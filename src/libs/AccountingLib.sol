@@ -5,9 +5,10 @@ import {Errors} from "./Errors.sol";
 
 library AccountingLib {
     function nav(uint256 B, uint256 PF, uint256 XP) internal pure returns (uint256) {
+        uint256 liabilities = PF + XP; // checked: reverts on overflow
+        if (B < liabilities) revert Errors.InsufficientBalance();
         unchecked {
-            if (B < PF + XP) revert Errors.InsufficientBalance();
-            return B - PF - XP;
+            return B - liabilities; // safe: B >= liabilities verified above
         }
     }
 

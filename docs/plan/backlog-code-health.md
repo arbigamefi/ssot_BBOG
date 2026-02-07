@@ -14,7 +14,7 @@ Tracked as individual PRs; doc-first per CONTRIBUTING.md.
 | Field | Value |
 |-------|-------|
 | **Severity** | High |
-| **Status** | Pending |
+| **Status** | Done |
 | **PR** | `fix/h1-nav-unchecked-overflow` |
 | **ADR** | None (defensive fix within existing function; ADR-0002 unchanged) |
 | **Files** | `src/libs/AccountingLib.sol` |

@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.12.14 — AccountingLib.nav() defensive overflow hardening (H-1)
+
+### Changed
+- `AccountingLib.nav()`: `PF + XP` addition moved outside `unchecked` block to checked context. Subtraction remains unchecked (safe after guard).
+
 ## v1.12.13 — Error semantics: separate auth from balance errors (H-2, ADR-0026)
 
 ### Added
