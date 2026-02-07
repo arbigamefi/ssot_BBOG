@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    # Run CI on all branches so feature pushes get feedback immediately.
+    branches: [ "**" ]
+    # Also run on version tags to ensure the tag itself is green.
+    tags: [ "v*" ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Show Forge version
+        run: forge --version
+
+      - name: Install pinned dependencies
+        run: |
+          bash script/ci/install_deps.sh
+
+      - name: Run unit tests (PR profile)
+        run: |
+          FOUNDRY_PROFILE=pr forge test --match-path "test/unit/*" -vvv
+
+      - name: Run diff tests (PR profile)
+        run: |
+          FOUNDRY_PROFILE=pr forge test --match-path "test/diff/*" -vvv
+
+      - name: Run invariants (PR profile)
+        run: |
+          FOUNDRY_PROFILE=pr forge test --match-path "test/invariants/*" -vvv
+
+      - name: Run fork tests (optional)
+        run: |
+          FOUNDRY_PROFILE=pr forge test --match-path "test/fork/*" -vvv
+
+      - name: Release artifacts check (non-strict)
+        run: |
+          make release-check

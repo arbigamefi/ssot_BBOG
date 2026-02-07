@@ -1,0 +1,13 @@
+# Foundry
+out/
+cache/
+
+# Broadcast artifacts (RPC-dependent)
+broadcast/
+
+# Local environment files
+.env
+.env.*
+
+# Release packaging output
+/dist/

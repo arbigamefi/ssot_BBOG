@@ -1,0 +1,46 @@
+name: Nightly Proof Gates
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  nightly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Show Forge version
+        run: forge --version
+
+      - name: Install pinned dependencies
+        run: |
+          bash script/ci/install_deps.sh
+
+      - name: Run unit tests (nightly profile)
+        run: |
+          FOUNDRY_PROFILE=nightly forge test --match-path "test/unit/*" -vvv
+
+      - name: Run diff tests (nightly profile)
+        run: |
+          FOUNDRY_PROFILE=nightly forge test --match-path "test/diff/*" -vvv
+
+      - name: Run invariants (nightly profile)
+        run: |
+          FOUNDRY_PROFILE=nightly forge test --match-path "test/invariants/*" -vvv
+
+      - name: Run fork tests (optional)
+        run: |
+          FOUNDRY_PROFILE=nightly forge test --match-path "test/fork/*" -vvv
+
+      - name: Release artifacts check (non-strict)
+        run: |
+          make release-check
