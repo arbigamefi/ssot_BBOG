@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.12.15 — Extract shared StopLogic library (M-5, ADR-0027)
+
+### Added
+- `src/libs/StopLogic.sol`: canonical multi-roll stop logic (`shouldStop`).
+
+### Changed
+- CoinTossModule, DiceModule, RouletteModule, KenoModule: replaced inline `_shouldStop` with `StopLogic.shouldStop`.
+- DiffCoinToss, DiffRoulette test references: same replacement.
+
 ## v1.12.14 — AccountingLib.nav() defensive overflow hardening (H-1)
 
 ### Changed

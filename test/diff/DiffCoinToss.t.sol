@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 
 import {CoinTossModule} from "../../src/modules/cointoss/CoinTossModule.sol";
 import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
+import {StopLogic} from "../../src/libs/StopLogic.sol";
 
 /// @notice Reference-model diff tests (ADR-0009).
 ///         Compares module.resolve(...) against an independent reference model.
@@ -80,7 +81,7 @@ contract DiffCoinToss is Test {
                 payout += 2 * amount;
             }
 
-            if (_shouldStop(spec.stopGain, spec.stopLoss, used, payout)) {
+            if (StopLogic.shouldStop(spec.stopGain, spec.stopLoss, used, payout)) {
                 break;
             }
         }
@@ -91,24 +92,5 @@ contract DiffCoinToss is Test {
 
     function _refRoll(uint256 betId, uint256 i, uint256 seed) internal pure returns (uint256) {
         return uint256(keccak256(abi.encodePacked(DOMAIN, betId, i, seed)));
-    }
-
-    function _shouldStop(
-        uint256 stopGain,
-        uint256 stopLoss,
-        uint256 usedTurnover,
-        uint256 payoutGrossSoFar
-    ) internal pure returns (bool) {
-        if (stopGain > 0) {
-            if (payoutGrossSoFar >= usedTurnover) {
-                if (payoutGrossSoFar - usedTurnover >= stopGain) return true;
-            }
-        }
-        if (stopLoss > 0) {
-            if (usedTurnover >= payoutGrossSoFar) {
-                if (usedTurnover - payoutGrossSoFar >= stopLoss) return true;
-            }
-        }
-        return false;
     }
 }

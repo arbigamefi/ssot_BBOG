@@ -5,6 +5,7 @@ import {IGameModule} from "../../core/interfaces/IGameModule.sol";
 import {SSOTTypes} from "../../core/interfaces/SSOTTypes.sol";
 import {CoinTossParams} from "./CoinTossParams.sol";
 import {RNG} from "../../libs/RNG.sol";
+import {StopLogic} from "../../libs/StopLogic.sol";
 
 /// @notice Pure Coin Toss module (multi-roll).
 ///         - params = abi.encode(bool isTails)
@@ -57,31 +58,12 @@ contract CoinTossModule is IGameModule {
                 cumPayout += 2 * amount;
             }
 
-            if (_shouldStop(stakeSpec.stopGain, stakeSpec.stopLoss, usedTurnover, cumPayout)) {
+            if (StopLogic.shouldStop(stakeSpec.stopGain, stakeSpec.stopLoss, usedTurnover, cumPayout)) {
                 break;
             }
         }
 
         payoutGross = cumPayout;
         refundAmount = stake - usedTurnover;
-    }
-
-    function _shouldStop(
-        uint256 stopGain,
-        uint256 stopLoss,
-        uint256 usedTurnover,
-        uint256 payoutGrossSoFar
-    ) internal pure returns (bool) {
-        if (stopGain > 0) {
-            if (payoutGrossSoFar >= usedTurnover) {
-                if (payoutGrossSoFar - usedTurnover >= stopGain) return true;
-            }
-        }
-        if (stopLoss > 0) {
-            if (usedTurnover >= payoutGrossSoFar) {
-                if (usedTurnover - payoutGrossSoFar >= stopLoss) return true;
-            }
-        }
-        return false;
     }
 }

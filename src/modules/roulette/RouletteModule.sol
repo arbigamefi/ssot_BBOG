@@ -6,6 +6,7 @@ import {SSOTTypes} from "../../core/interfaces/SSOTTypes.sol";
 import {RouletteParams} from "./RouletteParams.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {RNG} from "../../libs/RNG.sol";
+import {StopLogic} from "../../libs/StopLogic.sol";
 
 /// @notice Pure Roulette module (multi-roll, European 0..36).
 ///         - params supports either:
@@ -86,7 +87,7 @@ contract RouletteModule is IGameModule {
                 cumPayout += Math.mulDiv(amount, MODULO, pc);
             }
 
-            if (_shouldStop(stakeSpec.stopGain, stakeSpec.stopLoss, usedTurnover, cumPayout)) {
+            if (StopLogic.shouldStop(stakeSpec.stopGain, stakeSpec.stopLoss, usedTurnover, cumPayout)) {
                 break;
             }
         }
@@ -98,24 +99,5 @@ contract RouletteModule is IGameModule {
     function _popcount(uint40 numbers) internal pure returns (uint256) {
         // ((x * m) & mask) % mod
         return ((uint256(numbers) * POPCNT_MULT) & POPCNT_MASK) % POPCNT_MODULO;
-    }
-
-    function _shouldStop(
-        uint256 stopGain,
-        uint256 stopLoss,
-        uint256 usedTurnover,
-        uint256 payoutGrossSoFar
-    ) internal pure returns (bool) {
-        if (stopGain > 0) {
-            if (payoutGrossSoFar >= usedTurnover) {
-                if (payoutGrossSoFar - usedTurnover >= stopGain) return true;
-            }
-        }
-        if (stopLoss > 0) {
-            if (usedTurnover >= payoutGrossSoFar) {
-                if (usedTurnover - payoutGrossSoFar >= stopLoss) return true;
-            }
-        }
-        return false;
     }
 }

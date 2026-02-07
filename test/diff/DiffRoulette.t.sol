@@ -5,6 +5,7 @@ import "forge-std/Test.sol";
 
 import {RouletteModule} from "../../src/modules/roulette/RouletteModule.sol";
 import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
+import {StopLogic} from "../../src/libs/StopLogic.sol";
 
 /// @notice Reference-model diff tests (ADR-0009).
 ///         Compares roulette module.resolve(...) against an independent reference model
@@ -89,7 +90,7 @@ contract DiffRoulette is Test {
                 payout += (amount * MODULO) / pc;
             }
 
-            if (_shouldStop(spec.stopGain, spec.stopLoss, used, payout)) {
+            if (StopLogic.shouldStop(spec.stopGain, spec.stopLoss, used, payout)) {
                 break;
             }
         }
@@ -107,24 +108,5 @@ contract DiffRoulette is Test {
         for (uint8 i = 0; i < 37; i++) {
             if (((x >> i) & 1) == 1) c++;
         }
-    }
-
-    function _shouldStop(
-        uint256 stopGain,
-        uint256 stopLoss,
-        uint256 usedTurnover,
-        uint256 payoutGrossSoFar
-    ) internal pure returns (bool) {
-        if (stopGain > 0) {
-            if (payoutGrossSoFar >= usedTurnover) {
-                if (payoutGrossSoFar - usedTurnover >= stopGain) return true;
-            }
-        }
-        if (stopLoss > 0) {
-            if (usedTurnover >= payoutGrossSoFar) {
-                if (usedTurnover - payoutGrossSoFar >= stopLoss) return true;
-            }
-        }
-        return false;
     }
 }

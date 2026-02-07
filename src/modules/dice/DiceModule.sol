@@ -6,6 +6,7 @@ import {SSOTTypes} from "../../core/interfaces/SSOTTypes.sol";
 import {DiceParams} from "./DiceParams.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {RNG} from "../../libs/RNG.sol";
+import {StopLogic} from "../../libs/StopLogic.sol";
 
 /// @notice 100-sided dice (1..100) where player chooses cap in [1..99] and wins if rolled > cap.
 ///
@@ -68,33 +69,12 @@ contract DiceModule is IGameModule {
                 cumPayout += Math.mulDiv(amount, 100, denom);
             }
 
-            if (_shouldStop(stakeSpec.stopGain, stakeSpec.stopLoss, usedTurnover, cumPayout)) {
+            if (StopLogic.shouldStop(stakeSpec.stopGain, stakeSpec.stopLoss, usedTurnover, cumPayout)) {
                 break;
             }
         }
 
         payoutGross = cumPayout;
         refundAmount = stake - usedTurnover;
-    }
-
-    function _shouldStop(
-        uint256 stopGain,
-        uint256 stopLoss,
-        uint256 usedTurnover,
-        uint256 payoutGrossSoFar
-    ) internal pure returns (bool) {
-        // stopGain: profitSoFar >= stopGain
-        if (stopGain > 0) {
-            if (payoutGrossSoFar >= usedTurnover) {
-                if (payoutGrossSoFar - usedTurnover >= stopGain) return true;
-            }
-        }
-        // stopLoss: profitSoFar <= -stopLoss  <=> usedTurnover - payoutGrossSoFar >= stopLoss
-        if (stopLoss > 0) {
-            if (usedTurnover >= payoutGrossSoFar) {
-                if (usedTurnover - payoutGrossSoFar >= stopLoss) return true;
-            }
-        }
-        return false;
     }
 }

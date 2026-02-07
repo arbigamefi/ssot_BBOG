@@ -40,7 +40,7 @@ Add `Errors.Unauthorized()`, replace misuses.
 | Field | Value |
 |-------|-------|
 | **Severity** | Medium |
-| **Status** | Pending |
+| **Status** | Done |
 | **PR** | `refactor/m5-stop-logic-lib` |
 | **ADR** | ADR-0027 |
 | **Files** | `src/libs/StopLogic.sol` (new), 4 modules, 2 diff tests |
