@@ -53,7 +53,7 @@ and 2 diff test files. Extract to shared `StopLogic` library.
 | Field | Value |
 |-------|-------|
 | **Severity** | Low |
-| **Status** | Pending |
+| **Status** | Done |
 | **PR** | `fix/errors-cleanup-l1-l4` |
 | **ADR** | None |
 | **Files** | `src/libs/Errors.sol`, `src/core/VRFHub.sol` |
@@ -66,7 +66,7 @@ Replace and remove. Also fixes indentation inconsistency.
 | Field | Value |
 |-------|-------|
 | **Severity** | Low |
-| **Status** | Pending |
+| **Status** | Done |
 | **PR** | `fix/errors-cleanup-l1-l4` (combined with L-1) |
 | **ADR** | None |
 | **Files** | `src/libs/SafeTransferLib.sol` |

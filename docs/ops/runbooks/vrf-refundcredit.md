@@ -52,7 +52,7 @@ Use your deployment snapshot as the source of truth:
 Symptom: users report `placeBet` revert.
 
 Actions:
-- Check recent transaction failures for `InsufficientVRFFee(paid, required)` or `BadConfig()`.
+- Check recent transaction failures for `InsufficientVRFFee(paid, required)` or `InvalidConfig()`.
 - If failures are widespread, **pause risk-in immediately**:
   - `Hub.setRiskInPausedAll(true)` (or per-asset)
 

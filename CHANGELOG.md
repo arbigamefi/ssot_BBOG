@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.12.12 — Error library cleanup
+
+### Removed
+- `SafeTransferLib.sol`: unused dead code (Bank uses OZ SafeERC20 per ADR-0015).
+- `Errors.BadConfig`: redundant with `Errors.InvalidConfig`.
+
+### Changed
+- `VRFHub.sol`: replaced `BadConfig()` with `InvalidConfig()`.
+
 ## v1.12.11.13 — Tooling cleanup after verification fix
 
 - Default to preserving `broadcast/` traces when cleaning Foundry artifacts; set `CLEAN_BROADCAST=1` only when needed.

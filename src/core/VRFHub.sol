@@ -141,7 +141,7 @@ contract VRFHub is IVRFHub, Governable {
                 callbackGasLimit, requestConfirmations, numWords
             );
             // Defensive: enforce charged == required (adapter should be pure proxy).
-            if (feeCharged != required) revert Errors.BadConfig();
+            if (feeCharged != required) revert Errors.InvalidConfig();
         } else {
             // Internal/test mode: use a disjoint requestId namespace to avoid collisions with provider ids.
             requestId = (uint256(1) << 255) | nextRequestId++;

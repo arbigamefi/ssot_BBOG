@@ -6,7 +6,6 @@ library Errors {
     error InvalidBps(uint256 bps);
     error InvalidConfig();
     error TransferFailed();
-error BadConfig();
     error InsufficientAllowance();
     error InsufficientBalance();
 }
