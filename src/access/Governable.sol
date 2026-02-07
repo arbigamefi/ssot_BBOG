@@ -11,7 +11,7 @@ abstract contract Governable {
     event GovernanceTransferred(address indexed oldGov, address indexed newGov);
 
     modifier onlyGov() {
-        if (msg.sender != governance) revert Errors.InsufficientBalance();
+        if (msg.sender != governance) revert Errors.Unauthorized();
         _;
     }
 
@@ -29,7 +29,7 @@ abstract contract Governable {
 
     function acceptGovernance() external {
         address newGov = pendingGovernance;
-        if (msg.sender != newGov) revert Errors.InsufficientBalance();
+        if (msg.sender != newGov) revert Errors.Unauthorized();
         address old = governance;
         governance = newGov;
         pendingGovernance = address(0);

@@ -27,7 +27,7 @@ Move addition to checked context; keep subtraction unchecked (safe after guard).
 | Field | Value |
 |-------|-------|
 | **Severity** | High |
-| **Status** | Pending |
+| **Status** | Done |
 | **PR** | `fix/h2-error-semantics` |
 | **ADR** | ADR-0026 |
 | **Files** | `src/libs/Errors.sol`, `src/access/Governable.sol`, `src/core/Bank.sol` |

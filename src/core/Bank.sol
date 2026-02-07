@@ -102,7 +102,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     /// @dev Governance may call directly. Hub MAY forward governance intent (Hub is immutable in v1.0).
     function setRiskInPaused(bool paused_) external {
         // Allow governance OR Hub (forwarding). Hub address is wired once via setHubOnce.
-        if (msg.sender != governance && msg.sender != hub) revert Errors.InsufficientBalance();
+        if (msg.sender != governance && msg.sender != hub) revert Errors.Unauthorized();
         if (paused_) {
             if (!paused()) _pause();
         } else {
@@ -113,7 +113,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
 
     /// @notice One-time wiring: set Hub address. Allowed only when hub is unset.
     function setHubOnce(address hub_) external onlyGov {
-        if (hub != address(0)) revert Errors.InsufficientBalance();
+        if (hub != address(0)) revert Errors.InvalidConfig();
         if (hub_ == address(0)) revert Errors.ZeroAddress();
         hub = hub_;
     }
@@ -136,7 +136,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
 
     /// @notice Rescue non-asset tokens only (no ASSET backdoor).
     function rescueToken(address token, address to, uint256 amount) external onlyGov nonReentrant {
-        if (token == asset) revert Errors.InsufficientBalance();
+        if (token == asset) revert Errors.InvalidConfig();
         IERC20(token).safeTransfer(to, amount);
     }
 

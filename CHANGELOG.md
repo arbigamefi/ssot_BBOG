@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.12.13 — Error semantics: separate auth from balance errors (H-2, ADR-0026)
+
+### Added
+- `Errors.Unauthorized()` for access-control reverts.
+
+### Changed
+- `Governable.onlyGov` / `acceptGovernance`: revert with `Unauthorized()` instead of `InsufficientBalance()`.
+- `Bank.setRiskInPaused`: revert with `Unauthorized()` for auth failure.
+- `Bank.setHubOnce` (already-set guard): revert with `InvalidConfig()`.
+- `Bank.rescueToken` (asset guard): revert with `InvalidConfig()`.
+
 ## v1.12.12 — Error library cleanup
 
 ### Removed

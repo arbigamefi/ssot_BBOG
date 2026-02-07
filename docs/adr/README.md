@@ -37,3 +37,4 @@ Each ADR:
 - [ADR-0023: Fork tests as a release gate](0023-fork-tests-as-release-gate.md)
 - [ADR-0024: Release artifact digest + signature (deployment lock)](0024-release-artifacts-digest-signature.md)
 - [ADR-0025: Release notes MUST reference the release digest](0025-release-notes-and-packaging.md)
+- [ADR-0026: Error taxonomy — separate auth from balance errors](0026-error-taxonomy-auth-vs-balance.md)
