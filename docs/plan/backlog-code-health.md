@@ -73,6 +73,19 @@ Replace and remove. Also fixes indentation inconsistency.
 
 Not imported anywhere. Bank.sol uses OZ SafeERC20 (ADR-0015). Delete.
 
+### P0 — SECURITY.md placeholder email (deployment blocker)
+
+| Field | Value |
+|-------|-------|
+| **Severity** | Blocker |
+| **Status** | Done |
+| **PR** | `fix/p0-security-contact` |
+| **ADR** | None |
+| **Files** | `SECURITY.md` |
+
+Placeholder `security@example.com` replaced with `security@bankroll.studio`.
+Deployment blocker: without a real contact, vulnerability reports go nowhere.
+
 ---
 
 ## PR Dependency Graph

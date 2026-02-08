@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.12.16 — Fix SECURITY.md placeholder contact (P0)
+
+### Changed
+- `SECURITY.md`: replaced placeholder `security@example.com` with `security@bankroll.studio`.
+- Added PGP key reference and public disclosure guidance.
+
 ## v1.12.15 — Extract shared StopLogic library (M-5, ADR-0027)
 
 ### Added

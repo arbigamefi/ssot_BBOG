@@ -4,10 +4,12 @@
 
 Please report security issues **privately**.
 
-- Email: security@example.com (replace with your security contact)
+- Email: security@bankroll.studio
+- PGP key: see [`keys/security.pub`](keys/security.pub) (when available)
 - Include: impact, reproduction steps, affected commit hash, and any suggested patch.
 
 We aim to respond within 72 hours.
+Do **not** file public GitHub issues for security vulnerabilities.
 
 ## Scope
 
