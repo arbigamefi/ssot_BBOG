@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.12.17 — Add release Foundry profile (P1)
+
+### Added
+- `foundry.toml`: `[profile.release]` with 4096 fuzz runs and 1024 invariant depth for mainnet-bound tags.
+
 ## v1.12.16 — Fix SECURITY.md placeholder contact (P0)
 
 ### Changed

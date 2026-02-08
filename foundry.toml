@@ -48,6 +48,17 @@ runs = 1024
 runs = 1024
 depth = 512
 
+# Release profile: high-coverage gate for mainnet-bound tags.
+# Usage: FOUNDRY_PROFILE=release forge test
+[profile.release]
+
+[profile.release.fuzz]
+runs = 4096
+
+[profile.release.invariant]
+runs = 4096
+depth = 1024
+
 # Optional multi-chain configuration helpers.
 # These are used by scripts and verification commands.
 #
