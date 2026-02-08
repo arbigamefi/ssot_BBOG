@@ -84,6 +84,10 @@ interface IBank is IERC4626Minimal {
     /// @notice Claim accrued XP (optional outflow; may be blocked by riskInPaused or A4 safety domain)
     function claimXPAcrued(uint256 amount, address receiver) external returns (uint256 claimed);
 
+    // -------- Protocol fee optional outflow --------
+    /// @notice Claim accumulated protocol fees (optional outflow; governance only, A4-domain-checked).
+    function claimProtocolFees(uint256 amount, address receiver) external returns (uint256 claimed);
+
     // -------- XP bucket moves (permissionless; NOT optional outflow) --------
     function unlockXPLocked(address payee, address sourcePlayer) external returns (uint256 unlocked);
     function syncXPHoldback(address payee) external returns (uint256 released);
@@ -119,6 +123,7 @@ interface IBank is IERC4626Minimal {
     event XPLockedUnlocked(address indexed payee, address indexed sourcePlayer, uint256 amount);
     event XPHoldbackReleased(address indexed payee, uint256 amount);
     event XPAcruedClaimed(address indexed payee, address indexed receiver, uint256 amount);
+    event ProtocolFeesClaimed(address indexed receiver, uint256 amount);
 
     // -------- errors --------
     error NotHub();

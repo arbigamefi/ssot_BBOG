@@ -86,6 +86,21 @@ Not imported anywhere. Bank.sol uses OZ SafeERC20 (ADR-0015). Delete.
 Placeholder `security@example.com` replaced with `security@bankroll.studio`.
 Deployment blocker: without a real contact, vulnerability reports go nowhere.
 
+### P2 — claimProtocolFees() missing from Bank.sol
+
+| Field | Value |
+|-------|-------|
+| **Severity** | Critical (design gap) |
+| **Status** | Done |
+| **PR** | `feat/p2-claim-protocol-fees` |
+| **ADR** | ADR-0028 |
+| **Files** | `IBank.sol`, `Bank.sol`, `Invariants.t.sol`, `InvariantsAdapter.t.sol` |
+
+Constitution v1.1 §2.3 lists PF withdrawals as optional outflow, but no
+implementation existed. Added governance-only, pause-gated, A4-domain-checked
+`claimProtocolFees()`. PF previously grew unbounded, permanently reducing
+NAV/LP value with no governance recourse.
+
 ---
 
 ## PR Dependency Graph

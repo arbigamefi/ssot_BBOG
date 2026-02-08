@@ -140,6 +140,30 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         IERC20(token).safeTransfer(to, amount);
     }
 
+    // -------- protocol fee optional outflow --------
+
+    /// @notice Claim accumulated protocol fees. Governance only, pause-gated, A4-domain-checked.
+    /// @param amount Amount of protocol fees to claim (in asset units).
+    /// @param receiver Address to receive the claimed fees.
+    /// @return claimed The amount actually claimed.
+    function claimProtocolFees(uint256 amount, address receiver) external onlyGov nonReentrant returns (uint256 claimed) {
+        if (paused()) revert RiskInPaused();
+        if (receiver == address(0)) revert Errors.ZeroAddress();
+
+        uint256 bal = protocolFeesPayable;
+        if (amount == 0 || bal == 0) return 0;
+        if (amount > bal) revert Errors.InsufficientBalance();
+
+        // Optional outflow: assetsOut = amount, PF decreases by amount, XP unchanged.
+        _checkOptionalOutflowDomain(amount, amount, 0);
+
+        protocolFeesPayable = bal - amount;
+        _assetToken.safeTransfer(receiver, amount);
+
+        emit ProtocolFeesClaimed(receiver, amount);
+        return amount;
+    }
+
     // -------- SSOT views --------
 
     function externalPayablesTotal() public view override returns (uint256) {

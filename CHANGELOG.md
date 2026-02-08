@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.12.18 — Add claimProtocolFees() to Bank (P2, ADR-0028)
+
+### Added
+- `Bank.claimProtocolFees(uint256, address)`: governance-only, pause-gated, A4-domain-checked protocol fee withdrawal.
+- `IBank.ProtocolFeesClaimed` event.
+- Invariant handler `action_claimProtocolFees` with A4 post-condition assertion.
+
 ## v1.12.17 — Add release Foundry profile (P1)
 
 ### Added

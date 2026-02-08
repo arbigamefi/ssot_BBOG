@@ -712,6 +712,19 @@ function action_refundReadyMustSucceed(uint256 seed) external {
         } catch { }
     }
 
+    function action_claimProtocolFees(uint256 seed, uint256 amount) external {
+        ( , Bank bank, ) = _pick(seed);
+        if (bank.riskInPaused()) return;
+        uint256 bal = bank.protocolFeesPayable();
+        if (bal == 0) return;
+        amount = bound(amount, 1, bal);
+
+        vm.prank(gov);
+        try bank.claimProtocolFees(amount, gov) {
+            _assertOptionalOutflowDomain(bank);
+        } catch { }
+    }
+
     // ----------------------
     // Permissionless XP bucket moves (must never revert)
     // ----------------------
@@ -832,7 +845,7 @@ contract MultiAssetInvariants is StdInvariant, Test {
         handler = new Handler(assetA, assetB, bankA, bankB, hub, vrf, gov, coordinator);
         targetContract(address(handler));
 
-        bytes4[] memory selectors = new bytes4[](17);
+        bytes4[] memory selectors = new bytes4[](18);
         selectors[0] = Handler.action_deposit.selector;
         selectors[1] = Handler.action_setAffiliateHouseEdge.selector;
         selectors[2] = Handler.action_placeBet.selector;
@@ -856,6 +869,9 @@ contract MultiAssetInvariants is StdInvariant, Test {
 
         // Governance hygiene (D2)
         selectors[16] = Handler.action_govNoAssetBackdoor.selector;
+
+        // Protocol fee optional outflow (A4-checked)
+        selectors[17] = Handler.action_claimProtocolFees.selector;
 
         targetSelector(FuzzSelector({addr: address(handler), selectors: selectors}));
     }

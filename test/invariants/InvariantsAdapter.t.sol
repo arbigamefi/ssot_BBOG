@@ -237,7 +237,7 @@ contract MultiAssetInvariantsAdapter is StdInvariant, Test {
         );
         targetContract(address(handler));
 
-        bytes4[] memory selectors = new bytes4[](18);
+        bytes4[] memory selectors = new bytes4[](19);
         selectors[0] = Handler.action_deposit.selector;
         selectors[1] = Handler.action_setAffiliateHouseEdge.selector;
         selectors[2] = Handler.action_placeBet.selector; // overridden in HandlerAdapter
@@ -255,7 +255,8 @@ contract MultiAssetInvariantsAdapter is StdInvariant, Test {
         selectors[14] = Handler.action_unlock_locked.selector;
         selectors[15] = Handler.action_sync_holdback.selector;
         selectors[16] = Handler.action_govNoAssetBackdoor.selector;
-        selectors[17] = HandlerAdapter.action_claimRefundCredit.selector;
+        selectors[17] = Handler.action_claimProtocolFees.selector;
+        selectors[18] = HandlerAdapter.action_claimRefundCredit.selector;
 
         targetSelector(FuzzSelector({addr: address(handler), selectors: selectors}));
     }
