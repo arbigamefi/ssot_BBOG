@@ -1,0 +1,5 @@
+# SSOT v2 Frontend
+User-agent: *
+Allow: /
+
+Sitemap: https://ssot.gg/sitemap.xml
