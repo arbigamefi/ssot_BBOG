@@ -1,3 +1,5 @@
+import { withSentryConfig } from "@sentry/nextjs";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -54,4 +56,14 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+// Wrap with Sentry only when DSN is configured (graceful no-op otherwise)
+export default withSentryConfig(nextConfig, {
+  // Suppress Sentry CLI logs in dev
+  silent: !process.env.CI,
+  // Upload source maps for readable stack traces
+  widenClientFileUpload: true,
+  // Hide source maps from users
+  hideSourceMaps: true,
+  // Disable Sentry telemetry
+  disableLogger: true,
+});
