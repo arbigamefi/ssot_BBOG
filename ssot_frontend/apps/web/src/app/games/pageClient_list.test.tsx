@@ -30,6 +30,7 @@ vi.mock("@ssot/ui", () => ({
   CardTitle: ({ children }: any) => <h3>{children}</h3>,
   CardDescription: ({ children }: any) => <p>{children}</p>,
   CardContent: ({ children }: any) => <div>{children}</div>,
+  CopyButton: ({ value }: any) => <button data-testid="copy-button" data-value={value}>Copy</button>,
 }));
 
 import { GamesListClient } from "./pageClient_list";

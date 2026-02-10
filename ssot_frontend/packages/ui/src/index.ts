@@ -14,6 +14,8 @@ export * from "./components/ui/label";
 export * from "./components/ui/skeleton";
 export * from "./components/ui/toaster";
 export * from "./components/ui/theme-toggle";
+export * from "./components/ui/pagination";
+export * from "./components/ui/copy-button";
 export { toast } from "sonner";
 
 // protocol (presentational domain components)
