@@ -516,18 +516,10 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
       const walletReq = requireWallet();
       if ("error" in walletReq) return { txHash: "0x0" as Hex, ok: false, error: walletReq.error };
 
+      const firstAsset = release.assets[0]?.address as Address;
       const bankAddr = (await publicClient.readContract({
-        address: hubAddress, abi: HUB_ABI, functionName: "bankFor", args: [receiver]
+        address: hubAddress, abi: HUB_ABI, functionName: "bankFor", args: [firstAsset]
       })) as Address;
-
-      // Guard: bankFor returns 0x0 when asset is not registered
-      if (!bankAddr || bankAddr === "0x0000000000000000000000000000000000000000") {
-        return { txHash: "0x0" as Hex, ok: false, error: {
-          code: "UNKNOWN_ASSET",
-          message: "No bank registered for this asset. The asset may not be configured on this network.",
-          severity: "error"
-        }};
-      }
 
       // ERC20 approve for the bank (exact amount)
       const allowance = (await publicClient.readContract({
@@ -559,8 +551,9 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
       const walletReq = requireWallet();
       if ("error" in walletReq) return { txHash: "0x0" as Hex, ok: false, error: walletReq.error };
 
+      const firstAsset = release.assets[0]?.address as Address;
       const bankAddr = (await publicClient.readContract({
-        address: hubAddress, abi: HUB_ABI, functionName: "bankFor", args: [owner]
+        address: hubAddress, abi: HUB_ABI, functionName: "bankFor", args: [firstAsset]
       })) as Address;
 
       return tx.simulateAndWrite({
@@ -574,8 +567,9 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
       const walletReq = requireWallet();
       if ("error" in walletReq) return { txHash: "0x0" as Hex, ok: false, error: walletReq.error };
 
+      const firstAsset = release.assets[0]?.address as Address;
       const bankAddr = (await publicClient.readContract({
-        address: hubAddress, abi: HUB_ABI, functionName: "bankFor", args: [owner]
+        address: hubAddress, abi: HUB_ABI, functionName: "bankFor", args: [firstAsset]
       })) as Address;
 
       return tx.simulateAndWrite({
@@ -658,8 +652,9 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
       if ("error" in walletReq) return { txHash: "0x0" as Hex, ok: false, error: walletReq.error };
 
       // claimProtocolFees uses the first asset's bank (governance knows which)
+      const firstAsset = release.assets[0]?.address as Address;
       const bankAddr = (await publicClient.readContract({
-        address: hubAddress, abi: HUB_ABI, functionName: "bankFor", args: [receiver]
+        address: hubAddress, abi: HUB_ABI, functionName: "bankFor", args: [firstAsset]
       })) as Address;
 
       return tx.simulateAndWrite({
@@ -673,8 +668,9 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
       const walletReq = requireWallet();
       if ("error" in walletReq) return { txHash: "0x0" as Hex, ok: false, error: walletReq.error };
 
+      const firstAsset = release.assets[0]?.address as Address;
       const bankAddr = (await publicClient.readContract({
-        address: hubAddress, abi: HUB_ABI, functionName: "bankFor", args: [receiver]
+        address: hubAddress, abi: HUB_ABI, functionName: "bankFor", args: [firstAsset]
       })) as Address;
 
       return tx.simulateAndWrite({
