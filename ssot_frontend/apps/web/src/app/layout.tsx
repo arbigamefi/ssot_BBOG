@@ -6,6 +6,7 @@ import { SSOTSDKProvider } from "./providers/SSOTSDKProvider";
 import { ReleaseProviderWagmi } from "./providers/ReleaseProviderWagmi";
 import { SSOTRuntimeProvider } from "./providers/SSOTRuntimeProvider";
 import { AppShell } from "../components/AppShell";
+import { AnalyticsProvider } from "./providers/AnalyticsProvider";
 import { Toaster } from "@ssot/ui";
 
 export const metadata: Metadata = {
@@ -55,14 +56,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="min-h-screen">
         <WebProviders>
-          <ReleaseProviderWagmi>
-            <SSOTRuntimeProvider>
-              <SSOTSDKProvider>
-                <AppShell>{children}</AppShell>
-                <Toaster />
-              </SSOTSDKProvider>
-            </SSOTRuntimeProvider>
-          </ReleaseProviderWagmi>
+          <AnalyticsProvider>
+            <ReleaseProviderWagmi>
+              <SSOTRuntimeProvider>
+                <SSOTSDKProvider>
+                  <AppShell>{children}</AppShell>
+                  <Toaster />
+                </SSOTSDKProvider>
+              </SSOTRuntimeProvider>
+            </ReleaseProviderWagmi>
+          </AnalyticsProvider>
         </WebProviders>
       </body>
     </html>
