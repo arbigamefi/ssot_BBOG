@@ -6,11 +6,11 @@ import Link from "next/link";
 
 import type { DomainBet } from "@ssot/ssot";
 import {
+  Badge,
   Button,
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
   CopyButton,
@@ -160,6 +160,19 @@ export default function BetDetailPage() {
     return `${units.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${sym}`;
   }
 
+  // ——— Outcome calculation ———
+  type Outcome = { kind: "win"; profit: bigint } | { kind: "loss"; loss: bigint } | { kind: "refunded" } | { kind: "pending"; label: string };
+
+  const outcome = React.useMemo((): Outcome | null => {
+    if (!onChainBet) return betState ? { kind: "pending", label: betState } : null;
+    if (betState === "refunded") return { kind: "refunded" };
+    if (betState === "finalized" && onChainBet.payout != null) {
+      const profit = onChainBet.payout - onChainBet.stake;
+      return profit >= 0n ? { kind: "win", profit } : { kind: "loss", loss: onChainBet.stake - onChainBet.payout };
+    }
+    return { kind: "pending", label: betState ?? "unknown" };
+  }, [onChainBet, betState]);
+
   return (
     <div className="space-y-6">
       <div className="text-sm text-muted-foreground">
@@ -175,6 +188,60 @@ export default function BetDetailPage() {
           subtitle={`Current state: ${betState}`}
           steps={buildLifecycleSteps(betState)}
         />
+      )}
+
+      {/* Outcome summary */}
+      {outcome && (
+        <Card data-testid="outcome-card">
+          <CardContent className="flex flex-col items-center gap-2 py-6">
+            {outcome.kind === "win" && (
+              <>
+                <Badge className="bg-green-600 text-white hover:bg-green-700" data-testid="outcome-badge">
+                  WIN
+                </Badge>
+                <p className="text-2xl font-bold text-green-600" data-testid="outcome-amount">
+                  +{fmtBigint(outcome.profit)}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Payout: {fmtBigint(onChainBet?.payout)} | Stake: {fmtBigint(onChainBet?.stake)}
+                </p>
+              </>
+            )}
+            {outcome.kind === "loss" && (
+              <>
+                <Badge variant="destructive" data-testid="outcome-badge">
+                  LOSS
+                </Badge>
+                <p className="text-2xl font-bold text-destructive" data-testid="outcome-amount">
+                  -{fmtBigint(outcome.loss)}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Payout: {fmtBigint(onChainBet?.payout)} | Stake: {fmtBigint(onChainBet?.stake)}
+                </p>
+              </>
+            )}
+            {outcome.kind === "refunded" && (
+              <>
+                <Badge variant="secondary" data-testid="outcome-badge">
+                  REFUNDED
+                </Badge>
+                <p className="text-sm text-muted-foreground">
+                  Stake was returned to player.
+                </p>
+              </>
+            )}
+            {outcome.kind === "pending" && (
+              <>
+                <Badge variant="outline" data-testid="outcome-badge">
+                  PENDING
+                </Badge>
+                <p className="text-sm text-muted-foreground">
+                  Awaiting {outcome.label === "placed" ? "VRF random word" : outcome.label === "randomReady" ? "finalization" : outcome.label}
+                </p>
+              </>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {/* On-chain bet details */}
