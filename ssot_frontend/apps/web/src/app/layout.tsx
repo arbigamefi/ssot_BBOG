@@ -32,9 +32,27 @@ export const metadata: Metadata = {
   },
 };
 
+/**
+ * Inline script to apply .dark class before first paint, preventing FOUC.
+ * Reads `ssot-theme` from localStorage and applies `.dark` to <html> when needed.
+ * Must be a raw string — no React, no imports — runs synchronously in <head>.
+ */
+const THEME_INIT_SCRIPT = `
+(function(){
+  try {
+    var t = localStorage.getItem("ssot-theme");
+    var dark = t === "dark" || (t !== "light" && matchMedia("(prefers-color-scheme:dark)").matches);
+    if (dark) document.documentElement.classList.add("dark");
+  } catch(e) {}
+})();
+`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body className="min-h-screen">
         <WebProviders>
           <ReleaseProviderWagmi>

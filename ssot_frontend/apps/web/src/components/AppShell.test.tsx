@@ -37,6 +37,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("@ssot/ui", () => ({
   ReleaseBadge: ({ networkName }: any) => <span data-testid="release-badge">{networkName}</span>,
   ReadOnlyBanner: ({ reason }: any) => <div data-testid="readonly-banner">{reason}</div>,
+  ThemeToggle: () => <button data-testid="theme-toggle">Theme</button>,
 }));
 
 describe("AppShell", () => {
@@ -95,6 +96,12 @@ describe("AppShell", () => {
     // Click to close
     fireEvent.click(btn);
     expect(btn.getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("renders ThemeToggle in header", () => {
+    render(<AppShell><div>content</div></AppShell>);
+    const toggles = screen.getAllByTestId("theme-toggle");
+    expect(toggles.length).toBeGreaterThanOrEqual(1);
   });
 
   it("nav links point to correct hrefs", () => {
