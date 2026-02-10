@@ -64,6 +64,8 @@ export default withSentryConfig(nextConfig, {
   widenClientFileUpload: true,
   // Hide source maps from users
   hideSourceMaps: true,
-  // Disable Sentry telemetry
-  disableLogger: true,
+  // Tree-shake Sentry debug logging (replaces deprecated disableLogger)
+  bundleSizeOptimizations: {
+    excludeDebugStatements: true,
+  },
 });

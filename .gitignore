@@ -15,6 +15,9 @@ broadcast/
 
 lib
 lib/*
+# Allow frontend src/lib directories (utils, not Foundry deps)
+!ssot_frontend/packages/*/src/lib
+!ssot_frontend/packages/*/src/lib/**
 
 ssot_frontend/node_modules
 ssot_frontend/apps/web/node_modules

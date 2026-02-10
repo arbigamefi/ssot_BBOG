@@ -1,3 +1,8 @@
+/**
+ * Next.js client instrumentation file.
+ * Runs once in the browser before the app hydrates.
+ * @see https://nextjs.org/docs/app/api-reference/file-conventions/instrumentation-client
+ */
 import * as Sentry from "@sentry/nextjs";
 
 const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
@@ -27,3 +32,6 @@ if (dsn) {
     ],
   });
 }
+
+// Instrument Next.js router transitions for Sentry performance monitoring
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
