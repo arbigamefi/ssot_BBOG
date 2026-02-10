@@ -1,0 +1,57 @@
+{
+  "name": "ssot-frontend-v2",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@9.12.3",
+  "engines": {
+    "node": "20.x",
+    "pnpm": "9.x"
+  },
+  "pnpm": {
+    "overrides": {
+      "storybook": "8.6.15",
+      "@storybook/core": "8.6.15",
+      "@storybook/react": "8.6.15",
+      "@storybook/react-vite": "8.6.15",
+      "@storybook/addon-essentials": "8.6.15",
+      "@storybook/addon-interactions": "8.6.15",
+      "@storybook/addon-links": "8.6.15"
+    }
+  },
+  "scripts": {
+    "dev": "pnpm -C apps/web dev",
+    "build": "pnpm -C apps/web build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "ssot:sync": "node scripts/ssot-sync.mjs",
+    "check:release": "node scripts/check-release.mjs",
+    "storybook": "pnpm -C packages/ui storybook",
+    "storybook:build": "pnpm -C packages/ui build-storybook",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "test:strict": "STRICT_VECTORS=1 pnpm test",
+    "prepare": "cd .. && husky ssot_frontend/.husky"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.6.0",
+    "@typescript-eslint/eslint-plugin": "^8.1.0",
+    "@typescript-eslint/parser": "^8.1.0",
+    "eslint": "^9.6.0",
+    "eslint-plugin-boundaries": "^4.2.2",
+    "eslint-plugin-import": "^2.29.1",
+    "husky": "^9.1.6",
+    "lint-staged": "^15.2.10",
+    "prettier": "^3.3.3",
+    "typescript": "^5.5.4",
+    "vitest": "^2.0.5"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "prettier --write"
+    ],
+    "*.{json,md,css,mjs}": [
+      "prettier --write"
+    ]
+  }
+}
