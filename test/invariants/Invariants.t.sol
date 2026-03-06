@@ -593,7 +593,7 @@ function action_optionalOutflowWhenPausedMustFail(uint256 seed) external {
     uint256 xp = bank.xpAccruedOf(owner);
     if (xp > 0) {
         vm.prank(owner);
-        try bank.claimXPAcrued(1, owner) {
+        try bank.claimXPAccrued(1, owner) {
             _noteViolation(VC_E3, 0);
         } catch { }
     }
@@ -698,7 +698,7 @@ function action_refundReadyMustSucceed(uint256 seed) external {
         } catch { }
     }
 
-    function action_claimXPAcrued(uint256 seed, uint256 amount) external {
+    function action_claimXPAccrued(uint256 seed, uint256 amount) external {
         ( , Bank bank, ) = _pick(seed);
         if (bank.riskInPaused()) return;
         address payee = players[seed % players.length];
@@ -707,7 +707,7 @@ function action_refundReadyMustSucceed(uint256 seed) external {
         amount = bound(amount, 1, bal);
 
         vm.prank(payee);
-        try bank.claimXPAcrued(amount, payee) {
+        try bank.claimXPAccrued(amount, payee) {
             _assertOptionalOutflowDomain(bank);
         } catch { }
     }
@@ -783,8 +783,8 @@ contract MultiAssetInvariants is StdInvariant, Test {
 
         vrf = new VRFHub(coordinator, gov);
 
-        bankA = new Bank(address(assetA), address(0), gov, 1000, "LP ASTA", "LPA", 18);
-        bankB = new Bank(address(assetB), address(0), gov, 1000, "LP ASTB", "LPB", 18);
+        bankA = new Bank(address(assetA), gov, 1000, "LP ASTA", "LPA", 18);
+        bankB = new Bank(address(assetB), gov, 1000, "LP ASTB", "LPB", 18);
 
         registry = new BankRegistry(gov);
         vm.startPrank(gov);
@@ -855,7 +855,7 @@ contract MultiAssetInvariants is StdInvariant, Test {
         selectors[6] = Handler.action_pause.selector;
         selectors[7] = Handler.action_withdraw.selector;
         selectors[8] = Handler.action_redeem.selector;
-        selectors[9] = Handler.action_claimXPAcrued.selector;
+        selectors[9] = Handler.action_claimXPAccrued.selector;
 
         // D-class + liveness strengthening
         selectors[10] = Handler.action_placeBetWhenPausedMustFail.selector;

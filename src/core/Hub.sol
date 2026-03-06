@@ -10,6 +10,7 @@ import {SSOTTypes} from "./interfaces/SSOTTypes.sol";
 import {Governable} from "../access/Governable.sol";
 import {Errors} from "../libs/Errors.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IReferralRegistry} from "../engines/referral/IReferralRegistry.sol";
 import {IReferralEngine} from "../engines/referral/IReferralEngine.sol";
 
@@ -19,7 +20,7 @@ import {IReferralEngine} from "../engines/referral/IReferralEngine.sol";
 /// - player = msg.sender (no relayer / no delegated betting)
 /// - affiliate hint is used for best-effort first-touch binding + skyline pricing
 /// - bet snapshots pricing/referral config to prevent retroactive changes
-contract Hub is IHub, Governable {
+contract Hub is IHub, Governable, ReentrancyGuard {
 
     uint16 internal constant BPS = 10_000;
     uint8 internal constant MAX_SKYLINE_SEGMENTS = 6;
@@ -291,7 +292,7 @@ contract Hub is IHub, Governable {
         SSOTTypes.StakeSpec calldata stakeSpec,
         address affiliate,
         uint16 maxHouseEdgeBps
-    ) external payable override returns (uint256 betId) {
+    ) external payable override nonReentrant returns (uint256 betId) {
         if (riskInPaused(asset)) revert RiskInPaused(asset);
         if (stakeSpec.amountPerRoll == 0) revert Errors.InsufficientBalance();
         if (stakeSpec.betCount == 0 || stakeSpec.betCount > MAX_BET_COUNT) revert Errors.InvalidConfig();
@@ -441,7 +442,7 @@ contract Hub is IHub, Governable {
     // Debt-Out: finalize (permissionless)
     // ---------------------------------------------------------------------
 
-    function finalize(uint256 betId) external override {
+    function finalize(uint256 betId) external override nonReentrant {
         SSOTTypes.Bet storage b = bets[betId];
         if (b.state == SSOTTypes.BetState.None) revert BetNotFound(betId);
         if (b.state != SSOTTypes.BetState.RandomReady) revert BadState(betId, b.state, SSOTTypes.BetState.RandomReady);
@@ -555,7 +556,7 @@ contract Hub is IHub, Governable {
     // Debt-Out: refund (permissionless)
     // ---------------------------------------------------------------------
 
-    function refund(uint256 betId) external override {
+    function refund(uint256 betId) external override nonReentrant {
         SSOTTypes.Bet storage b = bets[betId];
         if (b.state == SSOTTypes.BetState.None) revert BetNotFound(betId);
         if (b.state != SSOTTypes.BetState.PendingVRF) revert BadState(betId, b.state, SSOTTypes.BetState.PendingVRF);

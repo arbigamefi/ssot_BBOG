@@ -77,7 +77,7 @@ contract ForkChainlinkWrapperAdapter is Test {
         vm.stopPrank();
 
         asset = new MockERC20("ForkAsset", "FAST", 18);
-        bank = new Bank(address(asset), address(0), gov, 1000, "LP", "LP", 18);
+        bank = new Bank(address(asset), gov, 1000, "LP", "LP", 18);
 
         registry = new BankRegistry(gov);
         vm.prank(gov);

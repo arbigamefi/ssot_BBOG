@@ -118,7 +118,7 @@ contract Deploy is Script {
             string memory lpSymbol = vm.envOr(string.concat("LP_SYMBOL_", suffix), string.concat("LP", suffix));
             uint8 lpDecimals = uint8(vm.envOr(string.concat("LP_DECIMALS_", suffix), uint256(18)));
 
-            Bank bank = new Bank(asset, treasury, gov, minLiqBps, lpName, lpSymbol, lpDecimals);
+            Bank bank = new Bank(asset, gov, minLiqBps, lpName, lpSymbol, lpDecimals);
             registry.registerBank(asset, address(bank));
 
             bank.setHubOnce(address(hub));
@@ -329,7 +329,7 @@ contract Deploy is Script {
             json = vm.serializeString(
                 obj,
                 string.concat("ctorArgs_bank_", suffix),
-                vm.toString(abi.encode(asset, treasury, gov, minLiqBps, lpName, lpSymbol, lpDecimals))
+                vm.toString(abi.encode(asset, gov, minLiqBps, lpName, lpSymbol, lpDecimals))
             );
         }
 
@@ -415,14 +415,13 @@ contract Deploy is Script {
             string memory lpName = vm.envOr(string.concat("LP_NAME_", suffix), string.concat("LP Share #", suffix));
             string memory lpSymbol = vm.envOr(string.concat("LP_SYMBOL_", suffix), string.concat("LP", suffix));
             uint8 lpDecimals = uint8(vm.envOr(string.concat("LP_DECIMALS_", suffix), uint256(18)));
-            address treasuryLocal = treasury;
 
             sh = string.concat(
                 sh,
                 _verifyLine(
                     bankAddr,
                     "src/core/Bank.sol:Bank",
-                    vm.toString(abi.encode(asset, treasuryLocal, gov, minLiqBps, lpName, lpSymbol, lpDecimals)),
+                    vm.toString(abi.encode(asset, gov, minLiqBps, lpName, lpSymbol, lpDecimals)),
                     verifierUrl
                 )
             );

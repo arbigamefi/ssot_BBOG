@@ -1,0 +1,8 @@
+# Frontend ownership
+/frontend/apps/web/ @ssot/frontend-core
+/frontend/packages/ssot/ @ssot/protocol
+/frontend/packages/ui/ @ssot/ui
+/frontend/docs/frontend/ @ssot/frontend-core
+/frontend/package.json @ssot/frontend-core
+/frontend/pnpm-workspace.yaml @ssot/frontend-core
+/frontend/pnpm-lock.yaml @ssot/frontend-core

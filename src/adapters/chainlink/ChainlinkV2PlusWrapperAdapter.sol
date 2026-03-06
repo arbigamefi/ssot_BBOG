@@ -95,7 +95,7 @@ contract ChainlinkV2PlusWrapperAdapter is IVRFAdapter, Governable {
             return;
         }
         // Best-effort forward; VRFHub itself is fulfill-never-revert.
-        (bool ok, ) = hub.call(abi.encodeWithSignature("fulfillRandomWords(uint256,uint256[])", requestId, randomWords));
+        (bool ok, ) = hub.call(abi.encodeWithSelector(bytes4(keccak256("fulfillRandomWords(uint256,uint256[])")), requestId, randomWords));
         ok; // ignore
     }
 

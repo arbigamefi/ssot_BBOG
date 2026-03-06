@@ -3,14 +3,54 @@
 FOUNDRY_PROFILE ?= pr
 DEPLOY_PROFILE ?= default
 VERIFY_PROFILE ?= default
+FRONTEND_DIR ?= frontend
 
-.PHONY: deps check-deps test pr nightly fork deploy verify verify-helpers  release-digest release-verify release-check release-notes release-package  audit-package lint
+.PHONY: deps check-deps check test pr nightly fork deploy verify verify-helpers release-digest release-verify release-check release-notes release-package audit-package lint frontend-install frontend-dev frontend-build frontend-lint frontend-typecheck frontend-test frontend-test-strict frontend-storybook frontend-storybook-build frontend-release-check frontend-check
 
 deps:
 	bash script/ci/install_deps.sh
 
 check-deps:
 	bash script/ci/check_deps.sh
+
+check: test frontend-check
+
+# Frontend monorepo lives under frontend/ but is operated from the repo root.
+frontend-install:
+	pnpm -C $(FRONTEND_DIR) install
+
+frontend-dev:
+	pnpm -C $(FRONTEND_DIR) dev
+
+frontend-build:
+	pnpm -C $(FRONTEND_DIR) build
+
+frontend-lint:
+	pnpm -C $(FRONTEND_DIR) lint
+
+frontend-typecheck:
+	pnpm -C $(FRONTEND_DIR) typecheck
+
+frontend-test:
+	pnpm -C $(FRONTEND_DIR) test
+
+frontend-test-strict:
+	pnpm -C $(FRONTEND_DIR) test:strict
+
+frontend-storybook:
+	pnpm -C $(FRONTEND_DIR) storybook
+
+frontend-storybook-build:
+	pnpm -C $(FRONTEND_DIR) storybook:build
+
+frontend-release-check:
+	pnpm -C $(FRONTEND_DIR) check:release
+
+frontend-check:
+	pnpm -C $(FRONTEND_DIR) lint
+	pnpm -C $(FRONTEND_DIR) typecheck
+	pnpm -C $(FRONTEND_DIR) test:strict
+	pnpm -C $(FRONTEND_DIR) build
 
 # Default test entrypoint. Uses FOUNDRY_PROFILE (default: pr).
 # Example: FOUNDRY_PROFILE=nightly make test

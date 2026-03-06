@@ -16,5 +16,8 @@ What new risks does this change introduce?
 ## Checklist
 
 - [ ] `forge test` passes locally
+- [ ] `pnpm -C frontend test:strict` passes locally when frontend files changed
 - [ ] No forbidden dependencies introduced (Bank -> Hub/modules, modules -> core, etc.)
 - [ ] Events and errors updated as needed
+- [ ] If I changed frontend behavior or architecture, I updated `frontend/docs/frontend/adr/` or related docs
+- [ ] If I changed UI flows or components, Storybook/tests were updated as needed

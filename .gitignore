@@ -1,6 +1,7 @@
 # Foundry
 out/
 cache/
+node_modules/
 
 # Broadcast artifacts (RPC-dependent)
 broadcast/
@@ -16,14 +17,27 @@ broadcast/
 lib
 lib/*
 # Allow frontend src/lib directories (utils, not Foundry deps)
-!ssot_frontend/packages/*/src/lib
-!ssot_frontend/packages/*/src/lib/**
+!frontend/packages/*/src/lib
+!frontend/packages/*/src/lib/**
 
-ssot_frontend/node_modules
-ssot_frontend/apps/web/node_modules
-ssot_frontend/packages/ssot/node_modules
-ssot_frontend/packages/ui/node_modules
+frontend/node_modules
+frontend/apps/web/node_modules
+frontend/packages/ssot/node_modules
+frontend/packages/ui/node_modules
 
-ssot_frontend/apps/web/.next
+frontend/apps/web/.next
+frontend/.turbo
+frontend/storybook-static
+frontend/coverage
+frontend/.nyc_output
+frontend/playwright-report
+frontend/test-results
+frontend/**/*.tsbuildinfo
+.idea/
+.vscode/settings.json
+.vscode/launch.json
+*.swp
+*.swo
+*~
 .DS_Store
 deployments/

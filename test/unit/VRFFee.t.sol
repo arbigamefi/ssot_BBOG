@@ -29,7 +29,7 @@ contract VRFFee is Test {
         asset = new MockERC20("Asset", "AST", 18);
         vrf = new VRFHub(address(this), gov);
 
-        bank = new Bank(address(asset), address(0), gov, 1000, "LP", "LP", 18);
+        bank = new Bank(address(asset), gov, 1000, "LP", "LP", 18);
         registry = new BankRegistry(gov);
         vm.prank(gov);
         registry.registerBank(address(asset), address(bank));

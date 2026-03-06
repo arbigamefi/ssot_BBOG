@@ -1,0 +1,74 @@
+name: Frontend CI
+
+on:
+  pull_request:
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend-ci.yml"
+      - ".node-version"
+      - "package.json"
+  push:
+    branches: ["**"]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend-ci.yml"
+      - ".node-version"
+      - "package.json"
+  workflow_dispatch:
+
+concurrency:
+  group: frontend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-test-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.3
+          run_install: false
+
+      - name: Install
+        run: |
+          if [ -f pnpm-lock.yaml ]; then
+            pnpm install --frozen-lockfile
+          else
+            echo "::notice::pnpm-lock.yaml is missing. Run 'pnpm install' locally and commit the lockfile to enable deterministic CI."
+            pnpm install
+          fi
+
+      - name: Release snapshot sanity
+        run: pnpm check:release
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit tests
+        run: pnpm test:strict
+
+      - name: Build
+        run: pnpm build
+
+      - name: Build Storybook
+        run: pnpm storybook:build

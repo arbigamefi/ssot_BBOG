@@ -74,7 +74,6 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
 
     constructor(
         address asset_,
-        address hub_,
         address gov_,
         uint256 minLiquidityBps_,
         string memory name_,
@@ -84,7 +83,6 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         if (asset_ == address(0)) revert Errors.ZeroAddress();
         if (minLiquidityBps_ > 10_000) revert Errors.InvalidBps(minLiquidityBps_);
         asset = asset_;
-        hub = hub_;
         _assetToken = IERC20(asset_);
         minLiquidityBps = minLiquidityBps_;
         name = name_;
@@ -352,7 +350,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
 
     // -------- XP optional outflow + permissionless bucket moves --------
 
-    function claimXPAcrued(uint256 amount, address receiver) external override nonReentrant returns (uint256 claimed) {
+    function claimXPAccrued(uint256 amount, address receiver) external override nonReentrant returns (uint256 claimed) {
         if (paused()) revert RiskInPaused();
         if (receiver == address(0)) revert Errors.ZeroAddress();
 
@@ -367,7 +365,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         xpAccruedTotal -= amount;
 
         _assetToken.safeTransfer(receiver, amount);
-        emit XPAcruedClaimed(msg.sender, receiver, amount);
+        emit XPAccruedClaimed(msg.sender, receiver, amount);
         return amount;
     }
 

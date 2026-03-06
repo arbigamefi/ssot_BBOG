@@ -163,8 +163,8 @@ contract MultiAssetInvariantsAdapter is StdInvariant, Test {
         vrf.setAdapter(address(adapter));
         vm.stopPrank();
 
-        bankA = new Bank(address(assetA), address(0), gov, 1000, "LP ASTA", "LPA", 18);
-        bankB = new Bank(address(assetB), address(0), gov, 1000, "LP ASTB", "LPB", 18);
+        bankA = new Bank(address(assetA), gov, 1000, "LP ASTA", "LPA", 18);
+        bankB = new Bank(address(assetB), gov, 1000, "LP ASTB", "LPB", 18);
 
         registry = new BankRegistry(gov);
         vm.startPrank(gov);
@@ -247,7 +247,7 @@ contract MultiAssetInvariantsAdapter is StdInvariant, Test {
         selectors[6] = Handler.action_pause.selector;
         selectors[7] = Handler.action_withdraw.selector;
         selectors[8] = Handler.action_redeem.selector;
-        selectors[9] = Handler.action_claimXPAcrued.selector;
+        selectors[9] = Handler.action_claimXPAccrued.selector;
         selectors[10] = Handler.action_placeBetWhenPausedMustFail.selector;
         selectors[11] = Handler.action_optionalOutflowWhenPausedMustFail.selector;
         selectors[12] = Handler.action_finalizeReadyMustSucceed.selector;

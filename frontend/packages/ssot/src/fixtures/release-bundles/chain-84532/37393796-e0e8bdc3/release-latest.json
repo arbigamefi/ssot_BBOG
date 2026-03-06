@@ -1,0 +1,12 @@
+{
+  "blockNumber": 37393796,
+  "chainId": 84532,
+  "digest": "0xe0e8bdc3ffc7ba52c7b3409a2bb1cb46c1d8ad20b6e9631ba4f267d490a8bc21",
+  "r": "0x0e727355c7a2d9a63b839465f59a23aeb463bdd77c47540c8548ec3e7caa1dd7",
+  "s": "0x7c52ab10e33901e1b21d5ac113937e80ea9a9a277c563968c57fd17344647198",
+  "schema": "SSOT_RELEASE_DIGEST_V1",
+  "schemaHash": "0x901cfc8e1c29392cc3ebfb99f4ae8720ec67900c240caf9ad43476b0479b64ec",
+  "signer": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684",
+  "snapshotPath": "deployments/latest.json",
+  "v": 27
+}

@@ -1,7 +1,13 @@
-# Bankroll Protocol — SSOT v1.2 (Immutable, Clean-Room)
+# Bankroll Protocol — SSOT Monorepo
 
-This repository is a **clean-room rewrite** of a bankroll-backed on-chain gaming protocol, designed for
-**institution-grade, provably correct** behavior.
+This repository is a single Git project that contains both the **SSOT smart contracts** and the
+**SSOT frontend workspace**.
+
+- **Contracts**: Foundry project at the repository root
+- **Frontend**: pnpm workspace under `frontend/`
+
+The protocol itself is a **clean-room rewrite** of a bankroll-backed on-chain gaming system, designed
+for **institution-grade, provably correct** behavior.
 
 The core idea is to treat the protocol as a set of **Single Sources of Truth (SSOT)**:
 - **Per-asset Bank SSOT (Accounting Truth):** for each supported asset, `NAV = B - PF - XP` and `totalAssets() == NAV`
@@ -12,7 +18,25 @@ The core idea is to treat the protocol as a set of **Single Sources of Truth (SS
 v1.2 additionally specifies **charged VRF fees in native token** ("多退少补") and a **Chainlink VRF v2.5+ Wrapper adapter**
 integration, while preserving SSOT liveness and minimal trust surface.
 
+## Repository layout
+
+```text
+.
+├── src/                    # Foundry contracts
+├── test/                   # Foundry unit/diff/invariant/fork tests
+├── script/                 # Deploy/release tooling
+├── deployments/            # Release snapshots and generated frontend artifacts
+├── docs/                   # Protocol, audit, deploy, ops docs
+└── frontend/               # Frontend monorepo
+    ├── apps/web/           # Next.js application
+    └── packages/
+        ├── ssot/           # SDK, release loader, encoding, indexer
+        └── ui/             # Shared UI system
+```
+
 ## What’s in this repo
+
+### Contracts
 
 - `src/core/Bank.sol` — per-asset ERC4626-like vault + accounting buckets (PF/XP/R) + bet funds API (**only Hub**)
 - `src/core/Hub.sol` — bet registry SSOT (global `betId`) + VRF orchestration + permissionless `finalize/refund`
@@ -23,6 +47,14 @@ integration, while preserving SSOT liveness and minimal trust surface.
 - `test/unit/*` — unit & end-to-end tests
 - `test/diff/*` — differential tests (module-level + system-level, incl. adapter mode)
 - `test/invariants/*` — **Executable SSOT** (Foundry invariants, incl. adapter ETH/credit invariants)
+
+### Frontend
+
+- `frontend/apps/web` — Next.js frontend application
+- `frontend/packages/ssot` — protocol SDK, encoding, release loader, indexer
+- `frontend/packages/ui` — shared UI components, Tailwind preset, Storybook
+- `deployments/frontend-manifest-latest.json` — contract-generated manifest the frontend consumes directly
+- `deployments/golden-vectors-latest.json` — exact-hex vectors used to verify frontend encoders
 
 ## Documentation
 
@@ -43,15 +75,40 @@ Start here:
 - Ops alert rules: `docs/ops/alerts.md`
 - Ops incident templates: `docs/ops/incident-templates.md`
 - Ops runbooks: `docs/ops/runbooks/README.md`
+- Frontend monorepo docs: `frontend/docs/frontend/*`
 
 ## Quickstart
 
-Prerequisites: Foundry.
+Prerequisites:
+
+- Foundry
+- Node.js 20
+- pnpm 9
+
+### Contracts
 
 ```bash
 make deps
 make test
 ```
+
+### Frontend
+
+```bash
+make frontend-install
+make frontend-dev
+```
+
+### Unified root commands
+
+```bash
+pnpm run setup
+pnpm run contracts:test
+pnpm run frontend:build
+pnpm run check
+```
+
+`make` is the contract-first entrypoint. `pnpm run ...` is the repo-level task runner entrypoint.
 
 Run invariants only:
 ```bash
@@ -63,6 +120,11 @@ Run adapter-mode gates only:
 forge test --match-path "test/diff/StatefulSystemDiffAdapter.t.sol" -vvv
 forge test --match-path "test/invariants/InvariantsAdapter.t.sol" -vvv
 ```
+
+## Frontend release artifacts
+
+- Frontend artifact contract: `docs/frontend/README.md`
+- Sync local frontend snapshot: `pnpm -C frontend ssot:sync -- --from ../path-to-release`
 
 ## Real-network readiness (Milestone 2.5)
 

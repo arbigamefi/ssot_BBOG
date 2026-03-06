@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Theme tokens — swap this import to re-brand the entire UI. */
+@import "../themes/default.css";
+
+* {
+  border-color: hsl(var(--border));
+}
+
+body {
+  @apply bg-background text-foreground;
+}

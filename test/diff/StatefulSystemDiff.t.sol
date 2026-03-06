@@ -131,8 +131,8 @@ address internal anyone = address(0xF00D);
         _postConfigureVRFAdapter(gov);
         vm.stopPrank();
 
-        bankA = new Bank(address(assetA), address(0), gov, 1000, "LP Share ASTA", "LPA", 18);
-        bankB = new Bank(address(assetB), address(0), gov, 1000, "LP Share ASTB", "LPB", 18);
+        bankA = new Bank(address(assetA), gov, 1000, "LP Share ASTA", "LPA", 18);
+        bankB = new Bank(address(assetB), gov, 1000, "LP Share ASTB", "LPB", 18);
 
         registry = new BankRegistry(gov);
         vm.startPrank(gov);
