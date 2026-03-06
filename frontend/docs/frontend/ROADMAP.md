@@ -2,6 +2,9 @@
 
 This roadmap is intentionally written like a release plan with explicit gates (similar to contract release gates).
 
+Companion execution document:
+- `docs/frontend/ACTION-PLAN-UI-PRODUCTIZATION.md`
+
 ## Gate-0 — Interface Freeze (Docs)
 **Goal**: Freeze public interfaces before feature coding.
 
@@ -106,7 +109,7 @@ Milestone D is executed as a sequence of gated sub-milestones (D0–D6). Each su
 **Deliverables**
 - SPEC additions: BetPanel stepper contract, reconcile contract, allowance policy, forms/units validation
 - ADRs: 022–025
-- Page specs updated: Games, Bets, Liquidity, Referral, Account
+- Page specs updated: Games, Bets, Liquidity, Claims, Referral, Account
 
 **Exit Criteria**
 - No open unknowns in: stepper states, reconcile algorithm, approval policy, validation rules

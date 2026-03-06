@@ -1,188 +1,511 @@
 "use client";
 
-import React from "react";
+import * as React from "react";
 import Link from "next/link";
-import { motion, Variants } from "framer-motion";
-import { Button, Card, CardContent } from "@ssot/ui";
+import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import type { Address } from "@ssot/ssot/sdk";
+import type { BetRow } from "@ssot/ssot/indexer";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  DataTable,
+  ErrorCallout,
+  PageHeader,
+  ReleaseBadge,
+  Skeleton,
+  StatCard,
+  StatusBadge,
+  type BetStatus,
+  type DataTableColumn,
+} from "@ssot/ui";
 
-// Framer Motion Animation Variants
-const containerVariants: Variants = {
-  hidden: { opacity: 1 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1 },
-  },
+import { PageTransition } from "../components/PageTransition";
+import { useRelease } from "../ssot/release/ReleaseProvider";
+import { useSSOTSDK } from "../ssot/sdk";
+import { useSSOTRuntime } from "../ssot/runtime";
+import { useBets } from "../features/bets/useBets";
+import { useIndexer } from "../features/ops/useIndexer";
+import { formatUnits } from "../features/betting/model/units";
+
+type AssetOverview = {
+  address: Address;
+  bank: Address;
+  symbol: string;
+  decimals: number;
+  totalAssets: bigint;
+  totalReserved: bigint;
+  freeLiquidity: bigint;
+  protocolFeesPayable?: bigint;
+  externalPayablesTotal?: bigint;
+  minLiquidityBps?: number;
+  updatedAtBlock?: bigint;
 };
 
-const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } },
-};
+function shortHex(value?: string) {
+  if (!value) return "—";
+  if (value.length <= 12) return value;
+  return `${value.slice(0, 6)}…${value.slice(-4)}`;
+}
 
-export default function HomePage() {
+function formatCount(value: number) {
+  return new Intl.NumberFormat("en-US").format(value);
+}
+
+function formatTokenAmount(value: bigint | undefined, decimals: number, symbol?: string, maxFractionDigits = 2) {
+  if (value == null) return "—";
+  const raw = formatUnits(value, decimals);
+  const neg = raw.startsWith("-");
+  const normalized = neg ? raw.slice(1) : raw;
+  const [intPart = "0", fracPart = ""] = normalized.split(".");
+  const integer = BigInt(intPart || "0").toLocaleString("en-US");
+  const fraction = fracPart.slice(0, maxFractionDigits).replace(/0+$/, "");
+  const body = `${neg ? "-" : ""}${integer}${fraction ? `.${fraction}` : ""}`;
+  return symbol ? `${body} ${symbol}` : body;
+}
+
+function formatBps(value?: number) {
+  if (value == null) return "—";
+  return `${value.toLocaleString("en-US")} bps`;
+}
+
+function formatRelativeTime(timestamp?: number) {
+  if (!timestamp) return "—";
+  const deltaMs = Math.max(0, Date.now() - timestamp);
+  const minutes = Math.floor(deltaMs / 60_000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+function mapBetState(state?: string): BetStatus {
+  if (!state) return "pending";
+  const normalized = state.toLowerCase();
+  if (normalized.includes("won") || normalized.includes("win")) return "won";
+  if (normalized.includes("lost") || normalized.includes("lose")) return "lost";
+  if (normalized.includes("final") || normalized.includes("settled") || normalized.includes("resolved")) {
+    return "settled";
+  }
+  if (normalized.includes("placed")) return "placed";
+  if (normalized.includes("refund")) return "cancelled";
+  if (normalized.includes("fail")) return "failed";
+  return "pending";
+}
+
+function AssetOverviewCard({ item }: { item: AssetOverview }) {
   return (
-    <div className="w-full text-slate-200">
-      {/* 🚀 HERO SECTION */}
-      <section className="relative min-h-[85vh] flex flex-col items-center justify-center text-center px-4">
-        {/* Background Grids for Hero */}
-        <div className="absolute inset-0 pointer-events-none bg-[url('/grid.svg')] bg-center opacity-10 [mask-image:radial-gradient(ellipse_at_center,black_20%,transparent)]" aria-hidden="true" />
-
-        <motion.div
-          className="relative z-10 max-w-5xl mx-auto"
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          <motion.div variants={itemVariants} className="mb-4 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-medium tracking-wide">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
-            Fully On-Chain Casino
-          </motion.div>
-
-          <motion.h1
-            variants={itemVariants}
-            className="text-5xl md:text-7xl font-black tracking-tight mb-6 text-transparent bg-clip-text bg-gradient-to-br from-white via-slate-200 to-slate-500"
-          >
-            VERIFIABLY FAIR <br className="hidden md:block" />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">ON-CHAIN GAMING</span>
-          </motion.h1>
-
-          <motion.p variants={itemVariants} className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed">
-            Experience the next generation of decentralized betting. No deposits, non-custodial execution, and 100% transparent verifiable randomness powered by Chainlink VRF.
-          </motion.p>
-
-          <motion.div variants={itemVariants} className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/games">
-              <Button size="lg" className="w-full sm:w-auto px-8 py-6 text-lg font-bold bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-400 hover:to-green-500 shadow-xl shadow-emerald-900/40 rounded-xl transition-all hover:scale-105 active:scale-95">
-                Start Playing
-              </Button>
-            </Link>
-            <Link href="/liquidity">
-              <Button size="lg" variant="outline" className="w-full sm:w-auto px-8 py-6 text-lg font-bold border-slate-700 bg-slate-900/50 hover:bg-slate-800 text-white shadow-xl rounded-xl transition-all hover:scale-105 active:scale-95 backdrop-blur-md">
-                Earn as House (Provide LP)
-              </Button>
-            </Link>
-          </motion.div>
-        </motion.div>
-      </section>
-
-      {/* 📊 KPI RIBBON SECTION */}
-      <section className="relative z-20 max-w-6xl mx-auto px-4 -mt-16 sm:-mt-24 mb-24">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6, duration: 0.6 }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-4"
-        >
-          {/* KPI Cards using dark glassmorphism */}
-          {[
-            { label: "Total Wagered", value: "$4.2M+", icon: "💰" },
-            { label: "Total Bets", value: "1.8M+", icon: "🎯" },
-            { label: "House Edge", value: "1.00%", icon: "🏦" },
-            { label: "Provably Fair", value: "Yes", icon: "🔗" }
-          ].map((stat, idx) => (
-            <Card key={idx} className="bg-slate-900/80 border-slate-800 backdrop-blur-xl shadow-2xl">
-              <CardContent className="p-6">
-                <div className="text-3xl mb-2 opacity-80">{stat.icon}</div>
-                <div className="text-slate-400 text-sm font-medium uppercase tracking-wider mb-1">{stat.label}</div>
-                <div className="text-2xl md:text-3xl font-bold text-white tabular-nums tracking-tight">{stat.value}</div>
-              </CardContent>
-            </Card>
-          ))}
-        </motion.div>
-      </section>
-
-      {/* 🎲 FEATURED GAMES SECTION */}
-      <section className="py-20 border-t border-slate-800/50 relative">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-5xl font-black mb-4">Featured <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">Games</span></h2>
-            <p className="text-slate-400 text-lg">Instant payouts. Direct from your wallet.</p>
+    <Card className="border-slate-800 bg-slate-900/50 backdrop-blur-xl shadow-xl shadow-slate-950/40">
+      <CardHeader className="border-b border-slate-800/70 pb-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <CardTitle className="text-xl font-black tracking-tight text-white">{item.symbol}</CardTitle>
+            <CardDescription className="mt-1 text-slate-400">
+              Asset {shortHex(item.address)} · Bank {shortHex(item.bank)}
+            </CardDescription>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Game Cards */}
-            {[
-              { id: 'dice', name: 'Dice', desc: 'Classic over/under with 99% RTP', color: 'from-blue-500/20 to-blue-900/20', icon: '🎲' },
-              { id: 'cointoss', name: 'Coin Toss', desc: 'Heads or tails? Double or nothing.', color: 'from-amber-500/20 to-amber-900/20', icon: '🪙' },
-              { id: 'roulette', name: 'Roulette', desc: 'European roulette on-chain', color: 'from-rose-500/20 to-rose-900/20', icon: '🎯' },
-              { id: 'keno', name: 'Keno', desc: 'Pick your lucky numbers', color: 'from-purple-500/20 to-purple-900/20', icon: '🔢' }
-            ].map((game) => (
-              <Link key={game.id} href={`/games/${game.id}`}>
-                <Card className={`group cursor-pointer relative overflow-hidden bg-slate-900/40 border-slate-800 hover:border-slate-600 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-cyan-900/20 h-full`}>
-                  <div className={`absolute inset-0 bg-gradient-to-b ${game.color} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
-                  <CardContent className="p-8 relative z-10 flex flex-col items-center text-center">
-                    <div className="text-6xl mb-6 transform group-hover:scale-110 group-hover:rotate-12 transition-transform duration-300 drop-shadow-2xl">
-                      {game.icon}
-                    </div>
-                    <h3 className="text-2xl font-bold text-white mb-2">{game.name}</h3>
-                    <p className="text-slate-400 leading-relaxed text-sm">{game.desc}</p>
-                    <div className="mt-8 flex items-center text-emerald-400 font-semibold opacity-0 group-hover:opacity-100 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
-                      Play Now
-                      <svg className="w-5 h-5 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                      </svg>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
+          <div className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-300">
+            Live
           </div>
         </div>
-      </section>
-
-      {/* 🔴 LIVE BETS LEADERBOARD (MOCK) */}
-      <section className="py-20 mb-20">
-        <div className="max-w-5xl mx-auto px-4">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-bold flex items-center gap-2">
-              <span className="relative flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
-              </span>
-              Live Bets
-            </h2>
-          </div>
-
-          <div className="bg-slate-900/50 border border-slate-800 rounded-2xl overflow-hidden backdrop-blur-sm">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-800/50 text-slate-400 text-sm">
-                    <th className="p-4 font-medium uppercase tracking-wider">Game</th>
-                    <th className="p-4 font-medium uppercase tracking-wider">Player</th>
-                    <th className="p-4 font-medium uppercase tracking-wider">Time</th>
-                    <th className="p-4 font-medium uppercase tracking-widertext-right">Wager</th>
-                    <th className="p-4 font-medium uppercase tracking-wider text-right">Result</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800/50">
-                  {[
-                    { game: "Dice", user: "0x12...4f9A", time: "1 min ago", wager: "50 USDC", result: "+100 USDC", win: true },
-                    { game: "Roulette", user: "0x89...2B11", time: "3 mins ago", wager: "10 USDC", result: "-10 USDC", win: false },
-                    { game: "Coin Toss", user: "0x33...Cc90", time: "5 mins ago", wager: "25 USDC", result: "+50 USDC", win: true },
-                    { game: "Dice", user: "0x4A...7d2f", time: "7 mins ago", wager: "100 USDC", result: "-100 USDC", win: false },
-                    { game: "Keno", user: "0x91...Ef00", time: "12 mins ago", wager: "5 USDC", result: "+125 USDC", win: true },
-                  ].map((log, i) => (
-                    <tr key={i} className="hover:bg-slate-800/30 transition-colors">
-                      <td className="p-4 font-medium text-white">{log.game}</td>
-                      <td className="p-4 text-slate-400 text-sm font-mono">{log.user}</td>
-                      <td className="p-4 text-slate-500 text-sm">{log.time}</td>
-                      <td className="p-4 text-white font-medium text-right">{log.wager}</td>
-                      <td className={`p-4 font-bold text-right ${log.win ? "text-emerald-400" : "text-slate-500"}`}>
-                        {log.result}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+      </CardHeader>
+      <CardContent className="grid gap-4 p-6 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="space-y-1">
+          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">NAV</div>
+          <div className="text-lg font-bold text-white tabular-nums">
+            {formatTokenAmount(item.totalAssets, item.decimals, item.symbol)}
           </div>
         </div>
-      </section>
-    </div>
+        <div className="space-y-1">
+          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Reserved</div>
+          <div className="text-lg font-bold text-white tabular-nums">
+            {formatTokenAmount(item.totalReserved, item.decimals, item.symbol)}
+          </div>
+        </div>
+        <div className="space-y-1">
+          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Free Liquidity</div>
+          <div className="text-lg font-bold text-emerald-300 tabular-nums">
+            {formatTokenAmount(item.freeLiquidity, item.decimals, item.symbol)}
+          </div>
+        </div>
+        <div className="space-y-1">
+          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Protocol Fees</div>
+          <div className="text-sm font-semibold text-slate-200 tabular-nums">
+            {formatTokenAmount(item.protocolFeesPayable, item.decimals, item.symbol)}
+          </div>
+        </div>
+        <div className="space-y-1">
+          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">External Payables</div>
+          <div className="text-sm font-semibold text-slate-200 tabular-nums">
+            {formatTokenAmount(item.externalPayablesTotal, item.decimals, item.symbol)}
+          </div>
+        </div>
+        <div className="space-y-1">
+          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Min Liquidity</div>
+          <div className="text-sm font-semibold text-slate-200">
+            {formatBps(item.minLiquidityBps)}
+          </div>
+          <div className="text-xs text-slate-500">
+            Updated block {item.updatedAtBlock?.toString() ?? "—"}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
+function AssetOverviewSkeleton() {
+  return (
+    <Card className="border-slate-800 bg-slate-900/50 backdrop-blur-xl shadow-xl shadow-slate-950/40">
+      <CardHeader className="border-b border-slate-800/70 pb-4">
+        <Skeleton className="h-7 w-28 bg-slate-800" />
+        <Skeleton className="mt-2 h-4 w-56 bg-slate-800" />
+      </CardHeader>
+      <CardContent className="grid gap-4 p-6 sm:grid-cols-2 xl:grid-cols-3">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <div key={index} className="space-y-2">
+            <Skeleton className="h-3 w-24 bg-slate-800" />
+            <Skeleton className="h-6 w-36 bg-slate-800" />
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function HomePage() {
+  const router = useRouter();
+  const { release, readOnly, readOnlyReason } = useRelease();
+  const { sdk, ready } = useSSOTSDK();
+  const { db } = useSSOTRuntime();
+  const { indexerStatus, syncNow } = useIndexer();
+  const { data: latestBets = [], isLoading: betsLoading } = useBets(6);
+
+  const { data: indexedBetCount = 0 } = useQuery({
+    queryKey: ["ssot", "home", "bet-count", release?.chainId],
+    enabled: Boolean(db && release),
+    queryFn: async () => {
+      if (!db || !release) return 0;
+      return await db.bets.where("chainId").equals(release.chainId).count();
+    },
+    refetchInterval: 5_000,
+  });
+
+  const {
+    data: assetOverviews = [],
+    isLoading: overviewLoading,
+    error: overviewError,
+  } = useQuery({
+    queryKey: ["ssot", "home", "asset-overview", release?.releaseDigest],
+    enabled: Boolean(release && sdk && ready),
+    queryFn: async (): Promise<AssetOverview[]> => {
+      if (!release || !sdk) return [];
+      return await Promise.all(
+        release.assets.map(async (asset) => {
+          const snapshot = await sdk.bank.getSnapshot(asset.address as Address);
+          return {
+            address: asset.address as Address,
+            bank: asset.bank as Address,
+            symbol: asset.symbol,
+            decimals: asset.decimals,
+            totalAssets: snapshot.totalAssets,
+            totalReserved: snapshot.totalReserved,
+            freeLiquidity: snapshot.totalAssets - snapshot.totalReserved,
+            protocolFeesPayable: snapshot.protocolFeesPayable,
+            externalPayablesTotal: snapshot.externalPayablesTotal,
+            minLiquidityBps: snapshot.minLiquidityBps,
+            updatedAtBlock: snapshot.updatedAtBlock,
+          };
+        })
+      );
+    },
+    refetchInterval: 15_000,
+  });
+
+  const gameLabelById = React.useMemo(() => {
+    const map = new Map<string, string>();
+    for (const game of release?.gamesMeta ?? []) {
+      map.set(game.gameId.toLowerCase(), game.label);
+    }
+    return map;
+  }, [release?.gamesMeta]);
+
+  const assetLabelByAddress = React.useMemo(() => {
+    const map = new Map<string, string>();
+    for (const asset of release?.assets ?? []) {
+      map.set(asset.address.toLowerCase(), asset.symbol);
+    }
+    return map;
+  }, [release?.assets]);
+
+  const latestBetColumns = React.useMemo<DataTableColumn<BetRow>[]>(
+    () => [
+      {
+        key: "betId",
+        header: "Bet ID",
+        render: (row) => <span className="font-mono text-white">{row.betId}</span>,
+      },
+      {
+        key: "game",
+        header: "Game",
+        render: (row) => (
+          <span className="text-slate-200">
+            {row.gameId ? gameLabelById.get(row.gameId.toLowerCase()) ?? shortHex(row.gameId) : "—"}
+          </span>
+        ),
+      },
+      {
+        key: "status",
+        header: "Status",
+        render: (row) => <StatusBadge status={mapBetState(row.state)} label={row.state} />,
+      },
+      {
+        key: "asset",
+        header: "Asset",
+        render: (row) => <span className="text-slate-300">{row.asset ? assetLabelByAddress.get(row.asset.toLowerCase()) ?? shortHex(row.asset) : "—"}</span>,
+      },
+      {
+        key: "player",
+        header: "Player",
+        render: (row) => <span className="font-mono text-slate-400">{shortHex(row.player)}</span>,
+      },
+      {
+        key: "updated",
+        header: "Updated",
+        render: (row) => <span className="text-slate-400">{formatRelativeTime(row.updatedAt)}</span>,
+      },
+      {
+        key: "block",
+        header: "Block",
+        render: (row) => <span className="font-mono text-slate-500">{row.updatedBlock}</span>,
+        cellClassName: "text-right",
+        headerClassName: "text-right",
+      },
+    ],
+    [assetLabelByAddress, gameLabelById]
+  );
+
+  if (!release) {
+    return (
+      <PageTransition pageKey="home-empty">
+        <Card className="border-slate-800 bg-slate-900/60">
+          <CardHeader>
+            <CardTitle className="text-white">Protocol Overview</CardTitle>
+            <CardDescription className="text-slate-400">
+              {readOnlyReason ?? "No embedded release is available for this chain."}
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </PageTransition>
+    );
+  }
+
+  const lagBlocks = indexerStatus?.lagBlocks;
+  const confirmations = indexerStatus?.config?.confirmations;
+  const lagTrend =
+    typeof lagBlocks !== "number" || typeof confirmations !== "number"
+      ? "neutral"
+      : lagBlocks <= confirmations
+        ? "up"
+        : lagBlocks <= confirmations * 3
+          ? "neutral"
+          : "down";
+
+  return (
+    <PageTransition pageKey="home-overview">
+      <div className="space-y-10">
+        <section className="relative overflow-hidden rounded-[2rem] border border-slate-800 bg-slate-900/60 px-6 py-8 shadow-2xl shadow-slate-950/40 backdrop-blur-xl sm:px-8 lg:px-10">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.14),transparent_32%)]" />
+          <div className="relative grid gap-8 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,0.9fr)]">
+            <div className="space-y-6">
+              <ReleaseBadge
+                networkName={release.name}
+                hubShort={shortHex(release.contracts.hub)}
+                digestShort={release.releaseDigest.slice(0, 8)}
+              />
+
+              <div className="space-y-4">
+                <div className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">
+                  Protocol Overview
+                </div>
+                <h1 className="max-w-4xl text-4xl font-black tracking-tight text-white md:text-6xl">
+                  Live protocol state, not marketing placeholders.
+                </h1>
+                <p className="max-w-2xl text-base leading-7 text-slate-300 md:text-lg">
+                  This dashboard is driven by the embedded release, live Bank snapshots, and event-derived facts from the local indexer.
+                  It is the fastest path to verify which games, assets, and bets are actually available on the connected network.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <Button asChild size="lg">
+                  <Link href="/games">Play Games</Link>
+                </Button>
+                <Button asChild variant="outline" size="lg">
+                  <Link href="/liquidity">Review Liquidity</Link>
+                </Button>
+                <Button asChild variant="glass" size="lg">
+                  <Link href="/bets">Inspect Bets</Link>
+                </Button>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-slate-800/80 bg-slate-950/50 p-4">
+                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Release Digest</div>
+                  <div className="mt-2 break-all font-mono text-sm text-slate-200">{release.releaseDigest}</div>
+                </div>
+                <div className="rounded-2xl border border-slate-800/80 bg-slate-950/50 p-4">
+                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Runtime Mode</div>
+                  <div className="mt-2 text-sm font-medium text-slate-200">
+                    {readOnly ? `Read-only${readOnlyReason ? ` · ${readOnlyReason}` : ""}` : "Read / write enabled"}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-2">
+              <StatCard
+                label="Live Games"
+                value={formatCount(release.gamesMeta?.length ?? Object.keys(release.games).length)}
+                subValue="release-driven"
+              />
+              <StatCard
+                label="Supported Assets"
+                value={formatCount(release.assets.length)}
+                subValue="bank-backed"
+              />
+              <StatCard
+                label="Indexed Bets"
+                value={formatCount(indexedBetCount)}
+                subValue={betsLoading ? "syncing" : "event-derived"}
+              />
+              <StatCard
+                label="Indexer Lag"
+                value={typeof lagBlocks === "number" ? `${lagBlocks}` : "—"}
+                subValue={
+                  indexerStatus?.lastSyncedBlock != null
+                    ? `synced ${indexerStatus.lastSyncedBlock}`
+                    : "waiting for sync"
+                }
+                trend={lagTrend}
+              />
+            </div>
+          </div>
+        </section>
+
+        <section className="space-y-6">
+          <PageHeader
+            title="Asset Snapshots"
+            description="Per-asset Bank state from live SDK reads. Values are never aggregated across assets, so multi-asset semantics remain intact."
+            actions={
+              <Button variant="outline" size="sm" onClick={() => void syncNow()} className="border-slate-700 text-slate-300 hover:text-white">
+                Sync Facts
+              </Button>
+            }
+          />
+
+          {overviewError ? (
+            <ErrorCallout
+              title="Snapshot load failed"
+              message={(overviewError as Error).message}
+              details="The Home overview could not read Bank snapshots for the active release."
+            />
+          ) : null}
+
+          <div className="grid gap-6">
+            {overviewLoading
+              ? release.assets.map((asset) => <AssetOverviewSkeleton key={asset.address} />)
+              : assetOverviews.map((item) => <AssetOverviewCard key={item.address} item={item} />)}
+          </div>
+        </section>
+
+        <section className="space-y-6">
+          <PageHeader
+            title="Latest Bets"
+            description="Recent event-derived bets from the local facts store. This table mirrors indexed chain activity and links straight into bet detail."
+            actions={
+              <Button asChild variant="outline" size="sm" className="border-slate-700 text-slate-300 hover:text-white">
+                <Link href="/bets">Open Full Ledger</Link>
+              </Button>
+            }
+          />
+
+          <DataTable
+            columns={latestBetColumns}
+            data={latestBets}
+            loading={betsLoading}
+            emptyMessage="No indexed bets yet. Sync the indexer or place a bet to start the local audit trail."
+            rowKey={(row) => row.id}
+            onRowClick={(row) => router.push(`/bets/${row.betId}`)}
+          />
+        </section>
+
+        <section className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+          <Card className="border-slate-800 bg-slate-900/50 backdrop-blur-xl shadow-xl shadow-slate-950/40">
+            <CardHeader>
+              <CardTitle className="text-white">Operational Signals</CardTitle>
+              <CardDescription className="text-slate-400">
+                Home only surfaces minimal signals. The full diagnostics view remains on the Ops route.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-2xl border border-slate-800/70 bg-slate-950/50 p-4">
+                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Safe Head</div>
+                <div className="mt-2 font-mono text-lg text-slate-200">{indexerStatus?.safeHeadBlock ?? "—"}</div>
+              </div>
+              <div className="rounded-2xl border border-slate-800/70 bg-slate-950/50 p-4">
+                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Confirmations</div>
+                <div className="mt-2 font-mono text-lg text-slate-200">{indexerStatus?.config?.confirmations ?? "—"}</div>
+              </div>
+              <div className="rounded-2xl border border-slate-800/70 bg-slate-950/50 p-4">
+                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Polling</div>
+                <div className="mt-2 font-mono text-lg text-slate-200">
+                  {typeof indexerStatus?.config?.pollIntervalMs === "number"
+                    ? `${Math.round(indexerStatus.config.pollIntervalMs / 1000)}s`
+                    : "—"}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-slate-800/70 bg-slate-950/50 p-4">
+                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Last Run</div>
+                <div className="mt-2 text-lg text-slate-200">
+                  {formatRelativeTime(indexerStatus?.lastRunAt)}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-800 bg-slate-900/50 backdrop-blur-xl shadow-xl shadow-slate-950/40">
+            <CardHeader>
+              <CardTitle className="text-white">Resources</CardTitle>
+              <CardDescription className="text-slate-400">
+                Repo-native references for release identity, protocol documentation, and operator visibility.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-2 text-sm text-slate-300">
+                <Link href="/games" className="rounded-xl border border-slate-800 px-4 py-3 transition-colors hover:border-slate-700 hover:bg-slate-800/40">
+                  Explore live games
+                </Link>
+                <Link href="/liquidity" className="rounded-xl border border-slate-800 px-4 py-3 transition-colors hover:border-slate-700 hover:bg-slate-800/40">
+                  Review Bank liquidity
+                </Link>
+                <Link href="/ops" className="rounded-xl border border-slate-800 px-4 py-3 transition-colors hover:border-slate-700 hover:bg-slate-800/40">
+                  Open Ops diagnostics
+                </Link>
+              </div>
+              <div className="rounded-2xl border border-slate-800/70 bg-slate-950/50 p-4 text-sm text-slate-400">
+                Protocol interactions are release-bound and event-auditable. If displayed values drift from chain truth, the issue belongs in the release, SDK, or indexer layer and should be investigated there rather than patched in-page.
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+      </div>
+    </PageTransition>
+  );
+}

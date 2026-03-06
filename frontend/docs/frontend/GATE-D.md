@@ -6,7 +6,7 @@
 进入任何功能实现（D1+）之前必须满足：
 - SPEC 已补齐并冻结：BetPanel stepper contract / reconcile contract / allowance policy / forms & units validation
 - ADR 已接受：ADR-022..ADR-025
-- Page specs 更新完成：Games / Bets / Liquidity / Referral / Account
+- Page specs 更新完成：Games / Bets / Liquidity / Claims / Referral / Account
 - 代码边界 lint 规则保持：feature 不得 import wagmi/viem/ABI
 
 **Exit Criteria**

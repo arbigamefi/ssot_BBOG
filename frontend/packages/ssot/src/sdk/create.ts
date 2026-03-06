@@ -610,6 +610,33 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
       return { user, shares, assetsEquivalent };
     },
 
+    async getAssetBalance(asset: AddressT, user: AddressT): Promise<bigint> {
+      return (await publicClient.readContract({
+        address: asset as Address,
+        abi: ERC20_ABI,
+        functionName: "balanceOf",
+        args: [user]
+      })) as bigint;
+    },
+
+    async getAllowance(asset: AddressT, owner: AddressT): Promise<bigint> {
+      const bankAddr =
+        (release.assets.find((item) => item.address.toLowerCase() === asset.toLowerCase())?.bank as Address | undefined) ??
+        ((await publicClient.readContract({
+          address: hubAddress,
+          abi: HUB_ABI,
+          functionName: "bankFor",
+          args: [asset]
+        })) as Address);
+
+      return (await publicClient.readContract({
+        address: asset as Address,
+        abi: ERC20_ABI,
+        functionName: "allowance",
+        args: [owner, bankAddr]
+      })) as bigint;
+    },
+
     async deposit(assets: bigint, receiver: AddressT): Promise<TxResult & { shares?: bigint }> {
       const walletReq = requireWallet();
       if ("error" in walletReq) return { txHash: "0x0" as Hex, ok: false, error: walletReq.error };

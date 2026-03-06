@@ -36,6 +36,7 @@ frontend/**/*.tsbuildinfo
 .idea/
 .vscode/settings.json
 .vscode/launch.json
+.claude/
 *.swp
 *.swo
 *~

@@ -127,6 +127,8 @@ describe("createSSOTSDK", () => {
       expect(typeof sdk.bank.maxRedeem).toBe("function");
       expect(typeof sdk.bank.getSnapshot).toBe("function");
       expect(typeof sdk.bank.getPosition).toBe("function");
+      expect(typeof sdk.bank.getAssetBalance).toBe("function");
+      expect(typeof sdk.bank.getAllowance).toBe("function");
       expect(typeof sdk.bank.playerTurnover).toBe("function");
     });
   });
@@ -201,6 +203,26 @@ describe("createSSOTSDK", () => {
 
       const result = await sdk.bank.maxRedeem(ACCOUNT);
       expect(result).toBe(500000n);
+    });
+  });
+
+  describe("bank.getAssetBalance", () => {
+    it("reads ERC20 balance from the asset contract", async () => {
+      pub.readContract.mockResolvedValueOnce(1234567n);
+
+      const result = await sdk.bank.getAssetBalance(TEST_RELEASE.assets[0]!.address as Address, ACCOUNT);
+      expect(result).toBe(1234567n);
+      expect(pub.readContract).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe("bank.getAllowance", () => {
+    it("reads allowance against the release bank spender", async () => {
+      pub.readContract.mockResolvedValueOnce(7654321n);
+
+      const result = await sdk.bank.getAllowance(TEST_RELEASE.assets[0]!.address as Address, ACCOUNT);
+      expect(result).toBe(7654321n);
+      expect(pub.readContract).toHaveBeenCalledOnce();
     });
   });
 

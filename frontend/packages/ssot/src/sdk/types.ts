@@ -130,6 +130,8 @@ export interface SSOTHubAPI {
 export interface SSOTBankAPI {
   getSnapshot(asset: Address): Promise<DomainBankSnapshot>;
   getPosition(asset: Address, user: Address): Promise<DomainBankPosition>;
+  getAssetBalance(asset: Address, user: Address): Promise<bigint>;
+  getAllowance(asset: Address, owner: Address): Promise<bigint>;
 
   // ERC4626-like vault operations
   deposit(assets: bigint, receiver: Address): Promise<TxResult & { shares?: bigint }>;

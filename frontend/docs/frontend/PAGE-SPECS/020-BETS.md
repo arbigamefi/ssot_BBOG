@@ -7,10 +7,17 @@
 ## Purpose
 Provide an auditable, event-driven bet history that mirrors protocol truth.
 
-## Data Sources
-- Indexer (Hub events) as the primary source
-- `hub.getBet(betId)` MAY be used for reconcile and detail completeness
-- `decodeGameParams(game, bytes)` for params display
+## Truth Sources
+- Indexer (Hub events):
+  - primary source for bet history
+  - primary source for lifecycle transitions
+- SDK read helpers:
+  - `sdk.hub.getBet(betId)` for reconcile and detail completeness
+- Release artifact + encoder/decoder registry:
+  - game identity
+  - params decode/display
+- Local tx journal:
+  - txHash linkage and local user action context
 
 ## List Page
 ### Modules
@@ -43,3 +50,4 @@ Provide an auditable, event-driven bet history that mirrors protocol truth.
 ## Acceptance Criteria
 - All state transitions come from events
 - Actions use standardized tx stepper
+- The list/detail views declare which fields are event-derived vs read-derived

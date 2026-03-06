@@ -62,6 +62,12 @@ The page MUST resolve the active game **only** from the embedded release:
 
 > **Never** hardcode `gameId` or module addresses in UI.
 
+## Presentation Metadata (MUST)
+- Icons, short marketing copy, and other decorative UI metadata MAY come from a governed frontend map keyed by `slug`.
+- Presentation metadata MUST NOT override release truth for `gameId`, `module`, `paramsEncoding`, supported assets, or route validity.
+- RTP, odds, or payout claims MUST NOT be hardcoded unless they come from a canonical protocol source for the active release.
+- If a slug has no governed presentation entry, the page MUST fall back to a generic release-routed presentation instead of inventing protocol facts.
+
 ## Inputs Spec (Shared, MUST)
 
 ### Asset selector
