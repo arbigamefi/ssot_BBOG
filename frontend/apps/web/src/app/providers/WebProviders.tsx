@@ -38,7 +38,7 @@ const chains = (supportedChains.length > 0 ? supportedChains : [baseSepolia]) as
 const transports = Object.fromEntries(chains.map((c: any) => [c.id, http()]));
 
 const wagmiConfig = getDefaultConfig({
-  appName: "SSOT v2",
+  appName: "ArbiGameFi",
   // WalletConnect project ID — optional for dev, required for production WalletConnect.
   projectId: process.env.NEXT_PUBLIC_WC_PROJECT_ID ?? "00000000000000000000000000000000",
   chains,

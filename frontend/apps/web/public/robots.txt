@@ -1,5 +1,5 @@
-# SSOT v2 Frontend
+# ArbiGameFi Frontend
 User-agent: *
 Allow: /
 
-Sitemap: https://ssot.gg/sitemap.xml
+Sitemap: https://arbigamefi.com/sitemap.xml

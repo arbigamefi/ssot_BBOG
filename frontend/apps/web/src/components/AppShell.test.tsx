@@ -42,14 +42,14 @@ vi.mock("@ssot/ui", () => ({
 
 describe("AppShell", () => {
   afterEach(() => cleanup());
-  it("renders the SSOT brand link", () => {
+  it("renders the ArbiGameFi brand link", () => {
     render(
       <AppShell>
         <div>content</div>
       </AppShell>
     );
-    expect(screen.getByText("SSOT")).toBeDefined();
-    expect(screen.getByText("Casino Lobby")).toBeDefined();
+    expect(screen.getByText("ArbiGameFi")).toBeDefined();
+    expect(screen.getByText("Game Rooms")).toBeDefined();
   });
 
   it("renders all 8 nav links", () => {

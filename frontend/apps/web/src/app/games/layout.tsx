@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Games — SSOT v2",
+  title: "Games",
   description: "Browse available on-chain games",
 };
 

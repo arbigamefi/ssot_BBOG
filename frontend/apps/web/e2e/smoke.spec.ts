@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 /**
- * Smoke tests for SSOT v2 web app.
+ * Smoke tests for the ArbiGameFi web app.
  *
  * These tests verify basic navigation and page rendering.
  * They do NOT require a wallet connection or on-chain state.
@@ -9,9 +9,9 @@ import { test, expect } from "@playwright/test";
  */
 
 test.describe("Smoke tests", () => {
-  test("homepage loads with SSOT v2 brand", async ({ page }) => {
+  test("homepage loads with ArbiGameFi brand", async ({ page }) => {
     await page.goto("/");
-    await expect(page.locator("text=SSOT v2")).toBeVisible();
+    await expect(page.locator("text=ArbiGameFi")).toBeVisible();
   });
 
   test("navigation links are visible on desktop", async ({ page }) => {
@@ -50,7 +50,7 @@ test.describe("Smoke tests", () => {
     await expect(page).toHaveURL(/\/bets/);
 
     // Navigate back to home
-    await page.locator("text=SSOT v2").first().click();
+    await page.locator("text=ArbiGameFi").first().click();
     await expect(page).toHaveURL("/");
   });
 

@@ -1,7 +1,7 @@
 {
-  "name": "SSOT v2",
-  "short_name": "SSOT",
-  "description": "Single Source of Truth — on-chain gaming protocol",
+  "name": "ArbiGameFi",
+  "short_name": "ArbiGameFi",
+  "description": "Non-custodial on-chain gaming platform with verifiable settlement.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#09090b",

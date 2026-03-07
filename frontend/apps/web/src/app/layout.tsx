@@ -10,23 +10,27 @@ import { Toaster } from "@ssot/ui";
 import { SiteChrome } from "../components/SiteChrome";
 
 export const metadata: Metadata = {
-  title: "SSOT v2",
-  description: "Single Source of Truth — on-chain gaming protocol",
+  metadataBase: new URL("https://arbigamefi.com"),
+  title: {
+    default: "ArbiGameFi",
+    template: "%s | ArbiGameFi"
+  },
+  description: "Non-custodial on-chain gaming platform with verifiable settlement.",
   icons: {
     icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
     apple: "/apple-touch-icon.png"
   },
   manifest: "/manifest.json",
   openGraph: {
-    title: "SSOT v2",
-    description: "Single Source of Truth — on-chain gaming protocol",
+    title: "ArbiGameFi",
+    description: "Non-custodial on-chain gaming platform with verifiable settlement.",
     type: "website",
     images: [{ url: "/og-image.png", width: 1200, height: 630 }]
   },
   twitter: {
     card: "summary_large_image",
-    title: "SSOT v2",
-    description: "Single Source of Truth — on-chain gaming protocol",
+    title: "ArbiGameFi",
+    description: "Non-custodial on-chain gaming platform with verifiable settlement.",
     images: ["/og-image.png"]
   }
 };
