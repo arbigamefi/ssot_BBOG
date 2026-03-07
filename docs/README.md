@@ -4,6 +4,12 @@
 
 - `docs/closeout/README.md` — one-page institutional handoff (proof + release + ops)
 
+## Release materials
+
+- `docs/release/ARBIGAMEFI-RELEASE-PACK.zh-CN.md` — outward-facing release pack for partners, LPs, auditors, and technical integrators
+- `docs/release/README.md` — release process and artifact model
+- `docs/release/checklist.md` — release Definition of Done and operator checklist
+
 ## Whitepaper
 
 - `docs/WHITEPAPER.zh-CN.md` — formal Chinese technical whitepaper derived from the current contract implementation
@@ -47,8 +53,6 @@ This repository is designed to be **auditable by construction**. The documentati
 ## Runbooks
 
 - [Testing & proof gates](runbooks/testing.md)
-- [Release process](release/README.md)
-- [Release checklist](release/checklist.md)
 - [Frontend artifacts](frontend/README.md)
 
 ## Ops

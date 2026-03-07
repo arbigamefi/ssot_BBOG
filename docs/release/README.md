@@ -3,6 +3,10 @@
 This repository is designed to be **auditable by construction**. A production release is defined by
 **immutable deployment artifacts**, not by a git tag alone.
 
+For an outward-facing summary built from the current canonical deployment artifacts, see:
+
+- [`ARBIGAMEFI-RELEASE-PACK.zh-CN.md`](ARBIGAMEFI-RELEASE-PACK.zh-CN.md) — partner / LP / auditor-facing release pack
+
 ## Definition of a release
 
 A release is the tuple:
