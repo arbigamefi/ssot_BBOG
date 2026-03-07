@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import type { Address } from "@ssot/ssot/sdk";
 import type { BetRow } from "@ssot/ssot/indexer";
@@ -13,16 +12,10 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  DataTable,
-  ErrorCallout,
-  GameCard,
-  PageHeader,
   ReleaseBadge,
   Skeleton,
-  StatCard,
   StatusBadge,
-  type BetStatus,
-  type DataTableColumn,
+  type BetStatus
 } from "@ssot/ui";
 
 import { PageTransition } from "../components/PageTransition";
@@ -58,7 +51,12 @@ function formatCount(value: number) {
   return new Intl.NumberFormat("en-US").format(value);
 }
 
-function formatTokenAmount(value: bigint | undefined, decimals: number, symbol?: string, maxFractionDigits = 2) {
+function formatTokenAmount(
+  value: bigint | undefined,
+  decimals: number,
+  symbol?: string,
+  maxFractionDigits = 2
+) {
   if (value == null) return "—";
   const raw = formatUnits(value, decimals);
   const neg = raw.startsWith("-");
@@ -68,11 +66,6 @@ function formatTokenAmount(value: bigint | undefined, decimals: number, symbol?:
   const fraction = fracPart.slice(0, maxFractionDigits).replace(/0+$/, "");
   const body = `${neg ? "-" : ""}${integer}${fraction ? `.${fraction}` : ""}`;
   return symbol ? `${body} ${symbol}` : body;
-}
-
-function formatBps(value?: number) {
-  if (value == null) return "—";
-  return `${value.toLocaleString("en-US")} bps`;
 }
 
 function formatRelativeTime(timestamp?: number) {
@@ -92,7 +85,11 @@ function mapBetState(state?: string): BetStatus {
   const normalized = state.toLowerCase();
   if (normalized.includes("won") || normalized.includes("win")) return "won";
   if (normalized.includes("lost") || normalized.includes("lose")) return "lost";
-  if (normalized.includes("final") || normalized.includes("settled") || normalized.includes("resolved")) {
+  if (
+    normalized.includes("final") ||
+    normalized.includes("settled") ||
+    normalized.includes("resolved")
+  ) {
     return "settled";
   }
   if (normalized.includes("placed")) return "placed";
@@ -101,93 +98,135 @@ function mapBetState(state?: string): BetStatus {
   return "pending";
 }
 
-function AssetOverviewCard({ item }: { item: AssetOverview }) {
+function SignalPill({ label, value }: { label: string; value: string }) {
   return (
-    <Card className="border-slate-800 bg-slate-900/50 backdrop-blur-xl shadow-xl shadow-slate-950/40">
-      <CardHeader className="border-b border-slate-800/70 pb-4">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <CardTitle className="text-xl font-black tracking-tight text-white">{item.symbol}</CardTitle>
-            <CardDescription className="mt-1 text-slate-400">
-              Asset {shortHex(item.address)} · Bank {shortHex(item.bank)}
-            </CardDescription>
-          </div>
-          <div className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-300">
-            Live
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="grid gap-4 p-6 sm:grid-cols-2 xl:grid-cols-3">
-        <div className="space-y-1">
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">NAV</div>
-          <div className="text-lg font-bold text-white tabular-nums">
-            {formatTokenAmount(item.totalAssets, item.decimals, item.symbol)}
-          </div>
-        </div>
-        <div className="space-y-1">
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Reserved</div>
-          <div className="text-lg font-bold text-white tabular-nums">
-            {formatTokenAmount(item.totalReserved, item.decimals, item.symbol)}
-          </div>
-        </div>
-        <div className="space-y-1">
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Free Liquidity</div>
-          <div className="text-lg font-bold text-emerald-300 tabular-nums">
-            {formatTokenAmount(item.freeLiquidity, item.decimals, item.symbol)}
-          </div>
-        </div>
-        <div className="space-y-1">
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Protocol Fees</div>
-          <div className="text-sm font-semibold text-slate-200 tabular-nums">
-            {formatTokenAmount(item.protocolFeesPayable, item.decimals, item.symbol)}
-          </div>
-        </div>
-        <div className="space-y-1">
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">External Payables</div>
-          <div className="text-sm font-semibold text-slate-200 tabular-nums">
-            {formatTokenAmount(item.externalPayablesTotal, item.decimals, item.symbol)}
-          </div>
-        </div>
-        <div className="space-y-1">
-          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Min Liquidity</div>
-          <div className="text-sm font-semibold text-slate-200">
-            {formatBps(item.minLiquidityBps)}
-          </div>
-          <div className="text-xs text-slate-500">
-            Updated block {item.updatedAtBlock?.toString() ?? "—"}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3">
+      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+        {label}
+      </div>
+      <div className="mt-1 text-sm font-semibold text-white">{value}</div>
+    </div>
   );
 }
 
-function AssetOverviewSkeleton() {
+function TrustPill({ label }: { label: string }) {
   return (
-    <Card className="border-slate-800 bg-slate-900/50 backdrop-blur-xl shadow-xl shadow-slate-950/40">
-      <CardHeader className="border-b border-slate-800/70 pb-4">
-        <Skeleton className="h-7 w-28 bg-slate-800" />
-        <Skeleton className="mt-2 h-4 w-56 bg-slate-800" />
-      </CardHeader>
-      <CardContent className="grid gap-4 p-6 sm:grid-cols-2 xl:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, index) => (
-          <div key={index} className="space-y-2">
-            <Skeleton className="h-3 w-24 bg-slate-800" />
-            <Skeleton className="h-6 w-36 bg-slate-800" />
+    <div className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-slate-200">
+      {label}
+    </div>
+  );
+}
+
+function NarrativeStep({ index, title, body }: { index: string; title: string; body: string }) {
+  return (
+    <div className="flex gap-4 rounded-[1.75rem] border border-slate-800/70 bg-slate-950/50 p-5">
+      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-cyan-400/25 bg-cyan-400/10 text-sm font-black text-cyan-100">
+        {index}
+      </div>
+      <div className="space-y-1.5">
+        <div className="text-base font-semibold text-white">{title}</div>
+        <p className="text-sm leading-6 text-slate-400">{body}</p>
+      </div>
+    </div>
+  );
+}
+
+function RoomRailItem({
+  href,
+  icon,
+  label,
+  badge,
+  active = false
+}: {
+  href: string;
+  icon: string;
+  label: string;
+  badge: string;
+  active?: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 transition-colors ${
+        active
+          ? "border-cyan-400/30 bg-cyan-400/10"
+          : "border-slate-800/70 bg-slate-950/45 hover:border-slate-700 hover:bg-slate-900/80"
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-slate-950/70 text-2xl">
+          {icon}
+        </div>
+        <div>
+          <div className="text-sm font-semibold text-white">{label}</div>
+          <div className="text-xs text-slate-500">{badge}</div>
+        </div>
+      </div>
+      <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Open</div>
+    </Link>
+  );
+}
+
+function LiveBetItem({ bet, gameLabel }: { bet: BetRow; gameLabel: string }) {
+  return (
+    <Link
+      href={`/bets/${bet.betId}`}
+      className="flex items-center justify-between gap-4 rounded-2xl border border-slate-800/70 bg-slate-950/45 px-4 py-3 transition-colors hover:border-slate-700 hover:bg-slate-900/80"
+    >
+      <div className="min-w-0 space-y-1">
+        <div className="flex items-center gap-2">
+          <div className="truncate text-sm font-semibold text-white">{gameLabel}</div>
+          <StatusBadge status={mapBetState(bet.state)} label={bet.state} />
+        </div>
+        <div className="truncate font-mono text-xs text-slate-500">betId {bet.betId}</div>
+      </div>
+      <div className="shrink-0 text-right">
+        <div className="text-sm font-medium text-slate-200">
+          {formatRelativeTime(bet.updatedAt)}
+        </div>
+        <div className="text-xs text-slate-500">block {bet.updatedBlock}</div>
+      </div>
+    </Link>
+  );
+}
+
+function AssetPulseCard({ item }: { item: AssetOverview }) {
+  return (
+    <div className="rounded-[1.5rem] border border-slate-800/70 bg-slate-950/45 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-lg font-semibold text-white">{item.symbol}</div>
+        <div className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-200">
+          Bank backed
+        </div>
+      </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            Free Liquidity
           </div>
-        ))}
-      </CardContent>
-    </Card>
+          <div className="mt-1 text-sm font-semibold text-white">
+            {formatTokenAmount(item.freeLiquidity, item.decimals, item.symbol)}
+          </div>
+        </div>
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+            Updated
+          </div>
+          <div className="mt-1 text-sm text-slate-300">
+            Block {item.updatedAtBlock?.toString() ?? "—"}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
 export default function HomePage() {
-  const router = useRouter();
   const { release, readOnly, readOnlyReason } = useRelease();
   const { sdk, ready } = useSSOTSDK();
   const { db } = useSSOTRuntime();
-  const { indexerStatus, syncNow } = useIndexer();
-  const { data: latestBets = [], isLoading: betsLoading } = useBets(6);
+  const { indexerStatus } = useIndexer();
+  const { data: latestBets = [] } = useBets(4);
 
   const { data: indexedBetCount = 0 } = useQuery({
     queryKey: ["ssot", "home", "bet-count", release?.chainId],
@@ -196,13 +235,13 @@ export default function HomePage() {
       if (!db || !release) return 0;
       return await db.bets.where("chainId").equals(release.chainId).count();
     },
-    refetchInterval: 5_000,
+    refetchInterval: 5_000
   });
 
   const {
     data: assetOverviews = [],
     isLoading: overviewLoading,
-    error: overviewError,
+    error: overviewError
   } = useQuery({
     queryKey: ["ssot", "home", "asset-overview", release?.releaseDigest],
     enabled: Boolean(release && sdk && ready),
@@ -222,12 +261,12 @@ export default function HomePage() {
             protocolFeesPayable: snapshot.protocolFeesPayable,
             externalPayablesTotal: snapshot.externalPayablesTotal,
             minLiquidityBps: snapshot.minLiquidityBps,
-            updatedAtBlock: snapshot.updatedAtBlock,
+            updatedAtBlock: snapshot.updatedAtBlock
           };
         })
       );
     },
-    refetchInterval: 15_000,
+    refetchInterval: 15_000
   });
 
   const gameLabelById = React.useMemo(() => {
@@ -238,329 +277,391 @@ export default function HomePage() {
     return map;
   }, [release?.gamesMeta]);
 
-  const assetLabelByAddress = React.useMemo(() => {
-    const map = new Map<string, string>();
-    for (const asset of release?.assets ?? []) {
-      map.set(asset.address.toLowerCase(), asset.symbol);
-    }
-    return map;
-  }, [release?.assets]);
-
-  const featuredGames = React.useMemo(() => (release?.gamesMeta ?? []).slice(0, 4), [release?.gamesMeta]);
-
-  const latestBetColumns = React.useMemo<DataTableColumn<BetRow>[]>(
-    () => [
-      {
-        key: "betId",
-        header: "Bet ID",
-        render: (row) => <span className="font-mono text-white">{row.betId}</span>,
-      },
-      {
-        key: "game",
-        header: "Game",
-        render: (row) => (
-          <span className="text-slate-200">
-            {row.gameId ? gameLabelById.get(row.gameId.toLowerCase()) ?? shortHex(row.gameId) : "—"}
-          </span>
-        ),
-      },
-      {
-        key: "status",
-        header: "Status",
-        render: (row) => <StatusBadge status={mapBetState(row.state)} label={row.state} />,
-      },
-      {
-        key: "asset",
-        header: "Asset",
-        render: (row) => <span className="text-slate-300">{row.asset ? assetLabelByAddress.get(row.asset.toLowerCase()) ?? shortHex(row.asset) : "—"}</span>,
-      },
-      {
-        key: "player",
-        header: "Player",
-        render: (row) => <span className="font-mono text-slate-400">{shortHex(row.player)}</span>,
-      },
-      {
-        key: "updated",
-        header: "Updated",
-        render: (row) => <span className="text-slate-400">{formatRelativeTime(row.updatedAt)}</span>,
-      },
-      {
-        key: "block",
-        header: "Block",
-        render: (row) => <span className="font-mono text-slate-500">{row.updatedBlock}</span>,
-        cellClassName: "text-right",
-        headerClassName: "text-right",
-      },
-    ],
-    [assetLabelByAddress, gameLabelById]
+  const featuredGames = React.useMemo(
+    () => (release?.gamesMeta ?? []).slice(0, 4),
+    [release?.gamesMeta]
   );
 
-  if (!release) {
-    return (
-      <PageTransition pageKey="home-empty">
-        <Card className="border-slate-800 bg-slate-900/60">
-          <CardHeader>
-            <CardTitle className="text-white">Protocol Overview</CardTitle>
-            <CardDescription className="text-slate-400">
-              {readOnlyReason ?? "No embedded release is available for this chain."}
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </PageTransition>
-    );
-  }
+  const roomCount = release?.gamesMeta?.length ?? Object.keys(release?.games ?? {}).length;
+  const assetCount = release?.assets.length ?? 0;
+  const primaryRoomHref = featuredGames[0] ? `/games/${featuredGames[0].slug}` : "/games";
+  const heroGame = featuredGames[0];
+  const heroPresentation = heroGame
+    ? getGamePresentation(heroGame.slug, heroGame.label)
+    : getGamePresentation("dice", "Dice");
+  const heroSecondaryGames = featuredGames.slice(1, 4);
+  const liveBetFeed = latestBets.slice(0, 4);
+  const latestHeroBet = liveBetFeed[0];
+  const assetPulse = assetOverviews.slice(0, 3);
 
   const lagBlocks = indexerStatus?.lagBlocks;
   const confirmations = indexerStatus?.config?.confirmations;
-  const lagTrend =
-    typeof lagBlocks !== "number" || typeof confirmations !== "number"
-      ? "neutral"
-      : lagBlocks <= confirmations
-        ? "up"
-        : lagBlocks <= confirmations * 3
-          ? "neutral"
-          : "down";
+  const syncLabel =
+    typeof lagBlocks !== "number"
+      ? "Waiting for sync"
+      : typeof confirmations === "number" && lagBlocks <= confirmations
+        ? "In sync"
+        : `${lagBlocks} blocks behind`;
 
   return (
-    <PageTransition pageKey="home-overview">
-      <div className="space-y-10">
-        <section className="relative overflow-hidden rounded-[2rem] border border-slate-800 bg-slate-900/60 px-6 py-8 shadow-2xl shadow-slate-950/40 backdrop-blur-xl sm:px-8 lg:px-10">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_35%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.14),transparent_32%)]" />
-          <div className="relative grid gap-8 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,0.9fr)]">
-            <div className="space-y-6">
-              <ReleaseBadge
-                networkName={release.name}
-                hubShort={shortHex(release.contracts.hub)}
-                digestShort={release.releaseDigest.slice(0, 8)}
-              />
+    <PageTransition pageKey="home-landing">
+      <div className="space-y-12">
+        <section className="relative overflow-hidden rounded-[2.5rem] border border-slate-800 bg-slate-950 px-6 py-8 shadow-2xl shadow-slate-950/40 sm:px-8 lg:px-10 lg:py-10">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.16),transparent_28%),radial-gradient(circle_at_top_right,rgba(59,130,246,0.24),transparent_36%),radial-gradient(circle_at_bottom_left,rgba(34,211,238,0.18),transparent_34%),linear-gradient(135deg,rgba(15,23,42,0.92),rgba(2,6,23,0.98))]" />
+          <div className="relative grid gap-8 xl:grid-cols-[minmax(0,1.03fr)_minmax(420px,0.97fr)]">
+            <div className="space-y-6 lg:space-y-7">
+              <div className="flex flex-wrap items-center gap-2">
+                <TrustPill label="Wallet-native" />
+                <TrustPill label="Provably fair" />
+                <TrustPill label="On-chain settlement" />
+              </div>
 
               <div className="space-y-4">
-                <div className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">
-                  Protocol Overview
+                <div className="inline-flex items-center rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-100">
+                  Live casino rooms
                 </div>
-                <h1 className="max-w-4xl text-4xl font-black tracking-tight text-white md:text-6xl">
-                  Live protocol state, not marketing placeholders.
+                <h1 className="max-w-4xl text-5xl font-black tracking-[-0.04em] text-white md:text-7xl">
+                  Live rooms that feel fast before they settle on-chain.
                 </h1>
-                <p className="max-w-2xl text-base leading-7 text-slate-300 md:text-lg">
-                  This dashboard is driven by the embedded release, live Bank snapshots, and event-derived facts from the local indexer.
-                  It is the fastest path to verify which games, assets, and bets are actually available on the connected network.
+                <p className="max-w-xl text-base leading-7 text-slate-300 md:text-lg">
+                  Start from a room, not a spreadsheet. Pick the outcome, size the stake, and let
+                  the release route the round while the ledger stays visible.
                 </p>
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
                 <Button asChild size="lg">
-                  <Link href="/games">Play Games</Link>
+                  <Link href={primaryRoomHref}>Play Now</Link>
                 </Button>
                 <Button asChild variant="outline" size="lg">
-                  <Link href="/liquidity">Review Liquidity</Link>
+                  <Link href="/games">Browse Rooms</Link>
                 </Button>
                 <Button asChild variant="glass" size="lg">
-                  <Link href="/bets">Inspect Bets</Link>
+                  <Link href="/bets">See Live Bets</Link>
                 </Button>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl border border-slate-800/80 bg-slate-950/50 p-4">
-                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Release Digest</div>
-                  <div className="mt-2 break-all font-mono text-sm text-slate-200">{release.releaseDigest}</div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <SignalPill label="Live rooms" value={formatCount(roomCount)} />
+                <SignalPill label="Event-ledger bets" value={formatCount(indexedBetCount)} />
+                <SignalPill label="Settlement pulse" value={syncLabel} />
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <SignalPill label="Network" value={release?.name ?? "Waiting for release"} />
+                <SignalPill label="Assets" value={`${formatCount(assetCount)} supported`} />
+                <SignalPill
+                  label="Mode"
+                  value={
+                    readOnly
+                      ? `Read-only${readOnlyReason ? ` · ${readOnlyReason}` : ""}`
+                      : "Ready to play"
+                  }
+                />
+                <SignalPill
+                  label="Last sync"
+                  value={formatRelativeTime(indexerStatus?.lastRunAt)}
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4">
+              <div
+                className={`relative overflow-hidden rounded-[2rem] border border-white/10 p-6 shadow-xl shadow-slate-950/40 ${heroPresentation.theme.stageClassName}`}
+              >
+                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent" />
+                <div className="relative flex items-start justify-between gap-4">
+                  <div className="space-y-3">
+                    <div className="inline-flex h-16 w-16 items-center justify-center rounded-[1.5rem] border border-white/10 bg-slate-950/45 text-4xl shadow-lg shadow-black/30">
+                      {heroPresentation.icon}
+                    </div>
+                    <div>
+                      <div
+                        className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${heroPresentation.theme.badgeClassName}`}
+                      >
+                        {heroPresentation.roomLabel}
+                      </div>
+                      <h2 className="mt-3 text-3xl font-black tracking-tight text-white">
+                        {heroGame?.label ?? "Featured room"}
+                      </h2>
+                    </div>
+                  </div>
+                  {release ? (
+                    <ReleaseBadge
+                      networkName={release.name}
+                      hubShort={shortHex(release.contracts.hub)}
+                      digestShort={release.releaseDigest.slice(0, 8)}
+                    />
+                  ) : null}
                 </div>
-                <div className="rounded-2xl border border-slate-800/80 bg-slate-950/50 p-4">
-                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Runtime Mode</div>
-                  <div className="mt-2 text-sm font-medium text-slate-200">
-                    {readOnly ? `Read-only${readOnlyReason ? ` · ${readOnlyReason}` : ""}` : "Read / write enabled"}
+
+                <div className="relative mt-6 max-w-md space-y-4">
+                  <p className="text-sm leading-6 text-slate-200">
+                    {heroGame
+                      ? heroPresentation.roomSummary
+                      : "Enter a room, pick the line, and let settlement happen on the active release."}
+                  </p>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <SignalPill label="Shape" value={heroPresentation.helpLabel} />
+                    <SignalPill
+                      label="Encoding"
+                      value={heroGame?.paramsEncoding ?? "release-defined"}
+                    />
+                    <SignalPill label="Assets" value={`${assetCount}`} />
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    <Button asChild size="lg">
+                      <Link href={primaryRoomHref}>Open {heroGame?.label ?? "Room"}</Link>
+                    </Button>
+                    <Button asChild variant="outline" size="lg">
+                      <Link href="/games">All Rooms</Link>
+                    </Button>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-2">
-              <StatCard
-                label="Live Games"
-                value={formatCount(release.gamesMeta?.length ?? Object.keys(release.games).length)}
-                subValue="release-driven"
-              />
-              <StatCard
-                label="Supported Assets"
-                value={formatCount(release.assets.length)}
-                subValue="bank-backed"
-              />
-              <StatCard
-                label="Indexed Bets"
-                value={formatCount(indexedBetCount)}
-                subValue={betsLoading ? "syncing" : "event-derived"}
-              />
-              <StatCard
-                label="Indexer Lag"
-                value={typeof lagBlocks === "number" ? `${lagBlocks}` : "—"}
-                subValue={
-                  indexerStatus?.lastSyncedBlock != null
-                    ? `synced ${indexerStatus.lastSyncedBlock}`
-                    : "waiting for sync"
-                }
-                trend={lagTrend}
-              />
-            </div>
-          </div>
-        </section>
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+                <Card className="border-white/10 bg-slate-950/55 shadow-xl shadow-slate-950/30">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-white">Tonight&apos;s rooms</CardTitle>
+                    <CardDescription className="text-slate-400">
+                      The first click should always be a game choice.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {featuredGames.length === 0 ? (
+                      <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-950/40 p-4 text-sm text-slate-400">
+                        Waiting for the active release to expose rooms.
+                      </div>
+                    ) : (
+                      <>
+                        <RoomRailItem
+                          href={primaryRoomHref}
+                          icon={heroPresentation.icon}
+                          label={heroGame?.label ?? "Featured room"}
+                          badge={heroPresentation.roomLabel}
+                          active
+                        />
+                        {heroSecondaryGames.map((game) => {
+                          const presentation = getGamePresentation(game.slug, game.label);
+                          return (
+                            <RoomRailItem
+                              key={game.slug}
+                              href={`/games/${game.slug}`}
+                              icon={presentation.icon}
+                              label={game.label}
+                              badge={presentation.roomLabel}
+                            />
+                          );
+                        })}
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
 
-        {featuredGames.length > 0 ? (
-          <section className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
-            <div className="space-y-6">
-              <PageHeader
-                title="Featured Rooms"
-                description="Jump straight into the live rooms exposed by the active release. These entries mirror the room-first detail pages without inventing protocol facts."
-                actions={
-                  <Button asChild variant="outline" size="sm" className="border-slate-700 text-slate-300 hover:text-white">
-                    <Link href="/games">Open Room Directory</Link>
-                  </Button>
-                }
-              />
-
-              <div className="grid gap-6 sm:grid-cols-2">
-                {featuredGames.map((game) => {
-                  const presentation = getGamePresentation(game.slug, game.label);
-                  return (
-                    <Link key={game.slug} href={`/games/${game.slug}`} className="block">
-                      <GameCard
-                        slug={game.slug}
-                        label={game.label}
-                        icon={presentation.icon}
-                        badge={presentation.roomLabel}
-                        description={presentation.listDescription}
-                        summary={presentation.roomSummary}
-                        facts={[game.paramsEncoding ?? "release-defined", `${release.assets.length} assets`]}
-                        ctaLabel="Enter Room"
+                <Card className="border-white/10 bg-slate-950/55 shadow-xl shadow-slate-950/30">
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-white">Latest round</CardTitle>
+                    <CardDescription className="text-slate-400">
+                      Proof stays visible, but it supports the play decision instead of taking over
+                      the page.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {latestHeroBet ? (
+                      <LiveBetItem
+                        bet={latestHeroBet}
+                        gameLabel={
+                          latestHeroBet.gameId
+                            ? (gameLabelById.get(latestHeroBet.gameId.toLowerCase()) ??
+                              shortHex(latestHeroBet.gameId))
+                            : "Unknown room"
+                        }
                       />
-                    </Link>
-                  );
-                })}
+                    ) : (
+                      <div className="rounded-[1.5rem] border border-dashed border-slate-700 bg-slate-950/40 p-5 text-sm text-slate-400">
+                        No recent rounds yet. The first settled bet will appear here.
+                      </div>
+                    )}
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <SignalPill label="Hub" value={shortHex(release?.contracts.hub)} />
+                      <SignalPill
+                        label="Bank proof"
+                        value={
+                          overviewError
+                            ? "Temporarily unavailable"
+                            : `${assetPulse.length || assetCount} live`
+                        }
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
-
-            <Card className="border-slate-800 bg-slate-900/50 backdrop-blur-xl shadow-xl shadow-slate-950/40">
-              <CardHeader>
-                <CardTitle className="text-white">Why Room-First</CardTitle>
-                <CardDescription className="text-slate-400">
-                  Discovery should feel productized without turning governed presentation into fake protocol guarantees.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4 text-sm leading-6 text-slate-300">
-                <p>Each featured room inherits its tone, copy, and gradients from governed frontend metadata keyed by slug.</p>
-                <p>Route validity, supported assets, module routing, and params encoding still come only from the embedded release bundle.</p>
-                <p>Once you enter a room, the live table and protocol truth panels take over so the path from discovery to action stays auditable.</p>
-                <div className="rounded-2xl border border-slate-800/70 bg-slate-950/50 p-4 text-slate-400">
-                  If a room drops out of this section, the release no longer exposes it. No legacy aliases are used to keep dead rooms alive.
-                </div>
-              </CardContent>
-            </Card>
-          </section>
-        ) : null}
-
-        <section className="space-y-6">
-          <PageHeader
-            title="Asset Snapshots"
-            description="Per-asset Bank state from live SDK reads. Values are never aggregated across assets, so multi-asset semantics remain intact."
-            actions={
-              <Button variant="outline" size="sm" onClick={() => void syncNow()} className="border-slate-700 text-slate-300 hover:text-white">
-                Sync Facts
-              </Button>
-            }
-          />
-
-          {overviewError ? (
-            <ErrorCallout
-              title="Snapshot load failed"
-              message={(overviewError as Error).message}
-              details="The Home overview could not read Bank snapshots for the active release."
-            />
-          ) : null}
-
-          <div className="grid gap-6">
-            {overviewLoading
-              ? release.assets.map((asset) => <AssetOverviewSkeleton key={asset.address} />)
-              : assetOverviews.map((item) => <AssetOverviewCard key={item.address} item={item} />)}
           </div>
         </section>
 
-        <section className="space-y-6">
-          <PageHeader
-            title="Latest Bets"
-            description="Recent event-derived bets from the local facts store. This table mirrors indexed chain activity and links straight into bet detail."
-            actions={
-              <Button asChild variant="outline" size="sm" className="border-slate-700 text-slate-300 hover:text-white">
-                <Link href="/bets">Open Full Ledger</Link>
-              </Button>
-            }
-          />
-
-          <DataTable
-            columns={latestBetColumns}
-            data={latestBets}
-            loading={betsLoading}
-            emptyMessage="No indexed bets yet. Sync the indexer or place a bet to start the local audit trail."
-            rowKey={(row) => row.id}
-            onRowClick={(row) => router.push(`/bets/${row.betId}`)}
-          />
-        </section>
-
-        <section className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
-          <Card className="border-slate-800 bg-slate-900/50 backdrop-blur-xl shadow-xl shadow-slate-950/40">
+        <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <Card className="border-slate-800 bg-slate-900/55 backdrop-blur-xl shadow-xl shadow-slate-950/40">
             <CardHeader>
-              <CardTitle className="text-white">Operational Signals</CardTitle>
-              <CardDescription className="text-slate-400">
-                Home only surfaces minimal signals. The full diagnostics view remains on the Ops route.
-              </CardDescription>
+              <div className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">
+                Three moves
+              </div>
+              <CardTitle className="text-white">
+                From wallet to settlement, without losing the plot.
+              </CardTitle>
             </CardHeader>
-            <CardContent className="grid gap-4 sm:grid-cols-2">
-              <div className="rounded-2xl border border-slate-800/70 bg-slate-950/50 p-4">
-                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Safe Head</div>
-                <div className="mt-2 font-mono text-lg text-slate-200">{indexerStatus?.safeHeadBlock ?? "—"}</div>
-              </div>
-              <div className="rounded-2xl border border-slate-800/70 bg-slate-950/50 p-4">
-                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Confirmations</div>
-                <div className="mt-2 font-mono text-lg text-slate-200">{indexerStatus?.config?.confirmations ?? "—"}</div>
-              </div>
-              <div className="rounded-2xl border border-slate-800/70 bg-slate-950/50 p-4">
-                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Polling</div>
-                <div className="mt-2 font-mono text-lg text-slate-200">
-                  {typeof indexerStatus?.config?.pollIntervalMs === "number"
-                    ? `${Math.round(indexerStatus.config.pollIntervalMs / 1000)}s`
-                    : "—"}
-                </div>
-              </div>
-              <div className="rounded-2xl border border-slate-800/70 bg-slate-950/50 p-4">
-                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Last Run</div>
-                <div className="mt-2 text-lg text-slate-200">
-                  {formatRelativeTime(indexerStatus?.lastRunAt)}
-                </div>
-              </div>
+            <CardContent className="grid gap-4">
+              <NarrativeStep
+                index="01"
+                title="Open a room that matches the risk shape"
+                body="Dice, coin toss, roulette, and keno should feel distinct before the player reads a single line of protocol copy."
+              />
+              <NarrativeStep
+                index="02"
+                title="Set the outcome and the amount in one flow"
+                body="The room should hold choice and stake together so betting feels like one decision instead of three separate forms."
+              />
+              <NarrativeStep
+                index="03"
+                title="Confirm once, then watch the result land"
+                body="Settlement proof and live ledger stay visible after the fact, not as clutter in front of the first click."
+              />
             </CardContent>
           </Card>
 
-          <Card className="border-slate-800 bg-slate-900/50 backdrop-blur-xl shadow-xl shadow-slate-950/40">
+          <Card className="border-slate-800 bg-slate-900/55 backdrop-blur-xl shadow-xl shadow-slate-950/40">
             <CardHeader>
-              <CardTitle className="text-white">Resources</CardTitle>
-              <CardDescription className="text-slate-400">
-                Repo-native references for release identity, protocol documentation, and operator visibility.
-              </CardDescription>
+              <div className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">
+                Why trust this
+              </div>
+              <CardTitle className="text-white">
+                Simple trust story, not a wall of diagnostics.
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-2 text-sm text-slate-300">
-                <Link href="/games" className="rounded-xl border border-slate-800 px-4 py-3 transition-colors hover:border-slate-700 hover:bg-slate-800/40">
-                  Explore live games
-                </Link>
-                <Link href="/liquidity" className="rounded-xl border border-slate-800 px-4 py-3 transition-colors hover:border-slate-700 hover:bg-slate-800/40">
-                  Review Bank liquidity
-                </Link>
-                <Link href="/ops" className="rounded-xl border border-slate-800 px-4 py-3 transition-colors hover:border-slate-700 hover:bg-slate-800/40">
-                  Open Ops diagnostics
-                </Link>
+              <div className="rounded-[1.75rem] border border-slate-800/70 bg-slate-950/45 p-5">
+                <div className="text-sm font-semibold text-white">
+                  Your wallet stays the point of control
+                </div>
+                <p className="mt-2 text-sm leading-6 text-slate-400">
+                  Players sign from the wallet instead of moving into a house account and hoping to
+                  withdraw later.
+                </p>
               </div>
-              <div className="rounded-2xl border border-slate-800/70 bg-slate-950/50 p-4 text-sm text-slate-400">
-                Protocol interactions are release-bound and event-auditable. If displayed values drift from chain truth, the issue belongs in the release, SDK, or indexer layer and should be investigated there rather than patched in-page.
+              <div className="rounded-[1.75rem] border border-slate-800/70 bg-slate-950/45 p-5">
+                <div className="text-sm font-semibold text-white">
+                  The release decides what is actually live
+                </div>
+                <p className="mt-2 text-sm leading-6 text-slate-400">
+                  Supported rooms, assets, modules, and encodings come from the active release, not
+                  from home-page fiction.
+                </p>
+              </div>
+              <div className="rounded-[1.75rem] border border-slate-800/70 bg-slate-950/45 p-5">
+                <div className="text-sm font-semibold text-white">Recent play stays auditable</div>
+                <p className="mt-2 text-sm leading-6 text-slate-400">
+                  Indexer facts keep recent rounds visible so users can verify what just happened
+                  instead of trusting copy.
+                </p>
               </div>
             </CardContent>
           </Card>
+
+          <div className="grid gap-6">
+            <Card className="border-slate-800 bg-slate-900/55 backdrop-blur-xl shadow-xl shadow-slate-950/40">
+              <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div className="space-y-2">
+                  <div className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">
+                    Live proof
+                  </div>
+                  <CardTitle className="text-white">Recent activity</CardTitle>
+                </div>
+                <Button asChild variant="outline" size="sm">
+                  <Link href="/bets">Full Ledger</Link>
+                </Button>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {liveBetFeed.length === 0 ? (
+                  <div className="rounded-[1.5rem] border border-dashed border-slate-700 bg-slate-950/40 p-6 text-sm text-slate-400">
+                    No indexed bets yet. Recent activity appears here as soon as the first round
+                    lands.
+                  </div>
+                ) : (
+                  liveBetFeed.map((bet) => (
+                    <LiveBetItem
+                      key={bet.id}
+                      bet={bet}
+                      gameLabel={
+                        bet.gameId
+                          ? (gameLabelById.get(bet.gameId.toLowerCase()) ?? shortHex(bet.gameId))
+                          : "Unknown room"
+                      }
+                    />
+                  ))
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="border-slate-800 bg-slate-900/55 backdrop-blur-xl shadow-xl shadow-slate-950/40">
+              <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div className="space-y-2">
+                  <div className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">
+                    Bank proof
+                  </div>
+                  <CardTitle className="text-white">Asset pulse</CardTitle>
+                </div>
+                <Button asChild variant="outline" size="sm">
+                  <Link href="/liquidity">Liquidity View</Link>
+                </Button>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {overviewLoading ? (
+                  <>
+                    <Skeleton className="h-24 rounded-[1.5rem] bg-slate-800" />
+                    <Skeleton className="h-24 rounded-[1.5rem] bg-slate-800" />
+                  </>
+                ) : overviewError ? (
+                  <div className="rounded-[1.5rem] border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-100">
+                    Asset snapshots are temporarily unavailable.
+                  </div>
+                ) : assetPulse.length === 0 ? (
+                  <div className="rounded-[1.5rem] border border-dashed border-slate-700 bg-slate-950/40 p-6 text-sm text-slate-400">
+                    No asset pulse available yet for the active release.
+                  </div>
+                ) : (
+                  assetPulse.map((item) => <AssetPulseCard key={item.address} item={item} />)
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+
+        <section className="relative overflow-hidden rounded-[2.25rem] border border-slate-800 bg-slate-900/60 px-6 py-8 shadow-xl shadow-slate-950/30 backdrop-blur-xl sm:px-8">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.12),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(34,211,238,0.16),transparent_32%)]" />
+          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-2xl space-y-3">
+              <div className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">
+                Final CTA
+              </div>
+              <h2 className="text-3xl font-black tracking-tight text-white">
+                Start from the room. Audit the rest when you need it.
+              </h2>
+              <p className="text-sm leading-6 text-slate-400">
+                Home should create intent and send users into play. The audit routes still exist,
+                but they do not need to own the first screen.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Button asChild size="lg">
+                <Link href={primaryRoomHref}>Play Now</Link>
+              </Button>
+              <Button asChild variant="outline" size="lg">
+                <Link href="/games">Browse Rooms</Link>
+              </Button>
+            </div>
+          </div>
         </section>
       </div>
     </PageTransition>

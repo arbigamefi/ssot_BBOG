@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ReleaseBadge, ReadOnlyBanner, ThemeToggle } from "@ssot/ui";
+import { ReadOnlyBanner } from "@ssot/ui";
 import { useRelease } from "../ssot/release/ReleaseProvider";
 import { WalletButton } from "../app/providers/WalletButton";
 
@@ -14,19 +14,26 @@ function shortHex(addr?: string) {
 }
 
 const NAV_LINKS = [
+  { href: "/", label: "Home" },
   { href: "/games", label: "Games" },
   { href: "/bets", label: "Bets" },
   { href: "/liquidity", label: "Liquidity" },
   { href: "/claims", label: "Claims" },
   { href: "/referral", label: "Referral" },
   { href: "/account", label: "Account" },
-  { href: "/ops", label: "Ops" },
+  { href: "/ops", label: "Ops" }
 ] as const;
+
+function isActivePath(pathname: string, href: string) {
+  if (href === "/") return pathname === "/";
+  return pathname.startsWith(href);
+}
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { release, readOnly, readOnlyReason, warnings } = useRelease();
   const [menuOpen, setMenuOpen] = React.useState(false);
   const pathname = usePathname();
+  const isGameRoom = /^\/games\/[^/]+$/.test(pathname);
 
   // Close mobile menu on navigation
   React.useEffect(() => {
@@ -39,51 +46,95 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen relative overflow-hidden flex flex-col bg-slate-950 text-slate-200 antialiased font-sans">
-      {/* Decorative Background Glows matching pure casino themes */}
-      <div className="pointer-events-none fixed inset-0 -z-10 bg-gradient-to-br from-slate-900/95 via-slate-900/75 to-slate-950/95" aria-hidden="true" />
+      <div
+        className="pointer-events-none fixed inset-0 -z-10 bg-gradient-to-br from-slate-900/95 via-slate-900/75 to-slate-950/95"
+        aria-hidden="true"
+      />
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-500/10 rounded-full blur-[120px] pointer-events-none fade-in" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-500/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-cyan-500/10 rounded-full blur-[120px] pointer-events-none" />
 
-      {/* Glassmorphic Header - Replicated from reference UI visual-system */}
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-slate-800 bg-slate-950/95 backdrop-blur-md">
-        <div className="pt-safe bg-slate-950/95" style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 0px)" }}>
-          <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 h-14 min-h-[3.5rem] px-6">
-            <div className="flex items-center gap-10">
-              <Link href="/" className="flex items-center gap-2.5 mr-4 group">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-emerald-500 to-green-500 flex items-center justify-center shadow-lg shadow-emerald-500/20 transition-transform duration-200 hover:scale-105">
-                  <span className="font-black text-black">N</span>
+        <div
+          className="pt-safe bg-slate-950/95"
+          style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 0px)" }}
+        >
+          <div
+            className={`mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 ${isGameRoom ? "h-14 min-h-[3.5rem]" : "h-16 min-h-[4rem]"}`}
+          >
+            <div className={`flex items-center ${isGameRoom ? "gap-3" : "gap-6"}`}>
+              <Link href="/" className="group flex items-center gap-3">
+                <div
+                  className={`flex items-center justify-center border border-emerald-400/30 bg-emerald-400/10 shadow-lg shadow-emerald-950/40 transition-transform duration-200 group-hover:scale-105 ${isGameRoom ? "h-9 w-9 rounded-xl" : "h-10 w-10 rounded-2xl"}`}
+                >
+                  <span className="text-sm font-black tracking-[0.24em] text-emerald-200">SS</span>
                 </div>
-                <span className="text-xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-300 group-hover:from-emerald-400 group-hover:to-green-400 transition-all duration-300">
-                  NEXUS
-                </span>
+                <div className="space-y-0.5">
+                  <div className="text-sm font-black uppercase tracking-[0.28em] text-white">
+                    SSOT
+                  </div>
+                  {!isGameRoom ? (
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                      Casino Lobby
+                    </div>
+                  ) : null}
+                </div>
               </Link>
 
-              {/* Desktop nav */}
-              <nav className="hidden items-center gap-6 text-sm md:flex">
-                {NAV_LINKS.map((l) => {
-                  const isActive = pathname.startsWith(l.href);
-                  return (
-                    <Link
-                      key={l.href}
-                      href={l.href}
-                      className={`text-sm font-medium transition-colors ${isActive ? "text-white" : "text-slate-400 hover:text-slate-200"
+              {isGameRoom ? (
+                <Link
+                  href="/games"
+                  className="hidden rounded-full border border-slate-800 bg-slate-900/70 px-4 py-2 text-sm font-semibold text-slate-300 transition-colors hover:border-slate-700 hover:text-white md:inline-flex"
+                >
+                  All Games
+                </Link>
+              ) : (
+                <nav className="hidden items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/70 p-1 md:flex">
+                  {NAV_LINKS.map((l) => {
+                    const isActive = isActivePath(pathname, l.href);
+                    return (
+                      <Link
+                        key={l.href}
+                        href={l.href}
+                        className={`rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
+                          isActive
+                            ? "bg-slate-200 text-slate-950 shadow-sm"
+                            : "text-slate-400 hover:bg-slate-800/60 hover:text-white"
                         }`}
-                    >
-                      {l.label}
-                    </Link>
-                  );
-                })}
-              </nav>
+                      >
+                        {l.label}
+                      </Link>
+                    );
+                  })}
+                </nav>
+              )}
             </div>
 
-            <div className="flex items-center gap-4 ml-auto">
-              {/* Release Badge in Topbar */}
-              <div className="hidden sm:flex items-center gap-1.5 px-2 py-1 bg-amber-900/30 border border-amber-700/50 rounded text-xs text-amber-300">
-                <div className="w-1 h-1 bg-amber-400 rounded-full"></div>
-                {networkName}
+            <div className="ml-auto flex items-center gap-3">
+              <div
+                className={`hidden items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-2 ${isGameRoom ? "xl:flex" : "lg:flex"}`}
+              >
+                <div className="space-y-0.5 text-right">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Release
+                  </div>
+                  <div className="text-sm font-semibold text-white">{networkName}</div>
+                </div>
+                <div className="h-8 w-px bg-slate-800" />
+                <div className="space-y-0.5">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Digest
+                  </div>
+                  <div className="font-mono text-sm text-slate-300">{digestShort}</div>
+                </div>
+                <div className="h-8 w-px bg-slate-800" />
+                <div className="space-y-0.5">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Hub
+                  </div>
+                  <div className="font-mono text-sm text-slate-300">{hubShort}</div>
+                </div>
               </div>
 
-              {/* Rainbow Wallet Button Substitute */}
               <div className="relative group">
                 <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/10 to-fuchsia-500/10 rounded-xl blur opacity-0 group-hover:opacity-100 transition duration-500" />
                 <div className="relative">
@@ -91,8 +142,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </div>
               </div>
 
-              {/* Mobile hamburger - Reference Project Equivalent */}
-              <div className="md:hidden relative">
+              <div className={`relative ${isGameRoom ? "hidden" : "md:hidden"}`}>
                 <button
                   type="button"
                   className="flex items-center justify-center w-11 h-11 rounded-lg border border-slate-700 bg-slate-800/50 active:bg-slate-700/50 active:scale-95 transition-all touch-manipulation"
@@ -101,11 +151,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   aria-label="Toggle navigation menu"
                   style={{ touchAction: "manipulation" }}
                 >
-                  <svg className="h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <svg
+                    className="h-6 w-6 text-slate-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={2}
+                    stroke="currentColor"
+                  >
                     {menuOpen ? (
                       <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                     ) : (
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M4 6h16M4 12h16M4 18h16"
+                      />
                     )}
                   </svg>
                 </button>
@@ -113,30 +173,38 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
 
-          {/* Mobile nav dropdown drawer pattern */}
           {menuOpen ? (
-            <nav className="fixed bottom-0 left-0 right-0 z-[70] pb-safe" style={{ paddingBottom: "max(env(safe-area-inset-bottom, 0px), 0px)" }}>
+            <nav
+              className="fixed bottom-0 left-0 right-0 z-[70] pb-safe"
+              style={{ paddingBottom: "max(env(safe-area-inset-bottom, 0px), 0px)" }}
+            >
               <div className="bg-slate-900 border-t border-slate-700 rounded-t-2xl shadow-2xl">
                 <div className="px-4 pt-3 pb-2.5 border-b border-slate-700/50 bg-slate-800/50">
                   <div className="h-1 w-10 rounded-full bg-slate-600/50 mx-auto mb-2" />
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Navigation</span>
-                    <button onClick={() => setMenuOpen(false)} className="text-slate-400 hover:text-slate-200 text-sm px-3 py-2 rounded-lg transition-colors">
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                      Navigation
+                    </span>
+                    <button
+                      onClick={() => setMenuOpen(false)}
+                      className="text-slate-400 hover:text-slate-200 text-sm px-3 py-2 rounded-lg transition-colors"
+                    >
                       Close
                     </button>
                   </div>
                 </div>
                 <div className="max-h-[60vh] overflow-y-auto py-1 bg-slate-900/50 overscroll-contain">
                   {NAV_LINKS.map((l) => {
-                    const isActive = pathname.startsWith(l.href);
+                    const isActive = isActivePath(pathname, l.href);
                     return (
                       <Link
                         key={l.href}
                         href={l.href}
-                        className={`block px-4 py-3 text-sm transition-colors touch-manipulation flex items-center ${isActive
-                          ? "text-white bg-slate-800/60"
-                          : "text-slate-300 active:text-white active:bg-slate-800/40"
-                          }`}
+                        className={`block px-4 py-3 text-sm transition-colors touch-manipulation flex items-center ${
+                          isActive
+                            ? "text-white bg-slate-800/60"
+                            : "text-slate-300 active:text-white active:bg-slate-800/40"
+                        }`}
                         onClick={() => setMenuOpen(false)}
                         style={{ touchAction: "manipulation" }}
                       >

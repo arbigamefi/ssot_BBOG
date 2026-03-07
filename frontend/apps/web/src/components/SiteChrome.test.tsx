@@ -1,0 +1,62 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import * as React from "react";
+
+const state = {
+  pathname: "/"
+};
+
+vi.mock("next/navigation", () => ({
+  usePathname: () => state.pathname
+}));
+
+vi.mock("./AppShell", () => ({
+  AppShell: ({ children }: any) => (
+    <div data-testid="app-shell">
+      <span>product-shell</span>
+      {children}
+    </div>
+  )
+}));
+
+vi.mock("./LandingShell", () => ({
+  LandingShell: ({ children }: any) => (
+    <div data-testid="landing-shell">
+      <span>landing-shell</span>
+      {children}
+    </div>
+  )
+}));
+
+import { SiteChrome } from "./SiteChrome";
+
+describe("SiteChrome", () => {
+  afterEach(() => {
+    cleanup();
+    state.pathname = "/";
+  });
+
+  it("uses landing shell on home route", () => {
+    state.pathname = "/";
+    render(
+      <SiteChrome>
+        <div>content</div>
+      </SiteChrome>
+    );
+
+    expect(screen.getByTestId("landing-shell")).toBeDefined();
+    expect(screen.queryByTestId("app-shell")).toBeNull();
+  });
+
+  it("uses product shell on app routes", () => {
+    state.pathname = "/bets";
+    render(
+      <SiteChrome>
+        <div>content</div>
+      </SiteChrome>
+    );
+
+    expect(screen.getByTestId("app-shell")).toBeDefined();
+    expect(screen.queryByTestId("landing-shell")).toBeNull();
+  });
+});
