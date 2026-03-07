@@ -19,9 +19,7 @@ import {
   DiceParamsForm,
   ErrorCallout,
   KenoParamsForm,
-  ReleaseBadge,
   RouletteParamsForm,
-  StatCard,
   StatusBadge,
   TabBar,
   type BetStatus,
@@ -47,6 +45,7 @@ type GameMeta = {
 };
 
 type ActivityView = "all" | "open" | "settled" | "refunded";
+type InfoView = "activity" | "guide" | "protocol";
 
 type Tone = {
   label: string;
@@ -85,6 +84,28 @@ function formatRelativeTime(timestamp?: number) {
   if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
   return `${days}d ago`;
+}
+
+function parseMaskValue(mask: string) {
+  const raw = mask.trim();
+  if (!raw) return 0n;
+  try {
+    const parsed = BigInt(raw);
+    if (parsed < 0n) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function countMaskSelections(mask: string, limit = 40) {
+  const parsed = parseMaskValue(mask);
+  if (parsed === null) return null;
+  let total = 0;
+  for (let index = 0; index < limit; index += 1) {
+    if ((parsed & (1n << BigInt(index))) !== 0n) total += 1;
+  }
+  return total;
 }
 
 function mapBetState(state?: string): BetStatus {
@@ -215,6 +236,14 @@ function buildActivityTabs(rows: BetRow[]): TabBarItem[] {
   ];
 }
 
+function buildInfoTabs(): TabBarItem[] {
+  return [
+    { key: "activity", label: "Live Bets" },
+    { key: "guide", label: "How to Play" },
+    { key: "protocol", label: "Protocol" },
+  ];
+}
+
 function filterRecentBets(rows: BetRow[], view: ActivityView) {
   return rows.filter((row) => {
     const status = mapBetState(row.state);
@@ -239,7 +268,7 @@ function getCurrentParamSignal(
   switch (slug) {
     case "dice":
       return {
-        value: diceCap,
+        value: `${diceCap}%`,
         label: "Current cap",
         helper: "Lower caps generally push toward lower hit rate and higher upside.",
       };
@@ -250,17 +279,29 @@ function getCurrentParamSignal(
         helper: "Binary room with the simplest possible parameter surface.",
       };
     case "roulette":
-      return {
-        value: rouletteMask,
-        label: "Active mask",
-        helper: "Legacy mask encoding stays bound to the active release manifest.",
-      };
+      {
+        const selected = countMaskSelections(rouletteMask);
+        return {
+          value: selected == null ? "Invalid" : `${selected} cell${selected === 1 ? "" : "s"}`,
+          label: "Active selection",
+          helper:
+            selected == null
+              ? "The legacy roulette mask is invalid. Fix the selection board before planning."
+              : "Legacy roulette now reads from the visible selection board instead of a hand-typed mask.",
+        };
+      }
     case "keno":
-      return {
-        value: kenoMask,
-        label: "Packed pick",
-        helper: "Packed selection must stay non-zero and release-compatible.",
-      };
+      {
+        const selected = countMaskSelections(kenoMask);
+        return {
+          value: selected == null ? "Invalid" : `${selected} pick${selected === 1 ? "" : "s"}`,
+          label: "Packed selection",
+          helper:
+            selected == null
+              ? "The Keno mask is invalid. Use the board to rebuild a valid selection."
+              : "Pick your numbers on the board first, then size the ticket in the stake console.",
+        };
+      }
     default:
       return {
         value: "Release",
@@ -292,18 +333,20 @@ export function GamePageClient({ slug }: { slug: string }) {
   );
 
   const [activityView, setActivityView] = React.useState<ActivityView>("all");
+  const [infoView, setInfoView] = React.useState<InfoView>("activity");
 
   const [diceCap, setDiceCap] = React.useState<string>("50");
   const [coinSide, setCoinSide] = React.useState<"heads" | "tails">("heads");
-  const [rouletteMask, setRouletteMask] = React.useState<string>("0x12345");
-  const [kenoMask, setKenoMask] = React.useState<string>("0xabcde");
+  const [rouletteMask, setRouletteMask] = React.useState<string>("0x1");
+  const [kenoMask, setKenoMask] = React.useState<string>("0x1f");
 
   React.useEffect(() => {
     setDiceCap("50");
     setCoinSide("heads");
-    setRouletteMask("0x12345");
-    setKenoMask("0xabcde");
+    setRouletteMask("0x1");
+    setKenoMask("0x1f");
     setActivityView("all");
+    setInfoView("activity");
   }, [slug]);
 
   if (!release) {
@@ -328,8 +371,8 @@ export function GamePageClient({ slug }: { slug: string }) {
 
   const roomPulse = summarizeRoomPulse(recentBets);
   const lagTone = summarizeLag(indexerStatus?.lagBlocks);
-  const stateBreakdown = summarizeStateBreakdown(recentBets);
   const activityTabs = buildActivityTabs(recentBets);
+  const infoTabs = buildInfoTabs();
   const filteredRecentBets = filterRecentBets(recentBets, activityView);
   const paramSignal = getCurrentParamSignal(game.slug, diceCap, coinSide, rouletteMask, kenoMask);
   const explorerModuleUrl = explorerBaseUrl ? `${explorerBaseUrl}/address/${game.module}` : undefined;
@@ -437,393 +480,200 @@ export function GamePageClient({ slug }: { slug: string }) {
 
   return (
     <PageTransition pageKey={`game-${slug}`}>
-      <div className="space-y-8">
-        <section className="relative overflow-hidden rounded-[2rem] border border-slate-800 bg-slate-900/60 px-6 py-6 shadow-2xl shadow-slate-950/40 backdrop-blur-xl sm:px-8 lg:px-10">
-          <div className={`pointer-events-none absolute inset-0 ${presentation.theme.ambientClassName}`} />
-
-          <div className="relative space-y-6">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-wrap items-center gap-3">
-                <Link
-                  href="/games"
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-700/70 bg-slate-950/50 px-4 py-2 text-sm text-slate-300 transition-colors hover:border-slate-600 hover:text-white"
-                >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
-                  All Games
-                </Link>
-                <ReleaseBadge
-                  networkName={release.name}
-                  hubShort={shortHex(release.contracts.hub)}
-                  digestShort={release.releaseDigest.slice(0, 8)}
-                />
-                <span
-                  className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${presentation.theme.badgeClassName}`}
-                >
-                  {presentation.roomLabel}
-                </span>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-3">
-                <Button
-                  asChild
-                  size="sm"
-                  variant="outline"
-                  className="border-slate-700 text-slate-200 hover:border-slate-500 hover:bg-slate-800/40 hover:text-white"
-                >
-                  <Link href="#bet-panel">Open Bet Console</Link>
-                </Button>
-                <Button asChild size="sm" variant="glass">
-                  <Link href="/bets">Open Ledger</Link>
-                </Button>
-              </div>
+      <div className="space-y-6">
+        <section className="space-y-4 rounded-[2rem] border border-slate-800 bg-slate-900/60 px-4 py-4 shadow-2xl shadow-slate-950/40 backdrop-blur-xl sm:px-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <Link
+                href="/games"
+                className="inline-flex items-center gap-2 rounded-full border border-slate-700/70 bg-slate-950/50 px-4 py-2 text-sm text-slate-300 transition-colors hover:border-slate-600 hover:text-white"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                All Games
+              </Link>
             </div>
 
-            <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.92fr)]">
-              <div className="space-y-6">
-                <div className="space-y-4">
-                  <div className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${roomPulse.className}`}>
-                    {roomPulse.label}
-                  </div>
-                  <div className="space-y-3">
-                    <h1 className="max-w-4xl text-4xl font-black tracking-tight text-white md:text-6xl">
-                      {presentation.icon} {game.label}
-                    </h1>
-                    <p className="max-w-3xl text-base leading-7 text-slate-300 md:text-lg">
-                      {presentation.detailDescription}
-                    </p>
-                  </div>
-                  <p className="max-w-2xl text-sm leading-6 text-slate-400">{presentation.roomSummary}</p>
-                </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${roomPulse.className}`}>
+                {roomPulse.label}
+              </span>
+              <Button asChild size="sm" variant="outline" className="border-slate-700 text-slate-200 hover:border-slate-500 hover:bg-slate-800/40 hover:text-white">
+                <Link href="/bets">Open ledger</Link>
+              </Button>
+            </div>
+          </div>
 
-                <div className="flex flex-wrap gap-2 text-sm">
-                  <span className="rounded-full border border-slate-700/70 bg-slate-950/50 px-3 py-1.5 text-slate-300">
-                    Assets: {assetLabels || "—"}
-                  </span>
-                  <span className="rounded-full border border-slate-700/70 bg-slate-950/50 px-3 py-1.5 text-slate-300">
-                    Params: {game.paramsEncoding ?? "release-defined"}
-                  </span>
-                  <span className="rounded-full border border-slate-700/70 bg-slate-950/50 px-3 py-1.5 text-slate-300">
-                    Module: {shortHex(game.module)}
-                  </span>
-                  <span className="rounded-full border border-slate-700/70 bg-slate-950/50 px-3 py-1.5 text-slate-300">
-                    Synced block: {indexerStatus?.lastSyncedBlock ?? "—"}
-                  </span>
-                </div>
+          <div className="-mx-1 overflow-x-auto px-1">
+            <div className="inline-flex gap-2">
+              {(release.gamesMeta ?? []).map((item) => {
+                const active = item.slug === game.slug;
+                return (
+                  <Link
+                    key={item.slug}
+                    href={`/games/${item.slug}`}
+                    className={
+                      active
+                        ? `rounded-2xl border px-5 py-3 text-sm font-semibold shadow-lg ${presentation.theme.badgeClassName}`
+                        : "rounded-2xl border border-slate-700/70 bg-slate-950/50 px-5 py-3 text-sm font-semibold text-slate-400 transition-colors hover:border-slate-600 hover:text-white"
+                    }
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
 
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                  <StatCard
-                    label="Recent Bets"
-                    value={formatCount(recentBets.length)}
-                    subValue={roomPulse.label}
-                    trend={roomPulse.trend}
-                  />
-                  <StatCard
-                    label="Settled Window"
-                    value={formatCount(stateBreakdown.settled)}
-                    subValue={`${formatCount(stateBreakdown.open)} open`}
-                    trend={stateBreakdown.settled >= stateBreakdown.open ? "up" : "neutral"}
-                  />
-                  <StatCard
-                    label="Supported Assets"
-                    value={formatCount(release.assets.length)}
-                    subValue={assetLabels || "release-defined"}
-                  />
-                  <StatCard
-                    label="Indexer Lag"
-                    value={typeof indexerStatus?.lagBlocks === "number" ? `${indexerStatus.lagBlocks}` : "—"}
-                    subValue={lagTone.label}
-                    trend={lagTone.trend}
-                  />
-                </div>
-
-                <div className="grid gap-3 lg:grid-cols-3">
-                  {presentation.playbook.map((step, index) => (
-                    <div
-                      key={`${game.slug}-playbook-${index}`}
-                      className="rounded-2xl border border-slate-800/80 bg-slate-950/45 p-4"
-                    >
-                      <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                        Step 0{index + 1}
-                      </div>
-                      <p className="mt-3 text-sm leading-6 text-slate-300">{step}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className={`relative overflow-hidden rounded-[1.75rem] border border-white/10 p-6 shadow-2xl ${presentation.theme.stageClassName}`}>
-                <div className="pointer-events-none absolute -right-12 -top-10 text-[8rem] opacity-10">
-                  {presentation.icon}
-                </div>
-                <div className="pointer-events-none absolute inset-x-10 bottom-0 h-32 rounded-full bg-white/5 blur-3xl" />
-
-                <div className="relative space-y-5">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                        Current game signal
-                      </div>
-                      <div className="mt-3 text-5xl font-black tracking-tight text-white sm:text-6xl">
-                        {paramSignal.value}
-                      </div>
-                      <div className={`mt-2 text-sm font-medium ${presentation.theme.accentClassName}`}>
-                        {paramSignal.label}
-                      </div>
-                    </div>
-
-                    <div
-                      className={`inline-flex items-center justify-center rounded-3xl border px-4 py-3 text-5xl shadow-lg ${presentation.theme.badgeClassName}`}
-                    >
-                      {presentation.icon}
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4 text-sm leading-6 text-slate-300">
-                    {paramSignal.helper}
-                  </div>
-
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-                      <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Room pulse</div>
-                      <div className="mt-2 text-lg font-bold text-white">{roomPulse.label}</div>
-                      <div className="mt-1 text-sm text-slate-400">{roomPulse.description}</div>
-                    </div>
-                    <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-                      <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Facts stream</div>
-                      <div className="mt-2 text-lg font-bold text-white">{lagTone.label}</div>
-                      <div className="mt-1 text-sm text-slate-400">
-                        {indexerStatus?.lastSyncedBlock != null
-                          ? `Synced through block ${indexerStatus.lastSyncedBlock}.`
-                          : lagTone.description}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl border border-white/10 bg-slate-950/40 p-4">
-                    <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Release truth</div>
-                    <div className="mt-3 grid gap-3 text-sm text-slate-300 sm:grid-cols-2">
-                      <div>
-                        <div className="text-slate-500">Game ID</div>
-                        <div className="mt-1 font-mono text-slate-100">{shortHex(game.gameId)}</div>
-                      </div>
-                      <div>
-                        <div className="text-slate-500">Params encoding</div>
-                        <div className="mt-1 font-mono text-slate-100">{game.paramsEncoding ?? "—"}</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-2xl border border-slate-800/80 bg-slate-950/45 px-4 py-3">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Room</div>
+              <div className="mt-1 text-sm font-semibold text-white">
+                {presentation.icon} {game.label}
               </div>
             </div>
-
-            <div className="-mx-2 overflow-x-auto px-2 pb-1">
-              <div className="inline-flex gap-2">
-                {(release.gamesMeta ?? []).map((item) => {
-                  const active = item.slug === game.slug;
-                  return (
-                    <Link
-                      key={item.slug}
-                      href={`/games/${item.slug}`}
-                      className={
-                        active
-                          ? `rounded-full border px-4 py-2 text-sm font-semibold shadow-lg ${presentation.theme.badgeClassName}`
-                          : "rounded-full border border-slate-700/70 bg-slate-950/50 px-4 py-2 text-sm font-semibold text-slate-400 transition-colors hover:border-slate-600 hover:text-white"
-                      }
-                    >
-                      {item.label}
-                    </Link>
-                  );
-                })}
-              </div>
+            <div className="rounded-2xl border border-slate-800/80 bg-slate-950/45 px-4 py-3">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">{paramSignal.label}</div>
+              <div className="mt-1 text-sm font-semibold text-white">{paramSignal.value}</div>
+            </div>
+            <div className={`rounded-2xl border px-4 py-3 ${lagTone.className}`}>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] opacity-75">Sync</div>
+              <div className="mt-1 text-sm font-semibold">{lagTone.label}</div>
+            </div>
+            <div className="rounded-2xl border border-slate-800/80 bg-slate-950/45 px-4 py-3">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Assets</div>
+              <div className="mt-1 text-sm font-semibold text-white">{assetLabels || "—"}</div>
             </div>
           </div>
         </section>
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.58fr)_minmax(320px,0.82fr)]">
-          <div id="bet-panel">
-            <GameBetPanel
-              release={release}
-              game={{ gameId: game.gameId, slug: game.slug, label: game.label }}
-              description={`Release-routed Hub.placeBet flow for ${game.label}.`}
-              getEncodedParams={getEncodedParams}
-            >
-              {renderParamsForm()}
-            </GameBetPanel>
-          </div>
-
-          <div className="space-y-6 self-start xl:sticky xl:top-24">
-            <Card className="border-slate-800 bg-slate-900/50 backdrop-blur-xl shadow-xl shadow-slate-950/40">
-              <CardHeader className="border-b border-slate-800/70 pb-4">
-                <CardTitle className="text-lg text-white">Control Room</CardTitle>
-                <CardDescription className="text-slate-400">
-                  Fast read on the room configuration, local facts health, and release-routed surfaces.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-3 p-6 text-sm">
-                <div className="rounded-2xl border border-slate-800/80 bg-slate-950/45 p-4">
-                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Current param</div>
-                  <div className="mt-2 text-lg font-bold text-white">{paramSignal.value}</div>
-                  <div className="mt-1 text-slate-400">{paramSignal.label}</div>
-                </div>
-                <div className="rounded-2xl border border-slate-800/80 bg-slate-950/45 p-4">
-                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Room state</div>
-                  <div className="mt-2 text-lg font-bold text-white">{roomPulse.label}</div>
-                  <div className="mt-1 text-slate-400">{roomPulse.description}</div>
-                </div>
-                <div className="rounded-2xl border border-slate-800/80 bg-slate-950/45 p-4">
-                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Indexer health</div>
-                  <div className="mt-2 text-lg font-bold text-white">{lagTone.label}</div>
-                  <div className="mt-1 text-slate-400">{lagTone.description}</div>
-                </div>
-                <div className="rounded-2xl border border-slate-800/80 bg-slate-950/45 p-4">
-                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Asset universe</div>
-                  <div className="mt-2 text-lg font-bold text-white">{formatCount(release.assets.length)}</div>
-                  <div className="mt-1 text-slate-400">{assetLabels || "No release assets"}</div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-slate-800 bg-slate-900/50 backdrop-blur-xl shadow-xl shadow-slate-950/40">
-              <CardHeader className="border-b border-slate-800/70 pb-4">
-                <CardTitle className="text-lg text-white">How to Play</CardTitle>
-                <CardDescription className="text-slate-400">
-                  Product guidance only. Route validity and settlement still come from release truth.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4 p-6">
-                {presentation.playbook.map((step, index) => (
-                  <div key={`${game.slug}-guide-${index}`} className="flex items-start gap-3">
-                    <div className={`mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-bold ${presentation.theme.badgeClassName}`}>
-                      {index + 1}
-                    </div>
-                    <p className="text-sm leading-6 text-slate-300">{step}</p>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            <Card className="border-slate-800 bg-slate-900/50 backdrop-blur-xl shadow-xl shadow-slate-950/40">
-              <CardHeader className="border-b border-slate-800/70 pb-4">
-                <CardTitle className="text-lg text-white">Execution Notes</CardTitle>
-                <CardDescription className="text-slate-400">
-                  Keep the page professional, but never outrun protocol semantics.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3 p-6 text-sm leading-6 text-slate-300">
-                <p>VRF fees are quoted during planning and attached as native value when the bet is submitted.</p>
-                <p>Token approvals target the Bank contract for the selected asset, never the Hub directly.</p>
-                <p>If the live table is empty after a recent tx, wait for local sync or jump to the full bet ledger.</p>
-                {explorerModuleUrl ? (
-                  <p>
-                    Explorer surface:{" "}
-                    <a
-                      href={explorerModuleUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="font-mono text-emerald-300 transition-colors hover:text-emerald-200"
-                    >
-                      {shortHex(game.module)}
-                    </a>
-                  </p>
-                ) : null}
-              </CardContent>
-            </Card>
-          </div>
+        <div id="bet-panel">
+          <GameBetPanel
+            release={release}
+            game={{ gameId: game.gameId, slug: game.slug, label: game.label }}
+            getEncodedParams={getEncodedParams}
+            inputFingerprint={[game.slug, diceCap, coinSide, rouletteMask, kenoMask].join("|")}
+            selectionSignal={paramSignal}
+          >
+            {renderParamsForm()}
+          </GameBetPanel>
         </div>
 
-        <section className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.8fr)]">
+        <section>
           <Card className="border-slate-800 bg-slate-900/50 backdrop-blur-xl shadow-xl shadow-slate-950/40">
-            <CardHeader className="flex flex-col gap-4 border-b border-slate-800/70 pb-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <CardTitle className="text-lg text-white">Live Table</CardTitle>
-                <CardDescription className="mt-1 text-slate-400">
-                  Indexer-scoped activity for this release game. Click a row to inspect the full bet timeline.
-                </CardDescription>
+            <CardHeader className="space-y-4 border-b border-slate-800/70 pb-4">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <CardTitle className="text-lg text-white">
+                    {infoView === "activity" ? "Live Table" : infoView === "guide" ? "How to play" : "Protocol routing"}
+                  </CardTitle>
+                  <CardDescription className="mt-1 text-slate-400">
+                    {infoView === "activity"
+                      ? "Recent indexed bets for this room. Use the ledger rows when you need the full bet timeline."
+                      : infoView === "guide"
+                        ? "Keep the interaction linear: choose the outcome, size the ticket, then confirm the quote."
+                        : "Presentation can move fast. Routing truth still lives in the active release manifest."}
+                  </CardDescription>
+                </div>
+                <TabBar tabs={infoTabs} activeKey={infoView} onTabChange={(next) => setInfoView(next as InfoView)} />
               </div>
-              <TabBar
-                tabs={activityTabs}
-                activeKey={activityView}
-                onTabChange={(next) => setActivityView(next as ActivityView)}
-              />
+              {infoView === "activity" ? (
+                <TabBar
+                  tabs={activityTabs}
+                  activeKey={activityView}
+                  onTabChange={(next) => setActivityView(next as ActivityView)}
+                />
+              ) : null}
             </CardHeader>
             <CardContent className="space-y-4 p-6">
-              {recentBetsQuery.error ? (
-                <ErrorCallout title="Recent bets unavailable" message={recentBetsError} />
-              ) : null}
-              <DataTable
-                columns={recentBetColumns}
-                data={filteredRecentBets}
-                loading={recentBetsQuery.isLoading}
-                rowKey={(row) => row.id}
-                onRowClick={(row) => router.push(`/bets/${row.betId}`)}
-                emptyMessage={`No ${activityView === "all" ? "" : `${activityView} `}indexed ${game.label} bets yet. The local indexer may still be catching up.`}
-              />
-            </CardContent>
-          </Card>
-
-          <Card className="border-slate-800 bg-slate-900/50 backdrop-blur-xl shadow-xl shadow-slate-950/40">
-            <CardHeader className="border-b border-slate-800/70 pb-4">
-              <CardTitle className="text-lg text-white">Protocol Truth</CardTitle>
-              <CardDescription className="text-slate-400">
-                Presentation can be expressive, but release identity and indexer facts still define what is real.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5 p-6">
-              <div className="space-y-2">
-                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Release Truth</div>
-                <div className="space-y-2 text-sm text-slate-300">
-                  <div className="flex items-start justify-between gap-3">
-                    <span>Game ID</span>
-                    <span className="font-mono text-right text-slate-200">{shortHex(game.gameId)}</span>
-                  </div>
-                  <div className="flex items-start justify-between gap-3">
-                    <span>Module</span>
-                    <span className="font-mono text-right text-slate-200">{shortHex(game.module)}</span>
-                  </div>
-                  <div className="flex items-start justify-between gap-3">
-                    <span>Params encoding</span>
-                    <span className="max-w-[16rem] text-right font-mono text-xs text-slate-200">
-                      {game.paramsEncoding ?? "—"}
-                    </span>
-                  </div>
-                  <div className="flex items-start justify-between gap-3">
-                    <span>Supported assets</span>
-                    <span className="text-right text-slate-200">{assetLabels || "—"}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                  {presentation.helpLabel}
-                </div>
-                <p className="text-sm leading-relaxed text-slate-300">{presentation.helpDescription}</p>
-              </div>
-
-              <div className="space-y-2">
-                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Local facts</div>
-                <div className="rounded-2xl border border-slate-800/80 bg-slate-950/45 p-4 text-sm text-slate-300">
-                  <div>Recent room window: {formatCount(recentBets.length)} indexed bets</div>
-                  <div className="mt-2">
-                    Synced block {indexerStatus?.lastSyncedBlock ?? "—"} · Lag {indexerStatus?.lagBlocks ?? "—"} blocks
-                  </div>
-                  {explorerModuleUrl ? (
-                    <div className="mt-2">
-                      Explorer:{" "}
-                      <a
-                        href={explorerModuleUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="font-mono text-emerald-300 transition-colors hover:text-emerald-200"
-                      >
-                        {shortHex(game.module)}
-                      </a>
-                    </div>
+              {infoView === "activity" ? (
+                <>
+                  {recentBetsQuery.error ? (
+                    <ErrorCallout title="Recent bets unavailable" message={recentBetsError} />
                   ) : null}
+                  <DataTable
+                    columns={recentBetColumns}
+                    data={filteredRecentBets}
+                    loading={recentBetsQuery.isLoading}
+                    rowKey={(row) => row.id}
+                    onRowClick={(row) => router.push(`/bets/${row.betId}`)}
+                    emptyMessage={`No ${activityView === "all" ? "" : `${activityView} `}indexed ${game.label} bets yet. The local indexer may still be catching up.`}
+                  />
+                </>
+              ) : null}
+
+              {infoView === "guide" ? (
+                <div className="space-y-5">
+                  <div className="rounded-[1.5rem] border border-slate-800/80 bg-slate-950/45 p-5">
+                    <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{presentation.helpLabel}</div>
+                    <p className="mt-3 text-sm leading-7 text-slate-300">{presentation.helpDescription}</p>
+                  </div>
+
+                  <div className="grid gap-4">
+                    {presentation.playbook.map((step, index) => (
+                      <div key={`${game.slug}-guide-${index}`} className="flex items-start gap-4 rounded-[1.5rem] border border-slate-800/80 bg-slate-950/45 p-4">
+                        <div className={`mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-bold ${presentation.theme.badgeClassName}`}>
+                          {index + 1}
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-sm font-semibold text-white">Step {index + 1}</div>
+                          <p className="text-sm leading-6 text-slate-300">{step}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              ) : null}
+
+              {infoView === "protocol" ? (
+                <div className="space-y-5">
+                  <div className="rounded-[1.5rem] border border-slate-800/80 bg-slate-950/45 p-5">
+                    <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Release truth</div>
+                    <div className="mt-4 space-y-3 text-sm text-slate-300">
+                      <div className="flex items-start justify-between gap-3">
+                        <span>Game ID</span>
+                        <span className="font-mono text-right text-slate-200">{shortHex(game.gameId)}</span>
+                      </div>
+                      <div className="flex items-start justify-between gap-3">
+                        <span>Module</span>
+                        <span className="font-mono text-right text-slate-200">{shortHex(game.module)}</span>
+                      </div>
+                      <div className="flex items-start justify-between gap-3">
+                        <span>Params encoding</span>
+                        <span className="max-w-[16rem] text-right font-mono text-xs text-slate-200">
+                          {game.paramsEncoding ?? "—"}
+                        </span>
+                      </div>
+                      <div className="flex items-start justify-between gap-3">
+                        <span>Supported assets</span>
+                        <span className="text-right text-slate-200">{assetLabels || "—"}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-[1.5rem] border border-slate-800/80 bg-slate-950/45 p-5 text-sm text-slate-300">
+                    <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Execution notes</div>
+                    <div className="mt-4 space-y-3 leading-6">
+                      <div>Recent room window: {formatCount(recentBets.length)} indexed bets.</div>
+                      <div>Token approvals always target the asset Bank, never the Hub.</div>
+                      {explorerModuleUrl ? (
+                        <div>
+                          Explorer:{" "}
+                          <a
+                            href={explorerModuleUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="font-mono text-emerald-300 transition-colors hover:text-emerald-200"
+                          >
+                            {shortHex(game.module)}
+                          </a>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
             </CardContent>
           </Card>
         </section>

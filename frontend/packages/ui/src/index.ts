@@ -32,6 +32,7 @@ export * from "./components/protocol/tx-status-chip";
 export * from "./components/protocol/error-callout";
 export * from "./components/protocol/stake-spec-form";
 export * from "./components/protocol/asset-selector";
+export * from "./components/protocol/mask-picker-grid";
 export * from "./components/protocol/dice-params-form";
 export * from "./components/protocol/cointoss-params-form";
 export * from "./components/protocol/roulette-params-form";

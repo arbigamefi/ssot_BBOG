@@ -25,6 +25,7 @@ Examples: Button, Card, Tabs, Dialog, Toast...
 | `Label` | Form label primitive | required |
 | `AssetSelector` | Canonical asset selector (pure UI) | required |
 | `StakeSpecForm` | StakeSpec form (amountPerRoll, betCount, stopGain/loss) | required |
+| `MaskPickerGrid` | 40-cell visual selector for packed mask games | required |
 | `DiceParamsForm` | Dice params form (cap) | required |
 | `CoinTossParamsForm` | Coin toss params form (heads/tails) | required |
 | `RouletteParamsForm` | Roulette params form (uint40 mask) | required |
@@ -38,7 +39,6 @@ Examples: BetPanel, BankPanel, ReferralPanel.
 ### System (@ssot/ui)
 - `DataTable` (standardized column definitions, alignment, empty state)
 - `MetricCard` (numbers + deltas + tooltip)
-- `MaskPickerGrid` (40-bit toggle grid) — optional enhancement for Roulette/Keno UX (post-D2)
 - `AddressInput` (validated address field with helper text) — used by Referral/Affiliate (Milestone D5)
 
 ### Feature (apps/web)

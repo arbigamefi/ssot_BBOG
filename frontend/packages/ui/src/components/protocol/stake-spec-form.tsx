@@ -29,6 +29,13 @@ export type StakeSpecFormProps = {
   betCountMax?: number;
   /** Show stop-gain / stop-loss fields. */
   defaultShowAdvanced?: boolean;
+  amountActions?: Array<{
+    label: string;
+    onClick: () => void;
+    disabled?: boolean;
+  }>;
+  betCountPresets?: number[];
+  balanceHint?: string;
   className?: string;
 };
 
@@ -53,17 +60,43 @@ export function StakeSpecForm(props: StakeSpecFormProps) {
     betCountMin = 1,
     betCountMax = 100,
     defaultShowAdvanced = false,
+    amountActions = [],
+    betCountPresets = [1, 3, 5, 10],
+    balanceHint,
     className,
   } = props;
 
   const [showAdvanced, setShowAdvanced] = React.useState(defaultShowAdvanced);
 
+  const updateBetCount = React.useCallback(
+    (nextValue: number) => {
+      const bounded = Math.max(betCountMin, Math.min(betCountMax, nextValue));
+      onChange({ ...value, betCount: String(bounded) });
+    },
+    [betCountMax, betCountMin, onChange, value]
+  );
+
+  const numericBetCount = React.useMemo(() => {
+    const parsed = Number(value.betCount || "");
+    if (!Number.isFinite(parsed)) return betCountMin;
+    return Math.max(betCountMin, Math.min(betCountMax, Math.floor(parsed)));
+  }, [betCountMax, betCountMin, value.betCount]);
+
   return (
     <div className={cn("space-y-6", className)}>
-      <div className="grid gap-2">
+      <div className="grid gap-3">
         <div className="flex items-center justify-between">
-          <Label htmlFor="stake.amountPerRoll" className="text-sm font-bold tracking-wider text-muted-foreground uppercase">Amount per bet</Label>
-          {unitHint ? <span className="rounded bg-primary/10 px-2 py-0.5 text-[10px] font-bold tracking-widest text-primary border border-primary/20">{unitHint}</span> : null}
+          <div className="space-y-1">
+            <Label htmlFor="stake.amountPerRoll" className="text-sm font-bold tracking-wider text-muted-foreground uppercase">
+              Bet amount
+            </Label>
+            {balanceHint ? <div className="text-xs text-muted-foreground">{balanceHint}</div> : null}
+          </div>
+          {unitHint ? (
+            <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[10px] font-bold tracking-widest text-primary">
+              {unitHint}
+            </span>
+          ) : null}
         </div>
         <div className="relative">
           <Input
@@ -73,33 +106,88 @@ export function StakeSpecForm(props: StakeSpecFormProps) {
             value={value.amountPerRoll}
             onChange={(e) => onChange({ ...value, amountPerRoll: e.target.value })}
             disabled={disabled}
-            className="text-2xl font-black font-mono tracking-widest h-14 bg-black/60 shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)] border-white/5 focus-visible:border-primary/50 focus-visible:shadow-[0_0_15px_rgba(16,185,129,0.1)_inset]"
+            className="h-16 rounded-2xl border-white/10 bg-black/60 text-3xl font-black tracking-tight shadow-[inset_0_2px_10px_rgba(0,0,0,0.5)] focus-visible:border-primary/50 focus-visible:shadow-[0_0_15px_rgba(16,185,129,0.1)_inset]"
           />
         </div>
+        {amountActions.length > 0 ? (
+          <div className="grid grid-cols-3 gap-2">
+            {amountActions.map((action) => (
+              <button
+                key={action.label}
+                type="button"
+                disabled={disabled || action.disabled}
+                onClick={action.onClick}
+                className="rounded-2xl border border-white/10 bg-black/30 px-3 py-2 text-sm font-semibold text-white transition-colors hover:border-white/20 hover:bg-black/50 disabled:opacity-50"
+              >
+                {action.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
         <FieldError msg={errors?.amountPerRoll} />
       </div>
 
-      <div className="grid gap-2">
+      <div className="grid gap-3">
         <div className="flex items-center justify-between">
-          <Label htmlFor="stake.betCount" className="text-sm font-bold tracking-wider text-muted-foreground uppercase">Bet count</Label>
-          <span className="rounded bg-white/10 px-2 py-0.5 text-[10px] font-bold tracking-widest text-white/50 border border-white/10 uppercase">Rolls</span>
+          <Label htmlFor="stake.betCount" className="text-sm font-bold tracking-wider text-muted-foreground uppercase">
+            Number of bets
+          </Label>
+          <span className="rounded-full border border-white/10 bg-white/10 px-2.5 py-1 text-[10px] font-bold tracking-widest text-white/50 uppercase">
+            Rounds
+          </span>
         </div>
-        <Input
-          id="stake.betCount"
-          type="number"
-          min={betCountMin}
-          max={betCountMax}
-          step={1}
-          placeholder={String(betCountMin)}
-          value={value.betCount}
-          onChange={(e) => onChange({ ...value, betCount: e.target.value })}
-          disabled={disabled}
-          className="text-xl font-bold font-mono tracking-widest h-12 bg-black/40 border-white/5 focus-visible:border-white/20"
-        />
+        <div className="grid grid-cols-[56px_minmax(0,1fr)_56px] gap-2">
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => updateBetCount(numericBetCount - 1)}
+            className="rounded-2xl border border-white/10 bg-black/30 text-2xl font-bold text-white transition-colors hover:border-white/20 hover:bg-black/50 disabled:opacity-50"
+          >
+            -
+          </button>
+          <Input
+            id="stake.betCount"
+            type="number"
+            min={betCountMin}
+            max={betCountMax}
+            step={1}
+            placeholder={String(betCountMin)}
+            value={value.betCount}
+            onChange={(e) => onChange({ ...value, betCount: e.target.value })}
+            disabled={disabled}
+            className="h-14 rounded-2xl border-white/10 bg-black/40 text-center text-2xl font-black tracking-tight focus-visible:border-white/20"
+          />
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => updateBetCount(numericBetCount + 1)}
+            className="rounded-2xl border border-white/10 bg-black/30 text-2xl font-bold text-white transition-colors hover:border-white/20 hover:bg-black/50 disabled:opacity-50"
+          >
+            +
+          </button>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {betCountPresets.map((preset) => (
+            <button
+              key={preset}
+              type="button"
+              disabled={disabled}
+              onClick={() => updateBetCount(preset)}
+              className={cn(
+                "rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] transition-colors",
+                numericBetCount === preset
+                  ? "border-primary/40 bg-primary/15 text-primary"
+                  : "border-white/10 bg-white/5 text-muted-foreground hover:border-white/20 hover:text-white"
+              )}
+            >
+              x{preset}
+            </button>
+          ))}
+        </div>
         <FieldError msg={errors?.betCount} />
       </div>
 
-      <div className="flex items-center justify-center pt-2 border-t border-white/5">
+      <div className="flex items-center justify-center border-t border-white/5 pt-2">
         <button
           type="button"
           className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors py-2"
@@ -116,10 +204,12 @@ export function StakeSpecForm(props: StakeSpecFormProps) {
       </div>
 
       {showAdvanced ? (
-        <div id="stake-spec-advanced" className="grid grid-cols-2 gap-4 p-4 rounded-2xl bg-black/20 border border-white/5">
+        <div id="stake-spec-advanced" className="grid grid-cols-1 gap-4 rounded-2xl border border-white/5 bg-black/20 p-4 md:grid-cols-2">
           <div className="grid gap-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="stake.stopGain" className="text-xs font-bold tracking-wider text-muted-foreground uppercase">Stop gain</Label>
+              <Label htmlFor="stake.stopGain" className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
+                Stop gain
+              </Label>
             </div>
             <Input
               id="stake.stopGain"
@@ -135,7 +225,9 @@ export function StakeSpecForm(props: StakeSpecFormProps) {
 
           <div className="grid gap-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="stake.stopLoss" className="text-xs font-bold tracking-wider text-muted-foreground uppercase">Stop loss</Label>
+              <Label htmlFor="stake.stopLoss" className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
+                Stop loss
+              </Label>
             </div>
             <Input
               id="stake.stopLoss"

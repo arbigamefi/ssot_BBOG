@@ -22,9 +22,9 @@ Games are routed by **release manifest slugs**.
    - Quick links back to `/games` and `/bets`
    - Release-truth chips (assets, params encoding, module, sync status)
 2. **Primary Surface: Bet Console**
-   - Inputs
-   - Plan preview
-   - Stepper
+   - Step 1: outcome board / game-specific selection surface
+   - Step 2: stake console (asset, amount, bet count, totals)
+   - Step 3: plan preview + stepper
 3. **Secondary Rail: Control Room**
    - Current param preview
    - Live room pulse from local indexed facts
@@ -44,10 +44,12 @@ Games are routed by **release manifest slugs**.
     - `GameSwitcher`
     - `RoomPulse`
   - `BetPanel` (feature component)
-    - `AssetSelector`
-    - `AmountInput`
-    - `StakeSpecInputs`
-    - `GameSpecificInputs` (by slug)
+    - `OutcomeBoard`
+      - `GameSpecificInputs` (by slug)
+    - `StakeConsole`
+      - `AssetSelector`
+      - `AmountInput`
+      - `StakeSpecInputs`
     - `PlanPreview`
     - `TxStepper`
   - `ControlRoomRail`
@@ -102,6 +104,8 @@ The BetPanel uses a canonical StakeSpec model:
 UI MUST display derived totals:
 - `totalStakeWei = amountPerBetWei * betCount`
 - `amountPerBet` and `totalStake` formatted using the selected asset decimals.
+- The stake console SHOULD expose human-first controls such as half/double/max amount actions and quick bet-count presets.
+- The stake console SHOULD surface wallet balance and current allowance inline so the user does not have to inspect a secondary page before planning.
 
 ### Affiliate + maxHouseEdgeBps
 - `affiliate` input is optional.
@@ -135,7 +139,7 @@ UI MUST display derived totals:
 
 ### Roulette (`slug=roulette`)
 - UI control (v1): 40-bit legacy mask picker.
-  - Present a 40-cell grid/toggles. Each toggle sets one bit in `mask`.
+  - Present a 40-cell visual board. Each toggle sets one bit in `mask`.
   - UI labels MAY be domain-specific (0–36 + specials) but the underlying encoding MUST be a uint40 bitmask.
 - Canonical model: `{ mask: bigint }`.
 - Encoding (v1 MUST): `abi.encode(uint40 legacyMask)`.
@@ -146,7 +150,7 @@ UI MUST display derived totals:
 - Default: select a single bit (e.g. bit 0) so mask is non-zero.
 
 ### Keno (`slug=keno`)
-- UI control: number picker mapped to a 40-bit mask (same representation constraints as Roulette).
+- UI control: number board mapped to a 40-bit mask (same representation constraints as Roulette).
 - Canonical model: `{ mask: bigint }`.
 - Encoding: `abi.encode(uint40 numbersPacked)`.
 - Validation:
@@ -156,16 +160,17 @@ UI MUST display derived totals:
 - Default: pick a minimal valid set (non-zero mask).
 
 ## Interaction Flow (MUST)
-1. User enters inputs
-2. UI calls `planPlaceBet()`
-3. UI displays:
+1. User completes the game-side selection board.
+2. User sizes the ticket in the stake console.
+3. UI calls `planPlaceBet()`
+4. UI displays:
    - stake (ERC20)
    - vrfFee (native)
    - spender (bank)
    - maxHouseEdgeBps
-4. UI runs preflight simulate before each step
-5. User signs transactions via stepper
-6. On receipt, UI **MUST** reconcile `txHash → betId` (ADR-023) and show a stable bet link
+5. UI runs preflight simulate before each step
+6. User signs transactions via stepper
+7. On receipt, UI **MUST** reconcile `txHash → betId` (ADR-023) and show a stable bet link
 
 ### Stepper Contract (MUST)
 - Stepper state machine is standardized (ADR-022):

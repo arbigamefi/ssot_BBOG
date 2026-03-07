@@ -1,7 +1,6 @@
 import * as React from "react";
 
-import { Card } from "../ui/card";
-import { Label } from "../ui/label";
+import { cn } from "../../lib/utils";
 
 export type CoinTossSide = "heads" | "tails";
 
@@ -27,49 +26,52 @@ export function CoinTossParamsForm(props: CoinTossParamsFormProps) {
   } = props;
 
   return (
-    <Card className={className}>
-      <div className="space-y-3 p-4">
-        <div className="space-y-1">
-          <Label>{title}</Label>
-          {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 pt-4 pb-2">
-          <button
-            type="button"
-            className={[
-              "relative overflow-hidden rounded-2xl border-2 p-6 transition-all duration-300 flex flex-col items-center justify-center gap-2",
-              side === "heads"
-                ? "border-primary bg-primary/10 shadow-[0_0_30px_rgba(16,185,129,0.2)] scale-[1.02]"
-                : "border-white/5 bg-black/40 hover:bg-black/60 hover:border-white/10"
-            ].filter(Boolean).join(" ")}
-            disabled={disabled}
-            onClick={() => onSideChange?.("heads")}
-          >
-            <div className={`text-4xl font-black ${side === "heads" ? "text-primary neon-text-primary" : "text-muted-foreground"}`}>
-              HEADS
-            </div>
-          </button>
-
-          <button
-            type="button"
-            className={[
-              "relative overflow-hidden rounded-2xl border-2 p-6 transition-all duration-300 flex flex-col items-center justify-center gap-2",
-              side === "tails"
-                ? "border-secondary bg-secondary/10 shadow-[0_0_30px_rgba(139,92,246,0.2)] scale-[1.02]"
-                : "border-white/5 bg-black/40 hover:bg-black/60 hover:border-white/10"
-            ].filter(Boolean).join(" ")}
-            disabled={disabled}
-            onClick={() => onSideChange?.("tails")}
-          >
-            <div className={`text-4xl font-black ${side === "tails" ? "text-secondary neon-text-secondary" : "text-muted-foreground"}`}>
-              TAILS
-            </div>
-          </button>
-        </div>
-
-        {error ? <p className="text-sm font-medium text-destructive animate-pulse mt-4">{error}</p> : null}
+    <div className={cn("space-y-6", className)}>
+      <div className="space-y-2">
+        <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Choose a side</div>
+        <div className="text-2xl font-black tracking-tight text-white">{title}</div>
+        {description ? <p className="max-w-2xl text-sm leading-6 text-slate-400">{description}</p> : null}
       </div>
-    </Card>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <button
+          type="button"
+          className={cn(
+            "relative overflow-hidden rounded-[1.75rem] border p-8 text-left transition-all duration-200",
+            side === "heads"
+              ? "border-emerald-300/70 bg-emerald-400/15 shadow-[0_24px_60px_rgba(16,185,129,0.18)]"
+              : "border-slate-800 bg-slate-950/45 hover:border-slate-600"
+          )}
+          disabled={disabled}
+          onClick={() => onSideChange?.("heads")}
+        >
+          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Option A</div>
+          <div className={cn("mt-4 text-4xl font-black tracking-tight", side === "heads" ? "text-white" : "text-slate-300")}>
+            Heads
+          </div>
+          <div className="mt-3 text-sm leading-6 text-slate-400">Fastest path: one outcome, one stake, one settlement trace.</div>
+        </button>
+
+        <button
+          type="button"
+          className={cn(
+            "relative overflow-hidden rounded-[1.75rem] border p-8 text-left transition-all duration-200",
+            side === "tails"
+              ? "border-violet-300/70 bg-violet-400/15 shadow-[0_24px_60px_rgba(139,92,246,0.18)]"
+              : "border-slate-800 bg-slate-950/45 hover:border-slate-600"
+          )}
+          disabled={disabled}
+          onClick={() => onSideChange?.("tails")}
+        >
+          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Option B</div>
+          <div className={cn("mt-4 text-4xl font-black tracking-tight", side === "tails" ? "text-white" : "text-slate-300")}>
+            Tails
+          </div>
+          <div className="mt-3 text-sm leading-6 text-slate-400">Same execution path, different face. Keep the choice binary and obvious.</div>
+        </button>
+      </div>
+
+      {error ? <p className="text-sm font-medium text-rose-300">{error}</p> : null}
+    </div>
   );
 }

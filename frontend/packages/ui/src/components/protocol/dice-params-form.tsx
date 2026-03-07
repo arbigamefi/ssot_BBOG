@@ -1,8 +1,7 @@
 import * as React from "react";
 
-import { Card } from "../ui/card";
-import { Input } from "../ui/input";
 import { Label } from "../ui/label";
+import { cn } from "../../lib/utils";
 
 export type DiceParamsFormProps = {
   title?: string;
@@ -28,60 +27,72 @@ export function DiceParamsForm(props: DiceParamsFormProps) {
   } = props;
 
   return (
-    <Card className={className}>
-      <div className="space-y-3 p-4">
-        <div className="space-y-1">
-          <Label>{title}</Label>
-          {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
-        </div>
-
-        <div className="space-y-4">
-          <div className="flex items-end justify-between">
-            <Label className="text-xl font-bold tracking-wider text-primary">Win Chance</Label>
-            <div className="flex items-baseline gap-1">
-              <span className="text-3xl font-black text-white">{cap}</span>
-              <span className="text-sm font-medium text-muted-foreground">%</span>
-            </div>
-          </div>
-
-          <div className="relative pt-6 pb-2">
-            <input
-              type="range"
-              min="2"
-              max="98"
-              value={cap}
-              disabled={disabled}
-              onChange={(e) => onCapChange?.(e.target.value)}
-              className="w-full h-2 bg-black/50 rounded-lg appearance-none cursor-pointer accent-primary"
-            />
-            <div className="flex justify-between mt-2 text-xs font-medium text-muted-foreground">
-              <span>Riskier (2%)</span>
-              <span>Safer (98%)</span>
-            </div>
-          </div>
-
-          {error ? <p className="text-sm font-medium text-destructive animate-pulse">{error}</p> : null}
-        </div>
-
-        {presets.length > 0 ? (
-          <div className="grid grid-cols-4 gap-2 pt-4 border-t border-white/5">
-            {presets.map((p) => (
-              <button
-                key={p}
-                type="button"
-                className={`rounded-xl border border-white/10 px-3 py-2 text-sm font-bold transition-all duration-300 hover:border-primary/50 hover:bg-primary/20 ${cap === String(p)
-                  ? "bg-primary text-black border-primary shadow-[0_0_15px_rgba(16,185,129,0.5)]"
-                  : "bg-black/30 text-muted-foreground hover:text-white"
-                  } disabled:opacity-50`}
-                disabled={disabled}
-                onClick={() => onCapChange?.(String(p))}
-              >
-                {p}%
-              </button>
-            ))}
-          </div>
-        ) : null}
+    <div className={cn("space-y-6", className)}>
+      <div className="space-y-2">
+        <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Risk dial</div>
+        <div className="text-2xl font-black tracking-tight text-white">{title}</div>
+        {description ? <p className="max-w-2xl text-sm leading-6 text-slate-400">{description}</p> : null}
       </div>
-    </Card>
+
+      <div className="rounded-[1.9rem] border border-violet-400/15 bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.22),transparent_32%),linear-gradient(180deg,rgba(15,23,42,0.94),rgba(8,12,24,0.98))] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+        <div className="grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)]">
+          <div className="flex min-h-[220px] flex-col items-center justify-center rounded-[1.75rem] border border-white/10 bg-slate-950/45 px-6 py-5 text-center shadow-[0_24px_70px_rgba(76,29,149,0.18)]">
+            <Label className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Win chance</Label>
+            <div className="mt-4 flex items-end gap-2">
+              <span className="text-7xl font-black text-white">{cap}</span>
+              <span className="pb-2 text-2xl font-semibold text-slate-400">%</span>
+            </div>
+            <div className="mt-4 rounded-full border border-violet-400/20 bg-violet-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-violet-200">
+              Live cap selection
+            </div>
+          </div>
+
+          <div className="space-y-5 rounded-[1.75rem] border border-white/10 bg-slate-950/35 p-5">
+            <div className="rounded-2xl border border-white/10 bg-slate-950/50 px-4 py-4 text-sm text-slate-300">
+              Lower cap means harder hit and larger upside. Keep the choice simple, then size the ticket on the right.
+            </div>
+
+            <div className="space-y-3">
+              <input
+                type="range"
+                min="2"
+                max="98"
+                value={cap}
+                disabled={disabled}
+                onChange={(e) => onCapChange?.(e.target.value)}
+                className="h-3 w-full cursor-pointer appearance-none rounded-full bg-black/50 accent-violet-400"
+              />
+              <div className="flex justify-between text-xs font-medium text-slate-500">
+                <span>Riskier (2%)</span>
+                <span>Safer (98%)</span>
+              </div>
+            </div>
+
+            {presets.length > 0 ? (
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                {presets.map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    className={cn(
+                      "rounded-2xl border px-3 py-4 text-sm font-bold transition-all duration-200",
+                      cap === String(preset)
+                        ? "border-violet-300/70 bg-violet-500/25 text-white shadow-[0_16px_40px_rgba(91,33,182,0.24)]"
+                        : "border-slate-700 bg-slate-900/80 text-slate-300 hover:border-slate-500 hover:text-white"
+                    )}
+                    disabled={disabled}
+                    onClick={() => onCapChange?.(String(preset))}
+                  >
+                    {preset}%
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        {error ? <p className="mt-4 text-sm font-medium text-rose-300">{error}</p> : null}
+      </div>
+    </div>
   );
 }
