@@ -7,6 +7,8 @@
 ## Release materials
 
 - `docs/release/ARBIGAMEFI-RELEASE-PACK.zh-CN.md` — outward-facing release pack for partners, LPs, auditors, and technical integrators
+- `docs/release/ARBIGAMEFI-EXPLORER-LINKS.zh-CN.md` — direct block explorer entrypoints for the current deployment snapshot
+- `docs/release/ARBIGAMEFI-LP-ONBOARDING.zh-CN.md` — LP-facing onboarding note for bankroll semantics and withdrawal constraints
 - `docs/release/README.md` — release process and artifact model
 - `docs/release/checklist.md` — release Definition of Done and operator checklist
 

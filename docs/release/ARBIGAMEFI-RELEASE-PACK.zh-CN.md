@@ -13,6 +13,8 @@
 > - [`../WHITEPAPER.zh-CN.md`](../WHITEPAPER.zh-CN.md)
 > - [`README.md`](README.md)
 > - [`checklist.md`](checklist.md)
+> - [`ARBIGAMEFI-EXPLORER-LINKS.zh-CN.md`](ARBIGAMEFI-EXPLORER-LINKS.zh-CN.md)
+> - [`ARBIGAMEFI-LP-ONBOARDING.zh-CN.md`](ARBIGAMEFI-LP-ONBOARDING.zh-CN.md)
 > - [`../../deployments/release-latest.json`](../../deployments/release-latest.json)
 > - [`../../deployments/frontend-manifest-latest.json`](../../deployments/frontend-manifest-latest.json)
 
@@ -223,9 +225,9 @@ This document is the outward-facing release pack for the current ArbiGameFi depl
 如果要把这套 release materials 继续提升到“更适合 BD / LP / 审计 kickoff”的等级，下一步最值得补的是：
 
 1. 一份主网前发布模板，明确 testnet 与 mainnet 的口径区别。
-2. 一份 explorer links 清单，让外部方不用自己拼地址。
-3. 一份 release-by-release 变更摘要，把 digest、参数、模块变化串起来。
-4. 一页 LP onboarding note，专讲 `NAV / reserve / optional outflow / XP liabilities` 怎么读。
+2. 一份 release-by-release 变更摘要，把 digest、参数、模块变化串起来。
+3. 一页 mainnet explorer links 模板，避免后续重新手拼。
+4. 一份面向 LP 的指标面板读数指南，和前端 liquidity 页形成一一对应。
 
 ## 10. 一句话结论
 

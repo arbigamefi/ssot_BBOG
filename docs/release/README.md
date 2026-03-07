@@ -6,6 +6,8 @@ This repository is designed to be **auditable by construction**. A production re
 For an outward-facing summary built from the current canonical deployment artifacts, see:
 
 - [`ARBIGAMEFI-RELEASE-PACK.zh-CN.md`](ARBIGAMEFI-RELEASE-PACK.zh-CN.md) — partner / LP / auditor-facing release pack
+- [`ARBIGAMEFI-EXPLORER-LINKS.zh-CN.md`](ARBIGAMEFI-EXPLORER-LINKS.zh-CN.md) — direct explorer entrypoints for the current deployment
+- [`ARBIGAMEFI-LP-ONBOARDING.zh-CN.md`](ARBIGAMEFI-LP-ONBOARDING.zh-CN.md) — LP-facing note for reading NAV, reserve, and optional outflow semantics
 
 ## Definition of a release
 
