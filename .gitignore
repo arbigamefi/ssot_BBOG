@@ -26,6 +26,7 @@ frontend/packages/ssot/node_modules
 frontend/packages/ui/node_modules
 
 frontend/apps/web/.next
+frontend/apps/web/.next-dev
 frontend/.turbo
 frontend/storybook-static
 frontend/coverage

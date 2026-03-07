@@ -15,6 +15,7 @@ import {
   CardTitle,
   DataTable,
   ErrorCallout,
+  GameCard,
   PageHeader,
   ReleaseBadge,
   Skeleton,
@@ -29,6 +30,7 @@ import { useRelease } from "../ssot/release/ReleaseProvider";
 import { useSSOTSDK } from "../ssot/sdk";
 import { useSSOTRuntime } from "../ssot/runtime";
 import { useBets } from "../features/bets/useBets";
+import { getGamePresentation } from "../features/games/presentation";
 import { useIndexer } from "../features/ops/useIndexer";
 import { formatUnits } from "../features/betting/model/units";
 
@@ -244,6 +246,8 @@ export default function HomePage() {
     return map;
   }, [release?.assets]);
 
+  const featuredGames = React.useMemo(() => (release?.gamesMeta ?? []).slice(0, 4), [release?.gamesMeta]);
+
   const latestBetColumns = React.useMemo<DataTableColumn<BetRow>[]>(
     () => [
       {
@@ -398,6 +402,59 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+
+        {featuredGames.length > 0 ? (
+          <section className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
+            <div className="space-y-6">
+              <PageHeader
+                title="Featured Rooms"
+                description="Jump straight into the live rooms exposed by the active release. These entries mirror the room-first detail pages without inventing protocol facts."
+                actions={
+                  <Button asChild variant="outline" size="sm" className="border-slate-700 text-slate-300 hover:text-white">
+                    <Link href="/games">Open Room Directory</Link>
+                  </Button>
+                }
+              />
+
+              <div className="grid gap-6 sm:grid-cols-2">
+                {featuredGames.map((game) => {
+                  const presentation = getGamePresentation(game.slug, game.label);
+                  return (
+                    <Link key={game.slug} href={`/games/${game.slug}`} className="block">
+                      <GameCard
+                        slug={game.slug}
+                        label={game.label}
+                        icon={presentation.icon}
+                        badge={presentation.roomLabel}
+                        description={presentation.listDescription}
+                        summary={presentation.roomSummary}
+                        facts={[game.paramsEncoding ?? "release-defined", `${release.assets.length} assets`]}
+                        ctaLabel="Enter Room"
+                      />
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+
+            <Card className="border-slate-800 bg-slate-900/50 backdrop-blur-xl shadow-xl shadow-slate-950/40">
+              <CardHeader>
+                <CardTitle className="text-white">Why Room-First</CardTitle>
+                <CardDescription className="text-slate-400">
+                  Discovery should feel productized without turning governed presentation into fake protocol guarantees.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 text-sm leading-6 text-slate-300">
+                <p>Each featured room inherits its tone, copy, and gradients from governed frontend metadata keyed by slug.</p>
+                <p>Route validity, supported assets, module routing, and params encoding still come only from the embedded release bundle.</p>
+                <p>Once you enter a room, the live table and protocol truth panels take over so the path from discovery to action stays auditable.</p>
+                <div className="rounded-2xl border border-slate-800/70 bg-slate-950/50 p-4 text-slate-400">
+                  If a room drops out of this section, the release no longer exposes it. No legacy aliases are used to keep dead rooms alive.
+                </div>
+              </CardContent>
+            </Card>
+          </section>
+        ) : null}
 
         <section className="space-y-6">
           <PageHeader

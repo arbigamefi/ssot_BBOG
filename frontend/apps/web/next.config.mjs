@@ -4,6 +4,7 @@ import { withSentryConfig } from "@sentry/nextjs";
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ["@ssot/ui", "@ssot/ssot"],
+  distDir: process.env.NODE_ENV === "development" ? ".next-dev" : ".next",
 
   async headers() {
     return [

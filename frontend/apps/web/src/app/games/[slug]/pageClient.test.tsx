@@ -71,6 +71,7 @@ vi.mock("../../../components/PageTransition", () => ({
 }));
 
 vi.mock("@ssot/ui", () => ({
+  Button: ({ children, asChild }: any) => (asChild ? children : <button type="button">{children}</button>),
   Card: ({ children }: any) => <section>{children}</section>,
   CardHeader: ({ children }: any) => <div>{children}</div>,
   CardTitle: ({ children }: any) => <h2>{children}</h2>,
@@ -110,16 +111,25 @@ vi.mock("@ssot/ui", () => ({
     </div>
   ),
   KenoParamsForm: () => <div>Keno Params</div>,
-  PageHeader: ({ title, description, actions }: any) => (
-    <div data-testid="page-header">
-      <h1>{title}</h1>
-      {description ? <p>{description}</p> : null}
-      {actions}
-    </div>
-  ),
   ReleaseBadge: ({ networkName }: any) => <span>{networkName}</span>,
   RouletteParamsForm: () => <div>Roulette Params</div>,
+  StatCard: ({ label, value, subValue }: any) => (
+    <div data-testid="stat-card">
+      <span>{label}</span>
+      <span>{value}</span>
+      {subValue ? <span>{subValue}</span> : null}
+    </div>
+  ),
   StatusBadge: ({ label }: any) => <span>{label}</span>,
+  TabBar: ({ tabs, activeKey, onTabChange }: any) => (
+    <div data-testid="tab-bar">
+      {tabs.map((tab: any) => (
+        <button key={tab.key} type="button" data-active={tab.key === activeKey} onClick={() => onTabChange(tab.key)}>
+          {tab.label}
+        </button>
+      ))}
+    </div>
+  ),
 }));
 
 import { GamePageClient } from "./pageClient";
@@ -186,14 +196,15 @@ describe("GamePageClient", () => {
 
     render(<GamePageClient slug="dice" />);
 
-    expect(screen.getByTestId("page-header")).toBeDefined();
-    expect(screen.getByTestId("page-header").textContent).toContain("Dice");
+    expect(screen.getByRole("heading", { name: /Dice/ })).toBeDefined();
     expect(screen.getByTestId("game-bet-panel")).toBeDefined();
-    expect(screen.getByText("Recent Bets")).toBeDefined();
-    expect(screen.getByText("Advanced / Help")).toBeDefined();
-    expect(screen.getByText("abi.encode(uint8 cap)")).toBeDefined();
-    expect(screen.getByText("USDC")).toBeDefined();
+    expect(screen.getByText("Live Table")).toBeDefined();
+    expect(screen.getByText("Protocol Truth")).toBeDefined();
+    expect(screen.getByText("Control Room")).toBeDefined();
+    expect(screen.getAllByText("abi.encode(uint8 cap)").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("USDC").length).toBeGreaterThan(0);
     expect(screen.getByTestId("data-table")).toBeDefined();
+    expect(screen.getByTestId("tab-bar")).toBeDefined();
   });
 
   it("navigates to bet detail when a recent bet row is clicked", () => {

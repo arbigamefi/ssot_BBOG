@@ -16,22 +16,33 @@ Games are routed by **release manifest slugs**.
 > **No legacy aliases.** Do not introduce `/games/cointoss` or other compatibility routes.
 
 ## Information Architecture
-1. **Page Header**
-   - Game title + short description
+1. **Hero / Room Identity**
+   - Game title + governed room copy
    - Release badge
-2. **Primary Card: Bet Panel**
+   - Quick links back to `/games` and `/bets`
+   - Release-truth chips (assets, params encoding, module, sync status)
+2. **Primary Surface: Bet Console**
    - Inputs
    - Plan preview
    - Stepper
-3. **Secondary Card: Recent Bets**
+3. **Secondary Rail: Control Room**
+   - Current param preview
+   - Live room pulse from local indexed facts
+   - Short playbook / execution notes
+4. **Secondary Surface: Live Table**
    - Event-driven list (Hub events)
+   - Filter pills for all/open/settled/refunded
    - Click-through to `/bets/{betId}`
-4. **Secondary Card: Advanced / Help**
-   - House edge explanation (maxHouseEdgeBps)
-   - VRF fee explanation
+5. **Secondary Surface: Protocol Truth**
+   - Game ID / module / params encoding / supported assets
+   - Help copy that clarifies what is governed presentation vs release truth
 
 ## Modules (Component Tree)
 - `GamePageShell`
+  - `RoomHero`
+    - `ReleaseBadge`
+    - `GameSwitcher`
+    - `RoomPulse`
   - `BetPanel` (feature component)
     - `AssetSelector`
     - `AmountInput`
@@ -39,8 +50,9 @@ Games are routed by **release manifest slugs**.
     - `GameSpecificInputs` (by slug)
     - `PlanPreview`
     - `TxStepper`
+  - `ControlRoomRail`
   - `RecentBetsTable`
-  - `HelpCard`
+  - `ProtocolTruthCard`
 
 ## Data Sources
 - `ssot-sdk.planPlaceBet()` → PlaceBetPlan
@@ -64,6 +76,7 @@ The page MUST resolve the active game **only** from the embedded release:
 
 ## Presentation Metadata (MUST)
 - Icons, short marketing copy, and other decorative UI metadata MAY come from a governed frontend map keyed by `slug`.
+- Room-specific gradients, hero labels, quick-play copy, and other expressive design metadata MAY also come from the same governed map keyed by `slug`.
 - Presentation metadata MUST NOT override release truth for `gameId`, `module`, `paramsEncoding`, supported assets, or route validity.
 - RTP, odds, or payout claims MUST NOT be hardcoded unless they come from a canonical protocol source for the active release.
 - If a slug has no governed presentation entry, the page MUST fall back to a generic release-routed presentation instead of inventing protocol facts.

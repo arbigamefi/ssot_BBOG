@@ -29,10 +29,19 @@ vi.mock("next/link", () => ({
 }));
 
 vi.mock("@ssot/ui", () => ({
+  Button: ({ children, asChild }: any) => (asChild ? children : <button type="button">{children}</button>),
   PageHeader: ({ title, description }: any) => (
     <div data-testid="page-header">
       <h1>{title}</h1>
       {description && <p>{description}</p>}
+    </div>
+  ),
+  ReleaseBadge: ({ networkName }: any) => <span>{networkName}</span>,
+  StatCard: ({ label, value, subValue }: any) => (
+    <div data-testid="stat-card">
+      <span>{label}</span>
+      <span>{value}</span>
+      {subValue ? <span>{subValue}</span> : null}
     </div>
   ),
   GameCard: ({ slug, label, icon, description, rtp }: any) => (
@@ -76,33 +85,58 @@ describe("GamesListClient", () => {
   });
 
   it("renders page header and game cards when gamesMeta is populated", () => {
-    state.release = { gamesMeta: MOCK_GAMES_META };
+    state.release = {
+      name: "Base Sepolia",
+      releaseDigest: "0xdeadbeefcafefeed",
+      contracts: { hub: "0x1234567890abcdef1234567890abcdef12345678" },
+      assets: [{ address: "0x01", symbol: "USDC", decimals: 6 }],
+      gamesMeta: MOCK_GAMES_META,
+    };
     render(<GamesListClient />);
     expect(screen.getByTestId("page-header")).toBeDefined();
-    expect(screen.getByText("Games")).toBeDefined();
-    expect(screen.getByText("Dice")).toBeDefined();
-    expect(screen.getByText("Coin Toss")).toBeDefined();
+    expect(screen.getAllByText("Room Directory").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Dice").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Coin Toss").length).toBeGreaterThan(0);
+    expect(screen.getAllByTestId("stat-card").length).toBeGreaterThan(0);
   });
 
   it("renders correct number of game cards", () => {
-    state.release = { gamesMeta: MOCK_GAMES_META };
+    state.release = {
+      name: "Base Sepolia",
+      releaseDigest: "0xdeadbeefcafefeed",
+      contracts: { hub: "0x1234567890abcdef1234567890abcdef12345678" },
+      assets: [{ address: "0x01", symbol: "USDC", decimals: 6 }],
+      gamesMeta: MOCK_GAMES_META,
+    };
     render(<GamesListClient />);
     const cards = screen.getAllByTestId("game-card");
     expect(cards.length).toBe(2);
   });
 
   it("links each game card to /games/[slug]", () => {
-    state.release = { gamesMeta: MOCK_GAMES_META };
+    state.release = {
+      name: "Base Sepolia",
+      releaseDigest: "0xdeadbeefcafefeed",
+      contracts: { hub: "0x1234567890abcdef1234567890abcdef12345678" },
+      assets: [{ address: "0x01", symbol: "USDC", decimals: 6 }],
+      gamesMeta: MOCK_GAMES_META,
+    };
     render(<GamesListClient />);
-    const diceLink = screen.getByText("Dice").closest("a");
-    expect(diceLink?.getAttribute("href")).toBe("/games/dice");
+    const diceLinks = screen.getAllByText("Dice").map((node) => node.closest("a")?.getAttribute("href"));
+    expect(diceLinks).toContain("/games/dice");
 
-    const coinLink = screen.getByText("Coin Toss").closest("a");
-    expect(coinLink?.getAttribute("href")).toBe("/games/coin-toss");
+    const coinLinks = screen.getAllByText("Coin Toss").map((node) => node.closest("a")?.getAttribute("href"));
+    expect(coinLinks).toContain("/games/coin-toss");
   });
 
   it("game cards have correct slug data attributes", () => {
-    state.release = { gamesMeta: MOCK_GAMES_META };
+    state.release = {
+      name: "Base Sepolia",
+      releaseDigest: "0xdeadbeefcafefeed",
+      contracts: { hub: "0x1234567890abcdef1234567890abcdef12345678" },
+      assets: [{ address: "0x01", symbol: "USDC", decimals: 6 }],
+      gamesMeta: MOCK_GAMES_META,
+    };
     render(<GamesListClient />);
     const cards = screen.getAllByTestId("game-card");
     expect(cards[0]?.getAttribute("data-slug")).toBe("dice");

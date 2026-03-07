@@ -6,9 +6,13 @@ export type GameCardProps = {
     label: string;
     /** Emoji or icon element */
     icon: React.ReactNode;
+    badge?: string;
     description?: string;
+    summary?: string;
+    facts?: string[];
     /** e.g. "99% RTP" */
     rtp?: string;
+    ctaLabel?: string;
     className?: string;
     /** Rendered as child allows wrapping with Link */
     children?: React.ReactNode;
@@ -23,48 +27,77 @@ const SLUG_COLORS: Record<string, string> = {
 };
 
 /**
- * Game entry card with hover glow, icon animation, and Play CTA.
+ * Game entry card with hover glow and room-level product framing.
  * Designed to be wrapped in a Next.js <Link> by the consuming page.
  */
-export function GameCard({ slug, label, icon, description, rtp, className }: GameCardProps) {
+export function GameCard({ slug, label, icon, badge, description, summary, facts, rtp, ctaLabel = "Enter Room", className }: GameCardProps) {
     const gradientColor = SLUG_COLORS[slug] ?? "from-slate-500/20 to-slate-900/20";
 
     return (
         <div
             className={cn(
-                "group cursor-pointer relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/40 backdrop-blur-sm transition-all duration-300",
+                "group cursor-pointer relative overflow-hidden rounded-[1.75rem] border border-slate-800 bg-slate-900/50 backdrop-blur-xl transition-all duration-300",
                 "hover:border-slate-600 hover:-translate-y-1 hover:shadow-2xl hover:shadow-cyan-900/10",
                 className
             )}
         >
-            {/* Hover gradient overlay */}
-            <div className={cn("absolute inset-0 bg-gradient-to-b opacity-0 group-hover:opacity-100 transition-opacity duration-300", gradientColor)} />
+            <div className={cn("absolute inset-0 bg-gradient-to-br opacity-90 transition-opacity duration-300", gradientColor)} />
+            <div className="absolute inset-0 bg-[linear-gradient(160deg,rgba(2,6,23,0.86),rgba(15,23,42,0.76))]" />
+            <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-white/10 blur-3xl opacity-70 transition-opacity duration-300 group-hover:opacity-100" />
 
-            <div className="relative z-10 p-8 flex flex-col items-center text-center">
-                {/* Icon */}
-                <div className="text-5xl mb-5 transform group-hover:scale-110 group-hover:rotate-6 transition-transform duration-300 drop-shadow-xl">
-                    {icon}
+            <div className="relative z-10 flex h-full flex-col p-6 sm:p-7">
+                <div className="flex items-start justify-between gap-4">
+                    <div className="inline-flex h-16 w-16 items-center justify-center rounded-3xl border border-white/10 bg-slate-950/45 text-4xl shadow-lg shadow-black/20 transition-transform duration-300 group-hover:scale-105 group-hover:rotate-3">
+                        {icon}
+                    </div>
+                    {badge ? (
+                        <span className="inline-flex items-center rounded-full border border-white/10 bg-slate-950/45 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-200">
+                            {badge}
+                        </span>
+                    ) : null}
                 </div>
 
-                {/* Title */}
-                <h3 className="text-xl font-bold text-white mb-1">{label}</h3>
+                <div className="mt-6 space-y-3 text-left">
+                    <h3 className="text-2xl font-black tracking-tight text-white">{label}</h3>
 
-                {/* RTP */}
-                {rtp ? (
-                    <span className="text-xs font-mono text-emerald-400/80 mb-2">{rtp}</span>
+                    {description ? (
+                        <p className="text-sm leading-relaxed text-slate-300">{description}</p>
+                    ) : null}
+
+                    {summary ? (
+                        <p className="text-sm leading-relaxed text-slate-400">{summary}</p>
+                    ) : null}
+                </div>
+
+                {facts && facts.length > 0 ? (
+                    <div className="mt-5 flex flex-wrap gap-2">
+                        {facts.map((fact) => (
+                            <span
+                                key={fact}
+                                className="rounded-full border border-white/10 bg-slate-950/45 px-3 py-1.5 text-xs font-medium text-slate-300"
+                            >
+                                {fact}
+                            </span>
+                        ))}
+                    </div>
                 ) : null}
 
-                {/* Description */}
-                {description ? (
-                    <p className="text-slate-400 text-sm leading-relaxed">{description}</p>
-                ) : null}
+                <div className="mt-auto flex items-end justify-between gap-4 pt-6">
+                    <div className="space-y-1">
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                            {rtp ? "Quoted edge" : "Release-routed"}
+                        </div>
+                        <div className="text-sm font-medium text-slate-200">
+                            {rtp ?? "Fully on-chain room"}
+                        </div>
+                    </div>
 
-                {/* Play CTA */}
-                <div className="mt-6 flex items-center text-emerald-400 font-semibold text-sm opacity-0 group-hover:opacity-100 transform translate-y-3 group-hover:translate-y-0 transition-all duration-300">
-                    Play Now
-                    <svg className="w-4 h-4 ml-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                    </svg>
+                    <div className="flex items-center text-emerald-300 font-semibold text-sm transition-all duration-300 group-hover:text-emerald-200">
+                        {ctaLabel}
+                        <svg className="w-4 h-4 ml-1.5 transition-transform duration-300 group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                        </svg>
+                    </div>
                 </div>
             </div>
         </div>
