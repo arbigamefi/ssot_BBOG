@@ -1,22 +1,22 @@
-# Bankroll Protocol — SSOT Monorepo
+# ArbiGameFi Monorepo
 
-This repository is a single Git project that contains both the **SSOT smart contracts** and the
-**SSOT frontend workspace**.
+This repository is a single Git project that contains both the **ArbiGameFi smart contracts** and the
+**ArbiGameFi frontend workspace**.
 
 - **Contracts**: Foundry project at the repository root
 - **Frontend**: pnpm workspace under `frontend/`
 
-The protocol itself is a **clean-room rewrite** of a bankroll-backed on-chain gaming system, designed
+ArbiGameFi is a **clean-room rewrite** of a bankroll-backed on-chain gaming system, designed
 for **institution-grade, provably correct** behavior.
 
-The core idea is to treat the protocol as a set of **Single Sources of Truth (SSOT)**:
+Its core design follows a **Single Source of Truth (SSOT)** architecture:
 - **Per-asset Bank SSOT (Accounting Truth):** for each supported asset, `NAV = B - PF - XP` and `totalAssets() == NAV`
 - **Hub SSOT (Lifecycle Truth):** one global `betId` registry (across assets) + permissionless `finalize()` / `refund()`
 - **VRFHub SSOT (Transport Truth):** request mapping + `detach` + **fulfill never reverts**
 - **Modules (Game Semantics):** pure, deterministic payout logic (`IGameModule`)
 
-v1.2 additionally specifies **charged VRF fees in native token** ("多退少补") and a **Chainlink VRF v2.5+ Wrapper adapter**
-integration, while preserving SSOT liveness and minimal trust surface.
+The current implementation additionally specifies **charged VRF fees in native token** ("多退少补") and a **Chainlink VRF v2.5+ Wrapper adapter**
+integration, while preserving SSOT liveness and a minimal trust surface.
 
 ## Repository layout
 
