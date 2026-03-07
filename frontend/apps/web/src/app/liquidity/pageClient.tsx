@@ -59,6 +59,27 @@ function formatBps(value?: number) {
   return value == null ? "—" : `${value} bps`;
 }
 
+function formatPctFromBps(value?: number) {
+  return value == null ? "—" : `${(value / 100).toFixed(value % 100 === 0 ? 0 : 2)}%`;
+}
+
+function formatTokenAmount(
+  value: bigint | undefined,
+  decimals: number,
+  symbol?: string,
+  maxFractionDigits = 4
+) {
+  if (value == null) return "—";
+  const raw = formatUnits(value, decimals);
+  const neg = raw.startsWith("-");
+  const normalized = neg ? raw.slice(1) : raw;
+  const [intPart = "0", fracPart = ""] = normalized.split(".");
+  const integer = BigInt(intPart || "0").toLocaleString("en-US");
+  const fraction = fracPart.slice(0, maxFractionDigits).replace(/0+$/, "");
+  const body = `${neg ? "-" : ""}${integer}${fraction ? `.${fraction}` : ""}`;
+  return symbol ? `${body} ${symbol}` : body;
+}
+
 function serializeErrorDetails(error?: DomainError) {
   if (!error?.details) return undefined;
   return JSON.stringify(
@@ -372,7 +393,22 @@ export function LiquidityPageClient() {
   }
 
   const sym = assetMeta?.symbol ?? "???";
-  const freeLiq = snapshot ? snapshot.totalAssets - snapshot.totalReserved : 0n;
+  const navBacking = snapshot?.totalAssets;
+  const reserved = snapshot?.totalReserved;
+  const minLiquidityBps = snapshot?.minLiquidityBps ?? 0;
+  const protocolFeesPayable = snapshot?.protocolFeesPayable ?? 0n;
+  const xpLiabilities = snapshot?.externalPayablesTotal ?? 0n;
+  const minLiquidityFloor =
+    snapshot && snapshot.minLiquidityBps != null
+      ? (snapshot.totalAssets * BigInt(snapshot.minLiquidityBps)) / 10_000n
+      : null;
+  const optionalOutflowRoom =
+    snapshot && minLiquidityFloor != null
+      ? (() => {
+          const constrained = snapshot.totalReserved + minLiquidityFloor;
+          return snapshot.totalAssets > constrained ? snapshot.totalAssets - constrained : 0n;
+        })()
+      : null;
 
   const actionTraceTitle =
     tab === "deposit"
@@ -382,10 +418,10 @@ export function LiquidityPageClient() {
         : "Redeem Trace";
   const actionTraceSubtitle =
     tab === "deposit"
-      ? "Deposit may include an exact-approval step before Bank.deposit."
+      ? "Deposit adds assets to bankroll backing and may include an exact approval step."
       : tab === "withdraw"
-        ? "Withdraw burns value-equivalent shares through Bank.withdraw."
-        : "Redeem burns shares directly through Bank.redeem.";
+        ? "Withdraw is an optional outflow and only clears if reserve and buffer rules still hold."
+        : "Redeem burns shares for assets and follows the same optional-outflow constraints.";
 
   const currentActionError = currentFlow.error;
 
@@ -393,7 +429,7 @@ export function LiquidityPageClient() {
     <PageTransition pageKey="liquidity">
       <PageHeader
         title="Liquidity"
-        description="Provide liquidity to earn yield as the house. Your deposits back all on-chain bets."
+        description="Read the bank like an LP: NAV backs shares, reserved protects live risk, and optional exits only clear when headroom stays above the buffer."
         actions={
           <Button
             variant="outline"
@@ -413,24 +449,110 @@ export function LiquidityPageClient() {
 
       {loadError ? <ErrorCallout title="Load error" message={loadError} /> : null}
 
+      <div className="mb-6 grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)]">
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card className="border-slate-800 bg-slate-900/40 backdrop-blur-sm">
+            <CardHeader className="space-y-2">
+              <CardDescription className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                LP backing
+              </CardDescription>
+              <CardTitle className="text-white">NAV is what backs shares.</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="text-2xl font-black tracking-tight text-white">
+                {formatTokenAmount(navBacking, decimals, sym)}
+              </div>
+              <p className="text-sm leading-6 text-slate-400">
+                This is the bank value that remains after protocol fees and XP liabilities. It is the number LPs should treat as real backing.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-800 bg-slate-900/40 backdrop-blur-sm">
+            <CardHeader className="space-y-2">
+              <CardDescription className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Optional outflow room
+              </CardDescription>
+              <CardTitle className="text-white">Exits clear only if headroom remains.</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="text-2xl font-black tracking-tight text-white">
+                {formatTokenAmount(optionalOutflowRoom ?? undefined, decimals, sym)}
+              </div>
+              <p className="text-sm leading-6 text-slate-400">
+                Withdraw and redeem are optional outflows. They must leave enough value above both reserved risk and the configured minimum liquidity floor.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-slate-800 bg-slate-900/40 backdrop-blur-sm">
+            <CardHeader className="space-y-2">
+              <CardDescription className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Off-backing liabilities
+              </CardDescription>
+              <CardTitle className="text-white">PF and XP are not LP backing.</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="text-2xl font-black tracking-tight text-white">
+                {formatTokenAmount(protocolFeesPayable + xpLiabilities, decimals, sym)}
+              </div>
+              <p className="text-sm leading-6 text-slate-400">
+                Protocol fees and XP liabilities sit outside LP backing. If these grow, NAV falls even when the raw bank balance looks unchanged.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="border-slate-800 bg-slate-900/40 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle className="text-white">How to read this bank</CardTitle>
+            <CardDescription className="text-slate-400">
+              Treat this route as an LP readout, not a generic vault screen.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm leading-6 text-slate-300">
+            <div>
+              <div className="font-semibold text-white">1. Start with NAV.</div>
+              <p className="text-slate-400">
+                NAV is the value actually backing LP shares. The raw bank balance is not the right number if fees or XP liabilities are pending.
+              </p>
+            </div>
+            <div>
+              <div className="font-semibold text-white">2. Check reserved and the buffer.</div>
+              <p className="text-slate-400">
+                Reserved is live risk already committed to active bets. The min-liquidity floor is the cushion that should remain after optional exits.
+              </p>
+            </div>
+            <div>
+              <div className="font-semibold text-white">3. Read exit room last.</div>
+              <p className="text-slate-400">
+                Optional outflow room is the approximate space left for withdraw or redeem before reserve and buffer constraints start rejecting exits.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="mb-4 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
-        <StatCard icon="🏦" label={`Total Assets (${sym})`} value={snapshot ? formatUnits(snapshot.totalAssets, decimals) : "—"} />
-        <StatCard icon="🔒" label="Reserved" value={snapshot ? formatUnits(snapshot.totalReserved, decimals) : "—"} />
-        <StatCard icon="💧" label="Free Liquidity" value={snapshot ? formatUnits(freeLiq, decimals) : "—"} />
-        <StatCard icon="📉" label="Min Liquidity" value={formatBps(snapshot?.minLiquidityBps)} />
-        <StatCard icon="💸" label="Protocol Fees" value={snapshot ? formatUnits(snapshot.protocolFeesPayable ?? 0n, decimals) : "—"} />
-        <StatCard icon="🧾" label="External Payables" value={snapshot ? formatUnits(snapshot.externalPayablesTotal ?? 0n, decimals) : "—"} />
-        <StatCard icon="📊" label="Your Shares" value={position ? formatUnits(position.shares, decimals) : sdk?.account ? "0" : "—"} />
-        <StatCard icon="🪙" label="Assets Equivalent" value={position ? formatUnits(position.assetsEquivalent, decimals) : sdk?.account ? "0" : "—"} />
+        <StatCard icon="🏦" label={`NAV (${sym})`} value={formatTokenAmount(navBacking, decimals, sym)} subValue="LP backing" />
+        <StatCard icon="🔒" label="Reserved" value={formatTokenAmount(reserved, decimals, sym)} subValue="pending risk" />
+        <StatCard icon="🛟" label="Buffer Floor" value={formatTokenAmount(minLiquidityFloor ?? undefined, decimals, sym)} subValue={formatPctFromBps(minLiquidityBps)} />
+        <StatCard icon="🚪" label="Exit Room" value={formatTokenAmount(optionalOutflowRoom ?? undefined, decimals, sym)} subValue="optional outflows" />
+        <StatCard icon="💸" label="Protocol Fees" value={formatTokenAmount(protocolFeesPayable, decimals, sym)} subValue="not LP backing" />
+        <StatCard icon="🧾" label="XP Liabilities" value={formatTokenAmount(xpLiabilities, decimals, sym)} subValue="not LP backing" />
+        <StatCard icon="📊" label="Your Shares" value={position ? formatUnits(position.shares, decimals) : sdk?.account ? "0" : "—"} subValue="bank position" />
+        <StatCard icon="🪙" label="Assets Equivalent" value={position ? formatTokenAmount(position.assetsEquivalent, decimals, sym) : sdk?.account ? `0 ${sym}` : "—"} subValue="mark-to-bank" />
       </div>
 
       <div className="mb-8 flex flex-wrap items-center gap-4 rounded-2xl border border-slate-800/70 bg-slate-950/40 px-4 py-3 text-xs text-slate-400">
         <span className="inline-flex items-center gap-2">
-          Bank
+          Selected bank
           <span className="font-mono text-slate-200">{snapshot?.bank ?? "—"}</span>
           {snapshot?.bank ? <CopyButton value={snapshot.bank} label="Copy bank address" /> : null}
         </span>
         <span>Updated block: {snapshot?.updatedAtBlock?.toString() ?? "—"}</span>
+        <span>Min liquidity: {formatBps(snapshot?.minLiquidityBps)}</span>
+        <span>{writesSupportedForSelectedAsset ? "Primary asset write scope" : "Read metrics only for this asset selection"}</span>
       </div>
 
       <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6 backdrop-blur-sm">
@@ -459,13 +581,21 @@ export function LiquidityPageClient() {
                 </CardTitle>
                 <CardDescription className="text-slate-400">
                   {tab === "deposit"
-                    ? "Deposits may trigger an exact ERC20 approval before the bank call."
+                    ? "Deposit adds assets to bankroll backing and may trigger an exact ERC20 approval before the bank call."
                     : tab === "withdraw"
-                      ? "Withdraw calculates the required shares for the requested asset amount."
-                      : "Redeem burns shares directly for assets from the Bank."}
+                      ? "Withdraw requests assets out. It only succeeds if reserve and min-liquidity checks still hold after the exit."
+                      : "Redeem burns shares for assets from the Bank and follows the same optional-outflow constraints."}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-5">
+                <div className="rounded-2xl border border-slate-800/70 bg-slate-950/40 p-4 text-sm leading-6 text-slate-300">
+                  {tab === "deposit"
+                    ? "Use deposit when you want to add fresh backing to the bank. Your assets convert into shares against the current NAV."
+                    : tab === "withdraw"
+                      ? "Use withdraw when you care about a target asset amount. The bank computes how many shares must burn to honor that request."
+                      : "Use redeem when you care about burning a specific share amount first and receiving the corresponding assets second."}
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="liq-amount" className="text-slate-300">
                     {tab === "redeem" ? "Shares to redeem" : `${sym} amount`}
@@ -536,7 +666,7 @@ export function LiquidityPageClient() {
               blockNumber={currentFlow.journalEntry?.blockNumber}
               explorerBaseUrl={explorerBaseUrl}
               onReset={currentFlow.reset}
-              idleMessage="Liquidity actions use the standard preflight → stepper → receipt → journal flow."
+              idleMessage="Liquidity actions are simulated first, then executed through the standard stepper and journaled with release identity."
             />
           </div>
         )}

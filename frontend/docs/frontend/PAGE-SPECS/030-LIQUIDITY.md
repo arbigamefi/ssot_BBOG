@@ -8,6 +8,7 @@ Allow users to view per-asset Bank health and manage LP positions (deposit/redee
 
 ## Modules
 - `LiquidityHeader` (release badge)
+- `InterpretationCards` (plain-language LP readout for NAV / reserve / optional outflow)
 - `BankSelector` (asset tabs)
 - `BankSnapshotCards` (NAV, reserved, free, minLiq, protocol fees, XP buckets)
 - `PositionCard` (user shares/assets, allowance helper)
@@ -37,8 +38,17 @@ Allow users to view per-asset Bank health and manage LP positions (deposit/redee
 ### Metrics (MUST)
 - UI MUST use SSOT bank snapshot semantics: NAV, Reserved, Free, MinLiq, ProtocolFeesPayable, XP buckets.
 - UI MUST NOT introduce legacy PoolV2 terms (maxBetBpsOfTVL / utilHighBps / turnoverRate, etc.).
+- UI SHOULD explain the LP meaning of those metrics in plain language, rather than only rendering raw labels.
+
+### Interpretation Layer (SHOULD)
+- The route SHOULD make clear that:
+  - `NAV` is LP backing
+  - `ProtocolFeesPayable` and `XP` are not LP backing
+  - `withdraw` / `redeem` are optional outflows constrained by reserve + minLiq checks
+- The route SHOULD help the user read the page like an LP dashboard, not like a generic vault form.
 
 ## Acceptance Criteria
 - Displays SSOT-defined metrics, not legacy pool metrics
 - No references to PoolV2 fields
 - All write actions use the standardized transaction flow
+- LP-facing explanatory copy exists for the core constraints, not just the raw numbers

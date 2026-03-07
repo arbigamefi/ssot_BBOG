@@ -52,26 +52,28 @@ describe("AppShell", () => {
     expect(screen.getByText("Game Rooms")).toBeDefined();
   });
 
-  it("renders all 8 nav links", () => {
+  it("renders primary navigation links and demotes advanced routes", () => {
     render(
       <AppShell>
         <div>content</div>
       </AppShell>
     );
-    const expectedLinks = [
+    const primaryLinks = [
       "Home",
       "Games",
       "Bets",
       "Liquidity",
-      "Claims",
-      "Referral",
-      "Account",
-      "Ops"
+      "Account"
     ];
-    for (const label of expectedLinks) {
+    for (const label of primaryLinks) {
       const links = screen.getAllByText(label);
       expect(links.length).toBeGreaterThanOrEqual(1);
     }
+
+    expect(screen.getByText("Advanced")).toBeDefined();
+    expect(screen.getAllByText("Claims").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Referral").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Ops").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders at least one WalletButton", () => {

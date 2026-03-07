@@ -13,14 +13,17 @@ function shortHex(addr?: string) {
   return `${addr.slice(0, 4)}…${addr.slice(-2)}`;
 }
 
-const NAV_LINKS = [
+const PRIMARY_NAV_LINKS = [
   { href: "/", label: "Home" },
   { href: "/games", label: "Games" },
   { href: "/bets", label: "Bets" },
   { href: "/liquidity", label: "Liquidity" },
+  { href: "/account", label: "Account" }
+] as const;
+
+const ADVANCED_NAV_LINKS = [
   { href: "/claims", label: "Claims" },
   { href: "/referral", label: "Referral" },
-  { href: "/account", label: "Account" },
   { href: "/ops", label: "Ops" }
 ] as const;
 
@@ -88,24 +91,48 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   All Games
                 </Link>
               ) : (
-                <nav className="hidden items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/70 p-1 md:flex">
-                  {NAV_LINKS.map((l) => {
-                    const isActive = isActivePath(pathname, l.href);
-                    return (
-                      <Link
-                        key={l.href}
-                        href={l.href}
-                        className={`rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
-                          isActive
-                            ? "bg-slate-200 text-slate-950 shadow-sm"
-                            : "text-slate-400 hover:bg-slate-800/60 hover:text-white"
-                        }`}
-                      >
-                        {l.label}
-                      </Link>
-                    );
-                  })}
-                </nav>
+                <div className="hidden items-center gap-3 md:flex">
+                  <nav className="flex items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/70 p-1">
+                    {PRIMARY_NAV_LINKS.map((l) => {
+                      const isActive = isActivePath(pathname, l.href);
+                      return (
+                        <Link
+                          key={l.href}
+                          href={l.href}
+                          className={`rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${
+                            isActive
+                              ? "bg-slate-200 text-slate-950 shadow-sm"
+                              : "text-slate-400 hover:bg-slate-800/60 hover:text-white"
+                          }`}
+                        >
+                          {l.label}
+                        </Link>
+                      );
+                    })}
+                  </nav>
+
+                  <div className="hidden items-center gap-2 lg:flex">
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Advanced
+                    </span>
+                    {ADVANCED_NAV_LINKS.map((l) => {
+                      const isActive = isActivePath(pathname, l.href);
+                      return (
+                        <Link
+                          key={l.href}
+                          href={l.href}
+                          className={`rounded-full border px-3 py-2 text-xs font-semibold transition-colors ${
+                            isActive
+                              ? "border-slate-200 bg-slate-200 text-slate-950"
+                              : "border-slate-800 bg-slate-900/70 text-slate-400 hover:border-slate-700 hover:text-white"
+                          }`}
+                        >
+                          {l.label}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
               )}
             </div>
 
@@ -194,7 +221,32 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   </div>
                 </div>
                 <div className="max-h-[60vh] overflow-y-auto py-1 bg-slate-900/50 overscroll-contain">
-                  {NAV_LINKS.map((l) => {
+                  <div className="px-4 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Primary
+                  </div>
+                  {PRIMARY_NAV_LINKS.map((l) => {
+                    const isActive = isActivePath(pathname, l.href);
+                    return (
+                      <Link
+                        key={l.href}
+                        href={l.href}
+                        className={`block px-4 py-3 text-sm transition-colors touch-manipulation flex items-center ${
+                          isActive
+                            ? "text-white bg-slate-800/60"
+                            : "text-slate-300 active:text-white active:bg-slate-800/40"
+                        }`}
+                        onClick={() => setMenuOpen(false)}
+                        style={{ touchAction: "manipulation" }}
+                      >
+                        {l.label}
+                      </Link>
+                    );
+                  })}
+
+                  <div className="mt-3 border-t border-slate-700/40 px-4 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Advanced
+                  </div>
+                  {ADVANCED_NAV_LINKS.map((l) => {
                     const isActive = isActivePath(pathname, l.href);
                     return (
                       <Link
