@@ -4,6 +4,7 @@ This roadmap is intentionally written like a release plan with explicit gates (s
 
 Companion execution document:
 - `docs/frontend/ACTION-PLAN-UI-PRODUCTIZATION.md`
+- `docs/frontend/FRONTEND-ROUTE-REVIEW-2026-03.md`
 
 ## Gate-0 — Interface Freeze (Docs)
 **Goal**: Freeze public interfaces before feature coding.

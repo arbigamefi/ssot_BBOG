@@ -11,6 +11,7 @@ This is a **gap-closure plan** for the current SSOT Frontend v2 codebase.
 Related documents:
 - PRD: `docs/frontend/PRD.md`
 - Roadmap: `docs/frontend/ROADMAP.md`
+- Route review: `docs/frontend/FRONTEND-ROUTE-REVIEW-2026-03.md`
 - UI Constitution: `docs/frontend/UI-CONSTITUTION.md`
 - Page specs: `docs/frontend/PAGE-SPECS/`
 - Milestone D3: `docs/frontend/MILESTONE-D3.md`
