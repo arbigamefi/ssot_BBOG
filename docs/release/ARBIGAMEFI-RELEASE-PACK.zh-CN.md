@@ -224,10 +224,10 @@ This document is the outward-facing release pack for the current ArbiGameFi depl
 
 如果要把这套 release materials 继续提升到“更适合 BD / LP / 审计 kickoff”的等级，下一步最值得补的是：
 
-1. 一份主网前发布模板，明确 testnet 与 mainnet 的口径区别。
-2. 一份 release-by-release 变更摘要，把 digest、参数、模块变化串起来。
-3. 一页 mainnet explorer links 模板，避免后续重新手拼。
-4. 一份面向 LP 的指标面板读数指南，和前端 liquidity 页形成一一对应。
+1. 一份面向主网的已填充 release pack，而不是模板版。
+2. 一份 liquidity 指标面板读数指南，和前端 `/liquidity` 页面一一对应。
+3. 一份 partner due diligence checklist，专门给 BD / 机构合作前使用。
+4. 一份 release materials 生成流程，减少手工维护 release history 的成本。
 
 ## 10. 一句话结论
 

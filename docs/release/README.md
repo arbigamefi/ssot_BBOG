@@ -8,6 +8,8 @@ For an outward-facing summary built from the current canonical deployment artifa
 - [`ARBIGAMEFI-RELEASE-PACK.zh-CN.md`](ARBIGAMEFI-RELEASE-PACK.zh-CN.md) — partner / LP / auditor-facing release pack
 - [`ARBIGAMEFI-EXPLORER-LINKS.zh-CN.md`](ARBIGAMEFI-EXPLORER-LINKS.zh-CN.md) — direct explorer entrypoints for the current deployment
 - [`ARBIGAMEFI-LP-ONBOARDING.zh-CN.md`](ARBIGAMEFI-LP-ONBOARDING.zh-CN.md) — LP-facing note for reading NAV, reserve, and optional outflow semantics
+- [`ARBIGAMEFI-MAINNET-RELEASE-TEMPLATE.zh-CN.md`](ARBIGAMEFI-MAINNET-RELEASE-TEMPLATE.zh-CN.md) — mainnet-facing release pack template
+- [`ARBIGAMEFI-RELEASE-HISTORY.zh-CN.md`](ARBIGAMEFI-RELEASE-HISTORY.zh-CN.md) — append-only ledger of canonical releases
 
 ## Definition of a release
 
