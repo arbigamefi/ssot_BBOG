@@ -7,6 +7,8 @@
 **Scope**: `High-fidelity route definition for core ArbiGameFi product surfaces`
 
 **Related documents**
+- `docs/frontend/BRAND-STARTER-PACK-2026-03.md`
+- `docs/frontend/MESSAGING-COPY-PACK-2026-03.md`
 - `docs/frontend/UI-UX-DESIGN-BRIEF-2026-03.md`
 - `docs/frontend/UI-UX-ARCHITECTURE-PACK-2026-03.md`
 - `docs/frontend/UI-UX-DIRECTION-BOARD-2026-03.md`

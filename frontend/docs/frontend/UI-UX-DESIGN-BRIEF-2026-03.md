@@ -11,6 +11,8 @@
 - `docs/WHITEPAPER.product.zh-CN.md`
 - `docs/release/ARBIGAMEFI-RELEASE-PACK.zh-CN.md`
 - `docs/release/ARBIGAMEFI-LP-ONBOARDING.zh-CN.md`
+- `docs/frontend/BRAND-STARTER-PACK-2026-03.md`
+- `docs/frontend/MESSAGING-COPY-PACK-2026-03.md`
 - `docs/frontend/PRD.md`
 - `docs/frontend/UI-CONSTITUTION.md`
 - `docs/frontend/FRONTEND-ROUTE-REVIEW-2026-03.md`
@@ -39,6 +41,11 @@ The current frontend has enough protocol correctness to support a serious produc
 What it lacks is a unified, professional, end-to-end interface system.
 
 This document defines that system at the brief level so design can be produced deliberately before further major UI rebuilding.
+
+Brand and copy freeze documents sit above final screens:
+
+1. `docs/frontend/BRAND-STARTER-PACK-2026-03.md`
+2. `docs/frontend/MESSAGING-COPY-PACK-2026-03.md`
 
 ---
 

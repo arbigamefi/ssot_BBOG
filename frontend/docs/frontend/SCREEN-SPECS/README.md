@@ -2,6 +2,10 @@
 
 These documents are the Figma-ready screen specifications derived from the UI/UX design chain:
 
+- `../BRAND-STARTER-PACK-2026-03.md`
+- `../MESSAGING-COPY-PACK-2026-03.md`
+- `../LOGO-CONCEPT-SHEET-2026-03.md`
+- `../LANDING-COPY-DRAFT-2026-03.md`
 - `../UI-UX-DESIGN-BRIEF-2026-03.md`
 - `../UI-UX-ARCHITECTURE-PACK-2026-03.md`
 - `../UI-UX-DIRECTION-BOARD-2026-03.md`

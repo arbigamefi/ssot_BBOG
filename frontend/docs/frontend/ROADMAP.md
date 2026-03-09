@@ -5,6 +5,10 @@ This roadmap is intentionally written like a release plan with explicit gates (s
 Companion execution document:
 - `docs/frontend/ACTION-PLAN-UI-PRODUCTIZATION.md`
 - `docs/frontend/FRONTEND-ROUTE-REVIEW-2026-03.md`
+- `docs/frontend/BRAND-STARTER-PACK-2026-03.md`
+- `docs/frontend/MESSAGING-COPY-PACK-2026-03.md`
+- `docs/frontend/LOGO-CONCEPT-SHEET-2026-03.md`
+- `docs/frontend/LANDING-COPY-DRAFT-2026-03.md`
 - `docs/frontend/UI-UX-DESIGN-BRIEF-2026-03.md`
 - `docs/frontend/UI-UX-ARCHITECTURE-PACK-2026-03.md`
 - `docs/frontend/UI-UX-DIRECTION-BOARD-2026-03.md`
