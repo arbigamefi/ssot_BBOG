@@ -20,6 +20,9 @@ import {
   ErrorCallout,
   KenoParamsForm,
   RouletteParamsForm,
+  createDefaultRouletteSelection,
+  summarizeRouletteSelection,
+  type RouletteSelection,
   StatusBadge,
   TabBar,
   type BetStatus,
@@ -262,7 +265,7 @@ function getCurrentParamSignal(
   slug: string,
   diceCap: string,
   coinSide: "heads" | "tails",
-  rouletteMask: string,
+  rouletteSelection: RouletteSelection,
   kenoMask: string
 ) {
   switch (slug) {
@@ -280,14 +283,11 @@ function getCurrentParamSignal(
       };
     case "roulette":
       {
-        const selected = countMaskSelections(rouletteMask);
+        const summary = summarizeRouletteSelection(rouletteSelection);
         return {
-          value: selected == null ? "Invalid" : `${selected} cell${selected === 1 ? "" : "s"}`,
-          label: "Active selection",
-          helper:
-            selected == null
-              ? "The legacy roulette mask is invalid. Fix the selection board before planning."
-              : "Legacy roulette now reads from the visible selection board instead of a hand-typed mask.",
+          value: summary.display,
+          label: "Active bet",
+          helper: summary.helper,
         };
       }
     case "keno":
@@ -337,13 +337,14 @@ export function GamePageClient({ slug }: { slug: string }) {
 
   const [diceCap, setDiceCap] = React.useState<string>("50");
   const [coinSide, setCoinSide] = React.useState<"heads" | "tails">("heads");
-  const [rouletteMask, setRouletteMask] = React.useState<string>("0x1");
+  const [rouletteSelection, setRouletteSelection] = React.useState<RouletteSelection>(() => createDefaultRouletteSelection());
   const [kenoMask, setKenoMask] = React.useState<string>("0x1f");
+  const isRouletteRoom = game?.slug === "roulette";
 
   React.useEffect(() => {
     setDiceCap("50");
     setCoinSide("heads");
-    setRouletteMask("0x1");
+    setRouletteSelection(createDefaultRouletteSelection());
     setKenoMask("0x1f");
     setActivityView("all");
     setInfoView("activity");
@@ -374,7 +375,7 @@ export function GamePageClient({ slug }: { slug: string }) {
   const activityTabs = buildActivityTabs(recentBets);
   const infoTabs = buildInfoTabs();
   const filteredRecentBets = filterRecentBets(recentBets, activityView);
-  const paramSignal = getCurrentParamSignal(game.slug, diceCap, coinSide, rouletteMask, kenoMask);
+  const paramSignal = getCurrentParamSignal(game.slug, diceCap, coinSide, rouletteSelection, kenoMask);
   const explorerModuleUrl = explorerBaseUrl ? `${explorerBaseUrl}/address/${game.module}` : undefined;
 
   const recentBetColumns: DataTableColumn<BetRow>[] = React.useMemo(
@@ -443,7 +444,7 @@ export function GamePageClient({ slug }: { slug: string }) {
       case "coin-toss":
         return <CoinTossParamsForm side={coinSide} onSideChange={setCoinSide} />;
       case "roulette":
-        return <RouletteParamsForm mask={rouletteMask} onMaskChange={setRouletteMask} />;
+        return <RouletteParamsForm selection={rouletteSelection} onChange={setRouletteSelection} />;
       case "keno":
         return <KenoParamsForm mask={kenoMask} onMaskChange={setKenoMask} />;
       default:
@@ -469,8 +470,35 @@ export function GamePageClient({ slug }: { slug: string }) {
       }
       case "coin-toss":
         return encoder.encode({ face: coinSide === "heads" });
-      case "roulette":
-        return encoder.encode({ mask: parseBigIntFromInput(rouletteMask) });
+      case "roulette": {
+        switch (rouletteSelection.kind) {
+          case "straight":
+            return encoder.encode({ kind: "straight", number: rouletteSelection.number });
+          case "split":
+            return encoder.encode({ kind: "split", first: rouletteSelection.first, second: rouletteSelection.second });
+          case "street":
+            return encoder.encode({ kind: "street", start: rouletteSelection.start });
+          case "corner":
+            return encoder.encode({ kind: "corner", start: rouletteSelection.start });
+          case "sixLine":
+            return encoder.encode({ kind: "sixLine", start: rouletteSelection.start });
+          case "dozen":
+            return encoder.encode({ kind: "dozen", dozen: rouletteSelection.dozen });
+          case "column":
+            return encoder.encode({ kind: "column", column: rouletteSelection.column });
+          case "red":
+          case "black":
+          case "odd":
+          case "even":
+          case "low":
+          case "high":
+            return encoder.encode({ kind: rouletteSelection.kind });
+          case "bitmask":
+            return encoder.encode({ kind: "bitmask", mask: parseBigIntFromInput(rouletteSelection.mask) });
+          default:
+            throw new Error(`Unsupported roulette selection: ${(rouletteSelection as { kind: string }).kind}`);
+        }
+      }
       case "keno":
         return encoder.encode({ mask: parseBigIntFromInput(kenoMask) });
       default:
@@ -481,30 +509,13 @@ export function GamePageClient({ slug }: { slug: string }) {
   return (
     <PageTransition pageKey={`game-${slug}`}>
       <div className="space-y-6">
-        <section className="space-y-4 rounded-[2rem] border border-slate-800 bg-slate-900/60 px-4 py-4 shadow-2xl shadow-slate-950/40 backdrop-blur-xl sm:px-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-3">
-              <Link
-                href="/games"
-                className="inline-flex items-center gap-2 rounded-full border border-slate-700/70 bg-slate-950/50 px-4 py-2 text-sm text-slate-300 transition-colors hover:border-slate-600 hover:text-white"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-                All Games
-              </Link>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${roomPulse.className}`}>
-                {roomPulse.label}
-              </span>
-              <Button asChild size="sm" variant="outline" className="border-slate-700 text-slate-200 hover:border-slate-500 hover:bg-slate-800/40 hover:text-white">
-                <Link href="/bets">Open ledger</Link>
-              </Button>
-            </div>
-          </div>
-
+        <section
+          className={`space-y-4 rounded-[2rem] border px-4 py-4 shadow-2xl shadow-slate-950/40 backdrop-blur-xl sm:px-6 ${
+            isRouletteRoom
+              ? "border-fuchsia-400/10 bg-[radial-gradient(circle_at_top,rgba(217,70,239,0.08),transparent_28%),linear-gradient(180deg,rgba(4,9,24,0.96),rgba(7,12,24,0.98))]"
+              : "border-slate-800 bg-slate-900/60"
+          }`}
+        >
           <div className="-mx-1 overflow-x-auto px-1">
             <div className="inline-flex gap-2">
               {(release.gamesMeta ?? []).map((item) => {
@@ -515,50 +526,82 @@ export function GamePageClient({ slug }: { slug: string }) {
                     href={`/games/${item.slug}`}
                     className={
                       active
-                        ? `rounded-2xl border px-5 py-3 text-sm font-semibold shadow-lg ${presentation.theme.badgeClassName}`
-                        : "rounded-2xl border border-slate-700/70 bg-slate-950/50 px-5 py-3 text-sm font-semibold text-slate-400 transition-colors hover:border-slate-600 hover:text-white"
+                        ? `inline-flex items-center gap-2 rounded-2xl border px-5 py-3 text-sm font-semibold shadow-lg ${presentation.theme.badgeClassName}`
+                        : "inline-flex items-center gap-2 rounded-2xl border border-slate-700/70 bg-slate-950/50 px-5 py-3 text-sm font-semibold text-slate-400 transition-colors hover:border-slate-600 hover:text-white"
                     }
                   >
-                    {item.label}
+                    <span>{item.label}</span>
+                    {active ? <span className="text-[10px] uppercase tracking-[0.14em]">Live</span> : null}
                   </Link>
                 );
               })}
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-2xl border border-slate-800/80 bg-slate-950/45 px-4 py-3">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Room</div>
-              <div className="mt-1 text-sm font-semibold text-white">
-                {presentation.icon} {game.label}
+          <div className="space-y-4">
+            {isRouletteRoom ? (
+              <div className="flex flex-wrap items-center justify-between gap-3 px-1">
+                <div className="flex flex-wrap items-center gap-3">
+                  <h1 className="text-2xl font-black tracking-tight text-white sm:text-3xl">
+                    {presentation.icon} {game.label}
+                  </h1>
+                  <span
+                    className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${roomPulse.className}`}
+                  >
+                    {roomPulse.label}
+                  </span>
+                </div>
+                <div className="inline-flex items-center gap-2 rounded-full border border-slate-700/80 bg-slate-950/60 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-slate-300">
+                  <span>Sync</span>
+                  <span className="text-white">{lagTone.label}</span>
+                </div>
               </div>
-            </div>
-            <div className="rounded-2xl border border-slate-800/80 bg-slate-950/45 px-4 py-3">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">{paramSignal.label}</div>
-              <div className="mt-1 text-sm font-semibold text-white">{paramSignal.value}</div>
-            </div>
-            <div className={`rounded-2xl border px-4 py-3 ${lagTone.className}`}>
-              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] opacity-75">Sync</div>
-              <div className="mt-1 text-sm font-semibold">{lagTone.label}</div>
-            </div>
-            <div className="rounded-2xl border border-slate-800/80 bg-slate-950/45 px-4 py-3">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Assets</div>
-              <div className="mt-1 text-sm font-semibold text-white">{assetLabels || "—"}</div>
+            ) : (
+              <>
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <h1 className="text-2xl font-black tracking-tight text-white sm:text-3xl">
+                          {presentation.icon} {game.label}
+                        </h1>
+                        <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${roomPulse.className}`}>
+                          {roomPulse.label}
+                        </span>
+                      </div>
+                      <p className="max-w-2xl text-sm leading-6 text-slate-400">
+                        Choose the table call, size the ticket, and only open the trace when you are ready to review the quote
+                        or sign.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[1.5rem] border border-slate-800/80 bg-slate-950/40 px-4 py-3 text-sm text-slate-400">
+                  <span>
+                    {paramSignal.label}: <span className="font-semibold text-white">{paramSignal.value}</span>
+                  </span>
+                  <span className="h-1 w-1 rounded-full bg-slate-700" />
+                  <span>
+                    Sync: <span className="font-semibold text-white">{lagTone.label}</span>
+                  </span>
+                </div>
+              </>
+            )}
+
+            <div id="bet-panel">
+              <GameBetPanel
+                release={release}
+                game={{ gameId: game.gameId, slug: game.slug, label: game.label }}
+                getEncodedParams={getEncodedParams}
+                inputFingerprint={[game.slug, diceCap, coinSide, JSON.stringify(rouletteSelection), kenoMask].join("|")}
+                selectionSignal={paramSignal}
+              >
+                {renderParamsForm()}
+              </GameBetPanel>
             </div>
           </div>
         </section>
-
-        <div id="bet-panel">
-          <GameBetPanel
-            release={release}
-            game={{ gameId: game.gameId, slug: game.slug, label: game.label }}
-            getEncodedParams={getEncodedParams}
-            inputFingerprint={[game.slug, diceCap, coinSide, rouletteMask, kenoMask].join("|")}
-            selectionSignal={paramSignal}
-          >
-            {renderParamsForm()}
-          </GameBetPanel>
-        </div>
 
         <section>
           <Card className="border-slate-800 bg-slate-900/50 backdrop-blur-xl shadow-xl shadow-slate-950/40">
@@ -566,17 +609,29 @@ export function GamePageClient({ slug }: { slug: string }) {
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <CardTitle className="text-lg text-white">
-                    {infoView === "activity" ? "Live Table" : infoView === "guide" ? "How to play" : "Protocol routing"}
+                    {infoView === "activity" ? "Recent bets" : infoView === "guide" ? "How to play" : "Protocol routing"}
                   </CardTitle>
                   <CardDescription className="mt-1 text-slate-400">
                     {infoView === "activity"
-                      ? "Recent indexed bets for this room. Use the ledger rows when you need the full bet timeline."
+                      ? "Recent indexed bets for this room. Open the full ledger only when you need the complete bet timeline."
                       : infoView === "guide"
                         ? "Keep the interaction linear: choose the outcome, size the ticket, then confirm the quote."
                         : "Presentation can move fast. Routing truth still lives in the active release manifest."}
                   </CardDescription>
                 </div>
-                <TabBar tabs={infoTabs} activeKey={infoView} onTabChange={(next) => setInfoView(next as InfoView)} />
+                <div className="flex flex-wrap items-center gap-3">
+                  {infoView === "activity" ? (
+                    <Button
+                      asChild
+                      size="sm"
+                      variant="outline"
+                      className="border-slate-700 text-slate-200 hover:border-slate-500 hover:bg-slate-800/40 hover:text-white"
+                    >
+                      <Link href="/bets">Open ledger</Link>
+                    </Button>
+                  ) : null}
+                  <TabBar tabs={infoTabs} activeKey={infoView} onTabChange={(next) => setInfoView(next as InfoView)} />
+                </div>
               </div>
               {infoView === "activity" ? (
                 <TabBar
@@ -656,6 +711,10 @@ export function GamePageClient({ slug }: { slug: string }) {
                     <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Execution notes</div>
                     <div className="mt-4 space-y-3 leading-6">
                       <div>Recent room window: {formatCount(recentBets.length)} indexed bets.</div>
+                      <div>
+                        Indexer status: {lagTone.label}
+                        {typeof indexerStatus?.lagBlocks === "number" ? ` (${formatCount(indexerStatus.lagBlocks)} blocks)` : ""}.
+                      </div>
                       <div>Token approvals always target the asset Bank, never the Hub.</div>
                       {explorerModuleUrl ? (
                         <div>

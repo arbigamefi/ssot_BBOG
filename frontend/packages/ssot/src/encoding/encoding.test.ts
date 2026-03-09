@@ -25,8 +25,13 @@ describe("encoding", () => {
   });
 
   it("roulette roundtrip", () => {
-    const hex = encodeRouletteParams(0x12345n);
-    expect(decodeRouletteParams(hex)).toEqual({ mask: 0x12345n });
+    const hex = encodeRouletteParams({ kind: "straight", number: 17 });
+    expect(decodeRouletteParams(hex)).toEqual({ kind: "straight", number: 17 });
+  });
+
+  it("roulette raw bitmask roundtrip", () => {
+    const hex = encodeRouletteParams({ kind: "bitmask", mask: 0x12345n });
+    expect(decodeRouletteParams(hex)).toEqual({ kind: "bitmask", mask: 0x12345n });
   });
 
   it("keno roundtrip", () => {

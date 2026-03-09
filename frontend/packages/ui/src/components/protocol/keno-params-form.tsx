@@ -16,7 +16,7 @@ export type KenoParamsFormProps = {
 export function KenoParamsForm(props: KenoParamsFormProps) {
   const {
     title = "Pick your Keno numbers",
-    description = "Tap the board directly. The packed mask stays available only as an advanced audit field.",
+    description = "Tap 1 to 10 numbers on the board, then move right to size the ticket.",
     mask,
     onMaskChange,
     disabled = false,
@@ -42,7 +42,7 @@ export function KenoParamsForm(props: KenoParamsFormProps) {
       minSelections={1}
       maxSelections={10}
       quickPickCounts={[3, 5, 8]}
-      helperText="Pick 1 to 10 numbers, then move to the stake console to size the ticket and review total cost."
+      helperText="The packed mask stays available only if you need to audit the exact encoding."
       rawMaskLabel="Advanced packed mask"
     />
   );

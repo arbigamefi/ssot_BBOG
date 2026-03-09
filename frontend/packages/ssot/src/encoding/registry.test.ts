@@ -65,16 +65,26 @@ describe("GameEncoderRegistry", () => {
   });
 
   describe("roulette encoder", () => {
-    it("encodes and decodes roundtrip", () => {
+    it("encodes and decodes a typed straight bet", () => {
       const enc = requireGameEncoder("roulette");
-      const hex = enc.encode({ mask: 0x12345n });
+      const hex = enc.encode({ kind: "straight", number: 17 });
       const decoded = enc.decode(hex);
+      expect(decoded.kind).toBe("straight");
+      expect(decoded.number).toBe(17);
+    });
+
+    it("encodes and decodes a legacy bitmask bet", () => {
+      const enc = requireGameEncoder("roulette");
+      const hex = enc.encode({ kind: "bitmask", mask: 0x12345n });
+      const decoded = enc.decode(hex);
+      expect(decoded.kind).toBe("bitmask");
       expect(decoded.mask).toBe(0x12345n);
     });
 
     it("has correct defaults", () => {
       const enc = requireGameEncoder("roulette");
-      expect(enc.defaultParams.mask).toBe(0x12345n);
+      expect(enc.defaultParams.kind).toBe("straight");
+      expect(enc.defaultParams.number).toBe(0);
     });
   });
 

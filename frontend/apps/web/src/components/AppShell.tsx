@@ -137,30 +137,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
 
             <div className="ml-auto flex items-center gap-3">
-              <div
-                className={`hidden items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-2 ${isGameRoom ? "xl:flex" : "lg:flex"}`}
-              >
-                <div className="space-y-0.5 text-right">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                    Release
+              {!isGameRoom ? (
+                <div className="hidden items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-2 lg:flex">
+                  <div className="space-y-0.5 text-right">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Release
+                    </div>
+                    <div className="text-sm font-semibold text-white">{networkName}</div>
                   </div>
-                  <div className="text-sm font-semibold text-white">{networkName}</div>
-                </div>
-                <div className="h-8 w-px bg-slate-800" />
-                <div className="space-y-0.5">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                    Digest
+                  <div className="h-8 w-px bg-slate-800" />
+                  <div className="space-y-0.5">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Digest
+                    </div>
+                    <div className="font-mono text-sm text-slate-300">{digestShort}</div>
                   </div>
-                  <div className="font-mono text-sm text-slate-300">{digestShort}</div>
-                </div>
-                <div className="h-8 w-px bg-slate-800" />
-                <div className="space-y-0.5">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                    Hub
+                  <div className="h-8 w-px bg-slate-800" />
+                  <div className="space-y-0.5">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      Hub
+                    </div>
+                    <div className="font-mono text-sm text-slate-300">{hubShort}</div>
                   </div>
-                  <div className="font-mono text-sm text-slate-300">{hubShort}</div>
                 </div>
-              </div>
+              ) : null}
 
               <div className="relative group">
                 <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/10 to-fuchsia-500/10 rounded-xl blur opacity-0 group-hover:opacity-100 transition duration-500" />

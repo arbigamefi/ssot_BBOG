@@ -113,6 +113,13 @@ vi.mock("@ssot/ui", () => ({
   KenoParamsForm: () => <div>Keno Params</div>,
   ReleaseBadge: ({ networkName }: any) => <span>{networkName}</span>,
   RouletteParamsForm: () => <div>Roulette Params</div>,
+  createDefaultRouletteSelection: () => ({ kind: "straight", number: 0 }),
+  summarizeRouletteSelection: () => ({
+    family: "Straight",
+    display: "Straight 0",
+    coverage: 1,
+    helper: "Single-number call.",
+  }),
   StatusBadge: ({ label }: any) => <span>{label}</span>,
   TabBar: ({ tabs, activeKey, onTabChange }: any) => (
     <div data-testid="tab-bar">
@@ -191,16 +198,20 @@ describe("GamePageClient", () => {
 
     expect(screen.getAllByText("Dice").length).toBeGreaterThan(0);
     expect(screen.getByTestId("game-bet-panel")).toBeDefined();
-    expect(screen.getByText("All Games")).toBeDefined();
-    expect(screen.getByText("Live Table")).toBeDefined();
+    expect(screen.getByText("Open ledger")).toBeDefined();
+    expect(screen.getByText(/Choose the table call, size the ticket/)).toBeDefined();
+    expect(screen.getByText("Current cap:")).toBeDefined();
+    expect(screen.getByText("50%")).toBeDefined();
+    expect(screen.getByText("Sync:")).toBeDefined();
+    expect(screen.getByText("Recent bets")).toBeDefined();
     expect(screen.getByRole("button", { name: "How to Play" })).toBeDefined();
     expect(screen.getByRole("button", { name: "Protocol" })).toBeDefined();
-    expect(screen.getAllByText("USDC").length).toBeGreaterThan(0);
     expect(screen.getByTestId("data-table")).toBeDefined();
     expect(screen.getAllByTestId("tab-bar").length).toBeGreaterThan(1);
 
     fireEvent.click(screen.getByRole("button", { name: "Protocol" }));
     expect(screen.getAllByText("abi.encode(uint8 cap)").length).toBeGreaterThan(0);
+    expect(screen.getByText("USDC")).toBeDefined();
   });
 
   it("navigates to bet detail when a recent bet row is clicked", () => {

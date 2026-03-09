@@ -10,6 +10,10 @@ const mockRelease = {
   releaseDigest: "0xdeadbeefcafe"
 };
 
+const state = {
+  pathname: "/bets"
+};
+
 vi.mock("../ssot/release/ReleaseProvider", () => ({
   useRelease: () => ({
     release: mockRelease,
@@ -33,7 +37,7 @@ vi.mock("next/link", () => ({
 }));
 
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/bets"
+  usePathname: () => state.pathname
 }));
 
 vi.mock("@ssot/ui", () => ({
@@ -41,7 +45,10 @@ vi.mock("@ssot/ui", () => ({
 }));
 
 describe("AppShell", () => {
-  afterEach(() => cleanup());
+  afterEach(() => {
+    cleanup();
+    state.pathname = "/bets";
+  });
   it("renders the ArbiGameFi brand link", () => {
     render(
       <AppShell>
@@ -148,5 +155,20 @@ describe("AppShell", () => {
 
     const betsLink = screen.getAllByText("Bets")[0]!;
     expect(betsLink.closest("a")?.getAttribute("href")).toBe("/bets");
+  });
+
+  it("uses minimal header chrome on game room routes", () => {
+    state.pathname = "/games/dice";
+    render(
+      <AppShell>
+        <div>content</div>
+      </AppShell>
+    );
+
+    expect(screen.getByText("All Games")).toBeDefined();
+    expect(screen.queryByText("Game Rooms")).toBeNull();
+    expect(screen.queryByText("Release")).toBeNull();
+    expect(screen.queryByText("Digest")).toBeNull();
+    expect(screen.queryByText("Hub")).toBeNull();
   });
 });
