@@ -242,8 +242,8 @@ function buildActivityTabs(rows: BetRow[]): TabBarItem[] {
 function buildInfoTabs(): TabBarItem[] {
   return [
     { key: "activity", label: "Live Bets" },
-    { key: "guide", label: "How to Play" },
-    { key: "protocol", label: "Protocol" },
+    { key: "guide", label: "Playbook" },
+    { key: "protocol", label: "Room Facts" },
   ];
 }
 
@@ -540,20 +540,36 @@ export function GamePageClient({ slug }: { slug: string }) {
 
           <div className="space-y-4">
             {isRouletteRoom ? (
-              <div className="flex flex-wrap items-center justify-between gap-3 px-1">
-                <div className="flex flex-wrap items-center gap-3">
-                  <h1 className="text-2xl font-black tracking-tight text-white sm:text-3xl">
-                    {presentation.icon} {game.label}
-                  </h1>
-                  <span
-                    className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${roomPulse.className}`}
-                  >
-                    {roomPulse.label}
-                  </span>
-                </div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-slate-700/80 bg-slate-950/60 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-slate-300">
-                  <span>Sync</span>
-                  <span className="text-white">{lagTone.label}</span>
+              <div className="rounded-[1.6rem] border border-fuchsia-400/10 bg-slate-950/45 px-4 py-4 sm:px-5">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="space-y-2">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      European roulette
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h1 className="text-2xl font-black tracking-tight text-white sm:text-3xl">
+                        {presentation.icon} {game.label}
+                      </h1>
+                      <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-200">
+                        Table-first room
+                      </span>
+                    </div>
+                    <p className="text-sm text-slate-400">
+                      Standard 0-36 table. One clear ticket at a time.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span
+                      className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${roomPulse.className}`}
+                    >
+                      {roomPulse.label}
+                    </span>
+                    <span className="inline-flex items-center gap-2 rounded-full border border-slate-700/80 bg-slate-950/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-300">
+                      <span>Sync</span>
+                      <span className="text-white">{lagTone.label}</span>
+                    </span>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -609,14 +625,14 @@ export function GamePageClient({ slug }: { slug: string }) {
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <CardTitle className="text-lg text-white">
-                    {infoView === "activity" ? "Recent bets" : infoView === "guide" ? "How to play" : "Protocol routing"}
+                    {infoView === "activity" ? "Recent bets" : infoView === "guide" ? "Playbook" : "Room facts"}
                   </CardTitle>
                   <CardDescription className="mt-1 text-slate-400">
                     {infoView === "activity"
                       ? "Recent indexed bets for this room. Open the full ledger only when you need the complete bet timeline."
                       : infoView === "guide"
                         ? "Keep the interaction linear: choose the outcome, size the ticket, then confirm the quote."
-                        : "Presentation can move fast. Routing truth still lives in the active release manifest."}
+                        : "When you need the governed truth, the module path, assets, and sync context stay here instead of crowding the first fold."}
                   </CardDescription>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">

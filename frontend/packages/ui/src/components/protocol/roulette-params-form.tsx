@@ -220,7 +220,7 @@ function parseSplitValue(value: string) {
 export function RouletteParamsForm(props: RouletteParamsFormProps) {
   const {
     title = "European roulette",
-    description = "European wheel, 0-36. Use the standard table first; raw masks stay in advanced mode only.",
+    description = "Standard 0-36 wheel. Start with the table, then size the ticket on the left.",
     selection,
     onChange,
     disabled = false,
@@ -237,8 +237,8 @@ export function RouletteParamsForm(props: RouletteParamsFormProps) {
   const sixLineValue = selection.kind === "sixLine" ? String(selection.start) : "1";
   const selectionModeNote =
     selection.kind === "bitmask"
-      ? "Advanced raw route. Use only for audit parity or manual mask checks."
-      : "Single table call per ticket. Pick one standard roulette bet, then size the slip.";
+      ? "Advanced raw route. Use only when you intentionally need manual mask parity."
+      : "One table call per ticket. Pick the table bet first, then size the slip.";
 
   return (
     <div className={cn("space-y-4", className)}>
@@ -255,7 +255,7 @@ export function RouletteParamsForm(props: RouletteParamsFormProps) {
           </div>
           <div className="flex items-center gap-2">
             <div className="hidden rounded-full border border-white/10 bg-slate-950/60 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-300 sm:inline-flex">
-              0-36 European wheel
+              Standard 0-36 wheel
             </div>
             <button
               type="button"
@@ -281,7 +281,7 @@ export function RouletteParamsForm(props: RouletteParamsFormProps) {
               <div className="mt-1 text-base font-semibold text-white">Pick the wheel result or one standard coverage</div>
             </div>
             <div className="rounded-full border border-white/10 bg-slate-950/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-slate-300">
-              Straight table
+              European table
             </div>
           </div>
 
@@ -489,7 +489,7 @@ export function RouletteParamsForm(props: RouletteParamsFormProps) {
 
           <div className="space-y-4">
             <div className="rounded-[1.5rem] border border-white/10 bg-slate-950/30 p-4">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Selection note</div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Table note</div>
               <div className="mt-2 text-sm leading-6 text-slate-300">{selectionModeNote}</div>
             </div>
 

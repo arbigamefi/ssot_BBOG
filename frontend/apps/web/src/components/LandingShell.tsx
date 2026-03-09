@@ -6,22 +6,16 @@ import { ReadOnlyBanner } from "@ssot/ui";
 import { useRelease } from "../ssot/release/ReleaseProvider";
 import { WalletButton } from "../app/providers/WalletButton";
 
-function shortHex(addr?: string) {
-  if (!addr) return "—";
-  if (addr.length < 10) return addr;
-  return `${addr.slice(0, 4)}…${addr.slice(-2)}`;
-}
-
 const LANDING_LINKS = [
   { href: "/games", label: "Rooms" },
-  { href: "/bets", label: "Live Bets" },
-  { href: "/liquidity", label: "Liquidity" }
+  { href: "/bets", label: "Bets" },
+  { href: "/liquidity", label: "Liquidity" },
+  { href: "/account", label: "Account" }
 ] as const;
 
 export function LandingShell({ children }: { children: React.ReactNode }) {
   const { release, readOnly, readOnlyReason, warnings } = useRelease();
   const networkName = release?.name ?? "Unknown";
-  const hubShort = shortHex(release?.contracts.hub);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-slate-950 text-slate-200 antialiased">
@@ -46,7 +40,7 @@ export function LandingShell({ children }: { children: React.ReactNode }) {
                     ArbiGameFi
                   </div>
                   <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                    Live Rooms
+                    Wallet-native game rooms
                   </div>
                 </div>
               </Link>
@@ -66,9 +60,7 @@ export function LandingShell({ children }: { children: React.ReactNode }) {
 
             <div className="flex items-center gap-3">
               <div className="hidden items-center gap-3 rounded-full border border-white/10 bg-white/5 px-4 py-2 lg:flex">
-                <div className="text-sm font-semibold text-white">{networkName}</div>
-                <div className="h-4 w-px bg-slate-800" />
-                <div className="font-mono text-xs text-slate-400">{hubShort}</div>
+                <div className="text-sm font-semibold text-white">Live on {networkName}</div>
               </div>
               <Link
                 href="/games"

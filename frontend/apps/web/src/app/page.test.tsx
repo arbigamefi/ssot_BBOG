@@ -122,12 +122,11 @@ describe("HomePage", () => {
   it("renders a landing-page hero instead of a protocol dashboard", () => {
     render(<HomePage />);
 
-    expect(
-      screen.getByText("Live rooms that feel fast before they settle on-chain.")
-    ).toBeDefined();
-    expect(screen.getAllByText("Play Now").length).toBeGreaterThan(0);
-    expect(screen.getByText("Three moves")).toBeDefined();
-    expect(screen.getByText("Live proof")).toBeDefined();
+    expect(screen.getByText("Play on-chain without losing the room feel.")).toBeDefined();
+    expect(screen.getAllByText("Open Rooms").length).toBeGreaterThan(0);
+    expect(screen.getByText("How it works")).toBeDefined();
+    expect(screen.getByText("Why trust it")).toBeDefined();
+    expect(screen.getAllByText("Live proof").length).toBeGreaterThan(0);
   });
 
   it("renders featured rooms and lightweight proof when release data exists", () => {
@@ -174,9 +173,9 @@ describe("HomePage", () => {
 
     render(<HomePage />);
 
-    expect(screen.getByText("From wallet to settlement, without losing the plot.")).toBeDefined();
-    expect(screen.getByText("Recent activity")).toBeDefined();
-    expect(screen.getByText("Asset pulse")).toBeDefined();
+    expect(screen.getByText("Choose a room and get straight to the table.")).toBeDefined();
+    expect(screen.getByText("See what is happening without dropping into operator mode.")).toBeDefined();
+    expect(screen.getByText("Live liquidity context")).toBeDefined();
     expect(screen.getAllByText("Dice").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Keno").length).toBeGreaterThan(0);
 

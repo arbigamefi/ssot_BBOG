@@ -156,6 +156,13 @@ const MOCK_RELEASE = {
       module: "0x8fb66ccc25d07b252d282be646d24444c062c667",
       paramsEncoding: "abi.encode(uint8 cap)",
     },
+    {
+      gameId: "0x2d2e6987fb3617c00abdd68d6c1f7eac28b7f9f96b25367e9b65dacaa0914aaa",
+      slug: "roulette",
+      label: "Roulette",
+      module: "0x1111111111111111111111111111111111111111",
+      paramsEncoding: "abi.encode(uint8 kind, uint40 payload)",
+    },
   ],
 };
 
@@ -204,14 +211,27 @@ describe("GamePageClient", () => {
     expect(screen.getByText("50%")).toBeDefined();
     expect(screen.getByText("Sync:")).toBeDefined();
     expect(screen.getByText("Recent bets")).toBeDefined();
-    expect(screen.getByRole("button", { name: "How to Play" })).toBeDefined();
-    expect(screen.getByRole("button", { name: "Protocol" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Playbook" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Room Facts" })).toBeDefined();
     expect(screen.getByTestId("data-table")).toBeDefined();
     expect(screen.getAllByTestId("tab-bar").length).toBeGreaterThan(1);
 
-    fireEvent.click(screen.getByRole("button", { name: "Protocol" }));
+    fireEvent.click(screen.getByRole("button", { name: "Room Facts" }));
     expect(screen.getAllByText("abi.encode(uint8 cap)").length).toBeGreaterThan(0);
     expect(screen.getByText("USDC")).toBeDefined();
+  });
+
+  it("renders roulette as a standard European table room", () => {
+    state.release = MOCK_RELEASE;
+
+    render(<GamePageClient slug="roulette" />);
+
+    expect(screen.getAllByText("Roulette").length).toBeGreaterThan(0);
+    expect(screen.getByText("European roulette")).toBeDefined();
+    expect(screen.getByText("Table-first room")).toBeDefined();
+    expect(screen.getByText("Playbook")).toBeDefined();
+    expect(screen.getByText("Room Facts")).toBeDefined();
+    expect(screen.queryByText("Mask table")).toBeNull();
   });
 
   it("navigates to bet detail when a recent bet row is clicked", () => {
@@ -225,8 +245,8 @@ describe("GamePageClient", () => {
 
   it("shows placeholder when slug is not present in release", () => {
     state.release = MOCK_RELEASE;
-    render(<GamePageClient slug="roulette" />);
+    render(<GamePageClient slug="keno" />);
     expect(screen.getByTestId("placeholder")).toBeDefined();
-    expect(screen.getByText(/No game with slug 'roulette'/)).toBeDefined();
+    expect(screen.getByText(/No game with slug 'keno'/)).toBeDefined();
   });
 });

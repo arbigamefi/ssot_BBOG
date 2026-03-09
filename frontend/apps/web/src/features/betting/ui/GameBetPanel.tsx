@@ -342,12 +342,16 @@ export function GameBetPanel({
             </div>
             <div className="mt-4 flex items-start justify-between gap-4">
               <div>
-                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{game.label} slip</div>
-                <div className="mt-1 text-base font-semibold text-white">{isRouletteRoom ? "Place the ticket" : ticketStepTitle}</div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  {game.label} slip
+                </div>
+                <div className="mt-1 text-base font-semibold text-white">
+                  {isRouletteRoom ? "Build the ticket" : ticketStepTitle}
+                </div>
               </div>
               <div className="text-right">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  {assetMeta?.symbol ?? "Asset"} balance
+                  {assetMeta?.symbol ?? "Asset"} wallet
                 </div>
                 <div className="mt-1 text-sm font-semibold text-white">
                   {account ? walletBalanceDisplay : "Connect wallet"}
@@ -360,8 +364,12 @@ export function GameBetPanel({
             <div className="rounded-[1.5rem] border border-slate-800/80 bg-slate-950/35 p-4">
               <div className="mb-3 flex items-start justify-between gap-4">
                 <div>
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Bet amount</div>
-                  <div className="mt-1 text-sm font-semibold text-white">{isRouletteRoom ? "Chip in or type the stake" : "Pick a chip or type the amount"}</div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    {isRouletteRoom ? "Stake amount" : "Bet amount"}
+                  </div>
+                  <div className="mt-1 text-sm font-semibold text-white">
+                    {isRouletteRoom ? "Chip in or type the stake" : "Pick a chip or type the amount"}
+                  </div>
                 </div>
                 <div className="text-right text-xs text-slate-400">{balanceHint}</div>
               </div>
@@ -392,6 +400,12 @@ export function GameBetPanel({
                   </select>
                 </div>
               </div>
+
+              {isRouletteRoom ? (
+                <div className="mt-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  Quick chips
+                </div>
+              ) : null}
 
               <div className="mt-3 grid grid-cols-4 gap-2">
                 {quickStakePresets.map((preset) => (
@@ -440,8 +454,12 @@ export function GameBetPanel({
               <div className="mb-4 flex items-center justify-between gap-4">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Number of bets</div>
-                    <div className="mt-1 text-sm font-semibold text-white">Choose how many rounds to cover</div>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                      {isRouletteRoom ? "Number of rounds" : "Number of bets"}
+                    </div>
+                    <div className="mt-1 text-sm font-semibold text-white">
+                      {isRouletteRoom ? "Choose how many spins to cover" : "Choose how many rounds to cover"}
+                    </div>
                   </div>
                 </div>
                 <div className="rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2 text-lg font-bold text-white">{betCount}</div>
@@ -475,7 +493,9 @@ export function GameBetPanel({
             <div className="rounded-[1.5rem] border border-slate-800/80 bg-slate-950/35 p-4">
               <div className="mb-3">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Ticket summary</div>
-                <div className="mt-1 text-sm font-semibold text-white">Review the ticket</div>
+                <div className="mt-1 text-sm font-semibold text-white">
+                  {isRouletteRoom ? "Review the roulette ticket" : "Review the ticket"}
+                </div>
               </div>
 
               <div className="space-y-3 text-sm">

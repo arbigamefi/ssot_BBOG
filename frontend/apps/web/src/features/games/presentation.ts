@@ -66,18 +66,20 @@ const GAME_PRESENTATION: Record<string, GamePresentation> = {
   },
   roulette: {
     icon: "🎯",
-    listDescription: "Compose a legacy roulette mask, inspect the encoded selection, and send the bet through the current release manifest.",
+    listDescription:
+      "Step into a standard European roulette table, build a readable ticket, and let the active release settle the result on-chain.",
     detailDescription:
-      "Build a roulette mask, confirm the encoded payload shape, and place the bet against the module address defined by the active release bundle.",
-    helpLabel: "Legacy mask selection",
+      "Choose a standard European roulette bet, review the ticket, and place it against the module and encoding defined by the active release bundle.",
+    helpLabel: "European table flow",
     helpDescription:
-      "Roulette currently encodes selections as a uint40-compatible mask. Review the release-provided params encoding on every environment because the UI must follow the active manifest, not page-local assumptions.",
-    roomLabel: "Mask table",
-    roomSummary: "A denser control surface for players who want to build selections instead of pressing a single binary toggle.",
+      "Roulette supports standard table bets such as straight, split, street, corner, six line, dozen, column, and even-money calls. Raw bitmask input stays available only as an advanced fallback.",
+    roomLabel: "European table",
+    roomSummary:
+      "A flagship room built around the standard 0-36 table, clearer ticket review, and a sharper left-slip/right-table rhythm.",
     playbook: [
-      "Compose the legacy mask carefully because encoding shape must match the active release manifest.",
-      "Use plan preview to verify that your selection, tolerance, and stake bundle are coherent before execution.",
-      "Lean on explorer links and room facts when auditing any unexpected settlement path.",
+      "Start with the standard table first so the main interaction stays legible in one glance.",
+      "Use ticket review to confirm the bet type, stake, and quote before signing.",
+      "Drop into the advanced fallback only when you intentionally need raw bitmask entry.",
     ],
     theme: {
       badgeClassName: "border-rose-400/30 bg-rose-400/10 text-rose-100",
