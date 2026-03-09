@@ -32,6 +32,7 @@ import {
 
 import { Placeholder } from "../../../components/Placeholder";
 import { PageTransition } from "../../../components/PageTransition";
+import { ArbiGameFiLockup, ArbiGameFiMark } from "../../../components/ArbiGameFiBrand";
 import { GameBetPanel } from "../../../features/betting/ui/GameBetPanel";
 import { clampNumber, parseBigIntFromInput } from "../../../features/betting/model/units";
 import { useBetsByGame } from "../../../features/bets/useBetsByGame";
@@ -540,35 +541,88 @@ export function GamePageClient({ slug }: { slug: string }) {
 
           <div className="space-y-4">
             {isRouletteRoom ? (
-              <div className="rounded-[1.6rem] border border-fuchsia-400/10 bg-slate-950/45 px-4 py-4 sm:px-5">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div className="space-y-2">
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      European roulette
+              <div className="rounded-[1.75rem] border border-fuchsia-400/10 bg-[linear-gradient(160deg,rgba(7,10,25,0.82),rgba(17,8,29,0.78)),radial-gradient(circle_at_top_right,rgba(201,59,99,0.18),transparent_28%)] px-4 py-4 sm:px-5">
+                <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                      <ArbiGameFiLockup className="hidden h-10 w-auto sm:block" />
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${roomPulse.className}`}
+                        >
+                          {roomPulse.label}
+                        </span>
+                        <span className="inline-flex items-center gap-2 rounded-full border border-slate-700/80 bg-slate-950/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-300">
+                          <span>Sync</span>
+                          <span className="text-white">{lagTone.label}</span>
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <h1 className="text-2xl font-black tracking-tight text-white sm:text-3xl">
-                        {presentation.icon} {game.label}
-                      </h1>
-                      <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-200">
-                        Table-first room
-                      </span>
+
+                    <div className="space-y-2">
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                        European roulette
+                      </div>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <h1 className="text-2xl font-black tracking-tight text-white sm:text-3xl">
+                          {presentation.icon} {game.label}
+                        </h1>
+                        <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-200">
+                          Table-first room
+                        </span>
+                      </div>
+                      <p className="max-w-2xl text-sm text-slate-400">
+                        Standard 0-36 table. One clear ticket at a time.
+                      </p>
                     </div>
-                    <p className="text-sm text-slate-400">
-                      Standard 0-36 table. One clear ticket at a time.
-                    </p>
+
+                    <div className="flex flex-wrap gap-2">
+                      {["0-36 standard wheel", "Single ticket focus", "Quote before sign", "Visible settlement"].map(
+                        (item) => (
+                          <div
+                            key={item}
+                            className="rounded-full border border-white/10 bg-slate-950/40 px-3 py-1.5 text-xs font-semibold text-slate-200"
+                          >
+                            {item}
+                          </div>
+                        )
+                      )}
+                    </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span
-                      className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${roomPulse.className}`}
-                    >
-                      {roomPulse.label}
-                    </span>
-                    <span className="inline-flex items-center gap-2 rounded-full border border-slate-700/80 bg-slate-950/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-300">
-                      <span>Sync</span>
-                      <span className="text-white">{lagTone.label}</span>
-                    </span>
+                  <div className="rounded-[1.5rem] border border-white/10 bg-slate-950/45 p-4 shadow-lg shadow-black/30">
+                    <div className="flex items-center gap-3">
+                      <ArbiGameFiMark accent="cyan" className="h-11 w-11 rounded-[1rem]" />
+                      <div>
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                          Table brief
+                        </div>
+                        <div className="text-sm font-semibold text-white">Room-led ticket review</div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-4 gap-2">
+                      {["0", "Red", "Black", "1st 12"].map((item, index) => (
+                        <div
+                          key={item}
+                          className={`rounded-[1rem] border px-3 py-3 text-center text-xs font-semibold ${
+                            index === 0
+                              ? "border-emerald-300/30 bg-emerald-300/12 text-emerald-100"
+                              : index === 1
+                                ? "border-rose-300/30 bg-rose-300/12 text-rose-100"
+                                : index === 2
+                                  ? "border-slate-200/20 bg-white/[0.04] text-slate-100"
+                                  : "border-fuchsia-300/20 bg-fuchsia-300/10 text-fuchsia-100"
+                          }`}
+                        >
+                          {item}
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-4 rounded-[1.2rem] border border-white/10 bg-white/[0.03] p-3 text-sm text-slate-300">
+                      Keep the room header emotional and compact. The actual table call, stake sizing, and quote all stay below in the live ticket flow.
+                    </div>
                   </div>
                 </div>
               </div>

@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { Button, GameCard, PageHeader, ReleaseBadge, StatCard } from "@ssot/ui";
 
+import { ArbiGameFiBrand, ArbiGameFiLockup, ArbiGameFiMark } from "../../components/ArbiGameFiBrand";
 import { Placeholder } from "../../components/Placeholder";
 import { PageTransition } from "../../components/PageTransition";
 import { getGamePresentation } from "../../features/games/presentation";
@@ -47,7 +48,7 @@ export function GamesListClient() {
     <PageTransition pageKey="games-list">
       <div className="space-y-8">
         <section className="relative overflow-hidden rounded-[2rem] border border-slate-800 bg-slate-900/60 px-6 py-8 shadow-2xl shadow-slate-950/40 backdrop-blur-xl sm:px-8 lg:px-10">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.14),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.12),transparent_30%)]" />
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.14),transparent_34%),radial-gradient(circle_at_top_right,rgba(110,231,249,0.10),transparent_24%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.12),transparent_30%)]" />
           <div className="relative grid gap-8 xl:grid-cols-[minmax(0,1.18fr)_minmax(320px,0.9fr)]">
             <div className="space-y-6">
               <div className="flex flex-wrap items-center gap-3">
@@ -62,12 +63,17 @@ export function GamesListClient() {
               </div>
 
               <div className="space-y-4">
+                <ArbiGameFiLockup className="hidden max-h-14 w-auto lg:block" />
+                <ArbiGameFiBrand accent="emerald" subtitle="Release-routed room directory" />
+              </div>
+
+              <div className="space-y-4">
                 <h1 className="max-w-4xl text-4xl font-black tracking-tight text-white md:text-6xl">
-                  Choose a live room, not a generic widget.
+                  Choose the room. Keep the trust layer behind the click.
                 </h1>
                 <p className="max-w-3xl text-base leading-7 text-slate-300 md:text-lg">
-                  Every room below is resolved from the active release manifest. Presentation can be expressive, but route validity,
-                  params encoding, module routing, and supported assets still come from protocol truth.
+                  The directory should feel like a premium game lobby, not a protocol dump. Every room below still resolves from the active
+                  release manifest, but the first scan stays focused on pace, table feel, and room choice.
                 </p>
               </div>
 
@@ -78,6 +84,17 @@ export function GamesListClient() {
                 <Button asChild variant="glass" size="lg">
                   <Link href="/bets">Open Ledger</Link>
                 </Button>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {["Room-first discovery", "Wallet-native tickets", "Readable settlement"].map((item) => (
+                  <div
+                    key={item}
+                    className="inline-flex items-center rounded-full border border-white/10 bg-slate-950/45 px-3 py-1.5 text-xs font-semibold text-slate-200"
+                  >
+                    {item}
+                  </div>
+                ))}
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -94,6 +111,21 @@ export function GamesListClient() {
               </div>
 
               <div className="relative space-y-5">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <ArbiGameFiMark accent="cyan" className="h-12 w-12 rounded-[1.1rem]" />
+                    <div>
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                        Directory preview
+                      </div>
+                      <div className="text-sm font-semibold text-white">Tonight&apos;s lead room</div>
+                    </div>
+                  </div>
+                  <div className="rounded-full border border-white/10 bg-slate-950/45 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-200">
+                    {games.length} rooms live
+                  </div>
+                </div>
+
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <div className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${featuredPresentation.theme.badgeClassName}`}>
@@ -121,6 +153,21 @@ export function GamesListClient() {
                       <div className="mt-1 font-mono text-slate-100">{shortHex(featuredGame.module)}</div>
                     </div>
                   </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {games.slice(0, 4).map((room) => (
+                    <div
+                      key={`preview-${room.slug}`}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
+                        room.slug === featuredGame.slug
+                          ? featuredPresentation.theme.badgeClassName
+                          : "border-white/10 bg-slate-950/45 text-slate-200"
+                      }`}
+                    >
+                      {room.label}
+                    </div>
+                  ))}
                 </div>
 
                 <div className="space-y-3">

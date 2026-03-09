@@ -110,3 +110,19 @@ export function ArbiGameFiBrand({
     </div>
   );
 }
+
+export function ArbiGameFiLockup({
+  className,
+  alt = "ArbiGameFi"
+}: {
+  className?: string;
+  alt?: string;
+}) {
+  return (
+    <img
+      src="/brand/arbigamefi-lockup.svg"
+      alt={alt}
+      className={["block h-auto w-auto", className].filter(Boolean).join(" ")}
+    />
+  );
+}
