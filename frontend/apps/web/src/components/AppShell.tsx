@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { ReadOnlyBanner } from "@ssot/ui";
 import { useRelease } from "../ssot/release/ReleaseProvider";
 import { WalletButton } from "../app/providers/WalletButton";
+import { ArbiGameFiBrand } from "./ArbiGameFiBrand";
 
 function shortHex(addr?: string) {
   if (!addr) return "—";
@@ -66,20 +67,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           >
             <div className={`flex items-center ${isGameRoom ? "gap-3" : "gap-6"}`}>
               <Link href="/" className="group flex items-center gap-3">
-                <div
-                  className={`flex items-center justify-center border border-emerald-400/30 bg-emerald-400/10 shadow-lg shadow-emerald-950/40 transition-transform duration-200 group-hover:scale-105 ${isGameRoom ? "h-9 w-9 rounded-xl" : "h-10 w-10 rounded-2xl"}`}
-                >
-                  <span className="text-sm font-black tracking-[0.18em] text-emerald-200">AG</span>
-                </div>
-                <div className="space-y-0.5">
-                  <div className="text-sm font-black tracking-[0.08em] text-white">
-                    ArbiGameFi
-                  </div>
-                  {!isGameRoom ? (
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                      Game Rooms
-                    </div>
-                  ) : null}
+                <div className="transition-transform duration-200 group-hover:scale-105">
+                  <ArbiGameFiBrand
+                    accent="emerald"
+                    subtitle={!isGameRoom ? "Game Rooms" : undefined}
+                    compact={isGameRoom}
+                  />
                 </div>
               </Link>
 

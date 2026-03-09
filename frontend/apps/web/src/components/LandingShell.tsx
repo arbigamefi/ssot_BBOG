@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ReadOnlyBanner } from "@ssot/ui";
 import { useRelease } from "../ssot/release/ReleaseProvider";
 import { WalletButton } from "../app/providers/WalletButton";
+import { ArbiGameFiBrand } from "./ArbiGameFiBrand";
 
 const LANDING_LINKS = [
   { href: "/games", label: "Rooms" },
@@ -32,16 +33,8 @@ export function LandingShell({ children }: { children: React.ReactNode }) {
           <div className="mx-auto flex h-16 max-w-[92rem] items-center justify-between gap-4 px-5 lg:px-8">
             <div className="flex items-center gap-8">
               <Link href="/" className="group flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-cyan-400/25 bg-cyan-400/10 shadow-lg shadow-cyan-950/30 transition-transform duration-200 group-hover:scale-105">
-                  <span className="text-sm font-black tracking-[0.18em] text-cyan-100">AG</span>
-                </div>
-                <div className="space-y-0.5">
-                  <div className="text-sm font-black tracking-[0.08em] text-white">
-                    ArbiGameFi
-                  </div>
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                    Wallet-native game rooms
-                  </div>
+                <div className="transition-transform duration-200 group-hover:scale-105">
+                  <ArbiGameFiBrand accent="cyan" subtitle="Wallet-native game rooms" />
                 </div>
               </Link>
 
