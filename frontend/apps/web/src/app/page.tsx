@@ -19,6 +19,7 @@ import {
 } from "@ssot/ui";
 
 import { PageTransition } from "../components/PageTransition";
+import { HomeHeroVisual } from "../components/home/HomeHeroVisual";
 import { useRelease } from "../ssot/release/ReleaseProvider";
 import { useSSOTSDK } from "../ssot/sdk";
 import { useSSOTRuntime } from "../ssot/runtime";
@@ -330,73 +331,24 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="grid gap-4">
-              <div
-                className={`relative overflow-hidden rounded-[2rem] border border-white/10 p-6 shadow-xl shadow-slate-950/40 ${heroPresentation.theme.stageClassName}`}
-              >
-                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 to-transparent" />
-                <div className="relative flex items-start justify-between gap-4">
-                  <div className="space-y-4">
-                    <div className="inline-flex h-16 w-16 items-center justify-center rounded-[1.5rem] border border-white/10 bg-slate-950/45 text-4xl shadow-lg shadow-black/30">
-                      {heroPresentation.icon}
-                    </div>
-                    <div>
-                      <div
-                        className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${heroPresentation.theme.badgeClassName}`}
-                      >
-                        Tonight&apos;s featured room
-                      </div>
-                      <h2 className="mt-3 text-3xl font-black tracking-tight text-white">
-                        {heroGame?.label ?? "Featured room"}
-                      </h2>
-                      <p className="mt-3 max-w-md text-sm leading-6 text-slate-200">
-                        {heroGame
-                          ? ROOM_COPY[heroGame.slug]?.description ?? heroPresentation.roomSummary
-                          : "Choose a room, build the ticket, and let the active release route settlement."}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="rounded-[1.5rem] border border-white/10 bg-slate-950/45 px-4 py-3 text-right">
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      Live proof
-                    </div>
-                    <div className="mt-2 text-sm font-semibold text-white">{syncLabel}</div>
-                    <div className="mt-1 text-xs text-slate-400">
-                      {indexedBetCount > 0
-                        ? `${formatCount(indexedBetCount)} indexed tickets`
-                        : "Ticket feed warming up"}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-[1.5rem] border border-white/10 bg-slate-950/45 p-4">
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      Room pulse
-                    </div>
-                    <div className="mt-2 text-lg font-semibold text-white">
-                      {roomCount > 0 ? `${formatCount(roomCount)} live rooms` : "Waiting for rooms"}
-                    </div>
-                    <div className="mt-1 text-sm text-slate-400">
-                      Featured entry stays clean so the first click is a room choice.
-                    </div>
-                  </div>
-                  <div className="rounded-[1.5rem] border border-white/10 bg-slate-950/45 p-4">
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      Ticket path
-                    </div>
-                    <div className="mt-2 text-lg font-semibold text-white">
-                      Wallet first, settlement visible
-                    </div>
-                    <div className="mt-1 text-sm text-slate-400">
-                      Enter the room, review the ticket, then follow the outcome through dedicated
-                      routes when needed.
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <HomeHeroVisual
+              icon={heroPresentation.icon}
+              featuredLabel={heroGame?.label ?? "Featured room"}
+              featuredDescriptor={
+                heroGame
+                  ? ROOM_COPY[heroGame.slug]?.description ?? heroPresentation.roomLabel
+                  : "Choose a room, build the ticket, and let the active release settle it."
+              }
+              roomSummary={heroPresentation.roomSummary}
+              syncLabel={syncLabel}
+              roomCount={roomCount}
+              indexedBetCount={indexedBetCount}
+              stageClassName={heroPresentation.theme.stageClassName}
+              rooms={(release?.gamesMeta ?? []).slice(0, 4).map((game) => ({
+                label: game.label,
+                active: game.slug === heroGame?.slug
+              }))}
+            />
           </div>
         </section>
 

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 160" fill="none">
+  <rect x="4" y="22" width="116" height="116" rx="34" fill="#090B14" stroke="rgba(82,212,166,0.28)" stroke-width="3"/>
+  <path d="M42 106L62 50L82 106M50.2 81H73.8" stroke="url(#ag-lockup)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M90 64C84.9 56.8 76.9 52 67.9 52C52.1 52 39.2 64.9 39.2 80.7C39.2 96.5 52.1 109.4 67.9 109.4C80 109.4 90.5 101.9 94.5 91.2H76.3" stroke="rgba(243,246,255,0.94)" stroke-width="6.4" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="152" y="72" fill="#F8FAFC" font-size="44" font-weight="800" letter-spacing="0.08em" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">ArbiGameFi</text>
+  <rect x="154" y="86" width="240" height="2" rx="1" fill="url(#ag-rail)" fill-opacity="0.8"/>
+  <circle cx="412" cy="87" r="5" fill="#6EE7F9"/>
+  <text x="152" y="116" fill="#94A3B8" font-size="18" font-weight="700" letter-spacing="0.28em" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">WALLET-NATIVE GAME ROOMS</text>
+  <defs>
+    <linearGradient id="ag-lockup" x1="28" y1="34" x2="96" y2="110" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#52D4A6"/>
+      <stop offset="0.52" stop-color="#6EE7F9"/>
+      <stop offset="1" stop-color="#C93B63"/>
+    </linearGradient>
+    <linearGradient id="ag-rail" x1="154" y1="87" x2="394" y2="87" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#52D4A6"/>
+      <stop offset="0.5" stop-color="#6EE7F9"/>
+      <stop offset="1" stop-color="#C93B63"/>
+    </linearGradient>
+  </defs>
+</svg>
