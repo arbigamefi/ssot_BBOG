@@ -52,10 +52,10 @@ export const ReleaseSuite: Story = {
         slug="roulette"
         label="Roulette"
         icon="🎯"
-        badge="Mask Table"
-        description="Legacy mask selection routed through the active manifest."
-        summary="Dense selection surface for players who want more than a binary toggle."
-        facts={["Legacy mask", "Manifest-driven", "Explorer-friendly"]}
+        badge="European Table"
+        description="Standard European roulette room with a cleaner ticket review."
+        summary="Step into a 0-36 table, keep the room feel intact, and only drop into the trace when you need it."
+        facts={["0-36 table", "Typed bets", "Readable slip"]}
       />
       <GameCard
         slug="keno"

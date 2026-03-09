@@ -17,6 +17,7 @@ import { usePlaceBetStepper } from "../usePlaceBetStepper";
 import { formatUnits, parseDecimalToUnits } from "../model/units";
 
 import { BetPanelShell } from "./BetPanelShell";
+import { ArbiGameFiMark } from "../../../components/ArbiGameFiBrand";
 
 type GameMeta = {
   gameId: Hex;
@@ -325,6 +326,21 @@ export function GameBetPanel({
           }`}
         >
           <div className="border-b border-slate-800 px-6 py-5">
+            <div className="mb-4 flex items-center justify-between gap-4 rounded-[1.35rem] border border-white/10 bg-slate-950/45 px-4 py-3">
+              <div className="flex items-center gap-3">
+                <ArbiGameFiMark accent={isRouletteRoom ? "cyan" : "emerald"} className="h-11 w-11 rounded-[1rem]" />
+                <div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Ticket rail
+                  </div>
+                  <div className="text-sm font-semibold text-white">{game.label} room slip</div>
+                </div>
+              </div>
+              <div className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-300">
+                Wallet-native
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-2 rounded-[1.35rem] border border-white/10 bg-slate-950/45 p-1.5">
               <button
                 type="button"
@@ -448,6 +464,10 @@ export function GameBetPanel({
                   Max
                 </button>
               </div>
+
+              <div className="mt-4 rounded-[1.2rem] border border-white/10 bg-white/[0.03] px-3 py-3 text-xs leading-5 text-slate-400">
+                Chips are shortcuts only. The live quote is still generated from the exact amount, rounds, and table call below.
+              </div>
             </div>
 
             <div className="rounded-[1.5rem] border border-slate-800/80 bg-slate-950/35 p-4">
@@ -488,6 +508,28 @@ export function GameBetPanel({
                   <span>100</span>
                 </div>
               </div>
+
+              <div className="mt-4 grid grid-cols-4 gap-2">
+                {[1, 5, 10, 25].map((preset) => (
+                  <button
+                    key={`round-${preset}`}
+                    type="button"
+                    onClick={() =>
+                      setStakeSpec((current) => ({
+                        ...current,
+                        betCount: String(preset),
+                      }))
+                    }
+                    className={`rounded-full border px-3 py-2 text-xs font-semibold transition-colors ${
+                      betCount === preset
+                        ? "border-cyan-300/30 bg-cyan-300/12 text-cyan-100"
+                        : "border-white/10 bg-white/[0.03] text-slate-300 hover:border-white/20 hover:text-white"
+                    }`}
+                  >
+                    {preset}x
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="rounded-[1.5rem] border border-slate-800/80 bg-slate-950/35 p-4">
@@ -515,6 +557,10 @@ export function GameBetPanel({
                       ? "—"
                       : `${formatUnits(totalStake, assetMeta.decimals)} ${assetMeta.symbol}`}
                   </span>
+                </div>
+                <div className="flex items-start justify-between gap-4">
+                  <span className="text-slate-400">Rounds</span>
+                  <span className="text-right font-semibold text-white">{betCount}</span>
                 </div>
                 <div className="flex items-start justify-between gap-4">
                   <span className="text-slate-400">Wallet balance</span>
