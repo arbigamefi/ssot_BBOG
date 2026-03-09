@@ -12,6 +12,8 @@ Related documents:
 - PRD: `docs/frontend/PRD.md`
 - Roadmap: `docs/frontend/ROADMAP.md`
 - Route review: `docs/frontend/FRONTEND-ROUTE-REVIEW-2026-03.md`
+- UI/UX design brief: `docs/frontend/UI-UX-DESIGN-BRIEF-2026-03.md`
+- UI/UX architecture pack: `docs/frontend/UI-UX-ARCHITECTURE-PACK-2026-03.md`
 - UI Constitution: `docs/frontend/UI-CONSTITUTION.md`
 - Page specs: `docs/frontend/PAGE-SPECS/`
 - Milestone D3: `docs/frontend/MILESTONE-D3.md`
