@@ -41,12 +41,12 @@ const nextConfig = {
             value: [
               "default-src 'self'",
               // Next.js requires inline scripts for hydration + hot-reload in dev
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://mcp.figma.com",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https:",
               "font-src 'self' data:",
               // RPC endpoints + WalletConnect relay + Sentry
-              "connect-src 'self' https://*.walletconnect.com https://*.walletconnect.org wss://*.walletconnect.com wss://*.walletconnect.org https://sepolia.base.org https://mainnet.base.org https://arb1.arbitrum.io https://*.sentry.io https://*.ingest.sentry.io",
+              "connect-src 'self' https://mcp.figma.com https://*.walletconnect.com https://*.walletconnect.org wss://*.walletconnect.com wss://*.walletconnect.org https://sepolia.base.org https://mainnet.base.org https://arb1.arbitrum.io https://*.sentry.io https://*.ingest.sentry.io",
               "frame-src 'self' https://*.walletconnect.com https://*.walletconnect.org",
               "worker-src 'self' blob:",
             ].join("; "),

@@ -59,4 +59,17 @@ describe("SiteChrome", () => {
     expect(screen.getByTestId("app-shell")).toBeDefined();
     expect(screen.queryByTestId("landing-shell")).toBeNull();
   });
+
+  it("bypasses chrome on prototype routes", () => {
+    state.pathname = "/prototype/ui-ux-v1";
+    render(
+      <SiteChrome>
+        <div>prototype-board</div>
+      </SiteChrome>
+    );
+
+    expect(screen.getByText("prototype-board")).toBeDefined();
+    expect(screen.queryByTestId("app-shell")).toBeNull();
+    expect(screen.queryByTestId("landing-shell")).toBeNull();
+  });
 });

@@ -8,6 +8,10 @@ import { LandingShell } from "./LandingShell";
 export function SiteChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
+  if (pathname.startsWith("/prototype")) {
+    return <>{children}</>;
+  }
+
   if (pathname === "/") {
     return <LandingShell>{children}</LandingShell>;
   }
