@@ -6,29 +6,28 @@ import { Label } from "../ui/label";
 
 const RED_NUMBERS = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
 const STRAIGHT_NUMBERS = Array.from({ length: 36 }, (_value, index) => index + 1);
+const TABLE_ROWS = [
+  { column: 3 as const, numbers: Array.from({ length: 12 }, (_value, index) => index * 3 + 3) },
+  { column: 2 as const, numbers: Array.from({ length: 12 }, (_value, index) => index * 3 + 2) },
+  { column: 1 as const, numbers: Array.from({ length: 12 }, (_value, index) => index * 3 + 1) },
+];
 const STREET_STARTS = Array.from({ length: 12 }, (_value, index) => index * 3 + 1);
 const SIX_LINE_STARTS = Array.from({ length: 11 }, (_value, index) => index * 3 + 1);
 const CORNER_STARTS = Array.from({ length: 32 }, (_value, index) => index + 1).filter((value) => value % 3 !== 0);
 
 const OUTSIDE_BETS = [
+  { kind: "low", label: "1 to 18", helper: "Low half" },
+  { kind: "even", label: "Even", helper: "All even numbers" },
   { kind: "red", label: "Red", helper: "18 red numbers" },
   { kind: "black", label: "Black", helper: "18 black numbers" },
   { kind: "odd", label: "Odd", helper: "All odd numbers" },
-  { kind: "even", label: "Even", helper: "All even numbers" },
-  { kind: "low", label: "1-18", helper: "Low half" },
-  { kind: "high", label: "19-36", helper: "High half" },
+  { kind: "high", label: "19 to 36", helper: "High half" },
 ] as const;
 
 const DOZENS = [
-  { dozen: 1 as const, label: "1st 12", helper: "1-12" },
-  { dozen: 2 as const, label: "2nd 12", helper: "13-24" },
-  { dozen: 3 as const, label: "3rd 12", helper: "25-36" },
-];
-
-const COLUMNS = [
-  { column: 1 as const, label: "Column 1", helper: "1,4,7..." },
-  { column: 2 as const, label: "Column 2", helper: "2,5,8..." },
-  { column: 3 as const, label: "Column 3", helper: "3,6,9..." },
+  { dozen: 1 as const, label: "1 to 12", helper: "First dozen" },
+  { dozen: 2 as const, label: "13 to 24", helper: "Second dozen" },
+  { dozen: 3 as const, label: "25 to 36", helper: "Third dozen" },
 ];
 
 type SplitOption = {
@@ -285,43 +284,64 @@ export function RouletteParamsForm(props: RouletteParamsFormProps) {
             </div>
           </div>
 
-          <div className="grid gap-3 lg:grid-cols-[88px_minmax(0,1fr)]">
-            <button
-              type="button"
-              disabled={disabled}
-              onClick={() => onChange?.({ kind: "straight", number: 0 })}
-              className={cn(
-                "flex min-h-[17rem] items-center justify-center rounded-[1.4rem] border text-4xl font-black transition-all duration-200",
-                selection.kind === "straight" && selection.number === 0
-                  ? "border-emerald-300/80 bg-emerald-400/20 text-white shadow-[0_18px_40px_rgba(16,185,129,0.18)]"
-                  : `${numberTone(0)} hover:border-emerald-300/70 hover:text-white`,
-                disabled && "cursor-not-allowed opacity-60"
-              )}
-            >
-              0
-            </button>
+          <div className="overflow-x-auto pb-2">
+            <div className="min-w-[58rem]">
+              <div className="grid grid-cols-[72px_repeat(12,minmax(0,1fr))_72px] gap-2">
+                <button
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => onChange?.({ kind: "straight", number: 0 })}
+                  className={cn(
+                    "row-span-3 flex min-h-[10.4rem] items-center justify-center rounded-[1.4rem] border text-4xl font-black transition-all duration-200",
+                    selection.kind === "straight" && selection.number === 0
+                      ? "border-emerald-300/80 bg-emerald-400/20 text-white shadow-[0_18px_40px_rgba(16,185,129,0.18)]"
+                      : `${numberTone(0)} hover:border-emerald-300/70 hover:text-white`,
+                    disabled && "cursor-not-allowed opacity-60"
+                  )}
+                >
+                  0
+                </button>
 
-            <div className="grid grid-cols-3 gap-2">
-              {STRAIGHT_NUMBERS.map((number) => {
-                const active = selection.kind === "straight" && selection.number === number;
-                return (
-                  <button
-                    key={number}
-                    type="button"
-                    disabled={disabled}
-                    onClick={() => onChange?.({ kind: "straight", number })}
-                    className={cn(
-                      "rounded-[1rem] border px-3 py-3 text-lg font-black transition-all duration-200",
-                      active
-                        ? "border-amber-300/80 bg-amber-400/20 text-white shadow-[0_16px_36px_rgba(245,158,11,0.18)]"
-                        : `${numberTone(number)} hover:border-slate-300/60 hover:text-white`,
-                      disabled && "cursor-not-allowed opacity-60"
-                    )}
-                  >
-                    {number}
-                  </button>
-                );
-              })}
+                {TABLE_ROWS.map((row) => (
+                  <React.Fragment key={row.column}>
+                    {row.numbers.map((number) => {
+                      const active = selection.kind === "straight" && selection.number === number;
+                      return (
+                        <button
+                          key={number}
+                          type="button"
+                          disabled={disabled}
+                          onClick={() => onChange?.({ kind: "straight", number })}
+                          className={cn(
+                            "rounded-[0.95rem] border px-3 py-3 text-lg font-black transition-all duration-200",
+                            active
+                              ? "border-amber-300/80 bg-amber-400/20 text-white shadow-[0_16px_36px_rgba(245,158,11,0.18)]"
+                              : `${numberTone(number)} hover:border-slate-300/60 hover:text-white`,
+                            disabled && "cursor-not-allowed opacity-60"
+                          )}
+                        >
+                          {number}
+                        </button>
+                      );
+                    })}
+
+                    <button
+                      type="button"
+                      disabled={disabled}
+                      onClick={() => onChange?.({ kind: "column", column: row.column })}
+                      className={cn(
+                        "rounded-[0.95rem] border px-3 py-3 text-sm font-black transition-all duration-200",
+                        selection.kind === "column" && selection.column === row.column
+                          ? "border-sky-300/70 bg-sky-500/20 text-white shadow-[0_18px_40px_rgba(14,165,233,0.18)]"
+                          : "border-white/10 bg-white/[0.06] text-slate-200 hover:border-white/20 hover:text-white",
+                        disabled && "cursor-not-allowed opacity-60"
+                      )}
+                    >
+                      2:1
+                    </button>
+                  </React.Fragment>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -349,31 +369,7 @@ export function RouletteParamsForm(props: RouletteParamsFormProps) {
             })}
           </div>
 
-          <div className="mt-3 grid gap-3 md:grid-cols-3">
-            {COLUMNS.map((item) => {
-              const active = selection.kind === "column" && selection.column === item.column;
-              return (
-                <button
-                  key={item.column}
-                  type="button"
-                  disabled={disabled}
-                  onClick={() => onChange?.({ kind: "column", column: item.column })}
-                  className={cn(
-                    "rounded-[1.15rem] border px-4 py-3 text-left transition-all duration-200",
-                    active
-                      ? "border-sky-300/70 bg-sky-500/20 text-white shadow-[0_18px_40px_rgba(14,165,233,0.18)]"
-                      : "border-slate-700 bg-slate-950/55 text-slate-300 hover:border-slate-500 hover:text-white",
-                    disabled && "cursor-not-allowed opacity-60"
-                  )}
-                >
-                  <div className="text-sm font-black">{item.label}</div>
-                  <div className="mt-1 text-xs text-slate-400">{item.helper}</div>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
             {OUTSIDE_BETS.map((item) => {
               const active = selection.kind === item.kind;
               return (
