@@ -206,19 +206,19 @@ describe("GamePageClient", () => {
     expect(screen.getAllByText("Dice").length).toBeGreaterThan(0);
     expect(screen.getByTestId("game-bet-panel")).toBeDefined();
     expect(screen.getByText("Open ledger")).toBeDefined();
-    expect(screen.getByText(/Choose the table call, size the ticket/)).toBeDefined();
-    expect(screen.getByText("Current cap:")).toBeDefined();
+    expect(screen.getByText(/A room-first layout/)).toBeDefined();
+    expect(screen.getByText("Active call")).toBeDefined();
     expect(screen.getByText("50%")).toBeDefined();
-    expect(screen.getByText("Sync:")).toBeDefined();
-    expect(screen.getByText("Recent bets")).toBeDefined();
-    expect(screen.getByRole("button", { name: "Playbook" })).toBeDefined();
-    expect(screen.getByRole("button", { name: "Room Facts" })).toBeDefined();
+    expect(screen.getByText("Sync")).toBeDefined();
+    expect(screen.getByText("Live bets")).toBeDefined();
+    expect(screen.getByRole("button", { name: "How to play" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Game details" })).toBeDefined();
     expect(screen.getByTestId("data-table")).toBeDefined();
     expect(screen.getAllByTestId("tab-bar").length).toBeGreaterThan(1);
 
-    fireEvent.click(screen.getByRole("button", { name: "Room Facts" }));
+    fireEvent.click(screen.getByRole("button", { name: "Game details" }));
     expect(screen.getAllByText("abi.encode(uint8 cap)").length).toBeGreaterThan(0);
-    expect(screen.getByText("USDC")).toBeDefined();
+    expect(screen.getAllByText("USDC").length).toBeGreaterThan(0);
   });
 
   it("renders roulette as a standard European table room", () => {
@@ -227,10 +227,10 @@ describe("GamePageClient", () => {
     render(<GamePageClient slug="roulette" />);
 
     expect(screen.getAllByText("Roulette").length).toBeGreaterThan(0);
-    expect(screen.getByText("European roulette")).toBeDefined();
-    expect(screen.getByText("Table-first room")).toBeDefined();
-    expect(screen.getByText("Playbook")).toBeDefined();
-    expect(screen.getByText("Room Facts")).toBeDefined();
+    expect(screen.getByText("European table")).toBeDefined();
+    expect(screen.getByText(/Standard 0-36 European table/)).toBeDefined();
+    expect(screen.getByText("How to play")).toBeDefined();
+    expect(screen.getByText("Game details")).toBeDefined();
     expect(screen.queryByText("Mask table")).toBeNull();
   });
 

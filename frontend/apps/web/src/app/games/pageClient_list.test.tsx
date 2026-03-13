@@ -84,7 +84,7 @@ describe("GamesListClient", () => {
     expect(desc.textContent).toContain("No games registered");
   });
 
-  it("renders page header and game cards when gamesMeta is populated", () => {
+  it("renders the rebuilt directory hero and game cards when gamesMeta is populated", () => {
     state.release = {
       name: "Base Sepolia",
       releaseDigest: "0xdeadbeefcafefeed",
@@ -93,11 +93,11 @@ describe("GamesListClient", () => {
       gamesMeta: MOCK_GAMES_META,
     };
     render(<GamesListClient />);
-    expect(screen.getByTestId("page-header")).toBeDefined();
-    expect(screen.getAllByText("Room Directory").length).toBeGreaterThan(0);
+    expect(screen.getByText("Enter a room the same way you would enter a real casino floor.")).toBeDefined();
+    expect(screen.getByText("Game directory")).toBeDefined();
     expect(screen.getAllByText("Dice").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Coin Toss").length).toBeGreaterThan(0);
-    expect(screen.getAllByTestId("stat-card").length).toBeGreaterThan(0);
+    expect(screen.getByText("Browse by room, not by module.")).toBeDefined();
   });
 
   it("renders correct number of game cards", () => {

@@ -2,19 +2,13 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Button, GameCard, PageHeader, ReleaseBadge, StatCard } from "@ssot/ui";
+import { Button, GameCard } from "@ssot/ui";
 
-import { ArbiGameFiBrand, ArbiGameFiLockup, ArbiGameFiMark } from "../../components/ArbiGameFiBrand";
+import { ArbiGameFiLockup, ArbiGameFiMark } from "../../components/ArbiGameFiBrand";
 import { Placeholder } from "../../components/Placeholder";
 import { PageTransition } from "../../components/PageTransition";
 import { getGamePresentation } from "../../features/games/presentation";
 import { useRelease } from "../../ssot/release/ReleaseProvider";
-
-function shortHex(value?: string) {
-  if (!value) return "—";
-  if (value.length <= 12) return value;
-  return `${value.slice(0, 6)}…${value.slice(-4)}`;
-}
 
 export function GamesListClient() {
   const { release, readOnlyReason } = useRelease();
@@ -46,197 +40,158 @@ export function GamesListClient() {
 
   return (
     <PageTransition pageKey="games-list">
-      <div className="space-y-8">
-        <section className="relative overflow-hidden rounded-[2rem] border border-slate-800 bg-slate-900/60 px-6 py-8 shadow-2xl shadow-slate-950/40 backdrop-blur-xl sm:px-8 lg:px-10">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.14),transparent_34%),radial-gradient(circle_at_top_right,rgba(110,231,249,0.10),transparent_24%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.12),transparent_30%)]" />
-          <div className="relative grid gap-8 xl:grid-cols-[minmax(0,1.18fr)_minmax(320px,0.9fr)]">
-            <div className="space-y-6">
-              <div className="flex flex-wrap items-center gap-3">
-                <ReleaseBadge
-                  networkName={release.name}
-                  hubShort={shortHex(release.contracts.hub)}
-                  digestShort={release.releaseDigest.slice(0, 8)}
-                />
-                <span className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">
-                  Room Directory
-                </span>
+      <div className="space-y-8 py-6">
+        <section className="ag-room-panel overflow-hidden rounded-[2.15rem] px-5 py-6 sm:px-7 lg:px-8">
+          <div className="flex flex-wrap items-center gap-2 overflow-x-auto pb-4">
+            {games.map((game, index) => (
+              <Link
+                key={game.slug}
+                href={`/games/${game.slug}`}
+                data-active={index === 0}
+                className="ag-pill-tab min-w-max px-4 py-2 text-sm"
+              >
+                {game.label}
+              </Link>
+            ))}
+          </div>
+
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.08fr)_360px]">
+            <div className="space-y-5">
+              <div className="flex items-center gap-3">
+                <ArbiGameFiLockup className="hidden h-11 w-auto lg:block" />
+                <div className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-100">
+                  Game directory
+                </div>
               </div>
 
-              <div className="space-y-4">
-                <ArbiGameFiLockup className="hidden max-h-14 w-auto lg:block" />
-                <ArbiGameFiBrand accent="emerald" subtitle="Release-routed room directory" />
-              </div>
-
-              <div className="space-y-4">
-                <h1 className="max-w-4xl text-4xl font-black tracking-tight text-white md:text-6xl">
-                  Choose the room. Keep the trust layer behind the click.
+              <div className="space-y-3">
+                <h1 className="max-w-4xl text-4xl font-black tracking-[-0.04em] text-white md:text-6xl">
+                  Enter a room the same way you would enter a real casino floor.
                 </h1>
                 <p className="max-w-3xl text-base leading-7 text-slate-300 md:text-lg">
-                  The directory should feel like a premium game lobby, not a protocol dump. Every room below still resolves from the active
-                  release manifest, but the first scan stays focused on pace, table feel, and room choice.
+                  Top-level choice first. Room detail second. The directory is built for scanning
+                  live tables, not deciphering protocol internals.
                 </p>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="rounded-[1.3rem] border border-white/8 bg-white/[0.04] px-4 py-4">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Live rooms
+                  </div>
+                  <div className="mt-2 text-2xl font-black text-white">{games.length}</div>
+                  <div className="mt-1 text-sm text-slate-400">One selector, one entrance per table</div>
+                </div>
+                <div className="rounded-[1.3rem] border border-white/8 bg-white/[0.04] px-4 py-4">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Assets
+                  </div>
+                  <div className="mt-2 text-2xl font-black text-white">{release.assets.length}</div>
+                  <div className="mt-1 text-sm text-slate-400">Wallet-native bankroll context</div>
+                </div>
+                <div className="rounded-[1.3rem] border border-white/8 bg-white/[0.04] px-4 py-4">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Flow
+                  </div>
+                  <div className="mt-2 text-2xl font-black text-white">Room-first</div>
+                  <div className="mt-1 text-sm text-slate-400">Slip on the side, table in focus</div>
+                </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
                 <Button asChild size="lg">
-                  <Link href={`/games/${featuredGame.slug}`}>Enter Featured Room</Link>
+                  <Link href={`/games/${featuredGame.slug}`}>Open {featuredGame.label}</Link>
                 </Button>
                 <Button asChild variant="glass" size="lg">
-                  <Link href="/bets">Open Ledger</Link>
+                  <Link href="/bets">See live bets</Link>
                 </Button>
               </div>
+            </div>
 
-              <div className="flex flex-wrap gap-2">
-                {["Room-first discovery", "Wallet-native tickets", "Readable settlement"].map((item) => (
-                  <div
-                    key={item}
-                    className="inline-flex items-center rounded-full border border-white/10 bg-slate-950/45 px-3 py-1.5 text-xs font-semibold text-slate-200"
-                  >
-                    {item}
+            <div className={`relative overflow-hidden rounded-[1.8rem] border border-white/8 p-5 ${featuredPresentation.theme.stageClassName}`}>
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <ArbiGameFiMark accent="cyan" className="h-12 w-12 rounded-[1rem]" />
+                  <div>
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                      Featured table
+                    </div>
+                    <div className="text-sm font-semibold text-white">{featuredGame.label}</div>
+                  </div>
+                </div>
+                <div className="rounded-full border border-white/10 bg-[#050714]/35 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-200">
+                  Ready now
+                </div>
+              </div>
+
+              <div className="mt-6 flex items-start justify-between gap-4">
+                <div>
+                  <div className="inline-flex items-center rounded-full border border-white/10 bg-[#050714]/35 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-200">
+                    {featuredPresentation.roomLabel}
+                  </div>
+                  <div className="mt-4 text-4xl font-black tracking-tight text-white">{featuredGame.label}</div>
+                  <p className="mt-3 max-w-lg text-sm leading-6 text-slate-300">
+                    {featuredPresentation.roomSummary}
+                  </p>
+                </div>
+                <div className="inline-flex h-16 w-16 items-center justify-center rounded-[1.4rem] border border-white/10 bg-[#050714]/35 text-4xl">
+                  {featuredPresentation.icon}
+                </div>
+              </div>
+
+              <div className="mt-6 space-y-3">
+                {featuredPresentation.previewSteps.slice(0, 3).map((step, index) => (
+                  <div key={step.title} className="flex items-start gap-4 rounded-[1.2rem] border border-white/8 bg-[#050714]/28 px-4 py-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-sm font-black text-white">
+                      {index + 1}
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-white">{step.title}</div>
+                      <p className="mt-1 text-sm leading-6 text-slate-400">{step.body}</p>
+                    </div>
                   </div>
                 ))}
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <StatCard label="Live Rooms" value={String(games.length)} subValue="release-driven" />
-                <StatCard label="Assets" value={String(release.assets.length)} subValue="bank-backed" />
-                <StatCard label="Digest" value={release.releaseDigest.slice(0, 8)} subValue="active bundle" />
-                <StatCard label="Routing" value="On-chain" subValue="wallet-native" />
-              </div>
-            </div>
-
-            <div className={`relative overflow-hidden rounded-[1.75rem] border border-white/10 p-6 shadow-2xl ${featuredPresentation.theme.stageClassName}`}>
-              <div className="pointer-events-none absolute -right-10 -top-10 text-[7rem] opacity-10">
-                {featuredPresentation.icon}
-              </div>
-
-              <div className="relative space-y-5">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <ArbiGameFiMark accent="cyan" className="h-12 w-12 rounded-[1.1rem]" />
-                    <div>
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                        Directory preview
-                      </div>
-                      <div className="text-sm font-semibold text-white">Tonight&apos;s lead room</div>
-                    </div>
-                  </div>
-                  <div className="rounded-full border border-white/10 bg-slate-950/45 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-200">
-                    {games.length} rooms live
-                  </div>
-                </div>
-
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${featuredPresentation.theme.badgeClassName}`}>
-                      {featuredPresentation.roomLabel}
-                    </div>
-                    <div className="mt-4 text-3xl font-black tracking-tight text-white">
-                      {featuredGame.label}
-                    </div>
-                    <p className="mt-3 text-sm leading-6 text-slate-300">{featuredPresentation.roomSummary}</p>
-                  </div>
-                  <div className="inline-flex h-16 w-16 items-center justify-center rounded-3xl border border-white/10 bg-slate-950/45 text-4xl shadow-lg shadow-black/20">
-                    {featuredPresentation.icon}
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-white/10 bg-slate-950/45 p-4 text-sm text-slate-300">
-                  <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Featured room notes</div>
-                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                    <div>
-                      <div className="text-slate-500">Params</div>
-                      <div className="mt-1 font-mono text-slate-100">{featuredGame.paramsEncoding ?? "release-defined"}</div>
-                    </div>
-                    <div>
-                      <div className="text-slate-500">Module</div>
-                      <div className="mt-1 font-mono text-slate-100">{shortHex(featuredGame.module)}</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  {games.slice(0, 4).map((room) => (
-                    <div
-                      key={`preview-${room.slug}`}
-                      className={`rounded-full border px-3 py-1.5 text-xs font-semibold ${
-                        room.slug === featuredGame.slug
-                          ? featuredPresentation.theme.badgeClassName
-                          : "border-white/10 bg-slate-950/45 text-slate-200"
-                      }`}
-                    >
-                      {room.label}
-                    </div>
-                  ))}
-                </div>
-
-                <div className="space-y-3">
-                  {featuredPresentation.playbook.slice(0, 2).map((item, index) => (
-                    <div key={`${featuredGame.slug}-hero-${index}`} className="flex items-start gap-3">
-                      <div className={`mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-bold ${featuredPresentation.theme.badgeClassName}`}>
-                        {index + 1}
-                      </div>
-                      <p className="text-sm leading-6 text-slate-300">{item}</p>
-                    </div>
-                  ))}
-                </div>
+              <div className="mt-5 flex flex-wrap gap-2">
+                {featuredPresentation.cardFacts.map((fact) => (
+                  <span key={fact} className="rounded-full border border-white/10 bg-[#050714]/35 px-3 py-1.5 text-xs font-semibold text-slate-200">
+                    {fact}
+                  </span>
+                ))}
               </div>
             </div>
           </div>
         </section>
 
-        <section className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
-          <div className="space-y-6">
-            <PageHeader
-              title="Room Directory"
-              description="Each room keeps its own tone and control surface, but every route is still locked to the active release manifest."
-            />
-
-            <div className="grid gap-6 sm:grid-cols-2" data-testid="games-grid">
-              {games.map((g) => {
-                const presentation = getGamePresentation(g.slug, g.label);
-                return (
-                  <Link key={g.slug} href={`/games/${g.slug}`} className="block">
-                    <GameCard
-                      slug={g.slug}
-                      label={g.label}
-                      icon={presentation.icon}
-                      badge={presentation.roomLabel}
-                      description={presentation.listDescription}
-                      summary={presentation.roomSummary}
-                      facts={[g.paramsEncoding ?? "release-defined", shortHex(g.module), `${release.assets.length} assets`]}
-                      ctaLabel="Enter Room"
-                    />
-                  </Link>
-                );
-              })}
+        <section className="space-y-5">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-300">Live room lineup</div>
+              <h2 className="mt-2 text-3xl font-black tracking-tight text-white">Browse by room, not by module.</h2>
             </div>
+            <Link href="/liquidity" className="text-sm font-semibold text-cyan-100">
+              View bankroll context
+            </Link>
           </div>
 
-          <div className="space-y-6">
-            <div className="rounded-[1.75rem] border border-slate-800 bg-slate-900/50 p-6 shadow-xl shadow-slate-950/40 backdrop-blur-xl">
-              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Selection rules</div>
-              <div className="mt-4 space-y-4 text-sm leading-6 text-slate-300">
-                <p>Use governed presentation to choose a room quickly, then rely on release truth once you enter it.</p>
-                <p>Do not treat room styling as protocol fact. Supported assets, params encoding, and module routing remain canonical only in the release.</p>
-                <p>If a room disappears from this directory, the active release no longer exposes it. No hidden aliases or legacy routes are used.</p>
-              </div>
-            </div>
-
-            <div className="rounded-[1.75rem] border border-slate-800 bg-slate-900/50 p-6 shadow-xl shadow-slate-950/40 backdrop-blur-xl">
-              <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Fast paths</div>
-              <div className="mt-4 grid gap-3 text-sm">
-                <Link href={`/games/${featuredGame.slug}`} className="rounded-2xl border border-slate-800 bg-slate-950/45 px-4 py-3 text-slate-200 transition-colors hover:border-slate-700 hover:bg-slate-800/40">
-                  Open {featuredGame.label}
-                </Link>
-                <Link href="/bets" className="rounded-2xl border border-slate-800 bg-slate-950/45 px-4 py-3 text-slate-200 transition-colors hover:border-slate-700 hover:bg-slate-800/40">
-                  Inspect recent bets
-                </Link>
-                <Link href="/ops" className="rounded-2xl border border-slate-800 bg-slate-950/45 px-4 py-3 text-slate-200 transition-colors hover:border-slate-700 hover:bg-slate-800/40">
-                  Check indexer health
-                </Link>
-              </div>
-            </div>
+          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            {games.map((game) => {
+              const presentation = getGamePresentation(game.slug, game.label);
+              return (
+                <Link key={game.slug} href={`/games/${game.slug}`} className="block">
+                  <GameCard
+                    slug={game.slug}
+                    label={game.label}
+                  icon={presentation.icon}
+                  badge={presentation.roomLabel}
+                  description={presentation.listDescription}
+                  summary={presentation.roomSummary}
+                  facts={presentation.cardFacts}
+                />
+              </Link>
+            );
+            })}
           </div>
         </section>
       </div>

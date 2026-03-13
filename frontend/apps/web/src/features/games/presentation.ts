@@ -7,6 +7,11 @@ export type GamePresentation = {
   roomLabel: string;
   roomSummary: string;
   playbook: string[];
+  previewSteps: Array<{
+    title: string;
+    body: string;
+  }>;
+  cardFacts: string[];
   theme: {
     badgeClassName: string;
     ambientClassName: string;
@@ -18,19 +23,25 @@ export type GamePresentation = {
 const GAME_PRESENTATION: Record<string, GamePresentation> = {
   dice: {
     icon: "🎲",
-    listDescription: "Set a cap, size your stake, and let the release-routed dice module settle the outcome on-chain.",
+    listDescription: "Set a cap, size the ticket, and roll through a room-first dice flow.",
     detailDescription:
-      "Choose an over-under style cap, preview the exact stake and VRF fee, then submit a release-routed dice bet through the canonical Hub flow.",
+      "Choose a cap, preview the ticket, and place the bet with settlement still visible underneath the room layer.",
     helpLabel: "Cap-driven payout profile",
     helpDescription:
-      "Lower caps usually imply lower hit probability and higher payout multiples. Treat the params form as the canonical input surface and verify the final plan before signing.",
+      "Lower caps usually imply lower hit probability and higher payout multiples. Use the board on the left, then confirm the quote on the right.",
     roomLabel: "Precision room",
-    roomSummary: "Dial the cap, track the room pulse, and ship a release-routed dice flow with explicit tolerance bounds.",
+    roomSummary: "Set the cap, size the slip, and keep the roll centered on one clean room surface.",
     playbook: [
       "Tune the cap to shape your risk curve before you ever sign a transaction.",
       "Plan first to quote VRF fee, stake, and approval requirements against the active release.",
       "Watch the live table after submission so your betId and state transition stay auditable.",
     ],
+    previewSteps: [
+      { title: "Set the cap", body: "Move the threshold until the risk curve feels right." },
+      { title: "Size the slip", body: "Adjust amount and rounds without leaving the room." },
+      { title: "Watch the roll", body: "Follow the live table after the ticket is sent." },
+    ],
+    cardFacts: ["Single asset", "Fast ticket", "Live settlement"],
     theme: {
       badgeClassName: "border-sky-400/30 bg-sky-400/10 text-sky-100",
       ambientClassName:
@@ -42,9 +53,9 @@ const GAME_PRESENTATION: Record<string, GamePresentation> = {
   },
   "coin-toss": {
     icon: "🪙",
-    listDescription: "Heads or tails with the simplest possible parameter model and the same on-chain execution guarantees.",
+    listDescription: "Heads or tails with the simplest possible room entry and the same on-chain settlement guarantees.",
     detailDescription:
-      "Select heads or tails, review the plan, and place a release-routed coin toss bet with fully on-chain settlement and VRF-backed randomness.",
+      "Select heads or tails, review the ticket, and place a clean binary bet without extra room clutter.",
     helpLabel: "Binary outcome flow",
     helpDescription:
       "Coin Toss uses a single boolean parameter. It is the cleanest room for validating allowance, VRF fee, and stepper behavior without extra game-shape complexity.",
@@ -55,6 +66,12 @@ const GAME_PRESENTATION: Record<string, GamePresentation> = {
       "Keep stake sizing disciplined because the UI is intentionally minimal and fast-moving.",
       "Use the recent activity table to inspect how this room is resolving in the current release.",
     ],
+    previewSteps: [
+      { title: "Call the side", body: "Pick heads or tails in one obvious move." },
+      { title: "Set the amount", body: "Use chips or type the exact stake on the slip." },
+      { title: "Check the outcome", body: "Track the result without extra room clutter." },
+    ],
+    cardFacts: ["Binary play", "Quick entry", "Single outcome"],
     theme: {
       badgeClassName: "border-amber-400/30 bg-amber-400/10 text-amber-100",
       ambientClassName:
@@ -67,20 +84,26 @@ const GAME_PRESENTATION: Record<string, GamePresentation> = {
   roulette: {
     icon: "🎯",
     listDescription:
-      "Step into a standard European roulette table, build a readable ticket, and let the active release settle the result on-chain.",
+      "Step into a standard European roulette table with a real board, a clear slip, and readable ticket review.",
     detailDescription:
-      "Choose a standard European roulette bet, review the ticket, and place it against the module and encoding defined by the active release bundle.",
+      "Choose a standard European roulette bet, review the ticket, and keep the room focused on the table instead of protocol panels.",
     helpLabel: "European table flow",
     helpDescription:
       "Roulette supports standard table bets such as straight, split, street, corner, six line, dozen, column, and even-money calls. Raw bitmask input stays available only as an advanced fallback.",
     roomLabel: "European table",
     roomSummary:
-      "A flagship room built around the standard 0-36 table, clearer ticket review, and a sharper left-slip/right-table rhythm.",
+      "A flagship European room with a standard 0-36 board, compact slip, and cleaner ticket review.",
     playbook: [
       "Start with the standard table first so the main interaction stays legible in one glance.",
       "Use ticket review to confirm the bet type, stake, and quote before signing.",
       "Drop into the advanced fallback only when you intentionally need raw bitmask entry.",
     ],
+    previewSteps: [
+      { title: "Pick the board", body: "Choose a straight, dozen, column, or even-money call." },
+      { title: "Build the ticket", body: "Keep stake, rounds, and review on one compact slip." },
+      { title: "Stay on the table", body: "Ledger and protocol detail remain below the fold." },
+    ],
+    cardFacts: ["0-36 table", "Standard bets", "Clear slip"],
     theme: {
       badgeClassName: "border-rose-400/30 bg-rose-400/10 text-rose-100",
       ambientClassName:
@@ -92,19 +115,25 @@ const GAME_PRESENTATION: Record<string, GamePresentation> = {
   },
   keno: {
     icon: "🔢",
-    listDescription: "Pick a packed number mask, size your bet, and let the Keno module execute against the current release snapshot.",
+    listDescription: "Pick the board, size the ticket, and keep the room centered on the Keno surface.",
     detailDescription:
-      "Use the packed-mask Keno form, preview the stake and fee requirements, and place the bet via the same standardized Hub flow used across the suite.",
+      "Use the Keno board first, then size the ticket and follow settlement without dropping into a form-heavy view.",
     helpLabel: "Packed number selection",
     helpDescription:
       "Keno relies on a uint40-style packed selection. Keep the input valid and use the release metadata as the final authority for routing and encoding expectations.",
     roomLabel: "Matrix room",
-    roomSummary: "Number-picking room built for repeatable packed-mask flows and quick auditability after each draw.",
+    roomSummary: "Pick the grid, size the ticket, and keep the Keno board as the main event.",
     playbook: [
       "Build a valid packed selection and keep the mask non-zero before planning.",
       "Review VRF fee and stake totals because multi-bet flows can compound faster here.",
       "Use the room table after mining to confirm the state machine reconciles cleanly.",
     ],
+    previewSteps: [
+      { title: "Mark the grid", body: "Build a number selection directly on the board." },
+      { title: "Set the stake", body: "Choose chips and rounds on the side slip." },
+      { title: "Follow the draw", body: "Use the live table to watch each ticket settle." },
+    ],
+    cardFacts: ["Board-first", "Repeat plays", "Live draw"],
     theme: {
       badgeClassName: "border-violet-400/30 bg-violet-400/10 text-violet-100",
       ambientClassName:
@@ -132,6 +161,12 @@ export function getGamePresentation(slug: string, label: string): GamePresentati
         "Plan before execution so stake, approval, and VRF fee are explicit.",
         "Use recent activity and explorer links to verify the room is behaving as expected.",
       ],
+      previewSteps: [
+        { title: "Enter the room", body: "Start with the game surface, not the protocol layer." },
+        { title: "Build the ticket", body: "Keep stake and review on one compact slip." },
+        { title: "Track settlement", body: "Follow the result on the live table after signing." },
+      ],
+      cardFacts: ["Room-first", "Wallet-native", "Readable settlement"],
       theme: {
         badgeClassName: "border-slate-400/30 bg-slate-400/10 text-slate-100",
         ambientClassName:

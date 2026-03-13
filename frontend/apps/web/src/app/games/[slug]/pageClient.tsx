@@ -32,7 +32,7 @@ import {
 
 import { Placeholder } from "../../../components/Placeholder";
 import { PageTransition } from "../../../components/PageTransition";
-import { ArbiGameFiLockup, ArbiGameFiMark } from "../../../components/ArbiGameFiBrand";
+import { ArbiGameFiMark } from "../../../components/ArbiGameFiBrand";
 import { GameBetPanel } from "../../../features/betting/ui/GameBetPanel";
 import { clampNumber, parseBigIntFromInput } from "../../../features/betting/model/units";
 import { useBetsByGame } from "../../../features/bets/useBetsByGame";
@@ -51,13 +51,6 @@ type GameMeta = {
 type ActivityView = "all" | "open" | "settled" | "refunded";
 type InfoView = "activity" | "guide" | "protocol";
 
-type Tone = {
-  label: string;
-  description: string;
-  className: string;
-  trend: "up" | "neutral" | "down";
-};
-
 function toGameMeta(raw: any): GameMeta {
   return {
     gameId: raw.gameId as `0x${string}`,
@@ -74,10 +67,6 @@ function shortHex(value?: string) {
   return `${value.slice(0, 6)}…${value.slice(-4)}`;
 }
 
-function formatCount(value: number) {
-  return new Intl.NumberFormat("en-US").format(value);
-}
-
 function formatRelativeTime(timestamp?: number) {
   if (!timestamp) return "—";
   const deltaMs = Math.max(0, Date.now() - timestamp);
@@ -86,8 +75,7 @@ function formatRelativeTime(timestamp?: number) {
   if (minutes < 60) return `${minutes}m ago`;
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+  return `${Math.floor(hours / 24)}d ago`;
 }
 
 function parseMaskValue(mask: string) {
@@ -141,76 +129,31 @@ function getExplorerBaseUrl(chainId: number) {
   }
 }
 
-function summarizeLag(lagBlocks?: number): Tone {
+function summarizeLag(lagBlocks?: number) {
   if (typeof lagBlocks !== "number") {
-    return {
-      label: "Waiting for sync",
-      description: "Indexer lag is not available yet.",
-      className: "border-slate-400/30 bg-slate-400/10 text-slate-100",
-      trend: "neutral",
-    };
+    return { label: "Waiting for sync", className: "border-slate-400/20 bg-white/[0.04] text-slate-200" };
   }
   if (lagBlocks <= 3) {
-    return {
-      label: "Fresh facts",
-      description: `Lag ${lagBlocks} blocks.`,
-      className: "border-emerald-400/30 bg-emerald-400/10 text-emerald-100",
-      trend: "up",
-    };
+    return { label: "Fresh facts", className: "border-emerald-300/25 bg-emerald-300/10 text-emerald-100" };
   }
   if (lagBlocks <= 12) {
-    return {
-      label: "Catching up",
-      description: `Lag ${lagBlocks} blocks.`,
-      className: "border-amber-400/30 bg-amber-400/10 text-amber-100",
-      trend: "neutral",
-    };
+    return { label: "Catching up", className: "border-amber-300/25 bg-amber-300/10 text-amber-100" };
   }
-  return {
-    label: "Delayed feed",
-    description: `Lag ${lagBlocks} blocks.`,
-    className: "border-rose-400/30 bg-rose-400/10 text-rose-100",
-    trend: "down",
-  };
+  return { label: "Delayed feed", className: "border-rose-300/25 bg-rose-300/10 text-rose-100" };
 }
 
-function summarizeRoomPulse(rows: BetRow[]): Tone {
+function summarizeRoomPulse(rows: BetRow[]) {
   if (rows.length === 0) {
-    return {
-      label: "Quiet room",
-      description: "No indexed activity in the current local window.",
-      className: "border-slate-400/30 bg-slate-400/10 text-slate-100",
-      trend: "neutral",
-    };
+    return { label: "Quiet room", className: "border-white/10 bg-white/[0.04] text-slate-200" };
   }
-
-  const freshCount = rows.filter((row) => {
-    if (!row.updatedAt) return false;
-    return Date.now() - row.updatedAt <= 30 * 60_000;
-  }).length;
-
+  const freshCount = rows.filter((row) => row.updatedAt && Date.now() - row.updatedAt <= 30 * 60_000).length;
   if (freshCount >= 4) {
-    return {
-      label: "Hot table",
-      description: `${freshCount} recent bets landed in the last 30 minutes.`,
-      className: "border-emerald-400/30 bg-emerald-400/10 text-emerald-100",
-      trend: "up",
-    };
+    return { label: "Hot table", className: "border-emerald-300/25 bg-emerald-300/10 text-emerald-100" };
   }
   if (freshCount >= 1) {
-    return {
-      label: "Warm table",
-      description: `${freshCount} fresh bet${freshCount === 1 ? "" : "s"} in the last 30 minutes.`,
-      className: "border-sky-400/30 bg-sky-400/10 text-sky-100",
-      trend: "up",
-    };
+    return { label: "Warm table", className: "border-cyan-300/25 bg-cyan-300/10 text-cyan-100" };
   }
-  return {
-    label: "Archive view",
-    description: "The table has history, but nothing new in the last 30 minutes.",
-    className: "border-violet-400/30 bg-violet-400/10 text-violet-100",
-    trend: "neutral",
-  };
+  return { label: "Archive table", className: "border-white/10 bg-white/[0.04] text-slate-200" };
 }
 
 function summarizeStateBreakdown(rows: BetRow[]) {
@@ -242,9 +185,9 @@ function buildActivityTabs(rows: BetRow[]): TabBarItem[] {
 
 function buildInfoTabs(): TabBarItem[] {
   return [
-    { key: "activity", label: "Live Bets" },
-    { key: "guide", label: "Playbook" },
-    { key: "protocol", label: "Room Facts" },
+    { key: "activity", label: "All bets" },
+    { key: "guide", label: "How to play" },
+    { key: "protocol", label: "Game details" },
   ];
 }
 
@@ -274,38 +217,36 @@ function getCurrentParamSignal(
       return {
         value: `${diceCap}%`,
         label: "Current cap",
-        helper: "Lower caps generally push toward lower hit rate and higher upside.",
+        helper: "Lower caps generally raise upside and lower hit rate.",
       };
     case "coin-toss":
       return {
         value: coinSide === "heads" ? "Heads" : "Tails",
         label: "Selected side",
-        helper: "Binary room with the simplest possible parameter surface.",
+        helper: "Binary room. One call, one ticket.",
       };
-    case "roulette":
-      {
-        const summary = summarizeRouletteSelection(rouletteSelection);
-        return {
-          value: summary.display,
-          label: "Active bet",
-          helper: summary.helper,
-        };
-      }
-    case "keno":
-      {
-        const selected = countMaskSelections(kenoMask);
-        return {
-          value: selected == null ? "Invalid" : `${selected} pick${selected === 1 ? "" : "s"}`,
-          label: "Packed selection",
-          helper:
-            selected == null
-              ? "The Keno mask is invalid. Use the board to rebuild a valid selection."
-              : "Pick your numbers on the board first, then size the ticket in the stake console.",
-        };
-      }
+    case "roulette": {
+      const summary = summarizeRouletteSelection(rouletteSelection);
+      return {
+        value: summary.display,
+        label: "Active bet",
+        helper: summary.helper,
+      };
+    }
+    case "keno": {
+      const selected = countMaskSelections(kenoMask);
+      return {
+        value: selected == null ? "Invalid" : `${selected} pick${selected === 1 ? "" : "s"}`,
+        label: "Current board",
+        helper:
+          selected == null
+            ? "The Keno mask is invalid. Rebuild the board."
+            : "Pick the board first, then size the ticket on the right.",
+      };
+    }
     default:
       return {
-        value: "Release",
+        value: "Release-defined",
         label: "Current mode",
         helper: "This room inherits the standard release-routed betting flow.",
       };
@@ -328,10 +269,6 @@ export function GamePageClient({ slug }: { slug: string }) {
   const recentBets = recentBetsQuery.data ?? [];
   const recentBetsError =
     recentBetsQuery.error instanceof Error ? recentBetsQuery.error.message : "Failed to load recent indexed bets.";
-  const assetLabels = React.useMemo(
-    () => (release?.assets ?? []).map((asset) => asset.symbol).join(", "),
-    [release?.assets]
-  );
 
   const [activityView, setActivityView] = React.useState<ActivityView>("all");
   const [infoView, setInfoView] = React.useState<InfoView>("activity");
@@ -424,7 +361,7 @@ export function GamePageClient({ slug }: { slug: string }) {
                   href={`${explorerBaseUrl}/tx/${row.lastTxHash}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-emerald-300 transition-colors hover:text-emerald-200"
+                  className="text-cyan-200 transition-colors hover:text-cyan-100"
                   onClick={(event) => event.stopPropagation()}
                 >
                   View
@@ -509,157 +446,64 @@ export function GamePageClient({ slug }: { slug: string }) {
 
   return (
     <PageTransition pageKey={`game-${slug}`}>
-      <div className="space-y-6">
-        <section
-          className={`space-y-4 rounded-[2rem] border px-4 py-4 shadow-2xl shadow-slate-950/40 backdrop-blur-xl sm:px-6 ${
-            isRouletteRoom
-              ? "border-fuchsia-400/10 bg-[radial-gradient(circle_at_top,rgba(217,70,239,0.08),transparent_28%),linear-gradient(180deg,rgba(4,9,24,0.96),rgba(7,12,24,0.98))]"
-              : "border-slate-800 bg-slate-900/60"
-          }`}
-        >
+      <div className="space-y-6 py-6">
+        <section className="space-y-5">
           <div className="-mx-1 overflow-x-auto px-1">
             <div className="inline-flex gap-2">
-              {(release.gamesMeta ?? []).map((item) => {
-                const active = item.slug === game.slug;
-                return (
-                  <Link
-                    key={item.slug}
-                    href={`/games/${item.slug}`}
-                    className={
-                      active
-                        ? `inline-flex items-center gap-2 rounded-2xl border px-5 py-3 text-sm font-semibold shadow-lg ${presentation.theme.badgeClassName}`
-                        : "inline-flex items-center gap-2 rounded-2xl border border-slate-700/70 bg-slate-950/50 px-5 py-3 text-sm font-semibold text-slate-400 transition-colors hover:border-slate-600 hover:text-white"
-                    }
-                  >
-                    <span>{item.label}</span>
-                    {active ? <span className="text-[10px] uppercase tracking-[0.14em]">Live</span> : null}
-                  </Link>
-                );
-              })}
+              {(release.gamesMeta ?? []).map((item) => (
+                <Link
+                  key={item.slug}
+                  href={`/games/${item.slug}`}
+                  data-active={item.slug === game.slug}
+                  className="ag-pill-tab min-w-max px-4 py-2.5 text-sm"
+                >
+                  {item.label}
+                </Link>
+              ))}
             </div>
           </div>
 
-          <div className="space-y-4">
-            {isRouletteRoom ? (
-              <div className="rounded-[1.75rem] border border-fuchsia-400/10 bg-[linear-gradient(160deg,rgba(7,10,25,0.82),rgba(17,8,29,0.78)),radial-gradient(circle_at_top_right,rgba(201,59,99,0.18),transparent_28%)] px-4 py-4 sm:px-5">
-                <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
-                  <div className="space-y-4">
-                    <div className="flex flex-wrap items-center justify-between gap-4">
-                      <ArbiGameFiLockup className="hidden h-10 w-auto sm:block" />
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span
-                          className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${roomPulse.className}`}
-                        >
-                          {roomPulse.label}
-                        </span>
-                        <span className="inline-flex items-center gap-2 rounded-full border border-slate-700/80 bg-slate-950/60 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-300">
-                          <span>Sync</span>
-                          <span className="text-white">{lagTone.label}</span>
-                        </span>
-                      </div>
-                    </div>
+          <div className="ag-room-panel rounded-[2.1rem] px-4 py-4 sm:px-5 sm:py-5">
+            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-white/8 px-1 pb-5">
+              <div className="max-w-3xl space-y-3">
+                <div className="flex items-center gap-3">
+                  <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${presentation.theme.badgeClassName}`}>
+                    {presentation.roomLabel}
+                  </span>
+                  <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${roomPulse.className}`}>
+                    {roomPulse.label}
+                  </span>
+                </div>
 
-                    <div className="space-y-2">
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                        European roulette
-                      </div>
-                      <div className="flex flex-wrap items-center gap-3">
-                        <h1 className="text-2xl font-black tracking-tight text-white sm:text-3xl">
-                          {presentation.icon} {game.label}
-                        </h1>
-                        <span className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-200">
-                          Table-first room
-                        </span>
-                      </div>
-                      <p className="max-w-2xl text-sm text-slate-400">
-                        Standard 0-36 table. One clear ticket at a time.
-                      </p>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      {["0-36 standard wheel", "Single ticket focus", "Quote before sign", "Visible settlement"].map(
-                        (item) => (
-                          <div
-                            key={item}
-                            className="rounded-full border border-white/10 bg-slate-950/40 px-3 py-1.5 text-xs font-semibold text-slate-200"
-                          >
-                            {item}
-                          </div>
-                        )
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="rounded-[1.5rem] border border-white/10 bg-slate-950/45 p-4 shadow-lg shadow-black/30">
-                    <div className="flex items-center gap-3">
-                      <ArbiGameFiMark accent="cyan" className="h-11 w-11 rounded-[1rem]" />
-                      <div>
-                        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                          Table brief
-                        </div>
-                        <div className="text-sm font-semibold text-white">Room-led ticket review</div>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 grid grid-cols-4 gap-2">
-                      {["0", "Red", "Black", "1st 12"].map((item, index) => (
-                        <div
-                          key={item}
-                          className={`rounded-[1rem] border px-3 py-3 text-center text-xs font-semibold ${
-                            index === 0
-                              ? "border-emerald-300/30 bg-emerald-300/12 text-emerald-100"
-                              : index === 1
-                                ? "border-rose-300/30 bg-rose-300/12 text-rose-100"
-                                : index === 2
-                                  ? "border-slate-200/20 bg-white/[0.04] text-slate-100"
-                                  : "border-fuchsia-300/20 bg-fuchsia-300/10 text-fuchsia-100"
-                          }`}
-                        >
-                          {item}
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="mt-4 rounded-[1.2rem] border border-white/10 bg-white/[0.03] p-3 text-sm text-slate-300">
-                      Keep the room header emotional and compact. The actual table call, stake sizing, and quote all stay below in the live ticket flow.
-                    </div>
-                  </div>
+                <div className="space-y-2">
+                  <h1 className="text-3xl font-black tracking-[-0.04em] text-white sm:text-4xl">
+                    {presentation.icon} {game.label}
+                  </h1>
+                  <p className="max-w-2xl text-sm leading-6 text-slate-400">
+                    {isRouletteRoom
+                      ? "Standard 0-36 European table. Pick the bet on the board, then size the ticket on the right."
+                      : "A room-first layout: game selector on top, play surface on the left, bet slip on the right."}
+                  </p>
                 </div>
               </div>
-            ) : (
-              <>
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div className="space-y-3">
-                    <div className="space-y-2">
-                      <div className="flex flex-wrap items-center gap-3">
-                        <h1 className="text-2xl font-black tracking-tight text-white sm:text-3xl">
-                          {presentation.icon} {game.label}
-                        </h1>
-                        <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${roomPulse.className}`}>
-                          {roomPulse.label}
-                        </span>
-                      </div>
-                      <p className="max-w-2xl text-sm leading-6 text-slate-400">
-                        Choose the table call, size the ticket, and only open the trace when you are ready to review the quote
-                        or sign.
-                      </p>
-                    </div>
-                  </div>
-                </div>
 
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[1.5rem] border border-slate-800/80 bg-slate-950/40 px-4 py-3 text-sm text-slate-400">
-                  <span>
-                    {paramSignal.label}: <span className="font-semibold text-white">{paramSignal.value}</span>
-                  </span>
-                  <span className="h-1 w-1 rounded-full bg-slate-700" />
-                  <span>
-                    Sync: <span className="font-semibold text-white">{lagTone.label}</span>
-                  </span>
+              <div className="grid gap-2 sm:grid-cols-3">
+                <div className="rounded-[1rem] border border-white/10 bg-white/[0.04] px-4 py-3">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Active call</div>
+                  <div className="mt-2 text-sm font-semibold text-white">{paramSignal.value}</div>
                 </div>
-              </>
-            )}
+                <div className="rounded-[1rem] border border-white/10 bg-white/[0.04] px-4 py-3">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Sync</div>
+                  <div className="mt-2 text-sm font-semibold text-white">{lagTone.label}</div>
+                </div>
+                <div className="rounded-[1rem] border border-white/10 bg-white/[0.04] px-4 py-3">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Assets</div>
+                  <div className="mt-2 text-sm font-semibold text-white">{(release.assets ?? []).map((asset) => asset.symbol).join(", ") || "—"}</div>
+                </div>
+              </div>
+            </div>
 
-            <div id="bet-panel">
+            <div className="pt-5" id="bet-panel">
               <GameBetPanel
                 release={release}
                 game={{ gameId: game.gameId, slug: game.slug, label: game.label }}
@@ -674,19 +518,19 @@ export function GamePageClient({ slug }: { slug: string }) {
         </section>
 
         <section>
-          <Card className="border-slate-800 bg-slate-900/50 backdrop-blur-xl shadow-xl shadow-slate-950/40">
-            <CardHeader className="space-y-4 border-b border-slate-800/70 pb-4">
+          <Card className="overflow-hidden border-white/8 bg-[#0a1024]/78 shadow-[0_24px_80px_rgba(2,6,23,0.5)] backdrop-blur-xl">
+            <CardHeader className="space-y-4 border-b border-white/8 pb-4">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <CardTitle className="text-lg text-white">
-                    {infoView === "activity" ? "Recent bets" : infoView === "guide" ? "Playbook" : "Room facts"}
+                    {infoView === "activity" ? "Live bets" : infoView === "guide" ? "How to play" : "Game details"}
                   </CardTitle>
                   <CardDescription className="mt-1 text-slate-400">
                     {infoView === "activity"
-                      ? "Recent indexed bets for this room. Open the full ledger only when you need the complete bet timeline."
+                      ? "Watch the room after the ticket is built. The ledger stays second-screen."
                       : infoView === "guide"
-                        ? "Keep the interaction linear: choose the outcome, size the ticket, then confirm the quote."
-                        : "When you need the governed truth, the module path, assets, and sync context stay here instead of crowding the first fold."}
+                        ? "Keep the room flow linear: choose the outcome, size the stake, then confirm the quote."
+                        : "Release truth and module facts stay here without hijacking the top fold."}
                   </CardDescription>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
@@ -695,7 +539,7 @@ export function GamePageClient({ slug }: { slug: string }) {
                       asChild
                       size="sm"
                       variant="outline"
-                      className="border-slate-700 text-slate-200 hover:border-slate-500 hover:bg-slate-800/40 hover:text-white"
+                      className="border-white/10 text-slate-200 hover:border-white/16 hover:bg-white/[0.04] hover:text-white"
                     >
                       <Link href="/bets">Open ledger</Link>
                     </Button>
@@ -704,11 +548,7 @@ export function GamePageClient({ slug }: { slug: string }) {
                 </div>
               </div>
               {infoView === "activity" ? (
-                <TabBar
-                  tabs={activityTabs}
-                  activeKey={activityView}
-                  onTabChange={(next) => setActivityView(next as ActivityView)}
-                />
+                <TabBar tabs={activityTabs} activeKey={activityView} onTabChange={(next) => setActivityView(next as ActivityView)} />
               ) : null}
             </CardHeader>
             <CardContent className="space-y-4 p-6">
@@ -730,21 +570,19 @@ export function GamePageClient({ slug }: { slug: string }) {
 
               {infoView === "guide" ? (
                 <div className="space-y-5">
-                  <div className="rounded-[1.5rem] border border-slate-800/80 bg-slate-950/45 p-5">
+                  <div className="rounded-[1.5rem] border border-white/8 bg-white/[0.04] p-5">
                     <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{presentation.helpLabel}</div>
                     <p className="mt-3 text-sm leading-7 text-slate-300">{presentation.helpDescription}</p>
                   </div>
 
-                  <div className="grid gap-4">
+                  <div className="grid gap-4 md:grid-cols-3">
                     {presentation.playbook.map((step, index) => (
-                      <div key={`${game.slug}-guide-${index}`} className="flex items-start gap-4 rounded-[1.5rem] border border-slate-800/80 bg-slate-950/45 p-4">
-                        <div className={`mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-bold ${presentation.theme.badgeClassName}`}>
+                      <div key={`${game.slug}-guide-${index}`} className="rounded-[1.5rem] border border-white/8 bg-white/[0.04] p-4">
+                        <div className={`inline-flex h-8 w-8 items-center justify-center rounded-full border text-xs font-bold ${presentation.theme.badgeClassName}`}>
                           {index + 1}
                         </div>
-                        <div className="space-y-1">
-                          <div className="text-sm font-semibold text-white">Step {index + 1}</div>
-                          <p className="text-sm leading-6 text-slate-300">{step}</p>
-                        </div>
+                        <div className="mt-4 text-sm font-semibold text-white">Step {index + 1}</div>
+                        <p className="mt-2 text-sm leading-6 text-slate-300">{step}</p>
                       </div>
                     ))}
                   </div>
@@ -752,53 +590,60 @@ export function GamePageClient({ slug }: { slug: string }) {
               ) : null}
 
               {infoView === "protocol" ? (
-                <div className="space-y-5">
-                  <div className="rounded-[1.5rem] border border-slate-800/80 bg-slate-950/45 p-5">
+                <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+                  <div className="rounded-[1.5rem] border border-white/8 bg-white/[0.04] p-5">
                     <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Release truth</div>
                     <div className="mt-4 space-y-3 text-sm text-slate-300">
                       <div className="flex items-start justify-between gap-3">
                         <span>Game ID</span>
-                        <span className="font-mono text-right text-slate-200">{shortHex(game.gameId)}</span>
-                      </div>
-                      <div className="flex items-start justify-between gap-3">
-                        <span>Module</span>
-                        <span className="font-mono text-right text-slate-200">{shortHex(game.module)}</span>
+                        <span className="font-mono text-white">{shortHex(game.gameId)}</span>
                       </div>
                       <div className="flex items-start justify-between gap-3">
                         <span>Params encoding</span>
-                        <span className="max-w-[16rem] text-right font-mono text-xs text-slate-200">
-                          {game.paramsEncoding ?? "—"}
-                        </span>
+                        <span className="font-mono text-white">{game.paramsEncoding ?? "release-defined"}</span>
                       </div>
                       <div className="flex items-start justify-between gap-3">
-                        <span>Supported assets</span>
-                        <span className="text-right text-slate-200">{assetLabels || "—"}</span>
+                        <span>Assets</span>
+                        <span className="text-white">{(release.assets ?? []).map((asset) => asset.symbol).join(", ") || "—"}</span>
+                      </div>
+                      <div className="flex items-start justify-between gap-3">
+                        <span>Module</span>
+                        <span className="font-mono text-white">{shortHex(game.module)}</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="rounded-[1.5rem] border border-slate-800/80 bg-slate-950/45 p-5 text-sm text-slate-300">
-                    <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Execution notes</div>
-                    <div className="mt-4 space-y-3 leading-6">
-                      <div>Recent room window: {formatCount(recentBets.length)} indexed bets.</div>
-                      <div>
-                        Indexer status: {lagTone.label}
-                        {typeof indexerStatus?.lagBlocks === "number" ? ` (${formatCount(indexerStatus.lagBlocks)} blocks)` : ""}.
-                      </div>
-                      <div>Token approvals always target the asset Bank, never the Hub.</div>
-                      {explorerModuleUrl ? (
+                  <div className="space-y-4">
+                    <div className="rounded-[1.5rem] border border-white/8 bg-white/[0.04] p-5">
+                      <div className="flex items-center gap-3">
+                        <ArbiGameFiMark accent="cyan" className="h-11 w-11 rounded-[1rem]" />
                         <div>
-                          Explorer:{" "}
+                          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Explorer</div>
+                          <div className="text-sm font-semibold text-white">Module route</div>
+                        </div>
+                      </div>
+                      <div className="mt-4 space-y-3 text-sm text-slate-300">
+                        <div>Chain {chainId}</div>
+                        {explorerModuleUrl ? (
                           <a
                             href={explorerModuleUrl}
                             target="_blank"
                             rel="noreferrer"
-                            className="font-mono text-emerald-300 transition-colors hover:text-emerald-200"
+                            className="inline-flex items-center rounded-full border border-cyan-300/25 bg-cyan-300/10 px-4 py-2 font-semibold text-cyan-100"
                           >
-                            {shortHex(game.module)}
+                            View module
                           </a>
-                        </div>
-                      ) : null}
+                        ) : (
+                          <div className="text-slate-500">Explorer unavailable for this chain.</div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="rounded-[1.5rem] border border-white/8 bg-white/[0.04] p-5">
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Room note</div>
+                      <p className="mt-3 text-sm leading-6 text-slate-300">
+                        The room stays product-first above the fold. Facts, module routes, and explorer links stay here when you need them.
+                      </p>
                     </div>
                   </div>
                 </div>

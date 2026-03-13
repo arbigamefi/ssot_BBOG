@@ -284,56 +284,50 @@ export function GameBetPanel({
     <div className="space-y-6">
       {formError ? <ErrorCallout title="Input error" message={formError} /> : null}
 
-      <div className={`grid gap-6 ${isRouletteRoom ? "xl:grid-cols-[340px_minmax(0,1fr)]" : "xl:grid-cols-[320px_minmax(0,1fr)]"}`}>
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
         <section
-          className={`order-1 min-h-[34rem] rounded-[2rem] border p-4 shadow-2xl shadow-slate-950/40 sm:p-5 xl:order-2 ${
+          className={`order-1 min-h-[34rem] rounded-[2rem] border shadow-2xl shadow-slate-950/40 ${
             isRouletteRoom
-              ? "overflow-hidden border-fuchsia-400/15 bg-[radial-gradient(circle_at_top,rgba(236,72,153,0.12),transparent_26%),linear-gradient(180deg,rgba(21,11,40,0.98),rgba(7,12,24,0.98))] p-0"
+              ? "overflow-hidden border-fuchsia-400/15 bg-[radial-gradient(circle_at_top,rgba(236,72,153,0.12),transparent_26%),linear-gradient(180deg,rgba(21,11,40,0.98),rgba(7,12,24,0.98))]"
               : "border-violet-400/15 bg-[radial-gradient(circle_at_top,rgba(168,85,247,0.12),transparent_26%),linear-gradient(180deg,rgba(21,11,40,0.98),rgba(7,12,24,0.98))]"
           }`}
         >
-          {isRouletteRoom ? (
-            <div className="min-h-full p-4 sm:p-5">{children}</div>
-          ) : (
-            <div className="flex h-full flex-col gap-4">
-              <div className="flex flex-wrap items-start justify-between gap-3 rounded-[1.5rem] border border-slate-800/80 bg-slate-950/40 px-4 py-3">
+          <div className={`flex h-full flex-col ${isRouletteRoom ? "min-h-full" : ""}`}>
+            {!isRouletteRoom ? (
+              <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/8 px-5 py-4">
                 <div>
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{game.label} table</div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Live table
+                  </div>
                   <div className="mt-1 text-base font-semibold text-white">{outcomeStepTitle}</div>
                 </div>
-                <div className="text-right">
+                <div className="max-w-[12rem] text-right">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{selectionSignal.label}</div>
                   <div className="mt-1 text-sm font-semibold text-white">{selectionSignal.value}</div>
                 </div>
               </div>
+            ) : null}
 
-              {selectionSignal.helper ? (
-                <div className="rounded-[1.5rem] border border-slate-800/70 bg-slate-950/30 px-4 py-3 text-sm leading-6 text-slate-400">
-                  {selectionSignal.helper}
-                </div>
-              ) : null}
-
-              <div className="min-h-0 flex-1">{children}</div>
+            <div className={`${isRouletteRoom ? "min-h-full p-4 sm:p-5" : "min-h-0 flex-1 p-4 sm:p-5"}`}>
+              {children}
             </div>
-          )}
+          </div>
         </section>
 
         <aside
-          className={`order-2 overflow-hidden rounded-[2rem] border shadow-2xl shadow-slate-950/40 xl:order-1 ${
+          className={`order-2 overflow-hidden rounded-[2rem] border shadow-2xl shadow-slate-950/40 ${
             isRouletteRoom
               ? "border-fuchsia-400/15 bg-[linear-gradient(180deg,rgba(26,13,46,0.98),rgba(11,18,34,0.98))]"
               : "border-violet-400/15 bg-[linear-gradient(180deg,rgba(30,14,49,0.98),rgba(11,18,34,0.98))]"
           }`}
         >
           <div className="border-b border-slate-800 px-6 py-5">
-            <div className="mb-4 flex items-center justify-between gap-4 rounded-[1.35rem] border border-white/10 bg-slate-950/45 px-4 py-3">
+            <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <ArbiGameFiMark accent={isRouletteRoom ? "cyan" : "emerald"} className="h-11 w-11 rounded-[1rem]" />
+                <ArbiGameFiMark accent={isRouletteRoom ? "cyan" : "emerald"} className="h-10 w-10 rounded-[0.95rem]" />
                 <div>
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                    Ticket rail
-                  </div>
-                  <div className="text-sm font-semibold text-white">{game.label} room slip</div>
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Bet slip</div>
+                  <div className="text-sm font-semibold text-white">{game.label}</div>
                 </div>
               </div>
               <div className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-300">
@@ -341,7 +335,7 @@ export function GameBetPanel({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 rounded-[1.35rem] border border-white/10 bg-slate-950/45 p-1.5">
+            <div className="mt-4 grid grid-cols-2 gap-2 rounded-[1.35rem] border border-white/10 bg-slate-950/45 p-1.5">
               <button
                 type="button"
                 className="rounded-[1rem] bg-white/10 px-3 py-3 text-sm font-semibold text-white"
@@ -358,20 +352,12 @@ export function GameBetPanel({
             </div>
             <div className="mt-4 flex items-start justify-between gap-4">
               <div>
-                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  {game.label} slip
-                </div>
-                <div className="mt-1 text-base font-semibold text-white">
-                  {isRouletteRoom ? "Build the ticket" : ticketStepTitle}
-                </div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Ticket</div>
+                <div className="mt-1 text-base font-semibold text-white">{isRouletteRoom ? "Build the ticket" : ticketStepTitle}</div>
               </div>
               <div className="text-right">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  {assetMeta?.symbol ?? "Asset"} wallet
-                </div>
-                <div className="mt-1 text-sm font-semibold text-white">
-                  {account ? walletBalanceDisplay : "Connect wallet"}
-                </div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{assetMeta?.symbol ?? "Asset"} balance</div>
+                <div className="mt-1 text-sm font-semibold text-white">{account ? walletBalanceDisplay : "Connect wallet"}</div>
               </div>
             </div>
           </div>
@@ -466,7 +452,7 @@ export function GameBetPanel({
               </div>
 
               <div className="mt-4 rounded-[1.2rem] border border-white/10 bg-white/[0.03] px-3 py-3 text-xs leading-5 text-slate-400">
-                Chips are shortcuts only. The live quote is still generated from the exact amount, rounds, and table call below.
+                Shortcuts only. The final quote still comes from the exact amount, rounds, and current table call.
               </div>
             </div>
 
@@ -535,9 +521,7 @@ export function GameBetPanel({
             <div className="rounded-[1.5rem] border border-slate-800/80 bg-slate-950/35 p-4">
               <div className="mb-3">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Ticket summary</div>
-                <div className="mt-1 text-sm font-semibold text-white">
-                  {isRouletteRoom ? "Review the roulette ticket" : "Review the ticket"}
-                </div>
+                <div className="mt-1 text-sm font-semibold text-white">{isRouletteRoom ? "Review the roulette ticket" : "Review the ticket"}</div>
               </div>
 
               <div className="space-y-3 text-sm">
@@ -567,7 +551,7 @@ export function GameBetPanel({
                   <span className="text-right text-white">{walletBalanceDisplay}</span>
                 </div>
                 <div className="rounded-2xl border border-slate-800/80 bg-slate-950/60 px-3 py-3 text-xs leading-5 text-slate-400">
-                  Review builds the live quote first. Approval checks, allowance, and RNG fee stay in the transaction trace until you are ready to sign.
+                  Review generates the live quote first. Approval checks, allowance, and RNG fee stay in the trace until you are ready to sign.
                 </div>
               </div>
             </div>
@@ -653,7 +637,7 @@ export function GameBetPanel({
           className="rounded-[1.75rem] border border-slate-800 bg-slate-900/40 p-4 shadow-xl shadow-slate-950/30"
           open={showDetails}
         >
-          <summary className="cursor-pointer list-none text-sm font-semibold text-white">Review and transaction trace</summary>
+          <summary className="cursor-pointer list-none text-sm font-semibold text-white">Quote and transaction trace</summary>
           <div className="mt-4">
             <BetPanelShell
               state={state}

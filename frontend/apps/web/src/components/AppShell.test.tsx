@@ -56,7 +56,7 @@ describe("AppShell", () => {
       </AppShell>
     );
     expect(screen.getByText("ArbiGameFi")).toBeDefined();
-    expect(screen.getByText("Game Rooms")).toBeDefined();
+    expect(screen.getByText("On-chain casino")).toBeDefined();
   });
 
   it("renders primary navigation links and demotes advanced routes", () => {
@@ -166,9 +166,8 @@ describe("AppShell", () => {
     );
 
     expect(screen.getByText("All Games")).toBeDefined();
-    expect(screen.queryByText("Game Rooms")).toBeNull();
-    expect(screen.queryByText("Release")).toBeNull();
-    expect(screen.queryByText("Digest")).toBeNull();
-    expect(screen.queryByText("Hub")).toBeNull();
+    expect(screen.queryByText("On-chain casino")).toBeNull();
+    expect(screen.queryByText("Advanced")).toBeNull();
+    expect(screen.queryByText("Home")).toBeNull();
   });
 });
