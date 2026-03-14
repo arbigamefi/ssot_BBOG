@@ -12,6 +12,7 @@ const state = {
   betsLoading: false,
   betsError: null as Error | null,
   indexerStatus: { lastSyncedBlock: 321, lagBlocks: 4 },
+  account: null as string | null,
 };
 
 vi.mock("next/navigation", () => ({
@@ -48,6 +49,12 @@ vi.mock("../../../features/ops/useIndexer", () => ({
   }),
 }));
 
+vi.mock("../../../ssot/sdk", () => ({
+  useSSOTSDK: () => ({
+    sdk: state.account ? { account: state.account } : null,
+  }),
+}));
+
 vi.mock("../../../features/betting/ui/GameBetPanel", () => ({
   GameBetPanel: ({ game, children }: any) => (
     <div data-testid="game-bet-panel">
@@ -64,6 +71,10 @@ vi.mock("../../../components/Placeholder", () => ({
       <p>{description}</p>
     </div>
   ),
+}));
+
+vi.mock("../../../components/ConnectWalletPrompt", () => ({
+  ConnectWalletPrompt: ({ action }: any) => <div data-testid="connect-wallet-prompt">{action}</div>,
 }));
 
 vi.mock("../../../components/PageTransition", () => ({
@@ -86,7 +97,7 @@ vi.mock("@ssot/ui", () => ({
       <div data-testid="data-table">
         {data.map((row: any, index: number) => (
           <div
-            key={row.id}
+            key={row.id ?? row.player ?? index}
             data-testid={`row-${index}`}
             role="button"
             tabIndex={0}
@@ -187,6 +198,7 @@ describe("GamePageClient", () => {
     state.betsLoading = false;
     state.betsError = null;
     state.indexerStatus = { lastSyncedBlock: 321, lagBlocks: 4 };
+    state.account = null;
   });
 
   it("shows placeholder when release is unavailable", () => {
@@ -210,13 +222,15 @@ describe("GamePageClient", () => {
     expect(screen.getByText("Active call")).toBeDefined();
     expect(screen.getByText("50%")).toBeDefined();
     expect(screen.getByText("Sync")).toBeDefined();
-    expect(screen.getByText("Live bets")).toBeDefined();
-    expect(screen.getByRole("button", { name: "How to play" })).toBeDefined();
-    expect(screen.getByRole("button", { name: "Game details" })).toBeDefined();
+    expect(screen.getByText("All bets")).toBeDefined();
+    expect(screen.getByRole("button", { name: "My Bets" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Players" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Analytics" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Game Details" })).toBeDefined();
     expect(screen.getByTestId("data-table")).toBeDefined();
     expect(screen.getAllByTestId("tab-bar").length).toBeGreaterThan(1);
 
-    fireEvent.click(screen.getByRole("button", { name: "Game details" }));
+    fireEvent.click(screen.getByRole("button", { name: "Game Details" }));
     expect(screen.getAllByText("abi.encode(uint8 cap)").length).toBeGreaterThan(0);
     expect(screen.getAllByText("USDC").length).toBeGreaterThan(0);
   });
@@ -229,9 +243,49 @@ describe("GamePageClient", () => {
     expect(screen.getAllByText("Roulette").length).toBeGreaterThan(0);
     expect(screen.getByText("European table")).toBeDefined();
     expect(screen.getByText(/Standard 0-36 European table/)).toBeDefined();
-    expect(screen.getByText("How to play")).toBeDefined();
-    expect(screen.getByText("Game details")).toBeDefined();
+    expect(screen.getByText("My Bets")).toBeDefined();
+    expect(screen.getByText("Players")).toBeDefined();
+    expect(screen.getByText("Analytics")).toBeDefined();
+    expect(screen.getByText("Game Details")).toBeDefined();
     expect(screen.queryByText("Mask table")).toBeNull();
+  });
+
+  it("shows connect wallet prompt on my bets when no account is connected", () => {
+    state.release = MOCK_RELEASE;
+    state.bets = MOCK_BETS;
+
+    render(<GamePageClient slug="dice" />);
+    fireEvent.click(screen.getByRole("button", { name: "My Bets" }));
+
+    expect(screen.getByTestId("connect-wallet-prompt")).toBeDefined();
+    expect(screen.getByText("view your room bets")).toBeDefined();
+  });
+
+  it("renders player and analytics tabs from indexed room history", () => {
+    state.release = MOCK_RELEASE;
+    state.account = "0x1111111111111111111111111111111111111111";
+    state.bets = [
+      ...MOCK_BETS,
+      {
+        id: "84532:2",
+        betId: "2",
+        state: "settled",
+        player: "0x2222222222222222222222222222222222222222",
+        updatedAt: Date.now() - 120_000,
+        lastTxHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      },
+    ];
+
+    render(<GamePageClient slug="dice" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Players" }));
+    expect(screen.getAllByText(/0x1111/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/0x2222/i).length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole("button", { name: "Analytics" }));
+    expect(screen.getByText("Total indexed bets")).toBeDefined();
+    expect(screen.getByText("Unique players")).toBeDefined();
+    expect(screen.getByText("Settlement rate")).toBeDefined();
   });
 
   it("navigates to bet detail when a recent bet row is clicked", () => {

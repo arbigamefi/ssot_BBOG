@@ -1,0 +1,286 @@
+Original prompt: Continue the frontend route review execution by simplifying the game room upper fold so the primary flow is select outcome -> set amount -> confirm.
+
+- 2026-03-08: Scoped this pass to `/games/[slug]` only. Goal is to remove top-fold noise and keep the first screen focused on the betting path.
+- 2026-03-08: Inspected `frontend/apps/web/src/app/games/[slug]/pageClient.tsx` and `frontend/apps/web/src/features/betting/ui/GameBetPanel.tsx`.
+- 2026-03-08: Planned changes:
+  - compress the room header into a lean room intro + game switcher
+  - move sync / module / routing context below the fold
+  - make the bet slip read as a 3-step ticket instead of a generic form
+- 2026-03-08: Implemented the room-header reduction in `frontend/apps/web/src/app/games/[slug]/pageClient.tsx`.
+- 2026-03-08: Rebuilt `frontend/apps/web/src/features/betting/ui/GameBetPanel.tsx` into a 3-step ticket: choose outcome, set amount, review ticket.
+- 2026-03-08: Validated the updated room with Playwright MCP on `http://192.168.1.107:3000/games/dice` and inspected screenshots manually.
+- 2026-03-08: Attempted the skill-provided `web_game_playwright_client.js`; it is currently blocked in this environment because the script is ESM but ships as `.js` outside a module package and cannot resolve the `playwright` package from the skill directory.
+- 2026-03-08: Regression checks passed:
+  - `pnpm -C frontend/apps/web exec vitest run 'src/app/games/[slug]/pageClient.test.tsx'`
+  - `make frontend-check`
+- 2026-03-08: Simplified `AppShell` game-room chrome so the top bar now keeps only brand, `All Games`, and wallet connect in room mode.
+- 2026-03-08: Removed the duplicate in-page `All Games` back button from the game room header to avoid redundant navigation.
+- 2026-03-08: Added a game-room-specific `AppShell` test and reran:
+  - `pnpm -C frontend/apps/web exec vitest run src/components/AppShell.test.tsx 'src/app/games/[slug]/pageClient.test.tsx'`
+  - `make frontend-check`
+- 2026-03-08: Moved `Open ledger` out of the room header and into the lower `Recent bets` section.
+- 2026-03-08: Reduced the room status strip to just the active parameter and sync status; assets and module access now live below the fold in protocol/recent-bets context.
+- 2026-03-08: Revalidated the updated room visually on `http://192.168.1.107:3001/games/dice` and reran `make frontend-check`.
+- 2026-03-08: Shifted the left gameplay panels from "styled forms" toward simpler play surfaces:
+  - rebuilt `frontend/packages/ui/src/components/protocol/dice-params-form.tsx` into a leaner dice lane with a single hero cap readout, slider, and preset lanes
+  - rebuilt `frontend/packages/ui/src/components/protocol/mask-picker-grid.tsx` into a tighter selection table with quicker pick actions and a lighter summary row
+  - shortened the wrapper copy in `frontend/packages/ui/src/components/protocol/keno-params-form.tsx` and `frontend/packages/ui/src/components/protocol/roulette-params-form.tsx`
+- 2026-03-08: Rechecked `/games/dice` and `/games/keno` visually on `http://192.168.1.107:3001` with Playwright MCP after the gameplay-panel pass.
+- 2026-03-08: Started fresh validation for the gameplay-panel pass:
+  - `pnpm -C frontend storybook:build`
+  - `make frontend-check`
+- 2026-03-08: Gameplay-panel pass validation completed successfully:
+  - `pnpm -C frontend storybook:build`
+  - `make frontend-check`
+- 2026-03-08: Continued the gameplay-panel pass by giving `Coin Toss` and `Roulette` their own room-specific surfaces instead of reusing the same generic shell:
+  - rebuilt `frontend/packages/ui/src/components/protocol/cointoss-params-form.tsx` into a dedicated binary-choice stage with a live face medallion and clearer side cards
+  - upgraded `frontend/packages/ui/src/components/protocol/roulette-params-form.tsx` with roulette-specific copy, table-summary cards, and alternating table tones on the 40-cell board
+- 2026-03-08: Rechecked `/games/coin-toss` and `/games/roulette` visually on `http://192.168.1.107:3001` with Playwright MCP.
+- 2026-03-08: Started another validation round for the room-specific panel pass:
+  - `pnpm -C frontend storybook:build`
+  - `make frontend-check`
+- 2026-03-08: Room-specific panel pass validation completed successfully:
+  - `pnpm -C frontend storybook:build`
+  - `make frontend-check`
+- 2026-03-08: Reworked roulette from the legacy 40-cell mask-first UI into a typed European table flow:
+  - updated frontend roulette encoding to support both legacy `uint40 mask` and typed `(uint8 kind, uint40 payload)` params
+  - rebuilt `frontend/packages/ui/src/components/protocol/roulette-params-form.tsx` around standard European bets: straight, split, street, corner, six line, dozen, column, red/black, odd/even, low/high
+  - kept raw mask entry behind an advanced disclosure instead of making it the default interaction
+  - wired `frontend/apps/web/src/app/games/[slug]/pageClient.tsx` to use typed roulette selections and human-readable room summaries
+- 2026-03-08: Validation for the European roulette pass completed successfully:
+  - `pnpm -C frontend/packages/ssot exec vitest run src/encoding/encoding.test.ts src/encoding/registry.test.ts`
+  - `pnpm -C frontend/apps/web exec vitest run 'src/app/games/[slug]/pageClient.test.tsx'`
+  - Playwright MCP visual check on `http://192.168.1.107:3001/games/roulette`
+  - `make frontend-check`
+- 2026-03-08: The skill-provided `web_game_playwright_client.js` is still blocked in this environment. Running `node "$WEB_GAME_CLIENT" --help` fails with `SyntaxError: Cannot use import statement outside a module` because the shipped client is ESM but not packaged as a module entrypoint.
+- 2026-03-08: Used `https://zeebit.io/game/4nWniJDt8HVHBGnAN8PU7G15dUAoK75TWTtATQRSpHoH` as a stronger roulette-room reference. The live page is geoblocked, but the underlying layout is still visible enough to extract the high-signal structure: compact left bet slip, dominant right table surface, chip presets, and lower-priority detail below the fold.
+- 2026-03-08: Applied a Zeebit-inspired roulette pass:
+  - flipped `GameBetPanel` into a roulette-specific `left slip / right table` desktop layout
+  - added roulette chip presets to the amount section so the slip reads more like a casino ticket than a generic DeFi form
+  - tightened `RouletteParamsForm` toward a darker, magenta-weighted table surface with a stronger active-bet card and a quick clear action
+- 2026-03-08: Revalidated the Zeebit-inspired roulette pass:
+  - Playwright MCP visual check on `http://127.0.0.1:3001/games/roulette`
+  - `pnpm -C frontend/apps/web exec vitest run 'src/app/games/[slug]/pageClient.test.tsx' src/components/AppShell.test.tsx`
+  - `make frontend-check`
+- 2026-03-08: Expanded the Zeebit-inspired desktop pass from roulette to the whole room system:
+  - moved `GameBetPanel` into a shared desktop layout with the bet slip on the left and the play surface on the right for all games
+  - promoted chip-style quick stake presets into the shared bet slip instead of keeping them roulette-only
+  - shifted `DiceParamsForm`, `CoinTossParamsForm`, and `MaskPickerGrid` to the same darker magenta/blue casino palette so the room desktops read as one product family
+- 2026-03-08: Validation for the full desktop pass:
+  - `make frontend-check`
+  - Note: local `next dev` still intermittently serves `/games/[slug]` as 404 while also logging the existing `indexedDB is not defined` server-side issue. Production build still emits the dynamic route correctly, so this remains a separate dev-runtime bug to isolate later.
+- 2026-03-08: Tightened the Zeebit pass after comparing the current result against the real room UI:
+  - the previous pass only borrowed palette and left/right layout; it still missed Zeebit's actual room grammar
+  - updated `frontend/apps/web/src/app/games/[slug]/pageClient.tsx` to add a desktop game rail and compress the room header into a more game-lobby-like shell
+  - updated `frontend/apps/web/src/features/betting/ui/GameBetPanel.tsx` so the bet slip reads more like a Zeebit panel: manual/auto header, simpler section labels, stronger CTA, and less "stepper document" language
+- 2026-03-08: Revalidated the stricter room-shell pass:
+  - `pnpm -C frontend/apps/web exec vitest run 'src/app/games/[slug]/pageClient.test.tsx' src/components/AppShell.test.tsx`
+  - `make frontend-check`
+  - local Playwright inspection still cannot reliably render `/games/[slug]` because of the existing dev-runtime 404 path; `/games` itself renders and reflects the current room directory state.
+- 2026-03-08: Corrected the Zeebit interpretation after user feedback:
+  - removed the desktop left game rail from `frontend/apps/web/src/app/games/[slug]/pageClient.tsx`
+  - restored game switching to a horizontal top selector
+  - rebuilt the roulette room so the first fold reads as `top selector -> compact room header -> left bet slip / right roulette table`
+  - gave `frontend/packages/ui/src/components/protocol/roulette-params-form.tsx` a more single-surface table layout instead of a stack of room-explainer cards
+- 2026-03-08: Revalidated the corrected roulette pass:
+  - `pnpm -C frontend/apps/web exec vitest run 'src/app/games/[slug]/pageClient.test.tsx' src/components/AppShell.test.tsx`
+  - `make frontend-check`
+  - Playwright MCP visual check on `http://127.0.0.1:3002/games/roulette`
+- 2026-03-09: Started the first code implementation pass after freezing the new brand and messaging baseline. Scoped this pass to `/` only so the highest-value acquisition route matches the new landing copy and screen spec before touching more rooms.
+- 2026-03-09: Rebuilt `frontend/apps/web/src/app/page.tsx` from the older dashboard-leaning landing into a more disciplined acquisition page:
+  - hero now follows the approved copy spine (`Wallet-native game rooms` -> `Play on-chain without losing the room feel.`)
+  - first fold now has one dominant CTA (`Open Rooms`) and a quieter secondary anchor (`How It Works`)
+  - proof ribbon was compressed into four light proof items instead of heavier operational cards
+  - mid page now follows `Featured Rooms -> How it works -> Why trust it -> Live proof -> Final CTA`
+  - live proof remains on the page, but only as lightweight recent activity plus a simple liquidity context card
+- 2026-03-09: Updated `frontend/apps/web/src/components/LandingShell.tsx` to remove protocol-heavy chrome from the landing header:
+  - brand subtitle now reads `Wallet-native game rooms`
+  - nav now reflects the public route hierarchy better (`Rooms`, `Bets`, `Liquidity`, `Account`)
+  - replaced the old network + hub short-address chip with a simpler `Live on <network>` label
+- 2026-03-09: Corrected user-visible copy drift caught during visual review:
+  - home `Open Rooms` CTAs now route to `/games` instead of auto-dropping users into the first room
+  - roulette presentation copy in `frontend/apps/web/src/features/games/presentation.ts` no longer talks about a legacy mask-first table; it now describes the typed European table flow and keeps raw bitmask as advanced fallback only
+- 2026-03-09: Validation for the landing rewrite:
+  - `pnpm -C frontend/apps/web exec vitest run src/app/page.test.tsx`
+  - `pnpm -C frontend/apps/web exec vitest run src/components/AppShell.test.tsx`
+  - `make frontend-check`
+  - Playwright MCP production-view inspection on `http://127.0.0.1:3002/`
+- 2026-03-09: Visual check outcome:
+  - the home route now reads like an actual landing page instead of an ops dashboard
+  - the remaining obvious polish gap is not hierarchy anymore; it is art direction and branded assets (real logo, hero imagery, and more bespoke room illustration language)
+- 2026-03-09: Continued with the next highest-value route after home: `/games/roulette`.
+- 2026-03-09: Tightened the roulette room to match the newer brand and messaging baseline:
+  - updated the top room strip in `frontend/apps/web/src/app/games/[slug]/pageClient.tsx` so roulette now reads as `European roulette` + `Table-first room` with short status chips instead of a colder protocol-style header
+  - renamed lower tabs from `How to Play / Protocol` to `Playbook / Room Facts` so the route feels more product-facing and less like an internal control panel
+  - updated `frontend/apps/web/src/features/betting/ui/GameBetPanel.tsx` so the left slip now reads more like a flagship room ticket: `Build the ticket`, `Stake amount`, `Quick chips`, `Number of rounds`, and `Review the roulette ticket`
+  - updated `frontend/packages/ui/src/components/protocol/roulette-params-form.tsx` so the table copy now emphasizes the standard 0-36 European wheel and pushes raw bitmask language even further into advanced mode
+  - updated `frontend/apps/web/src/features/games/presentation.ts` so the shared roulette presentation no longer says `Mask table`
+- 2026-03-09: Validation for the roulette room polish pass:
+  - `pnpm -C frontend/apps/web exec vitest run 'src/app/games/[slug]/pageClient.test.tsx'`
+  - `pnpm -C frontend/apps/web exec vitest run src/app/page.test.tsx`
+  - `make frontend-check`
+  - Playwright MCP production-view inspection on `http://127.0.0.1:3002/games/roulette`
+- 2026-03-09: Visual check outcome:
+  - roulette now keeps the correct top game selector
+  - the compact room strip reads as a flagship table room instead of an engineering route
+  - the slip/table pairing is in a better place, but the next visible quality jump will come from real branded art direction and a stronger bespoke roulette table rendering rather than more copy changes
+- 2026-03-09: User rejected further incremental polish and asked for a true reset of the frontend shell against the two mature references already reviewed earlier:
+  - BetSwirl dice room (`top selector -> dominant play surface -> narrow bet slip -> lower detail`)
+  - Zeebit game room (`dense room shell, stronger game surface, ticket-first secondary rail`)
+- 2026-03-09: Rebuilt the top-level visual system from scratch instead of layering more patches onto the prior UI:
+  - rewrote `frontend/apps/web/src/app/globals.css` with a new dark casino surface system and shared shell classes
+  - replaced `frontend/apps/web/src/components/AppShell.tsx` and `frontend/apps/web/src/components/LandingShell.tsx` with new chrome that matches the new room grammar
+  - rebuilt `frontend/apps/web/src/app/page.tsx`, `frontend/apps/web/src/app/games/pageClient_list.tsx`, `frontend/apps/web/src/app/games/[slug]/pageClient.tsx`, `frontend/apps/web/src/features/betting/ui/GameBetPanel.tsx`, and `frontend/packages/ui/src/components/ui/game-card.tsx`
+- 2026-03-09: The reset intentionally keeps game selection at the top of room pages, per user correction, while still borrowing the higher-signal room layout patterns from BetSwirl and Zeebit.
+- 2026-03-09: First visual review of the reset exposed two clear remaining issues:
+  - home and games preview panels were still too dense to read comfortably
+  - room cards and directory hero still leaked internal language like `abi.encode(...)`, module addresses, and release-heavy phrasing
+- 2026-03-09: Follow-up cleanup pass:
+  - added `previewSteps` and `cardFacts` to `frontend/apps/web/src/features/games/presentation.ts`
+  - replaced technical facts in `/` and `/games` with product-facing room facts
+  - converted the narrow preview-step columns into vertical step rows so the right-side hero panels read cleanly at desktop widths
+  - softened directory copy so it now talks about rooms and tables instead of protocol internals
+- 2026-03-09: Visual validation after the cleanup pass:
+  - Playwright MCP review on `http://127.0.0.1:3003/`
+  - Playwright MCP review on `http://127.0.0.1:3003/games`
+  - Playwright MCP review on `http://127.0.0.1:3003/games/roulette`
+  - screenshots saved locally under `tmp/home-redesign-v2.png`, `tmp/games-redesign-v2.png`, and `tmp/roulette-redesign.png`
+- 2026-03-09: Current visual outcome:
+  - `/` now reads like a marketing landing page instead of an ops dashboard
+  - `/games` now reads like a room directory instead of a release manifest browser
+  - `/games/roulette` now keeps the correct top selector and a more legible table-plus-slip layout, but it is still waiting on bespoke art direction to feel fully premium
+- 2026-03-09: Regression checks for the shell-reset pass completed successfully:
+  - `pnpm -C frontend/apps/web exec vitest run src/components/AppShell.test.tsx src/app/page.test.tsx src/app/games/pageClient_list.test.tsx 'src/app/games/[slug]/pageClient.test.tsx'`
+  - `pnpm -C frontend/apps/web exec tsc --noEmit`
+  - `make frontend-check`
+- 2026-03-09: Known non-blocking issues unchanged by this pass:
+  - local Node version is still `v22.6.0` while the repo expects `20.x`
+  - MetaMask SDK still warns about `@react-native-async-storage/async-storage`
+  - WalletConnect/pino still warns about `pino-pretty`
+  - build still logs the pre-existing `indexedDB is not defined` server-side warning during static generation
+- 2026-03-13: User flagged the flagship prototype board as still having layout issues after the roulette table orientation fix.
+- 2026-03-13: Visual inspection on `http://127.0.0.1:3013/prototype/ui-ux-v2-flagship` showed the main problem is not the roulette table standard itself anymore:
+  - `Home v2` right-side flagship card was too narrow and too tall, making the roulette preview read like a thumbnail
+  - `Roulette Room v2` had an oversized brand banner that consumed too much first-fold height and pushed the actual table/slip product down
+- 2026-03-13: Applied a prototype-only layout correction in `frontend/apps/web/src/app/prototype/ui-ux-v2-flagship/page.tsx`:
+  - widened the home hero split for the featured room card
+  - changed the home room-sequence block from three cramped columns to a larger primary sequence area plus a small mood rail
+  - compressed the roulette room top nav from full lockup to compact mark + actions
+  - tightened the room strip and made the table/slip fold start earlier on the artboard
+- 2026-03-13: Second flagship prototype correction after another visual pass:
+  - replaced oversized lockup headers with compact `ArbiGameFiBrand` rows so the prototype stops burning first-fold height on brand assets
+  - narrowed and shortened the roulette slip (`xl:grid-cols-[292px_minmax(0,1fr)]`, reduced padding, smaller mode chips, shorter ticket review)
+  - confirmed via Playwright screenshot that the right roulette table now reads as the dominant surface instead of sharing equal visual weight with the slip
+- 2026-03-13: Started the next refinement target on `Home v2`:
+  - widened the right hero rail from `520px` to `560px`
+  - converted the featured roulette card from an information stack into a more visual hero panel
+  - removed the cramped `Room sequence + Room mood` split and replaced it with three short visual principles plus two direct CTA actions
+- 2026-03-13: Continued the flagship refinement after another user push on layout quality:
+  - widened `Home v2` again and turned the featured roulette panel into a more visual preview block with one main explanation area plus a small `Room pulse` tile
+  - collapsed the extra principle cards under the home preview into lighter pills so the hero reads less like a stacked content card
+  - tightened `Roulette Room v2` further by shrinking the room strip, narrowing the slip to `272px`, and trimming stake / rounds / ticket copy
+  - added three short board facts under the roulette table so the table remains the hero while the rule language stays attached to the board
+- 2026-03-13: Revalidated the refined flagship prototype visually on `http://127.0.0.1:3013/prototype/ui-ux-v2-flagship?ts=1773369000` and saved the latest screenshot to `tmp/prototype-v2-flagship-current-2.png`.
+- 2026-03-13: `next dev` rewrote `frontend/apps/web/next-env.d.ts` and `frontend/apps/web/tsconfig.json` again during this pass; restored them afterward so only the intentional `tsconfig` diff remains (`.next-dev` types removed).
+- 2026-03-13: Reworked the lower half of `Home v2` in `frontend/apps/web/src/app/prototype/ui-ux-v2-flagship/page.tsx`:
+  - replaced the flat `Featured rooms` row with a two-part discovery block: left intro rail and right differentiated room cards
+  - promoted Dice into a larger high-signal room card while keeping Coin Toss and Keno as secondary entries
+  - merged `Why trust it` and `Final CTA` into a single stronger right-column trust/CTA rail so the lower fold feels like one system instead of two same-weight cards
+- 2026-03-13: Revalidated the new lower-fold composition visually on `http://127.0.0.1:3013/prototype/ui-ux-v2-flagship?ts=1773369300` and saved `tmp/prototype-v2-flagship-current-3.png`.
+- 2026-03-13: Continued the `Home v2` first-fold pass:
+  - replaced the old four-box stat block under the hero with a composed `Room entry sequence` panel plus a smaller `Live signal` tile
+  - shifted the hero proof language from static metrics toward action-oriented flow (`Choose room -> Build ticket -> Follow result`)
+- 2026-03-13: Revalidated the updated first fold visually on `http://127.0.0.1:3013/prototype/ui-ux-v2-flagship?ts=1773369450` and saved `tmp/prototype-v2-flagship-current-4.png`.
+- 2026-03-13: Continued the `Roulette Room v2` board-first pass:
+  - narrowed the left slip again to `248px`
+  - removed the stronger fuchsia slip shell and swapped it for a quieter dark ticket rail
+  - softened the stake / rounds / ticket sections so the board is visually dominant
+- 2026-03-13: Revalidated the quieter roulette rail on `http://127.0.0.1:3013/prototype/ui-ux-v2-flagship?ts=1773371300` and saved `tmp/prototype-v2-flagship-current-5.png`.
+- 2026-03-13: Continued the roulette flagship-table pass:
+  - added a `live selection` hero line above the board
+  - added a curved wheel-strip style number band derived from the European wheel order
+  - pushed more of the premium feeling into the board surface instead of the ticket rail
+- 2026-03-13: Revalidated the stronger table presentation on `http://127.0.0.1:3013/prototype/ui-ux-v2-flagship?ts=1773371600` and saved `tmp/prototype-v2-flagship-current-6.png`.
+- 2026-03-13: Started the final prototype polish pass on the roulette table stage:
+  - kept the quieter left ticket rail as-is
+  - focused the premium treatment on the right table stage instead of the rail
+  - verified the current direction still keeps the board as the primary visual anchor after the live selection + wheel strip additions
+- 2026-03-13: Added another roulette-stage refinement in `frontend/apps/web/src/app/prototype/ui-ux-v2-flagship/page.tsx`:
+  - introduced a stronger `live selection` header block above the board
+  - kept the board-first copy but pushed more of the premium feeling into the stage itself
+  - visual check saved to `tmp/prototype-v2-flagship-current-6.png`
+- 2026-03-13: Attempted another Figma sync with capture id `5c4fe39a-4657-414f-81a5-9d6ce2ca703d`, but it remained stuck in `pending`; latest confirmed successful Figma node remains the prior sync before this attempt.
+- 2026-03-13: Continued the flagship prototype polish with a more product-shaped hierarchy:
+  - rebuilt the `Home v2` sequence block into a horizontal entry rail instead of three narrow stacked info cards
+  - split the old tall `Live signal` tile into a compact lead signal plus three quieter support notes
+  - upgraded `Roulette Room v2` into a clearer live-stage header with a larger result medallion, a separate live-wheel module, and a stronger board-first hierarchy
+- 2026-03-13: Revalidated the refined flagship board on `http://127.0.0.1:3013/prototype/ui-ux-v2-flagship?ts=1773373100` with Playwright and synced it into the existing Figma file using a fresh capture id. Latest confirmed Figma node is now `20:2`.
+- 2026-03-13: `next dev` reintroduced `.next-dev` route references into `frontend/apps/web/tsconfig.json` and `frontend/apps/web/next-env.d.ts`; both were restored after the validation pass so only intentional diffs remain.
+- 2026-03-14: Compared ArbiGameFi against BetSwirl room grammar and wrote `frontend/docs/frontend/BETSWIRL-GAP-ANALYSIS-2026-03.md`.
+- 2026-03-14: Implemented the first direct response from that gap analysis in `frontend/apps/web/src/app/games/[slug]/pageClient.tsx`:
+- 2026-03-14: User clarified that `/frontend/apps/web/src/app/prototype/ui-ux-v2-flagship/page.tsx` should be treated as the new source of truth instead of the older multi-board prototype.
+- 2026-03-14: Re-read `frontend/docs/frontend/UI-UX-DESIGN-BRIEF-2026-03.md` and rebuilt the current flagship prototype page as a single landing-style screen:
+  - replaced the abstract spinner hero with a room-first `European roulette` teaser
+  - removed remote texture dependencies and most meta labels
+  - rebuilt the hero right side into a compact top selector + mini roulette room preview with a left bet slip and standard `0 + 3x12` table
+  - rewrote the first-fold support area into a cleaner `Room entry` rail plus a smaller `Live proof` tile
+  - softened the lower half into `Tonight's rooms` plus a separate trust / CTA rail
+- 2026-03-14: Validation for the current-file landing pass:
+  - `pnpm -C frontend/apps/web exec tsc --noEmit`
+  - attempted local visual review with headless Chrome on `http://127.0.0.1:3013/prototype/ui-ux-v2-flagship`
+- 2026-03-14: Visual review is still partially blocked by the existing dev-runtime issue on this repo:
+  - `next dev` intermittently serves `/prototype/ui-ux-v2-flagship` as a 404 even after compiling the route
+  - server logs still show the pre-existing `indexedDB is not defined` unhandled rejection during prototype/dev requests
+  - restored `frontend/apps/web/tsconfig.json` and `frontend/apps/web/next-env.d.ts` after the dev pass so only intentional diffs remain
+  - replaced the old prototype-style lower tabs (`All bets / How to play / Game details`) with a casino-style room grammar:
+    - `All Bets`
+    - `My Bets`
+    - `Players`
+    - `Analytics`
+    - `Game Details`
+  - kept the status filter (`All / Open / Settled / Refunded`) as a secondary rail for bet streams
+  - merged the old guide/protocol split into a single `Game Details` tab
+  - added a wallet-aware `My Bets` view, a room `Players` view, and a compact `Analytics` view
+- 2026-03-14: Validation for the room-tab pass:
+  - `pnpm -C frontend/apps/web exec vitest run 'src/app/games/[slug]/pageClient.test.tsx'`
+  - `pnpm -C frontend/apps/web exec tsc --noEmit`
+  - `make frontend-check`
+- 2026-03-14: `next dev` again re-added `.next-dev/types/**/*.ts` into `frontend/apps/web/tsconfig.json`; restored it afterward so the worktree only reflects intentional changes.
+
+- 2026-03-14: Continued the BetSwirl-based roulette prototype pass in `frontend/apps/web/src/app/prototype/ui-ux-v2-flagship/page.tsx`:
+  - rewrote the left rail into a more mature `Bet slip` with quick actions, number-of-bets wording, potential payout, and RNG fee
+  - removed design-internal copy like `Quiet room`, `Settlement readable`, and `Board-first` from the room strip and table stage
+  - added a standard casino-room lower tab band (`All Bets / My Bets / Players / Analytics / Game Details`) under the roulette board
+  - added sample bet stream, player list, and analytics cards so the prototype reads like a full room instead of only a first-fold composition
+
+- 2026-03-14: Tightened the roulette flagship prototype again in `frontend/apps/web/src/app/prototype/ui-ux-v2-flagship/page.tsx`:
+  - compressed the room strip and live stage so the board keeps more vertical space
+  - reduced the live selection medallion and shortened the explanatory copy
+  - narrowed the live wheel module and kept the room language player-facing rather than design-facing
+
+- 2026-03-14: Continued compressing the roulette flagship live stage in `frontend/apps/web/src/app/prototype/ui-ux-v2-flagship/page.tsx`:
+  - merged the result medallion and live-wheel strip into one tighter pre-table stage
+  - removed the separate explanatory line under the stage
+  - replaced the three board fact cards with a lighter pill rail so the table gets more vertical space
+
+- 2026-03-14: Reworked the roulette prototype left rail toward a more mature casino bet slip:
+  - removed the extra rail header and turned the top into a tighter Manual/Auto segmented control
+  - changed the stake area to `Bet amount` with live balance context and inline quick actions
+  - shortened the rounds section and merged review into a single `Ticket summary` block
+  - renamed the CTA to `Connect to play` to match casino-room language
+
+- 2026-03-14: Tightened the Home v2 featured-room copy in `frontend/apps/web/src/app/prototype/ui-ux-v2-flagship/page.tsx`:
+  - changed the hero-side room title from `European flagship table` to `European roulette`
+  - shortened the supporting room rationale copy for cleaner card layout
+  - changed the pulse tile to `Straight 17 live` with a more player-facing helper
+
+- 2026-03-14: Continued the BetSwirl-inspired room-data pass in `frontend/apps/web/src/app/prototype/ui-ux-v2-flagship/page.tsx`:
+  - tightened the room tabs into a denser strip
+  - added a secondary bet-status rail (`All / Open / Settled / Refunded`)
+  - compressed the bet table, player cards, and analytics cards so the lower half reads more like a mature casino room data layer
+
+- 2026-03-14: Added `Dice Room v2` to `frontend/apps/web/src/app/prototype/ui-ux-v2-flagship/page.tsx` using the same mature room grammar:
+  - top game switcher + compact room strip
+  - left short bet slip
+  - right under/over play surface with visible cap lane
+  - lower `All Bets / My Bets / Players / Analytics / Game Details` data layer

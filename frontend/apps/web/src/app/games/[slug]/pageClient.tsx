@@ -33,12 +33,14 @@ import {
 import { Placeholder } from "../../../components/Placeholder";
 import { PageTransition } from "../../../components/PageTransition";
 import { ArbiGameFiMark } from "../../../components/ArbiGameFiBrand";
+import { ConnectWalletPrompt } from "../../../components/ConnectWalletPrompt";
 import { GameBetPanel } from "../../../features/betting/ui/GameBetPanel";
 import { clampNumber, parseBigIntFromInput } from "../../../features/betting/model/units";
 import { useBetsByGame } from "../../../features/bets/useBetsByGame";
 import { getGamePresentation } from "../../../features/games/presentation";
 import { useIndexer } from "../../../features/ops/useIndexer";
 import { useRelease } from "../../../ssot/release/ReleaseProvider";
+import { useSSOTSDK } from "../../../ssot/sdk";
 
 type GameMeta = {
   gameId: `0x${string}`;
@@ -49,7 +51,15 @@ type GameMeta = {
 };
 
 type ActivityView = "all" | "open" | "settled" | "refunded";
-type InfoView = "activity" | "guide" | "protocol";
+type InfoView = "all-bets" | "my-bets" | "players" | "analytics" | "details";
+
+type PlayerRoomRow = {
+  player: string;
+  ticketCount: number;
+  lastState?: string;
+  lastUpdated?: number;
+  lastTxHash?: string;
+};
 
 function toGameMeta(raw: any): GameMeta {
   return {
@@ -185,9 +195,11 @@ function buildActivityTabs(rows: BetRow[]): TabBarItem[] {
 
 function buildInfoTabs(): TabBarItem[] {
   return [
-    { key: "activity", label: "All bets" },
-    { key: "guide", label: "How to play" },
-    { key: "protocol", label: "Game details" },
+    { key: "all-bets", label: "All Bets" },
+    { key: "my-bets", label: "My Bets" },
+    { key: "players", label: "Players" },
+    { key: "analytics", label: "Analytics" },
+    { key: "details", label: "Game Details" },
   ];
 }
 
@@ -202,6 +214,38 @@ function filterRecentBets(rows: BetRow[], view: ActivityView) {
       return status === "settled" || status === "won" || status === "lost";
     }
     return status === "cancelled";
+  });
+}
+
+function buildPlayerRows(rows: BetRow[]) {
+  const map = new Map<string, PlayerRoomRow>();
+
+  for (const row of rows) {
+    if (!row.player) continue;
+    const key = row.player.toLowerCase();
+    const current = map.get(key);
+    if (!current) {
+      map.set(key, {
+        player: row.player,
+        ticketCount: 1,
+        lastState: row.state,
+        lastUpdated: row.updatedAt,
+        lastTxHash: row.lastTxHash,
+      });
+      continue;
+    }
+
+    current.ticketCount += 1;
+    if ((row.updatedAt ?? 0) >= (current.lastUpdated ?? 0)) {
+      current.lastUpdated = row.updatedAt;
+      current.lastState = row.state;
+      current.lastTxHash = row.lastTxHash;
+    }
+  }
+
+  return Array.from(map.values()).sort((left, right) => {
+    if (right.ticketCount !== left.ticketCount) return right.ticketCount - left.ticketCount;
+    return (right.lastUpdated ?? 0) - (left.lastUpdated ?? 0);
   });
 }
 
@@ -257,6 +301,7 @@ export function GamePageClient({ slug }: { slug: string }) {
   const router = useRouter();
   const { release, readOnlyReason, chainId } = useRelease();
   const { indexerStatus } = useIndexer();
+  const { sdk } = useSSOTSDK();
 
   const game = React.useMemo(() => {
     const found = release?.gamesMeta?.find((item) => item.slug === slug);
@@ -271,7 +316,7 @@ export function GamePageClient({ slug }: { slug: string }) {
     recentBetsQuery.error instanceof Error ? recentBetsQuery.error.message : "Failed to load recent indexed bets.";
 
   const [activityView, setActivityView] = React.useState<ActivityView>("all");
-  const [infoView, setInfoView] = React.useState<InfoView>("activity");
+  const [infoView, setInfoView] = React.useState<InfoView>("all-bets");
 
   const [diceCap, setDiceCap] = React.useState<string>("50");
   const [coinSide, setCoinSide] = React.useState<"heads" | "tails">("heads");
@@ -285,7 +330,7 @@ export function GamePageClient({ slug }: { slug: string }) {
     setRouletteSelection(createDefaultRouletteSelection());
     setKenoMask("0x1f");
     setActivityView("all");
-    setInfoView("activity");
+    setInfoView("all-bets");
   }, [slug]);
 
   if (!release) {
@@ -313,6 +358,31 @@ export function GamePageClient({ slug }: { slug: string }) {
   const activityTabs = buildActivityTabs(recentBets);
   const infoTabs = buildInfoTabs();
   const filteredRecentBets = filterRecentBets(recentBets, activityView);
+  const myBets = React.useMemo(() => {
+    if (!sdk?.account) return [];
+    const normalizedAccount = sdk.account.toLowerCase();
+    return recentBets.filter((row) => row.player?.toLowerCase() === normalizedAccount);
+  }, [recentBets, sdk?.account]);
+  const filteredMyBets = React.useMemo(() => filterRecentBets(myBets, activityView), [activityView, myBets]);
+  const playerRows = React.useMemo(() => buildPlayerRows(recentBets), [recentBets]);
+  const analytics = React.useMemo(() => {
+    const breakdown = summarizeStateBreakdown(recentBets);
+    const settled = breakdown.settled;
+    const open = breakdown.open;
+    const refunded = breakdown.refunded;
+    const total = recentBets.length;
+    const uniquePlayers = playerRows.length;
+    const recentUpdates = recentBets.filter((row) => row.updatedAt && Date.now() - row.updatedAt <= 60 * 60_000).length;
+    return {
+      total,
+      settled,
+      open,
+      refunded,
+      uniquePlayers,
+      recentUpdates,
+      settlementRate: total > 0 ? Math.round((settled / total) * 100) : 0,
+    };
+  }, [playerRows.length, recentBets]);
   const paramSignal = getCurrentParamSignal(game.slug, diceCap, coinSide, rouletteSelection, kenoMask);
   const explorerModuleUrl = explorerBaseUrl ? `${explorerBaseUrl}/address/${game.module}` : undefined;
 
@@ -347,6 +417,63 @@ export function GamePageClient({ slug }: { slug: string }) {
         key: "updated",
         header: "Updated",
         render: (row) => <span className="text-slate-400">{formatRelativeTime(row.updatedAt)}</span>,
+      },
+      {
+        key: "tx",
+        header: "Tx",
+        render: (row) => {
+          if (!row.lastTxHash) return <span className="text-slate-500">—</span>;
+          return (
+            <span className="inline-flex items-center gap-2 font-mono text-slate-400">
+              <span>{shortHex(row.lastTxHash)}</span>
+              {explorerBaseUrl ? (
+                <a
+                  href={`${explorerBaseUrl}/tx/${row.lastTxHash}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-cyan-200 transition-colors hover:text-cyan-100"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  View
+                </a>
+              ) : null}
+            </span>
+          );
+        },
+      },
+    ],
+    [explorerBaseUrl]
+  );
+
+  const playerColumns: DataTableColumn<PlayerRoomRow>[] = React.useMemo(
+    () => [
+      {
+        key: "player",
+        header: "Player",
+        render: (row) => (
+          <span className="inline-flex items-center gap-1 font-mono text-slate-300">
+            {shortHex(row.player)}
+            <span onClick={(event) => event.stopPropagation()}>
+              <CopyButton value={row.player} label="Copy player address" />
+            </span>
+          </span>
+        ),
+      },
+      {
+        key: "tickets",
+        header: "Tickets",
+        render: (row) => <span className="font-semibold text-white">{row.ticketCount}</span>,
+      },
+      {
+        key: "status",
+        header: "Latest",
+        render: (row) =>
+          row.lastState ? <StatusBadge status={mapBetState(row.lastState)} label={row.lastState} /> : <span className="text-slate-500">—</span>,
+      },
+      {
+        key: "updated",
+        header: "Last seen",
+        render: (row) => <span className="text-slate-400">{formatRelativeTime(row.lastUpdated)}</span>,
       },
       {
         key: "tx",
@@ -523,18 +650,30 @@ export function GamePageClient({ slug }: { slug: string }) {
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <CardTitle className="text-lg text-white">
-                    {infoView === "activity" ? "Live bets" : infoView === "guide" ? "How to play" : "Game details"}
+                    {infoView === "all-bets"
+                      ? "All bets"
+                      : infoView === "my-bets"
+                        ? "My bets"
+                        : infoView === "players"
+                          ? "Players"
+                          : infoView === "analytics"
+                            ? "Analytics"
+                            : "Game details"}
                   </CardTitle>
                   <CardDescription className="mt-1 text-slate-400">
-                    {infoView === "activity"
-                      ? "Watch the room after the ticket is built. The ledger stays second-screen."
-                      : infoView === "guide"
-                        ? "Keep the room flow linear: choose the outcome, size the stake, then confirm the quote."
-                        : "Release truth and module facts stay here without hijacking the top fold."}
+                    {infoView === "all-bets"
+                      ? "Watch the whole room after the ticket is built. This stays below the fold."
+                      : infoView === "my-bets"
+                        ? "Follow your own tickets without mixing them into the full room stream."
+                        : infoView === "players"
+                          ? "Room participants and their latest visible ticket activity."
+                          : infoView === "analytics"
+                            ? "Compact room metrics instead of another explanation block."
+                            : "How to play and release truth stay here without hijacking the top fold."}
                   </CardDescription>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
-                  {infoView === "activity" ? (
+                  {infoView === "all-bets" || infoView === "my-bets" ? (
                     <Button
                       asChild
                       size="sm"
@@ -547,12 +686,12 @@ export function GamePageClient({ slug }: { slug: string }) {
                   <TabBar tabs={infoTabs} activeKey={infoView} onTabChange={(next) => setInfoView(next as InfoView)} />
                 </div>
               </div>
-              {infoView === "activity" ? (
+              {infoView === "all-bets" || infoView === "my-bets" ? (
                 <TabBar tabs={activityTabs} activeKey={activityView} onTabChange={(next) => setActivityView(next as ActivityView)} />
               ) : null}
             </CardHeader>
             <CardContent className="space-y-4 p-6">
-              {infoView === "activity" ? (
+              {infoView === "all-bets" ? (
                 <>
                   {recentBetsQuery.error ? (
                     <ErrorCallout title="Recent bets unavailable" message={recentBetsError} />
@@ -568,7 +707,52 @@ export function GamePageClient({ slug }: { slug: string }) {
                 </>
               ) : null}
 
-              {infoView === "guide" ? (
+              {infoView === "my-bets" ? (
+                <>
+                  {!sdk?.account ? <ConnectWalletPrompt action="view your room bets" /> : null}
+                  {sdk?.account ? (
+                    <DataTable
+                      columns={recentBetColumns}
+                      data={filteredMyBets}
+                      loading={recentBetsQuery.isLoading}
+                      rowKey={(row) => row.id}
+                      onRowClick={(row) => router.push(`/bets/${row.betId}`)}
+                      emptyMessage={`No ${activityView === "all" ? "" : `${activityView} `}${game.label} bets found for the connected wallet in local indexed history yet.`}
+                    />
+                  ) : null}
+                </>
+              ) : null}
+
+              {infoView === "players" ? (
+                <DataTable
+                  columns={playerColumns}
+                  data={playerRows}
+                  loading={recentBetsQuery.isLoading}
+                  rowKey={(row) => row.player}
+                  emptyMessage={`No indexed ${game.label} players yet. Room participant history will appear once indexed bets arrive.`}
+                />
+              ) : null}
+
+              {infoView === "analytics" ? (
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {[
+                    ["Total indexed bets", String(analytics.total), "Visible room stream"],
+                    ["Unique players", String(analytics.uniquePlayers), "Distinct wallets in local room history"],
+                    ["Settlement rate", `${analytics.settlementRate}%`, "Settled share of indexed room tickets"],
+                    ["Open tickets", String(analytics.open), "Still live, pending, or unresolved"],
+                    ["Refunded", String(analytics.refunded), "Cancelled or refunded tickets"],
+                    ["Updated last hour", String(analytics.recentUpdates), "Recent room motion"],
+                  ].map(([label, value, note]) => (
+                    <div key={label} className="rounded-[1.4rem] border border-white/8 bg-white/[0.04] p-5">
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</div>
+                      <div className="mt-3 text-3xl font-black tracking-tight text-white">{value}</div>
+                      <div className="mt-2 text-sm leading-6 text-slate-400">{note}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
+              {infoView === "details" ? (
                 <div className="space-y-5">
                   <div className="rounded-[1.5rem] border border-white/8 bg-white/[0.04] p-5">
                     <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{presentation.helpLabel}</div>
@@ -586,64 +770,62 @@ export function GamePageClient({ slug }: { slug: string }) {
                       </div>
                     ))}
                   </div>
-                </div>
-              ) : null}
 
-              {infoView === "protocol" ? (
-                <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-                  <div className="rounded-[1.5rem] border border-white/8 bg-white/[0.04] p-5">
-                    <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Release truth</div>
-                    <div className="mt-4 space-y-3 text-sm text-slate-300">
-                      <div className="flex items-start justify-between gap-3">
-                        <span>Game ID</span>
-                        <span className="font-mono text-white">{shortHex(game.gameId)}</span>
-                      </div>
-                      <div className="flex items-start justify-between gap-3">
-                        <span>Params encoding</span>
-                        <span className="font-mono text-white">{game.paramsEncoding ?? "release-defined"}</span>
-                      </div>
-                      <div className="flex items-start justify-between gap-3">
-                        <span>Assets</span>
-                        <span className="text-white">{(release.assets ?? []).map((asset) => asset.symbol).join(", ") || "—"}</span>
-                      </div>
-                      <div className="flex items-start justify-between gap-3">
-                        <span>Module</span>
-                        <span className="font-mono text-white">{shortHex(game.module)}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-4">
+                  <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
                     <div className="rounded-[1.5rem] border border-white/8 bg-white/[0.04] p-5">
-                      <div className="flex items-center gap-3">
-                        <ArbiGameFiMark accent="cyan" className="h-11 w-11 rounded-[1rem]" />
-                        <div>
-                          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Explorer</div>
-                          <div className="text-sm font-semibold text-white">Module route</div>
+                      <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Release truth</div>
+                      <div className="mt-4 space-y-3 text-sm text-slate-300">
+                        <div className="flex items-start justify-between gap-3">
+                          <span>Game ID</span>
+                          <span className="font-mono text-white">{shortHex(game.gameId)}</span>
+                        </div>
+                        <div className="flex items-start justify-between gap-3">
+                          <span>Params encoding</span>
+                          <span className="font-mono text-white">{game.paramsEncoding ?? "release-defined"}</span>
+                        </div>
+                        <div className="flex items-start justify-between gap-3">
+                          <span>Assets</span>
+                          <span className="text-white">{(release.assets ?? []).map((asset) => asset.symbol).join(", ") || "—"}</span>
+                        </div>
+                        <div className="flex items-start justify-between gap-3">
+                          <span>Module</span>
+                          <span className="font-mono text-white">{shortHex(game.module)}</span>
                         </div>
                       </div>
-                      <div className="mt-4 space-y-3 text-sm text-slate-300">
-                        <div>Chain {chainId}</div>
-                        {explorerModuleUrl ? (
-                          <a
-                            href={explorerModuleUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center rounded-full border border-cyan-300/25 bg-cyan-300/10 px-4 py-2 font-semibold text-cyan-100"
-                          >
-                            View module
-                          </a>
-                        ) : (
-                          <div className="text-slate-500">Explorer unavailable for this chain.</div>
-                        )}
-                      </div>
                     </div>
 
-                    <div className="rounded-[1.5rem] border border-white/8 bg-white/[0.04] p-5">
-                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Room note</div>
-                      <p className="mt-3 text-sm leading-6 text-slate-300">
-                        The room stays product-first above the fold. Facts, module routes, and explorer links stay here when you need them.
-                      </p>
+                    <div className="space-y-4">
+                      <div className="rounded-[1.5rem] border border-white/8 bg-white/[0.04] p-5">
+                        <div className="flex items-center gap-3">
+                          <ArbiGameFiMark accent="cyan" className="h-11 w-11 rounded-[1rem]" />
+                          <div>
+                            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Explorer</div>
+                            <div className="text-sm font-semibold text-white">Module route</div>
+                          </div>
+                        </div>
+                        <div className="mt-4 space-y-3 text-sm text-slate-300">
+                          <div>Chain {chainId}</div>
+                          {explorerModuleUrl ? (
+                            <a
+                              href={explorerModuleUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center rounded-full border border-cyan-300/25 bg-cyan-300/10 px-4 py-2 font-semibold text-cyan-100"
+                            >
+                              View module
+                            </a>
+                          ) : (
+                            <div className="text-slate-500">Explorer unavailable for this chain.</div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="rounded-[1.5rem] border border-white/8 bg-white/[0.04] p-5">
+                        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Room note</div>
+                        <p className="mt-3 text-sm leading-6 text-slate-300">
+                          The room stays product-first above the fold. Facts, module routes, and explorer links stay here when you need them.
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>

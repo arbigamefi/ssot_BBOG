@@ -9,6 +9,7 @@ Companion execution document:
 - `docs/frontend/MESSAGING-COPY-PACK-2026-03.md`
 - `docs/frontend/LOGO-CONCEPT-SHEET-2026-03.md`
 - `docs/frontend/LANDING-COPY-DRAFT-2026-03.md`
+- `docs/frontend/BETSWIRL-GAP-ANALYSIS-2026-03.md`
 - `docs/frontend/UI-UX-DESIGN-BRIEF-2026-03.md`
 - `docs/frontend/UI-UX-ARCHITECTURE-PACK-2026-03.md`
 - `docs/frontend/UI-UX-DIRECTION-BOARD-2026-03.md`
