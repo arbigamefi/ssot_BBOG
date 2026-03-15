@@ -1,200 +1,410 @@
 import React from "react";
 
+const featuredRooms = [
+  {
+    title: "Precision Dice",
+    tag: "Fast play",
+    promise: "Call the cap and size the ticket in seconds.",
+    cue: "Instant under / over flow",
+  },
+  {
+    title: "Coin Toss",
+    tag: "Binary",
+    promise: "Fast two-sided action with a clean slip flow.",
+    cue: "Heads or tails, one tight ticket",
+  },
+  {
+    title: "Keno",
+    tag: "Board pick",
+    promise: "Pick the board, then let the room handle the rest.",
+    cue: "Multi-pick board play",
+  },
+];
+
+const trustPillars = [
+  {
+    title: "Wallet-native flow",
+    description: "Tickets start from your wallet and stay explicit through the signing path.",
+  },
+  {
+    title: "Readable settlement",
+    description: "Follow outcomes, receipts, and post-bet actions without dropping into operator mode.",
+  },
+  {
+    title: "Visible room truth",
+    description: "Keep the trust layer close when you need it, without letting it take over the first fold.",
+  },
+];
+
+const liveProof = [
+  { label: "Recent activity", value: "Roulette settled 18 seconds ago" },
+  { label: "Room count", value: "4 release-backed rooms live" },
+  { label: "Sync state", value: "Settlement path healthy" },
+];
+
+const roulettePreviewRows = [
+  ["3", "6", "9", "12", "15", "18", "21", "24", "27", "30", "33", "36"],
+  ["2", "5", "8", "11", "14", "17", "20", "23", "26", "29", "32", "35"],
+  ["1", "4", "7", "10", "13", "16", "19", "22", "25", "28", "31", "34"],
+];
+
+const redNumbers = new Set(["1", "3", "5", "7", "9", "12", "14", "16", "18", "19", "21", "23", "25", "27", "30", "32", "34", "36"]);
+
 export default function HomeLandingPrototype() {
   return (
-    <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-blue-500/30 overflow-x-hidden">
-      {/* Background Glows */}
-      <div className="fixed top-[-20%] left-[-10%] w-[50vw] h-[50vw] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="fixed top-[20%] right-[-10%] w-[40vw] h-[40vw] bg-purple-600/10 rounded-full blur-[120px] pointer-events-none" />
+    <div className="min-h-screen overflow-x-hidden bg-[#050505] font-sans text-white selection:bg-blue-500/30">
+      <div className="fixed left-[-10%] top-[-20%] h-[50vw] w-[50vw] rounded-full bg-blue-600/8 blur-[120px] pointer-events-none" />
+      <div className="fixed right-[-10%] top-[20%] h-[40vw] w-[40vw] rounded-full bg-fuchsia-600/8 blur-[120px] pointer-events-none" />
 
-      {/* 1. Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-[#050505]/80 backdrop-blur-md">
-        <div className="max-w-[1280px] mx-auto px-6 h-20 flex items-center justify-between">
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-white/6 bg-[#050505]/80 backdrop-blur-md">
+        <div className="mx-auto flex h-20 max-w-[1280px] items-center justify-between px-6">
           <div className="flex items-center gap-12">
             <div className="text-xl font-bold tracking-tight">ArbiGameFi</div>
-            <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-white/60">
-              <a href="#" className="hover:text-white transition-colors">Rooms</a>
-              <a href="#" className="hover:text-white transition-colors">Liquidity</a>
+            <nav className="hidden items-center gap-6 text-sm font-medium text-white/60 md:flex">
+              <a href="#" className="transition-colors hover:text-white">Rooms</a>
+              <a href="#" className="transition-colors hover:text-white">Liquidity</a>
             </nav>
           </div>
           <div className="flex items-center gap-4">
-            <button className="hidden md:flex text-sm font-medium text-white/60 hover:text-white px-4 py-2 transition-colors">
+            <button className="hidden px-4 py-2 text-sm font-medium text-white/60 transition-colors hover:text-white md:flex">
               Connect Wallet
             </button>
-            <button className="bg-white text-black px-5 py-2.5 rounded-full font-medium text-sm hover:bg-white/90 transition-colors">
-              Start Playing
+            <button className="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90">
+              Open Rooms
             </button>
           </div>
         </div>
       </header>
 
-      <main className="pt-32 pb-24 max-w-[1280px] mx-auto px-6">
-
-        {/* 2. Hero Section */}
-        <section className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 min-h-[70vh] items-center mb-24">
-          <div className="lg:col-span-6 flex flex-col gap-8">
+      <main className="mx-auto max-w-[1280px] px-6 pb-24 pt-32">
+        <section className="mb-16 grid grid-cols-1 items-start gap-10 pt-4 lg:grid-cols-12 lg:gap-12">
+          <div className="flex flex-col gap-7 lg:col-span-6 lg:pt-6">
             <div className="flex flex-col gap-6">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 w-fit">
-                <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                <span className="text-xs font-semibold tracking-wide text-white/80 uppercase">Arbitrum Native</span>
+              <div className="inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1">
+                <span className="h-2 w-2 rounded-full bg-blue-500" />
+                <span className="text-xs font-semibold uppercase tracking-wide text-white/80">
+                  Wallet-native game rooms
+                </span>
               </div>
-              <h1 className="text-5xl lg:text-7xl font-bold tracking-tight leading-[1.1]">
-                Provably Fair.<br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">
-                  Instant Settlement.
+              <h1 className="text-5xl font-bold leading-[1.05] tracking-tight lg:text-7xl">
+                Play on-chain
+                <br />
+                <span className="bg-gradient-to-r from-blue-400 to-fuchsia-500 bg-clip-text text-transparent">
+                  without losing the room feel.
                 </span>
               </h1>
-              <p className="text-lg text-white/60 max-w-md leading-relaxed">
-                Experience the next generation of on-chain gaming. Non-custodial, mathematically sound, and settled at the speed of Arbitrum.
+              <p className="max-w-xl text-lg leading-relaxed text-white/60">
+                Choose a room, place a ticket, and follow settlement through transparent rails built
+                for readable trust.
               </p>
             </div>
 
-            <div className="flex items-center gap-4">
-              <button className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-full font-semibold transition-all shadow-[0_0_20px_rgba(37,99,235,0.3)]">
-                Start Playing
+            <div className="flex flex-wrap items-center gap-4">
+              <button className="rounded-full bg-blue-600 px-8 py-4 font-semibold text-white shadow-[0_0_20px_rgba(37,99,235,0.3)] transition-all hover:bg-blue-500">
+                Open Rooms
               </button>
-              <button className="px-8 py-4 rounded-full font-semibold text-white/80 hover:text-white hover:bg-white/5 transition-all border border-white/10">
-                Explore Rooms
+              <button className="rounded-full border border-white/10 px-8 py-4 font-semibold text-white/80 transition-all hover:bg-white/5 hover:text-white">
+                How It Works
               </button>
             </div>
 
-            <div className="flex items-center gap-6 text-sm font-medium text-white/40 pt-4">
-              <div className="flex items-center gap-2">✓ Non-custodial</div>
-              <div className="flex items-center gap-2">✓ On-chain settlement</div>
-              <div className="flex items-center gap-2">✓ Provable math</div>
+            <div className="flex flex-wrap items-center gap-4 pt-1 text-sm font-medium text-white/45">
+              <div className="flex items-center gap-2">✓ Wallet-native actions</div>
+              <div className="flex items-center gap-2">✓ Readable settlement path</div>
+              <div className="flex items-center gap-2">✓ Auditable room activity</div>
             </div>
-          </div>
 
-          <div className="lg:col-span-6 relative aspect-square lg:aspect-auto lg:h-[600px] flex items-center justify-center">
-            {/* Abstract Visual Block */}
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-[2.5rem] border border-white/10 overflow-hidden group">
-              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20 mix-blend-overlay" />
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/4 h-3/4 bg-[#0a0a0a] rounded-[2rem] border border-white/10 shadow-2xl flex flex-col items-center justify-center gap-6 p-8 transition-transform duration-500 group-hover:scale-105">
-                <div className="w-24 h-24 rounded-full border-4 border-blue-500 border-t-transparent animate-spin" />
-                <div className="text-center">
-                  <div className="text-2xl font-bold">Roulette Pro</div>
-                  <div className="text-blue-400 mt-2 font-mono">0x...8F2A • ACTIVE</div>
+            <div className="grid max-w-2xl gap-4 lg:grid-cols-[1.35fr_0.65fr]">
+              <div className="rounded-[1.6rem] border border-white/8 bg-white/[0.03] p-5">
+                <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/35">
+                  Room entry
+                </div>
+                <div className="mt-4 grid grid-cols-3 gap-3">
+                  {[
+                    { label: "01", title: "Choose room" },
+                    { label: "02", title: "Build ticket" },
+                    { label: "03", title: "Follow result" },
+                  ].map((step) => (
+                    <div
+                      key={step.label}
+                      className="rounded-2xl border border-white/8 bg-black/25 px-3 py-4"
+                    >
+                      <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-blue-300">
+                        {step.label}
+                      </div>
+                      <div className="mt-2 text-sm font-semibold text-white/80">{step.title}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-[1.6rem] border border-white/8 bg-black/25 p-5">
+                <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/35">
+                  Live proof
+                </div>
+                <div className="mt-4 space-y-3">
+                  <div>
+                    <div className="text-xs font-bold uppercase tracking-[0.22em] text-white/35">
+                      Recent room
+                    </div>
+                    <div className="mt-1 text-sm font-medium text-white/80">
+                      Roulette settled 18 seconds ago
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold uppercase tracking-[0.22em] text-white/35">
+                      Live count
+                    </div>
+                    <div className="mt-1 text-sm font-medium text-white/80">4 live tables</div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </section>
 
-        {/* 3. Proof Ribbon */}
-        <section className="py-8 border-y border-white/10 flex flex-wrap lg:flex-nowrap items-center justify-between gap-8 mb-32">
-          {[
-            { label: "Live Rooms", value: "24" },
-            { label: "24h Volume", value: "$1.2M+" },
-            { label: "Custody", value: "0% User Funds" },
-            { label: "Settlement", value: "Instant" }
-          ].map((stat, i) => (
-            <div key={i} className="flex flex-col gap-1 w-[45%] lg:w-auto">
-              <div className="text-white/50 text-xs font-semibold uppercase tracking-wider">{stat.label}</div>
-              <div className="text-2xl font-bold tracking-tight">{stat.value}</div>
+          <div className="relative flex aspect-square items-center justify-center lg:col-span-6 lg:h-[560px] lg:aspect-auto">
+            <div className="absolute inset-0 rounded-[2.5rem] border border-white/10 bg-gradient-to-br from-blue-500/12 via-fuchsia-500/8 to-white/4" />
+            <div className="relative flex h-[88%] w-[88%] flex-col rounded-[2rem] border border-white/10 bg-[#090909] p-6 shadow-2xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.24em] text-blue-300">
+                    Featured room
+                  </span>
+                  <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.24em] text-emerald-300">
+                    Live room
+                  </span>
+                </div>
+                <span className="text-xs font-mono text-white/35">European roulette</span>
+              </div>
+
+              <div className="mt-6 flex items-start justify-between gap-4">
+                <div className="max-w-[320px]">
+                  <h2 className="text-3xl font-bold tracking-tight">European roulette</h2>
+                  <p className="mt-3 text-sm leading-6 text-white/55">
+                    Standard European table layout with a compact ticket rail and readable settlement.
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-right">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/40">
+                    Room pulse
+                  </div>
+                  <div className="mt-2 text-xl font-bold text-white">Straight 17</div>
+                  <div className="mt-1 text-xs text-white/45">Waiting for settlement</div>
+                </div>
+              </div>
+
+              <div className="mt-6 grid flex-1 grid-cols-[72px_minmax(0,1fr)] gap-3 rounded-[1.5rem] border border-white/8 bg-black/30 p-4">
+                <div className="flex items-stretch">
+                  <div className="flex min-h-[260px] w-full items-center justify-center rounded-[1.2rem] bg-emerald-500 text-3xl font-bold text-white shadow-[0_0_24px_rgba(16,185,129,0.28)]">
+                    0
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {roulettePreviewRows.map((row, rowIndex) => (
+                    <div key={rowIndex} className="grid grid-cols-12 gap-2">
+                      {row.map((number) => (
+                        <div
+                          key={number}
+                          className={[
+                            "flex h-14 items-center justify-center rounded-xl border text-lg font-bold",
+                            redNumbers.has(number)
+                              ? "border-rose-400/20 bg-rose-500 text-white"
+                              : "border-white/10 bg-[#161616] text-white",
+                          ].join(" ")}
+                        >
+                          {number}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    {["1 to 12", "13 to 24", "25 to 36"].map((label) => (
+                      <div key={label} className="flex h-12 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-sm font-semibold text-white/80">
+                        {label}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-5 flex items-center justify-between rounded-2xl border border-white/8 bg-white/[0.03] px-5 py-4">
+                <div>
+                  <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/35">
+                    Room entry
+                  </div>
+                  <div className="mt-2 text-sm text-white/70">
+                    Enter the room, build the ticket, then follow the result through the same surface.
+                  </div>
+                </div>
+                <button className="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90">
+                  Enter Room
+                </button>
+              </div>
             </div>
-          ))}
+          </div>
         </section>
 
-        {/* 4. Featured Rooms */}
-        <section className="mb-32">
-          <div className="flex items-baseline justify-between mb-12">
-            <h2 className="text-3xl font-bold tracking-tight">Featured Rooms</h2>
-            <a href="#" className="hidden sm:block text-blue-400 font-medium hover:text-blue-300 transition-colors">View All Directory →</a>
+        <section className="mb-24">
+          <div className="mb-12 flex items-baseline justify-between gap-6">
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-[0.24em] text-white/35">Featured Rooms</div>
+              <h2 className="mt-3 text-3xl font-bold tracking-tight">Choose a room and get straight to the table.</h2>
+              <p className="mt-3 max-w-2xl text-white/50">
+                Each room is designed to make the game legible first, while keeping the trust layer close when you need it.
+              </p>
+            </div>
+            <a href="#" className="hidden text-blue-400 font-medium transition-colors hover:text-blue-300 sm:block">
+              View All Directory →
+            </a>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Primary Large Card */}
-            <div className="lg:col-span-2 group relative rounded-3xl overflow-hidden border border-white/10 bg-white/5 hover:bg-white/10 transition-colors flex flex-col justify-end p-8 min-h-[400px]">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/20 blur-[80px] -z-10 group-hover:bg-blue-500/30 transition-colors" />
-              <div className="absolute top-6 left-6 px-3 py-1 bg-black/50 backdrop-blur-md rounded-full text-xs font-semibold uppercase tracking-wider text-blue-400 border border-white/10">
-                Classic Table
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.4fr_0.6fr]">
+            <div className="group relative flex min-h-[400px] flex-col justify-between overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.04] p-8">
+              <div className="absolute right-0 top-0 h-72 w-72 bg-blue-500/18 blur-[90px] transition-colors group-hover:bg-blue-500/26" />
+              <div className="relative flex items-start justify-between gap-4">
+                <div className="rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.24em] text-blue-300">
+                  Flagship table
+                </div>
+                <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.22em] text-white/45">
+                  Enter room
+                </div>
               </div>
-              <div className="mt-auto max-w-md">
-                <h3 className="text-3xl font-bold mb-2">European Roulette</h3>
-                <p className="text-white/60 mb-6 line-clamp-2">The flagship table experience. Fully verifiable random numbers with traditional inside and outside betting structures.</p>
-                <button className="bg-white text-black px-6 py-3 rounded-full font-medium text-sm hover:bg-white/90 transition-colors">
+              <div className="relative max-w-xl">
+                <h3 className="text-4xl font-bold tracking-tight">European Roulette</h3>
+                <p className="mt-3 max-w-md text-white/55">
+                  Standard European table layout with a cleaner ticket review and a more readable settlement path.
+                </p>
+                <div className="mt-6 flex flex-wrap gap-3 text-sm text-white/65">
+                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">Classic table</span>
+                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">Standard European board</span>
+                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">Compact ticket rail</span>
+                </div>
+              </div>
+              <div className="relative flex items-center justify-between gap-4">
+                <div className="text-sm text-white/50">
+                  One room. One ticket. One readable settlement path.
+                </div>
+                <button className="rounded-full bg-white px-6 py-3 text-sm font-semibold text-black transition-colors hover:bg-white/90">
                   Enter Room
                 </button>
               </div>
             </div>
 
-            {/* Smaller Support Cards */}
-            <div className="flex flex-col gap-6">
-              {[
-                { name: "Precision Dice", type: "Fast Play", desc: "Roll over or under with instant sub-second settlement." },
-                { name: "Coin Toss", type: "Binary", desc: "Pure 50/50 action. Set your stake and flip." }
-              ].map((room, i) => (
-                <div key={i} className="group relative rounded-3xl border border-white/10 bg-white/5 hover:bg-white/[0.07] transition-colors p-6 flex flex-col flex-1 h-[190px]">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 blur-[40px] -z-10 group-hover:bg-purple-500/20 transition-colors" />
-                  <div className="inline-block px-2 py-0.5 bg-white/5 rounded text-[10px] font-semibold uppercase tracking-wider text-white/50 mb-3 w-fit">{room.type}</div>
-                  <h3 className="text-xl font-bold mb-1">{room.name}</h3>
-                  <p className="text-white/50 text-sm mb-4 line-clamp-2">{room.desc}</p>
-                  <div className="mt-auto text-blue-400 font-medium text-sm group-hover:translate-x-1 transition-transform">Play Now →</div>
+            <div className="grid grid-cols-1 gap-6">
+              {featuredRooms.map((room) => (
+                <div key={room.title} className="group flex min-h-[180px] flex-col rounded-[1.6rem] border border-white/10 bg-white/[0.03] p-6 transition-colors hover:bg-white/[0.05]">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.22em] text-white/45">
+                      {room.tag}
+                    </div>
+                    <div className="text-xs font-medium text-blue-400 transition-transform group-hover:translate-x-1">Enter →</div>
+                  </div>
+                  <h3 className="mt-4 text-xl font-bold">{room.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-white/55">{room.promise}</p>
+                  <div className="mt-auto pt-5 text-sm text-white/40">{room.cue}</div>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* 5. How It Works */}
-        <section className="mb-32">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold tracking-tight mb-4">How it Works</h2>
-            <p className="text-white/50 max-w-xl mx-auto">Skip the deposits. Play directly from your wallet with zero counterparty risk.</p>
+        <section className="mb-28">
+          <div className="mb-14 text-center">
+            <div className="text-[10px] font-bold uppercase tracking-[0.24em] text-white/35">How it works</div>
+            <h2 className="mt-3 text-3xl font-bold tracking-tight">Three moves from room entry to settlement.</h2>
+            <p className="mx-auto mt-3 max-w-xl text-white/50">
+              Skip the deposit-heavy flow. Choose a room, build the ticket, and follow the result through a visible product path.
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
-            <div className="hidden md:block absolute top-[28%] left-[10%] right-[10%] h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent -z-10" />
+          <div className="relative grid grid-cols-1 gap-8 md:grid-cols-3">
+            <div className="pointer-events-none absolute left-[10%] right-[10%] top-[28%] hidden h-px bg-gradient-to-r from-transparent via-white/10 to-transparent md:block" />
             {[
-              { num: "01", title: "Choose a Room", desc: "Pick your game style. From classic tables to fast binary plays." },
-              { num: "02", title: "Set Your Ticket", desc: "Place your chips entirely on-chain without trusting a house." },
-              { num: "03", title: "Settle On-Chain", desc: "Instant transparent payouts straight to your wallet." }
-            ].map((step, i) => (
-              <div key={i} className="flex flex-col items-center text-center">
-                <div className="w-16 h-16 rounded-2xl bg-[#0a0a0a] border border-white/10 flex items-center justify-center text-xl font-mono font-bold text-blue-400 mb-6 shadow-xl">
+              {
+                num: "01",
+                title: "Pick a room",
+                desc: "Start with the room that matches the pace and risk surface you want.",
+              },
+              {
+                num: "02",
+                title: "Build the ticket",
+                desc: "Choose the outcome, set the stake, and review the live ticket before signing.",
+              },
+              {
+                num: "03",
+                title: "Follow settlement",
+                desc: "Track status, result, and follow-up actions through visible product surfaces.",
+              },
+            ].map((step) => (
+              <div key={step.num} className="flex flex-col items-center text-center">
+                <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-[#0a0a0a] text-xl font-mono font-bold text-blue-400 shadow-xl">
                   {step.num}
                 </div>
-                <h3 className="text-xl font-semibold mb-3">{step.title}</h3>
-                <p className="text-white/50 text-sm leading-relaxed max-w-[250px]">{step.desc}</p>
+                <h3 className="mb-3 text-xl font-semibold">{step.title}</h3>
+                <p className="max-w-[250px] text-sm leading-relaxed text-white/50">{step.desc}</p>
               </div>
             ))}
           </div>
         </section>
 
-        {/* 6. Why Trust This */}
-        <section className="mb-32">
-          <div className="rounded-[2.5rem] bg-white/[0.02] border border-white/5 p-12 lg:p-16">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-              <div className="lg:col-span-4 flex flex-col justify-center">
-                <h2 className="text-3xl font-bold tracking-tight mb-4">Built on Proof,<br />Not Promises.</h2>
-                <p className="text-white/50">Our architecture removes the need to trust us. Verify everything on Arbitrum.</p>
-              </div>
-              <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-3 gap-8">
-                {[
-                  { icon: "🛡️", title: "Self Custody", desc: "Your keys, your chips. Never deposit into a centralized hot wallet again." },
-                  { icon: "⚡", title: "Smart Settlement", desc: "Immutable smart contracts guarantee deterministic payout execution." },
-                  { icon: "📜", title: "Room Truth", desc: "Every spin, flip, and roll is cryptographically verifiable." }
-                ].map((pillar, i) => (
-                  <div key={i} className="flex flex-col gap-4">
-                    <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-xl border border-white/10">{pillar.icon}</div>
-                    <h3 className="text-lg font-semibold">{pillar.title}</h3>
-                    <p className="text-sm text-white/50 leading-relaxed">{pillar.desc}</p>
+        <section className="mb-28 rounded-[2.5rem] border border-white/6 bg-white/[0.02] p-12 lg:p-16">
+          <div className="grid grid-cols-1 gap-12 lg:grid-cols-12">
+            <div className="flex flex-col justify-center lg:col-span-4">
+              <div className="text-[10px] font-bold uppercase tracking-[0.24em] text-white/35">Why trust it</div>
+              <h2 className="mt-3 text-3xl font-bold tracking-tight">The trust layer stays close, not in your way.</h2>
+              <p className="mt-4 text-white/50">
+                The first fold should stay playable. The trust layer becomes visible exactly when the player wants to inspect the path.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 gap-8 sm:grid-cols-3 lg:col-span-8">
+              {trustPillars.map((pillar) => (
+                <div key={pillar.title} className="flex flex-col gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/5 text-lg">
+                    ●
                   </div>
-                ))}
-              </div>
+                  <h3 className="text-lg font-semibold">{pillar.title}</h3>
+                  <p className="text-sm leading-relaxed text-white/50">{pillar.description}</p>
+                </div>
+              ))}
             </div>
           </div>
         </section>
 
-        {/* 7. Final CTA */}
-        <section className="relative rounded-[2.5rem] overflow-hidden bg-blue-600/10 border border-blue-500/20 flex flex-col items-center justify-center py-24 px-6 text-center">
-          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay" />
-          <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-8">Ready to enter the rooms?</h2>
-          <button className="bg-white text-black px-10 py-5 rounded-full font-bold text-lg hover:bg-white/90 transition-all shadow-[0_0_40px_rgba(255,255,255,0.2)]">
-            Start Playing Now
-          </button>
+        <section className="mb-24 grid grid-cols-1 gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="rounded-[2rem] border border-white/8 bg-white/[0.03] p-8">
+            <div className="text-[10px] font-bold uppercase tracking-[0.24em] text-white/35">Live proof</div>
+            <h2 className="mt-3 text-3xl font-bold tracking-tight">See what is happening without dropping into operator mode.</h2>
+            <p className="mt-3 max-w-2xl text-white/50">
+              Use a light proof layer on the landing page, then move into Bets, Liquidity, or Account when you want the full record.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 gap-4">
+            {liveProof.map((item) => (
+              <div key={item.label} className="rounded-[1.4rem] border border-white/8 bg-black/25 px-5 py-5">
+                <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/35">{item.label}</div>
+                <div className="mt-3 text-base font-medium text-white/80">{item.value}</div>
+              </div>
+            ))}
+          </div>
         </section>
 
+        <section className="relative overflow-hidden rounded-[2.5rem] border border-blue-500/20 bg-blue-600/10 px-6 py-24 text-center">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-transparent to-fuchsia-500/10" />
+          <div className="relative mx-auto max-w-3xl">
+            <h2 className="text-4xl font-bold tracking-tight md:text-5xl">Ready to step into a room?</h2>
+            <p className="mx-auto mt-4 max-w-xl text-white/55">
+              Start with the directory, choose the room that fits your style, and keep the trust layer available when you need it.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+              <button className="rounded-full bg-white px-10 py-5 text-lg font-bold text-black shadow-[0_0_40px_rgba(255,255,255,0.2)] transition-all hover:bg-white/90">
+                Open Rooms
+              </button>
+              <button className="rounded-full border border-white/12 px-8 py-4 font-semibold text-white/80 transition-all hover:bg-white/5 hover:text-white">
+                View Liquidity
+              </button>
+            </div>
+          </div>
+        </section>
       </main>
     </div>
   );

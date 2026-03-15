@@ -17,6 +17,7 @@ Companion execution document:
 - `docs/frontend/UI-UX-HIGH-FIDELITY-CORE-ROUTES-2026-03.md`
 - `docs/frontend/PROTOTYPE-FREEZE-CHECKLIST-2026-03.md`
 - `docs/frontend/PROTOTYPE-FREEZE-REVIEW-2026-03.md`
+- `docs/frontend/PROTOTYPE-IMPROVEMENT-MATRIX-2026-03.md`
 - `docs/frontend/SCREEN-SPECS/README.md`
 
 ## Gate-0 — Interface Freeze (Docs)
