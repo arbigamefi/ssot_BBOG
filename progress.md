@@ -284,3 +284,13 @@ Original prompt: Continue the frontend route review execution by simplifying the
   - left short bet slip
   - right under/over play surface with visible cap lane
   - lower `All Bets / My Bets / Players / Analytics / Game Details` data layer
+
+- 2026-03-15: Added v2 prototype coverage for Claims and Ops, plus a freeze checklist for implementation handoff.
+  - New prototype routes: `frontend/apps/web/src/app/prototype/ui-ux-v2-claims/page.tsx`, `frontend/apps/web/src/app/prototype/ui-ux-v2-ops/page.tsx`
+  - New checklist: `frontend/docs/frontend/PROTOTYPE-FREEZE-CHECKLIST-2026-03.md`
+  - Direction: finish prototype freeze before further formal UI implementation.
+
+- 2026-03-15: Ran a prototype freeze review and aligned trust-route v2 prototypes on one shared nav grammar.
+  - Trust header now consistently uses `Games / Bets / Liquidity / Claims / Affiliates / Account / Ops`
+  - New review doc: `frontend/docs/frontend/PROTOTYPE-FREEZE-REVIEW-2026-03.md`
+  - Updated `frontend/docs/frontend/ROADMAP.md` and `frontend/docs/frontend/PROTOTYPE-FREEZE-CHECKLIST-2026-03.md` to reflect the new baseline

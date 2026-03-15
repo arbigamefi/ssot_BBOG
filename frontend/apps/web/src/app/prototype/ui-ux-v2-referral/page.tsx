@@ -14,9 +14,12 @@ export default function ReferralPrototype() {
           <ShellHeaderBrand name="ArbiGameFi" />
           <ShellHeaderNav>
              <Link href="/prototype/ui-ux-v2-directory" className="hover:text-white transition-colors">Games</Link>
+             <Link href="/prototype/ui-ux-v2-bets" className="hover:text-white transition-colors">Bets</Link>
              <Link href="/prototype/ui-ux-v2-liquidity" className="hover:text-white transition-colors">Liquidity</Link>
+             <Link href="/prototype/ui-ux-v2-claims" className="hover:text-white transition-colors">Claims</Link>
              <Link href="/prototype/ui-ux-v2-referral" className="text-white hover:text-white transition-colors border-b-2 border-white pb-1">Affiliates</Link>
              <Link href="/prototype/ui-ux-v2-account" className="hover:text-white transition-colors">Account</Link>
+             <Link href="/prototype/ui-ux-v2-ops" className="hover:text-white transition-colors">Ops</Link>
           </ShellHeaderNav>
         </div>
         <ShellHeaderActions>
