@@ -13,6 +13,7 @@ import {
   CardHeader,
   CardTitle,
   ErrorCallout,
+  GlassCard,
   Input,
   Label,
   PageHeader,
@@ -272,202 +273,236 @@ export function ClaimsPageClient() {
 
   return (
     <PageTransition pageKey="claims">
-      <PageHeader
-        title="Claims"
-        description="Claim XP, sync holdback, and execute governed fee withdrawals with a standardized transaction trace."
-        actions={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => void fetchXPBuckets()}
-            disabled={xpLoading || !hasWallet}
-            className="border-slate-700 text-slate-300"
-          >
-            {xpLoading ? "Refreshing…" : "Refresh"}
-          </Button>
-        }
-      />
-
-      {!hasWallet ? (
-        <div className="mb-8">
-          <ConnectWalletPrompt action="view XP buckets" />
+      <main className="max-w-[1440px] mx-auto px-6 py-12 md:py-16">
+        
+        <div className="mb-12">
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">Claims & Rewards</h1>
+          <p className="text-white/50 text-lg">Manage your accrued XP, sync holdback, and execute governed protocol fee withdrawals.</p>
         </div>
-      ) : xpError ? (
-        <div className="mb-8">
-          <ErrorCallout title="XP load error" message={xpError} />
+
+        {/* Dashboard Stats */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
+           <GlassCard padding="lg" glowColor="bg-amber-500/10" className="border-amber-500/20 shadow-xl shadow-amber-900/5">
+              <div className="flex flex-col gap-1">
+                 <span className="text-amber-400/60 text-[10px] font-bold uppercase tracking-widest">Accrued (Claimable)</span>
+                 <span className="text-2xl font-mono font-bold text-white">
+                   {xpBuckets ? formatUnits(xpBuckets.accrued, decimals) : "—"}
+                 </span>
+                 <span className="text-[10px] text-white/30 truncate">{sym} in play bucket</span>
+              </div>
+           </GlassCard>
+           
+           <GlassCard padding="lg" glowColor="bg-blue-500/10" className="border-white/10">
+              <div className="flex flex-col gap-1">
+                 <span className="text-white/40 text-[10px] font-bold uppercase tracking-widest">Locked (Vesting)</span>
+                 <span className="text-2xl font-mono font-bold text-white">
+                   {xpBuckets ? formatUnits(xpBuckets.locked, decimals) : "—"}
+                 </span>
+                 <span className="text-[10px] text-white/30 truncate">Vesting schedule active</span>
+              </div>
+           </GlassCard>
+
+           <GlassCard padding="lg" glowColor="bg-white/5" className="border-white/10">
+              <div className="flex flex-col gap-1">
+                 <span className="text-white/40 text-[10px] font-bold uppercase tracking-widest">Holdback</span>
+                 <span className="text-2xl font-mono font-bold text-white">
+                   {xpBuckets ? formatUnits(xpBuckets.holdback, decimals) : "—"}
+                 </span>
+                 <span className="text-[10px] text-white/30 truncate">Settlement buffer</span>
+              </div>
+           </GlassCard>
+
+           <GlassCard padding="lg" glowColor="bg-cyan-500/10" className="border-cyan-500/10">
+              <div className="flex flex-col gap-1">
+                 <span className="text-cyan-400/60 text-[10px] font-bold uppercase tracking-widest">Holdback Releasable</span>
+                 <span className="text-2xl font-mono font-bold text-white">
+                   {xpBuckets ? formatUnits(xpBuckets.holdbackReleasable, decimals) : "—"}
+                 </span>
+                 <span className="text-[10px] text-white/30 truncate underline cursor-pointer" onClick={() => void handleSyncHoldback()}>Sync to accrued →</span>
+              </div>
+           </GlassCard>
         </div>
-      ) : (
-        <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">
-          <StatCard
-            icon="💰"
-            label="Accrued (Claimable)"
-            value={xpBuckets ? formatUnits(xpBuckets.accrued, decimals) : "—"}
-          />
-          <StatCard
-            icon="🔒"
-            label="Locked (Vesting)"
-            value={xpBuckets ? formatUnits(xpBuckets.locked, decimals) : "—"}
-          />
-          <StatCard
-            icon="⏳"
-            label="Holdback"
-            value={xpBuckets ? formatUnits(xpBuckets.holdback, decimals) : "—"}
-          />
-          <StatCard
-            icon="🔓"
-            label="Holdback Releasable"
-            value={xpBuckets ? formatUnits(xpBuckets.holdbackReleasable, decimals) : "—"}
-          />
+
+        <div className="grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-8">
+           
+           {/* Primary: XP Terminal */}
+           <div className="space-y-6">
+              <GlassCard padding="xl" glowColor="bg-amber-600/10" className="border-amber-500/20 bg-amber-950/5">
+                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-amber-500/10 pb-8 mb-8">
+                    <div>
+                        <h2 className="text-2xl font-bold mb-1">XP Terminal</h2>
+                        <p className="text-amber-200/40 text-sm">Withdraw your accrued rewards directly to your wallet.</p>
+                    </div>
+                    <TxStatusChip status={xpClaimFlow.status} />
+                 </div>
+
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                    <div className="flex flex-col gap-6">
+                       <div className="flex flex-col gap-2">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-amber-500">Amount to Claim ({sym})</label>
+                          <div className="relative group">
+                             <input 
+                               type="text" 
+                               value={xpClaimAmount}
+                               onChange={(e) => setXPClaimAmount(e.target.value)}
+                               placeholder="0.00" 
+                               className="w-full bg-black/40 border-2 border-amber-500/20 rounded-xl px-4 py-4 font-mono text-xl text-white outline-none focus:border-amber-500/40 transition-all placeholder:text-white/10"
+                             />
+                             {xpBuckets && (
+                               <button 
+                                 onClick={() => setXPClaimAmount(formatUnits(xpBuckets.accrued, decimals))}
+                                 className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 px-2 py-1 rounded transition-colors"
+                               >
+                                 Max
+                               </button>
+                             )}
+                          </div>
+                       </div>
+
+                       <Button 
+                         onClick={() => void handleClaimXP()} 
+                         disabled={readOnly || xpClaimFlow.busy || !xpClaimAmount || !hasWallet}
+                         className="w-full bg-amber-500 hover:bg-amber-400 text-black font-black py-4 rounded-xl transition-all active:scale-95 shadow-lg shadow-amber-500/20"
+                       >
+                         {xpClaimFlow.busy ? "Executing Settlement..." : "Claim Accrued XP"}
+                       </Button>
+                    </div>
+
+                    <div className="flex flex-col gap-4">
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-amber-500/60 pb-2 border-b border-amber-500/5">Trace Manifest</div>
+                        <div className="flex flex-col gap-3">
+                           <ActionTrace
+                              title="XP Claim Manifest"
+                              status={xpClaimFlow.status}
+                              steps={xpClaimFlow.steps}
+                              hasActivity={xpClaimFlow.hasActivity}
+                              error={xpClaimFlow.error}
+                              txHash={xpClaimFlow.txHash}
+                              blockNumber={xpClaimFlow.journalEntry?.blockNumber}
+                              explorerBaseUrl={explorerBaseUrl}
+                              onReset={xpClaimFlow.reset}
+                           />
+                        </div>
+                    </div>
+                 </div>
+              </GlassCard>
+
+              {/* Secondary: Sync Holdback */}
+              <GlassCard padding="xl" className="border-white/5 bg-white/[0.01]">
+                 <div className="flex items-center justify-between mb-6">
+                    <div>
+                       <h3 className="text-xl font-bold">Sync Holdback</h3>
+                       <p className="text-white/40 text-sm">Release buffer funds into your accrued claimable bucket.</p>
+                    </div>
+                    <TxStatusChip status={syncHoldbackFlow.status} />
+                 </div>
+                 
+                 <div className="flex flex-wrap items-center gap-6">
+                    <div className="p-4 bg-white/5 rounded-xl border border-white/10 flex flex-col gap-1 min-w-[180px]">
+                       <span className="text-[10px] font-bold uppercase text-white/30">Releasable Buffer</span>
+                       <span className="text-lg font-mono font-bold">{xpBuckets ? formatUnits(xpBuckets.holdbackReleasable, decimals) : "—"} {sym}</span>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => void handleSyncHoldback()} 
+                      disabled={readOnly || syncHoldbackFlow.busy || !hasWallet}
+                      className="border-white/10 hover:bg-white/5 text-white font-bold px-8 h-14 rounded-xl transition-all active:scale-95"
+                    >
+                      {syncHoldbackFlow.busy ? "Syncing..." : "Run Sync Cycle"}
+                    </Button>
+                 </div>
+
+                 {syncHoldbackFlow.hasActivity && (
+                   <div className="mt-8 pt-8 border-t border-white/5">
+                      <ActionTrace
+                         title="Holdback Sync Manifest"
+                         status={syncHoldbackFlow.status}
+                         steps={syncHoldbackFlow.steps}
+                         hasActivity={syncHoldbackFlow.hasActivity}
+                         error={syncHoldbackFlow.error}
+                         txHash={syncHoldbackFlow.txHash}
+                         blockNumber={syncHoldbackFlow.journalEntry?.blockNumber}
+                         explorerBaseUrl={explorerBaseUrl}
+                         onReset={syncHoldbackFlow.reset}
+                      />
+                   </div>
+                 )}
+              </GlassCard>
+           </div>
+
+           {/* Secondary: Protocol Fees (Governed) */}
+           <div className="space-y-6">
+              <GlassCard padding="xl" className="border-white/5 bg-white/[0.01]">
+                 <div className="flex flex-col gap-6">
+                    <div className="flex items-center justify-between">
+                       <h3 className="text-xl font-bold">Governance Claims</h3>
+                       <TxStatusChip status={protocolFeeFlow.status} />
+                    </div>
+                    <p className="text-white/40 text-sm leading-relaxed">
+                       Protocol fees are governed assets. Unauthorized attempts will be rejected by the contract's ACL.
+                    </p>
+
+                    <div className="flex flex-col gap-4">
+                       <div className="flex flex-col gap-2">
+                          <label className="text-[10px] font-bold uppercase tracking-widest text-white/30">Claim Amount ({sym})</label>
+                          <input 
+                            type="text" 
+                            value={pfAmount}
+                            onChange={(e) => setPFAmount(e.target.value)}
+                            placeholder="0.00" 
+                            className="bg-black/40 border border-white/10 rounded-xl px-4 py-3 font-mono text-white outline-none focus:border-white/30 transition-all"
+                          />
+                       </div>
+                       <Button 
+                         onClick={() => void handleClaimPF()} 
+                         disabled={readOnly || protocolFeeFlow.busy || !pfAmount || !hasWallet}
+                         className="bg-white/10 hover:bg-white/20 text-white font-bold py-3 rounded-xl transition-all active:scale-95"
+                       >
+                         {protocolFeeFlow.busy ? "Executing Gov Action..." : "Claim Protocol Fees"}
+                       </Button>
+                    </div>
+
+                    {protocolFeeFlow.hasActivity && (
+                      <div className="mt-4">
+                         <ActionTrace
+                           title="Protocol Fee Manifest"
+                           status={protocolFeeFlow.status}
+                           steps={protocolFeeFlow.steps}
+                           hasActivity={protocolFeeFlow.hasActivity}
+                           error={protocolFeeFlow.error}
+                           txHash={protocolFeeFlow.txHash}
+                           blockNumber={protocolFeeFlow.journalEntry?.blockNumber}
+                           explorerBaseUrl={explorerBaseUrl}
+                           onReset={protocolFeeFlow.reset}
+                         />
+                      </div>
+                    )}
+                 </div>
+              </GlassCard>
+
+              <GlassCard padding="lg" className="border-white/5 bg-white/[0.02]">
+                 <h4 className="text-[10px] font-bold uppercase tracking-widest text-white/30 mb-4">Claim Journal</h4>
+                 <div className="flex flex-col gap-3">
+                    <div className="flex justify-between items-center py-2 border-b border-white/5">
+                       <span className="text-sm text-white/45">Registry Digest</span>
+                       <span className="text-xs font-mono text-white/60">{shortHex(release?.releaseDigest)}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-white/5">
+                       <span className="text-sm text-white/45">Bank Context</span>
+                       <span className="text-xs font-mono text-white/60 underline cursor-pointer">{shortHex(release?.contracts.bankRegistry)}</span>
+                    </div>
+                 </div>
+              </GlassCard>
+           </div>
         </div>
-      )}
 
-      <div className="grid gap-6 xl:grid-cols-3">
-        <Card className="border-slate-800 bg-slate-900/40 backdrop-blur-sm">
-          <CardHeader className="space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <CardTitle className="text-white">Claim Accrued XP</CardTitle>
-              <TxStatusChip status={xpClaimFlow.status} />
-            </div>
-            <CardDescription className="text-slate-400">
-              {readOnly
-                ? "Read-only mode is active, so claims are disabled."
-                : "Withdraw accrued XP to your wallet through the standard transaction flow."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="xp-amount" className="text-slate-300">
-                Amount
-              </Label>
-              <Input
-                id="xp-amount"
-                inputMode="decimal"
-                placeholder="0.00"
-                value={xpClaimAmount}
-                onChange={(e) => setXPClaimAmount(e.target.value)}
-                disabled={readOnly || !hasWallet || xpClaimFlow.busy}
-                className="border-slate-700 bg-slate-800/50 text-white"
-              />
-              {xpBuckets ? (
-                <button
-                  type="button"
-                  className="text-xs text-emerald-400 hover:underline"
-                  onClick={() => setXPClaimAmount(formatUnits(xpBuckets.accrued, decimals))}
-                >
-                  Max: {formatUnits(xpBuckets.accrued, decimals)}
-                </button>
-              ) : null}
-            </div>
-
-            <Button
-              onClick={() => void handleClaimXP()}
-              disabled={readOnly || xpClaimFlow.busy || !xpClaimAmount || !hasWallet}
-            >
-              {xpClaimFlow.busy ? "Running…" : "Claim XP"}
-            </Button>
-
-            <ActionTrace
-              title="XP Claim Trace"
-              status={xpClaimFlow.status}
-              steps={xpClaimFlow.steps}
-              hasActivity={xpClaimFlow.hasActivity}
-              error={xpClaimFlow.error}
-              txHash={xpClaimFlow.txHash}
-              blockNumber={xpClaimFlow.journalEntry?.blockNumber}
-              explorerBaseUrl={explorerBaseUrl}
-              onReset={xpClaimFlow.reset}
-            />
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-800 bg-slate-900/40 backdrop-blur-sm">
-          <CardHeader className="space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <CardTitle className="text-white">Sync Holdback</CardTitle>
-              <TxStatusChip status={syncHoldbackFlow.status} />
-            </div>
-            <CardDescription className="text-slate-400">
-              Release eligible holdback into the accrued bucket before claiming.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <div className="rounded-2xl border border-slate-800/70 bg-slate-950/40 p-4 text-sm text-slate-300">
-              Current releasable amount:{" "}
-              <span className="font-mono text-white">
-                {xpBuckets ? formatUnits(xpBuckets.holdbackReleasable, decimals) : "—"} {sym}
-              </span>
-            </div>
-
-            <Button
-              variant="outline"
-              onClick={() => void handleSyncHoldback()}
-              disabled={readOnly || syncHoldbackFlow.busy || !hasWallet}
-              className="border-slate-700 text-slate-200 hover:text-white"
-            >
-              {syncHoldbackFlow.busy ? "Running…" : "Sync Holdback"}
-            </Button>
-
-            <ActionTrace
-              title="Holdback Sync Trace"
-              status={syncHoldbackFlow.status}
-              steps={syncHoldbackFlow.steps}
-              hasActivity={syncHoldbackFlow.hasActivity}
-              error={syncHoldbackFlow.error}
-              txHash={syncHoldbackFlow.txHash}
-              blockNumber={syncHoldbackFlow.journalEntry?.blockNumber}
-              explorerBaseUrl={explorerBaseUrl}
-              onReset={syncHoldbackFlow.reset}
-            />
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-800 bg-slate-900/40 backdrop-blur-sm">
-          <CardHeader className="space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <CardTitle className="text-white">Protocol Fee Claim</CardTitle>
-              <TxStatusChip status={protocolFeeFlow.status} />
-            </div>
-            <CardDescription className="text-slate-400">
-              Governance-only action. Unauthorized callers will fail at preflight or execution.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="pf-amount" className="text-slate-300">
-                Amount ({sym})
-              </Label>
-              <Input
-                id="pf-amount"
-                inputMode="decimal"
-                placeholder="0.00"
-                value={pfAmount}
-                onChange={(e) => setPFAmount(e.target.value)}
-                disabled={readOnly || !hasWallet || protocolFeeFlow.busy}
-                className="border-slate-700 bg-slate-800/50 text-white"
-              />
-            </div>
-
-            <Button
-              onClick={() => void handleClaimPF()}
-              disabled={readOnly || protocolFeeFlow.busy || !pfAmount || !hasWallet}
-            >
-              {protocolFeeFlow.busy ? "Running…" : "Claim Protocol Fees"}
-            </Button>
-
-            <ActionTrace
-              title="Protocol Fee Trace"
-              status={protocolFeeFlow.status}
-              steps={protocolFeeFlow.steps}
-              hasActivity={protocolFeeFlow.hasActivity}
-              error={protocolFeeFlow.error}
-              txHash={protocolFeeFlow.txHash}
-              blockNumber={protocolFeeFlow.journalEntry?.blockNumber}
-              explorerBaseUrl={explorerBaseUrl}
-              onReset={protocolFeeFlow.reset}
-            />
-          </CardContent>
-        </Card>
-      </div>
+      </main>
     </PageTransition>
   );
+}
+
+function shortHex(value?: string) {
+  if (!value) return "—";
+  if (value.length <= 12) return value;
+  return `${value.slice(0, 6)}…${value.slice(-4)}`;
 }

@@ -294,3 +294,29 @@ Original prompt: Continue the frontend route review execution by simplifying the
   - Trust header now consistently uses `Games / Bets / Liquidity / Claims / Affiliates / Account / Ops`
   - New review doc: `frontend/docs/frontend/PROTOTYPE-FREEZE-REVIEW-2026-03.md`
   - Updated `frontend/docs/frontend/ROADMAP.md` and `frontend/docs/frontend/PROTOTYPE-FREEZE-CHECKLIST-2026-03.md` to reflect the new baseline
+
+- 2026-03-15: Cross-checked the current v2 prototypes against the design brief, screen specs, copy pack, brand pack, and UI constitution.
+  - Added `frontend/docs/frontend/PROTOTYPE-IMPROVEMENT-MATRIX-2026-03.md` as a route-by-route improvement matrix with `P0 / P1 / P2` priorities.
+  - Updated `frontend/docs/frontend/ROADMAP.md` to link the new matrix.
+
+- 2026-03-15: Executed the `P0` prototype refinement pass on the three highest-priority routes:
+  - `frontend/apps/web/src/app/prototype/ui-ux-v2-flagship/page.tsx`
+    - tightened the hero to a room-first landing
+    - moved room-entry / live-proof cues into the first fold
+    - reduced the large dead zone between hero and featured rooms
+  - `frontend/apps/web/src/app/prototype/ui-ux-v2-directory/page.tsx`
+    - kept the curated-lobby structure
+    - replaced the bottom explanatory `Lobby note` cards with shorter, more product-facing `Lobby proof` blocks
+  - `frontend/apps/web/src/app/prototype/ui-ux-v2-roulette/page.tsx`
+    - compressed the left ticket rail into a denser casino-style slip
+    - merged recent results into the slip
+    - demoted the lower tabs/data layer so it reads as secondary to the board
+
+- 2026-03-15: Visual validation for the `P0` refinement pass:
+  - Reused the local dev server on `http://127.0.0.1:3013`
+  - Saved fresh screenshots to:
+    - `tmp/prototype-p0-home.png`
+    - `tmp/prototype-p0-directory.png`
+    - `tmp/prototype-p0-roulette.png`
+  - Ran `pnpm -C frontend/apps/web exec tsc --noEmit`
+  - Current state: `Home / Directory / Roulette` now form a coherent `P0` baseline and are ready to freeze in a commit before the next round of prototype work.

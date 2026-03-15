@@ -158,277 +158,425 @@ export default function HomePage() {
 
   // Derive metrics
   const primaryAsset = assetOverviews[0];
-  const tvl = primaryAsset ? formatTokenAmount(primaryAsset.totalAssets, primaryAsset.decimals, primaryAsset.symbol) : "Loading...";
+  const totalTvl = assetOverviews.reduce((sum, a) => sum + (a.totalAssets || 0n), 0n);
+  const tvlFormatted = primaryAsset ? formatTokenAmount(totalTvl, primaryAsset.decimals, primaryAsset.symbol) : "Loading...";
   const featuredGames = React.useMemo(() => (release?.gamesMeta ?? []).slice(0, 4), [release?.gamesMeta]);
-
   return (
     <PageTransition pageKey="home">
-      <div className="text-white font-sans selection:bg-blue-500/30 overflow-x-hidden w-full pb-24 relative">
-        {/* Background Glows */}
-        <div className="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vw] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none" />
-        <div className="absolute top-[20%] right-[-10%] w-[40vw] h-[40vw] bg-purple-600/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="fixed left-[-10%] top-[-20%] h-[50vw] w-[50vw] rounded-full bg-blue-600/8 blur-[120px] pointer-events-none -z-1" />
+      <div className="fixed right-[-10%] top-[20%] h-[40vw] w-[40vw] rounded-full bg-fuchsia-600/8 blur-[120px] pointer-events-none -z-1" />
 
-        <main className="pt-24 lg:pt-32 max-w-[1280px] mx-auto px-6 relative z-10 w-full">
-
+      <main className="pt-24 lg:pt-32 max-w-[1280px] mx-auto px-6 relative z-10 w-full mb-24">
+          
           {/* 1. Hero Section */}
-          <section className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 min-h-[70vh] items-center mb-24">
-            <div className="lg:col-span-6 flex flex-col gap-8">
+          <section className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start mb-32 pt-4">
+            <div className="lg:col-span-6 flex flex-col gap-8 lg:pt-6">
               <div className="flex flex-col gap-6">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 w-fit">
                   <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                  <span className="text-xs font-semibold tracking-wide text-white/80 uppercase">Arbitrum Native</span>
+                  <span className="text-[10px] font-bold tracking-widest text-white/60 uppercase">
+                    Protocol Native Game Rooms
+                  </span>
                 </div>
-                <h1 className="text-5xl lg:text-7xl font-bold tracking-tight leading-[1.1]">
-                  Provably Fair.<br />
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">
-                    Instant Settlement.
+                <h1 className="text-5xl lg:text-8xl font-black tracking-tighter leading-[0.9] text-white">
+                  Play on-chain<br />
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-fuchsia-500">
+                    without losing the room feel.
                   </span>
                 </h1>
-                <p className="text-lg text-white/60 max-w-md leading-relaxed">
-                  Experience the next generation of on-chain gaming. Non-custodial, mathematically sound, and settled at the speed of Arbitrum.
+                <p className="text-lg text-white/50 max-w-xl leading-relaxed font-medium">
+                  Choose a room, place a ticket, and follow settlement through transparent rails built for readable trust. Settled at the speed of Arbitrum.
                 </p>
               </div>
 
               <div className="flex flex-wrap items-center gap-4">
-                <Link href="/games" className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-full font-semibold transition-all shadow-[0_0_20px_rgba(37,99,235,0.3)] text-center">
-                  Start Playing
+                <Link href="/games" className="bg-blue-600 hover:bg-blue-500 text-white px-10 py-5 rounded-full font-bold transition-all shadow-xl shadow-blue-600/20 active:scale-95 text-center">
+                  Open Rooms
                 </Link>
-                <Link href="/games" className="px-8 py-4 rounded-full font-semibold text-white/80 hover:text-white hover:bg-white/5 transition-all border border-white/10 text-center">
-                  Explore Rooms
+                <Link href="/games" className="px-10 py-5 rounded-full font-bold text-white/80 hover:text-white hover:bg-white/5 transition-all border border-white/10 text-center backdrop-blur-sm">
+                  How It Works
                 </Link>
               </div>
 
-              <div className="flex items-center gap-6 text-sm font-medium text-white/40 pt-4 flex-wrap">
-                <div className="flex items-center gap-2">✓ Non-custodial</div>
-                <div className="flex items-center gap-2">✓ On-chain settlement</div>
-                <div className="flex items-center gap-2">✓ Provable math</div>
-              </div>
-            </div>
+              <div className="grid max-w-2xl gap-4 lg:grid-cols-[1.35fr_0.65fr]">
+                <div className="rounded-[2rem] border border-white/8 bg-white/[0.03] p-6 backdrop-blur-xl">
+                   <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/35 mb-4">Room Lifecycle</div>
+                   <div className="grid grid-cols-3 gap-3">
+                     {[
+                       { label: "01", title: "Choose room" },
+                       { label: "02", title: "Build ticket" },
+                       { label: "03", title: "Follow" },
+                     ].map((step) => (
+                       <div key={step.label} className="rounded-2xl border border-white/8 bg-black/40 px-3 py-4">
+                         <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-blue-400">{step.label}</div>
+                         <div className="mt-2 text-xs font-bold text-white/80">{step.title}</div>
+                       </div>
+                     ))}
+                   </div>
+                </div>
 
-            <div className="lg:col-span-6 relative aspect-square lg:aspect-auto lg:h-[600px] flex items-center justify-center">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-[2.5rem] border border-white/10 overflow-hidden group">
-                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20 mix-blend-overlay" />
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3/4 h-3/4 bg-[#0a0a0a] rounded-[2rem] border border-white/10 shadow-2xl flex flex-col items-center justify-center gap-6 p-8 transition-transform duration-500 group-hover:scale-105">
-                  <div className="w-24 h-24 rounded-full border-4 border-blue-500 border-t-transparent animate-spin" />
-                  <div className="text-center">
-                    <div className="text-2xl font-bold">Protocol Sync</div>
-                    <div className="text-blue-400 mt-2 font-mono">{release?.name ?? "Network"} • ACTIVE</div>
-                  </div>
+                <div className="rounded-[2rem] border border-white/8 bg-black/40 p-6 backdrop-blur-xl">
+                   <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/35 mb-4">Live Proof</div>
+                   <div className="space-y-4">
+                     <div>
+                       <div className="text-[9px] font-bold uppercase tracking-[0.22em] text-white/35">Bankroll TVL</div>
+                       <div className="mt-1 text-sm font-mono font-bold text-emerald-400">{tvlFormatted}</div>
+                     </div>
+                     <div>
+                       <div className="text-[9px] font-bold uppercase tracking-[0.22em] text-white/35">Calls Indexed</div>
+                       <div className="mt-1 text-sm font-mono font-bold text-indigo-300">{indexedBetCount.toLocaleString()}</div>
+                     </div>
+                   </div>
                 </div>
               </div>
             </div>
-          </section>
 
-          {/* 2. Proof Ribbon */}
-          <section className="py-8 border-y border-white/10 flex flex-wrap lg:flex-nowrap items-center justify-between gap-8 mb-32">
-            {[
-              { label: "Live Rooms", value: String(release?.gamesMeta?.length ?? 0) },
-              { label: "Total Bankroll", value: tvl },
-              { label: "Indexed Proofs", value: indexedBetCount.toLocaleString() },
-              { label: "Network", value: release?.name ?? "—" }
-            ].map((stat, i) => (
-              <div key={i} className="flex flex-col gap-1 w-[45%] lg:w-auto">
-                <div className="text-white/50 text-xs font-semibold uppercase tracking-wider">{stat.label}</div>
-                <div className="text-2xl font-bold tracking-tight">{stat.value}</div>
-              </div>
-            ))}
-          </section>
+            <div className="lg:col-span-6 relative aspect-square lg:aspect-auto lg:h-[620px] flex items-center justify-center">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/15 via-fuchsia-500/10 to-white/5 rounded-[3rem] border border-white/10 shadow-2xl" />
+              <div className="relative w-[92%] h-[92%] bg-[#080808] rounded-[2.5rem] border border-white/10 shadow-inner p-8 flex flex-col overflow-hidden">
+                <div className="flex items-center justify-between mb-8">
+                   <div className="flex items-center gap-2">
+                     <span className="rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.24em] text-blue-400">Featured</span>
+                     <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.24em] text-emerald-400">
+                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                       Live
+                     </span>
+                   </div>
+                   <span className="text-[10px] font-mono font-bold text-white/30 tracking-widest uppercase">Network Protocol Trace</span>
+                </div>
 
-          {/* 3. Featured Rooms */}
-          <section className="mb-32">
-            <div className="flex items-baseline justify-between mb-12">
-              <h2 className="text-3xl font-bold tracking-tight">Featured Rooms</h2>
-              <Link href="/games" className="hidden sm:block text-blue-400 font-medium hover:text-blue-300 transition-colors">View All Directory →</Link>
-            </div>
+                <div className="flex items-start justify-between gap-4 mb-8">
+                  <div className="max-w-[320px]">
+                    <h2 className="text-4xl font-black tracking-tighter text-white">Active Settlement</h2>
+                    <p className="mt-3 text-sm leading-relaxed text-white/45 font-medium">Standard European table layout with a compact ticket rail and readable settlement.</p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-right backdrop-blur-md">
+                    <div className="text-[9px] font-bold uppercase tracking-[0.22em] text-white/40">Status</div>
+                    <div className="mt-2 text-2xl font-mono font-bold text-white uppercase">{release?.name || "Active"}</div>
+                    <div className="mt-1 text-[10px] font-mono text-white/30">{indexerStatus?.lagBlocks ? `${indexerStatus.lagBlocks} blocks lag` : "Head healthy"}</div>
+                  </div>
+                </div>
 
-            {featuredGames.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {/* Primary Large Card */}
-                {(() => {
-                  const game = featuredGames[0]!;
-                  const pres = getGamePresentation(game.slug, game.label);
-                  return (
-                    <div className="lg:col-span-2 group relative rounded-3xl overflow-hidden border border-white/10 bg-white/5 hover:bg-white/10 transition-colors flex flex-col justify-end p-8 min-h-[400px]">
-                      <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/20 blur-[80px] -z-10 group-hover:bg-blue-500/30 transition-colors" />
-                      <div className="absolute top-6 left-6 px-3 py-1 bg-black/50 backdrop-blur-md rounded-full text-xs font-semibold uppercase tracking-wider text-blue-400 border border-white/10">
-                        {pres.roomLabel}
-                      </div>
-                      <div className="mt-auto max-w-md relative z-10">
-                        <div className="flex items-center gap-3 mb-2">
-                           <span className="text-4xl">{pres.icon}</span>
-                           <h3 className="text-3xl font-bold">{game.label}</h3>
-                        </div>
-                        <p className="text-white/60 mb-6 line-clamp-2">{pres.roomSummary}</p>
-                        <Link href={`/games/${game.slug}`} className="inline-block bg-white text-black px-6 py-3 rounded-full font-medium text-sm hover:bg-white/90 transition-colors">
-                          Enter Room
-                        </Link>
-                      </div>
-                    </div>
-                  );
-                })()}
-
-                {/* Smaller Support Cards */}
-                <div className="flex flex-col gap-6">
-                  {featuredGames.slice(1, 3).map((game) => {
-                    const pres = getGamePresentation(game.slug, game.label);
+                <div className="flex-1 rounded-[1.8rem] border border-white/8 bg-black/50 p-6 flex flex-col gap-4">
+                  {latestBets.slice(0, 4).map((bet) => {
+                    const gameLabel = gameLabelById.get((bet.gameId ?? "").toLowerCase()) ?? "Network Room";
+                    const status = mapBetState(bet.state);
                     return (
-                      <Link href={`/games/${game.slug}`} key={game.slug} className="group relative rounded-3xl border border-white/10 bg-white/5 hover:bg-white/[0.07] transition-colors p-6 flex flex-col flex-1 h-[190px]">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 blur-[40px] -z-10 group-hover:bg-purple-500/20 transition-colors" />
-                        <div className="flex items-center gap-2 mb-3">
-                           <span className="text-xl">{pres.icon}</span>
-                           <div className="inline-block px-2 py-0.5 bg-white/5 rounded text-[10px] font-semibold uppercase tracking-wider text-white/50">{pres.roomLabel}</div>
-                        </div>
-                        <h3 className="text-xl font-bold mb-1">{game.label}</h3>
-                        <p className="text-white/50 text-sm mb-4 line-clamp-2">{pres.listDescription}</p>
-                        <div className="mt-auto text-blue-400 font-medium text-sm group-hover:translate-x-1 transition-transform inline-block w-fit">
-                           Play Now →
-                        </div>
-                      </Link>
+                      <div key={bet.id} className="flex items-center justify-between p-4 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-colors">
+                         <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-lg shadow-inner">🎲</div>
+                            <div>
+                               <div className="text-sm font-bold text-white tracking-tight">{gameLabel}</div>
+                               <div className="text-[10px] font-mono text-white/30">{shortHex(bet.player)}</div>
+                            </div>
+                         </div>
+                         <div className="text-right flex flex-col items-end gap-1">
+                            <StatusBadge status={status} label={bet.state} />
+                            <span className="text-[9px] font-mono text-white/20">{formatRelativeTime(bet.updatedAt)}</span>
+                         </div>
+                      </div>
                     );
                   })}
-                </div>
-              </div>
-            ) : (
-               <div className="text-white/40 py-12 text-center text-sm">No featured games configured on this network.</div>
-            )}
-          </section>
-
-          {/* 4. How It Works */}
-          <section className="mb-32">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl font-bold tracking-tight mb-4">How it Works</h2>
-              <p className="text-white/50 max-w-xl mx-auto">Skip the deposits. Play directly from your wallet with zero counterparty risk.</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
-              <div className="hidden md:block absolute top-[28%] left-[10%] right-[10%] h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent -z-10" />
-              {[
-                { num: "01", title: "Choose a Room", desc: "Pick your game style. From classic tables to fast binary plays." },
-                { num: "02", title: "Set Your Ticket", desc: "Place your chips entirely on-chain without trusting a house." },
-                { num: "03", title: "Settle On-Chain", desc: "Instant transparent payouts straight to your wallet." }
-              ].map((step, i) => (
-                <div key={i} className="flex flex-col items-center text-center">
-                  <div className="w-16 h-16 rounded-2xl bg-[#0a0a0a] border border-white/10 flex items-center justify-center text-xl font-mono font-bold text-blue-400 mb-6 shadow-xl">
-                    {step.num}
-                  </div>
-                  <h3 className="text-xl font-semibold mb-3">{step.title}</h3>
-                  <p className="text-white/50 text-sm leading-relaxed max-w-[250px]">{step.desc}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* 5. Why Trust This */}
-          <section className="mb-32">
-            <div className="rounded-[2.5rem] bg-white/[0.02] border border-white/5 p-8 md:p-12 lg:p-16">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-                <div className="lg:col-span-4 flex flex-col justify-center">
-                  <h2 className="text-3xl font-bold tracking-tight mb-4">Built on Proof,<br />Not Promises.</h2>
-                  <p className="text-white/50">Our architecture removes the need to trust us. Verify everything on Arbitrum.</p>
-                </div>
-                <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-3 gap-8">
-                  {[
-                    { icon: "🛡️", title: "Self Custody", desc: "Your keys, your chips. Never deposit into a centralized hot wallet again." },
-                    { icon: "⚡", title: "Smart Settlement", desc: "Immutable smart contracts guarantee deterministic payout execution." },
-                    { icon: "📜", title: "Room Truth", desc: "Every spin, flip, and roll is cryptographically verifiable." }
-                  ].map((pillar, i) => (
-                    <div key={i} className="flex flex-col gap-4">
-                      <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-xl border border-white/10">{pillar.icon}</div>
-                      <h3 className="text-lg font-semibold">{pillar.title}</h3>
-                      <p className="text-sm text-white/50 leading-relaxed">{pillar.desc}</p>
+                  {latestBets.length === 0 && (
+                    <div className="flex-1 flex flex-col items-center justify-center text-center opacity-30 italic font-mono text-sm py-12">
+                      Waiting for protocol activity...
                     </div>
-                  ))}
+                  )}
+                </div>
+
+                <div className="mt-8 flex items-center justify-between rounded-[1.8rem] border border-white/8 bg-white/[0.04] px-6 py-5 backdrop-blur-xl">
+                   <div>
+                      <div className="text-[9px] font-bold uppercase tracking-[0.22em] text-white/35">Quick Start</div>
+                      <div className="mt-1 text-sm text-white/60 font-medium">Sign a ticket to enter the room.</div>
+                   </div>
+                   <Link href="/games" className="rounded-full bg-white px-6 py-3 text-xs font-bold text-black transition-all hover:scale-105 active:scale-95 shadow-lg">
+                      Enter Room
+                   </Link>
                 </div>
               </div>
             </div>
           </section>
 
-          {/* 6. Live Activity Trace */}
+          {/* 2. Featured Rooms */}
           <section className="mb-32">
-             <div className="flex items-baseline justify-between mb-8">
-               <h2 className="text-3xl font-bold tracking-tight">Live Activity Proof</h2>
-               <div className="hidden sm:block text-white/40 text-sm">
-                 {indexerStatus?.lagBlocks ? `Trailer lag: ${indexerStatus.lagBlocks} blocks` : "Up to date with chain head"}
+            <div className="flex flex-col md:flex-row items-end justify-between gap-8 mb-16">
+              <div className="max-w-3xl">
+                <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/30 mb-4">Room Directory</div>
+                <h2 className="text-5xl lg:text-6xl font-black tracking-tighter text-white leading-none">
+                  Choose a room and get straight to the table.
+                </h2>
+                <p className="mt-6 text-xl text-white/45 max-w-2xl leading-relaxed">Each room is designed to make the game legible first, while keeping the trust layer close when you need it.</p>
+              </div>
+              <Link href="/games" className="text-indigo-400 font-bold hover:text-indigo-300 transition-colors border-b-2 border-indigo-400/20 pb-1 text-sm tracking-widest uppercase">
+                Browse All Tables →
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_0.6fr] gap-8">
+              {featuredGames.length > 0 && (
+                <>
+                  <div className="group relative rounded-[2.5rem] border border-white/10 bg-white/[0.03] p-10 min-h-[480px] flex flex-col justify-between overflow-hidden shadow-2xl">
+                    <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-blue-500/10 blur-[100px] -z-10 group-hover:bg-blue-500/20 transition-all duration-700" />
+                    <div className="relative flex items-start justify-between gap-4">
+                       <span className="rounded-full border border-blue-500/20 bg-blue-500/10 px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.24em] text-blue-400">Flagship Experience</span>
+                       <div className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                          <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Open Now</span>
+                       </div>
+                    </div>
+                    <div className="relative max-w-2xl py-8">
+                      {(() => {
+                        const game = featuredGames[0]!;
+                        const pres = getGamePresentation(game.slug, game.label);
+                        return (
+                          <>
+                            <h3 className="text-6xl font-black tracking-tighter text-white">{game.label}</h3>
+                            <p className="mt-6 text-xl text-white/50 leading-relaxed font-medium">{pres.roomSummary}</p>
+                            <div className="mt-8 flex flex-wrap gap-3 text-[10px] font-bold tracking-widest uppercase">
+                               <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-white/60 backdrop-blur-md">{pres.roomLabel}</span>
+                               <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-white/60 backdrop-blur-md">Instant Proof</span>
+                               <span className="rounded-full border border-indigo-500/20 bg-indigo-500/10 px-4 py-2 text-indigo-400 backdrop-blur-md">Arbitrum L2</span>
+                            </div>
+                            <div className="mt-12 flex items-center gap-6">
+                              <Link href={`/games/${game.slug}`} className="rounded-full bg-white px-10 py-5 text-sm font-black text-black transition-all hover:scale-105 active:scale-95 shadow-xl">
+                                Enter Flagship Table
+                              </Link>
+                              <span className="text-xs font-mono text-white/30">Readable trust layer active</span>
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-6">
+                    {featuredGames.slice(1, 4).map((game) => {
+                      const pres = getGamePresentation(game.slug, game.label);
+                      return (
+                        <Link href={`/games/${game.slug}`} key={game.slug} className="group flex flex-col justify-between min-h-[160px] rounded-[2rem] border border-white/10 bg-white/[0.03] p-8 hover:bg-white/[0.06] transition-all relative overflow-hidden backdrop-blur-sm">
+                           <div className="absolute top-0 right-0 w-40 h-40 bg-purple-500/5 blur-[50px] -z-10 group-hover:bg-purple-500/15 transition-all" />
+                           <div className="flex items-start justify-between gap-4">
+                              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[9px] font-black uppercase tracking-[0.22em] text-white/30">{pres.roomLabel}</span>
+                              <div className="w-8 h-8 rounded-full border border-white/10 flex items-center justify-center text-white/40 group-hover:text-white group-hover:scale-110 transition-all">→</div>
+                           </div>
+                           <div>
+                              <h3 className="text-2xl font-black text-white tracking-tight">{game.label}</h3>
+                              <p className="text-sm text-white/40 mt-2 font-medium line-clamp-1">{pres.listDescription}</p>
+                           </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </div>
+          </section>
+
+          {/* 3. Deep Infrastructure */}
+          <section className="mb-40 pt-12 relative">
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+            <div className="mt-24 grid grid-cols-1 lg:grid-cols-2 gap-24 items-center">
+               <div className="flex flex-col gap-8">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-indigo-400">Readable Settlement</div>
+                  <h2 className="text-5xl lg:text-7xl font-black tracking-tighter text-white leading-[0.9]">
+                    The trust layer stays close.
+                  </h2>
+                  <p className="text-xl text-white/45 leading-relaxed font-medium">
+                    Skip the deposit-heavy flow. Use an auditable path from room entry to session finality. No opaque backends, just verifiable protocol calls.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mt-4">
+                    {[
+                      { icon: "👛", title: "Wallet-native", desc: "No deposits needed. Tickets start and stay in your wallet." },
+                      { icon: "📜", title: "Opaque-free", desc: "Every flip and spin is a protocol event you can trace." },
+                    ].map((item, i) => (
+                      <div key={i} className="flex flex-col gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-xl shadow-inner">{item.icon}</div>
+                        <h4 className="text-lg font-bold text-white tracking-tight">{item.title}</h4>
+                        <p className="text-sm text-white/40 leading-relaxed font-medium">{item.desc}</p>
+                      </div>
+                    ))}
+                  </div>
+               </div>
+               <div className="grid grid-cols-1 gap-6">
+                  <GlassCard padding="lg" glowColor="bg-indigo-500/10" className="flex flex-col gap-6 scale-105 shadow-2xl">
+                     <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold tracking-widest text-white/40 uppercase">Architecture Audit</span>
+                        <div className="px-2 py-0.5 rounded border border-emerald-500/20 bg-emerald-500/10 text-[9px] font-bold text-emerald-400 uppercase">Verifiable</div>
+                     </div>
+                     <div className="space-y-4">
+                        <div className="p-4 rounded-xl bg-black/40 border border-white/5 flex justify-between items-center group cursor-pointer hover:border-indigo-500/30 transition-colors">
+                           <div className="flex items-center gap-3">
+                              <span className="text-white/30 font-mono text-xs">01</span>
+                              <span className="text-sm font-bold text-white/80">VRF Entropy Request</span>
+                           </div>
+                           <span className="text-indigo-400 text-xs">Chain Head →</span>
+                        </div>
+                        <div className="p-4 rounded-xl bg-black/40 border border-white/5 flex justify-between items-center">
+                           <div className="flex items-center gap-3">
+                              <span className="text-white/30 font-mono text-xs">02</span>
+                              <span className="text-sm font-bold text-white/80">On-chain Fullfillment</span>
+                           </div>
+                           <span className="text-emerald-400 text-xs">Fulfilled</span>
+                        </div>
+                        <div className="p-4 rounded-xl bg-black/40 border border-white/5 flex justify-between items-center opacity-40">
+                           <div className="flex items-center gap-3">
+                              <span className="text-white/30 font-mono text-xs">03</span>
+                              <span className="text-sm font-bold text-white/80">Asset Reconciliation</span>
+                           </div>
+                           <span className="text-white/40 text-xs text-right">Settled</span>
+                        </div>
+                     </div>
+                     <p className="text-[10px] font-medium text-white/30 italic text-center leading-relaxed">
+                       This trace represents a live settlement call on the Arbitrum network. Every step is public.
+                     </p>
+                  </GlassCard>
+               </div>
+            </div>
+          </section>
+
+          {/* 4. Global Protocol Trace */}
+          <section className="mb-40">
+             <div className="flex flex-col md:flex-row items-baseline justify-between gap-8 mb-12">
+               <div>
+                 <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/30 mb-4">Protocol Feed</div>
+                 <h2 className="text-4xl lg:text-5xl font-black tracking-tighter text-white">Live Activity Trace</h2>
+               </div>
+               <div className="text-white/40 font-mono text-xs backdrop-blur-md bg-white/5 px-4 py-2 rounded-full border border-white/5">
+                 {indexerStatus?.lagBlocks ? `Trailer: ${indexerStatus.lagBlocks} blocks` : "Network: Head aligned"}
                </div>
              </div>
-             <AuditTabs tabs={["Live Protocol Network", "My Bets"]} activeTab="Live Protocol Network" onTabChange={() => {}}>
-               <div className="overflow-x-auto">
-                 <div className="min-w-[800px]">
-                   <AuditTableHeader>
-                     <div className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_100px] text-white/40 font-bold uppercase tracking-wider text-[10px]">
-                       <div>Game & Ticket ID</div>
-                       <div>Player</div>
-                       <div>Time</div>
-                       <div>Status</div>
-                       <div className="text-right">Action</div>
-                     </div>
-                   </AuditTableHeader>
-                   <div className="flex flex-col">
-                     {latestBets.map(bet => {
-                       const gameLabel = gameLabelById.get((bet.gameId ?? "").toLowerCase()) ?? "Network Room";
-                       const status = mapBetState(bet.state);
-                       const presentation = getGamePresentation((bet.gameId ?? "").toLowerCase(), gameLabel);
-                       
-                       return (
-                         <AuditTableRow key={bet.id}>
-                           <div className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_100px] items-center">
-                             <AuditTableCell>
-                               <Link href={`/bets/${bet.betId}`} className="flex items-center gap-3 group">
-                                  <div className="w-8 h-8 rounded bg-white/5 flex items-center justify-center text-sm group-hover:bg-white/10 transition-colors">
-                                    {presentation?.icon ?? "🕹️"}
-                                  </div>
-                                  <div>
-                                    <div className="font-bold text-white group-hover:text-blue-400 transition-colors">{gameLabel}</div>
-                                    <div className="text-[10px] font-mono text-white/40">ID {shortHex(bet.betId)}</div>
-                                  </div>
-                               </Link>
-                             </AuditTableCell>
-                             
-                             <AuditTableCell>
-                               <div className="flex items-center gap-2">
-                                 <div className="w-5 h-5 rounded-full bg-white/10 flex items-center justify-center text-[10px]">👤</div>
-                                 <span className="font-mono text-sm text-white/80">{shortHex(bet.player)}</span>
-                               </div>
-                             </AuditTableCell>
- 
-                             <AuditTableCell>
-                               <div className="flex flex-col items-start justify-center gap-1">
-                                 <span className="text-sm text-white">{formatRelativeTime(bet.updatedAt)}</span>
-                                 <span className="text-[10px] text-white/30 truncate">Block {bet.updatedBlock}</span>
-                               </div>
-                             </AuditTableCell>
- 
-                             <AuditTableCell>
-                                <StatusBadge status={status} label={bet.state} />
-                             </AuditTableCell>
- 
-                             <AuditTableCell className="justify-end transition-transform hover:translate-x-1 cursor-pointer text-white/30 hover:text-white">
-                                <Link href={`/bets/${bet.betId}`}>↗</Link>
-                             </AuditTableCell>
-                           </div>
-                         </AuditTableRow>
-                       );
-                     })}
-                     {latestBets.length === 0 && (
-                       <div className="py-12 text-center text-white/40 font-mono text-sm">Waiting for live block indexer...</div>
-                     )}
-                   </div>
-                 </div>
-               </div>
+             
+             <AuditTabs activeColorClass="border-blue-400 text-blue-400">
+                <div className="overflow-x-auto custom-scrollbar">
+                  <div className="min-w-[1000px]">
+                    <AuditTableHeader>
+                      <div className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_100px] text-white/30 font-bold uppercase tracking-widest text-[9px] px-4 py-4 border-b border-white/5">
+                        <div>Game & Ticket ID</div>
+                        <div>Identity</div>
+                        <div>Settlement Time</div>
+                        <div>State</div>
+                        <div className="text-right">Action</div>
+                      </div>
+                    </AuditTableHeader>
+                    <div className="flex flex-col">
+                      {latestBets.map(bet => {
+                        const gameLabel = gameLabelById.get((bet.gameId ?? "").toLowerCase()) ?? "Network Room";
+                        const status = mapBetState(bet.state);
+                        const presentation = getGamePresentation((bet.gameId ?? "").toLowerCase(), gameLabel);
+                        
+                        return (
+                          <AuditTableRow key={bet.id} className="hover:bg-white/[0.02] transition-colors border-b border-white/[0.03] group">
+                            <div className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_100px] items-center px-4 py-6">
+                              <AuditTableCell>
+                                <Link href={`/bets/${bet.betId}`} className="flex items-center gap-4 group/item">
+                                   <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-lg border border-white/5 group-hover/item:border-blue-500/30 transition-all shadow-inner">
+                                     {presentation?.icon ?? "🕹️"}
+                                   </div>
+                                   <div>
+                                     <div className="font-bold text-white group-hover/item:text-blue-400 transition-colors tracking-tight">{gameLabel}</div>
+                                     <div className="text-[10px] font-mono text-white/20 tracking-tighter uppercase">ID {shortHex(bet.betId)}</div>
+                                   </div>
+                                </Link>
+                              </AuditTableCell>
+                              
+                              <AuditTableCell>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-6 h-6 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[10px]">👤</div>
+                                  <span className="font-mono text-sm text-white/70">{shortHex(bet.player)}</span>
+                                </div>
+                              </AuditTableCell>
+  
+                              <AuditTableCell>
+                                <div className="flex flex-col items-start justify-center gap-1">
+                                  <span className="text-sm font-bold text-white/80">{formatRelativeTime(bet.updatedAt)}</span>
+                                  <span className="text-[10px] font-mono text-white/20">Block {bet.updatedBlock}</span>
+                                </div>
+                              </AuditTableCell>
+  
+                              <AuditTableCell>
+                                 <StatusBadge status={status} label={bet.state} size="sm" />
+                              </AuditTableCell>
+  
+                              <AuditTableCell className="justify-end py-1">
+                                 <Link href={`/bets/${bet.betId}`} className="w-10 h-10 flex items-center justify-center rounded-full border border-white/0 hover:border-white/5 hover:bg-white/5 text-white/30 hover:text-white transition-all">
+                                   ↗
+                                 </Link>
+                              </AuditTableCell>
+                            </div>
+                          </AuditTableRow>
+                        );
+                      })}
+                      {latestBets.length === 0 && (
+                        <div className="py-24 text-center text-white/20 font-mono text-sm tracking-widest uppercase bg-white/[0.01]">
+                          <span className="animate-pulse">Awaiting live block reconciliation...</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
              </AuditTabs>
           </section>
 
-          {/* 7. Final CTA */}
-          <section className="relative rounded-[2.5rem] overflow-hidden bg-blue-600/10 border border-blue-500/20 flex flex-col items-center justify-center py-24 px-6 text-center">
-            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay" />
-            <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-8 relative z-10">Ready to enter the rooms?</h2>
-            <Link href="/games" className="relative z-10 inline-block bg-white text-black px-10 py-5 rounded-full font-bold text-lg hover:bg-white/90 transition-all shadow-[0_0_40px_rgba(255,255,255,0.2)]">
-              Start Playing Now
-            </Link>
+          {/* 5. Final CTA */}
+          <section className="relative rounded-[3rem] overflow-hidden bg-blue-600/10 border border-blue-500/20 flex flex-col items-center justify-center py-32 px-6 text-center mb-16 shadow-2xl">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-transparent to-fuchsia-500/10" />
+            <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(37,99,235,0.05),transparent_70%)]" />
+            <div className="relative z-10 max-w-3xl">
+              <h2 className="text-5xl md:text-7xl font-black tracking-tighter mb-8 text-white leading-[0.9]">Ready to step into a room?</h2>
+              <p className="text-xl text-white/40 mb-12 max-w-xl mx-auto font-medium">Start with the directory, choose the room that fits your style, and keep the trust layer available when you need it.</p>
+              <div className="flex flex-wrap items-center justify-center gap-6">
+                <Link href="/games" className="inline-block bg-white text-black px-12 py-6 rounded-full font-black text-xl hover:scale-105 active:scale-95 transition-all shadow-[0_0_50px_rgba(255,255,255,0.2)]">
+                  Enter Rooms Now
+                </Link>
+                <Link href="/liquidity" className="rounded-full border border-white/10 px-10 py-5 font-bold text-white/60 transition-all hover:bg-white/5 hover:text-white backdrop-blur-md">
+                  View Bankroll Stats
+                </Link>
+              </div>
+            </div>
           </section>
 
+          {/* 6. High-Fidelity Footer */}
+          <footer className="mt-20 pt-16 border-t border-white/5 grid grid-cols-1 lg:grid-cols-12 gap-16 pb-12">
+             <div className="lg:col-span-5 flex flex-col gap-8">
+                <div className="flex flex-col gap-2">
+                   <ArbiGameFiLockup className="h-7 w-auto" />
+                   <p className="text-sm font-medium text-white/30 max-w-sm mt-4 leading-relaxed italic">
+                     Digital game rooms on the Arbitrum network. Built for readable trust and wallet-native transparency.
+                   </p>
+                </div>
+                <div className="flex items-center gap-6 text-[10px] font-bold tracking-widest uppercase text-white/20">
+                   <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Arbitrum One</span>
+                   <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-indigo-500" /> SSOT Protocol</span>
+                </div>
+             </div>
+             <div className="lg:col-span-7 grid grid-cols-2 sm:grid-cols-3 gap-12">
+                <div className="flex flex-col gap-5">
+                   <span className="font-bold text-white/50 uppercase tracking-[0.2em] text-[10px]">Core Index</span>
+                   <Link href="/games" className="text-sm text-white/40 hover:text-white transition-colors font-medium">Rooms Directory</Link>
+                   <Link href="/liquidity" className="text-sm text-white/40 hover:text-white transition-colors font-medium">Bankroll Stats</Link>
+                   <Link href="/referral" className="text-sm text-white/40 hover:text-white transition-colors font-medium">Affiliate Hub</Link>
+                </div>
+                <div className="flex flex-col gap-5">
+                   <span className="font-bold text-white/50 uppercase tracking-[0.2em] text-[10px]">Session Audit</span>
+                   <Link href="/bets" className="text-sm text-white/40 hover:text-white transition-colors font-medium">My Active Bets</Link>
+                   <Link href="/account" className="text-sm text-white/40 hover:text-white transition-colors font-medium">Account Integrity</Link>
+                   <Link href="/ops" className="text-sm text-white/40 hover:text-white transition-colors font-medium">Indexer Pulse</Link>
+                </div>
+                <div className="flex flex-col gap-5">
+                   <span className="font-bold text-white/50 uppercase tracking-[0.2em] text-[10px]">Connection</span>
+                   <a href="https://twitter.com" target="_blank" rel="noreferrer" className="text-sm text-white/40 hover:text-white transition-colors font-medium">Twitter Pulse</a>
+                   <a href="https://discord.com" target="_blank" rel="noreferrer" className="text-sm text-white/40 hover:text-white transition-colors font-medium">Discord Room</a>
+                   <a href="https://docs.arbigamefi.com" target="_blank" rel="noreferrer" className="text-sm text-white/40 hover:text-white transition-colors font-medium">Protocol Mirror</a>
+                </div>
+             </div>
+             <div className="lg:col-span-12 pt-8 flex border-t border-white/[0.02] justify-between items-center text-[10px] text-white/20 font-mono tracking-tighter">
+                <span>© 2026 ARBIGAMEFI LABS. FULLY DECENTRALIZED.</span>
+                <span>V2.1 FLAGSHIP DEPLOYMENT</span>
+             </div>
+          </footer>
+
         </main>
-      </div>
     </PageTransition>
   );
 }
+

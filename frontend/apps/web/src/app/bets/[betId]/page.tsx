@@ -15,6 +15,7 @@ import {
   CardTitle,
   CopyButton,
   ErrorCallout,
+  GlassCard,
   PageHeader,
   StatCard,
   StatusBadge,
@@ -324,255 +325,174 @@ export default function BetDetailPage() {
       : "Finalize settles a random-ready bet through Hub.finalize().";
   const actionError = refundFlow.error ?? finalizeFlow.error;
 
+  const resultState = React.useMemo(() => {
+    if (betState === "finalized" && onChainBet && onChainBet.payout != null) {
+       return onChainBet.payout > onChainBet.stake ? "won" : "lost";
+    }
+    return betState;
+  }, [betState, onChainBet]);
+
   return (
     <PageTransition pageKey={`bet-${betId ?? "unknown"}`}>
-      <div className="space-y-8">
-        <PageHeader
-          title={`Bet #${betId ?? "—"}`}
-          description={
-            gameMeta
-              ? `${gameMeta.label} · ${assetMeta?.symbol ?? shortHex(assetAddress)} · event-auditable detail`
-              : `${assetMeta?.symbol ?? shortHex(assetAddress)} · event-auditable detail`
-          }
-          actions={
-            <Button asChild variant="outline" size="sm" className="border-slate-700 text-slate-300 hover:text-white">
-              <Link href="/bets">Back to Bets</Link>
-            </Button>
-          }
-        />
+      <main className="max-w-2xl mx-auto px-6 py-12 md:py-24">
+        
+        <Link href="/bets" className="inline-flex items-center gap-2 text-white/40 hover:text-white transition-colors font-bold text-sm mb-8">
+           <span>←</span> Back to Tickets
+        </Link>
+        
+        {/* Receipt Container */}
+        <GlassCard 
+          glowColor={resultState === 'won' ? "bg-green-500/20" : resultState === 'lost' ? "bg-white/10" : "bg-blue-500/20"} 
+          glowPosition="top-left" 
+          padding="xl" 
+          className={`border-t-4 relative shadow-2xl ${
+            resultState === 'won' ? 'border-t-green-500 shadow-green-500/10' : 
+            resultState === 'lost' ? 'border-t-white/20' : 
+            'border-t-blue-500 shadow-blue-500/10'
+          }`}
+        >
+           
+           {/* Decorative watermark */}
+           {resultState === 'won' && (
+             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[120px] font-bold text-white/[0.02] pointer-events-none select-none rotate-12">
+               WON
+             </div>
+           )}
+           {resultState === 'lost' && (
+             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[120px] font-bold text-white/[0.02] pointer-events-none select-none rotate-12">
+               LOST
+             </div>
+           )}
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <StatCard label="Status" value={betState ?? "—"} subValue={gameMeta?.label} />
-          <StatCard
-            label="Stake"
-            value={onChainBet ? formatTokenAmount(onChainBet.stake, decimals, symbol) : "—"}
-            subValue={assetMeta?.symbol}
-          />
-          <StatCard
-            label="VRF Fee"
-            value={onChainBet ? formatTokenAmount(onChainBet.vrfFeePaid, decimals, symbol) : "—"}
-            subValue={primaryTxHash ? shortHex(primaryTxHash) : undefined}
-          />
-          <StatCard
-            label={outcome?.label ?? "Lifecycle"}
-            value={
-              outcome
-                ? formatTokenAmount(outcome.value, decimals, symbol)
-                : betState === "randomReady"
-                  ? "Awaiting finalize"
-                  : betState === "placed"
-                    ? "Awaiting VRF"
-                    : "—"
-            }
-            subValue={onChainBet?.placedAt ? formatTimestamp(onChainBet.placedAt) : undefined}
-          />
-        </div>
+           {/* Header */}
+           <div className="flex flex-col items-center justify-center border-b border-white/10 pb-8 mb-8 relative z-10">
+              <span className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-4 px-3 py-1 bg-white/5 rounded-full border border-white/10">
+                Ticket #{betId ?? "—"}
+              </span>
+              <h1 className="text-3xl font-bold mb-2 text-white">{gameMeta?.label ?? "ArbiGameFi Room"}</h1>
+              <span className={`font-bold px-3 py-1 rounded-md text-sm border uppercase tracking-widest ${
+                resultState === 'won' ? 'text-green-400 bg-green-500/10 border-green-500/20' :
+                resultState === 'lost' ? 'text-white/40 bg-white/5 border-white/10' :
+                'text-blue-400 bg-blue-500/10 border-blue-500/20 animate-pulse'
+              }`}>
+                {resultState ?? "Pending"}
+              </span>
+           </div>
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
-          <div className="space-y-6">
-            <Card className="border-slate-800 bg-slate-900/40 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-white">Summary</CardTitle>
-                <CardDescription className="text-slate-400">
-                  {isLoading
-                    ? "Loading live bet state..."
-                    : onChainBet
-                      ? "Live on-chain data from Hub.getBet() with local fact-store enrichment."
-                      : localBet
-                        ? "Fallback to indexed facts because the live read is unavailable."
-                        : "No bet data is currently available."}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Metric label="Game" value={gameMeta?.label ?? shortHex(gameId)} />
-                <Metric label="Game ID" value={gameId ?? "—"} copyable />
-                <Metric
-                  label="Asset"
-                  value={assetAddress ? `${assetAddress}${symbol ? ` (${symbol})` : ""}` : "—"}
-                  copyable
-                  href={explorerBaseUrl && assetAddress ? `${explorerBaseUrl}/address/${assetAddress}` : undefined}
-                />
-                <Metric
-                  label="Player"
-                  value={onChainBet?.player ?? localBet?.player ?? "—"}
-                  copyable
-                  href={explorerBaseUrl && (onChainBet?.player ?? localBet?.player) ? `${explorerBaseUrl}/address/${onChainBet?.player ?? localBet?.player}` : undefined}
-                />
-                <Metric label="Placed At" value={onChainBet?.placedAt ? formatTimestamp(onChainBet.placedAt) : "—"} />
-                <Metric label="Local Updated" value={localBet?.updatedAt ? formatTimestamp(localBet.updatedAt) : "—"} />
-                <Metric label="Current State" value={betState ?? "—"} />
-                <Metric label="Last Event" value={localBet?.lastEventName ?? timeline[timeline.length - 1]?.eventName ?? "—"} />
-                <Metric
-                  label="Primary Tx"
-                  value={primaryTxHash ?? "—"}
-                  copyable
-                  href={explorerBaseUrl && primaryTxHash ? `${explorerBaseUrl}/tx/${primaryTxHash}` : undefined}
-                />
-              </CardContent>
-            </Card>
+           {/* Core Figures */}
+           <div className="grid grid-cols-2 gap-4 mb-8 bg-[#050505] p-6 rounded-2xl border border-white/5 relative z-10">
+              <div className="flex flex-col">
+                 <span className="text-white/40 text-xs font-bold uppercase tracking-widest">Wager Amount</span>
+                 <span className="text-2xl font-mono font-bold mt-1 text-white">
+                   {onChainBet ? formatTokenAmount(onChainBet.stake, decimals, symbol) : "—"}
+                 </span>
+              </div>
+              <div className="flex flex-col items-end">
+                 <span className={`${resultState === 'won' ? 'text-green-500/80' : 'text-white/40'} text-xs font-bold uppercase tracking-widest`}>
+                   Gross Payout
+                 </span>
+                 <span className={`text-2xl font-mono font-bold mt-1 ${resultState === 'won' ? 'text-green-400' : 'text-white/40'}`}>
+                   {outcome ? formatTokenAmount(outcome.value, decimals, symbol) : "--"}
+                 </span>
+              </div>
+           </div>
 
-            <Card className="border-slate-800 bg-slate-900/40 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-white">Timeline</CardTitle>
-                <CardDescription className="text-slate-400">
-                  Event-derived lifecycle from the local facts store.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {timelineLoading ? (
-                  <p className="text-sm text-slate-500">Loading timeline...</p>
-                ) : timeline.length === 0 ? (
-                  <p className="text-sm text-slate-500">
-                    No local Hub events found for this bet yet. Run a sync if the bet was placed recently.
-                  </p>
-                ) : (
-                  timeline.map((event) => (
-                    <div key={event.id} className="rounded-2xl border border-slate-800/70 bg-slate-950/50 p-4">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <StatusBadge status={mapTimelineStatus(event.eventName)} label={event.eventName} />
-                          <span className="text-sm text-slate-300">Block {event.blockNumber}</span>
-                        </div>
-                        <span className="text-xs text-slate-500">{formatRelativeTime(event.createdAt)}</span>
-                      </div>
-                      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-400">
-                        <span className="font-mono">{shortHex(event.txHash)}</span>
-                        {explorerBaseUrl ? (
-                          <a
-                            href={`${explorerBaseUrl}/tx/${event.txHash}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-emerald-300 transition-colors hover:text-emerald-200"
-                          >
-                            View tx
-                          </a>
-                        ) : null}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </CardContent>
-            </Card>
-          </div>
+           {/* Parameters / Summary Items */}
+           <div className="flex flex-col gap-4 border-b border-white/10 pb-8 mb-8 relative z-10">
+              <h3 className="text-sm font-bold text-white/60 uppercase tracking-widest">Wager Details</h3>
+              <div className="flex justify-between py-2 border-b border-white/5">
+                <span className="text-white/40">Asset</span>
+                <span className="font-mono text-white text-right">{symbol || shortHex(assetAddress)}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-white/5">
+                <span className="text-white/40">Timestamp</span>
+                <span className="font-mono text-white text-right">{onChainBet?.placedAt ? formatTimestamp(onChainBet.placedAt) : "—"}</span>
+              </div>
+              <div className="flex justify-between py-2">
+                <span className="text-white/40">Lifecycle</span>
+                <span className="font-mono text-white text-right truncate max-w-[140px]">{localBet?.lastEventName ?? "Awaiting..."}</span>
+              </div>
+           </div>
 
-          <div className="space-y-6">
-            {betState ? (
-              <TxStepper
-                title="Lifecycle"
-                subtitle={`Current state: ${betState}`}
-                steps={buildLifecycleSteps(betState)}
-              />
-            ) : null}
+           {/* Provable Truth Matrix */}
+           <div className="flex flex-col gap-4 relative z-10">
+              <h3 className="text-sm font-bold text-white/60 uppercase tracking-widest flex items-center gap-2">
+                 Provable Truth 
+                 <span className={`w-2 h-2 rounded-full ${resultState === 'finalized' || resultState === 'won' || resultState === 'lost' ? 'bg-blue-500' : 'bg-white/20'}`}></span>
+              </h3>
+              
+              <div className="flex flex-col p-4 bg-white/5 border border-white/10 rounded-xl font-mono text-xs gap-3 text-white/60">
+                 <div className="flex flex-col gap-1">
+                   <span className="text-blue-400/60 font-sans text-[10px] uppercase font-bold tracking-wider">Player Address</span>
+                   <span className="font-bold text-white text-sm bg-white/5 w-fit px-2 py-1 rounded inline-block truncate max-w-full">
+                     {onChainBet?.player ?? localBet?.player ?? "—"}
+                   </span>
+                 </div>
+                 
+                 <div className="w-full h-px bg-white/5 my-1" />
 
-            <Card className="border-slate-800 bg-slate-900/40 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-white">Protocol Context</CardTitle>
-                <CardDescription className="text-slate-400">
-                  Release-scoped metadata used to interpret this bet.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Metric label="Release Digest" value={release?.releaseDigest ?? "—"} copyable />
-                <Metric label="Hub" value={release?.contracts.hub ?? "—"} copyable />
-                <Metric label="Game Label" value={gameMeta?.label ?? "—"} />
-                <Metric label="Route Slug" value={gameMeta?.slug ?? "—"} />
-                <Metric label="Params Encoding" value={gameMeta?.paramsEncoding ?? "Not declared"} />
-              </CardContent>
-            </Card>
+                 <div className="flex justify-between">
+                   <span>Release Digest</span>
+                   <span className="text-white truncate max-w-[120px]">{shortHex(release?.releaseDigest)}</span>
+                 </div>
+                 <div className="flex justify-between">
+                   <span>Hub Contract</span>
+                   <span className="text-blue-400 cursor-pointer hover:underline">{shortHex(release?.contracts.hub)}</span>
+                 </div>
+                 <div className="flex justify-between">
+                   <span>Primary Tx</span>
+                   <span className="text-blue-400 cursor-pointer hover:underline">{shortHex(primaryTxHash)}</span>
+                 </div>
+              </div>
+           </div>
 
-            <Card className="border-slate-800 bg-slate-900/40 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-white">Actions</CardTitle>
-                <CardDescription className="text-slate-400">
-                  Refund and finalize are available only when the current lifecycle state allows them.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex flex-wrap gap-3">
-                  <Button
-                    variant="destructive"
-                    onClick={() => void handleRefund()}
-                    disabled={!canRefund || refundFlow.busy || finalizeFlow.busy}
-                  >
-                    {refundFlow.busy ? "Running..." : "Refund"}
-                  </Button>
-                  <Button
-                    onClick={() => void handleFinalize()}
-                    disabled={!canFinalize || finalizeFlow.busy || refundFlow.busy}
-                  >
-                    {finalizeFlow.busy ? "Running..." : "Finalize"}
-                  </Button>
+           {/* Finalize/Refund Actions */}
+           {(canFinalize || canRefund) && (
+             <div className="mt-10 pt-8 border-t border-white/10 relative z-10">
+                <div className="flex flex-col gap-4">
+                   <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-bold text-white/60 uppercase tracking-widest">Protocol Intervention</h3>
+                      <TxStatusChip status={actionFlow?.status ?? 'idle'} />
+                   </div>
+                   
+                   <div className="flex gap-2">
+                      {canFinalize && (
+                        <Button 
+                          onClick={() => void handleFinalize()} 
+                          disabled={finalizeFlow.busy || refundFlow.busy}
+                          className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition-all active:scale-95"
+                        >
+                          {finalizeFlow.busy ? "Finalizing..." : "Finalize Room"}
+                        </Button>
+                      )}
+                      {canRefund && (
+                        <Button 
+                          variant="destructive"
+                          onClick={() => void handleRefund()} 
+                          disabled={refundFlow.busy || finalizeFlow.busy}
+                          className="flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-3 rounded-xl transition-all active:scale-95"
+                        >
+                          {refundFlow.busy ? "Refunding..." : "Refund Stake"}
+                        </Button>
+                      )}
+                   </div>
+                   
+                   {actionError && (
+                     <p className="text-xs text-rose-500 mt-2">{actionError.message}</p>
+                   )}
+                   
+                   {actionFlow?.hasActivity && (
+                     <div className="mt-4">
+                        <TxStepper steps={actionFlow.steps} title="Governance Trace" footer={<Button variant="ghost" size="sm" onClick={actionFlow.reset} className="text-[10px] text-white/30 p-0 h-auto">Reset</Button>} />
+                     </div>
+                   )}
                 </div>
-                {readOnly ? (
-                  <p className="text-sm text-amber-400/80">Read-only mode is active, so write actions are disabled.</p>
-                ) : null}
-                {!canRefund && !canFinalize ? (
-                  <p className="text-sm text-slate-500">
-                    No write action is currently available for the observed state.
-                  </p>
-                ) : null}
-                {actionError ? (
-                  <ErrorCallout
-                    title="Action error"
-                    message={actionError.message}
-                    details={serializeErrorDetails(actionError)}
-                  />
-                ) : null}
-                {actionFlow ? (
-                  <div className="space-y-3 rounded-2xl border border-slate-800/70 bg-slate-950/40 p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <div className="text-sm font-semibold text-white">{actionTitle}</div>
-                        <div className="text-xs text-slate-400">{actionSubtitle}</div>
-                      </div>
-                      <TxStatusChip status={actionFlow.status} />
-                    </div>
-                    <TxStepper
-                      title={actionTitle}
-                      subtitle={`Status: ${actionFlow.status}`}
-                      steps={actionFlow.steps}
-                      footer={
-                        <div className="space-y-2 text-xs text-slate-400">
-                          {actionFlow.txHash ? (
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="font-mono">{actionFlow.txHash}</span>
-                              {explorerBaseUrl ? (
-                                <a
-                                  href={`${explorerBaseUrl}/tx/${actionFlow.txHash}`}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="text-emerald-300 transition-colors hover:text-emerald-200"
-                                >
-                                  View tx
-                                </a>
-                              ) : null}
-                            </div>
-                          ) : null}
-                          {actionFlow.journalEntry?.blockNumber ? (
-                            <div>Block: {actionFlow.journalEntry.blockNumber}</div>
-                          ) : null}
-                          {actionFlow.hasActivity ? (
-                            <div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={actionFlow.reset}
-                                className="h-auto px-0 text-slate-400 hover:text-white"
-                              >
-                                Reset trace
-                              </Button>
-                            </div>
-                          ) : null}
-                        </div>
-                      }
-                    />
-                  </div>
-                ) : null}
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
+             </div>
+           )}
+
+        </GlassCard>
+
+      </main>
     </PageTransition>
   );
 }

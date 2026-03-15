@@ -15,6 +15,7 @@ import { useRelease } from "../../../ssot/release/ReleaseProvider";
 import { useSSOTSDK } from "../../../ssot/sdk";
 import { usePlaceBetStepper } from "../usePlaceBetStepper";
 import { formatUnits, parseDecimalToUnits } from "../model/units";
+import { cn } from "@ssot/ui";
 
 import { BetPanelShell } from "./BetPanelShell";
 
@@ -42,6 +43,8 @@ export type GameBetPanelProps = {
     value: string;
     helper?: string;
   };
+  layout?: "slip-right" | "slip-left";
+  variant?: "room" | "immersive";
   children: React.ReactNode;
 };
 
@@ -58,6 +61,8 @@ export function GameBetPanel({
   getEncodedParams,
   inputFingerprint,
   selectionSignal,
+  layout = "slip-right",
+  variant = "room",
   children,
 }: GameBetPanelProps) {
   const router = useRouter();
@@ -282,16 +287,19 @@ export function GameBetPanel({
     <div className="space-y-6">
       {formError ? <ErrorCallout title="Input error" message={formError} /> : null}
 
-      <div className="flex flex-col xl:flex-row gap-6">
+      <div className={`flex flex-col xl:flex-row gap-6 ${layout === "slip-left" ? "xl:flex-row-reverse" : ""}`}>
         <section
-          className={`flex-1 min-h-[34rem] rounded-[2rem] border shadow-2xl shadow-slate-950/40 ${
-            isRouletteRoom
-              ? "overflow-hidden border-fuchsia-400/15 bg-[radial-gradient(circle_at_top,rgba(236,72,153,0.12),transparent_26%),linear-gradient(180deg,rgba(21,11,40,0.98),rgba(7,12,24,0.98))]"
-              : "border-violet-400/15 bg-[radial-gradient(circle_at_top,rgba(168,85,247,0.12),transparent_26%),linear-gradient(180deg,rgba(21,11,40,0.98),rgba(7,12,24,0.98))]"
-          }`}
+          className={cn(
+            "flex-1 min-h-[34rem] rounded-[2rem]",
+            variant === "room" ? (
+              isRouletteRoom
+                ? "border shadow-2xl shadow-slate-950/40 border-fuchsia-400/15 bg-[radial-gradient(circle_at_top,rgba(236,72,153,0.12),transparent_26%),linear-gradient(180deg,rgba(21,11,40,0.98),rgba(7,12,24,0.98))]"
+                : "border shadow-2xl shadow-slate-950/40 border-violet-400/15 bg-[radial-gradient(circle_at_top,rgba(168,85,247,0.12),transparent_26%),linear-gradient(180deg,rgba(21,11,40,0.98),rgba(7,12,24,0.98))]"
+            ) : "bg-transparent"
+          )}
         >
           <div className={`flex h-full flex-col ${isRouletteRoom ? "min-h-full" : ""}`}>
-            {!isRouletteRoom ? (
+            {variant === "room" && !isRouletteRoom ? (
               <div className="flex flex-wrap items-start justify-between gap-3 border-b border-white/8 px-5 py-4">
                 <div>
                   <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -306,7 +314,10 @@ export function GameBetPanel({
               </div>
             ) : null}
 
-            <div className={`${isRouletteRoom ? "min-h-full p-4 sm:p-5" : "min-h-0 flex-1 p-4 sm:p-5"}`}>
+            <div className={cn(
+              isRouletteRoom ? "min-h-full" : "min-h-0 flex-1",
+              variant === "room" ? "p-4 sm:p-5" : "p-0"
+            )}>
               {children}
             </div>
           </div>

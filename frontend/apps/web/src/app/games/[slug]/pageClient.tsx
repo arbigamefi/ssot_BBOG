@@ -25,6 +25,10 @@ import {
   type RouletteSelection,
   StatusBadge,
   TabBar,
+  RoomStrip,
+  DiceSlider,
+  SharedBetSlip,
+  cn,
   type BetStatus,
   type DataTableColumn,
   type TabBarItem,
@@ -590,55 +594,84 @@ export function GamePageClient({ slug }: { slug: string }) {
             </div>
           </div>
 
-          <div className="ag-room-panel rounded-[2.1rem] px-4 py-4 sm:px-5 sm:py-5">
-            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-white/8 px-1 pb-5">
-              <div className="max-w-3xl space-y-3">
-                <div className="flex items-center gap-3">
-                  <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${presentation.theme.badgeClassName}`}>
-                    {presentation.roomLabel}
-                  </span>
-                  <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${roomPulse.className}`}>
-                    {roomPulse.label}
-                  </span>
+          <div className={cn(
+            "ag-room-panel rounded-[2.1rem]",
+            slug === "dice" ? "border-none bg-transparent p-0" : "px-4 py-4 sm:px-5 sm:py-5"
+          )}>
+            {slug !== "dice" && (
+              <div className="flex flex-wrap items-start justify-between gap-4 border-b border-white/8 px-1 pb-5">
+                <div className="max-w-3xl space-y-3">
+                  <div className="flex items-center gap-3">
+                    <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${presentation.theme.badgeClassName}`}>
+                      {presentation.roomLabel}
+                    </span>
+                    <span className={`inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${roomPulse.className}`}>
+                      {roomPulse.label}
+                    </span>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h1 className="text-3xl font-black tracking-[-0.04em] text-white sm:text-4xl">
+                      {presentation.icon} {game.label}
+                    </h1>
+                    <p className="max-w-2xl text-sm leading-6 text-slate-400">
+                      {isRouletteRoom
+                        ? "Standard 0-36 European table. Pick the bet on the board, then size the ticket on the right."
+                        : "A room-first layout: game selector on top, play surface on the left, bet slip on the right."}
+                    </p>
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <h1 className="text-3xl font-black tracking-[-0.04em] text-white sm:text-4xl">
-                    {presentation.icon} {game.label}
-                  </h1>
-                  <p className="max-w-2xl text-sm leading-6 text-slate-400">
-                    {isRouletteRoom
-                      ? "Standard 0-36 European table. Pick the bet on the board, then size the ticket on the right."
-                      : "A room-first layout: game selector on top, play surface on the left, bet slip on the right."}
-                  </p>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  <div className="rounded-[1rem] border border-white/10 bg-white/[0.04] px-4 py-3">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Active call</div>
+                    <div className="mt-2 text-sm font-semibold text-white">{paramSignal.value}</div>
+                  </div>
+                  <div className="rounded-[1rem] border border-white/10 bg-white/[0.04] px-4 py-3">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Sync</div>
+                    <div className="mt-2 text-sm font-semibold text-white">{lagTone.label}</div>
+                  </div>
+                  <div className="rounded-[1rem] border border-white/10 bg-white/[0.04] px-4 py-3">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Assets</div>
+                    <div className="mt-2 text-sm font-semibold text-white">{(release.assets ?? []).map((asset) => asset.symbol).join(", ") || "—"}</div>
+                  </div>
                 </div>
               </div>
+            )}
 
-              <div className="grid gap-2 sm:grid-cols-3">
-                <div className="rounded-[1rem] border border-white/10 bg-white/[0.04] px-4 py-3">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Active call</div>
-                  <div className="mt-2 text-sm font-semibold text-white">{paramSignal.value}</div>
-                </div>
-                <div className="rounded-[1rem] border border-white/10 bg-white/[0.04] px-4 py-3">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Sync</div>
-                  <div className="mt-2 text-sm font-semibold text-white">{lagTone.label}</div>
-                </div>
-                <div className="rounded-[1rem] border border-white/10 bg-white/[0.04] px-4 py-3">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Assets</div>
-                  <div className="mt-2 text-sm font-semibold text-white">{(release.assets ?? []).map((asset) => asset.symbol).join(", ") || "—"}</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-5" id="bet-panel">
+            <div className={slug === "dice" ? "pt-0" : "pt-5"} id="bet-panel">
+              {slug === "dice" && <RoomStrip title="Precision Dice" edgePercentage={1.0} isLive={true} className="mb-6" />}
               <GameBetPanel
                 release={release}
                 game={{ gameId: game.gameId, slug: game.slug, label: game.label }}
                 getEncodedParams={getEncodedParams}
                 inputFingerprint={[game.slug, diceCap, coinSide, JSON.stringify(rouletteSelection), kenoMask].join("|")}
                 selectionSignal={paramSignal}
+                layout={slug === "dice" ? "slip-left" : "slip-right"}
+                variant={slug === "dice" ? "immersive" : "room"}
               >
-                {renderParamsForm()}
+                {slug === "dice" ? (
+                  <div className="flex flex-col gap-6">
+                    <div className="relative rounded-3xl border border-white/5 bg-[#0a0a0a] p-8 min-h-[500px] flex items-center justify-center overflow-hidden">
+                       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-purple-500/5 blur-[120px] rounded-full pointer-events-none" />
+                       <DiceSlider initialValue={50} direction="under" />
+                    </div>
+                    
+                    <div className="flex flex-col gap-2 p-4 rounded-xl border border-white/5 bg-[#0a0a0a] w-fit">
+                        <div className="text-[10px] font-bold text-white/40 tracking-[0.2em] uppercase">Last Results</div>
+                        <div className="flex gap-2">
+                           {[42.5, 89.12, 12.04, 76.99, 50.01].map((res, i) => (
+                              <div key={i} className={cn(
+                                "w-12 h-8 rounded-md flex items-center justify-center text-[10px] font-mono font-black border transition-colors",
+                                res < Number(diceCap) ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-rose-500/10 text-rose-500 border-rose-500/20"
+                              )}>
+                                {res.toFixed(1)}
+                              </div>
+                           ))}
+                        </div>
+                    </div>
+                  </div>
+                ) : renderParamsForm()}
               </GameBetPanel>
             </div>
           </div>

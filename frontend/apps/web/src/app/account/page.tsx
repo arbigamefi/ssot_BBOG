@@ -17,6 +17,12 @@ import {
   StatCard,
   TxStatusChip,
   TxStepper,
+  GlassCard,
+  AuditTabs,
+  AuditTableHeader,
+  AuditTableRow,
+  AuditTableCell,
+  cn,
   type DataTableColumn,
   toast,
 } from "@ssot/ui";
@@ -174,373 +180,203 @@ export default function AccountPage() {
     }
   }, [account, claimRefundFlow, readOnly, refetchRefundCredit, sdk]);
 
-  const balanceColumns: DataTableColumn<AssetAuditRow>[] = React.useMemo(
-    () => [
-      {
-        key: "asset",
-        header: "Asset",
-        render: (row) => (
-          <div className="space-y-1">
-            <div className="font-medium text-white">{row.symbol}</div>
-            <div className="inline-flex items-center gap-2 font-mono text-xs text-slate-400">
-              <span>{shortHex(row.asset)}</span>
-              <CopyButton value={row.asset} label={`Copy ${row.symbol} address`} />
-            </div>
-          </div>
-        ),
-      },
-      {
-        key: "walletBalance",
-        header: "Wallet Balance",
-        render: (row) => <span className="font-mono text-slate-200">{formatAmount(row.walletBalance, row.decimals, row.symbol)}</span>,
-      },
-      {
-        key: "shares",
-        header: "Bank Shares",
-        render: (row) => <span className="font-mono text-slate-300">{formatAmount(row.shares, row.decimals)}</span>,
-      },
-      {
-        key: "assetsEquivalent",
-        header: "Assets Eq.",
-        render: (row) => <span className="font-mono text-slate-300">{formatAmount(row.assetsEquivalent, row.decimals, row.symbol)}</span>,
-      },
-    ],
-    []
-  );
-
-  const allowanceColumns: DataTableColumn<AssetAuditRow>[] = React.useMemo(
-    () => [
-      {
-        key: "asset",
-        header: "Asset",
-        render: (row) => <span className="font-medium text-white">{row.symbol}</span>,
-      },
-      {
-        key: "allowance",
-        header: "Allowance",
-        render: (row) => <span className="font-mono text-slate-200">{formatAmount(row.allowance, row.decimals, row.symbol)}</span>,
-      },
-      {
-        key: "spender",
-        header: "Bank Spender",
-        render: (row) => (
-          <div className="inline-flex items-center gap-2 font-mono text-xs text-slate-400">
-            <span>{shortHex(row.bank)}</span>
-            <CopyButton value={row.bank} label={`Copy ${row.symbol} bank`} />
-          </div>
-        ),
-      },
-    ],
-    []
-  );
-
-  const journalColumns: DataTableColumn<JournalRow>[] = React.useMemo(
-    () => [
-      {
-        key: "time",
-        header: "Time",
-        render: (row) => (
-          <span className="font-mono text-slate-400">{new Date(row.createdAt).toLocaleString()}</span>
-        ),
-      },
-      {
-        key: "action",
-        header: "Action",
-        render: (row) => <span className="font-medium text-white">{row.action}</span>,
-      },
-      {
-        key: "status",
-        header: "Status",
-        render: (row) => (
-          <span className={`font-medium ${STATUS_COLORS[row.status] ?? "text-slate-400"}`}>
-            {row.status}
-          </span>
-        ),
-      },
-      {
-        key: "tx",
-        header: "Tx",
-        render: (row) =>
-          row.txHash ? (
-            <span className="inline-flex items-center gap-2 font-mono text-slate-400">
-              <span>{shortHex(row.txHash)}</span>
-              {explorerBaseUrl ? (
-                <a
-                  href={`${explorerBaseUrl}/tx/${row.txHash}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-emerald-300 transition-colors hover:text-emerald-200"
-                >
-                  View
-                </a>
-              ) : null}
-            </span>
-          ) : (
-            <span className="text-slate-500">—</span>
-          ),
-      },
-      {
-        key: "chain",
-        header: "Chain",
-        render: (row) => <span className="font-mono text-slate-400">{row.chainId}</span>,
-      },
-      {
-        key: "release",
-        header: "Release",
-        render: (row) => (
-          <div className="inline-flex items-center gap-2 font-mono text-xs text-slate-400">
-            <span>{shortHex(row.releaseDigest)}</span>
-            <CopyButton value={row.releaseDigest} label="Copy release digest" />
-          </div>
-        ),
-      },
-      {
-        key: "block",
-        header: "Block",
-        render: (row) => <span className="font-mono text-slate-500">{row.blockNumber ?? "—"}</span>,
-      },
-      {
-        key: "error",
-        header: "Error",
-        render: (row) => <span className="font-mono text-xs text-rose-400/70">{row.errorCode ?? ""}</span>,
-      },
-    ],
-    [explorerBaseUrl]
-  );
-
-  const totalWalletBalance = assetRows.reduce((sum, row) => sum + row.walletBalance, 0n);
-  const totalAssetsEquivalent = assetRows.reduce((sum, row) => sum + row.assetsEquivalent, 0n);
-  const totalAllowance = assetRows.reduce((sum, row) => sum + row.allowance, 0n);
   const primaryAsset = release?.assets[0];
+  const totalAssetsEquivalent = assetRows.reduce((sum, row) => sum + row.assetsEquivalent, 0n);
 
   return (
     <PageTransition pageKey="account">
-      <PageHeader
-        title="Account"
-        description="Self-audit for wallet balances, bank allowances, VRF refund credit, release identity, and the local transaction journal."
-      />
-
-      {!account ? (
-        <div className="mb-8">
-          <ConnectWalletPrompt action="inspect your account state" />
-        </div>
-      ) : null}
-
-      {balancesError ? (
-        <div className="mb-6">
-          <ErrorCallout title="Account load error" message={(balancesError as Error).message} />
-        </div>
-      ) : null}
-      {refundError ? (
-        <div className="mb-6">
-          <ErrorCallout title="Refund credit load error" message={(refundError as Error).message} />
-        </div>
-      ) : null}
-
-      <div className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard
-          icon="👛"
-          label={`Wallet Balance${primaryAsset ? ` (${primaryAsset.symbol})` : ""}`}
-          value={account && primaryAsset ? formatAmount(totalWalletBalance, primaryAsset.decimals, primaryAsset.symbol) : "—"}
-        />
-        <StatCard
-          icon="🏦"
-          label="Assets in Bank"
-          value={account && primaryAsset ? formatAmount(totalAssetsEquivalent, primaryAsset.decimals, primaryAsset.symbol) : "—"}
-        />
-        <StatCard
-          icon="🧾"
-          label="Allowance"
-          value={account && primaryAsset ? formatAmount(totalAllowance, primaryAsset.decimals, primaryAsset.symbol) : "—"}
-        />
-        <StatCard
-          icon="🎲"
-          label="Refund Credit"
-          value={account && primaryAsset ? formatAmount(refundCredit, primaryAsset.decimals, primaryAsset.symbol) : "—"}
-        />
-      </div>
-
-      <div className="mb-8 grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.9fr)]">
-        <Card className="border-slate-800 bg-slate-900/40 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="text-white">Balances</CardTitle>
-            <CardDescription className="text-slate-400">
-              Per-asset wallet balances and current Bank position.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <DataTable
-              columns={balanceColumns}
-              data={assetRows}
-              loading={balancesLoading && Boolean(account)}
-              emptyMessage={account ? "No asset state available yet." : "Connect wallet to load balances."}
-              rowKey={(row) => row.id}
-            />
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-800 bg-slate-900/40 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="text-white">Allowances</CardTitle>
-            <CardDescription className="text-slate-400">
-              Exact ERC20 allowances granted to each per-asset Bank spender.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <DataTable
-              columns={allowanceColumns}
-              data={assetRows}
-              loading={balancesLoading && Boolean(account)}
-              emptyMessage={account ? "No allowance state available yet." : "Connect wallet to load allowances."}
-              rowKey={(row) => row.id}
-            />
-          </CardContent>
-        </Card>
-
-        <div className="space-y-6">
-          <Card className="border-slate-800 bg-slate-900/40 backdrop-blur-sm">
-            <CardHeader>
-              <div className="flex items-center justify-between gap-3">
-                <CardTitle className="text-white">VRF Refund Credit</CardTitle>
-                <TxStatusChip status={claimRefundFlow.status} />
+      <main className="max-w-[1440px] mx-auto px-6 py-12 md:py-16 flex flex-col gap-12">
+        
+        {/* Account Header Section */}
+        <div className="flex flex-col md:flex-row gap-8 justify-between items-start md:items-end">
+          <div className="flex items-center gap-6">
+            <div className="w-24 h-24 rounded-full bg-indigo-500/20 border-2 border-indigo-500/30 flex items-center justify-center shadow-[0_0_30px_rgba(99,102,241,0.2)]">
+               <span className="text-3xl">👤</span>
+            </div>
+            <div className="flex flex-col gap-2">
+              <h1 className="text-3xl md:text-5xl font-mono font-bold tracking-tight text-white flex items-center gap-3">
+                {account ? shortHex(account) : "No Wallet"}
+                {account && <CopyButton value={account} label="Copy address" />}
+              </h1>
+              <div className="flex items-center gap-3 text-sm text-white/50">
+                 <span>Chain ID: {chainId}</span>
+                 <span>•</span>
+                 {explorerBaseUrl && account && (
+                   <a href={`${explorerBaseUrl}/address/${account}`} target="_blank" rel="noreferrer" className="text-green-400 hover:text-green-300 transition-colors">Explorer ↗</a>
+                 )}
               </div>
-              <CardDescription className="text-slate-400">
-                Refund credit held in VRFHub for the connected wallet.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="rounded-2xl border border-slate-800/70 bg-slate-950/40 p-4 text-sm text-slate-300">
-                Available credit:{" "}
-                <span className="font-mono text-white">
-                  {primaryAsset && account ? formatAmount(refundCredit, primaryAsset.decimals, primaryAsset.symbol) : "—"}
-                </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+             {!account && <ConnectWalletPrompt action="inspect account" />}
+             {account && (
+               <button className="px-6 py-3 rounded-full bg-white text-black font-bold text-sm hover:bg-gray-200 transition-colors">Connected</button>
+             )}
+          </div>
+        </div>
+
+        {balancesError && <ErrorCallout title="Load error" message={(balancesError as Error).message} />}
+
+        {/* Global Balances */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+           <GlassCard glowColor="bg-indigo-500/20" padding="md" className="flex flex-col gap-2 relative">
+              <span className="text-white/40 text-[10px] font-bold uppercase tracking-widest">Total Vault Value</span>
+              <span className="text-3xl font-mono font-bold">
+                {primaryAsset ? formatAmount(totalAssetsEquivalent, primaryAsset.decimals, primaryAsset.symbol) : "—"}
+              </span>
+              <span className="text-indigo-400 text-sm font-medium">Sum of all bank shares</span>
+           </GlassCard>
+
+           <GlassCard padding="md" className="flex flex-col gap-2 justify-between col-span-1 md:col-span-3">
+              <span className="text-white/40 text-[10px] font-bold uppercase tracking-widest">Asset Breakdown</span>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-8">
+                 {assetRows.length > 0 ? assetRows.map((row, i) => (
+                   <div key={row.id} className={cn("flex flex-col", i > 0 && "border-l border-white/10 pl-8")}>
+                      <span className={cn("font-mono text-2xl font-bold", i === 1 ? "text-blue-400" : i === 2 ? "text-amber-500" : "text-white")}>
+                        {formatAmount(row.assetsEquivalent, row.decimals, row.symbol)}
+                      </span>
+                      <span className="text-white/40 text-sm mt-1">{i === 1 ? "Providing Liquidity" : i === 2 ? "Unclaimed Rewards" : "Ready to play"}</span>
+                   </div>
+                 )) : (
+                   <div className="text-white/20 text-sm italic">No assets identified in this release.</div>
+                 )}
               </div>
+           </GlassCard>
+        </div>
 
-              {claimRefundFlow.error ? (
-                <ErrorCallout
-                  title="Transaction error"
-                  message={claimRefundFlow.error.message}
-                  details={serializeErrorDetails(claimRefundFlow.error)}
-                />
-              ) : null}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-12">
+           {/* Transaction Journal */}
+           <div className="flex flex-col gap-6">
+              <h2 className="text-2xl font-bold tracking-tight">Transaction Journal</h2>
+              
+              <AuditTabs activeColorClass="border-indigo-400 text-indigo-400">
+                <AuditTableHeader>
+                   <div className="grid grid-cols-[1fr_2fr_1fr_1fr_80px] text-white/40 font-bold uppercase tracking-wider text-[10px]">
+                     <div>Date / Hash</div>
+                     <div>Event Type / Action</div>
+                     <div>Amount</div>
+                     <div>Status</div>
+                     <div className="text-right">Chain</div>
+                   </div>
+                </AuditTableHeader>
+                
+                {txRows.length > 0 ? txRows.map((tx: any, i: number) => (
+                   <AuditTableRow key={i}>
+                     <div className="grid grid-cols-[1fr_2fr_1fr_1fr_80px] items-center">
+                       <AuditTableCell>
+                         <div className="flex flex-col gap-1">
+                           <span className="text-white">{new Date(tx.createdAt).toLocaleDateString()}</span>
+                           <span className="text-xs font-mono text-white/30 hover:text-white transition-colors cursor-pointer">{shortHex(tx.txHash)}</span>
+                         </div>
+                       </AuditTableCell>
+                       <AuditTableCell>
+                         <div className="flex flex-col gap-1">
+                           <span className="text-white font-medium">{tx.action}</span>
+                           <span className="text-xs text-white/40">Chain {tx.chainId}</span>
+                         </div>
+                       </AuditTableCell>
+                       <AuditTableCell>
+                         <span className="font-mono font-bold text-sm text-white/60">
+                            —
+                         </span>
+                       </AuditTableCell>
+                       <AuditTableCell>
+                         <span className={cn("py-1 px-3 rounded-md border font-mono text-[10px] uppercase font-bold tracking-widest", 
+                           tx.status === 'mined' ? "bg-green-500/10 border-green-500/20 text-green-400" : 
+                           tx.status === 'failed' ? "bg-red-500/10 border-red-500/20 text-red-400" :
+                           "bg-blue-500/10 border-blue-500/20 text-blue-400")}>
+                           {tx.status}
+                         </span>
+                       </AuditTableCell>
+                       <AuditTableCell className="justify-end transition-transform hover:translate-x-1 cursor-pointer text-white/30 hover:text-white">
+                         ↗
+                       </AuditTableCell>
+                     </div>
+                   </AuditTableRow>
+                )) : (
+                  <div className="py-12 text-center text-white/30 font-mono text-sm border-b border-white/5">No transactions in local journal.</div>
+                )}
+              </AuditTabs>
+           </div>
 
-              <Button
-                onClick={() => void handleClaimRefund()}
-                disabled={!account || readOnly || claimRefundFlow.busy || refundCredit === 0n || refundLoading}
-              >
-                {claimRefundFlow.busy ? "Claiming…" : "Claim Refund Credit"}
-              </Button>
-
-              {claimRefundFlow.hasActivity ? (
-                <TxStepper
-                  title="Refund Credit Trace"
-                  subtitle={`Status: ${claimRefundFlow.status}`}
-                  steps={claimRefundFlow.steps}
-                  footer={
-                    <div className="space-y-2 text-xs text-slate-400">
-                      {claimRefundFlow.txHash ? (
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-mono">{claimRefundFlow.txHash}</span>
-                          {explorerBaseUrl ? (
-                            <a
-                              href={`${explorerBaseUrl}/tx/${claimRefundFlow.txHash}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-emerald-300 transition-colors hover:text-emerald-200"
-                            >
-                              View tx
-                            </a>
-                          ) : null}
-                        </div>
-                      ) : null}
-                      {claimRefundFlow.journalEntry?.blockNumber ? (
-                        <div>Block: {claimRefundFlow.journalEntry.blockNumber}</div>
-                      ) : null}
-                      <div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={claimRefundFlow.reset}
-                          className="h-auto px-0 text-slate-400 hover:text-white"
-                        >
-                          Reset trace
-                        </Button>
-                      </div>
+           {/* Sidebar: Allowances & Refunds */}
+           <div className="flex flex-col gap-12">
+              <div className="flex flex-col gap-6">
+                 <h2 className="text-2xl font-bold tracking-tight">Allowances / Bank</h2>
+                 <GlassCard padding="lg" className="flex flex-col gap-4 border-white/5">
+                    <div className="flex flex-col gap-4">
+                       {assetRows.map((row) => (
+                          <div key={row.id} className="flex justify-between items-center border-b border-white/5 pb-3 last:border-0 last:pb-0">
+                             <div className="flex flex-col">
+                                <span className="text-sm font-bold text-white">{row.symbol}</span>
+                                <span className="text-[10px] text-white/30 uppercase tracking-widest">Bank Spender</span>
+                             </div>
+                             <span className={cn("font-mono text-xs font-bold", row.allowance === 0n ? "text-rose-500" : "text-emerald-400")}>
+                                {row.allowance > 1_000_000_000_000_000_000n ? "Unlimited" : formatAmount(row.allowance, row.decimals)}
+                             </span>
+                          </div>
+                       ))}
+                       {assetRows.length === 0 && <span className="text-white/20 text-xs text-center py-4 italic">No assets identified.</span>}
                     </div>
-                  }
-                />
-              ) : (
-                <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-950/30 p-4 text-sm text-slate-500">
-                  Refund claims use the standard preflight → stepper → receipt → journal flow.
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                 </GlassCard>
+              </div>
 
-          <Card className="border-slate-800 bg-slate-900/40 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-white">Release Identity</CardTitle>
-              <CardDescription className="text-slate-400">
-                Active protocol release and route execution mode.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <div className="flex items-center justify-between gap-4 border-b border-slate-800/60 py-2">
-                <span className="text-slate-400">Chain</span>
-                <span className="font-mono text-slate-200">{release?.chainId ?? chainId}</span>
+              <div className="flex flex-col gap-6">
+                  <h2 className="text-2xl font-bold tracking-tight">Refund logic</h2>
+                  <GlassCard padding="lg" className="flex flex-col gap-6 border-indigo-500/20 bg-indigo-500/[0.02]">
+                     <div>
+                        <div className="flex items-center justify-between mb-2">
+                           <span className="text-white/40 text-[10px] font-bold uppercase tracking-widest">VRF Refund Credit</span>
+                           <TxStatusChip status={claimRefundFlow.status} />
+                        </div>
+                        <div className="text-3xl font-mono font-bold text-transparent bg-clip-text bg-gradient-to-br from-indigo-400 to-purple-500">
+                           {primaryAsset && account ? formatAmount(refundCredit, primaryAsset.decimals, primaryAsset.symbol) : "0.00"}
+                        </div>
+                     </div>
+
+                     <div className="p-4 bg-black/40 border border-white/5 rounded-2xl text-xs text-white/50 leading-relaxed">
+                        Refund credit is recovered from failed or cancelled VRF requests. Claiming will move these assets to your Bank position.
+                     </div>
+
+                     {claimRefundFlow.error && <ErrorCallout title="Tx Error" message={claimRefundFlow.error.message} />}
+
+                     <Button 
+                        onClick={() => void handleClaimRefund()}
+                        disabled={!account || readOnly || claimRefundFlow.busy || refundCredit === 0n}
+                        className="w-full py-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-all active:scale-[0.98] shadow-lg shadow-indigo-600/20"
+                     >
+                        {claimRefundFlow.busy ? "Executing claim..." : "Claim Refund Credit"}
+                     </Button>
+
+                     {claimRefundFlow.hasActivity && (
+                       <div className="mt-4 pt-4 border-t border-white/5">
+                          <TxStepper 
+                             title="Claim Manifest" 
+                             steps={claimRefundFlow.steps} 
+                             footer={<Button variant="ghost" size="sm" onClick={claimRefundFlow.reset} className="text-[10px] text-white/30 p-0 h-auto">Reset Trace</Button>}
+                          />
+                       </div>
+                     )}
+                  </GlassCard>
+
+                  <div className="flex flex-col gap-4">
+                     <h3 className="text-sm font-bold text-white/40 uppercase tracking-widest">Release Context</h3>
+                     <div className="space-y-3">
+                        <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5 text-xs">
+                           <span className="text-white/40">Release Digest</span>
+                           <span className="font-mono text-indigo-300">{shortHex(release?.releaseDigest)}</span>
+                        </div>
+                        <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5 text-xs">
+                           <span className="text-white/40">Session Integrity</span>
+                           <span className={cn("font-bold px-2 py-1 rounded", readOnly ? "text-amber-400 bg-amber-400/10" : "text-emerald-400 bg-emerald-400/10")}>{readOnly ? "Read-only" : "Writable"}</span>
+                        </div>
+                     </div>
+                  </div>
               </div>
-              <div className="flex items-center justify-between gap-4 border-b border-slate-800/60 py-2">
-                <span className="text-slate-400">Mode</span>
-                <span className={readOnly ? "text-amber-400" : "text-emerald-400"}>
-                  {readOnly ? "Read-only" : "Writable"}
-                </span>
-              </div>
-              <div className="flex items-center justify-between gap-4 border-b border-slate-800/60 py-2">
-                <span className="text-slate-400">Release Digest</span>
-                <span className="inline-flex items-center gap-2 font-mono text-xs text-slate-200">
-                  <span>{shortHex(release?.releaseDigest)}</span>
-                  {release?.releaseDigest ? <CopyButton value={release.releaseDigest} label="Copy release digest" /> : null}
-                </span>
-              </div>
-              <div className="flex items-center justify-between gap-4 border-b border-slate-800/60 py-2">
-                <span className="text-slate-400">Hub</span>
-                <span className="inline-flex items-center gap-2 font-mono text-xs text-slate-200">
-                  <span>{shortHex(release?.contracts.hub)}</span>
-                  {release?.contracts.hub ? <CopyButton value={release.contracts.hub} label="Copy hub address" /> : null}
-                </span>
-              </div>
-              <div className="flex items-center justify-between gap-4 py-2">
-                <span className="text-slate-400">VRF Hub</span>
-                <span className="inline-flex items-center gap-2 font-mono text-xs text-slate-200">
-                  <span>{shortHex(release?.contracts.vrfHub)}</span>
-                  {release?.contracts.vrfHub ? <CopyButton value={release.contracts.vrfHub} label="Copy VRF hub address" /> : null}
-                </span>
-              </div>
-              {readOnlyReason ? (
-                <div className="pt-2 text-xs text-amber-400/80">{readOnlyReason}</div>
-              ) : null}
-            </CardContent>
-          </Card>
+           </div>
         </div>
-      </div>
 
-      <Card className="border-slate-800 bg-slate-900/40 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="text-white">Transaction Journal</CardTitle>
-          <CardDescription className="text-slate-400">
-            Local audit trail of on-chain actions, including chain identity and release digest.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <DataTable
-            columns={journalColumns}
-            data={txRows as JournalRow[]}
-            loading={txLoading}
-            emptyMessage="No transactions yet. Place a bet, provide liquidity, or claim a refund to populate the journal."
-            rowKey={(row) => row.id}
-          />
-        </CardContent>
-      </Card>
+      </main>
     </PageTransition>
   );
 }

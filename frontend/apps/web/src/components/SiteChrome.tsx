@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { usePathname } from "next/navigation";
-import { GlobalSiteShell } from "./GlobalSiteShell";
+import { ShellSwitcher } from "./ShellSwitcher";
 
 export function SiteChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -12,6 +12,6 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  // Use the brand new, clean, single source of truth shell
-  return <GlobalSiteShell>{children}</GlobalSiteShell>;
+  // Use the architectural multi-shell switcher
+  return <ShellSwitcher>{children}</ShellSwitcher>;
 }

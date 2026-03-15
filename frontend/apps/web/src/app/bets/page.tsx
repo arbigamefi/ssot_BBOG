@@ -10,15 +10,21 @@ import {
   PageHeader,
   StatusBadge,
   TabBar,
+  AuditTabs,
+  AuditTableHeader,
+  AuditTableRow,
+  AuditTableCell,
   type BetStatus,
   type DataTableColumn,
 } from "@ssot/ui";
+import Link from "next/link";
 import type { BetRow as IndexedBetRow } from "@ssot/ssot/indexer";
 
 import { PageTransition } from "../../components/PageTransition";
 import { useBets } from "../../features/bets/useBets";
 import { useIndexer } from "../../features/ops/useIndexer";
 import { useRelease } from "../../ssot/release/ReleaseProvider";
+import { formatUnits } from "../../features/betting/model/units";
 
 type StatusFilter = "all" | "placed" | "randomReady" | "finalized" | "refunded";
 
@@ -118,6 +124,14 @@ export default function BetsPage() {
     const map = new Map<string, string>();
     for (const asset of release?.assets ?? []) {
       map.set(asset.address.toLowerCase(), asset.symbol);
+    }
+    return map;
+  }, [release?.assets]);
+
+  const assetDecimalsByAddress = React.useMemo(() => {
+    const map = new Map<string, number>();
+    for (const asset of release?.assets ?? []) {
+      map.set(asset.address.toLowerCase(), asset.decimals);
     }
     return map;
   }, [release?.assets]);
@@ -232,56 +246,100 @@ export default function BetsPage() {
 
   return (
     <PageTransition pageKey="bets">
-      <div className="space-y-8">
-        <PageHeader
-          title="My Bets"
-          description={`${filteredBets.length} of ${bets.length} indexed bets · Last synced block: ${indexerStatus?.lastSyncedBlock ?? "—"}`}
-          actions={
-            <Button variant="outline" size="sm" onClick={() => void syncNow()} className="border-slate-700 text-slate-300 hover:text-white">
-              Sync Now
-            </Button>
-          }
-        />
-
-        <div className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/40 p-5 backdrop-blur-sm">
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-            <div className="space-y-2">
-              <label htmlFor="bets-search" className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                Search
-              </label>
-              <Input
-                id="bets-search"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="betId, player, tx hash, asset, or game"
-                className="border-slate-700 bg-slate-950/60 text-white"
-              />
-            </div>
-            <div className="space-y-2">
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Status</div>
-              <div className="overflow-x-auto">
-                <TabBar tabs={STATUS_TABS.map((tab) => ({ key: tab.key, label: tab.label }))} activeKey={statusFilter} onTabChange={(key) => setStatusFilter(key as StatusFilter)} />
-              </div>
-            </div>
+      <main className="max-w-[1440px] mx-auto px-6 py-12 md:py-16">
+        
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-6">
+          <div>
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">My Tickets</h1>
+            <p className="text-white/50 text-lg">Your complete wagering history across all ArbiGameFi smart contracts.</p>
           </div>
-
-          <div className="space-y-2">
-            <div className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Game</div>
-            <div className="overflow-x-auto">
-              <TabBar tabs={gameTabs} activeKey={gameFilter} onTabChange={setGameFilter} />
-            </div>
+          
+          <div className="flex gap-2 p-1 bg-[#0a0a0a] border border-white/5 rounded-xl">
+             {STATUS_TABS.map((tab) => (
+               <button 
+                 key={tab.key}
+                 onClick={() => setStatusFilter(tab.key as StatusFilter)}
+                 className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${statusFilter === tab.key ? 'bg-white/10 text-white shadow' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
+               >
+                 {tab.label}
+               </button>
+             ))}
           </div>
         </div>
 
-        <DataTable
-          columns={columns}
-          data={filteredBets}
-          loading={isLoading}
-          emptyMessage="No bets match the current filters. Try widening the search or place a new bet from Games."
-          rowKey={(row) => row.id ?? row.betId}
-          onRowClick={(row) => router.push(`/bets/${row.betId}`)}
-        />
-      </div>
+        {/* Global Audit View using standard component */}
+        <AuditTabs activeColorClass="border-blue-400 text-blue-400">
+           <AuditTableHeader>
+              <div className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_1fr_100px] text-white/40 font-bold uppercase tracking-wider text-[10px]">
+                  <div>Date / Block</div>
+                  <div>Game / Result Hash</div>
+                  <div>Wager</div>
+                  <div>Payout</div>
+                  <div>Status</div>
+                  <div className="text-right">Action</div>
+              </div>
+           </AuditTableHeader>
+
+           {isLoading ? (
+             <div className="py-20 text-center text-white/30">Loading tickets...</div>
+           ) : filteredBets.length === 0 ? (
+             <div className="py-20 text-center text-white/30">No tickets found for the current selection.</div>
+           ) : (
+             filteredBets.map((row) => {
+               const gameLabel = row.gameId ? gameLabelById.get(row.gameId.toLowerCase()) ?? shortHex(row.gameId) : "—";
+               const assetSymbol = row.asset ? assetLabelByAddress.get(row.asset.toLowerCase()) ?? shortHex(row.asset) : "—";
+               const status = mapBetState(row.state);
+               
+               const decimals = row.asset ? assetDecimalsByAddress.get(row.asset.toLowerCase()) ?? 18 : 18;
+               const payoutBigInt = (row as any).payout ? BigInt((row as any).payout) : null;
+               
+               return (
+                 <Link key={row.betId} href={`/bets/${row.betId}`}>
+                    <AuditTableRow className="cursor-pointer group">
+                      <div className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_1fr_100px] items-center">
+                        <AuditTableCell>
+                          <div className="flex flex-col gap-1">
+                            <span className="text-white">{formatRelativeTime(row.updatedAt)}</span>
+                            <span className="text-[10px] font-mono text-white/30 hidden sm:block">ID: {row.betId}</span>
+                          </div>
+                        </AuditTableCell>
+                        <AuditTableCell>
+                          <div className="flex flex-col gap-1">
+                            <span className="text-white font-bold">{gameLabel}</span>
+                            <span className="text-[10px] font-mono text-white/40">{shortHex(row.lastTxHash)}</span>
+                          </div>
+                        </AuditTableCell>
+                        <AuditTableCell>
+                           <span className="font-mono text-sm text-white/70">
+                             {(row as any).stake ? formatUnits(BigInt((row as any).stake), decimals) : '0.00'} {assetSymbol}
+                           </span>
+                        </AuditTableCell>
+                        <AuditTableCell>
+                           <span className={`font-mono text-sm ${status === 'won' ? 'text-green-400 font-bold' : 'text-white/40'}`}>
+                             {payoutBigInt != null ? `${formatUnits(payoutBigInt, decimals)} ${assetSymbol}` : '--'}
+                           </span>
+                        </AuditTableCell>
+                        <AuditTableCell>
+                           <span className={`py-1 px-2 border font-bold text-[10px] uppercase rounded-md shrink-0 ${
+                             status === 'won' ? 'border-green-500/20 bg-green-500/10 text-green-400' :
+                             status === 'lost' ? 'border-white/10 bg-white/5 text-white/40' :
+                             'border-blue-500/20 bg-blue-500/10 text-blue-400 animate-pulse'
+                           }`}>
+                              {row.state}
+                           </span>
+                        </AuditTableCell>
+                        <AuditTableCell className="justify-end transition-transform group-hover:translate-x-1 text-white/30 group-hover:text-white">
+                           View Receipt →
+                        </AuditTableCell>
+                      </div>
+                    </AuditTableRow>
+                 </Link>
+               );
+             })
+           )}
+        </AuditTabs>
+
+      </main>
     </PageTransition>
   );
 }

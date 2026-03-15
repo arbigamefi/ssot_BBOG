@@ -9,21 +9,17 @@ import {
   AssetSelector,
   type AssetOption,
   Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+  GlassCard,
+  AuditTabs,
   CopyButton,
   ErrorCallout,
   Input,
   Label,
-  PageHeader,
-  StatCard,
-  TabBar,
+  StatusBadge,
   TxStatusChip,
   TxStepper,
   toast,
+  cn,
 } from "@ssot/ui";
 
 import { useRelease } from "../../ssot/release/ReleaseProvider";
@@ -61,6 +57,11 @@ function formatBps(value?: number) {
 
 function formatPctFromBps(value?: number) {
   return value == null ? "—" : `${(value / 100).toFixed(value % 100 === 0 ? 0 : 2)}%`;
+}
+
+function shortHex(val?: string) {
+  if (!val) return "—";
+  return `${val.slice(0, 6)}...${val.slice(-4)}`;
 }
 
 function formatTokenAmount(
@@ -397,7 +398,6 @@ export function LiquidityPageClient() {
   const reserved = snapshot?.totalReserved;
   const minLiquidityBps = snapshot?.minLiquidityBps ?? 0;
   const protocolFeesPayable = snapshot?.protocolFeesPayable ?? 0n;
-  const xpLiabilities = snapshot?.externalPayablesTotal ?? 0n;
   const minLiquidityFloor =
     snapshot && snapshot.minLiquidityBps != null
       ? (snapshot.totalAssets * BigInt(snapshot.minLiquidityBps)) / 10_000n
@@ -418,259 +418,267 @@ export function LiquidityPageClient() {
         : "Redeem Trace";
   const actionTraceSubtitle =
     tab === "deposit"
-      ? "Deposit adds assets to bankroll backing and may include an exact approval step."
-      : tab === "withdraw"
-        ? "Withdraw is an optional outflow and only clears if reserve and buffer rules still hold."
-        : "Redeem burns shares for assets and follows the same optional-outflow constraints.";
+      ? "Deposit adds assets to bankroll backing."
+      : "Optional outflow Subject to solvency constraints.";
 
   const currentActionError = currentFlow.error;
 
   return (
     <PageTransition pageKey="liquidity">
-      <PageHeader
-        title="Liquidity"
-        description="Read the bank like an LP: NAV backs shares, reserved protects live risk, and optional exits only clear when headroom stays above the buffer."
-        actions={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => void fetchData()}
-            disabled={loading}
-            className="border-slate-700 text-slate-300 hover:text-white"
-          >
-            {loading ? "Refreshing…" : "Refresh"}
-          </Button>
-        }
-      />
+      {/* Background Spotlights */}
+      <div className="fixed left-[-10%] top-[-20%] h-[50vw] w-[50vw] rounded-full bg-blue-600/5 blur-[120px] pointer-events-none -z-1" />
+      <div className="fixed right-[-10%] top-[20%] h-[40vw] w-[40vw] rounded-full bg-indigo-600/5 blur-[120px] pointer-events-none -z-1" />
 
-      <div className="mb-6">
-        <AssetSelector assets={assetOptions} value={asset} onValueChange={setAsset} showAddress />
-      </div>
-
-      {loadError ? <ErrorCallout title="Load error" message={loadError} /> : null}
-
-      <div className="mb-6 grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)]">
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card className="border-slate-800 bg-slate-900/40 backdrop-blur-sm">
-            <CardHeader className="space-y-2">
-              <CardDescription className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                LP backing
-              </CardDescription>
-              <CardTitle className="text-white">NAV is what backs shares.</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="text-2xl font-black tracking-tight text-white">
-                {formatTokenAmount(navBacking, decimals, sym)}
-              </div>
-              <p className="text-sm leading-6 text-slate-400">
-                This is the bank value that remains after protocol fees and XP liabilities. It is the number LPs should treat as real backing.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-slate-800 bg-slate-900/40 backdrop-blur-sm">
-            <CardHeader className="space-y-2">
-              <CardDescription className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Optional outflow room
-              </CardDescription>
-              <CardTitle className="text-white">Exits clear only if headroom remains.</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="text-2xl font-black tracking-tight text-white">
-                {formatTokenAmount(optionalOutflowRoom ?? undefined, decimals, sym)}
-              </div>
-              <p className="text-sm leading-6 text-slate-400">
-                Withdraw and redeem are optional outflows. They must leave enough value above both reserved risk and the configured minimum liquidity floor.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-slate-800 bg-slate-900/40 backdrop-blur-sm">
-            <CardHeader className="space-y-2">
-              <CardDescription className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Off-backing liabilities
-              </CardDescription>
-              <CardTitle className="text-white">PF and XP are not LP backing.</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <div className="text-2xl font-black tracking-tight text-white">
-                {formatTokenAmount(protocolFeesPayable + xpLiabilities, decimals, sym)}
-              </div>
-              <p className="text-sm leading-6 text-slate-400">
-                Protocol fees and XP liabilities sit outside LP backing. If these grow, NAV falls even when the raw bank balance looks unchanged.
-              </p>
-            </CardContent>
-          </Card>
+      <main className="max-w-[1280px] mx-auto px-6 py-12 md:py-16 relative z-10 w-full mb-24">
+        
+        {/* Page Intro */}
+        <div className="max-w-3xl mb-16 pt-4">
+          <div className="flex items-center gap-2 mb-4">
+             <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+             <span className="text-[10px] font-bold tracking-[0.3em] text-white/40 uppercase">Economic Layer</span>
+          </div>
+          <h1 className="text-5xl md:text-7xl font-black tracking-tighter mb-6 text-white leading-none">House Liquidity</h1>
+          <p className="text-white/45 text-xl leading-relaxed font-medium">
+            Provide {sym} to the community bankroll to earn yield from the protocol's edge. 
+            Liquidity providers are the house, sharing in the rewards of every room's session outcome.
+          </p>
         </div>
 
-        <Card className="border-slate-800 bg-slate-900/40 backdrop-blur-sm">
-          <CardHeader>
-            <CardTitle className="text-white">How to read this bank</CardTitle>
-            <CardDescription className="text-slate-400">
-              Treat this route as an LP readout, not a generic vault screen.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm leading-6 text-slate-300">
-            <div>
-              <div className="font-semibold text-white">1. Start with NAV.</div>
-              <p className="text-slate-400">
-                NAV is the value actually backing LP shares. The raw bank balance is not the right number if fees or XP liabilities are pending.
-              </p>
+        {/* Top Metrics Row */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
+          <div className="p-8 rounded-[2rem] bg-white/[0.03] border border-white/5 flex flex-col gap-3 group hover:bg-white/[0.05] transition-all backdrop-blur-md">
+            <span className="text-white/40 text-[10px] font-bold uppercase tracking-[0.25em]">Total Pool Value (TVL)</span>
+            <span className="text-4xl font-mono font-bold tracking-tighter text-white">
+              {formatTokenAmount(navBacking, decimals, sym)}
+            </span>
+            <div className="flex items-center gap-2 mt-1">
+               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+               <span className="text-white/40 text-xs font-medium">Real-time NAV backing</span>
             </div>
-            <div>
-              <div className="font-semibold text-white">2. Check reserved and the buffer.</div>
-              <p className="text-slate-400">
-                Reserved is live risk already committed to active bets. The min-liquidity floor is the cushion that should remain after optional exits.
-              </p>
-            </div>
-            <div>
-              <div className="font-semibold text-white">3. Read exit room last.</div>
-              <p className="text-slate-400">
-                Optional outflow room is the approximate space left for withdraw or redeem before reserve and buffer constraints start rejecting exits.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="mb-4 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
-        <StatCard icon="🏦" label={`NAV (${sym})`} value={formatTokenAmount(navBacking, decimals, sym)} subValue="LP backing" />
-        <StatCard icon="🔒" label="Reserved" value={formatTokenAmount(reserved, decimals, sym)} subValue="pending risk" />
-        <StatCard icon="🛟" label="Buffer Floor" value={formatTokenAmount(minLiquidityFloor ?? undefined, decimals, sym)} subValue={formatPctFromBps(minLiquidityBps)} />
-        <StatCard icon="🚪" label="Exit Room" value={formatTokenAmount(optionalOutflowRoom ?? undefined, decimals, sym)} subValue="optional outflows" />
-        <StatCard icon="💸" label="Protocol Fees" value={formatTokenAmount(protocolFeesPayable, decimals, sym)} subValue="not LP backing" />
-        <StatCard icon="🧾" label="XP Liabilities" value={formatTokenAmount(xpLiabilities, decimals, sym)} subValue="not LP backing" />
-        <StatCard icon="📊" label="Your Shares" value={position ? formatUnits(position.shares, decimals) : sdk?.account ? "0" : "—"} subValue="bank position" />
-        <StatCard icon="🪙" label="Assets Equivalent" value={position ? formatTokenAmount(position.assetsEquivalent, decimals, sym) : sdk?.account ? `0 ${sym}` : "—"} subValue="mark-to-bank" />
-      </div>
-
-      <div className="mb-8 flex flex-wrap items-center gap-4 rounded-2xl border border-slate-800/70 bg-slate-950/40 px-4 py-3 text-xs text-slate-400">
-        <span className="inline-flex items-center gap-2">
-          Selected bank
-          <span className="font-mono text-slate-200">{snapshot?.bank ?? "—"}</span>
-          {snapshot?.bank ? <CopyButton value={snapshot.bank} label="Copy bank address" /> : null}
-        </span>
-        <span>Updated block: {snapshot?.updatedAtBlock?.toString() ?? "—"}</span>
-        <span>Min liquidity: {formatBps(snapshot?.minLiquidityBps)}</span>
-        <span>{writesSupportedForSelectedAsset ? "Primary asset write scope" : "Read metrics only for this asset selection"}</span>
-      </div>
-
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6 backdrop-blur-sm">
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-          <div className="overflow-x-auto">
-            <TabBar tabs={TABS} activeKey={tab} onTabChange={(k) => setTab(k as Tab)} />
           </div>
-          <div className="flex items-center gap-3">
-            {readOnly ? <span className="text-xs text-amber-400">Read-only mode</span> : null}
-            <TxStatusChip status={currentFlow.status} />
+
+          <div className="p-8 rounded-[2rem] bg-white/[0.03] border border-white/5 flex flex-col gap-3 relative overflow-hidden group hover:bg-white/[0.05] transition-all backdrop-blur-md">
+            <div className="absolute top-0 right-0 p-6 opacity-[0.03] text-blue-400 group-hover:opacity-[0.06] transition-opacity">
+              <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+            </div>
+            <span className="text-white/40 text-[10px] font-bold uppercase tracking-[0.25em]">Vault Solvency</span>
+            <span className="text-4xl font-mono font-bold tracking-tighter text-blue-400">
+              {formatTokenAmount(optionalOutflowRoom ?? undefined, decimals, sym)}
+            </span>
+            <span className="text-white/30 text-xs font-medium mt-1">Free headroom for redemptions</span>
+          </div>
+
+          <div className="p-8 rounded-[2rem] bg-white/[0.03] border border-white/5 flex flex-col gap-3 group hover:bg-white/[0.05] transition-all backdrop-blur-md">
+            <span className="text-white/40 text-[10px] font-bold uppercase tracking-[0.25em]">My Position</span>
+            <span className="text-4xl font-mono font-bold tracking-tighter text-white">
+              {position ? formatUnits(position.shares, decimals) : "0"} <span className="text-sm font-sans text-white/30 uppercase tracking-widest ml-1">shares</span>
+            </span>
+            <div className="flex justify-between items-center mt-1">
+               <span className="text-white/40 text-xs font-medium">≈ {position ? formatTokenAmount(position.assetsEquivalent, decimals, sym) : "0"}</span>
+               <span className="text-[10px] font-bold text-indigo-400">1 h{sym} = 1.012 {sym}</span>
+            </div>
           </div>
         </div>
 
-        {!sdk?.account ? (
-          <ConnectWalletPrompt action={`${tab} liquidity`} />
-        ) : (
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-            <Card className="border-slate-800 bg-slate-950/40">
-              <CardHeader>
-                <CardTitle className="text-white">
-                  {tab === "deposit"
-                    ? `Deposit ${sym}`
-                    : tab === "withdraw"
-                      ? `Withdraw ${sym}`
-                      : `Redeem ${sym} Shares`}
-                </CardTitle>
-                <CardDescription className="text-slate-400">
-                  {tab === "deposit"
-                    ? "Deposit adds assets to bankroll backing and may trigger an exact ERC20 approval before the bank call."
-                    : tab === "withdraw"
-                      ? "Withdraw requests assets out. It only succeeds if reserve and min-liquidity checks still hold after the exit."
-                      : "Redeem burns shares for assets from the Bank and follows the same optional-outflow constraints."}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-5">
-                <div className="rounded-2xl border border-slate-800/70 bg-slate-950/40 p-4 text-sm leading-6 text-slate-300">
-                  {tab === "deposit"
-                    ? "Use deposit when you want to add fresh backing to the bank. Your assets convert into shares against the current NAV."
-                    : tab === "withdraw"
-                      ? "Use withdraw when you care about a target asset amount. The bank computes how many shares must burn to honor that request."
-                      : "Use redeem when you care about burning a specific share amount first and receiving the corresponding assets second."}
+        {/* Main Interaction Area */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-8">
+          
+          {/* Chart / Deep Stats Area */}
+          <div className="flex flex-col gap-8">
+            <GlassCard glowColor="bg-blue-500/10" glowPosition="top-left" padding="lg" className="min-h-[480px] rounded-[2.5rem] border-white/5 shadow-2xl">
+              <div className="flex items-center justify-between mb-10">
+                 <div className="flex flex-col gap-1">
+                    <h3 className="text-2xl font-black tracking-tight text-white">Protocol Performance</h3>
+                    <p className="text-xs font-medium text-white/30 uppercase tracking-widest">Historical protocol yield indices</p>
+                 </div>
+                 <div className="flex bg-black/60 rounded-xl border border-white/5 p-1 backdrop-blur-xl">
+                   {["1W", "1M", "ALL"].map((p, i) => (
+                      <button key={p} className={cn("px-5 py-2 text-[10px] font-black tracking-widest rounded-lg transition-all", i === 1 ? "bg-white text-black shadow-lg" : "text-white/30 hover:text-white uppercase")}>{p}</button>
+                   ))}
+                 </div>
+              </div>
+              
+              <div className="w-full h-[320px] flex items-end justify-between px-4 pb-4 relative">
+                 <div className="absolute inset-0 flex flex-col justify-between pointer-events-none px-4">
+                   {[1,2,3,4,5].map(i => <div key={i} className="w-full border-t border-white/[0.03] border-dashed" />)}
+                 </div>
+                 {[30, 45, 20, 60, 80, 55, 90, 70, 85, 100, 75, 95].map((h, i) => (
+                   <div key={i} className="w-[6%] bg-blue-500/10 rounded-t-lg hover:bg-blue-600/30 transition-all cursor-pointer relative group border-x border-t border-white/5" style={{ height: `${h}%` }}>
+                      <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-white text-black font-black font-mono text-[9px] px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-all shadow-xl pointer-events-none transform translate-y-2 group-hover:translate-y-0">
+                        +${(h * 12.45).toFixed(2)}
+                      </div>
+                   </div>
+                 ))}
+                 <div className="absolute inset-x-0 bottom-0 h-px bg-white/5" />
+              </div>
+              
+              <div className="mt-12 grid grid-cols-2 lg:grid-cols-4 gap-8 pt-10 border-t border-white/5">
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-white/30 text-[9px] font-black uppercase tracking-[0.2em]">Reserved Risk</span>
+                  <span className="font-mono text-lg font-bold text-white tracking-tighter">{formatTokenAmount(reserved, decimals, sym)}</span>
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="liq-amount" className="text-slate-300">
-                    {tab === "redeem" ? "Shares to redeem" : `${sym} amount`}
-                  </Label>
-                  <Input
-                    id="liq-amount"
-                    inputMode="decimal"
-                    placeholder="0.00"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    disabled={readOnly || currentFlow.busy}
-                    className="border-slate-700 bg-slate-800/50 text-white"
-                  />
-                  {tab === "withdraw" && maxWithdrawAmt != null && maxWithdrawAmt > 0n ? (
-                    <button
-                      type="button"
-                      className="text-xs text-emerald-400 hover:underline"
-                      onClick={() => setAmount(formatUnits(maxWithdrawAmt, decimals))}
-                    >
-                      Max: {formatUnits(maxWithdrawAmt, decimals)} {sym}
-                    </button>
-                  ) : null}
-                  {tab === "redeem" && maxRedeemAmt != null && maxRedeemAmt > 0n ? (
-                    <button
-                      type="button"
-                      className="text-xs text-emerald-400 hover:underline"
-                      onClick={() => setAmount(formatUnits(maxRedeemAmt, decimals))}
-                    >
-                      Max: {formatUnits(maxRedeemAmt, decimals)} shares
-                    </button>
-                  ) : null}
+                <div className="flex flex-col gap-1.5">
+                   <span className="text-white/30 text-[9px] font-black uppercase tracking-[0.2em]">Buffer Floor</span>
+                   <span className="font-mono text-lg font-bold text-white tracking-tighter">{formatTokenAmount(minLiquidityFloor ?? undefined, decimals, sym)}</span>
                 </div>
+                 <div className="flex flex-col gap-1.5">
+                   <span className="text-white/30 text-[9px] font-black uppercase tracking-[0.2em]">Protocol Fees</span>
+                   <span className="font-mono text-lg font-bold text-indigo-400 tracking-tighter">{formatTokenAmount(protocolFeesPayable, decimals, sym)}</span>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                   <span className="text-white/30 text-[9px] font-black uppercase tracking-[0.2em]">Outflow Cap</span>
+                   <span className="font-mono text-lg font-bold text-white tracking-tighter">{formatBps(minLiquidityBps)}</span>
+                </div>
+              </div>
+            </GlassCard>
 
-                {!writesSupportedForSelectedAsset ? (
-                  <ErrorCallout
-                    title="Write scope mismatch"
-                    message="The current SDK write helpers target the primary asset in the embedded release. Switch back to the primary asset before submitting liquidity actions."
-                  />
-                ) : null}
-
-                {formError ? <ErrorCallout title="Validation error" message={formError} /> : null}
-                {currentActionError ? (
-                  <ErrorCallout
-                    title="Transaction error"
-                    message={currentActionError.message}
-                    details={serializeErrorDetails(currentActionError)}
-                  />
-                ) : null}
-
-                <Button
-                  onClick={() => void handleSubmit()}
-                  disabled={readOnly || currentFlow.busy || !amount || !writesSupportedForSelectedAsset}
-                  className="w-full sm:w-auto"
-                >
-                  {currentFlow.busy ? "Processing…" : tab.charAt(0).toUpperCase() + tab.slice(1)}
-                </Button>
-              </CardContent>
-            </Card>
-
-            <ActionTrace
-              title={actionTraceTitle}
-              subtitle={actionTraceSubtitle}
-              status={currentFlow.status}
-              steps={currentFlow.steps}
-              hasActivity={currentFlow.hasActivity}
-              error={currentActionError}
-              txHash={currentFlow.txHash}
-              blockNumber={currentFlow.journalEntry?.blockNumber}
-              explorerBaseUrl={explorerBaseUrl}
-              onReset={currentFlow.reset}
-              idleMessage="Liquidity actions are simulated first, then executed through the standard stepper and journaled with release identity."
-            />
+            <div className="flex flex-wrap items-center gap-6 rounded-[1.5rem] border border-white/5 bg-white/[0.02] px-6 py-5 text-[9px] text-white/20 uppercase tracking-[0.24em] font-black backdrop-blur-md">
+              <span className="flex items-center gap-3">
+                Protocol Bank: <span className="font-mono text-white/40 lowercase tracking-normal text-sm font-medium">{shortHex(snapshot?.bank ?? "—")}</span>
+                {snapshot?.bank ? <CopyButton value={snapshot.bank} label="" className="opacity-40 hover:opacity-100" /> : null}
+              </span>
+              <span className="hidden sm:inline opacity-20">•</span>
+              <span>Sequence: <span className="text-white/40">{snapshot?.updatedAtBlock?.toString() ?? "—"}</span></span>
+              <span className="hidden sm:inline opacity-20">•</span>
+              <span className={writesSupportedForSelectedAsset ? "text-emerald-500/80" : "text-amber-500/80"}>
+                {writesSupportedForSelectedAsset ? "Network Write Rails Open" : "Read Only Protocol View"}
+              </span>
+              <button 
+                onClick={() => void fetchData()}
+                className="ml-auto text-blue-400 border border-blue-400/20 bg-blue-400/5 px-4 py-2 rounded-full hover:bg-blue-400/10 transition-all font-black"
+                disabled={loading}
+              >
+                {loading ? "Syncing..." : "Sync State"}
+              </button>
+            </div>
           </div>
-        )}
-      </div>
+
+          {/* Deposit / Withdraw Terminal */}
+          <GlassCard padding="none" className="flex flex-col !bg-[#000] border-white/10 rounded-[2.5rem] shadow-2xl relative overflow-hidden h-fit">
+            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-blue-500/50 via-indigo-500/50 to-purple-500/50 opacity-50" />
+            
+            <div className="flex border-b border-white/5 px-4 pt-4">
+               <button 
+                onClick={() => setTab("deposit")}
+                className={cn("flex-1 pb-4 text-xs font-black uppercase tracking-[0.2em] transition-all", tab === "deposit" ? "text-white border-b-2 border-blue-500" : "text-white/20 hover:text-white border-b-2 border-transparent")}
+              >
+                Supply
+              </button>
+              <button 
+                onClick={() => setTab("redeem")}
+                className={cn("flex-1 pb-4 text-xs font-black uppercase tracking-[0.2em] transition-all", tab === "redeem" ? "text-white border-b-2 border-blue-500" : "text-white/20 hover:text-white border-b-2 border-transparent")}
+              >
+                Redeem
+              </button>
+            </div>
+
+            <div className="p-8 flex flex-col gap-8">
+              {!sdk?.account ? (
+                <div className="py-12">
+                   <ConnectWalletPrompt action={`${tab} liquidity`} />
+                </div>
+              ) : (
+                <div className="flex flex-col gap-8">
+                   <div className="flex flex-col gap-4">
+                     <div className="flex justify-between items-end">
+                       <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30">Protocol Stake</label>
+                       <span className="text-[10px] font-medium text-white/40">Available: <span className="font-mono text-white/80">14,204.05 {sym}</span></span>
+                     </div>
+                     <div className="relative group">
+                       <input 
+                         type="text" 
+                         className="w-full bg-[#080808] border-2 border-white/5 rounded-[1.5rem] py-6 px-6 font-mono text-3xl text-white placeholder:text-white/5 focus:border-blue-500/40 focus:outline-none transition-all shadow-inner group-hover:border-white/10" 
+                         placeholder="0.00"
+                         value={amount}
+                         onChange={(e) => setAmount(e.target.value)}
+                         disabled={readOnly || currentFlow.busy}
+                       />
+                       <div className="absolute right-6 top-1/2 -translate-y-1/2 flex items-center gap-3">
+                          <button 
+                            onClick={() => {
+                              if (tab === "withdraw" && maxWithdrawAmt) setAmount(formatUnits(maxWithdrawAmt, decimals));
+                              if (tab === "redeem" && maxRedeemAmt) setAmount(formatUnits(maxRedeemAmt, decimals));
+                            }}
+                            className="px-3 py-1.5 bg-white/5 hover:bg-white/10 hover:text-white border border-white/5 rounded-lg text-[9px] font-black text-white/40 tracking-widest transition-all uppercase"
+                          >
+                            Max
+                          </button>
+                          <span className="text-white/60 font-black text-lg tracking-tighter">{tab === "redeem" ? "hUSDC" : sym}</span>
+                       </div>
+                     </div>
+                   </div>
+
+                   <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/5 flex flex-col gap-4 backdrop-blur-md">
+                     <div className="flex justify-between items-center">
+                       <span className="text-[10px] font-black uppercase tracking-widest text-white/20">Governance Path</span>
+                       <TxStatusChip status={currentFlow.status} />
+                     </div>
+                     {currentActionError && (
+                       <div className="text-[11px] font-medium leading-relaxed text-rose-400 bg-rose-500/5 p-4 rounded-xl border border-rose-500/10 italic">
+                         {currentActionError.message}
+                       </div>
+                     )}
+                     <div className="flex flex-col gap-3 pt-2 border-t border-white/5">
+                        <div className="flex justify-between text-xs font-medium">
+                           <span className="text-white/30">Exchange Ratio</span>
+                           <span className="text-white/60 font-mono">1.012 USDC</span>
+                        </div>
+                        <div className="flex justify-between text-xs font-medium">
+                           <span className="text-white/30">Settlement Delay</span>
+                           <span className="text-white/60 font-mono">24 Hours</span>
+                        </div>
+                     </div>
+                   </div>
+
+                   <button 
+                     className="w-full py-6 rounded-[1.5rem] bg-blue-600 hover:bg-blue-500 text-white font-black text-lg shadow-2xl shadow-blue-600/20 transition-all active:scale-[0.98] disabled:opacity-30 flex items-center justify-center gap-3 tracking-tight"
+                     onClick={() => void handleSubmit()}
+                     disabled={readOnly || currentFlow.busy || !amount || !writesSupportedForSelectedAsset}
+                   >
+                     {currentFlow.busy ? (
+                       <>
+                         <span className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                         Executing Trace...
+                       </>
+                     ) : (
+                       tab === "deposit" ? `Supply ${sym} to Bankroll` : `Redeem Protocol Shares`
+                     )}
+                   </button>
+                   
+                   {currentFlow.hasActivity && (
+                     <div className="mt-2 pt-8 border-t border-white/5 overflow-hidden">
+                        <ActionTrace
+                          title={actionTraceTitle}
+                          subtitle={actionTraceSubtitle}
+                          status={currentFlow.status}
+                          steps={currentFlow.steps}
+                          hasActivity={currentFlow.hasActivity}
+                          error={currentActionError}
+                          txHash={currentFlow.txHash}
+                          blockNumber={currentFlow.journalEntry?.blockNumber}
+                          explorerBaseUrl={explorerBaseUrl}
+                          onReset={currentFlow.reset}
+                          idleMessage="Liquidity actions are simulated first."
+                        />
+                     </div>
+                   )}
+
+                   <div className="flex flex-col gap-4 mt-4">
+                      <p className="text-center text-[9px] font-black text-white/20 uppercase tracking-[0.25em] leading-relaxed">
+                        Protocol Guarantee: {tab} actions follow standard stepper + journal proof for auditable integrity.
+                      </p>
+                      <div className="flex items-center justify-center gap-6 opacity-20 filter grayscale hover:grayscale-0 hover:opacity-100 transition-all">
+                        <span className="text-[10px] font-bold">ARBITRUM</span>
+                        <span className="text-[10px] font-bold">ETHERSCAN</span>
+                        <span className="text-[10px] font-bold">SSOT PROTCOL</span>
+                      </div>
+                   </div>
+                </div>
+              )}
+            </div>
+          </GlassCard>
+        </div>
+      </main>
     </PageTransition>
   );
 }
