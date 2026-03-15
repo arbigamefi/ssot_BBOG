@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 import type { Hex, PlaceBetInput } from "@ssot/ssot/sdk";
 import { encodeStakeSpec } from "@ssot/ssot/encoding";
-import { Button, ErrorCallout, Input, Label } from "@ssot/ui";
+import { Button, ErrorCallout, Input, Label, SharedBetSlip } from "@ssot/ui";
 
 import type { SSOTRelease } from "@ssot/ssot/release";
 
@@ -17,7 +17,6 @@ import { usePlaceBetStepper } from "../usePlaceBetStepper";
 import { formatUnits, parseDecimalToUnits } from "../model/units";
 
 import { BetPanelShell } from "./BetPanelShell";
-import { ArbiGameFiMark } from "../../../components/ArbiGameFiBrand";
 
 type GameMeta = {
   gameId: Hex;
@@ -89,7 +88,6 @@ export function GameBetPanel({
   const betCount = React.useMemo(() => normalizeBetCount(stakeSpec.betCount), [stakeSpec.betCount]);
   const isRouletteRoom = game.slug === "roulette";
   const outcomeStepTitle = isRouletteRoom ? "Choose the table bet" : "Choose the outcome";
-  const ticketStepTitle = "Build the slip";
   const quickStakePresets = ["0.10", "0.50", "1.00", "5.00"];
 
   const inputDigest = React.useMemo(
@@ -284,9 +282,9 @@ export function GameBetPanel({
     <div className="space-y-6">
       {formError ? <ErrorCallout title="Input error" message={formError} /> : null}
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="flex flex-col xl:flex-row gap-6">
         <section
-          className={`order-1 min-h-[34rem] rounded-[2rem] border shadow-2xl shadow-slate-950/40 ${
+          className={`flex-1 min-h-[34rem] rounded-[2rem] border shadow-2xl shadow-slate-950/40 ${
             isRouletteRoom
               ? "overflow-hidden border-fuchsia-400/15 bg-[radial-gradient(circle_at_top,rgba(236,72,153,0.12),transparent_26%),linear-gradient(180deg,rgba(21,11,40,0.98),rgba(7,12,24,0.98))]"
               : "border-violet-400/15 bg-[radial-gradient(circle_at_top,rgba(168,85,247,0.12),transparent_26%),linear-gradient(180deg,rgba(21,11,40,0.98),rgba(7,12,24,0.98))]"
@@ -314,169 +312,49 @@ export function GameBetPanel({
           </div>
         </section>
 
-        <aside
-          className={`order-2 overflow-hidden rounded-[2rem] border shadow-2xl shadow-slate-950/40 ${
-            isRouletteRoom
-              ? "border-fuchsia-400/15 bg-[linear-gradient(180deg,rgba(26,13,46,0.98),rgba(11,18,34,0.98))]"
-              : "border-violet-400/15 bg-[linear-gradient(180deg,rgba(30,14,49,0.98),rgba(11,18,34,0.98))]"
-          }`}
-        >
-          <div className="border-b border-slate-800 px-6 py-5">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <ArbiGameFiMark accent={isRouletteRoom ? "cyan" : "emerald"} className="h-10 w-10 rounded-[0.95rem]" />
-                <div>
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Bet slip</div>
-                  <div className="text-sm font-semibold text-white">{game.label}</div>
+        <div className="w-full xl:w-[380px] flex-shrink-0 flex flex-col gap-4">
+          <SharedBetSlip
+            glowColorClass={isRouletteRoom ? "bg-fuchsia-500/10 border-fuchsia-500/20" : "bg-violet-500/10 border-violet-500/20"}
+            primaryActionClass={isRouletteRoom ? "bg-fuchsia-600 hover:bg-fuchsia-500" : "bg-violet-600 hover:bg-violet-500"}
+            amountValue={stakeSpec.amountPerRoll}
+            onAmountChange={(val) => setStakeSpec((cur) => ({ ...cur, amountPerRoll: val }))}
+            assetSymbol={assetMeta?.symbol ?? "USDC"}
+            assetOptions={assets.map((a) => ({ address: a.address, symbol: a.symbol }))}
+            selectedAsset={asset}
+            onAssetChange={(val) => setAsset(val as `0x${string}`)}
+            balanceHint={balanceHint}
+            quickChips={quickStakePresets}
+            onQuickChip={applyAmountPreset}
+            actionLabel={primaryLabel}
+            actionDisabled={primaryDisabled}
+            onAction={() => void handlePrimaryAction()}
+            summaryContent={
+              <div className="flex flex-col gap-3 px-1 text-sm">
+                <div className="flex justify-between items-start text-xs">
+                  <span className="text-[10px] text-white/50 font-bold uppercase tracking-wider">{selectionSignal.label}</span>
+                  <span className="font-bold text-white text-right max-w-[12rem]">{selectionSignal.value}</span>
+                </div>
+                {selectionSignal.helper && (
+                  <div className="text-xs text-white/50">{selectionSignal.helper}</div>
+                )}
+                <div className="flex justify-between items-center mt-2 pt-2 border-t border-white/5 text-xs">
+                  <span className="text-[10px] text-white/50 font-bold uppercase tracking-wider">Total Stake</span>
+                  <span className="font-mono font-bold text-white">
+                    {totalStake === null || !assetMeta ? "—" : `${formatUnits(totalStake, assetMeta.decimals)} ${assetMeta.symbol}`}
+                  </span>
                 </div>
               </div>
-              <div className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-300">
-                Wallet-native
-              </div>
-            </div>
-
-            <div className="mt-4 grid grid-cols-2 gap-2 rounded-[1.35rem] border border-white/10 bg-slate-950/45 p-1.5">
-              <button
-                type="button"
-                className="rounded-[1rem] bg-white/10 px-3 py-3 text-sm font-semibold text-white"
-              >
-                Manual
-              </button>
-              <button
-                type="button"
-                disabled
-                className="rounded-[1rem] px-3 py-3 text-sm font-semibold text-slate-500"
-              >
-                Auto
-              </button>
-            </div>
-            <div className="mt-4 flex items-start justify-between gap-4">
-              <div>
-                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Ticket</div>
-                <div className="mt-1 text-base font-semibold text-white">{isRouletteRoom ? "Build the ticket" : ticketStepTitle}</div>
-              </div>
-              <div className="text-right">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{assetMeta?.symbol ?? "Asset"} balance</div>
-                <div className="mt-1 text-sm font-semibold text-white">{account ? walletBalanceDisplay : "Connect wallet"}</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-5 p-6">
-            <div className="rounded-[1.5rem] border border-slate-800/80 bg-slate-950/35 p-4">
-              <div className="mb-3 flex items-start justify-between gap-4">
-                <div>
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                    {isRouletteRoom ? "Stake amount" : "Bet amount"}
-                  </div>
-                  <div className="mt-1 text-sm font-semibold text-white">
-                    {isRouletteRoom ? "Chip in or type the stake" : "Pick a chip or type the amount"}
-                  </div>
-                </div>
-                <div className="text-right text-xs text-slate-400">{balanceHint}</div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="bet.amount" className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                  Amount
-                </Label>
-                <div className="grid grid-cols-[minmax(0,1fr)_112px] gap-2">
-                  <Input
-                    id="bet.amount"
-                    inputMode="decimal"
-                    value={stakeSpec.amountPerRoll}
-                    onChange={(event) => setStakeSpec((current) => ({ ...current, amountPerRoll: event.target.value }))}
-                    className="h-16 rounded-2xl border-slate-700 bg-slate-950/70 text-3xl font-black tracking-tight text-white"
-                    placeholder="0.00"
-                  />
-                  <select
-                    value={asset}
-                    onChange={(event) => setAsset(event.target.value as `0x${string}`)}
-                    className="h-16 rounded-2xl border border-slate-700 bg-slate-950/70 px-3 text-base font-semibold text-white outline-none"
-                  >
-                    {assets.map((candidate) => (
-                      <option key={candidate.address} value={candidate.address}>
-                        {candidate.symbol}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {isRouletteRoom ? (
-                <div className="mt-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                  Quick chips
-                </div>
-              ) : null}
-
-              <div className="mt-3 grid grid-cols-4 gap-2">
-                {quickStakePresets.map((preset) => (
-                  <button
-                    key={preset}
-                    type="button"
-                    onClick={() => applyAmountPreset(preset)}
-                    className={`rounded-full border px-3 py-3 text-sm font-semibold transition-colors ${
-                      isRouletteRoom
-                        ? "border-fuchsia-300/20 bg-fuchsia-500/10 text-fuchsia-100 hover:border-fuchsia-200/40 hover:bg-fuchsia-500/20"
-                        : "border-violet-300/20 bg-violet-500/10 text-violet-100 hover:border-violet-200/40 hover:bg-violet-500/20"
-                    }`}
-                  >
-                    {preset}
-                  </button>
-                ))}
-              </div>
-
-              <div className="mt-3 grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleAmountShortcut("half")}
-                  className="rounded-2xl border border-slate-700 bg-slate-900/80 px-3 py-3 text-sm font-semibold text-white transition-colors hover:border-slate-500"
-                >
-                  1/2
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleAmountShortcut("double")}
-                  className="rounded-2xl border border-slate-700 bg-slate-900/80 px-3 py-3 text-sm font-semibold text-white transition-colors hover:border-slate-500"
-                >
-                  2x
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleAmountShortcut("max")}
-                  disabled={!assetFacts || assetFacts.walletBalance === 0n}
-                  className="rounded-2xl border border-slate-700 bg-slate-900/80 px-3 py-3 text-sm font-semibold text-white transition-colors hover:border-slate-500 disabled:opacity-50"
-                >
-                  Max
-                </button>
-              </div>
-
-              <div className="mt-4 rounded-[1.2rem] border border-white/10 bg-white/[0.03] px-3 py-3 text-xs leading-5 text-slate-400">
-                Shortcuts only. The final quote still comes from the exact amount, rounds, and current table call.
-              </div>
-            </div>
-
-            <div className="rounded-[1.5rem] border border-slate-800/80 bg-slate-950/35 p-4">
-              <div className="mb-4 flex items-center justify-between gap-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                      {isRouletteRoom ? "Number of rounds" : "Number of bets"}
-                    </div>
-                    <div className="mt-1 text-sm font-semibold text-white">
-                      {isRouletteRoom ? "Choose how many spins to cover" : "Choose how many rounds to cover"}
-                    </div>
-                  </div>
-                </div>
-                <div className="rounded-xl border border-slate-700 bg-slate-950/70 px-3 py-2 text-lg font-bold text-white">{betCount}</div>
-              </div>
-
-              <div className="space-y-2">
-                <input
+            }
+          >
+            {/* Number of Rounds Configuration */}
+            <div className="flex flex-col gap-2 p-4 rounded-xl border border-white/5 bg-[#050505]">
+               <div className="flex items-center justify-between mb-1">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-white/50">{isRouletteRoom ? "Number of spins" : "Number of bets"}</span>
+                  <span className="font-mono text-sm font-bold text-white">{betCount}</span>
+               </div>
+               <input
                   type="range"
-                  min="1"
-                  max="100"
-                  step="1"
+                  min="1" max="100" step="1"
                   value={betCount}
                   onChange={(event) =>
                     setStakeSpec((current) => ({
@@ -484,110 +362,53 @@ export function GameBetPanel({
                       betCount: String(normalizeBetCount(event.target.value)),
                     }))
                   }
-                  className="h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-800 accent-violet-400"
-                />
-                <div className="flex justify-between text-xs text-slate-500">
-                  <span>1</span>
-                  <span>25</span>
-                  <span>50</span>
-                  <span>75</span>
-                  <span>100</span>
-                </div>
-              </div>
-
-              <div className="mt-4 grid grid-cols-4 gap-2">
-                {[1, 5, 10, 25].map((preset) => (
-                  <button
-                    key={`round-${preset}`}
-                    type="button"
-                    onClick={() =>
-                      setStakeSpec((current) => ({
-                        ...current,
-                        betCount: String(preset),
-                      }))
-                    }
-                    className={`rounded-full border px-3 py-2 text-xs font-semibold transition-colors ${
-                      betCount === preset
-                        ? "border-cyan-300/30 bg-cyan-300/12 text-cyan-100"
-                        : "border-white/10 bg-white/[0.03] text-slate-300 hover:border-white/20 hover:text-white"
-                    }`}
-                  >
-                    {preset}x
-                  </button>
-                ))}
-              </div>
+                  className="h-2 w-full cursor-pointer appearance-none rounded-full bg-white/10 accent-white"
+               />
+               <div className="grid grid-cols-4 gap-2 mt-2">
+                  {[1, 5, 10, 25].map((preset) => (
+                    <button
+                      key={`round-${preset}`}
+                      type="button"
+                      onClick={() =>
+                        setStakeSpec((current) => ({ ...current, betCount: String(preset) }))
+                      }
+                      className={`rounded-lg py-1.5 text-xs font-bold transition-colors ${
+                        betCount === preset
+                          ? "bg-white/20 text-white"
+                          : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white"
+                      }`}
+                    >
+                      {preset}x
+                    </button>
+                  ))}
+               </div>
             </div>
 
-            <div className="rounded-[1.5rem] border border-slate-800/80 bg-slate-950/35 p-4">
-              <div className="mb-3">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Ticket summary</div>
-                <div className="mt-1 text-sm font-semibold text-white">{isRouletteRoom ? "Review the roulette ticket" : "Review the ticket"}</div>
-              </div>
-
-              <div className="space-y-3 text-sm">
-                <div className="flex items-start justify-between gap-4">
-                  <span className="text-slate-400">{selectionSignal.label}</span>
-                  <span className="max-w-[10rem] text-right font-semibold text-white">{selectionSignal.value}</span>
-                </div>
-                {isRouletteRoom && selectionSignal.helper ? (
-                  <div className="rounded-2xl border border-fuchsia-400/10 bg-fuchsia-500/5 px-3 py-3 text-xs leading-5 text-slate-300">
-                    {selectionSignal.helper}
-                  </div>
-                ) : null}
-                <div className="flex items-start justify-between gap-4">
-                  <span className="text-slate-400">Total stake</span>
-                  <span className="text-right font-semibold text-white">
-                    {totalStake === null || !assetMeta
-                      ? "—"
-                      : `${formatUnits(totalStake, assetMeta.decimals)} ${assetMeta.symbol}`}
-                  </span>
-                </div>
-                <div className="flex items-start justify-between gap-4">
-                  <span className="text-slate-400">Rounds</span>
-                  <span className="text-right font-semibold text-white">{betCount}</span>
-                </div>
-                <div className="flex items-start justify-between gap-4">
-                  <span className="text-slate-400">Wallet balance</span>
-                  <span className="text-right text-white">{walletBalanceDisplay}</span>
-                </div>
-                <div className="rounded-2xl border border-slate-800/80 bg-slate-950/60 px-3 py-3 text-xs leading-5 text-slate-400">
-                  Review generates the live quote first. Approval checks, allowance, and RNG fee stay in the trace until you are ready to sign.
-                </div>
-              </div>
-            </div>
-
-            <Button
-              size="lg"
-              onClick={() => void handlePrimaryAction()}
-              disabled={primaryDisabled}
-              className="w-full rounded-[1.6rem] bg-[linear-gradient(90deg,rgba(168,85,247,1),rgba(236,72,153,0.96))] text-lg normal-case text-white hover:brightness-110"
-            >
-              {primaryLabel}
-            </Button>
-
-            <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
+            {/* Status bar */}
+            <div className="flex flex-wrap items-center justify-between gap-3 text-[11px] text-white/40 px-1 pt-1 font-semibold uppercase tracking-wide">
               <span>
                 {account
-                  ? `Ready on chain ${release.chainId}. Allowance now ${allowanceHint}.`
-                  : "Connect first, then review the live quote before submitting."}
+                  ? `Allowance: ${allowanceHint}`
+                  : "Review quote before submitting"}
               </span>
               {state.plan ? (
                 <button
                   type="button"
                   onClick={() => void plan()}
                   disabled={isBusy}
-                  className="font-semibold text-slate-300 transition-colors hover:text-white disabled:opacity-50"
+                  className="font-bold text-white/60 hover:text-white disabled:opacity-50"
                 >
                   Refresh quote
                 </button>
               ) : null}
             </div>
 
-            <details className="rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
-              <summary className="cursor-pointer list-none text-sm font-semibold text-white">Advanced limits</summary>
+            {/* Advanced details mapped from details...summary */}
+            <details className="rounded-xl border border-white/5 bg-[#050505] p-3 -mt-2">
+              <summary className="cursor-pointer list-none text-xs font-bold text-white/60 hover:text-white">Advanced limits</summary>
               <div className="mt-4 space-y-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="bet.stopGain" className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  <Label htmlFor="bet.stopGain" className="text-xs font-bold uppercase tracking-wider text-white/40">
                     Stop gain
                   </Label>
                   <Input
@@ -595,11 +416,11 @@ export function GameBetPanel({
                     inputMode="decimal"
                     value={stakeSpec.stopGain ?? ""}
                     onChange={(event) => setStakeSpec((current) => ({ ...current, stopGain: event.target.value }))}
-                    className="border-slate-700 bg-slate-950/70"
+                    className="border-white/10 bg-transparent text-white focus:border-white/30"
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="bet.stopLoss" className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  <Label htmlFor="bet.stopLoss" className="text-xs font-bold uppercase tracking-wider text-white/40">
                     Stop loss
                   </Label>
                   <Input
@@ -607,11 +428,11 @@ export function GameBetPanel({
                     inputMode="decimal"
                     value={stakeSpec.stopLoss ?? ""}
                     onChange={(event) => setStakeSpec((current) => ({ ...current, stopLoss: event.target.value }))}
-                    className="border-slate-700 bg-slate-950/70"
+                    className="border-white/10 bg-transparent text-white focus:border-white/30"
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="bet.maxHouseEdge" className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  <Label htmlFor="bet.maxHouseEdge" className="text-xs font-bold uppercase tracking-wider text-white/40">
                     Max house edge (bps)
                   </Label>
                   <Input
@@ -623,13 +444,13 @@ export function GameBetPanel({
                       if (!Number.isFinite(next)) return;
                       setMaxHouseEdgeBps(Math.max(0, Math.min(10_000, Math.floor(next))));
                     }}
-                    className="border-slate-700 bg-slate-950/70"
+                    className="border-white/10 bg-transparent text-white focus:border-white/30"
                   />
                 </div>
               </div>
             </details>
-          </div>
-        </aside>
+          </SharedBetSlip>
+        </div>
       </div>
 
       {showDetails ? (

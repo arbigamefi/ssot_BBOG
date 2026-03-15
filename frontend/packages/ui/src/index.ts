@@ -38,6 +38,17 @@ export * from "./components/protocol/cointoss-params-form";
 export * from "./components/protocol/roulette-params-form";
 export * from "./components/protocol/keno-params-form";
 
+// New Refactored Domain Components
+export * from "./components/ui/shell-header";
+export * from "./components/ui/glass-card";
+export * from "./components/ui/room-strip";
+export * from "./components/protocol/shared-bet-slip";
+export * from "./components/protocol/audit-tabs";
+export * from "./components/protocol/roulette-board";
+export * from "./components/protocol/dice-slider";
+export * from "./components/protocol/coin-stage";
+export * from "./components/protocol/keno-grid";
+
 // i18n
 export type { I18nKey, I18nPack } from "./i18n/keys";
 export { I18nProvider, useI18n, registerI18nPack } from "./i18n/context";

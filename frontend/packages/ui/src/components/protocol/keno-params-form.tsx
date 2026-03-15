@@ -1,11 +1,10 @@
 import * as React from "react";
-
-import { MaskPickerGrid } from "./mask-picker-grid";
+import { cn } from "../../lib/utils";
+import { KenoGrid } from "./keno-grid";
 
 export type KenoParamsFormProps = {
   title?: string;
   description?: string;
-  /** Bitmask (uint40) as user-typed string. Accepts hex (0x...) or decimal. */
   mask: string;
   onMaskChange?: (mask: string) => void;
   disabled?: boolean;
@@ -13,37 +12,40 @@ export type KenoParamsFormProps = {
   className?: string;
 };
 
-export function KenoParamsForm(props: KenoParamsFormProps) {
-  const {
-    title = "Pick your Keno numbers",
-    description = "Tap 1 to 10 numbers on the board, then move right to size the ticket.",
-    mask,
-    onMaskChange,
-    disabled = false,
-    error,
-    className,
-  } = props;
+export function arrayToMask(nums: number[]): string {
+  if (nums.length === 0) return "0";
+  return nums.reduce((acc, num) => acc | (1n << BigInt(num - 1)), 0n).toString(10);
+}
 
-  const cells = React.useMemo(
-    () => Array.from({ length: 40 }, (_value, index) => ({ label: String(index + 1) })),
-    []
-  );
+export function maskToArray(mask: string): number[] {
+  try {
+    const m = BigInt(mask);
+    const nums: number[] = [];
+    for (let i = 0; i < 40; i++) {
+      if ((m & (1n << BigInt(i))) !== 0n) {
+        nums.push(i + 1);
+      }
+    }
+    return nums;
+  } catch {
+    return [];
+  }
+}
+
+export function KenoParamsForm(props: KenoParamsFormProps) {
+  const { mask, onMaskChange, className } = props;
+  
+  const selectedNumbers = React.useMemo(() => maskToArray(mask), [mask]);
 
   return (
-    <MaskPickerGrid
-      title={title}
-      description={description}
-      mask={mask}
-      onMaskChange={onMaskChange}
-      disabled={disabled}
-      error={error}
-      className={className}
-      cells={cells}
-      minSelections={1}
-      maxSelections={10}
-      quickPickCounts={[3, 5, 8]}
-      helperText="The packed mask stays available only if you need to audit the exact encoding."
-      rawMaskLabel="Advanced packed mask"
-    />
+    <div className={cn("relative w-full h-full flex flex-col items-center justify-center p-4 md:p-8", className)}>
+      {/* Ambient background glow inside the game surface */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[300px] bg-emerald-500/5 blur-[100px] rounded-full pointer-events-none" />
+      
+      <KenoGrid 
+        value={selectedNumbers}
+        onSelectionChange={(nums) => onMaskChange?.(arrayToMask(nums))}
+      />
+    </div>
   );
 }
