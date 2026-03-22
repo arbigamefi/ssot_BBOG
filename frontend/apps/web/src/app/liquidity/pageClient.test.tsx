@@ -87,6 +87,7 @@ vi.mock("@ssot/ui", () => ({
       <span>{message}</span>
     </div>
   ),
+  GlassCard: ({ children }: any) => <section>{children}</section>,
   Input: (props: any) => <input {...props} />,
   Label: ({ children, htmlFor }: any) => <label htmlFor={htmlFor}>{children}</label>,
   PageHeader: ({ title, description, actions }: any) => (
@@ -113,6 +114,7 @@ vi.mock("@ssot/ui", () => ({
       <span>{subtitle}</span>
     </div>
   ),
+  cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" "),
   toast: {
     success: vi.fn(),
     error: vi.fn()
@@ -137,15 +139,11 @@ describe("LiquidityPageClient", () => {
   it("frames liquidity as an LP readout instead of a generic vault form", () => {
     render(<LiquidityPageClient />);
 
-    expect(
-      screen.getByText(
-        "Read the bank like an LP: NAV backs shares, reserved protects live risk, and optional exits only clear when headroom stays above the buffer."
-      )
-    ).toBeDefined();
-    expect(screen.getByText("NAV is what backs shares.")).toBeDefined();
-    expect(screen.getByText("Exits clear only if headroom remains.")).toBeDefined();
-    expect(screen.getByText("PF and XP are not LP backing.")).toBeDefined();
-    expect(screen.getByText("How to read this bank")).toBeDefined();
+    expect(screen.getByText("House Liquidity")).toBeDefined();
+    expect(screen.getByText(/Provide USDC to the community bankroll/)).toBeDefined();
+    expect(screen.getByText("Real-time NAV backing")).toBeDefined();
+    expect(screen.getByText("Free headroom for redemptions")).toBeDefined();
+    expect(screen.getByText("Protocol Performance")).toBeDefined();
     expect(screen.getByText("Connect wallet to deposit liquidity")).toBeDefined();
   });
 });

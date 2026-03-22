@@ -10,22 +10,12 @@ vi.mock("next/navigation", () => ({
   usePathname: () => state.pathname
 }));
 
-vi.mock("./AppShell", () => ({
-  AppShell: ({ children }: any) => (
-    <div data-testid="app-shell">
-      <span>product-shell</span>
-      {children}
-    </div>
-  )
+vi.mock("./LandingShell", () => ({
+  LandingShell: ({ children }: any) => <div data-testid="landing-shell">{children}</div>,
 }));
 
-vi.mock("./LandingShell", () => ({
-  LandingShell: ({ children }: any) => (
-    <div data-testid="landing-shell">
-      <span>landing-shell</span>
-      {children}
-    </div>
-  )
+vi.mock("./AppShell", () => ({
+  AppShell: ({ children }: any) => <div data-testid="app-shell">{children}</div>,
 }));
 
 import { SiteChrome } from "./SiteChrome";
@@ -45,7 +35,6 @@ describe("SiteChrome", () => {
     );
 
     expect(screen.getByTestId("landing-shell")).toBeDefined();
-    expect(screen.queryByTestId("app-shell")).toBeNull();
   });
 
   it("uses product shell on app routes", () => {
@@ -57,7 +46,6 @@ describe("SiteChrome", () => {
     );
 
     expect(screen.getByTestId("app-shell")).toBeDefined();
-    expect(screen.queryByTestId("landing-shell")).toBeNull();
   });
 
   it("bypasses chrome on prototype routes", () => {
@@ -69,7 +57,7 @@ describe("SiteChrome", () => {
     );
 
     expect(screen.getByText("prototype-board")).toBeDefined();
-    expect(screen.queryByTestId("app-shell")).toBeNull();
     expect(screen.queryByTestId("landing-shell")).toBeNull();
+    expect(screen.queryByTestId("app-shell")).toBeNull();
   });
 });

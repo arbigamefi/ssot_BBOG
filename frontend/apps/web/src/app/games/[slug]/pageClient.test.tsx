@@ -123,7 +123,10 @@ vi.mock("@ssot/ui", () => ({
   ),
   KenoParamsForm: () => <div>Keno Params</div>,
   ReleaseBadge: ({ networkName }: any) => <span>{networkName}</span>,
+  RoomStrip: ({ title }: any) => <div>{title}</div>,
   RouletteParamsForm: () => <div>Roulette Params</div>,
+  DiceSlider: () => <div>Dice Slider</div>,
+  SharedBetSlip: ({ children }: any) => <div>{children}</div>,
   createDefaultRouletteSelection: () => ({ kind: "straight", number: 0 }),
   summarizeRouletteSelection: () => ({
     family: "Straight",
@@ -141,6 +144,7 @@ vi.mock("@ssot/ui", () => ({
       ))}
     </div>
   ),
+  cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" "),
 }));
 
 import { GamePageClient } from "./pageClient";
@@ -218,10 +222,9 @@ describe("GamePageClient", () => {
     expect(screen.getAllByText("Dice").length).toBeGreaterThan(0);
     expect(screen.getByTestId("game-bet-panel")).toBeDefined();
     expect(screen.getByText("Open ledger")).toBeDefined();
-    expect(screen.getByText(/A room-first layout/)).toBeDefined();
-    expect(screen.getByText("Active call")).toBeDefined();
-    expect(screen.getByText("50%")).toBeDefined();
-    expect(screen.getByText("Sync")).toBeDefined();
+    expect(screen.getByText("Precision Dice")).toBeDefined();
+    expect(screen.getByText("Dice Slider")).toBeDefined();
+    expect(screen.getByText("Last Results")).toBeDefined();
     expect(screen.getByText("All bets")).toBeDefined();
     expect(screen.getByRole("button", { name: "My Bets" })).toBeDefined();
     expect(screen.getByRole("button", { name: "Players" })).toBeDefined();
@@ -241,12 +244,13 @@ describe("GamePageClient", () => {
     render(<GamePageClient slug="roulette" />);
 
     expect(screen.getAllByText("Roulette").length).toBeGreaterThan(0);
-    expect(screen.getByText("European table")).toBeDefined();
-    expect(screen.getByText(/Standard 0-36 European table/)).toBeDefined();
-    expect(screen.getByText("My Bets")).toBeDefined();
-    expect(screen.getByText("Players")).toBeDefined();
-    expect(screen.getByText("Analytics")).toBeDefined();
-    expect(screen.getByText("Game Details")).toBeDefined();
+    expect(screen.getByTestId("game-bet-panel")).toBeDefined();
+    expect(screen.getByRole("button", { name: "My Bets" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Players" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Analytics" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "Game Details" })).toBeDefined();
+    expect(screen.queryByText("Table bet")).toBeNull();
+    expect(screen.queryByText("Room feed")).toBeNull();
     expect(screen.queryByText("Mask table")).toBeNull();
   });
 
@@ -283,9 +287,9 @@ describe("GamePageClient", () => {
     expect(screen.getAllByText(/0x2222/i).length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole("button", { name: "Analytics" }));
-    expect(screen.getByText("Total indexed bets")).toBeDefined();
-    expect(screen.getByText("Unique players")).toBeDefined();
-    expect(screen.getByText("Settlement rate")).toBeDefined();
+    expect(screen.getByText("Room intelligence")).toBeDefined();
+    expect(screen.getByText("Ticket flow")).toBeDefined();
+    expect(screen.getByText("Distinct wallets")).toBeDefined();
   });
 
   it("navigates to bet detail when a recent bet row is clicked", () => {

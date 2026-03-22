@@ -7,30 +7,31 @@ import { ReadOnlyBanner } from "@ssot/ui";
 import { useRelease } from "../ssot/release/ReleaseProvider";
 import { WalletButton } from "../app/providers/WalletButton";
 import { ArbiGameFiBrand } from "./ArbiGameFiBrand";
+import { SiteFooter } from "./SiteFooter";
 
 const PRIMARY_NAV_LINKS = [
-  { href: "/", label: "Home" },
-  { href: "/games", label: "Games" },
+  { href: "/dice", label: "Games" },
+  { href: "/invest", label: "Invest" },
+  { href: "/referral", label: "Referral" },
   { href: "/bets", label: "Bets" },
-  { href: "/liquidity", label: "Liquidity" },
   { href: "/account", label: "Account" },
 ] as const;
 
-const SECONDARY_NAV_LINKS = [
-  { href: "/claims", label: "Claims" },
-  { href: "/referral", label: "Referral" },
-  { href: "/ops", label: "Ops" },
-] as const;
-
 function isActivePath(pathname: string, href: string) {
-  if (href === "/") return pathname === "/";
+  if (href === "/dice") {
+    return ["/dice", "/cointoss", "/roulette", "/keno", "/games"].some((candidate) => pathname.startsWith(candidate));
+  }
+  if (href === "/invest") {
+    return pathname.startsWith("/invest") || pathname.startsWith("/liquidity");
+  }
   return pathname.startsWith(href);
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { release, readOnly, readOnlyReason, warnings } = useRelease();
-  const isGameRoom = /^\/games\/[^/]+$/.test(pathname);
+  const isTopLevelRoom = ["/dice", "/cointoss", "/roulette", "/keno"].includes(pathname);
+  const isGameRoom = isTopLevelRoom || /^\/games\/[^/]+$/.test(pathname);
   const [menuOpen, setMenuOpen] = React.useState(false);
 
   React.useEffect(() => {
@@ -38,8 +39,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [pathname]);
 
   return (
-    <div className="min-h-screen bg-[#050714] text-white">
-      <header className="fixed inset-x-0 top-0 z-50 border-b border-white/6 bg-[#070b1a]/88 backdrop-blur-xl">
+    <div className="min-h-screen bg-[#060914] text-white">
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-white/6 bg-[#090d18]/95 backdrop-blur-xl">
         <div
           className="pt-safe"
           style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 0px)" }}
@@ -52,12 +53,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {isGameRoom ? (
               <div className="hidden items-center gap-3 md:flex">
                 <Link
-                  href="/games"
-                  className="ag-pill-tab px-4 py-2 text-sm"
+                  href="/dice"
+                  className="rounded-xl border border-white/8 bg-white/[0.03] px-4 py-2 text-sm font-semibold text-white/70 transition-colors hover:border-white/14 hover:bg-white/[0.06] hover:text-white"
                 >
                   All Games
                 </Link>
-                <div className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-300">
+                <div className="rounded-xl border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-300">
                   {release?.name ?? "Unknown network"}
                 </div>
               </div>
@@ -68,7 +69,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     key={link.href}
                     href={link.href}
                     data-active={isActivePath(pathname, link.href)}
-                    className="ag-pill-tab px-4 py-2 text-sm"
+                    className="rounded-xl border border-white/8 bg-white/[0.03] px-4 py-2 text-sm font-semibold text-white/70 transition-colors hover:border-white/14 hover:bg-white/[0.06] hover:text-white data-[active=true]:border-white/16 data-[active=true]:bg-white/[0.08] data-[active=true]:text-white"
                   >
                     {link.label}
                   </Link>
@@ -78,7 +79,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
             <div className="ml-auto flex items-center gap-3">
               {!isGameRoom ? (
-                <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 lg:flex">
+                <div className="hidden items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 lg:flex">
                   <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                     Live
                   </span>
@@ -108,28 +109,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
           </div>
 
-          {!isGameRoom ? (
-            <div className="hidden border-t border-white/5 xl:block">
-              <div className="mx-auto flex max-w-[1480px] items-center gap-2 px-4 py-3 sm:px-6 lg:px-8">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Advanced
-                </span>
-                {SECONDARY_NAV_LINKS.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    data-active={isActivePath(pathname, link.href)}
-                    className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5 text-xs font-semibold text-slate-300 transition-colors hover:border-white/16 hover:text-white data-[active=true]:border-cyan-400/30 data-[active=true]:bg-cyan-400/10 data-[active=true]:text-cyan-100"
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          ) : null}
-
           {menuOpen ? (
-            <div className="border-t border-white/5 bg-[#090e1f]/96 xl:hidden">
+            <div className="border-t border-white/5 bg-[#090d18]/96 xl:hidden">
               <div className="mx-auto max-w-[1480px] space-y-4 px-4 py-4 sm:px-6">
                 <div className="grid gap-2">
                   {PRIMARY_NAV_LINKS.map((link) => (
@@ -137,17 +118,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                       key={link.href}
                       href={link.href}
                       className="rounded-2xl border border-white/8 bg-white/[0.04] px-4 py-3 text-sm font-semibold text-slate-200"
-                    >
-                      {link.label}
-                    </Link>
-                  ))}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {SECONDARY_NAV_LINKS.map((link) => (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      className="rounded-full border border-white/8 bg-white/[0.03] px-3 py-2 text-xs font-semibold text-slate-300"
                     >
                       {link.label}
                     </Link>
@@ -166,12 +136,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       ) : null}
 
       <main
-        className={`mx-auto max-w-[1480px] px-4 pb-12 sm:px-6 lg:px-8 ${
+        className={`mx-auto w-full max-w-[1480px] flex-1 px-4 pb-12 sm:px-6 lg:px-8 ${
           readOnly ? "pt-5" : isGameRoom ? "pt-[5.5rem]" : "pt-[6.5rem]"
         }`}
       >
         {children}
       </main>
+      <SiteFooter />
     </div>
   );
 }

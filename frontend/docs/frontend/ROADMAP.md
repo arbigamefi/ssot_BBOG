@@ -1,4 +1,4 @@
-# ROADMAP — SSOT Frontend v2
+# ROADMAP — ArbiGameFi Frontend v2
 
 This roadmap is intentionally written like a release plan with explicit gates (similar to contract release gates).
 
@@ -18,6 +18,9 @@ Companion execution document:
 - `docs/frontend/PROTOTYPE-FREEZE-CHECKLIST-2026-03.md`
 - `docs/frontend/PROTOTYPE-FREEZE-REVIEW-2026-03.md`
 - `docs/frontend/PROTOTYPE-IMPROVEMENT-MATRIX-2026-03.md`
+- `docs/frontend/FRONTEND-STATE-AND-PROTOTYPE-REVIEW-2026-03-16.md`
+- `docs/frontend/PROTOTYPE-TO-IMPLEMENTATION-MAP-2026-03.md`
+- `docs/frontend/HOME-LANDING-REFACTOR-CHECKLIST-2026-03.md`
 - `docs/frontend/SCREEN-SPECS/README.md`
 
 ## Gate-0 — Interface Freeze (Docs)

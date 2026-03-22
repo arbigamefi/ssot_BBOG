@@ -24,7 +24,9 @@ import {
   type StepState,
   type TxStepItem,
   toast,
+  cn,
 } from "@ssot/ui";
+import { ArrowLeftIcon, CubeIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
 
 import { PageTransition } from "../../../components/PageTransition";
 import { useRelease } from "../../../ssot/release/ReleaseProvider";
@@ -326,171 +328,182 @@ export default function BetDetailPage() {
   const actionError = refundFlow.error ?? finalizeFlow.error;
 
   const resultState = React.useMemo(() => {
-    if (betState === "finalized" && onChainBet && onChainBet.payout != null) {
-       return onChainBet.payout > onChainBet.stake ? "won" : "lost";
+    if (betState === "finalized" && onChainBet && (onChainBet as any).payout != null) {
+       return BigInt((onChainBet as any).payout) > BigInt(onChainBet.stake) ? "won" : "lost";
     }
     return betState;
   }, [betState, onChainBet]);
 
   return (
     <PageTransition pageKey={`bet-${betId ?? "unknown"}`}>
-      <main className="max-w-2xl mx-auto px-6 py-12 md:py-24">
+      <main className="mx-auto flex min-h-[90vh] flex-col items-center justify-center px-6 py-12 md:py-24">
         
-        <Link href="/bets" className="inline-flex items-center gap-2 text-white/40 hover:text-white transition-colors font-bold text-sm mb-8">
-           <span>←</span> Back to Tickets
+        <Link 
+          href="/bets" 
+          className="mb-8 flex items-center gap-2 text-sm font-bold uppercase tracking-widest text-white/30 transition-colors hover:text-white"
+        >
+           <ArrowLeftIcon className="h-4 w-4" /> Back to Ledger
         </Link>
         
-        {/* Receipt Container */}
-        <GlassCard 
-          glowColor={resultState === 'won' ? "bg-green-500/20" : resultState === 'lost' ? "bg-white/10" : "bg-blue-500/20"} 
-          glowPosition="top-left" 
-          padding="xl" 
-          className={`border-t-4 relative shadow-2xl ${
-            resultState === 'won' ? 'border-t-green-500 shadow-green-500/10' : 
-            resultState === 'lost' ? 'border-t-white/20' : 
-            'border-t-blue-500 shadow-blue-500/10'
-          }`}
-        >
+        {/* The Receipt Container */}
+        <div className="relative w-full max-w-lg">
+           {/* Visual Flourish: Connection Lines */}
+           <div className="absolute -left-12 top-1/2 h-px w-12 bg-gradient-to-r from-transparent to-white/10" />
+           <div className="absolute -right-12 top-1/2 h-px w-12 bg-gradient-to-l from-transparent to-white/10" />
            
-           {/* Decorative watermark */}
-           {resultState === 'won' && (
-             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[120px] font-bold text-white/[0.02] pointer-events-none select-none rotate-12">
-               WON
-             </div>
-           )}
-           {resultState === 'lost' && (
-             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[120px] font-bold text-white/[0.02] pointer-events-none select-none rotate-12">
-               LOST
-             </div>
-           )}
-
-           {/* Header */}
-           <div className="flex flex-col items-center justify-center border-b border-white/10 pb-8 mb-8 relative z-10">
-              <span className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-4 px-3 py-1 bg-white/5 rounded-full border border-white/10">
-                Ticket #{betId ?? "—"}
-              </span>
-              <h1 className="text-3xl font-bold mb-2 text-white">{gameMeta?.label ?? "ArbiGameFi Room"}</h1>
-              <span className={`font-bold px-3 py-1 rounded-md text-sm border uppercase tracking-widest ${
-                resultState === 'won' ? 'text-green-400 bg-green-500/10 border-green-500/20' :
-                resultState === 'lost' ? 'text-white/40 bg-white/5 border-white/10' :
-                'text-blue-400 bg-blue-500/10 border-blue-500/20 animate-pulse'
-              }`}>
-                {resultState ?? "Pending"}
-              </span>
-           </div>
-
-           {/* Core Figures */}
-           <div className="grid grid-cols-2 gap-4 mb-8 bg-[#050505] p-6 rounded-2xl border border-white/5 relative z-10">
-              <div className="flex flex-col">
-                 <span className="text-white/40 text-xs font-bold uppercase tracking-widest">Wager Amount</span>
-                 <span className="text-2xl font-mono font-bold mt-1 text-white">
-                   {onChainBet ? formatTokenAmount(onChainBet.stake, decimals, symbol) : "—"}
-                 </span>
-              </div>
-              <div className="flex flex-col items-end">
-                 <span className={`${resultState === 'won' ? 'text-green-500/80' : 'text-white/40'} text-xs font-bold uppercase tracking-widest`}>
-                   Gross Payout
-                 </span>
-                 <span className={`text-2xl font-mono font-bold mt-1 ${resultState === 'won' ? 'text-green-400' : 'text-white/40'}`}>
-                   {outcome ? formatTokenAmount(outcome.value, decimals, symbol) : "--"}
-                 </span>
-              </div>
-           </div>
-
-           {/* Parameters / Summary Items */}
-           <div className="flex flex-col gap-4 border-b border-white/10 pb-8 mb-8 relative z-10">
-              <h3 className="text-sm font-bold text-white/60 uppercase tracking-widest">Wager Details</h3>
-              <div className="flex justify-between py-2 border-b border-white/5">
-                <span className="text-white/40">Asset</span>
-                <span className="font-mono text-white text-right">{symbol || shortHex(assetAddress)}</span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-white/5">
-                <span className="text-white/40">Timestamp</span>
-                <span className="font-mono text-white text-right">{onChainBet?.placedAt ? formatTimestamp(onChainBet.placedAt) : "—"}</span>
-              </div>
-              <div className="flex justify-between py-2">
-                <span className="text-white/40">Lifecycle</span>
-                <span className="font-mono text-white text-right truncate max-w-[140px]">{localBet?.lastEventName ?? "Awaiting..."}</span>
-              </div>
-           </div>
-
-           {/* Provable Truth Matrix */}
-           <div className="flex flex-col gap-4 relative z-10">
-              <h3 className="text-sm font-bold text-white/60 uppercase tracking-widest flex items-center gap-2">
-                 Provable Truth 
-                 <span className={`w-2 h-2 rounded-full ${resultState === 'finalized' || resultState === 'won' || resultState === 'lost' ? 'bg-blue-500' : 'bg-white/20'}`}></span>
-              </h3>
+           <div className={cn(
+             "relative overflow-hidden rounded-[2.5rem] border-t-4 bg-[#050505] p-10 shadow-2xl transition-all",
+             resultState === 'won' ? 'border-t-green-500 shadow-green-500/10' : 
+             resultState === 'lost' ? 'border-t-white/10 shadow-white/5' : 
+             'border-t-blue-500 shadow-blue-500/10'
+           )}>
+              {/* Grain Overlay */}
+              <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] mix-blend-overlay pointer-events-none" />
               
-              <div className="flex flex-col p-4 bg-white/5 border border-white/10 rounded-xl font-mono text-xs gap-3 text-white/60">
-                 <div className="flex flex-col gap-1">
-                   <span className="text-blue-400/60 font-sans text-[10px] uppercase font-bold tracking-wider">Player Address</span>
-                   <span className="font-bold text-white text-sm bg-white/5 w-fit px-2 py-1 rounded inline-block truncate max-w-full">
-                     {onChainBet?.player ?? localBet?.player ?? "—"}
-                   </span>
+              {/* State Watermark */}
+              <div className={cn(
+                "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 select-none text-[120px] font-black tracking-tighter opacity-[0.02] pointer-events-none",
+                resultState === 'won' ? 'text-green-500' : 'text-white'
+              )}>
+                {resultState === 'won' ? 'WON' : resultState === 'lost' ? 'LOST' : 'WAIT'}
+              </div>
+
+              {/* Header: Identity */}
+              <div className="relative z-10 mb-12 flex flex-col items-center text-center">
+                 <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-3xl border border-white/10 bg-white/5 text-white/40 shadow-inner">
+                    <CubeIcon className="h-8 w-8" />
+                 </div>
+                 <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/30">
+                    Smart Ticket #{betId ? shortHex(betId) : "—"}
+                 </span>
+                 <h1 className="mt-2 text-3xl font-bold tracking-tight text-white">{gameMeta?.label ?? "System Node"}</h1>
+                 
+                 <div className={cn(
+                    "mt-4 inline-flex items-center gap-2 rounded-lg border px-3 py-1 text-[10px] font-black uppercase tracking-widest",
+                    resultState === 'won' ? 'border-green-500/30 bg-green-500/10 text-green-400' :
+                    resultState === 'lost' ? 'border-white/10 bg-white/5 text-white/40' :
+                    'border-blue-500/30 bg-blue-500/10 text-blue-400 animate-pulse'
+                 )}>
+                    {resultState ?? "Awaiting VRF"}
+                 </div>
+              </div>
+
+              {/* Body: Figures */}
+              <div className="relative z-10 grid grid-cols-2 gap-8 rounded-3xl border border-white/5 bg-black/40 p-8 shadow-inner mb-10">
+                 <div className="flex flex-col">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/30">Commitment</span>
+                    <span className="mt-1 font-mono text-2xl font-bold text-white">
+                       {onChainBet ? formatTokenAmount(onChainBet.stake, decimals, symbol) : "—"}
+                    </span>
+                 </div>
+                 <div className="flex flex-col items-end text-right">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/30">Realized</span>
+                    <span className={cn(
+                      "mt-1 font-mono text-2xl font-bold",
+                      resultState === 'won' ? 'text-green-400 drop-shadow-[0_0_10px_rgba(34,197,94,0.4)]' : 'text-white'
+                    )}>
+                       {outcome ? formatTokenAmount(outcome.value, decimals, symbol) : "—"}
+                    </span>
+                 </div>
+              </div>
+
+              {/* Details: Table */}
+              <div className="relative z-10 mb-10 space-y-4 px-2">
+                 <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/30">Settlement Asset</span>
+                    <span className="font-mono text-sm font-bold text-white/80">{symbol || "TOKEN"}</span>
+                 </div>
+                 <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/30">Entry Time</span>
+                    <span className="font-mono text-sm font-bold text-white/80">{onChainBet?.placedAt ? formatTimestamp(Number(onChainBet.placedAt)) : "—"}</span>
+                 </div>
+                 <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-white/30">Registry Sector</span>
+                    <span className="font-mono text-sm font-bold text-white/80">HUB_ALPHA_01</span>
+                 </div>
+              </div>
+
+              {/* Technicolor Readout: Provable Truth */}
+              <div className="relative z-10 rounded-[1.5rem] border border-blue-500/20 bg-blue-500/[0.02] p-6 shadow-inner">
+                 <div className="mb-4 flex items-center justify-between">
+                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-blue-400/60 flex items-center gap-2">
+                       <ShieldCheckIcon className="h-3 w-3" /> Provable Truth Matrix
+                    </h3>
+                    <div className="h-1.5 w-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
                  </div>
                  
-                 <div className="w-full h-px bg-white/5 my-1" />
-
-                 <div className="flex justify-between">
-                   <span>Release Digest</span>
-                   <span className="text-white truncate max-w-[120px]">{shortHex(release?.releaseDigest)}</span>
-                 </div>
-                 <div className="flex justify-between">
-                   <span>Hub Contract</span>
-                   <span className="text-blue-400 cursor-pointer hover:underline">{shortHex(release?.contracts.hub)}</span>
-                 </div>
-                 <div className="flex justify-between">
-                   <span>Primary Tx</span>
-                   <span className="text-blue-400 cursor-pointer hover:underline">{shortHex(primaryTxHash)}</span>
+                 <div className="space-y-3 font-mono text-[10px]">
+                    <div className="flex flex-col gap-1">
+                       <span className="text-white/20 uppercase">Subject Address</span>
+                       <span className="truncate text-white/60">{onChainBet?.player ?? localBet?.player ?? "—"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                       <span className="text-white/20 uppercase">Release ID</span>
+                       <span className="text-blue-300/80">{shortHex(release?.releaseDigest)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                       <span className="text-white/20 uppercase">Primary Hash</span>
+                       <span className="text-blue-300/80 cursor-pointer hover:text-blue-300 transition-colors">{shortHex(primaryTxHash)}</span>
+                    </div>
                  </div>
               </div>
+
+              {/* Interventions: Protocol Actions */}
+              {(canFinalize || canRefund) && (
+                <div className="relative z-10 mt-10 pt-8 border-t border-white/10">
+                   <div className="flex flex-col gap-6">
+                      <div className="flex items-center justify-between">
+                         <h3 className="text-[10px] font-bold uppercase tracking-widest text-white/30">Protocol Intervention</h3>
+                         <TxStatusChip status={actionFlow?.status ?? 'idle'} />
+                      </div>
+                      
+                      <div className="flex gap-4">
+                         {canFinalize && (
+                           <button 
+                             onClick={() => void handleFinalize()} 
+                             disabled={finalizeFlow.busy || refundFlow.busy}
+                             className="flex-1 rounded-2xl bg-blue-500 py-4 font-bold text-black transition-all hover:bg-blue-400 hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] active:scale-[0.98] disabled:opacity-50"
+                           >
+                             {finalizeFlow.busy ? "Finalizing..." : "Finalize Receipt"}
+                           </button>
+                         )}
+                         {canRefund && (
+                           <button 
+                             onClick={() => void handleRefund()} 
+                             disabled={refundFlow.busy || finalizeFlow.busy}
+                             className="flex-1 rounded-2xl bg-rose-500 py-4 font-bold text-black transition-all hover:bg-rose-400 hover:shadow-[0_0_20px_rgba(244,63,94,0.4)] active:scale-[0.98] disabled:opacity-50"
+                           >
+                             {refundFlow.busy ? "Refunding..." : "Refund Stake"}
+                           </button>
+                         )}
+                      </div>
+                      
+                      {actionFlow?.hasActivity && (
+                        <div className="mt-4 rounded-xl border border-white/5 bg-white/[0.01] p-4 text-white">
+                           <TxStepper 
+                             steps={actionFlow.steps} 
+                             title="Action Trace" 
+                             footer={<Button variant="ghost" size="sm" onClick={actionFlow.reset} className="text-[10px] text-white/30 p-0 h-auto">Clear Trace</Button>} 
+                           />
+                        </div>
+                      )}
+                   </div>
+                </div>
+              )}
            </div>
 
-           {/* Finalize/Refund Actions */}
-           {(canFinalize || canRefund) && (
-             <div className="mt-10 pt-8 border-t border-white/10 relative z-10">
-                <div className="flex flex-col gap-4">
-                   <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-bold text-white/60 uppercase tracking-widest">Protocol Intervention</h3>
-                      <TxStatusChip status={actionFlow?.status ?? 'idle'} />
-                   </div>
-                   
-                   <div className="flex gap-2">
-                      {canFinalize && (
-                        <Button 
-                          onClick={() => void handleFinalize()} 
-                          disabled={finalizeFlow.busy || refundFlow.busy}
-                          className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition-all active:scale-95"
-                        >
-                          {finalizeFlow.busy ? "Finalizing..." : "Finalize Room"}
-                        </Button>
-                      )}
-                      {canRefund && (
-                        <Button 
-                          variant="destructive"
-                          onClick={() => void handleRefund()} 
-                          disabled={refundFlow.busy || finalizeFlow.busy}
-                          className="flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-3 rounded-xl transition-all active:scale-95"
-                        >
-                          {refundFlow.busy ? "Refunding..." : "Refund Stake"}
-                        </Button>
-                      )}
-                   </div>
-                   
-                   {actionError && (
-                     <p className="text-xs text-rose-500 mt-2">{actionError.message}</p>
-                   )}
-                   
-                   {actionFlow?.hasActivity && (
-                     <div className="mt-4">
-                        <TxStepper steps={actionFlow.steps} title="Governance Trace" footer={<Button variant="ghost" size="sm" onClick={actionFlow.reset} className="text-[10px] text-white/30 p-0 h-auto">Reset</Button>} />
-                     </div>
-                   )}
-                </div>
-             </div>
-           )}
-
-        </GlassCard>
+           {/* Receipt Decoration: Bottom Cutout */}
+           <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex gap-2">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="w-4 h-4 rounded-full bg-[#000] -translate-y-1/2" />
+              ))}
+           </div>
+        </div>
+        
+        {/* Footer Audit Quote */}
+        <p className="mt-12 text-[10px] font-mono font-bold uppercase tracking-[0.4em] text-white/20">
+           Immutable Settlement Receipt • Sector_01_Hub
+        </p>
 
       </main>
     </PageTransition>

@@ -55,32 +55,27 @@ describe("AppShell", () => {
         <div>content</div>
       </AppShell>
     );
-    expect(screen.getByText("ArbiGameFi")).toBeDefined();
+    expect(screen.getAllByText("ArbiGameFi").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("On-chain casino")).toBeDefined();
   });
 
-  it("renders primary navigation links and demotes advanced routes", () => {
+  it("renders migrated archive-style primary navigation links", () => {
     render(
       <AppShell>
         <div>content</div>
       </AppShell>
     );
     const primaryLinks = [
-      "Home",
       "Games",
+      "Invest",
+      "Referral",
       "Bets",
-      "Liquidity",
       "Account"
     ];
     for (const label of primaryLinks) {
       const links = screen.getAllByText(label);
       expect(links.length).toBeGreaterThanOrEqual(1);
     }
-
-    expect(screen.getByText("Advanced")).toBeDefined();
-    expect(screen.getAllByText("Claims").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Referral").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Ops").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders at least one WalletButton", () => {
@@ -151,7 +146,10 @@ describe("AppShell", () => {
       </AppShell>
     );
     const gamesLink = screen.getAllByText("Games")[0]!;
-    expect(gamesLink.closest("a")?.getAttribute("href")).toBe("/games");
+    expect(gamesLink.closest("a")?.getAttribute("href")).toBe("/dice");
+
+    const investLink = screen.getAllByText("Invest")[0]!;
+    expect(investLink.closest("a")?.getAttribute("href")).toBe("/invest");
 
     const betsLink = screen.getAllByText("Bets")[0]!;
     expect(betsLink.closest("a")?.getAttribute("href")).toBe("/bets");
@@ -167,7 +165,5 @@ describe("AppShell", () => {
 
     expect(screen.getByText("All Games")).toBeDefined();
     expect(screen.queryByText("On-chain casino")).toBeNull();
-    expect(screen.queryByText("Advanced")).toBeNull();
-    expect(screen.queryByText("Home")).toBeNull();
   });
 });

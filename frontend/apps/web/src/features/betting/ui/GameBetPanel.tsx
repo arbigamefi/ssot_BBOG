@@ -54,6 +54,22 @@ function normalizeBetCount(raw: string, min = 1, max = 100) {
   return Math.max(min, Math.min(max, Math.floor(parsed)));
 }
 
+function getRouletteCoverage(selectionValue: string) {
+  const normalized = selectionValue.trim().toLowerCase();
+  if (!normalized) return 0;
+  if (normalized.startsWith("straight")) return 1;
+  if (normalized.startsWith("split")) return 2;
+  if (normalized.startsWith("street")) return 3;
+  if (normalized.startsWith("corner")) return 4;
+  if (normalized.startsWith("six line")) return 6;
+  if (normalized.startsWith("column")) return 12;
+  if (normalized.includes("12")) return 12;
+  if (normalized === "red" || normalized === "black" || normalized === "odd" || normalized === "even" || normalized === "1-18" || normalized === "19-36") {
+    return 18;
+  }
+  return 0;
+}
+
 export function GameBetPanel({
   release,
   game,
@@ -93,7 +109,7 @@ export function GameBetPanel({
   const betCount = React.useMemo(() => normalizeBetCount(stakeSpec.betCount), [stakeSpec.betCount]);
   const isRouletteRoom = game.slug === "roulette";
   const outcomeStepTitle = isRouletteRoom ? "Choose the table bet" : "Choose the outcome";
-  const quickStakePresets = ["0.10", "0.50", "1.00", "5.00"];
+  const quickStakePresets = isRouletteRoom ? ["1/2", "2x", "Max"] : ["0.10", "0.50", "1.00", "5.00"];
 
   const inputDigest = React.useMemo(
     () =>
@@ -159,6 +175,39 @@ export function GameBetPanel({
     return `${formatUnits(assetFacts.walletBalance, assetMeta.decimals)} ${assetMeta.symbol}`;
   }, [assetFacts, assetMeta]);
 
+  const rouletteCoverage = React.useMemo(
+    () => (isRouletteRoom ? getRouletteCoverage(selectionSignal.value) : 0),
+    [isRouletteRoom, selectionSignal.value]
+  );
+
+  const rouletteWinChanceDisplay = React.useMemo(() => {
+    if (!isRouletteRoom || rouletteCoverage <= 0) return "0%";
+    return `${((rouletteCoverage / 37) * 100).toFixed(2)}%`;
+  }, [isRouletteRoom, rouletteCoverage]);
+
+  const rouletteGrossMultiplier = React.useMemo(() => {
+    if (!isRouletteRoom || rouletteCoverage <= 0) return 0;
+    return 36 / rouletteCoverage;
+  }, [isRouletteRoom, rouletteCoverage]);
+
+  const rouletteTargetPayoutDisplay = React.useMemo(() => {
+    if (!isRouletteRoom || !assetMeta || totalStake === null || rouletteGrossMultiplier <= 0) {
+      return assetMeta ? `0 ${assetMeta.symbol}` : "0";
+    }
+    const grossUnits = totalStake * BigInt(rouletteGrossMultiplier);
+    return `${formatUnits(grossUnits, assetMeta.decimals)} ${assetMeta.symbol}`;
+  }, [assetMeta, isRouletteRoom, rouletteGrossMultiplier, totalStake]);
+
+  const quoteVrfFeeDisplay = React.useMemo(() => {
+    if (!state.plan || !assetMeta) return "Review quote";
+    return `${formatUnits(state.plan.preview.vrfFee, assetMeta.decimals)} ${assetMeta.symbol}`;
+  }, [assetMeta, state.plan]);
+
+  const quoteApprovalDisplay = React.useMemo(() => {
+    if (!state.plan) return account ? "Quote pending" : "Connect wallet";
+    return state.plan.preview.needsApproval ? "Approval required" : "Ready to place";
+  }, [account, state.plan]);
+
   const setAmountUnits = React.useCallback(
     (nextUnits: bigint) => {
       if (!assetMeta) return;
@@ -195,6 +244,25 @@ export function GameBetPanel({
       }
     },
     [assetFacts, assetMeta, betCount, setAmountUnits, stakeSpec.amountPerRoll]
+  );
+
+  const handleQuickChip = React.useCallback(
+    (chip: string) => {
+      if (chip === "1/2") {
+        handleAmountShortcut("half");
+        return;
+      }
+      if (chip === "2x") {
+        handleAmountShortcut("double");
+        return;
+      }
+      if (chip === "Max") {
+        handleAmountShortcut("max");
+        return;
+      }
+      applyAmountPreset(chip);
+    },
+    [applyAmountPreset, handleAmountShortcut]
   );
 
   const onReset = React.useCallback(() => {
@@ -265,14 +333,14 @@ export function GameBetPanel({
 
   const isBusy = state.status === "planning" || state.status === "submitting";
   const primaryLabel = React.useMemo(() => {
-    if (!account) return "Connect wallet";
+    if (!account) return isRouletteRoom ? "Connect" : "Connect wallet";
     if (relCtx.readOnly) return "Read-only release";
     if (state.status === "reconciled" && state.betId !== undefined) return "Open bet";
     if (state.status === "planning") return "Reviewing ticket...";
     if (state.status === "submitting") return "Submitting ticket...";
     if (state.plan) return state.plan.preview.needsApproval ? "Approve and place ticket" : "Place ticket";
     return "Review ticket";
-  }, [account, relCtx.readOnly, state.betId, state.plan, state.status]);
+  }, [account, isRouletteRoom, relCtx.readOnly, state.betId, state.plan, state.status]);
 
   const primaryDisabled = React.useMemo(() => {
     if (relCtx.readOnly) return true;
@@ -293,7 +361,7 @@ export function GameBetPanel({
             "flex-1 min-h-[34rem] rounded-[2rem]",
             variant === "room" ? (
               isRouletteRoom
-                ? "border shadow-2xl shadow-slate-950/40 border-fuchsia-400/15 bg-[radial-gradient(circle_at_top,rgba(236,72,153,0.12),transparent_26%),linear-gradient(180deg,rgba(21,11,40,0.98),rgba(7,12,24,0.98))]"
+                ? "bg-transparent shadow-none border-0"
                 : "border shadow-2xl shadow-slate-950/40 border-violet-400/15 bg-[radial-gradient(circle_at_top,rgba(168,85,247,0.12),transparent_26%),linear-gradient(180deg,rgba(21,11,40,0.98),rgba(7,12,24,0.98))]"
             ) : "bg-transparent"
           )}
@@ -316,54 +384,148 @@ export function GameBetPanel({
 
             <div className={cn(
               isRouletteRoom ? "min-h-full" : "min-h-0 flex-1",
-              variant === "room" ? "p-4 sm:p-5" : "p-0"
+              variant === "room" ? (isRouletteRoom ? "p-0" : "p-4 sm:p-5") : "p-0"
             )}>
               {children}
             </div>
           </div>
         </section>
 
-        <div className="w-full xl:w-[380px] flex-shrink-0 flex flex-col gap-4">
+        <div className={cn("w-full flex-shrink-0 flex flex-col gap-3", isRouletteRoom ? "xl:w-[300px]" : "xl:w-[380px]")}>
           <SharedBetSlip
-            glowColorClass={isRouletteRoom ? "bg-fuchsia-500/10 border-fuchsia-500/20" : "bg-violet-500/10 border-violet-500/20"}
-            primaryActionClass={isRouletteRoom ? "bg-fuchsia-600 hover:bg-fuchsia-500" : "bg-violet-600 hover:bg-violet-500"}
+            showHeader={!isRouletteRoom}
+            topMeta={isRouletteRoom ? `${assetMeta?.symbol ?? "USDC"} balance: ${assetFacts ? formatUnits(assetFacts.walletBalance, assetMeta?.decimals ?? 6) : "0"}` : undefined}
+            amountHeaderValue={isRouletteRoom ? `0.00 ${assetMeta?.symbol ?? "USDC"}` : undefined}
+            inputAccessory={
+              isRouletteRoom ? (
+                <>
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-fuchsia-500 text-[13px] font-black text-white">
+                    ⛓
+                  </span>
+                  <span className="text-sm font-semibold text-white/70">⌄</span>
+                </>
+              ) : undefined
+            }
+            slipLabel="Bet slip"
+            slipTitle={isRouletteRoom ? "Roulette ticket" : "Room ticket"}
+            slipDescription={
+              isRouletteRoom
+                ? "Build the ticket without leaving the table."
+                : "Amount, repeats, and quote stay on one compact rail."
+            }
+            glowColorClass={isRouletteRoom ? "bg-transparent border-transparent" : "bg-violet-500/10 border-violet-500/20"}
+            primaryActionClass={isRouletteRoom ? "bg-[#6978ff] hover:bg-[#7482ff]" : "bg-violet-600 hover:bg-violet-500"}
             amountValue={stakeSpec.amountPerRoll}
             onAmountChange={(val) => setStakeSpec((cur) => ({ ...cur, amountPerRoll: val }))}
             assetSymbol={assetMeta?.symbol ?? "USDC"}
             assetOptions={assets.map((a) => ({ address: a.address, symbol: a.symbol }))}
             selectedAsset={asset}
             onAssetChange={(val) => setAsset(val as `0x${string}`)}
-            balanceHint={balanceHint}
+            balanceHint={isRouletteRoom ? undefined : balanceHint}
             quickChips={quickStakePresets}
-            onQuickChip={applyAmountPreset}
+            onQuickChip={handleQuickChip}
             actionLabel={primaryLabel}
             actionDisabled={primaryDisabled}
             onAction={() => void handlePrimaryAction()}
+            showModeSwitch={!isRouletteRoom}
+            summaryBare={isRouletteRoom}
+            summaryAfterChildren={isRouletteRoom}
+            footerNote={isRouletteRoom ? undefined : "Connected wallet required to place room tickets."}
+            className={
+              isRouletteRoom
+                ? "rounded-[1.8rem] border-white/12 bg-[#0a0b10] p-5 shadow-[0_28px_80px_rgba(2,6,23,0.48)]"
+                : undefined
+            }
             summaryContent={
-              <div className="flex flex-col gap-3 px-1 text-sm">
-                <div className="flex justify-between items-start text-xs">
-                  <span className="text-[10px] text-white/50 font-bold uppercase tracking-wider">{selectionSignal.label}</span>
-                  <span className="font-bold text-white text-right max-w-[12rem]">{selectionSignal.value}</span>
+              isRouletteRoom ? (
+                <div className="space-y-2 border-t border-white/10 pt-4 text-sm text-white/78">
+                  <div className="flex items-center justify-between gap-3">
+                    <span>Win chance:</span>
+                    <span className="font-mono">{rouletteWinChanceDisplay}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span>Target payout:</span>
+                    <span className="font-mono">{rouletteTargetPayoutDisplay}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span>RNG fee:</span>
+                    <span className="font-mono">{quoteVrfFeeDisplay}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span>Approval:</span>
+                    <span className={cn("font-medium", !state.plan ? "text-slate-200" : state.plan.preview.needsApproval ? "text-amber-300" : "text-emerald-300")}>
+                      {quoteApprovalDisplay}
+                    </span>
+                  </div>
                 </div>
-                {selectionSignal.helper && (
-                  <div className="text-xs text-white/50">{selectionSignal.helper}</div>
-                )}
-                <div className="flex justify-between items-center mt-2 pt-2 border-t border-white/5 text-xs">
-                  <span className="text-[10px] text-white/50 font-bold uppercase tracking-wider">Total Stake</span>
-                  <span className="font-mono font-bold text-white">
-                    {totalStake === null || !assetMeta ? "—" : `${formatUnits(totalStake, assetMeta.decimals)} ${assetMeta.symbol}`}
-                  </span>
+              ) : (
+                <div className="flex flex-col gap-2.5 px-1 text-sm">
+                  <div className="rounded-2xl border border-white/8 bg-black/20 px-3 py-2.5">
+                    <div className="text-[10px] text-white/50 font-bold uppercase tracking-wider">{selectionSignal.label}</div>
+                    <div className="mt-1 text-[15px] font-semibold text-white">{selectionSignal.value}</div>
+                    {selectionSignal.helper ? <div className="mt-1.5 text-xs leading-5 text-white/50">{selectionSignal.helper}</div> : null}
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                    <span className="text-[10px] text-white/50 font-bold uppercase tracking-wider">Wallet</span>
+                    <span className="font-mono font-bold text-white text-right max-w-[12rem]">{walletBalanceDisplay}</span>
+                    <span className="text-[10px] text-white/50 font-bold uppercase tracking-wider">Bets</span>
+                    <span className="font-mono font-bold text-white text-right">{betCount}</span>
+                    <span className="text-[10px] text-white/50 font-bold uppercase tracking-wider">Stake</span>
+                    <span className="font-mono font-bold text-white text-right">
+                      {totalStake === null || !assetMeta ? "—" : `${formatUnits(totalStake, assetMeta.decimals)} ${assetMeta.symbol}`}
+                    </span>
+                    <span className="text-[10px] text-white/50 font-bold uppercase tracking-wider">RNG fee</span>
+                    <span className="font-mono font-bold text-white text-right">{quoteVrfFeeDisplay}</span>
+                  </div>
+                  <div className="flex justify-between items-center border-t border-white/6 pt-3 text-xs">
+                    <span className="text-[10px] text-white/50 font-bold uppercase tracking-wider">Approval</span>
+                    <span
+                      className={cn(
+                        "font-bold",
+                        !state.plan
+                          ? "text-slate-200"
+                          : state.plan.preview.needsApproval
+                            ? "text-amber-300"
+                            : "text-emerald-300"
+                      )}
+                    >
+                      {quoteApprovalDisplay}
+                    </span>
+                  </div>
                 </div>
-              </div>
+              )
             }
           >
-            {/* Number of Rounds Configuration */}
-            <div className="flex flex-col gap-2 p-4 rounded-xl border border-white/5 bg-[#050505]">
-               <div className="flex items-center justify-between mb-1">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-white/50">{isRouletteRoom ? "Number of spins" : "Number of bets"}</span>
+            {isRouletteRoom ? (
+              <div className="grid gap-3 border-y border-white/10 py-4">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[11px] font-bold text-white">Number of bets</span>
+                  <span className="inline-flex min-w-[3.4rem] items-center justify-center rounded-[0.95rem] border border-white/10 bg-white/[0.03] px-3 py-2 font-mono text-sm font-bold text-white">
+                    {betCount}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="1"
+                  max="100"
+                  step="1"
+                  value={betCount}
+                  onChange={(event) =>
+                    setStakeSpec((current) => ({
+                      ...current,
+                      betCount: String(normalizeBetCount(event.target.value)),
+                    }))
+                  }
+                  className="h-2 w-full cursor-pointer appearance-none rounded-full bg-white/10 accent-white"
+                />
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2 rounded-2xl border border-white/8 bg-[#050505] p-4">
+                <div className="mb-1 flex items-center justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-white/50">Number of bets</span>
                   <span className="font-mono text-sm font-bold text-white">{betCount}</span>
-               </div>
-               <input
+                </div>
+                <input
                   type="range"
                   min="1" max="100" step="1"
                   value={betCount}
@@ -374,8 +536,8 @@ export function GameBetPanel({
                     }))
                   }
                   className="h-2 w-full cursor-pointer appearance-none rounded-full bg-white/10 accent-white"
-               />
-               <div className="grid grid-cols-4 gap-2 mt-2">
+                />
+                <div className="mt-2 grid grid-cols-4 gap-2">
                   {[1, 5, 10, 25].map((preset) => (
                     <button
                       key={`round-${preset}`}
@@ -392,74 +554,77 @@ export function GameBetPanel({
                       {preset}x
                     </button>
                   ))}
-               </div>
-            </div>
-
-            {/* Status bar */}
-            <div className="flex flex-wrap items-center justify-between gap-3 text-[11px] text-white/40 px-1 pt-1 font-semibold uppercase tracking-wide">
-              <span>
-                {account
-                  ? `Allowance: ${allowanceHint}`
-                  : "Review quote before submitting"}
-              </span>
-              {state.plan ? (
-                <button
-                  type="button"
-                  onClick={() => void plan()}
-                  disabled={isBusy}
-                  className="font-bold text-white/60 hover:text-white disabled:opacity-50"
-                >
-                  Refresh quote
-                </button>
-              ) : null}
-            </div>
-
-            {/* Advanced details mapped from details...summary */}
-            <details className="rounded-xl border border-white/5 bg-[#050505] p-3 -mt-2">
-              <summary className="cursor-pointer list-none text-xs font-bold text-white/60 hover:text-white">Advanced limits</summary>
-              <div className="mt-4 space-y-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="bet.stopGain" className="text-xs font-bold uppercase tracking-wider text-white/40">
-                    Stop gain
-                  </Label>
-                  <Input
-                    id="bet.stopGain"
-                    inputMode="decimal"
-                    value={stakeSpec.stopGain ?? ""}
-                    onChange={(event) => setStakeSpec((current) => ({ ...current, stopGain: event.target.value }))}
-                    className="border-white/10 bg-transparent text-white focus:border-white/30"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="bet.stopLoss" className="text-xs font-bold uppercase tracking-wider text-white/40">
-                    Stop loss
-                  </Label>
-                  <Input
-                    id="bet.stopLoss"
-                    inputMode="decimal"
-                    value={stakeSpec.stopLoss ?? ""}
-                    onChange={(event) => setStakeSpec((current) => ({ ...current, stopLoss: event.target.value }))}
-                    className="border-white/10 bg-transparent text-white focus:border-white/30"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="bet.maxHouseEdge" className="text-xs font-bold uppercase tracking-wider text-white/40">
-                    Max house edge (bps)
-                  </Label>
-                  <Input
-                    id="bet.maxHouseEdge"
-                    inputMode="numeric"
-                    value={String(maxHouseEdgeBps)}
-                    onChange={(event) => {
-                      const next = Number(event.target.value);
-                      if (!Number.isFinite(next)) return;
-                      setMaxHouseEdgeBps(Math.max(0, Math.min(10_000, Math.floor(next))));
-                    }}
-                    className="border-white/10 bg-transparent text-white focus:border-white/30"
-                  />
                 </div>
               </div>
-            </details>
+            )}
+
+            {!isRouletteRoom ? (
+              <>
+                <div className="flex flex-wrap items-center justify-between gap-3 text-[11px] text-white/40 px-1 pt-1 font-semibold uppercase tracking-wide">
+                  <span>
+                    {account
+                      ? `Allowance: ${allowanceHint}`
+                      : "Review quote before submitting"}
+                  </span>
+                  {state.plan ? (
+                    <button
+                      type="button"
+                      onClick={() => void plan()}
+                      disabled={isBusy}
+                      className="font-bold text-white/60 hover:text-white disabled:opacity-50"
+                    >
+                      Refresh quote
+                    </button>
+                  ) : null}
+                </div>
+
+                <details className="rounded-xl border border-white/5 bg-[#050505] p-3 -mt-2">
+                  <summary className="cursor-pointer list-none text-xs font-bold text-white/60 hover:text-white">Advanced limits</summary>
+                  <div className="mt-4 space-y-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="bet.stopGain" className="text-xs font-bold uppercase tracking-wider text-white/40">
+                        Stop gain
+                      </Label>
+                      <Input
+                        id="bet.stopGain"
+                        inputMode="decimal"
+                        value={stakeSpec.stopGain ?? ""}
+                        onChange={(event) => setStakeSpec((current) => ({ ...current, stopGain: event.target.value }))}
+                        className="border-white/10 bg-transparent text-white focus:border-white/30"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="bet.stopLoss" className="text-xs font-bold uppercase tracking-wider text-white/40">
+                        Stop loss
+                      </Label>
+                      <Input
+                        id="bet.stopLoss"
+                        inputMode="decimal"
+                        value={stakeSpec.stopLoss ?? ""}
+                        onChange={(event) => setStakeSpec((current) => ({ ...current, stopLoss: event.target.value }))}
+                        className="border-white/10 bg-transparent text-white focus:border-white/30"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="bet.maxHouseEdge" className="text-xs font-bold uppercase tracking-wider text-white/40">
+                        Max house edge (bps)
+                      </Label>
+                      <Input
+                        id="bet.maxHouseEdge"
+                        inputMode="numeric"
+                        value={String(maxHouseEdgeBps)}
+                        onChange={(event) => {
+                          const next = Number(event.target.value);
+                          if (!Number.isFinite(next)) return;
+                          setMaxHouseEdgeBps(Math.max(0, Math.min(10_000, Math.floor(next))));
+                        }}
+                        className="border-white/10 bg-transparent text-white focus:border-white/30"
+                      />
+                    </div>
+                  </div>
+                </details>
+              </>
+            ) : null}
           </SharedBetSlip>
         </div>
       </div>

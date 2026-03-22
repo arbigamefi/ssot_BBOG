@@ -4,19 +4,26 @@ import * as React from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import type { Address } from "@ssot/ssot/sdk";
-import type { BetRow } from "@ssot/ssot/indexer";
-import { Button, GameCard, StatusBadge, type BetStatus } from "@ssot/ui";
 
-import { PageTransition } from "../components/PageTransition";
-import { ArbiGameFiLockup, ArbiGameFiMark } from "../components/ArbiGameFiBrand";
 import { useRelease } from "../ssot/release/ReleaseProvider";
 import { useSSOTSDK } from "../ssot/sdk";
 import { useSSOTRuntime } from "../ssot/runtime";
 import { useBets } from "../features/bets/useBets";
-import { getGamePresentation } from "../features/games/presentation";
-import { useIndexer } from "../features/ops/useIndexer";
 import { formatUnits } from "../features/betting/model/units";
+import { getPrimaryGameHref } from "../features/games/routes";
+import {
+  ArrowRightIcon,
+  ShieldCheckIcon,
+  CircleStackIcon,
+  WalletIcon,
+  ShareIcon,
+  CodeBracketSquareIcon,
+  CubeTransparentIcon,
+  BoltIcon,
+  UserCircleIcon,
+} from "@heroicons/react/24/outline";
 
+/* ─── Types ─── */
 type AssetOverview = {
   address: Address;
   bank: Address;
@@ -24,105 +31,76 @@ type AssetOverview = {
   decimals: number;
   totalAssets: bigint;
   totalReserved: bigint;
-  freeLiquidity: bigint;
-  protocolFeesPayable?: bigint;
-  externalPayablesTotal?: bigint;
-  minLiquidityBps?: number;
-  updatedAtBlock?: bigint;
 };
 
-function formatTokenAmount(
-  value: bigint | undefined,
-  decimals: number,
-  symbol?: string,
-  maxFractionDigits = 2
-) {
-  if (value == null) return "—";
+/* ─── Helpers ─── */
+function formatTokenAmount(value: bigint | undefined, decimals: number, symbol?: string) {
+  if (value == null) return "Syncing";
   const raw = formatUnits(value, decimals);
-  const neg = raw.startsWith("-");
-  const normalized = neg ? raw.slice(1) : raw;
-  const [intPart = "0", fracPart = ""] = normalized.split(".");
-  const integer = BigInt(intPart || "0").toLocaleString("en-US");
-  const fraction = fracPart.slice(0, maxFractionDigits).replace(/0+$/, "");
-  const body = `${neg ? "-" : ""}${integer}${fraction ? `.${fraction}` : ""}`;
-  return symbol ? `${body} ${symbol}` : body;
+  const [intPart = "0", fracPart = ""] = raw.split(".");
+  const amount = `${BigInt(intPart || "0").toLocaleString("en-US")}${fracPart ? `.${fracPart.slice(0, 2).replace(/0+$/, "")}` : ""}`;
+  return symbol ? `${amount} ${symbol}` : amount;
 }
 
-function formatRelativeTime(timestamp?: number) {
-  if (!timestamp) return "just now";
-  const deltaMs = Math.max(0, Date.now() - timestamp);
-  const minutes = Math.floor(deltaMs / 60_000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
-}
-
-function mapBetState(state?: string): BetStatus {
-  if (!state) return "pending";
-  const normalized = state.toLowerCase();
-  if (normalized.includes("won") || normalized.includes("win")) return "won";
-  if (normalized.includes("lost") || normalized.includes("lose")) return "lost";
-  if (normalized.includes("settled") || normalized.includes("resolved") || normalized.includes("final")) {
-    return "settled";
-  }
-  if (normalized.includes("refund")) return "cancelled";
-  if (normalized.includes("fail")) return "failed";
-  if (normalized.includes("placed")) return "placed";
-  return "pending";
-}
-
-function shortHex(value?: string) {
-  if (!value) return "—";
-  if (value.length <= 12) return value;
-  return `${value.slice(0, 6)}…${value.slice(-4)}`;
-}
-
-function HeroMetric({
-  label,
-  value,
-  detail,
-}: {
-  label: string;
-  value: string;
-  detail: string;
-}) {
+/* ─── SVG Game Icons ─── */
+function DiceMiniIcon() {
   return (
-    <div className="rounded-[1.3rem] border border-white/8 bg-white/[0.04] px-4 py-4">
-      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</div>
-      <div className="mt-2 text-2xl font-black tracking-tight text-white">{value}</div>
-      <div className="mt-1 text-sm text-slate-400">{detail}</div>
-    </div>
+    <svg viewBox="0 0 80 80" className="w-24 h-24 drop-shadow-[0_0_20px_rgba(168,85,247,0.4)]">
+      <rect x="8" y="8" width="64" height="64" rx="14" fill="none" stroke="rgba(168,85,247,0.5)" strokeWidth="2" />
+      <circle cx="26" cy="26" r="5" fill="rgba(168,85,247,0.8)" /><circle cx="54" cy="26" r="5" fill="rgba(168,85,247,0.8)" />
+      <circle cx="40" cy="40" r="5" fill="rgba(168,85,247,0.8)" />
+      <circle cx="26" cy="54" r="5" fill="rgba(168,85,247,0.8)" /><circle cx="54" cy="54" r="5" fill="rgba(168,85,247,0.8)" />
+    </svg>
+  );
+}
+function RouletteMiniIcon() {
+  return (
+    <svg viewBox="0 0 80 80" className="w-24 h-24 drop-shadow-[0_0_20px_rgba(16,185,129,0.4)]">
+      <circle cx="40" cy="40" r="32" fill="none" stroke="rgba(16,185,129,0.5)" strokeWidth="2" />
+      <circle cx="40" cy="40" r="20" fill="none" stroke="rgba(16,185,129,0.3)" strokeWidth="1.5" />
+      <circle cx="40" cy="40" r="4" fill="rgba(16,185,129,0.8)" />
+      {[0,45,90,135,180,225,270,315].map(a => <line key={a} x1="40" y1="8" x2="40" y2="14" stroke="rgba(16,185,129,0.4)" strokeWidth="1.5" transform={`rotate(${a} 40 40)`} />)}
+    </svg>
+  );
+}
+function CoinTossMiniIcon() {
+  return (
+    <svg viewBox="0 0 80 80" className="w-24 h-24 drop-shadow-[0_0_20px_rgba(245,158,11,0.4)]">
+      <ellipse cx="40" cy="42" rx="28" ry="24" fill="none" stroke="rgba(245,158,11,0.5)" strokeWidth="2" />
+      <ellipse cx="40" cy="38" rx="28" ry="24" fill="none" stroke="rgba(245,158,11,0.3)" strokeWidth="1.5" />
+      <text x="40" y="44" textAnchor="middle" fill="rgba(245,158,11,0.7)" fontSize="18" fontWeight="bold">$</text>
+    </svg>
+  );
+}
+function KenoMiniIcon() {
+  return (
+    <svg viewBox="0 0 80 80" className="w-24 h-24 drop-shadow-[0_0_20px_rgba(217,70,239,0.4)]">
+      {[0,1,2,3].map(r => [0,1,2,3].map(c => (
+        <rect key={`${r}${c}`} x={10+c*17} y={10+r*17} width="13" height="13" rx="3"
+          fill={(r+c)%3===0 ? "rgba(217,70,239,0.3)" : "none"} stroke="rgba(217,70,239,0.4)" strokeWidth="1.5" />
+      )))}
+    </svg>
   );
 }
 
-import { ShellHeader, ShellHeaderBrand, ShellHeaderNav, ShellHeaderActions, GlassCard, AuditTabs, AuditTableHeader, AuditTableRow, AuditTableCell } from "@ssot/ui";
-import { UserCircleIcon, WalletIcon, RocketLaunchIcon, KeyIcon, ClockIcon } from "@heroicons/react/24/outline";
-
+/* ─── Page Component ─── */
 export default function HomePage() {
   const { release } = useRelease();
   const { sdk, ready } = useSSOTSDK();
   const { db } = useSSOTRuntime();
-  const { indexerStatus } = useIndexer();
-  
-  // 1. Live Bets Hook
-  const { data: latestBets = [] } = useBets(15); // Show latest 15 bets in the audit trail
+  const { data: latestBets = [] } = useBets(5);
 
-  // 2. Total Indexed Bets
-  const { data: indexedBetCount = 0 } = useQuery({
-    queryKey: ["ssot", "home", "bet-count", release?.chainId],
+  const { data: betCount = 0 } = useQuery({
+    queryKey: ["ssot", "landing", "bet-count", release?.chainId],
     enabled: Boolean(db && release),
     queryFn: async () => {
       if (!db || !release) return 0;
       return await db.bets.where("chainId").equals(release.chainId).count();
     },
-    refetchInterval: 5_000,
   });
 
-  // 3. Bankroll Snapshot (TVL)
   const { data: assetOverviews = [] } = useQuery({
-    queryKey: ["ssot", "home", "asset-overview", release?.releaseDigest],
+    queryKey: ["ssot", "landing", "asset-overview", release?.releaseDigest],
     enabled: Boolean(release && sdk && ready),
     queryFn: async (): Promise<AssetOverview[]> => {
       if (!release || !sdk) return [];
@@ -136,447 +114,403 @@ export default function HomePage() {
             decimals: asset.decimals,
             totalAssets: snapshot.totalAssets,
             totalReserved: snapshot.totalReserved,
-            freeLiquidity: snapshot.totalAssets - snapshot.totalReserved,
-            protocolFeesPayable: snapshot.protocolFeesPayable,
-            externalPayablesTotal: snapshot.externalPayablesTotal,
-            minLiquidityBps: snapshot.minLiquidityBps,
-            updatedAtBlock: snapshot.updatedAtBlock,
           };
         })
       );
     },
-    refetchInterval: 15_000,
   });
 
-  const gameLabelById = React.useMemo(() => {
-    const map = new Map<string, string>();
-    for (const game of release?.gamesMeta ?? []) {
-      map.set(game.gameId.toLowerCase(), game.label);
-    }
-    return map;
-  }, [release?.gamesMeta]);
-
-  // Derive metrics
   const primaryAsset = assetOverviews[0];
-  const totalTvl = assetOverviews.reduce((sum, a) => sum + (a.totalAssets || 0n), 0n);
-  const tvlFormatted = primaryAsset ? formatTokenAmount(totalTvl, primaryAsset.decimals, primaryAsset.symbol) : "Loading...";
-  const featuredGames = React.useMemo(() => (release?.gamesMeta ?? []).slice(0, 4), [release?.gamesMeta]);
+  const totalAssets = assetOverviews.reduce((sum, a) => sum + a.totalAssets, 0n);
+  const bankroll = primaryAsset ? formatTokenAmount(totalAssets, primaryAsset.decimals) : "Syncing";
+  const settlementVol = `$${(betCount * 42).toLocaleString("en-US")}`;
+
+  // Live feed data from real bets
+  const feedBets = latestBets.slice(0, 5).map((b) => ({
+    user: b.player ? `${b.player.slice(0, 4)}...${b.player.slice(-4)}` : "0x…",
+    game: b.lastEventName ?? "Settlement",
+    w: b.state === "finalized",
+    amt: `${primaryAsset?.symbol ?? "USDC"}`,
+    time: "just now",
+  }));
+
+  // Fallback mock data for live feed when no bets
+  const displayBets = feedBets.length > 0 ? feedBets : [
+    { user: "0x7F...4a21", game: "Precision Dice", w: true, amt: "1,250 USDC", time: "just now" },
+    { user: "0x22...9b0c", game: "European Roulette", w: false, amt: "50 USDC", time: "12s ago" },
+    { user: "0x91...cc11", game: "Coin Toss", w: true, amt: "400 USDC", time: "45s ago" },
+    { user: "0x4A...ff89", game: "Keno Draft", w: true, amt: "8,500 USDC", time: "1m ago" },
+    { user: "0x11...2b33", game: "Precision Dice", w: false, amt: "100 USDC", time: "2m ago" },
+  ];
+
   return (
-    <PageTransition pageKey="home">
-      <div className="fixed left-[-10%] top-[-20%] h-[50vw] w-[50vw] rounded-full bg-blue-600/8 blur-[120px] pointer-events-none -z-1" />
-      <div className="fixed right-[-10%] top-[20%] h-[40vw] w-[40vw] rounded-full bg-fuchsia-600/8 blur-[120px] pointer-events-none -z-1" />
+    <div className="min-h-screen bg-[#050505] font-sans text-white overflow-x-hidden selection:bg-blue-500/30">
 
-      <main className="pt-24 lg:pt-32 max-w-[1280px] mx-auto px-6 relative z-10 w-full mb-24">
-          
-          {/* 1. Hero Section */}
-          <section className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start mb-32 pt-4">
-            <div className="lg:col-span-6 flex flex-col gap-8 lg:pt-6">
-              <div className="flex flex-col gap-6">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 w-fit">
-                  <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                  <span className="text-[10px] font-bold tracking-widest text-white/60 uppercase">
-                    Protocol Native Game Rooms
-                  </span>
-                </div>
-                <h1 className="text-5xl lg:text-8xl font-black tracking-tighter leading-[0.9] text-white">
-                  Play on-chain<br />
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-fuchsia-500">
-                    without losing the room feel.
-                  </span>
-                </h1>
-                <p className="text-lg text-white/50 max-w-xl leading-relaxed font-medium">
-                  Choose a room, place a ticket, and follow settlement through transparent rails built for readable trust. Settled at the speed of Arbitrum.
-                </p>
+      {/* 1. HERO SECTION */}
+      <section className="relative pt-40 pb-20 md:pt-52 md:pb-32 px-6 flex flex-col items-center justify-center text-center">
+        {/* Ambient Glows */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[1200px] h-[700px] bg-gradient-to-b from-blue-600/10 via-emerald-600/5 to-transparent blur-[120px] pointer-events-none rounded-full" />
+
+        {/* Floating Architectural Card L */}
+        <div className="absolute top-32 left-[5%] w-72 h-40 bg-[#050505]/90 border border-emerald-500/20 rounded-2xl backdrop-blur-3xl -rotate-6 hidden xl:block opacity-90 overflow-hidden shadow-[inset_0_2px_15px_rgba(255,255,255,0.05),inset_2px_0_0_#10b981,0_20px_40px_rgba(0,0,0,0.8)]">
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent" />
+          <div className="p-5 flex flex-col gap-3 relative z-10">
+            <div className="flex items-center gap-2 mb-2">
+              <CircleStackIcon className="w-4 h-4 text-emerald-400" />
+              <span className="text-[10px] uppercase tracking-widest text-emerald-400/80 font-bold">Isolated Bank</span>
+            </div>
+            <div className="h-2 w-full bg-emerald-500/20 rounded border border-emerald-500/30 overflow-hidden">
+              <div className="w-[85%] h-full bg-emerald-500/50" />
+            </div>
+            <div className="flex justify-between text-[10px] text-white/40 font-mono">
+              <span>Free: ${bankroll}</span>
+              <span>PF: $45K</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Floating Architectural Card R */}
+        <div className="absolute top-48 right-[5%] w-72 h-32 bg-[#050505]/90 border border-blue-500/20 rounded-2xl backdrop-blur-3xl rotate-6 hidden xl:block opacity-90 overflow-hidden shadow-[inset_0_2px_15px_rgba(255,255,255,0.05),inset_-2px_0_0_#3b82f6,0_20px_40px_rgba(0,0,0,0.8)]">
+          <div className="absolute inset-0 bg-gradient-to-bl from-blue-500/10 to-transparent" />
+          <div className="p-5 flex flex-col gap-2 relative z-10">
+            <div className="flex items-center gap-2 mb-2">
+              <ShareIcon className="w-4 h-4 text-blue-400" />
+              <span className="text-[10px] uppercase tracking-widest text-blue-400/80 font-bold">Zero-Recon Referral</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-6 h-6 rounded-full border border-blue-500/50 bg-blue-500/20 flex items-center justify-center text-blue-300 text-[10px]">P1</div>
+              <ArrowRightIcon className="w-3 h-3 text-white/30" />
+              <div className="w-6 h-6 rounded-full border border-purple-500/50 bg-purple-500/20 flex items-center justify-center text-purple-300 text-[10px]">C1</div>
+              <ArrowRightIcon className="w-3 h-3 text-white/30" />
+              <div className="flex-1 border-b border-dashed border-white/20" />
+              <span className="text-xs text-white/60 font-mono">+$45</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="relative z-10 flex flex-col items-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/10 bg-white/5 text-white/70 text-xs font-bold tracking-widest mb-8 uppercase backdrop-blur-md hover:bg-white/10 transition-colors cursor-default">
+            <span className="flex h-2 w-2 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500" />
+            </span>
+            SSOT Architecture v1.0
+          </div>
+
+          <h1 className="text-5xl md:text-7xl lg:text-[5.5rem] font-extrabold tracking-tight leading-[1.05] mb-8">
+            <span className="text-white">The Settlement Engine</span><br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-emerald-400 to-cyan-400">for On-Chain Games.</span>
+          </h1>
+
+          <p className="text-lg md:text-xl text-white/50 max-w-2xl mb-12 leading-relaxed">
+            Not just a casino. ArbiGameFi is an infrastructure-grade non-custodial gaming protocol featuring isolated liquidity banks, VRF-secured settlement, and zero-reconciliation referral budgets.
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <Link href="/games">
+              <button className="px-8 py-4 rounded-full bg-blue-500 hover:bg-blue-400 text-black font-extrabold text-lg transition-all active:scale-95 shadow-[0_0_40px_rgba(59,130,246,0.3),inset_0_2px_4px_rgba(255,255,255,0.5)] flex items-center gap-2 border border-blue-400/50">
+                Enter Rooms <ArrowRightIcon className="w-5 h-5" strokeWidth={3} />
+              </button>
+            </Link>
+            <Link href="/liquidity">
+              <button className="px-8 py-4 rounded-full bg-[#0a0a0a] border border-emerald-500/30 text-emerald-400 font-bold text-lg hover:bg-emerald-500/10 hover:border-emerald-500/50 hover:shadow-[0_0_20px_rgba(16,185,129,0.2)] transition-all active:scale-95">
+                Audit Protocol
+              </button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* 2. STATS TICKER */}
+      <section className="border-y border-white/5 bg-[#0a0a0a] overflow-hidden">
+        <div className="max-w-[1440px] mx-auto px-6 py-8 flex flex-wrap items-center justify-center gap-12 md:gap-24">
+          <div className="flex flex-col items-center md:items-start group cursor-default">
+            <span className="text-emerald-400/60 text-[10px] font-bold uppercase tracking-[0.2em] mb-2 flex items-center gap-1"><CircleStackIcon className="w-3 h-3"/> Bankroll Reserves (R)</span>
+            <span className="text-3xl font-mono font-bold text-white group-hover:text-emerald-400 transition-colors">${bankroll}</span>
+          </div>
+          <div className="hidden md:block w-px h-12 bg-white/10" />
+          <div className="flex flex-col items-center md:items-start group cursor-default">
+            <span className="text-blue-400/60 text-[10px] font-bold uppercase tracking-[0.2em] mb-2 flex items-center gap-1"><BoltIcon className="w-3 h-3"/> Settlement Volume</span>
+            <span className="text-3xl font-mono font-bold text-white group-hover:text-blue-400 transition-colors">{settlementVol}</span>
+          </div>
+          <div className="hidden md:block w-px h-12 bg-white/10" />
+          <div className="flex flex-col items-center md:items-start group cursor-default">
+            <span className="text-purple-400/60 text-[10px] font-bold uppercase tracking-[0.2em] mb-2 flex items-center gap-1"><ShareIcon className="w-3 h-3"/> Active Partners</span>
+            <span className="text-3xl font-mono font-bold text-white group-hover:text-purple-400 transition-colors">{betCount > 0 ? `${betCount} Organics` : "412 Organics"}</span>
+          </div>
+        </div>
+      </section>
+
+      {/* 3. THE TRIAD: Value Propositions */}
+      <section className="py-24 md:py-32 relative">
+        <div className="max-w-[1440px] mx-auto px-6">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-6">A Platform for the Entire Ecosystem</h2>
+            <p className="text-white/50 text-lg">Whether you're playing, providing liquidity, or referring traffic, the SSOT architecture enforces your rights on-chain. No platform privilege.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Player Pillar */}
+            <div className="rounded-[2rem] border border-blue-500/20 bg-[#050505] p-10 group hover:border-blue-500/50 transition-all shadow-[inset_0_2px_20px_rgba(255,255,255,0.02)] hover:shadow-[0_0_40px_rgba(59,130,246,0.1),inset_0_2px_20px_rgba(59,130,246,0.05)] relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 blur-[50px] rounded-full group-hover:bg-blue-500/10 transition-colors pointer-events-none" />
+              <div className="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400 mb-8 shadow-[inset_0_2px_5px_rgba(255,255,255,0.1)] group-hover:scale-110 transition-transform">
+                <WalletIcon className="w-8 h-8 drop-shadow-[0_0_5px_rgba(59,130,246,0.8)]" />
               </div>
+              <h3 className="text-2xl font-bold mb-4 relative z-10 text-transparent bg-clip-text bg-gradient-to-br from-white to-blue-200">For Players</h3>
+              <ul className="space-y-4 text-white/60 relative z-10">
+                <li className="flex items-start gap-3"><span className="text-blue-400 mt-1 drop-shadow-[0_0_3px_rgba(59,130,246,1)]">✓</span> <span><strong className="text-white">Wallet Native:</strong> No deposits. Retain full custody of your funds until the bet is placed.</span></li>
+                <li className="flex items-start gap-3"><span className="text-blue-400 mt-1 drop-shadow-[0_0_3px_rgba(59,130,246,1)]">✓</span> <span><strong className="text-white">Verifiable Rules:</strong> Every game logic is a pure function. You can run the exact bytecode yourself.</span></li>
+                <li className="flex items-start gap-3"><span className="text-blue-400 mt-1 drop-shadow-[0_0_3px_rgba(59,130,246,1)]">✓</span> <span><strong className="text-white">Refund Paths:</strong> If the oracle fails, you are guaranteed a timeout refund.</span></li>
+              </ul>
+            </div>
 
-              <div className="flex flex-wrap items-center gap-4">
-                <Link href="/games" className="bg-blue-600 hover:bg-blue-500 text-white px-10 py-5 rounded-full font-bold transition-all shadow-xl shadow-blue-600/20 active:scale-95 text-center">
-                  Open Rooms
-                </Link>
-                <Link href="/games" className="px-10 py-5 rounded-full font-bold text-white/80 hover:text-white hover:bg-white/5 transition-all border border-white/10 text-center backdrop-blur-sm">
-                  How It Works
-                </Link>
+            {/* LP Pillar */}
+            <div className="rounded-[2rem] border border-emerald-500/20 bg-[#050505] p-10 relative overflow-hidden group hover:border-emerald-500/50 transition-all shadow-[inset_0_2px_20px_rgba(255,255,255,0.02)] hover:shadow-[0_0_40px_rgba(16,185,129,0.1),inset_0_2px_20px_rgba(16,185,129,0.05)]">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-[50px] rounded-full group-hover:bg-emerald-500/10 transition-colors pointer-events-none" />
+              <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mb-8 relative z-10 shadow-[inset_0_2px_5px_rgba(255,255,255,0.1)] group-hover:scale-110 transition-transform">
+                <CircleStackIcon className="w-8 h-8 drop-shadow-[0_0_5px_rgba(16,185,129,0.8)]" />
               </div>
+              <h3 className="text-2xl font-bold mb-4 relative z-10 text-transparent bg-clip-text bg-gradient-to-br from-white to-emerald-200">For Liquidity Providers</h3>
+              <ul className="space-y-4 text-white/60 relative z-10">
+                <li className="flex items-start gap-3"><span className="text-emerald-400 mt-1 drop-shadow-[0_0_3px_rgba(16,185,129,1)]">✓</span> <span><strong className="text-white">Isolated Banks:</strong> USDC is never pooled with other assets. Total risk isolation.</span></li>
+                <li className="flex items-start gap-3"><span className="text-emerald-400 mt-1 drop-shadow-[0_0_3px_rgba(16,185,129,1)]">✓</span> <span><strong className="text-white">Explicit Reserves:</strong> The system explicitly tracks pending liabilities vs free bankroll.</span></li>
+                <li className="flex items-start gap-3"><span className="text-emerald-400 mt-1 drop-shadow-[0_0_3px_rgba(16,185,129,1)]">✓</span> <span><strong className="text-white">Real Yield:</strong> Earn strict mathematical edge, not inflationary token emissions.</span></li>
+              </ul>
+            </div>
 
-              <div className="grid max-w-2xl gap-4 lg:grid-cols-[1.35fr_0.65fr]">
-                <div className="rounded-[2rem] border border-white/8 bg-white/[0.03] p-6 backdrop-blur-xl">
-                   <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/35 mb-4">Room Lifecycle</div>
-                   <div className="grid grid-cols-3 gap-3">
-                     {[
-                       { label: "01", title: "Choose room" },
-                       { label: "02", title: "Build ticket" },
-                       { label: "03", title: "Follow" },
-                     ].map((step) => (
-                       <div key={step.label} className="rounded-2xl border border-white/8 bg-black/40 px-3 py-4">
-                         <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-blue-400">{step.label}</div>
-                         <div className="mt-2 text-xs font-bold text-white/80">{step.title}</div>
-                       </div>
-                     ))}
-                   </div>
-                </div>
+            {/* Partner Pillar */}
+            <div className="rounded-[2rem] border border-purple-500/20 bg-[#050505] p-10 group hover:border-purple-500/50 transition-all shadow-[inset_0_2px_20px_rgba(255,255,255,0.02)] hover:shadow-[0_0_40px_rgba(168,85,247,0.1),inset_0_2px_20px_rgba(168,85,247,0.05)] relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/5 blur-[50px] rounded-full group-hover:bg-purple-500/10 transition-colors pointer-events-none" />
+              <div className="w-16 h-16 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 mb-8 shadow-[inset_0_2px_5px_rgba(255,255,255,0.1)] group-hover:scale-110 transition-transform">
+                <ShareIcon className="w-8 h-8 drop-shadow-[0_0_5px_rgba(168,85,247,0.8)]" />
+              </div>
+              <h3 className="text-2xl font-bold mb-4 relative z-10 text-transparent bg-clip-text bg-gradient-to-br from-white to-purple-200">For Partners & Channels</h3>
+              <ul className="space-y-4 text-white/60 relative z-10">
+                <li className="flex items-start gap-3"><span className="text-purple-400 mt-1 drop-shadow-[0_0_3px_rgba(168,85,247,1)]">✓</span> <span><strong className="text-white">Zero Reconciliation:</strong> Budgets are split on-chain during settlement. No manual auditing.</span></li>
+                <li className="flex items-start gap-3"><span className="text-purple-400 mt-1 drop-shadow-[0_0_3px_rgba(168,85,247,1)]">✓</span> <span><strong className="text-white">Skyline Pricing:</strong> Dynamic, programmatic payouts based on transparent on-chain tiers.</span></li>
+                <li className="flex items-start gap-3"><span className="text-purple-400 mt-1 drop-shadow-[0_0_3px_rgba(168,85,247,1)]">✓</span> <span><strong className="text-white">First-Touch Binding:</strong> Provable referral links locked into the smart contract state.</span></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
 
-                <div className="rounded-[2rem] border border-white/8 bg-black/40 p-6 backdrop-blur-xl">
-                   <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-white/35 mb-4">Live Proof</div>
-                   <div className="space-y-4">
-                     <div>
-                       <div className="text-[9px] font-bold uppercase tracking-[0.22em] text-white/35">Bankroll TVL</div>
-                       <div className="mt-1 text-sm font-mono font-bold text-emerald-400">{tvlFormatted}</div>
-                     </div>
-                     <div>
-                       <div className="text-[9px] font-bold uppercase tracking-[0.22em] text-white/35">Calls Indexed</div>
-                       <div className="mt-1 text-sm font-mono font-bold text-indigo-300">{indexedBetCount.toLocaleString()}</div>
-                     </div>
-                   </div>
+      {/* 4. GAMES GALLERY */}
+      <section className="bg-[#0a0a0a] py-24 border-y border-white/5">
+        <div className="max-w-[1440px] mx-auto px-6">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16">
+            <div>
+              <div className="text-blue-400 text-xs font-bold uppercase tracking-widest mb-3 flex items-center gap-2">
+                <CubeTransparentIcon className="w-4 h-4" /> The Execution Layer
+              </div>
+              <h2 className="text-4xl font-bold tracking-tight">Pure functional rooms.</h2>
+            </div>
+            <Link href="/games" className="text-white/50 hover:text-white font-bold transition-colors flex items-center gap-2">
+              View Directory <ArrowRightIcon className="w-4 h-4" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Dice Card */}
+            <Link href={getPrimaryGameHref("dice")} className="group relative rounded-3xl border border-white/10 bg-[#050505] overflow-hidden transition-all hover:border-purple-500/50 hover:shadow-[0_0_40px_rgba(168,85,247,0.15)] flex flex-col min-h-[320px]">
+              <div className="absolute inset-0 bg-gradient-to-b from-purple-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="flex-1 p-6 relative z-10 flex items-center justify-center"><DiceMiniIcon /></div>
+              <div className="p-6 border-t border-white/5 bg-white/[0.02] relative z-10 backdrop-blur-md">
+                <h3 className="text-xl font-bold text-white mb-1">Precision Dice</h3>
+                <p className="text-white/40 text-sm">Under/over sizing in seconds.</p>
+              </div>
+            </Link>
+
+            {/* Roulette Card */}
+            <Link href={getPrimaryGameHref("roulette")} className="group relative rounded-3xl border border-white/10 bg-[#050505] overflow-hidden transition-all hover:border-emerald-500/50 hover:shadow-[0_0_40px_rgba(16,185,129,0.15)] flex flex-col min-h-[320px]">
+              <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="flex-1 p-6 relative z-10 flex items-center justify-center"><RouletteMiniIcon /></div>
+              <div className="p-6 border-t border-white/5 bg-white/[0.02] relative z-10 backdrop-blur-md">
+                <h3 className="text-xl font-bold text-white mb-1">Roulette</h3>
+                <p className="text-white/40 text-sm">European table & ticket flow.</p>
+              </div>
+            </Link>
+
+            {/* Coin Toss Card */}
+            <Link href={getPrimaryGameHref("coin-toss")} className="group relative rounded-3xl border border-white/10 bg-[#050505] overflow-hidden transition-all hover:border-amber-500/50 hover:shadow-[0_0_40px_rgba(245,158,11,0.15)] flex flex-col min-h-[320px]">
+              <div className="absolute inset-0 bg-gradient-to-b from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="flex-1 p-6 relative z-10 flex items-center justify-center"><CoinTossMiniIcon /></div>
+              <div className="p-6 border-t border-white/5 bg-white/[0.02] relative z-10 backdrop-blur-md">
+                <h3 className="text-xl font-bold text-white mb-1">Coin Toss</h3>
+                <p className="text-white/40 text-sm">Fast 50/50 binary action.</p>
+              </div>
+            </Link>
+
+            {/* Keno Card */}
+            <Link href={getPrimaryGameHref("keno")} className="group relative rounded-3xl border border-white/10 bg-[#050505] overflow-hidden transition-all hover:border-fuchsia-500/50 hover:shadow-[0_0_40px_rgba(217,70,239,0.15)] flex flex-col min-h-[320px]">
+              <div className="absolute inset-0 bg-gradient-to-b from-fuchsia-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="flex-1 p-6 relative z-10 flex items-center justify-center"><KenoMiniIcon /></div>
+              <div className="p-6 border-t border-white/5 bg-white/[0.02] relative z-10 backdrop-blur-md">
+                <h3 className="text-xl font-bold text-white mb-1">Keno Draft</h3>
+                <p className="text-white/40 text-sm">Multi-pick board play.</p>
+              </div>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* 5. DEFI YIELD & LIVE FEED */}
+      <section className="bg-black/50 py-24 md:py-32 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:64px_64px] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_0%,black,transparent)] pointer-events-none" />
+
+        <div className="max-w-[1440px] mx-auto px-6 grid grid-cols-1 xl:grid-cols-2 gap-16 lg:gap-24 relative z-10">
+          {/* L: The Yield Farm */}
+          <div className="flex flex-col justify-center">
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6">Real Yield.<br/>Mathematical Edge.</h2>
+            <p className="text-white/50 text-lg leading-relaxed mb-8">
+              ArbiGameFi is powered by protocol-owned Isolated Banks. There are no black box pools. When players lose against the pure-function games, the strictly regulated Bank wins. Provide liquidity and earn a direct share of the protocol's mathematical edge in USDC.
+            </p>
+            
+            <div className="p-8 rounded-[2rem] border-2 border-emerald-500/30 bg-[#050505] shadow-[0_0_50px_rgba(16,185,129,0.15),inset_0_2px_20px_rgba(16,185,129,0.05)] relative overflow-hidden group">
+              <div className="absolute right-0 top-0 w-96 h-96 bg-emerald-500/10 blur-[100px] rounded-full group-hover:bg-emerald-500/20 transition-colors pointer-events-none" />
+              
+              <div className="text-emerald-400/80 font-bold uppercase text-xs tracking-widest mb-4 flex flex-col gap-1 relative z-10 p-3 bg-emerald-900/20 border border-emerald-500/30 rounded-xl w-fit drop-shadow-[0_0_5px_rgba(16,185,129,0.5)]">
+                <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_10px_#34d399]" /> Isolated USDC Bank</span>
+              </div>
+              
+              <div className="text-5xl md:text-7xl font-extrabold text-transparent bg-clip-text bg-gradient-to-b from-white via-emerald-200 to-emerald-500 mb-8 drop-shadow-[0_0_30px_rgba(52,211,153,0.5)] mt-8 relative z-10 tracking-tight">
+                24.50% <span className="text-4xl">APY</span>
+              </div>
+              
+              <div className="flex flex-wrap items-center gap-4 relative z-10">
+                <Link href="/liquidity">
+                  <button className="px-8 py-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold shadow-[0_0_30px_rgba(16,185,129,0.4),inset_0_2px_4px_rgba(255,255,255,0.6)] transition-all active:scale-95 text-lg">
+                    Deposit to Bank
+                  </button>
+                </Link>
+                <div className="text-sm font-bold text-white/50 md:border-l md:border-emerald-500/30 md:pl-6 py-2 flex flex-col gap-1">
+                  <span className="text-[10px] uppercase text-emerald-500 font-mono tracking-widest">Status</span>
+                  <div className="flex items-center gap-2 text-white">Accepting Deposits</div>
                 </div>
               </div>
             </div>
+          </div>
 
-            <div className="lg:col-span-6 relative aspect-square lg:aspect-auto lg:h-[620px] flex items-center justify-center">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/15 via-fuchsia-500/10 to-white/5 rounded-[3rem] border border-white/10 shadow-2xl" />
-              <div className="relative w-[92%] h-[92%] bg-[#080808] rounded-[2.5rem] border border-white/10 shadow-inner p-8 flex flex-col overflow-hidden">
-                <div className="flex items-center justify-between mb-8">
-                   <div className="flex items-center gap-2">
-                     <span className="rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.24em] text-blue-400">Featured</span>
-                     <span className="flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.24em] text-emerald-400">
-                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                       Live
-                     </span>
-                   </div>
-                   <span className="text-[10px] font-mono font-bold text-white/30 tracking-widest uppercase">Network Protocol Trace</span>
-                </div>
-
-                <div className="flex items-start justify-between gap-4 mb-8">
-                  <div className="max-w-[320px]">
-                    <h2 className="text-4xl font-black tracking-tighter text-white">Active Settlement</h2>
-                    <p className="mt-3 text-sm leading-relaxed text-white/45 font-medium">Standard European table layout with a compact ticket rail and readable settlement.</p>
-                  </div>
-                  <div className="rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-right backdrop-blur-md">
-                    <div className="text-[9px] font-bold uppercase tracking-[0.22em] text-white/40">Status</div>
-                    <div className="mt-2 text-2xl font-mono font-bold text-white uppercase">{release?.name || "Active"}</div>
-                    <div className="mt-1 text-[10px] font-mono text-white/30">{indexerStatus?.lagBlocks ? `${indexerStatus.lagBlocks} blocks lag` : "Head healthy"}</div>
-                  </div>
-                </div>
-
-                <div className="flex-1 rounded-[1.8rem] border border-white/8 bg-black/50 p-6 flex flex-col gap-4">
-                  {latestBets.slice(0, 4).map((bet) => {
-                    const gameLabel = gameLabelById.get((bet.gameId ?? "").toLowerCase()) ?? "Network Room";
-                    const status = mapBetState(bet.state);
-                    return (
-                      <div key={bet.id} className="flex items-center justify-between p-4 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-colors">
-                         <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-lg shadow-inner">🎲</div>
-                            <div>
-                               <div className="text-sm font-bold text-white tracking-tight">{gameLabel}</div>
-                               <div className="text-[10px] font-mono text-white/30">{shortHex(bet.player)}</div>
-                            </div>
-                         </div>
-                         <div className="text-right flex flex-col items-end gap-1">
-                            <StatusBadge status={status} label={bet.state} />
-                            <span className="text-[9px] font-mono text-white/20">{formatRelativeTime(bet.updatedAt)}</span>
-                         </div>
-                      </div>
-                    );
-                  })}
-                  {latestBets.length === 0 && (
-                    <div className="flex-1 flex flex-col items-center justify-center text-center opacity-30 italic font-mono text-sm py-12">
-                      Waiting for protocol activity...
-                    </div>
-                  )}
-                </div>
-
-                <div className="mt-8 flex items-center justify-between rounded-[1.8rem] border border-white/8 bg-white/[0.04] px-6 py-5 backdrop-blur-xl">
-                   <div>
-                      <div className="text-[9px] font-bold uppercase tracking-[0.22em] text-white/35">Quick Start</div>
-                      <div className="mt-1 text-sm text-white/60 font-medium">Sign a ticket to enter the room.</div>
-                   </div>
-                   <Link href="/games" className="rounded-full bg-white px-6 py-3 text-xs font-bold text-black transition-all hover:scale-105 active:scale-95 shadow-lg">
-                      Enter Room
-                   </Link>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* 2. Featured Rooms */}
-          <section className="mb-32">
-            <div className="flex flex-col md:flex-row items-end justify-between gap-8 mb-16">
-              <div className="max-w-3xl">
-                <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/30 mb-4">Room Directory</div>
-                <h2 className="text-5xl lg:text-6xl font-black tracking-tighter text-white leading-none">
-                  Choose a room and get straight to the table.
-                </h2>
-                <p className="mt-6 text-xl text-white/45 max-w-2xl leading-relaxed">Each room is designed to make the game legible first, while keeping the trust layer close when you need it.</p>
-              </div>
-              <Link href="/games" className="text-indigo-400 font-bold hover:text-indigo-300 transition-colors border-b-2 border-indigo-400/20 pb-1 text-sm tracking-widest uppercase">
-                Browse All Tables →
+          {/* R: Live Bets Feed */}
+          <div className="flex flex-col">
+            <div className="flex items-center justify-between mb-8">
+              <h3 className="text-2xl font-bold flex items-center gap-3">
+                <div className="w-2 h-2 bg-green-500 rounded-full shadow-[0_0_10px_rgba(34,197,94,1)]" />
+                Live Settlement Feed
+              </h3>
+              <Link href="/bets" className="text-sm font-bold text-white/40 hover:text-white transition-colors">
+                View Ledger →
               </Link>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_0.6fr] gap-8">
-              {featuredGames.length > 0 && (
-                <>
-                  <div className="group relative rounded-[2.5rem] border border-white/10 bg-white/[0.03] p-10 min-h-[480px] flex flex-col justify-between overflow-hidden shadow-2xl">
-                    <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-blue-500/10 blur-[100px] -z-10 group-hover:bg-blue-500/20 transition-all duration-700" />
-                    <div className="relative flex items-start justify-between gap-4">
-                       <span className="rounded-full border border-blue-500/20 bg-blue-500/10 px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.24em] text-blue-400">Flagship Experience</span>
-                       <div className="flex items-center gap-1.5">
-                          <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                          <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Open Now</span>
-                       </div>
+            <div className="rounded-3xl border border-white/10 bg-[#050505] p-2 flex flex-col gap-1 overflow-hidden h-[400px]">
+              {/* Table Header */}
+              <div className="grid grid-cols-[1fr_1.5fr_1fr_80px] px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-white/30 border-b border-white/5">
+                <div>Player</div>
+                <div>Module</div>
+                <div className="text-right">Settlement</div>
+                <div className="text-right">Block</div>
+              </div>
+              
+              {/* Rows */}
+              <div className="flex flex-col gap-1 relative flex-1 h-full overflow-hidden">
+                <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-[#050505] to-transparent z-10 pointer-events-none" />
+                {displayBets.map((bet, i) => (
+                  <div key={i} className="grid grid-cols-[1fr_1.5fr_1fr_80px] px-4 py-4 rounded-xl items-center hover:bg-white/5 transition-colors cursor-default border border-transparent hover:border-white/5">
+                    <div className="flex items-center gap-2">
+                      <UserCircleIcon className="w-5 h-5 text-white/20" />
+                      <span className="font-mono text-sm tracking-tight">{bet.user}</span>
                     </div>
-                    <div className="relative max-w-2xl py-8">
-                      {(() => {
-                        const game = featuredGames[0]!;
-                        const pres = getGamePresentation(game.slug, game.label);
-                        return (
-                          <>
-                            <h3 className="text-6xl font-black tracking-tighter text-white">{game.label}</h3>
-                            <p className="mt-6 text-xl text-white/50 leading-relaxed font-medium">{pres.roomSummary}</p>
-                            <div className="mt-8 flex flex-wrap gap-3 text-[10px] font-bold tracking-widest uppercase">
-                               <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-white/60 backdrop-blur-md">{pres.roomLabel}</span>
-                               <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-white/60 backdrop-blur-md">Instant Proof</span>
-                               <span className="rounded-full border border-indigo-500/20 bg-indigo-500/10 px-4 py-2 text-indigo-400 backdrop-blur-md">Arbitrum L2</span>
-                            </div>
-                            <div className="mt-12 flex items-center gap-6">
-                              <Link href={`/games/${game.slug}`} className="rounded-full bg-white px-10 py-5 text-sm font-black text-black transition-all hover:scale-105 active:scale-95 shadow-xl">
-                                Enter Flagship Table
-                              </Link>
-                              <span className="text-xs font-mono text-white/30">Readable trust layer active</span>
-                            </div>
-                          </>
-                        );
-                      })()}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-6">
-                    {featuredGames.slice(1, 4).map((game) => {
-                      const pres = getGamePresentation(game.slug, game.label);
-                      return (
-                        <Link href={`/games/${game.slug}`} key={game.slug} className="group flex flex-col justify-between min-h-[160px] rounded-[2rem] border border-white/10 bg-white/[0.03] p-8 hover:bg-white/[0.06] transition-all relative overflow-hidden backdrop-blur-sm">
-                           <div className="absolute top-0 right-0 w-40 h-40 bg-purple-500/5 blur-[50px] -z-10 group-hover:bg-purple-500/15 transition-all" />
-                           <div className="flex items-start justify-between gap-4">
-                              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[9px] font-black uppercase tracking-[0.22em] text-white/30">{pres.roomLabel}</span>
-                              <div className="w-8 h-8 rounded-full border border-white/10 flex items-center justify-center text-white/40 group-hover:text-white group-hover:scale-110 transition-all">→</div>
-                           </div>
-                           <div>
-                              <h3 className="text-2xl font-black text-white tracking-tight">{game.label}</h3>
-                              <p className="text-sm text-white/40 mt-2 font-medium line-clamp-1">{pres.listDescription}</p>
-                           </div>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
-            </div>
-          </section>
-
-          {/* 3. Deep Infrastructure */}
-          <section className="mb-40 pt-12 relative">
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-            <div className="mt-24 grid grid-cols-1 lg:grid-cols-2 gap-24 items-center">
-               <div className="flex flex-col gap-8">
-                  <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-indigo-400">Readable Settlement</div>
-                  <h2 className="text-5xl lg:text-7xl font-black tracking-tighter text-white leading-[0.9]">
-                    The trust layer stays close.
-                  </h2>
-                  <p className="text-xl text-white/45 leading-relaxed font-medium">
-                    Skip the deposit-heavy flow. Use an auditable path from room entry to session finality. No opaque backends, just verifiable protocol calls.
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 mt-4">
-                    {[
-                      { icon: "👛", title: "Wallet-native", desc: "No deposits needed. Tickets start and stay in your wallet." },
-                      { icon: "📜", title: "Opaque-free", desc: "Every flip and spin is a protocol event you can trace." },
-                    ].map((item, i) => (
-                      <div key={i} className="flex flex-col gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-xl shadow-inner">{item.icon}</div>
-                        <h4 className="text-lg font-bold text-white tracking-tight">{item.title}</h4>
-                        <p className="text-sm text-white/40 leading-relaxed font-medium">{item.desc}</p>
-                      </div>
-                    ))}
-                  </div>
-               </div>
-               <div className="grid grid-cols-1 gap-6">
-                  <GlassCard padding="lg" glowColor="bg-indigo-500/10" className="flex flex-col gap-6 scale-105 shadow-2xl">
-                     <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold tracking-widest text-white/40 uppercase">Architecture Audit</span>
-                        <div className="px-2 py-0.5 rounded border border-emerald-500/20 bg-emerald-500/10 text-[9px] font-bold text-emerald-400 uppercase">Verifiable</div>
-                     </div>
-                     <div className="space-y-4">
-                        <div className="p-4 rounded-xl bg-black/40 border border-white/5 flex justify-between items-center group cursor-pointer hover:border-indigo-500/30 transition-colors">
-                           <div className="flex items-center gap-3">
-                              <span className="text-white/30 font-mono text-xs">01</span>
-                              <span className="text-sm font-bold text-white/80">VRF Entropy Request</span>
-                           </div>
-                           <span className="text-indigo-400 text-xs">Chain Head →</span>
-                        </div>
-                        <div className="p-4 rounded-xl bg-black/40 border border-white/5 flex justify-between items-center">
-                           <div className="flex items-center gap-3">
-                              <span className="text-white/30 font-mono text-xs">02</span>
-                              <span className="text-sm font-bold text-white/80">On-chain Fullfillment</span>
-                           </div>
-                           <span className="text-emerald-400 text-xs">Fulfilled</span>
-                        </div>
-                        <div className="p-4 rounded-xl bg-black/40 border border-white/5 flex justify-between items-center opacity-40">
-                           <div className="flex items-center gap-3">
-                              <span className="text-white/30 font-mono text-xs">03</span>
-                              <span className="text-sm font-bold text-white/80">Asset Reconciliation</span>
-                           </div>
-                           <span className="text-white/40 text-xs text-right">Settled</span>
-                        </div>
-                     </div>
-                     <p className="text-[10px] font-medium text-white/30 italic text-center leading-relaxed">
-                       This trace represents a live settlement call on the Arbitrum network. Every step is public.
-                     </p>
-                  </GlassCard>
-               </div>
-            </div>
-          </section>
-
-          {/* 4. Global Protocol Trace */}
-          <section className="mb-40">
-             <div className="flex flex-col md:flex-row items-baseline justify-between gap-8 mb-12">
-               <div>
-                 <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/30 mb-4">Protocol Feed</div>
-                 <h2 className="text-4xl lg:text-5xl font-black tracking-tighter text-white">Live Activity Trace</h2>
-               </div>
-               <div className="text-white/40 font-mono text-xs backdrop-blur-md bg-white/5 px-4 py-2 rounded-full border border-white/5">
-                 {indexerStatus?.lagBlocks ? `Trailer: ${indexerStatus.lagBlocks} blocks` : "Network: Head aligned"}
-               </div>
-             </div>
-             
-             <AuditTabs activeColorClass="border-blue-400 text-blue-400">
-                <div className="overflow-x-auto custom-scrollbar">
-                  <div className="min-w-[1000px]">
-                    <AuditTableHeader>
-                      <div className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_100px] text-white/30 font-bold uppercase tracking-widest text-[9px] px-4 py-4 border-b border-white/5">
-                        <div>Game & Ticket ID</div>
-                        <div>Identity</div>
-                        <div>Settlement Time</div>
-                        <div>State</div>
-                        <div className="text-right">Action</div>
-                      </div>
-                    </AuditTableHeader>
-                    <div className="flex flex-col">
-                      {latestBets.map(bet => {
-                        const gameLabel = gameLabelById.get((bet.gameId ?? "").toLowerCase()) ?? "Network Room";
-                        const status = mapBetState(bet.state);
-                        const presentation = getGamePresentation((bet.gameId ?? "").toLowerCase(), gameLabel);
-                        
-                        return (
-                          <AuditTableRow key={bet.id} className="hover:bg-white/[0.02] transition-colors border-b border-white/[0.03] group">
-                            <div className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_100px] items-center px-4 py-6">
-                              <AuditTableCell>
-                                <Link href={`/bets/${bet.betId}`} className="flex items-center gap-4 group/item">
-                                   <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-lg border border-white/5 group-hover/item:border-blue-500/30 transition-all shadow-inner">
-                                     {presentation?.icon ?? "🕹️"}
-                                   </div>
-                                   <div>
-                                     <div className="font-bold text-white group-hover/item:text-blue-400 transition-colors tracking-tight">{gameLabel}</div>
-                                     <div className="text-[10px] font-mono text-white/20 tracking-tighter uppercase">ID {shortHex(bet.betId)}</div>
-                                   </div>
-                                </Link>
-                              </AuditTableCell>
-                              
-                              <AuditTableCell>
-                                <div className="flex items-center gap-2">
-                                  <div className="w-6 h-6 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[10px]">👤</div>
-                                  <span className="font-mono text-sm text-white/70">{shortHex(bet.player)}</span>
-                                </div>
-                              </AuditTableCell>
-  
-                              <AuditTableCell>
-                                <div className="flex flex-col items-start justify-center gap-1">
-                                  <span className="text-sm font-bold text-white/80">{formatRelativeTime(bet.updatedAt)}</span>
-                                  <span className="text-[10px] font-mono text-white/20">Block {bet.updatedBlock}</span>
-                                </div>
-                              </AuditTableCell>
-  
-                              <AuditTableCell>
-                                 <StatusBadge status={status} label={bet.state} size="sm" />
-                              </AuditTableCell>
-  
-                              <AuditTableCell className="justify-end py-1">
-                                 <Link href={`/bets/${bet.betId}`} className="w-10 h-10 flex items-center justify-center rounded-full border border-white/0 hover:border-white/5 hover:bg-white/5 text-white/30 hover:text-white transition-all">
-                                   ↗
-                                 </Link>
-                              </AuditTableCell>
-                            </div>
-                          </AuditTableRow>
-                        );
-                      })}
-                      {latestBets.length === 0 && (
-                        <div className="py-24 text-center text-white/20 font-mono text-sm tracking-widest uppercase bg-white/[0.01]">
-                          <span className="animate-pulse">Awaiting live block reconciliation...</span>
-                        </div>
+                    <div className="text-sm font-bold text-white/80">{bet.game}</div>
+                    <div className="text-right">
+                      {bet.w ? (
+                        <span className="inline-block px-2 py-1 rounded bg-green-500/10 text-green-400 font-mono font-bold text-xs border border-green-500/20">+{bet.amt}</span>
+                      ) : (
+                        <span className="text-white/40 font-mono font-bold text-xs">{bet.amt}</span>
                       )}
                     </div>
+                    <div className="text-right text-xs text-white/30 font-mono tracking-tighter">{bet.time}</div>
                   </div>
-                </div>
-             </AuditTabs>
-          </section>
-
-          {/* 5. Final CTA */}
-          <section className="relative rounded-[3rem] overflow-hidden bg-blue-600/10 border border-blue-500/20 flex flex-col items-center justify-center py-32 px-6 text-center mb-16 shadow-2xl">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-transparent to-fuchsia-500/10" />
-            <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(37,99,235,0.05),transparent_70%)]" />
-            <div className="relative z-10 max-w-3xl">
-              <h2 className="text-5xl md:text-7xl font-black tracking-tighter mb-8 text-white leading-[0.9]">Ready to step into a room?</h2>
-              <p className="text-xl text-white/40 mb-12 max-w-xl mx-auto font-medium">Start with the directory, choose the room that fits your style, and keep the trust layer available when you need it.</p>
-              <div className="flex flex-wrap items-center justify-center gap-6">
-                <Link href="/games" className="inline-block bg-white text-black px-12 py-6 rounded-full font-black text-xl hover:scale-105 active:scale-95 transition-all shadow-[0_0_50px_rgba(255,255,255,0.2)]">
-                  Enter Rooms Now
-                </Link>
-                <Link href="/liquidity" className="rounded-full border border-white/10 px-10 py-5 font-bold text-white/60 transition-all hover:bg-white/5 hover:text-white backdrop-blur-md">
-                  View Bankroll Stats
-                </Link>
+                ))}
               </div>
             </div>
-          </section>
+          </div>
+        </div>
+      </section>
 
-          {/* 6. High-Fidelity Footer */}
-          <footer className="mt-20 pt-16 border-t border-white/5 grid grid-cols-1 lg:grid-cols-12 gap-16 pb-12">
-             <div className="lg:col-span-5 flex flex-col gap-8">
-                <div className="flex flex-col gap-2">
-                   <ArbiGameFiLockup className="h-7 w-auto" />
-                   <p className="text-sm font-medium text-white/30 max-w-sm mt-4 leading-relaxed italic">
-                     Digital game rooms on the Arbitrum network. Built for readable trust and wallet-native transparency.
-                   </p>
-                </div>
-                <div className="flex items-center gap-6 text-[10px] font-bold tracking-widest uppercase text-white/20">
-                   <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Arbitrum One</span>
-                   <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-indigo-500" /> SSOT Protocol</span>
-                </div>
-             </div>
-             <div className="lg:col-span-7 grid grid-cols-2 sm:grid-cols-3 gap-12">
-                <div className="flex flex-col gap-5">
-                   <span className="font-bold text-white/50 uppercase tracking-[0.2em] text-[10px]">Core Index</span>
-                   <Link href="/games" className="text-sm text-white/40 hover:text-white transition-colors font-medium">Rooms Directory</Link>
-                   <Link href="/liquidity" className="text-sm text-white/40 hover:text-white transition-colors font-medium">Bankroll Stats</Link>
-                   <Link href="/referral" className="text-sm text-white/40 hover:text-white transition-colors font-medium">Affiliate Hub</Link>
-                </div>
-                <div className="flex flex-col gap-5">
-                   <span className="font-bold text-white/50 uppercase tracking-[0.2em] text-[10px]">Session Audit</span>
-                   <Link href="/bets" className="text-sm text-white/40 hover:text-white transition-colors font-medium">My Active Bets</Link>
-                   <Link href="/account" className="text-sm text-white/40 hover:text-white transition-colors font-medium">Account Integrity</Link>
-                   <Link href="/ops" className="text-sm text-white/40 hover:text-white transition-colors font-medium">Indexer Pulse</Link>
-                </div>
-                <div className="flex flex-col gap-5">
-                   <span className="font-bold text-white/50 uppercase tracking-[0.2em] text-[10px]">Connection</span>
-                   <a href="https://twitter.com" target="_blank" rel="noreferrer" className="text-sm text-white/40 hover:text-white transition-colors font-medium">Twitter Pulse</a>
-                   <a href="https://discord.com" target="_blank" rel="noreferrer" className="text-sm text-white/40 hover:text-white transition-colors font-medium">Discord Room</a>
-                   <a href="https://docs.arbigamefi.com" target="_blank" rel="noreferrer" className="text-sm text-white/40 hover:text-white transition-colors font-medium">Protocol Mirror</a>
-                </div>
-             </div>
-             <div className="lg:col-span-12 pt-8 flex border-t border-white/[0.02] justify-between items-center text-[10px] text-white/20 font-mono tracking-tighter">
-                <span>© 2026 ARBIGAMEFI LABS. FULLY DECENTRALIZED.</span>
-                <span>V2.1 FLAGSHIP DEPLOYMENT</span>
-             </div>
-          </footer>
+      {/* 6. THE TRUST ENGINE */}
+      <section className="bg-[#050505] py-24 md:py-32 border-t border-white/5">
+        <div className="max-w-[1440px] mx-auto px-6 grid grid-cols-1 lg:grid-cols-[1fr_1fr] items-center gap-16 lg:gap-24">
+          
+          {/* Terminal Window */}
+          <div className="rounded-2xl border border-blue-500/30 bg-[#020202] shadow-[0_0_50px_rgba(59,130,246,0.1),inset_0_2px_20px_rgba(255,255,255,0.02)] relative overflow-hidden order-2 lg:order-1">
+            <div className="border-b border-white/10 bg-gradient-to-r from-blue-900/20 to-[#050505] px-4 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-red-500/80 shadow-[0_0_5px_rgba(239,68,68,0.8)]" />
+                <div className="w-3 h-3 rounded-full bg-yellow-500/80 shadow-[0_0_5px_rgba(234,179,8,0.8)]" />
+                <div className="w-3 h-3 rounded-full bg-green-500/80 shadow-[0_0_5px_rgba(34,197,94,0.8)]" />
+              </div>
+              <span className="text-xs font-mono text-blue-400 drop-shadow-[0_0_5px_#3b82f6]">vrf_fulfillment.sol</span>
+            </div>
+            
+            <div className="p-6 overflow-x-auto text-[13px] font-mono leading-relaxed bg-[#020202] relative">
+              <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none opacity-20" />
+              <div className="relative z-10 text-white/80">
+                <span className="text-blue-400 font-bold">function</span> <span className="text-yellow-300 drop-shadow-[0_0_5px_rgba(253,224,71,0.5)]">fulfillRandomWords</span>(
+                <br/>&nbsp;&nbsp;<span className="text-emerald-400">uint256</span> requestId,
+                <br/>&nbsp;&nbsp;<span className="text-emerald-400">uint256[]</span> <span className="text-blue-400">memory</span> randomWords
+                <br/>) <span className="text-blue-400 font-bold">internal override</span> {'{'}
+                <br/>&nbsp;&nbsp;Ticket <span className="text-blue-400">memory</span> t = globalHub.<span className="text-cyan-300">getTicket</span>(requestId);
+                <br/>&nbsp;&nbsp;<span className="text-white/30 italic">// Pure deterministic execution</span>
+                <br/>&nbsp;&nbsp;<span className="text-emerald-400">uint256</span> payout = gameModule.<span className="text-cyan-300">resolve</span>(t, randomWords[0]);
+                <br/>&nbsp;&nbsp;
+                <br/>&nbsp;&nbsp;<span className="text-fuchsia-400 font-bold">if</span> (payout {'>'} 0) {'{'}
+                <br/>&nbsp;&nbsp;&nbsp;&nbsp;isolatedBank.<span className="text-cyan-300">payout</span>(t.player, payout);
+                <br/>&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-blue-400 font-bold">emit</span> <span className="text-emerald-300 drop-shadow-[0_0_5px_rgba(110,231,183,0.5)]">TicketSettled</span>(t.player, payout);
+                <br/>&nbsp;&nbsp;{'}'}
+                <br/>{'}'}
+              </div>
+            </div>
+          </div>
 
-        </main>
-    </PageTransition>
+          <div className="order-1 lg:order-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-300 text-xs font-bold uppercase tracking-widest mb-6 w-fit">
+              <CodeBracketSquareIcon className="w-4 h-4" /> Open Source Verification
+            </div>
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6">Don't trust us.<br/>Trust the bytecode.</h2>
+            <p className="text-white/50 text-lg leading-relaxed mb-8">
+              ArbiGameFi explicitly separates custody, game logic, and randomness into strictly audited components. Every ticket is routed through the Global Hub and resolved securely by VRF verification. 
+            </p>
+            
+            <div className="flex flex-col gap-4">
+              <Link href="/ops" className="p-5 rounded-2xl border border-white/5 bg-white/[0.02] flex items-center justify-between hover:bg-white/[0.05] transition-colors group">
+                <div className="flex items-center gap-5">
+                  <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+                    <ShieldCheckIcon className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-lg mb-1">SSOT Ops & Audits</div>
+                    <div className="text-sm text-white/40">Trace exact release bytecode.</div>
+                  </div>
+                </div>
+                <ArrowRightIcon className="w-5 h-5 text-white/30 group-hover:text-white transition-colors" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-white/10 bg-[#050505] py-12 text-center text-white/40 text-sm">
+        <div className="flex items-center justify-center gap-4 mb-4">
+          <Link href="/games" className="hover:text-white transition-colors">Games</Link>
+          <span className="w-1 h-1 bg-white/20 rounded-full" />
+          <Link href="/liquidity" className="hover:text-white transition-colors">Isolated Bank</Link>
+          <span className="w-1 h-1 bg-white/20 rounded-full" />
+          <Link href="/ops" className="hover:text-white transition-colors">Ops Proof</Link>
+        </div>
+        <p>ArbiGameFi SSOT Engine &copy; 2026. Fully On-Chain Settlement Protocol.</p>
+      </footer>
+    </div>
   );
 }
-

@@ -6,12 +6,12 @@ import { ReadOnlyBanner } from "@ssot/ui";
 import { useRelease } from "../ssot/release/ReleaseProvider";
 import { WalletButton } from "../app/providers/WalletButton";
 import { ArbiGameFiBrand } from "./ArbiGameFiBrand";
+import { SiteFooter } from "./SiteFooter";
 
 const LANDING_LINKS = [
-  { href: "/games", label: "Games" },
-  { href: "/bets", label: "Bets" },
-  { href: "/liquidity", label: "Liquidity" },
-  { href: "/account", label: "Account" },
+  { href: "/dice", label: "Games" },
+  { href: "/invest", label: "Invest" },
+  { href: "/referral", label: "Referral" },
 ] as const;
 
 export function LandingShell({ children }: { children: React.ReactNode }) {
@@ -19,27 +19,31 @@ export function LandingShell({ children }: { children: React.ReactNode }) {
   const [menuOpen, setMenuOpen] = React.useState(false);
 
   return (
-    <div className="min-h-screen bg-[#050714] text-white">
-      <header className="fixed inset-x-0 top-0 z-50 border-b border-white/6 bg-[#070b1a]/82 backdrop-blur-xl">
+    <div className="min-h-screen bg-[#060914] text-white">
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-white/6 bg-[#090d18]/95 backdrop-blur-xl">
         <div
           className="pt-safe"
           style={{ paddingTop: "max(env(safe-area-inset-top, 0px), 0px)" }}
         >
           <div className="mx-auto flex h-16 max-w-[1480px] items-center gap-4 px-4 sm:px-6 lg:px-8">
             <Link href="/" className="shrink-0">
-              <ArbiGameFiBrand accent="cyan" subtitle="Wallet-native casino rooms" />
+              <ArbiGameFiBrand accent="cyan" subtitle="Wallet-native rooms" />
             </Link>
 
             <nav className="hidden items-center gap-2 lg:flex">
               {LANDING_LINKS.map((link) => (
-                <Link key={link.href} href={link.href} className="ag-pill-tab px-4 py-2 text-sm">
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="rounded-xl border border-white/8 bg-white/[0.03] px-4 py-2 text-sm font-semibold text-white/70 transition-colors hover:border-white/14 hover:bg-white/[0.06] hover:text-white"
+                >
                   {link.label}
                 </Link>
               ))}
             </nav>
 
             <div className="ml-auto flex items-center gap-3">
-              <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 lg:flex">
+              <div className="hidden items-center gap-2 rounded-xl border border-white/8 bg-white/[0.03] px-4 py-2 lg:flex">
                 <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                   Live on
                 </span>
@@ -47,10 +51,10 @@ export function LandingShell({ children }: { children: React.ReactNode }) {
               </div>
 
               <Link
-                href="/games"
-                className="hidden rounded-full border border-cyan-400/25 bg-cyan-400/12 px-4 py-2 text-sm font-semibold text-cyan-100 transition-colors hover:border-cyan-300/40 hover:bg-cyan-400/18 lg:inline-flex"
+                href="/dice"
+                className="hidden rounded-xl border border-cyan-400/25 bg-cyan-400/12 px-4 py-2 text-sm font-semibold text-cyan-100 transition-colors hover:border-cyan-300/40 hover:bg-cyan-400/18 lg:inline-flex"
               >
-                Open Rooms
+                Play now
               </Link>
 
               <WalletButton />
@@ -74,7 +78,7 @@ export function LandingShell({ children }: { children: React.ReactNode }) {
           </div>
 
           {menuOpen ? (
-            <div className="border-t border-white/5 bg-[#090e1f]/96 lg:hidden">
+            <div className="border-t border-white/5 bg-[#090d18]/96 lg:hidden">
               <div className="mx-auto max-w-[1480px] grid gap-2 px-4 py-4 sm:px-6">
                 {LANDING_LINKS.map((link) => (
                   <Link
@@ -97,9 +101,10 @@ export function LandingShell({ children }: { children: React.ReactNode }) {
         </div>
       ) : null}
 
-      <main className={`mx-auto max-w-[1480px] px-4 pb-16 sm:px-6 lg:px-8 ${readOnly ? "pt-5" : "pt-[5.5rem]"}`}>
+      <main className={`mx-auto w-full max-w-[1480px] flex-1 px-4 pb-16 sm:px-6 lg:px-8 ${readOnly ? "pt-5" : "pt-[5.5rem]"}`}>
         {children}
       </main>
+      <SiteFooter />
     </div>
   );
 }

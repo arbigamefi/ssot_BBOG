@@ -238,6 +238,14 @@ Original prompt: Continue the frontend route review execution by simplifying the
     - `Players`
     - `Analytics`
     - `Game Details`
+- 2026-03-16: Continued roulette-room simplification using the provided mature casino screenshot as the fallback reference when in doubt.
+- 2026-03-16: Removed more non-essential first-fold chrome from the formal roulette room:
+  - hid the roulette slip header block so the right rail starts directly with amount input
+  - removed the roulette room's inline `View module` action from the upper data-tabs header
+  - updated the roulette test to stop asserting the removed descriptive/header copy
+- 2026-03-16: Current design rule for roulette formal UI:
+  - first fold should read as `game tabs + board + compact slip`
+  - anything not directly helping the user place a bet should move below the fold
   - kept the status filter (`All / Open / Settled / Refunded`) as a secondary rail for bet streams
   - merged the old guide/protocol split into a single `Game Details` tab
   - added a wallet-aware `My Bets` view, a room `Players` view, and a compact `Analytics` view
@@ -320,3 +328,15 @@ Original prompt: Continue the frontend route review execution by simplifying the
     - `tmp/prototype-p0-roulette.png`
   - Ran `pnpm -C frontend/apps/web exec tsc --noEmit`
   - Current state: `Home / Directory / Roulette` now form a coherent `P0` baseline and are ready to freeze in a commit before the next round of prototype work.
+
+- 2026-03-16: Pulled the formal `/games/roulette` page much closer to the BetSwirl roulette reference instead of continuing generic room styling.
+  - Removed the extra outer roulette-stage frame by dropping the roulette room shell border/padding and letting the table stage own the composition.
+  - Reworked the roulette stage background to a darker, quieter wheel backdrop with a softer rim and a much weaker center ornament.
+  - Tightened the right bet slip into the reference order: balance -> amount -> quick buttons -> number of bets -> quote lines -> CTA.
+  - Added an input accessory for the roulette amount field and moved the `0.00 USDC` readout into the amount header to better match the reference rail.
+  - Validation:
+    - `pnpm -C frontend/apps/web exec vitest run 'src/app/games/[slug]/pageClient.test.tsx'`
+    - `pnpm -C frontend/apps/web exec tsc --noEmit`
+    - `make frontend-check`
+    - Playwright screenshot review of `http://127.0.0.1:3013/games/roulette?rev=2`
+  - Latest visual checkpoint: `tmp/roulette-room-compare-2.png`

@@ -1,4 +1,4 @@
-# UI Constitution — SSOT Frontend v2
+# UI Constitution — ArbiGameFi Frontend v2
 
 **Status**: Draft → Gate-0
 

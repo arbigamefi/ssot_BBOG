@@ -1,52 +1,12 @@
-import { ShellHeader, ShellHeaderBrand, ShellHeaderNav, ShellHeaderActions } from "@ssot/ui";
 import { GlassCard, AuditTabs, AuditTableHeader, AuditTableRow, AuditTableCell } from "@ssot/ui";
 import Link from "next/link";
 import { UserCircleIcon, WalletIcon, ServerStackIcon, ShieldCheckIcon, CubeTransparentIcon } from "@heroicons/react/24/outline";
+import { PrototypeHeader } from "../components/PrototypeHeader";
 
 export default function OpsPrototype() {
   return (
     <div className="min-h-screen bg-[#050505] font-sans text-white selection:bg-cyan-500/30">
-      <ShellHeader variant="solid">
-        <div className="flex items-center gap-12">
-          <ShellHeaderBrand name="ArbiGameFi" />
-          <ShellHeaderNav>
-            <Link href="/prototype/ui-ux-v2-directory" className="hover:text-white transition-colors">
-              Games
-            </Link>
-            <Link href="/prototype/ui-ux-v2-bets" className="hover:text-white transition-colors">
-              Bets
-            </Link>
-            <Link href="/prototype/ui-ux-v2-liquidity" className="hover:text-white transition-colors">
-              Liquidity
-            </Link>
-            <Link href="/prototype/ui-ux-v2-claims" className="hover:text-white transition-colors">
-              Claims
-            </Link>
-            <Link href="/prototype/ui-ux-v2-referral" className="hover:text-white transition-colors">
-              Affiliates
-            </Link>
-            <Link href="/prototype/ui-ux-v2-account" className="hover:text-white transition-colors">
-              Account
-            </Link>
-            <Link href="/prototype/ui-ux-v2-ops" className="text-white hover:text-white transition-colors border-b-2 border-white pb-1">
-              Ops
-            </Link>
-          </ShellHeaderNav>
-        </div>
-        <ShellHeaderActions>
-          <div className="hidden sm:flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-mono text-white/60">
-            <span className="h-1.5 w-1.5 rounded-full bg-cyan-400" />
-            Base Sepolia
-          </div>
-          <button className="hidden sm:flex items-center justify-center rounded-full p-2 transition-colors hover:bg-white/10">
-            <UserCircleIcon className="h-5 w-5 text-white/70" />
-          </button>
-          <button className="flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-sm font-bold text-white transition-transform active:scale-95 hover:bg-white/20">
-            <WalletIcon className="h-4 w-4" />
-            <span>0x12...34af</span>
-          </button>
-        </ShellHeaderActions>
-      </ShellHeader>
+      <PrototypeHeader activeRoute="ops" />
 
       <main className="mx-auto max-w-[1440px] px-6 py-12 md:py-16">
         <div className="mb-12 max-w-3xl">

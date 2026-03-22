@@ -38,10 +38,11 @@ export function ShellHeader({
 
 interface ShellHeaderBrandProps {
   name?: string;
+  className?: string;
 }
-export function ShellHeaderBrand({ name = "ArbiGameFi" }: ShellHeaderBrandProps) {
+export function ShellHeaderBrand({ name = "ArbiGameFi", className }: ShellHeaderBrandProps) {
   return (
-    <div className="text-xl font-bold tracking-tight">
+    <div className={cn("text-xl font-bold tracking-tight", className)}>
       {name}
     </div>
   );

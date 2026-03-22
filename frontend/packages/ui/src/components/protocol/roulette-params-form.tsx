@@ -237,123 +237,145 @@ export function RouletteParamsForm(props: RouletteParamsFormProps) {
   const streetValue = selection.kind === "street" ? String(selection.start) : "1";
   const cornerValue = selection.kind === "corner" ? String(selection.start) : "1";
   const sixLineValue = selection.kind === "sixLine" ? String(selection.start) : "1";
+  const selectionKind = selection.kind;
+  const multiplier = summary.coverage > 0 ? 36 / summary.coverage : 0;
   const selectionModeNote =
     selection.kind === "bitmask"
       ? "Advanced raw route. Use only when you intentionally need manual mask parity."
       : "One table call per ticket. Pick the table bet first, then size the slip.";
 
   return (
-    <div className={cn("space-y-8 flex flex-col items-center", className)}>
-      {/* Visual Board Stage */}
-      <div className="relative w-full py-4 md:py-8 flex justify-center overflow-x-auto min-h-[350px]">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[300px] bg-fuchsia-500/5 blur-[100px] rounded-full pointer-events-none" />
-        <RouletteBoard 
-          selection={selection}
-          onBetPlaced={(s) => onChange?.(s)}
-        />
-      </div>
-
-      <div className="w-full space-y-6">
-        <div className="space-y-2">
-          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Group & Advanced Selection</div>
-          <div className="text-sm text-slate-400">Select combinations directly from the board above or use these specific layout tools.</div>
+    <div className={cn("flex flex-col items-center space-y-5", className)}>
+      <div className="relative flex min-h-[420px] w-full items-center justify-center overflow-hidden rounded-[2rem] border border-white/6 bg-[linear-gradient(180deg,rgba(16,21,39,0.98),rgba(11,16,28,0.98))] px-4 py-6">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute left-1/2 top-[53%] h-[720px] w-[720px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[48px] border-slate-950/70 opacity-52" />
+          <div className="absolute left-1/2 top-[53%] h-[720px] w-[720px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[conic-gradient(from_0deg,rgba(127,29,29,0.38)_0deg,rgba(15,23,42,0.7)_16deg,rgba(15,23,42,0.7)_32deg,rgba(127,29,29,0.38)_48deg,rgba(15,23,42,0.7)_64deg,rgba(15,23,42,0.7)_80deg,rgba(127,29,29,0.38)_96deg,rgba(15,23,42,0.7)_112deg,rgba(15,23,42,0.7)_128deg,rgba(127,29,29,0.38)_144deg,rgba(15,23,42,0.7)_160deg,rgba(15,23,42,0.7)_176deg,rgba(127,29,29,0.38)_192deg,rgba(15,23,42,0.7)_208deg,rgba(15,23,42,0.7)_224deg,rgba(127,29,29,0.38)_240deg,rgba(15,23,42,0.7)_256deg,rgba(15,23,42,0.7)_272deg,rgba(127,29,29,0.38)_288deg,rgba(15,23,42,0.7)_304deg,rgba(15,23,42,0.7)_320deg,rgba(127,29,29,0.38)_336deg,rgba(15,23,42,0.7)_352deg,rgba(15,23,42,0.7)_360deg)] [mask-image:radial-gradient(circle,transparent_0_56%,black_57%_74%,transparent_75%)] opacity-18" />
+          <div className="absolute left-1/2 top-[15%] h-20 w-3 -translate-x-[5.8rem] -translate-y-1/2 rotate-45 rounded-full bg-[#7a5d2d]/32" />
+          <div className="absolute left-1/2 top-[15%] h-20 w-3 -translate-x-[5.8rem] -translate-y-1/2 -rotate-45 rounded-full bg-[#7a5d2d]/32" />
+          <div className="absolute left-1/2 top-[15%] h-20 w-3 translate-x-[5.8rem] -translate-y-1/2 rotate-45 rounded-full bg-[#7a5d2d]/32" />
+          <div className="absolute left-1/2 top-[15%] h-20 w-3 translate-x-[5.8rem] -translate-y-1/2 -rotate-45 rounded-full bg-[#7a5d2d]/32" />
+          <div className="absolute left-1/2 top-[11%] -translate-x-1/2 text-[4.4rem] font-black tracking-[-0.08em] text-white/95 drop-shadow-[0_10px_40px_rgba(0,0,0,0.55)]">{
+            `${multiplier.toFixed(2)}x`
+          }</div>
+          <div className="absolute left-1/2 top-[31%] h-20 w-20 -translate-x-1/2 rounded-full border-[8px] border-[#7a5d2d]/14 opacity-12" />
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          {/* Layout bets - compact version */}
+        <div className="relative z-10 flex w-full justify-center overflow-x-auto pt-24">
+          <RouletteBoard
+            selection={selection}
+            onBetPlaced={(s) => onChange?.(s)}
+          />
+        </div>
+      </div>
+
+      {selection.kind === "bitmask" ? (
+      <details className="w-full rounded-[1.25rem] border border-white/8 bg-white/[0.025] p-4">
+        <summary className="cursor-pointer list-none">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Advanced routes</div>
+              <div className="mt-1 text-sm font-semibold text-white">{summary.display} · {summary.family} · {coverage}</div>
+            </div>
+            <div className="text-xs leading-5 text-slate-400">
+              {selectionModeNote}
+            </div>
+          </div>
+        </summary>
+
+        <div className="mt-5 grid gap-4 md:grid-cols-2">
           <div className="rounded-[1.5rem] border border-fuchsia-300/10 bg-slate-950/35 p-5">
             <div className="mb-4">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Structured Combinations</div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Structured combinations</div>
             </div>
 
             <div className="space-y-4">
-               <div className="grid grid-cols-2 gap-3">
-                 <div className={cn("rounded-xl border p-3", selection.kind === "split" ? "border-violet-300/60 bg-violet-500/10" : "border-white/5 bg-white/5")}>
-                    <div className="text-[10px] font-bold text-slate-500 uppercase mb-2">Split (2 nums)</div>
-                    <select
-                      value={splitValue}
-                      disabled={disabled}
-                      onChange={(event) => {
-                        const next = parseSplitValue(event.target.value);
-                        onChange?.({ kind: "split", first: next.first, second: next.second });
-                      }}
-                      className="h-9 w-full rounded-lg border border-slate-700 bg-slate-950/85 px-2 text-xs font-medium text-white outline-none"
-                    >
-                      {SPLIT_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
-                 </div>
-                 <div className={cn("rounded-xl border p-3", selection.kind === "street" ? "border-violet-300/60 bg-violet-500/10" : "border-white/5 bg-white/5")}>
-                    <div className="text-[10px] font-bold text-slate-500 uppercase mb-2">Street (3 nums)</div>
-                    <select
-                      value={streetValue}
-                      disabled={disabled}
-                      onChange={(event) => onChange?.({ kind: "street", start: Number(event.target.value) })}
-                      className="h-9 w-full rounded-lg border border-slate-700 bg-slate-950/85 px-2 text-xs font-medium text-white outline-none"
-                    >
-                      {STREET_STARTS.map((start) => (
-                        <option key={start} value={start}>{start}-{start + 2}</option>
-                      ))}
-                    </select>
-                 </div>
-               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className={cn("rounded-xl border p-3", selectionKind === "split" ? "border-violet-300/60 bg-violet-500/10" : "border-white/5 bg-white/5")}>
+                  <div className="mb-2 text-[10px] font-bold uppercase text-slate-500">Split (2 nums)</div>
+                  <select
+                    value={splitValue}
+                    disabled={disabled}
+                    onChange={(event) => {
+                      const next = parseSplitValue(event.target.value);
+                      onChange?.({ kind: "split", first: next.first, second: next.second });
+                    }}
+                    className="h-9 w-full rounded-lg border border-slate-700 bg-slate-950/85 px-2 text-xs font-medium text-white outline-none"
+                  >
+                    {SPLIT_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className={cn("rounded-xl border p-3", selectionKind === "street" ? "border-violet-300/60 bg-violet-500/10" : "border-white/5 bg-white/5")}>
+                  <div className="mb-2 text-[10px] font-bold uppercase text-slate-500">Street (3 nums)</div>
+                  <select
+                    value={streetValue}
+                    disabled={disabled}
+                    onChange={(event) => onChange?.({ kind: "street", start: Number(event.target.value) })}
+                    className="h-9 w-full rounded-lg border border-slate-700 bg-slate-950/85 px-2 text-xs font-medium text-white outline-none"
+                  >
+                    {STREET_STARTS.map((start) => (
+                      <option key={start} value={start}>{start}-{start + 2}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
 
-               <div className="grid grid-cols-2 gap-3">
-                 <div className={cn("rounded-xl border p-3", selection.kind === "corner" ? "border-violet-300/60 bg-violet-500/10" : "border-white/5 bg-white/5")}>
-                    <div className="text-[10px] font-bold text-slate-500 uppercase mb-2">Corner (4 nums)</div>
-                    <select
-                      value={cornerValue}
-                      disabled={disabled}
-                      onChange={(event) => onChange?.({ kind: "corner", start: Number(event.target.value) })}
-                      className="h-9 w-full rounded-lg border border-slate-700 bg-slate-950/85 px-2 text-xs font-medium text-white outline-none"
-                    >
-                      {CORNER_STARTS.map((start) => <option key={start} value={start}>{start}-{start+1}-{start+3}-{start+4}</option>)}
-                    </select>
-                 </div>
-                 <div className={cn("rounded-xl border p-3", selection.kind === "sixLine" ? "border-violet-300/60 bg-violet-500/10" : "border-white/5 bg-white/5")}>
-                    <div className="text-[10px] font-bold text-slate-500 uppercase mb-2">Six Line (6 nums)</div>
-                    <select
-                      value={sixLineValue}
-                      disabled={disabled}
-                      onChange={(event) => onChange?.({ kind: "sixLine", start: Number(event.target.value) })}
-                      className="h-9 w-full rounded-lg border border-slate-700 bg-slate-950/85 px-2 text-xs font-medium text-white outline-none"
-                    >
-                      {SIX_LINE_STARTS.map((start) => (
-                        <option key={start} value={start}>{start}-{start + 5}</option>
-                      ))}
-                    </select>
-                 </div>
-               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className={cn("rounded-xl border p-3", selectionKind === "corner" ? "border-violet-300/60 bg-violet-500/10" : "border-white/5 bg-white/5")}>
+                  <div className="mb-2 text-[10px] font-bold uppercase text-slate-500">Corner (4 nums)</div>
+                  <select
+                    value={cornerValue}
+                    disabled={disabled}
+                    onChange={(event) => onChange?.({ kind: "corner", start: Number(event.target.value) })}
+                    className="h-9 w-full rounded-lg border border-slate-700 bg-slate-950/85 px-2 text-xs font-medium text-white outline-none"
+                  >
+                    {CORNER_STARTS.map((start) => <option key={start} value={start}>{start}-{start+1}-{start+3}-{start+4}</option>)}
+                  </select>
+                </div>
+                <div className={cn("rounded-xl border p-3", selectionKind === "sixLine" ? "border-violet-300/60 bg-violet-500/10" : "border-white/5 bg-white/5")}>
+                  <div className="mb-2 text-[10px] font-bold uppercase text-slate-500">Six line (6 nums)</div>
+                  <select
+                    value={sixLineValue}
+                    disabled={disabled}
+                    onChange={(event) => onChange?.({ kind: "sixLine", start: Number(event.target.value) })}
+                    className="h-9 w-full rounded-lg border border-slate-700 bg-slate-950/85 px-2 text-xs font-medium text-white outline-none"
+                  >
+                    {SIX_LINE_STARTS.map((start) => (
+                      <option key={start} value={start}>{start}-{start + 5}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Mask auditing */}
           <div className="rounded-[1.5rem] border border-white/5 bg-slate-950/35 p-5">
-             <div className="mb-4">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Protocol Verification</div>
-             </div>
-             <div className="space-y-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="roulette.mask" className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-600">
-                    Packed selection bitmask
-                  </Label>
-                  <Input
-                    id="roulette.mask"
-                    value={selection.kind === "bitmask" ? selection.mask : ""}
-                    disabled={disabled}
-                    placeholder="Auto-calculated from board..."
-                    onChange={(event) => onChange?.({ kind: "bitmask", mask: event.target.value })}
-                    className="h-11 border-slate-700 bg-slate-950/70 font-mono text-sm text-white"
-                  />
-                  <p className="text-[10px] leading-relaxed text-slate-500 uppercase font-medium">
-                    This raw mask represents the exact bits passed to the RNG auditor for your bet.
-                  </p>
-                </div>
-             </div>
+            <div className="mb-4">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Protocol verification</div>
+            </div>
+            <div className="space-y-4">
+              <div className="grid gap-2">
+                <Label htmlFor="roulette.mask" className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-600">
+                  Packed selection bitmask
+                </Label>
+                <Input
+                  id="roulette.mask"
+                  value={selection.kind === "bitmask" ? selection.mask : ""}
+                  disabled={disabled}
+                  placeholder="Auto-calculated from board..."
+                  onChange={(event) => onChange?.({ kind: "bitmask", mask: event.target.value })}
+                  className="h-11 border-slate-700 bg-slate-950/70 font-mono text-sm text-white"
+                />
+                <p className="text-[10px] font-medium uppercase leading-relaxed text-slate-500">
+                  This raw mask represents the exact bits passed to the RNG auditor for your bet.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      </details>
+      ) : null}
       {error ? <p className="text-sm font-semibold text-rose-400">{error}</p> : null}
     </div>
   );

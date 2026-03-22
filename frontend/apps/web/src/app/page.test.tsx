@@ -119,17 +119,18 @@ describe("HomePage", () => {
     state.overviewError = null;
   });
 
-  it("renders a landing-page hero instead of a protocol dashboard", () => {
+  it("renders the migrated archive-style landing hero", () => {
     render(<HomePage />);
 
-    expect(screen.getByText("Play premium rooms. Settle every ticket on-chain.")).toBeDefined();
-    expect(screen.getAllByText("Open Rooms").length).toBeGreaterThan(0);
+    expect(screen.getByRole("heading", { name: /play on-chain/i })).toBeDefined();
+    expect(screen.getByText(/without losing the room feel/i)).toBeDefined();
+    expect(screen.getAllByText("Play now").length).toBeGreaterThan(0);
+    expect(screen.getByText("Choose the route")).toBeDefined();
     expect(screen.getByText("How it works")).toBeDefined();
-    expect(screen.getByText("Why trust it")).toBeDefined();
-    expect(screen.getByText("Featured rooms")).toBeDefined();
+    expect(screen.getByText("Open a room directly.")).toBeDefined();
   });
 
-  it("renders featured rooms and lightweight proof when release data exists", () => {
+  it("renders live room proof and migrated room cards when release data exists", () => {
     state.release = {
       name: "Arbitrum",
       chainId: 42161,
@@ -173,15 +174,16 @@ describe("HomePage", () => {
 
     render(<HomePage />);
 
-    expect(screen.getByText("Choose a room and get straight to the table.")).toBeDefined();
-    expect(screen.getByText("See what is happening without dropping into operator mode.")).toBeDefined();
-    expect(screen.getByText("Readable liquidity context")).toBeDefined();
+    expect(screen.getAllByText("Roulette").length).toBeGreaterThan(0);
+    expect(screen.getByText("Tickets indexed")).toBeDefined();
+    expect(screen.getByText(/Reserve floor:/)).toBeDefined();
+    expect(screen.getAllByText("Live rooms").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Dice").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Keno").length).toBeGreaterThan(0);
 
-    const diceLinks = screen
-      .getAllByText("Dice")
+    const kenoLinks = screen
+      .getAllByText("Keno")
       .map((node) => node.closest("a")?.getAttribute("href"));
-    expect(diceLinks).toContain("/games/dice");
+    expect(kenoLinks).toContain("/keno");
   });
 });

@@ -93,14 +93,14 @@ describe("GamesListClient", () => {
       gamesMeta: MOCK_GAMES_META,
     };
     render(<GamesListClient />);
-    expect(screen.getByText("Enter a room the same way you would enter a real casino floor.")).toBeDefined();
-    expect(screen.getByText("Game directory")).toBeDefined();
+    expect(screen.getByText("Choose the room that fits your pace.")).toBeDefined();
+    expect(screen.getByText("Flagship rooms")).toBeDefined();
     expect(screen.getAllByText("Dice").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Coin Toss").length).toBeGreaterThan(0);
-    expect(screen.getByText("Browse by room, not by module.")).toBeDefined();
+    expect(screen.getByText("Browse the full room floor.")).toBeDefined();
   });
 
-  it("renders correct number of game cards", () => {
+  it("renders correct number of room entry cards", () => {
     state.release = {
       name: "Base Sepolia",
       releaseDigest: "0xdeadbeefcafefeed",
@@ -109,7 +109,7 @@ describe("GamesListClient", () => {
       gamesMeta: MOCK_GAMES_META,
     };
     render(<GamesListClient />);
-    const cards = screen.getAllByTestId("game-card");
+    const cards = screen.getAllByTestId("room-entry-card");
     expect(cards.length).toBe(2);
   });
 
@@ -129,7 +129,7 @@ describe("GamesListClient", () => {
     expect(coinLinks).toContain("/games/coin-toss");
   });
 
-  it("game cards have correct slug data attributes", () => {
+  it("room entry cards have correct slug data attributes", () => {
     state.release = {
       name: "Base Sepolia",
       releaseDigest: "0xdeadbeefcafefeed",
@@ -138,7 +138,7 @@ describe("GamesListClient", () => {
       gamesMeta: MOCK_GAMES_META,
     };
     render(<GamesListClient />);
-    const cards = screen.getAllByTestId("game-card");
+    const cards = screen.getAllByTestId("room-entry-card");
     expect(cards[0]?.getAttribute("data-slug")).toBe("dice");
     expect(cards[1]?.getAttribute("data-slug")).toBe("coin-toss");
   });
