@@ -105,7 +105,11 @@ vi.mock("@ssot/ui", () => ({
     </div>
   ),
   TabBar: ({ tabs }: any) => (
-    <div>{tabs.map((tab: any) => <span key={tab.key}>{tab.label}</span>)}</div>
+    <div>
+      {tabs.map((tab: any) => (
+        <span key={tab.key}>{tab.label}</span>
+      ))}
+    </div>
   ),
   TxStatusChip: ({ status }: any) => <span>{status}</span>,
   TxStepper: ({ title, subtitle }: any) => (
@@ -139,11 +143,13 @@ describe("LiquidityPageClient", () => {
   it("frames liquidity as an LP readout instead of a generic vault form", () => {
     render(<LiquidityPageClient />);
 
-    expect(screen.getByText("House Liquidity")).toBeDefined();
-    expect(screen.getByText(/Provide USDC to the community bankroll/)).toBeDefined();
-    expect(screen.getByText("Real-time NAV backing")).toBeDefined();
-    expect(screen.getByText("Free headroom for redemptions")).toBeDefined();
-    expect(screen.getByText("Protocol Performance")).toBeDefined();
-    expect(screen.getByText("Connect wallet to deposit liquidity")).toBeDefined();
+    expect(screen.getByText("Provide Liquidity.")).toBeDefined();
+    expect(screen.getByText("Earn the Mathematical Edge.")).toBeDefined();
+    expect(screen.getByText(/protocol-owned Isolated Banks/i)).toBeDefined();
+    expect(screen.getByText("Current APY")).toBeDefined();
+    expect(screen.getByText("Total Free Capital (R)")).toBeDefined();
+    expect(screen.getByText("Pending Liabilities")).toBeDefined();
+    expect(screen.getByText("Max Ticket Cap (1.5% R)")).toBeDefined();
+    expect(screen.getByText("Contract Address")).toBeDefined();
   });
 });

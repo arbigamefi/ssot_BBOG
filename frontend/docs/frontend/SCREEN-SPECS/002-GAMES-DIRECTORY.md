@@ -1,201 +1,80 @@
-# SCREEN SPEC — Games Directory
+# Screen Spec — Games Directory
 
 **Route**: `/games`
 
-**Design status**: Figma-ready spec
+**Active prototype source**: `ui-ux-v2-directory`
 
-**Product mode**: Acquisition to Gameplay bridge
-
-**Primary user**: player choosing a room
+**Product mode**: Acquisition → Gameplay bridge
 
 **Primary action**: `Enter Room`
 
----
+## 1. Goal
 
-## 1. Screen Goal
+Help the player choose a room quickly and confidently.
 
-Help the user choose a room quickly and confidently.
+The page should feel like a curated room lobby, not a data catalog.
 
-The page should answer:
-
-- what rooms exist
-- how they differ
-- which room should I enter
-
-It should feel like a curated room directory, not a release manifest browser.
-
----
-
-## 2. Desktop Frame
-
-Suggested desktop artboard:
-
-- width: `1440`
-- content max-width: `1240-1280`
-- outer gutter: `32`
-
-Suggested grid:
-
-- 12-column
-- clear featured area above grid
-
----
-
-## 3. Layout Order
+## 2. Page Order
 
 1. product header
 2. page intro
-3. featured strip
-4. room family controls
-5. room grid
+3. featured room
+4. supporting room rail or grid
+5. lightweight proof
 
----
+## 3. First Fold Rules
 
-## 4. First Fold
+The first fold must communicate:
 
-## 4.1 Page intro
+- what this directory is
+- which room is featured
+- how to enter a room immediately
 
-Contains:
+It must not lead with:
 
-- page title
-- one-line explanation
+- analytics
+- protocol metrics
+- release-manifest language
+- equal-weight card walls
 
-Copy target:
-- short
-- room-selection focused
+## 4. Room Card Rules
 
-## 4.2 Featured strip
+Each room entry card should show:
 
-Desktop:
-- one primary featured room card
-- one or two secondary support cards
-
-Purpose:
-- accelerate decision-making
-- highlight the flagship room or current recommendation
-
-## 4.3 Family controls
-
-Use pill controls to group room types.
-
-Recommended categories:
-
-- fast
-- precision
-- classic table
-- board play
-
-These are user-facing categories, not protocol categories.
-
----
-
-## 5. Room Grid
-
-## 5.1 Card structure
-
-Each card should contain:
-
-- room icon or symbol
 - room name
-- one-line promise
-- short room type tag
-- one quick cue
-- primary CTA
+- short room promise
+- a small mode or family cue
+- one compact fact or cue
+- a clear room-entry CTA
 
-## 5.2 Cue examples
+Cards should not show:
 
-- `Fast binary play`
-- `Precision threshold`
-- `Classic table action`
-- `Multi-pick board`
+- raw protocol semantics
+- invented odds claims
+- dense metadata stacks
 
-## 5.3 Visual hierarchy
+## 5. Featured Room Rules
 
-- featured room strongest
-- standard cards uniform but not flat
-- room type tag quieter than room name
-- CTA obvious but not oversized
+- one featured room gets visibly stronger hierarchy
+- featured room should include a room-like visual signal
+- supporting rooms remain simpler and quicker to scan
 
----
+## 6. Copy Rules
 
-## 6. Mobile Layout
+Room copy should explain:
 
-Order:
+- pace
+- decision style
+- room feel
 
-1. title
-2. featured room
-3. family pills
-4. stacked room cards
+Room copy should not explain:
 
-Rules:
+- module identity
+- params encoding
+- routing mechanics
 
-- family pills horizontally scroll
-- featured room remains first
-- cards should be thumb-friendly and tap-clear
+## 7. Visual Rules
 
----
-
-## 7. Copy Rules
-
-Room descriptions should focus on play style, not protocol structure.
-
-Do:
-
-- explain room feeling
-- explain decision style
-- explain speed or variance
-
-Do not:
-
-- expose raw module semantics
-- expose protocol routing language
-
----
-
-## 8. State Specs
-
-### 8.1 Normal
-
-- featured strip visible
-- categories visible
-- grid populated
-
-### 8.2 No featured room
-
-- page still works
-- first room in grid can inherit visual priority
-
-### 8.3 Empty release
-
-- route becomes a graceful unavailable state
-- page should explain that no rooms are available
-
----
-
-## 9. Motion Notes
-
-Allowed:
-
-- hover rise or glow on cards
-- subtle active animation for family pills
-
-Avoid:
-
-- large card flips
-- carousel gimmicks that hide room information
-
----
-
-## 10. Implementation Notes
-
-Truth sources:
-
-- release for room identity
-- governed presentation map for decorative metadata
-
-Room cards must not invent:
-
-- RTP claims
-- unsupported assets
-- module-derived facts not present in product copy
-
+- this page shares `LandingShell` with Home
+- directory is more product-like than Home and less dense than trust routes
+- room entries should feel tactile and actionable

@@ -1,13 +1,5 @@
-import dynamic from "next/dynamic";
-
-const GamePageClient = dynamic(() => import("../games/[slug]/pageClient").then((m) => ({ default: m.GamePageClient })), {
-  loading: () => (
-    <div className="flex min-h-[40vh] items-center justify-center">
-      <p className="text-sm text-muted-foreground">Loading game...</p>
-    </div>
-  ),
-});
+import CoinTossRoomPageClient from "./pageClient";
 
 export default function CoinTossPage() {
-  return <GamePageClient slug="coin-toss" />;
+  return <CoinTossRoomPageClient />;
 }

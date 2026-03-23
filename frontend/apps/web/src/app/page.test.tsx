@@ -81,22 +81,7 @@ vi.mock("next/link", () => ({
 }));
 
 vi.mock("@ssot/ui", () => ({
-  Button: ({ children, asChild }: any) =>
-    asChild ? children : <button type="button">{children}</button>,
-  Card: ({ children }: any) => <section>{children}</section>,
-  CardHeader: ({ children }: any) => <div>{children}</div>,
-  CardContent: ({ children }: any) => <div>{children}</div>,
-  CardTitle: ({ children }: any) => <h2>{children}</h2>,
-  CardDescription: ({ children }: any) => <p>{children}</p>,
-  ReleaseBadge: ({ networkName }: any) => <span>{networkName}</span>,
-  Skeleton: () => <div data-testid="skeleton" />,
-  StatusBadge: ({ label }: any) => <span>{label}</span>,
-  GameCard: ({ slug, label, description }: any) => (
-    <div data-testid="game-card" data-slug={slug}>
-      <h3>{label}</h3>
-      {description ? <p>{description}</p> : null}
-    </div>
-  )
+  cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" ")
 }));
 
 import HomePage from "./page";
@@ -119,18 +104,18 @@ describe("HomePage", () => {
     state.overviewError = null;
   });
 
-  it("renders the migrated archive-style landing hero", () => {
+  it("renders the prototype-first landing hero", () => {
     render(<HomePage />);
 
-    expect(screen.getByRole("heading", { name: /play on-chain/i })).toBeDefined();
-    expect(screen.getByText(/without losing the room feel/i)).toBeDefined();
-    expect(screen.getAllByText("Play now").length).toBeGreaterThan(0);
-    expect(screen.getByText("Choose the route")).toBeDefined();
-    expect(screen.getByText("How it works")).toBeDefined();
-    expect(screen.getByText("Open a room directly.")).toBeDefined();
+    expect(screen.getByRole("heading", { name: /the settlement engine/i })).toBeDefined();
+    expect(screen.getByText(/for on-chain games/i)).toBeDefined();
+    expect(screen.getByText("SSOT Architecture v1.0")).toBeDefined();
+    expect(screen.getAllByText("Enter Rooms").length).toBeGreaterThan(0);
+    expect(screen.getByText("A Platform for the Entire Ecosystem")).toBeDefined();
+    expect(screen.getByText("Pure functional rooms.")).toBeDefined();
   });
 
-  it("renders live room proof and migrated room cards when release data exists", () => {
+  it("renders reserve proof and canonical room cards when release data exists", () => {
     state.release = {
       name: "Arbitrum",
       chainId: 42161,
@@ -174,15 +159,18 @@ describe("HomePage", () => {
 
     render(<HomePage />);
 
-    expect(screen.getAllByText("Roulette").length).toBeGreaterThan(0);
-    expect(screen.getByText("Tickets indexed")).toBeDefined();
-    expect(screen.getByText(/Reserve floor:/)).toBeDefined();
-    expect(screen.getAllByText("Live rooms").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Dice").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Keno").length).toBeGreaterThan(0);
+    expect(screen.getByText("Bankroll reserves (R)")).toBeDefined();
+    expect(screen.getByText("Settlement Volume")).toBeDefined();
+    expect(screen.getByText("Active Partners")).toBeDefined();
+    expect(screen.getAllByTestId("room-entry-card").length).toBe(2);
+    expect(screen.getByText("Precision Dice")).toBeDefined();
+    expect(screen.getByText("Keno Draft")).toBeDefined();
+
+    const roomCards = screen.getAllByTestId("room-entry-card");
+    expect(roomCards.length).toBeGreaterThan(0);
 
     const kenoLinks = screen
-      .getAllByText("Keno")
+      .getAllByText("Keno Draft")
       .map((node) => node.closest("a")?.getAttribute("href"));
     expect(kenoLinks).toContain("/keno");
   });

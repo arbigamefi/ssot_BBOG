@@ -1,15 +1,14 @@
-import dynamic from "next/dynamic";
-import { use } from "react";
+import { redirect } from "next/navigation";
 
-const GamePageClient = dynamic(() => import("./pageClient").then((m) => ({ default: m.GamePageClient })), {
-  loading: () => (
-    <div className="flex min-h-[40vh] items-center justify-center">
-      <p className="text-sm text-muted-foreground">Loading game...</p>
-    </div>
-  ),
-});
+const CANONICAL_ROOM_ROUTES: Record<string, string> = {
+  roulette: "/roulette",
+  dice: "/dice",
+  "coin-toss": "/cointoss",
+  cointoss: "/cointoss",
+  keno: "/keno"
+};
 
-export default function GamePage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = use(params);
-  return <GamePageClient slug={slug} />;
+export default async function GameCompatPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  redirect(CANONICAL_ROOM_ROUTES[slug] ?? "/games");
 }

@@ -1,6 +1,8 @@
 # Prototype Freeze Review — 2026-03
 
-**Status**: Draft review  
+> Historical reference only. Useful as a decision artifact, but not the active implementation baseline.
+
+**Status**: Historical reference  
 **Scope**: `v2 prototype system before formal UI implementation`
 
 ## Review Goal

@@ -1,5 +1,7 @@
 # BetSwirl Gap Analysis — ArbiGameFi Frontend (2026-03)
 
+> Historical reference only. BetSwirl remains an interaction benchmark, not an active page-layout source.
+
 ## Purpose
 
 This document compares the current ArbiGameFi frontend against the publicly visible BetSwirl frontend and product grammar, then converts that comparison into an actionable improvement list.

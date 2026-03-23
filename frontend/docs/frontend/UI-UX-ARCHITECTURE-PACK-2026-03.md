@@ -1,12 +1,16 @@
 # UI/UX ARCHITECTURE PACK — ArbiGameFi
 
-**Status**: Draft
+> Historical reference only. This document no longer drives formal implementation.
+> Current layout truth lives in `V2-PROTOTYPE-BASELINE-2026-03-23.md` and the live `ui-ux-v2-*` prototypes.
+
+**Status**: Historical reference
 
 **Date**: 2026-03-09
 
 **Scope**: `ArbiGameFi web product architecture`
 
 **Related documents**
+
 - `docs/frontend/UI-UX-DESIGN-BRIEF-2026-03.md`
 - `docs/frontend/UI-UX-DIRECTION-BOARD-2026-03.md`
 - `docs/frontend/UI-UX-WIREFRAME-PACK-2026-03.md`
@@ -49,13 +53,16 @@ ArbiGameFi should be treated as one brand with three interface modes.
 ### 2.1 Acquisition Mode
 
 Routes:
+
 - `/`
 - `/games`
 
 Objective:
+
 - turn a visitor into a room entrant
 
 Design tone:
+
 - editorial
 - premium
 - persuasive
@@ -64,13 +71,16 @@ Design tone:
 ### 2.2 Gameplay Mode
 
 Routes:
+
 - `/games/[slug]`
 - `/bets/[betId]` when reached from play
 
 Objective:
+
 - let a player enter, configure, place, and understand one bet
 
 Design tone:
+
 - immersive
 - table-first
 - minimal chrome
@@ -79,6 +89,7 @@ Design tone:
 ### 2.3 Trust / Audit Mode
 
 Routes:
+
 - `/bets`
 - `/bets/[betId]`
 - `/liquidity`
@@ -88,9 +99,11 @@ Routes:
 - `/ops`
 
 Objective:
+
 - explain facts, balances, liabilities, and eligibility with confidence
 
 Design tone:
+
 - clean
 - precise
 - institutional
@@ -138,15 +151,18 @@ It should use four distinct shell types.
 ## 4.1 Landing Shell
 
 Used by:
+
 - `/`
 
 Characteristics:
+
 - minimal header
 - strong brand expression
 - no dense product navigation
 - CTA-focused footer
 
 Header contents:
+
 - brand
 - compact top-level links
 - primary CTA
@@ -155,14 +171,17 @@ Header contents:
 ## 4.2 Directory Shell
 
 Used by:
+
 - `/games`
 
 Characteristics:
+
 - product navigation visible
 - route title visible
 - content focused on selection and comparison
 
 Header contents:
+
 - brand
 - primary navigation
 - wallet
@@ -170,15 +189,18 @@ Header contents:
 ## 4.3 Room Shell
 
 Used by:
+
 - `/games/[slug]`
 
 Characteristics:
+
 - minimal top chrome
 - no left global navigation
 - game selector on top
 - screen dominated by the active room surface
 
 Header contents:
+
 - brand
 - `All Games`
 - wallet
@@ -188,6 +210,7 @@ No additional global chrome should compete with the room itself.
 ## 4.4 Trust Shell
 
 Used by:
+
 - `/bets`
 - `/bets/[betId]`
 - `/liquidity`
@@ -197,6 +220,7 @@ Used by:
 - `/ops`
 
 Characteristics:
+
 - strongest navigation presence
 - high-density layouts allowed
 - emphasis on clarity and explanation

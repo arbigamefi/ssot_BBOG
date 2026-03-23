@@ -12,11 +12,13 @@ const STRAIGHT_NUMBERS = Array.from({ length: 36 }, (_value, index) => index + 1
 const TABLE_ROWS = [
   { column: 3 as const, numbers: Array.from({ length: 12 }, (_value, index) => index * 3 + 3) },
   { column: 2 as const, numbers: Array.from({ length: 12 }, (_value, index) => index * 3 + 2) },
-  { column: 1 as const, numbers: Array.from({ length: 12 }, (_value, index) => index * 3 + 1) },
+  { column: 1 as const, numbers: Array.from({ length: 12 }, (_value, index) => index * 3 + 1) }
 ];
 const STREET_STARTS = Array.from({ length: 12 }, (_value, index) => index * 3 + 1);
 const SIX_LINE_STARTS = Array.from({ length: 11 }, (_value, index) => index * 3 + 1);
-const CORNER_STARTS = Array.from({ length: 32 }, (_value, index) => index + 1).filter((value) => value % 3 !== 0);
+const CORNER_STARTS = Array.from({ length: 32 }, (_value, index) => index + 1).filter(
+  (value) => value % 3 !== 0
+);
 
 const OUTSIDE_BETS = [
   { kind: "low", label: "1 to 18", helper: "Low half" },
@@ -24,13 +26,13 @@ const OUTSIDE_BETS = [
   { kind: "red", label: "Red", helper: "18 red numbers" },
   { kind: "black", label: "Black", helper: "18 black numbers" },
   { kind: "odd", label: "Odd", helper: "All odd numbers" },
-  { kind: "high", label: "19 to 36", helper: "High half" },
+  { kind: "high", label: "19 to 36", helper: "High half" }
 ] as const;
 
 const DOZENS = [
   { dozen: 1 as const, label: "1 to 12", helper: "First dozen" },
   { dozen: 2 as const, label: "13 to 24", helper: "Second dozen" },
-  { dozen: 3 as const, label: "25 to 36", helper: "Third dozen" },
+  { dozen: 3 as const, label: "25 to 36", helper: "Third dozen" }
 ];
 
 type SplitOption = {
@@ -49,7 +51,7 @@ function buildSplitOptions(): SplitOption[] {
         value: `${number}-${number + 1}`,
         label: `${number} / ${number + 1}`,
         first: number,
-        second: number + 1,
+        second: number + 1
       });
     }
     if (number <= 33) {
@@ -57,7 +59,7 @@ function buildSplitOptions(): SplitOption[] {
         value: `${number}-${number + 3}`,
         label: `${number} / ${number + 3}`,
         first: number,
-        second: number + 3,
+        second: number + 3
       });
     }
   }
@@ -86,6 +88,7 @@ export type RouletteParamsFormProps = {
   disabled?: boolean;
   error?: string;
   className?: string;
+  variant?: "default" | "prototype";
 };
 
 export function createDefaultRouletteSelection(): RouletteSelection {
@@ -123,49 +126,49 @@ export function summarizeRouletteSelection(selection: RouletteSelection) {
         family: "Straight",
         display: `Straight ${selection.number}`,
         coverage: 1,
-        helper: "Single-number call. Highest variance, tightest coverage.",
+        helper: "Single-number call. Highest variance, tightest coverage."
       };
     case "split":
       return {
         family: "Split",
         display: `Split ${selection.first}/${selection.second}`,
         coverage: 2,
-        helper: "Two-number line bet across one edge on the table.",
+        helper: "Two-number line bet across one edge on the table."
       };
     case "street":
       return {
         family: "Street",
         display: `Street ${selection.start}-${selection.start + 2}`,
         coverage: 3,
-        helper: "Three-number row bet on a single street.",
+        helper: "Three-number row bet on a single street."
       };
     case "corner":
       return {
         family: "Corner",
         display: `Corner ${selection.start}-${selection.start + 1}-${selection.start + 3}-${selection.start + 4}`,
         coverage: 4,
-        helper: "Four-number square covering a 2x2 block.",
+        helper: "Four-number square covering a 2x2 block."
       };
     case "sixLine":
       return {
         family: "Six line",
         display: `Six line ${selection.start}-${selection.start + 5}`,
         coverage: 6,
-        helper: "Two adjacent streets bundled into one six-number line.",
+        helper: "Two adjacent streets bundled into one six-number line."
       };
     case "dozen":
       return {
         family: "Dozen",
         display: `${selection.dozen}${selection.dozen === 1 ? "st" : selection.dozen === 2 ? "nd" : "rd"} 12`,
         coverage: 12,
-        helper: "Twelve-number outside bet on one dozen block.",
+        helper: "Twelve-number outside bet on one dozen block."
       };
     case "column":
       return {
         family: "Column",
         display: `Column ${selection.column}`,
         coverage: 12,
-        helper: "One of the three vertical columns on the table.",
+        helper: "One of the three vertical columns on the table."
       };
     case "red":
     case "black":
@@ -182,7 +185,7 @@ export function summarizeRouletteSelection(selection: RouletteSelection) {
               ? "19-36"
               : selection.kind.charAt(0).toUpperCase() + selection.kind.slice(1),
         coverage: 18,
-        helper: "Classic outside bet with the widest standard coverage.",
+        helper: "Classic outside bet with the widest standard coverage."
       };
     case "bitmask": {
       const parsed = parseMask(selection.mask);
@@ -191,14 +194,14 @@ export function summarizeRouletteSelection(selection: RouletteSelection) {
           family: "Raw mask",
           display: "Invalid mask",
           coverage: 0,
-          helper: "The raw selection is malformed. Fix the mask before planning.",
+          helper: "The raw selection is malformed. Fix the mask before planning."
         };
       }
       return {
         family: "Raw mask",
         display: parsed === 0n ? "Mask 0x0" : `Mask ${selection.mask}`,
         coverage: countBits(parsed),
-        helper: "Advanced mode bypassing the typed table helpers.",
+        helper: "Advanced mode bypassing the typed table helpers."
       };
     }
   }
@@ -215,7 +218,7 @@ function parseSplitValue(value: string) {
   const [firstRaw, secondRaw] = value.split("-");
   return {
     first: Number(firstRaw),
-    second: Number(secondRaw),
+    second: Number(secondRaw)
   };
 }
 
@@ -228,12 +231,16 @@ export function RouletteParamsForm(props: RouletteParamsFormProps) {
     disabled = false,
     error,
     className,
+    variant = "default"
   } = props;
+  const isPrototypeVariant = variant === "prototype";
 
   const summary = summarizeRouletteSelection(selection);
   const coverage = coverageLabel(summary.coverage);
   const splitValue =
-    selection.kind === "split" ? `${selection.first}-${selection.second}` : `${SPLIT_OPTIONS[0]?.first ?? 1}-${SPLIT_OPTIONS[0]?.second ?? 2}`;
+    selection.kind === "split"
+      ? `${selection.first}-${selection.second}`
+      : `${SPLIT_OPTIONS[0]?.first ?? 1}-${SPLIT_OPTIONS[0]?.second ?? 2}`;
   const streetValue = selection.kind === "street" ? String(selection.start) : "1";
   const cornerValue = selection.kind === "corner" ? String(selection.start) : "1";
   const sixLineValue = selection.kind === "sixLine" ? String(selection.start) : "1";
@@ -243,138 +250,306 @@ export function RouletteParamsForm(props: RouletteParamsFormProps) {
     selection.kind === "bitmask"
       ? "Advanced raw route. Use only when you intentionally need manual mask parity."
       : "One table call per ticket. Pick the table bet first, then size the slip.";
+  const recentNumbers = [12, 0, 35];
 
   return (
     <div className={cn("flex flex-col items-center space-y-5", className)}>
-      <div className="relative flex min-h-[420px] w-full items-center justify-center overflow-hidden rounded-[2rem] border border-white/6 bg-[linear-gradient(180deg,rgba(16,21,39,0.98),rgba(11,16,28,0.98))] px-4 py-6">
+      {!isPrototypeVariant ? (
+        <div className="w-full space-y-2">
+          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+            European wheel
+          </div>
+          <div className="text-2xl font-black tracking-tight text-white">{title}</div>
+          {description ? (
+            <p className="max-w-2xl text-sm leading-6 text-slate-400">{description}</p>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div
+        className={cn(
+          "relative flex w-full items-center justify-center overflow-hidden px-4",
+          isPrototypeVariant
+            ? "min-h-[760px] rounded-[2.35rem] border border-white/10 bg-[linear-gradient(180deg,rgba(10,13,24,0.98),rgba(4,7,13,0.98))] pb-10 pt-8 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]"
+            : "min-h-[420px] rounded-[2rem] border border-white/6 bg-[linear-gradient(180deg,rgba(16,21,39,0.98),rgba(11,16,28,0.98))] py-6"
+        )}
+      >
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute left-1/2 top-[53%] h-[720px] w-[720px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[48px] border-slate-950/70 opacity-52" />
-          <div className="absolute left-1/2 top-[53%] h-[720px] w-[720px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[conic-gradient(from_0deg,rgba(127,29,29,0.38)_0deg,rgba(15,23,42,0.7)_16deg,rgba(15,23,42,0.7)_32deg,rgba(127,29,29,0.38)_48deg,rgba(15,23,42,0.7)_64deg,rgba(15,23,42,0.7)_80deg,rgba(127,29,29,0.38)_96deg,rgba(15,23,42,0.7)_112deg,rgba(15,23,42,0.7)_128deg,rgba(127,29,29,0.38)_144deg,rgba(15,23,42,0.7)_160deg,rgba(15,23,42,0.7)_176deg,rgba(127,29,29,0.38)_192deg,rgba(15,23,42,0.7)_208deg,rgba(15,23,42,0.7)_224deg,rgba(127,29,29,0.38)_240deg,rgba(15,23,42,0.7)_256deg,rgba(15,23,42,0.7)_272deg,rgba(127,29,29,0.38)_288deg,rgba(15,23,42,0.7)_304deg,rgba(15,23,42,0.7)_320deg,rgba(127,29,29,0.38)_336deg,rgba(15,23,42,0.7)_352deg,rgba(15,23,42,0.7)_360deg)] [mask-image:radial-gradient(circle,transparent_0_56%,black_57%_74%,transparent_75%)] opacity-18" />
-          <div className="absolute left-1/2 top-[15%] h-20 w-3 -translate-x-[5.8rem] -translate-y-1/2 rotate-45 rounded-full bg-[#7a5d2d]/32" />
-          <div className="absolute left-1/2 top-[15%] h-20 w-3 -translate-x-[5.8rem] -translate-y-1/2 -rotate-45 rounded-full bg-[#7a5d2d]/32" />
-          <div className="absolute left-1/2 top-[15%] h-20 w-3 translate-x-[5.8rem] -translate-y-1/2 rotate-45 rounded-full bg-[#7a5d2d]/32" />
-          <div className="absolute left-1/2 top-[15%] h-20 w-3 translate-x-[5.8rem] -translate-y-1/2 -rotate-45 rounded-full bg-[#7a5d2d]/32" />
-          <div className="absolute left-1/2 top-[11%] -translate-x-1/2 text-[4.4rem] font-black tracking-[-0.08em] text-white/95 drop-shadow-[0_10px_40px_rgba(0,0,0,0.55)]">{
-            `${multiplier.toFixed(2)}x`
-          }</div>
-          <div className="absolute left-1/2 top-[31%] h-20 w-20 -translate-x-1/2 rounded-full border-[8px] border-[#7a5d2d]/14 opacity-12" />
+          <div
+            className={cn(
+              "absolute left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-slate-950/70",
+              isPrototypeVariant
+                ? "top-[44%] h-[840px] w-[840px] border-[58px] opacity-42"
+                : "top-[53%] h-[720px] w-[720px] border-[48px] opacity-52"
+            )}
+          />
+          <div
+            className={cn(
+              "absolute left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[conic-gradient(from_0deg,rgba(127,29,29,0.38)_0deg,rgba(15,23,42,0.7)_16deg,rgba(15,23,42,0.7)_32deg,rgba(127,29,29,0.38)_48deg,rgba(15,23,42,0.7)_64deg,rgba(15,23,42,0.7)_80deg,rgba(127,29,29,0.38)_96deg,rgba(15,23,42,0.7)_112deg,rgba(15,23,42,0.7)_128deg,rgba(127,29,29,0.38)_144deg,rgba(15,23,42,0.7)_160deg,rgba(15,23,42,0.7)_176deg,rgba(127,29,29,0.38)_192deg,rgba(15,23,42,0.7)_208deg,rgba(15,23,42,0.7)_224deg,rgba(127,29,29,0.38)_240deg,rgba(15,23,42,0.7)_256deg,rgba(15,23,42,0.7)_272deg,rgba(127,29,29,0.38)_288deg,rgba(15,23,42,0.7)_304deg,rgba(15,23,42,0.7)_320deg,rgba(127,29,29,0.38)_336deg,rgba(15,23,42,0.7)_352deg,rgba(15,23,42,0.7)_360deg)] [mask-image:radial-gradient(circle,transparent_0_56%,black_57%_74%,transparent_75%)]"
+            )}
+            style={{
+              top: isPrototypeVariant ? "44%" : "53%",
+              height: isPrototypeVariant ? "840px" : "720px",
+              width: isPrototypeVariant ? "840px" : "720px",
+              opacity: isPrototypeVariant ? 0.16 : 0.18
+            }}
+          />
+          {isPrototypeVariant ? (
+            <>
+              <div className="absolute inset-x-0 top-0 h-64 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08),transparent_58%)]" />
+              <div className="absolute inset-x-0 bottom-0 h-44 bg-[linear-gradient(180deg,transparent,rgba(0,0,0,0.42))]" />
+            </>
+          ) : (
+            <>
+              <div
+                className={cn(
+                  "absolute left-1/2 -translate-x-1/2 text-white/95 drop-shadow-[0_10px_40px_rgba(0,0,0,0.55)]",
+                  "top-[11%] text-[4.4rem] font-black tracking-[-0.08em]"
+                )}
+              >
+                {`${multiplier.toFixed(2)}x`}
+              </div>
+              <div className="absolute left-1/2 top-[15%] h-20 w-3 -translate-x-[5.8rem] -translate-y-1/2 rotate-45 rounded-full bg-[#7a5d2d]/26" />
+              <div className="absolute left-1/2 top-[15%] h-20 w-3 -translate-x-[5.8rem] -translate-y-1/2 -rotate-45 rounded-full bg-[#7a5d2d]/26" />
+              <div className="absolute left-1/2 top-[15%] h-20 w-3 translate-x-[5.8rem] -translate-y-1/2 rotate-45 rounded-full bg-[#7a5d2d]/26" />
+              <div className="absolute left-1/2 top-[15%] h-20 w-3 translate-x-[5.8rem] -translate-y-1/2 -rotate-45 rounded-full bg-[#7a5d2d]/26" />
+              <div className="absolute left-1/2 top-[31%] h-20 w-20 -translate-x-1/2 rounded-full border-[8px] border-[#7a5d2d]/14 opacity-12" />
+            </>
+          )}
         </div>
 
-        <div className="relative z-10 flex w-full justify-center overflow-x-auto pt-24">
-          <RouletteBoard
-            selection={selection}
-            onBetPlaced={(s) => onChange?.(s)}
-          />
-        </div>
+        {isPrototypeVariant ? (
+          <div className="relative z-10 flex w-full flex-col items-center gap-8 px-2 pt-2">
+            <div className="ml-auto hidden rounded-[1.35rem] border border-white/8 bg-[#050505]/78 px-4 py-3 shadow-[0_18px_60px_rgba(0,0,0,0.45)] md:block">
+              <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/32">
+                Recent Numbers
+              </div>
+              <div className="mt-3 flex items-center gap-2">
+                {recentNumbers.map((number) => {
+                  const tone =
+                    number === 0
+                      ? "border-emerald-300/50 bg-emerald-500 text-white"
+                      : RED_NUMBERS.has(number)
+                        ? "border-rose-300/50 bg-rose-600 text-white"
+                        : "border-white/20 bg-[#111] text-white";
+                  return (
+                    <div
+                      key={number}
+                      className={cn(
+                        "flex h-9 w-9 items-center justify-center rounded-full border text-xs font-mono font-bold shadow-[0_0_18px_rgba(0,0,0,0.35)]",
+                        tone
+                      )}
+                    >
+                      {number}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="relative flex h-[300px] w-[300px] items-center justify-center rounded-full border-[12px] border-[#2c1810] bg-[#111] p-2 shadow-[0_0_60px_rgba(0,0,0,0.95),inset_0_0_24px_black] ring-4 ring-[#b8860b]/70 md:h-[360px] md:w-[360px] md:border-[16px]">
+              <div className="absolute inset-0 rounded-full bg-[conic-gradient(from_-4deg,rgba(5,150,105,0.95)_0deg,rgba(127,29,29,0.72)_12deg,rgba(15,23,42,0.86)_24deg,rgba(127,29,29,0.72)_36deg,rgba(15,23,42,0.86)_48deg,rgba(127,29,29,0.72)_60deg,rgba(15,23,42,0.86)_72deg,rgba(127,29,29,0.72)_84deg,rgba(15,23,42,0.86)_96deg,rgba(127,29,29,0.72)_108deg,rgba(15,23,42,0.86)_120deg,rgba(127,29,29,0.72)_132deg,rgba(15,23,42,0.86)_144deg,rgba(127,29,29,0.72)_156deg,rgba(15,23,42,0.86)_168deg,rgba(127,29,29,0.72)_180deg,rgba(15,23,42,0.86)_192deg,rgba(127,29,29,0.72)_204deg,rgba(15,23,42,0.86)_216deg,rgba(127,29,29,0.72)_228deg,rgba(15,23,42,0.86)_240deg,rgba(127,29,29,0.72)_252deg,rgba(15,23,42,0.86)_264deg,rgba(127,29,29,0.72)_276deg,rgba(15,23,42,0.86)_288deg,rgba(127,29,29,0.72)_300deg,rgba(15,23,42,0.86)_312deg,rgba(127,29,29,0.72)_324deg,rgba(15,23,42,0.86)_336deg,rgba(127,29,29,0.72)_348deg,rgba(15,23,42,0.86)_360deg)] [mask-image:radial-gradient(circle,transparent_0_51%,black_52%_72%,transparent_73%)] opacity-85" />
+              <div className="absolute inset-[2.4rem] rounded-full border border-[#b8860b]/35 bg-black/38 shadow-[inset_0_0_24px_black]" />
+              <div className="absolute inset-[4.9rem] rounded-full border-[4px] border-[#222] bg-[radial-gradient(circle_at_30%_30%,#fde047,#b8860b_68%,#4527a0)] shadow-[0_0_30px_rgba(0,0,0,0.8),inset_0_0_16px_black] md:inset-[5.5rem]" />
+              <div className="absolute inset-[7.8rem] rounded-full bg-[radial-gradient(circle_at_center,#111,#000)] shadow-[inset_0_0_10px_black] md:inset-[8.8rem]" />
+              <div className="absolute h-32 w-[10px] rotate-45 rounded-full bg-[#facc15]/18 md:h-36" />
+              <div className="absolute h-32 w-[10px] -rotate-45 rounded-full bg-[#facc15]/18 md:h-36" />
+              <div className="absolute flex h-6 w-6 -translate-y-[8.9rem] items-center justify-center rounded-full bg-white shadow-[0_0_16px_rgba(255,255,255,0.85)] md:-translate-y-[10.6rem]" />
+              <div className="absolute bottom-8 rounded-full border border-white/10 bg-black/50 px-4 py-2 shadow-[0_12px_32px_rgba(0,0,0,0.35)]">
+                <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/34">
+                  Max Payout
+                </div>
+                <div className="mt-1 text-center text-2xl font-black tracking-[-0.05em] text-white">{`${multiplier.toFixed(2)}x`}</div>
+              </div>
+            </div>
+
+            <div className="w-full overflow-x-auto pb-2">
+              <RouletteBoard
+                variant="prototype"
+                selection={selection}
+                onBetPlaced={(s) => onChange?.(s)}
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="relative z-10 flex w-full justify-center overflow-x-auto pt-24">
+            <RouletteBoard
+              variant="default"
+              selection={selection}
+              onBetPlaced={(s) => onChange?.(s)}
+            />
+          </div>
+        )}
       </div>
 
       {selection.kind === "bitmask" ? (
-      <details className="w-full rounded-[1.25rem] border border-white/8 bg-white/[0.025] p-4">
-        <summary className="cursor-pointer list-none">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Advanced routes</div>
-              <div className="mt-1 text-sm font-semibold text-white">{summary.display} · {summary.family} · {coverage}</div>
-            </div>
-            <div className="text-xs leading-5 text-slate-400">
-              {selectionModeNote}
-            </div>
-          </div>
-        </summary>
-
-        <div className="mt-5 grid gap-4 md:grid-cols-2">
-          <div className="rounded-[1.5rem] border border-fuchsia-300/10 bg-slate-950/35 p-5">
-            <div className="mb-4">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Structured combinations</div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div className={cn("rounded-xl border p-3", selectionKind === "split" ? "border-violet-300/60 bg-violet-500/10" : "border-white/5 bg-white/5")}>
-                  <div className="mb-2 text-[10px] font-bold uppercase text-slate-500">Split (2 nums)</div>
-                  <select
-                    value={splitValue}
-                    disabled={disabled}
-                    onChange={(event) => {
-                      const next = parseSplitValue(event.target.value);
-                      onChange?.({ kind: "split", first: next.first, second: next.second });
-                    }}
-                    className="h-9 w-full rounded-lg border border-slate-700 bg-slate-950/85 px-2 text-xs font-medium text-white outline-none"
-                  >
-                    {SPLIT_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
+        <details className="w-full rounded-[1.25rem] border border-white/8 bg-white/[0.025] p-4">
+          <summary className="cursor-pointer list-none">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  Advanced routes
                 </div>
-                <div className={cn("rounded-xl border p-3", selectionKind === "street" ? "border-violet-300/60 bg-violet-500/10" : "border-white/5 bg-white/5")}>
-                  <div className="mb-2 text-[10px] font-bold uppercase text-slate-500">Street (3 nums)</div>
-                  <select
-                    value={streetValue}
-                    disabled={disabled}
-                    onChange={(event) => onChange?.({ kind: "street", start: Number(event.target.value) })}
-                    className="h-9 w-full rounded-lg border border-slate-700 bg-slate-950/85 px-2 text-xs font-medium text-white outline-none"
-                  >
-                    {STREET_STARTS.map((start) => (
-                      <option key={start} value={start}>{start}-{start + 2}</option>
-                    ))}
-                  </select>
+                <div className="mt-1 text-sm font-semibold text-white">
+                  {summary.display} · {summary.family} · {coverage}
+                </div>
+              </div>
+              <div className="text-xs leading-5 text-slate-400">{selectionModeNote}</div>
+            </div>
+          </summary>
+
+          <div className="mt-5 grid gap-4 md:grid-cols-2">
+            <div className="rounded-[1.5rem] border border-fuchsia-300/10 bg-slate-950/35 p-5">
+              <div className="mb-4">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  Structured combinations
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className={cn("rounded-xl border p-3", selectionKind === "corner" ? "border-violet-300/60 bg-violet-500/10" : "border-white/5 bg-white/5")}>
-                  <div className="mb-2 text-[10px] font-bold uppercase text-slate-500">Corner (4 nums)</div>
-                  <select
-                    value={cornerValue}
-                    disabled={disabled}
-                    onChange={(event) => onChange?.({ kind: "corner", start: Number(event.target.value) })}
-                    className="h-9 w-full rounded-lg border border-slate-700 bg-slate-950/85 px-2 text-xs font-medium text-white outline-none"
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div
+                    className={cn(
+                      "rounded-xl border p-3",
+                      selectionKind === "split"
+                        ? "border-violet-300/60 bg-violet-500/10"
+                        : "border-white/5 bg-white/5"
+                    )}
                   >
-                    {CORNER_STARTS.map((start) => <option key={start} value={start}>{start}-{start+1}-{start+3}-{start+4}</option>)}
-                  </select>
-                </div>
-                <div className={cn("rounded-xl border p-3", selectionKind === "sixLine" ? "border-violet-300/60 bg-violet-500/10" : "border-white/5 bg-white/5")}>
-                  <div className="mb-2 text-[10px] font-bold uppercase text-slate-500">Six line (6 nums)</div>
-                  <select
-                    value={sixLineValue}
-                    disabled={disabled}
-                    onChange={(event) => onChange?.({ kind: "sixLine", start: Number(event.target.value) })}
-                    className="h-9 w-full rounded-lg border border-slate-700 bg-slate-950/85 px-2 text-xs font-medium text-white outline-none"
+                    <div className="mb-2 text-[10px] font-bold uppercase text-slate-500">
+                      Split (2 nums)
+                    </div>
+                    <select
+                      value={splitValue}
+                      disabled={disabled}
+                      onChange={(event) => {
+                        const next = parseSplitValue(event.target.value);
+                        onChange?.({ kind: "split", first: next.first, second: next.second });
+                      }}
+                      className="h-9 w-full rounded-lg border border-slate-700 bg-slate-950/85 px-2 text-xs font-medium text-white outline-none"
+                    >
+                      {SPLIT_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div
+                    className={cn(
+                      "rounded-xl border p-3",
+                      selectionKind === "street"
+                        ? "border-violet-300/60 bg-violet-500/10"
+                        : "border-white/5 bg-white/5"
+                    )}
                   >
-                    {SIX_LINE_STARTS.map((start) => (
-                      <option key={start} value={start}>{start}-{start + 5}</option>
-                    ))}
-                  </select>
+                    <div className="mb-2 text-[10px] font-bold uppercase text-slate-500">
+                      Street (3 nums)
+                    </div>
+                    <select
+                      value={streetValue}
+                      disabled={disabled}
+                      onChange={(event) =>
+                        onChange?.({ kind: "street", start: Number(event.target.value) })
+                      }
+                      className="h-9 w-full rounded-lg border border-slate-700 bg-slate-950/85 px-2 text-xs font-medium text-white outline-none"
+                    >
+                      {STREET_STARTS.map((start) => (
+                        <option key={start} value={start}>
+                          {start}-{start + 2}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </div>
 
-          <div className="rounded-[1.5rem] border border-white/5 bg-slate-950/35 p-5">
-            <div className="mb-4">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Protocol verification</div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div
+                    className={cn(
+                      "rounded-xl border p-3",
+                      selectionKind === "corner"
+                        ? "border-violet-300/60 bg-violet-500/10"
+                        : "border-white/5 bg-white/5"
+                    )}
+                  >
+                    <div className="mb-2 text-[10px] font-bold uppercase text-slate-500">
+                      Corner (4 nums)
+                    </div>
+                    <select
+                      value={cornerValue}
+                      disabled={disabled}
+                      onChange={(event) =>
+                        onChange?.({ kind: "corner", start: Number(event.target.value) })
+                      }
+                      className="h-9 w-full rounded-lg border border-slate-700 bg-slate-950/85 px-2 text-xs font-medium text-white outline-none"
+                    >
+                      {CORNER_STARTS.map((start) => (
+                        <option key={start} value={start}>
+                          {start}-{start + 1}-{start + 3}-{start + 4}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div
+                    className={cn(
+                      "rounded-xl border p-3",
+                      selectionKind === "sixLine"
+                        ? "border-violet-300/60 bg-violet-500/10"
+                        : "border-white/5 bg-white/5"
+                    )}
+                  >
+                    <div className="mb-2 text-[10px] font-bold uppercase text-slate-500">
+                      Six line (6 nums)
+                    </div>
+                    <select
+                      value={sixLineValue}
+                      disabled={disabled}
+                      onChange={(event) =>
+                        onChange?.({ kind: "sixLine", start: Number(event.target.value) })
+                      }
+                      className="h-9 w-full rounded-lg border border-slate-700 bg-slate-950/85 px-2 text-xs font-medium text-white outline-none"
+                    >
+                      {SIX_LINE_STARTS.map((start) => (
+                        <option key={start} value={start}>
+                          {start}-{start + 5}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="space-y-4">
-              <div className="grid gap-2">
-                <Label htmlFor="roulette.mask" className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-600">
-                  Packed selection bitmask
-                </Label>
-                <Input
-                  id="roulette.mask"
-                  value={selection.kind === "bitmask" ? selection.mask : ""}
-                  disabled={disabled}
-                  placeholder="Auto-calculated from board..."
-                  onChange={(event) => onChange?.({ kind: "bitmask", mask: event.target.value })}
-                  className="h-11 border-slate-700 bg-slate-950/70 font-mono text-sm text-white"
-                />
-                <p className="text-[10px] font-medium uppercase leading-relaxed text-slate-500">
-                  This raw mask represents the exact bits passed to the RNG auditor for your bet.
-                </p>
+
+            <div className="rounded-[1.5rem] border border-white/5 bg-slate-950/35 p-5">
+              <div className="mb-4">
+                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  Protocol verification
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div className="grid gap-2">
+                  <Label
+                    htmlFor="roulette.mask"
+                    className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-600"
+                  >
+                    Packed selection bitmask
+                  </Label>
+                  <Input
+                    id="roulette.mask"
+                    value={selection.kind === "bitmask" ? selection.mask : ""}
+                    disabled={disabled}
+                    placeholder="Auto-calculated from board..."
+                    onChange={(event) => onChange?.({ kind: "bitmask", mask: event.target.value })}
+                    className="h-11 border-slate-700 bg-slate-950/70 font-mono text-sm text-white"
+                  />
+                  <p className="text-[10px] font-medium uppercase leading-relaxed text-slate-500">
+                    This raw mask represents the exact bits passed to the RNG auditor for your bet.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </details>
+        </details>
       ) : null}
       {error ? <p className="text-sm font-semibold text-rose-400">{error}</p> : null}
     </div>

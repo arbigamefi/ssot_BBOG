@@ -1,41 +1,29 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import type { DomainError } from "@ssot/ssot";
+import { ArrowTopRightOnSquareIcon, UserCircleIcon, WalletIcon } from "@heroicons/react/24/outline";
 import {
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+  AuditTabs,
+  AuditTableCell,
+  AuditTableHeader,
   CopyButton,
-  DataTable,
   ErrorCallout,
-  PageHeader,
-  StatCard,
   TxStatusChip,
   TxStepper,
-  GlassCard,
-  AuditTabs,
-  AuditTableHeader,
-  AuditTableRow,
-  AuditTableCell,
   cn,
-  type DataTableColumn,
-  toast,
-  CyberButton,
-  StatBlock,
+  toast
 } from "@ssot/ui";
 
 import { ConnectWalletPrompt } from "../../components/ConnectWalletPrompt";
 import { PageTransition } from "../../components/PageTransition";
+import { TrustTableShell } from "../../components/TrustTableShell";
 import { useTxJournal } from "../../features/account/useTxJournal";
+import { formatUnits } from "../../features/betting/model/units";
 import { useDirectTxAction } from "../../features/tx/useDirectTxAction";
 import { useRelease } from "../../ssot/release/ReleaseProvider";
 import { useSSOTSDK } from "../../ssot/sdk";
-import { formatUnits } from "../../features/betting/model/units";
 
 type AssetAuditRow = {
   id: string;
@@ -56,22 +44,14 @@ type JournalRow = {
   status: string;
   txHash?: string;
   blockNumber?: number;
-  errorCode?: string;
   releaseDigest: string;
   chainId: number;
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  mined: "text-emerald-400",
-  submitted: "text-blue-400",
-  failed: "text-rose-400",
-  timeout: "text-amber-400",
-};
-
-function shortHex(s?: string) {
-  if (!s) return "—";
-  if (s.length <= 12) return s;
-  return `${s.slice(0, 6)}…${s.slice(-4)}`;
+function shortHex(value?: string) {
+  if (!value) return "—";
+  if (value.length <= 12) return value;
+  return `${value.slice(0, 6)}…${value.slice(-4)}`;
 }
 
 function formatAmount(value: bigint, decimals: number, symbol?: string) {
@@ -94,13 +74,20 @@ function getExplorerBaseUrl(chainId: number) {
   }
 }
 
-function serializeErrorDetails(error?: DomainError) {
-  if (!error?.details) return undefined;
-  return JSON.stringify(
-    error.details,
-    (_key, value) => (typeof value === "bigint" ? value.toString() : value),
-    2
-  );
+function mapJournalStatus(
+  status: JournalRow["status"]
+): React.ComponentProps<typeof TxStatusChip>["status"] {
+  switch (status) {
+    case "submitted":
+      return "submitting";
+    case "mined":
+      return "mined";
+    case "failed":
+    case "timeout":
+      return "failed";
+    default:
+      return "idle";
+  }
 }
 
 export default function AccountPage() {
@@ -109,9 +96,13 @@ export default function AccountPage() {
   const explorerBaseUrl = React.useMemo(() => getExplorerBaseUrl(chainId), [chainId]);
   const account = sdk?.account;
 
-  const { data: txRows = [], isLoading: txLoading } = useTxJournal(100);
+  const { data: txRows = [] } = useTxJournal(100);
 
-  const { data: assetRows = [], isLoading: balancesLoading, error: balancesError } = useQuery({
+  const {
+    data: assetRows = [],
+    isLoading: balancesLoading,
+    error: balancesError
+  } = useQuery({
     queryKey: ["ssot", "account", "assets", release?.releaseDigest, account],
     enabled: Boolean(release && ready && sdk && account),
     queryFn: async (): Promise<AssetAuditRow[]> => {
@@ -121,7 +112,7 @@ export default function AccountPage() {
           const [walletBalance, allowance, position] = await Promise.all([
             sdk.bank.getAssetBalance(asset.address as `0x${string}`, account),
             sdk.bank.getAllowance(asset.address as `0x${string}`, account),
-            sdk.bank.getPosition(asset.address as `0x${string}`, account),
+            sdk.bank.getPosition(asset.address as `0x${string}`, account)
           ]);
 
           return {
@@ -133,19 +124,18 @@ export default function AccountPage() {
             walletBalance,
             shares: position.shares,
             assetsEquivalent: position.assetsEquivalent,
-            allowance,
+            allowance
           };
         })
       );
     },
-    refetchInterval: 5_000,
+    refetchInterval: 5_000
   });
 
   const {
     data: refundCredit = 0n,
-    isLoading: refundLoading,
     error: refundError,
-    refetch: refetchRefundCredit,
+    refetch: refetchRefundCredit
   } = useQuery({
     queryKey: ["ssot", "account", "refundCredit", chainId, account],
     enabled: Boolean(ready && sdk && account),
@@ -153,7 +143,7 @@ export default function AccountPage() {
       if (!sdk || !account) return 0n;
       return await sdk.vrfHub.getRefundCredit(account);
     },
-    refetchInterval: 5_000,
+    refetchInterval: 5_000
   });
 
   const claimRefundFlow = useDirectTxAction({
@@ -161,20 +151,20 @@ export default function AccountPage() {
     labels: {
       preflight: "Preflight",
       submit: "Submit claim",
-      confirm: "Confirm on-chain",
+      confirm: "Confirm on-chain"
     },
     descriptions: {
       preflight: "Validate the claim and simulate the VRFHub call.",
       submit: "Broadcast claimRefundCredit through the wallet client.",
-      confirm: "Wait for receipt and journal reconciliation.",
-    },
+      confirm: "Wait for receipt and journal reconciliation."
+    }
   });
 
   const handleClaimRefund = React.useCallback(async () => {
     if (!sdk || !account || readOnly) return;
     try {
-      const res = await claimRefundFlow.execute(() => sdk.vrfHub.claimRefundCredit());
-      if (!res.ok) return;
+      const result = await claimRefundFlow.execute(() => sdk.vrfHub.claimRefundCredit());
+      if (!result.ok) return;
       toast.success("Refund credit claimed");
       void refetchRefundCredit();
     } catch (error) {
@@ -184,221 +174,392 @@ export default function AccountPage() {
 
   const primaryAsset = release?.assets[0];
   const totalAssetsEquivalent = assetRows.reduce((sum, row) => sum + row.assetsEquivalent, 0n);
+  const totalWalletBalance = assetRows.reduce((sum, row) => sum + row.walletBalance, 0n);
+  const journalRows = txRows as JournalRow[];
+  const explorerHref =
+    explorerBaseUrl && account ? `${explorerBaseUrl}/address/${account}` : undefined;
+
   return (
     <PageTransition pageKey="account">
-       {/* Global Indigo Ambience */}
-       <div className="fixed top-0 left-0 w-[600px] h-[600px] bg-indigo-900/10 blur-[150px] pointer-events-none rounded-full z-0" />
-       
-      <main className="relative z-10 max-w-[1440px] mx-auto px-6 py-12 md:py-16 flex flex-col gap-12">
-        
-        {/* Account Header Section */}
-        <div className="flex flex-col md:flex-row gap-8 justify-between items-start md:items-end mb-4">
+      <main className="mx-auto flex max-w-[1440px] flex-col gap-8 px-6 py-12 md:py-16">
+        <header className="mb-4 flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
           <div className="flex items-center gap-6">
-            <div className="relative w-28 h-28 group cursor-pointer perspective-1000">
-               <div className="absolute inset-0 bg-indigo-500/10 blur-[20px] rounded-full group-hover:bg-indigo-500/30 transition-all duration-500" />
-               <div className="absolute inset-0 rounded-full border-4 border-indigo-500/20 group-hover:border-indigo-400 group-hover:animate-[spin_4s_linear_infinite] transition-all" />
-               
-               <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-[#0a0a0a] to-[#111] rounded-full shadow-[inset_0_2px_15px_rgba(99,102,241,0.2)] border border-indigo-500/30 z-10 group-hover:scale-105 transition-transform duration-500">
-                  <span className="text-4xl drop-shadow-[0_0_10px_rgba(99,102,241,0.5)]">👤</span>
-               </div>
+            <div className="group relative h-28 w-28 cursor-pointer">
+              <div className="absolute inset-0 rounded-full bg-indigo-500/10 blur-[20px] transition-all duration-500 group-hover:bg-indigo-500/20" />
+              <div className="absolute inset-0 rounded-full border-4 border-indigo-500/20 transition-all duration-500 group-hover:border-indigo-400/40" />
+              <div className="absolute inset-2 rounded-full border border-dashed border-indigo-400/40" />
+              <div className="absolute inset-0 z-10 flex items-center justify-center rounded-full border border-indigo-500/30 bg-gradient-to-br from-[#0a0a0a] to-[#111827] shadow-[inset_0_2px_15px_rgba(99,102,241,0.2)]">
+                <UserCircleIcon className="h-14 w-14 text-indigo-400 drop-shadow-[0_0_10px_rgba(99,102,241,0.5)]" />
+              </div>
             </div>
 
             <div className="flex flex-col gap-2">
-              <div className="text-indigo-400 text-[10px] font-bold uppercase tracking-[0.2em] flex items-center gap-2">
-                 <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" /> Encrypted Identity
+              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-300/80">
+                <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
+                {account ? "Encrypted Identity" : "Wallet Ledger"}
               </div>
-              <h1 className="text-4xl md:text-5xl font-mono font-extrabold tracking-tight text-white flex items-center gap-3 drop-shadow-[0_0_20px_rgba(255,255,255,0.1)]">
-                {account ? shortHex(account) : "No Wallet"}
-                {account && <CopyButton value={account} className="bg-white/5 border-white/10" />}
+              <h1 className="flex items-center gap-3 text-4xl font-mono font-extrabold tracking-tight text-white md:text-5xl">
+                {account ? shortHex(account) : "No wallet"}
+                {account ? <CopyButton value={account} label="Copy wallet address" /> : null}
               </h1>
-              <div className="flex items-center gap-3 text-sm text-white/50 font-medium font-mono">
-                 <span>Chain ID: {chainId}</span>
-                 <span className="text-white/20">•</span>
-                 {explorerBaseUrl && account && (
-                   <a href={`${explorerBaseUrl}/address/${account}`} target="_blank" rel="noreferrer" className="text-emerald-400 hover:text-emerald-300 transition-colors">Arbiscan ↗</a>
-                 )}
+              <div className="flex flex-wrap items-center gap-3 text-sm font-medium text-white/50">
+                <span>
+                  {account ? "Encrypted wallet session" : "Connect a wallet to load balances"}
+                </span>
+                {explorerHref ? <span className="text-white/20">•</span> : null}
+                {explorerHref ? (
+                  <Link
+                    href={explorerHref}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-1 text-emerald-400 transition-colors hover:text-emerald-300"
+                  >
+                    Explorer
+                    <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" />
+                  </Link>
+                ) : null}
               </div>
             </div>
           </div>
-          
-          <div className="flex items-center gap-4">
-             {!account ? <ConnectWalletPrompt action="authenticate" /> : (
-               <button className="px-8 py-4 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-black font-bold text-sm shadow-[0_0_30px_rgba(99,102,241,0.2)] transition-all active:scale-95">
-                  Authenticated Session
-               </button>
-             )}
+
+          {account ? (
+            <Link
+              href="/invest"
+              className="inline-flex items-center gap-2 rounded-xl bg-indigo-500 px-8 py-4 text-sm font-bold text-black transition-all hover:bg-indigo-400"
+            >
+              Deposit / Withdraw
+              <WalletIcon className="h-4 w-4" />
+            </Link>
+          ) : (
+            <ConnectWalletPrompt action="inspect balances" />
+          )}
+        </header>
+
+        {readOnly ? (
+          <ErrorCallout
+            title="Read-only session"
+            message={readOnlyReason ?? "Writes are disabled for this release context."}
+          />
+        ) : null}
+
+        {balancesError ? (
+          <ErrorCallout
+            title="Asset query failed"
+            message={(balancesError as Error).message ?? "Unable to load account balances."}
+          />
+        ) : null}
+
+        {refundError ? (
+          <ErrorCallout
+            title="Refund credit query failed"
+            message={(refundError as Error).message ?? "Unable to load refund credit."}
+          />
+        ) : null}
+
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
+          <section className="relative overflow-hidden rounded-[2rem] border-2 border-indigo-500/20 bg-gradient-to-br from-indigo-950/20 to-[#050505] p-8 shadow-[inset_0_0_40px_rgba(99,102,241,0.05),0_10px_40px_rgba(0,0,0,0.5)] lg:col-span-1">
+            <div className="absolute -top-10 -right-10 h-40 w-40 rounded-full bg-indigo-500/10 blur-[50px]" />
+            <div className="relative z-10">
+              <div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-300/70">
+                <span className="h-2 w-2 rounded-sm bg-indigo-500/60" />
+                Total Vault Value
+              </div>
+              <div className="mb-2 bg-gradient-to-r from-white to-indigo-200 bg-clip-text text-4xl font-mono font-extrabold text-transparent md:text-5xl">
+                {primaryAsset
+                  ? formatAmount(totalAssetsEquivalent, primaryAsset.decimals, primaryAsset.symbol)
+                  : "—"}
+              </div>
+              <div className="max-w-[220px] text-xs font-medium leading-relaxed text-indigo-300/70">
+                Cryptographically secured combined assets held across the embedded release banks.
+              </div>
+            </div>
+          </section>
+
+          <section className="relative overflow-hidden rounded-[2rem] border border-white/8 bg-[#0a0a0a] p-8 shadow-[inset_0_0_40px_rgba(255,255,255,0.02),0_10px_40px_rgba(0,0,0,0.5)] lg:col-span-3">
+            <div className="mb-6 text-[10px] font-bold uppercase tracking-[0.2em] text-white/35">
+              Asset Breakdown
+            </div>
+            <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+              <div className="flex flex-col">
+                <div className="mb-2 flex items-center gap-2">
+                  <span className="h-3 w-3 rounded bg-white shadow-[0_0_10px_rgba(255,255,255,0.4)]" />
+                  <span className="font-mono text-3xl font-bold text-white">
+                    {primaryAsset
+                      ? formatAmount(totalWalletBalance, primaryAsset.decimals, primaryAsset.symbol)
+                      : "—"}
+                  </span>
+                </div>
+                <div className="text-xs font-bold uppercase tracking-[0.18em] text-white/38">
+                  Wallet balance
+                </div>
+                <div className="mt-1 text-xs text-white/30">
+                  Free capital before deposits, withdrawals, or bets.
+                </div>
+              </div>
+
+              <div className="flex flex-col md:border-l md:border-white/5 md:pl-8">
+                <div className="mb-2 flex items-center gap-2">
+                  <span className="h-3 w-3 rounded bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
+                  <span className="font-mono text-3xl font-bold text-blue-400">
+                    {primaryAsset
+                      ? formatAmount(
+                          totalAssetsEquivalent,
+                          primaryAsset.decimals,
+                          primaryAsset.symbol
+                        )
+                      : "—"}
+                  </span>
+                </div>
+                <div className="text-xs font-bold uppercase tracking-[0.18em] text-blue-300/50">
+                  Bank exposure
+                </div>
+                <div className="mt-1 text-xs text-white/30">
+                  Assets-equivalent minted through house shares.
+                </div>
+              </div>
+
+              <div className="flex flex-col md:border-l md:border-white/5 md:pl-8">
+                <div className="mb-2 flex items-center gap-2">
+                  <span className="h-3 w-3 rounded bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
+                  <span className="font-mono text-3xl font-bold text-amber-400">
+                    {primaryAsset
+                      ? formatAmount(refundCredit, primaryAsset.decimals, primaryAsset.symbol)
+                      : "—"}
+                  </span>
+                </div>
+                <div className="text-xs font-bold uppercase tracking-[0.18em] text-amber-300/50">
+                  Refund credit
+                </div>
+                <div className="mt-1 text-xs text-white/30">
+                  {claimRefundFlow.busy
+                    ? "Recovery currently in-flight."
+                    : "Recoverable VRF credit routed back to the same wallet."}
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div className="grid gap-8 xl:grid-cols-[1.15fr_0.85fr]">
+          <TrustTableShell
+            eyebrow="Asset positions"
+            title="Wallet and bank balances"
+            description="Free balance, house shares, and allowance state for every release asset remain visible in one dense ledger surface."
+          >
+            <div className="space-y-4">
+              {balancesLoading ? (
+                <div className="rounded-[1.5rem] border border-dashed border-white/8 bg-white/[0.02] py-16 text-center text-[11px] font-bold uppercase tracking-[0.2em] text-white/28">
+                  Synchronizing wallet context
+                </div>
+              ) : assetRows.length === 0 ? (
+                <div className="rounded-[1.5rem] border border-dashed border-white/8 bg-white/[0.02] py-16 text-center text-[11px] font-bold uppercase tracking-[0.2em] text-white/28">
+                  No release assets visible for this wallet
+                </div>
+              ) : (
+                assetRows.map((row) => (
+                  <div
+                    key={row.id}
+                    className="rounded-[1.5rem] border border-white/8 bg-[linear-gradient(180deg,rgba(10,14,24,0.95),rgba(6,9,15,0.96))] p-5"
+                  >
+                    <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                      <div>
+                        <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/35">
+                          {row.symbol}
+                        </div>
+                        <div className="mt-2 text-xl font-black tracking-tight text-white">
+                          {formatAmount(row.assetsEquivalent, row.decimals, row.symbol)}
+                        </div>
+                        <div className="mt-2 text-sm leading-6 text-white/42">
+                          Wallet free balance and bank-issued exposure visible side-by-side.
+                        </div>
+                      </div>
+
+                      <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[520px]">
+                        <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
+                          <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/30">
+                            Wallet
+                          </div>
+                          <div className="mt-2 font-mono text-sm text-white">
+                            {formatAmount(row.walletBalance, row.decimals, row.symbol)}
+                          </div>
+                        </div>
+                        <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
+                          <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/30">
+                            House shares
+                          </div>
+                          <div className="mt-2 font-mono text-sm text-white">
+                            {formatAmount(row.shares, row.decimals)}
+                          </div>
+                        </div>
+                        <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
+                          <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/30">
+                            Allowance
+                          </div>
+                          <div
+                            className={cn(
+                              "mt-2 font-mono text-sm",
+                              row.allowance === 0n ? "text-rose-300" : "text-emerald-300"
+                            )}
+                          >
+                            {row.allowance > 1_000_000_000_000_000_000n
+                              ? "Unlimited"
+                              : formatAmount(row.allowance, row.decimals, row.symbol)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </TrustTableShell>
+
+          <div className="space-y-8">
+            <TrustTableShell
+              eyebrow="Recovery"
+              title="Refund credit"
+              description="Failed or cancelled VRF requests accumulate refundable credit. Claiming routes funds back through the same wallet-first path."
+            >
+              <div className="rounded-[1.5rem] border border-indigo-400/14 bg-indigo-400/[0.05] p-5">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/35">
+                      Recoverable amount
+                    </div>
+                    <div className="mt-3 text-3xl font-black tracking-tight text-white">
+                      {primaryAsset
+                        ? formatAmount(refundCredit, primaryAsset.decimals, primaryAsset.symbol)
+                        : "—"}
+                    </div>
+                  </div>
+                  <TxStatusChip status={claimRefundFlow.status} />
+                </div>
+
+                <p className="mt-4 text-sm leading-6 text-white/46">
+                  Recovery stays explicit: validate the claim, submit from the wallet, then
+                  reconcile the receipt in the journal.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => void handleClaimRefund()}
+                  disabled={!account || readOnly || claimRefundFlow.busy || refundCredit === 0n}
+                  className="mt-6 w-full rounded-2xl bg-indigo-500 px-4 py-4 text-sm font-bold text-black transition-all hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {claimRefundFlow.busy ? "Claiming refund credit..." : "Claim refund credit"}
+                </button>
+
+                {claimRefundFlow.hasActivity ? (
+                  <div className="mt-6 border-t border-white/8 pt-6">
+                    <TxStepper
+                      title="Recovery trace"
+                      steps={claimRefundFlow.steps}
+                      footer={
+                        <button
+                          type="button"
+                          onClick={claimRefundFlow.reset}
+                          className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/30 transition-colors hover:text-white"
+                        >
+                          Reset trace
+                        </button>
+                      }
+                    />
+                  </div>
+                ) : null}
+              </div>
+            </TrustTableShell>
+
+            <TrustTableShell
+              eyebrow="Protocol context"
+              title="Runtime envelope"
+              description="The account route remains explicit about chain, release identity, and current write permissions."
+            >
+              <div className="space-y-3">
+                {[
+                  ["Release digest", shortHex(release?.releaseDigest)],
+                  ["Network", release?.name ?? "Unknown"],
+                  ["Explorer", explorerBaseUrl ?? "Unavailable"],
+                  ["Session mode", readOnly ? "Read-only" : "Writable"]
+                ].map(([label, value]) => (
+                  <div
+                    key={label}
+                    className="flex items-center justify-between rounded-2xl border border-white/8 bg-black/20 px-4 py-3"
+                  >
+                    <span className="text-sm text-white/46">{label}</span>
+                    <span className="font-mono text-sm text-white">{value}</span>
+                  </div>
+                ))}
+              </div>
+            </TrustTableShell>
           </div>
         </div>
 
-        {/* Global Balances - Cyber Terminal Style */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-           {/* Total Value Vault */}
-           <div className="p-8 rounded-[2rem] border-2 border-indigo-500/20 bg-gradient-to-br from-indigo-950/20 to-[#050505] shadow-[inset_0_0_40px_rgba(99,102,241,0.05),0_10px_40px_rgba(0,0,0,0.5)] flex flex-col justify-center relative overflow-hidden group hover:border-indigo-500/40 transition-colors">
-              <div className="absolute -right-10 -top-10 w-40 h-40 bg-indigo-500/10 blur-[50px] rounded-full group-hover:bg-indigo-500/20 transition-all" />
-              <span className="text-indigo-300/50 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 mb-2">
-                 <div className="w-2 h-2 rounded-sm bg-indigo-500/50" /> Vault Valuation
-              </span>
-              <span className="text-3xl md:text-4xl font-mono font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-indigo-200 drop-shadow-[0_0_20px_rgba(99,102,241,0.3)] mb-2">
-                 {primaryAsset ? formatAmount(totalAssetsEquivalent, primaryAsset.decimals, primaryAsset.symbol) : "$0.00"}
-              </span>
-              <span className="text-indigo-400 max-w-[200px] text-[10px] font-medium leading-relaxed font-mono uppercase tracking-tighter">Secured via SSOT SDK v1.02</span>
-           </div>
-
-           {/* Asset Breakdown Terminal */}
-           <div className="p-8 rounded-[2rem] border border-white/5 bg-[#0a0a0a] shadow-[inset_0_0_40px_rgba(255,255,255,0.02),0_10px_40px_rgba(0,0,0,0.5)] flex flex-col justify-between col-span-1 lg:col-span-3 relative overflow-hidden group hover:border-white/10 transition-colors">
-              <span className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-6">Asset Breakdown</span>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10">
-                 {assetRows.length > 0 ? assetRows.map((row, i) => (
-                    <div key={row.id} className={cn("flex flex-col group/item", i > 0 && "md:border-l border-white/5 md:pl-8")}>
-                       <div className="flex items-center gap-2 mb-2">
-                          <span className={cn("w-3 h-3 rounded shadow-[0_0_10px_rgba(255,255,255,0.5)]", i === 1 ? "bg-blue-500" : i === 2 ? "bg-amber-500" : "bg-white")} />
-                          <span className={cn("font-mono text-3xl font-bold group-hover/item:text-shadow-[0_0_20px_rgba(255,255,255,0.5)] transition-all", i === 1 ? "text-blue-400" : i === 2 ? "text-amber-500" : "text-white")}>
-                             {formatAmount(row.assetsEquivalent, row.decimals)}
-                          </span>
-                       </div>
-                       <span className="text-xs font-bold uppercase tracking-widest text-white/40 mb-1">{row.symbol}</span>
-                       <span className="text-white/30 text-[10px] font-mono tracking-tighter uppercase">{i === 1 ? "Providing Liquidity" : i === 2 ? "Protocol Rewards" : "Available Balance"}</span>
-                    </div>
-                 )) : (
-                    <div className="col-span-3 py-4 text-center text-white/20 text-xs font-mono uppercase tracking-[0.2em]">Indexing local wallet context...</div>
-                 )}
+        <TrustTableShell
+          eyebrow="Journal"
+          title="Recent account receipts"
+          description="Every direct transaction stays visible as a compact, chain-aware journal row."
+        >
+          <AuditTabs
+            className="mt-0 border-white/8 bg-black/20"
+            activeColorClass="border-cyan-400/70 text-cyan-200"
+            tabs={["Transactions"]}
+            activeTab="Transactions"
+          >
+            <AuditTableHeader>
+              <div className="grid grid-cols-[1.4fr_1.4fr_1fr_1fr_72px] gap-4 text-[10px] font-bold uppercase tracking-[0.2em] text-white/35">
+                <div>Time / Hash</div>
+                <div>Action</div>
+                <div>Release</div>
+                <div>Status</div>
+                <div className="text-right">Chain</div>
               </div>
-           </div>
-        </div>
+            </AuditTableHeader>
 
-        {/* Audit / Journal Section */}
-        <div className="grid grid-cols-1 xl:grid-cols-[1fr_400px] gap-12">
-           <div className="flex flex-col gap-6">
-              <div className="flex justify-between items-end mb-2">
-                 <div>
-                    <h2 className="text-2xl font-bold tracking-tight mb-1">Transaction Journal</h2>
-                    <p className="text-white/50 text-sm">On-chain actions mapped to your wallet context.</p>
-                 </div>
-              </div>
-              
-              <AuditTabs activeColorClass="border-indigo-400 text-indigo-400">
-                <AuditTableHeader>
-                   <div className="grid grid-cols-[1.5fr_2fr_1.5fr_1fr_80px] text-white/40 font-bold uppercase tracking-wider text-[10px]">
-                     <div>Time / Hash</div>
-                     <div>Event / Module</div>
-                     <div>Amount</div>
-                     <div>Status</div>
-                     <div className="text-right">Chain</div>
-                   </div>
-                </AuditTableHeader>
-                
-                <div className="min-h-[400px]">
-                   {txRows.length > 0 ? txRows.map((tx: any, i: number) => (
-                      <AuditTableRow key={i}>
-                        <div className="grid grid-cols-[1.5fr_2fr_1.5fr_1fr_80px] items-center">
-                          <AuditTableCell>
-                            <div className="flex flex-col gap-1">
-                              <span className="text-white text-xs">{new Date(tx.createdAt).toLocaleString()}</span>
-                              <span className="text-[10px] font-mono text-indigo-400/50 hover:text-indigo-300 transition-colors cursor-pointer">{shortHex(tx.txHash)}</span>
-                            </div>
-                          </AuditTableCell>
-                          <AuditTableCell>
-                            <div className="flex flex-col gap-1">
-                              <span className="text-white font-bold text-xs uppercase tracking-tight">{tx.action.replace(/_/g, ' ')}</span>
-                              <span className="text-[10px] text-white/30 font-mono">SSOT Protocol Engine</span>
-                            </div>
-                          </AuditTableCell>
-                          <AuditTableCell>
-                            <span className="font-mono font-bold text-xs text-white/60">
-                               —
-                            </span>
-                          </AuditTableCell>
-                          <AuditTableCell>
-                             <TxStatusChip status={tx.status} />
-                          </AuditTableCell>
-                          <AuditTableCell className="justify-end transition-transform hover:translate-x-1 cursor-pointer text-white/30 hover:text-white">
-                            ↗
-                          </AuditTableCell>
-                        </div>
-                      </AuditTableRow>
-                   )) : (
-                     <div className="py-20 text-center flex flex-col items-center gap-4 border border-dashed border-white/5 rounded-2xl bg-white/[0.01]">
-                        <span className="text-white/20 text-xs font-mono uppercase tracking-[0.2em]">Journal is empty for this session</span>
-                     </div>
-                   )}
+            <div className="flex min-h-[280px] flex-col gap-3">
+              {journalRows.length === 0 ? (
+                <div className="rounded-[1.5rem] border border-dashed border-white/8 bg-white/[0.02] py-16 text-center text-[11px] font-bold uppercase tracking-[0.2em] text-white/28">
+                  Journal is empty for this wallet session
                 </div>
-              </AuditTabs>
-           </div>
-
-           {/* Sidebar: Allowances & Refunds */}
-           <div className="flex flex-col gap-10">
-              <div className="flex flex-col gap-6">
-                 <h2 className="text-lg font-bold tracking-tight uppercase tracking-[0.2em] text-white/40">Bank Protections</h2>
-                 <div className="flex flex-col gap-4">
-                    {assetRows.map((row) => (
-                       <div key={row.id} className="p-5 rounded-2xl border border-white/5 bg-[#0a0a0a] flex justify-between items-center group hover:border-indigo-500/30 transition-all">
-                          <div className="flex flex-col">
-                             <span className="text-sm font-bold text-white uppercase tracking-tight">{row.symbol} Allowance</span>
-                             <span className="text-[10px] text-white/30 font-mono">Bank Spender Approval</span>
-                          </div>
-                          <span className={cn("font-mono text-xs font-bold px-3 py-1 rounded-lg border", row.allowance === 0n ? "text-rose-400 border-rose-400/20 bg-rose-400/5" : "text-emerald-400 border-emerald-400/20 bg-emerald-400/5")}>
-                             {row.allowance > 1_000_000_000_000_000_000n ? "UNLIMITED" : formatAmount(row.allowance, row.decimals)}
+              ) : (
+                journalRows.map((row) => (
+                  <div
+                    key={row.id}
+                    className="rounded-[1.35rem] border border-white/8 bg-[linear-gradient(180deg,rgba(10,14,24,0.95),rgba(6,9,15,0.96))] p-4"
+                  >
+                    <div className="grid grid-cols-[1.4fr_1.4fr_1fr_1fr_72px] items-center gap-4">
+                      <AuditTableCell>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-sm font-semibold text-white">
+                            {new Date(row.createdAt).toLocaleString()}
                           </span>
-                       </div>
-                    ))}
-                    {assetRows.length === 0 && <span className="text-white/20 text-xs font-mono italic text-center py-4 bg-white/5 rounded-xl border border-dashed border-white/10">No active assets found.</span>}
-                 </div>
-              </div>
-
-              <div className="flex flex-col gap-6">
-                  <h2 className="text-lg font-bold tracking-tight uppercase tracking-[0.2em] text-white/40">Recovery Services</h2>
-                  <div className="p-8 rounded-[2rem] border-2 border-indigo-500/20 bg-indigo-500/[0.03] shadow-[inset_0_0_40px_rgba(99,102,241,0.02)] flex flex-col gap-6 relative overflow-hidden group">
-                     <div>
-                        <div className="flex items-center justify-between mb-3 text-[10px] font-bold uppercase tracking-widest text-indigo-400/50">
-                           <span>VRF Refund Credit</span>
-                           <TxStatusChip status={claimRefundFlow.status} />
+                          <span className="text-[10px] font-mono uppercase tracking-[0.16em] text-white/24">
+                            {shortHex(row.txHash)}
+                          </span>
                         </div>
-                        <div className="text-4xl font-mono font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-indigo-400 to-purple-500 drop-shadow-[0_0_20px_rgba(99,102,241,0.3)]">
-                           {primaryAsset && account ? formatAmount(refundCredit, primaryAsset.decimals, primaryAsset.symbol) : "0.00"}
-                        </div>
-                     </div>
-
-                     <p className="text-[11px] text-white/40 font-mono tracking-tighter leading-relaxed">
-                        Credit recovered from failed/cancelled VRF requests. Reclaiming moves assets to your house position.
-                     </p>
-
-                     {claimRefundFlow.error && <ErrorCallout title="Tx Error" message={claimRefundFlow.error.message} />}
-
-                     <button 
-                        onClick={() => void handleClaimRefund()}
-                        disabled={!account || readOnly || claimRefundFlow.busy || refundCredit === 0n}
-                        className="w-full py-4 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-black font-extrabold text-sm transition-all shadow-[0_0_20px_rgba(99,102,241,0.2)] disabled:opacity-30 disabled:grayscale disabled:shadow-none active:scale-[0.98]"
-                     >
-                        {claimRefundFlow.busy ? "Executing Claim..." : "Claim Recovery Credit"}
-                     </button>
-
-                     {claimRefundFlow.hasActivity && (
-                       <div className="mt-4 pt-6 border-t border-white/5">
-                          <TxStepper 
-                             title="Claim Manifest" 
-                             steps={claimRefundFlow.steps} 
-                             footer={<button onClick={claimRefundFlow.reset} className="text-[9px] font-bold uppercase tracking-widest text-white/20 hover:text-white transition-colors">Reset Trace</button>}
-                          />
-                       </div>
-                     )}
+                      </AuditTableCell>
+                      <AuditTableCell>
+                        <span className="text-sm font-semibold text-white">
+                          {row.action.replace(/_/g, " ")}
+                        </span>
+                      </AuditTableCell>
+                      <AuditTableCell>
+                        <span className="font-mono text-sm text-white/62">
+                          {shortHex(row.releaseDigest)}
+                        </span>
+                      </AuditTableCell>
+                      <AuditTableCell>
+                        <TxStatusChip status={mapJournalStatus(row.status)} />
+                      </AuditTableCell>
+                      <AuditTableCell className="justify-end text-[11px] font-bold uppercase tracking-[0.18em] text-white/30">
+                        {row.chainId}
+                      </AuditTableCell>
+                    </div>
                   </div>
-
-                  <div className="p-6 rounded-[2rem] border border-white/5 bg-[#050505] flex flex-col gap-4">
-                     <span className="text-[10px] font-bold uppercase tracking-widest text-white/20">Protocol Context</span>
-                     <div className="flex justify-between items-center">
-                        <span className="text-xs text-white/40">Release Digest</span>
-                        <span className="text-[10px] font-mono text-indigo-300 bg-indigo-300/10 px-2 py-1 rounded-md">{shortHex(release?.releaseDigest)}</span>
-                     </div>
-                     <div className="flex justify-between items-center">
-                        <span className="text-xs text-white/40">Session Mode</span>
-                        <span className={cn("text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-md", readOnly ? "text-amber-400 bg-amber-400/10" : "text-emerald-400 bg-emerald-400/10")}>{readOnly ? "READ ONLY" : "WRITABLE"}</span>
-                     </div>
-                  </div>
-              </div>
-           </div>
-        </div>
-
+                ))
+              )}
+            </div>
+          </AuditTabs>
+        </TrustTableShell>
       </main>
     </PageTransition>
   );

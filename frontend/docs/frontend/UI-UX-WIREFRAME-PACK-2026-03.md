@@ -1,12 +1,16 @@
 # UI/UX WIREFRAME PACK — ArbiGameFi
 
-**Status**: Draft
+> Historical reference only. This document no longer drives formal implementation.
+> Current visual/layout truth is the active `ui-ux-v2-*` prototype suite.
+
+**Status**: Historical reference
 
 **Date**: 2026-03-09
 
 **Scope**: `Low-fidelity wireframes for core ArbiGameFi routes`
 
 **Related documents**
+
 - `docs/frontend/UI-UX-DESIGN-BRIEF-2026-03.md`
 - `docs/frontend/UI-UX-ARCHITECTURE-PACK-2026-03.md`
 - `docs/frontend/UI-UX-DIRECTION-BOARD-2026-03.md`
@@ -41,6 +45,7 @@ Every wireframe must reveal one obvious primary action.
 Every route must have a visual center.
 
 Examples:
+
 - home: hero
 - games: room grid
 - game room: game table + bet slip

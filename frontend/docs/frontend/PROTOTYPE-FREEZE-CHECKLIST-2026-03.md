@@ -1,6 +1,8 @@
 # Prototype Freeze Checklist — 2026-03
 
-**Status**: Draft  
+> Historical reference only. The current v2 prototype suite is already frozen as the active layout baseline.
+
+**Status**: Historical reference  
 **Scope**: `frontend prototype system before formal UI implementation`
 
 ## Purpose

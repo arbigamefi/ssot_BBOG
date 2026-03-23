@@ -1,1 +1,3 @@
-cd ssot_frontend && npx lint-staged
+#!/usr/bin/env sh
+cd frontend || exit 1
+pnpm exec lint-staged
