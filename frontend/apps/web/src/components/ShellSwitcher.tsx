@@ -12,29 +12,32 @@ import {
 import Link from "next/link";
 import { useRelease } from "../ssot/release/ReleaseProvider";
 import { WalletButton } from "../app/providers/WalletButton";
+import { SiteFooter } from "./SiteFooter";
 
 // Navigation Maps per Shell
 const TRUST_NAV = [
-  { href: "/games", label: "Games" },
+  { href: "/dice", label: "Games" },
+  { href: "/invest", label: "Invest" },
+  { href: "/referral", label: "Referral" },
   { href: "/bets", label: "Bets" },
-  { href: "/liquidity", label: "Liquidity" },
-  { href: "/referral", label: "Affiliates" },
   { href: "/account", label: "Account" },
 ] as const;
 
 const DIRECTORY_NAV = [
-  { href: "/games", label: "Games" },
-  { href: "/liquidity", label: "Liquidity" },
-  { href: "/referral", label: "Affiliates" },
+  { href: "/dice", label: "Games" },
+  { href: "/invest", label: "Invest" },
+  { href: "/referral", label: "Referral" },
 ] as const;
 
 const LANDING_NAV = [
-  { href: "/games", label: "Open Rooms" },
-  { href: "/liquidity", label: "Liquidity" },
+  { href: "/dice", label: "Games" },
+  { href: "/invest", label: "Invest" },
+  { href: "/referral", label: "Referral" },
 ] as const;
 
 function isActive(pathname: string, href: string) {
-  if (href === "/games") return pathname.startsWith("/games") && !pathname.includes("/", 7); // Simple check for directory vs room
+  if (href === "/dice") return ["/dice", "/cointoss", "/roulette", "/keno", "/games"].some((candidate) => pathname.startsWith(candidate));
+  if (href === "/invest") return pathname.startsWith("/invest") || pathname.startsWith("/liquidity");
   return pathname.startsWith(href);
 }
 
@@ -80,6 +83,9 @@ export function ShellSwitcher({ children }: { children: React.ReactNode }) {
          <div className="w-full flex-1 relative z-10">
            {children}
          </div>
+         <div className="w-full relative z-10">
+           <SiteFooter />
+         </div>
        </div>
      );
   }
@@ -106,6 +112,9 @@ export function ShellSwitcher({ children }: { children: React.ReactNode }) {
         </ShellHeader>
         <div className="w-full flex-1 relative z-10">
           {children}
+        </div>
+        <div className="w-full relative z-10">
+          <SiteFooter />
         </div>
       </div>
     );
@@ -159,6 +168,9 @@ export function ShellSwitcher({ children }: { children: React.ReactNode }) {
       <main className="w-full max-w-[1440px] flex-1 relative z-10">
         {children}
       </main>
+      <div className="w-full relative z-10">
+        <SiteFooter />
+      </div>
     </div>
   );
 }

@@ -1,39 +1,22 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
-import {
-  Button,
-  CopyButton,
-  DataTable,
-  Input,
-  PageHeader,
-  StatusBadge,
-  TabBar,
-  AuditTabs,
-  AuditTableHeader,
-  AuditTableRow,
-  AuditTableCell,
-  type BetStatus,
-  type DataTableColumn,
-} from "@ssot/ui";
 import Link from "next/link";
 import type { BetRow as IndexedBetRow } from "@ssot/ssot/indexer";
+import { AuditTabs, AuditTableCell, AuditTableHeader, cn } from "@ssot/ui";
 
 import { PageTransition } from "../../components/PageTransition";
 import { useBets } from "../../features/bets/useBets";
-import { useIndexer } from "../../features/ops/useIndexer";
-import { useRelease } from "../../ssot/release/ReleaseProvider";
 import { formatUnits } from "../../features/betting/model/units";
+import { useRelease } from "../../ssot/release/ReleaseProvider";
 
-type StatusFilter = "all" | "placed" | "randomReady" | "finalized" | "refunded";
+type StatusFilter = "all" | "open" | "won" | "lost";
 
 const STATUS_TABS = [
-  { key: "all", label: "All" },
-  { key: "placed", label: "Placed" },
-  { key: "randomReady", label: "Random Ready" },
-  { key: "finalized", label: "Finalized" },
-  { key: "refunded", label: "Refunded" },
+  { key: "open", label: "Open" },
+  { key: "won", label: "Won" },
+  { key: "lost", label: "Lost" },
+  { key: "all", label: "All Tickets" }
 ] as const;
 
 function shortHex(value?: string) {
@@ -42,12 +25,16 @@ function shortHex(value?: string) {
   return `${value.slice(0, 6)}…${value.slice(-4)}`;
 }
 
-function mapBetState(state?: string): BetStatus {
+function mapBetState(state?: string) {
   if (!state) return "pending";
   const normalized = state.toLowerCase();
   if (normalized.includes("won") || normalized.includes("win")) return "won";
   if (normalized.includes("lost") || normalized.includes("lose")) return "lost";
-  if (normalized.includes("final") || normalized.includes("settled") || normalized.includes("resolved")) {
+  if (
+    normalized.includes("final") ||
+    normalized.includes("settled") ||
+    normalized.includes("resolved")
+  ) {
     return "settled";
   }
   if (normalized.includes("placed")) return "placed";
@@ -68,54 +55,15 @@ function formatRelativeTime(timestamp?: number) {
   return `${days}d ago`;
 }
 
-function getExplorerBaseUrl(chainId: number) {
-  switch (chainId) {
-    case 84532:
-      return "https://sepolia.basescan.org";
-    case 8453:
-      return "https://basescan.org";
-    case 42161:
-      return "https://arbiscan.io";
-    case 421614:
-      return "https://sepolia.arbiscan.io";
-    default:
-      return undefined;
-  }
-}
-
 export default function BetsPage() {
-  const router = useRouter();
-  const { release, chainId } = useRelease();
+  const { release } = useRelease();
   const { data: bets = [], isLoading } = useBets(500);
-  const { indexerStatus, syncNow } = useIndexer();
-
-  const [searchQuery, setSearchQuery] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<StatusFilter>("all");
-  const [gameFilter, setGameFilter] = React.useState<string>("all");
-  const deferredQuery = React.useDeferredValue(searchQuery);
-
-  const gameMeta = React.useMemo(
-    () => release?.gamesMeta?.map((game) => ({ key: game.slug, label: game.label })) ?? [],
-    [release?.gamesMeta]
-  );
-
-  const gameTabs = React.useMemo(
-    () => [{ key: "all", label: "All Games" }, ...gameMeta],
-    [gameMeta]
-  );
 
   const gameLabelById = React.useMemo(() => {
     const map = new Map<string, string>();
     for (const game of release?.gamesMeta ?? []) {
       map.set(game.gameId.toLowerCase(), game.label);
-    }
-    return map;
-  }, [release?.gamesMeta]);
-
-  const gameSlugById = React.useMemo(() => {
-    const map = new Map<string, string>();
-    for (const game of release?.gamesMeta ?? []) {
-      map.set(game.gameId.toLowerCase(), game.slug);
     }
     return map;
   }, [release?.gamesMeta]);
@@ -136,209 +84,225 @@ export default function BetsPage() {
     return map;
   }, [release?.assets]);
 
-  const explorerBaseUrl = React.useMemo(() => getExplorerBaseUrl(chainId), [chainId]);
-
   const filteredBets = React.useMemo(() => {
-    const query = deferredQuery.trim().toLowerCase();
     return bets.filter((row) => {
-      if (statusFilter !== "all" && row.state !== statusFilter) return false;
-      if (gameFilter !== "all") {
-        const slug = row.gameId ? gameSlugById.get(row.gameId.toLowerCase()) : undefined;
-        if (slug !== gameFilter) return false;
-      }
-      if (!query) return true;
-
-      const haystack = [
-        row.betId,
-        row.state,
-        row.player,
-        row.asset,
-        row.lastTxHash,
-        row.lastEventName,
-        row.gameId ? gameLabelById.get(row.gameId.toLowerCase()) : "",
-        row.asset ? assetLabelByAddress.get(row.asset.toLowerCase()) : "",
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-
-      return haystack.includes(query);
+      const status = mapBetState(row.state);
+      if (statusFilter === "open") return status === "pending" || status === "placed";
+      if (statusFilter === "won") return status === "won" || status === "settled";
+      if (statusFilter === "lost")
+        return status === "lost" || status === "cancelled" || status === "failed";
+      return true;
     });
-  }, [assetLabelByAddress, bets, deferredQuery, gameFilter, gameLabelById, gameSlugById, statusFilter]);
-
-  const columns: DataTableColumn<IndexedBetRow>[] = React.useMemo(
-    () => [
-      {
-        key: "betId",
-        header: "Bet ID",
-        render: (row) => <span className="font-mono text-white font-medium">{row.betId}</span>,
-        cellClassName: "w-20",
-      },
-      {
-        key: "game",
-        header: "Game",
-        render: (row) => (
-          <span className="text-slate-200">
-            {row.gameId ? gameLabelById.get(row.gameId.toLowerCase()) ?? shortHex(row.gameId) : "—"}
-          </span>
-        ),
-      },
-      {
-        key: "state",
-        header: "Status",
-        render: (row) => <StatusBadge status={mapBetState(row.state)} label={row.state} />,
-      },
-      {
-        key: "asset",
-        header: "Asset",
-        render: (row) => (
-          <span className="text-slate-300">
-            {row.asset ? assetLabelByAddress.get(row.asset.toLowerCase()) ?? shortHex(row.asset) : "—"}
-          </span>
-        ),
-      },
-      {
-        key: "player",
-        header: "Player",
-        render: (row) => (
-          <span className="inline-flex items-center gap-1 font-mono text-slate-400">
-            {shortHex(row.player)}
-            {row.player && <CopyButton value={row.player} label="Copy player address" />}
-          </span>
-        ),
-      },
-      {
-        key: "event",
-        header: "Last Event",
-        render: (row) => <span className="text-slate-300">{row.lastEventName || "—"}</span>,
-      },
-      {
-        key: "updated",
-        header: "Updated",
-        render: (row) => <span className="text-slate-400">{formatRelativeTime(row.updatedAt)}</span>,
-      },
-      {
-        key: "tx",
-        header: "Tx",
-        render: (row) => {
-          if (!row.lastTxHash) return <span className="text-slate-500">—</span>;
-          return (
-            <span className="inline-flex items-center gap-2 font-mono text-slate-400">
-              <span>{shortHex(row.lastTxHash)}</span>
-              {explorerBaseUrl ? (
-                <a
-                  href={`${explorerBaseUrl}/tx/${row.lastTxHash}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-emerald-300 transition-colors hover:text-emerald-200"
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  View
-                </a>
-              ) : null}
-            </span>
-          );
-        },
-      },
-    ],
-    [assetLabelByAddress, explorerBaseUrl, gameLabelById]
-  );
+  }, [bets, statusFilter]);
 
   return (
     <PageTransition pageKey="bets">
       <main className="max-w-[1440px] mx-auto px-6 py-12 md:py-16">
-        
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-6">
+        <div className="relative z-10 mb-8 flex flex-col items-start justify-between gap-6 md:flex-row md:items-end">
           <div>
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">My Tickets</h1>
-            <p className="text-white/50 text-lg">Your complete wagering history across all ArbiGameFi smart contracts.</p>
+            <h1 className="mb-2 text-4xl font-bold tracking-tight text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.1)] md:text-5xl">
+              My Tickets
+            </h1>
+            <p className="text-sm font-mono uppercase tracking-widest text-white/40">
+              Decentralized Wagering Ledger
+            </p>
           </div>
-          
-          <div className="flex gap-2 p-1 bg-[#0a0a0a] border border-white/5 rounded-xl">
-             {STATUS_TABS.map((tab) => (
-               <button 
-                 key={tab.key}
-                 onClick={() => setStatusFilter(tab.key as StatusFilter)}
-                 className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${statusFilter === tab.key ? 'bg-white/10 text-white shadow' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
-               >
-                 {tab.label}
-               </button>
-             ))}
+
+          <div className="flex gap-2 rounded-[1.25rem] border border-white/10 bg-[#050505] p-1.5 shadow-[inset_0_2px_10px_rgba(0,0,0,0.8)]">
+            {STATUS_TABS.map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setStatusFilter(tab.key as StatusFilter)}
+                className={cn(
+                  "rounded-xl px-5 py-2.5 text-xs font-bold uppercase tracking-widest transition-all",
+                  statusFilter === tab.key
+                    ? "border border-white/20 bg-white/10 text-white shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+                    : tab.key === "won"
+                      ? "text-green-500/40 hover:bg-green-500/10 hover:text-green-400"
+                      : "text-white/30 hover:bg-white/5 hover:text-white"
+                )}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Global Audit View using standard component */}
-        <AuditTabs activeColorClass="border-blue-400 text-blue-400">
-           <AuditTableHeader>
-              <div className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_1fr_100px] text-white/40 font-bold uppercase tracking-wider text-[10px]">
-                  <div>Date / Block</div>
-                  <div>Game / Result Hash</div>
-                  <div>Wager</div>
-                  <div>Payout</div>
-                  <div>Status</div>
-                  <div className="text-right">Action</div>
+        <div className="relative overflow-hidden rounded-[2.5rem] border border-white/5 bg-gradient-to-b from-[#0a0a0a] to-[#020202] p-8 shadow-[0_20px_50px_rgba(0,0,0,0.8)]">
+          <AuditTabs activeColorClass="border-blue-500/50 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.3)] bg-blue-500/10">
+            <AuditTableHeader>
+              <div className="mb-4 grid grid-cols-[1.5fr_1.5fr_1fr_1fr_1fr_100px] border-b border-white/5 pb-4 text-[10px] font-bold uppercase tracking-[0.2em] text-white/30">
+                <div>Timestamp / Block</div>
+                <div>Protocol / Target</div>
+                <div>Capital At Risk</div>
+                <div>Settlement</div>
+                <div>Status</div>
+                <div className="text-right">Action</div>
               </div>
-           </AuditTableHeader>
+            </AuditTableHeader>
 
-           {isLoading ? (
-             <div className="py-20 text-center text-white/30">Loading tickets...</div>
-           ) : filteredBets.length === 0 ? (
-             <div className="py-20 text-center text-white/30">No tickets found for the current selection.</div>
-           ) : (
-             filteredBets.map((row) => {
-               const gameLabel = row.gameId ? gameLabelById.get(row.gameId.toLowerCase()) ?? shortHex(row.gameId) : "—";
-               const assetSymbol = row.asset ? assetLabelByAddress.get(row.asset.toLowerCase()) ?? shortHex(row.asset) : "—";
-               const status = mapBetState(row.state);
-               
-               const decimals = row.asset ? assetDecimalsByAddress.get(row.asset.toLowerCase()) ?? 18 : 18;
-               const payoutBigInt = (row as any).payout ? BigInt((row as any).payout) : null;
-               
-               return (
-                 <Link key={row.betId} href={`/bets/${row.betId}`}>
-                    <AuditTableRow className="cursor-pointer group">
+            <div className="flex min-h-[360px] flex-col gap-3">
+              {isLoading ? (
+                <div className="rounded-[1.5rem] border border-white/5 bg-[#050505] p-8 text-center text-[11px] font-bold uppercase tracking-[0.2em] text-white/28">
+                  Synchronizing indexed ticket stream
+                </div>
+              ) : filteredBets.length === 0 ? (
+                <div className="rounded-[1.5rem] border border-white/5 bg-[#050505] p-8 text-center text-[11px] font-bold uppercase tracking-[0.2em] text-white/28">
+                  No tickets found in this slice
+                </div>
+              ) : (
+                filteredBets.map((row: IndexedBetRow) => {
+                  const gameLabel = row.gameId
+                    ? (gameLabelById.get(row.gameId.toLowerCase()) ?? shortHex(row.gameId))
+                    : "—";
+                  const assetSymbol = row.asset
+                    ? (assetLabelByAddress.get(row.asset.toLowerCase()) ?? shortHex(row.asset))
+                    : "—";
+                  const status = mapBetState(row.state);
+                  const decimals = row.asset
+                    ? (assetDecimalsByAddress.get(row.asset.toLowerCase()) ?? 18)
+                    : 18;
+                  const payoutBigInt = (row as { payout?: string }).payout
+                    ? BigInt((row as { payout?: string }).payout ?? "0")
+                    : null;
+                  const stakeBigInt = (row as { stake?: string }).stake
+                    ? BigInt((row as { stake?: string }).stake ?? "0")
+                    : 0n;
+                  const isOpen = row.state === "placed" || row.state === "randomReady";
+                  const statusLabel =
+                    status === "won"
+                      ? "Confirmed"
+                      : isOpen
+                        ? "In Progress"
+                        : status === "cancelled"
+                          ? "Refunded"
+                          : "Burned";
+                  const statusClass =
+                    status === "won"
+                      ? "border-green-500/30 bg-green-500/10 text-green-400 shadow-[0_0_10px_rgba(34,197,94,0.2)]"
+                      : isOpen
+                        ? "border-blue-500/30 bg-blue-500/10 text-blue-400 shadow-[0_0_10px_rgba(59,130,246,0.2)]"
+                        : "border-white/10 bg-white/5 text-white/40";
+                  const rowTone =
+                    status === "won"
+                      ? "hover:border-green-500/40 hover:shadow-[0_0_25px_rgba(34,197,94,0.1)]"
+                      : isOpen
+                        ? "hover:border-blue-500/40 hover:shadow-[0_0_25px_rgba(59,130,246,0.15)]"
+                        : "hover:border-white/20 hover:shadow-[0_0_25px_rgba(255,255,255,0.05)]";
+                  const actionLabel =
+                    status === "won" ? "Receipt ↗" : isOpen ? "Decrypt ↗" : "Archive ↗";
+
+                  return (
+                    <Link
+                      key={row.betId}
+                      href={`/bets/${row.betId}`}
+                      className={cn(
+                        "group cursor-pointer rounded-[1.5rem] border border-white/5 bg-[#050505] p-4 transition-all",
+                        rowTone,
+                        status !== "won" && !isOpen ? "opacity-70 hover:opacity-100" : ""
+                      )}
+                    >
                       <div className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_1fr_100px] items-center">
                         <AuditTableCell>
                           <div className="flex flex-col gap-1">
-                            <span className="text-white">{formatRelativeTime(row.updatedAt)}</span>
-                            <span className="text-[10px] font-mono text-white/30 hidden sm:block">ID: {row.betId}</span>
+                            <span className="text-sm font-mono text-white/80 transition-colors group-hover:text-white">
+                              {new Date(row.updatedAt).toLocaleDateString()} ·{" "}
+                              {formatRelativeTime(row.updatedAt)}
+                            </span>
+                            <span className="hidden text-[10px] font-mono uppercase tracking-widest text-white/20 sm:block">
+                              BLK: {(row as { blockNumber?: number }).blockNumber ?? "—"}
+                            </span>
                           </div>
                         </AuditTableCell>
                         <AuditTableCell>
                           <div className="flex flex-col gap-1">
-                            <span className="text-white font-bold">{gameLabel}</span>
-                            <span className="text-[10px] font-mono text-white/40">{shortHex(row.lastTxHash)}</span>
+                            <span
+                              className={cn(
+                                "font-bold tracking-tight",
+                                status === "won"
+                                  ? "text-green-50"
+                                  : isOpen
+                                    ? "text-blue-100"
+                                    : "text-white/70"
+                              )}
+                            >
+                              {gameLabel}
+                            </span>
+                            <span
+                              className={cn(
+                                "max-w-[140px] truncate text-[10px] font-mono uppercase tracking-widest",
+                                status === "won"
+                                  ? "text-white/30"
+                                  : isOpen
+                                    ? "text-blue-400/50"
+                                    : "text-white/30"
+                              )}
+                            >
+                              {shortHex(row.lastTxHash)}
+                            </span>
                           </div>
                         </AuditTableCell>
                         <AuditTableCell>
-                           <span className="font-mono text-sm text-white/70">
-                             {(row as any).stake ? formatUnits(BigInt((row as any).stake), decimals) : '0.00'} {assetSymbol}
-                           </span>
+                          <span
+                            className={cn(
+                              "font-mono text-sm font-bold",
+                              status === "won" ? "text-white/80" : "text-white/50"
+                            )}
+                          >
+                            {`${formatUnits(stakeBigInt, decimals)} ${assetSymbol}`}
+                          </span>
                         </AuditTableCell>
                         <AuditTableCell>
-                           <span className={`font-mono text-sm ${status === 'won' ? 'text-green-400 font-bold' : 'text-white/40'}`}>
-                             {payoutBigInt != null ? `${formatUnits(payoutBigInt, decimals)} ${assetSymbol}` : '--'}
-                           </span>
+                          <span
+                            className={cn(
+                              "font-mono text-sm",
+                              payoutBigInt != null && payoutBigInt > 0n
+                                ? "text-lg font-bold text-green-400 drop-shadow-[0_0_8px_rgba(34,197,94,0.4)]"
+                                : isOpen
+                                  ? "text-white/20"
+                                  : "text-white/50"
+                            )}
+                          >
+                            {payoutBigInt != null && payoutBigInt > 0n
+                              ? `+${formatUnits(payoutBigInt, decimals)} ${assetSymbol}`
+                              : isOpen
+                                ? "PENDING"
+                                : status === "cancelled"
+                                  ? "REFUNDED"
+                                  : `-${formatUnits(stakeBigInt, decimals)} ${assetSymbol}`}
+                          </span>
                         </AuditTableCell>
                         <AuditTableCell>
-                           <span className={`py-1 px-2 border font-bold text-[10px] uppercase rounded-md shrink-0 ${
-                             status === 'won' ? 'border-green-500/20 bg-green-500/10 text-green-400' :
-                             status === 'lost' ? 'border-white/10 bg-white/5 text-white/40' :
-                             'border-blue-500/20 bg-blue-500/10 text-blue-400 animate-pulse'
-                           }`}>
-                              {row.state}
-                           </span>
+                          <span
+                            className={cn(
+                              "shrink-0 rounded-lg border px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest",
+                              statusClass
+                            )}
+                          >
+                            {statusLabel}
+                          </span>
                         </AuditTableCell>
-                        <AuditTableCell className="justify-end transition-transform group-hover:translate-x-1 text-white/30 group-hover:text-white">
-                           View Receipt →
+                        <AuditTableCell
+                          className={cn(
+                            "justify-end text-[10px] font-bold uppercase tracking-widest transition-transform group-hover:translate-x-1",
+                            status === "won"
+                              ? "text-white/20 group-hover:text-green-400"
+                              : isOpen
+                                ? "text-white/20 group-hover:text-blue-400"
+                                : "text-white/20 group-hover:text-white/50"
+                          )}
+                        >
+                          {actionLabel}
                         </AuditTableCell>
                       </div>
-                    </AuditTableRow>
-                 </Link>
-               );
-             })
-           )}
-        </AuditTabs>
-
+                    </Link>
+                  );
+                })
+              )}
+            </div>
+          </AuditTabs>
+        </div>
       </main>
     </PageTransition>
   );

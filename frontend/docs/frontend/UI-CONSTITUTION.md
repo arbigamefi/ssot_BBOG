@@ -1,143 +1,299 @@
-# UI Constitution — SSOT Frontend v2
+# UI Constitution — ArbiGameFi Frontend v2
 
-**Status**: Draft → Gate-0
+**Status**: Active baseline
 
-This document is the **single source of truth** for visual and interaction consistency.
-It plays the same role as an SSOT “spec/constitution” on the contract side.
+**Effective date**: 2026-03-23
 
-Conventions:
-- **MUST**: non-negotiable rules (enforced via components/lint/review)
-- **SHOULD**: strong recommendations; deviations require justification in PR
-- **MAY**: optional patterns
+This document is the active constitution for the frontend.
+It defines what is currently binding for layout, interaction, and visual consistency.
 
-Related documents (all treated as SSOT for frontend governance):
-- PRD: `docs/frontend/PRD.md`
-- Roadmap: `docs/frontend/ROADMAP.md`
-- Page specs: `docs/frontend/PAGE-SPECS/`
-- ADRs: `docs/frontend/adr/`
-- Component inventory: `docs/frontend/COMPONENT-INVENTORY.md`
-- Copy style: `docs/frontend/COPY-STYLE.md`
+## 1. Source Of Truth
 
----
+The frontend now uses the following priority order:
 
-## 1) Design System Foundations (Tokens)
+1. `frontend/apps/web/src/app/prototype/ui-ux-v2-*`
+   - the only first source for visual hierarchy and page structure
+2. frontend brand and copy documents
+   - whitepaper
+   - `BRAND-STARTER-PACK-2026-03.md`
+   - `MESSAGING-COPY-PACK-2026-03.md`
+   - `LANDING-COPY-DRAFT-2026-03.md`
+3. current production functionality
+   - provider
+   - sdk
+   - runtime
+   - indexer
+   - tx flow
+4. archive frontend references
+   - interaction reference only
+   - never primary page structure
 
-### 1.1 Theme + Tokens
-- The UI MUST be expressed through a small set of tokens:
-  - Color semantic roles: `bg`, `fg`, `muted`, `accent`, `primary`, `destructive`, `border`, `ring`
-  - Radii: `sm`, `md`, `lg`, `xl`, `2xl`
-  - Shadows: `sm`, `md`, `lg`
-  - Spacing scale: Tailwind default (4px baseline)
+Any frontend implementation that conflicts with the current v2 prototypes is wrong unless the prototypes are updated first.
 
-- Tokens MUST be implemented using Tailwind + CSS variables (shadcn style), not inline hex codes scattered across components.
+## 2. Active Product Families
 
-### 1.2 Typography
-- Font sizes SHOULD follow a small set of roles:
-  - `text-sm` (secondary), `text-base` (default), `text-lg` (section header), `text-2xl` (page header)
-- Numbers (prices, balances, bps) MUST use tabular numbers (`tabular-nums`) where applicable.
+The frontend is one product with three route families.
 
-### 1.3 Layout & Spacing
-- Page content MUST be placed in a centered container with consistent max width.
-- Vertical rhythm MUST use a consistent scale (e.g. `space-y-6`, `gap-6`).
-- Cards MUST have consistent padding (`p-4`/`p-6`) and rounding (`rounded-2xl`).
+### 2.1 Acquisition
 
----
+Routes:
 
-## 2) Component Governance
+- `/`
+- `/games`
 
-### 2.1 Component Sources
-- Base primitives MUST be shadcn/ui (Radix) where available.
-- App-specific composites MUST live in `features/*/ui` or `packages/ui/src/components/` (depending on reusability).
+Purpose:
 
-### 2.2 Component Contract
-- Components in `packages/ui` MUST be **pure presentational**:
-  - MUST accept props and render.
-  - MUST NOT import protocol SDK, wallet clients, or fetch data.
+- explain the product fast
+- build trust fast
+- route a user into a room fast
 
-### 2.3 States (Required)
-Every interactive component MUST support:
-- Loading
-- Disabled
-- Error (when applicable)
-- Empty (for list/table components)
+Shell:
 
-All states MUST be visually consistent across the app.
+- `LandingShell`
 
----
+### 2.2 Gameplay
 
-## 3) Transaction UX Standard (Institution-Grade)
+Canonical routes:
 
-All write actions (bet, deposit, redeem, bind referrer, refund, claim) MUST use the standardized flow:
+- `/roulette`
+- `/dice`
+- `/cointoss`
+- `/keno`
 
-1. **Plan**: compute required steps (approve? placeBet? value?) and show user a preview.
-2. **Preflight**: simulate the tx(s) and surface deterministic errors before signing.
-3. **Stepper**: render explicit steps:
-   - Step 1: Approve (if needed)
-   - Step 2: Execute action
-4. **Receipt**: confirm mined status and show tx hash.
-5. **Reconcile**: subscribe to events and update state to chain truth.
+Compatibility routes:
 
-### 3.1 User Guarantees
-- UI MUST clearly show:
-  - Stake (ERC20) amount and asset
-  - VRF fee (native) as `msg.value`
-  - Target approval spender (`bank`), not `hub`
-  - Max house edge bps the user agrees to
+- `/games/[slug]`
 
-### 3.2 Error Messages
-- UI MUST show **DomainError** messages.
-- UI MUST NOT show raw revert selectors or hex revert data.
+Purpose:
 
----
+- let a user understand one room in one glance
+- choose a target
+- set the ticket
+- place the bet
 
-## 4) Data Presentation Standards
+Shell:
 
-### 4.1 Amount Formatting
-- All formatting MUST be centralized helpers (no ad-hoc `toFixed` scattered in UI).
-- USDC-like assets MUST display with 2–6 decimals depending on magnitude.
-- Percent/bps MUST include unit (`bps` or `%`) and use consistent rounding.
+- `RoomShell`
 
-### 4.2 Tables & Lists
-- Tables SHOULD use consistent column alignment:
-  - Text left
-  - Numbers right (tabular)
-- Empty states MUST be intentional, not blank whitespace.
+### 2.3 Trust
 
----
+Canonical routes:
 
-## 5) Page Structure Standard
+- `/invest`
+- `/bets`
+- `/bets/[betId]`
+- `/account`
+- `/claims`
+- `/referral`
+- `/ops`
 
-Every page MUST follow:
-- Page header: title + short subtitle + release badge
-- Primary card(s) for core action
-- Secondary card(s) for history/advanced
-- Footer with links to docs/discord/support (optional)
+Compatibility routes:
 
-New pages MUST be specified in `docs/frontend/PAGE-SPECS/` before implementation.
+- `/liquidity`
 
----
+Purpose:
 
-## 6) Storybook Policy
+- explain balances
+- explain liabilities
+- explain eligibility
+- explain release and operational facts
 
-- Every new UI component in `packages/ui` MUST have:
-  - a Storybook story
-  - at least: default, loading, disabled, error (if relevant)
-- Feature components MAY have stories if they are purely presentational.
+Shell:
 
----
+- `TrustShell`
 
-## 7) Dark Mode
+## 3. Layout Constitution
 
-- The app MUST support dark mode (CSS variables), matching shadcn conventions.
-- Color usage MUST be semantic tokens, not fixed colors.
+### 3.1 Prototype-first rule
 
----
+Every formal route MUST map to a current v2 prototype before major UI work begins.
 
-## 8) Review Checklist (MUST)
+### 3.2 One dominant action per first fold
 
-A PR that modifies UI MUST answer:
-1. Does this change violate any MUST rule? If yes, why?
-2. Are tokens used instead of hardcoded colors?
-3. Are transaction flows using the standard stepper?
-4. Are new components covered by Storybook stories?
-5. Does the page have a corresponding page spec?
+The first fold MUST have one dominant action only.
+
+Examples:
+
+- `/`: enter rooms
+- `/games`: choose a room
+- `/roulette`: review or place a ticket
+- `/invest`: deposit or redeem
+- `/claims`: extract claimable value
+
+### 3.3 Gameplay first fold
+
+Gameplay first folds MUST be structured as:
+
+1. top game selector
+2. compact room HUD
+3. board/stage area
+4. compact ticket rail
+5. lower room tabs below the fold
+
+Gameplay pages MUST NOT lead with:
+
+- release digest
+- module identity
+- indexer lag
+- protocol explanation cards
+- multi-card room heroes
+
+### 3.4 Trust first fold
+
+Trust routes MUST feel calmer and more precise than gameplay routes.
+
+Trust routes MUST emphasize:
+
+- facts
+- balances
+- eligibility
+- tables
+- action clarity
+
+Trust routes MUST NOT reuse gameplay theatrical styling as the dominant visual language.
+
+### 3.5 Acquisition first fold
+
+Acquisition routes MUST feel editorial, premium, and low-noise.
+
+They MUST include:
+
+- value proposition
+- primary CTA
+- secondary CTA only if clearly subordinate
+- lightweight proof
+
+They MUST NOT read like:
+
+- dashboards
+- protocol control rooms
+- room detail pages
+
+## 4. Visual System Rules
+
+### 4.1 Token discipline
+
+Implementation MUST converge toward reusable visual roles rather than page-local one-off styling.
+
+Allowed roles:
+
+- background
+- surface
+- elevated surface
+- border
+- text primary
+- text secondary
+- accent
+- success
+- warning
+
+Current prototypes may still contain hardcoded values, but implementation work MUST normalize them into reusable roles.
+
+### 4.2 Glow discipline
+
+Glow is allowed only as support.
+
+Glow MUST NOT replace hierarchy.
+If borders, glow, and gradients all carry the same visual weight, the page is wrong.
+
+### 4.3 Typography discipline
+
+Typography MUST do more hierarchy work than borders.
+Numbers that represent balances, stakes, prices, blocks, or rates SHOULD use tabular numerals.
+
+### 4.4 Copy discipline
+
+Prototype-note language is forbidden in formal UI.
+
+Do not render copy such as:
+
+- `this page should feel like`
+- `this route should`
+- `the visual language should`
+
+Formal UI copy must be user-facing product language only.
+
+## 5. Shared Component Constitution
+
+The following shared components or component families are required:
+
+- `HeroProofRibbon`
+- `RoomEntryCard`
+- `RoomSelector`
+- `RoomHud`
+- `TicketRailBase`
+- `LowerRoomTabs`
+- `TrustStatsStrip`
+- `TrustTableShell`
+
+The following functional components SHOULD be preserved and re-skinned rather than replaced:
+
+- `GameBetPanel`
+- `SharedBetSlip`
+- `RouletteBoard`
+- audit/data table components
+- transaction stepper and quote flow
+
+## 6. Transaction UX Constitution
+
+All write actions MUST preserve the current standardized transaction flow:
+
+1. plan
+2. preview
+3. preflight
+4. approval if required
+5. submit
+6. receipt
+7. reconcile
+
+Visual rewrites MUST NOT bypass the current provider/sdk/runtime/indexer truth path.
+
+## 7. Route And Redirect Constitution
+
+Canonical public routes are:
+
+- `/`
+- `/games`
+- `/roulette`
+- `/dice`
+- `/cointoss`
+- `/keno`
+- `/invest`
+- `/bets`
+- `/bets/[betId]`
+- `/account`
+- `/claims`
+- `/referral`
+- `/ops`
+
+Compatibility routes remain valid during transition:
+
+- `/games/[slug]`
+- `/liquidity`
+
+Long-term product navigation MUST prioritize canonical routes.
+
+## 8. Historical Documents
+
+The following documents are no longer active visual sources.
+They are historical references only:
+
+- `UI-UX-ARCHITECTURE-PACK-2026-03.md`
+- `UI-UX-WIREFRAME-PACK-2026-03.md`
+- `FRONTEND-ROUTE-REVIEW-2026-03.md`
+- `BETSWIRL-GAP-ANALYSIS-2026-03.md`
+- `ACTION-PLAN-UI-PRODUCTIZATION.md`
+- `PROTOTYPE-FREEZE-REVIEW-2026-03.md`
+- `PROTOTYPE-IMPROVEMENT-MATRIX-2026-03.md`
+- `PROTOTYPE-FREEZE-CHECKLIST-2026-03.md`
+- `FRONTEND-STATE-AND-PROTOTYPE-REVIEW-2026-03-16.md`
+
+## 9. Review Checklist
+
+A frontend UI change is acceptable only if all answers are yes:
+
+1. Does the route map to a current v2 prototype?
+2. Does the page obey the correct shell family?
+3. Is the first fold dominated by one action?
+4. Is the copy product-facing and free of prototype-note language?
+5. Does the change preserve the existing protocol truth and transaction flow?

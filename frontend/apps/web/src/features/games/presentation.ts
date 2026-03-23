@@ -23,7 +23,7 @@ export type GamePresentation = {
 const GAME_PRESENTATION: Record<string, GamePresentation> = {
   dice: {
     icon: "🎲",
-    listDescription: "Set a cap, size the ticket, and roll through a room-first dice flow.",
+    listDescription: "Set the cap, size the ticket, and step into a fast dice room.",
     detailDescription:
       "Choose a cap, preview the ticket, and place the bet with settlement still visible underneath the room layer.",
     helpLabel: "Cap-driven payout profile",
@@ -41,7 +41,7 @@ const GAME_PRESENTATION: Record<string, GamePresentation> = {
       { title: "Size the slip", body: "Adjust amount and rounds without leaving the room." },
       { title: "Watch the roll", body: "Follow the live table after the ticket is sent." },
     ],
-    cardFacts: ["Single asset", "Fast ticket", "Live settlement"],
+    cardFacts: ["Fast ticket", "Live settlement", "Single asset"],
     theme: {
       badgeClassName: "border-sky-400/30 bg-sky-400/10 text-sky-100",
       ambientClassName:
@@ -53,7 +53,7 @@ const GAME_PRESENTATION: Record<string, GamePresentation> = {
   },
   "coin-toss": {
     icon: "🪙",
-    listDescription: "Heads or tails with the simplest possible room entry and the same on-chain settlement guarantees.",
+    listDescription: "Heads or tails with the cleanest room entry on the floor.",
     detailDescription:
       "Select heads or tails, review the ticket, and place a clean binary bet without extra room clutter.",
     helpLabel: "Binary outcome flow",
@@ -71,7 +71,7 @@ const GAME_PRESENTATION: Record<string, GamePresentation> = {
       { title: "Set the amount", body: "Use chips or type the exact stake on the slip." },
       { title: "Check the outcome", body: "Track the result without extra room clutter." },
     ],
-    cardFacts: ["Binary play", "Quick entry", "Single outcome"],
+    cardFacts: ["Quick entry", "Binary play", "Single outcome"],
     theme: {
       badgeClassName: "border-amber-400/30 bg-amber-400/10 text-amber-100",
       ambientClassName:
@@ -103,7 +103,7 @@ const GAME_PRESENTATION: Record<string, GamePresentation> = {
       { title: "Build the ticket", body: "Keep stake, rounds, and review on one compact slip." },
       { title: "Stay on the table", body: "Ledger and protocol detail remain below the fold." },
     ],
-    cardFacts: ["0-36 table", "Standard bets", "Clear slip"],
+    cardFacts: ["0-36 table", "Clear slip", "Standard bets"],
     theme: {
       badgeClassName: "border-rose-400/30 bg-rose-400/10 text-rose-100",
       ambientClassName:
@@ -115,7 +115,7 @@ const GAME_PRESENTATION: Record<string, GamePresentation> = {
   },
   keno: {
     icon: "🔢",
-    listDescription: "Pick the board, size the ticket, and keep the room centered on the Keno surface.",
+    listDescription: "Pick the board, size the ticket, and keep the draw centered on the room.",
     detailDescription:
       "Use the Keno board first, then size the ticket and follow settlement without dropping into a form-heavy view.",
     helpLabel: "Packed number selection",
@@ -133,7 +133,7 @@ const GAME_PRESENTATION: Record<string, GamePresentation> = {
       { title: "Set the stake", body: "Choose chips and rounds on the side slip." },
       { title: "Follow the draw", body: "Use the live table to watch each ticket settle." },
     ],
-    cardFacts: ["Board-first", "Repeat plays", "Live draw"],
+    cardFacts: ["Board-first", "Live draw", "Repeat plays"],
     theme: {
       badgeClassName: "border-violet-400/30 bg-violet-400/10 text-violet-100",
       ambientClassName:

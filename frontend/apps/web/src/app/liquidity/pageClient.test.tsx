@@ -87,6 +87,7 @@ vi.mock("@ssot/ui", () => ({
       <span>{message}</span>
     </div>
   ),
+  GlassCard: ({ children }: any) => <section>{children}</section>,
   Input: (props: any) => <input {...props} />,
   Label: ({ children, htmlFor }: any) => <label htmlFor={htmlFor}>{children}</label>,
   PageHeader: ({ title, description, actions }: any) => (
@@ -104,7 +105,11 @@ vi.mock("@ssot/ui", () => ({
     </div>
   ),
   TabBar: ({ tabs }: any) => (
-    <div>{tabs.map((tab: any) => <span key={tab.key}>{tab.label}</span>)}</div>
+    <div>
+      {tabs.map((tab: any) => (
+        <span key={tab.key}>{tab.label}</span>
+      ))}
+    </div>
   ),
   TxStatusChip: ({ status }: any) => <span>{status}</span>,
   TxStepper: ({ title, subtitle }: any) => (
@@ -113,6 +118,7 @@ vi.mock("@ssot/ui", () => ({
       <span>{subtitle}</span>
     </div>
   ),
+  cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" "),
   toast: {
     success: vi.fn(),
     error: vi.fn()
@@ -137,15 +143,13 @@ describe("LiquidityPageClient", () => {
   it("frames liquidity as an LP readout instead of a generic vault form", () => {
     render(<LiquidityPageClient />);
 
-    expect(
-      screen.getByText(
-        "Read the bank like an LP: NAV backs shares, reserved protects live risk, and optional exits only clear when headroom stays above the buffer."
-      )
-    ).toBeDefined();
-    expect(screen.getByText("NAV is what backs shares.")).toBeDefined();
-    expect(screen.getByText("Exits clear only if headroom remains.")).toBeDefined();
-    expect(screen.getByText("PF and XP are not LP backing.")).toBeDefined();
-    expect(screen.getByText("How to read this bank")).toBeDefined();
-    expect(screen.getByText("Connect wallet to deposit liquidity")).toBeDefined();
+    expect(screen.getByText("Provide Liquidity.")).toBeDefined();
+    expect(screen.getByText("Earn the Mathematical Edge.")).toBeDefined();
+    expect(screen.getByText(/protocol-owned Isolated Banks/i)).toBeDefined();
+    expect(screen.getByText("Current APY")).toBeDefined();
+    expect(screen.getByText("Total Free Capital (R)")).toBeDefined();
+    expect(screen.getByText("Pending Liabilities")).toBeDefined();
+    expect(screen.getByText("Max Ticket Cap (1.5% R)")).toBeDefined();
+    expect(screen.getByText("Contract Address")).toBeDefined();
   });
 });

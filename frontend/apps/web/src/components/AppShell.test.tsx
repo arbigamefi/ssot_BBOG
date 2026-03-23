@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import { render, screen, cleanup } from "@testing-library/react";
 import * as React from "react";
 import { AppShell } from "./AppShell";
 
@@ -41,7 +41,12 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("@ssot/ui", () => ({
-  ReadOnlyBanner: ({ reason }: any) => <div data-testid="readonly-banner">{reason}</div>
+  ReadOnlyBanner: ({ reason }: any) => <div data-testid="readonly-banner">{reason}</div>,
+  ShellHeader: ({ children }: any) => <header>{children}</header>,
+  ShellHeaderBrand: ({ name }: any) => <div>{name}</div>,
+  ShellHeaderNav: ({ children }: any) => <nav>{children}</nav>,
+  ShellHeaderActions: ({ children }: any) => <div>{children}</div>,
+  cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" ")
 }));
 
 describe("AppShell", () => {
@@ -55,32 +60,20 @@ describe("AppShell", () => {
         <div>content</div>
       </AppShell>
     );
-    expect(screen.getByText("ArbiGameFi")).toBeDefined();
-    expect(screen.getByText("On-chain casino")).toBeDefined();
+    expect(screen.getAllByText("ArbiGameFi").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("renders primary navigation links and demotes advanced routes", () => {
+  it("renders trust-route navigation links", () => {
     render(
       <AppShell>
         <div>content</div>
       </AppShell>
     );
-    const primaryLinks = [
-      "Home",
-      "Games",
-      "Bets",
-      "Liquidity",
-      "Account"
-    ];
+    const primaryLinks = ["Games", "Liquidity", "Bets", "Claims", "Affiliates", "Account"];
     for (const label of primaryLinks) {
       const links = screen.getAllByText(label);
       expect(links.length).toBeGreaterThanOrEqual(1);
     }
-
-    expect(screen.getByText("Advanced")).toBeDefined();
-    expect(screen.getAllByText("Claims").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Referral").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Ops").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders at least one WalletButton", () => {
@@ -113,35 +106,15 @@ describe("AppShell", () => {
     expect(screen.getByText("Hello")).toBeDefined();
   });
 
-  it("has a hamburger menu button with aria-label", () => {
+  it("marks the active trust route in the prototype header nav", () => {
     render(
       <AppShell>
         <div>content</div>
       </AppShell>
     );
-    const btns = screen.getAllByLabelText("Toggle navigation menu");
-    expect(btns.length).toBeGreaterThanOrEqual(1);
-    expect(btns[0]!.getAttribute("aria-expanded")).toBe("false");
-  });
-
-  it("toggles mobile menu on hamburger click", () => {
-    render(
-      <AppShell>
-        <div>content</div>
-      </AppShell>
-    );
-    const btn = screen.getAllByLabelText("Toggle navigation menu")[0]!;
-
-    // Initially closed
-    expect(btn.getAttribute("aria-expanded")).toBe("false");
-
-    // Click to open
-    fireEvent.click(btn);
-    expect(btn.getAttribute("aria-expanded")).toBe("true");
-
-    // Click to close
-    fireEvent.click(btn);
-    expect(btn.getAttribute("aria-expanded")).toBe("false");
+    const betsLink = screen.getAllByText("Bets")[0]!;
+    expect(betsLink.className).toContain("text-white");
+    expect(betsLink.className).toContain("border-b-2");
   });
 
   it("nav links point to correct hrefs", () => {
@@ -153,21 +126,10 @@ describe("AppShell", () => {
     const gamesLink = screen.getAllByText("Games")[0]!;
     expect(gamesLink.closest("a")?.getAttribute("href")).toBe("/games");
 
+    const investLink = screen.getAllByText("Liquidity")[0]!;
+    expect(investLink.closest("a")?.getAttribute("href")).toBe("/invest");
+
     const betsLink = screen.getAllByText("Bets")[0]!;
     expect(betsLink.closest("a")?.getAttribute("href")).toBe("/bets");
-  });
-
-  it("uses minimal header chrome on game room routes", () => {
-    state.pathname = "/games/dice";
-    render(
-      <AppShell>
-        <div>content</div>
-      </AppShell>
-    );
-
-    expect(screen.getByText("All Games")).toBeDefined();
-    expect(screen.queryByText("On-chain casino")).toBeNull();
-    expect(screen.queryByText("Advanced")).toBeNull();
-    expect(screen.queryByText("Home")).toBeNull();
   });
 });

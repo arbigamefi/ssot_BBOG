@@ -1,8 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import * as React from "react";
-
-const pushMock = vi.fn();
 
 const state = {
   release: null as any,
@@ -12,11 +10,11 @@ const state = {
   betsLoading: false,
   betsError: null as Error | null,
   indexerStatus: { lastSyncedBlock: 321, lagBlocks: 4 },
-  account: null as string | null,
+  account: null as string | null
 };
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: pushMock }),
+  useRouter: () => ({ push: vi.fn() })
 }));
 
 vi.mock("next/link", () => ({
@@ -24,35 +22,35 @@ vi.mock("next/link", () => ({
     <a href={href} {...props}>
       {children}
     </a>
-  ),
+  )
 }));
 
 vi.mock("../../../ssot/release/ReleaseProvider", () => ({
   useRelease: () => ({
     release: state.release,
     readOnlyReason: state.readOnlyReason,
-    chainId: state.chainId,
-  }),
+    chainId: state.chainId
+  })
 }));
 
 vi.mock("../../../features/bets/useBetsByGame", () => ({
   useBetsByGame: () => ({
     data: state.bets,
     isLoading: state.betsLoading,
-    error: state.betsError,
-  }),
+    error: state.betsError
+  })
 }));
 
 vi.mock("../../../features/ops/useIndexer", () => ({
   useIndexer: () => ({
-    indexerStatus: state.indexerStatus,
-  }),
+    indexerStatus: state.indexerStatus
+  })
 }));
 
 vi.mock("../../../ssot/sdk", () => ({
   useSSOTSDK: () => ({
-    sdk: state.account ? { account: state.account } : null,
-  }),
+    sdk: state.account ? { account: state.account } : null
+  })
 }));
 
 vi.mock("../../../features/betting/ui/GameBetPanel", () => ({
@@ -61,7 +59,7 @@ vi.mock("../../../features/betting/ui/GameBetPanel", () => ({
       <div>{game.label}</div>
       <div>{children}</div>
     </div>
-  ),
+  )
 }));
 
 vi.mock("../../../components/Placeholder", () => ({
@@ -70,19 +68,24 @@ vi.mock("../../../components/Placeholder", () => ({
       <h2>{title}</h2>
       <p>{description}</p>
     </div>
-  ),
+  )
 }));
 
 vi.mock("../../../components/ConnectWalletPrompt", () => ({
-  ConnectWalletPrompt: ({ action }: any) => <div data-testid="connect-wallet-prompt">{action}</div>,
+  ConnectWalletPrompt: ({ action }: any) => <div data-testid="connect-wallet-prompt">{action}</div>
 }));
 
 vi.mock("../../../components/PageTransition", () => ({
-  PageTransition: ({ children }: any) => <div>{children}</div>,
+  PageTransition: ({ children }: any) => <div>{children}</div>
 }));
 
 vi.mock("@ssot/ui", () => ({
-  Button: ({ children, asChild }: any) => (asChild ? children : <button type="button">{children}</button>),
+  AuditTabs: ({ children }: any) => <div>{children}</div>,
+  AuditTableHeader: ({ children }: any) => <div>{children}</div>,
+  AuditTableRow: ({ children }: any) => <div>{children}</div>,
+  AuditTableCell: ({ children }: any) => <div>{children}</div>,
+  Button: ({ children, asChild }: any) =>
+    asChild ? children : <button type="button">{children}</button>,
   Card: ({ children }: any) => <section>{children}</section>,
   CardHeader: ({ children }: any) => <div>{children}</div>,
   CardTitle: ({ children }: any) => <h2>{children}</h2>,
@@ -123,24 +126,33 @@ vi.mock("@ssot/ui", () => ({
   ),
   KenoParamsForm: () => <div>Keno Params</div>,
   ReleaseBadge: ({ networkName }: any) => <span>{networkName}</span>,
+  RoomStrip: ({ title }: any) => <div>{title}</div>,
   RouletteParamsForm: () => <div>Roulette Params</div>,
+  DiceSlider: () => <div>Dice Slider</div>,
+  SharedBetSlip: ({ children }: any) => <div>{children}</div>,
   createDefaultRouletteSelection: () => ({ kind: "straight", number: 0 }),
   summarizeRouletteSelection: () => ({
     family: "Straight",
     display: "Straight 0",
     coverage: 1,
-    helper: "Single-number call.",
+    helper: "Single-number call."
   }),
-  StatusBadge: ({ label }: any) => <span>{label}</span>,
+  StatusBadge: ({ label, status }: any) => <span>{label ?? status}</span>,
   TabBar: ({ tabs, activeKey, onTabChange }: any) => (
     <div data-testid="tab-bar">
       {tabs.map((tab: any) => (
-        <button key={tab.key} type="button" data-active={tab.key === activeKey} onClick={() => onTabChange(tab.key)}>
+        <button
+          key={tab.key}
+          type="button"
+          data-active={tab.key === activeKey}
+          onClick={() => onTabChange(tab.key)}
+        >
           {tab.label}
         </button>
       ))}
     </div>
   ),
+  cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" ")
 }));
 
 import { GamePageClient } from "./pageClient";
@@ -149,15 +161,15 @@ const MOCK_RELEASE = {
   name: "Base Sepolia",
   releaseDigest: "0xdeadbeefcafefeed",
   contracts: {
-    hub: "0x1234567890abcdef1234567890abcdef12345678",
+    hub: "0x1234567890abcdef1234567890abcdef12345678"
   },
   assets: [
     {
       symbol: "USDC",
       decimals: 6,
       address: "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
-      bank: "0x49b9dc94d98c3d78224ca37abf05ec09af7c50ff",
-    },
+      bank: "0x49b9dc94d98c3d78224ca37abf05ec09af7c50ff"
+    }
   ],
   gamesMeta: [
     {
@@ -165,16 +177,16 @@ const MOCK_RELEASE = {
       slug: "dice",
       label: "Dice",
       module: "0x8fb66ccc25d07b252d282be646d24444c062c667",
-      paramsEncoding: "abi.encode(uint8 cap)",
+      paramsEncoding: "abi.encode(uint8 cap)"
     },
     {
       gameId: "0x2d2e6987fb3617c00abdd68d6c1f7eac28b7f9f96b25367e9b65dacaa0914aaa",
       slug: "roulette",
       label: "Roulette",
       module: "0x1111111111111111111111111111111111111111",
-      paramsEncoding: "abi.encode(uint8 kind, uint40 payload)",
-    },
-  ],
+      paramsEncoding: "abi.encode(uint8 kind, uint40 payload)"
+    }
+  ]
 };
 
 const MOCK_BETS = [
@@ -184,14 +196,13 @@ const MOCK_BETS = [
     state: "placed",
     player: "0x1111111111111111111111111111111111111111",
     updatedAt: Date.now() - 60_000,
-    lastTxHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-  },
+    lastTxHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
 ];
 
 describe("GamePageClient", () => {
   afterEach(() => {
     cleanup();
-    pushMock.mockReset();
     state.release = null;
     state.readOnlyReason = null;
     state.bets = [];
@@ -215,24 +226,10 @@ describe("GamePageClient", () => {
 
     render(<GamePageClient slug="dice" />);
 
-    expect(screen.getAllByText("Dice").length).toBeGreaterThan(0);
-    expect(screen.getByTestId("game-bet-panel")).toBeDefined();
-    expect(screen.getByText("Open ledger")).toBeDefined();
-    expect(screen.getByText(/A room-first layout/)).toBeDefined();
-    expect(screen.getByText("Active call")).toBeDefined();
-    expect(screen.getByText("50%")).toBeDefined();
-    expect(screen.getByText("Sync")).toBeDefined();
-    expect(screen.getByText("All bets")).toBeDefined();
-    expect(screen.getByRole("button", { name: "My Bets" })).toBeDefined();
-    expect(screen.getByRole("button", { name: "Players" })).toBeDefined();
-    expect(screen.getByRole("button", { name: "Analytics" })).toBeDefined();
-    expect(screen.getByRole("button", { name: "Game Details" })).toBeDefined();
-    expect(screen.getByTestId("data-table")).toBeDefined();
-    expect(screen.getAllByTestId("tab-bar").length).toBeGreaterThan(1);
-
-    fireEvent.click(screen.getByRole("button", { name: "Game Details" }));
-    expect(screen.getAllByText("abi.encode(uint8 cap)").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("USDC").length).toBeGreaterThan(0);
+    expect(screen.getByText("Precision Dice")).toBeDefined();
+    expect(screen.getByText("Live SSOT Module")).toBeDefined();
+    expect(screen.getByText("Wallet Balance")).toBeDefined();
+    expect(screen.getByText("Bet Amount")).toBeDefined();
   });
 
   it("renders roulette as a standard European table room", () => {
@@ -240,67 +237,37 @@ describe("GamePageClient", () => {
 
     render(<GamePageClient slug="roulette" />);
 
-    expect(screen.getAllByText("Roulette").length).toBeGreaterThan(0);
-    expect(screen.getByText("European table")).toBeDefined();
-    expect(screen.getByText(/Standard 0-36 European table/)).toBeDefined();
-    expect(screen.getByText("My Bets")).toBeDefined();
-    expect(screen.getByText("Players")).toBeDefined();
-    expect(screen.getByText("Analytics")).toBeDefined();
-    expect(screen.getByText("Game Details")).toBeDefined();
-    expect(screen.queryByText("Mask table")).toBeNull();
+    expect(screen.getByText("European Roulette")).toBeDefined();
+    expect(screen.getByText("Wallet Balance")).toBeDefined();
+    expect(screen.getByText("Bet Amount")).toBeDefined();
   });
 
-  it("shows connect wallet prompt on my bets when no account is connected", () => {
-    state.release = MOCK_RELEASE;
-    state.bets = MOCK_BETS;
+  it("renders coin toss as a compat room shell", () => {
+    state.release = {
+      ...MOCK_RELEASE,
+      gamesMeta: [
+        ...MOCK_RELEASE.gamesMeta,
+        {
+          gameId: "0x3333333333333333333333333333333333333333333333333333333333333333",
+          slug: "coin-toss",
+          label: "Coin Toss",
+          module: "0x3333333333333333333333333333333333333333",
+          paramsEncoding: "abi.encode(bool isHeads)"
+        }
+      ]
+    };
 
-    render(<GamePageClient slug="dice" />);
-    fireEvent.click(screen.getByRole("button", { name: "My Bets" }));
+    render(<GamePageClient slug="coin-toss" />);
 
-    expect(screen.getByTestId("connect-wallet-prompt")).toBeDefined();
-    expect(screen.getByText("view your room bets")).toBeDefined();
-  });
-
-  it("renders player and analytics tabs from indexed room history", () => {
-    state.release = MOCK_RELEASE;
-    state.account = "0x1111111111111111111111111111111111111111";
-    state.bets = [
-      ...MOCK_BETS,
-      {
-        id: "84532:2",
-        betId: "2",
-        state: "settled",
-        player: "0x2222222222222222222222222222222222222222",
-        updatedAt: Date.now() - 120_000,
-        lastTxHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-      },
-    ];
-
-    render(<GamePageClient slug="dice" />);
-
-    fireEvent.click(screen.getByRole("button", { name: "Players" }));
-    expect(screen.getAllByText(/0x1111/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/0x2222/i).length).toBeGreaterThan(0);
-
-    fireEvent.click(screen.getByRole("button", { name: "Analytics" }));
-    expect(screen.getByText("Total indexed bets")).toBeDefined();
-    expect(screen.getByText("Unique players")).toBeDefined();
-    expect(screen.getByText("Settlement rate")).toBeDefined();
-  });
-
-  it("navigates to bet detail when a recent bet row is clicked", () => {
-    state.release = MOCK_RELEASE;
-    state.bets = MOCK_BETS;
-
-    render(<GamePageClient slug="dice" />);
-    fireEvent.click(screen.getByTestId("row-0"));
-    expect(pushMock).toHaveBeenCalledWith("/bets/1");
+    expect(screen.getByText("Coin Toss")).toBeDefined();
+    expect(screen.getByText("Wallet Balance")).toBeDefined();
+    expect(screen.getByText("Bet Amount")).toBeDefined();
   });
 
   it("shows placeholder when slug is not present in release", () => {
     state.release = MOCK_RELEASE;
     render(<GamePageClient slug="keno" />);
     expect(screen.getByTestId("placeholder")).toBeDefined();
-    expect(screen.getByText(/No game with slug 'keno'/)).toBeDefined();
+    expect(screen.getByText("Game not found.")).toBeDefined();
   });
 });

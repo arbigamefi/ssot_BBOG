@@ -1,17 +1,83 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
-import { Button, GameCard } from "@ssot/ui";
+import {
+  AdjustmentsHorizontalIcon,
+  MagnifyingGlassIcon,
+  PlayCircleIcon,
+  SparklesIcon,
+  TrophyIcon
+} from "@heroicons/react/24/outline";
 
-import { ArbiGameFiLockup, ArbiGameFiMark } from "../../components/ArbiGameFiBrand";
 import { Placeholder } from "../../components/Placeholder";
-import { PageTransition } from "../../components/PageTransition";
-import { getGamePresentation } from "../../features/games/presentation";
+import { RoomEntryCard } from "../../components/RoomEntryCard";
+import { getCatalogRooms } from "../../features/games/catalog";
 import { useRelease } from "../../ssot/release/ReleaseProvider";
+import {
+  CoinTossMiniIcon,
+  DiceMiniIcon,
+  KenoMiniIcon,
+  RouletteMiniIcon
+} from "../prototype/components/PrototypeGameIcons";
+
+const ROOM_ICON_MAP: Record<string, React.ReactNode> = {
+  dice: <DiceMiniIcon />,
+  roulette: <RouletteMiniIcon />,
+  "coin-toss": <CoinTossMiniIcon />,
+  keno: <KenoMiniIcon />
+};
+
+const ROOM_TAG_MAP: Record<string, string> = {
+  dice: "Binary",
+  roulette: "Table",
+  "coin-toss": "Binary",
+  keno: "Lottery"
+};
+
+const RAW_ROOM_COPY_MAP: Record<
+  string,
+  {
+    title: string;
+    promise: string;
+    live: string;
+  }
+> = {
+  dice: { title: "Precision Dice", promise: "1-99 sizing in seconds.", live: "—" },
+  roulette: {
+    title: "European Roulette",
+    promise: "Classic 37-slot physical mechanics.",
+    live: "—"
+  },
+  "coin-toss": { title: "Coin Toss", promise: "High-speed 50/50 resolution.", live: "—" },
+  keno: { title: "Keno Draft", promise: "Pick multi-spots for massive multipliers.", live: "—" }
+};
+
+const FILTERS = [
+  { key: "all", label: "All Modules" },
+  { key: "table", label: "Table Games" },
+  { key: "binary", label: "Binary / Fast" },
+  { key: "lottery", label: "Lottery" }
+] as const;
+
+type FilterKey = (typeof FILTERS)[number]["key"];
+
+function matchesFilter(slug: string, filter: FilterKey) {
+  switch (filter) {
+    case "table":
+      return slug === "roulette";
+    case "binary":
+      return slug === "dice" || slug === "coin-toss";
+    case "lottery":
+      return slug === "keno";
+    default:
+      return true;
+  }
+}
 
 export function GamesListClient() {
   const { release, readOnlyReason } = useRelease();
+  const [query, setQuery] = React.useState("");
+  const [filter, setFilter] = React.useState<FilterKey>("all");
 
   if (!release) {
     return (
@@ -23,138 +89,168 @@ export function GamesListClient() {
     );
   }
 
-  const games = release.gamesMeta ?? [];
+  const rooms = getCatalogRooms(
+    release.gamesMeta as Array<{ slug: string; label: string }> | undefined
+  );
 
-  if (games.length === 0) {
+  if (!rooms.length) {
     return (
       <Placeholder
         title="Games"
-        description="No games registered in the release bundle. Sync the latest release bundle and retry."
+        description="No games registered in the active release."
         specPath="docs/frontend/PAGE-SPECS/010-GAMES.md"
       />
     );
   }
 
-  const featuredGame = games[0]!;
-  const featuredPresentation = getGamePresentation(featuredGame.slug, featuredGame.label);
+  const filteredRooms = rooms.filter((room) => {
+    const normalizedQuery = query.trim().toLowerCase();
+    const matchesQuery =
+      !normalizedQuery ||
+      room.label.toLowerCase().includes(normalizedQuery) ||
+      room.summary.toLowerCase().includes(normalizedQuery);
+    return matchesQuery && matchesFilter(room.slug, filter);
+  });
 
-  const categories = ["All Rooms", "Table", "Originals", "Fast Entry"];
+  const roomsToRender = filteredRooms.length ? filteredRooms : rooms;
+  const primaryAssetSet = release.assets?.length
+    ? release.assets.map((asset) => asset.symbol).join(" • ")
+    : "Pending";
 
   return (
-    <PageTransition pageKey="games-list">
-      <div className="mx-auto max-w-[1440px] px-6 py-12 md:py-16">
-        <div className="mb-12 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-          <div className="max-w-3xl">
-            <div className="text-[10px] font-bold uppercase tracking-[0.24em] text-white/35">Room directory</div>
-            <h1 className="mt-3 text-4xl font-bold tracking-tight md:text-5xl">Choose a room and get straight to the table.</h1>
-            <p className="mt-4 text-lg text-white/50 leading-relaxed max-w-2xl">
-              Room-first selection. Pick the pace, read the ticket style, and enter without digging through protocol mechanics.
+    <div className="min-h-screen bg-[#050505] font-sans text-white selection:bg-blue-500/30">
+      <div className="fixed top-0 right-0 left-0 z-0 h-[500px] bg-gradient-to-b from-blue-900/10 via-[#050505]/50 to-[#050505] pointer-events-none" />
+
+      <main className="relative z-10 mx-auto max-w-[1440px] px-6 py-12 md:py-16">
+        <header className="mb-12 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+          <div className="max-w-2xl">
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-blue-300">
+              <SparklesIcon className="h-4 w-4" /> Global Access Lobby
+            </div>
+            <h1 className="mb-4 bg-gradient-to-r from-white to-white/70 bg-clip-text text-4xl font-extrabold tracking-tight text-transparent md:text-5xl">
+              Select Game Module
+            </h1>
+            <p className="text-lg leading-relaxed text-white/50">
+              All modules are on-chain, verifiable, and connected directly to the isolated reserve
+              bank. Connect wallet to enter.
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-2 rounded-xl border border-white/5 bg-[#0a0a0a] p-1">
-            {categories.map((category, index) => (
+          <div className="relative overflow-hidden rounded-2xl border-2 border-emerald-500/20 bg-[#020202] p-4 px-6 shadow-[0_0_30px_rgba(16,185,129,0.1),inset_0_2px_15px_rgba(16,185,129,0.05)]">
+            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(16,185,129,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(16,185,129,0.05)_1px,transparent_1px)] bg-[size:8px_8px] opacity-20" />
+            <div className="relative z-10 flex gap-6">
+              <div className="flex flex-col">
+                <span className="mb-1 text-[10px] font-bold uppercase tracking-widest text-emerald-500/80">
+                  Live Players
+                </span>
+                <span className="flex items-center gap-2 font-mono text-xl text-emerald-400">
+                  <span className="relative h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]" />
+                  —
+                </span>
+              </div>
+              <div className="relative z-10 w-px bg-emerald-500/20" />
+              <div className="flex flex-col">
+                <span className="mb-1 text-[10px] font-bold uppercase tracking-widest text-amber-500/80">
+                  Max Win (24h)
+                </span>
+                <span className="font-mono text-xl text-amber-400">—</span>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <div className="mb-10 flex flex-col items-center gap-4 sm:flex-row">
+          <div className="group relative w-full sm:w-96">
+            <MagnifyingGlassIcon className="absolute top-1/2 left-4 z-10 h-5 w-5 -translate-y-1/2 text-blue-400/50 transition-colors group-focus-within:text-blue-400" />
+            <input
+              type="text"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search modules..."
+              className="relative z-0 w-full rounded-2xl border border-blue-500/30 bg-[#020202] py-4 pr-4 pl-12 text-sm text-blue-50 placeholder:text-blue-500/30 shadow-[inset_0_4px_15px_rgba(0,0,0,0.8)] transition-all focus:border-blue-400 focus:outline-none focus:shadow-[0_0_20px_rgba(59,130,246,0.3),inset_0_2px_15px_rgba(0,0,0,1)]"
+            />
+          </div>
+
+          <div className="hide-scrollbar flex w-full flex-1 gap-2 overflow-x-auto rounded-[1.25rem] border border-white/5 bg-[#050505] p-1 shadow-[inset_0_2px_10px_rgba(0,0,0,0.6)]">
+            {FILTERS.map((item) => (
               <button
-                key={category}
-                className={[
-                  "rounded-lg px-4 py-2 text-sm font-bold transition-all",
-                  index === 0 ? "bg-white/10 text-white shadow" : "text-white/40 hover:bg-white/5 hover:text-white",
-                ].join(" ")}
+                key={item.key}
+                type="button"
+                onClick={() => setFilter(item.key)}
+                className={
+                  item.key === filter
+                    ? "flex-shrink-0 rounded-xl bg-blue-500 px-6 py-3.5 text-sm font-extrabold text-black shadow-[0_0_20px_rgba(59,130,246,0.4),inset_0_2px_4px_rgba(255,255,255,0.4)]"
+                    : "flex-shrink-0 rounded-xl border border-transparent bg-transparent px-6 py-3.5 text-sm font-bold text-white/40 transition-all hover:border-blue-500/30 hover:bg-blue-500/10 hover:text-blue-300"
+                }
               >
-                {category}
+                {item.label}
               </button>
             ))}
+            <button
+              type="button"
+              className="ml-auto rounded-xl border border-white/10 bg-[#0a0a0a] px-4 py-3.5 text-white/50 transition-all hover:bg-white/10 hover:text-white"
+            >
+              <AdjustmentsHorizontalIcon className="h-5 w-5" />
+            </button>
           </div>
         </div>
 
-        <section className="mb-20 grid grid-cols-1 gap-6 xl:grid-cols-[1.3fr_0.7fr]">
-          <Link href={`/games/${featuredGame.slug}`} className="group relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.04] p-8 min-h-[460px] flex flex-col justify-between transition-all hover:border-white/20">
-            <div className={`absolute right-0 top-0 h-96 w-96 blur-[120px] transition-colors group-hover:opacity-80 opacity-60 ${featuredPresentation.theme.stageClassName}`} />
-            
-            <div className="relative flex flex-col h-full justify-between gap-10">
-              <div className="flex items-start justify-between gap-4">
-                <div className="rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.24em] text-blue-300">
-                  Featured room
+        <div className="mb-20 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {roomsToRender.map((room) => {
+            const copy = RAW_ROOM_COPY_MAP[room.slug] ?? {
+              title: room.label,
+              promise: room.summary,
+              live: "—"
+            };
+            return (
+              <RoomEntryCard
+                key={room.slug}
+                slug={room.slug}
+                href={room.href}
+                title={copy.title}
+                summary={copy.promise}
+                badge={ROOM_TAG_MAP[room.slug] ?? "Module"}
+                meta={copy.live}
+                accent={room.accent}
+                icon={ROOM_ICON_MAP[room.slug] ?? <div className="text-5xl">{room.icon}</div>}
+                actionLabel="Enter Module"
+              />
+            );
+          })}
+        </div>
+
+        <div className="relative overflow-hidden rounded-[2.5rem] border border-white/5 bg-gradient-to-r from-blue-900/10 via-purple-900/10 to-[#0a0a0a] p-1">
+          <div className="rounded-[2.4rem] bg-[#050505]/80 px-8 py-10 backdrop-blur-2xl md:py-12">
+            <div className="relative z-10 flex flex-col items-center justify-between gap-8 md:flex-row">
+              <div className="flex items-center gap-6">
+                <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-2xl border border-amber-500/20 bg-amber-500/10 text-amber-400 shadow-[0_0_30px_rgba(245,158,11,0.15)]">
+                  <TrophyIcon className="h-8 w-8" />
                 </div>
-                <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.22em] text-white/45">
-                  {featuredPresentation.roomLabel}
+                <div>
+                  <h3 className="mb-1 text-2xl font-bold">Global Prize Pool</h3>
+                  <p className="text-sm text-white/40">
+                    Canonical modules exposed on the active release asset grid.
+                  </p>
                 </div>
               </div>
-
-              <div className="max-w-xl">
-                <h2 className="text-4xl font-bold tracking-tight">{featuredGame.label}</h2>
-                <p className="mt-4 max-w-md text-white/55 leading-relaxed">
-                  {featuredPresentation.roomSummary}
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-[1.5rem] border border-white/8 bg-black/25 p-4">
-                {featuredPresentation.cardFacts.slice(0, 3).map((item) => (
-                  <div key={item} className="rounded-xl border border-white/8 bg-white/[0.03] px-4 py-4 text-sm font-medium text-white/75 flex items-center justify-center text-center">
-                    {item}
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/34">
+                    Primary asset set
                   </div>
-                ))}
-              </div>
-
-              <div className="flex items-center justify-between gap-4 border-t border-white/5 pt-6">
-                <div className="text-xs text-white/45 hidden sm:block">Standard protocol settlement with institutional-grade auditability.</div>
-                <span className="text-sm font-bold text-blue-400 group-hover:translate-x-1 transition-transform">Enter Room →</span>
+                  <div className="mt-2 font-mono text-sm text-white/70">{primaryAssetSet}</div>
+                </div>
+                <div className="bg-gradient-to-r from-amber-200 to-amber-500 bg-clip-text text-4xl font-extrabold text-transparent md:text-5xl">
+                  —
+                </div>
+                <div className="hidden h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-black/20 text-white/60 md:flex">
+                  <PlayCircleIcon className="h-5 w-5" />
+                </div>
               </div>
             </div>
-          </Link>
-
-          <div className="grid grid-cols-1 gap-6">
-            {games.slice(1, 4).map((game) => {
-              const presentation = getGamePresentation(game.slug, game.label);
-              return (
-                <Link
-                  key={game.slug}
-                  href={`/games/${game.slug}`}
-                  className="group flex min-h-[170px] flex-col rounded-[1.6rem] border border-white/10 bg-white/[0.03] p-6 transition-all hover:bg-white/[0.05] hover:border-white/20 relative overflow-hidden"
-                >
-                   <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 blur-[40px] -z-10 group-hover:bg-indigo-500/20 transition-colors" />
-                   <div className="flex items-start justify-between gap-4">
-                    <div className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.22em] text-white/45">
-                      {presentation.roomLabel}
-                    </div>
-                    <div className="text-xs font-medium text-blue-400 transition-transform group-hover:translate-x-1">Enter →</div>
-                  </div>
-                  <h3 className="mt-4 text-xl font-bold">{game.label}</h3>
-                  <p className="mt-2 text-sm leading-6 text-white/55 line-clamp-2">{presentation.listDescription}</p>
-                </Link>
-              );
-            })}
           </div>
-        </section>
-
-        <section className="space-y-5">
-          <div className="flex items-end justify-between gap-4 mb-2">
-            <div>
-              <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-300">Live room lineup</div>
-              <h2 className="mt-2 text-3xl font-black tracking-tight text-white">Browse by room, not by module.</h2>
-            </div>
-          </div>
-
-          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-            {games.map((game) => {
-              const presentation = getGamePresentation(game.slug, game.label);
-              return (
-                <Link key={game.slug} href={`/games/${game.slug}`} className="block">
-                  <GameCard
-                    slug={game.slug}
-                    label={game.label}
-                    icon={presentation.icon}
-                    badge={presentation.roomLabel}
-                    description={presentation.listDescription}
-                    summary={presentation.roomSummary}
-                    facts={presentation.cardFacts}
-                  />
-                </Link>
-              );
-            })}
-          </div>
-        </section>
-      </div>
-    </PageTransition>
+        </div>
+      </main>
+    </div>
   );
 }

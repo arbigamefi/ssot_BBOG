@@ -4,34 +4,31 @@ import * as React from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import type { DomainBet, DomainError } from "@ssot/ssot";
+import type { DomainBet } from "@ssot/ssot";
 import type { HubEventRow } from "@ssot/ssot/indexer";
 import {
+  AuditTabs,
+  AuditTableCell,
+  AuditTableHeader,
   Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
   CopyButton,
-  ErrorCallout,
-  GlassCard,
-  PageHeader,
-  StatCard,
-  StatusBadge,
   TxStatusChip,
   TxStepper,
   type StepState,
   type TxStepItem,
-  toast,
+  cn,
+  toast
 } from "@ssot/ui";
+import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 
 import { PageTransition } from "../../../components/PageTransition";
+import { TrustStatsStrip } from "../../../components/TrustStatsStrip";
+import { TrustTableShell } from "../../../components/TrustTableShell";
+import { formatUnits } from "../../../features/betting/model/units";
+import { useDirectTxAction } from "../../../features/tx/useDirectTxAction";
 import { useRelease } from "../../../ssot/release/ReleaseProvider";
 import { useSSOTRuntime } from "../../../ssot/runtime";
 import { useSSOTSDK } from "../../../ssot/sdk";
-import { formatUnits } from "../../../features/betting/model/units";
-import { useDirectTxAction } from "../../../features/tx/useDirectTxAction";
 
 function shortHex(value?: string) {
   if (!value) return "—";
@@ -39,7 +36,12 @@ function shortHex(value?: string) {
   return `${value.slice(0, 6)}…${value.slice(-4)}`;
 }
 
-function formatTokenAmount(value: bigint | undefined, decimals: number, symbol?: string, maxFractionDigits = 4) {
+function formatTokenAmount(
+  value: bigint | undefined,
+  decimals: number,
+  symbol?: string,
+  maxFractionDigits = 4
+) {
   if (value == null) return "—";
   const raw = formatUnits(value, decimals);
   const neg = raw.startsWith("-");
@@ -57,70 +59,6 @@ function formatTimestamp(value?: number) {
   return new Date(millis).toLocaleString();
 }
 
-function formatRelativeTime(timestamp?: number) {
-  if (!timestamp) return "—";
-  const deltaMs = Math.max(0, Date.now() - timestamp);
-  const minutes = Math.floor(deltaMs / 60_000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
-
-function serializeErrorDetails(error?: DomainError) {
-  if (!error?.details) return undefined;
-  return JSON.stringify(
-    error.details,
-    (_key, value) => (typeof value === "bigint" ? value.toString() : value),
-    2
-  );
-}
-
-function getExplorerBaseUrl(chainId: number) {
-  switch (chainId) {
-    case 84532:
-      return "https://sepolia.basescan.org";
-    case 8453:
-      return "https://basescan.org";
-    case 42161:
-      return "https://arbiscan.io";
-    case 421614:
-      return "https://sepolia.arbiscan.io";
-    default:
-      return undefined;
-  }
-}
-
-function Metric({
-  label,
-  value,
-  copyable,
-  href,
-}: {
-  label: string;
-  value: string;
-  copyable?: boolean;
-  href?: string;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-4 border-b border-slate-800/60 py-3 last:border-0">
-      <span className="text-sm text-slate-400">{label}</span>
-      <span className="inline-flex items-center gap-2 text-right font-mono text-sm text-slate-200">
-        {href && value !== "—" ? (
-          <a href={href} target="_blank" rel="noreferrer" className="text-emerald-300 transition-colors hover:text-emerald-200">
-            {value}
-          </a>
-        ) : (
-          <span>{value}</span>
-        )}
-        {copyable && value !== "—" ? <CopyButton value={value} label={`Copy ${label.toLowerCase()}`} /> : null}
-      </span>
-    </div>
-  );
-}
-
 function stateToStep(state: string, target: string): StepState {
   const order = ["placed", "randomReady", "finalized"];
   const currentIndex = order.indexOf(state);
@@ -135,7 +73,7 @@ function buildLifecycleSteps(state: string): TxStepItem[] {
   if (state === "refunded") {
     return [
       { title: "Placed", state: "done" },
-      { title: "Refunded", description: "Stake returned to the player", state: "done" },
+      { title: "Refunded", description: "Stake returned to the player", state: "done" }
     ];
   }
   return [
@@ -143,13 +81,13 @@ function buildLifecycleSteps(state: string): TxStepItem[] {
     {
       title: "Random Ready",
       description: "VRF delivered a random word",
-      state: stateToStep(state, "randomReady"),
+      state: stateToStep(state, "randomReady")
     },
     {
       title: "Finalized",
       description: "Bet settled on the Hub",
-      state: stateToStep(state, "finalized"),
-    },
+      state: stateToStep(state, "finalized")
+    }
   ];
 }
 
@@ -175,6 +113,56 @@ function matchesBetId(argsJson: string, expectedBetId: string) {
   }
 }
 
+function getExplorerBaseUrl(chainId: number) {
+  switch (chainId) {
+    case 84532:
+      return "https://sepolia.basescan.org";
+    case 8453:
+      return "https://basescan.org";
+    case 42161:
+      return "https://arbiscan.io";
+    case 421614:
+      return "https://sepolia.arbiscan.io";
+    default:
+      return undefined;
+  }
+}
+
+function RelativeMetric({
+  label,
+  value,
+  copyValue,
+  href
+}: {
+  label: string;
+  value: string;
+  copyValue?: string;
+  href?: string;
+}) {
+  return (
+    <div className="flex items-center justify-between rounded-2xl border border-white/8 bg-black/20 px-4 py-3">
+      <span className="text-sm text-white/46">{label}</span>
+      <span className="inline-flex items-center gap-2 font-mono text-sm text-white">
+        {href && value !== "—" ? (
+          <a
+            href={href}
+            target="_blank"
+            rel="noreferrer"
+            className="text-cyan-200 transition-colors hover:text-cyan-100"
+          >
+            {value}
+          </a>
+        ) : (
+          <span>{value}</span>
+        )}
+        {copyValue && value !== "—" ? (
+          <CopyButton value={copyValue} label={`Copy ${label.toLowerCase()}`} />
+        ) : null}
+      </span>
+    </div>
+  );
+}
+
 export default function BetDetailPage() {
   const params = useParams<{ betId: string }>();
   const betId = params?.betId;
@@ -189,10 +177,14 @@ export default function BetDetailPage() {
       if (!db || !betId) return null;
       return await db.bets.get(`${chainId}:${betId}`);
     },
-    refetchInterval: 2_000,
+    refetchInterval: 2_000
   });
 
-  const { data: onChainBet, isLoading: onChainLoading, refetch: refetchOnChain } = useQuery({
+  const {
+    data: onChainBet,
+    isLoading: onChainLoading,
+    refetch: refetchOnChain
+  } = useQuery({
     queryKey: ["ssot", "getBet", chainId, betId],
     enabled: Boolean(sdk && betId),
     queryFn: async (): Promise<DomainBet | null> => {
@@ -203,10 +195,10 @@ export default function BetDetailPage() {
         return null;
       }
     },
-    refetchInterval: 5_000,
+    refetchInterval: 5_000
   });
 
-  const { data: timeline = [], isLoading: timelineLoading } = useQuery({
+  const { data: timeline = [] } = useQuery({
     queryKey: ["ssot", "bet", "timeline", chainId, betId],
     enabled: Boolean(db && betId),
     queryFn: async (): Promise<HubEventRow[]> => {
@@ -216,7 +208,7 @@ export default function BetDetailPage() {
         .filter((row) => matchesBetId(row.argsJson, betId))
         .sort((a, b) => a.blockNumber - b.blockNumber || a.logIndex - b.logIndex);
     },
-    refetchInterval: 2_000,
+    refetchInterval: 2_000
   });
 
   const betState = onChainBet?.state ?? localBet?.state ?? null;
@@ -231,7 +223,8 @@ export default function BetDetailPage() {
     [gameId, release?.gamesMeta]
   );
   const assetMeta = React.useMemo(
-    () => release?.assets.find((asset) => asset.address.toLowerCase() === assetAddress?.toLowerCase()),
+    () =>
+      release?.assets.find((asset) => asset.address.toLowerCase() === assetAddress?.toLowerCase()),
     [assetAddress, release?.assets]
   );
 
@@ -245,13 +238,13 @@ export default function BetDetailPage() {
     labels: {
       preflight: "Preflight",
       submit: "Submit refund",
-      confirm: "Confirm on-chain",
+      confirm: "Confirm on-chain"
     },
     descriptions: {
       preflight: "Validate refund eligibility and simulate the Hub call.",
       submit: "Broadcast refund through the wallet client.",
-      confirm: "Wait for receipt and journal reconciliation.",
-    },
+      confirm: "Wait for receipt and journal reconciliation."
+    }
   });
 
   const finalizeFlow = useDirectTxAction({
@@ -259,22 +252,23 @@ export default function BetDetailPage() {
     labels: {
       preflight: "Preflight",
       submit: "Submit finalize",
-      confirm: "Confirm on-chain",
+      confirm: "Confirm on-chain"
     },
     descriptions: {
       preflight: "Validate finalize eligibility and simulate the Hub call.",
       submit: "Broadcast finalize through the wallet client.",
-      confirm: "Wait for receipt and journal reconciliation.",
-    },
+      confirm: "Wait for receipt and journal reconciliation."
+    }
   });
 
   const outcome = React.useMemo(() => {
     if (!onChainBet || !betState) return null;
-    if (betState === "refunded") return { label: "Refunded", value: onChainBet.refund ?? onChainBet.stake };
+    if (betState === "refunded")
+      return { label: "Refunded", value: onChainBet.refund ?? onChainBet.stake };
     if (betState === "finalized" && onChainBet.payout != null) {
       return {
-        label: onChainBet.payout >= onChainBet.stake ? "Net Result" : "Loss",
-        value: onChainBet.payout - onChainBet.stake,
+        label: onChainBet.payout >= onChainBet.stake ? "Net result" : "Loss",
+        value: onChainBet.payout - onChainBet.stake
       };
     }
     return null;
@@ -284,9 +278,7 @@ export default function BetDetailPage() {
     if (!sdk || !betId) return;
     try {
       const result = await refundFlow.execute(() => sdk.hub.refund(BigInt(betId)));
-      if (!result.ok) {
-        return;
-      }
+      if (!result.ok) return;
       toast.success("Bet refunded successfully");
       void refetchOnChain();
     } catch (error) {
@@ -298,9 +290,7 @@ export default function BetDetailPage() {
     if (!sdk || !betId) return;
     try {
       const result = await finalizeFlow.execute(() => sdk.hub.finalize(BigInt(betId)));
-      if (!result.ok) {
-        return;
-      }
+      if (!result.ok) return;
       toast.success("Bet finalized successfully");
       void refetchOnChain();
     } catch (error) {
@@ -318,196 +308,280 @@ export default function BetDetailPage() {
           ? refundFlow
           : null;
 
-  const actionTitle = actionFlow === refundFlow ? "Refund Trace" : "Finalize Trace";
-  const actionSubtitle =
-    actionFlow === refundFlow
-      ? "Refund returns stake to the player when the lifecycle allows it."
-      : "Finalize settles a random-ready bet through Hub.finalize().";
-  const actionError = refundFlow.error ?? finalizeFlow.error;
-
+  const actionTitle = actionFlow === refundFlow ? "Refund trace" : "Finalize trace";
   const resultState = React.useMemo(() => {
-    if (betState === "finalized" && onChainBet && onChainBet.payout != null) {
-       return onChainBet.payout > onChainBet.stake ? "won" : "lost";
+    if (betState === "finalized" && onChainBet?.payout != null) {
+      return BigInt(onChainBet.payout) > BigInt(onChainBet.stake) ? "Won" : "Lost";
     }
-    return betState;
+    if (betState === "randomReady") return "Random ready";
+    if (betState === "placed") return "Placed";
+    if (betState === "refunded") return "Refunded";
+    return betState ? `${betState.charAt(0).toUpperCase()}${betState.slice(1)}` : "Pending";
   }, [betState, onChainBet]);
+
+  const timelineStatus = React.useCallback(
+    (eventName: string): React.ComponentProps<typeof TxStatusChip>["status"] => {
+      switch (eventName) {
+        case "BetFinalized":
+          return "reconciled";
+        case "BetRefunded":
+          return "failed";
+        case "BetRandomReady":
+          return "mined";
+        default:
+          return "submitting";
+      }
+    },
+    []
+  );
 
   return (
     <PageTransition pageKey={`bet-${betId ?? "unknown"}`}>
-      <main className="max-w-2xl mx-auto px-6 py-12 md:py-24">
-        
-        <Link href="/bets" className="inline-flex items-center gap-2 text-white/40 hover:text-white transition-colors font-bold text-sm mb-8">
-           <span>←</span> Back to Tickets
-        </Link>
-        
-        {/* Receipt Container */}
-        <GlassCard 
-          glowColor={resultState === 'won' ? "bg-green-500/20" : resultState === 'lost' ? "bg-white/10" : "bg-blue-500/20"} 
-          glowPosition="top-left" 
-          padding="xl" 
-          className={`border-t-4 relative shadow-2xl ${
-            resultState === 'won' ? 'border-t-green-500 shadow-green-500/10' : 
-            resultState === 'lost' ? 'border-t-white/20' : 
-            'border-t-blue-500 shadow-blue-500/10'
-          }`}
+      <main className="mx-auto flex max-w-[1240px] flex-col gap-8 px-6 py-12 md:py-16">
+        <Link
+          href="/bets"
+          className="inline-flex items-center gap-2 text-sm font-bold uppercase tracking-[0.18em] text-white/30 transition-colors hover:text-white"
         >
-           
-           {/* Decorative watermark */}
-           {resultState === 'won' && (
-             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[120px] font-bold text-white/[0.02] pointer-events-none select-none rotate-12">
-               WON
-             </div>
-           )}
-           {resultState === 'lost' && (
-             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[120px] font-bold text-white/[0.02] pointer-events-none select-none rotate-12">
-               LOST
-             </div>
-           )}
+          <ArrowLeftIcon className="h-4 w-4" />
+          Back to ledger
+        </Link>
 
-           {/* Header */}
-           <div className="flex flex-col items-center justify-center border-b border-white/10 pb-8 mb-8 relative z-10">
-              <span className="text-white/40 text-[10px] font-bold uppercase tracking-widest mb-4 px-3 py-1 bg-white/5 rounded-full border border-white/10">
-                Ticket #{betId ?? "—"}
-              </span>
-              <h1 className="text-3xl font-bold mb-2 text-white">{gameMeta?.label ?? "ArbiGameFi Room"}</h1>
-              <span className={`font-bold px-3 py-1 rounded-md text-sm border uppercase tracking-widest ${
-                resultState === 'won' ? 'text-green-400 bg-green-500/10 border-green-500/20' :
-                resultState === 'lost' ? 'text-white/40 bg-white/5 border-white/10' :
-                'text-blue-400 bg-blue-500/10 border-blue-500/20 animate-pulse'
-              }`}>
-                {resultState ?? "Pending"}
-              </span>
-           </div>
+        <header className="max-w-3xl">
+          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/18 bg-emerald-400/[0.06] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-200/80">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            Network verified
+          </div>
+          <h1 className="mt-2 text-4xl font-black tracking-tight text-white md:text-5xl">
+            {gameMeta?.label ?? "Ticket Detail"}
+          </h1>
+          <div className="mt-4 inline-flex items-center gap-3 rounded-xl border border-white/10 bg-black/25 px-4 py-2 font-mono text-sm text-white/65">
+            <span>TICKET_ID: #{betId ?? "—"}</span>
+            {betId ? <CopyButton value={betId} label="Copy ticket id" /> : null}
+          </div>
+          <p className="mt-4 text-sm leading-7 text-white/48 md:text-[15px]">
+            This receipt keeps stake, realized result, lifecycle proof, and any allowed protocol
+            intervention in one compact dossier.
+          </p>
+        </header>
 
-           {/* Core Figures */}
-           <div className="grid grid-cols-2 gap-4 mb-8 bg-[#050505] p-6 rounded-2xl border border-white/5 relative z-10">
-              <div className="flex flex-col">
-                 <span className="text-white/40 text-xs font-bold uppercase tracking-widest">Wager Amount</span>
-                 <span className="text-2xl font-mono font-bold mt-1 text-white">
-                   {onChainBet ? formatTokenAmount(onChainBet.stake, decimals, symbol) : "—"}
-                 </span>
-              </div>
-              <div className="flex flex-col items-end">
-                 <span className={`${resultState === 'won' ? 'text-green-500/80' : 'text-white/40'} text-xs font-bold uppercase tracking-widest`}>
-                   Gross Payout
-                 </span>
-                 <span className={`text-2xl font-mono font-bold mt-1 ${resultState === 'won' ? 'text-green-400' : 'text-white/40'}`}>
-                   {outcome ? formatTokenAmount(outcome.value, decimals, symbol) : "--"}
-                 </span>
-              </div>
-           </div>
+        <TrustStatsStrip
+          items={[
+            {
+              label: "Settlement state",
+              value: resultState,
+              helper: isLoading
+                ? "Refreshing state from the runtime."
+                : "Current lifecycle state pulled from local and on-chain sources.",
+              accent:
+                betState === "finalized" ? "emerald" : betState === "refunded" ? "amber" : "cyan"
+            },
+            {
+              label: "Capital at risk",
+              value: onChainBet ? formatTokenAmount(onChainBet.stake, decimals, symbol) : "—",
+              helper: "Original stake committed when the ticket was placed.",
+              accent: "slate"
+            },
+            {
+              label: "Gross settlement",
+              value: outcome ? formatTokenAmount(outcome.value, decimals, symbol) : "—",
+              helper: outcome?.label ?? "Outcome not yet settled.",
+              accent: outcome && outcome.value > 0n ? "emerald" : "slate"
+            },
+            {
+              label: "Receipt id",
+              value: betId ? `#${betId}` : "—",
+              helper: "Stable identifier used across runtime and indexer traces.",
+              accent: "indigo"
+            }
+          ]}
+        />
 
-           {/* Parameters / Summary Items */}
-           <div className="flex flex-col gap-4 border-b border-white/10 pb-8 mb-8 relative z-10">
-              <h3 className="text-sm font-bold text-white/60 uppercase tracking-widest">Wager Details</h3>
-              <div className="flex justify-between py-2 border-b border-white/5">
-                <span className="text-white/40">Asset</span>
-                <span className="font-mono text-white text-right">{symbol || shortHex(assetAddress)}</span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-white/5">
-                <span className="text-white/40">Timestamp</span>
-                <span className="font-mono text-white text-right">{onChainBet?.placedAt ? formatTimestamp(onChainBet.placedAt) : "—"}</span>
-              </div>
-              <div className="flex justify-between py-2">
-                <span className="text-white/40">Lifecycle</span>
-                <span className="font-mono text-white text-right truncate max-w-[140px]">{localBet?.lastEventName ?? "Awaiting..."}</span>
-              </div>
-           </div>
+        <div className="grid gap-8 xl:grid-cols-[1.05fr_0.95fr]">
+          <TrustTableShell
+            eyebrow="Execution logic"
+            title="Receipt matrix"
+            description="Readable facts first: room, timestamps, wallet, and realized settlement."
+          >
+            <div className="space-y-3">
+              <RelativeMetric label="Room" value={gameMeta?.label ?? "—"} />
+              <RelativeMetric label="Ticket id" value={betId ?? "—"} copyValue={betId} />
+              <RelativeMetric
+                label="Capital at risk"
+                value={onChainBet ? formatTokenAmount(onChainBet.stake, decimals, symbol) : "—"}
+              />
+              <RelativeMetric
+                label="Gross settlement"
+                value={outcome ? formatTokenAmount(outcome.value, decimals, symbol) : "—"}
+              />
+              <RelativeMetric
+                label="Placed at"
+                value={onChainBet?.placedAt ? formatTimestamp(Number(onChainBet.placedAt)) : "—"}
+              />
+              <RelativeMetric
+                label="Primary tx"
+                value={shortHex(primaryTxHash)}
+                copyValue={primaryTxHash}
+                href={
+                  explorerBaseUrl && primaryTxHash
+                    ? `${explorerBaseUrl}/tx/${primaryTxHash}`
+                    : undefined
+                }
+              />
+              <RelativeMetric
+                label="Player"
+                value={shortHex(onChainBet?.player ?? localBet?.player)}
+                copyValue={onChainBet?.player ?? localBet?.player}
+                href={
+                  explorerBaseUrl && (onChainBet?.player ?? localBet?.player)
+                    ? `${explorerBaseUrl}/address/${onChainBet?.player ?? localBet?.player}`
+                    : undefined
+                }
+              />
+            </div>
+          </TrustTableShell>
 
-           {/* Provable Truth Matrix */}
-           <div className="flex flex-col gap-4 relative z-10">
-              <h3 className="text-sm font-bold text-white/60 uppercase tracking-widest flex items-center gap-2">
-                 Provable Truth 
-                 <span className={`w-2 h-2 rounded-full ${resultState === 'finalized' || resultState === 'won' || resultState === 'lost' ? 'bg-blue-500' : 'bg-white/20'}`}></span>
-              </h3>
-              
-              <div className="flex flex-col p-4 bg-white/5 border border-white/10 rounded-xl font-mono text-xs gap-3 text-white/60">
-                 <div className="flex flex-col gap-1">
-                   <span className="text-blue-400/60 font-sans text-[10px] uppercase font-bold tracking-wider">Player Address</span>
-                   <span className="font-bold text-white text-sm bg-white/5 w-fit px-2 py-1 rounded inline-block truncate max-w-full">
-                     {onChainBet?.player ?? localBet?.player ?? "—"}
-                   </span>
-                 </div>
-                 
-                 <div className="w-full h-px bg-white/5 my-1" />
+          <div className="space-y-8">
+            <TrustTableShell
+              eyebrow="Provable truth"
+              title="Lifecycle dossier"
+              description="The runtime and indexer perspectives stay visible together so the receipt can be audited without jumping between views."
+            >
+              <div className="space-y-5">
+                <TxStepper title="Lifecycle" steps={buildLifecycleSteps(betState ?? "placed")} />
 
-                 <div className="flex justify-between">
-                   <span>Release Digest</span>
-                   <span className="text-white truncate max-w-[120px]">{shortHex(release?.releaseDigest)}</span>
-                 </div>
-                 <div className="flex justify-between">
-                   <span>Hub Contract</span>
-                   <span className="text-blue-400 cursor-pointer hover:underline">{shortHex(release?.contracts.hub)}</span>
-                 </div>
-                 <div className="flex justify-between">
-                   <span>Primary Tx</span>
-                   <span className="text-blue-400 cursor-pointer hover:underline">{shortHex(primaryTxHash)}</span>
-                 </div>
-              </div>
-           </div>
-
-           {/* Finalize/Refund Actions */}
-           {(canFinalize || canRefund) && (
-             <div className="mt-10 pt-8 border-t border-white/10 relative z-10">
-                <div className="flex flex-col gap-4">
-                   <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-bold text-white/60 uppercase tracking-widest">Protocol Intervention</h3>
-                      <TxStatusChip status={actionFlow?.status ?? 'idle'} />
-                   </div>
-                   
-                   <div className="flex gap-2">
-                      {canFinalize && (
-                        <Button 
-                          onClick={() => void handleFinalize()} 
-                          disabled={finalizeFlow.busy || refundFlow.busy}
-                          className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition-all active:scale-95"
-                        >
-                          {finalizeFlow.busy ? "Finalizing..." : "Finalize Room"}
-                        </Button>
-                      )}
-                      {canRefund && (
-                        <Button 
-                          variant="destructive"
-                          onClick={() => void handleRefund()} 
-                          disabled={refundFlow.busy || finalizeFlow.busy}
-                          className="flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-3 rounded-xl transition-all active:scale-95"
-                        >
-                          {refundFlow.busy ? "Refunding..." : "Refund Stake"}
-                        </Button>
-                      )}
-                   </div>
-                   
-                   {actionError && (
-                     <p className="text-xs text-rose-500 mt-2">{actionError.message}</p>
-                   )}
-                   
-                   {actionFlow?.hasActivity && (
-                     <div className="mt-4">
-                        <TxStepper steps={actionFlow.steps} title="Governance Trace" footer={<Button variant="ghost" size="sm" onClick={actionFlow.reset} className="text-[10px] text-white/30 p-0 h-auto">Reset</Button>} />
-                     </div>
-                   )}
+                <div className="space-y-3">
+                  <RelativeMetric
+                    label="Release digest"
+                    value={shortHex(release?.releaseDigest)}
+                    copyValue={release?.releaseDigest}
+                  />
+                  <RelativeMetric label="Asset" value={symbol || "—"} />
+                  <RelativeMetric
+                    label="Latest indexed event"
+                    value={
+                      timeline[timeline.length - 1]?.eventName ?? localBet?.lastEventName ?? "—"
+                    }
+                  />
                 </div>
-             </div>
-           )}
+              </div>
+            </TrustTableShell>
 
-        </GlassCard>
+            {(canFinalize || canRefund || actionFlow?.hasActivity) && (
+              <TrustTableShell
+                eyebrow="Protocol action"
+                title={canRefund ? "Refund surface" : "Finalize surface"}
+                description="Intervention buttons only appear when the lifecycle allows them. The trace stays attached to the same receipt."
+              >
+                <div className="space-y-5">
+                  <div className="flex flex-wrap gap-3">
+                    {canFinalize ? (
+                      <button
+                        type="button"
+                        onClick={() => void handleFinalize()}
+                        disabled={finalizeFlow.busy || refundFlow.busy}
+                        className="flex-1 rounded-2xl bg-cyan-400 px-4 py-4 text-sm font-bold text-black transition-colors hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        {finalizeFlow.busy ? "Finalizing..." : "Finalize ticket"}
+                      </button>
+                    ) : null}
+                    {canRefund ? (
+                      <button
+                        type="button"
+                        onClick={() => void handleRefund()}
+                        disabled={refundFlow.busy || finalizeFlow.busy}
+                        className="flex-1 rounded-2xl bg-amber-400 px-4 py-4 text-sm font-bold text-black transition-colors hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        {refundFlow.busy ? "Refunding..." : "Refund stake"}
+                      </button>
+                    ) : null}
+                  </div>
 
+                  {actionFlow?.hasActivity ? (
+                    <>
+                      <TxStatusChip status={actionFlow.status} />
+                      <TxStepper
+                        title={actionTitle}
+                        steps={actionFlow.steps}
+                        footer={
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={actionFlow.reset}
+                            className="h-auto px-0 text-white/30 hover:text-white"
+                          >
+                            Clear trace
+                          </Button>
+                        }
+                      />
+                    </>
+                  ) : null}
+                </div>
+              </TrustTableShell>
+            )}
+          </div>
+        </div>
+
+        <TrustTableShell
+          eyebrow="Timeline"
+          title="Indexed lifecycle events"
+          description="A compact event stream tied specifically to this ticket id."
+        >
+          <AuditTabs
+            className="mt-0 border-white/8 bg-black/20"
+            activeColorClass="border-cyan-400/70 text-cyan-200"
+            tabs={["Events"]}
+            activeTab="Events"
+          >
+            <AuditTableHeader>
+              <div className="grid grid-cols-[1fr_1fr_1fr_1fr_72px] gap-4 text-[10px] font-bold uppercase tracking-[0.2em] text-white/35">
+                <div>Time / Tx</div>
+                <div>Event</div>
+                <div>Block</div>
+                <div>Status</div>
+                <div className="text-right">Flow</div>
+              </div>
+            </AuditTableHeader>
+
+            <div className="flex min-h-[220px] flex-col gap-3">
+              {timeline.length === 0 ? (
+                <div className="rounded-[1.5rem] border border-dashed border-white/8 bg-white/[0.02] py-16 text-center text-[11px] font-bold uppercase tracking-[0.2em] text-white/28">
+                  No indexed lifecycle events yet
+                </div>
+              ) : (
+                timeline.map((row) => (
+                  <div
+                    key={`${row.txHash}-${row.logIndex}`}
+                    className="rounded-[1.35rem] border border-white/8 bg-[linear-gradient(180deg,rgba(10,14,24,0.95),rgba(6,9,15,0.96))] p-4"
+                  >
+                    <div className="grid grid-cols-[1fr_1fr_1fr_1fr_72px] items-center gap-4">
+                      <AuditTableCell>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-sm font-semibold text-white">
+                            {formatTimestamp(row.createdAt)}
+                          </span>
+                          <span className="text-[10px] font-mono uppercase tracking-[0.16em] text-white/24">
+                            {shortHex(row.txHash)}
+                          </span>
+                        </div>
+                      </AuditTableCell>
+                      <AuditTableCell>{row.eventName}</AuditTableCell>
+                      <AuditTableCell>
+                        <span className="font-mono text-sm text-white/72">{row.blockNumber}</span>
+                      </AuditTableCell>
+                      <AuditTableCell>
+                        <TxStatusChip status={timelineStatus(row.eventName)} />
+                      </AuditTableCell>
+                      <AuditTableCell className="justify-end text-[11px] font-bold uppercase tracking-[0.18em] text-white/30">
+                        Live
+                      </AuditTableCell>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </AuditTabs>
+        </TrustTableShell>
       </main>
     </PageTransition>
   );
-}
-
-function mapTimelineStatus(eventName: string) {
-  switch (eventName) {
-    case "BetPlaced":
-      return "placed" as const;
-    case "BetRandomReady":
-      return "pending" as const;
-    case "BetFinalized":
-      return "settled" as const;
-    case "BetRefunded":
-      return "cancelled" as const;
-    default:
-      return "pending" as const;
-  }
 }

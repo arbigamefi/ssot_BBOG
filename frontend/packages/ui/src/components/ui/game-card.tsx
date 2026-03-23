@@ -1,134 +1,147 @@
 import * as React from "react";
 import { cn } from "../../lib/utils";
+import { cva, type VariantProps } from "class-variance-authority";
 
-export type GameCardProps = {
-  slug: string;
-  label: string;
-  icon: React.ReactNode;
-  badge?: string;
-  description?: string;
-  summary?: string;
-  facts?: string[];
-  rtp?: string;
-  ctaLabel?: string;
-  className?: string;
-  children?: React.ReactNode;
-};
-
-const SLUG_ACCENTS: Record<
-  string,
+const gameCardGlowVariants = cva(
+  "absolute inset-0 bg-gradient-to-b opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none to-transparent",
   {
-    stage: string;
-    pill: string;
+    variants: {
+      colorVariant: {
+        emerald: "from-emerald-500/10",
+        purple: "from-purple-500/10",
+        amber: "from-amber-500/10",
+        fuchsia: "from-fuchsia-500/10",
+        blue: "from-blue-500/10",
+        rose: "from-rose-500/10",
+        cyan: "from-cyan-500/10",
+      },
+    },
+    defaultVariants: {
+      colorVariant: "emerald",
+    },
   }
-> = {
-  dice: {
-    stage:
-      "bg-[radial-gradient(circle_at_top_left,rgba(103,232,249,0.28),transparent_28%),linear-gradient(145deg,rgba(18,27,62,0.98),rgba(7,11,26,0.98))]",
-    pill: "border-cyan-300/25 bg-cyan-300/10 text-cyan-100",
-  },
-  "coin-toss": {
-    stage:
-      "bg-[radial-gradient(circle_at_top_left,rgba(251,191,36,0.24),transparent_28%),linear-gradient(145deg,rgba(45,24,6,0.98),rgba(7,11,26,0.98))]",
-    pill: "border-amber-300/25 bg-amber-300/10 text-amber-100",
-  },
-  roulette: {
-    stage:
-      "bg-[radial-gradient(circle_at_top_left,rgba(244,63,94,0.24),transparent_28%),linear-gradient(145deg,rgba(57,14,33,0.98),rgba(7,11,26,0.98))]",
-    pill: "border-rose-300/25 bg-rose-300/10 text-rose-100",
-  },
-  keno: {
-    stage:
-      "bg-[radial-gradient(circle_at_top_left,rgba(168,85,247,0.24),transparent_28%),linear-gradient(145deg,rgba(31,17,63,0.98),rgba(7,11,26,0.98))]",
-    pill: "border-violet-300/25 bg-violet-300/10 text-violet-100",
-  },
-};
+);
+
+export interface GameCardProps {
+  colorVariant: "emerald" | "purple" | "amber" | "fuchsia" | "blue" | "rose" | "cyan";
+  title: string;
+  promise: string;
+  icon: React.ReactNode;
+  tag: string;
+  liveStatus: string;
+  href: string;
+  buttonText: string;
+  className?: string;
+}
 
 export function GameCard({
-  slug,
-  label,
+  colorVariant,
+  title,
+  promise,
   icon,
-  badge,
-  description,
-  summary,
-  facts,
-  rtp,
-  ctaLabel = "Enter room",
-  className,
+  tag,
+  liveStatus,
+  href,
+  buttonText,
+  className
 }: GameCardProps) {
-  const accent = SLUG_ACCENTS[slug] ?? {
-    stage:
-      "bg-[radial-gradient(circle_at_top_left,rgba(148,163,184,0.24),transparent_28%),linear-gradient(145deg,rgba(18,27,62,0.98),rgba(7,11,26,0.98))]",
-    pill: "border-white/15 bg-white/[0.06] text-slate-100",
+
+  const getBorderColorClasses = () => {
+    switch(colorVariant) {
+      case "emerald": return "border-emerald-500/40";
+      case "purple": return "border-purple-500/40";
+      case "amber": return "border-amber-500/40";
+      case "fuchsia": return "border-fuchsia-500/40";
+      case "blue": return "border-blue-500/40";
+      case "rose": return "border-rose-500/40";
+      case "cyan": return "border-cyan-500/40";
+      default: return "border-white/10";
+    }
+  };
+
+  const getTextGradient = () => {
+    switch(colorVariant) {
+      case "emerald": return "to-emerald-200";
+      case "purple": return "to-purple-200";
+      case "amber": return "to-amber-200";
+      case "fuchsia": return "to-fuchsia-200";
+      case "blue": return "to-blue-200";
+      case "rose": return "to-rose-200";
+      case "cyan": return "to-cyan-200";
+      default: return "to-white";
+    }
+  };
+
+  const getLiveIndicatorColors = () => {
+    switch(colorVariant) {
+      case "emerald": return "bg-emerald-500 shadow-[0_0_8px_#10b981]";
+      case "purple": return "bg-purple-500 shadow-[0_0_8px_#a855f7]";
+      case "amber": return "bg-amber-500 shadow-[0_0_8px_#f59e0b]";
+      case "fuchsia": return "bg-fuchsia-500 shadow-[0_0_8px_#d946ef]";
+      case "blue": return "bg-blue-500 shadow-[0_0_8px_#3b82f6]";
+      case "rose": return "bg-rose-500 shadow-[0_0_8px_#f43f5e]";
+      case "cyan": return "bg-cyan-500 shadow-[0_0_8px_#06b6d4]";
+      default: return "bg-white shadow-[0_0_8px_white]";
+    }
+  };
+
+  // Pre-calculate hover background classes for the button, equivalent to the "buttonHover" generation in prototype
+  const getButtonHoverClasses = () => {
+    switch (colorVariant) {
+      case "emerald": return "hover:bg-emerald-500 hover:text-black";
+      case "purple": return "hover:bg-purple-500 hover:text-white";
+      case "amber": return "hover:bg-amber-500 hover:text-black";
+      case "fuchsia": return "hover:bg-fuchsia-500 hover:text-white";
+      case "blue": return "hover:bg-blue-500 hover:text-white";
+      case "rose": return "hover:bg-rose-500 hover:text-white";
+      case "cyan": return "hover:bg-cyan-500 hover:text-black";
+      default: return "hover:bg-white hover:text-black";
+    }
   };
 
   return (
-    <article
+    <a 
+      href={href} 
       className={cn(
-        "group relative overflow-hidden rounded-[1.75rem] border border-white/8 bg-[#0a1024]/80 p-3 transition-all duration-300",
-        "hover:-translate-y-1 hover:border-white/14 hover:shadow-[0_20px_70px_rgba(2,6,23,0.55)]",
+        "group relative rounded-[2rem] border border-white/5 bg-[#050505] overflow-hidden transition-all flex flex-col min-h-[400px] shadow-[inset_0_2px_15px_rgba(255,255,255,0.02),0_20px_40px_rgba(0,0,0,0.8)]",
         className
       )}
     >
-      <div className={cn("relative overflow-hidden rounded-[1.35rem] border border-white/8 p-4", accent.stage)}>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.08),transparent_30%)]" />
-        <div className="relative flex min-h-[11rem] flex-col justify-between">
-          <div className="flex items-center justify-between gap-3">
-            <div className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-200">
-              Room live
-            </div>
-            {badge ? (
-              <div className={cn("rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em]", accent.pill)}>
-                {badge}
-              </div>
-            ) : null}
-          </div>
-
-          <div className="space-y-3">
-            <div className="inline-flex h-14 w-14 items-center justify-center rounded-[1.15rem] border border-white/10 bg-[#050714]/45 text-4xl shadow-lg shadow-black/25">
-              {icon}
-            </div>
-            <div className="max-w-[16rem] text-2xl font-black tracking-tight text-white">{label}</div>
-            {description ? <p className="max-w-[18rem] text-sm leading-6 text-slate-300">{description}</p> : null}
-          </div>
+      {/* Ambient Hover Gradient */}
+      <div className={cn(gameCardGlowVariants({ colorVariant }))} />
+      
+      {/* Badges area */}
+      <div className="absolute top-5 left-5 right-5 flex justify-between items-start z-20 pointer-events-none">
+        <div className="px-3 py-1.5 rounded-full bg-[#020202]/90 border border-white/10 shadow-[inset_0_2px_5px_rgba(255,255,255,0.1)] backdrop-blur-md text-[10px] font-bold uppercase tracking-widest text-white/70">
+          {tag}
+        </div>
+        <div className={cn("px-3 py-1.5 rounded-lg bg-[#020202]/90 border shadow-[inset_0_2px_5px_rgba(255,255,255,0.1)] backdrop-blur-md flex items-center gap-2", getBorderColorClasses())}>
+            <span className={cn("w-2 h-2 rounded-full animate-pulse", getLiveIndicatorColors())} />
+            <span className="text-xs font-mono font-bold text-white tracking-widest">{liveStatus}</span>
         </div>
       </div>
 
-      <div className="space-y-4 px-2 pb-2 pt-4">
-        {summary ? <p className="text-sm leading-6 text-slate-400">{summary}</p> : null}
+      {/* Center Graphic */}
+      <div className="flex-1 p-6 relative z-10 flex items-center justify-center mt-10 group-hover:scale-105 transition-transform duration-500">
+        {icon}
+      </div>
 
-        <div className="flex flex-wrap gap-2">
-          {(facts ?? []).slice(0, 3).map((fact, index) => (
-            <span
-              key={fact}
-              className={cn(
-                "rounded-full border px-3 py-1.5 text-xs font-semibold",
-                index === 0 ? accent.pill : "border-white/10 bg-white/[0.03] text-slate-300"
-              )}
-            >
-              {fact}
-            </span>
-          ))}
-          {rtp ? (
-            <span className="rounded-full border border-emerald-300/25 bg-emerald-300/10 px-3 py-1.5 text-xs font-semibold text-emerald-100">
-              {rtp}
-            </span>
-          ) : null}
-        </div>
-
-        <div className="flex items-center justify-between gap-4 border-t border-white/6 pt-4">
-          <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Room entry</div>
-            <div className="mt-1 text-sm font-semibold text-white">Open the table</div>
-          </div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-sm font-semibold text-white transition-colors group-hover:border-cyan-300/30 group-hover:bg-cyan-300/10">
-            {ctaLabel}
-            <svg className="h-4 w-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0-7 7m7-7H3" />
-            </svg>
-          </div>
+      {/* Info Card */}
+      <div className="p-6 border-t border-white/10 bg-[#0a0a0a]/90 relative z-20 backdrop-blur-xl shadow-[inset_0_2px_15px_rgba(255,255,255,0.05)] pt-8">
+        <h3 className={cn("text-2xl font-extrabold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-white", getTextGradient())}>
+          {title}
+        </h3>
+        <p className="text-white/40 text-sm mb-6 h-10 leading-relaxed font-medium">
+          {promise}
+        </p>
+        <div className={cn(
+          "w-full py-4 rounded-xl flex items-center justify-center gap-2 font-bold text-sm transition-all shadow-[inset_0_2px_5px_rgba(255,255,255,0.1)] border border-white/10",
+          "bg-[#050505] text-white/80 group-hover:shadow-[0_0_30px_rgba(currentColor,0.4),inset_0_2px_5px_rgba(255,255,255,0.5)]",
+          getButtonHoverClasses()
+        )}>
+          {buttonText} {`->`}
         </div>
       </div>
-    </article>
+    </a>
   );
 }

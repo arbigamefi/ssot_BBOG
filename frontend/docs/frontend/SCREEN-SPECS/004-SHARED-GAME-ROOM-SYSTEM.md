@@ -1,250 +1,111 @@
-# SCREEN SPEC — Shared Game Room System
+# Screen Spec — Shared Game Room System
 
 **Routes**:
-- `/games/dice`
-- `/games/coin-toss`
-- `/games/roulette`
-- `/games/keno`
 
-**Design status**: Figma-ready system spec
+- `/roulette`
+- `/dice`
+- `/cointoss`
+- `/keno`
 
-**Product mode**: Gameplay
+**Active prototype sources**:
 
----
+- `ui-ux-v2-roulette`
+- `ui-ux-v2-dice`
+- `ui-ux-v2-cointoss`
+- `ui-ux-v2-keno`
 
 ## 1. Purpose
 
-Define the shared structural system every game room must inherit.
+Define the active shared room grammar for all game rooms.
 
-This ensures:
+Every room must feel like one product family while keeping a game-specific stage and ticket language.
 
-- all rooms feel like one product family
-- each room still has its own gameplay character
+## 2. Shared Room Structure
 
-This is the system-level spec that the room-specific high-fidelity screens must obey.
+Every room must contain:
 
----
-
-## 2. Shared Structural Rules
-
-Every room must have:
-
-1. minimal room header
+1. room shell header
 2. top game selector
-3. compact room strip
-4. left bet slip on desktop
-5. right gameplay surface on desktop
-6. lower tabs for supporting content
+3. compact room HUD
+4. board or stage area
+5. compact ticket rail
+6. lower room tabs
 
-No room should introduce:
+## 3. Shared Room Rules
+
+Rooms must not introduce:
 
 - left global game rail
-- heavy hero block above gameplay
+- heavy hero blocks above the stage
 - protocol-first first fold
+- multi-card room intros
 
----
+## 4. Shared Ticket Rail
 
-## 3. Shared Bet Slip
+Required structure:
 
-## 3.1 Required sections
-
-1. mode switch
+1. balance context
 2. amount
-3. chip presets
-4. round count
-5. summary
+3. quick actions
+4. number of bets or room-specific count control
+5. ticket summary
 6. CTA
-7. advanced area
+7. advanced disclosure only if needed
 
-## 3.2 Required visual behavior
+Stable rules:
 
-- same width family across rooms
-- same CTA hierarchy across rooms
-- same amount input prominence across rooms
-- same tx state placement across rooms
-
-## 3.3 Allowed room-specific adaptations
-
-- different quick chip styling emphasis
-- different copy tone
-- different summary framing
-
-But structure should remain stable.
-
----
-
-## 4. Shared Room Strip
-
-Must stay compact.
-
-Contains:
-
-- room title
-- one compact state indicator
-- optional tiny reassurance cue
-
-Must not contain:
-
-- long room description
-- protocol explanation
-- multi-card status stack
-
----
+- consistent width family
+- CTA always strongest
+- amount input always primary control
+- transaction states live near the rail
 
 ## 5. Shared Lower Tabs
 
-Tabs:
+The shared lower tabs grammar is:
 
-- `Recent Bets`
-- `How to Play`
-- `Protocol`
-
-Purpose:
-- keep deeper information available
-- keep it out of the first fold
+- `All Bets`
+- `My Bets`
+- `Players`
+- `Analytics`
+- `Game Details`
 
 Rules:
 
-- tabs are secondary
-- tabs should not visually compete with the table
+- clearly secondary to the stage
+- same tab order across all rooms
+- tab content density can vary by room
 
----
+## 6. Room-Specific Differentiation
 
-## 6. Game-Specific Differentiation
+### Dice
 
-## 6.1 Dice
+- stage emphasizes threshold control
+- ticket language emphasizes precision and quick repetition
 
-Visual center:
-- threshold or cap control
+### Coin Toss
 
-Character:
-- precision
-- fast adjustment
-- numeric confidence
+- stage emphasizes binary selection
+- ticket language is the cleanest and shortest
 
-## 6.2 Coin Toss
+### Roulette
 
-Visual center:
-- binary side choice
+- stage emphasizes the European table
+- ticket language feels like a table ticket, not a generic form
 
-Character:
-- simplest room
-- cleanest room
-- strongest binary contrast
+### Keno
 
-## 6.3 Roulette
+- stage emphasizes pick-building
+- ticket language supports deliberate board selection
 
-Visual center:
-- European table
+## 7. Mobile Rules
 
-Character:
-- classic table room
-- flagship table feel
+Order:
 
-## 6.4 Keno
+1. header
+2. game selector
+3. room HUD
+4. stage
+5. ticket rail
+6. lower tabs
 
-Visual center:
-- number board
-
-Character:
-- tactical board room
-- deliberate pick-building
-
----
-
-## 7. Desktop Shared Layout
-
-```text
-┌────────────────────────────────────────────────────────────────────────────┐
-│ Minimal Header                                                            │
-├────────────────────────────────────────────────────────────────────────────┤
-│ Top Selector                                                              │
-├────────────────────────────────────────────────────────────────────────────┤
-│ Compact Room Strip                                                        │
-├──────────────────────────────┬─────────────────────────────────────────────┤
-│ Shared Bet Slip              │ Room-Specific Surface                      │
-├──────────────────────────────┴─────────────────────────────────────────────┤
-│ Shared Lower Tabs                                                       │
-└────────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 8. Mobile Shared Layout
-
-```text
-┌──────────────────────────────┐
-│ Minimal Header               │
-├──────────────────────────────┤
-│ Top Selector                 │
-├──────────────────────────────┤
-│ Compact Room Strip           │
-├──────────────────────────────┤
-│ Room Surface                 │
-├──────────────────────────────┤
-│ Shared Bet Slip              │
-├──────────────────────────────┤
-│ Lower Tabs                   │
-└──────────────────────────────┘
-```
-
-Rules:
-
-- gameplay surface before bet slip if that room depends on visible table context
-- bet slip immediately after the surface
-
----
-
-## 9. Shared State System
-
-Every room must design these states consistently:
-
-- disconnected
-- input ready
-- quote ready
-- approval required
-- tx pending
-- tx mined
-- reconciled
-- failed
-
-State rendering rule:
-
-the state belongs near the slip and action origin, not in floating unrelated banners.
-
----
-
-## 10. Shared Content Rules
-
-Player-facing first fold copy must avoid:
-
-- release digest
-- module
-- params encoding
-- indexer lag numbers
-- raw protocol jargon
-
-Those belong below the fold or in the protocol tab.
-
----
-
-## 11. Figma Handoff Requirements
-
-The Figma room system must include:
-
-- one shared desktop room template
-- one shared mobile room template
-- one shared bet slip component system
-- one shared room-strip component
-- one shared lower-tabs component
-- four room variants: Dice, Coin Toss, Roulette, Keno
-
----
-
-## 12. Implementation Rule
-
-Once this system is accepted:
-
-- room-level frontend work should follow this system
-- structural experimentation in code should stop
-- only room-specific surface behavior should vary
+Gameplay context stays above the rail on mobile.
