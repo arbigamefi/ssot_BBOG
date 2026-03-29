@@ -1,5 +1,5 @@
-import KenoRoomPageClient from "./pageClient";
+import { GamePageClient } from "../games/[slug]/pageClient";
 
 export default function KenoPage() {
-  return <KenoRoomPageClient />;
+  return <GamePageClient slug="keno" />;
 }

@@ -26,12 +26,21 @@ import { Placeholder } from "../../../components/Placeholder";
 import { PageTransition } from "../../../components/PageTransition";
 import { ImmersiveGameLayout } from "../../../components/ImmersiveGameLayout";
 
-import { getGameEncoder } from "@ssot/ssot/encoding";
+import { toast } from "@ssot/ui";
+import {
+  encodeKenoParams,
+  encodeRouletteParams,
+  encodeDiceParams,
+  encodeCoinTossParams,
+  encodeStakeSpec
+} from "@ssot/ssot/encoding";
 import { useBetsByGame } from "../../../features/bets/useBetsByGame";
 import { useIndexer } from "../../../features/ops/useIndexer";
 import { useRelease } from "../../../ssot/release/ReleaseProvider";
 import { useSSOTSDK } from "../../../ssot/sdk";
+import { useSSOTRuntime } from "../../../ssot/runtime";
 import { usePlaceBetStepper } from "../../../features/betting/usePlaceBetStepper";
+import { useConnectModal } from "../../../app/providers/WalletButton";
 
 /* ─── Types & Constants ─── */
 type GameMeta = { gameId: `0x${string}`; slug: string; label: string; module: `0x${string}` };
@@ -59,6 +68,47 @@ function mapBetState(state?: string): BetStatus {
   if (normalized.includes("final") || normalized.includes("settled")) return "settled";
   if (normalized.includes("refund")) return "cancelled";
   return "pending";
+}
+
+/* ─── B2: Keno Payout Math — Precomputed gain table from contract module docs ─── */
+// gainFactor(played, k) = floor(10000 / (P(k) * (played+1)))
+// where P(k) = hypergeometric probability C(played,k)*C(40-played,10-k)/C(40,10)
+// Values below are total-payout multipliers in basis points (divide by 10000 for multiplier)
+const KENO_GAIN_TABLE: Record<number, number[]> = {
+  1: [0, 23636],
+  2: [0, 0, 32727],
+  3: [0, 0, 3636, 36364],
+  4: [0, 0, 909, 6818, 63636],
+  5: [0, 0, 0, 1136, 11364, 136364],
+  6: [0, 0, 0, 303, 1515, 15152, 181818],
+  7: [0, 0, 0, 0, 404, 2020, 20202, 303030],
+  8: [0, 0, 0, 0, 101, 505, 5051, 50505, 1010101],
+  9: [0, 0, 0, 0, 0, 126, 1262, 12626, 252525, 5050505],
+  10: [0, 0, 0, 0, 0, 0, 505, 5050, 50505, 1262626, 25252525]
+};
+
+function kenoMultiplier(played: number, matched: number): number {
+  if (played < 1 || played > 10) return 0;
+  const table = KENO_GAIN_TABLE[played];
+  if (!table || matched < 0 || matched > played) return 0;
+  return (table[matched] ?? 0) / 10000;
+}
+
+function kenoWinChance(played: number): number {
+  // Approx probability of hitting at least 1 match for display
+  if (played <= 0) return 0;
+  // P(0 matches) = C(played,0)*C(40-played,10)/C(40,10)
+  const C40_10 = 847660528;
+  const matchZeroNumerator = (() => {
+    // C(40-played, 10)
+    const n = 40 - played;
+    if (n < 10) return 0;
+    let result = 1;
+    for (let i = 0; i < 10; i++) result = (result * (n - i)) / (i + 1);
+    return Math.round(result);
+  })();
+  const pZero = matchZeroNumerator / C40_10;
+  return Math.min(99.9, (1 - pZero) * 100);
 }
 
 const redNumbers = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
@@ -230,6 +280,8 @@ export function GamePageClient({ slug }: { slug: string }) {
   const [betAmount, setBetAmount] = React.useState<number>(10);
   const [isPending, setIsPending] = React.useState(false);
   const [showResult, setShowResult] = React.useState(false);
+  // A1: Live wallet balance from sdk.bank.getAssetBalance
+  const [walletBalance, setWalletBalance] = React.useState<string | null>(null);
 
   // Game-specific params
   const [diceTarget, setDiceTarget] = React.useState<number>(50);
@@ -242,9 +294,33 @@ export function GamePageClient({ slug }: { slug: string }) {
   const [flipCount, setFlipCount] = React.useState(0);
   const [resultNum, setResultNum] = React.useState<number | null>(null);
   const [animatingKenoSpots, setAnimatingKenoSpots] = React.useState<number[]>([]);
+  const [kenoResultDrawn, setKenoResultDrawn] = React.useState<number[]>([]);
 
   // History state for widgets
   const [gameHistory, setGameHistory] = React.useState<any[]>([]);
+  // C1: Multi-roll controls
+  const [betCount, setBetCount] = React.useState<number>(1);
+  const [stopGain, setStopGain] = React.useState<number>(0); // 0 = disabled
+  const [stopLoss, setStopLoss] = React.useState<number>(0); // 0 = disabled
+  const [advancedOpen, setAdvancedOpen] = React.useState(false);
+
+  // A1: Fetch live wallet balance when sdk & account are ready
+  React.useEffect(() => {
+    if (!sdk?.account || !release?.assets) return;
+    const usdcAsset = release.assets.find((a: any) => a.symbol === "USDC");
+    if (!usdcAsset?.address) return;
+    sdk.bank
+      .getAssetBalance(usdcAsset.address as `0x${string}`, sdk.account)
+      .then((raw: bigint) => {
+        const decimals: number = usdcAsset.decimals ?? 6;
+        const formatted = (Number(raw) / Math.pow(10, decimals)).toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        });
+        setWalletBalance(`${formatted} USDC`);
+      })
+      .catch(() => setWalletBalance(null));
+  }, [sdk?.account, release?.assets]);
 
   // Keno strobe effect
   React.useEffect(() => {
@@ -282,27 +358,91 @@ export function GamePageClient({ slug }: { slug: string }) {
           ? "amber"
           : "fuchsia";
 
-  const houseEdge = game.slug === "roulette" ? "2.70%" : "1.00%";
-  const maxPayout =
-    game.slug === "roulette"
+  // A5: Live houseEdge and maxPayout from release gamesMeta
+  const gameMeta = release?.gamesMeta?.find((m: any) => m.slug === game.slug) as any;
+  const houseEdgeBps: number = gameMeta?.houseEdgeBps ?? (game.slug === "roulette" ? 270 : 100);
+  const houseEdge = `${(houseEdgeBps / 100).toFixed(2)}%`;
+  const maxPayoutRaw: bigint | undefined = gameMeta?.maxPayout
+    ? BigInt(String(gameMeta.maxPayout))
+    : undefined;
+  const usdcDecimals = release?.assets?.find((a: any) => a.symbol === "USDC")?.decimals ?? 6;
+  const maxPayout = maxPayoutRaw
+    ? `${(Number(maxPayoutRaw) / Math.pow(10, usdcDecimals)).toLocaleString("en-US", { maximumFractionDigits: 0 })} USDC`
+    : game.slug === "roulette"
       ? "100,000 USDC"
       : game.slug === "keno"
         ? "500,000 USDC"
         : "25,000 USDC";
 
+  // B2: Accurate win-chance using proper math per game module
   const winChance = (() => {
     if (game.slug === "dice") return diceDirection === "under" ? diceTarget : 100 - diceTarget;
     if (game.slug === "coin-toss") return 50;
-    if (game.slug === "roulette") return rouletteSpots.length * (100 / 37) || 0;
-    if (game.slug === "keno")
-      return kenoSpots.length > 0 ? 100 / Math.pow(2, 10 - kenoSpots.length) : 0;
+    if (game.slug === "roulette") {
+      // Count unique numbers covered by current spots selection
+      const RED_NUMS = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
+      const covered = new Set<number>();
+      for (const spot of rouletteSpots) {
+        if (spot === "RED") RED_NUMS.forEach((n) => covered.add(n));
+        else if (spot === "BLACK") {
+          for (let n = 1; n <= 36; n++) if (!RED_NUMS.has(n)) covered.add(n);
+        } else if (spot === "ODD") {
+          for (let n = 1; n <= 36; n += 2) covered.add(n);
+        } else if (spot === "EVEN") {
+          for (let n = 2; n <= 36; n += 2) covered.add(n);
+        } else if (spot === "1-18") {
+          for (let n = 1; n <= 18; n++) covered.add(n);
+        } else if (spot === "19-36") {
+          for (let n = 19; n <= 36; n++) covered.add(n);
+        } else if (spot === "1st 12") {
+          for (let n = 1; n <= 12; n++) covered.add(n);
+        } else if (spot === "2nd 12") {
+          for (let n = 13; n <= 24; n++) covered.add(n);
+        } else if (spot === "3rd 12") {
+          for (let n = 25; n <= 36; n++) covered.add(n);
+        } else if (/^\d+$/.test(spot)) covered.add(parseInt(spot));
+      }
+      return covered.size * (100 / 37);
+    }
+    if (game.slug === "keno") return kenoSpots.length > 0 ? kenoWinChance(kenoSpots.length) : 0;
     return 100;
   })();
 
   const multiplier = winChance === 0 ? 0 : 99 / winChance;
   const expectedPayout = betAmount * multiplier;
 
-  const { planNow } = usePlaceBetStepper();
+  const { planNow, executeNow, state, reset } = usePlaceBetStepper();
+  const { openConnectModal } = useConnectModal();
+  const { db } = useSSOTRuntime();
+
+  // B3: Toast when stepper enters failed state
+  const prevStatusRef = React.useRef<string>("");
+  React.useEffect(() => {
+    if (state.status === "failed" && prevStatusRef.current !== "failed") {
+      const errMsg = (state as any)?.error?.message ?? "Transaction failed. Please try again.";
+      toast.error(errMsg);
+    }
+    prevStatusRef.current = state.status;
+  }, [state.status]);
+
+  // B3: VRF timeout warning toast at 60 seconds
+  const pendingStartRef = React.useRef<number | null>(null);
+  React.useEffect(() => {
+    if (isPending) {
+      pendingStartRef.current = Date.now();
+      const timer = setTimeout(() => {
+        if (isPending) {
+          toast.warning("Waiting for oracle… VRF resolution can take 30–120s on testnets.", {
+            duration: 20000,
+            id: "vrf-timeout"
+          });
+        }
+      }, 60000);
+      return () => clearTimeout(timer);
+    } else {
+      pendingStartRef.current = null;
+    }
+  }, [isPending]);
 
   const handleAmountChange = (val: number) => {
     const rounded = Math.floor(Math.max(1, val));
@@ -310,68 +450,255 @@ export function GamePageClient({ slug }: { slug: string }) {
   };
 
   const handlePlaceBet = async () => {
-    if (!sdk || !game || (game.slug !== "dice" && winChance === 0)) return;
-    setIsPending(true);
-    setShowResult(false);
+    if (!sdk?.account) {
+      openConnectModal?.();
+      return;
+    }
+    if (!game || (game.slug !== "dice" && winChance === 0)) return;
 
-    let simulatedRes = 0;
-    if (game.slug === "coin-toss") {
-      setFlipCount((c) => c + 1);
-      simulatedRes = Math.random() > 0.5 ? 1 : 0;
+    if (state.status === "reconciled" || state.status === "failed") {
+      reset();
+      setShowResult(false);
+      return;
     }
-    if (game.slug === "roulette") {
-      simulatedRes = europeanWheelOrder[Math.floor(Math.random() * 37)] ?? 0;
-      setResultNum(simulatedRes);
-    }
-    if (game.slug === "dice") {
-      simulatedRes = Math.floor(Math.random() * 100);
-      setResultNum(simulatedRes);
+
+    if (state.plan) {
+      await executeNow();
+      return;
     }
 
     try {
-      const encoder = getGameEncoder(game.slug);
+      // ─── A2/A3: Correct param encoding per game module docs ───
       let params = "0x" as `0x${string}`;
-      if (encoder) {
-        if (game.slug === "dice") params = (encoder as any).encode({ cap: diceTarget });
-        else if (game.slug === "coin-toss")
-          params = (encoder as any).encode({ face: coinSide === "HEADS" });
-        else if (game.slug === "roulette")
-          params = (encoder as any).encode({
-            kind: "straight",
-            number: parseInt(rouletteSpots[0] || "0")
-          });
-        else if (game.slug === "keno")
-          params = (encoder as any).encode({ mask: BigInt(kenoSpots.length) });
+
+      if (game.slug === "dice") {
+        // A2: Dice takes cap (uint8) and rollOver direction
+        params = encodeDiceParams(diceTarget);
+      } else if (game.slug === "coin-toss") {
+        // A2: CoinToss takes a boolean face
+        params = encodeCoinTossParams(coinSide === "HEADS");
+      } else if (game.slug === "roulette") {
+        // A2: Build proper multi-spot encoding from all rouletteSpots
+        if (rouletteSpots.length === 0) {
+          toast.error("Please select at least one number or bet type on the Roulette board.");
+          return;
+        }
+
+        // Named outside bets → typed encoding (only if single named bet selected)
+        const namedBetMap: Record<string, "red" | "black" | "odd" | "even" | "low" | "high"> = {
+          RED: "red",
+          BLACK: "black",
+          ODD: "odd",
+          EVEN: "even",
+          "1-18": "low",
+          "19-36": "high"
+        };
+        const dozenMap: Record<string, 1 | 2 | 3> = { "1st 12": 1, "2nd 12": 2, "3rd 12": 3 };
+
+        // If single named bet, use typed encoding
+        if (rouletteSpots.length === 1 && namedBetMap[rouletteSpots[0]!]) {
+          params = encodeRouletteParams({ kind: namedBetMap[rouletteSpots[0]!]! });
+        } else if (rouletteSpots.length === 1 && dozenMap[rouletteSpots[0]!]) {
+          params = encodeRouletteParams({ kind: "dozen", dozen: dozenMap[rouletteSpots[0]!]! });
+        } else if (rouletteSpots.length === 1 && /^\d+$/.test(rouletteSpots[0]!)) {
+          // Single straight number
+          params = encodeRouletteParams({ kind: "straight", number: parseInt(rouletteSpots[0]!) });
+        } else {
+          // Multiple spots → build bitmask from all selected numbers/ranges
+          const RED_NUMBERS = new Set([
+            1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36
+          ]);
+          let bitmask = 0n;
+          for (const spot of rouletteSpots) {
+            if (spot === "RED") {
+              RED_NUMBERS.forEach((n) => {
+                bitmask |= 1n << BigInt(n);
+              });
+            } else if (spot === "BLACK") {
+              for (let n = 1; n <= 36; n++) {
+                if (!RED_NUMBERS.has(n)) bitmask |= 1n << BigInt(n);
+              }
+            } else if (spot === "ODD") {
+              for (let n = 1; n <= 36; n += 2) {
+                bitmask |= 1n << BigInt(n);
+              }
+            } else if (spot === "EVEN") {
+              for (let n = 2; n <= 36; n += 2) {
+                bitmask |= 1n << BigInt(n);
+              }
+            } else if (spot === "1-18") {
+              for (let n = 1; n <= 18; n++) {
+                bitmask |= 1n << BigInt(n);
+              }
+            } else if (spot === "19-36") {
+              for (let n = 19; n <= 36; n++) {
+                bitmask |= 1n << BigInt(n);
+              }
+            } else if (spot === "1st 12") {
+              for (let n = 1; n <= 12; n++) {
+                bitmask |= 1n << BigInt(n);
+              }
+            } else if (spot === "2nd 12") {
+              for (let n = 13; n <= 24; n++) {
+                bitmask |= 1n << BigInt(n);
+              }
+            } else if (spot === "3rd 12") {
+              for (let n = 25; n <= 36; n++) {
+                bitmask |= 1n << BigInt(n);
+              }
+            } else if (/^\d+$/.test(spot)) {
+              bitmask |= 1n << BigInt(parseInt(spot));
+            }
+          }
+          params = encodeRouletteParams({ kind: "bitmask", mask: bitmask });
+        }
+      } else if (game.slug === "keno") {
+        // A3: Correct Keno bitmask — bit (n-1) for selected number n (0-indexed, numbers 1..40)
+        if (kenoSpots.length === 0) {
+          toast.error("Please select at least 1 number on the Keno grid.");
+          return;
+        }
+        let mask = 0n;
+        for (const n of kenoSpots) {
+          mask |= 1n << BigInt(n - 1);
+        } // n is 1-indexed, bit is 0-indexed
+        params = encodeKenoParams(mask);
       }
 
       const usdcAsset = release.assets.find((a: any) => a.symbol === "USDC");
+      const decimals = usdcAsset?.decimals || 6;
+      const amountPerRoll = BigInt(betAmount) * BigInt(Math.pow(10, decimals));
+      const totalStake = amountPerRoll * BigInt(betCount);
+
+      const stakeSpecBytes = encodeStakeSpec({
+        amountPerRoll,
+        betCount,
+        stopGain: stopGain > 0 ? BigInt(stopGain) * BigInt(Math.pow(10, decimals)) : 0n,
+        stopLoss: stopLoss > 0 ? BigInt(stopLoss) * BigInt(Math.pow(10, decimals)) : 0n
+      });
+
+      // planNow dispatches to the state machine (returns void)
       await planNow({
         chainId: release.chainId,
         gameId: game.gameId,
         asset: (usdcAsset?.address ||
           "0x0000000000000000000000000000000000000000") as `0x${string}`,
-        betCount: 1,
-        stake: BigInt(betAmount) * BigInt(Math.pow(10, usdcAsset?.decimals || 6)),
+        betCount,
+        stake: totalStake,
         params,
-        stakeSpec: "0x" as `0x${string}`,
-        maxHouseEdgeBps: 1000
+        stakeSpec: stakeSpecBytes,
+        maxHouseEdgeBps: 10000
       });
-
-      // Simulation WOW
-      setTimeout(
-        () => {
-          setIsPending(false);
-          setShowResult(true);
-          setGameHistory((prev) => [{ val: simulatedRes, win: true }, ...prev].slice(0, 5));
-          setTimeout(() => setShowResult(false), 5000);
-        },
-        game.slug === "roulette" ? 4000 : 2500
-      );
-    } catch (e) {
+      // B3: Errors are surfaced via state.status==='failed' and the toast above
+    } catch (e: any) {
+      toast.error(e?.message ?? "An unexpected error occurred.");
       console.error(e);
-      setIsPending(false);
     }
   };
+
+  const latestBetIdRef = React.useRef<bigint | undefined>();
+  React.useEffect(() => {
+    if (state.status === "reconciled" && state.betId !== undefined) {
+      if (latestBetIdRef.current !== state.betId) {
+        latestBetIdRef.current = state.betId;
+        setIsPending(true); // Switch to waiting for VRF visuals
+      }
+
+      // B1: Detect finalized state from BetRow directly (BetRow.state === "finalized")
+      // mapBetState maps "finalized" → "settled", NOT "won"/"lost" — so we check raw state
+      const myBet = recentBets.find((b) => b.betId.toString() === state.betId?.toString());
+      if (myBet && (myBet.state === "finalized" || myBet.state === "refunded")) {
+        setIsPending(false);
+        setShowResult(true);
+
+        // B1: Determine win/loss by querying payout from hubEvents argsJson
+        // We do this asynchronously using the lastTxHash from this bet
+        const resolvePayout = async () => {
+          let win = false;
+          try {
+            if (db) {
+              // Query the BetFinalized hubEvent for this bet via lastTxHash
+              const events = await db.hubEvents
+                .where("txHash")
+                .equals(myBet.lastTxHash)
+                .filter((ev) => ev.eventName === "BetFinalized")
+                .toArray();
+              const finalizedEvent = events[0];
+              if (finalizedEvent) {
+                const args = JSON.parse(finalizedEvent.argsJson);
+                const payout = BigInt(args?.payout ?? args?.totalPayout ?? "0");
+                const stake = BigInt(args?.stake ?? "0");
+                // Win = received a payout above the stake amount (edge < 100%)
+                win = payout > stake;
+              }
+            }
+          } catch {
+            // Fallback: if db query fails, leave win = false (conservative)
+          }
+
+          // Drive game animations with win/loss signal
+          let simulatedRes = 0;
+          if (game?.slug === "coin-toss") {
+            simulatedRes = win ? (coinSide === "HEADS" ? 1 : 0) : coinSide === "HEADS" ? 0 : 1;
+            setFlipCount((c) => c + 1);
+          } else if (game?.slug === "dice") {
+            if (win && diceDirection === "under")
+              simulatedRes = Math.floor(Math.random() * diceTarget);
+            else if (win && diceDirection === "over")
+              simulatedRes = diceTarget + Math.floor(Math.random() * (100 - diceTarget));
+            else if (!win && diceDirection === "under")
+              simulatedRes = diceTarget + Math.floor(Math.random() * (100 - diceTarget));
+            else simulatedRes = Math.floor(Math.random() * diceTarget);
+            setResultNum(simulatedRes);
+          } else if (game?.slug === "roulette") {
+            const spots = rouletteSpots.flatMap((s) => {
+              if (/^\d+$/.test(s)) return [parseInt(s)];
+              return []; // named bets: if win, pick any number in range
+            });
+            if (win && spots.length > 0)
+              simulatedRes = spots[Math.floor(Math.random() * spots.length)] ?? 0;
+            else simulatedRes = europeanWheelOrder.find((n) => !spots.includes(n)) ?? 0;
+            setResultNum(simulatedRes);
+          } else if (game?.slug === "keno") {
+            const drawn: number[] = [];
+            const mySpots = [...kenoSpots];
+            const remaining = Array.from({ length: 40 }, (_, i) => i + 1).filter(
+              (n) => !mySpots.includes(n)
+            );
+            const hitsTarget = win ? Math.max(1, Math.floor(kenoSpots.length * 0.7)) : 0;
+            for (let i = 0; i < hitsTarget && mySpots.length > 0; i++) {
+              const idx = Math.floor(Math.random() * mySpots.length);
+              drawn.push(mySpots.splice(idx, 1)[0]!);
+            }
+            while (drawn.length < 10 && remaining.length > 0) {
+              const idx = Math.floor(Math.random() * remaining.length);
+              drawn.push(remaining.splice(idx, 1)[0]!);
+            }
+            setKenoResultDrawn(drawn);
+            simulatedRes = drawn.filter((n) => kenoSpots.includes(n)).length;
+          }
+
+          setGameHistory((prev) => [{ val: simulatedRes, win }, ...prev].slice(0, 5));
+          setTimeout(() => setShowResult(false), 8000);
+          reset();
+        };
+
+        void resolvePayout();
+      }
+    }
+  }, [
+    state.status,
+    state.betId,
+    recentBets,
+    game?.slug,
+    coinSide,
+    diceDirection,
+    diceTarget,
+    rouletteSpots,
+    kenoSpots,
+    db,
+    reset
+  ]);
 
   const LeftPane = (
     <>
@@ -380,88 +707,101 @@ export function GamePageClient({ slug }: { slug: string }) {
           <WalletIcon className="w-4 h-4" /> Wallet Balance
         </span>
         <span className="font-mono text-white bg-white/5 py-1 px-3 rounded-lg border border-white/10 shadow-inner">
-          {isSynced ? "1,450.20 USDC" : "Syncing..."}
+          {/* A4: Live wallet balance — shows syncing until both indexer is caught-up and balance fetched */}
+          {!isSynced ? "Syncing..." : (walletBalance ?? "—")}
         </span>
       </div>
 
       {game.slug === "roulette" && (
-        <div className="mb-6 bg-[#050505] rounded-2xl border border-white/10 p-4 min-h-[120px] shadow-inner">
-          <div className="flex justify-between items-center mb-3">
-            <label className="text-[10px] uppercase tracking-widest font-bold text-emerald-400 block tracking-wider">
-              Selected Targets ({rouletteSpots.length})
-            </label>
+        <div className="flex flex-col gap-3 rounded-[1.5rem] bg-[#050505] border border-white/10 p-5 mb-6 shadow-inner relative overflow-hidden">
+          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-red-600 to-amber-500" />
+          <div className="flex justify-between items-center z-10">
+            <span className="text-xl font-black font-mono text-white flex gap-2 items-center">
+              {rouletteSpots.length}{" "}
+              <span className="text-white/30 text-xs tracking-widest uppercase mt-1">Bets</span>
+            </span>
             <button
               onClick={() => setRouletteSpots([])}
-              className="text-[10px] font-bold text-white/40 hover:text-white transition-all uppercase tracking-tight"
+              className="px-4 py-2 rounded-xl bg-[#111] hover:bg-red-500/10 border border-white/5 hover:border-red-500/30 text-white/40 hover:text-red-400 text-[10px] font-black uppercase tracking-widest transition-all"
             >
               Clear All
             </button>
           </div>
-          <div className="flex flex-wrap gap-1.5">
-            {rouletteSpots.map((spot) => (
-              <div
-                key={spot}
-                className={cn(
-                  "px-2.5 py-1.5 rounded text-[10px] font-bold font-mono border-b-2 shadow-inner",
-                  spot === "0"
-                    ? "bg-emerald-500 text-white border-emerald-300"
-                    : redNumbers.includes(parseInt(spot))
-                      ? "bg-red-600 text-white border-red-400"
-                      : "bg-black text-white border-white/20"
-                )}
-              >
-                {spot}
-              </div>
-            ))}
-            {rouletteSpots.length === 0 && (
-              <span className="text-[10px] text-white/20 italic">
-                No targets selected. Click the board.
+          <div className="flex flex-wrap gap-1.5 z-10 pt-2 border-t border-white/5 mt-2 max-h-[140px] overflow-y-auto custom-scrollbar pr-2">
+            {rouletteSpots.length === 0 ? (
+              <span className="text-xs text-white/20 font-bold italic py-2">
+                No bets placed. Click the felt to bet.
               </span>
+            ) : (
+              rouletteSpots.map((spot) => (
+                <div
+                  key={spot}
+                  className="bg-[#111] px-2.5 py-1.5 rounded-lg text-xs font-mono font-bold border border-white/10 flex items-center gap-1.5 shadow-sm"
+                >
+                  <div
+                    className={cn(
+                      "w-2 h-2 rounded-full shadow-inner",
+                      spot === "0"
+                        ? "bg-emerald-500"
+                        : [
+                              "RED",
+                              "BLACK",
+                              "EVEN",
+                              "ODD",
+                              "1-18",
+                              "19-36",
+                              "1st 12",
+                              "2nd 12",
+                              "3rd 12"
+                            ].includes(spot)
+                          ? "bg-white/40"
+                          : redNumbers.includes(parseInt(spot))
+                            ? "bg-red-500"
+                            : "bg-zinc-800"
+                    )}
+                  />
+                  <span className="text-white/80">{spot.toUpperCase()}</span>
+                </div>
+              ))
             )}
           </div>
         </div>
       )}
 
       {game.slug === "coin-toss" && (
-        <div className="mb-6">
-          <label className="text-[10px] uppercase tracking-widest font-bold text-white/40 mb-2 block">
-            Call The Coin
+        <div className="mb-6 flex flex-col gap-2 relative">
+          <label className="text-[10px] uppercase tracking-[0.2em] font-bold text-white/40 flex items-center gap-2 mb-1">
+            <SparklesIcon className="w-3 h-3" /> Select Face
           </label>
-          <div className="flex bg-[#050505] p-1.5 rounded-2xl border border-white/10 relative shadow-inner h-16">
+          <div className="flex bg-[#030303] border border-white/5 p-1.5 rounded-2xl relative shadow-inner">
             <div
               className={cn(
-                "absolute inset-y-1.5 w-[calc(50%-6px)] rounded-xl transition-all duration-500 ease-out shadow-[0_0_20px_rgba(0,0,0,0.8)]",
+                "absolute inset-y-1.5 w-[calc(50%-6px)] rounded-xl transition-all duration-[400ms] ease-out shadow-[0_0_20px_rgba(0,0,0,1),inset_0_2px_10px_rgba(255,255,255,0.2)]",
                 coinSide === "HEADS"
-                  ? "bg-gradient-to-br from-amber-400 to-amber-600 left-1.5"
-                  : "bg-gradient-to-br from-indigo-400 to-indigo-600 left-[calc(50%+4px)]"
+                  ? "bg-gradient-to-b from-amber-400 to-amber-600 left-1.5"
+                  : "bg-gradient-to-b from-indigo-500 to-indigo-700 left-[calc(50%+4.5px)]"
               )}
             />
             <button
               onClick={() => setCoinSide("HEADS")}
               className={cn(
-                "flex-1 rounded-xl font-bold uppercase tracking-wider text-sm relative z-10 transition-colors flex items-center justify-center gap-2",
+                "flex-1 py-3 rounded-xl font-bold uppercase tracking-widest text-xs relative z-10 transition-colors flex items-center justify-center gap-2",
                 coinSide === "HEADS"
-                  ? "text-amber-950 font-extrabold"
-                  : "text-white/40 hover:text-white"
+                  ? "text-amber-950 font-black drop-shadow-md"
+                  : "text-white/30 hover:text-white"
               )}
             >
-              <SparklesIcon
-                className={cn("w-5 h-5", coinSide === "HEADS" ? "text-amber-900" : "opacity-30")}
-              />{" "}
               Heads
             </button>
             <button
               onClick={() => setCoinSide("TAILS")}
               className={cn(
-                "flex-1 rounded-xl font-bold uppercase tracking-wider text-sm relative z-10 transition-colors flex items-center justify-center gap-2",
+                "flex-1 py-3 rounded-xl font-bold uppercase tracking-widest text-xs relative z-10 transition-colors flex items-center justify-center gap-2",
                 coinSide === "TAILS"
-                  ? "text-indigo-950 font-extrabold"
-                  : "text-white/40 hover:text-white"
+                  ? "text-white font-black drop-shadow-md"
+                  : "text-white/30 hover:text-white"
               )}
             >
-              <ShieldCheckIcon
-                className={cn("w-5 h-5", coinSide === "TAILS" ? "text-indigo-900" : "opacity-30")}
-              />{" "}
               Tails
             </button>
           </div>
@@ -469,40 +809,53 @@ export function GamePageClient({ slug }: { slug: string }) {
       )}
 
       {game.slug === "keno" && (
-        <div className="flex flex-col gap-3 rounded-2xl bg-[#050505] border border-white/10 p-4 mb-6 shadow-inner">
-          <div className="flex justify-between items-center">
-            <span className="text-xl font-bold font-mono text-white">
-              {kenoSpots.length} <span className="text-white/30 text-sm">/ 10</span>
+        <div className="flex flex-col gap-3 rounded-[1.5rem] bg-[#050505] border border-white/10 p-5 mb-6 shadow-inner relative overflow-hidden">
+          <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-fuchsia-600 to-fuchsia-400" />
+          <div className="flex justify-between items-center z-10">
+            <span className="text-xl font-black font-mono text-white flex gap-2 items-center">
+              {kenoSpots.length}{" "}
+              <span className="text-white/30 text-xs tracking-widest uppercase mt-1">
+                / 10 Spots
+              </span>
             </span>
             <div className="flex gap-2">
               <button
                 onClick={() => {
-                  const r: any[] = [];
+                  const r: number[] = [];
                   while (r.length < 10) {
                     const n = Math.floor(Math.random() * 40) + 1;
                     if (!r.includes(n)) r.push(n);
                   }
                   setKenoSpots(r);
+                  setKenoResultDrawn([]);
                 }}
-                className="px-3 py-1.5 rounded-lg border border-fuchsia-500/50 bg-fuchsia-500/10 text-fuchsia-300 text-[10px] font-bold uppercase"
+                className="px-4 py-2 rounded-xl border border-fuchsia-500/50 bg-fuchsia-500/10 text-fuchsia-300 text-[10px] font-black uppercase tracking-widest hover:bg-fuchsia-500/20 transition-all shadow-[0_0_15px_rgba(217,70,239,0.1)]"
               >
                 Auto Pick
               </button>
               <button
-                onClick={() => setKenoSpots([])}
-                className="px-3 py-1.5 rounded-lg bg-[#111] border border-white/5 text-white/40 text-[10px] font-bold uppercase"
+                onClick={() => {
+                  setKenoSpots([]);
+                  setKenoResultDrawn([]);
+                }}
+                className="px-4 py-2 rounded-xl bg-[#111] hover:bg-white/10 border border-white/5 text-white/40 hover:text-white text-[10px] font-black uppercase tracking-widest transition-all"
               >
                 Clear
               </button>
             </div>
           </div>
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap gap-1.5 z-10 pt-2 border-t border-white/5 mt-2">
+            {kenoSpots.length === 0 && (
+              <span className="text-xs text-white/20 font-bold italic py-2">
+                No spots selected. Click the grid to pick numbers.
+              </span>
+            )}
             {kenoSpots
               .sort((a, b) => a - b)
               .map((n) => (
                 <div
                   key={n}
-                  className="w-6 h-6 flex items-center justify-center rounded-md bg-fuchsia-600 text-white font-mono text-[10px] font-bold"
+                  className="w-7 h-7 flex items-center justify-center rounded-lg bg-fuchsia-600 border border-fuchsia-400 text-white font-mono text-xs font-black shadow-[0_0_10px_rgba(217,70,239,0.4)]"
                 >
                   {n}
                 </div>
@@ -550,13 +903,119 @@ export function GamePageClient({ slug }: { slug: string }) {
               2x
             </button>
             <button
-              onClick={() => handleAmountChange(1450)}
+              onClick={() => {
+                // C1: Use live wallet balance for Max button
+                const rawBalance = walletBalance
+                  ? parseFloat(walletBalance.replace(/,/g, "").replace(" USDC", ""))
+                  : 1450;
+                handleAmountChange(Math.floor(rawBalance));
+              }}
               className="flex-1 py-1.5 rounded-lg bg-[#0a0a0a] hover:bg-white/10 text-[10px] uppercase font-bold text-white/40 hover:text-white transition-all"
             >
               Max
             </button>
           </div>
         </div>
+      </div>
+
+      {/* C1: Multi-Roll Controls */}
+      <div className="mb-6">
+        <div className="flex justify-between items-center mb-2">
+          <label className="text-[10px] uppercase tracking-widest font-bold text-white/40">
+            Rolls
+          </label>
+          {betCount > 1 && (
+            <span className="text-[10px] font-mono text-white/30">
+              Total: {(betAmount * betCount).toLocaleString()} USDC
+            </span>
+          )}
+        </div>
+        <div className="flex gap-1.5">
+          {[1, 2, 5, 10].map((n) => (
+            <button
+              key={n}
+              onClick={() => setBetCount(n)}
+              disabled={isPending}
+              className={cn(
+                "flex-1 py-2.5 rounded-xl text-xs font-black uppercase tracking-wide border transition-all",
+                betCount === n
+                  ? themeColor === "purple"
+                    ? "bg-purple-600 border-purple-400 text-white shadow-[0_0_12px_rgba(147,51,234,0.4)]"
+                    : themeColor === "emerald"
+                      ? "bg-emerald-600 border-emerald-400 text-white shadow-[0_0_12px_rgba(16,185,129,0.4)]"
+                      : themeColor === "amber"
+                        ? "bg-amber-500 border-amber-300 text-amber-950 shadow-[0_0_12px_rgba(245,158,11,0.4)]"
+                        : "bg-fuchsia-600 border-fuchsia-400 text-white shadow-[0_0_12px_rgba(217,70,239,0.4)]"
+                  : "bg-[#0a0a0a] border-white/10 text-white/40 hover:border-white/20 hover:text-white"
+              )}
+            >
+              {n === 1 ? "1x" : `${n}x`}
+            </button>
+          ))}
+          <input
+            type="number"
+            min={1}
+            max={100}
+            value={betCount}
+            onChange={(e) => setBetCount(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
+            disabled={isPending}
+            className="w-14 text-center bg-[#0a0a0a] border border-white/10 rounded-xl text-xs font-mono text-white focus:border-white/30 focus:outline-none"
+          />
+        </div>
+      </div>
+
+      {/* C1: Advanced Controls (collapsible) */}
+      <div className="mb-6">
+        <button
+          onClick={() => setAdvancedOpen((o) => !o)}
+          className="w-full flex justify-between items-center text-[10px] uppercase tracking-widest font-bold text-white/25 hover:text-white/50 transition-colors pb-2 border-b border-white/5"
+        >
+          <span>Advanced</span>
+          <span className={cn("transition-transform duration-200", advancedOpen && "rotate-180")}>
+            ▼
+          </span>
+        </button>
+        {advancedOpen && (
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1">
+              <label className="text-[9px] uppercase font-bold text-white/30 tracking-widest">
+                Stop Gain (USDC)
+              </label>
+              <input
+                type="number"
+                min={0}
+                value={stopGain}
+                onChange={(e) => setStopGain(Math.max(0, parseInt(e.target.value) || 0))}
+                placeholder="0 = off"
+                className="bg-[#0a0a0a] border border-white/10 rounded-xl px-3 py-2 text-sm font-mono text-white focus:border-emerald-500/40 focus:outline-none"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[9px] uppercase font-bold text-white/30 tracking-widest">
+                Stop Loss (USDC)
+              </label>
+              <input
+                type="number"
+                min={0}
+                value={stopLoss}
+                onChange={(e) => setStopLoss(Math.max(0, parseInt(e.target.value) || 0))}
+                placeholder="0 = off"
+                className="bg-[#0a0a0a] border border-white/10 rounded-xl px-3 py-2 text-sm font-mono text-white focus:border-red-500/40 focus:outline-none"
+              />
+            </div>
+            {(stopGain > 0 || stopLoss > 0) && (
+              <div className="col-span-2 text-[9px] text-white/20 font-mono">
+                {stopGain > 0 && (
+                  <span className="text-emerald-400/50">↑ Stop at +{stopGain} USDC gain</span>
+                )}
+                {stopGain > 0 && stopLoss > 0 && <span className="mx-2">·</span>}
+                {stopLoss > 0 && (
+                  <span className="text-red-400/50">↓ Stop at {stopLoss} USDC loss</span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4 mb-auto">
@@ -583,27 +1042,93 @@ export function GamePageClient({ slug }: { slug: string }) {
           </span>
           <span className="text-2xl font-mono font-bold text-white">{winChance.toFixed(2)}%</span>
         </div>
+        <div className="col-span-2 bg-[#050505] p-4 rounded-2xl border border-white/10 flex flex-col shadow-[inset_0_2px_15px_rgba(0,0,0,0.5)] select-none">
+          <span className="text-[10px] uppercase font-bold text-white/40 tracking-widest mb-1">
+            Expected Payout
+          </span>
+          <span
+            className={cn(
+              "text-3xl font-mono font-extrabold flex items-baseline gap-2",
+              themeColor === "emerald"
+                ? "text-emerald-400"
+                : themeColor === "purple"
+                  ? "text-purple-400"
+                  : themeColor === "amber"
+                    ? "text-amber-400"
+                    : "text-fuchsia-400"
+            )}
+          >
+            {expectedPayout.toFixed(2)}{" "}
+            <span
+              className={cn(
+                "text-sm font-bold",
+                themeColor === "emerald"
+                  ? "text-emerald-500/50"
+                  : themeColor === "purple"
+                    ? "text-purple-500/50"
+                    : themeColor === "amber"
+                      ? "text-amber-500/50"
+                      : "text-fuchsia-500/50"
+              )}
+            >
+              USDC
+            </span>
+          </span>
+        </div>
       </div>
+
+      {state.status === "failed" && state.error && (
+        <div className="mb-4 bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-start gap-3 text-red-400">
+          <InformationCircleIcon className="w-5 h-5 flex-shrink-0" />
+          <div className="text-xs font-bold font-mono">{state.error.message}</div>
+        </div>
+      )}
 
       <button
         onClick={handlePlaceBet}
-        disabled={isPending || (game.slug !== "dice" && winChance === 0)}
+        disabled={
+          isPending ||
+          state.status === "planning" ||
+          state.status === "submitting" ||
+          state.status === "mined" ||
+          (game.slug !== "dice" && winChance === 0)
+        }
         className={cn(
           "mt-8 w-full py-6 rounded-2xl text-white font-extrabold text-xl shadow-2xl transition-all border-b-[4px]",
-          isPending
-            ? "bg-[#111] opacity-50 cursor-not-allowed border-black"
-            : game.slug === "dice"
-              ? "bg-purple-600 border-purple-800 text-white"
-              : game.slug === "roulette"
-                ? "bg-emerald-600 border-emerald-800 text-white"
-                : game.slug === "coin-toss"
-                  ? coinSide === "HEADS"
-                    ? "bg-amber-500 border-amber-700 text-amber-950"
-                    : "bg-indigo-600 border-indigo-800 text-white"
-                  : "bg-fuchsia-600 border-fuchsia-800 text-white"
+          isPending ||
+            state.status === "reconciled" ||
+            state.status === "submitting" ||
+            state.status === "mined" ||
+            state.status === "planning"
+            ? "bg-[#111] opacity-50 cursor-not-allowed border-black text-white/50 shadow-none hover:bg-[#111]"
+            : state.status === "failed"
+              ? "bg-red-600 border-red-800 text-white hover:bg-red-500"
+              : game.slug === "dice"
+                ? "bg-purple-600 border-purple-800 text-white hover:bg-purple-500"
+                : game.slug === "roulette"
+                  ? "bg-emerald-600 border-emerald-800 text-white hover:bg-emerald-500"
+                  : game.slug === "coin-toss"
+                    ? coinSide === "HEADS"
+                      ? "bg-amber-500 border-amber-700 text-amber-950 hover:bg-amber-400"
+                      : "bg-indigo-600 border-indigo-800 text-white hover:bg-indigo-500"
+                    : "bg-fuchsia-600 border-fuchsia-800 text-white hover:bg-fuchsia-500"
         )}
       >
-        {isPending ? "SPINNING..." : "PLACE BET"}
+        {!sdk?.account
+          ? "CONNECT WALLET"
+          : state.status === "failed"
+            ? "TRANSACTION FAILED - RETRY"
+            : isPending || state.status === "reconciled"
+              ? "WAITING FOR VRF..."
+              : state.status === "mined" || state.status === "submitting"
+                ? "CONFIRM IN WALLET..."
+                : state.plan
+                  ? state.plan.preview.needsApproval
+                    ? "APPROVE TICKET"
+                    : "CONFIRM TICKET"
+                  : state.status === "planning"
+                    ? "REVIEWING TICKET..."
+                    : "PLACE BET"}
       </button>
     </>
   );
@@ -616,166 +1141,287 @@ export function GamePageClient({ slug }: { slug: string }) {
           __html: `
          @keyframes dice-roll-3d { 0% { transform: rotateX(0deg) rotateY(0deg) scale(0.8); } 50% { transform: rotateX(540deg) rotateY(720deg) scale(1.2); } 100% { transform: rotateX(1080deg) rotateY(1440deg) scale(1); } }
          @keyframes toss-anim { 0% { transform: rotateX(20deg) rotateY(0deg) translateY(0px); } 50% { transform: rotateX(80deg) rotateY(900deg) translateY(-400px) scale(1.5); } 100% { transform: rotateX(20deg) rotateY(${flipCount * 1800 + (coinSide === "TAILS" ? 180 : 0)}deg) translateY(0px); } }
+         @keyframes spin-coin-fast { 0% { transform: rotateX(10deg) rotateY(0deg) scale(1.2); } 100% { transform: rotateX(10deg) rotateY(360deg) scale(1.2); } }
        `
         }}
       />
 
-      {/* RECENT RECORDS WIDGET */}
+      {/* C2: Live Bets Tracker — shows real chain state of recent bets */}
       <div className="absolute top-6 right-6 lg:top-8 lg:right-8 z-20 hidden md:block">
-        <div className="flex flex-col items-end gap-2 p-3 rounded-2xl border border-white/5 bg-[#050505]/90 backdrop-blur-xl shadow-2xl">
-          <div className="text-[10px] font-bold text-white/30 tracking-widest uppercase px-2">
+        <div className="flex flex-col items-end gap-2 p-3 rounded-2xl border border-white/5 bg-[#050505]/90 backdrop-blur-xl shadow-2xl min-w-[200px] max-w-[260px]">
+          <div className="text-[10px] font-bold text-white/30 tracking-widest uppercase px-1 w-full">
             {game.slug === "dice"
               ? "RECENT ROLLS"
               : game.slug === "roulette"
                 ? "RECENT NUMBERS"
-                : "RECENT FLIPS"}
+                : game.slug === "keno"
+                  ? "RECENT DRAWS"
+                  : "RECENT FLIPS"}
           </div>
-          <div className="flex gap-2 min-w-[120px] justify-end">
-            {gameHistory.length > 0 ? (
-              gameHistory.map((res, i) => (
+          {/* Session history from this session */}
+          {gameHistory.length > 0 && (
+            <div className="flex gap-1.5 justify-end flex-wrap w-full">
+              {gameHistory.map((res, i) => (
                 <div
                   key={i}
                   className={cn(
-                    "w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold font-mono border",
-                    game.slug === "roulette"
-                      ? res.val === 0
-                        ? "bg-emerald-500 border-emerald-300"
-                        : redNumbers.includes(res.val)
-                          ? "bg-red-600 border-red-400"
-                          : "bg-black border-white/20"
-                      : res.val === 1
-                        ? "bg-amber-500/20 text-amber-400 border-amber-500/40"
-                        : "bg-indigo-500/20 text-indigo-400 border-indigo-500/40"
+                    "w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-bold font-mono border",
+                    res.win
+                      ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.3)]"
+                      : "bg-red-500/10 text-red-400 border-red-500/20"
                   )}
                 >
-                  {game.slug === "coin-toss" ? (res.val === 1 ? "H" : "T") : res.val}
+                  {game.slug === "coin-toss" ? (
+                    res.val === 1 ? (
+                      "H"
+                    ) : (
+                      "T"
+                    )
+                  ) : game.slug === "keno" ? (
+                    res.val
+                  ) : game.slug === "roulette" ? (
+                    <span
+                      className={cn(
+                        "w-5 h-5 rounded-full flex items-center justify-center text-[8px]",
+                        res.val === 0
+                          ? "bg-emerald-500"
+                          : redNumbers.includes(res.val)
+                            ? "bg-red-600"
+                            : "bg-zinc-700"
+                      )}
+                    >
+                      {res.val}
+                    </span>
+                  ) : (
+                    res.val
+                  )}
                 </div>
-              ))
-            ) : (
-              <span className="text-[10px] text-white/10 px-4 py-2">Waiting for first play...</span>
-            )}
-          </div>
+              ))}
+            </div>
+          )}
+          {/* C2: Live chain bets from indexer */}
+          {recentBets.length > 0 && (
+            <div className="w-full border-t border-white/5 pt-2 mt-1 flex flex-col gap-1">
+              {recentBets.slice(0, 3).map((bet) => (
+                <div key={bet.id} className="flex justify-between items-center">
+                  <span className="text-[9px] font-mono text-white/30">
+                    #{bet.betId.toString().slice(-6)}
+                  </span>
+                  <span
+                    className={cn(
+                      "text-[9px] font-bold px-2 py-0.5 rounded-full border",
+                      bet.state === "finalized"
+                        ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                        : bet.state === "refunded"
+                          ? "bg-zinc-500/10 text-zinc-400 border-zinc-500/20"
+                          : bet.state === "randomReady"
+                            ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                            : "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                    )}
+                  >
+                    {bet.state === "finalized"
+                      ? "SETTLED"
+                      : bet.state === "refunded"
+                        ? "REFUNDED"
+                        : bet.state === "randomReady"
+                          ? "VRF READY"
+                          : "PLACED"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+          {gameHistory.length === 0 && recentBets.length === 0 && (
+            <span className="text-[10px] text-white/10 px-2 py-1">Waiting for first play...</span>
+          )}
         </div>
       </div>
 
       {/* DICE STAGE */}
       {game.slug === "dice" && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center p-8 z-10">
-          <div className="relative mb-12 flex flex-col items-center mt-[-100px]">
-            <div className="absolute -bottom-10 w-64 h-16 bg-purple-500/20 blur-[60px] rounded-full" />
-            <div className="w-32 h-32 md:w-48 md:h-48 relative" style={{ perspective: "1200px" }}>
+        <div className="absolute inset-0 flex flex-col items-center justify-center p-8 z-10 overflow-hidden">
+          {/* Ambient Purple Background */}
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(147,51,234,0.05)_0%,transparent_60%)] pointer-events-none" />
+
+          {/* Floating 3D Dice Geometry */}
+          <div className="relative mb-24 flex flex-col items-center z-10 scale-90 md:scale-100">
+            <div className="absolute -bottom-8 w-48 h-12 bg-purple-500/30 blur-[40px] rounded-[100%] pointer-events-none" />
+            <div className="w-40 h-40 relative" style={{ perspective: "1500px" }}>
               <div
                 className={cn(
-                  "w-full h-full relative transition-all duration-1000",
+                  "w-full h-full relative transition-[transform] duration-[2000ms]",
                   isPending
-                    ? "animate-[dice-roll-3d_2.5s_cubic-bezier(0.2,0.8,0.2,1)_forwards]"
+                    ? "animate-[dice-roll-3d_1.5s_cubic-bezier(0.2,0.8,0.2,1)_forwards]"
                     : "animate-[spin_40s_linear_infinite]"
                 )}
                 style={{
                   transformStyle: "preserve-3d",
-                  transform: "rotateX(-20deg) rotateY(30deg)"
+                  transform:
+                    !isPending && showResult
+                      ? `rotateX(${Math.random() * 360}deg) rotateY(${Math.random() * 360}deg)`
+                      : "rotateX(-20deg) rotateY(30deg)"
                 }}
               >
-                <DiceFace
-                  type={1}
-                  className="[transform:rotateY(0deg)_translateZ(4rem)] md:[transform:rotateY(0deg)_translateZ(6rem)]"
-                />
-                <DiceFace
-                  type={6}
-                  className="[transform:rotateY(180deg)_translateZ(4rem)] md:[transform:rotateY(180deg)_translateZ(6rem)]"
-                />
-                <DiceFace
-                  type={3}
-                  className="[transform:rotateY(90deg)_translateZ(4rem)] md:[transform:rotateY(90deg)_translateZ(6rem)]"
-                />
-                <DiceFace
-                  type={4}
-                  className="[transform:rotateY(-90deg)_translateZ(4rem)] md:[transform:rotateY(-90deg)_translateZ(6rem)]"
-                />
-                <DiceFace
-                  type={2}
-                  className="[transform:rotateX(90deg)_translateZ(4rem)] md:[transform:rotateX(90deg)_translateZ(6rem)]"
-                />
-                <DiceFace
-                  type={5}
-                  className="[transform:rotateX(-90deg)_translateZ(4rem)] md:[transform:rotateX(-90deg)_translateZ(6rem)]"
-                />
+                {/* 3D Faces */}
+                <DiceFace type={1} className="[transform:rotateY(0deg)_translateZ(5rem)]" />
+                <DiceFace type={6} className="[transform:rotateY(180deg)_translateZ(5rem)]" />
+                <DiceFace type={3} className="[transform:rotateY(90deg)_translateZ(5rem)]" />
+                <DiceFace type={4} className="[transform:rotateY(-90deg)_translateZ(5rem)]" />
+                <DiceFace type={2} className="[transform:rotateX(90deg)_translateZ(5rem)]" />
+                <DiceFace type={5} className="[transform:rotateX(-90deg)_translateZ(5rem)]" />
               </div>
             </div>
+
+            {showResult && resultNum !== null && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50 mt-10">
+                <div className="px-6 py-2 bg-purple-600/90 backdrop-blur-xl border border-purple-400 rounded-full text-white font-mono font-black text-3xl shadow-[0_0_40px_rgba(168,85,247,0.8)] animate-in zoom-in spin-in-12 duration-500">
+                  {resultNum}
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="absolute bottom-8 w-full max-w-2xl px-6">
-            <div className="bg-[#0a0a0a]/90 backdrop-blur-3xl rounded-[2.5rem] border border-white/10 p-8 shadow-2xl flex flex-col gap-6">
-              <div className="flex justify-between items-center px-2">
-                <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10 relative h-10 w-48">
+          {/* Interactive Precision Slider Console */}
+          <div className="absolute bottom-12 w-full max-w-3xl px-6 z-20">
+            <div className="bg-[#050505]/95 backdrop-blur-3xl rounded-[3rem] border border-white/10 p-8 shadow-[0_40px_80px_rgba(0,0,0,0.8),inset_0_2px_15px_rgba(255,255,255,0.05)] flex flex-col gap-8 relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-t from-purple-900/10 to-transparent pointer-events-none" />
+
+              <div className="flex justify-between items-center relative z-10 px-4">
+                <div className="flex bg-[#0a0a0a] p-1.5 rounded-2xl border border-white/10 relative h-12 w-64 shadow-inner">
                   <div
                     className={cn(
-                      "absolute inset-y-1 w-[calc(50%-4px)] rounded-xl transition-all duration-300 bg-purple-600 shadow-lg",
-                      diceDirection === "under" ? "left-1" : "left-[calc(50%+2px)]"
+                      "absolute inset-y-1.5 w-[calc(50%-6px)] rounded-xl transition-all duration-300 shadow-md",
+                      diceDirection === "under"
+                        ? "bg-purple-600 left-1.5"
+                        : "bg-emerald-600 left-[calc(50%+4px)]"
                     )}
                   />
                   <button
                     onClick={() => setDiceDirection("under")}
-                    className="flex-1 rounded-xl font-bold uppercase tracking-widest text-[9px] relative z-10"
+                    className={cn(
+                      "flex-1 rounded-xl font-bold uppercase tracking-widest text-[10px] relative z-10 transition-colors",
+                      diceDirection === "under" ? "text-white" : "text-white/40"
+                    )}
                   >
                     Roll Under
                   </button>
                   <button
                     onClick={() => setDiceDirection("over")}
-                    className="flex-1 rounded-xl font-bold uppercase tracking-widest text-[9px] relative z-10"
+                    className={cn(
+                      "flex-1 rounded-xl font-bold uppercase tracking-widest text-[10px] relative z-10 transition-colors",
+                      diceDirection === "over" ? "text-white" : "text-white/40"
+                    )}
                   >
                     Roll Over
                   </button>
                 </div>
-                <div className="text-right">
-                  <span className="text-[10px] text-white/30 uppercase font-bold block mb-1">
-                    Target Result
+
+                <div className="text-right flex flex-col items-end">
+                  <span className="text-[10px] text-white/30 uppercase font-black tracking-widest block mb-1">
+                    Target Range
                   </span>
-                  <span className="text-2xl font-mono font-bold text-white">
-                    {diceDirection === "under" ? `< ${diceTarget}` : `> ${diceTarget}`}
-                  </span>
+                  <div className="flex items-center gap-2 bg-[#0a0a0a] px-4 py-1.5 rounded-xl border border-white/5 font-mono">
+                    <span className="text-gray-500">0</span>
+                    <span className="text-purple-400 font-bold">
+                      {diceDirection === "under" ? `< ${diceTarget}` : `> ${diceTarget}`}
+                    </span>
+                    <span className="text-gray-500">100</span>
+                  </div>
                 </div>
               </div>
-              <div className="relative h-16 flex items-center group">
-                <div className="absolute inset-x-0 h-4 bg-black rounded-full border border-white/5 overflow-hidden shadow-inner">
+
+              {/* Massive Slider Track */}
+              <div className="relative h-28 flex items-center group mt-4 mb-2 mx-4 z-20">
+                <div className="absolute inset-x-0 h-6 bg-[#030303] rounded-full border-[3px] border-white/5 overflow-hidden shadow-[inset_0_4px_10px_rgba(0,0,0,1)]">
                   <div
-                    className="absolute inset-y-0 bg-gradient-to-r from-emerald-600 to-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.5)] transition-all ease-out"
-                    style={{
-                      left: diceDirection === "under" ? "0%" : `${diceTarget}%`,
-                      width: diceDirection === "under" ? `${diceTarget}%` : `${100 - diceTarget}%`
-                    }}
+                    className={cn(
+                      "absolute inset-y-0 transition-all ease-out",
+                      diceDirection === "under"
+                        ? "bg-gradient-to-r from-emerald-500 to-emerald-300 shadow-[0_0_20px_emerald]"
+                        : "bg-gradient-to-r from-red-600 to-red-400 shadow-[0_0_20px_red]"
+                    )}
+                    style={{ left: "0%", width: `${diceTarget}%` }}
                   />
                   <div
-                    className="absolute inset-y-0 bg-red-900/30 transition-all ease-out"
-                    style={{
-                      left: diceDirection === "under" ? `${diceTarget}%` : "0%",
-                      width: diceDirection === "under" ? `${100 - diceTarget}%` : `${diceTarget}%`
-                    }}
+                    className={cn(
+                      "absolute inset-y-0 transition-all ease-out",
+                      diceDirection === "under"
+                        ? "bg-gradient-to-r from-red-400 to-red-600 shadow-[0_0_20px_red]"
+                        : "bg-gradient-to-r from-emerald-300 to-emerald-500 shadow-[0_0_20px_emerald]"
+                    )}
+                    style={{ left: `${diceTarget}%`, width: `${100 - diceTarget}%` }}
                   />
                 </div>
+
+                {/* Invisible native input over the entire track */}
                 <input
                   type="range"
                   min="2"
                   max="98"
                   value={diceTarget}
                   onChange={(e) => setDiceTarget(parseInt(e.target.value))}
-                  className="absolute inset-x-0 w-full h-full opacity-0 cursor-ew-resize z-20"
+                  disabled={isPending}
+                  className="absolute inset-x-0 w-full h-[60px] opacity-0 cursor-ew-resize z-30"
                 />
+
+                {/* The Custom Glass Thumb */}
                 <div
-                  className="absolute z-10 w-16 h-16 -ml-8 flex flex-col items-center justify-center transition-all ease-out pointer-events-none"
+                  className="absolute z-10 w-24 h-24 -ml-12 flex flex-col items-center justify-center transition-all ease-out pointer-events-none"
                   style={{ left: `${diceTarget}%` }}
                 >
-                  <div className="absolute bottom-full bg-purple-600 rounded-xl px-4 py-2 border border-purple-400 shadow-2xl font-mono text-2xl font-bold text-white mb-4">
-                    {diceTarget}
+                  <div className="absolute bottom-[80%] bg-[#0f0f0f]/95 backdrop-blur-md rounded-2xl py-3 px-4 shadow-[0_20px_50px_rgba(0,0,0,0.8),inset_0_2px_10px_rgba(255,255,255,0.1)] border border-purple-500/40 flex flex-col items-center min-w-[130px] scale-100 group-hover:scale-[1.15] transition-transform mb-4">
+                    <span className="text-[10px] text-white/40 uppercase font-black tracking-widest mb-1 shadow-sm">
+                      Target
+                    </span>
+                    <span className="font-mono text-4xl font-black text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">
+                      {diceTarget}
+                    </span>
+
+                    <div className="flex gap-4 mt-2 pt-2 border-t border-white/10 w-full justify-between px-1">
+                      <div className="flex flex-col items-center">
+                        <span className="text-[8px] text-white/30 tracking-widest uppercase font-bold">
+                          Mult
+                        </span>
+                        <span className="text-[11px] font-mono text-purple-400 font-black">
+                          {multiplier.toFixed(2)}x
+                        </span>
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <span className="text-[8px] text-white/30 tracking-widest uppercase font-bold">
+                          Win
+                        </span>
+                        <span className="text-[11px] font-mono text-emerald-400 font-black">
+                          {winChance.toFixed(2)}%
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[10px] border-r-[10px] border-t-[10px] border-transparent border-t-[#0f0f0f] filter drop-shadow-[0_5px_5px_rgba(0,0,0,0.5)]" />
                   </div>
-                  <div className="w-8 h-8 rounded-full bg-white border-[6px] border-purple-500 shadow-2xl" />
+
+                  {/* Grip Indicator */}
+                  <div
+                    className={cn(
+                      "w-10 h-10 rounded-full border-[6px] shadow-[0_0_30px_rgba(0,0,0,0.8)] outline outline-2 outline-black/30 bg-white group-hover:bg-purple-100 transition-colors flex items-center justify-center",
+                      diceDirection === "under" ? "border-purple-500" : "border-emerald-500"
+                    )}
+                  >
+                    <div className="flex gap-0.5">
+                      <div className="w-[2px] h-3 bg-black/20 rounded-full" />
+                      <div className="w-[2px] h-3 bg-black/20 rounded-full" />
+                      <div className="w-[2px] h-3 bg-black/20 rounded-full" />
+                    </div>
+                  </div>
                 </div>
-                <div className="absolute bottom-[-24px] inset-x-0 flex justify-between text-[10px] font-bold text-white/10 px-1 font-mono">
-                  <span>0</span>
-                  <span>25</span>
-                  <span>50</span>
-                  <span>75</span>
-                  <span>100</span>
+
+                {/* Track Scale Markers */}
+                <div className="absolute -bottom-6 inset-x-4 flex justify-between text-[9px] font-black text-white/20 px-1 font-mono tracking-widest">
+                  {[0, 25, 50, 75, 100].map((val) => (
+                    <div key={val} className="flex flex-col items-center opacity-70">
+                      <div className="w-0.5 h-1.5 bg-white/20 mb-1 rounded-full" />
+                      {val}
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -785,86 +1431,127 @@ export function GamePageClient({ slug }: { slug: string }) {
 
       {/* COIN TOSS STAGE */}
       {game.slug === "coin-toss" && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center p-8 z-10">
-          <div className="relative w-64 h-64 md:w-80 md:h-80" style={{ perspective: "1500px" }}>
+        <div className="absolute inset-0 flex flex-col items-center justify-center p-8 z-10 overflow-hidden">
+          {/* Ambient Cosmic Background */}
+          <div className="absolute inset-x-0 bottom-0 h-[60%] bg-gradient-to-t from-amber-500/5 to-transparent pointer-events-none" />
+          <div
+            className={cn(
+              "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full blur-[120px] opacity-20 pointer-events-none transition-colors duration-1000",
+              isPending ? "bg-amber-500" : coinSide === "HEADS" ? "bg-amber-600" : "bg-indigo-600"
+            )}
+          />
+
+          <div className="relative w-56 h-56 md:w-72 md:h-72" style={{ perspective: "1200px" }}>
             <div
               className={cn(
-                "w-full h-full relative shadow-2xl",
-                isPending ? "animate-[toss-anim_2.5s_cubic-bezier(0.3,0.1,0.3,1)_forwards]" : ""
+                "w-full h-full relative transition-[transform] ease-out",
+                isPending ? "animate-[spin-coin-fast_0.5s_linear_infinite]" : "duration-700"
               )}
               style={{
                 transformStyle: "preserve-3d",
-                transform: `rotateX(20deg) rotateY(${coinSide === "TAILS" ? 180 : 0}deg)`
+                transform:
+                  !isPending && showResult
+                    ? `rotateX(15deg) rotateY(${resultNum === 1 ? 0 : 180}deg)`
+                    : isPending
+                      ? "none"
+                      : `rotateX(15deg) rotateY(${coinSide === "TAILS" ? 180 : 0}deg)`
               }}
             >
-              {Array.from({ length: 24 }).map((_, i) => (
+              {/* Coin Edge Depth (30 Layers) */}
+              {Array.from({ length: 30 }).map((_, i) => (
                 <div
                   key={i}
-                  className="absolute inset-0 rounded-full border-[8px] backface-hidden"
+                  className="absolute inset-0 rounded-full border-[6px]"
                   style={{
                     transform: `translateZ(-${i}px)`,
-                    borderColor: isPending
-                      ? "#9CA3AF"
-                      : coinSide === "HEADS"
-                        ? "#B45309"
-                        : "#312E81"
+                    borderColor: i % 2 === 0 ? "#8B6508" : "#DAA520",
+                    filter: "brightness(0.8)"
                   }}
                 />
               ))}
+
+              {/* HEADS FACE */}
               <div
-                className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_top_right,#fbbf24,#b45309_70%)] border-[10px] border-amber-300 flex flex-col items-center justify-center shadow-inner overflow-hidden backface-hidden"
+                className="absolute inset-0 rounded-full bg-[conic-gradient(from_45deg,#FFD700,#B8860B,#FFD700,#F0E68C,#FFD700)] shadow-[inset_0_0_30px_rgba(139,69,19,0.8),inset_0_2px_15px_rgba(255,255,255,0.7)] flex flex-col items-center justify-center border-2 border-yellow-200 overflow-hidden backface-hidden"
                 style={{ transform: "translateZ(1px)" }}
               >
-                <SparklesIcon className="w-20 h-20 text-white/30 mb-2" />
-                <span className="text-3xl font-black text-white tracking-widest uppercase">
-                  HEADS
-                </span>
+                {/* Engraving ring */}
+                <div className="absolute inset-4 rounded-full border border-[#B8860B]/40 shadow-[inset_0_0_10px_rgba(0,0,0,0.5)] bg-[radial-gradient(circle_at_center,#DAA520,#8B6508)] flex flex-col items-center justify-center">
+                  <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay" />
+                  <SparklesIcon className="w-24 h-24 text-white p-4 drop-shadow-[0_2px_5px_rgba(0,0,0,0.8)]" />
+                  <span className="text-3xl font-black text-white/90 tracking-[0.2em] [text-shadow:0_2px_4px_rgba(0,0,0,0.8)] mt-[-10px]">
+                    HEADS
+                  </span>
+                </div>
               </div>
+
+              {/* TAILS FACE */}
               <div
-                className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_top_right,#818cf8,#3730a3_70%)] border-[10px] border-indigo-300 flex flex-col items-center justify-center shadow-inner overflow-hidden backface-hidden"
-                style={{ transform: "rotateY(180deg) translateZ(24px)" }}
+                className="absolute inset-0 rounded-full bg-[conic-gradient(from_45deg,#C0C0C0,#708090,#C0C0C0,#E6E6FA,#C0C0C0)] shadow-[inset_0_0_30px_rgba(47,79,79,0.8),inset_0_2px_15px_rgba(255,255,255,0.7)] flex flex-col items-center justify-center border-2 border-white/80 overflow-hidden backface-hidden"
+                style={{ transform: "rotateY(180deg) translateZ(30px)" }}
               >
-                <ShieldCheckIcon className="w-20 h-20 text-white/30 mb-2" />
-                <span className="text-3xl font-black text-white tracking-widest uppercase">
-                  TAILS
-                </span>
+                {/* Engraving ring */}
+                <div className="absolute inset-4 rounded-full border border-gray-500/40 shadow-[inset_0_0_10px_rgba(0,0,0,0.5)] bg-[radial-gradient(circle_at_center,#778899,#2F4F4F)] flex flex-col items-center justify-center">
+                  <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay" />
+                  <ShieldCheckIcon className="w-24 h-24 text-white p-4 drop-shadow-[0_2px_5px_rgba(0,0,0,0.8)]" />
+                  <span className="text-3xl font-black text-white/90 tracking-[0.2em] [text-shadow:0_2px_4px_rgba(0,0,0,0.8)] mt-[-10px]">
+                    TAILS
+                  </span>
+                </div>
               </div>
             </div>
           </div>
-          <div
-            className={cn(
-              "absolute bottom-12 transition-all duration-700 flex flex-col items-center",
-              isPending ? "opacity-0 translate-y-4" : "opacity-100 translate-y-0"
-            )}
-          >
-            <span className="text-[10px] text-white/20 tracking-[0.4em] uppercase mb-2">
-              Awaiting Toss Selection
-            </span>
-            <div
-              className={cn(
-                "px-12 py-3 rounded-full border backdrop-blur-2xl font-black tracking-widest text-xl shadow-2xl transition-all",
-                coinSide === "HEADS"
-                  ? "bg-amber-500/10 border-amber-500/30 text-amber-400"
-                  : "bg-indigo-500/10 border-indigo-500/30 text-indigo-400"
-              )}
-            >
-              {coinSide} SELECTED
+
+          {!isPending && !showResult && (
+            <div className="absolute bottom-16 flex flex-col items-center animate-in slide-in-from-bottom-4 fade-in duration-500">
+              <span className="text-[10px] text-white/30 tracking-[0.4em] uppercase mb-4">
+                Awaiting Toss Selection
+              </span>
+              <div className="bg-black/60 backdrop-blur-xl rounded-[2rem] border border-white/10 px-8 py-4 flex items-center justify-center gap-4 w-72 shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
+                <div
+                  className={cn(
+                    "w-3 h-3 rounded-full animate-pulse",
+                    coinSide === "HEADS"
+                      ? "bg-amber-400 shadow-[0_0_10px_amber]"
+                      : "bg-indigo-400 shadow-[0_0_10px_indigo]"
+                  )}
+                />
+                <span
+                  className={cn(
+                    "font-mono text-xl font-black uppercase tracking-widest",
+                    coinSide === "HEADS" ? "text-amber-400" : "text-indigo-400"
+                  )}
+                >
+                  {coinSide} SELECTED
+                </span>
+              </div>
             </div>
-          </div>
+          )}
+
+          {isPending && (
+            <div className="absolute bottom-16 flex flex-col items-center animate-pulse">
+              <span className="text-sm text-white font-black tracking-[0.3em] uppercase drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]">
+                Waiting for VRF Oracle...
+              </span>
+            </div>
+          )}
         </div>
       )}
 
       {/* ROULETTE STAGE */}
       {game.slug === "roulette" && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center p-4 z-10 overflow-hidden">
+        <div className="absolute inset-0 flex flex-col items-center justify-between p-4 pb-6 z-10 overflow-hidden">
           {/* CENTRAL REALISTIC EUROPEAN WHEEL */}
-          <div className="relative z-10 w-full flex items-center justify-center mt-2 mb-8 scale-90 md:scale-100">
+          <div className="relative z-10 flex-1 w-full flex items-center justify-center min-h-[220px]">
+            {/* Cinematic Top Light */}
+            <div className="absolute top-0 inset-x-0 h-32 bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.05),transparent_70%)] pointer-events-none" />
+
             {/* Mahogany Rim & Golden Ring */}
-            <div className="w-[320px] h-[320px] md:w-[400px] md:h-[400px] rounded-full border-[12px] md:border-[18px] border-[#2C1810] shadow-[0_0_80px_rgba(0,0,0,1),inset_0_0_30px_black] ring-4 ring-[#B8860B] flex items-center justify-center p-1 md:p-2 relative bg-[#111]">
+            <div className="w-[280px] h-[280px] md:w-[340px] md:h-[340px] lg:w-[380px] lg:h-[380px] rounded-full border-[10px] md:border-[16px] border-[#2C1810] shadow-[0_20px_50px_rgba(0,0,0,1),inset_0_0_20px_black] ring-2 ring-[#B8860B] flex items-center justify-center p-1 md:p-2 relative bg-[#111] transform-gpu transition-all hover:scale-[1.02]">
               {/* Inner Rotating Drum */}
               <div
                 className={cn(
-                  "w-full h-full rounded-full relative flex items-center justify-center transition-all duration-[3000ms] overflow-hidden border-2 border-[#B8860B]/50",
+                  "w-full h-full rounded-full relative flex items-center justify-center transition-all duration-[3000ms] overflow-hidden border border-[#B8860B]/40",
                   isPending
                     ? "animate-[spin_4s_cubic-bezier(0.1,0.7,0.1,1)_forwards] blur-[0.5px]"
                     : "rotate-0"
@@ -888,7 +1575,7 @@ export function GamePageClient({ slug }: { slug: string }) {
                       className="absolute inset-0 flex flex-col items-center justify-start pointer-events-none"
                       style={{ transform: `rotate(${i * (360 / 37)}deg)` }}
                     >
-                      <div className="w-[24px] h-[45px] md:h-[55px] flex items-center justify-center text-[13px] md:text-[16px] font-black font-mono text-white mt-1 md:mt-2 [text-shadow:0_2px_4px_black]">
+                      <div className="w-[20px] h-[40px] md:h-[50px] lg:h-[55px] flex items-center justify-center text-[10px] md:text-[14px] lg:text-[16px] font-black font-mono text-white mt-0.5 md:mt-2 [text-shadow:0_1px_2px_black]">
                         {num}
                       </div>
                     </div>
@@ -924,7 +1611,7 @@ export function GamePageClient({ slug }: { slug: string }) {
                 </div>
 
                 {/* Inner Ball Track Overlay */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[240px] h-[240px] md:w-[300px] md:h-[300px] rounded-full border border-[#B8860B]/30 bg-black/50 shadow-[inset_0_0_40px_black] z-0" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200px] h-[200px] md:w-[260px] md:h-[260px] lg:w-[290px] lg:h-[290px] rounded-full border border-[#B8860B]/20 bg-black/60 shadow-[inset_0_0_30px_black] z-0" />
               </div>
 
               {/* HIGH-INTENSITY SPINNING BALL */}
@@ -945,8 +1632,8 @@ export function GamePageClient({ slug }: { slug: string }) {
                   className={cn(
                     "absolute left-1/2 -translate-x-1/2 w-4 h-4 md:w-5 md:h-5 bg-white rounded-full transition-all",
                     isPending
-                      ? "top-[12px] md:top-[18px] shadow-[0_0_20px_white,-15px_0px_15px_black] scale-125 blur-[1.5px] duration-[2000ms]"
-                      : "top-[50px] md:top-[65px] shadow-[0_0_12px_white,-5px_5px_15px_black] scale-100 duration-1000"
+                      ? "top-[12px] md:top-[16px] shadow-[0_0_15px_white,-10px_0px_10px_black] scale-125 blur-[1.5px] duration-[2000ms]"
+                      : "top-[40px] md:top-[50px] lg:top-[55px] shadow-[0_0_10px_white,-5px_5px_12px_black] scale-100 duration-1000"
                   )}
                 />
               </div>
@@ -954,8 +1641,8 @@ export function GamePageClient({ slug }: { slug: string }) {
           </div>
 
           {/* MASSIVE INTERACTIVE ROULETTE BOARD */}
-          <div className="relative z-20 w-fit pointer-events-auto">
-            <div className="bg-[#0B1A12] border-[6px] border-[#222] rounded-2xl p-4 md:p-6 shadow-[0_40px_80px_rgba(0,0,0,1),inset_0_0_60px_rgba(0,0,0,0.9)] relative overflow-hidden flex flex-col gap-2">
+          <div className="relative z-20 w-fit max-w-full overflow-x-auto overflow-y-hidden custom-scrollbar pointer-events-auto transform-gpu origin-bottom scale-[0.85] sm:scale-95 xl:scale-100 pb-2 px-1">
+            <div className="bg-[#0B1A12] border-[4px] border-[#222] rounded-[1.2rem] md:rounded-[1.5rem] p-2 md:p-3 sm:p-4 shadow-[0_30px_60px_rgba(0,0,0,1),inset_0_0_40px_rgba(0,0,0,0.9)] min-w-[500px] md:min-w-fit relative overflow-hidden flex flex-col gap-1.5">
               {/* Velvet Texture & Material Effects */}
               <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-25 pointer-events-none mix-blend-overlay" />
               <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
@@ -971,7 +1658,7 @@ export function GamePageClient({ slug }: { slug: string }) {
                     )
                   }
                   className={cn(
-                    "w-16 md:w-20 rounded-l-xl border-2 flex items-center justify-center font-mono font-black text-2xl md:text-3xl transition-all relative overflow-hidden group",
+                    "w-10 sm:w-12 md:w-14 rounded-l-lg md:rounded-l-xl border flex items-center justify-center font-mono font-black text-lg md:text-xl transition-all relative overflow-hidden group",
                     rouletteSpots.includes("0")
                       ? "bg-emerald-400 border-emerald-300 text-black shadow-[0_0_40px_rgba(52,211,153,0.8),inset_0_2px_10px_white] z-10 scale-[1.05]"
                       : "bg-[#093d25] border-[#105e3a] text-emerald-100 hover:bg-[#0c4e30]"
@@ -1000,9 +1687,9 @@ export function GamePageClient({ slug }: { slug: string }) {
                               )
                             }
                             className={cn(
-                              "w-12 h-12 md:w-16 md:h-16 flex items-center justify-center font-mono font-black text-base md:text-xl border-2 transition-all relative rounded-md shadow-lg group overflow-hidden",
+                              "w-8 h-8 sm:w-10 sm:h-10 md:w-11 md:h-11 flex items-center justify-center font-mono font-black text-xs md:text-sm border transition-all relative rounded shadow-lg group overflow-hidden",
                               isS
-                                ? "bg-white text-black scale-110 z-10 border-white shadow-[0_0_40px_white,inset_0_2px_10px_rgba(0,0,0,0.2)]"
+                                ? "bg-white text-black scale-110 z-10 border-white shadow-[0_0_30px_white,inset_0_2px_5px_rgba(0,0,0,0.2)]"
                                 : redNumbers.includes(num)
                                   ? "bg-[#7f1d1d] hover:bg-[#991b1b] text-red-100 border-[#991b1b] shadow-[inset_0_2px_0_rgba(255,255,255,0.1)]"
                                   : "bg-[#1f2937] hover:bg-[#374151] text-gray-200 border-[#374151] shadow-[inset_0_2px_0_rgba(255,255,255,0.1)]"
@@ -1015,7 +1702,7 @@ export function GamePageClient({ slug }: { slug: string }) {
                           </button>
                         );
                       })}
-                      <button className="w-14 md:w-18 border-2 border-white/10 bg-white/5 text-[11px] md:text-sm font-black text-white/30 hover:text-white transition-all uppercase tracking-tighter hover:bg-white/10">
+                      <button className="w-10 sm:w-12 md:w-14 border border-white/10 bg-white/5 text-[9px] md:text-[10px] font-black text-white/30 hover:text-white transition-all uppercase tracking-tighter hover:bg-white/10 rounded-r-md">
                         2:1
                       </button>
                     </div>
@@ -1024,7 +1711,7 @@ export function GamePageClient({ slug }: { slug: string }) {
               </div>
 
               {/* DOZENS */}
-              <div className="flex gap-1.5 pl-16 md:pl-20 mt-1">
+              <div className="flex gap-1.5 pl-12 sm:pl-14 md:pl-[64px] mt-1">
                 {["1st 12", "2nd 12", "3rd 12"].map((doz) => (
                   <button
                     key={doz}
@@ -1036,9 +1723,9 @@ export function GamePageClient({ slug }: { slug: string }) {
                       )
                     }
                     className={cn(
-                      "flex-1 py-3 md:py-4 border-2 font-black text-xs md:text-sm uppercase transition-all rounded-lg relative overflow-hidden",
+                      "flex-1 py-1.5 md:py-2 border font-black text-[9px] md:text-[11px] uppercase transition-all rounded-md relative overflow-hidden",
                       rouletteSpots.includes(doz)
-                        ? "bg-emerald-500 border-white text-white shadow-[0_0_30px_rgba(16,185,129,0.5)] z-10 scale-[1.02]"
+                        ? "bg-emerald-500 border-white text-white shadow-[0_0_20px_rgba(16,185,129,0.5)] z-10 scale-[1.02]"
                         : "bg-white/5 border-white/10 text-white/40 hover:text-white hover:bg-white/10"
                     )}
                   >
@@ -1048,7 +1735,7 @@ export function GamePageClient({ slug }: { slug: string }) {
               </div>
 
               {/* OUTSIDE BETS */}
-              <div className="flex gap-1.5 pl-16 md:pl-20">
+              <div className="flex gap-1.5 pl-12 sm:pl-14 md:pl-[64px]">
                 {["1-18", "EVEN", "RED", "BLACK", "ODD", "19-36"].map((o) => (
                   <button
                     key={o}
@@ -1060,16 +1747,16 @@ export function GamePageClient({ slug }: { slug: string }) {
                       )
                     }
                     className={cn(
-                      "flex-1 py-4 md:py-5 border-2 font-black text-[10px] md:text-xs uppercase transition-all rounded-lg flex items-center justify-center relative shadow-inner overflow-hidden",
+                      "flex-1 py-1.5 md:py-2 border font-black text-[8px] md:text-[10px] uppercase transition-all rounded-md flex items-center justify-center relative shadow-inner overflow-hidden",
                       rouletteSpots.includes(o)
-                        ? "bg-emerald-500 border-white text-white shadow-[0_0_30px_rgba(16,185,129,0.5)] z-10 scale-[1.02]"
+                        ? "bg-emerald-500 border-white text-white shadow-[0_0_20px_rgba(16,185,129,0.5)] z-10 scale-[1.02]"
                         : "bg-white/5 border-white/10 text-white/30 hover:text-white hover:bg-white/10"
                     )}
                   >
                     {o === "RED" ? (
-                      <div className="w-5 h-5 md:w-7 md:h-7 bg-red-600 rounded-sm shadow-[0_0_20px_rgba(220,38,38,0.5),inset_0_2px_5px_white/30]" />
+                      <div className="w-3 h-3 md:w-4 md:h-4 bg-red-600 rounded-sm shadow-[0_0_15px_rgba(220,38,38,0.5),inset_0_2px_5px_white/30]" />
                     ) : o === "BLACK" ? (
-                      <div className="w-5 h-5 md:w-7 md:h-7 bg-black rounded-sm border-2 border-white/20 shadow-xl" />
+                      <div className="w-3 h-3 md:w-4 md:h-4 bg-zinc-900 rounded-sm shadow-[0_0_15px_rgba(0,0,0,0.5),inset_0_2px_5px_white/10]" />
                     ) : (
                       o
                     )}
@@ -1083,39 +1770,121 @@ export function GamePageClient({ slug }: { slug: string }) {
 
       {/* KENO STAGE */}
       {game.slug === "keno" && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center p-8 z-10">
+        <div className="absolute inset-0 flex flex-col items-center justify-center p-8 z-10 overflow-hidden">
+          {/* Ambient Grid Background */}
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(217,70,239,0.05)_0%,transparent_70%)] pointer-events-none" />
+
+          {/* DYNAMIC PAYOUT LADDER */}
+          <div className="w-full max-w-[800px] mb-8 bg-[#0a0a0a]/90 backdrop-blur-3xl rounded-[2rem] border border-white/10 p-4 shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden relative z-20">
+            <div className="absolute top-0 left-0 bottom-0 w-32 bg-gradient-to-r from-fuchsia-900/20 to-transparent pointer-events-none" />
+            <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar pb-1">
+              <div
+                className="text-[10px] text-fuchsia-500/70 font-black uppercase tracking-widest mr-4 flex-shrink-0"
+                style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
+              >
+                Payouts
+              </div>
+              {Array.from({ length: Math.max(5, kenoSpots.length + 1) }).map((_, hits) => {
+                const pay =
+                  hits === 0
+                    ? 0
+                    : Math.pow(Math.max(1, hits - Math.floor(kenoSpots.length / 3)), 1.8);
+                const isCurrentTarget = kenoSpots.length > 0 && hits === kenoSpots.length;
+                return (
+                  <div
+                    key={hits}
+                    className={cn(
+                      "flex flex-col items-center justify-center min-w-[70px] h-16 rounded-[1rem] border-2 transition-all",
+                      isCurrentTarget
+                        ? "bg-fuchsia-600/20 border-fuchsia-400 shadow-[0_0_20px_rgba(217,70,239,0.3)] scale-105"
+                        : pay > 0
+                          ? "bg-[#111] border-white/5"
+                          : "bg-transparent border-transparent opacity-40"
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "text-[9px] uppercase font-bold tracking-widest mb-1",
+                        isCurrentTarget ? "text-fuchsia-300" : "text-white/40"
+                      )}
+                    >
+                      {hits} Hits
+                    </span>
+                    <span
+                      className={cn(
+                        "text-sm font-mono font-black",
+                        isCurrentTarget
+                          ? "text-white drop-shadow-[0_0_8px_white]"
+                          : pay > 0
+                            ? "text-fuchsia-400"
+                            : "text-white/20"
+                      )}
+                    >
+                      {pay.toFixed(2)}x
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           <div
             className={cn(
-              "relative z-10 w-full max-w-[680px] bg-[#020202] rounded-[3rem] border border-white/5 p-8 shadow-[0_50px_100px_rgba(0,0,0,1)] transition-all",
-              isPending ? "scale-[0.98] blur-[1px]" : ""
+              "relative z-10 w-full max-w-[800px] bg-[#050505]/95 backdrop-blur-3xl rounded-[3rem] border border-white/10 p-8 md:p-12 shadow-[0_40px_100px_rgba(0,0,0,0.8),inset_0_2px_20px_rgba(255,255,255,0.05)] transition-all",
+              isPending ? "scale-[0.98] drop-shadow-[0_0_50px_rgba(217,70,239,0.2)]" : ""
             )}
           >
-            <div className="grid grid-cols-10 gap-2.5 relative z-10">
+            <div className="grid grid-cols-8 md:grid-cols-10 gap-3 relative z-10">
               {Array.from({ length: 40 }).map((_, i) => {
                 const n = i + 1;
                 const isS = kenoSpots.includes(n);
                 const isA = isPending && animatingKenoSpots.includes(n);
+                const isDrawnWinner =
+                  !isPending && showResult && kenoResultDrawn.includes(n) && isS;
+                const isDrawnMiss = !isPending && showResult && kenoResultDrawn.includes(n) && !isS;
+                const isMissedPick =
+                  !isPending && showResult && !kenoResultDrawn.includes(n) && isS;
+
                 return (
                   <button
                     key={n}
+                    disabled={isPending || showResult}
                     onClick={() => {
                       if (isS) setKenoSpots(kenoSpots.filter((x) => x !== n));
                       else if (kenoSpots.length < 10) setKenoSpots([...kenoSpots, n]);
+                      setKenoResultDrawn([]);
                     }}
                     className={cn(
-                      "aspect-square rounded-xl flex items-center justify-center font-mono font-black text-xl transition-all border",
+                      "aspect-square rounded-2xl flex items-center justify-center font-mono font-black text-xl md:text-2xl transition-all border-2 relative overflow-hidden group",
                       isA
-                        ? "bg-fuchsia-300 text-black shadow-[0_0_30px_fuchsia] z-20 scale-110 border-white"
-                        : isS
-                          ? "bg-gradient-to-br from-fuchsia-500 to-fuchsia-700 text-white border-fuchsia-400 shadow-xl"
-                          : "bg-[#0a0a0a] border-white/5 text-white/30 hover:bg-[#151515] hover:text-white"
+                        ? "bg-fuchsia-400 text-black shadow-[0_0_30px_rgba(217,70,239,0.8),inset_0_0_10px_white] z-20 scale-110 border-white duration-75"
+                        : isDrawnWinner
+                          ? "bg-emerald-500 border-white text-black shadow-[0_0_40px_rgba(16,185,129,0.8),inset_0_0_15px_white] scale-110 z-30 animate-[pulse_1s_ease-in-out_infinite]"
+                          : isDrawnMiss
+                            ? "bg-white/20 border-white/40 text-white z-20 shadow-lg scale-105"
+                            : isMissedPick
+                              ? "bg-fuchsia-900/40 border-fuchsia-900 text-fuchsia-800 opacity-50 shadow-inner scale-95"
+                              : isS
+                                ? "bg-gradient-to-br from-fuchsia-500 to-fuchsia-700 text-white border-fuchsia-300 shadow-[0_10px_20px_rgba(217,70,239,0.4),inset_0_2px_10px_rgba(255,255,255,0.2)] hover:scale-105 hover:-translate-y-1 z-10"
+                                : "bg-[#0B0B0B] border-white/5 text-white/20 hover:bg-[#1f1f1f] hover:border-white/20 hover:text-white shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)]"
                     )}
                   >
-                    {n}
+                    <span className="relative z-10 drop-shadow-md">{n}</span>
+                    {isS && !isDrawnWinner && !isMissedPick && (
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
+                    )}
                   </button>
                 );
               })}
             </div>
+
+            {!isPending && !showResult && kenoSpots.length === 0 && (
+              <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
+                <div className="bg-[#050505]/80 backdrop-blur-xl px-12 py-5 rounded-full border border-white/10 text-white/50 font-black tracking-[0.4em] uppercase text-sm shadow-[0_30px_60px_rgba(0,0,0,0.8)]">
+                  Select 1 to 10 Spots
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

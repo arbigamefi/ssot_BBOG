@@ -29,6 +29,11 @@ import { useSSOTSDK } from "../../ssot/sdk";
 import { Placeholder } from "../../components/Placeholder";
 import { formatUnits, parseDecimalToUnits } from "../../features/betting/model/units";
 import { useDirectTxAction, useSequencedTxAction } from "../../features/tx/useDirectTxAction";
+import {
+  InformationCircleIcon,
+  ChartBarIcon,
+  ArrowTrendingUpIcon
+} from "@heroicons/react/24/outline";
 
 type Tab = "deposit" | "withdraw" | "redeem";
 
@@ -125,14 +130,14 @@ function ActionTrace({
 }: ActionTraceProps) {
   if (!hasActivity && !error) {
     return (
-      <div className="rounded-2xl border border-dashed border-slate-800 bg-slate-950/30 p-4 text-sm text-slate-500">
+      <div className="rounded-xl border border-dashed border-white/10 bg-[#0a0a0a]/50 p-3 text-xs text-white/40 text-center font-mono">
         {idleMessage}
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {error ? (
         <ErrorCallout
           title="Transaction error"
@@ -140,43 +145,43 @@ function ActionTrace({
           details={serializeErrorDetails(error)}
         />
       ) : null}
-      <TxStepper
-        title={title}
-        subtitle={`Status: ${status} · ${subtitle}`}
-        steps={steps}
-        footer={
-          <div className="space-y-2 text-xs text-slate-400">
-            {txHash ? (
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-mono">{txHash}</span>
-                {explorerBaseUrl ? (
-                  <a
-                    href={`${explorerBaseUrl}/tx/${txHash}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-emerald-300 transition-colors hover:text-emerald-200"
+      <div className="scale-95 origin-top">
+        <TxStepper
+          title={title}
+          subtitle={`Status: ${status} · ${subtitle}`}
+          steps={steps}
+          footer={
+            <div className="space-y-1.5 text-[11px] text-white/40">
+              {txHash ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-mono">{shortHex(txHash)}</span>
+                  {explorerBaseUrl ? (
+                    <a
+                      href={`${explorerBaseUrl}/tx/${txHash}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-emerald-400 hover:text-emerald-300 underline underline-offset-2"
+                    >
+                      View explorer
+                    </a>
+                  ) : null}
+                </div>
+              ) : null}
+              {blockNumber ? <div>Block: {blockNumber}</div> : null}
+              {hasActivity ? (
+                <div className="pt-2">
+                  <button
+                    onClick={onReset}
+                    className="text-xs text-blue-400 hover:text-blue-300 font-medium"
                   >
-                    View tx
-                  </a>
-                ) : null}
-              </div>
-            ) : null}
-            {blockNumber ? <div>Block: {blockNumber}</div> : null}
-            {hasActivity ? (
-              <div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onReset}
-                  className="h-auto px-0 text-slate-400 hover:text-white"
-                >
-                  Reset trace
-                </Button>
-              </div>
-            ) : null}
-          </div>
-        }
-      />
+                    Reset terminal
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          }
+        />
+      </div>
     </div>
   );
 }
@@ -249,19 +254,19 @@ export function LiquidityPageClient() {
       {
         key: "preflight",
         title: "Preflight",
-        description: "Validate inputs and simulate the liquidity flow."
+        description: "Validate inputs and simulate flow."
       },
       {
         key: "approve",
         title: "Approve Bank",
-        description: "Set exact ERC20 allowance for the Bank if required.",
+        description: "Set ERC20 allowance.",
         action: "APPROVE_DEPOSIT",
         optional: true
       },
       {
         key: "deposit",
         title: "Deposit Assets",
-        description: "Broadcast Bank.deposit and wait for receipt.",
+        description: "Broadcast Bank.deposit.",
         action: "DEPOSIT"
       }
     ]
@@ -269,36 +274,27 @@ export function LiquidityPageClient() {
 
   const withdrawFlow = useDirectTxAction({
     action: "WITHDRAW",
-    labels: {
-      preflight: "Preflight",
-      submit: "Submit withdraw",
-      confirm: "Confirm on-chain"
-    },
+    labels: { preflight: "Preflight", submit: "Submit", confirm: "Confirm" },
     descriptions: {
-      preflight: "Validate withdraw amount and simulate the Bank call.",
-      submit: "Broadcast Bank.withdraw through the wallet client.",
-      confirm: "Wait for receipt and journal reconciliation."
+      preflight: "Validate constraints.",
+      submit: "Broadcast Bank.withdraw.",
+      confirm: "Wait for receipt."
     }
   });
 
   const redeemFlow = useDirectTxAction({
     action: "REDEEM",
-    labels: {
-      preflight: "Preflight",
-      submit: "Submit redeem",
-      confirm: "Confirm on-chain"
-    },
+    labels: { preflight: "Preflight", submit: "Submit", confirm: "Confirm" },
     descriptions: {
-      preflight: "Validate redeem amount and simulate the Bank call.",
-      submit: "Broadcast Bank.redeem through the wallet client.",
-      confirm: "Wait for receipt and journal reconciliation."
+      preflight: "Validate constraints.",
+      submit: "Broadcast Bank.redeem.",
+      confirm: "Wait for receipt."
     }
   });
 
   const currentFlow =
     tab === "deposit" ? depositFlow : tab === "withdraw" ? withdrawFlow : redeemFlow;
 
-  // Max values
   const [maxWithdrawAmt, setMaxWithdrawAmt] = React.useState<bigint | null>(null);
   const [maxRedeemAmt, setMaxRedeemAmt] = React.useState<bigint | null>(null);
 
@@ -333,7 +329,7 @@ export function LiquidityPageClient() {
     const acct = sdk.account;
 
     if (!writesSupportedForSelectedAsset) {
-      setFormError("Write flows currently support only the primary asset from the active release.");
+      setFormError("Write flows currently support only the primary asset.");
       return;
     }
 
@@ -344,21 +340,32 @@ export function LiquidityPageClient() {
         return;
       }
 
+      const id = toast.loading("Processing transaction...");
       if (tab === "deposit") {
         const res = await depositFlow.execute(() => sdk.bank.deposit(parsed, acct));
-        if (!res.ok) return;
+        if (!res.ok) {
+          toast.dismiss(id);
+          return;
+        }
         toast.success(`Deposited ${formatUnits(parsed, decimals)} ${assetMeta?.symbol ?? ""}`, {
-          description:
-            res.shares != null ? `Received ${formatUnits(res.shares, decimals)} shares` : undefined
+          id
         });
       } else if (tab === "withdraw") {
         const res = await withdrawFlow.execute(() => sdk.bank.withdraw(parsed, acct, acct));
-        if (!res.ok) return;
-        toast.success(`Withdrew ${formatUnits(parsed, decimals)} ${assetMeta?.symbol ?? ""}`);
+        if (!res.ok) {
+          toast.dismiss(id);
+          return;
+        }
+        toast.success(`Withdrew ${formatUnits(parsed, decimals)} ${assetMeta?.symbol ?? ""}`, {
+          id
+        });
       } else {
         const res = await redeemFlow.execute(() => sdk.bank.redeem(parsed, acct, acct));
-        if (!res.ok) return;
-        toast.success(`Redeemed ${formatUnits(parsed, decimals)} shares`);
+        if (!res.ok) {
+          toast.dismiss(id);
+          return;
+        }
+        toast.success(`Redeemed ${formatUnits(parsed, decimals)} shares`, { id });
       }
 
       setAmount("");
@@ -385,7 +392,7 @@ export function LiquidityPageClient() {
       <Placeholder
         title="Liquidity"
         description={readOnlyReason ?? "No embedded release available."}
-        specPath="docs/frontend/PAGE-SPECS/030-LIQUIDITY.md"
+        specPath="-"
       />
     );
   }
@@ -397,215 +404,95 @@ export function LiquidityPageClient() {
     snapshot && snapshot.totalAssets > snapshot.totalReserved
       ? snapshot.totalAssets - snapshot.totalReserved
       : 0n;
-  const minLiquidityFloor =
-    snapshot && snapshot.minLiquidityBps != null
-      ? (snapshot.totalAssets * BigInt(snapshot.minLiquidityBps)) / 10_000n
-      : null;
-
-  const actionTraceTitle =
-    tab === "deposit" ? "Deposit Trace" : tab === "withdraw" ? "Withdraw Trace" : "Redeem Trace";
-  const actionTraceSubtitle =
-    tab === "deposit"
-      ? "Deposit adds assets to bankroll backing."
-      : "Optional outflow Subject to solvency constraints.";
-
   const currentActionError = currentFlow.error;
   const maxActionAmount =
     tab === "withdraw" ? maxWithdrawAmt : tab === "redeem" ? maxRedeemAmt : null;
-  const terminalHelperCopy =
-    tab === "deposit"
-      ? "Route fresh assets into the live bankroll."
-      : tab === "withdraw"
-        ? "Withdraw available assets without breaching active reserve constraints."
-        : "Redeem bankroll shares back into underlying assets.";
-  const terminalPreviewRows = [
-    {
-      label: "Expected APY",
-      value: "—"
-    },
-    {
-      label: "Lockup Period",
-      value: "0 Epochs (Instant)"
-    },
-    {
-      label: "Network Fee",
-      value: "Wallet estimated"
-    }
-  ];
-  const terminalFactRows = [
-    {
-      label: "Backed by",
-      value: formatTokenAmount(navBacking, decimals, sym)
-    },
-    {
-      label: "Reserved",
-      value: formatTokenAmount(reserved, decimals, sym)
-    },
-    {
-      label: "Liquidity floor",
-      value: formatTokenAmount(minLiquidityFloor ?? undefined, decimals, sym)
-    },
-    {
-      label: tab === "deposit" ? "Approval" : "Max route",
-      value:
-        tab === "deposit"
-          ? currentFlow.status === "needs-approval"
-            ? "Approval required"
-            : "Wallet ready"
-          : formatTokenAmount(
-              maxActionAmount ?? undefined,
-              decimals,
-              tab === "redeem" ? "shares" : sym
-            )
-    }
-  ];
 
   return (
     <PageTransition pageKey="liquidity">
-      {/* Grid Pattern Background */}
-      <div className="fixed inset-0 bg-[linear-gradient(rgba(16,185,129,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(16,185,129,0.03)_1px,transparent_1px)] bg-[size:64px_64px] [mask-image:radial-gradient(ellipse_80%_80%_at_50%_0%,black,transparent)] pointer-events-none z-0" />
+      {/* Immersive Terminal Glow */}
+      <div className="fixed top-[-10%] left-[-10%] w-[500px] h-[500px] bg-emerald-600/10 blur-[150px] pointer-events-none rounded-full z-0" />
+      <div className="fixed bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-blue-600/10 blur-[150px] pointer-events-none rounded-full z-0" />
 
-      {/* Top Emerald Glow */}
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[1000px] h-[400px] bg-emerald-600/10 blur-[120px] pointer-events-none rounded-full z-0" />
-
-      <main className="relative z-10 max-w-[1440px] mx-auto px-6 py-8 md:py-12">
-        {/* HEADER SECTION */}
-        <header className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-8">
-          <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-xs font-bold uppercase tracking-widest mb-4">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> {sym}{" "}
-              Isolated Bankroll
+      {/* Terminal Layout */}
+      <div className="flex flex-col h-[calc(100vh-80px)] max-h-[900px] overflow-hidden">
+        {/* TOP COMPACT HEADER & STATS */}
+        <header className="shrink-0 flex flex-col md:flex-row gap-4 justify-between items-start md:items-center mb-4 relative z-10 px-2">
+          <div>
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-md mb-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Protocol
+              Liquidity Terminal
             </div>
-            <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-2">
-              Provide Liquidity.
-              <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">
-                Earn the Mathematical Edge.
-              </span>
+            <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-3">
+              {sym} Isolated Bankroll
             </h1>
-            <p className="text-lg text-white/50 leading-relaxed max-w-2xl mt-4">
-              ArbiGameFi operates on protocol-owned Isolated Banks. When players lose against the
-              pure-function games, the strictly regulated Bank wins. No black box pools, just
-              transparent reserves.
-            </p>
           </div>
 
-          <div className="flex flex-col gap-2 p-5 rounded-2xl border-2 border-emerald-500/20 bg-[#020202] min-w-[300px] shadow-[0_0_30px_rgba(16,185,129,0.1),inset_0_2px_15px_rgba(16,185,129,0.05)] relative overflow-hidden group">
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(16,185,129,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(16,185,129,0.05)_1px,transparent_1px)] bg-[size:8px_8px] pointer-events-none opacity-20" />
-            <div className="text-[10px] text-white/40 uppercase tracking-widest font-bold flex justify-between relative z-10">
-              <span>Contract Address</span>
-              <span className="text-emerald-400 drop-shadow-[0_0_5px_#34d399] flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Verified
+          <div className="flex gap-2 w-full md:w-auto overflow-x-auto hide-scrollbar">
+            {/* Extremely dense stat blocks */}
+            <div className="flex flex-col px-4 py-2 bg-[#050505] border border-white/5 rounded-xl min-w-[140px] shadow-inner">
+              <span className="text-[10px] text-white/40 uppercase font-bold tracking-widest">
+                Total NAV
+              </span>
+              <span className="text-lg font-mono text-emerald-400 font-bold">
+                {formatTokenAmount(navBacking, decimals, sym, 2)}
               </span>
             </div>
-            <div className="font-mono text-sm text-white/90 bg-[#050505] border border-white/5 rounded px-3 py-2 cursor-copy hover:border-emerald-500/50 hover:text-emerald-300 transition-colors text-center shadow-[inset_0_2px_5px_rgba(0,0,0,1)] relative z-10">
-              {shortHex(snapshot?.bank)}
+            <div className="flex flex-col px-4 py-2 bg-[#050505] border border-white/5 rounded-xl min-w-[140px] shadow-inner">
+              <span className="text-[10px] text-white/40 uppercase font-bold tracking-widest">
+                Free Capital
+              </span>
+              <span className="text-lg font-mono text-blue-400 font-bold">
+                {formatTokenAmount(freeCapital, decimals, sym, 2)}
+              </span>
+            </div>
+            <div className="flex flex-col px-4 py-2 bg-[#050505] border border-white/5 rounded-xl min-w-[140px] shadow-inner">
+              <span className="text-[10px] text-white/40 uppercase font-bold tracking-widest">
+                Liabilities
+              </span>
+              <span className="text-lg font-mono text-amber-400 font-bold">
+                {formatTokenAmount(reserved, decimals, sym, 2)}
+              </span>
             </div>
           </div>
         </header>
 
-        {/* METRICS DASHBOARD */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-          {/* Current APY */}
-          <div className="p-6 rounded-[1.5rem] border border-emerald-500/30 bg-[#050505] shadow-[0_0_30px_rgba(16,185,129,0.1),inset_0_2px_15px_rgba(16,185,129,0.05)] relative overflow-hidden group hover:border-emerald-500/50 transition-colors">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 blur-[50px] rounded-full group-hover:bg-emerald-500/20 transition-all pointer-events-none" />
-            <div className="text-[10px] uppercase font-bold text-white/40 tracking-widest mb-1 relative z-10">
-              Current APY
-            </div>
-            <div className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-emerald-200 to-emerald-500 drop-shadow-[0_0_10px_rgba(16,185,129,0.3)] relative z-10 cursor-default">
-              —
-            </div>
-            <div className="mt-3 text-xs text-emerald-400/80 font-mono tracking-tighter flex items-center gap-1 relative z-10">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_5px_#10b981]" />
-              Yield model not surfaced in the active release
-            </div>
-          </div>
-
-          {/* Total Free Capital (R) */}
-          <div className="p-6 rounded-[1.5rem] border border-blue-500/20 bg-[#020202] shadow-[inset_0_2px_15px_rgba(59,130,246,0.05)] group hover:border-blue-500/50 hover:shadow-[0_0_30px_rgba(59,130,246,0.1),inset_0_2px_15px_rgba(59,130,246,0.05)] transition-all relative overflow-hidden">
-            <div className="text-[10px] uppercase font-bold text-white/40 tracking-widest mb-1 relative z-10">
-              Total Free Capital (R)
-            </div>
-            <div className="text-3xl font-mono font-bold text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.2)] relative z-10 cursor-default">
-              {formatTokenAmount(freeCapital, decimals, sym)}
-            </div>
-            <div className="mt-3 text-xs text-white/40 font-medium relative z-10">
-              Ready to underwrite the current room envelope
-            </div>
-          </div>
-
-          {/* Pending Liabilities */}
-          <div className="p-6 rounded-[1.5rem] border border-amber-500/20 bg-[#020202] shadow-[inset_0_2px_15px_rgba(245,158,11,0.05)] group hover:border-amber-500/50 hover:shadow-[0_0_30px_rgba(245,158,11,0.1),inset_0_2px_15px_rgba(245,158,11,0.05)] transition-all relative overflow-hidden">
-            <div className="text-[10px] uppercase font-bold text-white/40 tracking-widest mb-1 relative z-10">
-              Pending Liabilities
-            </div>
-            <div className="text-3xl font-mono font-bold text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.2)] relative z-10 cursor-default">
-              {formatTokenAmount(reserved, decimals, sym)}
-            </div>
-            <div className="mt-3 text-xs text-amber-400/60 font-medium relative z-10">
-              Locked for unsettled module tickets
-            </div>
-          </div>
-
-          {/* Max Ticket Cap (1.5% R) */}
-          <div className="p-6 rounded-[1.5rem] border border-purple-500/20 bg-[#020202] shadow-[inset_0_2px_15px_rgba(168,85,247,0.05)] group hover:border-purple-500/50 hover:shadow-[0_0_30px_rgba(168,85,247,0.1),inset_0_2px_15px_rgba(168,85,247,0.05)] transition-all relative overflow-hidden">
-            <div className="text-[10px] uppercase font-bold text-white/40 tracking-widest mb-1 relative z-10">
-              Max Ticket Cap (1.5% R)
-            </div>
-            <div className="text-3xl font-mono font-bold text-white drop-shadow-[0_0_5px_rgba(255,255,255,0.2)] relative z-10 cursor-default">
-              —
-            </div>
-            <div className="mt-3 text-xs text-white/40 font-medium relative z-10">
-              {position
-                ? `Position ≈ ${formatTokenAmount(position.assetsEquivalent, decimals, sym)}`
-                : "Cap model not surfaced in the current release"}
-            </div>
-          </div>
-        </div>
-
-        {/* CORE INTERACTION SPACE */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-8">
-          {/* Left: Charts and Deep Dive */}
-          <div className="flex flex-col gap-8">
-            <div className="rounded-[2rem] border border-white/5 bg-[#050505] p-6 lg:p-8 flex flex-col min-h-[400px] relative overflow-hidden shadow-[inset_0_2px_15px_rgba(255,255,255,0.02),0_20px_40px_rgba(0,0,0,0.8)]">
-              <div className="flex justify-between items-center mb-8 relative z-10">
-                <div>
-                  <h3 className="text-xl font-bold mb-1 text-white">Capital Posture View</h3>
-                  <p className="text-sm text-emerald-500/80 font-mono tracking-tighter">
-                    Illustrative stage anchored by live bankroll, reserve, and floor metrics.
-                  </p>
-                </div>
-                <div className="flex bg-[#020202] rounded-xl p-1 border border-white/10">
-                  {["1W", "1M", "ALL"].map((tf, i) => (
-                    <button
-                      key={tf}
-                      className={cn(
-                        "px-5 py-1.5 text-xs font-bold rounded-lg transition-all",
-                        i === 1
-                          ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                          : "text-white/40 hover:text-white hover:bg-white/5"
-                      )}
-                    >
-                      {tf}
-                    </button>
-                  ))}
-                </div>
+        {/* SPLIT PANE WORKSPACE */}
+        <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-4 relative z-10 px-2 pb-4">
+          {/* LEFT: CHART & DATA VIEW */}
+          <div className="flex flex-col gap-4 min-h-0">
+            {/* Chart Area */}
+            <div className="flex-[2] rounded-2xl bg-[#030303] border border-white/10 overflow-hidden flex flex-col relative shadow-[inset_0_2px_20px_rgba(0,0,0,0.8)]">
+              <div className="absolute top-4 left-5 z-10">
+                <h3 className="text-[13px] font-bold text-white flex items-center gap-2 tracking-wide font-sans">
+                  <ChartBarIcon className="w-4 h-4 text-emerald-500" /> Capital Posture Series
+                </h3>
+              </div>
+              <div className="absolute top-4 right-4 z-10 flex bg-[#0a0a0a] rounded-lg p-0.5 border border-white/5 shadow-md">
+                {["1W", "1M", "ALL"].map((tf, i) => (
+                  <button
+                    key={tf}
+                    className={cn(
+                      "px-3 py-1 text-[10px] font-bold rounded-md transition-all",
+                      i === 1 ? "bg-white/10 text-white" : "text-white/40 hover:text-white"
+                    )}
+                  >
+                    {tf}
+                  </button>
+                ))}
               </div>
 
-              <div className="flex-1 w-full bg-[#020202] rounded-2xl border border-white/10 relative flex items-end justify-between px-2 pt-20 shadow-[inset_0_4px_20px_rgba(0,0,0,0.8)] overflow-hidden">
-                <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none" />
-
+              {/* Chart Graphic Area */}
+              <div className="flex-1 relative flex items-end justify-between px-1 pt-16">
                 <svg
-                  className="absolute inset-x-0 bottom-0 w-full h-full text-emerald-500/20 pointer-events-none"
+                  className="absolute inset-x-0 bottom-0 w-full h-[70%] text-emerald-500/20 pointer-events-none"
                   preserveAspectRatio="none"
                   viewBox="0 0 100 100"
                 >
-                  <defs>
-                    <linearGradient id="grad1" x1="0%" y1="0%" x2="0%" y2="100%">
-                      <stop offset="0%" style={{ stopColor: "#10b981", stopOpacity: 0.4 }} />
-                      <stop offset="100%" style={{ stopColor: "#10b981", stopOpacity: 0 }} />
-                    </linearGradient>
-                  </defs>
+                  <linearGradient id="grad1" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" style={{ stopColor: "#10b981", stopOpacity: 0.3 }} />
+                    <stop offset="100%" style={{ stopColor: "#10b981", stopOpacity: 0 }} />
+                  </linearGradient>
                   <path
                     d="M0,100 L0,70 Q10,60 20,65 T40,40 T60,45 T80,10 T100,5 L100,100 Z"
                     fill="url(#grad1)"
@@ -614,95 +501,99 @@ export function LiquidityPageClient() {
                     d="M0,70 Q10,60 20,65 T40,40 T60,45 T80,10 T100,5"
                     fill="none"
                     stroke="#34d399"
-                    strokeWidth="1.5"
-                    style={{ filter: "drop-shadow(0 0 5px rgba(52,211,153,0.8))" }}
+                    strokeWidth="1"
+                    style={{ filter: "drop-shadow(0 0 3px rgba(52,211,153,0.5))" }}
                   />
                 </svg>
-
-                {CAPITAL_POSTURE_SERIES.map((h, i) => {
-                  return (
-                    <div
-                      key={i}
-                      className="w-[3%] bg-emerald-500/20 border-t border-emerald-400/50 rounded-t-sm hover:bg-emerald-400 hover:shadow-[0_0_15px_#34d399] transition-all relative group z-10"
-                      style={{ height: `${h}%` }}
-                    />
-                  );
-                })}
+                {CAPITAL_POSTURE_SERIES.map((h, i) => (
+                  <div
+                    key={i}
+                    className="w-[3%] bg-emerald-500/10 border-t border-emerald-400/30 rounded-t-[2px] transition-all relative z-10"
+                    style={{ height: `${h}%` }}
+                  />
+                ))}
               </div>
             </div>
 
-            <div className="rounded-[2rem] border-2 border-orange-500/30 bg-[#0a0a0a] shadow-[0_0_30px_rgba(249,115,22,0.05),inset_0_2px_15px_rgba(249,115,22,0.05)] p-6 flex gap-6 items-start relative overflow-hidden">
-              <div className="absolute inset-0 bg-[linear-gradient(rgba(249,115,22,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(249,115,22,0.1)_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none opacity-50" />
-              <div className="relative z-10">
-                <h3 className="text-orange-400 font-bold mb-2 flex items-center gap-2">
-                  Capital Guardrails{" "}
-                  <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse" />
-                </h3>
-                <p className="text-sm text-white/50 leading-relaxed font-mono tracking-tighter">
-                  Withdrawals follow standard stepper + journal proof for auditable integrity.
-                  Pending liabilities are prioritized.
-                </p>
+            {/* Terminal Details & Info */}
+            <div className="flex-[1] flex gap-4 min-h-0">
+              <div className="flex-1 rounded-2xl bg-[#050505] border border-white/5 p-4 flex flex-col justify-center">
+                <h4 className="text-[11px] font-bold text-white/50 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                  <ArrowTrendingUpIcon className="w-3.5 h-3.5" /> Position Valuation
+                </h4>
+                <div className="text-2xl font-mono font-bold text-white tracking-tight">
+                  {position ? formatTokenAmount(position.assetsEquivalent, decimals, sym) : "—"}
+                </div>
+                <div className="text-[11px] text-emerald-400/80 mt-1 font-mono">
+                  1 Share ≈ 1.05 {sym}
+                </div>
               </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-6 rounded-[1.5rem] border border-white/5 bg-white/[0.02] px-6 py-5 text-[9px] text-white/20 uppercase tracking-[0.24em] font-black backdrop-blur-md">
-              <span className="flex items-center gap-3">
-                Protocol Bank:{" "}
-                <span className="font-mono text-white/40 lowercase tracking-normal text-sm font-medium">
-                  {shortHex(snapshot?.bank)}
-                </span>
-              </span>
-              <span className="ml-auto text-blue-400 border border-blue-400/20 bg-blue-400/5 px-4 py-2 rounded-full hover:bg-blue-400/10 transition-all font-black">
-                ChainID {chainId}
-              </span>
+              <div className="flex-1 rounded-2xl bg-[#050505] border border-white/5 p-4 flex flex-col justify-center gap-2">
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-white/40">Bank Address</span>
+                  <span className="text-white/80 font-mono tracking-tighter">
+                    {shortHex(snapshot?.bank)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-white/40">Total Assets</span>
+                  <span className="text-white/80 font-mono">
+                    {formatTokenAmount(navBacking, decimals, sym, 2)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-white/40">Liquidity Floor</span>
+                  <span className="text-white/80 font-mono">
+                    {formatTokenAmount(
+                      snapshot?.minLiquidityBps != null
+                        ? (snapshot.totalAssets * BigInt(snapshot.minLiquidityBps)) / 10_000n
+                        : undefined,
+                      decimals,
+                      sym,
+                      2
+                    )}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Right: Interaction Terminal */}
-          <div className="flex flex-col">
+          {/* RIGHT: ACTION MODULE */}
+          <div className="flex flex-col min-h-0">
             {!sdk?.account ? (
-              <div className="h-full rounded-[2.5rem] border border-blue-500/20 bg-[#020202] p-8 flex items-center justify-center">
+              <div className="h-full rounded-2xl border border-blue-500/20 bg-[#020202] p-8 flex items-center justify-center">
                 <ConnectWalletPrompt action="interact with bankroll" />
               </div>
             ) : (
-              <div className="rounded-[2.5rem] border border-blue-500/20 bg-[#020202] shadow-[0_30px_60px_rgba(0,0,0,0.8)] p-2 relative overflow-hidden h-full">
-                <div className="bg-[#050505] rounded-[2.2rem] border border-white/5 h-full p-6 md:p-8 flex flex-col relative z-10">
-                  {/* Tabs */}
-                  <div className="flex mb-8 bg-[#020202] rounded-xl p-1 border border-white/5">
+              <div className="rounded-2xl border border-white/10 bg-[#0a0a0a]/90 backdrop-blur-xl h-full flex flex-col relative overflow-hidden shadow-2xl">
+                {/* Compact Interface Tabs */}
+                <div className="flex border-b border-white/10">
+                  {TABS.map((t) => (
                     <button
-                      onClick={() => setTab("deposit")}
+                      key={t.key}
+                      onClick={() => setTab(t.key as Tab)}
                       className={cn(
-                        "flex-1 py-3 text-sm font-bold rounded-lg transition-all",
-                        tab === "deposit"
-                          ? "text-emerald-400 bg-emerald-500/10 border border-emerald-500/20"
-                          : "text-white/40 hover:text-white"
+                        "flex-1 py-3.5 text-xs font-bold uppercase tracking-wider transition-all relative",
+                        tab === t.key
+                          ? "text-white"
+                          : "text-white/40 hover:text-white/70 hover:bg-white/5"
                       )}
                     >
-                      Deposit {sym}
-                    </button>
-                    <button
-                      onClick={() => setTab("redeem")}
-                      className={cn(
-                        "flex-1 py-3 text-sm font-bold rounded-lg transition-all",
-                        tab === "redeem"
-                          ? "text-emerald-400 bg-emerald-500/10 border border-emerald-500/20"
-                          : "text-white/40 hover:text-white"
+                      {t.label}
+                      {tab === t.key && (
+                        <div className="absolute bottom-0 left-0 w-full h-[2px] bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)]" />
                       )}
-                    >
-                      Redeem
                     </button>
-                  </div>
+                  ))}
+                </div>
 
-                  <p className="text-white/40 text-sm mb-6 leading-relaxed font-mono tracking-tighter">
-                    {tab === "deposit"
-                      ? `Deposit ${sym} into the house bankroll to begin accruing real yield from global game settlements.`
-                      : terminalHelperCopy}
-                  </p>
-
-                  {/* Input Field */}
-                  <div className="bg-[#020202] border border-emerald-500/30 rounded-2xl p-5 mb-6 group focus-within:border-emerald-400 transition-all">
-                    <div className="flex justify-between items-center mb-3 text-[10px] font-bold uppercase tracking-widest text-emerald-500/60">
-                      <span>Amount</span>
+                <div className="p-5 flex-1 flex flex-col overflow-y-auto hide-scrollbar custom-scrollbar">
+                  {/* Amount Input */}
+                  <div className="bg-[#050505] border border-white/10 rounded-xl p-4 mb-5 group focus-within:border-blue-500/50 transition-colors shadow-inner">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-[10px] uppercase font-bold text-white/40 tracking-widest">
+                        Amount
+                      </span>
                       <button
                         onClick={() => {
                           if (tab === "withdraw" && maxWithdrawAmt)
@@ -711,87 +602,102 @@ export function LiquidityPageClient() {
                             setAmount(formatUnits(maxRedeemAmt, decimals));
                         }}
                         disabled={tab === "deposit" || maxActionAmount == null}
-                        className="hover:text-white transition-colors disabled:cursor-not-allowed disabled:text-white/20"
+                        className="text-[10px] text-blue-400 hover:text-blue-300 font-bold uppercase tracking-wider disabled:opacity-30 disabled:cursor-not-allowed"
                       >
                         {tab === "deposit"
-                          ? "Wallet-routed"
-                          : `Use max ${formatTokenAmount(maxActionAmount ?? undefined, decimals, tab === "redeem" ? "shares" : sym)}`}
+                          ? "Wallet"
+                          : `Max ${formatTokenAmount(maxActionAmount ?? undefined, decimals, tab === "redeem" ? "shares" : "", 2)}`}
                       </button>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
                       <input
                         type="text"
                         value={amount}
                         onChange={(e) => setAmount(e.target.value)}
                         placeholder="0.00"
-                        className="bg-transparent border-none outline-none text-4xl font-mono font-extrabold text-white w-full placeholder:text-white/10"
+                        className="bg-transparent text-3xl font-mono font-black text-white w-full outline-none placeholder:text-white/10"
                       />
+                      <span className="text-white/50 font-bold">
+                        {tab === "redeem" ? "SHARES" : sym}
+                      </span>
                     </div>
                   </div>
 
-                  {/* Transaction Preview */}
-                  <div className="rounded-xl border border-white/5 bg-[#020202] p-5 flex flex-col gap-4 mb-8 shadow-inner">
-                    <div className="space-y-2 text-sm">
-                      {terminalPreviewRows.map((row) => (
-                        <div key={row.label} className="flex items-center justify-between gap-4">
-                          <span className="text-white/42">{row.label}</span>
-                          <span className="font-mono text-white/82">{row.value}</span>
-                        </div>
-                      ))}
+                  {/* Fact Sheet Rows */}
+                  <div className="space-y-3 text-xs mb-6 px-1">
+                    <div className="flex justify-between items-center text-white/50">
+                      <span>Expected APY</span>
+                      <span className="text-white">—</span>
                     </div>
-                    <div className="border-t border-white/5 pt-4 space-y-2 text-sm">
-                      <div className="flex items-center justify-between gap-4">
-                        <span className="text-white/42 font-bold tracking-wide">Flow status</span>
-                        <TxStatusChip status={currentFlow.status} />
-                      </div>
-                      {terminalFactRows.map((row) => (
-                        <div key={row.label} className="flex items-center justify-between gap-4">
-                          <span className="text-white/32">{row.label}</span>
-                          <span className="font-mono text-white/68">{row.value}</span>
-                        </div>
-                      ))}
+                    <div className="flex justify-between items-center text-white/50">
+                      <span>Lockup</span>
+                      <span className="text-white">0 Epochs (Instant)</span>
                     </div>
-                    {formError && <div className="text-rose-400 text-xs italic">{formError}</div>}
+                    <div className="flex justify-between items-center text-white/50">
+                      <span>Network Fee</span>
+                      <span className="text-white font-mono">Wallet est.</span>
+                    </div>
                   </div>
 
-                  {/* Action Button */}
-                  <button
-                    onClick={() => void handleSubmit()}
-                    disabled={
-                      readOnly || currentFlow.busy || !amount || !writesSupportedForSelectedAsset
-                    }
-                    className="mt-auto w-full py-5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-black font-extrabold text-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2 border border-emerald-300"
-                  >
-                    {currentFlow.busy
-                      ? "Executing..."
-                      : tab === "deposit"
-                        ? "Supply Liquidity"
-                        : "Redeem Shares"}
-                  </button>
-
-                  {currentFlow.hasActivity && (
-                    <div className="mt-6 pt-6 border-t border-white/5 overflow-y-auto">
-                      <ActionTrace
-                        title={actionTraceTitle}
-                        subtitle={actionTraceSubtitle}
-                        status={currentFlow.status}
-                        steps={currentFlow.steps}
-                        hasActivity={currentFlow.hasActivity}
-                        error={currentActionError}
-                        txHash={currentFlow.txHash}
-                        blockNumber={currentFlow.journalEntry?.blockNumber}
-                        explorerBaseUrl={explorerBaseUrl}
-                        onReset={currentFlow.reset}
-                        idleMessage="Simulating flow..."
-                      />
+                  {formError && (
+                    <div className="mb-4 text-[11px] text-rose-400 italic bg-rose-500/10 border border-rose-500/20 p-2 rounded-lg">
+                      {formError}
                     </div>
                   )}
+
+                  <div className="mt-auto flex flex-col gap-4">
+                    <button
+                      onClick={() => void handleSubmit()}
+                      disabled={
+                        readOnly || currentFlow.busy || !amount || !writesSupportedForSelectedAsset
+                      }
+                      className={cn(
+                        "w-full py-4 rounded-xl text-black font-extrabold text-[13px] uppercase tracking-widest transition-all active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#0a0a0a]",
+                        tab === "deposit"
+                          ? "bg-emerald-500 hover:bg-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.3)] focus:ring-emerald-500"
+                          : "bg-blue-500 hover:bg-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.3)] focus:ring-blue-500",
+                        "disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+                      )}
+                    >
+                      {currentFlow.busy
+                        ? "Executing..."
+                        : tab === "deposit"
+                          ? "Supply Liquidity"
+                          : tab === "withdraw"
+                            ? "Withdraw Assets"
+                            : "Redeem Shares"}
+                    </button>
+
+                    {currentFlow.hasActivity && (
+                      <div className="border border-white/5 rounded-xl bg-[#030303] overflow-hidden">
+                        <ActionTrace
+                          title={
+                            tab === "deposit"
+                              ? "Deposit Trace"
+                              : tab === "withdraw"
+                                ? "Withdraw Trace"
+                                : "Redeem Trace"
+                          }
+                          subtitle="Blockchain sync."
+                          status={currentFlow.status}
+                          steps={currentFlow.steps}
+                          hasActivity={currentFlow.hasActivity}
+                          error={currentActionError}
+                          txHash={currentFlow.txHash}
+                          blockNumber={currentFlow.journalEntry?.blockNumber}
+                          explorerBaseUrl={explorerBaseUrl}
+                          onReset={currentFlow.reset}
+                          idleMessage="Standing by..."
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
           </div>
         </div>
-      </main>
+      </div>
     </PageTransition>
   );
 }

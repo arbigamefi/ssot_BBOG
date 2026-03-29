@@ -32,6 +32,7 @@ export * from "./components/ui/cyber-header";
 export * from "./components/ui/cyber-layout";
 export * from "./components/ui/win-loss-overlay";
 export * from "./components/ui/data-table";
+export * from "./components/ui/glass-modal";
 export { toast } from "sonner";
 
 // protocol (presentational domain components)

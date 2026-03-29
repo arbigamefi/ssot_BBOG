@@ -3,22 +3,16 @@
 import * as React from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowTopRightOnSquareIcon, UserCircleIcon, WalletIcon } from "@heroicons/react/24/outline";
 import {
-  AuditTabs,
-  AuditTableCell,
-  AuditTableHeader,
-  CopyButton,
-  ErrorCallout,
-  TxStatusChip,
-  TxStepper,
-  cn,
-  toast
-} from "@ssot/ui";
+  ArrowTopRightOnSquareIcon,
+  UserCircleIcon,
+  WalletIcon,
+  CheckCircleIcon
+} from "@heroicons/react/24/outline";
+import { CopyButton, ErrorCallout, TxStatusChip, TxStepper, cn, toast } from "@ssot/ui";
 
 import { ConnectWalletPrompt } from "../../components/ConnectWalletPrompt";
 import { PageTransition } from "../../components/PageTransition";
-import { TrustTableShell } from "../../components/TrustTableShell";
 import { useTxJournal } from "../../features/account/useTxJournal";
 import { formatUnits } from "../../features/betting/model/units";
 import { useDirectTxAction } from "../../features/tx/useDirectTxAction";
@@ -96,7 +90,7 @@ export default function AccountPage() {
   const explorerBaseUrl = React.useMemo(() => getExplorerBaseUrl(chainId), [chainId]);
   const account = sdk?.account;
 
-  const { data: txRows = [] } = useTxJournal(100);
+  const { data: txRows = [] } = useTxJournal(50);
 
   const {
     data: assetRows = [],
@@ -114,7 +108,6 @@ export default function AccountPage() {
             sdk.bank.getAllowance(asset.address as `0x${string}`, account),
             sdk.bank.getPosition(asset.address as `0x${string}`, account)
           ]);
-
           return {
             id: asset.address,
             symbol: asset.symbol,
@@ -148,16 +141,8 @@ export default function AccountPage() {
 
   const claimRefundFlow = useDirectTxAction({
     action: "CLAIM_VRF_REFUND",
-    labels: {
-      preflight: "Preflight",
-      submit: "Submit claim",
-      confirm: "Confirm on-chain"
-    },
-    descriptions: {
-      preflight: "Validate the claim and simulate the VRFHub call.",
-      submit: "Broadcast claimRefundCredit through the wallet client.",
-      confirm: "Wait for receipt and journal reconciliation."
-    }
+    labels: { preflight: "Preflight", submit: "Submit claim", confirm: "Confirm on-chain" },
+    descriptions: { preflight: "Validating claim.", submit: "Broadcasting.", confirm: "Waiting." }
   });
 
   const handleClaimRefund = React.useCallback(async () => {
@@ -176,390 +161,319 @@ export default function AccountPage() {
   const totalAssetsEquivalent = assetRows.reduce((sum, row) => sum + row.assetsEquivalent, 0n);
   const totalWalletBalance = assetRows.reduce((sum, row) => sum + row.walletBalance, 0n);
   const journalRows = txRows as JournalRow[];
-  const explorerHref =
-    explorerBaseUrl && account ? `${explorerBaseUrl}/address/${account}` : undefined;
+
+  // Player ID Auto-save logic
+  const [alias, setAlias] = React.useState("");
+  const [debouncedAlias, setDebouncedAlias] = React.useState("");
+  const [isMounted, setIsMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+    const saved = localStorage.getItem("ssot.player_alias") || "";
+    setAlias(saved);
+    setDebouncedAlias(saved);
+  }, []);
+
+  React.useEffect(() => {
+    const t = setTimeout(() => setDebouncedAlias(alias), 600);
+    return () => clearTimeout(t);
+  }, [alias]);
+
+  React.useEffect(() => {
+    if (!isMounted) return;
+    const current = localStorage.getItem("ssot.player_alias") || "";
+    if (debouncedAlias !== current) {
+      localStorage.setItem("ssot.player_alias", debouncedAlias);
+      toast.success("Player ID auto-saved globally.", { icon: "💾" });
+    }
+  }, [debouncedAlias, isMounted]);
 
   return (
     <PageTransition pageKey="account">
-      <main className="mx-auto flex max-w-[1440px] flex-col gap-8 px-6 py-12 md:py-16">
-        <header className="mb-4 flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
-          <div className="flex items-center gap-6">
-            <div className="group relative h-28 w-28 cursor-pointer">
-              <div className="absolute inset-0 rounded-full bg-indigo-500/10 blur-[20px] transition-all duration-500 group-hover:bg-indigo-500/20" />
-              <div className="absolute inset-0 rounded-full border-4 border-indigo-500/20 transition-all duration-500 group-hover:border-indigo-400/40" />
-              <div className="absolute inset-2 rounded-full border border-dashed border-indigo-400/40" />
-              <div className="absolute inset-0 z-10 flex items-center justify-center rounded-full border border-indigo-500/30 bg-gradient-to-br from-[#0a0a0a] to-[#111827] shadow-[inset_0_2px_15px_rgba(99,102,241,0.2)]">
-                <UserCircleIcon className="h-14 w-14 text-indigo-400 drop-shadow-[0_0_10px_rgba(99,102,241,0.5)]" />
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-300/80">
-                <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" />
-                {account ? "Encrypted Identity" : "Wallet Ledger"}
-              </div>
-              <h1 className="flex items-center gap-3 text-4xl font-mono font-extrabold tracking-tight text-white md:text-5xl">
-                {account ? shortHex(account) : "No wallet"}
-                {account ? <CopyButton value={account} label="Copy wallet address" /> : null}
-              </h1>
-              <div className="flex flex-wrap items-center gap-3 text-sm font-medium text-white/50">
-                <span>
-                  {account ? "Encrypted wallet session" : "Connect a wallet to load balances"}
-                </span>
-                {explorerHref ? <span className="text-white/20">•</span> : null}
-                {explorerHref ? (
-                  <Link
-                    href={explorerHref}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-1 text-emerald-400 transition-colors hover:text-emerald-300"
-                  >
-                    Explorer
-                    <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" />
-                  </Link>
-                ) : null}
-              </div>
-            </div>
+      <main className="mx-auto flex h-[calc(100vh-80px)] max-w-[1600px] flex-col overflow-hidden px-4 md:px-8 py-6">
+        <header className="mb-6 flex shrink-0 items-end justify-between">
+          <div>
+            <h1 className="text-2xl font-black tracking-tight text-white md:text-3xl">
+              Player Identity
+            </h1>
+            <p className="mt-1 text-sm text-white/40">
+              Manage profile, assets, and execution environment.
+            </p>
           </div>
-
-          {account ? (
+          {!account ? (
+            <ConnectWalletPrompt action="view profile" />
+          ) : (
             <Link
               href="/invest"
-              className="inline-flex items-center gap-2 rounded-xl bg-indigo-500 px-8 py-4 text-sm font-bold text-black transition-all hover:bg-indigo-400"
+              className="inline-flex items-center gap-2 rounded-lg bg-indigo-500 px-4 py-2 text-xs font-bold uppercase tracking-widest text-black transition-all hover:bg-indigo-400"
             >
-              Deposit / Withdraw
-              <WalletIcon className="h-4 w-4" />
+              Deposit Margin <WalletIcon className="h-4 w-4" />
             </Link>
-          ) : (
-            <ConnectWalletPrompt action="inspect balances" />
           )}
         </header>
 
-        {readOnly ? (
-          <ErrorCallout
-            title="Read-only session"
-            message={readOnlyReason ?? "Writes are disabled for this release context."}
-          />
-        ) : null}
+        {readOnly && (
+          <div className="mb-6 shrink-0">
+            <ErrorCallout
+              title="Read-only session"
+              message={readOnlyReason ?? "Writes are disabled."}
+            />
+          </div>
+        )}
+        {balancesError && (
+          <div className="mb-6 shrink-0">
+            <ErrorCallout title="Asset query failed" message={(balancesError as Error).message} />
+          </div>
+        )}
 
-        {balancesError ? (
-          <ErrorCallout
-            title="Asset query failed"
-            message={(balancesError as Error).message ?? "Unable to load account balances."}
-          />
-        ) : null}
+        <div className="flex min-h-0 flex-1 flex-col gap-6 lg:flex-row">
+          {/* Left Panel: Profile & Context */}
+          <div className="flex w-full shrink-0 flex-col gap-6 lg:w-[350px]">
+            {/* Player ID Card */}
+            <div className="relative overflow-hidden rounded-xl border border-indigo-500/20 bg-gradient-to-br from-[#050510] to-[#010105] p-6 shadow-[inset_0_0_40px_rgba(99,102,241,0.05)]">
+              <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-indigo-500/10 blur-[50px] pointer-events-none" />
+              <div className="relative z-10 flex flex-col items-center">
+                <div className="relative mb-4 flex h-20 w-20 items-center justify-center rounded-full border-2 border-indigo-500/30 bg-black shadow-[0_0_20px_rgba(99,102,241,0.2)]">
+                  <UserCircleIcon className="h-10 w-10 text-indigo-400" />
+                  <div className="absolute bottom-0 right-0 h-4 w-4 rounded-full border-2 border-black bg-emerald-500" />
+                </div>
 
-        {refundError ? (
-          <ErrorCallout
-            title="Refund credit query failed"
-            message={(refundError as Error).message ?? "Unable to load refund credit."}
-          />
-        ) : null}
+                <input
+                  type="text"
+                  value={alias}
+                  onChange={(e) => setAlias(e.target.value)}
+                  placeholder="Enter Alias"
+                  className="w-full bg-transparent text-center text-xl font-black tracking-tight text-white outline-none placeholder:text-white/20 transition-all focus:text-indigo-300"
+                  disabled={!account}
+                />
+                <div className="mt-1 flex items-center justify-center gap-1 text-[10px] font-bold uppercase tracking-[0.2em] text-white/40">
+                  {debouncedAlias !== alias ? (
+                    "Saving..."
+                  ) : (
+                    <>
+                      <CheckCircleIcon className="h-3 w-3 text-emerald-500" /> Auto-saved
+                    </>
+                  )}
+                </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
-          <section className="relative overflow-hidden rounded-[2rem] border-2 border-indigo-500/20 bg-gradient-to-br from-indigo-950/20 to-[#050505] p-8 shadow-[inset_0_0_40px_rgba(99,102,241,0.05),0_10px_40px_rgba(0,0,0,0.5)] lg:col-span-1">
-            <div className="absolute -top-10 -right-10 h-40 w-40 rounded-full bg-indigo-500/10 blur-[50px]" />
-            <div className="relative z-10">
-              <div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-300/70">
-                <span className="h-2 w-2 rounded-sm bg-indigo-500/60" />
-                Total Vault Value
+                <div className="mt-6 w-full rounded-lg border border-white/10 bg-black/40 p-3 shadow-inner">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-mono text-indigo-200/80">
+                      {account ? shortHex(account) : "Unconnected"}
+                    </span>
+                    {account && (
+                      <CopyButton
+                        value={account}
+                        label="Copy"
+                        className="h-6 px-2 text-[10px] bg-white/5 hover:bg-white/10"
+                      />
+                    )}
+                  </div>
+                </div>
               </div>
-              <div className="mb-2 bg-gradient-to-r from-white to-indigo-200 bg-clip-text text-4xl font-mono font-extrabold text-transparent md:text-5xl">
+            </div>
+
+            {/* Protocol Context */}
+            <div className="flex flex-col gap-2 rounded-xl border border-white/5 bg-[#0a0a0a] p-4 text-[10px] uppercase tracking-[0.15em] text-white/40">
+              <div className="mb-2 font-bold text-white/60">Execution Context</div>
+              <div className="flex justify-between">
+                <span>Session:</span>{" "}
+                <span className="font-mono text-white/80">
+                  {readOnly ? "Read-Only" : "Writable"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Network:</span>{" "}
+                <span className="font-mono text-white/80">{release?.name || "Unknown"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Digest:</span>{" "}
+                <span className="font-mono text-white/80">{shortHex(release?.releaseDigest)}</span>
+              </div>
+            </div>
+
+            {/* Refund Vault */}
+            <div className="flex flex-col gap-3 rounded-xl border border-amber-500/20 bg-amber-500/5 p-5">
+              <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-amber-500/60">
+                Recoverable VRF Credit
+              </div>
+              <div className="font-mono text-2xl font-black text-amber-400">
                 {primaryAsset
-                  ? formatAmount(totalAssetsEquivalent, primaryAsset.decimals, primaryAsset.symbol)
+                  ? formatAmount(refundCredit, primaryAsset.decimals, primaryAsset.symbol)
                   : "—"}
               </div>
-              <div className="max-w-[220px] text-xs font-medium leading-relaxed text-indigo-300/70">
-                Cryptographically secured combined assets held across the embedded release banks.
-              </div>
+              <button
+                type="button"
+                onClick={() => void handleClaimRefund()}
+                disabled={!account || readOnly || claimRefundFlow.busy || refundCredit === 0n}
+                className="w-full rounded-lg bg-amber-500 py-3 text-xs font-bold text-black transition-all hover:bg-amber-400 disabled:opacity-40"
+              >
+                {claimRefundFlow.busy ? "Claiming..." : "Claim Credit"}
+              </button>
+              {claimRefundFlow.hasActivity && (
+                <TxStepper steps={claimRefundFlow.steps} title="Trace" />
+              )}
             </div>
-          </section>
+          </div>
 
-          <section className="relative overflow-hidden rounded-[2rem] border border-white/8 bg-[#0a0a0a] p-8 shadow-[inset_0_0_40px_rgba(255,255,255,0.02),0_10px_40px_rgba(0,0,0,0.5)] lg:col-span-3">
-            <div className="mb-6 text-[10px] font-bold uppercase tracking-[0.2em] text-white/35">
-              Asset Breakdown
-            </div>
-            <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-              <div className="flex flex-col">
-                <div className="mb-2 flex items-center gap-2">
-                  <span className="h-3 w-3 rounded bg-white shadow-[0_0_10px_rgba(255,255,255,0.4)]" />
-                  <span className="font-mono text-3xl font-bold text-white">
-                    {primaryAsset
-                      ? formatAmount(totalWalletBalance, primaryAsset.decimals, primaryAsset.symbol)
-                      : "—"}
-                  </span>
+          {/* Middle Panel: Asset Ledger */}
+          <div className="flex flex-1 flex-col gap-6 overflow-hidden">
+            {/* Key Metrics */}
+            <div className="grid grid-cols-3 gap-4 shrink-0">
+              <div className="flex flex-col rounded-xl border border-white/10 bg-white/[0.03] p-4 shadow-inner">
+                <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">
+                  Total Vault Value
                 </div>
-                <div className="text-xs font-bold uppercase tracking-[0.18em] text-white/38">
-                  Wallet balance
-                </div>
-                <div className="mt-1 text-xs text-white/30">
-                  Free capital before deposits, withdrawals, or bets.
+                <div className="mt-1 font-mono text-2xl font-black text-white">
+                  {primaryAsset
+                    ? formatAmount(
+                        totalAssetsEquivalent,
+                        primaryAsset.decimals,
+                        primaryAsset.symbol
+                      )
+                    : "—"}
                 </div>
               </div>
-
-              <div className="flex flex-col md:border-l md:border-white/5 md:pl-8">
-                <div className="mb-2 flex items-center gap-2">
-                  <span className="h-3 w-3 rounded bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
-                  <span className="font-mono text-3xl font-bold text-blue-400">
-                    {primaryAsset
-                      ? formatAmount(
-                          totalAssetsEquivalent,
-                          primaryAsset.decimals,
-                          primaryAsset.symbol
-                        )
-                      : "—"}
-                  </span>
+              <div className="flex flex-col rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-4 shadow-inner">
+                <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-indigo-400/60">
+                  Free Balance
                 </div>
-                <div className="text-xs font-bold uppercase tracking-[0.18em] text-blue-300/50">
-                  Bank exposure
-                </div>
-                <div className="mt-1 text-xs text-white/30">
-                  Assets-equivalent minted through house shares.
+                <div className="mt-1 font-mono text-2xl font-black text-indigo-400">
+                  {primaryAsset
+                    ? formatAmount(totalWalletBalance, primaryAsset.decimals, primaryAsset.symbol)
+                    : "—"}
                 </div>
               </div>
-
-              <div className="flex flex-col md:border-l md:border-white/5 md:pl-8">
-                <div className="mb-2 flex items-center gap-2">
-                  <span className="h-3 w-3 rounded bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
-                  <span className="font-mono text-3xl font-bold text-amber-400">
-                    {primaryAsset
-                      ? formatAmount(refundCredit, primaryAsset.decimals, primaryAsset.symbol)
-                      : "—"}
-                  </span>
+              <div className="flex flex-col rounded-xl border border-blue-500/20 bg-blue-500/5 p-4 shadow-inner">
+                <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-400/60">
+                  Bank Exposure
                 </div>
-                <div className="text-xs font-bold uppercase tracking-[0.18em] text-amber-300/50">
-                  Refund credit
-                </div>
-                <div className="mt-1 text-xs text-white/30">
-                  {claimRefundFlow.busy
-                    ? "Recovery currently in-flight."
-                    : "Recoverable VRF credit routed back to the same wallet."}
+                <div className="mt-1 font-mono text-2xl font-black text-blue-400">
+                  {primaryAsset
+                    ? formatAmount(
+                        totalAssetsEquivalent,
+                        primaryAsset.decimals,
+                        primaryAsset.symbol
+                      )
+                    : "—"}
                 </div>
               </div>
             </div>
-          </section>
-        </div>
 
-        <div className="grid gap-8 xl:grid-cols-[1.15fr_0.85fr]">
-          <TrustTableShell
-            eyebrow="Asset positions"
-            title="Wallet and bank balances"
-            description="Free balance, house shares, and allowance state for every release asset remain visible in one dense ledger surface."
-          >
-            <div className="space-y-4">
-              {balancesLoading ? (
-                <div className="rounded-[1.5rem] border border-dashed border-white/8 bg-white/[0.02] py-16 text-center text-[11px] font-bold uppercase tracking-[0.2em] text-white/28">
-                  Synchronizing wallet context
-                </div>
-              ) : assetRows.length === 0 ? (
-                <div className="rounded-[1.5rem] border border-dashed border-white/8 bg-white/[0.02] py-16 text-center text-[11px] font-bold uppercase tracking-[0.2em] text-white/28">
-                  No release assets visible for this wallet
-                </div>
-              ) : (
-                assetRows.map((row) => (
-                  <div
-                    key={row.id}
-                    className="rounded-[1.5rem] border border-white/8 bg-[linear-gradient(180deg,rgba(10,14,24,0.95),rgba(6,9,15,0.96))] p-5"
-                  >
-                    <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                      <div>
-                        <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/35">
-                          {row.symbol}
+            {/* Detailed Position rows */}
+            <div className="flex flex-1 flex-col overflow-hidden rounded-xl border border-white/5 bg-[#050505]">
+              <div className="shrink-0 border-b border-white/10 p-4">
+                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">
+                  Asset Positions
+                </h3>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {balancesLoading ? (
+                  <div className="py-12 text-center text-[11px] font-bold uppercase tracking-widest text-white/30">
+                    Loading Balances...
+                  </div>
+                ) : assetRows.length === 0 ? (
+                  <div className="py-12 text-center text-[11px] font-bold uppercase tracking-widest text-white/30">
+                    No Assets Available
+                  </div>
+                ) : (
+                  assetRows.map((row) => (
+                    <div
+                      key={row.id}
+                      className="rounded-lg border border-white/10 bg-[#0a0a0a] p-4 shadow-sm"
+                    >
+                      <div className="mb-4 flex items-center justify-between">
+                        <div className="flex items-center gap-2 font-mono text-sm font-black text-white">
+                          <span className="h-2 w-2 rounded-full bg-emerald-400" /> {row.symbol}{" "}
+                          Equivalent
                         </div>
-                        <div className="mt-2 text-xl font-black tracking-tight text-white">
-                          {formatAmount(row.assetsEquivalent, row.decimals, row.symbol)}
-                        </div>
-                        <div className="mt-2 text-sm leading-6 text-white/42">
-                          Wallet free balance and bank-issued exposure visible side-by-side.
+                        <div className="font-mono text-lg font-bold text-white">
+                          {formatAmount(row.assetsEquivalent, row.decimals)}
                         </div>
                       </div>
-
-                      <div className="grid gap-3 sm:grid-cols-3 lg:min-w-[520px]">
-                        <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
-                          <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/30">
-                            Wallet
-                          </div>
-                          <div className="mt-2 font-mono text-sm text-white">
-                            {formatAmount(row.walletBalance, row.decimals, row.symbol)}
-                          </div>
+                      <div className="grid grid-cols-3 gap-2 text-[10px] uppercase tracking-widest">
+                        <div className="flex flex-col gap-1 rounded bg-black/40 p-2 border border-white/5">
+                          <span className="text-white/40">Wallet</span>
+                          <span className="font-mono text-xs font-bold text-white/80">
+                            {formatAmount(row.walletBalance, row.decimals)}
+                          </span>
                         </div>
-                        <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
-                          <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/30">
-                            House shares
-                          </div>
-                          <div className="mt-2 font-mono text-sm text-white">
+                        <div className="flex flex-col gap-1 rounded bg-black/40 p-2 border border-white/5">
+                          <span className="text-white/40">House Shares</span>
+                          <span className="font-mono text-xs font-bold text-white/80">
                             {formatAmount(row.shares, row.decimals)}
-                          </div>
+                          </span>
                         </div>
-                        <div className="rounded-2xl border border-white/8 bg-black/20 p-4">
-                          <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/30">
-                            Allowance
-                          </div>
-                          <div
+                        <div className="flex flex-col gap-1 rounded bg-black/40 p-2 border border-white/5">
+                          <span className="text-white/40">Allowance</span>
+                          <span
                             className={cn(
-                              "mt-2 font-mono text-sm",
-                              row.allowance === 0n ? "text-rose-300" : "text-emerald-300"
+                              "font-mono text-xs font-bold",
+                              row.allowance === 0n ? "text-rose-400" : "text-emerald-400"
                             )}
                           >
                             {row.allowance > 1_000_000_000_000_000_000n
                               ? "Unlimited"
-                              : formatAmount(row.allowance, row.decimals, row.symbol)}
-                          </div>
+                              : formatAmount(row.allowance, row.decimals)}
+                          </span>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))
-              )}
+                  ))
+                )}
+              </div>
             </div>
-          </TrustTableShell>
-
-          <div className="space-y-8">
-            <TrustTableShell
-              eyebrow="Recovery"
-              title="Refund credit"
-              description="Failed or cancelled VRF requests accumulate refundable credit. Claiming routes funds back through the same wallet-first path."
-            >
-              <div className="rounded-[1.5rem] border border-indigo-400/14 bg-indigo-400/[0.05] p-5">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/35">
-                      Recoverable amount
-                    </div>
-                    <div className="mt-3 text-3xl font-black tracking-tight text-white">
-                      {primaryAsset
-                        ? formatAmount(refundCredit, primaryAsset.decimals, primaryAsset.symbol)
-                        : "—"}
-                    </div>
-                  </div>
-                  <TxStatusChip status={claimRefundFlow.status} />
-                </div>
-
-                <p className="mt-4 text-sm leading-6 text-white/46">
-                  Recovery stays explicit: validate the claim, submit from the wallet, then
-                  reconcile the receipt in the journal.
-                </p>
-
-                <button
-                  type="button"
-                  onClick={() => void handleClaimRefund()}
-                  disabled={!account || readOnly || claimRefundFlow.busy || refundCredit === 0n}
-                  className="mt-6 w-full rounded-2xl bg-indigo-500 px-4 py-4 text-sm font-bold text-black transition-all hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  {claimRefundFlow.busy ? "Claiming refund credit..." : "Claim refund credit"}
-                </button>
-
-                {claimRefundFlow.hasActivity ? (
-                  <div className="mt-6 border-t border-white/8 pt-6">
-                    <TxStepper
-                      title="Recovery trace"
-                      steps={claimRefundFlow.steps}
-                      footer={
-                        <button
-                          type="button"
-                          onClick={claimRefundFlow.reset}
-                          className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/30 transition-colors hover:text-white"
-                        >
-                          Reset trace
-                        </button>
-                      }
-                    />
-                  </div>
-                ) : null}
-              </div>
-            </TrustTableShell>
-
-            <TrustTableShell
-              eyebrow="Protocol context"
-              title="Runtime envelope"
-              description="The account route remains explicit about chain, release identity, and current write permissions."
-            >
-              <div className="space-y-3">
-                {[
-                  ["Release digest", shortHex(release?.releaseDigest)],
-                  ["Network", release?.name ?? "Unknown"],
-                  ["Explorer", explorerBaseUrl ?? "Unavailable"],
-                  ["Session mode", readOnly ? "Read-only" : "Writable"]
-                ].map(([label, value]) => (
-                  <div
-                    key={label}
-                    className="flex items-center justify-between rounded-2xl border border-white/8 bg-black/20 px-4 py-3"
-                  >
-                    <span className="text-sm text-white/46">{label}</span>
-                    <span className="font-mono text-sm text-white">{value}</span>
-                  </div>
-                ))}
-              </div>
-            </TrustTableShell>
           </div>
-        </div>
 
-        <TrustTableShell
-          eyebrow="Journal"
-          title="Recent account receipts"
-          description="Every direct transaction stays visible as a compact, chain-aware journal row."
-        >
-          <AuditTabs
-            className="mt-0 border-white/8 bg-black/20"
-            activeColorClass="border-cyan-400/70 text-cyan-200"
-            tabs={["Transactions"]}
-            activeTab="Transactions"
-          >
-            <AuditTableHeader>
-              <div className="grid grid-cols-[1.4fr_1.4fr_1fr_1fr_72px] gap-4 text-[10px] font-bold uppercase tracking-[0.2em] text-white/35">
-                <div>Time / Hash</div>
-                <div>Action</div>
-                <div>Release</div>
-                <div>Status</div>
-                <div className="text-right">Chain</div>
-              </div>
-            </AuditTableHeader>
-
-            <div className="flex min-h-[280px] flex-col gap-3">
+          {/* Right Panel: Network Activity */}
+          <div className="flex w-full shrink-0 flex-col overflow-hidden rounded-xl border border-white/5 bg-[#050505] lg:w-[380px]">
+            <div className="shrink-0 border-b border-white/10 p-4">
+              <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/50">
+                Tx Journal
+              </h3>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
               {journalRows.length === 0 ? (
-                <div className="rounded-[1.5rem] border border-dashed border-white/8 bg-white/[0.02] py-16 text-center text-[11px] font-bold uppercase tracking-[0.2em] text-white/28">
-                  Journal is empty for this wallet session
+                <div className="py-12 text-center text-[10px] font-bold uppercase tracking-widest text-white/30">
+                  Journal empty
                 </div>
               ) : (
-                journalRows.map((row) => (
-                  <div
-                    key={row.id}
-                    className="rounded-[1.35rem] border border-white/8 bg-[linear-gradient(180deg,rgba(10,14,24,0.95),rgba(6,9,15,0.96))] p-4"
-                  >
-                    <div className="grid grid-cols-[1.4fr_1.4fr_1fr_1fr_72px] items-center gap-4">
-                      <AuditTableCell>
-                        <div className="flex flex-col gap-1">
-                          <span className="text-sm font-semibold text-white">
-                            {new Date(row.createdAt).toLocaleString()}
-                          </span>
-                          <span className="text-[10px] font-mono uppercase tracking-[0.16em] text-white/24">
-                            {shortHex(row.txHash)}
-                          </span>
-                        </div>
-                      </AuditTableCell>
-                      <AuditTableCell>
-                        <span className="text-sm font-semibold text-white">
+                <div className="flex flex-col gap-2">
+                  {journalRows.map((row) => (
+                    <div
+                      key={row.id}
+                      className="flex flex-col gap-2 rounded-lg border border-white/5 bg-[#0a0a0a] p-3 transition-colors hover:bg-[#111]"
+                    >
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-semibold text-white">
                           {row.action.replace(/_/g, " ")}
                         </span>
-                      </AuditTableCell>
-                      <AuditTableCell>
-                        <span className="font-mono text-sm text-white/62">
-                          {shortHex(row.releaseDigest)}
-                        </span>
-                      </AuditTableCell>
-                      <AuditTableCell>
                         <TxStatusChip status={mapJournalStatus(row.status)} />
-                      </AuditTableCell>
-                      <AuditTableCell className="justify-end text-[11px] font-bold uppercase tracking-[0.18em] text-white/30">
-                        {row.chainId}
-                      </AuditTableCell>
+                      </div>
+                      <div className="flex items-center justify-between text-[10px] uppercase tracking-widest text-white/40">
+                        <span className="font-mono">
+                          {new Date(row.createdAt).toLocaleTimeString()}
+                        </span>
+                        {explorerBaseUrl && row.txHash ? (
+                          <a
+                            href={`${explorerBaseUrl}/tx/${row.txHash}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-indigo-400 hover:text-indigo-300"
+                          >
+                            {shortHex(row.txHash)} ↗
+                          </a>
+                        ) : (
+                          <span className="font-mono">{shortHex(row.txHash)}</span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))
+                  ))}
+                </div>
               )}
             </div>
-          </AuditTabs>
-        </TrustTableShell>
+          </div>
+        </div>
       </main>
     </PageTransition>
   );

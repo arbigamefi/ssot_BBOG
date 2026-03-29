@@ -10,16 +10,14 @@ vi.mock("next/navigation", () => ({
   usePathname: () => state.pathname
 }));
 
-vi.mock("./LandingShell", () => ({
-  LandingShell: ({ children }: any) => <div data-testid="landing-shell">{children}</div>
+vi.mock("./PrototypeHeader", () => ({
+  PrototypeHeader: ({ activeRoute, variant }: any) => (
+    <div data-testid={`header-${activeRoute}-${variant}`}>Header</div>
+  )
 }));
 
-vi.mock("./RoomShell", () => ({
-  RoomShell: ({ children }: any) => <div data-testid="room-shell">{children}</div>
-}));
-
-vi.mock("./TrustShell", () => ({
-  TrustShell: ({ children }: any) => <div data-testid="trust-shell">{children}</div>
+vi.mock("../ssot/release/ReleaseProvider", () => ({
+  useRelease: () => ({ readOnly: false, readOnlyReason: null, warnings: [] })
 }));
 
 import { SiteChrome } from "./SiteChrome";
@@ -30,7 +28,7 @@ describe("SiteChrome", () => {
     state.pathname = "/";
   });
 
-  it("uses landing shell on home route", () => {
+  it("passes correct properties for home route", () => {
     state.pathname = "/";
     render(
       <SiteChrome>
@@ -38,10 +36,10 @@ describe("SiteChrome", () => {
       </SiteChrome>
     );
 
-    expect(screen.getByTestId("landing-shell")).toBeDefined();
+    expect(screen.getByTestId("header-none-transparent")).toBeDefined();
   });
 
-  it("uses room shell on gameplay routes", () => {
+  it("passes correct properties for gameplay routes", () => {
     state.pathname = "/roulette";
     render(
       <SiteChrome>
@@ -49,30 +47,18 @@ describe("SiteChrome", () => {
       </SiteChrome>
     );
 
-    expect(screen.getByTestId("room-shell")).toBeDefined();
+    expect(screen.getByTestId("header-roulette-game")).toBeDefined();
   });
 
-  it("does not treat legacy compat room routes as canonical gameplay shells", () => {
-    state.pathname = "/games/roulette";
+  it("detects games directory route", () => {
+    state.pathname = "/games";
     render(
       <SiteChrome>
         <div>content</div>
       </SiteChrome>
     );
 
-    expect(screen.getByTestId("trust-shell")).toBeDefined();
-    expect(screen.queryByTestId("room-shell")).toBeNull();
-  });
-
-  it("uses trust shell on trust routes", () => {
-    state.pathname = "/bets";
-    render(
-      <SiteChrome>
-        <div>content</div>
-      </SiteChrome>
-    );
-
-    expect(screen.getByTestId("trust-shell")).toBeDefined();
+    expect(screen.getByTestId("header-directory-default")).toBeDefined();
   });
 
   it("bypasses chrome on prototype routes", () => {
@@ -84,8 +70,7 @@ describe("SiteChrome", () => {
     );
 
     expect(screen.getByText("prototype-board")).toBeDefined();
-    expect(screen.queryByTestId("landing-shell")).toBeNull();
-    expect(screen.queryByTestId("room-shell")).toBeNull();
-    expect(screen.queryByTestId("trust-shell")).toBeNull();
+    // Header should not be rendered
+    expect(screen.queryByTestId(/header-/)).toBeNull();
   });
 });

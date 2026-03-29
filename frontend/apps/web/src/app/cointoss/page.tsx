@@ -1,5 +1,5 @@
-import CoinTossRoomPageClient from "./pageClient";
+import { GamePageClient } from "../games/[slug]/pageClient";
 
 export default function CoinTossPage() {
-  return <CoinTossRoomPageClient />;
+  return <GamePageClient slug="coin-toss" />;
 }

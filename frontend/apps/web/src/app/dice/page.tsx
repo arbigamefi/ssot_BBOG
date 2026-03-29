@@ -1,5 +1,5 @@
-import DiceRoomPageClient from "./pageClient";
+import { GamePageClient } from "../games/[slug]/pageClient";
 
 export default function DicePage() {
-  return <DiceRoomPageClient />;
+  return <GamePageClient slug="dice" />;
 }

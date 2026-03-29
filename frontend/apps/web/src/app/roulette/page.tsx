@@ -1,5 +1,5 @@
-import RouletteRoomPageClient from "./pageClient";
+import { GamePageClient } from "../games/[slug]/pageClient";
 
 export default function RoulettePage() {
-  return <RouletteRoomPageClient />;
+  return <GamePageClient slug="roulette" />;
 }
