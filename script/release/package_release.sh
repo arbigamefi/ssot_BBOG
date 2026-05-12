@@ -21,6 +21,13 @@ ABIS_DIR="${ABIS_DIR:-deployments/abis}"
 ABIS_INDEX_PATH="${ABIS_INDEX_PATH:-deployments/abis/index.json}"
 
 TAG_NAME="${TAG_NAME:-}"
+RELEASE_TAG_SUFFIX="${RELEASE_TAG_SUFFIX:-}"
+
+SNAPSHOT_LATEST_NAME="${SNAPSHOT_LATEST_NAME:-latest.json}"
+RELEASE_LATEST_NAME="${RELEASE_LATEST_NAME:-release-latest.json}"
+NOTES_LATEST_NAME="${NOTES_LATEST_NAME:-release-notes-latest.md}"
+FRONTEND_MANIFEST_LATEST_NAME="${FRONTEND_MANIFEST_LATEST_NAME:-frontend-manifest-latest.json}"
+GOLDEN_VECTORS_LATEST_NAME="${GOLDEN_VECTORS_LATEST_NAME:-golden-vectors-latest.json}"
 
 [[ -f "$RELEASE_PATH" ]] || { echo "missing $RELEASE_PATH (run: make release-digest)"; exit 1; }
 [[ -f "$SNAPSHOT_PATH" ]] || { echo "missing $SNAPSHOT_PATH (run: make deploy)"; exit 1; }
@@ -30,9 +37,10 @@ TAG_NAME="${TAG_NAME:-}"
 [[ -f "$GOLDEN_VECTORS_PATH" ]] || { echo "missing $GOLDEN_VECTORS_PATH (run: make release-golden-vectors)"; exit 1; }
 [[ -f "$ABIS_INDEX_PATH" ]] || { echo "missing $ABIS_INDEX_PATH (run: make release-abis)"; exit 1; }
 
+export RELEASE_PATH
 python3 - <<'PY'
-import json,sys
-p="deployments/release-latest.json"
+import json, os, sys
+p=os.environ["RELEASE_PATH"]
 j=json.load(open(p,"r",encoding="utf-8"))
 for k in ("chainId","blockNumber","digest"):
     if k not in j: 
@@ -61,19 +69,19 @@ trap cleanup EXIT
 mkdir -p "$STAGE/deployments" "$STAGE/abis"
 
 # Core release artifacts
-cp "$SNAPSHOT_PATH" "$STAGE/deployments/latest.json"
-cp "$RELEASE_PATH" "$STAGE/deployments/release-latest.json"
-cp "$NOTES_PATH" "$STAGE/deployments/release-notes-latest.md"
-cp "$FRONTEND_MANIFEST_PATH" "$STAGE/deployments/frontend-manifest-latest.json"
-cp "$GOLDEN_VECTORS_PATH" "$STAGE/deployments/golden-vectors-latest.json"
+cp "$SNAPSHOT_PATH" "$STAGE/deployments/$SNAPSHOT_LATEST_NAME"
+cp "$RELEASE_PATH" "$STAGE/deployments/$RELEASE_LATEST_NAME"
+cp "$NOTES_PATH" "$STAGE/deployments/$NOTES_LATEST_NAME"
+cp "$FRONTEND_MANIFEST_PATH" "$STAGE/deployments/$FRONTEND_MANIFEST_LATEST_NAME"
+cp "$GOLDEN_VECTORS_PATH" "$STAGE/deployments/$GOLDEN_VECTORS_LATEST_NAME"
 
 # Also include per-release copies if present
-for f in   "deployments/release/frontend-manifest-${CHAIN_ID}-${BLOCK_NUMBER}.json"   "deployments/release/golden-vectors-${CHAIN_ID}-${BLOCK_NUMBER}.json"   "deployments/release/release-${CHAIN_ID}-${BLOCK_NUMBER}.json"   "deployments/release/abi-index-${CHAIN_ID}-${BLOCK_NUMBER}.json" ; do
+for f in   "deployments/release/frontend-manifest-${CHAIN_ID}-${BLOCK_NUMBER}${RELEASE_TAG_SUFFIX}.json"   "deployments/release/golden-vectors-${CHAIN_ID}-${BLOCK_NUMBER}${RELEASE_TAG_SUFFIX}.json"   "deployments/release/release-${CHAIN_ID}-${BLOCK_NUMBER}${RELEASE_TAG_SUFFIX}.json"   "deployments/release/release-notes-${CHAIN_ID}-${BLOCK_NUMBER}${RELEASE_TAG_SUFFIX}.md"   "deployments/release/abi-index-${CHAIN_ID}-${BLOCK_NUMBER}${RELEASE_TAG_SUFFIX}.json" ; do
   [[ -f "$f" ]] && { mkdir -p "$STAGE/$(dirname "$f")"; cp "$f" "$STAGE/$f"; }
 done
 
 # Verify helpers (optional)
-for f in "deployments/verify-latest.sh" "deployments/verify/verify-${CHAIN_ID}-${BLOCK_NUMBER}.sh"; do
+for f in "deployments/verify-latest${RELEASE_TAG_SUFFIX}.sh" "deployments/verify/verify-${CHAIN_ID}-${BLOCK_NUMBER}${RELEASE_TAG_SUFFIX}.sh"; do
   [[ -f "$f" ]] && { mkdir -p "$STAGE/$(dirname "$f")"; cp "$f" "$STAGE/$f"; }
 done
 

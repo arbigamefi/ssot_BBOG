@@ -13,7 +13,7 @@ The index is tied to the release identity (chainId + blockNumber) so that
 frontend can be zero-inference: copy+consume.
 
 Requires:
-  - `deployments/frontend-manifest-latest.json` (for addresses)
+  - `deployments/frontend-manifest-latest.json` or v1.3 manifest (for addresses)
   - `out/` artifacts present (run `forge build` first)
 """
 
@@ -27,11 +27,30 @@ from typing import Any, Dict, List, Optional, Tuple
 import hashlib
 import time
 
-REQUIRED_CONTRACTS = [
+REQUIRED_CONTRACTS_V1 = [
     # core
     ("Hub", "src/core/Hub.sol:Hub", "hub"),
     ("VRFHub", "src/core/VRFHub.sol:VRFHub", "vrfHub"),
     ("BankRegistry", "src/core/BankRegistry.sol:BankRegistry", "bankRegistry"),
+    ("ReferralRegistry", "src/engines/referral/ReferralRegistry.sol:ReferralRegistry", "refRegistry"),
+    ("DefaultReferralEngine", "src/engines/referral/DefaultReferralEngine.sol:DefaultReferralEngine", "refEngine"),
+    # adapter
+    ("ChainlinkV2PlusWrapperAdapter", "src/adapters/chainlink/ChainlinkV2PlusWrapperAdapter.sol:ChainlinkV2PlusWrapperAdapter", "adapter"),
+    # modules
+    ("DiceModule", "src/modules/dice/DiceModule.sol:DiceModule", "moduleDice"),
+    ("CoinTossModule", "src/modules/cointoss/CoinTossModule.sol:CoinTossModule", "moduleCoinToss"),
+    ("RouletteModule", "src/modules/roulette/RouletteModule.sol:RouletteModule", "moduleRoulette"),
+    ("KenoModule", "src/modules/keno/KenoModule.sol:KenoModule", "moduleKeno"),
+    # bank (type)
+    ("Bank", "src/core/Bank.sol:Bank", "__bank_type__"),
+]
+
+REQUIRED_CONTRACTS_V13 = [
+    # core
+    ("GameHub", "src/core/GameHub.sol:GameHub", "gameHub"),
+    ("VRFHub", "src/core/VRFHub.sol:VRFHub", "vrfHub"),
+    ("PoolRegistry", "src/core/PoolRegistry.sol:PoolRegistry", "poolRegistry"),
+    ("SettlementRouter", "src/core/SettlementRouter.sol:SettlementRouter", "settlementRouter"),
     ("ReferralRegistry", "src/engines/referral/ReferralRegistry.sol:ReferralRegistry", "refRegistry"),
     ("DefaultReferralEngine", "src/engines/referral/DefaultReferralEngine.sol:DefaultReferralEngine", "refEngine"),
     # adapter
@@ -85,6 +104,7 @@ def main() -> None:
     ap.add_argument("--out", default="out")
     ap.add_argument("--dest", default="deployments/abis")
     ap.add_argument("--schema", type=int, default=1)
+    ap.add_argument("--tag-suffix", default="")
     ap.add_argument("--git-sha", default=os.environ.get("GIT_SHA", ""))
     args = ap.parse_args()
 
@@ -122,8 +142,10 @@ def main() -> None:
 
     exported: List[Dict[str, Any]] = []
 
+    required_contracts = REQUIRED_CONTRACTS_V13 if args.schema == 2 else REQUIRED_CONTRACTS_V1
+
     # Export each required ABI
-    for file_name, _fq, addr_key in REQUIRED_CONTRACTS:
+    for file_name, _fq, addr_key in required_contracts:
         artifact_path = _find_artifact(out_dir, file_name)
         abi = _load_abi_from_artifact(artifact_path)
 
@@ -142,21 +164,42 @@ def main() -> None:
             "abiSha256": _sha256_hex((dest_dir / abi_file).read_bytes()),
         })
 
-    # Add per-asset banks (addresses from manifest.assets[])
-    assets = manifest.get("assets") or []
-    if isinstance(assets, list):
-        for a in assets:
-            if not isinstance(a, dict):
-                continue
-            bank = a.get("bank")
-            asset = a.get("asset")
-            if isinstance(bank, str) and isinstance(asset, str):
-                exported.append({
-                    "name": "BankInstance",
-                    "asset": asset,
-                    "address": bank,
-                    "abiFile": "Bank.abi.json",
-                })
+    if args.schema == 2:
+        # Add per-pool banks (addresses from manifest.pools[]).
+        pools = manifest.get("pools") or []
+        if isinstance(pools, list):
+            for p in pools:
+                if not isinstance(p, dict):
+                    continue
+                bank = p.get("bank")
+                asset = p.get("asset")
+                pool_id = p.get("poolId")
+                domain = p.get("domain")
+                if isinstance(bank, str) and isinstance(asset, str):
+                    exported.append({
+                        "name": "BankInstance",
+                        "poolId": pool_id,
+                        "domain": domain,
+                        "asset": asset,
+                        "address": bank,
+                        "abiFile": "Bank.abi.json",
+                    })
+    else:
+        # Add per-asset banks (addresses from manifest.assets[]).
+        assets = manifest.get("assets") or []
+        if isinstance(assets, list):
+            for a in assets:
+                if not isinstance(a, dict):
+                    continue
+                bank = a.get("bank")
+                asset = a.get("asset")
+                if isinstance(bank, str) and isinstance(asset, str):
+                    exported.append({
+                        "name": "BankInstance",
+                        "asset": asset,
+                        "address": bank,
+                        "abiFile": "Bank.abi.json",
+                    })
 
     index = {
         "schemaVersion": args.schema,
@@ -172,7 +215,7 @@ def main() -> None:
     # Also write an immutable per-release copy for auditability.
     release_dir = Path("deployments/release")
     release_dir.mkdir(parents=True, exist_ok=True)
-    per_release = release_dir / f"abi-index-{chain_id}-{block_number}.json"
+    per_release = release_dir / f"abi-index-{chain_id}-{block_number}{args.tag_suffix}.json"
     _write_json(per_release, index)
 
     print(f"Wrote: {dest_dir / 'index.json'}")

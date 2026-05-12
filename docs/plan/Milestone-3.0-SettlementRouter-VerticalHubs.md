@@ -61,8 +61,8 @@ As of the current `codex/sportsbook-architecture-research` branch:
   reserved liability, ownerHub-only debt-out, and registered vertical hub Bank-bypass rejection; full
   legacy stateful diff migration to `GameHub` is still pending.
 - PR-3.0.7 has an initial `DeployV13` script, v1.3 verify-helper support, v1.3 release digest
-  signing/verification, and schemaVersion 2 frontend manifest/golden-vector generation; v1.3
-  release-pack/check-release wiring is still pending.
+  signing/verification, schemaVersion 2 frontend manifest/golden-vector generation, and v1.3
+  release-notes/check/package/ABI export wiring.
 
 ### PR-3.0.1 — SSOT v1.3 draft and interfaces
 

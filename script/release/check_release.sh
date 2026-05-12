@@ -11,6 +11,9 @@ NOTES_PATH="${NOTES_PATH:-deployments/release-notes-latest.md}"
 FRONTEND_MANIFEST_PATH="${FRONTEND_MANIFEST_PATH:-deployments/frontend-manifest-latest.json}"
 GOLDEN_VECTORS_PATH="${GOLDEN_VECTORS_PATH:-deployments/golden-vectors-latest.json}"
 ABI_INDEX_PATH="${ABI_INDEX_PATH:-deployments/abis/index.json}"
+FRONTEND_SCHEMA="${FRONTEND_SCHEMA:-1}"
+RELEASE_TAG_SUFFIX="${RELEASE_TAG_SUFFIX:-}"
+VERIFY_SCRIPT="${VERIFY_SCRIPT:-script/release/VerifyRelease.s.sol:VerifyRelease}"
 
 if [[ "$STRICT" == "1" ]]; then
   [[ -f "$SNAPSHOT_PATH" ]] || { echo "missing snapshot: $SNAPSHOT_PATH"; exit 1; }
@@ -35,8 +38,10 @@ python3 script/release/validate_frontend_artifacts.py \
   --notes "$NOTES_PATH" \
   --manifest "$FRONTEND_MANIFEST_PATH" \
   --vectors "$GOLDEN_VECTORS_PATH" \
+  --schema "$FRONTEND_SCHEMA" \
+  --tag-suffix="$RELEASE_TAG_SUFFIX" \
   --abis-index "$ABI_INDEX_PATH"
 
 # Verify digest + signature deterministically (no RPC needed).
 RELEASE_PATH="$RELEASE_PATH" SNAPSHOT_PATH="$SNAPSHOT_PATH" \
-  forge script script/release/VerifyRelease.s.sol:VerifyRelease -vvv
+  forge script "$VERIFY_SCRIPT" -vvv

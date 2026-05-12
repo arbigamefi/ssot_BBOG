@@ -48,6 +48,7 @@ For a v1.3 router/pool deployment produced by `DeployV13`:
 ```bash
 SNAPSHOT_PATH=deployments/latest-v13.json make release-frontend-manifest-v13
 SNAPSHOT_PATH=deployments/latest-v13.json make release-golden-vectors-v13
+make release-abis-v13
 ```
 
 The v1.3 artifacts are written to:
@@ -56,6 +57,8 @@ The v1.3 artifacts are written to:
 - `deployments/golden-vectors-latest-v13.json`
 - `deployments/release/frontend-manifest-<chainId>-<block>-v13.json`
 - `deployments/release/golden-vectors-<chainId>-<block>-v13.json`
+- `deployments/abis-v13/index.json`
+- `deployments/release/abi-index-<chainId>-<block>-v13.json`
 
 The v1.3 manifest uses `schemaVersion: 2`, exposes `addresses.gameHub`, `addresses.settlementRouter`,
 `addresses.poolRegistry`, and `pools[]`. The v1.3 vectors prove `IGameHub.placeBet(gameId,poolId,...)`.

@@ -70,9 +70,13 @@ STRICT=1 make release-check
 For v1.3 router/pool snapshots:
 ```bash
 SNAPSHOT_PATH=deployments/latest-v13.json make release-digest-v13
+SNAPSHOT_PATH=deployments/latest-v13.json make release-notes-v13
 SNAPSHOT_PATH=deployments/latest-v13.json make release-frontend-manifest-v13
 SNAPSHOT_PATH=deployments/latest-v13.json make release-golden-vectors-v13
+make release-abis-v13
 SNAPSHOT_PATH=deployments/latest-v13.json make release-verify-v13
+STRICT=1 make release-check-v13
+make release-package-v13
 ```
 
 The v1.3 frontend manifest writes schemaVersion 2 with explicit `pools[]` rows. The v1.3 golden

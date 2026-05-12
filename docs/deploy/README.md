@@ -139,9 +139,13 @@ For a v1.3 router/pool deployment, use the v1.3 release lock path:
 
 ```bash
 SNAPSHOT_PATH=deployments/latest-v13.json make release-digest-v13
+SNAPSHOT_PATH=deployments/latest-v13.json make release-notes-v13
 SNAPSHOT_PATH=deployments/latest-v13.json make release-frontend-manifest-v13
 SNAPSHOT_PATH=deployments/latest-v13.json make release-golden-vectors-v13
+make release-abis-v13
 SNAPSHOT_PATH=deployments/latest-v13.json make release-verify-v13
+STRICT=1 make release-check-v13
+make release-package-v13
 ```
 
 This writes:
@@ -149,8 +153,12 @@ This writes:
 - `deployments/release/release-<chainid>-<block>-v13.json`
 - `deployments/frontend-manifest-latest-v13.json`
 - `deployments/golden-vectors-latest-v13.json`
+- `deployments/release-notes-latest-v13.md`
+- `deployments/abis-v13/index.json`
 - `deployments/release/frontend-manifest-<chainid>-<block>-v13.json`
 - `deployments/release/golden-vectors-<chainid>-<block>-v13.json`
+- `deployments/release/release-notes-<chainid>-<block>-v13.md`
+- `deployments/release/abi-index-<chainid>-<block>-v13.json`
 
 The v1.3 digest includes `PoolRegistry`, `SettlementRouter`, `GameHub`, and every pool id/domain/bank
 row from the deployment snapshot. The v1.3 frontend manifest is schemaVersion 2 and exposes `pools[]`

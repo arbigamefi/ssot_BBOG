@@ -5,7 +5,7 @@ DEPLOY_PROFILE ?= default
 VERIFY_PROFILE ?= default
 FRONTEND_DIR ?= frontend
 
-.PHONY: deps check-deps check test pr nightly fork deploy verify verify-helpers release-digest release-digest-v13 release-verify release-verify-v13 release-check release-notes release-package audit-package lint release-frontend-manifest release-frontend-manifest-v13 release-golden-vectors release-golden-vectors-v13 frontend-install frontend-dev frontend-build frontend-lint frontend-typecheck frontend-test frontend-test-strict frontend-storybook frontend-storybook-build frontend-release-check frontend-check
+.PHONY: deps check-deps check test pr nightly fork deploy verify verify-helpers release release-v13 release-digest release-digest-v13 release-verify release-verify-v13 release-check release-check-v13 release-notes release-notes-v13 release-package release-package-v13 audit-package lint release-frontend-manifest release-frontend-manifest-v13 release-golden-vectors release-golden-vectors-v13 release-abis release-abis-v13 frontend-install frontend-dev frontend-build frontend-lint frontend-typecheck frontend-test frontend-test-strict frontend-storybook frontend-storybook-build frontend-release-check frontend-check
 
 deps:
 	bash script/ci/install_deps.sh
@@ -119,6 +119,7 @@ verify-helpers:
 
 # Full release workflow (digest + notes + frontend artifacts + verify + package).
 release: release-digest release-notes release-frontend-manifest release-golden-vectors release-abis release-verify release-package
+release-v13: release-digest-v13 release-notes-v13 release-frontend-manifest-v13 release-golden-vectors-v13 release-abis-v13 release-verify-v13 release-package-v13
 
 release-digest:
 	@$(MAKE) check-deps
@@ -140,10 +141,18 @@ release-check:
 	@$(MAKE) check-deps
 	bash script/release/check_release.sh
 
+release-check-v13:
+	@$(MAKE) check-deps
+	RELEASE_PATH=deployments/release-latest-v13.json SNAPSHOT_PATH=deployments/latest-v13.json NOTES_PATH=deployments/release-notes-latest-v13.md FRONTEND_MANIFEST_PATH=deployments/frontend-manifest-latest-v13.json GOLDEN_VECTORS_PATH=deployments/golden-vectors-latest-v13.json ABI_INDEX_PATH=deployments/abis-v13/index.json FRONTEND_SCHEMA=2 RELEASE_TAG_SUFFIX=-v13 VERIFY_SCRIPT=script/release/VerifyReleaseV13.s.sol:VerifyReleaseV13 bash script/release/check_release.sh
+
 # Generate human-friendly release notes that include the release digest.
 release-notes:
 	@$(MAKE) check-deps
 	FOUNDRY_PROFILE=$(FOUNDRY_PROFILE) forge script script/release/GenerateReleaseNotes.s.sol:GenerateReleaseNotes -vvv
+
+release-notes-v13:
+	@$(MAKE) check-deps
+	RELEASE_PATH=deployments/release-latest-v13.json SNAPSHOT_PATH=deployments/latest-v13.json FOUNDRY_PROFILE=$(FOUNDRY_PROFILE) forge script script/release/GenerateReleaseNotesV13.s.sol:GenerateReleaseNotesV13 -vvv
 
 # Create a distributable archive containing the snapshot + release lock + notes (+ verify helper if present).
 
@@ -167,8 +176,17 @@ release-abis:
 	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge build > /dev/null
 	python3 script/release/export_frontend_abis.py
 
+release-abis-v13:
+	@$(MAKE) check-deps
+	# ABIs are derived from Foundry artifacts; build once to ensure out/ exists.
+	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge build > /dev/null
+	python3 script/release/export_frontend_abis.py --manifest deployments/frontend-manifest-latest-v13.json --dest deployments/abis-v13 --schema 2 --tag-suffix=-v13
+
 release-package:
 	bash script/release/package_release.sh
+
+release-package-v13:
+	RELEASE_PATH=deployments/release-latest-v13.json SNAPSHOT_PATH=deployments/latest-v13.json NOTES_PATH=deployments/release-notes-latest-v13.md FRONTEND_MANIFEST_PATH=deployments/frontend-manifest-latest-v13.json GOLDEN_VECTORS_PATH=deployments/golden-vectors-latest-v13.json ABIS_DIR=deployments/abis-v13 ABIS_INDEX_PATH=deployments/abis-v13/index.json RELEASE_TAG_SUFFIX=-v13 SNAPSHOT_LATEST_NAME=latest-v13.json RELEASE_LATEST_NAME=release-latest-v13.json NOTES_LATEST_NAME=release-notes-latest-v13.md FRONTEND_MANIFEST_LATEST_NAME=frontend-manifest-latest-v13.json GOLDEN_VECTORS_LATEST_NAME=golden-vectors-latest-v13.json bash script/release/package_release.sh
 
 # Create an "audit handoff" bundle: code + docs + pinned deps metadata + release artifacts + verify helpers.
 # The output is placed under dist/ as a .tar.gz.
