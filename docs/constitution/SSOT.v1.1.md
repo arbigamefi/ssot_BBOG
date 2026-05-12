@@ -150,7 +150,7 @@ Bank MUST reject holding a bet if `Free_after[asset] < 0`.
 At `placeBet(gameId, asset, params, stakeSpec, affiliate, maxHouseEdgeBps)` the Hub MUST compute and snapshot pricing inputs
 such that **accepted bets cannot be repriced retroactively**.
 
-The Hub MUST store a **normalized** `maxHouseEdgeBps` per bet (`0 => MAX_HOUSE_EDGE`, `>MAX => MAX`)
+The Hub MUST store a **normalized** `maxHouseEdgeBps` per bet (`0 => defaultHouseEdgeBps`, `>MAX => MAX`)
 and include it in the bet's `snapshotHash`.
 
 The remaining skyline construction, bounds, and snapshot fields are unchanged from v1.0.
@@ -314,6 +314,8 @@ For each asset `a`:
   - `xpHoldback[a][payee]`
   - `holdbackLastSync[a][payee]`
   - `holdbackVestingEnd[a][payee]`
+- A new holdback award MUST NOT extend an active `holdbackVestingEnd[a][payee]` while unreleased holdback remains.
+  If no unreleased holdback remains, the new award starts a fresh vesting schedule.
 - Sync MUST be a bucket move only (no transfers), so it MUST remain live even during pause.
 
 ### 5.4 Claim is optional outflow

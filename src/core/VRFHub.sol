@@ -176,9 +176,11 @@ contract VRFHub is IVRFHub, Governable {
     function detach(uint256 requestId) external override {
         RequestInfo storage r = requests[requestId];
         if (r.hub != msg.sender) revert NotOwningHub();
-        if (!r.active) return;
-        r.active = false;
-        emit Detached(requestId, r.hub, r.betId);
+        address hub = r.hub;
+        uint256 betId = r.betId;
+        bool wasActive = r.active;
+        delete requests[requestId];
+        if (wasActive) emit Detached(requestId, hub, betId);
     }
 
     // -------------------------
@@ -197,14 +199,16 @@ contract VRFHub is IVRFHub, Governable {
             emit Ignored(requestId);
             return;
         }
+        address hub = r.hub;
+        uint256 betId = r.betId;
 
         // single-use: deactivate on first attempt
         r.active = false;
 
         bytes32 rh = keccak256(abi.encode(randomWords));
 
-        try HubLike(r.hub).onRandomWords(requestId, randomWords) {
-            emit Fulfilled(requestId, r.hub, r.betId, rh);
+        try HubLike(hub).onRandomWords(requestId, randomWords) {
+            emit Fulfilled(requestId, hub, betId, rh);
         } catch (bytes memory err) {
             emit HubCallbackFailed(requestId, err);
         }

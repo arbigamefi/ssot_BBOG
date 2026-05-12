@@ -26,6 +26,11 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     uint256 public override protocolFeesPayable;   // PF
     uint256 public override totalReserved;         // R
 
+    /// @dev Virtual reserves keep the initial share price 1:1 while making direct
+    ///      asset donations economically captured by the vault instead of letting
+    ///      a dust first-depositor dilute later LPs to zero shares.
+    uint256 private immutable _virtualOffset;
+
     // XP buckets (external payables; E-class)
     uint256 public override xpAccruedTotal;
     uint256 public override xpLockedTotal;
@@ -36,7 +41,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     mapping(address => uint256) internal _xpHoldback;
     mapping(address => mapping(address => uint256)) internal _xpLockedBySource;
 
-    // rolling linear vesting schedule for holdback (per payee)
+    // aggregate non-extending linear vesting schedule for holdback (per payee)
     mapping(address => uint64) internal _holdbackLastSync;
     mapping(address => uint64) internal _holdbackVestingEnd;
 
@@ -81,6 +86,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         uint8 decimals_
     ) Governable(gov_) {
         if (asset_ == address(0)) revert Errors.ZeroAddress();
+        if (decimals_ > 77) revert Errors.InvalidConfig();
         if (minLiquidityBps_ > 10_000) revert Errors.InvalidBps(minLiquidityBps_);
         asset = asset_;
         _assetToken = IERC20(asset_);
@@ -88,6 +94,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         name = name_;
         symbol = symbol_;
         decimals = decimals_;
+        _virtualOffset = 10 ** uint256(decimals_);
 
         // referral/xp defaults (governance can update)
         holdbackVestingSeconds = 30 days;
@@ -264,17 +271,19 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     // -------- ERC4626-like --------
 
     function convertToShares(uint256 assets_) public view override returns (uint256) {
-        uint256 ts = totalSupply;
-        uint256 ta = totalAssets();
-        if (ts == 0) return assets_;
-        return Math.mulDiv(assets_, ts, ta);
+        return _convertToShares(assets_, Math.Rounding.Floor);
     }
 
     function convertToAssets(uint256 shares_) public view override returns (uint256) {
-        uint256 ts = totalSupply;
-        uint256 ta = totalAssets();
-        if (ts == 0) return shares_;
-        return Math.mulDiv(shares_, ta, ts);
+        return _convertToAssets(shares_, Math.Rounding.Floor);
+    }
+
+    function _convertToShares(uint256 assets_, Math.Rounding rounding) internal view returns (uint256) {
+        return Math.mulDiv(assets_, totalSupply + _virtualOffset, totalAssets() + _virtualOffset, rounding);
+    }
+
+    function _convertToAssets(uint256 shares_, Math.Rounding rounding) internal view returns (uint256) {
+        return Math.mulDiv(shares_, totalAssets() + _virtualOffset, totalSupply + _virtualOffset, rounding);
     }
 
     function maxWithdraw(address) external view override returns (uint256) {
@@ -285,10 +294,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     function maxRedeem(address owner) external view override returns (uint256) {
         if (paused()) return 0;
         uint256 capAssets = _optionalOutflowCap();
-        uint256 ts = totalSupply;
-        uint256 ta = totalAssets();
-        if (ts == 0) return 0;
-        uint256 capShares = Math.mulDiv(capAssets, ts, ta);
+        uint256 capShares = _convertToShares(capAssets, Math.Rounding.Floor);
         uint256 bal = balanceOf[owner];
         return capShares < bal ? capShares : bal;
     }
@@ -296,9 +302,8 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     function deposit(uint256 assets_, address receiver) external override nonReentrant returns (uint256 shares) {
         if (paused()) revert RiskInPaused();
         if (assets_ == 0) revert Errors.InsufficientBalance();
-        uint256 ta = totalAssets();
-        uint256 ts = totalSupply;
-        shares = (ts == 0) ? assets_ : Math.mulDiv(assets_, ts, ta);
+        shares = _convertToShares(assets_, Math.Rounding.Floor);
+        if (shares == 0) revert Errors.InsufficientBalance();
         _assetToken.safeTransferFrom(msg.sender, address(this), assets_);
         _mint(receiver, shares);
     }
@@ -306,9 +311,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     function mint(uint256 shares_, address receiver) external override nonReentrant returns (uint256 assets_) {
         if (paused()) revert RiskInPaused();
         if (shares_ == 0) revert Errors.InsufficientBalance();
-        uint256 ta = totalAssets();
-        uint256 ts = totalSupply;
-        assets_ = (ts == 0) ? shares_ : Math.mulDiv(shares_, ta, ts, Math.Rounding.Ceil);
+        assets_ = _convertToAssets(shares_, Math.Rounding.Ceil);
         _assetToken.safeTransferFrom(msg.sender, address(this), assets_);
         _mint(receiver, shares_);
     }
@@ -316,9 +319,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     function withdraw(uint256 assets_, address receiver, address owner) external override nonReentrant returns (uint256 shares) {
         if (paused()) revert RiskInPaused();
         if (assets_ == 0) revert Errors.InsufficientBalance();
-        uint256 ta = totalAssets();
-        uint256 ts = totalSupply;
-        shares = (ts == 0) ? assets_ : Math.mulDiv(assets_, ts, ta, Math.Rounding.Ceil);
+        shares = _convertToShares(assets_, Math.Rounding.Ceil);
         _spendAllowanceIfNeeded(owner, shares);
         _checkOptionalOutflowDomain(assets_, 0, 0);
         _burn(owner, shares);
@@ -329,9 +330,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         if (paused()) revert RiskInPaused();
         if (shares_ == 0) revert Errors.InsufficientBalance();
         _spendAllowanceIfNeeded(owner, shares_);
-        uint256 ta = totalAssets();
-        uint256 ts = totalSupply;
-        assets_ = (ts == 0) ? shares_ : Math.mulDiv(shares_, ta, ts);
+        assets_ = _convertToAssets(shares_, Math.Rounding.Floor);
         _checkOptionalOutflowDomain(assets_, 0, 0);
         _burn(owner, shares_);
         _assetToken.safeTransfer(receiver, assets_);
@@ -404,11 +403,8 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
 
         if (nowTs >= endTs) return bal;
 
-        uint64 denom = endTs - last;
-        if (denom == 0) return bal;
-
         uint64 dt = nowTs - last;
-        return (bal * dt) / denom;
+        return (bal * dt) / (endTs - last);
     }
 
     function _syncHoldback(address payee, uint64 nowTs) internal returns (uint256 released) {
@@ -532,6 +528,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         // Release reserve first (B3 + avoid transient insolvency window)
         h.open = false;
         totalReserved -= reserved;
+        emit BetReserveReleased(betId, h.player, reserved);
 
         // Player MUST-PAY
         uint256 playerOwed = payoutNet + refundAmount;
@@ -576,14 +573,19 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
             }
             if (holdback > 0) {
                 _syncHoldback(a.payee, uint64(block.timestamp));
+                uint256 existingHoldback = _xpHoldback[a.payee];
                 _xpHoldback[a.payee] += holdback;
                 xpHoldbackTotal += holdback;
                 totalHoldback += holdback;
 
-                // rolling linear vesting schedule: reset end to now + T for the total remaining holdback
+                // Do not extend an active schedule. A new award can accelerate its own
+                // release into the existing aggregate schedule, but it cannot delay
+                // holdback that was already vesting.
                 uint64 nowTs = uint64(block.timestamp);
-                _holdbackLastSync[a.payee] = nowTs;
-                _holdbackVestingEnd[a.payee] = nowTs + uint64(holdbackVestingSeconds);
+                if (existingHoldback == 0 || _holdbackVestingEnd[a.payee] <= nowTs) {
+                    _holdbackLastSync[a.payee] = nowTs;
+                    _holdbackVestingEnd[a.payee] = nowTs + uint64(holdbackVestingSeconds);
+                }
             }
 
             emit XPAwarded(betId, a.payee, a.sourcePlayer, accrued, locked, holdback, a.reason);
@@ -615,6 +617,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
 
         h.open = false;
         totalReserved -= reserved;
+        emit BetReserveReleased(betId, h.player, reserved);
 
         if (refundAmount > 0) {
             _assetToken.safeTransfer(h.player, refundAmount);

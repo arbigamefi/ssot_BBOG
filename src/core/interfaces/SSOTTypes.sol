@@ -66,7 +66,7 @@ library SSOTTypes {
         address pricingAffiliate;
         uint16 baseHouseEdgeBps;
         uint16 effectiveHouseEdgeBps;
-        uint16 maxHouseEdgeBps; // normalized; 0 implies MAX_HOUSE_EDGE at acceptance
+        uint16 maxHouseEdgeBps; // normalized; 0 implies defaultHouseEdgeBps at acceptance
 
         // referral snapshot
         uint32 referralConfigId;
@@ -93,7 +93,7 @@ library SSOTTypes {
     /// @notice XP award instruction produced during settlement (debt accrual, not a transfer).
     ///         - accrued: immediately claimable (still optional outflow)
     ///         - locked: gated by player turnover, attributed to sourcePlayer
-    ///         - holdback: linearly vests (rolling schedule), permissionless sync
+    ///         - holdback: linearly vests via a non-extending aggregate schedule, permissionless sync
     struct XPAward {
         address payee;
         address sourcePlayer; // for locked attribution (player whose turnover gates unlock)

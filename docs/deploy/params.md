@@ -18,7 +18,7 @@ After deploy, the script writes:
 ## Hub pricing + referral policy
 - `REFUND_TIMEOUT_SECONDS` (default `3600`): when a player can claim a timeout refund.
 - `DEFAULT_HOUSE_EDGE_BPS` (default `200` = 2%).
-- `MAX_AFFILIATE_DELTA_BPS` (default `0` = allow up to 100% by budget limit).
+- `MAX_AFFILIATE_DELTA_BPS` (default `0` = affiliate house edge is capped at `DEFAULT_HOUSE_EDGE_BPS`).
 
 Referral config (defaults match the cleanroom E2E tests):
 - `REF_BASE_BUDGET_BPS` (default `10000`)
