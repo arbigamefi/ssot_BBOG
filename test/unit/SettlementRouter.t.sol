@@ -34,7 +34,7 @@ contract SettlementRouterTest is Test {
         registry.registerPool(1, address(usdc), address(bank), SSOTTypes.PoolDomain.Casino);
         registry.setHubRegistered(hub, true);
         registry.setHubAllowedForPool(1, hub, true);
-        bank.setHubOnce(address(router));
+        bank.setSettlementRouterOnce(address(router));
         vm.stopPrank();
 
         usdc.mint(gov, 1_000_000e6);

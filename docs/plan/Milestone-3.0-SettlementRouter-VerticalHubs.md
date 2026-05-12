@@ -116,7 +116,7 @@ Acceptance:
 Deliverables:
 
 - Rename `hub` to `settlementRouter` in Bank and IBank.
-- Rename `setHubOnce` to `setSettlementRouterOnce`.
+- Rename `setSettlementRouterOnce` to `setSettlementRouterOnce`.
 - Replace `NotHub` with `NotSettlementRouter` or equivalent error.
 - Keep Bank hold/settle/refund accounting semantics unchanged.
 

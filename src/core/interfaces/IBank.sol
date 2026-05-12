@@ -24,11 +24,11 @@ interface IERC4626Minimal {
 
 /// @notice Bank = funds + accounting SSOT.
 ///         - totalAssets() == NAV == B - PF - XP
-///         - bet funds interface callable ONLY by Hub
+///         - bet funds interface callable ONLY by SettlementRouter
 ///         - riskInPaused freezes Risk-In + Optional Outflow, but never blocks settle/refund
 interface IBank is IERC4626Minimal {
     // -------- wiring --------
-    function hub() external view returns (address);
+    function settlementRouter() external view returns (address);
 
     // -------- pause --------
     function riskInPaused() external view returns (bool);
@@ -58,14 +58,8 @@ interface IBank is IERC4626Minimal {
     function playerTurnover(address player) external view returns (uint256);
     function holdbackReleasable(address payee) external view returns (uint256);
 
-    // -------- bet funds interface (only Hub) --------
-    function holdBet(
-        uint256 betId,
-        address player,
-        uint256 stake,
-        uint256 reserved,
-        bytes32 snapshotHash
-    ) external;
+    // -------- bet funds interface (only SettlementRouter) --------
+    function holdBet(uint256 betId, address player, uint256 stake, uint256 reserved, bytes32 snapshotHash) external;
 
     /// @dev accrue XP awards (E-class) in the same call; must NOT transfer to payees during settlement.
     /// @dev payoutNet is the amount actually paid to the player (excludes fee-on-payout).
@@ -127,7 +121,7 @@ interface IBank is IERC4626Minimal {
     event ProtocolFeesClaimed(address indexed receiver, uint256 amount);
 
     // -------- errors --------
-    error NotHub();
+    error NotSettlementRouter();
     error RiskInPaused();
     error BetAlreadyExists(uint256 betId);
     error BetNotOpen(uint256 betId);

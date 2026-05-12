@@ -63,7 +63,7 @@ contract StatefulSystemDiff is Test {
     // -------------------------
     address internal gov = address(0xA11CE);
     address internal coordinator;
-address internal anyone = address(0xF00D);
+    address internal anyone = address(0xF00D);
 
     address[] internal players;
 
@@ -96,9 +96,9 @@ address internal anyone = address(0xF00D);
     }
 
     struct BankModel {
-        uint256 B;   // token balance of bank
-        uint256 PF;  // protocolFeesPayable
-        uint256 R;   // totalReserved
+        uint256 B; // token balance of bank
+        uint256 PF; // protocolFeesPayable
+        uint256 R; // totalReserved
         uint256 xpAccruedTotal;
         uint256 xpLockedTotal;
         uint256 xpHoldbackTotal;
@@ -160,7 +160,7 @@ address internal anyone = address(0xF00D);
             gov,
             3600,
             200, // 2%
-            0,   // affiliate HE capped at default
+            0, // affiliate HE capped at default
             10_000,
             10_000,
             3000,
@@ -169,8 +169,8 @@ address internal anyone = address(0xF00D);
         );
 
         vm.startPrank(gov);
-        bankA.setHubOnce(address(hub));
-        bankB.setHubOnce(address(hub));
+        bankA.setSettlementRouterOnce(address(hub));
+        bankB.setSettlementRouterOnce(address(hub));
         refRegistry.setBinderOnce(address(hub));
 
         // keep vesting short to ensure holdback release is exercised when time warps
@@ -235,196 +235,213 @@ address internal anyone = address(0xF00D);
     // Deterministic stateful diff
     // -------------------------
 
-    
-// -------------------------
-// Deterministic stateful diff
-// -------------------------
+    // -------------------------
+    // Deterministic stateful diff
+    // -------------------------
 
-/// @notice Hook to configure an external VRF adapter coordinator before VRFHub is deployed.
-/// @dev Return the coordinator address that will be authorized to call VRFHub.fulfillRandomWords().
-///      Default: this test contract (direct fulfill).
-function _configureVRFAdapter(address /*gov_*/) internal virtual returns (address coordinatorOut) {
-    coordinatorOut = address(this);
-}
-
-/// @notice Hook invoked after VRFHub is deployed (and under gov prank).
-/// @dev Adapter tests can wire vrf.setAdapter(...) and adapter.setVRFHub(...) here.
-function _postConfigureVRFAdapter(address /*gov_*/) internal virtual {}
-
-/// @notice Optional hook invoked after base players are initialized.
-/// @dev Adapter variants can add additional player contracts (e.g. refund-failing receivers)
-///      and grant token approvals here.
-function _postPlayersSetup() internal virtual {}
-
-/// @notice Deterministic overpay hook for charged VRF fee.
-/// @dev Default: no overpay. Adapter variants can override to exercise refund-credit paths.
-function _vrfOverpayWei(address /*player*/, uint32 /*betCount*/, uint256 /*feeCharged*/) internal view virtual returns (uint256) {
-    return 0;
-}
-
-/// @notice Fulfill helper that can be overridden by adapter-based tests.
-function _fulfill(uint256 requestId, uint256[] memory randomWords) internal virtual {
-    vrf.fulfillRandomWords(requestId, randomWords);
-}
-
-function testFuzz_stateful_system_diff(uint256 seed) external {
-    _runStateful(seed, 24);
-}
-
-/// @notice Internal runner used by adapter variants.
-function _runStateful(uint256 seed, uint256 steps) internal {
-    // Keep the run bounded and reproducible.
-    // If a failure occurs, the fuzzed `seed` is sufficient to repro.
-    uint256 state = seed;
-
-    for (uint256 step = 0; step < steps; step++) {
-        state = uint256(keccak256(abi.encode(state, step)));
-
-        // Expose per-step state for deterministic hooks (e.g., overpay selection).
-        _loopState = state;
-        _loopState = state;
-
-        // pick asset
-        address asset = (state & 1 == 0) ? address(assetA) : address(assetB);
-        Bank bank = (asset == address(assetA)) ? bankA : bankB;
-
-        // pick player + affiliate
-        address player = players[(state >> 8) % players.length];
-        address affiliate = players[(state >> 16) % players.length];
-        if (affiliate == player) affiliate = players[(uint256(uint160(affiliate)) + 1) % players.length];
-
-        // occasionally set affiliate house edge (exercise skyline)
-        if ((state >> 24) % 5 == 0) {
-            uint16 def = hub.defaultHouseEdgeBps();
-            // allow up to 10% for this test (still within max)
-            uint16 he = uint16(bound(uint256(state >> 32), uint256(def), 1000));
-            _doSetAffiliateHouseEdge(affiliate, he);
-        }
-
-        // build params + stakeSpec
-        bytes32 gameId;
-        bytes memory params;
-
-        uint256 g = (state >> 40) % 4;
-        if (g == 0) {
-            gameId = GAME_DICE;
-            uint8 cap = uint8(bound(uint256(state >> 48), 1, 99));
-            params = abi.encode(cap);
-        } else if (g == 1) {
-            gameId = GAME_COIN;
-            bool isTails = ((state >> 48) & 1) == 1;
-            params = abi.encode(isTails);
-        } else if (g == 2) {
-            gameId = GAME_ROULETTE;
-            // raw bitmask with 1..6 numbers
-            uint8 picks = uint8(bound(uint256(state >> 56), 1, 6));
-            uint40 mask = _randomBitmask40(state >> 64, 37, picks);
-            params = abi.encode(mask);
-        } else {
-            gameId = GAME_KENO;
-            // keno numbers: 1..10 picks from 40
-            uint8 picks = uint8(bound(uint256(state >> 56), 1, 10));
-            uint40 mask = _randomBitmask40(state >> 64, 40, picks);
-            params = abi.encode(mask);
-        }
-
-        uint256 amountPerRoll = bound(uint256(state >> 96), 0.1 ether, 5 ether);
-        uint32 betCount = uint32(bound(uint256(state >> 128), 1, 8));
-
-        uint256 stake = amountPerRoll * uint256(betCount);
-
-        uint256 stopGain = 0;
-        uint256 stopLoss = 0;
-        // occasionally set stopGain/stopLoss with safe bounds
-        if ((state >> 160) % 3 == 0) {
-            uint256 halfStake = stake / 2;
-            if (halfStake >= 0.1 ether) {
-                stopGain = bound(uint256(state >> 168), 0.1 ether, halfStake);
-            }
-        }
-        if ((state >> 176) % 3 == 0) {
-            uint256 halfStake = stake / 2;
-            if (halfStake >= 0.1 ether) {
-                stopLoss = bound(uint256(state >> 184), 0.1 ether, halfStake);
-            }
-        }
-
-        SSOTTypes.StakeSpec memory spec = SSOTTypes.StakeSpec({
-            amountPerRoll: amountPerRoll,
-            betCount: betCount,
-            stopGain: stopGain,
-            stopLoss: stopLoss
-        });
-
-        // normalize maxHouseEdge like Hub (0 => default)
-        uint16 maxHE = 0;
-
-        // reference-model pre-compute (includes first-touch binding)
-        address oldRef = mReferrer[player];
-        RefPricing memory pricing = _modelComputePricing(player, affiliate, maxHE);
-
-        // execute placeBet (may legitimately fail)
-        uint256 betId = _doPlaceBet(player, gameId, asset, params, spec, affiliate, maxHE);
-        if (betId == 0) {
-            // placeBet reverted => no on-chain state change, roll back any speculative first-touch bind
-            mReferrer[player] = oldRef;
-            _assertBankMatches(asset);
-            continue;
-        }
-
-        // assert placement snapshot matches reference pricing
-        {
-            SSOTTypes.Bet memory b = hub.getBet(betId);
-            assertEq(b.player, player);
-            assertEq(b.asset, asset);
-            assertEq(b.bank, address(bank));
-            assertEq(b.stake, stake);
-            assertEq(b.amountPerRoll, amountPerRoll);
-            assertEq(uint256(b.betCount), uint256(betCount));
-            assertEq(uint256(b.stopGain), stopGain);
-            assertEq(uint256(b.stopLoss), stopLoss);
-            assertEq(uint256(b.baseHouseEdgeBps), uint256(pricing.baseHE));
-            assertEq(uint256(b.effectiveHouseEdgeBps), uint256(pricing.effectiveHE));
-            assertEq(b.pricingAffiliate, pricing.pricingAffiliate);
-            assertEq(b.deltaSkylineHash, keccak256(pricing.skyline));
-        }
-
-        // settle path: finalize ~80%, refund ~20%
-        bool doRefund = ((state >> 188) % 5 == 0);
-        if (doRefund) {
-            // warp beyond refund timeout
-            uint256 timeout = hub.refundTimeoutSeconds();
-            vm.warp(block.timestamp + timeout + 1);
-            _modelRefund(betId, asset);
-            vm.prank(anyone);
-            hub.refund(betId);
-
-            // late fulfill should have no effect
-            uint256 requestId = hub.getBet(betId).requestId;
-            uint256[] memory rw = new uint256[](1);
-            rw[0] = uint256(keccak256(abi.encode(state, betId, "late")));
-            _fulfill(requestId, rw);
-        } else {
-            // fulfill
-            uint256 requestId = hub.getBet(betId).requestId;
-            uint256 seedWord = uint256(keccak256(abi.encode(state, betId, "seed")));
-            uint256[] memory rw = new uint256[](1);
-            rw[0] = seedWord;
-            _fulfill(requestId, rw);
-
-            // finalize
-            _modelFinalize(betId, asset, seedWord, pricing);
-            vm.prank(anyone);
-            hub.finalize(betId);
-        }
-
-        // post-check: key bank + per-payee bucket values
-        _assertBankMatches(asset);
+    /// @notice Hook to configure an external VRF adapter coordinator before VRFHub is deployed.
+    /// @dev Return the coordinator address that will be authorized to call VRFHub.fulfillRandomWords().
+    ///      Default: this test contract (direct fulfill).
+    function _configureVRFAdapter(
+        address /*gov_*/
+    )
+        internal
+        virtual
+        returns (address coordinatorOut)
+    {
+        coordinatorOut = address(this);
     }
-}
 
-// -------------------------
-// Model: pricing + referral
+    /// @notice Hook invoked after VRFHub is deployed (and under gov prank).
+    /// @dev Adapter tests can wire vrf.setAdapter(...) and adapter.setVRFHub(...) here.
+    function _postConfigureVRFAdapter(
+        address /*gov_*/
+    )
+        internal
+        virtual {}
+
+    /// @notice Optional hook invoked after base players are initialized.
+    /// @dev Adapter variants can add additional player contracts (e.g. refund-failing receivers)
+    ///      and grant token approvals here.
+    function _postPlayersSetup() internal virtual {}
+
+    /// @notice Deterministic overpay hook for charged VRF fee.
+    /// @dev Default: no overpay. Adapter variants can override to exercise refund-credit paths.
+    function _vrfOverpayWei(
+        address,
+        /*player*/
+        uint32,
+        /*betCount*/
+        uint256 /*feeCharged*/
+    )
+        internal
+        view
+        virtual
+        returns (uint256)
+    {
+        return 0;
+    }
+
+    /// @notice Fulfill helper that can be overridden by adapter-based tests.
+    function _fulfill(uint256 requestId, uint256[] memory randomWords) internal virtual {
+        vrf.fulfillRandomWords(requestId, randomWords);
+    }
+
+    function testFuzz_stateful_system_diff(uint256 seed) external {
+        _runStateful(seed, 24);
+    }
+
+    /// @notice Internal runner used by adapter variants.
+    function _runStateful(uint256 seed, uint256 steps) internal {
+        // Keep the run bounded and reproducible.
+        // If a failure occurs, the fuzzed `seed` is sufficient to repro.
+        uint256 state = seed;
+
+        for (uint256 step = 0; step < steps; step++) {
+            state = uint256(keccak256(abi.encode(state, step)));
+
+            // Expose per-step state for deterministic hooks (e.g., overpay selection).
+            _loopState = state;
+            _loopState = state;
+
+            // pick asset
+            address asset = (state & 1 == 0) ? address(assetA) : address(assetB);
+            Bank bank = (asset == address(assetA)) ? bankA : bankB;
+
+            // pick player + affiliate
+            address player = players[(state >> 8) % players.length];
+            address affiliate = players[(state >> 16) % players.length];
+            if (affiliate == player) affiliate = players[(uint256(uint160(affiliate)) + 1) % players.length];
+
+            // occasionally set affiliate house edge (exercise skyline)
+            if ((state >> 24) % 5 == 0) {
+                uint16 def = hub.defaultHouseEdgeBps();
+                // allow up to 10% for this test (still within max)
+                uint16 he = uint16(bound(uint256(state >> 32), uint256(def), 1000));
+                _doSetAffiliateHouseEdge(affiliate, he);
+            }
+
+            // build params + stakeSpec
+            bytes32 gameId;
+            bytes memory params;
+
+            uint256 g = (state >> 40) % 4;
+            if (g == 0) {
+                gameId = GAME_DICE;
+                uint8 cap = uint8(bound(uint256(state >> 48), 1, 99));
+                params = abi.encode(cap);
+            } else if (g == 1) {
+                gameId = GAME_COIN;
+                bool isTails = ((state >> 48) & 1) == 1;
+                params = abi.encode(isTails);
+            } else if (g == 2) {
+                gameId = GAME_ROULETTE;
+                // raw bitmask with 1..6 numbers
+                uint8 picks = uint8(bound(uint256(state >> 56), 1, 6));
+                uint40 mask = _randomBitmask40(state >> 64, 37, picks);
+                params = abi.encode(mask);
+            } else {
+                gameId = GAME_KENO;
+                // keno numbers: 1..10 picks from 40
+                uint8 picks = uint8(bound(uint256(state >> 56), 1, 10));
+                uint40 mask = _randomBitmask40(state >> 64, 40, picks);
+                params = abi.encode(mask);
+            }
+
+            uint256 amountPerRoll = bound(uint256(state >> 96), 0.1 ether, 5 ether);
+            uint32 betCount = uint32(bound(uint256(state >> 128), 1, 8));
+
+            uint256 stake = amountPerRoll * uint256(betCount);
+
+            uint256 stopGain = 0;
+            uint256 stopLoss = 0;
+            // occasionally set stopGain/stopLoss with safe bounds
+            if ((state >> 160) % 3 == 0) {
+                uint256 halfStake = stake / 2;
+                if (halfStake >= 0.1 ether) {
+                    stopGain = bound(uint256(state >> 168), 0.1 ether, halfStake);
+                }
+            }
+            if ((state >> 176) % 3 == 0) {
+                uint256 halfStake = stake / 2;
+                if (halfStake >= 0.1 ether) {
+                    stopLoss = bound(uint256(state >> 184), 0.1 ether, halfStake);
+                }
+            }
+
+            SSOTTypes.StakeSpec memory spec = SSOTTypes.StakeSpec({
+                amountPerRoll: amountPerRoll, betCount: betCount, stopGain: stopGain, stopLoss: stopLoss
+            });
+
+            // normalize maxHouseEdge like Hub (0 => default)
+            uint16 maxHE = 0;
+
+            // reference-model pre-compute (includes first-touch binding)
+            address oldRef = mReferrer[player];
+            RefPricing memory pricing = _modelComputePricing(player, affiliate, maxHE);
+
+            // execute placeBet (may legitimately fail)
+            uint256 betId = _doPlaceBet(player, gameId, asset, params, spec, affiliate, maxHE);
+            if (betId == 0) {
+                // placeBet reverted => no on-chain state change, roll back any speculative first-touch bind
+                mReferrer[player] = oldRef;
+                _assertBankMatches(asset);
+                continue;
+            }
+
+            // assert placement snapshot matches reference pricing
+            {
+                SSOTTypes.Bet memory b = hub.getBet(betId);
+                assertEq(b.player, player);
+                assertEq(b.asset, asset);
+                assertEq(b.bank, address(bank));
+                assertEq(b.stake, stake);
+                assertEq(b.amountPerRoll, amountPerRoll);
+                assertEq(uint256(b.betCount), uint256(betCount));
+                assertEq(uint256(b.stopGain), stopGain);
+                assertEq(uint256(b.stopLoss), stopLoss);
+                assertEq(uint256(b.baseHouseEdgeBps), uint256(pricing.baseHE));
+                assertEq(uint256(b.effectiveHouseEdgeBps), uint256(pricing.effectiveHE));
+                assertEq(b.pricingAffiliate, pricing.pricingAffiliate);
+                assertEq(b.deltaSkylineHash, keccak256(pricing.skyline));
+            }
+
+            // settle path: finalize ~80%, refund ~20%
+            bool doRefund = ((state >> 188) % 5 == 0);
+            if (doRefund) {
+                // warp beyond refund timeout
+                uint256 timeout = hub.refundTimeoutSeconds();
+                vm.warp(block.timestamp + timeout + 1);
+                _modelRefund(betId, asset);
+                vm.prank(anyone);
+                hub.refund(betId);
+
+                // late fulfill should have no effect
+                uint256 requestId = hub.getBet(betId).requestId;
+                uint256[] memory rw = new uint256[](1);
+                rw[0] = uint256(keccak256(abi.encode(state, betId, "late")));
+                _fulfill(requestId, rw);
+            } else {
+                // fulfill
+                uint256 requestId = hub.getBet(betId).requestId;
+                uint256 seedWord = uint256(keccak256(abi.encode(state, betId, "seed")));
+                uint256[] memory rw = new uint256[](1);
+                rw[0] = seedWord;
+                _fulfill(requestId, rw);
+
+                // finalize
+                _modelFinalize(betId, asset, seedWord, pricing);
+                vm.prank(anyone);
+                hub.finalize(betId);
+            }
+
+            // post-check: key bank + per-payee bucket values
+            _assertBankMatches(asset);
+        }
+    }
+
+    // -------------------------
+    // Model: pricing + referral
     // -------------------------
 
     struct RefPricing {
@@ -438,7 +455,6 @@ function _runStateful(uint256 seed, uint256 steps) internal {
         uint16 v = mAffiliateHE[affiliate];
         return v == 0 ? hub.defaultHouseEdgeBps() : v;
     }
-
 
     function _canBindFirstTouch(address player, address referrer) internal view returns (bool) {
         // Mirror ReferralRegistry._bind semantics (best-effort, non-reverting in Hub):
@@ -494,7 +510,9 @@ function _runStateful(uint256 seed, uint256 steps) internal {
                 payeesTmp[k] = cur;
                 incTmp[k] = inc;
                 curMax = heCur;
-                unchecked { ++k; }
+                unchecked {
+                    ++k;
+                }
             }
             cur = mReferrer[cur];
         }
@@ -547,7 +565,7 @@ function _runStateful(uint256 seed, uint256 steps) internal {
         // Risk-in can legitimately fail (pause, solvency, invalid params, etc.).
         // The diff model must treat such failures as "bet rejected" (no state change).
         vm.prank(player);
-        (uint256 fee, ) = hub.quoteVRFFee(spec.betCount);
+        (uint256 fee,) = hub.quoteVRFFee(spec.betCount);
         uint256 overpay = _vrfOverpayWei(player, spec.betCount, fee);
         uint256 msgValue = fee + overpay;
         try hub.placeBet{value: msgValue}(gameId, asset, params, spec, affiliate, maxHE) returns (uint256 id) {
@@ -577,16 +595,14 @@ function _runStateful(uint256 seed, uint256 steps) internal {
         SSOTTypes.Bet memory b = hub.getBet(betId);
         address module = hub.gameModule(b.gameId);
         SSOTTypes.StakeSpec memory spec = SSOTTypes.StakeSpec({
-            amountPerRoll: b.amountPerRoll,
-            betCount: b.betCount,
-            stopGain: b.stopGain,
-            stopLoss: b.stopLoss
+            amountPerRoll: b.amountPerRoll, betCount: b.betCount, stopGain: b.stopGain, stopLoss: b.stopLoss
         });
 
         uint256[] memory rw = new uint256[](1);
         rw[0] = seedWord;
 
-        (uint256 payoutGross, uint256 refundAmount) = IGameModule(module).resolve(hub.getBetParams(betId), spec, betId, rw);
+        (uint256 payoutGross, uint256 refundAmount) =
+            IGameModule(module).resolve(hub.getBetParams(betId), spec, betId, rw);
 
         uint256 feeOnPayout = 0;
         uint256 payoutNet = payoutGross;
@@ -604,7 +620,8 @@ function _runStateful(uint256 seed, uint256 steps) internal {
         (uint16 baseBudgetBps, uint16 deltaBudgetBps, uint16 holdbackBps, uint16[6] memory levelBps, uint8 levels) =
             hub.getReferralConfig(b.referralConfigId);
 
-        uint256 minTurnover = (asset == address(assetA)) ? bankA.minPlayerTurnoverForUnlock() : bankB.minPlayerTurnoverForUnlock();
+        uint256 minTurnover =
+            (asset == address(assetA)) ? bankA.minPlayerTurnoverForUnlock() : bankB.minPlayerTurnoverForUnlock();
 
         uint256 baseHEAmt = Math.mulDiv(usedTurnover, uint256(b.baseHouseEdgeBps), BPS);
         uint256 baseBudget = Math.mulDiv(baseHEAmt, uint256(baseBudgetBps), BPS);
@@ -722,13 +739,8 @@ function _runStateful(uint256 seed, uint256 steps) internal {
             plan.sink += (baseBudget - accounted);
         }
 
-        (plan.payees, plan.immediate, plan.locked, plan.holdback) = _splitAmounts(
-            payees,
-            amounts,
-            holdbackBps,
-            minTurnover,
-            playerTurnover
-        );
+        (plan.payees, plan.immediate, plan.locked, plan.holdback) =
+            _splitAmounts(payees, amounts, holdbackBps, minTurnover, playerTurnover);
     }
 
     function _splitDelta(
@@ -800,13 +812,8 @@ function _runStateful(uint256 seed, uint256 steps) internal {
             }
         }
 
-        (plan.payees, plan.immediate, plan.locked, plan.holdback) = _splitAmounts(
-            payees,
-            amounts,
-            holdbackBps,
-            minTurnover,
-            playerTurnover
-        );
+        (plan.payees, plan.immediate, plan.locked, plan.holdback) =
+            _splitAmounts(payees, amounts, holdbackBps, minTurnover, playerTurnover);
     }
 
     function _splitAmounts(
@@ -815,7 +822,16 @@ function _runStateful(uint256 seed, uint256 steps) internal {
         uint16 holdbackBps,
         uint256 minTurnover,
         uint256 playerTurnover
-    ) internal pure returns (address[] memory outPayees, uint256[] memory immediate, uint256[] memory locked, uint256[] memory holdback) {
+    )
+        internal
+        pure
+        returns (
+            address[] memory outPayees,
+            uint256[] memory immediate,
+            uint256[] memory locked,
+            uint256[] memory holdback
+        )
+    {
         outPayees = payees;
         uint256 n = payees.length;
         immediate = new uint256[](n);
@@ -905,8 +921,9 @@ function _runStateful(uint256 seed, uint256 steps) internal {
             release = bal;
         } else {
             uint64 denom = end - last;
-            if (denom == 0) release = bal;
-            else {
+            if (denom == 0) {
+                release = bal;
+            } else {
                 uint64 dt = nowTs - last;
                 release = (bal * uint256(dt)) / uint256(denom);
             }
@@ -962,7 +979,8 @@ function _runStateful(uint256 seed, uint256 steps) internal {
     function _applyPlanAwards(address asset, address sourcePlayer, Plan memory plan) internal {
         uint256 n = plan.payees.length;
         uint64 nowTs = uint64(block.timestamp);
-        uint64 vest = uint64((asset == address(assetA)) ? bankA.holdbackVestingSeconds() : bankB.holdbackVestingSeconds());
+        uint64 vest =
+            uint64((asset == address(assetA)) ? bankA.holdbackVestingSeconds() : bankB.holdbackVestingSeconds());
         for (uint256 i = 0; i < n; i++) {
             address payee = plan.payees[i];
             if (payee == address(0)) continue;

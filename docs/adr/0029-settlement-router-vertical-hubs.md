@@ -177,8 +177,8 @@ function settlementRouter() external view returns (address);
 function setSettlementRouterOnce(address router) external;
 ```
 
-The existing `hub()` / `setHubOnce()` vocabulary should be removed during the pre-mainnet refactor
-instead of carried forward as misleading compatibility surface.
+The existing `hub()` / `setHubOnce()` vocabulary is removed during the pre-mainnet refactor instead
+of being carried forward as misleading compatibility surface.
 
 Bank MUST NOT:
 

@@ -73,7 +73,7 @@ contract ChainlinkAdapter is Test {
         );
 
         vm.startPrank(gov);
-        bank.setHubOnce(address(hub));
+        bank.setSettlementRouterOnce(address(hub));
         refReg.setBinderOnce(address(hub));
         vm.stopPrank();
 
@@ -98,8 +98,9 @@ contract ChainlinkAdapter is Test {
     }
 
     function test_chainlink_adapter_end_to_end_single_bet() external {
-        SSOTTypes.StakeSpec memory spec = SSOTTypes.StakeSpec({amountPerRoll: 1 ether, betCount: 1, stopGain: 0, stopLoss: 0});
-        (uint256 fee, ) = hub.quoteVRFFee(1);
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: 1 ether, betCount: 1, stopGain: 0, stopLoss: 0});
+        (uint256 fee,) = hub.quoteVRFFee(1);
 
         vm.prank(alice);
         uint256 betId = hub.placeBet{value: fee}(GAME_COIN, address(asset), abi.encode(true), spec, address(0), 10_000);
@@ -118,8 +119,9 @@ contract ChainlinkAdapter is Test {
     }
 
     function test_chainlink_adapter_overpay_refund_still_works() external {
-        SSOTTypes.StakeSpec memory spec = SSOTTypes.StakeSpec({amountPerRoll: 1 ether, betCount: 1, stopGain: 0, stopLoss: 0});
-        (uint256 fee, ) = hub.quoteVRFFee(1);
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: 1 ether, betCount: 1, stopGain: 0, stopLoss: 0});
+        (uint256 fee,) = hub.quoteVRFFee(1);
 
         uint256 ethBefore = alice.balance;
 

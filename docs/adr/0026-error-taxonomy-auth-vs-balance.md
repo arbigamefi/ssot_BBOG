@@ -10,7 +10,7 @@ are **authorization or configuration** checks, not balance checks:
 | `Governable.onlyGov` (line 14) | caller != governance | Authorization |
 | `Governable.acceptGovernance` (line 32) | caller != pendingGovernance | Authorization |
 | `Bank.setRiskInPaused` (line 105) | caller not governance and not hub | Authorization |
-| `Bank.setHubOnce` (line 116) | hub already set | Configuration guard |
+| `Bank.setSettlementRouterOnce` (line 116) | settlement router already set | Configuration guard |
 | `Bank.rescueToken` (line 139) | token == asset (policy guard) | Configuration guard |
 
 Reusing a balance error for authorization failures:
@@ -43,7 +43,7 @@ Reusing a balance error for authorization failures:
 1. **OZ-style `OwnableUnauthorizedAccount(address)` with caller argument.**
    Rejected: adds gas overhead for an argument rarely consumed on-chain; the caller
    is always available in transaction metadata.
-2. **Per-contract access errors (e.g., `NotGovernance`, `NotHub`).**
+2. **Per-contract access errors (e.g., `NotGovernance`, `NotSettlementRouter`).**
    Rejected: over-engineering for v1; `Unauthorized()` is sufficient for all auth checks.
-   Contract-specific errors like `NotHub()` already exist in `IBank.sol` for the
+   Contract-specific errors like `NotSettlementRouter()` already exist in `IBank.sol` for the
    hub-gating use case.
