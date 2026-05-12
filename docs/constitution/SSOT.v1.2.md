@@ -1,5 +1,8 @@
 # Protocol Constitution (SSOT) v1.2 — Charged VRF Fee (Native) Parity
 
+> Superseded by draft v1.3 for pre-mainnet SettlementRouter architecture work:
+> `docs/constitution/SSOT.v1.3.md`.
+
 This document is **normative**. Keywords **MUST / MUST NOT / SHOULD / MAY** are used as defined in RFC 2119.
 
 v1.2 supersedes v1.1 by specifying **native-token VRF fee charging** at bet placement time, matching the

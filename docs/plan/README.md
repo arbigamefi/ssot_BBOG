@@ -18,3 +18,4 @@ Action plans are living documents, but they MUST remain consistent with:
 - `Milestone-2.3-VRF-Fee-Adapter.md`
 - `Milestone-2.4-Chainlink-Adapter.md`
 - `Milestone-2.5-RealNetwork-Readiness.md`
+- `Milestone-3.0-SettlementRouter-VerticalHubs.md`

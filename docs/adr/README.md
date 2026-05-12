@@ -40,3 +40,4 @@ Each ADR:
 - [ADR-0026: Error taxonomy — separate auth from balance errors](0026-error-taxonomy-auth-vs-balance.md)
 - [ADR-0027: Extract shared StopLogic library](0027-stop-logic-shared-library.md)
 - [ADR-0028: Protocol Fee Withdrawal (`claimProtocolFees`)](0028-claim-protocol-fees.md)
+- [ADR-0029: Settlement Router + Vertical Hubs](0029-settlement-router-vertical-hubs.md)

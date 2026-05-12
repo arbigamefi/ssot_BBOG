@@ -4,6 +4,44 @@ pragma solidity ^0.8.20;
 /// @notice Protocol-wide SSOT types shared across Bank/Hub/VRFHub/Modules.
 ///         Keep dependency-light: no imports, only types/enums/structs.
 library SSOTTypes {
+    /// @notice Pool risk/accounting domain.
+    enum PoolDomain {
+        Unknown,
+        Casino,
+        Sports,
+        Future
+    }
+
+    /// @notice Router-side position lifecycle.
+    enum PositionState {
+        None,
+        Held,
+        Settled,
+        Refunded
+    }
+
+    /// @notice Pool registry record. A pool is one risk/accounting domain.
+    struct Pool {
+        address asset;
+        address bank;
+        PoolDomain domain;
+        bool active;
+    }
+
+    /// @notice Router-side settlement record shared by vertical hubs.
+    struct Position {
+        uint256 positionId;
+        address ownerHub;
+        uint64 poolId;
+        address asset;
+        address bank;
+        address player;
+        uint256 stake;
+        uint256 reserved;
+        bytes32 snapshotHash;
+        PositionState state;
+    }
+
     /// @notice Stake specification for a bet (multi-roll).
     /// @dev amountPerRoll * betCount == stake (total escrow).
     struct StakeSpec {
@@ -15,15 +53,15 @@ library SSOTTypes {
 
     /// @notice Bank-side SSOT snapshot (accounting truth).
     struct SSOT {
-        uint256 B;                 // ASSET.balanceOf(Bank)
-        uint256 PF;                // protocolFeesPayable
-        uint256 XP;                // externalPayablesTotal (== xpAccruedTotal + xpLockedTotal + xpHoldbackTotal)
-        uint256 NAV;               // B - PF - XP (no-underflow; underflow => violation)
-        uint256 R;                 // totalReserved
-        uint256 minLiquidityBps;   // [0..10_000]
-        uint256 minLiq;            // NAV * bps / 10_000
-        uint256 free;              // NAV - R - minLiq (clamped at 0)
-        bool riskInPaused;         // Risk-In + Optional outflow freeze
+        uint256 B; // ASSET.balanceOf(Bank)
+        uint256 PF; // protocolFeesPayable
+        uint256 XP; // externalPayablesTotal (== xpAccruedTotal + xpLockedTotal + xpHoldbackTotal)
+        uint256 NAV; // B - PF - XP (no-underflow; underflow => violation)
+        uint256 R; // totalReserved
+        uint256 minLiquidityBps; // [0..10_000]
+        uint256 minLiq; // NAV * bps / 10_000
+        uint256 free; // NAV - R - minLiq (clamped at 0)
+        bool riskInPaused; // Risk-In + Optional outflow freeze
 
         // XP bucket breakdown (E-class invariants)
         uint256 xpAccruedTotal;
@@ -53,8 +91,8 @@ library SSOTTypes {
         address player;
         address asset;
         address bank;
-        uint256 stake;         // total escrow = amountPerRoll * betCount
-        uint256 reserved;      // upper bound on payoutGross + refund
+        uint256 stake; // total escrow = amountPerRoll * betCount
+        uint256 reserved; // upper bound on payoutGross + refund
 
         // stake spec (multi-roll)
         uint256 amountPerRoll;
@@ -100,6 +138,6 @@ library SSOTTypes {
         uint256 accrued;
         uint256 locked;
         uint256 holdback;
-        bytes32 reason;       // for audit; e.g. keccak256("REFERRAL")
+        bytes32 reason; // for audit; e.g. keccak256("REFERRAL")
     }
 }

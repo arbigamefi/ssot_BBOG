@@ -141,8 +141,24 @@ This milestone connects SSOT v1.2 charged VRF fee semantics to a real Chainlink 
 - E2E tests for each new module
 - Invariant + diff suites remain stable (PR + nightly profiles)
 
+## Milestone 3.0 — SettlementRouter + Vertical Hubs (pre-mainnet architecture)
 
-## Milestone 3 — Full feature parity migration from refactored protocol
+**Plan:** see `docs/plan/Milestone-3.0-SettlementRouter-VerticalHubs.md`.
+
+**Goals**
+- Introduce `PoolRegistry` so `poolId`, not only `asset`, becomes the risk/accounting domain.
+- Introduce `SettlementRouter` as the only Bank settlement authority.
+- Evolve current `Hub` into `GameHub` for VRF casino games.
+- Preserve existing casino semantics through `GameHub -> SettlementRouter -> Bank`.
+- Create the substrate for future `SportsHub` without adding sportsbook lifecycle to casino modules.
+
+**Acceptance**
+- Casino bets complete end-to-end through the router.
+- Same-asset pools are isolated by `poolId`.
+- Router authorization and no-double-settlement invariants pass.
+- Existing VRF, diff, adapter, and Bank accounting tests remain green.
+
+## Milestone 3.x — Full feature parity migration from refactored protocol
 
 **Goals**
 - Migrate all economic and gameplay features (multi-roll games, stopGain/stopLoss, referral v2 semantics as needed)
