@@ -18,6 +18,16 @@ The authoritative enforcement points after implementation SHOULD include:
 - invariant handlers that track active positions per pool;
 - adapter-mode tests proving VRF fee behavior survives the `GameHub` migration.
 
+Current branch status:
+
+- `test/unit/GameHubE2E.t.sol` proves real Dice/Coin/Roulette/Keno flows through
+  `GameHub -> SettlementRouter -> Bank`.
+- `test/invariants/SettlementRouterInvariants.t.sol` tracks router positions and same-asset,
+  different-Bank pools to prove per-pool reserved liability, position immutability, ownerHub-only
+  debt-out, and Bank settlement-router exclusivity.
+- Legacy stateful diff and adapter invariants still exercise `Hub`; full diff migration to
+  `GameHub` remains pending.
+
 ## Notation
 
 - `Pool[p]` = pool registry record for `poolId = p`
@@ -50,7 +60,7 @@ and is allowed for the selected pool.
 - Owner: SettlementRouter
 - Proof:
   - Unit: non-owner hub rejection
-  - Invariant: no action from another actor can terminalize someone else's position
+  - Invariant: no action from another registered hub can terminalize someone else's position
 
 ### R3. Position terminality
 
@@ -72,6 +82,7 @@ and is allowed for the selected pool.
   - Unit: direct hub call rejection
   - Unit: governance direct settlement rejection
   - Unit: router settlement success
+  - Invariant: registered vertical hubs cannot call Bank hold/settle/refund directly
 
 ---
 
@@ -105,6 +116,7 @@ liabilities, or asset balance of pool `q != p`.
 - Owner: SettlementRouter + Bank
 - Proof:
   - Unit: same-asset, different-Bank pool isolation
+  - Invariant: per-pool reserved liability remains isolated across same-asset pools
   - Stateful diff: per-pool accounting deltas
 
 ### P4. Same asset does not imply same risk domain
@@ -115,7 +127,7 @@ shares MUST NOT be interchangeable.
 - Owner: PoolRegistry + Bank
 - Proof:
   - Unit: same-token pool registration with distinct Banks
-  - Invariant: Bank A never transfers/settles against Bank B
+  - Invariant: Bank A never records or opens Bank B's router position ids
 
 ---
 

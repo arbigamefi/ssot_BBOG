@@ -57,6 +57,9 @@ As of the current `codex/sportsbook-architecture-research` branch:
   the broader invariant/differential suites are migrated.
 - `GameHub` enforces `PoolDomain.Casino` at contract level, so a governance allowlist mistake cannot route
   casino bets into Sports/Future pools.
+- PR-3.0.6 has an initial router/pool invariant suite covering same-asset different-Bank pools, per-pool
+  reserved liability, ownerHub-only debt-out, and registered vertical hub Bank-bypass rejection; full
+  legacy stateful diff migration to `GameHub` is still pending.
 - PR-3.0.7 has an initial `DeployV13` script and v1.3 verify-helper support; release digest/frontend
   manifest migration is still pending.
 
