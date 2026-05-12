@@ -139,15 +139,22 @@ For a v1.3 router/pool deployment, use the v1.3 release lock path:
 
 ```bash
 SNAPSHOT_PATH=deployments/latest-v13.json make release-digest-v13
+SNAPSHOT_PATH=deployments/latest-v13.json make release-frontend-manifest-v13
+SNAPSHOT_PATH=deployments/latest-v13.json make release-golden-vectors-v13
 SNAPSHOT_PATH=deployments/latest-v13.json make release-verify-v13
 ```
 
 This writes:
 - `deployments/release-latest-v13.json`
 - `deployments/release/release-<chainid>-<block>-v13.json`
+- `deployments/frontend-manifest-latest-v13.json`
+- `deployments/golden-vectors-latest-v13.json`
+- `deployments/release/frontend-manifest-<chainid>-<block>-v13.json`
+- `deployments/release/golden-vectors-<chainid>-<block>-v13.json`
 
 The v1.3 digest includes `PoolRegistry`, `SettlementRouter`, `GameHub`, and every pool id/domain/bank
-row from the deployment snapshot.
+row from the deployment snapshot. The v1.3 frontend manifest is schemaVersion 2 and exposes `pools[]`
+instead of the legacy `assets[]`; v1.3 golden vectors use `IGameHub.placeBet(gameId,poolId,...)`.
 
 Verify deterministically (offline):
 

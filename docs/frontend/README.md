@@ -43,6 +43,22 @@ make release-frontend-manifest
 make release-golden-vectors
 ```
 
+For a v1.3 router/pool deployment produced by `DeployV13`:
+
+```bash
+SNAPSHOT_PATH=deployments/latest-v13.json make release-frontend-manifest-v13
+SNAPSHOT_PATH=deployments/latest-v13.json make release-golden-vectors-v13
+```
+
+The v1.3 artifacts are written to:
+
+- `deployments/frontend-manifest-latest-v13.json`
+- `deployments/golden-vectors-latest-v13.json`
+- `deployments/release/frontend-manifest-<chainId>-<block>-v13.json`
+- `deployments/release/golden-vectors-<chainId>-<block>-v13.json`
+
+The v1.3 manifest uses `schemaVersion: 2`, exposes `addresses.gameHub`, `addresses.settlementRouter`,
+`addresses.poolRegistry`, and `pools[]`. The v1.3 vectors prove `IGameHub.placeBet(gameId,poolId,...)`.
 
 ## ABIs
 

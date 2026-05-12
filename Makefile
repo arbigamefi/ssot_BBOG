@@ -5,7 +5,7 @@ DEPLOY_PROFILE ?= default
 VERIFY_PROFILE ?= default
 FRONTEND_DIR ?= frontend
 
-.PHONY: deps check-deps check test pr nightly fork deploy verify verify-helpers release-digest release-verify release-check release-notes release-package audit-package lint frontend-install frontend-dev frontend-build frontend-lint frontend-typecheck frontend-test frontend-test-strict frontend-storybook frontend-storybook-build frontend-release-check frontend-check
+.PHONY: deps check-deps check test pr nightly fork deploy verify verify-helpers release-digest release-digest-v13 release-verify release-verify-v13 release-check release-notes release-package audit-package lint release-frontend-manifest release-frontend-manifest-v13 release-golden-vectors release-golden-vectors-v13 frontend-install frontend-dev frontend-build frontend-lint frontend-typecheck frontend-test frontend-test-strict frontend-storybook frontend-storybook-build frontend-release-check frontend-check
 
 deps:
 	bash script/ci/install_deps.sh
@@ -151,9 +151,15 @@ release-notes:
 release-frontend-manifest:
 	FOUNDRY_PROFILE=default forge script script/release/GenerateFrontendManifest.s.sol:GenerateFrontendManifest -vvv
 
+release-frontend-manifest-v13:
+	FOUNDRY_PROFILE=default forge script script/release/GenerateFrontendManifestV13.s.sol:GenerateFrontendManifestV13 -vvv
+
 # Generate golden (exact-hex) vectors for frontend encoding tests.
 release-golden-vectors:
 	FOUNDRY_PROFILE=default forge script script/release/GenerateGoldenVectors.s.sol:GenerateGoldenVectors -vvv
+
+release-golden-vectors-v13:
+	FOUNDRY_PROFILE=default forge script script/release/GenerateGoldenVectorsV13.s.sol:GenerateGoldenVectorsV13 -vvv
 
 release-abis:
 	@$(MAKE) check-deps
