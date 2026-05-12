@@ -42,6 +42,7 @@ contract GameHubRouterTest is Test {
 
     MockERC20 internal asset;
     Bank internal bank;
+    Bank internal sportsBank;
     PoolRegistry internal poolRegistry;
     SettlementRouter internal router;
     VRFHub internal vrf;
@@ -52,6 +53,7 @@ contract GameHubRouterTest is Test {
     function setUp() external {
         asset = new MockERC20("USD Coin", "USDC", 6);
         bank = new Bank(address(asset), gov, 0, "LP USDC", "lpUSDC", 6);
+        sportsBank = new Bank(address(asset), gov, 0, "Sports LP USDC", "slpUSDC", 6);
         poolRegistry = new PoolRegistry(gov);
         router = new SettlementRouter(address(poolRegistry));
         vrf = new VRFHub(address(this), gov);
@@ -77,9 +79,12 @@ contract GameHubRouterTest is Test {
 
         vm.startPrank(gov);
         poolRegistry.registerPool(1, address(asset), address(bank), SSOTTypes.PoolDomain.Casino);
+        poolRegistry.registerPool(2, address(asset), address(sportsBank), SSOTTypes.PoolDomain.Sports);
         poolRegistry.setHubRegistered(address(gameHub), true);
         poolRegistry.setHubAllowedForPool(1, address(gameHub), true);
+        poolRegistry.setHubAllowedForPool(2, address(gameHub), true);
         bank.setSettlementRouterOnce(address(router));
+        sportsBank.setSettlementRouterOnce(address(router));
         refRegistry.setBinderOnce(address(gameHub));
         gameHub.registerGame(GAME_STAKE, address(new RouterStakePayoutModule()));
         vm.stopPrank();
@@ -164,5 +169,17 @@ contract GameHubRouterTest is Test {
         vm.prank(player);
         vm.expectRevert(abi.encodeWithSelector(IGameHub.RiskInPaused.selector, uint64(1)));
         gameHub.placeBet{value: fee}(GAME_STAKE, 1, "", spec, address(0), 10_000);
+    }
+
+    function test_nonCasinoPoolRejectedEvenIfAllowedForGameHub() external {
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: 10e6, betCount: 1, stopGain: 0, stopLoss: 0});
+        (uint256 fee,) = gameHub.quoteVRFFee(spec.betCount);
+
+        vm.prank(player);
+        vm.expectRevert(
+            abi.encodeWithSelector(IGameHub.WrongPoolDomain.selector, uint64(2), SSOTTypes.PoolDomain.Sports)
+        );
+        gameHub.placeBet{value: fee}(GAME_STAKE, 2, "", spec, address(0), 10_000);
     }
 }

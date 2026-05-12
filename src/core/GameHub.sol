@@ -117,7 +117,7 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
     }
 
     function riskInPaused(uint64 poolId) public view override returns (bool) {
-        SSOTTypes.Pool memory p = _pool(poolId);
+        SSOTTypes.Pool memory p = _casinoPool(poolId);
         return !p.active || IBank(p.bank).riskInPaused();
     }
 
@@ -264,7 +264,8 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         address affiliate,
         uint16 maxHouseEdgeBps
     ) external payable override nonReentrant returns (uint256 positionId) {
-        if (riskInPaused(poolId)) revert RiskInPaused(poolId);
+        SSOTTypes.Pool memory pool_ = _casinoPool(poolId);
+        if (!pool_.active || IBank(pool_.bank).riskInPaused()) revert RiskInPaused(poolId);
         if (stakeSpec.amountPerRoll == 0) revert Errors.InsufficientBalance();
         if (stakeSpec.betCount == 0 || stakeSpec.betCount > MAX_BET_COUNT) revert Errors.InvalidConfig();
 
@@ -273,7 +274,6 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
 
         address player = msg.sender;
 
-        SSOTTypes.Pool memory pool_ = _pool(poolId);
         address asset = pool_.asset;
         address bank_ = pool_.bank;
 
@@ -595,6 +595,13 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
             return pool_;
         } catch {
             revert UnknownPool(poolId);
+        }
+    }
+
+    function _casinoPool(uint64 poolId) internal view returns (SSOTTypes.Pool memory p) {
+        p = _pool(poolId);
+        if (p.domain != SSOTTypes.PoolDomain.Casino) {
+            revert WrongPoolDomain(poolId, p.domain);
         }
     }
 

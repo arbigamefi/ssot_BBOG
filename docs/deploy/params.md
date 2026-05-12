@@ -35,6 +35,20 @@ For each `i in [0..NUM_ASSETS-1]`:
 - `BANK_HOLDBACK_VESTING_SECONDS_i` (default `86400` = 1 day)
 - `LP_NAME_i`, `LP_SYMBOL_i`, `LP_DECIMALS_i` (LP share token metadata)
 
+## v1.3 pool banks
+`script/DeployV13.s.sol:DeployV13` uses pools, not assets, as the deployment unit.
+
+For each `i in [0..NUM_POOLS-1]`:
+- `POOL_ID_i` (default `i + 1`): protocol risk/accounting domain id.
+- `POOL_ASSET_i` (required; `ASSET_i` is accepted as a compatibility alias): ERC20 address.
+- `POOL_DOMAIN_i` (default `1`): `1=Casino`, `2=Sports`, `3=Future`.
+- `BANK_MIN_LIQ_BPS_i`, `BANK_MIN_TURNOVER_FOR_UNLOCK_i`, `BANK_HOLDBACK_VESTING_SECONDS_i`.
+- `LP_NAME_i`, `LP_SYMBOL_i`, `LP_DECIMALS_i`.
+
+The v1.3 deploy script writes `deployments/latest-v13.json` and `deployments/verify-latest-v13.sh`.
+Only Casino pools are allowlisted for `GameHub`; Sports/Future pools are registered and wired to
+`SettlementRouter` but need their own vertical hub before risk-in can open positions.
+
 ## Callback gas policy (fixed in code)
 `Hub.quoteVRFFee(betCount)` sets `callbackGasLimit = 300k + 20k * betCount`, capped at 2,000,000.
 This is part of the SSOT v1.2 policy (auditability).
