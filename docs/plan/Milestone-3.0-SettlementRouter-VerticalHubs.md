@@ -60,8 +60,8 @@ As of the current `codex/sportsbook-architecture-research` branch:
 - PR-3.0.6 has an initial router/pool invariant suite covering same-asset different-Bank pools, per-pool
   reserved liability, ownerHub-only debt-out, and registered vertical hub Bank-bypass rejection; full
   legacy stateful diff migration to `GameHub` is still pending.
-- PR-3.0.7 has an initial `DeployV13` script and v1.3 verify-helper support; release digest/frontend
-  manifest migration is still pending.
+- PR-3.0.7 has an initial `DeployV13` script, v1.3 verify-helper support, and v1.3 release digest
+  signing/verification; frontend manifest/golden-vector migration is still pending.
 
 ### PR-3.0.1 — SSOT v1.3 draft and interfaces
 

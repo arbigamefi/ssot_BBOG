@@ -594,6 +594,9 @@ contract DeployV13 is Script {
     function _tryAssetMetadata(address token) internal view returns (string memory sym, uint8 dec) {
         sym = "";
         dec = 18;
+        if (token.code.length == 0) {
+            return (sym, dec);
+        }
         try IERC20MetadataLikeV13(token).symbol() returns (string memory s) {
             sym = s;
         } catch {}

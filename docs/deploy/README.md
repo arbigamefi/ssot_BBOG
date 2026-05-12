@@ -135,6 +135,20 @@ make release-digest
 This writes:
 - `deployments/release-latest.json` (+ `deployments/release/release-<chainid>-<block>.json`)
 
+For a v1.3 router/pool deployment, use the v1.3 release lock path:
+
+```bash
+SNAPSHOT_PATH=deployments/latest-v13.json make release-digest-v13
+SNAPSHOT_PATH=deployments/latest-v13.json make release-verify-v13
+```
+
+This writes:
+- `deployments/release-latest-v13.json`
+- `deployments/release/release-<chainid>-<block>-v13.json`
+
+The v1.3 digest includes `PoolRegistry`, `SettlementRouter`, `GameHub`, and every pool id/domain/bank
+row from the deployment snapshot.
+
 Verify deterministically (offline):
 
 ```bash

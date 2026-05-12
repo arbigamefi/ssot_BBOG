@@ -124,9 +124,17 @@ release-digest:
 	@$(MAKE) check-deps
 	FOUNDRY_PROFILE=$(FOUNDRY_PROFILE) forge script script/release/ReleaseDigest.s.sol:ReleaseDigest -vvv
 
+release-digest-v13:
+	@$(MAKE) check-deps
+	FOUNDRY_PROFILE=$(FOUNDRY_PROFILE) forge script script/release/ReleaseDigestV13.s.sol:ReleaseDigestV13 -vvv
+
 release-verify:
 	@$(MAKE) check-deps
 	FOUNDRY_PROFILE=$(FOUNDRY_PROFILE) forge script script/release/VerifyRelease.s.sol:VerifyRelease -vvv
+
+release-verify-v13:
+	@$(MAKE) check-deps
+	FOUNDRY_PROFILE=$(FOUNDRY_PROFILE) forge script script/release/VerifyReleaseV13.s.sol:VerifyReleaseV13 -vvv
 
 release-check:
 	@$(MAKE) check-deps

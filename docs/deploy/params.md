@@ -66,3 +66,9 @@ make release-digest
 make release-verify
 STRICT=1 make release-check
 ```
+
+For v1.3 router/pool snapshots:
+```bash
+SNAPSHOT_PATH=deployments/latest-v13.json make release-digest-v13
+SNAPSHOT_PATH=deployments/latest-v13.json make release-verify-v13
+```
