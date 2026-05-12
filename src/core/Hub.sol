@@ -89,9 +89,7 @@ contract Hub is IHub, Governable, ReentrancyGuard {
         if (defaultHouseEdgeBps_ == 0 || defaultHouseEdgeBps_ > MAX_HOUSE_EDGE) {
             revert Errors.InvalidConfig();
         }
-        if (holdbackBps_ > BPS) revert Errors.InvalidBps(holdbackBps_);
-        if (baseBudgetBps_ > BPS || deltaBudgetBps_ > BPS) revert Errors.InvalidBps(uint256(baseBudgetBps_) + uint256(deltaBudgetBps_));
-        if (levels_ > 6) revert Errors.InvalidConfig();
+        _validateReferralConfig(baseBudgetBps_, deltaBudgetBps_, holdbackBps_, levelBps_, levels_);
 
         bankRegistry = bankRegistry_;
         vrfHub = vrfHub_;
@@ -160,6 +158,7 @@ contract Hub is IHub, Governable, ReentrancyGuard {
     }
 
     function setMaxAffiliateDeltaBps(uint16 bps) external onlyGov {
+        if (bps > MAX_HOUSE_EDGE) revert Errors.InvalidBps(bps);
         maxAffiliateDeltaBps = bps;
     }
 
@@ -170,9 +169,7 @@ contract Hub is IHub, Governable, ReentrancyGuard {
         uint16[6] calldata levelBps_,
         uint8 levels_
     ) external override onlyGov returns (uint32 id) {
-        if (holdbackBps_ > BPS) revert Errors.InvalidBps(holdbackBps_);
-        if (baseBudgetBps_ > BPS || deltaBudgetBps_ > BPS) revert Errors.InvalidBps(uint256(baseBudgetBps_) + uint256(deltaBudgetBps_));
-        if (levels_ > 6) revert Errors.InvalidConfig();
+        _validateReferralConfig(baseBudgetBps_, deltaBudgetBps_, holdbackBps_, levelBps_, levels_);
         id = _nextRefCfgId++;
         _refCfg[id] = ReferralConfig({
             baseBudgetBps: baseBudgetBps_,
@@ -220,12 +217,7 @@ contract Hub is IHub, Governable, ReentrancyGuard {
         uint16 def = defaultHouseEdgeBps;
         if (houseEdgeBps < def) revert HouseEdgeTooLow(houseEdgeBps, def);
 
-        uint16 maxAllowed;
-        if (maxAffiliateDeltaBps > 0) {
-            maxAllowed = uint16(def + maxAffiliateDeltaBps);
-        } else {
-            maxAllowed = MAX_HOUSE_EDGE;
-        }
+        uint16 maxAllowed = _maxAffiliateHouseEdge(def);
         if (houseEdgeBps > maxAllowed) revert HouseEdgeTooHigh(houseEdgeBps, maxAllowed);
 
         uint16 old = affiliateHouseEdgeBps[msg.sender];
@@ -316,9 +308,9 @@ contract Hub is IHub, Governable, ReentrancyGuard {
         bytes32 paramsHash = keccak256(abi.encode(params, stakeSpec.amountPerRoll, stakeSpec.betCount, stakeSpec.stopGain, stakeSpec.stopLoss));
 
         // Normalize player-specified maxHouseEdgeBps for auditability.
-        // (0 => MAX_HOUSE_EDGE; >MAX => MAX)
+        // (0 => defaultHouseEdgeBps; >MAX => MAX)
         uint16 usedMaxHE = maxHouseEdgeBps;
-        if (usedMaxHE == 0) usedMaxHE = MAX_HOUSE_EDGE;
+        if (usedMaxHE == 0) usedMaxHE = defaultHouseEdgeBps;
         if (usedMaxHE > MAX_HOUSE_EDGE) usedMaxHE = MAX_HOUSE_EDGE;
 
         // Compute pricing snapshot + skyline
@@ -458,15 +450,18 @@ contract Hub is IHub, Governable, ReentrancyGuard {
             stopLoss: b.stopLoss
         });
         (uint256 payoutGross, uint256 refundAmount) = IGameModule(module).resolve(betParams[betId], spec, betId, randomWords);
+        if (refundAmount > b.stake) {
+            b.resolvedAt = uint64(block.timestamp);
+            b.state = SSOTTypes.BetState.Refunded;
+
+            _clearRequest(b);
+            IBank(b.bank).refundBet(betId, b.stake);
+
+            emit BetRefunded(betId, b.stake);
+            return;
+        }
         // reserved must cover total owed (payoutGross + refundAmount)
         if (payoutGross + refundAmount > b.reserved) revert Errors.InsufficientBalance();
-
-        // clear request mapping to prevent any late transport artifacts
-        uint256 requestId = b.requestId;
-        if (requestId != 0) {
-            try IVRFHub(vrfHub).detach(requestId) { } catch { }
-            requestToBetId[requestId] = 0;
-        }
 
         // ---- Fee-on-payout ----
         uint256 feeOnPayout = 0;
@@ -537,6 +532,12 @@ contract Hub is IHub, Governable, ReentrancyGuard {
         // ---- convert plans to XP awards ----
         SSOTTypes.XPAward[] memory awards = _plansToAwards(b.player, planB, planD);
 
+        b.resolvedAt = uint64(block.timestamp);
+        b.state = SSOTTypes.BetState.Settled;
+
+        // clear request mapping to prevent any late transport artifacts
+        _clearRequest(b);
+
         IBank(b.bank).settleBet(
             betId,
             payoutGross,
@@ -547,9 +548,6 @@ contract Hub is IHub, Governable, ReentrancyGuard {
         );
 
         emit BetFinalized(betId, payoutGross, payoutNet, feeOnPayout, protocolFeeAccrual);
-
-        b.resolvedAt = uint64(block.timestamp);
-        b.state = SSOTTypes.BetState.Settled;
     }
 
     // ---------------------------------------------------------------------
@@ -564,16 +562,16 @@ contract Hub is IHub, Governable, ReentrancyGuard {
         uint256 readyAt = uint256(b.placedAt) + refundTimeoutSeconds;
         if (block.timestamp < readyAt) revert RefundNotReady(betId, block.timestamp, readyAt);
 
+        b.resolvedAt = uint64(block.timestamp);
+        b.state = SSOTTypes.BetState.Refunded;
+
         uint256 requestId = b.requestId;
         if (requestId != 0) {
-            try IVRFHub(vrfHub).detach(requestId) { } catch { }
             requestToBetId[requestId] = 0;
+            try IVRFHub(vrfHub).detach(requestId) { } catch { }
         }
 
         IBank(b.bank).refundBet(betId, b.stake);
-
-        b.resolvedAt = uint64(block.timestamp);
-        b.state = SSOTTypes.BetState.Refunded;
 
         emit BetRefunded(betId, b.stake);
     }
@@ -582,12 +580,47 @@ contract Hub is IHub, Governable, ReentrancyGuard {
     // Internals
     // ---------------------------------------------------------------------
 
+    function _validateReferralConfig(
+        uint16 baseBudgetBps_,
+        uint16 deltaBudgetBps_,
+        uint16 holdbackBps_,
+        uint16[6] memory levelBps_,
+        uint8 levels_
+    ) internal pure {
+        if (holdbackBps_ > BPS) revert Errors.InvalidBps(holdbackBps_);
+        if (baseBudgetBps_ > BPS || deltaBudgetBps_ > BPS) {
+            revert Errors.InvalidBps(uint256(baseBudgetBps_) + uint256(deltaBudgetBps_));
+        }
+        if (levels_ > 6) revert Errors.InvalidConfig();
+
+        uint256 sumLevels;
+        for (uint8 i = 0; i < levels_; ++i) {
+            sumLevels += uint256(levelBps_[i]);
+        }
+        if (sumLevels > BPS) revert Errors.InvalidBps(sumLevels);
+    }
+
+    function _maxAffiliateHouseEdge(uint16 def) internal view returns (uint16) {
+        uint16 delta = maxAffiliateDeltaBps;
+        if (delta == 0) return def;
+        uint256 maxAllowed = uint256(def) + uint256(delta);
+        return maxAllowed > MAX_HOUSE_EDGE ? MAX_HOUSE_EDGE : uint16(maxAllowed);
+    }
+
+    function _clearRequest(SSOTTypes.Bet storage b) internal {
+        uint256 requestId = b.requestId;
+        if (requestId != 0) {
+            requestToBetId[requestId] = 0;
+            try IVRFHub(vrfHub).detach(requestId) { } catch { }
+        }
+    }
+
     function _computeSkylineAndHE(
         address player,
         address affiliate,
         uint16 maxHouseEdgeBps
     ) internal returns (address pricingAff, uint16 baseHE, uint16 effectiveHE, bytes memory skyline) {
-        if (maxHouseEdgeBps == 0) maxHouseEdgeBps = MAX_HOUSE_EDGE;
+        if (maxHouseEdgeBps == 0) maxHouseEdgeBps = defaultHouseEdgeBps;
         if (maxHouseEdgeBps > MAX_HOUSE_EDGE) maxHouseEdgeBps = MAX_HOUSE_EDGE;
 
         // First-touch: if player has no referrer and affiliate is provided, try binding.
@@ -627,12 +660,13 @@ contract Hub is IHub, Governable, ReentrancyGuard {
             skyline = new bytes(uint256(k) * 22);
             for (uint8 j = 0; j < k; ++j) {
                 uint256 o = uint256(j) * 22;
-                address p = payeesTmp[j];
+                bytes20 p = bytes20(payeesTmp[j]);
                 uint16 inc = incBpsTmp[j];
-                assembly ("memory-safe") {
-                    mstore(add(add(skyline, 0x20), o), shl(96, p))
-                    mstore(add(add(skyline, 0x20), add(o, 20)), shl(240, inc))
+                for (uint8 b = 0; b < 20; ++b) {
+                    skyline[o + b] = p[b];
                 }
+                skyline[o + 20] = bytes1(uint8(inc >> 8));
+                skyline[o + 21] = bytes1(uint8(inc));
             }
         }
     }

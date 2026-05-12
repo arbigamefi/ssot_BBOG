@@ -8,10 +8,10 @@ import {IReferralRegistry} from "./IReferralRegistry.sol";
 /// @notice First-touch referral registry with anti-cycle.
 ///
 /// Notes:
-/// - v1.0 limits cycle checks to a bounded number of hops (32) for gas safety.
+/// - v1.0 limits cycle checks to a bounded number of hops (64) for gas safety.
 /// - `binder` is intended to be the Hub contract and is set once.
 contract ReferralRegistry is IReferralRegistry, Governable {
-    uint8 internal constant MAX_HOPS = 32;
+    uint8 internal constant MAX_HOPS = 64;
 
     address public override binder;
     mapping(address => address) private _ref;
@@ -45,7 +45,7 @@ contract ReferralRegistry is IReferralRegistry, Governable {
     function _bind(address player, address referrer) internal {
         if (player == address(0) || referrer == address(0)) revert Errors.ZeroAddress();
         if (player == referrer) revert Errors.InvalidConfig();
-        if (_ref[player] != address(0)) return; // first-touch immutable
+        if (_ref[player] != address(0)) revert Errors.InvalidConfig(); // first-touch immutable
 
         // anti-cycle: walk up from referrer and ensure we never reach player
         address cur = referrer;

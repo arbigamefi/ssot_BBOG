@@ -94,6 +94,7 @@ interface IBank is IERC4626Minimal {
 
     // -------- events (audit surface) --------
     event BetHeld(uint256 indexed betId, address indexed player, uint256 stake, uint256 reserved, bytes32 snapshotHash);
+    event BetReserveReleased(uint256 indexed betId, address indexed player, uint256 reserved);
 
     event BetSettled(
         uint256 indexed betId,

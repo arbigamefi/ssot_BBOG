@@ -82,7 +82,7 @@ contract E2E is Test {
             gov,
             3600,
             200, // defaultHouseEdgeBps = 2%
-            0,   // maxAffiliateDeltaBps = 0 => allow up to 100%
+            0,   // maxAffiliateDeltaBps = 0 => affiliate HE capped at default
             10_000,
             10_000,
             3000,
@@ -455,7 +455,9 @@ contract E2E is Test {
         vm.prank(alice);
         hub.bindReferrer(bob);
 
-        // bob opts into higher house edge (3%) => deltaHE = 1%
+        // governance opts into a bounded affiliate delta, then bob selects 3% HE => deltaHE = 1%
+        vm.prank(gov);
+        hub.setMaxAffiliateDeltaBps(100);
         vm.prank(bob);
         hub.setAffiliateHouseEdge(300);
 

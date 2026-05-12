@@ -114,7 +114,7 @@ At `placeBet(gameId, params, stake, affiliate, maxHouseEdgeBps)` the Hub MUST co
 such that **accepted bets cannot be repriced retroactively**.
 
 Implementation requirement (SSOT): the Hub MUST store a **normalized** `maxHouseEdgeBps` per bet
-(`0 => MAX_HOUSE_EDGE`, `>MAX => MAX`) and include it in the bet's `snapshotHash`.
+(`0 => defaultHouseEdgeBps`, `>MAX => MAX`) and include it in the bet's `snapshotHash`.
 
 Definitions:
 
@@ -224,7 +224,7 @@ XP is split into three buckets per payee:
 
 - `xpAccrued`: claimable now
 - `xpLocked`: unlockable when turnover threshold is met
-- `xpHoldback`: released via rolling linear vesting
+- `xpHoldback`: released via aggregate linear vesting that must not extend an active schedule
 
 ### 5.1 XP is not LP backing
 
@@ -246,6 +246,8 @@ XP MUST be counted as a liability:
   - `xpHoldback[payee]`
   - `holdbackLastSync[payee]`
   - `holdbackVestingEnd[payee]`
+- A new holdback award MUST NOT extend an active `holdbackVestingEnd[payee]` while unreleased holdback remains.
+  If no unreleased holdback remains, the new award starts a fresh vesting schedule.
 - Sync MUST be a bucket move only (no transfers), so it MUST remain live even during pause.
 
 ### 5.4 Claim is optional outflow

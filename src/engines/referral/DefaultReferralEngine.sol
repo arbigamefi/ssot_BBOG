@@ -45,7 +45,10 @@ contract DefaultReferralEngine is IReferralEngine {
         // L1..Lk: uplines
         uint256 idx = 0;
         for (uint8 l = 1; l < levels; ++l) {
+            if (accounted >= budget) break;
             uint256 share = Math.mulDiv(budget, uint256(input.levelBps[l]), BPS);
+            uint256 remaining = budget - accounted;
+            if (share > remaining) share = remaining;
             if (share == 0) continue;
             accounted += share;
 

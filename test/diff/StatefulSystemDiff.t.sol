@@ -160,7 +160,7 @@ address internal anyone = address(0xF00D);
             gov,
             3600,
             200, // 2%
-            0,   // allow up to 100%
+            0,   // affiliate HE capped at default
             10_000,
             10_000,
             3000,
@@ -356,7 +356,7 @@ function _runStateful(uint256 seed, uint256 steps) internal {
             stopLoss: stopLoss
         });
 
-        // normalize maxHouseEdge like Hub (0 => MAX)
+        // normalize maxHouseEdge like Hub (0 => default)
         uint16 maxHE = 0;
 
         // reference-model pre-compute (includes first-touch binding)
@@ -464,7 +464,7 @@ function _runStateful(uint256 seed, uint256 steps) internal {
     {
         // normalize maxHE like Hub
         uint16 maxHE = maxHouseEdgeBps;
-        if (maxHE == 0) maxHE = 10_000;
+        if (maxHE == 0) maxHE = hub.defaultHouseEdgeBps();
         if (maxHE > 10_000) maxHE = 10_000;
 
         address pricingAff = mReferrer[player];
@@ -507,12 +507,13 @@ function _runStateful(uint256 seed, uint256 steps) internal {
             skyline = new bytes(uint256(k) * 22);
             for (uint8 j = 0; j < k; j++) {
                 uint256 o = uint256(j) * 22;
-                address p = payeesTmp[j];
+                bytes20 p = bytes20(payeesTmp[j]);
                 uint16 inc = incTmp[j];
-                assembly ("memory-safe") {
-                    mstore(add(add(skyline, 0x20), o), shl(96, p))
-                    mstore(add(add(skyline, 0x20), add(o, 20)), shl(240, inc))
+                for (uint8 b = 0; b < 20; ++b) {
+                    skyline[o + b] = p[b];
                 }
+                skyline[o + 20] = bytes1(uint8(inc >> 8));
+                skyline[o + 21] = bytes1(uint8(inc));
             }
         }
 
@@ -951,9 +952,11 @@ function _runStateful(uint256 seed, uint256 steps) internal {
         bm[asset].xpHoldbackTotal += amt;
         x.hb.bal += amt;
 
-        // rolling schedule reset
-        x.hb.last = nowTs;
-        x.hb.end = nowTs + vestSeconds;
+        // Non-extending aggregate schedule: do not delay existing holdback.
+        if (x.hb.bal == amt || x.hb.end <= nowTs) {
+            x.hb.last = nowTs;
+            x.hb.end = nowTs + vestSeconds;
+        }
     }
 
     function _applyPlanAwards(address asset, address sourcePlayer, Plan memory plan) internal {
