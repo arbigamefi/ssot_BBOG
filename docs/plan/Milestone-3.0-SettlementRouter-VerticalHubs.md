@@ -52,8 +52,9 @@ SettlementRouter
 As of the current `codex/sportsbook-architecture-research` branch:
 
 - PR-3.0.1 through PR-3.0.4 are implemented as local checkpoints.
-- PR-3.0.5 has a parallel `GameHub` path proven by focused router-backed casino tests; the legacy `Hub`
-  still remains for compatibility until the broader E2E/invariant suites are migrated.
+- PR-3.0.5 has a parallel `GameHub` path proven by router-backed casino tests, including real
+  Dice/Coin/Roulette/Keno module E2E coverage; the legacy `Hub` still remains for compatibility until
+  the broader invariant/differential suites are migrated.
 - `GameHub` enforces `PoolDomain.Casino` at contract level, so a governance allowlist mistake cannot route
   casino bets into Sports/Future pools.
 - PR-3.0.7 has an initial `DeployV13` script and v1.3 verify-helper support; release digest/frontend
