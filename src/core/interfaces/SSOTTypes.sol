@@ -208,6 +208,8 @@ library SSOTTypes {
         bytes32 evidenceHash;
         bytes32 rulebookHash;
         bytes32 reporterSetHash;
+        uint8 reporterThreshold;
+        uint8 reporterCount;
         address proposer;
         uint64 observedAt;
         uint64 proposedAt;

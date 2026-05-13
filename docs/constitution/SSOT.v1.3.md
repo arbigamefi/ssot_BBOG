@@ -126,7 +126,8 @@ SportsHub MUST:
 
 - use an independent sports pool for the first release;
 - bind every ticket to market id, outcome id, EIP-712 odds snapshot, rulebook hash, and result/finality state;
-- bind sports results to source/evidence hashes, observed timestamp, reporter set, market version, and rulebook hash;
+- bind sports results to source/evidence hashes, observed timestamp, reporter set, reporter threshold,
+  market version, and rulebook hash;
 - reject stale odds;
 - reject tickets after market lock;
 - enforce exposure caps before opening a position;

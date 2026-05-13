@@ -203,6 +203,10 @@ contract GenerateReleaseNotesV13 is Script {
             "- sportsResultReporterSetHash: `",
             vm.toString(snap.readBytes32(".sportsResultReporterSetHash")),
             "`",
+            "\n",
+            "- sportsResultReporterThreshold: `",
+            vm.toString(snap.readUint(".sportsResultReporterThreshold")),
+            "`",
             "\n\n"
         );
     }

@@ -11,6 +11,7 @@ interface ISportsHub {
     function riskEngine() external view returns (address);
     function oddsSignerSetHash() external view returns (bytes32);
     function resultReporterSetHash() external view returns (bytes32);
+    function resultReporterThreshold() external view returns (uint8);
 
     function nextMarketId() external view returns (uint64);
     function nextTicketId() external view returns (uint256);
@@ -67,6 +68,14 @@ interface ISportsHub {
         bytes32 evidenceHash,
         uint64 observedAt
     ) external;
+    function proposeResult(
+        uint64 marketId,
+        uint32 winningOutcomeId,
+        bytes32 resultSourceHash,
+        bytes32 evidenceHash,
+        uint64 observedAt,
+        bytes[] calldata reporterSignatures
+    ) external;
     function challengeResult(uint64 marketId, bytes32 reasonHash) external;
     function finalizeResult(uint64 marketId) external;
 
@@ -91,6 +100,7 @@ interface ISportsHub {
     event OddsSignerSetHashSet(bytes32 oldHash, bytes32 newHash);
     event OddsSignerSet(address indexed signer, bool allowed);
     event ResultReporterSetHashSet(bytes32 oldHash, bytes32 newHash);
+    event ResultReporterThresholdSet(uint8 oldThreshold, uint8 newThreshold);
     event ResultReporterSet(address indexed reporter, bool allowed);
     event TicketPlaced(
         uint256 indexed ticketId,
@@ -115,6 +125,8 @@ interface ISportsHub {
         bytes32 evidenceHash,
         bytes32 rulebookHash,
         bytes32 reporterSetHash,
+        uint8 reporterThreshold,
+        uint8 reporterCount,
         address proposer,
         uint64 observedAt,
         uint64 finalizesAt
@@ -140,4 +152,7 @@ interface ISportsHub {
     error ResultFinalityPending(uint64 marketId, uint256 nowTs, uint256 finalizesAt);
     error ResultAlreadyChallenged(uint64 marketId);
     error UnauthorizedReporter(address reporter);
+    error BadResultSignature();
+    error DuplicateResultReporter(address reporter);
+    error ResultReporterQuorumNotMet(uint8 threshold, uint8 got);
 }

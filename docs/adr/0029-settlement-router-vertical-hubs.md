@@ -286,6 +286,7 @@ MVP recommendation:
 - challenge delay;
 - governance emergency pause;
 - final result event.
+- configurable reporter threshold for production deployments.
 
 Production direction:
 
@@ -304,6 +305,7 @@ Every result must bind:
 - `reportedAt`;
 - `finalizedAt`;
 - reporter set hash;
+- reporter threshold and observed reporter count;
 - reporter/proposer identity.
 
 ## MVP scope

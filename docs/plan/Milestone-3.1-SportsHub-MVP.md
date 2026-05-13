@@ -85,6 +85,8 @@ As of the current `codex/sportsbook-architecture-research` branch:
   exposes Sports fields in the v1.3 frontend manifest, and exports Sports ABIs.
 - PR-3.1.7 also has an initial SportsHub ops runbook, plus Sports monitoring metrics, alert rules, and
   incident-template hooks for odds signer health, result reporter finality, and exposure-cap incidents.
+- PR-3.1.8 adds a configurable result reporter threshold and EIP-712 reporter signature quorum for
+  result proposals, while keeping the threshold-1 MVP call path available.
 
 ### PR-3.1.1 — Interfaces and milestone plan
 
@@ -196,6 +198,20 @@ Acceptance:
 - Local deployment produces a complete GameHub + SportsHub topology.
 - Release artifacts include sports pool id, Bank, SportsHub, risk engine, signer set hash, and reporter set hash.
 - Operator docs define what to do when odds signing, result finality, or exposure caps fail.
+
+### PR-3.1.8 — Result reporter quorum
+
+Deliverables:
+
+- Add a configurable `resultReporterThreshold`.
+- Require result proposals to meet threshold with the proposer plus unique reporter signatures.
+- Store reporter threshold/count in the result record and release artifacts.
+
+Acceptance:
+
+- Threshold `1` preserves the MVP reporter flow.
+- Threshold `2+` rejects missing, unauthorized, or duplicate reporter signatures.
+- Result ops docs explain how to verify quorum evidence.
 
 ## Recommended validation commands
 
