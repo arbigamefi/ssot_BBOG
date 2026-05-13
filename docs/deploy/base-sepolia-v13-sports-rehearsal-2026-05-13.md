@@ -160,7 +160,25 @@ Canary place-ticket broadcast:
   - Sports Bank assets: `1.1 USDC`
   - Sports Bank reserved: `0.15 USDC`
 
-- Execute canary Sports tickets with realistic odds snapshots and result quorum flow.
+Canary result/finality/settlement broadcast:
+
+- Lock market tx: `0x95e60677c51b31842dc3bc10d60afebcef1e53c55b58e70770382c896238167d`
+- Propose result tx: `0x8d514db4b07812bde98fabd8bb3ac109f02b670f10aeee93362663e88b71b110`
+- Finalize result tx: `0xa849eb2d86f760f17dc4c4b9fecbf71545db039539174b5dbc8d5d86331e3691`
+- Settle ticket tx: `0x54f71582949664fd3cc14969347c4817d472451e16bc7ad3e4101b575d0a5aa4`
+- Result source hash: `0xe8f744c255d9d398f2423370fbd8e899bb6ef08f6abdd751755071af4db26e8b`
+- Evidence hash: `0xccdb0caf20f1a2185d42040a6f6ab658571f490f55f2ec9985fe1a8ab4020230`
+- Observed at: `1778660008`
+- Proposed at: `1778660016`
+- Finalized after: `1778660616`
+- Post-settlement state:
+  - market state: `Resolved`
+  - ticket state: `Settled`
+  - router position state: `Settled`
+  - Sports market/event/pool-event reserved: `0`
+  - Sports Bank reserved: `0`
+  - Sports Bank assets: `0.95 USDC`
+
 - Rehearse result challenge, direct void, and batch debt-out playbooks on this deployment.
 - Replace single-operator GOV bootstrap roles with dedicated testnet signer/reporter keys before any
   public canary.
