@@ -12,6 +12,7 @@ interface ISportsHub {
     function oddsSignerSetHash() external view returns (bytes32);
     function resultReporterSetHash() external view returns (bytes32);
     function resultReporterThreshold() external view returns (uint8);
+    function resultChallengeTimeoutSeconds() external view returns (uint64);
     function resultChallenger(address challenger) external view returns (bool);
     function resultArbitrator(address arbitrator) external view returns (bool);
 
@@ -109,6 +110,7 @@ interface ISportsHub {
     event OddsSignerSet(address indexed signer, bool allowed);
     event ResultReporterSetHashSet(bytes32 oldHash, bytes32 newHash);
     event ResultReporterThresholdSet(uint8 oldThreshold, uint8 newThreshold);
+    event ResultChallengeTimeoutSet(uint64 oldTimeoutSeconds, uint64 newTimeoutSeconds);
     event ResultReporterSet(address indexed reporter, bool allowed);
     event ResultChallengerSet(address indexed challenger, bool allowed);
     event ResultArbitratorSet(address indexed arbitrator, bool allowed);
@@ -170,6 +172,7 @@ interface ISportsHub {
     error ResultChallengeWindowClosed(uint64 marketId, uint256 nowTs, uint256 finalizesAt);
     error ResultAlreadyChallenged(uint64 marketId);
     error ResultChallengePending(uint64 marketId);
+    error BatchTooLarge(uint256 got, uint256 max);
     error UnauthorizedReporter(address reporter);
     error UnauthorizedChallenger(address challenger);
     error UnauthorizedArbitrator(address arbitrator);

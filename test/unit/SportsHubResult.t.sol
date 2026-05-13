@@ -92,6 +92,21 @@ contract SportsHubResultTest is Test {
         assertEq(sportsHub.resultReporterThreshold(), 2);
     }
 
+    function test_setResultChallengeTimeout_governanceOnlyAndBounds() external {
+        assertEq(sportsHub.resultChallengeTimeoutSeconds(), 7 days);
+
+        vm.expectRevert(Errors.Unauthorized.selector);
+        sportsHub.setResultChallengeTimeoutSeconds(2 days);
+
+        vm.prank(gov);
+        vm.expectRevert(Errors.InvalidConfig.selector);
+        sportsHub.setResultChallengeTimeoutSeconds(9 minutes);
+
+        vm.prank(gov);
+        sportsHub.setResultChallengeTimeoutSeconds(2 days);
+        assertEq(sportsHub.resultChallengeTimeoutSeconds(), 2 days);
+    }
+
     function test_setResultChallengeRoles_governanceOnly() external {
         address role = address(0x1234);
 
