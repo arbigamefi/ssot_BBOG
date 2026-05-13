@@ -20,3 +20,4 @@ Action plans are living documents, but they MUST remain consistent with:
 - `Milestone-2.5-RealNetwork-Readiness.md`
 - `Milestone-3.0-SettlementRouter-VerticalHubs.md`
 - `Milestone-3.1-SportsHub-MVP.md`
+- `Milestone-3.1-SportsHub-Readiness.md`

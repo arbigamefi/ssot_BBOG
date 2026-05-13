@@ -59,7 +59,7 @@ SettlementRouter
 
 ## Current implementation status
 
-As of `master` through PR #5 plus the local `codex/sports-challenge-window` closeout branch:
+As of `master` through PR #6:
 
 - PR-3.1.1 is implemented as a local checkpoint with shared SportsHub types, `ISportsHub`,
   `ISportsRiskEngine`, and this milestone plan.
@@ -93,6 +93,11 @@ As of `master` through PR #5 plus the local `codex/sports-challenge-window` clos
   for incident linkage and monitoring.
 - PR-3.1.11 adds batch debt-out helpers for keeper/frontend terminalization while preserving single-ticket
   settlement/refund/void semantics and per-ticket events.
+
+The SportsHub MVP contract track is now functionally closed for pre-match fixed-odds singles. Mainnet
+readiness still depends on the production gates in
+`docs/plan/Milestone-3.1-SportsHub-Readiness.md`, including oracle policy, risk caps, release artifacts,
+ops monitoring, and jurisdiction/compliance review.
 
 ### PR-3.1.1 — Interfaces and milestone plan
 

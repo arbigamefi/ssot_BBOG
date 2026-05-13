@@ -27,11 +27,20 @@ If releasing to a real network, also run fork tests against the target chain:
 RPC_URL=... make deploy
 ```
 
+For v1.3 router/pool deployments, use `DeployV13` as documented in `docs/deploy/README.md`:
+
+```bash
+forge script script/DeployV13.s.sol:DeployV13 --rpc-url $RPC_URL --broadcast -vvv
+```
+
 Confirm the deployment artifacts are produced:
 
 - [ ] `deployments/latest.json`
 - [ ] `deployments/snapshots/deploy-<chainId>-<block>.json` (preferred) or `deployments/deploy-<chainId>-<block>.json` (legacy)
 - [ ] `deployments/verify-latest.sh` and/or `deployments/verify/verify-<chainId>-<block>.sh`
+- [ ] For v1.3: `deployments/latest-v13.json`
+- [ ] For v1.3: `deployments/snapshots/deploy-<chainId>-<block>-v13.json`
+- [ ] For v1.3: `deployments/verify-latest-v13.sh` and/or `deployments/verify/verify-<chainId>-<block>-v13.sh`
 
 ## 3. Explorer verification (recommended)
 
@@ -50,16 +59,30 @@ make verify
 make release-digest
 ```
 
+For v1.3:
+
+```bash
+SNAPSHOT_PATH=deployments/latest-v13.json make release-digest-v13
+```
+
 - [ ] Offline verify:
 
 ```bash
 make release-verify
 ```
 
+For v1.3:
+
+```bash
+SNAPSHOT_PATH=deployments/latest-v13.json make release-verify-v13
+```
+
 Artifacts expected:
 
 - [ ] `deployments/release-latest.json`
 - [ ] `deployments/release/release-<chainId>-<block>.json`
+- [ ] For v1.3: `deployments/release-latest-v13.json`
+- [ ] For v1.3: `deployments/release/release-<chainId>-<block>-v13.json`
 
 ## 5. Release notes (must include digest)
 
@@ -67,6 +90,12 @@ Artifacts expected:
 
 ```bash
 TAG_NAME=vX.Y.Z make release-notes
+```
+
+For v1.3:
+
+```bash
+SNAPSHOT_PATH=deployments/latest-v13.json make release-notes-v13
 ```
 
 - [ ] Generate required frontend artifacts:
@@ -77,10 +106,24 @@ make release-golden-vectors
 make release-abis
 ```
 
+For v1.3:
+
+```bash
+SNAPSHOT_PATH=deployments/latest-v13.json make release-frontend-manifest-v13
+SNAPSHOT_PATH=deployments/latest-v13.json make release-golden-vectors-v13
+make release-abis-v13
+```
+
 - [ ] Enforce strict release check:
 
 ```bash
 STRICT=1 make release-check
+```
+
+For v1.3:
+
+```bash
+STRICT=1 make release-check-v13
 ```
 
 Artifacts expected:
@@ -91,6 +134,13 @@ Artifacts expected:
 - [ ] `deployments/release/frontend-manifest-<chainId>-<block>.json`
 - [ ] `deployments/golden-vectors-latest.json`
 - [ ] `deployments/release/golden-vectors-<chainId>-<block>.json`
+- [ ] For v1.3: `deployments/release-notes-latest-v13.md`
+- [ ] For v1.3: `deployments/release/release-notes-<chainId>-<block>-v13.md`
+- [ ] For v1.3: `deployments/frontend-manifest-latest-v13.json`
+- [ ] For v1.3: `deployments/release/frontend-manifest-<chainId>-<block>-v13.json`
+- [ ] For v1.3: `deployments/golden-vectors-latest-v13.json`
+- [ ] For v1.3: `deployments/release/golden-vectors-<chainId>-<block>-v13.json`
+- [ ] For v1.3: `deployments/abis-v13/index.json`
 
 ## 6. Package artifacts (recommended)
 
@@ -100,9 +150,16 @@ Artifacts expected:
 TAG_NAME=vX.Y.Z make release-package
 ```
 
+For v1.3:
+
+```bash
+TAG_NAME=vX.Y.Z make release-package-v13
+```
+
 Expected:
 
 - [ ] `dist/ssot-vX.Y.Z-0x........tar.gz`
+- [ ] For v1.3: `dist/ssot-vX.Y.Z-v13-0x........tar.gz`
 
 ## 6b. Audit handoff package (recommended for third-party audits)
 
