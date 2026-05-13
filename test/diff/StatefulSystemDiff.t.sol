@@ -19,6 +19,8 @@ import {RouletteParams} from "../../src/modules/roulette/RouletteParams.sol";
 import {KenoModule} from "../../src/modules/keno/KenoModule.sol";
 import {PlinkoModule} from "../../src/modules/plinko/PlinkoModule.sol";
 import {PlinkoParams} from "../../src/modules/plinko/PlinkoParams.sol";
+import {SicBoModule} from "../../src/modules/sicbo/SicBoModule.sol";
+import {SicBoParams} from "../../src/modules/sicbo/SicBoParams.sol";
 import {SlotsModule} from "../../src/modules/slots/SlotsModule.sol";
 import {SlotsParams} from "../../src/modules/slots/SlotsParams.sol";
 
@@ -64,6 +66,7 @@ contract StatefulSystemDiff is Test {
     RouletteModule internal roulette;
     KenoModule internal keno;
     PlinkoModule internal plinko;
+    SicBoModule internal sicBo;
     SlotsModule internal slots;
     BaccaratModule internal baccarat;
 
@@ -87,6 +90,7 @@ contract StatefulSystemDiff is Test {
     bytes32 internal constant GAME_ROULETTE = keccak256("ROULETTE");
     bytes32 internal constant GAME_KENO = keccak256("KENO");
     bytes32 internal constant GAME_PLINKO = keccak256("PLINKO");
+    bytes32 internal constant GAME_SIC_BO = keccak256("SIC_BO");
     bytes32 internal constant GAME_SLOTS = keccak256("SLOTS");
     bytes32 internal constant GAME_BACCARAT = keccak256("BACCARAT");
     uint64 internal constant POOL_A = 1;
@@ -206,6 +210,7 @@ contract StatefulSystemDiff is Test {
         roulette = new RouletteModule();
         keno = new KenoModule();
         plinko = new PlinkoModule();
+        sicBo = new SicBoModule();
         slots = new SlotsModule();
         baccarat = new BaccaratModule();
 
@@ -215,6 +220,7 @@ contract StatefulSystemDiff is Test {
         hub.registerGame(GAME_ROULETTE, address(roulette));
         hub.registerGame(GAME_KENO, address(keno));
         hub.registerGame(GAME_PLINKO, address(plinko));
+        hub.registerGame(GAME_SIC_BO, address(sicBo));
         hub.registerGame(GAME_SLOTS, address(slots));
         hub.registerGame(GAME_BACCARAT, address(baccarat));
         vm.stopPrank();
@@ -432,7 +438,7 @@ contract StatefulSystemDiff is Test {
             bytes32 gameId;
             bytes memory params;
 
-            uint256 g = (state >> 40) % 7;
+            uint256 g = (state >> 40) % 8;
             if (g == 0) {
                 gameId = GAME_DICE;
                 uint8 cap = uint8(bound(uint256(state >> 48), 1, 99));
@@ -460,6 +466,11 @@ contract StatefulSystemDiff is Test {
                 gameId = GAME_PLINKO;
                 uint8 risk = uint8(bound(uint256(state >> 56), 0, 2));
                 params = PlinkoParams.encode(risk);
+            } else if (g == 6) {
+                gameId = GAME_SIC_BO;
+                uint8 kind = uint8(bound(uint256(state >> 56), 0, 6));
+                uint8 value = _sicBoValue(kind, uint256(state >> 64));
+                params = SicBoParams.encode(kind, value);
             } else {
                 gameId = GAME_BACCARAT;
                 uint8 side = uint8(bound(uint256(state >> 56), 0, 2));
@@ -1160,6 +1171,16 @@ contract StatefulSystemDiff is Test {
     // -------------------------
     // Utilities
     // -------------------------
+
+    function _sicBoValue(uint8 kind, uint256 raw) internal pure returns (uint8) {
+        if (kind == SicBoParams.KIND_SMALL || kind == SicBoParams.KIND_BIG || kind == SicBoParams.KIND_ANY_TRIPLE) {
+            return 0;
+        }
+        if (kind == SicBoParams.KIND_TOTAL) {
+            return uint8(bound(raw, 4, 17));
+        }
+        return uint8(bound(raw, 1, 6));
+    }
 
     function _randomBitmask40(uint256 x, uint8 domain, uint8 picks) internal pure returns (uint40 out) {
         require(domain <= 40, "domain");

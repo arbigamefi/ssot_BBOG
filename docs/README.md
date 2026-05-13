@@ -61,6 +61,7 @@ This repository is designed to be **auditable by construction**. The documentati
 - `docs/games/roulette.md` — roulette module rules + parameter encoding
 - `docs/games/keno.md` — keno module rules + parameter encoding
 - `docs/games/plinko.md` — plinko module rules + parameter encoding
+- `docs/games/sicbo.md` — sic bo module rules + parameter encoding
 - `docs/games/slots.md` — slots module rules + parameter encoding
 - `docs/games/baccarat.md` — baccarat module rules + parameter encoding
 

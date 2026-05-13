@@ -24,6 +24,8 @@ import {PlinkoModule} from "../../src/modules/plinko/PlinkoModule.sol";
 import {PlinkoParams} from "../../src/modules/plinko/PlinkoParams.sol";
 import {RouletteModule} from "../../src/modules/roulette/RouletteModule.sol";
 import {RouletteParams} from "../../src/modules/roulette/RouletteParams.sol";
+import {SicBoModule} from "../../src/modules/sicbo/SicBoModule.sol";
+import {SicBoParams} from "../../src/modules/sicbo/SicBoParams.sol";
 import {SlotsModule} from "../../src/modules/slots/SlotsModule.sol";
 import {SlotsParams} from "../../src/modules/slots/SlotsParams.sol";
 
@@ -38,6 +40,7 @@ contract GameHubE2E is Test {
     bytes32 internal constant GAME_SLOTS = keccak256("SLOTS");
     bytes32 internal constant GAME_BACCARAT = keccak256("BACCARAT");
     bytes32 internal constant GAME_PLINKO = keccak256("PLINKO");
+    bytes32 internal constant GAME_SIC_BO = keccak256("SIC_BO");
     bytes internal constant RNG_DOMAIN = "SSOT_RNG_V1";
 
     address internal gov = address(0xA11CE);
@@ -107,6 +110,7 @@ contract GameHubE2E is Test {
         gameHub.registerGame(GAME_SLOTS, address(new SlotsModule()));
         gameHub.registerGame(GAME_BACCARAT, address(new BaccaratModule()));
         gameHub.registerGame(GAME_PLINKO, address(new PlinkoModule()));
+        gameHub.registerGame(GAME_SIC_BO, address(new SicBoModule()));
         vm.stopPrank();
 
         assetA.mint(alice, 1_000 ether);
@@ -260,6 +264,26 @@ contract GameHubE2E is Test {
         assertEq(gameHub.getBet(positionId).reserved, expectedGross);
 
         _fulfill(positionId, _findSeedPlinkoEdge(positionId));
+
+        uint256 balBefore = assetA.balanceOf(alice);
+        gameHub.finalize(positionId);
+        uint256 balAfter = assetA.balanceOf(alice);
+
+        uint256 fee = Math.mulDiv(expectedGross, gameHub.defaultHouseEdgeBps(), 10_000);
+        assertEq(balAfter - balBefore, expectedGross - fee);
+    }
+
+    function test_sicBoSpecificTripleSettlesThroughRouter() external {
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: 1 ether, betCount: 1, stopGain: 0, stopLoss: 0});
+
+        uint256 positionId = _place(
+            alice, GAME_SIC_BO, POOL_A, SicBoParams.encode(SicBoParams.KIND_SPECIFIC_TRIPLE, 6), spec, address(0)
+        );
+        uint256 expectedGross = 216 ether;
+        assertEq(gameHub.getBet(positionId).reserved, expectedGross);
+
+        _fulfill(positionId, _findSeedSicBoSpecificTriple(positionId, 6));
 
         uint256 balBefore = assetA.balanceOf(alice);
         gameHub.finalize(positionId);
@@ -448,6 +472,20 @@ contract GameHubE2E is Test {
         for (uint8 row = 0; row < 8; row++) {
             bucket += uint8(_rng2(betId, 0, uint256(row), seed) & 1);
         }
+    }
+
+    function _findSeedSicBoSpecificTriple(uint256 betId, uint8 face) internal pure returns (uint256) {
+        for (uint256 seed = 0; seed < 65536; seed++) {
+            (uint8 a, uint8 b, uint8 c) = _sicBoDice(betId, seed);
+            if (a == face && b == face && c == face) return seed;
+        }
+        revert("no seed");
+    }
+
+    function _sicBoDice(uint256 betId, uint256 seed) internal pure returns (uint8 a, uint8 b, uint8 c) {
+        a = uint8(_rng2(betId, 0, 0, seed) % 6) + 1;
+        b = uint8(_rng2(betId, 0, 1, seed) % 6) + 1;
+        c = uint8(_rng2(betId, 0, 2, seed) % 6) + 1;
     }
 
     function _kenoDraw0(uint256 betId, uint256 seed) internal pure returns (uint40 rolled) {
