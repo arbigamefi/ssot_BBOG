@@ -5,6 +5,9 @@
 - [ ] Confirm `PRIVATE_KEY` corresponds to `GOV` (the deploy script enforces this)
 - [ ] Confirm Chainlink VRF v2.5 **Wrapper** address for the target chain
 - [ ] Confirm the ERC20 assets you will register (decimals, transfer behavior, blacklists, fee-on-transfer)
+- [ ] For v1.3 Sports testnet rehearsal, start from one of:
+  - `docs/deploy/base-sepolia-v13-sports.env.example`
+  - `docs/deploy/arbitrum-sepolia-v13-sports.env.example`
 - [ ] Decide initial:
   - `BANK_MIN_LIQ_BPS_i`
   - referral budgets + holdback
@@ -26,6 +29,7 @@
   - bootstrap odds signer, result reporter, challenger, and arbitrator addresses if used
 - [ ] Run `make sports-phase0-readiness` locally to prove both the v1.3 Casino+Sports artifact path
   and the Phase 0 mock event lifecycle before using real deployment parameters.
+- [ ] Run `ENV_FILE=<filled-env> make sports-testnet-preflight-v13` before broadcasting a public testnet deployment.
 
 ## Deploy
 - [ ] Run `bash script/ci/install_deps.sh`

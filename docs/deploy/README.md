@@ -114,6 +114,19 @@ export SPORTS_MAX_EVENT_RESERVED_POOL_0=...
 forge script script/DeployV13.s.sol:DeployV13   --rpc-url $RPC_URL   --broadcast   -vvv
 ```
 
+For a public testnet Casino+Sports rehearsal, start from a v1.3 Sports env example and run the
+preflight before broadcasting:
+
+```bash
+cp docs/deploy/base-sepolia-v13-sports.env.example .env.base-sepolia-v13-sports
+# edit .env.base-sepolia-v13-sports
+ENV_FILE=.env.base-sepolia-v13-sports make sports-testnet-preflight-v13
+source .env.base-sepolia-v13-sports
+forge script script/DeployV13.s.sol:DeployV13 --rpc-url $RPC_URL --broadcast -vvv
+```
+
+The same flow applies to `docs/deploy/arbitrum-sepolia-v13-sports.env.example`.
+
 The v1.3 script deploys and wires:
 - `PoolRegistry`
 - `SettlementRouter`

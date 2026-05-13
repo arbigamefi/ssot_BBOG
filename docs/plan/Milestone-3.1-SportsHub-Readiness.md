@@ -19,10 +19,14 @@ bankrolls, or unlicensed regulated-market sportsbook operations.
 
 ## Current Status
 
-As of `master` through PR #6:
+As of `master` through PR #7, with the next readiness package accumulating locally on
+`codex/sports-readiness-phase-local`:
 
 - Contract implementation for the SportsHub MVP scope is complete.
 - Unit, invariant, build, release-check, and PR CI gates passed on PR #6.
+- The v1.3 Casino+Sports local deployment/release-artifact path is covered by `make sports-dry-run-v13`.
+- The complete mock event lifecycle is covered by `make sports-lifecycle-dry-run`.
+- The combined local Phase 0 gate is `make sports-phase0-readiness`.
 - Ops metrics, alerts, and sportsbook runbook exist for odds signer health, result finality, disputes,
   direct void reasons, exposure caps, and batch debt-out.
 - The remaining work is production readiness: deployment rehearsal, release artifacts, operational
@@ -155,6 +159,8 @@ No-go conditions:
 
 ### Phase 1 — Testnet rehearsal
 
+- Fill a public-testnet v1.3 Sports env file from `docs/deploy/*-v13-sports.env.example`.
+- Run `ENV_FILE=<filled-env> make sports-testnet-preflight-v13`.
 - Deploy v1.3 to a public testnet with one Casino pool and one Sports pool.
 - Verify explorer metadata.
 - Publish release digest and frontend manifest.
