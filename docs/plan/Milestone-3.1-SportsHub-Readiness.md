@@ -275,3 +275,13 @@ It runs:
 - `make sports-lifecycle-dry-run`.
 
 Passing this gate is required before moving from local readiness work to public testnet rehearsal.
+
+## Public Testnet Evidence
+
+2026-05-13 Base Sepolia v1.3 Casino+Sports rehearsal evidence:
+
+- `docs/deploy/base-sepolia-v13-sports-rehearsal-2026-05-13.md`
+
+This proves public testnet deployment, release artifact generation, strict release checking, and
+basic on-chain topology checks. Explorer verification, funded canary tickets, result challenge,
+direct void, and batch debt-out rehearsals remain Phase 1 work.
