@@ -13,7 +13,6 @@ import {ISportsHub} from "../../src/core/interfaces/ISportsHub.sol";
 import {ISportsRiskEngine} from "../../src/core/interfaces/ISportsRiskEngine.sol";
 import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
 import {MockERC20} from "../../src/mocks/MockERC20.sol";
-import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 contract MockSportsRiskEngine is ISportsRiskEngine {
     uint256 internal _payout;
@@ -218,8 +217,7 @@ contract SportsHubTicketTest is Test {
         riskEngine.setDecision(190e6, 190e6, RISK_HASH);
 
         bytes32 oddsTicketHash = sportsHub.hashOddsTicket(odds, player, stake);
-        bytes32 digest = MessageHashUtils.toEthSignedMessageHash(oddsTicketHash);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(0xBADC0DE, digest);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(0xBADC0DE, oddsTicketHash);
         bytes memory badSignature = abi.encodePacked(r, s, v);
 
         vm.prank(player);
@@ -315,8 +313,7 @@ contract SportsHubTicketTest is Test {
     }
 
     function _signOdds(bytes32 oddsTicketHash) internal view returns (bytes memory signature) {
-        bytes32 digest = MessageHashUtils.toEthSignedMessageHash(oddsTicketHash);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(oddsSignerKey, digest);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(oddsSignerKey, oddsTicketHash);
         signature = abi.encodePacked(r, s, v);
     }
 

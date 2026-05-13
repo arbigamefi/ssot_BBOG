@@ -155,7 +155,8 @@ Deliverables:
 
 - Implement allowlisted result reporters.
 - Implement result proposal, challenge, finalize, and emergency void.
-- Bind result payload to market id, event id, rulebook hash, reporter set hash, proposer, and finality time.
+- Bind result payload to market id, event id, pool id, market version, rulebook hash, reporter set hash,
+  result source hash, evidence hash, and observed timestamp; store proposer and finality time.
 
 Acceptance:
 

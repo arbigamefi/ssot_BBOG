@@ -295,10 +295,15 @@ Every result must bind:
 
 - `eventId`;
 - `marketId`;
-- `resultPayload`;
+- `poolId`;
+- `marketVersion`;
+- `resultSourceHash`;
+- `evidenceHash`;
 - `rulebookHash`;
+- `observedAt`;
 - `reportedAt`;
 - `finalizedAt`;
+- reporter set hash;
 - reporter/proposer identity.
 
 ## MVP scope

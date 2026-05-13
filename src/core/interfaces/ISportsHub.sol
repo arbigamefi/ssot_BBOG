@@ -48,7 +48,25 @@ interface ISportsHub {
         bytes calldata signature
     ) external returns (uint256 ticketId);
 
-    function proposeResult(uint64 marketId, uint32 winningOutcomeId, bytes32 resultPayloadHash) external;
+    function hashOddsTicket(SSOTTypes.SportsOddsSnapshot calldata odds, address player, uint256 stake)
+        external
+        view
+        returns (bytes32);
+    function hashResultPayload(
+        uint64 marketId,
+        uint32 winningOutcomeId,
+        bytes32 resultSourceHash,
+        bytes32 evidenceHash,
+        uint64 observedAt
+    ) external view returns (bytes32);
+
+    function proposeResult(
+        uint64 marketId,
+        uint32 winningOutcomeId,
+        bytes32 resultSourceHash,
+        bytes32 evidenceHash,
+        uint64 observedAt
+    ) external;
     function challengeResult(uint64 marketId, bytes32 reasonHash) external;
     function finalizeResult(uint64 marketId) external;
 
@@ -93,8 +111,12 @@ interface ISportsHub {
         uint64 indexed eventId,
         uint32 winningOutcomeId,
         bytes32 resultPayloadHash,
+        bytes32 resultSourceHash,
+        bytes32 evidenceHash,
         bytes32 rulebookHash,
+        bytes32 reporterSetHash,
         address proposer,
+        uint64 observedAt,
         uint64 finalizesAt
     );
     event ResultChallenged(uint64 indexed marketId, bytes32 reasonHash, address challenger);

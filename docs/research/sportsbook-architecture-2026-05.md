@@ -582,10 +582,13 @@ Every result should bind to:
 
 - event id;
 - market id;
-- result payload;
-- data source / signer set;
-- timestamp;
+- pool id;
+- market version;
+- data source hash;
+- evidence hash;
+- observed timestamp;
 - rulebook version;
+- reporter set;
 - finality window.
 
 ## SportsHub lifecycle
@@ -658,8 +661,9 @@ This is the smallest shape that proves the core sportsbook system without import
 
 SportsHub must protect against stale or replayed odds:
 
-- odds payload signed by authorized signer set or proven under a current Merkle root;
-- odds include `marketId`, `marketVersion`, `outcomeId`, `price`, `maxPayout`, `expiresAt`, and `nonce`;
+- odds payload signed as EIP-712 typed data by an authorized signer set or proven under a current Merkle root;
+- odds include `marketId`, `eventId`, `poolId`, `marketVersion`, `outcomeId`, `price`, `maxPayout`,
+  `expiresAt`, `nonce`, `rulebookHash`, and `riskHash`;
 - user call includes max acceptable price/slippage and deadline;
 - market is rejected if suspended, locked, stale, or over cap.
 

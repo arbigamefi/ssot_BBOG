@@ -22,7 +22,8 @@ contract SportsHubResultTest is Test {
     bytes32 internal constant REPORTER_SET_HASH = keccak256("REPORTER_SET");
     bytes32 internal constant MARKET_KEY = keccak256("NBA:LAL:BOS:ML");
     bytes32 internal constant RULEBOOK_HASH = keccak256("SPORTS_RULEBOOK_V1");
-    bytes32 internal constant RESULT_PAYLOAD_HASH = keccak256("LAL_WIN");
+    bytes32 internal constant RESULT_SOURCE_HASH = keccak256("NBA_FINAL_SCORE_PROVIDER");
+    bytes32 internal constant RESULT_EVIDENCE_HASH = keccak256("LAL_WIN_EVIDENCE");
     bytes32 internal constant CHALLENGE_REASON = keccak256("SCORE_DISPUTE");
 
     uint64 internal constant SPORTS_POOL_ID = 2;
@@ -65,9 +66,15 @@ contract SportsHubResultTest is Test {
 
     function test_proposeResult_successBindsFinalityPayloadAndReporterSet() external {
         uint64 marketId = _createOpenAndLockMarket();
+        SSOTTypes.SportsMarket memory preProposalMarket = sportsHub.getMarket(marketId);
+        vm.warp(preProposalMarket.startsAt);
+        uint64 observedAt = uint64(block.timestamp);
+        bytes32 expectedPayloadHash = sportsHub.hashResultPayload(
+            marketId, WINNING_OUTCOME_ID, RESULT_SOURCE_HASH, RESULT_EVIDENCE_HASH, observedAt
+        );
 
         vm.prank(reporter);
-        sportsHub.proposeResult(marketId, WINNING_OUTCOME_ID, RESULT_PAYLOAD_HASH);
+        sportsHub.proposeResult(marketId, WINNING_OUTCOME_ID, RESULT_SOURCE_HASH, RESULT_EVIDENCE_HASH, observedAt);
 
         SSOTTypes.SportsMarket memory market = sportsHub.getMarket(marketId);
         assertEq(uint256(market.state), uint256(SSOTTypes.SportsMarketState.ResultProposed));
@@ -76,11 +83,16 @@ contract SportsHubResultTest is Test {
         SSOTTypes.SportsResult memory result = sportsHub.getResult(marketId);
         assertEq(result.marketId, marketId);
         assertEq(result.eventId, EVENT_ID);
+        assertEq(result.poolId, SPORTS_POOL_ID);
         assertEq(result.winningOutcomeId, WINNING_OUTCOME_ID);
-        assertEq(result.resultPayloadHash, RESULT_PAYLOAD_HASH);
+        assertEq(result.marketVersion, preProposalMarket.version);
+        assertEq(result.resultPayloadHash, expectedPayloadHash);
+        assertEq(result.resultSourceHash, RESULT_SOURCE_HASH);
+        assertEq(result.evidenceHash, RESULT_EVIDENCE_HASH);
         assertEq(result.rulebookHash, RULEBOOK_HASH);
         assertEq(result.reporterSetHash, REPORTER_SET_HASH);
         assertEq(result.proposer, reporter);
+        assertEq(result.observedAt, observedAt);
         assertEq(result.proposedAt, block.timestamp);
         assertEq(result.finalizesAt, block.timestamp + FINALITY);
         assertFalse(result.challenged);
@@ -90,7 +102,9 @@ contract SportsHubResultTest is Test {
         uint64 marketId = _createMarket();
 
         vm.expectRevert(abi.encodeWithSelector(ISportsHub.UnauthorizedReporter.selector, address(this)));
-        sportsHub.proposeResult(marketId, WINNING_OUTCOME_ID, RESULT_PAYLOAD_HASH);
+        sportsHub.proposeResult(
+            marketId, WINNING_OUTCOME_ID, RESULT_SOURCE_HASH, RESULT_EVIDENCE_HASH, uint64(block.timestamp)
+        );
 
         vm.prank(reporter);
         vm.expectRevert(
@@ -101,20 +115,51 @@ contract SportsHubResultTest is Test {
                 SSOTTypes.SportsMarketState.Locked
             )
         );
-        sportsHub.proposeResult(marketId, WINNING_OUTCOME_ID, RESULT_PAYLOAD_HASH);
+        sportsHub.proposeResult(
+            marketId, WINNING_OUTCOME_ID, RESULT_SOURCE_HASH, RESULT_EVIDENCE_HASH, uint64(block.timestamp)
+        );
 
         vm.startPrank(gov);
         sportsHub.openMarket(marketId);
         sportsHub.lockMarket(marketId);
         vm.stopPrank();
+        SSOTTypes.SportsMarket memory market = sportsHub.getMarket(marketId);
+        vm.warp(market.startsAt);
 
         vm.prank(reporter);
         vm.expectRevert(Errors.InvalidConfig.selector);
-        sportsHub.proposeResult(marketId, WINNING_OUTCOME_ID, bytes32(0));
+        sportsHub.proposeResult(marketId, WINNING_OUTCOME_ID, bytes32(0), RESULT_EVIDENCE_HASH, uint64(block.timestamp));
 
         vm.prank(reporter);
         vm.expectRevert(abi.encodeWithSelector(ISportsHub.BadOddsSnapshot.selector, marketId, OUTCOME_COUNT));
-        sportsHub.proposeResult(marketId, OUTCOME_COUNT, RESULT_PAYLOAD_HASH);
+        sportsHub.proposeResult(
+            marketId, OUTCOME_COUNT, RESULT_SOURCE_HASH, RESULT_EVIDENCE_HASH, uint64(block.timestamp)
+        );
+    }
+
+    function test_proposeResult_rejectsPrematureAndInvalidObservedAt() external {
+        uint64 marketId = _createOpenAndLockMarket();
+        SSOTTypes.SportsMarket memory market = sportsHub.getMarket(marketId);
+
+        vm.prank(reporter);
+        vm.expectRevert(Errors.InvalidConfig.selector);
+        sportsHub.proposeResult(
+            marketId, WINNING_OUTCOME_ID, RESULT_SOURCE_HASH, RESULT_EVIDENCE_HASH, uint64(block.timestamp)
+        );
+
+        vm.warp(market.startsAt);
+
+        vm.prank(reporter);
+        vm.expectRevert(Errors.InvalidConfig.selector);
+        sportsHub.proposeResult(
+            marketId, WINNING_OUTCOME_ID, RESULT_SOURCE_HASH, RESULT_EVIDENCE_HASH, market.startsAt - 1
+        );
+
+        vm.prank(reporter);
+        vm.expectRevert(Errors.InvalidConfig.selector);
+        sportsHub.proposeResult(
+            marketId, WINNING_OUTCOME_ID, RESULT_SOURCE_HASH, RESULT_EVIDENCE_HASH, uint64(block.timestamp + 1)
+        );
     }
 
     function test_challengeResult_blocksFinalizationAndCanBeVoided() external {
@@ -186,8 +231,7 @@ contract SportsHubResultTest is Test {
 
     function _createOpenLockAndProposeResult() internal returns (uint64 marketId) {
         marketId = _createOpenAndLockMarket();
-        vm.prank(reporter);
-        sportsHub.proposeResult(marketId, WINNING_OUTCOME_ID, RESULT_PAYLOAD_HASH);
+        _proposeResult(marketId, WINNING_OUTCOME_ID);
     }
 
     function _createOpenAndLockMarket() internal returns (uint64 marketId) {
@@ -202,6 +246,16 @@ contract SportsHubResultTest is Test {
         vm.prank(gov);
         marketId = sportsHub.createMarket(
             EVENT_ID, SPORTS_POOL_ID, OUTCOME_COUNT, _startsAt(), _lockTime(), FINALITY, MARKET_KEY, RULEBOOK_HASH
+        );
+    }
+
+    function _proposeResult(uint64 marketId, uint32 winningOutcomeId) internal {
+        SSOTTypes.SportsMarket memory market = sportsHub.getMarket(marketId);
+        if (block.timestamp < market.startsAt) vm.warp(market.startsAt);
+
+        vm.prank(reporter);
+        sportsHub.proposeResult(
+            marketId, winningOutcomeId, RESULT_SOURCE_HASH, RESULT_EVIDENCE_HASH, uint64(block.timestamp)
         );
     }
 

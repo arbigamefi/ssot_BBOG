@@ -125,7 +125,8 @@ SportsHub is out of scope for the initial router refactor but its boundary is no
 SportsHub MUST:
 
 - use an independent sports pool for the first release;
-- bind every ticket to market id, outcome id, odds snapshot, rulebook hash, and result/finality state;
+- bind every ticket to market id, outcome id, EIP-712 odds snapshot, rulebook hash, and result/finality state;
+- bind sports results to source/evidence hashes, observed timestamp, reporter set, market version, and rulebook hash;
 - reject stale odds;
 - reject tickets after market lock;
 - enforce exposure caps before opening a position;

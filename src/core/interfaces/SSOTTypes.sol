@@ -200,11 +200,16 @@ library SSOTTypes {
     struct SportsResult {
         uint64 marketId;
         uint64 eventId;
+        uint64 poolId;
         uint32 winningOutcomeId;
+        uint64 marketVersion;
         bytes32 resultPayloadHash;
+        bytes32 resultSourceHash;
+        bytes32 evidenceHash;
         bytes32 rulebookHash;
         bytes32 reporterSetHash;
         address proposer;
+        uint64 observedAt;
         uint64 proposedAt;
         uint64 finalizesAt;
         bool challenged;

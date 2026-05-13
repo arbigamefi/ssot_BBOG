@@ -12,7 +12,6 @@ import {ISettlementRouter} from "../../src/core/interfaces/ISettlementRouter.sol
 import {ISportsHub} from "../../src/core/interfaces/ISportsHub.sol";
 import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
 import {MockERC20} from "../../src/mocks/MockERC20.sol";
-import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 contract SportsHubSettlementTest is Test {
     address internal gov = address(0xA11CE);
@@ -25,7 +24,8 @@ contract SportsHubSettlementTest is Test {
     bytes32 internal constant REPORTER_SET_HASH = keccak256("REPORTER_SET");
     bytes32 internal constant MARKET_KEY = keccak256("NBA:LAL:BOS:ML");
     bytes32 internal constant RULEBOOK_HASH = keccak256("SPORTS_RULEBOOK_V1");
-    bytes32 internal constant RESULT_PAYLOAD_HASH = keccak256("LAL_WIN");
+    bytes32 internal constant RESULT_SOURCE_HASH = keccak256("NBA_FINAL_SCORE_PROVIDER");
+    bytes32 internal constant RESULT_EVIDENCE_HASH = keccak256("LAL_WIN_EVIDENCE");
 
     uint64 internal constant SPORTS_POOL_ID = 2;
     uint64 internal constant EVENT_ID = 4004;
@@ -202,8 +202,13 @@ contract SportsHubSettlementTest is Test {
         vm.prank(gov);
         sportsHub.lockMarket(marketId);
 
+        SSOTTypes.SportsMarket memory market = sportsHub.getMarket(marketId);
+        vm.warp(market.startsAt);
+
         vm.prank(reporter);
-        sportsHub.proposeResult(marketId, WINNING_OUTCOME_ID, RESULT_PAYLOAD_HASH);
+        sportsHub.proposeResult(
+            marketId, WINNING_OUTCOME_ID, RESULT_SOURCE_HASH, RESULT_EVIDENCE_HASH, uint64(block.timestamp)
+        );
 
         SSOTTypes.SportsResult memory result = sportsHub.getResult(marketId);
         vm.warp(result.finalizesAt);
@@ -225,8 +230,7 @@ contract SportsHubSettlementTest is Test {
         });
 
         bytes32 oddsTicketHash = sportsHub.hashOddsTicket(odds, player, stake);
-        bytes32 digest = MessageHashUtils.toEthSignedMessageHash(oddsTicketHash);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(oddsSignerKey, digest);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(oddsSignerKey, oddsTicketHash);
         bytes memory signature = abi.encodePacked(r, s, v);
 
         vm.prank(player);

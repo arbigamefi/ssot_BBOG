@@ -54,6 +54,7 @@ Record the release digest from `deployments/release-latest-v13.json` in every in
 ```bash
 cast call $SPORTS_HUB "oddsSignerSetHash()(bytes32)" --rpc-url $RPC
 cast call $SPORTS_HUB "resultReporterSetHash()(bytes32)" --rpc-url $RPC
+cast call $SPORTS_HUB "MIN_RESULT_FINALITY_SECONDS()(uint64)" --rpc-url $RPC
 cast call $SPORTS_RISK_ENGINE "limitsForPool(uint64)(uint256,uint256,uint256,uint256,uint256)" $SPORTS_POOL_ID --rpc-url $RPC
 cast call $SPORTS_RISK_ENGINE "currentRiskHashForPool(uint64)(bytes32)" $SPORTS_POOL_ID --rpc-url $RPC
 ```
@@ -62,12 +63,16 @@ Market and exposure reads:
 
 ```bash
 cast call $SPORTS_HUB "getMarket(uint64)((uint64,uint64,uint64,uint32,uint64,uint64,uint64,uint64,bytes32,bytes32,uint8))" $MARKET_ID --rpc-url $RPC
-cast call $SPORTS_HUB "getResult(uint64)((uint64,uint64,uint32,bytes32,bytes32,bytes32,address,uint64,uint64,bool))" $MARKET_ID --rpc-url $RPC
+cast call $SPORTS_HUB "getResult(uint64)((uint64,uint64,uint64,uint32,uint64,bytes32,bytes32,bytes32,bytes32,bytes32,address,uint64,uint64,uint64,bool))" $MARKET_ID --rpc-url $RPC
 cast call $SPORTS_HUB "marketReserved(uint64)(uint256)" $MARKET_ID --rpc-url $RPC
 cast call $SPORTS_HUB "marketOutcomeReserved(uint64,uint32)(uint256)" $MARKET_ID $OUTCOME_ID --rpc-url $RPC
 cast call $SPORTS_HUB "poolEventReserved(uint64,uint64)(uint256)" $SPORTS_POOL_ID $EVENT_ID --rpc-url $RPC
 cast call $SPORTS_HUB "eventReserved(uint64)(uint256)" $EVENT_ID --rpc-url $RPC # aggregate only
 ```
+
+`getResult` returns `marketId`, `eventId`, `poolId`, `winningOutcomeId`, `marketVersion`,
+`resultPayloadHash`, `resultSourceHash`, `evidenceHash`, `rulebookHash`, `reporterSetHash`,
+`proposer`, `observedAt`, `proposedAt`, `finalizesAt`, and `challenged`.
 
 Sports market state values:
 - `0=None`
@@ -134,7 +139,8 @@ If multiple active markets fail with the same signer/hash/risk mismatch, treat a
 2) **Compare on-chain and off-chain hashes.**
    - Read `SportsHub.oddsSignerSetHash()`.
    - Read `SportsRiskEngine.currentRiskHashForPool(poolId)` for every affected Sports pool.
-   - Confirm the odds service signs snapshots with both current values.
+   - Confirm the odds service signs the EIP-712 digest returned by `hashOddsTicket(...)`, binding the
+     current signer set, player, stake, market fields, rulebook hash, and risk hash.
 3) **Remove a compromised signer if needed.**
    ```bash
    cast send $SPORTS_HUB "setOddsSigner(address,bool)" $SIGNER false --rpc-url $RPC --private-key $GOV_PK
@@ -175,8 +181,10 @@ If multiple active markets fail with the same signer/hash/risk mismatch, treat a
 1) **Read market and result state.**
    ```bash
    cast call $SPORTS_HUB "getMarket(uint64)((uint64,uint64,uint64,uint32,uint64,uint64,uint64,uint64,bytes32,bytes32,uint8))" $MARKET_ID --rpc-url $RPC
-   cast call $SPORTS_HUB "getResult(uint64)((uint64,uint64,uint32,bytes32,bytes32,bytes32,address,uint64,uint64,bool))" $MARKET_ID --rpc-url $RPC
+   cast call $SPORTS_HUB "getResult(uint64)((uint64,uint64,uint64,uint32,uint64,bytes32,bytes32,bytes32,bytes32,bytes32,address,uint64,uint64,uint64,bool))" $MARKET_ID --rpc-url $RPC
    ```
+   Recompute `resultPayloadHash` with `hashResultPayload(marketId, winningOutcomeId, resultSourceHash,
+   evidenceHash, observedAt)` and compare it with the stored result.
 2) **If the proposed result is wrong or untrusted, challenge it before finality.**
    ```bash
    cast send $SPORTS_HUB "challengeResult(uint64,bytes32)" $MARKET_ID $REASON_HASH --rpc-url $RPC --private-key $GOV_PK
@@ -196,7 +204,8 @@ If multiple active markets fail with the same signer/hash/risk mismatch, treat a
    - Winning tickets settle through `SettlementRouter`; no direct Bank calls are allowed.
 
 **Do not**
-- Finalize a result whose `resultPayloadHash` cannot be reproduced from the rulebook.
+- Finalize a result whose `resultPayloadHash` cannot be reproduced from the structured source/evidence
+  fields and the rulebook.
 - Use governance to pick arbitrary winning tickets.
 - Block user-triggered `settleTicket`, `refundTicket`, or `voidTicket` once market state permits debt-out.
 

@@ -124,6 +124,19 @@ contract SportsHubMarketTest is Test {
         sportsHub.createMarket(
             EVENT_ID, SPORTS_POOL_ID, OUTCOME_COUNT, _startsAt(), _lockTime(), 0, MARKET_KEY, RULEBOOK_HASH
         );
+
+        uint64 belowMinFinality = sportsHub.MIN_RESULT_FINALITY_SECONDS() - 1;
+        vm.expectRevert(Errors.InvalidConfig.selector);
+        sportsHub.createMarket(
+            EVENT_ID,
+            SPORTS_POOL_ID,
+            OUTCOME_COUNT,
+            _startsAt(),
+            _lockTime(),
+            belowMinFinality,
+            MARKET_KEY,
+            RULEBOOK_HASH
+        );
         vm.stopPrank();
     }
 

@@ -9,13 +9,19 @@ import {ISportsRiskEngine} from "./interfaces/ISportsRiskEngine.sol";
 import {ISportsHub} from "./interfaces/ISportsHub.sol";
 import {SSOTTypes} from "./interfaces/SSOTTypes.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /// @notice SportsHub = sportsbook market lifecycle SSOT.
 ///         Ticket funding and settlement are deliberately routed through SettlementRouter.
-contract SportsHub is ISportsHub, Governable, ReentrancyGuard {
-    bytes32 internal constant ODDS_TICKET_HASH_DOMAIN = keccak256("ARBI_SPORTS_ODDS_TICKET_V1");
+contract SportsHub is ISportsHub, Governable, EIP712, ReentrancyGuard {
+    uint64 public constant MIN_RESULT_FINALITY_SECONDS = 10 minutes;
+    bytes32 internal constant ODDS_TICKET_TYPEHASH = keccak256(
+        "SportsOddsTicket(bytes32 oddsSignerSetHash,address player,uint256 stake,uint64 marketId,uint64 eventId,uint64 poolId,uint32 outcomeId,uint64 marketVersion,bytes32 marketKey,bytes32 rulebookHash,uint256 oddsWad,uint256 maxStake,uint256 maxPayout,uint64 expiresAt,uint64 nonce,bytes32 riskHash)"
+    );
+    bytes32 internal constant RESULT_PAYLOAD_TYPEHASH = keccak256(
+        "SportsResultPayload(bytes32 reporterSetHash,uint64 marketId,uint64 eventId,uint64 poolId,uint32 winningOutcomeId,uint64 marketVersion,bytes32 marketKey,bytes32 rulebookHash,bytes32 resultSourceHash,bytes32 evidenceHash,uint64 observedAt)"
+    );
 
     address public immutable override settlementRouter;
     address public immutable override poolRegistry;
@@ -46,7 +52,7 @@ contract SportsHub is ISportsHub, Governable, ReentrancyGuard {
         address gov_,
         bytes32 oddsSignerSetHash_,
         bytes32 resultReporterSetHash_
-    ) Governable(gov_) {
+    ) Governable(gov_) EIP712("ArbiGameFi SportsHub", "1.3") {
         if (settlementRouter_ == address(0) || riskEngine_ == address(0)) {
             revert Errors.ZeroAddress();
         }
@@ -117,9 +123,22 @@ contract SportsHub is ISportsHub, Governable, ReentrancyGuard {
     function hashOddsTicket(SSOTTypes.SportsOddsSnapshot calldata odds, address player, uint256 stake)
         external
         view
+        override
         returns (bytes32)
     {
-        return _hashOddsTicket(odds, player, stake);
+        SSOTTypes.SportsMarket storage market = _requireMarket(odds.marketId);
+        return _hashOddsTicket(market, odds, player, stake);
+    }
+
+    function hashResultPayload(
+        uint64 marketId,
+        uint32 winningOutcomeId,
+        bytes32 resultSourceHash,
+        bytes32 evidenceHash,
+        uint64 observedAt
+    ) external view override returns (bytes32) {
+        SSOTTypes.SportsMarket storage market = _requireMarket(marketId);
+        return _hashResultPayload(market, winningOutcomeId, resultSourceHash, evidenceHash, observedAt);
     }
 
     function createMarket(
@@ -133,9 +152,9 @@ contract SportsHub is ISportsHub, Governable, ReentrancyGuard {
         bytes32 rulebookHash
     ) external override onlyGov returns (uint64 marketId) {
         if (
-            eventId == 0 || outcomeCount < 2 || startsAt == 0 || lockTime == 0 || resultFinalitySeconds == 0
-                || marketKey == bytes32(0) || rulebookHash == bytes32(0) || lockTime > startsAt
-                || lockTime <= block.timestamp
+            eventId == 0 || outcomeCount < 2 || startsAt == 0 || lockTime == 0
+                || resultFinalitySeconds < MIN_RESULT_FINALITY_SECONDS || marketKey == bytes32(0)
+                || rulebookHash == bytes32(0) || lockTime > startsAt || lockTime <= block.timestamp
         ) {
             revert Errors.InvalidConfig();
         }
@@ -229,7 +248,7 @@ contract SportsHub is ISportsHub, Governable, ReentrancyGuard {
         if (odds.expiresAt <= block.timestamp) revert OddsExpired(marketId, odds.expiresAt, block.timestamp);
         if (stake > odds.maxStake) revert BadOddsSnapshot(marketId, outcomeId);
 
-        bytes32 oddsTicketHash = _hashOddsTicket(odds, msg.sender, stake);
+        bytes32 oddsTicketHash = _hashOddsTicket(market, odds, msg.sender, stake);
         if (oddsSnapshotUsed[oddsTicketHash]) revert BadOddsSnapshot(marketId, outcomeId);
         _requireValidOddsSignature(oddsTicketHash, signature);
 
@@ -296,25 +315,43 @@ contract SportsHub is ISportsHub, Governable, ReentrancyGuard {
         );
     }
 
-    function proposeResult(uint64 marketId, uint32 winningOutcomeId, bytes32 resultPayloadHash) external override {
+    function proposeResult(
+        uint64 marketId,
+        uint32 winningOutcomeId,
+        bytes32 resultSourceHash,
+        bytes32 evidenceHash,
+        uint64 observedAt
+    ) external override {
         if (!resultReporter[msg.sender]) revert UnauthorizedReporter(msg.sender);
-        if (resultPayloadHash == bytes32(0)) revert Errors.InvalidConfig();
+        if (resultSourceHash == bytes32(0) || evidenceHash == bytes32(0) || observedAt == 0) {
+            revert Errors.InvalidConfig();
+        }
 
         SSOTTypes.SportsMarket storage market = _requireMutableMarket(marketId);
         if (market.state != SSOTTypes.SportsMarketState.Locked) {
             revert BadMarketState(marketId, market.state, SSOTTypes.SportsMarketState.Locked);
         }
         if (winningOutcomeId >= market.outcomeCount) revert BadOddsSnapshot(marketId, winningOutcomeId);
+        if (block.timestamp < market.startsAt || observedAt < market.startsAt || observedAt > block.timestamp) {
+            revert Errors.InvalidConfig();
+        }
 
+        bytes32 resultPayloadHash =
+            _hashResultPayload(market, winningOutcomeId, resultSourceHash, evidenceHash, observedAt);
         uint64 finalizesAt = uint64(block.timestamp + market.resultFinalitySeconds);
         _results[marketId] = SSOTTypes.SportsResult({
             marketId: marketId,
             eventId: market.eventId,
+            poolId: market.poolId,
             winningOutcomeId: winningOutcomeId,
+            marketVersion: market.version,
             resultPayloadHash: resultPayloadHash,
+            resultSourceHash: resultSourceHash,
+            evidenceHash: evidenceHash,
             rulebookHash: market.rulebookHash,
             reporterSetHash: resultReporterSetHash,
             proposer: msg.sender,
+            observedAt: observedAt,
             proposedAt: uint64(block.timestamp),
             finalizesAt: finalizesAt,
             challenged: false
@@ -322,7 +359,17 @@ contract SportsHub is ISportsHub, Governable, ReentrancyGuard {
 
         _setMarketState(market, SSOTTypes.SportsMarketState.ResultProposed);
         emit ResultProposed(
-            marketId, market.eventId, winningOutcomeId, resultPayloadHash, market.rulebookHash, msg.sender, finalizesAt
+            marketId,
+            market.eventId,
+            winningOutcomeId,
+            resultPayloadHash,
+            resultSourceHash,
+            evidenceHash,
+            market.rulebookHash,
+            resultReporterSetHash,
+            msg.sender,
+            observedAt,
+            finalizesAt
         );
     }
 
@@ -466,22 +513,25 @@ contract SportsHub is ISportsHub, Governable, ReentrancyGuard {
         eventReserved[ticket.eventId] -= reserved;
     }
 
-    function _hashOddsTicket(SSOTTypes.SportsOddsSnapshot calldata odds, address player, uint256 stake)
-        internal
-        view
-        returns (bytes32)
-    {
-        return keccak256(
+    function _hashOddsTicket(
+        SSOTTypes.SportsMarket storage market,
+        SSOTTypes.SportsOddsSnapshot calldata odds,
+        address player,
+        uint256 stake
+    ) internal view returns (bytes32) {
+        bytes32 structHash = keccak256(
             abi.encode(
-                ODDS_TICKET_HASH_DOMAIN,
-                address(this),
-                block.chainid,
+                ODDS_TICKET_TYPEHASH,
                 oddsSignerSetHash,
                 player,
                 stake,
                 odds.marketId,
+                market.eventId,
+                market.poolId,
                 odds.outcomeId,
                 odds.marketVersion,
+                market.marketKey,
+                market.rulebookHash,
                 odds.oddsWad,
                 odds.maxStake,
                 odds.maxPayout,
@@ -490,11 +540,37 @@ contract SportsHub is ISportsHub, Governable, ReentrancyGuard {
                 odds.riskHash
             )
         );
+        return _hashTypedDataV4(structHash);
+    }
+
+    function _hashResultPayload(
+        SSOTTypes.SportsMarket storage market,
+        uint32 winningOutcomeId,
+        bytes32 resultSourceHash,
+        bytes32 evidenceHash,
+        uint64 observedAt
+    ) internal view returns (bytes32) {
+        bytes32 structHash = keccak256(
+            abi.encode(
+                RESULT_PAYLOAD_TYPEHASH,
+                resultReporterSetHash,
+                market.marketId,
+                market.eventId,
+                market.poolId,
+                winningOutcomeId,
+                market.version,
+                market.marketKey,
+                market.rulebookHash,
+                resultSourceHash,
+                evidenceHash,
+                observedAt
+            )
+        );
+        return _hashTypedDataV4(structHash);
     }
 
     function _requireValidOddsSignature(bytes32 oddsTicketHash, bytes calldata signature) internal view {
-        bytes32 digest = MessageHashUtils.toEthSignedMessageHash(oddsTicketHash);
-        (address recovered, ECDSA.RecoverError err,) = ECDSA.tryRecoverCalldata(digest, signature);
+        (address recovered, ECDSA.RecoverError err,) = ECDSA.tryRecoverCalldata(oddsTicketHash, signature);
         if (err != ECDSA.RecoverError.NoError || !oddsSigner[recovered]) revert BadOddsSignature();
     }
 }

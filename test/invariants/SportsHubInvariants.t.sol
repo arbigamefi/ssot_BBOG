@@ -11,7 +11,6 @@ import {SportsHub} from "../../src/core/SportsHub.sol";
 import {SportsRiskEngine} from "../../src/core/SportsRiskEngine.sol";
 import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
 import {MockERC20} from "../../src/mocks/MockERC20.sol";
-import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
 
 contract SportsHubHandler is Test {
     MockERC20 public asset;
@@ -36,7 +35,8 @@ contract SportsHubHandler is Test {
     uint64 internal constant EVENT_ID = 5005;
     uint32 internal constant OUTCOME_COUNT = 2;
     uint64 internal constant FINALITY = 30 minutes;
-    bytes32 internal constant RESULT_PAYLOAD_HASH = keccak256("RESULT");
+    bytes32 internal constant RESULT_SOURCE_HASH = keccak256("SPORTS_RESULT_PROVIDER");
+    bytes32 internal constant RESULT_EVIDENCE_HASH = keccak256("SPORTS_RESULT_EVIDENCE");
 
     constructor(
         MockERC20 asset_,
@@ -98,8 +98,7 @@ contract SportsHubHandler is Test {
         });
 
         bytes32 oddsTicketHash = sportsHub.hashOddsTicket(odds, player, stake);
-        bytes32 digest = MessageHashUtils.toEthSignedMessageHash(oddsTicketHash);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(oddsSignerKey, digest);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(oddsSignerKey, oddsTicketHash);
         bytes memory signature = abi.encodePacked(r, s, v);
 
         vm.prank(player);
@@ -118,9 +117,15 @@ contract SportsHubHandler is Test {
             return;
         }
 
+        market = sportsHub.getMarket(marketId);
+        if (block.timestamp < market.startsAt) vm.warp(market.startsAt);
+
         uint32 winningOutcomeId = uint32(bound(uint256(winningRaw), 0, OUTCOME_COUNT - 1));
         vm.prank(reporter);
-        try sportsHub.proposeResult(marketId, winningOutcomeId, RESULT_PAYLOAD_HASH) {} catch {}
+        try sportsHub.proposeResult(
+            marketId, winningOutcomeId, RESULT_SOURCE_HASH, RESULT_EVIDENCE_HASH, uint64(block.timestamp)
+        ) {}
+            catch {}
     }
 
     function action_finalizeResult() external {
