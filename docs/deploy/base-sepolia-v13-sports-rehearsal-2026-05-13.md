@@ -88,6 +88,9 @@ ENV_FILE=.env.sports-roles.local make sports-roles-v13
 
 # broadcast role rotation
 BROADCAST=1 ENV_FILE=.env.sports-roles.local make sports-roles-v13
+
+# validate Phase 1 closeout state
+ENV_FILE=.env.sports-roles.local make sports-phase1-closeout-v13
 ```
 
 ## Post-Deploy Checks
@@ -380,8 +383,17 @@ Role-separated challenge + arbitration void broadcast:
   - Sports Bank reserved: `0`
   - Sports Bank assets: `0.95 USDC`
 
-Remaining Phase 1 gaps before any public canary:
+Remaining production/public-launch blockers:
 
 - replace generated testnet keys with managed custody or an approved signer service;
 - connect a real odds/result data-provider policy and evidence store;
 - define jurisdiction, geofencing, and KYC policy for any public frontend.
+
+Phase 1 closeout gate:
+
+- Command: `ENV_FILE=.env.sports-roles.local make sports-phase1-closeout-v13`
+- Status: passed after role-separated arbitration rehearsal.
+- Scope: validates Base Sepolia deployment bytecode, Sports pool snapshot, dedicated role mappings,
+  GOV odds/reporter removal, zero Sports Bank reserved exposure, and required closeout documents.
+- Production caveat: managed key custody, provider integration, evidence storage, and public frontend
+  controls remain mainnet/public-launch blockers under `docs/ops/sportsbook-production-controls.md`.

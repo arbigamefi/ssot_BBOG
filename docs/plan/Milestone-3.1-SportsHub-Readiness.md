@@ -32,8 +32,9 @@ As of `master` through PR #7, with the next readiness package accumulating local
 - Base Sepolia Phase 1 rehearsal now covers v1.3 deployment/release, funded canary placement,
   finality settlement, direct void plus batch debt-out, result challenge/arbitration void plus batch
   debt-out, and dedicated non-GOV testnet Sports signer/reporter/challenger/arbitrator roles.
-- The remaining work is production readiness: managed key custody, operational staffing, provider
-  policy, evidence storage, and compliance gating.
+- Phase 1 is closed for the Base Sepolia testnet rehearsal. The remaining work is production/public
+  launch readiness: managed key custody, operational staffing, provider policy, evidence storage, and
+  compliance gating.
 
 ## Go/No-Go Gates
 
@@ -257,12 +258,15 @@ redundancy, or public-network transaction inclusion. Those remain Phase 1 testne
 - dedicated testnet odds signer, result reporter, result challenger, and result arbitrator role
   rotation;
 - role-separated challenge/arbitration canary with GOV removed from odds signer and result reporter
-  mappings.
+  mappings;
+- closeout gate `make sports-phase1-closeout-v13`.
 
 The rehearsal proves public-testnet transaction inclusion and accounting terminalization for the MVP
 paths, plus testnet-level operational role separation. It still uses generated local testnet role keys
 and GOV as the canary player/market operator, so it does not prove managed production key custody,
 external provider reliability, or public frontend controls.
+
+The remaining production controls are tracked in `docs/ops/sportsbook-production-controls.md`.
 
 ## Local Lifecycle Evidence
 

@@ -12,6 +12,7 @@
 - [Pause + config drift + governance safety](runbooks/pause-config-drift.md)
 - [Game finalization stalls / diff anomalies](runbooks/game-finalization-diffs.md)
 - [SportsHub odds, result finality, and exposure caps](runbooks/sportsbook-ops.md)
+- [Sportsbook production controls](sportsbook-production-controls.md)
 
 ## Incident process
 

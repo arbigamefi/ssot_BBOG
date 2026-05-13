@@ -67,6 +67,11 @@
   - `Hub.setRiskInPaused(asset, true/false)`
 - [ ] For v1.3, decide per-pool risk-in pause policy and document who can pause/resume each vertical.
 - [ ] For SportsHub, confirm operators have rehearsed `docs/ops/runbooks/sportsbook-ops.md` and own alerts for odds signer failures, result finality, direct voids, and exposure caps.
+- [ ] For SportsHub public-testnet Phase 1 closeout, run
+  `ENV_FILE=<role-env> make sports-phase1-closeout-v13` and archive the output with the rehearsal
+  evidence.
+- [ ] Before any public sportsbook frontend, approve `docs/ops/sportsbook-production-controls.md`
+  sections for managed key custody, provider evidence, and public frontend controls.
 - [ ] Decide on monitoring signals:
   - bet placement / requestId issuance
   - refund credit changes (`VRFHub.refundCreditOf`)
