@@ -106,9 +106,24 @@ As of the first post-verification funding preflight:
 Recommended first canary funding is `1 USDC` into each Bank, leaving about `1.066502 USDC` for
 small ticket placement tests.
 
+Funding transactions:
+
+- Casino Bank approve: `0x981d82047baddf5486e7af7fc5a648ad6b9be5eb36537ebec0aab98a1807c5d8`
+- Casino Bank deposit: `0xa44af58d9ea388bb94410c73bbfba4e2b7e0fa7a997866c1cfa1880beda3ed83`
+- Sports Bank approve: `0xde41c78dd22977d77f0cd75da2d8d03b83f6d66e417ff847f036c3677f41552c`
+- Sports Bank deposit: `0xc788260527ff96cd3efe63f607336ada6806deffb60f51e7eb5ac9add5754f9f`
+
+Post-funding state:
+
+- GOV USDC balance: `1.066502 USDC`
+- Casino Bank USDC assets: `1 USDC`
+- Sports Bank USDC assets: `1 USDC`
+- GOV Casino LP balance: `1`
+- GOV Sports LP balance: `1`
+- GOV allowance to both Banks: `0`
+
 ## Remaining Phase 1 Work
 
-- Fund the two Banks with controlled testnet liquidity.
 - Execute canary Sports tickets with realistic odds snapshots and result quorum flow.
 - Rehearse result challenge, direct void, and batch debt-out playbooks on this deployment.
 - Replace single-operator GOV bootstrap roles with dedicated testnet signer/reporter keys before any
