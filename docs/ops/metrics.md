@@ -50,6 +50,7 @@ From `ISportsHub`:
 - `TicketPlaced`
 - `ResultProposed`
 - `ResultChallenged`
+- `ResultChallengeResolved`
 - `ResultFinalized`
 - `TicketSettled`
 - `TicketRefunded`
@@ -262,7 +263,7 @@ Alert when a result remains unfinalized beyond finality plus operator SLA.
 
 **G5. sports_oracle_config_changes_total** (counter)
 Source: `OddsSignerSetHashSet`, `OddsSignerSet`, `ResultReporterSetHashSet`,
-`ResultReporterThresholdSet`, `ResultReporterSet`.
+`ResultReporterThresholdSet`, `ResultReporterSet`, `ResultChallengerSet`, and `ResultArbitratorSet`.
 Alert on any change outside an approved window.
 
 **G6. sports_risk_limits_changes_total** (counter)

@@ -12,6 +12,8 @@ interface ISportsHub {
     function oddsSignerSetHash() external view returns (bytes32);
     function resultReporterSetHash() external view returns (bytes32);
     function resultReporterThreshold() external view returns (uint8);
+    function resultChallenger(address challenger) external view returns (bool);
+    function resultArbitrator(address arbitrator) external view returns (bool);
 
     function nextMarketId() external view returns (uint64);
     function nextTicketId() external view returns (uint256);
@@ -77,6 +79,8 @@ interface ISportsHub {
         bytes[] calldata reporterSignatures
     ) external;
     function challengeResult(uint64 marketId, bytes32 reasonHash) external;
+    function resolveResultChallenge(uint64 marketId, SSOTTypes.SportsChallengeDecision decision, bytes32 decisionHash)
+        external;
     function finalizeResult(uint64 marketId) external;
 
     function settleTicket(uint256 ticketId) external;
@@ -102,6 +106,8 @@ interface ISportsHub {
     event ResultReporterSetHashSet(bytes32 oldHash, bytes32 newHash);
     event ResultReporterThresholdSet(uint8 oldThreshold, uint8 newThreshold);
     event ResultReporterSet(address indexed reporter, bool allowed);
+    event ResultChallengerSet(address indexed challenger, bool allowed);
+    event ResultArbitratorSet(address indexed arbitrator, bool allowed);
     event TicketPlaced(
         uint256 indexed ticketId,
         uint256 indexed positionId,
@@ -132,6 +138,13 @@ interface ISportsHub {
         uint64 finalizesAt
     );
     event ResultChallenged(uint64 indexed marketId, bytes32 reasonHash, address challenger);
+    event ResultChallengeResolved(
+        uint64 indexed marketId,
+        bytes32 indexed resultPayloadHash,
+        SSOTTypes.SportsChallengeDecision decision,
+        bytes32 decisionHash,
+        address arbitrator
+    );
     event ResultFinalized(
         uint64 indexed marketId, uint64 indexed eventId, uint32 winningOutcomeId, bytes32 resultPayloadHash
     );
@@ -151,7 +164,10 @@ interface ISportsHub {
     error BadPoolDomain(uint64 poolId, SSOTTypes.PoolDomain domain);
     error ResultFinalityPending(uint64 marketId, uint256 nowTs, uint256 finalizesAt);
     error ResultAlreadyChallenged(uint64 marketId);
+    error ResultChallengePending(uint64 marketId);
     error UnauthorizedReporter(address reporter);
+    error UnauthorizedChallenger(address challenger);
+    error UnauthorizedArbitrator(address arbitrator);
     error BadResultSignature();
     error DuplicateResultReporter(address reporter);
     error ResultReporterQuorumNotMet(uint8 threshold, uint8 got);

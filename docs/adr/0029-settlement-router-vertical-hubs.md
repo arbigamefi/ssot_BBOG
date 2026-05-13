@@ -245,6 +245,7 @@ SportsHub responsibilities:
 - odds snapshot validation;
 - ticket creation;
 - result proposal/challenge/finality;
+- challenge resolution through an auditable arbitration decision hash;
 - rulebook-hash binding;
 - risk-cap checks;
 - settlement/refund calls through `SettlementRouter`.
@@ -254,6 +255,7 @@ SportsHub MUST NOT:
 - custody bankroll funds;
 - bypass `SettlementRouter`;
 - settle before configured finality/challenge conditions;
+- silently void a challenged result without an arbitration decision hash;
 - accept stale odds;
 - accept tickets after market lock;
 - share a casino pool by default.
