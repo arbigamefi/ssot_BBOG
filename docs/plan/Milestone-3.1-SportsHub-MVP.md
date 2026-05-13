@@ -69,9 +69,11 @@ As of the current `codex/sportsbook-architecture-research` branch:
 - PR-3.1.3 has router-backed fixed-odds ticket placement: per-ticket signed odds acceptance hashes,
   allowlisted odds signers, replay rejection, `SportsRiskEngine` decision calls, ticket records, router
   positions, Bank reserve accounting, and market/outcome/event exposure increments.
-- A concrete production `SportsRiskEngine`, result finality, settlement/refund/void debt-out, and
-  SportsHub-specific invariants remain out of this slice and are intentionally left for PR-3.1.4 through
-  PR-3.1.6.
+- PR-3.1.4 has an initial concrete `SportsRiskEngine` with configurable global caps, deterministic
+  `riskHash`, fixed-odds payout calculation, stale odds/state checks, and market/outcome/event exposure
+  cap enforcement.
+- Result finality, settlement/refund/void debt-out, and SportsHub-specific invariants remain out of this
+  slice and are intentionally left for PR-3.1.5 through PR-3.1.6.
 
 ### PR-3.1.1 — Interfaces and milestone plan
 

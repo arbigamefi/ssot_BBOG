@@ -7,6 +7,7 @@ import {Bank} from "../../src/core/Bank.sol";
 import {PoolRegistry} from "../../src/core/PoolRegistry.sol";
 import {SettlementRouter} from "../../src/core/SettlementRouter.sol";
 import {SportsHub} from "../../src/core/SportsHub.sol";
+import {SportsRiskEngine} from "../../src/core/SportsRiskEngine.sol";
 import {ISettlementRouter} from "../../src/core/interfaces/ISettlementRouter.sol";
 import {ISportsHub} from "../../src/core/interfaces/ISportsHub.sol";
 import {ISportsRiskEngine} from "../../src/core/interfaces/ISportsRiskEngine.sol";
@@ -141,6 +142,29 @@ contract SportsHubTicketTest is Test {
         assertEq(sportsHub.marketReserved(marketId), reserved);
         assertEq(sportsHub.marketOutcomeReserved(marketId, OUTCOME_ID), reserved);
         assertEq(sportsHub.eventReserved(EVENT_ID), reserved);
+    }
+
+    function test_placeTicket_withConcreteRiskEngine() external {
+        SportsRiskEngine concreteRiskEngine = new SportsRiskEngine(gov, 1_000e6, 2_000e6, 10_000e6, 5_000e6, 20_000e6);
+        vm.prank(gov);
+        sportsHub.setRiskEngine(address(concreteRiskEngine));
+
+        uint64 marketId = _createAndOpenMarket();
+        uint256 stake = 100e6;
+        SSOTTypes.SportsOddsSnapshot memory odds = _odds(marketId, 2, OUTCOME_ID, uint64(block.timestamp + 1 hours));
+        odds.riskHash = concreteRiskEngine.currentRiskHash();
+
+        bytes32 oddsTicketHash = sportsHub.hashOddsTicket(odds, player, stake);
+        bytes memory signature = _signOdds(oddsTicketHash);
+
+        vm.prank(player);
+        uint256 ticketId = sportsHub.placeTicket(marketId, OUTCOME_ID, odds, stake, signature);
+
+        SSOTTypes.SportsTicket memory ticket = sportsHub.getTicket(ticketId);
+        assertEq(ticket.payout, 190e6);
+        assertEq(ticket.reserved, 190e6);
+        assertEq(sportsHub.marketReserved(marketId), 190e6);
+        assertEq(sportsBank.totalReserved(), 190e6);
     }
 
     function test_placeTicket_rejectsUnauthorizedSigner() external {
