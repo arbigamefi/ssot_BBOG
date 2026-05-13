@@ -52,6 +52,8 @@ When any `POOL_DOMAIN_i=2` pool exists, the following Sports deployment paramete
 - `SPORTS_RESULT_REPORTER_SET_HASH`: governance-published hash of the active result reporter set.
 - `SPORTS_RESULT_REPORTER_THRESHOLD`: optional quorum threshold for result proposals; defaults to `1`.
   If set above `1`, allowlist enough reporters through governance before result proposals are expected.
+- `SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS`: optional timeout after a challenged result can be governance-voided;
+  defaults to `604800` (7 days) and must be at least `600` (10 minutes).
 - `SPORTS_RESULT_CHALLENGER`: optional bootstrap address allowed to challenge a proposed result.
 - `SPORTS_RESULT_ARBITRATOR`: optional bootstrap address allowed to resolve challenged results with an
   on-chain arbitration decision hash.
@@ -70,9 +72,9 @@ Optional one-address bootstrap allowlists:
 - `SPORTS_RESULT_ARBITRATOR`: if set, the deploy script immediately allowlists this address.
 
 Risk caps are intentionally raw token units because pools can use different ERC20 decimals. The deploy
-script writes both the default Sports caps and each Sports pool's effective caps/risk hash into the v1.3
-snapshot. For production deployments, pick caps per target pool asset and lock the resulting snapshot
-with `make release-digest-v13`.
+script writes the default Sports caps, challenge timeout, and each Sports pool's effective caps/risk hash
+into the v1.3 snapshot. For production deployments, pick caps per target pool asset and lock the resulting
+snapshot with `make release-digest-v13`.
 
 ## Callback gas policy (fixed in code)
 `GameHub.quoteVRFFee(betCount)` sets `callbackGasLimit = 300k + 20k * betCount`, capped at 2,000,000.

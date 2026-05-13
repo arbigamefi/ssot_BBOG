@@ -26,6 +26,7 @@
   - `SPORTS_ODDS_SIGNER_SET_HASH`
   - `SPORTS_RESULT_REPORTER_SET_HASH`
   - `SPORTS_RESULT_REPORTER_THRESHOLD`
+  - `SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS`
   - bootstrap odds signer, result reporter, challenger, and arbitrator addresses if used
 - [ ] Run `make sports-phase0-readiness` locally to prove both the v1.3 Casino+Sports artifact path
   and the Phase 0 mock event lifecycle before using real deployment parameters.
@@ -43,7 +44,7 @@
   - [ ] Each bank has settlement authority set: `Bank.settlementRouter == SettlementRouter`
   - [ ] Every pool in `PoolRegistry` has the expected `poolId`, asset, Bank, and domain.
   - [ ] Casino pools are allowlisted for `GameHub`, Sports pools are allowlisted for `SportsHub`, and cross-domain allowlists are absent.
-  - [ ] For Sports pools: `SportsHub`, `SportsRiskEngine`, signer set hash, reporter set hash, reporter threshold, and effective pool caps are present in `deployments/latest-v13.json`.
+  - [ ] For Sports pools: `SportsHub`, `SportsRiskEngine`, signer set hash, reporter set hash, reporter threshold, challenge timeout, and effective pool caps are present in `deployments/latest-v13.json`.
 
 - [ ] Generate and verify the release lock (tamper-evident config):
   - [ ] `make release-digest`

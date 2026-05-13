@@ -100,6 +100,7 @@ export SPORTS_MAX_OUTCOME_RESERVED=...
 export SPORTS_MAX_EVENT_RESERVED=...
 export SPORTS_ODDS_SIGNER_SET_HASH=0x...
 export SPORTS_RESULT_REPORTER_SET_HASH=0x...
+export SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS=604800  # optional; default 7 days, minimum 10 minutes
 
 # Optional per-Sports-pool raw-unit overrides.
 export SPORTS_MAX_STAKE_POOL_0=...
@@ -141,10 +142,10 @@ It writes auditable artifacts:
 
 For v1.3, each `Bank.settlementRouter()` must equal `SettlementRouter`. Casino pools are allowlisted
 for `GameHub`; Sports pools are allowlisted for `SportsHub` after the deployment script has deployed
-and registered the Sports vertical. Sports result-oracle configuration includes both
-`sportsResultReporterSetHash` and `sportsResultReporterThreshold` in the release snapshot, plus
-optional bootstrap `sportsResultChallenger` and `sportsResultArbitrator` addresses for dispute
-operations.
+and registered the Sports vertical. Sports result-oracle configuration includes
+`sportsResultReporterSetHash`, `sportsResultReporterThreshold`, and
+`sportsResultChallengeTimeoutSeconds` in the release snapshot, plus optional bootstrap
+`sportsResultChallenger` and `sportsResultArbitrator` addresses for dispute operations.
 
 ## 3.1) Verify on explorer (optional but recommended)
 Set an Etherscan-family API key (BaseScan/Arbiscan also work with Etherscan API v2 unified keys).

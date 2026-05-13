@@ -55,6 +55,8 @@ interface IERC20MetadataLikeV13 {
 ///   SPORTS_MAX_OUTCOME_RESERVED_POOL_i, SPORTS_MAX_EVENT_RESERVED_POOL_i
 /// Optional Sports bootstrap allowlists:
 ///   SPORTS_ODDS_SIGNER, SPORTS_RESULT_REPORTER, SPORTS_RESULT_CHALLENGER, SPORTS_RESULT_ARBITRATOR
+/// Optional Sports dispute policy:
+///   SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS default 604800; minimum 600
 ///
 /// Example:
 ///   forge script script/DeployV13.s.sol:DeployV13 --rpc-url $RPC_URL --broadcast -vvv
@@ -67,6 +69,8 @@ contract DeployV13 is Script {
     bytes32 internal constant GAME_SIC_BO = keccak256("SIC_BO");
     bytes32 internal constant GAME_SLOTS = keccak256("SLOTS");
     bytes32 internal constant GAME_BACCARAT = keccak256("BACCARAT");
+    uint64 internal constant MIN_RESULT_CHALLENGE_TIMEOUT_SECONDS = 10 minutes;
+    uint64 internal constant DEFAULT_RESULT_CHALLENGE_TIMEOUT_SECONDS = 7 days;
 
     struct RefConfig {
         uint16 baseBudgetBps;
@@ -86,6 +90,7 @@ contract DeployV13 is Script {
         bytes32 oddsSignerSetHash;
         bytes32 resultReporterSetHash;
         uint8 resultReporterThreshold;
+        uint64 resultChallengeTimeoutSeconds;
         address oddsSigner;
         address resultReporter;
         address resultChallenger;
@@ -219,6 +224,9 @@ contract DeployV13 is Script {
             if (cfg.sportsConfig.resultReporterThreshold != 1) {
                 d.sportsHub.setResultReporterThreshold(cfg.sportsConfig.resultReporterThreshold);
             }
+            if (cfg.sportsConfig.resultChallengeTimeoutSeconds != DEFAULT_RESULT_CHALLENGE_TIMEOUT_SECONDS) {
+                d.sportsHub.setResultChallengeTimeoutSeconds(cfg.sportsConfig.resultChallengeTimeoutSeconds);
+            }
             if (cfg.sportsConfig.resultChallenger != address(0)) {
                 d.sportsHub.setResultChallenger(cfg.sportsConfig.resultChallenger, true);
             }
@@ -323,6 +331,14 @@ contract DeployV13 is Script {
             "SPORTS_RESULT_REPORTER_THRESHOLD out of range"
         );
         cfg.resultReporterThreshold = uint8(resultReporterThreshold);
+        uint256 resultChallengeTimeoutSeconds =
+            vm.envOr("SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS", uint256(DEFAULT_RESULT_CHALLENGE_TIMEOUT_SECONDS));
+        require(
+            resultChallengeTimeoutSeconds >= MIN_RESULT_CHALLENGE_TIMEOUT_SECONDS
+                && resultChallengeTimeoutSeconds <= type(uint64).max,
+            "SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS out of range"
+        );
+        cfg.resultChallengeTimeoutSeconds = uint64(resultChallengeTimeoutSeconds);
         cfg.oddsSigner = vm.envOr("SPORTS_ODDS_SIGNER", address(0));
         cfg.resultReporter = vm.envOr("SPORTS_RESULT_REPORTER", address(0));
         cfg.resultChallenger = vm.envOr("SPORTS_RESULT_CHALLENGER", address(0));
@@ -478,6 +494,9 @@ contract DeployV13 is Script {
         json = vm.serializeBytes32(obj, "sportsOddsSignerSetHash", cfg.sportsConfig.oddsSignerSetHash);
         json = vm.serializeBytes32(obj, "sportsResultReporterSetHash", cfg.sportsConfig.resultReporterSetHash);
         json = vm.serializeUint(obj, "sportsResultReporterThreshold", cfg.sportsConfig.resultReporterThreshold);
+        json = vm.serializeUint(
+            obj, "sportsResultChallengeTimeoutSeconds", cfg.sportsConfig.resultChallengeTimeoutSeconds
+        );
         json = vm.serializeAddress(obj, "sportsOddsSigner", cfg.sportsConfig.oddsSigner);
         json = vm.serializeAddress(obj, "sportsResultReporter", cfg.sportsConfig.resultReporter);
         json = vm.serializeAddress(obj, "sportsResultChallenger", cfg.sportsConfig.resultChallenger);
