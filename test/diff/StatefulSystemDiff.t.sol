@@ -120,7 +120,7 @@ contract StatefulSystemDiff is Test {
     // -------------------------
     // Setup
     // -------------------------
-    function setUp() external {
+    function setUp() public virtual {
         assetA = new MockERC20("AssetA", "ASTA", 18);
         assetB = new MockERC20("AssetB", "ASTB", 18);
 
@@ -287,6 +287,80 @@ contract StatefulSystemDiff is Test {
         vrf.fulfillRandomWords(requestId, randomWords);
     }
 
+    function _hubDefaultHouseEdgeBps() internal view virtual returns (uint16) {
+        return hub.defaultHouseEdgeBps();
+    }
+
+    function _hubRefundTimeoutSeconds() internal view virtual returns (uint256) {
+        return hub.refundTimeoutSeconds();
+    }
+
+    function _hubQuoteVRFFee(uint32 betCount) internal view virtual returns (uint256 fee, uint32 callbackGasLimit) {
+        return hub.quoteVRFFee(betCount);
+    }
+
+    function _hubGetBet(uint256 betId) internal view virtual returns (SSOTTypes.Bet memory) {
+        return hub.getBet(betId);
+    }
+
+    function _hubGetBetParams(uint256 betId) internal view virtual returns (bytes memory) {
+        return hub.getBetParams(betId);
+    }
+
+    function _hubGameModule(bytes32 gameId) internal view virtual returns (address) {
+        return hub.gameModule(gameId);
+    }
+
+    function _hubGetReferralConfig(uint32 id)
+        internal
+        view
+        virtual
+        returns (
+            uint16 baseBudgetBps,
+            uint16 deltaBudgetBps,
+            uint16 holdbackBps,
+            uint16[6] memory levelBps,
+            uint8 levels
+        )
+    {
+        return hub.getReferralConfig(id);
+    }
+
+    function _hubSetAffiliateHouseEdge(address affiliate, uint16 he) internal virtual returns (bool) {
+        vm.prank(affiliate);
+        try hub.setAffiliateHouseEdge(he) {
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    function _hubPlaceBet(
+        address player,
+        bytes32 gameId,
+        address asset,
+        bytes memory params,
+        SSOTTypes.StakeSpec memory spec,
+        address affiliate,
+        uint16 maxHE,
+        uint256 msgValue
+    ) internal virtual returns (uint256 betId, bool ok) {
+        vm.prank(player);
+        try hub.placeBet{value: msgValue}(gameId, asset, params, spec, affiliate, maxHE) returns (uint256 id) {
+            return (id, true);
+        } catch {
+            return (0, false);
+        }
+    }
+
+    function _hubRefund(uint256 betId) internal virtual {
+        hub.refund(betId);
+    }
+
+    function _hubFinalize(uint256 betId) internal virtual {
+        hub.finalize(betId);
+    }
+
     function testFuzz_stateful_system_diff(uint256 seed) external {
         _runStateful(seed, 24);
     }
@@ -315,7 +389,7 @@ contract StatefulSystemDiff is Test {
 
             // occasionally set affiliate house edge (exercise skyline)
             if ((state >> 24) % 5 == 0) {
-                uint16 def = hub.defaultHouseEdgeBps();
+                uint16 def = _hubDefaultHouseEdgeBps();
                 // allow up to 10% for this test (still within max)
                 uint16 he = uint16(bound(uint256(state >> 32), uint256(def), 1000));
                 _doSetAffiliateHouseEdge(affiliate, he);
@@ -391,7 +465,7 @@ contract StatefulSystemDiff is Test {
 
             // assert placement snapshot matches reference pricing
             {
-                SSOTTypes.Bet memory b = hub.getBet(betId);
+                SSOTTypes.Bet memory b = _hubGetBet(betId);
                 assertEq(b.player, player);
                 assertEq(b.asset, asset);
                 assertEq(b.bank, address(bank));
@@ -410,20 +484,20 @@ contract StatefulSystemDiff is Test {
             bool doRefund = ((state >> 188) % 5 == 0);
             if (doRefund) {
                 // warp beyond refund timeout
-                uint256 timeout = hub.refundTimeoutSeconds();
+                uint256 timeout = _hubRefundTimeoutSeconds();
                 vm.warp(block.timestamp + timeout + 1);
                 _modelRefund(betId, asset);
                 vm.prank(anyone);
-                hub.refund(betId);
+                _hubRefund(betId);
 
                 // late fulfill should have no effect
-                uint256 requestId = hub.getBet(betId).requestId;
+                uint256 requestId = _hubGetBet(betId).requestId;
                 uint256[] memory rw = new uint256[](1);
                 rw[0] = uint256(keccak256(abi.encode(state, betId, "late")));
                 _fulfill(requestId, rw);
             } else {
                 // fulfill
-                uint256 requestId = hub.getBet(betId).requestId;
+                uint256 requestId = _hubGetBet(betId).requestId;
                 uint256 seedWord = uint256(keccak256(abi.encode(state, betId, "seed")));
                 uint256[] memory rw = new uint256[](1);
                 rw[0] = seedWord;
@@ -432,7 +506,7 @@ contract StatefulSystemDiff is Test {
                 // finalize
                 _modelFinalize(betId, asset, seedWord, pricing);
                 vm.prank(anyone);
-                hub.finalize(betId);
+                _hubFinalize(betId);
             }
 
             // post-check: key bank + per-payee bucket values
@@ -453,7 +527,7 @@ contract StatefulSystemDiff is Test {
 
     function _getAffiliateHE(address affiliate) internal view returns (uint16) {
         uint16 v = mAffiliateHE[affiliate];
-        return v == 0 ? hub.defaultHouseEdgeBps() : v;
+        return v == 0 ? _hubDefaultHouseEdgeBps() : v;
     }
 
     function _canBindFirstTouch(address player, address referrer) internal view returns (bool) {
@@ -480,7 +554,7 @@ contract StatefulSystemDiff is Test {
     {
         // normalize maxHE like Hub
         uint16 maxHE = maxHouseEdgeBps;
-        if (maxHE == 0) maxHE = hub.defaultHouseEdgeBps();
+        if (maxHE == 0) maxHE = _hubDefaultHouseEdgeBps();
         if (maxHE > 10_000) maxHE = 10_000;
 
         address pricingAff = mReferrer[player];
@@ -495,7 +569,7 @@ contract StatefulSystemDiff is Test {
             if (pricingAff == address(0)) pricingAff = affiliate;
         }
 
-        uint16 baseHE = hub.defaultHouseEdgeBps();
+        uint16 baseHE = _hubDefaultHouseEdgeBps();
         uint16 curMax = baseHE;
 
         address[6] memory payeesTmp;
@@ -539,13 +613,10 @@ contract StatefulSystemDiff is Test {
     }
 
     function _doSetAffiliateHouseEdge(address affiliate, uint16 he) internal {
-        uint16 def = hub.defaultHouseEdgeBps();
+        uint16 def = _hubDefaultHouseEdgeBps();
         if (he < def) he = def;
-        vm.prank(affiliate);
-        try hub.setAffiliateHouseEdge(he) {
+        if (_hubSetAffiliateHouseEdge(affiliate, he)) {
             mAffiliateHE[affiliate] = he;
-        } catch {
-            // ignore
         }
     }
 
@@ -564,25 +635,24 @@ contract StatefulSystemDiff is Test {
     ) internal returns (uint256 betId) {
         // Risk-in can legitimately fail (pause, solvency, invalid params, etc.).
         // The diff model must treat such failures as "bet rejected" (no state change).
-        vm.prank(player);
-        (uint256 fee,) = hub.quoteVRFFee(spec.betCount);
+        (uint256 fee,) = _hubQuoteVRFFee(spec.betCount);
         uint256 overpay = _vrfOverpayWei(player, spec.betCount, fee);
         uint256 msgValue = fee + overpay;
-        try hub.placeBet{value: msgValue}(gameId, asset, params, spec, affiliate, maxHE) returns (uint256 id) {
-            betId = id;
-        } catch {
+        bool ok;
+        (betId, ok) = _hubPlaceBet(player, gameId, asset, params, spec, affiliate, maxHE, msgValue);
+        if (!ok) {
             return 0;
         }
 
         // On success, model the risk-in transfers using the *actual* on-chain snapshot.
-        SSOTTypes.Bet memory b = hub.getBet(betId);
+        SSOTTypes.Bet memory b = _hubGetBet(betId);
         playerBal[player][asset] -= b.stake;
         bm[asset].B += b.stake;
         bm[asset].R += b.reserved;
     }
 
     function _modelRefund(uint256 betId, address asset) internal {
-        SSOTTypes.Bet memory b = hub.getBet(betId);
+        SSOTTypes.Bet memory b = _hubGetBet(betId);
         // hold was already modeled at placeBet. Refund returns full stake and releases full reserve.
         bm[asset].R -= b.reserved;
         bm[asset].B -= b.stake;
@@ -592,8 +662,8 @@ contract StatefulSystemDiff is Test {
     }
 
     function _modelFinalize(uint256 betId, address asset, uint256 seedWord, RefPricing memory pricing) internal {
-        SSOTTypes.Bet memory b = hub.getBet(betId);
-        address module = hub.gameModule(b.gameId);
+        SSOTTypes.Bet memory b = _hubGetBet(betId);
+        address module = _hubGameModule(b.gameId);
         SSOTTypes.StakeSpec memory spec = SSOTTypes.StakeSpec({
             amountPerRoll: b.amountPerRoll, betCount: b.betCount, stopGain: b.stopGain, stopLoss: b.stopLoss
         });
@@ -602,7 +672,7 @@ contract StatefulSystemDiff is Test {
         rw[0] = seedWord;
 
         (uint256 payoutGross, uint256 refundAmount) =
-            IGameModule(module).resolve(hub.getBetParams(betId), spec, betId, rw);
+            IGameModule(module).resolve(_hubGetBetParams(betId), spec, betId, rw);
 
         uint256 feeOnPayout = 0;
         uint256 payoutNet = payoutGross;
@@ -618,7 +688,7 @@ contract StatefulSystemDiff is Test {
 
         // referral config
         (uint16 baseBudgetBps, uint16 deltaBudgetBps, uint16 holdbackBps, uint16[6] memory levelBps, uint8 levels) =
-            hub.getReferralConfig(b.referralConfigId);
+            _hubGetReferralConfig(b.referralConfigId);
 
         uint256 minTurnover =
             (asset == address(assetA)) ? bankA.minPlayerTurnoverForUnlock() : bankB.minPlayerTurnoverForUnlock();
@@ -1008,7 +1078,7 @@ contract StatefulSystemDiff is Test {
         bm[asset].xpHoldbackTotal = bank.xpHoldbackTotal();
     }
 
-    function _assertBankMatches(address asset) internal {
+    function _assertBankMatches(address asset) internal view {
         Bank bank = (asset == address(assetA)) ? bankA : bankB;
 
         assertEq(IERC20Like(asset).balanceOf(address(bank)), bm[asset].B, "bank.B");

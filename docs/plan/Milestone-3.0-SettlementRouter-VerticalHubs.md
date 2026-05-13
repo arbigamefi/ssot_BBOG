@@ -59,7 +59,7 @@ As of the current `codex/sportsbook-architecture-research` branch:
   casino bets into Sports/Future pools.
 - PR-3.0.6 has an initial router/pool invariant suite covering same-asset different-Bank pools, per-pool
   reserved liability, ownerHub-only debt-out, and registered vertical hub Bank-bypass rejection; full
-  legacy stateful diff migration to `GameHub` is still pending.
+  legacy accounting-model stateful diff coverage now also runs through the router-backed `GameHub`.
 - PR-3.0.7 has an initial `DeployV13` script, v1.3 verify-helper support, v1.3 release digest
   signing/verification, schemaVersion 2 frontend manifest/golden-vector generation, and v1.3
   release-notes/check/package/ABI export wiring.
@@ -234,6 +234,7 @@ Milestone 3.0 is complete when:
 
 ```bash
 FOUNDRY_PROFILE=pr forge test -vv
+FOUNDRY_PROFILE=pr forge test --match-path test/diff/GameHubStatefulSystemDiff.t.sol -vv
 FOUNDRY_PROFILE=pr forge test --match-path test/diff/StatefulSystemDiff.t.sol -vv
 FOUNDRY_PROFILE=pr forge test --match-path test/diff/StatefulSystemDiffAdapter.t.sol -vv
 FOUNDRY_PROFILE=pr forge test --match-path test/invariants/Invariants.t.sol -vv
