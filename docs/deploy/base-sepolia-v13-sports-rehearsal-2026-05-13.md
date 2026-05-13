@@ -138,6 +138,28 @@ The default canary creates a short-lived Sports market, opens it, approves `0.1 
 Bank, and places one winning-outcome ticket at `1.5x` fixed odds. The current simulation passed with
 an estimated `1,512,954` gas and estimated `0.000016642494 ETH` cost.
 
+Canary place-ticket broadcast:
+
+- Market ID: `1`
+- Ticket ID: `1`
+- Event ID: `1778659542`
+- Outcome ID: `1`
+- Stake: `0.1 USDC`
+- Expected payout/reserved: `0.15 USDC`
+- Odds snapshot hash: `0x2bbda2caaf956de269dc3fb4bb9c3a09419310851c5780f79dd0a416b2690502`
+- Create market tx: `0xfc0ae0c2e5f2cc95d2fdd7a9e649cefe5e28d09f721f0ba6749bad9fe48ad9f5`
+- Open market tx: `0x6bc2c4b5a75edd1830b069d700800a0957a9b7e5a7839e79274ca02e0bb9b9b6`
+- Approve stake tx: `0x20bc8bdf6288b55edefbe21bf7604b3656d76429b9c86404e46054d8aaa980c1`
+- Place ticket tx: `0xfd282385be6323b530d0ade16cc4787ee8a8ac5046d983dc6d79b8deff2b6b26`
+- Post-place state:
+  - `SportsHub.nextMarketId() == 2`
+  - `SportsHub.nextTicketId() == 2`
+  - market state: `Open`
+  - ticket state: `Held`
+  - Sports market/event/pool-event reserved: `0.15 USDC`
+  - Sports Bank assets: `1.1 USDC`
+  - Sports Bank reserved: `0.15 USDC`
+
 - Execute canary Sports tickets with realistic odds snapshots and result quorum flow.
 - Rehearse result challenge, direct void, and batch debt-out playbooks on this deployment.
 - Replace single-operator GOV bootstrap roles with dedicated testnet signer/reporter keys before any
