@@ -41,7 +41,7 @@ interface ISportsHub {
     function openMarket(uint64 marketId) external;
     function suspendMarket(uint64 marketId, bool suspended) external;
     function lockMarket(uint64 marketId) external;
-    function voidMarket(uint64 marketId) external;
+    function voidMarket(uint64 marketId, bytes32 reasonHash) external;
 
     function placeTicket(
         uint64 marketId,
@@ -101,6 +101,7 @@ interface ISportsHub {
     event MarketStateSet(
         uint64 indexed marketId, SSOTTypes.SportsMarketState oldState, SSOTTypes.SportsMarketState newState
     );
+    event MarketVoided(uint64 indexed marketId, uint64 indexed eventId, bytes32 reasonHash, address operator);
     event OddsSignerSetHashSet(bytes32 oldHash, bytes32 newHash);
     event OddsSignerSet(address indexed signer, bool allowed);
     event ResultReporterSetHashSet(bytes32 oldHash, bytes32 newHash);

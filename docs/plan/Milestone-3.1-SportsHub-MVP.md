@@ -230,6 +230,20 @@ Acceptance:
 - A reopened challenge returns the market to `Locked` so reporters must submit a fresh quorum-bound result.
 - A void decision enables refunds and emits public arbitration evidence.
 
+### PR-3.1.10 — Void reason evidence
+
+Deliverables:
+
+- Require direct market voids to include a non-zero `reasonHash`.
+- Emit a dedicated `MarketVoided` event in addition to the state transition.
+- Document direct void incident handling and monitoring.
+
+Acceptance:
+
+- Direct voids without a reason hash revert.
+- Challenged-result voids still use the arbitration decision hash path.
+- Operators can tie every voided market to an incident or rulebook evidence record.
+
 ## Recommended validation commands
 
 ```bash

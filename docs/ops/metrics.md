@@ -252,6 +252,11 @@ Source: `TicketSettled`, `TicketRefunded`, `TicketVoided`
 Labels: `poolId`, `marketId`, terminal type
 Use with `G1` to derive held Sports tickets.
 
+**G2a. sports_markets_voided_total** (counter)
+Source: `MarketVoided`
+Labels: `poolId`, `marketId`, `eventId`
+Use `reasonHash` as event detail or incident metadata, not as a high-cardinality metric label.
+
 **G3. sports_exposure_reserved** (gauge)
 Source: derived from `TicketPlaced` minus terminal ticket events, with spot reads from
 `marketReserved`, `marketOutcomeReserved`, and `poolEventReserved`.

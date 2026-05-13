@@ -117,6 +117,14 @@ cast send $SPORTS_HUB "suspendMarket(uint64,bool)" $MARKET_ID true --rpc-url $RP
 
 Suspension blocks new tickets. It does not block valid later settlement/refund paths.
 
+If the market must be voided before a challenged-result arbitration path exists, publish a non-zero
+reason hash and include the underlying incident/data-room link in the incident record:
+
+```bash
+export VOID_REASON_HASH=0x...
+cast send $SPORTS_HUB "voidMarket(uint64,bytes32)" $MARKET_ID $VOID_REASON_HASH --rpc-url $RPC --private-key $GOV_PK
+```
+
 ### 3) Is this isolated to one market/event or systemic?
 
 Compare:
@@ -230,6 +238,7 @@ If multiple active markets fail with the same signer/hash/risk mismatch, treat a
   fields and the rulebook.
 - Finalize a result below the approved reporter threshold for the market's reporter-set policy.
 - Reopen or void a challenged result without a public `arbitrationDecisionHash`.
+- Void a market directly without a non-zero public reason hash.
 - Use governance to pick arbitrary winning tickets.
 - Block user-triggered `settleTicket`, `refundTicket`, or `voidTicket` once market state permits debt-out.
 

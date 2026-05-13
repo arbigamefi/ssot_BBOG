@@ -240,7 +240,9 @@ contract SportsHub is ISportsHub, Governable, EIP712, ReentrancyGuard {
         _setMarketState(market, SSOTTypes.SportsMarketState.Locked);
     }
 
-    function voidMarket(uint64 marketId) external override onlyGov {
+    function voidMarket(uint64 marketId, bytes32 reasonHash) external override onlyGov {
+        if (reasonHash == bytes32(0)) revert Errors.InvalidConfig();
+
         SSOTTypes.SportsMarket storage market = _requireMutableMarket(marketId);
         if (market.state == SSOTTypes.SportsMarketState.Resolved || market.state == SSOTTypes.SportsMarketState.Voided)
         {
@@ -248,6 +250,7 @@ contract SportsHub is ISportsHub, Governable, EIP712, ReentrancyGuard {
         }
         if (market.state == SSOTTypes.SportsMarketState.Challenged) revert ResultChallengePending(marketId);
         _setMarketState(market, SSOTTypes.SportsMarketState.Voided);
+        emit MarketVoided(marketId, market.eventId, reasonHash, msg.sender);
     }
 
     function placeTicket(

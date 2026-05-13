@@ -26,6 +26,7 @@ contract SportsHubSettlementTest is Test {
     bytes32 internal constant RULEBOOK_HASH = keccak256("SPORTS_RULEBOOK_V1");
     bytes32 internal constant RESULT_SOURCE_HASH = keccak256("NBA_FINAL_SCORE_PROVIDER");
     bytes32 internal constant RESULT_EVIDENCE_HASH = keccak256("LAL_WIN_EVIDENCE");
+    bytes32 internal constant VOID_REASON = keccak256("EVENT_CANCELLED");
 
     uint64 internal constant SPORTS_POOL_ID = 2;
     uint64 internal constant EVENT_ID = 4004;
@@ -146,7 +147,7 @@ contract SportsHubSettlementTest is Test {
         uint256 ticketId = _placeTicket(marketId, WINNING_OUTCOME_ID, 1);
 
         vm.prank(gov);
-        sportsHub.voidMarket(marketId);
+        sportsHub.voidMarket(marketId, VOID_REASON);
 
         sportsHub.voidTicket(ticketId);
 
@@ -178,7 +179,7 @@ contract SportsHubSettlementTest is Test {
         sportsHub.refundTicket(ticketId);
 
         vm.prank(gov);
-        sportsHub.voidMarket(marketId);
+        sportsHub.voidMarket(marketId, VOID_REASON);
 
         sportsHub.refundTicket(ticketId);
 

@@ -31,6 +31,7 @@ contract SportsHubResultTest is Test {
     bytes32 internal constant RESULT_EVIDENCE_HASH = keccak256("LAL_WIN_EVIDENCE");
     bytes32 internal constant CHALLENGE_REASON = keccak256("SCORE_DISPUTE");
     bytes32 internal constant ARBITRATION_DECISION = keccak256("ARBITRATION_DECISION");
+    bytes32 internal constant VOID_REASON = keccak256("EVENT_CANCELLED");
 
     uint64 internal constant SPORTS_POOL_ID = 2;
     uint64 internal constant EVENT_ID = 3003;
@@ -308,7 +309,7 @@ contract SportsHubResultTest is Test {
 
         vm.prank(gov);
         vm.expectRevert(abi.encodeWithSelector(ISportsHub.ResultChallengePending.selector, marketId));
-        sportsHub.voidMarket(marketId);
+        sportsHub.voidMarket(marketId, VOID_REASON);
 
         vm.prank(arbitrator);
         sportsHub.resolveResultChallenge(marketId, SSOTTypes.SportsChallengeDecision.VoidMarket, ARBITRATION_DECISION);
