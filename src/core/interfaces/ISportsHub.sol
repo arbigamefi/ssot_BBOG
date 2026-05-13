@@ -70,6 +70,7 @@ interface ISportsHub {
         uint64 indexed marketId, SSOTTypes.SportsMarketState oldState, SSOTTypes.SportsMarketState newState
     );
     event OddsSignerSetHashSet(bytes32 oldHash, bytes32 newHash);
+    event OddsSignerSet(address indexed signer, bool allowed);
     event ResultReporterSetHashSet(bytes32 oldHash, bytes32 newHash);
     event TicketPlaced(
         uint256 indexed ticketId,

@@ -5,12 +5,18 @@ import {Governable} from "../access/Governable.sol";
 import {Errors} from "../libs/Errors.sol";
 import {IPoolRegistry} from "./interfaces/IPoolRegistry.sol";
 import {ISettlementRouter} from "./interfaces/ISettlementRouter.sol";
+import {ISportsRiskEngine} from "./interfaces/ISportsRiskEngine.sol";
 import {ISportsHub} from "./interfaces/ISportsHub.sol";
 import {SSOTTypes} from "./interfaces/SSOTTypes.sol";
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {MessageHashUtils} from "@openzeppelin/contracts/utils/cryptography/MessageHashUtils.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /// @notice SportsHub = sportsbook market lifecycle SSOT.
 ///         Ticket funding and settlement are deliberately routed through SettlementRouter.
-contract SportsHub is ISportsHub, Governable {
+contract SportsHub is ISportsHub, Governable, ReentrancyGuard {
+    bytes32 internal constant ODDS_TICKET_HASH_DOMAIN = keccak256("ARBI_SPORTS_ODDS_TICKET_V1");
+
     address public immutable override settlementRouter;
     address public immutable override poolRegistry;
 
@@ -24,6 +30,9 @@ contract SportsHub is ISportsHub, Governable {
     mapping(uint64 => SSOTTypes.SportsMarket) internal _markets;
     mapping(uint256 => SSOTTypes.SportsTicket) internal _tickets;
     mapping(uint64 => SSOTTypes.SportsResult) internal _results;
+
+    mapping(address => bool) public oddsSigner;
+    mapping(bytes32 => bool) public oddsSnapshotUsed;
 
     mapping(uint64 => uint256) public override marketReserved;
     mapping(uint64 => uint256) public override eventReserved;
@@ -58,6 +67,12 @@ contract SportsHub is ISportsHub, Governable {
         riskEngine = riskEngine_;
     }
 
+    function setOddsSigner(address signer, bool allowed) external onlyGov {
+        if (signer == address(0)) revert Errors.ZeroAddress();
+        oddsSigner[signer] = allowed;
+        emit OddsSignerSet(signer, allowed);
+    }
+
     function setOddsSignerSetHash(bytes32 newHash) external onlyGov {
         if (newHash == bytes32(0)) revert Errors.InvalidConfig();
         bytes32 oldHash = oddsSignerSetHash;
@@ -85,6 +100,14 @@ contract SportsHub is ISportsHub, Governable {
     function getResult(uint64 marketId) external view override returns (SSOTTypes.SportsResult memory) {
         _requireMarket(marketId);
         return _results[marketId];
+    }
+
+    function hashOddsTicket(SSOTTypes.SportsOddsSnapshot calldata odds, address player, uint256 stake)
+        external
+        view
+        returns (bytes32)
+    {
+        return _hashOddsTicket(odds, player, stake);
     }
 
     function createMarket(
@@ -179,21 +202,85 @@ contract SportsHub is ISportsHub, Governable {
         SSOTTypes.SportsOddsSnapshot calldata odds,
         uint256 stake,
         bytes calldata signature
-    ) external view override returns (uint256) {
-        stake;
-        signature;
-
+    ) external override nonReentrant returns (uint256 ticketId) {
         SSOTTypes.SportsMarket storage market = _requireMarket(marketId);
         _requireTicketAcceptingMarket(market);
+        _sportsPool(market.poolId);
+
+        if (stake == 0) revert Errors.InsufficientBalance();
         if (
             odds.marketId != marketId || odds.outcomeId != outcomeId || odds.marketVersion != market.version
-                || outcomeId >= market.outcomeCount
+                || outcomeId >= market.outcomeCount || odds.oddsWad == 0 || odds.maxStake == 0 || odds.maxPayout == 0
         ) {
             revert BadOddsSnapshot(marketId, outcomeId);
         }
         if (odds.expiresAt <= block.timestamp) revert OddsExpired(marketId, odds.expiresAt, block.timestamp);
+        if (stake > odds.maxStake) revert BadOddsSnapshot(marketId, outcomeId);
 
-        revert Errors.InvalidConfig();
+        bytes32 oddsTicketHash = _hashOddsTicket(odds, msg.sender, stake);
+        if (oddsSnapshotUsed[oddsTicketHash]) revert BadOddsSnapshot(marketId, outcomeId);
+        _requireValidOddsSignature(oddsTicketHash, signature);
+
+        ISportsRiskEngine.RiskDecision memory decision = ISportsRiskEngine(riskEngine)
+            .checkTicket(
+                ISportsRiskEngine.RiskInput({
+                    market: market,
+                    odds: odds,
+                    stake: stake,
+                    marketReserved: marketReserved[marketId],
+                    outcomeReserved: marketOutcomeReserved[marketId][outcomeId],
+                    eventReserved: eventReserved[market.eventId]
+                })
+            );
+        if (
+            decision.payout == 0 || decision.reserved == 0 || decision.reserved < decision.payout
+                || decision.payout > odds.maxPayout || decision.riskHash != odds.riskHash
+        ) {
+            revert BadOddsSnapshot(marketId, outcomeId);
+        }
+
+        uint256 positionId = ISettlementRouter(settlementRouter)
+            .openPosition(market.poolId, msg.sender, stake, decision.reserved, oddsTicketHash);
+
+        ticketId = nextTicketId;
+        nextTicketId = ticketId + 1;
+
+        _tickets[ticketId] = SSOTTypes.SportsTicket({
+            ticketId: ticketId,
+            positionId: positionId,
+            marketId: marketId,
+            eventId: market.eventId,
+            poolId: market.poolId,
+            outcomeId: outcomeId,
+            player: msg.sender,
+            stake: stake,
+            payout: decision.payout,
+            reserved: decision.reserved,
+            oddsSnapshotHash: oddsTicketHash,
+            rulebookHash: market.rulebookHash,
+            acceptedAt: uint64(block.timestamp),
+            state: SSOTTypes.SportsTicketState.Held
+        });
+
+        oddsSnapshotUsed[oddsTicketHash] = true;
+        marketReserved[marketId] += decision.reserved;
+        marketOutcomeReserved[marketId][outcomeId] += decision.reserved;
+        eventReserved[market.eventId] += decision.reserved;
+
+        emit TicketPlaced(
+            ticketId,
+            positionId,
+            marketId,
+            market.eventId,
+            market.poolId,
+            outcomeId,
+            msg.sender,
+            stake,
+            decision.payout,
+            decision.reserved,
+            oddsTicketHash,
+            market.rulebookHash
+        );
     }
 
     function proposeResult(uint64 marketId, uint32 winningOutcomeId, bytes32 resultPayloadHash) external pure override {
@@ -271,5 +358,37 @@ contract SportsHub is ISportsHub, Governable {
         if (market.state != SSOTTypes.SportsMarketState.Open) {
             revert BadMarketState(market.marketId, market.state, SSOTTypes.SportsMarketState.Open);
         }
+    }
+
+    function _hashOddsTicket(SSOTTypes.SportsOddsSnapshot calldata odds, address player, uint256 stake)
+        internal
+        view
+        returns (bytes32)
+    {
+        return keccak256(
+            abi.encode(
+                ODDS_TICKET_HASH_DOMAIN,
+                address(this),
+                block.chainid,
+                oddsSignerSetHash,
+                player,
+                stake,
+                odds.marketId,
+                odds.outcomeId,
+                odds.marketVersion,
+                odds.oddsWad,
+                odds.maxStake,
+                odds.maxPayout,
+                odds.expiresAt,
+                odds.nonce,
+                odds.riskHash
+            )
+        );
+    }
+
+    function _requireValidOddsSignature(bytes32 oddsTicketHash, bytes calldata signature) internal view {
+        bytes32 digest = MessageHashUtils.toEthSignedMessageHash(oddsTicketHash);
+        (address recovered, ECDSA.RecoverError err,) = ECDSA.tryRecoverCalldata(digest, signature);
+        if (err != ECDSA.RecoverError.NoError || !oddsSigner[recovered]) revert BadOddsSignature();
     }
 }
