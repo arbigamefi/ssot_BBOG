@@ -20,6 +20,7 @@ import {CoinTossModule} from "../src/modules/cointoss/CoinTossModule.sol";
 import {DiceModule} from "../src/modules/dice/DiceModule.sol";
 import {RouletteModule} from "../src/modules/roulette/RouletteModule.sol";
 import {KenoModule} from "../src/modules/keno/KenoModule.sol";
+import {SlotsModule} from "../src/modules/slots/SlotsModule.sol";
 
 import {ChainlinkV2PlusWrapperAdapter} from "../src/adapters/chainlink/ChainlinkV2PlusWrapperAdapter.sol";
 
@@ -59,6 +60,7 @@ contract DeployV13 is Script {
     bytes32 internal constant GAME_COIN = keccak256("COIN_TOSS");
     bytes32 internal constant GAME_ROULETTE = keccak256("ROULETTE");
     bytes32 internal constant GAME_KENO = keccak256("KENO");
+    bytes32 internal constant GAME_SLOTS = keccak256("SLOTS");
 
     struct RefConfig {
         uint16 baseBudgetBps;
@@ -131,6 +133,7 @@ contract DeployV13 is Script {
         CoinTossModule coin;
         RouletteModule roulette;
         KenoModule keno;
+        SlotsModule slots;
     }
 
     function run() external {
@@ -250,11 +253,13 @@ contract DeployV13 is Script {
         d.coin = new CoinTossModule();
         d.roulette = new RouletteModule();
         d.keno = new KenoModule();
+        d.slots = new SlotsModule();
 
         d.gameHub.registerGame(GAME_DICE, address(d.dice));
         d.gameHub.registerGame(GAME_COIN, address(d.coin));
         d.gameHub.registerGame(GAME_ROULETTE, address(d.roulette));
         d.gameHub.registerGame(GAME_KENO, address(d.keno));
+        d.gameHub.registerGame(GAME_SLOTS, address(d.slots));
 
         vm.stopBroadcast();
 
@@ -406,6 +411,7 @@ contract DeployV13 is Script {
         json = vm.serializeAddress(obj, "moduleCoinToss", address(d.coin));
         json = vm.serializeAddress(obj, "moduleRoulette", address(d.roulette));
         json = vm.serializeAddress(obj, "moduleKeno", address(d.keno));
+        json = vm.serializeAddress(obj, "moduleSlots", address(d.slots));
 
         json = _writeConfigJson(obj, json, cfg);
         json = _writeCtorJson(obj, json, cfg, d);
@@ -475,6 +481,7 @@ contract DeployV13 is Script {
         json = vm.serializeString(obj, "ctorArgs_moduleCoinToss", "0x");
         json = vm.serializeString(obj, "ctorArgs_moduleRoulette", "0x");
         json = vm.serializeString(obj, "ctorArgs_moduleKeno", "0x");
+        json = vm.serializeString(obj, "ctorArgs_moduleSlots", "0x");
         string memory gameHubCtorArgs = _gameHubCtorArgs(cfg, d);
         json = vm.serializeString(obj, "ctorArgs_gameHub", gameHubCtorArgs);
         json = vm.serializeString(obj, "ctorArgs_sportsRiskEngine", _sportsRiskEngineCtorArgs(cfg));
@@ -665,7 +672,9 @@ contract DeployV13 is Script {
         sh = _appendVerifyLine(
             sh, address(d.roulette), "src/modules/roulette/RouletteModule.sol:RouletteModule", "0x", verifierUrl
         );
-        return _appendVerifyLine(sh, address(d.keno), "src/modules/keno/KenoModule.sol:KenoModule", "0x", verifierUrl);
+        sh = _appendVerifyLine(sh, address(d.keno), "src/modules/keno/KenoModule.sol:KenoModule", "0x", verifierUrl);
+        return
+            _appendVerifyLine(sh, address(d.slots), "src/modules/slots/SlotsModule.sol:SlotsModule", "0x", verifierUrl);
     }
 
     function _gameHubCtorArgs(DeployConfig memory cfg, Deployed memory d) internal pure returns (string memory) {

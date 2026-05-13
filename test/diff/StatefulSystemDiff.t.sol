@@ -15,6 +15,8 @@ import {CoinTossModule} from "../../src/modules/cointoss/CoinTossModule.sol";
 import {RouletteModule} from "../../src/modules/roulette/RouletteModule.sol";
 import {RouletteParams} from "../../src/modules/roulette/RouletteParams.sol";
 import {KenoModule} from "../../src/modules/keno/KenoModule.sol";
+import {SlotsModule} from "../../src/modules/slots/SlotsModule.sol";
+import {SlotsParams} from "../../src/modules/slots/SlotsParams.sol";
 
 import {ReferralRegistry} from "../../src/engines/referral/ReferralRegistry.sol";
 import {DefaultReferralEngine} from "../../src/engines/referral/DefaultReferralEngine.sol";
@@ -57,6 +59,7 @@ contract StatefulSystemDiff is Test {
     CoinTossModule internal coin;
     RouletteModule internal roulette;
     KenoModule internal keno;
+    SlotsModule internal slots;
 
     ReferralRegistry internal refRegistry;
     DefaultReferralEngine internal refEngine;
@@ -77,6 +80,7 @@ contract StatefulSystemDiff is Test {
     bytes32 internal constant GAME_COIN = keccak256("COIN_TOSS");
     bytes32 internal constant GAME_ROULETTE = keccak256("ROULETTE");
     bytes32 internal constant GAME_KENO = keccak256("KENO");
+    bytes32 internal constant GAME_SLOTS = keccak256("SLOTS");
     uint64 internal constant POOL_A = 1;
     uint64 internal constant POOL_B = 2;
 
@@ -193,12 +197,14 @@ contract StatefulSystemDiff is Test {
         coin = new CoinTossModule();
         roulette = new RouletteModule();
         keno = new KenoModule();
+        slots = new SlotsModule();
 
         vm.startPrank(gov);
         hub.registerGame(GAME_DICE, address(dice));
         hub.registerGame(GAME_COIN, address(coin));
         hub.registerGame(GAME_ROULETTE, address(roulette));
         hub.registerGame(GAME_KENO, address(keno));
+        hub.registerGame(GAME_SLOTS, address(slots));
         vm.stopPrank();
 
         // Players
@@ -414,7 +420,7 @@ contract StatefulSystemDiff is Test {
             bytes32 gameId;
             bytes memory params;
 
-            uint256 g = (state >> 40) % 4;
+            uint256 g = (state >> 40) % 5;
             if (g == 0) {
                 gameId = GAME_DICE;
                 uint8 cap = uint8(bound(uint256(state >> 48), 1, 99));
@@ -429,12 +435,15 @@ contract StatefulSystemDiff is Test {
                 uint8 picks = uint8(bound(uint256(state >> 56), 1, 6));
                 uint40 mask = _randomBitmask40(state >> 64, 37, picks);
                 params = RouletteParams.encode(RouletteParams.Kind.Bitmask, mask);
-            } else {
+            } else if (g == 3) {
                 gameId = GAME_KENO;
                 // keno numbers: 1..10 picks from 40
                 uint8 picks = uint8(bound(uint256(state >> 56), 1, 10));
                 uint40 mask = _randomBitmask40(state >> 64, 40, picks);
                 params = abi.encode(mask);
+            } else {
+                gameId = GAME_SLOTS;
+                params = SlotsParams.encode(SlotsParams.PROFILE_CLASSIC);
             }
 
             uint256 amountPerRoll = bound(uint256(state >> 96), 0.1 ether, 5 ether);

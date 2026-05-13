@@ -167,6 +167,9 @@ contract GenerateReleaseNotesV13 is Script {
             "`\n",
             "- Keno: `",
             vm.toString(snap.readAddress(".moduleKeno")),
+            "`\n",
+            "- Slots: `",
+            vm.toString(snap.readAddress(".moduleSlots")),
             "`\n\n"
         );
     }

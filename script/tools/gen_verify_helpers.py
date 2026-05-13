@@ -122,6 +122,7 @@ def main() -> int:
             ("moduleCoinToss", "src/modules/cointoss/CoinTossModule.sol:CoinTossModule", "ctorArgs_moduleCoinToss"),
             ("moduleRoulette", "src/modules/roulette/RouletteModule.sol:RouletteModule", "ctorArgs_moduleRoulette"),
             ("moduleKeno", "src/modules/keno/KenoModule.sol:KenoModule", "ctorArgs_moduleKeno"),
+            ("moduleSlots", "src/modules/slots/SlotsModule.sol:SlotsModule", "ctorArgs_moduleSlots"),
         ]
     )
 

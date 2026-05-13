@@ -20,6 +20,8 @@ import {KenoModule} from "../../src/modules/keno/KenoModule.sol";
 import {KenoParams} from "../../src/modules/keno/KenoParams.sol";
 import {RouletteModule} from "../../src/modules/roulette/RouletteModule.sol";
 import {RouletteParams} from "../../src/modules/roulette/RouletteParams.sol";
+import {SlotsModule} from "../../src/modules/slots/SlotsModule.sol";
+import {SlotsParams} from "../../src/modules/slots/SlotsParams.sol";
 
 contract GameHubE2E is Test {
     uint64 internal constant POOL_A = 1;
@@ -29,6 +31,7 @@ contract GameHubE2E is Test {
     bytes32 internal constant GAME_COIN = keccak256("COIN_TOSS");
     bytes32 internal constant GAME_ROULETTE = keccak256("ROULETTE");
     bytes32 internal constant GAME_KENO = keccak256("KENO");
+    bytes32 internal constant GAME_SLOTS = keccak256("SLOTS");
     bytes internal constant RNG_DOMAIN = "SSOT_RNG_V1";
 
     address internal gov = address(0xA11CE);
@@ -95,6 +98,7 @@ contract GameHubE2E is Test {
         gameHub.registerGame(GAME_COIN, address(new CoinTossModule()));
         gameHub.registerGame(GAME_ROULETTE, address(new RouletteModule()));
         gameHub.registerGame(GAME_KENO, address(new KenoModule()));
+        gameHub.registerGame(GAME_SLOTS, address(new SlotsModule()));
         vm.stopPrank();
 
         assetA.mint(alice, 1_000 ether);
@@ -198,6 +202,25 @@ contract GameHubE2E is Test {
         uint256 balAfter = assetA.balanceOf(alice);
 
         assertEq(balAfter - balBefore, (196 ether) / 10);
+    }
+
+    function test_slotsJackpotSettlesThroughRouter() external {
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
+
+        uint256 positionId =
+            _place(alice, GAME_SLOTS, POOL_A, SlotsParams.encode(SlotsParams.PROFILE_CLASSIC), spec, address(0));
+        assertEq(gameHub.getBet(positionId).reserved, 640 ether);
+
+        _fulfill(positionId, _findSeedSlotsJackpot(positionId));
+
+        uint256 balBefore = assetA.balanceOf(alice);
+        gameHub.finalize(positionId);
+        uint256 balAfter = assetA.balanceOf(alice);
+
+        uint256 expectedGross = 640 ether;
+        uint256 fee = Math.mulDiv(expectedGross, gameHub.defaultHouseEdgeBps(), 10_000);
+        assertEq(balAfter - balBefore, expectedGross - fee);
     }
 
     function test_referralSkylineAccruesXpOnlyInSettledPool() external {
@@ -304,6 +327,21 @@ contract GameHubE2E is Test {
             if (hit == wantHit) return seed;
         }
         revert("no seed");
+    }
+
+    function _findSeedSlotsJackpot(uint256 betId) internal pure returns (uint256) {
+        for (uint256 seed = 0; seed < 16384; seed++) {
+            if (
+                _slotSymbol(betId, 0, seed) == 7 && _slotSymbol(betId, 1, seed) == 7 && _slotSymbol(betId, 2, seed) == 7
+            ) {
+                return seed;
+            }
+        }
+        revert("no seed");
+    }
+
+    function _slotSymbol(uint256 betId, uint256 reelIndex, uint256 seed) internal pure returns (uint8) {
+        return uint8(_rng2(betId, 0, reelIndex, seed) % 8);
     }
 
     function _kenoDraw0(uint256 betId, uint256 seed) internal pure returns (uint40 rolled) {

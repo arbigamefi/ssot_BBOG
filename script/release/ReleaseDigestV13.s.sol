@@ -117,7 +117,8 @@ contract ReleaseDigestV13 is Script {
                 snap.readAddress(".moduleDice"),
                 snap.readAddress(".moduleCoinToss"),
                 snap.readAddress(".moduleRoulette"),
-                snap.readAddress(".moduleKeno")
+                snap.readAddress(".moduleKeno"),
+                snap.readAddress(".moduleSlots")
             )
         );
 

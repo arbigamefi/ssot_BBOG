@@ -12,6 +12,7 @@ import {SSOTTypes} from "src/core/interfaces/SSOTTypes.sol";
 
 import {KenoParams} from "src/modules/keno/KenoParams.sol";
 import {RouletteParams} from "src/modules/roulette/RouletteParams.sol";
+import {SlotsParams} from "src/modules/slots/SlotsParams.sol";
 
 contract GenerateGoldenVectorsV13 is Script {
     using stdJson for string;
@@ -25,6 +26,7 @@ contract GenerateGoldenVectorsV13 is Script {
     bytes32 internal constant GAME_COIN_TOSS = keccak256("COIN_TOSS");
     bytes32 internal constant GAME_ROULETTE = keccak256("ROULETTE");
     bytes32 internal constant GAME_KENO = keccak256("KENO");
+    bytes32 internal constant GAME_SLOTS = keccak256("SLOTS");
 
     uint256 internal constant DOMAIN_CASINO = 1;
 
@@ -51,6 +53,7 @@ contract GenerateGoldenVectorsV13 is Script {
         bytes memory paramsCoinToss = abi.encode(true);
         bytes memory paramsRoulette = RouletteParams.encode(RouletteParams.Kind.Bitmask, uint40(1));
         bytes memory paramsKeno = KenoParams.encode(uint40(0x0000000001));
+        bytes memory paramsSlots = SlotsParams.encode(SlotsParams.PROFILE_CLASSIC);
 
         string memory vectors = "[";
         vectors = string.concat(
@@ -92,6 +95,13 @@ contract GenerateGoldenVectorsV13 is Script {
             ",",
             _vectorJson(
                 gameHub, GAME_KENO, poolId, paramsKeno, stake, affiliate, maxHouseEdgeBps, "keno.placeBet(poolId)"
+            )
+        );
+        vectors = string.concat(
+            vectors,
+            ",",
+            _vectorJson(
+                gameHub, GAME_SLOTS, poolId, paramsSlots, stake, affiliate, maxHouseEdgeBps, "slots.placeBet(poolId)"
             )
         );
         vectors = string.concat(vectors, "]");
