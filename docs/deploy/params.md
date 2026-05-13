@@ -54,6 +54,10 @@ When any `POOL_DOMAIN_i=2` pool exists, the following Sports deployment paramete
   If set above `1`, allowlist enough reporters through governance before result proposals are expected.
 - `SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS`: optional timeout after a challenged result can be governance-voided;
   defaults to `604800` (7 days) and must be at least `600` (10 minutes).
+- `SPORTS_DERIVE_ROLE_SET_HASHES`: optional boolean. When `true`, the deploy script replaces the constructor
+  bootstrap hashes with deterministic hashes derived from the deployed `SportsHub`, chain id, and bootstrap
+  odds signer/result reporter. This is useful when the role-set hash policy intentionally binds the active
+  signer set to a specific deployed hub address.
 - `SPORTS_RESULT_CHALLENGER`: optional bootstrap address allowed to challenge a proposed result.
 - `SPORTS_RESULT_ARBITRATOR`: optional bootstrap address allowed to resolve challenged results with an
   on-chain arbitration decision hash.

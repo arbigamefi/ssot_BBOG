@@ -178,6 +178,11 @@ if [[ "$SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS" =~ ^[0-9]+$ ]]; then
   fi
 fi
 
+case "${SPORTS_DERIVE_ROLE_SET_HASHES:-false}" in
+  true|false) ;;
+  *) fail "SPORTS_DERIVE_ROLE_SET_HASHES must be true or false when set" ;;
+esac
+
 need_address SPORTS_ODDS_SIGNER
 need_address SPORTS_RESULT_REPORTER
 need_address SPORTS_RESULT_CHALLENGER
@@ -195,3 +200,4 @@ echo "  vrfWrapper: $VRF_WRAPPER"
 echo "  pools: $POOL_COUNT"
 echo "  sportsResultReporterThreshold: $SPORTS_RESULT_REPORTER_THRESHOLD"
 echo "  sportsResultChallengeTimeoutSeconds: $SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS"
+echo "  sportsDeriveRoleSetHashes: ${SPORTS_DERIVE_ROLE_SET_HASHES:-false}"

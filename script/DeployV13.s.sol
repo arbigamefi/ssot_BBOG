@@ -57,6 +57,8 @@ interface IERC20MetadataLikeV13 {
 ///   SPORTS_ODDS_SIGNER, SPORTS_RESULT_REPORTER, SPORTS_RESULT_CHALLENGER, SPORTS_RESULT_ARBITRATOR
 /// Optional Sports dispute policy:
 ///   SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS default 604800; minimum 600
+/// Optional Sports role-set hash policy:
+///   SPORTS_DERIVE_ROLE_SET_HASHES=true derives final hashes from deployed SportsHub + bootstrap roles
 ///
 /// Example:
 ///   forge script script/DeployV13.s.sol:DeployV13 --rpc-url $RPC_URL --broadcast -vvv
@@ -91,6 +93,7 @@ contract DeployV13 is Script {
         bytes32 resultReporterSetHash;
         uint8 resultReporterThreshold;
         uint64 resultChallengeTimeoutSeconds;
+        bool deriveRoleSetHashes;
         address oddsSigner;
         address resultReporter;
         address resultChallenger;
@@ -215,17 +218,30 @@ contract DeployV13 is Script {
                 cfg.sportsConfig.resultReporterSetHash
             );
             d.poolRegistry.setHubRegistered(address(d.sportsHub), true);
-            if (cfg.sportsConfig.oddsSigner != address(0)) {
-                d.sportsHub.setOddsSigner(cfg.sportsConfig.oddsSigner, true);
-            }
-            if (cfg.sportsConfig.resultReporter != address(0)) {
-                d.sportsHub.setResultReporter(cfg.sportsConfig.resultReporter, true);
-            }
             if (cfg.sportsConfig.resultReporterThreshold != 1) {
                 d.sportsHub.setResultReporterThreshold(cfg.sportsConfig.resultReporterThreshold);
             }
             if (cfg.sportsConfig.resultChallengeTimeoutSeconds != DEFAULT_RESULT_CHALLENGE_TIMEOUT_SECONDS) {
                 d.sportsHub.setResultChallengeTimeoutSeconds(cfg.sportsConfig.resultChallengeTimeoutSeconds);
+            }
+            if (cfg.sportsConfig.deriveRoleSetHashes) {
+                require(
+                    cfg.sportsConfig.oddsSigner != address(0) && cfg.sportsConfig.resultReporter != address(0),
+                    "derived sports hashes require signer/reporter"
+                );
+                cfg.sportsConfig.oddsSignerSetHash =
+                    _derivedOddsSignerSetHash(address(d.sportsHub), cfg.sportsConfig.oddsSigner);
+                cfg.sportsConfig.resultReporterSetHash = _derivedResultReporterSetHash(
+                    address(d.sportsHub), cfg.sportsConfig.resultReporter, cfg.sportsConfig.resultReporterThreshold
+                );
+                d.sportsHub.setOddsSignerSetHash(cfg.sportsConfig.oddsSignerSetHash);
+                d.sportsHub.setResultReporterSetHash(cfg.sportsConfig.resultReporterSetHash);
+            }
+            if (cfg.sportsConfig.oddsSigner != address(0)) {
+                d.sportsHub.setOddsSigner(cfg.sportsConfig.oddsSigner, true);
+            }
+            if (cfg.sportsConfig.resultReporter != address(0)) {
+                d.sportsHub.setResultReporter(cfg.sportsConfig.resultReporter, true);
             }
             if (cfg.sportsConfig.resultChallenger != address(0)) {
                 d.sportsHub.setResultChallenger(cfg.sportsConfig.resultChallenger, true);
@@ -339,6 +355,7 @@ contract DeployV13 is Script {
             "SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS out of range"
         );
         cfg.resultChallengeTimeoutSeconds = uint64(resultChallengeTimeoutSeconds);
+        cfg.deriveRoleSetHashes = vm.envOr("SPORTS_DERIVE_ROLE_SET_HASHES", false);
         cfg.oddsSigner = vm.envOr("SPORTS_ODDS_SIGNER", address(0));
         cfg.resultReporter = vm.envOr("SPORTS_RESULT_REPORTER", address(0));
         cfg.resultChallenger = vm.envOr("SPORTS_RESULT_CHALLENGER", address(0));
@@ -764,6 +781,23 @@ contract DeployV13 is Script {
                 cfg.gov,
                 cfg.sportsConfig.oddsSignerSetHash,
                 cfg.sportsConfig.resultReporterSetHash
+            )
+        );
+    }
+
+    function _derivedOddsSignerSetHash(address sportsHub, address oddsSigner) internal view returns (bytes32) {
+        return
+            keccak256(abi.encodePacked("BASE_SEPOLIA_SPORTS_ODDS_SIGNER_SET_V1", block.chainid, sportsHub, oddsSigner));
+    }
+
+    function _derivedResultReporterSetHash(address sportsHub, address reporter, uint8 threshold)
+        internal
+        view
+        returns (bytes32)
+    {
+        return keccak256(
+            abi.encodePacked(
+                "BASE_SEPOLIA_SPORTS_RESULT_REPORTER_SET_V1", block.chainid, sportsHub, reporter, threshold
             )
         );
     }
