@@ -150,8 +150,8 @@ No-go conditions:
 - Deploy to a local or ephemeral test chain.
 - Generate v1.3 release artifacts.
 - Run `make release-check-v13`.
-- Or run the deterministic local artifact dry run: `make sports-dry-run-v13`.
-- Run a complete mock event lifecycle: `make sports-lifecycle-dry-run`.
+- Run the combined deterministic local gate: `make sports-phase0-readiness`.
+  This wraps the v1.3 Casino+Sports artifact dry run and the complete mock event lifecycle.
 
 ### Phase 1 — Testnet rehearsal
 
@@ -254,3 +254,18 @@ The smoke path covers:
 
 This is still a local mock lifecycle. It does not prove provider data quality, real operator timing,
 chain inclusion, frontend signer integration, or jurisdiction controls.
+
+## Combined Phase 0 Gate
+
+The combined local Phase 0 readiness gate is:
+
+```bash
+make sports-phase0-readiness
+```
+
+It runs:
+
+- `make sports-dry-run-v13`;
+- `make sports-lifecycle-dry-run`.
+
+Passing this gate is required before moving from local readiness work to public testnet rehearsal.

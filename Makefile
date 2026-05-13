@@ -5,7 +5,7 @@ DEPLOY_PROFILE ?= default
 VERIFY_PROFILE ?= default
 FRONTEND_DIR ?= frontend
 
-.PHONY: deps check-deps check test pr nightly fork deploy verify verify-helpers sports-dry-run-v13 sports-lifecycle-dry-run release release-v13 release-digest release-digest-v13 release-verify release-verify-v13 release-check release-check-v13 release-notes release-notes-v13 release-package release-package-v13 audit-package lint release-frontend-manifest release-frontend-manifest-v13 release-golden-vectors release-golden-vectors-v13 release-abis release-abis-v13 frontend-install frontend-dev frontend-build frontend-lint frontend-typecheck frontend-test frontend-test-strict frontend-storybook frontend-storybook-build frontend-release-check frontend-check
+.PHONY: deps check-deps check test pr nightly fork deploy verify verify-helpers sports-dry-run-v13 sports-lifecycle-dry-run sports-phase0-readiness release release-v13 release-digest release-digest-v13 release-verify release-verify-v13 release-check release-check-v13 release-notes release-notes-v13 release-package release-package-v13 audit-package lint release-frontend-manifest release-frontend-manifest-v13 release-golden-vectors release-golden-vectors-v13 release-abis release-abis-v13 frontend-install frontend-dev frontend-build frontend-lint frontend-typecheck frontend-test frontend-test-strict frontend-storybook frontend-storybook-build frontend-release-check frontend-check
 
 deps:
 	bash script/ci/install_deps.sh
@@ -114,6 +114,10 @@ sports-dry-run-v13:
 sports-lifecycle-dry-run:
 	@$(MAKE) check-deps
 	FOUNDRY_PROFILE=pr forge test --match-path test/unit/SportsHubLifecycle.t.sol -vv
+
+sports-phase0-readiness:
+	@$(MAKE) sports-dry-run-v13
+	@$(MAKE) sports-lifecycle-dry-run
 
 # --- Release artifacts (digest + signature) ---
 # 1) After a successful deploy that produced deployments/latest.json:
