@@ -5,8 +5,8 @@
 Base Sepolia v1.3 Casino+Sports deployment rehearsal completed successfully.
 
 This is a public testnet deployment only. It is not a mainnet launch approval and does not prove
-funded bankroll operations, real provider data quality, explorer verification, user-facing signer
-integration, canary ticket execution, or jurisdiction controls.
+funded bankroll operations, real provider data quality, user-facing signer integration, canary ticket
+execution, or jurisdiction controls.
 
 ## Inputs
 
@@ -48,6 +48,24 @@ Key addresses:
 - Casino pool Bank: `0xa383E1C133021c1948a644a758B3E7D5F971262E`
 - Sports pool Bank: `0x360270Aa8E8fdD044Af72E5CF48c2CB11093a0C6`
 
+Explorer verification:
+
+- `adapter`: https://sepolia.basescan.org/address/0x1d324a8dd2db78907ea815a46737aca32e9ff6d7
+- `vrfHub`: https://sepolia.basescan.org/address/0x5db5f917185b66698d85c935003b6357f59dea35
+- `poolRegistry`: https://sepolia.basescan.org/address/0x0808a8862c7f3e55d4f009f4912f367012cfb4fe
+- `settlementRouter`: https://sepolia.basescan.org/address/0x5f0930f2c0b0c20a009d0a0c2e4452b07506ce17
+- `refRegistry`: https://sepolia.basescan.org/address/0xf5a4ea665aef217790d2c63e41e2b541a1806da8
+- `refEngine`: https://sepolia.basescan.org/address/0xb72fe105061c714577c211ca5064203aecf56d0f
+- `gameHub`: https://sepolia.basescan.org/address/0xeb387ab52ba3e242f76ede5c747f8210c9db31aa
+- `sportsRiskEngine`: https://sepolia.basescan.org/address/0xbd066fe5e72be2a230f2add60a2dd7935a680ffd
+- `sportsHub`: https://sepolia.basescan.org/address/0x5f8d28d8d27376fa223fe425048680fde78bd275
+- Casino pool Bank: https://sepolia.basescan.org/address/0xa383e1c133021c1948a644a758b3e7d5f971262e
+- Sports pool Bank: https://sepolia.basescan.org/address/0x360270aa8e8fdd044af72e5cf48c2cb11093a0c6
+- Dice module: https://sepolia.basescan.org/address/0x2b09d94a88bb41f28bf85a1347156880422bf3aa
+- CoinToss module: https://sepolia.basescan.org/address/0xfe76e4728d7749c42337118734f1da2db7a4f425
+- Roulette module: https://sepolia.basescan.org/address/0xddd377b53d06c7fcec7cfc53c30145ef48148b4a
+- Keno module: https://sepolia.basescan.org/address/0xbe030518bffebecb6700c3cbb66bb0cfcaea3705
+
 ## Commands
 
 ```bash
@@ -55,6 +73,7 @@ ENV_FILE=.env.v13-sports.local make sports-testnet-preflight-v13
 forge script script/DeployV13.s.sol:DeployV13 --rpc-url "$RPC_URL" --broadcast -vvv
 SNAPSHOT_PATH=deployments/latest-v13.json make release-v13
 STRICT=1 make release-check-v13
+bash deployments/verify-latest-v13.sh
 ```
 
 ## Post-Deploy Checks
@@ -71,11 +90,24 @@ The following checks passed against Base Sepolia:
 - `SportsHub.riskEngine()` points to `SportsRiskEngine`;
 - `SportsRiskEngine.hasPoolLimits(2) == true`;
 - GOV is allowlisted as the testnet odds signer and result reporter;
-- strict v1.3 release check passed for chain `84532`, block `41444125`.
+- strict v1.3 release check passed for chain `84532`, block `41444125`;
+- all deployment contracts and modules passed Basescan source verification.
+
+## Funding Preflight
+
+As of the first post-verification funding preflight:
+
+- GOV USDC balance: `3.066502 USDC`
+- Casino Bank USDC assets: `0`
+- Sports Bank USDC assets: `0`
+- GOV allowance to Casino Bank: `0`
+- GOV allowance to Sports Bank: `0`
+
+Recommended first canary funding is `1 USDC` into each Bank, leaving about `1.066502 USDC` for
+small ticket placement tests.
 
 ## Remaining Phase 1 Work
 
-- Run explorer verification for deployed contracts.
 - Fund the two Banks with controlled testnet liquidity.
 - Execute canary Sports tickets with realistic odds snapshots and result quorum flow.
 - Rehearse result challenge, direct void, and batch debt-out playbooks on this deployment.

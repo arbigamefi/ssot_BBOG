@@ -282,6 +282,6 @@ Passing this gate is required before moving from local readiness work to public 
 
 - `docs/deploy/base-sepolia-v13-sports-rehearsal-2026-05-13.md`
 
-This proves public testnet deployment, release artifact generation, strict release checking, and
-basic on-chain topology checks. Explorer verification, funded canary tickets, result challenge,
+This proves public testnet deployment, explorer verification, release artifact generation, strict
+release checking, and basic on-chain topology checks. Funded canary tickets, result challenge,
 direct void, and batch debt-out rehearsals remain Phase 1 work.
