@@ -124,6 +124,20 @@ Post-funding state:
 
 ## Remaining Phase 1 Work
 
+Canary helper:
+
+```bash
+# simulation only
+ENV_FILE=.env.v13-sports.local make sports-canary-v13
+
+# broadcast the place-ticket canary
+BROADCAST=1 ENV_FILE=.env.v13-sports.local make sports-canary-v13
+```
+
+The default canary creates a short-lived Sports market, opens it, approves `0.1 USDC` to the Sports
+Bank, and places one winning-outcome ticket at `1.5x` fixed odds. The current simulation passed with
+an estimated `1,512,954` gas and estimated `0.000016642494 ETH` cost.
+
 - Execute canary Sports tickets with realistic odds snapshots and result quorum flow.
 - Rehearse result challenge, direct void, and batch debt-out playbooks on this deployment.
 - Replace single-operator GOV bootstrap roles with dedicated testnet signer/reporter keys before any
