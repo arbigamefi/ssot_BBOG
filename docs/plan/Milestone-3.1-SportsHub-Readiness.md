@@ -150,6 +150,7 @@ No-go conditions:
 - Deploy to a local or ephemeral test chain.
 - Generate v1.3 release artifacts.
 - Run `make release-check-v13`.
+- Or run the deterministic local artifact dry run: `make sports-dry-run-v13`.
 - Run a complete mock event: create/open/lock market, place tickets, propose result, finalize, settle
   winners and losers, void/refund a separate market.
 
@@ -199,8 +200,8 @@ Before promoting a deployment to public launch, collect:
 
 ## Local Dry-Run Evidence
 
-2026-05-13 local dry run from commit `47bdedc46` used a temporary detached worktree and a deterministic
-two-pool v1.3 configuration:
+2026-05-13 local dry run on the Sports readiness branch used a temporary detached worktree and a
+deterministic two-pool v1.3 configuration:
 
 - pool `1`: Casino, dummy asset `0x0000000000000000000000000000000000000101`;
 - pool `2`: Sports, same dummy asset but independent Bank;
@@ -214,14 +215,7 @@ two-pool v1.3 configuration:
 Commands that passed:
 
 ```bash
-forge script script/DeployV13.s.sol:DeployV13 -vvv
-SNAPSHOT_PATH=deployments/latest-v13.json make release-digest-v13
-SNAPSHOT_PATH=deployments/latest-v13.json make release-notes-v13
-SNAPSHOT_PATH=deployments/latest-v13.json make release-frontend-manifest-v13
-SNAPSHOT_PATH=deployments/latest-v13.json make release-golden-vectors-v13
-make release-abis-v13
-SNAPSHOT_PATH=deployments/latest-v13.json make release-verify-v13
-STRICT=1 make release-check-v13
+make sports-dry-run-v13
 ```
 
 Observed generated evidence:

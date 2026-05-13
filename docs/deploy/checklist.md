@@ -24,6 +24,7 @@
   - `SPORTS_RESULT_REPORTER_SET_HASH`
   - `SPORTS_RESULT_REPORTER_THRESHOLD`
   - bootstrap odds signer, result reporter, challenger, and arbitrator addresses if used
+- [ ] Run `make sports-dry-run-v13` locally to prove the v1.3 Casino+Sports artifact path before using real deployment parameters.
 
 ## Deploy
 - [ ] Run `bash script/ci/install_deps.sh`
