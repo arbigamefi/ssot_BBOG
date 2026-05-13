@@ -15,7 +15,6 @@ import "forge-std/console2.sol";
 /// Outputs:
 /// - deployments/release-latest-v13.json
 /// - deployments/release/release-<chain>-<block>-v13.json
-/// - deployments/release-<chain>-<block>-v13.json
 contract ReleaseDigestV13 is Script {
     using stdJson for string;
 
@@ -62,17 +61,14 @@ contract ReleaseDigestV13 is Script {
         json = vm.serializeBytes32(obj, "s", s);
 
         string memory tag = string.concat(vm.toString(chainId), "-", vm.toString(blockNumber), "-v13");
-        string memory outPathLegacy = string.concat("deployments/release-", tag, ".json");
         string memory outPath = string.concat("deployments/release/release-", tag, ".json");
 
-        vm.writeJson(json, outPathLegacy);
         vm.writeJson(json, outPath);
         vm.writeJson(json, "deployments/release-latest-v13.json");
 
         console2.log("snapshot:", snapshotPath);
         console2.log("digest:", vm.toString(digest));
         console2.log("signer:", signer);
-        console2.log("wrote (legacy):", outPathLegacy);
         console2.log("wrote:", outPath);
         console2.log("wrote:", "deployments/release-latest-v13.json");
     }
@@ -121,7 +117,11 @@ contract ReleaseDigestV13 is Script {
                 snap.readAddress(".moduleDice"),
                 snap.readAddress(".moduleCoinToss"),
                 snap.readAddress(".moduleRoulette"),
-                snap.readAddress(".moduleKeno")
+                snap.readAddress(".moduleKeno"),
+                snap.readAddress(".modulePlinko"),
+                snap.readAddress(".moduleSicBo"),
+                snap.readAddress(".moduleSlots"),
+                snap.readAddress(".moduleBaccarat")
             )
         );
 

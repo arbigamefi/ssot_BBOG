@@ -1,5 +1,10 @@
 # ArbiGameFi 技术白皮书
 
+> **版本提示 (2026-05-13)**: 本白皮书是 v1.3 SettlementRouter / vertical hubs 改造前的技术草稿。
+> 文中 `Hub` / `src/core/Hub.sol` 口径属于历史架构。当前合约架构为
+> `Bank -> SettlementRouter -> GameHub / SportsHub`；当前规范见
+> `docs/constitution/SSOT.v1.3.md` 与 `docs/architecture/overview.md`。
+
 > 项目：`ArbiGameFi`
 >
 > 底层架构：`SSOT`

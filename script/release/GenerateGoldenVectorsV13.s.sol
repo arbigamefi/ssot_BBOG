@@ -10,8 +10,12 @@ import "./JsonReader.sol";
 import {IGameHub} from "src/core/interfaces/IGameHub.sol";
 import {SSOTTypes} from "src/core/interfaces/SSOTTypes.sol";
 
+import {BaccaratParams} from "src/modules/baccarat/BaccaratParams.sol";
 import {KenoParams} from "src/modules/keno/KenoParams.sol";
+import {PlinkoParams} from "src/modules/plinko/PlinkoParams.sol";
 import {RouletteParams} from "src/modules/roulette/RouletteParams.sol";
+import {SicBoParams} from "src/modules/sicbo/SicBoParams.sol";
+import {SlotsParams} from "src/modules/slots/SlotsParams.sol";
 
 contract GenerateGoldenVectorsV13 is Script {
     using stdJson for string;
@@ -25,6 +29,10 @@ contract GenerateGoldenVectorsV13 is Script {
     bytes32 internal constant GAME_COIN_TOSS = keccak256("COIN_TOSS");
     bytes32 internal constant GAME_ROULETTE = keccak256("ROULETTE");
     bytes32 internal constant GAME_KENO = keccak256("KENO");
+    bytes32 internal constant GAME_PLINKO = keccak256("PLINKO");
+    bytes32 internal constant GAME_SIC_BO = keccak256("SIC_BO");
+    bytes32 internal constant GAME_SLOTS = keccak256("SLOTS");
+    bytes32 internal constant GAME_BACCARAT = keccak256("BACCARAT");
 
     uint256 internal constant DOMAIN_CASINO = 1;
 
@@ -51,6 +59,10 @@ contract GenerateGoldenVectorsV13 is Script {
         bytes memory paramsCoinToss = abi.encode(true);
         bytes memory paramsRoulette = RouletteParams.encode(RouletteParams.Kind.Bitmask, uint40(1));
         bytes memory paramsKeno = KenoParams.encode(uint40(0x0000000001));
+        bytes memory paramsPlinko = PlinkoParams.encode(PlinkoParams.RISK_MEDIUM);
+        bytes memory paramsSicBo = SicBoParams.encode(SicBoParams.KIND_BIG, 0);
+        bytes memory paramsSlots = SlotsParams.encode(SlotsParams.PROFILE_CLASSIC);
+        bytes memory paramsBaccarat = BaccaratParams.encode(BaccaratParams.SIDE_PLAYER);
 
         string memory vectors = "[";
         vectors = string.concat(
@@ -92,6 +104,41 @@ contract GenerateGoldenVectorsV13 is Script {
             ",",
             _vectorJson(
                 gameHub, GAME_KENO, poolId, paramsKeno, stake, affiliate, maxHouseEdgeBps, "keno.placeBet(poolId)"
+            )
+        );
+        vectors = string.concat(
+            vectors,
+            ",",
+            _vectorJson(
+                gameHub, GAME_PLINKO, poolId, paramsPlinko, stake, affiliate, maxHouseEdgeBps, "plinko.placeBet(poolId)"
+            )
+        );
+        vectors = string.concat(
+            vectors,
+            ",",
+            _vectorJson(
+                gameHub, GAME_SIC_BO, poolId, paramsSicBo, stake, affiliate, maxHouseEdgeBps, "sic-bo.placeBet(poolId)"
+            )
+        );
+        vectors = string.concat(
+            vectors,
+            ",",
+            _vectorJson(
+                gameHub, GAME_SLOTS, poolId, paramsSlots, stake, affiliate, maxHouseEdgeBps, "slots.placeBet(poolId)"
+            )
+        );
+        vectors = string.concat(
+            vectors,
+            ",",
+            _vectorJson(
+                gameHub,
+                GAME_BACCARAT,
+                poolId,
+                paramsBaccarat,
+                stake,
+                affiliate,
+                maxHouseEdgeBps,
+                "baccarat.placeBet(poolId)"
             )
         );
         vectors = string.concat(vectors, "]");

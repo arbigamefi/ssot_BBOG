@@ -4,12 +4,13 @@ pragma solidity ^0.8.20;
 import "forge-std/Test.sol";
 
 import {RouletteModule} from "../../src/modules/roulette/RouletteModule.sol";
+import {RouletteParams} from "../../src/modules/roulette/RouletteParams.sol";
 import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
 import {StopLogic} from "../../src/libs/StopLogic.sol";
 
 /// @notice Reference-model diff tests (ADR-0009).
 ///         Compares roulette module.resolve(...) against an independent reference model
-///         for raw-bitmask params.
+///         for typed bitmask params.
 contract DiffRoulette is Test {
     RouletteModule internal mod;
 
@@ -20,7 +21,7 @@ contract DiffRoulette is Test {
         mod = new RouletteModule();
     }
 
-    function testFuzz_diff_roulette_rawbitmask(
+    function testFuzz_diff_roulette_typed_bitmask(
         uint40 rawMask,
         uint256 amountPerRoll,
         uint32 betCount,
@@ -38,12 +39,8 @@ contract DiffRoulette is Test {
         amountPerRoll = bound(amountPerRoll, 1e12, 10 ether);
         betCount = uint32(bound(uint256(betCount), 1, 50));
 
-        SSOTTypes.StakeSpec memory spec = SSOTTypes.StakeSpec({
-            amountPerRoll: amountPerRoll,
-            betCount: betCount,
-            stopGain: 0,
-            stopLoss: 0
-        });
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: amountPerRoll, betCount: betCount, stopGain: 0, stopLoss: 0});
 
         uint256 stake = amountPerRoll * uint256(betCount);
         stopGain = bound(stopGain, 0, stake * 4);
@@ -51,7 +48,7 @@ contract DiffRoulette is Test {
         spec.stopGain = stopGain;
         spec.stopLoss = stopLoss;
 
-        bytes memory params = abi.encode(numbers);
+        bytes memory params = RouletteParams.encode(RouletteParams.Kind.Bitmask, numbers);
         uint256[] memory rw = new uint256[](1);
         rw[0] = seed;
 
@@ -66,12 +63,11 @@ contract DiffRoulette is Test {
     // Reference model
     // ------------------
 
-    function _refResolve(
-        uint40 numbers,
-        SSOTTypes.StakeSpec memory spec,
-        uint256 betId,
-        uint256 seed
-    ) internal pure returns (uint256 payoutGross, uint256 refundAmount) {
+    function _refResolve(uint40 numbers, SSOTTypes.StakeSpec memory spec, uint256 betId, uint256 seed)
+        internal
+        pure
+        returns (uint256 payoutGross, uint256 refundAmount)
+    {
         uint256 pc = _popcount37(numbers);
         require(pc > 0, "pc=0");
 

@@ -3,20 +3,18 @@
 This repo produces two kinds of deployment artifacts:
 
 1) **Snapshot JSON** (human/audit)
-- `deployments/snapshots/deploy-<chainid>-<block>.json` (preferred, immutable)
-- `deployments/deploy-<chainid>-<block>.json` (legacy, kept for backwards compatibility)
-- `deployments/latest.json` (overwritten; points to latest snapshot)
+- `deployments/snapshots/deploy-<chainid>-<block>-v13.json` (immutable)
+- `deployments/latest-v13.json` (overwritten; points to latest snapshot)
 
 2) **Release lock** (machine-checkable)
-- `deployments/release/release-<chainid>-<block>.json` (preferred, immutable)
-- `deployments/release-<chainid>-<block>.json` (legacy)
-- `deployments/release-latest.json` (overwritten)
+- `deployments/release/release-<chainid>-<block>-v13.json` (immutable)
+- `deployments/release-latest-v13.json` (overwritten)
 
 3) **Release notes** (human-readable, must include the digest)
-- `deployments/release/release-notes-<chainid>-<block>.md`
-- `deployments/release-notes-latest.md`
+- `deployments/release/release-notes-<chainid>-<block>-v13.md`
+- `deployments/release-notes-latest-v13.md`
 
-The release lock is a deterministic digest computed from parsed snapshot fields (schema `SSOT_RELEASE_DIGEST_V1`) plus an ECDSA signature. This makes the deployment configuration **tamper-evident** without depending on JSON key ordering or whitespace.
+The release lock is a deterministic digest computed from parsed snapshot fields (schema `SSOT_RELEASE_DIGEST_V13`) plus an ECDSA signature. This makes the deployment configuration **tamper-evident** without depending on JSON key ordering or whitespace.
 
 ## Generate
 After deployment:
@@ -58,9 +56,9 @@ In strict mode the check enforces:
 For normal PR CI, `release-check` is non-blocking if no deployment artifacts are present.
 
 ## Files
-- Generator: `script/release/ReleaseDigest.s.sol`
-- Verifier: `script/release/VerifyRelease.s.sol`
+- Generator: `script/release/ReleaseDigestV13.s.sol`
+- Verifier: `script/release/VerifyReleaseV13.s.sol`
 - Wrapper: `script/release/check_release.sh`
-- Notes generator: `script/release/GenerateReleaseNotes.s.sol`
+- Notes generator: `script/release/GenerateReleaseNotesV13.s.sol`
 - Packager: `script/release/package_release.sh`
 - ADR: `docs/adr/0024-release-artifacts-digest-signature.md`

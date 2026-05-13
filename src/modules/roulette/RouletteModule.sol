@@ -9,9 +9,7 @@ import {RNG} from "../../libs/RNG.sol";
 import {StopLogic} from "../../libs/StopLogic.sol";
 
 /// @notice Pure Roulette module (multi-roll, European 0..36).
-///         - params supports either:
-///           (a) Legacy raw bitmask: abi.encode(uint40 numbersBitmask)
-///           (b) Typed bet: abi.encode(uint8 kind, uint40 payload) (see RouletteParams, ADR-0016)
+///         - params use typed encoding: abi.encode(uint8 kind, uint40 payload)
 ///         - Decodes to a numbers bitmask where:
 ///           * bit i set => number i selected
 ///           * numbers != 0 and numbers < 2^37 - 1 (cannot select all numbers)
@@ -21,10 +19,8 @@ contract RouletteModule is IGameModule {
     uint8 internal constant MODULO = 37;
 
     // Popcount constants (same trick as the refactored RouletteV2)
-    uint256 internal constant POPCNT_MULT =
-        0x0000000000002000000000100000000008000000000400000000020000000001;
-    uint256 internal constant POPCNT_MASK =
-        0x0001041041041041041041041041041041041041041041041041041041041041;
+    uint256 internal constant POPCNT_MULT = 0x0000000000002000000000100000000008000000000400000000020000000001;
+    uint256 internal constant POPCNT_MASK = 0x0001041041041041041041041041041041041041041041041041041041041041;
     uint256 internal constant POPCNT_MODULO = 0x3F;
 
     function validate(bytes calldata params, SSOTTypes.StakeSpec calldata stakeSpec) external pure override {

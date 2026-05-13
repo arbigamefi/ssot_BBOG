@@ -4,7 +4,6 @@ pragma solidity ^0.8.20;
 import {SSOTTypes} from "./SSOTTypes.sol";
 
 /// @notice Casino-game vertical hub interface for the SettlementRouter architecture.
-///         This is the v1.3 successor shape of the current VRF casino Hub.
 interface IGameHub {
     function settlementRouter() external view returns (address);
     function vrfHub() external view returns (address);

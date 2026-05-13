@@ -9,7 +9,7 @@ export const USDC = {
 } as const;
 
 // Chainlink VRF v2.5 Wrapper (direct funding) addresses.
-// For SSOT cleanroom deploys, only WRAPPER is required by `script/Deploy.s.sol`.
+// For SSOT cleanroom deploys, only WRAPPER is required by `script/DeployV13.s.sol`.
 export const VRF_WRAPPER = {
   BASE: "0xb0407dbe851f8318bd31404A49e658143C982F23",
   BASE_SEPOLIA: "0x7a1BaC17Ccc5b313516C5E16fb24f7659aA5ebed",

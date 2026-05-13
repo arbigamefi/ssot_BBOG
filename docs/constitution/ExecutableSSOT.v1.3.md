@@ -20,13 +20,13 @@ The authoritative enforcement points after implementation SHOULD include:
 
 Current branch status:
 
-- `test/unit/GameHubE2E.t.sol` proves real Dice/Coin/Roulette/Keno flows through
+- `test/unit/GameHubE2E.t.sol` proves real Dice/Coin/Roulette/Keno/Slots/Baccarat/Plinko/Sic Bo flows through
   `GameHub -> SettlementRouter -> Bank`.
 - `test/invariants/SettlementRouterInvariants.t.sol` tracks router positions and same-asset,
   different-Bank pools to prove per-pool reserved liability, position immutability, ownerHub-only
   debt-out, and Bank settlement-router exclusivity.
-- Legacy stateful diff and adapter invariants still exercise `Hub`; full diff migration to
-  `GameHub` remains pending.
+- `test/diff/StatefulSystemDiff.t.sol` and `test/diff/StatefulSystemDiffAdapter.t.sol` exercise
+  router-backed `GameHub` flows, including adapter-mode VRF fee/refundCredit behavior.
 
 ## Notation
 

@@ -167,6 +167,18 @@ contract GenerateReleaseNotesV13 is Script {
             "`\n",
             "- Keno: `",
             vm.toString(snap.readAddress(".moduleKeno")),
+            "`\n",
+            "- Plinko: `",
+            vm.toString(snap.readAddress(".modulePlinko")),
+            "`\n",
+            "- SicBo: `",
+            vm.toString(snap.readAddress(".moduleSicBo")),
+            "`\n",
+            "- Slots: `",
+            vm.toString(snap.readAddress(".moduleSlots")),
+            "`\n",
+            "- Baccarat: `",
+            vm.toString(snap.readAddress(".moduleBaccarat")),
             "`\n\n"
         );
     }

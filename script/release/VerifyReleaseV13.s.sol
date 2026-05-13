@@ -89,7 +89,11 @@ contract VerifyReleaseV13 is Script {
                 snap.readAddress(".moduleDice"),
                 snap.readAddress(".moduleCoinToss"),
                 snap.readAddress(".moduleRoulette"),
-                snap.readAddress(".moduleKeno")
+                snap.readAddress(".moduleKeno"),
+                snap.readAddress(".modulePlinko"),
+                snap.readAddress(".moduleSicBo"),
+                snap.readAddress(".moduleSlots"),
+                snap.readAddress(".moduleBaccarat")
             )
         );
 

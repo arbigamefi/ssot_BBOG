@@ -19,14 +19,22 @@ bankrolls, or unlicensed regulated-market sportsbook operations.
 
 ## Current Status
 
-As of `master` through PR #6:
+As of `master` through PR #7, with the next readiness package accumulating locally on
+`codex/sports-readiness-phase-local`:
 
 - Contract implementation for the SportsHub MVP scope is complete.
 - Unit, invariant, build, release-check, and PR CI gates passed on PR #6.
+- The v1.3 Casino+Sports local deployment/release-artifact path is covered by `make sports-dry-run-v13`.
+- The complete mock event lifecycle is covered by `make sports-lifecycle-dry-run`.
+- The combined local Phase 0 gate is `make sports-phase0-readiness`.
 - Ops metrics, alerts, and sportsbook runbook exist for odds signer health, result finality, disputes,
   direct void reasons, exposure caps, and batch debt-out.
-- The remaining work is production readiness: deployment rehearsal, release artifacts, operational
-  staffing, provider policy, and compliance gating.
+- Base Sepolia Phase 1 rehearsal now covers v1.3 deployment/release, funded canary placement,
+  finality settlement, direct void plus batch debt-out, result challenge/arbitration void plus batch
+  debt-out, and dedicated non-GOV testnet Sports signer/reporter/challenger/arbitrator roles.
+- Phase 1 is closed for the Base Sepolia testnet rehearsal. The remaining work is production/public
+  launch readiness: managed key custody, operational staffing, provider policy, evidence storage, and
+  compliance gating.
 
 ## Go/No-Go Gates
 
@@ -150,17 +158,21 @@ No-go conditions:
 - Deploy to a local or ephemeral test chain.
 - Generate v1.3 release artifacts.
 - Run `make release-check-v13`.
-- Or run the deterministic local artifact dry run: `make sports-dry-run-v13`.
-- Run a complete mock event: create/open/lock market, place tickets, propose result, finalize, settle
-  winners and losers, void/refund a separate market.
+- Run the combined deterministic local gate: `make sports-phase0-readiness`.
+  This wraps the v1.3 Casino+Sports artifact dry run and the complete mock event lifecycle.
 
 ### Phase 1 — Testnet rehearsal
 
+- Fill a public-testnet v1.3 Sports env file from `docs/deploy/*-v13-sports.env.example`.
+- Run `ENV_FILE=<filled-env> make sports-testnet-preflight-v13`.
 - Deploy v1.3 to a public testnet with one Casino pool and one Sports pool.
 - Verify explorer metadata.
 - Publish release digest and frontend manifest.
 - Run canary tickets with realistic odds snapshots and result quorum signatures.
-- Rehearse each sportsbook incident playbook.
+- Rotate away from single-GOV bootstrap roles to dedicated testnet odds signer, result reporter,
+  result challenger, and result arbitrator keys.
+- Rehearse each sportsbook incident playbook, including direct void, batch debt-out, and challenged
+  result arbitration.
 
 ### Phase 2 — Limited mainnet canary
 
@@ -231,3 +243,81 @@ Observed generated evidence:
 This proves the local v1.3 Casino+Sports artifact-generation path. It does not prove real ERC20
 metadata, real VRF wrapper behavior, explorer verification, funded bankroll behavior, provider
 redundancy, or public-network transaction inclusion. Those remain Phase 1 testnet rehearsal gates.
+
+## Base Sepolia Phase 1 Evidence
+
+2026-05-13 Base Sepolia rehearsal is recorded in
+`docs/deploy/base-sepolia-v13-sports-rehearsal-2026-05-13.md` and covers:
+
+- v1.3 Casino+Sports deployment with one Casino pool and one independent Sports pool;
+- strict release artifact generation/check and Basescan source verification;
+- funded Casino and Sports Banks;
+- Sports canary placement, result finality, and ticket settlement;
+- direct market void with `refundTickets` and `voidTickets` debt-out;
+- challenged result arbitration to `VoidMarket` with `refundTickets` and `voidTickets` debt-out;
+- dedicated testnet odds signer, result reporter, result challenger, and result arbitrator role
+  rotation;
+- role-separated challenge/arbitration canary with GOV removed from odds signer and result reporter
+  mappings;
+- closeout gate `make sports-phase1-closeout-v13`.
+
+The rehearsal proves public-testnet transaction inclusion and accounting terminalization for the MVP
+paths, plus testnet-level operational role separation. It still uses generated local testnet role keys
+and GOV as the canary player/market operator, so it does not prove managed production key custody,
+external provider reliability, or public frontend controls.
+
+The remaining production controls are tracked in `docs/ops/sportsbook-production-controls.md`.
+
+## Local Lifecycle Evidence
+
+2026-05-13 local lifecycle dry run used `test/unit/SportsHubLifecycle.t.sol` and passed:
+
+```bash
+make sports-lifecycle-dry-run
+```
+
+The smoke path covers:
+
+- create/open a resolved market;
+- place one winning and one losing fixed-odds ticket;
+- lock the market, propose a result, wait through finality, and finalize;
+- batch-settle winner and loser through `settleTickets`;
+- assert Bank/router/SportsHub exposure returns to zero;
+- create/open a separate market;
+- place two tickets, direct-void the market with a non-zero reason hash, then terminalize one ticket
+  through `refundTickets` and one through `voidTickets`;
+- assert refunded/voided ticket states, refunded router positions, final player balance, and cleared
+  market/event/pool-event exposure.
+
+This is still a local mock lifecycle. It does not prove provider data quality, real operator timing,
+chain inclusion, frontend signer integration, or jurisdiction controls.
+
+## Combined Phase 0 Gate
+
+The combined local Phase 0 readiness gate is:
+
+```bash
+make sports-phase0-readiness
+```
+
+It runs:
+
+- `make sports-dry-run-v13`;
+- `make sports-lifecycle-dry-run`.
+
+Passing this gate is required before moving from local readiness work to public testnet rehearsal.
+
+## Public Testnet Evidence
+
+2026-05-13 Base Sepolia v1.3 Casino+Sports rehearsal evidence:
+
+- `docs/deploy/base-sepolia-v13-sports-rehearsal-2026-05-13.md`
+
+This proves public testnet deployment, explorer verification, release artifact generation, strict
+release checking, basic on-chain topology checks, controlled testnet Bank funding, and one funded
+canary Sports ticket through placement, result proposal, finality, finalization, and settlement. The
+same deployment also rehearsed a direct market void followed by batch `refundTickets` and
+`voidTickets` debt-out, with SportsHub exposure, router positions, and Sports Bank reserved liability
+returning to zero on Base Sepolia block `41447214`.
+
+Result challenge rehearsal remains Phase 1 work.

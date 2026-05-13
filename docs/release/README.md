@@ -3,13 +3,8 @@
 This repository is designed to be **auditable by construction**. A production release is defined by
 **immutable deployment artifacts**, not by a git tag alone.
 
-For an outward-facing summary built from the current canonical deployment artifacts, see:
-
-- [`ARBIGAMEFI-RELEASE-PACK.zh-CN.md`](ARBIGAMEFI-RELEASE-PACK.zh-CN.md) — partner / LP / auditor-facing release pack
-- [`ARBIGAMEFI-EXPLORER-LINKS.zh-CN.md`](ARBIGAMEFI-EXPLORER-LINKS.zh-CN.md) — direct explorer entrypoints for the current deployment
-- [`ARBIGAMEFI-LP-ONBOARDING.zh-CN.md`](ARBIGAMEFI-LP-ONBOARDING.zh-CN.md) — LP-facing note for reading NAV, reserve, and optional outflow semantics
-- [`ARBIGAMEFI-MAINNET-RELEASE-TEMPLATE.zh-CN.md`](ARBIGAMEFI-MAINNET-RELEASE-TEMPLATE.zh-CN.md) — mainnet-facing release pack template
-- [`ARBIGAMEFI-RELEASE-HISTORY.zh-CN.md`](ARBIGAMEFI-RELEASE-HISTORY.zh-CN.md) — append-only ledger of canonical releases
+For an outward-facing summary, regenerate release notes and packaging from the current v1.3 artifacts.
+The mainnet-facing template lives at [`ARBIGAMEFI-MAINNET-RELEASE-TEMPLATE.zh-CN.md`](ARBIGAMEFI-MAINNET-RELEASE-TEMPLATE.zh-CN.md).
 
 ## Definition of a release
 
@@ -32,28 +27,28 @@ This ensures a third party can:
 
 The `deployments/` directory is treated as a release artifact store:
 
-- `deployments/latest.json` — latest deployment snapshot (overwritten on each deploy)
-- `deployments/snapshots/deploy-<chainId>-<block>.json` — immutable snapshot copy
-- `deployments/release-latest.json` — latest release lock (digest + signature)
-- `deployments/release/release-<chainId>-<block>.json` — immutable release lock copy
-- `deployments/release-notes-latest.md` — latest release notes
-- `deployments/frontend-manifest-latest.json` — latest frontend manifest (required)
-- `deployments/golden-vectors-latest.json` — latest golden vectors (required)
-- `deployments/release/release-notes-<chainId>-<block>.md` — immutable release notes copy
-- `deployments/release/frontend-manifest-<chainId>-<block>.json` — immutable frontend manifest copy
-- `deployments/release/golden-vectors-<chainId>-<block>.json` — immutable golden vectors copy
-- `deployments/verify-latest.sh` — latest explorer verification helper
-- `deployments/verify/verify-<chainId>-<block>.sh` — immutable verification helper
+- `deployments/latest-v13.json` — latest deployment snapshot (overwritten on each deploy)
+- `deployments/snapshots/deploy-<chainId>-<block>-v13.json` — immutable snapshot copy
+- `deployments/release-latest-v13.json` — latest release lock (digest + signature)
+- `deployments/release/release-<chainId>-<block>-v13.json` — immutable release lock copy
+- `deployments/release-notes-latest-v13.md` — latest release notes
+- `deployments/frontend-manifest-latest-v13.json` — latest frontend manifest (required)
+- `deployments/golden-vectors-latest-v13.json` — latest golden vectors (required)
+- `deployments/release/release-notes-<chainId>-<block>-v13.md` — immutable release notes copy
+- `deployments/release/frontend-manifest-<chainId>-<block>-v13.json` — immutable frontend manifest copy
+- `deployments/release/golden-vectors-<chainId>-<block>-v13.json` — immutable golden vectors copy
+- `deployments/verify-latest-v13.sh` — latest explorer verification helper
+- `deployments/verify/verify-<chainId>-<block>-v13.sh` — immutable verification helper
 
 ## The 4 commands you run for a production release
 
-After deploying and producing `deployments/latest.json`:
+After deploying and producing `deployments/latest-v13.json`:
 
 ```bash
-make release-digest        # creates deployments/release-*.json + release-latest.json
-make release-notes         # creates deployments/release-notes-*.md + release-notes-latest.md
-make release-frontend-manifest # creates deployments/frontend-manifest-*.json + frontend-manifest-latest.json
-make release-golden-vectors    # creates deployments/golden-vectors-*.json + golden-vectors-latest.json
+make release-digest        # creates deployments/release/release-*-v13.json + release-latest-v13.json
+make release-notes         # creates deployments/release/release-notes-*-v13.md + release-notes-latest-v13.md
+make release-frontend-manifest # creates deployments/release/frontend-manifest-*-v13.json + frontend-manifest-latest-v13.json
+make release-golden-vectors    # creates deployments/release/golden-vectors-*-v13.json + golden-vectors-latest-v13.json
 make release-verify        # offline verification (digest + signature)
 STRICT=1 make release-check # enforces (snapshot + lock + notes + manifest + vectors) and checks notes contain digest
 ```
@@ -78,16 +73,16 @@ Recommended flow:
 1. Make sure `CHANGELOG.md` includes an entry for the version (even if short).
 2. Run the release commands above.
 3. Create a git tag `vX.Y.Z` for the commit you want to ship.
-4. Create a GitHub release using the content from `deployments/release-notes-latest.md`.
+4. Create a GitHub release using the content from `deployments/release-notes-latest-v13.md`.
 5. Attach `dist/ssot-<tag>-<digestPrefix>.tar.gz` (from `make release-package`).
 
 > The CI `Release Gate` workflow enforces `STRICT=1 make release-check` **and** fork tests on tags that start with `v`.
 
 ## Fork tests as a release gate
 
-On release tags (`v*`), CI also runs `test/fork/*` against the **deployed chain** described by `deployments/latest.json`.
+On release tags (`v*`), CI also runs `test/fork/*` against the **deployed chain** described by `deployments/latest-v13.json`.
 The gate:
-- reads `chainId` and `vrfWrapper` from `deployments/latest.json`
+- reads `chainId` and `vrfWrapper` from `deployments/latest-v13.json`
 - selects the matching fork RPC URL from repository secrets
 - runs `forge test --match-path "test/fork/*"` with `FORK_REQUIRED=1` (so skipping is not allowed)
 

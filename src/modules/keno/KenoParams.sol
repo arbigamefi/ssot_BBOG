@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 /// @notice Keno parameters.
 ///
-/// Encoding (legacy-compatible): `abi.encode(uint40 numbersBitmask)`
+/// Encoding: `abi.encode(uint40 numbersBitmask)`
 /// - bit i set => number i is selected (0-indexed)
 /// - Pool size N = 40 (valid bits [0..39])
 /// - Draw size M = 10

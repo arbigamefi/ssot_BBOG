@@ -3,31 +3,31 @@ set -euo pipefail
 
 # Build a release bundle that is tied to a release digest and contains
 # *all* frontend-facing artifacts:
-#   - release-latest.json (lock)
-#   - frontend-manifest-latest.json (mapping)
-#   - golden-vectors-latest.json (provable encoding)
-#   - abis/ (frontend-only trimmed ABIs)
+#   - release-latest-v13.json (lock)
+#   - frontend-manifest-latest-v13.json (mapping)
+#   - golden-vectors-latest-v13.json (provable encoding)
+#   - abis-v13/ (frontend-only trimmed ABIs)
 #
 # Output: dist/ssot-release-<TAG>-<digestPrefix>.tar.gz
 
-RELEASE_PATH="${RELEASE_PATH:-deployments/release-latest.json}"
-SNAPSHOT_PATH="${SNAPSHOT_PATH:-deployments/latest.json}"
-NOTES_PATH="${NOTES_PATH:-deployments/release-notes-latest.md}"
+RELEASE_PATH="${RELEASE_PATH:-deployments/release-latest-v13.json}"
+SNAPSHOT_PATH="${SNAPSHOT_PATH:-deployments/latest-v13.json}"
+NOTES_PATH="${NOTES_PATH:-deployments/release-notes-latest-v13.md}"
 
-FRONTEND_MANIFEST_PATH="${FRONTEND_MANIFEST_PATH:-deployments/frontend-manifest-latest.json}"
-GOLDEN_VECTORS_PATH="${GOLDEN_VECTORS_PATH:-deployments/golden-vectors-latest.json}"
+FRONTEND_MANIFEST_PATH="${FRONTEND_MANIFEST_PATH:-deployments/frontend-manifest-latest-v13.json}"
+GOLDEN_VECTORS_PATH="${GOLDEN_VECTORS_PATH:-deployments/golden-vectors-latest-v13.json}"
 
-ABIS_DIR="${ABIS_DIR:-deployments/abis}"
-ABIS_INDEX_PATH="${ABIS_INDEX_PATH:-deployments/abis/index.json}"
+ABIS_DIR="${ABIS_DIR:-deployments/abis-v13}"
+ABIS_INDEX_PATH="${ABIS_INDEX_PATH:-deployments/abis-v13/index.json}"
 
 TAG_NAME="${TAG_NAME:-}"
-RELEASE_TAG_SUFFIX="${RELEASE_TAG_SUFFIX:-}"
+RELEASE_TAG_SUFFIX="${RELEASE_TAG_SUFFIX:--v13}"
 
-SNAPSHOT_LATEST_NAME="${SNAPSHOT_LATEST_NAME:-latest.json}"
-RELEASE_LATEST_NAME="${RELEASE_LATEST_NAME:-release-latest.json}"
-NOTES_LATEST_NAME="${NOTES_LATEST_NAME:-release-notes-latest.md}"
-FRONTEND_MANIFEST_LATEST_NAME="${FRONTEND_MANIFEST_LATEST_NAME:-frontend-manifest-latest.json}"
-GOLDEN_VECTORS_LATEST_NAME="${GOLDEN_VECTORS_LATEST_NAME:-golden-vectors-latest.json}"
+SNAPSHOT_LATEST_NAME="${SNAPSHOT_LATEST_NAME:-latest-v13.json}"
+RELEASE_LATEST_NAME="${RELEASE_LATEST_NAME:-release-latest-v13.json}"
+NOTES_LATEST_NAME="${NOTES_LATEST_NAME:-release-notes-latest-v13.md}"
+FRONTEND_MANIFEST_LATEST_NAME="${FRONTEND_MANIFEST_LATEST_NAME:-frontend-manifest-latest-v13.json}"
+GOLDEN_VECTORS_LATEST_NAME="${GOLDEN_VECTORS_LATEST_NAME:-golden-vectors-latest-v13.json}"
 
 [[ -f "$RELEASE_PATH" ]] || { echo "missing $RELEASE_PATH (run: make release-digest)"; exit 1; }
 [[ -f "$SNAPSHOT_PATH" ]] || { echo "missing $SNAPSHOT_PATH (run: make deploy)"; exit 1; }

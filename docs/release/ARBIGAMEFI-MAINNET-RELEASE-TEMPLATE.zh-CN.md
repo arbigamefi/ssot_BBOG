@@ -68,12 +68,12 @@ This is the mainnet-facing release template for ArbiGameFi. Use it only after ge
 
 并且应具备：
 
-- `deployments/latest.json`
-- `deployments/release-latest.json`
+- `deployments/latest-v13.json`
+- `deployments/release-latest-v13.json`
 - `deployments/release-notes-latest.md`
-- `deployments/frontend-manifest-latest.json`
-- `deployments/golden-vectors-latest.json`
-- `deployments/verify-latest.sh`
+- `deployments/frontend-manifest-latest-v13.json`
+- `deployments/golden-vectors-latest-v13.json`
+- `deployments/verify-latest-v13.sh`
 
 ## 4. 主网 release pack 模板
 
@@ -100,8 +100,8 @@ This is the mainnet-facing release template for ArbiGameFi. Use it only after ge
 > - [`checklist.md`](checklist.md)
 > - [`ARBIGAMEFI-EXPLORER-LINKS.zh-CN.md`](ARBIGAMEFI-EXPLORER-LINKS.zh-CN.md)
 > - [`ARBIGAMEFI-LP-ONBOARDING.zh-CN.md`](ARBIGAMEFI-LP-ONBOARDING.zh-CN.md)
-> - [`../../deployments/release-latest.json`](../../deployments/release-latest.json)
-> - [`../../deployments/frontend-manifest-latest.json`](../../deployments/frontend-manifest-latest.json)
+> - [`../../deployments/release-latest-v13.json`](../../deployments/release-latest-v13.json)
+> - [`../../deployments/frontend-manifest-latest-v13.json`](../../deployments/frontend-manifest-latest-v13.json)
 
 ## Abstract (EN)
 
@@ -125,8 +125,8 @@ This document is the outward-facing release pack for the current ArbiGameFi main
 | Digest schema | `SSOT_RELEASE_DIGEST_V1` |
 | Schema hash | `<SCHEMA_HASH>` |
 | Signer / GOV | `<GOV_ADDRESS>` |
-| Release lock artifact | [`../../deployments/release-latest.json`](../../deployments/release-latest.json) |
-| Deployment snapshot | [`../../deployments/latest.json`](../../deployments/latest.json) |
+| Release lock artifact | [`../../deployments/release-latest-v13.json`](../../deployments/release-latest-v13.json) |
+| Deployment snapshot | [`../../deployments/latest-v13.json`](../../deployments/latest-v13.json) |
 
 ### 2.2 Release lock signature
 
@@ -143,10 +143,10 @@ This document is the outward-facing release pack for the current ArbiGameFi main
 | 模块 | 地址 | 角色 |
 |---|---|---|
 | GOV | `<GOV_ADDRESS>` | 当前治理与发布签名主体 |
-| Hub | `<HUB_ADDRESS>` | 全局 bet registry、生命周期与结算中枢 |
-| VRFHub | `<VRFHUB_ADDRESS>` | 随机数请求映射、transport 与 refundCredit |
+| GameHub | `<GAMEHUB_ADDRESS>` | 全局 bet registry、生命周期与结算中枢 |
+| VRFHub | `<VRFGAMEHUB_ADDRESS>` | 随机数请求映射、transport 与 refundCredit |
 | Adapter | `<ADAPTER_ADDRESS>` | 外部 VRF provider 适配层 |
-| BankRegistry | `<BANKREGISTRY_ADDRESS>` | 资产到 Bank 的注册表 |
+| PoolRegistry | `<POOLREGISTRY_ADDRESS>` | 资产到 Bank 的注册表 |
 | ReferralRegistry | `<REFREGISTRY_ADDRESS>` | 推荐关系注册表 |
 | ReferralEngine | `<REFENGINE_ADDRESS>` | 推荐预算与 XP 负债计算引擎 |
 
@@ -177,7 +177,7 @@ This document is the outward-facing release pack for the current ArbiGameFi main
 
 ## 5. 当前关键参数
 
-### 5.1 Hub-level parameters
+### 5.1 GameHub-level parameters
 
 | 参数 | 当前值 | 含义 |
 |---|---|---|
@@ -195,11 +195,11 @@ This document is the outward-facing release pack for the current ArbiGameFi main
 
 ## 6. 外部验证怎么做
 
-1. 读取 `deployments/latest.json`
-2. 读取 `deployments/release-latest.json`
+1. 读取 `deployments/latest-v13.json`
+2. 读取 `deployments/release-latest-v13.json`
 3. 运行 `make release-verify`
-4. 使用 `deployments/verify-latest.sh` 或 `make verify`
-5. 对照 `frontend-manifest-latest.json` 和 `golden-vectors-latest.json`
+4. 使用 `deployments/verify-latest-v13.sh` 或 `make verify`
+5. 对照 `frontend-manifest-latest-v13.json` 和 `golden-vectors-latest-v13.json`
 
 ## 7. 当前 release 的边界与未承诺事项
 
@@ -215,12 +215,12 @@ This document is the outward-facing release pack for the current ArbiGameFi main
 
 ## 8. 附带文件
 
-- `deployments/latest.json`
-- `deployments/release-latest.json`
+- `deployments/latest-v13.json`
+- `deployments/release-latest-v13.json`
 - `deployments/release-notes-latest.md`
-- `deployments/frontend-manifest-latest.json`
-- `deployments/golden-vectors-latest.json`
-- `deployments/verify-latest.sh`
+- `deployments/frontend-manifest-latest-v13.json`
+- `deployments/golden-vectors-latest-v13.json`
+- `deployments/verify-latest-v13.sh`
 - `docs/release/ARBIGAMEFI-EXPLORER-LINKS.zh-CN.md`
 - `docs/release/ARBIGAMEFI-LP-ONBOARDING.zh-CN.md`
 

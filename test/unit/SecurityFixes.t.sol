@@ -4,11 +4,12 @@ pragma solidity ^0.8.20;
 import "forge-std/Test.sol";
 
 import {Bank} from "../../src/core/Bank.sol";
-import {BankRegistry} from "../../src/core/BankRegistry.sol";
-import {Hub} from "../../src/core/Hub.sol";
+import {GameHub} from "../../src/core/GameHub.sol";
+import {PoolRegistry} from "../../src/core/PoolRegistry.sol";
+import {SettlementRouter} from "../../src/core/SettlementRouter.sol";
 import {VRFHub} from "../../src/core/VRFHub.sol";
 import {IGameModule} from "../../src/core/interfaces/IGameModule.sol";
-import {IHub} from "../../src/core/interfaces/IHub.sol";
+import {IGameHub} from "../../src/core/interfaces/IGameHub.sol";
 import {IVRFHub} from "../../src/core/interfaces/IVRFHub.sol";
 import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
 import {MockERC20} from "../../src/mocks/MockERC20.sol";
@@ -95,7 +96,7 @@ contract SecurityFixes is Test {
 
     function test_referralConfigRejectsOverBudgetLevels() external {
         uint16[6] memory initialLevels;
-        (,, Hub hub,) = _deploy(initialLevels, 0, 0, 200, 0);
+        (,, GameHub hub,) = _deploy(initialLevels, 0, 0, 200, 0);
 
         uint16[6] memory badLevels;
         badLevels[0] = 5_000;
@@ -107,21 +108,18 @@ contract SecurityFixes is Test {
     }
 
     function test_initialReferralConfigRejectsOverBudgetLevels() external {
-        MockERC20 asset = new MockERC20("Asset", "AST", 18);
-        Bank bank = new Bank(address(asset), gov, 0, "LP", "LP", 18);
-        BankRegistry registry = new BankRegistry(gov);
+        PoolRegistry poolRegistry = new PoolRegistry(gov);
+        SettlementRouter router = new SettlementRouter(address(poolRegistry));
         VRFHub vrf = new VRFHub(address(this), gov);
         ReferralRegistry refReg = new ReferralRegistry(gov);
         DefaultReferralEngine refEng = new DefaultReferralEngine();
-        vm.prank(gov);
-        registry.registerBank(address(asset), address(bank));
 
         uint16[6] memory badLevels;
         badLevels[1] = 30_000;
 
         vm.expectRevert(abi.encodeWithSelector(Errors.InvalidBps.selector, 30_000));
-        new Hub(
-            address(registry),
+        new GameHub(
+            address(router),
             address(vrf),
             address(refReg),
             address(refEng),
@@ -139,10 +137,10 @@ contract SecurityFixes is Test {
 
     function test_zeroMaxAffiliateDeltaMeansDefaultOnly() external {
         uint16[6] memory levels;
-        (MockERC20 asset, Bank bank, Hub hub, VRFHub vrf) = _deploy(levels, 0, 0, 200, 0);
+        (MockERC20 asset, Bank bank, GameHub hub, VRFHub vrf) = _deploy(levels, 0, 0, 200, 0);
 
         vm.prank(affiliate);
-        vm.expectRevert(abi.encodeWithSelector(IHub.HouseEdgeTooHigh.selector, 201, 200));
+        vm.expectRevert(abi.encodeWithSelector(IGameHub.HouseEdgeTooHigh.selector, 201, 200));
         hub.setAffiliateHouseEdge(201);
 
         vm.prank(affiliate);
@@ -162,7 +160,7 @@ contract SecurityFixes is Test {
         (uint256 fee,) = hub.quoteVRFFee(1);
 
         vm.prank(player);
-        uint256 betId = hub.placeBet{value: fee}(GAME_STAKE, address(asset), "", spec, affiliate, 0);
+        uint256 betId = hub.placeBet{value: fee}(GAME_STAKE, 1, "", spec, affiliate, 0);
 
         SSOTTypes.Bet memory b = hub.getBet(betId);
         assertEq(b.maxHouseEdgeBps, 200, "user maxHouseEdgeBps=0 should mean default HE");
@@ -178,7 +176,7 @@ contract SecurityFixes is Test {
 
     function test_badModuleRefundTooLargeFallsBackToFullRefund() external {
         uint16[6] memory levels;
-        (MockERC20 asset, Bank bank, Hub hub, VRFHub vrf) = _deploy(levels, 0, 0, 200, 0);
+        (MockERC20 asset, Bank bank, GameHub hub, VRFHub vrf) = _deploy(levels, 0, 0, 200, 0);
 
         SecurityRefundTooLargeModule module = new SecurityRefundTooLargeModule();
         vm.prank(gov);
@@ -194,7 +192,7 @@ contract SecurityFixes is Test {
         (uint256 fee,) = hub.quoteVRFFee(1);
 
         vm.prank(player);
-        uint256 betId = hub.placeBet{value: fee}(GAME_BAD_REFUND, address(asset), "", spec, address(0), 10_000);
+        uint256 betId = hub.placeBet{value: fee}(GAME_BAD_REFUND, 1, "", spec, address(0), 10_000);
 
         SSOTTypes.Bet memory b = hub.getBet(betId);
         uint256[] memory words = new uint256[](1);
@@ -240,7 +238,7 @@ contract SecurityFixes is Test {
 
     function test_duplicateBindReferrerReverts() external {
         uint16[6] memory levels;
-        (,, Hub hub,) = _deploy(levels, 0, 0, 200, 0);
+        (,, GameHub hub,) = _deploy(levels, 0, 0, 200, 0);
 
         vm.prank(player);
         hub.bindReferrer(affiliate);
@@ -301,19 +299,17 @@ contract SecurityFixes is Test {
         uint16 deltaBudgetBps,
         uint16 defaultHE,
         uint16 maxAffiliateDelta
-    ) internal returns (MockERC20 asset, Bank bank, Hub hub, VRFHub vrf) {
+    ) internal returns (MockERC20 asset, Bank bank, GameHub hub, VRFHub vrf) {
         asset = new MockERC20("Asset", "AST", 18);
         bank = new Bank(address(asset), gov, 0, "LP", "LP", 18);
-        BankRegistry registry = new BankRegistry(gov);
+        PoolRegistry poolRegistry = new PoolRegistry(gov);
+        SettlementRouter router = new SettlementRouter(address(poolRegistry));
         vrf = new VRFHub(address(this), gov);
         ReferralRegistry refReg = new ReferralRegistry(gov);
         DefaultReferralEngine refEng = new DefaultReferralEngine();
 
-        vm.prank(gov);
-        registry.registerBank(address(asset), address(bank));
-
-        hub = new Hub(
-            address(registry),
+        hub = new GameHub(
+            address(router),
             address(vrf),
             address(refReg),
             address(refEng),
@@ -329,7 +325,10 @@ contract SecurityFixes is Test {
         );
 
         vm.startPrank(gov);
-        bank.setSettlementRouterOnce(address(hub));
+        poolRegistry.registerPool(1, address(asset), address(bank), SSOTTypes.PoolDomain.Casino);
+        poolRegistry.setHubRegistered(address(hub), true);
+        poolRegistry.setHubAllowedForPool(1, address(hub), true);
+        bank.setSettlementRouterOnce(address(router));
         refReg.setBinderOnce(address(hub));
         vm.stopPrank();
 

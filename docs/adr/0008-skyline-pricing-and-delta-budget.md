@@ -87,4 +87,5 @@ Unallocated delta budget is returned as `sink` and accrued as protocol fees.
 ## Links
 
 - Constitution: `docs/constitution/SSOT.v1.0.md` (§3.2.1, §3.3.2)
-- Implementation: `src/core/Hub.sol`, `src/engines/referral/DefaultReferralEngine.sol`
+- Current implementation after ADR-0029: `src/core/GameHub.sol`,
+  `src/engines/referral/DefaultReferralEngine.sol`

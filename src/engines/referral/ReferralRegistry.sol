@@ -9,7 +9,7 @@ import {IReferralRegistry} from "./IReferralRegistry.sol";
 ///
 /// Notes:
 /// - v1.0 limits cycle checks to a bounded number of hops (64) for gas safety.
-/// - `binder` is intended to be the Hub contract and is set once.
+/// - `binder` is intended to be the authorized game hub and is set once.
 contract ReferralRegistry is IReferralRegistry, Governable {
     uint8 internal constant MAX_HOPS = 64;
 
@@ -19,7 +19,7 @@ contract ReferralRegistry is IReferralRegistry, Governable {
     event BinderSet(address indexed binder);
     event ReferrerBound(address indexed player, address indexed referrer);
 
-    constructor(address gov) Governable(gov) { }
+    constructor(address gov) Governable(gov) {}
 
     function referrerOf(address player) external view override returns (address) {
         return _ref[player];

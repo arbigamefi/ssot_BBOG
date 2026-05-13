@@ -3,16 +3,10 @@ pragma solidity ^0.8.20;
 
 /// @notice Roulette bet parameter helpers.
 ///
-/// Two supported encodings (both are forward-compatible):
-///
-/// (1) Legacy/Raw bitmask (parity with refactored RouletteV2):
-///     params = abi.encode(uint40 numbersBitmask)
-///
-/// (2) Typed bets (UI-friendly). Encoded as:
+/// Canonical encoding:
 ///     params = abi.encode(uint8 kind, uint40 payload)
 ///
-/// In all cases, the module ultimately resolves into a numbers bitmask for 0..36
-/// (European roulette wheel).
+/// The module ultimately resolves into a numbers bitmask for 0..36.
 library RouletteParams {
     uint8 internal constant MODULO = 37;
 
@@ -51,12 +45,6 @@ library RouletteParams {
     /// @notice Decode params into a numbers bitmask for 0..36.
     /// @dev Reverts if params are malformed or out of range.
     function decode(bytes calldata params) internal pure returns (uint40 numbers) {
-        // Legacy ABI encoding: abi.encode(uint40)
-        if (params.length == 32) {
-            numbers = abi.decode(params, (uint40));
-            return numbers;
-        }
-
         (uint8 kindRaw, uint40 payload) = abi.decode(params, (uint8, uint40));
         Kind kind = Kind(kindRaw);
         numbers = _toBitmask(kind, payload);
@@ -65,11 +53,6 @@ library RouletteParams {
     /// @notice Convenience encoder for typed params.
     function encode(Kind kind, uint40 payload) internal pure returns (bytes memory) {
         return abi.encode(uint8(kind), payload);
-    }
-
-    /// @notice Convenience encoder for raw bitmask params.
-    function encodeBitmask(uint40 numbers) internal pure returns (bytes memory) {
-        return abi.encode(numbers);
     }
 
     // ---------------------------------------------------------------------
@@ -109,10 +92,7 @@ library RouletteParams {
             // top-left of a 2x2 corner: 1..32 and not on rightmost column (3,6,9,...,33,36)
             require(n >= 1 && n <= 32, "corner=range");
             require((n % 3) != 0, "corner=col");
-            return (uint40(1) << n)
-                | (uint40(1) << (n + 1))
-                | (uint40(1) << (n + 3))
-                | (uint40(1) << (n + 4));
+            return (uint40(1) << n) | (uint40(1) << (n + 1)) | (uint40(1) << (n + 3)) | (uint40(1) << (n + 4));
         }
 
         if (kind == Kind.SixLine) {
@@ -120,12 +100,8 @@ library RouletteParams {
             // Six-line starts: 1,4,7,...,31
             require(s >= 1 && s <= 31, "six=range");
             require(((s - 1) % 3) == 0, "six=start");
-            return (uint40(1) << s)
-                | (uint40(1) << (s + 1))
-                | (uint40(1) << (s + 2))
-                | (uint40(1) << (s + 3))
-                | (uint40(1) << (s + 4))
-                | (uint40(1) << (s + 5));
+            return (uint40(1) << s) | (uint40(1) << (s + 1)) | (uint40(1) << (s + 2)) | (uint40(1) << (s + 3))
+                | (uint40(1) << (s + 4)) | (uint40(1) << (s + 5));
         }
 
         if (kind == Kind.Dozen) {

@@ -39,7 +39,7 @@ The “Query” fields are **pseudocode** (PromQL-like). Implement with your mon
 **ALERT-B4-HUB_CALLBACK_FAILED (SEV0)**
 - Trigger: any `vrf_hub_callback_failed_total` increment.
 - Query: `increase(vrf_hub_callback_failed_total[5m]) > 0`
-- Action: **VRF + refundCredit (v1.2)** runbook: `docs/ops/runbooks/vrf-refundcredit.md` (Playbook C)
+- Action: **VRF + refundCredit** runbook: `docs/ops/runbooks/vrf-refundcredit.md` (Playbook C)
 
 **ALERT-B6-VRF_BACKLOG_GROWING (SEV1)**
 - Trigger: `vrf_pending_requests` rising steadily for 10 minutes.
@@ -57,7 +57,7 @@ The “Query” fields are **pseudocode** (PromQL-like). Implement with your mon
 - Query: `increase(vrf_ignored_total[1h]) > 0`
 - Action: `docs/ops/runbooks/vrf-refundcredit.md` (configuration sanity checks)
 
-### C. VRF fee accounting & refundCredit (v1.2)
+### C. VRF fee accounting & refundCredit
 
 **ALERT-C4-REFUND_FAILED_SPIKE (SEV2 → SEV1)**
 - Trigger: refund failures appear (SEV2) or spike around a release (SEV1).
@@ -117,7 +117,7 @@ The “Query” fields are **pseudocode** (PromQL-like). Implement with your mon
 ### F. ETH balance sanity (adapter invariants operationalized)
 
 **ALERT-F1-HUB_ETH_NONZERO (SEV1 → SEV0)**
-- Trigger: Hub holds ETH beyond dust for > 10 minutes.
+- Trigger: GameHub holds ETH beyond dust for > 10 minutes.
 - Query (pseudo): `hub_eth_balance > HUB_DUST for 10m` (SEV1); escalate if `hub_eth_balance > HUB_ETH_MAX` (SEV0)
 - Action: `docs/ops/runbooks/game-finalization-diffs.md` (also check release artifacts for config drift)
 

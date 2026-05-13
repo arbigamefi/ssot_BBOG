@@ -16,10 +16,14 @@ import {SSOTTypes} from "../src/core/interfaces/SSOTTypes.sol";
 import {ReferralRegistry} from "../src/engines/referral/ReferralRegistry.sol";
 import {DefaultReferralEngine} from "../src/engines/referral/DefaultReferralEngine.sol";
 
+import {BaccaratModule} from "../src/modules/baccarat/BaccaratModule.sol";
 import {CoinTossModule} from "../src/modules/cointoss/CoinTossModule.sol";
 import {DiceModule} from "../src/modules/dice/DiceModule.sol";
+import {PlinkoModule} from "../src/modules/plinko/PlinkoModule.sol";
 import {RouletteModule} from "../src/modules/roulette/RouletteModule.sol";
 import {KenoModule} from "../src/modules/keno/KenoModule.sol";
+import {SicBoModule} from "../src/modules/sicbo/SicBoModule.sol";
+import {SlotsModule} from "../src/modules/slots/SlotsModule.sol";
 
 import {ChainlinkV2PlusWrapperAdapter} from "../src/adapters/chainlink/ChainlinkV2PlusWrapperAdapter.sol";
 
@@ -35,7 +39,7 @@ interface IERC20MetadataLikeV13 {
 ///
 /// Per-pool env:
 ///   POOL_ID_i                         default i + 1
-///   POOL_ASSET_i                      required; ASSET_i is accepted as a compatibility alias
+///   POOL_ASSET_i                      required
 ///   POOL_DOMAIN_i                     default 1; 1=Casino, 2=Sports, 3=Future
 ///   BANK_MIN_LIQ_BPS_i                default 1000
 ///   BANK_MIN_TURNOVER_FOR_UNLOCK_i    default 20 ether
@@ -59,6 +63,10 @@ contract DeployV13 is Script {
     bytes32 internal constant GAME_COIN = keccak256("COIN_TOSS");
     bytes32 internal constant GAME_ROULETTE = keccak256("ROULETTE");
     bytes32 internal constant GAME_KENO = keccak256("KENO");
+    bytes32 internal constant GAME_PLINKO = keccak256("PLINKO");
+    bytes32 internal constant GAME_SIC_BO = keccak256("SIC_BO");
+    bytes32 internal constant GAME_SLOTS = keccak256("SLOTS");
+    bytes32 internal constant GAME_BACCARAT = keccak256("BACCARAT");
 
     struct RefConfig {
         uint16 baseBudgetBps;
@@ -131,6 +139,10 @@ contract DeployV13 is Script {
         CoinTossModule coin;
         RouletteModule roulette;
         KenoModule keno;
+        PlinkoModule plinko;
+        SicBoModule sicBo;
+        SlotsModule slots;
+        BaccaratModule baccarat;
     }
 
     function run() external {
@@ -250,11 +262,19 @@ contract DeployV13 is Script {
         d.coin = new CoinTossModule();
         d.roulette = new RouletteModule();
         d.keno = new KenoModule();
+        d.plinko = new PlinkoModule();
+        d.sicBo = new SicBoModule();
+        d.slots = new SlotsModule();
+        d.baccarat = new BaccaratModule();
 
         d.gameHub.registerGame(GAME_DICE, address(d.dice));
         d.gameHub.registerGame(GAME_COIN, address(d.coin));
         d.gameHub.registerGame(GAME_ROULETTE, address(d.roulette));
         d.gameHub.registerGame(GAME_KENO, address(d.keno));
+        d.gameHub.registerGame(GAME_PLINKO, address(d.plinko));
+        d.gameHub.registerGame(GAME_SIC_BO, address(d.sicBo));
+        d.gameHub.registerGame(GAME_SLOTS, address(d.slots));
+        d.gameHub.registerGame(GAME_BACCARAT, address(d.baccarat));
 
         vm.stopBroadcast();
 
@@ -331,10 +351,7 @@ contract DeployV13 is Script {
     function _readPoolConfig(uint256 i) internal view returns (PoolConfig memory cfg) {
         string memory suffix = vm.toString(i);
         cfg.poolId = uint64(vm.envOr(string.concat("POOL_ID_", suffix), i + 1));
-        cfg.asset = vm.envOr(string.concat("POOL_ASSET_", suffix), address(0));
-        if (cfg.asset == address(0)) {
-            cfg.asset = vm.envOr(string.concat("ASSET_", suffix), address(0));
-        }
+        cfg.asset = vm.envAddress(string.concat("POOL_ASSET_", suffix));
         require(cfg.asset != address(0), "POOL_ASSET_i required");
 
         uint256 domainRaw = vm.envOr(string.concat("POOL_DOMAIN_", suffix), uint256(1));
@@ -402,7 +419,6 @@ contract DeployV13 is Script {
         json = vm.serializeAddress(obj, "refRegistry", address(d.refRegistry));
         json = vm.serializeAddress(obj, "refEngine", address(d.refEngine));
         json = vm.serializeAddress(obj, "gameHub", address(d.gameHub));
-        json = vm.serializeAddress(obj, "hub", address(d.gameHub)); // compatibility alias for older frontend tooling
         json = vm.serializeAddress(obj, "sportsRiskEngine", address(d.sportsRiskEngine));
         json = vm.serializeAddress(obj, "sportsHub", address(d.sportsHub));
 
@@ -410,30 +426,28 @@ contract DeployV13 is Script {
         json = vm.serializeAddress(obj, "moduleCoinToss", address(d.coin));
         json = vm.serializeAddress(obj, "moduleRoulette", address(d.roulette));
         json = vm.serializeAddress(obj, "moduleKeno", address(d.keno));
+        json = vm.serializeAddress(obj, "modulePlinko", address(d.plinko));
+        json = vm.serializeAddress(obj, "moduleSicBo", address(d.sicBo));
+        json = vm.serializeAddress(obj, "moduleSlots", address(d.slots));
+        json = vm.serializeAddress(obj, "moduleBaccarat", address(d.baccarat));
 
         json = _writeConfigJson(obj, json, cfg);
         json = _writeCtorJson(obj, json, cfg, d);
         json = _writePoolJson(obj, json, cfg, pools, d);
 
         string memory tag = string.concat(vm.toString(block.chainid), "-", vm.toString(block.number), "-v13");
-        string memory snapPathLegacy = string.concat("deployments/deploy-", tag, ".json");
         string memory snapPath = string.concat("deployments/snapshots/deploy-", tag, ".json");
 
-        _safeWriteJson(json, snapPathLegacy);
         _safeWriteJson(json, snapPath);
         _safeWriteJson(json, "deployments/latest-v13.json");
-        console2.log("Wrote v1.3 deployment snapshot (legacy):", snapPathLegacy);
         console2.log("Wrote v1.3 deployment snapshot:", snapPath);
         console2.log("Wrote v1.3 deployment snapshot:", "deployments/latest-v13.json");
 
         string memory sh = _verifyScript(cfg, pools, d);
-        string memory verifyPathLegacy = string.concat("deployments/verify-", tag, ".sh");
         string memory verifyPath = string.concat("deployments/verify/verify-", tag, ".sh");
 
-        _safeWriteFile(verifyPathLegacy, sh);
         _safeWriteFile(verifyPath, sh);
         _safeWriteFile("deployments/verify-latest-v13.sh", sh);
-        console2.log("Wrote v1.3 verify helper (legacy):", verifyPathLegacy);
         console2.log("Wrote v1.3 verify helper:", verifyPath);
         console2.log("Wrote v1.3 verify helper:", "deployments/verify-latest-v13.sh");
     }
@@ -485,9 +499,12 @@ contract DeployV13 is Script {
         json = vm.serializeString(obj, "ctorArgs_moduleCoinToss", "0x");
         json = vm.serializeString(obj, "ctorArgs_moduleRoulette", "0x");
         json = vm.serializeString(obj, "ctorArgs_moduleKeno", "0x");
+        json = vm.serializeString(obj, "ctorArgs_modulePlinko", "0x");
+        json = vm.serializeString(obj, "ctorArgs_moduleSicBo", "0x");
+        json = vm.serializeString(obj, "ctorArgs_moduleSlots", "0x");
+        json = vm.serializeString(obj, "ctorArgs_moduleBaccarat", "0x");
         string memory gameHubCtorArgs = _gameHubCtorArgs(cfg, d);
         json = vm.serializeString(obj, "ctorArgs_gameHub", gameHubCtorArgs);
-        json = vm.serializeString(obj, "ctorArgs_hub", gameHubCtorArgs);
         json = vm.serializeString(obj, "ctorArgs_sportsRiskEngine", _sportsRiskEngineCtorArgs(cfg));
         json = vm.serializeString(obj, "ctorArgs_sportsHub", _sportsHubCtorArgs(cfg, d));
         return json;
@@ -501,7 +518,6 @@ contract DeployV13 is Script {
         Deployed memory d
     ) internal returns (string memory) {
         json = vm.serializeUint(obj, "numPools", pools.length);
-        json = vm.serializeUint(obj, "numAssets", pools.length); // compatibility: old tooling treats each row as asset+bank
 
         for (uint256 i = 0; i < pools.length; ++i) {
             string memory suffix = vm.toString(i);
@@ -511,7 +527,19 @@ contract DeployV13 is Script {
             json = vm.serializeUint(obj, string.concat("poolDomain_", suffix), uint256(pools[i].domain));
             json = vm.serializeString(obj, string.concat("poolDomainLabel_", suffix), _domainLabel(pools[i].domain));
             json = vm.serializeAddress(obj, string.concat("poolAsset_", suffix), pools[i].asset);
+            json = vm.serializeString(obj, string.concat("poolAssetSymbol_", suffix), assetSymbol);
+            json = vm.serializeUint(obj, string.concat("poolAssetDecimals_", suffix), uint256(assetDecimals));
             json = vm.serializeAddress(obj, string.concat("poolBank_", suffix), pools[i].bank);
+            json = vm.serializeUint(obj, string.concat("poolBankMinLiqBps_", suffix), pools[i].minLiqBps);
+            json = vm.serializeUint(
+                obj, string.concat("poolBankMinTurnoverForUnlock_", suffix), pools[i].minTurnoverForUnlock
+            );
+            json = vm.serializeUint(
+                obj, string.concat("poolBankHoldbackVestingSeconds_", suffix), pools[i].holdbackVestingSeconds
+            );
+            json = vm.serializeString(obj, string.concat("poolLpName_", suffix), pools[i].lpName);
+            json = vm.serializeString(obj, string.concat("poolLpSymbol_", suffix), pools[i].lpSymbol);
+            json = vm.serializeUint(obj, string.concat("poolLpDecimals_", suffix), pools[i].lpDecimals);
             json = vm.serializeUint(obj, string.concat("poolActive_", suffix), 1);
             json = vm.serializeUint(obj, string.concat("poolSportsMaxStake_", suffix), pools[i].sportsMaxStake);
             json = vm.serializeUint(obj, string.concat("poolSportsMaxPayout_", suffix), pools[i].sportsMaxPayout);
@@ -529,21 +557,6 @@ contract DeployV13 is Script {
                 sportsRiskHash = d.sportsRiskEngine.currentRiskHashForPool(pools[i].poolId);
             }
             json = vm.serializeBytes32(obj, string.concat("poolSportsRiskHash_", suffix), sportsRiskHash);
-
-            json = vm.serializeAddress(obj, string.concat("asset_", suffix), pools[i].asset);
-            json = vm.serializeString(obj, string.concat("assetSymbol_", suffix), assetSymbol);
-            json = vm.serializeUint(obj, string.concat("assetDecimals_", suffix), uint256(assetDecimals));
-            json = vm.serializeAddress(obj, string.concat("bank_", suffix), pools[i].bank);
-            json = vm.serializeUint(obj, string.concat("bankMinLiqBps_", suffix), pools[i].minLiqBps);
-            json = vm.serializeUint(
-                obj, string.concat("bankMinTurnoverForUnlock_", suffix), pools[i].minTurnoverForUnlock
-            );
-            json = vm.serializeUint(
-                obj, string.concat("bankHoldbackVestingSeconds_", suffix), pools[i].holdbackVestingSeconds
-            );
-            json = vm.serializeString(obj, string.concat("lpName_", suffix), pools[i].lpName);
-            json = vm.serializeString(obj, string.concat("lpSymbol_", suffix), pools[i].lpSymbol);
-            json = vm.serializeUint(obj, string.concat("lpDecimals_", suffix), pools[i].lpDecimals);
 
             json = vm.serializeString(
                 obj,
@@ -680,7 +693,15 @@ contract DeployV13 is Script {
         sh = _appendVerifyLine(
             sh, address(d.roulette), "src/modules/roulette/RouletteModule.sol:RouletteModule", "0x", verifierUrl
         );
-        return _appendVerifyLine(sh, address(d.keno), "src/modules/keno/KenoModule.sol:KenoModule", "0x", verifierUrl);
+        sh = _appendVerifyLine(sh, address(d.keno), "src/modules/keno/KenoModule.sol:KenoModule", "0x", verifierUrl);
+        sh = _appendVerifyLine(
+            sh, address(d.plinko), "src/modules/plinko/PlinkoModule.sol:PlinkoModule", "0x", verifierUrl
+        );
+        sh = _appendVerifyLine(sh, address(d.sicBo), "src/modules/sicbo/SicBoModule.sol:SicBoModule", "0x", verifierUrl);
+        sh = _appendVerifyLine(sh, address(d.slots), "src/modules/slots/SlotsModule.sol:SlotsModule", "0x", verifierUrl);
+        return _appendVerifyLine(
+            sh, address(d.baccarat), "src/modules/baccarat/BaccaratModule.sol:BaccaratModule", "0x", verifierUrl
+        );
     }
 
     function _gameHubCtorArgs(DeployConfig memory cfg, Deployed memory d) internal pure returns (string memory) {

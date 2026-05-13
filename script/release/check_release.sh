@@ -3,17 +3,17 @@ set -euo pipefail
 
 STRICT="${STRICT:-0}"
 
-RELEASE_PATH="${RELEASE_PATH:-deployments/release-latest.json}"
-SNAPSHOT_PATH="${SNAPSHOT_PATH:-deployments/latest.json}"
-NOTES_PATH="${NOTES_PATH:-deployments/release-notes-latest.md}"
+RELEASE_PATH="${RELEASE_PATH:-deployments/release-latest-v13.json}"
+SNAPSHOT_PATH="${SNAPSHOT_PATH:-deployments/latest-v13.json}"
+NOTES_PATH="${NOTES_PATH:-deployments/release-notes-latest-v13.md}"
 
 # "Latest" pointers (frontend consumes these)
-FRONTEND_MANIFEST_PATH="${FRONTEND_MANIFEST_PATH:-deployments/frontend-manifest-latest.json}"
-GOLDEN_VECTORS_PATH="${GOLDEN_VECTORS_PATH:-deployments/golden-vectors-latest.json}"
-ABI_INDEX_PATH="${ABI_INDEX_PATH:-deployments/abis/index.json}"
-FRONTEND_SCHEMA="${FRONTEND_SCHEMA:-1}"
-RELEASE_TAG_SUFFIX="${RELEASE_TAG_SUFFIX:-}"
-VERIFY_SCRIPT="${VERIFY_SCRIPT:-script/release/VerifyRelease.s.sol:VerifyRelease}"
+FRONTEND_MANIFEST_PATH="${FRONTEND_MANIFEST_PATH:-deployments/frontend-manifest-latest-v13.json}"
+GOLDEN_VECTORS_PATH="${GOLDEN_VECTORS_PATH:-deployments/golden-vectors-latest-v13.json}"
+ABI_INDEX_PATH="${ABI_INDEX_PATH:-deployments/abis-v13/index.json}"
+FRONTEND_SCHEMA="${FRONTEND_SCHEMA:-2}"
+RELEASE_TAG_SUFFIX="${RELEASE_TAG_SUFFIX:--v13}"
+VERIFY_SCRIPT="${VERIFY_SCRIPT:-script/release/VerifyReleaseV13.s.sol:VerifyReleaseV13}"
 
 if [[ "$STRICT" == "1" ]]; then
   [[ -f "$SNAPSHOT_PATH" ]] || { echo "missing snapshot: $SNAPSHOT_PATH"; exit 1; }

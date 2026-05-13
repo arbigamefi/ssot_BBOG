@@ -7,7 +7,7 @@ Use these templates for:
 - live incident handling (status updates, actions, evidence)
 - post-incident review (root cause, prevention, follow-ups)
 
-> Always record the **release digest** (from `deployments/release-latest.json`) and the exact **block range**
+> Always record the **release digest** (from `deployments/release-latest-v13.json`) and the exact **block range**
 > where the incident occurred.
 
 ---
@@ -38,7 +38,7 @@ Use these templates for:
   - adapter:
   - vrfWrapper:
 - **Deployment snapshot:** `deployments/snapshots/deploy-<chainId>-<block>.json`
-- **Release digest:** `0x...` (from `deployments/release-latest.json` or `deployments/release-latest-v13.json`)
+- **Release digest:** `0x...` (from `deployments/release-latest-v13.json`)
 - **Release tag (if any):** vX.Y.Z
 
 ### Impact
@@ -128,4 +128,3 @@ Classify each action as **code**, **tests/proofs**, **docs/process**, or **ops t
 - Snapshot file:
 - Any configuration changes (pause/refundTimeout/module registry):
 - Any chain/environment specific factors:
-

@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
-"""Generate Etherscan-family verification helper scripts from deployments/latest.json.
+"""Generate Etherscan-family verification helper scripts from deployments/latest-v13.json.
 
 Why this exists
 - Etherscan API V1 endpoints have been deprecated across the Etherscan family.
 - Contract verification should use the unified Etherscan API V2 endpoint.
 
 This tool regenerates:
-- deployments/verify-latest.sh
+- deployments/verify-latest-v13.sh
 - deployments/verify/verify-<chainid>-<block>.sh
-- deployments/verify-<chainid>-<block>.sh (legacy)
 
 The scripts default to:
   https://api.etherscan.io/v2/api?chainid=<CHAIN_ID>
@@ -63,7 +62,7 @@ def _verify_line(addr: str, contract_id: str, ctor_args: str) -> str:
 
 
 def main() -> int:
-    in_path = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("deployments/latest.json")
+    in_path = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("deployments/latest-v13.json")
     if not in_path.exists():
         print(f"error: {in_path} not found", file=sys.stderr)
         return 2
@@ -71,8 +70,11 @@ def main() -> int:
     data = json.loads(in_path.read_text())
     chain_id = int(_must(data, "chainId"))
     block_number = int(_must(data, "blockNumber"))
-    is_v13 = str(data.get("architectureVersion", "")).startswith("v1.3")
-    tag = f"{chain_id}-{block_number}{'-v13' if is_v13 else ''}"
+    architecture_version = str(data.get("architectureVersion", ""))
+    if not architecture_version.startswith("v1.3"):
+        print(f"error: expected v1.3 snapshot, got architectureVersion={architecture_version!r}", file=sys.stderr)
+        return 2
+    tag = f"{chain_id}-{block_number}-v13"
 
     out_dir = Path("deployments")
     (out_dir / "verify").mkdir(parents=True, exist_ok=True)
@@ -96,31 +98,20 @@ def main() -> int:
         "if forge verify-contract --help 2>/dev/null | grep -q -- \"--compilation-profile\"; then PROFILE_FLAG=\"--compilation-profile default\"; fi\n\n"
     )
 
-    if is_v13:
-        contracts: list[tuple[str, str, str]] = [
-            ("adapter", "src/adapters/chainlink/ChainlinkV2PlusWrapperAdapter.sol:ChainlinkV2PlusWrapperAdapter", "ctorArgs_adapter"),
-            ("vrfHub", "src/core/VRFHub.sol:VRFHub", "ctorArgs_vrfHub"),
-            ("poolRegistry", "src/core/PoolRegistry.sol:PoolRegistry", "ctorArgs_poolRegistry"),
-            ("settlementRouter", "src/core/SettlementRouter.sol:SettlementRouter", "ctorArgs_settlementRouter"),
-            ("refRegistry", "src/engines/referral/ReferralRegistry.sol:ReferralRegistry", "ctorArgs_refRegistry"),
-            ("refEngine", "src/engines/referral/DefaultReferralEngine.sol:DefaultReferralEngine", "ctorArgs_refEngine"),
-            ("gameHub", "src/core/GameHub.sol:GameHub", "ctorArgs_gameHub"),
-            ("sportsRiskEngine", "src/core/SportsRiskEngine.sol:SportsRiskEngine", "ctorArgs_sportsRiskEngine"),
-            ("sportsHub", "src/core/SportsHub.sol:SportsHub", "ctorArgs_sportsHub"),
-        ]
-    else:
-        # Contract list from Deploy.s.sol snapshot keys
-        contracts = [
-            ("adapter", "src/adapters/chainlink/ChainlinkV2PlusWrapperAdapter.sol:ChainlinkV2PlusWrapperAdapter", "ctorArgs_adapter"),
-            ("vrfHub", "src/core/VRFHub.sol:VRFHub", "ctorArgs_vrfHub"),
-            ("bankRegistry", "src/core/BankRegistry.sol:BankRegistry", "ctorArgs_bankRegistry"),
-            ("refRegistry", "src/engines/referral/ReferralRegistry.sol:ReferralRegistry", "ctorArgs_refRegistry"),
-            ("refEngine", "src/engines/referral/DefaultReferralEngine.sol:DefaultReferralEngine", "ctorArgs_refEngine"),
-            ("hub", "src/core/Hub.sol:Hub", "ctorArgs_hub"),
-        ]
+    contracts: list[tuple[str, str, str]] = [
+        ("adapter", "src/adapters/chainlink/ChainlinkV2PlusWrapperAdapter.sol:ChainlinkV2PlusWrapperAdapter", "ctorArgs_adapter"),
+        ("vrfHub", "src/core/VRFHub.sol:VRFHub", "ctorArgs_vrfHub"),
+        ("poolRegistry", "src/core/PoolRegistry.sol:PoolRegistry", "ctorArgs_poolRegistry"),
+        ("settlementRouter", "src/core/SettlementRouter.sol:SettlementRouter", "ctorArgs_settlementRouter"),
+        ("refRegistry", "src/engines/referral/ReferralRegistry.sol:ReferralRegistry", "ctorArgs_refRegistry"),
+        ("refEngine", "src/engines/referral/DefaultReferralEngine.sol:DefaultReferralEngine", "ctorArgs_refEngine"),
+        ("gameHub", "src/core/GameHub.sol:GameHub", "ctorArgs_gameHub"),
+        ("sportsRiskEngine", "src/core/SportsRiskEngine.sol:SportsRiskEngine", "ctorArgs_sportsRiskEngine"),
+        ("sportsHub", "src/core/SportsHub.sol:SportsHub", "ctorArgs_sportsHub"),
+    ]
 
-    # Banks: per-asset
-    n_banks = int(data.get("numPools" if is_v13 else "numAssets", data.get("numAssets", 0)))
+    # Banks: per-pool
+    n_banks = int(data.get("numPools", 0))
     for i in range(n_banks):
         contracts.append((f"bank_{i}", "src/core/Bank.sol:Bank", f"ctorArgs_bank_{i}"))
 
@@ -131,6 +122,10 @@ def main() -> int:
             ("moduleCoinToss", "src/modules/cointoss/CoinTossModule.sol:CoinTossModule", "ctorArgs_moduleCoinToss"),
             ("moduleRoulette", "src/modules/roulette/RouletteModule.sol:RouletteModule", "ctorArgs_moduleRoulette"),
             ("moduleKeno", "src/modules/keno/KenoModule.sol:KenoModule", "ctorArgs_moduleKeno"),
+            ("modulePlinko", "src/modules/plinko/PlinkoModule.sol:PlinkoModule", "ctorArgs_modulePlinko"),
+            ("moduleSicBo", "src/modules/sicbo/SicBoModule.sol:SicBoModule", "ctorArgs_moduleSicBo"),
+            ("moduleSlots", "src/modules/slots/SlotsModule.sol:SlotsModule", "ctorArgs_moduleSlots"),
+            ("moduleBaccarat", "src/modules/baccarat/BaccaratModule.sol:BaccaratModule", "ctorArgs_moduleBaccarat"),
         ]
     )
 
@@ -146,22 +141,20 @@ def main() -> int:
         script += _verify_line(addr, contract_id, ctor_args)
 
     # Outputs
-    out_latest = out_dir / ("verify-latest-v13.sh" if is_v13 else "verify-latest.sh")
-    out_legacy = out_dir / f"verify-{tag}.sh"
+    out_latest = out_dir / "verify-latest-v13.sh"
     out_convention = out_dir / "verify" / f"verify-{tag}.sh"
 
-    for p in (out_latest, out_legacy, out_convention):
+    for p in (out_latest, out_convention):
         p.write_text(script)
 
     # Make scripts executable (best-effort)
-    for p in (out_latest, out_legacy, out_convention):
+    for p in (out_latest, out_convention):
         try:
             os.chmod(p, 0o755)
         except Exception:
             pass
 
     print(f"Wrote verify helper: {out_latest}")
-    print(f"Wrote verify helper (legacy): {out_legacy}")
     print(f"Wrote verify helper: {out_convention}")
     return 0
 

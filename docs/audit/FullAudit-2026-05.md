@@ -1,5 +1,11 @@
 # ArbiGameFi SSOT 合约全量安全审计报告
 
+> **Historical baseline notice (2026-05-13)**: this audit report was produced before the v1.3
+> SettlementRouter / vertical-hub refactor. References to `src/core/Hub.sol` describe the removed
+> pre-v1.3 casino hub. Current code routes casino settlement through `GameHub -> SettlementRouter -> Bank`
+> and sports settlement through `SportsHub -> SettlementRouter -> Bank`; see
+> `docs/constitution/SSOT.v1.3.md` and `docs/architecture/overview.md`.
+
 **版本**: 1.0 · 独立审计 (忽略 `SSOT_v1.2_Audit_Report.docx`,从零覆盖)
 **审计日期**: 2026-05-12
 **审计范围**: `src/` 下全部业务合约 (~3,700 LOC),排除 `src/mocks/`、`frontend/`、`script/`、`test/`、`lib/`

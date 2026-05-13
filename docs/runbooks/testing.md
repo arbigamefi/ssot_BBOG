@@ -18,12 +18,12 @@ make test
 ## Suite breakdown
 - **Unit tests:** `test/unit/*`
 - **Differential tests:** `test/diff/*`
-  - `DiffCoinToss.t.sol`, `DiffRoulette.t.sol`: module boundary diffs
-  - `StatefulSystemDiff.t.sol`: system-level accounting diff (non-adapter mode)
+  - `Diff*.t.sol`: module boundary reference diffs
+  - `StatefulSystemDiff.t.sol`: router-backed system-level accounting diff (non-adapter mode)
   - `StatefulSystemDiffAdapter.t.sol`: system-level diff in **adapter mode** (Chainlink Wrapper + ETH/credit accounting)
 - **Invariant suite:** `test/invariants/*`
-  - `Invariants.t.sol`: default (non-adapter) SSOT invariants
-  - `InvariantsAdapter.t.sol`: adapter-mode ETH/credit invariants
+  - `SettlementRouterInvariants.t.sol`: router authority, owner-hub terminality, and pool reserve isolation
+  - `SportsHubInvariants.t.sol`: sports exposure, router position matching, and debt-out liveness
 - **Fork tests (optional):** `test/fork/*`
   - Auto-skip when `FORK_RPC_URL` is not set
   - When set, validates request path against a *real* Chainlink VRF v2.5 Wrapper on a fork

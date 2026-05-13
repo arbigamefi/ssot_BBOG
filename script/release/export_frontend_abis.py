@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
-"""Export *frontend-only* ABIs into deployments/abis/.
+"""Export *frontend-only* ABIs into deployments/abis-v13/.
 
 This is intentionally a "trimmed ABI" export:
   - We DO NOT ship full Foundry artifacts (bytecode/metadata).
   - We only export the `abi` array needed by frontend tooling.
 
 Outputs:
-  - deployments/abis/index.json
-  - deployments/abis/<Contract>.abi.json (one per contract type)
+  - deployments/abis-v13/index.json
+  - deployments/abis-v13/<Contract>.abi.json (one per contract type)
 
 The index is tied to the release identity (chainId + blockNumber) so that
 frontend can be zero-inference: copy+consume.
 
 Requires:
-  - `deployments/frontend-manifest-latest.json` or v1.3 manifest (for addresses)
+  - `deployments/frontend-manifest-latest-v13.json` (for addresses)
   - `out/` artifacts present (run `forge build` first)
 """
 
@@ -26,24 +26,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 import hashlib
 import time
-
-REQUIRED_CONTRACTS_V1 = [
-    # core
-    ("Hub", "src/core/Hub.sol:Hub", "hub"),
-    ("VRFHub", "src/core/VRFHub.sol:VRFHub", "vrfHub"),
-    ("BankRegistry", "src/core/BankRegistry.sol:BankRegistry", "bankRegistry"),
-    ("ReferralRegistry", "src/engines/referral/ReferralRegistry.sol:ReferralRegistry", "refRegistry"),
-    ("DefaultReferralEngine", "src/engines/referral/DefaultReferralEngine.sol:DefaultReferralEngine", "refEngine"),
-    # adapter
-    ("ChainlinkV2PlusWrapperAdapter", "src/adapters/chainlink/ChainlinkV2PlusWrapperAdapter.sol:ChainlinkV2PlusWrapperAdapter", "adapter"),
-    # modules
-    ("DiceModule", "src/modules/dice/DiceModule.sol:DiceModule", "moduleDice"),
-    ("CoinTossModule", "src/modules/cointoss/CoinTossModule.sol:CoinTossModule", "moduleCoinToss"),
-    ("RouletteModule", "src/modules/roulette/RouletteModule.sol:RouletteModule", "moduleRoulette"),
-    ("KenoModule", "src/modules/keno/KenoModule.sol:KenoModule", "moduleKeno"),
-    # bank (type)
-    ("Bank", "src/core/Bank.sol:Bank", "__bank_type__"),
-]
 
 REQUIRED_CONTRACTS_V13 = [
     # core
@@ -62,6 +44,10 @@ REQUIRED_CONTRACTS_V13 = [
     ("CoinTossModule", "src/modules/cointoss/CoinTossModule.sol:CoinTossModule", "moduleCoinToss"),
     ("RouletteModule", "src/modules/roulette/RouletteModule.sol:RouletteModule", "moduleRoulette"),
     ("KenoModule", "src/modules/keno/KenoModule.sol:KenoModule", "moduleKeno"),
+    ("PlinkoModule", "src/modules/plinko/PlinkoModule.sol:PlinkoModule", "modulePlinko"),
+    ("SicBoModule", "src/modules/sicbo/SicBoModule.sol:SicBoModule", "moduleSicBo"),
+    ("SlotsModule", "src/modules/slots/SlotsModule.sol:SlotsModule", "moduleSlots"),
+    ("BaccaratModule", "src/modules/baccarat/BaccaratModule.sol:BaccaratModule", "moduleBaccarat"),
     # bank (type)
     ("Bank", "src/core/Bank.sol:Bank", "__bank_type__"),
 ]
@@ -102,11 +88,11 @@ def _contract_key_to_address(addresses: Dict[str, str], key: str) -> Optional[st
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--manifest", default="deployments/frontend-manifest-latest.json")
+    ap.add_argument("--manifest", default="deployments/frontend-manifest-latest-v13.json")
     ap.add_argument("--out", default="out")
-    ap.add_argument("--dest", default="deployments/abis")
-    ap.add_argument("--schema", type=int, default=1)
-    ap.add_argument("--tag-suffix", default="")
+    ap.add_argument("--dest", default="deployments/abis-v13")
+    ap.add_argument("--schema", type=int, default=2)
+    ap.add_argument("--tag-suffix", default="-v13")
     ap.add_argument("--git-sha", default=os.environ.get("GIT_SHA", ""))
     args = ap.parse_args()
 
@@ -144,7 +130,9 @@ def main() -> None:
 
     exported: List[Dict[str, Any]] = []
 
-    required_contracts = REQUIRED_CONTRACTS_V13 if args.schema == 2 else REQUIRED_CONTRACTS_V1
+    if args.schema != 2:
+        raise SystemExit("only schemaVersion=2 v1.3 manifests are supported")
+    required_contracts = REQUIRED_CONTRACTS_V13
 
     # Export each required ABI
     for file_name, _fq, addr_key in required_contracts:
@@ -166,42 +154,25 @@ def main() -> None:
             "abiSha256": _sha256_hex((dest_dir / abi_file).read_bytes()),
         })
 
-    if args.schema == 2:
-        # Add per-pool banks (addresses from manifest.pools[]).
-        pools = manifest.get("pools") or []
-        if isinstance(pools, list):
-            for p in pools:
-                if not isinstance(p, dict):
-                    continue
-                bank = p.get("bank")
-                asset = p.get("asset")
-                pool_id = p.get("poolId")
-                domain = p.get("domain")
-                if isinstance(bank, str) and isinstance(asset, str):
-                    exported.append({
-                        "name": "BankInstance",
-                        "poolId": pool_id,
-                        "domain": domain,
-                        "asset": asset,
-                        "address": bank,
-                        "abiFile": "Bank.abi.json",
-                    })
-    else:
-        # Add per-asset banks (addresses from manifest.assets[]).
-        assets = manifest.get("assets") or []
-        if isinstance(assets, list):
-            for a in assets:
-                if not isinstance(a, dict):
-                    continue
-                bank = a.get("bank")
-                asset = a.get("asset")
-                if isinstance(bank, str) and isinstance(asset, str):
-                    exported.append({
-                        "name": "BankInstance",
-                        "asset": asset,
-                        "address": bank,
-                        "abiFile": "Bank.abi.json",
-                    })
+    # Add per-pool banks (addresses from manifest.pools[]).
+    pools = manifest.get("pools") or []
+    if isinstance(pools, list):
+        for p in pools:
+            if not isinstance(p, dict):
+                continue
+            bank = p.get("bank")
+            asset = p.get("asset")
+            pool_id = p.get("poolId")
+            domain = p.get("domain")
+            if isinstance(bank, str) and isinstance(asset, str):
+                exported.append({
+                    "name": "BankInstance",
+                    "poolId": pool_id,
+                    "domain": domain,
+                    "asset": asset,
+                    "address": bank,
+                    "abiFile": "Bank.abi.json",
+                })
 
     index = {
         "schemaVersion": args.schema,

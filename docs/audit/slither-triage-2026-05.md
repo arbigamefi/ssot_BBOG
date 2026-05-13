@@ -1,5 +1,9 @@
 # Slither Triage - 2026-05-12
 
+> **Historical baseline notice (2026-05-13)**: this triage was written against the pre-v1.3 Hub
+> codebase. References to `src/core/Hub.sol` are retained as historical detector evidence. Current
+> casino lifecycle code lives in `src/core/GameHub.sol` and settles through `src/core/SettlementRouter.sol`.
+
 Scope: post-audit security-fix working tree after the May 2026 FullAudit fixes.
 
 Commands:

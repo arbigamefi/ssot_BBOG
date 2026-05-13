@@ -4,15 +4,25 @@ pragma solidity ^0.8.20;
 import "forge-std/Test.sol";
 
 import {Bank} from "../../src/core/Bank.sol";
-import {BankRegistry} from "../../src/core/BankRegistry.sol";
-import {Hub} from "../../src/core/Hub.sol";
+import {GameHub} from "../../src/core/GameHub.sol";
+import {PoolRegistry} from "../../src/core/PoolRegistry.sol";
+import {SettlementRouter} from "../../src/core/SettlementRouter.sol";
 import {VRFHub} from "../../src/core/VRFHub.sol";
 import {MockERC20} from "../../src/mocks/MockERC20.sol";
 
+import {BaccaratModule} from "../../src/modules/baccarat/BaccaratModule.sol";
+import {BaccaratParams} from "../../src/modules/baccarat/BaccaratParams.sol";
 import {DiceModule} from "../../src/modules/dice/DiceModule.sol";
 import {CoinTossModule} from "../../src/modules/cointoss/CoinTossModule.sol";
 import {RouletteModule} from "../../src/modules/roulette/RouletteModule.sol";
+import {RouletteParams} from "../../src/modules/roulette/RouletteParams.sol";
 import {KenoModule} from "../../src/modules/keno/KenoModule.sol";
+import {PlinkoModule} from "../../src/modules/plinko/PlinkoModule.sol";
+import {PlinkoParams} from "../../src/modules/plinko/PlinkoParams.sol";
+import {SicBoModule} from "../../src/modules/sicbo/SicBoModule.sol";
+import {SicBoParams} from "../../src/modules/sicbo/SicBoParams.sol";
+import {SlotsModule} from "../../src/modules/slots/SlotsModule.sol";
+import {SlotsParams} from "../../src/modules/slots/SlotsParams.sol";
 
 import {ReferralRegistry} from "../../src/engines/referral/ReferralRegistry.sol";
 import {DefaultReferralEngine} from "../../src/engines/referral/DefaultReferralEngine.sol";
@@ -46,14 +56,19 @@ contract StatefulSystemDiff is Test {
     Bank internal bankA;
     Bank internal bankB;
 
-    BankRegistry internal registry;
-    Hub internal hub;
+    PoolRegistry internal poolRegistry;
+    SettlementRouter internal router;
+    GameHub internal hub;
     VRFHub internal vrf;
 
     DiceModule internal dice;
     CoinTossModule internal coin;
     RouletteModule internal roulette;
     KenoModule internal keno;
+    PlinkoModule internal plinko;
+    SicBoModule internal sicBo;
+    SlotsModule internal slots;
+    BaccaratModule internal baccarat;
 
     ReferralRegistry internal refRegistry;
     DefaultReferralEngine internal refEngine;
@@ -74,6 +89,12 @@ contract StatefulSystemDiff is Test {
     bytes32 internal constant GAME_COIN = keccak256("COIN_TOSS");
     bytes32 internal constant GAME_ROULETTE = keccak256("ROULETTE");
     bytes32 internal constant GAME_KENO = keccak256("KENO");
+    bytes32 internal constant GAME_PLINKO = keccak256("PLINKO");
+    bytes32 internal constant GAME_SIC_BO = keccak256("SIC_BO");
+    bytes32 internal constant GAME_SLOTS = keccak256("SLOTS");
+    bytes32 internal constant GAME_BACCARAT = keccak256("BACCARAT");
+    uint64 internal constant POOL_A = 1;
+    uint64 internal constant POOL_B = 2;
 
     uint16 internal constant BPS = 10_000;
 
@@ -134,11 +155,8 @@ contract StatefulSystemDiff is Test {
         bankA = new Bank(address(assetA), gov, 1000, "LP Share ASTA", "LPA", 18);
         bankB = new Bank(address(assetB), gov, 1000, "LP Share ASTB", "LPB", 18);
 
-        registry = new BankRegistry(gov);
-        vm.startPrank(gov);
-        registry.registerBank(address(assetA), address(bankA));
-        registry.registerBank(address(assetB), address(bankB));
-        vm.stopPrank();
+        poolRegistry = new PoolRegistry(gov);
+        router = new SettlementRouter(address(poolRegistry));
 
         refRegistry = new ReferralRegistry(gov);
         refEngine = new DefaultReferralEngine();
@@ -152,8 +170,8 @@ contract StatefulSystemDiff is Test {
         levelBps[0] = 0;
         levelBps[1] = 10_000;
 
-        hub = new Hub(
-            address(registry),
+        hub = new GameHub(
+            address(router),
             address(vrf),
             address(refRegistry),
             address(refEngine),
@@ -169,8 +187,14 @@ contract StatefulSystemDiff is Test {
         );
 
         vm.startPrank(gov);
-        bankA.setSettlementRouterOnce(address(hub));
-        bankB.setSettlementRouterOnce(address(hub));
+        poolRegistry.registerPool(POOL_A, address(assetA), address(bankA), SSOTTypes.PoolDomain.Casino);
+        poolRegistry.registerPool(POOL_B, address(assetB), address(bankB), SSOTTypes.PoolDomain.Casino);
+        poolRegistry.setHubRegistered(address(hub), true);
+        poolRegistry.setHubAllowedForPool(POOL_A, address(hub), true);
+        poolRegistry.setHubAllowedForPool(POOL_B, address(hub), true);
+
+        bankA.setSettlementRouterOnce(address(router));
+        bankB.setSettlementRouterOnce(address(router));
         refRegistry.setBinderOnce(address(hub));
 
         // keep vesting short to ensure holdback release is exercised when time warps
@@ -185,12 +209,20 @@ contract StatefulSystemDiff is Test {
         coin = new CoinTossModule();
         roulette = new RouletteModule();
         keno = new KenoModule();
+        plinko = new PlinkoModule();
+        sicBo = new SicBoModule();
+        slots = new SlotsModule();
+        baccarat = new BaccaratModule();
 
         vm.startPrank(gov);
         hub.registerGame(GAME_DICE, address(dice));
         hub.registerGame(GAME_COIN, address(coin));
         hub.registerGame(GAME_ROULETTE, address(roulette));
         hub.registerGame(GAME_KENO, address(keno));
+        hub.registerGame(GAME_PLINKO, address(plinko));
+        hub.registerGame(GAME_SIC_BO, address(sicBo));
+        hub.registerGame(GAME_SLOTS, address(slots));
+        hub.registerGame(GAME_BACCARAT, address(baccarat));
         vm.stopPrank();
 
         // Players
@@ -345,8 +377,9 @@ contract StatefulSystemDiff is Test {
         uint16 maxHE,
         uint256 msgValue
     ) internal virtual returns (uint256 betId, bool ok) {
+        uint64 poolId = _poolIdForAsset(asset);
         vm.prank(player);
-        try hub.placeBet{value: msgValue}(gameId, asset, params, spec, affiliate, maxHE) returns (uint256 id) {
+        try hub.placeBet{value: msgValue}(gameId, poolId, params, spec, affiliate, maxHE) returns (uint256 id) {
             return (id, true);
         } catch {
             return (0, false);
@@ -359,6 +392,12 @@ contract StatefulSystemDiff is Test {
 
     function _hubFinalize(uint256 betId) internal virtual {
         hub.finalize(betId);
+    }
+
+    function _poolIdForAsset(address asset) internal view returns (uint64) {
+        if (asset == address(assetA)) return POOL_A;
+        if (asset == address(assetB)) return POOL_B;
+        revert("unknown asset");
     }
 
     function testFuzz_stateful_system_diff(uint256 seed) external {
@@ -399,7 +438,7 @@ contract StatefulSystemDiff is Test {
             bytes32 gameId;
             bytes memory params;
 
-            uint256 g = (state >> 40) % 4;
+            uint256 g = (state >> 40) % 8;
             if (g == 0) {
                 gameId = GAME_DICE;
                 uint8 cap = uint8(bound(uint256(state >> 48), 1, 99));
@@ -410,16 +449,32 @@ contract StatefulSystemDiff is Test {
                 params = abi.encode(isTails);
             } else if (g == 2) {
                 gameId = GAME_ROULETTE;
-                // raw bitmask with 1..6 numbers
+                // typed bitmask with 1..6 numbers
                 uint8 picks = uint8(bound(uint256(state >> 56), 1, 6));
                 uint40 mask = _randomBitmask40(state >> 64, 37, picks);
-                params = abi.encode(mask);
-            } else {
+                params = RouletteParams.encode(RouletteParams.Kind.Bitmask, mask);
+            } else if (g == 3) {
                 gameId = GAME_KENO;
                 // keno numbers: 1..10 picks from 40
                 uint8 picks = uint8(bound(uint256(state >> 56), 1, 10));
                 uint40 mask = _randomBitmask40(state >> 64, 40, picks);
                 params = abi.encode(mask);
+            } else if (g == 4) {
+                gameId = GAME_SLOTS;
+                params = SlotsParams.encode(SlotsParams.PROFILE_CLASSIC);
+            } else if (g == 5) {
+                gameId = GAME_PLINKO;
+                uint8 risk = uint8(bound(uint256(state >> 56), 0, 2));
+                params = PlinkoParams.encode(risk);
+            } else if (g == 6) {
+                gameId = GAME_SIC_BO;
+                uint8 kind = uint8(bound(uint256(state >> 56), 0, 6));
+                uint8 value = _sicBoValue(kind, uint256(state >> 64));
+                params = SicBoParams.encode(kind, value);
+            } else {
+                gameId = GAME_BACCARAT;
+                uint8 side = uint8(bound(uint256(state >> 56), 0, 2));
+                params = BaccaratParams.encode(side);
             }
 
             uint256 amountPerRoll = bound(uint256(state >> 96), 0.1 ether, 5 ether);
@@ -447,7 +502,7 @@ contract StatefulSystemDiff is Test {
                 amountPerRoll: amountPerRoll, betCount: betCount, stopGain: stopGain, stopLoss: stopLoss
             });
 
-            // normalize maxHouseEdge like Hub (0 => default)
+            // normalize maxHouseEdge like GameHub (0 => default)
             uint16 maxHE = 0;
 
             // reference-model pre-compute (includes first-touch binding)
@@ -531,7 +586,7 @@ contract StatefulSystemDiff is Test {
     }
 
     function _canBindFirstTouch(address player, address referrer) internal view returns (bool) {
-        // Mirror ReferralRegistry._bind semantics (best-effort, non-reverting in Hub):
+        // Mirror ReferralRegistry._bind semantics (best-effort, non-reverting in GameHub):
         // - reject zero/identity
         // - first-touch immutable (only if unset)
         // - anti-cycle: walk up from referrer; if we reach player, binding is invalid
@@ -552,14 +607,14 @@ contract StatefulSystemDiff is Test {
         internal
         returns (RefPricing memory out)
     {
-        // normalize maxHE like Hub
+        // normalize maxHE like GameHub
         uint16 maxHE = maxHouseEdgeBps;
         if (maxHE == 0) maxHE = _hubDefaultHouseEdgeBps();
         if (maxHE > 10_000) maxHE = 10_000;
 
         address pricingAff = mReferrer[player];
         if (pricingAff == address(0)) {
-            // First-touch: Hub tries binding but does not revert if the registry rejects (cycle, invalid, etc.).
+            // First-touch: GameHub tries binding but does not revert if the registry rejects.
             if (affiliate != address(0) && affiliate != player) {
                 if (_canBindFirstTouch(player, affiliate)) {
                     mReferrer[player] = affiliate;
@@ -1116,6 +1171,16 @@ contract StatefulSystemDiff is Test {
     // -------------------------
     // Utilities
     // -------------------------
+
+    function _sicBoValue(uint8 kind, uint256 raw) internal pure returns (uint8) {
+        if (kind == SicBoParams.KIND_SMALL || kind == SicBoParams.KIND_BIG || kind == SicBoParams.KIND_ANY_TRIPLE) {
+            return 0;
+        }
+        if (kind == SicBoParams.KIND_TOTAL) {
+            return uint8(bound(raw, 4, 17));
+        }
+        return uint8(bound(raw, 1, 6));
+    }
 
     function _randomBitmask40(uint256 x, uint8 domain, uint8 picks) internal pure returns (uint40 out) {
         require(domain <= 40, "domain");
