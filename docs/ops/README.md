@@ -14,6 +14,7 @@
 - [SportsHub odds, result finality, and exposure caps](runbooks/sportsbook-ops.md)
 - [Sportsbook production controls](sportsbook-production-controls.md)
 - [Sportsbook provider and evidence policy](sportsbook-provider-evidence-policy.md)
+- [Sportsbook bankroll and risk caps](sportsbook-bankroll-risk-caps.md)
 - [Sportsbook Phase 2 go/no-go packet](sportsbook-phase2-gonogo-2026-05-14.md)
 
 ## Incident process

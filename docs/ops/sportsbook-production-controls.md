@@ -71,6 +71,33 @@ No-go:
 - a challenged result is resolved without a non-zero arbitration decision hash;
 - a market type is opened before cancellation/void/postponement handling is defined.
 
+## Bankroll And Risk Caps
+
+Sports caps must be derived from approved bankroll and loss tolerance in raw asset units. Testnet caps
+must not be copied into production.
+
+The repo-side sizing policy and validator are defined in
+[`sportsbook-bankroll-risk-caps.md`](sportsbook-bankroll-risk-caps.md). The approval memo should be
+based on `docs/ops/templates/sportsbook-bankroll-risk-caps.example.json` and checked with
+`make sports-bankroll-caps-check-v13`.
+
+Before any public-money Sports market:
+
+- the Sports Bank must be funded with the approved initial bankroll;
+- `manualLossToleranceRaw` must be less than or equal to the funded bankroll;
+- `maxEventReservedRaw` must be less than or equal to `manualLossToleranceRaw`;
+- max stake, max payout, outcome, market, and event caps must be recorded in raw asset units;
+- deploy env `SPORTS_MAX_*` values must match the approved memo;
+- odds snapshots must be rotated after any cap change because the risk hash changes.
+
+No-go:
+
+- the memo is missing or still marked `draft`;
+- cap values are copied from Base Sepolia without an asset-decimal memo;
+- `maxEventReservedRaw` exceeds manual loss tolerance;
+- `manualLossToleranceRaw` exceeds funded bankroll;
+- deploy env values do not match the approved memo.
+
 ## Public Frontend Controls
 
 The current repo has no approved public sportsbook frontend launch. Any public entrypoint must be

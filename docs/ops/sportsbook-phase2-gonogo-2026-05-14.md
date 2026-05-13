@@ -87,10 +87,15 @@ Covered:
   `docs/ops/templates/sportsbook-rulebook.pre-match-moneyline.example.json`
 - Example result evidence bundle template:
   `docs/ops/templates/sportsbook-result-evidence.example.json`
+- Bankroll/risk cap sizing policy:
+  `docs/ops/sportsbook-bankroll-risk-caps.md`
+- Example bankroll/risk cap memo:
+  `docs/ops/templates/sportsbook-bankroll-risk-caps.example.json`
 
 These documents define the reproducibility standard for `rulebookHash`, `resultSourceHash`,
 `evidenceHash`, `challengeReasonHash`, and `arbitrationDecisionHash`. They do not approve a provider
-or evidence-storage vendor.
+or evidence-storage vendor. They also define how Sports caps should be derived from bankroll, but do
+not approve a production bankroll.
 
 ## Open No-Go Items
 
@@ -99,8 +104,8 @@ or evidence-storage vendor.
 | Managed key custody | NO-GO | Odds signer, result reporter, challenger, arbitrator, and governance keys must have approved custody, operator ownership, rotation procedure, and rollback plan. |
 | Provider and evidence policy | NO-GO | Approve the provider choice, fallback rules, evidence storage location, and the draft rulebook/result evidence procedure in `docs/ops/sportsbook-provider-evidence-policy.md`. |
 | Jurisdiction and frontend access | NO-GO | Legal/compliance must approve jurisdictions, restricted regions, age policy, KYC/sanctions posture, responsible-gaming controls, and frontend gating. |
-| Bankroll sizing | NO-GO | Initial bankroll, loss tolerance, max reserved exposure, and manual supervision limits must be approved in raw asset units. |
-| Final risk caps | NO-GO | Mainnet `SPORTS_MAX_*` values must be set from the bankroll memo, not copied from testnet. |
+| Bankroll sizing | NO-GO | Approve a `sportsbook.bankroll-risk-caps.v1` memo with initial bankroll, loss tolerance, max reserved exposure, and manual supervision limits in raw asset units. |
+| Final risk caps | NO-GO | Mainnet `SPORTS_MAX_*` values must match the approved bankroll memo and pass `REQUIRE_APPROVED=1 make sports-bankroll-caps-check-v13`. |
 | Monitoring and alerts | NO-GO | Sports metrics G1-G7 and related alerts must be routed to named operators with escalation coverage during market windows. |
 | Keeper/debt-out operations | NO-GO | Keeper process must be able to call `finalizeResult`, `settleTickets`, `refundTickets`, and `voidTickets`, with retry/shrink procedure for failed batches. |
 | Mainnet release artifacts | NO-GO | Fresh mainnet deployment, verification, release digest, frontend manifest, golden vectors, ABI export, strict release check, fork tests, and release package must exist. |

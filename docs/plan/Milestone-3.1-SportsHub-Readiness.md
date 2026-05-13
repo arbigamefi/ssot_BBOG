@@ -40,6 +40,8 @@ As of `master` through PR #13:
   mainnet sportsbook canary until the off-chain approvals and production controls are filled.
 - The provider/evidence policy draft is tracked at `docs/ops/sportsbook-provider-evidence-policy.md`;
   it defines hash reproducibility, but does not approve any provider or evidence-storage vendor.
+- The bankroll/risk cap sizing policy is tracked at `docs/ops/sportsbook-bankroll-risk-caps.md`; the
+  local memo validator is `make sports-bankroll-caps-check-v13`, but no production bankroll is approved.
 
 ## Go/No-Go Gates
 
@@ -183,6 +185,8 @@ No-go conditions:
 
 - Before entering Phase 2, run `make sports-phase2-gonogo-v13` and confirm the packet has moved from
   NO-GO to GO with approval records for every open production gate.
+- Validate the approved bankroll memo with
+  `REQUIRE_APPROVED=1 make sports-bankroll-caps-check-v13 BANKROLL_CAPS_FILE=<approved-memo.json>`.
 - Start with one asset, one Sports pool, low limits, and a small market set.
 - Keep max stake/payout below the bankroll amount that operators can manually supervise.
 - Require active monitoring during market lock/result/finality windows.

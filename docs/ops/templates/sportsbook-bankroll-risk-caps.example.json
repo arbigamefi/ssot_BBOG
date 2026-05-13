@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "sportsbook.bankroll-risk-caps.v1",
+  "status": "draft",
+  "chainId": 84532,
+  "poolId": 2,
+  "asset": {
+    "address": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    "symbol": "EXAMPLE",
+    "decimals": 6
+  },
+  "initialBankrollRaw": "10000000000",
+  "manualLossToleranceRaw": "1000000000",
+  "caps": {
+    "maxStakeRaw": "10000000",
+    "maxPayoutRaw": "50000000",
+    "maxOutcomeReservedRaw": "200000000",
+    "maxMarketReservedRaw": "500000000",
+    "maxEventReservedRaw": "1000000000"
+  },
+  "approvals": {
+    "bankrollApproval": "TBD",
+    "riskApproval": "TBD",
+    "approvedAt": "TBD",
+    "evidenceUri": "TBD"
+  }
+}
