@@ -204,7 +204,8 @@ If multiple active markets fail with the same signer/hash/risk mismatch, treat a
    ```bash
    cast send $SPORTS_HUB "challengeResult(uint64,bytes32)" $MARKET_ID $REASON_HASH --rpc-url $RPC --private-key $SPORTS_CHALLENGER_PK
    ```
-   The caller must be governance or an allowlisted `resultChallenger`.
+   The caller must be governance or an allowlisted `resultChallenger`. The challenge window closes at
+   `finalizesAt`; after that, `finalizeResult` is the expected path.
 3) **Resolve the challenge with an auditable arbitration decision.**
    - Use `1=UpholdResult` only when the original result is confirmed correct; this finalizes the market.
    - Use `2=ReopenResult` when the original payload is rejected but reporters can propose a corrected result.

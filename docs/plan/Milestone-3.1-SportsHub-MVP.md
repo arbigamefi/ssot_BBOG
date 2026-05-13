@@ -225,6 +225,7 @@ Deliverables:
 Acceptance:
 
 - Unauthorized addresses cannot force a market into `Challenged`.
+- Challenges cannot be opened after the result finality window closes.
 - An upheld challenge finalizes the original result without changing the winner.
 - A reopened challenge returns the market to `Locked` so reporters must submit a fresh quorum-bound result.
 - A void decision enables refunds and emits public arbitration evidence.

@@ -163,6 +163,7 @@ interface ISportsHub {
     error BadOddsSignature();
     error BadPoolDomain(uint64 poolId, SSOTTypes.PoolDomain domain);
     error ResultFinalityPending(uint64 marketId, uint256 nowTs, uint256 finalizesAt);
+    error ResultChallengeWindowClosed(uint64 marketId, uint256 nowTs, uint256 finalizesAt);
     error ResultAlreadyChallenged(uint64 marketId);
     error ResultChallengePending(uint64 marketId);
     error UnauthorizedReporter(address reporter);

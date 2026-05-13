@@ -344,6 +344,25 @@ contract SportsHubResultTest is Test {
         sportsHub.challengeResult(marketId, CHALLENGE_REASON);
     }
 
+    function test_challengeResult_rejectsAfterFinalityWindowCloses() external {
+        uint64 marketId = _createOpenLockAndProposeResult();
+        SSOTTypes.SportsResult memory result = sportsHub.getResult(marketId);
+
+        vm.warp(result.finalizesAt);
+
+        vm.prank(challenger);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ISportsHub.ResultChallengeWindowClosed.selector, marketId, block.timestamp, result.finalizesAt
+            )
+        );
+        sportsHub.challengeResult(marketId, CHALLENGE_REASON);
+
+        sportsHub.finalizeResult(marketId);
+        SSOTTypes.SportsMarket memory market = sportsHub.getMarket(marketId);
+        assertEq(uint256(market.state), uint256(SSOTTypes.SportsMarketState.Resolved));
+    }
+
     function test_resolveResultChallenge_upholdsResultAndFinalizes() external {
         uint64 marketId = _createOpenLockAndProposeResult();
         SSOTTypes.SportsResult memory result = sportsHub.getResult(marketId);

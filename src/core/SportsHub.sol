@@ -442,6 +442,9 @@ contract SportsHub is ISportsHub, Governable, EIP712, ReentrancyGuard {
         }
 
         SSOTTypes.SportsResult storage result = _results[marketId];
+        if (block.timestamp >= result.finalizesAt) {
+            revert ResultChallengeWindowClosed(marketId, block.timestamp, result.finalizesAt);
+        }
         result.challenged = true;
         result.challengeReasonHash = reasonHash;
         result.challenger = msg.sender;
