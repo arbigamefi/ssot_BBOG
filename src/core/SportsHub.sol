@@ -32,6 +32,7 @@ contract SportsHub is ISportsHub, Governable, ReentrancyGuard {
     mapping(uint64 => SSOTTypes.SportsResult) internal _results;
 
     mapping(address => bool) public oddsSigner;
+    mapping(address => bool) public resultReporter;
     mapping(bytes32 => bool) public oddsSnapshotUsed;
 
     mapping(uint64 => uint256) public override marketReserved;
@@ -85,6 +86,12 @@ contract SportsHub is ISportsHub, Governable, ReentrancyGuard {
         bytes32 oldHash = resultReporterSetHash;
         resultReporterSetHash = newHash;
         emit ResultReporterSetHashSet(oldHash, newHash);
+    }
+
+    function setResultReporter(address reporter, bool allowed) external onlyGov {
+        if (reporter == address(0)) revert Errors.ZeroAddress();
+        resultReporter[reporter] = allowed;
+        emit ResultReporterSet(reporter, allowed);
     }
 
     function getMarket(uint64 marketId) external view override returns (SSOTTypes.SportsMarket memory) {
@@ -283,22 +290,65 @@ contract SportsHub is ISportsHub, Governable, ReentrancyGuard {
         );
     }
 
-    function proposeResult(uint64 marketId, uint32 winningOutcomeId, bytes32 resultPayloadHash) external pure override {
-        marketId;
-        winningOutcomeId;
-        resultPayloadHash;
-        revert Errors.InvalidConfig();
+    function proposeResult(uint64 marketId, uint32 winningOutcomeId, bytes32 resultPayloadHash) external override {
+        if (!resultReporter[msg.sender]) revert UnauthorizedReporter(msg.sender);
+        if (resultPayloadHash == bytes32(0)) revert Errors.InvalidConfig();
+
+        SSOTTypes.SportsMarket storage market = _requireMutableMarket(marketId);
+        if (market.state != SSOTTypes.SportsMarketState.Locked) {
+            revert BadMarketState(marketId, market.state, SSOTTypes.SportsMarketState.Locked);
+        }
+        if (winningOutcomeId >= market.outcomeCount) revert BadOddsSnapshot(marketId, winningOutcomeId);
+
+        uint64 finalizesAt = uint64(block.timestamp + market.resultFinalitySeconds);
+        _results[marketId] = SSOTTypes.SportsResult({
+            marketId: marketId,
+            eventId: market.eventId,
+            winningOutcomeId: winningOutcomeId,
+            resultPayloadHash: resultPayloadHash,
+            rulebookHash: market.rulebookHash,
+            reporterSetHash: resultReporterSetHash,
+            proposer: msg.sender,
+            proposedAt: uint64(block.timestamp),
+            finalizesAt: finalizesAt,
+            challenged: false
+        });
+
+        _setMarketState(market, SSOTTypes.SportsMarketState.ResultProposed);
+        emit ResultProposed(
+            marketId, market.eventId, winningOutcomeId, resultPayloadHash, market.rulebookHash, msg.sender, finalizesAt
+        );
     }
 
-    function challengeResult(uint64 marketId, bytes32 reasonHash) external pure override {
-        marketId;
-        reasonHash;
-        revert Errors.InvalidConfig();
+    function challengeResult(uint64 marketId, bytes32 reasonHash) external override {
+        if (reasonHash == bytes32(0)) revert Errors.InvalidConfig();
+
+        SSOTTypes.SportsMarket storage market = _requireMutableMarket(marketId);
+        if (market.state != SSOTTypes.SportsMarketState.ResultProposed) {
+            revert BadMarketState(marketId, market.state, SSOTTypes.SportsMarketState.ResultProposed);
+        }
+
+        SSOTTypes.SportsResult storage result = _results[marketId];
+        result.challenged = true;
+        _setMarketState(market, SSOTTypes.SportsMarketState.Challenged);
+        emit ResultChallenged(marketId, reasonHash, msg.sender);
     }
 
-    function finalizeResult(uint64 marketId) external pure override {
-        marketId;
-        revert Errors.InvalidConfig();
+    function finalizeResult(uint64 marketId) external override {
+        SSOTTypes.SportsMarket storage market = _requireMutableMarket(marketId);
+        if (market.state == SSOTTypes.SportsMarketState.Challenged) revert ResultAlreadyChallenged(marketId);
+        if (market.state != SSOTTypes.SportsMarketState.ResultProposed) {
+            revert BadMarketState(marketId, market.state, SSOTTypes.SportsMarketState.ResultProposed);
+        }
+
+        SSOTTypes.SportsResult storage result = _results[marketId];
+        if (result.challenged) revert ResultAlreadyChallenged(marketId);
+        if (block.timestamp < result.finalizesAt) {
+            revert ResultFinalityPending(marketId, block.timestamp, result.finalizesAt);
+        }
+
+        _setMarketState(market, SSOTTypes.SportsMarketState.Resolved);
+        emit ResultFinalized(marketId, market.eventId, result.winningOutcomeId, result.resultPayloadHash);
     }
 
     function settleTicket(uint256 ticketId) external view override {

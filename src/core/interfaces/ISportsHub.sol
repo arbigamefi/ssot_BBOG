@@ -72,6 +72,7 @@ interface ISportsHub {
     event OddsSignerSetHashSet(bytes32 oldHash, bytes32 newHash);
     event OddsSignerSet(address indexed signer, bool allowed);
     event ResultReporterSetHashSet(bytes32 oldHash, bytes32 newHash);
+    event ResultReporterSet(address indexed reporter, bool allowed);
     event TicketPlaced(
         uint256 indexed ticketId,
         uint256 indexed positionId,

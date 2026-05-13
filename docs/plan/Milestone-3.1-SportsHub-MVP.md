@@ -72,8 +72,10 @@ As of the current `codex/sportsbook-architecture-research` branch:
 - PR-3.1.4 has an initial concrete `SportsRiskEngine` with configurable global caps, deterministic
   `riskHash`, fixed-odds payout calculation, stale odds/state checks, and market/outcome/event exposure
   cap enforcement.
-- Result finality, settlement/refund/void debt-out, and SportsHub-specific invariants remain out of this
-  slice and are intentionally left for PR-3.1.5 through PR-3.1.6.
+- PR-3.1.5 has allowlisted result reporters, public result proposal, explicit challenge delay,
+  challenged-result blocking, result finalization, and challenged-market void coverage.
+- Settlement/refund/void debt-out and SportsHub-specific invariants remain out of this slice and are
+  intentionally left for PR-3.1.6.
 
 ### PR-3.1.1 — Interfaces and milestone plan
 
