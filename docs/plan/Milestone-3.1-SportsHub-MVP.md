@@ -59,7 +59,7 @@ SettlementRouter
 
 ## Current implementation status
 
-As of the current `codex/sportsbook-architecture-research` branch:
+As of `master` through PR #5 plus the local `codex/sports-challenge-window` closeout branch:
 
 - PR-3.1.1 is implemented as a local checkpoint with shared SportsHub types, `ISportsHub`,
   `ISportsRiskEngine`, and this milestone plan.
@@ -87,6 +87,12 @@ As of the current `codex/sportsbook-architecture-research` branch:
   incident-template hooks for odds signer health, result reporter finality, and exposure-cap incidents.
 - PR-3.1.8 adds a configurable result reporter threshold and EIP-712 reporter signature quorum for
   result proposals, while keeping the threshold-1 MVP call path available.
+- PR-3.1.9 adds authorized result challenger/arbitrator roles, challenge evidence, arbitration decision
+  evidence, explicit uphold/reopen/void outcomes, and a closed finality challenge window.
+- PR-3.1.10 requires direct market voids to include a non-zero reason hash and emits `MarketVoided`
+  for incident linkage and monitoring.
+- PR-3.1.11 adds batch debt-out helpers for keeper/frontend terminalization while preserving single-ticket
+  settlement/refund/void semantics and per-ticket events.
 
 ### PR-3.1.1 — Interfaces and milestone plan
 
