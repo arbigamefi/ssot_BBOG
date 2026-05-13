@@ -160,12 +160,12 @@ contract VerifyReleaseV13 is Script {
             digest = keccak256(
                 abi.encode(
                     digest,
-                    snap.readUint(string.concat(".bankMinLiqBps_", suffix)),
-                    snap.readUint(string.concat(".bankMinTurnoverForUnlock_", suffix)),
-                    snap.readUint(string.concat(".bankHoldbackVestingSeconds_", suffix)),
-                    keccak256(bytes(snap.readString(string.concat(".lpName_", suffix)))),
-                    keccak256(bytes(snap.readString(string.concat(".lpSymbol_", suffix)))),
-                    snap.readUint(string.concat(".lpDecimals_", suffix))
+                    snap.readUint(string.concat(".poolBankMinLiqBps_", suffix)),
+                    snap.readUint(string.concat(".poolBankMinTurnoverForUnlock_", suffix)),
+                    snap.readUint(string.concat(".poolBankHoldbackVestingSeconds_", suffix)),
+                    keccak256(bytes(snap.readString(string.concat(".poolLpName_", suffix)))),
+                    keccak256(bytes(snap.readString(string.concat(".poolLpSymbol_", suffix)))),
+                    snap.readUint(string.concat(".poolLpDecimals_", suffix))
                 )
             );
 
