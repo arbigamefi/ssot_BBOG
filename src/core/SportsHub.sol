@@ -351,19 +351,47 @@ contract SportsHub is ISportsHub, Governable, ReentrancyGuard {
         emit ResultFinalized(marketId, market.eventId, result.winningOutcomeId, result.resultPayloadHash);
     }
 
-    function settleTicket(uint256 ticketId) external view override {
-        _requireTicket(ticketId);
-        revert Errors.InvalidConfig();
+    function settleTicket(uint256 ticketId) external override nonReentrant {
+        SSOTTypes.SportsTicket storage ticket = _requireHeldTicket(ticketId);
+        SSOTTypes.SportsMarket storage market = _requireMarket(ticket.marketId);
+        if (market.state != SSOTTypes.SportsMarketState.Resolved) {
+            revert BadMarketState(ticket.marketId, market.state, SSOTTypes.SportsMarketState.Resolved);
+        }
+
+        SSOTTypes.SportsResult storage result = _results[ticket.marketId];
+        uint256 payout = ticket.outcomeId == result.winningOutcomeId ? ticket.payout : 0;
+
+        ticket.state = SSOTTypes.SportsTicketState.Settled;
+        _releaseExposure(ticket);
+
+        SSOTTypes.XPAward[] memory noAwards = new SSOTTypes.XPAward[](0);
+        ISettlementRouter(settlementRouter).settlePosition(ticket.positionId, payout, payout, 0, 0, noAwards);
+
+        emit TicketSettled(ticketId, ticket.positionId, payout);
     }
 
-    function refundTicket(uint256 ticketId) external view override {
-        _requireTicket(ticketId);
-        revert Errors.InvalidConfig();
+    function refundTicket(uint256 ticketId) external override nonReentrant {
+        SSOTTypes.SportsTicket storage ticket = _requireHeldTicket(ticketId);
+        _requireVoidedMarket(ticket.marketId);
+
+        ticket.state = SSOTTypes.SportsTicketState.Refunded;
+        _releaseExposure(ticket);
+
+        ISettlementRouter(settlementRouter).refundPosition(ticket.positionId, ticket.stake);
+
+        emit TicketRefunded(ticketId, ticket.positionId, ticket.stake);
     }
 
-    function voidTicket(uint256 ticketId) external view override {
-        _requireTicket(ticketId);
-        revert Errors.InvalidConfig();
+    function voidTicket(uint256 ticketId) external override nonReentrant {
+        SSOTTypes.SportsTicket storage ticket = _requireHeldTicket(ticketId);
+        _requireVoidedMarket(ticket.marketId);
+
+        ticket.state = SSOTTypes.SportsTicketState.Voided;
+        _releaseExposure(ticket);
+
+        ISettlementRouter(settlementRouter).refundPosition(ticket.positionId, ticket.stake);
+
+        emit TicketVoided(ticketId, ticket.positionId, ticket.stake);
     }
 
     function _requireMarket(uint64 marketId) internal view returns (SSOTTypes.SportsMarket storage market) {
@@ -378,6 +406,20 @@ contract SportsHub is ISportsHub, Governable, ReentrancyGuard {
     function _requireTicket(uint256 ticketId) internal view returns (SSOTTypes.SportsTicket storage ticket) {
         ticket = _tickets[ticketId];
         if (ticket.state == SSOTTypes.SportsTicketState.None) revert UnknownTicket(ticketId);
+    }
+
+    function _requireHeldTicket(uint256 ticketId) internal view returns (SSOTTypes.SportsTicket storage ticket) {
+        ticket = _requireTicket(ticketId);
+        if (ticket.state != SSOTTypes.SportsTicketState.Held) {
+            revert BadTicketState(ticketId, ticket.state, SSOTTypes.SportsTicketState.Held);
+        }
+    }
+
+    function _requireVoidedMarket(uint64 marketId) internal view {
+        SSOTTypes.SportsMarket storage market = _requireMarket(marketId);
+        if (market.state != SSOTTypes.SportsMarketState.Voided) {
+            revert BadMarketState(marketId, market.state, SSOTTypes.SportsMarketState.Voided);
+        }
     }
 
     function _sportsPool(uint64 poolId) internal view returns (SSOTTypes.Pool memory pool) {
@@ -408,6 +450,13 @@ contract SportsHub is ISportsHub, Governable, ReentrancyGuard {
         if (market.state != SSOTTypes.SportsMarketState.Open) {
             revert BadMarketState(market.marketId, market.state, SSOTTypes.SportsMarketState.Open);
         }
+    }
+
+    function _releaseExposure(SSOTTypes.SportsTicket storage ticket) internal {
+        uint256 reserved = ticket.reserved;
+        marketReserved[ticket.marketId] -= reserved;
+        marketOutcomeReserved[ticket.marketId][ticket.outcomeId] -= reserved;
+        eventReserved[ticket.eventId] -= reserved;
     }
 
     function _hashOddsTicket(SSOTTypes.SportsOddsSnapshot calldata odds, address player, uint256 stake)
