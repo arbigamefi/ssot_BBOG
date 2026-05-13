@@ -57,6 +57,18 @@ SettlementRouter
 
 ## PR sequence
 
+## Current implementation status
+
+As of the current `codex/sportsbook-architecture-research` branch:
+
+- PR-3.1.1 is implemented as a local checkpoint with shared SportsHub types, `ISportsHub`,
+  `ISportsRiskEngine`, and this milestone plan.
+- PR-3.1.2 has an initial `SportsHub` contract covering constructor wiring, Sports pool enforcement,
+  market creation, open/suspend/resume/lock/void transitions, version bumps, and risk-in prechecks for
+  non-open, suspended, locked, and expired-odds ticket attempts.
+- Ticket placement, odds signature verification, risk-cap accounting, result finality, and router-backed
+  settlement remain out of this slice and are intentionally left for PR-3.1.3 through PR-3.1.6.
+
 ### PR-3.1.1 — Interfaces and milestone plan
 
 Deliverables:
