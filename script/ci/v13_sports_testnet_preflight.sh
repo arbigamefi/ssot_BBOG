@@ -102,6 +102,7 @@ need_var RPC_URL
 need_var PRIVATE_KEY
 need_address GOV
 need_address VRF_WRAPPER
+need_positive_decimal REQUEST_GAS_PRICE_WEI
 need_positive_decimal NUM_POOLS
 POOL_COUNT=$((10#$NUM_POOLS))
 if (( POOL_COUNT > 32 )); then
@@ -161,6 +162,8 @@ need_positive_decimal SPORTS_MAX_EVENT_RESERVED
 need_bytes32 SPORTS_ODDS_SIGNER_SET_HASH
 need_bytes32 SPORTS_RESULT_REPORTER_SET_HASH
 need_positive_decimal SPORTS_RESULT_REPORTER_THRESHOLD
+SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS="${SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS:-604800}"
+need_positive_decimal SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS
 
 if [[ "$SPORTS_RESULT_REPORTER_THRESHOLD" =~ ^[0-9]+$ ]]; then
   result_reporter_threshold=$((10#$SPORTS_RESULT_REPORTER_THRESHOLD))
@@ -168,6 +171,18 @@ if [[ "$SPORTS_RESULT_REPORTER_THRESHOLD" =~ ^[0-9]+$ ]]; then
     fail "SPORTS_RESULT_REPORTER_THRESHOLD must fit uint8"
   fi
 fi
+
+if [[ "$SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS" =~ ^[0-9]+$ ]]; then
+  result_challenge_timeout=$((10#$SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS))
+  if (( result_challenge_timeout < 600 )); then
+    fail "SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS must be >= 600"
+  fi
+fi
+
+case "${SPORTS_DERIVE_ROLE_SET_HASHES:-false}" in
+  true|false) ;;
+  *) fail "SPORTS_DERIVE_ROLE_SET_HASHES must be true or false when set" ;;
+esac
 
 need_address SPORTS_ODDS_SIGNER
 need_address SPORTS_RESULT_REPORTER
@@ -185,3 +200,5 @@ echo "  gov: $GOV"
 echo "  vrfWrapper: $VRF_WRAPPER"
 echo "  pools: $POOL_COUNT"
 echo "  sportsResultReporterThreshold: $SPORTS_RESULT_REPORTER_THRESHOLD"
+echo "  sportsResultChallengeTimeoutSeconds: $SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS"
+echo "  sportsDeriveRoleSetHashes: ${SPORTS_DERIVE_ROLE_SET_HASHES:-false}"

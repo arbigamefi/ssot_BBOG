@@ -397,3 +397,96 @@ Phase 1 closeout gate:
   GOV odds/reporter removal, zero Sports Bank reserved exposure, and required closeout documents.
 - Production caveat: managed key custody, provider integration, evidence storage, and public frontend
   controls remain mainnet/public-launch blockers under `docs/ops/sportsbook-production-controls.md`.
+
+## Final v1.3 redeploy after audit fixes
+
+This supersedes the earlier Base Sepolia rehearsal deployments in this document.
+
+- Date: `2026-05-14` Asia/Shanghai
+- Chain: Base Sepolia `84532`
+- Deployment block: `41462034`
+- Release digest: `0x7ad0f2cb1a996251325c00441b125ca5276c5bf70f011577222ce588cae1349f`
+- Release package: `dist/ssot-release-chain-84532-41462034-0x7ad0f2cb.tar.gz`
+- `GameHub`: `0x99c8c8B55803A566561b58188027fb9E46ACa215`
+- `SportsHub`: `0x2DB4Ba326C2C3e5830b0da10F0C52B4097f9fa4b`
+- Casino Bank: `0x3aADa481F979E5DFabd2Cd252A76feA2aD05e346`
+- Sports Bank: `0x3686664d8D92FEAb8C4c9Ac0baaEb07c8BDDbc85`
+- Sports challenge timeout: `604800`
+- Sports odds signer set hash: `0x3181e36dda893c31b3108b977ad21a8814ac18776e5e26ba89833f47e5058cbb`
+- Sports result reporter set hash: `0x4d6c357ad9229b0489a1a9e49e78f2cd2c07d4fae7e24b969e9416c9fa540dd7`
+- Result reporter threshold: `1`
+
+Validation:
+
+- `forge build`: passed.
+- `forge test --match-path 'test/unit/SportsHub*.t.sol'`: `42` passed.
+- `STRICT=1 SNAPSHOT_PATH=deployments/latest-v13.json make release-check-v13`: passed.
+- `bash deployments/verify-latest-v13.sh`: passed.
+- `ENV_FILE=.env.sports-roles.local make sports-phase1-closeout-v13`: passed.
+
+Funding:
+
+- Casino Bank `1 USDC`: `0x71dea6891e04e530cf14fdfa2c63fc2184f2a94a4fd2469a6b524bb0577571ff`
+- Sports Bank `1 USDC`: `0x80c34d35ac6f6073acd6d1ab965b8cefb8aeb03ff5944591b0fa089f8502b000`
+
+Initial place canary and cleanup:
+
+- Market ID: `1`
+- Ticket ID: `1`
+- Place ticket tx: `0x1bca788b26d20742a38d1a3602fd2fe3b0362700843c16d86aa54366e87019a4`
+- Cleanup market void tx: `0x369905a216cc7ceac97626a938680f394d1a7eb57eb440d0f7fc96054e32970c`
+- Cleanup ticket refund tx: `0x8ac6f48424ba7ed2bac5d4bd51fcf71b48013250a97eed1651e32e539a601a11`
+
+Direct void + batch debt-out canary:
+
+- Market ID: `2`
+- Ticket IDs:
+  - refunded through `refundTickets`: `2`, `4`
+  - voided through `voidTickets`: `3`, `5`
+- Create/open txs:
+  - `0x98d7b929d8fdd1eab5b4df07d457b838f421f49d8dd250dcd7b66a710b24ae68`
+  - `0x1957762113617b922c60e8b2c961f5f30c7fa3979298416a096631cba863e448`
+- Place ticket txs:
+  - `0xd8ace03d0b12f61e5211230c9796e87d063e0401ef7c11b5c5624697e1dbbe58`
+  - `0x0b2a1a56ca4ef7d52eb8effdd4f1f17071b41559e3ca497c36158be191b97428`
+  - `0xe70051ab9880d04a652a5fcb1e1c5c6e9a4b9ff3bc8173f23f799533b8e640e3`
+  - `0xc51b2aa82a5b22a04cf0bdd4b083bd79f269602547b7d897f8a0f5f72b4d1488`
+- Direct void tx: `0x6dce2a2455636695717305565428c1efe898ccbf18673b8e156276610b524416`
+- Batch refund tx: `0xb62ca4120dd7defa177e2ad1b74ab46107ea14b4afa6fec1f13831fe35cc8eeb`
+- Batch void tx: `0xf847895194735bf2f1f274beafab659659881e0b7e3a0c9e3f841a2fe16d713d`
+
+Role-separated challenge + arbitration void canary:
+
+- Market ID: `3`
+- Event ID: `1778694246`
+- Ticket IDs:
+  - refunded through `refundTickets`: `6`, `8`
+  - voided through `voidTickets`: `7`, `9`
+- Setup txs:
+  - create market: `0x3864b66dabd66c610994e3b90105a3d65a6fb9e470fb6e1fb9d2b7c65925fb1f`
+  - open market: `0xa3240443ddcab863fb5044ff203a7c510daf8dcb0d4d3d086783b281996cf41d`
+  - approve batch stake: `0xf21e8e25f3fff76d0aaa1405c53c51e8ec278cb023281c62a7f71f9b6be7f5a2`
+  - place tickets:
+    - `0xe7e8d1d9e31cabc3a13cca5008c28c22b74d08cecc05e83e971e2eb9f717ff4a`
+    - `0xd4720744336a83a3a2e6abecb2e070d4a86a24d1b717a824b8d1095ab98d93a8`
+    - `0xbb03d8fe9aa534c460aa0fdca8762741ec3d90b1ff02908cf739cc387ef4349f`
+    - `0xdff30d22ce7893b1350a8048b77cb42f5c3083f2dda4344c68132b87fbd9dddb`
+  - lock market: `0xf593c16e8e0b96ae9031c509a477055b19e52ca4047c6f959523a8706848348c`
+- Challenge/arbitration txs:
+  - propose result: `0x79ecf57214ab9fb8086cde0bad69a6c360135e673d03895f99a594dd5ac9dc97`
+  - challenge result: `0x7fadaea8bf0e2cf7c0995d324d6c94e9ee89b510460552aba9aa561b3b2b47fb`
+  - resolve challenge as `VoidMarket`: `0x72bab005a5b38a33933255a0bfb629b1391102799ad7a4557ae4b3ce255e8f89`
+  - batch refund: `0x545046e3e1bc142873fa9aac678081628774a3326d75125aa4d4ec0853de3aa7`
+  - batch void: `0xe3609008f20c32ef32bb6d5d8b545566297fd5b4216fb61ba37276a813fec2a9`
+- Result source hash: `0xe994491f37255a73e174863b8db772e73d1d5b49d32cb913c6420809c32a4583`
+- Evidence hash: `0x3a02451faab76c71d0a369770b9f3e67aa753ac901475bed8af706dde9a5db2c`
+- Challenge reason hash: `0x21a0180c220c1aff0792f487593dd5f03334a5ea730ca252d34273ab555e9da6`
+- Arbitration decision hash: `0xb8855bb23b93abe57065031037d736a62037c79a874fc82c8c1225c33abc6b96`
+
+Final readback:
+
+- Sports Bank assets: `1 USDC`
+- Sports Bank reserved: `0`
+- `marketReserved(3)`: `0`
+- `nextMarketId`: `4`
+- `nextTicketId`: `10`

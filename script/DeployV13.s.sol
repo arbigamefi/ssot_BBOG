@@ -55,6 +55,10 @@ interface IERC20MetadataLikeV13 {
 ///   SPORTS_MAX_OUTCOME_RESERVED_POOL_i, SPORTS_MAX_EVENT_RESERVED_POOL_i
 /// Optional Sports bootstrap allowlists:
 ///   SPORTS_ODDS_SIGNER, SPORTS_RESULT_REPORTER, SPORTS_RESULT_CHALLENGER, SPORTS_RESULT_ARBITRATOR
+/// Optional Sports dispute policy:
+///   SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS default 604800; minimum 600
+/// Optional Sports role-set hash policy:
+///   SPORTS_DERIVE_ROLE_SET_HASHES=true derives final hashes from deployed SportsHub + bootstrap roles
 ///
 /// Example:
 ///   forge script script/DeployV13.s.sol:DeployV13 --rpc-url $RPC_URL --broadcast -vvv
@@ -67,6 +71,8 @@ contract DeployV13 is Script {
     bytes32 internal constant GAME_SIC_BO = keccak256("SIC_BO");
     bytes32 internal constant GAME_SLOTS = keccak256("SLOTS");
     bytes32 internal constant GAME_BACCARAT = keccak256("BACCARAT");
+    uint64 internal constant MIN_RESULT_CHALLENGE_TIMEOUT_SECONDS = 10 minutes;
+    uint64 internal constant DEFAULT_RESULT_CHALLENGE_TIMEOUT_SECONDS = 7 days;
 
     struct RefConfig {
         uint16 baseBudgetBps;
@@ -86,6 +92,8 @@ contract DeployV13 is Script {
         bytes32 oddsSignerSetHash;
         bytes32 resultReporterSetHash;
         uint8 resultReporterThreshold;
+        uint64 resultChallengeTimeoutSeconds;
+        bool deriveRoleSetHashes;
         address oddsSigner;
         address resultReporter;
         address resultChallenger;
@@ -210,14 +218,30 @@ contract DeployV13 is Script {
                 cfg.sportsConfig.resultReporterSetHash
             );
             d.poolRegistry.setHubRegistered(address(d.sportsHub), true);
+            if (cfg.sportsConfig.resultReporterThreshold != 1) {
+                d.sportsHub.setResultReporterThreshold(cfg.sportsConfig.resultReporterThreshold);
+            }
+            if (cfg.sportsConfig.resultChallengeTimeoutSeconds != DEFAULT_RESULT_CHALLENGE_TIMEOUT_SECONDS) {
+                d.sportsHub.setResultChallengeTimeoutSeconds(cfg.sportsConfig.resultChallengeTimeoutSeconds);
+            }
+            if (cfg.sportsConfig.deriveRoleSetHashes) {
+                require(
+                    cfg.sportsConfig.oddsSigner != address(0) && cfg.sportsConfig.resultReporter != address(0),
+                    "derived sports hashes require signer/reporter"
+                );
+                cfg.sportsConfig.oddsSignerSetHash =
+                    _derivedOddsSignerSetHash(address(d.sportsHub), cfg.sportsConfig.oddsSigner);
+                cfg.sportsConfig.resultReporterSetHash = _derivedResultReporterSetHash(
+                    address(d.sportsHub), cfg.sportsConfig.resultReporter, cfg.sportsConfig.resultReporterThreshold
+                );
+                d.sportsHub.setOddsSignerSetHash(cfg.sportsConfig.oddsSignerSetHash);
+                d.sportsHub.setResultReporterSetHash(cfg.sportsConfig.resultReporterSetHash);
+            }
             if (cfg.sportsConfig.oddsSigner != address(0)) {
                 d.sportsHub.setOddsSigner(cfg.sportsConfig.oddsSigner, true);
             }
             if (cfg.sportsConfig.resultReporter != address(0)) {
                 d.sportsHub.setResultReporter(cfg.sportsConfig.resultReporter, true);
-            }
-            if (cfg.sportsConfig.resultReporterThreshold != 1) {
-                d.sportsHub.setResultReporterThreshold(cfg.sportsConfig.resultReporterThreshold);
             }
             if (cfg.sportsConfig.resultChallenger != address(0)) {
                 d.sportsHub.setResultChallenger(cfg.sportsConfig.resultChallenger, true);
@@ -289,6 +313,9 @@ contract DeployV13 is Script {
         cfg.treasury = vm.envOr("TREASURY", address(0));
         cfg.vrfWrapper = vm.envAddress("VRF_WRAPPER");
         cfg.requestGasPriceWei = vm.envOr("REQUEST_GAS_PRICE_WEI", uint256(0));
+        if (block.chainid != 31337 && cfg.requestGasPriceWei == 0) {
+            revert("REQUEST_GAS_PRICE_WEI required off local chain");
+        }
         cfg.refundTimeoutSeconds = vm.envOr("REFUND_TIMEOUT_SECONDS", uint256(3600));
         cfg.defaultHouseEdgeBps = uint16(vm.envOr("DEFAULT_HOUSE_EDGE_BPS", uint256(200)));
         cfg.maxAffiliateDeltaBps = uint16(vm.envOr("MAX_AFFILIATE_DELTA_BPS", uint256(0)));
@@ -323,6 +350,15 @@ contract DeployV13 is Script {
             "SPORTS_RESULT_REPORTER_THRESHOLD out of range"
         );
         cfg.resultReporterThreshold = uint8(resultReporterThreshold);
+        uint256 resultChallengeTimeoutSeconds =
+            vm.envOr("SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS", uint256(DEFAULT_RESULT_CHALLENGE_TIMEOUT_SECONDS));
+        require(
+            resultChallengeTimeoutSeconds >= MIN_RESULT_CHALLENGE_TIMEOUT_SECONDS
+                && resultChallengeTimeoutSeconds <= type(uint64).max,
+            "SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS out of range"
+        );
+        cfg.resultChallengeTimeoutSeconds = uint64(resultChallengeTimeoutSeconds);
+        cfg.deriveRoleSetHashes = vm.envOr("SPORTS_DERIVE_ROLE_SET_HASHES", false);
         cfg.oddsSigner = vm.envOr("SPORTS_ODDS_SIGNER", address(0));
         cfg.resultReporter = vm.envOr("SPORTS_RESULT_REPORTER", address(0));
         cfg.resultChallenger = vm.envOr("SPORTS_RESULT_CHALLENGER", address(0));
@@ -478,6 +514,9 @@ contract DeployV13 is Script {
         json = vm.serializeBytes32(obj, "sportsOddsSignerSetHash", cfg.sportsConfig.oddsSignerSetHash);
         json = vm.serializeBytes32(obj, "sportsResultReporterSetHash", cfg.sportsConfig.resultReporterSetHash);
         json = vm.serializeUint(obj, "sportsResultReporterThreshold", cfg.sportsConfig.resultReporterThreshold);
+        json = vm.serializeUint(
+            obj, "sportsResultChallengeTimeoutSeconds", cfg.sportsConfig.resultChallengeTimeoutSeconds
+        );
         json = vm.serializeAddress(obj, "sportsOddsSigner", cfg.sportsConfig.oddsSigner);
         json = vm.serializeAddress(obj, "sportsResultReporter", cfg.sportsConfig.resultReporter);
         json = vm.serializeAddress(obj, "sportsResultChallenger", cfg.sportsConfig.resultChallenger);
@@ -745,6 +784,23 @@ contract DeployV13 is Script {
                 cfg.gov,
                 cfg.sportsConfig.oddsSignerSetHash,
                 cfg.sportsConfig.resultReporterSetHash
+            )
+        );
+    }
+
+    function _derivedOddsSignerSetHash(address sportsHub, address oddsSigner) internal view returns (bytes32) {
+        return
+            keccak256(abi.encodePacked("BASE_SEPOLIA_SPORTS_ODDS_SIGNER_SET_V1", block.chainid, sportsHub, oddsSigner));
+    }
+
+    function _derivedResultReporterSetHash(address sportsHub, address reporter, uint8 threshold)
+        internal
+        view
+        returns (bytes32)
+    {
+        return keccak256(
+            abi.encodePacked(
+                "BASE_SEPOLIA_SPORTS_RESULT_REPORTER_SET_V1", block.chainid, sportsHub, reporter, threshold
             )
         );
     }

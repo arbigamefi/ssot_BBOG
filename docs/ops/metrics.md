@@ -74,7 +74,8 @@ From `ChainlinkV2PlusWrapperAdapter`:
 - `Bank.riskInPaused()` and `GameHub.riskInPaused(asset)`
 - `SportsHub.marketReserved(marketId)`, `marketOutcomeReserved(marketId,outcomeId)`,
   `poolEventReserved(poolId,eventId)`, `eventReserved(eventId)` aggregate
-- `SportsHub.oddsSignerSetHash()`, `resultReporterSetHash()`, `resultReporterThreshold()`
+- `SportsHub.oddsSignerSetHash()`, `resultReporterSetHash()`, `resultReporterThreshold()`,
+  `resultChallengeTimeoutSeconds()`
 - `SportsRiskEngine.limits()`, `limitsForPool(poolId)`, `currentRiskHashForPool(poolId)`
 - `address(GameHub).balance`, `address(VRFHub).balance`, `address(Adapter).balance` (should be ~0 by design)
 

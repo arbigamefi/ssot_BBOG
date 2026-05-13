@@ -55,6 +55,7 @@ Record the release digest from `deployments/release-latest-v13.json` in every in
 cast call $SPORTS_HUB "oddsSignerSetHash()(bytes32)" --rpc-url $RPC
 cast call $SPORTS_HUB "resultReporterSetHash()(bytes32)" --rpc-url $RPC
 cast call $SPORTS_HUB "resultReporterThreshold()(uint8)" --rpc-url $RPC
+cast call $SPORTS_HUB "resultChallengeTimeoutSeconds()(uint64)" --rpc-url $RPC
 cast call $SPORTS_HUB "resultChallenger(address)(bool)" $CHALLENGER --rpc-url $RPC
 cast call $SPORTS_HUB "resultArbitrator(address)(bool)" $ARBITRATOR --rpc-url $RPC
 cast call $SPORTS_HUB "MIN_RESULT_FINALITY_SECONDS()(uint64)" --rpc-url $RPC
@@ -129,7 +130,8 @@ cast send $SPORTS_HUB "voidMarket(uint64,bytes32)" $MARKET_ID $VOID_REASON_HASH 
 
 Compare:
 - failed tx revert reasons by market id;
-- current `oddsSignerSetHash`, `resultReporterSetHash`, `resultReporterThreshold`, and
+- current `oddsSignerSetHash`, `resultReporterSetHash`, `resultReporterThreshold`,
+  `resultChallengeTimeoutSeconds`, and
   `currentRiskHashForPool(poolId)`;
 - exposure reads for the affected market/outcome/pool-event;
 - latest `OddsSignerSet`, `ResultReporterSet`, `ResultChallengerSet`, `ResultArbitratorSet`,
@@ -311,7 +313,7 @@ Capture:
 - `sportsHub`, `sportsRiskEngine`, `settlementRouter`, affected pool/bank;
 - affected `marketId`, `eventId`, `outcomeId`, `ticketId` samples;
 - current `oddsSignerSetHash`, `resultReporterSetHash`, `currentRiskHashForPool(poolId)`;
-- current `resultReporterThreshold`;
+- current `resultReporterThreshold` and `resultChallengeTimeoutSeconds`;
 - `SportsRiskEngine.limitsForPool(poolId)` and exposure reads;
 - relevant events: `MarketStateSet`, `TicketPlaced`, `ResultProposed`, `ResultChallenged`,
   `ResultChallengeResolved`, `ResultFinalized`, `TicketSettled`, `TicketRefunded`, `TicketVoided`, `RiskLimitsSet`,

@@ -67,12 +67,15 @@ SPORTS_BANK="$(jq -r '.poolBank_1 // empty' "$SNAPSHOT_PATH")"
 POOL_DOMAIN="$(jq -r '.poolDomain_1 // empty' "$SNAPSHOT_PATH")"
 SPORTS_ENABLED="$(jq -r '.sportsEnabled // empty' "$SNAPSHOT_PATH")"
 REPORTER_THRESHOLD="$(jq -r '.sportsResultReporterThreshold // empty' "$SNAPSHOT_PATH")"
+CHALLENGE_TIMEOUT="$(jq -r '.sportsResultChallengeTimeoutSeconds // empty' "$SNAPSHOT_PATH")"
 
 [[ "$SPORTS_HUB" =~ ^0x[0-9a-fA-F]{40}$ ]] || fail "snapshot sportsHub is not an address: $SPORTS_HUB"
 [[ "$SPORTS_BANK" =~ ^0x[0-9a-fA-F]{40}$ ]] || fail "snapshot poolBank_1 is not an address: $SPORTS_BANK"
 [[ "$POOL_DOMAIN" == "2" ]] || fail "snapshot pool 2 row must be Sports domain"
 [[ "$SPORTS_ENABLED" == "1" ]] || fail "snapshot sportsEnabled must be 1"
 [[ "$REPORTER_THRESHOLD" == "1" ]] || fail "Phase 1 closeout expects reporter threshold 1"
+[[ "$CHALLENGE_TIMEOUT" =~ ^[0-9]+$ ]] || fail "snapshot sportsResultChallengeTimeoutSeconds must be numeric"
+(( CHALLENGE_TIMEOUT >= 600 )) || fail "snapshot sportsResultChallengeTimeoutSeconds must be >= 600"
 
 hub_code="$(cast code "$SPORTS_HUB" --rpc-url "$RPC_URL")"
 bank_code="$(cast code "$SPORTS_BANK" --rpc-url "$RPC_URL")"
@@ -85,12 +88,16 @@ gov_onchain="$(cast_call "$SPORTS_HUB" 'governance()(address)')"
 odds_hash="$(cast_call "$SPORTS_HUB" 'oddsSignerSetHash()(bytes32)')"
 reporter_hash="$(cast_call "$SPORTS_HUB" 'resultReporterSetHash()(bytes32)')"
 threshold_onchain="$(cast_call "$SPORTS_HUB" 'resultReporterThreshold()(uint8)')"
+challenge_timeout_onchain_raw="$(cast_call "$SPORTS_HUB" 'resultChallengeTimeoutSeconds()(uint64)')"
+challenge_timeout_onchain="${challenge_timeout_onchain_raw%% *}"
 
 [[ "$odds_hash" != "0x0000000000000000000000000000000000000000000000000000000000000000" ]] \
   || fail "odds signer set hash is zero"
 [[ "$reporter_hash" != "0x0000000000000000000000000000000000000000000000000000000000000000" ]] \
   || fail "result reporter set hash is zero"
 [[ "$threshold_onchain" == "1" ]] || fail "on-chain reporter threshold must be 1"
+[[ "$challenge_timeout_onchain" == "$CHALLENGE_TIMEOUT" ]] \
+  || fail "on-chain challenge timeout mismatch: $challenge_timeout_onchain != $CHALLENGE_TIMEOUT"
 
 [[ "$(cast_call "$SPORTS_HUB" 'oddsSigner(address)(bool)' "$SPORTS_ODDS_SIGNER")" == "true" ]] \
   || fail "dedicated odds signer not allowlisted"
@@ -121,5 +128,6 @@ echo "  sportsBank: $SPORTS_BANK"
 echo "  oddsSignerSetHash: $odds_hash"
 echo "  resultReporterSetHash: $reporter_hash"
 echo "  resultReporterThreshold: $threshold_onchain"
+echo "  resultChallengeTimeoutSeconds: $challenge_timeout_onchain"
 echo "  sportsBankReserved: $bank_reserved"
 echo "  docs: $REHEARSAL_DOC, $READINESS_DOC, $CONTROLS_DOC"
