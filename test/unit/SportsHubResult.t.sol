@@ -15,6 +15,10 @@ import {MockERC20} from "../../src/mocks/MockERC20.sol";
 contract SportsHubResultTest is Test {
     address internal gov = address(0xA11CE);
     address internal reporter = address(0xBEEF);
+    uint256 internal reporter2Key = 0xBEEF2;
+    uint256 internal reporter3Key = 0xBEEF3;
+    address internal reporter2;
+    address internal reporter3;
     address internal challenger = address(0xCAFE);
     address internal riskEngine = address(0x5151);
 
@@ -40,6 +44,8 @@ contract SportsHubResultTest is Test {
 
     function setUp() external {
         vm.warp(1_700_000_000);
+        reporter2 = vm.addr(reporter2Key);
+        reporter3 = vm.addr(reporter3Key);
 
         usdc = new MockERC20("USD Coin", "USDC", 6);
         sportsBank = new Bank(address(usdc), gov, 1000, "LP USDC Sports", "lpUSDC-S", 6);
@@ -52,6 +58,8 @@ contract SportsHubResultTest is Test {
         registry.setHubRegistered(address(sportsHub), true);
         registry.setHubAllowedForPool(SPORTS_POOL_ID, address(sportsHub), true);
         sportsHub.setResultReporter(reporter, true);
+        sportsHub.setResultReporter(reporter2, true);
+        sportsHub.setResultReporter(reporter3, true);
         vm.stopPrank();
     }
 
@@ -62,6 +70,21 @@ contract SportsHubResultTest is Test {
         vm.prank(gov);
         vm.expectRevert(Errors.ZeroAddress.selector);
         sportsHub.setResultReporter(address(0), true);
+    }
+
+    function test_setResultReporterThreshold_governanceOnly() external {
+        assertEq(sportsHub.resultReporterThreshold(), 1);
+
+        vm.expectRevert(Errors.Unauthorized.selector);
+        sportsHub.setResultReporterThreshold(2);
+
+        vm.prank(gov);
+        vm.expectRevert(Errors.InvalidConfig.selector);
+        sportsHub.setResultReporterThreshold(0);
+
+        vm.prank(gov);
+        sportsHub.setResultReporterThreshold(2);
+        assertEq(sportsHub.resultReporterThreshold(), 2);
     }
 
     function test_proposeResult_successBindsFinalityPayloadAndReporterSet() external {
@@ -91,6 +114,8 @@ contract SportsHubResultTest is Test {
         assertEq(result.evidenceHash, RESULT_EVIDENCE_HASH);
         assertEq(result.rulebookHash, RULEBOOK_HASH);
         assertEq(result.reporterSetHash, REPORTER_SET_HASH);
+        assertEq(result.reporterThreshold, 1);
+        assertEq(result.reporterCount, 1);
         assertEq(result.proposer, reporter);
         assertEq(result.observedAt, observedAt);
         assertEq(result.proposedAt, block.timestamp);
@@ -159,6 +184,69 @@ contract SportsHubResultTest is Test {
         vm.expectRevert(Errors.InvalidConfig.selector);
         sportsHub.proposeResult(
             marketId, WINNING_OUTCOME_ID, RESULT_SOURCE_HASH, RESULT_EVIDENCE_HASH, uint64(block.timestamp + 1)
+        );
+    }
+
+    function test_proposeResult_successWithReporterQuorumSignatures() external {
+        vm.prank(gov);
+        sportsHub.setResultReporterThreshold(2);
+
+        uint64 marketId = _createOpenAndLockMarket();
+        SSOTTypes.SportsMarket memory market = sportsHub.getMarket(marketId);
+        vm.warp(market.startsAt);
+        uint64 observedAt = uint64(block.timestamp);
+        bytes32 resultPayloadHash = sportsHub.hashResultPayload(
+            marketId, WINNING_OUTCOME_ID, RESULT_SOURCE_HASH, RESULT_EVIDENCE_HASH, observedAt
+        );
+
+        bytes[] memory reporterSignatures = new bytes[](1);
+        reporterSignatures[0] = _signResult(resultPayloadHash, reporter2Key);
+
+        vm.prank(reporter);
+        sportsHub.proposeResult(
+            marketId, WINNING_OUTCOME_ID, RESULT_SOURCE_HASH, RESULT_EVIDENCE_HASH, observedAt, reporterSignatures
+        );
+
+        SSOTTypes.SportsResult memory result = sportsHub.getResult(marketId);
+        assertEq(result.resultPayloadHash, resultPayloadHash);
+        assertEq(result.reporterThreshold, 2);
+        assertEq(result.reporterCount, 2);
+        assertEq(result.proposer, reporter);
+    }
+
+    function test_proposeResult_rejectsMissingBadAndDuplicateReporterQuorumSignatures() external {
+        vm.prank(gov);
+        sportsHub.setResultReporterThreshold(2);
+
+        uint64 marketId = _createOpenAndLockMarket();
+        SSOTTypes.SportsMarket memory market = sportsHub.getMarket(marketId);
+        vm.warp(market.startsAt);
+        uint64 observedAt = uint64(block.timestamp);
+        bytes32 resultPayloadHash = sportsHub.hashResultPayload(
+            marketId, WINNING_OUTCOME_ID, RESULT_SOURCE_HASH, RESULT_EVIDENCE_HASH, observedAt
+        );
+
+        vm.prank(reporter);
+        vm.expectRevert(abi.encodeWithSelector(ISportsHub.ResultReporterQuorumNotMet.selector, 2, 1));
+        sportsHub.proposeResult(marketId, WINNING_OUTCOME_ID, RESULT_SOURCE_HASH, RESULT_EVIDENCE_HASH, observedAt);
+
+        bytes[] memory badSignatures = new bytes[](1);
+        badSignatures[0] = _signResult(resultPayloadHash, 0xBAD);
+
+        vm.prank(reporter);
+        vm.expectRevert(ISportsHub.BadResultSignature.selector);
+        sportsHub.proposeResult(
+            marketId, WINNING_OUTCOME_ID, RESULT_SOURCE_HASH, RESULT_EVIDENCE_HASH, observedAt, badSignatures
+        );
+
+        bytes[] memory duplicateSignatures = new bytes[](2);
+        duplicateSignatures[0] = _signResult(resultPayloadHash, reporter2Key);
+        duplicateSignatures[1] = duplicateSignatures[0];
+
+        vm.prank(reporter);
+        vm.expectRevert(abi.encodeWithSelector(ISportsHub.DuplicateResultReporter.selector, reporter2));
+        sportsHub.proposeResult(
+            marketId, WINNING_OUTCOME_ID, RESULT_SOURCE_HASH, RESULT_EVIDENCE_HASH, observedAt, duplicateSignatures
         );
     }
 
@@ -257,6 +345,11 @@ contract SportsHubResultTest is Test {
         sportsHub.proposeResult(
             marketId, winningOutcomeId, RESULT_SOURCE_HASH, RESULT_EVIDENCE_HASH, uint64(block.timestamp)
         );
+    }
+
+    function _signResult(bytes32 resultPayloadHash, uint256 key) internal pure returns (bytes memory signature) {
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(key, resultPayloadHash);
+        signature = abi.encodePacked(r, s, v);
     }
 
     function _lockTime() internal view returns (uint64) {

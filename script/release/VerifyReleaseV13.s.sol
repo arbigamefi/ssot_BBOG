@@ -129,6 +129,7 @@ contract VerifyReleaseV13 is Script {
                 snap.readUint(".sportsMaxEventReserved"),
                 snap.readBytes32(".sportsOddsSignerSetHash"),
                 snap.readBytes32(".sportsResultReporterSetHash"),
+                snap.readUint(".sportsResultReporterThreshold"),
                 snap.readAddress(".sportsOddsSigner"),
                 snap.readAddress(".sportsResultReporter"),
                 snap.readUint(".numPools")

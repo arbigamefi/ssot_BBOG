@@ -58,6 +58,8 @@ When any `POOL_DOMAIN_i=2` pool exists, the following Sports deployment paramete
 - `SPORTS_MAX_EVENT_RESERVED`: default total reserved exposure cap per pool/event.
 - `SPORTS_ODDS_SIGNER_SET_HASH`: governance-published hash of the active odds signer set.
 - `SPORTS_RESULT_REPORTER_SET_HASH`: governance-published hash of the active result reporter set.
+- `SPORTS_RESULT_REPORTER_THRESHOLD`: optional quorum threshold for result proposals; defaults to `1`.
+  If set above `1`, allowlist enough reporters through governance before result proposals are expected.
 
 Optional per-Sports-pool overrides:
 - `SPORTS_MAX_STAKE_POOL_i`

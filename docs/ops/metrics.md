@@ -45,6 +45,7 @@ From `ISportsHub`:
 - `OddsSignerSetHashSet`
 - `OddsSignerSet`
 - `ResultReporterSetHashSet`
+- `ResultReporterThresholdSet`
 - `ResultReporterSet`
 - `TicketPlaced`
 - `ResultProposed`
@@ -72,7 +73,7 @@ From `ChainlinkV2PlusWrapperAdapter`:
 - `Bank.riskInPaused()` and `Hub.riskInPaused(asset)`
 - `SportsHub.marketReserved(marketId)`, `marketOutcomeReserved(marketId,outcomeId)`,
   `poolEventReserved(poolId,eventId)`, `eventReserved(eventId)` aggregate
-- `SportsHub.oddsSignerSetHash()`, `resultReporterSetHash()`
+- `SportsHub.oddsSignerSetHash()`, `resultReporterSetHash()`, `resultReporterThreshold()`
 - `SportsRiskEngine.limits()`, `limitsForPool(poolId)`, `currentRiskHashForPool(poolId)`
 - `address(Hub).balance`, `address(VRFHub).balance`, `address(Adapter).balance` (should be ~0 by design)
 
@@ -260,7 +261,8 @@ Source: `ResultProposed.finalizesAt` until `ResultFinalized` or `ResultChallenge
 Alert when a result remains unfinalized beyond finality plus operator SLA.
 
 **G5. sports_oracle_config_changes_total** (counter)
-Source: `OddsSignerSetHashSet`, `OddsSignerSet`, `ResultReporterSetHashSet`, `ResultReporterSet`.
+Source: `OddsSignerSetHashSet`, `OddsSignerSet`, `ResultReporterSetHashSet`,
+`ResultReporterThresholdSet`, `ResultReporterSet`.
 Alert on any change outside an approved window.
 
 **G6. sports_risk_limits_changes_total** (counter)

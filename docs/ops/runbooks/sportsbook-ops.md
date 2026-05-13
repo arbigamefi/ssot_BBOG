@@ -54,6 +54,7 @@ Record the release digest from `deployments/release-latest-v13.json` in every in
 ```bash
 cast call $SPORTS_HUB "oddsSignerSetHash()(bytes32)" --rpc-url $RPC
 cast call $SPORTS_HUB "resultReporterSetHash()(bytes32)" --rpc-url $RPC
+cast call $SPORTS_HUB "resultReporterThreshold()(uint8)" --rpc-url $RPC
 cast call $SPORTS_HUB "MIN_RESULT_FINALITY_SECONDS()(uint64)" --rpc-url $RPC
 cast call $SPORTS_RISK_ENGINE "limitsForPool(uint64)(uint256,uint256,uint256,uint256,uint256)" $SPORTS_POOL_ID --rpc-url $RPC
 cast call $SPORTS_RISK_ENGINE "currentRiskHashForPool(uint64)(bytes32)" $SPORTS_POOL_ID --rpc-url $RPC
@@ -63,7 +64,7 @@ Market and exposure reads:
 
 ```bash
 cast call $SPORTS_HUB "getMarket(uint64)((uint64,uint64,uint64,uint32,uint64,uint64,uint64,uint64,bytes32,bytes32,uint8))" $MARKET_ID --rpc-url $RPC
-cast call $SPORTS_HUB "getResult(uint64)((uint64,uint64,uint64,uint32,uint64,bytes32,bytes32,bytes32,bytes32,bytes32,address,uint64,uint64,uint64,bool))" $MARKET_ID --rpc-url $RPC
+cast call $SPORTS_HUB "getResult(uint64)((uint64,uint64,uint64,uint32,uint64,bytes32,bytes32,bytes32,bytes32,bytes32,uint8,uint8,address,uint64,uint64,uint64,bool))" $MARKET_ID --rpc-url $RPC
 cast call $SPORTS_HUB "marketReserved(uint64)(uint256)" $MARKET_ID --rpc-url $RPC
 cast call $SPORTS_HUB "marketOutcomeReserved(uint64,uint32)(uint256)" $MARKET_ID $OUTCOME_ID --rpc-url $RPC
 cast call $SPORTS_HUB "poolEventReserved(uint64,uint64)(uint256)" $SPORTS_POOL_ID $EVENT_ID --rpc-url $RPC
@@ -72,7 +73,8 @@ cast call $SPORTS_HUB "eventReserved(uint64)(uint256)" $EVENT_ID --rpc-url $RPC 
 
 `getResult` returns `marketId`, `eventId`, `poolId`, `winningOutcomeId`, `marketVersion`,
 `resultPayloadHash`, `resultSourceHash`, `evidenceHash`, `rulebookHash`, `reporterSetHash`,
-`proposer`, `observedAt`, `proposedAt`, `finalizesAt`, and `challenged`.
+`reporterThreshold`, `reporterCount`, `proposer`, `observedAt`, `proposedAt`, `finalizesAt`, and
+`challenged`.
 
 Sports market state values:
 - `0=None`
@@ -110,7 +112,8 @@ Suspension blocks new tickets. It does not block valid later settlement/refund p
 
 Compare:
 - failed tx revert reasons by market id;
-- current `oddsSignerSetHash`, `resultReporterSetHash`, and `currentRiskHashForPool(poolId)`;
+- current `oddsSignerSetHash`, `resultReporterSetHash`, `resultReporterThreshold`, and
+  `currentRiskHashForPool(poolId)`;
 - exposure reads for the affected market/outcome/pool-event;
 - latest `OddsSignerSet`, `ResultReporterSet`, `RiskLimitsSet` / `PoolRiskLimitsSet`, and `MarketStateSet` events.
 
@@ -181,10 +184,12 @@ If multiple active markets fail with the same signer/hash/risk mismatch, treat a
 1) **Read market and result state.**
    ```bash
    cast call $SPORTS_HUB "getMarket(uint64)((uint64,uint64,uint64,uint32,uint64,uint64,uint64,uint64,bytes32,bytes32,uint8))" $MARKET_ID --rpc-url $RPC
-   cast call $SPORTS_HUB "getResult(uint64)((uint64,uint64,uint64,uint32,uint64,bytes32,bytes32,bytes32,bytes32,bytes32,address,uint64,uint64,uint64,bool))" $MARKET_ID --rpc-url $RPC
+   cast call $SPORTS_HUB "getResult(uint64)((uint64,uint64,uint64,uint32,uint64,bytes32,bytes32,bytes32,bytes32,bytes32,uint8,uint8,address,uint64,uint64,uint64,bool))" $MARKET_ID --rpc-url $RPC
    ```
    Recompute `resultPayloadHash` with `hashResultPayload(marketId, winningOutcomeId, resultSourceHash,
    evidenceHash, observedAt)` and compare it with the stored result.
+   Confirm `reporterCount >= reporterThreshold`, and confirm `reporterThreshold` matches the approved
+   reporter-set policy for the incident window.
 2) **If the proposed result is wrong or untrusted, challenge it before finality.**
    ```bash
    cast send $SPORTS_HUB "challengeResult(uint64,bytes32)" $MARKET_ID $REASON_HASH --rpc-url $RPC --private-key $GOV_PK
@@ -206,6 +211,7 @@ If multiple active markets fail with the same signer/hash/risk mismatch, treat a
 **Do not**
 - Finalize a result whose `resultPayloadHash` cannot be reproduced from the structured source/evidence
   fields and the rulebook.
+- Finalize a result below the approved reporter threshold for the market's reporter-set policy.
 - Use governance to pick arbitrary winning tickets.
 - Block user-triggered `settleTicket`, `refundTicket`, or `voidTicket` once market state permits debt-out.
 
@@ -271,6 +277,7 @@ Capture:
 - `sportsHub`, `sportsRiskEngine`, `settlementRouter`, affected pool/bank;
 - affected `marketId`, `eventId`, `outcomeId`, `ticketId` samples;
 - current `oddsSignerSetHash`, `resultReporterSetHash`, `currentRiskHashForPool(poolId)`;
+- current `resultReporterThreshold`;
 - `SportsRiskEngine.limitsForPool(poolId)` and exposure reads;
 - relevant events: `MarketStateSet`, `TicketPlaced`, `ResultProposed`, `ResultChallenged`,
   `ResultFinalized`, `TicketSettled`, `TicketRefunded`, `TicketVoided`, `RiskLimitsSet`,

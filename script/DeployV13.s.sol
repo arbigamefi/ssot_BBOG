@@ -75,6 +75,7 @@ contract DeployV13 is Script {
         uint256 maxEventReserved;
         bytes32 oddsSignerSetHash;
         bytes32 resultReporterSetHash;
+        uint8 resultReporterThreshold;
         address oddsSigner;
         address resultReporter;
     }
@@ -199,6 +200,9 @@ contract DeployV13 is Script {
             if (cfg.sportsConfig.resultReporter != address(0)) {
                 d.sportsHub.setResultReporter(cfg.sportsConfig.resultReporter, true);
             }
+            if (cfg.sportsConfig.resultReporterThreshold != 1) {
+                d.sportsHub.setResultReporterThreshold(cfg.sportsConfig.resultReporterThreshold);
+            }
             for (uint256 i = 0; i < pools.length; ++i) {
                 if (pools[i].domain == SSOTTypes.PoolDomain.Sports) {
                     d.sportsRiskEngine
@@ -283,6 +287,12 @@ contract DeployV13 is Script {
         cfg.maxEventReserved = vm.envUint("SPORTS_MAX_EVENT_RESERVED");
         cfg.oddsSignerSetHash = vm.envBytes32("SPORTS_ODDS_SIGNER_SET_HASH");
         cfg.resultReporterSetHash = vm.envBytes32("SPORTS_RESULT_REPORTER_SET_HASH");
+        uint256 resultReporterThreshold = vm.envOr("SPORTS_RESULT_REPORTER_THRESHOLD", uint256(1));
+        require(
+            resultReporterThreshold > 0 && resultReporterThreshold <= type(uint8).max,
+            "SPORTS_RESULT_REPORTER_THRESHOLD out of range"
+        );
+        cfg.resultReporterThreshold = uint8(resultReporterThreshold);
         cfg.oddsSigner = vm.envOr("SPORTS_ODDS_SIGNER", address(0));
         cfg.resultReporter = vm.envOr("SPORTS_RESULT_REPORTER", address(0));
     }
@@ -441,6 +451,7 @@ contract DeployV13 is Script {
         json = vm.serializeUint(obj, "sportsMaxEventReserved", cfg.sportsConfig.maxEventReserved);
         json = vm.serializeBytes32(obj, "sportsOddsSignerSetHash", cfg.sportsConfig.oddsSignerSetHash);
         json = vm.serializeBytes32(obj, "sportsResultReporterSetHash", cfg.sportsConfig.resultReporterSetHash);
+        json = vm.serializeUint(obj, "sportsResultReporterThreshold", cfg.sportsConfig.resultReporterThreshold);
         json = vm.serializeAddress(obj, "sportsOddsSigner", cfg.sportsConfig.oddsSigner);
         json = vm.serializeAddress(obj, "sportsResultReporter", cfg.sportsConfig.resultReporter);
         return json;

@@ -29,6 +29,7 @@ contract SportsHub is ISportsHub, Governable, EIP712, ReentrancyGuard {
     address public override riskEngine;
     bytes32 public override oddsSignerSetHash;
     bytes32 public override resultReporterSetHash;
+    uint8 public override resultReporterThreshold = 1;
 
     uint64 public override nextMarketId = 1;
     uint256 public override nextTicketId = 1;
@@ -93,6 +94,13 @@ contract SportsHub is ISportsHub, Governable, EIP712, ReentrancyGuard {
         bytes32 oldHash = resultReporterSetHash;
         resultReporterSetHash = newHash;
         emit ResultReporterSetHashSet(oldHash, newHash);
+    }
+
+    function setResultReporterThreshold(uint8 newThreshold) external onlyGov {
+        if (newThreshold == 0) revert Errors.InvalidConfig();
+        uint8 oldThreshold = resultReporterThreshold;
+        resultReporterThreshold = newThreshold;
+        emit ResultReporterThresholdSet(oldThreshold, newThreshold);
     }
 
     function setResultReporter(address reporter, bool allowed) external onlyGov {
@@ -322,6 +330,29 @@ contract SportsHub is ISportsHub, Governable, EIP712, ReentrancyGuard {
         bytes32 evidenceHash,
         uint64 observedAt
     ) external override {
+        bytes[] memory noSignatures = new bytes[](0);
+        _proposeResult(marketId, winningOutcomeId, resultSourceHash, evidenceHash, observedAt, noSignatures);
+    }
+
+    function proposeResult(
+        uint64 marketId,
+        uint32 winningOutcomeId,
+        bytes32 resultSourceHash,
+        bytes32 evidenceHash,
+        uint64 observedAt,
+        bytes[] calldata reporterSignatures
+    ) external override {
+        _proposeResult(marketId, winningOutcomeId, resultSourceHash, evidenceHash, observedAt, reporterSignatures);
+    }
+
+    function _proposeResult(
+        uint64 marketId,
+        uint32 winningOutcomeId,
+        bytes32 resultSourceHash,
+        bytes32 evidenceHash,
+        uint64 observedAt,
+        bytes[] memory reporterSignatures
+    ) internal {
         if (!resultReporter[msg.sender]) revert UnauthorizedReporter(msg.sender);
         if (resultSourceHash == bytes32(0) || evidenceHash == bytes32(0) || observedAt == 0) {
             revert Errors.InvalidConfig();
@@ -338,6 +369,8 @@ contract SportsHub is ISportsHub, Governable, EIP712, ReentrancyGuard {
 
         bytes32 resultPayloadHash =
             _hashResultPayload(market, winningOutcomeId, resultSourceHash, evidenceHash, observedAt);
+        uint8 reporterThreshold = resultReporterThreshold;
+        uint8 reporterCount = _requireReporterQuorum(resultPayloadHash, msg.sender, reporterSignatures);
         uint64 finalizesAt = uint64(block.timestamp + market.resultFinalitySeconds);
         _results[marketId] = SSOTTypes.SportsResult({
             marketId: marketId,
@@ -350,6 +383,8 @@ contract SportsHub is ISportsHub, Governable, EIP712, ReentrancyGuard {
             evidenceHash: evidenceHash,
             rulebookHash: market.rulebookHash,
             reporterSetHash: resultReporterSetHash,
+            reporterThreshold: reporterThreshold,
+            reporterCount: reporterCount,
             proposer: msg.sender,
             observedAt: observedAt,
             proposedAt: uint64(block.timestamp),
@@ -367,6 +402,8 @@ contract SportsHub is ISportsHub, Governable, EIP712, ReentrancyGuard {
             evidenceHash,
             market.rulebookHash,
             resultReporterSetHash,
+            reporterThreshold,
+            reporterCount,
             msg.sender,
             observedAt,
             finalizesAt
@@ -572,5 +609,32 @@ contract SportsHub is ISportsHub, Governable, EIP712, ReentrancyGuard {
     function _requireValidOddsSignature(bytes32 oddsTicketHash, bytes calldata signature) internal view {
         (address recovered, ECDSA.RecoverError err,) = ECDSA.tryRecoverCalldata(oddsTicketHash, signature);
         if (err != ECDSA.RecoverError.NoError || !oddsSigner[recovered]) revert BadOddsSignature();
+    }
+
+    function _requireReporterQuorum(bytes32 resultPayloadHash, address proposer, bytes[] memory reporterSignatures)
+        internal
+        view
+        returns (uint8 reporterCount)
+    {
+        uint8 threshold = resultReporterThreshold;
+        if (reporterSignatures.length > type(uint8).max - 1) revert Errors.InvalidConfig();
+
+        reporterCount = 1;
+        address[] memory seen = new address[](reporterSignatures.length + 1);
+        seen[0] = proposer;
+
+        for (uint256 i = 0; i < reporterSignatures.length; ++i) {
+            (address recovered, ECDSA.RecoverError err,) = ECDSA.tryRecover(resultPayloadHash, reporterSignatures[i]);
+            if (err != ECDSA.RecoverError.NoError || !resultReporter[recovered]) revert BadResultSignature();
+
+            for (uint256 j = 0; j < reporterCount; ++j) {
+                if (seen[j] == recovered) revert DuplicateResultReporter(recovered);
+            }
+
+            seen[reporterCount] = recovered;
+            ++reporterCount;
+        }
+
+        if (reporterCount < threshold) revert ResultReporterQuorumNotMet(threshold, reporterCount);
     }
 }
