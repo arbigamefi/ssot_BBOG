@@ -1,5 +1,10 @@
 # FullAudit 2026-05 Closure
 
+> **Historical baseline notice (2026-05-13)**: this closure documents fixes against the pre-v1.3 Hub
+> codebase. References to `Hub` / `InvariantsAdapter` are retained as historical closure evidence.
+> Current casino lifecycle code lives in `src/core/GameHub.sol` and settles through
+> `src/core/SettlementRouter.sol`.
+
 Date: 2026-05-12
 
 Source report: `docs/audit/FullAudit-2026-05.md`

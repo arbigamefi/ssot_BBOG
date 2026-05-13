@@ -234,11 +234,10 @@ Milestone 3.0 is complete when:
 
 ```bash
 FOUNDRY_PROFILE=pr forge test -vv
-FOUNDRY_PROFILE=pr forge test --match-path test/diff/GameHubStatefulSystemDiff.t.sol -vv
 FOUNDRY_PROFILE=pr forge test --match-path test/diff/StatefulSystemDiff.t.sol -vv
 FOUNDRY_PROFILE=pr forge test --match-path test/diff/StatefulSystemDiffAdapter.t.sol -vv
-FOUNDRY_PROFILE=pr forge test --match-path test/invariants/Invariants.t.sol -vv
-FOUNDRY_PROFILE=pr forge test --match-path test/invariants/InvariantsAdapter.t.sol -vv
+FOUNDRY_PROFILE=pr forge test --match-path test/invariants/SettlementRouterInvariants.t.sol -vv
+FOUNDRY_PROFILE=pr forge test --match-path test/invariants/SportsHubInvariants.t.sol -vv
 git diff --check
 ```
 

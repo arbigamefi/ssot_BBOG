@@ -109,11 +109,11 @@ This milestone connects SSOT v1.2 charged VRF fee semantics to a real Chainlink 
 - Introduce `IVRFAdapter` + Chainlink wrapper adapter callback-forwarding flow
 - Add adapter-mode proof gates:
   - system-level adapter diff (`StatefulSystemDiffAdapter`)
-  - adapter ETH/credit invariants (`InvariantsAdapter`)
+  - adapter ETH/credit accounting inside `StatefulSystemDiffAdapter`
 
 **Acceptance**
 - Unit tests for adapter path pass
-- Adapter-mode diff and adapter-mode invariants are stable under PR and nightly profiles
+- Adapter-mode diff is stable under PR and nightly profiles
 
 ## Milestone 2.5 — Real-network readiness (fork + deploy)
 
