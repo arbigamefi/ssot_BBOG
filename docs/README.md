@@ -53,6 +53,7 @@ This repository is designed to be **auditable by construction**. The documentati
 
 - `docs/roadmap.md` — roadmap, milestones, acceptance criteria
 - `docs/plan/README.md` — implementation-grade action plans (PR-sized work breakdowns)
+- `docs/plan/Milestone-3.1-SportsHub-MVP.md` — sportsbook MVP implementation plan on top of SettlementRouter
 - `docs/migration/refactored-mapping.md` — mapping of refactored features to the clean-room design
 
 ## Games

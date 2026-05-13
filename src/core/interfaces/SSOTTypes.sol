@@ -83,6 +83,28 @@ library SSOTTypes {
         Refunded
     }
 
+    /// @notice Sportsbook market lifecycle owned by SportsHub.
+    enum SportsMarketState {
+        None,
+        Draft,
+        Open,
+        Locked,
+        Suspended,
+        ResultProposed,
+        Challenged,
+        Resolved,
+        Voided
+    }
+
+    /// @notice Sportsbook ticket lifecycle. Settlement funds still move only through SettlementRouter.
+    enum SportsTicketState {
+        None,
+        Held,
+        Settled,
+        Refunded,
+        Voided
+    }
+
     /// @notice Hub-side canonical bet record (lifecycle SSOT).
     struct Bet {
         uint256 betId;
@@ -126,6 +148,66 @@ library SSOTTypes {
         uint64 resolvedAt;
 
         BetState state;
+    }
+
+    /// @notice Sports market record. The rulebook hash defines market-specific void/push semantics.
+    struct SportsMarket {
+        uint64 marketId;
+        uint64 eventId;
+        uint64 poolId;
+        uint32 outcomeCount;
+        uint64 startsAt;
+        uint64 lockTime;
+        uint64 resultFinalitySeconds;
+        uint64 version;
+        bytes32 marketKey;
+        bytes32 rulebookHash;
+        SportsMarketState state;
+    }
+
+    /// @notice Signed or proven odds snapshot accepted by SportsHub for one fixed-odds ticket.
+    struct SportsOddsSnapshot {
+        uint64 marketId;
+        uint32 outcomeId;
+        uint64 marketVersion;
+        uint256 oddsWad;
+        uint256 maxStake;
+        uint256 maxPayout;
+        uint64 expiresAt;
+        uint64 nonce;
+        bytes32 riskHash;
+    }
+
+    /// @notice Sports ticket record bound to a router position.
+    struct SportsTicket {
+        uint256 ticketId;
+        uint256 positionId;
+        uint64 marketId;
+        uint64 eventId;
+        uint64 poolId;
+        uint32 outcomeId;
+        address player;
+        uint256 stake;
+        uint256 payout;
+        uint256 reserved;
+        bytes32 oddsSnapshotHash;
+        bytes32 rulebookHash;
+        uint64 acceptedAt;
+        SportsTicketState state;
+    }
+
+    /// @notice Public result proposal/finality record for one sports market.
+    struct SportsResult {
+        uint64 marketId;
+        uint64 eventId;
+        uint32 winningOutcomeId;
+        bytes32 resultPayloadHash;
+        bytes32 rulebookHash;
+        bytes32 reporterSetHash;
+        address proposer;
+        uint64 proposedAt;
+        uint64 finalizesAt;
+        bool challenged;
     }
 
     /// @notice XP award instruction produced during settlement (debt accrual, not a transfer).
