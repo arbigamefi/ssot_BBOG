@@ -126,6 +126,29 @@ No-go:
 - a public UI lets users place Sports tickets while provider evidence, rulebook, or role status is
   unknown.
 
+## Monitoring And Keeper Coverage
+
+SportsHub canary operation must have named alert ownership and keeper debt-out coverage. The repo-side
+coverage record is defined in [`sportsbook-ops-coverage.md`](sportsbook-ops-coverage.md). The approval
+memo should be based on `docs/ops/templates/sportsbook-ops-coverage.example.json` and checked with
+`make sports-ops-coverage-check-v13`.
+
+Before any public-money Sports market:
+
+- Sports G1-G7 alerts must route to named operators;
+- operators must cover market lock, result, finality, challenge, and debt-out windows;
+- keeper keys must be able to call `finalizeResult`, `settleTickets`, `refundTickets`, and
+  `voidTickets`;
+- failed atomic batches must have a retry-and-shrink procedure;
+- rehearsal evidence must include keeper finalization and batch debt-out.
+
+No-go:
+
+- any Sports G-series alert lacks a named owner or channel;
+- no keeper can terminalize tickets in batches;
+- no process exists to shrink a failed batch and retry;
+- keeper rehearsal evidence is missing.
+
 ## Launch Decision
 
 Phase 1 closeout means the testnet rails are ready for review. It does not mean mainnet is ready.
@@ -138,6 +161,7 @@ The next production gate is a documented go/no-go packet containing:
 - jurisdiction and frontend access decision;
 - bankroll sizing memo;
 - final risk caps in raw asset units;
+- monitoring/alert ownership and keeper coverage memo;
 - fresh canary after any role, provider, or risk parameter change.
 
 Current Phase 2 packet:

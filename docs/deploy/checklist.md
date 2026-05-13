@@ -78,6 +78,9 @@
 - [ ] For SportsHub mainnet canary caps, run
   `REQUIRE_APPROVED=1 make sports-bankroll-caps-check-v13 BANKROLL_CAPS_FILE=<approved-memo.json>`
   before copying `SPORTS_MAX_*` values into the deploy env.
+- [ ] For SportsHub operator coverage, run
+  `REQUIRE_APPROVED=1 make sports-ops-coverage-check-v13 OPS_COVERAGE_FILE=<approved-ops-coverage.json>`
+  before opening market risk-in.
 - [ ] Decide on monitoring signals:
   - bet placement / requestId issuance
   - refund credit changes (`VRFHub.refundCreditOf`)

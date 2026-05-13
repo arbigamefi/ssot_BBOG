@@ -95,11 +95,15 @@ Covered:
   `docs/ops/sportsbook-bankroll-risk-caps.md`
 - Example bankroll/risk cap memo:
   `docs/ops/templates/sportsbook-bankroll-risk-caps.example.json`
+- Monitoring/keeper coverage policy:
+  `docs/ops/sportsbook-ops-coverage.md`
+- Example monitoring/keeper coverage memo:
+  `docs/ops/templates/sportsbook-ops-coverage.example.json`
 
 These documents define the reproducibility standard for `rulebookHash`, `resultSourceHash`,
 `evidenceHash`, `challengeReasonHash`, and `arbitrationDecisionHash`. They do not approve a provider
-or evidence-storage vendor. They also define role-custody and bankroll/risk-cap memo shapes, but do
-not approve production keys or production bankroll.
+or evidence-storage vendor. They also define role-custody, bankroll/risk-cap, and monitoring/keeper
+memo shapes, but do not approve production keys, production bankroll, or operator coverage.
 
 ## Open No-Go Items
 
@@ -110,8 +114,8 @@ not approve production keys or production bankroll.
 | Jurisdiction and frontend access | NO-GO | Legal/compliance must approve jurisdictions, restricted regions, age policy, KYC/sanctions posture, responsible-gaming controls, and frontend gating. |
 | Bankroll sizing | NO-GO | Approve a `sportsbook.bankroll-risk-caps.v1` memo with initial bankroll, loss tolerance, max reserved exposure, and manual supervision limits in raw asset units. |
 | Final risk caps | NO-GO | Mainnet `SPORTS_MAX_*` values must match the approved bankroll memo and pass `REQUIRE_APPROVED=1 make sports-bankroll-caps-check-v13`. |
-| Monitoring and alerts | NO-GO | Sports metrics G1-G7 and related alerts must be routed to named operators with escalation coverage during market windows. |
-| Keeper/debt-out operations | NO-GO | Keeper process must be able to call `finalizeResult`, `settleTickets`, `refundTickets`, and `voidTickets`, with retry/shrink procedure for failed batches. |
+| Monitoring and alerts | NO-GO | Approve a `sportsbook.ops-coverage.v1` memo proving Sports G1-G7 alerts route to named operators with escalation coverage during market windows. |
+| Keeper/debt-out operations | NO-GO | The approved ops coverage memo must prove keeper access to `finalizeResult`, `settleTickets`, `refundTickets`, and `voidTickets`, plus retry/shrink rehearsal evidence. |
 | Mainnet release artifacts | NO-GO | Fresh mainnet deployment, verification, release digest, frontend manifest, golden vectors, ABI export, strict release check, fork tests, and release package must exist. |
 | Fresh canary after final params | NO-GO | After role, provider, and risk-cap changes, run a new minimal canary and record tx hashes/readbacks. |
 

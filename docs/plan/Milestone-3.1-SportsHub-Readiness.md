@@ -45,6 +45,9 @@ As of `master` through PR #13:
   approved.
 - The bankroll/risk cap sizing policy is tracked at `docs/ops/sportsbook-bankroll-risk-caps.md`; the
   local memo validator is `make sports-bankroll-caps-check-v13`, but no production bankroll is approved.
+- The monitoring/keeper coverage draft is tracked at `docs/ops/sportsbook-ops-coverage.md`; the local
+  memo validator is `make sports-ops-coverage-check-v13`, but no production operator coverage is
+  approved.
 
 ## Go/No-Go Gates
 
@@ -192,6 +195,8 @@ No-go conditions:
   `REQUIRE_APPROVED=1 make sports-role-custody-check-v13 ROLE_CUSTODY_FILE=<approved-role-custody.json>`.
 - Validate the approved bankroll memo with
   `REQUIRE_APPROVED=1 make sports-bankroll-caps-check-v13 BANKROLL_CAPS_FILE=<approved-memo.json>`.
+- Validate the approved ops coverage memo with
+  `REQUIRE_APPROVED=1 make sports-ops-coverage-check-v13 OPS_COVERAGE_FILE=<approved-ops-coverage.json>`.
 - Start with one asset, one Sports pool, low limits, and a small market set.
 - Keep max stake/payout below the bankroll amount that operators can manually supervise.
 - Require active monitoring during market lock/result/finality windows.
