@@ -76,8 +76,10 @@ As of the current `codex/sportsbook-architecture-research` branch:
   challenged-result blocking, result finalization, and challenged-market void coverage.
 - PR-3.1.6 has initial router-backed debt-out for resolved winners/losers and void/refund flows, with
   market/outcome/event exposure release and Bank position terminalization coverage.
-- SportsHub-specific invariant handlers remain the main unfinished proof surface before deployment/release
-  wiring.
+- SportsHub-specific invariants now cover exposure sums against held tickets, Bank reserve alignment,
+  router position ownership/pool binding, ticket/position terminal-state alignment, and no early debt-out
+  before Resolved/Voided market states.
+- Deployment and release wiring remain out of this milestone slice.
 
 ### PR-3.1.1 — Interfaces and milestone plan
 
