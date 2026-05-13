@@ -84,8 +84,11 @@ interface ISportsHub {
     function finalizeResult(uint64 marketId) external;
 
     function settleTicket(uint256 ticketId) external;
+    function settleTickets(uint256[] calldata ticketIds) external;
     function refundTicket(uint256 ticketId) external;
+    function refundTickets(uint256[] calldata ticketIds) external;
     function voidTicket(uint256 ticketId) external;
+    function voidTickets(uint256[] calldata ticketIds) external;
 
     event MarketCreated(
         uint64 indexed marketId,

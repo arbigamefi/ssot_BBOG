@@ -244,6 +244,20 @@ Acceptance:
 - Challenged-result voids still use the arbitration decision hash path.
 - Operators can tie every voided market to an incident or rulebook evidence record.
 
+### PR-3.1.11 — Batch debt-out helpers
+
+Deliverables:
+
+- Add `settleTickets`, `refundTickets`, and `voidTickets` batch wrappers.
+- Keep single-ticket semantics and per-ticket events unchanged.
+- Document keeper retry behavior for atomic batches.
+
+Acceptance:
+
+- Batch settle handles winning and losing tickets while releasing exposure.
+- Batch refund/void terminalizes tickets in voided markets through the router.
+- A bad ticket in a batch reverts the whole batch without partial terminalization.
+
 ## Recommended validation commands
 
 ```bash

@@ -516,6 +516,36 @@ contract SportsHub is ISportsHub, Governable, EIP712, ReentrancyGuard {
     }
 
     function settleTicket(uint256 ticketId) external override nonReentrant {
+        _settleTicket(ticketId);
+    }
+
+    function settleTickets(uint256[] calldata ticketIds) external override nonReentrant {
+        for (uint256 i = 0; i < ticketIds.length; ++i) {
+            _settleTicket(ticketIds[i]);
+        }
+    }
+
+    function refundTicket(uint256 ticketId) external override nonReentrant {
+        _refundTicket(ticketId);
+    }
+
+    function refundTickets(uint256[] calldata ticketIds) external override nonReentrant {
+        for (uint256 i = 0; i < ticketIds.length; ++i) {
+            _refundTicket(ticketIds[i]);
+        }
+    }
+
+    function voidTicket(uint256 ticketId) external override nonReentrant {
+        _voidTicket(ticketId);
+    }
+
+    function voidTickets(uint256[] calldata ticketIds) external override nonReentrant {
+        for (uint256 i = 0; i < ticketIds.length; ++i) {
+            _voidTicket(ticketIds[i]);
+        }
+    }
+
+    function _settleTicket(uint256 ticketId) internal {
         SSOTTypes.SportsTicket storage ticket = _requireHeldTicket(ticketId);
         SSOTTypes.SportsMarket storage market = _requireMarket(ticket.marketId);
         if (market.state != SSOTTypes.SportsMarketState.Resolved) {
@@ -534,7 +564,7 @@ contract SportsHub is ISportsHub, Governable, EIP712, ReentrancyGuard {
         emit TicketSettled(ticketId, ticket.positionId, payout);
     }
 
-    function refundTicket(uint256 ticketId) external override nonReentrant {
+    function _refundTicket(uint256 ticketId) internal {
         SSOTTypes.SportsTicket storage ticket = _requireHeldTicket(ticketId);
         _requireVoidedMarket(ticket.marketId);
 
@@ -546,7 +576,7 @@ contract SportsHub is ISportsHub, Governable, EIP712, ReentrancyGuard {
         emit TicketRefunded(ticketId, ticket.positionId, ticket.stake);
     }
 
-    function voidTicket(uint256 ticketId) external override nonReentrant {
+    function _voidTicket(uint256 ticketId) internal {
         SSOTTypes.SportsTicket storage ticket = _requireHeldTicket(ticketId);
         _requireVoidedMarket(ticket.marketId);
 

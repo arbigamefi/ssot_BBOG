@@ -224,6 +224,8 @@ If multiple active markets fail with the same signer/hash/risk mismatch, treat a
    ```
    The caller must be governance or an allowlisted `resultArbitrator`. A challenged market cannot be
    silently voided through `voidMarket`; use decision `3=VoidMarket` so the decision hash is public.
+   Voided tickets can be refunded through `refundTicket` / `voidTicket`, or batched with
+   `refundTickets(uint256[])` / `voidTickets(uint256[])`.
 4) **If the result is valid and finality has elapsed without a challenge, finalize.**
    ```bash
    cast send $SPORTS_HUB "finalizeResult(uint64)" $MARKET_ID --rpc-url $RPC --private-key $KEEPER_PK
@@ -232,6 +234,11 @@ If multiple active markets fail with the same signer/hash/risk mismatch, treat a
    - `TicketSettled` should progress for held tickets.
    - Losing tickets settle with zero payout.
    - Winning tickets settle through `SettlementRouter`; no direct Bank calls are allowed.
+   - Keepers may batch terminalization:
+     ```bash
+     cast send $SPORTS_HUB "settleTickets(uint256[])" "[$TICKET_ID_1,$TICKET_ID_2]" --rpc-url $RPC --private-key $KEEPER_PK
+     ```
+     Batch calls are atomic; one bad ticket reverts the whole batch, so retry with a smaller batch when needed.
 
 **Do not**
 - Finalize a result whose `resultPayloadHash` cannot be reproduced from the structured source/evidence
