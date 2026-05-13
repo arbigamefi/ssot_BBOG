@@ -47,29 +47,44 @@ Conclusion: GameHub is correctly wired far enough to reach the VRF provider requ
 - `script/ci/v13_sports_testnet_preflight.sh` requires a positive `REQUEST_GAS_PRICE_WEI`.
 - v1.3 public-testnet env examples now document a non-zero conservative estimator value.
 
-## Required next action
+## Completed follow-up
 
-Before broadcasting a GameHub canary, governance must configure the adapter estimator gas price. Suggested Base Sepolia test value:
+Governance configured the adapter estimator gas price:
 
-```bash
-cast send $ADAPTER "setRequestGasPriceWei(uint256)" 100000000 --rpc-url $RPC_URL --private-key $PRIVATE_KEY
-```
+- Value: `100000000`
+- Tx: `0xc13133d499b573d3d76b4a0763fa38eb3f2284fd431e993c0d98c3bfe6b88391`
+- Block: `41464040`
+- Readback: `adapter.requestGasPriceWei() == 100000000`
+- `GameHub.quoteVRFFee(1)`: `73169600000918 wei`, callback gas `320000`
 
-Then run:
+## Successful GameHub canary
 
-```bash
-ENV_FILE=.env BROADCAST=1 make gamehub-canary-v13
-CANARY_MODE=status CANARY_POSITION_ID=<positionId> ENV_FILE=.env make gamehub-canary-v13
-```
+`ENV_FILE=.env BROADCAST=1 make gamehub-canary-v13` succeeded after the adapter update.
 
-If Chainlink fulfills the request, close with:
+- Approve tx: `0xa257055cb13715cff0b750bc4cf2528aa4669db4d1baaa46d24ffa21dbc3a65e`
+- Place tx: `0x748392fbfbba516792927536b5caa2db53cc2fb5572ff591b2db4f652aed23ab`
+- Place block: `41464089`
+- Position id: `10`
+- Request id: `27132349123599711136123585542011620120088044542647541467732412976108291299276`
+- Game: `DICE`
+- Stake: `10000`
+- Reserved: `20000`
+- VRF fee paid/charged: `73169600000902 wei`
+- Initial post-place state: `betState=PendingVRF`, `positionState=Held`, `bankReserved=20000`
 
-```bash
-CANARY_MODE=finalize CANARY_POSITION_ID=<positionId> ENV_FILE=.env BROADCAST=1 make gamehub-canary-v13
-```
+Chainlink callback arrived during the rehearsal:
 
-If the request remains pending past `refundTimeoutSeconds`, close with:
+- Intermediate status: `betState=RandomReady`
+- Random hash: `0x0b3f5451905f1963fd0f93fc143046bbd10ad9e7e290d18ab5d5d235911e4d77`
+- VRFHub request readback after callback: detached / inactive
 
-```bash
-CANARY_MODE=refund CANARY_POSITION_ID=<positionId> ENV_FILE=.env BROADCAST=1 make gamehub-canary-v13
-```
+`CANARY_MODE=finalize CANARY_POSITION_ID=10 ENV_FILE=.env BROADCAST=1 make gamehub-canary-v13` succeeded:
+
+- Finalize tx: `0x97c005c0a863dc5b649fbc6e17e969930c7c784421c18170769f253a3898595b`
+- Finalize block: `41464145`
+- Final state: `betState=Settled`, `positionState=Settled`
+- `resolvedAt`: `1778696578`
+- Final Casino Bank assets: `1009800`
+- Final Casino Bank reserved: `0`
+
+Conclusion: the Base Sepolia v1.3 deployment now has a complete Casino/GameHub chain canary covering adapter fee configuration, ERC20 approval, `GameHub.placeBet`, `VRFHub` request creation, Chainlink callback into `RandomReady`, permissionless `finalize`, and reserve release through `SettlementRouter`/`Bank`.
