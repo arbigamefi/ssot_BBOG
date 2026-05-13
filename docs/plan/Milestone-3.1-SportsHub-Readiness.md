@@ -284,5 +284,9 @@ Passing this gate is required before moving from local readiness work to public 
 
 This proves public testnet deployment, explorer verification, release artifact generation, strict
 release checking, basic on-chain topology checks, controlled testnet Bank funding, and one funded
-canary Sports ticket through placement, result proposal, finality, finalization, and settlement.
-Result challenge, direct void, and batch debt-out rehearsals remain Phase 1 work.
+canary Sports ticket through placement, result proposal, finality, finalization, and settlement. The
+same deployment also rehearsed a direct market void followed by batch `refundTickets` and
+`voidTickets` debt-out, with SportsHub exposure, router positions, and Sports Bank reserved liability
+returning to zero on Base Sepolia block `41447214`.
+
+Result challenge rehearsal remains Phase 1 work.

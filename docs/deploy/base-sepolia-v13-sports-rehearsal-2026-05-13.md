@@ -132,6 +132,12 @@ ENV_FILE=.env.v13-sports.local make sports-canary-v13
 
 # broadcast the place-ticket canary
 BROADCAST=1 ENV_FILE=.env.v13-sports.local make sports-canary-v13
+
+# simulation only: direct void + batch debt-out
+CANARY_MODE=void-batch ENV_FILE=.env make sports-canary-v13
+
+# broadcast direct void + batch debt-out
+BROADCAST=1 CANARY_MODE=void-batch ENV_FILE=.env make sports-canary-v13
 ```
 
 The default canary creates a short-lived Sports market, opens it, approves `0.1 USDC` to the Sports
@@ -179,6 +185,38 @@ Canary result/finality/settlement broadcast:
   - Sports Bank reserved: `0`
   - Sports Bank assets: `0.95 USDC`
 
-- Rehearse result challenge, direct void, and batch debt-out playbooks on this deployment.
+Direct void + batch debt-out broadcast:
+
+- Block: `41447214`
+- Market ID: `2`
+- Event ID: `1778662632`
+- Ticket IDs:
+  - refunded through `refundTickets`: `2`, `4`
+  - voided through `voidTickets`: `3`, `5`
+- Stake per ticket: `0.1 USDC`
+- Total stake routed in: `0.4 USDC`
+- Expected total reserved while held: `0.6 USDC`
+- Direct void reason hash: `0x4dba5c6e334b0c2a7d22a8d9ab4907ce4cad27d9b1c6145f05a1a4db2cec802d`
+- Create market tx: `0xac1043d4d81f9f69010f2a25fcaf1da730ffb35aa17e4b8a3ee36dcc4d863e0a`
+- Open market tx: `0xb7be981d2e37045f52e2dbff899c4624e8fd62a67a3af4a040d1c139de50cc84`
+- Approve batch stake tx: `0x897089975dbdb15682262112b1560b906e87ef617c574d1afdc31b6d29283d7e`
+- Place ticket txs:
+  - `0x780229643fc0e84b84fe66de8c480a90561efd102066ef070a8e663561b9ad1c`
+  - `0x24e8ced903ca909719ded9fd8aef47e1182607377fad8b836deb9c2f1961ddf7`
+  - `0xbc5909d9936c1eade85e230fc6b4a0530745e0facadc9c0d542a327d3c048482`
+  - `0xf9f6f2a480e8049c5921bf38dbeec829cf5fb88f8efe3a206d6232c54b9bd956`
+- Direct void tx: `0x12ff1ac16293e686966d90b2918da2c8be337374ec6b25b01eca643aa2575bc8`
+- Batch refund tx: `0xe588c6b09f29677b8c32e65f25a7d318dd5b2d327fe85110cb11e0be37464bc9`
+- Batch void tx: `0xba00e4d8056c3eb7e3fbbb9ff51520ae49aeb4a32d184a83e52ba8baae0f81a1`
+- Post-debt-out state:
+  - market state: `Voided`
+  - ticket `2` / `4` state: `Refunded`
+  - ticket `3` / `5` state: `Voided`
+  - router positions `2` / `3` / `4` / `5` state: `Refunded`
+  - Sports market/event/pool-event reserved: `0`
+  - Sports Bank reserved: `0`
+  - Sports Bank assets: `0.95 USDC`
+
+- Rehearse result challenge playbook on this deployment.
 - Replace single-operator GOV bootstrap roles with dedicated testnet signer/reporter keys before any
   public canary.
