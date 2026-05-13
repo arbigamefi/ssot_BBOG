@@ -133,3 +133,44 @@ The “Query” fields are **pseudocode** (PromQL-like). Implement with your mon
 - Trigger: wrapper ETH balance deviates materially from expected charged-fee regime (operator-defined).
 - Action: `docs/ops/runbooks/vrf-refundcredit.md` (provider/config sanity)
 
+### G. SportsHub sportsbook operations
+
+**ALERT-G1-SPORTS_ODDS_REJECT_SPIKE (SEV1)**
+- Trigger: failed `placeTicket` transactions spike with `BadOddsSignature`, `OddsExpired`,
+  `BadOddsSnapshot`, or odds `riskHash` mismatch.
+- Query (pseudo): `increase(sports_ticket_reverts_total{reason=~"BadOddsSignature|OddsExpired|BadOddsSnapshot"}[5m]) > ODDS_REJECT_SPIKE`
+- Action: `docs/ops/runbooks/sportsbook-ops.md` (Playbook A)
+
+**ALERT-G2-SPORTS_RISK_CAP_REVERT_SPIKE (SEV1)**
+- Trigger: failed `placeTicket` transactions spike with stake/payout/exposure cap errors.
+- Query (pseudo): `increase(sports_ticket_reverts_total{reason=~"StakeTooLarge|PayoutTooLarge|.*ExposureExceeded"}[10m]) > RISK_CAP_REVERT_SPIKE`
+- Action: `docs/ops/runbooks/sportsbook-ops.md` (Playbook C)
+
+**ALERT-G3-SPORTS_EXPOSURE_NEAR_CAP (SEV1 -> SEV0)**
+- Trigger: market/outcome/event reserved exposure exceeds an operator threshold below the on-chain cap.
+- Query (pseudo): `sports_exposure_reserved / sports_exposure_cap > SPORTS_EXPOSURE_WARN_RATIO`
+- Escalate to SEV0 if exposure keeps rising while the market remains open.
+- Action: `docs/ops/runbooks/sportsbook-ops.md` (Playbook C)
+
+**ALERT-G4-SPORTS_RESULT_FINALITY_STUCK (SEV1)**
+- Trigger: `ResultProposed.finalizesAt` elapsed plus SLA, but `ResultFinalized` has not occurred.
+- Query (pseudo): `sports_result_finality_pending_seconds > SPORTS_RESULT_FINALITY_SLA`
+- Action: `docs/ops/runbooks/sportsbook-ops.md` (Playbook B)
+
+**ALERT-G5-SPORTS_RESULT_CHALLENGED (SEV1 -> SEV0)**
+- Trigger: any `ResultChallenged` event.
+- Query: `increase(sports_results_challenged_total[5m]) > 0`
+- Escalate to SEV0 for high-liability markets or suspected data-provider compromise.
+- Action: `docs/ops/runbooks/sportsbook-ops.md` (Playbook B)
+
+**ALERT-G6-SPORTS_ORACLE_CONFIG_CHANGED (SEV0)**
+- Trigger: `OddsSignerSetHashSet`, `OddsSignerSet`, `ResultReporterSetHashSet`, or `ResultReporterSet`
+  outside an approved governance window.
+- Query: `increase(sports_oracle_config_changes_total[5m]) > 0`
+- Action: `docs/ops/runbooks/sportsbook-ops.md` and `docs/ops/runbooks/pause-config-drift.md`
+
+**ALERT-G7-SPORTS_RISK_LIMITS_CHANGED (SEV0)**
+- Trigger: any `RiskLimitsSet` or `PoolRiskLimitsSet` outside an approved governance window.
+- Query: `increase(sports_risk_limits_changes_total[5m]) > 0`
+- Action: `docs/ops/runbooks/sportsbook-ops.md` (Playbook C); confirm odds snapshots rotate to the new
+  per-pool `riskHash`.

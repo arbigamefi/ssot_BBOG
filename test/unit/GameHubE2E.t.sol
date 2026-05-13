@@ -1,0 +1,335 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "forge-std/Test.sol";
+
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+
+import {Bank} from "../../src/core/Bank.sol";
+import {GameHub} from "../../src/core/GameHub.sol";
+import {PoolRegistry} from "../../src/core/PoolRegistry.sol";
+import {SettlementRouter} from "../../src/core/SettlementRouter.sol";
+import {VRFHub} from "../../src/core/VRFHub.sol";
+import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
+import {MockERC20} from "../../src/mocks/MockERC20.sol";
+import {ReferralRegistry} from "../../src/engines/referral/ReferralRegistry.sol";
+import {DefaultReferralEngine} from "../../src/engines/referral/DefaultReferralEngine.sol";
+import {CoinTossModule} from "../../src/modules/cointoss/CoinTossModule.sol";
+import {DiceModule} from "../../src/modules/dice/DiceModule.sol";
+import {KenoModule} from "../../src/modules/keno/KenoModule.sol";
+import {KenoParams} from "../../src/modules/keno/KenoParams.sol";
+import {RouletteModule} from "../../src/modules/roulette/RouletteModule.sol";
+import {RouletteParams} from "../../src/modules/roulette/RouletteParams.sol";
+
+contract GameHubE2E is Test {
+    uint64 internal constant POOL_A = 1;
+    uint64 internal constant POOL_B = 2;
+
+    bytes32 internal constant GAME_DICE = keccak256("DICE");
+    bytes32 internal constant GAME_COIN = keccak256("COIN_TOSS");
+    bytes32 internal constant GAME_ROULETTE = keccak256("ROULETTE");
+    bytes32 internal constant GAME_KENO = keccak256("KENO");
+    bytes internal constant RNG_DOMAIN = "SSOT_RNG_V1";
+
+    address internal gov = address(0xA11CE);
+    address internal alice = address(0xBEEF);
+    address internal bob = address(0xB0B);
+
+    MockERC20 internal assetA;
+    MockERC20 internal assetB;
+    Bank internal bankA;
+    Bank internal bankB;
+    PoolRegistry internal poolRegistry;
+    SettlementRouter internal router;
+    VRFHub internal vrf;
+    GameHub internal gameHub;
+
+    function setUp() external {
+        assetA = new MockERC20("AssetA", "ASTA", 18);
+        assetB = new MockERC20("AssetB", "ASTB", 18);
+
+        bankA = new Bank(address(assetA), gov, 1000, "LP Share ASTA", "LPA", 18);
+        bankB = new Bank(address(assetB), gov, 1000, "LP Share ASTB", "LPB", 18);
+        poolRegistry = new PoolRegistry(gov);
+        router = new SettlementRouter(address(poolRegistry));
+        vrf = new VRFHub(address(this), gov);
+
+        ReferralRegistry refRegistry = new ReferralRegistry(gov);
+        DefaultReferralEngine refEngine = new DefaultReferralEngine();
+
+        uint16[6] memory levelBps;
+        levelBps[1] = 10_000;
+
+        gameHub = new GameHub(
+            address(router),
+            address(vrf),
+            address(refRegistry),
+            address(refEngine),
+            gov,
+            3600,
+            200,
+            0,
+            10_000,
+            10_000,
+            3000,
+            levelBps,
+            2
+        );
+
+        vm.startPrank(gov);
+        poolRegistry.registerPool(POOL_A, address(assetA), address(bankA), SSOTTypes.PoolDomain.Casino);
+        poolRegistry.registerPool(POOL_B, address(assetB), address(bankB), SSOTTypes.PoolDomain.Casino);
+        poolRegistry.setHubRegistered(address(gameHub), true);
+        poolRegistry.setHubAllowedForPool(POOL_A, address(gameHub), true);
+        poolRegistry.setHubAllowedForPool(POOL_B, address(gameHub), true);
+
+        bankA.setSettlementRouterOnce(address(router));
+        bankB.setSettlementRouterOnce(address(router));
+        bankA.setMinPlayerTurnoverForUnlock(20 ether);
+        bankA.setHoldbackVestingSeconds(10);
+        bankB.setMinPlayerTurnoverForUnlock(20 ether);
+        bankB.setHoldbackVestingSeconds(10);
+
+        refRegistry.setBinderOnce(address(gameHub));
+        gameHub.registerGame(GAME_DICE, address(new DiceModule()));
+        gameHub.registerGame(GAME_COIN, address(new CoinTossModule()));
+        gameHub.registerGame(GAME_ROULETTE, address(new RouletteModule()));
+        gameHub.registerGame(GAME_KENO, address(new KenoModule()));
+        vm.stopPrank();
+
+        assetA.mint(alice, 1_000 ether);
+        assetA.mint(bob, 1_000 ether);
+        assetA.mint(gov, 10_000 ether);
+        assetB.mint(alice, 1_000 ether);
+        assetB.mint(bob, 1_000 ether);
+        assetB.mint(gov, 10_000 ether);
+
+        vm.deal(alice, 100 ether);
+        vm.deal(bob, 100 ether);
+        vm.deal(gov, 100 ether);
+
+        vm.startPrank(gov);
+        assetA.approve(address(bankA), type(uint256).max);
+        bankA.deposit(5_000 ether, gov);
+        assetB.approve(address(bankB), type(uint256).max);
+        bankB.deposit(5_000 ether, gov);
+        vm.stopPrank();
+
+        vm.startPrank(alice);
+        assetA.approve(address(bankA), type(uint256).max);
+        assetB.approve(address(bankB), type(uint256).max);
+        vm.stopPrank();
+    }
+
+    function test_diceWinSettlesThroughRouterPoolA() external {
+        uint8 cap = 50;
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
+
+        uint256 positionId = _place(alice, GAME_DICE, POOL_A, abi.encode(cap), spec, address(0));
+
+        SSOTTypes.Position memory pos = router.getPosition(positionId);
+        assertEq(pos.ownerHub, address(gameHub));
+        assertEq(pos.poolId, POOL_A);
+        assertEq(pos.bank, address(bankA));
+
+        uint256 seed = _findSeedDiceWin(positionId, cap);
+        _fulfill(positionId, seed);
+
+        uint256 balBefore = assetA.balanceOf(alice);
+        gameHub.finalize(positionId);
+        uint256 balAfter = assetA.balanceOf(alice);
+
+        assertEq(balAfter - balBefore, (196 ether) / 10);
+        assertEq(uint256(router.getPosition(positionId).state), uint256(SSOTTypes.PositionState.Settled));
+    }
+
+    function test_coinMultirollStopGainRefundsUnusedStakeThroughRouterPoolB() external {
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 5, stopGain: 10 ether, stopLoss: 0});
+
+        uint256 positionId = _place(alice, GAME_COIN, POOL_B, abi.encode(true), spec, address(0));
+        SSOTTypes.Bet memory bet = gameHub.getBet(positionId);
+        assertEq(bet.stake, 50 ether);
+        assertEq(bet.reserved, 100 ether);
+
+        uint256 seed = _findSeedCoinWin(positionId, true);
+        _fulfill(positionId, seed);
+
+        uint256 balBefore = assetB.balanceOf(alice);
+        gameHub.finalize(positionId);
+        uint256 balAfter = assetB.balanceOf(alice);
+
+        assertEq(balAfter - balBefore, 40 ether + (196 ether) / 10);
+        assertEq(bankB.playerTurnover(alice), 10 ether);
+    }
+
+    function test_rouletteRedWinKeepsModuleMathThroughRouter() external {
+        bytes memory params = RouletteParams.encode(RouletteParams.Kind.Red, 0);
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
+
+        uint256 positionId = _place(alice, GAME_ROULETTE, POOL_A, params, spec, address(0));
+        uint256 expectedGross = Math.mulDiv(10 ether, 37, 18);
+        assertEq(gameHub.getBet(positionId).reserved, expectedGross);
+
+        _fulfill(positionId, _findSeedRouletteHit(positionId, 7));
+
+        uint256 balBefore = assetA.balanceOf(alice);
+        gameHub.finalize(positionId);
+        uint256 balAfter = assetA.balanceOf(alice);
+
+        uint256 fee = Math.mulDiv(expectedGross, gameHub.defaultHouseEdgeBps(), 10_000);
+        assertEq(balAfter - balBefore, expectedGross - fee);
+    }
+
+    function test_kenoSinglePickHitSettlesThroughRouter() external {
+        uint40 numbers = uint40(1) << 5;
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
+
+        uint256 positionId = _place(alice, GAME_KENO, POOL_A, KenoParams.encode(numbers), spec, address(0));
+        assertEq(gameHub.getBet(positionId).reserved, 20 ether);
+
+        _fulfill(positionId, _findSeedKenoHit(positionId, numbers, true));
+
+        uint256 balBefore = assetA.balanceOf(alice);
+        gameHub.finalize(positionId);
+        uint256 balAfter = assetA.balanceOf(alice);
+
+        assertEq(balAfter - balBefore, (196 ether) / 10);
+    }
+
+    function test_referralSkylineAccruesXpOnlyInSettledPool() external {
+        vm.prank(alice);
+        gameHub.bindReferrer(bob);
+
+        vm.prank(gov);
+        gameHub.setMaxAffiliateDeltaBps(100);
+        vm.prank(bob);
+        gameHub.setAffiliateHouseEdge(300);
+
+        uint8 cap = 50;
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
+        uint256 positionId = _place(alice, GAME_DICE, POOL_A, abi.encode(cap), spec, bob);
+
+        _fulfill(positionId, _findSeedDiceLose(positionId, cap));
+        gameHub.finalize(positionId);
+
+        assertEq(bankA.playerTurnover(alice), 10 ether);
+        assertEq(bankB.playerTurnover(alice), 0);
+        assertEq(bankA.xpAccruedOf(bob), 0);
+        assertGt(bankA.xpLockedOf(bob) + bankA.xpHoldbackOf(bob), 0);
+        assertEq(bankB.xpAccruedOf(bob), 0);
+        assertEq(bankB.xpLockedOf(bob), 0);
+        assertEq(bankB.xpHoldbackOf(bob), 0);
+    }
+
+    function test_invalidRouletteParamsRevertBeforeRouterPosition() external {
+        bytes memory params = RouletteParams.encode(RouletteParams.Kind.Street, 2);
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: 1 ether, betCount: 1, stopGain: 0, stopLoss: 0});
+
+        vm.prank(alice);
+        vm.expectRevert("street=start");
+        gameHub.placeBet(GAME_ROULETTE, POOL_A, params, spec, address(0), 10_000);
+
+        assertEq(router.nextPositionId(), 1);
+    }
+
+    function _place(
+        address player,
+        bytes32 gameId,
+        uint64 poolId,
+        bytes memory params,
+        SSOTTypes.StakeSpec memory spec,
+        address affiliate
+    ) internal returns (uint256 positionId) {
+        (uint256 fee,) = gameHub.quoteVRFFee(spec.betCount);
+        vm.prank(player);
+        positionId = gameHub.placeBet{value: fee}(gameId, poolId, params, spec, affiliate, 10_000);
+    }
+
+    function _fulfill(uint256 positionId, uint256 seed) internal {
+        SSOTTypes.Bet memory bet = gameHub.getBet(positionId);
+        uint256[] memory rw = new uint256[](1);
+        rw[0] = seed;
+        vrf.fulfillRandomWords(bet.requestId, rw);
+    }
+
+    function _rng(uint256 betId, uint256 i, uint256 seed) internal pure returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(RNG_DOMAIN, betId, i, seed)));
+    }
+
+    function _rng2(uint256 betId, uint256 i, uint256 j, uint256 seed) internal pure returns (uint256) {
+        return uint256(keccak256(abi.encodePacked(RNG_DOMAIN, betId, i, j, seed)));
+    }
+
+    function _findSeedDiceWin(uint256 betId, uint8 cap) internal pure returns (uint256) {
+        for (uint256 seed = 0; seed < 2048; seed++) {
+            uint256 rolled = (_rng(betId, 0, seed) % 100) + 1;
+            if (rolled > cap) return seed;
+        }
+        revert("no seed");
+    }
+
+    function _findSeedDiceLose(uint256 betId, uint8 cap) internal pure returns (uint256) {
+        for (uint256 seed = 0; seed < 2048; seed++) {
+            uint256 rolled = (_rng(betId, 0, seed) % 100) + 1;
+            if (rolled <= cap) return seed;
+        }
+        revert("no seed");
+    }
+
+    function _findSeedCoinWin(uint256 betId, bool isTails) internal pure returns (uint256) {
+        for (uint256 seed = 0; seed < 2048; seed++) {
+            bool rolledTails = (_rng(betId, 0, seed) % 2) == 1;
+            if (rolledTails == isTails) return seed;
+        }
+        revert("no seed");
+    }
+
+    function _findSeedRouletteHit(uint256 betId, uint256 want) internal pure returns (uint256) {
+        for (uint256 seed = 0; seed < 8192; seed++) {
+            if (_rng(betId, 0, seed) % 37 == want) return seed;
+        }
+        revert("no seed");
+    }
+
+    function _findSeedKenoHit(uint256 betId, uint40 numbers, bool wantHit) internal pure returns (uint256) {
+        for (uint256 seed = 0; seed < 16384; seed++) {
+            uint40 rolled = _kenoDraw0(betId, seed);
+            bool hit = (numbers & rolled) != 0;
+            if (hit == wantHit) return seed;
+        }
+        revert("no seed");
+    }
+
+    function _kenoDraw0(uint256 betId, uint256 seed) internal pure returns (uint40 rolled) {
+        uint8[40] memory available;
+        for (uint8 i = 0; i < 40;) {
+            available[i] = i;
+            unchecked {
+                ++i;
+            }
+        }
+
+        uint256 result = 0;
+        uint256 remaining = 40;
+        for (uint8 i = 0; i < 10;) {
+            uint256 r = _rng2(betId, 0, uint256(i), seed);
+            uint256 randomIndex = (r % remaining) + uint256(i);
+            uint8 selected = available[randomIndex];
+            result |= (uint256(1) << selected);
+            if (randomIndex != i) {
+                available[randomIndex] = available[i];
+            }
+            unchecked {
+                --remaining;
+                ++i;
+            }
+        }
+        return uint40(result);
+    }
+}

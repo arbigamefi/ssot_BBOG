@@ -24,7 +24,6 @@ interface IERC20MetadataLike {
     function decimals() external view returns (uint8);
 }
 
-
 /// @notice Deployment script for Milestone 2.5 (real-network readiness).
 ///
 /// This script assumes the deployer EOA is also the governance address (GOV).
@@ -111,8 +110,10 @@ contract Deploy is Script {
             address asset = vm.envAddress(string.concat("ASSET_", suffix));
 
             uint16 minLiqBps = uint16(vm.envOr(string.concat("BANK_MIN_LIQ_BPS_", suffix), uint256(1000)));
-            uint256 minTurnoverForUnlock = vm.envOr(string.concat("BANK_MIN_TURNOVER_FOR_UNLOCK_", suffix), uint256(20 ether));
-            uint256 holdbackVestingSeconds = vm.envOr(string.concat("BANK_HOLDBACK_VESTING_SECONDS_", suffix), uint256(86400));
+            uint256 minTurnoverForUnlock =
+                vm.envOr(string.concat("BANK_MIN_TURNOVER_FOR_UNLOCK_", suffix), uint256(20 ether));
+            uint256 holdbackVestingSeconds =
+                vm.envOr(string.concat("BANK_HOLDBACK_VESTING_SECONDS_", suffix), uint256(86400));
 
             string memory lpName = vm.envOr(string.concat("LP_NAME_", suffix), string.concat("LP Share #", suffix));
             string memory lpSymbol = vm.envOr(string.concat("LP_SYMBOL_", suffix), string.concat("LP", suffix));
@@ -121,7 +122,7 @@ contract Deploy is Script {
             Bank bank = new Bank(asset, gov, minLiqBps, lpName, lpSymbol, lpDecimals);
             registry.registerBank(asset, address(bank));
 
-            bank.setHubOnce(address(hub));
+            bank.setSettlementRouterOnce(address(hub));
             bank.setMinPlayerTurnoverForUnlock(minTurnoverForUnlock);
             bank.setHoldbackVestingSeconds(holdbackVestingSeconds);
         }
@@ -308,8 +309,10 @@ contract Deploy is Script {
             address bankAddr = registry.bankFor(asset);
 
             uint16 minLiqBps = uint16(vm.envOr(string.concat("BANK_MIN_LIQ_BPS_", suffix), uint256(1000)));
-            uint256 minTurnoverForUnlock = vm.envOr(string.concat("BANK_MIN_TURNOVER_FOR_UNLOCK_", suffix), uint256(20 ether));
-            uint256 holdbackVestingSeconds = vm.envOr(string.concat("BANK_HOLDBACK_VESTING_SECONDS_", suffix), uint256(86400));
+            uint256 minTurnoverForUnlock =
+                vm.envOr(string.concat("BANK_MIN_TURNOVER_FOR_UNLOCK_", suffix), uint256(20 ether));
+            uint256 holdbackVestingSeconds =
+                vm.envOr(string.concat("BANK_HOLDBACK_VESTING_SECONDS_", suffix), uint256(86400));
             string memory lpName = vm.envOr(string.concat("LP_NAME_", suffix), string.concat("LP Share #", suffix));
             string memory lpSymbol = vm.envOr(string.concat("LP_SYMBOL_", suffix), string.concat("LP", suffix));
             uint8 lpDecimals = uint8(vm.envOr(string.concat("LP_DECIMALS_", suffix), uint256(18)));
@@ -364,9 +367,13 @@ contract Deploy is Script {
             // shellcheck disable=SC2154
             "ETHERSCAN_API_KEY=\"${ETHERSCAN_API_KEY:-${ETHERSCAN_V2_API_KEY:-}}\"\n",
             "if [ -z \"$ETHERSCAN_API_KEY\" ]; then echo \"set ETHERSCAN_API_KEY (or ETHERSCAN_V2_API_KEY)\"; exit 1; fi\n",
-            "CHAIN_ID=", vm.toString(block.chainid), "\n",
+            "CHAIN_ID=",
+            vm.toString(block.chainid),
+            "\n",
             // Allow overriding VERIFIER_URL externally, otherwise default to V2.
-            "VERIFIER_URL=\"${VERIFIER_URL:-", verifierUrl, "}\"\n\n",
+            "VERIFIER_URL=\"${VERIFIER_URL:-",
+            verifierUrl,
+            "}\"\n\n",
             "# Foundry uses --chain (docs) but some older builds accepted --chain-id.\n",
             "CHAIN_FLAG=\"--chain\"\n",
             "if forge verify-contract --help 2>/dev/null | grep -q -- \"--chain-id\"; then CHAIN_FLAG=\"--chain-id\"; fi\n\n",
@@ -377,11 +384,30 @@ contract Deploy is Script {
 
         sh = string.concat(
             sh,
-            _verifyLine(address(adapter), "src/adapters/chainlink/ChainlinkV2PlusWrapperAdapter.sol:ChainlinkV2PlusWrapperAdapter", vm.toString(abi.encode(vrfWrapper, gov)), verifierUrl),
-            _verifyLine(address(vrf), "src/core/VRFHub.sol:VRFHub", vm.toString(abi.encode(address(adapter), gov)), verifierUrl),
-            _verifyLine(address(registry), "src/core/BankRegistry.sol:BankRegistry", vm.toString(abi.encode(gov)), verifierUrl),
-            _verifyLine(address(refRegistry), "src/engines/referral/ReferralRegistry.sol:ReferralRegistry", vm.toString(abi.encode(gov)), verifierUrl),
-            _verifyLine(address(refEngine), "src/engines/referral/DefaultReferralEngine.sol:DefaultReferralEngine", "0x", verifierUrl),
+            _verifyLine(
+                address(adapter),
+                "src/adapters/chainlink/ChainlinkV2PlusWrapperAdapter.sol:ChainlinkV2PlusWrapperAdapter",
+                vm.toString(abi.encode(vrfWrapper, gov)),
+                verifierUrl
+            ),
+            _verifyLine(
+                address(vrf), "src/core/VRFHub.sol:VRFHub", vm.toString(abi.encode(address(adapter), gov)), verifierUrl
+            ),
+            _verifyLine(
+                address(registry), "src/core/BankRegistry.sol:BankRegistry", vm.toString(abi.encode(gov)), verifierUrl
+            ),
+            _verifyLine(
+                address(refRegistry),
+                "src/engines/referral/ReferralRegistry.sol:ReferralRegistry",
+                vm.toString(abi.encode(gov)),
+                verifierUrl
+            ),
+            _verifyLine(
+                address(refEngine),
+                "src/engines/referral/DefaultReferralEngine.sol:DefaultReferralEngine",
+                "0x",
+                verifierUrl
+            ),
             _verifyLine(
                 address(hub),
                 "src/core/Hub.sol:Hub",
@@ -453,24 +479,27 @@ contract Deploy is Script {
 
     function _safeCreateDir(string memory path) internal {
         try vm.createDir(path, true) {
-            // ok
-        } catch {
+        // ok
+        }
+        catch {
             console2.log(string.concat("WARN: cannot create dir (check fs_permissions): ", path));
         }
     }
 
     function _safeWriteJson(string memory json, string memory path) internal {
         try vm.writeJson(json, path) {
-            // ok
-        } catch {
+        // ok
+        }
+        catch {
             console2.log(string.concat("WARN: cannot write json (check fs_permissions): ", path));
         }
     }
 
     function _safeWriteFile(string memory path, string memory data) internal {
         try vm.writeFile(path, data) {
-            // ok
-        } catch {
+        // ok
+        }
+        catch {
             console2.log(string.concat("WARN: cannot write file (check fs_permissions): ", path));
         }
     }
@@ -486,12 +515,11 @@ contract Deploy is Script {
         return "";
     }
 
-    function _verifyLine(
-        address addr,
-        string memory contractId,
-        string memory ctorArgs,
-        string memory verifierUrl
-    ) internal pure returns (string memory) {
+    function _verifyLine(address addr, string memory contractId, string memory ctorArgs, string memory verifierUrl)
+        internal
+        pure
+        returns (string memory)
+    {
         // If verifierUrl is empty, rely on Foundry's chain preset.
         string memory base = string.concat(
             "forge verify-contract ",
@@ -524,5 +552,4 @@ contract Deploy is Script {
             dec = d;
         } catch {}
     }
-
 }

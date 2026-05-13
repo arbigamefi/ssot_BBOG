@@ -82,7 +82,7 @@ contract E2E is Test {
             gov,
             3600,
             200, // defaultHouseEdgeBps = 2%
-            0,   // maxAffiliateDeltaBps = 0 => affiliate HE capped at default
+            0, // maxAffiliateDeltaBps = 0 => affiliate HE capped at default
             10_000,
             10_000,
             3000,
@@ -91,8 +91,8 @@ contract E2E is Test {
         );
 
         vm.startPrank(gov);
-        bankA.setHubOnce(address(hub));
-        bankB.setHubOnce(address(hub));
+        bankA.setSettlementRouterOnce(address(hub));
+        bankB.setSettlementRouterOnce(address(hub));
         refRegistry.setBinderOnce(address(hub));
 
         // lock eligibility threshold and vesting for tests (per asset)
@@ -160,7 +160,7 @@ contract E2E is Test {
     }
 
     function _vrfFee(uint32 betCount) internal view returns (uint256 fee) {
-        (fee, ) = hub.quoteVRFFee(betCount);
+        (fee,) = hub.quoteVRFFee(betCount);
     }
 
     function _rng2(uint256 betId, uint256 i, uint256 j, uint256 seed) internal pure returns (uint256) {
@@ -170,13 +170,15 @@ contract E2E is Test {
     function _kenoDraw0(uint256 betId, uint256 seed) internal pure returns (uint40 rolled) {
         // Mirror KenoModule._draw for rollIndex=0
         uint8[40] memory available;
-        for (uint8 i = 0; i < 40; ) {
+        for (uint8 i = 0; i < 40;) {
             available[i] = i;
-            unchecked { ++i; }
+            unchecked {
+                ++i;
+            }
         }
         uint256 result = 0;
         uint256 remaining = 40;
-        for (uint8 i = 0; i < 10; ) {
+        for (uint8 i = 0; i < 10;) {
             uint256 r = _rng2(betId, 0, uint256(i), seed);
             uint256 randomIndex = (r % remaining) + uint256(i);
             uint8 selected = available[randomIndex];
@@ -252,15 +254,13 @@ contract E2E is Test {
     function test_place_finalize_win_fee_on_payout_assetA() external {
         // cap=50 => 2x payout on win
         uint8 cap = 50;
-        SSOTTypes.StakeSpec memory spec = SSOTTypes.StakeSpec({
-            amountPerRoll: 10 ether,
-            betCount: 1,
-            stopGain: 0,
-            stopLoss: 0
-        });
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
 
         vm.startPrank(alice);
-        uint256 betId = hub.placeBet{value: _vrfFee(spec.betCount)}(GAME_DICE, address(assetA), abi.encode(cap), spec, address(0), 10_000);
+        uint256 betId = hub.placeBet{value: _vrfFee(spec.betCount)}(
+            GAME_DICE, address(assetA), abi.encode(cap), spec, address(0), 10_000
+        );
         vm.stopPrank();
 
         SSOTTypes.Bet memory bet = hub.getBet(betId);
@@ -286,15 +286,13 @@ contract E2E is Test {
     }
 
     function test_cointoss_win_fee_on_payout_assetB() external {
-        SSOTTypes.StakeSpec memory spec = SSOTTypes.StakeSpec({
-            amountPerRoll: 10 ether,
-            betCount: 1,
-            stopGain: 0,
-            stopLoss: 0
-        });
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
 
         vm.startPrank(alice);
-        uint256 betId = hub.placeBet{value: _vrfFee(spec.betCount)}(GAME_COIN, address(assetB), abi.encode(true), spec, address(0), 10_000); // tails
+        uint256 betId = hub.placeBet{value: _vrfFee(spec.betCount)}(
+            GAME_COIN, address(assetB), abi.encode(true), spec, address(0), 10_000
+        ); // tails
         vm.stopPrank();
 
         SSOTTypes.Bet memory bet = hub.getBet(betId);
@@ -317,15 +315,13 @@ contract E2E is Test {
     function test_roulette_single_number_win_fee_on_payout_assetA() external {
         // pick number 7 (bit 7)
         uint40 numbers = uint40(1) << 7;
-        SSOTTypes.StakeSpec memory spec = SSOTTypes.StakeSpec({
-            amountPerRoll: 10 ether,
-            betCount: 1,
-            stopGain: 0,
-            stopLoss: 0
-        });
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
 
         vm.startPrank(alice);
-        uint256 betId = hub.placeBet{value: _vrfFee(spec.betCount)}(GAME_ROULETTE, address(assetA), abi.encode(numbers), spec, address(0), 10_000);
+        uint256 betId = hub.placeBet{value: _vrfFee(spec.betCount)}(
+            GAME_ROULETTE, address(assetA), abi.encode(numbers), spec, address(0), 10_000
+        );
         vm.stopPrank();
 
         SSOTTypes.Bet memory bet = hub.getBet(betId);
@@ -350,15 +346,13 @@ contract E2E is Test {
         // Typed bet: Red (18 numbers)
         bytes memory params = RouletteParams.encode(RouletteParams.Kind.Red, 0);
 
-        SSOTTypes.StakeSpec memory spec = SSOTTypes.StakeSpec({
-            amountPerRoll: 10 ether,
-            betCount: 1,
-            stopGain: 0,
-            stopLoss: 0
-        });
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
 
         vm.startPrank(alice);
-        uint256 betId = hub.placeBet{value: _vrfFee(spec.betCount)}(GAME_ROULETTE, address(assetA), params, spec, address(0), 10_000);
+        uint256 betId = hub.placeBet{value: _vrfFee(spec.betCount)}(
+            GAME_ROULETTE, address(assetA), params, spec, address(0), 10_000
+        );
         vm.stopPrank();
 
         SSOTTypes.Bet memory bet = hub.getBet(betId);
@@ -384,15 +378,13 @@ contract E2E is Test {
         bytes memory params = RouletteParams.encode(RouletteParams.Kind.Red, 0);
         uint40 mask = RouletteParams.redMask();
 
-        SSOTTypes.StakeSpec memory spec = SSOTTypes.StakeSpec({
-            amountPerRoll: 10 ether,
-            betCount: 1,
-            stopGain: 0,
-            stopLoss: 0
-        });
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
 
         vm.startPrank(alice);
-        uint256 betId = hub.placeBet{value: _vrfFee(spec.betCount)}(GAME_ROULETTE, address(assetA), params, spec, address(0), 10_000);
+        uint256 betId = hub.placeBet{value: _vrfFee(spec.betCount)}(
+            GAME_ROULETTE, address(assetA), params, spec, address(0), 10_000
+        );
         vm.stopPrank();
 
         SSOTTypes.Bet memory bet = hub.getBet(betId);
@@ -412,12 +404,8 @@ contract E2E is Test {
     function test_roulette_invalid_street_reverts_assetA() external {
         // street start must be 1,4,7,...,34; start=2 should revert
         bytes memory params = RouletteParams.encode(RouletteParams.Kind.Street, 2);
-        SSOTTypes.StakeSpec memory spec = SSOTTypes.StakeSpec({
-            amountPerRoll: 1 ether,
-            betCount: 1,
-            stopGain: 0,
-            stopLoss: 0
-        });
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: 1 ether, betCount: 1, stopGain: 0, stopLoss: 0});
 
         vm.prank(alice);
         vm.expectRevert("street=start");
@@ -425,15 +413,13 @@ contract E2E is Test {
     }
 
     function test_refund_detach_late_fulfill_no_effect_assetB() external {
-        SSOTTypes.StakeSpec memory spec = SSOTTypes.StakeSpec({
-            amountPerRoll: 10 ether,
-            betCount: 1,
-            stopGain: 0,
-            stopLoss: 0
-        });
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
 
         vm.startPrank(alice);
-        uint256 betId = hub.placeBet{value: _vrfFee(spec.betCount)}(GAME_DICE, address(assetB), abi.encode(uint8(50)), spec, address(0), 10_000);
+        uint256 betId = hub.placeBet{value: _vrfFee(spec.betCount)}(
+            GAME_DICE, address(assetB), abi.encode(uint8(50)), spec, address(0), 10_000
+        );
         vm.stopPrank();
 
         SSOTTypes.Bet memory b = hub.getBet(betId);
@@ -463,15 +449,12 @@ contract E2E is Test {
 
         // place a bet in assetA that LOSES (cap=50, rolled<=50)
         uint8 cap = 50;
-        SSOTTypes.StakeSpec memory spec = SSOTTypes.StakeSpec({
-            amountPerRoll: 10 ether,
-            betCount: 1,
-            stopGain: 0,
-            stopLoss: 0
-        });
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
 
         vm.startPrank(alice);
-        uint256 betId = hub.placeBet{value: _vrfFee(spec.betCount)}(GAME_DICE, address(assetA), abi.encode(cap), spec, bob, 10_000);
+        uint256 betId =
+            hub.placeBet{value: _vrfFee(spec.betCount)}(GAME_DICE, address(assetA), abi.encode(cap), spec, bob, 10_000);
         vm.stopPrank();
 
         SSOTTypes.Bet memory b = hub.getBet(betId);
@@ -504,15 +487,13 @@ contract E2E is Test {
         // Select a single number (played=1).
         // If hit: factor=20000 => 2x payout gross.
         uint40 numbers = uint40(1) << 5;
-        SSOTTypes.StakeSpec memory spec = SSOTTypes.StakeSpec({
-            amountPerRoll: 10 ether,
-            betCount: 1,
-            stopGain: 0,
-            stopLoss: 0
-        });
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
 
         vm.startPrank(alice);
-        uint256 betId = hub.placeBet{value: _vrfFee(spec.betCount)}(GAME_KENO, address(assetA), KenoParams.encode(numbers), spec, address(0), 10_000);
+        uint256 betId = hub.placeBet{value: _vrfFee(spec.betCount)}(
+            GAME_KENO, address(assetA), KenoParams.encode(numbers), spec, address(0), 10_000
+        );
         vm.stopPrank();
 
         SSOTTypes.Bet memory bet = hub.getBet(betId);
@@ -532,12 +513,8 @@ contract E2E is Test {
     }
 
     function test_keno_invalid_numbers_revert() external {
-        SSOTTypes.StakeSpec memory spec = SSOTTypes.StakeSpec({
-            amountPerRoll: 1 ether,
-            betCount: 1,
-            stopGain: 0,
-            stopLoss: 0
-        });
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: 1 ether, betCount: 1, stopGain: 0, stopLoss: 0});
 
         vm.startPrank(alice);
         vm.expectRevert();
@@ -547,15 +524,13 @@ contract E2E is Test {
 
     function test_cointoss_multiroll_stopgain_refund_turnover_assetB() external {
         // 5 rolls escrowed, but stopGain triggers after first win (profit>=10)
-        SSOTTypes.StakeSpec memory spec = SSOTTypes.StakeSpec({
-            amountPerRoll: 10 ether,
-            betCount: 5,
-            stopGain: 10 ether,
-            stopLoss: 0
-        });
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 5, stopGain: 10 ether, stopLoss: 0});
 
         vm.startPrank(alice);
-        uint256 betId = hub.placeBet{value: _vrfFee(spec.betCount)}(GAME_COIN, address(assetB), abi.encode(true), spec, address(0), 10_000);
+        uint256 betId = hub.placeBet{value: _vrfFee(spec.betCount)}(
+            GAME_COIN, address(assetB), abi.encode(true), spec, address(0), 10_000
+        );
         vm.stopPrank();
 
         SSOTTypes.Bet memory bet = hub.getBet(betId);

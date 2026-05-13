@@ -26,6 +26,8 @@ This repository is designed to be **auditable by construction**. The documentati
 
 ## Constitution & invariants
 
+- `docs/constitution/SSOT.v1.3.md` — draft normative protocol constitution for SettlementRouter + vertical hubs
+- `docs/constitution/ExecutableSSOT.v1.3.md` — draft executable invariant spec for router/pool isolation
 - `docs/constitution/SSOT.v1.2.md` — normative protocol constitution (MUST / MUST NOT)
 - `docs/constitution/ExecutableSSOT.v1.2.md` — executable invariant spec (v1.1 + v1.2 additions)
 - (Historical) `docs/constitution/SSOT.v1.1.md`
@@ -38,6 +40,10 @@ This repository is designed to be **auditable by construction**. The documentati
 - `docs/architecture/overview.md` — module boundaries, data flows, dependency direction
 - `docs/adr/README.md` — ADR index + templates (why the system is designed this way)
 
+## Research
+
+- `docs/research/sportsbook-architecture-2026-05.md` — industry comparison and recommended architecture for extending the current casino SSOT into sportsbook verticals
+
 ## Audit & assurance
 
 - `docs/audit/threat-model.md` — assets, assumptions, threats, mitigations
@@ -47,6 +53,7 @@ This repository is designed to be **auditable by construction**. The documentati
 
 - `docs/roadmap.md` — roadmap, milestones, acceptance criteria
 - `docs/plan/README.md` — implementation-grade action plans (PR-sized work breakdowns)
+- `docs/plan/Milestone-3.1-SportsHub-MVP.md` — sportsbook MVP implementation plan on top of SettlementRouter
 - `docs/migration/refactored-mapping.md` — mapping of refactored features to the clean-room design
 
 ## Games

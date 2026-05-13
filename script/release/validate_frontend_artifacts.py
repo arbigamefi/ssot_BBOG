@@ -51,19 +51,22 @@ def _pick_release_artifact(
     latest_path: Path,
     chain_id: int,
     block_number: int,
+    tag_suffix: str,
     strict: bool,
 ) -> Path:
     """Prefer the release-tagged artifact if present."""
 
-    tagged = Path("deployments") / "release" / f"{kind}-{chain_id}-{block_number}.json"
+    tagged = Path("deployments") / "release" / f"{kind}-{chain_id}-{block_number}{tag_suffix}.json"
     if tagged.exists():
         return tagged
 
     # If the tagged file is missing, strict mode should fail with a clear message.
     if strict:
+        target = "frontend-manifest" if kind == "frontend-manifest" else "golden-vectors"
+        command = f"make release-{target}{tag_suffix}"
         raise SystemExit(
             f"missing release-tagged {kind} at {tagged}. "
-            f"Run: make release-{ 'frontend-manifest' if kind == 'frontend-manifest' else 'golden-vectors' }"
+            f"Run: {command}"
         )
 
     # Non-strict: fall back to latest.
@@ -78,6 +81,8 @@ def main() -> None:
     ap.add_argument("--notes", required=True)
     ap.add_argument("--manifest", required=True)
     ap.add_argument("--vectors", required=True)
+    ap.add_argument("--schema", type=int, default=1)
+    ap.add_argument("--tag-suffix", default="")
     # Optional ABI inventory (frontend-only ABIs). In STRICT=1 this can be a hard gate.
     ap.add_argument("--abis-index", default="")
     args = ap.parse_args()
@@ -89,6 +94,7 @@ def main() -> None:
     notes_path = Path(args.notes)
     manifest_latest = Path(args.manifest)
     vectors_latest = Path(args.vectors)
+    tag_suffix = str(args.tag_suffix)
 
     if strict:
         for p in (release_path, snapshot_path, notes_path, manifest_latest, vectors_latest):
@@ -106,6 +112,7 @@ def main() -> None:
         latest_path=manifest_latest,
         chain_id=chain_id,
         block_number=block_number,
+        tag_suffix=tag_suffix,
         strict=strict,
     )
     vectors_path = _pick_release_artifact(
@@ -113,6 +120,7 @@ def main() -> None:
         latest_path=vectors_latest,
         chain_id=chain_id,
         block_number=block_number,
+        tag_suffix=tag_suffix,
         strict=strict,
     )
 
@@ -120,7 +128,12 @@ def main() -> None:
     vectors = _load_json(vectors_path)
 
     # Schema requirements.
-    _require_keys(manifest, keys=("schemaVersion", "chainId", "blockNumber", "addresses", "games", "assets"), path=manifest_path)
+    manifest_keys = (
+        ("schemaVersion", "chainId", "blockNumber", "addresses", "games", "assets")
+        if args.schema == 1
+        else ("schemaVersion", "chainId", "blockNumber", "architectureVersion", "addresses", "sports", "games", "pools")
+    )
+    _require_keys(manifest, keys=manifest_keys, path=manifest_path)
     _require_keys(vectors, keys=("schemaVersion", "chainId", "blockNumber", "vectors"), path=vectors_path)
 
     # Optional ABI inventory (frontend-only ABIs).
@@ -131,8 +144,8 @@ def main() -> None:
         if abis_index_path.exists():
             abis_index = _load_json(abis_index_path)
             _require_keys(abis_index, keys=("schemaVersion", "chainId", "blockNumber", "contracts"), path=abis_index_path)
-            if _as_int(abis_index["schemaVersion"], field="schemaVersion", path=abis_index_path) != 1:
-                raise SystemExit(f"{abis_index_path}: schemaVersion must be 1")
+            if _as_int(abis_index["schemaVersion"], field="schemaVersion", path=abis_index_path) != args.schema:
+                raise SystemExit(f"{abis_index_path}: schemaVersion must be {args.schema}")
             if _as_int(abis_index["chainId"], field="chainId", path=abis_index_path) != chain_id:
                 raise SystemExit(f"abis index chainId mismatch: expected {chain_id}, got {abis_index.get('chainId')}")
             if _as_int(abis_index["blockNumber"], field="blockNumber", path=abis_index_path) != block_number:
@@ -150,10 +163,10 @@ def main() -> None:
             if missing_files:
                 raise SystemExit(f"abis missing files under {abis_dir}: {missing_files}")
 
-    if _as_int(manifest["schemaVersion"], field="schemaVersion", path=manifest_path) != 1:
-        raise SystemExit(f"{manifest_path}: schemaVersion must be 1")
-    if _as_int(vectors["schemaVersion"], field="schemaVersion", path=vectors_path) != 1:
-        raise SystemExit(f"{vectors_path}: schemaVersion must be 1")
+    if _as_int(manifest["schemaVersion"], field="schemaVersion", path=manifest_path) != args.schema:
+        raise SystemExit(f"{manifest_path}: schemaVersion must be {args.schema}")
+    if _as_int(vectors["schemaVersion"], field="schemaVersion", path=vectors_path) != args.schema:
+        raise SystemExit(f"{vectors_path}: schemaVersion must be {args.schema}")
 
     m_chain = _as_int(manifest["chainId"], field="chainId", path=manifest_path)
     m_block = _as_int(manifest["blockNumber"], field="blockNumber", path=manifest_path)
@@ -183,13 +196,13 @@ def main() -> None:
             raise SystemExit(
                 f"frontend-manifest-latest.json does not match release identity. "
                 f"expected chainId={chain_id}, blockNumber={block_number} but got chainId={ml_chain}, blockNumber={ml_block}. "
-                f"Run: make release-frontend-manifest"
+                f"Run: make release-frontend-manifest{tag_suffix}"
             )
         if (vl_chain, vl_block) != (chain_id, block_number):
             raise SystemExit(
                 f"golden-vectors-latest.json does not match release identity. "
                 f"expected chainId={chain_id}, blockNumber={block_number} but got chainId={vl_chain}, blockNumber={vl_block}. "
-                f"Run: make release-golden-vectors"
+                f"Run: make release-golden-vectors{tag_suffix}"
             )
 
     # Notes must reference digest in strict mode.

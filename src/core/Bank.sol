@@ -14,17 +14,17 @@ import {Errors} from "../libs/Errors.sol";
 
 /// @notice Single-asset vault with ERC4626-like semantics + SSOT accounting + bet funds interface.
 ///         - totalAssets() == NAV == B - PF - XP
-///         - hold/settle/refund callable ONLY by immutable Hub.
+///         - hold/settle/refund callable ONLY by immutable SettlementRouter.
 ///         - riskInPaused freezes Risk-In + Optional Outflow, but never blocks settle/refund.
 contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
-    address public override hub;
+    address public override settlementRouter;
     address public immutable override asset;
     IERC20 private immutable _assetToken;
 
-    uint256 public override protocolFeesPayable;   // PF
-    uint256 public override totalReserved;         // R
+    uint256 public override protocolFeesPayable; // PF
+    uint256 public override totalReserved; // R
 
     /// @dev Virtual reserves keep the initial share price 1:1 while making direct
     ///      asset donations economically captured by the vault instead of letting
@@ -51,7 +51,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     uint256 public override holdbackVestingSeconds;
     uint256 public override minPlayerTurnoverForUnlock;
 
-    uint256 public override minLiquidityBps;       // [0..10000]
+    uint256 public override minLiquidityBps; // [0..10000]
     // pause state comes from OZ Pausable (maps to SSOT "riskInPaused")
 
     // ERC4626-like shares (ERC20)
@@ -104,10 +104,9 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     // -------- governance controls --------
 
     /// @notice Freeze Risk-In + Optional outflows, while keeping Debt-Out (settle/refund) live.
-    /// @dev Governance may call directly. Hub MAY forward governance intent (Hub is immutable in v1.0).
+    /// @dev Governance may call directly. SettlementRouter MAY forward governance intent.
     function setRiskInPaused(bool paused_) external {
-        // Allow governance OR Hub (forwarding). Hub address is wired once via setHubOnce.
-        if (msg.sender != governance && msg.sender != hub) revert Errors.Unauthorized();
+        if (msg.sender != governance && msg.sender != settlementRouter) revert Errors.Unauthorized();
         if (paused_) {
             if (!paused()) _pause();
         } else {
@@ -116,11 +115,11 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         emit RiskInPausedSet(paused_);
     }
 
-    /// @notice One-time wiring: set Hub address. Allowed only when hub is unset.
-    function setHubOnce(address hub_) external onlyGov {
-        if (hub != address(0)) revert Errors.InvalidConfig();
-        if (hub_ == address(0)) revert Errors.ZeroAddress();
-        hub = hub_;
+    /// @notice One-time wiring: set SettlementRouter address. Allowed only when unset.
+    function setSettlementRouterOnce(address router_) external onlyGov {
+        if (settlementRouter != address(0)) revert Errors.InvalidConfig();
+        if (router_ == address(0)) revert Errors.ZeroAddress();
+        settlementRouter = router_;
     }
 
     function setMinLiquidityBps(uint256 bps) external onlyGov {
@@ -138,7 +137,6 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         minPlayerTurnoverForUnlock = turnover_;
     }
 
-
     /// @notice Rescue non-asset tokens only (no ASSET backdoor).
     function rescueToken(address token, address to, uint256 amount) external onlyGov nonReentrant {
         if (token == asset) revert Errors.InvalidConfig();
@@ -151,7 +149,12 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     /// @param amount Amount of protocol fees to claim (in asset units).
     /// @param receiver Address to receive the claimed fees.
     /// @return claimed The amount actually claimed.
-    function claimProtocolFees(uint256 amount, address receiver) external onlyGov nonReentrant returns (uint256 claimed) {
+    function claimProtocolFees(uint256 amount, address receiver)
+        external
+        onlyGov
+        nonReentrant
+        returns (uint256 claimed)
+    {
         if (paused()) revert RiskInPaused();
         if (receiver == address(0)) revert Errors.ZeroAddress();
 
@@ -175,14 +178,25 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         return xpAccruedTotal + xpLockedTotal + xpHoldbackTotal;
     }
 
-    function xpAccruedOf(address payee) external view override returns (uint256) { return _xpAccrued[payee]; }
-    function xpLockedOf(address payee) external view override returns (uint256) { return _xpLocked[payee]; }
-    function xpHoldbackOf(address payee) external view override returns (uint256) { return _xpHoldback[payee]; }
+    function xpAccruedOf(address payee) external view override returns (uint256) {
+        return _xpAccrued[payee];
+    }
+
+    function xpLockedOf(address payee) external view override returns (uint256) {
+        return _xpLocked[payee];
+    }
+
+    function xpHoldbackOf(address payee) external view override returns (uint256) {
+        return _xpHoldback[payee];
+    }
+
     function xpLockedBySource(address payee, address sourcePlayer) external view override returns (uint256) {
         return _xpLockedBySource[payee][sourcePlayer];
     }
 
-    function playerTurnover(address player) external view override returns (uint256) { return _playerTurnover[player]; }
+    function playerTurnover(address player) external view override returns (uint256) {
+        return _playerTurnover[player];
+    }
 
     function holdbackReleasable(address payee) external view override returns (uint256) {
         return _holdbackReleasable(payee, uint64(block.timestamp));
@@ -211,11 +225,9 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
             minLiq: ml,
             free: fr,
             riskInPaused: paused(),
-
             xpAccruedTotal: xpAccruedTotal,
             xpLockedTotal: xpLockedTotal,
             xpHoldbackTotal: xpHoldbackTotal,
-
             holdbackVestingSeconds: holdbackVestingSeconds,
             minPlayerTurnoverForUnlock: minPlayerTurnoverForUnlock
         });
@@ -316,7 +328,12 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         _mint(receiver, shares_);
     }
 
-    function withdraw(uint256 assets_, address receiver, address owner) external override nonReentrant returns (uint256 shares) {
+    function withdraw(uint256 assets_, address receiver, address owner)
+        external
+        override
+        nonReentrant
+        returns (uint256 shares)
+    {
         if (paused()) revert RiskInPaused();
         if (assets_ == 0) revert Errors.InsufficientBalance();
         shares = _convertToShares(assets_, Math.Rounding.Ceil);
@@ -326,7 +343,12 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         _assetToken.safeTransfer(receiver, assets_);
     }
 
-    function redeem(uint256 shares_, address receiver, address owner) external override nonReentrant returns (uint256 assets_) {
+    function redeem(uint256 shares_, address receiver, address owner)
+        external
+        override
+        nonReentrant
+        returns (uint256 assets_)
+    {
         if (paused()) revert RiskInPaused();
         if (shares_ == 0) revert Errors.InsufficientBalance();
         _spendAllowanceIfNeeded(owner, shares_);
@@ -344,8 +366,6 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
             allowance[owner][msg.sender] = allowed - shares;
         }
     }
-
-    
 
     // -------- XP optional outflow + permissionless bucket moves --------
 
@@ -438,7 +458,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         emit XPHoldbackReleased(payee, released);
         return released;
     }
-// -------- Optional outflow domain (A4) --------
+    // -------- Optional outflow domain (A4) --------
 
     function _optionalOutflowCap() internal view returns (uint256 capAssets) {
         uint256 B = _assetToken.balanceOf(address(this));
@@ -467,20 +487,19 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         if (NAV < R || NAV - R < ml) revert OptionalOutflowDomainViolation();
     }
 
-    // -------- bet funds interface (only Hub) --------
+    // -------- bet funds interface (only SettlementRouter) --------
 
-    modifier onlyHub() {
-        if (hub == address(0) || msg.sender != hub) revert NotHub();
+    modifier onlySettlementRouter() {
+        if (settlementRouter == address(0) || msg.sender != settlementRouter) revert NotSettlementRouter();
         _;
     }
 
-    function holdBet(
-        uint256 betId,
-        address player,
-        uint256 stake,
-        uint256 reserved,
-        bytes32 snapshotHash
-    ) external override onlyHub nonReentrant {
+    function holdBet(uint256 betId, address player, uint256 stake, uint256 reserved, bytes32 snapshotHash)
+        external
+        override
+        onlySettlementRouter
+        nonReentrant
+    {
         if (paused()) revert RiskInPaused();
         if (player == address(0) || stake == 0 || reserved == 0) revert Errors.InsufficientBalance();
         Hold storage h = holds[betId];
@@ -496,13 +515,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
 
         totalReserved = Rafter;
 
-        holds[betId] = Hold({
-            player: player,
-            stake: stake,
-            reserved: reserved,
-            snapshotHash: snapshotHash,
-            open: true
-        });
+        holds[betId] = Hold({player: player, stake: stake, reserved: reserved, snapshotHash: snapshotHash, open: true});
 
         emit BetHeld(betId, player, stake, reserved, snapshotHash);
     }
@@ -514,7 +527,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         uint256 refundAmount,
         uint256 protocolFeeAccrual,
         SSOTTypes.XPAward[] calldata xpAwards
-    ) external override onlyHub nonReentrant {
+    ) external override onlySettlementRouter nonReentrant {
         Hold storage h = holds[betId];
         if (!h.open) revert BetNotOpen(betId);
 
@@ -522,7 +535,9 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         uint256 stake = h.stake;
 
         if (payoutNet > payoutGross) revert Errors.InvalidConfig();
-        if (payoutGross + refundAmount > reserved) revert ReservedTooSmall(betId, reserved, payoutGross + refundAmount);
+        if (payoutGross + refundAmount > reserved) {
+            revert ReservedTooSmall(betId, reserved, payoutGross + refundAmount);
+        }
         if (refundAmount > stake) revert RefundTooLarge(betId, refundAmount, stake);
 
         // Release reserve first (B3 + avoid transient insolvency window)
@@ -606,7 +621,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         );
     }
 
-    function refundBet(uint256 betId, uint256 refundAmount) external override onlyHub nonReentrant {
+    function refundBet(uint256 betId, uint256 refundAmount) external override onlySettlementRouter nonReentrant {
         Hold storage h = holds[betId];
         if (!h.open) revert BetNotOpen(betId);
 
@@ -625,6 +640,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
 
         emit BetRefunded(betId, h.player, refundAmount);
     }
+
     function riskInPaused() external view override returns (bool) {
         return paused();
     }

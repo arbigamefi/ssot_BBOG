@@ -16,7 +16,6 @@ import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
 import {IGameModule} from "../../src/core/interfaces/IGameModule.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
-
 /// @notice Stateful fuzz handler used by StdInvariant.
 ///         We intentionally model both:
 ///         - Risk-in actions (deposit/placeBet/affiliate opt-in) that may revert
@@ -53,60 +52,50 @@ contract Handler is Test {
     uint256 public openReservedA;
     uint256 public openReservedB;
 
+    // ---------------------------------------------------------------------
+    // Additional mirrors for bounded settlement + budgets (B3/P3)
+    // ---------------------------------------------------------------------
 
-// ---------------------------------------------------------------------
-// Additional mirrors for bounded settlement + budgets (B3/P3)
-// ---------------------------------------------------------------------
+    mapping(uint256 => bytes) internal _mirrorParams;
+    mapping(uint256 => SSOTTypes.StakeSpec) internal _mirrorStakeSpec;
+    mapping(uint256 => bytes32) internal _mirrorGameId;
+    mapping(uint256 => uint256) internal _mirrorSeedPlus1; // seed+1 sentinel (0 means unset)
 
-mapping(uint256 => bytes) internal _mirrorParams;
-mapping(uint256 => SSOTTypes.StakeSpec) internal _mirrorStakeSpec;
-mapping(uint256 => bytes32) internal _mirrorGameId;
-mapping(uint256 => uint256) internal _mirrorSeedPlus1; // seed+1 sentinel (0 means unset)
+    // ---------------------------------------------------------------------
+    // Violation flags (invariant functions assert these are always zero)
+    // ---------------------------------------------------------------------
+    uint256 public v_D2_noAssetBackdoor;
+    uint256 public v_E2_bucketMovesPreserveTotal;
+    uint256 public v_E3_claimPauseGated;
+    uint256 public v_B3_boundedSettlement;
+    uint256 public v_P3_budgetConservation;
+    uint256 public v_A4_optionalOutflowDomain;
+    uint256 public v_LIVE_debtOutMustSucceed;
 
-// ---------------------------------------------------------------------
-// Violation flags (invariant functions assert these are always zero)
-// ---------------------------------------------------------------------
-uint256 public v_D2_noAssetBackdoor;
-uint256 public v_E2_bucketMovesPreserveTotal;
-uint256 public v_E3_claimPauseGated;
-uint256 public v_B3_boundedSettlement;
-uint256 public v_P3_budgetConservation;
-uint256 public v_A4_optionalOutflowDomain;
-uint256 public v_LIVE_debtOutMustSucceed;
+    bytes32 public lastViolationCode;
+    uint256 public lastViolationBetId;
 
-bytes32 public lastViolationCode;
-uint256 public lastViolationBetId;
+    bytes32 internal constant VC_D2 = keccak256("D2_NO_ASSET_BACKDOOR");
+    bytes32 internal constant VC_E2 = keccak256("E2_BUCKET_MOVES");
+    bytes32 internal constant VC_E3 = keccak256("E3_CLAIM_PAUSE_GATED");
+    bytes32 internal constant VC_B3 = keccak256("B3_BOUNDED_SETTLEMENT");
+    bytes32 internal constant VC_P3 = keccak256("P3_BUDGET_CONSERVATION");
+    bytes32 internal constant VC_A4 = keccak256("A4_OPTIONAL_OUTFLOW_DOMAIN");
+    bytes32 internal constant VC_LIVE = keccak256("LIVE_DEBT_OUT");
 
-bytes32 internal constant VC_D2 = keccak256("D2_NO_ASSET_BACKDOOR");
-bytes32 internal constant VC_E2 = keccak256("E2_BUCKET_MOVES");
-bytes32 internal constant VC_E3 = keccak256("E3_CLAIM_PAUSE_GATED");
-bytes32 internal constant VC_B3 = keccak256("B3_BOUNDED_SETTLEMENT");
-bytes32 internal constant VC_P3 = keccak256("P3_BUDGET_CONSERVATION");
-bytes32 internal constant VC_A4 = keccak256("A4_OPTIONAL_OUTFLOW_DOMAIN");
-bytes32 internal constant VC_LIVE = keccak256("LIVE_DEBT_OUT");
+    function _noteViolation(bytes32 code, uint256 betId) internal {
+        lastViolationCode = code;
+        lastViolationBetId = betId;
+        if (code == VC_D2) v_D2_noAssetBackdoor++;
+        else if (code == VC_E2) v_E2_bucketMovesPreserveTotal++;
+        else if (code == VC_E3) v_E3_claimPauseGated++;
+        else if (code == VC_B3) v_B3_boundedSettlement++;
+        else if (code == VC_P3) v_P3_budgetConservation++;
+        else if (code == VC_A4) v_A4_optionalOutflowDomain++;
+        else if (code == VC_LIVE) v_LIVE_debtOutMustSucceed++;
+    }
 
-function _noteViolation(bytes32 code, uint256 betId) internal {
-    lastViolationCode = code;
-    lastViolationBetId = betId;
-    if (code == VC_D2) v_D2_noAssetBackdoor++;
-    else if (code == VC_E2) v_E2_bucketMovesPreserveTotal++;
-    else if (code == VC_E3) v_E3_claimPauseGated++;
-    else if (code == VC_B3) v_B3_boundedSettlement++;
-    else if (code == VC_P3) v_P3_budgetConservation++;
-    else if (code == VC_A4) v_A4_optionalOutflowDomain++;
-    else if (code == VC_LIVE) v_LIVE_debtOutMustSucceed++;
-}
-
-    constructor(
-        MockERC20 aA,
-        MockERC20 aB,
-        Bank bA,
-        Bank bB,
-        Hub h,
-        VRFHub v,
-        address g,
-        address coord
-    ) {
+    constructor(MockERC20 aA, MockERC20 aB, Bank bA, Bank bB, Hub h, VRFHub v, address g, address coord) {
         assetA = aA;
         assetB = aB;
         bankA = bA;
@@ -130,11 +119,21 @@ function _noteViolation(bytes32 code, uint256 betId) internal {
         }
     }
 
-    function playersLength() external view returns (uint256) { return players.length; }
-    function betIdsLength() external view returns (uint256) { return betIds.length; }
+    function playersLength() external view returns (uint256) {
+        return players.length;
+    }
 
-    function openReservedSumA() external view returns (uint256) { return openReservedA; }
-    function openReservedSumB() external view returns (uint256) { return openReservedB; }
+    function betIdsLength() external view returns (uint256) {
+        return betIds.length;
+    }
+
+    function openReservedSumA() external view returns (uint256) {
+        return openReservedA;
+    }
+
+    function openReservedSumB() external view returns (uint256) {
+        return openReservedB;
+    }
 
     function _pick(uint256 seed) internal view returns (address asset, Bank bank, MockERC20 token) {
         if (seed % 2 == 0) {
@@ -156,7 +155,7 @@ function _noteViolation(bytes32 code, uint256 betId) internal {
 
         vm.startPrank(p);
         token.approve(address(bank), type(uint256).max);
-        try bank.deposit(assetsIn, p) { } catch { }
+        try bank.deposit(assetsIn, p) {} catch {}
         vm.stopPrank();
 
         // silence unused
@@ -174,7 +173,7 @@ function _noteViolation(bytes32 code, uint256 betId) internal {
         bps = uint16(bound(uint256(bps), uint256(minBps), 10_000));
 
         vm.prank(affiliate);
-        try hub.setAffiliateHouseEdge(bps) { } catch { }
+        try hub.setAffiliateHouseEdge(bps) {} catch {}
     }
 
     // ----------------------
@@ -182,7 +181,7 @@ function _noteViolation(bytes32 code, uint256 betId) internal {
     // ----------------------
 
     function action_placeBet(uint256 seed, uint256 amountPerRoll, uint8 cap, uint16 maxHE) external virtual {
-        (address asset, , ) = _pick(seed);
+        (address asset,,) = _pick(seed);
         // if unsupported or paused, return
         try hub.riskInPaused(asset) returns (bool paused) {
             if (paused) return;
@@ -204,71 +203,76 @@ function _noteViolation(bytes32 code, uint256 betId) internal {
         // best-effort bind a referrer (first-touch) to increase coverage
         if (affiliate != address(0) && affiliate != p) {
             vm.prank(p);
-            try hub.bindReferrer(affiliate) { } catch { }
+            try hub.bindReferrer(affiliate) {} catch {}
         }
 
-        SSOTTypes.StakeSpec memory spec = SSOTTypes.StakeSpec({
-            amountPerRoll: amountPerRoll,
-            betCount: betCount,
-            stopGain: 0,
-            stopLoss: 0
-        });
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: amountPerRoll, betCount: betCount, stopGain: 0, stopLoss: 0});
 
-        (uint256 fee, ) = hub.quoteVRFFee(betCount);
+        (uint256 fee,) = hub.quoteVRFFee(betCount);
 
         vm.prank(p);
-        try hub.placeBet{value: fee}(GAME_DICE, asset, abi.encode(cap), spec, affiliate, maxHE) returns (uint256 betId) {
+        try hub.placeBet{value: fee}(GAME_DICE, asset, abi.encode(cap), spec, affiliate, maxHE) returns (
+            uint256 betId
+        ) {
             betIds.push(betId);
             _mirrorParams[betId] = abi.encode(cap);
             _mirrorStakeSpec[betId] = spec;
             _mirrorGameId[betId] = GAME_DICE;
             _observeAndTrackNewBet(betId);
-        } catch { }
+        } catch {}
     }
 
     // ----------------------
     // Debt-out: VRF fulfill + finalize
     // ----------------------
 
-    
-function action_fulfillFinalize(uint256 seed, uint256 rnd) external {
-    uint256 n = betIds.length;
-    if (n == 0) return;
+    function action_fulfillFinalize(uint256 seed, uint256 rnd) external {
+        uint256 n = betIds.length;
+        if (n == 0) return;
 
-    uint256 betId = betIds[seed % n];
+        uint256 betId = betIds[seed % n];
 
-    SSOTTypes.Bet memory b;
-    try hub.getBet(betId) returns (SSOTTypes.Bet memory bb) { b = bb; } catch { return; }
-
-    uint256 pfBefore = Bank(b.bank).protocolFeesPayable();
-    uint256 xpBefore = Bank(b.bank).externalPayablesTotal();
-    uint256 turnoverBefore = Bank(b.bank).playerTurnover(b.player);
-
-    if (b.state == SSOTTypes.BetState.PendingVRF && b.requestId != 0) {
-        _mirrorSeedPlus1[betId] = rnd + 1;
-        uint256[] memory rw = new uint256[](1);
-        rw[0] = rnd;
-        vm.prank(coordinator);
-        vrf.fulfillRandomWords(b.requestId, rw);
-    }
-
-    SSOTTypes.Bet memory bMid = hub.getBet(betId);
-    if (bMid.state == SSOTTypes.BetState.RandomReady) {
-        _checkBoundedSettlementOutcome(betId, bMid);
-    }
-
-    bool finalized = false;
-    try hub.finalize(betId) { finalized = true; } catch { }
-
-    if (finalized) {
-        SSOTTypes.Bet memory bAfter = hub.getBet(betId);
-        if (bAfter.state == SSOTTypes.BetState.Settled) {
-            _checkBudgetConservation_P3(bAfter, pfBefore, xpBefore, turnoverBefore, betId);
+        SSOTTypes.Bet memory b;
+        try hub.getBet(betId) returns (SSOTTypes.Bet memory bb) {
+            b = bb;
         }
-    }
+            catch {
+            return;
+        }
 
-    _observeAndTrack(betId);
-}
+        uint256 pfBefore = Bank(b.bank).protocolFeesPayable();
+        uint256 xpBefore = Bank(b.bank).externalPayablesTotal();
+        uint256 turnoverBefore = Bank(b.bank).playerTurnover(b.player);
+
+        if (b.state == SSOTTypes.BetState.PendingVRF && b.requestId != 0) {
+            _mirrorSeedPlus1[betId] = rnd + 1;
+            uint256[] memory rw = new uint256[](1);
+            rw[0] = rnd;
+            vm.prank(coordinator);
+            vrf.fulfillRandomWords(b.requestId, rw);
+        }
+
+        SSOTTypes.Bet memory bMid = hub.getBet(betId);
+        if (bMid.state == SSOTTypes.BetState.RandomReady) {
+            _checkBoundedSettlementOutcome(betId, bMid);
+        }
+
+        bool finalized = false;
+        try hub.finalize(betId) {
+            finalized = true;
+        }
+            catch {}
+
+        if (finalized) {
+            SSOTTypes.Bet memory bAfter = hub.getBet(betId);
+            if (bAfter.state == SSOTTypes.BetState.Settled) {
+                _checkBudgetConservation_P3(bAfter, pfBefore, xpBefore, turnoverBefore, betId);
+            }
+        }
+
+        _observeAndTrack(betId);
+    }
 
     // ----------------------
     // Debt-out: refund (permissionless, time-gated)
@@ -281,7 +285,12 @@ function action_fulfillFinalize(uint256 seed, uint256 rnd) external {
         uint256 betId = betIds[seed % n];
 
         SSOTTypes.Bet memory b;
-        try hub.getBet(betId) returns (SSOTTypes.Bet memory bb) { b = bb; } catch { return; }
+        try hub.getBet(betId) returns (SSOTTypes.Bet memory bb) {
+            b = bb;
+        }
+            catch {
+            return;
+        }
         if (b.state != SSOTTypes.BetState.PendingVRF) return;
 
         uint256 readyAt = uint256(b.placedAt) + hub.refundTimeoutSeconds();
@@ -289,7 +298,7 @@ function action_fulfillFinalize(uint256 seed, uint256 rnd) external {
             vm.warp(readyAt + 1);
         }
 
-        try hub.refund(betId) { } catch { }
+        try hub.refund(betId) {} catch {}
         _observeAndTrack(betId);
     }
 
@@ -304,7 +313,12 @@ function action_fulfillFinalize(uint256 seed, uint256 rnd) external {
         uint256 betId = betIds[seed % n];
 
         SSOTTypes.Bet memory b;
-        try hub.getBet(betId) returns (SSOTTypes.Bet memory bb) { b = bb; } catch { return; }
+        try hub.getBet(betId) returns (SSOTTypes.Bet memory bb) {
+            b = bb;
+        }
+            catch {
+            return;
+        }
         if (b.state != SSOTTypes.BetState.Refunded) return;
         if (b.requestId == 0) return;
 
@@ -341,7 +355,12 @@ function action_fulfillFinalize(uint256 seed, uint256 rnd) external {
 
     function _observeAndTrack(uint256 betId) internal {
         SSOTTypes.Bet memory b;
-        try hub.getBet(betId) returns (SSOTTypes.Bet memory bb) { b = bb; } catch { return; }
+        try hub.getBet(betId) returns (SSOTTypes.Bet memory bb) {
+            b = bb;
+        }
+            catch {
+            return;
+        }
 
         // Snapshot immutability: bank + reserved must not change post-place
         address mb = _mirrorBank[betId];
@@ -390,8 +409,6 @@ function action_fulfillFinalize(uint256 seed, uint256 rnd) external {
         _mirrorRequestId[betId] = b.requestId;
     }
 
-
-
     // ---------------------------------------------------------------------
     // B3: bounded settlement + P3: budget conservation helpers
     // ---------------------------------------------------------------------
@@ -404,17 +421,15 @@ function action_fulfillFinalize(uint256 seed, uint256 rnd) external {
 
     function _stakeSpecFromBet(SSOTTypes.Bet memory b) internal pure returns (SSOTTypes.StakeSpec memory spec) {
         spec = SSOTTypes.StakeSpec({
-            amountPerRoll: b.amountPerRoll,
-            betCount: b.betCount,
-            stopGain: b.stopGain,
-            stopLoss: b.stopLoss
+            amountPerRoll: b.amountPerRoll, betCount: b.betCount, stopGain: b.stopGain, stopLoss: b.stopLoss
         });
     }
 
-    function _resolveMirror(
-        uint256 betId,
-        SSOTTypes.Bet memory b
-    ) internal view returns (bool ok, uint256 payoutGross, uint256 refundAmount) {
+    function _resolveMirror(uint256 betId, SSOTTypes.Bet memory b)
+        internal
+        view
+        returns (bool ok, uint256 payoutGross, uint256 refundAmount)
+    {
         bytes memory params = _mirrorParams[betId];
         if (params.length == 0) return (false, 0, 0);
 
@@ -469,7 +484,7 @@ function action_fulfillFinalize(uint256 seed, uint256 rnd) external {
         }
 
         // recompute usedTurnover via module.resolve (needs refundAmount)
-        (bool ok, , uint256 refundAmount) = _resolveMirror(betId, bSettled);
+        (bool ok,, uint256 refundAmount) = _resolveMirror(betId, bSettled);
         if (!ok) return;
 
         if (refundAmount > bSettled.stake) {
@@ -506,166 +521,182 @@ function action_fulfillFinalize(uint256 seed, uint256 rnd) external {
     // ----------------------
 
     function action_pause(uint256 seed, bool p) external {
-        (address asset, , ) = _pick(seed);
+        (address asset,,) = _pick(seed);
         vm.prank(gov);
-        try hub.setRiskInPaused(asset, p) { } catch { }
+        try hub.setRiskInPaused(asset, p) {} catch {}
     }
 
-    
-// ----------------------
-// D2: Governance calls must not move ASSET (no backdoor)
-// ----------------------
+    // ----------------------
+    // D2: Governance calls must not move ASSET (no backdoor)
+    // ----------------------
 
-function action_govNoAssetBackdoor(uint256 seed, uint256 x) external {
-    (address asset, Bank bank, MockERC20 token) = _pick(seed);
+    function action_govNoAssetBackdoor(uint256 seed, uint256 x) external {
+        (address asset, Bank bank, MockERC20 token) = _pick(seed);
 
-    uint256 balBefore = token.balanceOf(address(bank));
+        uint256 balBefore = token.balanceOf(address(bank));
 
-    vm.startPrank(gov);
-    try hub.setRiskInPaused(asset, (x % 2 == 0)) { } catch { }
-    try bank.setMinLiquidityBps(bound(x, 0, 10_000)) { } catch { }
-    uint256 vb = bound(x, 1, 365 days);
-    try bank.setHoldbackVestingSeconds(vb) { } catch { }
-    try bank.setMinPlayerTurnoverForUnlock(bound(x, 0, 200 ether)) { } catch { }
-    vm.stopPrank();
+        vm.startPrank(gov);
+        try hub.setRiskInPaused(asset, (x % 2 == 0)) {} catch {}
+        try bank.setMinLiquidityBps(bound(x, 0, 10_000)) {} catch {}
+        uint256 vb = bound(x, 1, 365 days);
+        try bank.setHoldbackVestingSeconds(vb) {} catch {}
+        try bank.setMinPlayerTurnoverForUnlock(bound(x, 0, 200 ether)) {} catch {}
+        vm.stopPrank();
 
-    uint256 balAfter = token.balanceOf(address(bank));
-    if (balAfter != balBefore) {
-        _noteViolation(VC_D2, 0);
+        uint256 balAfter = token.balanceOf(address(bank));
+        if (balAfter != balBefore) {
+            _noteViolation(VC_D2, 0);
+        }
+
+        vm.prank(gov);
+        try bank.rescueToken(asset, gov, 1) {
+            _noteViolation(VC_D2, 0);
+        } catch {}
+
+        uint256 balEnd = token.balanceOf(address(bank));
+        if (balEnd != balBefore) {
+            _noteViolation(VC_D2, 0);
+        }
     }
 
-    vm.prank(gov);
-    try bank.rescueToken(asset, gov, 1) {
-        _noteViolation(VC_D2, 0);
-    } catch { }
-
-    uint256 balEnd = token.balanceOf(address(bank));
-    if (balEnd != balBefore) {
-        _noteViolation(VC_D2, 0);
-    }
-}
-
-// ----------------------
+    // ----------------------
     // D1: When paused, risk-in + optional outflows must fail
     // ----------------------
 
-    
-function action_placeBetWhenPausedMustFail(uint256 seed, uint256 amountPerRoll, uint8 cap) external {
-    (address asset, , ) = _pick(seed);
-    bool p;
-    try hub.riskInPaused(asset) returns (bool paused_) { p = paused_; } catch { return; }
-    if (!p) return;
+    function action_placeBetWhenPausedMustFail(uint256 seed, uint256 amountPerRoll, uint8 cap) external {
+        (address asset,,) = _pick(seed);
+        bool p;
+        try hub.riskInPaused(asset) returns (bool paused_) {
+            p = paused_;
+        }
+            catch {
+            return;
+        }
+        if (!p) return;
 
-    address player = players[seed % players.length];
-    amountPerRoll = bound(amountPerRoll, 0.1 ether, 5 ether);
-    cap = uint8(bound(uint256(cap), 1, 99));
+        address player = players[seed % players.length];
+        amountPerRoll = bound(amountPerRoll, 0.1 ether, 5 ether);
+        cap = uint8(bound(uint256(cap), 1, 99));
 
-    SSOTTypes.StakeSpec memory spec = SSOTTypes.StakeSpec({
-        amountPerRoll: amountPerRoll,
-        betCount: 1,
-        stopGain: 0,
-        stopLoss: 0
-    });
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: amountPerRoll, betCount: 1, stopGain: 0, stopLoss: 0});
 
-    (uint256 fee, ) = hub.quoteVRFFee(1);
+        (uint256 fee,) = hub.quoteVRFFee(1);
 
-    vm.prank(player);
-    try hub.placeBet{value: fee}(GAME_DICE, asset, abi.encode(cap), spec, address(0), hub.defaultHouseEdgeBps()) returns (uint256) {
-        _noteViolation(VC_LIVE, 0);
-    } catch { }
-}
-
-    
-function action_optionalOutflowWhenPausedMustFail(uint256 seed) external {
-    ( , Bank bank, ) = _pick(seed);
-    if (!bank.riskInPaused()) return;
-
-    address owner = players[seed % players.length];
-
-    uint256 bal = bank.balanceOf(owner);
-    if (bal > 0) {
-        vm.prank(owner);
-        try bank.redeem(1, owner, owner) {
-            _noteViolation(VC_E3, 0);
-        } catch { }
+        vm.prank(player);
+        try hub.placeBet{value: fee}(
+            GAME_DICE, asset, abi.encode(cap), spec, address(0), hub.defaultHouseEdgeBps()
+        ) returns (
+            uint256
+        ) {
+            _noteViolation(VC_LIVE, 0);
+        } catch {}
     }
 
-    uint256 xp = bank.xpAccruedOf(owner);
-    if (xp > 0) {
-        vm.prank(owner);
-        try bank.claimXPAccrued(1, owner) {
-            _noteViolation(VC_E3, 0);
-        } catch { }
+    function action_optionalOutflowWhenPausedMustFail(uint256 seed) external {
+        (, Bank bank,) = _pick(seed);
+        if (!bank.riskInPaused()) return;
+
+        address owner = players[seed % players.length];
+
+        uint256 bal = bank.balanceOf(owner);
+        if (bal > 0) {
+            vm.prank(owner);
+            try bank.redeem(1, owner, owner) {
+                _noteViolation(VC_E3, 0);
+            } catch {}
+        }
+
+        uint256 xp = bank.xpAccruedOf(owner);
+        if (xp > 0) {
+            vm.prank(owner);
+            try bank.claimXPAccrued(1, owner) {
+                _noteViolation(VC_E3, 0);
+            } catch {}
+        }
     }
-}
 
     // ----------------------
     // Debt-out liveness: when ready, refund/finalize must succeed even if paused
     // ----------------------
 
-    
-function action_finalizeReadyMustSucceed(uint256 seed) external {
-    uint256 n = betIds.length;
-    if (n == 0) return;
-    uint256 betId = betIds[seed % n];
+    function action_finalizeReadyMustSucceed(uint256 seed) external {
+        uint256 n = betIds.length;
+        if (n == 0) return;
+        uint256 betId = betIds[seed % n];
 
-    SSOTTypes.Bet memory b;
-    try hub.getBet(betId) returns (SSOTTypes.Bet memory bb) { b = bb; } catch { return; }
-    if (b.state != SSOTTypes.BetState.RandomReady) return;
+        SSOTTypes.Bet memory b;
+        try hub.getBet(betId) returns (SSOTTypes.Bet memory bb) {
+            b = bb;
+        }
+            catch {
+            return;
+        }
+        if (b.state != SSOTTypes.BetState.RandomReady) return;
 
-    uint256 pfBefore = Bank(b.bank).protocolFeesPayable();
-    uint256 xpBefore = Bank(b.bank).externalPayablesTotal();
-    uint256 turnoverBefore = Bank(b.bank).playerTurnover(b.player);
+        uint256 pfBefore = Bank(b.bank).protocolFeesPayable();
+        uint256 xpBefore = Bank(b.bank).externalPayablesTotal();
+        uint256 turnoverBefore = Bank(b.bank).playerTurnover(b.player);
 
-    vm.prank(address(uint160(uint256(keccak256(abi.encodePacked(seed, block.number))))));
-    bool ok = true;
-    try hub.finalize(betId) { } catch { ok = false; }
+        vm.prank(address(uint160(uint256(keccak256(abi.encodePacked(seed, block.number))))));
+        bool ok = true;
+        try hub.finalize(betId) {}
+            catch {
+            ok = false;
+        }
 
-    if (!ok) {
-        _noteViolation(VC_LIVE, betId);
-        return;
+        if (!ok) {
+            _noteViolation(VC_LIVE, betId);
+            return;
+        }
+
+        SSOTTypes.Bet memory bAfter = hub.getBet(betId);
+        if (bAfter.state != SSOTTypes.BetState.Settled) {
+            _noteViolation(VC_LIVE, betId);
+            return;
+        }
+
+        _checkBudgetConservation_P3(bAfter, pfBefore, xpBefore, turnoverBefore, betId);
+        _observeAndTrack(betId);
     }
 
-    SSOTTypes.Bet memory bAfter = hub.getBet(betId);
-    if (bAfter.state != SSOTTypes.BetState.Settled) {
-        _noteViolation(VC_LIVE, betId);
-        return;
+    function action_refundReadyMustSucceed(uint256 seed) external {
+        uint256 n = betIds.length;
+        if (n == 0) return;
+        uint256 betId = betIds[seed % n];
+
+        SSOTTypes.Bet memory b;
+        try hub.getBet(betId) returns (SSOTTypes.Bet memory bb) {
+            b = bb;
+        }
+            catch {
+            return;
+        }
+        if (b.state != SSOTTypes.BetState.PendingVRF) return;
+
+        uint256 readyAt = uint256(b.placedAt) + hub.refundTimeoutSeconds();
+        if (block.timestamp <= readyAt) vm.warp(readyAt + 1);
+
+        vm.prank(address(uint160(uint256(keccak256(abi.encodePacked(seed, block.timestamp))))));
+        bool ok = true;
+        try hub.refund(betId) {}
+            catch {
+            ok = false;
+        }
+
+        if (!ok) {
+            _noteViolation(VC_LIVE, betId);
+            return;
+        }
+
+        SSOTTypes.Bet memory bAfter = hub.getBet(betId);
+        if (bAfter.state != SSOTTypes.BetState.Refunded) {
+            _noteViolation(VC_LIVE, betId);
+            return;
+        }
+
+        _observeAndTrack(betId);
     }
-
-    _checkBudgetConservation_P3(bAfter, pfBefore, xpBefore, turnoverBefore, betId);
-    _observeAndTrack(betId);
-}
-
-    
-function action_refundReadyMustSucceed(uint256 seed) external {
-    uint256 n = betIds.length;
-    if (n == 0) return;
-    uint256 betId = betIds[seed % n];
-
-    SSOTTypes.Bet memory b;
-    try hub.getBet(betId) returns (SSOTTypes.Bet memory bb) { b = bb; } catch { return; }
-    if (b.state != SSOTTypes.BetState.PendingVRF) return;
-
-    uint256 readyAt = uint256(b.placedAt) + hub.refundTimeoutSeconds();
-    if (block.timestamp <= readyAt) vm.warp(readyAt + 1);
-
-    vm.prank(address(uint160(uint256(keccak256(abi.encodePacked(seed, block.timestamp))))));
-    bool ok = true;
-    try hub.refund(betId) { } catch { ok = false; }
-
-    if (!ok) {
-        _noteViolation(VC_LIVE, betId);
-        return;
-    }
-
-    SSOTTypes.Bet memory bAfter = hub.getBet(betId);
-    if (bAfter.state != SSOTTypes.BetState.Refunded) {
-        _noteViolation(VC_LIVE, betId);
-        return;
-    }
-
-    _observeAndTrack(betId);
-}
 
     // ----------------------
     // Optional outflows: withdraw/redeem + XP claim
@@ -673,7 +704,7 @@ function action_refundReadyMustSucceed(uint256 seed) external {
     // ----------------------
 
     function action_withdraw(uint256 seed, uint256 assetsOut) external {
-        ( , Bank bank, ) = _pick(seed);
+        (, Bank bank,) = _pick(seed);
         if (bank.riskInPaused()) return;
         address owner = players[seed % players.length];
         assetsOut = bound(assetsOut, 0.01 ether, 20 ether);
@@ -681,11 +712,11 @@ function action_refundReadyMustSucceed(uint256 seed) external {
         vm.prank(owner);
         try bank.withdraw(assetsOut, owner, owner) {
             _assertOptionalOutflowDomain(bank);
-        } catch { }
+        } catch {}
     }
 
     function action_redeem(uint256 seed, uint256 shares) external {
-        ( , Bank bank, ) = _pick(seed);
+        (, Bank bank,) = _pick(seed);
         if (bank.riskInPaused()) return;
         address owner = players[seed % players.length];
         uint256 bal = bank.balanceOf(owner);
@@ -695,11 +726,11 @@ function action_refundReadyMustSucceed(uint256 seed) external {
         vm.prank(owner);
         try bank.redeem(shares, owner, owner) {
             _assertOptionalOutflowDomain(bank);
-        } catch { }
+        } catch {}
     }
 
     function action_claimXPAccrued(uint256 seed, uint256 amount) external {
-        ( , Bank bank, ) = _pick(seed);
+        (, Bank bank,) = _pick(seed);
         if (bank.riskInPaused()) return;
         address payee = players[seed % players.length];
         uint256 bal = bank.xpAccruedOf(payee);
@@ -709,11 +740,11 @@ function action_refundReadyMustSucceed(uint256 seed) external {
         vm.prank(payee);
         try bank.claimXPAccrued(amount, payee) {
             _assertOptionalOutflowDomain(bank);
-        } catch { }
+        } catch {}
     }
 
     function action_claimProtocolFees(uint256 seed, uint256 amount) external {
-        ( , Bank bank, ) = _pick(seed);
+        (, Bank bank,) = _pick(seed);
         if (bank.riskInPaused()) return;
         uint256 bal = bank.protocolFeesPayable();
         if (bal == 0) return;
@@ -722,7 +753,7 @@ function action_refundReadyMustSucceed(uint256 seed) external {
         vm.prank(gov);
         try bank.claimProtocolFees(amount, gov) {
             _assertOptionalOutflowDomain(bank);
-        } catch { }
+        } catch {}
     }
 
     // ----------------------
@@ -730,25 +761,31 @@ function action_refundReadyMustSucceed(uint256 seed) external {
     // ----------------------
 
     function action_unlock_locked(uint256 seedA, uint256 seedB) external {
-        ( , Bank bank, ) = _pick(seedA);
+        (, Bank bank,) = _pick(seedA);
         uint256 xpBefore = bank.externalPayablesTotal();
         address payee = players[bound(seedA, 0, players.length - 1)];
         address src = players[bound(seedB, 0, players.length - 1)];
 
         address caller = address(uint160(uint256(keccak256(abi.encodePacked(seedA, seedB, block.number)))));
         vm.prank(caller);
-        try bank.unlockXPLocked(payee, src) { } catch { _noteViolation(VC_LIVE, 0); }
+        try bank.unlockXPLocked(payee, src) {}
+            catch {
+            _noteViolation(VC_LIVE, 0);
+        }
         uint256 xpAfter = bank.externalPayablesTotal();
         if (xpAfter != xpBefore) _noteViolation(VC_E2, 0);
     }
 
     function action_sync_holdback(uint256 seedA) external {
-        ( , Bank bank, ) = _pick(seedA);
+        (, Bank bank,) = _pick(seedA);
         uint256 xpBefore = bank.externalPayablesTotal();
         address payee = players[bound(seedA, 0, players.length - 1)];
         address caller = address(uint160(uint256(keccak256(abi.encodePacked(seedA, block.timestamp)))));
         vm.prank(caller);
-        try bank.syncXPHoldback(payee) { } catch { _noteViolation(VC_LIVE, 0); }
+        try bank.syncXPHoldback(payee) {}
+            catch {
+            _noteViolation(VC_LIVE, 0);
+        }
         uint256 xpAfter = bank.externalPayablesTotal();
         if (xpAfter != xpBefore) _noteViolation(VC_E2, 0);
     }
@@ -756,8 +793,8 @@ function action_refundReadyMustSucceed(uint256 seed) external {
     function _assertOptionalOutflowDomain(Bank bank) internal {
         SSOTTypes.SSOT memory s = bank.getSSOT();
         // A4 post-condition for optional outflows
-        if (s.NAV < s.R) { _noteViolation(VC_A4, 0); }
-        else if (s.NAV - s.R < s.minLiq) { _noteViolation(VC_A4, 0); }
+        if (s.NAV < s.R) _noteViolation(VC_A4, 0);
+        else if (s.NAV - s.R < s.minLiq) _noteViolation(VC_A4, 0);
     }
 }
 
@@ -816,8 +853,8 @@ contract MultiAssetInvariants is StdInvariant, Test {
         );
 
         vm.startPrank(gov);
-        bankA.setHubOnce(address(hub));
-        bankB.setHubOnce(address(hub));
+        bankA.setSettlementRouterOnce(address(hub));
+        bankB.setSettlementRouterOnce(address(hub));
         refRegistry.setBinderOnce(address(hub));
 
         // keep XP gating simple
@@ -926,7 +963,6 @@ contract MultiAssetInvariants is StdInvariant, Test {
         }
     }
 
-    
     /// @notice D2: governance must not have an ASSET backdoor.
     function invariant_D2_no_asset_backdoor() external view {
         assertEq(handler.v_D2_noAssetBackdoor(), 0, "D2 violated");
@@ -962,7 +998,7 @@ contract MultiAssetInvariants is StdInvariant, Test {
         assertEq(handler.v_LIVE_debtOutMustSucceed(), 0, "LIVE violated");
     }
 
-function _assertSolvent(Bank bank) internal view {
+    function _assertSolvent(Bank bank) internal view {
         SSOTTypes.SSOT memory s = bank.getSSOT();
         assertGe(s.B, s.PF + s.XP, "A2 B<PF+XP");
         assertGe(s.NAV, s.R, "A3 NAV<R");

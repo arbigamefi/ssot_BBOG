@@ -11,9 +11,11 @@
 - [Bank solvency / reserve anomalies](runbooks/bank-solvency.md)
 - [Pause + config drift + governance safety](runbooks/pause-config-drift.md)
 - [Game finalization stalls / diff anomalies](runbooks/game-finalization-diffs.md)
+- [SportsHub odds, result finality, and exposure caps](runbooks/sportsbook-ops.md)
 
 ## Incident process
 
 - [Incident + postmortem templates](incident-templates.md)
 
-> Tip: always record the **release digest** (from `deployments/release-latest.json`) in incident notes.
+> Tip: always record the **release digest** (from `deployments/release-latest.json` or
+> `deployments/release-latest-v13.json`) in incident notes.

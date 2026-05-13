@@ -5,8 +5,8 @@ into PR-sized steps with explicit acceptance criteria.
 
 Action plans are living documents, but they MUST remain consistent with:
 
-- the SSOT constitution (`docs/constitution/SSOT.v1.2.md`)
-- the Executable SSOT (`docs/constitution/ExecutableSSOT.v1.2.md`)
+- the current SSOT constitution (`docs/constitution/SSOT.v1.3.md`)
+- the current Executable SSOT (`docs/constitution/ExecutableSSOT.v1.3.md`)
 - accepted ADRs (`docs/adr/*`)
 
 ## Index
@@ -18,3 +18,5 @@ Action plans are living documents, but they MUST remain consistent with:
 - `Milestone-2.3-VRF-Fee-Adapter.md`
 - `Milestone-2.4-Chainlink-Adapter.md`
 - `Milestone-2.5-RealNetwork-Readiness.md`
+- `Milestone-3.0-SettlementRouter-VerticalHubs.md`
+- `Milestone-3.1-SportsHub-MVP.md`

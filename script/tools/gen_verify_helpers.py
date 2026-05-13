@@ -36,6 +36,10 @@ def _is_hex0x(s: str) -> bool:
     return isinstance(s, str) and s.startswith("0x")
 
 
+def _is_zero_addr(s: str) -> bool:
+    return isinstance(s, str) and s.lower() == "0x0000000000000000000000000000000000000000"
+
+
 def _verify_line(addr: str, contract_id: str, ctor_args: str) -> str:
     addr = addr.strip()
     if not addr.startswith("0x") or len(addr) != 42:
@@ -67,7 +71,8 @@ def main() -> int:
     data = json.loads(in_path.read_text())
     chain_id = int(_must(data, "chainId"))
     block_number = int(_must(data, "blockNumber"))
-    tag = f"{chain_id}-{block_number}"
+    is_v13 = str(data.get("architectureVersion", "")).startswith("v1.3")
+    tag = f"{chain_id}-{block_number}{'-v13' if is_v13 else ''}"
 
     out_dir = Path("deployments")
     (out_dir / "verify").mkdir(parents=True, exist_ok=True)
@@ -91,19 +96,32 @@ def main() -> int:
         "if forge verify-contract --help 2>/dev/null | grep -q -- \"--compilation-profile\"; then PROFILE_FLAG=\"--compilation-profile default\"; fi\n\n"
     )
 
-    # Contract list from Deploy.s.sol snapshot keys
-    contracts: list[tuple[str, str, str]] = [
-        ("adapter", "src/adapters/chainlink/ChainlinkV2PlusWrapperAdapter.sol:ChainlinkV2PlusWrapperAdapter", "ctorArgs_adapter"),
-        ("vrfHub", "src/core/VRFHub.sol:VRFHub", "ctorArgs_vrfHub"),
-        ("bankRegistry", "src/core/BankRegistry.sol:BankRegistry", "ctorArgs_bankRegistry"),
-        ("refRegistry", "src/engines/referral/ReferralRegistry.sol:ReferralRegistry", "ctorArgs_refRegistry"),
-        ("refEngine", "src/engines/referral/DefaultReferralEngine.sol:DefaultReferralEngine", "ctorArgs_refEngine"),
-        ("hub", "src/core/Hub.sol:Hub", "ctorArgs_hub"),
-    ]
+    if is_v13:
+        contracts: list[tuple[str, str, str]] = [
+            ("adapter", "src/adapters/chainlink/ChainlinkV2PlusWrapperAdapter.sol:ChainlinkV2PlusWrapperAdapter", "ctorArgs_adapter"),
+            ("vrfHub", "src/core/VRFHub.sol:VRFHub", "ctorArgs_vrfHub"),
+            ("poolRegistry", "src/core/PoolRegistry.sol:PoolRegistry", "ctorArgs_poolRegistry"),
+            ("settlementRouter", "src/core/SettlementRouter.sol:SettlementRouter", "ctorArgs_settlementRouter"),
+            ("refRegistry", "src/engines/referral/ReferralRegistry.sol:ReferralRegistry", "ctorArgs_refRegistry"),
+            ("refEngine", "src/engines/referral/DefaultReferralEngine.sol:DefaultReferralEngine", "ctorArgs_refEngine"),
+            ("gameHub", "src/core/GameHub.sol:GameHub", "ctorArgs_gameHub"),
+            ("sportsRiskEngine", "src/core/SportsRiskEngine.sol:SportsRiskEngine", "ctorArgs_sportsRiskEngine"),
+            ("sportsHub", "src/core/SportsHub.sol:SportsHub", "ctorArgs_sportsHub"),
+        ]
+    else:
+        # Contract list from Deploy.s.sol snapshot keys
+        contracts = [
+            ("adapter", "src/adapters/chainlink/ChainlinkV2PlusWrapperAdapter.sol:ChainlinkV2PlusWrapperAdapter", "ctorArgs_adapter"),
+            ("vrfHub", "src/core/VRFHub.sol:VRFHub", "ctorArgs_vrfHub"),
+            ("bankRegistry", "src/core/BankRegistry.sol:BankRegistry", "ctorArgs_bankRegistry"),
+            ("refRegistry", "src/engines/referral/ReferralRegistry.sol:ReferralRegistry", "ctorArgs_refRegistry"),
+            ("refEngine", "src/engines/referral/DefaultReferralEngine.sol:DefaultReferralEngine", "ctorArgs_refEngine"),
+            ("hub", "src/core/Hub.sol:Hub", "ctorArgs_hub"),
+        ]
 
     # Banks: per-asset
-    n_assets = int(data.get("numAssets", 0))
-    for i in range(n_assets):
+    n_banks = int(data.get("numPools" if is_v13 else "numAssets", data.get("numAssets", 0)))
+    for i in range(n_banks):
         contracts.append((f"bank_{i}", "src/core/Bank.sol:Bank", f"ctorArgs_bank_{i}"))
 
     # Modules: no-arg constructors
@@ -122,11 +140,13 @@ def main() -> int:
             # keep going so partial snapshots still work
             continue
         addr = data[addr_key]
+        if _is_zero_addr(addr):
+            continue
         ctor_args = data.get(ctor_key, "0x")
         script += _verify_line(addr, contract_id, ctor_args)
 
     # Outputs
-    out_latest = out_dir / "verify-latest.sh"
+    out_latest = out_dir / ("verify-latest-v13.sh" if is_v13 else "verify-latest.sh")
     out_legacy = out_dir / f"verify-{tag}.sh"
     out_convention = out_dir / "verify" / f"verify-{tag}.sh"
 

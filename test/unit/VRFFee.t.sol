@@ -56,7 +56,7 @@ contract VRFFee is Test {
         );
 
         vm.startPrank(gov);
-        bank.setHubOnce(address(hub));
+        bank.setSettlementRouterOnce(address(hub));
         refReg.setBinderOnce(address(hub));
         vm.stopPrank();
 
@@ -80,8 +80,9 @@ contract VRFFee is Test {
     }
 
     function test_vrf_fee_overpay_refunds_best_effort() external {
-        SSOTTypes.StakeSpec memory spec = SSOTTypes.StakeSpec({amountPerRoll: 1 ether, betCount: 1, stopGain: 0, stopLoss: 0});
-        (uint256 fee, ) = hub.quoteVRFFee(1);
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: 1 ether, betCount: 1, stopGain: 0, stopLoss: 0});
+        (uint256 fee,) = hub.quoteVRFFee(1);
 
         uint256 ethBefore = alice.balance;
 
@@ -93,8 +94,9 @@ contract VRFFee is Test {
     }
 
     function test_vrf_fee_underpay_reverts() external {
-        SSOTTypes.StakeSpec memory spec = SSOTTypes.StakeSpec({amountPerRoll: 1 ether, betCount: 1, stopGain: 0, stopLoss: 0});
-        (uint256 fee, ) = hub.quoteVRFFee(1);
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: 1 ether, betCount: 1, stopGain: 0, stopLoss: 0});
+        (uint256 fee,) = hub.quoteVRFFee(1);
 
         vm.prank(alice);
         vm.expectRevert(abi.encodeWithSelector(IVRFHub.InsufficientVRFFee.selector, fee - 1, fee));

@@ -23,7 +23,12 @@ contract StatefulSystemDiffAdapter is StatefulSystemDiff {
         // vrf is constructed after this hook; we will set adapter in the base after vrf exists.
     }
 
-    function _postConfigureVRFAdapter(address /*gov*/) internal override {
+    function _postConfigureVRFAdapter(
+        address /*gov*/
+    )
+        internal
+        override
+    {
         // set deterministic request gas price for wrapper estimates
         adapter.setRequestGasPriceWei(0);
         adapter.setVRFHub(address(vrf));
@@ -45,7 +50,12 @@ contract StatefulSystemDiffAdapter is StatefulSystemDiff {
         vm.stopPrank();
     }
 
-    function _vrfOverpayWei(address player, uint32 /*betCount*/, uint256 feeCharged)
+    function _vrfOverpayWei(
+        address player,
+        uint32,
+        /*betCount*/
+        uint256 feeCharged
+    )
         internal
         view
         override
@@ -77,6 +87,8 @@ contract StatefulSystemDiffAdapter is StatefulSystemDiff {
         // reduce steps/runs for adapter path
         _runStateful(seed, 32);
 
+        _assertAdapterEthAccounting();
+
         // Optional: claim refundCredit under paused risk-in to validate debt-out liveness for VRF credits.
         if (address(toggle) != address(0)) {
             uint256 credit = vrf.refundCreditOf(address(toggle));
@@ -90,13 +102,12 @@ contract StatefulSystemDiffAdapter is StatefulSystemDiff {
                 vm.prank(address(toggle));
                 vrf.claimRefund();
                 assertEq(vrf.refundCreditOf(address(toggle)), 0, "toggle.credit.zero");
+                assertEq(address(vrf).balance, 0, "vrf.balance.after.claim");
             }
         }
-
-        _assertAdapterEthAccounting();
     }
 
-    function _assertAdapterEthAccounting() internal {
+    function _assertAdapterEthAccounting() internal view {
         // Wrapper should collect exactly sum of charged VRF fees for all placed bets.
         uint256 sumCharged = 0;
         uint256 sumOverpayToggle = 0;

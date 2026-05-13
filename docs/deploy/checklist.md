@@ -20,7 +20,7 @@
   - [ ] `VRFHub.coordinator == adapter` and `VRFHub.adapter == adapter`
   - [ ] `adapter.wrapper == VRF_WRAPPER`
   - [ ] For every registered asset: `BankRegistry.bankFor(asset) != 0`
-  - [ ] Each bank has hub set: `Bank.hub == Hub`
+  - [ ] Each bank has settlement authority set: `Bank.settlementRouter == Hub` for the legacy casino deployment, or `Bank.settlementRouter == SettlementRouter` after the v1.3 router migration
 
 - [ ] Generate and verify the release lock (tamper-evident config):
   - [ ] `make release-digest`

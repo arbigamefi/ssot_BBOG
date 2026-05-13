@@ -15,7 +15,7 @@ SSOT v1.2 constitutional constraints (minimal trust surface + debt-out liveness 
 ### SSOT v1.2 patterns
 - Single Hub registry (global betId across assets)
 - Per-asset single custody: one immutable `Bank(asset)` per supported asset (ADR-0012)
-- Bank trusts only Hub
+- Bank trusts only the settlement authority (Hub in v1.2; SettlementRouter in v1.3)
 - Fee/referral are accrued as liabilities; transfers are optional outflows
 - VRFHub fulfill never reverts
 - Risk-in pause freezes only risk-in + optional outflows; debt-out stays live

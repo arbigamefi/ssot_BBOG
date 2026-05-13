@@ -56,7 +56,7 @@ contract HandlerAdapter is Handler {
 
     /// @dev Override to occasionally overpay VRF fee (EOAs) and always overpay for ToggleReceiver.
     function action_placeBet(uint256 seed, uint256 amountPerRoll, uint8 cap, uint16 maxHE) external override {
-        (address asset, , ) = _pick(seed);
+        (address asset,,) = _pick(seed);
         try hub.riskInPaused(asset) returns (bool paused) {
             if (paused) return;
         } catch {
@@ -74,17 +74,13 @@ contract HandlerAdapter is Handler {
 
         if (affiliate != address(0) && affiliate != p) {
             vm.prank(p);
-            try hub.bindReferrer(affiliate) { } catch { }
+            try hub.bindReferrer(affiliate) {} catch {}
         }
 
-        SSOTTypes.StakeSpec memory spec = SSOTTypes.StakeSpec({
-            amountPerRoll: amountPerRoll,
-            betCount: betCount,
-            stopGain: 0,
-            stopLoss: 0
-        });
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: amountPerRoll, betCount: betCount, stopGain: 0, stopLoss: 0});
 
-        (uint256 fee, ) = hub.quoteVRFFee(betCount);
+        (uint256 fee,) = hub.quoteVRFFee(betCount);
 
         // Small deterministic overpay, to exercise best-effort refunds.
         uint256 extra = (seed % 3 == 0) ? 1e15 : 0; // 0.001 ETH
@@ -93,7 +89,9 @@ contract HandlerAdapter is Handler {
         }
 
         vm.prank(p);
-        try hub.placeBet{value: fee + extra}(GAME_DICE, asset, abi.encode(cap), spec, affiliate, maxHE) returns (uint256 betId) {
+        try hub.placeBet{value: fee + extra}(GAME_DICE, asset, abi.encode(cap), spec, affiliate, maxHE) returns (
+            uint256 betId
+        ) {
             betIds.push(betId);
             _mirrorParams[betId] = abi.encode(cap);
             _mirrorStakeSpec[betId] = spec;
@@ -103,7 +101,7 @@ contract HandlerAdapter is Handler {
             // In adapter mode, charged fee is forwarded to wrapper and retained there.
             SSOTTypes.Bet memory b = hub.getBet(betId);
             expectedWrapperEth += b.vrfFeeCharged;
-        } catch { }
+        } catch {}
     }
 
     /// @notice Debt-out: claim VRF refund credit if any.
@@ -116,9 +114,12 @@ contract HandlerAdapter is Handler {
         bool isToggle = (p == address(toggle));
         if (isToggle) toggle.setAccept(true);
         vm.prank(p);
-        try vrf.claimRefund() returns (uint256 /*amount*/ ) {
-            // ok
-        } catch {
+        try vrf.claimRefund() returns (
+            uint256 /*amount*/
+        ) {
+        // ok
+        }
+        catch {
             v_VRF_claimCredit++;
         }
         if (isToggle) toggle.setAccept(false);
@@ -196,8 +197,8 @@ contract MultiAssetInvariantsAdapter is StdInvariant, Test {
         );
 
         vm.startPrank(gov);
-        bankA.setHubOnce(address(hub));
-        bankB.setHubOnce(address(hub));
+        bankA.setSettlementRouterOnce(address(hub));
+        bankB.setSettlementRouterOnce(address(hub));
         refRegistry.setBinderOnce(address(hub));
 
         bankA.setMinPlayerTurnoverForUnlock(20 ether);
@@ -222,19 +223,8 @@ contract MultiAssetInvariantsAdapter is StdInvariant, Test {
         toggle = new ToggleReceiver();
         toggle.setAccept(false);
 
-        handler = new HandlerAdapter(
-            assetA,
-            assetB,
-            bankA,
-            bankB,
-            hub,
-            vrf,
-            gov,
-            address(adapter),
-            wrapper,
-            adapter,
-            toggle
-        );
+        handler =
+            new HandlerAdapter(assetA, assetB, bankA, bankB, hub, vrf, gov, address(adapter), wrapper, adapter, toggle);
         targetContract(address(handler));
 
         bytes4[] memory selectors = new bytes4[](19);

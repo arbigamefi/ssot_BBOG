@@ -1,5 +1,8 @@
 # Executable SSOT (Invariants) v1.2 — Charged VRF Fee (Native) + Adapter ETH/Credit Gates
 
+> Extended by draft v1.3 for pre-mainnet SettlementRouter architecture work:
+> `docs/constitution/ExecutableSSOT.v1.3.md`.
+
 This document defines the **machine-checkable** proof obligations for SSOT v1.2.
 
 v1.2 **extends** ExecutableSSOT v1.1. All v1.1 statements remain in force.

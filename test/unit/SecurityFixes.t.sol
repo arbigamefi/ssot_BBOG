@@ -215,7 +215,7 @@ contract SecurityFixes is Test {
         address payee = address(0xCAFE);
 
         vm.prank(gov);
-        bank.setHubOnce(address(this));
+        bank.setSettlementRouterOnce(address(this));
 
         asset.mint(player, 200 ether);
         vm.prank(player);
@@ -259,8 +259,7 @@ contract SecurityFixes is Test {
         uint32 words = 1;
         uint256 required = vrf.quote(cbGas, conf, words);
 
-        (uint256 requestId,) =
-            vrf.requestRandomWords{value: required}(address(this), 123, cbGas, conf, words, player);
+        (uint256 requestId,) = vrf.requestRandomWords{value: required}(address(this), 123, cbGas, conf, words, player);
 
         IVRFHub.RequestInfo memory beforeDetach = vrf.getRequest(requestId);
         assertEq(beforeDetach.hub, address(this), "request should be stored");
@@ -280,7 +279,7 @@ contract SecurityFixes is Test {
         Bank bank = new Bank(address(asset), gov, 0, "LP", "LP", 18);
 
         vm.prank(gov);
-        bank.setHubOnce(address(this));
+        bank.setSettlementRouterOnce(address(this));
 
         asset.mint(player, 10 ether);
         vm.prank(player);
@@ -330,7 +329,7 @@ contract SecurityFixes is Test {
         );
 
         vm.startPrank(gov);
-        bank.setHubOnce(address(hub));
+        bank.setSettlementRouterOnce(address(hub));
         refReg.setBinderOnce(address(hub));
         vm.stopPrank();
 
