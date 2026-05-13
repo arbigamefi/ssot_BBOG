@@ -40,6 +40,9 @@ As of `master` through PR #13:
   mainnet sportsbook canary until the off-chain approvals and production controls are filled.
 - The provider/evidence policy draft is tracked at `docs/ops/sportsbook-provider-evidence-policy.md`;
   it defines hash reproducibility, but does not approve any provider or evidence-storage vendor.
+- The key custody/role-control draft is tracked at `docs/ops/sportsbook-key-custody-roles.md`; the
+  local memo validator is `make sports-role-custody-check-v13`, but no production role custody is
+  approved.
 - The bankroll/risk cap sizing policy is tracked at `docs/ops/sportsbook-bankroll-risk-caps.md`; the
   local memo validator is `make sports-bankroll-caps-check-v13`, but no production bankroll is approved.
 
@@ -185,6 +188,8 @@ No-go conditions:
 
 - Before entering Phase 2, run `make sports-phase2-gonogo-v13` and confirm the packet has moved from
   NO-GO to GO with approval records for every open production gate.
+- Validate the approved role-custody memo with
+  `REQUIRE_APPROVED=1 make sports-role-custody-check-v13 ROLE_CUSTODY_FILE=<approved-role-custody.json>`.
 - Validate the approved bankroll memo with
   `REQUIRE_APPROVED=1 make sports-bankroll-caps-check-v13 BANKROLL_CAPS_FILE=<approved-memo.json>`.
 - Start with one asset, one Sports pool, low limits, and a small market set.

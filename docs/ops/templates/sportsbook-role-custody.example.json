@@ -1,0 +1,62 @@
+{
+  "schemaVersion": "sportsbook.role-custody.v1",
+  "status": "draft",
+  "chainId": 84532,
+  "sportsHub": "0x2DB4Ba326C2C3e5830b0da10F0C52B4097f9fa4b",
+  "noLocalPrivateKeys": true,
+  "roleSetHashes": {
+    "oddsSignerSetHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "resultReporterSetHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "resultReporterThreshold": 1
+  },
+  "roles": {
+    "governance": {
+      "address": "0x0000000000000000000000000000000000001000",
+      "custodyType": "TBD",
+      "owner": "TBD",
+      "rotationProcedure": "TBD",
+      "rollbackProcedure": "TBD"
+    },
+    "oddsSigner": {
+      "address": "0x0000000000000000000000000000000000001001",
+      "custodyType": "TBD",
+      "owner": "TBD",
+      "rotationProcedure": "TBD",
+      "rollbackProcedure": "TBD"
+    },
+    "resultReporter": {
+      "address": "0x0000000000000000000000000000000000001002",
+      "custodyType": "TBD",
+      "owner": "TBD",
+      "rotationProcedure": "TBD",
+      "rollbackProcedure": "TBD"
+    },
+    "resultChallenger": {
+      "address": "0x0000000000000000000000000000000000001003",
+      "custodyType": "TBD",
+      "owner": "TBD",
+      "rotationProcedure": "TBD",
+      "rollbackProcedure": "TBD"
+    },
+    "resultArbitrator": {
+      "address": "0x0000000000000000000000000000000000001004",
+      "custodyType": "TBD",
+      "owner": "TBD",
+      "rotationProcedure": "TBD",
+      "rollbackProcedure": "TBD"
+    },
+    "keeper": {
+      "address": "0x0000000000000000000000000000000000001005",
+      "custodyType": "TBD",
+      "owner": "TBD",
+      "rotationProcedure": "TBD",
+      "rollbackProcedure": "TBD"
+    }
+  },
+  "approvals": {
+    "custodyApproval": "TBD",
+    "operationsApproval": "TBD",
+    "approvedAt": "TBD",
+    "evidenceUri": "TBD"
+  }
+}

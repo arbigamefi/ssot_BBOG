@@ -72,6 +72,9 @@
   sections for managed key custody, provider evidence, and public frontend controls.
 - [ ] Before any SportsHub mainnet canary or public risk-in, run `make sports-phase2-gonogo-v13`
   and confirm the Phase 2 packet records GO with every production approval linked.
+- [ ] For SportsHub production roles, run
+  `REQUIRE_APPROVED=1 make sports-role-custody-check-v13 ROLE_CUSTODY_FILE=<approved-role-custody.json>`
+  before allowlisting routine odds/reporting/challenge/arbitration keys.
 - [ ] For SportsHub mainnet canary caps, run
   `REQUIRE_APPROVED=1 make sports-bankroll-caps-check-v13 BANKROLL_CAPS_FILE=<approved-memo.json>`
   before copying `SPORTS_MAX_*` values into the deploy env.

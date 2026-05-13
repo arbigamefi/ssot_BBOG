@@ -26,6 +26,11 @@ Phase 1 is closed only when all of the following are true:
 
 The generated Base Sepolia role keys are acceptable only for testnet rehearsal.
 
+The repo-side custody record shape is defined in
+[`sportsbook-key-custody-roles.md`](sportsbook-key-custody-roles.md). The approval memo should be
+based on `docs/ops/templates/sportsbook-role-custody.example.json` and checked with
+`make sports-role-custody-check-v13`.
+
 Before any public-money deployment:
 
 - odds signer keys must live in an approved signer service, HSM, MPC wallet, or similarly managed

@@ -87,6 +87,10 @@ Covered:
   `docs/ops/templates/sportsbook-rulebook.pre-match-moneyline.example.json`
 - Example result evidence bundle template:
   `docs/ops/templates/sportsbook-result-evidence.example.json`
+- Key custody/role control policy:
+  `docs/ops/sportsbook-key-custody-roles.md`
+- Example key custody/role memo:
+  `docs/ops/templates/sportsbook-role-custody.example.json`
 - Bankroll/risk cap sizing policy:
   `docs/ops/sportsbook-bankroll-risk-caps.md`
 - Example bankroll/risk cap memo:
@@ -94,14 +98,14 @@ Covered:
 
 These documents define the reproducibility standard for `rulebookHash`, `resultSourceHash`,
 `evidenceHash`, `challengeReasonHash`, and `arbitrationDecisionHash`. They do not approve a provider
-or evidence-storage vendor. They also define how Sports caps should be derived from bankroll, but do
-not approve a production bankroll.
+or evidence-storage vendor. They also define role-custody and bankroll/risk-cap memo shapes, but do
+not approve production keys or production bankroll.
 
 ## Open No-Go Items
 
 | Gate | Status | Required before GO |
 |---|---:|---|
-| Managed key custody | NO-GO | Odds signer, result reporter, challenger, arbitrator, and governance keys must have approved custody, operator ownership, rotation procedure, and rollback plan. |
+| Managed key custody | NO-GO | Approve a `sportsbook.role-custody.v1` memo for odds signer, result reporter, challenger, arbitrator, keeper, and governance keys; it must pass `REQUIRE_APPROVED=1 make sports-role-custody-check-v13`. |
 | Provider and evidence policy | NO-GO | Approve the provider choice, fallback rules, evidence storage location, and the draft rulebook/result evidence procedure in `docs/ops/sportsbook-provider-evidence-policy.md`. |
 | Jurisdiction and frontend access | NO-GO | Legal/compliance must approve jurisdictions, restricted regions, age policy, KYC/sanctions posture, responsible-gaming controls, and frontend gating. |
 | Bankroll sizing | NO-GO | Approve a `sportsbook.bankroll-risk-caps.v1` memo with initial bankroll, loss tolerance, max reserved exposure, and manual supervision limits in raw asset units. |

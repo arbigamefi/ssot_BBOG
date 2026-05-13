@@ -5,7 +5,7 @@ DEPLOY_PROFILE ?= default
 VERIFY_PROFILE ?= default
 FRONTEND_DIR ?= frontend
 
-.PHONY: deps check-deps check test pr nightly fork deploy verify verify-helpers sports-dry-run-v13 sports-lifecycle-dry-run sports-phase0-readiness sports-testnet-preflight-v13 sports-roles-v13 sports-canary-v13 gamehub-canary-v13 sports-phase1-closeout-v13 sports-phase2-gonogo-v13 sports-bankroll-caps-check-v13 release release-v13 release-digest release-digest-v13 release-verify release-verify-v13 release-check release-check-v13 release-notes release-notes-v13 release-package release-package-v13 audit-package lint release-frontend-manifest release-frontend-manifest-v13 release-golden-vectors release-golden-vectors-v13 release-abis release-abis-v13 frontend-install frontend-dev frontend-build frontend-lint frontend-typecheck frontend-test frontend-test-strict frontend-storybook frontend-storybook-build frontend-release-check frontend-check
+.PHONY: deps check-deps check test pr nightly fork deploy verify verify-helpers sports-dry-run-v13 sports-lifecycle-dry-run sports-phase0-readiness sports-testnet-preflight-v13 sports-roles-v13 sports-canary-v13 gamehub-canary-v13 sports-phase1-closeout-v13 sports-phase2-gonogo-v13 sports-bankroll-caps-check-v13 sports-role-custody-check-v13 release release-v13 release-digest release-digest-v13 release-verify release-verify-v13 release-check release-check-v13 release-notes release-notes-v13 release-package release-package-v13 audit-package lint release-frontend-manifest release-frontend-manifest-v13 release-golden-vectors release-golden-vectors-v13 release-abis release-abis-v13 frontend-install frontend-dev frontend-build frontend-lint frontend-typecheck frontend-test frontend-test-strict frontend-storybook frontend-storybook-build frontend-release-check frontend-check
 
 deps:
 	bash script/ci/install_deps.sh
@@ -139,6 +139,9 @@ sports-phase2-gonogo-v13:
 
 sports-bankroll-caps-check-v13:
 	bash script/ci/v13_sports_bankroll_caps_check.sh $(BANKROLL_CAPS_FILE)
+
+sports-role-custody-check-v13:
+	bash script/ci/v13_sports_role_custody_check.sh $(ROLE_CUSTODY_FILE)
 
 # --- Release artifacts (digest + signature) ---
 # 1) After a successful deploy that produced deployments/latest-v13.json:
