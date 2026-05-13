@@ -2,7 +2,8 @@
 
 ## Status
 
-Base Sepolia v1.3 Casino+Sports deployment rehearsal completed successfully.
+Base Sepolia v1.3 Casino+Sports deployment rehearsal, funded canary settlement, direct void
+debt-out, and challenge arbitration debt-out completed successfully.
 
 This is a public testnet deployment only. It is not a mainnet launch approval and does not prove
 funded bankroll operations, real provider data quality, user-facing signer integration, canary ticket
@@ -138,6 +139,20 @@ CANARY_MODE=void-batch ENV_FILE=.env make sports-canary-v13
 
 # broadcast direct void + batch debt-out
 BROADCAST=1 CANARY_MODE=void-batch ENV_FILE=.env make sports-canary-v13
+
+# simulation only: challenge setup with paired tickets
+CANARY_MODE=challenge-setup ENV_FILE=.env make sports-canary-v13
+
+# broadcast challenge setup with paired tickets
+BROADCAST=1 CANARY_MODE=challenge-setup ENV_FILE=.env make sports-canary-v13
+
+# simulation only: challenge arbitration void + batch debt-out
+CANARY_MODE=challenge-void CANARY_MARKET_ID=<market-id> CANARY_TICKET_ID=<first-ticket-id> \
+  ENV_FILE=.env make sports-canary-v13
+
+# broadcast challenge arbitration void + batch debt-out
+BROADCAST=1 CANARY_MODE=challenge-void CANARY_MARKET_ID=<market-id> \
+  CANARY_TICKET_ID=<first-ticket-id> ENV_FILE=.env make sports-canary-v13
 ```
 
 The default canary creates a short-lived Sports market, opens it, approves `0.1 USDC` to the Sports
@@ -217,6 +232,47 @@ Direct void + batch debt-out broadcast:
   - Sports Bank reserved: `0`
   - Sports Bank assets: `0.95 USDC`
 
-- Rehearse result challenge playbook on this deployment.
+Result challenge + arbitration void broadcast:
+
+- Setup block: `41447653`
+- Challenge/arbitration block: `41447793`
+- Market ID: `3`
+- Event ID: `1778663514`
+- Lock/start time: `1778663634`
+- Ticket IDs:
+  - refunded through `refundTickets`: `6`, `8`
+  - voided through `voidTickets`: `7`, `9`
+- Stake per ticket: `0.1 USDC`
+- Total stake routed in: `0.4 USDC`
+- Expected total reserved while held: `0.6 USDC`
+- Result source hash: `0xe994491f37255a73e174863b8db772e73d1d5b49d32cb913c6420809c32a4583`
+- Evidence hash: `0x3a02451faab76c71d0a369770b9f3e67aa753ac901475bed8af706dde9a5db2c`
+- Challenge reason hash: `0x21a0180c220c1aff0792f487593dd5f03334a5ea730ca252d34273ab555e9da6`
+- Arbitration decision hash: `0xb8855bb23b93abe57065031037d736a62037c79a874fc82c8c1225c33abc6b96`
+- Create market tx: `0xb66b881194e70c284608f8643ba1d4f3947c74152496ccbd6dbfc7c4d9f1349d`
+- Open market tx: `0x786897fc33f6e787f6f560f8ca274667d39064c4f28a0704402d63a720a94aed`
+- Approve batch stake tx: `0xe113dc5393a2ff103c483fdb673cbcd7c8a54b441c227507f7fddef1d2ee1d28`
+- Place ticket txs:
+  - `0x068d840bcc4871e2d192fd23cdf0c0b93ec8921241893fdaec041de9d62e18ee`
+  - `0x363b9e938aa33819ce39425c567640f4189addada19fe2a5d7a6b55590812210`
+  - `0xb014df356b724c113875c0b0e356a532e2728b5a03ecdc361d0a19699ad7a213`
+  - `0x58b7aea7d9d200dfaf2141a465a9640d41890e9249d276e4b46ef4205bfb5fa3`
+- Lock market tx: `0xf25cf15a323a7692d19a7ffa1ecf76f0188de3c386d80c3fac766129320ea21a`
+- Propose result tx: `0xf4c8e8a467bd2f824c67701ca56e0c859ac3df3547445a518d43de368251f012`
+- Challenge result tx: `0x7b4bc1821c167facff31d832eff428c632640082844002f7c0be8d3e74ae5af0`
+- Resolve challenge tx: `0x97a4b435503cdda1cb53bd1f4bd01c4bd60f96ecb594dc053a443c4aa785dbee`
+- Batch refund tx: `0x43edc6fe21e6e36da1a767b8445317fbf274cbd24ee491b0542ede223367457b`
+- Batch void tx: `0x6c39257100fe805c68916ae12bd2d3bc3e7f7738430d1cb2044a604a6ae99f66`
+- Post-arbitration debt-out state:
+  - market state: `Voided`
+  - result challenged: `true`
+  - challenge decision: `VoidMarket`
+  - ticket `6` / `8` state: `Refunded`
+  - ticket `7` / `9` state: `Voided`
+  - router positions `6` / `7` / `8` / `9` state: `Refunded`
+  - Sports market/event/pool-event reserved: `0`
+  - Sports Bank reserved: `0`
+  - Sports Bank assets: `0.95 USDC`
+
 - Replace single-operator GOV bootstrap roles with dedicated testnet signer/reporter keys before any
   public canary.

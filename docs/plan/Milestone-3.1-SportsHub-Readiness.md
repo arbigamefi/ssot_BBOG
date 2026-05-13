@@ -29,8 +29,11 @@ As of `master` through PR #7, with the next readiness package accumulating local
 - The combined local Phase 0 gate is `make sports-phase0-readiness`.
 - Ops metrics, alerts, and sportsbook runbook exist for odds signer health, result finality, disputes,
   direct void reasons, exposure caps, and batch debt-out.
-- The remaining work is production readiness: deployment rehearsal, release artifacts, operational
-  staffing, provider policy, and compliance gating.
+- Base Sepolia Phase 1 rehearsal now covers v1.3 deployment/release, funded canary placement,
+  finality settlement, direct void plus batch debt-out, and result challenge/arbitration void plus
+  batch debt-out.
+- The remaining work is production readiness: dedicated non-GOV testnet signer/reporter keys,
+  operational staffing, provider policy, and compliance gating.
 
 ## Go/No-Go Gates
 
@@ -165,7 +168,8 @@ No-go conditions:
 - Verify explorer metadata.
 - Publish release digest and frontend manifest.
 - Run canary tickets with realistic odds snapshots and result quorum signatures.
-- Rehearse each sportsbook incident playbook.
+- Rehearse each sportsbook incident playbook, including direct void, batch debt-out, and challenged
+  result arbitration.
 
 ### Phase 2 — Limited mainnet canary
 
@@ -236,6 +240,22 @@ Observed generated evidence:
 This proves the local v1.3 Casino+Sports artifact-generation path. It does not prove real ERC20
 metadata, real VRF wrapper behavior, explorer verification, funded bankroll behavior, provider
 redundancy, or public-network transaction inclusion. Those remain Phase 1 testnet rehearsal gates.
+
+## Base Sepolia Phase 1 Evidence
+
+2026-05-13 Base Sepolia rehearsal is recorded in
+`docs/deploy/base-sepolia-v13-sports-rehearsal-2026-05-13.md` and covers:
+
+- v1.3 Casino+Sports deployment with one Casino pool and one independent Sports pool;
+- strict release artifact generation/check and Basescan source verification;
+- funded Casino and Sports Banks;
+- Sports canary placement, result finality, and ticket settlement;
+- direct market void with `refundTickets` and `voidTickets` debt-out;
+- challenged result arbitration to `VoidMarket` with `refundTickets` and `voidTickets` debt-out.
+
+The rehearsal proves public-testnet transaction inclusion and accounting terminalization for the MVP
+paths. It still uses GOV as odds signer, reporter, challenger, arbitrator, and player, so it does not
+prove operational key separation or external provider reliability.
 
 ## Local Lifecycle Evidence
 
