@@ -39,6 +39,24 @@ From `IBank`:
 - `BetSettled`
 - `BetRefunded` (bank-side)
 
+From `ISportsHub`:
+- `MarketCreated`
+- `MarketStateSet`
+- `OddsSignerSetHashSet`
+- `OddsSignerSet`
+- `ResultReporterSetHashSet`
+- `ResultReporterSet`
+- `TicketPlaced`
+- `ResultProposed`
+- `ResultChallenged`
+- `ResultFinalized`
+- `TicketSettled`
+- `TicketRefunded`
+- `TicketVoided`
+
+From `SportsRiskEngine`:
+- `RiskLimitsSet`
+
 From `Governable`:
 - `GovernanceTransferStarted`
 - `GovernanceTransferred`
@@ -51,6 +69,10 @@ From `ChainlinkV2PlusWrapperAdapter`:
 - `VRFHub.refundCreditOf(payer)` (spot checks / sampling; do **not** iterate all payers on-chain)
 - `Bank.totalAssets()` (NAV proxy / sanity)
 - `Bank.riskInPaused()` and `Hub.riskInPaused(asset)`
+- `SportsHub.marketReserved(marketId)`, `marketOutcomeReserved(marketId,outcomeId)`,
+  `eventReserved(eventId)`
+- `SportsHub.oddsSignerSetHash()`, `resultReporterSetHash()`
+- `SportsRiskEngine.limits()`, `currentRiskHash()`
 - `address(Hub).balance`, `address(VRFHub).balance`, `address(Adapter).balance` (should be ~0 by design)
 
 ---
@@ -213,6 +235,45 @@ Interpretation: should track **charged fees**; large deviations should be invest
 
 ---
 
+### G. SportsHub sportsbook operations
+
+These metrics apply to v1.3 Sports pools and map to `docs/ops/runbooks/sportsbook-ops.md`.
+
+**G1. sports_tickets_placed_total** (counter)
+Source: `ISportsHub.TicketPlaced`
+Labels: `poolId`, `marketId`, `eventId`, `outcomeId`
+Notes: avoid player labels in high-cardinality monitoring systems.
+
+**G2. sports_tickets_terminal_total** (counter)
+Source: `TicketSettled`, `TicketRefunded`, `TicketVoided`
+Labels: `poolId`, `marketId`, terminal type
+Use with `G1` to derive held Sports tickets.
+
+**G3. sports_exposure_reserved** (gauge)
+Source: derived from `TicketPlaced` minus terminal ticket events, with spot reads from
+`marketReserved`, `marketOutcomeReserved`, and `eventReserved`.
+Labels: `poolId`, `marketId`, `eventId`, optional `outcomeId`.
+
+**G4. sports_result_finality_pending_seconds** (gauge)
+Source: `ResultProposed.finalizesAt` until `ResultFinalized` or `ResultChallenged`.
+Alert when a result remains unfinalized beyond finality plus operator SLA.
+
+**G5. sports_oracle_config_changes_total** (counter)
+Source: `OddsSignerSetHashSet`, `OddsSignerSet`, `ResultReporterSetHashSet`, `ResultReporterSet`.
+Alert on any change outside an approved window.
+
+**G6. sports_risk_limits_changes_total** (counter)
+Source: `SportsRiskEngine.RiskLimitsSet`.
+Track new `riskHash`; odds snapshots must use the current hash after any cap change.
+
+**G7. sports_ticket_reverts_total** (counter; derived from failed tx traces)
+Source: failed `placeTicket` transactions grouped by custom error:
+`BadOddsSignature`, `OddsExpired`, `BadOddsSnapshot`, `StakeTooLarge`, `PayoutTooLarge`,
+`MarketExposureExceeded`, `OutcomeExposureExceeded`, `EventExposureExceeded`.
+Alert on spikes by market/event.
+
+---
+
 ## Implementation notes (non-normative)
 
 - Avoid high-cardinality labels (`payer`, `player`) in Prometheus-style systems. Prefer:
@@ -236,5 +297,6 @@ Interpretation: should track **charged fees**; large deviations should be invest
 
 - [VRF + refundCredit (v1.2)](runbooks/vrf-refundcredit.md)
 - [Bank solvency / reserve anomalies](runbooks/bank-solvency.md)
+- [SportsHub odds, result finality, and exposure caps](runbooks/sportsbook-ops.md)
 - [Pause + config drift + governance safety](runbooks/pause-config-drift.md)
 - [Game finalization stalls / diff anomalies](runbooks/game-finalization-diffs.md)

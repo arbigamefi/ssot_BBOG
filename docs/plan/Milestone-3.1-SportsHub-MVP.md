@@ -83,8 +83,8 @@ As of the current `codex/sportsbook-architecture-research` branch:
   `SportsRiskEngine` + `SportsHub` for Sports pools, allowlists SportsHub for Sports pool ids, writes
   Sports addresses/risk/oracle metadata into v1.3 snapshots, includes Sports fields in release digests,
   exposes Sports fields in the v1.3 frontend manifest, and exports Sports ABIs.
-- The remaining PR-3.1.7 gap is the ops runbook for odds signer health, result reporter finality, and
-  exposure-cap incidents.
+- PR-3.1.7 also has an initial SportsHub ops runbook, plus Sports monitoring metrics, alert rules, and
+  incident-template hooks for odds signer health, result reporter finality, and exposure-cap incidents.
 
 ### PR-3.1.1 — Interfaces and milestone plan
 

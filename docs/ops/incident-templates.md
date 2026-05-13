@@ -33,11 +33,12 @@ Use these templates for:
 - **Affected assets/banks:**
 - **Contracts (from snapshot):**
   - hub:
+  - gameHub / sportsHub:
   - vrfHub:
   - adapter:
   - vrfWrapper:
 - **Deployment snapshot:** `deployments/snapshots/deploy-<chainId>-<block>.json`
-- **Release digest:** `0x...` (from `deployments/release-latest.json`)
+- **Release digest:** `0x...` (from `deployments/release-latest.json` or `deployments/release-latest-v13.json`)
 - **Release tag (if any):** vX.Y.Z
 
 ### Impact
@@ -54,6 +55,8 @@ Use these templates for:
   - B5 latency p95/p99:
   - C6 refund_credit_outstanding_estimate:
   - D1 bank_total_assets:
+  - G3 sports_exposure_reserved:
+  - G4 sports_result_finality_pending_seconds:
 - Hypothesis (initial):
 
 ### Actions (ordered, with evidence)
