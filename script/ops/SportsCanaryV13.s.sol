@@ -25,6 +25,13 @@ interface IBankCanary {
 ///      `CANARY_MODE=void-batch` rehearses direct market void plus batch refund/void debt-out.
 ///      `CANARY_MODE=challenge-setup` creates, opens, tickets, and locks a market for later challenge.
 ///      `CANARY_MODE=challenge-void` proposes, challenges, arbitrates VoidMarket, and batches debt-out.
+///      Optional role keys:
+///      - CANARY_PLAYER_PRIVATE_KEY
+///      - CANARY_ODDS_SIGNER_PRIVATE_KEY
+///      - CANARY_RESULT_REPORTER_PRIVATE_KEY
+///      - CANARY_RESULT_CHALLENGER_PRIVATE_KEY
+///      - CANARY_RESULT_ARBITRATOR_PRIVATE_KEY
+///      Unset role keys fall back to PRIVATE_KEY for bootstrap compatibility.
 ///      The wrapper script simulates by default; set BROADCAST=1 there to send transactions.
 contract SportsCanaryV13 is Script {
     using stdJson for string;
@@ -36,7 +43,17 @@ contract SportsCanaryV13 is Script {
 
     struct CanaryConfig {
         uint256 privateKey;
+        uint256 playerPrivateKey;
+        uint256 oddsSignerPrivateKey;
+        uint256 resultReporterPrivateKey;
+        uint256 resultChallengerPrivateKey;
+        uint256 resultArbitratorPrivateKey;
+        address governance;
         address player;
+        address oddsSigner;
+        address resultReporter;
+        address resultChallenger;
+        address resultArbitrator;
         address asset;
         address sportsBank;
         SportsHub sportsHub;
@@ -150,7 +167,7 @@ contract SportsCanaryV13 is Script {
 
     function _readPlaceConfig() internal view returns (CanaryConfig memory cfg) {
         cfg.privateKey = vm.envUint("PRIVATE_KEY");
-        cfg.player = vm.addr(cfg.privateKey);
+        _readRoleKeys(cfg);
         string memory snapshotPath = vm.envOr("SNAPSHOT_PATH", string("deployments/latest-v13.json"));
         string memory json = vm.readFile(snapshotPath);
 
@@ -158,6 +175,7 @@ contract SportsCanaryV13 is Script {
         cfg.sportsBank = json.readAddress(".poolBank_1");
         cfg.sportsHub = SportsHub(json.readAddress(".sportsHub"));
         cfg.riskEngine = SportsRiskEngine(json.readAddress(".sportsRiskEngine"));
+        cfg.governance = cfg.sportsHub.governance();
 
         cfg.stake = vm.envOr("CANARY_STAKE", uint256(100_000));
         cfg.oddsWad = vm.envOr("CANARY_ODDS_WAD", uint256(15 * WAD / 10));
@@ -179,7 +197,7 @@ contract SportsCanaryV13 is Script {
 
     function _readExistingMarketConfig() internal view returns (CanaryConfig memory cfg) {
         cfg.privateKey = vm.envUint("PRIVATE_KEY");
-        cfg.player = vm.addr(cfg.privateKey);
+        _readRoleKeys(cfg);
         string memory snapshotPath = vm.envOr("SNAPSHOT_PATH", string("deployments/latest-v13.json"));
         string memory json = vm.readFile(snapshotPath);
 
@@ -187,6 +205,7 @@ contract SportsCanaryV13 is Script {
         cfg.sportsBank = json.readAddress(".poolBank_1");
         cfg.sportsHub = SportsHub(json.readAddress(".sportsHub"));
         cfg.riskEngine = SportsRiskEngine(json.readAddress(".sportsRiskEngine"));
+        cfg.governance = cfg.sportsHub.governance();
 
         cfg.marketId = uint64(vm.envUint("CANARY_MARKET_ID"));
         cfg.ticketId = vm.envUint("CANARY_TICKET_ID");
@@ -198,12 +217,27 @@ contract SportsCanaryV13 is Script {
         cfg.marketKey = market.marketKey;
     }
 
+    function _readRoleKeys(CanaryConfig memory cfg) internal view {
+        cfg.playerPrivateKey = vm.envOr("CANARY_PLAYER_PRIVATE_KEY", cfg.privateKey);
+        cfg.oddsSignerPrivateKey = vm.envOr("CANARY_ODDS_SIGNER_PRIVATE_KEY", cfg.privateKey);
+        cfg.resultReporterPrivateKey = vm.envOr("CANARY_RESULT_REPORTER_PRIVATE_KEY", cfg.privateKey);
+        cfg.resultChallengerPrivateKey = vm.envOr("CANARY_RESULT_CHALLENGER_PRIVATE_KEY", cfg.privateKey);
+        cfg.resultArbitratorPrivateKey = vm.envOr("CANARY_RESULT_ARBITRATOR_PRIVATE_KEY", cfg.privateKey);
+
+        cfg.player = vm.addr(cfg.playerPrivateKey);
+        cfg.oddsSigner = vm.addr(cfg.oddsSignerPrivateKey);
+        cfg.resultReporter = vm.addr(cfg.resultReporterPrivateKey);
+        cfg.resultChallenger = vm.addr(cfg.resultChallengerPrivateKey);
+        cfg.resultArbitrator = vm.addr(cfg.resultArbitratorPrivateKey);
+    }
+
     function _validatePlaceConfig(CanaryConfig memory cfg) internal view {
         uint256 balance = IERC20Canary(cfg.asset).balanceOf(cfg.player);
         uint256 bankAssets = IBankCanary(cfg.sportsBank).totalAssets();
         if (cfg.stake == 0 || cfg.stake > balance) revert("insufficient canary stake balance");
         if (bankAssets == 0) revert("sports bank is unfunded");
         if (cfg.expiresAt <= block.timestamp) revert("bad canary expiry");
+        if (!cfg.sportsHub.oddsSigner(cfg.oddsSigner)) revert("odds signer not allowed");
     }
 
     function _validateVoidBatchConfig(CanaryConfig memory cfg) internal view {
@@ -215,11 +249,13 @@ contract SportsCanaryV13 is Script {
         if (cfg.stake == 0 || cfg.stake * ticketCount > balance) revert("insufficient batch stake balance");
         if (bankAssets == 0) revert("sports bank is unfunded");
         if (cfg.expiresAt <= block.timestamp) revert("bad canary expiry");
+        if (!cfg.sportsHub.oddsSigner(cfg.oddsSigner)) revert("odds signer not allowed");
     }
 
     function _logPlaceConfig(CanaryConfig memory cfg) internal pure {
         console2.log("Sports canary place:");
         console2.log("  player", cfg.player);
+        console2.log("  oddsSigner", cfg.oddsSigner);
         console2.log("  asset", cfg.asset);
         console2.log("  sportsBank", cfg.sportsBank);
         console2.log("  sportsHub", address(cfg.sportsHub));
@@ -238,6 +274,7 @@ contract SportsCanaryV13 is Script {
         uint256 ticketCount = batchSize * 2;
         console2.log("Sports canary direct void + batch debt-out:");
         console2.log("  player", cfg.player);
+        console2.log("  oddsSigner", cfg.oddsSigner);
         console2.log("  asset", cfg.asset);
         console2.log("  sportsBank", cfg.sportsBank);
         console2.log("  sportsHub", address(cfg.sportsHub));
@@ -260,6 +297,7 @@ contract SportsCanaryV13 is Script {
         uint256 ticketCount = batchSize * 2;
         console2.log("Sports canary challenge setup:");
         console2.log("  player", cfg.player);
+        console2.log("  oddsSigner", cfg.oddsSigner);
         console2.log("  asset", cfg.asset);
         console2.log("  sportsBank", cfg.sportsBank);
         console2.log("  sportsHub", address(cfg.sportsHub));
@@ -281,6 +319,9 @@ contract SportsCanaryV13 is Script {
         SSOTTypes.SportsMarket memory market = cfg.sportsHub.getMarket(cfg.marketId);
         console2.log("Sports canary challenge -> arbitration void + batch debt-out:");
         console2.log("  player", cfg.player);
+        console2.log("  resultReporter", cfg.resultReporter);
+        console2.log("  resultChallenger", cfg.resultChallenger);
+        console2.log("  resultArbitrator", cfg.resultArbitrator);
         console2.log("  sportsHub", address(cfg.sportsHub));
         console2.log("  sportsBank", cfg.sportsBank);
         console2.log("  marketId", cfg.marketId);
@@ -317,6 +358,8 @@ contract SportsCanaryV13 is Script {
         require(createdMarketId == cfg.marketId, "unexpected marketId");
         cfg.sportsHub.openMarket(cfg.marketId);
 
+        vm.stopBroadcast();
+
         SSOTTypes.SportsMarket memory market = cfg.sportsHub.getMarket(cfg.marketId);
         SSOTTypes.SportsOddsSnapshot memory odds = SSOTTypes.SportsOddsSnapshot({
             marketId: cfg.marketId,
@@ -331,8 +374,9 @@ contract SportsCanaryV13 is Script {
         });
 
         oddsTicketHash = cfg.sportsHub.hashOddsTicket(odds, cfg.player, cfg.stake);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(cfg.privateKey, oddsTicketHash);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(cfg.oddsSignerPrivateKey, oddsTicketHash);
 
+        vm.startBroadcast(cfg.playerPrivateKey);
         IERC20Canary(cfg.asset).approve(cfg.sportsBank, cfg.stake);
         placedTicketId =
             cfg.sportsHub.placeTicket(cfg.marketId, WINNING_OUTCOME_ID, odds, cfg.stake, abi.encodePacked(r, s, v));
@@ -369,6 +413,9 @@ contract SportsCanaryV13 is Script {
         require(createdMarketId == cfg.marketId, "unexpected marketId");
         cfg.sportsHub.openMarket(cfg.marketId);
 
+        vm.stopBroadcast();
+
+        vm.startBroadcast(cfg.playerPrivateKey);
         IERC20Canary(cfg.asset).approve(cfg.sportsBank, cfg.stake * ticketCount);
 
         for (uint256 i = 0; i < batchSize; ++i) {
@@ -376,6 +423,9 @@ contract SportsCanaryV13 is Script {
             voidIds[i] = _placeTicket(cfg, 0, uint64(cfg.ticketId + i * 2 + 1));
         }
 
+        vm.stopBroadcast();
+
+        vm.startBroadcast(cfg.privateKey);
         cfg.sportsHub.voidMarket(cfg.marketId, voidReasonHash);
         cfg.sportsHub.refundTickets(refundIds);
         cfg.sportsHub.voidTickets(voidIds);
@@ -412,6 +462,9 @@ contract SportsCanaryV13 is Script {
         require(createdMarketId == cfg.marketId, "unexpected marketId");
         cfg.sportsHub.openMarket(cfg.marketId);
 
+        vm.stopBroadcast();
+
+        vm.startBroadcast(cfg.playerPrivateKey);
         IERC20Canary(cfg.asset).approve(cfg.sportsBank, cfg.stake * ticketCount);
 
         for (uint256 i = 0; i < batchSize; ++i) {
@@ -419,6 +472,9 @@ contract SportsCanaryV13 is Script {
             voidIds[i] = _placeTicket(cfg, 0, uint64(cfg.ticketId + i * 2 + 1));
         }
 
+        vm.stopBroadcast();
+
+        vm.startBroadcast(cfg.privateKey);
         cfg.sportsHub.lockMarket(cfg.marketId);
 
         vm.stopBroadcast();
@@ -440,12 +496,24 @@ contract SportsCanaryV13 is Script {
         SSOTTypes.SportsMarket memory market = cfg.sportsHub.getMarket(cfg.marketId);
         require(market.state == SSOTTypes.SportsMarketState.Locked, "market not locked");
         require(block.timestamp >= market.startsAt, "market not started");
+        require(cfg.sportsHub.resultReporterThreshold() == 1, "canary supports reporter threshold 1");
+        require(cfg.sportsHub.resultReporter(cfg.resultReporter), "result reporter not allowed");
+        require(_canChallenge(cfg), "result challenger not allowed");
+        require(_canArbitrate(cfg), "result arbitrator not allowed");
 
-        vm.startBroadcast(cfg.privateKey);
+        vm.startBroadcast(cfg.resultReporterPrivateKey);
 
         cfg.sportsHub
             .proposeResult(cfg.marketId, WINNING_OUTCOME_ID, resultSourceHash, evidenceHash, uint64(block.timestamp));
+
+        vm.stopBroadcast();
+
+        vm.startBroadcast(cfg.resultChallengerPrivateKey);
         cfg.sportsHub.challengeResult(cfg.marketId, challengeReasonHash);
+
+        vm.stopBroadcast();
+
+        vm.startBroadcast(cfg.resultArbitratorPrivateKey);
         cfg.sportsHub
             .resolveResultChallenge(cfg.marketId, SSOTTypes.SportsChallengeDecision.VoidMarket, arbitrationDecisionHash);
         cfg.sportsHub.refundTickets(refundIds);
@@ -478,7 +546,7 @@ contract SportsCanaryV13 is Script {
         });
 
         bytes32 oddsTicketHash = cfg.sportsHub.hashOddsTicket(odds, cfg.player, cfg.stake);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(cfg.privateKey, oddsTicketHash);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(cfg.oddsSignerPrivateKey, oddsTicketHash);
         ticketId = cfg.sportsHub.placeTicket(cfg.marketId, outcomeId, odds, cfg.stake, abi.encodePacked(r, s, v));
     }
 
@@ -554,9 +622,10 @@ contract SportsCanaryV13 is Script {
         SSOTTypes.SportsResult memory result = cfg.sportsHub.getResult(cfg.marketId);
         require(result.challenged, "result not challenged");
         require(result.challengeReasonHash == challengeReasonHash, "challenge reason mismatch");
+        require(result.challenger == cfg.resultChallenger, "challenger mismatch");
         require(result.challengeDecision == SSOTTypes.SportsChallengeDecision.VoidMarket, "challenge decision mismatch");
         require(result.arbitrationDecisionHash == arbitrationDecisionHash, "arbitration hash mismatch");
-        require(result.arbitrator == cfg.player, "arbitrator mismatch");
+        require(result.arbitrator == cfg.resultArbitrator, "arbitrator mismatch");
 
         require(cfg.sportsHub.marketReserved(cfg.marketId) == 0, "market reserved not cleared");
         require(cfg.sportsHub.poolEventReserved(SPORTS_POOL_ID, cfg.eventId) == 0, "pool event reserved not cleared");
@@ -594,5 +663,13 @@ contract SportsCanaryV13 is Script {
 
     function _batchSize() internal view returns (uint256) {
         return vm.envOr("CANARY_BATCH_SIZE", uint256(2));
+    }
+
+    function _canChallenge(CanaryConfig memory cfg) internal view returns (bool) {
+        return cfg.resultChallenger == cfg.governance || cfg.sportsHub.resultChallenger(cfg.resultChallenger);
+    }
+
+    function _canArbitrate(CanaryConfig memory cfg) internal view returns (bool) {
+        return cfg.resultArbitrator == cfg.governance || cfg.sportsHub.resultArbitrator(cfg.resultArbitrator);
     }
 }

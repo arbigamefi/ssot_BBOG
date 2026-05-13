@@ -3,11 +3,12 @@
 ## Status
 
 Base Sepolia v1.3 Casino+Sports deployment rehearsal, funded canary settlement, direct void
-debt-out, and challenge arbitration debt-out completed successfully.
+debt-out, challenge arbitration debt-out, and dedicated testnet Sports role rehearsal completed
+successfully.
 
 This is a public testnet deployment only. It is not a mainnet launch approval and does not prove
-funded bankroll operations, real provider data quality, user-facing signer integration, canary ticket
-execution, or jurisdiction controls.
+real provider data quality, managed production key custody, user-facing signer integration, or
+jurisdiction controls.
 
 ## Inputs
 
@@ -22,11 +23,17 @@ execution, or jurisdiction controls.
   - pool `1`: Casino, independent Bank
   - pool `2`: Sports, independent Bank
 - Sports reporter threshold: `1`
-- Bootstrap testnet roles:
+- Initial bootstrap testnet roles:
   - odds signer: GOV
   - result reporter: GOV
   - result challenger: GOV
   - result arbitrator: GOV
+- Rotated testnet canary roles:
+  - odds signer: `0x871FbF5FF3FD3515636dACAafcEF1a008F1853Eb`
+  - result reporter: `0x9f1F0b9BaB6Ccf386E32F72023368cF74228cb7A`
+  - result challenger: `0x6ee473cE7AA56bDA640bD7560604e1699Fd9D013`
+  - result arbitrator: `0x7033114a50115fdbCA684dEa0734A502bA2F7BD8`
+  - role env: local ignored `.env.sports-roles.local`
 
 ## Deployment
 
@@ -75,6 +82,12 @@ forge script script/DeployV13.s.sol:DeployV13 --rpc-url "$RPC_URL" --broadcast -
 SNAPSHOT_PATH=deployments/latest-v13.json make release-v13
 STRICT=1 make release-check-v13
 bash deployments/verify-latest-v13.sh
+
+# simulation only: rotate existing SportsHub testnet roles
+ENV_FILE=.env.sports-roles.local make sports-roles-v13
+
+# broadcast role rotation
+BROADCAST=1 ENV_FILE=.env.sports-roles.local make sports-roles-v13
 ```
 
 ## Post-Deploy Checks
@@ -123,7 +136,7 @@ Post-funding state:
 - GOV Sports LP balance: `1`
 - GOV allowance to both Banks: `0`
 
-## Remaining Phase 1 Work
+## Phase 1 Ops Rehearsal
 
 Canary helper:
 
@@ -153,6 +166,14 @@ CANARY_MODE=challenge-void CANARY_MARKET_ID=<market-id> CANARY_TICKET_ID=<first-
 # broadcast challenge arbitration void + batch debt-out
 BROADCAST=1 CANARY_MODE=challenge-void CANARY_MARKET_ID=<market-id> \
   CANARY_TICKET_ID=<first-ticket-id> ENV_FILE=.env make sports-canary-v13
+
+# after role rotation, run the same canaries with dedicated role keys
+CANARY_MODE=challenge-setup ENV_FILE=.env.sports-roles.local make sports-canary-v13
+BROADCAST=1 CANARY_MODE=challenge-setup ENV_FILE=.env.sports-roles.local make sports-canary-v13
+CANARY_MODE=challenge-void CANARY_MARKET_ID=<market-id> CANARY_TICKET_ID=<first-ticket-id> \
+  ENV_FILE=.env.sports-roles.local make sports-canary-v13
+BROADCAST=1 CANARY_MODE=challenge-void CANARY_MARKET_ID=<market-id> \
+  CANARY_TICKET_ID=<first-ticket-id> ENV_FILE=.env.sports-roles.local make sports-canary-v13
 ```
 
 The default canary creates a short-lived Sports market, opens it, approves `0.1 USDC` to the Sports
@@ -274,5 +295,93 @@ Result challenge + arbitration void broadcast:
   - Sports Bank reserved: `0`
   - Sports Bank assets: `0.95 USDC`
 
-- Replace single-operator GOV bootstrap roles with dedicated testnet signer/reporter keys before any
-  public canary.
+Dedicated Sports role rotation broadcast:
+
+- Block: `41452104`
+- Odds signer: `0x871FbF5FF3FD3515636dACAafcEF1a008F1853Eb`
+- Result reporter: `0x9f1F0b9BaB6Ccf386E32F72023368cF74228cb7A`
+- Result challenger: `0x6ee473cE7AA56bDA640bD7560604e1699Fd9D013`
+- Result arbitrator: `0x7033114a50115fdbCA684dEa0734A502bA2F7BD8`
+- New odds signer set hash: `0x3716125c7970c7724f4603dad9e0c599f575c5ce9a0db3ee4fc52bc94ec18b96`
+- New result reporter set hash: `0x0409bfe432d5e74ddc77b987eef0b4236d7d36f628cfb145a6282bbf707b9253`
+- Reporter threshold: `1`
+- Role txs:
+  - set odds signer set hash: `0x5e42df98e733a7b18a66022763511d5db1d682a907ec63ea538ca902c842e1e9`
+  - set result reporter set hash: `0xab3d36d2a89ce361767b7958ab0e52d37ba86b3a61b32e1f8ff95ea4d385dd5f`
+  - allow odds signer: `0x8488862f2cf81d016345d836ae2bbcceca1949f669b32b837ad9c853f35e15b9`
+  - allow result reporter: `0x577985f12042ce0f08ac27315d232e19949574b707e3f013c853e9ff10e0bacc`
+  - allow result challenger: `0x793a840b53cb57eb186e414386e38ca1f5b315d054ff0d6af236af6ff0839bf9`
+  - allow result arbitrator: `0xcb5d67c9f2bb955dde0de5c17bb4196d4e3fbd1af2826ef1abe8be316faa762f`
+  - revoke GOV odds signer mapping: `0xbf180b885171f4d0ede0967bc3bdb6cf03293ca6021d1971ac09d2cdf1bdfba8`
+  - revoke GOV result reporter mapping: `0x5cd76b6f8cfe977f8b29302e315766ec2ba04dd89ab52a6708cd4e9e62b20e71`
+  - revoke GOV challenger mapping: `0x6f06843cb3d16a5e9b10ddce3fe47010016fcff1f24a5f2817387a170c229b76`
+  - revoke GOV arbitrator mapping: `0x0c0c9358bbb770bfce4644f24155042df319075bbbe792a815e3343b7315a520`
+- Gas funding txs:
+  - odds signer, `0.00005 ETH`: `0x85ece7459f54f57876ea3e3e6d47382c0c45617db82d2b8f33553a9c2a71e7a0`
+  - result reporter, `0.00005 ETH`: `0xc27f521bb10980e4e43e31a603e498b97d2d9eceffab1f23064c00009d62d270`
+  - result challenger, `0.00005 ETH`: `0xabf21d0781ff349c122d8556ea259da9ec19169043e55c48a3103533efce8b61`
+  - result arbitrator, `0.00005 ETH`: `0xe110241e880857b895ab3eada065e97cb095289001690222c853df6d78ce6ef7`
+- Post-rotation role state:
+  - dedicated odds signer / reporter / challenger / arbitrator mappings: `true`
+  - GOV odds signer mapping: `false`
+  - GOV result reporter mapping: `false`
+  - GOV challenger/arbitrator mappings: `false`
+  - GOV still retains governance fallback for challenge/arbitration in contract code.
+
+Role-separated challenge + arbitration void broadcast:
+
+- Setup block: `41452253`
+- Challenge/arbitration blocks:
+  - propose result: `41452357`
+  - challenge and resolve: `41452358`
+  - refund batch: `41452359`
+  - void batch: `41452361`
+- Market ID: `4`
+- Event ID: `1778672712`
+- Lock/start time: `1778672832`
+- Odds signer: `0x871FbF5FF3FD3515636dACAafcEF1a008F1853Eb`
+- Result proposer/reporter: `0x9f1F0b9BaB6Ccf386E32F72023368cF74228cb7A`
+- Result challenger: `0x6ee473cE7AA56bDA640bD7560604e1699Fd9D013`
+- Result arbitrator: `0x7033114a50115fdbCA684dEa0734A502bA2F7BD8`
+- Ticket IDs:
+  - refunded through `refundTickets`: `10`, `12`
+  - voided through `voidTickets`: `11`, `13`
+- Stake per ticket: `0.1 USDC`
+- Total stake routed in: `0.4 USDC`
+- Expected total reserved while held: `0.6 USDC`
+- Result source hash: `0xe994491f37255a73e174863b8db772e73d1d5b49d32cb913c6420809c32a4583`
+- Evidence hash: `0x3a02451faab76c71d0a369770b9f3e67aa753ac901475bed8af706dde9a5db2c`
+- Challenge reason hash: `0x21a0180c220c1aff0792f487593dd5f03334a5ea730ca252d34273ab555e9da6`
+- Arbitration decision hash: `0xb8855bb23b93abe57065031037d736a62037c79a874fc82c8c1225c33abc6b96`
+- Create market tx: `0x9c26f94b1f88ba895a781dbe34aa430ca4b9d7acc2a56b03910a8f0334d5e66f`
+- Open market tx: `0xd88b21597363dcf8fbcd153ac181f3a36c7b48d1b0c02fcf2b821401ce144dff`
+- Approve batch stake tx: `0x09aeea657c3749b22e95fcb72a444c307bffc178680ff30fc9a35ba301c0696c`
+- Place ticket txs:
+  - `0xecaf642cbfc2f0a23cce80ba339217fb22d90e89a66285083369469d0ac38130`
+  - `0x1c91485ce2597b4c231e4e40e36357d9d62bb02831dc550338eff8a10cec313f`
+  - `0xb4d07d9b8b8f9502bb65446bc7af70ed3999a548603cf3f7d7dd2ed43802758b`
+  - `0x51d2710554cc2ac1faa21e720230fac91e041873455067920d70efff0e2aee56`
+- Lock market tx: `0x6345b0009d22c827583b64fba5d3d8abc160f547be3da6d5a18af2b1ba105729`
+- Propose result tx: `0x93f5c330c7b7ae0ca46d6d20ffe6423f3cdf6588a74f05525379924d7c694827`
+- Challenge result tx: `0xa412629b98dcd0d8b074abdac5708e83fbdd800b707033bdd9c30751c92c7006`
+- Resolve challenge tx: `0x114613b302c54e6870c010e472c1b488216ad0711726568d13f335fe132c838a`
+- Batch refund tx: `0xb3e3b88cc7af98bed1a00d5c33e5095e12b08d4a6ca2c7115d0f765f43066077`
+- Batch void tx: `0x7d7a97a6f8ebcfd853cab3bd9c43282850a7c54db468242335aac8fb0712777e`
+- Post-arbitration debt-out state:
+  - market state: `Voided`
+  - result challenged: `true`
+  - result reporter set hash: `0x0409bfe432d5e74ddc77b987eef0b4236d7d36f628cfb145a6282bbf707b9253`
+  - reporter count / threshold: `1 / 1`
+  - challenge decision: `VoidMarket`
+  - ticket `10` / `12` state: `Refunded`
+  - ticket `11` / `13` state: `Voided`
+  - router positions `10` / `11` / `12` / `13` state: `Refunded`
+  - Sports market/event/pool-event reserved: `0`
+  - Sports Bank reserved: `0`
+  - Sports Bank assets: `0.95 USDC`
+
+Remaining Phase 1 gaps before any public canary:
+
+- replace generated testnet keys with managed custody or an approved signer service;
+- connect a real odds/result data-provider policy and evidence store;
+- define jurisdiction, geofencing, and KYC policy for any public frontend.

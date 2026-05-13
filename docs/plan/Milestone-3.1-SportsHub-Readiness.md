@@ -30,10 +30,10 @@ As of `master` through PR #7, with the next readiness package accumulating local
 - Ops metrics, alerts, and sportsbook runbook exist for odds signer health, result finality, disputes,
   direct void reasons, exposure caps, and batch debt-out.
 - Base Sepolia Phase 1 rehearsal now covers v1.3 deployment/release, funded canary placement,
-  finality settlement, direct void plus batch debt-out, and result challenge/arbitration void plus
-  batch debt-out.
-- The remaining work is production readiness: dedicated non-GOV testnet signer/reporter keys,
-  operational staffing, provider policy, and compliance gating.
+  finality settlement, direct void plus batch debt-out, result challenge/arbitration void plus batch
+  debt-out, and dedicated non-GOV testnet Sports signer/reporter/challenger/arbitrator roles.
+- The remaining work is production readiness: managed key custody, operational staffing, provider
+  policy, evidence storage, and compliance gating.
 
 ## Go/No-Go Gates
 
@@ -168,6 +168,8 @@ No-go conditions:
 - Verify explorer metadata.
 - Publish release digest and frontend manifest.
 - Run canary tickets with realistic odds snapshots and result quorum signatures.
+- Rotate away from single-GOV bootstrap roles to dedicated testnet odds signer, result reporter,
+  result challenger, and result arbitrator keys.
 - Rehearse each sportsbook incident playbook, including direct void, batch debt-out, and challenged
   result arbitration.
 
@@ -251,11 +253,16 @@ redundancy, or public-network transaction inclusion. Those remain Phase 1 testne
 - funded Casino and Sports Banks;
 - Sports canary placement, result finality, and ticket settlement;
 - direct market void with `refundTickets` and `voidTickets` debt-out;
-- challenged result arbitration to `VoidMarket` with `refundTickets` and `voidTickets` debt-out.
+- challenged result arbitration to `VoidMarket` with `refundTickets` and `voidTickets` debt-out;
+- dedicated testnet odds signer, result reporter, result challenger, and result arbitrator role
+  rotation;
+- role-separated challenge/arbitration canary with GOV removed from odds signer and result reporter
+  mappings.
 
 The rehearsal proves public-testnet transaction inclusion and accounting terminalization for the MVP
-paths. It still uses GOV as odds signer, reporter, challenger, arbitrator, and player, so it does not
-prove operational key separation or external provider reliability.
+paths, plus testnet-level operational role separation. It still uses generated local testnet role keys
+and GOV as the canary player/market operator, so it does not prove managed production key custody,
+external provider reliability, or public frontend controls.
 
 ## Local Lifecycle Evidence
 
