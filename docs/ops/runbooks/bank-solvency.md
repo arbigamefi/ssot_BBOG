@@ -25,15 +25,15 @@ It maps to the metrics in `docs/ops/metrics.md` section **D** (and partially **A
 ## Prerequisites
 
 ### Addresses
-Use `deployments/latest.json` (or the release snapshot under `deployments/release/`) as the source of truth.
+Use `deployments/latest-v13.json` (or the release snapshot under `deployments/release/`) as the source of truth.
 You will need:
-- `hub`
-- `bankRegistry`
-- `bank` for the affected `asset`
+- `gameHub` / `sportsHub`
+- `poolRegistry`
+- `bank` for the affected `poolId`
 
 To find a bank address:
 ```bash
-cast call $HUB "bankFor(address)(address)" $ASSET --rpc-url $RPC
+cast call $POOL_REGISTRY "bankFor(uint64)(address)" $POOL_ID --rpc-url $RPC
 ```
 
 ### Tools
@@ -41,7 +41,7 @@ cast call $HUB "bankFor(address)(address)" $ASSET --rpc-url $RPC
 - An indexer / logs pipeline for derived metrics (`D2`, `A5`) is recommended
 
 ### Governance actions available
-- Pause risk-in for affected asset(s): `Hub.setRiskInPaused(asset, true)` / `setRiskInPausedAll(true)`
+- Pause risk-in for affected pool(s): use the relevant vertical hub pool pause controls.
 - Tighten optional outflows (withdrawals/XP claims) by raising minLiquidity:
   - `Bank.setMinLiquidityBps(bps)` (per bank)
 
@@ -96,7 +96,7 @@ If `totalAssets` drops without corresponding expected outflows, proceed to **Pla
 **Steps**
 1) **Pause risk-in for the affected asset**
    - Prefer per-asset pause:
-     - `Hub.setRiskInPaused(asset, true)`
+     - `GameHub or SportsHub pool pause`
    - If multi-asset stress, use `setRiskInPausedAll(true)`.
 2) **Confirm the solvency boundary**
    - Re-read `Bank.getSSOT()` and record `NAV/R/minLiq/free`.
@@ -173,7 +173,7 @@ Capture:
 
 ```bash
 # Bank for an asset
-cast call $HUB "bankFor(address)(address)" $ASSET --rpc-url $RPC
+cast call $GAME_HUB "bankFor(address)(address)" $ASSET --rpc-url $RPC
 
 # Bank SSOT snapshot
 cast call $BANK "getSSOT()((uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,bool,uint256,uint256,uint256,uint256,uint256))" --rpc-url $RPC
@@ -182,7 +182,7 @@ cast call $BANK "getSSOT()((uint256,uint256,uint256,uint256,uint256,uint256,uint
 cast call $BANK "totalAssets()(uint256)" --rpc-url $RPC
 
 # Pause risk-in for an asset (gov)
-cast send $HUB "setRiskInPaused(address,bool)" $ASSET true --rpc-url $RPC --private-key $GOV_PK
+cast send $GAME_HUB "setRiskInPaused(address,bool)" $ASSET true --rpc-url $RPC --private-key $GOV_PK
 
 # Tighten optional outflow (gov)
 cast send $BANK "setMinLiquidityBps(uint256)" 2000 --rpc-url $RPC --private-key $GOV_PK

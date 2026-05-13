@@ -39,7 +39,7 @@ jobs:
       - name: Fork tests (release gate)
         env:
           # Provide per-network fork RPCs via repository secrets.
-          # Only the RPC for the deployed chainId (from deployments/latest.json) is required.
+          # Only the RPC for the deployed chainId (from deployments/latest-v13.json) is required.
           FORK_RPC_URL_BASE: ${{ secrets.FORK_RPC_URL_BASE }}
           FORK_RPC_URL_BASE_SEPOLIA: ${{ secrets.FORK_RPC_URL_BASE_SEPOLIA }}
           FORK_RPC_URL_ARBITRUM_ONE: ${{ secrets.FORK_RPC_URL_ARBITRUM_ONE }}

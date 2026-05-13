@@ -31,8 +31,10 @@ export PRIVATE_KEY=...
 export GOV=$(cast wallet address --private-key $PRIVATE_KEY)
 export VRF_WRAPPER=0x7a1BaC17Ccc5b313516C5E16fb24f7659aA5ebed
 
-export NUM_ASSETS=1
-export ASSET_0=0x036CbD53842c5426634e7929541eC2318f3dCF7e  # USDC (Base Sepolia)
+export NUM_POOLS=1
+export POOL_ID_0=1
+export POOL_DOMAIN_0=1
+export POOL_ASSET_0=0x036CbD53842c5426634e7929541eC2318f3dCF7e  # USDC (Base Sepolia)
 ```
 
 ### Arbitrum Sepolia (example)
@@ -44,8 +46,10 @@ export PRIVATE_KEY=...
 export GOV=$(cast wallet address --private-key $PRIVATE_KEY)
 export VRF_WRAPPER=0x29576aB8152A09b9DC634804e4aDE73dA1f3a3CC
 
-export NUM_ASSETS=1
-export ASSET_0=0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d  # USDC (Arbitrum Sepolia)
+export NUM_POOLS=1
+export POOL_ID_0=1
+export POOL_DOMAIN_0=1
+export POOL_ASSET_0=0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d  # USDC (Arbitrum Sepolia)
 ```
 
 ### Base mainnet (example)
@@ -57,8 +61,10 @@ export PRIVATE_KEY=...
 export GOV=$(cast wallet address --private-key $PRIVATE_KEY)
 export VRF_WRAPPER=0xb0407dbe851f8318bd31404A49e658143C982F23
 
-export NUM_ASSETS=1
-export ASSET_0=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913  # USDC (Base)
+export NUM_POOLS=1
+export POOL_ID_0=1
+export POOL_DOMAIN_0=1
+export POOL_ASSET_0=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913  # USDC (Base)
 ```
 
 ### Arbitrum One (example)
@@ -70,30 +76,21 @@ export PRIVATE_KEY=...
 export GOV=$(cast wallet address --private-key $PRIVATE_KEY)
 export VRF_WRAPPER=0x14632CD5c12eC5875D41350B55e825c54406BaaB
 
-export NUM_ASSETS=1
-export ASSET_0=0xaf88d065e77c8cC2239327C5EDb3A432268e5831  # USDC (Arbitrum One)
+export NUM_POOLS=1
+export POOL_ID_0=1
+export POOL_DOMAIN_0=1
+export POOL_ASSET_0=0xaf88d065e77c8cC2239327C5EDb3A432268e5831  # USDC (Arbitrum One)
 ```
 
 ## 3) Deploy
 
-### Legacy v1.2 deployment
-```bash
-forge script script/Deploy.s.sol:Deploy   --rpc-url $RPC_URL   --broadcast   -vvv
-```
-
-The script prints all deployed addresses to stdout **and writes auditable artifacts**:
-- `deployments/latest.json` (+ `deployments/snapshots/deploy-<chainid>-<block>.json`)
-- `deployments/verify-latest.sh` (+ `deployments/verify/verify-<chainid>-<block>.sh`)
-
-### v1.3 router/pool deployment
-
-Use this path for pre-mainnet SettlementRouter deployments:
+Use the router/pool deployment path:
 
 ```bash
 export NUM_POOLS=1
 export POOL_ID_0=1
 export POOL_DOMAIN_0=1          # 1=Casino, 2=Sports, 3=Future
-export POOL_ASSET_0=$ASSET_0    # ASSET_0 is still accepted as a compatibility alias
+export POOL_ASSET_0=...
 
 # Required only when at least one pool uses POOL_DOMAIN_i=2.
 export SPORTS_MAX_STAKE=...
@@ -136,7 +133,7 @@ The v1.3 script deploys and wires:
 - `VRFHub` + Chainlink wrapper adapter
 - referral registry/engine and casino modules
 
-It writes separate v1.3 artifacts while the legacy release pipeline is still being migrated:
+It writes auditable artifacts:
 - `deployments/latest-v13.json`
 - `deployments/snapshots/deploy-<chainid>-<block>-v13.json`
 - `deployments/verify-latest-v13.sh`
@@ -154,33 +151,17 @@ Set an Etherscan-family API key (BaseScan/Arbiscan also work with Etherscan API 
 
 ```bash
 export ETHERSCAN_API_KEY=...
-bash deployments/verify-latest.sh
+bash deployments/verify-latest-v13.sh
 ```
 
 
 ## 3.2) Lock the deployment (release digest + signature)
-After a successful deploy (which writes `deployments/latest.json`), generate a **tamper-evident release artifact**:
+After a successful deploy (which writes `deployments/latest-v13.json`), generate a **tamper-evident release artifact**:
 
 ```bash
 # Uses SIGNER_PRIVATE_KEY if provided, otherwise falls back to PRIVATE_KEY.
 # Recommended: set GOV and sign with the governance key.
 make release-digest
-```
-
-This writes:
-- `deployments/release-latest.json` (+ `deployments/release/release-<chainid>-<block>.json`)
-
-For a v1.3 router/pool deployment, use the v1.3 release lock path:
-
-```bash
-SNAPSHOT_PATH=deployments/latest-v13.json make release-digest-v13
-SNAPSHOT_PATH=deployments/latest-v13.json make release-notes-v13
-SNAPSHOT_PATH=deployments/latest-v13.json make release-frontend-manifest-v13
-SNAPSHOT_PATH=deployments/latest-v13.json make release-golden-vectors-v13
-make release-abis-v13
-SNAPSHOT_PATH=deployments/latest-v13.json make release-verify-v13
-STRICT=1 make release-check-v13
-make release-package-v13
 ```
 
 This writes:
@@ -195,9 +176,9 @@ This writes:
 - `deployments/release/release-notes-<chainid>-<block>-v13.md`
 - `deployments/release/abi-index-<chainid>-<block>-v13.json`
 
-The v1.3 digest includes `PoolRegistry`, `SettlementRouter`, `GameHub`, and every pool id/domain/bank
-row from the deployment snapshot. The v1.3 frontend manifest is schemaVersion 2 and exposes `pools[]`
-instead of the legacy `assets[]`; v1.3 golden vectors use `IGameHub.placeBet(gameId,poolId,...)`.
+The release digest includes `PoolRegistry`, `SettlementRouter`, `GameHub`, and every pool id/domain/bank
+row from the deployment snapshot. The frontend manifest is schemaVersion 2 and exposes `pools[]`;
+golden vectors use `IGameHub.placeBet(gameId,poolId,...)`.
 
 Verify deterministically (offline):
 

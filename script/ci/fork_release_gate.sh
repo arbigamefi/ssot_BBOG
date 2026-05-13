@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SNAPSHOT_PATH="${SNAPSHOT_PATH:-deployments/latest.json}"
+SNAPSHOT_PATH="${SNAPSHOT_PATH:-deployments/latest-v13.json}"
 
 if [[ ! -f "$SNAPSHOT_PATH" ]]; then
   echo "missing snapshot: $SNAPSHOT_PATH"
-  echo "hint: run a deploy (writes deployments/latest.json) and include the artifacts in the release commit/tag."
+  echo "hint: run a deploy (writes deployments/latest-v13.json) and include the artifacts in the release commit/tag."
   exit 1
 fi
 
-# Snapshot JSON is written under the root key "ssot" by Deploy.s.sol.
+# Snapshot JSON is written under the root key "ssot" by DeployV13.s.sol.
 CHAIN_ID=$(jq -r '.ssot.chainId // .chainId // empty' "$SNAPSHOT_PATH")
 VRF_WRAPPER_FROM_SNAPSHOT=$(jq -r '.ssot.vrfWrapper // .vrfWrapper // empty' "$SNAPSHOT_PATH")
 

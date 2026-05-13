@@ -3,7 +3,7 @@
 This repository includes a pure, deterministic **Keno** module (`KenoModule`) designed to preserve SSOT guarantees:
 
 - Module is **stateless** and purely semantic (deterministic given params, stake spec, and RNG seed).
-- House edge is **not baked into the module**; it is applied by the Hub as **fee-on-payout** (ADR-0007).
+- House edge is **not baked into the module**; it is applied by `GameHub` as **fee-on-payout** (ADR-0007).
 - Multi-roll semantics (refund + stopGain/stopLoss) follow SSOT.v1.1 / ADR-0013.
 
 ## Rules (default config)
@@ -13,8 +13,6 @@ This repository includes a pure, deterministic **Keno** module (`KenoModule`) de
 - Player selection: select `played` numbers where `1 <= played <= 10`.
 
 ## Parameter encoding
-
-Legacy-compatible encoding:
 
 - `params = abi.encode(uint40 numbers)`
 - Bit `i` set => number `i` selected

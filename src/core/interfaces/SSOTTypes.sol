@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-/// @notice Protocol-wide SSOT types shared across Bank/Hub/VRFHub/Modules.
+/// @notice Protocol-wide SSOT types shared across Bank, vertical hubs, VRFHub, and modules.
 ///         Keep dependency-light: no imports, only types/enums/structs.
 library SSOTTypes {
     /// @notice Pool risk/accounting domain.
@@ -73,7 +73,7 @@ library SSOTTypes {
         uint256 minPlayerTurnoverForUnlock;
     }
 
-    /// @notice Hub-side bet lifecycle (single SSOT registry).
+    /// @notice Casino hub-side bet lifecycle.
     enum BetState {
         None,
         Held,
@@ -113,7 +113,7 @@ library SSOTTypes {
         VoidMarket
     }
 
-    /// @notice Hub-side canonical bet record (lifecycle SSOT).
+    /// @notice Casino hub-side canonical bet record (lifecycle SSOT).
     struct Bet {
         uint256 betId;
         bytes32 gameId;

@@ -202,13 +202,7 @@ contract GenerateFrontendManifestV13 is Script {
             ",",
             _gameJson(GAME_COIN_TOSS, "coin-toss", "Coin Toss", moduleCoinToss, "abi.encode(bool isHeads)"),
             ",",
-            _gameJson(
-                GAME_ROULETTE,
-                "roulette",
-                "Roulette",
-                moduleRoulette,
-                "abi.encode(uint40 legacyMask) OR abi.encode(uint8 kind, uint40 payload)"
-            ),
+            _gameJson(GAME_ROULETTE, "roulette", "Roulette", moduleRoulette, "abi.encode(uint8 kind, uint40 payload)"),
             ",",
             _gameJson(GAME_KENO, "keno", "Keno", moduleKeno, "abi.encode(uint40 numbersPacked)"),
             "]"

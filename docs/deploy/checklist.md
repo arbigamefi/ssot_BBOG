@@ -33,18 +33,16 @@
 
 ## Deploy
 - [ ] Run `bash script/ci/install_deps.sh`
-- [ ] For legacy v1.2, run `forge script script/Deploy.s.sol:Deploy --rpc-url $RPC_URL --broadcast -vvv`
-- [ ] For v1.3 router/pool deployments, run `forge script script/DeployV13.s.sol:DeployV13 --rpc-url $RPC_URL --broadcast -vvv`
+- [ ] Run `forge script script/DeployV13.s.sol:DeployV13 --rpc-url $RPC_URL --broadcast -vvv`
 - [ ] Record the printed addresses
 
 ## Postflight
 - [ ] Verify core wiring:
   - [ ] `VRFHub.coordinator == adapter` and `VRFHub.adapter == adapter`
   - [ ] `adapter.wrapper == VRF_WRAPPER`
-  - [ ] For every registered asset: `BankRegistry.bankFor(asset) != 0`
-  - [ ] Each bank has settlement authority set: `Bank.settlementRouter == Hub` for the legacy casino deployment, or `Bank.settlementRouter == SettlementRouter` after the v1.3 router migration
-  - [ ] For v1.3: every pool in `PoolRegistry` has the expected `poolId`, asset, Bank, and domain.
-  - [ ] For v1.3: Casino pools are allowlisted for `GameHub`, Sports pools are allowlisted for `SportsHub`, and cross-domain allowlists are absent.
+  - [ ] Each bank has settlement authority set: `Bank.settlementRouter == SettlementRouter`
+  - [ ] Every pool in `PoolRegistry` has the expected `poolId`, asset, Bank, and domain.
+  - [ ] Casino pools are allowlisted for `GameHub`, Sports pools are allowlisted for `SportsHub`, and cross-domain allowlists are absent.
   - [ ] For Sports pools: `SportsHub`, `SportsRiskEngine`, signer set hash, reporter set hash, reporter threshold, and effective pool caps are present in `deployments/latest-v13.json`.
 
 - [ ] Generate and verify the release lock (tamper-evident config):
@@ -52,7 +50,6 @@
   - [ ] `make release-verify`
   - [ ] Generate release notes (must include digest): `TAG_NAME=vX.Y.Z make release-notes`
   - [ ] Enforce strict gate: `STRICT=1 make release-check`
-  - [ ] For v1.3, use the v1.3 release path: `make release-digest-v13`, `make release-verify-v13`, `make release-frontend-manifest-v13`, `make release-golden-vectors-v13`, `make release-abis-v13`, and `STRICT=1 make release-check-v13`
   - [ ] (recommended) package artifacts for audit handoff: `TAG_NAME=vX.Y.Z make release-package`
   - [ ] (recommended) commit snapshot + release lock + notes under `deployments/` before tagging a release
 
@@ -64,8 +61,8 @@
 
 ## Operational safety
 - [ ] Decide your risk-in pause policy:
-  - `Hub.setRiskInPaused(asset, true/false)`
-- [ ] For v1.3, decide per-pool risk-in pause policy and document who can pause/resume each vertical.
+  - `GameHub`/`SportsHub` pool controls as applicable
+- [ ] Decide per-pool risk-in pause policy and document who can pause/resume each vertical.
 - [ ] For SportsHub, confirm operators have rehearsed `docs/ops/runbooks/sportsbook-ops.md` and own alerts for odds signer failures, result finality, direct voids, and exposure caps.
 - [ ] For SportsHub public-testnet Phase 1 closeout, run
   `ENV_FILE=<role-env> make sports-phase1-closeout-v13` and archive the output with the rehearsal

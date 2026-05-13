@@ -2,7 +2,7 @@
 
 Roulette is implemented as a **pure SSOT module** with:
 - **Fair odds** inside the module, and
-- **house edge** applied exclusively via SSOT "fee-on-payout" in the Hub.
+- **house edge** applied exclusively via SSOT "fee-on-payout" in `GameHub`.
 
 ## Wheel
 
@@ -21,17 +21,11 @@ For each roll:
 - If lose: `payoutGross = 0`
 
 This is **fair** because `P(win) = k/37` and the expected gross payout equals `amountPerRoll`.
-The house edge is applied by the Hub as `feeOnPayoutBps`.
+The house edge is applied by `GameHub` as `feeOnPayoutBps`.
 
 ## Param encoding
 
-Two encodings are supported (see ADR-0016):
-
-### 1) Raw bitmask (legacy / parity with refactored)
-
-`params = abi.encode(uint40 numbersBitmask)`
-
-### 2) Typed bets (UI friendly)
+Canonical encoding:
 
 `params = abi.encode(uint8 kind, uint40 payload)`
 

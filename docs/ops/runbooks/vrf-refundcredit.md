@@ -1,6 +1,6 @@
-# Runbook: VRF + refundCredit (v1.2)
+# Runbook: VRF + refundCredit
 
-This runbook covers incidents involving **VRF request/fulfillment liveness** and **refundCredit accounting** in SSOT v1.2
+This runbook covers incidents involving **VRF request/fulfillment liveness** and **refundCredit accounting** in SSOT
 (Chainlink VRF v2.5 Wrapper via adapter).
 
 It maps directly to the metrics defined in `docs/ops/metrics.md` (sections **B** and **C**).
@@ -26,7 +26,7 @@ It maps directly to the metrics defined in `docs/ops/metrics.md` (sections **B**
 ### Addresses
 Use your deployment snapshot as the source of truth:
 
-- `deployments/latest.json` (or the release snapshot under `deployments/release/`)
+- `deployments/latest-v13.json` (or the release snapshot under `deployments/release/`)
   - `hub`
   - `vrfHub`
   - `adapter`
@@ -37,12 +37,12 @@ Use your deployment snapshot as the source of truth:
 - An indexer / logs pipeline for metric aggregation (recommended)
 
 ### Governance actions available (onlyGov)
-- Pause new risk-in per asset: `Hub.setRiskInPaused(asset, true)` / `setRiskInPausedAll(true)`
-- Adjust refund timeout: `Hub.setRefundTimeout(seconds)`
+- Pause new risk-in per asset: `GameGameHub or SportsHub pool pause` / `setRiskInPausedAll(true)`
+- Adjust refund timeout: `GameHub.setRefundTimeout(seconds)`
 - Adjust wrapper fee estimation gas price: `Adapter.setRequestGasPriceWei(weiPerGas)`
 
 **Guardrail: do NOT “swap adapter addresses” in-place.**  
-`VRFHub.coordinator` is **immutable** and must match the adapter that calls `VRFHub.fulfillRandomWords`. If you need a new adapter address, you must redeploy `VRFHub` (and then `Hub`) for that release.
+`VRFHub.coordinator` is **immutable** and must match the adapter that calls `VRFHub.fulfillRandomWords`. If you need a new adapter address, you must redeploy `VRFHub` (and then `GameHub`) for that release.
 
 ---
 
@@ -54,11 +54,11 @@ Symptom: users report `placeBet` revert.
 Actions:
 - Check recent transaction failures for `InsufficientVRFFee(paid, required)` or `InvalidConfig()`.
 - If failures are widespread, **pause risk-in immediately**:
-  - `Hub.setRiskInPausedAll(true)` (or per-asset)
+  - `Gamepause all active pools in the relevant vertical hub` (or per-asset)
 
 Likely causes:
 - Wrong wrapper address configured (deployment/config drift)
-- Adapter/Hub addresses mismatch (misconfiguration)
+- Adapter/GameHub addresses mismatch (misconfiguration)
 - Downstream VRF provider issue (rare for quote path)
 
 ### 2) Is VRF fulfillment slow/stalled?
@@ -102,14 +102,14 @@ Actions:
    - Prefer pausing only affected assets, else use `setRiskInPausedAll(true)`.
 2) **Confirm configuration sanity**
    ```bash
-   cast call $HUB    "vrfHub()(address)" --rpc-url $RPC
+   cast call $GAME_HUB    "vrfHub()(address)" --rpc-url $RPC
    cast call $VRFHUB "coordinator()(address)" --rpc-url $RPC
    cast call $VRFHUB "adapter()(address)" --rpc-url $RPC
    cast call $ADAPTER "vrfHub()(address)" --rpc-url $RPC
    cast call $ADAPTER "wrapper()(address)" --rpc-url $RPC
    ```
    Expectations:
-   - `Hub.vrfHub == VRFHub`
+   - `GameHub.vrfHub == VRFHub`
    - `VRFHub.coordinator == <adapter address>`
    - `Adapter.vrfHub == VRFHub`
    - `Adapter.wrapper == expected wrapper` (see `docs/deploy/networks.ts`)
@@ -125,8 +125,8 @@ Actions:
    - Postmortem: record start/end blocks, peak pending, and any parameter changes.
 
 **Notes**
-- Refunds are permissionless via `Hub.refund(betId)` once timeout passes.
-- `Hub.refund` will attempt `VRFHub.detach(requestId)` best-effort to stop late fulfill processing.
+- Refunds are permissionless via `GameHub.refund(betId)` once timeout passes.
+- `GameHub.refund` will attempt `VRFHub.detach(requestId)` best-effort to stop late fulfill processing.
 
 ---
 
@@ -142,8 +142,8 @@ Actions:
 **Steps**
 1) **Pause new risk-in immediately**
 2) **Classify the revert**
-   - If revert is `NotVRFHub()`: configuration drift between `Hub.vrfHub` and the deployed `VRFHub`.
-   - If revert indicates out-of-gas: callback gas limit insufficient (should be rare; `Hub.quoteVRFFee` scales with betCount).
+   - If revert is `NotVRFHub()`: configuration drift between `GameHub.vrfHub` and the deployed `VRFHub`.
+   - If revert indicates out-of-gas: callback gas limit insufficient (should be rare; `GameHub.quoteVRFFee` scales with betCount).
    - Otherwise treat as a bug until proven otherwise.
 3) **Confirm configuration sanity** (same as Playbook A step 2)
 4) **Containment**
@@ -167,7 +167,7 @@ Actions:
 - Users report `claimRefund()` revert
 
 **Key fact**
-Refund failures are most commonly caused by **payers that are smart contracts rejecting ETH**. In SSOT v1.2 this is expected and safely routed to `refundCredit`.
+Refund failures are most commonly caused by **payers that are smart contracts rejecting ETH**. In SSOT this is expected and safely routed to `refundCredit`.
 
 **Steps**
 1) **Confirm the pattern**
@@ -213,8 +213,8 @@ Capture the following:
 ## Appendix: commonly used calls
 
 ```bash
-# Hub + VRFHub addresses
-cast call $HUB "vrfHub()(address)" --rpc-url $RPC
+# GameHub + VRFHub addresses
+cast call $GAME_HUB "vrfHub()(address)" --rpc-url $RPC
 
 # Request status
 cast call $VRFHUB "getRequest(uint256)((address,uint256,address,uint256,uint256,bool))" $REQUEST_ID --rpc-url $RPC
@@ -226,10 +226,10 @@ cast call $VRFHUB "refundCreditOf(address)(uint256)" $PAYER --rpc-url $RPC
 cast send $VRFHUB "claimRefund()(uint256)" --rpc-url $RPC --private-key $PAYER_PK
 
 # pause new risk-in (gov)
-cast send $HUB "setRiskInPausedAll(bool)" true --rpc-url $RPC --private-key $GOV_PK
+cast send $GAME_HUB "setRiskInPausedAll(bool)" true --rpc-url $RPC --private-key $GOV_PK
 
 # adjust refund timeout (gov)
-cast send $HUB "setRefundTimeout(uint256)" 900 --rpc-url $RPC --private-key $GOV_PK
+cast send $GAME_HUB "setRefundTimeout(uint256)" 900 --rpc-url $RPC --private-key $GOV_PK
 
 # adjust wrapper estimate gas price (gov)
 cast send $ADAPTER "setRequestGasPriceWei(uint256)" 1000000000 --rpc-url $RPC --private-key $GOV_PK

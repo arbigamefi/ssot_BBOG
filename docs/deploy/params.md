@@ -12,10 +12,10 @@ This repo intentionally makes the **parameter policy explicit**.
 - `VERIFIER_URL` (optional): override explorer API endpoint (e.g. `https://api.basescan.org/api`). If not set, the deploy script chooses a default for Base/Base Sepolia/Arbitrum/Arbitrum Sepolia.
 
 After deploy, the script writes:
-- `deployments/latest.json` (+ `deployments/deploy-<chainid>-<block>.json`)
-- `deployments/verify-latest.sh` (+ `deployments/verify-<chainid>-<block>.sh`)
+- `deployments/latest-v13.json` (+ `deployments/snapshots/deploy-<chainid>-<block>-v13.json`)
+- `deployments/verify-latest-v13.sh` (+ `deployments/verify/verify-<chainid>-<block>-v13.sh`)
 
-## Hub pricing + referral policy
+## GameHub pricing + referral policy
 - `REFUND_TIMEOUT_SECONDS` (default `3600`): when a player can claim a timeout refund.
 - `DEFAULT_HOUSE_EDGE_BPS` (default `200` = 2%).
 - `MAX_AFFILIATE_DELTA_BPS` (default `0` = affiliate house edge is capped at `DEFAULT_HOUSE_EDGE_BPS`).
@@ -27,25 +27,17 @@ Referral config (defaults match the cleanroom E2E tests):
 - `REF_LEVELS` (default `2`)
 - `REF_LEVEL{0..5}_BPS` (default L0=0, L1=10000, others=0)
 
-## Per-asset banks
-For each `i in [0..NUM_ASSETS-1]`:
-- `ASSET_i` (required): ERC20 address
-- `BANK_MIN_LIQ_BPS_i` (default `1000` = 10%)
-- `BANK_MIN_TURNOVER_FOR_UNLOCK_i` (default `20 ether`)
-- `BANK_HOLDBACK_VESTING_SECONDS_i` (default `86400` = 1 day)
-- `LP_NAME_i`, `LP_SYMBOL_i`, `LP_DECIMALS_i` (LP share token metadata)
-
-## v1.3 pool banks
+## Pool banks
 `script/DeployV13.s.sol:DeployV13` uses pools, not assets, as the deployment unit.
 
 For each `i in [0..NUM_POOLS-1]`:
 - `POOL_ID_i` (default `i + 1`): protocol risk/accounting domain id.
-- `POOL_ASSET_i` (required; `ASSET_i` is accepted as a compatibility alias): ERC20 address.
+- `POOL_ASSET_i` (required): ERC20 address.
 - `POOL_DOMAIN_i` (default `1`): `1=Casino`, `2=Sports`, `3=Future`.
 - `BANK_MIN_LIQ_BPS_i`, `BANK_MIN_TURNOVER_FOR_UNLOCK_i`, `BANK_HOLDBACK_VESTING_SECONDS_i`.
 - `LP_NAME_i`, `LP_SYMBOL_i`, `LP_DECIMALS_i`.
 
-The v1.3 deploy script writes `deployments/latest-v13.json` and `deployments/verify-latest-v13.sh`.
+The deploy script writes `deployments/latest-v13.json` and `deployments/verify-latest-v13.sh`.
 Casino pools are allowlisted for `GameHub`; Sports pools are allowlisted for `SportsHub`; Future pools
 are registered and wired to `SettlementRouter` but still need their own vertical hub before risk-in can
 open positions.
@@ -83,13 +75,12 @@ snapshot. For production deployments, pick caps per target pool asset and lock t
 with `make release-digest-v13`.
 
 ## Callback gas policy (fixed in code)
-`Hub.quoteVRFFee(betCount)` sets `callbackGasLimit = 300k + 20k * betCount`, capped at 2,000,000.
-This is part of the SSOT v1.2 policy (auditability).
+`GameHub.quoteVRFFee(betCount)` sets `callbackGasLimit = 300k + 20k * betCount`, capped at 2,000,000.
 
 ## Release artifact lock (digest + signature)
 These are only needed when you want a tamper-evident release lock for a deployment snapshot.
 
-- `SNAPSHOT_PATH` (optional, default `deployments/latest.json`): snapshot input file.
+- `SNAPSHOT_PATH` (optional, default `deployments/latest-v13.json`): snapshot input file.
 - `SIGNER_PRIVATE_KEY` (optional): if set, used to sign the release digest. If unset, falls back to `PRIVATE_KEY`.
 - `GOV` (recommended): if set, the release digest generator enforces that the signer address equals `GOV`.
 
@@ -102,15 +93,15 @@ STRICT=1 make release-check
 
 For v1.3 router/pool snapshots:
 ```bash
-SNAPSHOT_PATH=deployments/latest-v13.json make release-digest-v13
-SNAPSHOT_PATH=deployments/latest-v13.json make release-notes-v13
-SNAPSHOT_PATH=deployments/latest-v13.json make release-frontend-manifest-v13
-SNAPSHOT_PATH=deployments/latest-v13.json make release-golden-vectors-v13
-make release-abis-v13
-SNAPSHOT_PATH=deployments/latest-v13.json make release-verify-v13
-STRICT=1 make release-check-v13
-make release-package-v13
+make release-digest
+make release-notes
+make release-frontend-manifest
+make release-golden-vectors
+make release-abis
+make release-verify
+STRICT=1 make release-check
+make release-package
 ```
 
-The v1.3 frontend manifest writes schemaVersion 2 with explicit `pools[]` rows. The v1.3 golden
-vectors prove `IGameHub.placeBet(gameId,poolId,...)` calldata, not the legacy `Hub(asset,...)` shape.
+The frontend manifest writes schemaVersion 2 with explicit `pools[]` rows. Golden vectors prove
+`IGameHub.placeBet(gameId,poolId,...)` calldata.

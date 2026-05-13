@@ -127,25 +127,20 @@ has_sports=0
 for ((i = 0; i < POOL_COUNT; ++i)); do
   pool_id_var="POOL_ID_${i}"
   pool_asset_var="POOL_ASSET_${i}"
-  compat_asset_var="ASSET_${i}"
   pool_domain_var="POOL_DOMAIN_${i}"
-  pool_asset_label="$pool_asset_var"
 
   need_var "$pool_id_var"
+  need_var "$pool_asset_var"
   need_var "$pool_domain_var"
 
   pool_id="${!pool_id_var}"
   pool_domain="${!pool_domain_var}"
-  pool_asset="${!pool_asset_var-}"
-  if [[ -z "$pool_asset" ]]; then
-    pool_asset="${!compat_asset_var-}"
-    pool_asset_label="$compat_asset_var"
-  fi
+  pool_asset="${!pool_asset_var}"
 
   is_positive_decimal "$pool_id" || fail "$pool_id_var must be a positive integer: $pool_id"
-  is_address "$pool_asset" || fail "$pool_asset_var or $compat_asset_var must be an address: $pool_asset"
-  [[ "$(lower "$pool_asset")" != "0x0000000000000000000000000000000000000000" ]] || fail "$pool_asset_label is zero address"
-  need_contract_code "$pool_asset_label" "$pool_asset"
+  is_address "$pool_asset" || fail "$pool_asset_var must be an address: $pool_asset"
+  [[ "$(lower "$pool_asset")" != "0x0000000000000000000000000000000000000000" ]] || fail "$pool_asset_var is zero address"
+  need_contract_code "$pool_asset_var" "$pool_asset"
 
   case "$pool_domain" in
     1) has_casino=1 ;;

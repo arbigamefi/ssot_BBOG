@@ -31,7 +31,7 @@ interface IBankCanary {
 ///      - CANARY_RESULT_REPORTER_PRIVATE_KEY
 ///      - CANARY_RESULT_CHALLENGER_PRIVATE_KEY
 ///      - CANARY_RESULT_ARBITRATOR_PRIVATE_KEY
-///      Unset role keys fall back to PRIVATE_KEY for bootstrap compatibility.
+///      Unset role keys fall back to PRIVATE_KEY for bootstrap rehearsals.
 ///      The wrapper script simulates by default; set BROADCAST=1 there to send transactions.
 contract SportsCanaryV13 is Script {
     using stdJson for string;

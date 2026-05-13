@@ -112,7 +112,7 @@ contract StatefulSystemDiffAdapter is StatefulSystemDiff {
         uint256 sumCharged = 0;
         uint256 sumOverpayToggle = 0;
 
-        uint256 n = hub.nextBetId();
+        uint256 n = hub.nextPositionIdHint();
         for (uint256 betId = 1; betId < n; betId++) {
             SSOTTypes.Bet memory b = hub.getBet(betId);
             sumCharged += b.vrfFeeCharged;

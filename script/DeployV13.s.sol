@@ -35,7 +35,7 @@ interface IERC20MetadataLikeV13 {
 ///
 /// Per-pool env:
 ///   POOL_ID_i                         default i + 1
-///   POOL_ASSET_i                      required; ASSET_i is accepted as a compatibility alias
+///   POOL_ASSET_i                      required
 ///   POOL_DOMAIN_i                     default 1; 1=Casino, 2=Sports, 3=Future
 ///   BANK_MIN_LIQ_BPS_i                default 1000
 ///   BANK_MIN_TURNOVER_FOR_UNLOCK_i    default 20 ether
@@ -331,10 +331,7 @@ contract DeployV13 is Script {
     function _readPoolConfig(uint256 i) internal view returns (PoolConfig memory cfg) {
         string memory suffix = vm.toString(i);
         cfg.poolId = uint64(vm.envOr(string.concat("POOL_ID_", suffix), i + 1));
-        cfg.asset = vm.envOr(string.concat("POOL_ASSET_", suffix), address(0));
-        if (cfg.asset == address(0)) {
-            cfg.asset = vm.envOr(string.concat("ASSET_", suffix), address(0));
-        }
+        cfg.asset = vm.envAddress(string.concat("POOL_ASSET_", suffix));
         require(cfg.asset != address(0), "POOL_ASSET_i required");
 
         uint256 domainRaw = vm.envOr(string.concat("POOL_DOMAIN_", suffix), uint256(1));
@@ -402,7 +399,6 @@ contract DeployV13 is Script {
         json = vm.serializeAddress(obj, "refRegistry", address(d.refRegistry));
         json = vm.serializeAddress(obj, "refEngine", address(d.refEngine));
         json = vm.serializeAddress(obj, "gameHub", address(d.gameHub));
-        json = vm.serializeAddress(obj, "hub", address(d.gameHub)); // compatibility alias for older frontend tooling
         json = vm.serializeAddress(obj, "sportsRiskEngine", address(d.sportsRiskEngine));
         json = vm.serializeAddress(obj, "sportsHub", address(d.sportsHub));
 
@@ -416,24 +412,18 @@ contract DeployV13 is Script {
         json = _writePoolJson(obj, json, cfg, pools, d);
 
         string memory tag = string.concat(vm.toString(block.chainid), "-", vm.toString(block.number), "-v13");
-        string memory snapPathLegacy = string.concat("deployments/deploy-", tag, ".json");
         string memory snapPath = string.concat("deployments/snapshots/deploy-", tag, ".json");
 
-        _safeWriteJson(json, snapPathLegacy);
         _safeWriteJson(json, snapPath);
         _safeWriteJson(json, "deployments/latest-v13.json");
-        console2.log("Wrote v1.3 deployment snapshot (legacy):", snapPathLegacy);
         console2.log("Wrote v1.3 deployment snapshot:", snapPath);
         console2.log("Wrote v1.3 deployment snapshot:", "deployments/latest-v13.json");
 
         string memory sh = _verifyScript(cfg, pools, d);
-        string memory verifyPathLegacy = string.concat("deployments/verify-", tag, ".sh");
         string memory verifyPath = string.concat("deployments/verify/verify-", tag, ".sh");
 
-        _safeWriteFile(verifyPathLegacy, sh);
         _safeWriteFile(verifyPath, sh);
         _safeWriteFile("deployments/verify-latest-v13.sh", sh);
-        console2.log("Wrote v1.3 verify helper (legacy):", verifyPathLegacy);
         console2.log("Wrote v1.3 verify helper:", verifyPath);
         console2.log("Wrote v1.3 verify helper:", "deployments/verify-latest-v13.sh");
     }
@@ -487,7 +477,6 @@ contract DeployV13 is Script {
         json = vm.serializeString(obj, "ctorArgs_moduleKeno", "0x");
         string memory gameHubCtorArgs = _gameHubCtorArgs(cfg, d);
         json = vm.serializeString(obj, "ctorArgs_gameHub", gameHubCtorArgs);
-        json = vm.serializeString(obj, "ctorArgs_hub", gameHubCtorArgs);
         json = vm.serializeString(obj, "ctorArgs_sportsRiskEngine", _sportsRiskEngineCtorArgs(cfg));
         json = vm.serializeString(obj, "ctorArgs_sportsHub", _sportsHubCtorArgs(cfg, d));
         return json;
@@ -501,7 +490,6 @@ contract DeployV13 is Script {
         Deployed memory d
     ) internal returns (string memory) {
         json = vm.serializeUint(obj, "numPools", pools.length);
-        json = vm.serializeUint(obj, "numAssets", pools.length); // compatibility: old tooling treats each row as asset+bank
 
         for (uint256 i = 0; i < pools.length; ++i) {
             string memory suffix = vm.toString(i);
@@ -511,7 +499,19 @@ contract DeployV13 is Script {
             json = vm.serializeUint(obj, string.concat("poolDomain_", suffix), uint256(pools[i].domain));
             json = vm.serializeString(obj, string.concat("poolDomainLabel_", suffix), _domainLabel(pools[i].domain));
             json = vm.serializeAddress(obj, string.concat("poolAsset_", suffix), pools[i].asset);
+            json = vm.serializeString(obj, string.concat("poolAssetSymbol_", suffix), assetSymbol);
+            json = vm.serializeUint(obj, string.concat("poolAssetDecimals_", suffix), uint256(assetDecimals));
             json = vm.serializeAddress(obj, string.concat("poolBank_", suffix), pools[i].bank);
+            json = vm.serializeUint(obj, string.concat("poolBankMinLiqBps_", suffix), pools[i].minLiqBps);
+            json = vm.serializeUint(
+                obj, string.concat("poolBankMinTurnoverForUnlock_", suffix), pools[i].minTurnoverForUnlock
+            );
+            json = vm.serializeUint(
+                obj, string.concat("poolBankHoldbackVestingSeconds_", suffix), pools[i].holdbackVestingSeconds
+            );
+            json = vm.serializeString(obj, string.concat("poolLpName_", suffix), pools[i].lpName);
+            json = vm.serializeString(obj, string.concat("poolLpSymbol_", suffix), pools[i].lpSymbol);
+            json = vm.serializeUint(obj, string.concat("poolLpDecimals_", suffix), pools[i].lpDecimals);
             json = vm.serializeUint(obj, string.concat("poolActive_", suffix), 1);
             json = vm.serializeUint(obj, string.concat("poolSportsMaxStake_", suffix), pools[i].sportsMaxStake);
             json = vm.serializeUint(obj, string.concat("poolSportsMaxPayout_", suffix), pools[i].sportsMaxPayout);
@@ -529,21 +529,6 @@ contract DeployV13 is Script {
                 sportsRiskHash = d.sportsRiskEngine.currentRiskHashForPool(pools[i].poolId);
             }
             json = vm.serializeBytes32(obj, string.concat("poolSportsRiskHash_", suffix), sportsRiskHash);
-
-            json = vm.serializeAddress(obj, string.concat("asset_", suffix), pools[i].asset);
-            json = vm.serializeString(obj, string.concat("assetSymbol_", suffix), assetSymbol);
-            json = vm.serializeUint(obj, string.concat("assetDecimals_", suffix), uint256(assetDecimals));
-            json = vm.serializeAddress(obj, string.concat("bank_", suffix), pools[i].bank);
-            json = vm.serializeUint(obj, string.concat("bankMinLiqBps_", suffix), pools[i].minLiqBps);
-            json = vm.serializeUint(
-                obj, string.concat("bankMinTurnoverForUnlock_", suffix), pools[i].minTurnoverForUnlock
-            );
-            json = vm.serializeUint(
-                obj, string.concat("bankHoldbackVestingSeconds_", suffix), pools[i].holdbackVestingSeconds
-            );
-            json = vm.serializeString(obj, string.concat("lpName_", suffix), pools[i].lpName);
-            json = vm.serializeString(obj, string.concat("lpSymbol_", suffix), pools[i].lpSymbol);
-            json = vm.serializeUint(obj, string.concat("lpDecimals_", suffix), pools[i].lpDecimals);
 
             json = vm.serializeString(
                 obj,

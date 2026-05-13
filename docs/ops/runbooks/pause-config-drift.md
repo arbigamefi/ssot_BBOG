@@ -25,9 +25,11 @@ It maps to the metrics in `docs/ops/metrics.md` section **E**.
 ## Prerequisites
 
 ### Addresses
-Use `deployments/release/release-*.json` (preferred) or `deployments/latest.json`:
-- `hub`
-- per-asset `bank` addresses
+Use `deployments/release/release-*-v13.json` (preferred) or `deployments/latest-v13.json`:
+- `gameHub`
+- `sportsHub`
+- `poolRegistry`
+- per-pool `bank` addresses
 - `adapter` / `vrfHub` (for VRF-related config checks)
 
 ### Tools
@@ -35,9 +37,9 @@ Use `deployments/release/release-*.json` (preferred) or `deployments/latest.json
 - Explorer / block analytics for signer attribution
 
 ### Governance actions available (onlyGov)
-- Pause per asset or all: `Hub.setRiskInPaused(asset, true)` / `setRiskInPausedAll(true)`
-- Update refund timeout: `Hub.setRefundTimeout(seconds)`
-- Update module registry: `Hub.registerGame(gameId, module)`
+- Pause risk-in per pool/domain using the relevant vertical hub controls.
+- Update refund timeout: `GameHub.setRefundTimeout(seconds)` where applicable.
+- Update module registry: `GameHub.registerGame(gameId, module)`
 - Update bank minLiquidity: `Bank.setMinLiquidityBps(bps)`
 - Transfer governance (two-step): `GovernanceTransferStarted/Transferred`
 
@@ -58,21 +60,21 @@ Any governance parameter change should be accompanied by:
 
 ### 2) Snapshot current critical parameters
 ```bash
-cast call $HUB "refundTimeoutSeconds()(uint256)" --rpc-url $RPC
-cast call $HUB "defaultHouseEdgeBps()(uint16)" --rpc-url $RPC
-cast call $HUB "maxAffiliateDeltaBps()(uint16)" --rpc-url $RPC
-cast call $HUB "activeReferralConfigId()(uint32)" --rpc-url $RPC
+cast call $GAME_HUB "refundTimeoutSeconds()(uint256)" --rpc-url $RPC
+cast call $GAME_HUB "defaultHouseEdgeBps()(uint16)" --rpc-url $RPC
+cast call $GAME_HUB "maxAffiliateDeltaBps()(uint16)" --rpc-url $RPC
+cast call $GAME_HUB "activeReferralConfigId()(uint32)" --rpc-url $RPC
 ```
 For each affected asset:
 ```bash
-cast call $HUB "riskInPaused(address)(bool)" $ASSET --rpc-url $RPC
-cast call $HUB "bankFor(address)(address)" $ASSET --rpc-url $RPC
+cast call $GAME_HUB "riskInPaused(address)(bool)" $ASSET --rpc-url $RPC
+cast call $GAME_HUB "bankFor(address)(address)" $ASSET --rpc-url $RPC
 ```
 
 ### 3) Validate module registry sanity
 Pick the canonical gameIds you expect to be registered and verify they map to known modules:
 ```bash
-cast call $HUB "gameModule(bytes32)(address)" $GAME_ID --rpc-url $RPC
+cast call $GAME_HUB "gameModule(bytes32)(address)" $GAME_ID --rpc-url $RPC
 ```
 
 ---
@@ -90,7 +92,7 @@ cast call $HUB "gameModule(bytes32)(address)" $GAME_ID --rpc-url $RPC
 **Steps**
 1) Identify the emitting transaction and signer.
 2) If signer is unknown or governance appears compromised:
-   - **Pause all assets immediately**: `Hub.setRiskInPausedAll(true)`
+   - **Pause all assets immediately**: `pause all active pools in the relevant vertical hub`
    - Freeze any further operational changes until governance is secured
    - Escalate as security incident (communications + incident commander)
 3) If signer is expected:
@@ -158,7 +160,7 @@ Do not register unreviewed modules on production. Treat registry updates as rele
 1) Page immediately.
 2) If unexpected:
    - Pause all assets
-   - Validate governance address on every core contract (Hub, VRFHub, Banks, Adapter)
+   - Validate governance address on every core contract (GameHub, SportsHub, VRFHub, Banks, Adapter)
 3) If expected:
    - Verify the final governance address matches the pre-approved target
    - Execute a post-transfer checklist:
@@ -185,21 +187,21 @@ Capture:
 ## Appendix: commonly used calls
 
 ```bash
-# Hub governance-related reads
-cast call $HUB "refundTimeoutSeconds()(uint256)" --rpc-url $RPC
-cast call $HUB "defaultHouseEdgeBps()(uint16)" --rpc-url $RPC
-cast call $HUB "maxAffiliateDeltaBps()(uint16)" --rpc-url $RPC
-cast call $HUB "activeReferralConfigId()(uint32)" --rpc-url $RPC
+# GameHub governance-related reads
+cast call $GAME_HUB "refundTimeoutSeconds()(uint256)" --rpc-url $RPC
+cast call $GAME_HUB "defaultHouseEdgeBps()(uint16)" --rpc-url $RPC
+cast call $GAME_HUB "maxAffiliateDeltaBps()(uint16)" --rpc-url $RPC
+cast call $GAME_HUB "activeReferralConfigId()(uint32)" --rpc-url $RPC
 
 # Pause per asset (gov)
-cast send $HUB "setRiskInPaused(address,bool)" $ASSET true --rpc-url $RPC --private-key $GOV_PK
+cast send $GAME_HUB "setRiskInPaused(address,bool)" $ASSET true --rpc-url $RPC --private-key $GOV_PK
 
 # Pause all assets (gov)
-cast send $HUB "setRiskInPausedAll(bool)" true --rpc-url $RPC --private-key $GOV_PK
+cast send $GAME_HUB "setRiskInPausedAll(bool)" true --rpc-url $RPC --private-key $GOV_PK
 
 # refund timeout (gov)
-cast send $HUB "setRefundTimeout(uint256)" 900 --rpc-url $RPC --private-key $GOV_PK
+cast send $GAME_HUB "setRefundTimeout(uint256)" 900 --rpc-url $RPC --private-key $GOV_PK
 
 # verify module for a gameId
-cast call $HUB "gameModule(bytes32)(address)" $GAME_ID --rpc-url $RPC
+cast call $GAME_HUB "gameModule(bytes32)(address)" $GAME_ID --rpc-url $RPC
 ```

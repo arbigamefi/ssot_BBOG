@@ -4,8 +4,9 @@ pragma solidity ^0.8.20;
 import "forge-std/Test.sol";
 
 import {Bank} from "../../src/core/Bank.sol";
-import {BankRegistry} from "../../src/core/BankRegistry.sol";
-import {Hub} from "../../src/core/Hub.sol";
+import {GameHub} from "../../src/core/GameHub.sol";
+import {PoolRegistry} from "../../src/core/PoolRegistry.sol";
+import {SettlementRouter} from "../../src/core/SettlementRouter.sol";
 import {VRFHub} from "../../src/core/VRFHub.sol";
 import {MockERC20} from "../../src/mocks/MockERC20.sol";
 import {MockVRFV2PlusWrapper} from "../../src/mocks/MockVRFV2PlusWrapper.sol";
@@ -18,8 +19,9 @@ import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
 contract ChainlinkAdapter is Test {
     MockERC20 asset;
     Bank bank;
-    BankRegistry registry;
-    Hub hub;
+    PoolRegistry poolRegistry;
+    SettlementRouter router;
+    GameHub hub;
     VRFHub vrf;
 
     MockVRFV2PlusWrapper wrapper;
@@ -47,17 +49,16 @@ contract ChainlinkAdapter is Test {
         vm.stopPrank();
 
         bank = new Bank(address(asset), gov, 1000, "LP", "LP", 18);
-        registry = new BankRegistry(gov);
-        vm.prank(gov);
-        registry.registerBank(address(asset), address(bank));
+        poolRegistry = new PoolRegistry(gov);
+        router = new SettlementRouter(address(poolRegistry));
 
         ReferralRegistry refReg = new ReferralRegistry(gov);
         DefaultReferralEngine refEng = new DefaultReferralEngine();
 
         uint16[6] memory levelBps;
         levelBps[1] = 10_000;
-        hub = new Hub(
-            address(registry),
+        hub = new GameHub(
+            address(router),
             address(vrf),
             address(refReg),
             address(refEng),
@@ -73,7 +74,10 @@ contract ChainlinkAdapter is Test {
         );
 
         vm.startPrank(gov);
-        bank.setSettlementRouterOnce(address(hub));
+        poolRegistry.registerPool(1, address(asset), address(bank), SSOTTypes.PoolDomain.Casino);
+        poolRegistry.setHubRegistered(address(hub), true);
+        poolRegistry.setHubAllowedForPool(1, address(hub), true);
+        bank.setSettlementRouterOnce(address(router));
         refReg.setBinderOnce(address(hub));
         vm.stopPrank();
 
@@ -103,7 +107,7 @@ contract ChainlinkAdapter is Test {
         (uint256 fee,) = hub.quoteVRFFee(1);
 
         vm.prank(alice);
-        uint256 betId = hub.placeBet{value: fee}(GAME_COIN, address(asset), abi.encode(true), spec, address(0), 10_000);
+        uint256 betId = hub.placeBet{value: fee}(GAME_COIN, 1, abi.encode(true), spec, address(0), 10_000);
 
         // fulfill through wrapper -> adapter -> vrf -> hub
         uint256 requestId = hub.getBet(betId).requestId;
@@ -126,7 +130,7 @@ contract ChainlinkAdapter is Test {
         uint256 ethBefore = alice.balance;
 
         vm.prank(alice);
-        hub.placeBet{value: fee + 1}(GAME_COIN, address(asset), abi.encode(true), spec, address(0), 10_000);
+        hub.placeBet{value: fee + 1}(GAME_COIN, 1, abi.encode(true), spec, address(0), 10_000);
 
         uint256 ethAfter = alice.balance;
         assertEq(ethBefore - ethAfter, fee, "overpay should be refunded (gas price=0)");
