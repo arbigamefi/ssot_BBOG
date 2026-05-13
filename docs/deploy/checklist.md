@@ -25,6 +25,7 @@
   - `SPORTS_RESULT_REPORTER_THRESHOLD`
   - bootstrap odds signer, result reporter, challenger, and arbitrator addresses if used
 - [ ] Run `make sports-dry-run-v13` locally to prove the v1.3 Casino+Sports artifact path before using real deployment parameters.
+- [ ] Run `make sports-lifecycle-dry-run` locally to prove the Phase 0 mock event lifecycle.
 
 ## Deploy
 - [ ] Run `bash script/ci/install_deps.sh`

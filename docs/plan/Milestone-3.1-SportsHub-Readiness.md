@@ -151,8 +151,7 @@ No-go conditions:
 - Generate v1.3 release artifacts.
 - Run `make release-check-v13`.
 - Or run the deterministic local artifact dry run: `make sports-dry-run-v13`.
-- Run a complete mock event: create/open/lock market, place tickets, propose result, finalize, settle
-  winners and losers, void/refund a separate market.
+- Run a complete mock event lifecycle: `make sports-lifecycle-dry-run`.
 
 ### Phase 1 — Testnet rehearsal
 
@@ -231,3 +230,27 @@ Observed generated evidence:
 This proves the local v1.3 Casino+Sports artifact-generation path. It does not prove real ERC20
 metadata, real VRF wrapper behavior, explorer verification, funded bankroll behavior, provider
 redundancy, or public-network transaction inclusion. Those remain Phase 1 testnet rehearsal gates.
+
+## Local Lifecycle Evidence
+
+2026-05-13 local lifecycle dry run used `test/unit/SportsHubLifecycle.t.sol` and passed:
+
+```bash
+make sports-lifecycle-dry-run
+```
+
+The smoke path covers:
+
+- create/open a resolved market;
+- place one winning and one losing fixed-odds ticket;
+- lock the market, propose a result, wait through finality, and finalize;
+- batch-settle winner and loser through `settleTickets`;
+- assert Bank/router/SportsHub exposure returns to zero;
+- create/open a separate market;
+- place two tickets, direct-void the market with a non-zero reason hash, then terminalize one ticket
+  through `refundTickets` and one through `voidTickets`;
+- assert refunded/voided ticket states, refunded router positions, final player balance, and cleared
+  market/event/pool-event exposure.
+
+This is still a local mock lifecycle. It does not prove provider data quality, real operator timing,
+chain inclusion, frontend signer integration, or jurisdiction controls.
