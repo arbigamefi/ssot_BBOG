@@ -102,6 +102,7 @@ need_var RPC_URL
 need_var PRIVATE_KEY
 need_address GOV
 need_address VRF_WRAPPER
+need_positive_decimal REQUEST_GAS_PRICE_WEI
 need_positive_decimal NUM_POOLS
 POOL_COUNT=$((10#$NUM_POOLS))
 if (( POOL_COUNT > 32 )); then

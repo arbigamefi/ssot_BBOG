@@ -313,6 +313,9 @@ contract DeployV13 is Script {
         cfg.treasury = vm.envOr("TREASURY", address(0));
         cfg.vrfWrapper = vm.envAddress("VRF_WRAPPER");
         cfg.requestGasPriceWei = vm.envOr("REQUEST_GAS_PRICE_WEI", uint256(0));
+        if (block.chainid != 31337 && cfg.requestGasPriceWei == 0) {
+            revert("REQUEST_GAS_PRICE_WEI required off local chain");
+        }
         cfg.refundTimeoutSeconds = vm.envOr("REFUND_TIMEOUT_SECONDS", uint256(3600));
         cfg.defaultHouseEdgeBps = uint16(vm.envOr("DEFAULT_HOUSE_EDGE_BPS", uint256(200)));
         cfg.maxAffiliateDeltaBps = uint16(vm.envOr("MAX_AFFILIATE_DELTA_BPS", uint256(0)));

@@ -4,8 +4,10 @@ This repo intentionally makes the **parameter policy explicit**.
 
 ## VRF / fee
 - `VRF_WRAPPER` (required): Chainlink VRF v2.5 Wrapper address on the target chain.
-- `REQUEST_GAS_PRICE_WEI` (optional, default `0`): used by the wrapper fee estimator.
-  - In production you typically set this to a conservative gas price (or a moving average) used by your UI.
+- `REQUEST_GAS_PRICE_WEI`: used by the wrapper fee estimator.
+  - Local-only deployments may leave it at `0`.
+  - Public testnet/mainnet deployments must set a non-zero conservative gas price. A zero value can underquote Chainlink wrapper requests and make `GameHub.placeBet` revert before VRF request creation.
+  - In production you typically set this to a conservative gas price or moving average used by your UI.
 
 ## Explorer verification (optional)
 - `ETHERSCAN_API_KEY`: Etherscan-family API key. BaseScan/Arbiscan use the same Etherscan v2 unified key model.
