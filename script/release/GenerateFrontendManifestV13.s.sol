@@ -20,6 +20,7 @@ contract GenerateFrontendManifestV13 is Script {
     bytes32 internal constant GAME_ROULETTE = keccak256("ROULETTE");
     bytes32 internal constant GAME_KENO = keccak256("KENO");
     bytes32 internal constant GAME_SLOTS = keccak256("SLOTS");
+    bytes32 internal constant GAME_BACCARAT = keccak256("BACCARAT");
 
     uint256 internal constant DOMAIN_CASINO = 1;
     uint256 internal constant DOMAIN_SPORTS = 2;
@@ -96,6 +97,7 @@ contract GenerateFrontendManifestV13 is Script {
         address moduleRoulette = snap.readAddress(".moduleRoulette");
         address moduleKeno = snap.readAddress(".moduleKeno");
         address moduleSlots = snap.readAddress(".moduleSlots");
+        address moduleBaccarat = snap.readAddress(".moduleBaccarat");
 
         return string.concat(
             "{",
@@ -143,6 +145,9 @@ contract GenerateFrontendManifestV13 is Script {
             "\",",
             "\"moduleSlots\":\"",
             vm.toString(moduleSlots),
+            "\",",
+            "\"moduleBaccarat\":\"",
+            vm.toString(moduleBaccarat),
             "\"",
             "}"
         );
@@ -201,6 +206,7 @@ contract GenerateFrontendManifestV13 is Script {
         address moduleRoulette = snap.readAddress(".moduleRoulette");
         address moduleKeno = snap.readAddress(".moduleKeno");
         address moduleSlots = snap.readAddress(".moduleSlots");
+        address moduleBaccarat = snap.readAddress(".moduleBaccarat");
 
         return string.concat(
             "[",
@@ -213,6 +219,8 @@ contract GenerateFrontendManifestV13 is Script {
             _gameJson(GAME_KENO, "keno", "Keno", moduleKeno, "abi.encode(uint40 numbersPacked)"),
             ",",
             _gameJson(GAME_SLOTS, "slots", "Slots", moduleSlots, "abi.encode(uint8 profile)"),
+            ",",
+            _gameJson(GAME_BACCARAT, "baccarat", "Baccarat", moduleBaccarat, "abi.encode(uint8 side)"),
             "]"
         );
     }

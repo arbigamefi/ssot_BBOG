@@ -10,6 +10,8 @@ import {SettlementRouter} from "../../src/core/SettlementRouter.sol";
 import {VRFHub} from "../../src/core/VRFHub.sol";
 import {MockERC20} from "../../src/mocks/MockERC20.sol";
 
+import {BaccaratModule} from "../../src/modules/baccarat/BaccaratModule.sol";
+import {BaccaratParams} from "../../src/modules/baccarat/BaccaratParams.sol";
 import {DiceModule} from "../../src/modules/dice/DiceModule.sol";
 import {CoinTossModule} from "../../src/modules/cointoss/CoinTossModule.sol";
 import {RouletteModule} from "../../src/modules/roulette/RouletteModule.sol";
@@ -60,6 +62,7 @@ contract StatefulSystemDiff is Test {
     RouletteModule internal roulette;
     KenoModule internal keno;
     SlotsModule internal slots;
+    BaccaratModule internal baccarat;
 
     ReferralRegistry internal refRegistry;
     DefaultReferralEngine internal refEngine;
@@ -81,6 +84,7 @@ contract StatefulSystemDiff is Test {
     bytes32 internal constant GAME_ROULETTE = keccak256("ROULETTE");
     bytes32 internal constant GAME_KENO = keccak256("KENO");
     bytes32 internal constant GAME_SLOTS = keccak256("SLOTS");
+    bytes32 internal constant GAME_BACCARAT = keccak256("BACCARAT");
     uint64 internal constant POOL_A = 1;
     uint64 internal constant POOL_B = 2;
 
@@ -198,6 +202,7 @@ contract StatefulSystemDiff is Test {
         roulette = new RouletteModule();
         keno = new KenoModule();
         slots = new SlotsModule();
+        baccarat = new BaccaratModule();
 
         vm.startPrank(gov);
         hub.registerGame(GAME_DICE, address(dice));
@@ -205,6 +210,7 @@ contract StatefulSystemDiff is Test {
         hub.registerGame(GAME_ROULETTE, address(roulette));
         hub.registerGame(GAME_KENO, address(keno));
         hub.registerGame(GAME_SLOTS, address(slots));
+        hub.registerGame(GAME_BACCARAT, address(baccarat));
         vm.stopPrank();
 
         // Players
@@ -420,7 +426,7 @@ contract StatefulSystemDiff is Test {
             bytes32 gameId;
             bytes memory params;
 
-            uint256 g = (state >> 40) % 5;
+            uint256 g = (state >> 40) % 6;
             if (g == 0) {
                 gameId = GAME_DICE;
                 uint8 cap = uint8(bound(uint256(state >> 48), 1, 99));
@@ -441,9 +447,13 @@ contract StatefulSystemDiff is Test {
                 uint8 picks = uint8(bound(uint256(state >> 56), 1, 10));
                 uint40 mask = _randomBitmask40(state >> 64, 40, picks);
                 params = abi.encode(mask);
-            } else {
+            } else if (g == 4) {
                 gameId = GAME_SLOTS;
                 params = SlotsParams.encode(SlotsParams.PROFILE_CLASSIC);
+            } else {
+                gameId = GAME_BACCARAT;
+                uint8 side = uint8(bound(uint256(state >> 56), 0, 2));
+                params = BaccaratParams.encode(side);
             }
 
             uint256 amountPerRoll = bound(uint256(state >> 96), 0.1 ether, 5 ether);

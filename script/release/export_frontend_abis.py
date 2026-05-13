@@ -45,6 +45,7 @@ REQUIRED_CONTRACTS_V13 = [
     ("RouletteModule", "src/modules/roulette/RouletteModule.sol:RouletteModule", "moduleRoulette"),
     ("KenoModule", "src/modules/keno/KenoModule.sol:KenoModule", "moduleKeno"),
     ("SlotsModule", "src/modules/slots/SlotsModule.sol:SlotsModule", "moduleSlots"),
+    ("BaccaratModule", "src/modules/baccarat/BaccaratModule.sol:BaccaratModule", "moduleBaccarat"),
     # bank (type)
     ("Bank", "src/core/Bank.sol:Bank", "__bank_type__"),
 ]

@@ -5,6 +5,8 @@ import "forge-std/Test.sol";
 
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
+import {BaccaratModule} from "../../src/modules/baccarat/BaccaratModule.sol";
+import {BaccaratParams} from "../../src/modules/baccarat/BaccaratParams.sol";
 import {Bank} from "../../src/core/Bank.sol";
 import {GameHub} from "../../src/core/GameHub.sol";
 import {PoolRegistry} from "../../src/core/PoolRegistry.sol";
@@ -32,6 +34,7 @@ contract GameHubE2E is Test {
     bytes32 internal constant GAME_ROULETTE = keccak256("ROULETTE");
     bytes32 internal constant GAME_KENO = keccak256("KENO");
     bytes32 internal constant GAME_SLOTS = keccak256("SLOTS");
+    bytes32 internal constant GAME_BACCARAT = keccak256("BACCARAT");
     bytes internal constant RNG_DOMAIN = "SSOT_RNG_V1";
 
     address internal gov = address(0xA11CE);
@@ -99,6 +102,7 @@ contract GameHubE2E is Test {
         gameHub.registerGame(GAME_ROULETTE, address(new RouletteModule()));
         gameHub.registerGame(GAME_KENO, address(new KenoModule()));
         gameHub.registerGame(GAME_SLOTS, address(new SlotsModule()));
+        gameHub.registerGame(GAME_BACCARAT, address(new BaccaratModule()));
         vm.stopPrank();
 
         assetA.mint(alice, 1_000 ether);
@@ -223,6 +227,25 @@ contract GameHubE2E is Test {
         assertEq(balAfter - balBefore, expectedGross - fee);
     }
 
+    function test_baccaratTieSettlesThroughRouter() external {
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
+
+        uint256 positionId =
+            _place(alice, GAME_BACCARAT, POOL_A, BaccaratParams.encode(BaccaratParams.SIDE_TIE), spec, address(0));
+        uint256 expectedGross = Math.mulDiv(10 ether, 104_793, 10_000);
+        assertEq(gameHub.getBet(positionId).reserved, expectedGross);
+
+        _fulfill(positionId, _findSeedBaccaratOutcome(positionId, BaccaratParams.SIDE_TIE));
+
+        uint256 balBefore = assetA.balanceOf(alice);
+        gameHub.finalize(positionId);
+        uint256 balAfter = assetA.balanceOf(alice);
+
+        uint256 fee = Math.mulDiv(expectedGross, gameHub.defaultHouseEdgeBps(), 10_000);
+        assertEq(balAfter - balBefore, expectedGross - fee);
+    }
+
     function test_referralSkylineAccruesXpOnlyInSettledPool() external {
         vm.prank(alice);
         gameHub.bindReferrer(bob);
@@ -342,6 +365,52 @@ contract GameHubE2E is Test {
 
     function _slotSymbol(uint256 betId, uint256 reelIndex, uint256 seed) internal pure returns (uint8) {
         return uint8(_rng2(betId, 0, reelIndex, seed) % 8);
+    }
+
+    function _findSeedBaccaratOutcome(uint256 betId, uint8 want) internal pure returns (uint256) {
+        for (uint256 seed = 0; seed < 16384; seed++) {
+            if (_baccaratOutcome(betId, seed) == want) return seed;
+        }
+        revert("no seed");
+    }
+
+    function _baccaratOutcome(uint256 betId, uint256 seed) internal pure returns (uint8) {
+        uint8 playerTotal = (_baccaratCardValue(betId, 0, seed) + _baccaratCardValue(betId, 2, seed)) % 10;
+        uint8 bankerTotal = (_baccaratCardValue(betId, 1, seed) + _baccaratCardValue(betId, 3, seed)) % 10;
+
+        if (playerTotal < 8 && bankerTotal < 8) {
+            bool playerDraws = playerTotal <= 5;
+            uint8 playerThird = 0;
+
+            if (playerDraws) {
+                playerThird = _baccaratCardValue(betId, 4, seed);
+                playerTotal = (playerTotal + playerThird) % 10;
+            }
+
+            if (_baccaratBankerDraws(bankerTotal, playerDraws, playerThird)) {
+                bankerTotal = (bankerTotal + _baccaratCardValue(betId, 5, seed)) % 10;
+            }
+        }
+
+        if (playerTotal > bankerTotal) return BaccaratParams.SIDE_PLAYER;
+        if (bankerTotal > playerTotal) return BaccaratParams.SIDE_BANKER;
+        return BaccaratParams.SIDE_TIE;
+    }
+
+    function _baccaratBankerDraws(uint8 bankerTotal, bool playerDraws, uint8 playerThird) internal pure returns (bool) {
+        if (!playerDraws) return bankerTotal <= 5;
+        if (bankerTotal <= 2) return true;
+        if (bankerTotal == 3) return playerThird != 8;
+        if (bankerTotal == 4) return playerThird >= 2 && playerThird <= 7;
+        if (bankerTotal == 5) return playerThird >= 4 && playerThird <= 7;
+        if (bankerTotal == 6) return playerThird == 6 || playerThird == 7;
+        return false;
+    }
+
+    function _baccaratCardValue(uint256 betId, uint256 cardIndex, uint256 seed) internal pure returns (uint8) {
+        uint8 rank = uint8(_rng2(betId, 0, cardIndex, seed) % 13);
+        if (rank <= 8) return rank + 1;
+        return 0;
     }
 
     function _kenoDraw0(uint256 betId, uint256 seed) internal pure returns (uint40 rolled) {

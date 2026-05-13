@@ -170,6 +170,9 @@ contract GenerateReleaseNotesV13 is Script {
             "`\n",
             "- Slots: `",
             vm.toString(snap.readAddress(".moduleSlots")),
+            "`\n",
+            "- Baccarat: `",
+            vm.toString(snap.readAddress(".moduleBaccarat")),
             "`\n\n"
         );
     }
