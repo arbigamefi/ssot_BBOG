@@ -102,3 +102,7 @@ The next production gate is a documented go/no-go packet containing:
 - bankroll sizing memo;
 - final risk caps in raw asset units;
 - fresh canary after any role, provider, or risk parameter change.
+
+Current Phase 2 packet:
+[`sportsbook-phase2-gonogo-2026-05-14.md`](sportsbook-phase2-gonogo-2026-05-14.md). The
+current decision is **NO-GO** until the packet records approvals for every open production gate.

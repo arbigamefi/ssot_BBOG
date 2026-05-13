@@ -19,11 +19,11 @@ bankrolls, or unlicensed regulated-market sportsbook operations.
 
 ## Current Status
 
-As of `master` through PR #7, with the next readiness package accumulating locally on
-`codex/sports-readiness-phase-local`:
+As of `master` through PR #13:
 
 - Contract implementation for the SportsHub MVP scope is complete.
-- Unit, invariant, build, release-check, and PR CI gates passed on PR #6.
+- Core unit, invariant, build, release-check, and PR CI gates have passed across the SportsHub
+  readiness work; PR #13 CI passed after the Base Sepolia Phase 1 closeout package.
 - The v1.3 Casino+Sports local deployment/release-artifact path is covered by `make sports-dry-run-v13`.
 - The complete mock event lifecycle is covered by `make sports-lifecycle-dry-run`.
 - The combined local Phase 0 gate is `make sports-phase0-readiness`.
@@ -35,6 +35,9 @@ As of `master` through PR #7, with the next readiness package accumulating local
 - Phase 1 is closed for the Base Sepolia testnet rehearsal. The remaining work is production/public
   launch readiness: managed key custody, operational staffing, provider policy, evidence storage, and
   compliance gating.
+- The Phase 2 go/no-go packet is tracked at
+  `docs/ops/sportsbook-phase2-gonogo-2026-05-14.md` and currently records **NO-GO** for limited
+  mainnet sportsbook canary until the off-chain approvals and production controls are filled.
 
 ## Go/No-Go Gates
 
@@ -176,6 +179,8 @@ No-go conditions:
 
 ### Phase 2 — Limited mainnet canary
 
+- Before entering Phase 2, run `make sports-phase2-gonogo-v13` and confirm the packet has moved from
+  NO-GO to GO with approval records for every open production gate.
 - Start with one asset, one Sports pool, low limits, and a small market set.
 - Keep max stake/payout below the bankroll amount that operators can manually supervise.
 - Require active monitoring during market lock/result/finality windows.
@@ -266,7 +271,8 @@ paths, plus testnet-level operational role separation. It still uses generated l
 and GOV as the canary player/market operator, so it does not prove managed production key custody,
 external provider reliability, or public frontend controls.
 
-The remaining production controls are tracked in `docs/ops/sportsbook-production-controls.md`.
+The remaining production controls are tracked in `docs/ops/sportsbook-production-controls.md` and
+the Phase 2 go/no-go packet at `docs/ops/sportsbook-phase2-gonogo-2026-05-14.md`.
 
 ## Local Lifecycle Evidence
 
@@ -320,4 +326,5 @@ same deployment also rehearsed a direct market void followed by batch `refundTic
 `voidTickets` debt-out, with SportsHub exposure, router positions, and Sports Bank reserved liability
 returning to zero on Base Sepolia block `41447214`.
 
-Result challenge rehearsal remains Phase 1 work.
+Result challenge/arbitration and GameHub canary evidence are now recorded in the deployment docs; the
+remaining work is Phase 2 go/no-go approval and production-control closure.

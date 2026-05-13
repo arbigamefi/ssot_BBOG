@@ -70,6 +70,8 @@
   evidence.
 - [ ] Before any public sportsbook frontend, approve `docs/ops/sportsbook-production-controls.md`
   sections for managed key custody, provider evidence, and public frontend controls.
+- [ ] Before any SportsHub mainnet canary or public risk-in, run `make sports-phase2-gonogo-v13`
+  and confirm the Phase 2 packet records GO with every production approval linked.
 - [ ] Decide on monitoring signals:
   - bet placement / requestId issuance
   - refund credit changes (`VRFHub.refundCreditOf`)
