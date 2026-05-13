@@ -88,7 +88,8 @@ gov_onchain="$(cast_call "$SPORTS_HUB" 'governance()(address)')"
 odds_hash="$(cast_call "$SPORTS_HUB" 'oddsSignerSetHash()(bytes32)')"
 reporter_hash="$(cast_call "$SPORTS_HUB" 'resultReporterSetHash()(bytes32)')"
 threshold_onchain="$(cast_call "$SPORTS_HUB" 'resultReporterThreshold()(uint8)')"
-challenge_timeout_onchain="$(cast_call "$SPORTS_HUB" 'resultChallengeTimeoutSeconds()(uint64)')"
+challenge_timeout_onchain_raw="$(cast_call "$SPORTS_HUB" 'resultChallengeTimeoutSeconds()(uint64)')"
+challenge_timeout_onchain="${challenge_timeout_onchain_raw%% *}"
 
 [[ "$odds_hash" != "0x0000000000000000000000000000000000000000000000000000000000000000" ]] \
   || fail "odds signer set hash is zero"
