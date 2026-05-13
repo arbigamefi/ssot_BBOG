@@ -71,6 +71,11 @@ contract SettlementRouter is ISettlementRouter {
         SSOTTypes.XPAward[] calldata xpAwards
     ) external {
         SSOTTypes.Position storage pos = _requireOwnerHeldPosition(positionId);
+        if (payoutNet > payoutGross) revert PayoutNetTooLarge(positionId, payoutNet, payoutGross);
+        if (refundAmount > pos.stake) revert RefundTooLarge(positionId, refundAmount, pos.stake);
+        uint256 need = payoutGross + refundAmount;
+        if (need > pos.reserved) revert ReservedTooSmall(positionId, pos.reserved, need);
+
         pos.state = SSOTTypes.PositionState.Settled;
 
         IBank(pos.bank).settleBet(positionId, payoutGross, payoutNet, refundAmount, protocolFeeAccrual, xpAwards);
@@ -82,6 +87,8 @@ contract SettlementRouter is ISettlementRouter {
 
     function refundPosition(uint256 positionId, uint256 refundAmount) external {
         SSOTTypes.Position storage pos = _requireOwnerHeldPosition(positionId);
+        if (refundAmount > pos.stake) revert RefundTooLarge(positionId, refundAmount, pos.stake);
+
         pos.state = SSOTTypes.PositionState.Refunded;
 
         IBank(pos.bank).refundBet(positionId, refundAmount);

@@ -54,4 +54,7 @@ interface ISettlementRouter {
     error UnknownPosition(uint256 positionId);
     error BadPositionState(uint256 positionId, SSOTTypes.PositionState got, SSOTTypes.PositionState want);
     error NotOwnerHub(uint256 positionId, address caller, address ownerHub);
+    error ReservedTooSmall(uint256 positionId, uint256 reserved, uint256 need);
+    error RefundTooLarge(uint256 positionId, uint256 refundAmount, uint256 stake);
+    error PayoutNetTooLarge(uint256 positionId, uint256 payoutNet, uint256 payoutGross);
 }

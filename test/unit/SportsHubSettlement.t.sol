@@ -17,6 +17,7 @@ contract SportsHubSettlementTest is Test {
     address internal gov = address(0xA11CE);
     address internal player = address(0xB0B);
     address internal reporter = address(0xBEEF);
+    address internal challenger = address(0xCAFE);
     uint256 internal oddsSignerKey = 0xA11CE1;
     address internal oddsSigner;
 
@@ -60,6 +61,7 @@ contract SportsHubSettlementTest is Test {
         sportsBank.setSettlementRouterOnce(address(router));
         sportsHub.setOddsSigner(oddsSigner, true);
         sportsHub.setResultReporter(reporter, true);
+        sportsHub.setResultChallenger(challenger, true);
         vm.stopPrank();
 
         usdc.mint(gov, 1_000_000e6);
@@ -197,6 +199,53 @@ contract SportsHubSettlementTest is Test {
         assertEq(sportsHub.marketReserved(marketId), 190e6);
     }
 
+    function test_challengedMarketCanBeVoidedAfterTimeoutAndRefunded() external {
+        uint64 marketId = _createAndOpenMarket();
+        uint256 ticketId = _placeTicket(marketId, WINNING_OUTCOME_ID, 1);
+        _lockAndPropose(marketId);
+
+        vm.prank(challenger);
+        sportsHub.challengeResult(marketId, keccak256("DISPUTED_SCORE"));
+
+        SSOTTypes.SportsResult memory result = sportsHub.getResult(marketId);
+        vm.warp(uint256(result.challengedAt) + sportsHub.resultChallengeTimeoutSeconds() - 1);
+        vm.prank(gov);
+        vm.expectRevert(abi.encodeWithSelector(ISportsHub.ResultChallengePending.selector, marketId));
+        sportsHub.voidMarket(marketId, VOID_REASON);
+
+        vm.warp(uint256(result.challengedAt) + sportsHub.resultChallengeTimeoutSeconds());
+        vm.prank(gov);
+        sportsHub.voidMarket(marketId, VOID_REASON);
+        assertEq(uint256(sportsHub.getMarket(marketId).state), uint256(SSOTTypes.SportsMarketState.Voided));
+
+        sportsHub.refundTicket(ticketId);
+        assertEq(usdc.balanceOf(player), 10_000e6);
+        assertEq(sportsBank.totalReserved(), 0);
+        assertEq(sportsHub.marketReserved(marketId), 0);
+        assertEq(sportsHub.poolEventReserved(SPORTS_POOL_ID, EVENT_ID), 0);
+        assertEq(sportsHub.eventReserved(EVENT_ID), 0);
+    }
+
+    function test_ticketBatchFunctionsRejectTooManyIds() external {
+        uint256 tooMany = sportsHub.MAX_TICKET_BATCH_SIZE() + 1;
+        uint256[] memory ticketIds = new uint256[](tooMany);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(ISportsHub.BatchTooLarge.selector, tooMany, sportsHub.MAX_TICKET_BATCH_SIZE())
+        );
+        sportsHub.settleTickets(ticketIds);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(ISportsHub.BatchTooLarge.selector, tooMany, sportsHub.MAX_TICKET_BATCH_SIZE())
+        );
+        sportsHub.refundTickets(ticketIds);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(ISportsHub.BatchTooLarge.selector, tooMany, sportsHub.MAX_TICKET_BATCH_SIZE())
+        );
+        sportsHub.voidTickets(ticketIds);
+    }
+
     function test_voidTicket_refundsStakeAndReleasesExposure() external {
         uint64 marketId = _createAndOpenMarket();
         uint256 ticketId = _placeTicket(marketId, WINNING_OUTCOME_ID, 1);
@@ -285,6 +334,14 @@ contract SportsHubSettlementTest is Test {
     }
 
     function _lockProposeAndFinalize(uint64 marketId) internal {
+        _lockAndPropose(marketId);
+
+        SSOTTypes.SportsResult memory result = sportsHub.getResult(marketId);
+        vm.warp(result.finalizesAt);
+        sportsHub.finalizeResult(marketId);
+    }
+
+    function _lockAndPropose(uint64 marketId) internal {
         vm.prank(gov);
         sportsHub.lockMarket(marketId);
 
@@ -295,10 +352,6 @@ contract SportsHubSettlementTest is Test {
         sportsHub.proposeResult(
             marketId, WINNING_OUTCOME_ID, RESULT_SOURCE_HASH, RESULT_EVIDENCE_HASH, uint64(block.timestamp)
         );
-
-        SSOTTypes.SportsResult memory result = sportsHub.getResult(marketId);
-        vm.warp(result.finalizesAt);
-        sportsHub.finalizeResult(marketId);
     }
 
     function _placeTicket(uint64 marketId, uint32 outcomeId, uint64 nonce) internal returns (uint256 ticketId) {

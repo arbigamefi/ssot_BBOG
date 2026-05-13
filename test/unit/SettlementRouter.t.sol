@@ -147,6 +147,27 @@ contract SettlementRouterTest is Test {
         router.refundPosition(positionId, 100e6);
     }
 
+    function test_settlePosition_rejectsInvalidPayoutAndRefundBeforeBankCall() external {
+        uint256 positionId = _open(100e6, 250e6);
+        SSOTTypes.XPAward[] memory awards = new SSOTTypes.XPAward[](0);
+
+        vm.prank(hub);
+        vm.expectRevert(abi.encodeWithSelector(ISettlementRouter.PayoutNetTooLarge.selector, positionId, 121e6, 120e6));
+        router.settlePosition(positionId, 120e6, 121e6, 0, 0, awards);
+
+        vm.prank(hub);
+        vm.expectRevert(abi.encodeWithSelector(ISettlementRouter.RefundTooLarge.selector, positionId, 101e6, 100e6));
+        router.settlePosition(positionId, 0, 0, 101e6, 0, awards);
+
+        vm.prank(hub);
+        vm.expectRevert(abi.encodeWithSelector(ISettlementRouter.ReservedTooSmall.selector, positionId, 250e6, 251e6));
+        router.settlePosition(positionId, 151e6, 151e6, 100e6, 0, awards);
+
+        SSOTTypes.Position memory pos = router.getPosition(positionId);
+        assertEq(uint256(pos.state), uint256(SSOTTypes.PositionState.Held));
+        assertEq(bank.totalReserved(), 250e6);
+    }
+
     function test_refundPosition_successAndNoDoubleTerminalization() external {
         uint256 positionId = _open(100e6, 250e6);
         SSOTTypes.XPAward[] memory awards = new SSOTTypes.XPAward[](0);
@@ -180,6 +201,18 @@ contract SettlementRouterTest is Test {
             )
         );
         router.settlePosition(positionId, 0, 0, 0, 0, awards);
+    }
+
+    function test_refundPosition_rejectsRefundAboveStakeBeforeBankCall() external {
+        uint256 positionId = _open(100e6, 250e6);
+
+        vm.prank(hub);
+        vm.expectRevert(abi.encodeWithSelector(ISettlementRouter.RefundTooLarge.selector, positionId, 101e6, 100e6));
+        router.refundPosition(positionId, 101e6);
+
+        SSOTTypes.Position memory pos = router.getPosition(positionId);
+        assertEq(uint256(pos.state), uint256(SSOTTypes.PositionState.Held));
+        assertEq(bank.totalReserved(), 250e6);
     }
 
     function test_debtOutSettlementAndRefundWorkAfterPoolPause() external {

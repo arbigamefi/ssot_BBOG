@@ -16,6 +16,8 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 ///         Ticket funding and settlement are deliberately routed through SettlementRouter.
 contract SportsHub is ISportsHub, Governable, EIP712, ReentrancyGuard {
     uint64 public constant MIN_RESULT_FINALITY_SECONDS = 10 minutes;
+    uint64 public constant DEFAULT_RESULT_CHALLENGE_TIMEOUT_SECONDS = 7 days;
+    uint256 public constant MAX_TICKET_BATCH_SIZE = 100;
     bytes32 internal constant ODDS_TICKET_TYPEHASH = keccak256(
         "SportsOddsTicket(bytes32 oddsSignerSetHash,address player,uint256 stake,uint64 marketId,uint64 eventId,uint64 poolId,uint32 outcomeId,uint64 marketVersion,bytes32 marketKey,bytes32 rulebookHash,uint256 oddsWad,uint256 maxStake,uint256 maxPayout,uint64 expiresAt,uint64 nonce,bytes32 riskHash)"
     );
@@ -30,6 +32,7 @@ contract SportsHub is ISportsHub, Governable, EIP712, ReentrancyGuard {
     bytes32 public override oddsSignerSetHash;
     bytes32 public override resultReporterSetHash;
     uint8 public override resultReporterThreshold = 1;
+    uint64 public override resultChallengeTimeoutSeconds = DEFAULT_RESULT_CHALLENGE_TIMEOUT_SECONDS;
 
     uint64 public override nextMarketId = 1;
     uint256 public override nextTicketId = 1;
@@ -103,6 +106,13 @@ contract SportsHub is ISportsHub, Governable, EIP712, ReentrancyGuard {
         uint8 oldThreshold = resultReporterThreshold;
         resultReporterThreshold = newThreshold;
         emit ResultReporterThresholdSet(oldThreshold, newThreshold);
+    }
+
+    function setResultChallengeTimeoutSeconds(uint64 newTimeoutSeconds) external onlyGov {
+        if (newTimeoutSeconds < MIN_RESULT_FINALITY_SECONDS) revert Errors.InvalidConfig();
+        uint64 oldTimeoutSeconds = resultChallengeTimeoutSeconds;
+        resultChallengeTimeoutSeconds = newTimeoutSeconds;
+        emit ResultChallengeTimeoutSet(oldTimeoutSeconds, newTimeoutSeconds);
     }
 
     function setResultReporter(address reporter, bool allowed) external onlyGov {
@@ -248,7 +258,11 @@ contract SportsHub is ISportsHub, Governable, EIP712, ReentrancyGuard {
         {
             revert BadMarketState(marketId, market.state, SSOTTypes.SportsMarketState.Open);
         }
-        if (market.state == SSOTTypes.SportsMarketState.Challenged) revert ResultChallengePending(marketId);
+        if (market.state == SSOTTypes.SportsMarketState.Challenged) {
+            SSOTTypes.SportsResult storage result = _results[marketId];
+            uint256 voidAfter = uint256(result.challengedAt) + uint256(resultChallengeTimeoutSeconds);
+            if (block.timestamp < voidAfter) revert ResultChallengePending(marketId);
+        }
         _setMarketState(market, SSOTTypes.SportsMarketState.Voided);
         emit MarketVoided(marketId, market.eventId, reasonHash, msg.sender);
     }
@@ -520,6 +534,7 @@ contract SportsHub is ISportsHub, Governable, EIP712, ReentrancyGuard {
     }
 
     function settleTickets(uint256[] calldata ticketIds) external override nonReentrant {
+        _requireBatchSize(ticketIds.length);
         for (uint256 i = 0; i < ticketIds.length; ++i) {
             _settleTicket(ticketIds[i]);
         }
@@ -530,6 +545,7 @@ contract SportsHub is ISportsHub, Governable, EIP712, ReentrancyGuard {
     }
 
     function refundTickets(uint256[] calldata ticketIds) external override nonReentrant {
+        _requireBatchSize(ticketIds.length);
         for (uint256 i = 0; i < ticketIds.length; ++i) {
             _refundTicket(ticketIds[i]);
         }
@@ -540,6 +556,7 @@ contract SportsHub is ISportsHub, Governable, EIP712, ReentrancyGuard {
     }
 
     function voidTickets(uint256[] calldata ticketIds) external override nonReentrant {
+        _requireBatchSize(ticketIds.length);
         for (uint256 i = 0; i < ticketIds.length; ++i) {
             _voidTicket(ticketIds[i]);
         }
@@ -607,6 +624,10 @@ contract SportsHub is ISportsHub, Governable, EIP712, ReentrancyGuard {
         if (ticket.state != SSOTTypes.SportsTicketState.Held) {
             revert BadTicketState(ticketId, ticket.state, SSOTTypes.SportsTicketState.Held);
         }
+    }
+
+    function _requireBatchSize(uint256 len) internal pure {
+        if (len > MAX_TICKET_BATCH_SIZE) revert BatchTooLarge(len, MAX_TICKET_BATCH_SIZE);
     }
 
     function _requireVoidedMarket(uint64 marketId) internal view {
