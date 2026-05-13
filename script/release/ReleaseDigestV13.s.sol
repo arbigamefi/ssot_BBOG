@@ -193,6 +193,18 @@ contract ReleaseDigestV13 is Script {
                     snap.readUint(string.concat(".lpDecimals_", suffix))
                 )
             );
+
+            digest = keccak256(
+                abi.encode(
+                    digest,
+                    snap.readUint(string.concat(".poolSportsMaxStake_", suffix)),
+                    snap.readUint(string.concat(".poolSportsMaxPayout_", suffix)),
+                    snap.readUint(string.concat(".poolSportsMaxMarketReserved_", suffix)),
+                    snap.readUint(string.concat(".poolSportsMaxOutcomeReserved_", suffix)),
+                    snap.readUint(string.concat(".poolSportsMaxEventReserved_", suffix)),
+                    snap.readBytes32(string.concat(".poolSportsRiskHash_", suffix))
+                )
+            );
         }
         return digest;
     }

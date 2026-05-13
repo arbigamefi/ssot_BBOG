@@ -52,6 +52,7 @@ contract SportsHubTicketTest is Test {
     bytes32 internal constant RISK_HASH = keccak256("RISK_CAPS_V1");
 
     uint64 internal constant SPORTS_POOL_ID = 2;
+    uint64 internal constant SECOND_SPORTS_POOL_ID = 3;
     uint64 internal constant EVENT_ID = 2002;
     uint32 internal constant OUTCOME_ID = 1;
     uint32 internal constant OUTCOME_COUNT = 2;
@@ -141,7 +142,50 @@ contract SportsHubTicketTest is Test {
         assertEq(usdc.balanceOf(player), 10_000e6 - stake);
         assertEq(sportsHub.marketReserved(marketId), reserved);
         assertEq(sportsHub.marketOutcomeReserved(marketId, OUTCOME_ID), reserved);
+        assertEq(sportsHub.poolEventReserved(SPORTS_POOL_ID, EVENT_ID), reserved);
         assertEq(sportsHub.eventReserved(EVENT_ID), reserved);
+    }
+
+    function test_placeTicket_tracksEventExposurePerPool() external {
+        Bank secondSportsBank = new Bank(address(usdc), gov, 1000, "LP USDC Sports B", "lpUSDC-SB", 6);
+
+        vm.startPrank(gov);
+        registry.registerPool(
+            SECOND_SPORTS_POOL_ID, address(usdc), address(secondSportsBank), SSOTTypes.PoolDomain.Sports
+        );
+        registry.setHubAllowedForPool(SECOND_SPORTS_POOL_ID, address(sportsHub), true);
+        secondSportsBank.setSettlementRouterOnce(address(router));
+        usdc.approve(address(secondSportsBank), type(uint256).max);
+        secondSportsBank.deposit(500_000e6, gov);
+        vm.stopPrank();
+
+        vm.prank(player);
+        usdc.approve(address(secondSportsBank), type(uint256).max);
+
+        uint64 firstMarketId = _createAndOpenMarketForPool(SPORTS_POOL_ID);
+        uint64 secondMarketId = _createAndOpenMarketForPool(SECOND_SPORTS_POOL_ID);
+        uint256 stake = 100e6;
+        uint256 reserved = 190e6;
+        riskEngine.setDecision(reserved, reserved, RISK_HASH);
+
+        SSOTTypes.SportsOddsSnapshot memory firstOdds =
+            _odds(firstMarketId, 2, OUTCOME_ID, uint64(block.timestamp + 1 hours));
+        bytes32 firstHash = sportsHub.hashOddsTicket(firstOdds, player, stake);
+        vm.prank(player);
+        sportsHub.placeTicket(firstMarketId, OUTCOME_ID, firstOdds, stake, _signOdds(firstHash));
+
+        SSOTTypes.SportsOddsSnapshot memory secondOdds =
+            _odds(secondMarketId, 2, OUTCOME_ID, uint64(block.timestamp + 1 hours));
+        secondOdds.nonce = 2;
+        bytes32 secondHash = sportsHub.hashOddsTicket(secondOdds, player, stake);
+        vm.prank(player);
+        sportsHub.placeTicket(secondMarketId, OUTCOME_ID, secondOdds, stake, _signOdds(secondHash));
+
+        assertEq(sportsHub.poolEventReserved(SPORTS_POOL_ID, EVENT_ID), reserved);
+        assertEq(sportsHub.poolEventReserved(SECOND_SPORTS_POOL_ID, EVENT_ID), reserved);
+        assertEq(sportsHub.eventReserved(EVENT_ID), reserved * 2);
+        assertEq(sportsBank.totalReserved(), reserved);
+        assertEq(secondSportsBank.totalReserved(), reserved);
     }
 
     function test_placeTicket_withConcreteRiskEngine() external {
@@ -152,7 +196,7 @@ contract SportsHubTicketTest is Test {
         uint64 marketId = _createAndOpenMarket();
         uint256 stake = 100e6;
         SSOTTypes.SportsOddsSnapshot memory odds = _odds(marketId, 2, OUTCOME_ID, uint64(block.timestamp + 1 hours));
-        odds.riskHash = concreteRiskEngine.currentRiskHash();
+        odds.riskHash = concreteRiskEngine.currentRiskHashForPool(SPORTS_POOL_ID);
 
         bytes32 oddsTicketHash = sportsHub.hashOddsTicket(odds, player, stake);
         bytes memory signature = _signOdds(oddsTicketHash);
@@ -240,9 +284,13 @@ contract SportsHubTicketTest is Test {
     }
 
     function _createAndOpenMarket() internal returns (uint64 marketId) {
+        return _createAndOpenMarketForPool(SPORTS_POOL_ID);
+    }
+
+    function _createAndOpenMarketForPool(uint64 poolId) internal returns (uint64 marketId) {
         vm.startPrank(gov);
         marketId = sportsHub.createMarket(
-            EVENT_ID, SPORTS_POOL_ID, OUTCOME_COUNT, _startsAt(), _lockTime(), FINALITY, MARKET_KEY, RULEBOOK_HASH
+            EVENT_ID, poolId, OUTCOME_COUNT, _startsAt(), _lockTime(), FINALITY, MARKET_KEY, RULEBOOK_HASH
         );
         sportsHub.openMarket(marketId);
         vm.stopPrank();

@@ -562,7 +562,7 @@ SportsHub should not custody funds and should not directly transfer LP assets.
 First-class risk logic:
 
 - per-market and per-outcome exposure caps;
-- per-event aggregate exposure;
+- per-pool/event aggregate exposure;
 - per-league/sport limits;
 - max stake / max payout;
 - stale-odds windows;

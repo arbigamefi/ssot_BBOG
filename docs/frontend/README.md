@@ -62,8 +62,10 @@ The v1.3 artifacts are written to:
 
 The v1.3 manifest uses `schemaVersion: 2`, exposes `addresses.gameHub`, `addresses.sportsHub`,
 `addresses.sportsRiskEngine`, `addresses.settlementRouter`, `addresses.poolRegistry`, `sports`, and
-`pools[]`. The v1.3 vectors prove `IGameHub.placeBet(gameId,poolId,...)`; Sports tickets use
-`ISportsHub.placeTicket(...)` and consume signed odds snapshots from the Sports oracle path.
+`pools[]`. Sports pool rows include `sportsRisk` with the pool's effective raw-unit caps and
+`riskHash`; non-Sports pools set `sportsRisk` to `null`. The v1.3 vectors prove
+`IGameHub.placeBet(gameId,poolId,...)`; Sports tickets use `ISportsHub.placeTicket(...)` and consume
+signed odds snapshots from the Sports oracle path.
 
 ## ABIs
 

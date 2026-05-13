@@ -38,6 +38,7 @@ contract SportsHub is ISportsHub, Governable, ReentrancyGuard {
     mapping(uint64 => uint256) public override marketReserved;
     mapping(uint64 => uint256) public override eventReserved;
     mapping(uint64 => mapping(uint32 => uint256)) public override marketOutcomeReserved;
+    mapping(uint64 => mapping(uint64 => uint256)) internal _poolEventReserved;
 
     constructor(
         address settlementRouter_,
@@ -107,6 +108,10 @@ contract SportsHub is ISportsHub, Governable, ReentrancyGuard {
     function getResult(uint64 marketId) external view override returns (SSOTTypes.SportsResult memory) {
         _requireMarket(marketId);
         return _results[marketId];
+    }
+
+    function poolEventReserved(uint64 poolId, uint64 eventId) external view override returns (uint256) {
+        return _poolEventReserved[poolId][eventId];
     }
 
     function hashOddsTicket(SSOTTypes.SportsOddsSnapshot calldata odds, address player, uint256 stake)
@@ -236,7 +241,7 @@ contract SportsHub is ISportsHub, Governable, ReentrancyGuard {
                     stake: stake,
                     marketReserved: marketReserved[marketId],
                     outcomeReserved: marketOutcomeReserved[marketId][outcomeId],
-                    eventReserved: eventReserved[market.eventId]
+                    eventReserved: _poolEventReserved[market.poolId][market.eventId]
                 })
             );
         if (
@@ -272,6 +277,7 @@ contract SportsHub is ISportsHub, Governable, ReentrancyGuard {
         oddsSnapshotUsed[oddsTicketHash] = true;
         marketReserved[marketId] += decision.reserved;
         marketOutcomeReserved[marketId][outcomeId] += decision.reserved;
+        _poolEventReserved[market.poolId][market.eventId] += decision.reserved;
         eventReserved[market.eventId] += decision.reserved;
 
         emit TicketPlaced(
@@ -456,6 +462,7 @@ contract SportsHub is ISportsHub, Governable, ReentrancyGuard {
         uint256 reserved = ticket.reserved;
         marketReserved[ticket.marketId] -= reserved;
         marketOutcomeReserved[ticket.marketId][ticket.outcomeId] -= reserved;
+        _poolEventReserved[ticket.poolId][ticket.eventId] -= reserved;
         eventReserved[ticket.eventId] -= reserved;
     }
 

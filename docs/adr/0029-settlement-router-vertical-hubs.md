@@ -268,7 +268,7 @@ MVP checks:
 - max payout per ticket;
 - per-market exposure cap;
 - per-outcome exposure cap;
-- per-event aggregate cap;
+- per-pool/event aggregate cap;
 - odds expiry / stale window;
 - market suspension override.
 

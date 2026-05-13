@@ -30,11 +30,11 @@ contract SportsRiskEngineTest is Test {
 
         assertEq(decision.payout, 190e6);
         assertEq(decision.reserved, 190e6);
-        assertEq(decision.riskHash, riskEngine.currentRiskHash());
+        assertEq(decision.riskHash, riskEngine.currentRiskHashForPool(POOL_ID));
     }
 
     function test_setLimits_governanceOnlyAndUpdatesRiskHash() external {
-        bytes32 oldHash = riskEngine.currentRiskHash();
+        bytes32 oldHash = riskEngine.currentRiskHashForPool(POOL_ID);
 
         vm.expectRevert(Errors.Unauthorized.selector);
         riskEngine.setLimits(500e6, 1_000e6, 5_000e6, 2_500e6, 10_000e6);
@@ -42,7 +42,7 @@ contract SportsRiskEngineTest is Test {
         vm.prank(gov);
         riskEngine.setLimits(500e6, 1_000e6, 5_000e6, 2_500e6, 10_000e6);
 
-        assertTrue(riskEngine.currentRiskHash() != oldHash);
+        assertTrue(riskEngine.currentRiskHashForPool(POOL_ID) != oldHash);
         SportsRiskEngine.RiskLimits memory limits = riskEngine.limits();
         assertEq(limits.maxStake, 500e6);
         assertEq(limits.maxPayout, 1_000e6);
@@ -67,6 +67,39 @@ contract SportsRiskEngineTest is Test {
         riskEngine.setLimits(500e6, 1_000e6, 12_000e6, 2_500e6, 10_000e6);
 
         vm.stopPrank();
+    }
+
+    function test_setPoolLimits_overridesOnlySelectedPoolAndUpdatesRiskHash() external {
+        bytes32 oldPoolHash = riskEngine.currentRiskHashForPool(POOL_ID);
+        bytes32 otherPoolHash = riskEngine.currentRiskHashForPool(3);
+
+        vm.expectRevert(Errors.Unauthorized.selector);
+        riskEngine.setPoolLimits(POOL_ID, 200e6, 400e6, 2_000e6, 1_000e6, 3_000e6);
+
+        vm.prank(gov);
+        riskEngine.setPoolLimits(POOL_ID, 200e6, 400e6, 2_000e6, 1_000e6, 3_000e6);
+
+        assertTrue(riskEngine.hasPoolLimits(POOL_ID));
+        assertTrue(riskEngine.currentRiskHashForPool(POOL_ID) != oldPoolHash);
+        assertEq(riskEngine.currentRiskHashForPool(3), otherPoolHash);
+
+        SportsRiskEngine.RiskLimits memory limits = riskEngine.limitsForPool(POOL_ID);
+        assertEq(limits.maxStake, 200e6);
+        assertEq(limits.maxPayout, 400e6);
+        assertEq(limits.maxMarketReserved, 2_000e6);
+        assertEq(limits.maxOutcomeReserved, 1_000e6);
+        assertEq(limits.maxEventReserved, 3_000e6);
+    }
+
+    function test_checkTicket_usesPoolSpecificLimits() external {
+        vm.prank(gov);
+        riskEngine.setPoolLimits(POOL_ID, 50e6, 100e6, 1_000e6, 500e6, 2_000e6);
+
+        ISportsRiskEngine.RiskInput memory input = _input(100e6, 0, 0, 0);
+        input.odds.riskHash = riskEngine.currentRiskHashForPool(POOL_ID);
+
+        vm.expectRevert(abi.encodeWithSelector(ISportsRiskEngine.StakeTooLarge.selector, MARKET_ID, 100e6, 50e6));
+        riskEngine.checkTicket(input);
     }
 
     function test_checkTicket_rejectsMarketStateAndTiming() external {
@@ -165,7 +198,7 @@ contract SportsRiskEngineTest is Test {
                 maxPayout: 2_000e6,
                 expiresAt: uint64(block.timestamp + 1 hours),
                 nonce: 1,
-                riskHash: riskEngine.currentRiskHash()
+                riskHash: riskEngine.currentRiskHashForPool(POOL_ID)
             }),
             stake: stake,
             marketReserved: marketReserved,

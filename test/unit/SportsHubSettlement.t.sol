@@ -81,6 +81,7 @@ contract SportsHubSettlementTest is Test {
         assertEq(sportsHub.marketReserved(marketId), 380e6);
         assertEq(sportsHub.marketOutcomeReserved(marketId, WINNING_OUTCOME_ID), 190e6);
         assertEq(sportsHub.marketOutcomeReserved(marketId, LOSING_OUTCOME_ID), 190e6);
+        assertEq(sportsHub.poolEventReserved(SPORTS_POOL_ID, EVENT_ID), 380e6);
         assertEq(sportsHub.eventReserved(EVENT_ID), 380e6);
         assertEq(usdc.balanceOf(player), 9_800e6);
 
@@ -98,6 +99,7 @@ contract SportsHubSettlementTest is Test {
         assertEq(sportsBank.totalReserved(), 0);
         assertEq(sportsHub.marketReserved(marketId), 0);
         assertEq(sportsHub.marketOutcomeReserved(marketId, LOSING_OUTCOME_ID), 0);
+        assertEq(sportsHub.poolEventReserved(SPORTS_POOL_ID, EVENT_ID), 0);
         assertEq(sportsHub.eventReserved(EVENT_ID), 0);
 
         SSOTTypes.SportsTicket memory winner = sportsHub.getTicket(winningTicket);
@@ -151,6 +153,7 @@ contract SportsHubSettlementTest is Test {
         assertEq(usdc.balanceOf(player), 10_000e6);
         assertEq(sportsBank.totalReserved(), 0);
         assertEq(sportsHub.marketReserved(marketId), 0);
+        assertEq(sportsHub.poolEventReserved(SPORTS_POOL_ID, EVENT_ID), 0);
         assertEq(sportsHub.eventReserved(EVENT_ID), 0);
 
         SSOTTypes.SportsTicket memory ticket = sportsHub.getTicket(ticketId);
@@ -218,7 +221,7 @@ contract SportsHubSettlementTest is Test {
             maxPayout: 2_000e6,
             expiresAt: uint64(block.timestamp + 1 hours),
             nonce: nonce,
-            riskHash: riskEngine.currentRiskHash()
+            riskHash: riskEngine.currentRiskHashForPool(SPORTS_POOL_ID)
         });
 
         bytes32 oddsTicketHash = sportsHub.hashOddsTicket(odds, player, stake);

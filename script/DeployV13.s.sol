@@ -46,6 +46,9 @@ interface IERC20MetadataLikeV13 {
 ///   SPORTS_MAX_STAKE, SPORTS_MAX_PAYOUT, SPORTS_MAX_MARKET_RESERVED,
 ///   SPORTS_MAX_OUTCOME_RESERVED, SPORTS_MAX_EVENT_RESERVED,
 ///   SPORTS_ODDS_SIGNER_SET_HASH, SPORTS_RESULT_REPORTER_SET_HASH
+/// Optional per-Sports-pool overrides:
+///   SPORTS_MAX_STAKE_POOL_i, SPORTS_MAX_PAYOUT_POOL_i, SPORTS_MAX_MARKET_RESERVED_POOL_i,
+///   SPORTS_MAX_OUTCOME_RESERVED_POOL_i, SPORTS_MAX_EVENT_RESERVED_POOL_i
 ///
 /// Example:
 ///   forge script script/DeployV13.s.sol:DeployV13 --rpc-url $RPC_URL --broadcast -vvv
@@ -102,6 +105,11 @@ contract DeployV13 is Script {
         string lpName;
         string lpSymbol;
         uint8 lpDecimals;
+        uint256 sportsMaxStake;
+        uint256 sportsMaxPayout;
+        uint256 sportsMaxMarketReserved;
+        uint256 sportsMaxOutcomeReserved;
+        uint256 sportsMaxEventReserved;
     }
 
     struct Deployed {
@@ -132,6 +140,7 @@ contract DeployV13 is Script {
         bool hasSports = _hasSportsPool(pools);
         require(_hasCasinoPool(pools) || hasSports, "at least one Casino or Sports pool required");
         cfg.sportsConfig = _readSportsConfig(hasSports);
+        _readSportsPoolLimits(cfg.sportsConfig, pools);
 
         vm.startBroadcast(cfg.privateKey);
 
@@ -189,6 +198,19 @@ contract DeployV13 is Script {
             }
             if (cfg.sportsConfig.resultReporter != address(0)) {
                 d.sportsHub.setResultReporter(cfg.sportsConfig.resultReporter, true);
+            }
+            for (uint256 i = 0; i < pools.length; ++i) {
+                if (pools[i].domain == SSOTTypes.PoolDomain.Sports) {
+                    d.sportsRiskEngine
+                        .setPoolLimits(
+                            pools[i].poolId,
+                            pools[i].sportsMaxStake,
+                            pools[i].sportsMaxPayout,
+                            pools[i].sportsMaxMarketReserved,
+                            pools[i].sportsMaxOutcomeReserved,
+                            pools[i].sportsMaxEventReserved
+                        );
+                }
             }
         }
 
@@ -263,6 +285,25 @@ contract DeployV13 is Script {
         cfg.resultReporterSetHash = vm.envBytes32("SPORTS_RESULT_REPORTER_SET_HASH");
         cfg.oddsSigner = vm.envOr("SPORTS_ODDS_SIGNER", address(0));
         cfg.resultReporter = vm.envOr("SPORTS_RESULT_REPORTER", address(0));
+    }
+
+    function _readSportsPoolLimits(SportsConfig memory sportsConfig, PoolConfig[] memory pools) internal view {
+        if (!sportsConfig.enabled) return;
+
+        for (uint256 i = 0; i < pools.length; ++i) {
+            if (pools[i].domain != SSOTTypes.PoolDomain.Sports) continue;
+
+            string memory suffix = vm.toString(i);
+            pools[i].sportsMaxStake = vm.envOr(string.concat("SPORTS_MAX_STAKE_POOL_", suffix), sportsConfig.maxStake);
+            pools[i].sportsMaxPayout =
+                vm.envOr(string.concat("SPORTS_MAX_PAYOUT_POOL_", suffix), sportsConfig.maxPayout);
+            pools[i].sportsMaxMarketReserved =
+                vm.envOr(string.concat("SPORTS_MAX_MARKET_RESERVED_POOL_", suffix), sportsConfig.maxMarketReserved);
+            pools[i].sportsMaxOutcomeReserved =
+                vm.envOr(string.concat("SPORTS_MAX_OUTCOME_RESERVED_POOL_", suffix), sportsConfig.maxOutcomeReserved);
+            pools[i].sportsMaxEventReserved =
+                vm.envOr(string.concat("SPORTS_MAX_EVENT_RESERVED_POOL_", suffix), sportsConfig.maxEventReserved);
+        }
     }
 
     function _readPoolConfig(uint256 i) internal view returns (PoolConfig memory cfg) {
@@ -350,7 +391,7 @@ contract DeployV13 is Script {
 
         json = _writeConfigJson(obj, json, cfg);
         json = _writeCtorJson(obj, json, cfg, d);
-        json = _writePoolJson(obj, json, cfg, pools);
+        json = _writePoolJson(obj, json, cfg, pools, d);
 
         string memory tag = string.concat(vm.toString(block.chainid), "-", vm.toString(block.number), "-v13");
         string memory snapPathLegacy = string.concat("deployments/deploy-", tag, ".json");
@@ -427,10 +468,13 @@ contract DeployV13 is Script {
         return json;
     }
 
-    function _writePoolJson(string memory obj, string memory json, DeployConfig memory cfg, PoolConfig[] memory pools)
-        internal
-        returns (string memory)
-    {
+    function _writePoolJson(
+        string memory obj,
+        string memory json,
+        DeployConfig memory cfg,
+        PoolConfig[] memory pools,
+        Deployed memory d
+    ) internal returns (string memory) {
         json = vm.serializeUint(obj, "numPools", pools.length);
         json = vm.serializeUint(obj, "numAssets", pools.length); // compatibility: old tooling treats each row as asset+bank
 
@@ -444,6 +488,22 @@ contract DeployV13 is Script {
             json = vm.serializeAddress(obj, string.concat("poolAsset_", suffix), pools[i].asset);
             json = vm.serializeAddress(obj, string.concat("poolBank_", suffix), pools[i].bank);
             json = vm.serializeUint(obj, string.concat("poolActive_", suffix), 1);
+            json = vm.serializeUint(obj, string.concat("poolSportsMaxStake_", suffix), pools[i].sportsMaxStake);
+            json = vm.serializeUint(obj, string.concat("poolSportsMaxPayout_", suffix), pools[i].sportsMaxPayout);
+            json = vm.serializeUint(
+                obj, string.concat("poolSportsMaxMarketReserved_", suffix), pools[i].sportsMaxMarketReserved
+            );
+            json = vm.serializeUint(
+                obj, string.concat("poolSportsMaxOutcomeReserved_", suffix), pools[i].sportsMaxOutcomeReserved
+            );
+            json = vm.serializeUint(
+                obj, string.concat("poolSportsMaxEventReserved_", suffix), pools[i].sportsMaxEventReserved
+            );
+            bytes32 sportsRiskHash = bytes32(0);
+            if (pools[i].domain == SSOTTypes.PoolDomain.Sports && address(d.sportsRiskEngine) != address(0)) {
+                sportsRiskHash = d.sportsRiskEngine.currentRiskHashForPool(pools[i].poolId);
+            }
+            json = vm.serializeBytes32(obj, string.concat("poolSportsRiskHash_", suffix), sportsRiskHash);
 
             json = vm.serializeAddress(obj, string.concat("asset_", suffix), pools[i].asset);
             json = vm.serializeString(obj, string.concat("assetSymbol_", suffix), assetSymbol);

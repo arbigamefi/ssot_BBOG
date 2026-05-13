@@ -170,6 +170,7 @@ The “Query” fields are **pseudocode** (PromQL-like). Implement with your mon
 - Action: `docs/ops/runbooks/sportsbook-ops.md` and `docs/ops/runbooks/pause-config-drift.md`
 
 **ALERT-G7-SPORTS_RISK_LIMITS_CHANGED (SEV0)**
-- Trigger: any `RiskLimitsSet` outside an approved governance window.
+- Trigger: any `RiskLimitsSet` or `PoolRiskLimitsSet` outside an approved governance window.
 - Query: `increase(sports_risk_limits_changes_total[5m]) > 0`
-- Action: `docs/ops/runbooks/sportsbook-ops.md` (Playbook C); confirm odds snapshots rotate to the new `riskHash`.
+- Action: `docs/ops/runbooks/sportsbook-ops.md` (Playbook C); confirm odds snapshots rotate to the new
+  per-pool `riskHash`.

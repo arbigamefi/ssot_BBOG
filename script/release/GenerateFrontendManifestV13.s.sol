@@ -245,6 +245,40 @@ contract GenerateFrontendManifestV13 is Script {
             "\",",
             "\"decimals\":",
             vm.toString(uint256(dec)),
+            ",",
+            "\"sportsRisk\":",
+            _poolSportsRiskJson(snap, suffix, domainId),
+            "}"
+        );
+    }
+
+    function _poolSportsRiskJson(string memory snap, string memory suffix, uint256 domainId)
+        internal
+        pure
+        returns (string memory)
+    {
+        if (domainId != DOMAIN_SPORTS) return "null";
+
+        return string.concat(
+            "{",
+            "\"maxStake\":\"",
+            vm.toString(snap.readUint(string.concat(".poolSportsMaxStake_", suffix))),
+            "\",",
+            "\"maxPayout\":\"",
+            vm.toString(snap.readUint(string.concat(".poolSportsMaxPayout_", suffix))),
+            "\",",
+            "\"maxMarketReserved\":\"",
+            vm.toString(snap.readUint(string.concat(".poolSportsMaxMarketReserved_", suffix))),
+            "\",",
+            "\"maxOutcomeReserved\":\"",
+            vm.toString(snap.readUint(string.concat(".poolSportsMaxOutcomeReserved_", suffix))),
+            "\",",
+            "\"maxEventReserved\":\"",
+            vm.toString(snap.readUint(string.concat(".poolSportsMaxEventReserved_", suffix))),
+            "\",",
+            "\"riskHash\":\"",
+            vm.toString(snap.readBytes32(string.concat(".poolSportsRiskHash_", suffix))),
+            "\"",
             "}"
         );
     }

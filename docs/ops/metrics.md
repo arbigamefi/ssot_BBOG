@@ -56,6 +56,7 @@ From `ISportsHub`:
 
 From `SportsRiskEngine`:
 - `RiskLimitsSet`
+- `PoolRiskLimitsSet`
 
 From `Governable`:
 - `GovernanceTransferStarted`
@@ -70,9 +71,9 @@ From `ChainlinkV2PlusWrapperAdapter`:
 - `Bank.totalAssets()` (NAV proxy / sanity)
 - `Bank.riskInPaused()` and `Hub.riskInPaused(asset)`
 - `SportsHub.marketReserved(marketId)`, `marketOutcomeReserved(marketId,outcomeId)`,
-  `eventReserved(eventId)`
+  `poolEventReserved(poolId,eventId)`, `eventReserved(eventId)` aggregate
 - `SportsHub.oddsSignerSetHash()`, `resultReporterSetHash()`
-- `SportsRiskEngine.limits()`, `currentRiskHash()`
+- `SportsRiskEngine.limits()`, `limitsForPool(poolId)`, `currentRiskHashForPool(poolId)`
 - `address(Hub).balance`, `address(VRFHub).balance`, `address(Adapter).balance` (should be ~0 by design)
 
 ---
@@ -251,7 +252,7 @@ Use with `G1` to derive held Sports tickets.
 
 **G3. sports_exposure_reserved** (gauge)
 Source: derived from `TicketPlaced` minus terminal ticket events, with spot reads from
-`marketReserved`, `marketOutcomeReserved`, and `eventReserved`.
+`marketReserved`, `marketOutcomeReserved`, and `poolEventReserved`.
 Labels: `poolId`, `marketId`, `eventId`, optional `outcomeId`.
 
 **G4. sports_result_finality_pending_seconds** (gauge)
@@ -263,8 +264,8 @@ Source: `OddsSignerSetHashSet`, `OddsSignerSet`, `ResultReporterSetHashSet`, `Re
 Alert on any change outside an approved window.
 
 **G6. sports_risk_limits_changes_total** (counter)
-Source: `SportsRiskEngine.RiskLimitsSet`.
-Track new `riskHash`; odds snapshots must use the current hash after any cap change.
+Source: `SportsRiskEngine.RiskLimitsSet` and `PoolRiskLimitsSet`.
+Track new `riskHash` per pool; odds snapshots must use `currentRiskHashForPool(poolId)` after any cap change.
 
 **G7. sports_ticket_reverts_total** (counter; derived from failed tx traces)
 Source: failed `placeTicket` transactions grouped by custom error:

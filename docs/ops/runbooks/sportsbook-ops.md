@@ -54,8 +54,8 @@ Record the release digest from `deployments/release-latest-v13.json` in every in
 ```bash
 cast call $SPORTS_HUB "oddsSignerSetHash()(bytes32)" --rpc-url $RPC
 cast call $SPORTS_HUB "resultReporterSetHash()(bytes32)" --rpc-url $RPC
-cast call $SPORTS_RISK_ENGINE "limits()(uint256,uint256,uint256,uint256,uint256)" --rpc-url $RPC
-cast call $SPORTS_RISK_ENGINE "currentRiskHash()(bytes32)" --rpc-url $RPC
+cast call $SPORTS_RISK_ENGINE "limitsForPool(uint64)(uint256,uint256,uint256,uint256,uint256)" $SPORTS_POOL_ID --rpc-url $RPC
+cast call $SPORTS_RISK_ENGINE "currentRiskHashForPool(uint64)(bytes32)" $SPORTS_POOL_ID --rpc-url $RPC
 ```
 
 Market and exposure reads:
@@ -65,7 +65,8 @@ cast call $SPORTS_HUB "getMarket(uint64)((uint64,uint64,uint64,uint32,uint64,uin
 cast call $SPORTS_HUB "getResult(uint64)((uint64,uint64,uint32,bytes32,bytes32,bytes32,address,uint64,uint64,bool))" $MARKET_ID --rpc-url $RPC
 cast call $SPORTS_HUB "marketReserved(uint64)(uint256)" $MARKET_ID --rpc-url $RPC
 cast call $SPORTS_HUB "marketOutcomeReserved(uint64,uint32)(uint256)" $MARKET_ID $OUTCOME_ID --rpc-url $RPC
-cast call $SPORTS_HUB "eventReserved(uint64)(uint256)" $EVENT_ID --rpc-url $RPC
+cast call $SPORTS_HUB "poolEventReserved(uint64,uint64)(uint256)" $SPORTS_POOL_ID $EVENT_ID --rpc-url $RPC
+cast call $SPORTS_HUB "eventReserved(uint64)(uint256)" $EVENT_ID --rpc-url $RPC # aggregate only
 ```
 
 Sports market state values:
@@ -104,9 +105,9 @@ Suspension blocks new tickets. It does not block valid later settlement/refund p
 
 Compare:
 - failed tx revert reasons by market id;
-- current `oddsSignerSetHash`, `resultReporterSetHash`, and `currentRiskHash`;
-- exposure reads for the affected market/outcome/event;
-- latest `OddsSignerSet`, `ResultReporterSet`, `RiskLimitsSet`, and `MarketStateSet` events.
+- current `oddsSignerSetHash`, `resultReporterSetHash`, and `currentRiskHashForPool(poolId)`;
+- exposure reads for the affected market/outcome/pool-event;
+- latest `OddsSignerSet`, `ResultReporterSet`, `RiskLimitsSet` / `PoolRiskLimitsSet`, and `MarketStateSet` events.
 
 If multiple active markets fail with the same signer/hash/risk mismatch, treat as systemic and suspend all affected markets.
 
@@ -132,7 +133,7 @@ If multiple active markets fail with the same signer/hash/risk mismatch, treat a
    - Do not void markets until you know accepted tickets cannot be fairly resolved.
 2) **Compare on-chain and off-chain hashes.**
    - Read `SportsHub.oddsSignerSetHash()`.
-   - Read `SportsRiskEngine.currentRiskHash()`.
+   - Read `SportsRiskEngine.currentRiskHashForPool(poolId)` for every affected Sports pool.
    - Confirm the odds service signs snapshots with both current values.
 3) **Remove a compromised signer if needed.**
    ```bash
@@ -206,7 +207,7 @@ If multiple active markets fail with the same signer/hash/risk mismatch, treat a
 **Trigger**
 - New tickets revert with `StakeTooLarge`, `PayoutTooLarge`, `MarketExposureExceeded`,
   `OutcomeExposureExceeded`, or `EventExposureExceeded`.
-- `marketReserved`, `marketOutcomeReserved`, or `eventReserved` approaches configured caps.
+- `marketReserved`, `marketOutcomeReserved`, or `poolEventReserved` approaches configured caps.
 - Odds service quotes higher limits than `SportsRiskEngine` permits.
 
 **Goal**
@@ -216,10 +217,10 @@ If multiple active markets fail with the same signer/hash/risk mismatch, treat a
 **Steps**
 1) **Read caps and current exposure.**
    ```bash
-   cast call $SPORTS_RISK_ENGINE "limits()(uint256,uint256,uint256,uint256,uint256)" --rpc-url $RPC
+   cast call $SPORTS_RISK_ENGINE "limitsForPool(uint64)(uint256,uint256,uint256,uint256,uint256)" $SPORTS_POOL_ID --rpc-url $RPC
    cast call $SPORTS_HUB "marketReserved(uint64)(uint256)" $MARKET_ID --rpc-url $RPC
    cast call $SPORTS_HUB "marketOutcomeReserved(uint64,uint32)(uint256)" $MARKET_ID $OUTCOME_ID --rpc-url $RPC
-   cast call $SPORTS_HUB "eventReserved(uint64)(uint256)" $EVENT_ID --rpc-url $RPC
+   cast call $SPORTS_HUB "poolEventReserved(uint64,uint64)(uint256)" $SPORTS_POOL_ID $EVENT_ID --rpc-url $RPC
    ```
 2) **If exposure is near cap, suspend the market while odds/risk is recalibrated.**
 3) **Prefer lowering off-chain quote limits before raising on-chain caps.**
@@ -228,11 +229,12 @@ If multiple active markets fail with the same signer/hash/risk mismatch, treat a
 4) **If governance deliberately changes caps, rotate risk hash and odds snapshots.**
    ```bash
    cast send $SPORTS_RISK_ENGINE \
-     "setLimits(uint256,uint256,uint256,uint256,uint256)" \
+     "setPoolLimits(uint64,uint256,uint256,uint256,uint256,uint256)" \
+     $SPORTS_POOL_ID \
      $MAX_STAKE $MAX_PAYOUT $MAX_MARKET_RESERVED $MAX_OUTCOME_RESERVED $MAX_EVENT_RESERVED \
      --rpc-url $RPC --private-key $GOV_PK
    ```
-   Then read `currentRiskHash()` and require the odds service to sign only snapshots with the new hash.
+   Then read `currentRiskHashForPool($SPORTS_POOL_ID)` and require the odds service to sign only snapshots with the new hash.
 5) **Resume market only after exposure and quote limits align.**
 
 **Do not**
@@ -246,7 +248,7 @@ If multiple active markets fail with the same signer/hash/risk mismatch, treat a
 
 An incident can move to monitoring when:
 - affected markets are either resumed, resolved, or voided;
-- odds service signs with current `oddsSignerSetHash` and `currentRiskHash`;
+- odds service signs with current `oddsSignerSetHash` and `currentRiskHashForPool(poolId)`;
 - result finality state is not stuck for open incidents;
 - exposure reads are below operator thresholds;
 - all governance transactions are recorded with tx hashes and rationale.
@@ -259,9 +261,9 @@ Capture:
 - chainId, block range, release digest, snapshot path;
 - `sportsHub`, `sportsRiskEngine`, `settlementRouter`, affected pool/bank;
 - affected `marketId`, `eventId`, `outcomeId`, `ticketId` samples;
-- current `oddsSignerSetHash`, `resultReporterSetHash`, `currentRiskHash`;
-- `SportsRiskEngine.limits()` and exposure reads;
+- current `oddsSignerSetHash`, `resultReporterSetHash`, `currentRiskHashForPool(poolId)`;
+- `SportsRiskEngine.limitsForPool(poolId)` and exposure reads;
 - relevant events: `MarketStateSet`, `TicketPlaced`, `ResultProposed`, `ResultChallenged`,
-  `ResultFinalized`, `TicketSettled`, `TicketRefunded`, `TicketVoided`, `RiskLimitsSet`;
+  `ResultFinalized`, `TicketSettled`, `TicketRefunded`, `TicketVoided`, `RiskLimitsSet`,
+  `PoolRiskLimitsSet`;
 - governance or keeper tx hashes and signers.
-

@@ -51,21 +51,29 @@ are registered and wired to `SettlementRouter` but still need their own vertical
 open positions.
 
 When any `POOL_DOMAIN_i=2` pool exists, the following Sports deployment parameters are required:
-- `SPORTS_MAX_STAKE`: per-ticket stake cap in raw asset units.
-- `SPORTS_MAX_PAYOUT`: per-ticket payout cap in raw asset units.
-- `SPORTS_MAX_MARKET_RESERVED`: total reserved exposure cap per market.
-- `SPORTS_MAX_OUTCOME_RESERVED`: reserved exposure cap per market outcome.
-- `SPORTS_MAX_EVENT_RESERVED`: total reserved exposure cap per event.
+- `SPORTS_MAX_STAKE`: default per-ticket stake cap in raw asset units.
+- `SPORTS_MAX_PAYOUT`: default per-ticket payout cap in raw asset units.
+- `SPORTS_MAX_MARKET_RESERVED`: default total reserved exposure cap per market.
+- `SPORTS_MAX_OUTCOME_RESERVED`: default reserved exposure cap per market outcome.
+- `SPORTS_MAX_EVENT_RESERVED`: default total reserved exposure cap per pool/event.
 - `SPORTS_ODDS_SIGNER_SET_HASH`: governance-published hash of the active odds signer set.
 - `SPORTS_RESULT_REPORTER_SET_HASH`: governance-published hash of the active result reporter set.
+
+Optional per-Sports-pool overrides:
+- `SPORTS_MAX_STAKE_POOL_i`
+- `SPORTS_MAX_PAYOUT_POOL_i`
+- `SPORTS_MAX_MARKET_RESERVED_POOL_i`
+- `SPORTS_MAX_OUTCOME_RESERVED_POOL_i`
+- `SPORTS_MAX_EVENT_RESERVED_POOL_i`
 
 Optional one-address bootstrap allowlists:
 - `SPORTS_ODDS_SIGNER`: if set, the deploy script immediately allowlists this address.
 - `SPORTS_RESULT_REPORTER`: if set, the deploy script immediately allowlists this address.
 
-Risk caps are intentionally raw token units because pools can use different ERC20 decimals. For
-production deployments, pick caps per target pool asset and lock the resulting snapshot with
-`make release-digest-v13`.
+Risk caps are intentionally raw token units because pools can use different ERC20 decimals. The deploy
+script writes both the default Sports caps and each Sports pool's effective caps/risk hash into the v1.3
+snapshot. For production deployments, pick caps per target pool asset and lock the resulting snapshot
+with `make release-digest-v13`.
 
 ## Callback gas policy (fixed in code)
 `Hub.quoteVRFFee(betCount)` sets `callbackGasLimit = 300k + 20k * betCount`, capped at 2,000,000.

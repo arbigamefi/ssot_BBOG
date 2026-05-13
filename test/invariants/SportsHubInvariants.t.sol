@@ -94,7 +94,7 @@ contract SportsHubHandler is Test {
             maxPayout: 2_000e6,
             expiresAt: uint64(block.timestamp + 1 hours),
             nonce: nonce,
-            riskHash: riskEngine.currentRiskHash()
+            riskHash: riskEngine.currentRiskHashForPool(SPORTS_POOL_ID)
         });
 
         bytes32 oddsTicketHash = sportsHub.hashOddsTicket(odds, player, stake);
@@ -195,6 +195,7 @@ contract SportsHubHandler is Test {
         }
 
         assertEq(sportsHub.marketReserved(marketId), marketSum, "market exposure mismatch");
+        assertEq(sportsHub.poolEventReserved(SPORTS_POOL_ID, EVENT_ID), eventSum, "pool event exposure mismatch");
         assertEq(sportsHub.eventReserved(EVENT_ID), eventSum, "event exposure mismatch");
         assertEq(sportsHub.marketOutcomeReserved(marketId, 0), outcomeSum[0], "outcome 0 exposure mismatch");
         assertEq(sportsHub.marketOutcomeReserved(marketId, 1), outcomeSum[1], "outcome 1 exposure mismatch");

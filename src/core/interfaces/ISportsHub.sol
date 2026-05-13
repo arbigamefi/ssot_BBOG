@@ -22,6 +22,7 @@ interface ISportsHub {
     function marketOutcomeReserved(uint64 marketId, uint32 outcomeId) external view returns (uint256);
     function marketReserved(uint64 marketId) external view returns (uint256);
     function eventReserved(uint64 eventId) external view returns (uint256);
+    function poolEventReserved(uint64 poolId, uint64 eventId) external view returns (uint256);
 
     function createMarket(
         uint64 eventId,

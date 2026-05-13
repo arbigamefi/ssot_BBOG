@@ -69,9 +69,9 @@ As of the current `codex/sportsbook-architecture-research` branch:
 - PR-3.1.3 has router-backed fixed-odds ticket placement: per-ticket signed odds acceptance hashes,
   allowlisted odds signers, replay rejection, `SportsRiskEngine` decision calls, ticket records, router
   positions, Bank reserve accounting, and market/outcome/event exposure increments.
-- PR-3.1.4 has an initial concrete `SportsRiskEngine` with configurable global caps, deterministic
-  `riskHash`, fixed-odds payout calculation, stale odds/state checks, and market/outcome/event exposure
-  cap enforcement.
+- PR-3.1.4 has a concrete `SportsRiskEngine` with configurable default caps plus per-Sports-pool
+  overrides, pool-aware deterministic `riskHash`, fixed-odds payout calculation, stale odds/state checks,
+  and market/outcome/pool-event exposure cap enforcement.
 - PR-3.1.5 has allowlisted result reporters, public result proposal, explicit challenge delay,
   challenged-result blocking, result finalization, and challenged-market void coverage.
 - PR-3.1.6 has initial router-backed debt-out for resolved winners/losers and void/refund flows, with
@@ -140,7 +140,7 @@ Deliverables:
   - max payout per ticket;
   - per-market exposure cap;
   - per-outcome exposure cap;
-  - per-event aggregate cap.
+  - per-pool/event aggregate cap.
 - Add independent unit tests for cap behavior.
 
 Acceptance:

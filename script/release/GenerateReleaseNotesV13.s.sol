@@ -186,7 +186,7 @@ contract GenerateReleaseNotesV13 is Script {
             "- sportsEnabled: ",
             snap.readUint(".sportsEnabled") == 0 ? "false" : "true",
             "\n",
-            "- sportsRiskCaps(raw asset units): maxStake=",
+            "- defaultSportsRiskCaps(raw asset units): maxStake=",
             vm.toString(snap.readUint(".sportsMaxStake")),
             ", maxPayout=",
             vm.toString(snap.readUint(".sportsMaxPayout")),
@@ -212,6 +212,7 @@ contract GenerateReleaseNotesV13 is Script {
         md = "## Pools\n\n";
         for (uint256 i = 0; i < numPools; i++) {
             string memory suffix = vm.toString(i);
+            uint256 domainId = snap.readUint(string.concat(".poolDomain_", suffix));
             md = string.concat(
                 md,
                 "- pool_",
@@ -219,15 +220,34 @@ contract GenerateReleaseNotesV13 is Script {
                 ": id=",
                 vm.toString(snap.readUint(string.concat(".poolId_", suffix))),
                 ", domain=",
-                _domainLabel(snap.readUint(string.concat(".poolDomain_", suffix))),
+                _domainLabel(domainId),
                 ", asset=`",
                 vm.toString(snap.readAddress(string.concat(".poolAsset_", suffix))),
                 "`, bank=`",
                 vm.toString(snap.readAddress(string.concat(".poolBank_", suffix))),
                 "`, active=",
-                snap.readUint(string.concat(".poolActive_", suffix)) == 0 ? "false" : "true",
-                "\n"
+                snap.readUint(string.concat(".poolActive_", suffix)) == 0 ? "false" : "true"
             );
+            if (domainId == 2) {
+                md = string.concat(
+                    md,
+                    ", sportsRiskCaps(raw)=",
+                    "stake:",
+                    vm.toString(snap.readUint(string.concat(".poolSportsMaxStake_", suffix))),
+                    "/payout:",
+                    vm.toString(snap.readUint(string.concat(".poolSportsMaxPayout_", suffix))),
+                    "/market:",
+                    vm.toString(snap.readUint(string.concat(".poolSportsMaxMarketReserved_", suffix))),
+                    "/outcome:",
+                    vm.toString(snap.readUint(string.concat(".poolSportsMaxOutcomeReserved_", suffix))),
+                    "/event:",
+                    vm.toString(snap.readUint(string.concat(".poolSportsMaxEventReserved_", suffix))),
+                    ", riskHash=`",
+                    vm.toString(snap.readBytes32(string.concat(".poolSportsRiskHash_", suffix))),
+                    "`"
+                );
+            }
+            md = string.concat(md, "\n");
         }
     }
 
