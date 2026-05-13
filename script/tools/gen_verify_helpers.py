@@ -36,6 +36,10 @@ def _is_hex0x(s: str) -> bool:
     return isinstance(s, str) and s.startswith("0x")
 
 
+def _is_zero_addr(s: str) -> bool:
+    return isinstance(s, str) and s.lower() == "0x0000000000000000000000000000000000000000"
+
+
 def _verify_line(addr: str, contract_id: str, ctor_args: str) -> str:
     addr = addr.strip()
     if not addr.startswith("0x") or len(addr) != 42:
@@ -101,6 +105,8 @@ def main() -> int:
             ("refRegistry", "src/engines/referral/ReferralRegistry.sol:ReferralRegistry", "ctorArgs_refRegistry"),
             ("refEngine", "src/engines/referral/DefaultReferralEngine.sol:DefaultReferralEngine", "ctorArgs_refEngine"),
             ("gameHub", "src/core/GameHub.sol:GameHub", "ctorArgs_gameHub"),
+            ("sportsRiskEngine", "src/core/SportsRiskEngine.sol:SportsRiskEngine", "ctorArgs_sportsRiskEngine"),
+            ("sportsHub", "src/core/SportsHub.sol:SportsHub", "ctorArgs_sportsHub"),
         ]
     else:
         # Contract list from Deploy.s.sol snapshot keys
@@ -134,6 +140,8 @@ def main() -> int:
             # keep going so partial snapshots still work
             continue
         addr = data[addr_key]
+        if _is_zero_addr(addr):
+            continue
         ctor_args = data.get(ctor_key, "0x")
         script += _verify_line(addr, contract_id, ctor_args)
 

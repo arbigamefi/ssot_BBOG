@@ -8,6 +8,8 @@ import {Bank} from "../src/core/Bank.sol";
 import {GameHub} from "../src/core/GameHub.sol";
 import {PoolRegistry} from "../src/core/PoolRegistry.sol";
 import {SettlementRouter} from "../src/core/SettlementRouter.sol";
+import {SportsHub} from "../src/core/SportsHub.sol";
+import {SportsRiskEngine} from "../src/core/SportsRiskEngine.sol";
 import {VRFHub} from "../src/core/VRFHub.sol";
 import {SSOTTypes} from "../src/core/interfaces/SSOTTypes.sol";
 
@@ -40,6 +42,11 @@ interface IERC20MetadataLikeV13 {
 ///   BANK_HOLDBACK_VESTING_SECONDS_i   default 86400
 ///   LP_NAME_i / LP_SYMBOL_i / LP_DECIMALS_i
 ///
+/// Required when any pool uses POOL_DOMAIN_i=2 (Sports):
+///   SPORTS_MAX_STAKE, SPORTS_MAX_PAYOUT, SPORTS_MAX_MARKET_RESERVED,
+///   SPORTS_MAX_OUTCOME_RESERVED, SPORTS_MAX_EVENT_RESERVED,
+///   SPORTS_ODDS_SIGNER_SET_HASH, SPORTS_RESULT_REPORTER_SET_HASH
+///
 /// Example:
 ///   forge script script/DeployV13.s.sol:DeployV13 --rpc-url $RPC_URL --broadcast -vvv
 contract DeployV13 is Script {
@@ -56,6 +63,19 @@ contract DeployV13 is Script {
         uint8 levels;
     }
 
+    struct SportsConfig {
+        bool enabled;
+        uint256 maxStake;
+        uint256 maxPayout;
+        uint256 maxMarketReserved;
+        uint256 maxOutcomeReserved;
+        uint256 maxEventReserved;
+        bytes32 oddsSignerSetHash;
+        bytes32 resultReporterSetHash;
+        address oddsSigner;
+        address resultReporter;
+    }
+
     struct DeployConfig {
         uint256 privateKey;
         address deployer;
@@ -68,6 +88,7 @@ contract DeployV13 is Script {
         uint16 maxAffiliateDeltaBps;
         uint256 poolCount;
         RefConfig refConfig;
+        SportsConfig sportsConfig;
     }
 
     struct PoolConfig {
@@ -91,6 +112,8 @@ contract DeployV13 is Script {
         ReferralRegistry refRegistry;
         DefaultReferralEngine refEngine;
         GameHub gameHub;
+        SportsRiskEngine sportsRiskEngine;
+        SportsHub sportsHub;
         DiceModule dice;
         CoinTossModule coin;
         RouletteModule roulette;
@@ -106,7 +129,9 @@ contract DeployV13 is Script {
         for (uint256 i = 0; i < cfg.poolCount; ++i) {
             pools[i] = _readPoolConfig(i);
         }
-        require(_hasCasinoPool(pools), "at least one Casino pool required");
+        bool hasSports = _hasSportsPool(pools);
+        require(_hasCasinoPool(pools) || hasSports, "at least one Casino or Sports pool required");
+        cfg.sportsConfig = _readSportsConfig(hasSports);
 
         vm.startBroadcast(cfg.privateKey);
 
@@ -142,6 +167,31 @@ contract DeployV13 is Script {
         d.refRegistry.setBinderOnce(address(d.gameHub));
         d.poolRegistry.setHubRegistered(address(d.gameHub), true);
 
+        if (cfg.sportsConfig.enabled) {
+            d.sportsRiskEngine = new SportsRiskEngine(
+                cfg.gov,
+                cfg.sportsConfig.maxStake,
+                cfg.sportsConfig.maxPayout,
+                cfg.sportsConfig.maxMarketReserved,
+                cfg.sportsConfig.maxOutcomeReserved,
+                cfg.sportsConfig.maxEventReserved
+            );
+            d.sportsHub = new SportsHub(
+                address(d.router),
+                address(d.sportsRiskEngine),
+                cfg.gov,
+                cfg.sportsConfig.oddsSignerSetHash,
+                cfg.sportsConfig.resultReporterSetHash
+            );
+            d.poolRegistry.setHubRegistered(address(d.sportsHub), true);
+            if (cfg.sportsConfig.oddsSigner != address(0)) {
+                d.sportsHub.setOddsSigner(cfg.sportsConfig.oddsSigner, true);
+            }
+            if (cfg.sportsConfig.resultReporter != address(0)) {
+                d.sportsHub.setResultReporter(cfg.sportsConfig.resultReporter, true);
+            }
+        }
+
         for (uint256 i = 0; i < pools.length; ++i) {
             Bank bank = new Bank(
                 pools[i].asset, cfg.gov, pools[i].minLiqBps, pools[i].lpName, pools[i].lpSymbol, pools[i].lpDecimals
@@ -155,6 +205,8 @@ contract DeployV13 is Script {
 
             if (pools[i].domain == SSOTTypes.PoolDomain.Casino) {
                 d.poolRegistry.setHubAllowedForPool(pools[i].poolId, address(d.gameHub), true);
+            } else if (pools[i].domain == SSOTTypes.PoolDomain.Sports) {
+                d.poolRegistry.setHubAllowedForPool(pools[i].poolId, address(d.sportsHub), true);
             }
         }
 
@@ -198,6 +250,21 @@ contract DeployV13 is Script {
         cfg.refConfig.levelBps[5] = uint16(vm.envOr("REF_LEVEL5_BPS", uint256(0)));
     }
 
+    function _readSportsConfig(bool enabled) internal view returns (SportsConfig memory cfg) {
+        if (!enabled) return cfg;
+
+        cfg.enabled = true;
+        cfg.maxStake = vm.envUint("SPORTS_MAX_STAKE");
+        cfg.maxPayout = vm.envUint("SPORTS_MAX_PAYOUT");
+        cfg.maxMarketReserved = vm.envUint("SPORTS_MAX_MARKET_RESERVED");
+        cfg.maxOutcomeReserved = vm.envUint("SPORTS_MAX_OUTCOME_RESERVED");
+        cfg.maxEventReserved = vm.envUint("SPORTS_MAX_EVENT_RESERVED");
+        cfg.oddsSignerSetHash = vm.envBytes32("SPORTS_ODDS_SIGNER_SET_HASH");
+        cfg.resultReporterSetHash = vm.envBytes32("SPORTS_RESULT_REPORTER_SET_HASH");
+        cfg.oddsSigner = vm.envOr("SPORTS_ODDS_SIGNER", address(0));
+        cfg.resultReporter = vm.envOr("SPORTS_RESULT_REPORTER", address(0));
+    }
+
     function _readPoolConfig(uint256 i) internal view returns (PoolConfig memory cfg) {
         string memory suffix = vm.toString(i);
         cfg.poolId = uint64(vm.envOr(string.concat("POOL_ID_", suffix), i + 1));
@@ -235,6 +302,8 @@ contract DeployV13 is Script {
         console2.log("refRegistry", address(d.refRegistry));
         console2.log("refEngine", address(d.refEngine));
         console2.log("gameHub", address(d.gameHub));
+        console2.log("sportsRiskEngine", address(d.sportsRiskEngine));
+        console2.log("sportsHub", address(d.sportsHub));
         console2.log("NUM_POOLS", pools.length);
         for (uint256 i = 0; i < pools.length; ++i) {
             string memory suffix = vm.toString(i);
@@ -271,6 +340,8 @@ contract DeployV13 is Script {
         json = vm.serializeAddress(obj, "refEngine", address(d.refEngine));
         json = vm.serializeAddress(obj, "gameHub", address(d.gameHub));
         json = vm.serializeAddress(obj, "hub", address(d.gameHub)); // compatibility alias for older frontend tooling
+        json = vm.serializeAddress(obj, "sportsRiskEngine", address(d.sportsRiskEngine));
+        json = vm.serializeAddress(obj, "sportsHub", address(d.sportsHub));
 
         json = vm.serializeAddress(obj, "moduleDice", address(d.dice));
         json = vm.serializeAddress(obj, "moduleCoinToss", address(d.coin));
@@ -321,6 +392,16 @@ contract DeployV13 is Script {
         json = vm.serializeUint(obj, "refLevel3Bps", cfg.refConfig.levelBps[3]);
         json = vm.serializeUint(obj, "refLevel4Bps", cfg.refConfig.levelBps[4]);
         json = vm.serializeUint(obj, "refLevel5Bps", cfg.refConfig.levelBps[5]);
+        json = vm.serializeUint(obj, "sportsEnabled", cfg.sportsConfig.enabled ? 1 : 0);
+        json = vm.serializeUint(obj, "sportsMaxStake", cfg.sportsConfig.maxStake);
+        json = vm.serializeUint(obj, "sportsMaxPayout", cfg.sportsConfig.maxPayout);
+        json = vm.serializeUint(obj, "sportsMaxMarketReserved", cfg.sportsConfig.maxMarketReserved);
+        json = vm.serializeUint(obj, "sportsMaxOutcomeReserved", cfg.sportsConfig.maxOutcomeReserved);
+        json = vm.serializeUint(obj, "sportsMaxEventReserved", cfg.sportsConfig.maxEventReserved);
+        json = vm.serializeBytes32(obj, "sportsOddsSignerSetHash", cfg.sportsConfig.oddsSignerSetHash);
+        json = vm.serializeBytes32(obj, "sportsResultReporterSetHash", cfg.sportsConfig.resultReporterSetHash);
+        json = vm.serializeAddress(obj, "sportsOddsSigner", cfg.sportsConfig.oddsSigner);
+        json = vm.serializeAddress(obj, "sportsResultReporter", cfg.sportsConfig.resultReporter);
         return json;
     }
 
@@ -341,6 +422,8 @@ contract DeployV13 is Script {
         string memory gameHubCtorArgs = _gameHubCtorArgs(cfg, d);
         json = vm.serializeString(obj, "ctorArgs_gameHub", gameHubCtorArgs);
         json = vm.serializeString(obj, "ctorArgs_hub", gameHubCtorArgs);
+        json = vm.serializeString(obj, "ctorArgs_sportsRiskEngine", _sportsRiskEngineCtorArgs(cfg));
+        json = vm.serializeString(obj, "ctorArgs_sportsHub", _sportsHubCtorArgs(cfg, d));
         return json;
     }
 
@@ -471,6 +554,20 @@ contract DeployV13 is Script {
         sh = _appendVerifyLine(
             sh, address(d.gameHub), "src/core/GameHub.sol:GameHub", _gameHubCtorArgs(cfg, d), verifierUrl
         );
+        if (address(d.sportsRiskEngine) != address(0)) {
+            sh = _appendVerifyLine(
+                sh,
+                address(d.sportsRiskEngine),
+                "src/core/SportsRiskEngine.sol:SportsRiskEngine",
+                _sportsRiskEngineCtorArgs(cfg),
+                verifierUrl
+            );
+        }
+        if (address(d.sportsHub) != address(0)) {
+            sh = _appendVerifyLine(
+                sh, address(d.sportsHub), "src/core/SportsHub.sol:SportsHub", _sportsHubCtorArgs(cfg, d), verifierUrl
+            );
+        }
 
         for (uint256 i = 0; i < pools.length; ++i) {
             sh = _appendVerifyLine(
@@ -521,6 +618,31 @@ contract DeployV13 is Script {
         );
     }
 
+    function _sportsRiskEngineCtorArgs(DeployConfig memory cfg) internal pure returns (string memory) {
+        return vm.toString(
+            abi.encode(
+                cfg.gov,
+                cfg.sportsConfig.maxStake,
+                cfg.sportsConfig.maxPayout,
+                cfg.sportsConfig.maxMarketReserved,
+                cfg.sportsConfig.maxOutcomeReserved,
+                cfg.sportsConfig.maxEventReserved
+            )
+        );
+    }
+
+    function _sportsHubCtorArgs(DeployConfig memory cfg, Deployed memory d) internal pure returns (string memory) {
+        return vm.toString(
+            abi.encode(
+                address(d.router),
+                address(d.sportsRiskEngine),
+                cfg.gov,
+                cfg.sportsConfig.oddsSignerSetHash,
+                cfg.sportsConfig.resultReporterSetHash
+            )
+        );
+    }
+
     function _appendVerifyLine(
         string memory sh,
         address addr,
@@ -534,6 +656,13 @@ contract DeployV13 is Script {
     function _hasCasinoPool(PoolConfig[] memory pools) internal pure returns (bool) {
         for (uint256 i = 0; i < pools.length; ++i) {
             if (pools[i].domain == SSOTTypes.PoolDomain.Casino) return true;
+        }
+        return false;
+    }
+
+    function _hasSportsPool(PoolConfig[] memory pools) internal pure returns (bool) {
+        for (uint256 i = 0; i < pools.length; ++i) {
+            if (pools[i].domain == SSOTTypes.PoolDomain.Sports) return true;
         }
         return false;
     }

@@ -51,6 +51,8 @@ REQUIRED_CONTRACTS_V13 = [
     ("VRFHub", "src/core/VRFHub.sol:VRFHub", "vrfHub"),
     ("PoolRegistry", "src/core/PoolRegistry.sol:PoolRegistry", "poolRegistry"),
     ("SettlementRouter", "src/core/SettlementRouter.sol:SettlementRouter", "settlementRouter"),
+    ("SportsRiskEngine", "src/core/SportsRiskEngine.sol:SportsRiskEngine", "sportsRiskEngine"),
+    ("SportsHub", "src/core/SportsHub.sol:SportsHub", "sportsHub"),
     ("ReferralRegistry", "src/engines/referral/ReferralRegistry.sol:ReferralRegistry", "refRegistry"),
     ("DefaultReferralEngine", "src/engines/referral/DefaultReferralEngine.sol:DefaultReferralEngine", "refEngine"),
     # adapter

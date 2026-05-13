@@ -56,6 +56,9 @@ contract GenerateFrontendManifestV13 is Script {
             "\"addresses\":",
             _buildAddressesJson(snap),
             ",",
+            "\"sports\":",
+            _buildSportsJson(snap),
+            ",",
             "\"games\":",
             _buildGamesJson(snap),
             ",",
@@ -84,6 +87,8 @@ contract GenerateFrontendManifestV13 is Script {
         address refRegistry = snap.readAddress(".refRegistry");
         address refEngine = snap.readAddress(".refEngine");
         address adapter = snap.readAddress(".adapter");
+        address sportsRiskEngine = snap.readAddress(".sportsRiskEngine");
+        address sportsHub = snap.readAddress(".sportsHub");
 
         address moduleDice = snap.readAddress(".moduleDice");
         address moduleCoinToss = snap.readAddress(".moduleCoinToss");
@@ -97,6 +102,12 @@ contract GenerateFrontendManifestV13 is Script {
             "\",",
             "\"gameHub\":\"",
             vm.toString(gameHub),
+            "\",",
+            "\"sportsRiskEngine\":\"",
+            vm.toString(sportsRiskEngine),
+            "\",",
+            "\"sportsHub\":\"",
+            vm.toString(sportsHub),
             "\",",
             "\"settlementRouter\":\"",
             vm.toString(settlementRouter),
@@ -132,6 +143,44 @@ contract GenerateFrontendManifestV13 is Script {
         );
     }
 
+    function _buildSportsJson(string memory snap) internal pure returns (string memory) {
+        uint256 enabled = snap.readUint(".sportsEnabled");
+        return string.concat(
+            "{",
+            "\"enabled\":",
+            enabled == 0 ? "false" : "true",
+            ",",
+            "\"riskEngine\":\"",
+            vm.toString(snap.readAddress(".sportsRiskEngine")),
+            "\",",
+            "\"hub\":\"",
+            vm.toString(snap.readAddress(".sportsHub")),
+            "\",",
+            "\"oddsSignerSetHash\":\"",
+            vm.toString(snap.readBytes32(".sportsOddsSignerSetHash")),
+            "\",",
+            "\"resultReporterSetHash\":\"",
+            vm.toString(snap.readBytes32(".sportsResultReporterSetHash")),
+            "\",",
+            "\"maxStake\":\"",
+            vm.toString(snap.readUint(".sportsMaxStake")),
+            "\",",
+            "\"maxPayout\":\"",
+            vm.toString(snap.readUint(".sportsMaxPayout")),
+            "\",",
+            "\"maxMarketReserved\":\"",
+            vm.toString(snap.readUint(".sportsMaxMarketReserved")),
+            "\",",
+            "\"maxOutcomeReserved\":\"",
+            vm.toString(snap.readUint(".sportsMaxOutcomeReserved")),
+            "\",",
+            "\"maxEventReserved\":\"",
+            vm.toString(snap.readUint(".sportsMaxEventReserved")),
+            "\"",
+            "}"
+        );
+    }
+
     function _buildGamesJson(string memory snap) internal pure returns (string memory) {
         address moduleDice = snap.readAddress(".moduleDice");
         address moduleCoinToss = snap.readAddress(".moduleCoinToss");
@@ -160,44 +209,44 @@ contract GenerateFrontendManifestV13 is Script {
     function _buildPoolsJson(string memory snap, uint256 numPools) internal view returns (string memory) {
         string memory out = "[";
         for (uint256 i = 0; i < numPools; i++) {
-            string memory suffix = vm.toString(i);
-            uint256 domainId = snap.readUint(string.concat(".poolDomain_", suffix));
-            uint256 activeRaw = snap.readUint(string.concat(".poolActive_", suffix));
-            address asset = snap.readAddress(string.concat(".poolAsset_", suffix));
-            address bank = snap.readAddress(string.concat(".poolBank_", suffix));
-            (string memory sym, uint8 dec) = _readAssetMeta(snap, i);
-
-            out = string.concat(
-                out,
-                (i == 0 ? "" : ","),
-                "{",
-                "\"poolId\":",
-                vm.toString(snap.readUint(string.concat(".poolId_", suffix))),
-                ",",
-                "\"domainId\":",
-                vm.toString(domainId),
-                ",",
-                "\"domain\":\"",
-                _domainLabel(domainId),
-                "\",",
-                "\"active\":",
-                activeRaw == 0 ? "false" : "true",
-                ",",
-                "\"asset\":\"",
-                vm.toString(asset),
-                "\",",
-                "\"bank\":\"",
-                vm.toString(bank),
-                "\",",
-                "\"symbol\":\"",
-                _safe(sym),
-                "\",",
-                "\"decimals\":",
-                vm.toString(uint256(dec)),
-                "}"
-            );
+            out = string.concat(out, (i == 0 ? "" : ","), _poolJson(snap, i));
         }
         return string.concat(out, "]");
+    }
+
+    function _poolJson(string memory snap, uint256 i) internal view returns (string memory) {
+        string memory suffix = vm.toString(i);
+        uint256 domainId = snap.readUint(string.concat(".poolDomain_", suffix));
+        uint256 activeRaw = snap.readUint(string.concat(".poolActive_", suffix));
+        (string memory sym, uint8 dec) = _readAssetMeta(snap, i);
+
+        return string.concat(
+            "{",
+            "\"poolId\":",
+            vm.toString(snap.readUint(string.concat(".poolId_", suffix))),
+            ",",
+            "\"domainId\":",
+            vm.toString(domainId),
+            ",",
+            "\"domain\":\"",
+            _domainLabel(domainId),
+            "\",",
+            "\"active\":",
+            activeRaw == 0 ? "false" : "true",
+            ",",
+            "\"asset\":\"",
+            vm.toString(snap.readAddress(string.concat(".poolAsset_", suffix))),
+            "\",",
+            "\"bank\":\"",
+            vm.toString(snap.readAddress(string.concat(".poolBank_", suffix))),
+            "\",",
+            "\"symbol\":\"",
+            _safe(sym),
+            "\",",
+            "\"decimals\":",
+            vm.toString(uint256(dec)),
+            "}"
+        );
     }
 
     function _gameJson(

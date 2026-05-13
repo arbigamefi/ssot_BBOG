@@ -79,7 +79,12 @@ As of the current `codex/sportsbook-architecture-research` branch:
 - SportsHub-specific invariants now cover exposure sums against held tickets, Bank reserve alignment,
   router position ownership/pool binding, ticket/position terminal-state alignment, and no early debt-out
   before Resolved/Voided market states.
-- Deployment and release wiring remain out of this milestone slice.
+- PR-3.1.7 now has initial deployment and release wiring: `DeployV13` conditionally deploys
+  `SportsRiskEngine` + `SportsHub` for Sports pools, allowlists SportsHub for Sports pool ids, writes
+  Sports addresses/risk/oracle metadata into v1.3 snapshots, includes Sports fields in release digests,
+  exposes Sports fields in the v1.3 frontend manifest, and exports Sports ABIs.
+- The remaining PR-3.1.7 gap is the ops runbook for odds signer health, result reporter finality, and
+  exposure-cap incidents.
 
 ### PR-3.1.1 — Interfaces and milestone plan
 

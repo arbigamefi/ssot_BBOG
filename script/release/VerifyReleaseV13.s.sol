@@ -77,7 +77,9 @@ contract VerifyReleaseV13 is Script {
                 snap.readAddress(".settlementRouter"),
                 snap.readAddress(".refRegistry"),
                 snap.readAddress(".refEngine"),
-                snap.readAddress(".gameHub")
+                snap.readAddress(".gameHub"),
+                snap.readAddress(".sportsRiskEngine"),
+                snap.readAddress(".sportsHub")
             )
         );
 
@@ -113,6 +115,22 @@ contract VerifyReleaseV13 is Script {
                 snap.readUint(".refLevel3Bps"),
                 snap.readUint(".refLevel4Bps"),
                 snap.readUint(".refLevel5Bps"),
+                snap.readUint(".sportsEnabled"),
+                snap.readUint(".sportsMaxStake"),
+                snap.readUint(".sportsMaxPayout"),
+                snap.readUint(".sportsMaxMarketReserved")
+            )
+        );
+
+        digest = keccak256(
+            abi.encode(
+                digest,
+                snap.readUint(".sportsMaxOutcomeReserved"),
+                snap.readUint(".sportsMaxEventReserved"),
+                snap.readBytes32(".sportsOddsSignerSetHash"),
+                snap.readBytes32(".sportsResultReporterSetHash"),
+                snap.readAddress(".sportsOddsSigner"),
+                snap.readAddress(".sportsResultReporter"),
                 snap.readUint(".numPools")
             )
         );

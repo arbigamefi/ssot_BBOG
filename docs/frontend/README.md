@@ -60,8 +60,10 @@ The v1.3 artifacts are written to:
 - `deployments/abis-v13/index.json`
 - `deployments/release/abi-index-<chainId>-<block>-v13.json`
 
-The v1.3 manifest uses `schemaVersion: 2`, exposes `addresses.gameHub`, `addresses.settlementRouter`,
-`addresses.poolRegistry`, and `pools[]`. The v1.3 vectors prove `IGameHub.placeBet(gameId,poolId,...)`.
+The v1.3 manifest uses `schemaVersion: 2`, exposes `addresses.gameHub`, `addresses.sportsHub`,
+`addresses.sportsRiskEngine`, `addresses.settlementRouter`, `addresses.poolRegistry`, `sports`, and
+`pools[]`. The v1.3 vectors prove `IGameHub.placeBet(gameId,poolId,...)`; Sports tickets use
+`ISportsHub.placeTicket(...)` and consume signed odds snapshots from the Sports oracle path.
 
 ## ABIs
 

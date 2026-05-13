@@ -95,6 +95,15 @@ export POOL_ID_0=1
 export POOL_DOMAIN_0=1          # 1=Casino, 2=Sports, 3=Future
 export POOL_ASSET_0=$ASSET_0    # ASSET_0 is still accepted as a compatibility alias
 
+# Required only when at least one pool uses POOL_DOMAIN_i=2.
+export SPORTS_MAX_STAKE=...
+export SPORTS_MAX_PAYOUT=...
+export SPORTS_MAX_MARKET_RESERVED=...
+export SPORTS_MAX_OUTCOME_RESERVED=...
+export SPORTS_MAX_EVENT_RESERVED=...
+export SPORTS_ODDS_SIGNER_SET_HASH=0x...
+export SPORTS_RESULT_REPORTER_SET_HASH=0x...
+
 forge script script/DeployV13.s.sol:DeployV13   --rpc-url $RPC_URL   --broadcast   -vvv
 ```
 
@@ -103,6 +112,7 @@ The v1.3 script deploys and wires:
 - `SettlementRouter`
 - one `Bank` per pool
 - `GameHub`
+- `SportsRiskEngine` + `SportsHub` when at least one Sports pool is configured
 - `VRFHub` + Chainlink wrapper adapter
 - referral registry/engine and casino modules
 
@@ -112,7 +122,9 @@ It writes separate v1.3 artifacts while the legacy release pipeline is still bei
 - `deployments/verify-latest-v13.sh`
 - `deployments/verify/verify-<chainid>-<block>-v13.sh`
 
-For v1.3, each `Bank.settlementRouter()` must equal `SettlementRouter`, and only Casino pools are allowlisted for `GameHub`.
+For v1.3, each `Bank.settlementRouter()` must equal `SettlementRouter`. Casino pools are allowlisted
+for `GameHub`; Sports pools are allowlisted for `SportsHub` after the deployment script has deployed
+and registered the Sports vertical.
 
 ## 3.1) Verify on explorer (optional but recommended)
 Set an Etherscan-family API key (BaseScan/Arbiscan also work with Etherscan API v2 unified keys).

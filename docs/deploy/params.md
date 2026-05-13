@@ -46,8 +46,26 @@ For each `i in [0..NUM_POOLS-1]`:
 - `LP_NAME_i`, `LP_SYMBOL_i`, `LP_DECIMALS_i`.
 
 The v1.3 deploy script writes `deployments/latest-v13.json` and `deployments/verify-latest-v13.sh`.
-Only Casino pools are allowlisted for `GameHub`; Sports/Future pools are registered and wired to
-`SettlementRouter` but need their own vertical hub before risk-in can open positions.
+Casino pools are allowlisted for `GameHub`; Sports pools are allowlisted for `SportsHub`; Future pools
+are registered and wired to `SettlementRouter` but still need their own vertical hub before risk-in can
+open positions.
+
+When any `POOL_DOMAIN_i=2` pool exists, the following Sports deployment parameters are required:
+- `SPORTS_MAX_STAKE`: per-ticket stake cap in raw asset units.
+- `SPORTS_MAX_PAYOUT`: per-ticket payout cap in raw asset units.
+- `SPORTS_MAX_MARKET_RESERVED`: total reserved exposure cap per market.
+- `SPORTS_MAX_OUTCOME_RESERVED`: reserved exposure cap per market outcome.
+- `SPORTS_MAX_EVENT_RESERVED`: total reserved exposure cap per event.
+- `SPORTS_ODDS_SIGNER_SET_HASH`: governance-published hash of the active odds signer set.
+- `SPORTS_RESULT_REPORTER_SET_HASH`: governance-published hash of the active result reporter set.
+
+Optional one-address bootstrap allowlists:
+- `SPORTS_ODDS_SIGNER`: if set, the deploy script immediately allowlists this address.
+- `SPORTS_RESULT_REPORTER`: if set, the deploy script immediately allowlists this address.
+
+Risk caps are intentionally raw token units because pools can use different ERC20 decimals. For
+production deployments, pick caps per target pool asset and lock the resulting snapshot with
+`make release-digest-v13`.
 
 ## Callback gas policy (fixed in code)
 `Hub.quoteVRFFee(betCount)` sets `callbackGasLimit = 300k + 20k * betCount`, capped at 2,000,000.

@@ -131,7 +131,7 @@ def main() -> None:
     manifest_keys = (
         ("schemaVersion", "chainId", "blockNumber", "addresses", "games", "assets")
         if args.schema == 1
-        else ("schemaVersion", "chainId", "blockNumber", "architectureVersion", "addresses", "games", "pools")
+        else ("schemaVersion", "chainId", "blockNumber", "architectureVersion", "addresses", "sports", "games", "pools")
     )
     _require_keys(manifest, keys=manifest_keys, path=manifest_path)
     _require_keys(vectors, keys=("schemaVersion", "chainId", "blockNumber", "vectors"), path=vectors_path)
