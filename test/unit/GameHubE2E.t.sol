@@ -20,6 +20,8 @@ import {CoinTossModule} from "../../src/modules/cointoss/CoinTossModule.sol";
 import {DiceModule} from "../../src/modules/dice/DiceModule.sol";
 import {KenoModule} from "../../src/modules/keno/KenoModule.sol";
 import {KenoParams} from "../../src/modules/keno/KenoParams.sol";
+import {PlinkoModule} from "../../src/modules/plinko/PlinkoModule.sol";
+import {PlinkoParams} from "../../src/modules/plinko/PlinkoParams.sol";
 import {RouletteModule} from "../../src/modules/roulette/RouletteModule.sol";
 import {RouletteParams} from "../../src/modules/roulette/RouletteParams.sol";
 import {SlotsModule} from "../../src/modules/slots/SlotsModule.sol";
@@ -35,6 +37,7 @@ contract GameHubE2E is Test {
     bytes32 internal constant GAME_KENO = keccak256("KENO");
     bytes32 internal constant GAME_SLOTS = keccak256("SLOTS");
     bytes32 internal constant GAME_BACCARAT = keccak256("BACCARAT");
+    bytes32 internal constant GAME_PLINKO = keccak256("PLINKO");
     bytes internal constant RNG_DOMAIN = "SSOT_RNG_V1";
 
     address internal gov = address(0xA11CE);
@@ -103,6 +106,7 @@ contract GameHubE2E is Test {
         gameHub.registerGame(GAME_KENO, address(new KenoModule()));
         gameHub.registerGame(GAME_SLOTS, address(new SlotsModule()));
         gameHub.registerGame(GAME_BACCARAT, address(new BaccaratModule()));
+        gameHub.registerGame(GAME_PLINKO, address(new PlinkoModule()));
         vm.stopPrank();
 
         assetA.mint(alice, 1_000 ether);
@@ -237,6 +241,25 @@ contract GameHubE2E is Test {
         assertEq(gameHub.getBet(positionId).reserved, expectedGross);
 
         _fulfill(positionId, _findSeedBaccaratOutcome(positionId, BaccaratParams.SIDE_TIE));
+
+        uint256 balBefore = assetA.balanceOf(alice);
+        gameHub.finalize(positionId);
+        uint256 balAfter = assetA.balanceOf(alice);
+
+        uint256 fee = Math.mulDiv(expectedGross, gameHub.defaultHouseEdgeBps(), 10_000);
+        assertEq(balAfter - balBefore, expectedGross - fee);
+    }
+
+    function test_plinkoHighRiskEdgeBucketSettlesThroughRouter() external {
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
+
+        uint256 positionId =
+            _place(alice, GAME_PLINKO, POOL_A, PlinkoParams.encode(PlinkoParams.RISK_HIGH), spec, address(0));
+        uint256 expectedGross = Math.mulDiv(10 ether, 246_153, 10_000);
+        assertEq(gameHub.getBet(positionId).reserved, expectedGross);
+
+        _fulfill(positionId, _findSeedPlinkoEdge(positionId));
 
         uint256 balBefore = assetA.balanceOf(alice);
         gameHub.finalize(positionId);
@@ -411,6 +434,20 @@ contract GameHubE2E is Test {
         uint8 rank = uint8(_rng2(betId, 0, cardIndex, seed) % 13);
         if (rank <= 8) return rank + 1;
         return 0;
+    }
+
+    function _findSeedPlinkoEdge(uint256 betId) internal pure returns (uint256) {
+        for (uint256 seed = 0; seed < 16384; seed++) {
+            uint8 bucket = _plinkoBucket(betId, seed);
+            if (bucket == 0 || bucket == 8) return seed;
+        }
+        revert("no seed");
+    }
+
+    function _plinkoBucket(uint256 betId, uint256 seed) internal pure returns (uint8 bucket) {
+        for (uint8 row = 0; row < 8; row++) {
+            bucket += uint8(_rng2(betId, 0, uint256(row), seed) & 1);
+        }
     }
 
     function _kenoDraw0(uint256 betId, uint256 seed) internal pure returns (uint40 rolled) {

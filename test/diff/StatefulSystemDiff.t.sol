@@ -17,6 +17,8 @@ import {CoinTossModule} from "../../src/modules/cointoss/CoinTossModule.sol";
 import {RouletteModule} from "../../src/modules/roulette/RouletteModule.sol";
 import {RouletteParams} from "../../src/modules/roulette/RouletteParams.sol";
 import {KenoModule} from "../../src/modules/keno/KenoModule.sol";
+import {PlinkoModule} from "../../src/modules/plinko/PlinkoModule.sol";
+import {PlinkoParams} from "../../src/modules/plinko/PlinkoParams.sol";
 import {SlotsModule} from "../../src/modules/slots/SlotsModule.sol";
 import {SlotsParams} from "../../src/modules/slots/SlotsParams.sol";
 
@@ -61,6 +63,7 @@ contract StatefulSystemDiff is Test {
     CoinTossModule internal coin;
     RouletteModule internal roulette;
     KenoModule internal keno;
+    PlinkoModule internal plinko;
     SlotsModule internal slots;
     BaccaratModule internal baccarat;
 
@@ -83,6 +86,7 @@ contract StatefulSystemDiff is Test {
     bytes32 internal constant GAME_COIN = keccak256("COIN_TOSS");
     bytes32 internal constant GAME_ROULETTE = keccak256("ROULETTE");
     bytes32 internal constant GAME_KENO = keccak256("KENO");
+    bytes32 internal constant GAME_PLINKO = keccak256("PLINKO");
     bytes32 internal constant GAME_SLOTS = keccak256("SLOTS");
     bytes32 internal constant GAME_BACCARAT = keccak256("BACCARAT");
     uint64 internal constant POOL_A = 1;
@@ -201,6 +205,7 @@ contract StatefulSystemDiff is Test {
         coin = new CoinTossModule();
         roulette = new RouletteModule();
         keno = new KenoModule();
+        plinko = new PlinkoModule();
         slots = new SlotsModule();
         baccarat = new BaccaratModule();
 
@@ -209,6 +214,7 @@ contract StatefulSystemDiff is Test {
         hub.registerGame(GAME_COIN, address(coin));
         hub.registerGame(GAME_ROULETTE, address(roulette));
         hub.registerGame(GAME_KENO, address(keno));
+        hub.registerGame(GAME_PLINKO, address(plinko));
         hub.registerGame(GAME_SLOTS, address(slots));
         hub.registerGame(GAME_BACCARAT, address(baccarat));
         vm.stopPrank();
@@ -426,7 +432,7 @@ contract StatefulSystemDiff is Test {
             bytes32 gameId;
             bytes memory params;
 
-            uint256 g = (state >> 40) % 6;
+            uint256 g = (state >> 40) % 7;
             if (g == 0) {
                 gameId = GAME_DICE;
                 uint8 cap = uint8(bound(uint256(state >> 48), 1, 99));
@@ -450,6 +456,10 @@ contract StatefulSystemDiff is Test {
             } else if (g == 4) {
                 gameId = GAME_SLOTS;
                 params = SlotsParams.encode(SlotsParams.PROFILE_CLASSIC);
+            } else if (g == 5) {
+                gameId = GAME_PLINKO;
+                uint8 risk = uint8(bound(uint256(state >> 56), 0, 2));
+                params = PlinkoParams.encode(risk);
             } else {
                 gameId = GAME_BACCARAT;
                 uint8 side = uint8(bound(uint256(state >> 56), 0, 2));

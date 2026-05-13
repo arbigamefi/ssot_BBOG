@@ -19,6 +19,7 @@ import {DefaultReferralEngine} from "../src/engines/referral/DefaultReferralEngi
 import {BaccaratModule} from "../src/modules/baccarat/BaccaratModule.sol";
 import {CoinTossModule} from "../src/modules/cointoss/CoinTossModule.sol";
 import {DiceModule} from "../src/modules/dice/DiceModule.sol";
+import {PlinkoModule} from "../src/modules/plinko/PlinkoModule.sol";
 import {RouletteModule} from "../src/modules/roulette/RouletteModule.sol";
 import {KenoModule} from "../src/modules/keno/KenoModule.sol";
 import {SlotsModule} from "../src/modules/slots/SlotsModule.sol";
@@ -61,6 +62,7 @@ contract DeployV13 is Script {
     bytes32 internal constant GAME_COIN = keccak256("COIN_TOSS");
     bytes32 internal constant GAME_ROULETTE = keccak256("ROULETTE");
     bytes32 internal constant GAME_KENO = keccak256("KENO");
+    bytes32 internal constant GAME_PLINKO = keccak256("PLINKO");
     bytes32 internal constant GAME_SLOTS = keccak256("SLOTS");
     bytes32 internal constant GAME_BACCARAT = keccak256("BACCARAT");
 
@@ -135,6 +137,7 @@ contract DeployV13 is Script {
         CoinTossModule coin;
         RouletteModule roulette;
         KenoModule keno;
+        PlinkoModule plinko;
         SlotsModule slots;
         BaccaratModule baccarat;
     }
@@ -256,6 +259,7 @@ contract DeployV13 is Script {
         d.coin = new CoinTossModule();
         d.roulette = new RouletteModule();
         d.keno = new KenoModule();
+        d.plinko = new PlinkoModule();
         d.slots = new SlotsModule();
         d.baccarat = new BaccaratModule();
 
@@ -263,6 +267,7 @@ contract DeployV13 is Script {
         d.gameHub.registerGame(GAME_COIN, address(d.coin));
         d.gameHub.registerGame(GAME_ROULETTE, address(d.roulette));
         d.gameHub.registerGame(GAME_KENO, address(d.keno));
+        d.gameHub.registerGame(GAME_PLINKO, address(d.plinko));
         d.gameHub.registerGame(GAME_SLOTS, address(d.slots));
         d.gameHub.registerGame(GAME_BACCARAT, address(d.baccarat));
 
@@ -416,6 +421,7 @@ contract DeployV13 is Script {
         json = vm.serializeAddress(obj, "moduleCoinToss", address(d.coin));
         json = vm.serializeAddress(obj, "moduleRoulette", address(d.roulette));
         json = vm.serializeAddress(obj, "moduleKeno", address(d.keno));
+        json = vm.serializeAddress(obj, "modulePlinko", address(d.plinko));
         json = vm.serializeAddress(obj, "moduleSlots", address(d.slots));
         json = vm.serializeAddress(obj, "moduleBaccarat", address(d.baccarat));
 
@@ -487,6 +493,7 @@ contract DeployV13 is Script {
         json = vm.serializeString(obj, "ctorArgs_moduleCoinToss", "0x");
         json = vm.serializeString(obj, "ctorArgs_moduleRoulette", "0x");
         json = vm.serializeString(obj, "ctorArgs_moduleKeno", "0x");
+        json = vm.serializeString(obj, "ctorArgs_modulePlinko", "0x");
         json = vm.serializeString(obj, "ctorArgs_moduleSlots", "0x");
         json = vm.serializeString(obj, "ctorArgs_moduleBaccarat", "0x");
         string memory gameHubCtorArgs = _gameHubCtorArgs(cfg, d);
@@ -680,6 +687,9 @@ contract DeployV13 is Script {
             sh, address(d.roulette), "src/modules/roulette/RouletteModule.sol:RouletteModule", "0x", verifierUrl
         );
         sh = _appendVerifyLine(sh, address(d.keno), "src/modules/keno/KenoModule.sol:KenoModule", "0x", verifierUrl);
+        sh = _appendVerifyLine(
+            sh, address(d.plinko), "src/modules/plinko/PlinkoModule.sol:PlinkoModule", "0x", verifierUrl
+        );
         sh = _appendVerifyLine(sh, address(d.slots), "src/modules/slots/SlotsModule.sol:SlotsModule", "0x", verifierUrl);
         return _appendVerifyLine(
             sh, address(d.baccarat), "src/modules/baccarat/BaccaratModule.sol:BaccaratModule", "0x", verifierUrl

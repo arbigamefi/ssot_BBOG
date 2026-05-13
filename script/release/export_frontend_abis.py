@@ -44,6 +44,7 @@ REQUIRED_CONTRACTS_V13 = [
     ("CoinTossModule", "src/modules/cointoss/CoinTossModule.sol:CoinTossModule", "moduleCoinToss"),
     ("RouletteModule", "src/modules/roulette/RouletteModule.sol:RouletteModule", "moduleRoulette"),
     ("KenoModule", "src/modules/keno/KenoModule.sol:KenoModule", "moduleKeno"),
+    ("PlinkoModule", "src/modules/plinko/PlinkoModule.sol:PlinkoModule", "modulePlinko"),
     ("SlotsModule", "src/modules/slots/SlotsModule.sol:SlotsModule", "moduleSlots"),
     ("BaccaratModule", "src/modules/baccarat/BaccaratModule.sol:BaccaratModule", "moduleBaccarat"),
     # bank (type)
