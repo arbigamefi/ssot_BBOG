@@ -40,6 +40,8 @@ contract SportsHub is ISportsHub, Governable, EIP712, ReentrancyGuard {
 
     mapping(address => bool) public oddsSigner;
     mapping(address => bool) public resultReporter;
+    mapping(address => bool) public override resultChallenger;
+    mapping(address => bool) public override resultArbitrator;
     mapping(bytes32 => bool) public oddsSnapshotUsed;
 
     mapping(uint64 => uint256) public override marketReserved;
@@ -107,6 +109,18 @@ contract SportsHub is ISportsHub, Governable, EIP712, ReentrancyGuard {
         if (reporter == address(0)) revert Errors.ZeroAddress();
         resultReporter[reporter] = allowed;
         emit ResultReporterSet(reporter, allowed);
+    }
+
+    function setResultChallenger(address challenger, bool allowed) external onlyGov {
+        if (challenger == address(0)) revert Errors.ZeroAddress();
+        resultChallenger[challenger] = allowed;
+        emit ResultChallengerSet(challenger, allowed);
+    }
+
+    function setResultArbitrator(address arbitrator, bool allowed) external onlyGov {
+        if (arbitrator == address(0)) revert Errors.ZeroAddress();
+        resultArbitrator[arbitrator] = allowed;
+        emit ResultArbitratorSet(arbitrator, allowed);
     }
 
     function getMarket(uint64 marketId) external view override returns (SSOTTypes.SportsMarket memory) {
@@ -232,6 +246,7 @@ contract SportsHub is ISportsHub, Governable, EIP712, ReentrancyGuard {
         {
             revert BadMarketState(marketId, market.state, SSOTTypes.SportsMarketState.Open);
         }
+        if (market.state == SSOTTypes.SportsMarketState.Challenged) revert ResultChallengePending(marketId);
         _setMarketState(market, SSOTTypes.SportsMarketState.Voided);
     }
 
@@ -389,7 +404,14 @@ contract SportsHub is ISportsHub, Governable, EIP712, ReentrancyGuard {
             observedAt: observedAt,
             proposedAt: uint64(block.timestamp),
             finalizesAt: finalizesAt,
-            challenged: false
+            challenged: false,
+            challengeReasonHash: bytes32(0),
+            challenger: address(0),
+            challengedAt: 0,
+            challengeDecision: SSOTTypes.SportsChallengeDecision.None,
+            arbitrationDecisionHash: bytes32(0),
+            arbitrator: address(0),
+            arbitratedAt: 0
         });
 
         _setMarketState(market, SSOTTypes.SportsMarketState.ResultProposed);
@@ -411,6 +433,7 @@ contract SportsHub is ISportsHub, Governable, EIP712, ReentrancyGuard {
     }
 
     function challengeResult(uint64 marketId, bytes32 reasonHash) external override {
+        _requireResultChallenger(msg.sender);
         if (reasonHash == bytes32(0)) revert Errors.InvalidConfig();
 
         SSOTTypes.SportsMarket storage market = _requireMutableMarket(marketId);
@@ -420,8 +443,53 @@ contract SportsHub is ISportsHub, Governable, EIP712, ReentrancyGuard {
 
         SSOTTypes.SportsResult storage result = _results[marketId];
         result.challenged = true;
+        result.challengeReasonHash = reasonHash;
+        result.challenger = msg.sender;
+        result.challengedAt = uint64(block.timestamp);
         _setMarketState(market, SSOTTypes.SportsMarketState.Challenged);
         emit ResultChallenged(marketId, reasonHash, msg.sender);
+    }
+
+    function resolveResultChallenge(uint64 marketId, SSOTTypes.SportsChallengeDecision decision, bytes32 decisionHash)
+        external
+        override
+    {
+        _requireResultArbitrator(msg.sender);
+        if (decision == SSOTTypes.SportsChallengeDecision.None || decisionHash == bytes32(0)) {
+            revert Errors.InvalidConfig();
+        }
+
+        SSOTTypes.SportsMarket storage market = _requireMutableMarket(marketId);
+        if (market.state != SSOTTypes.SportsMarketState.Challenged) {
+            revert BadMarketState(marketId, market.state, SSOTTypes.SportsMarketState.Challenged);
+        }
+
+        SSOTTypes.SportsResult storage result = _results[marketId];
+        result.challengeDecision = decision;
+        result.arbitrationDecisionHash = decisionHash;
+        result.arbitrator = msg.sender;
+        result.arbitratedAt = uint64(block.timestamp);
+
+        if (decision == SSOTTypes.SportsChallengeDecision.UpholdResult) {
+            _setMarketState(market, SSOTTypes.SportsMarketState.Resolved);
+            emit ResultChallengeResolved(marketId, result.resultPayloadHash, decision, decisionHash, msg.sender);
+            emit ResultFinalized(marketId, market.eventId, result.winningOutcomeId, result.resultPayloadHash);
+            return;
+        }
+
+        if (decision == SSOTTypes.SportsChallengeDecision.ReopenResult) {
+            _setMarketState(market, SSOTTypes.SportsMarketState.Locked);
+            emit ResultChallengeResolved(marketId, result.resultPayloadHash, decision, decisionHash, msg.sender);
+            return;
+        }
+
+        if (decision == SSOTTypes.SportsChallengeDecision.VoidMarket) {
+            _setMarketState(market, SSOTTypes.SportsMarketState.Voided);
+            emit ResultChallengeResolved(marketId, result.resultPayloadHash, decision, decisionHash, msg.sender);
+            return;
+        }
+
+        revert Errors.InvalidConfig();
     }
 
     function finalizeResult(uint64 marketId) external override {
@@ -609,6 +677,14 @@ contract SportsHub is ISportsHub, Governable, EIP712, ReentrancyGuard {
     function _requireValidOddsSignature(bytes32 oddsTicketHash, bytes calldata signature) internal view {
         (address recovered, ECDSA.RecoverError err,) = ECDSA.tryRecoverCalldata(oddsTicketHash, signature);
         if (err != ECDSA.RecoverError.NoError || !oddsSigner[recovered]) revert BadOddsSignature();
+    }
+
+    function _requireResultChallenger(address challenger) internal view {
+        if (challenger != governance && !resultChallenger[challenger]) revert UnauthorizedChallenger(challenger);
+    }
+
+    function _requireResultArbitrator(address arbitrator) internal view {
+        if (arbitrator != governance && !resultArbitrator[arbitrator]) revert UnauthorizedArbitrator(arbitrator);
     }
 
     function _requireReporterQuorum(bytes32 resultPayloadHash, address proposer, bytes[] memory reporterSignatures)

@@ -128,6 +128,8 @@ SportsHub MUST:
 - bind every ticket to market id, outcome id, EIP-712 odds snapshot, rulebook hash, and result/finality state;
 - bind sports results to source/evidence hashes, observed timestamp, reporter set, reporter threshold,
   market version, and rulebook hash;
+- require challenged results to resolve through an explicit arbitration decision hash before they can be
+  upheld, reopened for a new result proposal, or voided;
 - reject stale odds;
 - reject tickets after market lock;
 - enforce exposure caps before opening a position;

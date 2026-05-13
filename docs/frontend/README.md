@@ -64,9 +64,9 @@ The v1.3 manifest uses `schemaVersion: 2`, exposes `addresses.gameHub`, `address
 `addresses.sportsRiskEngine`, `addresses.settlementRouter`, `addresses.poolRegistry`, `sports`, and
 `pools[]`. Sports pool rows include `sportsRisk` with the pool's effective raw-unit caps and
 `riskHash`; non-Sports pools set `sportsRisk` to `null`. The top-level `sports` object includes the
-result reporter set hash and reporter threshold used by result-oracle flows. The v1.3 vectors prove
-`IGameHub.placeBet(gameId,poolId,...)`; Sports tickets use `ISportsHub.placeTicket(...)` and consume
-signed odds snapshots from the Sports oracle path.
+result reporter set hash, reporter threshold, bootstrap challenger, and bootstrap arbitrator used by
+result-oracle and dispute flows. The v1.3 vectors prove `IGameHub.placeBet(gameId,poolId,...)`; Sports
+tickets use `ISportsHub.placeTicket(...)` and consume signed odds snapshots from the Sports oracle path.
 
 ## ABIs
 

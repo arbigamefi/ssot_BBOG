@@ -20,6 +20,7 @@ contract SportsHubResultTest is Test {
     address internal reporter2;
     address internal reporter3;
     address internal challenger = address(0xCAFE);
+    address internal arbitrator = address(0xA12B);
     address internal riskEngine = address(0x5151);
 
     bytes32 internal constant ODDS_SET_HASH = keccak256("ODDS_SET");
@@ -29,6 +30,7 @@ contract SportsHubResultTest is Test {
     bytes32 internal constant RESULT_SOURCE_HASH = keccak256("NBA_FINAL_SCORE_PROVIDER");
     bytes32 internal constant RESULT_EVIDENCE_HASH = keccak256("LAL_WIN_EVIDENCE");
     bytes32 internal constant CHALLENGE_REASON = keccak256("SCORE_DISPUTE");
+    bytes32 internal constant ARBITRATION_DECISION = keccak256("ARBITRATION_DECISION");
 
     uint64 internal constant SPORTS_POOL_ID = 2;
     uint64 internal constant EVENT_ID = 3003;
@@ -60,6 +62,8 @@ contract SportsHubResultTest is Test {
         sportsHub.setResultReporter(reporter, true);
         sportsHub.setResultReporter(reporter2, true);
         sportsHub.setResultReporter(reporter3, true);
+        sportsHub.setResultChallenger(challenger, true);
+        sportsHub.setResultArbitrator(arbitrator, true);
         vm.stopPrank();
     }
 
@@ -85,6 +89,32 @@ contract SportsHubResultTest is Test {
         vm.prank(gov);
         sportsHub.setResultReporterThreshold(2);
         assertEq(sportsHub.resultReporterThreshold(), 2);
+    }
+
+    function test_setResultChallengeRoles_governanceOnly() external {
+        address role = address(0x1234);
+
+        vm.expectRevert(Errors.Unauthorized.selector);
+        sportsHub.setResultChallenger(role, true);
+
+        vm.prank(gov);
+        vm.expectRevert(Errors.ZeroAddress.selector);
+        sportsHub.setResultChallenger(address(0), true);
+
+        vm.prank(gov);
+        sportsHub.setResultChallenger(role, true);
+        assertTrue(sportsHub.resultChallenger(role));
+
+        vm.expectRevert(Errors.Unauthorized.selector);
+        sportsHub.setResultArbitrator(role, true);
+
+        vm.prank(gov);
+        vm.expectRevert(Errors.ZeroAddress.selector);
+        sportsHub.setResultArbitrator(address(0), true);
+
+        vm.prank(gov);
+        sportsHub.setResultArbitrator(role, true);
+        assertTrue(sportsHub.resultArbitrator(role));
     }
 
     function test_proposeResult_successBindsFinalityPayloadAndReporterSet() external {
@@ -121,6 +151,13 @@ contract SportsHubResultTest is Test {
         assertEq(result.proposedAt, block.timestamp);
         assertEq(result.finalizesAt, block.timestamp + FINALITY);
         assertFalse(result.challenged);
+        assertEq(result.challengeReasonHash, bytes32(0));
+        assertEq(result.challenger, address(0));
+        assertEq(result.challengedAt, 0);
+        assertEq(uint256(result.challengeDecision), uint256(SSOTTypes.SportsChallengeDecision.None));
+        assertEq(result.arbitrationDecisionHash, bytes32(0));
+        assertEq(result.arbitrator, address(0));
+        assertEq(result.arbitratedAt, 0);
     }
 
     function test_proposeResult_rejectsUnauthorizedReporterBadStateAndBadPayload() external {
@@ -261,23 +298,41 @@ contract SportsHubResultTest is Test {
 
         SSOTTypes.SportsResult memory result = sportsHub.getResult(marketId);
         assertTrue(result.challenged);
+        assertEq(result.challengeReasonHash, CHALLENGE_REASON);
+        assertEq(result.challenger, challenger);
+        assertEq(result.challengedAt, block.timestamp);
 
         vm.warp(result.finalizesAt);
         vm.expectRevert(abi.encodeWithSelector(ISportsHub.ResultAlreadyChallenged.selector, marketId));
         sportsHub.finalizeResult(marketId);
 
         vm.prank(gov);
+        vm.expectRevert(abi.encodeWithSelector(ISportsHub.ResultChallengePending.selector, marketId));
         sportsHub.voidMarket(marketId);
+
+        vm.prank(arbitrator);
+        sportsHub.resolveResultChallenge(marketId, SSOTTypes.SportsChallengeDecision.VoidMarket, ARBITRATION_DECISION);
         market = sportsHub.getMarket(marketId);
         assertEq(uint256(market.state), uint256(SSOTTypes.SportsMarketState.Voided));
+
+        result = sportsHub.getResult(marketId);
+        assertEq(uint256(result.challengeDecision), uint256(SSOTTypes.SportsChallengeDecision.VoidMarket));
+        assertEq(result.arbitrationDecisionHash, ARBITRATION_DECISION);
+        assertEq(result.arbitrator, arbitrator);
+        assertEq(result.arbitratedAt, block.timestamp);
     }
 
     function test_challengeResult_rejectsBadStateAndReason() external {
         uint64 marketId = _createOpenAndLockMarket();
 
+        vm.expectRevert(abi.encodeWithSelector(ISportsHub.UnauthorizedChallenger.selector, address(this)));
+        sportsHub.challengeResult(marketId, CHALLENGE_REASON);
+
+        vm.prank(challenger);
         vm.expectRevert(Errors.InvalidConfig.selector);
         sportsHub.challengeResult(marketId, bytes32(0));
 
+        vm.prank(challenger);
         vm.expectRevert(
             abi.encodeWithSelector(
                 ISportsHub.BadMarketState.selector,
@@ -287,6 +342,86 @@ contract SportsHubResultTest is Test {
             )
         );
         sportsHub.challengeResult(marketId, CHALLENGE_REASON);
+    }
+
+    function test_resolveResultChallenge_upholdsResultAndFinalizes() external {
+        uint64 marketId = _createOpenLockAndProposeResult();
+        SSOTTypes.SportsResult memory result = sportsHub.getResult(marketId);
+
+        vm.prank(challenger);
+        sportsHub.challengeResult(marketId, CHALLENGE_REASON);
+
+        vm.prank(arbitrator);
+        sportsHub.resolveResultChallenge(marketId, SSOTTypes.SportsChallengeDecision.UpholdResult, ARBITRATION_DECISION);
+
+        SSOTTypes.SportsMarket memory market = sportsHub.getMarket(marketId);
+        assertEq(uint256(market.state), uint256(SSOTTypes.SportsMarketState.Resolved));
+
+        SSOTTypes.SportsResult memory resolved = sportsHub.getResult(marketId);
+        assertEq(resolved.resultPayloadHash, result.resultPayloadHash);
+        assertEq(uint256(resolved.challengeDecision), uint256(SSOTTypes.SportsChallengeDecision.UpholdResult));
+        assertEq(resolved.arbitrationDecisionHash, ARBITRATION_DECISION);
+        assertEq(resolved.arbitrator, arbitrator);
+        assertEq(resolved.arbitratedAt, block.timestamp);
+    }
+
+    function test_resolveResultChallenge_reopensForNewQuorumResult() external {
+        uint64 marketId = _createOpenLockAndProposeResult();
+        SSOTTypes.SportsResult memory oldResult = sportsHub.getResult(marketId);
+
+        vm.prank(challenger);
+        sportsHub.challengeResult(marketId, CHALLENGE_REASON);
+
+        vm.prank(arbitrator);
+        sportsHub.resolveResultChallenge(marketId, SSOTTypes.SportsChallengeDecision.ReopenResult, ARBITRATION_DECISION);
+
+        SSOTTypes.SportsMarket memory market = sportsHub.getMarket(marketId);
+        assertEq(uint256(market.state), uint256(SSOTTypes.SportsMarketState.Locked));
+        assertEq(
+            uint256(sportsHub.getResult(marketId).challengeDecision),
+            uint256(SSOTTypes.SportsChallengeDecision.ReopenResult)
+        );
+
+        vm.warp(block.timestamp + 1);
+        vm.prank(reporter);
+        sportsHub.proposeResult(
+            marketId, 0, keccak256("CORRECTED_SOURCE"), keccak256("CORRECTED_EVIDENCE"), uint64(block.timestamp)
+        );
+
+        SSOTTypes.SportsResult memory newResult = sportsHub.getResult(marketId);
+        assertFalse(newResult.challenged);
+        assertEq(newResult.winningOutcomeId, 0);
+        assertTrue(newResult.resultPayloadHash != oldResult.resultPayloadHash);
+        assertEq(uint256(newResult.challengeDecision), uint256(SSOTTypes.SportsChallengeDecision.None));
+    }
+
+    function test_resolveResultChallenge_rejectsUnauthorizedBadDecisionAndBadState() external {
+        uint64 marketId = _createOpenLockAndProposeResult();
+
+        vm.expectRevert(abi.encodeWithSelector(ISportsHub.UnauthorizedArbitrator.selector, address(this)));
+        sportsHub.resolveResultChallenge(marketId, SSOTTypes.SportsChallengeDecision.UpholdResult, ARBITRATION_DECISION);
+
+        vm.prank(arbitrator);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ISportsHub.BadMarketState.selector,
+                marketId,
+                SSOTTypes.SportsMarketState.ResultProposed,
+                SSOTTypes.SportsMarketState.Challenged
+            )
+        );
+        sportsHub.resolveResultChallenge(marketId, SSOTTypes.SportsChallengeDecision.UpholdResult, ARBITRATION_DECISION);
+
+        vm.prank(challenger);
+        sportsHub.challengeResult(marketId, CHALLENGE_REASON);
+
+        vm.prank(arbitrator);
+        vm.expectRevert(Errors.InvalidConfig.selector);
+        sportsHub.resolveResultChallenge(marketId, SSOTTypes.SportsChallengeDecision.None, ARBITRATION_DECISION);
+
+        vm.prank(arbitrator);
+        vm.expectRevert(Errors.InvalidConfig.selector);
+        sportsHub.resolveResultChallenge(marketId, SSOTTypes.SportsChallengeDecision.UpholdResult, bytes32(0));
     }
 
     function test_finalizeResult_respectsChallengeDelayAndResolvesOnce() external {

@@ -207,6 +207,14 @@ contract GenerateReleaseNotesV13 is Script {
             "- sportsResultReporterThreshold: `",
             vm.toString(snap.readUint(".sportsResultReporterThreshold")),
             "`",
+            "\n",
+            "- sportsResultChallenger: `",
+            vm.toString(snap.readAddress(".sportsResultChallenger")),
+            "`",
+            "\n",
+            "- sportsResultArbitrator: `",
+            vm.toString(snap.readAddress(".sportsResultArbitrator")),
+            "`",
             "\n\n"
         );
     }

@@ -55,6 +55,8 @@ Record the release digest from `deployments/release-latest-v13.json` in every in
 cast call $SPORTS_HUB "oddsSignerSetHash()(bytes32)" --rpc-url $RPC
 cast call $SPORTS_HUB "resultReporterSetHash()(bytes32)" --rpc-url $RPC
 cast call $SPORTS_HUB "resultReporterThreshold()(uint8)" --rpc-url $RPC
+cast call $SPORTS_HUB "resultChallenger(address)(bool)" $CHALLENGER --rpc-url $RPC
+cast call $SPORTS_HUB "resultArbitrator(address)(bool)" $ARBITRATOR --rpc-url $RPC
 cast call $SPORTS_HUB "MIN_RESULT_FINALITY_SECONDS()(uint64)" --rpc-url $RPC
 cast call $SPORTS_RISK_ENGINE "limitsForPool(uint64)(uint256,uint256,uint256,uint256,uint256)" $SPORTS_POOL_ID --rpc-url $RPC
 cast call $SPORTS_RISK_ENGINE "currentRiskHashForPool(uint64)(bytes32)" $SPORTS_POOL_ID --rpc-url $RPC
@@ -64,7 +66,7 @@ Market and exposure reads:
 
 ```bash
 cast call $SPORTS_HUB "getMarket(uint64)((uint64,uint64,uint64,uint32,uint64,uint64,uint64,uint64,bytes32,bytes32,uint8))" $MARKET_ID --rpc-url $RPC
-cast call $SPORTS_HUB "getResult(uint64)((uint64,uint64,uint64,uint32,uint64,bytes32,bytes32,bytes32,bytes32,bytes32,uint8,uint8,address,uint64,uint64,uint64,bool))" $MARKET_ID --rpc-url $RPC
+cast call $SPORTS_HUB "getResult(uint64)((uint64,uint64,uint64,uint32,uint64,bytes32,bytes32,bytes32,bytes32,bytes32,uint8,uint8,address,uint64,uint64,uint64,bool,bytes32,address,uint64,uint8,bytes32,address,uint64))" $MARKET_ID --rpc-url $RPC
 cast call $SPORTS_HUB "marketReserved(uint64)(uint256)" $MARKET_ID --rpc-url $RPC
 cast call $SPORTS_HUB "marketOutcomeReserved(uint64,uint32)(uint256)" $MARKET_ID $OUTCOME_ID --rpc-url $RPC
 cast call $SPORTS_HUB "poolEventReserved(uint64,uint64)(uint256)" $SPORTS_POOL_ID $EVENT_ID --rpc-url $RPC
@@ -74,7 +76,14 @@ cast call $SPORTS_HUB "eventReserved(uint64)(uint256)" $EVENT_ID --rpc-url $RPC 
 `getResult` returns `marketId`, `eventId`, `poolId`, `winningOutcomeId`, `marketVersion`,
 `resultPayloadHash`, `resultSourceHash`, `evidenceHash`, `rulebookHash`, `reporterSetHash`,
 `reporterThreshold`, `reporterCount`, `proposer`, `observedAt`, `proposedAt`, `finalizesAt`, and
-`challenged`.
+`challenged`, followed by challenge/arbitration evidence: `challengeReasonHash`, `challenger`,
+`challengedAt`, `challengeDecision`, `arbitrationDecisionHash`, `arbitrator`, and `arbitratedAt`.
+
+Challenge decision values:
+- `0=None`
+- `1=UpholdResult`
+- `2=ReopenResult`
+- `3=VoidMarket`
 
 Sports market state values:
 - `0=None`
@@ -115,7 +124,8 @@ Compare:
 - current `oddsSignerSetHash`, `resultReporterSetHash`, `resultReporterThreshold`, and
   `currentRiskHashForPool(poolId)`;
 - exposure reads for the affected market/outcome/pool-event;
-- latest `OddsSignerSet`, `ResultReporterSet`, `RiskLimitsSet` / `PoolRiskLimitsSet`, and `MarketStateSet` events.
+- latest `OddsSignerSet`, `ResultReporterSet`, `ResultChallengerSet`, `ResultArbitratorSet`,
+  `RiskLimitsSet` / `PoolRiskLimitsSet`, and `MarketStateSet` events.
 
 If multiple active markets fail with the same signer/hash/risk mismatch, treat as systemic and suspend all affected markets.
 
@@ -184,7 +194,7 @@ If multiple active markets fail with the same signer/hash/risk mismatch, treat a
 1) **Read market and result state.**
    ```bash
    cast call $SPORTS_HUB "getMarket(uint64)((uint64,uint64,uint64,uint32,uint64,uint64,uint64,uint64,bytes32,bytes32,uint8))" $MARKET_ID --rpc-url $RPC
-   cast call $SPORTS_HUB "getResult(uint64)((uint64,uint64,uint64,uint32,uint64,bytes32,bytes32,bytes32,bytes32,bytes32,uint8,uint8,address,uint64,uint64,uint64,bool))" $MARKET_ID --rpc-url $RPC
+   cast call $SPORTS_HUB "getResult(uint64)((uint64,uint64,uint64,uint32,uint64,bytes32,bytes32,bytes32,bytes32,bytes32,uint8,uint8,address,uint64,uint64,uint64,bool,bytes32,address,uint64,uint8,bytes32,address,uint64))" $MARKET_ID --rpc-url $RPC
    ```
    Recompute `resultPayloadHash` with `hashResultPayload(marketId, winningOutcomeId, resultSourceHash,
    evidenceHash, observedAt)` and compare it with the stored result.
@@ -192,14 +202,20 @@ If multiple active markets fail with the same signer/hash/risk mismatch, treat a
    reporter-set policy for the incident window.
 2) **If the proposed result is wrong or untrusted, challenge it before finality.**
    ```bash
-   cast send $SPORTS_HUB "challengeResult(uint64,bytes32)" $MARKET_ID $REASON_HASH --rpc-url $RPC --private-key $GOV_PK
+   cast send $SPORTS_HUB "challengeResult(uint64,bytes32)" $MARKET_ID $REASON_HASH --rpc-url $RPC --private-key $SPORTS_CHALLENGER_PK
    ```
-3) **If no trustworthy result path remains, void the market.**
+   The caller must be governance or an allowlisted `resultChallenger`.
+3) **Resolve the challenge with an auditable arbitration decision.**
+   - Use `1=UpholdResult` only when the original result is confirmed correct; this finalizes the market.
+   - Use `2=ReopenResult` when the original payload is rejected but reporters can propose a corrected result.
+   - Use `3=VoidMarket` when no trustworthy result path remains; tickets can then be refunded.
    ```bash
-   cast send $SPORTS_HUB "voidMarket(uint64)" $MARKET_ID --rpc-url $RPC --private-key $GOV_PK
+   export DECISION_HASH=0x... # hash of the signed arbitration note / incident ticket / data-room bundle
+   cast send $SPORTS_HUB "resolveResultChallenge(uint64,uint8,bytes32)" $MARKET_ID 2 $DECISION_HASH --rpc-url $RPC --private-key $SPORTS_ARBITRATOR_PK
    ```
-   Voided tickets can be refunded through `refundTicket` or `voidTicket`.
-4) **If the result is valid and finality has elapsed, finalize.**
+   The caller must be governance or an allowlisted `resultArbitrator`. A challenged market cannot be
+   silently voided through `voidMarket`; use decision `3=VoidMarket` so the decision hash is public.
+4) **If the result is valid and finality has elapsed without a challenge, finalize.**
    ```bash
    cast send $SPORTS_HUB "finalizeResult(uint64)" $MARKET_ID --rpc-url $RPC --private-key $KEEPER_PK
    ```
@@ -212,6 +228,7 @@ If multiple active markets fail with the same signer/hash/risk mismatch, treat a
 - Finalize a result whose `resultPayloadHash` cannot be reproduced from the structured source/evidence
   fields and the rulebook.
 - Finalize a result below the approved reporter threshold for the market's reporter-set policy.
+- Reopen or void a challenged result without a public `arbitrationDecisionHash`.
 - Use governance to pick arbitrary winning tickets.
 - Block user-triggered `settleTicket`, `refundTicket`, or `voidTicket` once market state permits debt-out.
 
@@ -280,6 +297,6 @@ Capture:
 - current `resultReporterThreshold`;
 - `SportsRiskEngine.limitsForPool(poolId)` and exposure reads;
 - relevant events: `MarketStateSet`, `TicketPlaced`, `ResultProposed`, `ResultChallenged`,
-  `ResultFinalized`, `TicketSettled`, `TicketRefunded`, `TicketVoided`, `RiskLimitsSet`,
+  `ResultChallengeResolved`, `ResultFinalized`, `TicketSettled`, `TicketRefunded`, `TicketVoided`, `RiskLimitsSet`,
   `PoolRiskLimitsSet`;
 - governance or keeper tx hashes and signers.

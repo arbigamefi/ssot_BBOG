@@ -142,6 +142,7 @@ contract SportsHubHandler is Test {
         if (market.state != SSOTTypes.SportsMarketState.ResultProposed) return;
         if (reasonHash == bytes32(0)) reasonHash = keccak256("DEFAULT_CHALLENGE");
 
+        vm.prank(gov);
         try sportsHub.challengeResult(marketId, reasonHash) {} catch {}
     }
 

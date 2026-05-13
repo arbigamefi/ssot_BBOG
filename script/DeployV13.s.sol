@@ -49,6 +49,8 @@ interface IERC20MetadataLikeV13 {
 /// Optional per-Sports-pool overrides:
 ///   SPORTS_MAX_STAKE_POOL_i, SPORTS_MAX_PAYOUT_POOL_i, SPORTS_MAX_MARKET_RESERVED_POOL_i,
 ///   SPORTS_MAX_OUTCOME_RESERVED_POOL_i, SPORTS_MAX_EVENT_RESERVED_POOL_i
+/// Optional Sports bootstrap allowlists:
+///   SPORTS_ODDS_SIGNER, SPORTS_RESULT_REPORTER, SPORTS_RESULT_CHALLENGER, SPORTS_RESULT_ARBITRATOR
 ///
 /// Example:
 ///   forge script script/DeployV13.s.sol:DeployV13 --rpc-url $RPC_URL --broadcast -vvv
@@ -78,6 +80,8 @@ contract DeployV13 is Script {
         uint8 resultReporterThreshold;
         address oddsSigner;
         address resultReporter;
+        address resultChallenger;
+        address resultArbitrator;
     }
 
     struct DeployConfig {
@@ -203,6 +207,12 @@ contract DeployV13 is Script {
             if (cfg.sportsConfig.resultReporterThreshold != 1) {
                 d.sportsHub.setResultReporterThreshold(cfg.sportsConfig.resultReporterThreshold);
             }
+            if (cfg.sportsConfig.resultChallenger != address(0)) {
+                d.sportsHub.setResultChallenger(cfg.sportsConfig.resultChallenger, true);
+            }
+            if (cfg.sportsConfig.resultArbitrator != address(0)) {
+                d.sportsHub.setResultArbitrator(cfg.sportsConfig.resultArbitrator, true);
+            }
             for (uint256 i = 0; i < pools.length; ++i) {
                 if (pools[i].domain == SSOTTypes.PoolDomain.Sports) {
                     d.sportsRiskEngine
@@ -295,6 +305,8 @@ contract DeployV13 is Script {
         cfg.resultReporterThreshold = uint8(resultReporterThreshold);
         cfg.oddsSigner = vm.envOr("SPORTS_ODDS_SIGNER", address(0));
         cfg.resultReporter = vm.envOr("SPORTS_RESULT_REPORTER", address(0));
+        cfg.resultChallenger = vm.envOr("SPORTS_RESULT_CHALLENGER", address(0));
+        cfg.resultArbitrator = vm.envOr("SPORTS_RESULT_ARBITRATOR", address(0));
     }
 
     function _readSportsPoolLimits(SportsConfig memory sportsConfig, PoolConfig[] memory pools) internal view {
@@ -454,6 +466,8 @@ contract DeployV13 is Script {
         json = vm.serializeUint(obj, "sportsResultReporterThreshold", cfg.sportsConfig.resultReporterThreshold);
         json = vm.serializeAddress(obj, "sportsOddsSigner", cfg.sportsConfig.oddsSigner);
         json = vm.serializeAddress(obj, "sportsResultReporter", cfg.sportsConfig.resultReporter);
+        json = vm.serializeAddress(obj, "sportsResultChallenger", cfg.sportsConfig.resultChallenger);
+        json = vm.serializeAddress(obj, "sportsResultArbitrator", cfg.sportsConfig.resultArbitrator);
         return json;
     }
 

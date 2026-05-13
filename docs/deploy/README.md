@@ -132,7 +132,9 @@ It writes separate v1.3 artifacts while the legacy release pipeline is still bei
 For v1.3, each `Bank.settlementRouter()` must equal `SettlementRouter`. Casino pools are allowlisted
 for `GameHub`; Sports pools are allowlisted for `SportsHub` after the deployment script has deployed
 and registered the Sports vertical. Sports result-oracle configuration includes both
-`sportsResultReporterSetHash` and `sportsResultReporterThreshold` in the release snapshot.
+`sportsResultReporterSetHash` and `sportsResultReporterThreshold` in the release snapshot, plus
+optional bootstrap `sportsResultChallenger` and `sportsResultArbitrator` addresses for dispute
+operations.
 
 ## 3.1) Verify on explorer (optional but recommended)
 Set an Etherscan-family API key (BaseScan/Arbiscan also work with Etherscan API v2 unified keys).

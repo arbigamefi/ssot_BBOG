@@ -162,10 +162,13 @@ The “Query” fields are **pseudocode** (PromQL-like). Implement with your mon
 - Query: `increase(sports_results_challenged_total[5m]) > 0`
 - Escalate to SEV0 for high-liability markets or suspected data-provider compromise.
 - Action: `docs/ops/runbooks/sportsbook-ops.md` (Playbook B)
+- Clear only after `ResultChallengeResolved` is emitted with an approved decision hash and the market is
+  either resolved, reopened for a fresh quorum result, or voided.
 
 **ALERT-G6-SPORTS_ORACLE_CONFIG_CHANGED (SEV0)**
-- Trigger: `OddsSignerSetHashSet`, `OddsSignerSet`, `ResultReporterSetHashSet`, or `ResultReporterSet`
-  outside an approved governance window.
+- Trigger: `OddsSignerSetHashSet`, `OddsSignerSet`, `ResultReporterSetHashSet`, `ResultReporterSet`,
+  `ResultReporterThresholdSet`, `ResultChallengerSet`, or `ResultArbitratorSet` outside an approved
+  governance window.
 - Query: `increase(sports_oracle_config_changes_total[5m]) > 0`
 - Action: `docs/ops/runbooks/sportsbook-ops.md` and `docs/ops/runbooks/pause-config-drift.md`
 

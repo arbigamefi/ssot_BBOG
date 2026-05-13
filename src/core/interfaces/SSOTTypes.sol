@@ -105,6 +105,14 @@ library SSOTTypes {
         Voided
     }
 
+    /// @notice Authorized arbitration outcome for a challenged Sports result.
+    enum SportsChallengeDecision {
+        None,
+        UpholdResult,
+        ReopenResult,
+        VoidMarket
+    }
+
     /// @notice Hub-side canonical bet record (lifecycle SSOT).
     struct Bet {
         uint256 betId;
@@ -215,6 +223,13 @@ library SSOTTypes {
         uint64 proposedAt;
         uint64 finalizesAt;
         bool challenged;
+        bytes32 challengeReasonHash;
+        address challenger;
+        uint64 challengedAt;
+        SportsChallengeDecision challengeDecision;
+        bytes32 arbitrationDecisionHash;
+        address arbitrator;
+        uint64 arbitratedAt;
     }
 
     /// @notice XP award instruction produced during settlement (debt accrual, not a transfer).

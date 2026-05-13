@@ -213,6 +213,22 @@ Acceptance:
 - Threshold `2+` rejects missing, unauthorized, or duplicate reporter signatures.
 - Result ops docs explain how to verify quorum evidence.
 
+### PR-3.1.9 — Result dispute arbitration
+
+Deliverables:
+
+- Add authorized result challenger and arbitrator roles.
+- Persist challenge reason, challenger, challenged timestamp, arbitration decision hash, arbitrator, and decision timestamp.
+- Resolve challenged results through explicit `UpholdResult`, `ReopenResult`, or `VoidMarket` decisions.
+- Require challenged-market voids to go through the auditable arbitration path.
+
+Acceptance:
+
+- Unauthorized addresses cannot force a market into `Challenged`.
+- An upheld challenge finalizes the original result without changing the winner.
+- A reopened challenge returns the market to `Locked` so reporters must submit a fresh quorum-bound result.
+- A void decision enables refunds and emits public arbitration evidence.
+
 ## Recommended validation commands
 
 ```bash
