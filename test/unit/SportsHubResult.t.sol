@@ -31,6 +31,7 @@ contract SportsHubResultTest is Test {
     bytes32 internal constant RESULT_EVIDENCE_HASH = keccak256("LAL_WIN_EVIDENCE");
     bytes32 internal constant CHALLENGE_REASON = keccak256("SCORE_DISPUTE");
     bytes32 internal constant ARBITRATION_DECISION = keccak256("ARBITRATION_DECISION");
+    bytes32 internal constant VOID_REASON = keccak256("EVENT_CANCELLED");
 
     uint64 internal constant SPORTS_POOL_ID = 2;
     uint64 internal constant EVENT_ID = 3003;
@@ -308,7 +309,7 @@ contract SportsHubResultTest is Test {
 
         vm.prank(gov);
         vm.expectRevert(abi.encodeWithSelector(ISportsHub.ResultChallengePending.selector, marketId));
-        sportsHub.voidMarket(marketId);
+        sportsHub.voidMarket(marketId, VOID_REASON);
 
         vm.prank(arbitrator);
         sportsHub.resolveResultChallenge(marketId, SSOTTypes.SportsChallengeDecision.VoidMarket, ARBITRATION_DECISION);
@@ -342,6 +343,25 @@ contract SportsHubResultTest is Test {
             )
         );
         sportsHub.challengeResult(marketId, CHALLENGE_REASON);
+    }
+
+    function test_challengeResult_rejectsAfterFinalityWindowCloses() external {
+        uint64 marketId = _createOpenLockAndProposeResult();
+        SSOTTypes.SportsResult memory result = sportsHub.getResult(marketId);
+
+        vm.warp(result.finalizesAt);
+
+        vm.prank(challenger);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ISportsHub.ResultChallengeWindowClosed.selector, marketId, block.timestamp, result.finalizesAt
+            )
+        );
+        sportsHub.challengeResult(marketId, CHALLENGE_REASON);
+
+        sportsHub.finalizeResult(marketId);
+        SSOTTypes.SportsMarket memory market = sportsHub.getMarket(marketId);
+        assertEq(uint256(market.state), uint256(SSOTTypes.SportsMarketState.Resolved));
     }
 
     function test_resolveResultChallenge_upholdsResultAndFinalizes() external {

@@ -41,7 +41,7 @@ interface ISportsHub {
     function openMarket(uint64 marketId) external;
     function suspendMarket(uint64 marketId, bool suspended) external;
     function lockMarket(uint64 marketId) external;
-    function voidMarket(uint64 marketId) external;
+    function voidMarket(uint64 marketId, bytes32 reasonHash) external;
 
     function placeTicket(
         uint64 marketId,
@@ -84,8 +84,11 @@ interface ISportsHub {
     function finalizeResult(uint64 marketId) external;
 
     function settleTicket(uint256 ticketId) external;
+    function settleTickets(uint256[] calldata ticketIds) external;
     function refundTicket(uint256 ticketId) external;
+    function refundTickets(uint256[] calldata ticketIds) external;
     function voidTicket(uint256 ticketId) external;
+    function voidTickets(uint256[] calldata ticketIds) external;
 
     event MarketCreated(
         uint64 indexed marketId,
@@ -101,6 +104,7 @@ interface ISportsHub {
     event MarketStateSet(
         uint64 indexed marketId, SSOTTypes.SportsMarketState oldState, SSOTTypes.SportsMarketState newState
     );
+    event MarketVoided(uint64 indexed marketId, uint64 indexed eventId, bytes32 reasonHash, address operator);
     event OddsSignerSetHashSet(bytes32 oldHash, bytes32 newHash);
     event OddsSignerSet(address indexed signer, bool allowed);
     event ResultReporterSetHashSet(bytes32 oldHash, bytes32 newHash);
@@ -163,6 +167,7 @@ interface ISportsHub {
     error BadOddsSignature();
     error BadPoolDomain(uint64 poolId, SSOTTypes.PoolDomain domain);
     error ResultFinalityPending(uint64 marketId, uint256 nowTs, uint256 finalizesAt);
+    error ResultChallengeWindowClosed(uint64 marketId, uint256 nowTs, uint256 finalizesAt);
     error ResultAlreadyChallenged(uint64 marketId);
     error ResultChallengePending(uint64 marketId);
     error UnauthorizedReporter(address reporter);

@@ -152,6 +152,12 @@ The “Query” fields are **pseudocode** (PromQL-like). Implement with your mon
 - Escalate to SEV0 if exposure keeps rising while the market remains open.
 - Action: `docs/ops/runbooks/sportsbook-ops.md` (Playbook C)
 
+**ALERT-G3A-SPORTS_MARKET_VOIDED (SEV1 -> SEV0)**
+- Trigger: any direct `MarketVoided` event.
+- Query: `increase(sports_markets_voided_total[5m]) > 0`
+- Escalate to SEV0 for high-liability markets or repeated voids from the same data source.
+- Action: `docs/ops/runbooks/sportsbook-ops.md`; confirm the non-zero reason hash maps to the incident record.
+
 **ALERT-G4-SPORTS_RESULT_FINALITY_STUCK (SEV1)**
 - Trigger: `ResultProposed.finalizesAt` elapsed plus SLA, but `ResultFinalized` has not occurred.
 - Query (pseudo): `sports_result_finality_pending_seconds > SPORTS_RESULT_FINALITY_SLA`

@@ -117,6 +117,14 @@ cast send $SPORTS_HUB "suspendMarket(uint64,bool)" $MARKET_ID true --rpc-url $RP
 
 Suspension blocks new tickets. It does not block valid later settlement/refund paths.
 
+If the market must be voided before a challenged-result arbitration path exists, publish a non-zero
+reason hash and include the underlying incident/data-room link in the incident record:
+
+```bash
+export VOID_REASON_HASH=0x...
+cast send $SPORTS_HUB "voidMarket(uint64,bytes32)" $MARKET_ID $VOID_REASON_HASH --rpc-url $RPC --private-key $GOV_PK
+```
+
 ### 3) Is this isolated to one market/event or systemic?
 
 Compare:
@@ -204,7 +212,8 @@ If multiple active markets fail with the same signer/hash/risk mismatch, treat a
    ```bash
    cast send $SPORTS_HUB "challengeResult(uint64,bytes32)" $MARKET_ID $REASON_HASH --rpc-url $RPC --private-key $SPORTS_CHALLENGER_PK
    ```
-   The caller must be governance or an allowlisted `resultChallenger`.
+   The caller must be governance or an allowlisted `resultChallenger`. The challenge window closes at
+   `finalizesAt`; after that, `finalizeResult` is the expected path.
 3) **Resolve the challenge with an auditable arbitration decision.**
    - Use `1=UpholdResult` only when the original result is confirmed correct; this finalizes the market.
    - Use `2=ReopenResult` when the original payload is rejected but reporters can propose a corrected result.
@@ -215,6 +224,8 @@ If multiple active markets fail with the same signer/hash/risk mismatch, treat a
    ```
    The caller must be governance or an allowlisted `resultArbitrator`. A challenged market cannot be
    silently voided through `voidMarket`; use decision `3=VoidMarket` so the decision hash is public.
+   Voided tickets can be refunded through `refundTicket` / `voidTicket`, or batched with
+   `refundTickets(uint256[])` / `voidTickets(uint256[])`.
 4) **If the result is valid and finality has elapsed without a challenge, finalize.**
    ```bash
    cast send $SPORTS_HUB "finalizeResult(uint64)" $MARKET_ID --rpc-url $RPC --private-key $KEEPER_PK
@@ -223,12 +234,18 @@ If multiple active markets fail with the same signer/hash/risk mismatch, treat a
    - `TicketSettled` should progress for held tickets.
    - Losing tickets settle with zero payout.
    - Winning tickets settle through `SettlementRouter`; no direct Bank calls are allowed.
+   - Keepers may batch terminalization:
+     ```bash
+     cast send $SPORTS_HUB "settleTickets(uint256[])" "[$TICKET_ID_1,$TICKET_ID_2]" --rpc-url $RPC --private-key $KEEPER_PK
+     ```
+     Batch calls are atomic; one bad ticket reverts the whole batch, so retry with a smaller batch when needed.
 
 **Do not**
 - Finalize a result whose `resultPayloadHash` cannot be reproduced from the structured source/evidence
   fields and the rulebook.
 - Finalize a result below the approved reporter threshold for the market's reporter-set policy.
 - Reopen or void a challenged result without a public `arbitrationDecisionHash`.
+- Void a market directly without a non-zero public reason hash.
 - Use governance to pick arbitrary winning tickets.
 - Block user-triggered `settleTicket`, `refundTicket`, or `voidTicket` once market state permits debt-out.
 

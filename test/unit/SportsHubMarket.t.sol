@@ -22,6 +22,7 @@ contract SportsHubMarketTest is Test {
     bytes32 internal constant REPORTER_SET_HASH = keccak256("REPORTER_SET");
     bytes32 internal constant MARKET_KEY = keccak256("NBA:LAL:BOS:ML");
     bytes32 internal constant RULEBOOK_HASH = keccak256("SPORTS_RULEBOOK_V1");
+    bytes32 internal constant VOID_REASON = keccak256("EVENT_CANCELLED");
 
     uint64 internal constant CASINO_POOL_ID = 1;
     uint64 internal constant SPORTS_POOL_ID = 2;
@@ -179,7 +180,11 @@ contract SportsHubMarketTest is Test {
         _assertMarketState(marketId, SSOTTypes.SportsMarketState.Locked, 5);
 
         vm.prank(gov);
-        sportsHub.voidMarket(marketId);
+        vm.expectRevert(Errors.InvalidConfig.selector);
+        sportsHub.voidMarket(marketId, bytes32(0));
+
+        vm.prank(gov);
+        sportsHub.voidMarket(marketId, VOID_REASON);
         _assertMarketState(marketId, SSOTTypes.SportsMarketState.Voided, 6);
     }
 
@@ -210,7 +215,7 @@ contract SportsHubMarketTest is Test {
         );
         sportsHub.openMarket(marketId);
 
-        sportsHub.voidMarket(marketId);
+        sportsHub.voidMarket(marketId, VOID_REASON);
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -220,7 +225,7 @@ contract SportsHubMarketTest is Test {
                 SSOTTypes.SportsMarketState.Open
             )
         );
-        sportsHub.voidMarket(marketId);
+        sportsHub.voidMarket(marketId, VOID_REASON);
         vm.stopPrank();
     }
 

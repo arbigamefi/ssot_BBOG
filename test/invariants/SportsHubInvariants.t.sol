@@ -37,6 +37,7 @@ contract SportsHubHandler is Test {
     uint64 internal constant FINALITY = 30 minutes;
     bytes32 internal constant RESULT_SOURCE_HASH = keccak256("SPORTS_RESULT_PROVIDER");
     bytes32 internal constant RESULT_EVIDENCE_HASH = keccak256("SPORTS_RESULT_EVIDENCE");
+    bytes32 internal constant VOID_REASON = keccak256("INVARIANT_VOID");
 
     constructor(
         MockERC20 asset_,
@@ -154,7 +155,7 @@ contract SportsHubHandler is Test {
         }
 
         vm.prank(gov);
-        try sportsHub.voidMarket(marketId) {} catch {}
+        try sportsHub.voidMarket(marketId, VOID_REASON) {} catch {}
     }
 
     function action_debtOut(uint256 seed) external {

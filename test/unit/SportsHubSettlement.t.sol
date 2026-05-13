@@ -26,6 +26,7 @@ contract SportsHubSettlementTest is Test {
     bytes32 internal constant RULEBOOK_HASH = keccak256("SPORTS_RULEBOOK_V1");
     bytes32 internal constant RESULT_SOURCE_HASH = keccak256("NBA_FINAL_SCORE_PROVIDER");
     bytes32 internal constant RESULT_EVIDENCE_HASH = keccak256("LAL_WIN_EVIDENCE");
+    bytes32 internal constant VOID_REASON = keccak256("EVENT_CANCELLED");
 
     uint64 internal constant SPORTS_POOL_ID = 2;
     uint64 internal constant EVENT_ID = 4004;
@@ -113,6 +114,34 @@ contract SportsHubSettlementTest is Test {
         assertEq(uint256(loserPosition.state), uint256(SSOTTypes.PositionState.Settled));
     }
 
+    function test_settleTickets_batchSettlesWinnerAndLoserAndReleasesExposure() external {
+        uint64 marketId = _createAndOpenMarket();
+        uint256 winningTicket = _placeTicket(marketId, WINNING_OUTCOME_ID, 1);
+        uint256 losingTicket = _placeTicket(marketId, LOSING_OUTCOME_ID, 2);
+        _lockProposeAndFinalize(marketId);
+
+        uint256[] memory ticketIds = new uint256[](2);
+        ticketIds[0] = winningTicket;
+        ticketIds[1] = losingTicket;
+        sportsHub.settleTickets(ticketIds);
+
+        assertEq(usdc.balanceOf(player), 9_990e6);
+        assertEq(sportsBank.totalReserved(), 0);
+        assertEq(sportsHub.marketReserved(marketId), 0);
+        assertEq(sportsHub.marketOutcomeReserved(marketId, WINNING_OUTCOME_ID), 0);
+        assertEq(sportsHub.marketOutcomeReserved(marketId, LOSING_OUTCOME_ID), 0);
+        assertEq(sportsHub.poolEventReserved(SPORTS_POOL_ID, EVENT_ID), 0);
+        assertEq(sportsHub.eventReserved(EVENT_ID), 0);
+
+        SSOTTypes.SportsTicket memory winner = sportsHub.getTicket(winningTicket);
+        SSOTTypes.SportsTicket memory loser = sportsHub.getTicket(losingTicket);
+        assertEq(uint256(winner.state), uint256(SSOTTypes.SportsTicketState.Settled));
+        assertEq(uint256(loser.state), uint256(SSOTTypes.SportsTicketState.Settled));
+
+        assertEq(uint256(router.getPosition(winner.positionId).state), uint256(SSOTTypes.PositionState.Settled));
+        assertEq(uint256(router.getPosition(loser.positionId).state), uint256(SSOTTypes.PositionState.Settled));
+    }
+
     function test_settleTicket_rejectsBeforeResolvedAndDoubleSettlement() external {
         uint64 marketId = _createAndOpenMarket();
         uint256 ticketId = _placeTicket(marketId, WINNING_OUTCOME_ID, 1);
@@ -141,12 +170,39 @@ contract SportsHubSettlementTest is Test {
         sportsHub.settleTicket(ticketId);
     }
 
+    function test_settleTickets_revertsAtomicallyOnBadTicket() external {
+        uint64 marketId = _createAndOpenMarket();
+        uint256 winningTicket = _placeTicket(marketId, WINNING_OUTCOME_ID, 1);
+        uint256 losingTicket = _placeTicket(marketId, LOSING_OUTCOME_ID, 2);
+        _lockProposeAndFinalize(marketId);
+
+        sportsHub.settleTicket(winningTicket);
+
+        uint256[] memory ticketIds = new uint256[](2);
+        ticketIds[0] = losingTicket;
+        ticketIds[1] = winningTicket;
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ISportsHub.BadTicketState.selector,
+                winningTicket,
+                SSOTTypes.SportsTicketState.Settled,
+                SSOTTypes.SportsTicketState.Held
+            )
+        );
+        sportsHub.settleTickets(ticketIds);
+
+        SSOTTypes.SportsTicket memory loser = sportsHub.getTicket(losingTicket);
+        assertEq(uint256(loser.state), uint256(SSOTTypes.SportsTicketState.Held));
+        assertEq(sportsBank.totalReserved(), 190e6);
+        assertEq(sportsHub.marketReserved(marketId), 190e6);
+    }
+
     function test_voidTicket_refundsStakeAndReleasesExposure() external {
         uint64 marketId = _createAndOpenMarket();
         uint256 ticketId = _placeTicket(marketId, WINNING_OUTCOME_ID, 1);
 
         vm.prank(gov);
-        sportsHub.voidMarket(marketId);
+        sportsHub.voidMarket(marketId, VOID_REASON);
 
         sportsHub.voidTicket(ticketId);
 
@@ -161,6 +217,36 @@ contract SportsHubSettlementTest is Test {
 
         SSOTTypes.Position memory position = router.getPosition(ticket.positionId);
         assertEq(uint256(position.state), uint256(SSOTTypes.PositionState.Refunded));
+    }
+
+    function test_refundTicketsAndVoidTickets_batchTerminalizeVoidedMarket() external {
+        uint64 marketId = _createAndOpenMarket();
+        uint256 refundTicketId = _placeTicket(marketId, WINNING_OUTCOME_ID, 1);
+        uint256 voidTicketId = _placeTicket(marketId, LOSING_OUTCOME_ID, 2);
+
+        vm.prank(gov);
+        sportsHub.voidMarket(marketId, VOID_REASON);
+
+        uint256[] memory refundIds = new uint256[](1);
+        refundIds[0] = refundTicketId;
+        sportsHub.refundTickets(refundIds);
+
+        uint256[] memory voidIds = new uint256[](1);
+        voidIds[0] = voidTicketId;
+        sportsHub.voidTickets(voidIds);
+
+        assertEq(usdc.balanceOf(player), 10_000e6);
+        assertEq(sportsBank.totalReserved(), 0);
+        assertEq(sportsHub.marketReserved(marketId), 0);
+        assertEq(sportsHub.poolEventReserved(SPORTS_POOL_ID, EVENT_ID), 0);
+        assertEq(sportsHub.eventReserved(EVENT_ID), 0);
+
+        SSOTTypes.SportsTicket memory refunded = sportsHub.getTicket(refundTicketId);
+        SSOTTypes.SportsTicket memory voided = sportsHub.getTicket(voidTicketId);
+        assertEq(uint256(refunded.state), uint256(SSOTTypes.SportsTicketState.Refunded));
+        assertEq(uint256(voided.state), uint256(SSOTTypes.SportsTicketState.Voided));
+        assertEq(uint256(router.getPosition(refunded.positionId).state), uint256(SSOTTypes.PositionState.Refunded));
+        assertEq(uint256(router.getPosition(voided.positionId).state), uint256(SSOTTypes.PositionState.Refunded));
     }
 
     function test_refundTicket_requiresVoidedMarketAndMarksRefunded() external {
@@ -178,7 +264,7 @@ contract SportsHubSettlementTest is Test {
         sportsHub.refundTicket(ticketId);
 
         vm.prank(gov);
-        sportsHub.voidMarket(marketId);
+        sportsHub.voidMarket(marketId, VOID_REASON);
 
         sportsHub.refundTicket(ticketId);
 
