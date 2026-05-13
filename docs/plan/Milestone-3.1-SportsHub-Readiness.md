@@ -38,6 +38,8 @@ As of `master` through PR #13:
 - The Phase 2 go/no-go packet is tracked at
   `docs/ops/sportsbook-phase2-gonogo-2026-05-14.md` and currently records **NO-GO** for limited
   mainnet sportsbook canary until the off-chain approvals and production controls are filled.
+- The provider/evidence policy draft is tracked at `docs/ops/sportsbook-provider-evidence-policy.md`;
+  it defines hash reproducibility, but does not approve any provider or evidence-storage vendor.
 
 ## Go/No-Go Gates
 

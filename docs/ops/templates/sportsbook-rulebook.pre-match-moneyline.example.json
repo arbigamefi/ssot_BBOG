@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "sportsbook.rulebook.v1",
+  "scope": "pre-match-fixed-odds-single",
+  "sport": "soccer",
+  "league": "example-league",
+  "eventId": "provider:event:example-2026-05-14-home-away",
+  "marketType": "moneyline",
+  "marketKey": "example-league:2026-05-14:home-away:moneyline",
+  "outcomes": [
+    {
+      "outcomeId": 1,
+      "label": "home"
+    },
+    {
+      "outcomeId": 2,
+      "label": "draw"
+    },
+    {
+      "outcomeId": 3,
+      "label": "away"
+    }
+  ],
+  "lockPolicy": {
+    "locksAt": "scheduled-start-minus-0s",
+    "lateStartHandling": "lock-at-scheduled-start-unless-market-suspended"
+  },
+  "settlementPolicy": {
+    "winningOutcomeSource": "full-time-result",
+    "extraTimeIncluded": false,
+    "penaltiesIncluded": false,
+    "statCorrectionsWindowSeconds": 86400
+  },
+  "voidPolicy": {
+    "postponedPastSeconds": 86400,
+    "abandonedWithoutOfficialResult": true,
+    "providerDisagreementHandling": "escalate-to-arbitration"
+  },
+  "providers": {
+    "primary": "provider-to-be-approved",
+    "secondary": "provider-to-be-approved",
+    "officialFallback": "official-league-source-to-be-approved"
+  },
+  "approvals": {
+    "providerPolicyApproval": "TBD",
+    "rulebookApproval": "TBD"
+  }
+}

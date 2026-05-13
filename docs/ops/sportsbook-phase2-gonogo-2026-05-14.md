@@ -79,12 +79,25 @@ Covered:
 - `SettlementRouter`/`Bank` settlement and reserve release;
 - final Casino Bank reserved exposure returned to zero.
 
+### Production-control draft evidence
+
+- Provider/evidence policy draft:
+  `docs/ops/sportsbook-provider-evidence-policy.md`
+- Example pre-match moneyline rulebook template:
+  `docs/ops/templates/sportsbook-rulebook.pre-match-moneyline.example.json`
+- Example result evidence bundle template:
+  `docs/ops/templates/sportsbook-result-evidence.example.json`
+
+These documents define the reproducibility standard for `rulebookHash`, `resultSourceHash`,
+`evidenceHash`, `challengeReasonHash`, and `arbitrationDecisionHash`. They do not approve a provider
+or evidence-storage vendor.
+
 ## Open No-Go Items
 
 | Gate | Status | Required before GO |
 |---|---:|---|
 | Managed key custody | NO-GO | Odds signer, result reporter, challenger, arbitrator, and governance keys must have approved custody, operator ownership, rotation procedure, and rollback plan. |
-| Provider and evidence policy | NO-GO | Market rulebooks, provider source policy, fallback rules, evidence storage, source bundle hash procedure, and result payload reproduction procedure must be approved. |
+| Provider and evidence policy | NO-GO | Approve the provider choice, fallback rules, evidence storage location, and the draft rulebook/result evidence procedure in `docs/ops/sportsbook-provider-evidence-policy.md`. |
 | Jurisdiction and frontend access | NO-GO | Legal/compliance must approve jurisdictions, restricted regions, age policy, KYC/sanctions posture, responsible-gaming controls, and frontend gating. |
 | Bankroll sizing | NO-GO | Initial bankroll, loss tolerance, max reserved exposure, and manual supervision limits must be approved in raw asset units. |
 | Final risk caps | NO-GO | Mainnet `SPORTS_MAX_*` values must be set from the bankroll memo, not copied from testnet. |

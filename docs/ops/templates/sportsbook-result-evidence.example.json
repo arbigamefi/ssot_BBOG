@@ -1,0 +1,43 @@
+{
+  "schemaVersion": "sportsbook.result-evidence.v1",
+  "chainId": 84532,
+  "sportsHub": "0x2DB4Ba326C2C3e5830b0da10F0C52B4097f9fa4b",
+  "marketId": 1,
+  "eventId": 1,
+  "poolId": 2,
+  "marketVersion": 1,
+  "marketKey": "example-league:2026-05-14:home-away:moneyline",
+  "rulebookHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "winningOutcomeId": 1,
+  "observedAt": 1778760000,
+  "providers": [
+    {
+      "name": "provider-to-be-approved",
+      "feedId": "feed-to-be-approved",
+      "providerEventId": "provider:event:example-2026-05-14-home-away",
+      "observedStatus": "final",
+      "observedScore": {
+        "home": 2,
+        "away": 1
+      },
+      "payloadSha256": "sha256-to-be-recorded",
+      "archiveUri": "evidence-store://to-be-approved/raw-provider-payload.json"
+    }
+  ],
+  "reporter": {
+    "reporterSetHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "threshold": 1,
+    "signers": [
+      "0x0000000000000000000000000000000000000000"
+    ]
+  },
+  "hashes": {
+    "resultSourceHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "evidenceHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "resultPayloadHash": "0x0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "approvals": {
+    "operatorReview": "TBD",
+    "incidentOrMarketRecord": "TBD"
+  }
+}

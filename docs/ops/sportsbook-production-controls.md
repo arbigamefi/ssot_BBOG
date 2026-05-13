@@ -48,6 +48,11 @@ No-go:
 Sports outcomes are real-world facts. On-chain custody and settlement do not remove the need for
 provider policy.
 
+The repo-side evidence shape is defined in
+[`sportsbook-provider-evidence-policy.md`](sportsbook-provider-evidence-policy.md), with example
+rulebook and result evidence bundles under `docs/ops/templates/`. That policy is a required input to
+production review, not a provider approval by itself.
+
 Before any public market:
 
 - each market type must have a published rulebook hash and a human-readable rulebook;
