@@ -7,6 +7,10 @@ shared `@ssot/ui` package. It turns the frontend audit into migration rules that
 can be executed in small PRs without breaking sportsbook, casino, release, or
 wallet flows.
 
+For a clean-room frontend rewrite, this document defines the visual and
+architectural constitution. The implementation blueprint lives in
+`docs/design/frontend-rewrite-blueprint.md`.
+
 ## 1. Current Findings
 
 The frontend currently has enough product surface to ship, but it lacks a single
@@ -292,6 +296,29 @@ New games should add one module and one registry entry. They should not expand a
 central page switch indefinitely.
 
 ## 7. Migration Plan
+
+The phases below are valid for incremental migration. If the team chooses a
+full rewrite, follow `docs/design/frontend-rewrite-blueprint.md` instead and
+use this document as the acceptance standard.
+
+### Full Rewrite Mode
+
+Full rewrite mode has different rules from incremental migration:
+
+- preserve protocol correctness, release artifacts, ABI encoding, and runtime
+  proof surfaces
+- do not preserve historical component names, shells, route aliases, or
+  prototype paths inside app code
+- redirects may exist at the route/edge boundary, but compatibility wrappers
+  must not survive inside the component tree
+- delete unused design experiments physically instead of hiding them behind
+  feature flags
+- require an approved UI/UX concept package before page implementation starts
+- require every product route to be rebuilt from shared tokens, primitives,
+  patterns, and feature modules
+
+Full rewrite mode is successful only when the new frontend can be understood
+from the target architecture without knowing the history of the old one.
 
 ### Phase 0: Guardrail Document
 

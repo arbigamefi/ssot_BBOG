@@ -42,6 +42,7 @@ This repository is designed to be **auditable by construction**. The documentati
 ## Design system
 
 - `docs/design/north-star.md` — frontend design-system SSOT, route taxonomy, and phased migration plan
+- `docs/design/frontend-rewrite-blueprint.md` — clean-room frontend rewrite architecture, UI/UX planning, deletion plan, and quality gates
 
 ## Research
 
