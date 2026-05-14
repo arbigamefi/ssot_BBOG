@@ -64,6 +64,23 @@ Covered:
 - final Sports Bank reserved exposure returned to zero;
 - `ENV_FILE=.env.sports-roles.local make sports-phase1-closeout-v13` passed.
 
+### Football MVP product canary evidence
+
+Documented in `docs/deploy/worldcup-football-mvp-canary-2026.md`.
+
+Covered:
+
+- one pre-match football 1X2 market shaped as Mexico vs South Africa;
+- 0-based outcome mapping: `0=Mexico`, `1=Draw`, `2=South Africa`;
+- two signed fixed-odds tickets on Base Sepolia market `4`;
+- result proposal with `resultSourceHash` and `evidenceHash`;
+- finality wait, result finalization, and batch settlement;
+- final `marketReserved(4) = 0`, `poolEventReserved(2, 2026061101) = 0`, and Sports Bank
+  `totalReserved() = 0`.
+
+This proves the narrow football product loop on public testnet. It does not approve a production data
+provider, production evidence store, jurisdiction policy, or public-money limits.
+
 ### GameHub/Casino canary evidence
 
 Documented in `docs/deploy/base-sepolia-v13-gamehub-canary-2026-05-14.md`.

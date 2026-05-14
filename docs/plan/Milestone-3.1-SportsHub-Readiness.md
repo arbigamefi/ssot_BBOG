@@ -32,6 +32,9 @@ As of `master` through PR #13:
 - Base Sepolia Phase 1 rehearsal now covers v1.3 deployment/release, funded canary placement,
   finality settlement, direct void plus batch debt-out, result challenge/arbitration void plus batch
   debt-out, and dedicated non-GOV testnet Sports signer/reporter/challenger/arbitrator roles.
+- The football MVP product canary has been broadcast on Base Sepolia and proves one 3-outcome
+  pre-match football 1X2 market through placement, result reporting, finality, batch settlement, and
+  full reserve release.
 - Phase 1 is closed for the Base Sepolia testnet rehearsal. The remaining work is production/public
   launch readiness: managed key custody, operational staffing, provider policy, evidence storage, and
   compliance gating.
@@ -344,3 +347,27 @@ returning to zero on Base Sepolia block `41447214`.
 
 Result challenge/arbitration and GameHub canary evidence are now recorded in the deployment docs; the
 remaining work is Phase 2 go/no-go approval and production-control closure.
+
+## Football MVP Product Canary Evidence
+
+2026-05-14 Base Sepolia football canary evidence is recorded in
+`docs/deploy/worldcup-football-mvp-canary-2026.md`.
+
+This proves the product shape originally intended for the MVP: one football pre-match 1X2 market with
+outcomes `0=Mexico`, `1=Draw`, and `2=South Africa`; two signed fixed-odds tickets; result reporting
+with source/evidence hashes; finality wait; finalization; batch settlement; and full release of
+SportsHub and Bank reserved liability.
+
+Key public-testnet readbacks:
+
+- market ID `4`, event ID `2026061101`, first ticket ID `10`, ticket count `2`;
+- winning outcome ID `0`;
+- `getMarket(4).state = 7` (`Resolved`);
+- `getTicket(10).state = 2` and `getTicket(11).state = 2` (`Settled`);
+- `marketReserved(4) = 0`;
+- `poolEventReserved(2, 2026061101) = 0`;
+- Sports Bank `totalReserved() = 0`.
+
+This still uses the existing SportsHub reporter path as the MVP fact oracle. It does not prove a
+production oracle/provider integration, managed production key custody, jurisdiction controls, public
+frontend gating, or mainnet bankroll limits.
