@@ -8,7 +8,6 @@ import { Placeholder } from "../../../components/Placeholder";
 import { PageTransition } from "../../../components/PageTransition";
 import { ImmersiveGameLayout } from "../../../components/ImmersiveGameLayout";
 
-import { encodeStakeSpec } from "@ssot/ssot/encoding";
 import { useBetsByGame } from "../../../features/bets/useBetsByGame";
 import { useIndexer } from "../../../features/ops/useIndexer";
 import { useRelease } from "../../../ssot/release/ReleaseProvider";
@@ -17,7 +16,8 @@ import { useSSOTRuntime } from "../../../ssot/runtime";
 import { usePlaceBetStepper } from "../../../features/betting/usePlaceBetStepper";
 import { useConnectModal } from "../../../app/providers/WalletButton";
 import { toGameMeta, type GameMeta } from "../../../features/games/room/model";
-import { buildGameParams, calculateGameWinChance } from "../../../features/games/room/params";
+import { calculateGameWinChance } from "../../../features/games/room/params";
+import { buildGamePlaceBetInput } from "../../../features/games/room/place-bet";
 import {
   formatGameMaxPayout,
   formatHouseEdge,
@@ -159,43 +159,25 @@ export function GamePageClient({ slug }: { slug: string }) {
     }
 
     try {
-      const gameParams = buildGameParams({
-        slug: game.slug,
+      const placeBet = buildGamePlaceBetInput({
+        release,
+        game,
+        betAmount,
+        betCount,
+        stopGain,
+        stopLoss,
         diceTarget,
         coinSide,
         rouletteSpots,
         kenoSpots
       });
-      if (!gameParams.ok) {
-        toast.error(gameParams.message);
+      if (!placeBet.ok) {
+        toast.error(placeBet.message);
         return;
       }
-      const params = gameParams.params;
-
-      const usdcAsset = release.assets.find((a: any) => a.symbol === "USDC");
-      const decimals = usdcAsset?.decimals || 6;
-      const amountPerRoll = BigInt(betAmount) * BigInt(Math.pow(10, decimals));
-      const totalStake = amountPerRoll * BigInt(betCount);
-
-      const stakeSpecBytes = encodeStakeSpec({
-        amountPerRoll,
-        betCount,
-        stopGain: stopGain > 0 ? BigInt(stopGain) * BigInt(Math.pow(10, decimals)) : 0n,
-        stopLoss: stopLoss > 0 ? BigInt(stopLoss) * BigInt(Math.pow(10, decimals)) : 0n
-      });
 
       // planNow dispatches to the state machine (returns void)
-      await planNow({
-        chainId: release.chainId,
-        gameId: game.gameId,
-        asset: (usdcAsset?.address ||
-          "0x0000000000000000000000000000000000000000") as `0x${string}`,
-        betCount,
-        stake: totalStake,
-        params,
-        stakeSpec: stakeSpecBytes,
-        maxHouseEdgeBps: 10000
-      });
+      await planNow(placeBet.input);
       // B3: Errors are surfaced via state.status==='failed' and the toast above
     } catch (e: any) {
       toast.error(e?.message ?? "An unexpected error occurred.");
