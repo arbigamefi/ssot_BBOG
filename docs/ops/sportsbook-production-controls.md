@@ -26,6 +26,11 @@ Phase 1 is closed only when all of the following are true:
 
 The generated Base Sepolia role keys are acceptable only for testnet rehearsal.
 
+The repo-side custody record shape is defined in
+[`sportsbook-key-custody-roles.md`](sportsbook-key-custody-roles.md). The approval memo should be
+based on `docs/ops/templates/sportsbook-role-custody.example.json` and checked with
+`make sports-role-custody-check-v13`.
+
 Before any public-money deployment:
 
 - odds signer keys must live in an approved signer service, HSM, MPC wallet, or similarly managed
@@ -48,6 +53,11 @@ No-go:
 Sports outcomes are real-world facts. On-chain custody and settlement do not remove the need for
 provider policy.
 
+The repo-side evidence shape is defined in
+[`sportsbook-provider-evidence-policy.md`](sportsbook-provider-evidence-policy.md), with example
+rulebook and result evidence bundles under `docs/ops/templates/`. That policy is a required input to
+production review, not a provider approval by itself.
+
 Before any public market:
 
 - each market type must have a published rulebook hash and a human-readable rulebook;
@@ -65,6 +75,33 @@ No-go:
 - a disputed result is finalized without waiting through the challenge window;
 - a challenged result is resolved without a non-zero arbitration decision hash;
 - a market type is opened before cancellation/void/postponement handling is defined.
+
+## Bankroll And Risk Caps
+
+Sports caps must be derived from approved bankroll and loss tolerance in raw asset units. Testnet caps
+must not be copied into production.
+
+The repo-side sizing policy and validator are defined in
+[`sportsbook-bankroll-risk-caps.md`](sportsbook-bankroll-risk-caps.md). The approval memo should be
+based on `docs/ops/templates/sportsbook-bankroll-risk-caps.example.json` and checked with
+`make sports-bankroll-caps-check-v13`.
+
+Before any public-money Sports market:
+
+- the Sports Bank must be funded with the approved initial bankroll;
+- `manualLossToleranceRaw` must be less than or equal to the funded bankroll;
+- `maxEventReservedRaw` must be less than or equal to `manualLossToleranceRaw`;
+- max stake, max payout, outcome, market, and event caps must be recorded in raw asset units;
+- deploy env `SPORTS_MAX_*` values must match the approved memo;
+- odds snapshots must be rotated after any cap change because the risk hash changes.
+
+No-go:
+
+- the memo is missing or still marked `draft`;
+- cap values are copied from Base Sepolia without an asset-decimal memo;
+- `maxEventReservedRaw` exceeds manual loss tolerance;
+- `manualLossToleranceRaw` exceeds funded bankroll;
+- deploy env values do not match the approved memo.
 
 ## Public Frontend Controls
 
@@ -89,6 +126,29 @@ No-go:
 - a public UI lets users place Sports tickets while provider evidence, rulebook, or role status is
   unknown.
 
+## Monitoring And Keeper Coverage
+
+SportsHub canary operation must have named alert ownership and keeper debt-out coverage. The repo-side
+coverage record is defined in [`sportsbook-ops-coverage.md`](sportsbook-ops-coverage.md). The approval
+memo should be based on `docs/ops/templates/sportsbook-ops-coverage.example.json` and checked with
+`make sports-ops-coverage-check-v13`.
+
+Before any public-money Sports market:
+
+- Sports G1-G7 alerts must route to named operators;
+- operators must cover market lock, result, finality, challenge, and debt-out windows;
+- keeper keys must be able to call `finalizeResult`, `settleTickets`, `refundTickets`, and
+  `voidTickets`;
+- failed atomic batches must have a retry-and-shrink procedure;
+- rehearsal evidence must include keeper finalization and batch debt-out.
+
+No-go:
+
+- any Sports G-series alert lacks a named owner or channel;
+- no keeper can terminalize tickets in batches;
+- no process exists to shrink a failed batch and retry;
+- keeper rehearsal evidence is missing.
+
 ## Launch Decision
 
 Phase 1 closeout means the testnet rails are ready for review. It does not mean mainnet is ready.
@@ -101,4 +161,9 @@ The next production gate is a documented go/no-go packet containing:
 - jurisdiction and frontend access decision;
 - bankroll sizing memo;
 - final risk caps in raw asset units;
+- monitoring/alert ownership and keeper coverage memo;
 - fresh canary after any role, provider, or risk parameter change.
+
+Current Phase 2 packet:
+[`sportsbook-phase2-gonogo-2026-05-14.md`](sportsbook-phase2-gonogo-2026-05-14.md). The
+current decision is **NO-GO** until the packet records approvals for every open production gate.

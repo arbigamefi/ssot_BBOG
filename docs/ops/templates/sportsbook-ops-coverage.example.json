@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "sportsbook.ops-coverage.v1",
+  "status": "draft",
+  "chainId": 84532,
+  "sportsHub": "0x2DB4Ba326C2C3e5830b0da10F0C52B4097f9fa4b",
+  "monitoring": {
+    "owner": "TBD",
+    "alertChannels": [
+      "TBD"
+    ],
+    "coverage": {
+      "G1_SPORTS_ODDS_REJECT_SPIKE": true,
+      "G2_SPORTS_RISK_CAP_REVERT_SPIKE": true,
+      "G3_SPORTS_EXPOSURE_NEAR_CAP": true,
+      "G3A_SPORTS_MARKET_VOIDED": true,
+      "G4_SPORTS_RESULT_FINALITY_STUCK": true,
+      "G5_SPORTS_RESULT_CHALLENGED": true,
+      "G6_SPORTS_ORACLE_CONFIG_CHANGED": true,
+      "G7_SPORTS_RISK_LIMITS_CHANGED": true
+    },
+    "marketWindowCoverage": "TBD",
+    "escalationPolicy": "TBD"
+  },
+  "keeper": {
+    "address": "0x0000000000000000000000000000000000002000",
+    "owner": "TBD",
+    "maxBatchSize": 100,
+    "canCall": {
+      "finalizeResult": true,
+      "settleTickets": true,
+      "refundTickets": true,
+      "voidTickets": true
+    },
+    "retryShrinkProcedure": "TBD"
+  },
+  "rehearsals": {
+    "finalizeResultTx": "TBD",
+    "settleTicketsTx": "TBD",
+    "refundTicketsTx": "TBD",
+    "voidTicketsTx": "TBD",
+    "lastCheckedAt": "TBD"
+  },
+  "approvals": {
+    "opsApproval": "TBD",
+    "approvedAt": "TBD",
+    "evidenceUri": "TBD"
+  }
+}

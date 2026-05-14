@@ -13,6 +13,11 @@
 - [Game finalization stalls / diff anomalies](runbooks/game-finalization-diffs.md)
 - [SportsHub odds, result finality, and exposure caps](runbooks/sportsbook-ops.md)
 - [Sportsbook production controls](sportsbook-production-controls.md)
+- [Sportsbook key custody and role control](sportsbook-key-custody-roles.md)
+- [Sportsbook provider and evidence policy](sportsbook-provider-evidence-policy.md)
+- [Sportsbook bankroll and risk caps](sportsbook-bankroll-risk-caps.md)
+- [Sportsbook monitoring and keeper coverage](sportsbook-ops-coverage.md)
+- [Sportsbook Phase 2 go/no-go packet](sportsbook-phase2-gonogo-2026-05-14.md)
 
 ## Incident process
 

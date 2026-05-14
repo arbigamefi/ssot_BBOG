@@ -68,8 +68,22 @@
 - [ ] For SportsHub public-testnet Phase 1 closeout, run
   `ENV_FILE=<role-env> make sports-phase1-closeout-v13` and archive the output with the rehearsal
   evidence.
+- [ ] For the football MVP product canary, run or rehearse
+  `make sports-football-canary-v13` using the flow in
+  `docs/deploy/worldcup-football-mvp-canary-2026.md`.
 - [ ] Before any public sportsbook frontend, approve `docs/ops/sportsbook-production-controls.md`
   sections for managed key custody, provider evidence, and public frontend controls.
+- [ ] Before any SportsHub mainnet canary or public risk-in, run `make sports-phase2-gonogo-v13`
+  and confirm the Phase 2 packet records GO with every production approval linked.
+- [ ] For SportsHub production roles, run
+  `REQUIRE_APPROVED=1 make sports-role-custody-check-v13 ROLE_CUSTODY_FILE=<approved-role-custody.json>`
+  before allowlisting routine odds/reporting/challenge/arbitration keys.
+- [ ] For SportsHub mainnet canary caps, run
+  `REQUIRE_APPROVED=1 make sports-bankroll-caps-check-v13 BANKROLL_CAPS_FILE=<approved-memo.json>`
+  before copying `SPORTS_MAX_*` values into the deploy env.
+- [ ] For SportsHub operator coverage, run
+  `REQUIRE_APPROVED=1 make sports-ops-coverage-check-v13 OPS_COVERAGE_FILE=<approved-ops-coverage.json>`
+  before opening market risk-in.
 - [ ] Decide on monitoring signals:
   - bet placement / requestId issuance
   - refund credit changes (`VRFHub.refundCreditOf`)
