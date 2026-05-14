@@ -114,14 +114,14 @@ describe("AppShell", () => {
     expect(screen.getByText("Hello")).toBeDefined();
   });
 
-  it("marks the active trust route in the prototype header nav", () => {
+  it("marks the active route in the app header nav", () => {
     render(
       <AppShell>
         <div>content</div>
       </AppShell>
     );
     const betsLink = screen.getAllByText("Bets")[0]!;
-    expect(betsLink.className).toContain("text-white");
+    expect(betsLink.className).toContain("text-fg");
     expect(betsLink.className).toContain("border-b-2");
   });
 

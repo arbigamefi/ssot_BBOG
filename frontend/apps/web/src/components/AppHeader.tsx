@@ -5,7 +5,7 @@ import { cn } from "@ssot/ui";
 import { WalletButton } from "../app/providers/WalletButton";
 import { useRelease } from "../ssot/release/ReleaseProvider";
 
-export type PrototypeRoute =
+export type AppRoute =
   | "directory"
   | "sportsbook"
   | "bets"
@@ -21,30 +21,28 @@ export type PrototypeRoute =
   | "keno";
 export type HeaderVariant = "default" | "game" | "transparent";
 
-interface PrototypeHeaderProps {
-  activeRoute?: PrototypeRoute;
+interface AppHeaderProps {
+  activeRoute?: AppRoute;
   variant?: HeaderVariant;
 }
 
-export function PrototypeHeader({
-  activeRoute = "none",
-  variant = "default"
-}: PrototypeHeaderProps) {
+export function AppHeader({ activeRoute = "none", variant = "default" }: AppHeaderProps) {
   const isTransparent = variant === "transparent";
   const { release } = useRelease();
 
-  // Flagship uses a completely custom transparent layout for the marketing vibe.
   if (isTransparent) {
     return (
-      <header className="fixed inset-x-0 top-0 z-50 border-b border-white/6 bg-[#050505]/80 backdrop-blur-md">
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-border-soft bg-surface-0/80 backdrop-blur-md">
         <div className="mx-auto flex h-20 max-w-[1280px] items-center justify-between px-6">
           <div className="flex items-center gap-12">
-            <div className="text-xl font-bold tracking-tight text-white">ArbiGameFi</div>
-            <nav className="hidden items-center gap-6 text-sm font-medium text-white/60 md:flex">
-              <Link href="/games" className="transition-colors hover:text-white">
+            <Link href="/" className="text-xl font-bold tracking-tight text-fg">
+              ArbiGameFi
+            </Link>
+            <nav className="hidden items-center gap-6 text-sm font-medium text-fg-muted md:flex">
+              <Link href="/games" className="transition-colors hover:text-fg">
                 Rooms
               </Link>
-              <Link href="/invest" className="transition-colors hover:text-white">
+              <Link href="/invest" className="transition-colors hover:text-fg">
                 Liquidity
               </Link>
             </nav>
@@ -55,7 +53,7 @@ export function PrototypeHeader({
             </div>
             <Link
               href="/games"
-              className="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-black transition-colors hover:bg-white/90"
+              className="rounded-full bg-fg px-5 py-2.5 text-sm font-semibold text-fg-inverse transition-colors hover:bg-fg/90"
             >
               Open Rooms
             </Link>
@@ -65,7 +63,6 @@ export function PrototypeHeader({
     );
   }
 
-  // Common Nav Links
   const navLinks = [
     { id: "directory", label: "Games", href: "/games" },
     { id: "sportsbook", label: "Sportsbook", href: "/sportsbook" },
@@ -85,54 +82,54 @@ export function PrototypeHeader({
         {variant === "game" ? (
           <ShellHeaderNav>
             <Link
-              href="/dice"
+              href="/games/dice"
               className={cn(
                 "transition-colors",
                 activeRoute === "dice"
-                  ? "text-purple-400 border-b-2 border-purple-400 pb-1"
-                  : "text-white/40 hover:text-white"
+                  ? "border-b-2 border-brand pb-1 text-brand"
+                  : "text-fg-subtle hover:text-fg"
               )}
             >
               Dice
             </Link>
             <Link
-              href="/roulette"
+              href="/games/roulette"
               className={cn(
                 "transition-colors",
                 activeRoute === "roulette"
-                  ? "text-emerald-400 border-b-2 border-emerald-400 pb-1"
-                  : "text-white/40 hover:text-white"
+                  ? "border-b-2 border-brand pb-1 text-brand"
+                  : "text-fg-subtle hover:text-fg"
               )}
             >
               Roulette
             </Link>
             <Link
-              href="/cointoss"
+              href="/games/coin-toss"
               className={cn(
                 "transition-colors",
                 activeRoute === "cointoss"
-                  ? "text-amber-400 border-b-2 border-amber-400 pb-1"
-                  : "text-white/40 hover:text-white"
+                  ? "border-b-2 border-brand pb-1 text-brand"
+                  : "text-fg-subtle hover:text-fg"
               )}
             >
               Coin Toss
             </Link>
             <Link
-              href="/keno"
+              href="/games/keno"
               className={cn(
                 "transition-colors",
                 activeRoute === "keno"
-                  ? "text-fuchsia-400 border-b-2 border-fuchsia-400 pb-1"
-                  : "text-white/40 hover:text-white"
+                  ? "border-b-2 border-brand pb-1 text-brand"
+                  : "text-fg-subtle hover:text-fg"
               )}
             >
               Keno
             </Link>
 
-            <div className="hidden sm:block border-l border-white/10 h-6 pl-6 ml-2">
+            <div className="hidden h-6 border-l border-border-soft pl-6 ml-2 sm:block">
               <Link
                 href="/games"
-                className="text-white/40 hover:text-white transition-colors text-sm font-bold flex items-center gap-2 h-full uppercase tracking-wider"
+                className="flex h-full items-center gap-2 text-sm font-bold uppercase tracking-wider text-fg-subtle transition-colors hover:text-fg"
               >
                 <span>←</span>
                 <span>Hub</span>
@@ -148,8 +145,8 @@ export function PrototypeHeader({
                 className={cn(
                   "transition-colors",
                   activeRoute === link.id
-                    ? "text-white border-b-2 border-white pb-1"
-                    : "text-white/40 hover:text-white"
+                    ? "border-b-2 border-fg pb-1 text-fg"
+                    : "text-fg-subtle hover:text-fg"
                 )}
               >
                 {link.label}
@@ -160,8 +157,8 @@ export function PrototypeHeader({
       </div>
 
       <ShellHeaderActions>
-        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-mono text-white/60">
-          <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+        <div className="hidden items-center gap-2 rounded-full border border-border-soft bg-surface-2 px-3 py-1.5 font-mono text-xs text-fg-muted sm:flex">
+          <span className="h-1.5 w-1.5 rounded-full bg-brand"></span>
           {release?.name ?? "Unknown network"}
         </div>
         <WalletButton />

@@ -7,7 +7,7 @@ import { ReleaseProviderWagmi } from "./providers/ReleaseProviderWagmi";
 import { SSOTRuntimeProvider } from "./providers/SSOTRuntimeProvider";
 import { AnalyticsProvider } from "./providers/AnalyticsProvider";
 import { Toaster } from "@ssot/ui";
-import { SiteChrome } from "../components/SiteChrome";
+import { AppShell } from "../components/AppShell";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://arbigamefi.com"),
@@ -66,7 +66,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <ReleaseProviderWagmi>
               <SSOTRuntimeProvider>
                 <SSOTSDKProvider>
-                  <SiteChrome>{children}</SiteChrome>
+                  <AppShell>{children}</AppShell>
                   <Toaster />
                 </SSOTSDKProvider>
               </SSOTRuntimeProvider>
