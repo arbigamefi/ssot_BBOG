@@ -28,6 +28,8 @@ Phase 2 means a limited mainnet canary for the SportsHub MVP only:
 
 - PR #13 merged into `master`: `8971eb9ed4a111cfd79d50cadeb9155e95d144e0`
 - PR #13 CI: two `test` checks passed.
+- PR #15 merged into `master`: `3f2be8075b326c4cb4356f6ac330a14a521d0006`
+- PR #15 CI: two `test` checks passed.
 - Local focused validation for GameHub canary tooling:
   - `forge build`
   - `forge test --match-path 'test/unit/GameHub*.t.sol' -vv`
@@ -102,6 +104,12 @@ Covered:
   `docs/ops/sportsbook-provider-evidence-policy.md`
 - Candidate The Odds API ingestion path:
   `docs/ops/sportsbook-provider-the-odds-api.md`
+- Deterministic provider odds fixture gate:
+  `make sports-provider-odds-v13`
+- Deterministic provider result evidence fixture gate:
+  `make sports-provider-evidence-v13`
+- Provider-driven football E2E rehearsal:
+  `ENV_FILE=.env ROLE_ENV_FILE=.env.sports-roles.local make sports-provider-e2e-v13`
 - Example pre-match moneyline rulebook template:
   `docs/ops/templates/sportsbook-rulebook.pre-match-moneyline.example.json`
 - Example result evidence bundle template:
@@ -119,11 +127,12 @@ Covered:
 - Example monitoring/keeper coverage memo:
   `docs/ops/templates/sportsbook-ops-coverage.example.json`
 
-These documents define the reproducibility standard for `rulebookHash`, odds snapshots,
+These documents and gates define the reproducibility standard for `rulebookHash`, odds snapshots,
 `resultSourceHash`, `evidenceHash`, `challengeReasonHash`, and `arbitrationDecisionHash`, plus a first
-concrete The Odds API odds/score ingestion path. They do not approve a provider or evidence-storage
-vendor. They also define role-custody, bankroll/risk-cap, and monitoring/keeper memo shapes, but do
-not approve production keys, production bankroll, or operator coverage.
+concrete The Odds API odds/score ingestion path and provider-driven local E2E rehearsal. They do not
+approve a provider or evidence-storage vendor. They also define role-custody, bankroll/risk-cap, and
+monitoring/keeper memo shapes, but do not approve production keys, production bankroll, or operator
+coverage.
 
 ## Open No-Go Items
 

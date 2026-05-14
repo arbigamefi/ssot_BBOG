@@ -19,11 +19,12 @@ bankrolls, or unlicensed regulated-market sportsbook operations.
 
 ## Current Status
 
-As of `master` through PR #13:
+As of `master` through PR #15:
 
 - Contract implementation for the SportsHub MVP scope is complete.
 - Core unit, invariant, build, release-check, and PR CI gates have passed across the SportsHub
-  readiness work; PR #13 CI passed after the Base Sepolia Phase 1 closeout package.
+  readiness work; PR #13 CI passed after the Base Sepolia Phase 1 closeout package, and PR #15 CI
+  passed after the provider odds/result E2E package.
 - The v1.3 Casino+Sports local deployment/release-artifact path is covered by `make sports-dry-run-v13`.
 - The complete mock event lifecycle is covered by `make sports-lifecycle-dry-run`.
 - The combined local Phase 0 gate is `make sports-phase0-readiness`.
@@ -35,6 +36,10 @@ As of `master` through PR #13:
 - The football MVP product canary has been broadcast on Base Sepolia and proves one 3-outcome
   pre-match football 1X2 market through placement, result reporting, finality, batch settlement, and
   full reserve release.
+- The Odds API candidate integration now covers both pre-match football 1X2 odds snapshots and
+  completed-score result evidence. Deterministic provider fixture gates exist for odds and result
+  evidence, plus a provider-driven local E2E rehearsal that validates odds/result evidence consistency
+  before running the SportsHub football canary through settlement.
 - Phase 1 is closed for the Base Sepolia testnet rehearsal. The remaining work is production/public
   launch readiness: managed key custody, operational staffing, provider policy, evidence storage, and
   compliance gating.
@@ -44,8 +49,9 @@ As of `master` through PR #13:
 - The provider/evidence policy draft is tracked at `docs/ops/sportsbook-provider-evidence-policy.md`;
   it defines hash reproducibility, but does not approve any provider or evidence-storage vendor.
 - The first concrete provider ingestion candidate is tracked at
-  `docs/ops/sportsbook-provider-the-odds-api.md` and produces SportsHub result hashes from completed
-  The Odds API score responses; it is a candidate integration, not production provider approval.
+  `docs/ops/sportsbook-provider-the-odds-api.md` and produces SportsHub odds snapshots plus result
+  hashes from The Odds API odds/score responses; it is a candidate integration, not production
+  provider approval.
 - The key custody/role-control draft is tracked at `docs/ops/sportsbook-key-custody-roles.md`; the
   local memo validator is `make sports-role-custody-check-v13`, but no production role custody is
   approved.
@@ -372,5 +378,31 @@ Key public-testnet readbacks:
 - Sports Bank `totalReserved() = 0`.
 
 This still uses the existing SportsHub reporter path as the MVP fact oracle. It does not prove a
-production oracle/provider integration, managed production key custody, jurisdiction controls, public
-frontend gating, or mainnet bankroll limits.
+production-approved oracle/provider integration, managed production key custody, jurisdiction controls,
+public frontend gating, or mainnet bankroll limits.
+
+## Provider-Driven Local E2E Evidence
+
+2026-05-14 provider-driven local rehearsal is covered by:
+
+```bash
+ENV_FILE=.env ROLE_ENV_FILE=.env.sports-roles.local make sports-provider-e2e-v13
+```
+
+The rehearsal forks the current v1.3 Base Sepolia deployment snapshot and runs the narrow football 1X2
+flow using deterministic The Odds API fixtures:
+
+- `script/ops/sports_provider_odds.py` turns provider `h2h` prices into per-outcome SportsHub odds
+  for `0=home`, `1=draw`, and `2=away`;
+- `script/ops/sports_provider_evidence.py` turns the completed score fixture into
+  `resultSourceHash`, `evidenceHash`, and `observedAt`;
+- `script/ci/v13_sports_provider_e2e_check.sh` validates that odds and result evidence agree on
+  provider event, market, event, pool, market version, rulebook hash, outcome mapping, reporter set,
+  time ordering, and payout caps before the canary runs;
+- `WorldCupFootballCanaryV13` then creates the market, places two provider-priced tickets, proposes
+  the provider result, finalizes after the challenge window, batch-settles, and verifies reserved
+  exposure returns to zero.
+
+This closes the local provider-driven MVP loop. It still does not approve The Odds API for production
+commercial use, replace legal/compliance review, prove redundant provider fallback, or approve
+mainnet bankroll/risk limits.
