@@ -6,7 +6,7 @@ import {
   GameRoomBetPanel,
   getPlaceBetButtonLabel,
   isPlaceBetButtonDisabled,
-  type GameBetPanelState
+  type GameRoomBetPanelState
 } from "./bet-panel";
 import { parseWalletBalanceAmount } from "./bet-amount-section";
 import type { GameMeta } from "./model";
@@ -26,7 +26,7 @@ const diceGame: GameMeta = {
   module: "0x2222222222222222222222222222222222222222"
 };
 
-const baseState: GameBetPanelState = { status: "idle" };
+const baseState: GameRoomBetPanelState = { status: "idle" };
 
 function renderPanel(overrides: Partial<React.ComponentProps<typeof GameRoomBetPanel>> = {}) {
   const props: React.ComponentProps<typeof GameRoomBetPanel> = {

@@ -65,15 +65,6 @@ vi.mock("../../../app/providers/WalletButton", () => ({
   })
 }));
 
-vi.mock("../../../features/betting/ui/GameBetPanel", () => ({
-  GameBetPanel: ({ game, children }: any) => (
-    <div data-testid="game-bet-panel">
-      <div>{game.label}</div>
-      <div>{children}</div>
-    </div>
-  )
-}));
-
 vi.mock("../../../components/Placeholder", () => ({
   Placeholder: ({ title, description }: any) => (
     <div data-testid="placeholder">
@@ -141,7 +132,6 @@ vi.mock("@ssot/ui", () => ({
   RoomStrip: ({ title }: any) => <div>{title}</div>,
   RouletteParamsForm: () => <div>Roulette Params</div>,
   DiceSlider: () => <div>Dice Slider</div>,
-  SharedBetSlip: ({ children }: any) => <div>{children}</div>,
   createDefaultRouletteSelection: () => ({ kind: "straight", number: 0 }),
   summarizeRouletteSelection: () => ({
     family: "Straight",

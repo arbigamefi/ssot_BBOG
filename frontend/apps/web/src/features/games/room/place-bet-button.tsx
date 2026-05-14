@@ -2,7 +2,7 @@ import * as React from "react";
 import { cn } from "@ssot/ui";
 
 import type { CoinSide } from "./params";
-import type { GameBetPanelState } from "./bet-panel-state";
+import type { GameRoomBetPanelState } from "./bet-panel-state";
 
 export function getPlaceBetButtonLabel({
   hasAccount,
@@ -10,7 +10,7 @@ export function getPlaceBetButtonLabel({
   isPending
 }: {
   hasAccount: boolean;
-  state: GameBetPanelState;
+  state: GameRoomBetPanelState;
   isPending: boolean;
 }) {
   if (!hasAccount) return "CONNECT WALLET";
@@ -31,7 +31,7 @@ export function isPlaceBetButtonDisabled({
   gameSlug: string;
   isPending: boolean;
   winChance: number;
-  state: GameBetPanelState;
+  state: GameRoomBetPanelState;
 }) {
   return (
     isPending ||
@@ -56,7 +56,7 @@ export function PlaceBetButton({
   hasAccount: boolean;
   isPending: boolean;
   winChance: number;
-  state: GameBetPanelState;
+  state: GameRoomBetPanelState;
   onClick: () => void;
 }) {
   const disabled = isPlaceBetButtonDisabled({ gameSlug, isPending, winChance, state });

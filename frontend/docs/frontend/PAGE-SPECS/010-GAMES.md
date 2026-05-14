@@ -54,8 +54,8 @@ The first fold must stay gameplay-first.
 - `RoomShell`
 - `RoomSelector`
 - `RoomHud`
-- `GameBetPanel`
-- `SharedBetSlip`
+- `GameRoomBetPanel`
+- `usePlaceBetStepper`
 - game-specific stage component
 - `LowerRoomTabs`
 

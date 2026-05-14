@@ -5,13 +5,13 @@ import { BetAdvancedSection } from "./bet-advanced-section";
 import { BetAmountSection } from "./bet-amount-section";
 import { BetPayoutSummary } from "./bet-payout-summary";
 import { BetRollsSection } from "./bet-rolls-section";
-import type { GameBetPanelState } from "./bet-panel-state";
+import type { GameRoomBetPanelState } from "./bet-panel-state";
 import { GameSelectionControls } from "./game-selection-controls";
 import type { GameMeta } from "./model";
 import type { CoinSide } from "./params";
 import { PlaceBetButton } from "./place-bet-button";
 
-export type { GameBetPanelState } from "./bet-panel-state";
+export type { GameRoomBetPanelState } from "./bet-panel-state";
 export { getPlaceBetButtonLabel, isPlaceBetButtonDisabled } from "./place-bet-button";
 
 export function GameRoomBetPanel({
@@ -59,7 +59,7 @@ export function GameRoomBetPanel({
   advancedOpen: boolean;
   onAdvancedOpenChange: (open: boolean) => void;
   isPending: boolean;
-  state: GameBetPanelState;
+  state: GameRoomBetPanelState;
   hasAccount: boolean;
   winChance: number;
   multiplier: number;

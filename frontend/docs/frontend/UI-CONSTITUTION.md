@@ -228,8 +228,8 @@ The following shared components or component families are required:
 
 The following functional components SHOULD be preserved and re-skinned rather than replaced:
 
-- `GameBetPanel`
-- `SharedBetSlip`
+- `GameRoomBetPanel`
+- `usePlaceBetStepper`
 - `RouletteBoard`
 - audit/data table components
 - transaction stepper and quote flow
