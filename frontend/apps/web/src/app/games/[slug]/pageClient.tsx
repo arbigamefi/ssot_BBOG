@@ -21,6 +21,7 @@ import { buildGameParams, calculateGameWinChance } from "../../../features/games
 import { simulateGameResult } from "../../../features/games/room/simulation";
 import { GameRoomAuditLedger } from "../../../features/games/room/audit-ledger";
 import { GameRoomBetPanel } from "../../../features/games/room/bet-panel";
+import { useGameWalletBalance, useKenoStrobeSpots } from "../../../features/games/room/hooks";
 import { GameRoomRightPane } from "../../../features/games/room/right-pane";
 
 /* ─── Main Logic ─── */
@@ -47,8 +48,6 @@ export function GamePageClient({ slug }: { slug: string }) {
   const [betAmount, setBetAmount] = React.useState<number>(10);
   const [isPending, setIsPending] = React.useState(false);
   const [showResult, setShowResult] = React.useState(false);
-  // A1: Live wallet balance from sdk.bank.getAssetBalance
-  const [walletBalance, setWalletBalance] = React.useState<string | null>(null);
 
   // Game-specific params
   const [diceTarget, setDiceTarget] = React.useState<number>(50);
@@ -60,7 +59,6 @@ export function GamePageClient({ slug }: { slug: string }) {
   // Simulation state
   const [flipCount, setFlipCount] = React.useState(0);
   const [resultNum, setResultNum] = React.useState<number | null>(null);
-  const [animatingKenoSpots, setAnimatingKenoSpots] = React.useState<number[]>([]);
   const [kenoResultDrawn, setKenoResultDrawn] = React.useState<number[]>([]);
 
   // History state for widgets
@@ -71,41 +69,8 @@ export function GamePageClient({ slug }: { slug: string }) {
   const [stopLoss, setStopLoss] = React.useState<number>(0); // 0 = disabled
   const [advancedOpen, setAdvancedOpen] = React.useState(false);
 
-  // A1: Fetch live wallet balance when sdk & account are ready
-  React.useEffect(() => {
-    if (!sdk?.account || !release?.assets) return;
-    const usdcAsset = release.assets.find((a: any) => a.symbol === "USDC");
-    if (!usdcAsset?.address) return;
-    sdk.bank
-      .getAssetBalance(usdcAsset.address as `0x${string}`, sdk.account)
-      .then((raw: bigint) => {
-        const decimals: number = usdcAsset.decimals ?? 6;
-        const formatted = (Number(raw) / Math.pow(10, decimals)).toLocaleString("en-US", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2
-        });
-        setWalletBalance(`${formatted} USDC`);
-      })
-      .catch(() => setWalletBalance(null));
-  }, [sdk?.account, release?.assets]);
-
-  // Keno strobe effect
-  React.useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isPending && game?.slug === "keno") {
-      interval = setInterval(() => {
-        const rnd: number[] = [];
-        while (rnd.length < 8) {
-          const num = Math.floor(Math.random() * 40) + 1;
-          if (!rnd.includes(num)) rnd.push(num);
-        }
-        setAnimatingKenoSpots(rnd);
-      }, 80);
-    } else {
-      setAnimatingKenoSpots([]);
-    }
-    return () => clearInterval(interval);
-  }, [isPending, game?.slug]);
+  const walletBalance = useGameWalletBalance({ sdk, assets: release?.assets });
+  const animatingKenoSpots = useKenoStrobeSpots({ isPending, gameSlug: game?.slug });
 
   if (!release || !game)
     return (
