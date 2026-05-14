@@ -88,6 +88,16 @@ make sports-provider-odds-v13
 make sports-provider-evidence-v13
 ```
 
+For a provider-driven local rehearsal against the current deployment snapshot, run:
+
+```bash
+ENV_FILE=.env ROLE_ENV_FILE=.env.sports-roles.local make sports-provider-e2e-v13
+```
+
+This generates odds and result evidence from deterministic fixtures, reads the current SportsHub
+`nextMarketId` and reporter-set hash, then injects both generated env files into the football canary's
+simulation-only `local-resolve` mode.
+
 For a live provider odds run, use `script/ops/sports_provider_odds.py` with `THE_ODDS_API_KEY`,
 `SPORTS_PROVIDER_EVENT_ID`, `SPORTS_HUB`, and the target market context. Review the generated JSON
 files, then source the generated odds env:

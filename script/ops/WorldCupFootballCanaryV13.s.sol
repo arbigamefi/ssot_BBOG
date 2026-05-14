@@ -103,7 +103,7 @@ contract WorldCupFootballCanaryV13 is Script {
         _logConfig("World Cup football local resolve:", cfg);
 
         uint256[] memory ticketIds = _simulateSetup(cfg);
-        vm.warp(cfg.startsAt);
+        vm.warp(_localResultProposalTime(cfg));
         _simulateProposeResult(cfg);
         SSOTTypes.SportsResult memory result = cfg.sportsHub.getResult(cfg.marketId);
         vm.warp(result.finalizesAt);
@@ -490,6 +490,13 @@ contract WorldCupFootballCanaryV13 is Script {
         }
         if (cfg.observedAt < cfg.startsAt || cfg.observedAt > block.timestamp) revert("bad result observedAt");
         return cfg.observedAt;
+    }
+
+    function _localResultProposalTime(FootballConfig memory cfg) internal pure returns (uint64) {
+        if (cfg.observedAt > cfg.startsAt) {
+            return cfg.observedAt;
+        }
+        return cfg.startsAt;
     }
 
     function _expectedPayout(FootballConfig memory cfg, uint32 outcomeId) internal pure returns (uint256) {

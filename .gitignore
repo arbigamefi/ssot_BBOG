@@ -47,3 +47,4 @@ __pycache__/
 deployments/
 tmp/sports-provider-evidence*/
 tmp/sports-provider-odds*/
+tmp/sports-provider-e2e*/

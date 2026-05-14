@@ -69,6 +69,15 @@ to SportsHub `home/draw/away` outcome odds. `make sports-provider-evidence-v13` 
 `test/fixtures/sports/the-odds-api-football-completed-score.json` and proves result evidence
 generation. The score fixture resolves Mexico 2-1 South Africa to outcome `0`.
 
+To prove the fixtures through the SportsHub canary on a fork of the current deployment, run:
+
+```bash
+ENV_FILE=.env ROLE_ENV_FILE=.env.sports-roles.local make sports-provider-e2e-v13
+```
+
+This is still simulation-only: it generates provider odds and result evidence, sources the generated
+env files, and completes one local football 1X2 market through `WorldCupFootballCanaryV13`.
+
 ## Odds Ingestion
 
 For football 1X2, The Odds API `h2h` market maps to:
