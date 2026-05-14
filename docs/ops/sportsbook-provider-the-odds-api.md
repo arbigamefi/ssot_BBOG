@@ -51,6 +51,13 @@ make sports-provider-evidence-v13
 This uses `test/fixtures/sports/the-odds-api-football-completed-score.json` and proves the adapter
 logic without a provider API key. The fixture resolves Mexico 2-1 South Africa to outcome `0`.
 
+## Live Smoke Evidence
+
+The first live provider smoke is recorded in
+`docs/deploy/the-odds-api-football-smoke-2026-05-14.md`. It used a completed MLS event from The Odds
+API and generated the `resultSourceHash`, `evidenceHash`, and `FOOTBALL_RESULT_OBSERVED_AT` values
+needed by the SportsHub football canary.
+
 ## Live Provider Run
 
 Set the provider and SportsHub context:
