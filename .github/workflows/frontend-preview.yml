@@ -25,13 +25,30 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Check Vercel preview secrets
+        id: vercel-secrets
+        shell: bash
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          if [[ -n "$VERCEL_TOKEN" && -n "$VERCEL_ORG_ID" && -n "$VERCEL_PROJECT_ID" ]]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "Vercel preview skipped because VERCEL_TOKEN, VERCEL_ORG_ID, or VERCEL_PROJECT_ID is not configured." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Setup pnpm
+        if: steps.vercel-secrets.outputs.enabled == 'true'
         uses: pnpm/action-setup@v4
         with:
           version: 9.12.3
           run_install: false
 
       - name: Setup Node
+        if: steps.vercel-secrets.outputs.enabled == 'true'
         uses: actions/setup-node@v4
         with:
           node-version-file: .node-version
@@ -39,9 +56,11 @@ jobs:
           cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: Install Vercel CLI
+        if: steps.vercel-secrets.outputs.enabled == 'true'
         run: npm i -g vercel@latest
 
       - name: Pull Vercel Environment
+        if: steps.vercel-secrets.outputs.enabled == 'true'
         run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
         working-directory: frontend
         env:
@@ -49,6 +68,7 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
       - name: Build with Vercel
+        if: steps.vercel-secrets.outputs.enabled == 'true'
         run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
         working-directory: frontend
         env:
@@ -56,6 +76,7 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
       - name: Deploy Preview
+        if: steps.vercel-secrets.outputs.enabled == 'true'
         id: deploy
         run: |
           url=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
@@ -66,6 +87,7 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
       - name: Comment PR with Preview URL
+        if: steps.vercel-secrets.outputs.enabled == 'true'
         uses: actions/github-script@v7
         with:
           script: |
