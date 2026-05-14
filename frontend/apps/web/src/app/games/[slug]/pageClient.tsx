@@ -45,6 +45,7 @@ import {
   type GameMeta
 } from "../../../features/games/room/model";
 import { buildGameParams, calculateGameWinChance } from "../../../features/games/room/params";
+import { simulateGameResult } from "../../../features/games/room/simulation";
 
 /* ─── Sub-Components ─── */
 
@@ -456,49 +457,25 @@ export function GamePageClient({ slug }: { slug: string }) {
             // Fallback: if db query fails, leave win = false (conservative)
           }
 
-          // Drive game animations with win/loss signal
-          let simulatedRes = 0;
-          if (game?.slug === "coin-toss") {
-            simulatedRes = win ? (coinSide === "HEADS" ? 1 : 0) : coinSide === "HEADS" ? 0 : 1;
-            setFlipCount((c) => c + 1);
-          } else if (game?.slug === "dice") {
-            if (win && diceDirection === "under")
-              simulatedRes = Math.floor(Math.random() * diceTarget);
-            else if (win && diceDirection === "over")
-              simulatedRes = diceTarget + Math.floor(Math.random() * (100 - diceTarget));
-            else if (!win && diceDirection === "under")
-              simulatedRes = diceTarget + Math.floor(Math.random() * (100 - diceTarget));
-            else simulatedRes = Math.floor(Math.random() * diceTarget);
-            setResultNum(simulatedRes);
-          } else if (game?.slug === "roulette") {
-            const spots = rouletteSpots.flatMap((s) => {
-              if (/^\d+$/.test(s)) return [parseInt(s)];
-              return []; // named bets: if win, pick any number in range
-            });
-            if (win && spots.length > 0)
-              simulatedRes = spots[Math.floor(Math.random() * spots.length)] ?? 0;
-            else simulatedRes = EUROPEAN_WHEEL_ORDER.find((n) => !spots.includes(n)) ?? 0;
-            setResultNum(simulatedRes);
-          } else if (game?.slug === "keno") {
-            const drawn: number[] = [];
-            const mySpots = [...kenoSpots];
-            const remaining = Array.from({ length: 40 }, (_, i) => i + 1).filter(
-              (n) => !mySpots.includes(n)
-            );
-            const hitsTarget = win ? Math.max(1, Math.floor(kenoSpots.length * 0.7)) : 0;
-            for (let i = 0; i < hitsTarget && mySpots.length > 0; i++) {
-              const idx = Math.floor(Math.random() * mySpots.length);
-              drawn.push(mySpots.splice(idx, 1)[0]!);
-            }
-            while (drawn.length < 10 && remaining.length > 0) {
-              const idx = Math.floor(Math.random() * remaining.length);
-              drawn.push(remaining.splice(idx, 1)[0]!);
-            }
-            setKenoResultDrawn(drawn);
-            simulatedRes = drawn.filter((n) => kenoSpots.includes(n)).length;
+          const simulated = simulateGameResult({
+            slug: game?.slug ?? "",
+            win,
+            coinSide,
+            diceDirection,
+            diceTarget,
+            rouletteSpots,
+            kenoSpots
+          });
+
+          if (simulated.flipCoin) setFlipCount((c) => c + 1);
+          if (game?.slug === "dice" || game?.slug === "roulette") {
+            setResultNum(simulated.value);
+          }
+          if (simulated.kenoDrawn) {
+            setKenoResultDrawn(simulated.kenoDrawn);
           }
 
-          setGameHistory((prev) => [{ val: simulatedRes, win }, ...prev].slice(0, 5));
+          setGameHistory((prev) => [{ val: simulated.value, win }, ...prev].slice(0, 5));
           setTimeout(() => setShowResult(false), 8000);
           reset();
         };
