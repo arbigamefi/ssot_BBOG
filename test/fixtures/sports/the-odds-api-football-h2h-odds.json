@@ -1,0 +1,37 @@
+[
+  {
+    "id": "odds-api-event-mexico-south-africa-2026",
+    "sport_key": "soccer_fifa_world_cup",
+    "sport_title": "FIFA World Cup",
+    "commence_time": "2026-06-11T19:00:00Z",
+    "home_team": "Mexico",
+    "away_team": "South Africa",
+    "bookmakers": [
+      {
+        "key": "draftkings",
+        "title": "DraftKings",
+        "last_update": "2026-06-11T16:00:00Z",
+        "markets": [
+          {
+            "key": "h2h",
+            "last_update": "2026-06-11T16:00:00Z",
+            "outcomes": [
+              {
+                "name": "Mexico",
+                "price": 1.8
+              },
+              {
+                "name": "Draw",
+                "price": 3.4
+              },
+              {
+                "name": "South Africa",
+                "price": 4.5
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]

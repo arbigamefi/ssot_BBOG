@@ -131,6 +131,12 @@ For the narrow football MVP product canary, use
 ready. It exercises one 3-outcome pre-match 1X2 market through `SportsHub` using the existing result
 reporter path as the MVP fact oracle.
 
+The first live provider ingestion smokes are recorded in
+`docs/deploy/the-odds-api-football-odds-smoke-2026-05-14.md` and
+`docs/deploy/the-odds-api-football-smoke-2026-05-14.md`. They use The Odds API odds for an upcoming
+MLS event and scores for a completed MLS event, producing the odds and result env fields consumed by
+the football canary.
+
 The v1.3 script deploys and wires:
 - `PoolRegistry`
 - `SettlementRouter`

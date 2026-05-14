@@ -100,6 +100,8 @@ Covered:
 
 - Provider/evidence policy draft:
   `docs/ops/sportsbook-provider-evidence-policy.md`
+- Candidate The Odds API ingestion path:
+  `docs/ops/sportsbook-provider-the-odds-api.md`
 - Example pre-match moneyline rulebook template:
   `docs/ops/templates/sportsbook-rulebook.pre-match-moneyline.example.json`
 - Example result evidence bundle template:
@@ -117,10 +119,11 @@ Covered:
 - Example monitoring/keeper coverage memo:
   `docs/ops/templates/sportsbook-ops-coverage.example.json`
 
-These documents define the reproducibility standard for `rulebookHash`, `resultSourceHash`,
-`evidenceHash`, `challengeReasonHash`, and `arbitrationDecisionHash`. They do not approve a provider
-or evidence-storage vendor. They also define role-custody, bankroll/risk-cap, and monitoring/keeper
-memo shapes, but do not approve production keys, production bankroll, or operator coverage.
+These documents define the reproducibility standard for `rulebookHash`, odds snapshots,
+`resultSourceHash`, `evidenceHash`, `challengeReasonHash`, and `arbitrationDecisionHash`, plus a first
+concrete The Odds API odds/score ingestion path. They do not approve a provider or evidence-storage
+vendor. They also define role-custody, bankroll/risk-cap, and monitoring/keeper memo shapes, but do
+not approve production keys, production bankroll, or operator coverage.
 
 ## Open No-Go Items
 

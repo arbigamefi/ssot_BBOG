@@ -13,8 +13,9 @@ fixed-odds single, settled by an allowlisted result reporter.
   - `2`: South Africa
 - Scope: no live betting, no parlays, no player props, no futures.
 
-The canary uses the existing `SportsHub` result reporter path as the MVP fact oracle. A real provider
-adapter can later feed the same `resultSourceHash` and `evidenceHash` fields.
+The canary uses the existing `SportsHub` result reporter path as the MVP fact oracle. The first real
+provider ingestion path is documented in `docs/ops/sportsbook-provider-the-odds-api.md`; it feeds the
+same `resultSourceHash`, `evidenceHash`, and `observedAt` fields.
 
 ## Local Contract Proof
 
@@ -78,7 +79,48 @@ Record the printed:
 - `FOOTBALL_TICKET_COUNT`
 - `startsAt`
 
-2. After `startsAt`, propose the reporter result:
+2. After `startsAt`, generate or load provider evidence.
+
+For a deterministic local check of the provider adapter:
+
+```bash
+make sports-provider-odds-v13
+make sports-provider-evidence-v13
+```
+
+For a provider-driven local rehearsal against the current deployment snapshot, run:
+
+```bash
+ENV_FILE=.env ROLE_ENV_FILE=.env.sports-roles.local make sports-provider-e2e-v13
+```
+
+This generates odds and result evidence from deterministic fixtures, reads the current SportsHub
+`nextMarketId` and reporter-set hash, then injects both generated env files into the football canary's
+simulation-only `local-resolve` mode. Before it runs the canary, it validates provider event, market,
+rulebook, outcome mapping, reporter set, and payout-cap consistency across the generated evidence
+files.
+
+For a live provider odds run, use `script/ops/sports_provider_odds.py` with `THE_ODDS_API_KEY`,
+`SPORTS_PROVIDER_EVENT_ID`, `SPORTS_HUB`, and the target market context. Review the generated JSON
+files, then source the generated odds env:
+
+```bash
+set -a
+source tmp/sports-provider-odds-live/odds-snapshot.env
+set +a
+```
+
+For a live provider result run, use `script/ops/sports_provider_evidence.py` with `THE_ODDS_API_KEY`,
+`SPORTS_PROVIDER_EVENT_ID`, `SPORTS_HUB`, `FOOTBALL_MARKET_ID`, and the current rulebook/reporter-set
+hashes. Review the generated JSON files, then source the generated result env:
+
+```bash
+set -a
+source tmp/sports-provider-evidence-live/result-proposal.env
+set +a
+```
+
+3. Propose the reporter result:
 
 ```bash
 FOOTBALL_CANARY_MODE=settle \
@@ -90,7 +132,7 @@ BROADCAST=1 ENV_FILE=.env.v13-sports.local make sports-football-canary-v13
 
 Record the printed `finalizesAt`.
 
-3. After `finalizesAt`, rerun the same command to finalize and settle tickets.
+4. After `finalizesAt`, rerun the same command to finalize and settle tickets.
 
 ## Useful Overrides
 
@@ -98,10 +140,14 @@ Record the printed `finalizesAt`.
 FOOTBALL_WINNING_OUTCOME_ID=0
 FOOTBALL_LOSING_OUTCOME_ID=1
 FOOTBALL_STAKE=100000
-FOOTBALL_ODDS_WAD=1800000000000000000
+FOOTBALL_HOME_ODDS_WAD=1800000000000000000
+FOOTBALL_DRAW_ODDS_WAD=3400000000000000000
+FOOTBALL_AWAY_ODDS_WAD=4500000000000000000
+FOOTBALL_ODDS_EXPIRES_AT=1781193720
 FOOTBALL_MAX_PAYOUT=300000
 FOOTBALL_RESULT_SOURCE_HASH=0x...
 FOOTBALL_EVIDENCE_HASH=0x...
+FOOTBALL_RESULT_OBSERVED_AT=1781211600
 ```
 
 Keep the MVP narrow: the canary is proving football 1X2 settlement, not a full sportsbook launch.

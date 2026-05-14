@@ -1,0 +1,22 @@
+[
+  {
+    "id": "odds-api-event-mexico-south-africa-2026",
+    "sport_key": "soccer_fifa_world_cup",
+    "sport_title": "FIFA World Cup",
+    "commence_time": "2026-06-11T19:00:00Z",
+    "completed": true,
+    "home_team": "Mexico",
+    "away_team": "South Africa",
+    "scores": [
+      {
+        "name": "Mexico",
+        "score": "2"
+      },
+      {
+        "name": "South Africa",
+        "score": "1"
+      }
+    ],
+    "last_update": "2026-06-11T21:00:00Z"
+  }
+]
