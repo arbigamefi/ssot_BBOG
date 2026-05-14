@@ -96,7 +96,9 @@ ENV_FILE=.env ROLE_ENV_FILE=.env.sports-roles.local make sports-provider-e2e-v13
 
 This generates odds and result evidence from deterministic fixtures, reads the current SportsHub
 `nextMarketId` and reporter-set hash, then injects both generated env files into the football canary's
-simulation-only `local-resolve` mode.
+simulation-only `local-resolve` mode. Before it runs the canary, it validates provider event, market,
+rulebook, outcome mapping, reporter set, and payout-cap consistency across the generated evidence
+files.
 
 For a live provider odds run, use `script/ops/sports_provider_odds.py` with `THE_ODDS_API_KEY`,
 `SPORTS_PROVIDER_EVENT_ID`, `SPORTS_HUB`, and the target market context. Review the generated JSON

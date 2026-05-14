@@ -76,7 +76,10 @@ ENV_FILE=.env ROLE_ENV_FILE=.env.sports-roles.local make sports-provider-e2e-v13
 ```
 
 This is still simulation-only: it generates provider odds and result evidence, sources the generated
-env files, and completes one local football 1X2 market through `WorldCupFootballCanaryV13`.
+env files, validates that the odds and result packages agree on provider event, market, rulebook,
+outcome mapping, reporter set, and payout cap, then completes one local football 1X2 market through
+`WorldCupFootballCanaryV13`. The rehearsal writes a combined
+`provider-e2e-manifest.json` under the temporary evidence directory for debugging and archival review.
 
 ## Odds Ingestion
 
