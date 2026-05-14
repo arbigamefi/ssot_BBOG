@@ -18,6 +18,12 @@ import { usePlaceBetStepper } from "../../../features/betting/usePlaceBetStepper
 import { useConnectModal } from "../../../app/providers/WalletButton";
 import { toGameMeta, type GameMeta } from "../../../features/games/room/model";
 import { buildGameParams, calculateGameWinChance } from "../../../features/games/room/params";
+import {
+  formatGameMaxPayout,
+  formatHouseEdge,
+  getGameDisplayName,
+  getGameThemeColor
+} from "../../../features/games/room/presentation";
 import { simulateGameResult } from "../../../features/games/room/simulation";
 import { GameRoomAuditLedger } from "../../../features/games/room/audit-ledger";
 import { GameRoomBetPanel } from "../../../features/games/room/bet-panel";
@@ -81,30 +87,13 @@ export function GamePageClient({ slug }: { slug: string }) {
       />
     );
 
-  const themeColor: any =
-    game.slug === "dice"
-      ? "purple"
-      : game.slug === "roulette"
-        ? "emerald"
-        : game.slug === "coin-toss"
-          ? "amber"
-          : "fuchsia";
+  const themeColor = getGameThemeColor(game.slug);
 
   // A5: Live houseEdge and maxPayout from release gamesMeta
-  const gameMeta = release?.gamesMeta?.find((m: any) => m.slug === game.slug) as any;
-  const houseEdgeBps: number = gameMeta?.houseEdgeBps ?? (game.slug === "roulette" ? 270 : 100);
-  const houseEdge = `${(houseEdgeBps / 100).toFixed(2)}%`;
-  const maxPayoutRaw: bigint | undefined = gameMeta?.maxPayout
-    ? BigInt(String(gameMeta.maxPayout))
-    : undefined;
+  const gameMeta = release?.gamesMeta?.find((m: any) => m.slug === game.slug);
+  const houseEdge = formatHouseEdge(gameMeta, game.slug);
   const usdcDecimals = release?.assets?.find((a: any) => a.symbol === "USDC")?.decimals ?? 6;
-  const maxPayout = maxPayoutRaw
-    ? `${(Number(maxPayoutRaw) / Math.pow(10, usdcDecimals)).toLocaleString("en-US", { maximumFractionDigits: 0 })} USDC`
-    : game.slug === "roulette"
-      ? "100,000 USDC"
-      : game.slug === "keno"
-        ? "500,000 USDC"
-        : "25,000 USDC";
+  const maxPayout = formatGameMaxPayout({ gameMeta, slug: game.slug, usdcDecimals });
 
   // B2: Accurate win-chance using proper math per game module
   const winChance = calculateGameWinChance({
@@ -366,15 +355,7 @@ export function GamePageClient({ slug }: { slug: string }) {
   return (
     <PageTransition pageKey={`game-${slug}`}>
       <ImmersiveGameLayout
-        gameName={
-          game.slug === "dice"
-            ? "Precision Dice"
-            : game.slug === "roulette"
-              ? "European Roulette"
-              : game.slug === "keno"
-                ? "Keno Draft"
-                : game.label
-        }
+        gameName={getGameDisplayName(game)}
         themeColor={themeColor}
         houseEdge={houseEdge}
         maxPayout={maxPayout}
