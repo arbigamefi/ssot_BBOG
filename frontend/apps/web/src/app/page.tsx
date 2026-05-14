@@ -501,7 +501,7 @@ export default function HomePage() {
             </p>
 
             <div className="p-8 rounded-[2rem] border-2 border-emerald-500/30 bg-[#050505] shadow-[0_0_50px_rgba(16,185,129,0.15),inset_0_2px_20px_rgba(16,185,129,0.05)] relative overflow-hidden group">
-              <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.15] mix-blend-overlay pointer-events-none" />
+              <div className="absolute inset-0 bg-[url('/textures/noise.svg')] opacity-[0.15] mix-blend-overlay pointer-events-none" />
               <div className="absolute right-0 top-0 w-96 h-96 bg-emerald-500/10 blur-[100px] rounded-full group-hover:bg-emerald-500/20 transition-colors pointer-events-none" />
 
               <div className="text-emerald-400/80 font-bold uppercase text-xs tracking-widest mb-4 flex flex-col gap-1 relative z-10 p-3 bg-emerald-900/20 border border-emerald-500/30 rounded-xl w-fit drop-shadow-[0_0_5px_rgba(16,185,129,0.5)]">

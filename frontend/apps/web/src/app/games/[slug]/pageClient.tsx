@@ -1477,7 +1477,7 @@ export function GamePageClient({ slug }: { slug: string }) {
               >
                 {/* Engraving ring */}
                 <div className="absolute inset-4 rounded-full border border-[#B8860B]/40 shadow-[inset_0_0_10px_rgba(0,0,0,0.5)] bg-[radial-gradient(circle_at_center,#DAA520,#8B6508)] flex flex-col items-center justify-center">
-                  <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay" />
+                  <div className="absolute inset-0 bg-[url('/textures/noise.svg')] opacity-20 mix-blend-overlay" />
                   <SparklesIcon className="w-24 h-24 text-white p-4 drop-shadow-[0_2px_5px_rgba(0,0,0,0.8)]" />
                   <span className="text-3xl font-black text-white/90 tracking-[0.2em] [text-shadow:0_2px_4px_rgba(0,0,0,0.8)] mt-[-10px]">
                     HEADS
@@ -1492,7 +1492,7 @@ export function GamePageClient({ slug }: { slug: string }) {
               >
                 {/* Engraving ring */}
                 <div className="absolute inset-4 rounded-full border border-gray-500/40 shadow-[inset_0_0_10px_rgba(0,0,0,0.5)] bg-[radial-gradient(circle_at_center,#778899,#2F4F4F)] flex flex-col items-center justify-center">
-                  <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay" />
+                  <div className="absolute inset-0 bg-[url('/textures/noise.svg')] opacity-20 mix-blend-overlay" />
                   <ShieldCheckIcon className="w-24 h-24 text-white p-4 drop-shadow-[0_2px_5px_rgba(0,0,0,0.8)]" />
                   <span className="text-3xl font-black text-white/90 tracking-[0.2em] [text-shadow:0_2px_4px_rgba(0,0,0,0.8)] mt-[-10px]">
                     TAILS
@@ -1644,7 +1644,7 @@ export function GamePageClient({ slug }: { slug: string }) {
           <div className="relative z-20 w-fit max-w-full overflow-x-auto overflow-y-hidden custom-scrollbar pointer-events-auto transform-gpu origin-bottom scale-[0.85] sm:scale-95 xl:scale-100 pb-2 px-1">
             <div className="bg-[#0B1A12] border-[4px] border-[#222] rounded-[1.2rem] md:rounded-[1.5rem] p-2 md:p-3 sm:p-4 shadow-[0_30px_60px_rgba(0,0,0,1),inset_0_0_40px_rgba(0,0,0,0.9)] min-w-[500px] md:min-w-fit relative overflow-hidden flex flex-col gap-1.5">
               {/* Velvet Texture & Material Effects */}
-              <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-25 pointer-events-none mix-blend-overlay" />
+              <div className="absolute inset-0 bg-[url('/textures/noise.svg')] opacity-25 pointer-events-none mix-blend-overlay" />
               <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
 
               <div className="flex">

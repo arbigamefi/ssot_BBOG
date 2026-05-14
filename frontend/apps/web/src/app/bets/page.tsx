@@ -182,7 +182,7 @@ function BetDetailModalContent({ row, onClose }: { row: IndexedBetRow; onClose: 
                 : "bg-white/5 border border-white/10"
         )}
       >
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay pointer-events-none" />
+        <div className="absolute inset-0 bg-[url('/textures/noise.svg')] opacity-20 mix-blend-overlay pointer-events-none" />
         <span
           className={cn(
             "text-[10px] font-bold uppercase tracking-widest mb-2 px-3 py-1 rounded-full border",

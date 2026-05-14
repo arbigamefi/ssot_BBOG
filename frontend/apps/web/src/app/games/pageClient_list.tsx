@@ -178,7 +178,7 @@ export function GamesListClient() {
     <div className="min-h-screen bg-[#050505] font-sans text-white selection:bg-blue-500/30">
       {/* Immersive Deep Glow Background */}
       <div className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[1200px] h-[700px] bg-gradient-to-b from-blue-600/15 via-indigo-600/10 to-transparent blur-[120px] pointer-events-none rounded-full z-0" />
-      <div className="fixed top-0 left-0 right-0 h-[600px] bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.12] mix-blend-overlay pointer-events-none z-0" />
+      <div className="fixed top-0 left-0 right-0 h-[600px] bg-[url('/textures/noise.svg')] opacity-[0.12] mix-blend-overlay pointer-events-none z-0" />
 
       <main className="relative z-10 max-w-[1440px] mx-auto px-6 py-12 md:py-16">
         {/* 1. GRAND LOBBY HEADER */}
@@ -347,7 +347,7 @@ export function GamesListClient() {
         <div className="rounded-[2.5rem] border border-amber-500/20 bg-gradient-to-b from-[#1a1400] to-[#0a0a0a] p-1 relative overflow-hidden group">
           {/* Cinematic Lighting */}
           <div className="absolute -top-1/2 left-1/2 -translate-x-1/2 w-full max-w-[800px] h-[300px] bg-amber-500/20 blur-[100px] pointer-events-none group-hover:bg-amber-500/30 transition-colors duration-1000" />
-          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.15] mix-blend-overlay pointer-events-none" />
+          <div className="absolute inset-0 bg-[url('/textures/noise.svg')] opacity-[0.15] mix-blend-overlay pointer-events-none" />
 
           <div className="rounded-[2.4rem] bg-[#050505]/60 backdrop-blur-xl px-8 py-10 md:py-14 flex flex-col md:flex-row items-center justify-between gap-10 relative z-10 border border-amber-500/10 shadow-[inset_0_0_50px_rgba(245,158,11,0.05)]">
             <div className="flex flex-col md:flex-row items-center gap-6 text-center md:text-left">

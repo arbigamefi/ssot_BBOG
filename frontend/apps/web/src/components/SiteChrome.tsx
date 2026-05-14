@@ -52,7 +52,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
 
       {isRoom && (
         <>
-          <div className="fixed left-1/2 top-1/2 z-0 h-full w-full -translate-x-1/2 -translate-y-1/2 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay pointer-events-none" />
+          <div className="fixed left-1/2 top-1/2 z-0 h-full w-full -translate-x-1/2 -translate-y-1/2 bg-[url('/textures/noise.svg')] opacity-20 mix-blend-overlay pointer-events-none" />
           <div className="pointer-events-none fixed right-[-10%] top-[-20%] z-0 h-[800px] w-[800px] rounded-full bg-purple-900/20 blur-[200px]" />
           <div className="pointer-events-none fixed bottom-[-20%] left-[-10%] z-0 h-[600px] w-[600px] rounded-full bg-blue-900/10 blur-[150px]" />
         </>
