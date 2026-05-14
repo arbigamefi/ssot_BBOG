@@ -26,7 +26,7 @@ import {
   DiceMiniIcon,
   KenoMiniIcon,
   RouletteMiniIcon
-} from "./prototype/components/PrototypeGameIcons";
+} from "../features/games/GameMiniIcons";
 
 type AssetOverview = {
   address: Address;

@@ -13,13 +13,13 @@ import {
 
 import { Placeholder } from "../../components/Placeholder";
 import { getCatalogRooms } from "../../features/games/catalog";
-import { useRelease } from "../../ssot/release/ReleaseProvider";
 import {
   CoinTossMiniIcon,
   DiceMiniIcon,
   KenoMiniIcon,
   RouletteMiniIcon
-} from "../prototype/components/PrototypeGameIcons";
+} from "../../features/games/GameMiniIcons";
+import { useRelease } from "../../ssot/release/ReleaseProvider";
 
 const ROOM_ICON_MAP: Record<string, React.ReactNode> = {
   dice: <DiceMiniIcon />,

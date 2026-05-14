@@ -20,8 +20,7 @@ import {
   TxStepper,
   toast,
   cn,
-  StatBlock,
-  CyberInputGroup
+  StatBlock
 } from "@ssot/ui";
 
 import { useRelease } from "../../ssot/release/ReleaseProvider";

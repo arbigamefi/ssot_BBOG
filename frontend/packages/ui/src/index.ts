@@ -6,10 +6,6 @@ export type { ThemeToken } from "./tokens";
 
 // ui primitives
 export * from "./components/ui/button";
-export * from "./components/ui/cyber-button";
-export * from "./components/ui/cyber-input";
-export * from "./components/ui/cyber-slider";
-export * from "./components/ui/cyber-icons";
 export * from "./components/ui/badge";
 export * from "./components/ui/card";
 export * from "./components/ui/alert";
@@ -26,10 +22,7 @@ export * from "./components/ui/stat-card";
 export * from "./components/ui/status-badge";
 export * from "./components/ui/tab-bar";
 export * from "./components/ui/game-card";
-export * from "./components/ui/cyber-table";
 export * from "./components/ui/receipt-ticket";
-export * from "./components/ui/cyber-header";
-export * from "./components/ui/cyber-layout";
 export * from "./components/ui/win-loss-overlay";
 export * from "./components/ui/data-table";
 export * from "./components/ui/glass-modal";
