@@ -27,6 +27,14 @@ if [[ $# -eq 1 ]]; then
   set +a
 fi
 
+if [[ -n "${ROLE_ENV_FILE:-}" ]]; then
+  [[ -f "$ROLE_ENV_FILE" ]] || fail "role env file not found: $ROLE_ENV_FILE"
+  set -a
+  # shellcheck disable=SC1090
+  source "$ROLE_ENV_FILE"
+  set +a
+fi
+
 command -v forge >/dev/null 2>&1 || fail "missing command: forge"
 
 [[ -n "${RPC_URL:-}" ]] || fail "missing env: RPC_URL"

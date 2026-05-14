@@ -98,12 +98,12 @@ contract WorldCupFootballCanaryV13 is Script {
         _validateNewMarketConfig(cfg);
         _logConfig("World Cup football local resolve:", cfg);
 
-        uint256[] memory ticketIds = _broadcastSetup(cfg);
+        uint256[] memory ticketIds = _simulateSetup(cfg);
         vm.warp(cfg.startsAt);
-        _broadcastProposeResult(cfg);
+        _simulateProposeResult(cfg);
         SSOTTypes.SportsResult memory result = cfg.sportsHub.getResult(cfg.marketId);
         vm.warp(result.finalizesAt);
-        _broadcastFinalizeAndSettle(cfg, ticketIds);
+        _simulateFinalizeAndSettle(cfg, ticketIds);
         _validateResolved(cfg, ticketIds);
 
         console2.log("  local football MVP resolved marketId", cfg.marketId);
@@ -215,9 +215,13 @@ contract WorldCupFootballCanaryV13 is Script {
     }
 
     function _readRoleKeys(FootballConfig memory cfg) internal view {
-        cfg.playerPrivateKey = vm.envOr("FOOTBALL_PLAYER_PRIVATE_KEY", vm.envUint("PRIVATE_KEY"));
-        cfg.oddsSignerPrivateKey = vm.envOr("FOOTBALL_ODDS_SIGNER_PRIVATE_KEY", vm.envUint("PRIVATE_KEY"));
-        cfg.resultReporterPrivateKey = vm.envOr("FOOTBALL_RESULT_REPORTER_PRIVATE_KEY", vm.envUint("PRIVATE_KEY"));
+        cfg.playerPrivateKey =
+            vm.envOr("FOOTBALL_PLAYER_PRIVATE_KEY", vm.envOr("CANARY_PLAYER_PRIVATE_KEY", cfg.privateKey));
+        cfg.oddsSignerPrivateKey =
+            vm.envOr("FOOTBALL_ODDS_SIGNER_PRIVATE_KEY", vm.envOr("CANARY_ODDS_SIGNER_PRIVATE_KEY", cfg.privateKey));
+        cfg.resultReporterPrivateKey = vm.envOr(
+            "FOOTBALL_RESULT_REPORTER_PRIVATE_KEY", vm.envOr("CANARY_RESULT_REPORTER_PRIVATE_KEY", cfg.privateKey)
+        );
         cfg.player = vm.addr(cfg.playerPrivateKey);
         cfg.oddsSigner = vm.addr(cfg.oddsSignerPrivateKey);
         cfg.resultReporter = vm.addr(cfg.resultReporterPrivateKey);
@@ -310,6 +314,36 @@ contract WorldCupFootballCanaryV13 is Script {
         vm.stopBroadcast();
     }
 
+    function _simulateSetup(FootballConfig memory cfg) internal returns (uint256[] memory ticketIds) {
+        ticketIds = _ticketIds(cfg.firstTicketId, cfg.ticketCount);
+
+        vm.startPrank(cfg.governance);
+        uint64 createdMarketId = cfg.sportsHub.createMarket(
+            cfg.eventId,
+            cfg.poolId,
+            cfg.outcomeCount,
+            cfg.startsAt,
+            cfg.lockTime,
+            cfg.finality,
+            cfg.marketKey,
+            cfg.rulebookHash
+        );
+        require(createdMarketId == cfg.marketId, "unexpected market id");
+        cfg.sportsHub.openMarket(cfg.marketId);
+        vm.stopPrank();
+
+        vm.startPrank(cfg.player);
+        IERC20FootballCanary(cfg.asset).approve(cfg.sportsBank, cfg.stake * cfg.ticketCount);
+        _placeTicket(cfg, cfg.winningOutcomeId, uint64(ticketIds[0]));
+        if (cfg.ticketCount > 1) {
+            _placeTicket(cfg, cfg.losingOutcomeId, uint64(ticketIds[1]));
+        }
+        vm.stopPrank();
+
+        vm.prank(cfg.governance);
+        cfg.sportsHub.lockMarket(cfg.marketId);
+    }
+
     function _broadcastProposeResult(FootballConfig memory cfg) internal {
         vm.startBroadcast(cfg.resultReporterPrivateKey);
         cfg.sportsHub
@@ -322,11 +356,29 @@ contract WorldCupFootballCanaryV13 is Script {
         console2.log("  finalizesAt", result.finalizesAt);
     }
 
+    function _simulateProposeResult(FootballConfig memory cfg) internal {
+        vm.prank(cfg.resultReporter);
+        cfg.sportsHub
+            .proposeResult(cfg.marketId, cfg.winningOutcomeId, cfg.resultSourceHash, cfg.evidenceHash, uint64(block.timestamp));
+
+        SSOTTypes.SportsResult memory result = cfg.sportsHub.getResult(cfg.marketId);
+        console2.log("  resultPayloadHash");
+        console2.logBytes32(result.resultPayloadHash);
+        console2.log("  finalizesAt", result.finalizesAt);
+    }
+
     function _broadcastFinalizeAndSettle(FootballConfig memory cfg, uint256[] memory ticketIds) internal {
         vm.startBroadcast(cfg.privateKey);
         cfg.sportsHub.finalizeResult(cfg.marketId);
         cfg.sportsHub.settleTickets(ticketIds);
         vm.stopBroadcast();
+    }
+
+    function _simulateFinalizeAndSettle(FootballConfig memory cfg, uint256[] memory ticketIds) internal {
+        vm.startPrank(cfg.governance);
+        cfg.sportsHub.finalizeResult(cfg.marketId);
+        cfg.sportsHub.settleTickets(ticketIds);
+        vm.stopPrank();
     }
 
     function _broadcastSettleOnly(FootballConfig memory cfg, uint256[] memory ticketIds) internal {

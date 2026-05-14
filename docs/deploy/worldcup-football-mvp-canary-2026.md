@@ -47,6 +47,17 @@ It accepts the same env-file pattern as other v1.3 canaries:
 ENV_FILE=.env.v13-sports.local make sports-football-canary-v13
 ```
 
+When base RPC/governance values and role keys are split across files, pass the base env as `ENV_FILE`
+and the role-key env as `ROLE_ENV_FILE`:
+
+```bash
+ENV_FILE=.env ROLE_ENV_FILE=.env.sports-roles.local make sports-football-canary-v13
+```
+
+Football-specific role variables override existing canary variables, but the script also accepts the
+existing `CANARY_PLAYER_PRIVATE_KEY`, `CANARY_ODDS_SIGNER_PRIVATE_KEY`, and
+`CANARY_RESULT_REPORTER_PRIVATE_KEY` names.
+
 Default mode is `FOOTBALL_CANARY_MODE=local-resolve`, which is simulation-only and uses `vm.warp` to
 run the full lifecycle in one pass. Do not use `local-resolve` with `BROADCAST=1`.
 
