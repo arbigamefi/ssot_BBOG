@@ -24,15 +24,13 @@ import {
   getGameDisplayName,
   getGameThemeColor
 } from "../../../features/games/room/presentation";
-import { simulateGameResult } from "../../../features/games/room/simulation";
 import { GameRoomAuditLedger } from "../../../features/games/room/audit-ledger";
 import { GameRoomBetPanel } from "../../../features/games/room/bet-panel";
 import { useGameWalletBalance, useKenoStrobeSpots } from "../../../features/games/room/hooks";
 import {
-  findIndexedBetById,
-  isTerminalIndexedBet,
-  readFinalizedPayoutWin
-} from "../../../features/games/room/reconciliation";
+  useGameResolutionEffect,
+  type GameHistoryEntry
+} from "../../../features/games/room/resolution";
 import { GameRoomRightPane } from "../../../features/games/room/right-pane";
 
 /* ─── Main Logic ─── */
@@ -73,7 +71,7 @@ export function GamePageClient({ slug }: { slug: string }) {
   const [kenoResultDrawn, setKenoResultDrawn] = React.useState<number[]>([]);
 
   // History state for widgets
-  const [gameHistory, setGameHistory] = React.useState<any[]>([]);
+  const [gameHistory, setGameHistory] = React.useState<GameHistoryEntry[]>([]);
   // C1: Multi-roll controls
   const [betCount, setBetCount] = React.useState<number>(1);
   const [stopGain, setStopGain] = React.useState<number>(0); // 0 = disabled
@@ -82,35 +80,6 @@ export function GamePageClient({ slug }: { slug: string }) {
 
   const walletBalance = useGameWalletBalance({ sdk, assets: release?.assets });
   const animatingKenoSpots = useKenoStrobeSpots({ isPending, gameSlug: game?.slug });
-
-  if (!release || !game)
-    return (
-      <Placeholder
-        title="Module Not Found"
-        description={readOnlyReason ?? "Game not found."}
-        specPath="docs/frontend/PAGE-SPECS/010-GAMES.md"
-      />
-    );
-
-  const themeColor = getGameThemeColor(game.slug);
-
-  // A5: Live houseEdge and maxPayout from release gamesMeta
-  const gameMeta = release?.gamesMeta?.find((m: any) => m.slug === game.slug);
-  const houseEdge = formatHouseEdge(gameMeta, game.slug);
-  const usdcDecimals = release?.assets?.find((a: any) => a.symbol === "USDC")?.decimals ?? 6;
-  const maxPayout = formatGameMaxPayout({ gameMeta, slug: game.slug, usdcDecimals });
-
-  // B2: Accurate win-chance using proper math per game module
-  const winChance = calculateGameWinChance({
-    slug: game.slug,
-    diceTarget,
-    diceDirection,
-    rouletteSpots,
-    kenoSpots
-  });
-
-  const multiplier = winChance === 0 ? 0 : 99 / winChance;
-  const expectedPayout = betAmount * multiplier;
 
   const { planNow, executeNow, state, reset } = usePlaceBetStepper();
   const { openConnectModal } = useConnectModal();
@@ -144,6 +113,55 @@ export function GamePageClient({ slug }: { slug: string }) {
       pendingStartRef.current = null;
     }
   }, [isPending]);
+
+  useGameResolutionEffect({
+    status: state.status,
+    betId: state.betId,
+    recentBets,
+    db,
+    gameSlug: game?.slug ?? "",
+    coinSide,
+    diceDirection,
+    diceTarget,
+    rouletteSpots,
+    kenoSpots,
+    setIsPending,
+    setShowResult,
+    setFlipCount,
+    setResultNum,
+    setKenoResultDrawn,
+    setGameHistory,
+    reset
+  });
+
+  if (!release || !game)
+    return (
+      <Placeholder
+        title="Module Not Found"
+        description={readOnlyReason ?? "Game not found."}
+        specPath="docs/frontend/PAGE-SPECS/010-GAMES.md"
+      />
+    );
+
+  const themeColor = getGameThemeColor(game.slug);
+
+  // A5: Live houseEdge and maxPayout from release gamesMeta
+  const gameMeta = release?.gamesMeta?.find((m: any) => m.slug === game.slug);
+  const houseEdge = formatHouseEdge(gameMeta, game.slug);
+  const usdcDecimals = release?.assets?.find((a: any) => a.symbol === "USDC")?.decimals ?? 6;
+  const maxPayout = formatGameMaxPayout({ gameMeta, slug: game.slug, usdcDecimals });
+
+  // B2: Accurate win-chance using proper math per game module
+  const winChance = calculateGameWinChance({
+    slug: game.slug,
+    diceTarget,
+    diceDirection,
+    rouletteSpots,
+    kenoSpots
+  });
+
+  const multiplier = winChance === 0 ? 0 : 99 / winChance;
+  const expectedPayout = betAmount * multiplier;
 
   const handlePlaceBet = async () => {
     if (!sdk?.account) {
@@ -189,62 +207,6 @@ export function GamePageClient({ slug }: { slug: string }) {
       console.error(e);
     }
   };
-
-  const latestBetIdRef = React.useRef<bigint | undefined>();
-  React.useEffect(() => {
-    if (state.status === "reconciled" && state.betId !== undefined) {
-      if (latestBetIdRef.current !== state.betId) {
-        latestBetIdRef.current = state.betId;
-        setIsPending(true); // Switch to waiting for VRF visuals
-      }
-
-      const myBet = findIndexedBetById(recentBets, state.betId);
-      if (isTerminalIndexedBet(myBet)) {
-        setIsPending(false);
-        setShowResult(true);
-
-        const resolvePayout = async () => {
-          const win = await readFinalizedPayoutWin({ db, txHash: myBet?.lastTxHash });
-
-          const simulated = simulateGameResult({
-            slug: game?.slug ?? "",
-            win,
-            coinSide,
-            diceDirection,
-            diceTarget,
-            rouletteSpots,
-            kenoSpots
-          });
-
-          if (simulated.flipCoin) setFlipCount((c) => c + 1);
-          if (game?.slug === "dice" || game?.slug === "roulette") {
-            setResultNum(simulated.value);
-          }
-          if (simulated.kenoDrawn) {
-            setKenoResultDrawn(simulated.kenoDrawn);
-          }
-
-          setGameHistory((prev) => [{ val: simulated.value, win }, ...prev].slice(0, 5));
-          setTimeout(() => setShowResult(false), 8000);
-          reset();
-        };
-
-        void resolvePayout();
-      }
-    }
-  }, [
-    state.status,
-    state.betId,
-    recentBets,
-    game?.slug,
-    coinSide,
-    diceDirection,
-    diceTarget,
-    rouletteSpots,
-    kenoSpots,
-    db,
-    reset
-  ]);
 
   const LeftPane = (
     <GameRoomBetPanel
