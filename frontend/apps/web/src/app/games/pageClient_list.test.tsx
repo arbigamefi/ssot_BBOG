@@ -70,7 +70,7 @@ describe("GamesListClient", () => {
   it("falls back to canonical rooms when gamesMeta is empty", () => {
     state.release = { gamesMeta: [] };
     render(<GamesListClient />);
-    expect(screen.getByText("Select Game Module")).toBeDefined();
+    expect(screen.getByText("Enter the Floor")).toBeDefined();
     expect(screen.getAllByTestId("room-entry-card").length).toBeGreaterThan(0);
     expect(screen.getByText("European Roulette")).toBeDefined();
   });
@@ -84,11 +84,11 @@ describe("GamesListClient", () => {
       gamesMeta: MOCK_GAMES_META
     };
     render(<GamesListClient />);
-    expect(screen.getByText("Select Game Module")).toBeDefined();
-    expect(screen.getByText("Global Access Lobby")).toBeDefined();
+    expect(screen.getByText("Enter the Floor")).toBeDefined();
+    expect(screen.getByText("Global Casino Lobby")).toBeDefined();
     expect(screen.getByText("Precision Dice")).toBeDefined();
     expect(screen.getAllByText("Coin Toss").length).toBeGreaterThan(0);
-    expect(screen.getByText("Global Prize Pool")).toBeDefined();
+    expect(screen.getByText("Progressive Reserve Pool")).toBeDefined();
   });
 
   it("renders correct number of room entry cards", () => {

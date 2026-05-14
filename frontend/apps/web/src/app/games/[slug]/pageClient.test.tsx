@@ -53,6 +53,18 @@ vi.mock("../../../ssot/sdk", () => ({
   })
 }));
 
+vi.mock("../../../ssot/runtime", () => ({
+  useSSOTRuntime: () => ({
+    db: null
+  })
+}));
+
+vi.mock("../../../app/providers/WalletButton", () => ({
+  useConnectModal: () => ({
+    openConnectModal: vi.fn()
+  })
+}));
+
 vi.mock("../../../features/betting/ui/GameBetPanel", () => ({
   GameBetPanel: ({ game, children }: any) => (
     <div data-testid="game-bet-panel">

@@ -276,6 +276,8 @@ export function GamesListClient() {
               <Link
                 key={room.slug}
                 href={room.href}
+                data-testid="room-entry-card"
+                data-slug={room.slug}
                 className={cn(
                   "group relative rounded-[2rem] border border-white/10 bg-[#050505] overflow-hidden hover:-translate-y-2 transition-all duration-300 flex flex-col min-h-[380px]",
                   theme.cardHover

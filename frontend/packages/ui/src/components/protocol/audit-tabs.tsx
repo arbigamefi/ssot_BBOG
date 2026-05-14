@@ -64,9 +64,17 @@ export function AuditTabs({
 // ----------------------------------------------------------------------
 // Compose Helpers for the Generic Table inside
 
-export function AuditTableHeader({ children }: { children: React.ReactNode }) {
+export function AuditTableHeader({
+  children,
+  className
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <div className="w-full text-left grid text-sm border-b border-white/10 pb-3 mb-2">
+    <div
+      className={cn("w-full text-left grid text-sm border-b border-white/10 pb-3 mb-2", className)}
+    >
       {children}
     </div>
   );

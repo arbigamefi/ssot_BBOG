@@ -23,11 +23,14 @@ export function getReleaseAbis(chainId: number): ReleaseAbis {
   if (!mod) {
     throw new Error(`No release ABIs for chainId=${chainId}. Did you run pnpm ssot:sync?`);
   }
-  if (!mod.HubAbi || !mod.BankAbi || !mod.VRFHubAbi) {
-    throw new Error(`Release ABI module for chainId=${chainId} is missing required contracts (Hub/Bank/VRFHub).`);
+  const hubAbi = mod.HubAbi ?? mod.GameHubAbi;
+  if (!hubAbi || !mod.BankAbi || !mod.VRFHubAbi) {
+    throw new Error(
+      `Release ABI module for chainId=${chainId} is missing required contracts (Hub or GameHub/Bank/VRFHub).`
+    );
   }
   return {
-    HubAbi: mod.HubAbi,
+    HubAbi: hubAbi,
     BankAbi: mod.BankAbi,
     VRFHubAbi: mod.VRFHubAbi,
     BankRegistryAbi: mod.BankRegistryAbi,

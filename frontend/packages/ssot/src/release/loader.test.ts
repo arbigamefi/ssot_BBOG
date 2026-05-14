@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { loadEmbeddedRelease } from "./loader";
+import { ReleaseSchema } from "./schema";
 
 /**
  * Tests for the release loader — validates all branches in
@@ -111,6 +112,97 @@ describe("loadEmbeddedRelease", () => {
     if (result.release.meta?.blockNumber !== undefined) {
       expect(result.release.meta.blockNumber).toBeGreaterThan(0);
     }
+  });
+
+  it("accepts v1.3 sports and pool metadata in embedded releases", () => {
+    const parsed = ReleaseSchema.safeParse({
+      chainId: 84532,
+      name: "Base Sepolia",
+      releaseDigest: "0xdeadbeefcafefeed",
+      contracts: {
+        hub: "0x1111111111111111111111111111111111111111",
+        gameHub: "0x1111111111111111111111111111111111111111",
+        vrfHub: "0x2222222222222222222222222222222222222222",
+        bankRegistry: "0x3333333333333333333333333333333333333333",
+        poolRegistry: "0x3333333333333333333333333333333333333333",
+        sportsHub: "0x4444444444444444444444444444444444444444",
+        sportsRiskEngine: "0x5555555555555555555555555555555555555555"
+      },
+      assets: [
+        {
+          symbol: "USDC",
+          decimals: 6,
+          address: "0x6666666666666666666666666666666666666666",
+          bank: "0x7777777777777777777777777777777777777777"
+        }
+      ],
+      games: {
+        "0x8d8e6987fb3617c00abdd68d6c1f7eac28b7f9f96b25367e9b65dacaa0914a8b":
+          "0x8888888888888888888888888888888888888888"
+      },
+      gamesMeta: [
+        {
+          gameId: "0x8d8e6987fb3617c00abdd68d6c1f7eac28b7f9f96b25367e9b65dacaa0914a8b",
+          slug: "dice",
+          label: "Dice",
+          module: "0x8888888888888888888888888888888888888888",
+          paramsEncoding: "abi.encode(uint8 cap)"
+        }
+      ],
+      sports: {
+        enabled: true,
+        riskEngine: "0x5555555555555555555555555555555555555555",
+        hub: "0x4444444444444444444444444444444444444444",
+        oddsSignerSetHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        resultReporterSetHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        resultReporterThreshold: "1",
+        resultChallengeTimeoutSeconds: "604800",
+        resultChallenger: "0x9999999999999999999999999999999999999999",
+        resultArbitrator: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        maxStake: "1000000",
+        maxPayout: "2000000",
+        maxMarketReserved: "3000000",
+        maxOutcomeReserved: "4000000",
+        maxEventReserved: "5000000"
+      },
+      pools: [
+        {
+          poolId: 1,
+          domainId: 1,
+          domain: "Casino",
+          active: true,
+          asset: "0x6666666666666666666666666666666666666666",
+          bank: "0x7777777777777777777777777777777777777777",
+          symbol: "USDC",
+          decimals: 6,
+          sportsRisk: null
+        },
+        {
+          poolId: 2,
+          domainId: 2,
+          domain: "Sports",
+          active: true,
+          asset: "0x6666666666666666666666666666666666666666",
+          bank: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          symbol: "USDC",
+          decimals: 6,
+          sportsRisk: {
+            maxStake: "1000000",
+            maxPayout: "2000000",
+            maxMarketReserved: "3000000",
+            maxOutcomeReserved: "4000000",
+            maxEventReserved: "5000000",
+            riskHash: "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          }
+        }
+      ]
+    });
+
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) throw new Error(parsed.error.message);
+    expect(parsed.data.sports?.enabled).toBe(true);
+    expect(parsed.data.contracts.sportsHub).toBe("0x4444444444444444444444444444444444444444");
+    expect(parsed.data.pools?.[1]?.sportsRisk?.riskHash).toContain("0xcccc");
   });
 });
 

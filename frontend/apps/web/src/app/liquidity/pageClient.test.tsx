@@ -143,13 +143,12 @@ describe("LiquidityPageClient", () => {
   it("frames liquidity as an LP readout instead of a generic vault form", () => {
     render(<LiquidityPageClient />);
 
-    expect(screen.getByText("Provide Liquidity.")).toBeDefined();
-    expect(screen.getByText("Earn the Mathematical Edge.")).toBeDefined();
-    expect(screen.getByText(/protocol-owned Isolated Banks/i)).toBeDefined();
-    expect(screen.getByText("Current APY")).toBeDefined();
-    expect(screen.getByText("Total Free Capital (R)")).toBeDefined();
-    expect(screen.getByText("Pending Liabilities")).toBeDefined();
-    expect(screen.getByText("Max Ticket Cap (1.5% R)")).toBeDefined();
-    expect(screen.getByText("Contract Address")).toBeDefined();
+    expect(screen.getByText("Protocol Liquidity Terminal")).toBeDefined();
+    expect(screen.getByText(/Isolated Bankroll/i)).toBeDefined();
+    expect(screen.getByText("Capital Posture Series")).toBeDefined();
+    expect(screen.getByText("Total NAV")).toBeDefined();
+    expect(screen.getByText("Free Capital")).toBeDefined();
+    expect(screen.getByText("Liabilities")).toBeDefined();
+    expect(screen.getByText("Connect wallet to interact with bankroll")).toBeDefined();
   });
 });

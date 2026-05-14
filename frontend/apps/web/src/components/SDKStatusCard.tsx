@@ -43,14 +43,23 @@ export function SDKStatusCard() {
           <span className="text-muted-foreground">ChainId:</span> {rel.chainId}
         </div>
         <div>
-          <span className="text-muted-foreground">Release loaded:</span> {rel.release ? "yes" : "no"}
+          <span className="text-muted-foreground">Release loaded:</span>{" "}
+          {rel.release ? "yes" : "no"}
         </div>
         <div>
           <span className="text-muted-foreground">SDK ready:</span> {ready ? "yes" : "no"}
         </div>
         <div>
-          <span className="text-muted-foreground">Write mode:</span> {readOnly ? "read-only" : "enabled"}
+          <span className="text-muted-foreground">Write mode:</span>{" "}
+          {readOnly ? "read-only" : "enabled"}
         </div>
+        <div>
+          <span className="text-muted-foreground">Sportsbook entry:</span>{" "}
+          {rel.sportsbook.enabled ? "enabled" : "disabled"}
+        </div>
+        {!rel.sportsbook.enabled && rel.sportsbook.disabledReason ? (
+          <div className="text-muted-foreground">{rel.sportsbook.disabledReason}</div>
+        ) : null}
         {!readOnly && fee !== null && (
           <div>
             <span className="text-muted-foreground">quoteVRFFee(1):</span> {fee.toString()}
