@@ -78,6 +78,9 @@
 - [ ] For SportsHub production roles, run
   `REQUIRE_APPROVED=1 make sports-role-custody-check-v13 ROLE_CUSTODY_FILE=<approved-role-custody.json>`
   before allowlisting routine odds/reporting/challenge/arbitration keys.
+- [ ] For SportsHub provider/evidence approval, run
+  `REQUIRE_APPROVED=1 make sports-provider-policy-check-v13 PROVIDER_POLICY_FILE=<approved-provider-policy.json>`
+  before opening provider-backed market risk-in.
 - [ ] For SportsHub mainnet canary caps, run
   `REQUIRE_APPROVED=1 make sports-bankroll-caps-check-v13 BANKROLL_CAPS_FILE=<approved-memo.json>`
   before copying `SPORTS_MAX_*` values into the deploy env.

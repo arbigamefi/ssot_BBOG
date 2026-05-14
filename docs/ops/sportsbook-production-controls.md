@@ -58,6 +58,10 @@ The repo-side evidence shape is defined in
 rulebook and result evidence bundles under `docs/ops/templates/`. That policy is a required input to
 production review, not a provider approval by itself.
 
+The provider/evidence approval memo should be based on
+`docs/ops/templates/sportsbook-provider-evidence-approval.example.json` and checked with
+`make sports-provider-policy-check-v13`.
+
 Before any public market:
 
 - each market type must have a published rulebook hash and a human-readable rulebook;
@@ -75,6 +79,8 @@ No-go:
 - a disputed result is finalized without waiting through the challenge window;
 - a challenged result is resolved without a non-zero arbitration decision hash;
 - a market type is opened before cancellation/void/postponement handling is defined.
+- `REQUIRE_APPROVED=1 make sports-provider-policy-check-v13` fails for the approved provider/evidence
+  memo.
 
 ## Bankroll And Risk Caps
 

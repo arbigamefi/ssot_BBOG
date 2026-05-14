@@ -139,7 +139,7 @@ coverage.
 | Gate | Status | Required before GO |
 |---|---:|---|
 | Managed key custody | NO-GO | Approve a `sportsbook.role-custody.v1` memo for odds signer, result reporter, challenger, arbitrator, keeper, and governance keys; it must pass `REQUIRE_APPROVED=1 make sports-role-custody-check-v13`. |
-| Provider and evidence policy | NO-GO | Approve the provider choice, fallback rules, evidence storage location, and the draft rulebook/result evidence procedure in `docs/ops/sportsbook-provider-evidence-policy.md`. |
+| Provider and evidence policy | NO-GO | Approve a `sportsbook.provider-evidence-approval.v1` memo for provider choice, fallback rules, evidence storage, and rulebook/result procedures; it must pass `REQUIRE_APPROVED=1 make sports-provider-policy-check-v13`. |
 | Jurisdiction and frontend access | NO-GO | Legal/compliance must approve jurisdictions, restricted regions, age policy, KYC/sanctions posture, responsible-gaming controls, and frontend gating. |
 | Bankroll sizing | NO-GO | Approve a `sportsbook.bankroll-risk-caps.v1` memo with initial bankroll, loss tolerance, max reserved exposure, and manual supervision limits in raw asset units. |
 | Final risk caps | NO-GO | Mainnet `SPORTS_MAX_*` values must match the approved bankroll memo and pass `REQUIRE_APPROVED=1 make sports-bankroll-caps-check-v13`. |
@@ -153,8 +153,8 @@ coverage.
 To change this packet from NO-GO to GO, add the concrete approval records or links for:
 
 1. Managed key custody approval.
-2. Provider contract or integration decision.
-3. Evidence storage location and operator procedure.
+2. Approved provider/evidence memo.
+3. Evidence storage location and operator procedure from that memo.
 4. Jurisdiction and frontend access decision.
 5. Bankroll sizing memo.
 6. Final Sports risk caps in raw asset units.
