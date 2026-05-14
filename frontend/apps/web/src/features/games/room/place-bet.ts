@@ -12,7 +12,7 @@ type ReleaseAsset = {
   decimals?: number;
 };
 
-type GameRoomRelease = {
+export type GameRoomRelease = {
   chainId: number;
   assets: readonly ReleaseAsset[];
 };

@@ -2,8 +2,6 @@
 
 import * as React from "react";
 
-import { toast } from "@ssot/ui";
-
 import { Placeholder } from "../../../components/Placeholder";
 import { PageTransition } from "../../../components/PageTransition";
 import { ImmersiveGameLayout } from "../../../components/ImmersiveGameLayout";
@@ -17,7 +15,7 @@ import { usePlaceBetStepper } from "../../../features/betting/usePlaceBetStepper
 import { useConnectModal } from "../../../app/providers/WalletButton";
 import { toGameMeta, type GameMeta } from "../../../features/games/room/model";
 import { calculateGameWinChance } from "../../../features/games/room/params";
-import { buildGamePlaceBetInput } from "../../../features/games/room/place-bet";
+import { executeGamePlaceBetAction } from "../../../features/games/room/place-bet-action";
 import {
   formatGameMaxPayout,
   formatHouseEdge,
@@ -141,50 +139,27 @@ export function GamePageClient({ slug }: { slug: string }) {
   const multiplier = winChance === 0 ? 0 : 99 / winChance;
   const expectedPayout = betAmount * multiplier;
 
-  const handlePlaceBet = async () => {
-    if (!sdk?.account) {
-      openConnectModal?.();
-      return;
-    }
-    if (!game || (game.slug !== "dice" && winChance === 0)) return;
-
-    if (state.status === "reconciled" || state.status === "failed") {
-      reset();
-      setShowResult(false);
-      return;
-    }
-
-    if (state.plan) {
-      await executeNow();
-      return;
-    }
-
-    try {
-      const placeBet = buildGamePlaceBetInput({
-        release,
-        game,
-        betAmount,
-        betCount,
-        stopGain,
-        stopLoss,
-        diceTarget,
-        coinSide,
-        rouletteSpots,
-        kenoSpots
-      });
-      if (!placeBet.ok) {
-        toast.error(placeBet.message);
-        return;
-      }
-
-      // planNow dispatches to the state machine (returns void)
-      await planNow(placeBet.input);
-      // B3: Errors are surfaced via state.status==='failed' and the toast above
-    } catch (e: any) {
-      toast.error(e?.message ?? "An unexpected error occurred.");
-      console.error(e);
-    }
-  };
+  const handlePlaceBet = () =>
+    executeGamePlaceBetAction({
+      account: sdk?.account,
+      openConnectModal,
+      release,
+      game,
+      winChance,
+      state,
+      reset,
+      setShowResult,
+      executeNow,
+      planNow,
+      betAmount,
+      betCount,
+      stopGain,
+      stopLoss,
+      diceTarget,
+      coinSide,
+      rouletteSpots,
+      kenoSpots
+    });
 
   const LeftPane = (
     <GameRoomBetPanel
