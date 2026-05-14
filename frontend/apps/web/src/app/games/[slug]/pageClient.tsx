@@ -27,13 +27,7 @@ import { PageTransition } from "../../../components/PageTransition";
 import { ImmersiveGameLayout } from "../../../components/ImmersiveGameLayout";
 
 import { toast } from "@ssot/ui";
-import {
-  encodeKenoParams,
-  encodeRouletteParams,
-  encodeDiceParams,
-  encodeCoinTossParams,
-  encodeStakeSpec
-} from "@ssot/ssot/encoding";
+import { encodeStakeSpec } from "@ssot/ssot/encoding";
 import { useBetsByGame } from "../../../features/bets/useBetsByGame";
 import { useIndexer } from "../../../features/ops/useIndexer";
 import { useRelease } from "../../../ssot/release/ReleaseProvider";
@@ -43,15 +37,14 @@ import { usePlaceBetStepper } from "../../../features/betting/usePlaceBetStepper
 import { useConnectModal } from "../../../app/providers/WalletButton";
 import {
   EUROPEAN_WHEEL_ORDER,
-  RED_NUMBERS,
   RED_NUMBER_SET,
   kenoMultiplier,
-  kenoWinChance,
   mapBetState,
   shortHex,
   toGameMeta,
   type GameMeta
 } from "../../../features/games/room/model";
+import { buildGameParams, calculateGameWinChance } from "../../../features/games/room/params";
 
 /* ─── Sub-Components ─── */
 
@@ -311,37 +304,13 @@ export function GamePageClient({ slug }: { slug: string }) {
         : "25,000 USDC";
 
   // B2: Accurate win-chance using proper math per game module
-  const winChance = (() => {
-    if (game.slug === "dice") return diceDirection === "under" ? diceTarget : 100 - diceTarget;
-    if (game.slug === "coin-toss") return 50;
-    if (game.slug === "roulette") {
-      // Count unique numbers covered by current spots selection
-      const covered = new Set<number>();
-      for (const spot of rouletteSpots) {
-        if (spot === "RED") RED_NUMBERS.forEach((n) => covered.add(n));
-        else if (spot === "BLACK") {
-          for (let n = 1; n <= 36; n++) if (!RED_NUMBER_SET.has(n)) covered.add(n);
-        } else if (spot === "ODD") {
-          for (let n = 1; n <= 36; n += 2) covered.add(n);
-        } else if (spot === "EVEN") {
-          for (let n = 2; n <= 36; n += 2) covered.add(n);
-        } else if (spot === "1-18") {
-          for (let n = 1; n <= 18; n++) covered.add(n);
-        } else if (spot === "19-36") {
-          for (let n = 19; n <= 36; n++) covered.add(n);
-        } else if (spot === "1st 12") {
-          for (let n = 1; n <= 12; n++) covered.add(n);
-        } else if (spot === "2nd 12") {
-          for (let n = 13; n <= 24; n++) covered.add(n);
-        } else if (spot === "3rd 12") {
-          for (let n = 25; n <= 36; n++) covered.add(n);
-        } else if (/^\d+$/.test(spot)) covered.add(parseInt(spot));
-      }
-      return covered.size * (100 / 37);
-    }
-    if (game.slug === "keno") return kenoSpots.length > 0 ? kenoWinChance(kenoSpots.length) : 0;
-    return 100;
-  })();
+  const winChance = calculateGameWinChance({
+    slug: game.slug,
+    diceTarget,
+    diceDirection,
+    rouletteSpots,
+    kenoSpots
+  });
 
   const multiplier = winChance === 0 ? 0 : 99 / winChance;
   const expectedPayout = betAmount * multiplier;
@@ -403,99 +372,18 @@ export function GamePageClient({ slug }: { slug: string }) {
     }
 
     try {
-      // ─── A2/A3: Correct param encoding per game module docs ───
-      let params = "0x" as `0x${string}`;
-
-      if (game.slug === "dice") {
-        // A2: Dice takes cap (uint8) and rollOver direction
-        params = encodeDiceParams(diceTarget);
-      } else if (game.slug === "coin-toss") {
-        // A2: CoinToss takes a boolean face
-        params = encodeCoinTossParams(coinSide === "HEADS");
-      } else if (game.slug === "roulette") {
-        // A2: Build proper multi-spot encoding from all rouletteSpots
-        if (rouletteSpots.length === 0) {
-          toast.error("Please select at least one number or bet type on the Roulette board.");
-          return;
-        }
-
-        // Named outside bets → typed encoding (only if single named bet selected)
-        const namedBetMap: Record<string, "red" | "black" | "odd" | "even" | "low" | "high"> = {
-          RED: "red",
-          BLACK: "black",
-          ODD: "odd",
-          EVEN: "even",
-          "1-18": "low",
-          "19-36": "high"
-        };
-        const dozenMap: Record<string, 1 | 2 | 3> = { "1st 12": 1, "2nd 12": 2, "3rd 12": 3 };
-
-        // If single named bet, use typed encoding
-        if (rouletteSpots.length === 1 && namedBetMap[rouletteSpots[0]!]) {
-          params = encodeRouletteParams({ kind: namedBetMap[rouletteSpots[0]!]! });
-        } else if (rouletteSpots.length === 1 && dozenMap[rouletteSpots[0]!]) {
-          params = encodeRouletteParams({ kind: "dozen", dozen: dozenMap[rouletteSpots[0]!]! });
-        } else if (rouletteSpots.length === 1 && /^\d+$/.test(rouletteSpots[0]!)) {
-          // Single straight number
-          params = encodeRouletteParams({ kind: "straight", number: parseInt(rouletteSpots[0]!) });
-        } else {
-          // Multiple spots → build bitmask from all selected numbers/ranges
-          let bitmask = 0n;
-          for (const spot of rouletteSpots) {
-            if (spot === "RED") {
-              RED_NUMBERS.forEach((n) => {
-                bitmask |= 1n << BigInt(n);
-              });
-            } else if (spot === "BLACK") {
-              for (let n = 1; n <= 36; n++) {
-                if (!RED_NUMBER_SET.has(n)) bitmask |= 1n << BigInt(n);
-              }
-            } else if (spot === "ODD") {
-              for (let n = 1; n <= 36; n += 2) {
-                bitmask |= 1n << BigInt(n);
-              }
-            } else if (spot === "EVEN") {
-              for (let n = 2; n <= 36; n += 2) {
-                bitmask |= 1n << BigInt(n);
-              }
-            } else if (spot === "1-18") {
-              for (let n = 1; n <= 18; n++) {
-                bitmask |= 1n << BigInt(n);
-              }
-            } else if (spot === "19-36") {
-              for (let n = 19; n <= 36; n++) {
-                bitmask |= 1n << BigInt(n);
-              }
-            } else if (spot === "1st 12") {
-              for (let n = 1; n <= 12; n++) {
-                bitmask |= 1n << BigInt(n);
-              }
-            } else if (spot === "2nd 12") {
-              for (let n = 13; n <= 24; n++) {
-                bitmask |= 1n << BigInt(n);
-              }
-            } else if (spot === "3rd 12") {
-              for (let n = 25; n <= 36; n++) {
-                bitmask |= 1n << BigInt(n);
-              }
-            } else if (/^\d+$/.test(spot)) {
-              bitmask |= 1n << BigInt(parseInt(spot));
-            }
-          }
-          params = encodeRouletteParams({ kind: "bitmask", mask: bitmask });
-        }
-      } else if (game.slug === "keno") {
-        // A3: Correct Keno bitmask — bit (n-1) for selected number n (0-indexed, numbers 1..40)
-        if (kenoSpots.length === 0) {
-          toast.error("Please select at least 1 number on the Keno grid.");
-          return;
-        }
-        let mask = 0n;
-        for (const n of kenoSpots) {
-          mask |= 1n << BigInt(n - 1);
-        } // n is 1-indexed, bit is 0-indexed
-        params = encodeKenoParams(mask);
+      const gameParams = buildGameParams({
+        slug: game.slug,
+        diceTarget,
+        coinSide,
+        rouletteSpots,
+        kenoSpots
+      });
+      if (!gameParams.ok) {
+        toast.error(gameParams.message);
+        return;
       }
+      const params = gameParams.params;
 
       const usdcAsset = release.assets.find((a: any) => a.symbol === "USDC");
       const decimals = usdcAsset?.decimals || 6;
