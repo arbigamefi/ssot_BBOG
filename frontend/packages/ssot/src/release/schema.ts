@@ -13,6 +13,47 @@ export const AssetSchema = z.object({
   bank: Address
 });
 
+const NumericString = z.string().regex(/^[0-9]+$/);
+
+export const SportsReleaseSchema = z.object({
+  enabled: z.boolean(),
+  riskEngine: Address.optional(),
+  hub: Address.optional(),
+  oddsSignerSetHash: z.string().min(8),
+  resultReporterSetHash: z.string().min(8),
+  resultReporterThreshold: NumericString,
+  resultChallengeTimeoutSeconds: NumericString.optional(),
+  resultChallenger: Address.optional(),
+  resultArbitrator: Address.optional(),
+  maxStake: NumericString,
+  maxPayout: NumericString,
+  maxMarketReserved: NumericString,
+  maxOutcomeReserved: NumericString,
+  maxEventReserved: NumericString
+});
+
+export const PoolSchema = z.object({
+  poolId: z.number().int().positive(),
+  domainId: z.number().int().nonnegative(),
+  domain: z.string().min(1),
+  active: z.boolean(),
+  asset: Address,
+  bank: Address,
+  symbol: z.string(),
+  decimals: z.number().int().min(0).max(36),
+  sportsRisk: z
+    .object({
+      maxStake: NumericString,
+      maxPayout: NumericString,
+      maxMarketReserved: NumericString,
+      maxOutcomeReserved: NumericString,
+      maxEventReserved: NumericString,
+      riskHash: z.string().min(8)
+    })
+    .nullable()
+    .optional()
+});
+
 export const ReleaseSchema = z.object({
   chainId: z.number().int().positive(),
   name: z.string().min(1),
@@ -25,7 +66,12 @@ export const ReleaseSchema = z.object({
     // Optional, but expected in FINAL SHAPE bundles.
     refRegistry: Address.optional(),
     refEngine: Address.optional(),
-    adapter: Address.optional()
+    adapter: Address.optional(),
+    // v1.3 router/pool bundles expose these names directly.
+    gameHub: Address.optional(),
+    poolRegistry: Address.optional(),
+    sportsHub: Address.optional(),
+    sportsRiskEngine: Address.optional()
   }),
   assets: z.array(AssetSchema).min(1),
   games: z.record(z.string(), Address), // gameId(hex) -> module address
@@ -34,7 +80,10 @@ export const ReleaseSchema = z.object({
   gamesMeta: z
     .array(
       z.object({
-        gameId: z.string().min(10).transform((s) => s.toLowerCase()),
+        gameId: z
+          .string()
+          .min(10)
+          .transform((s) => s.toLowerCase()),
         slug: z.string().min(1),
         label: z.string().min(1),
         module: Address,
@@ -42,6 +91,8 @@ export const ReleaseSchema = z.object({
       })
     )
     .optional(),
+  sports: SportsReleaseSchema.optional(),
+  pools: z.array(PoolSchema).optional(),
   // Optional bundle metadata (used by indexer/journal as a sane default for start blocks).
   meta: z
     .object({

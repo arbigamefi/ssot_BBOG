@@ -1,0 +1,72 @@
+{
+  "schemaVersion": "sportsbook.provider-evidence-approval.v1",
+  "status": "draft",
+  "chainId": 84532,
+  "sportsHub": "0x2DB4Ba326C2C3e5830b0da10F0C52B4097f9fa4b",
+  "scope": {
+    "sports": [
+      "soccer"
+    ],
+    "marketTypes": [
+      "football-1x2-pre-match"
+    ],
+    "excludedMarketTypes": [
+      "live-betting",
+      "parlays",
+      "player-props",
+      "futures"
+    ]
+  },
+  "providerDecision": {
+    "primaryProvider": {
+      "name": "The Odds API",
+      "status": "candidate",
+      "oddsFeed": "/v4/sports/{sport}/odds/",
+      "resultFeed": "/v4/sports/{sport}/scores/",
+      "accountOrContract": "TBD",
+      "commercialUseApproved": false,
+      "termsReview": "TBD"
+    },
+    "fallbackProviders": [
+      {
+        "name": "TBD",
+        "purpose": "TBD"
+      }
+    ],
+    "providerDisagreementPolicy": "TBD",
+    "providerOutagePolicy": "TBD",
+    "correctionPolicy": "TBD"
+  },
+  "evidenceStorage": {
+    "primaryUri": "TBD",
+    "retentionPolicy": "TBD",
+    "rawPayloadArchiveRequired": true,
+    "immutableArchiveRequired": true,
+    "operatorReviewRecord": "TBD"
+  },
+  "rulebookPolicy": {
+    "rulebookTemplate": "docs/ops/templates/sportsbook-rulebook.pre-match-moneyline.example.json",
+    "resultEvidenceTemplate": "docs/ops/templates/sportsbook-result-evidence.example.json",
+    "outcomeMapping": "0=home,1=draw,2=away",
+    "cancellationPolicy": "TBD",
+    "postponementPolicy": "TBD",
+    "abandonmentPolicy": "TBD",
+    "statCorrectionPolicy": "TBD",
+    "voidPolicy": "TBD"
+  },
+  "ingestionChecks": {
+    "oddsTool": "script/ops/sports_provider_odds.py",
+    "resultEvidenceTool": "script/ops/sports_provider_evidence.py",
+    "oddsFixtureGate": "make sports-provider-odds-v13",
+    "resultFixtureGate": "make sports-provider-evidence-v13",
+    "providerE2EGate": "ENV_FILE=.env ROLE_ENV_FILE=.env.sports-roles.local make sports-provider-e2e-v13"
+  },
+  "approvals": {
+    "providerApproval": "TBD",
+    "evidenceStorageApproval": "TBD",
+    "legalApproval": "TBD",
+    "operationsApproval": "TBD",
+    "approvedAt": "TBD",
+    "evidenceUri": "TBD"
+  }
+}

@@ -72,6 +72,14 @@ async function readJson(p) {
   return JSON.parse(raw);
 }
 
+async function firstExistingPath(baseDir, candidates) {
+  for (const candidate of candidates) {
+    const p = path.join(baseDir, candidate);
+    if (await pathExists(p)) return p;
+  }
+  return path.join(baseDir, candidates[0]);
+}
+
 async function copyFile(src, dst) {
   await ensureDir(path.dirname(dst));
   await fs.copyFile(src, dst);
@@ -113,12 +121,126 @@ function shortDigest(digest) {
   return s.slice(0, 8);
 }
 
+function normalizeAddress(value) {
+  return typeof value === "string" ? value.toLowerCase() : value;
+}
+
+function normalizeNumeric(value, fallback = 0) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function buildEmbeddedAssets(manifest) {
+  if (Array.isArray(manifest.assets) && manifest.assets.length > 0) {
+    return manifest.assets.map((a) => ({
+      symbol: a.symbol,
+      decimals: normalizeNumeric(a.decimals, 18),
+      address: normalizeAddress(a.asset),
+      bank: normalizeAddress(a.bank)
+    }));
+  }
+
+  const pools = Array.isArray(manifest.pools) ? manifest.pools : [];
+  const casinoPools = pools.filter(
+    (p) => String(p.domain).toLowerCase() === "casino" || Number(p.domainId) === 1
+  );
+  const sourcePools = casinoPools.length > 0 ? casinoPools : pools;
+  const seenAssets = new Set();
+  const assets = [];
+  for (const pool of sourcePools) {
+    if (!pool.asset || !pool.bank) continue;
+    const asset = normalizeAddress(pool.asset);
+    if (seenAssets.has(asset)) continue;
+    seenAssets.add(asset);
+    assets.push({
+      symbol: pool.symbol || `POOL_${pool.poolId}`,
+      decimals: normalizeNumeric(pool.decimals, 18),
+      address: asset,
+      bank: normalizeAddress(pool.bank)
+    });
+  }
+  return assets;
+}
+
+function buildEmbeddedGames(manifest) {
+  if (Array.isArray(manifest.games)) {
+    return Object.fromEntries(
+      manifest.games.map((g) => [String(g.gameId).toLowerCase(), normalizeAddress(g.module)])
+    );
+  }
+  return Object.fromEntries(
+    Object.entries(manifest.games ?? {}).map(([gameId, module]) => [
+      String(gameId).toLowerCase(),
+      normalizeAddress(module)
+    ])
+  );
+}
+
+function buildEmbeddedGamesMeta(manifest) {
+  if (!Array.isArray(manifest.games)) return undefined;
+  return manifest.games.map((g) => ({
+    gameId: String(g.gameId).toLowerCase(),
+    slug: g.slug,
+    label: g.label,
+    module: normalizeAddress(g.module),
+    paramsEncoding: g.paramsEncoding
+  }));
+}
+
+function buildEmbeddedSports(manifest) {
+  if (!manifest.sports || typeof manifest.sports !== "object") return undefined;
+  const s = manifest.sports;
+  return {
+    enabled: Boolean(s.enabled),
+    riskEngine: normalizeAddress(s.riskEngine),
+    hub: normalizeAddress(s.hub),
+    oddsSignerSetHash: s.oddsSignerSetHash,
+    resultReporterSetHash: s.resultReporterSetHash,
+    resultReporterThreshold: String(s.resultReporterThreshold ?? "0"),
+    resultChallengeTimeoutSeconds: String(s.resultChallengeTimeoutSeconds ?? "0"),
+    resultChallenger: normalizeAddress(s.resultChallenger),
+    resultArbitrator: normalizeAddress(s.resultArbitrator),
+    maxStake: String(s.maxStake ?? "0"),
+    maxPayout: String(s.maxPayout ?? "0"),
+    maxMarketReserved: String(s.maxMarketReserved ?? "0"),
+    maxOutcomeReserved: String(s.maxOutcomeReserved ?? "0"),
+    maxEventReserved: String(s.maxEventReserved ?? "0")
+  };
+}
+
+function buildEmbeddedPools(manifest) {
+  if (!Array.isArray(manifest.pools)) return undefined;
+  return manifest.pools.map((pool) => ({
+    poolId: normalizeNumeric(pool.poolId),
+    domainId: normalizeNumeric(pool.domainId),
+    domain: String(pool.domain ?? ""),
+    active: Boolean(pool.active),
+    asset: normalizeAddress(pool.asset),
+    bank: normalizeAddress(pool.bank),
+    symbol: pool.symbol || "",
+    decimals: normalizeNumeric(pool.decimals, 18),
+    sportsRisk: pool.sportsRisk
+      ? {
+          maxStake: String(pool.sportsRisk.maxStake ?? "0"),
+          maxPayout: String(pool.sportsRisk.maxPayout ?? "0"),
+          maxMarketReserved: String(pool.sportsRisk.maxMarketReserved ?? "0"),
+          maxOutcomeReserved: String(pool.sportsRisk.maxOutcomeReserved ?? "0"),
+          maxEventReserved: String(pool.sportsRisk.maxEventReserved ?? "0"),
+          riskHash: String(pool.sportsRisk.riskHash ?? "")
+        }
+      : null
+  }));
+}
+
 async function extractTarToTemp(tarPath) {
   const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "ssot-release-"));
   await execFileAsync("tar", ["-xzf", tarPath, "-C", tmp]);
   // Some tars contain a single top-level directory, some don't.
   const entries = await fs.readdir(tmp, { withFileTypes: true });
-  const dirs = entries.filter((e) => e.isDirectory()).map((e) => e.name).filter((n) => !isAppleJunk(n));
+  const dirs = entries
+    .filter((e) => e.isDirectory())
+    .map((e) => e.name)
+    .filter((n) => !isAppleJunk(n));
   if (dirs.length === 1) {
     return path.join(tmp, dirs[0]);
   }
@@ -145,10 +267,7 @@ async function writeAbiReleaseIndex(chainId, abiIndex, contractNames) {
   await ensureDir(chainDir);
 
   // Write chain-level index.ts
-  const imports = [
-    `import abiIndex from "./index.json";`,
-    `export { abiIndex };`
-  ];
+  const imports = [`import abiIndex from "./index.json";`, `export { abiIndex };`];
   for (const name of contractNames) {
     const varName = name.replace(/[^a-zA-Z0-9]/g, "_");
     imports.push(`import ${varName} from "./${name}.abi.json";`);
@@ -160,13 +279,21 @@ async function writeAbiReleaseIndex(chainId, abiIndex, contractNames) {
   // Root release/index.ts is generated separately by scanning all chains.
 
   // keep abiIndex json for audit
-  await fs.writeFile(path.join(chainDir, "index.json"), JSON.stringify(abiIndex, null, 2), "utf8");
+  await fs.writeFile(
+    path.join(chainDir, "index.json"),
+    `${JSON.stringify(abiIndex, null, 2)}\n`,
+    "utf8"
+  );
 }
 
 async function writeAbiRootIndex() {
   const rootIndexPath = path.join(OUT_ABIS, "index.ts");
   if (!(await pathExists(OUT_ABIS))) {
-    await fs.writeFile(rootIndexPath, `// AUTO-GENERATED by pnpm ssot:sync. DO NOT EDIT.\n`, "utf8");
+    await fs.writeFile(
+      rootIndexPath,
+      `// AUTO-GENERATED by pnpm ssot:sync. DO NOT EDIT.\n`,
+      "utf8"
+    );
     return;
   }
   const dirs = (await fs.readdir(OUT_ABIS, { withFileTypes: true }))
@@ -198,16 +325,37 @@ async function main() {
   const deploymentsDir = path.join(bundleRoot, "deployments");
   const abisDir = path.join(bundleRoot, "abis");
 
-  const manifestPath = path.join(deploymentsDir, "frontend-manifest-latest.json");
-  const vectorsPath = path.join(deploymentsDir, "golden-vectors-latest.json");
-  const releaseLockPath = path.join(deploymentsDir, "release-latest.json");
-  const latestSnapshotPath = path.join(deploymentsDir, "latest.json");
+  const manifestPath = await firstExistingPath(deploymentsDir, [
+    "frontend-manifest-latest.json",
+    "frontend-manifest-latest-v13.json"
+  ]);
+  const vectorsPath = await firstExistingPath(deploymentsDir, [
+    "golden-vectors-latest.json",
+    "golden-vectors-latest-v13.json"
+  ]);
+  const releaseLockPath = await firstExistingPath(deploymentsDir, [
+    "release-latest.json",
+    "release-latest-v13.json"
+  ]);
+  const latestSnapshotPath = await firstExistingPath(deploymentsDir, [
+    "latest.json",
+    "latest-v13.json"
+  ]);
   const abiIndexPath = path.join(abisDir, "index.json");
 
-  for (const p of [deploymentsDir, abisDir, manifestPath, vectorsPath, releaseLockPath, abiIndexPath]) {
+  for (const p of [
+    deploymentsDir,
+    abisDir,
+    manifestPath,
+    vectorsPath,
+    releaseLockPath,
+    abiIndexPath
+  ]) {
     if (!(await pathExists(p))) {
       console.error("\n[ssot:sync] missing required path:", p);
-      console.error("This command expects a FINAL SHAPE release bundle containing deployments/ and abis/.\n");
+      console.error(
+        "This command expects a FINAL SHAPE release bundle containing deployments/ and abis/.\n"
+      );
       process.exit(1);
     }
   }
@@ -220,18 +368,24 @@ async function main() {
   const chainId = Number(manifest.chainId);
   const blockNumber = Number(manifest.blockNumber);
   const digest = String(releaseLock.digest);
+  const addresses = manifest.addresses ?? {};
 
-  const fixtureDir = path.join(OUT_FIXT, `chain-${chainId}`, `${blockNumber}-${shortDigest(digest)}`);
+  const fixtureDir = path.join(
+    OUT_FIXT,
+    `chain-${chainId}`,
+    `${blockNumber}-${shortDigest(digest)}`
+  );
+  await fs.rm(fixtureDir, { recursive: true, force: true });
   await ensureDir(fixtureDir);
 
   console.log(`[ssot:sync] chainId=${chainId} block=${blockNumber} digest=${digest}`);
 
   // Mirror raw inputs for audit
-  await copyFile(manifestPath, path.join(fixtureDir, "frontend-manifest-latest.json"));
-  await copyFile(vectorsPath, path.join(fixtureDir, "golden-vectors-latest.json"));
-  await copyFile(releaseLockPath, path.join(fixtureDir, "release-latest.json"));
+  await copyFile(manifestPath, path.join(fixtureDir, path.basename(manifestPath)));
+  await copyFile(vectorsPath, path.join(fixtureDir, path.basename(vectorsPath)));
+  await copyFile(releaseLockPath, path.join(fixtureDir, path.basename(releaseLockPath)));
   if (await pathExists(latestSnapshotPath)) {
-    await copyFile(latestSnapshotPath, path.join(fixtureDir, "latest.json"));
+    await copyFile(latestSnapshotPath, path.join(fixtureDir, path.basename(latestSnapshotPath)));
   }
   // Mirror ABI index + ABI files
   await copyFile(abiIndexPath, path.join(fixtureDir, "abi-index.json"));
@@ -244,36 +398,31 @@ async function main() {
     releaseDigest: digest,
     isPlaceholder: false,
     contracts: {
-      hub: manifest.addresses.hub,
-      vrfHub: manifest.addresses.vrfHub,
-      bankRegistry: manifest.addresses.bankRegistry,
+      hub: normalizeAddress(addresses.hub ?? addresses.gameHub),
+      vrfHub: normalizeAddress(addresses.vrfHub),
+      bankRegistry: normalizeAddress(addresses.bankRegistry ?? addresses.poolRegistry),
       // Field names are contract-repo-defined; support canonical aliases.
-      refRegistry: manifest.addresses.refRegistry ?? manifest.addresses.referralRegistry,
-      refEngine: manifest.addresses.refEngine ?? manifest.addresses.referralEngine,
-      adapter: manifest.addresses.adapter ?? manifest.addresses.adapterChainlinkV2PlusWrapper
+      refRegistry: normalizeAddress(addresses.refRegistry ?? addresses.referralRegistry),
+      refEngine: normalizeAddress(addresses.refEngine ?? addresses.referralEngine),
+      adapter: normalizeAddress(addresses.adapter ?? addresses.adapterChainlinkV2PlusWrapper),
+      gameHub: normalizeAddress(addresses.gameHub ?? addresses.hub),
+      poolRegistry: normalizeAddress(addresses.poolRegistry),
+      sportsHub: normalizeAddress(addresses.sportsHub),
+      sportsRiskEngine: normalizeAddress(addresses.sportsRiskEngine)
     },
-    assets: (manifest.assets ?? []).map((a) => ({
-      symbol: a.symbol,
-      decimals: a.decimals,
-      address: a.asset,
-      bank: a.bank
-    })),
-    games: Object.fromEntries((manifest.games ?? []).map((g) => [String(g.gameId).toLowerCase(), String(g.module).toLowerCase()])),
-    gamesMeta: (manifest.games ?? []).map((g) => ({
-      gameId: String(g.gameId).toLowerCase(),
-      slug: g.slug,
-      label: g.label,
-      module: String(g.module).toLowerCase(),
-      paramsEncoding: g.paramsEncoding
-    })),
+    assets: buildEmbeddedAssets(manifest),
+    games: buildEmbeddedGames(manifest),
+    gamesMeta: buildEmbeddedGamesMeta(manifest),
+    sports: buildEmbeddedSports(manifest),
+    pools: buildEmbeddedPools(manifest),
     meta: {
       blockNumber,
       schemaVersion: manifest.schemaVersion,
       generatedAt: manifest.generatedAt,
       bundle: {
-        manifestPath: "deployments/frontend-manifest-latest.json",
-        vectorsPath: "deployments/golden-vectors-latest.json",
-        releaseLockPath: "deployments/release-latest.json",
+        manifestPath: path.posix.join("deployments", path.basename(manifestPath)),
+        vectorsPath: path.posix.join("deployments", path.basename(vectorsPath)),
+        releaseLockPath: path.posix.join("deployments", path.basename(releaseLockPath)),
         abiIndexPath: "abis/index.json"
       },
       releaseLock,
@@ -283,12 +432,18 @@ async function main() {
 
   await ensureDir(OUT_EMBEDDED);
   const embeddedFile = `chain-${chainId}.json`;
-  await fs.writeFile(path.join(OUT_EMBEDDED, embeddedFile), JSON.stringify(embedded, null, 2), "utf8");
+  await fs.writeFile(
+    path.join(OUT_EMBEDDED, embeddedFile),
+    `${JSON.stringify(embedded, null, 2)}\n`,
+    "utf8"
+  );
 
   // Generate embedded/index.ts
   // Final-shape policy: only chain-<id>.json files are supported.
   // Remove any legacy placeholders to avoid drift.
-  const allEmbedded = (await fs.readdir(OUT_EMBEDDED)).filter((f) => f.endsWith(".json") && !isAppleJunk(f));
+  const allEmbedded = (await fs.readdir(OUT_EMBEDDED)).filter(
+    (f) => f.endsWith(".json") && !isAppleJunk(f)
+  );
   for (const f of allEmbedded) {
     if (!f.startsWith("chain-")) {
       await fs.rm(path.join(OUT_EMBEDDED, f), { force: true });

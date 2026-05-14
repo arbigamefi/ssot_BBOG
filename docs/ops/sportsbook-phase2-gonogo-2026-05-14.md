@@ -28,6 +28,8 @@ Phase 2 means a limited mainnet canary for the SportsHub MVP only:
 
 - PR #13 merged into `master`: `8971eb9ed4a111cfd79d50cadeb9155e95d144e0`
 - PR #13 CI: two `test` checks passed.
+- PR #15 merged into `master`: `3f2be8075b326c4cb4356f6ac330a14a521d0006`
+- PR #15 CI: two `test` checks passed.
 - Local focused validation for GameHub canary tooling:
   - `forge build`
   - `forge test --match-path 'test/unit/GameHub*.t.sol' -vv`
@@ -102,6 +104,16 @@ Covered:
   `docs/ops/sportsbook-provider-evidence-policy.md`
 - Candidate The Odds API ingestion path:
   `docs/ops/sportsbook-provider-the-odds-api.md`
+- Deterministic provider odds fixture gate:
+  `make sports-provider-odds-v13`
+- Deterministic provider result evidence fixture gate:
+  `make sports-provider-evidence-v13`
+- Provider-driven football E2E rehearsal:
+  `ENV_FILE=.env ROLE_ENV_FILE=.env.sports-roles.local make sports-provider-e2e-v13`
+- Frontend access policy draft:
+  `docs/ops/sportsbook-frontend-access.md`
+- Example frontend access approval memo:
+  `docs/ops/templates/sportsbook-frontend-access.example.json`
 - Example pre-match moneyline rulebook template:
   `docs/ops/templates/sportsbook-rulebook.pre-match-moneyline.example.json`
 - Example result evidence bundle template:
@@ -119,19 +131,20 @@ Covered:
 - Example monitoring/keeper coverage memo:
   `docs/ops/templates/sportsbook-ops-coverage.example.json`
 
-These documents define the reproducibility standard for `rulebookHash`, odds snapshots,
+These documents and gates define the reproducibility standard for `rulebookHash`, odds snapshots,
 `resultSourceHash`, `evidenceHash`, `challengeReasonHash`, and `arbitrationDecisionHash`, plus a first
-concrete The Odds API odds/score ingestion path. They do not approve a provider or evidence-storage
-vendor. They also define role-custody, bankroll/risk-cap, and monitoring/keeper memo shapes, but do
-not approve production keys, production bankroll, or operator coverage.
+concrete The Odds API odds/score ingestion path and provider-driven local E2E rehearsal. They do not
+approve a provider or evidence-storage vendor. They also define role-custody, bankroll/risk-cap, and
+monitoring/keeper memo shapes and the frontend-access approval shape, but do not approve production
+keys, production bankroll, operator coverage, or public sportsbook frontend access.
 
 ## Open No-Go Items
 
 | Gate | Status | Required before GO |
 |---|---:|---|
 | Managed key custody | NO-GO | Approve a `sportsbook.role-custody.v1` memo for odds signer, result reporter, challenger, arbitrator, keeper, and governance keys; it must pass `REQUIRE_APPROVED=1 make sports-role-custody-check-v13`. |
-| Provider and evidence policy | NO-GO | Approve the provider choice, fallback rules, evidence storage location, and the draft rulebook/result evidence procedure in `docs/ops/sportsbook-provider-evidence-policy.md`. |
-| Jurisdiction and frontend access | NO-GO | Legal/compliance must approve jurisdictions, restricted regions, age policy, KYC/sanctions posture, responsible-gaming controls, and frontend gating. |
+| Provider and evidence policy | NO-GO | Approve a `sportsbook.provider-evidence-approval.v1` memo for provider choice, fallback rules, evidence storage, and rulebook/result procedures; it must pass `REQUIRE_APPROVED=1 make sports-provider-policy-check-v13`. |
+| Jurisdiction and frontend access | NO-GO | Approve a `sportsbook.frontend-access.v1` memo for jurisdictions, restricted regions, age policy, KYC/sanctions posture, responsible-gaming controls, and frontend gating; it must pass `REQUIRE_APPROVED=1 make sports-frontend-access-check-v13`. |
 | Bankroll sizing | NO-GO | Approve a `sportsbook.bankroll-risk-caps.v1` memo with initial bankroll, loss tolerance, max reserved exposure, and manual supervision limits in raw asset units. |
 | Final risk caps | NO-GO | Mainnet `SPORTS_MAX_*` values must match the approved bankroll memo and pass `REQUIRE_APPROVED=1 make sports-bankroll-caps-check-v13`. |
 | Monitoring and alerts | NO-GO | Approve a `sportsbook.ops-coverage.v1` memo proving Sports G1-G7 alerts route to named operators with escalation coverage during market windows. |
@@ -144,9 +157,9 @@ not approve production keys, production bankroll, or operator coverage.
 To change this packet from NO-GO to GO, add the concrete approval records or links for:
 
 1. Managed key custody approval.
-2. Provider contract or integration decision.
-3. Evidence storage location and operator procedure.
-4. Jurisdiction and frontend access decision.
+2. Approved provider/evidence memo.
+3. Evidence storage location and operator procedure from that memo.
+4. Approved jurisdiction and frontend-access memo.
 5. Bankroll sizing memo.
 6. Final Sports risk caps in raw asset units.
 7. Monitoring/alert routing ownership.

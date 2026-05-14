@@ -107,12 +107,16 @@ describe("HomePage", () => {
   it("renders the prototype-first landing hero", () => {
     render(<HomePage />);
 
-    expect(screen.getByRole("heading", { name: /the settlement engine/i })).toBeDefined();
-    expect(screen.getByText(/for on-chain games/i)).toBeDefined();
-    expect(screen.getByText("SSOT Architecture v1.0")).toBeDefined();
-    expect(screen.getAllByText("Enter Rooms").length).toBeGreaterThan(0);
-    expect(screen.getByText("A Platform for the Entire Ecosystem")).toBeDefined();
-    expect(screen.getByText("Pure functional rooms.")).toBeDefined();
+    expect(
+      screen.getByRole("heading", { name: /No Deposits\.\s+No Blackboxes\.\s+Just Pure Odds\./i })
+    ).toBeDefined();
+    expect(screen.getByText("Live on Arbitrum Base Sepolia")).toBeDefined();
+    expect(screen.getAllByText("Enter Casino").length).toBeGreaterThan(0);
+    expect(screen.getByText("Designed for the Player.")).toBeDefined();
+    expect(screen.getByText("The Classics, Elevated.")).toBeDefined();
+    expect(
+      screen.getByRole("heading", { name: /Don't trust us\.\s+Trust the bytecode\./i })
+    ).toBeDefined();
   });
 
   it("renders reserve proof and canonical room cards when release data exists", () => {
@@ -159,15 +163,16 @@ describe("HomePage", () => {
 
     render(<HomePage />);
 
-    expect(screen.getByText("Bankroll reserves (R)")).toBeDefined();
-    expect(screen.getByText("Settlement Volume")).toBeDefined();
-    expect(screen.getByText("Active Partners")).toBeDefined();
-    expect(screen.getAllByTestId("room-entry-card").length).toBe(2);
+    expect(screen.getByText("Guaranteed Payout Bankroll")).toBeDefined();
+    expect(screen.getByText("Provably Fair Matches")).toBeDefined();
+    expect(screen.getByText("Total Paid Out")).toBeDefined();
     expect(screen.getByText("Precision Dice")).toBeDefined();
     expect(screen.getByText("Keno Draft")).toBeDefined();
-
-    const roomCards = screen.getAllByTestId("room-entry-card");
-    expect(roomCards.length).toBeGreaterThan(0);
+    expect(
+      screen.getByRole("heading", { name: /Real Yield\.\s+Mathematical Edge\./i })
+    ).toBeDefined();
+    expect(screen.getByText("Live Winner Feed")).toBeDefined();
+    expect(screen.getByText("Deposit to Bank")).toBeDefined();
 
     const kenoLinks = screen
       .getAllByText("Keno Draft")

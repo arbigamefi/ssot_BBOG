@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 2,
+  "architectureVersion": "v1.3-router-pools",
+  "chainId": 84532,
+  "blockNumber": 41462034,
+  "gitSha": "",
+  "generatedAt": 1,
+  "addresses": {
+    "gov": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684",
+    "gameHub": "0x99c8c8B55803A566561b58188027fb9E46ACa215",
+    "sportsRiskEngine": "0xB9c3647Cb5DAF23dea8335B7D91C7aa5F6bc2579",
+    "sportsHub": "0x2DB4Ba326C2C3e5830b0da10F0C52B4097f9fa4b",
+    "settlementRouter": "0xa6b00b5a7893045c7ce8443a3ceD632E6daE9077",
+    "poolRegistry": "0x1F232208B4B6068d18b156F2914acfc8092942f3",
+    "vrfHub": "0x70F4b14e0Aba0034685c0C269445C6D4c6AeB314",
+    "refRegistry": "0x52E0aAC05F039F1BE7fA42dE7A2cCc5C8c722b15",
+    "refEngine": "0x0B77c28707a89f3988F9B38B64134B77050c32a5",
+    "adapter": "0x7648feE565DC42dfdB843e5166518060048E8d73",
+    "moduleDice": "0x3C153Bf8Ceb58C294F4df0fe71d3d707147d2EbF",
+    "moduleCoinToss": "0x9A27274Bbd8cCE010777503847ed434865cA1CCb",
+    "moduleRoulette": "0x0f445db9E709b3035562Ec88Be0816aA7eb02Ee5",
+    "moduleKeno": "0x9A83C0A9239219cE4c8dcf6B2aE42eD3A225B18f",
+    "modulePlinko": "0x9151c7B0Fd09A9Df358e8DaAC5797c4588ca7546",
+    "moduleSicBo": "0x98f1b9323CaE7FE9A27E1035034aeD10eB218A5e",
+    "moduleSlots": "0xA22Ee90b97351fcC03f2F97b193bde7A60F10245",
+    "moduleBaccarat": "0x8Cc29ec71084A8CdAb5a8dC792dE2C6FE624BFC4"
+  },
+  "sports": {
+    "enabled": true,
+    "riskEngine": "0xB9c3647Cb5DAF23dea8335B7D91C7aa5F6bc2579",
+    "hub": "0x2DB4Ba326C2C3e5830b0da10F0C52B4097f9fa4b",
+    "oddsSignerSetHash": "0x3181e36dda893c31b3108b977ad21a8814ac18776e5e26ba89833f47e5058cbb",
+    "resultReporterSetHash": "0x4d6c357ad9229b0489a1a9e49e78f2cd2c07d4fae7e24b969e9416c9fa540dd7",
+    "resultReporterThreshold": "1",
+    "resultChallengeTimeoutSeconds": "604800",
+    "resultChallenger": "0x6ee473cE7AA56bDA640bD7560604e1699Fd9D013",
+    "resultArbitrator": "0x7033114a50115fdbCA684dEa0734A502bA2F7BD8",
+    "maxStake": "10000000",
+    "maxPayout": "20000000",
+    "maxMarketReserved": "100000000",
+    "maxOutcomeReserved": "50000000",
+    "maxEventReserved": "150000000"
+  },
+  "games": [
+    {
+      "gameId": "0x8d8e6987fb3617c00abdd68d6c1f7eac28b7f9f96b25367e9b65dacaa0914a8b",
+      "slug": "dice",
+      "label": "Dice",
+      "module": "0x3c153bf8ceb58c294f4df0fe71d3d707147d2ebf",
+      "paramsEncoding": "abi.encode(uint8 cap)"
+    },
+    {
+      "gameId": "0x6e800792927dde77598bf8cf4e8d9832799fbff08d7fbb3989225097ac6fa4e7",
+      "slug": "coin-toss",
+      "label": "Coin Toss",
+      "module": "0x9a27274bbd8cce010777503847ed434865ca1ccb",
+      "paramsEncoding": "abi.encode(bool isHeads)"
+    },
+    {
+      "gameId": "0x41541f350c1da9780d719f9ebc2dd9d5883bf8c8df895243a1696bede4a708c0",
+      "slug": "roulette",
+      "label": "Roulette",
+      "module": "0x0f445db9e709b3035562ec88be0816aa7eb02ee5",
+      "paramsEncoding": "abi.encode(uint8 kind, uint40 payload)"
+    },
+    {
+      "gameId": "0xb4aacd27778fcc813ac1737807c34d5d4193c514f0d91a0caeeada2d6752baf0",
+      "slug": "keno",
+      "label": "Keno",
+      "module": "0x9a83c0a9239219ce4c8dcf6b2ae42ed3a225b18f",
+      "paramsEncoding": "abi.encode(uint40 numbersPacked)"
+    },
+    {
+      "gameId": "0xf079b0c3d932c294ee3983751f8789be874f0ceef4ce93c84fc7e6be1e9f3bd2",
+      "slug": "plinko",
+      "label": "Plinko",
+      "module": "0x9151c7b0fd09a9df358e8daac5797c4588ca7546",
+      "paramsEncoding": "abi.encode(uint8 risk)"
+    },
+    {
+      "gameId": "0x3f8a7d05df6b7136e6cb9eb13e763fb722015b2357a0378af58fea0efcabce1d",
+      "slug": "sic-bo",
+      "label": "Sic Bo",
+      "module": "0x98f1b9323cae7fe9a27e1035034aed10eb218a5e",
+      "paramsEncoding": "abi.encode(uint8 kind, uint8 value)"
+    },
+    {
+      "gameId": "0x3b985d08128ef7b25e693a611fb5ae6f2d2b2974adbec7deb83c4f95c2562e6b",
+      "slug": "slots",
+      "label": "Slots",
+      "module": "0xa22ee90b97351fcc03f2f97b193bde7a60f10245",
+      "paramsEncoding": "abi.encode(uint8 profile)"
+    },
+    {
+      "gameId": "0xf03cfb57946606f01bd40b08522709153b0e3d73dd054769c5ecdfdbfe72f681",
+      "slug": "baccarat",
+      "label": "Baccarat",
+      "module": "0x8cc29ec71084a8cdab5a8dc792de2c6fe624bfc4",
+      "paramsEncoding": "abi.encode(uint8 side)"
+    }
+  ],
+  "pools": [
+    {
+      "poolId": 1,
+      "domainId": 1,
+      "domain": "Casino",
+      "active": true,
+      "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      "bank": "0x3aADa481F979E5DFabd2Cd252A76feA2aD05e346",
+      "symbol": "",
+      "decimals": 18,
+      "sportsRisk": null
+    },
+    {
+      "poolId": 2,
+      "domainId": 2,
+      "domain": "Sports",
+      "active": true,
+      "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      "bank": "0x3686664d8D92FEAb8C4c9Ac0baaEb07c8BDDbc85",
+      "symbol": "",
+      "decimals": 18,
+      "sportsRisk": {
+        "maxStake": "10000000",
+        "maxPayout": "20000000",
+        "maxMarketReserved": "100000000",
+        "maxOutcomeReserved": "50000000",
+        "maxEventReserved": "150000000",
+        "riskHash": "0x0707ba776912152fe0028608c2b31e2ac864f24ed79351eaa10ea012303793e6"
+      }
+    }
+  ]
+}

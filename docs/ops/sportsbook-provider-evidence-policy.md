@@ -57,6 +57,26 @@ The first concrete provider ingestion path is documented in
 API `h2h` odds into per-outcome SportsHub odds snapshots, and maps completed score responses into
 canonical `resultSourceHash` and `evidenceHash` values for the existing SportsHub reporter path.
 
+## Approval Memo
+
+The provider/evidence approval record must use schema `sportsbook.provider-evidence-approval.v1`.
+Start from `docs/ops/templates/sportsbook-provider-evidence-approval.example.json` and validate it
+with:
+
+```bash
+make sports-provider-policy-check-v13
+```
+
+For production approval, rerun with:
+
+```bash
+REQUIRE_APPROVED=1 make sports-provider-policy-check-v13 PROVIDER_POLICY_FILE=<approved-provider-policy.json>
+```
+
+The approved memo must confirm provider commercial-use approval, fallback providers, provider outage
+and disagreement rules, evidence storage, retention, operator review records, and cancellation,
+postponement, abandonment, stat-correction, and void policies for the supported market types.
+
 ## Market Rulebook Requirements
 
 Before `createMarket(...)`, operators must publish or archive a rulebook bundle that includes:
