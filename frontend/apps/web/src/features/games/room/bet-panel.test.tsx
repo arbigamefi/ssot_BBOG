@@ -8,6 +8,7 @@ import {
   isPlaceBetButtonDisabled,
   type GameBetPanelState
 } from "./bet-panel";
+import { parseWalletBalanceAmount } from "./bet-amount-section";
 import type { GameMeta } from "./model";
 
 vi.mock("@ssot/ui", async () => {
@@ -105,5 +106,10 @@ describe("GameRoomBetPanel", () => {
         state: baseState
       })
     ).toBe(true);
+  });
+
+  it("parses wallet balances for max amount shortcuts", () => {
+    expect(parseWalletBalanceAmount("1,450.00 USDC")).toBe(1450);
+    expect(parseWalletBalanceAmount(null)).toBe(1450);
   });
 });
