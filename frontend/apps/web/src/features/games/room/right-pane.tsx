@@ -1,10 +1,12 @@
 import * as React from "react";
 import { cn } from "@ssot/ui";
 
+import { CoinTossStage } from "./coin-toss-stage";
+import { DiceStage } from "./dice-stage";
+import { KenoStage } from "./keno-stage";
 import { RED_NUMBER_SET } from "./model";
 import type { CoinSide, DiceDirection } from "./params";
 import { RouletteStage } from "./roulette-stage";
-import { CoinTossStage, DiceStage, KenoStage } from "./stages";
 
 export type GameHistoryEntry = {
   val: number;

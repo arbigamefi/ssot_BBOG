@@ -2,7 +2,9 @@ import * as React from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { CoinTossStage, DiceStage, KenoStage } from "./stages";
+import { CoinTossStage } from "./coin-toss-stage";
+import { DiceStage } from "./dice-stage";
+import { KenoStage } from "./keno-stage";
 
 vi.mock("@ssot/ui", () => ({
   cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" ")
