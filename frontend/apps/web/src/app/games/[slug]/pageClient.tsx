@@ -41,81 +41,17 @@ import { useSSOTSDK } from "../../../ssot/sdk";
 import { useSSOTRuntime } from "../../../ssot/runtime";
 import { usePlaceBetStepper } from "../../../features/betting/usePlaceBetStepper";
 import { useConnectModal } from "../../../app/providers/WalletButton";
-
-/* ─── Types & Constants ─── */
-type GameMeta = { gameId: `0x${string}`; slug: string; label: string; module: `0x${string}` };
-type BetStatus = "won" | "lost" | "pending" | "settled" | "cancelled";
-
-function toGameMeta(raw: any): GameMeta {
-  return {
-    gameId: raw.gameId as `0x${string}`,
-    slug: String(raw.slug),
-    label: String(raw.label),
-    module: raw.module as `0x${string}`
-  };
-}
-
-function shortHex(value?: string) {
-  if (!value) return "—";
-  return `${value.slice(0, 6)}…${value.slice(-4)}`;
-}
-
-function mapBetState(state?: string): BetStatus {
-  if (!state) return "pending";
-  const normalized = state.toLowerCase();
-  if (normalized.includes("won")) return "won";
-  if (normalized.includes("lost")) return "lost";
-  if (normalized.includes("final") || normalized.includes("settled")) return "settled";
-  if (normalized.includes("refund")) return "cancelled";
-  return "pending";
-}
-
-/* ─── B2: Keno Payout Math — Precomputed gain table from contract module docs ─── */
-// gainFactor(played, k) = floor(10000 / (P(k) * (played+1)))
-// where P(k) = hypergeometric probability C(played,k)*C(40-played,10-k)/C(40,10)
-// Values below are total-payout multipliers in basis points (divide by 10000 for multiplier)
-const KENO_GAIN_TABLE: Record<number, number[]> = {
-  1: [0, 23636],
-  2: [0, 0, 32727],
-  3: [0, 0, 3636, 36364],
-  4: [0, 0, 909, 6818, 63636],
-  5: [0, 0, 0, 1136, 11364, 136364],
-  6: [0, 0, 0, 303, 1515, 15152, 181818],
-  7: [0, 0, 0, 0, 404, 2020, 20202, 303030],
-  8: [0, 0, 0, 0, 101, 505, 5051, 50505, 1010101],
-  9: [0, 0, 0, 0, 0, 126, 1262, 12626, 252525, 5050505],
-  10: [0, 0, 0, 0, 0, 0, 505, 5050, 50505, 1262626, 25252525]
-};
-
-function kenoMultiplier(played: number, matched: number): number {
-  if (played < 1 || played > 10) return 0;
-  const table = KENO_GAIN_TABLE[played];
-  if (!table || matched < 0 || matched > played) return 0;
-  return (table[matched] ?? 0) / 10000;
-}
-
-function kenoWinChance(played: number): number {
-  // Approx probability of hitting at least 1 match for display
-  if (played <= 0) return 0;
-  // P(0 matches) = C(played,0)*C(40-played,10)/C(40,10)
-  const C40_10 = 847660528;
-  const matchZeroNumerator = (() => {
-    // C(40-played, 10)
-    const n = 40 - played;
-    if (n < 10) return 0;
-    let result = 1;
-    for (let i = 0; i < 10; i++) result = (result * (n - i)) / (i + 1);
-    return Math.round(result);
-  })();
-  const pZero = matchZeroNumerator / C40_10;
-  return Math.min(99.9, (1 - pZero) * 100);
-}
-
-const redNumbers = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
-const europeanWheelOrder = [
-  0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14,
-  31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26
-];
+import {
+  EUROPEAN_WHEEL_ORDER,
+  RED_NUMBERS,
+  RED_NUMBER_SET,
+  kenoMultiplier,
+  kenoWinChance,
+  mapBetState,
+  shortHex,
+  toGameMeta,
+  type GameMeta
+} from "../../../features/games/room/model";
 
 /* ─── Sub-Components ─── */
 
@@ -380,12 +316,11 @@ export function GamePageClient({ slug }: { slug: string }) {
     if (game.slug === "coin-toss") return 50;
     if (game.slug === "roulette") {
       // Count unique numbers covered by current spots selection
-      const RED_NUMS = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
       const covered = new Set<number>();
       for (const spot of rouletteSpots) {
-        if (spot === "RED") RED_NUMS.forEach((n) => covered.add(n));
+        if (spot === "RED") RED_NUMBERS.forEach((n) => covered.add(n));
         else if (spot === "BLACK") {
-          for (let n = 1; n <= 36; n++) if (!RED_NUMS.has(n)) covered.add(n);
+          for (let n = 1; n <= 36; n++) if (!RED_NUMBER_SET.has(n)) covered.add(n);
         } else if (spot === "ODD") {
           for (let n = 1; n <= 36; n += 2) covered.add(n);
         } else if (spot === "EVEN") {
@@ -505,9 +440,6 @@ export function GamePageClient({ slug }: { slug: string }) {
           params = encodeRouletteParams({ kind: "straight", number: parseInt(rouletteSpots[0]!) });
         } else {
           // Multiple spots → build bitmask from all selected numbers/ranges
-          const RED_NUMBERS = new Set([
-            1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36
-          ]);
           let bitmask = 0n;
           for (const spot of rouletteSpots) {
             if (spot === "RED") {
@@ -516,7 +448,7 @@ export function GamePageClient({ slug }: { slug: string }) {
               });
             } else if (spot === "BLACK") {
               for (let n = 1; n <= 36; n++) {
-                if (!RED_NUMBERS.has(n)) bitmask |= 1n << BigInt(n);
+                if (!RED_NUMBER_SET.has(n)) bitmask |= 1n << BigInt(n);
               }
             } else if (spot === "ODD") {
               for (let n = 1; n <= 36; n += 2) {
@@ -657,7 +589,7 @@ export function GamePageClient({ slug }: { slug: string }) {
             });
             if (win && spots.length > 0)
               simulatedRes = spots[Math.floor(Math.random() * spots.length)] ?? 0;
-            else simulatedRes = europeanWheelOrder.find((n) => !spots.includes(n)) ?? 0;
+            else simulatedRes = EUROPEAN_WHEEL_ORDER.find((n) => !spots.includes(n)) ?? 0;
             setResultNum(simulatedRes);
           } else if (game?.slug === "keno") {
             const drawn: number[] = [];
@@ -755,7 +687,7 @@ export function GamePageClient({ slug }: { slug: string }) {
                               "3rd 12"
                             ].includes(spot)
                           ? "bg-white/40"
-                          : redNumbers.includes(parseInt(spot))
+                          : RED_NUMBER_SET.has(parseInt(spot))
                             ? "bg-red-500"
                             : "bg-zinc-800"
                     )}
@@ -1185,7 +1117,7 @@ export function GamePageClient({ slug }: { slug: string }) {
                         "w-5 h-5 rounded-full flex items-center justify-center text-[8px]",
                         res.val === 0
                           ? "bg-emerald-500"
-                          : redNumbers.includes(res.val)
+                          : RED_NUMBER_SET.has(res.val)
                             ? "bg-red-600"
                             : "bg-zinc-700"
                       )}
@@ -1557,19 +1489,19 @@ export function GamePageClient({ slug }: { slug: string }) {
                     : "rotate-0"
                 )}
                 style={{
-                  background: `conic-gradient(from -4.86deg, ${europeanWheelOrder
-                    .map((num, i) => {
+                  background: `conic-gradient(from -4.86deg, ${EUROPEAN_WHEEL_ORDER.map(
+                    (num, i) => {
                       const color =
-                        num === 0 ? "#059669" : redNumbers.includes(num) ? "#b91c1c" : "#1a1a1a";
+                        num === 0 ? "#059669" : RED_NUMBER_SET.has(num) ? "#b91c1c" : "#1a1a1a";
                       const deg = 360 / 37;
                       return `${color} ${i * deg}deg ${(i + 1) * deg}deg`;
-                    })
-                    .join(", ")})`
+                    }
+                  ).join(", ")})`
                 }}
               >
                 {/* 37 Number Pockets Labels */}
                 <div className="absolute inset-0 rounded-full flex items-center justify-center">
-                  {europeanWheelOrder.map((num, i) => (
+                  {EUROPEAN_WHEEL_ORDER.map((num, i) => (
                     <div
                       key={num}
                       className="absolute inset-0 flex flex-col items-center justify-start pointer-events-none"
@@ -1584,7 +1516,7 @@ export function GamePageClient({ slug }: { slug: string }) {
 
                 {/* Perfect Metal Frets (3D Rendered) */}
                 <div className="absolute inset-0 rounded-full flex items-center justify-center pointer-events-none">
-                  {europeanWheelOrder.map((num, i) => (
+                  {EUROPEAN_WHEEL_ORDER.map((num, i) => (
                     <div
                       key={`fret-${num}`}
                       className="absolute inset-0 flex flex-col items-center justify-start pointer-events-none"
@@ -1623,7 +1555,7 @@ export function GamePageClient({ slug }: { slug: string }) {
                 style={
                   !isPending && showResult && resultNum !== null
                     ? {
-                        transform: `rotate(${europeanWheelOrder.indexOf(resultNum) * (360 / 37)}deg)`
+                        transform: `rotate(${EUROPEAN_WHEEL_ORDER.indexOf(resultNum) * (360 / 37)}deg)`
                       }
                     : {}
                 }
@@ -1690,7 +1622,7 @@ export function GamePageClient({ slug }: { slug: string }) {
                               "w-8 h-8 sm:w-10 sm:h-10 md:w-11 md:h-11 flex items-center justify-center font-mono font-black text-xs md:text-sm border transition-all relative rounded shadow-lg group overflow-hidden",
                               isS
                                 ? "bg-white text-black scale-110 z-10 border-white shadow-[0_0_30px_white,inset_0_2px_5px_rgba(0,0,0,0.2)]"
-                                : redNumbers.includes(num)
+                                : RED_NUMBER_SET.has(num)
                                   ? "bg-[#7f1d1d] hover:bg-[#991b1b] text-red-100 border-[#991b1b] shadow-[inset_0_2px_0_rgba(255,255,255,0.1)]"
                                   : "bg-[#1f2937] hover:bg-[#374151] text-gray-200 border-[#374151] shadow-[inset_0_2px_0_rgba(255,255,255,0.1)]"
                             )}
