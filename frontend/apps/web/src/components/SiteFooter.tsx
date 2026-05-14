@@ -6,38 +6,38 @@ import Link from "next/link";
 import { ArbiGameFiBrand } from "./ArbiGameFiBrand";
 
 const GAME_LINKS = [
-  { href: "/dice", label: "Dice" },
-  { href: "/cointoss", label: "Coin Toss" },
-  { href: "/roulette", label: "Roulette" },
-  { href: "/keno", label: "Keno" },
+  { href: "/games/dice", label: "Dice" },
+  { href: "/games/coin-toss", label: "Coin Toss" },
+  { href: "/games/roulette", label: "Roulette" },
+  { href: "/games/keno", label: "Keno" }
 ] as const;
 
 const PLATFORM_LINKS = [
   { href: "/invest", label: "Invest" },
   { href: "/referral", label: "Referral" },
-  { href: "/bets", label: "Bets" },
+  { href: "/bets", label: "Bets" }
 ] as const;
 
 const RESOURCE_LINKS = [
   { href: "/account", label: "Account" },
   { href: "/claims", label: "Claims" },
-  { href: "/ops", label: "Ops" },
+  { href: "/ops", label: "Ops" }
 ] as const;
 
 const LEGAL_LINKS = [
   { href: "/terms", label: "Terms" },
   { href: "/privacy", label: "Privacy" },
-  { href: "/disclaimer", label: "Disclaimer" },
+  { href: "/disclaimer", label: "Disclaimer" }
 ] as const;
 
 const COMMUNITY_LINKS = [
   { href: "https://github.com/arbigamefi/ssot_BBOG", label: "GitHub" },
-  { href: "https://github.com/arbigamefi/ssot_BBOG/tree/master/docs", label: "Docs" },
+  { href: "https://github.com/arbigamefi/ssot_BBOG/tree/master/docs", label: "Docs" }
 ] as const;
 
 function FooterColumn({
   title,
-  links,
+  links
 }: {
   title: string;
   links: ReadonlyArray<{ href: string; label: string }>;
@@ -48,7 +48,10 @@ function FooterColumn({
       <ul className="space-y-3">
         {links.map((link) => (
           <li key={link.href}>
-            <Link href={link.href} className="text-sm text-slate-400 transition-colors hover:text-white">
+            <Link
+              href={link.href}
+              className="text-sm text-slate-400 transition-colors hover:text-white"
+            >
               {link.label}
             </Link>
           </li>
@@ -66,7 +69,8 @@ export function SiteFooter() {
           <div className="space-y-5">
             <ArbiGameFiBrand accent="cyan" subtitle="Wallet-native rooms" />
             <p className="max-w-sm text-sm leading-7 text-slate-400">
-              Wallet-native game rooms, readable settlement, and visible bankroll context on top of on-chain execution.
+              Wallet-native game rooms, readable settlement, and visible bankroll context on top of
+              on-chain execution.
             </p>
             <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">
               <span className="h-2 w-2 rounded-full bg-blue-400" />

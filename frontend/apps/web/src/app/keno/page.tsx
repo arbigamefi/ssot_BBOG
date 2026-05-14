@@ -1,5 +1,5 @@
-import { GamePageClient } from "../games/[slug]/pageClient";
+import { redirect } from "next/navigation";
 
 export default function KenoPage() {
-  return <GamePageClient slug="keno" />;
+  redirect("/games/keno");
 }

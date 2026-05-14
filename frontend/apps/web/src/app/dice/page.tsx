@@ -1,5 +1,5 @@
-import { GamePageClient } from "../games/[slug]/pageClient";
+import { redirect } from "next/navigation";
 
 export default function DicePage() {
-  return <GamePageClient slug="dice" />;
+  redirect("/games/dice");
 }

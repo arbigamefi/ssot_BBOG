@@ -1,5 +1,5 @@
-import { GamePageClient } from "../games/[slug]/pageClient";
+import { redirect } from "next/navigation";
 
 export default function CoinTossPage() {
-  return <GamePageClient slug="coin-toss" />;
+  redirect("/games/coin-toss");
 }

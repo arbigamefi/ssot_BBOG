@@ -104,7 +104,7 @@ describe("GamesListClient", () => {
     expect(cards.length).toBe(2);
   });
 
-  it("links each game card to canonical top-level room routes", () => {
+  it("links each game card to canonical game room routes", () => {
     state.release = {
       name: "Base Sepolia",
       releaseDigest: "0xdeadbeefcafefeed",
@@ -116,12 +116,12 @@ describe("GamesListClient", () => {
     const diceLinks = screen
       .getAllByText("Precision Dice")
       .map((node) => node.closest("a")?.getAttribute("href"));
-    expect(diceLinks).toContain("/dice");
+    expect(diceLinks).toContain("/games/dice");
 
     const coinLinks = screen
       .getAllByText("Coin Toss")
       .map((node) => node.closest("a")?.getAttribute("href"));
-    expect(coinLinks).toContain("/cointoss");
+    expect(coinLinks).toContain("/games/coin-toss");
   });
 
   it("room entry cards have correct slug data attributes", () => {

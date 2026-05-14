@@ -30,9 +30,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { readOnly, readOnlyReason, warnings } = useRelease();
 
   const isHome = pathname === "/";
-  const isRoom = ["/roulette", "/dice", "/cointoss", "/keno"].some(
-    (p) => pathname.startsWith(p) || pathname.startsWith(`/games${p}`)
-  );
+  const isRoom =
+    pathname.startsWith("/games/") ||
+    ["/roulette", "/dice", "/cointoss", "/keno"].some((p) => pathname.startsWith(p));
 
   const activeRoute = getActiveRoute(pathname);
   const headerVariant = isHome ? "transparent" : isRoom ? "game" : "default";

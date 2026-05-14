@@ -177,6 +177,6 @@ describe("HomePage", () => {
     const kenoLinks = screen
       .getAllByText("Keno Draft")
       .map((node) => node.closest("a")?.getAttribute("href"));
-    expect(kenoLinks).toContain("/keno");
+    expect(kenoLinks).toContain("/games/keno");
   });
 });

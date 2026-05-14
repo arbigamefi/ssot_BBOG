@@ -391,7 +391,7 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Dice Card */}
             <Link
-              href="/dice"
+              href="/games/dice"
               className="group relative rounded-[2rem] border border-white/10 bg-[#050505] overflow-hidden hover:-translate-y-2 transition-all duration-300 hover:border-purple-500/60 hover:shadow-[0_20px_50px_rgba(168,85,247,0.2)] flex flex-col min-h-[360px]"
             >
               <div className="absolute inset-0 bg-gradient-to-b from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -413,7 +413,7 @@ export default function HomePage() {
 
             {/* Roulette Card */}
             <Link
-              href="/roulette"
+              href="/games/roulette"
               className="group relative rounded-[2rem] border border-white/10 bg-[#050505] overflow-hidden hover:-translate-y-2 transition-all duration-300 hover:border-emerald-500/60 hover:shadow-[0_20px_50px_rgba(16,185,129,0.2)] flex flex-col min-h-[360px]"
             >
               <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -436,7 +436,7 @@ export default function HomePage() {
 
             {/* Coin Toss Card */}
             <Link
-              href="/cointoss"
+              href="/games/coin-toss"
               className="group relative rounded-[2rem] border border-white/10 bg-[#050505] overflow-hidden hover:-translate-y-2 transition-all duration-300 hover:border-amber-500/60 hover:shadow-[0_20px_50px_rgba(245,158,11,0.2)] flex flex-col min-h-[360px]"
             >
               <div className="absolute inset-0 bg-gradient-to-b from-amber-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -458,7 +458,7 @@ export default function HomePage() {
 
             {/* Keno Card */}
             <Link
-              href="/keno"
+              href="/games/keno"
               className="group relative rounded-[2rem] border border-white/10 bg-[#050505] overflow-hidden hover:-translate-y-2 transition-all duration-300 hover:border-fuchsia-500/60 hover:shadow-[0_20px_50px_rgba(217,70,239,0.2)] flex flex-col min-h-[360px]"
             >
               <div className="absolute inset-0 bg-gradient-to-b from-fuchsia-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />

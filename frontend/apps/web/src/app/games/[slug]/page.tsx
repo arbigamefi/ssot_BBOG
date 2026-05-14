@@ -1,14 +1,12 @@
-import { redirect } from "next/navigation";
+import * as React from "react";
 
-const CANONICAL_ROOM_ROUTES: Record<string, string> = {
-  roulette: "/roulette",
-  dice: "/dice",
-  "coin-toss": "/cointoss",
-  cointoss: "/cointoss",
-  keno: "/keno"
+import { GamePageClient } from "./pageClient";
+
+const SLUG_ALIASES: Record<string, string> = {
+  cointoss: "coin-toss"
 };
 
-export default async function GameCompatPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function GameRoomPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  redirect(CANONICAL_ROOM_ROUTES[slug] ?? "/games");
+  return <GamePageClient slug={SLUG_ALIASES[slug] ?? slug} />;
 }

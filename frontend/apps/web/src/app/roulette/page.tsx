@@ -1,5 +1,5 @@
-import { GamePageClient } from "../games/[slug]/pageClient";
+import { redirect } from "next/navigation";
 
 export default function RoulettePage() {
-  return <GamePageClient slug="roulette" />;
+  redirect("/games/roulette");
 }

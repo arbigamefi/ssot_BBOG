@@ -1,36 +1,32 @@
+import * as React from "react";
 import { describe, expect, it, vi } from "vitest";
 
-const { redirectMock } = vi.hoisted(() => ({
-  redirectMock: vi.fn((target: string) => {
-    throw new Error(`REDIRECT:${target}`);
-  })
+const { gamePageClientMock } = vi.hoisted(() => ({
+  gamePageClientMock: vi.fn(() => null)
 }));
 
-vi.mock("next/navigation", () => ({
-  redirect: redirectMock
+vi.mock("./pageClient", () => ({
+  GamePageClient: gamePageClientMock
 }));
 
-import GameCompatPage from "./page";
+import GameRoomPage from "./page";
 
-describe("GameCompatPage", () => {
-  it("redirects roulette to the canonical roulette route", async () => {
-    await expect(GameCompatPage({ params: Promise.resolve({ slug: "roulette" }) })).rejects.toThrow(
-      "REDIRECT:/roulette"
-    );
-    expect(redirectMock).toHaveBeenCalledWith("/roulette");
+describe("GameRoomPage", () => {
+  it("renders roulette through the shared game page client", async () => {
+    const page = await GameRoomPage({ params: Promise.resolve({ slug: "roulette" }) });
+    expect((page as React.ReactElement).type).toBe(gamePageClientMock);
+    expect((page as React.ReactElement).props.slug).toBe("roulette");
   });
 
-  it("redirects coin-toss to the canonical cointoss route", async () => {
-    await expect(
-      GameCompatPage({ params: Promise.resolve({ slug: "coin-toss" }) })
-    ).rejects.toThrow("REDIRECT:/cointoss");
-    expect(redirectMock).toHaveBeenCalledWith("/cointoss");
+  it("normalizes the legacy cointoss slug", async () => {
+    const page = await GameRoomPage({ params: Promise.resolve({ slug: "cointoss" }) });
+    expect((page as React.ReactElement).type).toBe(gamePageClientMock);
+    expect((page as React.ReactElement).props.slug).toBe("coin-toss");
   });
 
-  it("falls back to the games directory for unknown slugs", async () => {
-    await expect(
-      GameCompatPage({ params: Promise.resolve({ slug: "unknown-room" }) })
-    ).rejects.toThrow("REDIRECT:/games");
-    expect(redirectMock).toHaveBeenCalledWith("/games");
+  it("passes unknown slugs to the shared client so it can show release-aware fallback", async () => {
+    const page = await GameRoomPage({ params: Promise.resolve({ slug: "unknown-room" }) });
+    expect((page as React.ReactElement).type).toBe(gamePageClientMock);
+    expect((page as React.ReactElement).props.slug).toBe("unknown-room");
   });
 });
