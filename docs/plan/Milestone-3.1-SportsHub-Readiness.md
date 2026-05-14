@@ -43,6 +43,9 @@ As of `master` through PR #13:
   mainnet sportsbook canary until the off-chain approvals and production controls are filled.
 - The provider/evidence policy draft is tracked at `docs/ops/sportsbook-provider-evidence-policy.md`;
   it defines hash reproducibility, but does not approve any provider or evidence-storage vendor.
+- The first concrete provider ingestion candidate is tracked at
+  `docs/ops/sportsbook-provider-the-odds-api.md` and produces SportsHub result hashes from completed
+  The Odds API score responses; it is a candidate integration, not production provider approval.
 - The key custody/role-control draft is tracked at `docs/ops/sportsbook-key-custody-roles.md`; the
   local memo validator is `make sports-role-custody-check-v13`, but no production role custody is
   approved.

@@ -67,6 +67,7 @@ contract WorldCupFootballCanaryV13 is Script {
         bytes32 rulebookHash;
         bytes32 resultSourceHash;
         bytes32 evidenceHash;
+        uint64 observedAt;
     }
 
     function run() external {
@@ -177,15 +178,12 @@ contract WorldCupFootballCanaryV13 is Script {
         cfg.lockTime = uint64(block.timestamp + lockOffset);
         cfg.startsAt = uint64(block.timestamp + lockOffset + startOffset);
         cfg.expiresAt = uint64(block.timestamp + lockOffset - 30 seconds);
-        cfg.marketKey = vm.envOr(
-            "FOOTBALL_MARKET_KEY", keccak256("FIFA_WORLD_CUP_2026_MEXICO_SOUTH_AFRICA_1X2")
-        );
+        cfg.marketKey = vm.envOr("FOOTBALL_MARKET_KEY", keccak256("FIFA_WORLD_CUP_2026_MEXICO_SOUTH_AFRICA_1X2"));
         cfg.rulebookHash = vm.envOr("FOOTBALL_RULEBOOK_HASH", keccak256("FIFA_WORLD_CUP_2026_1X2_RULEBOOK_V1"));
-        cfg.resultSourceHash = vm.envOr(
-            "FOOTBALL_RESULT_SOURCE_HASH", keccak256("FIFA_WORLD_CUP_2026_OPENING_MATCH_RESULT_SOURCE")
-        );
-        cfg.evidenceHash =
-            vm.envOr("FOOTBALL_EVIDENCE_HASH", keccak256("FIFA_WORLD_CUP_2026_OPENING_MATCH_EVIDENCE"));
+        cfg.resultSourceHash =
+            vm.envOr("FOOTBALL_RESULT_SOURCE_HASH", keccak256("FIFA_WORLD_CUP_2026_OPENING_MATCH_RESULT_SOURCE"));
+        cfg.evidenceHash = vm.envOr("FOOTBALL_EVIDENCE_HASH", keccak256("FIFA_WORLD_CUP_2026_OPENING_MATCH_EVIDENCE"));
+        cfg.observedAt = uint64(vm.envOr("FOOTBALL_RESULT_OBSERVED_AT", uint256(0)));
     }
 
     function _readExistingMarketConfig() internal view returns (FootballConfig memory cfg) {
@@ -197,11 +195,10 @@ contract WorldCupFootballCanaryV13 is Script {
         cfg.firstTicketId = vm.envUint("FOOTBALL_FIRST_TICKET_ID");
         cfg.ticketCount = vm.envOr("FOOTBALL_TICKET_COUNT", uint256(2));
         cfg.winningOutcomeId = uint32(vm.envOr("FOOTBALL_WINNING_OUTCOME_ID", uint256(DEFAULT_WINNING_OUTCOME_ID)));
-        cfg.resultSourceHash = vm.envOr(
-            "FOOTBALL_RESULT_SOURCE_HASH", keccak256("FIFA_WORLD_CUP_2026_OPENING_MATCH_RESULT_SOURCE")
-        );
-        cfg.evidenceHash =
-            vm.envOr("FOOTBALL_EVIDENCE_HASH", keccak256("FIFA_WORLD_CUP_2026_OPENING_MATCH_EVIDENCE"));
+        cfg.resultSourceHash =
+            vm.envOr("FOOTBALL_RESULT_SOURCE_HASH", keccak256("FIFA_WORLD_CUP_2026_OPENING_MATCH_RESULT_SOURCE"));
+        cfg.evidenceHash = vm.envOr("FOOTBALL_EVIDENCE_HASH", keccak256("FIFA_WORLD_CUP_2026_OPENING_MATCH_EVIDENCE"));
+        cfg.observedAt = uint64(vm.envOr("FOOTBALL_RESULT_OBSERVED_AT", uint256(0)));
 
         SSOTTypes.SportsMarket memory market = cfg.sportsHub.getMarket(cfg.marketId);
         cfg.poolId = market.poolId;
@@ -240,7 +237,9 @@ contract WorldCupFootballCanaryV13 is Script {
     function _validateNewMarketConfig(FootballConfig memory cfg) internal view {
         if (cfg.poolId == 0) revert("bad pool id");
         if (cfg.outcomeCount != 3) revert("football 1X2 canary expects 3 outcomes");
-        if (cfg.winningOutcomeId >= cfg.outcomeCount || cfg.losingOutcomeId >= cfg.outcomeCount) revert("bad outcome id");
+        if (cfg.winningOutcomeId >= cfg.outcomeCount || cfg.losingOutcomeId >= cfg.outcomeCount) {
+            revert("bad outcome id");
+        }
         if (cfg.winningOutcomeId == cfg.losingOutcomeId && cfg.ticketCount > 1) revert("duplicate outcome ids");
         if (cfg.ticketCount == 0 || cfg.ticketCount > 2) revert("bad ticket count");
         if (cfg.stake == 0 || cfg.oddsWad == 0 || cfg.maxPayout == 0) revert("bad stake or odds");
@@ -279,6 +278,9 @@ contract WorldCupFootballCanaryV13 is Script {
         console2.log("  expectedPayoutEach", cfg.stake * cfg.oddsWad / WAD);
         console2.log("  lockTime", cfg.lockTime);
         console2.log("  startsAt", cfg.startsAt);
+        if (cfg.observedAt != 0) {
+            console2.log("  observedAt", cfg.observedAt);
+        }
         console2.logBytes32(cfg.marketKey);
         console2.logBytes32(cfg.rulebookHash);
     }
@@ -287,16 +289,17 @@ contract WorldCupFootballCanaryV13 is Script {
         ticketIds = _ticketIds(cfg.firstTicketId, cfg.ticketCount);
 
         vm.startBroadcast(cfg.privateKey);
-        uint64 createdMarketId = cfg.sportsHub.createMarket(
-            cfg.eventId,
-            cfg.poolId,
-            cfg.outcomeCount,
-            cfg.startsAt,
-            cfg.lockTime,
-            cfg.finality,
-            cfg.marketKey,
-            cfg.rulebookHash
-        );
+        uint64 createdMarketId = cfg.sportsHub
+            .createMarket(
+                cfg.eventId,
+                cfg.poolId,
+                cfg.outcomeCount,
+                cfg.startsAt,
+                cfg.lockTime,
+                cfg.finality,
+                cfg.marketKey,
+                cfg.rulebookHash
+            );
         require(createdMarketId == cfg.marketId, "unexpected market id");
         cfg.sportsHub.openMarket(cfg.marketId);
         vm.stopBroadcast();
@@ -318,16 +321,17 @@ contract WorldCupFootballCanaryV13 is Script {
         ticketIds = _ticketIds(cfg.firstTicketId, cfg.ticketCount);
 
         vm.startPrank(cfg.governance);
-        uint64 createdMarketId = cfg.sportsHub.createMarket(
-            cfg.eventId,
-            cfg.poolId,
-            cfg.outcomeCount,
-            cfg.startsAt,
-            cfg.lockTime,
-            cfg.finality,
-            cfg.marketKey,
-            cfg.rulebookHash
-        );
+        uint64 createdMarketId = cfg.sportsHub
+            .createMarket(
+                cfg.eventId,
+                cfg.poolId,
+                cfg.outcomeCount,
+                cfg.startsAt,
+                cfg.lockTime,
+                cfg.finality,
+                cfg.marketKey,
+                cfg.rulebookHash
+            );
         require(createdMarketId == cfg.marketId, "unexpected market id");
         cfg.sportsHub.openMarket(cfg.marketId);
         vm.stopPrank();
@@ -347,7 +351,9 @@ contract WorldCupFootballCanaryV13 is Script {
     function _broadcastProposeResult(FootballConfig memory cfg) internal {
         vm.startBroadcast(cfg.resultReporterPrivateKey);
         cfg.sportsHub
-            .proposeResult(cfg.marketId, cfg.winningOutcomeId, cfg.resultSourceHash, cfg.evidenceHash, uint64(block.timestamp));
+            .proposeResult(
+                cfg.marketId, cfg.winningOutcomeId, cfg.resultSourceHash, cfg.evidenceHash, _resultObservedAt(cfg)
+            );
         vm.stopBroadcast();
 
         SSOTTypes.SportsResult memory result = cfg.sportsHub.getResult(cfg.marketId);
@@ -359,7 +365,9 @@ contract WorldCupFootballCanaryV13 is Script {
     function _simulateProposeResult(FootballConfig memory cfg) internal {
         vm.prank(cfg.resultReporter);
         cfg.sportsHub
-            .proposeResult(cfg.marketId, cfg.winningOutcomeId, cfg.resultSourceHash, cfg.evidenceHash, uint64(block.timestamp));
+            .proposeResult(
+                cfg.marketId, cfg.winningOutcomeId, cfg.resultSourceHash, cfg.evidenceHash, _resultObservedAt(cfg)
+            );
 
         SSOTTypes.SportsResult memory result = cfg.sportsHub.getResult(cfg.marketId);
         console2.log("  resultPayloadHash");
@@ -387,7 +395,10 @@ contract WorldCupFootballCanaryV13 is Script {
         vm.stopBroadcast();
     }
 
-    function _placeTicket(FootballConfig memory cfg, uint32 outcomeId, uint64 nonce) internal returns (uint256 ticketId) {
+    function _placeTicket(FootballConfig memory cfg, uint32 outcomeId, uint64 nonce)
+        internal
+        returns (uint256 ticketId)
+    {
         SSOTTypes.SportsMarket memory market = cfg.sportsHub.getMarket(cfg.marketId);
         SSOTTypes.SportsOddsSnapshot memory odds = SSOTTypes.SportsOddsSnapshot({
             marketId: cfg.marketId,
@@ -420,6 +431,9 @@ contract WorldCupFootballCanaryV13 is Script {
         require(result.winningOutcomeId == cfg.winningOutcomeId, "winning outcome mismatch");
         require(result.resultSourceHash == cfg.resultSourceHash, "source hash mismatch");
         require(result.evidenceHash == cfg.evidenceHash, "evidence hash mismatch");
+        if (cfg.observedAt != 0) {
+            require(result.observedAt == cfg.observedAt, "observedAt mismatch");
+        }
 
         for (uint256 i = 0; i < ticketIds.length; ++i) {
             SSOTTypes.SportsTicket memory ticket = cfg.sportsHub.getTicket(ticketIds[i]);
@@ -437,5 +451,13 @@ contract WorldCupFootballCanaryV13 is Script {
         for (uint256 i = 0; i < ticketCount; ++i) {
             ticketIds[i] = firstTicketId + i;
         }
+    }
+
+    function _resultObservedAt(FootballConfig memory cfg) internal view returns (uint64) {
+        if (cfg.observedAt == 0) {
+            return uint64(block.timestamp);
+        }
+        if (cfg.observedAt < cfg.startsAt || cfg.observedAt > block.timestamp) revert("bad result observedAt");
+        return cfg.observedAt;
     }
 }

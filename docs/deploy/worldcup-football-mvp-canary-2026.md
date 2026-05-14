@@ -13,8 +13,9 @@ fixed-odds single, settled by an allowlisted result reporter.
   - `2`: South Africa
 - Scope: no live betting, no parlays, no player props, no futures.
 
-The canary uses the existing `SportsHub` result reporter path as the MVP fact oracle. A real provider
-adapter can later feed the same `resultSourceHash` and `evidenceHash` fields.
+The canary uses the existing `SportsHub` result reporter path as the MVP fact oracle. The first real
+provider ingestion path is documented in `docs/ops/sportsbook-provider-the-odds-api.md`; it feeds the
+same `resultSourceHash`, `evidenceHash`, and `observedAt` fields.
 
 ## Local Contract Proof
 
@@ -78,7 +79,25 @@ Record the printed:
 - `FOOTBALL_TICKET_COUNT`
 - `startsAt`
 
-2. After `startsAt`, propose the reporter result:
+2. After `startsAt`, generate or load provider evidence.
+
+For a deterministic local check of the provider adapter:
+
+```bash
+make sports-provider-evidence-v13
+```
+
+For a live provider run, use `script/ops/sports_provider_evidence.py` with `THE_ODDS_API_KEY`,
+`SPORTS_PROVIDER_EVENT_ID`, `SPORTS_HUB`, `FOOTBALL_MARKET_ID`, and the current rulebook/reporter-set
+hashes. Review the generated JSON files, then source the generated env:
+
+```bash
+set -a
+source tmp/sports-provider-evidence-live/result-proposal.env
+set +a
+```
+
+3. Propose the reporter result:
 
 ```bash
 FOOTBALL_CANARY_MODE=settle \
@@ -90,7 +109,7 @@ BROADCAST=1 ENV_FILE=.env.v13-sports.local make sports-football-canary-v13
 
 Record the printed `finalizesAt`.
 
-3. After `finalizesAt`, rerun the same command to finalize and settle tickets.
+4. After `finalizesAt`, rerun the same command to finalize and settle tickets.
 
 ## Useful Overrides
 
@@ -102,6 +121,7 @@ FOOTBALL_ODDS_WAD=1800000000000000000
 FOOTBALL_MAX_PAYOUT=300000
 FOOTBALL_RESULT_SOURCE_HASH=0x...
 FOOTBALL_EVIDENCE_HASH=0x...
+FOOTBALL_RESULT_OBSERVED_AT=1781211600
 ```
 
 Keep the MVP narrow: the canary is proving football 1X2 settlement, not a full sportsbook launch.

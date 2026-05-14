@@ -41,5 +41,8 @@ frontend/**/*.tsbuildinfo
 *.swp
 *.swo
 *~
+__pycache__/
+*.pyc
 .DS_Store
 deployments/
+tmp/sports-provider-evidence*/
