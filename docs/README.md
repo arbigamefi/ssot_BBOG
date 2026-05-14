@@ -41,8 +41,11 @@ This repository is designed to be **auditable by construction**. The documentati
 
 ## Design system
 
+- `docs/design/README.md` — frontend clean-room rewrite design SSOT index
 - `docs/design/north-star.md` — frontend design-system SSOT, route taxonomy, and phased migration plan
 - `docs/design/frontend-rewrite-blueprint.md` — clean-room frontend rewrite architecture, UI/UX planning, deletion plan, and quality gates
+- `docs/design/frontend-kill-list.md` — physical delete / rewrite / keep inventory for the frontend clean-room rewrite
+- `docs/frontend/INDEX.md` — frontend engineering-quality SSOT index
 
 ## Research
 
