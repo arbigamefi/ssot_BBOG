@@ -1,5 +1,5 @@
-import { LiquidityPageClient } from "../liquidity/pageClient";
+import { InvestPageClient } from "./pageClient";
 
 export default function InvestPage() {
-  return <LiquidityPageClient />;
+  return <InvestPageClient />;
 }
