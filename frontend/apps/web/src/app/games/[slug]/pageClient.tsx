@@ -26,6 +26,10 @@ import {
 } from "../../../features/games/room/presentation";
 import { GameRoomAuditLedger } from "../../../features/games/room/audit-ledger";
 import { GameRoomBetPanel } from "../../../features/games/room/bet-panel";
+import {
+  useBetStepperFailureToast,
+  useVrfTimeoutToast
+} from "../../../features/games/room/feedback";
 import { useGameWalletBalance, useKenoStrobeSpots } from "../../../features/games/room/hooks";
 import {
   useGameResolutionEffect,
@@ -85,34 +89,8 @@ export function GamePageClient({ slug }: { slug: string }) {
   const { openConnectModal } = useConnectModal();
   const { db } = useSSOTRuntime();
 
-  // B3: Toast when stepper enters failed state
-  const prevStatusRef = React.useRef<string>("");
-  React.useEffect(() => {
-    if (state.status === "failed" && prevStatusRef.current !== "failed") {
-      const errMsg = (state as any)?.error?.message ?? "Transaction failed. Please try again.";
-      toast.error(errMsg);
-    }
-    prevStatusRef.current = state.status;
-  }, [state.status]);
-
-  // B3: VRF timeout warning toast at 60 seconds
-  const pendingStartRef = React.useRef<number | null>(null);
-  React.useEffect(() => {
-    if (isPending) {
-      pendingStartRef.current = Date.now();
-      const timer = setTimeout(() => {
-        if (isPending) {
-          toast.warning("Waiting for oracle… VRF resolution can take 30–120s on testnets.", {
-            duration: 20000,
-            id: "vrf-timeout"
-          });
-        }
-      }, 60000);
-      return () => clearTimeout(timer);
-    } else {
-      pendingStartRef.current = null;
-    }
-  }, [isPending]);
+  useBetStepperFailureToast({ status: state.status, error: state.error });
+  useVrfTimeoutToast(isPending);
 
   useGameResolutionEffect({
     status: state.status,
