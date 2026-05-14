@@ -10,6 +10,7 @@ import { SiteFooter } from "./SiteFooter";
 
 function getActiveRoute(pathname: string): PrototypeRoute {
   if (pathname === "/games") return "directory";
+  if (pathname === "/sportsbook" || pathname.startsWith("/sportsbook/")) return "sportsbook";
   if (pathname === "/bets" || pathname.startsWith("/bets/")) return "bets";
   if (pathname === "/invest" || pathname.startsWith("/liquidity")) return "liquidity";
   if (pathname === "/claims") return "claims";

@@ -7,6 +7,7 @@ import { useRelease } from "../ssot/release/ReleaseProvider";
 
 export type PrototypeRoute =
   | "directory"
+  | "sportsbook"
   | "bets"
   | "liquidity"
   | "claims"
@@ -67,6 +68,7 @@ export function PrototypeHeader({
   // Common Nav Links
   const navLinks = [
     { id: "directory", label: "Games", href: "/games" },
+    { id: "sportsbook", label: "Sportsbook", href: "/sportsbook" },
     { id: "bets", label: "Bets", href: "/bets" },
     { id: "liquidity", label: "Liquidity", href: "/invest" },
     { id: "claims", label: "Claims", href: "/claims" },

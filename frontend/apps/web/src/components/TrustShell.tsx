@@ -16,6 +16,7 @@ import { useRelease } from "../ssot/release/ReleaseProvider";
 
 const TRUST_NAV = [
   { href: "/games", label: "Games" },
+  { href: "/sportsbook", label: "Sportsbook" },
   { href: "/invest", label: "Liquidity" },
   { href: "/bets", label: "Bets" },
   { href: "/claims", label: "Claims" },

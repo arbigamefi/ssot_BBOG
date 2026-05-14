@@ -61,6 +61,17 @@ describe("SiteChrome", () => {
     expect(screen.getByTestId("header-directory-default")).toBeDefined();
   });
 
+  it("detects sportsbook route", () => {
+    state.pathname = "/sportsbook";
+    render(
+      <SiteChrome>
+        <div>content</div>
+      </SiteChrome>
+    );
+
+    expect(screen.getByTestId("header-sportsbook-default")).toBeDefined();
+  });
+
   it("bypasses chrome on prototype routes", () => {
     state.pathname = "/prototype/ui-ux-v1";
     render(

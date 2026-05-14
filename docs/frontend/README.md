@@ -74,6 +74,10 @@ the embedded release exposes enabled SportsHub metadata. This frontend flag is o
 does not replace the approved `sportsbook.frontend-access.v1` memo required by
 `docs/ops/sportsbook-frontend-access.md`.
 
+`/sportsbook` is a read-only control-room entrypoint for v1.3 SportsHub metadata, Sports pool caps, and
+provider-readiness status. It must not expose public ticket placement until the Phase 2 go/no-go packet
+records GO and the frontend-access approval memo passes the required ops check.
+
 ## ABIs
 
 Releases ship a trimmed ABI directory at `abis/` inside the bundle. Frontend should load ABI JSON from there (do not embed ABI in source).
