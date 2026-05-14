@@ -28,6 +28,11 @@ import { simulateGameResult } from "../../../features/games/room/simulation";
 import { GameRoomAuditLedger } from "../../../features/games/room/audit-ledger";
 import { GameRoomBetPanel } from "../../../features/games/room/bet-panel";
 import { useGameWalletBalance, useKenoStrobeSpots } from "../../../features/games/room/hooks";
+import {
+  findIndexedBetById,
+  isTerminalIndexedBet,
+  readFinalizedPayoutWin
+} from "../../../features/games/room/reconciliation";
 import { GameRoomRightPane } from "../../../features/games/room/right-pane";
 
 /* ─── Main Logic ─── */
@@ -193,37 +198,13 @@ export function GamePageClient({ slug }: { slug: string }) {
         setIsPending(true); // Switch to waiting for VRF visuals
       }
 
-      // B1: Detect finalized state from BetRow directly (BetRow.state === "finalized")
-      // mapBetState maps "finalized" → "settled", NOT "won"/"lost" — so we check raw state
-      const myBet = recentBets.find((b) => b.betId.toString() === state.betId?.toString());
-      if (myBet && (myBet.state === "finalized" || myBet.state === "refunded")) {
+      const myBet = findIndexedBetById(recentBets, state.betId);
+      if (isTerminalIndexedBet(myBet)) {
         setIsPending(false);
         setShowResult(true);
 
-        // B1: Determine win/loss by querying payout from hubEvents argsJson
-        // We do this asynchronously using the lastTxHash from this bet
         const resolvePayout = async () => {
-          let win = false;
-          try {
-            if (db) {
-              // Query the BetFinalized hubEvent for this bet via lastTxHash
-              const events = await db.hubEvents
-                .where("txHash")
-                .equals(myBet.lastTxHash)
-                .filter((ev) => ev.eventName === "BetFinalized")
-                .toArray();
-              const finalizedEvent = events[0];
-              if (finalizedEvent) {
-                const args = JSON.parse(finalizedEvent.argsJson);
-                const payout = BigInt(args?.payout ?? args?.totalPayout ?? "0");
-                const stake = BigInt(args?.stake ?? "0");
-                // Win = received a payout above the stake amount (edge < 100%)
-                win = payout > stake;
-              }
-            }
-          } catch {
-            // Fallback: if db query fails, leave win = false (conservative)
-          }
+          const win = await readFinalizedPayoutWin({ db, txHash: myBet?.lastTxHash });
 
           const simulated = simulateGameResult({
             slug: game?.slug ?? "",
