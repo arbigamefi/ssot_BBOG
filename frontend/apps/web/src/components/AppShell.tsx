@@ -41,6 +41,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div
       className={cn(
         "min-h-screen bg-surface-0 text-fg",
+        isHome && "theme-dark",
         isRoom ? "overflow-x-hidden selection:bg-brand/30" : "selection:bg-brand/20"
       )}
     >

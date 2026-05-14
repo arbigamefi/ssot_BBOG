@@ -1,6 +1,7 @@
 :root,
 :root.dark,
-:root[data-theme="dark"] {
+:root[data-theme="dark"],
+.theme-dark {
   color-scheme: dark;
 
   --surface-0: 220 39% 4%;

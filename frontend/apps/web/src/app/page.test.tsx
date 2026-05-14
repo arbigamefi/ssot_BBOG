@@ -104,19 +104,14 @@ describe("HomePage", () => {
     state.overviewError = null;
   });
 
-  it("renders the prototype-first landing hero", () => {
+  it("renders the product-first landing surface", () => {
     render(<HomePage />);
 
-    expect(
-      screen.getByRole("heading", { name: /No Deposits\.\s+No Blackboxes\.\s+Just Pure Odds\./i })
-    ).toBeDefined();
-    expect(screen.getByText("Live on Arbitrum Base Sepolia")).toBeDefined();
+    expect(screen.getByRole("heading", { name: "ArbiGameFi" })).toBeDefined();
+    expect(screen.getByText("Base Sepolia release channel")).toBeDefined();
     expect(screen.getAllByText("Enter Casino").length).toBeGreaterThan(0);
-    expect(screen.getByText("Designed for the Player.")).toBeDefined();
-    expect(screen.getByText("The Classics, Elevated.")).toBeDefined();
-    expect(
-      screen.getByRole("heading", { name: /Don't trust us\.\s+Trust the bytecode\./i })
-    ).toBeDefined();
+    expect(screen.getByText("Casino rooms")).toBeDefined();
+    expect(screen.getByText("Transparent settlement rails.")).toBeDefined();
   });
 
   it("renders reserve proof and canonical room cards when release data exists", () => {
@@ -163,19 +158,17 @@ describe("HomePage", () => {
 
     render(<HomePage />);
 
-    expect(screen.getByText("Guaranteed Payout Bankroll")).toBeDefined();
-    expect(screen.getByText("Provably Fair Matches")).toBeDefined();
-    expect(screen.getByText("Total Paid Out")).toBeDefined();
-    expect(screen.getByText("Precision Dice")).toBeDefined();
-    expect(screen.getByText("Keno Draft")).toBeDefined();
-    expect(
-      screen.getByRole("heading", { name: /Real Yield\.\s+Mathematical Edge\./i })
-    ).toBeDefined();
-    expect(screen.getByText("Live Winner Feed")).toBeDefined();
-    expect(screen.getByText("Deposit to Bank")).toBeDefined();
+    expect(screen.getAllByText("Free reserve").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Bank assets").length).toBeGreaterThan(0);
+    expect(screen.getByText("Release")).toBeDefined();
+    expect(screen.getAllByText("Dice").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Keno").length).toBeGreaterThan(0);
+    expect(screen.getByText("Reserve ledger before marketing yield.")).toBeDefined();
+    expect(screen.getByText("Latest indexed tickets")).toBeDefined();
+    expect(screen.getByText("Inspect bank")).toBeDefined();
 
     const kenoLinks = screen
-      .getAllByText("Keno Draft")
+      .getAllByText("Keno")
       .map((node) => node.closest("a")?.getAttribute("href"));
     expect(kenoLinks).toContain("/games/keno");
   });
