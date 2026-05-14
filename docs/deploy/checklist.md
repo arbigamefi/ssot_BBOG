@@ -68,6 +68,9 @@
 - [ ] For SportsHub public-testnet Phase 1 closeout, run
   `ENV_FILE=<role-env> make sports-phase1-closeout-v13` and archive the output with the rehearsal
   evidence.
+- [ ] For the football MVP product canary, run or rehearse
+  `make sports-football-canary-v13` using the flow in
+  `docs/deploy/worldcup-football-mvp-canary-2026.md`.
 - [ ] Before any public sportsbook frontend, approve `docs/ops/sportsbook-production-controls.md`
   sections for managed key custody, provider evidence, and public frontend controls.
 - [ ] Before any SportsHub mainnet canary or public risk-in, run `make sports-phase2-gonogo-v13`

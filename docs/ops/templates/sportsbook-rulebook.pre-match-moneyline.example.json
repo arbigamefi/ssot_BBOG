@@ -8,15 +8,15 @@
   "marketKey": "example-league:2026-05-14:home-away:moneyline",
   "outcomes": [
     {
-      "outcomeId": 1,
+      "outcomeId": 0,
       "label": "home"
     },
     {
-      "outcomeId": 2,
+      "outcomeId": 1,
       "label": "draw"
     },
     {
-      "outcomeId": 3,
+      "outcomeId": 2,
       "label": "away"
     }
   ],

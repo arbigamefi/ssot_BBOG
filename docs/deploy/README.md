@@ -126,6 +126,11 @@ forge script script/DeployV13.s.sol:DeployV13 --rpc-url $RPC_URL --broadcast -vv
 
 The same flow applies to `docs/deploy/arbitrum-sepolia-v13-sports.env.example`.
 
+For the narrow football MVP product canary, use
+`docs/deploy/worldcup-football-mvp-canary-2026.md` after the v1.3 Sports deployment and role canary are
+ready. It exercises one 3-outcome pre-match 1X2 market through `SportsHub` using the existing result
+reporter path as the MVP fact oracle.
+
 The v1.3 script deploys and wires:
 - `PoolRegistry`
 - `SettlementRouter`

@@ -93,6 +93,9 @@ As of `master` through PR #6:
   for incident linkage and monitoring.
 - PR-3.1.11 adds batch debt-out helpers for keeper/frontend terminalization while preserving single-ticket
   settlement/refund/void semantics and per-ticket events.
+- The football 1X2 product canary is tracked in
+  `docs/deploy/worldcup-football-mvp-canary-2026.md` and proves the MVP shape against a World Cup
+  opening-match style market: `0=Mexico`, `1=Draw`, `2=South Africa`.
 
 The SportsHub MVP contract track is now functionally closed for pre-match fixed-odds singles. Mainnet
 readiness still depends on the production gates in
