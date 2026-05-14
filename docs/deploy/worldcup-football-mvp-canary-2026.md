@@ -84,12 +84,23 @@ Record the printed:
 For a deterministic local check of the provider adapter:
 
 ```bash
+make sports-provider-odds-v13
 make sports-provider-evidence-v13
 ```
 
-For a live provider run, use `script/ops/sports_provider_evidence.py` with `THE_ODDS_API_KEY`,
+For a live provider odds run, use `script/ops/sports_provider_odds.py` with `THE_ODDS_API_KEY`,
+`SPORTS_PROVIDER_EVENT_ID`, `SPORTS_HUB`, and the target market context. Review the generated JSON
+files, then source the generated odds env:
+
+```bash
+set -a
+source tmp/sports-provider-odds-live/odds-snapshot.env
+set +a
+```
+
+For a live provider result run, use `script/ops/sports_provider_evidence.py` with `THE_ODDS_API_KEY`,
 `SPORTS_PROVIDER_EVENT_ID`, `SPORTS_HUB`, `FOOTBALL_MARKET_ID`, and the current rulebook/reporter-set
-hashes. Review the generated JSON files, then source the generated env:
+hashes. Review the generated JSON files, then source the generated result env:
 
 ```bash
 set -a
@@ -117,7 +128,10 @@ Record the printed `finalizesAt`.
 FOOTBALL_WINNING_OUTCOME_ID=0
 FOOTBALL_LOSING_OUTCOME_ID=1
 FOOTBALL_STAKE=100000
-FOOTBALL_ODDS_WAD=1800000000000000000
+FOOTBALL_HOME_ODDS_WAD=1800000000000000000
+FOOTBALL_DRAW_ODDS_WAD=3400000000000000000
+FOOTBALL_AWAY_ODDS_WAD=4500000000000000000
+FOOTBALL_ODDS_EXPIRES_AT=1781193720
 FOOTBALL_MAX_PAYOUT=300000
 FOOTBALL_RESULT_SOURCE_HASH=0x...
 FOOTBALL_EVIDENCE_HASH=0x...

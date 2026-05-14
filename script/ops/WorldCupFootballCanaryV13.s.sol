@@ -60,6 +60,9 @@ contract WorldCupFootballCanaryV13 is Script {
         uint32 losingOutcomeId;
         uint256 stake;
         uint256 oddsWad;
+        uint256 homeOddsWad;
+        uint256 drawOddsWad;
+        uint256 awayOddsWad;
         uint256 maxPayout;
         uint256 firstTicketId;
         uint256 ticketCount;
@@ -167,6 +170,7 @@ contract WorldCupFootballCanaryV13 is Script {
         cfg.losingOutcomeId = uint32(vm.envOr("FOOTBALL_LOSING_OUTCOME_ID", uint256(DEFAULT_LOSING_OUTCOME_ID)));
         cfg.stake = vm.envOr("FOOTBALL_STAKE", uint256(100_000));
         cfg.oddsWad = vm.envOr("FOOTBALL_ODDS_WAD", uint256(18 * WAD / 10));
+        _readOutcomeOdds(cfg);
         cfg.maxPayout = vm.envOr("FOOTBALL_MAX_PAYOUT", uint256(300_000));
         cfg.finality = uint64(vm.envOr("FOOTBALL_RESULT_FINALITY_SECONDS", uint256(10 minutes)));
         cfg.ticketCount = vm.envOr("FOOTBALL_TICKET_COUNT", uint256(2));
@@ -177,7 +181,7 @@ contract WorldCupFootballCanaryV13 is Script {
         cfg.firstTicketId = cfg.sportsHub.nextTicketId();
         cfg.lockTime = uint64(block.timestamp + lockOffset);
         cfg.startsAt = uint64(block.timestamp + lockOffset + startOffset);
-        cfg.expiresAt = uint64(block.timestamp + lockOffset - 30 seconds);
+        cfg.expiresAt = uint64(vm.envOr("FOOTBALL_ODDS_EXPIRES_AT", uint256(block.timestamp + lockOffset - 30 seconds)));
         cfg.marketKey = vm.envOr("FOOTBALL_MARKET_KEY", keccak256("FIFA_WORLD_CUP_2026_MEXICO_SOUTH_AFRICA_1X2"));
         cfg.rulebookHash = vm.envOr("FOOTBALL_RULEBOOK_HASH", keccak256("FIFA_WORLD_CUP_2026_1X2_RULEBOOK_V1"));
         cfg.resultSourceHash =
@@ -195,6 +199,11 @@ contract WorldCupFootballCanaryV13 is Script {
         cfg.firstTicketId = vm.envUint("FOOTBALL_FIRST_TICKET_ID");
         cfg.ticketCount = vm.envOr("FOOTBALL_TICKET_COUNT", uint256(2));
         cfg.winningOutcomeId = uint32(vm.envOr("FOOTBALL_WINNING_OUTCOME_ID", uint256(DEFAULT_WINNING_OUTCOME_ID)));
+        cfg.losingOutcomeId = uint32(vm.envOr("FOOTBALL_LOSING_OUTCOME_ID", uint256(DEFAULT_LOSING_OUTCOME_ID)));
+        cfg.stake = vm.envOr("FOOTBALL_STAKE", uint256(100_000));
+        cfg.oddsWad = vm.envOr("FOOTBALL_ODDS_WAD", uint256(18 * WAD / 10));
+        _readOutcomeOdds(cfg);
+        cfg.maxPayout = vm.envOr("FOOTBALL_MAX_PAYOUT", uint256(300_000));
         cfg.resultSourceHash =
             vm.envOr("FOOTBALL_RESULT_SOURCE_HASH", keccak256("FIFA_WORLD_CUP_2026_OPENING_MATCH_RESULT_SOURCE"));
         cfg.evidenceHash = vm.envOr("FOOTBALL_EVIDENCE_HASH", keccak256("FIFA_WORLD_CUP_2026_OPENING_MATCH_EVIDENCE"));
@@ -224,6 +233,12 @@ contract WorldCupFootballCanaryV13 is Script {
         cfg.resultReporter = vm.addr(cfg.resultReporterPrivateKey);
     }
 
+    function _readOutcomeOdds(FootballConfig memory cfg) internal view {
+        cfg.homeOddsWad = vm.envOr("FOOTBALL_HOME_ODDS_WAD", cfg.oddsWad);
+        cfg.drawOddsWad = vm.envOr("FOOTBALL_DRAW_ODDS_WAD", cfg.oddsWad);
+        cfg.awayOddsWad = vm.envOr("FOOTBALL_AWAY_ODDS_WAD", cfg.oddsWad);
+    }
+
     function _readSnapshot(FootballConfig memory cfg) internal view {
         string memory snapshotPath = vm.envOr("SNAPSHOT_PATH", string("deployments/latest-v13.json"));
         string memory json = vm.readFile(snapshotPath);
@@ -242,8 +257,17 @@ contract WorldCupFootballCanaryV13 is Script {
         }
         if (cfg.winningOutcomeId == cfg.losingOutcomeId && cfg.ticketCount > 1) revert("duplicate outcome ids");
         if (cfg.ticketCount == 0 || cfg.ticketCount > 2) revert("bad ticket count");
-        if (cfg.stake == 0 || cfg.oddsWad == 0 || cfg.maxPayout == 0) revert("bad stake or odds");
+        if (
+            cfg.stake == 0 || cfg.oddsWad == 0 || cfg.homeOddsWad == 0 || cfg.drawOddsWad == 0 || cfg.awayOddsWad == 0
+                || cfg.maxPayout == 0
+        ) {
+            revert("bad stake or odds");
+        }
         if (cfg.expiresAt <= block.timestamp) revert("bad expiry");
+        if (_expectedPayout(cfg, cfg.winningOutcomeId) > cfg.maxPayout) revert("winning payout above cap");
+        if (cfg.ticketCount > 1 && _expectedPayout(cfg, cfg.losingOutcomeId) > cfg.maxPayout) {
+            revert("losing payout above cap");
+        }
         if (!cfg.sportsHub.oddsSigner(cfg.oddsSigner)) revert("odds signer not allowed");
         if (!cfg.sportsHub.resultReporter(cfg.resultReporter)) revert("result reporter not allowed");
         if (cfg.sportsHub.resultReporterThreshold() != 1) revert("football canary supports reporter threshold 1");
@@ -275,9 +299,16 @@ contract WorldCupFootballCanaryV13 is Script {
         console2.log("  losingOutcomeId", cfg.losingOutcomeId);
         console2.log("  stake", cfg.stake);
         console2.log("  oddsWad", cfg.oddsWad);
-        console2.log("  expectedPayoutEach", cfg.stake * cfg.oddsWad / WAD);
+        console2.log("  homeOddsWad", cfg.homeOddsWad);
+        console2.log("  drawOddsWad", cfg.drawOddsWad);
+        console2.log("  awayOddsWad", cfg.awayOddsWad);
+        console2.log("  expectedWinningPayout", _expectedPayout(cfg, cfg.winningOutcomeId));
+        if (cfg.ticketCount > 1) {
+            console2.log("  expectedLosingPayout", _expectedPayout(cfg, cfg.losingOutcomeId));
+        }
         console2.log("  lockTime", cfg.lockTime);
         console2.log("  startsAt", cfg.startsAt);
+        console2.log("  expiresAt", cfg.expiresAt);
         if (cfg.observedAt != 0) {
             console2.log("  observedAt", cfg.observedAt);
         }
@@ -404,7 +435,7 @@ contract WorldCupFootballCanaryV13 is Script {
             marketId: cfg.marketId,
             outcomeId: outcomeId,
             marketVersion: market.version,
-            oddsWad: cfg.oddsWad,
+            oddsWad: _oddsWadForOutcome(cfg, outcomeId),
             maxStake: cfg.stake,
             maxPayout: cfg.maxPayout,
             expiresAt: cfg.expiresAt,
@@ -459,5 +490,16 @@ contract WorldCupFootballCanaryV13 is Script {
         }
         if (cfg.observedAt < cfg.startsAt || cfg.observedAt > block.timestamp) revert("bad result observedAt");
         return cfg.observedAt;
+    }
+
+    function _expectedPayout(FootballConfig memory cfg, uint32 outcomeId) internal pure returns (uint256) {
+        return cfg.stake * _oddsWadForOutcome(cfg, outcomeId) / WAD;
+    }
+
+    function _oddsWadForOutcome(FootballConfig memory cfg, uint32 outcomeId) internal pure returns (uint256) {
+        if (outcomeId == 0) return cfg.homeOddsWad;
+        if (outcomeId == 1) return cfg.drawOddsWad;
+        if (outcomeId == 2) return cfg.awayOddsWad;
+        revert("bad football outcome");
     }
 }

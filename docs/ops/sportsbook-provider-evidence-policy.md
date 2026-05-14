@@ -53,7 +53,8 @@ separate sidecar or proposal summary after the evidence preimage is hashed.
 
 The first concrete provider ingestion path is documented in
 `docs/ops/sportsbook-provider-the-odds-api.md` and implemented by
-`script/ops/sports_provider_evidence.py`. It maps a completed The Odds API score response into
+`script/ops/sports_provider_odds.py` plus `script/ops/sports_provider_evidence.py`. It maps The Odds
+API `h2h` odds into per-outcome SportsHub odds snapshots, and maps completed score responses into
 canonical `resultSourceHash` and `evidenceHash` values for the existing SportsHub reporter path.
 
 ## Market Rulebook Requirements
@@ -92,6 +93,23 @@ For The Odds API football 1X2 ingestion, `script/ops/sports_provider_evidence.py
 result submission. The generated `result-proposal.env` can be sourced by the football canary so
 `FOOTBALL_RESULT_OBSERVED_AT`, `FOOTBALL_RESULT_SOURCE_HASH`, and `FOOTBALL_EVIDENCE_HASH` all come
 from the same provider payload.
+
+## Odds Evidence Requirements
+
+Before signing odds snapshots, operators must preserve:
+
+- provider name and account/feed identifier;
+- provider event identifier and internal `eventId`/`marketId`;
+- bookmaker key and provider market key;
+- raw provider payload or immutable archive link;
+- canonical `oddsSourceHash`;
+- generated `FOOTBALL_HOME_ODDS_WAD`, `FOOTBALL_DRAW_ODDS_WAD`, and `FOOTBALL_AWAY_ODDS_WAD`;
+- `FOOTBALL_ODDS_EXPIRES_AT` and the intended short-lived quote window;
+- the signer-set hash and signer identity used for accepted tickets.
+
+For The Odds API football 1X2 ingestion, `script/ops/sports_provider_odds.py` must be run before odds
+signing. The generated `odds-snapshot.env` can be sourced by the football canary so every ticket uses
+the provider-derived odds for its selected outcome.
 
 No result should be proposed if the winning outcome cannot be reproduced from the published rulebook
 and preserved source material.

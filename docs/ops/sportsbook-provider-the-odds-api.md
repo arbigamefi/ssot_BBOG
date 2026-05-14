@@ -1,30 +1,44 @@
 # The Odds API Provider Ingestion
 
-Status: candidate SportsHub result provider integration. This file documents how to turn a real
-provider score response into the hashes accepted by `SportsHub.proposeResult(...)`. It does not approve
-mainnet sportsbook risk-in by itself.
+Status: candidate SportsHub odds and result provider integration. This file documents how to turn real
+provider odds and score responses into the values accepted by `SportsHub.placeTicket(...)` and
+`SportsHub.proposeResult(...)`. It does not approve mainnet sportsbook risk-in by itself.
 
 ## Scope
 
 The first integration is deliberately narrow:
 
-- provider: The Odds API scores endpoint;
+- provider: The Odds API odds and scores endpoints;
 - market type: pre-match football 1X2;
+- odds state: provider `h2h` prices before market lock;
 - result state: completed/final scores only;
-- output: `FOOTBALL_WINNING_OUTCOME_ID`, `FOOTBALL_RESULT_OBSERVED_AT`,
+- odds output: `FOOTBALL_HOME_ODDS_WAD`, `FOOTBALL_DRAW_ODDS_WAD`,
+  `FOOTBALL_AWAY_ODDS_WAD`, `FOOTBALL_ODDS_EXPIRES_AT`, and `FOOTBALL_ODDS_SOURCE_HASH`;
+- result output: `FOOTBALL_WINNING_OUTCOME_ID`, `FOOTBALL_RESULT_OBSERVED_AT`,
   `FOOTBALL_RESULT_SOURCE_HASH`, and `FOOTBALL_EVIDENCE_HASH`;
 - submission path: existing allowlisted SportsHub result reporter.
 
-The Odds API documents a v4 scores endpoint under `/v4/sports/{sport}/scores/`. The production
-operator must verify account terms, sport coverage, rate limits, and allowed commercial use before a
-public market uses this feed.
+The Odds API documents v4 odds and scores endpoints under `/v4/sports/{sport}/odds/` and
+`/v4/sports/{sport}/scores/`. The production operator must verify account terms, sport coverage, rate
+limits, and allowed commercial use before a public market uses this feed.
 
 ## Architecture
 
 ```text
-The Odds API scores
+The Odds API odds + scores
     |
     v
+script/ops/sports_provider_odds.py
+    |
+    +-- raw-odds-response.json
+    +-- raw-odds-event.json
+    +-- odds-source.json       -> oddsSourceHash
+    +-- odds-snapshot.json     -> home/draw/away oddsWad
+    +-- odds-snapshot.env      -> SportsHub canary odds env
+    |
+    v
+odds signer -> SportsHub.placeTicket
+
 script/ops/sports_provider_evidence.py
     |
     +-- raw-provider-response.json
@@ -42,30 +56,91 @@ The tool hashes canonical JSON with `cast keccak`, matching the repo policy in
 
 ## Deterministic Fixture Check
 
-Run:
+Run both provider fixture checks:
 
 ```bash
+make sports-provider-odds-v13
 make sports-provider-evidence-v13
 ```
 
-This uses `test/fixtures/sports/the-odds-api-football-completed-score.json` and proves the adapter
-logic without a provider API key. The fixture resolves Mexico 2-1 South Africa to outcome `0`.
+`make sports-provider-odds-v13` uses
+`test/fixtures/sports/the-odds-api-football-h2h-odds.json` and proves that provider `h2h` prices map
+to SportsHub `home/draw/away` outcome odds. `make sports-provider-evidence-v13` uses
+`test/fixtures/sports/the-odds-api-football-completed-score.json` and proves result evidence
+generation. The score fixture resolves Mexico 2-1 South Africa to outcome `0`.
+
+## Odds Ingestion
+
+For football 1X2, The Odds API `h2h` market maps to:
+
+- home team -> SportsHub outcome `0`;
+- draw -> SportsHub outcome `1`;
+- away team -> SportsHub outcome `2`.
+
+The generated odds env includes:
+
+```bash
+FOOTBALL_MARKET_KEY=0x...
+FOOTBALL_RULEBOOK_HASH=0x...
+FOOTBALL_ODDS_EXPIRES_AT=<unix-seconds>
+FOOTBALL_HOME_ODDS_WAD=<decimal-odds * 1e18>
+FOOTBALL_DRAW_ODDS_WAD=<decimal-odds * 1e18>
+FOOTBALL_AWAY_ODDS_WAD=<decimal-odds * 1e18>
+FOOTBALL_MAX_PAYOUT=<approved payout cap for these odds>
+FOOTBALL_REQUIRED_MAX_PAYOUT=<minimum payout cap required by the provider odds>
+FOOTBALL_ODDS_SOURCE_HASH=0x...
+```
+
+`WorldCupFootballCanaryV13` accepts the per-outcome odds env and signs each ticket with the odds for
+that ticket's selected outcome. This keeps the market odds dynamic before lock while preserving fixed
+odds for every accepted ticket.
+
+For deterministic replay, set `SPORTS_ODDS_GENERATED_AT` or pass `--generated-at` when regenerating a
+fixture or archived market snapshot. Live runs can omit it and use the local generation timestamp.
+
+The odds tool fails if `FOOTBALL_MAX_PAYOUT` / `--max-payout-raw` is below the payout implied by the
+highest provider odds for the configured stake. Operators must raise the cap explicitly from an
+approved bankroll/risk memo rather than silently accepting provider prices that exceed risk limits.
 
 ## Live Smoke Evidence
 
-The first live provider smoke is recorded in
+The first live provider odds smoke is recorded in
+`docs/deploy/the-odds-api-football-odds-smoke-2026-05-14.md`. It used an upcoming MLS event from The
+Odds API and generated the per-outcome `FOOTBALL_*_ODDS_WAD`, `FOOTBALL_ODDS_EXPIRES_AT`, and
+`FOOTBALL_ODDS_SOURCE_HASH` values needed by the SportsHub football canary.
+
+The first live provider result smoke is recorded in
 `docs/deploy/the-odds-api-football-smoke-2026-05-14.md`. It used a completed MLS event from The Odds
 API and generated the `resultSourceHash`, `evidenceHash`, and `FOOTBALL_RESULT_OBSERVED_AT` values
 needed by the SportsHub football canary.
 
 ## Live Provider Run
 
-Set the provider and SportsHub context:
+Set the provider and SportsHub context for odds:
 
 ```bash
 export THE_ODDS_API_KEY=<secret>
 export SPORTS_PROVIDER_SPORT_KEY=soccer_fifa_world_cup
 export SPORTS_PROVIDER_EVENT_ID=<the-odds-api-event-id>
+export SPORTS_ODDS_SNAPSHOT_DIR=tmp/sports-provider-odds-live
+export SPORTS_BOOKMAKER_KEY=<optional-bookmaker-key>
+
+export CHAIN_ID=84532
+export SPORTS_HUB=<sports-hub-address>
+export FOOTBALL_MARKET_ID=<sports-hub-market-id>
+export FOOTBALL_EVENT_ID=<sports-hub-event-id>
+export FOOTBALL_POOL_ID=<sports-pool-id>
+```
+
+Then run:
+
+```bash
+python3 script/ops/sports_provider_odds.py
+```
+
+Set the provider and SportsHub context for final score/result evidence:
+
+```bash
 export SPORTS_PROVIDER_EVIDENCE_DIR=tmp/sports-provider-evidence-live
 
 export CHAIN_ID=84532
@@ -91,9 +166,13 @@ file.
 
 ## Submitting The Result
 
-After the provider tool writes `result-proposal.env`, review the generated JSON files and load the env:
+After the provider tools write their env files, review the generated JSON files and load the env:
 
 ```bash
+set -a
+source tmp/sports-provider-odds-live/odds-snapshot.env
+set +a
+
 set -a
 source tmp/sports-provider-evidence-live/result-proposal.env
 set +a
@@ -119,6 +198,7 @@ Do not submit a public-money result if:
 - the provider event is not completed;
 - the provider event id does not map to the SportsHub market rulebook;
 - home/draw/away outcome ids differ from the market rulebook;
+- provider `h2h` odds do not contain home, draw, and away outcomes;
 - `result-source.json` or `result-evidence.json` is not archived;
 - the generated env file is edited by hand without regenerating hashes;
 - provider terms, commercial use, or coverage for the sport/league are not approved.
