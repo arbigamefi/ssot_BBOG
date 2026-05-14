@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "sportsbook.frontend-access.v1",
+  "status": "draft",
+  "chainId": 84532,
+  "sportsHub": "0x2DB4Ba326C2C3e5830b0da10F0C52B4097f9fa4b",
+  "frontend": {
+    "publicSportsbookEnabled": false,
+    "enablementFlag": "NEXT_PUBLIC_SPORTSBOOK_ENABLED",
+    "defaultState": "off",
+    "unknownJurisdictionBehavior": "block-risk-in",
+    "restrictedJurisdictionBehavior": "block-risk-in"
+  },
+  "jurisdictionDecision": {
+    "targetJurisdictions": [
+      "TBD"
+    ],
+    "restrictedJurisdictions": [
+      "TBD"
+    ],
+    "operatorLicensesOrExemptions": [
+      "TBD"
+    ]
+  },
+  "accessControls": {
+    "minimumAge": 18,
+    "agePolicy": "TBD",
+    "kycPolicy": "TBD",
+    "sanctionsPolicy": "TBD",
+    "geoRestrictionProvider": "TBD",
+    "vpnProxyPolicy": "TBD",
+    "responsibleGamingControls": [
+      "TBD"
+    ]
+  },
+  "contentLinks": {
+    "termsUri": "TBD",
+    "privacyUri": "TBD",
+    "riskDisclaimerUri": "TBD",
+    "rulebookUri": "docs/ops/templates/sportsbook-rulebook.pre-match-moneyline.example.json"
+  },
+  "technicalControls": {
+    "riskInDisabledWhenUnapproved": true,
+    "sportsbookEntryHiddenWhenDisabled": true,
+    "serverSideOrWalletGateRequired": true,
+    "auditLogRequired": true
+  },
+  "approvals": {
+    "legalApproval": "TBD",
+    "complianceApproval": "TBD",
+    "frontendApproval": "TBD",
+    "operationsApproval": "TBD",
+    "approvedAt": "TBD",
+    "evidenceUri": "TBD"
+  }
+}

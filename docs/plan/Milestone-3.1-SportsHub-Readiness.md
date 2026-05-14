@@ -60,6 +60,9 @@ As of `master` through PR #15:
 - The monitoring/keeper coverage draft is tracked at `docs/ops/sportsbook-ops-coverage.md`; the local
   memo validator is `make sports-ops-coverage-check-v13`, but no production operator coverage is
   approved.
+- The frontend access draft is tracked at `docs/ops/sportsbook-frontend-access.md`; the local memo
+  validator is `make sports-frontend-access-check-v13`, but no jurisdiction or public sportsbook
+  frontend access is approved.
 
 ## Go/No-Go Gates
 
@@ -205,6 +208,8 @@ No-go conditions:
   NO-GO to GO with approval records for every open production gate.
 - Validate the approved role-custody memo with
   `REQUIRE_APPROVED=1 make sports-role-custody-check-v13 ROLE_CUSTODY_FILE=<approved-role-custody.json>`.
+- Validate the approved frontend-access memo with
+  `REQUIRE_APPROVED=1 make sports-frontend-access-check-v13 FRONTEND_ACCESS_FILE=<approved-frontend-access.json>`.
 - Validate the approved bankroll memo with
   `REQUIRE_APPROVED=1 make sports-bankroll-caps-check-v13 BANKROLL_CAPS_FILE=<approved-memo.json>`.
 - Validate the approved ops coverage memo with

@@ -73,6 +73,9 @@
   `docs/deploy/worldcup-football-mvp-canary-2026.md`.
 - [ ] Before any public sportsbook frontend, approve `docs/ops/sportsbook-production-controls.md`
   sections for managed key custody, provider evidence, and public frontend controls.
+- [ ] For SportsHub frontend access, run
+  `REQUIRE_APPROVED=1 make sports-frontend-access-check-v13 FRONTEND_ACCESS_FILE=<approved-frontend-access.json>`
+  before enabling public sportsbook entrypoints or third-party frontend risk-in.
 - [ ] Before any SportsHub mainnet canary or public risk-in, run `make sports-phase2-gonogo-v13`
   and confirm the Phase 2 packet records GO with every production approval linked.
 - [ ] For SportsHub production roles, run

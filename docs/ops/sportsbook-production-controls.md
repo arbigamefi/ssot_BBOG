@@ -114,6 +114,11 @@ No-go:
 The current repo has no approved public sportsbook frontend launch. Any public entrypoint must be
 treated as a separate go/no-go decision.
 
+The repo-side access policy and validator are defined in
+[`sportsbook-frontend-access.md`](sportsbook-frontend-access.md). The approval memo should be based
+on `docs/ops/templates/sportsbook-frontend-access.example.json` and checked with
+`make sports-frontend-access-check-v13`.
+
 Before enabling a public sportsbook frontend:
 
 - legal/compliance must approve target jurisdictions, restricted jurisdictions, age policy, KYC policy,
@@ -131,6 +136,8 @@ No-go:
 - the frontend exposes public sportsbook risk-in before legal/compliance approval;
 - a public UI lets users place Sports tickets while provider evidence, rulebook, or role status is
   unknown.
+- `REQUIRE_APPROVED=1 make sports-frontend-access-check-v13` fails for the approved frontend-access
+  memo.
 
 ## Monitoring And Keeper Coverage
 

@@ -110,6 +110,10 @@ Covered:
   `make sports-provider-evidence-v13`
 - Provider-driven football E2E rehearsal:
   `ENV_FILE=.env ROLE_ENV_FILE=.env.sports-roles.local make sports-provider-e2e-v13`
+- Frontend access policy draft:
+  `docs/ops/sportsbook-frontend-access.md`
+- Example frontend access approval memo:
+  `docs/ops/templates/sportsbook-frontend-access.example.json`
 - Example pre-match moneyline rulebook template:
   `docs/ops/templates/sportsbook-rulebook.pre-match-moneyline.example.json`
 - Example result evidence bundle template:
@@ -131,8 +135,8 @@ These documents and gates define the reproducibility standard for `rulebookHash`
 `resultSourceHash`, `evidenceHash`, `challengeReasonHash`, and `arbitrationDecisionHash`, plus a first
 concrete The Odds API odds/score ingestion path and provider-driven local E2E rehearsal. They do not
 approve a provider or evidence-storage vendor. They also define role-custody, bankroll/risk-cap, and
-monitoring/keeper memo shapes, but do not approve production keys, production bankroll, or operator
-coverage.
+monitoring/keeper memo shapes and the frontend-access approval shape, but do not approve production
+keys, production bankroll, operator coverage, or public sportsbook frontend access.
 
 ## Open No-Go Items
 
@@ -140,7 +144,7 @@ coverage.
 |---|---:|---|
 | Managed key custody | NO-GO | Approve a `sportsbook.role-custody.v1` memo for odds signer, result reporter, challenger, arbitrator, keeper, and governance keys; it must pass `REQUIRE_APPROVED=1 make sports-role-custody-check-v13`. |
 | Provider and evidence policy | NO-GO | Approve a `sportsbook.provider-evidence-approval.v1` memo for provider choice, fallback rules, evidence storage, and rulebook/result procedures; it must pass `REQUIRE_APPROVED=1 make sports-provider-policy-check-v13`. |
-| Jurisdiction and frontend access | NO-GO | Legal/compliance must approve jurisdictions, restricted regions, age policy, KYC/sanctions posture, responsible-gaming controls, and frontend gating. |
+| Jurisdiction and frontend access | NO-GO | Approve a `sportsbook.frontend-access.v1` memo for jurisdictions, restricted regions, age policy, KYC/sanctions posture, responsible-gaming controls, and frontend gating; it must pass `REQUIRE_APPROVED=1 make sports-frontend-access-check-v13`. |
 | Bankroll sizing | NO-GO | Approve a `sportsbook.bankroll-risk-caps.v1` memo with initial bankroll, loss tolerance, max reserved exposure, and manual supervision limits in raw asset units. |
 | Final risk caps | NO-GO | Mainnet `SPORTS_MAX_*` values must match the approved bankroll memo and pass `REQUIRE_APPROVED=1 make sports-bankroll-caps-check-v13`. |
 | Monitoring and alerts | NO-GO | Approve a `sportsbook.ops-coverage.v1` memo proving Sports G1-G7 alerts route to named operators with escalation coverage during market windows. |
@@ -155,7 +159,7 @@ To change this packet from NO-GO to GO, add the concrete approval records or lin
 1. Managed key custody approval.
 2. Approved provider/evidence memo.
 3. Evidence storage location and operator procedure from that memo.
-4. Jurisdiction and frontend access decision.
+4. Approved jurisdiction and frontend-access memo.
 5. Bankroll sizing memo.
 6. Final Sports risk caps in raw asset units.
 7. Monitoring/alert routing ownership.
