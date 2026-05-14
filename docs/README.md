@@ -21,7 +21,6 @@
 - `docs/ARBIGAMEFI-EXECUTIVE-BRIEF.zh-CN.md` — short outward-facing executive brief for partners, investors, and contributors
 - `docs/WHITEPAPER-PUBLISHING-STANDARD.zh-CN.md` — publishing standard for naming, versioning, and scope separation across the whitepaper set
 
-
 This repository is designed to be **auditable by construction**. The documentation is part of the SSOT.
 
 ## Constitution & invariants
@@ -39,6 +38,10 @@ This repository is designed to be **auditable by construction**. The documentati
 
 - `docs/architecture/overview.md` — module boundaries, data flows, dependency direction
 - `docs/adr/README.md` — ADR index + templates (why the system is designed this way)
+
+## Design system
+
+- `docs/design/north-star.md` — frontend design-system SSOT, route taxonomy, and phased migration plan
 
 ## Research
 
