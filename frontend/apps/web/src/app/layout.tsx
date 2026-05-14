@@ -36,8 +36,9 @@ export const metadata: Metadata = {
 };
 
 /**
- * Inline script to apply .dark class before first paint, preventing FOUC.
- * Reads `ssot-theme` from localStorage and applies `.dark` to <html> when needed.
+ * Inline script to apply theme markers before first paint, preventing FOUC.
+ * Reads `ssot-theme` from localStorage and applies `.dark` / `.light` plus
+ * `data-theme` to <html> when needed.
  * Must be a raw string — no React, no imports — runs synchronously in <head>.
  */
 const THEME_INIT_SCRIPT = `
@@ -45,7 +46,10 @@ const THEME_INIT_SCRIPT = `
   try {
     var t = localStorage.getItem("ssot-theme");
     var dark = t === "dark" || (t !== "light" && matchMedia("(prefers-color-scheme:dark)").matches);
-    if (dark) document.documentElement.classList.add("dark");
+    var theme = dark ? "dark" : "light";
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.classList.toggle("dark", dark);
+    document.documentElement.classList.toggle("light", !dark);
   } catch(e) {}
 })();
 `;

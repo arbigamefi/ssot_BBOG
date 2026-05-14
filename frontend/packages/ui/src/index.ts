@@ -1,8 +1,8 @@
 export * from "./lib/utils";
 
-// theme token types
-export { THEME_TOKEN_NAMES } from "./themes";
-export type { ThemeToken } from "./themes";
+// design token names
+export { THEME_TOKEN_NAMES } from "./tokens";
+export type { ThemeToken } from "./tokens";
 
 // ui primitives
 export * from "./components/ui/button";

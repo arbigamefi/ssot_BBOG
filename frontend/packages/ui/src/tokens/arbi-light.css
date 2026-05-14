@@ -1,0 +1,47 @@
+:root.light,
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --surface-0: 220 40% 98%;
+  --surface-1: 0 0% 100%;
+  --surface-2: 220 35% 96%;
+  --surface-3: 220 28% 92%;
+
+  --fg: 220 39% 5%;
+  --fg-muted: 220 14% 38%;
+  --fg-subtle: 220 12% 52%;
+  --fg-inverse: 210 40% 98%;
+
+  --border: 220 18% 84%;
+  --border-soft: 220 16% 90%;
+  --input: 220 18% 84%;
+  --ring: 255 92% 58%;
+
+  --brand: 255 82% 58%;
+  --brand-hover: 255 82% 52%;
+  --brand-active: 255 76% 45%;
+
+  --accent: 170 72% 36%;
+  --accent-hover: 170 72% 31%;
+
+  --success: 145 58% 37%;
+  --warn: 38 85% 43%;
+  --danger: 0 72% 49%;
+  --info: 205 78% 45%;
+
+  --background: var(--surface-0);
+  --foreground: var(--fg);
+  --card: var(--surface-1);
+  --card-foreground: var(--fg);
+  --popover: var(--surface-1);
+  --popover-foreground: var(--fg);
+  --primary: var(--brand);
+  --primary-foreground: var(--fg-inverse);
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--fg);
+  --muted: var(--surface-2);
+  --muted-foreground: var(--fg-muted);
+  --accent-foreground: var(--fg-inverse);
+  --destructive: var(--danger);
+  --destructive-foreground: var(--fg-inverse);
+}

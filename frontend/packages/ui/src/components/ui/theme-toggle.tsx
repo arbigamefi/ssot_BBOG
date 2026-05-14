@@ -32,12 +32,14 @@ function resolveAppearance(theme: Theme): "light" | "dark" {
 }
 
 /**
- * Apply the `.dark` class to `<html>` and persist the preference.
+ * Apply the effective theme marker to `<html>` and persist the preference.
  */
 function applyTheme(theme: Theme) {
   const appearance = resolveAppearance(theme);
   const root = document.documentElement;
   root.classList.toggle("dark", appearance === "dark");
+  root.classList.toggle("light", appearance === "light");
+  root.dataset.theme = appearance;
   try {
     localStorage.setItem(STORAGE_KEY, theme);
   } catch {
@@ -154,7 +156,7 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
         "inline-flex items-center justify-center rounded-md p-2 text-sm transition-colors",
         "hover:bg-accent hover:text-accent-foreground",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        className,
+        className
       )}
       onClick={cycleTheme}
       aria-label={ariaLabel}
