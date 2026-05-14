@@ -72,6 +72,14 @@ async function readJson(p) {
   return JSON.parse(raw);
 }
 
+async function firstExistingPath(baseDir, candidates) {
+  for (const candidate of candidates) {
+    const p = path.join(baseDir, candidate);
+    if (await pathExists(p)) return p;
+  }
+  return path.join(baseDir, candidates[0]);
+}
+
 async function copyFile(src, dst) {
   await ensureDir(path.dirname(dst));
   await fs.copyFile(src, dst);
@@ -271,7 +279,11 @@ async function writeAbiReleaseIndex(chainId, abiIndex, contractNames) {
   // Root release/index.ts is generated separately by scanning all chains.
 
   // keep abiIndex json for audit
-  await fs.writeFile(path.join(chainDir, "index.json"), JSON.stringify(abiIndex, null, 2), "utf8");
+  await fs.writeFile(
+    path.join(chainDir, "index.json"),
+    `${JSON.stringify(abiIndex, null, 2)}\n`,
+    "utf8"
+  );
 }
 
 async function writeAbiRootIndex() {
@@ -313,10 +325,22 @@ async function main() {
   const deploymentsDir = path.join(bundleRoot, "deployments");
   const abisDir = path.join(bundleRoot, "abis");
 
-  const manifestPath = path.join(deploymentsDir, "frontend-manifest-latest.json");
-  const vectorsPath = path.join(deploymentsDir, "golden-vectors-latest.json");
-  const releaseLockPath = path.join(deploymentsDir, "release-latest.json");
-  const latestSnapshotPath = path.join(deploymentsDir, "latest.json");
+  const manifestPath = await firstExistingPath(deploymentsDir, [
+    "frontend-manifest-latest.json",
+    "frontend-manifest-latest-v13.json"
+  ]);
+  const vectorsPath = await firstExistingPath(deploymentsDir, [
+    "golden-vectors-latest.json",
+    "golden-vectors-latest-v13.json"
+  ]);
+  const releaseLockPath = await firstExistingPath(deploymentsDir, [
+    "release-latest.json",
+    "release-latest-v13.json"
+  ]);
+  const latestSnapshotPath = await firstExistingPath(deploymentsDir, [
+    "latest.json",
+    "latest-v13.json"
+  ]);
   const abiIndexPath = path.join(abisDir, "index.json");
 
   for (const p of [
@@ -351,16 +375,17 @@ async function main() {
     `chain-${chainId}`,
     `${blockNumber}-${shortDigest(digest)}`
   );
+  await fs.rm(fixtureDir, { recursive: true, force: true });
   await ensureDir(fixtureDir);
 
   console.log(`[ssot:sync] chainId=${chainId} block=${blockNumber} digest=${digest}`);
 
   // Mirror raw inputs for audit
-  await copyFile(manifestPath, path.join(fixtureDir, "frontend-manifest-latest.json"));
-  await copyFile(vectorsPath, path.join(fixtureDir, "golden-vectors-latest.json"));
-  await copyFile(releaseLockPath, path.join(fixtureDir, "release-latest.json"));
+  await copyFile(manifestPath, path.join(fixtureDir, path.basename(manifestPath)));
+  await copyFile(vectorsPath, path.join(fixtureDir, path.basename(vectorsPath)));
+  await copyFile(releaseLockPath, path.join(fixtureDir, path.basename(releaseLockPath)));
   if (await pathExists(latestSnapshotPath)) {
-    await copyFile(latestSnapshotPath, path.join(fixtureDir, "latest.json"));
+    await copyFile(latestSnapshotPath, path.join(fixtureDir, path.basename(latestSnapshotPath)));
   }
   // Mirror ABI index + ABI files
   await copyFile(abiIndexPath, path.join(fixtureDir, "abi-index.json"));
@@ -395,9 +420,9 @@ async function main() {
       schemaVersion: manifest.schemaVersion,
       generatedAt: manifest.generatedAt,
       bundle: {
-        manifestPath: "deployments/frontend-manifest-latest.json",
-        vectorsPath: "deployments/golden-vectors-latest.json",
-        releaseLockPath: "deployments/release-latest.json",
+        manifestPath: path.posix.join("deployments", path.basename(manifestPath)),
+        vectorsPath: path.posix.join("deployments", path.basename(vectorsPath)),
+        releaseLockPath: path.posix.join("deployments", path.basename(releaseLockPath)),
         abiIndexPath: "abis/index.json"
       },
       releaseLock,
@@ -409,7 +434,7 @@ async function main() {
   const embeddedFile = `chain-${chainId}.json`;
   await fs.writeFile(
     path.join(OUT_EMBEDDED, embeddedFile),
-    JSON.stringify(embedded, null, 2),
+    `${JSON.stringify(embedded, null, 2)}\n`,
     "utf8"
   );
 

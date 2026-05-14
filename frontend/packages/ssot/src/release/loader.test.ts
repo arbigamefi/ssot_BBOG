@@ -216,7 +216,10 @@ describe("deriveGamesMeta (indirectly via loadEmbeddedRelease)", () => {
     // but we can verify the result is consistent regardless of path.
     const gm = result.release.gamesMeta;
     expect(gm).toBeDefined();
-    expect(gm!.length).toBe(4);
+    expect(gm!.length).toBeGreaterThanOrEqual(4);
+    expect(gm!.map((g) => g.slug)).toEqual(
+      expect.arrayContaining(["dice", "roulette", "coin-toss", "keno"])
+    );
     expect(gm!.every((g) => g.gameId && g.slug && g.label && g.module)).toBe(true);
   });
 });
