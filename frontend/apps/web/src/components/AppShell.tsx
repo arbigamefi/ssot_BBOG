@@ -35,6 +35,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isReferral = pathname === "/referral";
   const isAccount = pathname === "/account";
   const isBets = pathname === "/bets" || pathname.startsWith("/bets/");
+  const isOps = pathname === "/ops";
   const isRoom =
     pathname.startsWith("/games/") ||
     ["/roulette", "/dice", "/cointoss", "/keno"].some((p) => pathname.startsWith(p));
@@ -46,7 +47,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div
       className={cn(
         "min-h-screen bg-surface-0 text-fg",
-        (isHome || isEarn || isClaims || isReferral || isAccount || isBets) && "theme-dark",
+        (isHome || isEarn || isClaims || isReferral || isAccount || isBets || isOps) &&
+          "theme-dark",
         isRoom ? "overflow-x-hidden selection:bg-brand/30" : "selection:bg-brand/20"
       )}
     >
