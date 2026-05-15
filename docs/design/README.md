@@ -41,6 +41,7 @@ Read top-down. Lower-numbered documents constrain higher-numbered ones.
 
 - [`north-star.md`](./north-star.md) — Visual-language summary (entry point for cross-team readers)
 - [`frontend-rewrite-blueprint.md`](./frontend-rewrite-blueprint.md) — Execution playbook (rebuild order, deletion ledger, cutover)
+- [`frontend-implementation-roadmap.md`](./frontend-implementation-roadmap.md) — Current branch gap audit and phase-by-phase execution order
 - [`frontend-kill-list.md`](./frontend-kill-list.md) — Physical keep / rewrite / delete inventory
 
 ### Decision Records

@@ -365,6 +365,7 @@ expand v2 with content that should live in a numbered SSOT doc.
 - Page Blueprints [`04-page-blueprints.md`](./04-page-blueprints.md)
 - Tokens [`10-design-tokens.md`](./10-design-tokens.md)
 - Components [`11-component-library.md`](./11-component-library.md)
+- Implementation Roadmap [`frontend-implementation-roadmap.md`](./frontend-implementation-roadmap.md)
 - ADRs [`adr/`](./adr/)
 - Engineering SSOT [`../frontend/INDEX.md`](../frontend/INDEX.md)
 - AI runtime rules [`../../frontend/CLAUDE.md`](../../frontend/CLAUDE.md)
