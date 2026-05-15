@@ -203,6 +203,7 @@ describe("SportsbookMarketDetailPageClient", () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+    vi.unstubAllGlobals();
     state.release = {
       ...state.release,
       sports: {
@@ -281,7 +282,7 @@ describe("SportsbookMarketDetailPageClient", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Plan ticket" }));
 
-    expect(await screen.findByText("Plan ready.")).toBeDefined();
+    expect((await screen.findAllByText("Plan ready.")).length).toBeGreaterThan(0);
     expect(state.sdk.sportsHub.planPlaceTicket).toHaveBeenCalledWith(
       expect.objectContaining({
         chainId: 84532,
@@ -289,6 +290,67 @@ describe("SportsbookMarketDetailPageClient", () => {
         outcomeId: 0,
         stake: 1_000_000n,
         signature: `0x${"11".repeat(65)}`
+      })
+    );
+  });
+
+  it("fetches provider-backed signed odds into the ticket form", async () => {
+    state.sportsbook = {
+      enabled: true,
+      frontendEnabled: true,
+      hasSportsRelease: true,
+      enablementFlag: "NEXT_PUBLIC_SPORTSBOOK_ENABLED"
+    };
+    state.sdk = {
+      account: "0x1111111111111111111111111111111111111111",
+      sportsHub: createSportsHubMock()
+    };
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        provider: {
+          providerEventId: "event-1",
+          bookmakerKey: "draftkings",
+          sportKey: "soccer_usa_mls"
+        },
+        outcome: { name: "Home FC", decimalPrice: "2.1", oddsWad: "2100000000000000000" },
+        stake: "1000000",
+        payout: "2100000",
+        odds: {
+          oddsWad: "2100000000000000000",
+          maxStake: "2000000",
+          maxPayout: "4200000",
+          expiresAt: "1900000000",
+          nonce: "44",
+          riskHash: "0x0707ba776912152fe0028608c2b31e2ac864f24ed79351eaa10ea012303793e6"
+        },
+        oddsTicketHash: "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        signature: `0x${"11".repeat(65)}`
+      })
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    renderWithQueryClient(<SportsbookMarketDetailPageClient marketId="7" />);
+
+    expect(await screen.findByText("Signed odds ticket")).toBeDefined();
+    fireEvent.change(screen.getByLabelText("Provider event id"), { target: { value: "event-1" } });
+    fireEvent.change(screen.getByLabelText("Bookmaker key"), { target: { value: "draftkings" } });
+    fireEvent.change(screen.getByLabelText("Sport key"), { target: { value: "soccer_usa_mls" } });
+    fireEvent.change(screen.getByLabelText("Stake raw units"), { target: { value: "1000000" } });
+    fireEvent.click(screen.getByRole("button", { name: "Fetch signed odds" }));
+
+    expect(await screen.findByText("Signed odds ready: Home FC @ 2.1.")).toBeDefined();
+    expect((screen.getByLabelText("Odds WAD") as HTMLInputElement).value).toBe(
+      "2100000000000000000"
+    );
+    expect((screen.getByLabelText("Odds signature") as HTMLInputElement).value).toBe(
+      `0x${"11".repeat(65)}`
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/sportsbook/odds-snapshot",
+      expect.objectContaining({
+        method: "POST",
+        body: expect.stringContaining('"providerEventId":"event-1"')
       })
     );
   });

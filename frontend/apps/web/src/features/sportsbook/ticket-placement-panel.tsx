@@ -22,6 +22,9 @@ type TicketPlacementStatus = {
 };
 
 type TicketPlacementForm = {
+  providerEventId: string;
+  bookmakerKey: string;
+  sportKey: string;
   outcomeId: string;
   stake: string;
   oddsWad: string;
@@ -34,6 +37,9 @@ type TicketPlacementForm = {
 };
 
 const EMPTY_FORM: TicketPlacementForm = {
+  providerEventId: "",
+  bookmakerKey: "",
+  sportKey: "soccer_fifa_world_cup",
   outcomeId: "0",
   stake: "",
   oddsWad: "",
@@ -43,6 +49,31 @@ const EMPTY_FORM: TicketPlacementForm = {
   nonce: "0",
   riskHash: "",
   signature: ""
+};
+
+type SignedOddsSnapshotResponse = {
+  provider: {
+    providerEventId?: string;
+    bookmakerKey?: string;
+    sportKey?: string;
+  };
+  outcome: {
+    name: string;
+    decimalPrice: string;
+    oddsWad: string;
+  };
+  stake: string;
+  payout: string;
+  odds: {
+    oddsWad: string;
+    maxStake: string;
+    maxPayout: string;
+    expiresAt: string;
+    nonce: string;
+    riskHash: string;
+  };
+  oddsTicketHash: string;
+  signature: string;
 };
 
 function parsePositiveBigInt(value: string, label: string) {
@@ -214,6 +245,63 @@ export function SportsbookTicketPlacementPanel({
     }
   }, [buildPlan]);
 
+  const onFetchProviderOdds = React.useCallback(async () => {
+    if (!sdk?.account) return;
+    try {
+      const outcomeId = parseOutcomeId(form.outcomeId, market);
+      const stake = parsePositiveBigInt(form.stake, "Stake");
+      setStatus({ busy: true, label: "Fetching provider odds..." });
+      const response = await fetch("/api/sportsbook/odds-snapshot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chainId,
+          marketId: market.marketId.toString(),
+          outcomeId,
+          player: sdk.account,
+          stake: stake.toString(),
+          providerEventId: form.providerEventId.trim() || undefined,
+          bookmakerKey: form.bookmakerKey.trim() || undefined,
+          sportKey: form.sportKey.trim() || undefined
+        })
+      });
+      const body = (await response.json()) as
+        | SignedOddsSnapshotResponse
+        | { error?: { message?: string } };
+      if (!response.ok) {
+        throw new Error(
+          ("error" in body && body.error?.message) || "Provider odds request failed."
+        );
+      }
+      const signed = body as SignedOddsSnapshotResponse;
+      setForm((current) => ({
+        ...current,
+        providerEventId: signed.provider.providerEventId ?? current.providerEventId,
+        bookmakerKey: signed.provider.bookmakerKey ?? current.bookmakerKey,
+        sportKey: signed.provider.sportKey ?? current.sportKey,
+        stake: signed.stake,
+        oddsWad: signed.odds.oddsWad,
+        maxStake: signed.odds.maxStake,
+        maxPayout: signed.odds.maxPayout,
+        expiresAt: signed.odds.expiresAt,
+        nonce: signed.odds.nonce,
+        riskHash: signed.odds.riskHash,
+        signature: signed.signature
+      }));
+      setPlan(undefined);
+      setStatus({
+        busy: false,
+        label: `Signed odds ready: ${signed.outcome.name} @ ${signed.outcome.decimalPrice}.`,
+        txHash: signed.oddsTicketHash
+      });
+      toast.success("Signed odds snapshot ready");
+    } catch (error) {
+      const message = formatLookupError(error) ?? "Provider odds request failed.";
+      setStatus({ busy: false, label: "Provider odds failed.", error: message });
+      toast.error(message);
+    }
+  }, [chainId, form, market, sdk?.account]);
+
   const onPlace = React.useCallback(async () => {
     if (!sdk) return;
     try {
@@ -247,7 +335,7 @@ export function SportsbookTicketPlacementPanel({
 
   return (
     <div className="grid gap-5">
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <DetailCell
           label="Gate"
           value={disabled ? "Locked" : "Enabled"}
@@ -260,11 +348,33 @@ export function SportsbookTicketPlacementPanel({
           helper={`Pool ${market.poolId}, ${market.outcomeCount} outcomes`}
           mono={false}
         />
+        <DetailCell label="Status" value={status.label} helper={status.error} mono={false} />
         <DetailCell label="Last tx" value={status.txHash ?? "N/A"} />
       </div>
 
       <div className="rounded-lg border border-border bg-surface-2/70 p-5">
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <Field
+            id="sports-ticket-provider-event"
+            label="Provider event id"
+            value={form.providerEventId}
+            onChange={(value) => update("providerEventId", value)}
+            placeholder="Optional"
+          />
+          <Field
+            id="sports-ticket-bookmaker"
+            label="Bookmaker key"
+            value={form.bookmakerKey}
+            onChange={(value) => update("bookmakerKey", value)}
+            placeholder="Optional"
+          />
+          <Field
+            id="sports-ticket-sport"
+            label="Sport key"
+            value={form.sportKey}
+            onChange={(value) => update("sportKey", value)}
+            placeholder="soccer_fifa_world_cup"
+          />
           <Field
             id="sports-ticket-outcome"
             label="Outcome id"
@@ -335,6 +445,14 @@ export function SportsbookTicketPlacementPanel({
         </div>
 
         <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+          <button
+            type="button"
+            disabled={actionDisabled}
+            onClick={onFetchProviderOdds}
+            className="min-h-11 rounded-md border border-brand/30 bg-brand-soft px-4 text-sm font-black text-brand transition-colors hover:border-brand/50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Fetch signed odds
+          </button>
           <button
             type="button"
             disabled={actionDisabled}
