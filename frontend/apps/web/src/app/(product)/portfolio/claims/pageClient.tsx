@@ -6,7 +6,7 @@ import type { Address } from "@ssot/ssot/sdk";
 import { toast, type TxStatus } from "@ssot/ui";
 
 import { PageTransition } from "../../../../components/PageTransition";
-import { Placeholder } from "../../../../components/Placeholder";
+import { ProductStateCard } from "../../../../components/ProductStateCard";
 import { ClaimsActionPanel } from "../../../../features/portfolio/claims/claims-action-panel";
 import { ClaimsBuckets } from "../../../../features/portfolio/claims/claims-buckets";
 import { ClaimsHero } from "../../../../features/portfolio/claims/claims-hero";
@@ -174,10 +174,9 @@ export function ClaimsPageClient() {
 
   if (!release) {
     return (
-      <Placeholder
+      <ProductStateCard
         title="Claims"
         description={readOnlyReason ?? "No embedded release available."}
-        specPath="docs/design/04-page-blueprints.md#7--portfolioclaims"
       />
     );
   }

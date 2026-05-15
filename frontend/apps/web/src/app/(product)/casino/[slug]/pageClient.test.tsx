@@ -65,8 +65,8 @@ vi.mock("../../../../app-shell/WalletButton", () => ({
   })
 }));
 
-vi.mock("../../../../components/Placeholder", () => ({
-  Placeholder: ({ title, description }: any) => (
+vi.mock("../../../../components/ProductStateCard", () => ({
+  ProductStateCard: ({ title, description }: any) => (
     <div data-testid="placeholder">
       <h2>{title}</h2>
       <p>{description}</p>

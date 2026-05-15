@@ -49,8 +49,8 @@ vi.mock("../../../components/PageTransition", () => ({
   PageTransition: ({ children }: { children: React.ReactNode }) => <div>{children}</div>
 }));
 
-vi.mock("../../../components/Placeholder", () => ({
-  Placeholder: ({ title, description }: any) => (
+vi.mock("../../../components/ProductStateCard", () => ({
+  ProductStateCard: ({ title, description }: any) => (
     <div>
       <h1>{title}</h1>
       <p>{description}</p>

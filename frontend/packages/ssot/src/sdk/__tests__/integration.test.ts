@@ -115,6 +115,92 @@ describe("createSSOTSDK", () => {
     expect(sdk).not.toHaveProperty("hub");
     expect(sdk).toHaveProperty("bank");
     expect(sdk).toHaveProperty("vrfHub");
+    expect(sdk).toHaveProperty("sportsHub");
+  });
+
+  it("reads SportsHub market state through the v1.3 SportsHub address", async () => {
+    pub.readContract.mockResolvedValueOnce({
+      marketId: 7n,
+      eventId: 99n,
+      poolId: 2n,
+      outcomeCount: 3,
+      startsAt: 1_800_000_000n,
+      lockTime: 1_800_003_600n,
+      resultFinalitySeconds: 86_400n,
+      version: 1n,
+      marketKey: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      rulebookHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      state: 2
+    });
+
+    const market = await sdk.sportsHub.getMarket(7n);
+
+    expect(market.marketId).toBe(7n);
+    expect(market.eventId).toBe(99n);
+    expect(market.poolId).toBe(2);
+    expect(market.state).toBe("open");
+    expect(pub.readContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        address: getAddress(TEST_RELEASE.contracts.sportsHub),
+        functionName: "getMarket",
+        args: [7n]
+      })
+    );
+  });
+
+  it("reads SportsHub ticket and result records", async () => {
+    pub.readContract
+      .mockResolvedValueOnce({
+        ticketId: 12n,
+        positionId: 34n,
+        marketId: 7n,
+        eventId: 99n,
+        poolId: 2n,
+        outcomeId: 1,
+        player: ACCOUNT,
+        stake: 1_000_000n,
+        payout: 1_800_000n,
+        reserved: 1_800_000n,
+        oddsSnapshotHash: "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        rulebookHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        acceptedAt: 1_800_000_100n,
+        state: 1
+      })
+      .mockResolvedValueOnce({
+        marketId: 7n,
+        eventId: 99n,
+        poolId: 2n,
+        winningOutcomeId: 1,
+        marketVersion: 1n,
+        resultPayloadHash: "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        resultSourceHash: "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        evidenceHash: "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        rulebookHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        reporterSetHash: "0x9999999999999999999999999999999999999999999999999999999999999999",
+        reporterThreshold: 1,
+        reporterCount: 1,
+        proposer: ACCOUNT,
+        observedAt: 1_800_010_000n,
+        proposedAt: 1_800_010_100n,
+        finalizesAt: 1_800_096_500n,
+        challenged: false,
+        challengeReasonHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
+        challenger: "0x0000000000000000000000000000000000000000",
+        challengedAt: 0n,
+        challengeDecision: 0,
+        arbitrationDecisionHash:
+          "0x0000000000000000000000000000000000000000000000000000000000000000",
+        arbitrator: "0x0000000000000000000000000000000000000000",
+        arbitratedAt: 0n
+      });
+
+    const ticket = await sdk.sportsHub.getTicket(12n);
+    const result = await sdk.sportsHub.getResult(7n);
+
+    expect(ticket.state).toBe("held");
+    expect(ticket.positionId).toBe(34n);
+    expect(result.winningOutcomeId).toBe(1);
+    expect(result.challengeDecision).toBe("none");
   });
 
   it("executes GameHub refund through the v1.3 GameHub address", async () => {

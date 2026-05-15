@@ -9,8 +9,8 @@ vi.mock("../../../ssot/release/ReleaseProvider", () => ({
   useRelease: () => ({ release: state.release, readOnlyReason: state.readOnlyReason })
 }));
 
-vi.mock("../../../components/Placeholder", () => ({
-  Placeholder: ({ title, description }: any) => (
+vi.mock("../../../components/ProductStateCard", () => ({
+  ProductStateCard: ({ title, description }: any) => (
     <div data-testid="placeholder">
       <h2>{title}</h2>
       <p data-testid="placeholder-desc">{description}</p>

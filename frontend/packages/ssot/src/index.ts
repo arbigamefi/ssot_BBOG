@@ -11,6 +11,9 @@ export type {
   DomainBet,
   DomainBankSnapshot,
   DomainBankPosition,
+  DomainSportsMarket,
+  DomainSportsTicket,
+  DomainSportsResult,
   DomainXPBuckets
 } from "./domain";
 
@@ -25,6 +28,7 @@ export type {
   SSOTGameHubAPI,
   SSOTBankAPI,
   SSOTVRFHubAPI,
+  SSOTSportsHubAPI,
   Address,
   Hex
 } from "./sdk";

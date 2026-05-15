@@ -7,7 +7,7 @@ import type { Address } from "@ssot/ssot/sdk";
 import { ErrorCallout, toast, type TxStatus } from "@ssot/ui";
 
 import { PageTransition } from "../../../components/PageTransition";
-import { Placeholder } from "../../../components/Placeholder";
+import { ProductStateCard } from "../../../components/ProductStateCard";
 import { AccountContextCard } from "../../../features/portfolio/overview/account-context-card";
 import { AccountHero } from "../../../features/portfolio/overview/account-hero";
 import { AccountIdentityCard } from "../../../features/portfolio/overview/account-identity-card";
@@ -155,10 +155,9 @@ export function AccountPageClient() {
 
   if (!release) {
     return (
-      <Placeholder
+      <ProductStateCard
         title="Account"
         description={readOnlyReason ?? "No embedded release available."}
-        specPath="docs/design/04-page-blueprints.md#5--portfolio-overview"
       />
     );
   }

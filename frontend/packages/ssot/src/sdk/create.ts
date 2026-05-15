@@ -6,6 +6,9 @@ import type {
   DomainBankSnapshot,
   DomainBet,
   DomainError,
+  DomainSportsMarket,
+  DomainSportsResult,
+  DomainSportsTicket,
   DomainXPBuckets
 } from "../domain";
 import { decodeStakeSpec } from "../encoding/stakeSpec";
@@ -21,6 +24,7 @@ import type {
   SSOTGameHubAPI,
   SSOTBankAPI,
   SSOTVRFHubAPI,
+  SSOTSportsHubAPI,
   Address as AddressT
 } from "./types";
 import { toDomainError } from "./errors";
@@ -64,6 +68,7 @@ export interface SSOTSDK {
   gameHub: SSOTGameHubAPI;
   bank: SSOTBankAPI;
   vrfHub: SSOTVRFHubAPI;
+  sportsHub: SSOTSportsHubAPI;
 }
 
 export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
@@ -128,12 +133,14 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
 
   const gameHubAddress = getAddress(release.contracts.gameHub) as Address;
   const vrfHubAddress = getAddress(release.contracts.vrfHub) as Address;
+  const sportsHubAddress = getAddress(release.contracts.sportsHub) as Address;
 
   // ABI resolution MUST be driven by the synchronized release bundle.
   const {
     GameHubAbi: GAME_HUB_ABI,
     BankAbi: BANK_ABI,
-    VRFHubAbi: VRFHUB_ABI
+    VRFHubAbi: VRFHUB_ABI,
+    SportsHubAbi: SPORTS_HUB_ABI
   } = getReleaseAbis(release.chainId);
 
   const gameHub: SSOTGameHubAPI = {
@@ -1027,7 +1034,93 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
     }
   };
 
-  return { release, account, gameHub, bank, vrfHub };
+  const sportsHub: SSOTSportsHubAPI = {
+    async getNextMarketId(): Promise<bigint> {
+      return (await publicClient.readContract({
+        address: sportsHubAddress,
+        abi: SPORTS_HUB_ABI,
+        functionName: "nextMarketId",
+        args: []
+      })) as bigint;
+    },
+
+    async getNextTicketId(): Promise<bigint> {
+      return (await publicClient.readContract({
+        address: sportsHubAddress,
+        abi: SPORTS_HUB_ABI,
+        functionName: "nextTicketId",
+        args: []
+      })) as bigint;
+    },
+
+    async getMarket(marketId: bigint): Promise<DomainSportsMarket> {
+      const market = (await publicClient.readContract({
+        address: sportsHubAddress,
+        abi: SPORTS_HUB_ABI,
+        functionName: "getMarket",
+        args: [marketId]
+      })) as any;
+      return mapSportsMarket(market);
+    },
+
+    async getTicket(ticketId: bigint): Promise<DomainSportsTicket> {
+      const ticket = (await publicClient.readContract({
+        address: sportsHubAddress,
+        abi: SPORTS_HUB_ABI,
+        functionName: "getTicket",
+        args: [ticketId]
+      })) as any;
+      return mapSportsTicket(ticket);
+    },
+
+    async getResult(marketId: bigint): Promise<DomainSportsResult> {
+      const result = (await publicClient.readContract({
+        address: sportsHubAddress,
+        abi: SPORTS_HUB_ABI,
+        functionName: "getResult",
+        args: [marketId]
+      })) as any;
+      return mapSportsResult(result);
+    },
+
+    async getMarketReserved(marketId: bigint): Promise<bigint> {
+      return (await publicClient.readContract({
+        address: sportsHubAddress,
+        abi: SPORTS_HUB_ABI,
+        functionName: "marketReserved",
+        args: [marketId]
+      })) as bigint;
+    },
+
+    async getMarketOutcomeReserved(marketId: bigint, outcomeId: number): Promise<bigint> {
+      return (await publicClient.readContract({
+        address: sportsHubAddress,
+        abi: SPORTS_HUB_ABI,
+        functionName: "marketOutcomeReserved",
+        args: [marketId, outcomeId]
+      })) as bigint;
+    },
+
+    async getEventReserved(eventId: bigint): Promise<bigint> {
+      return (await publicClient.readContract({
+        address: sportsHubAddress,
+        abi: SPORTS_HUB_ABI,
+        functionName: "eventReserved",
+        args: [eventId]
+      })) as bigint;
+    },
+
+    async getPoolEventReserved(poolId: number, eventId: bigint): Promise<bigint> {
+      return (await publicClient.readContract({
+        address: sportsHubAddress,
+        abi: SPORTS_HUB_ABI,
+        functionName: "poolEventReserved",
+        args: [BigInt(poolId), eventId]
+      })) as bigint;
+    }
+  };
+
+  return { release, account, gameHub, bank, vrfHub, sportsHub };
 }
 
 function mapBetState(state: number): DomainBet["state"] {
@@ -1036,4 +1129,98 @@ function mapBetState(state: number): DomainBet["state"] {
   if (state === 4) return "finalized";
   if (state === 5) return "refunded";
   return "placed";
+}
+
+function mapSportsMarket(market: any): DomainSportsMarket {
+  return {
+    marketId: BigInt(market.marketId),
+    eventId: BigInt(market.eventId),
+    poolId: Number(market.poolId),
+    outcomeCount: Number(market.outcomeCount),
+    startsAt: Number(market.startsAt),
+    lockTime: Number(market.lockTime),
+    resultFinalitySeconds: Number(market.resultFinalitySeconds),
+    version: BigInt(market.version),
+    marketKey: market.marketKey as Hex,
+    rulebookHash: market.rulebookHash as Hex,
+    state: mapSportsMarketState(Number(market.state))
+  };
+}
+
+function mapSportsTicket(ticket: any): DomainSportsTicket {
+  return {
+    ticketId: BigInt(ticket.ticketId),
+    positionId: BigInt(ticket.positionId),
+    marketId: BigInt(ticket.marketId),
+    eventId: BigInt(ticket.eventId),
+    poolId: Number(ticket.poolId),
+    outcomeId: Number(ticket.outcomeId),
+    player: ticket.player as AddressT,
+    stake: BigInt(ticket.stake),
+    payout: BigInt(ticket.payout),
+    reserved: BigInt(ticket.reserved),
+    oddsSnapshotHash: ticket.oddsSnapshotHash as Hex,
+    rulebookHash: ticket.rulebookHash as Hex,
+    acceptedAt: Number(ticket.acceptedAt),
+    state: mapSportsTicketState(Number(ticket.state))
+  };
+}
+
+function mapSportsResult(result: any): DomainSportsResult {
+  return {
+    marketId: BigInt(result.marketId),
+    eventId: BigInt(result.eventId),
+    poolId: Number(result.poolId),
+    winningOutcomeId: Number(result.winningOutcomeId),
+    marketVersion: BigInt(result.marketVersion),
+    resultPayloadHash: result.resultPayloadHash as Hex,
+    resultSourceHash: result.resultSourceHash as Hex,
+    evidenceHash: result.evidenceHash as Hex,
+    rulebookHash: result.rulebookHash as Hex,
+    reporterSetHash: result.reporterSetHash as Hex,
+    reporterThreshold: Number(result.reporterThreshold),
+    reporterCount: Number(result.reporterCount),
+    proposer: result.proposer as AddressT,
+    observedAt: Number(result.observedAt),
+    proposedAt: Number(result.proposedAt),
+    finalizesAt: Number(result.finalizesAt),
+    challenged: Boolean(result.challenged),
+    challengeReasonHash: result.challengeReasonHash as Hex,
+    challenger: result.challenger as AddressT,
+    challengedAt: Number(result.challengedAt),
+    challengeDecision: mapSportsChallengeDecision(Number(result.challengeDecision)),
+    arbitrationDecisionHash: result.arbitrationDecisionHash as Hex,
+    arbitrator: result.arbitrator as AddressT,
+    arbitratedAt: Number(result.arbitratedAt)
+  };
+}
+
+function mapSportsMarketState(state: number): DomainSportsMarket["state"] {
+  const states: DomainSportsMarket["state"][] = [
+    "none",
+    "draft",
+    "open",
+    "locked",
+    "suspended",
+    "resultProposed",
+    "challenged",
+    "resolved",
+    "voided"
+  ];
+  return states[state] ?? "none";
+}
+
+function mapSportsTicketState(state: number): DomainSportsTicket["state"] {
+  const states: DomainSportsTicket["state"][] = ["none", "held", "settled", "refunded", "voided"];
+  return states[state] ?? "none";
+}
+
+function mapSportsChallengeDecision(state: number): DomainSportsResult["challengeDecision"] {
+  const states: DomainSportsResult["challengeDecision"][] = [
+    "none",
+    "upholdResult",
+    "reopenResult",
+    "voidMarket"
+  ];
+  return states[state] ?? "none";
 }

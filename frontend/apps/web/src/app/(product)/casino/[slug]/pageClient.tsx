@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { Placeholder } from "../../../../components/Placeholder";
+import { ProductStateCard } from "../../../../components/ProductStateCard";
 import { PageTransition } from "../../../../components/PageTransition";
 
 import { useBetsByGame } from "../../../../features/betting/useBetsByGame";
@@ -111,10 +111,9 @@ export function GamePageClient({ slug }: { slug: string }) {
 
   if (!release || !game)
     return (
-      <Placeholder
+      <ProductStateCard
         title="Module Not Found"
         description={readOnlyReason ?? "Game not found."}
-        specPath="docs/design/04-page-blueprints.md#3--casinoslug-game-room"
       />
     );
 

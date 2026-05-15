@@ -20,6 +20,7 @@ const checks = [
   checkPrototypeRoutes(),
   checkLegacyRouteAliases(),
   checkLegacyDocsDirectory(),
+  checkLegacyPlaceholderComponent(),
   checkPageClientSize(),
   checkForbiddenWeb3Imports(),
   checkLegacySDKCompatibility()
@@ -146,6 +147,18 @@ function checkLegacyDocsDirectory() {
   return {
     id: "legacy-frontend-docs",
     label: "Pre-clean-room frontend docs directory",
+    count: examples.length,
+    blocking: true,
+    examples
+  };
+}
+
+function checkLegacyPlaceholderComponent() {
+  const legacyComponent = resolve(root, "apps/web/src/components/Placeholder.tsx");
+  const examples = existsSync(legacyComponent) ? [formatPath(legacyComponent)] : [];
+  return {
+    id: "legacy-placeholder",
+    label: "Legacy scaffold Placeholder component",
     count: examples.length,
     blocking: true,
     examples

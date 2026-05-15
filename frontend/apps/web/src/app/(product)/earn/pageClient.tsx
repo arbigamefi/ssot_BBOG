@@ -6,7 +6,7 @@ import type { Address } from "@ssot/ssot/sdk";
 import type { AssetOption } from "@ssot/ui";
 
 import { PageTransition } from "../../../components/PageTransition";
-import { Placeholder } from "../../../components/Placeholder";
+import { ProductStateCard } from "../../../components/ProductStateCard";
 import { EarnActionPanel, type EarnFlowState } from "../../../features/earn/earn-action-panel";
 import { EarnBankSummary } from "../../../features/earn/earn-bank-summary";
 import { EarnHero } from "../../../features/earn/earn-hero";
@@ -244,10 +244,9 @@ export function InvestPageClient() {
 
   if (!release) {
     return (
-      <Placeholder
+      <ProductStateCard
         title="Invest"
         description={readOnlyReason ?? "No embedded release available."}
-        specPath="-"
       />
     );
   }

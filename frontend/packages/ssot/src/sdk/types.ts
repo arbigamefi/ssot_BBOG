@@ -3,6 +3,9 @@ import type {
   DomainBankSnapshot,
   DomainBet,
   DomainError,
+  DomainSportsMarket,
+  DomainSportsResult,
+  DomainSportsTicket,
   DomainXPBuckets
 } from "../domain";
 
@@ -187,4 +190,16 @@ export interface SSOTBankAPI {
 export interface SSOTVRFHubAPI {
   getRefundCredit(user: Address): Promise<bigint>;
   claimRefundCredit(): Promise<TxResult>;
+}
+
+export interface SSOTSportsHubAPI {
+  getNextMarketId(): Promise<bigint>;
+  getNextTicketId(): Promise<bigint>;
+  getMarket(marketId: bigint): Promise<DomainSportsMarket>;
+  getTicket(ticketId: bigint): Promise<DomainSportsTicket>;
+  getResult(marketId: bigint): Promise<DomainSportsResult>;
+  getMarketReserved(marketId: bigint): Promise<bigint>;
+  getMarketOutcomeReserved(marketId: bigint, outcomeId: number): Promise<bigint>;
+  getEventReserved(eventId: bigint): Promise<bigint>;
+  getPoolEventReserved(poolId: number, eventId: bigint): Promise<bigint>;
 }

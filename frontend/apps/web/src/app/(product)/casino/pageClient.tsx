@@ -10,7 +10,7 @@ import {
   TrophyIcon
 } from "@heroicons/react/24/outline";
 
-import { Placeholder } from "../../../components/Placeholder";
+import { ProductStateCard } from "../../../components/ProductStateCard";
 import { getCatalogRooms } from "../../../features/casino/catalog";
 import {
   CoinTossMiniIcon,
@@ -98,10 +98,9 @@ export function GamesListClient() {
 
   if (!release) {
     return (
-      <Placeholder
+      <ProductStateCard
         title="Games"
         description={readOnlyReason ?? "No embedded release available for the connected chain."}
-        specPath="docs/design/04-page-blueprints.md#2--casino-directory"
       />
     );
   }
@@ -112,11 +111,7 @@ export function GamesListClient() {
 
   if (!rooms.length) {
     return (
-      <Placeholder
-        title="Games"
-        description="No games registered in the active release."
-        specPath="docs/design/04-page-blueprints.md#2--casino-directory"
-      />
+      <ProductStateCard title="Games" description="No games registered in the active release." />
     );
   }
 
