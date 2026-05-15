@@ -76,7 +76,26 @@ function createSportsHubMock() {
     refundTicket: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
     refundTickets: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
     voidTicket: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
-    voidTickets: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" })
+    voidTickets: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
+    planPlaceTicket: vi.fn().mockResolvedValue({
+      chainId: 84532,
+      releaseDigest: "0x7ad0f2cb1a996251325c00441b125ca5276c5bf70f011577222ce588cae1349f",
+      warnings: [],
+      steps: [],
+      payload: {},
+      preview: {
+        allowance: 0n,
+        needsApproval: false,
+        asset: "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
+        bank: "0x3686664d8d92feab8c4c9ac0baaeb07c8bddbc85",
+        marketState: "open",
+        oddsTicketHash: "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      }
+    }),
+    executeTicketPlan: vi.fn().mockResolvedValue({
+      placeTicketTx: { ok: true, txHash: "0xabc123" },
+      ticketId: 99n
+    })
   };
 }
 
@@ -99,7 +118,26 @@ const state = {
       sportsHub: "0x2db4ba326c2c3e5830b0da10f0c52b4097f9fa4b",
       riskEngine: "0xb9c3647cb5daf23dea8335b7d91c7aa5f6bc2579"
     },
-    pools: []
+    pools: [
+      {
+        poolId: 2,
+        domainId: 2,
+        domain: "Sports",
+        active: true,
+        asset: "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
+        bank: "0x3686664d8d92feab8c4c9ac0baaeb07c8bddbc85",
+        symbol: "USDC",
+        decimals: 6,
+        sportsRisk: {
+          maxStake: "10000000",
+          maxPayout: "20000000",
+          maxMarketReserved: "100000000",
+          maxOutcomeReserved: "50000000",
+          maxEventReserved: "150000000",
+          riskHash: "0x0707ba776912152fe0028608c2b31e2ac864f24ed79351eaa10ea012303793e6"
+        }
+      }
+    ]
   } as any,
   readOnlyReason: null as string | null,
   sportsbook: {
@@ -116,6 +154,7 @@ const state = {
 
 vi.mock("../../../../ssot/release/ReleaseProvider", () => ({
   useRelease: () => ({
+    chainId: 84532,
     release: state.release,
     readOnly: false,
     readOnlyReason: state.readOnlyReason,
@@ -214,6 +253,44 @@ describe("SportsbookMarketDetailPageClient", () => {
       true
     );
     expect(state.sdk.sportsHub.getTicket).toHaveBeenCalledWith(12n);
+  });
+
+  it("plans signed odds ticket placement only after the sportsbook gate is enabled", async () => {
+    state.sportsbook = {
+      enabled: true,
+      frontendEnabled: true,
+      hasSportsRelease: true,
+      enablementFlag: "NEXT_PUBLIC_SPORTSBOOK_ENABLED"
+    };
+    state.sdk = {
+      account: "0x1111111111111111111111111111111111111111",
+      sportsHub: createSportsHubMock()
+    };
+    renderWithQueryClient(<SportsbookMarketDetailPageClient marketId="7" />);
+
+    expect(await screen.findByText("Signed odds ticket")).toBeDefined();
+    fireEvent.change(screen.getByLabelText("Stake raw units"), { target: { value: "1000000" } });
+    fireEvent.change(screen.getByLabelText("Odds WAD"), {
+      target: { value: "2100000000000000000" }
+    });
+    fireEvent.change(screen.getByLabelText("Max stake"), { target: { value: "2000000" } });
+    fireEvent.change(screen.getByLabelText("Max payout"), { target: { value: "4200000" } });
+    fireEvent.change(screen.getByLabelText("Expires at"), { target: { value: "1900000000" } });
+    fireEvent.change(screen.getByLabelText("Odds signature"), {
+      target: { value: `0x${"11".repeat(65)}` }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Plan ticket" }));
+
+    expect(await screen.findByText("Plan ready.")).toBeDefined();
+    expect(state.sdk.sportsHub.planPlaceTicket).toHaveBeenCalledWith(
+      expect.objectContaining({
+        chainId: 84532,
+        marketId: 7n,
+        outcomeId: 0,
+        stake: 1_000_000n,
+        signature: `0x${"11".repeat(65)}`
+      })
+    );
   });
 
   it("does not call SportsHub for invalid market ids", () => {

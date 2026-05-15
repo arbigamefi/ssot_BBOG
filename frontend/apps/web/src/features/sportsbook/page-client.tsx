@@ -250,6 +250,9 @@ export function SportsbookPageClient() {
         maxEventReserved: sports.maxEventReserved
       }
     : undefined;
+  const latestMarketHref = recentMarkets?.[0]?.market
+    ? `/sportsbook/${recentMarkets[0].market.marketId.toString()}`
+    : "/sportsbook";
 
   return (
     <PageTransition pageKey="sportsbook">
@@ -269,8 +272,8 @@ export function SportsbookPageClient() {
             </h1>
             <p className="mt-4 max-w-3xl text-sm leading-7 text-fg-muted md:text-[15px]">
               Fixed-odds sports markets stay behind explicit launch controls. This entry exposes the
-              deployed SportsHub surface and release risk caps without opening public ticket
-              placement.
+              deployed SportsHub surface, release risk caps, and the signed-odds ticket path when
+              the frontend gate is enabled.
             </p>
           </div>
 
@@ -278,18 +281,19 @@ export function SportsbookPageClient() {
             <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-fg-subtle">
               Public risk-in
             </div>
-            <div className="mt-3 text-2xl font-black text-fg">Locked</div>
+            <div className="mt-3 text-2xl font-black text-fg">
+              {sportsbook.enabled ? "Signed odds only" : "Locked"}
+            </div>
             <p className="mt-2 text-sm leading-6 text-fg-muted">
               {sportsbook.disabledReason ??
-                "Ticket placement remains outside this read-only frontend phase."}
+                "Open a market detail page and provide a signed odds snapshot before placement."}
             </p>
-            <button
-              type="button"
-              disabled
-              className="mt-5 w-full cursor-not-allowed rounded-lg border border-border bg-surface-2 px-4 py-3 text-sm font-semibold text-fg-subtle opacity-70"
+            <Link
+              href={latestMarketHref}
+              className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-border bg-surface-2 px-4 text-sm font-semibold text-fg transition-colors hover:border-brand/40 hover:bg-surface-3"
             >
-              Ticket placement locked
-            </button>
+              Inspect market before placing
+            </Link>
           </div>
         </header>
 
@@ -391,7 +395,7 @@ export function SportsbookPageClient() {
         <SectionShell
           eyebrow="Market tape"
           title="Recent SportsHub markets"
-          description="The frontend now reads the latest on-chain SportsHub market ids directly through the v1.3 SDK. This stays read-only until signed odds and ticket placement gates are explicitly approved."
+          description="The frontend reads the latest on-chain SportsHub market ids directly through the v1.3 SDK. Ticket placement is only available from a market detail page after the signed-odds gate is satisfied."
         >
           <MarketTape
             rows={recentMarkets ?? []}
@@ -404,7 +408,7 @@ export function SportsbookPageClient() {
         <SectionShell
           eyebrow="On-chain lookup"
           title="Inspect SportsHub records"
-          description="Lookup stays read-only and goes through the v1.3 SDK. Public ticket placement remains locked until the ops gate changes."
+          description="Lookup stays read-only and goes through the v1.3 SDK. Use market detail for the signed-odds ticket flow."
         >
           <div className="grid gap-5 xl:grid-cols-2">
             <div className="grid gap-4">
@@ -455,7 +459,7 @@ export function SportsbookPageClient() {
         <SectionShell
           eyebrow="Operator writes"
           title="Market and result administration"
-          description="Governance and reporter actions are exposed as typed SDK calls for authorized wallets. Public ticket placement remains locked and contract roles still enforce every write."
+          description="Governance and reporter actions are exposed as typed SDK calls for authorized wallets. Public ticket placement uses a separate signed-odds path and contract roles still enforce every write."
         >
           <SportsbookOperatorPanel
             sdk={sdk}

@@ -215,7 +215,7 @@ describe("SportsbookPageClient", () => {
     };
   });
 
-  it("renders SportsHub metadata without exposing ticket placement", async () => {
+  it("renders SportsHub metadata without direct ticket placement on the index page", async () => {
     renderWithQueryClient(<SportsbookPageClient />);
 
     expect(screen.getByRole("heading", { name: "Sportsbook Control Room" })).toBeDefined();
@@ -223,10 +223,8 @@ describe("SportsbookPageClient", () => {
     expect(screen.getByText("SportsHub present")).toBeDefined();
     expect(screen.getAllByText("0x2db4...fa4b").length).toBeGreaterThan(0);
     expect(screen.getByText("NEXT_PUBLIC_SPORTSBOOK_ENABLED is not true.")).toBeDefined();
-    const lockedButton = screen.getByRole("button", {
-      name: "Ticket placement locked"
-    }) as HTMLButtonElement;
-    expect(lockedButton.disabled).toBe(true);
+    expect(screen.getByText("Locked")).toBeDefined();
+    expect(screen.getByRole("link", { name: "Inspect market before placing" })).toBeDefined();
     expect(await screen.findByText("8")).toBeDefined();
     expect(screen.getByText("13")).toBeDefined();
   });
@@ -258,7 +256,7 @@ describe("SportsbookPageClient", () => {
     expect(state.sdk.sportsHub.getMarket).toHaveBeenCalledWith(7n);
   });
 
-  it("still keeps ticket placement locked when metadata gate is enabled", () => {
+  it("points enabled ticket placement to market detail instead of the index page", () => {
     state.sportsbook = {
       enabled: true,
       frontendEnabled: true,
@@ -269,10 +267,8 @@ describe("SportsbookPageClient", () => {
     renderWithQueryClient(<SportsbookPageClient />);
 
     expect(screen.getByText("Metadata enabled")).toBeDefined();
-    const lockedButton = screen.getByRole("button", {
-      name: "Ticket placement locked"
-    }) as HTMLButtonElement;
-    expect(lockedButton.disabled).toBe(true);
+    expect(screen.getByText("Signed odds only")).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Place ticket" })).toBeNull();
   });
 
   it("renders operator write controls locked until a wallet is connected", () => {

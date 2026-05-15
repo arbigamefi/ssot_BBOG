@@ -15,6 +15,7 @@ import {
   type MarketTapeRow
 } from "./components";
 import { formatLookupError, parseLookupId, shortHex } from "./format";
+import { SportsbookTicketPlacementPanel } from "./ticket-placement-panel";
 import { SportsbookTicketTerminalPanel } from "./ticket-terminal-panel";
 
 interface MarketDetailReadback extends MarketTapeRow {
@@ -28,7 +29,7 @@ function formatUnits(value?: bigint) {
 }
 
 export function SportsbookMarketDetailPageClient({ marketId }: { marketId: string }) {
-  const { release, readOnly, readOnlyReason, sportsbook } = useRelease();
+  const { release, readOnly, readOnlyReason, sportsbook, chainId } = useRelease();
   const { sdk, ready } = useSSOTSDK();
   const parsedMarketId = React.useMemo(() => parseLookupId(marketId), [marketId]);
 
@@ -105,8 +106,8 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
               Market {marketId}
             </h1>
             <p className="mt-4 max-w-3xl text-sm leading-7 text-fg-muted md:text-[15px]">
-              Direct SportsHub readback for one fixed-odds market. Ticket placement remains locked;
-              this route is for inspection, ops review, and shareable market state.
+              Direct SportsHub readback for one fixed-odds market. Ticket placement stays behind the
+              frontend release gate and requires a complete signed odds snapshot before broadcast.
             </p>
           </div>
 
@@ -211,6 +212,32 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
                 </div>
               </SectionShell>
             </div>
+
+            <SectionShell
+              eyebrow="Ticket placement"
+              title="Signed odds ticket"
+              description="This is the only public risk-in path for the MVP: it plans ERC20 approval, validates the signed odds snapshot against the active market, then calls SportsHub.placeTicket through the SDK."
+            >
+              <SportsbookTicketPlacementPanel
+                sdk={sdk}
+                release={release}
+                chainId={chainId}
+                market={readback.market}
+                disabled={
+                  readOnly || !ready || !sportsbook.enabled || readback.market.state !== "open"
+                }
+                disabledReason={
+                  readOnly
+                    ? readOnlyReason
+                    : !sportsbook.enabled
+                      ? sportsbook.disabledReason
+                      : readback.market.state !== "open"
+                        ? "Market must be open before ticket placement."
+                        : "A connected wallet and signed odds snapshot are required."
+                }
+                onMutated={() => void refetchReadback()}
+              />
+            </SectionShell>
 
             <SectionShell
               eyebrow="Ticket terminalization"
