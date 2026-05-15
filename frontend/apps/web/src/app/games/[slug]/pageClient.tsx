@@ -4,7 +4,6 @@ import * as React from "react";
 
 import { Placeholder } from "../../../components/Placeholder";
 import { PageTransition } from "../../../components/PageTransition";
-import { ImmersiveGameLayout } from "../../../components/ImmersiveGameLayout";
 
 import { useBetsByGame } from "../../../features/bets/useBetsByGame";
 import { useIndexer } from "../../../features/ops/useIndexer";
@@ -34,6 +33,7 @@ import {
   type GameHistoryEntry
 } from "../../../features/games/room/resolution";
 import { GameRoomRightPane } from "../../../features/games/room/right-pane";
+import { GameRoomShell } from "../../../features/games/room/game-room-shell";
 
 /* ─── Main Logic ─── */
 
@@ -232,9 +232,8 @@ export function GamePageClient({ slug }: { slug: string }) {
 
   return (
     <PageTransition pageKey={`game-${slug}`}>
-      <ImmersiveGameLayout
+      <GameRoomShell
         gameName={getGameDisplayName(game)}
-        themeColor={themeColor}
         houseEdge={houseEdge}
         maxPayout={maxPayout}
         isInteractive={true}

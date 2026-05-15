@@ -125,6 +125,17 @@ describe("AppShell", () => {
     expect(container.firstElementChild?.className).toContain("theme-dark");
   });
 
+  it("uses the dark theme on game room routes", () => {
+    state.pathname = "/games/dice";
+    const { container } = render(
+      <AppShell>
+        <div>game content</div>
+      </AppShell>
+    );
+
+    expect(container.firstElementChild?.className).toContain("theme-dark");
+  });
+
   it("marks the active route in the app header nav", () => {
     render(
       <AppShell>
