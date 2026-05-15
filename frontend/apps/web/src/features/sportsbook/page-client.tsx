@@ -11,6 +11,8 @@ import { useSSOTSDK } from "../../ssot/sdk";
 import {
   DetailCell,
   LookupForm,
+  MarketTape,
+  type MarketTapeRow,
   MarketInspector,
   PoolPanel,
   RiskRows,
@@ -25,6 +27,7 @@ import {
   parseLookupId,
   shortHex
 } from "./format";
+import { SportsbookOperatorPanel } from "./operator-panel";
 
 const CONTROL_LINKS = [
   {
@@ -44,14 +47,31 @@ const CONTROL_LINKS = [
   }
 ] as const;
 
+const RECENT_MARKET_LIMIT = 8;
+
 function getSportsPools(release: SSOTRelease) {
   return (release.pools ?? []).filter(
     (pool) => pool.domain.toLowerCase() === "sports" || Boolean(pool.sportsRisk)
   );
 }
 
+function getRecentMarketIds(nextMarketId: bigint, limit: number) {
+  if (nextMarketId <= 1n || limit <= 0) return [];
+  const ids: bigint[] = [];
+  let current = nextMarketId - 1n;
+  while (current >= 1n && ids.length < limit) {
+    ids.push(current);
+    current -= 1n;
+  }
+  return ids;
+}
+
+function isMarketTapeRow(row: MarketTapeRow | undefined): row is MarketTapeRow {
+  return row !== undefined;
+}
+
 export function SportsbookPageClient() {
-  const { release, readOnlyReason, sportsbook } = useRelease();
+  const { release, readOnly, readOnlyReason, sportsbook } = useRelease();
   const { sdk, ready } = useSSOTSDK();
   const [marketInput, setMarketInput] = React.useState("");
   const [ticketInput, setTicketInput] = React.useState("");
@@ -59,7 +79,11 @@ export function SportsbookPageClient() {
   const [ticketLookupId, setTicketLookupId] = React.useState<bigint | undefined>();
   const [marketInputError, setMarketInputError] = React.useState<string | undefined>();
   const [ticketInputError, setTicketInputError] = React.useState<string | undefined>();
-  const { data: runtimeCounters, error: runtimeError } = useQuery({
+  const {
+    data: runtimeCounters,
+    error: runtimeError,
+    refetch: refetchRuntimeCounters
+  } = useQuery({
     queryKey: ["ssot", "sportsbook", "runtime-counters", release?.releaseDigest ?? "none"],
     enabled: Boolean(release && sdk && ready && sportsbook.hasSportsRelease),
     staleTime: 15_000,
@@ -73,9 +97,52 @@ export function SportsbookPageClient() {
     }
   });
   const {
+    data: recentMarkets,
+    error: recentMarketsError,
+    isFetching: recentMarketsFetching,
+    refetch: refetchRecentMarkets
+  } = useQuery({
+    queryKey: [
+      "ssot",
+      "sportsbook",
+      "recent-markets",
+      release?.releaseDigest ?? "none",
+      runtimeCounters?.nextMarketId?.toString() ?? "none"
+    ],
+    enabled: Boolean(
+      release &&
+      sdk &&
+      ready &&
+      sportsbook.hasSportsRelease &&
+      runtimeCounters?.nextMarketId &&
+      runtimeCounters.nextMarketId > 1n
+    ),
+    staleTime: 15_000,
+    queryFn: async () => {
+      if (!sdk || !runtimeCounters?.nextMarketId) return [];
+      const marketIds = getRecentMarketIds(runtimeCounters.nextMarketId, RECENT_MARKET_LIMIT);
+      const rows = await Promise.all(
+        marketIds.map(async (marketId): Promise<MarketTapeRow | undefined> => {
+          try {
+            const market = await sdk.sportsHub.getMarket(marketId);
+            const [result, reserved] = await Promise.all([
+              sdk.sportsHub.getResult(marketId).catch(() => undefined),
+              sdk.sportsHub.getMarketReserved(marketId).catch(() => undefined)
+            ]);
+            return { market, result, reserved };
+          } catch {
+            return undefined;
+          }
+        })
+      );
+      return rows.filter(isMarketTapeRow);
+    }
+  });
+  const {
     data: marketLookup,
     error: marketLookupError,
-    isFetching: marketFetching
+    isFetching: marketFetching,
+    refetch: refetchMarketLookup
   } = useQuery({
     queryKey: [
       "ssot",
@@ -136,6 +203,16 @@ export function SportsbookPageClient() {
     setTicketLookupId(parsed);
   }, [ticketInput]);
 
+  const inspectRecentMarket = React.useCallback((marketId: bigint) => {
+    setMarketInput(marketId.toString());
+    setMarketInputError(undefined);
+    setMarketLookupId(marketId);
+  }, []);
+
+  const refreshSportsbookReads = React.useCallback(() => {
+    void Promise.all([refetchRuntimeCounters(), refetchRecentMarkets(), refetchMarketLookup()]);
+  }, [refetchMarketLookup, refetchRecentMarkets, refetchRuntimeCounters]);
+
   if (!release) {
     return (
       <PageTransition pageKey="sportsbook">
@@ -157,6 +234,13 @@ export function SportsbookPageClient() {
   const riskEngine = sports?.riskEngine ?? release.contracts.sportsRiskEngine;
   const sportsPools = getSportsPools(release);
   const statusTone = sportsbook.enabled ? "success" : "warn";
+  const marketTapeLoading = Boolean(
+    sdk &&
+    ready &&
+    sportsbook.hasSportsRelease &&
+    !runtimeError &&
+    (!runtimeCounters || (recentMarketsFetching && !recentMarkets))
+  );
   const riskSummary = sports
     ? {
         maxStake: sports.maxStake,
@@ -305,6 +389,19 @@ export function SportsbookPageClient() {
         ) : null}
 
         <SectionShell
+          eyebrow="Market tape"
+          title="Recent SportsHub markets"
+          description="The frontend now reads the latest on-chain SportsHub market ids directly through the v1.3 SDK. This stays read-only until signed odds and ticket placement gates are explicitly approved."
+        >
+          <MarketTape
+            rows={recentMarkets ?? []}
+            loading={marketTapeLoading}
+            error={formatLookupError(recentMarketsError ?? runtimeError)}
+            onInspect={inspectRecentMarket}
+          />
+        </SectionShell>
+
+        <SectionShell
           eyebrow="On-chain lookup"
           title="Inspect SportsHub records"
           description="Lookup stays read-only and goes through the v1.3 SDK. Public ticket placement remains locked until the ops gate changes."
@@ -353,6 +450,27 @@ export function SportsbookPageClient() {
               )}
             </div>
           </div>
+        </SectionShell>
+
+        <SectionShell
+          eyebrow="Operator writes"
+          title="Market and result administration"
+          description="Governance and reporter actions are exposed as typed SDK calls for authorized wallets. Public ticket placement remains locked and contract roles still enforce every write."
+        >
+          <SportsbookOperatorPanel
+            sdk={sdk}
+            disabled={readOnly || !ready || !sportsbook.hasSportsRelease}
+            disabledReason={
+              readOnly
+                ? readOnlyReason
+                : sportsbook.hasSportsRelease
+                  ? "Wallet role must be authorized on SportsHub."
+                  : sportsbook.disabledReason
+            }
+            defaultPoolId={sportsPools[0]?.poolId}
+            defaultFinalitySeconds={sports?.resultChallengeTimeoutSeconds}
+            onMutated={refreshSportsbookReads}
+          />
         </SectionShell>
 
         <SectionShell

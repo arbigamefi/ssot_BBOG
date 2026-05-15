@@ -19,8 +19,12 @@ export type {
 
 // Flat re-exports of commonly used SDK types
 export type {
+  CreateSportsMarketInput,
   PlaceBetInput,
   PlaceBetPlan,
+  ProposeSportsResultInput,
+  ResolveSportsChallengeDecision,
+  ResolveSportsChallengeInput,
   ExecutePlanResult,
   TxStep,
   ReconcilePlaceBetTxResult,

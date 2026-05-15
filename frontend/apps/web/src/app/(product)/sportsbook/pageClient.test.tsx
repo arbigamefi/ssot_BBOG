@@ -10,9 +10,9 @@ function createSportsHubMock() {
   return {
     getNextMarketId: vi.fn().mockResolvedValue(8n),
     getNextTicketId: vi.fn().mockResolvedValue(13n),
-    getMarket: vi.fn().mockResolvedValue({
-      marketId: 7n,
-      eventId: 99n,
+    getMarket: vi.fn().mockImplementation(async (marketId: bigint) => ({
+      marketId,
+      eventId: 90n + marketId,
       poolId: 2,
       outcomeCount: 3,
       startsAt: 1_800_000_000,
@@ -21,11 +21,11 @@ function createSportsHubMock() {
       version: 1n,
       marketKey: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       rulebookHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-      state: "open"
-    }),
-    getResult: vi.fn().mockResolvedValue({
-      marketId: 7n,
-      eventId: 99n,
+      state: marketId === 7n ? "open" : "locked"
+    })),
+    getResult: vi.fn().mockImplementation(async (marketId: bigint) => ({
+      marketId,
+      eventId: 90n + marketId,
       poolId: 2,
       winningOutcomeId: 1,
       marketVersion: 1n,
@@ -48,8 +48,21 @@ function createSportsHubMock() {
       arbitrationDecisionHash: zeroHash,
       arbitrator: zeroAddress,
       arbitratedAt: 0
-    }),
+    })),
     getMarketReserved: vi.fn().mockResolvedValue(2_000_000n),
+    createMarket: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
+    openMarket: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
+    suspendMarket: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
+    lockMarket: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
+    voidMarket: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
+    proposeResult: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
+    finalizeResult: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
+    settleTicket: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
+    settleTickets: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
+    refundTicket: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
+    refundTickets: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
+    voidTicket: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
+    voidTickets: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
     getTicket: vi.fn().mockResolvedValue({
       ticketId: 12n,
       positionId: 34n,
@@ -162,7 +175,11 @@ vi.mock("next/link", () => ({
 }));
 
 vi.mock("@ssot/ui", () => ({
-  cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" ")
+  cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" "),
+  toast: {
+    error: vi.fn(),
+    success: vi.fn()
+  }
 }));
 
 import { SportsbookPageClient } from "./pageClient";
@@ -224,6 +241,23 @@ describe("SportsbookPageClient", () => {
     expect(screen.getByText("Phase 2 NO-GO for public risk-in")).toBeDefined();
   });
 
+  it("renders recent SportsHub markets and loads one into the inspector", async () => {
+    renderWithQueryClient(<SportsbookPageClient />);
+
+    expect(screen.getByText("Recent SportsHub markets")).toBeDefined();
+    expect(await screen.findByText("Market 7")).toBeDefined();
+    expect(screen.getByText("Event 97")).toBeDefined();
+    expect(screen.getAllByRole("link", { name: "Open" })[0]?.getAttribute("href")).toBe(
+      "/sportsbook/7"
+    );
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Load" })[0]!);
+
+    expect((screen.getByLabelText("Market id") as HTMLInputElement).value).toBe("7");
+    expect(await screen.findByText("open / pool 2")).toBeDefined();
+    expect(state.sdk.sportsHub.getMarket).toHaveBeenCalledWith(7n);
+  });
+
   it("still keeps ticket placement locked when metadata gate is enabled", () => {
     state.sportsbook = {
       enabled: true,
@@ -241,14 +275,24 @@ describe("SportsbookPageClient", () => {
     expect(lockedButton.disabled).toBe(true);
   });
 
+  it("renders operator write controls locked until a wallet is connected", () => {
+    renderWithQueryClient(<SportsbookPageClient />);
+
+    expect(screen.getByText("Market and result administration")).toBeDefined();
+    expect(screen.getByText("Wallet required")).toBeDefined();
+    expect(
+      (screen.getByRole("button", { name: "Create market" }) as HTMLButtonElement).disabled
+    ).toBe(true);
+  });
+
   it("looks up SportsHub market and ticket records through the SDK", async () => {
     renderWithQueryClient(<SportsbookPageClient />);
 
     fireEvent.change(screen.getByLabelText("Market id"), { target: { value: "7" } });
     fireEvent.click(screen.getAllByRole("button", { name: "Inspect" })[0]!);
 
-    expect(await screen.findByText("Market 7")).toBeDefined();
-    expect(screen.getByText("open / pool 2")).toBeDefined();
+    expect(await screen.findByText("open / pool 2")).toBeDefined();
+    expect(screen.getAllByText("Market 7").length).toBeGreaterThan(0);
     expect(screen.getByText("Result proposed")).toBeDefined();
     expect(screen.getByText("2000000")).toBeDefined();
     expect(state.sdk.sportsHub.getMarket).toHaveBeenCalledWith(7n);
