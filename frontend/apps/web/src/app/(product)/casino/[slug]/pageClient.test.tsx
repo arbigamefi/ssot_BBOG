@@ -94,7 +94,6 @@ vi.mock("@ssot/ui", () => ({
   CardTitle: ({ children }: any) => <h2>{children}</h2>,
   CardDescription: ({ children }: any) => <p>{children}</p>,
   CardContent: ({ children }: any) => <div>{children}</div>,
-  CoinTossParamsForm: () => <div>Coin Toss Params</div>,
   CopyButton: ({ value }: any) => <button type="button">{value}</button>,
   DataTable: ({ columns, data, onRowClick, loading, emptyMessage }: any) => {
     if (loading) return <div>Loading…</div>;
@@ -120,25 +119,13 @@ vi.mock("@ssot/ui", () => ({
       </div>
     );
   },
-  DiceParamsForm: () => <div>Dice Params</div>,
   ErrorCallout: ({ title, message }: any) => (
     <div data-testid="error-callout">
       <strong>{title}</strong>
       <span>{message}</span>
     </div>
   ),
-  KenoParamsForm: () => <div>Keno Params</div>,
-  ReleaseBadge: ({ networkName }: any) => <span>{networkName}</span>,
   RoomStrip: ({ title }: any) => <div>{title}</div>,
-  RouletteParamsForm: () => <div>Roulette Params</div>,
-  DiceSlider: () => <div>Dice Slider</div>,
-  createDefaultRouletteSelection: () => ({ kind: "straight", number: 0 }),
-  summarizeRouletteSelection: () => ({
-    family: "Straight",
-    display: "Straight 0",
-    coverage: 1,
-    helper: "Single-number call."
-  }),
   StatusBadge: ({ label, status }: any) => <span>{label ?? status}</span>,
   TabBar: ({ tabs, activeKey, onTabChange }: any) => (
     <div data-testid="tab-bar">

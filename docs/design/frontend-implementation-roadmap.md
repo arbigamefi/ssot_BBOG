@@ -829,6 +829,59 @@ Follow-up:
 - after that retokenization lands, `forbidden-style` can move from report-only
   to blocking.
 
+### 2026-05-15 - R9 Protocol Surface Prune
+
+Status: completed as a package-level dead surface removal.
+
+Changes:
+
+- deleted unused protocol-era casino forms, boards, selectors, and matching
+  stories that no product route imports anymore;
+- removed deleted protocol exports from `@ssot/ui` root and `@ssot/ui/patterns`;
+- cleaned stale casino route test mocks that referred to removed protocol
+  components;
+- retokenized the still-used `AuditTabs` helpers and `ErrorCallout` details
+  block;
+- kept active protocol system components: `AssetSelector`, `AuditTabs`,
+  `ReadOnlyBanner`, `ReleaseBadge`, `ErrorCallout`, `TxStatusChip`, and
+  `TxStepper`;
+- kept `frontend/packages/ssot/**` untouched.
+
+Evidence:
+
+```bash
+rg -n "CoinTossParamsForm|DiceParamsForm|KenoParamsForm|RouletteParamsForm|DiceSlider|CoinStage|KenoGrid|MaskPickerGrid|RouletteBoard|SharedBetSlip|StakeSpecForm" frontend/apps/web/src frontend/packages/ui/src -S
+pnpm -C frontend/packages/ui typecheck
+pnpm -C frontend/apps/web test -- 'src/app/(product)/casino/[slug]/pageClient.test.tsx' 'src/features/casino/room/audit-ledger.test.tsx'
+pnpm -C frontend/apps/web test
+pnpm -C frontend typecheck
+pnpm -C frontend precheck:frontend -- --strict
+pnpm -C frontend/apps/web build
+```
+
+Observed:
+
+- stale protocol component scan returned no product or UI source hits;
+- focused casino/audit tests passed: 2 files, 7 tests;
+- full web tests passed: 37 files, 133 tests;
+- `pnpm -C frontend/packages/ui typecheck` passed;
+- `pnpm -C frontend typecheck` passed;
+- `precheck:frontend -- --strict` passed;
+- `forbidden-style` improved from 224 to 62 warnings;
+- `pnpm -C frontend/apps/web build` passed with the known Node 20 engine,
+  MetaMask optional storage, ESLint plugin, `indexedDB`, and `punycode`
+  warnings;
+- build first-load JS dropped on several product routes after deleting the
+  unused protocol exports, for example `/casino/[slug]` from about 509 kB after
+  R7 to about 498 kB.
+
+Follow-up:
+
+- Remaining forbidden-style warnings are now in base UI primitives such as
+  `alert`, `button`, `card`, `game-card`, `glass-card`, and `glass-modal`;
+- the next cleanup pass should retokenize those primitives before promoting
+  `forbidden-style` to blocking.
+
 Useful commands:
 
 ```bash
