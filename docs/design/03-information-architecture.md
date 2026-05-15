@@ -120,7 +120,7 @@ every product route; auditors don't need to leave the page.
 /
 ├── /casino                     # directory
 │   ├── /casino/dice
-│   ├── /casino/cointoss
+│   ├── /casino/coin-toss
 │   ├── /casino/roulette
 │   ├── /casino/keno
 │   ├── /casino/plinko
@@ -139,15 +139,18 @@ every product route; auditors don't need to leave the page.
     ├── /legal/terms
     └── /legal/disclaimer
 
-# Redirects (boundary glue only; no legacy components survive)
-/dice, /roulette, /cointoss, /keno      → /casino/<slug>
-/account                                → /portfolio
-/bets, /bets/[id]                       → /portfolio/activity[/...]
-/claims                                 → /portfolio/claims
-/referral                               → /portfolio (referral tab)
-/invest, /liquidity                     → /earn
+# Legacy route policy
+/dice, /roulette, /cointoss, /keno      → 404
+/games, /games/[slug]                   → 404
+/account, /bets, /bets/[id]             → 404
+/claims, /referral                      → 404
+/invest, /liquidity                     → 404
+/privacy, /terms, /disclaimer           → 404
 /prototype/*                            → 404 (production); accessible only in sandbox build
 ```
+
+The clean-room frontend has no legacy public aliases. Product copy, AppShell
+active-route logic, tests, and precheck gates must use canonical routes only.
 
 | Route                    | Personas           | Description                                                              |
 | ------------------------ | ------------------ | ------------------------------------------------------------------------ |
@@ -279,8 +282,8 @@ block explorer + a `Copy` button. No exceptions.
 - Do not introduce a per-game URL inside `/casino` other than `[slug]`.
 - Do not show ops-only metadata (e.g., chain RPC URL, indexer cursor)
   outside `/ops` and the release-proof drawer.
-- Do not redirect to a placeholder. If a redirect target is not ready,
-  block the redirect and leave the old route 404.
+- Do not keep compatibility redirects for pre-clean-room routes. Old public
+  aliases must stay 404 unless a signed ADR explicitly reintroduces one.
 
 ## 10. How To Enforce
 
@@ -291,8 +294,8 @@ node scripts/check-route-map.mjs   # generated CI script (see 30-build-and-relea
 # No nav link points to a route lacking all 7 states
 node scripts/check-page-states.mjs # reads Storybook story manifests
 
-# Redirects exist only at app/router boundary, not inside features
-rg -nE "from .*legacy|redirect\\(" frontend/apps/web/src/features
+# Legacy redirects are not part of the clean-room route surface
+pnpm -C frontend precheck:frontend -- --strict
 ```
 
 CI implements all three. See `../frontend/30-build-and-release.md §5`.
@@ -301,16 +304,16 @@ CI implements all three. See `../frontend/30-build-and-release.md §5`.
 
 Mapping from current routes to target routes:
 
-| Current                                    | Target                                    | Action                                |
-| ------------------------------------------ | ----------------------------------------- | ------------------------------------- |
-| `/`                                        | `/`                                       | Rebuild from `04-page-blueprints §1`  |
-| `/games`, `/games/[slug]`                  | `/casino`, `/casino/[slug]`               | New IA; old aliases redirect          |
-| `/dice`, `/cointoss`, `/roulette`, `/keno` | `/casino/<slug>`                          | 301 redirect                          |
-| `/sportsbook` (stub)                       | `/sportsbook` (real)                      | Build per §J3                         |
-| `/account`, `/bets`, `/bets/[id]`          | `/portfolio`, `/portfolio/activity[/...]` | Merged                                |
-| `/claims` (stub)                           | `/portfolio/claims`                       | Built into portfolio                  |
-| `/referral` (stub)                         | `/portfolio` (tab)                        | Built into portfolio                  |
-| `/invest`, `/liquidity` (stubs)            | `/earn`                                   | Built                                 |
-| `/ops`                                     | `/ops`                                    | Rebuild per `04-page-blueprints §9`   |
-| `/privacy`, `/terms`, `/disclaimer`        | `/legal/{privacy,terms,disclaimer}`       | Move under legal segment              |
-| `/prototype/*`                             | (deleted)                                 | Move to `src/sandbox/` (non-routable) |
+| Current                                    | Target                                    | Action                                        |
+| ------------------------------------------ | ----------------------------------------- | --------------------------------------------- |
+| `/`                                        | `/`                                       | Rebuild from `04-page-blueprints §1`          |
+| `/games`, `/games/[slug]`                  | `/casino`, `/casino/[slug]`               | New IA; old aliases deleted                   |
+| `/dice`, `/cointoss`, `/roulette`, `/keno` | `/casino/<slug>`                          | Deleted; no compatibility redirect            |
+| `/sportsbook` (stub)                       | `/sportsbook` (real)                      | Build per §J3                                 |
+| `/account`, `/bets`, `/bets/[id]`          | `/portfolio`, `/portfolio/activity[/...]` | Merged                                        |
+| `/claims` (stub)                           | `/portfolio/claims`                       | Built into portfolio                          |
+| `/referral` (stub)                         | `/portfolio` (tab)                        | Built into portfolio                          |
+| `/invest`, `/liquidity` (stubs)            | `/earn`                                   | Built                                         |
+| `/ops`                                     | `/ops`                                    | Rebuild per `04-page-blueprints §9`           |
+| `/privacy`, `/terms`, `/disclaimer`        | `/legal/{privacy,terms,disclaimer}`       | Move under legal segment; old aliases deleted |
+| `/prototype/*`                             | (deleted)                                 | Move to `src/sandbox/` (non-routable)         |

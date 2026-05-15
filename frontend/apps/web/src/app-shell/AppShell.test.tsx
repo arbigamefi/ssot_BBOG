@@ -11,7 +11,7 @@ const mockRelease = {
 };
 
 const state = {
-  pathname: "/bets"
+  pathname: "/portfolio/activity"
 };
 
 vi.mock("../ssot/release/ReleaseProvider", () => ({
@@ -52,7 +52,7 @@ vi.mock("@ssot/ui", () => ({
 describe("AppShell", () => {
   afterEach(() => {
     cleanup();
-    state.pathname = "/bets";
+    state.pathname = "/portfolio/activity";
   });
   it("renders the ArbiGameFi brand link", () => {
     render(
@@ -115,7 +115,7 @@ describe("AppShell", () => {
   });
 
   it("uses the dark theme on legal routes", () => {
-    state.pathname = "/privacy";
+    state.pathname = "/legal/privacy";
     const { container } = render(
       <AppShell>
         <div>legal content</div>
@@ -126,7 +126,7 @@ describe("AppShell", () => {
   });
 
   it("uses the dark theme on game room routes", () => {
-    state.pathname = "/games/dice";
+    state.pathname = "/casino/dice";
     const { container } = render(
       <AppShell>
         <div>game content</div>
@@ -137,7 +137,7 @@ describe("AppShell", () => {
   });
 
   it("uses the dark theme on the games directory route", () => {
-    state.pathname = "/games";
+    state.pathname = "/casino";
     const { container } = render(
       <AppShell>
         <div>games directory</div>

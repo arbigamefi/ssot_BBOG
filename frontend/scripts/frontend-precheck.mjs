@@ -17,6 +17,7 @@ const checks = [
   checkForbiddenStyles(),
   checkLegacyShellNames(),
   checkPrototypeRoutes(),
+  checkLegacyRouteAliases(),
   checkPageClientSize(),
   checkForbiddenWeb3Imports()
 ];
@@ -97,6 +98,39 @@ function checkPrototypeRoutes() {
   return {
     id: "prototype-route",
     label: "Prototype routes in production App Router",
+    count: examples.length,
+    blocking: true,
+    examples
+  };
+}
+
+function checkLegacyRouteAliases() {
+  const legacyRouteFiles = [
+    "apps/web/src/app/account/page.tsx",
+    "apps/web/src/app/bets/page.tsx",
+    "apps/web/src/app/bets/[betId]/page.tsx",
+    "apps/web/src/app/claims/page.tsx",
+    "apps/web/src/app/cointoss/page.tsx",
+    "apps/web/src/app/dice/page.tsx",
+    "apps/web/src/app/disclaimer/page.tsx",
+    "apps/web/src/app/games/page.tsx",
+    "apps/web/src/app/games/[slug]/page.tsx",
+    "apps/web/src/app/invest/page.tsx",
+    "apps/web/src/app/keno/page.tsx",
+    "apps/web/src/app/liquidity/page.tsx",
+    "apps/web/src/app/privacy/page.tsx",
+    "apps/web/src/app/referral/page.tsx",
+    "apps/web/src/app/roulette/page.tsx",
+    "apps/web/src/app/terms/page.tsx"
+  ];
+  const examples = legacyRouteFiles
+    .map((path) => resolve(root, path))
+    .filter((path) => existsSync(path))
+    .map(formatPath);
+
+  return {
+    id: "legacy-route-alias",
+    label: "Legacy redirect route aliases",
     count: examples.length,
     blocking: true,
     examples

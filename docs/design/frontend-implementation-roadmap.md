@@ -447,7 +447,7 @@ pnpm -C frontend/apps/web build
 Rendered QA:
 
 - `/casino/dice`
-- `/casino/cointoss`
+- `/casino/coin-toss`
 - `/casino/roulette`
 - `/casino/keno`
 - desktop plus 390px mobile
@@ -931,6 +931,45 @@ Follow-up:
   `/portfolio`, `/earn`, `/ops`, and `/sportsbook`;
 - if those routes pass, this frontend cleanup block can be treated as closed
   for a larger PR.
+
+### 2026-05-15 - R11 Legacy Route Alias Deletion
+
+Status: completed as a route-surface closeout.
+
+Changes:
+
+- deleted root-level legacy route aliases instead of keeping redirect
+  boundaries:
+  `/dice`, `/cointoss`, `/roulette`, `/keno`, `/games`, `/games/[slug]`,
+  `/account`, `/bets`, `/bets/[betId]`, `/claims`, `/referral`, `/invest`,
+  `/liquidity`, `/privacy`, `/terms`, and `/disclaimer`;
+- removed the `/casino/cointoss` slug alias so `coin-toss` is the only
+  canonical coin-toss room slug;
+- removed legacy-only redirect tests and updated AppShell tests to canonical
+  routes;
+- added a strict `legacy-route-alias` frontend precheck so these route files
+  cannot return unnoticed;
+- updated IA and kill-list docs to state that old aliases 404 unless a future
+  ADR explicitly reintroduces one;
+- kept `frontend/packages/ssot/**` untouched.
+
+Evidence:
+
+```bash
+rg -n "redirect\\(|/games|/dice|/cointoss|/roulette|/keno|/account|/bets|/invest|/liquidity|/claims|/referral|/privacy|/terms|/disclaimer" \
+  frontend/apps/web/src/app-shell frontend/apps/web/src/app/(product) -S
+pnpm -C frontend precheck:frontend -- --strict
+pnpm -C frontend/apps/web test
+pnpm -C frontend typecheck
+pnpm -C frontend/apps/web build
+```
+
+Follow-up:
+
+- browser smoke should verify canonical URLs and legacy 404 behavior together:
+  `/casino/coin-toss`, `/portfolio/activity`, `/legal/privacy`, plus legacy
+  `/games`, `/dice`, `/privacy`, and `/casino/cointoss`;
+- if those pass, the frontend cleanup block is ready for a local phase commit.
 
 Useful commands:
 

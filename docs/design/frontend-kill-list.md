@@ -12,14 +12,14 @@ glue. It does not authorize code changes by itself; it scopes Phase 1+ work.
 
 ## 1. Decision Labels
 
-| Label             | Meaning                                                                                |
-| ----------------- | -------------------------------------------------------------------------------------- |
-| **Keep**          | File or package remains authoritative. No rewrite unless future proof fails.           |
-| **Rewrite**       | Existing behavior may be reimplemented, but the file does not survive.                 |
-| **Delete**        | Remove physically after its replacement or route boundary lands.                       |
-| **Move**          | Preserve as non-production reference or sandbox artifact.                              |
-| **Redirect**      | Keep only a route-boundary file that calls `redirect()`. No legacy component survives. |
-| **Rebuild tests** | Keep the behavior being tested, but rewrite tests against the new architecture.        |
+| Label             | Meaning                                                                                                        |
+| ----------------- | -------------------------------------------------------------------------------------------------------------- |
+| **Keep**          | File or package remains authoritative. No rewrite unless future proof fails.                                   |
+| **Rewrite**       | Existing behavior may be reimplemented, but the file does not survive.                                         |
+| **Delete**        | Remove physically after its replacement or route boundary lands.                                               |
+| **Move**          | Preserve as non-production reference or sandbox artifact.                                                      |
+| **Redirect**      | Historical label only. Clean-room production route aliases are deleted unless a new ADR explicitly allows one. |
+| **Rebuild tests** | Keep the behavior being tested, but rewrite tests against the new architecture.                                |
 
 ## 2. Hard Boundary
 
@@ -64,30 +64,30 @@ owns byte-level correctness against release manifests and golden vectors.
 | `frontend/apps/web/src/app/games/page.tsx`              | `app/(product)/casino/page.tsx`              | Rewrite casino directory.                                      |
 | `frontend/apps/web/src/app/games/[slug]/page.tsx`       | `app/(product)/casino/[slug]/page.tsx`       | Rewrite route composer.                                        |
 | `frontend/apps/web/src/app/games/[slug]/pageClient.tsx` | `features/casino/room/**` + modules          | Delete after replacement; no 2,030 LOC god component survives. |
-| `frontend/apps/web/src/app/dice/page.tsx`               | `/casino/dice`                               | Redirect boundary only.                                        |
+| `frontend/apps/web/src/app/dice/page.tsx`               | `/casino/dice`                               | Delete; no compatibility route survives.                       |
 | `frontend/apps/web/src/app/dice/pageClient.tsx`         | `features/casino/modules/dice/**`            | Rewrite/delete.                                                |
-| `frontend/apps/web/src/app/cointoss/page.tsx`           | `/casino/cointoss`                           | Redirect boundary only.                                        |
+| `frontend/apps/web/src/app/cointoss/page.tsx`           | `/casino/coin-toss`                          | Delete; no compatibility route survives.                       |
 | `frontend/apps/web/src/app/cointoss/pageClient.tsx`     | `features/casino/modules/cointoss/**`        | Rewrite/delete.                                                |
-| `frontend/apps/web/src/app/roulette/page.tsx`           | `/casino/roulette`                           | Redirect boundary only.                                        |
+| `frontend/apps/web/src/app/roulette/page.tsx`           | `/casino/roulette`                           | Delete; no compatibility route survives.                       |
 | `frontend/apps/web/src/app/roulette/pageClient.tsx`     | `features/casino/modules/roulette/**`        | Rewrite/delete.                                                |
-| `frontend/apps/web/src/app/keno/page.tsx`               | `/casino/keno`                               | Redirect boundary only.                                        |
+| `frontend/apps/web/src/app/keno/page.tsx`               | `/casino/keno`                               | Delete; no compatibility route survives.                       |
 | `frontend/apps/web/src/app/keno/pageClient.tsx`         | `features/casino/modules/keno/**`            | Rewrite/delete.                                                |
 | `frontend/apps/web/src/app/sportsbook/page.tsx`         | `app/(product)/sportsbook/page.tsx`          | Rewrite on SportsHub read model and feature gate.              |
 | `frontend/apps/web/src/app/sportsbook/pageClient.tsx`   | `features/sportsbook/**`                     | Rewrite.                                                       |
-| `frontend/apps/web/src/app/account/page.tsx`            | `/portfolio`                                 | Redirect boundary or delete after new route.                   |
-| `frontend/apps/web/src/app/bets/page.tsx`               | `/portfolio/activity`                        | Redirect boundary or delete after new route.                   |
-| `frontend/apps/web/src/app/bets/[betId]/page.tsx`       | `/portfolio/activity` detail route if needed | Rewrite or redirect after IA decision.                         |
-| `frontend/apps/web/src/app/claims/page.tsx`             | `/portfolio/claims`                          | Redirect boundary.                                             |
+| `frontend/apps/web/src/app/account/page.tsx`            | `/portfolio`                                 | Delete; no compatibility route survives.                       |
+| `frontend/apps/web/src/app/bets/page.tsx`               | `/portfolio/activity`                        | Delete; no compatibility route survives.                       |
+| `frontend/apps/web/src/app/bets/[betId]/page.tsx`       | `/portfolio/activity` detail route if needed | Delete; no compatibility route survives.                       |
+| `frontend/apps/web/src/app/claims/page.tsx`             | `/portfolio/claims`                          | Delete; no compatibility route survives.                       |
 | `frontend/apps/web/src/app/claims/pageClient.tsx`       | `features/portfolio/claims/**`               | Rewrite/delete.                                                |
-| `frontend/apps/web/src/app/referral/page.tsx`           | `/portfolio` tab                             | Redirect boundary.                                             |
+| `frontend/apps/web/src/app/referral/page.tsx`           | `/portfolio` tab                             | Delete; no compatibility route survives.                       |
 | `frontend/apps/web/src/app/referral/pageClient.tsx`     | `features/portfolio/referral/**` if enabled  | Rewrite/delete.                                                |
-| `frontend/apps/web/src/app/invest/page.tsx`             | `/earn`                                      | Redirect boundary.                                             |
-| `frontend/apps/web/src/app/liquidity/page.tsx`          | `/earn`                                      | Redirect boundary.                                             |
+| `frontend/apps/web/src/app/invest/page.tsx`             | `/earn`                                      | Delete; no compatibility route survives.                       |
+| `frontend/apps/web/src/app/liquidity/page.tsx`          | `/earn`                                      | Delete; no compatibility route survives.                       |
 | `frontend/apps/web/src/app/liquidity/pageClient.tsx`    | `features/earn/**`                           | Rewrite/delete.                                                |
 | `frontend/apps/web/src/app/ops/page.tsx`                | `app/(product)/ops/page.tsx`                 | Rewrite as dense ops control room.                             |
-| `frontend/apps/web/src/app/privacy/page.tsx`            | `app/(legal)/legal/privacy/page.tsx`         | Rewrite in legal layout.                                       |
-| `frontend/apps/web/src/app/terms/page.tsx`              | `app/(legal)/legal/terms/page.tsx`           | Rewrite in legal layout.                                       |
-| `frontend/apps/web/src/app/disclaimer/page.tsx`         | `app/(legal)/legal/disclaimer/page.tsx`      | Rewrite in legal layout.                                       |
+| `frontend/apps/web/src/app/privacy/page.tsx`            | `app/(legal)/legal/privacy/page.tsx`         | Delete old root route after legal route lands.                 |
+| `frontend/apps/web/src/app/terms/page.tsx`              | `app/(legal)/legal/terms/page.tsx`           | Delete old root route after legal route lands.                 |
+| `frontend/apps/web/src/app/disclaimer/page.tsx`         | `app/(legal)/legal/disclaimer/page.tsx`      | Delete old root route after legal route lands.                 |
 | `frontend/apps/web/src/app/layout.tsx`                  | root layout                                  | Rewrite to keep root provider-light.                           |
 | `frontend/apps/web/src/app/error.tsx`                   | route error boundary                         | Rewrite using new error pattern.                               |
 | `frontend/apps/web/src/app/global-error.tsx`            | global error boundary                        | Rewrite using new error pattern.                               |
@@ -189,6 +189,9 @@ git diff --name-only origin/master...HEAD | rg '^frontend/packages/ssot/' && exi
 
 # No prototype routes in production app
 test ! -d frontend/apps/web/src/app/prototype
+
+# No legacy route aliases in production app
+pnpm -C frontend precheck:frontend -- --strict
 
 # No legacy token systems
 rg -nE "visual-system|--ag-|cyber-" frontend/apps/web/src frontend/packages/ui/src
