@@ -23,6 +23,7 @@ interface IBankFootballCanary {
 /// @dev Outcome ids are zero-based: 0=Mexico, 1=Draw, 2=South Africa.
 ///      Modes:
 ///      - local-resolve: simulation-only full lifecycle using vm.warp.
+///      - open-market: create/open a 3-outcome market without placing tickets or locking it.
 ///      - setup: create/open/lock a 3-outcome market and place tickets.
 ///      - settle: propose result, or after finality, finalize and settle tickets.
 contract WorldCupFootballCanaryV13 is Script {
@@ -87,6 +88,11 @@ contract WorldCupFootballCanaryV13 is Script {
             return;
         }
 
+        if (modeHash == keccak256("open-market")) {
+            _openMarket();
+            return;
+        }
+
         if (modeHash == keccak256("settle")) {
             _settle();
             return;
@@ -123,6 +129,20 @@ contract WorldCupFootballCanaryV13 is Script {
         console2.log("  FOOTBALL_MARKET_ID", cfg.marketId);
         console2.log("  FOOTBALL_FIRST_TICKET_ID", ticketIds[0]);
         console2.log("  FOOTBALL_TICKET_COUNT", ticketIds.length);
+        console2.log("  startsAt", cfg.startsAt);
+    }
+
+    function _openMarket() internal {
+        FootballConfig memory cfg = _readNewMarketConfig();
+        _validateOpenMarketConfig(cfg);
+        _logConfig("World Cup football open market:", cfg);
+
+        _broadcastOpenMarket(cfg);
+
+        SSOTTypes.SportsMarket memory market = cfg.sportsHub.getMarket(cfg.marketId);
+        require(market.state == SSOTTypes.SportsMarketState.Open, "market not open");
+        console2.log("  FOOTBALL_MARKET_ID", cfg.marketId);
+        console2.log("  lockTime", cfg.lockTime);
         console2.log("  startsAt", cfg.startsAt);
     }
 
@@ -278,6 +298,19 @@ contract WorldCupFootballCanaryV13 is Script {
         if (bankAssets == 0) revert("sports bank is unfunded");
     }
 
+    function _validateOpenMarketConfig(FootballConfig memory cfg) internal view {
+        if (cfg.poolId == 0) revert("bad pool id");
+        if (cfg.outcomeCount != 3) revert("football 1X2 canary expects 3 outcomes");
+        if (cfg.lockTime <= block.timestamp) revert("bad lockTime");
+        if (cfg.startsAt <= cfg.lockTime) revert("bad startsAt");
+        if (!cfg.sportsHub.oddsSigner(cfg.oddsSigner)) revert("odds signer not allowed");
+        if (!cfg.sportsHub.resultReporter(cfg.resultReporter)) revert("result reporter not allowed");
+        if (cfg.sportsHub.resultReporterThreshold() != 1) revert("football canary supports reporter threshold 1");
+
+        uint256 bankAssets = IBankFootballCanary(cfg.sportsBank).totalAssets();
+        if (bankAssets == 0) revert("sports bank is unfunded");
+    }
+
     function _logConfig(string memory label, FootballConfig memory cfg) internal view {
         console2.log(label);
         console2.log("  market: FIFA World Cup 2026 opening match, Mexico vs South Africa, 1X2");
@@ -345,6 +378,24 @@ contract WorldCupFootballCanaryV13 is Script {
 
         vm.startBroadcast(cfg.privateKey);
         cfg.sportsHub.lockMarket(cfg.marketId);
+        vm.stopBroadcast();
+    }
+
+    function _broadcastOpenMarket(FootballConfig memory cfg) internal {
+        vm.startBroadcast(cfg.privateKey);
+        uint64 createdMarketId = cfg.sportsHub
+            .createMarket(
+                cfg.eventId,
+                cfg.poolId,
+                cfg.outcomeCount,
+                cfg.startsAt,
+                cfg.lockTime,
+                cfg.finality,
+                cfg.marketKey,
+                cfg.rulebookHash
+            );
+        require(createdMarketId == cfg.marketId, "unexpected market id");
+        cfg.sportsHub.openMarket(cfg.marketId);
         vm.stopBroadcast();
     }
 
