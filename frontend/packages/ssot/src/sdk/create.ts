@@ -20,8 +20,11 @@ import type {
   PlaceBetPlan,
   CreateSportsMarketInput,
   ExecutePlanResult,
+  ExecuteSportsTicketPlanResult,
   ReconcilePlaceBetTxResult,
   BindPlaceBetTxResult,
+  PlaceSportsTicketInput,
+  PlaceSportsTicketPlan,
   ProposeSportsResultInput,
   ResolveSportsChallengeDecision,
   ResolveSportsChallengeInput,
@@ -29,6 +32,7 @@ import type {
   SSOTBankAPI,
   SSOTVRFHubAPI,
   SSOTSportsHubAPI,
+  SportsOddsSnapshotInput,
   Address as AddressT
 } from "./types";
 import { toDomainError } from "./errors";
@@ -1123,6 +1127,310 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
       })) as bigint;
     },
 
+    async hashOddsTicket(
+      odds: SportsOddsSnapshotInput,
+      player: AddressT,
+      stake: bigint
+    ): Promise<Hex> {
+      return (await publicClient.readContract({
+        address: sportsHubAddress,
+        abi: SPORTS_HUB_ABI,
+        functionName: "hashOddsTicket",
+        args: [toSportsOddsStruct(odds), player, stake]
+      })) as Hex;
+    },
+
+    async planPlaceTicket(
+      input: PlaceSportsTicketInput
+    ): Promise<PlaceSportsTicketPlan | { error: DomainError }> {
+      try {
+        if (input.chainId !== release.chainId) {
+          return {
+            error: {
+              code: "CHAIN_MISMATCH",
+              message: `Release chainId=${release.chainId} does not match request chainId=${input.chainId}.`,
+              severity: "error"
+            }
+          };
+        }
+
+        if (!release.sports?.enabled) {
+          return {
+            error: {
+              code: "SPORTSBOOK_DISABLED",
+              message: "Sportsbook ticket placement is disabled for this release.",
+              severity: "warning"
+            }
+          };
+        }
+
+        if (input.stake <= 0n) {
+          return {
+            error: { code: "BAD_INPUT", message: "stake must be > 0", severity: "error" }
+          };
+        }
+
+        const walletReq = requireWallet();
+        if ("error" in walletReq) return walletReq;
+
+        const oddsCheck = validateSportsOddsInput(input);
+        if (oddsCheck) return { error: oddsCheck };
+
+        const market = await sportsHub.getMarket(input.marketId);
+        if (market.state !== "open") {
+          return {
+            error: {
+              code: "SPORTS_MARKET_NOT_OPEN",
+              message: `Market ${input.marketId.toString()} is not open for ticket placement.`,
+              severity: "warning",
+              details: { state: market.state }
+            }
+          };
+        }
+        if (input.outcomeId < 0 || input.outcomeId >= market.outcomeCount) {
+          return {
+            error: {
+              code: "SPORTS_BAD_OUTCOME",
+              message: "Selected outcome is outside this market's outcome range.",
+              severity: "error",
+              details: { outcomeId: input.outcomeId, outcomeCount: market.outcomeCount }
+            }
+          };
+        }
+        if (input.odds.marketVersion !== market.version) {
+          return {
+            error: {
+              code: "SPORTS_ODDS_VERSION_MISMATCH",
+              message: "Odds snapshot version does not match the current market version.",
+              severity: "warning",
+              details: {
+                oddsVersion: input.odds.marketVersion.toString(),
+                marketVersion: market.version.toString()
+              }
+            }
+          };
+        }
+        if (input.stake > input.odds.maxStake) {
+          return {
+            error: {
+              code: "SPORTS_STAKE_EXCEEDS_ODDS_CAP",
+              message: "Stake exceeds the signed odds snapshot maxStake.",
+              severity: "warning",
+              details: {
+                stake: input.stake.toString(),
+                maxStake: input.odds.maxStake.toString()
+              }
+            }
+          };
+        }
+
+        const poolReq = getPool(market.poolId);
+        if ("error" in poolReq) return poolReq;
+        const pool = normalizePool(poolReq);
+        if (pool.domain.toLowerCase() !== "sports" && !pool.sportsRisk) {
+          return {
+            error: {
+              code: "SPORTS_POOL_REQUIRED",
+              message: `Pool ${market.poolId} is not configured as a sports pool.`,
+              severity: "error"
+            }
+          };
+        }
+        const releaseRiskHash = pool.sportsRisk?.riskHash?.toLowerCase();
+        if (releaseRiskHash && releaseRiskHash !== input.odds.riskHash.toLowerCase()) {
+          return {
+            error: {
+              code: "SPORTS_RISK_HASH_MISMATCH",
+              message: "Odds snapshot riskHash does not match the release sports risk policy.",
+              severity: "warning",
+              details: { expected: pool.sportsRisk?.riskHash, received: input.odds.riskHash }
+            }
+          };
+        }
+
+        const allowance = (await publicClient.readContract({
+          address: pool.asset,
+          abi: ERC20_ABI,
+          functionName: "allowance",
+          args: [walletReq.account, pool.bank]
+        })) as bigint;
+        const { needsApproval, approveAmount } = planExactApproval({
+          allowance,
+          required: input.stake
+        });
+
+        const warnings: string[] = [];
+        if (release.isPlaceholder) {
+          warnings.push("Release snapshot is marked as placeholder; writes are not recommended.");
+        }
+        const now = BigInt(Math.floor(Date.now() / 1000));
+        if (input.odds.expiresAt <= now) {
+          return {
+            error: {
+              code: "SPORTS_ODDS_EXPIRED",
+              message: "Odds snapshot has expired.",
+              severity: "warning",
+              details: { expiresAt: input.odds.expiresAt.toString(), now: now.toString() }
+            }
+          };
+        }
+
+        let oddsTicketHash: Hex | undefined;
+        try {
+          oddsTicketHash = await sportsHub.hashOddsTicket(
+            input.odds,
+            walletReq.account as AddressT,
+            input.stake
+          );
+        } catch {
+          warnings.push("Could not preview the odds ticket hash before execution.");
+        }
+
+        const steps: PlaceSportsTicketPlan["steps"] = [];
+        if (needsApproval) {
+          steps.push({
+            type: "approve",
+            token: pool.asset as AddressT,
+            spender: pool.bank as AddressT,
+            amount: approveAmount!
+          });
+        }
+        steps.push({
+          type: "placeSportsTicket",
+          to: sportsHubAddress as AddressT,
+          call: {
+            contract: "SportsHub",
+            fn: "placeTicket",
+            argsSummary: {
+              marketId: input.marketId,
+              outcomeId: input.outcomeId,
+              stake: input.stake,
+              oddsWad: input.odds.oddsWad,
+              maxPayout: input.odds.maxPayout,
+              expiresAt: input.odds.expiresAt
+            }
+          }
+        });
+
+        return {
+          chainId: release.chainId,
+          releaseDigest: release.releaseDigest,
+          warnings,
+          steps,
+          payload: {
+            marketId: input.marketId,
+            outcomeId: input.outcomeId,
+            stake: input.stake,
+            odds: input.odds,
+            signature: input.signature,
+            poolId: market.poolId
+          },
+          preview: {
+            allowance,
+            needsApproval,
+            approveAmount,
+            asset: pool.asset as AddressT,
+            bank: pool.bank as AddressT,
+            marketState: market.state,
+            oddsTicketHash
+          }
+        };
+      } catch (e) {
+        return { error: toDomainError(e) };
+      }
+    },
+
+    async executeTicketPlan(plan: PlaceSportsTicketPlan): Promise<ExecuteSportsTicketPlanResult> {
+      const walletReq = requireWallet();
+      if ("error" in walletReq) {
+        return {
+          placeTicketTx: { txHash: "0x0" as Hex, ok: false, error: walletReq.error }
+        };
+      }
+
+      let approveTx: TxResult | undefined;
+      for (const step of plan.steps) {
+        if (step.type === "approve") {
+          approveTx = await tx.simulateAndWrite({
+            chainId: plan.chainId,
+            releaseDigest: plan.releaseDigest,
+            action: "APPROVE",
+            publicClient,
+            walletClient: walletReq.walletClient,
+            account: walletReq.account,
+            address: getAddress(step.token) as Address,
+            abi: ERC20_ABI,
+            functionName: "approve",
+            args: [getAddress(step.spender) as Address, step.amount]
+          });
+          if (!approveTx.ok) {
+            return {
+              approveTx,
+              placeTicketTx: { txHash: "0x0" as Hex, ok: false, error: approveTx.error }
+            };
+          }
+        }
+      }
+
+      const placeStep = plan.steps.find((s) => s.type === "placeSportsTicket");
+      if (!placeStep) {
+        return {
+          approveTx,
+          placeTicketTx: {
+            txHash: "0x0" as Hex,
+            ok: false,
+            error: {
+              code: "NO_PLACE_TICKET_STEP",
+              message: "No placeSportsTicket step in plan.",
+              severity: "error"
+            }
+          }
+        };
+      }
+
+      const payload = plan.payload;
+      const args = [
+        payload.marketId,
+        payload.outcomeId,
+        toSportsOddsStruct(payload.odds),
+        payload.stake,
+        payload.signature
+      ] as const;
+
+      const placeTicketTx = await tx.simulateAndWrite({
+        chainId: plan.chainId,
+        releaseDigest: plan.releaseDigest,
+        action: "SPORTS_PLACE_TICKET",
+        publicClient,
+        walletClient: walletReq.walletClient,
+        account: walletReq.account,
+        address: sportsHubAddress,
+        abi: SPORTS_HUB_ABI,
+        functionName: "placeTicket",
+        args
+      });
+
+      if (!placeTicketTx.ok) {
+        return { approveTx, placeTicketTx };
+      }
+
+      let ticketId: bigint | undefined;
+      try {
+        const receipt = await publicClient.getTransactionReceipt({ hash: placeTicketTx.txHash });
+        const ev = tx.extractEventArgs({
+          abi: SPORTS_HUB_ABI,
+          receiptLogs: receipt.logs as any,
+          eventName: "TicketPlaced"
+        });
+        const rawTicketId = ev[0]?.ticketId;
+        if (rawTicketId != null) ticketId = BigInt(rawTicketId as any);
+      } catch {
+        // Event parsing is best-effort; callers can reconcile with getTicket/nextTicketId.
+      }
+
+      return { approveTx, placeTicketTx, ticketId };
+    },
+
     async createMarket(input: CreateSportsMarketInput): Promise<TxResult> {
       return sportsHubWrite("SPORTS_CREATE_MARKET", "createMarket", [
         input.eventId,
@@ -1345,4 +1653,51 @@ function mapSportsChallengeDecisionInput(decision: ResolveSportsChallengeDecisio
   if (decision === "upholdResult") return 1;
   if (decision === "reopenResult") return 2;
   return 3;
+}
+
+function toSportsOddsStruct(odds: SportsOddsSnapshotInput) {
+  return {
+    marketId: odds.marketId,
+    outcomeId: odds.outcomeId,
+    marketVersion: odds.marketVersion,
+    oddsWad: odds.oddsWad,
+    maxStake: odds.maxStake,
+    maxPayout: odds.maxPayout,
+    expiresAt: odds.expiresAt,
+    nonce: odds.nonce,
+    riskHash: odds.riskHash
+  };
+}
+
+function validateSportsOddsInput(input: PlaceSportsTicketInput): DomainError | undefined {
+  if (input.odds.marketId !== input.marketId) {
+    return {
+      code: "SPORTS_ODDS_MARKET_MISMATCH",
+      message: "Odds snapshot marketId does not match the selected market.",
+      severity: "error",
+      details: {
+        marketId: input.marketId.toString(),
+        oddsMarketId: input.odds.marketId.toString()
+      }
+    };
+  }
+  if (input.odds.outcomeId !== input.outcomeId) {
+    return {
+      code: "SPORTS_ODDS_OUTCOME_MISMATCH",
+      message: "Odds snapshot outcomeId does not match the selected outcome.",
+      severity: "error",
+      details: {
+        outcomeId: input.outcomeId,
+        oddsOutcomeId: input.odds.outcomeId
+      }
+    };
+  }
+  if (input.odds.oddsWad <= 0n || input.odds.maxStake <= 0n || input.odds.maxPayout <= 0n) {
+    return {
+      code: "SPORTS_BAD_ODDS_SNAPSHOT",
+      message: "Odds snapshot oddsWad, maxStake, and maxPayout must be non-zero.",
+      severity: "error"
+    };
+  }
+  return undefined;
 }

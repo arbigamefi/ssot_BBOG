@@ -114,6 +114,61 @@ The odds tool fails if `FOOTBALL_MAX_PAYOUT` / `--max-payout-raw` is below the p
 highest provider odds for the configured stake. Operators must raise the cap explicitly from an
 approved bankroll/risk memo rather than silently accepting provider prices that exceed risk limits.
 
+## Frontend Signed Odds Route
+
+The frontend exposes a server-side helper for operator/canary ticket placement:
+
+```text
+POST /api/sportsbook/odds-snapshot
+```
+
+The route is deliberately narrow. It reads the embedded v1.3 release, fetches The Odds API `h2h`
+prices, maps football 1X2 outcomes to SportsHub outcome ids, checks the selected stake against the
+Sports pool `sportsRisk` caps, asks SportsHub for the canonical `hashOddsTicket(...)`, signs that hash
+with the configured odds signer, and returns the complete `SportsOddsSnapshot` payload plus signature.
+
+Required server-only environment:
+
+```bash
+NEXT_PUBLIC_SPORTSBOOK_ENABLED=true
+THE_ODDS_API_KEY=<secret>
+SPORTS_ODDS_SIGNER_PRIVATE_KEY=<32-byte-private-key>
+RPC_URL=<chain-rpc-url>
+```
+
+Optional controls:
+
+```bash
+SPORTS_ODDS_SIGNER=<expected-signer-address>
+SPORTS_PROVIDER_SPORT_KEY=soccer_fifa_world_cup
+SPORTS_PROVIDER_EVENT_ID=<the-odds-api-event-id>
+SPORTS_BOOKMAKER_KEY=<optional-bookmaker-key>
+THE_ODDS_API_REGIONS=us,uk,eu,au
+SPORTS_ODDS_TTL_SECONDS=120
+```
+
+Request body:
+
+```json
+{
+  "chainId": 84532,
+  "marketId": "7",
+  "outcomeId": 0,
+  "player": "0x1111111111111111111111111111111111111111",
+  "stake": "1000000",
+  "providerEventId": "optional-provider-event-id",
+  "bookmakerKey": "optional-bookmaker-key",
+  "sportKey": "soccer_fifa_world_cup"
+}
+```
+
+The response schema is `sportsbook.signed-odds-ticket.v1`. The `/sportsbook/[marketId]` UI consumes it
+to fill `oddsWad`, `maxStake`, `maxPayout`, `expiresAt`, `nonce`, `riskHash`, and `signature` before
+calling the SDK planner.
+
+Do not expose the signer private key to the browser, use a long-lived snapshot, or accept a snapshot
+whose `riskHash` no longer matches the active Sports pool risk metadata.
+
 ## Live Smoke Evidence
 
 The first live provider odds smoke is recorded in

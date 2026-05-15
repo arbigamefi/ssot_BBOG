@@ -80,9 +80,24 @@ the embedded release exposes enabled SportsHub metadata. This frontend flag is o
 does not replace the approved `sportsbook.frontend-access.v1` memo required by
 `docs/ops/sportsbook-frontend-access.md`.
 
-`/sportsbook` is a read-only control-room entrypoint for v1.3 SportsHub metadata, Sports pool caps, and
-provider-readiness status. It must not expose public ticket placement until the Phase 2 go/no-go packet
-records GO and the frontend-access approval memo passes the required ops check.
+`/sportsbook` is the read-oriented control-room entrypoint for v1.3 SportsHub metadata, Sports pool
+caps, and provider-readiness status. Ticket placement is limited to the market detail route
+`/sportsbook/[marketId]`, where the UI must obtain a fresh signed odds snapshot before planning and
+broadcasting `SportsHub.placeTicket(...)`.
+
+The web API route `POST /api/sportsbook/odds-snapshot` is the only frontend-owned path that can turn
+The Odds API `h2h` prices into a signed ticket snapshot. It requires server-only environment variables:
+
+- `THE_ODDS_API_KEY`
+- `SPORTS_ODDS_SIGNER_PRIVATE_KEY` (or the legacy aliases `FOOTBALL_ODDS_SIGNER_PRIVATE_KEY` /
+  `CANARY_ODDS_SIGNER_PRIVATE_KEY`)
+- `RPC_URL`
+- optional `SPORTS_ODDS_SIGNER`, `SPORTS_PROVIDER_SPORT_KEY`, `SPORTS_PROVIDER_EVENT_ID`,
+  `SPORTS_BOOKMAKER_KEY`, `THE_ODDS_API_REGIONS`, and `SPORTS_ODDS_TTL_SECONDS`
+
+The route must fail closed when sportsbook is disabled, release metadata lacks SportsHub, the market is
+not open, risk metadata is missing, the provider payout exceeds pool caps, or the signing key does not
+match `SPORTS_ODDS_SIGNER`.
 
 ## ABIs
 
