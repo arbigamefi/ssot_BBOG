@@ -192,6 +192,26 @@ export interface SSOTVRFHubAPI {
   claimRefundCredit(): Promise<TxResult>;
 }
 
+export interface CreateSportsMarketInput {
+  eventId: bigint;
+  poolId: number;
+  outcomeCount: number;
+  startsAt: bigint;
+  lockTime: bigint;
+  resultFinalitySeconds: bigint;
+  marketKey: Hex;
+  rulebookHash: Hex;
+}
+
+export interface ProposeSportsResultInput {
+  marketId: bigint;
+  winningOutcomeId: number;
+  resultSourceHash: Hex;
+  evidenceHash: Hex;
+  observedAt: bigint;
+  reporterSignatures?: readonly Hex[];
+}
+
 export interface SSOTSportsHubAPI {
   getNextMarketId(): Promise<bigint>;
   getNextTicketId(): Promise<bigint>;
@@ -202,4 +222,17 @@ export interface SSOTSportsHubAPI {
   getMarketOutcomeReserved(marketId: bigint, outcomeId: number): Promise<bigint>;
   getEventReserved(eventId: bigint): Promise<bigint>;
   getPoolEventReserved(poolId: number, eventId: bigint): Promise<bigint>;
+  createMarket(input: CreateSportsMarketInput): Promise<TxResult>;
+  openMarket(marketId: bigint): Promise<TxResult>;
+  suspendMarket(marketId: bigint, suspended: boolean): Promise<TxResult>;
+  lockMarket(marketId: bigint): Promise<TxResult>;
+  voidMarket(marketId: bigint, reasonHash: Hex): Promise<TxResult>;
+  proposeResult(input: ProposeSportsResultInput): Promise<TxResult>;
+  finalizeResult(marketId: bigint): Promise<TxResult>;
+  settleTicket(ticketId: bigint): Promise<TxResult>;
+  settleTickets(ticketIds: readonly bigint[]): Promise<TxResult>;
+  refundTicket(ticketId: bigint): Promise<TxResult>;
+  refundTickets(ticketIds: readonly bigint[]): Promise<TxResult>;
+  voidTicket(ticketId: bigint): Promise<TxResult>;
+  voidTickets(ticketIds: readonly bigint[]): Promise<TxResult>;
 }

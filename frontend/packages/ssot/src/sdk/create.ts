@@ -18,9 +18,11 @@ import { createTxPipeline, type JournalSink, type TxResult } from "./txPipeline"
 import type {
   PlaceBetInput,
   PlaceBetPlan,
+  CreateSportsMarketInput,
   ExecutePlanResult,
   ReconcilePlaceBetTxResult,
   BindPlaceBetTxResult,
+  ProposeSportsResultInput,
   SSOTGameHubAPI,
   SSOTBankAPI,
   SSOTVRFHubAPI,
@@ -1117,8 +1119,108 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         functionName: "poolEventReserved",
         args: [BigInt(poolId), eventId]
       })) as bigint;
+    },
+
+    async createMarket(input: CreateSportsMarketInput): Promise<TxResult> {
+      return sportsHubWrite("SPORTS_CREATE_MARKET", "createMarket", [
+        input.eventId,
+        BigInt(input.poolId),
+        input.outcomeCount,
+        input.startsAt,
+        input.lockTime,
+        input.resultFinalitySeconds,
+        input.marketKey,
+        input.rulebookHash
+      ]);
+    },
+
+    async openMarket(marketId: bigint): Promise<TxResult> {
+      return sportsHubWrite("SPORTS_OPEN_MARKET", "openMarket", [marketId]);
+    },
+
+    async suspendMarket(marketId: bigint, suspended: boolean): Promise<TxResult> {
+      return sportsHubWrite("SPORTS_SUSPEND_MARKET", "suspendMarket", [marketId, suspended]);
+    },
+
+    async lockMarket(marketId: bigint): Promise<TxResult> {
+      return sportsHubWrite("SPORTS_LOCK_MARKET", "lockMarket", [marketId]);
+    },
+
+    async voidMarket(marketId: bigint, reasonHash: Hex): Promise<TxResult> {
+      return sportsHubWrite("SPORTS_VOID_MARKET", "voidMarket", [marketId, reasonHash]);
+    },
+
+    async proposeResult(input: ProposeSportsResultInput): Promise<TxResult> {
+      const reporterSignatures = input.reporterSignatures ?? [];
+      const args = reporterSignatures.length
+        ? [
+            input.marketId,
+            input.winningOutcomeId,
+            input.resultSourceHash,
+            input.evidenceHash,
+            input.observedAt,
+            reporterSignatures
+          ]
+        : [
+            input.marketId,
+            input.winningOutcomeId,
+            input.resultSourceHash,
+            input.evidenceHash,
+            input.observedAt
+          ];
+      return sportsHubWrite("SPORTS_PROPOSE_RESULT", "proposeResult", args);
+    },
+
+    async finalizeResult(marketId: bigint): Promise<TxResult> {
+      return sportsHubWrite("SPORTS_FINALIZE_RESULT", "finalizeResult", [marketId]);
+    },
+
+    async settleTicket(ticketId: bigint): Promise<TxResult> {
+      return sportsHubWrite("SPORTS_SETTLE_TICKET", "settleTicket", [ticketId]);
+    },
+
+    async settleTickets(ticketIds: readonly bigint[]): Promise<TxResult> {
+      return sportsHubWrite("SPORTS_SETTLE_TICKETS", "settleTickets", [ticketIds]);
+    },
+
+    async refundTicket(ticketId: bigint): Promise<TxResult> {
+      return sportsHubWrite("SPORTS_REFUND_TICKET", "refundTicket", [ticketId]);
+    },
+
+    async refundTickets(ticketIds: readonly bigint[]): Promise<TxResult> {
+      return sportsHubWrite("SPORTS_REFUND_TICKETS", "refundTickets", [ticketIds]);
+    },
+
+    async voidTicket(ticketId: bigint): Promise<TxResult> {
+      return sportsHubWrite("SPORTS_VOID_TICKET", "voidTicket", [ticketId]);
+    },
+
+    async voidTickets(ticketIds: readonly bigint[]): Promise<TxResult> {
+      return sportsHubWrite("SPORTS_VOID_TICKETS", "voidTickets", [ticketIds]);
     }
   };
+
+  function sportsHubWrite(
+    action: string,
+    functionName: string,
+    args: readonly unknown[]
+  ): Promise<TxResult> {
+    const walletReq = requireWallet();
+    if ("error" in walletReq)
+      return Promise.resolve({ txHash: "0x0" as Hex, ok: false, error: walletReq.error });
+    return tx.simulateAndWrite({
+      chainId: release.chainId,
+      releaseDigest: release.releaseDigest,
+      action,
+      publicClient,
+      walletClient: walletReq.walletClient,
+      account: walletReq.account,
+      address: sportsHubAddress,
+      abi: SPORTS_HUB_ABI,
+      functionName,
+      args
+    });
+  }
 
   return { release, account, gameHub, bank, vrfHub, sportsHub };
 }

@@ -203,6 +203,78 @@ describe("createSSOTSDK", () => {
     expect(result.challengeDecision).toBe("none");
   });
 
+  it("executes SportsHub market and result writes through the v1.3 SportsHub address", async () => {
+    const marketKey = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Hex;
+    const rulebookHash =
+      "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Hex;
+    const resultSourceHash =
+      "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc" as Hex;
+    const evidenceHash =
+      "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd" as Hex;
+
+    await sdk.sportsHub.createMarket({
+      eventId: 99n,
+      poolId: 2,
+      outcomeCount: 3,
+      startsAt: 1_800_000_000n,
+      lockTime: 1_799_996_400n,
+      resultFinalitySeconds: 604_800n,
+      marketKey,
+      rulebookHash
+    });
+    await sdk.sportsHub.openMarket(7n);
+    await sdk.sportsHub.lockMarket(7n);
+    await sdk.sportsHub.proposeResult({
+      marketId: 7n,
+      winningOutcomeId: 1,
+      resultSourceHash,
+      evidenceHash,
+      observedAt: 1_800_010_000n
+    });
+    await sdk.sportsHub.finalizeResult(7n);
+
+    expect(pub.simulateContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        address: getAddress(TEST_RELEASE.contracts.sportsHub),
+        functionName: "createMarket",
+        args: [99n, 2n, 3, 1_800_000_000n, 1_799_996_400n, 604_800n, marketKey, rulebookHash]
+      })
+    );
+    expect(pub.simulateContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        address: getAddress(TEST_RELEASE.contracts.sportsHub),
+        functionName: "proposeResult",
+        args: [7n, 1, resultSourceHash, evidenceHash, 1_800_010_000n]
+      })
+    );
+    expect(journal.map((entry) => entry.action)).toContain("SPORTS_CREATE_MARKET");
+    expect(journal.map((entry) => entry.action)).toContain("SPORTS_PROPOSE_RESULT");
+  });
+
+  it("executes SportsHub terminal ticket helpers through the SDK", async () => {
+    await sdk.sportsHub.settleTicket(12n);
+    await sdk.sportsHub.settleTickets([12n, 13n]);
+    await sdk.sportsHub.refundTicket(14n);
+    await sdk.sportsHub.refundTickets([14n, 15n]);
+    await sdk.sportsHub.voidTicket(16n);
+    await sdk.sportsHub.voidTickets([16n, 17n]);
+
+    expect(pub.simulateContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        functionName: "settleTickets",
+        args: [[12n, 13n]]
+      })
+    );
+    expect(pub.simulateContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        functionName: "voidTickets",
+        args: [[16n, 17n]]
+      })
+    );
+    expect(journal.map((entry) => entry.action)).toContain("SPORTS_SETTLE_TICKETS");
+    expect(journal.map((entry) => entry.action)).toContain("SPORTS_VOID_TICKETS");
+  });
+
   it("executes GameHub refund through the v1.3 GameHub address", async () => {
     const result = await sdk.gameHub.refund(42n);
 
@@ -270,6 +342,15 @@ describe("createSSOTSDK", () => {
     const readOnlySDK = createSSOTSDK({ release: TEST_RELEASE, publicClient: pub });
 
     const result = await readOnlySDK.gameHub.refund(42n);
+
+    expect(result.ok).toBe(false);
+    expect(result.error?.code).toBe("WALLET_NOT_CONNECTED");
+  });
+
+  it("returns WALLET_NOT_CONNECTED for SportsHub writes without a wallet", async () => {
+    const readOnlySDK = createSSOTSDK({ release: TEST_RELEASE, publicClient: pub });
+
+    const result = await readOnlySDK.sportsHub.openMarket(7n);
 
     expect(result.ok).toBe(false);
     expect(result.error?.code).toBe("WALLET_NOT_CONNECTED");
