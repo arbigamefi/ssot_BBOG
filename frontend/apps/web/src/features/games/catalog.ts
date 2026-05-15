@@ -10,13 +10,6 @@ const FALLBACK_LABELS: Record<string, string> = {
   keno: "Keno"
 };
 
-const ACCENTS: Record<string, "blue" | "emerald" | "amber" | "fuchsia" | "slate"> = {
-  roulette: "emerald",
-  dice: "blue",
-  "coin-toss": "amber",
-  keno: "fuchsia"
-};
-
 const BADGES: Record<string, string> = {
   roulette: "European table",
   dice: "Precision room",
@@ -28,7 +21,6 @@ export type CatalogRoom = {
   slug: string;
   label: string;
   href: string;
-  accent: "blue" | "emerald" | "amber" | "fuchsia" | "slate";
   badge: string;
   icon: string;
   summary: string;
@@ -77,7 +69,6 @@ export function getCatalogRooms(rawGamesMeta?: Array<ReleaseGameMetaLike | null 
       slug: game.slug,
       label: game.label,
       href: getPrimaryGameHref(game.slug),
-      accent: ACCENTS[game.slug] ?? "slate",
       badge: BADGES[game.slug] ?? presentation.roomLabel,
       icon: presentation.icon,
       summary: presentation.listDescription,

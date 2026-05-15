@@ -4,7 +4,6 @@ import * as React from "react";
 import Link from "next/link";
 import { cn } from "@ssot/ui";
 import {
-  AdjustmentsHorizontalIcon,
   MagnifyingGlassIcon,
   PlayCircleIcon,
   SparklesIcon,
@@ -35,74 +34,40 @@ const ROOM_TAG_MAP: Record<string, string> = {
   keno: "Lottery"
 };
 
-const RAW_ROOM_COPY_MAP: Record<
+const ROOM_COPY_MAP: Record<
   string,
   {
     title: string;
     promise: string;
     live: string;
-  }
-> = {
-  dice: { title: "Precision Dice", promise: "1-99 sizing in seconds.", live: "124" },
-  roulette: {
-    title: "European Roulette",
-    promise: "Classic 37-slot physical mechanics.",
-    live: "312"
-  },
-  "coin-toss": { title: "Coin Toss", promise: "High-speed 50/50 resolution.", live: "89" },
-  keno: { title: "Keno Draft", promise: "Pick multi-spots for massive multipliers.", live: "45" }
-};
-
-const ROOM_THEME_MAP: Record<
-  string,
-  {
-    cardHover: string;
-    gradientFrom: string;
-    badgeTag: string;
-    badgeStyle: string;
-    iconHoverTransform: string;
-    buttonHover: string;
+    badge: string;
   }
 > = {
   dice: {
-    cardHover: "hover:border-purple-500/60 hover:shadow-[0_20px_50px_rgba(168,85,247,0.2)]",
-    gradientFrom: "from-purple-500/10",
-    badgeTag: "1% House Edge",
-    badgeStyle: "bg-purple-500/20 border-purple-500/50 text-purple-300",
-    iconHoverTransform: "group-hover:scale-110",
-    buttonHover:
-      "group-hover:bg-purple-500/10 group-hover:border-purple-500/50 group-hover:text-purple-400 group-hover:shadow-[0_0_15px_rgba(168,85,247,0.2)]"
+    title: "Precision Dice",
+    promise: "1-99 sizing in seconds.",
+    live: "124",
+    badge: "1% House Edge"
   },
   roulette: {
-    cardHover: "hover:border-emerald-500/60 hover:shadow-[0_20px_50px_rgba(16,185,129,0.2)]",
-    gradientFrom: "from-emerald-500/10",
-    badgeTag: "Max Payout 36x",
-    badgeStyle: "bg-emerald-500/20 border-emerald-500/50 text-emerald-300",
-    iconHoverTransform: "group-hover:scale-110 group-hover:-rotate-12",
-    buttonHover:
-      "group-hover:bg-emerald-500/10 group-hover:border-emerald-500/50 group-hover:text-emerald-400 group-hover:shadow-[0_0_15px_rgba(16,185,129,0.2)]"
+    title: "European Roulette",
+    promise: "Classic 37-slot physical mechanics.",
+    live: "312",
+    badge: "Max Payout 36x"
   },
   "coin-toss": {
-    cardHover: "hover:border-amber-500/60 hover:shadow-[0_20px_50px_rgba(245,158,11,0.2)]",
-    gradientFrom: "from-amber-500/10",
-    badgeTag: "1% House Edge",
-    badgeStyle: "bg-amber-500/20 border-amber-500/50 text-amber-300",
-    iconHoverTransform: "group-hover:scale-110 group-hover:rotate-180",
-    buttonHover:
-      "group-hover:bg-amber-500/10 group-hover:border-amber-500/50 group-hover:text-amber-400 group-hover:shadow-[0_0_15px_rgba(245,158,11,0.2)]"
+    title: "Coin Toss",
+    promise: "High-speed 50/50 resolution.",
+    live: "89",
+    badge: "1% House Edge"
   },
   keno: {
-    cardHover: "hover:border-fuchsia-500/60 hover:shadow-[0_20px_50px_rgba(217,70,239,0.2)]",
-    gradientFrom: "from-fuchsia-500/10",
-    badgeTag: "Huge 1,000x Win",
-    badgeStyle: "bg-fuchsia-500/20 border-fuchsia-500/50 text-fuchsia-300",
-    iconHoverTransform: "group-hover:scale-110",
-    buttonHover:
-      "group-hover:bg-fuchsia-500/10 group-hover:border-fuchsia-500/50 group-hover:text-fuchsia-400 group-hover:shadow-[0_0_15px_rgba(217,70,239,0.2)]"
+    title: "Keno Draft",
+    promise: "Pick multi-spots for massive multipliers.",
+    live: "45",
+    badge: "Huge 1,000x Win"
   }
 };
-
-const DEFAULT_THEME = ROOM_THEME_MAP["dice"]!;
 
 const FILTERS = [
   { key: "all", label: "All Modules" },
@@ -175,57 +140,48 @@ export function GamesListClient() {
   });
 
   return (
-    <div className="min-h-screen bg-[#050505] font-sans text-white selection:bg-blue-500/30">
-      {/* Immersive Deep Glow Background */}
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-[1200px] h-[700px] bg-gradient-to-b from-blue-600/15 via-indigo-600/10 to-transparent blur-[120px] pointer-events-none rounded-full z-0" />
-      <div className="fixed top-0 left-0 right-0 h-[600px] bg-[url('/textures/noise.svg')] opacity-[0.12] mix-blend-overlay pointer-events-none z-0" />
+    <div className="relative overflow-hidden pb-16 text-fg selection:bg-brand/20">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-gradient-to-b from-brand-soft to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[36rem] bg-[url('/textures/noise.svg')] opacity-10 mix-blend-overlay" />
 
-      <main className="relative z-10 max-w-[1440px] mx-auto px-6 py-12 md:py-16">
-        {/* 1. GRAND LOBBY HEADER */}
-        <header className="mb-16 flex flex-col lg:flex-row lg:items-end justify-between gap-10">
-          <div className="max-w-2xl relative">
-            <div className="absolute -left-10 top-0 w-32 h-32 bg-blue-500/20 blur-[50px] rounded-full pointer-events-none" />
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-300 text-[10px] font-bold uppercase tracking-widest mb-6 backdrop-blur-md shadow-[0_0_15px_rgba(59,130,246,0.15)] relative z-10 text-shadow-sm">
-              <SparklesIcon className="w-4 h-4" /> Global Casino Lobby
+      <section className="relative border-b border-border-soft py-12 md:py-16">
+        <header className="flex flex-col gap-10 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-2xl">
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand/30 bg-brand-soft px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-brand">
+              <SparklesIcon className="h-4 w-4" />
+              Global Casino Lobby
             </div>
-            <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight mb-4 text-transparent bg-clip-text bg-gradient-to-r from-white via-white/90 to-white/50 relative z-10 leading-tight">
+            <h1 className="text-5xl font-extrabold leading-tight tracking-tight text-fg md:text-6xl">
               Enter the Floor
             </h1>
-            <p className="text-lg md:text-xl text-white/50 leading-relaxed font-medium relative z-10">
+            <p className="mt-5 max-w-2xl text-lg leading-relaxed text-fg-muted md:text-xl">
               All modules are 100% on-chain, verifiable, and connected directly to the isolated
               reserve bank. Play directly from your wallet.
             </p>
           </div>
 
-          {/* Glassmorphism Stats Cards */}
-          <div className="flex flex-col sm:flex-row gap-4 relative z-10">
-            <div className="flex flex-col gap-1 rounded-2xl border border-white/10 bg-[#0a0a0a]/60 backdrop-blur-xl p-5 min-w-[180px] shadow-2xl relative overflow-hidden group">
-              <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <span className="text-[10px] text-emerald-500/80 uppercase tracking-widest font-bold flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981] animate-pulse" />{" "}
+          <dl className="grid gap-4 sm:grid-cols-2 lg:min-w-[25rem]">
+            <div className="rounded-xl border border-border bg-surface-1 p-5 shadow-e1">
+              <dt className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-accent">
+                <span className="h-1.5 w-1.5 rounded-full bg-accent shadow-glow" />
                 Live Players
-              </span>
-              <span className="text-3xl font-mono font-black text-white drop-shadow-[0_0_10px_rgba(16,185,129,0.3)] mt-2">
-                1,842
-              </span>
+              </dt>
+              <dd className="mt-3 font-mono text-3xl font-black text-fg">1,842</dd>
             </div>
-
-            <div className="flex flex-col gap-1 rounded-2xl border border-white/10 bg-[#0a0a0a]/60 backdrop-blur-xl p-5 min-w-[200px] shadow-2xl relative overflow-hidden group">
-              <div className="absolute inset-0 bg-gradient-to-b from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <span className="text-[10px] text-amber-500/80 uppercase tracking-widest font-bold flex items-center gap-2">
-                <TrophyIcon className="w-3 h-3" /> Max Win (24H)
-              </span>
-              <span className="text-3xl font-mono font-black text-white drop-shadow-[0_0_10px_rgba(245,158,11,0.3)] mt-2">
-                $35,000
-              </span>
+            <div className="rounded-xl border border-border bg-surface-1 p-5 shadow-e1">
+              <dt className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-brand">
+                <TrophyIcon className="h-3.5 w-3.5" />
+                Max Win (24H)
+              </dt>
+              <dd className="mt-3 font-mono text-3xl font-black text-fg">$35,000</dd>
             </div>
-          </div>
+          </dl>
         </header>
+      </section>
 
-        {/* 2. SLEEK SEARCH & FILTERS */}
-        <div className="mb-12 flex flex-col md:flex-row items-center justify-between gap-6 border-b border-white/5 pb-6">
-          {/* Filter Tabs */}
-          <div className="flex items-center gap-1 overflow-x-auto hide-scrollbar w-full md:w-auto">
+      <section className="relative py-8 md:py-10">
+        <div className="mb-10 flex flex-col gap-5 border-b border-border-soft pb-6 md:flex-row md:items-center md:justify-between">
+          <div className="flex w-full items-center gap-1 overflow-x-auto md:w-auto">
             {FILTERS.map((item) => {
               const isActive = item.key === filter;
               return (
@@ -234,43 +190,42 @@ export function GamesListClient() {
                   type="button"
                   onClick={() => setFilter(item.key)}
                   className={cn(
-                    "px-6 py-3 text-sm font-bold flex-shrink-0 transition-all rounded-full relative",
+                    "relative flex-shrink-0 rounded-full px-5 py-3 text-sm font-bold transition-colors",
                     isActive
-                      ? "text-white bg-white/10 shadow-[inset_0_1px_3px_rgba(255,255,255,0.1)]"
-                      : "text-white/40 hover:text-white/80 hover:bg-white/5"
+                      ? "bg-surface-3 text-fg"
+                      : "text-fg-subtle hover:bg-surface-2 hover:text-fg"
                   )}
                 >
                   {item.label}
-                  {isActive && (
-                    <div className="absolute -bottom-[25px] left-1/2 -translate-x-1/2 w-8 h-[3px] bg-blue-500 rounded-t-full shadow-[0_0_15px_rgba(59,130,246,0.8)]" />
-                  )}
+                  {isActive ? (
+                    <span className="absolute -bottom-[1.55rem] left-1/2 h-0.5 w-8 -translate-x-1/2 rounded-full bg-brand shadow-glow" />
+                  ) : null}
                 </button>
               );
             })}
           </div>
 
-          {/* Search Bar */}
-          <div className="relative w-full md:w-80 group">
-            <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30 group-focus-within:text-white/80 transition-colors z-10" />
+          <div className="relative w-full md:w-80">
+            <MagnifyingGlassIcon className="absolute left-4 top-1/2 z-10 h-5 w-5 -translate-y-1/2 text-fg-subtle" />
             <input
               type="text"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search games..."
-              className="w-full bg-[#0a0a0a] border border-white/10 hover:border-white/20 rounded-full pl-12 pr-4 py-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-blue-500 focus:bg-[#0f0f0f] focus:shadow-[0_0_20px_rgba(59,130,246,0.15)] transition-all shadow-inner relative z-0"
+              aria-label="Search games"
+              className="relative z-0 w-full rounded-full border border-border bg-surface-1 py-3 pl-12 pr-4 text-sm text-fg shadow-inner-e1 transition-colors placeholder:text-fg-subtle hover:border-brand/30 focus:border-brand focus:bg-surface-2 focus:outline-none focus:ring-2 focus:ring-brand-ring"
             />
           </div>
         </div>
 
-        {/* 3. PREMIUM GAME CARDS GRID */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-24 animate-in fade-in slide-in-from-bottom-8 duration-700">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
           {roomsToRender.map((room) => {
-            const copy = RAW_ROOM_COPY_MAP[room.slug] ?? {
+            const copy = ROOM_COPY_MAP[room.slug] ?? {
               title: room.label,
               promise: room.summary,
-              live: "—"
+              live: "--",
+              badge: room.badge
             };
-            const theme = ROOM_THEME_MAP[room.slug] ?? DEFAULT_THEME;
 
             return (
               <Link
@@ -278,107 +233,77 @@ export function GamesListClient() {
                 href={room.href}
                 data-testid="room-entry-card"
                 data-slug={room.slug}
-                className={cn(
-                  "group relative rounded-[2rem] border border-white/10 bg-[#050505] overflow-hidden hover:-translate-y-2 transition-all duration-300 flex flex-col min-h-[380px]",
-                  theme.cardHover
-                )}
+                className="group relative flex min-h-[24rem] flex-col overflow-hidden rounded-xl border border-border bg-surface-1 shadow-e1 transition duration-300 hover:-translate-y-1 hover:border-brand/50 hover:bg-surface-2 hover:shadow-glow"
               >
-                {/* Ambient Drop Glow */}
-                <div
-                  className={cn(
-                    "absolute inset-0 bg-gradient-to-b from-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none",
-                    theme.gradientFrom
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-brand-soft to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
+                <div className="absolute left-4 top-4 z-20 rounded-full border border-border bg-surface-0/80 px-3 py-1.5 backdrop-blur">
+                  <span className="flex items-center gap-2 text-[10px] font-mono font-bold uppercase tracking-widest text-fg-muted">
+                    <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+                    {copy.live} playing
+                  </span>
+                </div>
+
+                <div className="absolute right-4 top-4 z-20 rounded-full border border-brand/30 bg-brand-soft px-3 py-1 text-[10px] font-bold uppercase text-brand backdrop-blur">
+                  {copy.badge}
+                </div>
+
+                <div className="relative z-10 mt-10 flex flex-1 items-center justify-center p-6">
+                  {ROOM_ICON_MAP[room.slug] ?? (
+                    <div className="text-3xl font-bold text-fg-subtle">[{room.slug}]</div>
                   )}
-                />
-
-                {/* Badges */}
-                <div className="absolute top-4 left-4 z-20 pointer-events-none">
-                  <div className="px-3 py-1.5 rounded-full bg-black/60 border border-white/10 backdrop-blur flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_5px_#22c55e]" />
-                    <span className="text-[10px] font-mono font-bold text-white/80 uppercase tracking-widest">
-                      {copy.live} playing
-                    </span>
-                  </div>
                 </div>
 
-                <div className="absolute top-4 right-4 z-20 pointer-events-none">
-                  <div
-                    className={cn(
-                      "px-3 py-1 text-[10px] uppercase font-bold rounded-full backdrop-blur-md border",
-                      theme.badgeStyle
-                    )}
-                  >
-                    {theme.badgeTag}
+                <div className="relative z-20 border-t border-border-soft bg-surface-2/90 p-6 backdrop-blur">
+                  <div className="mb-3 text-[10px] font-bold uppercase tracking-widest text-accent">
+                    {ROOM_TAG_MAP[room.slug] ?? "Module"}
                   </div>
-                </div>
+                  <h3 className="text-2xl font-bold text-fg">{copy.title}</h3>
+                  <p className="mt-2 min-h-10 text-sm leading-relaxed text-fg-muted">
+                    {copy.promise}
+                  </p>
 
-                {/* 3D Game Icon Viewer */}
-                <div className="flex-1 p-6 relative z-10 flex items-center justify-center mt-8">
-                  <div
-                    className={cn("transition-transform duration-700", theme.iconHoverTransform)}
-                  >
-                    {ROOM_ICON_MAP[room.slug] ?? (
-                      <div className="text-3xl font-bold opacity-30">[{room.slug}]</div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Card Details & Hover CTA */}
-                <div className="p-6 border-t border-white/5 bg-[#0a0a0a]/90 relative z-20 backdrop-blur-xl">
-                  <h3 className="text-2xl font-bold text-white mb-2">{copy.title}</h3>
-                  <p className="text-white/40 text-sm mb-6 h-10 leading-relaxed">{copy.promise}</p>
-
-                  <button
-                    className={cn(
-                      "w-full py-4 rounded-xl flex items-center justify-center gap-2 font-black text-sm transition-all duration-300",
-                      "bg-[#0f0f0f] border border-white/5 text-white/50",
-                      theme.buttonHover
-                    )}
-                  >
-                    Play Now <PlayCircleIcon className="w-5 h-5 flex-shrink-0" />
-                  </button>
+                  <span className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-surface-1 py-4 text-sm font-black text-fg-muted transition-colors group-hover:border-brand/40 group-hover:text-brand">
+                    Play Now <PlayCircleIcon className="h-5 w-5 flex-shrink-0" />
+                  </span>
                 </div>
               </Link>
             );
           })}
         </div>
 
-        {/* 4. PROGRESSIVE JACKPOT BANNER */}
-        <div className="rounded-[2.5rem] border border-amber-500/20 bg-gradient-to-b from-[#1a1400] to-[#0a0a0a] p-1 relative overflow-hidden group">
-          {/* Cinematic Lighting */}
-          <div className="absolute -top-1/2 left-1/2 -translate-x-1/2 w-full max-w-[800px] h-[300px] bg-amber-500/20 blur-[100px] pointer-events-none group-hover:bg-amber-500/30 transition-colors duration-1000" />
-          <div className="absolute inset-0 bg-[url('/textures/noise.svg')] opacity-[0.15] mix-blend-overlay pointer-events-none" />
-
-          <div className="rounded-[2.4rem] bg-[#050505]/60 backdrop-blur-xl px-8 py-10 md:py-14 flex flex-col md:flex-row items-center justify-between gap-10 relative z-10 border border-amber-500/10 shadow-[inset_0_0_50px_rgba(245,158,11,0.05)]">
-            <div className="flex flex-col md:flex-row items-center gap-6 text-center md:text-left">
-              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 p-0.5 shadow-[0_0_40px_rgba(245,158,11,0.4)] flex-shrink-0">
-                <div className="w-full h-full rounded-[15px] bg-[#1a1400] flex items-center justify-center">
-                  <TrophyIcon className="w-10 h-10 text-amber-500" />
+        <aside className="mt-10 overflow-hidden rounded-xl border border-border bg-surface-1 p-1 shadow-e2">
+          <div className="relative overflow-hidden rounded-lg border border-border-soft bg-surface-2 px-6 py-8 md:px-8 md:py-10">
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-brand-soft to-transparent" />
+            <div className="relative z-10 flex flex-col items-start justify-between gap-8 md:flex-row md:items-center">
+              <div className="flex flex-col gap-5 md:flex-row md:items-center">
+                <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl border border-brand/30 bg-brand-soft text-brand shadow-glow">
+                  <TrophyIcon className="h-8 w-8" />
+                </div>
+                <div>
+                  <h3 className="text-3xl font-black tracking-tight text-fg">
+                    Progressive Reserve Pool
+                  </h3>
+                  <p className="mt-2 font-mono text-sm font-medium uppercase tracking-widest text-fg-subtle">
+                    Transparent / Verifiable / Unlocked
+                  </p>
                 </div>
               </div>
-              <div>
-                <h3 className="text-3xl font-black text-white mb-2 tracking-tight">
-                  Progressive Reserve Pool
-                </h3>
-                <p className="text-amber-500/60 font-medium font-mono text-sm uppercase tracking-widest">
-                  Transparent • Verifiable • Unlocked
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-col items-center md:items-end">
-              <div className="text-5xl md:text-7xl font-mono font-black text-transparent bg-clip-text bg-gradient-to-b from-amber-200 via-amber-400 to-amber-600 drop-shadow-[0_0_30px_rgba(245,158,11,0.5)] tracking-tighter">
-                $1,452,093<span className="text-3xl text-amber-500/50">.42</span>
-              </div>
-              <div className="mt-4 flex items-center gap-2 px-3 py-1 bg-amber-500/10 border border-amber-500/30 rounded-lg shadow-[0_0_10px_rgba(245,158,11,0.2)]">
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-                <span className="text-[10px] uppercase font-bold text-amber-500 tracking-widest">
-                  Yielding Real Time
-                </span>
+              <div className="flex flex-col items-start md:items-end">
+                <div className="font-mono text-5xl font-black tracking-tight text-fg md:text-6xl">
+                  $1,452,093<span className="text-3xl text-fg-subtle">.42</span>
+                </div>
+                <div className="mt-4 flex items-center gap-2 rounded-lg border border-accent/30 bg-accent-soft px-3 py-1">
+                  <span className="h-2 w-2 rounded-full bg-accent" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-accent">
+                    Yielding Real Time
+                  </span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </main>
+        </aside>
+      </section>
     </div>
   );
 }
