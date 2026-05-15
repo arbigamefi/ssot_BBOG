@@ -1,7 +1,73 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import * as React from "react";
+
+const zeroHash = `0x${"0".repeat(64)}`;
+const zeroAddress = `0x${"0".repeat(40)}`;
+
+function createSportsHubMock() {
+  return {
+    getNextMarketId: vi.fn().mockResolvedValue(8n),
+    getNextTicketId: vi.fn().mockResolvedValue(13n),
+    getMarket: vi.fn().mockResolvedValue({
+      marketId: 7n,
+      eventId: 99n,
+      poolId: 2,
+      outcomeCount: 3,
+      startsAt: 1_800_000_000,
+      lockTime: 1_800_003_600,
+      resultFinalitySeconds: 604_800,
+      version: 1n,
+      marketKey: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      rulebookHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      state: "open"
+    }),
+    getResult: vi.fn().mockResolvedValue({
+      marketId: 7n,
+      eventId: 99n,
+      poolId: 2,
+      winningOutcomeId: 1,
+      marketVersion: 1n,
+      resultPayloadHash: "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      resultSourceHash: "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      evidenceHash: "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      rulebookHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      reporterSetHash: "0x9999999999999999999999999999999999999999999999999999999999999999",
+      reporterThreshold: 1,
+      reporterCount: 1,
+      proposer: "0x1111111111111111111111111111111111111111",
+      observedAt: 1_800_010_000,
+      proposedAt: 1_800_010_100,
+      finalizesAt: 1_800_614_900,
+      challenged: false,
+      challengeReasonHash: zeroHash,
+      challenger: zeroAddress,
+      challengedAt: 0,
+      challengeDecision: "none",
+      arbitrationDecisionHash: zeroHash,
+      arbitrator: zeroAddress,
+      arbitratedAt: 0
+    }),
+    getMarketReserved: vi.fn().mockResolvedValue(2_000_000n),
+    getTicket: vi.fn().mockResolvedValue({
+      ticketId: 12n,
+      positionId: 34n,
+      marketId: 7n,
+      eventId: 99n,
+      poolId: 2,
+      outcomeId: 1,
+      player: "0x1111111111111111111111111111111111111111",
+      stake: 1_000_000n,
+      payout: 1_800_000n,
+      reserved: 1_800_000n,
+      oddsSnapshotHash: "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      rulebookHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      acceptedAt: 1_800_000_100,
+      state: "held"
+    })
+  };
+}
 
 const state = {
   release: {
@@ -63,10 +129,7 @@ const state = {
     disabledReason: "NEXT_PUBLIC_SPORTSBOOK_ENABLED is not true."
   } as any,
   sdk: {
-    sportsHub: {
-      getNextMarketId: vi.fn().mockResolvedValue(8n),
-      getNextTicketId: vi.fn().mockResolvedValue(13n)
-    }
+    sportsHub: createSportsHubMock()
   } as any
 };
 
@@ -131,10 +194,7 @@ describe("SportsbookPageClient", () => {
       disabledReason: "NEXT_PUBLIC_SPORTSBOOK_ENABLED is not true."
     };
     state.sdk = {
-      sportsHub: {
-        getNextMarketId: vi.fn().mockResolvedValue(8n),
-        getNextTicketId: vi.fn().mockResolvedValue(13n)
-      }
+      sportsHub: createSportsHubMock()
     };
   });
 
@@ -179,5 +239,28 @@ describe("SportsbookPageClient", () => {
       name: "Ticket placement locked"
     }) as HTMLButtonElement;
     expect(lockedButton.disabled).toBe(true);
+  });
+
+  it("looks up SportsHub market and ticket records through the SDK", async () => {
+    renderWithQueryClient(<SportsbookPageClient />);
+
+    fireEvent.change(screen.getByLabelText("Market id"), { target: { value: "7" } });
+    fireEvent.click(screen.getAllByRole("button", { name: "Inspect" })[0]!);
+
+    expect(await screen.findByText("Market 7")).toBeDefined();
+    expect(screen.getByText("open / pool 2")).toBeDefined();
+    expect(screen.getByText("Result proposed")).toBeDefined();
+    expect(screen.getByText("2000000")).toBeDefined();
+    expect(state.sdk.sportsHub.getMarket).toHaveBeenCalledWith(7n);
+    expect(state.sdk.sportsHub.getResult).toHaveBeenCalledWith(7n);
+    expect(state.sdk.sportsHub.getMarketReserved).toHaveBeenCalledWith(7n);
+
+    fireEvent.change(screen.getByLabelText("Ticket id"), { target: { value: "12" } });
+    fireEvent.click(screen.getAllByRole("button", { name: "Inspect" })[1]!);
+
+    expect(await screen.findByText("Ticket 12")).toBeDefined();
+    expect(screen.getByText("held / market 7")).toBeDefined();
+    expect(screen.getAllByText("1800000").length).toBeGreaterThan(0);
+    expect(state.sdk.sportsHub.getTicket).toHaveBeenCalledWith(12n);
   });
 });
