@@ -14,6 +14,12 @@ A machine-readable manifest that the frontend should **consume directly**:
 - `games[]`: `{ gameId, slug, label, module, paramsEncoding }`
 - `assets[]`: `{ asset, bank, symbol, decimals }`
 
+Frontend release gates:
+
+- `pnpm -C frontend check:release` rejects embedded release bundles that reintroduce v1/v1.2 keys such as `contracts.hub`, `contracts.bankRegistry`, or `sports.hub`.
+- `pnpm -C frontend precheck:frontend -- --strict` rejects runtime/SDK source references to the old hub namespace.
+- `pnpm -C frontend smoke:release-readonly` performs a read-only Base Sepolia RPC smoke against the embedded release without using a wallet or broadcasting transactions.
+
 Frontend rule: **copy + consume**. Do not derive `gameId` or token metadata.
 
 ## 2) `deployments/golden-vectors-latest.json`

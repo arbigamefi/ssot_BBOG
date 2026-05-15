@@ -11,6 +11,7 @@ const report = args.has("--report") || !strict;
 const maxExamples = Number(process.env.FRONTEND_PRECHECK_MAX_EXAMPLES ?? 20);
 
 const sourceRoots = [resolve(root, "apps/web/src"), resolve(root, "packages/ui/src")];
+const sdkBoundaryRoots = [resolve(root, "apps/web/src"), resolve(root, "packages/ssot/src")];
 
 const checks = [
   checkTargetStructure(),
@@ -19,7 +20,8 @@ const checks = [
   checkPrototypeRoutes(),
   checkLegacyRouteAliases(),
   checkPageClientSize(),
-  checkForbiddenWeb3Imports()
+  checkForbiddenWeb3Imports(),
+  checkLegacySDKCompatibility()
 ];
 
 console.log(
@@ -169,6 +171,20 @@ function checkForbiddenWeb3Imports() {
       formatPath(file).startsWith("apps/web/src/workers/"),
     roots: [resolve(root, "apps/web/src")],
     pattern,
+    blocking: true
+  });
+}
+
+function checkLegacySDKCompatibility() {
+  const pattern =
+    /\bSSOTHubAPI\b|\bsdk\.hub\b|\brelease\.contracts\.hub\b|\bcontracts\.hub\b|\bHubAbi\b|\bHubEventRow\b|\bhubEvents\b|\bhubIndexer\b|\bbankRegistry\b|["']hub["']\s*:/;
+  return scanLines({
+    id: "legacy-sdk-compat",
+    label: "Legacy hub/bankRegistry SDK compatibility surface",
+    roots: sdkBoundaryRoots,
+    pattern,
+    extensions: /\.(ts|tsx|mjs)$/,
+    exclude: (file) => formatPath(file) === "packages/ssot/src/release/loader.test.ts",
     blocking: true
   });
 }
