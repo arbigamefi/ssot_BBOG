@@ -1,8 +1,8 @@
 # Frontend Implementation Audit & Roadmap
 
 | Owner | Frontend Lead |
-| Status | Draft v2 |
-| Last Updated | 2026-05-15 |
+| Status | Draft v3 |
+| Last Updated | 2026-05-16 |
 | Depends on | `00-charter.md`, `01-brand.md`, `02-voice-and-copy.md`, `03-information-architecture.md`, `04-page-blueprints.md`, `10-design-tokens.md`, `11-component-library.md`, `12-motion.md`, `13-web3-ux.md`, `14-data-and-state.md`, `15-forms.md`, `16-mobile.md`, `../frontend/20-accessibility.md`, `../frontend/21-i18n.md`, `../frontend/22-performance.md`, `../frontend/23-security.md`, `../frontend/24-testing.md`, `../frontend/25-observability.md`, `../frontend/30-build-and-release.md`, `../frontend/31-governance.md`, `../frontend/32-ai-pairing.md`, `frontend-rewrite-blueprint.md`, `frontend-kill-list.md`, ADR-0001, ADR-0002, ADR-0003 |
 | Supersedes | ad-hoc chat-only frontend rewrite sequencing |
 
@@ -1215,34 +1215,145 @@ find frontend/apps/web/src/app -name 'pageClient.tsx' -print0 \
   | xargs -0 wc -l | awk '$2 != "total" && $1 > 600 {print $0}'
 ```
 
-## 14. Next Immediate Commit After This Document
+## 14. 2026-05-16 Audit Refresh And Action Plan
 
-After this roadmap refresh, the next commit should be:
+This refresh supersedes the 2026-05-15 bundle-risk numbers in the external
+audit. It does not supersede the Gate A/B/C requirements.
+
+### 14.1 Refreshed Evidence
+
+Commands run on `codex/frontend-bundle-closeout`:
+
+```bash
+git status --short --branch
+git log --oneline -8
+pnpm -C frontend precheck:frontend -- --strict
+find frontend/apps/web/src/app -name 'pageClient.tsx' -print0 | xargs -0 wc -l | sort -n
+rg -n "#[0-9a-fA-F]{3,8}\b|rgba\(|rgb\(" frontend/apps/web/src frontend/packages/ui/src
+rg -n "rgba\(|147,51,234|purple|emerald|amber|fuchsia|indigo|white/|text-white|bg-white|border-white" \
+  frontend/apps/web/src/features/casino frontend/apps/web/src/app frontend/packages/ui/src
+pnpm -C frontend/apps/web build
+```
+
+Observed:
+
+- working tree was clean at the start of this audit;
+- strict frontend precheck passes under its current rule set;
+- old production alias routes and `app/prototype` are absent;
+- no legacy shell names remain in app or UI source;
+- no `pageClient.tsx` exceeds 600 lines; the largest current file is
+  `earn/pageClient.tsx` at 324 lines;
+- bundle risk from the prior report is materially reduced:
+  `/casino/[slug]` is now 178 kB first-load JS,
+  `/sportsbook/[marketId]` is now 159 kB, and shared first-load JS is 104 kB;
+- `frontend/apps/web/sandbox/prototype/**` exists outside `src/`, so it is not
+  part of the App Router. This is acceptable as non-routable reference code;
+- raw hex literals still exist in `app/global-error.tsx`;
+- a raw purple `rgba(147,51,234,0.05)` background still exists in the Dice
+  stage;
+- several `@ssot/ui` legacy primitives still use Tailwind color families
+  (`white`, `slate`, `emerald`, `amber`, `rose`, `blue`, `green`) instead of
+  SSOT tokens;
+- casino stage implementations are still physically flat in
+  `features/casino/room/*-stage.tsx` instead of living under
+  `features/casino/modules/<slug>/`.
+
+### 14.2 Finding Disposition
+
+| External audit item | Current disposition | Action |
+| --- | --- | --- |
+| Bundle high risk (`/casino/[slug]` 504 kB, sportsbook detail 289 kB) | **Resolved enough for closeout.** Current build is 178 kB / 159 kB after lazy Sentry, lazy stages, lightweight page transition, custom toaster, and lazy RainbowKit modal. | Do not chase 150 kB as a hard blocker. Keep a future bundle-budget gate. |
+| N3 single AppShell | **Closed.** No legacy shell names remain. Feature-level `GameRoomShell` is not a competing app chrome. | No code action. |
+| N5 no hex literal | **Open.** `global-error.tsx` still uses raw hex because it cannot rely on normal providers/components. | Replace raw hex with token-compatible HSL fallbacks; extend precheck to catch raw hex literals in source. |
+| N2 no per-game color family | **Partially open.** The Tailwind color-family scan missed raw `rgba(147,51,234,0.05)` in Dice and old UI primitive color families. | Replace with `brand` / `accent` / semantic token classes; extend precheck to catch ad-hoc Tailwind color families and raw rgb/rgba in app/UI source. |
+| Phase 5 casino modules | **Partially open.** Registry exists, but stage implementations are flat in `room/`. | Move stage components/tests into `modules/<slug>/`; keep shared room framework in `room/`. Do not add new games in this slice. |
+| Phase 1 primitives physical migration | **Transitional.** `primitives/index.ts` re-exports `components/ui/*`; this is acceptable short-term but not final Gate B. | Do not do a broad move in this slice. First retokenize remaining `components/ui` debt and keep the later physical move separate. |
+| Gate A/B/C document statuses | **Formally open.** Draft documents should not be mechanically marked Accepted. | Keep Draft until human sign-off. Record implementation evidence here instead. |
+| Lighthouse / a11y / bundle-budget CI | **Open but not first-order correctness.** CI already runs release sanity, lint, typecheck, strict tests, build, and Storybook build. | Add budget/a11y/perf gates after token discipline and module ownership are clean. |
+| v1.3 four new casino games | **Product expansion, not closeout.** Earlier product decision paused adding games. | Do not add Baccarat / Plinko / Sic Bo / Slots in this closeout slice. |
+
+### 14.3 Immediate Implementation Slice
+
+The next local commit should be:
 
 ```text
-Close frontend release compatibility residue
+Close frontend audit residue
 ```
 
 Scope:
 
-- `frontend/scripts/ssot-sync.mjs`
-- `frontend/scripts/frontend-precheck.mjs`
-- `frontend/scripts/check-release.mjs`
-- `frontend/scripts/release-readonly-smoke.mjs`
-- `frontend/packages/ssot/src/release/loader.test.ts`
-- v1.3 release fixtures under `frontend/packages/ssot/src/fixtures`
-- this roadmap
+1. **Token discipline closeout**
+   - retokenize `app/global-error.tsx`;
+   - retokenize `features/casino/room/dice-stage.tsx`;
+   - retokenize old `@ssot/ui` files still referenced by the public barrel:
+     `stat-card.tsx`, `room-strip.tsx`, `status-badge.tsx`, and
+     `page-header.tsx`;
+   - extend `frontend-precheck` so raw hex, raw rgb/rgba, and ad-hoc Tailwind
+     color families are blocking in app/UI source.
 
-Validation:
+2. **Casino module ownership**
+   - move Dice / Coin Toss / Roulette / Keno stage files from `room/` to
+     `modules/<slug>/`;
+   - update dynamic imports and tests;
+   - leave shared room framework files in `room/`.
+
+3. **Verification**
+   - `pnpm -C frontend precheck:frontend -- --strict`
+   - `pnpm -C frontend/packages/ui test`
+   - `pnpm -C frontend/apps/web test -- src/features/casino`
+   - `pnpm -C frontend/apps/web typecheck`
+   - `pnpm -C frontend/packages/ui typecheck`
+   - `pnpm -C frontend/apps/web build`
+   - `git diff --check`
+
+No new game, sportsbook, SDK, or release behavior belongs in this commit.
+
+### 14.4 Implementation Result
+
+Status: completed locally.
+
+Changes:
+
+- replaced raw hex colors in `app/global-error.tsx` with token-compatible HSL
+  fallbacks that still work if the root providers fail;
+- replaced the Dice stage's raw purple `rgba(...)` visual with the `brand`
+  token;
+- retokenized old exported UI primitives/pattern helpers:
+  `copy-button`, `data-table`, `page-header`, `room-strip`, `stat-card`, and
+  `status-badge`;
+- extended `frontend-precheck` with a blocking
+  `forbidden-color-literal` check for raw hex, raw rgb/rgba, raw numeric hsl,
+  and ad-hoc Tailwind color families in app/UI source;
+- moved Dice / Coin Toss / Roulette / Keno stage implementations into
+  `features/casino/modules/<slug>/stage.tsx`;
+- moved stage tests under `features/casino/modules/`;
+- kept shared room framework, controls, params, model, and history widgets in
+  `features/casino/room/`.
+
+Evidence:
 
 ```bash
-pnpm -C frontend/apps/web exec vitest run 'src/app/(product)/sportsbook/pageClient.test.tsx'
-pnpm -C frontend/packages/ssot test -- src/release/loader.test.ts
 pnpm -C frontend precheck:frontend -- --strict
-pnpm -C frontend check:release
-pnpm -C frontend smoke:release-readonly
+pnpm -C frontend/apps/web test -- src/features/casino
+pnpm -C frontend/packages/ui test
+pnpm -C frontend/apps/web typecheck
+pnpm -C frontend/packages/ui typecheck
+pnpm -C frontend/apps/web build
+pnpm -C frontend test
+pnpm -C frontend lint
 pnpm -C frontend typecheck
-pnpm -C frontend build
+git diff --check
 ```
 
-No new page behavior should be bundled into that commit.
+Observed:
+
+- strict precheck now includes `forbidden-color-literal` and passes with 0
+  findings;
+- raw color scans outside token files return 0 findings;
+- old flat casino stage filename references return 0 findings;
+- full frontend tests passed: `packages/ssot` 137 tests,
+  `packages/ui` 23 tests, and `apps/web` 135 tests;
+- production build passed and preserved the latest bundle profile:
+  `/casino/[slug]` 178 kB, `/sportsbook/[marketId]` 159 kB, shared 104 kB;
+- known non-blocking warnings remain unchanged: local Node v22 vs project Node
+  20, deprecated `next lint`, and the existing Next ESLint plugin warning.

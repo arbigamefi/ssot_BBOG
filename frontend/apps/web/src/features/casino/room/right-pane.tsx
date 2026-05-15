@@ -21,22 +21,28 @@ function StageLoading() {
   );
 }
 
-const DiceStage = dynamic(() => import("./dice-stage").then((mod) => mod.DiceStage), {
+const DiceStage = dynamic(() => import("../modules/dice/stage").then((mod) => mod.DiceStage), {
   loading: StageLoading,
   ssr: false
 });
 
-const CoinTossStage = dynamic(() => import("./coin-toss-stage").then((mod) => mod.CoinTossStage), {
-  loading: StageLoading,
-  ssr: false
-});
+const CoinTossStage = dynamic(
+  () => import("../modules/coin-toss/stage").then((mod) => mod.CoinTossStage),
+  {
+    loading: StageLoading,
+    ssr: false
+  }
+);
 
-const RouletteStage = dynamic(() => import("./roulette-stage").then((mod) => mod.RouletteStage), {
-  loading: StageLoading,
-  ssr: false
-});
+const RouletteStage = dynamic(
+  () => import("../modules/roulette/stage").then((mod) => mod.RouletteStage),
+  {
+    loading: StageLoading,
+    ssr: false
+  }
+);
 
-const KenoStage = dynamic(() => import("./keno-stage").then((mod) => mod.KenoStage), {
+const KenoStage = dynamic(() => import("../modules/keno/stage").then((mod) => mod.KenoStage), {
   loading: StageLoading,
   ssr: false
 });
