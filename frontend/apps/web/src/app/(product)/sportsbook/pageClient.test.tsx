@@ -230,8 +230,11 @@ describe("SportsbookPageClient", () => {
     expect(screen.getByText("Recent SportsHub markets")).toBeDefined();
     expect(await screen.findByText("Market 7")).toBeDefined();
     expect(screen.getByText("Event 97")).toBeDefined();
+    expect(screen.getAllByRole("link", { name: "Open" })[0]?.getAttribute("href")).toBe(
+      "/sportsbook/7"
+    );
 
-    fireEvent.click(screen.getAllByRole("button", { name: "Load market" })[0]!);
+    fireEvent.click(screen.getAllByRole("button", { name: "Load" })[0]!);
 
     expect((screen.getByLabelText("Market id") as HTMLInputElement).value).toBe("7");
     expect(await screen.findByText("open / pool 2")).toBeDefined();

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import type { DomainSportsMarket, DomainSportsResult, DomainSportsTicket } from "@ssot/ssot";
 import type { SSOTRelease } from "@ssot/ssot/release";
 import { cn } from "@ssot/ui";
@@ -246,7 +247,7 @@ export function MarketTape({
         <div className="hidden md:block">Starts</div>
         <div className="hidden md:block">Reserved</div>
         <div className="hidden md:block">Result</div>
-        <div className="text-right">Action</div>
+        <div className="text-right">Actions</div>
       </div>
       <div className="divide-y divide-border-soft">
         {rows.map(({ market, result, reserved }) => (
@@ -277,13 +278,21 @@ export function MarketTape({
             <div className="hidden text-xs font-semibold text-fg md:block">
               {resultLabel(result)}
             </div>
-            <button
-              type="button"
-              onClick={() => onInspect(market.marketId)}
-              className="min-h-10 rounded-md border border-border bg-surface-2 px-3 text-xs font-bold text-fg transition-colors hover:border-brand/40 hover:bg-surface-3"
-            >
-              Load market
-            </button>
+            <div className="flex flex-col justify-end gap-2 sm:flex-row">
+              <Link
+                href={`/sportsbook/${market.marketId.toString()}`}
+                className="inline-flex min-h-10 items-center justify-center rounded-md bg-brand px-3 text-xs font-bold text-fg-inverse shadow-glow transition-colors hover:bg-brand-hover"
+              >
+                Open
+              </Link>
+              <button
+                type="button"
+                onClick={() => onInspect(market.marketId)}
+                className="min-h-10 rounded-md border border-border bg-surface-2 px-3 text-xs font-bold text-fg transition-colors hover:border-brand/40 hover:bg-surface-3"
+              >
+                Load
+              </button>
+            </div>
           </div>
         ))}
       </div>
