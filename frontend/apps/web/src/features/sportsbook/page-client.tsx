@@ -27,6 +27,7 @@ import {
   parseLookupId,
   shortHex
 } from "./format";
+import { SportsbookOperatorPanel } from "./operator-panel";
 
 const CONTROL_LINKS = [
   {
@@ -70,7 +71,7 @@ function isMarketTapeRow(row: MarketTapeRow | undefined): row is MarketTapeRow {
 }
 
 export function SportsbookPageClient() {
-  const { release, readOnlyReason, sportsbook } = useRelease();
+  const { release, readOnly, readOnlyReason, sportsbook } = useRelease();
   const { sdk, ready } = useSSOTSDK();
   const [marketInput, setMarketInput] = React.useState("");
   const [ticketInput, setTicketInput] = React.useState("");
@@ -78,7 +79,11 @@ export function SportsbookPageClient() {
   const [ticketLookupId, setTicketLookupId] = React.useState<bigint | undefined>();
   const [marketInputError, setMarketInputError] = React.useState<string | undefined>();
   const [ticketInputError, setTicketInputError] = React.useState<string | undefined>();
-  const { data: runtimeCounters, error: runtimeError } = useQuery({
+  const {
+    data: runtimeCounters,
+    error: runtimeError,
+    refetch: refetchRuntimeCounters
+  } = useQuery({
     queryKey: ["ssot", "sportsbook", "runtime-counters", release?.releaseDigest ?? "none"],
     enabled: Boolean(release && sdk && ready && sportsbook.hasSportsRelease),
     staleTime: 15_000,
@@ -94,7 +99,8 @@ export function SportsbookPageClient() {
   const {
     data: recentMarkets,
     error: recentMarketsError,
-    isFetching: recentMarketsFetching
+    isFetching: recentMarketsFetching,
+    refetch: refetchRecentMarkets
   } = useQuery({
     queryKey: [
       "ssot",
@@ -135,7 +141,8 @@ export function SportsbookPageClient() {
   const {
     data: marketLookup,
     error: marketLookupError,
-    isFetching: marketFetching
+    isFetching: marketFetching,
+    refetch: refetchMarketLookup
   } = useQuery({
     queryKey: [
       "ssot",
@@ -201,6 +208,10 @@ export function SportsbookPageClient() {
     setMarketInputError(undefined);
     setMarketLookupId(marketId);
   }, []);
+
+  const refreshSportsbookReads = React.useCallback(() => {
+    void Promise.all([refetchRuntimeCounters(), refetchRecentMarkets(), refetchMarketLookup()]);
+  }, [refetchMarketLookup, refetchRecentMarkets, refetchRuntimeCounters]);
 
   if (!release) {
     return (
@@ -439,6 +450,27 @@ export function SportsbookPageClient() {
               )}
             </div>
           </div>
+        </SectionShell>
+
+        <SectionShell
+          eyebrow="Operator writes"
+          title="Market and result administration"
+          description="Governance and reporter actions are exposed as typed SDK calls for authorized wallets. Public ticket placement remains locked and contract roles still enforce every write."
+        >
+          <SportsbookOperatorPanel
+            sdk={sdk}
+            disabled={readOnly || !ready || !sportsbook.hasSportsRelease}
+            disabledReason={
+              readOnly
+                ? readOnlyReason
+                : sportsbook.hasSportsRelease
+                  ? "Wallet role must be authorized on SportsHub."
+                  : sportsbook.disabledReason
+            }
+            defaultPoolId={sportsPools[0]?.poolId}
+            defaultFinalitySeconds={sports?.resultChallengeTimeoutSeconds}
+            onMutated={refreshSportsbookReads}
+          />
         </SectionShell>
 
         <SectionShell

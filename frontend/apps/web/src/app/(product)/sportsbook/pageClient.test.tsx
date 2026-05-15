@@ -50,6 +50,19 @@ function createSportsHubMock() {
       arbitratedAt: 0
     })),
     getMarketReserved: vi.fn().mockResolvedValue(2_000_000n),
+    createMarket: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
+    openMarket: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
+    suspendMarket: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
+    lockMarket: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
+    voidMarket: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
+    proposeResult: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
+    finalizeResult: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
+    settleTicket: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
+    settleTickets: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
+    refundTicket: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
+    refundTickets: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
+    voidTicket: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
+    voidTickets: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
     getTicket: vi.fn().mockResolvedValue({
       ticketId: 12n,
       positionId: 34n,
@@ -162,7 +175,11 @@ vi.mock("next/link", () => ({
 }));
 
 vi.mock("@ssot/ui", () => ({
-  cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" ")
+  cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" "),
+  toast: {
+    error: vi.fn(),
+    success: vi.fn()
+  }
 }));
 
 import { SportsbookPageClient } from "./pageClient";
@@ -256,6 +273,16 @@ describe("SportsbookPageClient", () => {
       name: "Ticket placement locked"
     }) as HTMLButtonElement;
     expect(lockedButton.disabled).toBe(true);
+  });
+
+  it("renders operator write controls locked until a wallet is connected", () => {
+    renderWithQueryClient(<SportsbookPageClient />);
+
+    expect(screen.getByText("Market and result administration")).toBeDefined();
+    expect(screen.getByText("Wallet required")).toBeDefined();
+    expect(
+      (screen.getByRole("button", { name: "Create market" }) as HTMLButtonElement).disabled
+    ).toBe(true);
   });
 
   it("looks up SportsHub market and ticket records through the SDK", async () => {
