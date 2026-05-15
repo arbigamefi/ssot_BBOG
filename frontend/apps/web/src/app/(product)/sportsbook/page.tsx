@@ -5,7 +5,7 @@ const SportsbookPageClient = dynamic(
   {
     loading: () => (
       <div className="flex min-h-[40vh] items-center justify-center">
-        <p className="text-sm text-white/48">Loading sportsbook...</p>
+        <p className="text-sm text-fg-muted">Loading sportsbook...</p>
       </div>
     )
   }

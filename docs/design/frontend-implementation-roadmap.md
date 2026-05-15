@@ -728,6 +728,53 @@ Follow-up:
 - R8 should remove the remaining stale app components and flip selected
   prechecks from report-only to blocking.
 
+### 2026-05-15 - R7 Sportsbook Readiness Surface
+
+Status: completed as a gated feature-boundary migration.
+
+Changes:
+
+- moved sportsbook implementation from the app route into
+  `features/sportsbook/page-client.tsx`;
+- kept `app/(product)/sportsbook/pageClient.tsx` as a thin route export only;
+- preserved the read-only readiness model: SportsHub metadata and caps are
+  visible, but ticket placement remains disabled even when the metadata gate is
+  enabled;
+- retokenized the sportsbook surface to remove the local hardcoded dark panel,
+  `white/` opacity utilities, and emerald/amber status color families from the
+  sportsbook feature;
+- kept `frontend/packages/ssot/**` untouched.
+
+Evidence:
+
+```bash
+rg -n -e "bg-\\[#|text-\\[#|border-\\[#|shadow-\\[|rounded-(2xl|3xl|\\[)|purple|emerald|amber|fuchsia|indigo|white/|transition-all|\\bdark:" frontend/apps/web/src/features/sportsbook frontend/apps/web/src/app/'(product)'/sportsbook -S
+pnpm -C frontend/apps/web test -- 'src/app/(product)/sportsbook/pageClient.test.tsx'
+pnpm -C frontend/apps/web test
+pnpm -C frontend typecheck
+pnpm -C frontend/apps/web build
+pnpm -C frontend precheck:frontend -- --report
+git diff --check
+```
+
+Observed:
+
+- sportsbook route tests passed: 1 file, 3 tests;
+- full web tests passed: 37 files, 133 tests;
+- `pnpm -C frontend typecheck` passed;
+- `pnpm -C frontend/apps/web build` passed with the known MetaMask optional
+  storage, ESLint plugin, `indexedDB`, and `punycode` warnings;
+- `precheck:frontend -- --report` improved forbidden-style warnings from 246 to
+  245 and remains at 2 legacy-shell warnings;
+- no sportsbook-local forbidden style utilities remain.
+
+Follow-up:
+
+- R8 should remove remaining stale app components, especially the legacy trust
+  shell fragments and home visual exploration artifacts still reported by
+  `precheck:frontend`;
+- R8 should decide which precheck groups can become blocking immediately.
+
 Useful commands:
 
 ```bash
