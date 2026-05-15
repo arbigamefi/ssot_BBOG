@@ -4,17 +4,10 @@ import * as React from "react";
 import { createSSOTSDK } from "@ssot/ssot/sdk";
 import { useAccount, useChainId, usePublicClient, useWalletClient } from "wagmi";
 
-import { useRelease } from "../../ssot/release/ReleaseProvider";
-import { SDKContext, type SDKContextValue } from "../../ssot/sdk";
-import { useSSOTRuntime } from "../../ssot/runtime";
+import { useRelease } from "../ssot/release/ReleaseProvider";
+import { SDKContext, type SDKContextValue } from "../ssot/sdk";
+import { useSSOTRuntime } from "../ssot/runtime";
 
-/**
- * SSOTSDKProvider
- *
- * Provider wiring ONLY (allowed to import wagmi).
- * - Exposes a memoized SSOT SDK instance to feature/UI code.
- * - SDK implementation uses viem directly; feature code MUST NOT.
- */
 export function SSOTSDKProvider({ children }: { children: React.ReactNode }) {
   const chainId = useChainId();
   const publicClient = usePublicClient({ chainId });
@@ -26,16 +19,16 @@ export function SSOTSDKProvider({ children }: { children: React.ReactNode }) {
   const sdk = React.useMemo(() => {
     if (!rel.release) return undefined;
     return createSSOTSDK({
-      release: rel.release,
-      publicClient: publicClient as any,
-      walletClient: walletClient as any,
       account: address as any,
-      journal: runtime.journal
+      journal: runtime.journal,
+      publicClient: publicClient as any,
+      release: rel.release,
+      walletClient: walletClient as any
     });
   }, [rel.release, publicClient, walletClient, address, runtime.journal]);
 
   const value = React.useMemo<SDKContextValue>(
-    () => ({ sdk, ready: Boolean(sdk), readOnly: rel.readOnly }),
+    () => ({ readOnly: rel.readOnly, ready: Boolean(sdk), sdk }),
     [sdk, rel.readOnly]
   );
 

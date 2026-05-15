@@ -59,7 +59,7 @@ vi.mock("../../../ssot/runtime", () => ({
   })
 }));
 
-vi.mock("../../../app/providers/WalletButton", () => ({
+vi.mock("../../../app-shell/WalletButton", () => ({
   useConnectModal: () => ({
     openConnectModal: vi.fn()
   })

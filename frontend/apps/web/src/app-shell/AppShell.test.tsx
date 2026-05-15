@@ -23,7 +23,7 @@ vi.mock("../ssot/release/ReleaseProvider", () => ({
   })
 }));
 
-vi.mock("../app/providers/WalletButton", () => ({
+vi.mock("./WalletButton", () => ({
   WalletButton: () => <button data-testid="wallet-button">Connect</button>,
   useConnectModal: () => ({ openConnectModal: vi.fn() })
 }));

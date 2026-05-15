@@ -3,38 +3,25 @@
 import * as React from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
-/**
- * Minimal privacy-respecting analytics provider.
- *
- * Tracks page views automatically via `usePathname` + `useSearchParams`.
- * Provides `trackEvent()` via context for custom event tracking.
- *
- * Backend integration is opt-in: set NEXT_PUBLIC_ANALYTICS_ID to enable.
- * When no ID is set, events are logged to console in development only.
- *
- * Supports Plausible-compatible script endpoint via NEXT_PUBLIC_ANALYTICS_HOST.
- * Default: https://plausible.io
- */
-
 interface AnalyticsContextValue {
   trackEvent: (name: string, props?: Record<string, string | number>) => void;
 }
 
 const AnalyticsContext = React.createContext<AnalyticsContextValue>({
-  trackEvent: () => {},
+  trackEvent: () => {}
 });
 
 export function useAnalytics() {
   return React.useContext(AnalyticsContext);
 }
 
-const ANALYTICS_ID = typeof window !== "undefined"
-  ? (process.env.NEXT_PUBLIC_ANALYTICS_ID ?? "")
-  : "";
+const ANALYTICS_ID =
+  typeof window !== "undefined" ? (process.env.NEXT_PUBLIC_ANALYTICS_ID ?? "") : "";
 
-const ANALYTICS_HOST = typeof window !== "undefined"
-  ? (process.env.NEXT_PUBLIC_ANALYTICS_HOST ?? "https://plausible.io")
-  : "https://plausible.io";
+const ANALYTICS_HOST =
+  typeof window !== "undefined"
+    ? (process.env.NEXT_PUBLIC_ANALYTICS_HOST ?? "https://plausible.io")
+    : "https://plausible.io";
 
 function sendEvent(name: string, props?: Record<string, string | number>) {
   if (!ANALYTICS_ID) {
@@ -44,24 +31,23 @@ function sendEvent(name: string, props?: Record<string, string | number>) {
     return;
   }
 
-  // Plausible-compatible event API
   try {
     const url = `${ANALYTICS_HOST}/api/event`;
     const body = JSON.stringify({
-      n: name,
-      u: window.location.href,
       d: ANALYTICS_ID,
-      r: document.referrer || null,
+      n: name,
       p: props ? JSON.stringify(props) : undefined,
+      r: document.referrer || null,
+      u: window.location.href
     });
-    // Use sendBeacon for reliability (fires even on page unload)
+
     if (navigator.sendBeacon) {
       navigator.sendBeacon(url, body);
     } else {
-      fetch(url, { method: "POST", body, keepalive: true }).catch(() => {});
+      fetch(url, { body, keepalive: true, method: "POST" }).catch(() => {});
     }
   } catch {
-    // Silently fail — analytics should never break the app
+    // Analytics must never break product flows.
   }
 }
 
@@ -77,12 +63,9 @@ function PageViewTracker() {
 }
 
 export function AnalyticsProvider({ children }: { children: React.ReactNode }) {
-  const trackEvent = React.useCallback(
-    (name: string, props?: Record<string, string | number>) => {
-      sendEvent(name, props);
-    },
-    [],
-  );
+  const trackEvent = React.useCallback((name: string, props?: Record<string, string | number>) => {
+    sendEvent(name, props);
+  }, []);
 
   const value = React.useMemo(() => ({ trackEvent }), [trackEvent]);
 

@@ -2,7 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { ShellHeader, ShellHeaderBrand, ShellHeaderNav, ShellHeaderActions } from "@ssot/ui";
 import { cn } from "@ssot/ui";
-import { WalletButton } from "../app/providers/WalletButton";
+import { WalletButton } from "../app-shell/WalletButton";
 import { useRelease } from "../ssot/release/ReleaseProvider";
 
 export type AppRoute =

@@ -1,3 +1,4 @@
+export * from "./app-shell";
 export * from "../components/protocol/asset-selector";
 export * from "../components/protocol/audit-tabs";
 export * from "../components/protocol/coin-stage";

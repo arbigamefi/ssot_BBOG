@@ -129,18 +129,30 @@ function checkForbiddenWeb3Imports() {
   return scanLines({
     id: "web3-import-boundary",
     label: "Direct wagmi/viem/RainbowKit imports outside provider islands",
+    extensions: /\.(ts|tsx)$/,
+    exclude: (file) =>
+      formatPath(file).startsWith("apps/web/src/app-shell/") ||
+      formatPath(file).startsWith("apps/web/src/workers/"),
     roots: [resolve(root, "apps/web/src")],
     pattern,
     blocking: false
   });
 }
 
-function scanLines({ id, label, roots, pattern, blocking }) {
+function scanLines({
+  id,
+  label,
+  roots,
+  pattern,
+  blocking,
+  extensions = /\.(css|mjs|ts|tsx)$/,
+  exclude = () => false
+}) {
   const examples = [];
   let count = 0;
 
   for (const file of roots.flatMap(filesUnder)) {
-    if (!/\.(css|mjs|ts|tsx)$/.test(file)) {
+    if (!extensions.test(file) || exclude(file)) {
       continue;
     }
 

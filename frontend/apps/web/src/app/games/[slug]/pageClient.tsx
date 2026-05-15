@@ -11,7 +11,7 @@ import { useRelease } from "../../../ssot/release/ReleaseProvider";
 import { useSSOTSDK } from "../../../ssot/sdk";
 import { useSSOTRuntime } from "../../../ssot/runtime";
 import { usePlaceBetStepper } from "../../../features/betting/usePlaceBetStepper";
-import { useConnectModal } from "../../../app/providers/WalletButton";
+import { useConnectModal } from "../../../app-shell/WalletButton";
 import { toGameMeta, type GameMeta } from "../../../features/games/room/model";
 import { calculateGameWinChance } from "../../../features/games/room/params";
 import { executeGamePlaceBetAction } from "../../../features/games/room/place-bet-action";

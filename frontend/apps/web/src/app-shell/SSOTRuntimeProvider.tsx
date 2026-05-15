@@ -1,21 +1,21 @@
 "use client";
 
 import * as React from "react";
+import {
+  createDexieJournalSink,
+  getSSOTDb,
+  type HubIndexerConfig,
+  type SSOTDb
+} from "@ssot/ssot/indexer";
 import { useChainId, useConfig } from "wagmi";
-import { getSSOTDb, createDexieJournalSink, type SSOTDb, type HubIndexerConfig } from "@ssot/ssot/indexer";
 
-import { useRelease } from "../../ssot/release/ReleaseProvider";
-import { SSOTRuntimeContext } from "../../ssot/runtime";
-import { HubIndexerWorkerClient, type HubIndexerWorkerStatus } from "../../ssot/runtime/indexerWorkerClient";
+import { useRelease } from "../ssot/release/ReleaseProvider";
+import { SSOTRuntimeContext } from "../ssot/runtime";
+import {
+  HubIndexerWorkerClient,
+  type HubIndexerWorkerStatus
+} from "../ssot/runtime/indexerWorkerClient";
 
-/**
- * SSOTRuntimeProvider
- *
- * Provider wiring only (allowed to import wagmi).
- * - Creates the local Dexie DB
- * - Wires tx journal sink
- * - Starts the Hub indexer (events-as-facts)
- */
 export function SSOTRuntimeProvider({ children }: { children: React.ReactNode }) {
   const chainId = useChainId();
   const wagmiConfig = useConfig();
@@ -23,7 +23,6 @@ export function SSOTRuntimeProvider({ children }: { children: React.ReactNode })
 
   const db: SSOTDb | undefined = React.useMemo(() => {
     if (!rel.release) return undefined;
-    // per-chain db name to avoid cross-chain mixing
     return getSSOTDb(`ssot_frontend_v2_${rel.release.chainId}`);
   }, [rel.release]);
 
@@ -32,12 +31,13 @@ export function SSOTRuntimeProvider({ children }: { children: React.ReactNode })
     return createDexieJournalSink(db);
   }, [db]);
 
-  // Indexer runs in a Web Worker for main-thread responsiveness.
   const workerRef = React.useRef<HubIndexerWorkerClient | null>(null);
-  const [indexerStatus, setIndexerStatus] = React.useState<HubIndexerWorkerStatus | undefined>(undefined);
+  const [indexerStatus, setIndexerStatus] = React.useState<HubIndexerWorkerStatus | undefined>(
+    undefined
+  );
 
   const indexerConfig: HubIndexerConfig = React.useMemo(
-    () => ({ confirmations: 12, pollIntervalMs: 10_000, batchSize: 2_000, rewindBlocks: 24 }),
+    () => ({ batchSize: 2_000, confirmations: 12, pollIntervalMs: 10_000, rewindBlocks: 24 }),
     []
   );
 
@@ -55,7 +55,6 @@ export function SSOTRuntimeProvider({ children }: { children: React.ReactNode })
   }, []);
 
   React.useEffect(() => {
-    // teardown on missing prereqs
     if (!rel.release || !db || rel.readOnly || !rpcUrl) {
       if (workerRef.current) {
         workerRef.current.terminate();
@@ -64,7 +63,6 @@ export function SSOTRuntimeProvider({ children }: { children: React.ReactNode })
       return;
     }
 
-    // recreate worker on chain/release change
     if (workerRef.current) {
       workerRef.current.terminate();
       workerRef.current = null;
@@ -73,16 +71,22 @@ export function SSOTRuntimeProvider({ children }: { children: React.ReactNode })
     const client = new HubIndexerWorkerClient({
       init: {
         chainId: rel.release.chainId,
-        rpcUrl,
-        release: rel.release,
         config: indexerConfig,
         dbName: `ssot_frontend_v2_${rel.release.chainId}`,
+        release: rel.release,
+        rpcUrl
       },
-      onStatus: (s) => setIndexerStatus(s),
-      onError: (e) => setIndexerStatus((prev) => ({
-        ...(prev ?? { chainId: rel.release!.chainId, hub: rel.release!.contracts.hub as any, running: false, config: indexerConfig }),
-        lastError: e.message,
-      })),
+      onError: (e) =>
+        setIndexerStatus((prev) => ({
+          ...(prev ?? {
+            chainId: rel.release!.chainId,
+            config: indexerConfig,
+            hub: rel.release!.contracts.hub as any,
+            running: false
+          }),
+          lastError: e.message
+        })),
+      onStatus: (s) => setIndexerStatus(s)
     });
 
     workerRef.current = client;
@@ -95,8 +99,8 @@ export function SSOTRuntimeProvider({ children }: { children: React.ReactNode })
   }, [rel.release, rel.readOnly, db, rpcUrl, indexerConfig]);
 
   const value = React.useMemo(
-    () => ({ db, indexer: undefined, indexerStatus, refreshIndexerStatus, syncNow, journal }),
-    [db, indexerStatus, refreshIndexerStatus, syncNow, journal]
+    () => ({ db, indexer: undefined, indexerStatus, journal, refreshIndexerStatus, syncNow }),
+    [db, indexerStatus, journal, refreshIndexerStatus, syncNow]
   );
 
   return <SSOTRuntimeContext.Provider value={value as any}>{children}</SSOTRuntimeContext.Provider>;
