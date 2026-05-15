@@ -173,7 +173,7 @@ contract GenerateFrontendManifestV13 is Script {
             "\"riskEngine\":\"",
             vm.toString(snap.readAddress(".sportsRiskEngine")),
             "\",",
-            "\"hub\":\"",
+            "\"sportsHub\":\"",
             vm.toString(snap.readAddress(".sportsHub")),
             "\",",
             "\"oddsSignerSetHash\":\"",
@@ -351,16 +351,12 @@ contract GenerateFrontendManifestV13 is Script {
 
     function _readAssetMeta(string memory snap, uint256 i) internal view returns (string memory sym, uint8 dec) {
         string memory suffix = vm.toString(i);
-        sym = "";
-        dec = 18;
+        sym = jsonReader.readString(snap, string.concat(".poolAssetSymbol_", suffix));
+        require(bytes(sym).length != 0, "missing pool asset symbol");
 
-        try jsonReader.readString(snap, string.concat(".assetSymbol_", suffix)) returns (string memory s) {
-            sym = s;
-        } catch {}
-
-        try jsonReader.readUint(snap, string.concat(".assetDecimals_", suffix)) returns (uint256 d) {
-            if (d <= type(uint8).max) dec = uint8(d);
-        } catch {}
+        uint256 d = jsonReader.readUint(snap, string.concat(".poolAssetDecimals_", suffix));
+        require(d <= type(uint8).max, "pool asset decimals too large");
+        dec = uint8(d);
     }
 
     function _domainLabel(uint256 domainId) internal pure returns (string memory) {

@@ -107,8 +107,8 @@
       "active": true,
       "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
       "bank": "0x3aADa481F979E5DFabd2Cd252A76feA2aD05e346",
-      "symbol": "",
-      "decimals": 18,
+      "symbol": "USDC",
+      "decimals": 6,
       "sportsRisk": null
     },
     {
@@ -118,8 +118,8 @@
       "active": true,
       "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
       "bank": "0x3686664d8D92FEAb8C4c9Ac0baaEb07c8BDDbc85",
-      "symbol": "",
-      "decimals": 18,
+      "symbol": "USDC",
+      "decimals": 6,
       "sportsRisk": {
         "maxStake": "10000000",
         "maxPayout": "20000000",
