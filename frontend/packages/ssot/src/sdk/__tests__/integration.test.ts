@@ -3,7 +3,7 @@ import { getAddress, type Address, type Hex } from "viem";
 import { createSSOTSDK, type SSOTSDK } from "../create";
 import type { SSOTRelease } from "../../release/schema";
 import type { JournalSink, TxJournalEntry } from "../txPipeline";
-import type { PlaceBetInput } from "../types";
+import type { PlaceBetInput, PlaceSportsTicketInput, PlaceSportsTicketPlan } from "../types";
 import { encodeStakeSpec } from "../../encoding/stakeSpec";
 
 const ACCOUNT = "0x1111111111111111111111111111111111111111" as Address;
@@ -11,6 +11,10 @@ const TX_HASH = "0xabc123" as Hex;
 const GAME_ID = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef" as Hex;
 const ASSET = "0x036cbd53842c5426634e7929541ec2318f3dcf7e" as Address;
 const BANK = "0x49b9dc94d98c3d78224ca37abf05ec09af7c50ff" as Address;
+const SPORTS_RISK_HASH =
+  "0x0707ba776912152fe0028608c2b31e2ac864f24ed79351eaa10ea012303793e6" as Hex;
+const ODDS_TICKET_HASH = "0x9999ba776912152fe0028608c2b31e2ac864f24ed79351eaa10ea0123037999" as Hex;
+const SPORTS_SIGNATURE = `0x${"11".repeat(65)}` as Hex;
 
 const TEST_RELEASE: SSOTRelease = {
   chainId: 84532,
@@ -65,6 +69,40 @@ const TEST_RELEASE: SSOTRelease = {
     }
   ],
   meta: { blockNumber: 100, schemaVersion: 2 }
+};
+
+const SPORTS_TEST_RELEASE: SSOTRelease = {
+  ...TEST_RELEASE,
+  sports: {
+    ...TEST_RELEASE.sports,
+    enabled: true,
+    maxStake: "10000000",
+    maxPayout: "25000000",
+    maxMarketReserved: "100000000",
+    maxOutcomeReserved: "50000000",
+    maxEventReserved: "250000000"
+  },
+  pools: [
+    ...TEST_RELEASE.pools,
+    {
+      poolId: 2,
+      domainId: 2,
+      domain: "Sports",
+      active: true,
+      asset: ASSET,
+      bank: BANK,
+      symbol: "USDC",
+      decimals: 6,
+      sportsRisk: {
+        maxStake: "10000000",
+        maxPayout: "25000000",
+        maxMarketReserved: "100000000",
+        maxOutcomeReserved: "50000000",
+        maxEventReserved: "250000000",
+        riskHash: SPORTS_RISK_HASH
+      }
+    }
+  ]
 };
 
 const RECEIPT = { blockNumber: 100n, status: "success" as const, logs: [] };
@@ -287,6 +325,177 @@ describe("createSSOTSDK", () => {
     );
     expect(journal.map((entry) => entry.action)).toContain("SPORTS_SETTLE_TICKETS");
     expect(journal.map((entry) => entry.action)).toContain("SPORTS_VOID_TICKETS");
+  });
+
+  it("builds SportsHub placeTicket plans with explicit release and odds gates", async () => {
+    const sportsSdk = createSSOTSDK({
+      release: SPORTS_TEST_RELEASE,
+      publicClient: pub,
+      walletClient: wal,
+      account: ACCOUNT,
+      journal: journalSink
+    });
+    pub.readContract
+      .mockResolvedValueOnce({
+        marketId: 7n,
+        eventId: 99n,
+        poolId: 2n,
+        outcomeCount: 3,
+        startsAt: 1_800_000_000n,
+        lockTime: 1_800_003_600n,
+        resultFinalitySeconds: 86_400n,
+        version: 1n,
+        marketKey: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        rulebookHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        state: 2
+      })
+      .mockResolvedValueOnce(0n)
+      .mockResolvedValueOnce(ODDS_TICKET_HASH);
+
+    const input: PlaceSportsTicketInput = {
+      chainId: 84532,
+      marketId: 7n,
+      outcomeId: 1,
+      stake: 1_000_000n,
+      odds: {
+        marketId: 7n,
+        outcomeId: 1,
+        marketVersion: 1n,
+        oddsWad: 2_100_000_000_000_000_000n,
+        maxStake: 2_000_000n,
+        maxPayout: 4_200_000n,
+        expiresAt: 1_900_000_000n,
+        nonce: 33n,
+        riskHash: SPORTS_RISK_HASH
+      },
+      signature: SPORTS_SIGNATURE
+    };
+
+    const result = await sportsSdk.sportsHub.planPlaceTicket(input);
+
+    if ("error" in result) throw new Error(`${result.error.code}: ${result.error.message}`);
+    expect(result.payload.poolId).toBe(2);
+    expect(result.preview.asset).toBe(getAddress(ASSET));
+    expect(result.preview.bank).toBe(getAddress(BANK));
+    expect(result.preview.needsApproval).toBe(true);
+    expect(result.preview.oddsTicketHash).toBe(ODDS_TICKET_HASH);
+    expect(result.steps.map((step) => step.type)).toEqual(["approve", "placeSportsTicket"]);
+    expect(result.steps[1]).toEqual(
+      expect.objectContaining({
+        to: getAddress(TEST_RELEASE.contracts.sportsHub),
+        call: expect.objectContaining({ contract: "SportsHub", fn: "placeTicket" })
+      })
+    );
+    expect(pub.readContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        address: getAddress(TEST_RELEASE.contracts.sportsHub),
+        functionName: "hashOddsTicket",
+        args: [expect.objectContaining({ riskHash: SPORTS_RISK_HASH }), ACCOUNT, 1_000_000n]
+      })
+    );
+  });
+
+  it("executes SportsHub placeTicket plans through approval and SportsHub writes", async () => {
+    const sportsSdk = createSSOTSDK({
+      release: SPORTS_TEST_RELEASE,
+      publicClient: pub,
+      walletClient: wal,
+      account: ACCOUNT,
+      journal: journalSink
+    });
+    const plan: PlaceSportsTicketPlan = {
+      chainId: 84532,
+      releaseDigest: TEST_RELEASE.releaseDigest,
+      warnings: [],
+      steps: [
+        { type: "approve", token: ASSET, spender: BANK, amount: 1_000_000n },
+        {
+          type: "placeSportsTicket",
+          to: getAddress(TEST_RELEASE.contracts.sportsHub),
+          call: {
+            contract: "SportsHub",
+            fn: "placeTicket",
+            argsSummary: { marketId: 7n, outcomeId: 1, stake: 1_000_000n }
+          }
+        }
+      ],
+      payload: {
+        marketId: 7n,
+        outcomeId: 1,
+        stake: 1_000_000n,
+        odds: {
+          marketId: 7n,
+          outcomeId: 1,
+          marketVersion: 1n,
+          oddsWad: 2_100_000_000_000_000_000n,
+          maxStake: 2_000_000n,
+          maxPayout: 4_200_000n,
+          expiresAt: 1_900_000_000n,
+          nonce: 33n,
+          riskHash: SPORTS_RISK_HASH
+        },
+        signature: SPORTS_SIGNATURE,
+        poolId: 2
+      },
+      preview: {
+        allowance: 0n,
+        needsApproval: true,
+        approveAmount: 1_000_000n,
+        asset: ASSET,
+        bank: BANK,
+        marketState: "open",
+        oddsTicketHash: ODDS_TICKET_HASH
+      }
+    };
+
+    const result = await sportsSdk.sportsHub.executeTicketPlan(plan);
+
+    expect(result.placeTicketTx.ok).toBe(true);
+    expect(pub.simulateContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        address: getAddress(ASSET),
+        functionName: "approve",
+        args: [getAddress(BANK), 1_000_000n]
+      })
+    );
+    expect(pub.simulateContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        address: getAddress(TEST_RELEASE.contracts.sportsHub),
+        functionName: "placeTicket",
+        args: [
+          7n,
+          1,
+          expect.objectContaining({ marketVersion: 1n, riskHash: SPORTS_RISK_HASH }),
+          1_000_000n,
+          SPORTS_SIGNATURE
+        ]
+      })
+    );
+    expect(journal.map((entry) => entry.action)).toContain("APPROVE");
+    expect(journal.map((entry) => entry.action)).toContain("SPORTS_PLACE_TICKET");
+  });
+
+  it("rejects SportsHub placeTicket planning when the release gate is disabled", async () => {
+    const result = await sdk.sportsHub.planPlaceTicket({
+      chainId: 84532,
+      marketId: 7n,
+      outcomeId: 1,
+      stake: 1_000_000n,
+      odds: {
+        marketId: 7n,
+        outcomeId: 1,
+        marketVersion: 1n,
+        oddsWad: 2_100_000_000_000_000_000n,
+        maxStake: 2_000_000n,
+        maxPayout: 4_200_000n,
+        expiresAt: 1_900_000_000n,
+        nonce: 33n,
+        riskHash: SPORTS_RISK_HASH
+      },
+      signature: SPORTS_SIGNATURE
+    });
+
+    expect("error" in result ? result.error.code : undefined).toBe("SPORTSBOOK_DISABLED");
   });
 
   it("executes GameHub refund through the v1.3 GameHub address", async () => {
