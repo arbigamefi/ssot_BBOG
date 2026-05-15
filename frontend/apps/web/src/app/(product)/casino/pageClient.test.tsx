@@ -49,6 +49,12 @@ const MOCK_GAMES_META = [
     slug: "coin-toss",
     label: "Coin Toss",
     module: "0x7777777777777777777777777777777777777777"
+  },
+  {
+    gameId: "0x03",
+    slug: "baccarat",
+    label: "Baccarat",
+    module: "0x8888888888888888888888888888888888888888"
   }
 ];
 
@@ -102,6 +108,23 @@ describe("GamesListClient", () => {
     render(<GamesListClient />);
     const cards = screen.getAllByTestId("room-entry-card");
     expect(cards.length).toBe(2);
+  });
+
+  it("does not render release games without implemented route modules", () => {
+    state.release = {
+      name: "Base Sepolia",
+      releaseDigest: "0xdeadbeefcafefeed",
+      contracts: { hub: "0x1234567890abcdef1234567890abcdef12345678" },
+      assets: [{ address: "0x01", symbol: "USDC", decimals: 6 }],
+      gamesMeta: MOCK_GAMES_META
+    };
+    render(<GamesListClient />);
+    expect(screen.queryByText("Baccarat")).toBeNull();
+    expect(
+      Array.from(screen.getAllByTestId("room-entry-card")).map((card) =>
+        card.getAttribute("data-slug")
+      )
+    ).toEqual(["dice", "coin-toss"]);
   });
 
   it("links each game card to canonical game room routes", () => {

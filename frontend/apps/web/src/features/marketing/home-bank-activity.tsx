@@ -39,7 +39,7 @@ function BankReservePanel({
   releaseDigest?: string;
 }) {
   return (
-    <div className="rounded-md border border-border bg-surface-0 p-6 shadow-e2">
+    <div className="min-w-0 rounded-md border border-border bg-surface-0 p-6 shadow-e2">
       <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent-soft px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-accent">
         <CircleStackIcon className="h-4 w-4" />
         Bank reserve
@@ -121,11 +121,13 @@ function ActivityPanel({ activity }: { activity: readonly LandingActivity[] }) {
 
 function BankMetric({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
-    <div className="rounded-md border border-border bg-surface-1 p-4">
+    <div className="min-w-0 rounded-md border border-border bg-surface-1 p-4">
       <div className="text-[10px] font-black uppercase tracking-[0.16em] text-fg-subtle">
         {label}
       </div>
-      <div className={`mt-2 font-black text-fg ${mono ? "font-mono text-sm" : "text-xl"}`}>
+      <div
+        className={`mt-2 min-w-0 font-black text-fg ${mono ? "break-all font-mono text-sm" : "text-xl"}`}
+      >
         {value}
       </div>
     </div>

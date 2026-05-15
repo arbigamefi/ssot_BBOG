@@ -1,6 +1,11 @@
 import { getGamePresentation } from "./presentation";
 import { getPrimaryGameHref } from "./routes";
-import { CASINO_MODULES, compareCasinoModules, getCasinoModule } from "./modules";
+import {
+  CASINO_MODULES,
+  compareCasinoModules,
+  getCasinoModule,
+  isCasinoModuleSlug
+} from "./modules";
 
 export type CatalogRoom = {
   slug: string;
@@ -24,9 +29,10 @@ type CatalogSeed = {
 
 export function getCatalogRooms(rawGamesMeta?: Array<ReleaseGameMetaLike | null | undefined>) {
   const source: CatalogSeed[] =
-    rawGamesMeta?.filter((game): game is ReleaseGameMetaLike =>
-      Boolean(game?.slug && game?.label)
-    ) ?? [];
+    rawGamesMeta?.filter((game): game is ReleaseGameMetaLike => {
+      if (!game?.slug || !game.label) return false;
+      return isCasinoModuleSlug(game.slug);
+    }) ?? [];
 
   const fallback: CatalogSeed[] = CASINO_MODULES.map((module) => ({
     slug: module.slug,

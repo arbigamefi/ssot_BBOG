@@ -971,6 +971,43 @@ Follow-up:
   `/games`, `/dice`, `/privacy`, and `/casino/cointoss`;
 - if those pass, the frontend cleanup block is ready for a local phase commit.
 
+### 2026-05-15 - R12 Route-Level Visual QA
+
+Status: completed as rendered QA polish.
+
+Changes:
+
+- verified production route status for canonical URLs and removed aliases:
+  `/casino/coin-toss`, `/portfolio/activity`, and `/legal/privacy` return 200;
+  `/games`, `/dice`, `/privacy`, and `/casino/cointoss` return 404;
+- fixed `/casino` directory dead links by filtering release metadata through
+  the implemented casino module registry before rendering room cards;
+- fixed mobile horizontal overflow on `/` caused by the long release digest
+  forcing bank metric grid width beyond the 390 px viewport;
+- captured desktop Browser screenshots for `/casino` and `/casino/dice`, and
+  mobile Playwright screenshots for `/`, `/casino`, and `/casino/dice`;
+- kept `frontend/packages/ssot/**` untouched.
+
+Evidence:
+
+```bash
+pnpm -C frontend/apps/web test -- 'src/app/(product)/casino/pageClient.test.tsx'
+pnpm -C frontend/apps/web test -- 'src/app/(marketing)/page.test.tsx'
+pnpm -C frontend typecheck
+pnpm -C frontend/apps/web build
+pnpm -C frontend/apps/web exec next start -p 3001
+```
+
+Rendered QA observations:
+
+- desktop `/casino` rendered exactly four room cards: `dice`, `roulette`,
+  `coin-toss`, and `keno`;
+- desktop interaction from `/casino` room card to `/casino/dice` completed
+  without a framework overlay or horizontal overflow;
+- mobile 390 px checks for `/`, `/casino`, `/casino/dice`, `/portfolio`,
+  `/earn`, `/ops`, and `/sportsbook` all returned 200 with no framework overlay
+  and no horizontal overflow.
+
 Useful commands:
 
 ```bash
