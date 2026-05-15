@@ -882,6 +882,56 @@ Follow-up:
 - the next cleanup pass should retokenize those primitives before promoting
   `forbidden-style` to blocking.
 
+### 2026-05-15 - R10 Primitive Style Gate Closeout
+
+Status: completed as the final design-debt gate closure.
+
+Changes:
+
+- deleted unused primitive-era artifacts with no product imports:
+  `GameCard`, `GlassCard`, `GlassModal`, `ReceiptTicket`, `StatBlock`, and
+  `WinLossOverlay`;
+- removed deleted primitive exports from `@ssot/ui` root and
+  `@ssot/ui/patterns`;
+- retokenized active primitives: `Button`, `Card`, `Alert`, `Input`,
+  `ShellHeader`, `TabBar`, and `Toaster`;
+- promoted `forbidden-style` to a blocking strict precheck after it reached
+  zero;
+- kept `frontend/packages/ssot/**` untouched.
+
+Evidence:
+
+```bash
+rg -n "GameCard|GlassCard|GlassModal|ReceiptTicket|WinLossOverlay|StatBlock" frontend/apps/web/src frontend/packages/ui/src -S
+pnpm -C frontend precheck:frontend -- --strict
+pnpm -C frontend/packages/ui typecheck
+pnpm -C frontend/apps/web test
+pnpm -C frontend typecheck
+pnpm -C frontend/apps/web build
+```
+
+Observed:
+
+- unused primitive scan returned no product or UI source hits;
+- `precheck:frontend -- --strict` passed with all checks at zero, including
+  `forbidden-style`;
+- full web tests passed: 37 files, 133 tests;
+- `pnpm -C frontend/packages/ui typecheck` passed;
+- `pnpm -C frontend typecheck` passed;
+- `pnpm -C frontend/apps/web build` passed with the known Node 20 engine,
+  MetaMask optional storage, ESLint plugin, `indexedDB`, and `punycode`
+  warnings;
+- build first-load JS dropped further, for example `/casino/[slug]` from about
+  498 kB after R9 to about 496 kB.
+
+Follow-up:
+
+- The next phase should move from cleanup to visual QA and route-level polish:
+  run browser screenshots for `/`, `/casino`, `/casino/dice`,
+  `/portfolio`, `/earn`, `/ops`, and `/sportsbook`;
+- if those routes pass, this frontend cleanup block can be treated as closed
+  for a larger PR.
+
 Useful commands:
 
 ```bash

@@ -24,15 +24,10 @@ export * from "./components/ui/theme-toggle";
 export * from "./components/ui/pagination";
 export * from "./components/ui/copy-button";
 export * from "./components/ui/page-header";
-export * from "./components/ui/stat-block";
 export * from "./components/ui/stat-card";
 export * from "./components/ui/status-badge";
 export * from "./components/ui/tab-bar";
-export * from "./components/ui/game-card";
-export * from "./components/ui/receipt-ticket";
-export * from "./components/ui/win-loss-overlay";
 export * from "./components/ui/data-table";
-export * from "./components/ui/glass-modal";
 export { toast } from "sonner";
 
 // protocol (presentational domain components)
@@ -45,7 +40,6 @@ export * from "./components/protocol/asset-selector";
 
 // New Refactored Domain Components
 export * from "./components/ui/shell-header";
-export * from "./components/ui/glass-card";
 export * from "./components/ui/room-strip";
 export * from "./components/protocol/audit-tabs";
 

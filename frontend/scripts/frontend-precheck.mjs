@@ -75,7 +75,7 @@ function checkForbiddenStyles() {
     label: "Forbidden style utilities",
     roots: sourceRoots,
     pattern,
-    blocking: false
+    blocking: true
   });
 }
 

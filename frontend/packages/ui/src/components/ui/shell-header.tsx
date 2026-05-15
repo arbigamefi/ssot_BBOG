@@ -4,29 +4,25 @@ import { cn } from "../../lib/utils";
 interface ShellHeaderProps {
   className?: string;
   children?: React.ReactNode;
-  /** 
+  /**
    * If true, uses a completely transparent background (good for Hero sections).
-   * If false, defaults to the standard #050505/80 backdrop-blur top bar.
+   * If false, defaults to the standard tokenized top bar.
    */
   variant?: "solid" | "transparent";
 }
 
-export function ShellHeader({ 
-  className, 
-  children,
-  variant = "solid"
-}: ShellHeaderProps) {
+export function ShellHeader({ className, children, variant = "solid" }: ShellHeaderProps) {
   return (
-    <header 
+    <header
       className={cn(
-        "flex-shrink-0 z-50 sticky top-0 transition-colors duration-300",
-        variant === "solid" 
-          ? "border-b border-white/5 bg-[#050505]/80 backdrop-blur-md" 
-          : "bg-transparent border-transparent",
+        "sticky top-0 z-50 flex-shrink-0 transition-colors duration-300",
+        variant === "solid"
+          ? "border-b border-border bg-surface-0/80 backdrop-blur-md"
+          : "border-transparent bg-transparent",
         className
       )}
     >
-      <div className="max-w-[1440px] mx-auto px-6 h-20 flex items-center justify-between">
+      <div className="mx-auto flex h-20 max-w-[1440px] items-center justify-between px-6">
         {children}
       </div>
     </header>
@@ -34,18 +30,14 @@ export function ShellHeader({
 }
 
 // ----------------------------------------------------------------------
-// Compose Helpers 
+// Compose Helpers
 
 interface ShellHeaderBrandProps {
   name?: string;
   className?: string;
 }
 export function ShellHeaderBrand({ name = "ArbiGameFi", className }: ShellHeaderBrandProps) {
-  return (
-    <div className={cn("text-xl font-bold tracking-tight", className)}>
-      {name}
-    </div>
-  );
+  return <div className={cn("text-xl font-bold tracking-tight text-fg", className)}>{name}</div>;
 }
 
 interface ShellHeaderNavProps {
@@ -53,7 +45,7 @@ interface ShellHeaderNavProps {
 }
 export function ShellHeaderNav({ children }: ShellHeaderNavProps) {
   return (
-    <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-white/60">
+    <nav className="hidden items-center gap-6 text-sm font-medium text-fg-muted md:flex">
       {children}
     </nav>
   );
@@ -63,9 +55,5 @@ interface ShellHeaderActionsProps {
   children?: React.ReactNode;
 }
 export function ShellHeaderActions({ children }: ShellHeaderActionsProps) {
-  return (
-    <div className="flex items-center gap-4">
-      {children}
-    </div>
-  );
+  return <div className="flex items-center gap-4">{children}</div>;
 }
