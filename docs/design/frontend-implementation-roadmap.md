@@ -775,6 +775,60 @@ Follow-up:
   `precheck:frontend`;
 - R8 should decide which precheck groups can become blocking immediately.
 
+### 2026-05-15 - R8 Stale Surface Deletion and Blocking Guards
+
+Status: completed as a final cleanup guardrail pass.
+
+Changes:
+
+- deleted unused stale exploration components:
+  `components/TrustStatsStrip.tsx`, `components/TrustTableShell.tsx`, and
+  `components/home/HomeHeroVisual.tsx`;
+- retokenized the product brand mark and global footer so they no longer
+  contribute hardcoded dark backgrounds or forbidden radius utilities;
+- promoted `legacy-shell` to a blocking strict precheck now that the count is
+  zero;
+- promoted `web3-import-boundary` to a blocking strict precheck while direct
+  wagmi, viem, and RainbowKit imports remain isolated to provider islands;
+- kept `forbidden-style` report-only because the remaining warnings are
+  concentrated in protocol visualization components and need a separate
+  controlled retokenization pass;
+- kept `frontend/packages/ssot/**` untouched.
+
+Evidence:
+
+```bash
+rg -n "TrustStatsStrip|TrustTableShell|HomeHeroVisual" frontend/apps/web/src frontend/packages/ui/src -S
+pnpm -C frontend precheck:frontend -- --report
+pnpm -C frontend precheck:frontend -- --strict
+pnpm -C frontend/apps/web test
+pnpm -C frontend typecheck
+pnpm -C frontend/apps/web build
+git diff --check
+```
+
+Observed:
+
+- stale component scan returned no product source hits;
+- `legacy-shell` is now 0 and blocking;
+- `web3-import-boundary` is now 0 and blocking;
+- `precheck:frontend -- --strict` passed;
+- `forbidden-style` improved from 245 to 224 warnings;
+- full web tests passed: 37 files, 133 tests;
+- `pnpm -C frontend typecheck` passed;
+- `pnpm -C frontend/apps/web build` passed with the known Node 20 engine,
+  MetaMask optional storage, ESLint plugin, `indexedDB`, and `punycode`
+  warnings.
+- browser smoke on `/` passed: brand/footer rendered, no visible Next overlay,
+  and no horizontal overflow at 1280px.
+
+Follow-up:
+
+- Next pass should focus on `packages/ui/src/components/protocol/*`, which now
+  owns nearly all remaining forbidden-style warnings;
+- after that retokenization lands, `forbidden-style` can move from report-only
+  to blocking.
+
 Useful commands:
 
 ```bash

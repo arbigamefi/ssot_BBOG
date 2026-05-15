@@ -44,13 +44,13 @@ function FooterColumn({
 }) {
   return (
     <div className="space-y-4">
-      <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-white/45">{title}</h3>
+      <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-fg-subtle">{title}</h3>
       <ul className="space-y-3">
         {links.map((link) => (
           <li key={link.href}>
             <Link
               href={link.href}
-              className="text-sm text-slate-400 transition-colors hover:text-white"
+              className="text-sm text-fg-muted transition-colors hover:text-fg"
             >
               {link.label}
             </Link>
@@ -63,17 +63,17 @@ function FooterColumn({
 
 export function SiteFooter() {
   return (
-    <footer className="mt-16 border-t border-white/8 bg-[#060a16]/95">
+    <footer className="mt-16 border-t border-border bg-surface-0">
       <div className="mx-auto max-w-[1480px] px-4 py-16 sm:px-6 lg:px-8">
         <div className="grid gap-10 md:grid-cols-[1.5fr_1fr_1fr_1fr_1fr]">
           <div className="space-y-5">
             <ArbiGameFiBrand accent="cyan" subtitle="Wallet-native rooms" />
-            <p className="max-w-sm text-sm leading-7 text-slate-400">
+            <p className="max-w-sm text-sm leading-7 text-fg-muted">
               Wallet-native game rooms, readable settlement, and visible bankroll context on top of
               on-chain execution.
             </p>
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">
-              <span className="h-2 w-2 rounded-full bg-blue-400" />
+            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-surface-1 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-fg-muted">
+              <span className="h-2 w-2 rounded-full bg-accent" />
               Live rooms
             </div>
           </div>
@@ -84,7 +84,7 @@ export function SiteFooter() {
           <FooterColumn title="Legal" links={LEGAL_LINKS} />
         </div>
 
-        <div className="mt-12 flex flex-col gap-4 border-t border-white/8 pt-6 text-sm text-slate-500 md:flex-row md:items-center md:justify-between">
+        <div className="mt-12 flex flex-col gap-4 border-t border-border pt-6 text-sm text-fg-subtle md:flex-row md:items-center md:justify-between">
           <p>ArbiGameFi frontend for wallet-native rooms and transparent settlement.</p>
           <div className="flex flex-wrap items-center gap-4">
             {COMMUNITY_LINKS.map((link) => (
@@ -93,7 +93,7 @@ export function SiteFooter() {
                 href={link.href}
                 target="_blank"
                 rel="noreferrer"
-                className="transition-colors hover:text-white"
+                className="transition-colors hover:text-fg"
               >
                 {link.label}
               </a>

@@ -87,7 +87,7 @@ function checkLegacyShellNames() {
     label: "Legacy shell names",
     roots: sourceRoots,
     pattern,
-    blocking: false
+    blocking: true
   });
 }
 
@@ -135,7 +135,7 @@ function checkForbiddenWeb3Imports() {
       formatPath(file).startsWith("apps/web/src/workers/"),
     roots: [resolve(root, "apps/web/src")],
     pattern,
-    blocking: false
+    blocking: true
   });
 }
 
