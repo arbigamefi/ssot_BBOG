@@ -15,6 +15,7 @@ import {
   type MarketTapeRow
 } from "./components";
 import { formatLookupError, parseLookupId, shortHex } from "./format";
+import { SportsbookTicketTerminalPanel } from "./ticket-terminal-panel";
 
 interface MarketDetailReadback extends MarketTapeRow {
   eventReserved?: bigint;
@@ -27,14 +28,15 @@ function formatUnits(value?: bigint) {
 }
 
 export function SportsbookMarketDetailPageClient({ marketId }: { marketId: string }) {
-  const { release, readOnlyReason, sportsbook } = useRelease();
+  const { release, readOnly, readOnlyReason, sportsbook } = useRelease();
   const { sdk, ready } = useSSOTSDK();
   const parsedMarketId = React.useMemo(() => parseLookupId(marketId), [marketId]);
 
   const {
     data: readback,
     error,
-    isFetching
+    isFetching,
+    refetch: refetchReadback
   } = useQuery({
     queryKey: [
       "ssot",
@@ -152,59 +154,81 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
             </div>
           </SectionShell>
         ) : readback ? (
-          <div className="grid gap-8 xl:grid-cols-[1.1fr_0.9fr]">
+          <>
+            <div className="grid gap-8 xl:grid-cols-[1.1fr_0.9fr]">
+              <SectionShell
+                eyebrow="Market"
+                title="Lifecycle and result"
+                description="Market state is read directly from SportsHub. Result state is displayed when a reporter proposal exists."
+              >
+                <MarketInspector
+                  market={readback.market}
+                  result={readback.result}
+                  reserved={readback.reserved}
+                />
+              </SectionShell>
+
+              <SectionShell
+                eyebrow="Exposure"
+                title="Reserved capital"
+                description="These values are the on-chain exposure readback used by ops to validate market, outcome, event, and pool-event caps."
+              >
+                <div className="grid gap-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <DetailCell label="Market reserved" value={formatUnits(readback.reserved)} />
+                    <DetailCell
+                      label="Event reserved"
+                      value={formatUnits(readback.eventReserved)}
+                    />
+                    <DetailCell
+                      label="Pool-event reserved"
+                      value={formatUnits(readback.poolEventReserved)}
+                    />
+                    <DetailCell
+                      label="Outcome count"
+                      value={readback.market.outcomeCount.toString()}
+                    />
+                  </div>
+
+                  <div className="overflow-hidden rounded-lg border border-border">
+                    <div className="border-b border-border bg-surface-2 px-4 py-3 text-sm font-semibold text-fg">
+                      Outcome exposure
+                    </div>
+                    <div className="divide-y divide-border-soft">
+                      {readback.outcomeReserved.map((row) => (
+                        <div
+                          key={row.outcomeId}
+                          className="flex items-center justify-between gap-4 px-4 py-3 text-sm"
+                        >
+                          <div className="text-fg-muted">Outcome {row.outcomeId}</div>
+                          <div className="font-mono font-semibold text-fg">
+                            {formatUnits(row.reserved)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </SectionShell>
+            </div>
+
             <SectionShell
-              eyebrow="Market"
-              title="Lifecycle and result"
-              description="Market state is read directly from SportsHub. Result state is displayed when a reporter proposal exists."
+              eyebrow="Ticket terminalization"
+              title="Settle, refund, or void tickets"
+              description="Debt-out calls remain wallet-gated and use SportsHub terminal helpers. Inspect a ticket before broadcasting to verify the state and payout path."
             >
-              <MarketInspector
-                market={readback.market}
-                result={readback.result}
-                reserved={readback.reserved}
+              <SportsbookTicketTerminalPanel
+                sdk={sdk}
+                disabled={readOnly || !ready}
+                disabledReason={
+                  readOnly
+                    ? readOnlyReason
+                    : "A connected wallet is required to broadcast terminal ticket calls."
+                }
+                onMutated={() => void refetchReadback()}
               />
             </SectionShell>
-
-            <SectionShell
-              eyebrow="Exposure"
-              title="Reserved capital"
-              description="These values are the on-chain exposure readback used by ops to validate market, outcome, event, and pool-event caps."
-            >
-              <div className="grid gap-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <DetailCell label="Market reserved" value={formatUnits(readback.reserved)} />
-                  <DetailCell label="Event reserved" value={formatUnits(readback.eventReserved)} />
-                  <DetailCell
-                    label="Pool-event reserved"
-                    value={formatUnits(readback.poolEventReserved)}
-                  />
-                  <DetailCell
-                    label="Outcome count"
-                    value={readback.market.outcomeCount.toString()}
-                  />
-                </div>
-
-                <div className="overflow-hidden rounded-lg border border-border">
-                  <div className="border-b border-border bg-surface-2 px-4 py-3 text-sm font-semibold text-fg">
-                    Outcome exposure
-                  </div>
-                  <div className="divide-y divide-border-soft">
-                    {readback.outcomeReserved.map((row) => (
-                      <div
-                        key={row.outcomeId}
-                        className="flex items-center justify-between gap-4 px-4 py-3 text-sm"
-                      >
-                        <div className="text-fg-muted">Outcome {row.outcomeId}</div>
-                        <div className="font-mono font-semibold text-fg">
-                          {formatUnits(row.reserved)}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </SectionShell>
-          </div>
+          </>
         ) : (
           <SectionShell
             eyebrow="Readback"

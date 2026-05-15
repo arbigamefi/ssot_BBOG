@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import * as React from "react";
 
 const zeroHash = `0x${"0".repeat(64)}`;
@@ -54,7 +54,29 @@ function createSportsHubMock() {
       .fn()
       .mockImplementation(async (_marketId: bigint, outcomeId: number) =>
         BigInt(100_000 + outcomeId)
-      )
+      ),
+    getTicket: vi.fn().mockResolvedValue({
+      ticketId: 12n,
+      positionId: 34n,
+      marketId: 7n,
+      eventId: 97n,
+      poolId: 2,
+      outcomeId: 1,
+      player: "0x1111111111111111111111111111111111111111",
+      stake: 1_000_000n,
+      payout: 1_800_000n,
+      reserved: 1_800_000n,
+      oddsSnapshotHash: "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      rulebookHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      acceptedAt: 1_800_000_100,
+      state: "held"
+    }),
+    settleTicket: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
+    settleTickets: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
+    refundTicket: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
+    refundTickets: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
+    voidTicket: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
+    voidTickets: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" })
   };
 }
 
@@ -95,6 +117,7 @@ const state = {
 vi.mock("../../../../ssot/release/ReleaseProvider", () => ({
   useRelease: () => ({
     release: state.release,
+    readOnly: false,
     readOnlyReason: state.readOnlyReason,
     sportsbook: state.sportsbook
   })
@@ -121,7 +144,11 @@ vi.mock("next/link", () => ({
 }));
 
 vi.mock("@ssot/ui", () => ({
-  cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" ")
+  cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" "),
+  toast: {
+    error: vi.fn(),
+    success: vi.fn()
+  }
 }));
 
 import { SportsbookMarketDetailPageClient } from "./pageClient";
@@ -172,6 +199,21 @@ describe("SportsbookMarketDetailPageClient", () => {
     expect(state.sdk.sportsHub.getMarket).toHaveBeenCalledWith(7n);
     expect(state.sdk.sportsHub.getResult).toHaveBeenCalledWith(7n);
     expect(state.sdk.sportsHub.getMarketOutcomeReserved).toHaveBeenCalledWith(7n, 2);
+  });
+
+  it("inspects ticket terminalization state without requiring an operator wallet", async () => {
+    renderWithQueryClient(<SportsbookMarketDetailPageClient marketId="7" />);
+
+    expect(await screen.findByText("Settle, refund, or void tickets")).toBeDefined();
+    fireEvent.change(screen.getByLabelText("Ticket ids"), { target: { value: "12" } });
+    fireEvent.click(screen.getByRole("button", { name: "Inspect ticket" }));
+
+    expect(await screen.findByText("Ticket 12")).toBeDefined();
+    expect(screen.getByText("held / market 7")).toBeDefined();
+    expect((screen.getByRole("button", { name: "Settle" }) as HTMLButtonElement).disabled).toBe(
+      true
+    );
+    expect(state.sdk.sportsHub.getTicket).toHaveBeenCalledWith(12n);
   });
 
   it("does not call SportsHub for invalid market ids", () => {
