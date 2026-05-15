@@ -114,6 +114,17 @@ describe("AppShell", () => {
     expect(screen.getByText("Hello")).toBeDefined();
   });
 
+  it("uses the dark theme on legal routes", () => {
+    state.pathname = "/privacy";
+    const { container } = render(
+      <AppShell>
+        <div>legal content</div>
+      </AppShell>
+    );
+
+    expect(container.firstElementChild?.className).toContain("theme-dark");
+  });
+
   it("marks the active route in the app header nav", () => {
     render(
       <AppShell>
