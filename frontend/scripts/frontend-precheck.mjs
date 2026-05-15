@@ -19,6 +19,7 @@ const checks = [
   checkLegacyShellNames(),
   checkPrototypeRoutes(),
   checkLegacyRouteAliases(),
+  checkLegacyDocsDirectory(),
   checkPageClientSize(),
   checkForbiddenWeb3Imports(),
   checkLegacySDKCompatibility()
@@ -133,6 +134,18 @@ function checkLegacyRouteAliases() {
   return {
     id: "legacy-route-alias",
     label: "Legacy redirect route aliases",
+    count: examples.length,
+    blocking: true,
+    examples
+  };
+}
+
+function checkLegacyDocsDirectory() {
+  const legacyDocs = resolve(root, "docs/frontend");
+  const examples = existsSync(legacyDocs) ? [formatPath(legacyDocs)] : [];
+  return {
+    id: "legacy-frontend-docs",
+    label: "Pre-clean-room frontend docs directory",
     count: examples.length,
     blocking: true,
     examples

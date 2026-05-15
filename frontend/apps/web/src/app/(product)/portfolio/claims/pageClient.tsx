@@ -177,7 +177,7 @@ export function ClaimsPageClient() {
       <Placeholder
         title="Claims"
         description={readOnlyReason ?? "No embedded release available."}
-        specPath="docs/frontend/PAGE-SPECS/045-CLAIMS.md"
+        specPath="docs/design/04-page-blueprints.md#7--portfolioclaims"
       />
     );
   }

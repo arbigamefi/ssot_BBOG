@@ -114,7 +114,7 @@ export function GamePageClient({ slug }: { slug: string }) {
       <Placeholder
         title="Module Not Found"
         description={readOnlyReason ?? "Game not found."}
-        specPath="docs/frontend/PAGE-SPECS/010-GAMES.md"
+        specPath="docs/design/04-page-blueprints.md#3--casinoslug-game-room"
       />
     );
 

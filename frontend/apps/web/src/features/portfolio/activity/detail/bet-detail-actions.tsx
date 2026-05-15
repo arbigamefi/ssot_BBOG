@@ -47,8 +47,8 @@ export function BetDetailActions({
         {canRefund ? "Refund surface" : "Finalize surface"}
       </h2>
       <p className="mt-2 text-sm leading-6 text-fg-muted">
-        Actions only appear when Hub state allows them. The execution trace remains attached to this
-        receipt.
+        Actions only appear when GameHub state allows them. The execution trace remains attached to
+        this receipt.
       </p>
 
       <div className="mt-5 flex flex-col gap-3 sm:flex-row">

@@ -158,7 +158,7 @@ export function AccountPageClient() {
       <Placeholder
         title="Account"
         description={readOnlyReason ?? "No embedded release available."}
-        specPath="docs/frontend/PAGE-SPECS/060-ACCOUNT.md"
+        specPath="docs/design/04-page-blueprints.md#5--portfolio-overview"
       />
     );
   }

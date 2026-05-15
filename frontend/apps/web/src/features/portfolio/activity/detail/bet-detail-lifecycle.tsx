@@ -16,7 +16,7 @@ export function BetDetailLifecycle({
       <div className="text-xs font-black uppercase tracking-[0.16em] text-fg-subtle">
         Lifecycle proof
       </div>
-      <h2 className="mt-2 text-2xl font-black text-fg">Hub state</h2>
+      <h2 className="mt-2 text-2xl font-black text-fg">GameHub state</h2>
       <div className="mt-5">
         <TxStepper
           title="Ticket lifecycle"

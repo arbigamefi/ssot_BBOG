@@ -101,7 +101,7 @@ export function GamesListClient() {
       <Placeholder
         title="Games"
         description={readOnlyReason ?? "No embedded release available for the connected chain."}
-        specPath="docs/frontend/PAGE-SPECS/010-GAMES.md"
+        specPath="docs/design/04-page-blueprints.md#2--casino-directory"
       />
     );
   }
@@ -115,7 +115,7 @@ export function GamesListClient() {
       <Placeholder
         title="Games"
         description="No games registered in the active release."
-        specPath="docs/frontend/PAGE-SPECS/010-GAMES.md"
+        specPath="docs/design/04-page-blueprints.md#2--casino-directory"
       />
     );
   }

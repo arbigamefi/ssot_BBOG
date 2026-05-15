@@ -47,7 +47,7 @@ export function buildLifecycleSteps(state?: string | null): TxStepItem[] {
   return [
     {
       title: "Placed",
-      description: "The Hub accepted the ticket and locked stake.",
+      description: "GameHub accepted the ticket and locked stake.",
       state: stepState(currentIndex, 0)
     },
     {
@@ -57,7 +57,7 @@ export function buildLifecycleSteps(state?: string | null): TxStepItem[] {
     },
     {
       title: "Finalized",
-      description: "The Hub settled payout or loss.",
+      description: "GameHub settled payout or loss.",
       state: stepState(currentIndex, 2)
     }
   ];

@@ -5,15 +5,25 @@ import type { TxStepItem } from "../components/protocol/tx-stepper";
 
 const meta: Meta<typeof TxStepper> = {
   title: "System/TxStepper",
-  component: TxStepper,
+  component: TxStepper
 };
 
 export default meta;
 type Story = StoryObj<typeof TxStepper>;
 
-function steps(state: "idle" | "planning" | "needs" | "submitting" | "mined" | "failed"): TxStepItem[] {
-  const approve: TxStepItem = { title: "Approve", description: "Authorize Bank to transfer stake", state: "todo" };
-  const place: TxStepItem = { title: "Place bet", description: "Hub.placeBet (payable)", state: "todo" };
+function steps(
+  state: "idle" | "planning" | "needs" | "submitting" | "mined" | "failed"
+): TxStepItem[] {
+  const approve: TxStepItem = {
+    title: "Approve",
+    description: "Authorize Bank to transfer stake",
+    state: "todo"
+  };
+  const place: TxStepItem = {
+    title: "Place bet",
+    description: "GameHub.placeBet (payable)",
+    state: "todo"
+  };
   if (state === "planning") {
     approve.state = "active";
   }
@@ -39,46 +49,46 @@ export const Idle: Story = {
   args: {
     title: "Transaction",
     subtitle: "Plan → Stepper → Receipt",
-    steps: steps("idle"),
-  },
+    steps: steps("idle")
+  }
 };
 
 export const Planning: Story = {
   args: {
     title: "Transaction",
     subtitle: "Planning",
-    steps: steps("planning"),
-  },
+    steps: steps("planning")
+  }
 };
 
 export const NeedsApproval: Story = {
   args: {
     title: "Transaction",
     subtitle: "Approval required",
-    steps: steps("needs"),
-  },
+    steps: steps("needs")
+  }
 };
 
 export const Submitting: Story = {
   args: {
     title: "Transaction",
     subtitle: "Submitting",
-    steps: steps("submitting"),
-  },
+    steps: steps("submitting")
+  }
 };
 
 export const Mined: Story = {
   args: {
     title: "Transaction",
     subtitle: "Mined",
-    steps: steps("mined"),
-  },
+    steps: steps("mined")
+  }
 };
 
 export const Failed: Story = {
   args: {
     title: "Transaction",
     subtitle: "Failed",
-    steps: steps("failed"),
-  },
+    steps: steps("failed")
+  }
 };

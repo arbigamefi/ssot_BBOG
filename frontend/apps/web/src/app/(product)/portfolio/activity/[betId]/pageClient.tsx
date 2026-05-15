@@ -110,7 +110,7 @@ export function BetDetailPageClient({ betId }: { betId: string }) {
       confirm: "Confirm on-chain"
     },
     descriptions: {
-      preflight: "Validate refund eligibility and simulate the Hub call.",
+      preflight: "Validate refund eligibility and simulate the GameHub call.",
       submit: "Broadcast refund through the wallet client.",
       confirm: "Wait for receipt and journal reconciliation."
     }
@@ -124,7 +124,7 @@ export function BetDetailPageClient({ betId }: { betId: string }) {
       confirm: "Confirm on-chain"
     },
     descriptions: {
-      preflight: "Validate finalize eligibility and simulate the Hub call.",
+      preflight: "Validate finalize eligibility and simulate the GameHub call.",
       submit: "Broadcast finalize through the wallet client.",
       confirm: "Wait for receipt and journal reconciliation."
     }

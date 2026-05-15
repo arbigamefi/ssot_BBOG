@@ -7,9 +7,8 @@ existing release-artifact contract in [`README.md`](./README.md).
 For visual / product SSOT (brand, voice, tokens, components), see
 [`../design/`](../design/).
 
-The older planning files under `frontend/docs/frontend/` are historical
-references for the pre-clean-room frontend. They are not active SSOT unless a
-document in `docs/design/` or `docs/frontend/` explicitly cites them.
+The older pre-clean-room frontend planning directory has been removed. Active
+frontend SSOT lives only under `docs/design/` and `docs/frontend/`.
 
 Most commands in Layer 3/4 are target-state enforcement contracts. If the script
 or CI job does not exist yet, the related gate cannot close until it is

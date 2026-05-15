@@ -132,7 +132,7 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
                 className="flex h-full items-center gap-2 text-sm font-bold uppercase tracking-wider text-fg-subtle transition-colors hover:text-fg"
               >
                 <span>←</span>
-                <span>Hub</span>
+                <span>Casino</span>
               </Link>
             </div>
           </ShellHeaderNav>

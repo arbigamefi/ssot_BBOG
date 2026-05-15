@@ -67,7 +67,7 @@ export function OpsPageClient() {
       { label: "Chain id", value: String(release?.chainId ?? "—") },
       { label: "Release digest", value: shortHex(release?.releaseDigest) },
       { label: "GameHub", value: shortHex(release?.contracts.gameHub) },
-      { label: "VRF Hub", value: shortHex(release?.contracts.vrfHub) },
+      { label: "VRFHub", value: shortHex(release?.contracts.vrfHub) },
       { label: "PoolRegistry", value: shortHex(release?.contracts.poolRegistry) },
       { label: "Primary bank", value: shortHex(release?.assets?.[0]?.bank) },
       { label: "Manifest", value: "release-latest.json" }

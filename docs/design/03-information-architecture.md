@@ -245,7 +245,8 @@ Available from every product route via the header. Owns:
 
 - Release digest (`d3a5…ef12`).
 - Chain ID + name + RPC.
-- Bank registry, Hub addresses (clickable to block explorer).
+- PoolRegistry, SettlementRouter, GameHub, SportsHub, and Bank addresses
+  (clickable to block explorer).
 - Indexer last-synced block + time.
 - Audit-report link.
 

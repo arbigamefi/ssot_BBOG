@@ -164,13 +164,13 @@ owns byte-level correctness against release manifests and golden vectors.
 
 ## 11. Historical Docs
 
-| Current path                | Decision                                                                        |
-| --------------------------- | ------------------------------------------------------------------------------- |
-| `frontend/docs/frontend/**` | Historical reference only. New SSOT is under `docs/design` and `docs/frontend`. |
-| `docs/frontend/README.md`   | Keep. It remains the release-artifact contract.                                 |
-| `docs/design/**`            | Active planning SSOT for clean-room rewrite.                                    |
-| `docs/frontend/{20..32}.md` | Active engineering-quality SSOT for clean-room rewrite.                         |
-| `frontend/CLAUDE.md`        | Active AI assistant runtime rules.                                              |
+| Current path                | Decision                                                     |
+| --------------------------- | ------------------------------------------------------------ |
+| `frontend/docs/frontend/**` | Delete. New SSOT is under `docs/design` and `docs/frontend`. |
+| `docs/frontend/README.md`   | Keep. It remains the release-artifact contract.              |
+| `docs/design/**`            | Active planning SSOT for clean-room rewrite.                 |
+| `docs/frontend/{20..32}.md` | Active engineering-quality SSOT for clean-room rewrite.      |
+| `frontend/CLAUDE.md`        | Active AI assistant runtime rules.                           |
 
 ## 12. Don'ts
 

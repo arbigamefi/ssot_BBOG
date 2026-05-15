@@ -80,8 +80,8 @@ documents are `Draft v1` until Gate A/B/C sign-off. Draft documents may define
 target-state enforcement commands before the scripts exist; those commands must
 be implemented before the relevant gate can close.
 
-The older documents under `frontend/docs/frontend/` are historical unless a new
-SSOT file links to them explicitly.
+The older pre-clean-room frontend planning directory has been removed. Active
+frontend SSOT lives only under `docs/design/` and `docs/frontend/`.
 
 ## Document Contract
 
