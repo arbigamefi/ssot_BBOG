@@ -11,7 +11,11 @@ const report = args.has("--report") || !strict;
 const maxExamples = Number(process.env.FRONTEND_PRECHECK_MAX_EXAMPLES ?? 20);
 
 const sourceRoots = [resolve(root, "apps/web/src"), resolve(root, "packages/ui/src")];
-const sdkBoundaryRoots = [resolve(root, "apps/web/src"), resolve(root, "packages/ssot/src")];
+const releaseBoundaryRoots = [
+  resolve(root, "apps/web/src"),
+  resolve(root, "packages/ssot/src"),
+  resolve(root, "scripts")
+];
 
 const checks = [
   checkTargetStructure(),
@@ -207,10 +211,10 @@ function checkLegacySDKCompatibility() {
   return scanLines({
     id: "legacy-sdk-compat",
     label: "Legacy hub/bankRegistry SDK compatibility surface",
-    roots: sdkBoundaryRoots,
+    roots: releaseBoundaryRoots,
     pattern,
-    extensions: /\.(ts|tsx|mjs)$/,
-    exclude: (file) => formatPath(file) === "packages/ssot/src/release/loader.test.ts",
+    extensions: /\.(ts|tsx|mjs|json)$/,
+    exclude: (file) => formatPath(file) === "scripts/frontend-precheck.mjs",
     blocking: true
   });
 }

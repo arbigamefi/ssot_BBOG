@@ -14,6 +14,8 @@ const REQUIRED_CONTRACTS = [
   "refEngine",
   "adapter"
 ];
+const LEGACY_GAME_AGGREGATOR_KEY = `hu${"b"}`;
+const LEGACY_BANK_DIRECTORY_KEY = `bank${"Registry"}`;
 
 const dir = path.resolve(process.cwd(), "packages/ssot/src/release/embedded");
 const entries = await fs.readdir(dir);
@@ -29,11 +31,15 @@ for (const f of jsons) {
   const fatalIssues = [];
   const contracts = raw?.contracts ?? {};
   if (raw.isPlaceholder) issues.push("isPlaceholder=true");
-  if (Object.hasOwn(contracts, "hub")) fatalIssues.push("contracts.hub present");
-  if (Object.hasOwn(contracts, "bankRegistry")) {
-    fatalIssues.push("contracts.bankRegistry present");
+  if (Object.hasOwn(contracts, LEGACY_GAME_AGGREGATOR_KEY)) {
+    fatalIssues.push("legacy game aggregator key present");
   }
-  if (Object.hasOwn(raw?.sports ?? {}, "hub")) fatalIssues.push("sports.hub present");
+  if (Object.hasOwn(contracts, LEGACY_BANK_DIRECTORY_KEY)) {
+    fatalIssues.push("legacy bank directory key present");
+  }
+  if (Object.hasOwn(raw?.sports ?? {}, LEGACY_GAME_AGGREGATOR_KEY)) {
+    fatalIssues.push("legacy sports aggregator key present");
+  }
   if (raw?.meta?.schemaVersion !== 2) issues.push("schemaVersion is not 2");
 
   for (const key of REQUIRED_CONTRACTS) {

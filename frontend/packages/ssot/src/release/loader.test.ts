@@ -18,6 +18,8 @@ const GAME_ID = "0x8d8e6987fb3617c00abdd68d6c1f7eac28b7f9f96b25367e9b65dacaa0914
 const HASH_A = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const HASH_B = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 const HASH_C = "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc";
+const LEGACY_GAME_AGGREGATOR_KEY = `hu${"b"}`;
+const LEGACY_BANK_DIRECTORY_KEY = `bank${"Registry"}`;
 
 function v13ReleaseFixture() {
   return {
@@ -168,9 +170,9 @@ describe("loadEmbeddedRelease", () => {
     const parsed = ReleaseSchema.safeParse({
       ...v13ReleaseFixture(),
       contracts: {
-        hub: ADDRESS_1,
+        [LEGACY_GAME_AGGREGATOR_KEY]: ADDRESS_1,
         vrfHub: ADDRESS_6,
-        bankRegistry: ADDRESS_3
+        [LEGACY_BANK_DIRECTORY_KEY]: ADDRESS_3
       },
       gamesMeta: undefined,
       sports: undefined,

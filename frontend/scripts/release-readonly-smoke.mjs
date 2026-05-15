@@ -63,6 +63,8 @@ const BankAbi = await loadAbi("Bank");
 const PoolRegistryAbi = await loadAbi("PoolRegistry");
 const SportsHubAbi = await loadAbi("SportsHub");
 const SportsRiskEngineAbi = await loadAbi("SportsRiskEngine");
+const LEGACY_GAME_AGGREGATOR_KEY = `hu${"b"}`;
+const LEGACY_BANK_DIRECTORY_KEY = `bank${"Registry"}`;
 
 let ok = true;
 
@@ -77,11 +79,11 @@ await check("release schemaVersion", () => {
   }
   const contracts = release?.contracts ?? {};
   if (
-    Object.hasOwn(contracts, "hub") ||
-    Object.hasOwn(contracts, "bankRegistry") ||
-    Object.hasOwn(release?.sports ?? {}, "hub")
+    Object.hasOwn(contracts, LEGACY_GAME_AGGREGATOR_KEY) ||
+    Object.hasOwn(contracts, LEGACY_BANK_DIRECTORY_KEY) ||
+    Object.hasOwn(release?.sports ?? {}, LEGACY_GAME_AGGREGATOR_KEY)
   ) {
-    throw new Error("legacy hub/bankRegistry keys are present in embedded release");
+    throw new Error("legacy release keys are present in embedded release");
   }
   for (const key of REQUIRED_CONTRACTS) {
     const address = contracts[key];

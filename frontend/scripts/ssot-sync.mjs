@@ -193,7 +193,7 @@ function buildEmbeddedSports(manifest) {
   return {
     enabled: Boolean(s.enabled),
     riskEngine: normalizeAddress(s.riskEngine),
-    sportsHub: normalizeAddress(s.hub ?? manifest.addresses?.sportsHub),
+    sportsHub: normalizeAddress(s.sportsHub),
     oddsSignerSetHash: s.oddsSignerSetHash,
     resultReporterSetHash: s.resultReporterSetHash,
     resultReporterThreshold: String(s.resultReporterThreshold ?? "0"),

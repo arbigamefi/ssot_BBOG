@@ -1,7 +1,7 @@
 # Frontend Implementation Audit & Roadmap
 
 | Owner | Frontend Lead |
-| Status | Draft v1 |
+| Status | Draft v2 |
 | Last Updated | 2026-05-15 |
 | Depends on | `00-charter.md`, `01-brand.md`, `02-voice-and-copy.md`, `03-information-architecture.md`, `04-page-blueprints.md`, `10-design-tokens.md`, `11-component-library.md`, `12-motion.md`, `13-web3-ux.md`, `14-data-and-state.md`, `15-forms.md`, `16-mobile.md`, `../frontend/20-accessibility.md`, `../frontend/21-i18n.md`, `../frontend/22-performance.md`, `../frontend/23-security.md`, `../frontend/24-testing.md`, `../frontend/25-observability.md`, `../frontend/30-build-and-release.md`, `../frontend/31-governance.md`, `../frontend/32-ai-pairing.md`, `frontend-rewrite-blueprint.md`, `frontend-kill-list.md`, ADR-0001, ADR-0002, ADR-0003 |
 | Supersedes | ad-hoc chat-only frontend rewrite sequencing |
@@ -17,24 +17,30 @@ state.
 
 ## 1. Executive Conclusion
 
-The correct strategy is still a clean-room frontend rewrite, but the branch is
-now in a **transitional rewrite** state:
+The correct strategy is still a clean-room frontend rewrite, and the branch has
+now moved from broad implementation into a **closeout audit** state:
 
-- useful page and casino-room decomposition work has already landed;
-- the protocol layer remains untouched and should stay untouched;
-- the design-token source exists, but the component and route architecture has
-  not reached the target shape;
-- continuing to token-fix individual files without first closing the system
-  gaps will recreate the same drift the rewrite is meant to remove.
+- canonical route groups, product routes, app shell, token folders, primitives,
+  patterns, motion, and icons are present;
+- old production route aliases and prototype routes have been physically
+  removed rather than kept as compatibility wrappers;
+- the v1.3 frontend SDK has been rewritten around GameHub / SportsHub /
+  PoolRegistry / Bank without the old Hub / BankRegistry public surface;
+- sportsbook is correctly read-only and now exposes SDK-backed SportsHub
+  counters plus market / ticket / result lookup;
+- the remaining work is no longer page-by-page polishing. It is gate accounting,
+  release-shape residue cleanup, quality guard closure, and then a deliberate
+  choice between PR closeout or sportsbook MVP expansion.
 
-Therefore the next implementation wave must stop treating `/games/*` as the
-center of gravity. The center of gravity is now:
+Therefore the next implementation wave must stop adding new product behavior
+until the closeout surface is clean. The center of gravity is now:
 
-1. SSOT acceptance state and gate accounting.
-2. `@ssot/ui` target structure: `tokens`, `primitives`, `patterns`, `motion`.
-3. app route groups and provider islands.
-4. casino migration from `features/games` to `features/casino`.
-5. deletion and CI guardrails.
+1. current roadmap accuracy and Gate A/B/C accounting;
+2. removal of release-shape compatibility residue such as `sports.hub`;
+3. guard coverage for scripts, fixtures, and JSON, not only app source;
+4. final local verification and clean local commit;
+5. decide whether to push/open PR for the clean-room phase or continue into
+   sportsbook MVP.
 
 ## 2. Source Documents Read
 
@@ -80,32 +86,34 @@ find frontend/apps/web/src/app -name 'pageClient.tsx' -print0 \
 
 Observed baseline:
 
-| Check                                                          | Current                              |
-| -------------------------------------------------------------- | ------------------------------------ |
-| Working tree                                                   | clean                                |
-| Draft SSOT documents                                           | 26                                   |
-| Accepted documents                                             | 3, all ADRs                          |
-| `app/prototype` directory                                      | absent                               |
-| `src/sandbox` directory                                        | absent                               |
-| app route groups `(...)`                                       | 0                                    |
-| `apps/web/src/app-shell`                                       | absent                               |
-| `packages/ui/src/primitives`                                   | absent                               |
-| `packages/ui/src/patterns`                                     | absent                               |
-| `packages/ui/src/motion`                                       | absent                               |
-| forbidden token/radius/shadow/transition/dark lines            | 320                                  |
-| files with forbidden token/radius/shadow/transition/dark lines | 40                                   |
-| `pageClient.tsx` files over 600 LOC                            | 0                                    |
-| largest `pageClient.tsx`                                       | `sportsbook/pageClient.tsx`, 409 LOC |
-| game-room files with old style vocabulary                      | 7                                    |
+| Check                                                          | Current                        |
+| -------------------------------------------------------------- | ------------------------------ |
+| Working tree                                                   | clean                          |
+| Draft SSOT documents                                           | 26                             |
+| Accepted documents                                             | 3, all ADRs                    |
+| `app/prototype` directory                                      | absent                         |
+| `apps/web/sandbox` directory                                   | present                        |
+| app route groups `(...)`                                       | 3                              |
+| `apps/web/src/app-shell`                                       | present                        |
+| `packages/ui/src/primitives`                                   | present                        |
+| `packages/ui/src/patterns`                                     | present                        |
+| `packages/ui/src/motion`                                       | present                        |
+| forbidden token/radius/shadow/transition/dark lines            | 0                              |
+| files with forbidden token/radius/shadow/transition/dark lines | 0                              |
+| `pageClient.tsx` files over 600 LOC                            | 0                              |
+| largest `pageClient.tsx`                                       | `earn/pageClient.tsx`, 324 LOC |
+| sportsbook SDK-backed lookup                                   | present                        |
+| release smoke against Base Sepolia                             | passing                        |
 
 Interpretation:
 
-- The old 2,030-line game god component problem has been meaningfully reduced.
-- The original prototype route pollution has been removed, but the sandbox
-  replacement has not been established.
-- The system structure required by `11-component-library.md` has not landed.
-- The branch is not ready for Phase 5-style casino completion because Gate B
-  infrastructure is incomplete.
+- The old 2,030-line game god component problem is closed.
+- The original prototype route pollution is closed for production routes.
+- The target route groups and UI package skeleton are now present.
+- Strict local guardrails cover style, shell, prototype route, legacy route,
+  placeholder, page size, web3 import boundary, and legacy SDK compatibility.
+- The remaining risk is not visible-page architecture; it is release-shape
+  residue in scripts / fixtures and incomplete formal Gate A/B/C acceptance.
 
 ## 4. SSOT Gate Status
 
@@ -147,16 +155,19 @@ Current:
 
 - Layer 2 documents are Draft;
 - token files exist under `frontend/packages/ui/src/tokens`;
-- target folders `primitives`, `patterns`, and `motion` do not exist;
-- old `components/ui` and `components/protocol` still hold production UI;
-- forbidden style scan still returns 320 lines across 40 files.
+- target folders `primitives`, `patterns`, `motion`, `icons`, and `utils` exist;
+- `components/ui` and `components/protocol` still contain implementations, but
+  target barrel boundaries exist and strict precheck is green;
+- forbidden style scan returns 0 lines.
 
-Status: **not closed**.
+Status: **functionally close, formally not closed**.
 
 Action:
 
-- Next engineering work must prioritize Gate B foundations before more page
-  polishing.
+- Do not call Gate B closed until Layer 2 docs are accepted and Storybook /
+  visual baseline expectations are reconciled.
+- Engineering can continue only on closeout guardrails or explicitly scoped
+  sportsbook MVP work.
 
 ### Gate C - Quality
 
@@ -169,10 +180,13 @@ Required:
 Current:
 
 - Layer 3/4 documents are Draft;
-- local typecheck/test/build pass for current slices;
-- target scripts such as `precheck:ai`, route-blueprint checks, Storybook
-  coverage checks, Lighthouse CI, axe page suite, and bundle budgets are not
-  fully proven from this snapshot.
+- `precheck:frontend -- --strict` passes;
+- `check:release` passes;
+- `smoke:release-readonly` passes against Base Sepolia;
+- focused sportsbook lookup tests pass;
+- `typecheck` and production `build` pass in the latest local baseline;
+- Storybook coverage, axe page suite, Lighthouse CI, bundle budgets, and
+  observability release tagging remain not fully closed.
 
 Status: **not closed**.
 
@@ -188,14 +202,15 @@ These changes should be retained and migrated, not discarded:
 1. `@ssot/ui/src/tokens/arbi-dark.css` and `arbi-light.css` exist.
 2. `visual-system.ts`, old `themes/*`, and `cyber-*` files appear removed.
 3. `app/prototype` is absent.
-4. Game room has been decomposed into feature files under
-   `features/games/room`.
-5. `games/[slug]/pageClient.tsx` is down to 237 LOC.
-6. `/games` directory page and game room bet rail have been partially
-   tokenized.
-7. Several legacy placeholder-like pages were rewritten into more serious
-   product surfaces.
-8. Full web test suite currently passes in the recent local baseline.
+4. Canonical routes live under `app/(marketing)`, `app/(product)`, and
+   `app/(legal)`.
+5. Casino room has been decomposed under `features/casino/room`.
+6. Portfolio, earn, ops, legal, marketing, and sportsbook have vertical feature
+   folders.
+7. Sportsbook has SDK-backed runtime counters and read-only market / ticket /
+   result lookup.
+8. Release checking and read-only chain smoke exist and pass locally.
+9. Strict precheck is blocking and currently green.
 
 The mistake would be to continue extending these as final architecture. Treat
 them as transition assets that will be moved into the target structure.
@@ -223,11 +238,94 @@ This means small commits are still fine, but every commit must be phase-bound:
 - no old component kept solely for compatibility;
 - no deletion without `rg` evidence.
 
-## 7. Revised Execution Phases
+## 7. Current Closeout Roadmap
 
-The phase names below are for this branch. They map back to
-`frontend-rewrite-blueprint.md §6` but account for the fact that some work has
-already happened.
+This section supersedes the historical phase ledger below for the current
+branch. Use it for new commits.
+
+### C0 - Roadmap Refresh
+
+Goal: make the branch plan match repository reality.
+
+Exit criteria:
+
+```bash
+git status --short --branch
+pnpm -C frontend precheck:frontend -- --strict
+```
+
+### C1 - Release Compatibility Residue Closeout
+
+Goal: remove the last frontend release-shape compatibility residue.
+
+Tasks:
+
+1. Remove `sports.hub` fallback from `scripts/ssot-sync.mjs`.
+2. Convert v1.3 fixtures to `sports.sportsHub`.
+3. Keep negative tests for legacy release shapes, but do not keep legacy keys
+   as normal runtime input paths.
+4. Extend `frontend-precheck` to scan scripts, fixtures, and JSON release
+   artifacts.
+
+Exit criteria:
+
+```bash
+pnpm -C frontend precheck:frontend -- --strict
+pnpm -C frontend check:release
+pnpm -C frontend smoke:release-readonly
+rg -n '"hub"\s*:|bankRegistry|SSOTHubAPI|sdk\.hub|contracts\.hub|release\.contracts\.hub|sports\.hub|s\.hub' \
+  frontend/packages/ssot/src frontend/apps/web/src frontend/scripts -S
+```
+
+Only `scripts/frontend-precheck.mjs` may contain the literal forbidden-regex
+definition.
+
+### C2 - Full Local Verification
+
+Goal: prove the clean-room phase is locally coherent.
+
+Run:
+
+```bash
+pnpm -C frontend/apps/web exec vitest run 'src/app/(product)/sportsbook/pageClient.test.tsx'
+pnpm -C frontend precheck:frontend -- --strict
+pnpm -C frontend check:release
+pnpm -C frontend smoke:release-readonly
+pnpm -C frontend typecheck
+pnpm -C frontend build
+```
+
+Expected caveats:
+
+- Node warning is expected while local Node is v22 and project asks for v20.
+- Next ESLint plugin warning is pre-existing and should be handled separately
+  before public launch.
+
+### C3 - Clean-Room PR Decision
+
+After C0-C2 are committed locally, choose one:
+
+- push/open PR for the clean-room frontend phase; or
+- continue locally into sportsbook MVP phase.
+
+Do not start sportsbook ticket placement work until C1 is closed.
+
+### C4 - Sportsbook MVP Phase
+
+Only after C1-C2:
+
+1. market list from provider-backed signed snapshots;
+2. market detail route;
+3. operator market creation/result write surfaces;
+4. ticket placement behind explicit env and release gates;
+5. settlement/readback path;
+6. challenge/void/admin ops surfaces.
+
+## 8. Historical Execution Phases
+
+The phase names below are retained as an implementation log and audit trail.
+They map back to `frontend-rewrite-blueprint.md §6`, but the authoritative
+next-work sequence for the current branch is the C0-C4 closeout roadmap above.
 
 ### R0 - Roadmap And Gate Accounting
 
@@ -545,80 +643,87 @@ pnpm -C frontend/apps/web build
 This is the first point where pushing a large branch and opening a PR is
 architecturally justified.
 
-## 8. File-Level Next Work
+## 9. File-Level Next Work
 
-The next concrete engineering slice should be R1, not more casino polish.
+The next concrete engineering slice is C1, not more page work.
 
-### R1.1 `@ssot/ui` folder skeleton
+### C1.1 Release manifest normalization
 
-Create empty target directories and non-breaking barrel files:
+Update the v1.3 sync path so the frontend accepts only the current release
+shape:
 
-```text
-frontend/packages/ui/src/primitives/index.ts
-frontend/packages/ui/src/patterns/index.ts
-frontend/packages/ui/src/motion/index.ts
-frontend/packages/ui/src/icons/index.ts
-frontend/packages/ui/src/utils/index.ts
-frontend/packages/ui/src/tokens/VERSION.md
-```
+- `frontend/scripts/ssot-sync.mjs`
+- `frontend/packages/ssot/src/fixtures/release-bundles/**/frontend-manifest-*.json`
+- `frontend/packages/ssot/src/release/loader.test.ts`
 
-Then re-export existing components through the new paths without moving all
-call sites yet. This makes later migrations mechanical and safe.
+### C1.2 Guard coverage expansion
 
-### R1.2 First primitive migration
+Extend `frontend/scripts/frontend-precheck.mjs` so legacy release-shape checks
+scan:
 
-Move or wrap the low-risk primitives:
+- app source;
+- `packages/ssot/src`;
+- `frontend/scripts`;
+- JSON fixtures and embedded release artifacts.
 
-- `button.tsx`
-- `input.tsx`
-- `badge.tsx`
-- `skeleton.tsx`
-- `copy-button.tsx`
-- `status-badge.tsx`
+### C1.3 Closeout validation
 
-Do not start with `game-card`, `receipt-ticket`, `shared-bet-slip`, or protocol
-forms; those are not primitives and need pattern ownership decisions.
+Run C2 verification and commit locally. Do not push until the user explicitly
+asks for the phase PR.
 
-### R1.3 First pattern migration
+## 10. Risk Register
 
-Move or build:
+| Risk                                                | Why it matters                                                    | Mitigation                                                                                      |
+| --------------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Docs remain Draft while code changes continue       | Formal gates do not match reality                                 | Treat this roadmap as transitional; do not claim Gate A/B/C closure until statuses are accepted |
+| Release-shape fallback survives in sync scripts     | A future bundle could silently reintroduce old `sports.hub` shape | C1 removes fallback and expands strict precheck to scripts / JSON                               |
+| Guard scripts themselves create false positives     | Literal forbidden names can hide real scan failures               | Keep forbidden literals centralized in `frontend-precheck`; computed keys in other guard files  |
+| Sportsbook accidentally exposed as public placement | Regulatory and product-readiness risk                             | Keep page read-only until explicit env + release + ops gates                                    |
+| Storybook / visual / a11y gates lag code            | Gate C can look complete while launch-quality checks are absent   | Track separately; do not claim public-launch readiness                                          |
+| Pushing before closeout commit                      | Large branch review becomes noisy and unstable                    | Finish C0-C2 locally first                                                                      |
 
-- `page-header`
-- `stat-block`
-- `ledger-table`
-- `empty-state`
-- `error-state`
-
-Only after those exist should route pages be migrated.
-
-## 9. Risk Register
-
-| Risk                                                | Why it matters                                                         | Mitigation                                                                                      |
-| --------------------------------------------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| Docs remain Draft while code changes continue       | Formal gates do not match reality                                      | Treat this roadmap as transitional; do not claim Gate A/B/C closure until statuses are accepted |
-| Continuing local token sweeps                       | Can produce partial style consistency without architecture consistency | R1/R2/R3 must precede more page work                                                            |
-| Old routes kept for compatibility                   | Violates kill-list and IA                                              | Keep redirects only; no legacy components                                                       |
-| `@ssot/ui/components/protocol` becomes permanent    | It bypasses primitive/pattern split                                    | Classify each file as pattern, app feature, or delete in R1/R8                                  |
-| Wagmi/RainbowKit provider mounted globally          | Marketing pays product wallet cost                                     | R3 provider island migration                                                                    |
-| Sportsbook accidentally exposed as public placement | Regulatory and product-readiness risk                                  | R7 gated-read-only rule                                                                         |
-| CI added only at the end                            | Violations keep reappearing                                            | R2 report-mode scripts, then phase-by-phase blocking                                            |
-
-## 10. Do Not Do Next
+## 11. Do Not Do Next
 
 - Do not add new casino games.
-- Do not continue tokenizing the remaining game stages before R1/R2.
-- Do not push or open PR for this branch until a phase closes.
+- Do not start sportsbook ticket placement before C1 closes.
+- Do not push or open PR for this branch until C0-C2 closes.
 - Do not mark Draft SSOT docs as Accepted without explicit human sign-off.
 - Do not edit accepted ADRs substantively.
-- Do not touch `frontend/packages/ssot/**` or `deployments/**` as part of UI
-  cleanup.
+- Do not touch protocol encoding / transaction behavior as part of release
+  residue cleanup.
 - Do not create temporary duplicate shells.
 
-## 11. How To Enforce This Roadmap
+## 12. How To Enforce This Roadmap
 
 Before every implementation slice, cite one roadmap phase in the commit plan.
 
-## 12. Implementation Log
+## 13. Implementation Log
+
+### 2026-05-15 - C1 Release Compatibility Residue Closeout
+
+Status: completed locally.
+
+Changes:
+
+- removed the `sports.hub` input fallback from `scripts/ssot-sync.mjs`;
+- normalized the v1.3 frontend manifest fixture to `sports.sportsHub`;
+- kept the release-schema negative test while avoiding normal runtime fallback
+  paths for old release keys;
+- expanded `frontend-precheck` legacy SDK compatibility scanning to include
+  scripts and JSON release artifacts;
+- kept release guard scripts as rejection surfaces, not compatibility surfaces.
+
+Evidence:
+
+```bash
+pnpm -C frontend/packages/ssot test -- src/release/loader.test.ts
+pnpm -C frontend/apps/web exec vitest run 'src/app/(product)/sportsbook/pageClient.test.tsx'
+pnpm -C frontend precheck:frontend -- --strict
+pnpm -C frontend check:release
+pnpm -C frontend smoke:release-readonly
+pnpm -C frontend typecheck
+pnpm -C frontend build
+```
 
 ### 2026-05-15 - R5 Casino Vertical Migration
 
@@ -1072,32 +1177,34 @@ find frontend/apps/web/src/app -name 'pageClient.tsx' -print0 \
   | xargs -0 wc -l | awk '$2 != "total" && $1 > 600 {print $0}'
 ```
 
-## 12. Next Immediate Commit After This Document
+## 14. Next Immediate Commit After This Document
 
-After this roadmap lands, the next commit should be:
+After this roadmap refresh, the next commit should be:
 
 ```text
-Scaffold UI primitive and pattern exports
+Close frontend release compatibility residue
 ```
 
 Scope:
 
-- `frontend/packages/ui/src/primitives/index.ts`
-- `frontend/packages/ui/src/patterns/index.ts`
-- `frontend/packages/ui/src/motion/index.ts`
-- `frontend/packages/ui/src/icons/index.ts`
-- `frontend/packages/ui/src/utils/index.ts`
-- `frontend/packages/ui/src/tokens/VERSION.md`
-- `frontend/packages/ui/src/index.ts`
-- package export adjustments if required
+- `frontend/scripts/ssot-sync.mjs`
+- `frontend/scripts/frontend-precheck.mjs`
+- `frontend/scripts/check-release.mjs`
+- `frontend/scripts/release-readonly-smoke.mjs`
+- `frontend/packages/ssot/src/release/loader.test.ts`
+- v1.3 release fixtures under `frontend/packages/ssot/src/fixtures`
+- this roadmap
 
 Validation:
 
 ```bash
-pnpm -C frontend/packages/ui typecheck
-pnpm -C frontend/apps/web test
+pnpm -C frontend/apps/web exec vitest run 'src/app/(product)/sportsbook/pageClient.test.tsx'
+pnpm -C frontend/packages/ssot test -- src/release/loader.test.ts
+pnpm -C frontend precheck:frontend -- --strict
+pnpm -C frontend check:release
+pnpm -C frontend smoke:release-readonly
 pnpm -C frontend typecheck
+pnpm -C frontend build
 ```
 
-No route migration and no visual retokenization should be bundled into that
-commit.
+No new page behavior should be bundled into that commit.
