@@ -11,6 +11,8 @@ import { useSSOTSDK } from "../../ssot/sdk";
 import {
   DetailCell,
   LookupForm,
+  MarketTape,
+  type MarketTapeRow,
   MarketInspector,
   PoolPanel,
   RiskRows,
@@ -44,10 +46,27 @@ const CONTROL_LINKS = [
   }
 ] as const;
 
+const RECENT_MARKET_LIMIT = 8;
+
 function getSportsPools(release: SSOTRelease) {
   return (release.pools ?? []).filter(
     (pool) => pool.domain.toLowerCase() === "sports" || Boolean(pool.sportsRisk)
   );
+}
+
+function getRecentMarketIds(nextMarketId: bigint, limit: number) {
+  if (nextMarketId <= 1n || limit <= 0) return [];
+  const ids: bigint[] = [];
+  let current = nextMarketId - 1n;
+  while (current >= 1n && ids.length < limit) {
+    ids.push(current);
+    current -= 1n;
+  }
+  return ids;
+}
+
+function isMarketTapeRow(row: MarketTapeRow | undefined): row is MarketTapeRow {
+  return row !== undefined;
 }
 
 export function SportsbookPageClient() {
@@ -70,6 +89,47 @@ export function SportsbookPageClient() {
         sdk.sportsHub.getNextTicketId()
       ]);
       return { nextMarketId, nextTicketId };
+    }
+  });
+  const {
+    data: recentMarkets,
+    error: recentMarketsError,
+    isFetching: recentMarketsFetching
+  } = useQuery({
+    queryKey: [
+      "ssot",
+      "sportsbook",
+      "recent-markets",
+      release?.releaseDigest ?? "none",
+      runtimeCounters?.nextMarketId?.toString() ?? "none"
+    ],
+    enabled: Boolean(
+      release &&
+      sdk &&
+      ready &&
+      sportsbook.hasSportsRelease &&
+      runtimeCounters?.nextMarketId &&
+      runtimeCounters.nextMarketId > 1n
+    ),
+    staleTime: 15_000,
+    queryFn: async () => {
+      if (!sdk || !runtimeCounters?.nextMarketId) return [];
+      const marketIds = getRecentMarketIds(runtimeCounters.nextMarketId, RECENT_MARKET_LIMIT);
+      const rows = await Promise.all(
+        marketIds.map(async (marketId): Promise<MarketTapeRow | undefined> => {
+          try {
+            const market = await sdk.sportsHub.getMarket(marketId);
+            const [result, reserved] = await Promise.all([
+              sdk.sportsHub.getResult(marketId).catch(() => undefined),
+              sdk.sportsHub.getMarketReserved(marketId).catch(() => undefined)
+            ]);
+            return { market, result, reserved };
+          } catch {
+            return undefined;
+          }
+        })
+      );
+      return rows.filter(isMarketTapeRow);
     }
   });
   const {
@@ -136,6 +196,12 @@ export function SportsbookPageClient() {
     setTicketLookupId(parsed);
   }, [ticketInput]);
 
+  const inspectRecentMarket = React.useCallback((marketId: bigint) => {
+    setMarketInput(marketId.toString());
+    setMarketInputError(undefined);
+    setMarketLookupId(marketId);
+  }, []);
+
   if (!release) {
     return (
       <PageTransition pageKey="sportsbook">
@@ -157,6 +223,13 @@ export function SportsbookPageClient() {
   const riskEngine = sports?.riskEngine ?? release.contracts.sportsRiskEngine;
   const sportsPools = getSportsPools(release);
   const statusTone = sportsbook.enabled ? "success" : "warn";
+  const marketTapeLoading = Boolean(
+    sdk &&
+    ready &&
+    sportsbook.hasSportsRelease &&
+    !runtimeError &&
+    (!runtimeCounters || (recentMarketsFetching && !recentMarkets))
+  );
   const riskSummary = sports
     ? {
         maxStake: sports.maxStake,
@@ -303,6 +376,19 @@ export function SportsbookPageClient() {
             <RiskRows title="SportsHub global risk caps" risk={riskSummary} />
           </SectionShell>
         ) : null}
+
+        <SectionShell
+          eyebrow="Market tape"
+          title="Recent SportsHub markets"
+          description="The frontend now reads the latest on-chain SportsHub market ids directly through the v1.3 SDK. This stays read-only until signed odds and ticket placement gates are explicitly approved."
+        >
+          <MarketTape
+            rows={recentMarkets ?? []}
+            loading={marketTapeLoading}
+            error={formatLookupError(recentMarketsError ?? runtimeError)}
+            onInspect={inspectRecentMarket}
+          />
+        </SectionShell>
 
         <SectionShell
           eyebrow="On-chain lookup"

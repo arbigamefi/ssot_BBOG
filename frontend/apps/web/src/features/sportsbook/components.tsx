@@ -9,6 +9,12 @@ import { formatRawUnits, formatTimestamp, shortHex } from "./format";
 
 type SportsPool = NonNullable<SSOTRelease["pools"]>[number];
 
+export interface MarketTapeRow {
+  market: DomainSportsMarket;
+  result?: DomainSportsResult;
+  reserved?: bigint;
+}
+
 export function DetailCell({
   label,
   value,
@@ -183,6 +189,105 @@ export function StatusPill({
     >
       {children}
     </span>
+  );
+}
+
+function marketTone(state: DomainSportsMarket["state"]): "success" | "warn" | "neutral" {
+  if (state === "open") return "success";
+  if (state === "suspended" || state === "challenged" || state === "voided") return "warn";
+  return "neutral";
+}
+
+function resultLabel(result?: DomainSportsResult) {
+  if (!result || result.proposedAt === 0) return "No result";
+  if (result.challenged) return "Challenged";
+  return `Outcome ${result.winningOutcomeId}`;
+}
+
+export function MarketTape({
+  rows,
+  loading,
+  error,
+  onInspect
+}: {
+  rows: readonly MarketTapeRow[];
+  loading?: boolean;
+  error?: string;
+  onInspect: (marketId: bigint) => void;
+}) {
+  if (loading) {
+    return (
+      <div className="rounded-lg border border-border bg-surface-2/50 p-4 text-sm leading-6 text-fg-muted">
+        Loading recent SportsHub markets...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-lg border border-danger/25 bg-danger-soft p-4 text-sm leading-6 text-danger">
+        {error}
+      </div>
+    );
+  }
+
+  if (!rows.length) {
+    return (
+      <div className="rounded-lg border border-border bg-surface-2/50 p-4 text-sm leading-6 text-fg-muted">
+        No SportsHub markets have been created in this release yet.
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-hidden rounded-lg border border-border">
+      <div className="grid grid-cols-[1fr_auto] gap-3 border-b border-border bg-surface-2 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.18em] text-fg-subtle md:grid-cols-[1fr_140px_140px_120px_auto]">
+        <div>Market</div>
+        <div className="hidden md:block">Starts</div>
+        <div className="hidden md:block">Reserved</div>
+        <div className="hidden md:block">Result</div>
+        <div className="text-right">Action</div>
+      </div>
+      <div className="divide-y divide-border-soft">
+        {rows.map(({ market, result, reserved }) => (
+          <div
+            key={market.marketId.toString()}
+            className="grid grid-cols-[1fr_auto] gap-3 px-4 py-4 md:grid-cols-[1fr_140px_140px_120px_auto] md:items-center"
+          >
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="text-sm font-semibold text-fg">
+                  Market {market.marketId.toString()}
+                </div>
+                <StatusPill tone={marketTone(market.state)}>{market.state}</StatusPill>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs leading-5 text-fg-muted">
+                <span>Event {market.eventId.toString()}</span>
+                <span>Pool {market.poolId}</span>
+                <span>{market.outcomeCount} outcomes</span>
+                <span>Locks {formatTimestamp(market.lockTime)}</span>
+              </div>
+            </div>
+            <div className="hidden text-xs leading-5 text-fg-muted md:block">
+              {formatTimestamp(market.startsAt)}
+            </div>
+            <div className="hidden font-mono text-xs font-semibold text-fg md:block">
+              {reserved === undefined ? "N/A" : reserved.toLocaleString("en-US")}
+            </div>
+            <div className="hidden text-xs font-semibold text-fg md:block">
+              {resultLabel(result)}
+            </div>
+            <button
+              type="button"
+              onClick={() => onInspect(market.marketId)}
+              className="min-h-10 rounded-md border border-border bg-surface-2 px-3 text-xs font-bold text-fg transition-colors hover:border-brand/40 hover:bg-surface-3"
+            >
+              Load market
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
