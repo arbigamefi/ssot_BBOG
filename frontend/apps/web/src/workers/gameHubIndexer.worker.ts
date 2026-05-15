@@ -1,7 +1,7 @@
 /*
- * Hub Indexer Worker
+ * GameHub Indexer Worker
  *
- * Runs the SSOT Hub indexer off the main thread.
+ * Runs the SSOT GameHub indexer off the main thread.
  * - Reads the release snapshot passed from the UI.
  * - Creates a viem public client using an explicit RPC URL.
  * - Uses the shared Dexie DB name (per-chain) so the UI can read derived tables.
@@ -9,20 +9,26 @@
  */
 
 import { createPublicClient, http } from "viem";
-import { createHubIndexer, getSSOTDb, type HubIndexer, type HubIndexerConfig, type HubIndexerStatus } from "@ssot/ssot/indexer";
+import {
+  createGameHubIndexer,
+  getSSOTDb,
+  type GameHubIndexer,
+  type GameHubIndexerConfig,
+  type GameHubIndexerStatus
+} from "@ssot/ssot/indexer";
 import type { SSOTRelease } from "@ssot/ssot/release";
 
 type WorkerInit = {
   chainId: number;
   rpcUrl: string;
   release: SSOTRelease;
-  config: HubIndexerConfig;
+  config: GameHubIndexerConfig;
   dbName: string;
 };
 
-export type HubIndexerWorkerStatus = HubIndexerStatus & {
+export type GameHubIndexerWorkerStatus = GameHubIndexerStatus & {
   running: boolean;
-  config: HubIndexerConfig;
+  config: GameHubIndexerConfig;
   safeHeadBlock?: number;
   lagBlocks?: number;
 };
@@ -36,11 +42,11 @@ type ToWorkerMessage =
 
 type FromWorkerMessage =
   | { type: "READY" }
-  | { type: "STATUS"; payload: HubIndexerWorkerStatus }
+  | { type: "STATUS"; payload: GameHubIndexerWorkerStatus }
   | { type: "ERROR"; payload: { message: string; stack?: string } };
 
 let init: WorkerInit | undefined;
-let indexer: HubIndexer | undefined;
+let indexer: GameHubIndexer | undefined;
 let running = false;
 let statusTimer: any | undefined;
 
@@ -48,17 +54,24 @@ function post(msg: FromWorkerMessage) {
   (self as any).postMessage(msg);
 }
 
-function computeDerivedStatus(base: HubIndexerStatus, cfg: HubIndexerConfig): HubIndexerWorkerStatus {
+function computeDerivedStatus(
+  base: GameHubIndexerStatus,
+  cfg: GameHubIndexerConfig
+): GameHubIndexerWorkerStatus {
   const latestBlock = base.latestBlock;
-  const safeHead = typeof latestBlock === "number" ? Math.max(0, latestBlock - cfg.confirmations) : undefined;
+  const safeHead =
+    typeof latestBlock === "number" ? Math.max(0, latestBlock - cfg.confirmations) : undefined;
   const lastSynced = base.lastSyncedBlock;
-  const lag = typeof safeHead === "number" && typeof lastSynced === "number" ? Math.max(0, safeHead - lastSynced) : undefined;
+  const lag =
+    typeof safeHead === "number" && typeof lastSynced === "number"
+      ? Math.max(0, safeHead - lastSynced)
+      : undefined;
   return {
     ...base,
     running,
     config: cfg,
     safeHeadBlock: safeHead,
-    lagBlocks: lag,
+    lagBlocks: lag
   };
 }
 
@@ -72,22 +85,22 @@ async function ensureIndexer(): Promise<void> {
     nativeCurrency: { name: "Native", symbol: "NATIVE", decimals: 18 },
     rpcUrls: {
       default: { http: [init.rpcUrl] },
-      public: { http: [init.rpcUrl] },
-    },
+      public: { http: [init.rpcUrl] }
+    }
   } as any;
 
   const publicClient = createPublicClient({
     chain,
-    transport: http(init.rpcUrl),
+    transport: http(init.rpcUrl)
   });
 
   const db = getSSOTDb(init.dbName);
 
-  indexer = createHubIndexer({
+  indexer = createGameHubIndexer({
     release: init.release,
     publicClient: publicClient as any,
     db,
-    config: init.config,
+    config: init.config
   });
 }
 
@@ -107,7 +120,7 @@ async function syncOnce() {
 function start() {
   if (!init) return;
   running = true;
-  // NOTE: createHubIndexer uses its own poll loop; we still emit UI status frequently.
+  // NOTE: createGameHubIndexer uses its own poll loop; we still emit UI status frequently.
   if (indexer) indexer.start();
   if (!statusTimer) {
     statusTimer = setInterval(() => emitStatus(), 1500);
@@ -162,8 +175,8 @@ self.onmessage = async (ev: MessageEvent<ToWorkerMessage>) => {
       type: "ERROR",
       payload: {
         message: e?.message ? String(e.message) : String(e),
-        stack: e?.stack ? String(e.stack) : undefined,
-      },
+        stack: e?.stack ? String(e.stack) : undefined
+      }
     });
   }
 };

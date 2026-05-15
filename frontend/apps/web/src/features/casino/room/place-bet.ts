@@ -4,17 +4,27 @@ import { encodeStakeSpec } from "@ssot/ssot/encoding";
 import type { GameMeta } from "./model";
 import { buildGameParams, type CoinSide, type GameParamsHex } from "./params";
 
-const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
-
 type ReleaseAsset = {
   symbol?: string;
   address?: string;
   decimals?: number;
 };
 
+type ReleasePool = {
+  poolId: number;
+  domain?: string;
+  domainId?: number;
+  active?: boolean;
+  asset?: string;
+  bank?: string;
+  symbol?: string;
+  decimals?: number;
+};
+
 export type GameRoomRelease = {
   chainId: number;
   assets: readonly ReleaseAsset[];
+  pools: readonly ReleasePool[];
 };
 
 export type BuildGamePlaceBetInputArgs = {
@@ -43,6 +53,14 @@ export function findUSDCAsset(assets: readonly ReleaseAsset[]) {
   return assets.find((asset) => asset.symbol === "USDC");
 }
 
+export function findCasinoPool(pools: readonly ReleasePool[]) {
+  return (
+    pools.find((pool) => pool.active !== false && String(pool.domain).toLowerCase() === "casino") ??
+    pools.find((pool) => pool.active !== false && pool.domainId === 1) ??
+    pools.find((pool) => pool.active !== false)
+  );
+}
+
 export function buildGamePlaceBetInput({
   release,
   game,
@@ -68,8 +86,16 @@ export function buildGamePlaceBetInput({
     return { ok: false, message: gameParams.message };
   }
 
-  const usdcAsset = findUSDCAsset(release.assets);
-  const decimals = usdcAsset?.decimals ?? 6;
+  const casinoPool = findCasinoPool(release.pools);
+  if (!casinoPool?.asset) {
+    return { ok: false, message: "No active casino pool is available in the current release." };
+  }
+
+  const assetMeta =
+    release.assets.find(
+      (asset) => asset.address?.toLowerCase() === casinoPool.asset?.toLowerCase()
+    ) ?? findUSDCAsset(release.assets);
+  const decimals = casinoPool.decimals ?? assetMeta?.decimals ?? 6;
   const amountPerRoll = toUnits(betAmount, decimals);
   const normalizedBetCount = Math.max(1, Math.floor(betCount));
   const totalStake = amountPerRoll * BigInt(normalizedBetCount);
@@ -87,7 +113,7 @@ export function buildGamePlaceBetInput({
     input: {
       chainId: release.chainId,
       gameId: game.gameId,
-      asset: (usdcAsset?.address ?? ZERO_ADDRESS) as `0x${string}`,
+      poolId: casinoPool.poolId,
       betCount: normalizedBetCount,
       stake: totalStake,
       params: gameParams.params,

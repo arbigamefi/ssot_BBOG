@@ -37,12 +37,15 @@ export function HomePageClient() {
     queryFn: async (): Promise<AssetOverview[]> => {
       if (!release || !sdk) return [];
       return await Promise.all(
-        release.assets.map(async (asset) => {
-          const snapshot = await sdk.bank.getSnapshot(asset.address as Address);
+        release.pools.map(async (pool) => {
+          const assetMeta = release.assets.find(
+            (asset) => asset.address.toLowerCase() === pool.asset.toLowerCase()
+          );
+          const snapshot = await sdk.bank.getSnapshot(pool.poolId);
           return {
-            address: asset.address as Address,
-            symbol: asset.symbol,
-            decimals: asset.decimals,
+            address: pool.asset as Address,
+            symbol: pool.symbol || assetMeta?.symbol || "Asset",
+            decimals: pool.decimals ?? assetMeta?.decimals ?? 18,
             totalAssets: snapshot.totalAssets,
             totalReserved: snapshot.totalReserved
           };

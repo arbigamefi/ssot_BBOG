@@ -224,7 +224,7 @@ export function SportsbookPageClient() {
   }
 
   const sports = release.sports;
-  const sportsHub = sports?.hub ?? release.contracts.sportsHub;
+  const sportsHub = sports?.sportsHub ?? release.contracts.sportsHub;
   const riskEngine = sports?.riskEngine ?? release.contracts.sportsRiskEngine;
   const sportsPools = getSportsPools(release);
   const statusTone = sportsbook.enabled ? "success" : "warn";

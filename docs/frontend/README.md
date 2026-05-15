@@ -10,7 +10,7 @@ A machine-readable manifest that the frontend should **consume directly**:
 
 - `schemaVersion` (must match the frontend parser)
 - `chainId`, `blockNumber`, `gitSha`
-- `addresses` (hub/vrfHub/registries/modules/banks...)
+- `addresses` (gameHub/sportsHub/settlementRouter/poolRegistry/vrfHub/modules/banks...)
 - `games[]`: `{ gameId, slug, label, module, paramsEncoding }`
 - `assets[]`: `{ asset, bank, symbol, decimals }`
 

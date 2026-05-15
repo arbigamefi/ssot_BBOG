@@ -41,7 +41,7 @@ async function listGoldenVectorFiles(): Promise<string[]> {
     const releases = await fs.readdir(chainDir);
     for (const r of releases) {
       const relDir = path.join(chainDir, r);
-      for (const name of ["golden-vectors-latest.json", "golden-vectors-latest-v13.json"]) {
+      for (const name of ["golden-vectors-latest-v13.json"]) {
         const gv = path.join(relDir, name);
         if (await pathExists(gv)) files.push(gv);
       }
@@ -107,15 +107,21 @@ describe("golden vectors (exact-hex)", () => {
         }
       }
 
-      const hubAbi = getReleaseAbis(chainId).HubAbi;
-      const placeBetInputTypes = getPlaceBetInputTypes(hubAbi as any[]);
-      const usesPoolIdPlaceBet = placeBetInputTypes[1] === "uint64";
+      const gameHubAbi = getReleaseAbis(chainId).GameHubAbi;
+      expect(getPlaceBetInputTypes(gameHubAbi as any[])).toEqual([
+        "bytes32",
+        "uint64",
+        "bytes",
+        "tuple",
+        "address",
+        "uint16"
+      ]);
 
       for (const v of vectors) {
         // Basic coherence checks
         expect(Number(chainId)).toBe(Number(raw.chainId));
-        if (isCurrentRelease && embedded?.contracts?.hub) {
-          expect(normalizeHex(v.hub ?? v.gameHub)).toBe(normalizeHex(embedded.contracts.hub));
+        if (isCurrentRelease && embedded?.contracts?.gameHub) {
+          expect(normalizeHex(v.gameHub)).toBe(normalizeHex(embedded.contracts.gameHub));
         }
 
         const stakeSpec = v.stakeSpec;
@@ -129,40 +135,25 @@ describe("golden vectors (exact-hex)", () => {
         expect(normalizeHex(encodedStakeSpec)).toBe(normalizeHex(v.stakeSpecEncoded));
 
         // Current ABI exports only support exact calldata checks for the current
-        // embedded release. Older fixtures remain committed for audit, but can
-        // have a previous placeBet signature.
+        // v1.3 embedded release.
         if (!isCurrentRelease) continue;
 
-        const placeBetArgs = usesPoolIdPlaceBet
-          ? [
-              normalizeHex(v.gameId) as Hex,
-              Number(v.poolId),
-              normalizeHex(v.params) as Hex,
-              {
-                amountPerRoll: BigInt(stakeSpec.amountPerRoll),
-                betCount: Number(stakeSpec.betCount),
-                stopGain: BigInt(stakeSpec.stopGain),
-                stopLoss: BigInt(stakeSpec.stopLoss)
-              },
-              normalizeHex(v.affiliate) as Hex,
-              Number(v.maxHouseEdgeBps)
-            ]
-          : [
-              normalizeHex(v.gameId) as Hex,
-              normalizeHex(v.asset) as Hex,
-              normalizeHex(v.params) as Hex,
-              {
-                amountPerRoll: BigInt(stakeSpec.amountPerRoll),
-                betCount: Number(stakeSpec.betCount),
-                stopGain: BigInt(stakeSpec.stopGain),
-                stopLoss: BigInt(stakeSpec.stopLoss)
-              },
-              normalizeHex(v.affiliate) as Hex,
-              Number(v.maxHouseEdgeBps)
-            ];
+        const placeBetArgs = [
+          normalizeHex(v.gameId) as Hex,
+          Number(v.poolId),
+          normalizeHex(v.params) as Hex,
+          {
+            amountPerRoll: BigInt(stakeSpec.amountPerRoll),
+            betCount: Number(stakeSpec.betCount),
+            stopGain: BigInt(stakeSpec.stopGain),
+            stopLoss: BigInt(stakeSpec.stopLoss)
+          },
+          normalizeHex(v.affiliate) as Hex,
+          Number(v.maxHouseEdgeBps)
+        ];
 
         const calldata = encodeFunctionData({
-          abi: hubAbi,
+          abi: gameHubAbi,
           functionName: "placeBet",
           args: placeBetArgs
         });

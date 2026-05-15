@@ -1,4 +1,4 @@
-import type { BetRow, HubEventRow, SSOTDb } from "@ssot/ssot/indexer";
+import type { BetRow, GameHubEventRow, SSOTDb } from "@ssot/ssot/indexer";
 
 export type IndexedBetSummary = Pick<BetRow, "betId" | "state" | "lastTxHash">;
 
@@ -31,15 +31,15 @@ export async function readFinalizedPayoutWin({
   db,
   txHash
 }: {
-  db: Pick<SSOTDb, "hubEvents"> | undefined;
+  db: Pick<SSOTDb, "gameHubEvents"> | undefined;
   txHash: string | undefined;
 }) {
   if (!db || !txHash) return false;
 
   try {
-    const events = await db.hubEvents
+    const events = await db.gameHubEvents
       .where("txHash")
-      .equals(txHash as HubEventRow["txHash"])
+      .equals(txHash as GameHubEventRow["txHash"])
       .filter((event) => event.eventName === "BetFinalized")
       .toArray();
     return parseFinalizedPayoutWin(events[0]?.argsJson);

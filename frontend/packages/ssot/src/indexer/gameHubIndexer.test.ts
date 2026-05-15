@@ -2,7 +2,7 @@ import "fake-indexeddb/auto";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { Address, Hex } from "viem";
 import { SSOTDb } from "./store";
-import { createHubIndexer, type HubIndexer } from "./hubIndexer";
+import { createGameHubIndexer, type GameHubIndexer } from "./gameHubIndexer";
 import type { SSOTRelease } from "../release/schema";
 
 // ——— Mock release ———
@@ -12,53 +12,106 @@ const MOCK_RELEASE: SSOTRelease = {
   releaseDigest: "0xdeadbeef",
   isPlaceholder: false,
   contracts: {
-    hub: "0x1111111111111111111111111111111111111111",
-    vrfHub: "0x2222222222222222222222222222222222222222",
-    bankRegistry: "0x3333333333333333333333333333333333333333",
+    gameHub: "0x1111111111111111111111111111111111111111",
+    settlementRouter: "0x2222222222222222222222222222222222222222",
+    poolRegistry: "0x3333333333333333333333333333333333333333",
+    sportsHub: "0x7777777777777777777777777777777777777777",
+    sportsRiskEngine: "0x8888888888888888888888888888888888888888",
+    vrfHub: "0x9999999999999999999999999999999999999999",
+    refRegistry: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    refEngine: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    adapter: "0xcccccccccccccccccccccccccccccccccccccccc"
   },
   assets: [
     {
       symbol: "USDC",
       decimals: 6,
       address: "0x4444444444444444444444444444444444444444",
-      bank: "0x5555555555555555555555555555555555555555",
-    },
+      bank: "0x5555555555555555555555555555555555555555"
+    }
   ],
   games: {
     "0x0000000000000000000000000000000000000000000000000000000000000001":
-      "0x6666666666666666666666666666666666666666",
+      "0x6666666666666666666666666666666666666666"
   },
-  meta: { blockNumber: 100 },
+  gamesMeta: [
+    {
+      gameId: "0x0000000000000000000000000000000000000000000000000000000000000001",
+      slug: "dice",
+      label: "Dice",
+      module: "0x6666666666666666666666666666666666666666"
+    }
+  ],
+  sports: {
+    enabled: false,
+    riskEngine: "0x8888888888888888888888888888888888888888",
+    sportsHub: "0x7777777777777777777777777777777777777777",
+    oddsSignerSetHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    resultReporterSetHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    resultReporterThreshold: "1",
+    maxStake: "1",
+    maxPayout: "1",
+    maxMarketReserved: "1",
+    maxOutcomeReserved: "1",
+    maxEventReserved: "1"
+  },
+  pools: [
+    {
+      poolId: 1,
+      domainId: 1,
+      domain: "Casino",
+      active: true,
+      asset: "0x4444444444444444444444444444444444444444",
+      bank: "0x5555555555555555555555555555555555555555",
+      symbol: "USDC",
+      decimals: 6,
+      sportsRisk: null
+    }
+  ],
+  meta: { blockNumber: 100, schemaVersion: 2 }
 };
 
 // ——— Mock publicClient ———
-function createMockPublicClient(opts: {
-  blockNumber?: bigint;
-  logs?: any[];
-}) {
+function createMockPublicClient(opts: { blockNumber?: bigint; logs?: any[] }) {
   return {
     getBlockNumber: vi.fn().mockResolvedValue(opts.blockNumber ?? 200n),
-    getLogs: vi.fn().mockResolvedValue(opts.logs ?? []),
+    getLogs: vi.fn().mockResolvedValue(opts.logs ?? [])
   } as any;
 }
 
 // ——— Mock ABI resolver ———
 vi.mock("../abis/release/resolver", () => ({
   getReleaseAbis: () => ({
-    HubAbi: [
-      { type: "event", name: "BetPlaced", inputs: [{ name: "betId", type: "uint256", indexed: true }] },
-      { type: "event", name: "BetRandomReady", inputs: [{ name: "betId", type: "uint256", indexed: true }] },
-      { type: "event", name: "BetFinalized", inputs: [{ name: "betId", type: "uint256", indexed: true }] },
-      { type: "event", name: "BetRefunded", inputs: [{ name: "betId", type: "uint256", indexed: true }] },
-    ],
-  }),
+    GameHubAbi: [
+      {
+        type: "event",
+        name: "BetPlaced",
+        inputs: [{ name: "betId", type: "uint256", indexed: true }]
+      },
+      {
+        type: "event",
+        name: "BetRandomReady",
+        inputs: [{ name: "betId", type: "uint256", indexed: true }]
+      },
+      {
+        type: "event",
+        name: "BetFinalized",
+        inputs: [{ name: "betId", type: "uint256", indexed: true }]
+      },
+      {
+        type: "event",
+        name: "BetRefunded",
+        inputs: [{ name: "betId", type: "uint256", indexed: true }]
+      }
+    ]
+  })
 }));
 
 let db: SSOTDb;
-let indexer: HubIndexer;
+let indexer: GameHubIndexer;
 
 beforeEach(() => {
-  db = new SSOTDb(`test-hub-${Date.now()}`);
+  db = new SSOTDb(`test-gameHub-${Date.now()}`);
 });
 
 afterEach(async () => {
@@ -66,33 +119,33 @@ afterEach(async () => {
   await db.delete();
 });
 
-describe("createHubIndexer", () => {
+describe("createGameHubIndexer", () => {
   it("returns an indexer with start, stop, syncOnce, getStatus", () => {
     const client = createMockPublicClient({});
-    indexer = createHubIndexer({ release: MOCK_RELEASE, publicClient: client, db });
+    indexer = createGameHubIndexer({ release: MOCK_RELEASE, publicClient: client, db });
     expect(indexer.start).toBeDefined();
     expect(indexer.stop).toBeDefined();
     expect(indexer.syncOnce).toBeDefined();
     expect(indexer.getStatus).toBeDefined();
   });
 
-  it("getStatus returns initial status with chainId and hub", () => {
+  it("getStatus returns initial status with chainId and gameHub", () => {
     const client = createMockPublicClient({});
-    indexer = createHubIndexer({ release: MOCK_RELEASE, publicClient: client, db });
+    indexer = createGameHubIndexer({ release: MOCK_RELEASE, publicClient: client, db });
     const status = indexer.getStatus();
     expect(status.chainId).toBe(84532);
-    expect(status.hub.toLowerCase()).toBe("0x1111111111111111111111111111111111111111");
+    expect(status.gameHub.toLowerCase()).toBe("0x1111111111111111111111111111111111111111");
   });
 });
 
-describe("hubIndexer.syncOnce()", () => {
+describe("gameHubIndexer.syncOnce()", () => {
   it("fetches block number and getLogs for each event type", async () => {
     const client = createMockPublicClient({ blockNumber: 200n });
-    indexer = createHubIndexer({
+    indexer = createGameHubIndexer({
       release: MOCK_RELEASE,
       publicClient: client,
       db,
-      config: { confirmations: 0, rewindBlocks: 0, batchSize: 10000, pollIntervalMs: 999999 },
+      config: { confirmations: 0, rewindBlocks: 0, batchSize: 10000, pollIntervalMs: 999999 }
     });
 
     await indexer.syncOnce();
@@ -104,11 +157,11 @@ describe("hubIndexer.syncOnce()", () => {
 
   it("inserts cursor after sync", async () => {
     const client = createMockPublicClient({ blockNumber: 200n });
-    indexer = createHubIndexer({
+    indexer = createGameHubIndexer({
       release: MOCK_RELEASE,
       publicClient: client,
       db,
-      config: { confirmations: 0, rewindBlocks: 0, batchSize: 10000, pollIntervalMs: 999999 },
+      config: { confirmations: 0, rewindBlocks: 0, batchSize: 10000, pollIntervalMs: 999999 }
     });
 
     await indexer.syncOnce();
@@ -122,11 +175,11 @@ describe("hubIndexer.syncOnce()", () => {
 
   it("handles empty log batches without error", async () => {
     const client = createMockPublicClient({ blockNumber: 300n, logs: [] });
-    indexer = createHubIndexer({
+    indexer = createGameHubIndexer({
       release: MOCK_RELEASE,
       publicClient: client,
       db,
-      config: { confirmations: 0, rewindBlocks: 0, batchSize: 10000, pollIntervalMs: 999999 },
+      config: { confirmations: 0, rewindBlocks: 0, batchSize: 10000, pollIntervalMs: 999999 }
     });
 
     await indexer.syncOnce();
@@ -136,35 +189,35 @@ describe("hubIndexer.syncOnce()", () => {
     expect(status.lastSyncedBlock).toBe(300);
   });
 
-  it("stores hub events and creates bet rows from logs", async () => {
+  it("stores GameHub events and creates bet rows from logs", async () => {
     const mockLogs = [
       {
         blockNumber: 150n,
         logIndex: 0,
         transactionHash: "0xabc1" as Hex,
-        args: { betId: 42n, gameId: "0x01" as Hex, player: "0xdeadbeef" as Address },
-      },
+        args: { betId: 42n, gameId: "0x01" as Hex, player: "0xdeadbeef" as Address }
+      }
     ];
 
     const client = createMockPublicClient({ blockNumber: 200n });
     // Only return logs for BetPlaced, empty for others
     client.getLogs
       .mockResolvedValueOnce(mockLogs) // BetPlaced
-      .mockResolvedValueOnce([])       // BetRandomReady
-      .mockResolvedValueOnce([])       // BetFinalized
-      .mockResolvedValueOnce([]);      // BetRefunded
+      .mockResolvedValueOnce([]) // BetRandomReady
+      .mockResolvedValueOnce([]) // BetFinalized
+      .mockResolvedValueOnce([]); // BetRefunded
 
-    indexer = createHubIndexer({
+    indexer = createGameHubIndexer({
       release: MOCK_RELEASE,
       publicClient: client,
       db,
-      config: { confirmations: 0, rewindBlocks: 0, batchSize: 10000, pollIntervalMs: 999999 },
+      config: { confirmations: 0, rewindBlocks: 0, batchSize: 10000, pollIntervalMs: 999999 }
     });
 
     await indexer.syncOnce();
 
-    // Verify hub event was stored
-    const events = await db.hubEvents.toArray();
+    // Verify gameHub event was stored
+    const events = await db.gameHubEvents.toArray();
     expect(events.length).toBe(1);
     expect(events[0]!.eventName).toBe("BetPlaced");
 
@@ -177,11 +230,11 @@ describe("hubIndexer.syncOnce()", () => {
 
   it("advances cursor correctly across multiple syncs", async () => {
     const client = createMockPublicClient({ blockNumber: 200n });
-    indexer = createHubIndexer({
+    indexer = createGameHubIndexer({
       release: MOCK_RELEASE,
       publicClient: client,
       db,
-      config: { confirmations: 0, rewindBlocks: 0, batchSize: 10000, pollIntervalMs: 999999 },
+      config: { confirmations: 0, rewindBlocks: 0, batchSize: 10000, pollIntervalMs: 999999 }
     });
 
     await indexer.syncOnce();
@@ -200,11 +253,11 @@ describe("hubIndexer.syncOnce()", () => {
 
   it("skips sync when fromBlock > targetBlock", async () => {
     const client = createMockPublicClient({ blockNumber: 50n });
-    indexer = createHubIndexer({
+    indexer = createGameHubIndexer({
       release: MOCK_RELEASE,
       publicClient: client,
       db,
-      config: { confirmations: 100, rewindBlocks: 0, batchSize: 10000, pollIntervalMs: 999999 },
+      config: { confirmations: 100, rewindBlocks: 0, batchSize: 10000, pollIntervalMs: 999999 }
     });
 
     // targetBlock = 50 - 100 = max(0, -50) = 0, fromBlock = 100 (meta.blockNumber)
@@ -219,11 +272,11 @@ describe("hubIndexer.syncOnce()", () => {
     const client = createMockPublicClient({});
     client.getBlockNumber.mockRejectedValue(new Error("RPC down"));
 
-    indexer = createHubIndexer({
+    indexer = createGameHubIndexer({
       release: MOCK_RELEASE,
       publicClient: client,
       db,
-      config: { confirmations: 0, rewindBlocks: 0, batchSize: 10000, pollIntervalMs: 999999 },
+      config: { confirmations: 0, rewindBlocks: 0, batchSize: 10000, pollIntervalMs: 999999 }
     });
 
     await indexer.syncOnce();
@@ -238,29 +291,33 @@ describe("hubIndexer.syncOnce()", () => {
         blockNumber: 150n,
         logIndex: 0,
         transactionHash: "0xabc1" as Hex,
-        args: { betId: 42n },
-      },
+        args: { betId: 42n }
+      }
     ];
 
     const client = createMockPublicClient({ blockNumber: 200n });
     client.getLogs
       .mockResolvedValueOnce(mockLogs)
-      .mockResolvedValueOnce([]).mockResolvedValueOnce([]).mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
       .mockResolvedValueOnce(mockLogs)
-      .mockResolvedValueOnce([]).mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
 
-    indexer = createHubIndexer({
+    indexer = createGameHubIndexer({
       release: MOCK_RELEASE,
       publicClient: client,
       db,
-      config: { confirmations: 0, rewindBlocks: 10, batchSize: 10000, pollIntervalMs: 999999 },
+      config: { confirmations: 0, rewindBlocks: 10, batchSize: 10000, pollIntervalMs: 999999 }
     });
 
     await indexer.syncOnce();
     await indexer.syncOnce();
 
     // Should still only have 1 event row (put is upsert)
-    const events = await db.hubEvents.toArray();
+    const events = await db.gameHubEvents.toArray();
     expect(events.length).toBe(1);
   });
 });

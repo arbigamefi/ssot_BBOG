@@ -1,11 +1,11 @@
 import * as React from "react";
 import { TxStatusChip } from "@ssot/ui";
-import type { HubEventRow } from "@ssot/ssot/indexer";
+import type { GameHubEventRow } from "@ssot/ssot/indexer";
 
 import { formatTimestamp, shortHex } from "./format";
 import { eventStatus } from "./lifecycle";
 
-export function BetDetailTimeline({ timeline }: { timeline: readonly HubEventRow[] }) {
+export function BetDetailTimeline({ timeline }: { timeline: readonly GameHubEventRow[] }) {
   return (
     <section className="rounded-md border border-border bg-surface-1 shadow-e2">
       <div className="border-b border-border px-5 py-4">
@@ -36,7 +36,7 @@ export function BetDetailTimeline({ timeline }: { timeline: readonly HubEventRow
   );
 }
 
-function TimelineRows({ timeline }: { timeline: readonly HubEventRow[] }) {
+function TimelineRows({ timeline }: { timeline: readonly GameHubEventRow[] }) {
   if (timeline.length === 0) {
     return <EmptyTimeline />;
   }
@@ -63,7 +63,7 @@ function TimelineRows({ timeline }: { timeline: readonly HubEventRow[] }) {
   );
 }
 
-function MobileEvent({ row }: { row: HubEventRow }) {
+function MobileEvent({ row }: { row: GameHubEventRow }) {
   return (
     <div className="rounded-md border border-border-soft bg-surface-0 p-4">
       <div className="flex items-start justify-between gap-3">

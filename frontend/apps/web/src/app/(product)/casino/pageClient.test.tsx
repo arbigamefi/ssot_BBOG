@@ -85,7 +85,7 @@ describe("GamesListClient", () => {
     state.release = {
       name: "Base Sepolia",
       releaseDigest: "0xdeadbeefcafefeed",
-      contracts: { hub: "0x1234567890abcdef1234567890abcdef12345678" },
+      contracts: { gameHub: "0x1234567890abcdef1234567890abcdef12345678" },
       assets: [{ address: "0x01", symbol: "USDC", decimals: 6 }],
       gamesMeta: MOCK_GAMES_META
     };
@@ -101,7 +101,7 @@ describe("GamesListClient", () => {
     state.release = {
       name: "Base Sepolia",
       releaseDigest: "0xdeadbeefcafefeed",
-      contracts: { hub: "0x1234567890abcdef1234567890abcdef12345678" },
+      contracts: { gameHub: "0x1234567890abcdef1234567890abcdef12345678" },
       assets: [{ address: "0x01", symbol: "USDC", decimals: 6 }],
       gamesMeta: MOCK_GAMES_META
     };
@@ -114,7 +114,7 @@ describe("GamesListClient", () => {
     state.release = {
       name: "Base Sepolia",
       releaseDigest: "0xdeadbeefcafefeed",
-      contracts: { hub: "0x1234567890abcdef1234567890abcdef12345678" },
+      contracts: { gameHub: "0x1234567890abcdef1234567890abcdef12345678" },
       assets: [{ address: "0x01", symbol: "USDC", decimals: 6 }],
       gamesMeta: MOCK_GAMES_META
     };
@@ -131,7 +131,7 @@ describe("GamesListClient", () => {
     state.release = {
       name: "Base Sepolia",
       releaseDigest: "0xdeadbeefcafefeed",
-      contracts: { hub: "0x1234567890abcdef1234567890abcdef12345678" },
+      contracts: { gameHub: "0x1234567890abcdef1234567890abcdef12345678" },
       assets: [{ address: "0x01", symbol: "USDC", decimals: 6 }],
       gamesMeta: MOCK_GAMES_META
     };
@@ -151,7 +151,7 @@ describe("GamesListClient", () => {
     state.release = {
       name: "Base Sepolia",
       releaseDigest: "0xdeadbeefcafefeed",
-      contracts: { hub: "0x1234567890abcdef1234567890abcdef12345678" },
+      contracts: { gameHub: "0x1234567890abcdef1234567890abcdef12345678" },
       assets: [{ address: "0x01", symbol: "USDC", decimals: 6 }],
       gamesMeta: MOCK_GAMES_META
     };

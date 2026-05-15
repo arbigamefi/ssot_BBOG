@@ -12,33 +12,70 @@ const MOCK_RELEASE: SSOTRelease = {
   releaseDigest: "0xdeadbeef",
   isPlaceholder: false,
   contracts: {
-    hub: "0x1111111111111111111111111111111111111111",
-    vrfHub: "0x2222222222222222222222222222222222222222",
-    bankRegistry: "0x3333333333333333333333333333333333333333",
+    gameHub: "0x1111111111111111111111111111111111111111",
+    settlementRouter: "0x2222222222222222222222222222222222222222",
+    poolRegistry: "0x3333333333333333333333333333333333333333",
+    sportsHub: "0x7777777777777777777777777777777777777777",
+    sportsRiskEngine: "0x8888888888888888888888888888888888888888",
+    vrfHub: "0x9999999999999999999999999999999999999999",
+    refRegistry: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    refEngine: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    adapter: "0xcccccccccccccccccccccccccccccccccccccccc"
   },
   assets: [
     {
       symbol: "USDC",
       decimals: 6,
       address: "0x4444444444444444444444444444444444444444",
-      bank: "0x5555555555555555555555555555555555555555",
-    },
+      bank: "0x5555555555555555555555555555555555555555"
+    }
   ],
   games: {
     "0x0000000000000000000000000000000000000000000000000000000000000001":
-      "0x6666666666666666666666666666666666666666",
+      "0x6666666666666666666666666666666666666666"
   },
-  meta: { blockNumber: 100 },
+  gamesMeta: [
+    {
+      gameId: "0x0000000000000000000000000000000000000000000000000000000000000001",
+      slug: "dice",
+      label: "Dice",
+      module: "0x6666666666666666666666666666666666666666"
+    }
+  ],
+  sports: {
+    enabled: false,
+    riskEngine: "0x8888888888888888888888888888888888888888",
+    sportsHub: "0x7777777777777777777777777777777777777777",
+    oddsSignerSetHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    resultReporterSetHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    resultReporterThreshold: "1",
+    maxStake: "1",
+    maxPayout: "1",
+    maxMarketReserved: "1",
+    maxOutcomeReserved: "1",
+    maxEventReserved: "1"
+  },
+  pools: [
+    {
+      poolId: 1,
+      domainId: 1,
+      domain: "Casino",
+      active: true,
+      asset: "0x4444444444444444444444444444444444444444",
+      bank: "0x5555555555555555555555555555555555555555",
+      symbol: "USDC",
+      decimals: 6,
+      sportsRisk: null
+    }
+  ],
+  meta: { blockNumber: 100, schemaVersion: 2 }
 };
 
 // ——— Mock publicClient ———
-function createMockPublicClient(opts: {
-  blockNumber?: bigint;
-  logs?: any[];
-}) {
+function createMockPublicClient(opts: { blockNumber?: bigint; logs?: any[] }) {
   return {
     getBlockNumber: vi.fn().mockResolvedValue(opts.blockNumber ?? 200n),
-    getLogs: vi.fn().mockResolvedValue(opts.logs ?? []),
+    getLogs: vi.fn().mockResolvedValue(opts.logs ?? [])
   } as any;
 }
 
@@ -46,13 +83,45 @@ function createMockPublicClient(opts: {
 vi.mock("../abis/release/resolver", () => ({
   getReleaseAbis: () => ({
     BankAbi: [
-      { type: "event", name: "BetSettled", inputs: [{ name: "betId", type: "uint256", indexed: true }] },
-      { type: "event", name: "XPAwarded", inputs: [{ name: "payee", type: "address", indexed: true }, { name: "accrued", type: "uint256" }] },
-      { type: "event", name: "XPLockedUnlocked", inputs: [{ name: "payee", type: "address", indexed: true }, { name: "amount", type: "uint256" }] },
-      { type: "event", name: "XPHoldbackReleased", inputs: [{ name: "payee", type: "address", indexed: true }, { name: "amount", type: "uint256" }] },
-      { type: "event", name: "XPAccruedClaimed", inputs: [{ name: "payee", type: "address", indexed: true }, { name: "amount", type: "uint256" }] },
-    ],
-  }),
+      {
+        type: "event",
+        name: "BetSettled",
+        inputs: [{ name: "betId", type: "uint256", indexed: true }]
+      },
+      {
+        type: "event",
+        name: "XPAwarded",
+        inputs: [
+          { name: "payee", type: "address", indexed: true },
+          { name: "accrued", type: "uint256" }
+        ]
+      },
+      {
+        type: "event",
+        name: "XPLockedUnlocked",
+        inputs: [
+          { name: "payee", type: "address", indexed: true },
+          { name: "amount", type: "uint256" }
+        ]
+      },
+      {
+        type: "event",
+        name: "XPHoldbackReleased",
+        inputs: [
+          { name: "payee", type: "address", indexed: true },
+          { name: "amount", type: "uint256" }
+        ]
+      },
+      {
+        type: "event",
+        name: "XPAccruedClaimed",
+        inputs: [
+          { name: "payee", type: "address", indexed: true },
+          { name: "amount", type: "uint256" }
+        ]
+      }
+    ]
+  })
 }));
 
 let db: SSOTDb;
@@ -94,7 +163,7 @@ describe("bankIndexer.syncOnce()", () => {
       release: MOCK_RELEASE,
       publicClient: client,
       db,
-      config: { confirmations: 0, rewindBlocks: 0, batchSize: 10000, pollIntervalMs: 999999 },
+      config: { confirmations: 0, rewindBlocks: 0, batchSize: 10000, pollIntervalMs: 999999 }
     });
 
     await indexer.syncOnce();
@@ -110,7 +179,7 @@ describe("bankIndexer.syncOnce()", () => {
       release: MOCK_RELEASE,
       publicClient: client,
       db,
-      config: { confirmations: 0, rewindBlocks: 0, batchSize: 10000, pollIntervalMs: 999999 },
+      config: { confirmations: 0, rewindBlocks: 0, batchSize: 10000, pollIntervalMs: 999999 }
     });
 
     await indexer.syncOnce();
@@ -126,7 +195,7 @@ describe("bankIndexer.syncOnce()", () => {
       release: MOCK_RELEASE,
       publicClient: client,
       db,
-      config: { confirmations: 0, rewindBlocks: 0, batchSize: 10000, pollIntervalMs: 999999 },
+      config: { confirmations: 0, rewindBlocks: 0, batchSize: 10000, pollIntervalMs: 999999 }
     });
 
     await indexer.syncOnce();
@@ -142,24 +211,24 @@ describe("bankIndexer.syncOnce()", () => {
         blockNumber: 150n,
         logIndex: 0,
         transactionHash: "0xabc1" as Hex,
-        args: { betId: 42n, payout: 1000000n },
-      },
+        args: { betId: 42n, payout: 1000000n }
+      }
     ];
 
     const client = createMockPublicClient({ blockNumber: 200n });
     // Return logs for BetSettled only
     client.getLogs
       .mockResolvedValueOnce(mockLogs) // BetSettled
-      .mockResolvedValueOnce([])       // XPAwarded
-      .mockResolvedValueOnce([])       // XPLockedUnlocked
-      .mockResolvedValueOnce([])       // XPHoldbackReleased
-      .mockResolvedValueOnce([]);      // XPAccruedClaimed
+      .mockResolvedValueOnce([]) // XPAwarded
+      .mockResolvedValueOnce([]) // XPLockedUnlocked
+      .mockResolvedValueOnce([]) // XPHoldbackReleased
+      .mockResolvedValueOnce([]); // XPAccruedClaimed
 
     indexer = createBankIndexer({
       release: MOCK_RELEASE,
       publicClient: client,
       db,
-      config: { confirmations: 0, rewindBlocks: 0, batchSize: 10000, pollIntervalMs: 999999 },
+      config: { confirmations: 0, rewindBlocks: 0, batchSize: 10000, pollIntervalMs: 999999 }
     });
 
     await indexer.syncOnce();
@@ -177,23 +246,23 @@ describe("bankIndexer.syncOnce()", () => {
         blockNumber: 160n,
         logIndex: 1,
         transactionHash: "0xdef1" as Hex,
-        args: { payee, accrued: 5000n },
-      },
+        args: { payee, accrued: 5000n }
+      }
     ];
 
     const client = createMockPublicClient({ blockNumber: 200n });
     client.getLogs
-      .mockResolvedValueOnce([])       // BetSettled
+      .mockResolvedValueOnce([]) // BetSettled
       .mockResolvedValueOnce(mockLogs) // XPAwarded
-      .mockResolvedValueOnce([])       // XPLockedUnlocked
-      .mockResolvedValueOnce([])       // XPHoldbackReleased
-      .mockResolvedValueOnce([]);      // XPAccruedClaimed
+      .mockResolvedValueOnce([]) // XPLockedUnlocked
+      .mockResolvedValueOnce([]) // XPHoldbackReleased
+      .mockResolvedValueOnce([]); // XPAccruedClaimed
 
     indexer = createBankIndexer({
       release: MOCK_RELEASE,
       publicClient: client,
       db,
-      config: { confirmations: 0, rewindBlocks: 0, batchSize: 10000, pollIntervalMs: 999999 },
+      config: { confirmations: 0, rewindBlocks: 0, batchSize: 10000, pollIntervalMs: 999999 }
     });
 
     await indexer.syncOnce();
@@ -216,7 +285,7 @@ describe("bankIndexer.syncOnce()", () => {
       release: MOCK_RELEASE,
       publicClient: client,
       db,
-      config: { confirmations: 0, rewindBlocks: 0, batchSize: 10000, pollIntervalMs: 999999 },
+      config: { confirmations: 0, rewindBlocks: 0, batchSize: 10000, pollIntervalMs: 999999 }
     });
 
     await indexer.syncOnce();
@@ -237,7 +306,7 @@ describe("bankIndexer.syncOnce()", () => {
       release: MOCK_RELEASE,
       publicClient: client,
       db,
-      config: { confirmations: 0, rewindBlocks: 0, batchSize: 10000, pollIntervalMs: 999999 },
+      config: { confirmations: 0, rewindBlocks: 0, batchSize: 10000, pollIntervalMs: 999999 }
     });
 
     await indexer.syncOnce();
@@ -252,20 +321,23 @@ describe("bankIndexer.syncOnce()", () => {
         blockNumber: 150n,
         logIndex: 0,
         transactionHash: "0xabc1" as Hex,
-        args: { betId: 42n, payout: 1000000n },
-      },
+        args: { betId: 42n, payout: 1000000n }
+      }
     ];
 
     const client = createMockPublicClient({ blockNumber: 200n });
     client.getLogs
       .mockResolvedValueOnce(mockLogs) // BetSettled
-      .mockResolvedValueOnce([]).mockResolvedValueOnce([]).mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
 
     indexer = createBankIndexer({
       release: MOCK_RELEASE,
       publicClient: client,
       db,
-      config: { confirmations: 0, rewindBlocks: 0, batchSize: 10000, pollIntervalMs: 999999 },
+      config: { confirmations: 0, rewindBlocks: 0, batchSize: 10000, pollIntervalMs: 999999 }
     });
 
     await indexer.syncOnce();

@@ -19,7 +19,7 @@ export function SDKStatusCard() {
       setFee(null);
       if (!sdk || readOnly) return;
       try {
-        const q = await sdk.hub.quoteVRFFee(1);
+        const q = await sdk.gameHub.quoteVRFFee(1);
         if (alive) setFee(q);
       } catch (e) {
         if (alive) setErr(e instanceof Error ? e.message : String(e));

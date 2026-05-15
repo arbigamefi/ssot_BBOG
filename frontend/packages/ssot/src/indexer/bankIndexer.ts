@@ -45,7 +45,12 @@ const BANK_EVENTS = [
 
 type BankEventName = (typeof BANK_EVENTS)[number];
 
-const XP_EVENTS = new Set<string>(["XPAwarded", "XPLockedUnlocked", "XPHoldbackReleased", "XPAccruedClaimed"]);
+const XP_EVENTS = new Set<string>([
+  "XPAwarded",
+  "XPLockedUnlocked",
+  "XPHoldbackReleased",
+  "XPAccruedClaimed"
+]);
 
 interface BankEventNormalized {
   chainId: number;
@@ -66,8 +71,7 @@ export function createBankIndexer(params: {
   const { release, publicClient, db } = params;
   const config: BankIndexerConfig = { ...DEFAULT_CONFIG, ...(params.config ?? {}) };
 
-  // Collect all bank addresses from the release assets
-  const banks = release.assets.map((a) => getAddress(a.bank) as Address);
+  const banks = Array.from(new Set(release.pools.map((pool) => getAddress(pool.bank) as Address)));
 
   const status: BankIndexerStatus = { chainId: release.chainId, banks };
   let timer: any | undefined;
@@ -91,7 +95,10 @@ export function createBankIndexer(params: {
 
       let fromBlock = cursor ? cursor.lastProcessedBlock + 1 : releaseStartBlock;
       if (cursor && config.rewindBlocks > 0) {
-        fromBlock = Math.max(releaseStartBlock, cursor.lastProcessedBlock - config.rewindBlocks + 1);
+        fromBlock = Math.max(
+          releaseStartBlock,
+          cursor.lastProcessedBlock - config.rewindBlocks + 1
+        );
       }
 
       if (fromBlock > targetBlock) {
@@ -106,14 +113,14 @@ export function createBankIndexer(params: {
         status.lastSyncedBlock = end;
       }
 
-      // Cursor update INSIDE transaction (fixes atomicity bug from hubIndexer)
+      // Cursor update INSIDE transaction (fixes atomicity bug from gameHubIndexer)
       // Actually we update cursor after all batches complete. For atomicity,
       // we use a separate transaction for the cursor.
       await db.transaction("rw", db.cursors, async () => {
         await db.cursors.put({
           id: cursorId,
           chainId: release.chainId,
-          hub: banks[0]!, // reuse CursorRow's hub field for bank address
+          source: banks[0]!,
           lastProcessedBlock: targetBlock,
           updatedAt: Date.now()
         });
@@ -244,7 +251,11 @@ function toBigintString(v: unknown): string {
   if (typeof v === "number") return BigInt(v).toString();
   if (typeof v === "string") {
     if (v.startsWith("0x")) {
-      try { return BigInt(v).toString(); } catch { /* fallthrough */ }
+      try {
+        return BigInt(v).toString();
+      } catch {
+        /* fallthrough */
+      }
     }
     if (/^\d+$/.test(v)) return v;
   }

@@ -4,7 +4,7 @@ import * as React from "react";
 import {
   createDexieJournalSink,
   getSSOTDb,
-  type HubIndexerConfig,
+  type GameHubIndexerConfig,
   type SSOTDb
 } from "@ssot/ssot/indexer";
 import { useChainId, useConfig } from "wagmi";
@@ -12,8 +12,8 @@ import { useChainId, useConfig } from "wagmi";
 import { useRelease } from "../ssot/release/ReleaseProvider";
 import { SSOTRuntimeContext } from "../ssot/runtime";
 import {
-  HubIndexerWorkerClient,
-  type HubIndexerWorkerStatus
+  GameHubIndexerWorkerClient,
+  type GameHubIndexerWorkerStatus
 } from "../ssot/runtime/indexerWorkerClient";
 
 export function SSOTRuntimeProvider({ children }: { children: React.ReactNode }) {
@@ -31,12 +31,12 @@ export function SSOTRuntimeProvider({ children }: { children: React.ReactNode })
     return createDexieJournalSink(db);
   }, [db]);
 
-  const workerRef = React.useRef<HubIndexerWorkerClient | null>(null);
-  const [indexerStatus, setIndexerStatus] = React.useState<HubIndexerWorkerStatus | undefined>(
+  const workerRef = React.useRef<GameHubIndexerWorkerClient | null>(null);
+  const [indexerStatus, setIndexerStatus] = React.useState<GameHubIndexerWorkerStatus | undefined>(
     undefined
   );
 
-  const indexerConfig: HubIndexerConfig = React.useMemo(
+  const indexerConfig: GameHubIndexerConfig = React.useMemo(
     () => ({ batchSize: 2_000, confirmations: 12, pollIntervalMs: 10_000, rewindBlocks: 24 }),
     []
   );
@@ -68,7 +68,7 @@ export function SSOTRuntimeProvider({ children }: { children: React.ReactNode })
       workerRef.current = null;
     }
 
-    const client = new HubIndexerWorkerClient({
+    const client = new GameHubIndexerWorkerClient({
       init: {
         chainId: rel.release.chainId,
         config: indexerConfig,
@@ -81,7 +81,7 @@ export function SSOTRuntimeProvider({ children }: { children: React.ReactNode })
           ...(prev ?? {
             chainId: rel.release!.chainId,
             config: indexerConfig,
-            hub: rel.release!.contracts.hub as any,
+            gameHub: rel.release!.contracts.gameHub as any,
             running: false
           }),
           lastError: e.message

@@ -11,7 +11,7 @@ export type {
   DomainBet,
   DomainBankSnapshot,
   DomainBankPosition,
-  DomainXPBuckets,
+  DomainXPBuckets
 } from "./domain";
 
 // Flat re-exports of commonly used SDK types
@@ -22,11 +22,11 @@ export type {
   TxStep,
   ReconcilePlaceBetTxResult,
   BindPlaceBetTxResult,
-  SSOTHubAPI,
+  SSOTGameHubAPI,
   SSOTBankAPI,
   SSOTVRFHubAPI,
   Address,
-  Hex,
+  Hex
 } from "./sdk";
 
 export type { TxResult } from "./sdk/types";

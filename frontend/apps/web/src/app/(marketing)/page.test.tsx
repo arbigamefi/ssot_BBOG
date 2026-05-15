@@ -119,9 +119,21 @@ describe("HomePage", () => {
       name: "Arbitrum",
       chainId: 42161,
       releaseDigest: "0xdeadbeefcafefeeddeadbeefcafefeed",
-      contracts: { hub: "0x1234567890abcdef1234567890abcdef12345678" },
+      contracts: { gameHub: "0x1234567890abcdef1234567890abcdef12345678" },
       games: {},
       assets: [{ address: "0x01", bank: "0x02", symbol: "USDC", decimals: 6 }],
+      pools: [
+        {
+          poolId: 1,
+          domainId: 1,
+          domain: "Casino",
+          active: true,
+          asset: "0x01",
+          bank: "0x02",
+          symbol: "USDC",
+          decimals: 6
+        }
+      ],
       gamesMeta: [
         { gameId: "0x01", slug: "dice", label: "Dice", paramsEncoding: "uint8" },
         { gameId: "0x02", slug: "keno", label: "Keno", paramsEncoding: "uint40" }

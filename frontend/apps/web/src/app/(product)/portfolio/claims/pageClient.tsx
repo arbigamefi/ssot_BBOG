@@ -35,6 +35,10 @@ export function ClaimsPageClient() {
   const explorerBaseUrl = React.useMemo(() => getExplorerBaseUrl(chainId), [chainId]);
   const assetMeta = release?.assets[0];
   const asset = assetMeta?.address as Address | undefined;
+  const claimsPool =
+    release?.pools.find((pool) => pool.active && String(pool.domain).toLowerCase() === "casino") ??
+    release?.pools[0];
+  const poolId = claimsPool?.poolId;
   const decimals = assetMeta?.decimals ?? 18;
   const symbol = assetMeta?.symbol ?? "XP";
 
@@ -86,21 +90,23 @@ export function ClaimsPageClient() {
     error: xpError,
     refetch: refetchXP
   } = useQuery({
-    queryKey: ["ssot", "claims", "xp", chainId, sdk?.account ?? "anonymous"],
-    enabled: Boolean(sdk?.account && ready),
+    queryKey: ["ssot", "claims", "xp", chainId, poolId, sdk?.account ?? "anonymous"],
+    enabled: Boolean(sdk?.account && ready && poolId),
     queryFn: async () => {
       if (!sdk?.account) throw new Error("Wallet unavailable");
-      return sdk.bank.getXPBuckets(sdk.account);
+      if (!poolId) throw new Error("Pool unavailable");
+      return sdk.bank.getXPBuckets(poolId, sdk.account);
     },
     refetchInterval: 8_000
   });
 
   const { data: snapshot, refetch: refetchSnapshot } = useQuery({
-    queryKey: ["ssot", "claims", "bank", chainId, asset],
-    enabled: Boolean(sdk && ready && asset),
+    queryKey: ["ssot", "claims", "bank", chainId, poolId],
+    enabled: Boolean(sdk && ready && asset && poolId),
     queryFn: async () => {
       if (!sdk || !asset) throw new Error("Bank unavailable");
-      return sdk.bank.getSnapshot(asset);
+      if (!poolId) throw new Error("Pool unavailable");
+      return sdk.bank.getSnapshot(poolId);
     },
     refetchInterval: 8_000
   });
@@ -117,7 +123,10 @@ export function ClaimsPageClient() {
         toast.error("Amount must be positive.");
         return;
       }
-      const result = await xpClaimFlow.execute(() => sdk.bank.claimXPAccrued(parsed, sdk.account!));
+      if (!poolId) throw new Error("Pool unavailable");
+      const result = await xpClaimFlow.execute(() =>
+        sdk.bank.claimXPAccrued(poolId, parsed, sdk.account!)
+      );
       if (!result.ok) return;
       toast.success(`Claimed ${formatUnits(parsed, decimals)} ${symbol}`);
       setXPClaimAmount("");
@@ -125,19 +134,22 @@ export function ClaimsPageClient() {
     } catch (error) {
       toast.error((error as Error)?.message ?? "XP claim failed");
     }
-  }, [decimals, readOnly, refetchXP, sdk, symbol, xpClaimAmount, xpClaimFlow]);
+  }, [decimals, poolId, readOnly, refetchXP, sdk, symbol, xpClaimAmount, xpClaimFlow]);
 
   const handleSyncHoldback = React.useCallback(async () => {
     if (!sdk?.account || readOnly) return;
     try {
-      const result = await syncHoldbackFlow.execute(() => sdk.bank.syncXPHoldback(sdk.account!));
+      if (!poolId) throw new Error("Pool unavailable");
+      const result = await syncHoldbackFlow.execute(() =>
+        sdk.bank.syncXPHoldback(poolId, sdk.account!)
+      );
       if (!result.ok) return;
       toast.success("Holdback synced");
       await refetchXP();
     } catch (error) {
       toast.error((error as Error)?.message ?? "Sync holdback failed");
     }
-  }, [readOnly, refetchXP, sdk, syncHoldbackFlow]);
+  }, [poolId, readOnly, refetchXP, sdk, syncHoldbackFlow]);
 
   const handleClaimFees = React.useCallback(async () => {
     if (!sdk?.account || readOnly) return;
@@ -147,8 +159,9 @@ export function ClaimsPageClient() {
         toast.error("Amount must be positive.");
         return;
       }
+      if (!poolId) throw new Error("Pool unavailable");
       const result = await protocolFeeFlow.execute(() =>
-        sdk.bank.claimProtocolFees(parsed, sdk.account!)
+        sdk.bank.claimProtocolFees(poolId, parsed, sdk.account!)
       );
       if (!result.ok) return;
       toast.success(`Claimed ${formatUnits(parsed, decimals)} ${symbol} protocol fees`);
@@ -157,7 +170,7 @@ export function ClaimsPageClient() {
     } catch (error) {
       toast.error((error as Error)?.message ?? "Protocol fee claim failed");
     }
-  }, [decimals, feeAmount, protocolFeeFlow, readOnly, refetchSnapshot, sdk, symbol]);
+  }, [decimals, feeAmount, poolId, protocolFeeFlow, readOnly, refetchSnapshot, sdk, symbol]);
 
   if (!release) {
     return (

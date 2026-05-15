@@ -1,17 +1,17 @@
 "use client";
 
 import type { SSOTRelease } from "@ssot/ssot/release";
-import type { HubIndexerConfig } from "@ssot/ssot/indexer";
+import type { GameHubIndexerConfig } from "@ssot/ssot/indexer";
 
-export type HubIndexerWorkerStatus = {
+export type GameHubIndexerWorkerStatus = {
   chainId: number;
-  hub: `0x${string}`;
+  gameHub: `0x${string}`;
   lastSyncedBlock?: number;
   latestBlock?: number;
   lastRunAt?: number;
   lastError?: string;
   running: boolean;
-  config: HubIndexerConfig;
+  config: GameHubIndexerConfig;
   safeHeadBlock?: number;
   lagBlocks?: number;
 };
@@ -20,13 +20,13 @@ type WorkerInit = {
   chainId: number;
   rpcUrl: string;
   release: SSOTRelease;
-  config: HubIndexerConfig;
+  config: GameHubIndexerConfig;
   dbName: string;
 };
 
 type FromWorkerMessage =
   | { type: "READY" }
-  | { type: "STATUS"; payload: HubIndexerWorkerStatus }
+  | { type: "STATUS"; payload: GameHubIndexerWorkerStatus }
   | { type: "ERROR"; payload: { message: string; stack?: string } };
 
 type ToWorkerMessage =
@@ -36,22 +36,24 @@ type ToWorkerMessage =
   | { type: "SYNC_ONCE" }
   | { type: "GET_STATUS" };
 
-export class HubIndexerWorkerClient {
+export class GameHubIndexerWorkerClient {
   private worker: Worker;
   private ready = false;
-  private onStatus?: (s: HubIndexerWorkerStatus) => void;
+  private onStatus?: (s: GameHubIndexerWorkerStatus) => void;
   private onError?: (e: { message: string; stack?: string }) => void;
 
   constructor(params: {
     init: WorkerInit;
-    onStatus: (s: HubIndexerWorkerStatus) => void;
+    onStatus: (s: GameHubIndexerWorkerStatus) => void;
     onError: (e: { message: string; stack?: string }) => void;
   }) {
     this.onStatus = params.onStatus;
     this.onError = params.onError;
 
     // Next/Webpack 5 worker pattern
-    this.worker = new Worker(new URL("../../workers/hubIndexer.worker.ts", import.meta.url), { type: "module" });
+    this.worker = new Worker(new URL("../../workers/gameHubIndexer.worker.ts", import.meta.url), {
+      type: "module"
+    });
 
     this.worker.onmessage = (ev: MessageEvent<FromWorkerMessage>) => {
       const msg = ev.data;

@@ -16,7 +16,7 @@ describe("game room presentation helpers", () => {
     expect(formatHouseEdge({ houseEdgeBps: 150 }, "dice")).toBe("1.50%");
   });
 
-  it("formats release max payout or legacy fallback", () => {
+  it("formats release max payout or catalog fallback", () => {
     expect(
       formatGameMaxPayout({ gameMeta: { maxPayout: "2500000000" }, slug: "dice", usdcDecimals: 6 })
     ).toBe("2,500 USDC");

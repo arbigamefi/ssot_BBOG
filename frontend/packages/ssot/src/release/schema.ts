@@ -17,8 +17,8 @@ const NumericString = z.string().regex(/^[0-9]+$/);
 
 export const SportsReleaseSchema = z.object({
   enabled: z.boolean(),
-  riskEngine: Address.optional(),
-  hub: Address.optional(),
+  riskEngine: Address,
+  sportsHub: Address,
   oddsSignerSetHash: z.string().min(8),
   resultReporterSetHash: z.string().min(8),
   resultReporterThreshold: NumericString,
@@ -60,23 +60,18 @@ export const ReleaseSchema = z.object({
   releaseDigest: z.string().min(8),
   isPlaceholder: z.boolean().optional().default(false),
   contracts: z.object({
-    hub: Address,
+    gameHub: Address,
+    settlementRouter: Address,
+    poolRegistry: Address,
+    sportsHub: Address,
+    sportsRiskEngine: Address,
     vrfHub: Address,
-    bankRegistry: Address,
-    // Optional, but expected in FINAL SHAPE bundles.
-    refRegistry: Address.optional(),
-    refEngine: Address.optional(),
-    adapter: Address.optional(),
-    // v1.3 router/pool bundles expose these names directly.
-    gameHub: Address.optional(),
-    poolRegistry: Address.optional(),
-    sportsHub: Address.optional(),
-    sportsRiskEngine: Address.optional()
+    refRegistry: Address,
+    refEngine: Address,
+    adapter: Address
   }),
   assets: z.array(AssetSchema).min(1),
   games: z.record(z.string(), Address), // gameId(hex) -> module address
-  // Optional UI-oriented game metadata synced from the contract release bundle.
-  // This enables canonical routing (/games/[slug]) without hardcoding game IDs.
   gamesMeta: z
     .array(
       z.object({
@@ -90,14 +85,14 @@ export const ReleaseSchema = z.object({
         paramsEncoding: z.string().optional()
       })
     )
-    .optional(),
-  sports: SportsReleaseSchema.optional(),
-  pools: z.array(PoolSchema).optional(),
+    .min(1),
+  sports: SportsReleaseSchema,
+  pools: z.array(PoolSchema).min(1),
   // Optional bundle metadata (used by indexer/journal as a sane default for start blocks).
   meta: z
     .object({
       blockNumber: z.number().int().nonnegative().optional(),
-      schemaVersion: z.number().int().optional(),
+      schemaVersion: z.literal(2).optional(),
       generatedAt: z.number().int().optional()
     })
     .partial()

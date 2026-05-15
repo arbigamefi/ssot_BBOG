@@ -1,9 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  getGameEncoder,
-  requireGameEncoder,
-  registeredGameSlugs,
-} from "./registry";
+import { getGameEncoder, requireGameEncoder, registeredGameSlugs } from "./registry";
 
 describe("GameEncoderRegistry", () => {
   it("has all 4 known game slugs registered", () => {
@@ -73,7 +69,7 @@ describe("GameEncoderRegistry", () => {
       expect(decoded.number).toBe(17);
     });
 
-    it("encodes and decodes a legacy bitmask bet", () => {
+    it("encodes and decodes a bitmask bet", () => {
       const enc = requireGameEncoder("roulette");
       const hex = enc.encode({ kind: "bitmask", mask: 0x12345n });
       const decoded = enc.decode(hex);

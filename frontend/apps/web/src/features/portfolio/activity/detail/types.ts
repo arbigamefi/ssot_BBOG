@@ -1,5 +1,5 @@
 import type { DomainBet } from "@ssot/ssot";
-import type { BetRow, HubEventRow } from "@ssot/ssot/indexer";
+import type { BetRow, GameHubEventRow } from "@ssot/ssot/indexer";
 
 export type BetDetailMetric = {
   label: string;
@@ -25,5 +25,5 @@ export type BetDetailContext = {
   primaryTxHash?: string;
   localBet?: BetRow | null;
   onChainBet?: DomainBet | null;
-  timeline: HubEventRow[];
+  timeline: GameHubEventRow[];
 };

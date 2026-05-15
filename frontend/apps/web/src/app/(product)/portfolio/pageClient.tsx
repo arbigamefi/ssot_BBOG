@@ -50,19 +50,22 @@ export function AccountPageClient() {
     queryFn: async (): Promise<AccountAssetRow[]> => {
       if (!release || !sdk || !account) return [];
       return Promise.all(
-        release.assets.map(async (asset) => {
-          const assetAddress = asset.address as Address;
+        release.pools.map(async (pool) => {
+          const assetMeta = release.assets.find(
+            (asset) => asset.address.toLowerCase() === pool.asset.toLowerCase()
+          );
+          const assetAddress = pool.asset as Address;
           const [walletBalance, allowance, position] = await Promise.all([
             sdk.bank.getAssetBalance(assetAddress, account),
-            sdk.bank.getAllowance(assetAddress, account),
-            sdk.bank.getPosition(assetAddress, account)
+            sdk.bank.getAllowance(pool.poolId, account),
+            sdk.bank.getPosition(pool.poolId, account)
           ]);
           return {
-            id: asset.address,
-            symbol: asset.symbol,
-            decimals: asset.decimals,
-            asset: asset.address as `0x${string}`,
-            bank: asset.bank as `0x${string}`,
+            id: String(pool.poolId),
+            symbol: pool.symbol || assetMeta?.symbol || "Asset",
+            decimals: pool.decimals ?? assetMeta?.decimals ?? 18,
+            asset: pool.asset as `0x${string}`,
+            bank: pool.bank as `0x${string}`,
             walletBalance,
             shares: position.shares,
             assetsEquivalent: position.assetsEquivalent,

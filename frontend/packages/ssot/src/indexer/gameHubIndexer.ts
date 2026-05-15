@@ -3,52 +3,57 @@ import { getAddress } from "viem";
 import type { SSOTRelease } from "../release/schema";
 import { getReleaseAbis } from "../abis/release/resolver";
 import type { SSOTDb } from "./store";
-import type { HubEventName, HubEventNormalized } from "./reduce";
-import { applyHubEventToBet } from "./reduce";
+import type { GameHubEventName, GameHubEventNormalized } from "./reduce";
+import { applyGameHubEventToBet } from "./reduce";
 
-export interface HubIndexerConfig {
+export interface GameHubIndexerConfig {
   confirmations: number;
   pollIntervalMs: number;
   batchSize: number;
   rewindBlocks: number;
 }
 
-export interface HubIndexerStatus {
+export interface GameHubIndexerStatus {
   chainId: number;
-  hub: Address;
+  gameHub: Address;
   lastSyncedBlock?: number;
   latestBlock?: number;
   lastRunAt?: number;
   lastError?: string;
 }
 
-export interface HubIndexer {
+export interface GameHubIndexer {
   start(): void;
   stop(): void;
   syncOnce(): Promise<void>;
-  getStatus(): HubIndexerStatus;
+  getStatus(): GameHubIndexerStatus;
 }
 
-const DEFAULT_CONFIG: HubIndexerConfig = {
+const DEFAULT_CONFIG: GameHubIndexerConfig = {
   confirmations: 12,
   pollIntervalMs: 10_000,
   batchSize: 2_000,
   rewindBlocks: 24
 };
 
-const HUB_EVENTS: HubEventName[] = ["BetPlaced", "BetRandomReady", "BetFinalized", "BetRefunded"];
+const GAME_HUB_EVENTS: GameHubEventName[] = [
+  "BetPlaced",
+  "BetRandomReady",
+  "BetFinalized",
+  "BetRefunded"
+];
 
-export function createHubIndexer(params: {
+export function createGameHubIndexer(params: {
   release: SSOTRelease;
   publicClient: PublicClient;
   db: SSOTDb;
-  config?: Partial<HubIndexerConfig>;
-}): HubIndexer {
+  config?: Partial<GameHubIndexerConfig>;
+}): GameHubIndexer {
   const { release, publicClient, db } = params;
-  const config: HubIndexerConfig = { ...DEFAULT_CONFIG, ...(params.config ?? {}) };
-  const hub = getAddress(release.contracts.hub) as Address;
+  const config: GameHubIndexerConfig = { ...DEFAULT_CONFIG, ...(params.config ?? {}) };
+  const gameHub = getAddress(release.contracts.gameHub) as Address;
 
-  const status: HubIndexerStatus = { chainId: release.chainId, hub };
+  const status: GameHubIndexerStatus = { chainId: release.chainId, gameHub };
   let timer: any | undefined;
 
   async function syncOnce(): Promise<void> {
@@ -62,7 +67,7 @@ export function createHubIndexer(params: {
 
       const targetBlock = Math.max(0, latestBlock - config.confirmations);
 
-      const cursorId = `${release.chainId}:${hub}`;
+      const cursorId = `${release.chainId}:${gameHub}`;
       const cursor = await db.cursors.get(cursorId);
 
       // Prefer release meta.blockNumber as the starting point for a fresh DB.
@@ -70,7 +75,10 @@ export function createHubIndexer(params: {
 
       let fromBlock = cursor ? cursor.lastProcessedBlock + 1 : releaseStartBlock;
       if (cursor && config.rewindBlocks > 0) {
-        fromBlock = Math.max(releaseStartBlock, cursor.lastProcessedBlock - config.rewindBlocks + 1);
+        fromBlock = Math.max(
+          releaseStartBlock,
+          cursor.lastProcessedBlock - config.rewindBlocks + 1
+        );
       }
 
       if (fromBlock > targetBlock) {
@@ -90,7 +98,7 @@ export function createHubIndexer(params: {
         await db.cursors.put({
           id: cursorId,
           chainId: release.chainId,
-          hub,
+          source: gameHub,
           lastProcessedBlock: targetBlock,
           updatedAt: Date.now()
         });
@@ -101,15 +109,15 @@ export function createHubIndexer(params: {
   }
 
   async function syncRange(fromBlock: number, toBlock: number): Promise<void> {
-    const { HubAbi } = getReleaseAbis(release.chainId);
-    const hubAbi = HubAbi as Abi;
+    const { GameHubAbi } = getReleaseAbis(release.chainId);
+    const gameHubAbi = GameHubAbi as Abi;
 
-    const logsAll: HubEventNormalized[] = [];
+    const logsAll: GameHubEventNormalized[] = [];
 
-    for (const eventName of HUB_EVENTS) {
-      const eventAbi = getEventAbi(hubAbi, eventName);
+    for (const eventName of GAME_HUB_EVENTS) {
+      const eventAbi = getEventAbi(gameHubAbi, eventName);
       const logs = await publicClient.getLogs({
-        address: hub,
+        address: gameHub,
         event: eventAbi,
         fromBlock: BigInt(fromBlock),
         toBlock: BigInt(toBlock)
@@ -119,7 +127,7 @@ export function createHubIndexer(params: {
         const logIndex = Number(log.logIndex ?? 0);
         logsAll.push({
           chainId: release.chainId,
-          hub,
+          gameHub,
           blockNumber: Number(log.blockNumber),
           logIndex,
           txHash: log.transactionHash,
@@ -140,14 +148,14 @@ export function createHubIndexer(params: {
 
     if (logsAll.length === 0) return;
 
-    await db.transaction("rw", db.hubEvents, db.bets, async () => {
+    await db.transaction("rw", db.gameHubEvents, db.bets, async () => {
       for (const ev of logsAll) {
         const rowId = `${ev.chainId}:${ev.txHash}:${ev.logIndex ?? 0}`;
         const argsJson = safeJson(ev.args);
-        await db.hubEvents.put({
+        await db.gameHubEvents.put({
           id: rowId,
           chainId: ev.chainId,
-          hub,
+          gameHub,
           blockNumber: ev.blockNumber,
           txHash: ev.txHash,
           logIndex: ev.logIndex ?? 0,
@@ -158,7 +166,7 @@ export function createHubIndexer(params: {
 
         const betKey = `${ev.chainId}:${extractBetIdString(ev.args)}`;
         const prev = await db.bets.get(betKey);
-        const next = applyHubEventToBet(prev, ev);
+        const next = applyGameHubEventToBet(prev, ev);
         await db.bets.put(next);
       }
     });
@@ -177,7 +185,7 @@ export function createHubIndexer(params: {
     timer = undefined;
   }
 
-  function getStatus(): HubIndexerStatus {
+  function getStatus(): GameHubIndexerStatus {
     return { ...status };
   }
 
@@ -186,7 +194,7 @@ export function createHubIndexer(params: {
 
 function getEventAbi(abi: Abi, eventName: string): AbiEvent {
   const item = abi.find((x: any) => x?.type === "event" && x?.name === eventName);
-  if (!item) throw new Error(`Hub ABI missing event ${eventName}`);
+  if (!item) throw new Error(`GameHub ABI missing event ${eventName}`);
   return item as any;
 }
 
@@ -195,7 +203,7 @@ function safeJson(obj: unknown): string {
 }
 
 function extractBetIdString(args: Record<string, unknown>): string {
-  const raw = (args as any).betId ?? (args as any).id ?? "0";
+  const raw = (args as any).positionId ?? (args as any).betId ?? (args as any).id ?? "0";
   if (typeof raw === "bigint") return raw.toString();
   if (typeof raw === "number") return BigInt(raw).toString();
   if (typeof raw === "string") {

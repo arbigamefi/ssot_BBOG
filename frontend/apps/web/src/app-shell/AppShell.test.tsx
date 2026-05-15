@@ -6,7 +6,7 @@ import { AppShell } from "./AppShell";
 // ——— Mock dependencies ———
 const mockRelease = {
   name: "test-net",
-  contracts: { hub: "0x1234567890abcdef1234567890abcdef12345678" },
+  contracts: { gameHub: "0x1234567890abcdef1234567890abcdef12345678" },
   releaseDigest: "0xdeadbeefcafe"
 };
 

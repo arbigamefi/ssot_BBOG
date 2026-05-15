@@ -1,4 +1,10 @@
-import type { DomainBankPosition, DomainBankSnapshot, DomainBet, DomainError, DomainXPBuckets } from "../domain";
+import type {
+  DomainBankPosition,
+  DomainBankSnapshot,
+  DomainBet,
+  DomainError,
+  DomainXPBuckets
+} from "../domain";
 
 export type Address = `0x${string}`;
 export type Hex = `0x${string}`;
@@ -10,7 +16,7 @@ export type TxStep =
       to: Address;
       value: bigint; // msg.value: VRF fee
       call: {
-        contract: "Hub";
+        contract: "GameHub";
         fn: "placeBet";
         argsSummary: Record<string, unknown>;
       };
@@ -19,7 +25,7 @@ export type TxStep =
 export interface PlaceBetInput {
   chainId: number;
   gameId: Hex;
-  asset: Address;
+  poolId: number;
   betCount: number;
   stake: bigint;
   params: Hex; // bytes
@@ -36,7 +42,7 @@ export interface PlaceBetPlan {
   // Opaque but executable payload; this is the SSOT "truth" used by executePlan.
   payload: {
     gameId: Hex;
-    asset: Address;
+    poolId: number;
     params: Hex; // bytes
     stakeSpec: {
       amountPerRoll: bigint;
@@ -56,6 +62,8 @@ export interface PlaceBetPlan {
     needsApproval: boolean;
     /** The approve amount used (note: approve sets allowance, it is NOT additive). */
     approveAmount?: bigint;
+    asset: Address;
+    bank: Address;
     /** Bank free liquidity at planning time (may change by execution). */
     freeLiquidity?: bigint;
     /** Max payout the bet requires the bank to reserve. */
@@ -83,8 +91,7 @@ export type BindPlaceBetTxResult =
   | { ok: true; betId: bigint; source: "manual" }
   | { ok: false; error: DomainError };
 
-
-export interface SSOTHubAPI {
+export interface SSOTGameHubAPI {
   quoteVRFFee(betCount: number): Promise<bigint>;
   planPlaceBet(input: PlaceBetInput): Promise<PlaceBetPlan | { error: DomainError }>;
   executePlan(plan: PlaceBetPlan): Promise<ExecutePlanResult>;
@@ -126,34 +133,55 @@ export interface SSOTHubAPI {
   getBet(betId: bigint): Promise<DomainBet>;
 }
 
-
 export interface SSOTBankAPI {
-  getSnapshot(asset: Address): Promise<DomainBankSnapshot>;
-  getPosition(asset: Address, user: Address): Promise<DomainBankPosition>;
+  getSnapshot(poolId: number): Promise<DomainBankSnapshot>;
+  getPosition(poolId: number, user: Address): Promise<DomainBankPosition>;
   getAssetBalance(asset: Address, user: Address): Promise<bigint>;
-  getAllowance(asset: Address, owner: Address): Promise<bigint>;
+  getAllowance(poolId: number, owner: Address): Promise<bigint>;
 
   // ERC4626-like vault operations
-  deposit(assets: bigint, receiver: Address): Promise<TxResult & { shares?: bigint }>;
-  withdraw(assets: bigint, receiver: Address, owner: Address): Promise<TxResult & { shares?: bigint }>;
-  redeem(shares: bigint, receiver: Address, owner: Address): Promise<TxResult & { assets?: bigint }>;
-  mint(shares: bigint, receiver: Address): Promise<TxResult & { assets?: bigint }>;
+  deposit(
+    poolId: number,
+    assets: bigint,
+    receiver: Address
+  ): Promise<TxResult & { shares?: bigint }>;
+  withdraw(
+    poolId: number,
+    assets: bigint,
+    receiver: Address,
+    owner: Address
+  ): Promise<TxResult & { shares?: bigint }>;
+  redeem(
+    poolId: number,
+    shares: bigint,
+    receiver: Address,
+    owner: Address
+  ): Promise<TxResult & { assets?: bigint }>;
+  mint(poolId: number, shares: bigint, receiver: Address): Promise<TxResult & { assets?: bigint }>;
 
   /** Maximum assets the owner can withdraw (accounting for reserves and solvency). */
-  maxWithdraw(owner: Address): Promise<bigint>;
+  maxWithdraw(poolId: number, owner: Address): Promise<bigint>;
   /** Maximum shares the owner can redeem. */
-  maxRedeem(owner: Address): Promise<bigint>;
+  maxRedeem(poolId: number, owner: Address): Promise<bigint>;
   /** Player's cumulative turnover (used for XP unlock eligibility check). */
-  playerTurnover(player: Address): Promise<bigint>;
+  playerTurnover(poolId: number, player: Address): Promise<bigint>;
 
   // Protocol fee claim (governance only)
-  claimProtocolFees(amount: bigint, receiver: Address): Promise<TxResult & { claimed?: bigint }>;
+  claimProtocolFees(
+    poolId: number,
+    amount: bigint,
+    receiver: Address
+  ): Promise<TxResult & { claimed?: bigint }>;
 
   // XP claim + bucket management
-  claimXPAccrued(amount: bigint, receiver: Address): Promise<TxResult & { claimed?: bigint }>;
-  getXPBuckets(payee: Address): Promise<DomainXPBuckets>;
-  unlockXPLocked(payee: Address, sourcePlayer: Address): Promise<TxResult>;
-  syncXPHoldback(payee: Address): Promise<TxResult>;
+  claimXPAccrued(
+    poolId: number,
+    amount: bigint,
+    receiver: Address
+  ): Promise<TxResult & { claimed?: bigint }>;
+  getXPBuckets(poolId: number, payee: Address): Promise<DomainXPBuckets>;
+  unlockXPLocked(poolId: number, payee: Address, sourcePlayer: Address): Promise<TxResult>;
+  syncXPHoldback(poolId: number, payee: Address): Promise<TxResult>;
 }
 
 export interface SSOTVRFHubAPI {

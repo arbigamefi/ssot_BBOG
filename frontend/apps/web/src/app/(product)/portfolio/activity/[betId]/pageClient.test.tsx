@@ -26,7 +26,7 @@ function createDb() {
     bets: {
       get: vi.fn(async () => state.localBet)
     },
-    hubEvents: {
+    gameHubEvents: {
       where: vi.fn(() => ({
         equals: vi.fn(() => ({
           toArray: vi.fn(async () => state.timeline)
@@ -39,7 +39,7 @@ function createDb() {
 function createSdk() {
   return {
     account: state.sdkAccount,
-    hub: {
+    gameHub: {
       getBet: vi.fn(async () => state.onChainBet),
       refund: vi.fn(async () => ({ ok: true, txHash: "0xabc" })),
       finalize: vi.fn(async () => ({ ok: true, txHash: "0xdef" }))
@@ -152,7 +152,7 @@ function seedBet(overrides: Record<string, unknown> = {}) {
     {
       id: "84532:0x123:0",
       chainId: 84532,
-      hub: player,
+      gameHub: player,
       blockNumber: 100,
       txHash: "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
       logIndex: 0,

@@ -56,7 +56,22 @@ export function InvestPageClient() {
     [asset, release?.assets]
   );
   const primaryAsset = release?.assets[0]?.address?.toLowerCase();
-  const writesSupportedForSelectedAsset = !primaryAsset || asset.toLowerCase() === primaryAsset;
+  const selectedPool = React.useMemo(
+    () =>
+      release?.pools.find(
+        (pool) =>
+          pool.active &&
+          pool.asset.toLowerCase() === asset.toLowerCase() &&
+          String(pool.domain).toLowerCase() === "casino"
+      ) ??
+      release?.pools.find(
+        (pool) => pool.active && pool.asset.toLowerCase() === asset.toLowerCase()
+      ),
+    [asset, release?.pools]
+  );
+  const poolId = selectedPool?.poolId;
+  const writesSupportedForSelectedAsset =
+    Boolean(poolId) && (!primaryAsset || asset.toLowerCase() === primaryAsset);
   const decimals = assetMeta?.decimals ?? 18;
   const symbol = assetMeta?.symbol ?? "Asset";
 
@@ -66,12 +81,13 @@ export function InvestPageClient() {
     error: loadError,
     refetch
   } = useQuery({
-    queryKey: ["ssot", "earn", "bank", chainId, asset, sdk?.account ?? "anonymous"],
-    enabled: Boolean(sdk && ready && assetMeta),
+    queryKey: ["ssot", "earn", "bank", chainId, poolId, sdk?.account ?? "anonymous"],
+    enabled: Boolean(sdk && ready && assetMeta && poolId),
     queryFn: async (): Promise<EarnBankData> => {
       if (!sdk) throw new Error("SDK unavailable");
-      const snapshot = await sdk.bank.getSnapshot(asset);
-      const position = sdk.account ? await sdk.bank.getPosition(asset, sdk.account) : null;
+      if (!poolId) throw new Error("Pool unavailable");
+      const snapshot = await sdk.bank.getSnapshot(poolId);
+      const position = sdk.account ? await sdk.bank.getPosition(poolId, sdk.account) : null;
       return { snapshot, position };
     },
     refetchInterval: 8_000
@@ -140,20 +156,20 @@ export function InvestPageClient() {
   };
 
   const { data: maxWithdraw = null } = useQuery({
-    queryKey: ["ssot", "earn", "maxWithdraw", chainId, sdk?.account],
+    queryKey: ["ssot", "earn", "maxWithdraw", chainId, poolId, sdk?.account],
     enabled: Boolean(sdk?.account && tab === "withdraw" && writesSupportedForSelectedAsset),
     queryFn: async () => {
-      if (!sdk?.account) return null;
-      return sdk.bank.maxWithdraw(sdk.account);
+      if (!sdk?.account || !poolId) return null;
+      return sdk.bank.maxWithdraw(poolId, sdk.account);
     }
   });
 
   const { data: maxRedeem = null } = useQuery({
-    queryKey: ["ssot", "earn", "maxRedeem", chainId, sdk?.account],
+    queryKey: ["ssot", "earn", "maxRedeem", chainId, poolId, sdk?.account],
     enabled: Boolean(sdk?.account && tab === "redeem" && writesSupportedForSelectedAsset),
     queryFn: async () => {
-      if (!sdk?.account) return null;
-      return sdk.bank.maxRedeem(sdk.account);
+      if (!sdk?.account || !poolId) return null;
+      return sdk.bank.maxRedeem(poolId, sdk.account);
     }
   });
 
@@ -174,8 +190,8 @@ export function InvestPageClient() {
     if (!sdk?.account || readOnly) return;
     setFormError(undefined);
 
-    if (!writesSupportedForSelectedAsset) {
-      setFormError("Write flows currently support only the primary asset.");
+    if (!writesSupportedForSelectedAsset || !poolId) {
+      setFormError("Write flows require an active casino pool for the selected asset.");
       return;
     }
 
@@ -190,10 +206,10 @@ export function InvestPageClient() {
       const account = sdk.account;
       const result =
         tab === "deposit"
-          ? await depositFlow.execute(() => sdk.bank.deposit(parsed, account))
+          ? await depositFlow.execute(() => sdk.bank.deposit(poolId, parsed, account))
           : tab === "withdraw"
-            ? await withdrawFlow.execute(() => sdk.bank.withdraw(parsed, account, account))
-            : await redeemFlow.execute(() => sdk.bank.redeem(parsed, account, account));
+            ? await withdrawFlow.execute(() => sdk.bank.withdraw(poolId, parsed, account, account))
+            : await redeemFlow.execute(() => sdk.bank.redeem(poolId, parsed, account, account));
 
       if (!result.ok) {
         toast.dismiss(toastId);
@@ -222,6 +238,7 @@ export function InvestPageClient() {
     symbol,
     tab,
     withdrawFlow,
+    poolId,
     writesSupportedForSelectedAsset
   ]);
 

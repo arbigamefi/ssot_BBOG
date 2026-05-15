@@ -6,7 +6,21 @@ import * as React from "react";
 const state = {
   release: {
     releaseDigest: "0x7ad0f2cb0000000000000000000000000000000000000000000000000000e1349f",
-    assets: [{ address: "0x0000000000000000000000000000000000000001", symbol: "USDC", decimals: 6 }]
+    assets: [
+      { address: "0x0000000000000000000000000000000000000001", symbol: "USDC", decimals: 6 }
+    ],
+    pools: [
+      {
+        poolId: 1,
+        domainId: 1,
+        domain: "Casino",
+        active: true,
+        asset: "0x0000000000000000000000000000000000000001",
+        bank: "0x0000000000000000000000000000000000000002",
+        symbol: "USDC",
+        decimals: 6
+      }
+    ]
   } as any,
   readOnly: false,
   readOnlyReason: null as string | null,
@@ -111,6 +125,18 @@ describe("InvestPageClient", () => {
       releaseDigest: "0x7ad0f2cb0000000000000000000000000000000000000000000000000000e1349f",
       assets: [
         { address: "0x0000000000000000000000000000000000000001", symbol: "USDC", decimals: 6 }
+      ],
+      pools: [
+        {
+          poolId: 1,
+          domainId: 1,
+          domain: "Casino",
+          active: true,
+          asset: "0x0000000000000000000000000000000000000001",
+          bank: "0x0000000000000000000000000000000000000002",
+          symbol: "USDC",
+          decimals: 6
+        }
       ]
     };
     state.readOnly = false;

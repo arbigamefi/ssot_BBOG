@@ -45,7 +45,7 @@ export function useGameResolutionEffect({
   status: string;
   betId: bigint | undefined;
   recentBets: readonly IndexedBetSummary[];
-  db: Pick<SSOTDb, "hubEvents"> | undefined;
+  db: Pick<SSOTDb, "gameHubEvents"> | undefined;
   gameSlug: string;
   coinSide: CoinSide;
   diceDirection: DiceDirection;

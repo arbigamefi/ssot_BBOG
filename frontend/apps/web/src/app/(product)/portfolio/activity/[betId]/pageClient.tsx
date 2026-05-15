@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { DomainBet } from "@ssot/ssot";
-import type { BetRow, HubEventRow } from "@ssot/ssot/indexer";
+import type { BetRow, GameHubEventRow } from "@ssot/ssot/indexer";
 import { toast } from "@ssot/ui";
 
 import { PageTransition } from "../../../../../components/PageTransition";
@@ -59,7 +59,7 @@ export function BetDetailPageClient({ betId }: { betId: string }) {
     queryFn: async (): Promise<DomainBet | null> => {
       if (!sdk || parsedBetId === undefined) return null;
       try {
-        return await sdk.hub.getBet(parsedBetId);
+        return await sdk.gameHub.getBet(parsedBetId);
       } catch {
         return null;
       }
@@ -70,9 +70,9 @@ export function BetDetailPageClient({ betId }: { betId: string }) {
   const { data: timeline = [] } = useQuery({
     queryKey: ["ssot", "bet", "timeline", chainId, betId],
     enabled: Boolean(db && betId),
-    queryFn: async (): Promise<HubEventRow[]> => {
+    queryFn: async (): Promise<GameHubEventRow[]> => {
       if (!db || !betId) return [];
-      const rows = await db.hubEvents.where("chainId").equals(chainId).toArray();
+      const rows = await db.gameHubEvents.where("chainId").equals(chainId).toArray();
       return rows
         .filter((row) => matchesBetId(row.argsJson, betId))
         .sort((a, b) => a.blockNumber - b.blockNumber || a.logIndex - b.logIndex);
@@ -136,7 +136,7 @@ export function BetDetailPageClient({ betId }: { betId: string }) {
   const handleRefund = React.useCallback(async () => {
     if (!sdk || parsedBetId === undefined) return;
     try {
-      const result = await refundFlow.execute(() => sdk.hub.refund(parsedBetId));
+      const result = await refundFlow.execute(() => sdk.gameHub.refund(parsedBetId));
       if (!result.ok) return;
       toast.success("Bet refunded successfully");
       void refetchOnChain();
@@ -148,7 +148,7 @@ export function BetDetailPageClient({ betId }: { betId: string }) {
   const handleFinalize = React.useCallback(async () => {
     if (!sdk || parsedBetId === undefined) return;
     try {
-      const result = await finalizeFlow.execute(() => sdk.hub.finalize(parsedBetId));
+      const result = await finalizeFlow.execute(() => sdk.gameHub.finalize(parsedBetId));
       if (!result.ok) return;
       toast.success("Bet finalized successfully");
       void refetchOnChain();

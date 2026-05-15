@@ -31,9 +31,9 @@ describe("game room reconciliation helpers", () => {
     expect(parseFinalizedPayoutWin("not-json")).toBe(false);
   });
 
-  it("reads the finalized payout event from the indexed hub event table", async () => {
+  it("reads the finalized payout event from the indexed GameHub event table", async () => {
     const db = {
-      hubEvents: {
+      gameHubEvents: {
         where: () => ({
           equals: () => ({
             filter: () => ({

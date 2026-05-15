@@ -2,7 +2,7 @@ import { decodeDiceParams, decodeStakeSpec } from "@ssot/ssot/encoding";
 import { describe, expect, it } from "vitest";
 
 import type { GameMeta } from "./model";
-import { buildGamePlaceBetInput, findUSDCAsset } from "./place-bet";
+import { buildGamePlaceBetInput, findCasinoPool, findUSDCAsset } from "./place-bet";
 
 const game: GameMeta = {
   gameId: "0x1111111111111111111111111111111111111111",
@@ -19,6 +19,18 @@ const release = {
       address: "0x3333333333333333333333333333333333333333",
       decimals: 6
     }
+  ],
+  pools: [
+    {
+      poolId: 1,
+      domain: "Casino",
+      domainId: 1,
+      active: true,
+      asset: "0x3333333333333333333333333333333333333333",
+      bank: "0x4444444444444444444444444444444444444444",
+      symbol: "USDC",
+      decimals: 6
+    }
   ]
 };
 
@@ -27,6 +39,10 @@ describe("game room place bet builder", () => {
     expect(findUSDCAsset(release.assets)?.address).toBe(
       "0x3333333333333333333333333333333333333333"
     );
+  });
+
+  it("finds the active casino pool", () => {
+    expect(findCasinoPool(release.pools)?.poolId).toBe(1);
   });
 
   it("builds a typed PlaceBetInput with encoded params and stake spec", () => {
@@ -47,7 +63,7 @@ describe("game room place bet builder", () => {
     if (!result.ok) return;
 
     expect(result.input.chainId).toBe(84532);
-    expect(result.input.asset).toBe("0x3333333333333333333333333333333333333333");
+    expect(result.input.poolId).toBe(1);
     expect(result.input.betCount).toBe(3);
     expect(result.input.stake).toBe(75_000_000n);
     expect(decodeDiceParams(result.input.params)).toEqual({ cap: 55 });
@@ -79,9 +95,9 @@ describe("game room place bet builder", () => {
     });
   });
 
-  it("keeps the existing zero-address fallback when release asset metadata is missing", () => {
+  it("rejects planning when no casino pool is available", () => {
     const result = buildGamePlaceBetInput({
-      release: { chainId: 84532, assets: [] },
+      release: { chainId: 84532, assets: [], pools: [] },
       game,
       betAmount: 10,
       betCount: 1,
@@ -93,6 +109,9 @@ describe("game room place bet builder", () => {
       kenoSpots: []
     });
 
-    expect(result.ok && result.input.asset).toBe("0x0000000000000000000000000000000000000000");
+    expect(result).toEqual({
+      ok: false,
+      message: "No active casino pool is available in the current release."
+    });
   });
 });

@@ -43,7 +43,7 @@ describe("GameRoomPage", () => {
     expect(gamePageClientMock).toHaveBeenCalledTimes(0);
   });
 
-  it("404s the removed cointoss compatibility slug", async () => {
+  it("404s the removed cointoss slug alias", async () => {
     await expect(GameRoomPage({ params: Promise.resolve({ slug: "cointoss" }) })).rejects.toThrow(
       "NEXT_NOT_FOUND"
     );

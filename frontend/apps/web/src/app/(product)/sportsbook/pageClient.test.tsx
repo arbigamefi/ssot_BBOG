@@ -8,9 +8,9 @@ const state = {
     name: "Base Sepolia",
     releaseDigest: "0x7ad0f2cb1a996251325c00441b125ca5276c5bf70f011577222ce588cae1349f",
     contracts: {
-      hub: "0x1111111111111111111111111111111111111111",
+      gameHub: "0x1111111111111111111111111111111111111111",
       vrfHub: "0x2222222222222222222222222222222222222222",
-      bankRegistry: "0x3333333333333333333333333333333333333333",
+      poolRegistry: "0x3333333333333333333333333333333333333333",
       sportsHub: "0x2db4ba326c2c3e5830b0da10f0c52b4097f9fa4b",
       sportsRiskEngine: "0xb9c3647cb5daf23dea8335b7d91c7aa5f6bc2579"
     },
@@ -18,7 +18,7 @@ const state = {
     games: {},
     sports: {
       enabled: true,
-      hub: "0x2db4ba326c2c3e5830b0da10f0c52b4097f9fa4b",
+      sportsHub: "0x2db4ba326c2c3e5830b0da10f0c52b4097f9fa4b",
       riskEngine: "0xb9c3647cb5daf23dea8335b7d91c7aa5f6bc2579",
       oddsSignerSetHash: "0x3181e36dda893c31b3108b977ad21a8814ac18776e5e26ba89833f47e5058cbb",
       resultReporterSetHash: "0x4d6c357ad9229b0489a1a9e49e78f2cd2c07d4fae7e24b969e9416c9fa540dd7",

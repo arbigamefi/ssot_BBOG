@@ -66,9 +66,9 @@ export function OpsPageClient() {
       { label: "Network", value: release?.name ?? "—" },
       { label: "Chain id", value: String(release?.chainId ?? "—") },
       { label: "Release digest", value: shortHex(release?.releaseDigest) },
-      { label: "Hub", value: shortHex(release?.contracts.hub) },
+      { label: "GameHub", value: shortHex(release?.contracts.gameHub) },
       { label: "VRF Hub", value: shortHex(release?.contracts.vrfHub) },
-      { label: "Bank registry", value: shortHex(release?.contracts.bankRegistry) },
+      { label: "PoolRegistry", value: shortHex(release?.contracts.poolRegistry) },
       { label: "Primary bank", value: shortHex(release?.assets?.[0]?.bank) },
       { label: "Manifest", value: "release-latest.json" }
     ],

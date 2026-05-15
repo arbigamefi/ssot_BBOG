@@ -150,7 +150,7 @@ const MOCK_RELEASE = {
   name: "Base Sepolia",
   releaseDigest: "0xdeadbeefcafefeed",
   contracts: {
-    hub: "0x1234567890abcdef1234567890abcdef12345678"
+    gameHub: "0x1234567890abcdef1234567890abcdef12345678"
   },
   assets: [
     {
@@ -231,7 +231,7 @@ describe("GamePageClient", () => {
     expect(screen.getByText("Bet Amount")).toBeDefined();
   });
 
-  it("renders coin toss as a compat room shell", () => {
+  it("renders coin toss as a canonical room shell", () => {
     state.release = {
       ...MOCK_RELEASE,
       gamesMeta: [
