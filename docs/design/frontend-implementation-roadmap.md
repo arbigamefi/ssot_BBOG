@@ -725,6 +725,44 @@ pnpm -C frontend typecheck
 pnpm -C frontend build
 ```
 
+### 2026-05-15 - C2 Full Local Verification
+
+Status: completed locally.
+
+Evidence:
+
+```bash
+pnpm -C frontend test
+pnpm -C frontend lint
+pnpm -C frontend precheck:frontend -- --strict
+pnpm -C frontend check:release
+pnpm -C frontend smoke:release-readonly
+pnpm -C frontend typecheck
+pnpm -C frontend build
+```
+
+Observed:
+
+- full workspace tests passed:
+  - `packages/ssot`: 11 files, 131 tests;
+  - `packages/ui`: 4 files, 23 tests;
+  - `apps/web`: 35 files, 125 tests;
+- lint passed for all workspace packages;
+- strict frontend precheck passed;
+- embedded release check passed;
+- Base Sepolia read-only smoke passed for contracts, pool registry, banks,
+  GameHub VRF quote, SportsHub wiring, and SportsRiskEngine pool hash;
+- workspace typecheck passed;
+- production web build passed.
+
+Known non-blocking warnings:
+
+- local Node is v22.6.0 while `frontend/package.json` declares Node 20.x;
+- `next lint` is deprecated and should be migrated to the ESLint CLI before
+  public launch;
+- Next build still reports the pre-existing "Next.js plugin was not detected"
+  ESLint configuration warning.
+
 ### 2026-05-15 - R5 Casino Vertical Migration
 
 Status: completed as a transitional vertical migration.
