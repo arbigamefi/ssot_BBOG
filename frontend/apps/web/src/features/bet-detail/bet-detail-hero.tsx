@@ -14,7 +14,7 @@ export function BetDetailHero({
   return (
     <section>
       <Link
-        href="/bets"
+        href="/portfolio/activity"
         className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.16em] text-fg-muted transition hover:text-fg"
       >
         <ArrowLeftIcon className="h-4 w-4" />

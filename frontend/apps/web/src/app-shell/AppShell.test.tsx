@@ -165,15 +165,15 @@ describe("AppShell", () => {
       </AppShell>
     );
     const gamesLink = screen.getAllByText("Games")[0]!;
-    expect(gamesLink.closest("a")?.getAttribute("href")).toBe("/games");
+    expect(gamesLink.closest("a")?.getAttribute("href")).toBe("/casino");
 
     const sportsbookLink = screen.getAllByText("Sportsbook")[0]!;
     expect(sportsbookLink.closest("a")?.getAttribute("href")).toBe("/sportsbook");
 
     const investLink = screen.getAllByText("Liquidity")[0]!;
-    expect(investLink.closest("a")?.getAttribute("href")).toBe("/invest");
+    expect(investLink.closest("a")?.getAttribute("href")).toBe("/earn");
 
     const betsLink = screen.getAllByText("Bets")[0]!;
-    expect(betsLink.closest("a")?.getAttribute("href")).toBe("/bets");
+    expect(betsLink.closest("a")?.getAttribute("href")).toBe("/portfolio/activity");
   });
 });

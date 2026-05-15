@@ -39,10 +39,10 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
               ArbiGameFi
             </Link>
             <nav className="hidden items-center gap-6 text-sm font-medium text-fg-muted md:flex">
-              <Link href="/games" className="transition-colors hover:text-fg">
+              <Link href="/casino" className="transition-colors hover:text-fg">
                 Rooms
               </Link>
-              <Link href="/invest" className="transition-colors hover:text-fg">
+              <Link href="/earn" className="transition-colors hover:text-fg">
                 Liquidity
               </Link>
             </nav>
@@ -52,7 +52,7 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
               <WalletButton />
             </div>
             <Link
-              href="/games"
+              href="/casino"
               className="rounded-full bg-fg px-5 py-2.5 text-sm font-semibold text-fg-inverse transition-colors hover:bg-fg/90"
             >
               Open Rooms
@@ -64,13 +64,13 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
   }
 
   const navLinks = [
-    { id: "directory", label: "Games", href: "/games" },
+    { id: "directory", label: "Games", href: "/casino" },
     { id: "sportsbook", label: "Sportsbook", href: "/sportsbook" },
-    { id: "bets", label: "Bets", href: "/bets" },
-    { id: "liquidity", label: "Liquidity", href: "/invest" },
-    { id: "claims", label: "Claims", href: "/claims" },
-    { id: "referral", label: "Affiliates", href: "/referral" },
-    { id: "account", label: "Account", href: "/account" },
+    { id: "bets", label: "Bets", href: "/portfolio/activity" },
+    { id: "liquidity", label: "Liquidity", href: "/earn" },
+    { id: "claims", label: "Claims", href: "/portfolio/claims" },
+    { id: "referral", label: "Affiliates", href: "/portfolio" },
+    { id: "account", label: "Account", href: "/portfolio" },
     { id: "ops", label: "Ops", href: "/ops" }
   ] as const;
 
@@ -82,7 +82,7 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
         {variant === "game" ? (
           <ShellHeaderNav>
             <Link
-              href="/games/dice"
+              href="/casino/dice"
               className={cn(
                 "transition-colors",
                 activeRoute === "dice"
@@ -93,7 +93,7 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
               Dice
             </Link>
             <Link
-              href="/games/roulette"
+              href="/casino/roulette"
               className={cn(
                 "transition-colors",
                 activeRoute === "roulette"
@@ -104,7 +104,7 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
               Roulette
             </Link>
             <Link
-              href="/games/coin-toss"
+              href="/casino/coin-toss"
               className={cn(
                 "transition-colors",
                 activeRoute === "cointoss"
@@ -115,7 +115,7 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
               Coin Toss
             </Link>
             <Link
-              href="/games/keno"
+              href="/casino/keno"
               className={cn(
                 "transition-colors",
                 activeRoute === "keno"
@@ -128,7 +128,7 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
 
             <div className="hidden h-6 border-l border-border-soft pl-6 ml-2 sm:block">
               <Link
-                href="/games"
+                href="/casino"
                 className="flex h-full items-center gap-2 text-sm font-bold uppercase tracking-wider text-fg-subtle transition-colors hover:text-fg"
               >
                 <span>←</span>

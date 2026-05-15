@@ -39,13 +39,13 @@ export function HomeHero({
 
           <div className="mt-10 flex flex-col gap-3 sm:flex-row">
             <Link
-              href="/games"
+              href="/casino"
               className="inline-flex items-center justify-center gap-3 rounded-md bg-brand px-6 py-4 text-sm font-black uppercase tracking-[0.12em] text-fg-inverse shadow-glow transition hover:bg-brand-hover"
             >
               Enter Casino <ArrowRightIcon className="h-5 w-5" />
             </Link>
             <Link
-              href="/invest"
+              href="/earn"
               className="inline-flex items-center justify-center rounded-md border border-border bg-surface-1 px-6 py-4 text-sm font-black uppercase tracking-[0.12em] text-fg transition hover:bg-surface-2"
             >
               View Bank

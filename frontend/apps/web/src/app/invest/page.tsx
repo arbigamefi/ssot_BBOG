@@ -1,5 +1,5 @@
-import { InvestPageClient } from "./pageClient";
+import { redirect } from "next/navigation";
 
-export default function InvestPage() {
-  return <InvestPageClient />;
+export default function InvestCompatPage() {
+  redirect("/earn");
 }

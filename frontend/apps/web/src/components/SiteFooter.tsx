@@ -6,28 +6,28 @@ import Link from "next/link";
 import { ArbiGameFiBrand } from "./ArbiGameFiBrand";
 
 const GAME_LINKS = [
-  { href: "/games/dice", label: "Dice" },
-  { href: "/games/coin-toss", label: "Coin Toss" },
-  { href: "/games/roulette", label: "Roulette" },
-  { href: "/games/keno", label: "Keno" }
+  { href: "/casino/dice", label: "Dice" },
+  { href: "/casino/coin-toss", label: "Coin Toss" },
+  { href: "/casino/roulette", label: "Roulette" },
+  { href: "/casino/keno", label: "Keno" }
 ] as const;
 
 const PLATFORM_LINKS = [
-  { href: "/invest", label: "Invest" },
-  { href: "/referral", label: "Referral" },
-  { href: "/bets", label: "Bets" }
+  { href: "/earn", label: "Earn" },
+  { href: "/portfolio", label: "Portfolio" },
+  { href: "/portfolio/activity", label: "Bets" }
 ] as const;
 
 const RESOURCE_LINKS = [
-  { href: "/account", label: "Account" },
-  { href: "/claims", label: "Claims" },
+  { href: "/portfolio", label: "Account" },
+  { href: "/portfolio/claims", label: "Claims" },
   { href: "/ops", label: "Ops" }
 ] as const;
 
 const LEGAL_LINKS = [
-  { href: "/terms", label: "Terms" },
-  { href: "/privacy", label: "Privacy" },
-  { href: "/disclaimer", label: "Disclaimer" }
+  { href: "/legal/terms", label: "Terms" },
+  { href: "/legal/privacy", label: "Privacy" },
+  { href: "/legal/disclaimer", label: "Disclaimer" }
 ] as const;
 
 const COMMUNITY_LINKS = [

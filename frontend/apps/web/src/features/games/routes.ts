@@ -1,12 +1,12 @@
 export function getPrimaryGameHref(slug: string) {
   switch (slug) {
     case "coin-toss":
-      return "/games/coin-toss";
+      return "/casino/coin-toss";
     case "dice":
     case "roulette":
     case "keno":
-      return `/games/${slug}`;
+      return `/casino/${slug}`;
     default:
-      return `/games/${slug}`;
+      return `/casino/${slug}`;
   }
 }

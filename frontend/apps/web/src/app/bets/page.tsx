@@ -1,5 +1,5 @@
-import { BetsPageClient } from "./pageClient";
+import { redirect } from "next/navigation";
 
-export default function BetsPage() {
-  return <BetsPageClient />;
+export default function BetsCompatPage() {
+  redirect("/portfolio/activity");
 }

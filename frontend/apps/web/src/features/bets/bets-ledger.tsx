@@ -67,7 +67,7 @@ function Rows({ rows, loading }: { rows: readonly EnrichedBetRow[]; loading: boo
       {rows.map((item) => (
         <Link
           key={item.row.id}
-          href={`/bets/${item.row.betId}`}
+          href={`/portfolio/activity/${item.row.betId}`}
           className="grid grid-cols-[120px_1.4fr_1fr_1fr_120px_120px] items-center border-b border-border-soft px-5 py-4 text-sm transition last:border-b-0 hover:bg-surface-2"
         >
           <div className="font-mono font-black text-fg">#{item.row.betId}</div>
@@ -94,7 +94,7 @@ function Rows({ rows, loading }: { rows: readonly EnrichedBetRow[]; loading: boo
 function MobileRow({ item }: { item: EnrichedBetRow }) {
   return (
     <Link
-      href={`/bets/${item.row.betId}`}
+      href={`/portfolio/activity/${item.row.betId}`}
       className="rounded-md border border-border bg-surface-0 p-4 transition hover:bg-surface-2"
     >
       <div className="flex items-start justify-between gap-3">

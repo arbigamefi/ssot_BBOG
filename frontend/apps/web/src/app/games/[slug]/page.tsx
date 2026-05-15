@@ -1,12 +1,14 @@
-import * as React from "react";
-
-import { GamePageClient } from "./pageClient";
+import { redirect } from "next/navigation";
 
 const SLUG_ALIASES: Record<string, string> = {
   cointoss: "coin-toss"
 };
 
-export default async function GameRoomPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function GameRoomCompatPage({
+  params
+}: {
+  params: Promise<{ slug: string }>;
+}) {
   const { slug } = await params;
-  return <GamePageClient slug={SLUG_ALIASES[slug] ?? slug} />;
+  redirect(`/casino/${SLUG_ALIASES[slug] ?? slug}`);
 }

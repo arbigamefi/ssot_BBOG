@@ -1,5 +1,5 @@
-import { ReferralPageClient } from "./pageClient";
+import { redirect } from "next/navigation";
 
 export default function ReferralPage() {
-  return <ReferralPageClient />;
+  redirect("/portfolio");
 }

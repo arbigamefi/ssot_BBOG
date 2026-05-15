@@ -108,7 +108,7 @@ export const LEGAL_PAGES: Record<LegalSlug, LegalPageContent> = {
 };
 
 export const LEGAL_NAV: ReadonlyArray<{ slug: LegalSlug; href: string; label: string }> = [
-  { slug: "terms", href: "/terms", label: "Terms" },
-  { slug: "privacy", href: "/privacy", label: "Privacy" },
-  { slug: "disclaimer", href: "/disclaimer", label: "Risk disclaimer" }
+  { slug: "terms", href: "/legal/terms", label: "Terms" },
+  { slug: "privacy", href: "/legal/privacy", label: "Privacy" },
+  { slug: "disclaimer", href: "/legal/disclaimer", label: "Risk disclaimer" }
 ];

@@ -59,7 +59,7 @@ function BankReservePanel({
       </div>
 
       <Link
-        href="/invest"
+        href="/earn"
         className="mt-8 inline-flex items-center gap-2 rounded-md border border-border bg-surface-2 px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-fg transition hover:border-accent/50 hover:text-accent"
       >
         Inspect bank <ArrowRightIcon className="h-4 w-4" />
@@ -78,7 +78,10 @@ function ActivityPanel({ activity }: { activity: readonly LandingActivity[] }) {
           </div>
           <h2 className="mt-2 text-2xl font-black text-fg">Latest indexed tickets</h2>
         </div>
-        <Link href="/bets" className="text-sm font-bold text-brand hover:text-brand-hover">
+        <Link
+          href="/portfolio/activity"
+          className="text-sm font-bold text-brand hover:text-brand-hover"
+        >
           View all
         </Link>
       </div>

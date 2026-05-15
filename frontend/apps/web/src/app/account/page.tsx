@@ -1,5 +1,5 @@
-import { AccountPageClient } from "./pageClient";
+import { redirect } from "next/navigation";
 
-export default function AccountPage() {
-  return <AccountPageClient />;
+export default function AccountCompatPage() {
+  redirect("/portfolio");
 }

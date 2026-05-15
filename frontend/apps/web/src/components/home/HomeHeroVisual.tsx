@@ -88,10 +88,14 @@ export function HomeHeroVisual({
                     <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                       Room energy
                     </div>
-                    <div className="text-sm font-semibold text-white">Table first, trust nearby</div>
+                    <div className="text-sm font-semibold text-white">
+                      Table first, trust nearby
+                    </div>
                   </div>
                 </div>
-                <p className="relative mt-4 max-w-md text-sm leading-6 text-slate-300">{roomSummary}</p>
+                <p className="relative mt-4 max-w-md text-sm leading-6 text-slate-300">
+                  {roomSummary}
+                </p>
 
                 <div className="relative mt-5 grid gap-3 sm:grid-cols-3">
                   <div className="rounded-[1.15rem] border border-white/10 bg-white/[0.03] px-3 py-3">
@@ -155,7 +159,7 @@ export function HomeHeroVisual({
                 </div>
 
                 <Link
-                  href="/games"
+                  href="/casino"
                   className="mt-5 flex items-center justify-between rounded-[1.25rem] border border-cyan-300/30 bg-cyan-300/12 px-4 py-3 text-sm font-semibold text-cyan-50 transition-colors hover:border-cyan-200/40 hover:bg-cyan-300/16"
                 >
                   <span>Open live rooms</span>

@@ -1,8 +1,10 @@
-import * as React from "react";
+import { redirect } from "next/navigation";
 
-import { BetDetailPageClient } from "./pageClient";
-
-export default async function BetDetailPage({ params }: { params: Promise<{ betId: string }> }) {
+export default async function BetDetailCompatPage({
+  params
+}: {
+  params: Promise<{ betId: string }>;
+}) {
   const { betId } = await params;
-  return <BetDetailPageClient betId={betId} />;
+  redirect(`/portfolio/activity/${betId}`);
 }

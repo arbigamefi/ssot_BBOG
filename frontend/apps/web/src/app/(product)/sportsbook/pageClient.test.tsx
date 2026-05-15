@@ -1,0 +1,152 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import * as React from "react";
+
+const state = {
+  release: {
+    chainId: 84532,
+    name: "Base Sepolia",
+    releaseDigest: "0x7ad0f2cb1a996251325c00441b125ca5276c5bf70f011577222ce588cae1349f",
+    contracts: {
+      hub: "0x1111111111111111111111111111111111111111",
+      vrfHub: "0x2222222222222222222222222222222222222222",
+      bankRegistry: "0x3333333333333333333333333333333333333333",
+      sportsHub: "0x2db4ba326c2c3e5830b0da10f0c52b4097f9fa4b",
+      sportsRiskEngine: "0xb9c3647cb5daf23dea8335b7d91c7aa5f6bc2579"
+    },
+    assets: [],
+    games: {},
+    sports: {
+      enabled: true,
+      hub: "0x2db4ba326c2c3e5830b0da10f0c52b4097f9fa4b",
+      riskEngine: "0xb9c3647cb5daf23dea8335b7d91c7aa5f6bc2579",
+      oddsSignerSetHash: "0x3181e36dda893c31b3108b977ad21a8814ac18776e5e26ba89833f47e5058cbb",
+      resultReporterSetHash: "0x4d6c357ad9229b0489a1a9e49e78f2cd2c07d4fae7e24b969e9416c9fa540dd7",
+      resultReporterThreshold: "1",
+      resultChallengeTimeoutSeconds: "604800",
+      resultChallenger: "0x6ee473ce7aa56bda640bd7560604e1699fd9d013",
+      resultArbitrator: "0x7033114a50115fdbca684dea0734a502ba2f7bd8",
+      maxStake: "10000000",
+      maxPayout: "20000000",
+      maxMarketReserved: "100000000",
+      maxOutcomeReserved: "50000000",
+      maxEventReserved: "150000000"
+    },
+    pools: [
+      {
+        poolId: 2,
+        domainId: 2,
+        domain: "Sports",
+        active: true,
+        asset: "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
+        bank: "0x3686664d8d92feab8c4c9ac0baaeb07c8bddbc85",
+        symbol: "",
+        decimals: 18,
+        sportsRisk: {
+          maxStake: "10000000",
+          maxPayout: "20000000",
+          maxMarketReserved: "100000000",
+          maxOutcomeReserved: "50000000",
+          maxEventReserved: "150000000",
+          riskHash: "0x0707ba776912152fe0028608c2b31e2ac864f24ed79351eaa10ea012303793e6"
+        }
+      }
+    ]
+  } as any,
+  readOnlyReason: null as string | null,
+  sportsbook: {
+    enabled: false,
+    frontendEnabled: false,
+    hasSportsRelease: true,
+    enablementFlag: "NEXT_PUBLIC_SPORTSBOOK_ENABLED",
+    disabledReason: "NEXT_PUBLIC_SPORTSBOOK_ENABLED is not true."
+  } as any
+};
+
+vi.mock("../../../ssot/release/ReleaseProvider", () => ({
+  useRelease: () => ({
+    release: state.release,
+    readOnlyReason: state.readOnlyReason,
+    sportsbook: state.sportsbook
+  })
+}));
+
+vi.mock("../../../components/PageTransition", () => ({
+  PageTransition: ({ children }: any) => <div>{children}</div>
+}));
+
+vi.mock("next/link", () => ({
+  default: ({ href, children, ...props }: any) => (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  )
+}));
+
+vi.mock("@ssot/ui", () => ({
+  cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" ")
+}));
+
+import { SportsbookPageClient } from "./pageClient";
+
+describe("SportsbookPageClient", () => {
+  afterEach(() => {
+    cleanup();
+    state.release = {
+      ...state.release,
+      sports: {
+        ...state.release.sports,
+        resultChallengeTimeoutSeconds: "604800"
+      }
+    };
+    state.readOnlyReason = null;
+    state.sportsbook = {
+      enabled: false,
+      frontendEnabled: false,
+      hasSportsRelease: true,
+      enablementFlag: "NEXT_PUBLIC_SPORTSBOOK_ENABLED",
+      disabledReason: "NEXT_PUBLIC_SPORTSBOOK_ENABLED is not true."
+    };
+  });
+
+  it("renders SportsHub metadata without exposing ticket placement", () => {
+    render(<SportsbookPageClient />);
+
+    expect(screen.getByRole("heading", { name: "Sportsbook Control Room" })).toBeDefined();
+    expect(screen.getByText("Read-only preview")).toBeDefined();
+    expect(screen.getByText("SportsHub present")).toBeDefined();
+    expect(screen.getAllByText("0x2db4...fa4b").length).toBeGreaterThan(0);
+    expect(screen.getByText("NEXT_PUBLIC_SPORTSBOOK_ENABLED is not true.")).toBeDefined();
+    const lockedButton = screen.getByRole("button", {
+      name: "Ticket placement locked"
+    }) as HTMLButtonElement;
+    expect(lockedButton.disabled).toBe(true);
+  });
+
+  it("surfaces MVP market scope and Sports pool caps", () => {
+    render(<SportsbookPageClient />);
+
+    expect(screen.getByText("Football 1X2 readiness")).toBeDefined();
+    expect(screen.getByText("Pre-match football 1X2")).toBeDefined();
+    expect(screen.getByText("Pool 2")).toBeDefined();
+    expect(screen.getAllByText("10,000,000").length).toBeGreaterThan(0);
+    expect(screen.getByText("Phase 2 NO-GO for public risk-in")).toBeDefined();
+  });
+
+  it("still keeps ticket placement locked when metadata gate is enabled", () => {
+    state.sportsbook = {
+      enabled: true,
+      frontendEnabled: true,
+      hasSportsRelease: true,
+      enablementFlag: "NEXT_PUBLIC_SPORTSBOOK_ENABLED"
+    };
+
+    render(<SportsbookPageClient />);
+
+    expect(screen.getByText("Metadata enabled")).toBeDefined();
+    const lockedButton = screen.getByRole("button", {
+      name: "Ticket placement locked"
+    }) as HTMLButtonElement;
+    expect(lockedButton.disabled).toBe(true);
+  });
+});

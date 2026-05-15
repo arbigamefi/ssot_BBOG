@@ -26,7 +26,7 @@ export function HomeRoomDirectory({ rooms }: { rooms: readonly LandingRoom[] }) 
           eyebrow="Casino rooms"
           title="Four one-shot RNG games, one settlement rail."
           detail="Each room maps to a release-defined module. The UI can change, but game identity, parameters, and payout path stay anchored to the SSOT release."
-          actionHref="/games"
+          actionHref="/casino"
           actionLabel="Open directory"
         />
 

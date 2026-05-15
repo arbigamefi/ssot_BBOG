@@ -13,8 +13,8 @@ vi.mock("next/navigation", () => ({
 import LiquidityCompatPage from "./page";
 
 describe("LiquidityCompatPage", () => {
-  it("redirects liquidity to the canonical invest route", () => {
-    expect(() => LiquidityCompatPage()).toThrow("REDIRECT:/invest");
-    expect(redirectMock).toHaveBeenCalledWith("/invest");
+  it("redirects liquidity to the canonical earn route", () => {
+    expect(() => LiquidityCompatPage()).toThrow("REDIRECT:/earn");
+    expect(redirectMock).toHaveBeenCalledWith("/earn");
   });
 });

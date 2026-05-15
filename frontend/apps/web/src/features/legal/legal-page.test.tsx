@@ -23,9 +23,11 @@ describe("LegalPage", () => {
 
     expect(screen.getByRole("heading", { name: "Terms of Service" })).toBeDefined();
     expect(screen.getByText("Use of the frontend")).toBeDefined();
-    expect(screen.getByRole("link", { name: "Privacy" }).getAttribute("href")).toBe("/privacy");
+    expect(screen.getByRole("link", { name: "Privacy" }).getAttribute("href")).toBe(
+      "/legal/privacy"
+    );
     expect(screen.getByRole("link", { name: "Risk disclaimer" }).getAttribute("href")).toBe(
-      "/disclaimer"
+      "/legal/disclaimer"
     );
     expect(screen.getByRole("link", { name: "Terms" }).getAttribute("aria-current")).toBe("page");
   });

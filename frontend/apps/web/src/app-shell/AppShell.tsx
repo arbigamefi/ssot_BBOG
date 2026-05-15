@@ -10,28 +10,62 @@ import { AppHeader, type AppRoute } from "../components/AppHeader";
 import { SiteFooter } from "../components/SiteFooter";
 
 function getActiveRoute(pathname: string): AppRoute {
-  if (pathname === "/games") return "directory";
+  if (pathname === "/casino" || pathname === "/games") return "directory";
   if (pathname === "/sportsbook" || pathname.startsWith("/sportsbook/")) return "sportsbook";
-  if (pathname === "/bets" || pathname.startsWith("/bets/")) return "bets";
-  if (pathname === "/invest" || pathname.startsWith("/liquidity")) return "liquidity";
-  if (pathname === "/claims") return "claims";
+  if (
+    pathname === "/portfolio/activity" ||
+    pathname.startsWith("/portfolio/activity/") ||
+    pathname === "/bets" ||
+    pathname.startsWith("/bets/")
+  ) {
+    return "bets";
+  }
+  if (pathname === "/earn" || pathname === "/invest" || pathname.startsWith("/liquidity")) {
+    return "liquidity";
+  }
+  if (pathname === "/portfolio/claims" || pathname === "/claims") return "claims";
   if (pathname === "/referral") return "referral";
-  if (pathname === "/account") return "account";
+  if (pathname === "/portfolio" || pathname === "/account") return "account";
   if (pathname === "/ops") return "ops";
-  if (pathname === "/roulette" || pathname === "/games/roulette") return "roulette";
-  if (pathname === "/dice" || pathname === "/games/dice") return "dice";
-  if (pathname === "/cointoss" || pathname === "/games/coin-toss" || pathname === "/games/cointoss")
+  if (
+    pathname === "/roulette" ||
+    pathname === "/games/roulette" ||
+    pathname === "/casino/roulette"
+  ) {
+    return "roulette";
+  }
+  if (pathname === "/dice" || pathname === "/games/dice" || pathname === "/casino/dice") {
+    return "dice";
+  }
+  if (
+    pathname === "/cointoss" ||
+    pathname === "/games/coin-toss" ||
+    pathname === "/games/cointoss" ||
+    pathname === "/casino/coin-toss" ||
+    pathname === "/casino/cointoss"
+  ) {
     return "cointoss";
-  if (pathname === "/keno" || pathname === "/games/keno") return "keno";
+  }
+  if (pathname === "/keno" || pathname === "/games/keno" || pathname === "/casino/keno") {
+    return "keno";
+  }
   return "none";
 }
 
 function getShellVariant(pathname: string) {
   if (pathname === "/") return "marketing";
-  if (pathname === "/terms" || pathname === "/privacy" || pathname === "/disclaimer") {
+  if (
+    pathname === "/legal/terms" ||
+    pathname === "/legal/privacy" ||
+    pathname === "/legal/disclaimer" ||
+    pathname === "/terms" ||
+    pathname === "/privacy" ||
+    pathname === "/disclaimer"
+  ) {
     return "legal";
   }
   if (
+    pathname.startsWith("/casino/") ||
     pathname.startsWith("/games/") ||
     ["/roulette", "/dice", "/cointoss", "/keno"].some((path) => pathname.startsWith(path))
   ) {
