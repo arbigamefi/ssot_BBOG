@@ -80,23 +80,23 @@ find frontend/apps/web/src/app -name 'pageClient.tsx' -print0 \
 
 Observed baseline:
 
-| Check | Current |
-| --- | --- |
-| Working tree | clean |
-| Draft SSOT documents | 26 |
-| Accepted documents | 3, all ADRs |
-| `app/prototype` directory | absent |
-| `src/sandbox` directory | absent |
-| app route groups `(...)` | 0 |
-| `apps/web/src/app-shell` | absent |
-| `packages/ui/src/primitives` | absent |
-| `packages/ui/src/patterns` | absent |
-| `packages/ui/src/motion` | absent |
-| forbidden token/radius/shadow/transition/dark lines | 320 |
-| files with forbidden token/radius/shadow/transition/dark lines | 40 |
-| `pageClient.tsx` files over 600 LOC | 0 |
-| largest `pageClient.tsx` | `sportsbook/pageClient.tsx`, 409 LOC |
-| game-room files with old style vocabulary | 7 |
+| Check                                                          | Current                              |
+| -------------------------------------------------------------- | ------------------------------------ |
+| Working tree                                                   | clean                                |
+| Draft SSOT documents                                           | 26                                   |
+| Accepted documents                                             | 3, all ADRs                          |
+| `app/prototype` directory                                      | absent                               |
+| `src/sandbox` directory                                        | absent                               |
+| app route groups `(...)`                                       | 0                                    |
+| `apps/web/src/app-shell`                                       | absent                               |
+| `packages/ui/src/primitives`                                   | absent                               |
+| `packages/ui/src/patterns`                                     | absent                               |
+| `packages/ui/src/motion`                                       | absent                               |
+| forbidden token/radius/shadow/transition/dark lines            | 320                                  |
+| files with forbidden token/radius/shadow/transition/dark lines | 40                                   |
+| `pageClient.tsx` files over 600 LOC                            | 0                                    |
+| largest `pageClient.tsx`                                       | `sportsbook/pageClient.tsx`, 409 LOC |
+| game-room files with old style vocabulary                      | 7                                    |
 
 Interpretation:
 
@@ -593,15 +593,15 @@ Only after those exist should route pages be migrated.
 
 ## 9. Risk Register
 
-| Risk | Why it matters | Mitigation |
-| --- | --- | --- |
-| Docs remain Draft while code changes continue | Formal gates do not match reality | Treat this roadmap as transitional; do not claim Gate A/B/C closure until statuses are accepted |
-| Continuing local token sweeps | Can produce partial style consistency without architecture consistency | R1/R2/R3 must precede more page work |
-| Old routes kept for compatibility | Violates kill-list and IA | Keep redirects only; no legacy components |
-| `@ssot/ui/components/protocol` becomes permanent | It bypasses primitive/pattern split | Classify each file as pattern, app feature, or delete in R1/R8 |
-| Wagmi/RainbowKit provider mounted globally | Marketing pays product wallet cost | R3 provider island migration |
-| Sportsbook accidentally exposed as public placement | Regulatory and product-readiness risk | R7 gated-read-only rule |
-| CI added only at the end | Violations keep reappearing | R2 report-mode scripts, then phase-by-phase blocking |
+| Risk                                                | Why it matters                                                         | Mitigation                                                                                      |
+| --------------------------------------------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Docs remain Draft while code changes continue       | Formal gates do not match reality                                      | Treat this roadmap as transitional; do not claim Gate A/B/C closure until statuses are accepted |
+| Continuing local token sweeps                       | Can produce partial style consistency without architecture consistency | R1/R2/R3 must precede more page work                                                            |
+| Old routes kept for compatibility                   | Violates kill-list and IA                                              | Keep redirects only; no legacy components                                                       |
+| `@ssot/ui/components/protocol` becomes permanent    | It bypasses primitive/pattern split                                    | Classify each file as pattern, app feature, or delete in R1/R8                                  |
+| Wagmi/RainbowKit provider mounted globally          | Marketing pays product wallet cost                                     | R3 provider island migration                                                                    |
+| Sportsbook accidentally exposed as public placement | Regulatory and product-readiness risk                                  | R7 gated-read-only rule                                                                         |
+| CI added only at the end                            | Violations keep reappearing                                            | R2 report-mode scripts, then phase-by-phase blocking                                            |
 
 ## 10. Do Not Do Next
 
@@ -617,6 +617,62 @@ Only after those exist should route pages be migrated.
 ## 11. How To Enforce This Roadmap
 
 Before every implementation slice, cite one roadmap phase in the commit plan.
+
+## 12. Implementation Log
+
+### 2026-05-15 - R5 Casino Vertical Migration
+
+Status: completed as a transitional vertical migration.
+
+Changes:
+
+- moved the `features/games` vertical to `features/casino`;
+- renamed `GameMiniIcons.tsx` to `CasinoMiniIcons.tsx`;
+- added `features/casino/modules` as the casino module registry for Roulette,
+  Dice, Coin Toss, and Keno;
+- wired catalog and route helpers to the module registry;
+- removed old `features/games` imports from app and marketing routes;
+- retokenized the casino room surface to remove per-game color families,
+  hex utility classes, arbitrary radius utilities, inline shadow utilities,
+  `transition-all`, and `white/` opacity utilities from
+  `features/casino/room`;
+- kept `frontend/packages/ssot/**` untouched.
+
+Evidence:
+
+```bash
+rg -n "features/games|GameMiniIcons|\\.\\./games|/features/games" frontend/apps/web/src -S
+rg -n -e "bg-\\[#|text-\\[#|border-\\[#|shadow-\\[|rounded-(2xl|3xl|\\[)|purple|emerald|amber|fuchsia|indigo|white/|transition-all|\\bdark:" frontend/apps/web/src/features/casino/room -S
+pnpm -C frontend/apps/web test -- src/features/casino
+pnpm -C frontend/apps/web test
+pnpm -C frontend typecheck
+pnpm -C frontend/apps/web build
+pnpm -C frontend precheck:frontend -- --report
+git diff --check
+```
+
+Observed:
+
+- no old `features/games` app imports remain;
+- no R5-forbidden casino room style utilities remain;
+- casino slice tests passed: 18 files, 57 tests;
+- full web tests passed: 37 files, 133 tests;
+- `pnpm -C frontend typecheck` passed;
+- `pnpm -C frontend/apps/web build` passed with the known MetaMask optional
+  storage, ESLint plugin, `indexedDB`, and `punycode` warnings;
+- `precheck:frontend -- --report` improved forbidden-style warnings from the
+  earlier baseline of 320 to 246; remaining warnings are outside
+  `features/casino`;
+- browser smoke QA loaded `/casino/dice`, `/casino/roulette`, `/casino/keno`,
+  and `/casino/coin-toss` locally on port 3001 with expected route text and no
+  visible error overlay.
+
+Follow-up:
+
+- R6 should migrate `account`, `bets`, `claims`, and `referral` into
+  `features/portfolio`;
+- R8 still needs to convert the precheck report warnings into blocking checks
+  after the remaining legacy components are removed.
 
 Useful commands:
 

@@ -96,7 +96,7 @@ export function CoinSideSelector({
       <div className="relative flex rounded-xl border border-border bg-surface-0 p-1.5 shadow-inner-e1">
         <div
           className={cn(
-            "absolute inset-y-1.5 w-[calc(50%-6px)] rounded-lg bg-brand shadow-glow transition-all duration-[400ms] ease-out",
+            "absolute inset-y-1.5 w-[calc(50%-6px)] rounded-lg bg-brand shadow-glow transition-[left] duration-[400ms] ease-out",
             coinSide === "HEADS" ? "left-1.5" : "left-[calc(50%+4.5px)]"
           )}
         />

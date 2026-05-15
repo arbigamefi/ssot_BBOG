@@ -1,5 +1,5 @@
 import type { Address } from "@ssot/ssot/sdk";
-import type { CatalogRoom } from "../games/catalog";
+import type { CatalogRoom } from "../casino/catalog";
 
 export type AssetOverview = {
   address: Address;

@@ -11,13 +11,13 @@ import {
 } from "@heroicons/react/24/outline";
 
 import { Placeholder } from "../../../components/Placeholder";
-import { getCatalogRooms } from "../../../features/games/catalog";
+import { getCatalogRooms } from "../../../features/casino/catalog";
 import {
   CoinTossMiniIcon,
   DiceMiniIcon,
   KenoMiniIcon,
   RouletteMiniIcon
-} from "../../../features/games/GameMiniIcons";
+} from "../../../features/casino/CasinoMiniIcons";
 import { useRelease } from "../../../ssot/release/ReleaseProvider";
 
 const ROOM_ICON_MAP: Record<string, React.ReactNode> = {

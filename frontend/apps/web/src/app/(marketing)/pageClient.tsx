@@ -6,7 +6,7 @@ import type { BetRow } from "@ssot/ssot/indexer";
 import type { Address } from "@ssot/ssot/sdk";
 
 import { useBets } from "../../features/bets/useBets";
-import { getCatalogRooms } from "../../features/games/catalog";
+import { getCatalogRooms } from "../../features/casino/catalog";
 import {
   formatTokenAmount,
   shortAddress,

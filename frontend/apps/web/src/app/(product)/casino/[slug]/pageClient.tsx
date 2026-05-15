@@ -12,27 +12,27 @@ import { useSSOTSDK } from "../../../../ssot/sdk";
 import { useSSOTRuntime } from "../../../../ssot/runtime";
 import { usePlaceBetStepper } from "../../../../features/betting/usePlaceBetStepper";
 import { useConnectModal } from "../../../../app-shell/WalletButton";
-import { toGameMeta, type GameMeta } from "../../../../features/games/room/model";
-import { calculateGameWinChance } from "../../../../features/games/room/params";
-import { executeGamePlaceBetAction } from "../../../../features/games/room/place-bet-action";
+import { toGameMeta, type GameMeta } from "../../../../features/casino/room/model";
+import { calculateGameWinChance } from "../../../../features/casino/room/params";
+import { executeGamePlaceBetAction } from "../../../../features/casino/room/place-bet-action";
 import {
   formatGameMaxPayout,
   formatHouseEdge,
   getGameDisplayName
-} from "../../../../features/games/room/presentation";
-import { GameRoomAuditLedger } from "../../../../features/games/room/audit-ledger";
-import { GameRoomBetPanel } from "../../../../features/games/room/bet-panel";
+} from "../../../../features/casino/room/presentation";
+import { GameRoomAuditLedger } from "../../../../features/casino/room/audit-ledger";
+import { GameRoomBetPanel } from "../../../../features/casino/room/bet-panel";
 import {
   useBetStepperFailureToast,
   useVrfTimeoutToast
-} from "../../../../features/games/room/feedback";
-import { useGameWalletBalance, useKenoStrobeSpots } from "../../../../features/games/room/hooks";
+} from "../../../../features/casino/room/feedback";
+import { useGameWalletBalance, useKenoStrobeSpots } from "../../../../features/casino/room/hooks";
 import {
   useGameResolutionEffect,
   type GameHistoryEntry
-} from "../../../../features/games/room/resolution";
-import { GameRoomRightPane } from "../../../../features/games/room/right-pane";
-import { GameRoomShell } from "../../../../features/games/room/game-room-shell";
+} from "../../../../features/casino/room/resolution";
+import { GameRoomRightPane } from "../../../../features/casino/room/right-pane";
+import { GameRoomShell } from "../../../../features/casino/room/game-room-shell";
 
 /* ─── Main Logic ─── */
 

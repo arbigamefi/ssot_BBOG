@@ -9,7 +9,7 @@ import {
   DiceMiniIcon,
   KenoMiniIcon,
   RouletteMiniIcon
-} from "../games/GameMiniIcons";
+} from "../casino/CasinoMiniIcons";
 
 const ROOM_ICON_MAP: Record<string, React.ReactNode> = {
   dice: <DiceMiniIcon />,
