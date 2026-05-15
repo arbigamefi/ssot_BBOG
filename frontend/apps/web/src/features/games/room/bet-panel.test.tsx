@@ -31,7 +31,6 @@ const baseState: GameRoomBetPanelState = { status: "idle" };
 function renderPanel(overrides: Partial<React.ComponentProps<typeof GameRoomBetPanel>> = {}) {
   const props: React.ComponentProps<typeof GameRoomBetPanel> = {
     game: diceGame,
-    themeColor: "purple",
     walletBalance: "1,450.00 USDC",
     isSynced: true,
     betAmount: 10,

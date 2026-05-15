@@ -35,7 +35,7 @@ describe("GameRoomAuditLedger", () => {
   afterEach(() => cleanup());
 
   it("renders the standby state without recent bets", () => {
-    render(<GameRoomAuditLedger game={game} themeColor="emerald" betAmount={10} recentBets={[]} />);
+    render(<GameRoomAuditLedger game={game} betAmount={10} recentBets={[]} />);
 
     expect(screen.getByText("Immutable Audit Stream")).toBeDefined();
     expect(screen.getByText("STANDBY FOR ON-CHAIN TRANSACTION EMIT...")).toBeDefined();
@@ -45,7 +45,6 @@ describe("GameRoomAuditLedger", () => {
     render(
       <GameRoomAuditLedger
         game={game}
-        themeColor="emerald"
         betAmount={25}
         recentBets={[
           {

@@ -1,13 +1,6 @@
 import * as React from "react";
 import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline";
-import {
-  AuditTabs,
-  AuditTableCell,
-  AuditTableHeader,
-  AuditTableRow,
-  StatusBadge,
-  cn
-} from "@ssot/ui";
+import { AuditTabs, AuditTableCell, AuditTableHeader, AuditTableRow, StatusBadge } from "@ssot/ui";
 
 import { mapBetState, shortHex, type GameMeta } from "./model";
 
@@ -20,27 +13,19 @@ export type GameAuditBet = {
 
 export function GameRoomAuditLedger({
   game,
-  themeColor,
   betAmount,
   recentBets
 }: {
   game: GameMeta;
-  themeColor: string;
   betAmount: number;
   recentBets: readonly GameAuditBet[];
 }) {
   return (
-    <div className="flex flex-col pointer-events-auto overflow-hidden">
-      <div className="px-8 py-6 border-b border-white/5 bg-white/[0.01]">
-        <AuditTabs
-          activeColorClass={cn(
-            themeColor === "emerald"
-              ? "border-emerald-400 text-emerald-400"
-              : "border-purple-400 text-purple-400"
-          )}
-        >
+    <div className="pointer-events-auto flex flex-col overflow-hidden">
+      <div className="border-b border-border-soft bg-surface-1 px-8 py-6">
+        <AuditTabs activeColorClass="border-brand text-brand">
           <AuditTableHeader>
-            <div className="grid grid-cols-[1.2fr_1fr_1.5fr_1.2fr_80px] text-white/20 font-black uppercase tracking-[0.2em] text-[10px] px-6 w-full">
+            <div className="grid w-full grid-cols-[1.2fr_1fr_1.5fr_1.2fr_80px] px-6 text-[10px] font-black uppercase tracking-[0.2em] text-fg-subtle">
               <div>Timestamp / Auth</div>
               <div>Submodule</div>
               <div>Wager Parameters</div>
@@ -48,38 +33,33 @@ export function GameRoomAuditLedger({
               <div className="text-right">Audit</div>
             </div>
           </AuditTableHeader>
-          <div className="flex flex-col gap-2 mt-4 px-2">
+          <div className="mt-4 flex flex-col gap-2 px-2">
             {recentBets.length > 0 ? (
               recentBets.map((bet, index) => (
                 <AuditTableRow
                   key={bet.id ?? `${bet.betId.toString()}-${index}`}
-                  className="hover:bg-white/[0.03] transition-all border border-white/5 py-5 px-6 rounded-2xl bg-black/20 group"
+                  className="group rounded-lg border border-border-soft bg-surface-0 px-6 py-5 transition-colors hover:bg-surface-2"
                 >
-                  <div className="grid grid-cols-[1.2fr_1fr_1.5fr_1.2fr_80px] items-center w-full">
+                  <div className="grid w-full grid-cols-[1.2fr_1fr_1.5fr_1.2fr_80px] items-center">
                     <AuditTableCell>
                       <div className="flex flex-col">
-                        <span className="text-white font-mono text-xs font-bold">
+                        <span className="font-mono text-xs font-bold text-fg">
                           {new Date().toLocaleTimeString()}
                         </span>
-                        <span className="text-[10px] font-mono text-white/30">
+                        <span className="font-mono text-[10px] text-fg-subtle">
                           {shortHex(bet.player)}
                         </span>
                       </div>
                     </AuditTableCell>
                     <AuditTableCell>
-                      <span className="font-black text-white/90 text-sm">{game.label}</span>
+                      <span className="text-sm font-black text-fg">{game.label}</span>
                     </AuditTableCell>
                     <AuditTableCell>
                       <div className="flex flex-col">
-                        <span
-                          className={cn(
-                            "font-black font-mono text-xs mb-1",
-                            themeColor === "emerald" ? "text-emerald-500" : "text-purple-500"
-                          )}
-                        >
+                        <span className="mb-1 font-mono text-xs font-black text-brand">
                           {game.slug.toUpperCase()} SELECTION
                         </span>
-                        <span className="text-[10px] text-white/40 font-mono tracking-tight">
+                        <span className="font-mono text-[10px] tracking-tight text-fg-subtle">
                           {betAmount} USDC - ID: {bet.betId.toString().slice(-12)}
                         </span>
                       </div>
@@ -91,20 +71,20 @@ export function GameRoomAuditLedger({
                       <button
                         type="button"
                         aria-label={`Open audit for bet ${bet.betId.toString()}`}
-                        className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all group-hover:scale-110 border border-white/5"
+                        className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface-1 transition-transform hover:bg-surface-2 group-hover:scale-105"
                       >
-                        <ArrowTopRightOnSquareIcon className="h-4 w-4 text-white/60" />
+                        <ArrowTopRightOnSquareIcon className="h-4 w-4 text-fg-muted" />
                       </button>
                     </AuditTableCell>
                   </div>
                 </AuditTableRow>
               ))
             ) : (
-              <div className="py-24 text-center border-2 border-white/5 rounded-3xl border-dashed">
-                <div className="text-white/5 text-[10px] font-black uppercase tracking-[0.5em] mb-2">
+              <div className="rounded-xl border-2 border-dashed border-border-soft py-24 text-center">
+                <div className="mb-2 text-[10px] font-black uppercase tracking-[0.5em] text-fg-subtle">
                   Immutable Audit Stream
                 </div>
-                <div className="text-white/20 text-xs font-bold font-mono">
+                <div className="font-mono text-xs font-bold text-fg-subtle">
                   STANDBY FOR ON-CHAIN TRANSACTION EMIT...
                 </div>
               </div>

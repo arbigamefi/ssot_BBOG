@@ -1,20 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  formatGameMaxPayout,
-  formatHouseEdge,
-  getGameDisplayName,
-  getGameThemeColor
-} from "./presentation";
+import { formatGameMaxPayout, formatHouseEdge, getGameDisplayName } from "./presentation";
 
 describe("game room presentation helpers", () => {
-  it("keeps legacy per-game theme mapping centralized", () => {
-    expect(getGameThemeColor("dice")).toBe("purple");
-    expect(getGameThemeColor("roulette")).toBe("emerald");
-    expect(getGameThemeColor("coin-toss")).toBe("amber");
-    expect(getGameThemeColor("keno")).toBe("fuchsia");
-  });
-
   it("formats display names and house edge fallbacks", () => {
     expect(
       getGameDisplayName({

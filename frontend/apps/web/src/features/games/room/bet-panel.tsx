@@ -16,7 +16,6 @@ export { getPlaceBetButtonLabel, isPlaceBetButtonDisabled } from "./place-bet-bu
 
 export function GameRoomBetPanel({
   game,
-  themeColor,
   walletBalance,
   isSynced,
   betAmount,
@@ -45,7 +44,6 @@ export function GameRoomBetPanel({
   onPlaceBet
 }: {
   game: GameMeta;
-  themeColor: string;
   walletBalance: string | null;
   isSynced: boolean;
   betAmount: number;
@@ -75,11 +73,11 @@ export function GameRoomBetPanel({
 }) {
   return (
     <>
-      <div className="flex justify-between items-center mb-6">
-        <span className="text-sm font-bold text-white/60 flex items-center gap-2">
-          <WalletIcon className="w-4 h-4" /> Wallet Balance
+      <div className="mb-6 flex items-center justify-between">
+        <span className="flex items-center gap-2 text-sm font-bold text-fg-muted">
+          <WalletIcon className="h-4 w-4" /> Wallet Balance
         </span>
-        <span className="font-mono text-white bg-white/5 py-1 px-3 rounded-lg border border-white/10 shadow-inner">
+        <span className="rounded-lg border border-border bg-surface-1 px-3 py-1 font-mono text-fg shadow-inner-e1">
           {!isSynced ? "Syncing..." : (walletBalance ?? "-")}
         </span>
       </div>
@@ -106,7 +104,6 @@ export function GameRoomBetPanel({
         betAmount={betAmount}
         betCount={betCount}
         isPending={isPending}
-        themeColor={themeColor}
         onBetCountChange={onBetCountChange}
       />
 
@@ -120,22 +117,20 @@ export function GameRoomBetPanel({
       />
 
       <BetPayoutSummary
-        themeColor={themeColor}
         multiplier={multiplier}
         winChance={winChance}
         expectedPayout={expectedPayout}
       />
 
       {state.status === "failed" && state.error?.message && (
-        <div className="mb-4 bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-start gap-3 text-red-400">
-          <InformationCircleIcon className="w-5 h-5 flex-shrink-0" />
-          <div className="text-xs font-bold font-mono">{state.error.message}</div>
+        <div className="mb-4 flex items-start gap-3 rounded-lg border border-danger/30 bg-danger-soft p-4 text-danger">
+          <InformationCircleIcon className="h-5 w-5 flex-shrink-0" />
+          <div className="font-mono text-xs font-bold">{state.error.message}</div>
         </div>
       )}
 
       <PlaceBetButton
         gameSlug={game.slug}
-        coinSide={coinSide}
         hasAccount={hasAccount}
         isPending={isPending}
         winChance={winChance}

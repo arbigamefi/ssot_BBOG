@@ -1,7 +1,6 @@
 import * as React from "react";
 import { cn } from "@ssot/ui";
 
-import type { CoinSide } from "./params";
 import type { GameRoomBetPanelState } from "./bet-panel-state";
 
 export function getPlaceBetButtonLabel({
@@ -44,7 +43,6 @@ export function isPlaceBetButtonDisabled({
 
 export function PlaceBetButton({
   gameSlug,
-  coinSide,
   hasAccount,
   isPending,
   winChance,
@@ -52,7 +50,6 @@ export function PlaceBetButton({
   onClick
 }: {
   gameSlug: string;
-  coinSide: CoinSide;
   hasAccount: boolean;
   isPending: boolean;
   winChance: number;
@@ -67,24 +64,16 @@ export function PlaceBetButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "mt-8 w-full py-6 rounded-2xl text-white font-extrabold text-xl shadow-2xl transition-all border-b-[4px]",
+        "mt-8 w-full rounded-lg border-b-[4px] py-6 text-xl font-extrabold transition-colors",
         isPending ||
           state.status === "reconciled" ||
           state.status === "submitting" ||
           state.status === "mined" ||
           state.status === "planning"
-          ? "bg-[#111] opacity-50 cursor-not-allowed border-black text-white/50 shadow-none hover:bg-[#111]"
+          ? "cursor-not-allowed border-border bg-surface-3 text-fg-subtle opacity-50 shadow-none"
           : state.status === "failed"
-            ? "bg-red-600 border-red-800 text-white hover:bg-red-500"
-            : gameSlug === "dice"
-              ? "bg-purple-600 border-purple-800 text-white hover:bg-purple-500"
-              : gameSlug === "roulette"
-                ? "bg-emerald-600 border-emerald-800 text-white hover:bg-emerald-500"
-                : gameSlug === "coin-toss"
-                  ? coinSide === "HEADS"
-                    ? "bg-amber-500 border-amber-700 text-amber-950 hover:bg-amber-400"
-                    : "bg-indigo-600 border-indigo-800 text-white hover:bg-indigo-500"
-                  : "bg-fuchsia-600 border-fuchsia-800 text-white hover:bg-fuchsia-500"
+            ? "border-danger bg-danger text-fg hover:bg-danger/90"
+            : "border-brand-active bg-brand text-fg shadow-glow hover:bg-brand-hover"
       )}
     >
       {getPlaceBetButtonLabel({ hasAccount, state, isPending })}

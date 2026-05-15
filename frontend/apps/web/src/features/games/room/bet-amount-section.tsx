@@ -23,50 +23,50 @@ export function BetAmountSection({
 
   return (
     <div className="mb-6">
-      <label className="text-[10px] uppercase tracking-widest font-bold text-white/40 mb-2 block">
+      <label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-fg-subtle">
         Bet Amount
       </label>
       <div
         className={cn(
-          "bg-[#050505] border border-white/10 rounded-[1.5rem] p-2 flex flex-col gap-2 relative shadow-inner",
-          isPending ? "opacity-50" : "focus-within:border-white/20"
+          "relative flex flex-col gap-2 rounded-xl border border-border bg-surface-0 p-2 shadow-inner-e1",
+          isPending ? "opacity-50" : "focus-within:border-brand/40"
         )}
       >
         <div className="flex items-center px-4 pt-2">
-          <CurrencyDollarIcon className="w-6 h-6 text-white/20" />
+          <CurrencyDollarIcon className="h-6 w-6 text-fg-subtle" />
           <input
             type="number"
             value={betAmount}
             onChange={(event) => onBetAmountChange(Math.max(1, parseInt(event.target.value) || 0))}
-            className="bg-transparent border-none outline-none text-4xl font-mono text-white w-full pr-2 text-right"
+            className="w-full border-none bg-transparent pr-2 text-right font-mono text-4xl text-fg outline-none"
           />
         </div>
-        <div className="flex gap-1 p-1 bg-white/[0.02] rounded-xl border border-white/5">
+        <div className="flex gap-1 rounded-lg border border-border-soft bg-surface-1 p-1">
           <button
             type="button"
             onClick={() => setRoundedBetAmount(1)}
-            className="flex-1 py-1.5 rounded-lg bg-[#0a0a0a] hover:bg-white/10 text-[10px] uppercase font-bold text-white/40 hover:text-white transition-all"
+            className="flex-1 rounded-md bg-surface-0 py-1.5 text-[10px] font-bold uppercase text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg"
           >
             Min
           </button>
           <button
             type="button"
             onClick={() => setRoundedBetAmount(betAmount / 2)}
-            className="flex-1 py-1.5 rounded-lg bg-[#0a0a0a] hover:bg-white/10 text-[10px] uppercase font-bold text-white/40 hover:text-white transition-all"
+            className="flex-1 rounded-md bg-surface-0 py-1.5 text-[10px] font-bold uppercase text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg"
           >
             1/2
           </button>
           <button
             type="button"
             onClick={() => setRoundedBetAmount(betAmount * 2)}
-            className="flex-1 py-1.5 rounded-lg bg-[#0a0a0a] hover:bg-white/10 text-[10px] uppercase font-bold text-white/40 hover:text-white transition-all"
+            className="flex-1 rounded-md bg-surface-0 py-1.5 text-[10px] font-bold uppercase text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg"
           >
             2x
           </button>
           <button
             type="button"
             onClick={() => setRoundedBetAmount(parseWalletBalanceAmount(walletBalance))}
-            className="flex-1 py-1.5 rounded-lg bg-[#0a0a0a] hover:bg-white/10 text-[10px] uppercase font-bold text-white/40 hover:text-white transition-all"
+            className="flex-1 rounded-md bg-surface-0 py-1.5 text-[10px] font-bold uppercase text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg"
           >
             Max
           </button>

@@ -18,8 +18,7 @@ import { executeGamePlaceBetAction } from "../../../features/games/room/place-be
 import {
   formatGameMaxPayout,
   formatHouseEdge,
-  getGameDisplayName,
-  getGameThemeColor
+  getGameDisplayName
 } from "../../../features/games/room/presentation";
 import { GameRoomAuditLedger } from "../../../features/games/room/audit-ledger";
 import { GameRoomBetPanel } from "../../../features/games/room/bet-panel";
@@ -119,8 +118,6 @@ export function GamePageClient({ slug }: { slug: string }) {
       />
     );
 
-  const themeColor = getGameThemeColor(game.slug);
-
   // A5: Live houseEdge and maxPayout from release gamesMeta
   const gameMeta = release?.gamesMeta?.find((m: any) => m.slug === game.slug);
   const houseEdge = formatHouseEdge(gameMeta, game.slug);
@@ -164,7 +161,6 @@ export function GamePageClient({ slug }: { slug: string }) {
   const LeftPane = (
     <GameRoomBetPanel
       game={game}
-      themeColor={themeColor}
       walletBalance={walletBalance}
       isSynced={Boolean(isSynced)}
       betAmount={betAmount}
@@ -222,12 +218,7 @@ export function GamePageClient({ slug }: { slug: string }) {
   );
 
   const AuditLedger = (
-    <GameRoomAuditLedger
-      game={game}
-      themeColor={themeColor}
-      betAmount={betAmount}
-      recentBets={recentBets}
-    />
+    <GameRoomAuditLedger game={game} betAmount={betAmount} recentBets={recentBets} />
   );
 
   return (

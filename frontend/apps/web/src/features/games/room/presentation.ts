@@ -1,19 +1,10 @@
 import type { GameMeta } from "./model";
 
-export type GameThemeColor = "purple" | "emerald" | "amber" | "fuchsia";
-
 export type ReleaseGamePresentationMeta = {
   slug?: string;
   houseEdgeBps?: number;
   maxPayout?: string | number | bigint;
 };
-
-export function getGameThemeColor(slug: string): GameThemeColor {
-  if (slug === "roulette") return "emerald";
-  if (slug === "coin-toss") return "amber";
-  if (slug === "keno") return "fuchsia";
-  return "purple";
-}
 
 export function getGameDisplayName(game: GameMeta) {
   if (game.slug === "dice") return "Precision Dice";
