@@ -62,9 +62,31 @@ existing `CANARY_PLAYER_PRIVATE_KEY`, `CANARY_ODDS_SIGNER_PRIVATE_KEY`, and
 Default mode is `FOOTBALL_CANARY_MODE=local-resolve`, which is simulation-only and uses `vm.warp` to
 run the full lifecycle in one pass. Do not use `local-resolve` with `BROADCAST=1`.
 
+Use `FOOTBALL_CANARY_MODE=open-market` when the goal is to test the frontend/provider ticket path. This
+mode only creates and opens the 3-outcome market; it does not place tickets and does not lock the
+market. Record the printed `FOOTBALL_MARKET_ID`, then use `/sportsbook/[marketId]` to fetch a signed
+odds snapshot and place the canary ticket through the frontend SDK path.
+
 ## Public Testnet Flow
 
 For Base Sepolia, use two or three broadcasts because real time must pass for start and finality.
+
+0. Optional frontend ticket-placement setup: create/open the market without placing tickets:
+
+```bash
+FOOTBALL_CANARY_MODE=open-market BROADCAST=1 ENV_FILE=.env ROLE_ENV_FILE=.env.sports-roles.local make sports-football-canary-v13
+```
+
+Record the printed:
+
+- `FOOTBALL_MARKET_ID`
+- `lockTime`
+- `startsAt`
+
+Then configure the frontend server-only odds route with `THE_ODDS_API_KEY`,
+`CANARY_ODDS_SIGNER_PRIVATE_KEY`, `SPORTS_ODDS_SIGNER`, `RPC_URL`, and the selected provider event
+metadata. The market must remain open while the frontend route signs and the wallet broadcasts
+`SportsHub.placeTicket(...)`.
 
 1. Create/open/lock the 3-outcome market and place tickets:
 
