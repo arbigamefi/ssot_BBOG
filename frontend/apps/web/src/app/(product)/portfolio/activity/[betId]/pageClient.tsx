@@ -7,20 +7,26 @@ import type { BetRow, HubEventRow } from "@ssot/ssot/indexer";
 import { toast } from "@ssot/ui";
 
 import { PageTransition } from "../../../../../components/PageTransition";
-import { BetDetailActions } from "../../../../../features/bet-detail/bet-detail-actions";
-import { BetDetailFacts } from "../../../../../features/bet-detail/bet-detail-facts";
-import { BetDetailHero } from "../../../../../features/bet-detail/bet-detail-hero";
-import { BetDetailLifecycle } from "../../../../../features/bet-detail/bet-detail-lifecycle";
-import { BetDetailSummary } from "../../../../../features/bet-detail/bet-detail-summary";
-import { BetDetailTimeline } from "../../../../../features/bet-detail/bet-detail-timeline";
+import { BetDetailActions } from "../../../../../features/portfolio/activity/detail/bet-detail-actions";
+import { BetDetailFacts } from "../../../../../features/portfolio/activity/detail/bet-detail-facts";
+import { BetDetailHero } from "../../../../../features/portfolio/activity/detail/bet-detail-hero";
+import { BetDetailLifecycle } from "../../../../../features/portfolio/activity/detail/bet-detail-lifecycle";
+import { BetDetailSummary } from "../../../../../features/portfolio/activity/detail/bet-detail-summary";
+import { BetDetailTimeline } from "../../../../../features/portfolio/activity/detail/bet-detail-timeline";
 import {
   formatTimestamp,
   formatTokenAmount,
   getExplorerBaseUrl,
   shortHex
-} from "../../../../../features/bet-detail/format";
-import { getStateLabel, matchesBetId } from "../../../../../features/bet-detail/lifecycle";
-import type { BetDetailFact, BetDetailMetric } from "../../../../../features/bet-detail/types";
+} from "../../../../../features/portfolio/activity/detail/format";
+import {
+  getStateLabel,
+  matchesBetId
+} from "../../../../../features/portfolio/activity/detail/lifecycle";
+import type {
+  BetDetailFact,
+  BetDetailMetric
+} from "../../../../../features/portfolio/activity/detail/types";
 import { useDirectTxAction } from "../../../../../features/tx/useDirectTxAction";
 import { useRelease } from "../../../../../ssot/release/ReleaseProvider";
 import { useSSOTRuntime } from "../../../../../ssot/runtime";

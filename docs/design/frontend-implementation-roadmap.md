@@ -674,6 +674,60 @@ Follow-up:
 - R8 still needs to convert the precheck report warnings into blocking checks
   after the remaining legacy components are removed.
 
+### 2026-05-15 - R6 Portfolio Vertical Convergence
+
+Status: completed as a physical feature-boundary migration.
+
+Changes:
+
+- moved account overview files into `features/portfolio/overview`;
+- moved betting activity UI files into `features/portfolio/activity`;
+- moved bet detail files into `features/portfolio/activity/detail`;
+- moved claims files into `features/portfolio/claims`;
+- moved referral files into `features/portfolio/referral`;
+- moved shared betting data hooks from `features/bets` to `features/betting`;
+- updated canonical portfolio, casino, and marketing imports to the new
+  boundaries;
+- removed the old physical directories:
+  `features/account`, `features/bets`, `features/bet-detail`,
+  `features/claims`, and `features/referral`;
+- kept legacy URL routes as redirect boundaries only;
+- kept `frontend/packages/ssot/**` untouched.
+
+Evidence:
+
+```bash
+rg -n "features/(account|bets|claims|referral|bet-detail)" frontend/apps/web/src -S
+test ! -d frontend/apps/web/src/features/account
+test ! -d frontend/apps/web/src/features/bets
+test ! -d frontend/apps/web/src/features/bet-detail
+test ! -d frontend/apps/web/src/features/claims
+test ! -d frontend/apps/web/src/features/referral
+pnpm -C frontend/apps/web test
+pnpm -C frontend typecheck
+pnpm -C frontend/apps/web build
+pnpm -C frontend precheck:frontend -- --report
+git diff --check
+```
+
+Observed:
+
+- no app imports reference the old feature paths;
+- the old physical feature directories are absent;
+- full web tests passed: 37 files, 133 tests;
+- `pnpm -C frontend typecheck` passed;
+- `pnpm -C frontend/apps/web build` passed with the known MetaMask optional
+  storage, ESLint plugin, `indexedDB`, and `punycode` warnings;
+- `precheck:frontend -- --report` remains at 246 forbidden-style warnings and
+  2 legacy-shell warnings, which are outside the R6 scope.
+
+Follow-up:
+
+- R7 should keep `/sportsbook` gated and move sportsbook-specific code under
+  `features/sportsbook`;
+- R8 should remove the remaining stale app components and flip selected
+  prechecks from report-only to blocking.
+
 Useful commands:
 
 ```bash

@@ -1,6 +1,6 @@
 import type { DomainError } from "@ssot/ssot";
 
-import { formatUnits } from "../betting/model/units";
+import { formatUnits } from "../../betting/model/units";
 
 export function getExplorerBaseUrl(chainId: number) {
   switch (chainId) {

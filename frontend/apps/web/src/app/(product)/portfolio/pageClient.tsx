@@ -8,20 +8,24 @@ import { ErrorCallout, toast, type TxStatus } from "@ssot/ui";
 
 import { PageTransition } from "../../../components/PageTransition";
 import { Placeholder } from "../../../components/Placeholder";
-import { AccountContextCard } from "../../../features/account/account-context-card";
-import { AccountHero } from "../../../features/account/account-hero";
-import { AccountIdentityCard } from "../../../features/account/account-identity-card";
-import { AccountJournal } from "../../../features/account/account-journal";
-import { AccountPositionsPanel } from "../../../features/account/account-positions-panel";
-import { AccountRefundCard } from "../../../features/account/account-refund-card";
-import { formatAmount, getExplorerBaseUrl, shortHex } from "../../../features/account/format";
+import { AccountContextCard } from "../../../features/portfolio/overview/account-context-card";
+import { AccountHero } from "../../../features/portfolio/overview/account-hero";
+import { AccountIdentityCard } from "../../../features/portfolio/overview/account-identity-card";
+import { AccountJournal } from "../../../features/portfolio/overview/account-journal";
+import { AccountPositionsPanel } from "../../../features/portfolio/overview/account-positions-panel";
+import { AccountRefundCard } from "../../../features/portfolio/overview/account-refund-card";
+import {
+  formatAmount,
+  getExplorerBaseUrl,
+  shortHex
+} from "../../../features/portfolio/overview/format";
 import type {
   AccountAssetRow,
   AccountFlowState,
   AccountJournalRow,
   AccountMetric
-} from "../../../features/account/types";
-import { useTxJournal } from "../../../features/account/useTxJournal";
+} from "../../../features/portfolio/overview/types";
+import { useTxJournal } from "../../../features/portfolio/overview/useTxJournal";
 import { useDirectTxAction } from "../../../features/tx/useDirectTxAction";
 import { useRelease } from "../../../ssot/release/ReleaseProvider";
 import { useSSOTSDK } from "../../../ssot/sdk";

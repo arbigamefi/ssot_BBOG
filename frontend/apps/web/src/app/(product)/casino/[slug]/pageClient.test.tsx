@@ -33,7 +33,7 @@ vi.mock("../../../../ssot/release/ReleaseProvider", () => ({
   })
 }));
 
-vi.mock("../../../../features/bets/useBetsByGame", () => ({
+vi.mock("../../../../features/betting/useBetsByGame", () => ({
   useBetsByGame: () => ({
     data: state.bets,
     isLoading: state.betsLoading,

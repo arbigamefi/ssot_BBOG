@@ -45,7 +45,7 @@ vi.mock("../../../components/Placeholder", () => ({
   )
 }));
 
-vi.mock("../../../features/account/useTxJournal", () => ({
+vi.mock("../../../features/portfolio/overview/useTxJournal", () => ({
   useTxJournal: () => ({ data: [] })
 }));
 

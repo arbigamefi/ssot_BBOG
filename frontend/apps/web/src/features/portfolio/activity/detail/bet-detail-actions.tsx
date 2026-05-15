@@ -2,7 +2,7 @@ import * as React from "react";
 import { ErrorCallout, TxStatusChip, TxStepper } from "@ssot/ui";
 
 import { shortHex } from "./format";
-import type { useDirectTxAction } from "../tx/useDirectTxAction";
+import type { useDirectTxAction } from "../../../tx/useDirectTxAction";
 
 type ActionFlow = ReturnType<typeof useDirectTxAction>;
 

@@ -7,20 +7,23 @@ import { toast, type TxStatus } from "@ssot/ui";
 
 import { PageTransition } from "../../../../components/PageTransition";
 import { Placeholder } from "../../../../components/Placeholder";
-import { ClaimsActionPanel } from "../../../../features/claims/claims-action-panel";
-import { ClaimsBuckets } from "../../../../features/claims/claims-buckets";
-import { ClaimsHero } from "../../../../features/claims/claims-hero";
-import { ClaimsJournal, type ClaimsJournalRow } from "../../../../features/claims/claims-journal";
+import { ClaimsActionPanel } from "../../../../features/portfolio/claims/claims-action-panel";
+import { ClaimsBuckets } from "../../../../features/portfolio/claims/claims-buckets";
+import { ClaimsHero } from "../../../../features/portfolio/claims/claims-hero";
+import {
+  ClaimsJournal,
+  type ClaimsJournalRow
+} from "../../../../features/portfolio/claims/claims-journal";
 import {
   formatTokenAmount,
   getExplorerBaseUrl,
   shortHex
-} from "../../../../features/claims/format";
+} from "../../../../features/portfolio/claims/format";
 import type {
   ClaimsAction,
   ClaimsFlowState,
   ClaimsMetric
-} from "../../../../features/claims/types";
+} from "../../../../features/portfolio/claims/types";
 import { formatUnits, parseDecimalToUnits } from "../../../../features/betting/model/units";
 import { useDirectTxAction } from "../../../../features/tx/useDirectTxAction";
 import { useRelease } from "../../../../ssot/release/ReleaseProvider";

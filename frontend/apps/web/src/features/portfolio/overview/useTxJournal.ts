@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useSSOTRuntime } from "../../ssot/runtime";
+
+import { useSSOTRuntime } from "../../../ssot/runtime";
 
 export function useTxJournal(limit = 50) {
   const { db } = useSSOTRuntime();

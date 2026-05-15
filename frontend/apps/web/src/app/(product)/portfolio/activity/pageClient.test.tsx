@@ -22,7 +22,7 @@ vi.mock("../../../../ssot/release/ReleaseProvider", () => ({
   useRelease: () => ({ release: state.release })
 }));
 
-vi.mock("../../../../features/bets/useBets", () => ({
+vi.mock("../../../../features/betting/useBets", () => ({
   useBets: () => ({ data: state.bets, isLoading: state.loading })
 }));
 

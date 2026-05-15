@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import { formatUnits } from "../betting/model/units";
+import { formatUnits } from "../../betting/model/units";
 import { formatTokenAmount } from "./format";
 import { ClaimsActionTrace } from "./claims-action-trace";
 import type { ClaimsAction, ClaimsFlowState } from "./types";

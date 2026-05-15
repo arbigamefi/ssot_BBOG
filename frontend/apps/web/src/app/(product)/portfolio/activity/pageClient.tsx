@@ -4,9 +4,9 @@ import * as React from "react";
 import type { BetRow } from "@ssot/ssot/indexer";
 
 import { PageTransition } from "../../../../components/PageTransition";
-import { BetsFilterTabs } from "../../../../features/bets/bets-filter-tabs";
-import { BetsHero } from "../../../../features/bets/bets-hero";
-import { BetsLedger } from "../../../../features/bets/bets-ledger";
+import { BetsFilterTabs } from "../../../../features/portfolio/activity/bets-filter-tabs";
+import { BetsHero } from "../../../../features/portfolio/activity/bets-hero";
+import { BetsLedger } from "../../../../features/portfolio/activity/bets-ledger";
 import {
   formatOutcome,
   formatRelativeTime,
@@ -15,9 +15,13 @@ import {
   isOpenStatus,
   mapBetState,
   shortHex
-} from "../../../../features/bets/format";
-import type { BetMetric, BetStatusFilter, EnrichedBetRow } from "../../../../features/bets/types";
-import { useBets } from "../../../../features/bets/useBets";
+} from "../../../../features/portfolio/activity/format";
+import type {
+  BetMetric,
+  BetStatusFilter,
+  EnrichedBetRow
+} from "../../../../features/portfolio/activity/types";
+import { useBets } from "../../../../features/betting/useBets";
 import { useRelease } from "../../../../ssot/release/ReleaseProvider";
 
 export function BetsPageClient() {

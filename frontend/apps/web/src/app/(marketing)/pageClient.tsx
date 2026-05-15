@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { BetRow } from "@ssot/ssot/indexer";
 import type { Address } from "@ssot/ssot/sdk";
 
-import { useBets } from "../../features/bets/useBets";
+import { useBets } from "../../features/betting/useBets";
 import { getCatalogRooms } from "../../features/casino/catalog";
 import {
   formatTokenAmount,

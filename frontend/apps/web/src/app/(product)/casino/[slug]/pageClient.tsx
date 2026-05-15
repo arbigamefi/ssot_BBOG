@@ -5,7 +5,7 @@ import * as React from "react";
 import { Placeholder } from "../../../../components/Placeholder";
 import { PageTransition } from "../../../../components/PageTransition";
 
-import { useBetsByGame } from "../../../../features/bets/useBetsByGame";
+import { useBetsByGame } from "../../../../features/betting/useBetsByGame";
 import { useIndexer } from "../../../../features/ops/useIndexer";
 import { useRelease } from "../../../../ssot/release/ReleaseProvider";
 import { useSSOTSDK } from "../../../../ssot/sdk";

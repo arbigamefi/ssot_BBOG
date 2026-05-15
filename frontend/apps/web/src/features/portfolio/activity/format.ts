@@ -1,6 +1,6 @@
 import type { BetRow } from "@ssot/ssot/indexer";
 
-import { formatUnits } from "../betting/model/units";
+import { formatUnits } from "../../betting/model/units";
 import type { BetStatusFilter, BetStatusGroup } from "./types";
 
 export const BET_STATUS_TABS: Array<{ key: BetStatusFilter; label: string; detail: string }> = [
