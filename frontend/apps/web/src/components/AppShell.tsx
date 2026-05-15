@@ -37,6 +37,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isBets = pathname === "/bets" || pathname.startsWith("/bets/");
   const isOps = pathname === "/ops";
   const isLegal = pathname === "/terms" || pathname === "/privacy" || pathname === "/disclaimer";
+  const isGamesDirectory = pathname === "/games";
   const isRoom =
     pathname.startsWith("/games/") ||
     ["/roulette", "/dice", "/cointoss", "/keno"].some((p) => pathname.startsWith(p));
@@ -56,6 +57,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           isBets ||
           isOps ||
           isLegal ||
+          isGamesDirectory ||
           isRoom) &&
           "theme-dark",
         isRoom ? "overflow-x-hidden selection:bg-brand/30" : "selection:bg-brand/20"
