@@ -23,6 +23,8 @@ import type {
   ReconcilePlaceBetTxResult,
   BindPlaceBetTxResult,
   ProposeSportsResultInput,
+  ResolveSportsChallengeDecision,
+  ResolveSportsChallengeInput,
   SSOTGameHubAPI,
   SSOTBankAPI,
   SSOTVRFHubAPI,
@@ -1171,6 +1173,18 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
       return sportsHubWrite("SPORTS_PROPOSE_RESULT", "proposeResult", args);
     },
 
+    async challengeResult(marketId: bigint, reasonHash: Hex): Promise<TxResult> {
+      return sportsHubWrite("SPORTS_CHALLENGE_RESULT", "challengeResult", [marketId, reasonHash]);
+    },
+
+    async resolveResultChallenge(input: ResolveSportsChallengeInput): Promise<TxResult> {
+      return sportsHubWrite("SPORTS_RESOLVE_RESULT_CHALLENGE", "resolveResultChallenge", [
+        input.marketId,
+        mapSportsChallengeDecisionInput(input.decision),
+        input.decisionHash
+      ]);
+    },
+
     async finalizeResult(marketId: bigint): Promise<TxResult> {
       return sportsHubWrite("SPORTS_FINALIZE_RESULT", "finalizeResult", [marketId]);
     },
@@ -1325,4 +1339,10 @@ function mapSportsChallengeDecision(state: number): DomainSportsResult["challeng
     "voidMarket"
   ];
   return states[state] ?? "none";
+}
+
+function mapSportsChallengeDecisionInput(decision: ResolveSportsChallengeDecision) {
+  if (decision === "upholdResult") return 1;
+  if (decision === "reopenResult") return 2;
+  return 3;
 }

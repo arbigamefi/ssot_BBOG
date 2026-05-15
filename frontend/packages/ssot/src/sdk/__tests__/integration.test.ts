@@ -232,6 +232,12 @@ describe("createSSOTSDK", () => {
       observedAt: 1_800_010_000n
     });
     await sdk.sportsHub.finalizeResult(7n);
+    await sdk.sportsHub.challengeResult(7n, evidenceHash);
+    await sdk.sportsHub.resolveResultChallenge({
+      marketId: 7n,
+      decision: "reopenResult",
+      decisionHash: evidenceHash
+    });
 
     expect(pub.simulateContract).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -247,8 +253,16 @@ describe("createSSOTSDK", () => {
         args: [7n, 1, resultSourceHash, evidenceHash, 1_800_010_000n]
       })
     );
+    expect(pub.simulateContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        address: getAddress(TEST_RELEASE.contracts.sportsHub),
+        functionName: "resolveResultChallenge",
+        args: [7n, 2, evidenceHash]
+      })
+    );
     expect(journal.map((entry) => entry.action)).toContain("SPORTS_CREATE_MARKET");
     expect(journal.map((entry) => entry.action)).toContain("SPORTS_PROPOSE_RESULT");
+    expect(journal.map((entry) => entry.action)).toContain("SPORTS_RESOLVE_RESULT_CHALLENGE");
   });
 
   it("executes SportsHub terminal ticket helpers through the SDK", async () => {

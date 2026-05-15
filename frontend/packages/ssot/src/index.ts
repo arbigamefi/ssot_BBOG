@@ -23,6 +23,8 @@ export type {
   PlaceBetInput,
   PlaceBetPlan,
   ProposeSportsResultInput,
+  ResolveSportsChallengeDecision,
+  ResolveSportsChallengeInput,
   ExecutePlanResult,
   TxStep,
   ReconcilePlaceBetTxResult,

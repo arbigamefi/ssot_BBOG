@@ -212,6 +212,14 @@ export interface ProposeSportsResultInput {
   reporterSignatures?: readonly Hex[];
 }
 
+export type ResolveSportsChallengeDecision = "upholdResult" | "reopenResult" | "voidMarket";
+
+export interface ResolveSportsChallengeInput {
+  marketId: bigint;
+  decision: ResolveSportsChallengeDecision;
+  decisionHash: Hex;
+}
+
 export interface SSOTSportsHubAPI {
   getNextMarketId(): Promise<bigint>;
   getNextTicketId(): Promise<bigint>;
@@ -228,6 +236,8 @@ export interface SSOTSportsHubAPI {
   lockMarket(marketId: bigint): Promise<TxResult>;
   voidMarket(marketId: bigint, reasonHash: Hex): Promise<TxResult>;
   proposeResult(input: ProposeSportsResultInput): Promise<TxResult>;
+  challengeResult(marketId: bigint, reasonHash: Hex): Promise<TxResult>;
+  resolveResultChallenge(input: ResolveSportsChallengeInput): Promise<TxResult>;
   finalizeResult(marketId: bigint): Promise<TxResult>;
   settleTicket(ticketId: bigint): Promise<TxResult>;
   settleTickets(ticketIds: readonly bigint[]): Promise<TxResult>;

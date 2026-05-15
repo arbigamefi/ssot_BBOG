@@ -129,6 +129,8 @@ export function SportsbookOperatorPanel({
   const [resultSourceHash, setResultSourceHash] = React.useState("");
   const [evidenceHash, setEvidenceHash] = React.useState("");
   const [observedAt, setObservedAt] = React.useState("");
+  const [challengeReasonHash, setChallengeReasonHash] = React.useState("");
+  const [decisionHash, setDecisionHash] = React.useState("");
   const [voidReasonHash, setVoidReasonHash] = React.useState("");
 
   React.useEffect(() => {
@@ -217,6 +219,30 @@ export function SportsbookOperatorPanel({
       return sdk.sportsHub.finalizeResult(parsePositiveBigInt(marketId, "Market id"));
     });
   }, [marketId, sdk]);
+
+  const challengeResult = React.useCallback(() => {
+    void run("Challenge result", async () => {
+      if (!sdk) throw new Error("SDK unavailable.");
+      return sdk.sportsHub.challengeResult(
+        parsePositiveBigInt(marketId, "Market id"),
+        parseBytes32(challengeReasonHash, "Challenge reason hash")
+      );
+    });
+  }, [challengeReasonHash, marketId, sdk]);
+
+  const resolveChallenge = React.useCallback(
+    (decision: "upholdResult" | "reopenResult" | "voidMarket") => {
+      void run("Resolve challenge", async () => {
+        if (!sdk) throw new Error("SDK unavailable.");
+        return sdk.sportsHub.resolveResultChallenge({
+          marketId: parsePositiveBigInt(marketId, "Market id"),
+          decision,
+          decisionHash: parseBytes32(decisionHash, "Decision hash")
+        });
+      });
+    },
+    [decisionHash, marketId, sdk]
+  );
 
   const voidMarket = React.useCallback(() => {
     void run("Void market", async () => {
@@ -362,6 +388,24 @@ export function SportsbookOperatorPanel({
               onChange={setVoidReasonHash}
               placeholder="0x..."
             />
+            <div className="sm:col-span-2">
+              <OperatorInput
+                id="sports-op-challenge"
+                label="Challenge reason hash"
+                value={challengeReasonHash}
+                onChange={setChallengeReasonHash}
+                placeholder="0x..."
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <OperatorInput
+                id="sports-op-decision"
+                label="Arbitration decision hash"
+                value={decisionHash}
+                onChange={setDecisionHash}
+                placeholder="0x..."
+              />
+            </div>
           </div>
           <div className="mt-5 flex flex-wrap gap-3">
             <OperatorButton disabled={actionDisabled} onClick={openMarket}>
@@ -375,6 +419,27 @@ export function SportsbookOperatorPanel({
             </OperatorButton>
             <OperatorButton disabled={actionDisabled} onClick={finalizeResult}>
               Finalize
+            </OperatorButton>
+            <OperatorButton disabled={actionDisabled} onClick={challengeResult}>
+              Challenge
+            </OperatorButton>
+            <OperatorButton
+              disabled={actionDisabled}
+              onClick={() => resolveChallenge("upholdResult")}
+            >
+              Uphold
+            </OperatorButton>
+            <OperatorButton
+              disabled={actionDisabled}
+              onClick={() => resolveChallenge("reopenResult")}
+            >
+              Reopen
+            </OperatorButton>
+            <OperatorButton
+              disabled={actionDisabled}
+              onClick={() => resolveChallenge("voidMarket")}
+            >
+              Void challenged
             </OperatorButton>
             <OperatorButton disabled={actionDisabled} onClick={voidMarket} variant="danger">
               Void
