@@ -1,18 +1,45 @@
-import * as React from "react";
+"use client";
 
-import { CoinTossStage } from "./coin-toss-stage";
-import { DiceStage } from "./dice-stage";
+import * as React from "react";
+import dynamic from "next/dynamic";
+
 import {
   GameRoomHistoryWidget,
   type GameHistoryEntry,
   type RecentBetSummary
 } from "./history-widget";
-import { KenoStage } from "./keno-stage";
 import type { CoinSide, DiceDirection } from "./params";
 import { GameRoomResultOverlay } from "./result-overlay";
-import { RouletteStage } from "./roulette-stage";
 
 export type { GameHistoryEntry, RecentBetSummary } from "./history-widget";
+
+function StageLoading() {
+  return (
+    <div className="flex min-h-[280px] items-center justify-center text-sm font-bold uppercase tracking-[0.18em] text-fg-subtle">
+      Loading stage
+    </div>
+  );
+}
+
+const DiceStage = dynamic(() => import("./dice-stage").then((mod) => mod.DiceStage), {
+  loading: StageLoading,
+  ssr: false
+});
+
+const CoinTossStage = dynamic(() => import("./coin-toss-stage").then((mod) => mod.CoinTossStage), {
+  loading: StageLoading,
+  ssr: false
+});
+
+const RouletteStage = dynamic(() => import("./roulette-stage").then((mod) => mod.RouletteStage), {
+  loading: StageLoading,
+  ssr: false
+});
+
+const KenoStage = dynamic(() => import("./keno-stage").then((mod) => mod.KenoStage), {
+  loading: StageLoading,
+  ssr: false
+});
 
 export function GameRoomRightPane({
   gameSlug,

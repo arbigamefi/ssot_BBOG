@@ -1,5 +1,3 @@
-import { withSentryConfig } from "@sentry/nextjs";
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -14,27 +12,27 @@ const nextConfig = {
         headers: [
           {
             key: "X-Frame-Options",
-            value: "DENY",
+            value: "DENY"
           },
           {
             key: "X-Content-Type-Options",
-            value: "nosniff",
+            value: "nosniff"
           },
           {
             key: "Referrer-Policy",
-            value: "strict-origin-when-cross-origin",
+            value: "strict-origin-when-cross-origin"
           },
           {
             key: "X-DNS-Prefetch-Control",
-            value: "on",
+            value: "on"
           },
           {
             key: "Strict-Transport-Security",
-            value: "max-age=63072000; includeSubDomains; preload",
+            value: "max-age=63072000; includeSubDomains; preload"
           },
           {
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=()",
+            value: "camera=(), microphone=(), geolocation=()"
           },
           {
             key: "Content-Security-Policy",
@@ -48,17 +46,18 @@ const nextConfig = {
               // RPC endpoints + WalletConnect relay + Sentry
               "connect-src 'self' https://mcp.figma.com https://*.walletconnect.com https://*.walletconnect.org wss://*.walletconnect.com wss://*.walletconnect.org https://sepolia.base.org https://mainnet.base.org https://arb1.arbitrum.io https://*.sentry.io https://*.ingest.sentry.io",
               "frame-src 'self' https://*.walletconnect.com https://*.walletconnect.org",
-              "worker-src 'self' blob:",
-            ].join("; "),
-          },
-        ],
-      },
+              "worker-src 'self' blob:"
+            ].join("; ")
+          }
+        ]
+      }
     ];
-  },
+  }
 };
 
-// Wrap with Sentry only when DSN is configured (graceful no-op otherwise)
-export default withSentryConfig(nextConfig, {
+const sentryDsn = process.env.NEXT_PUBLIC_SENTRY_DSN || process.env.SENTRY_DSN;
+
+const sentryConfig = {
   // Suppress Sentry CLI logs in dev
   silent: !process.env.CI,
   // Upload source maps for readable stack traces
@@ -67,6 +66,13 @@ export default withSentryConfig(nextConfig, {
   hideSourceMaps: true,
   // Tree-shake Sentry debug logging (replaces deprecated disableLogger)
   bundleSizeOptimizations: {
-    excludeDebugStatements: true,
-  },
-});
+    excludeDebugStatements: true
+  }
+};
+
+// Keep local and preview bundles lean when Sentry is not configured.
+const config = sentryDsn
+  ? (await import("@sentry/nextjs")).withSentryConfig(nextConfig, sentryConfig)
+  : nextConfig;
+
+export default config;

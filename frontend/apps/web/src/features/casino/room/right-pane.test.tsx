@@ -35,12 +35,12 @@ const baseProps = {
 describe("GameRoomRightPane", () => {
   afterEach(() => cleanup());
 
-  it("renders the empty live tracker and dice stage", () => {
+  it("renders the empty live tracker and dice stage", async () => {
     render(<GameRoomRightPane {...baseProps} gameSlug="dice" />);
 
     expect(screen.getByText("RECENT ROLLS")).toBeDefined();
     expect(screen.getByText("Waiting for first play...")).toBeDefined();
-    expect(screen.getByText("Roll Under")).toBeDefined();
+    expect(await screen.findByText("Roll Under")).toBeDefined();
   });
 
   it("renders chain bet status and result overlay", () => {

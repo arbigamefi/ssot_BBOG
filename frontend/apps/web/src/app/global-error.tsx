@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import * as Sentry from "@sentry/nextjs";
 
 /**
  * Global error boundary — catches errors in the root layout itself.
@@ -11,14 +10,16 @@ import * as Sentry from "@sentry/nextjs";
  */
 export default function GlobalError({
   error,
-  reset,
+  reset
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
   useEffect(() => {
     console.error("[GlobalErrorBoundary]", error);
-    Sentry.captureException(error);
+    (
+      window as Window & { __ssotCaptureException?: (error: unknown) => void }
+    ).__ssotCaptureException?.(error);
   }, [error]);
 
   return (
@@ -32,7 +33,7 @@ export default function GlobalError({
           justifyContent: "center",
           minHeight: "100vh",
           backgroundColor: "#0a0a0a",
-          color: "#fafafa",
+          color: "#fafafa"
         }}
       >
         <div
@@ -41,7 +42,7 @@ export default function GlobalError({
             padding: 32,
             border: "1px solid #333",
             borderRadius: 16,
-            textAlign: "center",
+            textAlign: "center"
           }}
         >
           <h1 style={{ fontSize: 20, marginBottom: 8 }}>Application Error</h1>
@@ -62,7 +63,7 @@ export default function GlobalError({
               backgroundColor: "transparent",
               color: "#fafafa",
               cursor: "pointer",
-              fontSize: 14,
+              fontSize: 14
             }}
           >
             Try again

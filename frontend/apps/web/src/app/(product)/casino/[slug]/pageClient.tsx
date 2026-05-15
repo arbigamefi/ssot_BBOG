@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import dynamic from "next/dynamic";
 
 import { ProductStateCard } from "../../../../components/ProductStateCard";
 import { PageTransition } from "../../../../components/PageTransition";
@@ -20,7 +21,6 @@ import {
   formatHouseEdge,
   getGameDisplayName
 } from "../../../../features/casino/room/presentation";
-import { GameRoomAuditLedger } from "../../../../features/casino/room/audit-ledger";
 import { GameRoomBetPanel } from "../../../../features/casino/room/bet-panel";
 import {
   useBetStepperFailureToast,
@@ -33,6 +33,19 @@ import {
 } from "../../../../features/casino/room/resolution";
 import { GameRoomRightPane } from "../../../../features/casino/room/right-pane";
 import { GameRoomShell } from "../../../../features/casino/room/game-room-shell";
+
+const GameRoomAuditLedger = dynamic(
+  () =>
+    import("../../../../features/casino/room/audit-ledger").then((mod) => mod.GameRoomAuditLedger),
+  {
+    loading: () => (
+      <div className="rounded-lg border border-border bg-surface-1 p-6 text-sm font-bold uppercase tracking-[0.18em] text-fg-subtle">
+        Loading audit stream
+      </div>
+    ),
+    ssr: false
+  }
+);
 
 /* ─── Main Logic ─── */
 

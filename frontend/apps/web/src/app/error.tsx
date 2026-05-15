@@ -1,19 +1,20 @@
 "use client";
 
 import { useEffect } from "react";
-import * as Sentry from "@sentry/nextjs";
 import { Button, Card, CardContent, CardFooter, CardHeader, CardTitle } from "@ssot/ui";
 
 export default function ErrorPage({
   error,
-  reset,
+  reset
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
   useEffect(() => {
     console.error("[ErrorBoundary]", error);
-    Sentry.captureException(error);
+    (
+      window as Window & { __ssotCaptureException?: (error: unknown) => void }
+    ).__ssotCaptureException?.(error);
   }, [error]);
 
   return (
@@ -27,9 +28,7 @@ export default function ErrorPage({
             {error.message || "An unexpected error occurred."}
           </p>
           {error.digest && (
-            <p className="mt-2 font-mono text-xs text-muted-foreground">
-              Error ID: {error.digest}
-            </p>
+            <p className="mt-2 font-mono text-xs text-muted-foreground">Error ID: {error.digest}</p>
           )}
         </CardContent>
         <CardFooter>
