@@ -4,6 +4,13 @@ export * from "./lib/utils";
 export { THEME_TOKEN_NAMES } from "./tokens";
 export type { ThemeToken } from "./tokens";
 
+// target architecture subpath namespaces
+export * as uiIcons from "./icons";
+export * as uiMotion from "./motion";
+export * as uiPatterns from "./patterns";
+export * as uiPrimitives from "./primitives";
+export * as uiUtils from "./utils";
+
 // ui primitives
 export * from "./components/ui/button";
 export * from "./components/ui/badge";
