@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import * as React from "react";
 
@@ -60,6 +61,12 @@ const state = {
     hasSportsRelease: true,
     enablementFlag: "NEXT_PUBLIC_SPORTSBOOK_ENABLED",
     disabledReason: "NEXT_PUBLIC_SPORTSBOOK_ENABLED is not true."
+  } as any,
+  sdk: {
+    sportsHub: {
+      getNextMarketId: vi.fn().mockResolvedValue(8n),
+      getNextTicketId: vi.fn().mockResolvedValue(13n)
+    }
   } as any
 };
 
@@ -68,6 +75,14 @@ vi.mock("../../../ssot/release/ReleaseProvider", () => ({
     release: state.release,
     readOnlyReason: state.readOnlyReason,
     sportsbook: state.sportsbook
+  })
+}));
+
+vi.mock("../../../ssot/sdk", () => ({
+  useSSOTSDK: () => ({
+    sdk: state.sdk,
+    ready: Boolean(state.sdk),
+    readOnly: false
   })
 }));
 
@@ -89,9 +104,17 @@ vi.mock("@ssot/ui", () => ({
 
 import { SportsbookPageClient } from "./pageClient";
 
+function renderWithQueryClient(ui: React.ReactElement) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } }
+  });
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+}
+
 describe("SportsbookPageClient", () => {
   afterEach(() => {
     cleanup();
+    vi.clearAllMocks();
     state.release = {
       ...state.release,
       sports: {
@@ -107,10 +130,16 @@ describe("SportsbookPageClient", () => {
       enablementFlag: "NEXT_PUBLIC_SPORTSBOOK_ENABLED",
       disabledReason: "NEXT_PUBLIC_SPORTSBOOK_ENABLED is not true."
     };
+    state.sdk = {
+      sportsHub: {
+        getNextMarketId: vi.fn().mockResolvedValue(8n),
+        getNextTicketId: vi.fn().mockResolvedValue(13n)
+      }
+    };
   });
 
-  it("renders SportsHub metadata without exposing ticket placement", () => {
-    render(<SportsbookPageClient />);
+  it("renders SportsHub metadata without exposing ticket placement", async () => {
+    renderWithQueryClient(<SportsbookPageClient />);
 
     expect(screen.getByRole("heading", { name: "Sportsbook Control Room" })).toBeDefined();
     expect(screen.getByText("Read-only preview")).toBeDefined();
@@ -121,10 +150,12 @@ describe("SportsbookPageClient", () => {
       name: "Ticket placement locked"
     }) as HTMLButtonElement;
     expect(lockedButton.disabled).toBe(true);
+    expect(await screen.findByText("8")).toBeDefined();
+    expect(screen.getByText("13")).toBeDefined();
   });
 
   it("surfaces MVP market scope and Sports pool caps", () => {
-    render(<SportsbookPageClient />);
+    renderWithQueryClient(<SportsbookPageClient />);
 
     expect(screen.getByText("Football 1X2 readiness")).toBeDefined();
     expect(screen.getByText("Pre-match football 1X2")).toBeDefined();
@@ -141,7 +172,7 @@ describe("SportsbookPageClient", () => {
       enablementFlag: "NEXT_PUBLIC_SPORTSBOOK_ENABLED"
     };
 
-    render(<SportsbookPageClient />);
+    renderWithQueryClient(<SportsbookPageClient />);
 
     expect(screen.getByText("Metadata enabled")).toBeDefined();
     const lockedButton = screen.getByRole("button", {

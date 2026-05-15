@@ -2,11 +2,13 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import type { SSOTRelease } from "@ssot/ssot/release";
 import { cn } from "@ssot/ui";
 
 import { PageTransition } from "../../components/PageTransition";
 import { useRelease } from "../../ssot/release/ReleaseProvider";
+import { useSSOTSDK } from "../../ssot/sdk";
 
 type SportsPool = NonNullable<SSOTRelease["pools"]>[number];
 
@@ -41,6 +43,10 @@ function formatRawUnits(value?: string) {
   } catch {
     return value;
   }
+}
+
+function formatCounter(value?: bigint) {
+  return value === undefined ? "N/A" : value.toString();
 }
 
 function formatDuration(value?: string) {
@@ -206,6 +212,20 @@ function PoolPanel({ pool }: { pool: SportsPool }) {
 
 export function SportsbookPageClient() {
   const { release, readOnlyReason, sportsbook } = useRelease();
+  const { sdk, ready } = useSSOTSDK();
+  const { data: runtimeCounters, error: runtimeError } = useQuery({
+    queryKey: ["ssot", "sportsbook", "runtime-counters", release?.releaseDigest ?? "none"],
+    enabled: Boolean(release && sdk && ready && sportsbook.hasSportsRelease),
+    staleTime: 15_000,
+    queryFn: async () => {
+      if (!release || !sdk) return undefined;
+      const [nextMarketId, nextTicketId] = await Promise.all([
+        sdk.sportsHub.getNextMarketId(),
+        sdk.sportsHub.getNextTicketId()
+      ]);
+      return { nextMarketId, nextTicketId };
+    }
+  });
 
   if (!release) {
     return (
@@ -300,6 +320,16 @@ export function SportsbookPageClient() {
             label="Challenge window"
             value={formatDuration(sports?.resultChallengeTimeoutSeconds)}
             helper="Result dispute timeout"
+          />
+          <DetailCell
+            label="Next market"
+            value={formatCounter(runtimeCounters?.nextMarketId)}
+            helper={runtimeError ? "SportsHub runtime read failed" : "Read through @ssot/ssot SDK"}
+          />
+          <DetailCell
+            label="Next ticket"
+            value={formatCounter(runtimeCounters?.nextTicketId)}
+            helper={runtimeError ? "SportsHub runtime read failed" : "Read through @ssot/ssot SDK"}
           />
         </div>
 
