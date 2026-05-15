@@ -1,10 +1,10 @@
-# SSOT Frontend v2 (Greenfield Monorepo)
+# ArbiGameFi Frontend
 
-This repository is the **institution-grade** SSOT-aligned frontend.
+This package is the clean-room, v1.3-only frontend for ArbiGameFi.
 
-- **UI stack**: Tailwind CSS + shadcn/ui + Storybook
-- **Protocol stack**: SSOT release artifact → SDK → indexer → features
-- **Design governance**: `docs/frontend/UI-CONSTITUTION.md` is the source of truth for visual + interaction rules.
+- **UI stack**: Next.js + Tailwind CSS + `@ssot/ui`
+- **Protocol stack**: embedded release artifact -> `@ssot/ssot` SDK -> feature data layer
+- **Design governance**: `../docs/design/` and `../docs/frontend/`
 
 ## Quickstart
 
@@ -13,13 +13,13 @@ pnpm install
 pnpm dev
 ```
 
-Storybook (UI-only):
+Storybook:
 
 ```bash
 pnpm storybook
 ```
 
-## Release artifact sync (MUST)
+## Release Artifact Sync
 
 Writes are disabled unless a valid embedded release snapshot is present.
 
@@ -31,10 +31,22 @@ pnpm ssot:sync -- --from ../path-to-ssot-release
 
 The release snapshots live in `packages/ssot/src/release/embedded/`.
 
-## Docs
+## Release Gates
 
-- `docs/frontend/PRD.md`
-- `docs/frontend/ROADMAP.md`
-- `docs/frontend/UI-CONSTITUTION.md`
-- `docs/frontend/PAGE-SPECS/`
-- `docs/frontend/adr/`
+```bash
+pnpm check:release
+pnpm precheck:frontend -- --strict
+pnpm smoke:release-readonly
+pnpm typecheck
+```
+
+`smoke:release-readonly` uses RPC only. It does not require a wallet and does
+not broadcast transactions.
+
+## Active Docs
+
+- Design SSOT: `../docs/design/README.md`
+- Frontend engineering SSOT: `../docs/frontend/INDEX.md`
+- Release artifact contract: `../docs/frontend/README.md`
+- Contract constitution: `../docs/constitution/SSOT.v1.3.md`
+- Frontend implementation roadmap: `../docs/design/frontend-implementation-roadmap.md`

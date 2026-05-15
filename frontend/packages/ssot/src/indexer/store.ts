@@ -10,10 +10,10 @@ import type { Address, Hex } from "viem";
 
 export type BetLifecycleState = "placed" | "randomReady" | "finalized" | "refunded";
 
-export interface HubEventRow {
+export interface GameHubEventRow {
   id: string; // `${chainId}:${txHash}:${logIndex}`
   chainId: number;
-  hub: Address;
+  gameHub: Address;
   blockNumber: number;
   txHash: Hex;
   logIndex: number;
@@ -38,9 +38,9 @@ export interface BetRow {
 }
 
 export interface CursorRow {
-  id: string; // `${chainId}:${hub}`
+  id: string; // `${chainId}:${source}`
   chainId: number;
-  hub: Address;
+  source: Address;
   lastProcessedBlock: number;
   updatedAt: number;
 }
@@ -59,7 +59,11 @@ export interface TxJournalRow {
   errorCode?: string;
 }
 
-export type BankXPEventName = "XPAwarded" | "XPLockedUnlocked" | "XPHoldbackReleased" | "XPAccruedClaimed";
+export type BankXPEventName =
+  | "XPAwarded"
+  | "XPLockedUnlocked"
+  | "XPHoldbackReleased"
+  | "XPAccruedClaimed";
 
 export interface BankEventRow {
   id: string; // `${chainId}:${bank}:${txHash}:${logIndex}`
@@ -88,7 +92,7 @@ export interface XPSnapshotRow {
 }
 
 export class SSOTDb extends Dexie {
-  hubEvents!: Table<HubEventRow, string>;
+  gameHubEvents!: Table<GameHubEventRow, string>;
   bets!: Table<BetRow, string>;
   cursors!: Table<CursorRow, string>;
   txJournal!: Table<TxJournalRow, string>;
@@ -98,15 +102,15 @@ export class SSOTDb extends Dexie {
   constructor(name = "ssot_frontend_v2") {
     super(name);
     this.version(1).stores({
-      hubEvents: "id, chainId, hub, blockNumber, txHash, logIndex, eventName",
+      gameHubEvents: "id, chainId, gameHub, blockNumber, txHash, logIndex, eventName",
       bets: "id, chainId, betId, state, updatedBlock",
-      cursors: "id, chainId, hub",
+      cursors: "id, chainId, source",
       txJournal: "id, chainId, txHash, createdAt, ok, action"
     });
     this.version(2).stores({
-      hubEvents: "id, chainId, hub, blockNumber, txHash, logIndex, eventName",
+      gameHubEvents: "id, chainId, gameHub, blockNumber, txHash, logIndex, eventName",
       bets: "id, chainId, betId, state, updatedBlock",
-      cursors: "id, chainId, hub",
+      cursors: "id, chainId, source",
       txJournal: "id, chainId, txHash, createdAt, ok, action",
       bankEvents: "id, chainId, bank, blockNumber, txHash, logIndex, eventName",
       xpSnapshots: "id, [chainId+payee+blockNumber], payee, eventType, blockNumber"

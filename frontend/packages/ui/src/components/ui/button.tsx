@@ -5,17 +5,18 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "../../lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-2xl text-base font-bold transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:pointer-events-none disabled:opacity-50 active:scale-95",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90 neon-glow-primary shadow-lg shadow-primary/20",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-lg shadow-secondary/20",
-        outline: "border-2 border-primary/50 bg-transparent text-primary hover:bg-primary/10 hover:border-primary hover:neon-glow-primary",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-lg shadow-destructive/20",
-        ghost: "hover:bg-accent/20 hover:text-accent",
-        glass: "bg-white/5 border border-white/10 backdrop-blur-md hover:bg-white/10 hover:border-white/20 text-white",
-        link: "text-primary underline-offset-4 hover:underline neon-text-primary"
+        default: "bg-brand text-fg-inverse shadow-glow hover:bg-brand-hover",
+        secondary: "border border-border bg-surface-2 text-fg hover:bg-surface-3",
+        outline:
+          "border border-border bg-transparent text-fg hover:border-brand/40 hover:bg-brand-soft",
+        destructive: "bg-danger text-fg-inverse hover:bg-danger/90",
+        ghost: "text-fg-muted hover:bg-surface-2 hover:text-fg",
+        glass: "border border-border bg-surface-1/80 text-fg backdrop-blur-md hover:bg-surface-2",
+        link: "text-brand underline-offset-4 hover:underline"
       },
       size: {
         default: "h-12 px-6 py-2 tracking-wide",
@@ -32,8 +33,7 @@ const buttonVariants = cva(
 );
 
 export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-  VariantProps<typeof buttonVariants> {
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
   asChild?: boolean;
 }
 
@@ -41,11 +41,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
     return (
-      <Comp
-        className={cn(buttonVariants({ variant, size, className }))}
-        ref={ref}
-        {...props}
-      />
+      <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />
     );
   }
 );

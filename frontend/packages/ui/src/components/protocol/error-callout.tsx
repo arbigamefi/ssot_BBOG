@@ -26,7 +26,7 @@ export function ErrorCallout({ title, message, details, className }: ErrorCallou
         <div className="space-y-2">
           <div>{message}</div>
           {details ? (
-            <pre className="whitespace-pre-wrap rounded-md bg-black/5 p-2 text-xs leading-relaxed dark:bg-white/5">
+            <pre className="whitespace-pre-wrap rounded-md bg-surface-2 p-2 text-xs leading-relaxed text-fg-muted">
               {details}
             </pre>
           ) : null}

@@ -6,7 +6,7 @@ import { useSSOTSDK } from "../../ssot/sdk";
 import {
   initialBetStepperState,
   reduceBetStepper,
-  type BetStepperState,
+  type BetStepperState
 } from "./model/stepperMachine";
 
 export type UsePlaceBetStepperReturn = {
@@ -32,7 +32,7 @@ export function usePlaceBetStepper(): UsePlaceBetStepperReturn {
   const noopError: DomainError = {
     code: "SDK_NOT_READY",
     message: "SSOT SDK is not ready. Please connect your wallet.",
-    severity: "warning",
+    severity: "warning"
   };
 
   const [state, dispatch] = useReducer(reduceBetStepper, initialBetStepperState);
@@ -45,7 +45,7 @@ export function usePlaceBetStepper(): UsePlaceBetStepperReturn {
       code: "TX_FAILED",
       message,
       severity: "error",
-      retryable: true,
+      retryable: true
     }),
     []
   );
@@ -57,7 +57,7 @@ export function usePlaceBetStepper(): UsePlaceBetStepperReturn {
         return;
       }
       dispatch({ type: "PLAN_START" });
-      const res = await sdk.hub.planPlaceBet(input);
+      const res = await sdk.gameHub.planPlaceBet(input);
       if ("error" in res) {
         dispatch({ type: "PLAN_ERROR", error: res.error as DomainError });
         return;
@@ -75,7 +75,7 @@ export function usePlaceBetStepper(): UsePlaceBetStepperReturn {
     if (!state.plan) return;
     dispatch({ type: "EXECUTE_START" });
     try {
-      const result = await sdk.hub.executePlan(state.plan);
+      const result = await sdk.gameHub.executePlan(state.plan);
       if (!result.placeBetTx.ok) {
         const error: DomainError = result.placeBetTx.error ?? unknownTxError("Transaction failed");
         dispatch({ type: "EXECUTE_ERROR", error });
@@ -88,7 +88,6 @@ export function usePlaceBetStepper(): UsePlaceBetStepperReturn {
     }
   }, [sdk, state.plan, unknownTxError, noopError]);
 
-
   const reconcileNow = useCallback(async () => {
     if (!sdk) return;
     const txHash = state.result?.placeBetTx?.txHash;
@@ -97,14 +96,17 @@ export function usePlaceBetStepper(): UsePlaceBetStepperReturn {
     setReconciling(true);
     dispatch({ type: "RECONCILE_START" });
     try {
-      const res = await sdk.hub.reconcilePlaceBetTx(txHash as any);
+      const res = await sdk.gameHub.reconcilePlaceBetTx(txHash as any);
       if (res.ok) {
         dispatch({ type: "RECONCILE_SUCCESS", betId: res.betId });
       } else {
         dispatch({ type: "RECONCILE_ERROR", error: res.error });
       }
     } catch (e) {
-      dispatch({ type: "RECONCILE_ERROR", error: unknownTxError((e as Error)?.message ?? "Reconcile failed") });
+      dispatch({
+        type: "RECONCILE_ERROR",
+        error: unknownTxError((e as Error)?.message ?? "Reconcile failed")
+      });
     } finally {
       setReconciling(false);
     }
@@ -119,14 +121,17 @@ export function usePlaceBetStepper(): UsePlaceBetStepperReturn {
       setBinding(true);
       dispatch({ type: "RECONCILE_START" });
       try {
-        const res = await sdk.hub.bindPlaceBetTx(txHash as any, betId);
+        const res = await sdk.gameHub.bindPlaceBetTx(txHash as any, betId);
         if (res.ok) {
           dispatch({ type: "RECONCILE_SUCCESS", betId: res.betId });
         } else {
           dispatch({ type: "RECONCILE_ERROR", error: res.error });
         }
       } catch (e) {
-        dispatch({ type: "RECONCILE_ERROR", error: unknownTxError((e as Error)?.message ?? "Bind failed") });
+        dispatch({
+          type: "RECONCILE_ERROR",
+          error: unknownTxError((e as Error)?.message ?? "Bind failed")
+        });
       } finally {
         setBinding(false);
       }
@@ -136,5 +141,15 @@ export function usePlaceBetStepper(): UsePlaceBetStepperReturn {
 
   const reset = useCallback(() => dispatch({ type: "RESET" }), []);
 
-  return { state: state as BetStepperState, plan: state.plan, planNow, executeNow, reconcileNow, bindNow, reconciling, binding, reset };
+  return {
+    state: state as BetStepperState,
+    plan: state.plan,
+    planNow,
+    executeNow,
+    reconcileNow,
+    bindNow,
+    reconciling,
+    binding,
+    reset
+  };
 }

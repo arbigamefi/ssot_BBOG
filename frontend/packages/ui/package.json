@@ -6,8 +6,16 @@
   "main": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
+    "./icons": "./src/icons/index.ts",
+    "./motion": "./src/motion/index.ts",
+    "./patterns": "./src/patterns/index.ts",
+    "./primitives": "./src/primitives/index.ts",
     "./tailwind-preset": "./src/tailwind-preset.ts",
-    "./styles/globals.css": "./src/styles/globals.css"
+    "./styles/globals.css": "./src/styles/globals.css",
+    "./tokens": "./src/tokens/index.ts",
+    "./tokens/arbi-dark.css": "./src/tokens/arbi-dark.css",
+    "./tokens/arbi-light.css": "./src/tokens/arbi-light.css",
+    "./utils": "./src/utils/index.ts"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",

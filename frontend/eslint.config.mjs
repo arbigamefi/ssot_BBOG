@@ -10,12 +10,7 @@ import tsParser from "@typescript-eslint/parser";
 export default [
   js.configs.recommended,
   {
-    ignores: [
-      "**/node_modules/**",
-      "**/.next/**",
-      "**/dist/**",
-      "**/storybook-static/**"
-    ]
+    ignores: ["**/node_modules/**", "**/.next/**", "**/dist/**", "**/storybook-static/**"]
   },
 
   // Minimal TS parsing so that rules apply consistently on TS/TSX files.
@@ -23,10 +18,7 @@ export default [
   // strictly more capable and these ESLint rules produce false positives on
   // type annotations, DOM globals, and destructuring patterns in TS files.
   {
-    files: [
-      "apps/**/*.{ts,tsx}",
-      "packages/**/*.{ts,tsx}"
-    ],
+    files: ["apps/**/*.{ts,tsx}", "packages/**/*.{ts,tsx}"],
     languageOptions: {
       parser: tsParser
     },
@@ -52,9 +44,19 @@ export default [
           ],
           paths: [
             { name: "viem", message: "Use @ssot/ssot SDK instead of importing viem in apps/web." },
-            { name: "wagmi", message: "wagmi is allowed only in app provider wiring; do not import it in pages/features." },
-            { name: "@wagmi/core", message: "Use @ssot/ssot SDK instead of @wagmi/core in apps/web." },
-            { name: "@rainbow-me/rainbowkit", message: "RainbowKit is allowed only in app provider wiring (ADR-028)." },
+            {
+              name: "wagmi",
+              message:
+                "wagmi is allowed only in app provider wiring; do not import it in pages/features."
+            },
+            {
+              name: "@wagmi/core",
+              message: "Use @ssot/ssot SDK instead of @wagmi/core in apps/web."
+            },
+            {
+              name: "@rainbow-me/rainbowkit",
+              message: "RainbowKit is allowed only in app provider wiring (ADR-028)."
+            },
             { name: "ethers", message: "Do not introduce ethers; use @ssot/ssot SDK." }
           ]
         }
@@ -62,9 +64,9 @@ export default [
     }
   },
 
-  // apps/web provider wiring: allow wagmi, but keep other restrictions.
+  // apps/web provider wiring: allow wagmi/RainbowKit, but keep other restrictions.
   {
-    files: ["apps/web/src/app/providers/**/*.{ts,tsx}"],
+    files: ["apps/web/src/app-shell/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-imports": [
         "error",

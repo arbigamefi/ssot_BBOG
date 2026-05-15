@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@ssot/ui";
-import { useConnectModal } from "../app/providers/WalletButton";
+import { useConnectModal } from "../app-shell/WalletButton";
 
 /**
  * Friendly prompt shown when a page requires a connected wallet.
@@ -16,9 +16,7 @@ export function ConnectWalletPrompt({ action }: { action?: string }) {
       <CardHeader>
         <CardTitle>Wallet required</CardTitle>
         <CardDescription>
-          {action
-            ? `Connect a wallet to ${action}.`
-            : "Connect a wallet to use this feature."}
+          {action ? `Connect a wallet to ${action}.` : "Connect a wallet to use this feature."}
         </CardDescription>
       </CardHeader>
       <CardContent>

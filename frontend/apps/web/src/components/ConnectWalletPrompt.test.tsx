@@ -5,16 +5,20 @@ import { ConnectWalletPrompt } from "./ConnectWalletPrompt";
 
 const mockOpenConnectModal = vi.fn();
 
-vi.mock("../app/providers/WalletButton", () => ({
-  useConnectModal: () => ({ openConnectModal: mockOpenConnectModal }),
+vi.mock("../app-shell/WalletButton", () => ({
+  useConnectModal: () => ({ openConnectModal: mockOpenConnectModal })
 }));
 
 vi.mock("@ssot/ui", () => ({
-  Card: ({ children, ...props }: any) => <div data-testid="card" {...props}>{children}</div>,
+  Card: ({ children, ...props }: any) => (
+    <div data-testid="card" {...props}>
+      {children}
+    </div>
+  ),
   CardHeader: ({ children }: any) => <div>{children}</div>,
   CardTitle: ({ children }: any) => <h3>{children}</h3>,
   CardDescription: ({ children }: any) => <p data-testid="description">{children}</p>,
-  CardContent: ({ children }: any) => <div>{children}</div>,
+  CardContent: ({ children }: any) => <div>{children}</div>
 }));
 
 describe("ConnectWalletPrompt", () => {

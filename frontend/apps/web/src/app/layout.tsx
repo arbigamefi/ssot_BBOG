@@ -1,13 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
-import { WebProviders } from "./providers/WebProviders";
-import { SSOTSDKProvider } from "./providers/SSOTSDKProvider";
-import { ReleaseProviderWagmi } from "./providers/ReleaseProviderWagmi";
-import { SSOTRuntimeProvider } from "./providers/SSOTRuntimeProvider";
-import { AnalyticsProvider } from "./providers/AnalyticsProvider";
 import { Toaster } from "@ssot/ui";
-import { SiteChrome } from "../components/SiteChrome";
+import { AppShell } from "../app-shell/AppShell";
+import { ProductProviders } from "../app-shell/ProductProviders";
+import { ThemeInitScript } from "../app-shell/ThemeProvider";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://arbigamefi.com"),
@@ -35,40 +32,17 @@ export const metadata: Metadata = {
   }
 };
 
-/**
- * Inline script to apply .dark class before first paint, preventing FOUC.
- * Reads `ssot-theme` from localStorage and applies `.dark` to <html> when needed.
- * Must be a raw string — no React, no imports — runs synchronously in <head>.
- */
-const THEME_INIT_SCRIPT = `
-(function(){
-  try {
-    var t = localStorage.getItem("ssot-theme");
-    var dark = t === "dark" || (t !== "light" && matchMedia("(prefers-color-scheme:dark)").matches);
-    if (dark) document.documentElement.classList.add("dark");
-  } catch(e) {}
-})();
-`;
-
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <ThemeInitScript />
       </head>
       <body className="min-h-screen">
-        <WebProviders>
-          <AnalyticsProvider>
-            <ReleaseProviderWagmi>
-              <SSOTRuntimeProvider>
-                <SSOTSDKProvider>
-                  <SiteChrome>{children}</SiteChrome>
-                  <Toaster />
-                </SSOTSDKProvider>
-              </SSOTRuntimeProvider>
-            </ReleaseProviderWagmi>
-          </AnalyticsProvider>
-        </WebProviders>
+        <ProductProviders>
+          <AppShell>{children}</AppShell>
+          <Toaster />
+        </ProductProviders>
       </body>
     </html>
   );

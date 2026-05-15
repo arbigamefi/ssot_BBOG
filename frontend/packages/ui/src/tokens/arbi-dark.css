@@ -1,0 +1,62 @@
+:root,
+:root.dark,
+:root[data-theme="dark"],
+.theme-dark {
+  color-scheme: dark;
+
+  --surface-0: 220 39% 4%;
+  --surface-1: 220 35% 7%;
+  --surface-2: 220 30% 11%;
+  --surface-3: 220 26% 16%;
+
+  --fg: 210 40% 98%;
+  --fg-muted: 215 16% 65%;
+  --fg-subtle: 215 14% 45%;
+  --fg-inverse: 220 39% 4%;
+
+  --border: 220 20% 18%;
+  --border-soft: 220 14% 14%;
+  --input: 220 20% 18%;
+  --ring: 255 92% 66%;
+
+  --brand: 255 92% 66%;
+  --brand-hover: 255 92% 72%;
+  --brand-active: 255 82% 58%;
+
+  --accent: 170 84% 60%;
+  --accent-hover: 170 84% 66%;
+
+  --success: 145 65% 52%;
+  --warn: 38 92% 60%;
+  --danger: 0 84% 62%;
+  --info: 205 90% 62%;
+
+  --background: var(--surface-0);
+  --foreground: var(--fg);
+  --card: var(--surface-2);
+  --card-foreground: var(--fg);
+  --popover: var(--surface-2);
+  --popover-foreground: var(--fg);
+  --primary: var(--brand);
+  --primary-foreground: var(--fg-inverse);
+  --secondary: var(--surface-3);
+  --secondary-foreground: var(--fg);
+  --muted: var(--surface-2);
+  --muted-foreground: var(--fg-muted);
+  --accent-foreground: var(--fg-inverse);
+  --destructive: var(--danger);
+  --destructive-foreground: var(--fg);
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-pill: 9999px;
+  --radius: var(--radius-md);
+
+  --elev-1: 0 1px 2px rgb(0 0 0 / 0.4);
+  --elev-2: 0 4px 16px rgb(0 0 0 / 0.35), 0 1px 2px rgb(0 0 0 / 0.4);
+  --elev-3: 0 12px 32px rgb(0 0 0 / 0.45), 0 2px 6px rgb(0 0 0 / 0.4);
+  --elev-glow: 0 0 0 1px hsl(var(--brand) / 0.45), 0 8px 32px hsl(var(--brand) / 0.18);
+  --elev-inner-1: inset 0 1px 0 hsl(var(--fg) / 0.06);
+}

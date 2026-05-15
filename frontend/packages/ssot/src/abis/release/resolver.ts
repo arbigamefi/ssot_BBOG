@@ -2,10 +2,13 @@ import type { Abi } from "viem";
 import * as release from "./index";
 
 export type ReleaseAbis = {
-  HubAbi: Abi;
+  GameHubAbi: Abi;
   BankAbi: Abi;
   VRFHubAbi: Abi;
-  BankRegistryAbi?: Abi;
+  PoolRegistryAbi: Abi;
+  SettlementRouterAbi: Abi;
+  SportsHubAbi: Abi;
+  SportsRiskEngineAbi: Abi;
   ReferralRegistryAbi?: Abi;
   DefaultReferralEngineAbi?: Abi;
 };
@@ -23,17 +26,27 @@ export function getReleaseAbis(chainId: number): ReleaseAbis {
   if (!mod) {
     throw new Error(`No release ABIs for chainId=${chainId}. Did you run pnpm ssot:sync?`);
   }
-  const hubAbi = mod.HubAbi ?? mod.GameHubAbi;
-  if (!hubAbi || !mod.BankAbi || !mod.VRFHubAbi) {
+  if (
+    !mod.GameHubAbi ||
+    !mod.BankAbi ||
+    !mod.VRFHubAbi ||
+    !mod.PoolRegistryAbi ||
+    !mod.SettlementRouterAbi ||
+    !mod.SportsHubAbi ||
+    !mod.SportsRiskEngineAbi
+  ) {
     throw new Error(
-      `Release ABI module for chainId=${chainId} is missing required contracts (Hub or GameHub/Bank/VRFHub).`
+      `Release ABI module for chainId=${chainId} is missing required v1.3 contracts (GameHub/Bank/VRFHub/PoolRegistry/SettlementRouter/SportsHub/SportsRiskEngine).`
     );
   }
   return {
-    HubAbi: hubAbi,
+    GameHubAbi: mod.GameHubAbi,
     BankAbi: mod.BankAbi,
     VRFHubAbi: mod.VRFHubAbi,
-    BankRegistryAbi: mod.BankRegistryAbi,
+    PoolRegistryAbi: mod.PoolRegistryAbi,
+    SettlementRouterAbi: mod.SettlementRouterAbi,
+    SportsHubAbi: mod.SportsHubAbi,
+    SportsRiskEngineAbi: mod.SportsRiskEngineAbi,
     ReferralRegistryAbi: mod.ReferralRegistryAbi,
     DefaultReferralEngineAbi: mod.DefaultReferralEngineAbi
   };

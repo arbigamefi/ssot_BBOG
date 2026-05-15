@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { cn } from "../../lib/utils";
 
 interface AuditTabsProps {
-  /** The theme glow color active border class (e.g. "border-purple-400 text-purple-400") */
+  /** Tokenized active border/text classes, for example "border-brand text-brand". */
   activeColorClass?: string;
   className?: string;
   children?: React.ReactNode;
@@ -16,7 +16,7 @@ interface AuditTabsProps {
 const DEFAULT_TABS = ["All Bets", "My Bets", "Players", "Analytics", "Game Details"] as const;
 
 export function AuditTabs({
-  activeColorClass = "border-blue-400 text-blue-400",
+  activeColorClass = "border-brand text-brand",
   className,
   children,
   tabs = DEFAULT_TABS,
@@ -31,21 +31,20 @@ export function AuditTabs({
   return (
     <div
       className={cn(
-        "mt-8 border border-white/10 rounded-2xl md:rounded-3xl bg-[#0a0a0a] overflow-hidden flex flex-col",
+        "mt-8 flex flex-col overflow-hidden rounded-lg border border-border bg-surface-1 shadow-e2",
         className
       )}
     >
-      {/* Header Scrollable Tabs */}
-      <div className="flex items-center gap-6 px-4 md:px-8 border-b border-white/5 bg-[#080808] overflow-x-auto scrollbar-hide">
+      <div className="scrollbar-hide flex items-center gap-6 overflow-x-auto border-b border-border-soft bg-surface-2 px-4 md:px-8">
         {tabs.map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={cn(
-              "py-4 md:py-5 text-xs md:text-sm font-bold transition-all whitespace-nowrap border-b-2",
+              "whitespace-nowrap border-b-2 py-4 text-xs font-bold transition-colors md:py-5 md:text-sm",
               activeTab === tab
                 ? activeColorClass
-                : "border-transparent text-white/40 hover:text-white"
+                : "border-transparent text-fg-subtle hover:text-fg"
             )}
           >
             {tab}
@@ -53,9 +52,8 @@ export function AuditTabs({
         ))}
       </div>
 
-      {/* Scrollable Body Content */}
-      <div className="p-4 md:p-6 overflow-x-auto">
-        <div className="min-w-[600px] w-full">{children}</div>
+      <div className="overflow-x-auto p-4 md:p-6">
+        <div className="w-full min-w-[600px]">{children}</div>
       </div>
     </div>
   );
@@ -73,7 +71,7 @@ export function AuditTableHeader({
 }) {
   return (
     <div
-      className={cn("w-full text-left grid text-sm border-b border-white/10 pb-3 mb-2", className)}
+      className={cn("mb-2 grid w-full border-b border-border pb-3 text-left text-sm", className)}
     >
       {children}
     </div>
@@ -90,7 +88,7 @@ export function AuditTableRow({
   return (
     <div
       className={cn(
-        "w-full text-left grid text-sm py-3 border-t border-white/5 transition-colors hover:bg-white/[0.02]",
+        "grid w-full border-t border-border-soft py-3 text-left text-sm transition-colors hover:bg-surface-2",
         className
       )}
     >
@@ -107,6 +105,6 @@ export function AuditTableCell({
   className?: string;
 }) {
   return (
-    <div className={cn("text-white/50 font-medium flex items-center", className)}>{children}</div>
+    <div className={cn("flex items-center font-medium text-fg-muted", className)}>{children}</div>
   );
 }

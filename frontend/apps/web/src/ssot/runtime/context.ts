@@ -3,14 +3,14 @@
 import * as React from "react";
 import type { SSOTDb } from "@ssot/ssot/indexer";
 import type { JournalSink } from "@ssot/ssot/sdk";
-import type { HubIndexerWorkerStatus } from "./indexerWorkerClient";
+import type { GameHubIndexerWorkerStatus } from "./indexerWorkerClient";
 import type { BankIndexerWorkerStatus } from "../../workers/bankIndexer.worker";
 
 export type SSOTRuntimeContextValue = {
   db?: SSOTDb;
   /** Indexer runs in a Web Worker (no direct indexer instance is exposed to UI). */
   indexer?: undefined;
-  indexerStatus?: HubIndexerWorkerStatus;
+  indexerStatus?: GameHubIndexerWorkerStatus;
   bankIndexerStatus?: BankIndexerWorkerStatus;
   journal?: JournalSink;
   refreshIndexerStatus: () => void;

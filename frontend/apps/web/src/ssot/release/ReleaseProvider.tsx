@@ -39,7 +39,7 @@ export function resolveSportsbookAccess(
   rawFlag?: string
 ): SportsbookAccess {
   const frontendEnabled = isTruthyFeatureFlag(rawFlag);
-  const sportsHub = release?.sports?.hub ?? release?.contracts.sportsHub;
+  const sportsHub = release?.sports?.sportsHub ?? release?.contracts.sportsHub;
   const hasSportsRelease =
     release?.sports?.enabled === true && Boolean(sportsHub && sportsHub !== ZERO_ADDRESS);
 

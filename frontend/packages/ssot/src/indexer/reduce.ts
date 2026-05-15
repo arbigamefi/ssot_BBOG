@@ -1,25 +1,28 @@
 import type { Address, Hex } from "viem";
 import type { BetLifecycleState, BetRow } from "./store";
 
-export type HubEventName = "BetPlaced" | "BetRandomReady" | "BetFinalized" | "BetRefunded";
+export type GameHubEventName = "BetPlaced" | "BetRandomReady" | "BetFinalized" | "BetRefunded";
 
-export interface HubEventNormalized {
+export interface GameHubEventNormalized {
   chainId: number;
-  hub: Address;
+  gameHub: Address;
   blockNumber: number;
   logIndex?: number;
   txHash: Hex;
-  eventName: HubEventName;
+  eventName: GameHubEventName;
   args: Record<string, unknown>;
 }
 
 /**
- * Pure reducer: applies one Hub event to the derived Bet row.
+ * Pure reducer: applies one GameHub event to the derived Bet row.
  *
  * - All bigint-like values must be provided as bigint or bigint-string; we store strings.
  */
-export function applyHubEventToBet(prev: BetRow | undefined, ev: HubEventNormalized): BetRow {
-  const betIdRaw = ev.args.betId ?? ev.args.id;
+export function applyGameHubEventToBet(
+  prev: BetRow | undefined,
+  ev: GameHubEventNormalized
+): BetRow {
+  const betIdRaw = ev.args.positionId ?? ev.args.betId ?? ev.args.id;
   const betId = toBigintString(betIdRaw);
   const id = `${ev.chainId}:${betId}`;
 
@@ -56,7 +59,10 @@ export function applyHubEventToBet(prev: BetRow | undefined, ev: HubEventNormali
   return next;
 }
 
-export function reduceState(prev: BetLifecycleState, eventName: HubEventName): BetLifecycleState {
+export function reduceState(
+  prev: BetLifecycleState,
+  eventName: GameHubEventName
+): BetLifecycleState {
   if (eventName === "BetRefunded") return "refunded";
   if (eventName === "BetFinalized") return "finalized";
   if (eventName === "BetRandomReady") {

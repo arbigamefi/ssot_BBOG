@@ -193,7 +193,7 @@ function buildEmbeddedSports(manifest) {
   return {
     enabled: Boolean(s.enabled),
     riskEngine: normalizeAddress(s.riskEngine),
-    hub: normalizeAddress(s.hub),
+    sportsHub: normalizeAddress(s.sportsHub),
     oddsSignerSetHash: s.oddsSignerSetHash,
     resultReporterSetHash: s.resultReporterSetHash,
     resultReporterThreshold: String(s.resultReporterThreshold ?? "0"),
@@ -398,17 +398,15 @@ async function main() {
     releaseDigest: digest,
     isPlaceholder: false,
     contracts: {
-      hub: normalizeAddress(addresses.hub ?? addresses.gameHub),
-      vrfHub: normalizeAddress(addresses.vrfHub),
-      bankRegistry: normalizeAddress(addresses.bankRegistry ?? addresses.poolRegistry),
-      // Field names are contract-repo-defined; support canonical aliases.
-      refRegistry: normalizeAddress(addresses.refRegistry ?? addresses.referralRegistry),
-      refEngine: normalizeAddress(addresses.refEngine ?? addresses.referralEngine),
-      adapter: normalizeAddress(addresses.adapter ?? addresses.adapterChainlinkV2PlusWrapper),
-      gameHub: normalizeAddress(addresses.gameHub ?? addresses.hub),
+      gameHub: normalizeAddress(addresses.gameHub),
+      settlementRouter: normalizeAddress(addresses.settlementRouter),
       poolRegistry: normalizeAddress(addresses.poolRegistry),
       sportsHub: normalizeAddress(addresses.sportsHub),
-      sportsRiskEngine: normalizeAddress(addresses.sportsRiskEngine)
+      sportsRiskEngine: normalizeAddress(addresses.sportsRiskEngine),
+      vrfHub: normalizeAddress(addresses.vrfHub),
+      refRegistry: normalizeAddress(addresses.refRegistry ?? addresses.referralRegistry),
+      refEngine: normalizeAddress(addresses.refEngine ?? addresses.referralEngine),
+      adapter: normalizeAddress(addresses.adapter ?? addresses.adapterChainlinkV2PlusWrapper)
     },
     assets: buildEmbeddedAssets(manifest),
     games: buildEmbeddedGames(manifest),

@@ -1,15 +1,18 @@
 export * from "./lib/utils";
 
-// theme token types
-export { THEME_TOKEN_NAMES } from "./themes";
-export type { ThemeToken } from "./themes";
+// design token names
+export { THEME_TOKEN_NAMES } from "./tokens";
+export type { ThemeToken } from "./tokens";
+
+// target architecture subpath namespaces
+export * as uiIcons from "./icons";
+export * as uiMotion from "./motion";
+export * as uiPatterns from "./patterns";
+export * as uiPrimitives from "./primitives";
+export * as uiUtils from "./utils";
 
 // ui primitives
 export * from "./components/ui/button";
-export * from "./components/ui/cyber-button";
-export * from "./components/ui/cyber-input";
-export * from "./components/ui/cyber-slider";
-export * from "./components/ui/cyber-icons";
 export * from "./components/ui/badge";
 export * from "./components/ui/card";
 export * from "./components/ui/alert";
@@ -21,18 +24,10 @@ export * from "./components/ui/theme-toggle";
 export * from "./components/ui/pagination";
 export * from "./components/ui/copy-button";
 export * from "./components/ui/page-header";
-export * from "./components/ui/stat-block";
 export * from "./components/ui/stat-card";
 export * from "./components/ui/status-badge";
 export * from "./components/ui/tab-bar";
-export * from "./components/ui/game-card";
-export * from "./components/ui/cyber-table";
-export * from "./components/ui/receipt-ticket";
-export * from "./components/ui/cyber-header";
-export * from "./components/ui/cyber-layout";
-export * from "./components/ui/win-loss-overlay";
 export * from "./components/ui/data-table";
-export * from "./components/ui/glass-modal";
 export { toast } from "sonner";
 
 // protocol (presentational domain components)
@@ -41,24 +36,12 @@ export * from "./components/protocol/read-only-banner";
 export * from "./components/protocol/tx-stepper";
 export * from "./components/protocol/tx-status-chip";
 export * from "./components/protocol/error-callout";
-export * from "./components/protocol/stake-spec-form";
 export * from "./components/protocol/asset-selector";
-export * from "./components/protocol/mask-picker-grid";
-export * from "./components/protocol/dice-params-form";
-export * from "./components/protocol/cointoss-params-form";
-export * from "./components/protocol/roulette-params-form";
-export * from "./components/protocol/keno-params-form";
 
 // New Refactored Domain Components
 export * from "./components/ui/shell-header";
-export * from "./components/ui/glass-card";
 export * from "./components/ui/room-strip";
-export * from "./components/protocol/shared-bet-slip";
 export * from "./components/protocol/audit-tabs";
-export * from "./components/protocol/roulette-board";
-export * from "./components/protocol/dice-slider";
-export * from "./components/protocol/coin-stage";
-export * from "./components/protocol/keno-grid";
 
 // i18n
 export type { I18nKey, I18nPack } from "./i18n/keys";

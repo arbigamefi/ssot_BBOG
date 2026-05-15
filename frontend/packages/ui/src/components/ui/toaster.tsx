@@ -12,20 +12,17 @@ export function Toaster(props: ToasterProps) {
       toastOptions={{
         classNames: {
           toast:
-            "group toast group rounded-2xl border border-white/10 bg-[#0a0a0a]/90 backdrop-blur-xl p-4 shadow-[0_0_30px_rgba(0,0,0,0.5),inset_0_1px_5px_rgba(255,255,255,0.05)] text-white font-sans",
-          title: "text-white font-bold text-[15px] mb-1",
-          description: "text-white/60 text-[13px] leading-relaxed",
+            "group toast rounded-lg border border-border bg-surface-1 p-4 font-sans text-fg shadow-e3 backdrop-blur-xl",
+          title: "mb-1 text-[15px] font-bold text-fg",
+          description: "text-[13px] leading-relaxed text-fg-muted",
           actionButton:
-            "bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg px-3 py-1.5 transition-colors",
+            "rounded-md bg-brand px-3 py-1.5 font-medium text-fg-inverse transition-colors hover:bg-brand-hover",
           cancelButton:
-            "bg-white/5 hover:bg-white/10 text-white/70 font-medium rounded-lg px-3 py-1.5 transition-colors border border-white/5",
-          success:
-            "group-[.toast]:border-emerald-500/30 group-[.toast]:shadow-[0_0_20px_rgba(16,185,129,0.1),inset_0_1px_5px_rgba(255,255,255,0.05)]",
-          error:
-            "group-[.toast]:border-rose-500/30 group-[.toast]:shadow-[0_0_20px_rgba(244,63,94,0.1),inset_0_1px_5px_rgba(255,255,255,0.05)]",
-          info: "group-[.toast]:border-blue-500/30 group-[.toast]:shadow-[0_0_20px_rgba(59,130,246,0.1),inset_0_1px_5px_rgba(255,255,255,0.05)]",
-          warning:
-            "group-[.toast]:border-amber-500/30 group-[.toast]:shadow-[0_0_20px_rgba(245,158,11,0.1),inset_0_1px_5px_rgba(255,255,255,0.05)]"
+            "rounded-md border border-border bg-surface-2 px-3 py-1.5 font-medium text-fg-muted transition-colors hover:bg-surface-3 hover:text-fg",
+          success: "group-[.toast]:border-success/35",
+          error: "group-[.toast]:border-danger/35",
+          info: "group-[.toast]:border-info/35",
+          warning: "group-[.toast]:border-warn/35"
         }
       }}
       {...props}

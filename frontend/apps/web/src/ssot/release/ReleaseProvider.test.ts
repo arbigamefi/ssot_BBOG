@@ -9,9 +9,15 @@ const BASE_RELEASE: SSOTRelease = {
   releaseDigest: "0xdeadbeefcafefeed",
   isPlaceholder: false,
   contracts: {
-    hub: "0x1111111111111111111111111111111111111111",
-    vrfHub: "0x2222222222222222222222222222222222222222",
-    bankRegistry: "0x3333333333333333333333333333333333333333"
+    gameHub: "0x1111111111111111111111111111111111111111",
+    settlementRouter: "0x2222222222222222222222222222222222222222",
+    poolRegistry: "0x3333333333333333333333333333333333333333",
+    sportsHub: "0x6666666666666666666666666666666666666666",
+    sportsRiskEngine: "0x7777777777777777777777777777777777777777",
+    vrfHub: "0x8888888888888888888888888888888888888888",
+    refRegistry: "0x9999999999999999999999999999999999999999",
+    refEngine: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    adapter: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
   },
   assets: [
     {
@@ -21,7 +27,41 @@ const BASE_RELEASE: SSOTRelease = {
       bank: "0x5555555555555555555555555555555555555555"
     }
   ],
-  games: {}
+  games: {},
+  gamesMeta: [
+    {
+      gameId: "0x8d8e6987fb3617c00abdd68d6c1f7eac28b7f9f96b25367e9b65dacaa0914a8b",
+      slug: "dice",
+      label: "Dice",
+      module: "0xcccccccccccccccccccccccccccccccccccccccc"
+    }
+  ],
+  sports: {
+    enabled: false,
+    riskEngine: "0x7777777777777777777777777777777777777777",
+    sportsHub: "0x6666666666666666666666666666666666666666",
+    oddsSignerSetHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    resultReporterSetHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    resultReporterThreshold: "1",
+    maxStake: "1000000",
+    maxPayout: "2000000",
+    maxMarketReserved: "3000000",
+    maxOutcomeReserved: "4000000",
+    maxEventReserved: "5000000"
+  },
+  pools: [
+    {
+      poolId: 1,
+      domainId: 1,
+      domain: "Casino",
+      active: true,
+      asset: "0x4444444444444444444444444444444444444444",
+      bank: "0x5555555555555555555555555555555555555555",
+      symbol: "USDC",
+      decimals: 6,
+      sportsRisk: null
+    }
+  ]
 };
 
 describe("resolveSportsbookAccess", () => {
@@ -35,7 +75,7 @@ describe("resolveSportsbookAccess", () => {
         },
         sports: {
           enabled: true,
-          hub: "0x6666666666666666666666666666666666666666",
+          sportsHub: "0x6666666666666666666666666666666666666666",
           riskEngine: "0x7777777777777777777777777777777777777777",
           oddsSignerSetHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           resultReporterSetHash:
@@ -75,7 +115,7 @@ describe("resolveSportsbookAccess", () => {
         ...BASE_RELEASE,
         sports: {
           enabled: true,
-          hub: "0x6666666666666666666666666666666666666666",
+          sportsHub: "0x6666666666666666666666666666666666666666",
           riskEngine: "0x7777777777777777777777777777777777777777",
           oddsSignerSetHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
           resultReporterSetHash:

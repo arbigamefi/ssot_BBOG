@@ -216,10 +216,10 @@ Original prompt: Continue the frontend route review execution by simplifying the
   - upgraded `Roulette Room v2` into a clearer live-stage header with a larger result medallion, a separate live-wheel module, and a stronger board-first hierarchy
 - 2026-03-13: Revalidated the refined flagship board on `http://127.0.0.1:3013/prototype/ui-ux-v2-flagship?ts=1773373100` with Playwright and synced it into the existing Figma file using a fresh capture id. Latest confirmed Figma node is now `20:2`.
 - 2026-03-13: `next dev` reintroduced `.next-dev` route references into `frontend/apps/web/tsconfig.json` and `frontend/apps/web/next-env.d.ts`; both were restored after the validation pass so only intentional diffs remain.
-- 2026-03-14: Compared ArbiGameFi against BetSwirl room grammar and wrote `frontend/docs/frontend/BETSWIRL-GAP-ANALYSIS-2026-03.md`.
+- 2026-03-14: Compared ArbiGameFi against BetSwirl room grammar and wrote a historical frontend gap analysis. This pre-clean-room document has since been removed.
 - 2026-03-14: Implemented the first direct response from that gap analysis in `frontend/apps/web/src/app/games/[slug]/pageClient.tsx`:
 - 2026-03-14: User clarified that `/frontend/apps/web/src/app/prototype/ui-ux-v2-flagship/page.tsx` should be treated as the new source of truth instead of the older multi-board prototype.
-- 2026-03-14: Re-read `frontend/docs/frontend/UI-UX-DESIGN-BRIEF-2026-03.md` and rebuilt the current flagship prototype page as a single landing-style screen:
+- 2026-03-14: Re-read the historical UI/UX design brief and rebuilt the current flagship prototype page as a single landing-style screen:
   - replaced the abstract spinner hero with a room-first `European roulette` teaser
   - removed remote texture dependencies and most meta labels
   - rebuilt the hero right side into a compact top selector + mini roulette room preview with a left bet slip and standard `0 + 3x12` table
@@ -295,17 +295,17 @@ Original prompt: Continue the frontend route review execution by simplifying the
 
 - 2026-03-15: Added v2 prototype coverage for Claims and Ops, plus a freeze checklist for implementation handoff.
   - New prototype routes: `frontend/apps/web/src/app/prototype/ui-ux-v2-claims/page.tsx`, `frontend/apps/web/src/app/prototype/ui-ux-v2-ops/page.tsx`
-  - New checklist: `frontend/docs/frontend/PROTOTYPE-FREEZE-CHECKLIST-2026-03.md`
+  - New prototype-freeze checklist, later removed with the pre-clean-room frontend docs
   - Direction: finish prototype freeze before further formal UI implementation.
 
 - 2026-03-15: Ran a prototype freeze review and aligned trust-route v2 prototypes on one shared nav grammar.
   - Trust header now consistently uses `Games / Bets / Liquidity / Claims / Affiliates / Account / Ops`
-  - New review doc: `frontend/docs/frontend/PROTOTYPE-FREEZE-REVIEW-2026-03.md`
-  - Updated `frontend/docs/frontend/ROADMAP.md` and `frontend/docs/frontend/PROTOTYPE-FREEZE-CHECKLIST-2026-03.md` to reflect the new baseline
+  - New prototype-freeze review doc, later removed with the pre-clean-room frontend docs
+  - Updated the historical frontend roadmap and freeze checklist to reflect the new baseline
 
 - 2026-03-15: Cross-checked the current v2 prototypes against the design brief, screen specs, copy pack, brand pack, and UI constitution.
-  - Added `frontend/docs/frontend/PROTOTYPE-IMPROVEMENT-MATRIX-2026-03.md` as a route-by-route improvement matrix with `P0 / P1 / P2` priorities.
-  - Updated `frontend/docs/frontend/ROADMAP.md` to link the new matrix.
+  - Added a historical route-by-route prototype improvement matrix with `P0 / P1 / P2` priorities.
+  - Updated the historical frontend roadmap to link the new matrix.
 
 - 2026-03-15: Executed the `P0` prototype refinement pass on the three highest-priority routes:
   - `frontend/apps/web/src/app/prototype/ui-ux-v2-flagship/page.tsx`

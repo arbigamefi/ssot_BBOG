@@ -26,10 +26,12 @@
     "test": "pnpm -r test",
     "ssot:sync": "node scripts/ssot-sync.mjs",
     "check:release": "node scripts/check-release.mjs",
+    "smoke:release-readonly": "node scripts/release-readonly-smoke.mjs",
     "storybook": "pnpm -C packages/ui storybook",
     "storybook:build": "pnpm -C packages/ui build-storybook",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
+    "precheck:frontend": "node scripts/frontend-precheck.mjs",
     "test:strict": "STRICT_VECTORS=1 pnpm test",
     "prepare": "cd .. && husky frontend/.husky"
   },
