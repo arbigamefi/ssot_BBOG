@@ -2,8 +2,7 @@
 
 import * as React from "react";
 import { embeddedChainIds } from "@ssot/ssot/release";
-import { RainbowKitProvider, getDefaultConfig } from "@rainbow-me/rainbowkit";
-import { WagmiProvider, http } from "wagmi";
+import { WagmiProvider, createConfig, http, injected } from "wagmi";
 import { arbitrum, arbitrumSepolia, base, baseSepolia } from "wagmi/chains";
 
 import { QueryProvider } from "./QueryProvider";
@@ -23,20 +22,17 @@ const chains = (supportedChains.length > 0
 
 const transports = Object.fromEntries(chains.map((chain: any) => [chain.id, http()]));
 
-const wagmiConfig = getDefaultConfig({
-  appName: "ArbiGameFi",
+const wagmiConfig = createConfig({
   chains,
-  projectId: process.env.NEXT_PUBLIC_WC_PROJECT_ID ?? "00000000000000000000000000000000",
   ssr: true,
-  transports
+  transports,
+  connectors: [injected({ shimDisconnect: true })]
 });
 
 export function WalletProviderIsland({ children }: { children: React.ReactNode }) {
   return (
     <WagmiProvider config={wagmiConfig}>
-      <QueryProvider>
-        <RainbowKitProvider>{children}</RainbowKitProvider>
-      </QueryProvider>
+      <QueryProvider>{children}</QueryProvider>
     </WagmiProvider>
   );
 }

@@ -1008,6 +1008,38 @@ Rendered QA observations:
   `/earn`, `/ops`, and `/sportsbook` all returned 200 with no framework overlay
   and no horizontal overflow.
 
+### 2026-05-15 - R13 Wallet Runtime Slimdown
+
+Status: completed as build-warning and bundle cleanup.
+
+Changes:
+
+- removed RainbowKit from the web app runtime and package dependencies;
+- replaced RainbowKit `ConnectButton` with a local wagmi-powered
+  `WalletButton`;
+- replaced RainbowKit `getDefaultConfig` with direct wagmi `createConfig`;
+- switched the wallet connector to wagmi's core `injected` export instead of
+  the `wagmi/connectors` barrel so MetaMask and WalletConnect SDK modules are
+  not pulled into the server build;
+- removed RainbowKit global CSS import;
+- kept `frontend/packages/ssot/**` untouched.
+
+Evidence:
+
+```bash
+pnpm -C frontend precheck:frontend -- --strict
+pnpm -C frontend/apps/web test
+pnpm -C frontend typecheck
+pnpm -C frontend/apps/web build
+```
+
+Observed:
+
+- production build no longer prints the MetaMask optional
+  `@react-native-async-storage/async-storage` warning;
+- production build no longer prints `indexedDB is not defined`;
+- `/casino/[slug]` first-load JS dropped from about 496 kB to about 313 kB.
+
 Useful commands:
 
 ```bash
