@@ -37,6 +37,7 @@ function optionText(opt: AssetOption, showAddress: boolean) {
 }
 
 export function AssetSelector(props: AssetSelectorProps) {
+  const selectId = React.useId();
   const {
     title = "Asset",
     description,
@@ -47,7 +48,7 @@ export function AssetSelector(props: AssetSelectorProps) {
     showAddress = false,
     disabled = false,
     error,
-    className,
+    className
   } = props;
 
   const selected = value ?? "";
@@ -56,17 +57,16 @@ export function AssetSelector(props: AssetSelectorProps) {
     <Card className={className}>
       <div className="space-y-2 p-4">
         <div className="space-y-1">
-          <Label>{title}</Label>
-          {description ? (
-            <p className="text-sm text-muted-foreground">{description}</p>
-          ) : null}
+          <Label htmlFor={selectId}>{title}</Label>
+          {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
         </div>
 
         <select
+          id={selectId}
           className={[
             "h-10 w-full rounded-md border bg-background px-3 text-sm",
             "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-            disabled ? "opacity-60" : "",
+            disabled ? "opacity-60" : ""
           ].join(" ")}
           value={selected}
           disabled={disabled || assets.length === 0}

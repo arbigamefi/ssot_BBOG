@@ -1721,3 +1721,68 @@ Observed:
 - `/sportsbook` measured 156.1 kB gzip JS against a 175 kB budget;
 - known local warnings remain unchanged: Node v22 vs project Node 20 and the
   existing Next ESLint plugin warning.
+
+## 17. Gate C Accessibility Smoke Slice
+
+Status: completed locally.
+
+### 17.1 Problem
+
+`docs/frontend/20-accessibility.md` and `docs/frontend/24-testing.md` require
+axe coverage, but frontend CI previously had no browser-level accessibility
+guard. The right first step is not a broad manual accessibility audit; it is a
+deterministic smoke suite that fails on serious or critical WCAG violations for
+the canonical route surface.
+
+### 17.2 Scope
+
+1. Add `@axe-core/playwright` as a web dev dependency.
+2. Add a read-only Playwright a11y smoke for the same canonical routes covered
+   by the route smoke suite.
+3. Fail only serious and critical axe violations in this slice.
+4. Run the a11y smoke through the existing `pnpm e2e` CI step.
+
+### 17.3 Acceptance Checks
+
+```bash
+CI=true PLAYWRIGHT_BASE_URL=http://localhost:3007 pnpm -C frontend/apps/web e2e
+pnpm -C frontend/apps/web typecheck
+pnpm -C frontend/apps/web build
+git diff --check
+```
+
+### 17.4 Implementation Result
+
+Changes:
+
+- added `@axe-core/playwright` and `frontend/apps/web/e2e/a11y.spec.ts`;
+- expanded `pnpm e2e` to include serious/critical axe coverage for the
+  canonical route surface;
+- renamed the CI step to `E2E and accessibility smoke`;
+- raised dark-mode `--fg-subtle`, `--fg-inverse`, and `--brand` tokens to meet
+  WCAG AA contrast thresholds on the current surface stack;
+- added accessible names to casino bet amount, roll count, and dice target
+  controls;
+- associated `AssetSelector` labels with the underlying select control.
+
+Evidence:
+
+```bash
+CI=true PLAYWRIGHT_BASE_URL=http://localhost:3007 pnpm -C frontend/apps/web e2e
+pnpm -C frontend/apps/web typecheck
+pnpm -C frontend/packages/ui typecheck
+pnpm -C frontend precheck:frontend -- --strict
+pnpm -C frontend/apps/web build
+pnpm -C frontend check:bundle
+git diff --check
+```
+
+Observed:
+
+- Playwright route + accessibility smoke passed: 14 tests;
+- all axe serious/critical violations were eliminated from the covered routes;
+- web and UI typecheck passed;
+- strict frontend precheck passed with 0 findings;
+- production build and bundle budget passed;
+- bundle profile remains effectively unchanged after token/a11y fixes:
+  `/casino/[slug]` 181 kB, `/sportsbook` 159 kB, shared 104 kB.

@@ -55,7 +55,7 @@ export default function GlobalError({
             <p
               style={{
                 fontSize: 12,
-                color: token("--fg-subtle", "215 14% 45%"),
+                color: token("--fg-subtle", "215 14% 58%"),
                 fontFamily: "monospace",
                 marginBottom: 16
               }}

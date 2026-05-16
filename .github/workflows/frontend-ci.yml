@@ -79,7 +79,7 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm -C apps/web exec playwright install --with-deps chromium
 
-      - name: E2E smoke
+      - name: E2E and accessibility smoke
         run: PLAYWRIGHT_USE_EXISTING_BUILD=1 pnpm e2e
 
       - name: Build Storybook
