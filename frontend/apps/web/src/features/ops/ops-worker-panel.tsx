@@ -12,8 +12,8 @@ export function OpsWorkerPanel({ rows }: { rows: readonly OpsKeyValueRow[] }) {
         </div>
         <h2 className="mt-2 text-2xl font-black text-fg">Operational focus</h2>
         <p className="mt-2 text-sm leading-6 text-fg-muted">
-          Room surfaces depend on a healthy indexer. These summaries expose drift before it leaks
-          into player views.
+          Room surfaces depend on a healthy indexer and keeper. These summaries expose drift before
+          it leaks into player views.
         </p>
       </div>
 

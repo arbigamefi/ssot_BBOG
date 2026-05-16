@@ -2,7 +2,7 @@
 
 | Owner | Frontend Lead + SRE |
 | Status | Draft v1 |
-| Last Updated | 2026-05-16 |
+| Last Updated | 2026-05-17 |
 | Depends-on | `../design/casino-placebet-ux.md`, `25-observability.md`, `30-build-and-release.md` |
 | Supersedes | manual-by-default casino finalize operations |
 
@@ -47,9 +47,23 @@ KEEPER_RELEASE_PATH=frontend/packages/ssot/src/release/embedded/chain-84532.json
 KEEPER_START_BLOCK=
 KEEPER_BACKUP_DELAY_SECONDS=0
 KEEPER_POLL_INTERVAL_SECONDS=15
+KEEPER_HEALTH_PATH=
 ```
 
 Backup keeper uses `KEEPER_BACKUP_DELAY_SECONDS=5`.
+
+`KEEPER_HEALTH_PATH` is optional. When set, the keeper writes a small JSON
+snapshot after startup, enqueue, scan, finalize, and heartbeat events. For local
+operator visibility the recommended path is:
+
+```bash
+KEEPER_HEALTH_PATH=frontend/apps/web/public/ops/casino-keeper-health.json
+```
+
+The web app then reads `/ops/casino-keeper-health.json` from the Ops page. In a
+hosted deployment, mount the same JSON behind an authenticated ops-only route or
+object-store URL; do not expose keeper private keys, RPC credentials, or raw
+environment values.
 
 ## 5. Event Triggers
 
@@ -114,6 +128,26 @@ Required metrics:
 | `casino_keeper_last_success_age_seconds` | < 60s | > 300s |
 | `casino_keeper_random_ready_stuck_count` | 0 | > 0 |
 
+Required health snapshot fields:
+
+| Field | Meaning |
+| --- | --- |
+| `status` | `starting`, `running`, `degraded`, or `stopped` |
+| `role` | `primary` or `backup` |
+| `chainId` | release chain id |
+| `gameHub` / `vrfHub` | watched contract addresses |
+| `keeper` | keeper EOA address |
+| `startedAt` / `updatedAt` | ISO timestamps |
+| `lastScannedBlock` | latest scan cursor |
+| `queueDepth` | pending finalize queue size |
+| `lastEnqueuedAt` | last RandomReady / Fulfilled / scan enqueue |
+| `lastFinalizeSuccessAt` | last successful terminal finalize verification |
+| `lastFinalizeFailureAt` | last failed finalize attempt |
+| `lastError` | latest operational error summary, if any |
+
+`/ops` must treat a missing or stale snapshot as warning/degraded rather than
+as a healthy worker.
+
 ## 9. Don'ts
 
 - Do not settle bets that are not `RandomReady`.
@@ -131,6 +165,7 @@ Keeper implementation must include tests for:
 - simulation failure
 - RPC timeout and retry
 - backup delay
+- health snapshot updates and stale/missing ops rendering
 
 Code search before merge:
 

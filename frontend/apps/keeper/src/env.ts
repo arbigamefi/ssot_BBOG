@@ -68,6 +68,8 @@ export function loadKeeperConfig(env: NodeJS.ProcessEnv = process.env): KeeperCo
     backupDelayMs: parseMs(env.KEEPER_BACKUP_DELAY_SECONDS, 0),
     pollIntervalMs: parseMs(env.KEEPER_POLL_INTERVAL_SECONDS, 15_000),
     scanChunkBlocks: parseBlockCount(env.KEEPER_SCAN_CHUNK_BLOCKS, 10n),
-    startBlock: parseOptionalBlock(env.KEEPER_START_BLOCK) ?? BigInt(release.meta?.blockNumber ?? 0)
+    startBlock:
+      parseOptionalBlock(env.KEEPER_START_BLOCK) ?? BigInt(release.meta?.blockNumber ?? 0),
+    healthPath: env.KEEPER_HEALTH_PATH?.trim() || undefined
   };
 }

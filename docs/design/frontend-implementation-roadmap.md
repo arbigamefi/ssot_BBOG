@@ -363,6 +363,40 @@ Completed in this wave:
 - The old local casino simulation module and its tests were deleted.
 - The forbidden-result scan returns zero matches.
 
+## 6.3 Casino Keeper Health Closeout - 2026-05-17
+
+### Evidence
+
+The keeper can already enqueue from `GameHub.BetRandomReady`, enqueue from
+`VRFHub.Fulfilled`, scan missed events, simulate `finalize`, write
+`finalize`, and verify terminal state. The remaining production gap is
+operator visibility:
+
+- keeper health exists only as stdout structured logs;
+- `/ops` exposes indexer worker health, but not casino keeper health;
+- no durable `lastFinalizeSuccessAt`, `lastFinalizeFailureAt`, queue depth, or
+  last scanned block snapshot exists for operators.
+
+### Scope
+
+1. Add an optional keeper health snapshot writer controlled by
+   `KEEPER_HEALTH_PATH`.
+2. Update the snapshot after startup, enqueue, scan, finalize success/failure,
+   and heartbeat events.
+3. Add a frontend `/ops` reader for `/ops/casino-keeper-health.json`.
+4. Render missing, stale, healthy, and degraded keeper states explicitly.
+5. Add unit coverage for both the keeper health writer and `/ops` rendering.
+
+### Acceptance Checks
+
+```bash
+pnpm -C frontend/apps/keeper test -- health runtime
+pnpm -C frontend/apps/web test -- 'src/app/(product)/ops/pageClient.test.tsx'
+pnpm -C frontend typecheck
+pnpm -C frontend test
+pnpm -C frontend/apps/web build
+```
+
 ## 7. Current Closeout Roadmap
 
 This section supersedes the historical phase ledger below for the current

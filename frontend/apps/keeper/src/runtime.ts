@@ -14,6 +14,7 @@ import { privateKeyToAccount } from "viem/accounts";
 
 import { GAME_HUB_KEEPER_ABI, VRF_HUB_KEEPER_ABI } from "./abi.js";
 import { finalizeIfReady, retryDelayMs } from "./finalizer.js";
+import { createFileHealthSink, KeeperHealthReporter } from "./health.js";
 import { FinalizeQueue, type QueueItem } from "./queue.js";
 import { splitBlockRange } from "./scan.js";
 import { mapBetState } from "./state.js";
@@ -38,6 +39,7 @@ export type KeeperRuntime = {
   stop: () => void;
   enqueue: (event: KeeperEvent) => void;
   queue: FinalizeQueue;
+  health: KeeperHealthReporter;
 };
 
 export function createKeeperRuntime({
@@ -67,13 +69,27 @@ export function createKeeperRuntime({
         });
 
   const queue = new FinalizeQueue();
+  const health = new KeeperHealthReporter({
+    config,
+    keeper: account.address,
+    sink: config.healthPath ? createFileHealthSink(config.healthPath) : undefined
+  });
   const timers: Array<ReturnType<typeof setInterval>> = [];
   const unwatchers: Array<() => void> = [];
   let stopped = false;
   let lastScannedBlock = config.startBlock ?? 0n;
 
+  const writeHealth = (op: Promise<void>) => {
+    void op.catch((error) => {
+      logger.error("casino.keeper.health_write_failed", {
+        message: (error as Error)?.message ?? "unknown error"
+      });
+    });
+  };
+
   const enqueue = (event: KeeperEvent) => {
     queue.enqueue(event, config.role === "backup" ? config.backupDelayMs : 0);
+    writeHealth(health.recordEnqueued(event, queue.size));
     logger.info("casino.keeper.enqueued", {
       betId: event.betId.toString(),
       requestId: event.requestId?.toString(),
@@ -133,6 +149,7 @@ export function createKeeperRuntime({
 
       if (outcome.kind === "failed" && outcome.retryable && item.attempts < 8) {
         const next = queue.retry(item, retryDelayMs(item.attempts));
+        writeHealth(health.recordFinalizeOutcome(item, outcome, queue.size));
         logger.warn("casino.keeper.retry_scheduled", {
           betId: item.betId.toString(),
           attempts: next.attempts,
@@ -142,6 +159,7 @@ export function createKeeperRuntime({
       }
 
       queue.complete(item.betId);
+      writeHealth(health.recordFinalizeOutcome(item, outcome, queue.size));
     } catch (error) {
       if (item.attempts < 8) {
         queue.retry(item, retryDelayMs(item.attempts));
@@ -152,6 +170,9 @@ export function createKeeperRuntime({
         betId: item.betId.toString(),
         message: (error as Error)?.message ?? "unknown error"
       });
+      writeHealth(
+        health.recordError((error as Error)?.message ?? "unknown process failure", queue.size)
+      );
     }
   };
 
@@ -231,6 +252,7 @@ export function createKeeperRuntime({
         });
       }
       lastScannedBlock = range.toBlock;
+      writeHealth(health.recordScan(lastScannedBlock, queue.size));
     }
   };
 
@@ -244,6 +266,7 @@ export function createKeeperRuntime({
       startBlock: lastScannedBlock.toString(),
       scanChunkBlocks: config.scanChunkBlocks.toString()
     });
+    writeHealth(health.recordStarted(lastScannedBlock, queue.size));
 
     if (wsClient) {
       unwatchers.push(
@@ -269,16 +292,19 @@ export function createKeeperRuntime({
     }
 
     await scanMissedEvents();
+    writeHealth(health.recordRunning(lastScannedBlock, queue.size));
     timers.push(setInterval(() => void scanMissedEvents(), config.pollIntervalMs));
     timers.push(setInterval(() => void drainQueue(), 500));
+    timers.push(setInterval(() => writeHealth(health.recordHeartbeat(queue.size)), 10_000));
   };
 
   const stop = () => {
     stopped = true;
     timers.forEach(clearInterval);
     unwatchers.forEach((unwatch) => unwatch());
+    writeHealth(health.recordStopped(queue.size));
     logger.info("casino.keeper.stopped");
   };
 
-  return { start, stop, enqueue, queue };
+  return { start, stop, enqueue, queue, health };
 }

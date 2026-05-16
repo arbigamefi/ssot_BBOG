@@ -15,16 +15,27 @@ import type {
   OpsTrailRow
 } from "../../../features/ops/types";
 import { useIndexer } from "../../../features/ops/useIndexer";
+import { useKeeperHealth } from "../../../features/ops/useKeeperHealth";
 import { useRelease } from "../../../ssot/release/ReleaseProvider";
 
 export function OpsPageClient() {
   const { release } = useRelease();
   const { indexerStatus, syncNow, refreshIndexerStatus } = useIndexer();
+  const {
+    snapshot: keeperHealth,
+    view: keeperHealthView,
+    refresh: refreshKeeperHealth
+  } = useKeeperHealth();
 
   const health = React.useMemo(
     () => deriveHealth(indexerStatus?.lagBlocks, indexerStatus?.config?.confirmations),
     [indexerStatus?.config?.confirmations, indexerStatus?.lagBlocks]
   );
+
+  const refreshOps = React.useCallback(() => {
+    refreshIndexerStatus();
+    void refreshKeeperHealth();
+  }, [refreshIndexerStatus, refreshKeeperHealth]);
 
   const metrics = React.useMemo<OpsMetric[]>(
     () => [
@@ -56,9 +67,15 @@ export function OpsPageClient() {
             ? `Polling every ${Math.round(indexerStatus.config.pollIntervalMs / 1000)}s.`
             : "Worker polling unavailable.",
         tone: indexerStatus?.running ? "success" : "warn"
+      },
+      {
+        label: "Keeper state",
+        value: keeperHealthView.label,
+        detail: keeperHealthView.detail,
+        tone: keeperHealthView.tone
       }
     ],
-    [health.tone, indexerStatus, release?.releaseDigest]
+    [health.tone, indexerStatus, keeperHealthView, release?.releaseDigest]
   );
 
   const releaseRows = React.useMemo(
@@ -120,9 +137,49 @@ export function OpsPageClient() {
         value: indexerStatus?.lastError ?? "None",
         detail: "Last worker error surfaced by the runtime provider.",
         tone: indexerStatus?.lastError ? "danger" : "success"
+      },
+      {
+        label: "Casino keeper",
+        value: keeperHealthView.label,
+        detail: keeperHealthView.detail,
+        tone: keeperHealthView.tone
+      },
+      {
+        label: "Keeper role",
+        value: keeperHealth?.role ?? "—",
+        detail: keeperHealth
+          ? `EOA ${shortHex(keeperHealth.keeper)} on chain ${keeperHealth.chainId}.`
+          : "Snapshot unavailable."
+      },
+      {
+        label: "Keeper queue",
+        value:
+          typeof keeperHealth?.queueDepth === "number" ? `${keeperHealth.queueDepth} pending` : "—",
+        detail:
+          keeperHealth?.lastScannedBlock != null
+            ? `Last scanned block ${keeperHealth.lastScannedBlock}.`
+            : "Scan cursor unavailable.",
+        tone:
+          typeof keeperHealth?.queueDepth === "number" && keeperHealth.queueDepth > 0
+            ? "warn"
+            : "default"
+      },
+      {
+        label: "Last keeper success",
+        value: formatIsoTime(keeperHealth?.lastFinalizeSuccessAt),
+        detail: keeperHealth?.lastFinalizeSuccess
+          ? `Bet ${keeperHealth.lastFinalizeSuccess.betId}; tx ${shortHex(keeperHealth.lastFinalizeSuccess.txHash)}; ${keeperHealth.lastFinalizeSuccess.latencyMs}ms.`
+          : "No keeper finalize success in the current snapshot.",
+        tone: keeperHealth?.lastFinalizeSuccess ? "success" : "warn"
+      },
+      {
+        label: "Last keeper failure",
+        value: formatIsoTime(keeperHealth?.lastFinalizeFailureAt),
+        detail: keeperHealth?.lastFinalizeFailure?.reason ?? "No keeper failure in the snapshot.",
+        tone: keeperHealth?.lastFinalizeFailure ? "danger" : "success"
       }
     ],
-    [health, indexerStatus]
+    [health, indexerStatus, keeperHealth, keeperHealthView]
   );
 
   const trail = React.useMemo<OpsTrailRow[]>(
@@ -152,6 +209,14 @@ export function OpsPageClient() {
             : "Lag unknown"
       },
       {
+        time: keeperHealth?.updatedAt ? new Date(keeperHealth.updatedAt).toLocaleTimeString() : "—",
+        block: keeperHealth?.lastScannedBlock ?? "—",
+        event: "Casino keeper",
+        status: keeperHealthView.label,
+        tone: keeperHealthView.tone,
+        context: keeperHealthView.detail
+      },
+      {
         time: "Release",
         block: shortHex(release?.releaseDigest),
         event: "Release identity",
@@ -160,7 +225,7 @@ export function OpsPageClient() {
         context: release?.name ?? "Embedded release"
       }
     ],
-    [health, indexerStatus, release?.name, release?.releaseDigest]
+    [health, indexerStatus, keeperHealth, keeperHealthView, release?.name, release?.releaseDigest]
   );
 
   return (
@@ -171,7 +236,7 @@ export function OpsPageClient() {
           <OpsReleasePanel
             rows={releaseRows}
             onSync={() => void syncNow()}
-            onRefresh={refreshIndexerStatus}
+            onRefresh={refreshOps}
           />
           <OpsWorkerPanel rows={workerRows} />
         </div>
@@ -191,4 +256,11 @@ function deriveHealth(
   if (lag <= confirmations) return { label: "Healthy", tone: "success" };
   if (lag <= confirmations * 3) return { label: "Behind", tone: "warn" };
   return { label: "Stalled", tone: "danger" };
+}
+
+function formatIsoTime(value?: string) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.valueOf())) return "—";
+  return date.toLocaleTimeString();
 }

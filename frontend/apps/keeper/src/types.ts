@@ -28,6 +28,7 @@ export type KeeperConfig = {
   pollIntervalMs: number;
   scanChunkBlocks: bigint;
   startBlock?: bigint;
+  healthPath?: string;
 };
 
 export type BetRead = {
