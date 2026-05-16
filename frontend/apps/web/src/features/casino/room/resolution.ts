@@ -1,18 +1,30 @@
 import * as React from "react";
+import type { DomainBet } from "@ssot/ssot";
 import type { SSOTDb } from "@ssot/ssot/indexer";
 
-import type { CoinSide, DiceDirection } from "./params";
 import {
   findIndexedBetById,
   isTerminalIndexedBet,
-  readFinalizedPayoutWin,
+  readTerminalProof,
+  type RefundProof,
+  type SettlementProof,
   type IndexedBetSummary
 } from "./reconciliation";
-import { simulateGameResult } from "./simulation";
 
 export type GameHistoryEntry = {
   val: number;
   win: boolean;
+};
+
+export type CasinoRoundResult = {
+  kind: "settled" | "refunded" | "indexing";
+  betId: bigint;
+  requestId: bigint;
+  randomHash: `0x${string}`;
+  stake: bigint;
+  resolvedAt?: number;
+  settlement?: SettlementProof;
+  refund?: RefundProof;
 };
 
 export function appendGameHistoryEntry(
@@ -23,102 +35,109 @@ export function appendGameHistoryEntry(
   return [entry, ...history].slice(0, limit);
 }
 
+export function isTerminalDomainBet(
+  bet: DomainBet | null | undefined
+): bet is DomainBet & { state: "finalized" | "refunded" } {
+  return bet?.state === "finalized" || bet?.state === "refunded";
+}
+
+export function buildCasinoRoundResult({
+  bet,
+  settlement,
+  refund
+}: {
+  bet: DomainBet;
+  settlement?: SettlementProof;
+  refund?: RefundProof;
+}): CasinoRoundResult {
+  if (bet.state === "refunded") {
+    return {
+      kind: refund ? "refunded" : "indexing",
+      betId: bet.betId,
+      requestId: bet.requestId,
+      randomHash: bet.randomHash,
+      stake: bet.stake,
+      resolvedAt: bet.resolvedAt,
+      refund
+    };
+  }
+
+  return {
+    kind: settlement ? "settled" : "indexing",
+    betId: bet.betId,
+    requestId: bet.requestId,
+    randomHash: bet.randomHash,
+    stake: bet.stake,
+    resolvedAt: bet.resolvedAt,
+    settlement
+  };
+}
+
 export function useGameResolutionEffect({
-  status,
-  betId,
+  terminalBet,
   recentBets,
   db,
-  gameSlug,
-  coinSide,
-  diceDirection,
-  diceTarget,
-  rouletteSpots,
-  kenoSpots,
   setIsPending,
   setShowResult,
-  setFlipCount,
-  setResultNum,
-  setKenoResultDrawn,
-  setGameHistory,
+  setResultProof,
   reset
 }: {
-  status: string;
-  betId: bigint | undefined;
+  terminalBet: DomainBet | null;
   recentBets: readonly IndexedBetSummary[];
   db: Pick<SSOTDb, "gameHubEvents"> | undefined;
-  gameSlug: string;
-  coinSide: CoinSide;
-  diceDirection: DiceDirection;
-  diceTarget: number;
-  rouletteSpots: readonly string[];
-  kenoSpots: readonly number[];
   setIsPending: React.Dispatch<React.SetStateAction<boolean>>;
   setShowResult: React.Dispatch<React.SetStateAction<boolean>>;
-  setFlipCount: React.Dispatch<React.SetStateAction<number>>;
-  setResultNum: React.Dispatch<React.SetStateAction<number | null>>;
-  setKenoResultDrawn: React.Dispatch<React.SetStateAction<number[]>>;
-  setGameHistory: React.Dispatch<React.SetStateAction<GameHistoryEntry[]>>;
+  setResultProof: React.Dispatch<React.SetStateAction<CasinoRoundResult | null>>;
   reset: () => void;
 }) {
   const latestBetIdRef = React.useRef<bigint | undefined>();
+  const hideTimerRef = React.useRef<ReturnType<typeof setTimeout> | undefined>();
 
   React.useEffect(() => {
-    if (status !== "reconciled" || betId === undefined) return;
+    if (!isTerminalDomainBet(terminalBet)) return;
 
-    if (latestBetIdRef.current !== betId) {
-      latestBetIdRef.current = betId;
-      setIsPending(true);
+    if (latestBetIdRef.current !== terminalBet.betId) {
+      latestBetIdRef.current = terminalBet.betId;
+      setIsPending(false);
+      setShowResult(true);
+      setResultProof(buildCasinoRoundResult({ bet: terminalBet }));
+
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = setTimeout(() => {
+        setShowResult(false);
+        setResultProof(null);
+      }, 8_000);
+      reset();
     }
 
-    const indexedBet = findIndexedBetById(recentBets, betId);
+    const indexedBet = findIndexedBetById(recentBets, terminalBet.betId);
     if (!isTerminalIndexedBet(indexedBet)) return;
 
-    setIsPending(false);
-    setShowResult(true);
-
-    const resolvePayout = async () => {
-      const win = await readFinalizedPayoutWin({ db, txHash: indexedBet?.lastTxHash });
-      const simulated = simulateGameResult({
-        slug: gameSlug,
-        win,
-        coinSide,
-        diceDirection,
-        diceTarget,
-        rouletteSpots,
-        kenoSpots
+    let cancelled = false;
+    const resolveProof = async () => {
+      const proof = await readTerminalProof({
+        db,
+        betId: terminalBet.betId,
+        txHash: indexedBet?.lastTxHash
       });
-
-      if (simulated.flipCoin) setFlipCount((current) => current + 1);
-      if (gameSlug === "dice" || gameSlug === "roulette") {
-        setResultNum(simulated.value);
-      }
-      if (simulated.kenoDrawn) {
-        setKenoResultDrawn(simulated.kenoDrawn);
-      }
-
-      setGameHistory((history) => appendGameHistoryEntry(history, { val: simulated.value, win }));
-      setTimeout(() => setShowResult(false), 8000);
-      reset();
+      if (cancelled || !proof) return;
+      setResultProof(
+        proof.kind === "settled"
+          ? buildCasinoRoundResult({ bet: terminalBet, settlement: proof.settlement })
+          : buildCasinoRoundResult({ bet: terminalBet, refund: proof.refund })
+      );
     };
 
-    void resolvePayout();
-  }, [
-    status,
-    betId,
-    recentBets,
-    db,
-    gameSlug,
-    coinSide,
-    diceDirection,
-    diceTarget,
-    rouletteSpots,
-    kenoSpots,
-    setIsPending,
-    setShowResult,
-    setFlipCount,
-    setResultNum,
-    setKenoResultDrawn,
-    setGameHistory,
-    reset
-  ]);
+    void resolveProof();
+    return () => {
+      cancelled = true;
+    };
+  }, [terminalBet, recentBets, db, setIsPending, setShowResult, setResultProof, reset]);
+
+  React.useEffect(
+    () => () => {
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    },
+    []
+  );
 }

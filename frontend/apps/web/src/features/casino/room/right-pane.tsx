@@ -10,6 +10,7 @@ import {
 } from "./history-widget";
 import type { CoinSide, DiceDirection } from "./params";
 import { GameRoomResultOverlay } from "./result-overlay";
+import type { CasinoRoundResult } from "./resolution";
 
 export type { GameHistoryEntry, RecentBetSummary } from "./history-widget";
 
@@ -64,7 +65,10 @@ export function GameRoomRightPane({
   kenoSpots,
   animatingKenoSpots,
   kenoResultDrawn,
-  expectedPayout,
+  resultProof,
+  chainId,
+  assetSymbol,
+  assetDecimals,
   onDiceDirectionChange,
   onDiceTargetChange,
   onRouletteChange,
@@ -87,7 +91,10 @@ export function GameRoomRightPane({
   kenoSpots: readonly number[];
   animatingKenoSpots: readonly number[];
   kenoResultDrawn: readonly number[];
-  expectedPayout: number;
+  resultProof: CasinoRoundResult | null;
+  chainId?: number;
+  assetSymbol?: string;
+  assetDecimals?: number;
   onDiceDirectionChange: (direction: DiceDirection) => void;
   onDiceTargetChange: (target: number) => void;
   onRouletteChange: (spots: string[]) => void;
@@ -159,10 +166,10 @@ export function GameRoomRightPane({
 
       {showResult && (
         <GameRoomResultOverlay
-          gameSlug={gameSlug}
-          coinSide={coinSide}
-          resultNum={resultNum}
-          expectedPayout={expectedPayout}
+          result={resultProof}
+          chainId={chainId}
+          assetSymbol={assetSymbol}
+          assetDecimals={assetDecimals}
         />
       )}
     </div>

@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  extractTerminalProofFromRows,
   findIndexedBetById,
   isTerminalIndexedBet,
-  parseFinalizedPayoutWin,
-  readFinalizedPayoutWin,
+  readTerminalProof,
   type IndexedBetSummary
 } from "./reconciliation";
 
@@ -23,37 +23,91 @@ describe("game room reconciliation helpers", () => {
     expect(isTerminalIndexedBet({ ...finalizedBet, state: "refunded" })).toBe(true);
   });
 
-  it("parses payout above stake as a win", () => {
-    expect(parseFinalizedPayoutWin(JSON.stringify({ payout: "110", stake: "100" }))).toBe(true);
-    expect(parseFinalizedPayoutWin(JSON.stringify({ totalPayout: "100", stake: "100" }))).toBe(
-      false
-    );
-    expect(parseFinalizedPayoutWin("not-json")).toBe(false);
+  it("extracts terminal payout and refund proofs by bet id", () => {
+    expect(
+      extractTerminalProofFromRows(
+        [
+          {
+            eventName: "BetFinalized",
+            txHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            argsJson: JSON.stringify({
+              positionId: "123",
+              payoutGross: "125",
+              payoutNet: "120",
+              feeOnPayout: "5",
+              protocolFeeAccrual: "1"
+            })
+          }
+        ] as any,
+        123n
+      )
+    ).toEqual({
+      kind: "settled",
+      settlement: {
+        txHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        payoutGross: 125n,
+        payoutNet: 120n,
+        feeOnPayout: 5n,
+        protocolFeeAccrual: 1n
+      }
+    });
+
+    expect(
+      extractTerminalProofFromRows(
+        [
+          {
+            eventName: "BetRefunded",
+            txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            argsJson: JSON.stringify({ positionId: "123", refundAmount: "100" })
+          }
+        ] as any,
+        123n
+      )
+    ).toEqual({
+      kind: "refunded",
+      refund: {
+        txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        refundAmount: 100n
+      }
+    });
   });
 
-  it("reads the finalized payout event from the indexed GameHub event table", async () => {
+  it("reads terminal proof from the indexed GameHub event table", async () => {
     const db = {
       gameHubEvents: {
         where: () => ({
           equals: () => ({
-            filter: () => ({
-              toArray: async () => [
-                {
-                  eventName: "BetFinalized",
-                  argsJson: JSON.stringify({ payout: "125", stake: "100" })
-                }
-              ]
-            })
+            toArray: async () => [
+              {
+                eventName: "BetFinalized",
+                txHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                argsJson: JSON.stringify({
+                  positionId: "123",
+                  payoutGross: "125",
+                  payoutNet: "120"
+                })
+              }
+            ]
           })
         })
       }
     };
 
     await expect(
-      readFinalizedPayoutWin({
+      readTerminalProof({
         db: db as any,
+        betId: 123n,
         txHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
       })
-    ).resolves.toBe(true);
+    ).resolves.toEqual({
+      kind: "settled",
+      settlement: {
+        txHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        payoutGross: 125n,
+        payoutNet: 120n,
+        feeOnPayout: undefined,
+        protocolFeeAccrual: undefined
+      }
+    });
   });
 });

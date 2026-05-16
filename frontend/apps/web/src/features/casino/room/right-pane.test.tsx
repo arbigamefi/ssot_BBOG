@@ -24,7 +24,10 @@ const baseProps = {
   kenoSpots: [],
   animatingKenoSpots: [],
   kenoResultDrawn: [],
-  expectedPayout: 19.8,
+  resultProof: null,
+  chainId: 84532,
+  assetSymbol: "USDC",
+  assetDecimals: 6,
   onDiceDirectionChange: vi.fn(),
   onDiceTargetChange: vi.fn(),
   onRouletteChange: vi.fn(),
@@ -50,6 +53,20 @@ describe("GameRoomRightPane", () => {
         gameSlug="roulette"
         showResult
         resultNum={17}
+        resultProof={{
+          kind: "settled",
+          betId: 123456n,
+          requestId: 88n,
+          randomHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          stake: 10_000_000n,
+          settlement: {
+            txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            payoutGross: 20_000_000n,
+            payoutNet: 19_600_000n,
+            feeOnPayout: 400_000n,
+            protocolFeeAccrual: 200_000n
+          }
+        }}
         gameHistory={[{ val: 17, win: true }]}
         recentBets={[{ id: "84532:123456", betId: "123456", state: "finalized" }]}
       />
@@ -57,6 +74,7 @@ describe("GameRoomRightPane", () => {
 
     expect(screen.getByText("RECENT NUMBERS")).toBeDefined();
     expect(screen.getByText("SETTLED")).toBeDefined();
-    expect(screen.getByText("Verification Success")).toBeDefined();
+    expect(screen.getByText("Win confirmed")).toBeDefined();
+    expect(screen.getByText("19.6 USDC")).toBeDefined();
   });
 });

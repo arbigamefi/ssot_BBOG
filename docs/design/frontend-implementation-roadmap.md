@@ -2,7 +2,7 @@
 
 | Owner | Frontend Lead |
 | Status | Draft v3 |
-| Last Updated | 2026-05-16 |
+| Last Updated | 2026-05-17 |
 | Depends on | `00-charter.md`, `01-brand.md`, `02-voice-and-copy.md`, `03-information-architecture.md`, `04-page-blueprints.md`, `10-design-tokens.md`, `11-component-library.md`, `12-motion.md`, `13-web3-ux.md`, `14-data-and-state.md`, `15-forms.md`, `16-mobile.md`, `../frontend/20-accessibility.md`, `../frontend/21-i18n.md`, `../frontend/22-performance.md`, `../frontend/23-security.md`, `../frontend/24-testing.md`, `../frontend/25-observability.md`, `../frontend/30-build-and-release.md`, `../frontend/31-governance.md`, `../frontend/32-ai-pairing.md`, `frontend-rewrite-blueprint.md`, `frontend-kill-list.md`, ADR-0001, ADR-0002, ADR-0003 |
 | Supersedes | ad-hoc chat-only frontend rewrite sequencing |
 
@@ -306,6 +306,62 @@ Completed in this wave:
   in the bet asset.
 - Settlement facts are derived from the latest indexed `BetFinalized` event.
 - Copy failures are handled inline instead of throwing browser console errors.
+
+## 6.2 Casino Round Result Proof Closeout - 2026-05-17
+
+### Evidence
+
+The live round UX already follows the keeper-oriented path:
+
+- the player signs approval only when needed;
+- the player signs `placeBet`;
+- the UI polls `sdk.gameHub.getBet(positionId)` during the active round;
+- keeper / relayer settlement moves the bet into `Settled` or `Refunded`;
+- the frontend receives a terminal `DomainBet` without requiring the player to
+  sign `finalize`.
+
+The remaining closeout gap was the result overlay. The old overlay used local
+simulation and expected-payout display semantics after reconciliation. That is
+not acceptable for a provably-fair casino surface because it can show a result
+before the indexed `BetFinalized` / `BetRefunded` proof is available.
+
+### Scope
+
+This closeout is intentionally narrow:
+
+1. remove local fake result simulation from the live round terminal path;
+2. construct the result modal from chain-derived `DomainBet` terminal fields;
+3. enrich the modal from indexed `BetFinalized` / `BetRefunded` event facts;
+4. keep indexer-lag UX explicit with `Settlement confirmed. Indexing payout
+   proof`;
+5. delete now-unused casino simulation helpers and tests.
+
+It does not decode per-game visual outcome numbers from `randomHash`. That is a
+separate enhancement and must not be faked.
+
+### Acceptance Checks
+
+```bash
+rg -n "simulateGameResult|Verification Success|DIRECT PREDICTION HIT|claim winnings|totalPayout|readFinalizedPayoutWin|parseFinalizedPayoutWin" \
+  frontend/apps/web/src/features/casino frontend/apps/web/src/app/'(product)'/casino -g '*.ts' -g '*.tsx'
+pnpm -C frontend/apps/web test -- reconciliation resolution right-pane 'src/app/(product)/casino/[slug]/pageClient.test.tsx'
+pnpm -C frontend typecheck
+pnpm -C frontend test
+pnpm -C frontend/apps/web build
+```
+
+### Implementation Result
+
+Completed in this wave:
+
+- `GameRoomResultOverlay` now renders only chain-derived facts: bet id, request
+  id, random hash, net payout or refund, net result, and settlement explorer
+  link.
+- `useGameResolutionEffect` now responds to a terminal `DomainBet` and enriches
+  the modal from indexed `BetFinalized` / `BetRefunded` rows.
+- `reconciliation.ts` now extracts terminal proof by canonical `positionId`.
+- The old local casino simulation module and its tests were deleted.
+- The forbidden-result scan returns zero matches.
 
 ## 7. Current Closeout Roadmap
 
