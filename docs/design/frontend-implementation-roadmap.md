@@ -7,9 +7,9 @@
 | Supersedes | ad-hoc chat-only frontend rewrite sequencing |
 
 This document is the working implementation roadmap for the current
-`codex/frontend-north-star` branch. It exists because implementation started
-before Gate A/B/C were formally closed. The goal is to bring the branch back
-under the SSOT process without throwing away useful work already landed.
+`codex/frontend-bundle-closeout` branch. It exists because implementation
+started before Gate A/B/C were formally closed. The goal is to bring the branch
+back under the SSOT process without throwing away useful work already landed.
 
 This file does not replace `frontend-rewrite-blueprint.md`; it translates that
 blueprint into an evidence-backed execution plan for the current repository
@@ -63,7 +63,7 @@ This roadmap is based on the full active frontend SSOT set:
 
 ## 3. Current Evidence Snapshot
 
-Snapshot command set, run on 2026-05-15:
+Snapshot command set, refreshed on 2026-05-17:
 
 ```bash
 git status --short --branch
@@ -89,10 +89,10 @@ Observed baseline:
 | Check                                                          | Current                        |
 | -------------------------------------------------------------- | ------------------------------ |
 | Working tree                                                   | clean                          |
-| Draft SSOT documents                                           | 26                             |
+| Draft SSOT documents                                           | 29                             |
 | Accepted documents                                             | 3, all ADRs                    |
 | `app/prototype` directory                                      | absent                         |
-| `apps/web/sandbox` directory                                   | present                        |
+| `apps/web/sandbox` directory                                   | absent; prototypes deleted     |
 | app route groups `(...)`                                       | 3                              |
 | `apps/web/src/app-shell`                                       | present                        |
 | `packages/ui/src/primitives`                                   | present                        |
@@ -101,19 +101,24 @@ Observed baseline:
 | forbidden token/radius/shadow/transition/dark lines            | 0                              |
 | files with forbidden token/radius/shadow/transition/dark lines | 0                              |
 | `pageClient.tsx` files over 600 LOC                            | 0                              |
-| largest `pageClient.tsx`                                       | `earn/pageClient.tsx`, 324 LOC |
+| largest `pageClient.tsx`                                       | activity detail, 408 LOC       |
 | sportsbook SDK-backed lookup                                   | present                        |
 | release smoke against Base Sepolia                             | passing                        |
+| casino result overlay                                          | chain-derived, no simulation   |
+| casino keeper health                                           | health snapshot + `/ops` panel |
 
 Interpretation:
 
 - The old 2,030-line game god component problem is closed.
 - The original prototype route pollution is closed for production routes.
 - The target route groups and UI package skeleton are now present.
+- Prototype artifacts were deleted instead of moved to sandbox; the production
+  App Router has no prototype surface.
 - Strict local guardrails cover style, shell, prototype route, legacy route,
   placeholder, page size, web3 import boundary, and legacy SDK compatibility.
-- The remaining risk is not visible-page architecture; it is release-shape
-  residue in scripts / fixtures and incomplete formal Gate A/B/C acceptance.
+- The remaining risk is not visible-page architecture; release-shape residue is
+  closed. The formal residual risk is incomplete Gate A/B/C acceptance and the
+  quality checks that are intentionally deferred to CI hardening.
 
 ## 4. SSOT Gate Status
 
@@ -439,6 +444,14 @@ rg -n '"hub"\s*:|bankRegistry|SSOTHubAPI|sdk\.hub|contracts\.hub|release\.contra
 Only `scripts/frontend-precheck.mjs` may contain the literal forbidden-regex
 definition.
 
+Implementation result on 2026-05-17:
+
+- `precheck:frontend -- --strict` passes.
+- `check:release` passes.
+- `smoke:release-readonly` passes on Base Sepolia.
+- The legacy compatibility scan returns only the intentional
+  `frontend-precheck.mjs` regex definition.
+
 ### C2 - Full Local Verification
 
 Goal: prove the clean-room phase is locally coherent.
@@ -459,6 +472,25 @@ Expected caveats:
 - Node warning is expected while local Node is v22 and project asks for v20.
 - Next ESLint plugin warning is pre-existing and should be handled separately
   before public launch.
+
+Implementation result on 2026-05-17:
+
+```bash
+pnpm -C frontend/apps/web exec vitest run 'src/app/(product)/sportsbook/pageClient.test.tsx'
+pnpm -C frontend precheck:frontend -- --strict
+pnpm -C frontend check:release
+pnpm -C frontend smoke:release-readonly
+pnpm -C frontend typecheck
+pnpm -C frontend test
+pnpm -C frontend/apps/web build
+```
+
+All commands passed. The read-only smoke validated Base Sepolia chain `84532`,
+the embedded `v1.3` release, `GameHub`, `SportsHub`, `VRFHub`, all eight casino
+module mappings, Casino pool `1`, Sports pool `2`, and SportsRiskEngine pool
+hash. Production build remains within the current post-optimization envelope:
+`/casino/[slug]` first load `181 kB`, `/sportsbook` first load `159 kB`, `/ops`
+first load `127 kB`.
 
 ### C3 - Clean-Room PR Decision
 
