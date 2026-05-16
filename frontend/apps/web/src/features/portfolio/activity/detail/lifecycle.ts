@@ -4,7 +4,7 @@ import type { TxStatus, TxStepItem } from "@ssot/ui";
 export function matchesBetId(argsJson: string, expectedBetId: string) {
   try {
     const args = JSON.parse(argsJson) as Record<string, unknown>;
-    const raw = args.betId ?? args.id;
+    const raw = args.positionId ?? args.betId ?? args.id;
     if (typeof raw === "number") return BigInt(raw).toString() === expectedBetId;
     if (typeof raw === "string") {
       if (raw.startsWith("0x")) {

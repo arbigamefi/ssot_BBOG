@@ -238,6 +238,75 @@ This means small commits are still fine, but every commit must be phase-bound:
 - no old component kept solely for compatibility;
 - no deletion without `rg` evidence.
 
+## 6.1 Receipt Proof Closeout - 2026-05-16
+
+### Evidence
+
+The Base Sepolia GameHub canary proved that `GameHub.finalize(positionId)`
+settles correctly and, after the VRF duplicate-detach fix, no longer produces a
+best-effort internal `VRFHub.detach` revert. The remaining user-facing issue is
+in the frontend receipt surface, not in settlement:
+
+- `getBet(positionId)` exposes v1.3 GameHub proof fields such as `requestId`,
+  `randomHash`, `vrfFeePaid`, `vrfFeeCharged`, `vrfRequestedAt`, and
+  `resolvedAt`, but the frontend SDK maps only the old minimal subset.
+- The activity detail page formats `vrfFeePaid` with the bet asset decimals and
+  symbol. This is wrong because VRF fees are native-token wei, not USDC units.
+- GameHub v1.3 lifecycle events index the identifier as `positionId`, while the
+  detail timeline filter only matches `betId` or `id`.
+- Settlement economics such as `payoutNet` live in `BetFinalized` events and
+  are not stored directly in the GameHub bet struct.
+
+### Scope
+
+This closeout is intentionally narrow. It does not add new casino games, change
+the wallet flow, or alter indexer storage. It only makes the receipt page show
+the canonical facts that already exist on-chain or in the indexed event log.
+
+### Implementation Plan
+
+1. Extend `DomainBet` and `sdk.gameHub.getBet()` to map the v1.3 GameHub bet
+   struct fields required by receipt proof display.
+2. Update activity timeline matching to accept `positionId` as the canonical
+   GameHub v1.3 identifier.
+3. Add a native-token formatter for VRF fees and use it for `vrfFeePaid` and
+   `vrfFeeCharged`.
+4. Extract settlement proof from the latest `BetFinalized` event when present,
+   then use `payoutNet` / `refundAmount` for receipt facts and net-result
+   metrics.
+5. Add unit coverage proving that `positionId` events render in the timeline
+   and that finalized receipts show ETH-denominated VRF fees plus request /
+   random proof fields.
+6. Validate with typecheck, focused tests, full frontend tests, and browser
+   smoke on a local activity detail route.
+
+### Acceptance Checks
+
+```bash
+pnpm -C frontend/apps/web test -- 'src/app/(product)/portfolio/activity/[betId]/pageClient.test.tsx'
+pnpm -C frontend/packages/ssot typecheck
+pnpm -C frontend typecheck
+pnpm -C frontend test
+```
+
+Rendered validation target:
+
+```text
+/portfolio/activity/<positionId> -> receipt dossier -> lifecycle events,
+native VRF fee display, requestId, randomHash, and settled timestamp are visible.
+```
+
+### Implementation Result
+
+Completed in this wave:
+
+- `sdk.gameHub.getBet()` now maps the v1.3 GameHub receipt proof fields.
+- Activity detail timeline matching accepts canonical `positionId` event args.
+- VRF fee facts display as native ETH, while stake / payout / protocol fee stay
+  in the bet asset.
+- Settlement facts are derived from the latest indexed `BetFinalized` event.
+- Copy failures are handled inline instead of throwing browser console errors.
+
 ## 7. Current Closeout Roadmap
 
 This section supersedes the historical phase ledger below for the current
@@ -1260,17 +1329,17 @@ Observed:
 
 ### 14.2 Finding Disposition
 
-| External audit item | Current disposition | Action |
-| --- | --- | --- |
-| Bundle high risk (`/casino/[slug]` 504 kB, sportsbook detail 289 kB) | **Resolved enough for closeout.** Current build is 178 kB / 159 kB after lazy Sentry, lazy stages, lightweight page transition, custom toaster, and lazy RainbowKit modal. | Do not chase 150 kB as a hard blocker. Keep a future bundle-budget gate. |
-| N3 single AppShell | **Closed.** No legacy shell names remain. Feature-level `GameRoomShell` is not a competing app chrome. | No code action. |
-| N5 no hex literal | **Open.** `global-error.tsx` still uses raw hex because it cannot rely on normal providers/components. | Replace raw hex with token-compatible HSL fallbacks; extend precheck to catch raw hex literals in source. |
-| N2 no per-game color family | **Partially open.** The Tailwind color-family scan missed raw `rgba(147,51,234,0.05)` in Dice and old UI primitive color families. | Replace with `brand` / `accent` / semantic token classes; extend precheck to catch ad-hoc Tailwind color families and raw rgb/rgba in app/UI source. |
-| Phase 5 casino modules | **Partially open.** Registry exists, but stage implementations are flat in `room/`. | Move stage components/tests into `modules/<slug>/`; keep shared room framework in `room/`. Do not add new games in this slice. |
-| Phase 1 primitives physical migration | **Transitional.** `primitives/index.ts` re-exports `components/ui/*`; this is acceptable short-term but not final Gate B. | Do not do a broad move in this slice. First retokenize remaining `components/ui` debt and keep the later physical move separate. |
-| Gate A/B/C document statuses | **Formally open.** Draft documents should not be mechanically marked Accepted. | Keep Draft until human sign-off. Record implementation evidence here instead. |
-| Lighthouse / a11y / bundle-budget CI | **Open but not first-order correctness.** CI already runs release sanity, lint, typecheck, strict tests, build, and Storybook build. | Add budget/a11y/perf gates after token discipline and module ownership are clean. |
-| v1.3 four new casino games | **Product expansion, not closeout.** Earlier product decision paused adding games. | Do not add Baccarat / Plinko / Sic Bo / Slots in this closeout slice. |
+| External audit item                                                  | Current disposition                                                                                                                                                        | Action                                                                                                                                               |
+| -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Bundle high risk (`/casino/[slug]` 504 kB, sportsbook detail 289 kB) | **Resolved enough for closeout.** Current build is 178 kB / 159 kB after lazy Sentry, lazy stages, lightweight page transition, custom toaster, and lazy RainbowKit modal. | Do not chase 150 kB as a hard blocker. Keep a future bundle-budget gate.                                                                             |
+| N3 single AppShell                                                   | **Closed.** No legacy shell names remain. Feature-level `GameRoomShell` is not a competing app chrome.                                                                     | No code action.                                                                                                                                      |
+| N5 no hex literal                                                    | **Open.** `global-error.tsx` still uses raw hex because it cannot rely on normal providers/components.                                                                     | Replace raw hex with token-compatible HSL fallbacks; extend precheck to catch raw hex literals in source.                                            |
+| N2 no per-game color family                                          | **Partially open.** The Tailwind color-family scan missed raw `rgba(147,51,234,0.05)` in Dice and old UI primitive color families.                                         | Replace with `brand` / `accent` / semantic token classes; extend precheck to catch ad-hoc Tailwind color families and raw rgb/rgba in app/UI source. |
+| Phase 5 casino modules                                               | **Partially open.** Registry exists, but stage implementations are flat in `room/`.                                                                                        | Move stage components/tests into `modules/<slug>/`; keep shared room framework in `room/`. Do not add new games in this slice.                       |
+| Phase 1 primitives physical migration                                | **Transitional.** `primitives/index.ts` re-exports `components/ui/*`; this is acceptable short-term but not final Gate B.                                                  | Do not do a broad move in this slice. First retokenize remaining `components/ui` debt and keep the later physical move separate.                     |
+| Gate A/B/C document statuses                                         | **Formally open.** Draft documents should not be mechanically marked Accepted.                                                                                             | Keep Draft until human sign-off. Record implementation evidence here instead.                                                                        |
+| Lighthouse / a11y / bundle-budget CI                                 | **Open but not first-order correctness.** CI already runs release sanity, lint, typecheck, strict tests, build, and Storybook build.                                       | Add budget/a11y/perf gates after token discipline and module ownership are clean.                                                                    |
+| v1.3 four new casino games                                           | **Product expansion, not closeout.** Earlier product decision paused adding games.                                                                                         | Do not add Baccarat / Plinko / Sic Bo / Slots in this closeout slice.                                                                                |
 
 ### 14.3 Immediate Implementation Slice
 

@@ -23,6 +23,10 @@ export function formatTokenAmount(
   return symbol ? `${body} ${symbol}` : body;
 }
 
+export function formatNativeAmount(value: bigint | undefined, symbol = "ETH") {
+  return formatTokenAmount(value, 18, symbol, 8);
+}
+
 export function formatTimestamp(value?: number | bigint) {
   if (!value) return "—";
   const numeric = Number(value);

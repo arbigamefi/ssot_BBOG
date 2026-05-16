@@ -14,6 +14,7 @@ import { BetDetailLifecycle } from "../../../../../features/portfolio/activity/d
 import { BetDetailSummary } from "../../../../../features/portfolio/activity/detail/bet-detail-summary";
 import { BetDetailTimeline } from "../../../../../features/portfolio/activity/detail/bet-detail-timeline";
 import {
+  formatNativeAmount,
   formatTimestamp,
   formatTokenAmount,
   getExplorerBaseUrl,
@@ -80,8 +81,15 @@ export function BetDetailPageClient({ betId }: { betId: string }) {
     refetchInterval: 2_000
   });
 
+  const settlementProof = React.useMemo(() => extractSettlementProof(timeline), [timeline]);
+  const refundProof = React.useMemo(() => extractRefundProof(timeline), [timeline]);
   const betState = onChainBet?.state ?? localBet?.state ?? null;
-  const stateLabel = getStateLabel(betState, onChainBet);
+  const stateLabel =
+    betState === "finalized" && settlementProof?.payoutNet != null
+      ? settlementProof.payoutNet >= (onChainBet?.stake ?? 0n)
+        ? "Won"
+        : "Lost"
+      : getStateLabel(betState, onChainBet);
   const gameId = onChainBet?.gameId ?? localBet?.gameId;
   const assetAddress = onChainBet?.asset ?? localBet?.asset;
 
@@ -157,7 +165,10 @@ export function BetDetailPageClient({ betId }: { betId: string }) {
     }
   }, [finalizeFlow, parsedBetId, refetchOnChain, sdk]);
 
-  const outcome = React.useMemo(() => deriveOutcome(onChainBet, betState), [betState, onChainBet]);
+  const outcome = React.useMemo(
+    () => deriveOutcome(onChainBet, betState, settlementProof, refundProof),
+    [betState, onChainBet, refundProof, settlementProof]
+  );
 
   const metrics = React.useMemo<BetDetailMetric[]>(
     () => [
@@ -198,11 +209,36 @@ export function BetDetailPageClient({ betId }: { betId: string }) {
       { label: "Room", value: gameLabel },
       { label: "Ticket id", value: betId, copyValue: betId },
       { label: "Stake", value: formatTokenAmount(onChainBet?.stake, decimals, symbol) },
-      { label: "VRF fee paid", value: formatTokenAmount(onChainBet?.vrfFeePaid, decimals, symbol) },
-      { label: "Payout", value: formatTokenAmount(onChainBet?.payout, decimals, symbol) },
-      { label: "Refund", value: formatTokenAmount(onChainBet?.refund, decimals, symbol) },
+      { label: "VRF fee paid", value: formatNativeAmount(onChainBet?.vrfFeePaid) },
+      { label: "VRF fee charged", value: formatNativeAmount(onChainBet?.vrfFeeCharged) },
+      {
+        label: "VRF request id",
+        value: formatBigintId(onChainBet?.requestId),
+        copyValue: copyableBigintId(onChainBet?.requestId)
+      },
+      {
+        label: "Random hash",
+        value: shortHex(nonZeroHex(onChainBet?.randomHash)),
+        copyValue: nonZeroHex(onChainBet?.randomHash)
+      },
+      {
+        label: "Payout",
+        value: formatTokenAmount(settlementProof?.payoutNet ?? onChainBet?.payout, decimals, symbol)
+      },
+      {
+        label: "Protocol fee",
+        value: formatTokenAmount(settlementProof?.protocolFeeAccrual, decimals, symbol)
+      },
+      {
+        label: "Refund",
+        value: formatTokenAmount(refundProof?.refundAmount ?? onChainBet?.refund, decimals, symbol)
+      },
       { label: "Placed at", value: formatTimestamp(onChainBet?.placedAt) },
-      { label: "Settled at", value: formatTimestamp(onChainBet?.settledAt) },
+      { label: "VRF requested at", value: formatTimestamp(onChainBet?.vrfRequestedAt) },
+      {
+        label: "Settled at",
+        value: formatTimestamp(onChainBet?.resolvedAt ?? onChainBet?.settledAt)
+      },
       {
         label: "Primary tx",
         value: shortHex(primaryTxHash),
@@ -228,6 +264,9 @@ export function BetDetailPageClient({ betId }: { betId: string }) {
       localBet?.player,
       onChainBet,
       primaryTxHash,
+      refundProof?.refundAmount,
+      settlementProof?.payoutNet,
+      settlementProof?.protocolFeeAccrual,
       symbol
     ]
   );
@@ -280,14 +319,90 @@ function parseBetId(value: string) {
   }
 }
 
-function deriveOutcome(bet?: DomainBet | null, state?: string | null) {
+interface SettlementProof {
+  payoutGross?: bigint;
+  payoutNet?: bigint;
+  feeOnPayout?: bigint;
+  protocolFeeAccrual?: bigint;
+}
+
+interface RefundProof {
+  refundAmount?: bigint;
+}
+
+function deriveOutcome(
+  bet?: DomainBet | null,
+  state?: string | null,
+  settlementProof?: SettlementProof | null,
+  refundProof?: RefundProof | null
+) {
   if (!bet || !state) return null;
-  if (state === "refunded") return { label: "Refunded", value: bet.refund ?? bet.stake };
-  if (state === "finalized" && bet.payout != null) {
+  if (state === "refunded")
+    return { label: "Refunded", value: refundProof?.refundAmount ?? bet.refund ?? bet.stake };
+  const payout = settlementProof?.payoutNet ?? bet.payout;
+  if (state === "finalized" && payout != null) {
     return {
-      label: bet.payout >= bet.stake ? "Net result" : "Loss",
-      value: bet.payout - bet.stake
+      label: payout >= bet.stake ? "Net result" : "Loss",
+      value: payout - bet.stake
     };
   }
   return null;
+}
+
+function extractSettlementProof(timeline: GameHubEventRow[]): SettlementProof | null {
+  const row = [...timeline].reverse().find((event) => event.eventName === "BetFinalized");
+  if (!row) return null;
+  const args = parseArgs(row.argsJson);
+  if (!args) return null;
+  return {
+    payoutGross: readBigintArg(args.payoutGross),
+    payoutNet: readBigintArg(args.payoutNet),
+    feeOnPayout: readBigintArg(args.feeOnPayout),
+    protocolFeeAccrual: readBigintArg(args.protocolFeeAccrual)
+  };
+}
+
+function extractRefundProof(timeline: GameHubEventRow[]): RefundProof | null {
+  const row = [...timeline].reverse().find((event) => event.eventName === "BetRefunded");
+  if (!row) return null;
+  const args = parseArgs(row.argsJson);
+  if (!args) return null;
+  return {
+    refundAmount: readBigintArg(args.refundAmount)
+  };
+}
+
+function parseArgs(argsJson: string): Record<string, unknown> | null {
+  try {
+    return JSON.parse(argsJson) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+function readBigintArg(value: unknown): bigint | undefined {
+  if (typeof value === "bigint") return value;
+  if (typeof value === "number") return BigInt(value);
+  if (typeof value === "string") {
+    if (!value) return undefined;
+    try {
+      return BigInt(value);
+    } catch {
+      return undefined;
+    }
+  }
+  return undefined;
+}
+
+function formatBigintId(value?: bigint) {
+  return value && value > 0n ? value.toString() : "—";
+}
+
+function copyableBigintId(value?: bigint) {
+  return value && value > 0n ? value.toString() : undefined;
+}
+
+function nonZeroHex(value?: string | null) {
+  if (!value || /^0x0+$/.test(value)) return undefined;
+  return value;
 }
