@@ -47,7 +47,9 @@ stateDiagram-v2
   approving --> placing: approval mined
   placing --> waiting_vrf: BetPlaced mined
   waiting_vrf --> settling: bet.state == RandomReady
-  waiting_vrf --> refundable: refund timeout reached
+  waiting_vrf --> timeout_soft: soft VRF threshold reached
+  timeout_soft --> settling: bet.state == RandomReady
+  timeout_soft --> refundable: refund timeout reached
   settling --> settled: bet.state == Settled
   settling --> manual_settle_offered: keeper delay threshold
   manual_settle_offered --> settling: user explicitly clicks Settle result
@@ -123,12 +125,24 @@ Responsibilities:
 - execute approval and `placeBet` from a single user click
 - parse/reconcile `betId`
 - poll `sdk.gameHub.getBet(betId)` every 1.5-2s while active
-- transition `PendingVRF -> RandomReady -> Settled/Refunded`
+- transition `PendingVRF -> soft timeout -> RandomReady -> Settled/Refunded`
 - show manual `Settle result` only after the keeper delay threshold
 - show `Refund stake` only after the protocol refund timeout
 
 The indexer remains the ledger source for history and event proof. Direct chain
 polling is the live round source because indexer latency is visible to players.
+
+### 6.1 Timeout and refund ownership
+
+`timeout_soft` is a user-facing status only. It must not stop polling, stop the
+stage animation, or imply funds are lost. It simply changes the copy from
+`Waiting for Chainlink VRF` to `VRF is taking longer than usual`.
+
+`refundable` is a signing state. It appears only when the latest direct
+`getBet` read is still `PendingVRF`/`placed` and
+`now >= placedAt + refundTimeoutSeconds`. The button copy is `Refund stake`.
+`Refund stake` sends `GameHub.refund(betId)` only after the user explicitly
+clicks it. The frontend must never auto-refund a player round.
 
 ## 7. Result Modal Contract
 
@@ -157,7 +171,8 @@ showing a mocked amount.
 ## 9. How To Enforce
 
 - Unit tests must cover `ready -> approving -> placing`, `waiting_vrf`,
-  `settling`, manual settlement after delay, and refund fallback.
+  `timeout_soft`, `settling`, manual settlement after delay, and refund
+  fallback.
 - Frontend checks:
 
 ```bash

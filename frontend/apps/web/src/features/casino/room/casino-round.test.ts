@@ -7,9 +7,29 @@ describe("casino round helpers", () => {
     expect(
       deriveCasinoRoundPhase({
         betState: "placed",
+        placedAt: 9,
         now: 10_000
       })
     ).toBe("waiting_vrf");
+
+    expect(
+      deriveCasinoRoundPhase({
+        betState: "placed",
+        placedAt: 1,
+        now: 62_000,
+        softVrfTimeoutMs: 60_000,
+        refundTimeoutSeconds: 3_600
+      })
+    ).toBe("timeout_soft");
+
+    expect(
+      deriveCasinoRoundPhase({
+        betState: "placed",
+        placedAt: 1,
+        now: 3_602_000,
+        refundTimeoutSeconds: 3_600
+      })
+    ).toBe("refundable");
 
     expect(
       deriveCasinoRoundPhase({

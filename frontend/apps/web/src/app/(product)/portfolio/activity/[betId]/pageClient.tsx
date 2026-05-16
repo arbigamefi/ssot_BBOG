@@ -124,7 +124,7 @@ export function BetDetailPageClient({ betId }: { betId: string }) {
     }
   });
 
-  const finalizeFlow = useDirectTxAction({
+  const manualFinalizeFlow = useDirectTxAction({
     action: "FINALIZE",
     labels: {
       preflight: "Preflight",
@@ -153,17 +153,17 @@ export function BetDetailPageClient({ betId }: { betId: string }) {
     }
   }, [parsedBetId, refetchOnChain, refundFlow, sdk]);
 
-  const handleFinalize = React.useCallback(async () => {
+  const manualFinalizeHandler = React.useCallback(async () => {
     if (!sdk || parsedBetId === undefined) return;
     try {
-      const result = await finalizeFlow.execute(() => sdk.gameHub.finalize(parsedBetId));
+      const result = await manualFinalizeFlow.execute(() => sdk.gameHub.finalize(parsedBetId));
       if (!result.ok) return;
       toast.success("Bet finalized successfully");
       void refetchOnChain();
     } catch (error) {
       toast.error((error as Error).message ?? "Finalize transaction failed");
     }
-  }, [finalizeFlow, parsedBetId, refetchOnChain, sdk]);
+  }, [manualFinalizeFlow, parsedBetId, refetchOnChain, sdk]);
 
   const outcome = React.useMemo(
     () => deriveOutcome(onChainBet, betState, settlementProof, refundProof),
@@ -296,9 +296,9 @@ export function BetDetailPageClient({ betId }: { betId: string }) {
             <BetDetailActions
               canFinalize={canFinalize}
               canRefund={canRefund}
-              finalizeFlow={finalizeFlow}
+              finalizeFlow={manualFinalizeFlow}
               refundFlow={refundFlow}
-              onFinalize={() => void handleFinalize()}
+              onFinalize={() => void manualFinalizeHandler()}
               onRefund={() => void handleRefund()}
               explorerBaseUrl={explorerBaseUrl}
             />

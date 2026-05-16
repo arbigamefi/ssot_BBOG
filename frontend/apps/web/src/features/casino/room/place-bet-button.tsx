@@ -14,11 +14,12 @@ export function getPlaceBetButtonLabel({
 }) {
   if (!hasAccount) return "CONNECT WALLET";
   if (state.status === "failed") return "TRANSACTION FAILED - RETRY";
-  if (isPending || state.status === "reconciled") return "WAITING FOR RESULT...";
+  if (isPending || state.status === "reconciled") return "ROUND IN PROGRESS";
   if (state.status === "mined") return "BET MINED...";
   if (state.status === "submitting") return "SIGNING / PLACING...";
-  if (state.plan) return state.plan.preview?.needsApproval ? "APPROVE + PLACE" : "PLACE BET";
-  if (state.status === "planning") return "REVIEWING TICKET...";
+  if (state.plan)
+    return state.plan.preview?.needsApproval ? "APPROVE, THEN PLACE BET" : "PLACE BET";
+  if (state.status === "planning") return "PREPARING ROUND...";
   return "PLACE BET";
 }
 

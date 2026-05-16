@@ -64,6 +64,8 @@ function renderPanel(overrides: Partial<React.ComponentProps<typeof GameRoomBetP
     roundError: undefined,
     manualSettleAvailable: false,
     onManualSettle: vi.fn(),
+    manualRefundAvailable: false,
+    onManualRefund: vi.fn(),
     onPlaceBet: vi.fn(),
     ...overrides
   };
@@ -105,7 +107,7 @@ describe("GameRoomBetPanel", () => {
         state: { status: "idle", plan: { preview: { needsApproval: true } } },
         isPending: false
       })
-    ).toBe("APPROVE + PLACE");
+    ).toBe("APPROVE, THEN PLACE BET");
     expect(
       isPlaceBetButtonDisabled({
         gameSlug: "roulette",
@@ -119,5 +121,24 @@ describe("GameRoomBetPanel", () => {
   it("parses wallet balances for max amount shortcuts", () => {
     expect(parseWalletBalanceAmount("1,450.00 USDC")).toBe(1450);
     expect(parseWalletBalanceAmount(null)).toBe(1450);
+  });
+
+  it("shows explicit manual settlement and refund fallback controls only when provided", () => {
+    const onManualSettle = vi.fn();
+    const onManualRefund = vi.fn();
+    renderPanel({
+      hasAccount: true,
+      roundPhase: "refundable",
+      manualSettleAvailable: true,
+      onManualSettle,
+      manualRefundAvailable: true,
+      onManualRefund
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Settle result" }));
+    fireEvent.click(screen.getByRole("button", { name: "Refund stake" }));
+
+    expect(onManualSettle).toHaveBeenCalledTimes(1);
+    expect(onManualRefund).toHaveBeenCalledTimes(1);
   });
 });

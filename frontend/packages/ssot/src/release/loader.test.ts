@@ -26,6 +26,7 @@ function v13ReleaseFixture() {
     chainId: 84532,
     name: "Base Sepolia",
     releaseDigest: "0xdeadbeefcafefeed",
+    refundTimeoutSeconds: 3600,
     contracts: {
       gameHub: ADDRESS_1,
       settlementRouter: ADDRESS_2,
@@ -123,6 +124,7 @@ describe("loadEmbeddedRelease", () => {
     expect(result.release.contracts.gameHub).toMatch(/^0x[a-f0-9]{40}$/);
     expect(result.release.contracts.poolRegistry).toMatch(/^0x[a-f0-9]{40}$/);
     expect(result.release.contracts.sportsHub).toMatch(/^0x[a-f0-9]{40}$/);
+    expect(result.release.refundTimeoutSeconds).toBe(3600);
     expect(result.release.assets.length).toBeGreaterThan(0);
     expect(result.release.gamesMeta.length).toBeGreaterThan(0);
     expect(result.release.pools.length).toBeGreaterThan(0);

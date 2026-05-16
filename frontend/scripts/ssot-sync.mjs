@@ -397,6 +397,11 @@ async function main() {
     name: chainName(chainId),
     releaseDigest: digest,
     isPlaceholder: false,
+    refundTimeoutSeconds:
+      Number.isFinite(Number(manifest.refundTimeoutSeconds)) &&
+      Number(manifest.refundTimeoutSeconds) > 0
+        ? Number(manifest.refundTimeoutSeconds)
+        : undefined,
     contracts: {
       gameHub: normalizeAddress(addresses.gameHub),
       settlementRouter: normalizeAddress(addresses.settlementRouter),

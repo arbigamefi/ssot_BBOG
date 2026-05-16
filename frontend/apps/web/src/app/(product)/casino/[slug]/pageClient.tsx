@@ -120,6 +120,7 @@ export function GamePageClient({ slug }: { slug: string }) {
     sdk,
     betId: state.betId,
     active: state.status === "reconciled",
+    refundTimeoutSeconds: release?.refundTimeoutSeconds,
     onTerminal: handleRoundTerminal
   });
   const roundPhase = React.useMemo<CasinoRoundPhase>(() => {
@@ -140,7 +141,7 @@ export function GamePageClient({ slug }: { slug: string }) {
   });
 
   useBetStepperFailureToast({ status: state.status, error: state.error });
-  useVrfTimeoutToast(isPending);
+  useVrfTimeoutToast(roundPhase === "timeout_soft");
 
   useGameResolutionEffect({
     terminalBet,
@@ -218,7 +219,7 @@ export function GamePageClient({ slug }: { slug: string }) {
       onStopLossChange={setStopLoss}
       advancedOpen={advancedOpen}
       onAdvancedOpenChange={setAdvancedOpen}
-      isPending={isPending}
+      isPending={isRoundAnimating}
       state={state}
       hasAccount={Boolean(sdk?.account)}
       winChance={winChance}
@@ -239,6 +240,8 @@ export function GamePageClient({ slug }: { slug: string }) {
       roundError={roundWatcher.error}
       manualSettleAvailable={roundWatcher.manualSettleAvailable}
       onManualSettle={roundWatcher.manualSettle}
+      manualRefundAvailable={roundWatcher.manualRefundAvailable}
+      onManualRefund={roundWatcher.manualRefund}
       onPlaceBet={handlePlaceBet}
     />
   );

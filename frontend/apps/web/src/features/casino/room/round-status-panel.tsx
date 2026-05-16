@@ -15,6 +15,11 @@ function getPhaseCopy(phase: CasinoRoundPhase) {
         label: "Rolling",
         detail: "PlaceBet is mined. Waiting for verifiable randomness."
       };
+    case "timeout_soft":
+      return {
+        label: "VRF is taking longer than usual",
+        detail: "The round is still safe. Keep this page open while Chainlink fulfills the request."
+      };
     case "placing":
       return {
         label: "Placing bet",
@@ -39,7 +44,7 @@ function getPhaseCopy(phase: CasinoRoundPhase) {
     case "refundable":
       return {
         label: "Refund path available",
-        detail: "VRF did not complete in time. The refund path can return the stake."
+        detail: "VRF did not complete before the protocol timeout. You can refund the stake."
       };
     case "failed":
       return {
@@ -62,7 +67,9 @@ export function CasinoRoundStatusPanel({
   requestId,
   error,
   manualSettleAvailable,
-  onManualSettle
+  onManualSettle,
+  manualRefundAvailable,
+  onManualRefund
 }: {
   phase: CasinoRoundPhase;
   quote?: bigint;
@@ -72,10 +79,13 @@ export function CasinoRoundStatusPanel({
   error?: string;
   manualSettleAvailable?: boolean;
   onManualSettle?: () => void;
+  manualRefundAvailable?: boolean;
+  onManualRefund?: () => void;
 }) {
   const copy = getPhaseCopy(phase);
   const active =
     phase === "waiting_vrf" ||
+    phase === "timeout_soft" ||
     phase === "placing" ||
     phase === "settling" ||
     phase === "manual_settle_offered" ||
@@ -136,6 +146,16 @@ export function CasinoRoundStatusPanel({
           className="mt-4 w-full rounded-lg border border-warn/40 bg-warn-soft px-4 py-3 text-sm font-black uppercase tracking-[0.14em] text-warn transition-colors hover:bg-warn/15"
         >
           Settle result
+        </button>
+      )}
+
+      {manualRefundAvailable && (
+        <button
+          type="button"
+          onClick={onManualRefund}
+          className="mt-4 w-full rounded-lg border border-danger/35 bg-danger-soft px-4 py-3 text-sm font-black uppercase tracking-[0.14em] text-danger transition-colors hover:bg-danger/15"
+        >
+          Refund stake
         </button>
       )}
     </div>

@@ -59,6 +59,7 @@ export const ReleaseSchema = z.object({
   name: z.string().min(1),
   releaseDigest: z.string().min(8),
   isPlaceholder: z.boolean().optional().default(false),
+  refundTimeoutSeconds: z.number().int().positive().optional(),
   contracts: z.object({
     gameHub: Address,
     settlementRouter: Address,
