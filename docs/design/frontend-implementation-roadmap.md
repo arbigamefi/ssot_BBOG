@@ -1647,3 +1647,77 @@ Observed:
 - known non-blocking warnings remain unchanged: local Node v22 vs project Node
   20, deprecated `next lint`, existing Next ESLint plugin warning, and the
   Playwright/Next `NO_COLOR` vs `FORCE_COLOR` runtime warning.
+
+## 16. Gate C Bundle Budget Slice
+
+Status: completed locally.
+
+### 16.1 Problem
+
+The bundle risk from the external audit was resolved enough for product
+closeout, but the repo still had no blocking budget guard. Without a CI budget,
+future feature work can silently reintroduce the same failure mode: wallet,
+motion, analytics, or sportsbook code drifting into every product route.
+
+This slice is intentionally no-dependency. It reads the production Next
+`app-build-manifest.json` after `pnpm build`, gzips the JavaScript chunks for
+each canonical route, and compares the total against route-specific ceilings.
+Those ceilings are deliberately wider than the current build so CI blocks
+regression, not normal hash-level noise.
+
+### 16.2 Scope
+
+1. Add `frontend/scripts/check-bundle-budget.mjs`.
+2. Add `pnpm check:bundle` at the frontend workspace root.
+3. Run `pnpm check:bundle` in frontend CI immediately after `pnpm build`.
+4. Track canonical route budgets for:
+   - `/`;
+   - `/casino`;
+   - `/casino/[slug]`;
+   - `/earn`;
+   - `/ops`;
+   - `/portfolio`;
+   - `/portfolio/activity`;
+   - `/portfolio/claims`;
+   - `/sportsbook`;
+   - `/sportsbook/[marketId]`;
+   - `/legal/privacy`.
+
+### 16.3 Acceptance Checks
+
+```bash
+pnpm -C frontend/apps/web build
+pnpm -C frontend check:bundle
+pnpm -C frontend precheck:frontend -- --strict
+git diff --check
+```
+
+### 16.4 Implementation Result
+
+Changes:
+
+- added `frontend/scripts/check-bundle-budget.mjs`;
+- added `pnpm check:bundle`;
+- wired bundle budget into frontend CI immediately after `pnpm build`;
+- used gzip totals from `.next/app-build-manifest.json` to approximate the
+  Next build table's First Load JS values without adding analyzer dependencies.
+
+Evidence:
+
+```bash
+pnpm -C frontend/apps/web build
+pnpm -C frontend check:bundle
+pnpm -C frontend precheck:frontend -- --strict
+git diff --check
+```
+
+Observed:
+
+- production build passed;
+- bundle budget passed for all tracked canonical routes;
+- tightest margins were `/legal/privacy` at 12.6 kB and `/portfolio/activity`
+  at 15.2 kB;
+- `/casino/[slug]` measured 177.1 kB gzip JS against a 195 kB budget;
+- `/sportsbook` measured 156.1 kB gzip JS against a 175 kB budget;
+- known local warnings remain unchanged: Node v22 vs project Node 20 and the
+  existing Next ESLint plugin warning.
