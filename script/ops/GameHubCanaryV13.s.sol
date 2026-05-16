@@ -63,6 +63,7 @@ contract GameHubCanaryV13 is Script {
         uint256 stopGain;
         uint256 stopLoss;
         uint16 maxHouseEdgeBps;
+        uint256 vrfFeeBufferBps;
         uint256 positionId;
     }
 
@@ -190,6 +191,7 @@ contract GameHubCanaryV13 is Script {
         cfg.stopGain = vm.envOr("CANARY_STOP_GAIN", uint256(0));
         cfg.stopLoss = vm.envOr("CANARY_STOP_LOSS", uint256(0));
         cfg.maxHouseEdgeBps = uint16(vm.envOr("CANARY_MAX_HOUSE_EDGE_BPS", uint256(0)));
+        cfg.vrfFeeBufferBps = vm.envOr("CANARY_VRF_FEE_BUFFER_BPS", uint256(5_000));
     }
 
     function _readExistingPositionConfig() internal view returns (CanaryConfig memory cfg) {
@@ -241,7 +243,7 @@ contract GameHubCanaryV13 is Script {
         require(IERC20GameHubCanary(cfg.asset).balanceOf(cfg.player) >= totalStake, "player asset balance low");
 
         (uint256 fee,) = cfg.gameHub.quoteVRFFee(cfg.betCount);
-        require(cfg.player.balance >= fee, "player native balance low");
+        require(cfg.player.balance >= _bufferedVrfFee(fee, cfg.vrfFeeBufferBps), "player native balance low");
     }
 
     function _validateFinalizeConfig(CanaryConfig memory cfg) internal view {
@@ -281,6 +283,8 @@ contract GameHubCanaryV13 is Script {
         console2.log("  betCount", cfg.betCount);
         console2.log("  diceCap", cfg.diceCap);
         console2.log("  vrfFee", fee);
+        console2.log("  vrfFeeBufferBps", cfg.vrfFeeBufferBps);
+        console2.log("  vrfFeePaid", _bufferedVrfFee(fee, cfg.vrfFeeBufferBps));
         console2.log("  vrfCallbackGasLimit", callbackGasLimit);
         console2.log("  bankAssets", IBankGameHubCanary(cfg.casinoBank).totalAssets());
         console2.log("  bankReserved", IBankGameHubCanary(cfg.casinoBank).totalReserved());
@@ -307,6 +311,7 @@ contract GameHubCanaryV13 is Script {
         uint256 totalStake = cfg.stake * uint256(cfg.betCount);
         uint256 allowance = IERC20GameHubCanary(cfg.asset).allowance(cfg.player, cfg.casinoBank);
         (uint256 fee,) = cfg.gameHub.quoteVRFFee(cfg.betCount);
+        uint256 feePaid = _bufferedVrfFee(fee, cfg.vrfFeeBufferBps);
 
         SSOTTypes.StakeSpec memory stakeSpec = SSOTTypes.StakeSpec({
             amountPerRoll: cfg.stake, betCount: cfg.betCount, stopGain: cfg.stopGain, stopLoss: cfg.stopLoss
@@ -318,9 +323,15 @@ contract GameHubCanaryV13 is Script {
         if (allowance < totalStake) {
             IERC20GameHubCanary(cfg.asset).approve(cfg.casinoBank, type(uint256).max);
         }
-        positionId =
-            cfg.gameHub.placeBet{value: fee}(GAME_DICE, cfg.poolId, params, stakeSpec, address(0), cfg.maxHouseEdgeBps);
+        positionId = cfg.gameHub.placeBet{value: feePaid}(
+            GAME_DICE, cfg.poolId, params, stakeSpec, address(0), cfg.maxHouseEdgeBps
+        );
         vm.stopBroadcast();
+    }
+
+    function _bufferedVrfFee(uint256 fee, uint256 bufferBps) internal pure returns (uint256) {
+        require(bufferBps <= 10_000, "vrf fee buffer too high");
+        return fee + (fee * bufferBps) / 10_000;
     }
 
     function _validatePlaced(CanaryConfig memory cfg, uint256 positionId) internal view {

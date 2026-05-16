@@ -137,6 +137,11 @@ The first live provider ingestion smokes are recorded in
 MLS event and scores for a completed MLS event, producing the odds and result env fields consumed by
 the football canary.
 
+The casino keeper auto-settlement rehearsal is recorded in
+`docs/deploy/base-sepolia-casino-keeper-canary-2026-05-16.md`. It validates
+`placeBet -> Chainlink fulfill -> RandomReady -> keeper finalize -> Settled` and records the VRF fee
+buffer fix required for live public-testnet canaries.
+
 The v1.3 script deploys and wires:
 - `PoolRegistry`
 - `SettlementRouter`

@@ -33,6 +33,11 @@ import {
 } from "../../../../features/casino/room/resolution";
 import { GameRoomRightPane } from "../../../../features/casino/room/right-pane";
 import { GameRoomShell } from "../../../../features/casino/room/game-room-shell";
+import {
+  useCasinoRoundWatcher,
+  useCasinoVrfQuote,
+  type CasinoRoundPhase
+} from "../../../../features/casino/room/casino-round";
 
 const GameRoomAuditLedger = dynamic(
   () =>
@@ -65,6 +70,7 @@ export function GamePageClient({ slug }: { slug: string }) {
   }, [release?.gamesMeta, slug]);
 
   const recentBetsQuery = useBetsByGame(game?.gameId, 12);
+  const refetchRecentBets = recentBetsQuery.refetch;
   const recentBets = recentBetsQuery.data ?? [];
 
   // Local State
@@ -93,11 +99,37 @@ export function GamePageClient({ slug }: { slug: string }) {
   const [advancedOpen, setAdvancedOpen] = React.useState(false);
 
   const walletBalance = useGameWalletBalance({ sdk, assets: release?.assets });
-  const animatingKenoSpots = useKenoStrobeSpots({ isPending, gameSlug: game?.slug });
 
   const { planNow, executeNow, state, reset } = usePlaceBetStepper();
   const { openConnectModal } = useConnectModal();
   const { db } = useSSOTRuntime();
+  const vrfQuote = useCasinoVrfQuote({ sdk, betCount });
+  const handleRoundTerminal = React.useCallback(() => {
+    setIsPending(false);
+    void refetchRecentBets?.();
+  }, [refetchRecentBets]);
+  const roundWatcher = useCasinoRoundWatcher({
+    sdk,
+    betId: state.betId,
+    active: state.status === "reconciled",
+    onTerminal: handleRoundTerminal
+  });
+  const roundPhase = React.useMemo<CasinoRoundPhase>(() => {
+    if (state.status === "planning") return "loading_quote";
+    if (state.status === "submitting" || state.status === "mined") return "placing";
+    if (roundWatcher.phase !== "idle") return roundWatcher.phase;
+    return vrfQuote.phase === "loading_quote" ? "loading_quote" : "ready";
+  }, [roundWatcher.phase, state.status, vrfQuote.phase]);
+  const isRoundAnimating =
+    isPending ||
+    state.status === "planning" ||
+    state.status === "submitting" ||
+    state.status === "mined" ||
+    roundWatcher.isLive;
+  const animatingKenoSpots = useKenoStrobeSpots({
+    isPending: isRoundAnimating,
+    gameSlug: game?.slug
+  });
 
   useBetStepperFailureToast({ status: state.status, error: state.error });
   useVrfTimeoutToast(isPending);
@@ -198,6 +230,14 @@ export function GamePageClient({ slug }: { slug: string }) {
       kenoSpots={kenoSpots}
       onKenoChange={setKenoSpots}
       onKenoResetResult={() => setKenoResultDrawn([])}
+      roundPhase={roundPhase}
+      vrfQuote={vrfQuote.quote}
+      vrfQuoteError={vrfQuote.quoteError}
+      activeBetId={state.betId}
+      activeRequestId={roundWatcher.bet?.requestId}
+      roundError={roundWatcher.error}
+      manualSettleAvailable={roundWatcher.manualSettleAvailable}
+      onManualSettle={roundWatcher.manualSettle}
       onPlaceBet={handlePlaceBet}
     />
   );
@@ -209,7 +249,7 @@ export function GamePageClient({ slug }: { slug: string }) {
       flipCount={flipCount}
       gameHistory={gameHistory}
       recentBets={recentBets}
-      isPending={isPending}
+      isPending={isRoundAnimating}
       showResult={showResult}
       resultNum={resultNum}
       diceDirection={diceDirection}
