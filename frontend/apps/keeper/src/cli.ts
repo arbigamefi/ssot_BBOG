@@ -6,12 +6,15 @@ async function main() {
   const config = loadKeeperConfig();
   const keeper = createKeeperRuntime({ config, logger });
 
-  const shutdown = () => {
-    keeper.stop();
+  let shuttingDown = false;
+  const shutdown = async () => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    await keeper.stop();
     process.exit(0);
   };
-  process.once("SIGINT", shutdown);
-  process.once("SIGTERM", shutdown);
+  process.once("SIGINT", () => void shutdown());
+  process.once("SIGTERM", () => void shutdown());
 
   await keeper.start();
 }

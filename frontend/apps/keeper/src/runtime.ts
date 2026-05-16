@@ -36,7 +36,7 @@ export function createKeeperChain(config: KeeperConfig) {
 
 export type KeeperRuntime = {
   start: () => Promise<void>;
-  stop: () => void;
+  stop: () => Promise<void>;
   enqueue: (event: KeeperEvent) => void;
   queue: FinalizeQueue;
   health: KeeperHealthReporter;
@@ -298,11 +298,11 @@ export function createKeeperRuntime({
     timers.push(setInterval(() => writeHealth(health.recordHeartbeat(queue.size)), 10_000));
   };
 
-  const stop = () => {
+  const stop = async () => {
     stopped = true;
     timers.forEach(clearInterval);
     unwatchers.forEach((unwatch) => unwatch());
-    writeHealth(health.recordStopped(queue.size));
+    await health.recordStopped(queue.size);
     logger.info("casino.keeper.stopped");
   };
 

@@ -13,6 +13,8 @@ pnpm -C frontend keeper:build
 
 ## Run
 
+Start from `frontend/apps/keeper/.env.example` and keep the real file local.
+
 ```bash
 KEEPER_PRIVATE_KEY=0x... \
 KEEPER_CHAIN_ID=84532 \
