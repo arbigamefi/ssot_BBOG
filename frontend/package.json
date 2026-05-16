@@ -27,6 +27,7 @@
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
+    "e2e": "pnpm -C apps/web e2e",
     "ssot:sync": "node scripts/ssot-sync.mjs",
     "check:release": "node scripts/check-release.mjs",
     "smoke:release-readonly": "node scripts/release-readonly-smoke.mjs",

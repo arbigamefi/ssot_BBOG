@@ -23,7 +23,7 @@ concurrency:
 jobs:
   lint-test-build:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
 
     defaults:
       run:
@@ -58,6 +58,9 @@ jobs:
       - name: Release snapshot sanity
         run: pnpm check:release
 
+      - name: Frontend architecture precheck
+        run: pnpm precheck:frontend -- --strict
+
       - name: Lint
         run: pnpm lint
 
@@ -69,6 +72,12 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      - name: Install Playwright browsers
+        run: pnpm -C apps/web exec playwright install --with-deps chromium
+
+      - name: E2E smoke
+        run: PLAYWRIGHT_USE_EXISTING_BUILD=1 pnpm e2e
 
       - name: Build Storybook
         run: pnpm storybook:build

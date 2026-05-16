@@ -1548,3 +1548,102 @@ Observed:
   `/casino/[slug]` 178 kB, `/sportsbook/[marketId]` 159 kB, shared 104 kB;
 - known non-blocking warnings remain unchanged: local Node v22 vs project Node
   20, deprecated `next lint`, and the existing Next ESLint plugin warning.
+
+## 15. Gate C Smoke CI Slice
+
+Status: completed locally.
+
+The frontend clean-room closeout now has enough token, route, and casino-module
+discipline to start moving Gate C from local evidence into CI. This slice must
+stay narrow: it adds no product features, no new games, no sportsbook behavior,
+and no design-system migrations.
+
+### 15.1 Problem
+
+The existing Playwright smoke suite still reflects the pre-clean-room route
+surface. It checks legacy URLs such as `/games` and `/bets`, while the current
+product routes are `/casino` and `/portfolio/activity`. That makes the suite
+unsafe to promote into CI because it would either fail for the wrong reason or
+encourage compatibility routes to come back.
+
+The existing frontend CI also runs lint, typecheck, tests, build, and Storybook,
+but it does not run the strict frontend architecture precheck or a browser-level
+route smoke. Those two checks are the lowest-risk Gate C additions because they
+are deterministic and do not depend on wallets, testnet writes, or external
+indexer freshness.
+
+### 15.2 Scope
+
+1. Update `frontend/apps/web/e2e/smoke.spec.ts` to cover the current route
+   surface:
+   - `/`;
+   - `/casino`;
+   - `/casino/dice`;
+   - `/portfolio`;
+   - `/portfolio/activity`;
+   - `/earn`;
+   - `/sportsbook`;
+   - `/ops`;
+   - `/legal/privacy`;
+   - legacy aliases such as `/games`, `/dice`, `/bets`, and `/privacy` remain
+     404.
+2. Keep the e2e suite read-only and wallet-free.
+3. Update the Playwright web-server command so CI can reuse the production build
+   already created by the `Build` step.
+4. Add `pnpm precheck:frontend -- --strict` to frontend CI.
+5. Add Chromium smoke e2e to frontend CI after the production build.
+
+### 15.3 Acceptance Checks
+
+```bash
+pnpm -C frontend precheck:frontend -- --strict
+pnpm -C frontend/apps/web test -- src/smoke.test.ts
+pnpm -C frontend/apps/web e2e
+pnpm -C frontend/apps/web build
+git diff --check
+```
+
+CI must keep the known non-blocking warnings separate from this slice:
+
+- local Node 22 warning in this workspace;
+- deprecated `next lint`;
+- existing Next ESLint plugin detection warning.
+
+### 15.4 Implementation Result
+
+Changes:
+
+- promoted `pnpm precheck:frontend -- --strict` into
+  `.github/workflows/frontend-ci.yml`;
+- promoted a wallet-free Chromium Playwright smoke into frontend CI after the
+  production build;
+- replaced the stale Playwright smoke suite that targeted `/games`, `/bets`,
+  and the removed theme/mobile-menu controls;
+- added browser coverage for the current canonical routes and for legacy-route
+  404s;
+- made Playwright read `PLAYWRIGHT_BASE_URL`, so local validation can avoid an
+  occupied port without changing CI behavior.
+
+Evidence:
+
+```bash
+pnpm -C frontend precheck:frontend -- --strict
+pnpm -C frontend/apps/web test -- src/smoke.test.ts
+CI=true PLAYWRIGHT_BASE_URL=http://localhost:3007 pnpm -C frontend/apps/web e2e
+pnpm -C frontend/apps/web build
+git diff --check
+```
+
+Observed:
+
+- strict frontend precheck passed with 0 findings;
+- app-level smoke unit test passed;
+- Playwright browser smoke passed: 5 tests covering `/`, `/casino`,
+  `/casino/roulette` navigation, core product pages, and deleted legacy aliases;
+- production build passed with the same bundle profile:
+  `/casino/[slug]` 181 kB, `/sportsbook/[marketId]` 159 kB, shared 104 kB;
+- local e2e used port 3007 because port 3000 was already occupied by an
+  unrelated local process;
+- known non-blocking warnings remain unchanged: local Node v22 vs project Node
+  20, deprecated `next lint`, existing Next ESLint plugin warning, and the
+  Playwright/Next `NO_COLOR` vs `FORCE_COLOR` runtime warning.
