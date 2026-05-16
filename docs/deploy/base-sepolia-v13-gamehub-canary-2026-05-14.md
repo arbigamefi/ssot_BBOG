@@ -88,3 +88,38 @@ Chainlink callback arrived during the rehearsal:
 - Final Casino Bank reserved: `0`
 
 Conclusion: the Base Sepolia v1.3 deployment now has a complete Casino/GameHub chain canary covering adapter fee configuration, ERC20 approval, `GameHub.placeBet`, `VRFHub` request creation, Chainlink callback into `RandomReady`, permissionless `finalize`, and reserve release through `SettlementRouter`/`Bank`.
+
+## Post-canary cleanup finding - 2026-05-16
+
+Follow-up user testing of position `14` on the same Base Sepolia deployment showed that the
+`finalize(14)` transaction completed successfully but Basescan rendered an internal revert warning:
+
+- Finalize tx: `0x76426348a60c99e96fc310753321bc27276c8d59e6b317d43a2f8bcc36f2413f`
+- Receipt status: `1` / success
+- Successful settlement effects: `BetFinalized`, `Bank.BetSettled`, and USDC payout transfer
+- Internal reverted call: `GameHub.finalize -> VRFHub.detach(requestId)`
+- Revert selector: `0x25ef7ff6` = `NotOwningHub()`
+
+Root cause: the Chainlink fulfill path had already called `GameHub.onRandomWords`, which cleared
+`GameHub.requestToBetId[requestId]` and detached the VRFHub request. Later, `finalize()` called the
+same best-effort cleanup again via `_clearRequest`, so `VRFHub.detach` reverted because the request
+storage no longer belonged to the GameHub. The revert was caught and did not block settlement, but
+it polluted explorer traces and is not acceptable for production UX.
+
+Fix: `GameHub` now uses `_detachRequestIfOwned(requestId)`, which first reads `VRFHub.getRequest`
+and calls `detach` only when the request still belongs to the current GameHub. The regression test
+`GameHubE2E.test_finalizeSkipsVrfDetachWhenRequestAlreadyClearedByFulfill` asserts that a fulfilled
+and already-cleared request does not trigger a second detach call during finalization.
+
+Validation:
+
+- `forge test --match-path test/unit/GameHubE2E.t.sol -vv`: 11 passed
+- `forge test --match-path test/unit/SecurityFixes.t.sol -vv`: 9 passed
+- `forge test --match-path test/unit/ChainlinkAdapter.t.sol -vv`: 2 passed
+- `forge test --match-path 'test/unit/VRFFee*.t.sol' -vv`: 4 passed
+- `forge build`: passed
+- `forge test`: 120 passed, 0 failed, 1 skipped
+
+This fix changes `GameHub` bytecode. The existing Base Sepolia tx remains historical evidence of the
+old cleanup behavior; the next Base Sepolia canary must use a fresh v1.3 release/deployment before
+validating that explorer traces no longer include the internal `detach` revert.

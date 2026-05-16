@@ -411,7 +411,7 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         // C1/C2 hygiene: requestId is only meaningful while PendingVRF.
         // Clear mapping ASAP (even though VRFHub deactivates requests on first fulfill).
         requestToBetId[requestId] = 0;
-        try IVRFHub(vrfHub).detach(requestId) {} catch {}
+        _detachRequestIfOwned(requestId);
 
         emit BetRandomReady(betId, requestId, rh);
     }
@@ -546,7 +546,7 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         uint256 requestId = b.requestId;
         if (requestId != 0) {
             requestToBetId[requestId] = 0;
-            try IVRFHub(vrfHub).detach(requestId) {} catch {}
+            _detachRequestIfOwned(requestId);
         }
 
         ISettlementRouter(settlementRouter).refundPosition(betId, b.stake);
@@ -609,8 +609,18 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         uint256 requestId = b.requestId;
         if (requestId != 0) {
             requestToBetId[requestId] = 0;
-            try IVRFHub(vrfHub).detach(requestId) {} catch {}
+            _detachRequestIfOwned(requestId);
         }
+    }
+
+    function _detachRequestIfOwned(uint256 requestId) internal {
+        if (requestId == 0) return;
+
+        try IVRFHub(vrfHub).getRequest(requestId) returns (IVRFHub.RequestInfo memory request) {
+            if (request.hub == address(this)) {
+                try IVRFHub(vrfHub).detach(requestId) {} catch {}
+            }
+        } catch {}
     }
 
     function _computeSkylineAndHE(address player, address affiliate, uint16 maxHouseEdgeBps)
