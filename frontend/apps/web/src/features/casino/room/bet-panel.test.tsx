@@ -56,6 +56,14 @@ function renderPanel(overrides: Partial<React.ComponentProps<typeof GameRoomBetP
     kenoSpots: [],
     onKenoChange: vi.fn(),
     onKenoResetResult: vi.fn(),
+    roundPhase: "ready",
+    vrfQuote: 73_169_600_001_705n,
+    vrfQuoteError: undefined,
+    activeBetId: undefined,
+    activeRequestId: undefined,
+    roundError: undefined,
+    manualSettleAvailable: false,
+    onManualSettle: vi.fn(),
     onPlaceBet: vi.fn(),
     ...overrides
   };
@@ -71,6 +79,7 @@ describe("GameRoomBetPanel", () => {
 
     expect(screen.getByText("Wallet Balance")).toBeDefined();
     expect(screen.getByText("1,450.00 USDC")).toBeDefined();
+    expect(screen.getByText("VRF estimate")).toBeDefined();
     expect(screen.getByText("1.98x")).toBeDefined();
     expect(screen.getByText("50.00%")).toBeDefined();
     expect(screen.getByRole("button", { name: "CONNECT WALLET" })).toBeDefined();
@@ -96,7 +105,7 @@ describe("GameRoomBetPanel", () => {
         state: { status: "idle", plan: { preview: { needsApproval: true } } },
         isPending: false
       })
-    ).toBe("APPROVE TICKET");
+    ).toBe("APPROVE + PLACE");
     expect(
       isPlaceBetButtonDisabled({
         gameSlug: "roulette",

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import * as Sentry from "@sentry/nextjs";
+
+const token = (name: string, fallback: string) => `hsl(var(${name}, ${fallback}))`;
 
 /**
  * Global error boundary — catches errors in the root layout itself.
@@ -11,14 +12,16 @@ import * as Sentry from "@sentry/nextjs";
  */
 export default function GlobalError({
   error,
-  reset,
+  reset
 }: {
   error: Error & { digest?: string };
   reset: () => void;
 }) {
   useEffect(() => {
     console.error("[GlobalErrorBoundary]", error);
-    Sentry.captureException(error);
+    (
+      window as Window & { __ssotCaptureException?: (error: unknown) => void }
+    ).__ssotCaptureException?.(error);
   }, [error]);
 
   return (
@@ -31,25 +34,32 @@ export default function GlobalError({
           alignItems: "center",
           justifyContent: "center",
           minHeight: "100vh",
-          backgroundColor: "#0a0a0a",
-          color: "#fafafa",
+          backgroundColor: token("--surface-0", "220 39% 4%"),
+          color: token("--fg", "210 40% 98%")
         }}
       >
         <div
           style={{
             maxWidth: 420,
             padding: 32,
-            border: "1px solid #333",
+            border: `1px solid ${token("--border", "220 20% 18%")}`,
             borderRadius: 16,
-            textAlign: "center",
+            textAlign: "center"
           }}
         >
           <h1 style={{ fontSize: 20, marginBottom: 8 }}>Application Error</h1>
-          <p style={{ fontSize: 14, color: "#888", marginBottom: 16 }}>
+          <p style={{ fontSize: 14, color: token("--fg-muted", "215 16% 65%"), marginBottom: 16 }}>
             {error.message || "A critical error occurred. Please try reloading."}
           </p>
           {error.digest && (
-            <p style={{ fontSize: 12, color: "#666", fontFamily: "monospace", marginBottom: 16 }}>
+            <p
+              style={{
+                fontSize: 12,
+                color: token("--fg-subtle", "215 14% 45%"),
+                fontFamily: "monospace",
+                marginBottom: 16
+              }}
+            >
               Error ID: {error.digest}
             </p>
           )}
@@ -57,12 +67,12 @@ export default function GlobalError({
             onClick={reset}
             style={{
               padding: "8px 20px",
-              border: "1px solid #555",
+              border: `1px solid ${token("--border", "220 20% 18%")}`,
               borderRadius: 8,
               backgroundColor: "transparent",
-              color: "#fafafa",
+              color: token("--fg", "210 40% 98%"),
               cursor: "pointer",
-              fontSize: 14,
+              fontSize: 14
             }}
           >
             Try again

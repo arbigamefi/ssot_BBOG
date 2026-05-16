@@ -88,3 +88,95 @@ Chainlink callback arrived during the rehearsal:
 - Final Casino Bank reserved: `0`
 
 Conclusion: the Base Sepolia v1.3 deployment now has a complete Casino/GameHub chain canary covering adapter fee configuration, ERC20 approval, `GameHub.placeBet`, `VRFHub` request creation, Chainlink callback into `RandomReady`, permissionless `finalize`, and reserve release through `SettlementRouter`/`Bank`.
+
+## Post-canary cleanup finding - 2026-05-16
+
+Follow-up user testing of position `14` on the same Base Sepolia deployment showed that the
+`finalize(14)` transaction completed successfully but Basescan rendered an internal revert warning:
+
+- Finalize tx: `0x76426348a60c99e96fc310753321bc27276c8d59e6b317d43a2f8bcc36f2413f`
+- Receipt status: `1` / success
+- Successful settlement effects: `BetFinalized`, `Bank.BetSettled`, and USDC payout transfer
+- Internal reverted call: `GameHub.finalize -> VRFHub.detach(requestId)`
+- Revert selector: `0x25ef7ff6` = `NotOwningHub()`
+
+Root cause: the Chainlink fulfill path had already called `GameHub.onRandomWords`, which cleared
+`GameHub.requestToBetId[requestId]` and detached the VRFHub request. Later, `finalize()` called the
+same best-effort cleanup again via `_clearRequest`, so `VRFHub.detach` reverted because the request
+storage no longer belonged to the GameHub. The revert was caught and did not block settlement, but
+it polluted explorer traces and is not acceptable for production UX.
+
+Fix: `GameHub` now uses `_detachRequestIfOwned(requestId)`, which first reads `VRFHub.getRequest`
+and calls `detach` only when the request still belongs to the current GameHub. The regression test
+`GameHubE2E.test_finalizeSkipsVrfDetachWhenRequestAlreadyClearedByFulfill` asserts that a fulfilled
+and already-cleared request does not trigger a second detach call during finalization.
+
+Validation:
+
+- `forge test --match-path test/unit/GameHubE2E.t.sol -vv`: 11 passed
+- `forge test --match-path test/unit/SecurityFixes.t.sol -vv`: 9 passed
+- `forge test --match-path test/unit/ChainlinkAdapter.t.sol -vv`: 2 passed
+- `forge test --match-path 'test/unit/VRFFee*.t.sol' -vv`: 4 passed
+- `forge build`: passed
+- `forge test`: 120 passed, 0 failed, 1 skipped
+
+This fix changes `GameHub` bytecode. The existing Base Sepolia tx remains historical evidence of the
+old cleanup behavior; the next Base Sepolia canary must use a fresh v1.3 release/deployment before
+validating that explorer traces no longer include the internal `detach` revert.
+
+## Redeploy validation - 2026-05-16
+
+A fresh Base Sepolia v1.3 deployment was broadcast after the `GameHub` cleanup fix.
+
+- Deployment snapshot block: `41562978`
+- Release digest: `0x97025bf84b1e73ceb683366d38ff8647763e0baa71d9216605d3ed030cc2216a`
+- Release bundle: `dist/ssot-release-chain-84532-41562978-0x97025bf8.tar.gz`
+- GameHub: `0x1FC18758b64205313F920cfc7fFc7dC343a892E6`
+- SettlementRouter: `0x99b0Ad5E43813760142F9821B1e5C4eBa942F4Ec`
+- VRFHub: `0xb982366D72ceEd8603DF1ba6932C1d532D316a86`
+- Adapter: `0x66311DF287b058140F05d9AD9270870f5a89c494`
+- Casino Bank: `0xbc9A8f34A416B6Da463c634D63996C362e2C5f0A`
+- Sports Bank: `0x732d8fdCe925f73d0b8573A8E8638a748069E661`
+
+Funding transactions:
+
+- Casino Bank approve: `0x9bfbf4a21db9a117bba5011e7b14c3df5a37952fcb7ff4f38f10094bff6acda8`
+- Casino Bank deposit: `0xa935948be7a14ca04d3d493fd7acb9985bf752f52940c750f8897af9085aad47`
+- Sports Bank approve: `0x167e5cc3a411097be22f85de7fd8c9d27557a475f01766c1c46e987aabcc1250`
+- Sports Bank deposit: `0x1970126c9ef08d1e736566bdd0fce3550699a945ef60f8273a5501b42e94beda`
+
+`BROADCAST=1 ENV_FILE=.env make gamehub-canary-v13` succeeded:
+
+- Place tx: `0x98ff3ef3c5b3626b75f0e88c0ad8088f69b25949e633d56fc868190b3eb1d1c1`
+- Position id: `1`
+- Request id: `88900432683796515367687110441888685110385694721876547794792857014691553370968`
+- Initial state: `betState=PendingVRF`, `positionState=Held`, `bankReserved=20000`
+
+Chainlink callback arrived and moved the position to `RandomReady`:
+
+- Random hash: `0xc1dd6522ffc33603f07c9f43cc35e6ad9f0fd8228b7715f072787026f04f5894`
+- VRFHub request readback after callback: detached / inactive
+
+`BROADCAST=1 CANARY_MODE=finalize CANARY_POSITION_ID=1 ENV_FILE=.env make gamehub-canary-v13`
+succeeded:
+
+- Finalize tx: `0x467731ba1354ff1b1ae8036c3822ab18ca56e95814550fa48fab973ba4bc16fa`
+- Finalize block: `41563334`
+- Final state: `betState=Settled`, `positionState=Settled`
+- `resolvedAt`: `1778894956`
+- Payout gross/net: `20000` / `19600`
+- Protocol fee accrual: `200`
+- Final Casino Bank assets: `990200`
+- Final Casino Bank reserved: `0`
+
+Trace validation:
+
+- `cast receipt <finalize tx>` returned `status=1`.
+- `cast run <finalize tx>` showed `GameHub.finalize -> VRFHub.getRequest(requestId)` returning an
+  empty request, followed by `SettlementRouter.settlePosition -> Bank.settleBet -> USDC.transfer`.
+- The trace did not call `VRFHub.detach(requestId)` during `finalize`, and no internal revert was
+  present.
+
+Conclusion: the fresh Base Sepolia v1.3 deployment validates the cleanup fix. Once Chainlink has
+already fulfilled and detached a request, `finalize()` no longer emits a best-effort duplicate
+`detach` call that causes explorer-level internal revert warnings.

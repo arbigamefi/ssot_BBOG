@@ -12,8 +12,8 @@ import {
 export type UsePlaceBetStepperReturn = {
   state: BetStepperState;
   plan: PlaceBetPlan | undefined;
-  planNow: (input: PlaceBetInput) => Promise<void>;
-  executeNow: () => Promise<void>;
+  planNow: (input: PlaceBetInput) => Promise<PlaceBetPlan | undefined>;
+  executeNow: (planOverride?: PlaceBetPlan) => Promise<void>;
 
   /** Retry reconcile for mined-but-unreconciled placeBet tx. */
   reconcileNow: () => Promise<void>;
@@ -54,39 +54,45 @@ export function usePlaceBetStepper(): UsePlaceBetStepperReturn {
     async (input: PlaceBetInput) => {
       if (!sdk) {
         dispatch({ type: "PLAN_ERROR", error: noopError });
-        return;
+        return undefined;
       }
       dispatch({ type: "PLAN_START" });
       const res = await sdk.gameHub.planPlaceBet(input);
       if ("error" in res) {
         dispatch({ type: "PLAN_ERROR", error: res.error as DomainError });
-        return;
+        return undefined;
       }
       dispatch({ type: "PLAN_SUCCESS", plan: res });
+      return res;
     },
     [sdk, noopError]
   );
 
-  const executeNow = useCallback(async () => {
-    if (!sdk) {
-      dispatch({ type: "EXECUTE_ERROR", error: noopError });
-      return;
-    }
-    if (!state.plan) return;
-    dispatch({ type: "EXECUTE_START" });
-    try {
-      const result = await sdk.gameHub.executePlan(state.plan);
-      if (!result.placeBetTx.ok) {
-        const error: DomainError = result.placeBetTx.error ?? unknownTxError("Transaction failed");
-        dispatch({ type: "EXECUTE_ERROR", error });
+  const executeNow = useCallback(
+    async (planOverride?: PlaceBetPlan) => {
+      if (!sdk) {
+        dispatch({ type: "EXECUTE_ERROR", error: noopError });
         return;
       }
-      dispatch({ type: "EXECUTE_SUCCESS", result });
-    } catch (e) {
-      const error: DomainError = unknownTxError((e as Error)?.message ?? "Transaction failed");
-      dispatch({ type: "EXECUTE_ERROR", error });
-    }
-  }, [sdk, state.plan, unknownTxError, noopError]);
+      const plan = planOverride ?? state.plan;
+      if (!plan) return;
+      dispatch({ type: "EXECUTE_START" });
+      try {
+        const result = await sdk.gameHub.executePlan(plan);
+        if (!result.placeBetTx.ok) {
+          const error: DomainError =
+            result.placeBetTx.error ?? unknownTxError("Transaction failed");
+          dispatch({ type: "EXECUTE_ERROR", error });
+          return;
+        }
+        dispatch({ type: "EXECUTE_SUCCESS", result });
+      } catch (e) {
+        const error: DomainError = unknownTxError((e as Error)?.message ?? "Transaction failed");
+        dispatch({ type: "EXECUTE_ERROR", error });
+      }
+    },
+    [sdk, state.plan, unknownTxError, noopError]
+  );
 
   const reconcileNow = useCallback(async () => {
     if (!sdk) return;

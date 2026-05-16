@@ -39,7 +39,7 @@ export const PoolSchema = z.object({
   active: z.boolean(),
   asset: Address,
   bank: Address,
-  symbol: z.string(),
+  symbol: z.string().min(1),
   decimals: z.number().int().min(0).max(36),
   sportsRisk: z
     .object({

@@ -624,11 +624,22 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         chainId: release.chainId,
         gameId: bet.gameId as Hex,
         asset: bet.asset as AddressT,
+        bank: bet.bank as AddressT,
         player: bet.player as AddressT,
         stake: BigInt(bet.stake),
+        reserved: BigInt(bet.reserved),
+        amountPerRoll: BigInt(bet.amountPerRoll),
+        betCount: Number(bet.betCount),
         vrfFeePaid: BigInt(bet.vrfFeePaid),
+        vrfFeeCharged: BigInt(bet.vrfFeeCharged),
+        vrfCallbackGasLimit: Number(bet.vrfCallbackGasLimit),
+        requestId: BigInt(bet.requestId),
+        randomHash: bet.randomHash as Hex,
         state,
-        placedAt: Number(bet.placedAt)
+        placedAt: Number(bet.placedAt),
+        vrfRequestedAt: numberOrUndefined(bet.vrfRequestedAt),
+        resolvedAt: numberOrUndefined(bet.resolvedAt),
+        settledAt: numberOrUndefined(bet.resolvedAt)
       };
     }
   };
@@ -1553,6 +1564,11 @@ function mapBetState(state: number): DomainBet["state"] {
   if (state === 4) return "finalized";
   if (state === 5) return "refunded";
   return "placed";
+}
+
+function numberOrUndefined(value: unknown): number | undefined {
+  const numeric = Number(value ?? 0);
+  return numeric > 0 ? numeric : undefined;
 }
 
 function mapSportsMarket(market: any): DomainSportsMarket {

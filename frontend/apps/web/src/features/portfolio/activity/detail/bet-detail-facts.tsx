@@ -45,12 +45,22 @@ function FactRow({ fact }: { fact: BetDetailFact }) {
 }
 
 function CopyAction({ value }: { value: string }) {
-  const [copied, setCopied] = React.useState(false);
+  const [copyState, setCopyState] = React.useState<"idle" | "copied" | "failed">("idle");
 
   const handleCopy = React.useCallback(async () => {
-    await navigator.clipboard?.writeText(value);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1200);
+    try {
+      if (!navigator.clipboard?.writeText) {
+        setCopyState("failed");
+        window.setTimeout(() => setCopyState("idle"), 1200);
+        return;
+      }
+      await navigator.clipboard.writeText(value);
+      setCopyState("copied");
+      window.setTimeout(() => setCopyState("idle"), 1200);
+    } catch {
+      setCopyState("failed");
+      window.setTimeout(() => setCopyState("idle"), 1200);
+    }
   }, [value]);
 
   return (
@@ -60,7 +70,7 @@ function CopyAction({ value }: { value: string }) {
       className="rounded-sm border border-border px-2 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-fg-muted transition hover:text-fg"
       title={`Copy ${shortHex(value)}`}
     >
-      {copied ? "Copied" : "Copy"}
+      {copyState === "copied" ? "Copied" : copyState === "failed" ? "Failed" : "Copy"}
     </button>
   );
 }

@@ -19,23 +19,23 @@ export function RoomStrip({
       <div className="flex items-center gap-4">
         {/* Title */}
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{title}</h1>
-        
+
         {/* Status / Edge Badges */}
         <div className="hidden sm:flex items-center gap-2">
           {isLive && (
-            <span className="px-3 py-1 rounded-md bg-green-500/10 text-green-400 text-[10px] md:text-xs font-semibold border border-green-500/20 uppercase tracking-widest leading-none">
+            <span className="rounded-md border border-success/20 bg-success-soft px-3 py-1 text-[10px] font-semibold uppercase leading-none tracking-widest text-success md:text-xs">
               Live
             </span>
           )}
-          <span className="px-3 py-1 rounded-md bg-white/5 text-white/50 text-[10px] md:text-xs font-mono border border-white/10 shadow-sm leading-none">
+          <span className="rounded-md border border-border-soft bg-surface-2 px-3 py-1 font-mono text-[10px] leading-none text-fg-subtle shadow-e1 md:text-xs">
             House edge: {edgePercentage.toFixed(1)}%
           </span>
         </div>
       </div>
-      
+
       {/* Network Sync Indicator */}
-      <div className="flex items-center gap-2 text-[10px] md:text-xs font-medium text-white/40">
-        <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+      <div className="flex items-center gap-2 text-[10px] font-medium text-fg-subtle md:text-xs">
+        <span className="h-2 w-2 animate-pulse rounded-full bg-info" />
         <span className="hidden sm:inline">Synchronized to Arbitrum</span>
         <span className="sm:hidden">Arbitrum</span>
       </div>

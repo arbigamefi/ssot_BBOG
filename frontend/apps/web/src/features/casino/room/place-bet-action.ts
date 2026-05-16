@@ -1,4 +1,4 @@
-import type { PlaceBetInput } from "@ssot/ssot";
+import type { PlaceBetInput, PlaceBetPlan } from "@ssot/ssot";
 import { toast } from "@ssot/ui";
 
 import type { GameMeta } from "./model";
@@ -46,8 +46,8 @@ export async function executeGamePlaceBetAction({
   state: GamePlaceBetStepperState;
   reset: () => void;
   setShowResult: (visible: boolean) => void;
-  executeNow: () => Promise<void>;
-  planNow: (input: PlaceBetInput) => Promise<void>;
+  executeNow: (planOverride?: PlaceBetPlan) => Promise<void>;
+  planNow: (input: PlaceBetInput) => Promise<PlaceBetPlan | undefined>;
   betAmount: number;
   betCount: number;
   stopGain: number;
@@ -93,7 +93,10 @@ export async function executeGamePlaceBetAction({
       return;
     }
 
-    await planNow(placeBet.input);
+    const plan = await planNow(placeBet.input);
+    if (plan) {
+      await executeNow(plan);
+    }
   } catch (error) {
     toast.error((error as Error)?.message ?? "An unexpected error occurred.");
     console.error(error);

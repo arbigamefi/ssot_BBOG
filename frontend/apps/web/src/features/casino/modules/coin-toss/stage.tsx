@@ -2,7 +2,7 @@ import * as React from "react";
 import { ShieldCheckIcon, SparklesIcon } from "@heroicons/react/24/outline";
 import { cn } from "@ssot/ui";
 
-import type { CoinSide } from "./params";
+import type { CoinSide } from "../../room/params";
 
 export function CoinTossStage({
   isPending,

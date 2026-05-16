@@ -1,0 +1,42 @@
+import { describe, expect, it } from "vitest";
+
+import { deriveCasinoRoundPhase, formatNativeFee } from "./casino-round";
+
+describe("casino round helpers", () => {
+  it("derives live settlement phases from on-chain bet state", () => {
+    expect(
+      deriveCasinoRoundPhase({
+        betState: "placed",
+        now: 10_000
+      })
+    ).toBe("waiting_vrf");
+
+    expect(
+      deriveCasinoRoundPhase({
+        betState: "randomReady",
+        randomReadyAt: 1_000,
+        now: 20_000,
+        manualSettleDelayMs: 30_000
+      })
+    ).toBe("settling");
+
+    expect(
+      deriveCasinoRoundPhase({
+        betState: "randomReady",
+        randomReadyAt: 1_000,
+        now: 40_000,
+        manualSettleDelayMs: 30_000
+      })
+    ).toBe("manual_settle_offered");
+  });
+
+  it("maps terminal bet states", () => {
+    expect(deriveCasinoRoundPhase({ betState: "finalized", now: 1 })).toBe("settled");
+    expect(deriveCasinoRoundPhase({ betState: "refunded", now: 1 })).toBe("refundable");
+  });
+
+  it("formats native VRF fees without scientific notation", () => {
+    expect(formatNativeFee(73_169_600_001_705n)).toBe("0.00007316 ETH");
+    expect(formatNativeFee(undefined)).toBe("—");
+  });
+});

@@ -10,6 +10,8 @@ import { GameSelectionControls } from "./game-selection-controls";
 import type { GameMeta } from "./model";
 import type { CoinSide } from "./params";
 import { PlaceBetButton } from "./place-bet-button";
+import { CasinoRoundStatusPanel } from "./round-status-panel";
+import type { CasinoRoundPhase } from "./casino-round";
 
 export type { GameRoomBetPanelState } from "./bet-panel-state";
 export { getPlaceBetButtonLabel, isPlaceBetButtonDisabled } from "./place-bet-button";
@@ -41,6 +43,14 @@ export function GameRoomBetPanel({
   kenoSpots,
   onKenoChange,
   onKenoResetResult,
+  roundPhase,
+  vrfQuote,
+  vrfQuoteError,
+  activeBetId,
+  activeRequestId,
+  roundError,
+  manualSettleAvailable,
+  onManualSettle,
   onPlaceBet
 }: {
   game: GameMeta;
@@ -69,6 +79,14 @@ export function GameRoomBetPanel({
   kenoSpots: readonly number[];
   onKenoChange: (spots: number[]) => void;
   onKenoResetResult: () => void;
+  roundPhase: CasinoRoundPhase;
+  vrfQuote?: bigint;
+  vrfQuoteError?: string;
+  activeBetId?: bigint;
+  activeRequestId?: bigint;
+  roundError?: string;
+  manualSettleAvailable?: boolean;
+  onManualSettle?: () => void;
   onPlaceBet: () => void;
 }) {
   return (
@@ -128,6 +146,17 @@ export function GameRoomBetPanel({
           <div className="font-mono text-xs font-bold">{state.error.message}</div>
         </div>
       )}
+
+      <CasinoRoundStatusPanel
+        phase={roundPhase}
+        quote={vrfQuote}
+        quoteError={vrfQuoteError}
+        betId={activeBetId}
+        requestId={activeRequestId}
+        error={roundError}
+        manualSettleAvailable={manualSettleAvailable}
+        onManualSettle={onManualSettle}
+      />
 
       <PlaceBetButton
         gameSlug={game.slug}

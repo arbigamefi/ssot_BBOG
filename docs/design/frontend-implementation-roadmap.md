@@ -1,15 +1,15 @@
 # Frontend Implementation Audit & Roadmap
 
 | Owner | Frontend Lead |
-| Status | Draft v2 |
-| Last Updated | 2026-05-15 |
+| Status | Draft v3 |
+| Last Updated | 2026-05-17 |
 | Depends on | `00-charter.md`, `01-brand.md`, `02-voice-and-copy.md`, `03-information-architecture.md`, `04-page-blueprints.md`, `10-design-tokens.md`, `11-component-library.md`, `12-motion.md`, `13-web3-ux.md`, `14-data-and-state.md`, `15-forms.md`, `16-mobile.md`, `../frontend/20-accessibility.md`, `../frontend/21-i18n.md`, `../frontend/22-performance.md`, `../frontend/23-security.md`, `../frontend/24-testing.md`, `../frontend/25-observability.md`, `../frontend/30-build-and-release.md`, `../frontend/31-governance.md`, `../frontend/32-ai-pairing.md`, `frontend-rewrite-blueprint.md`, `frontend-kill-list.md`, ADR-0001, ADR-0002, ADR-0003 |
 | Supersedes | ad-hoc chat-only frontend rewrite sequencing |
 
 This document is the working implementation roadmap for the current
-`codex/frontend-north-star` branch. It exists because implementation started
-before Gate A/B/C were formally closed. The goal is to bring the branch back
-under the SSOT process without throwing away useful work already landed.
+`codex/frontend-bundle-closeout` branch. It exists because implementation
+started before Gate A/B/C were formally closed. The goal is to bring the branch
+back under the SSOT process without throwing away useful work already landed.
 
 This file does not replace `frontend-rewrite-blueprint.md`; it translates that
 blueprint into an evidence-backed execution plan for the current repository
@@ -63,7 +63,7 @@ This roadmap is based on the full active frontend SSOT set:
 
 ## 3. Current Evidence Snapshot
 
-Snapshot command set, run on 2026-05-15:
+Snapshot command set, refreshed on 2026-05-17:
 
 ```bash
 git status --short --branch
@@ -89,10 +89,10 @@ Observed baseline:
 | Check                                                          | Current                        |
 | -------------------------------------------------------------- | ------------------------------ |
 | Working tree                                                   | clean                          |
-| Draft SSOT documents                                           | 26                             |
+| Draft SSOT documents                                           | 29                             |
 | Accepted documents                                             | 3, all ADRs                    |
 | `app/prototype` directory                                      | absent                         |
-| `apps/web/sandbox` directory                                   | present                        |
+| `apps/web/sandbox` directory                                   | absent; prototypes deleted     |
 | app route groups `(...)`                                       | 3                              |
 | `apps/web/src/app-shell`                                       | present                        |
 | `packages/ui/src/primitives`                                   | present                        |
@@ -101,19 +101,24 @@ Observed baseline:
 | forbidden token/radius/shadow/transition/dark lines            | 0                              |
 | files with forbidden token/radius/shadow/transition/dark lines | 0                              |
 | `pageClient.tsx` files over 600 LOC                            | 0                              |
-| largest `pageClient.tsx`                                       | `earn/pageClient.tsx`, 324 LOC |
+| largest `pageClient.tsx`                                       | activity detail, 408 LOC       |
 | sportsbook SDK-backed lookup                                   | present                        |
 | release smoke against Base Sepolia                             | passing                        |
+| casino result overlay                                          | chain-derived, no simulation   |
+| casino keeper health                                           | health snapshot + `/ops` panel |
 
 Interpretation:
 
 - The old 2,030-line game god component problem is closed.
 - The original prototype route pollution is closed for production routes.
 - The target route groups and UI package skeleton are now present.
+- Prototype artifacts were deleted instead of moved to sandbox; the production
+  App Router has no prototype surface.
 - Strict local guardrails cover style, shell, prototype route, legacy route,
   placeholder, page size, web3 import boundary, and legacy SDK compatibility.
-- The remaining risk is not visible-page architecture; it is release-shape
-  residue in scripts / fixtures and incomplete formal Gate A/B/C acceptance.
+- The remaining risk is not visible-page architecture; release-shape residue is
+  closed. The formal residual risk is incomplete Gate A/B/C acceptance and the
+  quality checks that are intentionally deferred to CI hardening.
 
 ## 4. SSOT Gate Status
 
@@ -238,6 +243,165 @@ This means small commits are still fine, but every commit must be phase-bound:
 - no old component kept solely for compatibility;
 - no deletion without `rg` evidence.
 
+## 6.1 Receipt Proof Closeout - 2026-05-16
+
+### Evidence
+
+The Base Sepolia GameHub canary proved that `GameHub.finalize(positionId)`
+settles correctly and, after the VRF duplicate-detach fix, no longer produces a
+best-effort internal `VRFHub.detach` revert. The remaining user-facing issue is
+in the frontend receipt surface, not in settlement:
+
+- `getBet(positionId)` exposes v1.3 GameHub proof fields such as `requestId`,
+  `randomHash`, `vrfFeePaid`, `vrfFeeCharged`, `vrfRequestedAt`, and
+  `resolvedAt`, but the frontend SDK maps only the old minimal subset.
+- The activity detail page formats `vrfFeePaid` with the bet asset decimals and
+  symbol. This is wrong because VRF fees are native-token wei, not USDC units.
+- GameHub v1.3 lifecycle events index the identifier as `positionId`, while the
+  detail timeline filter only matches `betId` or `id`.
+- Settlement economics such as `payoutNet` live in `BetFinalized` events and
+  are not stored directly in the GameHub bet struct.
+
+### Scope
+
+This closeout is intentionally narrow. It does not add new casino games, change
+the wallet flow, or alter indexer storage. It only makes the receipt page show
+the canonical facts that already exist on-chain or in the indexed event log.
+
+### Implementation Plan
+
+1. Extend `DomainBet` and `sdk.gameHub.getBet()` to map the v1.3 GameHub bet
+   struct fields required by receipt proof display.
+2. Update activity timeline matching to accept `positionId` as the canonical
+   GameHub v1.3 identifier.
+3. Add a native-token formatter for VRF fees and use it for `vrfFeePaid` and
+   `vrfFeeCharged`.
+4. Extract settlement proof from the latest `BetFinalized` event when present,
+   then use `payoutNet` / `refundAmount` for receipt facts and net-result
+   metrics.
+5. Add unit coverage proving that `positionId` events render in the timeline
+   and that finalized receipts show ETH-denominated VRF fees plus request /
+   random proof fields.
+6. Validate with typecheck, focused tests, full frontend tests, and browser
+   smoke on a local activity detail route.
+
+### Acceptance Checks
+
+```bash
+pnpm -C frontend/apps/web test -- 'src/app/(product)/portfolio/activity/[betId]/pageClient.test.tsx'
+pnpm -C frontend/packages/ssot typecheck
+pnpm -C frontend typecheck
+pnpm -C frontend test
+```
+
+Rendered validation target:
+
+```text
+/portfolio/activity/<positionId> -> receipt dossier -> lifecycle events,
+native VRF fee display, requestId, randomHash, and settled timestamp are visible.
+```
+
+### Implementation Result
+
+Completed in this wave:
+
+- `sdk.gameHub.getBet()` now maps the v1.3 GameHub receipt proof fields.
+- Activity detail timeline matching accepts canonical `positionId` event args.
+- VRF fee facts display as native ETH, while stake / payout / protocol fee stay
+  in the bet asset.
+- Settlement facts are derived from the latest indexed `BetFinalized` event.
+- Copy failures are handled inline instead of throwing browser console errors.
+
+## 6.2 Casino Round Result Proof Closeout - 2026-05-17
+
+### Evidence
+
+The live round UX already follows the keeper-oriented path:
+
+- the player signs approval only when needed;
+- the player signs `placeBet`;
+- the UI polls `sdk.gameHub.getBet(positionId)` during the active round;
+- keeper / relayer settlement moves the bet into `Settled` or `Refunded`;
+- the frontend receives a terminal `DomainBet` without requiring the player to
+  sign `finalize`.
+
+The remaining closeout gap was the result overlay. The old overlay used local
+simulation and expected-payout display semantics after reconciliation. That is
+not acceptable for a provably-fair casino surface because it can show a result
+before the indexed `BetFinalized` / `BetRefunded` proof is available.
+
+### Scope
+
+This closeout is intentionally narrow:
+
+1. remove local fake result simulation from the live round terminal path;
+2. construct the result modal from chain-derived `DomainBet` terminal fields;
+3. enrich the modal from indexed `BetFinalized` / `BetRefunded` event facts;
+4. keep indexer-lag UX explicit with `Settlement confirmed. Indexing payout
+   proof`;
+5. delete now-unused casino simulation helpers and tests.
+
+It does not decode per-game visual outcome numbers from `randomHash`. That is a
+separate enhancement and must not be faked.
+
+### Acceptance Checks
+
+```bash
+rg -n "simulateGameResult|Verification Success|DIRECT PREDICTION HIT|claim winnings|totalPayout|readFinalizedPayoutWin|parseFinalizedPayoutWin" \
+  frontend/apps/web/src/features/casino frontend/apps/web/src/app/'(product)'/casino -g '*.ts' -g '*.tsx'
+pnpm -C frontend/apps/web test -- reconciliation resolution right-pane 'src/app/(product)/casino/[slug]/pageClient.test.tsx'
+pnpm -C frontend typecheck
+pnpm -C frontend test
+pnpm -C frontend/apps/web build
+```
+
+### Implementation Result
+
+Completed in this wave:
+
+- `GameRoomResultOverlay` now renders only chain-derived facts: bet id, request
+  id, random hash, net payout or refund, net result, and settlement explorer
+  link.
+- `useGameResolutionEffect` now responds to a terminal `DomainBet` and enriches
+  the modal from indexed `BetFinalized` / `BetRefunded` rows.
+- `reconciliation.ts` now extracts terminal proof by canonical `positionId`.
+- The old local casino simulation module and its tests were deleted.
+- The forbidden-result scan returns zero matches.
+
+## 6.3 Casino Keeper Health Closeout - 2026-05-17
+
+### Evidence
+
+The keeper can already enqueue from `GameHub.BetRandomReady`, enqueue from
+`VRFHub.Fulfilled`, scan missed events, simulate `finalize`, write
+`finalize`, and verify terminal state. The remaining production gap is
+operator visibility:
+
+- keeper health exists only as stdout structured logs;
+- `/ops` exposes indexer worker health, but not casino keeper health;
+- no durable `lastFinalizeSuccessAt`, `lastFinalizeFailureAt`, queue depth, or
+  last scanned block snapshot exists for operators.
+
+### Scope
+
+1. Add an optional keeper health snapshot writer controlled by
+   `KEEPER_HEALTH_PATH`.
+2. Update the snapshot after startup, enqueue, scan, finalize success/failure,
+   and heartbeat events.
+3. Add a frontend `/ops` reader for `/ops/casino-keeper-health.json`.
+4. Render missing, stale, healthy, and degraded keeper states explicitly.
+5. Add unit coverage for both the keeper health writer and `/ops` rendering.
+
+### Acceptance Checks
+
+```bash
+pnpm -C frontend/apps/keeper test -- health runtime
+pnpm -C frontend/apps/web test -- 'src/app/(product)/ops/pageClient.test.tsx'
+pnpm -C frontend typecheck
+pnpm -C frontend test
+pnpm -C frontend/apps/web build
+```
+
 ## 7. Current Closeout Roadmap
 
 This section supersedes the historical phase ledger below for the current
@@ -280,6 +444,14 @@ rg -n '"hub"\s*:|bankRegistry|SSOTHubAPI|sdk\.hub|contracts\.hub|release\.contra
 Only `scripts/frontend-precheck.mjs` may contain the literal forbidden-regex
 definition.
 
+Implementation result on 2026-05-17:
+
+- `precheck:frontend -- --strict` passes.
+- `check:release` passes.
+- `smoke:release-readonly` passes on Base Sepolia.
+- The legacy compatibility scan returns only the intentional
+  `frontend-precheck.mjs` regex definition.
+
 ### C2 - Full Local Verification
 
 Goal: prove the clean-room phase is locally coherent.
@@ -300,6 +472,25 @@ Expected caveats:
 - Node warning is expected while local Node is v22 and project asks for v20.
 - Next ESLint plugin warning is pre-existing and should be handled separately
   before public launch.
+
+Implementation result on 2026-05-17:
+
+```bash
+pnpm -C frontend/apps/web exec vitest run 'src/app/(product)/sportsbook/pageClient.test.tsx'
+pnpm -C frontend precheck:frontend -- --strict
+pnpm -C frontend check:release
+pnpm -C frontend smoke:release-readonly
+pnpm -C frontend typecheck
+pnpm -C frontend test
+pnpm -C frontend/apps/web build
+```
+
+All commands passed. The read-only smoke validated Base Sepolia chain `84532`,
+the embedded `v1.3` release, `GameHub`, `SportsHub`, `VRFHub`, all eight casino
+module mappings, Casino pool `1`, Sports pool `2`, and SportsRiskEngine pool
+hash. Production build remains within the current post-optimization envelope:
+`/casino/[slug]` first load `181 kB`, `/sportsbook` first load `159 kB`, `/ops`
+first load `127 kB`.
 
 ### C3 - Clean-Room PR Decision
 
@@ -1215,34 +1406,145 @@ find frontend/apps/web/src/app -name 'pageClient.tsx' -print0 \
   | xargs -0 wc -l | awk '$2 != "total" && $1 > 600 {print $0}'
 ```
 
-## 14. Next Immediate Commit After This Document
+## 14. 2026-05-16 Audit Refresh And Action Plan
 
-After this roadmap refresh, the next commit should be:
+This refresh supersedes the 2026-05-15 bundle-risk numbers in the external
+audit. It does not supersede the Gate A/B/C requirements.
+
+### 14.1 Refreshed Evidence
+
+Commands run on `codex/frontend-bundle-closeout`:
+
+```bash
+git status --short --branch
+git log --oneline -8
+pnpm -C frontend precheck:frontend -- --strict
+find frontend/apps/web/src/app -name 'pageClient.tsx' -print0 | xargs -0 wc -l | sort -n
+rg -n "#[0-9a-fA-F]{3,8}\b|rgba\(|rgb\(" frontend/apps/web/src frontend/packages/ui/src
+rg -n "rgba\(|147,51,234|purple|emerald|amber|fuchsia|indigo|white/|text-white|bg-white|border-white" \
+  frontend/apps/web/src/features/casino frontend/apps/web/src/app frontend/packages/ui/src
+pnpm -C frontend/apps/web build
+```
+
+Observed:
+
+- working tree was clean at the start of this audit;
+- strict frontend precheck passes under its current rule set;
+- old production alias routes and `app/prototype` are absent;
+- no legacy shell names remain in app or UI source;
+- no `pageClient.tsx` exceeds 600 lines; the largest current file is
+  `earn/pageClient.tsx` at 324 lines;
+- bundle risk from the prior report is materially reduced:
+  `/casino/[slug]` is now 178 kB first-load JS,
+  `/sportsbook/[marketId]` is now 159 kB, and shared first-load JS is 104 kB;
+- `frontend/apps/web/sandbox/prototype/**` exists outside `src/`, so it is not
+  part of the App Router. This is acceptable as non-routable reference code;
+- raw hex literals still exist in `app/global-error.tsx`;
+- a raw purple `rgba(147,51,234,0.05)` background still exists in the Dice
+  stage;
+- several `@ssot/ui` legacy primitives still use Tailwind color families
+  (`white`, `slate`, `emerald`, `amber`, `rose`, `blue`, `green`) instead of
+  SSOT tokens;
+- casino stage implementations are still physically flat in
+  `features/casino/room/*-stage.tsx` instead of living under
+  `features/casino/modules/<slug>/`.
+
+### 14.2 Finding Disposition
+
+| External audit item                                                  | Current disposition                                                                                                                                                        | Action                                                                                                                                               |
+| -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Bundle high risk (`/casino/[slug]` 504 kB, sportsbook detail 289 kB) | **Resolved enough for closeout.** Current build is 178 kB / 159 kB after lazy Sentry, lazy stages, lightweight page transition, custom toaster, and lazy RainbowKit modal. | Do not chase 150 kB as a hard blocker. Keep a future bundle-budget gate.                                                                             |
+| N3 single AppShell                                                   | **Closed.** No legacy shell names remain. Feature-level `GameRoomShell` is not a competing app chrome.                                                                     | No code action.                                                                                                                                      |
+| N5 no hex literal                                                    | **Open.** `global-error.tsx` still uses raw hex because it cannot rely on normal providers/components.                                                                     | Replace raw hex with token-compatible HSL fallbacks; extend precheck to catch raw hex literals in source.                                            |
+| N2 no per-game color family                                          | **Partially open.** The Tailwind color-family scan missed raw `rgba(147,51,234,0.05)` in Dice and old UI primitive color families.                                         | Replace with `brand` / `accent` / semantic token classes; extend precheck to catch ad-hoc Tailwind color families and raw rgb/rgba in app/UI source. |
+| Phase 5 casino modules                                               | **Partially open.** Registry exists, but stage implementations are flat in `room/`.                                                                                        | Move stage components/tests into `modules/<slug>/`; keep shared room framework in `room/`. Do not add new games in this slice.                       |
+| Phase 1 primitives physical migration                                | **Transitional.** `primitives/index.ts` re-exports `components/ui/*`; this is acceptable short-term but not final Gate B.                                                  | Do not do a broad move in this slice. First retokenize remaining `components/ui` debt and keep the later physical move separate.                     |
+| Gate A/B/C document statuses                                         | **Formally open.** Draft documents should not be mechanically marked Accepted.                                                                                             | Keep Draft until human sign-off. Record implementation evidence here instead.                                                                        |
+| Lighthouse / a11y / bundle-budget CI                                 | **Open but not first-order correctness.** CI already runs release sanity, lint, typecheck, strict tests, build, and Storybook build.                                       | Add budget/a11y/perf gates after token discipline and module ownership are clean.                                                                    |
+| v1.3 four new casino games                                           | **Product expansion, not closeout.** Earlier product decision paused adding games.                                                                                         | Do not add Baccarat / Plinko / Sic Bo / Slots in this closeout slice.                                                                                |
+
+### 14.3 Immediate Implementation Slice
+
+The next local commit should be:
 
 ```text
-Close frontend release compatibility residue
+Close frontend audit residue
 ```
 
 Scope:
 
-- `frontend/scripts/ssot-sync.mjs`
-- `frontend/scripts/frontend-precheck.mjs`
-- `frontend/scripts/check-release.mjs`
-- `frontend/scripts/release-readonly-smoke.mjs`
-- `frontend/packages/ssot/src/release/loader.test.ts`
-- v1.3 release fixtures under `frontend/packages/ssot/src/fixtures`
-- this roadmap
+1. **Token discipline closeout**
+   - retokenize `app/global-error.tsx`;
+   - retokenize `features/casino/room/dice-stage.tsx`;
+   - retokenize old `@ssot/ui` files still referenced by the public barrel:
+     `stat-card.tsx`, `room-strip.tsx`, `status-badge.tsx`, and
+     `page-header.tsx`;
+   - extend `frontend-precheck` so raw hex, raw rgb/rgba, and ad-hoc Tailwind
+     color families are blocking in app/UI source.
 
-Validation:
+2. **Casino module ownership**
+   - move Dice / Coin Toss / Roulette / Keno stage files from `room/` to
+     `modules/<slug>/`;
+   - update dynamic imports and tests;
+   - leave shared room framework files in `room/`.
+
+3. **Verification**
+   - `pnpm -C frontend precheck:frontend -- --strict`
+   - `pnpm -C frontend/packages/ui test`
+   - `pnpm -C frontend/apps/web test -- src/features/casino`
+   - `pnpm -C frontend/apps/web typecheck`
+   - `pnpm -C frontend/packages/ui typecheck`
+   - `pnpm -C frontend/apps/web build`
+   - `git diff --check`
+
+No new game, sportsbook, SDK, or release behavior belongs in this commit.
+
+### 14.4 Implementation Result
+
+Status: completed locally.
+
+Changes:
+
+- replaced raw hex colors in `app/global-error.tsx` with token-compatible HSL
+  fallbacks that still work if the root providers fail;
+- replaced the Dice stage's raw purple `rgba(...)` visual with the `brand`
+  token;
+- retokenized old exported UI primitives/pattern helpers:
+  `copy-button`, `data-table`, `page-header`, `room-strip`, `stat-card`, and
+  `status-badge`;
+- extended `frontend-precheck` with a blocking
+  `forbidden-color-literal` check for raw hex, raw rgb/rgba, raw numeric hsl,
+  and ad-hoc Tailwind color families in app/UI source;
+- moved Dice / Coin Toss / Roulette / Keno stage implementations into
+  `features/casino/modules/<slug>/stage.tsx`;
+- moved stage tests under `features/casino/modules/`;
+- kept shared room framework, controls, params, model, and history widgets in
+  `features/casino/room/`.
+
+Evidence:
 
 ```bash
-pnpm -C frontend/apps/web exec vitest run 'src/app/(product)/sportsbook/pageClient.test.tsx'
-pnpm -C frontend/packages/ssot test -- src/release/loader.test.ts
 pnpm -C frontend precheck:frontend -- --strict
-pnpm -C frontend check:release
-pnpm -C frontend smoke:release-readonly
+pnpm -C frontend/apps/web test -- src/features/casino
+pnpm -C frontend/packages/ui test
+pnpm -C frontend/apps/web typecheck
+pnpm -C frontend/packages/ui typecheck
+pnpm -C frontend/apps/web build
+pnpm -C frontend test
+pnpm -C frontend lint
 pnpm -C frontend typecheck
-pnpm -C frontend build
+git diff --check
 ```
 
-No new page behavior should be bundled into that commit.
+Observed:
+
+- strict precheck now includes `forbidden-color-literal` and passes with 0
+  findings;
+- raw color scans outside token files return 0 findings;
+- old flat casino stage filename references return 0 findings;
+- full frontend tests passed: `packages/ssot` 137 tests,
+  `packages/ui` 23 tests, and `apps/web` 135 tests;
+- production build passed and preserved the latest bundle profile:
+  `/casino/[slug]` 178 kB, `/sportsbook/[marketId]` 159 kB, shared 104 kB;
+- known non-blocking warnings remain unchanged: local Node v22 vs project Node
+  20, deprecated `next lint`, and the existing Next ESLint plugin warning.

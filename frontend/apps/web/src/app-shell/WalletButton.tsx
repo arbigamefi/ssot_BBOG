@@ -7,10 +7,16 @@ function shortAddress(address: string) {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
 }
 
+export const OPEN_WALLET_CONNECT_MODAL_EVENT = "ssot-open-wallet-connect-modal";
+
 export function useConnectModal() {
   const { connect, connectors, isPending } = useConnect();
 
   const openConnectModal = React.useCallback(() => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event(OPEN_WALLET_CONNECT_MODAL_EVENT));
+      return;
+    }
     const connector = connectors[0];
     if (!connector) return;
     connect({ connector });

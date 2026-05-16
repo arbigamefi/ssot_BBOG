@@ -1,7 +1,7 @@
 import * as React from "react";
 import { cn } from "@ssot/ui";
 
-import { EUROPEAN_WHEEL_ORDER, RED_NUMBER_SET } from "./model";
+import { EUROPEAN_WHEEL_ORDER, RED_NUMBER_SET } from "../../room/model";
 
 export function RouletteStage({
   isPending,

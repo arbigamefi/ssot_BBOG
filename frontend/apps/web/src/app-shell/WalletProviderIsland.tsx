@@ -6,6 +6,7 @@ import { WagmiProvider, createConfig, http, injected } from "wagmi";
 import { arbitrum, arbitrumSepolia, base, baseSepolia } from "wagmi/chains";
 
 import { QueryProvider } from "./QueryProvider";
+import { WalletConnectModalHost } from "./WalletConnectModalHost";
 
 const CHAIN_BY_ID: Record<number, any> = {
   [arbitrum.id]: arbitrum,
@@ -32,7 +33,10 @@ const wagmiConfig = createConfig({
 export function WalletProviderIsland({ children }: { children: React.ReactNode }) {
   return (
     <WagmiProvider config={wagmiConfig}>
-      <QueryProvider>{children}</QueryProvider>
+      <QueryProvider>
+        {children}
+        <WalletConnectModalHost />
+      </QueryProvider>
     </WagmiProvider>
   );
 }

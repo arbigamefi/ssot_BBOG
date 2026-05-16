@@ -12,6 +12,7 @@ import {GameHub} from "../../src/core/GameHub.sol";
 import {PoolRegistry} from "../../src/core/PoolRegistry.sol";
 import {SettlementRouter} from "../../src/core/SettlementRouter.sol";
 import {VRFHub} from "../../src/core/VRFHub.sol";
+import {IVRFHub} from "../../src/core/interfaces/IVRFHub.sol";
 import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
 import {MockERC20} from "../../src/mocks/MockERC20.sol";
 import {ReferralRegistry} from "../../src/engines/referral/ReferralRegistry.sol";
@@ -158,6 +159,23 @@ contract GameHubE2E is Test {
 
         assertEq(balAfter - balBefore, (196 ether) / 10);
         assertEq(uint256(router.getPosition(positionId).state), uint256(SSOTTypes.PositionState.Settled));
+    }
+
+    function test_finalizeSkipsVrfDetachWhenRequestAlreadyClearedByFulfill() external {
+        uint8 cap = 50;
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
+
+        uint256 positionId = _place(alice, GAME_DICE, POOL_A, abi.encode(cap), spec, address(0));
+        uint256 requestId = gameHub.getBet(positionId).requestId;
+
+        uint256 seed = _findSeedDiceWin(positionId, cap);
+        _fulfill(positionId, seed);
+
+        assertEq(vrf.getRequest(requestId).hub, address(0), "fulfilled callback should clear VRF request storage");
+
+        vm.expectCall(address(vrf), abi.encodeWithSelector(IVRFHub.detach.selector, requestId), 0);
+        gameHub.finalize(positionId);
     }
 
     function test_coinMultirollStopGainRefundsUnusedStakeThroughRouterPoolB() external {

@@ -21,6 +21,9 @@
   "scripts": {
     "dev": "pnpm -C apps/web dev",
     "build": "pnpm -C apps/web build",
+    "keeper:build": "pnpm -C apps/keeper build",
+    "keeper:start": "pnpm -C apps/keeper start",
+    "keeper:test": "pnpm -C apps/keeper test",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",

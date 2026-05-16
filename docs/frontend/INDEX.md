@@ -29,6 +29,10 @@ implemented.
 - [`31-governance.md`](./31-governance.md)
 - [`32-ai-pairing.md`](./32-ai-pairing.md)
 
+## Companion Specs
+
+- [`casino-keeper-v1.md`](./casino-keeper-v1.md)
+
 ## Gates
 
 Layer 3 documents must reach `Status: Accepted` before public launch. The

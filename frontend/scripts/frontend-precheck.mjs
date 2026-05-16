@@ -20,6 +20,7 @@ const releaseBoundaryRoots = [
 const checks = [
   checkTargetStructure(),
   checkForbiddenStyles(),
+  checkForbiddenColorLiterals(),
   checkLegacyShellNames(),
   checkPrototypeRoutes(),
   checkLegacyRouteAliases(),
@@ -84,6 +85,19 @@ function checkForbiddenStyles() {
     label: "Forbidden style utilities",
     roots: sourceRoots,
     pattern,
+    blocking: true
+  });
+}
+
+function checkForbiddenColorLiterals() {
+  const pattern =
+    /#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(\s*(?:\d|,)|\b(?:bg|text|border|from|via|to|ring)-(?:slate|zinc|neutral|stone|gray|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)(?:-|\/)/;
+  return scanLines({
+    id: "forbidden-color-literal",
+    label: "Raw colors and ad-hoc Tailwind color families",
+    roots: sourceRoots,
+    pattern,
+    exclude: (file) => formatPath(file).startsWith("packages/ui/src/tokens/"),
     blocking: true
   });
 }

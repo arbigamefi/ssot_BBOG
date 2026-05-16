@@ -10,4 +10,4 @@ export * from "../components/ui/skeleton";
 export * from "../components/ui/tab-bar";
 export * from "../components/ui/theme-toggle";
 export * from "../components/ui/toaster";
-export { toast } from "sonner";
+export { toast } from "../components/ui/toaster";

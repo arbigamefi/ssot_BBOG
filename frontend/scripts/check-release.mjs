@@ -21,6 +21,14 @@ const dir = path.resolve(process.cwd(), "packages/ssot/src/release/embedded");
 const entries = await fs.readdir(dir);
 const jsons = entries.filter((f) => f.endsWith(".json"));
 
+function isValidDecimals(value) {
+  return Number.isInteger(value) && value >= 0 && value <= 36;
+}
+
+function isNonEmptyString(value) {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
 let ok = true;
 let fatal = false;
 
@@ -51,26 +59,43 @@ for (const f of jsons) {
     }
   }
 
-  if (
-    raw?.sports?.enabled &&
-    raw.sports.sportsHub &&
-    contracts.sportsHub &&
-    raw.sports.sportsHub.toLowerCase() !== contracts.sportsHub.toLowerCase()
-  ) {
-    issues.push("sports.sportsHub does not match contracts.sportsHub");
-  }
-  if (
-    raw?.sports?.enabled &&
-    raw.sports.riskEngine &&
-    contracts.sportsRiskEngine &&
-    raw.sports.riskEngine.toLowerCase() !== contracts.sportsRiskEngine.toLowerCase()
-  ) {
-    issues.push("sports.riskEngine does not match contracts.sportsRiskEngine");
+  if (raw?.sports?.enabled) {
+    if (
+      !isNonEmptyString(raw.sports.sportsHub) ||
+      raw.sports.sportsHub.toLowerCase() === ZERO_ADDRESS
+    ) {
+      issues.push("sports.sportsHub missing");
+    } else if (
+      contracts.sportsHub &&
+      raw.sports.sportsHub.toLowerCase() !== contracts.sportsHub.toLowerCase()
+    ) {
+      issues.push("sports.sportsHub does not match contracts.sportsHub");
+    }
+    if (
+      !isNonEmptyString(raw.sports.riskEngine) ||
+      raw.sports.riskEngine.toLowerCase() === ZERO_ADDRESS
+    ) {
+      issues.push("sports.riskEngine missing");
+    } else if (
+      contracts.sportsRiskEngine &&
+      raw.sports.riskEngine.toLowerCase() !== contracts.sportsRiskEngine.toLowerCase()
+    ) {
+      issues.push("sports.riskEngine does not match contracts.sportsRiskEngine");
+    }
   }
   if (!raw?.assets?.length) issues.push("assets empty");
   if (!raw?.games || Object.keys(raw.games).length === 0) issues.push("games empty");
   if (!Array.isArray(raw?.gamesMeta) || raw.gamesMeta.length === 0) issues.push("gamesMeta empty");
   if (!Array.isArray(raw?.pools) || raw.pools.length === 0) issues.push("pools empty");
+
+  raw?.assets?.forEach?.((asset, index) => {
+    if (!isNonEmptyString(asset?.symbol)) issues.push(`assets[${index}].symbol missing`);
+    if (!isValidDecimals(asset?.decimals)) issues.push(`assets[${index}].decimals invalid`);
+  });
+  raw?.pools?.forEach?.((pool, index) => {
+    if (!isNonEmptyString(pool?.symbol)) issues.push(`pools[${index}].symbol missing`);
+    if (!isValidDecimals(pool?.decimals)) issues.push(`pools[${index}].decimals invalid`);
+  });
 
   if (fatalIssues.length) {
     ok = false;

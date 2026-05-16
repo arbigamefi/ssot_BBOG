@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import dynamic from "next/dynamic";
+import type { DomainBet } from "@ssot/ssot";
 
 import { ProductStateCard } from "../../../../components/ProductStateCard";
 import { PageTransition } from "../../../../components/PageTransition";
@@ -20,7 +22,6 @@ import {
   formatHouseEdge,
   getGameDisplayName
 } from "../../../../features/casino/room/presentation";
-import { GameRoomAuditLedger } from "../../../../features/casino/room/audit-ledger";
 import { GameRoomBetPanel } from "../../../../features/casino/room/bet-panel";
 import {
   useBetStepperFailureToast,
@@ -29,15 +30,34 @@ import {
 import { useGameWalletBalance, useKenoStrobeSpots } from "../../../../features/casino/room/hooks";
 import {
   useGameResolutionEffect,
+  type CasinoRoundResult,
   type GameHistoryEntry
 } from "../../../../features/casino/room/resolution";
 import { GameRoomRightPane } from "../../../../features/casino/room/right-pane";
 import { GameRoomShell } from "../../../../features/casino/room/game-room-shell";
+import {
+  useCasinoRoundWatcher,
+  useCasinoVrfQuote,
+  type CasinoRoundPhase
+} from "../../../../features/casino/room/casino-round";
+
+const GameRoomAuditLedger = dynamic(
+  () =>
+    import("../../../../features/casino/room/audit-ledger").then((mod) => mod.GameRoomAuditLedger),
+  {
+    loading: () => (
+      <div className="rounded-lg border border-border bg-surface-1 p-6 text-sm font-bold uppercase tracking-[0.18em] text-fg-subtle">
+        Loading audit stream
+      </div>
+    ),
+    ssr: false
+  }
+);
 
 /* ─── Main Logic ─── */
 
 export function GamePageClient({ slug }: { slug: string }) {
-  const { release, readOnlyReason } = useRelease();
+  const { release, readOnlyReason, chainId } = useRelease();
   const { sdk } = useSSOTSDK();
   const { indexerStatus } = useIndexer();
 
@@ -52,12 +72,15 @@ export function GamePageClient({ slug }: { slug: string }) {
   }, [release?.gamesMeta, slug]);
 
   const recentBetsQuery = useBetsByGame(game?.gameId, 12);
+  const refetchRecentBets = recentBetsQuery.refetch;
   const recentBets = recentBetsQuery.data ?? [];
 
   // Local State
   const [betAmount, setBetAmount] = React.useState<number>(10);
   const [isPending, setIsPending] = React.useState(false);
   const [showResult, setShowResult] = React.useState(false);
+  const [terminalBet, setTerminalBet] = React.useState<DomainBet | null>(null);
+  const [resultProof, setResultProof] = React.useState<CasinoRoundResult | null>(null);
 
   // Game-specific params
   const [diceTarget, setDiceTarget] = React.useState<number>(50);
@@ -80,32 +103,52 @@ export function GamePageClient({ slug }: { slug: string }) {
   const [advancedOpen, setAdvancedOpen] = React.useState(false);
 
   const walletBalance = useGameWalletBalance({ sdk, assets: release?.assets });
-  const animatingKenoSpots = useKenoStrobeSpots({ isPending, gameSlug: game?.slug });
 
   const { planNow, executeNow, state, reset } = usePlaceBetStepper();
   const { openConnectModal } = useConnectModal();
   const { db } = useSSOTRuntime();
+  const vrfQuote = useCasinoVrfQuote({ sdk, betCount });
+  const handleRoundTerminal = React.useCallback(
+    (bet: DomainBet) => {
+      setIsPending(false);
+      setTerminalBet(bet);
+      void refetchRecentBets?.();
+    },
+    [refetchRecentBets]
+  );
+  const roundWatcher = useCasinoRoundWatcher({
+    sdk,
+    betId: state.betId,
+    active: state.status === "reconciled",
+    onTerminal: handleRoundTerminal
+  });
+  const roundPhase = React.useMemo<CasinoRoundPhase>(() => {
+    if (state.status === "planning") return "loading_quote";
+    if (state.status === "submitting" || state.status === "mined") return "placing";
+    if (roundWatcher.phase !== "idle") return roundWatcher.phase;
+    return vrfQuote.phase === "loading_quote" ? "loading_quote" : "ready";
+  }, [roundWatcher.phase, state.status, vrfQuote.phase]);
+  const isRoundAnimating =
+    isPending ||
+    state.status === "planning" ||
+    state.status === "submitting" ||
+    state.status === "mined" ||
+    roundWatcher.isLive;
+  const animatingKenoSpots = useKenoStrobeSpots({
+    isPending: isRoundAnimating,
+    gameSlug: game?.slug
+  });
 
   useBetStepperFailureToast({ status: state.status, error: state.error });
   useVrfTimeoutToast(isPending);
 
   useGameResolutionEffect({
-    status: state.status,
-    betId: state.betId,
+    terminalBet,
     recentBets,
     db,
-    gameSlug: game?.slug ?? "",
-    coinSide,
-    diceDirection,
-    diceTarget,
-    rouletteSpots,
-    kenoSpots,
     setIsPending,
     setShowResult,
-    setFlipCount,
-    setResultNum,
-    setKenoResultDrawn,
-    setGameHistory,
+    setResultProof,
     reset
   });
 
@@ -135,8 +178,10 @@ export function GamePageClient({ slug }: { slug: string }) {
   const multiplier = winChance === 0 ? 0 : 99 / winChance;
   const expectedPayout = betAmount * multiplier;
 
-  const handlePlaceBet = () =>
-    executeGamePlaceBetAction({
+  const handlePlaceBet = () => {
+    setTerminalBet(null);
+    setResultProof(null);
+    return executeGamePlaceBetAction({
       account: sdk?.account,
       openConnectModal,
       release,
@@ -156,6 +201,7 @@ export function GamePageClient({ slug }: { slug: string }) {
       rouletteSpots,
       kenoSpots
     });
+  };
 
   const LeftPane = (
     <GameRoomBetPanel
@@ -185,6 +231,14 @@ export function GamePageClient({ slug }: { slug: string }) {
       kenoSpots={kenoSpots}
       onKenoChange={setKenoSpots}
       onKenoResetResult={() => setKenoResultDrawn([])}
+      roundPhase={roundPhase}
+      vrfQuote={vrfQuote.quote}
+      vrfQuoteError={vrfQuote.quoteError}
+      activeBetId={state.betId}
+      activeRequestId={roundWatcher.bet?.requestId}
+      roundError={roundWatcher.error}
+      manualSettleAvailable={roundWatcher.manualSettleAvailable}
+      onManualSettle={roundWatcher.manualSettle}
       onPlaceBet={handlePlaceBet}
     />
   );
@@ -196,7 +250,7 @@ export function GamePageClient({ slug }: { slug: string }) {
       flipCount={flipCount}
       gameHistory={gameHistory}
       recentBets={recentBets}
-      isPending={isPending}
+      isPending={isRoundAnimating}
       showResult={showResult}
       resultNum={resultNum}
       diceDirection={diceDirection}
@@ -207,7 +261,10 @@ export function GamePageClient({ slug }: { slug: string }) {
       kenoSpots={kenoSpots}
       animatingKenoSpots={animatingKenoSpots}
       kenoResultDrawn={kenoResultDrawn}
-      expectedPayout={expectedPayout}
+      resultProof={resultProof}
+      chainId={chainId}
+      assetSymbol="USDC"
+      assetDecimals={usdcDecimals}
       onDiceDirectionChange={setDiceDirection}
       onDiceTargetChange={setDiceTarget}
       onRouletteChange={setRouletteSpots}

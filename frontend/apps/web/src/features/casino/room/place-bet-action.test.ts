@@ -47,6 +47,15 @@ const release = {
   ]
 };
 
+const plannedBet = {
+  chainId: 84532,
+  releaseDigest: "0xrelease",
+  warnings: [],
+  steps: [],
+  payload: {},
+  preview: { needsApproval: false }
+};
+
 function baseArgs(overrides: Partial<Parameters<typeof executeGamePlaceBetAction>[0]> = {}) {
   return {
     account: "0x4444444444444444444444444444444444444444",
@@ -58,7 +67,7 @@ function baseArgs(overrides: Partial<Parameters<typeof executeGamePlaceBetAction
     reset: vi.fn(),
     setShowResult: vi.fn(),
     executeNow: vi.fn(async () => undefined),
-    planNow: vi.fn(async () => undefined),
+    planNow: vi.fn(async () => plannedBet as any),
     betAmount: 10,
     betCount: 1,
     stopGain: 0,
@@ -126,6 +135,7 @@ describe("game room place bet action", () => {
     await executeGamePlaceBetAction(args);
 
     expect(args.planNow).toHaveBeenCalledTimes(1);
+    expect(args.executeNow).toHaveBeenCalledWith(plannedBet);
     expect((args.planNow as any).mock.calls[0]?.[0].stake).toBe(10_000_000n);
   });
 });

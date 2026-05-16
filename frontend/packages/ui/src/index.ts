@@ -6,7 +6,6 @@ export type { ThemeToken } from "./tokens";
 
 // target architecture subpath namespaces
 export * as uiIcons from "./icons";
-export * as uiMotion from "./motion";
 export * as uiPatterns from "./patterns";
 export * as uiPrimitives from "./primitives";
 export * as uiUtils from "./utils";
@@ -28,7 +27,7 @@ export * from "./components/ui/stat-card";
 export * from "./components/ui/status-badge";
 export * from "./components/ui/tab-bar";
 export * from "./components/ui/data-table";
-export { toast } from "sonner";
+export { toast } from "./components/ui/toaster";
 
 // protocol (presentational domain components)
 export * from "./components/protocol/release-badge";

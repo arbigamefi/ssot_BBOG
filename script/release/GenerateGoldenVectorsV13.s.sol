@@ -262,9 +262,9 @@ contract GenerateGoldenVectorsV13 is Script {
         for (uint256 i = 0; i < numPools; i++) {
             string memory suffix = vm.toString(i);
             if (snap.readUint(string.concat(".poolId_", suffix)) == uint256(poolId)) {
-                try jsonReader.readUint(snap, string.concat(".assetDecimals_", suffix)) returns (uint256 d) {
-                    if (d <= type(uint8).max) dec = uint8(d);
-                } catch {}
+                uint256 d = jsonReader.readUint(snap, string.concat(".poolAssetDecimals_", suffix));
+                require(d <= type(uint8).max, "pool asset decimals too large");
+                dec = uint8(d);
                 return dec;
             }
         }
