@@ -11,17 +11,17 @@
 
   --fg: 210 40% 98%;
   --fg-muted: 215 16% 65%;
-  --fg-subtle: 215 14% 45%;
-  --fg-inverse: 220 39% 4%;
+  --fg-subtle: 215 14% 58%;
+  --fg-inverse: 220 39% 2%;
 
   --border: 220 20% 18%;
   --border-soft: 220 14% 14%;
   --input: 220 20% 18%;
-  --ring: 255 92% 66%;
+  --ring: 255 92% 70%;
 
-  --brand: 255 92% 66%;
-  --brand-hover: 255 92% 72%;
-  --brand-active: 255 82% 58%;
+  --brand: 255 92% 70%;
+  --brand-hover: 255 92% 74%;
+  --brand-active: 255 82% 66%;
 
   --accent: 170 84% 60%;
   --accent-hover: 170 84% 66%;

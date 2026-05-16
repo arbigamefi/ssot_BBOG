@@ -36,6 +36,7 @@ export function BetAmountSection({
           <CurrencyDollarIcon className="h-6 w-6 text-fg-subtle" />
           <input
             type="number"
+            aria-label="Bet amount"
             value={betAmount}
             onChange={(event) => onBetAmountChange(Math.max(1, parseInt(event.target.value) || 0))}
             className="w-full border-none bg-transparent pr-2 text-right font-mono text-4xl text-fg outline-none"

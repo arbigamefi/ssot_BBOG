@@ -27,6 +27,7 @@
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
+    "e2e": "pnpm -C apps/web e2e",
     "ssot:sync": "node scripts/ssot-sync.mjs",
     "check:release": "node scripts/check-release.mjs",
     "smoke:release-readonly": "node scripts/release-readonly-smoke.mjs",
@@ -35,6 +36,7 @@
     "format": "prettier . --write",
     "format:check": "prettier . --check",
     "precheck:frontend": "node scripts/frontend-precheck.mjs",
+    "check:bundle": "node scripts/check-bundle-budget.mjs",
     "test:strict": "STRICT_VECTORS=1 pnpm test",
     "prepare": "cd .. && husky frontend/.husky"
   },

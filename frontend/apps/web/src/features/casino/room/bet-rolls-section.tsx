@@ -34,7 +34,7 @@ export function BetRollsSection({
             className={cn(
               "flex-1 rounded-lg border py-2.5 text-xs font-black uppercase tracking-wide transition-colors",
               betCount === count
-                ? "border-brand bg-brand text-fg shadow-glow"
+                ? "border-brand bg-brand text-fg-inverse shadow-glow"
                 : "border-border bg-surface-1 text-fg-subtle hover:border-brand/40 hover:bg-surface-2 hover:text-fg"
             )}
           >
@@ -45,6 +45,7 @@ export function BetRollsSection({
           type="number"
           min={1}
           max={100}
+          aria-label="Roll count"
           value={betCount}
           onChange={(event) =>
             onBetCountChange(Math.max(1, Math.min(100, parseInt(event.target.value) || 1)))

@@ -42,8 +42,8 @@ so Tailwind can compose `hsl(var(--token) / <alpha>)`.
   /* Foregrounds */
   --fg: 210 40% 98%; /* default text */
   --fg-muted: 215 16% 65%; /* secondary text, label */
-  --fg-subtle: 215 14% 45%; /* disabled, caption-2 */
-  --fg-inverse: 222 47% 11%; /* text on brand-fill */
+  --fg-subtle: 215 14% 58%; /* disabled, caption-2 */
+  --fg-inverse: 220 39% 2%; /* text on brand-fill */
 
   /* Borders */
   --border: 220 20% 18%;
@@ -51,9 +51,9 @@ so Tailwind can compose `hsl(var(--token) / <alpha>)`.
   --border-strong: 220 24% 28%;
 
   /* Brand + accent */
-  --brand: 255 92% 66%;
-  --brand-hover: 255 92% 71%;
-  --brand-active: 255 92% 60%;
+  --brand: 255 92% 70%;
+  --brand-hover: 255 92% 74%;
+  --brand-active: 255 82% 66%;
   --accent: 170 84% 60%;
   --accent-hover: 170 84% 65%;
 

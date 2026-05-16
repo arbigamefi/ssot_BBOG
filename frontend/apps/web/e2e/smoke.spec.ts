@@ -1,97 +1,80 @@
-import { test, expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 /**
- * Smoke tests for the ArbiGameFi web app.
+ * Browser smoke tests for the current clean-room route surface.
  *
- * These tests verify basic navigation and page rendering.
- * They do NOT require a wallet connection or on-chain state.
- * Run with: pnpm e2e (dev server must be running on :3000)
+ * The suite is intentionally read-only and wallet-free. It protects the
+ * production routes while also asserting that deleted legacy aliases stay gone.
  */
 
-test.describe("Smoke tests", () => {
-  test("homepage loads with ArbiGameFi brand", async ({ page }) => {
-    await page.goto("/");
-    await expect(page.locator("text=ArbiGameFi")).toBeVisible();
-  });
-
-  test("navigation links are visible on desktop", async ({ page }) => {
-    await page.goto("/");
-    // Desktop nav links
-    const nav = page.locator("header nav").first();
-    await expect(nav.locator("text=Games")).toBeVisible();
-    await expect(nav.locator("text=Bets")).toBeVisible();
-    await expect(nav.locator("text=Liquidity")).toBeVisible();
-  });
-
-  test("games page loads", async ({ page }) => {
-    await page.goto("/games");
-    // Should see either the games grid or a placeholder
-    const heading = page.locator("h1, h2").first();
-    await expect(heading).toBeVisible();
-  });
-
-  test("bets page loads with table headers", async ({ page }) => {
-    await page.goto("/bets");
-    await expect(page.locator("text=Bets")).toBeVisible();
-    // Table headers
-    await expect(page.locator("th:has-text('betId')")).toBeVisible();
-    await expect(page.locator("th:has-text('state')")).toBeVisible();
-  });
-
-  test("navigation between pages works", async ({ page }) => {
+test.describe("current route smoke", () => {
+  test("marketing homepage exposes canonical product entrypoints", async ({ page }) => {
     await page.goto("/");
 
-    // Navigate to Games
-    await page.locator("header").locator("text=Games").first().click();
-    await expect(page).toHaveURL(/\/games/);
-
-    // Navigate to Bets
-    await page.locator("header").locator("text=Bets").first().click();
-    await expect(page).toHaveURL(/\/bets/);
-
-    // Navigate back to home
-    await page.locator("text=ArbiGameFi").first().click();
-    await expect(page).toHaveURL("/");
-  });
-
-  test("theme toggle button is present", async ({ page }) => {
-    await page.goto("/");
-    const toggle = page.locator('[data-testid="theme-toggle"]');
-    await expect(toggle).toBeVisible();
-  });
-
-  test("dark mode toggles the .dark class", async ({ page }) => {
-    await page.goto("/");
-    const toggle = page.locator('[data-testid="theme-toggle"]');
-
-    // Click once → should go to light (default is system, first click = light)
-    // Actually: default is "system", cycle is system→light→dark→system
-    // So first click from system → light
-    await toggle.click();
-
-    // Click again → dark
-    await toggle.click();
-    const hasDark = await page.evaluate(() =>
-      document.documentElement.classList.contains("dark"),
+    await expect(page.getByRole("link", { name: "ArbiGameFi" }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: "Open Rooms" })).toHaveAttribute("href", "/casino");
+    await expect(page.getByRole("link", { name: "Liquidity" }).first()).toHaveAttribute(
+      "href",
+      "/earn"
     );
-    expect(hasDark).toBe(true);
+    await expect(page.getByText("Casino rooms")).toBeVisible();
   });
 
-  test("mobile menu toggle works on narrow viewport", async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto("/");
+  test("product header points only at current product routes", async ({ page }) => {
+    await page.goto("/casino");
+    const header = page.locator("header").first();
 
-    // Desktop nav should be hidden
-    const desktopNav = page.locator("header nav.md\\:flex");
-    // The hamburger should be visible
-    const hamburger = page.locator('[aria-label="Toggle navigation menu"]');
-    await expect(hamburger).toBeVisible();
+    await expect(header.getByRole("link", { name: "Games" })).toHaveAttribute("href", "/casino");
+    await expect(header.getByRole("link", { name: "Sportsbook" })).toHaveAttribute(
+      "href",
+      "/sportsbook"
+    );
+    await expect(header.getByRole("link", { name: "Bets" })).toHaveAttribute(
+      "href",
+      "/portfolio/activity"
+    );
+    await expect(header.getByRole("link", { name: "Liquidity" })).toHaveAttribute("href", "/earn");
+    await expect(header.getByRole("link", { name: "Claims" })).toHaveAttribute(
+      "href",
+      "/portfolio/claims"
+    );
+  });
 
-    // Click hamburger to open mobile nav
-    await hamburger.click();
+  test("casino directory filters and navigates to a room", async ({ page }) => {
+    await page.goto("/casino");
 
-    // Mobile nav links should now be visible
-    const mobileNav = page.locator("header nav.md\\:hidden");
-    await expect(mobileNav.locator("text=Games")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Enter the Floor" })).toBeVisible();
+    await expect(page.getByTestId("room-entry-card")).toHaveCount(4);
+
+    await page.getByLabel("Search games").fill("roulette");
+    await expect(page.getByText("European Roulette")).toBeVisible();
+
+    await page.getByRole("link", { name: /European Roulette/i }).click();
+    await expect(page).toHaveURL(/\/casino\/roulette$/);
+    await expect(page.getByRole("heading", { name: /Roulette/i })).toBeVisible();
+  });
+
+  test("core product pages render without wallet interaction", async ({ page }) => {
+    const routes = [
+      { path: "/portfolio", text: "Account" },
+      { path: "/portfolio/activity", text: "Casino ledger" },
+      { path: "/earn", text: "Liquidity" },
+      { path: "/sportsbook", text: "Sportsbook Control Room" },
+      { path: "/ops", text: "Casino keeper" },
+      { path: "/legal/privacy", text: "Privacy" }
+    ];
+
+    for (const route of routes) {
+      const response = await page.goto(route.path);
+      expect(response?.status(), route.path).toBeLessThan(400);
+      await expect(page.getByText(route.text).first()).toBeVisible();
+    }
+  });
+
+  test("legacy route aliases stay physically deleted", async ({ page }) => {
+    for (const path of ["/games", "/dice", "/bets", "/privacy"]) {
+      const response = await page.goto(path);
+      expect(response?.status(), path).toBe(404);
+    }
   });
 });

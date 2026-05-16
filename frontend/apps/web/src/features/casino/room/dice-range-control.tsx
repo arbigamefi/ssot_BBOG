@@ -87,6 +87,7 @@ export function DiceRangeControl({
 
           <input
             type="range"
+            aria-label="Dice target"
             min="2"
             max="98"
             value={diceTarget}
