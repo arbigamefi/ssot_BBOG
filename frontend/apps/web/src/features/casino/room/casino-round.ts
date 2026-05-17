@@ -260,9 +260,7 @@ export function useCasinoRoundWatcher({
       ...current,
       settleTx: manualSettleTx,
       phase: manualSettleTx.ok ? "settling" : "manual_settle_offered",
-      error: manualSettleTx.ok
-        ? undefined
-        : (manualSettleTx.error?.message ?? manualSettleErrorMessage)
+      error: manualSettleTx.ok ? undefined : manualSettleErrorMessage
     }));
   }, [sdk, betId, manualSettleErrorMessage]);
 
@@ -274,7 +272,7 @@ export function useCasinoRoundWatcher({
       ...current,
       refundTx,
       phase: "refundable",
-      error: refundTx.ok ? undefined : (refundTx.error?.message ?? refundErrorMessage)
+      error: refundTx.ok ? undefined : refundErrorMessage
     }));
   }, [sdk, betId, refundErrorMessage]);
 

@@ -139,4 +139,24 @@ describe("game room place bet action", () => {
     expect(args.executeNow).toHaveBeenCalledWith(plannedBet);
     expect((args.planNow as any).mock.calls[0]?.[0].stake).toBe(10_000_000n);
   });
+
+  it("does not expose raw unexpected errors as player copy", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const args = baseArgs({
+        planNow: vi.fn(async () => {
+          throw new Error('The contract function "placeBet" reverted.');
+        }),
+        messages: {
+          unexpectedError: "发生了非预期错误。"
+        }
+      });
+      await executeGamePlaceBetAction(args);
+
+      expect(mocks.toastError).toHaveBeenCalledWith("发生了非预期错误。");
+      expect(consoleError).toHaveBeenCalledTimes(1);
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
 });

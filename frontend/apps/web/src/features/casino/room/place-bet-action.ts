@@ -106,7 +106,7 @@ export async function executeGamePlaceBetAction({
       await executeNow(plan);
     }
   } catch (error) {
-    toast.error((error as Error)?.message ?? messages?.unexpectedError ?? "—");
+    toast.error(messages?.unexpectedError ?? "—");
     console.error(error);
   }
 }

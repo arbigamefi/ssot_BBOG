@@ -2,8 +2,19 @@ import * as React from "react";
 import type { DomainError } from "@ssot/ssot";
 import { toast } from "@ssot/ui";
 
-export function getStepperErrorMessage(error: DomainError | undefined, fallbackMessage = "—") {
-  return error?.message ?? fallbackMessage;
+type StepperDisplayError = Partial<Pick<DomainError, "code" | "message" | "severity">>;
+
+export function getStepperErrorMessage(
+  error: StepperDisplayError | undefined,
+  fallbackMessage = "—"
+) {
+  if (!error) return fallbackMessage;
+
+  if ("code" in error && error.code === "USER_REJECTED") {
+    return error.message || fallbackMessage;
+  }
+
+  return fallbackMessage;
 }
 
 export function useBetStepperFailureToast({

@@ -15,6 +15,7 @@ import type { GameRoomBetPanelState } from "./place-bet-button";
 import { PlaceBetButton } from "./place-bet-button";
 import { CasinoRoundStatusPanel } from "./round-status-panel";
 import type { CasinoRoundPhase } from "./casino-round";
+import { getStepperErrorMessage } from "./feedback";
 
 export type { GameRoomBetPanelState } from "./place-bet-button";
 export { isPlaceBetButtonDisabled } from "./place-bet-button";
@@ -192,7 +193,9 @@ export function GameRoomBetPanel({
       {state.status === "failed" && state.error?.message && (
         <div className="mb-4 flex items-start gap-3 rounded-lg border border-danger/30 bg-danger-soft p-4 text-danger">
           <InformationCircleIcon className="h-5 w-5 flex-shrink-0" />
-          <div className="font-mono text-xs font-bold">{state.error.message}</div>
+          <div className="font-mono text-xs font-bold">
+            {getStepperErrorMessage(state.error, t("casino.room.errors.transactionFailed"))}
+          </div>
         </div>
       )}
 
