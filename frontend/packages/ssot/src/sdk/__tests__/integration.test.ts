@@ -110,6 +110,7 @@ const RECEIPT = { blockNumber: 100n, status: "success" as const, logs: [] };
 function mockPublicClient(overrides?: Record<string, any>) {
   return {
     getContractEvents: vi.fn().mockResolvedValue([]),
+    getBlockNumber: vi.fn().mockResolvedValue(130n),
     getTransactionReceipt: vi.fn().mockResolvedValue(RECEIPT),
     readContract: vi.fn().mockResolvedValue(0n),
     simulateContract: vi.fn().mockResolvedValue({ request: { mock: true } }),
@@ -184,8 +185,8 @@ describe("createSSOTSDK", () => {
         address: getAddress(TEST_RELEASE.contracts.gameHub),
         eventName: "BetFinalized",
         args: { positionId: 7n },
-        fromBlock: 100n,
-        toBlock: "latest"
+        fromBlock: 121n,
+        toBlock: 130n
       })
     );
     expect(proof).toEqual({
@@ -197,6 +198,61 @@ describe("createSSOTSDK", () => {
         payoutNet: 1_960_000n,
         feeOnPayout: 40_000n,
         protocolFeeAccrual: 20_000n
+      }
+    });
+  });
+
+  it("scans recent GameHub terminal proof ranges backwards in RPC-safe chunks", async () => {
+    const settlementTx =
+      "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc" as Hex;
+    pub.getContractEvents
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          args: {
+            positionId: 8n,
+            payoutGross: 1_000_000n,
+            payoutNet: 980_000n,
+            feeOnPayout: 20_000n,
+            protocolFeeAccrual: 10_000n
+          },
+          transactionHash: settlementTx,
+          blockNumber: 119n,
+          logIndex: 2
+        }
+      ])
+      .mockResolvedValueOnce([]);
+
+    const proof = await sdk.gameHub.getTerminalProof(8n);
+
+    expect(pub.getContractEvents).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        eventName: "BetFinalized",
+        args: { positionId: 8n },
+        fromBlock: 121n,
+        toBlock: 130n
+      })
+    );
+    expect(pub.getContractEvents).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({
+        eventName: "BetFinalized",
+        args: { positionId: 8n },
+        fromBlock: 111n,
+        toBlock: 120n
+      })
+    );
+    expect(proof).toEqual({
+      kind: "settled",
+      settlement: {
+        txHash: settlementTx,
+        blockNumber: 119n,
+        payoutGross: 1_000_000n,
+        payoutNet: 980_000n,
+        feeOnPayout: 20_000n,
+        protocolFeeAccrual: 10_000n
       }
     });
   });

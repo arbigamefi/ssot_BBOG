@@ -62,6 +62,9 @@ const GAME_MODULE_ABI = [
   }
 ] as const;
 
+const GAME_HUB_TERMINAL_PROOF_LOOKBACK_BLOCKS = 250n;
+const GAME_HUB_TERMINAL_PROOF_CHUNK_BLOCKS = 10n;
+
 export interface CreateSSOTSDKParams {
   release: SSOTRelease;
   publicClient: PublicClient;
@@ -151,6 +154,75 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
     VRFHubAbi: VRFHUB_ABI,
     SportsHubAbi: SPORTS_HUB_ABI
   } = getReleaseAbis(release.chainId);
+
+  function terminalProofRanges(latestBlock: bigint) {
+    const releaseBlock = BigInt(release.meta?.blockNumber ?? 0);
+    const lookbackStart =
+      latestBlock > GAME_HUB_TERMINAL_PROOF_LOOKBACK_BLOCKS
+        ? latestBlock - GAME_HUB_TERMINAL_PROOF_LOOKBACK_BLOCKS
+        : 0n;
+    const fromBlock = lookbackStart > releaseBlock ? lookbackStart : releaseBlock;
+    const ranges: Array<{ fromBlock: bigint; toBlock: bigint }> = [];
+    let cursor = latestBlock;
+
+    while (cursor >= fromBlock) {
+      const rangeFrom =
+        cursor + 1n > GAME_HUB_TERMINAL_PROOF_CHUNK_BLOCKS
+          ? cursor + 1n - GAME_HUB_TERMINAL_PROOF_CHUNK_BLOCKS
+          : 0n;
+      const boundedFrom = rangeFrom > fromBlock ? rangeFrom : fromBlock;
+      ranges.push({ fromBlock: boundedFrom, toBlock: cursor });
+      if (boundedFrom === fromBlock) break;
+      cursor = boundedFrom - 1n;
+    }
+
+    return ranges;
+  }
+
+  async function readTerminalEventsInRange({
+    betId,
+    fromBlock,
+    toBlock
+  }: {
+    betId: bigint;
+    fromBlock: bigint;
+    toBlock: bigint;
+  }) {
+    const eventBase = {
+      address: gameHubAddress,
+      abi: GAME_HUB_ABI,
+      fromBlock,
+      toBlock,
+      args: { positionId: betId }
+    };
+
+    const [settled, refunded] = await Promise.all([
+      publicClient.getContractEvents({
+        ...eventBase,
+        eventName: "BetFinalized"
+      } as any),
+      publicClient.getContractEvents({
+        ...eventBase,
+        eventName: "BetRefunded"
+      } as any)
+    ]);
+
+    return [
+      ...settled.map((event: any) => ({
+        kind: "settled" as const,
+        event
+      })),
+      ...refunded.map((event: any) => ({
+        kind: "refunded" as const,
+        event
+      }))
+    ].sort((a, b) => {
+      const blockA = BigInt(a.event.blockNumber ?? 0n);
+      const blockB = BigInt(b.event.blockNumber ?? 0n);
+      if (blockA !== blockB) return blockA > blockB ? -1 : 1;
+      return Number(b.event.logIndex ?? 0) - Number(a.event.logIndex ?? 0);
+    });
+  }
 
   const gameHub: SSOTGameHubAPI = {
     async quoteVRFFee(betCount: number): Promise<bigint> {
@@ -645,43 +717,15 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
     },
 
     async getTerminalProof(betId: bigint): Promise<GameHubTerminalProof | null> {
-      const fromBlock = BigInt(release.meta?.blockNumber ?? 0);
-      const eventBase = {
-        address: gameHubAddress,
-        abi: GAME_HUB_ABI,
-        fromBlock,
-        toBlock: "latest" as const,
-        args: { positionId: betId }
-      };
+      const latestBlock = await publicClient.getBlockNumber();
+      let latest: Awaited<ReturnType<typeof readTerminalEventsInRange>>[number] | undefined;
 
-      const [settled, refunded] = await Promise.all([
-        publicClient.getContractEvents({
-          ...eventBase,
-          eventName: "BetFinalized"
-        } as any),
-        publicClient.getContractEvents({
-          ...eventBase,
-          eventName: "BetRefunded"
-        } as any)
-      ]);
+      for (const range of terminalProofRanges(latestBlock)) {
+        const events = await readTerminalEventsInRange({ betId, ...range });
+        latest = events[0];
+        if (latest) break;
+      }
 
-      const events = [
-        ...settled.map((event: any) => ({
-          kind: "settled" as const,
-          event
-        })),
-        ...refunded.map((event: any) => ({
-          kind: "refunded" as const,
-          event
-        }))
-      ].sort((a, b) => {
-        const blockA = BigInt(a.event.blockNumber ?? 0n);
-        const blockB = BigInt(b.event.blockNumber ?? 0n);
-        if (blockA !== blockB) return blockA > blockB ? -1 : 1;
-        return Number(b.event.logIndex ?? 0) - Number(a.event.logIndex ?? 0);
-      });
-
-      const latest = events[0];
       if (!latest) return null;
 
       const args = latest.event.args ?? {};
