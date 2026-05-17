@@ -301,33 +301,56 @@
         "empty": "等待第一局..."
       },
       "result": {
-        "title": "链上结果",
+        "title": "投注详情",
         "outcomes": {
           "refunded": {
             "label": "本金已退回",
             "detail": "VRF 超时窗口后，退款路径已退回本金。"
           },
           "win": {
-            "label": "中奖已确认",
-            "detail": "赔付证明已从 BetFinalized 确认。"
+            "label": "本局中奖",
+            "detail": "本局已在链上完成结算，赔付已确认。"
           },
           "returned": {
             "label": "本金已返回",
             "detail": "本次结算赔付等于本金。"
           },
           "loss": {
-            "label": "未中奖已确认",
-            "detail": "BetFinalized 已确认本次赔付为零或低于本金。"
+            "label": "本局未中奖",
+            "detail": "本局已在链上完成结算，没有净赔付。"
           }
         },
+        "sections": {
+          "gameResult": "游戏结果",
+          "fairnessData": "公平性数据"
+        },
         "facts": {
+          "status": "状态",
+          "player": "玩家",
+          "multiplier": "倍率",
+          "betAmount": "投注金额",
+          "payout": "赔付",
           "betId": "投注 ID",
-          "netPayout": "净赔付",
           "refund": "退款",
           "requestId": "请求 ID",
           "netResult": "净结果",
           "randomHash": "随机哈希",
-          "settlementTx": "结算交易"
+          "settlementTx": "结算交易",
+          "resolvedTime": "结算时间",
+          "vrfFee": "随机费用 (VRF)",
+          "diceTarget": "骰子目标",
+          "diceNumber": "开出点数",
+          "coinChoice": "选择面",
+          "coinDrawn": "开出面",
+          "rouletteBet": "轮盘投注",
+          "rouletteWinningNumber": "中奖号码",
+          "kenoPicked": "已选号码",
+          "kenoDrawn": "开奖号码",
+          "kenoHits": "命中数"
+        },
+        "actions": {
+          "close": "关闭",
+          "viewSettlement": "查看结算"
         }
       }
     },

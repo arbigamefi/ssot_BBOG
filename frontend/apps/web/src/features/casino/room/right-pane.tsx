@@ -72,6 +72,7 @@ export function GameRoomRightPane({
   chainId,
   assetSymbol,
   assetDecimals,
+  onResultClose,
   onDiceDirectionChange,
   onDiceTargetChange,
   onRouletteChange,
@@ -98,6 +99,7 @@ export function GameRoomRightPane({
   chainId?: number;
   assetSymbol?: string;
   assetDecimals?: number;
+  onResultClose?: () => void;
   onDiceDirectionChange: (direction: DiceDirection) => void;
   onDiceTargetChange: (target: number) => void;
   onRouletteChange: (spots: string[]) => void;
@@ -173,6 +175,15 @@ export function GameRoomRightPane({
           chainId={chainId}
           assetSymbol={assetSymbol}
           assetDecimals={assetDecimals}
+          gameSlug={gameSlug}
+          resultNum={resultNum}
+          diceDirection={diceDirection}
+          diceTarget={diceTarget}
+          coinSide={coinSide}
+          rouletteSpots={rouletteSpots}
+          kenoSpots={kenoSpots}
+          kenoResultDrawn={kenoResultDrawn}
+          onClose={onResultClose}
         />
       )}
     </div>

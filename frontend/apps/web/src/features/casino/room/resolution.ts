@@ -22,7 +22,9 @@ type CasinoRoundResultBase = {
   betId: bigint;
   requestId: bigint;
   randomHash: `0x${string}`;
+  player: `0x${string}`;
   stake: bigint;
+  vrfFeeCharged?: bigint;
   resolvedAt?: number;
 };
 
@@ -84,7 +86,9 @@ function buildIndexingRoundResult({
     betId: bet.betId,
     requestId: bet.requestId,
     randomHash: bet.randomHash,
+    player: bet.player,
     stake: bet.stake,
+    vrfFeeCharged: bet.vrfFeeCharged,
     resolvedAt: bet.resolvedAt,
     settlement,
     refund
@@ -103,7 +107,9 @@ function buildSettledRoundResult({
     betId: bet.betId,
     requestId: bet.requestId,
     randomHash: bet.randomHash,
+    player: bet.player,
     stake: bet.stake,
+    vrfFeeCharged: bet.vrfFeeCharged,
     resolvedAt: bet.resolvedAt,
     settlement
   };
@@ -121,7 +127,9 @@ function buildRefundedRoundResult({
     betId: bet.betId,
     requestId: bet.requestId,
     randomHash: bet.randomHash,
+    player: bet.player,
     stake: bet.stake,
+    vrfFeeCharged: bet.vrfFeeCharged,
     resolvedAt: bet.resolvedAt,
     refund
   };

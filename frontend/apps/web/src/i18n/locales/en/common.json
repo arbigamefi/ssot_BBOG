@@ -301,33 +301,56 @@
         "empty": "Waiting for first play..."
       },
       "result": {
-        "title": "Chain result",
+        "title": "Bet details",
         "outcomes": {
           "refunded": {
             "label": "Stake refunded",
             "detail": "The refund path returned the stake after the VRF timeout window."
           },
           "win": {
-            "label": "Win confirmed",
-            "detail": "Payout proof is confirmed from BetFinalized."
+            "label": "Won bet",
+            "detail": "The round settled on-chain and payout is confirmed."
           },
           "returned": {
             "label": "Stake returned",
             "detail": "The settled payout equals the stake."
           },
           "loss": {
-            "label": "Loss confirmed",
-            "detail": "BetFinalized is confirmed with zero or below-stake payout."
+            "label": "Lost bet",
+            "detail": "The round settled on-chain with no net payout."
           }
         },
+        "sections": {
+          "gameResult": "Game result",
+          "fairnessData": "Fairness data"
+        },
         "facts": {
+          "status": "Status",
+          "player": "Player",
+          "multiplier": "Multiplier",
+          "betAmount": "Bet amount",
+          "payout": "Payout",
           "betId": "Bet ID",
-          "netPayout": "Net payout",
           "refund": "Refund",
           "requestId": "Request ID",
           "netResult": "Net result",
           "randomHash": "Random hash",
-          "settlementTx": "Settlement tx"
+          "settlementTx": "Settlement tx",
+          "resolvedTime": "Resolved time",
+          "vrfFee": "RNG fees (VRF)",
+          "diceTarget": "Dice target",
+          "diceNumber": "Number drawn",
+          "coinChoice": "Chosen side",
+          "coinDrawn": "Side drawn",
+          "rouletteBet": "Roulette bet",
+          "rouletteWinningNumber": "Winning number",
+          "kenoPicked": "Numbers picked",
+          "kenoDrawn": "Numbers drawn",
+          "kenoHits": "Hits"
+        },
+        "actions": {
+          "close": "Close",
+          "viewSettlement": "View settlement"
         }
       }
     },

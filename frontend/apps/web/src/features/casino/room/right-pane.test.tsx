@@ -28,24 +28,43 @@ vi.mock("next-intl", () => ({
       "casino.room.history.states.vrfReady": "VRF READY",
       "casino.room.history.states.placed": "PLACED",
       "casino.room.history.empty": "Waiting for first play...",
-      "casino.room.result.title": "Chain result",
+      "casino.room.result.title": "Bet details",
       "casino.room.result.outcomes.refunded.label": "Stake refunded",
       "casino.room.result.outcomes.refunded.detail":
         "The refund path returned the stake after the VRF timeout window.",
-      "casino.room.result.outcomes.win.label": "Win confirmed",
-      "casino.room.result.outcomes.win.detail": "Payout proof is confirmed from BetFinalized.",
+      "casino.room.result.outcomes.win.label": "Won bet",
+      "casino.room.result.outcomes.win.detail":
+        "The round settled on-chain and payout is confirmed.",
       "casino.room.result.outcomes.returned.label": "Stake returned",
       "casino.room.result.outcomes.returned.detail": "The settled payout equals the stake.",
-      "casino.room.result.outcomes.loss.label": "Loss confirmed",
-      "casino.room.result.outcomes.loss.detail":
-        "BetFinalized is confirmed with zero or below-stake payout.",
+      "casino.room.result.outcomes.loss.label": "Lost bet",
+      "casino.room.result.outcomes.loss.detail": "The round settled on-chain with no net payout.",
+      "casino.room.result.sections.gameResult": "Game result",
+      "casino.room.result.sections.fairnessData": "Fairness data",
+      "casino.room.result.facts.status": "Status",
+      "casino.room.result.facts.player": "Player",
+      "casino.room.result.facts.multiplier": "Multiplier",
+      "casino.room.result.facts.betAmount": "Bet amount",
+      "casino.room.result.facts.payout": "Payout",
       "casino.room.result.facts.betId": "Bet ID",
-      "casino.room.result.facts.netPayout": "Net payout",
       "casino.room.result.facts.refund": "Refund",
       "casino.room.result.facts.requestId": "Request ID",
       "casino.room.result.facts.netResult": "Net result",
       "casino.room.result.facts.randomHash": "Random hash",
-      "casino.room.result.facts.settlementTx": "Settlement tx"
+      "casino.room.result.facts.settlementTx": "Settlement tx",
+      "casino.room.result.facts.resolvedTime": "Resolved time",
+      "casino.room.result.facts.vrfFee": "RNG fees (VRF)",
+      "casino.room.result.facts.diceTarget": "Dice target",
+      "casino.room.result.facts.diceNumber": "Number drawn",
+      "casino.room.result.facts.coinChoice": "Chosen side",
+      "casino.room.result.facts.coinDrawn": "Side drawn",
+      "casino.room.result.facts.rouletteBet": "Roulette bet",
+      "casino.room.result.facts.rouletteWinningNumber": "Winning number",
+      "casino.room.result.facts.kenoPicked": "Numbers picked",
+      "casino.room.result.facts.kenoDrawn": "Numbers drawn",
+      "casino.room.result.facts.kenoHits": "Hits",
+      "casino.room.result.actions.close": "Close",
+      "casino.room.result.actions.viewSettlement": "View settlement"
     })[key] ?? key
 }));
 
@@ -69,6 +88,7 @@ const baseProps = {
   chainId: 84532,
   assetSymbol: "USDC",
   assetDecimals: 6,
+  onResultClose: vi.fn(),
   onDiceDirectionChange: vi.fn(),
   onDiceTargetChange: vi.fn(),
   onRouletteChange: vi.fn(),
@@ -99,7 +119,10 @@ describe("GameRoomRightPane", () => {
           betId: 123456n,
           requestId: 88n,
           randomHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          player: "0xc8ec9920d573893e888db5d30b2b3b3824b1b684",
           stake: 10_000_000n,
+          vrfFeeCharged: 100_000_000_000_000n,
+          resolvedAt: 1_778_888_888,
           settlement: {
             txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
             payoutGross: 20_000_000n,
@@ -115,8 +138,13 @@ describe("GameRoomRightPane", () => {
 
     expect(screen.getByText("RECENT NUMBERS")).toBeDefined();
     expect(screen.getByText("SETTLED")).toBeDefined();
-    expect(screen.getByText("Win confirmed")).toBeDefined();
+    expect(screen.getAllByText("Won bet").length).toBeGreaterThan(0);
+    expect(screen.getByText("Bet details")).toBeDefined();
+    expect(screen.getByText("Game result")).toBeDefined();
+    expect(screen.getByText("Fairness data")).toBeDefined();
     expect(screen.getByText("19.6 USDC")).toBeDefined();
+    expect(screen.getByText("+ 9.6 USDC")).toBeDefined();
+    expect(screen.getAllByText("17").length).toBeGreaterThan(0);
   });
 
   it("does not open the result overlay until terminal proof is available", () => {
@@ -130,13 +158,14 @@ describe("GameRoomRightPane", () => {
           betId: 13n,
           requestId: 88n,
           randomHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          player: "0xc8ec9920d573893e888db5d30b2b3b3824b1b684",
           stake: 10_000_000n
         }}
       />
     );
 
-    expect(screen.queryByText("Chain result")).toBeNull();
+    expect(screen.queryByText("Bet details")).toBeNull();
     expect(screen.queryByText("Reading result")).toBeNull();
-    expect(screen.queryByText("Win confirmed")).toBeNull();
+    expect(screen.queryByText("Won bet")).toBeNull();
   });
 });

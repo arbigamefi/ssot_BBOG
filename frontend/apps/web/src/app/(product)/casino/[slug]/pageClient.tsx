@@ -140,6 +140,10 @@ export function GamePageClient({ slug }: { slug: string }) {
     setTerminalBet(null);
     setResultProof(null);
   }, []);
+  const handleResultClose = React.useCallback(() => {
+    setShowResult(false);
+    setResultProof(null);
+  }, []);
 
   // B2: Accurate win-chance using proper math per game module
   const winChance = game
@@ -270,6 +274,7 @@ export function GamePageClient({ slug }: { slug: string }) {
       chainId={chainId}
       assetSymbol="USDC"
       assetDecimals={usdcDecimals}
+      onResultClose={handleResultClose}
       onDiceDirectionChange={setDiceDirection}
       onDiceTargetChange={setDiceTarget}
       onRouletteChange={setRouletteSpots}

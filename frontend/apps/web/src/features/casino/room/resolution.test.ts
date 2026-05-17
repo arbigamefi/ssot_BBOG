@@ -66,7 +66,9 @@ describe("game room resolution helpers", () => {
       betId: 7n,
       requestId: 88n,
       randomHash: baseBet.randomHash,
+      player: baseBet.player,
       stake: 10_000n,
+      vrfFeeCharged: 90n,
       resolvedAt: 2,
       settlement: undefined
     });
