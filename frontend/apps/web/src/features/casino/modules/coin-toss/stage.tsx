@@ -1,6 +1,7 @@
 import * as React from "react";
 import { ShieldCheckIcon, SparklesIcon } from "@heroicons/react/24/outline";
 import { cn } from "@ssot/ui";
+import { useTranslations } from "next-intl";
 
 import type { CoinSide } from "../../room/params";
 
@@ -15,6 +16,12 @@ export function CoinTossStage({
   resultNum: number | null;
   coinSide: CoinSide;
 }) {
+  const t = useTranslations();
+  const selectedSideLabel =
+    coinSide === "HEADS"
+      ? t("casino.room.selection.coin.heads")
+      : t("casino.room.selection.coin.tails");
+
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center p-8 z-10 overflow-hidden">
       <div className="absolute inset-x-0 bottom-0 h-[60%] bg-gradient-to-t from-brand/5 to-transparent pointer-events-none" />
@@ -60,7 +67,9 @@ export function CoinTossStage({
             <div className="absolute inset-4 flex flex-col items-center justify-center rounded-full border border-brand/25 bg-[radial-gradient(circle_at_center,hsl(var(--brand)/0.35),hsl(var(--surface-1)/0.95))]">
               <div className="absolute inset-0 bg-[url('/textures/noise.svg')] opacity-20 mix-blend-overlay" />
               <SparklesIcon className="h-24 w-24 p-4 text-fg" />
-              <span className="mt-[-10px] text-3xl font-black tracking-[0.2em] text-fg">HEADS</span>
+              <span className="mt-[-10px] text-3xl font-black tracking-[0.2em] text-fg">
+                {t("casino.room.selection.coin.heads")}
+              </span>
             </div>
           </div>
 
@@ -71,7 +80,9 @@ export function CoinTossStage({
             <div className="absolute inset-4 flex flex-col items-center justify-center rounded-full border border-accent/25 bg-[radial-gradient(circle_at_center,hsl(var(--accent)/0.30),hsl(var(--surface-1)/0.95))]">
               <div className="absolute inset-0 bg-[url('/textures/noise.svg')] opacity-20 mix-blend-overlay" />
               <ShieldCheckIcon className="h-24 w-24 p-4 text-fg" />
-              <span className="mt-[-10px] text-3xl font-black tracking-[0.2em] text-fg">TAILS</span>
+              <span className="mt-[-10px] text-3xl font-black tracking-[0.2em] text-fg">
+                {t("casino.room.selection.coin.tails")}
+              </span>
             </div>
           </div>
         </div>
@@ -80,7 +91,7 @@ export function CoinTossStage({
       {!isPending && !showResult && (
         <div className="absolute bottom-16 flex flex-col items-center animate-in slide-in-from-bottom-4 fade-in duration-500">
           <span className="mb-4 text-[10px] uppercase tracking-[0.4em] text-fg-subtle">
-            Awaiting Toss Selection
+            {t("casino.room.stage.coin.awaitingSelection")}
           </span>
           <div className="flex w-72 items-center justify-center gap-4 rounded-xl border border-border bg-surface-1/85 px-8 py-4 shadow-e2 backdrop-blur-xl">
             <div
@@ -90,7 +101,7 @@ export function CoinTossStage({
               )}
             />
             <span className="font-mono text-xl font-black uppercase tracking-widest text-fg">
-              {coinSide} SELECTED
+              {t("casino.room.stage.coin.selected", { side: selectedSideLabel })}
             </span>
           </div>
         </div>
@@ -99,7 +110,7 @@ export function CoinTossStage({
       {isPending && (
         <div className="absolute bottom-16 flex flex-col items-center animate-pulse">
           <span className="text-sm font-black uppercase tracking-[0.3em] text-fg">
-            Waiting for VRF Oracle...
+            {t("casino.room.stage.coin.waitingVrf")}
           </span>
         </div>
       )}

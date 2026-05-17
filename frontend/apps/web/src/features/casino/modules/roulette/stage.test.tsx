@@ -8,6 +8,19 @@ vi.mock("@ssot/ui", () => ({
   cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" ")
 }));
 
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string) =>
+    ({
+      "casino.room.selection.roulette.labels.firstDozen": "1st 12",
+      "casino.room.selection.roulette.labels.secondDozen": "2nd 12",
+      "casino.room.selection.roulette.labels.thirdDozen": "3rd 12",
+      "casino.room.selection.roulette.labels.even": "EVEN",
+      "casino.room.selection.roulette.labels.red": "RED",
+      "casino.room.selection.roulette.labels.black": "BLACK",
+      "casino.room.selection.roulette.labels.odd": "ODD"
+    })[key] ?? key
+}));
+
 describe("RouletteStage", () => {
   afterEach(() => cleanup());
 

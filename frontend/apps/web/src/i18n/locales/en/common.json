@@ -184,7 +184,16 @@
         "roulette": {
           "bets": "Bets",
           "clearAll": "Clear All",
-          "empty": "No bets placed. Click the felt to bet."
+          "empty": "No bets placed. Click the felt to bet.",
+          "labels": {
+            "firstDozen": "1st 12",
+            "secondDozen": "2nd 12",
+            "thirdDozen": "3rd 12",
+            "even": "Even",
+            "red": "Red",
+            "black": "Black",
+            "odd": "Odd"
+          }
         },
         "coin": {
           "selectFace": "Select Face",
@@ -199,7 +208,12 @@
         }
       },
       "stage": {
-        "loading": "Loading stage"
+        "loading": "Loading stage",
+        "coin": {
+          "awaitingSelection": "Awaiting toss selection",
+          "selected": "{side} selected",
+          "waitingVrf": "Waiting for VRF oracle..."
+        }
       },
       "history": {
         "recent": {

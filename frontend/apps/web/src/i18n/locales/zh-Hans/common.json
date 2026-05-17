@@ -184,7 +184,16 @@
         "roulette": {
           "bets": "投注",
           "clearAll": "全部清除",
-          "empty": "还没有投注。点击桌面选择投注项。"
+          "empty": "还没有投注。点击桌面选择投注项。",
+          "labels": {
+            "firstDozen": "第 1 打",
+            "secondDozen": "第 2 打",
+            "thirdDozen": "第 3 打",
+            "even": "双数",
+            "red": "红",
+            "black": "黑",
+            "odd": "单数"
+          }
         },
         "coin": {
           "selectFace": "选择正反面",
@@ -199,7 +208,12 @@
         }
       },
       "stage": {
-        "loading": "正在加载舞台"
+        "loading": "正在加载舞台",
+        "coin": {
+          "awaitingSelection": "等待选择正反面",
+          "selected": "已选择{side}",
+          "waitingVrf": "等待 VRF oracle..."
+        }
       },
       "history": {
         "recent": {

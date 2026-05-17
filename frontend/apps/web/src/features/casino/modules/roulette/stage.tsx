@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { cn } from "@ssot/ui";
 
 import { EUROPEAN_WHEEL_ORDER, RED_NUMBER_SET } from "../../room/model";
@@ -16,6 +17,8 @@ export function RouletteStage({
   spots: readonly string[];
   onChange: (spots: string[]) => void;
 }) {
+  const t = useTranslations();
+
   const toggleSpot = React.useCallback(
     (spot: string) => {
       onChange(spots.includes(spot) ? spots.filter((s) => s !== spot) : [...spots, spot]);
@@ -183,7 +186,7 @@ export function RouletteStage({
                     : "border-border bg-surface-2 text-fg-subtle hover:bg-surface-3 hover:text-fg"
                 )}
               >
-                {dozen}
+                {getRouletteBetLabel(t, dozen)}
               </button>
             ))}
           </div>
@@ -193,6 +196,7 @@ export function RouletteStage({
               <button
                 key={outsideBet}
                 onClick={() => toggleSpot(outsideBet)}
+                aria-label={getRouletteBetLabel(t, outsideBet)}
                 className={cn(
                   "relative flex flex-1 items-center justify-center overflow-hidden rounded-md border py-1.5 text-[8px] font-black uppercase shadow-inner transition-[transform,border-color,background-color,color] md:py-2 md:text-[10px]",
                   spots.includes(outsideBet)
@@ -205,7 +209,7 @@ export function RouletteStage({
                 ) : outsideBet === "BLACK" ? (
                   <div className="h-3 w-3 rounded-sm bg-surface-0 md:h-4 md:w-4" />
                 ) : (
-                  outsideBet
+                  getRouletteBetLabel(t, outsideBet)
                 )}
               </button>
             ))}
@@ -214,4 +218,25 @@ export function RouletteStage({
       </div>
     </div>
   );
+}
+
+function getRouletteBetLabel(t: (key: string) => string, bet: string) {
+  switch (bet) {
+    case "1st 12":
+      return t("casino.room.selection.roulette.labels.firstDozen");
+    case "2nd 12":
+      return t("casino.room.selection.roulette.labels.secondDozen");
+    case "3rd 12":
+      return t("casino.room.selection.roulette.labels.thirdDozen");
+    case "EVEN":
+      return t("casino.room.selection.roulette.labels.even");
+    case "RED":
+      return t("casino.room.selection.roulette.labels.red");
+    case "BLACK":
+      return t("casino.room.selection.roulette.labels.black");
+    case "ODD":
+      return t("casino.room.selection.roulette.labels.odd");
+    default:
+      return bet;
+  }
 }

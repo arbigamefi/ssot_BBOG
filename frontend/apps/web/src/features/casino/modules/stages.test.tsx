@@ -10,6 +10,17 @@ vi.mock("@ssot/ui", () => ({
   cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" ")
 }));
 
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string, values?: Record<string, string>) =>
+    ({
+      "casino.room.selection.coin.heads": "HEADS",
+      "casino.room.selection.coin.tails": "TAILS",
+      "casino.room.stage.coin.awaitingSelection": "Awaiting Toss Selection",
+      "casino.room.stage.coin.selected": `${values?.side} SELECTED`,
+      "casino.room.stage.coin.waitingVrf": "Waiting for VRF Oracle..."
+    })[key] ?? key
+}));
+
 describe("game room stages", () => {
   afterEach(() => cleanup());
 
