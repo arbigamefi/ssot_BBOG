@@ -4,6 +4,10 @@
 
 - `docs/closeout/README.md` — one-page institutional handoff (proof + release + ops)
 
+## Strategy
+
+- `docs/strategy/fullstack-product-architecture.md` — fullstack commitment: protocol-grade settlement kernel, lean B2C casino/sportsbook product, optional future infrastructure
+
 ## Release materials
 
 - `docs/release/ARBIGAMEFI-RELEASE-PACK.zh-CN.md` — outward-facing release pack for partners, LPs, auditors, and technical integrators

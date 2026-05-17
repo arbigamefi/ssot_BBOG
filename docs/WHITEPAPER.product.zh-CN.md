@@ -16,13 +16,13 @@
 >
 > 基础前提：`grounded in currently implemented protocol capabilities`
 >
-> 目标读者：`operators / partners / investors / growth contributors`
+> 目标读者：`players / LPs / referrers / investors / technical auditors / growth contributors`
 >
 > 关联文档：`docs/WHITEPAPER.zh-CN.md` · `docs/ARBIGAMEFI-EXECUTIVE-BRIEF.zh-CN.md`
 
 ## 摘要
 
-ArbiGameFi 的产品机会，不在于“再做一个链上赌场前端”，而在于把一个传统上高度黑盒、强托管、低透明度的行业，重构为一种可验证、非托管、可审计的链上娱乐基础设施。
+ArbiGameFi 的产品机会，不在于“再做一个链上赌场前端”，也不在于第一阶段就去做白标运营平台，而在于把一个传统上高度黑盒、强托管、低透明度的行业，先做成一个玩家可直接使用的、可验证、非托管、可审计的链上 casino 与 sportsbook 产品。
 
 从商业上看，ArbiGameFi 具备三个最有价值的出发点：
 
@@ -30,31 +30,31 @@ ArbiGameFi 的产品机会，不在于“再做一个链上赌场前端”，而
 - 对流动性提供者：用每资产隔离、准备金约束和可证明负债，替代黑盒资金池。
 - 对分发者和推荐方：用首触绑定、定价 skyline 与链上预算分配，替代离链人工返佣与对账。
 
-从产品上看，ArbiGameFi 不是一个单点游戏，而是一套可以承载多种概率游戏房间的结算底层。Dice、Coin Toss、Roulette、Keno 只是第一批房间类型。只要新的游戏模块遵守同样的上界计算、开奖解析和注单生命周期接口，它们就可以接入同一个资金与结算系统。
+从系统上看，ArbiGameFi 的底层不是单点游戏，而是一套可以承载 casino、sportsbook 与未来垂直玩法的结算内核。`Bank -> SettlementRouter -> GameHub / SportsHub / FutureHub` 这条架构保留协议级扩展能力；但从 go-to-market 上看，当前阶段必须先按单品牌 B2C 产品落地，把玩家下注、自动结算、LP 信任和渠道转化跑通。
 
 本文件的目标是回答：
 
-1. 这个协议面向谁。
+1. 这个产品当前首先面向谁。
 2. 它创造的用户价值是什么。
 3. 它的增长飞轮如何形成。
 4. 它的商业化抓手在哪里。
-5. 在当前代码边界下，最现实的产品路线图是什么。
+5. 在当前代码边界下，哪些能力应该产品化，哪些能力只应作为未来可选项保留。
 
 ## Abstract (EN)
 
-ArbiGameFi should be understood not as a single casino interface, but as a product and distribution layer built on top of a verifiable on-chain settlement protocol. Its business opportunity comes from combining three value propositions at once: non-custodial player experience, auditable bankroll and liability structure for LPs, and on-chain referral economics for channels and partners.
+ArbiGameFi should be understood as a single-brand B2C casino and sportsbook product built on a protocol-grade settlement kernel. Its business opportunity comes from combining three value propositions at once: non-custodial player experience, auditable bankroll and liability structure for LPs, and on-chain referral economics for channels.
 
-This document explains the product thesis, user segments, commercial model, growth flywheel, go-to-market logic, and realistic roadmap that can be built on the current protocol. It is intentionally constrained by what the contracts already support and does not treat future token or governance ideas as present-day facts.
+This document explains the product thesis, user segments, commercial model, growth flywheel, go-to-market logic, and realistic roadmap that can be built on the current protocol. It is intentionally constrained by what the contracts already support, and it treats third-party operator or white-label distribution as a future option rather than the current go-to-market motion.
 
 ## 1. 产品命题
 
 ### 1.1 我们到底在做什么
 
-ArbiGameFi 不是“赌博 UI”，而是一个面向全链上概率游戏的可信执行层。其底层采用 SSOT 账本与结算架构，试图把下面这句话变成真实产品体验：
+ArbiGameFi 不是纯“赌博 UI”，也不是当前阶段的白标 SaaS 平台。它是一个先以单品牌 B2C 形态上线的链上 casino/sportsbook 产品，其底层采用 SSOT 账本与结算架构，试图把下面这句话变成真实产品体验：
 
 > 玩家不需要把钱交给平台，也不需要相信平台解释结果；LP 不需要相信平台手工记账；推荐方不需要相信平台人工对账。
 
-这让 ArbiGameFi 更像“链上概率游戏的金融与结算引擎”，而不是单纯内容站。
+这让 ArbiGameFi 的底层更像“链上概率游戏的金融与结算引擎”，但当前产品入口必须像一个用户能直接玩、能直接理解、能直接信任的消费级产品。
 
 ### 1.2 为什么这件事值得做
 
@@ -70,7 +70,7 @@ ArbiGameFi 不是“赌博 UI”，而是一个面向全链上概率游戏的可
 - 半链上产品能把充值和提现放到链上，但结果与返佣依旧依赖平台解释。
 - 单游戏小协议可以做到完全上链，但难以扩展成一个有运营效率的游戏平台。
 
-ArbiGameFi 的机会在于：用协议化结算把“可信”做成底层能力，再在上层做强运营和分发。
+ArbiGameFi 的机会在于：用协议化结算把“可信”做成底层能力，再通过自营 B2C 产品验证真实下注、LP 供给与渠道分发。只有这条主线跑通后，第三方集成或白标前端才有商业意义。
 
 ## 2. 核心用户
 
@@ -121,16 +121,16 @@ ArbiGameFi 的推荐系统为这类角色提供了一个更具确定性的合作
 - 链上预算拆分
 - 可被审计的返利负债
 
-### 2.4 集成方与运营方
+### 2.4 技术审计者与未来集成方
 
-从更高一层看，ArbiGameFi 还可以服务于未来的：
+从更高一层看，ArbiGameFi 的协议结构还可以服务于未来的：
 
 - 游戏房间运营方
 - 白标前端
 - 聚合器
 - 数据分析与监控层
 
-这些角色不一定直接出现在 v1 前端里，但协议结构已经为它们留出了接口层空间。
+但这些角色不是当前 go-to-market 的第一优先级。v1 前端应优先服务玩家、LP、推荐方和协议运营者；未来集成能力应当作为底层可选性保留，而不是倒逼当前前端过早复杂化。
 
 ## 3. 用户价值主张
 
@@ -240,7 +240,7 @@ ArbiGameFi 不应该试图在第一天就复制它们全部内容，而应该打
 - 部分入金出金在链上
 - 结果和返佣仍在平台后端
 
-ArbiGameFi 的差异在于其关键真相已经被拆成可查询的链上事实源。这意味着它更像一个协议，而不是单点网站。
+ArbiGameFi 的差异在于其关键真相已经被拆成可查询的链上事实源。这意味着它的底层是协议级内核，但第一产品形态仍然应该是可转化、可留存的 B2C casino/sportsbook。
 
 ### 5.3 与单游戏小协议相比
 
@@ -271,9 +271,9 @@ ArbiGameFi 的优势在于：它已经为多房间扩展准备好了统一底层
 
 - 注单结算中的 house-edge 相关费用确认
 - 在推荐预算分配后留在协议侧的费用部分
-- 潜在的未来房间运营分润与白标集成费
+- 未来可选的集成、数据或房间分发收入
 
-其中前两项已经在协议代码中具备明确语义，第三项属于产品与 BD 层的延展，不应在技术语义上写成已实现事实。
+其中前两项已经在协议代码中具备明确语义，第三项属于产品与 BD 层的延展，不应在技术语义上写成已实现事实，也不应成为当前前端架构复杂化的理由。
 
 ### 6.3 成本结构
 
@@ -289,7 +289,7 @@ ArbiGameFi 的优势在于：它已经为多房间扩展准备好了统一底层
 
 - 用链上可信度换用户和 LP 信任
 - 用协议化返利降低渠道对账摩擦
-- 用统一结算底层降低每新增一个房间的边际成本
+- 用统一结算内核降低每新增一个自营房间或垂直玩法的边际成本
 
 ## 7. 增长飞轮
 
@@ -301,7 +301,7 @@ ArbiGameFi 的增长不应依赖单一买量，而应围绕一个多角色飞轮
 flowchart LR
     A["More credible rooms"] --> B["More players"]
     B --> C["More turnover"]
-    C --> D["More protocol fees and referral budget"]
+    C --> D["More house edge, protocol fees, and referral budget"]
     D --> E["More channel incentive and LP confidence"]
     E --> F["More liquidity and better room coverage"]
     F --> A
@@ -348,9 +348,9 @@ flowchart LR
 - 可审计返利
 - 更低争议成本
 
-### 8.4 第四阶段：协议化分发
+### 8.4 第四阶段：开放式分发
 
-长期来看，ArbiGameFi 不应只做一个站点，而应让协议被更多前端、房间运营方和集成方调用。这时真正的竞争点会变成：
+长期来看，ArbiGameFi 不必被限制为单一站点。协议级结算内核可以让更多前端、房间运营方和集成方调用。但这必须发生在自营产品已经验证真实需求之后，而不是在 MVP 阶段提前为未验证的白标业务承担复杂度。
 
 - 哪个协议最适合承载链上概率房间
 - 哪个协议最能让渠道与 LP 愿意长期合作
@@ -390,16 +390,16 @@ flowchart LR
 
 ## 10. 品牌与对外叙事
 
-### 10.1 最该说的不是“我们是 Web3 Casino”
+### 10.1 最该说的是“非托管、可验证、能直接玩的 casino/sportsbook”
 
 更准确的对外说法应是：
 
-- 非托管概率游戏平台
+- 非托管 casino 与 sportsbook
 - 可验证结算
 - 链上 bankroll 与房间系统
-- 面向多房间的概率游戏协议
+- 底层由协议级结算内核支撑
 
-如果直接把自己包装成“又一个 casino”，会把最有价值的协议差异主动降级。
+如果只把自己包装成“又一个 casino”，会把最有价值的协议差异主动降级；但如果只说“结算底层”，又会让普通玩家不知道为什么要下注。正确叙事应该是：用户玩的是一个清晰的 B2C 产品，可信度来自底层可验证协议。
 
 ### 10.2 最适合的三层叙事
 
@@ -407,7 +407,7 @@ flowchart LR
 
 1. 面向普通用户：钱包原生、即时可玩、结果可查
 2. 面向深度用户和 LP：准备金、负债、退款路径和审计性
-3. 面向合作伙伴：可集成、可分发、可扩展的结算底层
+3. 面向未来合作伙伴：底层可集成、可分发、可扩展，但这不是当前 MVP 的主入口
 
 ## 11. 风险与约束
 
@@ -452,7 +452,7 @@ flowchart LR
 
 ### 12.3 最后再放大审计层和渠道层
 
-`/bets`、`/liquidity`、`/claims`、`/account` 与推荐体系，是重要但不该抢第一转化动作的部分。它们更适合在产品成熟后成为深度用户和合作伙伴的信任工具。
+`/bets`、`/liquidity`、`/claims`、`/account` 与推荐体系，是重要但不该抢第一转化动作的部分。它们更适合在产品成熟后成为深度用户、LP、推荐方和协议运营者的信任工具。
 
 ## 13. 非目标
 
@@ -463,6 +463,7 @@ flowchart LR
 - 已经存在的大规模白标生态
 - 已经完成的全球合规覆盖
 - 已经成熟的多链全球化运营网络
+- 已经验证的第三方 operator 平台需求
 
 这些都可以是未来方向，但不该在当下文档里写成现状。
 
@@ -476,7 +477,7 @@ ArbiGameFi 的商业机会不在于复制一家中心化赌场，而在于建立
 - 可审计 bankroll
 - 可协议化分发
 
-如果技术层的可信度成立，而产品层又能把房间体验做得足够顺滑，那么 ArbiGameFi 就不仅是一个协议，也会成为一个适合承载多种房间、多种渠道和多方角色协作的链上概率游戏平台底层。
+如果技术层的可信度成立，而产品层又能把房间体验做得足够顺滑，那么 ArbiGameFi 就会先成为一个能真实获客、下注、结算和沉淀 LP 信任的 B2C 产品。只有在这条主线成立之后，它的协议级内核才有机会进一步承载更多房间、渠道和外部集成。
 
 从这个角度看，ArbiGameFi 最重要的长期资产不是某一个房间，而是：
 

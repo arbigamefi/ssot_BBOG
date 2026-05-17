@@ -3,7 +3,7 @@
 | Owner | Frontend Lead |
 | Status | Active v4 |
 | Last Updated | 2026-05-17 |
-| Depends on | `frontend-rewrite-blueprint.md`, `indexing-strategy.md`, `durable-bet-index.md`, `casino-placebet-ux.md`, `../frontend/21-i18n.md`, `../frontend/casino-keeper-v1.md` |
+| Depends on | `../strategy/fullstack-product-architecture.md`, `frontend-rewrite-blueprint.md`, `indexing-strategy.md`, `durable-bet-index.md`, `casino-placebet-ux.md`, `../frontend/21-i18n.md`, `../frontend/casino-keeper-v1.md` |
 | Supersedes | `Draft v3` implementation audit log and chat-only sequencing |
 
 This roadmap is the current execution plan for the frontend closeout. The
@@ -13,7 +13,9 @@ finish the branch without reintroducing process overhead.
 
 ## 1. Operating Principle
 
-The frontend should be simpler, not merely more documented.
+The frontend should be simpler, not merely more documented. The fullstack
+boundary is defined in `../strategy/fullstack-product-architecture.md`:
+protocol-grade contracts, lean B2C product, optional future infrastructure.
 
 Use this rule for every next change:
 
@@ -25,35 +27,37 @@ Use this rule for every next change:
 4. Do not collapse a package only to reduce package count when it is shared by
    multiple runtimes.
 5. Prefer small verified commits over another broad rewrite.
+6. Do not add frontend complexity for white-label/operator workflows until a
+   real operator requirement exists.
 
 ## 2. What Is Already Closed
 
 The following problems should not be reopened unless new evidence appears:
 
-| Area | Current state |
-| --- | --- |
-| Prototype routes | `app/prototype` is gone from production routes. |
-| Visual-system drift | Hard-coded product UI hex / old visual-system / cyber theme residues are removed from app source. |
-| Game page size | No `pageClient.tsx` exceeds the old 600-line guard. |
-| Casino result proof | Result receipt reads chain-derived settlement data instead of presenting simulation as proof. |
-| Keeper settlement | A Node keeper exists, writes health snapshots outside `apps/web/public`, and is documented in `../frontend/casino-keeper-v1.md`. |
-| Health route conflict | `/ops/casino-keeper-health.json` is a Next route; health files must live under `.runtime`, not `public`. |
-| Durable feed choice | ADR-0004 rejects subgraph for MVP; ADR-0005 selects Postgres for durable bet indexing. |
-| i18n policy | `../frontend/21-i18n.md` is accepted and must remain in scope. |
+| Area                  | Current state                                                                                                                    |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| Prototype routes      | `app/prototype` is gone from production routes.                                                                                  |
+| Visual-system drift   | Hard-coded product UI hex / old visual-system / cyber theme residues are removed from app source.                                |
+| Game page size        | No `pageClient.tsx` exceeds the old 600-line guard.                                                                              |
+| Casino result proof   | Result receipt reads chain-derived settlement data instead of presenting simulation as proof.                                    |
+| Keeper settlement     | A Node keeper exists, writes health snapshots outside `apps/web/public`, and is documented in `../frontend/casino-keeper-v1.md`. |
+| Health route conflict | `/ops/casino-keeper-health.json` is a Next route; health files must live under `.runtime`, not `public`.                         |
+| Durable feed choice   | ADR-0004 rejects subgraph for MVP; ADR-0005 selects Postgres for durable bet indexing.                                           |
+| i18n policy           | `../frontend/21-i18n.md` is accepted and must remain in scope.                                                                   |
 
 ## 3. Explicitly Keep For Now
 
 These are not accidental overengineering at the current stage:
 
-| Item | Reason |
-| --- | --- |
-| `frontend/packages/ssot` | Contract-facing SDK, encoding, release, and indexer surface. Do not fold into app code. |
-| `frontend/packages/bet-index` | Shared by web API routes and the keeper. It owns the durable Postgres store boundary. |
-| `frontend/apps/keeper` | Separate runtime for automatic settlement. It can be simplified internally, but it should not be hidden inside the web app. |
-| `docs/frontend/21-i18n.md` | Multilingual launch is a product requirement. |
-| `docs/frontend/23-security.md` | Wallet, RPC, CSP, and secret handling are launch requirements. |
-| `docs/frontend/24-testing.md` | The repo needs deterministic proof that simplification did not break settlement or routing. |
-| `docs/frontend/30-build-and-release.md` | Release artifacts and chain manifests are part of the product contract. |
+| Item                                    | Reason                                                                                                                      |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `frontend/packages/ssot`                | Contract-facing SDK, encoding, release, and indexer surface. Do not fold into app code.                                     |
+| `frontend/packages/bet-index`           | Shared by web API routes and the keeper. It owns the durable Postgres store boundary.                                       |
+| `frontend/apps/keeper`                  | Separate runtime for automatic settlement. It can be simplified internally, but it should not be hidden inside the web app. |
+| `docs/frontend/21-i18n.md`              | Multilingual launch is a product requirement.                                                                               |
+| `docs/frontend/23-security.md`          | Wallet, RPC, CSP, and secret handling are launch requirements.                                                              |
+| `docs/frontend/24-testing.md`           | The repo needs deterministic proof that simplification did not break settlement or routing.                                 |
+| `docs/frontend/30-build-and-release.md` | Release artifacts and chain manifests are part of the product contract.                                                     |
 
 ## 4. Current Priority Order
 
@@ -211,9 +215,9 @@ before committing.
 
 ## 8. Decision Log
 
-| Date | Decision |
-| --- | --- |
-| 2026-05-17 | i18n stays in scope because multilingual launch is required. |
+| Date       | Decision                                                                    |
+| ---------- | --------------------------------------------------------------------------- |
+| 2026-05-17 | i18n stays in scope because multilingual launch is required.                |
 | 2026-05-17 | `packages/bet-index` stays separate because web and keeper both consume it. |
-| 2026-05-17 | Keeper remains a separate runtime because it owns automatic settlement. |
-| 2026-05-17 | Roadmap changed from historical audit ledger to lean closeout plan. |
+| 2026-05-17 | Keeper remains a separate runtime because it owns automatic settlement.     |
+| 2026-05-17 | Roadmap changed from historical audit ledger to lean closeout plan.         |
