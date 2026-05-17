@@ -1,13 +1,18 @@
 import { formatUnits } from "../../betting/model/units";
 
-export function shortHex(value?: string | null) {
-  if (!value) return "Pending";
+export function shortHex(value?: string | null, pendingLabel = "Pending") {
+  if (!value) return pendingLabel;
   if (value.length <= 12) return value;
   return `${value.slice(0, 6)}...${value.slice(-4)}`;
 }
 
-export function formatAmount(value: bigint | undefined, decimals: number, symbol?: string) {
-  if (value == null) return "Pending";
+export function formatAmount(
+  value: bigint | undefined,
+  decimals: number,
+  symbol?: string,
+  pendingLabel = "Pending"
+) {
+  if (value == null) return pendingLabel;
   const raw = formatUnits(value, decimals);
   const negative = raw.startsWith("-");
   const normalized = negative ? raw.slice(1) : raw;
@@ -18,8 +23,15 @@ export function formatAmount(value: bigint | undefined, decimals: number, symbol
   return symbol ? `${body} ${symbol}` : body;
 }
 
-export function formatAllowance(value: bigint, decimals: number) {
-  return value > 1_000_000_000_000_000_000n ? "Unlimited" : formatAmount(value, decimals);
+export function formatAllowance(
+  value: bigint,
+  decimals: number,
+  unlimitedLabel = "Unlimited",
+  pendingLabel = "Pending"
+) {
+  return value > 1_000_000_000_000_000_000n
+    ? unlimitedLabel
+    : formatAmount(value, decimals, undefined, pendingLabel);
 }
 
 export function getExplorerBaseUrl(chainId: number) {

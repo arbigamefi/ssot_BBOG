@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import type { Address } from "@ssot/ssot/sdk";
 import { ErrorCallout, toast, type TxStatus } from "@ssot/ui";
@@ -33,6 +34,7 @@ import { useSSOTSDK } from "../../../ssot/sdk";
 const ALIAS_STORAGE_KEY = "ssot.player_alias";
 
 export function PortfolioPageClient() {
+  const t = useTranslations();
   const { release, chainId, readOnly, readOnlyReason } = useRelease();
   const { sdk, ready } = useSSOTSDK();
   const explorerBaseUrl = React.useMemo(() => getExplorerBaseUrl(chainId), [chainId]);
@@ -62,7 +64,7 @@ export function PortfolioPageClient() {
           ]);
           return {
             id: String(pool.poolId),
-            symbol: pool.symbol || assetMeta?.symbol || "Asset",
+            symbol: pool.symbol || assetMeta?.symbol || t("portfolio.overview.common.asset"),
             decimals: pool.decimals ?? assetMeta?.decimals ?? 18,
             asset: pool.asset as `0x${string}`,
             bank: pool.bank as `0x${string}`,
@@ -94,14 +96,14 @@ export function PortfolioPageClient() {
   const claimRefundFlow = useDirectTxAction({
     action: "CLAIM_VRF_REFUND",
     labels: {
-      preflight: "Preflight",
-      submit: "Submit claim",
-      confirm: "Confirm on-chain"
+      preflight: t("portfolio.overview.refund.flow.preflight"),
+      submit: t("portfolio.overview.refund.flow.submit"),
+      confirm: t("portfolio.overview.refund.flow.confirm")
     },
     descriptions: {
-      preflight: "Validate refund credit.",
-      submit: "Broadcast claimRefundCredit.",
-      confirm: "Wait for receipt."
+      preflight: t("portfolio.overview.refund.flow.preflightDetail"),
+      submit: t("portfolio.overview.refund.flow.submitDetail"),
+      confirm: t("portfolio.overview.refund.flow.confirmDetail")
     }
   });
 
@@ -126,76 +128,90 @@ export function PortfolioPageClient() {
     const current = localStorage.getItem(ALIAS_STORAGE_KEY) ?? "";
     if (debouncedAlias === current) return;
     localStorage.setItem(ALIAS_STORAGE_KEY, debouncedAlias);
-    toast.success("Player label saved locally.");
-  }, [debouncedAlias, mounted]);
+    toast.success(t("portfolio.overview.toast.labelSaved"));
+  }, [debouncedAlias, mounted, t]);
 
   const handleCopyAccount = React.useCallback(() => {
     if (!account) return;
     if (!navigator.clipboard?.writeText) {
-      toast.error("Clipboard is unavailable in this browser.");
+      toast.error(t("portfolio.overview.toast.clipboardUnavailable"));
       return;
     }
     void navigator.clipboard
       .writeText(account)
-      .then(() => toast.success("Wallet address copied"))
-      .catch((error) => toast.error((error as Error)?.message ?? "Failed to copy wallet address"));
-  }, [account]);
+      .then(() => toast.success(t("portfolio.overview.toast.walletCopied")))
+      .catch((error) =>
+        toast.error((error as Error)?.message ?? t("portfolio.overview.toast.walletCopyFailed"))
+      );
+  }, [account, t]);
 
   const handleClaimRefund = React.useCallback(async () => {
     if (!sdk || !account || readOnly) return;
     try {
       const result = await claimRefundFlow.execute(() => sdk.vrfHub.claimRefundCredit());
       if (!result.ok) return;
-      toast.success("Refund credit claimed");
+      toast.success(t("portfolio.overview.toast.refundClaimed"));
       await refetchRefundCredit();
     } catch (error) {
-      toast.error((error as Error).message ?? "Refund claim failed");
+      toast.error((error as Error).message ?? t("portfolio.overview.toast.refundClaimFailed"));
     }
-  }, [account, claimRefundFlow, readOnly, refetchRefundCredit, sdk]);
+  }, [account, claimRefundFlow, readOnly, refetchRefundCredit, sdk, t]);
 
   if (!release) {
     return (
       <ProductStateCard
-        title="Portfolio"
-        description={readOnlyReason ?? "No embedded release available."}
+        title={t("portfolio.overview.state.noRelease.title")}
+        description={readOnlyReason ?? t("portfolio.overview.state.noRelease.description")}
       />
     );
   }
 
+  const pendingLabel = t("portfolio.overview.common.pending");
+  const walletRequiredLabel = t("portfolio.overview.common.walletRequired");
   const primaryAsset = release.assets[0];
   const totalAssetsEquivalent = assetRows.reduce((sum, row) => sum + row.assetsEquivalent, 0n);
   const totalWalletBalance = assetRows.reduce((sum, row) => sum + row.walletBalance, 0n);
   const refundAmount =
     account && primaryAsset
-      ? formatAmount(refundCredit, primaryAsset.decimals, primaryAsset.symbol)
+      ? formatAmount(refundCredit, primaryAsset.decimals, primaryAsset.symbol, pendingLabel)
       : account
-        ? "Pending"
-        : "Wallet required";
+        ? pendingLabel
+        : walletRequiredLabel;
   const metrics: PortfolioMetric[] = [
     {
-      label: "Wallet balance",
+      label: t("portfolio.overview.metrics.walletBalance.label"),
       value:
         account && primaryAsset
-          ? formatAmount(totalWalletBalance, primaryAsset.decimals, primaryAsset.symbol)
+          ? formatAmount(
+              totalWalletBalance,
+              primaryAsset.decimals,
+              primaryAsset.symbol,
+              pendingLabel
+            )
           : account
-            ? "Pending"
-            : "Wallet required",
-      detail: "Free balance across the active release asset set."
+            ? pendingLabel
+            : walletRequiredLabel,
+      detail: t("portfolio.overview.metrics.walletBalance.detail")
     },
     {
-      label: "Bank position",
+      label: t("portfolio.overview.metrics.bankPosition.label"),
       value:
         account && primaryAsset
-          ? formatAmount(totalAssetsEquivalent, primaryAsset.decimals, primaryAsset.symbol)
+          ? formatAmount(
+              totalAssetsEquivalent,
+              primaryAsset.decimals,
+              primaryAsset.symbol,
+              pendingLabel
+            )
           : account
-            ? "Pending"
-            : "Wallet required",
-      detail: "Assets equivalent for connected Bank shares."
+            ? pendingLabel
+            : walletRequiredLabel,
+      detail: t("portfolio.overview.metrics.bankPosition.detail")
     },
     {
-      label: "Refund credit",
+      label: t("portfolio.overview.metrics.refundCredit.label"),
       value: refundAmount,
-      detail: "Recoverable VRF balance credited to the wallet."
+      detail: t("portfolio.overview.metrics.refundCredit.detail")
     }
   ];
 
@@ -205,19 +221,25 @@ export function PortfolioPageClient() {
   return (
     <PageTransition pageKey="portfolio">
       <div className="space-y-8">
-        <PortfolioHero account={shortHex(account)} metrics={metrics} />
+        <PortfolioHero account={shortHex(account, pendingLabel)} metrics={metrics} />
 
         {readOnly ? (
           <ErrorCallout
-            title="Read-only session"
-            message={readOnlyReason ?? "Writes are disabled."}
+            title={t("portfolio.overview.alerts.readOnly.title")}
+            message={readOnlyReason ?? t("portfolio.overview.alerts.readOnly.message")}
           />
         ) : null}
         {balancesError ? (
-          <ErrorCallout title="Asset query failed" message={(balancesError as Error).message} />
+          <ErrorCallout
+            title={t("portfolio.overview.alerts.assetQueryFailed")}
+            message={(balancesError as Error).message}
+          />
         ) : null}
         {refundError ? (
-          <ErrorCallout title="Refund query failed" message={(refundError as Error).message} />
+          <ErrorCallout
+            title={t("portfolio.overview.alerts.refundQueryFailed")}
+            message={(refundError as Error).message}
+          />
         ) : null}
 
         <div className="grid gap-6 xl:grid-cols-[360px_1fr_420px]">
@@ -238,7 +260,7 @@ export function PortfolioPageClient() {
               href="/earn"
               className="block rounded-md border border-border bg-surface-1 p-5 text-sm font-black uppercase tracking-[0.12em] text-brand shadow-e2 transition hover:bg-surface-2 hover:text-brand-hover"
             >
-              Open bank console
+              {t("portfolio.overview.links.openBankConsole")}
             </Link>
           </div>
 
@@ -246,7 +268,7 @@ export function PortfolioPageClient() {
             <PortfolioPositionsPanel rows={assetRows} loading={balancesLoading} />
             {!account ? (
               <div className="rounded-md border border-dashed border-border bg-surface-1 p-5 text-sm text-fg-muted">
-                Connect a wallet to inspect account state.
+                {t("portfolio.overview.common.connectWalletInspect")}
               </div>
             ) : null}
           </div>

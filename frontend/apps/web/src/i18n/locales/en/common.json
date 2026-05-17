@@ -727,6 +727,126 @@
     }
   },
   "portfolio": {
+    "overview": {
+      "common": {
+        "asset": "Asset",
+        "pending": "Pending",
+        "walletRequired": "Wallet required",
+        "unknown": "Unknown",
+        "unconnected": "Unconnected",
+        "unlimited": "Unlimited",
+        "connectWalletInspect": "Connect a wallet to inspect account state."
+      },
+      "state": {
+        "noRelease": {
+          "title": "Portfolio",
+          "description": "No embedded release available."
+        }
+      },
+      "hero": {
+        "eyebrow": "Account registry",
+        "title": "Wallet profile.",
+        "description": "Inspect wallet balances, Bank positions, refund credits, and local execution history from the active release context.",
+        "connectedAccount": "Connected account"
+      },
+      "metrics": {
+        "walletBalance": {
+          "label": "Wallet balance",
+          "detail": "Free balance across the active release asset set."
+        },
+        "bankPosition": {
+          "label": "Bank position",
+          "detail": "Assets equivalent for connected Bank shares."
+        },
+        "refundCredit": {
+          "label": "Refund credit",
+          "detail": "Recoverable VRF balance credited to the wallet."
+        }
+      },
+      "alerts": {
+        "readOnly": {
+          "title": "Read-only session",
+          "message": "Writes are disabled."
+        },
+        "assetQueryFailed": "Asset query failed",
+        "refundQueryFailed": "Refund query failed"
+      },
+      "links": {
+        "openBankConsole": "Open bank console"
+      },
+      "context": {
+        "title": "Execution context",
+        "session": "Session",
+        "readOnly": "Read-only",
+        "writable": "Writable",
+        "network": "Network",
+        "digest": "Digest"
+      },
+      "identity": {
+        "eyebrow": "Profile",
+        "title": "Player identity",
+        "playerLabel": "Player label",
+        "placeholder": "Enter label",
+        "saved": "Saved locally",
+        "saving": "Saving locally",
+        "walletAddress": "Wallet address",
+        "copyWalletAddress": "Copy wallet address"
+      },
+      "positions": {
+        "eyebrow": "Ledger",
+        "title": "Asset positions",
+        "loading": "Loading balances.",
+        "shares": "{amount} shares",
+        "columns": {
+          "asset": "Asset",
+          "wallet": "Wallet",
+          "bankPosition": "Bank position",
+          "allowance": "Allowance"
+        }
+      },
+      "refund": {
+        "title": "VRF refund credit",
+        "connectWallet": "Connect a wallet to inspect and claim recoverable VRF credit.",
+        "readOnly": "Writes are disabled for this release.",
+        "claiming": "Claiming",
+        "claim": "Claim credit",
+        "flow": {
+          "preflight": "Preflight",
+          "submit": "Submit claim",
+          "confirm": "Confirm on-chain",
+          "preflightDetail": "Validate refund credit.",
+          "submitDetail": "Broadcast claimRefundCredit.",
+          "confirmDetail": "Wait for receipt."
+        }
+      },
+      "trace": {
+        "waiting": "Waiting for refund claim intent.",
+        "error": "Transaction error",
+        "title": "Refund claim trace",
+        "subtitle": "Wallet signature, broadcast, and receipt state.",
+        "status": "Status",
+        "viewExplorer": "View explorer",
+        "block": "Block {blockNumber}",
+        "reset": "Reset trace"
+      },
+      "journal": {
+        "eyebrow": "Journal",
+        "title": "Transaction journal",
+        "columns": {
+          "action": "Action",
+          "status": "Status"
+        },
+        "empty": "No account transactions in this browser session."
+      },
+      "toast": {
+        "labelSaved": "Player label saved locally.",
+        "clipboardUnavailable": "Clipboard is unavailable in this browser.",
+        "walletCopied": "Wallet address copied",
+        "walletCopyFailed": "Failed to copy wallet address",
+        "refundClaimed": "Refund credit claimed",
+        "refundClaimFailed": "Refund claim failed"
+      }
+    },
     "claims": {
       "common": {
         "pending": "Pending",

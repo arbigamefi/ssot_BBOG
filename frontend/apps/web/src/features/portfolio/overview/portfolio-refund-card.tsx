@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { ArrowPathIcon } from "@heroicons/react/24/outline";
 
 import { PortfolioActionTrace } from "./portfolio-action-trace";
@@ -21,12 +22,14 @@ export function PortfolioRefundCard({
   explorerBaseUrl?: string;
   onClaim: () => void;
 }) {
+  const t = useTranslations();
+
   return (
     <section className="rounded-md border border-border bg-surface-1 p-5 shadow-e2">
       <div className="flex items-center justify-between gap-4">
         <div>
           <div className="text-xs font-black uppercase tracking-[0.16em] text-fg-subtle">
-            VRF refund credit
+            {t("portfolio.overview.refund.title")}
           </div>
           <div className="mt-2 font-mono text-2xl font-black text-fg">{amount}</div>
         </div>
@@ -37,13 +40,13 @@ export function PortfolioRefundCard({
 
       {!connected ? (
         <div className="mt-4 rounded-md border border-dashed border-border bg-surface-0 p-4 text-sm text-fg-muted">
-          Connect a wallet to inspect and claim recoverable VRF credit.
+          {t("portfolio.overview.refund.connectWallet")}
         </div>
       ) : null}
 
       {readOnly ? (
         <div className="mt-4 rounded-md border border-warn/30 bg-warn-soft p-3 text-sm text-warn">
-          Writes are disabled for this release.
+          {t("portfolio.overview.refund.readOnly")}
         </div>
       ) : null}
 
@@ -53,7 +56,7 @@ export function PortfolioRefundCard({
         disabled={disabled}
         className="mt-4 w-full rounded-md bg-brand px-5 py-4 text-sm font-black uppercase tracking-[0.12em] text-fg-inverse shadow-glow transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {flow.busy ? "Claiming" : "Claim credit"}
+        {flow.busy ? t("portfolio.overview.refund.claiming") : t("portfolio.overview.refund.claim")}
       </button>
 
       <div className="mt-4">

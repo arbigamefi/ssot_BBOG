@@ -727,6 +727,126 @@
     }
   },
   "portfolio": {
+    "overview": {
+      "common": {
+        "asset": "资产",
+        "pending": "待读取",
+        "walletRequired": "需要连接钱包",
+        "unknown": "未知",
+        "unconnected": "未连接",
+        "unlimited": "无限额度",
+        "connectWalletInspect": "连接钱包后才能查看账户状态。"
+      },
+      "state": {
+        "noRelease": {
+          "title": "账户组合",
+          "description": "当前链没有内嵌 release。"
+        }
+      },
+      "hero": {
+        "eyebrow": "账户注册表",
+        "title": "钱包档案。",
+        "description": "在当前 active release 语境下查看钱包余额、Bank 仓位、退款 credit 和本地执行历史。",
+        "connectedAccount": "已连接账户"
+      },
+      "metrics": {
+        "walletBalance": {
+          "label": "钱包余额",
+          "detail": "active release 资产集中的可用余额。"
+        },
+        "bankPosition": {
+          "label": "Bank 仓位",
+          "detail": "已连接钱包 Bank 份额对应的资产等价值。"
+        },
+        "refundCredit": {
+          "label": "退款 credit",
+          "detail": "计入钱包、可追回的 VRF 余额。"
+        }
+      },
+      "alerts": {
+        "readOnly": {
+          "title": "只读会话",
+          "message": "写入已禁用。"
+        },
+        "assetQueryFailed": "资产查询失败",
+        "refundQueryFailed": "退款查询失败"
+      },
+      "links": {
+        "openBankConsole": "打开 Bank 控制台"
+      },
+      "context": {
+        "title": "执行上下文",
+        "session": "会话",
+        "readOnly": "只读",
+        "writable": "可写",
+        "network": "网络",
+        "digest": "摘要"
+      },
+      "identity": {
+        "eyebrow": "档案",
+        "title": "玩家身份",
+        "playerLabel": "玩家标签",
+        "placeholder": "输入标签",
+        "saved": "已保存到本地",
+        "saving": "正在保存到本地",
+        "walletAddress": "钱包地址",
+        "copyWalletAddress": "复制钱包地址"
+      },
+      "positions": {
+        "eyebrow": "账本",
+        "title": "资产仓位",
+        "loading": "正在加载余额。",
+        "shares": "{amount} 份额",
+        "columns": {
+          "asset": "资产",
+          "wallet": "钱包",
+          "bankPosition": "Bank 仓位",
+          "allowance": "授权额度"
+        }
+      },
+      "refund": {
+        "title": "VRF 退款 credit",
+        "connectWallet": "连接钱包后才能查看并领取可追回的 VRF credit。",
+        "readOnly": "当前 release 禁用了写入。",
+        "claiming": "领取中",
+        "claim": "领取 credit",
+        "flow": {
+          "preflight": "预检查",
+          "submit": "提交领取",
+          "confirm": "链上确认",
+          "preflightDetail": "校验退款 credit。",
+          "submitDetail": "广播 claimRefundCredit。",
+          "confirmDetail": "等待交易回执。"
+        }
+      },
+      "trace": {
+        "waiting": "等待退款领取意图。",
+        "error": "交易错误",
+        "title": "退款领取追踪",
+        "subtitle": "钱包签名、广播和回执状态。",
+        "status": "状态",
+        "viewExplorer": "查看浏览器",
+        "block": "区块 {blockNumber}",
+        "reset": "重置追踪"
+      },
+      "journal": {
+        "eyebrow": "日志",
+        "title": "交易日志",
+        "columns": {
+          "action": "操作",
+          "status": "状态"
+        },
+        "empty": "当前浏览器会话还没有账户交易。"
+      },
+      "toast": {
+        "labelSaved": "玩家标签已保存到本地。",
+        "clipboardUnavailable": "当前浏览器不可用剪贴板。",
+        "walletCopied": "钱包地址已复制",
+        "walletCopyFailed": "复制钱包地址失败",
+        "refundClaimed": "退款 credit 已领取",
+        "refundClaimFailed": "退款领取失败"
+      }
+    },
     "claims": {
       "common": {
         "pending": "待读取",
