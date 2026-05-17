@@ -15,6 +15,7 @@ export type CasinoRoundPhase =
   | "ready"
   | "placing"
   | "waiting_vrf"
+  | "timeout_soft"
   | "settling"
   | "manual_settle_offered"
   | "settled"
@@ -29,6 +30,7 @@ export type CasinoRoundSnapshot = {
   error?: string;
   randomReadyAt?: number;
   settleTx?: TxResult;
+  refundTx?: TxResult;
 };
 
 export function formatNativeFee(value: bigint | undefined, symbol = "ETH") {
@@ -41,13 +43,19 @@ export function formatNativeFee(value: bigint | undefined, symbol = "ETH") {
 
 export function deriveCasinoRoundPhase({
   betState,
+  placedAt,
   randomReadyAt,
   now,
+  refundTimeoutSeconds,
+  softVrfTimeoutMs = CASINO_ROUND_SOFT_VRF_TIMEOUT_MS,
   manualSettleDelayMs = CASINO_ROUND_MANUAL_SETTLE_DELAY_MS
 }: {
   betState: DomainBet["state"] | undefined;
+  placedAt?: number;
   randomReadyAt?: number;
   now: number;
+  refundTimeoutSeconds?: number;
+  softVrfTimeoutMs?: number;
   manualSettleDelayMs?: number;
 }): CasinoRoundPhase {
   if (betState === "finalized") return "settled";
@@ -58,8 +66,23 @@ export function deriveCasinoRoundPhase({
     }
     return "settling";
   }
-  if (betState === "placed") return "waiting_vrf";
+  if (betState === "placed") {
+    const placedAtMs = toUnixMs(placedAt);
+    if (placedAtMs != null) {
+      const elapsedMs = now - placedAtMs;
+      if (refundTimeoutSeconds && elapsedMs >= refundTimeoutSeconds * 1_000) {
+        return "refundable";
+      }
+      if (elapsedMs >= softVrfTimeoutMs) return "timeout_soft";
+    }
+    return "waiting_vrf";
+  }
   return "idle";
+}
+
+function toUnixMs(value: number | undefined) {
+  if (!value || !Number.isFinite(value)) return undefined;
+  return value > 1_000_000_000_000 ? value : value * 1_000;
 }
 
 export function useCasinoVrfQuote({
@@ -109,14 +132,18 @@ export function useCasinoRoundWatcher({
   betId,
   active,
   onTerminal,
+  refundTimeoutSeconds,
   pollIntervalMs = 2_000,
+  softVrfTimeoutMs = CASINO_ROUND_SOFT_VRF_TIMEOUT_MS,
   manualSettleDelayMs = CASINO_ROUND_MANUAL_SETTLE_DELAY_MS
 }: {
   sdk: SSOTSDK | undefined;
   betId: bigint | undefined;
   active: boolean;
   onTerminal?: (bet: DomainBet) => void;
+  refundTimeoutSeconds?: number;
   pollIntervalMs?: number;
+  softVrfTimeoutMs?: number;
   manualSettleDelayMs?: number;
 }) {
   const [snapshot, setSnapshot] = React.useState<CasinoRoundSnapshot>({ phase: "idle" });
@@ -146,8 +173,11 @@ export function useCasinoRoundWatcher({
             randomReadyAt,
             phase: deriveCasinoRoundPhase({
               betState: bet.state,
+              placedAt: bet.placedAt,
               randomReadyAt,
               now: Date.now(),
+              refundTimeoutSeconds,
+              softVrfTimeoutMs,
               manualSettleDelayMs
             }),
             error: undefined
@@ -178,27 +208,53 @@ export function useCasinoRoundWatcher({
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, [sdk, active, betId, onTerminal, pollIntervalMs, manualSettleDelayMs]);
+  }, [
+    sdk,
+    active,
+    betId,
+    onTerminal,
+    pollIntervalMs,
+    refundTimeoutSeconds,
+    softVrfTimeoutMs,
+    manualSettleDelayMs
+  ]);
 
   const manualSettle = React.useCallback(async () => {
     if (!sdk || betId === undefined) return;
     setSnapshot((current) => ({ ...current, phase: "settling", error: undefined }));
-    const settleTx = await sdk.gameHub.finalize(betId);
+    const manualSettleTx = await sdk.gameHub.finalize(betId);
     setSnapshot((current) => ({
       ...current,
-      settleTx,
-      phase: settleTx.ok ? "settling" : "manual_settle_offered",
-      error: settleTx.ok ? undefined : (settleTx.error?.message ?? "Manual settlement failed.")
+      settleTx: manualSettleTx,
+      phase: manualSettleTx.ok ? "settling" : "manual_settle_offered",
+      error: manualSettleTx.ok
+        ? undefined
+        : (manualSettleTx.error?.message ?? "Manual settlement failed.")
+    }));
+  }, [sdk, betId]);
+
+  const manualRefund = React.useCallback(async () => {
+    if (!sdk || betId === undefined) return;
+    setSnapshot((current) => ({ ...current, phase: "refundable", error: undefined }));
+    const refundTx = await sdk.gameHub.refund(betId);
+    setSnapshot((current) => ({
+      ...current,
+      refundTx,
+      phase: "refundable",
+      error: refundTx.ok ? undefined : (refundTx.error?.message ?? "Refund failed.")
     }));
   }, [sdk, betId]);
 
   return {
     ...snapshot,
     manualSettle,
+    manualRefund,
     manualSettleAvailable: snapshot.phase === "manual_settle_offered",
+    manualRefundAvailable: snapshot.phase === "refundable" && snapshot.bet?.state === "placed",
     isLive:
       active &&
       (snapshot.phase === "waiting_vrf" ||
+        snapshot.phase === "timeout_soft" ||
         snapshot.phase === "settling" ||
         snapshot.phase === "manual_settle_offered")
   };

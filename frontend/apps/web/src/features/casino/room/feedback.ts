@@ -23,17 +23,20 @@ export function useBetStepperFailureToast({
   }, [status, error]);
 }
 
-export function useVrfTimeoutToast(isPending: boolean) {
-  React.useEffect(() => {
-    if (!isPending) return;
+export function useVrfTimeoutToast(isSoftTimeout: boolean) {
+  const shownRef = React.useRef(false);
 
-    const timer = setTimeout(() => {
+  React.useEffect(() => {
+    if (!isSoftTimeout) {
+      shownRef.current = false;
+      return;
+    }
+    if (!shownRef.current) {
+      shownRef.current = true;
       toast.warning("Waiting for oracle... VRF resolution can take 30-120s on testnets.", {
         duration: 20000,
         id: "vrf-timeout"
       });
-    }, 60000);
-
-    return () => clearTimeout(timer);
-  }, [isPending]);
+    }
+  }, [isSoftTimeout]);
 }

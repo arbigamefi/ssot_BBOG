@@ -402,6 +402,160 @@ pnpm -C frontend test
 pnpm -C frontend/apps/web build
 ```
 
+## 6.4 Casino Round Timeout And Refund Fallback Closeout - 2026-05-17
+
+### Evidence
+
+The casino room already quotes VRF fees on page load, executes the approve /
+placeBet plan from one player click, polls `sdk.gameHub.getBet(positionId)`, and
+defers normal settlement to the keeper. The remaining UX gap is the fallback
+ladder after a live round is mined:
+
+- `PendingVRF` currently remains visually indistinguishable before and after the
+  soft timeout threshold;
+- the protocol refund timeout is documented but not surfaced as an explicit
+  `Refund stake` control;
+- result waiting copy is still partly driven by the old stepper labels rather
+  than the round state machine.
+
+### Scope
+
+1. Extend `deriveCasinoRoundPhase` with `timeout_soft` and protocol refund
+   timeout handling.
+2. Keep polling active through `timeout_soft`.
+3. Expose `Refund stake` only after `placedAt + refundTimeoutSeconds`.
+4. Wire manual refund through `sdk.gameHub.refund(betId)` behind an explicit
+   click.
+5. Adjust CTA copy to describe the current user action, not the old ticket
+   planning phase.
+6. Add focused tests for soft timeout, refund fallback, and button copy.
+
+### Acceptance Checks
+
+```bash
+pnpm -C frontend/apps/web test -- src/features/casino/room
+pnpm -C frontend/apps/web typecheck
+pnpm -C frontend precheck:frontend -- --strict
+pnpm -C frontend/apps/web build
+git diff --check
+```
+
+### Implementation Result
+
+Completed in this wave:
+
+- added `timeout_soft` to the casino round state machine;
+- derived refund availability from direct chain `getBet` facts and
+  `refundTimeoutSeconds`;
+- preserved live polling through the soft-timeout state;
+- exposed `Refund stake` only as an explicit delayed fallback;
+- switched the soft-timeout toast to the state-machine phase instead of an
+  unused local pending flag;
+- locked the bet controls while a round is being placed, mined, or watched;
+- removed old ticket-oriented CTA copy from the casino room;
+- carried `refundTimeoutSeconds` through the frontend release schema and
+  embedded Base Sepolia release snapshot.
+
+Evidence:
+
+```bash
+pnpm -C frontend/apps/web test -- src/features/casino/room
+pnpm -C frontend/packages/ssot test -- src/release/loader.test.ts
+pnpm -C frontend/apps/web typecheck
+pnpm -C frontend/packages/ssot typecheck
+pnpm -C frontend precheck:frontend -- --strict
+pnpm -C frontend check:release
+pnpm -C frontend/apps/web test -- 'src/app/(product)/casino/[slug]/pageClient.test.tsx'
+pnpm -C frontend/apps/web test
+pnpm -C frontend/apps/web build
+pnpm -C frontend check:bundle
+pnpm -C frontend typecheck
+pnpm -C frontend test
+pnpm -C frontend lint
+CI=true PLAYWRIGHT_BASE_URL=http://localhost:3007 pnpm -C frontend/apps/web e2e
+git diff --check
+```
+
+Observed:
+
+- casino room focused tests passed: 15 files, 53 tests;
+- app tests passed: 38 files, 143 tests;
+- full frontend tests passed: keeper 16 tests, ssot 137 tests, ui 23 tests,
+  web 143 tests;
+- production build passed and the bundle budget stayed green:
+  `/casino/[slug]` 177.5 kB gzip JS against a 195 kB budget;
+- Playwright route + accessibility smoke passed: 14 tests;
+- known local warnings remain unchanged: Node v22 vs project Node 20,
+  deprecated `next lint`, existing Next ESLint plugin warning, and the
+  Next/ESM warning during production build.
+
+## 6.5 Casino Round Hook Ownership Closeout - 2026-05-17
+
+### Evidence
+
+After 6.4, the behavior is correct, but the route composer still wires several
+round concerns directly:
+
+- `usePlaceBetStepper`;
+- `useCasinoVrfQuote`;
+- `useCasinoRoundWatcher`;
+- `useBetStepperFailureToast`;
+- `useVrfTimeoutToast`;
+- `executeGamePlaceBetAction`.
+
+That is too much round orchestration inside
+`app/(product)/casino/[slug]/pageClient.tsx` and leaves the implementation
+slightly behind `casino-placebet-ux.md §6`, which says the casino room owns one
+hook: `useCasinoRound`.
+
+### Scope
+
+1. Add `features/casino/room/use-casino-round.ts`.
+2. Move the round composition into that hook without changing SDK calls.
+3. Keep game-specific params and visual state in `pageClient.tsx`.
+4. Keep the existing stepper reducer unchanged in this slice.
+5. Preserve all 6.4 timeout/refund behavior.
+
+### Acceptance Checks
+
+```bash
+pnpm -C frontend/apps/web test -- 'src/app/(product)/casino/[slug]/pageClient.test.tsx' src/features/casino/room
+pnpm -C frontend/apps/web typecheck
+pnpm -C frontend precheck:frontend -- --strict
+pnpm -C frontend/apps/web build
+git diff --check
+```
+
+### Implementation Result
+
+Completed in this wave:
+
+- added `features/casino/room/use-casino-round.ts`;
+- moved stepper execution, VRF quote, round watcher, timeout toast, and fallback
+  settlement/refund controls behind `useCasinoRound`;
+- kept game parameter state, visual stage state, and result-proof enrichment in
+  the route composer;
+- preserved the 6.4 timeout and refund behavior;
+- kept manual finalize calls explicitly named as manual fallback paths for grep
+  enforcement.
+
+Evidence:
+
+```bash
+pnpm -C frontend/apps/web test -- 'src/app/(product)/casino/[slug]/pageClient.test.tsx' src/features/casino/room
+pnpm -C frontend/apps/web test -- 'src/app/(product)/portfolio/activity/[betId]/pageClient.test.tsx' src/features/casino/room/casino-round.test.ts
+pnpm -C frontend/apps/web typecheck
+rg -n "finalize\\(" frontend/apps/web/src/features/casino 'frontend/apps/web/src/app/(product)/casino' 'frontend/apps/web/src/app/(product)/portfolio' -S | rg -v "manual|keeper|test"
+git diff --check
+```
+
+Observed:
+
+- casino route + room tests passed: 16 files, 58 tests;
+- portfolio manual fallback and casino round tests passed: 2 files, 8 tests;
+- web typecheck passed;
+- forbidden non-manual frontend `finalize(` scan returned 0 findings.
+
 ## 7. Current Closeout Roadmap
 
 This section supersedes the historical phase ledger below for the current

@@ -51,6 +51,8 @@ export function GameRoomBetPanel({
   roundError,
   manualSettleAvailable,
   onManualSettle,
+  manualRefundAvailable,
+  onManualRefund,
   onPlaceBet
 }: {
   game: GameMeta;
@@ -87,6 +89,8 @@ export function GameRoomBetPanel({
   roundError?: string;
   manualSettleAvailable?: boolean;
   onManualSettle?: () => void;
+  manualRefundAvailable?: boolean;
+  onManualRefund?: () => void;
   onPlaceBet: () => void;
 }) {
   return (
@@ -156,6 +160,8 @@ export function GameRoomBetPanel({
         error={roundError}
         manualSettleAvailable={manualSettleAvailable}
         onManualSettle={onManualSettle}
+        manualRefundAvailable={manualRefundAvailable}
+        onManualRefund={onManualRefund}
       />
 
       <PlaceBetButton

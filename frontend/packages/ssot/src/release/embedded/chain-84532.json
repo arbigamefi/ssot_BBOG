@@ -3,6 +3,7 @@
   "name": "Base Sepolia",
   "releaseDigest": "0x97025bf84b1e73ceb683366d38ff8647763e0baa71d9216605d3ed030cc2216a",
   "isPlaceholder": false,
+  "refundTimeoutSeconds": 3600,
   "contracts": {
     "gameHub": "0x1fc18758b64205313f920cfc7ffc7dc343a892e6",
     "settlementRouter": "0x99b0ad5e43813760142f9821b1e5c4eba942f4ec",

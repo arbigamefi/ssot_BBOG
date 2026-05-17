@@ -12,21 +12,15 @@ import { useIndexer } from "../../../../features/ops/useIndexer";
 import { useRelease } from "../../../../ssot/release/ReleaseProvider";
 import { useSSOTSDK } from "../../../../ssot/sdk";
 import { useSSOTRuntime } from "../../../../ssot/runtime";
-import { usePlaceBetStepper } from "../../../../features/betting/usePlaceBetStepper";
 import { useConnectModal } from "../../../../app-shell/WalletButton";
 import { toGameMeta, type GameMeta } from "../../../../features/casino/room/model";
 import { calculateGameWinChance } from "../../../../features/casino/room/params";
-import { executeGamePlaceBetAction } from "../../../../features/casino/room/place-bet-action";
 import {
   formatGameMaxPayout,
   formatHouseEdge,
   getGameDisplayName
 } from "../../../../features/casino/room/presentation";
 import { GameRoomBetPanel } from "../../../../features/casino/room/bet-panel";
-import {
-  useBetStepperFailureToast,
-  useVrfTimeoutToast
-} from "../../../../features/casino/room/feedback";
 import { useGameWalletBalance, useKenoStrobeSpots } from "../../../../features/casino/room/hooks";
 import {
   useGameResolutionEffect,
@@ -35,11 +29,7 @@ import {
 } from "../../../../features/casino/room/resolution";
 import { GameRoomRightPane } from "../../../../features/casino/room/right-pane";
 import { GameRoomShell } from "../../../../features/casino/room/game-room-shell";
-import {
-  useCasinoRoundWatcher,
-  useCasinoVrfQuote,
-  type CasinoRoundPhase
-} from "../../../../features/casino/room/casino-round";
+import { useCasinoRound } from "../../../../features/casino/room/use-casino-round";
 
 const GameRoomAuditLedger = dynamic(
   () =>
@@ -104,10 +94,8 @@ export function GamePageClient({ slug }: { slug: string }) {
 
   const walletBalance = useGameWalletBalance({ sdk, assets: release?.assets });
 
-  const { planNow, executeNow, state, reset } = usePlaceBetStepper();
   const { openConnectModal } = useConnectModal();
   const { db } = useSSOTRuntime();
-  const vrfQuote = useCasinoVrfQuote({ sdk, betCount });
   const handleRoundTerminal = React.useCallback(
     (bet: DomainBet) => {
       setIsPending(false);
@@ -116,31 +104,52 @@ export function GamePageClient({ slug }: { slug: string }) {
     },
     [refetchRecentBets]
   );
-  const roundWatcher = useCasinoRoundWatcher({
+  const handleRoundStart = React.useCallback(() => {
+    setTerminalBet(null);
+    setResultProof(null);
+  }, []);
+  const handleRoundReset = React.useCallback(() => {
+    setShowResult(false);
+    setTerminalBet(null);
+    setResultProof(null);
+  }, []);
+
+  // B2: Accurate win-chance using proper math per game module
+  const winChance = game
+    ? calculateGameWinChance({
+        slug: game.slug,
+        diceTarget,
+        diceDirection,
+        rouletteSpots,
+        kenoSpots
+      })
+    : 0;
+
+  const casinoRound = useCasinoRound({
     sdk,
-    betId: state.betId,
-    active: state.status === "reconciled",
-    onTerminal: handleRoundTerminal
+    release,
+    game,
+    winChance,
+    openConnectModal,
+    betAmount,
+    betCount,
+    stopGain,
+    stopLoss,
+    diceTarget,
+    coinSide,
+    rouletteSpots,
+    kenoSpots,
+    onRoundStart: handleRoundStart,
+    onRoundTerminal: handleRoundTerminal,
+    onRoundReset: handleRoundReset
   });
-  const roundPhase = React.useMemo<CasinoRoundPhase>(() => {
-    if (state.status === "planning") return "loading_quote";
-    if (state.status === "submitting" || state.status === "mined") return "placing";
-    if (roundWatcher.phase !== "idle") return roundWatcher.phase;
-    return vrfQuote.phase === "loading_quote" ? "loading_quote" : "ready";
-  }, [roundWatcher.phase, state.status, vrfQuote.phase]);
-  const isRoundAnimating =
-    isPending ||
-    state.status === "planning" ||
-    state.status === "submitting" ||
-    state.status === "mined" ||
-    roundWatcher.isLive;
+  const { state, reset } = casinoRound;
+
+  const isRoundAnimating = isPending || casinoRound.isRoundAnimating;
   const animatingKenoSpots = useKenoStrobeSpots({
     isPending: isRoundAnimating,
     gameSlug: game?.slug
   });
-
-  useBetStepperFailureToast({ status: state.status, error: state.error });
-  useVrfTimeoutToast(isPending);
 
   useGameResolutionEffect({
     terminalBet,
@@ -166,42 +175,8 @@ export function GamePageClient({ slug }: { slug: string }) {
   const usdcDecimals = release?.assets?.find((a: any) => a.symbol === "USDC")?.decimals ?? 6;
   const maxPayout = formatGameMaxPayout({ gameMeta, slug: game.slug, usdcDecimals });
 
-  // B2: Accurate win-chance using proper math per game module
-  const winChance = calculateGameWinChance({
-    slug: game.slug,
-    diceTarget,
-    diceDirection,
-    rouletteSpots,
-    kenoSpots
-  });
-
   const multiplier = winChance === 0 ? 0 : 99 / winChance;
   const expectedPayout = betAmount * multiplier;
-
-  const handlePlaceBet = () => {
-    setTerminalBet(null);
-    setResultProof(null);
-    return executeGamePlaceBetAction({
-      account: sdk?.account,
-      openConnectModal,
-      release,
-      game,
-      winChance,
-      state,
-      reset,
-      setShowResult,
-      executeNow,
-      planNow,
-      betAmount,
-      betCount,
-      stopGain,
-      stopLoss,
-      diceTarget,
-      coinSide,
-      rouletteSpots,
-      kenoSpots
-    });
-  };
 
   const LeftPane = (
     <GameRoomBetPanel
@@ -218,7 +193,7 @@ export function GamePageClient({ slug }: { slug: string }) {
       onStopLossChange={setStopLoss}
       advancedOpen={advancedOpen}
       onAdvancedOpenChange={setAdvancedOpen}
-      isPending={isPending}
+      isPending={isRoundAnimating}
       state={state}
       hasAccount={Boolean(sdk?.account)}
       winChance={winChance}
@@ -231,15 +206,17 @@ export function GamePageClient({ slug }: { slug: string }) {
       kenoSpots={kenoSpots}
       onKenoChange={setKenoSpots}
       onKenoResetResult={() => setKenoResultDrawn([])}
-      roundPhase={roundPhase}
-      vrfQuote={vrfQuote.quote}
-      vrfQuoteError={vrfQuote.quoteError}
-      activeBetId={state.betId}
-      activeRequestId={roundWatcher.bet?.requestId}
-      roundError={roundWatcher.error}
-      manualSettleAvailable={roundWatcher.manualSettleAvailable}
-      onManualSettle={roundWatcher.manualSettle}
-      onPlaceBet={handlePlaceBet}
+      roundPhase={casinoRound.roundPhase}
+      vrfQuote={casinoRound.vrfQuote}
+      vrfQuoteError={casinoRound.vrfQuoteError}
+      activeBetId={casinoRound.activeBetId}
+      activeRequestId={casinoRound.activeRequestId}
+      roundError={casinoRound.roundError}
+      manualSettleAvailable={casinoRound.manualSettleAvailable}
+      onManualSettle={casinoRound.manualSettle}
+      manualRefundAvailable={casinoRound.manualRefundAvailable}
+      onManualRefund={casinoRound.manualRefund}
+      onPlaceBet={casinoRound.placeBet}
     />
   );
 
