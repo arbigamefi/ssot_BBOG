@@ -18,12 +18,8 @@ function defaultHealthPath() {
 function healthPathCandidates() {
   const configured = process.env.KEEPER_HEALTH_PATH?.trim();
   if (!configured) return [defaultHealthPath()];
-  if (path.isAbsolute(configured)) return [configured, defaultHealthPath()];
-  return [
-    path.resolve(repoRoot(), configured),
-    path.resolve(process.cwd(), configured),
-    defaultHealthPath()
-  ];
+  if (path.isAbsolute(configured)) return [configured];
+  return [path.resolve(repoRoot(), configured), path.resolve(process.cwd(), configured)];
 }
 
 async function readJsonFile(filePath: string) {
