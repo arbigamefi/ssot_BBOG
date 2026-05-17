@@ -42,7 +42,7 @@ as a global home page feed, because a browser only sees what it has replayed.
 | Surface | Source for MVP | Rationale |
 | --- | --- | --- |
 | Bet detail proof | direct GameHub logs + `getBet` | must be chain-verifiable |
-| User portfolio activity | local Dexie replay, later server cache fallback | user-owned and replayable |
+| User portfolio activity | server player API merged with local Dexie replay | faster cold start while preserving local verification |
 | Home live activity feed | server aggregation API | must represent global activity |
 | Casino room recent bets | server aggregation API scoped by `gameId` | must not depend on one browser's local replay |
 | Bank reserve snapshot | direct contract view | low-volume canonical read |
@@ -82,6 +82,8 @@ runtime is not long-lived.
 - Add `/api/bets/player/[address]`.
 - Keep local Dexie as the verification layer.
 - Use server cache as a cold-start accelerator only.
+- Merge server rows with local replay rows client-side and prefer the freshest
+  row per bet id.
 
 ### Phase 3: Durable Aggregation
 

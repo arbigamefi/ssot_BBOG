@@ -13,6 +13,10 @@ export type RecentBetsResponse = {
   rows: RecentBetRow[];
 };
 
+export type PlayerBetsResponse = RecentBetsResponse & {
+  player: string;
+};
+
 export type RecentBetsQuery = {
   chainId: number;
   gameId?: string;

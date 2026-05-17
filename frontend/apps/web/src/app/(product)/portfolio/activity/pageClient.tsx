@@ -21,12 +21,19 @@ import type {
   BetStatusFilter,
   EnrichedBetRow
 } from "../../../../features/portfolio/activity/types";
-import { useBets } from "../../../../features/betting/useBets";
+import { usePlayerBets } from "../../../../features/betting/usePlayerBets";
 import { useRelease } from "../../../../ssot/release/ReleaseProvider";
+import { useSSOTSDK } from "../../../../ssot/sdk";
 
 export function PortfolioActivityPageClient() {
   const { release } = useRelease();
-  const { data: bets = [], isLoading } = useBets(500);
+  const { sdk } = useSSOTSDK();
+  const {
+    data: bets = [],
+    isLoading,
+    localRows,
+    serverRows
+  } = usePlayerBets({ limit: 500, player: sdk?.account });
   const [statusFilter, setStatusFilter] = React.useState<BetStatusFilter>("all");
 
   const gameLabelById = React.useMemo(() => {
@@ -77,7 +84,9 @@ export function PortfolioActivityPageClient() {
       {
         label: "Indexed tickets",
         value: enrichedBets.length.toLocaleString("en-US"),
-        detail: "Rows loaded from the local replayable index."
+        detail: sdk?.account
+          ? `Rows merged from shared cache (${serverRows.length}) and local replay (${localRows.length}).`
+          : "Connect a wallet to load account-scoped tickets."
       },
       {
         label: "Open tickets",
@@ -90,7 +99,7 @@ export function PortfolioActivityPageClient() {
         detail: "Tickets with final win, loss, refund, or failure state."
       }
     ];
-  }, [enrichedBets]);
+  }, [enrichedBets, localRows.length, sdk?.account, serverRows.length]);
 
   return (
     <PageTransition pageKey="portfolio-activity">

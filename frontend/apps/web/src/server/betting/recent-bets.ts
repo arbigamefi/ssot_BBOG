@@ -12,7 +12,7 @@ import { applyGameHubEventToBet, type BetRow, type GameHubEventName } from "@sso
 import { loadEmbeddedRelease, type SSOTRelease } from "@ssot/ssot/release";
 
 import { resolvePublicRpcUrl } from "../../app-shell/rpc";
-import type { RecentBetsResponse } from "../../features/betting/recent-bets";
+import type { PlayerBetsResponse, RecentBetsResponse } from "../../features/betting/recent-bets";
 
 const GAME_HUB_EVENTS: GameHubEventName[] = [
   "BetPlaced",
@@ -30,7 +30,10 @@ const GAME_HUB_EVENT_ABI = parseAbi([
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
+const DEFAULT_PLAYER_LIMIT = 100;
+const MAX_PLAYER_LIMIT = 500;
 const DEFAULT_WINDOW_BLOCKS = 5_000;
+const DEFAULT_PLAYER_WINDOW_BLOCKS = 20_000;
 const DEFAULT_CONFIRMATIONS = 2;
 const DEFAULT_CACHE_TTL_MS = 8_000;
 
@@ -89,6 +92,11 @@ export function clampRecentBetsLimit(limit: number | undefined) {
   return Math.min(MAX_LIMIT, Math.max(1, Math.floor(limit)));
 }
 
+export function clampPlayerBetsLimit(limit: number | undefined) {
+  if (!Number.isFinite(limit) || !limit || limit <= 0) return DEFAULT_PLAYER_LIMIT;
+  return Math.min(MAX_PLAYER_LIMIT, Math.max(1, Math.floor(limit)));
+}
+
 export function normalizeGameId(gameId: string | undefined) {
   const value = cleanEnvValue(gameId);
   if (!value) return undefined;
@@ -96,6 +104,16 @@ export function normalizeGameId(gameId: string | undefined) {
     throw new Error("gameId must be a 32-byte hex string.");
   }
   return `0x${value.slice(2).toLowerCase()}` as Hex;
+}
+
+export function normalizePlayerAddress(player: string | undefined) {
+  const value = cleanEnvValue(player);
+  if (!value) throw new Error("player address is required.");
+  try {
+    return getAddress(value);
+  } catch {
+    throw new Error("player must be a valid address.");
+  }
 }
 
 export function foldRecentBetLogs({
@@ -133,6 +151,59 @@ export function foldRecentBetLogs({
   return [...rows.values()].sort((a, b) => b.updatedBlock - a.updatedBlock);
 }
 
+async function loadGameHubClient({
+  chainId,
+  client
+}: {
+  chainId: number;
+  client?: PublicClient;
+}): Promise<{
+  client: PublicClient;
+  gameHub: Address;
+  latestBlock: bigint;
+  release: SSOTRelease;
+}> {
+  const releaseResult = loadEmbeddedRelease(chainId);
+  if (!releaseResult.ok) throw new Error(releaseResult.error);
+  const release = releaseResult.release;
+  let publicClient = client;
+  if (!publicClient) {
+    const rpcUrl = resolveServerRpcUrl(chainId);
+    if (!rpcUrl) throw new Error(`No RPC URL configured for chainId=${chainId}.`);
+    publicClient = createPublicClient({
+      chain: createChain(chainId, rpcUrl),
+      transport: http(rpcUrl)
+    });
+  }
+
+  return {
+    client: publicClient,
+    gameHub: getAddress(release.contracts.gameHub) as Address,
+    latestBlock: await publicClient.getBlockNumber(),
+    release
+  };
+}
+
+function resolveBlockWindow({
+  latestBlock,
+  release,
+  windowBlocks,
+  confirmations
+}: {
+  latestBlock: bigint;
+  release: SSOTRelease;
+  windowBlocks: bigint;
+  confirmations: bigint;
+}) {
+  const toBlock = latestBlock > confirmations ? latestBlock - confirmations : latestBlock;
+  const releaseBlock = BigInt(release.meta?.blockNumber ?? 0);
+  const windowStart = toBlock > windowBlocks ? toBlock - windowBlocks : 0n;
+  return {
+    fromBlock: windowStart > releaseBlock ? windowStart : releaseBlock,
+    toBlock
+  };
+}
+
 export async function queryRecentBets({
   chainId,
   gameId,
@@ -158,29 +229,18 @@ export async function queryRecentBets({
     return { ...cached.response, cached: true };
   }
 
-  const releaseResult = loadEmbeddedRelease(chainId);
-  if (!releaseResult.ok) throw new Error(releaseResult.error);
-  const release = releaseResult.release;
-  const rpcUrl = resolveServerRpcUrl(chainId);
-  if (!rpcUrl) throw new Error(`No RPC URL configured for chainId=${chainId}.`);
-
-  const publicClient =
-    client ??
-    createPublicClient({
-      chain: createChain(chainId, rpcUrl),
-      transport: http(rpcUrl)
-    });
-
-  const latestBlock = await publicClient.getBlockNumber();
-  const toBlock = latestBlock > confirmations ? latestBlock - confirmations : latestBlock;
-  const releaseBlock = BigInt(release.meta?.blockNumber ?? 0);
-  const windowStart = toBlock > windowBlocks ? toBlock - windowBlocks : 0n;
-  const fromBlock = windowStart > releaseBlock ? windowStart : releaseBlock;
-  const gameHub = getAddress(release.contracts.gameHub) as Address;
+  const loaded = await loadGameHubClient({ chainId, client });
+  const { fromBlock, toBlock } = resolveBlockWindow({
+    confirmations,
+    latestBlock: loaded.latestBlock,
+    release: loaded.release,
+    windowBlocks
+  });
+  const gameHub = loaded.gameHub;
   const logs: Array<EventLogLike & { eventName: GameHubEventName }> = [];
 
   for (const eventName of GAME_HUB_EVENTS) {
-    const eventLogs = (await publicClient.getLogs({
+    const eventLogs = (await loaded.client.getLogs({
       address: gameHub,
       event: getEventAbi(eventName),
       fromBlock,
@@ -200,6 +260,99 @@ export async function queryRecentBets({
     chainId,
     fromBlock: Number(fromBlock),
     generatedAt: timestamp,
+    rows: rows.slice(0, normalizedLimit),
+    source: "rpc-window",
+    toBlock: Number(toBlock)
+  };
+  recentBetsCache.set(cacheKey, { expiresAt: timestamp + cacheTtlMs, response });
+  return response;
+}
+
+export async function queryPlayerBets({
+  chainId,
+  player,
+  limit,
+  client,
+  now = () => Date.now()
+}: {
+  chainId: number;
+  player: string;
+  limit?: number;
+  client?: PublicClient;
+  now?: () => number;
+}): Promise<PlayerBetsResponse> {
+  const normalizedLimit = clampPlayerBetsLimit(limit);
+  const normalizedPlayer = normalizePlayerAddress(player);
+  const cacheTtlMs = numberEnv("PLAYER_BETS_CACHE_TTL_MS", DEFAULT_CACHE_TTL_MS);
+  const windowBlocks = BigInt(numberEnv("PLAYER_BETS_WINDOW_BLOCKS", DEFAULT_PLAYER_WINDOW_BLOCKS));
+  const confirmations = BigInt(numberEnv("PLAYER_BETS_CONFIRMATIONS", DEFAULT_CONFIRMATIONS));
+  const cacheKey = [
+    "player",
+    chainId,
+    normalizedPlayer.toLowerCase(),
+    normalizedLimit,
+    windowBlocks
+  ].join(":");
+  const cached = recentBetsCache.get(cacheKey);
+  const timestamp = now();
+  if (cached && cached.expiresAt > timestamp) {
+    return { ...(cached.response as PlayerBetsResponse), cached: true };
+  }
+
+  const loaded = await loadGameHubClient({ chainId, client });
+  const { fromBlock, toBlock } = resolveBlockWindow({
+    confirmations,
+    latestBlock: loaded.latestBlock,
+    release: loaded.release,
+    windowBlocks
+  });
+  const gameHub = loaded.gameHub;
+
+  const placedLogs = (await loaded.client.getLogs({
+    address: gameHub,
+    args: { player: normalizedPlayer },
+    event: getEventAbi("BetPlaced"),
+    fromBlock,
+    toBlock
+  })) as EventLogLike[];
+  const betIds = new Set(
+    placedLogs
+      .map((log) => String(log.args?.positionId ?? log.args?.betId ?? log.args?.id ?? ""))
+      .filter(Boolean)
+  );
+  const logs: Array<EventLogLike & { eventName: GameHubEventName }> = placedLogs.map((log) => ({
+    ...log,
+    eventName: "BetPlaced"
+  }));
+
+  if (betIds.size > 0) {
+    for (const eventName of GAME_HUB_EVENTS.filter((name) => name !== "BetPlaced")) {
+      const eventLogs = (await loaded.client.getLogs({
+        address: gameHub,
+        event: getEventAbi(eventName),
+        fromBlock,
+        toBlock
+      })) as EventLogLike[];
+      logs.push(
+        ...eventLogs
+          .filter((log) =>
+            betIds.has(String(log.args?.positionId ?? log.args?.betId ?? log.args?.id ?? ""))
+          )
+          .map((log) => ({ ...log, eventName }))
+      );
+    }
+  }
+
+  const rows = foldRecentBetLogs({ chainId, gameHub, logs }).filter(
+    (row) => row.player?.toLowerCase() === normalizedPlayer.toLowerCase()
+  );
+  const response: PlayerBetsResponse = {
+    schemaVersion: 1,
+    cached: false,
+    chainId,
+    fromBlock: Number(fromBlock),
+    generatedAt: timestamp,
+    player: normalizedPlayer,
     rows: rows.slice(0, normalizedLimit),
     source: "rpc-window",
     toBlock: Number(toBlock)

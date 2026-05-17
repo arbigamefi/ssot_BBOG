@@ -22,8 +22,17 @@ vi.mock("../../../../ssot/release/ReleaseProvider", () => ({
   useRelease: () => ({ release: state.release })
 }));
 
-vi.mock("../../../../features/betting/useBets", () => ({
-  useBets: () => ({ data: state.bets, isLoading: state.loading })
+vi.mock("../../../../ssot/sdk", () => ({
+  useSSOTSDK: () => ({ sdk: { account: "0x1111111111111111111111111111111111111111" } })
+}));
+
+vi.mock("../../../../features/betting/usePlayerBets", () => ({
+  usePlayerBets: () => ({
+    data: state.bets,
+    isLoading: state.loading,
+    localRows: state.bets,
+    serverRows: []
+  })
 }));
 
 vi.mock("../../../../components/PageTransition", () => ({

@@ -90,6 +90,8 @@ Neutral:
 - [x] ADR accepted.
 - [x] `/api/bets/recent` implemented and tested.
 - [x] Home/casino global feed no longer depends on browser-local `useBets`.
+- [x] `/api/bets/player/[address]` implemented as a cold-start accelerator.
+- [x] Portfolio activity merges player API rows with local replay rows.
 - [ ] Future persistent cache decision documented before mainnet.
 
 ## 9. References

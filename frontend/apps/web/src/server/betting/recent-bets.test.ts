@@ -1,6 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { clampRecentBetsLimit, foldRecentBetLogs, normalizeGameId } from "./recent-bets";
+import {
+  clampRecentBetsLimit,
+  clampPlayerBetsLimit,
+  foldRecentBetLogs,
+  normalizeGameId,
+  normalizePlayerAddress,
+  queryPlayerBets
+} from "./recent-bets";
 
 const GAME_ID = `0x${"11".repeat(32)}` as const;
 const PLAYER = "0x2222222222222222222222222222222222222222" as const;
@@ -17,6 +24,14 @@ describe("recent bets server aggregation", () => {
     expect(clampRecentBetsLimit(0)).toBe(20);
     expect(clampRecentBetsLimit(3.8)).toBe(3);
     expect(clampRecentBetsLimit(500)).toBe(50);
+    expect(clampPlayerBetsLimit(undefined)).toBe(100);
+    expect(clampPlayerBetsLimit(500)).toBe(500);
+    expect(clampPlayerBetsLimit(999)).toBe(500);
+  });
+
+  it("normalizes and validates player addresses", () => {
+    expect(normalizePlayerAddress(PLAYER)).toBe(PLAYER);
+    expect(() => normalizePlayerAddress("0x1234")).toThrow("player");
   });
 
   it("folds GameHub logs into terminal recent bet rows", () => {
@@ -71,6 +86,75 @@ describe("recent bets server aggregation", () => {
       player: PLAYER,
       state: "finalized",
       updatedBlock: 12
+    });
+  });
+
+  it("queries player placed logs and folds matching terminal events", async () => {
+    const getLogs = vi
+      .fn()
+      .mockResolvedValueOnce([
+        {
+          args: {
+            asset: "0x4444444444444444444444444444444444444444",
+            gameId: GAME_ID,
+            player: PLAYER,
+            positionId: 8n
+          },
+          blockNumber: 20n,
+          logIndex: 1,
+          transactionHash: "0xaaa"
+        }
+      ])
+      .mockResolvedValueOnce([
+        {
+          args: {
+            positionId: 8n,
+            randomHash: `0x${"55".repeat(32)}`,
+            requestId: 99n
+          },
+          blockNumber: 21n,
+          logIndex: 2,
+          transactionHash: "0xbbb"
+        },
+        {
+          args: { positionId: 9n, requestId: 100n },
+          blockNumber: 21n,
+          logIndex: 3,
+          transactionHash: "0xddd"
+        }
+      ])
+      .mockResolvedValueOnce([
+        {
+          args: {
+            positionId: 8n,
+            payoutGross: 20n,
+            payoutNet: 19n
+          },
+          blockNumber: 22n,
+          logIndex: 4,
+          transactionHash: "0xccc"
+        }
+      ])
+      .mockResolvedValueOnce([]);
+
+    const response = await queryPlayerBets({
+      chainId: 84532,
+      client: {
+        getBlockNumber: vi.fn().mockResolvedValue(41_600_000n),
+        getLogs
+      } as any,
+      limit: 10,
+      now: () => 1234,
+      player: PLAYER
+    });
+
+    expect(response.player).toBe(PLAYER);
+    expect(response.rows).toHaveLength(1);
+    expect(response.rows[0]).toMatchObject({
+      betId: "8",
+      lastEventName: "BetFinalized",
+      player: PLAYER,
+      state: "finalized"
     });
   });
 });
