@@ -33,7 +33,7 @@ export function useRecentBets({
       });
       const body = (await response.json()) as RecentBetsResponse | { error?: { message?: string } };
       if (!response.ok) {
-        throw new Error("error" in body ? (body.error?.message ?? errorMessage) : errorMessage);
+        throw new Error(errorMessage);
       }
       return (body as RecentBetsResponse).rows;
     },

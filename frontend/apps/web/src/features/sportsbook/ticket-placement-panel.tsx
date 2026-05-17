@@ -318,10 +318,7 @@ export function SportsbookTicketPlacementPanel({
         | SignedOddsSnapshotResponse
         | { error?: { message?: string } };
       if (!response.ok) {
-        throw new Error(
-          ("error" in body && body.error?.message) ||
-            t("sportsbook.ticketPlacement.status.providerOddsRequestFailed")
-        );
+        throw new Error(t("sportsbook.ticketPlacement.status.providerOddsRequestFailed"));
       }
       const signed = body as SignedOddsSnapshotResponse;
       setForm((current) => ({

@@ -37,7 +37,7 @@ export function usePlayerBets({
       });
       const body = (await response.json()) as PlayerBetsResponse | { error?: { message?: string } };
       if (!response.ok) {
-        throw new Error("error" in body ? (body.error?.message ?? errorMessage) : errorMessage);
+        throw new Error(errorMessage);
       }
       return (body as PlayerBetsResponse).rows;
     },
