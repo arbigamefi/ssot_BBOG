@@ -48,10 +48,7 @@ function keeperEnv() {
   env.KEEPER_PRIVATE_KEY ??= env.PRIVATE_KEY;
   env.KEEPER_POLL_INTERVAL_SECONDS ??= "5";
   env.KEEPER_SCAN_CHUNK_BLOCKS ??= "10";
-  env.KEEPER_HEALTH_PATH ??= path.join(
-    FRONTEND_ROOT,
-    "apps/web/public/ops/casino-keeper-health.json"
-  );
+  env.KEEPER_HEALTH_PATH ??= path.join(FRONTEND_ROOT, ".runtime/casino-keeper-health.json");
 
   return env;
 }

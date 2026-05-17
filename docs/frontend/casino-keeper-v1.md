@@ -57,10 +57,11 @@ snapshot after startup, enqueue, scan, finalize, and heartbeat events. For local
 operator visibility the recommended path is:
 
 ```bash
-KEEPER_HEALTH_PATH=frontend/apps/web/public/ops/casino-keeper-health.json
+KEEPER_HEALTH_PATH=frontend/.runtime/casino-keeper-health.json
 ```
 
-The web app then reads `/ops/casino-keeper-health.json` from the Ops page. In a
+The web app then reads `/ops/casino-keeper-health.json` from the Ops page. Keep
+the snapshot outside `apps/web/public` because that URL is served by a Next route. In a
 hosted deployment, mount the same JSON behind an authenticated ops-only route or
 object-store URL; do not expose keeper private keys, RPC credentials, or raw
 environment values.

@@ -12,7 +12,7 @@ function repoRoot() {
 }
 
 function defaultHealthPath() {
-  return path.join(process.cwd(), "public/ops/casino-keeper-health.json");
+  return path.resolve(process.cwd(), "../../.runtime/casino-keeper-health.json");
 }
 
 function healthPathCandidates() {
