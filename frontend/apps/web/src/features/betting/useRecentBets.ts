@@ -8,11 +8,13 @@ import type { RecentBetsResponse } from "./recent-bets";
 export function useRecentBets({
   enabled = true,
   gameId,
-  limit = 20
+  limit = 20,
+  errorMessage = "Recent bets failed"
 }: {
   enabled?: boolean;
   gameId?: string;
   limit?: number;
+  errorMessage?: string;
 } = {}) {
   const { chainId } = useRelease();
 
@@ -31,9 +33,7 @@ export function useRecentBets({
       });
       const body = (await response.json()) as RecentBetsResponse | { error?: { message?: string } };
       if (!response.ok) {
-        throw new Error(
-          "error" in body ? (body.error?.message ?? "Recent bets failed") : "Recent bets failed"
-        );
+        throw new Error("error" in body ? (body.error?.message ?? errorMessage) : errorMessage);
       }
       return (body as RecentBetsResponse).rows;
     },

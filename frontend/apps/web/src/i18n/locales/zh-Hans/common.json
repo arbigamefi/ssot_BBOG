@@ -12,6 +12,8 @@
       "boundaryTitle": "页面出现错误",
       "unexpected": "发生了非预期错误。",
       "transactionFailed": "交易失败",
+      "recentBetsFailed": "最近投注读取失败",
+      "playerBetsFailed": "玩家投注读取失败",
       "errorId": "错误 ID: {digest}",
       "tryAgain": "重试"
     }
@@ -1637,6 +1639,9 @@
     }
   },
   "marketing": {
+    "errors": {
+      "recentBetsFailed": "最近活动加载失败"
+    },
     "format": {
       "syncing": "同步中",
       "awaitingReserveSync": "等待储备同步",

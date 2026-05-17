@@ -11,11 +11,13 @@ import type { PlayerBetsResponse } from "./recent-bets";
 export function usePlayerBets({
   enabled = true,
   limit = 50,
-  player
+  player,
+  errorMessage = "Player bets failed"
 }: {
   enabled?: boolean;
   limit?: number;
   player?: string;
+  errorMessage?: string;
 }) {
   const { chainId } = useRelease();
   const { db } = useSSOTRuntime();
@@ -35,9 +37,7 @@ export function usePlayerBets({
       });
       const body = (await response.json()) as PlayerBetsResponse | { error?: { message?: string } };
       if (!response.ok) {
-        throw new Error(
-          "error" in body ? (body.error?.message ?? "Player bets failed") : "Player bets failed"
-        );
+        throw new Error("error" in body ? (body.error?.message ?? errorMessage) : errorMessage);
       }
       return (body as PlayerBetsResponse).rows;
     },

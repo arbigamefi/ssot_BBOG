@@ -33,7 +33,10 @@ export function HomePageClient() {
   const locale = useLocale();
   const { release } = useRelease();
   const { sdk, ready } = useSSOTSDK();
-  const { data: latestBets = [] } = useRecentBets({ limit: 5 });
+  const { data: latestBets = [] } = useRecentBets({
+    errorMessage: t("errors.recentBetsFailed"),
+    limit: 5
+  });
 
   const { data: assetOverviews = [] } = useQuery({
     queryKey: ["ssot", "landing", "asset-overview", release?.releaseDigest],

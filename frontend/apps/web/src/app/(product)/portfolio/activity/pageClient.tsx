@@ -35,7 +35,11 @@ export function PortfolioActivityPageClient() {
     isLoading,
     localRows,
     serverRows
-  } = usePlayerBets({ limit: 500, player: sdk?.account });
+  } = usePlayerBets({
+    errorMessage: t("app.errors.playerBetsFailed"),
+    limit: 500,
+    player: sdk?.account
+  });
   const [statusFilter, setStatusFilter] = React.useState<BetStatusFilter>("all");
 
   const gameLabelById = React.useMemo(() => {

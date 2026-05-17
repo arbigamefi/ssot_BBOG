@@ -86,6 +86,7 @@ export function GamePageClient({ slug }: { slug: string }) {
 
   const recentBetsQuery = useRecentBets({
     enabled: Boolean(game?.gameId),
+    errorMessage: t("app.errors.recentBetsFailed"),
     gameId: game?.gameId,
     limit: 12
   });

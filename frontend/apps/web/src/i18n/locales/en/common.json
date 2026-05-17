@@ -12,6 +12,8 @@
       "boundaryTitle": "Something went wrong",
       "unexpected": "An unexpected error occurred.",
       "transactionFailed": "Transaction failed",
+      "recentBetsFailed": "Recent bets failed",
+      "playerBetsFailed": "Player bets failed",
       "errorId": "Error ID: {digest}",
       "tryAgain": "Try again"
     }
@@ -1637,6 +1639,9 @@
     }
   },
   "marketing": {
+    "errors": {
+      "recentBetsFailed": "Recent activity failed to load"
+    },
     "format": {
       "syncing": "Syncing",
       "awaitingReserveSync": "Awaiting reserve sync",
