@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { BetRow } from "@ssot/ssot/indexer";
 import type { Address } from "@ssot/ssot/sdk";
 
-import { useBets } from "../../features/betting/useBets";
+import { useRecentBets } from "../../features/betting/useRecentBets";
 import { getCatalogRooms } from "../../features/casino/catalog";
 import {
   formatTokenAmount,
@@ -29,7 +29,7 @@ import { useSSOTSDK } from "../../ssot/sdk";
 export function HomePageClient() {
   const { release } = useRelease();
   const { sdk, ready } = useSSOTSDK();
-  const { data: latestBets = [] } = useBets(5);
+  const { data: latestBets = [] } = useRecentBets({ limit: 5 });
 
   const { data: assetOverviews = [] } = useQuery({
     queryKey: ["ssot", "landing", "asset-overview", release?.releaseDigest],

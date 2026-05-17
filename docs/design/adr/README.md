@@ -11,6 +11,7 @@ ADR process.
 | [0001](./0001-no-per-game-color-family.md)                      | No per-game brand color family                | Accepted | 2026-05-14 |
 | [0002](./0002-prototype-routes-out-of-production-app-router.md) | Prototype routes out of production App Router | Accepted | 2026-05-14 |
 | [0003](./0003-single-design-token-source.md)                    | Single design-token source                    | Accepted | 2026-05-14 |
+| [0004](./0004-no-subgraph-for-mvp-indexing.md)                  | No subgraph for MVP indexing                  | Accepted | 2026-05-17 |
 
 ## Conventions
 

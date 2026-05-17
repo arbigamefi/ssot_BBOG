@@ -61,8 +61,8 @@ vi.mock("../../features/ops/useIndexer", () => ({
   })
 }));
 
-vi.mock("../../features/betting/useBets", () => ({
-  useBets: () => ({
+vi.mock("../../features/betting/useRecentBets", () => ({
+  useRecentBets: () => ({
     data: state.bets,
     isLoading: state.betsLoading
   })

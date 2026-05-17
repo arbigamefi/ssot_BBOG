@@ -7,7 +7,7 @@ import type { DomainBet } from "@ssot/ssot";
 import { ProductStateCard } from "../../../../components/ProductStateCard";
 import { PageTransition } from "../../../../components/PageTransition";
 
-import { useBetsByGame } from "../../../../features/betting/useBetsByGame";
+import { useRecentBets } from "../../../../features/betting/useRecentBets";
 import { useIndexer } from "../../../../features/ops/useIndexer";
 import { useRelease } from "../../../../ssot/release/ReleaseProvider";
 import { useSSOTSDK } from "../../../../ssot/sdk";
@@ -61,7 +61,11 @@ export function GamePageClient({ slug }: { slug: string }) {
     return found ? toGameMeta(found) : null;
   }, [release?.gamesMeta, slug]);
 
-  const recentBetsQuery = useBetsByGame(game?.gameId, 12);
+  const recentBetsQuery = useRecentBets({
+    enabled: Boolean(game?.gameId),
+    gameId: game?.gameId,
+    limit: 12
+  });
   const refetchRecentBets = recentBetsQuery.refetch;
   const recentBets = recentBetsQuery.data ?? [];
 

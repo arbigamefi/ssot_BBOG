@@ -17,7 +17,7 @@ without reading any other code.
 ```mermaid
 flowchart TB
   C[On-chain contracts] --> S
-  I[Indexer subgraph] --> S
+  I[Optional shared indexer/API cache] --> S
   S["@ssot/ssot/sdk · @ssot/ssot/indexer"] --> D
   D[features/<vertical>/data] --> A[features/<vertical>/actions]
   D --> P["@ssot/ui/patterns"]
@@ -29,7 +29,7 @@ Layers (read top-down):
 
 | Layer                               | Responsibility                                        | Owner package      |
 | ----------------------------------- | ----------------------------------------------------- | ------------------ |
-| Source                              | Chain RPC + indexer subgraph                          | external           |
+| Source                              | Chain RPC + optional shared indexer/API cache         | external           |
 | SDK                                 | typed reads, calldata builders, action calls          | `@ssot/ssot`       |
 | Data hooks (`features/*/data`)      | query keys, cache config, view-model mapping          | `apps/web`         |
 | Action hooks (`features/*/actions`) | the tx state machine wrappers from `13-web3-ux.md §5` | `apps/web`         |
