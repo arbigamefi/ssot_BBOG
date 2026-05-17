@@ -4,7 +4,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   GameRoomBetPanel,
-  getPlaceBetButtonLabel,
   isPlaceBetButtonDisabled,
   type GameRoomBetPanelState
 } from "./bet-panel";
@@ -175,17 +174,14 @@ describe("GameRoomBetPanel", () => {
     expect(props.onPlaceBet).toHaveBeenCalledTimes(1);
   });
 
-  it("exposes deterministic CTA label and disabled helpers", () => {
-    expect(getPlaceBetButtonLabel({ hasAccount: false, state: baseState, isPending: false })).toBe(
-      "CONNECT WALLET"
-    );
-    expect(
-      getPlaceBetButtonLabel({
-        hasAccount: true,
-        state: { status: "idle", plan: { preview: { needsApproval: true } } },
-        isPending: false
-      })
-    ).toBe("APPROVE, THEN PLACE BET");
+  it("renders deterministic CTA labels and exposes disabled helpers", () => {
+    cleanup();
+    renderPanel({
+      hasAccount: true,
+      state: { status: "idle", plan: { preview: { needsApproval: true } } }
+    });
+
+    expect(screen.getByRole("button", { name: "APPROVE, THEN PLACE BET" })).toBeDefined();
     expect(
       isPlaceBetButtonDisabled({
         gameSlug: "roulette",

@@ -17,7 +17,7 @@ import { CasinoRoundStatusPanel } from "./round-status-panel";
 import type { CasinoRoundPhase } from "./casino-round";
 
 export type { GameRoomBetPanelState } from "./bet-panel-state";
-export { getPlaceBetButtonLabel, isPlaceBetButtonDisabled } from "./place-bet-button";
+export { isPlaceBetButtonDisabled } from "./place-bet-button";
 
 export function GameRoomBetPanel({
   game,

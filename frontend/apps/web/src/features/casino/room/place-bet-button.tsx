@@ -4,26 +4,6 @@ import { cn } from "@ssot/ui";
 
 import type { GameRoomBetPanelState } from "./bet-panel-state";
 
-export function getPlaceBetButtonLabel({
-  hasAccount,
-  state,
-  isPending
-}: {
-  hasAccount: boolean;
-  state: GameRoomBetPanelState;
-  isPending: boolean;
-}) {
-  if (!hasAccount) return "CONNECT WALLET";
-  if (state.status === "failed") return "TRANSACTION FAILED - RETRY";
-  if (isPending || state.status === "reconciled") return "ROUND IN PROGRESS";
-  if (state.status === "mined") return "BET MINED...";
-  if (state.status === "submitting") return "SIGNING / PLACING...";
-  if (state.plan)
-    return state.plan.preview?.needsApproval ? "APPROVE, THEN PLACE BET" : "PLACE BET";
-  if (state.status === "planning") return "PREPARING ROUND...";
-  return "PLACE BET";
-}
-
 export function isPlaceBetButtonDisabled({
   gameSlug,
   isPending,
