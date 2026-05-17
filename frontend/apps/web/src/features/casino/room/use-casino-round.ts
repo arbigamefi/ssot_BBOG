@@ -69,6 +69,7 @@ export function useCasinoRound({
     refundTimeoutSeconds: release?.refundTimeoutSeconds,
     onTerminal: onRoundTerminal,
     readErrorMessage: t("casino.room.errors.readRoundFailed"),
+    betNotFoundErrorMessage: t("casino.room.errors.roundNotFound"),
     manualSettleErrorMessage: t("casino.room.errors.manualSettleFailed"),
     refundErrorMessage: t("casino.room.errors.refundFailed")
   });

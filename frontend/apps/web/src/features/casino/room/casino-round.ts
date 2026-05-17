@@ -85,6 +85,23 @@ function toUnixMs(value: number | undefined) {
   return value > 1_000_000_000_000 ? value : value * 1_000;
 }
 
+export function isBetNotFoundError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return /\bBetNotFound\b/.test(message);
+}
+
+export function getCasinoRoundReadErrorMessage({
+  error,
+  fallback,
+  betNotFoundFallback
+}: {
+  error: unknown;
+  fallback: string;
+  betNotFoundFallback?: string;
+}) {
+  return isBetNotFoundError(error) ? (betNotFoundFallback ?? fallback) : fallback;
+}
+
 export function useCasinoVrfQuote({
   sdk,
   betCount,
@@ -112,11 +129,11 @@ export function useCasinoVrfQuote({
       .then((quote) => {
         if (!cancelled) setSnapshot({ phase: "ready", quote });
       })
-      .catch((error) => {
+      .catch(() => {
         if (!cancelled) {
           setSnapshot({
             phase: "ready",
-            quoteError: (error as Error)?.message ?? quoteErrorMessage
+            quoteError: quoteErrorMessage
           });
         }
       });
@@ -139,6 +156,7 @@ export function useCasinoRoundWatcher({
   softVrfTimeoutMs = CASINO_ROUND_SOFT_VRF_TIMEOUT_MS,
   manualSettleDelayMs = CASINO_ROUND_MANUAL_SETTLE_DELAY_MS,
   readErrorMessage = "—",
+  betNotFoundErrorMessage,
   manualSettleErrorMessage = "—",
   refundErrorMessage = "—"
 }: {
@@ -151,6 +169,7 @@ export function useCasinoRoundWatcher({
   softVrfTimeoutMs?: number;
   manualSettleDelayMs?: number;
   readErrorMessage?: string;
+  betNotFoundErrorMessage?: string;
   manualSettleErrorMessage?: string;
   refundErrorMessage?: string;
 }) {
@@ -204,7 +223,11 @@ export function useCasinoRoundWatcher({
           setSnapshot((current) => ({
             ...current,
             phase: "failed",
-            error: (error as Error)?.message ?? readErrorMessage
+            error: getCasinoRoundReadErrorMessage({
+              error,
+              fallback: readErrorMessage,
+              betNotFoundFallback: betNotFoundErrorMessage
+            })
           }));
         }
       }
@@ -222,6 +245,7 @@ export function useCasinoRoundWatcher({
     betId,
     onTerminal,
     pollIntervalMs,
+    betNotFoundErrorMessage,
     readErrorMessage,
     refundTimeoutSeconds,
     softVrfTimeoutMs,
