@@ -34,6 +34,7 @@ export async function executeGamePlaceBetAction({
   stopGain,
   stopLoss,
   diceTarget,
+  diceDirection,
   coinSide,
   rouletteSpots,
   kenoSpots,
@@ -54,6 +55,7 @@ export async function executeGamePlaceBetAction({
   stopGain: number;
   stopLoss: number;
   diceTarget: number;
+  diceDirection: "under" | "over";
   coinSide: CoinSide;
   rouletteSpots: readonly string[];
   kenoSpots: readonly number[];
@@ -91,6 +93,7 @@ export async function executeGamePlaceBetAction({
       stopGain,
       stopLoss,
       diceTarget,
+      diceDirection,
       coinSide,
       rouletteSpots,
       kenoSpots,

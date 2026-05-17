@@ -36,11 +36,12 @@ const REGISTRY: ReadonlyMap<string, GameEncoder> = new Map<string, GameEncoder>(
     {
       slug: "dice",
       label: "Dice",
-      encode: (p: { cap: number }) => encodeDiceParams(p.cap),
+      encode: (p: { cap?: number; target?: number; direction?: "under" | "over" }) =>
+        encodeDiceParams({ direction: p.direction ?? "over", target: p.target ?? p.cap ?? 50 }),
       decode: (hex: Hex) => decodeDiceParams(hex),
-      defaultParams: { cap: 50 },
-      paramsDescription: "uint8 cap (0-255)",
-    },
+      defaultParams: { direction: "under", target: 50 },
+      paramsDescription: "bool isOver, uint8 target"
+    }
   ],
   [
     "coin-toss",
@@ -50,8 +51,8 @@ const REGISTRY: ReadonlyMap<string, GameEncoder> = new Map<string, GameEncoder>(
       encode: (p: { face: boolean }) => encodeCoinTossParams(p.face),
       decode: (hex: Hex) => decodeCoinTossParams(hex),
       defaultParams: { face: true },
-      paramsDescription: "bool face (true=heads)",
-    },
+      paramsDescription: "bool face (true=heads)"
+    }
   ],
   [
     "roulette",
@@ -61,8 +62,8 @@ const REGISTRY: ReadonlyMap<string, GameEncoder> = new Map<string, GameEncoder>(
       encode: (p: any) => encodeRouletteParams(p),
       decode: (hex: Hex) => decodeRouletteParams(hex),
       defaultParams: { kind: "straight", number: 0 },
-      paramsDescription: "uint40 mask OR (uint8 kind, uint40 payload)",
-    },
+      paramsDescription: "uint40 mask OR (uint8 kind, uint40 payload)"
+    }
   ],
   [
     "keno",
@@ -72,9 +73,9 @@ const REGISTRY: ReadonlyMap<string, GameEncoder> = new Map<string, GameEncoder>(
       encode: (p: { mask: bigint }) => encodeKenoParams(p.mask),
       decode: (hex: Hex) => decodeKenoParams(hex),
       defaultParams: { mask: 0xabcden },
-      paramsDescription: "uint40 mask",
-    },
-  ],
+      paramsDescription: "uint40 mask"
+    }
+  ]
 ]);
 
 /**

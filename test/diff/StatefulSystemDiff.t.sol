@@ -441,8 +441,9 @@ contract StatefulSystemDiff is Test {
             uint256 g = (state >> 40) % 8;
             if (g == 0) {
                 gameId = GAME_DICE;
-                uint8 cap = uint8(bound(uint256(state >> 48), 1, 99));
-                params = abi.encode(cap);
+                bool isOver = ((state >> 47) & 1) == 1;
+                uint8 target = uint8(bound(uint256(state >> 48), 1, 99));
+                params = abi.encode(isOver, target);
             } else if (g == 1) {
                 gameId = GAME_COIN;
                 bool isTails = ((state >> 48) & 1) == 1;

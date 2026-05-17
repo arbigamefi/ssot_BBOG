@@ -5,6 +5,7 @@ import type { GameMeta } from "./model";
 import {
   buildGameParams,
   type CoinSide,
+  type DiceDirection,
   type GameParamsHex,
   type GameParamsMessages
 } from "./params";
@@ -40,6 +41,7 @@ export type BuildGamePlaceBetInputArgs = {
   stopGain: number;
   stopLoss: number;
   diceTarget: number;
+  diceDirection: DiceDirection;
   coinSide: CoinSide;
   rouletteSpots: readonly string[];
   kenoSpots: readonly number[];
@@ -79,6 +81,7 @@ export function buildGamePlaceBetInput({
   stopGain,
   stopLoss,
   diceTarget,
+  diceDirection,
   coinSide,
   rouletteSpots,
   kenoSpots,
@@ -88,6 +91,7 @@ export function buildGamePlaceBetInput({
   const gameParams = buildGameParams({
     slug: game.slug,
     diceTarget,
+    diceDirection,
     coinSide,
     rouletteSpots,
     kenoSpots,

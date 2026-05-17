@@ -24,9 +24,11 @@ import { GameRoomBetPanel } from "../../../../features/casino/room/bet-panel";
 import { useGameWalletBalance, useKenoStrobeSpots } from "../../../../features/casino/room/hooks";
 import {
   useGameResolutionEffect,
+  isCasinoTerminalRoundResult,
   type CasinoRoundResult,
   type GameHistoryEntry
 } from "../../../../features/casino/room/resolution";
+import { readCasinoOutcome, type CasinoOutcome } from "../../../../features/casino/room/outcome";
 import { GameRoomRightPane } from "../../../../features/casino/room/right-pane";
 import { GameRoomShell } from "../../../../features/casino/room/game-room-shell";
 import { useCasinoRound } from "../../../../features/casino/room/use-casino-round";
@@ -98,6 +100,7 @@ export function GamePageClient({ slug }: { slug: string }) {
   const [showResult, setShowResult] = React.useState(false);
   const [terminalBet, setTerminalBet] = React.useState<DomainBet | null>(null);
   const [resultProof, setResultProof] = React.useState<CasinoRoundResult | null>(null);
+  const [casinoOutcome, setCasinoOutcome] = React.useState<CasinoOutcome | null>(null);
 
   // Game-specific params
   const [diceTarget, setDiceTarget] = React.useState<number>(50);
@@ -127,6 +130,7 @@ export function GamePageClient({ slug }: { slug: string }) {
     (bet: DomainBet) => {
       setIsPending(false);
       setTerminalBet(bet);
+      setCasinoOutcome(null);
       void refetchRecentBets?.();
     },
     [refetchRecentBets]
@@ -134,15 +138,18 @@ export function GamePageClient({ slug }: { slug: string }) {
   const handleRoundStart = React.useCallback(() => {
     setTerminalBet(null);
     setResultProof(null);
+    setCasinoOutcome(null);
   }, []);
   const handleRoundReset = React.useCallback(() => {
     setShowResult(false);
     setTerminalBet(null);
     setResultProof(null);
+    setCasinoOutcome(null);
   }, []);
   const handleResultClose = React.useCallback(() => {
     setShowResult(false);
     setResultProof(null);
+    setCasinoOutcome(null);
   }, []);
 
   // B2: Accurate win-chance using proper math per game module
@@ -167,6 +174,7 @@ export function GamePageClient({ slug }: { slug: string }) {
     stopGain,
     stopLoss,
     diceTarget,
+    diceDirection,
     coinSide,
     rouletteSpots,
     kenoSpots,
@@ -192,6 +200,34 @@ export function GamePageClient({ slug }: { slug: string }) {
     setResultProof,
     reset
   });
+
+  React.useEffect(() => {
+    let cancelled = false;
+    if (!terminalBet || !game || !isCasinoTerminalRoundResult(resultProof)) {
+      setCasinoOutcome(null);
+      return;
+    }
+
+    void readCasinoOutcome({
+      gameHub: sdk?.gameHub,
+      bet: terminalBet,
+      gameSlug: game.slug
+    }).then((outcome) => {
+      if (cancelled) return;
+      setCasinoOutcome(outcome);
+
+      if (outcome?.kind === "dice") setResultNum(outcome.rolls.at(-1)?.value ?? null);
+      if (outcome?.kind === "coin-toss") {
+        setResultNum(outcome.rolls.at(-1)?.value === "HEADS" ? 1 : 0);
+      }
+      if (outcome?.kind === "roulette") setResultNum(outcome.rolls.at(-1)?.value ?? null);
+      if (outcome?.kind === "keno") setKenoResultDrawn(outcome.draws.at(-1)?.numbers ?? []);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [game, resultProof, sdk?.gameHub, terminalBet]);
 
   if (!release || !game)
     return (
@@ -270,6 +306,7 @@ export function GamePageClient({ slug }: { slug: string }) {
       kenoSpots={kenoSpots}
       animatingKenoSpots={animatingKenoSpots}
       kenoResultDrawn={kenoResultDrawn}
+      casinoOutcome={casinoOutcome}
       resultProof={resultProof}
       chainId={chainId}
       assetSymbol="USDC"

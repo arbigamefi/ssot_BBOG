@@ -239,6 +239,14 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         return betParams[betId];
     }
 
+    function getBetRandomWords(uint256 betId) external view override returns (uint256[] memory) {
+        SSOTTypes.Bet memory b = bets[betId];
+        if (b.state == SSOTTypes.BetState.None) revert BetNotFound(betId);
+        bytes memory data = betRandomData[betId];
+        if (data.length == 0) return new uint256[](0);
+        return abi.decode(data, (uint256[]));
+    }
+
     function getDeltaSkyline(uint256 betId) external view override returns (bytes memory) {
         SSOTTypes.Bet memory b = bets[betId];
         if (b.state == SSOTTypes.BetState.None) revert BetNotFound(betId);

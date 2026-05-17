@@ -92,24 +92,31 @@ describe("game room params", () => {
     const dice = buildGameParams({
       slug: "dice",
       diceTarget: 55,
+      diceDirection: "under",
       coinSide: "HEADS",
       rouletteSpots: [],
       kenoSpots: []
     });
-    expect(dice.ok && decodeDiceParams(dice.params)).toEqual({ cap: 55 });
+    expect(dice.ok && decodeDiceParams(dice.params)).toEqual({
+      cap: 55,
+      direction: "under",
+      target: 55
+    });
 
     const coin = buildGameParams({
       slug: "coin-toss",
       diceTarget: 50,
+      diceDirection: "under",
       coinSide: "TAILS",
       rouletteSpots: [],
       kenoSpots: []
     });
-    expect(coin.ok && decodeCoinTossParams(coin.params)).toEqual({ face: false });
+    expect(coin.ok && decodeCoinTossParams(coin.params)).toEqual({ face: true });
 
     const roulette = buildGameParams({
       slug: "roulette",
       diceTarget: 50,
+      diceDirection: "under",
       coinSide: "HEADS",
       rouletteSpots: ["1st 12"],
       kenoSpots: []
@@ -122,6 +129,7 @@ describe("game room params", () => {
     const keno = buildGameParams({
       slug: "keno",
       diceTarget: 50,
+      diceDirection: "under",
       coinSide: "HEADS",
       rouletteSpots: [],
       kenoSpots: [1, 40]
@@ -134,6 +142,7 @@ describe("game room params", () => {
       buildGameParams({
         slug: "roulette",
         diceTarget: 50,
+        diceDirection: "under",
         coinSide: "HEADS",
         rouletteSpots: [],
         kenoSpots: []
@@ -146,6 +155,7 @@ describe("game room params", () => {
       buildGameParams({
         slug: "keno",
         diceTarget: 50,
+        diceDirection: "under",
         coinSide: "HEADS",
         rouletteSpots: [],
         kenoSpots: []
@@ -158,6 +168,7 @@ describe("game room params", () => {
       buildGameParams({
         slug: "roulette",
         diceTarget: 50,
+        diceDirection: "under",
         coinSide: "HEADS",
         rouletteSpots: [],
         kenoSpots: [],

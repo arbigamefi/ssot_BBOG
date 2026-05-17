@@ -15,8 +15,8 @@ describe("encoding", () => {
   });
 
   it("dice roundtrip", () => {
-    const hex = encodeDiceParams(42);
-    expect(decodeDiceParams(hex)).toEqual({ cap: 42 });
+    const hex = encodeDiceParams({ direction: "under", target: 42 });
+    expect(decodeDiceParams(hex)).toEqual({ cap: 42, direction: "under", target: 42 });
   });
 
   it("cointoss roundtrip", () => {

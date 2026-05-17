@@ -31,7 +31,7 @@ describe("GameEncoderRegistry", () => {
 
     it("has correct defaults", () => {
       const enc = requireGameEncoder("dice");
-      expect(enc.defaultParams.cap).toBe(50);
+      expect(enc.defaultParams).toEqual({ direction: "under", target: 50 });
     });
 
     it("has correct label", () => {

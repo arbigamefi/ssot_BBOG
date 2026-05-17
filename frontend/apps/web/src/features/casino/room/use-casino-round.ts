@@ -9,7 +9,7 @@ import { usePlaceBetStepper } from "../../betting/usePlaceBetStepper";
 import type { GameMeta } from "./model";
 import { executeGamePlaceBetAction } from "./place-bet-action";
 import type { GameRoomRelease } from "./place-bet";
-import type { CoinSide } from "./params";
+import type { CoinSide, DiceDirection } from "./params";
 import { useBetStepperFailureToast, useVrfTimeoutToast } from "./feedback";
 import { useCasinoRoundWatcher, useCasinoVrfQuote, type CasinoRoundPhase } from "./casino-round";
 
@@ -24,6 +24,7 @@ export type UseCasinoRoundArgs = {
   stopGain: number;
   stopLoss: number;
   diceTarget: number;
+  diceDirection: DiceDirection;
   coinSide: CoinSide;
   rouletteSpots: readonly string[];
   kenoSpots: readonly number[];
@@ -43,6 +44,7 @@ export function useCasinoRound({
   stopGain,
   stopLoss,
   diceTarget,
+  diceDirection,
   coinSide,
   rouletteSpots,
   kenoSpots,
@@ -115,6 +117,7 @@ export function useCasinoRound({
       stopGain,
       stopLoss,
       diceTarget,
+      diceDirection,
       coinSide,
       rouletteSpots,
       kenoSpots,
@@ -129,6 +132,7 @@ export function useCasinoRound({
     betAmount,
     betCount,
     coinSide,
+    diceDirection,
     diceTarget,
     executeNow,
     game,

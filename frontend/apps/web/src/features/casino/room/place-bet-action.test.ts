@@ -73,6 +73,7 @@ function baseArgs(overrides: Partial<Parameters<typeof executeGamePlaceBetAction
     stopGain: 0,
     stopLoss: 0,
     diceTarget: 50,
+    diceDirection: "under" as const,
     coinSide: "HEADS" as const,
     rouletteSpots: [],
     kenoSpots: [],

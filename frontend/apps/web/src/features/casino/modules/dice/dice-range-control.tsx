@@ -63,7 +63,7 @@ export function DiceRangeControl({
             <div className="flex items-center gap-2 rounded-lg border border-border-soft bg-surface-2 px-4 py-1.5 font-mono">
               <span className="text-fg-subtle">0</span>
               <span className="font-bold text-brand">
-                {diceDirection === "under" ? `< ${diceTarget}` : `> ${diceTarget}`}
+                {diceDirection === "under" ? `≤ ${diceTarget}` : `> ${diceTarget}`}
               </span>
               <span className="text-fg-subtle">100</span>
             </div>

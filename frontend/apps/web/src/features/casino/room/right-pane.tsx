@@ -9,6 +9,7 @@ import {
   type GameHistoryEntry,
   type RecentBetSummary
 } from "./history-widget";
+import type { CasinoOutcome } from "./outcome";
 import type { CoinSide, DiceDirection } from "./params";
 import { GameRoomResultOverlay } from "./result-overlay";
 import { isCasinoTerminalRoundResult, type CasinoRoundResult } from "./resolution";
@@ -68,6 +69,7 @@ export function GameRoomRightPane({
   kenoSpots,
   animatingKenoSpots,
   kenoResultDrawn,
+  casinoOutcome,
   resultProof,
   chainId,
   assetSymbol,
@@ -95,6 +97,7 @@ export function GameRoomRightPane({
   kenoSpots: readonly number[];
   animatingKenoSpots: readonly number[];
   kenoResultDrawn: readonly number[];
+  casinoOutcome?: CasinoOutcome | null;
   resultProof: CasinoRoundResult | null;
   chainId?: number;
   assetSymbol?: string;
@@ -183,6 +186,7 @@ export function GameRoomRightPane({
           rouletteSpots={rouletteSpots}
           kenoSpots={kenoSpots}
           kenoResultDrawn={kenoResultDrawn}
+          casinoOutcome={casinoOutcome}
           onClose={onResultClose}
         />
       )}

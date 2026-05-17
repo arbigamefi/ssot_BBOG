@@ -54,6 +54,7 @@ describe("game room place bet builder", () => {
       stopGain: 50,
       stopLoss: 10,
       diceTarget: 55,
+      diceDirection: "under",
       coinSide: "HEADS",
       rouletteSpots: [],
       kenoSpots: []
@@ -66,7 +67,11 @@ describe("game room place bet builder", () => {
     expect(result.input.poolId).toBe(1);
     expect(result.input.betCount).toBe(3);
     expect(result.input.stake).toBe(75_000_000n);
-    expect(decodeDiceParams(result.input.params)).toEqual({ cap: 55 });
+    expect(decodeDiceParams(result.input.params)).toEqual({
+      cap: 55,
+      direction: "under",
+      target: 55
+    });
     expect(decodeStakeSpec(result.input.stakeSpec)).toEqual({
       amountPerRoll: 25_000_000n,
       betCount: 3,
@@ -84,6 +89,7 @@ describe("game room place bet builder", () => {
       stopGain: 0,
       stopLoss: 0,
       diceTarget: 50,
+      diceDirection: "under",
       coinSide: "HEADS",
       rouletteSpots: [],
       kenoSpots: []
@@ -104,6 +110,7 @@ describe("game room place bet builder", () => {
       stopGain: 0,
       stopLoss: 0,
       diceTarget: 50,
+      diceDirection: "under",
       coinSide: "HEADS",
       rouletteSpots: [],
       kenoSpots: []
@@ -124,6 +131,7 @@ describe("game room place bet builder", () => {
       stopGain: 0,
       stopLoss: 0,
       diceTarget: 50,
+      diceDirection: "under",
       coinSide: "HEADS",
       rouletteSpots: [],
       kenoSpots: [],

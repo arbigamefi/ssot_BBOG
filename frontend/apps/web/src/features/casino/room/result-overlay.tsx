@@ -5,6 +5,7 @@ import { cn } from "@ssot/ui";
 
 import { formatUnits } from "../../betting/model/units";
 import { formatNativeFee } from "./casino-round";
+import type { CasinoOutcome } from "./outcome";
 import type { CoinSide, DiceDirection } from "./params";
 import type { CasinoTerminalRoundResult } from "./resolution";
 
@@ -95,6 +96,7 @@ type GameResultContext = {
   rouletteSpots: readonly string[];
   kenoSpots: readonly number[];
   kenoResultDrawn: readonly number[];
+  casinoOutcome?: CasinoOutcome | null;
 };
 
 type DetailTone = "win" | "loss" | "accent" | "neutral";
@@ -116,6 +118,66 @@ function formatCoinSide(side: CoinSide, t: Translate) {
 }
 
 function getGameResultRows(context: GameResultContext, t: Translate) {
+  if (context.casinoOutcome?.kind === "dice") {
+    return [
+      {
+        label: t("casino.room.result.facts.diceTarget"),
+        value: `${context.casinoOutcome.direction === "under" ? "≤" : ">"} ${context.casinoOutcome.target}`
+      },
+      {
+        label: t("casino.room.result.facts.diceNumber"),
+        value: context.casinoOutcome.rolls.map((roll) => roll.value).join(", "),
+        tone: context.casinoOutcome.rolls.some((roll) => roll.won) ? "win" : "loss"
+      }
+    ] satisfies GameResultRow[];
+  }
+
+  if (context.casinoOutcome?.kind === "coin-toss") {
+    return [
+      {
+        label: t("casino.room.result.facts.coinChoice"),
+        value: formatCoinSide(context.casinoOutcome.chosen, t)
+      },
+      {
+        label: t("casino.room.result.facts.coinDrawn"),
+        value: context.casinoOutcome.rolls.map((roll) => formatCoinSide(roll.value, t)).join(", "),
+        tone: context.casinoOutcome.rolls.some((roll) => roll.won) ? "win" : "loss"
+      }
+    ] satisfies GameResultRow[];
+  }
+
+  if (context.casinoOutcome?.kind === "roulette") {
+    return [
+      {
+        label: t("casino.room.result.facts.rouletteBet"),
+        value: formatList(context.casinoOutcome.selectedNumbers)
+      },
+      {
+        label: t("casino.room.result.facts.rouletteWinningNumber"),
+        value: context.casinoOutcome.rolls.map((roll) => roll.value).join(", "),
+        tone: context.casinoOutcome.rolls.some((roll) => roll.won) ? "win" : "loss"
+      }
+    ] satisfies GameResultRow[];
+  }
+
+  if (context.casinoOutcome?.kind === "keno") {
+    return [
+      {
+        label: t("casino.room.result.facts.kenoPicked"),
+        value: formatList(context.casinoOutcome.pickedNumbers)
+      },
+      {
+        label: t("casino.room.result.facts.kenoDrawn"),
+        value: context.casinoOutcome.draws.map((draw) => draw.numbers.join(", ")).join(" / "),
+        tone: context.casinoOutcome.draws.some((draw) => draw.won) ? "win" : "loss"
+      },
+      {
+        label: t("casino.room.result.facts.kenoHits"),
+        value: context.casinoOutcome.draws.map((draw) => draw.hits).join(", ")
+      }
+    ] satisfies GameResultRow[];
+  }
+
   if (context.gameSlug === "dice") {
     const rows: GameResultRow[] = [
       {
@@ -258,6 +320,7 @@ export function GameRoomResultOverlay({
   rouletteSpots,
   kenoSpots,
   kenoResultDrawn,
+  casinoOutcome,
   onClose
 }: {
   result: CasinoTerminalRoundResult;
@@ -272,6 +335,7 @@ export function GameRoomResultOverlay({
   rouletteSpots: readonly string[];
   kenoSpots: readonly number[];
   kenoResultDrawn: readonly number[];
+  casinoOutcome?: CasinoOutcome | null;
   onClose?: () => void;
 }) {
   const t = useTranslations();
@@ -290,7 +354,8 @@ export function GameRoomResultOverlay({
       coinSide,
       rouletteSpots,
       kenoSpots,
-      kenoResultDrawn
+      kenoResultDrawn,
+      casinoOutcome
     },
     t
   );

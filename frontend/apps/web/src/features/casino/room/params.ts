@@ -15,6 +15,7 @@ export type GameParamsHex = `0x${string}`;
 export type BuildGameParamsInput = {
   slug: string;
   diceTarget: number;
+  diceDirection: DiceDirection;
   coinSide: CoinSide;
   rouletteSpots: readonly string[];
   kenoSpots: readonly number[];
@@ -143,11 +144,14 @@ export function calculateGameWinChance(input: {
 
 export function buildGameParams(input: BuildGameParamsInput): BuildGameParamsResult {
   if (input.slug === "dice") {
-    return { ok: true, params: encodeDiceParams(input.diceTarget) };
+    return {
+      ok: true,
+      params: encodeDiceParams({ direction: input.diceDirection, target: input.diceTarget })
+    };
   }
 
   if (input.slug === "coin-toss") {
-    return { ok: true, params: encodeCoinTossParams(input.coinSide === "HEADS") };
+    return { ok: true, params: encodeCoinTossParams(input.coinSide === "TAILS") };
   }
 
   if (input.slug === "roulette") {

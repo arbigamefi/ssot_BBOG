@@ -176,6 +176,8 @@ function seedBet(overrides: Record<string, unknown> = {}) {
     reserved: 1_980_000n,
     amountPerRoll: 1_000_000n,
     betCount: 1,
+    stopGain: 0n,
+    stopLoss: 0n,
     vrfFeePaid: 10_000n,
     vrfFeeCharged: 0n,
     vrfCallbackGasLimit: 220_000,

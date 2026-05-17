@@ -162,6 +162,8 @@ export interface SSOTGameHubAPI {
   referrerOf(player: Address): Promise<Address>;
 
   getBet(betId: bigint): Promise<DomainBet>;
+  getBetParams(betId: bigint): Promise<Hex>;
+  getBetRandomWords(betId: bigint): Promise<bigint[]>;
   getTerminalProof(betId: bigint): Promise<GameHubTerminalProof | null>;
 }
 

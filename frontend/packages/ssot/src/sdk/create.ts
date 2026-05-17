@@ -62,6 +62,23 @@ const GAME_MODULE_ABI = [
   }
 ] as const;
 
+const GAME_HUB_OUTCOME_READ_ABI = [
+  {
+    inputs: [{ name: "positionId", type: "uint256" }],
+    name: "getBetParams",
+    outputs: [{ name: "", type: "bytes" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [{ name: "positionId", type: "uint256" }],
+    name: "getBetRandomWords",
+    outputs: [{ name: "", type: "uint256[]" }],
+    stateMutability: "view",
+    type: "function"
+  }
+] as const;
+
 const GAME_HUB_TERMINAL_PROOF_LOOKBACK_BLOCKS = 250n;
 const GAME_HUB_TERMINAL_PROOF_CHUNK_BLOCKS = 10n;
 
@@ -742,6 +759,8 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         reserved: BigInt(bet.reserved),
         amountPerRoll: BigInt(bet.amountPerRoll),
         betCount: Number(bet.betCount),
+        stopGain: BigInt(bet.stopGain),
+        stopLoss: BigInt(bet.stopLoss),
         vrfFeePaid: BigInt(bet.vrfFeePaid),
         vrfFeeCharged: BigInt(bet.vrfFeeCharged),
         vrfCallbackGasLimit: Number(bet.vrfCallbackGasLimit),
@@ -753,6 +772,25 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         resolvedAt: numberOrUndefined(bet.resolvedAt),
         settledAt: numberOrUndefined(bet.resolvedAt)
       };
+    },
+
+    async getBetParams(betId: bigint): Promise<Hex> {
+      return (await publicClient.readContract({
+        address: gameHubAddress,
+        abi: GAME_HUB_OUTCOME_READ_ABI,
+        functionName: "getBetParams",
+        args: [betId]
+      })) as Hex;
+    },
+
+    async getBetRandomWords(betId: bigint): Promise<bigint[]> {
+      const words = (await publicClient.readContract({
+        address: gameHubAddress,
+        abi: GAME_HUB_OUTCOME_READ_ABI,
+        functionName: "getBetRandomWords",
+        args: [betId]
+      })) as readonly bigint[];
+      return [...words];
     },
 
     async getTerminalProof(betId: bigint): Promise<GameHubTerminalProof | null> {

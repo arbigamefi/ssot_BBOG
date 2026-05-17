@@ -22,6 +22,8 @@ const baseBet: DomainBet = {
   reserved: 20_000n,
   amountPerRoll: 10_000n,
   betCount: 1,
+  stopGain: 0n,
+  stopLoss: 0n,
   vrfFeePaid: 100n,
   vrfFeeCharged: 90n,
   vrfCallbackGasLimit: 320_000,
