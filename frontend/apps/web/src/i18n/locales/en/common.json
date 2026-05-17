@@ -847,6 +847,85 @@
         "refundClaimFailed": "Refund claim failed"
       }
     },
+    "activity": {
+      "common": {
+        "pending": "Pending",
+        "unknownGame": "Unknown game",
+        "asset": "Asset"
+      },
+      "time": {
+        "justNow": "just now",
+        "minutesAgo": "{minutes}m ago",
+        "hoursAgo": "{hours}h ago",
+        "daysAgo": "{days}d ago"
+      },
+      "hero": {
+        "eyebrow": "Activity ledger",
+        "title": "Betting activity.",
+        "description": "Review indexed tickets, settlement state, and capital outcomes without mixing detail actions into the activity surface.",
+        "summary": "Ledger summary",
+        "session": "Indexed browser session"
+      },
+      "metrics": {
+        "indexed": {
+          "label": "Indexed tickets",
+          "connected": "Rows merged from shared cache ({serverRows}) and local replay ({localRows}).",
+          "disconnected": "Connect a wallet to load account-scoped tickets."
+        },
+        "open": {
+          "label": "Open tickets",
+          "detail": "Placed or VRF-ready tickets that still need closure."
+        },
+        "settled": {
+          "label": "Settled outcomes",
+          "detail": "Tickets with final win, loss, refund, or failure state."
+        }
+      },
+      "filters": {
+        "all": {
+          "label": "All",
+          "detail": "Every indexed ticket."
+        },
+        "open": {
+          "label": "Open",
+          "detail": "Placed or waiting for VRF."
+        },
+        "won": {
+          "label": "Won",
+          "detail": "Positive settled tickets."
+        },
+        "lost": {
+          "label": "Lost",
+          "detail": "Loss, refund, or failure states."
+        }
+      },
+      "ledger": {
+        "eyebrow": "Tickets",
+        "title": "Casino ledger",
+        "loading": "Synchronizing ledger.",
+        "empty": "No tickets align with the current filter.",
+        "view": "View",
+        "columns": {
+          "ticket": "Ticket",
+          "module": "Module",
+          "stake": "Stake",
+          "settlement": "Settlement",
+          "status": "Status",
+          "action": "Action"
+        },
+        "mobile": {
+          "stake": "Stake",
+          "settlement": "Settlement",
+          "updated": "Updated"
+        }
+      },
+      "status": {
+        "won": "Won",
+        "closed": "Closed",
+        "settled": "Settled",
+        "open": "Open"
+      }
+    },
     "claims": {
       "common": {
         "pending": "Pending",

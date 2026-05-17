@@ -847,6 +847,85 @@
         "refundClaimFailed": "退款领取失败"
       }
     },
+    "activity": {
+      "common": {
+        "pending": "待读取",
+        "unknownGame": "未知游戏",
+        "asset": "资产"
+      },
+      "time": {
+        "justNow": "刚刚",
+        "minutesAgo": "{minutes} 分钟前",
+        "hoursAgo": "{hours} 小时前",
+        "daysAgo": "{days} 天前"
+      },
+      "hero": {
+        "eyebrow": "活动账本",
+        "title": "投注活动。",
+        "description": "查看已索引票据、结算状态和资金结果，同时把详情操作留在详情页处理。",
+        "summary": "账本摘要",
+        "session": "浏览器会话索引"
+      },
+      "metrics": {
+        "indexed": {
+          "label": "已索引票据",
+          "connected": "合并共享缓存（{serverRows}）和本地重放（{localRows}）的记录。",
+          "disconnected": "连接钱包后加载账户范围内的票据。"
+        },
+        "open": {
+          "label": "未关闭票据",
+          "detail": "已下注或 VRF 已就绪、仍需关闭的票据。"
+        },
+        "settled": {
+          "label": "已结算结果",
+          "detail": "已有最终胜、负、退款或失败状态的票据。"
+        }
+      },
+      "filters": {
+        "all": {
+          "label": "全部",
+          "detail": "所有已索引票据。"
+        },
+        "open": {
+          "label": "未关闭",
+          "detail": "已下注或等待 VRF。"
+        },
+        "won": {
+          "label": "获胜",
+          "detail": "正收益的已结算票据。"
+        },
+        "lost": {
+          "label": "未获胜",
+          "detail": "亏损、退款或失败状态。"
+        }
+      },
+      "ledger": {
+        "eyebrow": "票据",
+        "title": "赌场账本",
+        "loading": "正在同步账本。",
+        "empty": "当前筛选条件下没有票据。",
+        "view": "查看",
+        "columns": {
+          "ticket": "票据",
+          "module": "模块",
+          "stake": "本金",
+          "settlement": "结算",
+          "status": "状态",
+          "action": "操作"
+        },
+        "mobile": {
+          "stake": "本金",
+          "settlement": "结算",
+          "updated": "更新"
+        }
+      },
+      "status": {
+        "won": "获胜",
+        "closed": "已关闭",
+        "settled": "已结算",
+        "open": "未关闭"
+      }
+    },
     "claims": {
       "common": {
         "pending": "待读取",

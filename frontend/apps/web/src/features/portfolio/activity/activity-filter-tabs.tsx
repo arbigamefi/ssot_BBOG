@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useTranslations } from "next-intl";
 
 import { BET_STATUS_TABS } from "./format";
 import type { BetStatusFilter } from "./types";
@@ -10,6 +11,8 @@ export function ActivityFilterTabs({
   active: BetStatusFilter;
   onChange: (value: BetStatusFilter) => void;
 }) {
+  const t = useTranslations();
+
   return (
     <section className="rounded-md border border-border bg-surface-1 p-2 shadow-e2">
       <div className="grid gap-2 sm:grid-cols-4">
@@ -24,8 +27,8 @@ export function ActivityFilterTabs({
                 : "rounded-md px-4 py-3 text-left text-fg-muted transition hover:bg-surface-2 hover:text-fg"
             }
           >
-            <div className="text-xs font-black uppercase tracking-[0.14em]">{tab.label}</div>
-            <div className="mt-1 text-xs leading-5 opacity-80">{tab.detail}</div>
+            <div className="text-xs font-black uppercase tracking-[0.14em]">{t(tab.labelKey)}</div>
+            <div className="mt-1 text-xs leading-5 opacity-80">{t(tab.detailKey)}</div>
           </button>
         ))}
       </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import type { BetRow } from "@ssot/ssot/indexer";
 
 import { PageTransition } from "../../../../components/PageTransition";
@@ -26,6 +27,7 @@ import { useRelease } from "../../../../ssot/release/ReleaseProvider";
 import { useSSOTSDK } from "../../../../ssot/sdk";
 
 export function PortfolioActivityPageClient() {
+  const t = useTranslations();
   const { release } = useRelease();
   const { sdk } = useSSOTSDK();
   const {
@@ -61,10 +63,19 @@ export function PortfolioActivityPageClient() {
           row,
           gameLabelById,
           assetSymbols: assetMaps.symbols,
-          assetDecimals: assetMaps.decimals
+          assetDecimals: assetMaps.decimals,
+          labels: {
+            pending: t("portfolio.activity.common.pending"),
+            unknownGame: t("portfolio.activity.common.unknownGame"),
+            asset: t("portfolio.activity.common.asset"),
+            justNow: t("portfolio.activity.time.justNow"),
+            minutesAgo: (minutes) => t("portfolio.activity.time.minutesAgo", { minutes }),
+            hoursAgo: (hours) => t("portfolio.activity.time.hoursAgo", { hours }),
+            daysAgo: (days) => t("portfolio.activity.time.daysAgo", { days })
+          }
         })
       ),
-    [assetMaps.decimals, assetMaps.symbols, bets, gameLabelById]
+    [assetMaps.decimals, assetMaps.symbols, bets, gameLabelById, t]
   );
 
   const filteredBets = React.useMemo(() => {
@@ -82,24 +93,27 @@ export function PortfolioActivityPageClient() {
     const closed = enrichedBets.filter((item) => isLossStatus(item.status)).length;
     return [
       {
-        label: "Indexed tickets",
+        label: t("portfolio.activity.metrics.indexed.label"),
         value: enrichedBets.length.toLocaleString("en-US"),
         detail: sdk?.account
-          ? `Rows merged from shared cache (${serverRows.length}) and local replay (${localRows.length}).`
-          : "Connect a wallet to load account-scoped tickets."
+          ? t("portfolio.activity.metrics.indexed.connected", {
+              serverRows: serverRows.length,
+              localRows: localRows.length
+            })
+          : t("portfolio.activity.metrics.indexed.disconnected")
       },
       {
-        label: "Open tickets",
+        label: t("portfolio.activity.metrics.open.label"),
         value: open.toLocaleString("en-US"),
-        detail: "Placed or VRF-ready tickets that still need closure."
+        detail: t("portfolio.activity.metrics.open.detail")
       },
       {
-        label: "Settled outcomes",
+        label: t("portfolio.activity.metrics.settled.label"),
         value: (won + closed).toLocaleString("en-US"),
-        detail: "Tickets with final win, loss, refund, or failure state."
+        detail: t("portfolio.activity.metrics.settled.detail")
       }
     ];
-  }, [enrichedBets, localRows.length, sdk?.account, serverRows.length]);
+  }, [enrichedBets, localRows.length, sdk?.account, serverRows.length, t]);
 
   return (
     <PageTransition pageKey="portfolio-activity">
@@ -116,22 +130,32 @@ function enrichBetRow({
   row,
   gameLabelById,
   assetSymbols,
-  assetDecimals
+  assetDecimals,
+  labels
 }: {
   row: BetRow;
   gameLabelById: ReadonlyMap<string, string>;
   assetSymbols: ReadonlyMap<string, string>;
   assetDecimals: ReadonlyMap<string, number>;
+  labels: {
+    pending: string;
+    unknownGame: string;
+    asset: string;
+    justNow: string;
+    minutesAgo: (minutes: number) => string;
+    hoursAgo: (hours: number) => string;
+    daysAgo: (days: number) => string;
+  };
 }): EnrichedBetRow {
   const stake = getBigIntField(row, "stake") ?? 0n;
   const payout = getBigIntField(row, "payout");
   const status = mapBetState(row.state, payout, stake);
   const gameLabel = row.gameId
-    ? (gameLabelById.get(row.gameId.toLowerCase()) ?? shortHex(row.gameId))
-    : "Unknown game";
+    ? (gameLabelById.get(row.gameId.toLowerCase()) ?? shortHex(row.gameId, labels.pending))
+    : labels.unknownGame;
   const assetSymbol = row.asset
-    ? (assetSymbols.get(row.asset.toLowerCase()) ?? shortHex(row.asset))
-    : "Asset";
+    ? (assetSymbols.get(row.asset.toLowerCase()) ?? shortHex(row.asset, labels.pending))
+    : labels.asset;
   const decimals = row.asset ? (assetDecimals.get(row.asset.toLowerCase()) ?? 18) : 18;
 
   return {
@@ -142,7 +166,14 @@ function enrichBetRow({
     decimals,
     stake,
     payout,
-    outcomeLabel: formatOutcome({ status, stake, payout, decimals, symbol: assetSymbol }),
-    relativeTime: formatRelativeTime(row.updatedAt)
+    outcomeLabel: formatOutcome({
+      status,
+      stake,
+      payout,
+      decimals,
+      symbol: assetSymbol,
+      pendingLabel: labels.pending
+    }),
+    relativeTime: formatRelativeTime(row.updatedAt, labels)
   };
 }
