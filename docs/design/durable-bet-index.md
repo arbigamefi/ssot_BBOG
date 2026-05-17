@@ -46,22 +46,35 @@ flowchart TB
 The keeper or a sibling worker owns writes. Web API routes own reads. Browser
 Dexie replay remains the user-verifiable self-check layer.
 
+## 3.1 Deployment Policy
+
+Use Docker Compose for local development, staging canaries, and one-machine
+trial deployments. The repository-provided Compose file runs only Postgres so
+the web app and keeper can keep using the normal `pnpm` development loop.
+
+For mainnet production, prefer a managed Postgres service with automated
+backups, point-in-time restore, disk alerts, and version upgrades. Self-hosting
+Postgres in Docker is acceptable only when the operator owns those controls:
+scheduled backups, restore drills, persistent volumes, monitoring, and a tested
+upgrade path. The keeper and web API connect through the same
+`BET_INDEX_DATABASE_URL` in either model.
+
 ## 4. Tables
 
 ### `gamehub_events`
 
 Raw, idempotent public event facts.
 
-| Column | Type | Notes |
-| --- | --- | --- |
-| `chain_id` | integer | release chain id |
-| `game_hub` | text | source GameHub address |
-| `block_number` | bigint | event block |
-| `tx_hash` | text | transaction hash |
-| `log_index` | integer | log index inside tx |
-| `event_name` | text | `BetPlaced`, `BetRandomReady`, `BetFinalized`, `BetRefunded` |
-| `args_json` | jsonb | normalized event args with bigint as strings |
-| `created_at` | timestamptz | ingestion time |
+| Column         | Type        | Notes                                                        |
+| -------------- | ----------- | ------------------------------------------------------------ |
+| `chain_id`     | integer     | release chain id                                             |
+| `game_hub`     | text        | source GameHub address                                       |
+| `block_number` | bigint      | event block                                                  |
+| `tx_hash`      | text        | transaction hash                                             |
+| `log_index`    | integer     | log index inside tx                                          |
+| `event_name`   | text        | `BetPlaced`, `BetRandomReady`, `BetFinalized`, `BetRefunded` |
+| `args_json`    | jsonb       | normalized event args with bigint as strings                 |
+| `created_at`   | timestamptz | ingestion time                                               |
 
 Primary key: `(chain_id, tx_hash, log_index)`.
 
@@ -69,19 +82,19 @@ Primary key: `(chain_id, tx_hash, log_index)`.
 
 Folded current state, using the same reducer semantics as browser Dexie replay.
 
-| Column | Type | Notes |
-| --- | --- | --- |
-| `chain_id` | integer | release chain id |
-| `bet_id` | text | bigint string |
-| `state` | text | `placed`, `randomReady`, `finalized`, `refunded` |
-| `game_id` | text | nullable |
-| `asset` | text | nullable |
-| `player` | text | nullable wallet address |
-| `placed_block` | bigint | nullable |
-| `updated_block` | bigint | latest folded event block |
-| `last_tx_hash` | text | latest folded event tx |
-| `last_event_name` | text | latest folded event name |
-| `updated_at` | timestamptz | latest fold time |
+| Column            | Type        | Notes                                            |
+| ----------------- | ----------- | ------------------------------------------------ |
+| `chain_id`        | integer     | release chain id                                 |
+| `bet_id`          | text        | bigint string                                    |
+| `state`           | text        | `placed`, `randomReady`, `finalized`, `refunded` |
+| `game_id`         | text        | nullable                                         |
+| `asset`           | text        | nullable                                         |
+| `player`          | text        | nullable wallet address                          |
+| `placed_block`    | bigint      | nullable                                         |
+| `updated_block`   | bigint      | latest folded event block                        |
+| `last_tx_hash`    | text        | latest folded event tx                           |
+| `last_event_name` | text        | latest folded event name                         |
+| `updated_at`      | timestamptz | latest fold time                                 |
 
 Primary key: `(chain_id, bet_id)`.
 
@@ -96,13 +109,13 @@ Indexes:
 
 Replay cursor per source.
 
-| Column | Type | Notes |
-| --- | --- | --- |
-| `chain_id` | integer | release chain id |
-| `source` | text | `gamehub-events` initially |
-| `cursor_key` | text | contract address or logical shard |
-| `block_number` | bigint | last fully processed block |
-| `updated_at` | timestamptz | write time |
+| Column         | Type        | Notes                             |
+| -------------- | ----------- | --------------------------------- |
+| `chain_id`     | integer     | release chain id                  |
+| `source`       | text        | `gamehub-events` initially        |
+| `cursor_key`   | text        | contract address or logical shard |
+| `block_number` | bigint      | last fully processed block        |
+| `updated_at`   | timestamptz | write time                        |
 
 Primary key: `(chain_id, source, cursor_key)`.
 
@@ -137,17 +150,21 @@ best-effort operational telemetry and feed acceleration; they must never block
 
 ## 7. Environment
 
-| Variable | Owner | Meaning |
-| --- | --- | --- |
-| `BET_INDEX_DATABASE_URL` | keeper + web | Postgres connection string |
-| `BET_INDEX_SSL` | keeper + web | optional `true` for managed Postgres SSL |
-| `BET_INDEX_WRITE_ENABLED` | keeper | defaults false until canary |
-| `BET_INDEX_READ_ENABLED` | web | defaults true when database URL exists |
-| `BET_INDEX_FROM_BLOCK` | backfill | optional explicit backfill start block |
-| `BET_INDEX_TO_BLOCK` | backfill | optional explicit backfill end block |
-| `BET_INDEX_CONFIRMATIONS` | backfill | default `2`, caps end block below latest |
-| `BET_INDEX_SCAN_CHUNK_BLOCKS` | backfill | default `10`, safe for Base Sepolia public RPC |
-| `BET_INDEX_DRY_RUN` | backfill | scan and fold into memory without Postgres writes |
+| Variable                      | Owner         | Meaning                                           |
+| ----------------------------- | ------------- | ------------------------------------------------- |
+| `BET_INDEX_DATABASE_URL`      | keeper + web  | Postgres connection string                        |
+| `BET_INDEX_SSL`               | keeper + web  | optional `true` for managed Postgres SSL          |
+| `BET_INDEX_WRITE_ENABLED`     | keeper        | defaults false until canary                       |
+| `BET_INDEX_READ_ENABLED`      | web           | defaults true when database URL exists            |
+| `BET_INDEX_FROM_BLOCK`        | backfill      | optional explicit backfill start block            |
+| `BET_INDEX_TO_BLOCK`          | backfill      | optional explicit backfill end block              |
+| `BET_INDEX_CONFIRMATIONS`     | backfill      | default `2`, caps end block below latest          |
+| `BET_INDEX_SCAN_CHUNK_BLOCKS` | backfill      | default `10`, safe for Base Sepolia public RPC    |
+| `BET_INDEX_DRY_RUN`           | backfill      | scan and fold into memory without Postgres writes |
+| `BET_INDEX_POSTGRES_PORT`     | local Compose | host port, default `54329`                        |
+| `BET_INDEX_POSTGRES_DB`       | local Compose | database name, default `arbigamefi`               |
+| `BET_INDEX_POSTGRES_USER`     | local Compose | database user, default `arbigamefi`               |
+| `BET_INDEX_POSTGRES_PASSWORD` | local Compose | local-only password                               |
 
 Implementation lives in `frontend/packages/bet-index`. The package is Node-only;
 client components must not import it.
@@ -169,6 +186,13 @@ The command reads the repo root `.env`, scans `GameHub` lifecycle events, writes
 idempotent rows, advances the same `gamehub-events` cursor, and prints a JSON
 summary. It does not require the keeper private key and must never call
 `GameHub.finalize`.
+
+Local Postgres can be started with:
+
+```bash
+pnpm -C frontend bet-index:db:up
+BET_INDEX_FROM_BLOCK=1 BET_INDEX_TO_BLOCK=1 pnpm -C frontend bet-index:backfill:local
+```
 
 ## 8. Don'ts
 

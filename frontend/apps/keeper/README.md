@@ -70,6 +70,42 @@ events, and resumes scan windows from the persisted `gamehub-events` cursor when
 that cursor is ahead of `KEEPER_START_BLOCK`. Index writes are best-effort:
 failures are logged and do not block `finalize`.
 
+## Local Postgres
+
+Use Docker Compose for local durable index development:
+
+```bash
+pnpm -C frontend bet-index:db:up
+```
+
+The default local connection string is:
+
+```text
+postgres://arbigamefi:arbigamefi_dev_only@127.0.0.1:54329/arbigamefi
+```
+
+Run a no-risk one-block write canary against the local database:
+
+```bash
+BET_INDEX_FROM_BLOCK=1 \
+BET_INDEX_TO_BLOCK=1 \
+pnpm -C frontend bet-index:backfill:local
+```
+
+Operational commands:
+
+```bash
+pnpm -C frontend bet-index:db:ps
+pnpm -C frontend bet-index:db:logs
+pnpm -C frontend bet-index:db:down
+pnpm -C frontend bet-index:db:reset
+```
+
+Compose is for local development and staging canaries. For mainnet production,
+prefer managed Postgres with backups, point-in-time restore, disk monitoring,
+and upgrade automation. A self-hosted Docker Postgres is only acceptable if
+those controls are explicitly owned and tested.
+
 One-shot durable index backfill or canary run:
 
 ```bash
