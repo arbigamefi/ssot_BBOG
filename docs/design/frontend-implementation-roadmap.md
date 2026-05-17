@@ -690,6 +690,44 @@ rg -n "FOOTBALL_ODDS_SIGNER_PRIVATE_KEY|CANARY_ODDS_SIGNER_PRIVATE_KEY" \
   frontend/apps/web/src frontend/apps/web/.env.example docs/frontend -S
 ```
 
+Implementation result:
+
+- `POST /api/sportsbook/odds-snapshot` now fails closed unless
+  `SPORTS_ODDS_SIGNER_PRIVATE_KEY` is present;
+- frontend docs and route tests no longer mention canary signer aliases;
+- removed the unused milestone-era `SDKStatusCard`;
+- renamed stale product page client names and transition keys from old route
+  labels to canonical `earn`, `portfolio`, and `portfolio-activity` names;
+- renamed portfolio overview and activity-list feature components so the
+  physical file layout matches the clean-room route model.
+
+Evidence:
+
+```bash
+pnpm -C frontend/apps/web test -- src/app/api/sportsbook/odds-snapshot/route.test.ts
+pnpm -C frontend/apps/web test -- src/components src/app-shell/AppShell.test.tsx
+pnpm -C frontend/apps/web test -- src/app/\(product\)/portfolio/pageClient.test.tsx \
+  src/app/\(product\)/portfolio/activity/pageClient.test.tsx \
+  src/app/\(product\)/portfolio/activity/\[betId\]/pageClient.test.tsx \
+  src/app/\(product\)/portfolio/claims/pageClient.test.tsx
+pnpm -C frontend/apps/web test
+pnpm -C frontend/apps/web typecheck
+pnpm -C frontend precheck:frontend -- --strict
+pnpm -C frontend/apps/web build
+git diff --check
+```
+
+Observed:
+
+- web test suite passed: 38 files / 144 tests;
+- strict frontend precheck passed with 0 findings;
+- production build passed;
+- post-cleanup source scan has no old page client names, transition keys,
+  frontend canary signer aliases, milestone SDK card, or old portfolio feature
+  file names;
+- expected local warnings remain unchanged: Node v22 vs project Node 20 and
+  the existing Next ESLint plugin warning.
+
 ## 8. Historical Execution Phases
 
 The phase names below are retained as an implementation log and audit trail.
