@@ -71,6 +71,13 @@ vi.mock("next-intl", () => ({
       "casino.room.shell.liveModule": "Live SSOT Module",
       "casino.room.shell.houseEdge": "House edge",
       "casino.room.shell.maxPayout": "Max payout",
+      "casino.room.empty.moduleNotFound": "Module not found",
+      "casino.room.empty.gameNotFound": "Game not found.",
+      "casino.room.names.dice": "Precision Dice",
+      "casino.room.names.roulette": "European Roulette",
+      "casino.room.names.coinToss": "Coin Toss",
+      "casino.room.names.keno": "Keno Draft",
+      "casino.room.audit.loading": "Loading audit stream",
       "casino.room.roundStatus.title": "Round status",
       "casino.room.roundStatus.phases.loadingQuote.label": "Estimating VRF fee",
       "casino.room.roundStatus.phases.loadingQuote.detail":

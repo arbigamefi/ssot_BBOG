@@ -1,13 +1,11 @@
 import dynamic from "next/dynamic";
 
+import { LoadingGames } from "./LoadingGames";
+
 const GamesListClient = dynamic(
   () => import("./pageClient").then((m) => ({ default: m.GamesListClient })),
   {
-    loading: () => (
-      <div className="flex min-h-[40vh] items-center justify-center">
-        <p className="text-sm text-muted-foreground">Loading games...</p>
-      </div>
-    )
+    loading: () => <LoadingGames />
   }
 );
 

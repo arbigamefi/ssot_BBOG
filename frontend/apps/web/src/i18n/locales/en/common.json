@@ -37,6 +37,33 @@
         "houseEdge": "House edge",
         "maxPayout": "Max payout"
       },
+      "empty": {
+        "moduleNotFound": "Module not found",
+        "gameNotFound": "Game not found."
+      },
+      "names": {
+        "dice": "Precision Dice",
+        "roulette": "European Roulette",
+        "coinToss": "Coin Toss",
+        "keno": "Keno Draft"
+      },
+      "audit": {
+        "loading": "Loading audit stream",
+        "headers": {
+          "timestampAuth": "Timestamp / Auth",
+          "submodule": "Submodule",
+          "wagerParameters": "Wager Parameters",
+          "settlementState": "Settlement State",
+          "audit": "Audit"
+        },
+        "selection": "{game} Selection",
+        "amountAndId": "{amount} {asset} - ID: {id}",
+        "openAudit": "Open audit for bet {betId}",
+        "empty": {
+          "title": "Immutable Audit Stream",
+          "description": "Standby for on-chain transaction emit..."
+        }
+      },
       "roundStatus": {
         "title": "Round status",
         "phases": {
@@ -215,6 +242,7 @@
       }
     },
     "directory": {
+      "loading": "Loading games...",
       "empty": {
         "noRelease": "No embedded release available for the connected chain.",
         "noGames": "No games registered in the active release."

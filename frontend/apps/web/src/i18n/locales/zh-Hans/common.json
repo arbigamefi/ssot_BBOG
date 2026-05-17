@@ -37,6 +37,33 @@
         "houseEdge": "庄家优势",
         "maxPayout": "最高赔付"
       },
+      "empty": {
+        "moduleNotFound": "未找到游戏模块",
+        "gameNotFound": "未找到该游戏。"
+      },
+      "names": {
+        "dice": "精准骰子",
+        "roulette": "欧式轮盘",
+        "coinToss": "抛硬币",
+        "keno": "Keno 选号"
+      },
+      "audit": {
+        "loading": "正在加载审计流",
+        "headers": {
+          "timestampAuth": "时间 / 身份",
+          "submodule": "子模块",
+          "wagerParameters": "投注参数",
+          "settlementState": "结算状态",
+          "audit": "审计"
+        },
+        "selection": "{game} 选择",
+        "amountAndId": "{amount} {asset} - ID: {id}",
+        "openAudit": "打开投注 {betId} 的审计记录",
+        "empty": {
+          "title": "不可篡改审计流",
+          "description": "等待链上交易事件写入..."
+        }
+      },
       "roundStatus": {
         "title": "回合状态",
         "phases": {
@@ -215,6 +242,7 @@
       }
     },
     "directory": {
+      "loading": "正在加载游戏...",
       "empty": {
         "noRelease": "当前链没有可用的内嵌 release。",
         "noGames": "当前 release 没有注册游戏。"

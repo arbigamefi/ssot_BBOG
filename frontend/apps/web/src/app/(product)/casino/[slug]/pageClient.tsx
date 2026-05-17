@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import dynamic from "next/dynamic";
+import { useTranslations } from "next-intl";
 import type { DomainBet } from "@ssot/ssot";
 
 import { ProductStateCard } from "../../../../components/ProductStateCard";
@@ -31,15 +32,36 @@ import { GameRoomRightPane } from "../../../../features/casino/room/right-pane";
 import { GameRoomShell } from "../../../../features/casino/room/game-room-shell";
 import { useCasinoRound } from "../../../../features/casino/room/use-casino-round";
 
+function AuditLedgerLoading() {
+  const t = useTranslations();
+
+  return (
+    <div className="rounded-lg border border-border bg-surface-1 p-6 text-sm font-bold uppercase tracking-[0.18em] text-fg-subtle">
+      {t("casino.room.audit.loading")}
+    </div>
+  );
+}
+
+function getLocalizedGameName(t: (key: string) => string, game: GameMeta) {
+  switch (game.slug) {
+    case "dice":
+      return t("casino.room.names.dice");
+    case "roulette":
+      return t("casino.room.names.roulette");
+    case "coin-toss":
+      return t("casino.room.names.coinToss");
+    case "keno":
+      return t("casino.room.names.keno");
+    default:
+      return getGameDisplayName(game);
+  }
+}
+
 const GameRoomAuditLedger = dynamic(
   () =>
     import("../../../../features/casino/room/audit-ledger").then((mod) => mod.GameRoomAuditLedger),
   {
-    loading: () => (
-      <div className="rounded-lg border border-border bg-surface-1 p-6 text-sm font-bold uppercase tracking-[0.18em] text-fg-subtle">
-        Loading audit stream
-      </div>
-    ),
+    loading: () => <AuditLedgerLoading />,
     ssr: false
   }
 );
@@ -47,6 +69,7 @@ const GameRoomAuditLedger = dynamic(
 /* ─── Main Logic ─── */
 
 export function GamePageClient({ slug }: { slug: string }) {
+  const t = useTranslations();
   const { release, readOnlyReason, chainId } = useRelease();
   const { sdk } = useSSOTSDK();
   const { indexerStatus } = useIndexer();
@@ -169,8 +192,8 @@ export function GamePageClient({ slug }: { slug: string }) {
   if (!release || !game)
     return (
       <ProductStateCard
-        title="Module Not Found"
-        description={readOnlyReason ?? "Game not found."}
+        title={t("casino.room.empty.moduleNotFound")}
+        description={readOnlyReason ?? t("casino.room.empty.gameNotFound")}
       />
     );
 
@@ -262,7 +285,7 @@ export function GamePageClient({ slug }: { slug: string }) {
   return (
     <PageTransition pageKey={`game-${slug}`}>
       <GameRoomShell
-        gameName={getGameDisplayName(game)}
+        gameName={getLocalizedGameName(t, game)}
         houseEdge={houseEdge}
         maxPayout={maxPayout}
         isInteractive={true}
