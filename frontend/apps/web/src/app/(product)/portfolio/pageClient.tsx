@@ -95,6 +95,7 @@ export function PortfolioPageClient() {
 
   const claimRefundFlow = useDirectTxAction({
     action: "CLAIM_VRF_REFUND",
+    errorMessage: t("app.errors.transactionFailed"),
     labels: {
       preflight: t("portfolio.overview.refund.flow.preflight"),
       submit: t("portfolio.overview.refund.flow.submit"),

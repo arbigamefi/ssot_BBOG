@@ -11,6 +11,7 @@
     "errors": {
       "boundaryTitle": "Something went wrong",
       "unexpected": "An unexpected error occurred.",
+      "transactionFailed": "Transaction failed",
       "errorId": "Error ID: {digest}",
       "tryAgain": "Try again"
     }

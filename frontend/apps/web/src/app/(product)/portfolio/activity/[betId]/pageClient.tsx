@@ -126,6 +126,7 @@ export function BetDetailPageClient({ betId }: { betId: string }) {
 
   const refundFlow = useDirectTxAction({
     action: "REFUND",
+    errorMessage: t("app.errors.transactionFailed"),
     labels: {
       preflight: t("portfolio.activity.detail.flows.preflight"),
       submit: t("portfolio.activity.detail.flows.refund.submit"),
@@ -140,6 +141,7 @@ export function BetDetailPageClient({ betId }: { betId: string }) {
 
   const manualFinalizeFlow = useDirectTxAction({
     action: "FINALIZE",
+    errorMessage: t("app.errors.transactionFailed"),
     labels: {
       preflight: t("portfolio.activity.detail.flows.preflight"),
       submit: t("portfolio.activity.detail.flows.finalize.submit"),

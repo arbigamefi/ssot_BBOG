@@ -25,6 +25,7 @@ type DirectTxActionOptions = {
   action: string;
   labels: DirectTxLabels;
   descriptions?: DirectTxDescriptions;
+  errorMessage?: string;
 };
 
 type SequencedTxStepConfig = {
@@ -39,6 +40,7 @@ type SequencedTxActionOptions = {
   steps: SequencedTxStepConfig[];
   finalAction: string;
   matchWindowMs?: number;
+  errorMessage?: string;
 };
 
 type DirectTxState = {
@@ -111,33 +113,33 @@ function buildSteps(
     {
       title: labels.preflight,
       description: descriptions?.preflight,
-      state: preflightState,
+      state: preflightState
     },
     {
       title: labels.submit,
       description: descriptions?.submit,
-      state: submitState,
+      state: submitState
     },
     {
       title: labels.confirm,
       description: descriptions?.confirm,
-      state: confirmState,
-    },
+      state: confirmState
+    }
   ];
 }
 
-function toDomainError(error: unknown): DomainError {
+function toDomainError(error: unknown, fallbackMessage = "Transaction failed"): DomainError {
   if (typeof error === "object" && error && "message" in error) {
     return {
       code: "UNKNOWN_TX_ERROR",
-      message: String((error as { message?: unknown }).message ?? "Transaction failed"),
-      severity: "error",
+      message: String((error as { message?: unknown }).message ?? fallbackMessage),
+      severity: "error"
     };
   }
   return {
     code: "UNKNOWN_TX_ERROR",
-    message: "Transaction failed",
-    severity: "error",
+    message: fallbackMessage,
+    severity: "error"
   };
 }
 
@@ -170,7 +172,7 @@ function buildSequencedSteps(
       return {
         title: step.title,
         description: step.description,
-        state: preflightState,
+        state: preflightState
       };
     }
 
@@ -185,26 +187,29 @@ function buildSequencedSteps(
       return {
         title: step.title,
         description: step.description,
-        state,
+        state
       };
     }
 
     const laterRowsExist = stepConfigs
       .slice(index + 1)
-      .some((candidate) => candidate.action && orderedRows.some((rowItem) => rowItem.action === candidate.action));
+      .some(
+        (candidate) =>
+          candidate.action && orderedRows.some((rowItem) => rowItem.action === candidate.action)
+      );
 
     if (step.optional && laterRowsExist) {
       return {
         title: step.title,
         description: step.description,
-        state: "done",
+        state: "done"
       };
     }
 
     return {
       title: step.title,
       description: step.description,
-      state: "todo",
+      state: "todo"
     };
   });
 }
@@ -231,7 +236,12 @@ function deriveSequencedStatus(
   return currentStatus;
 }
 
-export function useDirectTxAction({ action, labels, descriptions }: DirectTxActionOptions) {
+export function useDirectTxAction({
+  action,
+  labels,
+  descriptions,
+  errorMessage
+}: DirectTxActionOptions) {
   const { db } = useSSOTRuntime();
   const { chainId } = useRelease();
   const [state, setState] = React.useState<DirectTxState>({ status: "idle" });
@@ -246,14 +256,11 @@ export function useDirectTxAction({ action, labels, descriptions }: DirectTxActi
       return (
         rows.find(
           (row) =>
-            row.chainId === chainId &&
-            row.action === action &&
-            row.createdAt >= startedAt - 2_000
+            row.chainId === chainId && row.action === action && row.createdAt >= startedAt - 2_000
         ) ?? null
       );
     },
-    refetchInterval:
-      state.status === "planning" || state.status === "submitting" ? 1_000 : false,
+    refetchInterval: state.status === "planning" || state.status === "submitting" ? 1_000 : false
   });
 
   React.useEffect(() => {
@@ -272,40 +279,40 @@ export function useDirectTxAction({ action, labels, descriptions }: DirectTxActi
         ...current,
         status: nextStatus,
         txHash: nextHash,
-        error:
-          nextStatus === "failed" && current.error
-            ? current.error
-            : current.error,
+        error: nextStatus === "failed" && current.error ? current.error : current.error
       };
     });
   }, [journalEntry]);
 
-  const execute = React.useCallback(async <T extends TxResult>(run: () => Promise<T>): Promise<T> => {
-    const startedAt = Date.now();
-    setState({ status: "planning", startedAt, error: undefined, txHash: undefined });
-    try {
-      const result = await run();
-      setState((current) => ({
-        ...current,
-        status: result.ok ? "mined" : "failed",
-        txHash: isMeaningfulHash(result.txHash) ? result.txHash : current.txHash,
-        error: result.ok ? undefined : result.error,
-      }));
-      return result;
-    } catch (error) {
-      const domainError = toDomainError(error);
-      setState((current) => ({
-        ...current,
-        status: "failed",
-        error: domainError,
-      }));
-      return {
-        ok: false,
-        txHash: ZERO_HASH as `0x${string}`,
-        error: domainError,
-      } as T;
-    }
-  }, []);
+  const execute = React.useCallback(
+    async <T extends TxResult>(run: () => Promise<T>): Promise<T> => {
+      const startedAt = Date.now();
+      setState({ status: "planning", startedAt, error: undefined, txHash: undefined });
+      try {
+        const result = await run();
+        setState((current) => ({
+          ...current,
+          status: result.ok ? "mined" : "failed",
+          txHash: isMeaningfulHash(result.txHash) ? result.txHash : current.txHash,
+          error: result.ok ? undefined : result.error
+        }));
+        return result;
+      } catch (error) {
+        const domainError = toDomainError(error, errorMessage);
+        setState((current) => ({
+          ...current,
+          status: "failed",
+          error: domainError
+        }));
+        return {
+          ok: false,
+          txHash: ZERO_HASH as `0x${string}`,
+          error: domainError
+        } as T;
+      }
+    },
+    [errorMessage]
+  );
 
   const reset = React.useCallback(() => {
     setState({ status: "idle" });
@@ -320,7 +327,7 @@ export function useDirectTxAction({ action, labels, descriptions }: DirectTxActi
     busy: state.status === "planning" || state.status === "submitting",
     execute,
     reset,
-    steps: buildSteps(state.status, labels, descriptions, state.txHash ?? journalEntry?.txHash),
+    steps: buildSteps(state.status, labels, descriptions, state.txHash ?? journalEntry?.txHash)
   };
 }
 
@@ -328,6 +335,7 @@ export function useSequencedTxAction({
   steps,
   finalAction,
   matchWindowMs = 2_000,
+  errorMessage
 }: SequencedTxActionOptions) {
   const { db } = useSSOTRuntime();
   const { chainId } = useRelease();
@@ -344,17 +352,15 @@ export function useSequencedTxAction({
     queryFn: async (): Promise<TxJournalRow[]> => {
       const startedAt = state.startedAt;
       if (!db || !startedAt) return [];
-      const rows = await db.txJournal.where("createdAt").aboveOrEqual(startedAt - matchWindowMs).toArray();
+      const rows = await db.txJournal
+        .where("createdAt")
+        .aboveOrEqual(startedAt - matchWindowMs)
+        .toArray();
       return sortRowsByCreatedAt(
-        rows.filter(
-          (row) =>
-            row.chainId === chainId &&
-            trackedActions.includes(row.action)
-        )
+        rows.filter((row) => row.chainId === chainId && trackedActions.includes(row.action))
       );
     },
-    refetchInterval:
-      state.status === "planning" || state.status === "submitting" ? 1_000 : false,
+    refetchInterval: state.status === "planning" || state.status === "submitting" ? 1_000 : false
   });
 
   React.useEffect(() => {
@@ -374,37 +380,40 @@ export function useSequencedTxAction({
       return {
         ...current,
         status: nextStatus,
-        txHash: nextHash,
+        txHash: nextHash
       };
     });
   }, [finalAction, journalRows]);
 
-  const execute = React.useCallback(async <T extends TxResult>(run: () => Promise<T>): Promise<T> => {
-    const startedAt = Date.now();
-    setState({ status: "planning", startedAt, error: undefined, txHash: undefined });
-    try {
-      const result = await run();
-      setState((current) => ({
-        ...current,
-        status: result.ok ? "mined" : "failed",
-        txHash: isMeaningfulHash(result.txHash) ? result.txHash : current.txHash,
-        error: result.ok ? undefined : result.error,
-      }));
-      return result;
-    } catch (error) {
-      const domainError = toDomainError(error);
-      setState((current) => ({
-        ...current,
-        status: "failed",
-        error: domainError,
-      }));
-      return {
-        ok: false,
-        txHash: ZERO_HASH as `0x${string}`,
-        error: domainError,
-      } as T;
-    }
-  }, []);
+  const execute = React.useCallback(
+    async <T extends TxResult>(run: () => Promise<T>): Promise<T> => {
+      const startedAt = Date.now();
+      setState({ status: "planning", startedAt, error: undefined, txHash: undefined });
+      try {
+        const result = await run();
+        setState((current) => ({
+          ...current,
+          status: result.ok ? "mined" : "failed",
+          txHash: isMeaningfulHash(result.txHash) ? result.txHash : current.txHash,
+          error: result.ok ? undefined : result.error
+        }));
+        return result;
+      } catch (error) {
+        const domainError = toDomainError(error, errorMessage);
+        setState((current) => ({
+          ...current,
+          status: "failed",
+          error: domainError
+        }));
+        return {
+          ok: false,
+          txHash: ZERO_HASH as `0x${string}`,
+          error: domainError
+        } as T;
+      }
+    },
+    [errorMessage]
+  );
 
   const reset = React.useCallback(() => {
     setState({ status: "idle" });
@@ -424,6 +433,6 @@ export function useSequencedTxAction({
     busy: state.status === "planning" || state.status === "submitting",
     execute,
     reset,
-    steps: buildSequencedSteps(state.status, steps, journalRows),
+    steps: buildSequencedSteps(state.status, steps, journalRows)
   };
 }

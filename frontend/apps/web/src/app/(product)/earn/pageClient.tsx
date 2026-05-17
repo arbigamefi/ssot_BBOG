@@ -106,6 +106,7 @@ export function EarnPageClient() {
 
   const depositFlow = useSequencedTxAction({
     finalAction: "DEPOSIT",
+    errorMessage: t("app.errors.transactionFailed"),
     steps: [
       {
         key: "preflight",
@@ -130,6 +131,7 @@ export function EarnPageClient() {
 
   const withdrawFlow = useDirectTxAction({
     action: "WITHDRAW",
+    errorMessage: t("app.errors.transactionFailed"),
     labels: {
       preflight: t("earn.flows.preflight.title"),
       submit: t("earn.flows.direct.submit"),
@@ -144,6 +146,7 @@ export function EarnPageClient() {
 
   const redeemFlow = useDirectTxAction({
     action: "REDEEM",
+    errorMessage: t("app.errors.transactionFailed"),
     labels: {
       preflight: t("earn.flows.preflight.title"),
       submit: t("earn.flows.direct.submit"),

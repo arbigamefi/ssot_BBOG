@@ -46,6 +46,7 @@ export function ClaimsPageClient() {
 
   const xpClaimFlow = useDirectTxAction({
     action: "CLAIM_XP_ACCRUED",
+    errorMessage: t("app.errors.transactionFailed"),
     labels: {
       preflight: t("portfolio.claims.flows.preflight"),
       submit: t("portfolio.claims.flows.submitClaim"),
@@ -60,6 +61,7 @@ export function ClaimsPageClient() {
 
   const syncHoldbackFlow = useDirectTxAction({
     action: "SYNC_XP_HOLDBACK",
+    errorMessage: t("app.errors.transactionFailed"),
     labels: {
       preflight: t("portfolio.claims.flows.preflight"),
       submit: t("portfolio.claims.flows.submitSync"),
@@ -74,6 +76,7 @@ export function ClaimsPageClient() {
 
   const protocolFeeFlow = useDirectTxAction({
     action: "CLAIM_PROTOCOL_FEES",
+    errorMessage: t("app.errors.transactionFailed"),
     labels: {
       preflight: t("portfolio.claims.flows.preflight"),
       submit: t("portfolio.claims.flows.submitClaim"),
