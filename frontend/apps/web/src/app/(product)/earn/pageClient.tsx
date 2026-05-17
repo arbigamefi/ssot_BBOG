@@ -75,7 +75,7 @@ export function EarnPageClient() {
   const writesSupportedForSelectedAsset =
     Boolean(poolId) && (!primaryAsset || asset.toLowerCase() === primaryAsset);
   const decimals = assetMeta?.decimals ?? 18;
-  const symbol = assetMeta?.symbol ?? "Asset";
+  const symbol = assetMeta?.symbol ?? t("earn.format.assetFallback");
 
   const {
     data: bankData,

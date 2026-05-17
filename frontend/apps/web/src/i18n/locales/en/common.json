@@ -199,6 +199,15 @@
         }
       },
       "selection": {
+        "dice": {
+          "rollUnder": "Roll Under",
+          "rollOver": "Roll Over",
+          "targetRange": "Target Range",
+          "targetAria": "Dice target",
+          "target": "Target",
+          "multiplier": "Mult",
+          "winChance": "Win"
+        },
         "roulette": {
           "bets": "Bets",
           "clearAll": "Clear All",
@@ -1334,6 +1343,9 @@
       "unsupportedWriteAsset": "Write flows require an active casino pool for the selected asset.",
       "positiveAmount": "Amount must be positive.",
       "primaryAssetOnly": "Write flows currently support only the primary asset."
+    },
+    "format": {
+      "assetFallback": "Asset"
     },
     "hero": {
       "eyebrow": "Bank reserve",

@@ -11,6 +11,13 @@ vi.mock("@ssot/ui", () => ({
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) =>
     ({
+      "casino.room.selection.dice.rollUnder": "Roll Under",
+      "casino.room.selection.dice.rollOver": "Roll Over",
+      "casino.room.selection.dice.targetRange": "Target Range",
+      "casino.room.selection.dice.targetAria": "Dice target",
+      "casino.room.selection.dice.target": "Target",
+      "casino.room.selection.dice.multiplier": "Mult",
+      "casino.room.selection.dice.winChance": "Win",
       "casino.room.stage.loading": "Loading stage",
       "casino.room.history.recent.rolls": "RECENT ROLLS",
       "casino.room.history.recent.numbers": "RECENT NUMBERS",

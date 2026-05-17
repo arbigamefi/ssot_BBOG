@@ -199,6 +199,15 @@
         }
       },
       "selection": {
+        "dice": {
+          "rollUnder": "小于目标",
+          "rollOver": "大于目标",
+          "targetRange": "目标区间",
+          "targetAria": "骰子目标点数",
+          "target": "目标",
+          "multiplier": "倍数",
+          "winChance": "胜率"
+        },
         "roulette": {
           "bets": "投注",
           "clearAll": "全部清除",
@@ -1334,6 +1343,9 @@
       "unsupportedWriteAsset": "写入流程需要所选资产存在 active casino pool。",
       "positiveAmount": "金额必须大于 0。",
       "primaryAssetOnly": "当前写入流程仅支持主资产。"
+    },
+    "format": {
+      "assetFallback": "资产"
     },
     "hero": {
       "eyebrow": "Bank 储备",

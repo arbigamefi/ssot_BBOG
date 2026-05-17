@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { cn } from "@ssot/ui";
 
 import type { DiceDirection } from "./params";
@@ -20,6 +21,8 @@ export function DiceRangeControl({
   onDirectionChange: (direction: DiceDirection) => void;
   onTargetChange: (target: number) => void;
 }) {
+  const t = useTranslations();
+
   return (
     <div className="absolute bottom-12 w-full max-w-3xl px-6 z-20">
       <div className="relative flex flex-col gap-8 overflow-hidden rounded-xl border border-border bg-surface-1/95 p-8 shadow-e3 backdrop-blur-3xl">
@@ -40,7 +43,7 @@ export function DiceRangeControl({
                 diceDirection === "under" ? "text-fg-inverse" : "text-fg-subtle"
               )}
             >
-              Roll Under
+              {t("casino.room.selection.dice.rollUnder")}
             </button>
             <button
               onClick={() => onDirectionChange("over")}
@@ -49,13 +52,13 @@ export function DiceRangeControl({
                 diceDirection === "over" ? "text-fg-inverse" : "text-fg-subtle"
               )}
             >
-              Roll Over
+              {t("casino.room.selection.dice.rollOver")}
             </button>
           </div>
 
           <div className="text-right flex flex-col items-end">
             <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-fg-subtle">
-              Target Range
+              {t("casino.room.selection.dice.targetRange")}
             </span>
             <div className="flex items-center gap-2 rounded-lg border border-border-soft bg-surface-2 px-4 py-1.5 font-mono">
               <span className="text-fg-subtle">0</span>
@@ -87,7 +90,7 @@ export function DiceRangeControl({
 
           <input
             type="range"
-            aria-label="Dice target"
+            aria-label={t("casino.room.selection.dice.targetAria")}
             min="2"
             max="98"
             value={diceTarget}
@@ -102,14 +105,14 @@ export function DiceRangeControl({
           >
             <div className="absolute bottom-[80%] mb-4 flex min-w-[130px] scale-100 flex-col items-center rounded-lg border border-brand/35 bg-surface-1/95 px-4 py-3 shadow-e2 backdrop-blur-md transition-transform group-hover:scale-[1.08]">
               <span className="mb-1 text-[10px] font-black uppercase tracking-widest text-fg-subtle">
-                Target
+                {t("casino.room.selection.dice.target")}
               </span>
               <span className="font-mono text-4xl font-black text-fg">{diceTarget}</span>
 
               <div className="mt-2 flex w-full justify-between gap-4 border-t border-border-soft px-1 pt-2">
                 <div className="flex flex-col items-center">
                   <span className="text-[8px] font-bold uppercase tracking-widest text-fg-subtle">
-                    Mult
+                    {t("casino.room.selection.dice.multiplier")}
                   </span>
                   <span className="font-mono text-[11px] font-black text-brand">
                     {multiplier.toFixed(2)}x
@@ -117,7 +120,7 @@ export function DiceRangeControl({
                 </div>
                 <div className="flex flex-col items-center">
                   <span className="text-[8px] font-bold uppercase tracking-widest text-fg-subtle">
-                    Win
+                    {t("casino.room.selection.dice.winChance")}
                   </span>
                   <span className="font-mono text-[11px] font-black text-accent">
                     {winChance.toFixed(2)}%
