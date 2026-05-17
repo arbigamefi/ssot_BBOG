@@ -172,7 +172,7 @@ export function GameRoomRightPane({
         />
       )}
 
-      {showResult && isCasinoTerminalRoundResult(resultProof) && (
+      {showResult && resultProof && (isCasinoTerminalRoundResult(resultProof) || casinoOutcome) && (
         <GameRoomResultOverlay
           result={resultProof}
           chainId={chainId}

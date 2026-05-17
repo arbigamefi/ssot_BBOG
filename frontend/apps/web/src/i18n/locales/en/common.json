@@ -163,8 +163,8 @@
             "status": "Placing"
           },
           "settling": {
-            "label": "Settling result",
-            "detail": "Randomness is ready. Keeper settlement should complete automatically.",
+            "label": "Result revealed",
+            "detail": "Randomness is ready. Opened numbers are visible while keeper settlement completes.",
             "status": "Settling"
           },
           "manualSettleOffered": {
@@ -311,13 +311,29 @@
             "label": "Won bet",
             "detail": "The round settled on-chain and payout is confirmed."
           },
+          "winPending": {
+            "label": "Won bet",
+            "detail": "The VRF result is revealed. Payout settlement is still pending."
+          },
           "returned": {
             "label": "Stake returned",
             "detail": "The settled payout equals the stake."
           },
+          "returnedPending": {
+            "label": "Stake returned",
+            "detail": "The VRF result is revealed. Settlement confirmation is still pending."
+          },
           "loss": {
             "label": "Lost bet",
             "detail": "The round settled on-chain with no net payout."
+          },
+          "lossPending": {
+            "label": "Lost bet",
+            "detail": "The VRF result is revealed. Final settlement is still pending."
+          },
+          "revealed": {
+            "label": "Result revealed",
+            "detail": "Opened numbers are available from VRF. Settlement is still pending."
           }
         },
         "sections": {
@@ -330,6 +346,8 @@
           "multiplier": "Multiplier",
           "betAmount": "Bet amount",
           "payout": "Payout",
+          "expectedPayout": "Expected payout",
+          "pending": "Pending",
           "betId": "Bet ID",
           "refund": "Refund",
           "requestId": "Request ID",

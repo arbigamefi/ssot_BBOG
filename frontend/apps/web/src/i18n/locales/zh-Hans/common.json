@@ -163,8 +163,8 @@
             "status": "下注中"
           },
           "settling": {
-            "label": "正在结算结果",
-            "detail": "随机数已准备好，keeper 应会自动完成结算。",
+            "label": "结果已揭晓",
+            "detail": "随机数已准备好，开奖号码已可见，keeper 正在完成资金结算。",
             "status": "结算中"
           },
           "manualSettleOffered": {
@@ -311,13 +311,29 @@
             "label": "本局中奖",
             "detail": "本局已在链上完成结算，赔付已确认。"
           },
+          "winPending": {
+            "label": "本局中奖",
+            "detail": "VRF 结果已揭晓，赔付结算仍在确认中。"
+          },
           "returned": {
             "label": "本金已返回",
             "detail": "本次结算赔付等于本金。"
           },
+          "returnedPending": {
+            "label": "本金返回",
+            "detail": "VRF 结果已揭晓，结算确认仍在等待中。"
+          },
           "loss": {
             "label": "本局未中奖",
             "detail": "本局已在链上完成结算，没有净赔付。"
+          },
+          "lossPending": {
+            "label": "本局未中奖",
+            "detail": "VRF 结果已揭晓，最终结算仍在确认中。"
+          },
+          "revealed": {
+            "label": "结果已揭晓",
+            "detail": "开奖号码已由 VRF 给出，资金结算仍在等待中。"
           }
         },
         "sections": {
@@ -330,6 +346,8 @@
           "multiplier": "倍率",
           "betAmount": "投注金额",
           "payout": "赔付",
+          "expectedPayout": "预计赔付",
+          "pending": "等待中",
           "betId": "投注 ID",
           "refund": "退款",
           "requestId": "请求 ID",

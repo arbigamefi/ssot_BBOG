@@ -24,7 +24,7 @@ import { GameRoomBetPanel } from "../../../../features/casino/room/bet-panel";
 import { useGameWalletBalance, useKenoStrobeSpots } from "../../../../features/casino/room/hooks";
 import {
   useGameResolutionEffect,
-  isCasinoTerminalRoundResult,
+  buildCasinoRoundResult,
   type CasinoRoundResult,
   type GameHistoryEntry
 } from "../../../../features/casino/room/resolution";
@@ -101,6 +101,7 @@ export function GamePageClient({ slug }: { slug: string }) {
   const [terminalBet, setTerminalBet] = React.useState<DomainBet | null>(null);
   const [resultProof, setResultProof] = React.useState<CasinoRoundResult | null>(null);
   const [casinoOutcome, setCasinoOutcome] = React.useState<CasinoOutcome | null>(null);
+  const revealedBetIdRef = React.useRef<bigint | null>(null);
 
   // Game-specific params
   const [diceTarget, setDiceTarget] = React.useState<number>(50);
@@ -130,17 +131,18 @@ export function GamePageClient({ slug }: { slug: string }) {
     (bet: DomainBet) => {
       setIsPending(false);
       setTerminalBet(bet);
-      setCasinoOutcome(null);
       void refetchRecentBets?.();
     },
     [refetchRecentBets]
   );
   const handleRoundStart = React.useCallback(() => {
+    revealedBetIdRef.current = null;
     setTerminalBet(null);
     setResultProof(null);
     setCasinoOutcome(null);
   }, []);
   const handleRoundReset = React.useCallback(() => {
+    revealedBetIdRef.current = null;
     setShowResult(false);
     setTerminalBet(null);
     setResultProof(null);
@@ -203,17 +205,23 @@ export function GamePageClient({ slug }: { slug: string }) {
 
   React.useEffect(() => {
     let cancelled = false;
-    if (!terminalBet || !game || !isCasinoTerminalRoundResult(resultProof)) {
-      setCasinoOutcome(null);
+    const activeBet = casinoRound.activeBet;
+    const bet =
+      terminalBet ??
+      (activeBet?.state === "randomReady" || activeBet?.state === "finalized" ? activeBet : null);
+
+    if (!bet || !game) {
+      if (!terminalBet) setCasinoOutcome(null);
       return;
     }
 
     void readCasinoOutcome({
       gameHub: sdk?.gameHub,
-      bet: terminalBet,
+      bet,
       gameSlug: game.slug
     }).then((outcome) => {
       if (cancelled) return;
+      if (!outcome) return;
       setCasinoOutcome(outcome);
 
       if (outcome?.kind === "dice") setResultNum(outcome.rolls.at(-1)?.value ?? null);
@@ -222,12 +230,19 @@ export function GamePageClient({ slug }: { slug: string }) {
       }
       if (outcome?.kind === "roulette") setResultNum(outcome.rolls.at(-1)?.value ?? null);
       if (outcome?.kind === "keno") setKenoResultDrawn(outcome.draws.at(-1)?.numbers ?? []);
+
+      if (bet.state === "randomReady" && revealedBetIdRef.current !== bet.betId) {
+        revealedBetIdRef.current = bet.betId;
+        setIsPending(false);
+        setResultProof(buildCasinoRoundResult({ bet }));
+        setShowResult(true);
+      }
     });
 
     return () => {
       cancelled = true;
     };
-  }, [game, resultProof, sdk?.gameHub, terminalBet]);
+  }, [casinoRound.activeBet, game, sdk?.gameHub, terminalBet]);
 
   if (!release || !game)
     return (

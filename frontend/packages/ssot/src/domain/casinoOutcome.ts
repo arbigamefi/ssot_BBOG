@@ -32,28 +32,37 @@ type RollTrace<T> = {
   won: boolean;
 };
 
+type OutcomeFinancials = {
+  payoutGross: bigint;
+  payoutNet: bigint;
+  refundAmount: bigint;
+  feeOnPayout: bigint;
+  playerOwed: bigint;
+  netResult: bigint;
+};
+
 export type CasinoOutcome =
-  | {
+  | (OutcomeFinancials & {
       kind: "dice";
       direction: DiceDirection;
       target: number;
       rolls: RollTrace<number>[];
-    }
-  | {
+    })
+  | (OutcomeFinancials & {
       kind: "coin-toss";
       chosen: "HEADS" | "TAILS";
       rolls: RollTrace<"HEADS" | "TAILS">[];
-    }
-  | {
+    })
+  | (OutcomeFinancials & {
       kind: "roulette";
       selectedNumbers: number[];
       rolls: RollTrace<number>[];
-    }
-  | {
+    })
+  | (OutcomeFinancials & {
       kind: "keno";
       pickedNumbers: number[];
       draws: Array<{ numbers: number[]; hits: number; won: boolean }>;
-    };
+    });
 
 export function deriveCasinoOutcome({
   bet,
@@ -87,7 +96,13 @@ export function deriveCasinoOutcome({
       if (shouldStop(bet.stopGain, bet.stopLoss, usedTurnover, payoutGross)) break;
     }
 
-    return { kind: "dice", direction, target, rolls };
+    return {
+      kind: "dice",
+      direction,
+      target,
+      rolls,
+      ...financials(bet, payoutGross, bet.stake - usedTurnover)
+    };
   }
 
   if (gameSlug === "coin-toss") {
@@ -106,7 +121,12 @@ export function deriveCasinoOutcome({
       if (shouldStop(bet.stopGain, bet.stopLoss, usedTurnover, payoutGross)) break;
     }
 
-    return { kind: "coin-toss", chosen, rolls };
+    return {
+      kind: "coin-toss",
+      chosen,
+      rolls,
+      ...financials(bet, payoutGross, bet.stake - usedTurnover)
+    };
   }
 
   if (gameSlug === "roulette") {
@@ -127,7 +147,12 @@ export function deriveCasinoOutcome({
       if (shouldStop(bet.stopGain, bet.stopLoss, usedTurnover, payoutGross)) break;
     }
 
-    return { kind: "roulette", selectedNumbers, rolls };
+    return {
+      kind: "roulette",
+      selectedNumbers,
+      rolls,
+      ...financials(bet, payoutGross, bet.stake - usedTurnover)
+    };
   }
 
   if (gameSlug === "keno") {
@@ -150,7 +175,12 @@ export function deriveCasinoOutcome({
       if (shouldStop(bet.stopGain, bet.stopLoss, usedTurnover, payoutGross)) break;
     }
 
-    return { kind: "keno", pickedNumbers, draws };
+    return {
+      kind: "keno",
+      pickedNumbers,
+      draws,
+      ...financials(bet, payoutGross, bet.stake - usedTurnover)
+    };
   }
 
   return null;
@@ -215,6 +245,22 @@ function shouldStop(
   )
     return true;
   return false;
+}
+
+function financials(bet: DomainBet, payoutGross: bigint, refundAmount: bigint): OutcomeFinancials {
+  const safeRefund = refundAmount > bet.stake ? bet.stake : refundAmount;
+  const feeOnPayout =
+    payoutGross > 0n ? mulDiv(payoutGross, BigInt(bet.effectiveHouseEdgeBps), 10_000n) : 0n;
+  const payoutNet = payoutGross > feeOnPayout ? payoutGross - feeOnPayout : 0n;
+  const playerOwed = payoutNet + safeRefund;
+  return {
+    payoutGross,
+    payoutNet,
+    refundAmount: safeRefund,
+    feeOnPayout,
+    playerOwed,
+    netResult: playerOwed - bet.stake
+  };
 }
 
 function rouletteMask(params: Hex) {

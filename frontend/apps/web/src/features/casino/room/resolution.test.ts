@@ -24,6 +24,7 @@ const baseBet: DomainBet = {
   betCount: 1,
   stopGain: 0n,
   stopLoss: 0n,
+  effectiveHouseEdgeBps: 200,
   vrfFeePaid: 100n,
   vrfFeeCharged: 90n,
   vrfCallbackGasLimit: 320_000,
@@ -216,7 +217,6 @@ describe("game room resolution helpers", () => {
       await Promise.resolve();
     });
     expect(setIsPending).toHaveBeenCalledWith(true);
-    expect(setShowResult).toHaveBeenCalledWith(false);
     expect(setShowResult).not.toHaveBeenCalledWith(true);
 
     await act(async () => {
@@ -267,7 +267,6 @@ describe("game room resolution helpers", () => {
       await Promise.resolve();
     });
 
-    expect(setShowResult).toHaveBeenCalledWith(false);
     expect(setShowResult).not.toHaveBeenCalledWith(true);
     expect(setResultProof).not.toHaveBeenCalledWith(expect.objectContaining({ kind: "settled" }));
   });

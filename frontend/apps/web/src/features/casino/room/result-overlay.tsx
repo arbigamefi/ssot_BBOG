@@ -7,7 +7,7 @@ import { formatUnits } from "../../betting/model/units";
 import { formatNativeFee } from "./casino-round";
 import type { CasinoOutcome } from "./outcome";
 import type { CoinSide, DiceDirection } from "./params";
-import type { CasinoTerminalRoundResult } from "./resolution";
+import type { CasinoRoundResult } from "./resolution";
 
 function formatTokenAmount(value: bigint, decimals: number, symbol: string) {
   const raw = formatUnits(value, decimals);
@@ -56,12 +56,46 @@ function explorerTxUrl(chainId: number | undefined, txHash: string | undefined) 
 
 type Translate = ReturnType<typeof useTranslations>;
 
-function getOutcome(result: CasinoTerminalRoundResult, t: Translate) {
+function getOutcome(
+  result: CasinoRoundResult,
+  casinoOutcome: CasinoOutcome | null | undefined,
+  t: Translate
+) {
   if (result.kind === "refunded") {
     return {
       label: t("casino.room.result.outcomes.refunded.label"),
       tone: "neutral" as const,
       detail: t("casino.room.result.outcomes.refunded.detail")
+    };
+  }
+
+  if (result.kind === "indexing") {
+    const net = casinoOutcome?.netResult;
+    if (net == null) {
+      return {
+        label: t("casino.room.result.outcomes.revealed.label"),
+        tone: "neutral" as const,
+        detail: t("casino.room.result.outcomes.revealed.detail")
+      };
+    }
+    if (net > 0n) {
+      return {
+        label: t("casino.room.result.outcomes.winPending.label"),
+        tone: "win" as const,
+        detail: t("casino.room.result.outcomes.winPending.detail")
+      };
+    }
+    if (net === 0n) {
+      return {
+        label: t("casino.room.result.outcomes.returnedPending.label"),
+        tone: "neutral" as const,
+        detail: t("casino.room.result.outcomes.returnedPending.detail")
+      };
+    }
+    return {
+      label: t("casino.room.result.outcomes.lossPending.label"),
+      tone: "loss" as const,
+      detail: t("casino.room.result.outcomes.lossPending.detail")
     };
   }
 
@@ -323,7 +357,7 @@ export function GameRoomResultOverlay({
   casinoOutcome,
   onClose
 }: {
-  result: CasinoTerminalRoundResult;
+  result: CasinoRoundResult;
   chainId?: number;
   assetSymbol?: string;
   assetDecimals?: number;
@@ -339,12 +373,21 @@ export function GameRoomResultOverlay({
   onClose?: () => void;
 }) {
   const t = useTranslations();
-  const outcome = getOutcome(result, t);
-  const txHash = result.kind === "refunded" ? result.refund.txHash : result.settlement.txHash;
+  const outcome = getOutcome(result, casinoOutcome, t);
+  const txHash =
+    result.kind === "refunded"
+      ? result.refund.txHash
+      : result.kind === "settled"
+        ? result.settlement.txHash
+        : undefined;
   const txHref = explorerTxUrl(chainId, txHash);
   const payout =
-    result.kind === "refunded" ? result.refund.refundAmount : result.settlement.payoutNet;
-  const net = payout - result.stake;
+    result.kind === "refunded"
+      ? result.refund.refundAmount
+      : result.kind === "settled"
+        ? result.settlement.payoutNet
+        : casinoOutcome?.playerOwed;
+  const net = payout == null ? undefined : payout - result.stake;
   const gameRows = getGameResultRows(
     {
       gameSlug,
@@ -362,7 +405,9 @@ export function GameRoomResultOverlay({
   const payoutLabel =
     result.kind === "refunded"
       ? t("casino.room.result.facts.refund")
-      : t("casino.room.result.facts.payout");
+      : result.kind === "indexing"
+        ? t("casino.room.result.facts.expectedPayout")
+        : t("casino.room.result.facts.payout");
 
   return (
     <div className="pointer-events-auto absolute inset-0 z-[60] flex flex-col items-center justify-center bg-surface-0/82 p-4 backdrop-blur-md animate-in fade-in zoom-in">
@@ -411,7 +456,11 @@ export function GameRoomResultOverlay({
               />
               <DetailRow
                 label={t("casino.room.result.facts.multiplier")}
-                value={formatMultiplier(payout, result.stake)}
+                value={
+                  payout == null
+                    ? t("casino.room.result.facts.pending")
+                    : formatMultiplier(payout, result.stake)
+                }
               />
               <DetailRow
                 label={t("casino.room.result.facts.betAmount")}
@@ -419,12 +468,20 @@ export function GameRoomResultOverlay({
               />
               <DetailRow
                 label={payoutLabel}
-                value={formatTokenAmount(payout, assetDecimals, assetSymbol)}
+                value={
+                  payout == null
+                    ? t("casino.room.result.facts.pending")
+                    : formatTokenAmount(payout, assetDecimals, assetSymbol)
+                }
               />
               <DetailRow
                 label={t("casino.room.result.facts.netResult")}
-                value={formatSignedTokenAmount(net, assetDecimals, assetSymbol)}
-                tone={net > 0n ? "win" : net < 0n ? "loss" : "neutral"}
+                value={
+                  net == null
+                    ? t("casino.room.result.facts.pending")
+                    : formatSignedTokenAmount(net, assetDecimals, assetSymbol)
+                }
+                tone={net == null ? "neutral" : net > 0n ? "win" : net < 0n ? "loss" : "neutral"}
               />
             </DetailSection>
 
@@ -459,7 +516,11 @@ export function GameRoomResultOverlay({
               />
               <DetailRow
                 label={t("casino.room.result.facts.settlementTx")}
-                value={shortHash(txHash)}
+                value={
+                  shortHash(txHash) === "—"
+                    ? t("casino.room.result.facts.pending")
+                    : shortHash(txHash)
+                }
                 href={txHref}
               />
             </DetailSection>

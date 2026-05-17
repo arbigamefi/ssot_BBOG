@@ -237,8 +237,6 @@ export function useGameResolutionEffect({
       latestBetIdRef.current = terminalBet.betId;
       displayedBetIdRef.current = undefined;
       setIsPending(true);
-      setShowResult(false);
-      setResultProof(null);
 
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
       if (proofTimerRef.current) clearTimeout(proofTimerRef.current);

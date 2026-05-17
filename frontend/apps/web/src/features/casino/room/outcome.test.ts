@@ -22,6 +22,7 @@ const baseBet: DomainBet = {
   betCount: 1,
   stopGain: 0n,
   stopLoss: 0n,
+  effectiveHouseEdgeBps: 200,
   vrfFeePaid: 10n,
   vrfFeeCharged: 10n,
   vrfCallbackGasLimit: 320_000,
@@ -47,6 +48,7 @@ describe("casino outcome derivation", () => {
     expect(outcome.rolls).toHaveLength(1);
     expect(outcome.rolls[0]?.value).toBeGreaterThanOrEqual(1);
     expect(outcome.rolls[0]?.value).toBeLessThanOrEqual(100);
+    expect(outcome.playerOwed).toBe(outcome.payoutNet + outcome.refundAmount);
   });
 
   it("uses the contract coin toss bool mapping", () => {

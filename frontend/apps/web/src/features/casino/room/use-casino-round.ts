@@ -161,6 +161,7 @@ export function useCasinoRound({
     vrfQuote: vrfQuote.quote,
     vrfQuoteError: vrfQuote.quoteError,
     activeBetId: state.betId,
+    activeBet: roundWatcher.bet,
     activeRequestId: roundWatcher.bet?.requestId,
     roundError: roundWatcher.error,
     manualSettleAvailable: roundWatcher.manualSettleAvailable,

@@ -14,7 +14,9 @@ export async function readCasinoOutcome({
   bet: DomainBet | undefined;
   gameSlug: string | undefined;
 }): Promise<CasinoOutcome | null> {
-  if (!gameHub || !bet || !gameSlug || bet.state !== "finalized") return null;
+  if (!gameHub || !bet || !gameSlug || (bet.state !== "randomReady" && bet.state !== "finalized")) {
+    return null;
+  }
 
   try {
     const [params, randomWords] = await Promise.all([

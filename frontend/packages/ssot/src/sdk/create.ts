@@ -761,6 +761,7 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         betCount: Number(bet.betCount),
         stopGain: BigInt(bet.stopGain),
         stopLoss: BigInt(bet.stopLoss),
+        effectiveHouseEdgeBps: Number(bet.effectiveHouseEdgeBps),
         vrfFeePaid: BigInt(bet.vrfFeePaid),
         vrfFeeCharged: BigInt(bet.vrfFeeCharged),
         vrfCallbackGasLimit: Number(bet.vrfCallbackGasLimit),
