@@ -106,9 +106,7 @@ export async function executeGamePlaceBetAction({
       await executeNow(plan);
     }
   } catch (error) {
-    toast.error(
-      (error as Error)?.message ?? messages?.unexpectedError ?? "An unexpected error occurred."
-    );
+    toast.error((error as Error)?.message ?? messages?.unexpectedError ?? "—");
     console.error(error);
   }
 }

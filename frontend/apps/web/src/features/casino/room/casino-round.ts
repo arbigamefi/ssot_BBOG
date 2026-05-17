@@ -88,7 +88,7 @@ function toUnixMs(value: number | undefined) {
 export function useCasinoVrfQuote({
   sdk,
   betCount,
-  quoteErrorMessage = "Unable to estimate VRF fee."
+  quoteErrorMessage = "—"
 }: {
   sdk: SSOTSDK | undefined;
   betCount: number;
@@ -138,9 +138,9 @@ export function useCasinoRoundWatcher({
   pollIntervalMs = 2_000,
   softVrfTimeoutMs = CASINO_ROUND_SOFT_VRF_TIMEOUT_MS,
   manualSettleDelayMs = CASINO_ROUND_MANUAL_SETTLE_DELAY_MS,
-  readErrorMessage = "Unable to read the live round state.",
-  manualSettleErrorMessage = "Manual settlement failed.",
-  refundErrorMessage = "Refund failed."
+  readErrorMessage = "—",
+  manualSettleErrorMessage = "—",
+  refundErrorMessage = "—"
 }: {
   sdk: SSOTSDK | undefined;
   betId: bigint | undefined;

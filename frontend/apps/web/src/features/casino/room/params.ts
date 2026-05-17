@@ -155,9 +155,7 @@ export function buildGameParams(input: BuildGameParamsInput): BuildGameParamsRes
     if (!rouletteInput) {
       return {
         ok: false,
-        message:
-          input.messages?.rouletteSelectionRequired ??
-          "Please select at least one number or bet type on the Roulette board."
+        message: input.messages?.rouletteSelectionRequired ?? "—"
       };
     }
     return { ok: true, params: encodeRouletteParams(rouletteInput) };
@@ -167,9 +165,7 @@ export function buildGameParams(input: BuildGameParamsInput): BuildGameParamsRes
     if (input.kenoSpots.length === 0) {
       return {
         ok: false,
-        message:
-          input.messages?.kenoSelectionRequired ??
-          "Please select at least 1 number on the Keno grid."
+        message: input.messages?.kenoSelectionRequired ?? "—"
       };
     }
     return { ok: true, params: encodeKenoParams(buildKenoMask(input.kenoSpots)) };

@@ -102,8 +102,7 @@ export function buildGamePlaceBetInput({
   if (!casinoPool?.asset) {
     return {
       ok: false,
-      message:
-        messages?.noActiveCasinoPool ?? "No active casino pool is available in the current release."
+      message: messages?.noActiveCasinoPool ?? "—"
     };
   }
 

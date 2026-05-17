@@ -120,13 +120,14 @@ describe("game room place bet action", () => {
     const args = baseArgs({
       game: { ...game, slug: "roulette", label: "Roulette" },
       rouletteSpots: [],
-      winChance: 1
+      winChance: 1,
+      messages: {
+        rouletteSelectionRequired: "请选择至少一个轮盘投注项。"
+      }
     });
     await executeGamePlaceBetAction(args);
 
-    expect(mocks.toastError).toHaveBeenCalledWith(
-      "Please select at least one number or bet type on the Roulette board."
-    );
+    expect(mocks.toastError).toHaveBeenCalledWith("请选择至少一个轮盘投注项。");
     expect(args.planNow).not.toHaveBeenCalled();
   });
 

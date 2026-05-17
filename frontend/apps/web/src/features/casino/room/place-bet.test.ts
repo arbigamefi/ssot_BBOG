@@ -75,7 +75,7 @@ describe("game room place bet builder", () => {
     });
   });
 
-  it("returns selection validation from game param encoding", () => {
+  it("returns neutral selection validation when UI copy is not provided", () => {
     const result = buildGamePlaceBetInput({
       release,
       game: { ...game, slug: "roulette", label: "Roulette" },
@@ -91,7 +91,7 @@ describe("game room place bet builder", () => {
 
     expect(result).toEqual({
       ok: false,
-      message: "Please select at least one number or bet type on the Roulette board."
+      message: "—"
     });
   });
 
@@ -111,7 +111,7 @@ describe("game room place bet builder", () => {
 
     expect(result).toEqual({
       ok: false,
-      message: "No active casino pool is available in the current release."
+      message: "—"
     });
   });
 

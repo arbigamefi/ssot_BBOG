@@ -9,7 +9,7 @@ export function useRecentBets({
   enabled = true,
   gameId,
   limit = 20,
-  errorMessage = "Recent bets failed"
+  errorMessage = "—"
 }: {
   enabled?: boolean;
   gameId?: string;

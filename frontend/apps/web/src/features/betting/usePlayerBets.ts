@@ -12,7 +12,7 @@ export function usePlayerBets({
   enabled = true,
   limit = 50,
   player,
-  errorMessage = "Player bets failed"
+  errorMessage = "—"
 }: {
   enabled?: boolean;
   limit?: number;

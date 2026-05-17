@@ -129,7 +129,7 @@ describe("game room params", () => {
     expect(keno.ok && decodeKenoParams(keno.params)).toEqual({ mask: buildKenoMask([1, 40]) });
   });
 
-  it("returns actionable validation messages for empty selection games", () => {
+  it("uses neutral validation fallbacks when UI copy is not provided", () => {
     expect(
       buildGameParams({
         slug: "roulette",
@@ -140,7 +140,7 @@ describe("game room params", () => {
       })
     ).toEqual({
       ok: false,
-      message: "Please select at least one number or bet type on the Roulette board."
+      message: "—"
     });
     expect(
       buildGameParams({
@@ -150,7 +150,7 @@ describe("game room params", () => {
         rouletteSpots: [],
         kenoSpots: []
       })
-    ).toEqual({ ok: false, message: "Please select at least 1 number on the Keno grid." });
+    ).toEqual({ ok: false, message: "—" });
   });
 
   it("allows UI layers to provide localized validation copy", () => {
