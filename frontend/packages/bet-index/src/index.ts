@@ -111,6 +111,7 @@ create table if not exists indexer_cursors (
 
 export type PostgresBetIndexConfig = {
   connectionString: string;
+  connectTimeoutSeconds?: number;
   ssl?: boolean | "require";
 };
 
@@ -159,6 +160,7 @@ export function createMemoryBetIndexStore(): BetIndexStore {
 
 export function createPostgresBetIndexStore(config: PostgresBetIndexConfig): BetIndexStore {
   const sql = postgres(config.connectionString, {
+    connect_timeout: config.connectTimeoutSeconds ?? 5,
     max: 5,
     ssl: config.ssl ? "require" : undefined,
     transform: postgres.camel

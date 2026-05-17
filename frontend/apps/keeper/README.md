@@ -57,6 +57,19 @@ pnpm -C frontend keeper:start
 The keeper always re-reads `getBet(betId)` before broadcasting and only calls
 `finalize` when the bet state is `RandomReady`.
 
+Durable bet-feed indexing can be enabled with:
+
+```bash
+BET_INDEX_WRITE_ENABLED=true \
+BET_INDEX_DATABASE_URL=postgres://... \
+pnpm -C frontend keeper:start
+```
+
+When enabled, the keeper runs the Postgres migration, writes `GameHub` lifecycle
+events, and resumes scan windows from the persisted `gamehub-events` cursor when
+that cursor is ahead of `KEEPER_START_BLOCK`. Index writes are best-effort:
+failures are logged and do not block `finalize`.
+
 `KEEPER_SCAN_CHUNK_BLOCKS` defaults to `10` so Base Sepolia free RPC providers
 with tight `eth_getLogs` range limits can still catch delayed events. Increase it
 only for providers with a documented larger logs range.

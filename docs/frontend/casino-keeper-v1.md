@@ -97,13 +97,13 @@ drain loop before the initial catch-up scan and runs scans with a single-flight
 guard. Local development may derive a recent `KEEPER_START_BLOCK` from the
 current chain head to avoid replaying the full release window on every restart.
 
-The keeper does not need a full indexer in v1. It only needs the latest scanned
-block persisted to a small JSON file or durable KV.
-
 Durable bet-feed indexing is optional and controlled by
 `BET_INDEX_WRITE_ENABLED`. When enabled, the keeper may write `GameHub` event
 facts to the Postgres index defined in `docs/design/durable-bet-index.md`.
-Index writes are best-effort and must never block finalize attempts.
+Index writes are best-effort and must never block finalize attempts. When
+enabled, the keeper also reads the persisted `gamehub-events` cursor at startup
+and resumes from it when it is ahead of `KEEPER_START_BLOCK`. This keeps
+restarts cheap while preserving the same idempotent replay path for backfills.
 
 ## 7. Queue Semantics
 

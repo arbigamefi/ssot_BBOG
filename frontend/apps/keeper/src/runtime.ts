@@ -26,6 +26,7 @@ import { mapBetState } from "./state.js";
 import type { BetRead, KeeperConfig, KeeperEvent, KeeperLogger } from "./types.js";
 
 type GameHubEventName = BetIndexEvent["eventName"];
+const BET_INDEX_CURSOR_SOURCE = "gamehub-events";
 
 export function createKeeperChain(config: KeeperConfig) {
   return defineChain({
@@ -242,6 +243,33 @@ export function createKeeperRuntime({
     }
   };
 
+  const initializeBetIndex = async () => {
+    if (!betIndexStore) return;
+    try {
+      await betIndexStore.migrate();
+      logger.info("casino.keeper.bet_index_ready");
+      const cursor = await betIndexStore.getCursor(
+        config.chainId,
+        BET_INDEX_CURSOR_SOURCE,
+        config.gameHub
+      );
+      const resumeBlock = resolveBetIndexResumeBlock(lastScannedBlock, cursor);
+      if (resumeBlock > lastScannedBlock) {
+        const configuredStartBlock = lastScannedBlock;
+        lastScannedBlock = resumeBlock;
+        logger.info("casino.keeper.bet_index_cursor_resumed", {
+          configuredStartBlock: configuredStartBlock.toString(),
+          cursorBlock: resumeBlock.toString()
+        });
+        writeHealth(health.recordStarted(lastScannedBlock, queue.size));
+      }
+    } catch (error) {
+      logger.error("casino.keeper.bet_index_migrate_failed", {
+        message: (error as Error)?.message ?? "migration failed"
+      });
+    }
+  };
+
   const enqueueFulfilledLog = (log: {
     args?: { hub?: Address; betId?: bigint; requestId?: bigint; randomHash?: Hex };
     blockNumber?: bigint;
@@ -321,16 +349,7 @@ export function createKeeperRuntime({
       scanChunkBlocks: config.scanChunkBlocks.toString()
     });
     writeHealth(health.recordStarted(lastScannedBlock, queue.size));
-    if (betIndexStore) {
-      betIndexStore
-        .migrate()
-        .then(() => logger.info("casino.keeper.bet_index_ready"))
-        .catch((error) =>
-          logger.error("casino.keeper.bet_index_migrate_failed", {
-            message: (error as Error)?.message ?? "migration failed"
-          })
-        );
-    }
+    await initializeBetIndex();
 
     if (wsClient) {
       unwatchers.push(
@@ -425,7 +444,7 @@ async function writeBetIndexRange(
       blockNumber: range.toBlock,
       chainId: config.chainId,
       cursorKey: config.gameHub,
-      source: "gamehub-events"
+      source: BET_INDEX_CURSOR_SOURCE
     });
   } catch (error) {
     logger.error("casino.keeper.bet_index_scan_failed", {
@@ -457,4 +476,8 @@ function toBetIndexEvent(
     logIndex: log.logIndex,
     txHash: log.transactionHash
   };
+}
+
+export function resolveBetIndexResumeBlock(currentStartBlock: bigint, cursorBlock: bigint | null) {
+  return cursorBlock != null && cursorBlock > currentStartBlock ? cursorBlock : currentStartBlock;
 }

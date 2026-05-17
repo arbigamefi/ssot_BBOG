@@ -147,6 +147,13 @@ best-effort operational telemetry and feed acceleration; they must never block
 Implementation lives in `frontend/packages/bet-index`. The package is Node-only;
 client components must not import it.
 
+Keeper startup must run migrations before scanning and then read the
+`gamehub-events` cursor for the current `GameHub`. When the cursor is ahead of
+`KEEPER_START_BLOCK`, the keeper resumes from the cursor to avoid replaying old
+block windows after restarts. If Postgres is unavailable, connection attempts
+must fail quickly and settlement must continue with the configured
+`KEEPER_START_BLOCK`.
+
 ## 8. Don'ts
 
 - Do not use Redis as the canonical indexed ledger.
