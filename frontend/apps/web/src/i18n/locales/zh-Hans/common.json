@@ -7,7 +7,13 @@
     "indexerWorkerFailed": "索引器 worker 启动失败",
     "unknownNetwork": "未知网络",
     "walletRequired": "需要钱包",
-    "writesDisabled": "当前写入已关闭。"
+    "writesDisabled": "当前写入已关闭。",
+    "errors": {
+      "boundaryTitle": "页面出现错误",
+      "unexpected": "发生了非预期错误。",
+      "errorId": "错误 ID: {digest}",
+      "tryAgain": "重试"
+    }
   },
   "locale": {
     "label": "语言",
@@ -335,6 +341,7 @@
   },
   "sportsbook": {
     "index": {
+      "loading": "正在加载体育投注...",
       "noRelease": {
         "title": "未加载 release",
         "description": "内嵌 release 快照不可用。",

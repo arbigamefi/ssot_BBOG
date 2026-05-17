@@ -7,7 +7,13 @@
     "indexerWorkerFailed": "Indexer worker failed to start",
     "unknownNetwork": "Unknown network",
     "walletRequired": "Wallet required",
-    "writesDisabled": "Writes are disabled."
+    "writesDisabled": "Writes are disabled.",
+    "errors": {
+      "boundaryTitle": "Something went wrong",
+      "unexpected": "An unexpected error occurred.",
+      "errorId": "Error ID: {digest}",
+      "tryAgain": "Try again"
+    }
   },
   "locale": {
     "label": "Language",
@@ -335,6 +341,7 @@
   },
   "sportsbook": {
     "index": {
+      "loading": "Loading sportsbook...",
       "noRelease": {
         "title": "No release loaded",
         "description": "The embedded release snapshot is unavailable.",

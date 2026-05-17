@@ -1,8 +1,32 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 const token = (name: string, fallback: string) => `hsl(var(${name}, ${fallback}))`;
+
+const GLOBAL_ERROR_COPY = {
+  en: {
+    lang: "en",
+    title: "Application Error",
+    fallback: "A critical error occurred. Please try reloading.",
+    errorId: (digest: string) => `Error ID: ${digest}`,
+    tryAgain: "Try again"
+  },
+  zhHans: {
+    lang: "zh-Hans",
+    title: "应用发生错误",
+    fallback: "发生严重错误。请尝试重新加载页面。",
+    errorId: (digest: string) => `错误 ID: ${digest}`,
+    tryAgain: "重试"
+  }
+};
+
+function getBrowserGlobalErrorCopy() {
+  if (typeof navigator !== "undefined" && navigator.language.toLowerCase().startsWith("zh")) {
+    return GLOBAL_ERROR_COPY.zhHans;
+  }
+  return GLOBAL_ERROR_COPY.en;
+}
 
 /**
  * Global error boundary — catches errors in the root layout itself.
@@ -17,7 +41,10 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const [copy, setCopy] = useState(GLOBAL_ERROR_COPY.en);
+
   useEffect(() => {
+    setCopy(getBrowserGlobalErrorCopy());
     console.error("[GlobalErrorBoundary]", error);
     (
       window as Window & { __ssotCaptureException?: (error: unknown) => void }
@@ -25,7 +52,7 @@ export default function GlobalError({
   }, [error]);
 
   return (
-    <html lang="en">
+    <html lang={copy.lang}>
       <body
         style={{
           margin: 0,
@@ -47,9 +74,9 @@ export default function GlobalError({
             textAlign: "center"
           }}
         >
-          <h1 style={{ fontSize: 20, marginBottom: 8 }}>Application Error</h1>
+          <h1 style={{ fontSize: 20, marginBottom: 8 }}>{copy.title}</h1>
           <p style={{ fontSize: 14, color: token("--fg-muted", "215 16% 65%"), marginBottom: 16 }}>
-            {error.message || "A critical error occurred. Please try reloading."}
+            {error.message || copy.fallback}
           </p>
           {error.digest && (
             <p
@@ -60,7 +87,7 @@ export default function GlobalError({
                 marginBottom: 16
               }}
             >
-              Error ID: {error.digest}
+              {copy.errorId(error.digest)}
             </p>
           )}
           <button
@@ -75,7 +102,7 @@ export default function GlobalError({
               fontSize: 14
             }}
           >
-            Try again
+            {copy.tryAgain}
           </button>
         </div>
       </body>

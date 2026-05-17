@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { Button, Card, CardContent, CardFooter, CardHeader, CardTitle } from "@ssot/ui";
 
 export default function ErrorPage({
@@ -10,6 +11,8 @@ export default function ErrorPage({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const t = useTranslations();
+
   useEffect(() => {
     console.error("[ErrorBoundary]", error);
     (
@@ -21,19 +24,21 @@ export default function ErrorPage({
     <div className="flex min-h-[60vh] items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Something went wrong</CardTitle>
+          <CardTitle>{t("app.errors.boundaryTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            {error.message || "An unexpected error occurred."}
+            {error.message || t("app.errors.unexpected")}
           </p>
           {error.digest && (
-            <p className="mt-2 font-mono text-xs text-muted-foreground">Error ID: {error.digest}</p>
+            <p className="mt-2 font-mono text-xs text-muted-foreground">
+              {t("app.errors.errorId", { digest: error.digest })}
+            </p>
           )}
         </CardContent>
         <CardFooter>
           <Button onClick={reset} variant="outline" size="sm">
-            Try again
+            {t("app.errors.tryAgain")}
           </Button>
         </CardFooter>
       </Card>
