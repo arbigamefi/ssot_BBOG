@@ -34,6 +34,14 @@ function parseOptionalBlock(value: string | undefined) {
   return BigInt(value);
 }
 
+function parseBool(value: string | undefined) {
+  return ["1", "true", "yes", "on"].includes(
+    String(value ?? "")
+      .trim()
+      .toLowerCase()
+  );
+}
+
 function parseBlockCount(value: string | undefined, fallback: bigint) {
   if (!value) return fallback;
   const parsed = BigInt(value);
@@ -70,6 +78,9 @@ export function loadKeeperConfig(env: NodeJS.ProcessEnv = process.env): KeeperCo
     scanChunkBlocks: parseBlockCount(env.KEEPER_SCAN_CHUNK_BLOCKS, 10n),
     startBlock:
       parseOptionalBlock(env.KEEPER_START_BLOCK) ?? BigInt(release.meta?.blockNumber ?? 0),
-    healthPath: env.KEEPER_HEALTH_PATH?.trim() || undefined
+    healthPath: env.KEEPER_HEALTH_PATH?.trim() || undefined,
+    betIndexDatabaseUrl: env.BET_INDEX_DATABASE_URL?.trim() || undefined,
+    betIndexSsl: parseBool(env.BET_INDEX_SSL),
+    betIndexWriteEnabled: parseBool(env.BET_INDEX_WRITE_ENABLED)
   };
 }

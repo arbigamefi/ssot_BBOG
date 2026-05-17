@@ -3,7 +3,7 @@
 | Owner | Frontend Lead + Protocol Lead |
 | Status | Accepted |
 | Last Updated | 2026-05-17 |
-| Depends-on | `14-data-and-state.md`, `../frontend/casino-keeper-v1.md`, `adr/0004-no-subgraph-for-mvp-indexing.md` |
+| Depends-on | `14-data-and-state.md`, `../frontend/casino-keeper-v1.md`, `adr/0004-no-subgraph-for-mvp-indexing.md`, `adr/0005-postgres-durable-bet-index.md` |
 | Supersedes | ad-hoc references to "indexer subgraph" as a required source |
 
 This document defines the MVP indexing strategy for casino and sportsbook UI
@@ -62,9 +62,9 @@ flowchart TB
   Keeper -. future durable cache .-> API
 ```
 
-The API layer may use short-lived in-memory cache for MVP. A production
-deployment should move shared feed cache to Redis, Postgres, or SQLite if the
-runtime is not long-lived.
+The API layer may use short-lived in-memory cache for MVP. Per ADR-0005,
+production durable indexing uses Postgres. SQLite is local/dev only and Redis is
+only an optional acceleration layer.
 
 ## 5. Phase Plan
 
@@ -89,6 +89,7 @@ runtime is not long-lived.
 
 - Extend the keeper or a small sibling worker to persist `BetPlaced`,
   `BetRandomReady`, `BetFinalized`, and `BetRefunded` rows.
+- Use Postgres as the durable store.
 - Store only derived public facts.
 - Serve `/api/bets/*` from durable storage, with RPC replay as fallback.
 

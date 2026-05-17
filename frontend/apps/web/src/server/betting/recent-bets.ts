@@ -8,6 +8,7 @@ import {
   type Hex,
   type PublicClient
 } from "viem";
+import { createPostgresBetIndexStore, type BetIndexStore } from "@ssot/bet-index";
 import { applyGameHubEventToBet, type BetRow, type GameHubEventName } from "@ssot/ssot/indexer";
 import { loadEmbeddedRelease, type SSOTRelease } from "@ssot/ssot/release";
 
@@ -50,6 +51,7 @@ type RecentBetsCacheEntry = {
 };
 
 const recentBetsCache = new Map<string, RecentBetsCacheEntry>();
+let durableBetIndexStore: BetIndexStore | null | undefined;
 
 function cleanEnvValue(value: string | undefined) {
   const trimmed = value?.trim();
@@ -70,6 +72,36 @@ function resolveServerRpcUrl(chainId: number) {
     cleanEnvValue(process.env.ARBITRUM_RPC_URL) ??
     resolvePublicRpcUrl(chainId)
   );
+}
+
+function isTruthyEnv(value: string | undefined) {
+  return ["1", "true", "yes", "on"].includes(
+    String(value ?? "")
+      .trim()
+      .toLowerCase()
+  );
+}
+
+function isFalseyEnv(value: string | undefined) {
+  return ["0", "false", "no", "off"].includes(
+    String(value ?? "")
+      .trim()
+      .toLowerCase()
+  );
+}
+
+function getDurableBetIndexStore() {
+  if (durableBetIndexStore !== undefined) return durableBetIndexStore;
+  const connectionString = cleanEnvValue(process.env.BET_INDEX_DATABASE_URL);
+  if (!connectionString || isFalseyEnv(process.env.BET_INDEX_READ_ENABLED)) {
+    durableBetIndexStore = null;
+    return durableBetIndexStore;
+  }
+  durableBetIndexStore = createPostgresBetIndexStore({
+    connectionString,
+    ssl: isTruthyEnv(process.env.BET_INDEX_SSL)
+  });
+  return durableBetIndexStore;
 }
 
 function getEventAbi(eventName: GameHubEventName) {
@@ -229,6 +261,23 @@ export async function queryRecentBets({
     return { ...cached.response, cached: true };
   }
 
+  const durableRows = await queryDurableRecentBets({
+    chainId,
+    gameId: normalizedGameId,
+    limit: normalizedLimit
+  });
+  if (durableRows.length > 0) {
+    const response = responseFromRows({
+      cached: false,
+      chainId,
+      generatedAt: timestamp,
+      rows: durableRows,
+      source: "postgres"
+    });
+    recentBetsCache.set(cacheKey, { expiresAt: timestamp + cacheTtlMs, response });
+    return response;
+  }
+
   const loaded = await loadGameHubClient({ chainId, client });
   const { fromBlock, toBlock } = resolveBlockWindow({
     confirmations,
@@ -299,6 +348,26 @@ export async function queryPlayerBets({
     return { ...(cached.response as PlayerBetsResponse), cached: true };
   }
 
+  const durableRows = await queryDurablePlayerBets({
+    chainId,
+    limit: normalizedLimit,
+    player: normalizedPlayer
+  });
+  if (durableRows.length > 0) {
+    const response = {
+      ...responseFromRows({
+        cached: false,
+        chainId,
+        generatedAt: timestamp,
+        rows: durableRows,
+        source: "postgres"
+      }),
+      player: normalizedPlayer
+    };
+    recentBetsCache.set(cacheKey, { expiresAt: timestamp + cacheTtlMs, response });
+    return response;
+  }
+
   const loaded = await loadGameHubClient({ chainId, client });
   const { fromBlock, toBlock } = resolveBlockWindow({
     confirmations,
@@ -359,6 +428,68 @@ export async function queryPlayerBets({
   };
   recentBetsCache.set(cacheKey, { expiresAt: timestamp + cacheTtlMs, response });
   return response;
+}
+
+async function queryDurableRecentBets({
+  chainId,
+  gameId,
+  limit
+}: {
+  chainId: number;
+  gameId?: Hex;
+  limit: number;
+}) {
+  const store = getDurableBetIndexStore();
+  if (!store) return [];
+  try {
+    return await store.getRecentBets({ chainId, gameId, limit });
+  } catch {
+    return [];
+  }
+}
+
+async function queryDurablePlayerBets({
+  chainId,
+  limit,
+  player
+}: {
+  chainId: number;
+  limit: number;
+  player: Address;
+}) {
+  const store = getDurableBetIndexStore();
+  if (!store) return [];
+  try {
+    return await store.getPlayerBets({ chainId, limit, player });
+  } catch {
+    return [];
+  }
+}
+
+function responseFromRows({
+  cached,
+  chainId,
+  generatedAt,
+  rows,
+  source
+}: {
+  cached: boolean;
+  chainId: number;
+  generatedAt: number;
+  rows: BetRow[];
+  source: RecentBetsResponse["source"];
+}): RecentBetsResponse {
+  const blocks = rows.map((row) => row.updatedBlock);
+  return {
+    schemaVersion: 1,
+    cached,
+    chainId,
+    fromBlock: blocks.length ? Math.min(...blocks) : 0,
+    generatedAt,
+    rows,
+    source,
+    toBlock: blocks.length ? Math.max(...blocks) : 0
+  };
 }
 
 export function recentBetsCacheSize() {

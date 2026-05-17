@@ -17,6 +17,7 @@
     "@heroicons/react": "^2.2.0",
     "@rainbow-me/rainbowkit": "2.2.11",
     "@sentry/nextjs": "^10.38.0",
+    "@ssot/bet-index": "workspace:*",
     "@ssot/ssot": "workspace:*",
     "@ssot/ui": "workspace:*",
     "@tanstack/react-query": "^5.56.2",

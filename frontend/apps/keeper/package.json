@@ -11,6 +11,7 @@
     "test": "vitest run -c vitest.config.ts"
   },
   "dependencies": {
+    "@ssot/bet-index": "workspace:*",
     "viem": "^2.21.0"
   },
   "devDependencies": {

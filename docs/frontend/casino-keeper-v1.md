@@ -3,7 +3,7 @@
 | Owner | Frontend Lead + SRE |
 | Status | Draft v1 |
 | Last Updated | 2026-05-17 |
-| Depends-on | `../design/casino-placebet-ux.md`, `25-observability.md`, `30-build-and-release.md` |
+| Depends-on | `../design/casino-placebet-ux.md`, `../design/durable-bet-index.md`, `25-observability.md`, `30-build-and-release.md` |
 | Supersedes | manual-by-default casino finalize operations |
 
 This document specifies the first production keeper for casino settlement.
@@ -99,6 +99,11 @@ current chain head to avoid replaying the full release window on every restart.
 
 The keeper does not need a full indexer in v1. It only needs the latest scanned
 block persisted to a small JSON file or durable KV.
+
+Durable bet-feed indexing is optional and controlled by
+`BET_INDEX_WRITE_ENABLED`. When enabled, the keeper may write `GameHub` event
+facts to the Postgres index defined in `docs/design/durable-bet-index.md`.
+Index writes are best-effort and must never block finalize attempts.
 
 ## 7. Queue Semantics
 

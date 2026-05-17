@@ -1,11 +1,60 @@
 export const GAME_HUB_KEEPER_ABI = [
   {
     type: "event",
+    name: "BetPlaced",
+    inputs: [
+      { indexed: true, name: "positionId", type: "uint256" },
+      { indexed: true, name: "gameId", type: "bytes32" },
+      { indexed: true, name: "player", type: "address" },
+      { indexed: false, name: "poolId", type: "uint64" },
+      { indexed: false, name: "asset", type: "address" },
+      { indexed: false, name: "bank", type: "address" },
+      { indexed: false, name: "stake", type: "uint256" },
+      { indexed: false, name: "reserved", type: "uint256" },
+      { indexed: false, name: "amountPerRoll", type: "uint256" },
+      { indexed: false, name: "betCount", type: "uint32" },
+      { indexed: false, name: "stopGain", type: "uint256" },
+      { indexed: false, name: "stopLoss", type: "uint256" },
+      { indexed: false, name: "vrfFeePaid", type: "uint256" },
+      { indexed: false, name: "vrfFeeCharged", type: "uint256" },
+      { indexed: false, name: "vrfCallbackGasLimit", type: "uint32" },
+      { indexed: false, name: "requestId", type: "uint256" },
+      { indexed: false, name: "snapshotHash", type: "bytes32" },
+      { indexed: false, name: "paramsHash", type: "bytes32" },
+      { indexed: false, name: "pricingAffiliate", type: "address" },
+      { indexed: false, name: "baseHouseEdgeBps", type: "uint16" },
+      { indexed: false, name: "effectiveHouseEdgeBps", type: "uint16" },
+      { indexed: false, name: "maxHouseEdgeBps", type: "uint16" },
+      { indexed: false, name: "referralConfigId", type: "uint32" },
+      { indexed: false, name: "deltaSkylineHash", type: "bytes32" }
+    ]
+  },
+  {
+    type: "event",
     name: "BetRandomReady",
     inputs: [
       { indexed: true, name: "betId", type: "uint256" },
       { indexed: true, name: "requestId", type: "uint256" },
       { indexed: false, name: "randomHash", type: "bytes32" }
+    ]
+  },
+  {
+    type: "event",
+    name: "BetFinalized",
+    inputs: [
+      { indexed: true, name: "positionId", type: "uint256" },
+      { indexed: false, name: "payoutGross", type: "uint256" },
+      { indexed: false, name: "payoutNet", type: "uint256" },
+      { indexed: false, name: "feeOnPayout", type: "uint256" },
+      { indexed: false, name: "protocolFeeAccrual", type: "uint256" }
+    ]
+  },
+  {
+    type: "event",
+    name: "BetRefunded",
+    inputs: [
+      { indexed: true, name: "positionId", type: "uint256" },
+      { indexed: false, name: "refundAmount", type: "uint256" }
     ]
   },
   {

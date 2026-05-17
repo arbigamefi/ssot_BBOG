@@ -16,7 +16,9 @@ const baseConfig: KeeperConfig = {
   backupDelayMs: 0,
   pollIntervalMs: 15_000,
   scanChunkBlocks: 10n,
-  startBlock: 100n
+  startBlock: 100n,
+  betIndexSsl: false,
+  betIndexWriteEnabled: false
 };
 
 const keeper = "0x3333333333333333333333333333333333333333";

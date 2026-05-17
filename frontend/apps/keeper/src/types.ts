@@ -29,6 +29,9 @@ export type KeeperConfig = {
   scanChunkBlocks: bigint;
   startBlock?: bigint;
   healthPath?: string;
+  betIndexDatabaseUrl?: string;
+  betIndexSsl: boolean;
+  betIndexWriteEnabled: boolean;
 };
 
 export type BetRead = {

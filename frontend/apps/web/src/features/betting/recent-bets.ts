@@ -5,7 +5,7 @@ export type RecentBetRow = BetRow;
 export type RecentBetsResponse = {
   schemaVersion: 1;
   chainId: number;
-  source: "rpc-window";
+  source: "postgres" | "rpc-window";
   cached: boolean;
   generatedAt: number;
   fromBlock: number;

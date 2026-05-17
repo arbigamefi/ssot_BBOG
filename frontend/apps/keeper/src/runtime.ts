@@ -11,6 +11,11 @@ import {
   type WalletClient
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+import {
+  createPostgresBetIndexStore,
+  type BetIndexEvent,
+  type BetIndexStore
+} from "@ssot/bet-index";
 
 import { GAME_HUB_KEEPER_ABI, VRF_HUB_KEEPER_ABI } from "./abi.js";
 import { finalizeIfReady, retryDelayMs } from "./finalizer.js";
@@ -19,6 +24,8 @@ import { FinalizeQueue, type QueueItem } from "./queue.js";
 import { splitBlockRange } from "./scan.js";
 import { mapBetState } from "./state.js";
 import type { BetRead, KeeperConfig, KeeperEvent, KeeperLogger } from "./types.js";
+
+type GameHubEventName = BetIndexEvent["eventName"];
 
 export function createKeeperChain(config: KeeperConfig) {
   return defineChain({
@@ -79,6 +86,13 @@ export function createKeeperRuntime({
   let stopped = false;
   let scanning = false;
   let lastScannedBlock = config.startBlock ?? 0n;
+  const betIndexStore =
+    config.betIndexWriteEnabled && config.betIndexDatabaseUrl
+      ? createPostgresBetIndexStore({
+          connectionString: config.betIndexDatabaseUrl,
+          ssl: config.betIndexSsl
+        })
+      : undefined;
 
   const writeHealth = (op: Promise<void>) => {
     void op.catch((error) => {
@@ -204,6 +218,30 @@ export function createKeeperRuntime({
     });
   };
 
+  const writeBetIndexLogs = async (
+    eventName: GameHubEventName,
+    logs: Array<{
+      args?: Record<string, unknown>;
+      blockNumber?: bigint;
+      logIndex?: number;
+      transactionHash?: Hex;
+    }>
+  ) => {
+    if (!betIndexStore || logs.length === 0) return;
+    const events = logs
+      .map((log) => toBetIndexEvent(config.chainId, config.gameHub, eventName, log))
+      .filter((event): event is BetIndexEvent => Boolean(event));
+    if (events.length === 0) return;
+    try {
+      await betIndexStore.writeGameHubEvents(events);
+    } catch (error) {
+      logger.error("casino.keeper.bet_index_write_failed", {
+        eventName,
+        message: (error as Error)?.message ?? "index write failed"
+      });
+    }
+  };
+
   const enqueueFulfilledLog = (log: {
     args?: { hub?: Address; betId?: bigint; requestId?: bigint; randomHash?: Hex };
     blockNumber?: bigint;
@@ -240,6 +278,7 @@ export function createKeeperRuntime({
         fromBlock: range.fromBlock,
         toBlock: range.toBlock
       });
+      await writeBetIndexRange(betIndexStore, publicClient, config, range, logger);
       for (const log of logs) {
         if (log.args.betId == null) continue;
         enqueue({
@@ -282,6 +321,16 @@ export function createKeeperRuntime({
       scanChunkBlocks: config.scanChunkBlocks.toString()
     });
     writeHealth(health.recordStarted(lastScannedBlock, queue.size));
+    if (betIndexStore) {
+      betIndexStore
+        .migrate()
+        .then(() => logger.info("casino.keeper.bet_index_ready"))
+        .catch((error) =>
+          logger.error("casino.keeper.bet_index_migrate_failed", {
+            message: (error as Error)?.message ?? "migration failed"
+          })
+        );
+    }
 
     if (wsClient) {
       unwatchers.push(
@@ -289,11 +338,31 @@ export function createKeeperRuntime({
           address: config.gameHub,
           abi: GAME_HUB_KEEPER_ABI,
           eventName: "BetRandomReady",
-          onLogs: (logs) => logs.forEach(enqueueBetRandomReadyLog),
+          onLogs: (logs) => {
+            logs.forEach(enqueueBetRandomReadyLog);
+            void writeBetIndexLogs("BetRandomReady", logs);
+          },
           onError: (error) =>
             logger.error("casino.keeper.gamehub_watch_error", { message: error.message })
         })
       );
+      if (betIndexStore) {
+        for (const eventName of ["BetPlaced", "BetFinalized", "BetRefunded"] as const) {
+          unwatchers.push(
+            wsClient.watchContractEvent({
+              address: config.gameHub,
+              abi: GAME_HUB_KEEPER_ABI,
+              eventName,
+              onLogs: (logs) => void writeBetIndexLogs(eventName, logs),
+              onError: (error) =>
+                logger.error("casino.keeper.gamehub_index_watch_error", {
+                  eventName,
+                  message: error.message
+                })
+            })
+          );
+        }
+      }
       unwatchers.push(
         wsClient.watchContractEvent({
           address: config.vrfHub,
@@ -317,9 +386,75 @@ export function createKeeperRuntime({
     stopped = true;
     timers.forEach(clearInterval);
     unwatchers.forEach((unwatch) => unwatch());
+    await betIndexStore?.close?.();
     await health.recordStopped(queue.size);
     logger.info("casino.keeper.stopped");
   };
 
   return { start, stop, enqueue, queue, health };
+}
+
+async function writeBetIndexRange(
+  store: BetIndexStore | undefined,
+  publicClient: PublicClient,
+  config: KeeperConfig,
+  range: { fromBlock: bigint; toBlock: bigint },
+  logger: KeeperLogger
+) {
+  if (!store) return;
+  try {
+    for (const eventName of [
+      "BetPlaced",
+      "BetRandomReady",
+      "BetFinalized",
+      "BetRefunded"
+    ] as const) {
+      const logs = await publicClient.getContractEvents({
+        address: config.gameHub,
+        abi: GAME_HUB_KEEPER_ABI,
+        eventName,
+        fromBlock: range.fromBlock,
+        toBlock: range.toBlock
+      });
+      const events = logs
+        .map((log) => toBetIndexEvent(config.chainId, config.gameHub, eventName, log))
+        .filter((event): event is BetIndexEvent => Boolean(event));
+      await store.writeGameHubEvents(events);
+    }
+    await store.setCursor({
+      blockNumber: range.toBlock,
+      chainId: config.chainId,
+      cursorKey: config.gameHub,
+      source: "gamehub-events"
+    });
+  } catch (error) {
+    logger.error("casino.keeper.bet_index_scan_failed", {
+      fromBlock: range.fromBlock.toString(),
+      message: (error as Error)?.message ?? "index scan failed",
+      toBlock: range.toBlock.toString()
+    });
+  }
+}
+
+function toBetIndexEvent(
+  chainId: number,
+  gameHub: Address,
+  eventName: GameHubEventName,
+  log: {
+    args?: Record<string, unknown>;
+    blockNumber?: bigint;
+    logIndex?: number;
+    transactionHash?: Hex;
+  }
+): BetIndexEvent | null {
+  if (log.blockNumber == null || log.transactionHash == null || log.logIndex == null) return null;
+  return {
+    args: log.args ?? {},
+    blockNumber: log.blockNumber,
+    chainId,
+    eventName,
+    gameHub,
+    logIndex: log.logIndex,
+    txHash: log.transactionHash
+  };
 }
