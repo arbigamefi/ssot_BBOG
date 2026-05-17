@@ -415,9 +415,9 @@ function deriveOutcome(
     netResult: string;
     loss: string;
   } = {
-    refunded: "Refunded",
-    netResult: "Net result",
-    loss: "Loss"
+    refunded: "—",
+    netResult: "—",
+    loss: "—"
   }
 ) {
   if (!bet || !state) return null;
