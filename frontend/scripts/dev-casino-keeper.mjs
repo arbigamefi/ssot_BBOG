@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import fs from "node:fs";
+import net from "node:net";
 import path from "node:path";
 import { spawn } from "node:child_process";
 
@@ -10,6 +11,8 @@ const LEGACY_PUBLIC_HEALTH_PATH = path.join(
   "apps/web/public/ops/casino-keeper-health.json"
 );
 const DEFAULT_DEV_REWIND_BLOCKS = 2_000n;
+const DEFAULT_LOCAL_BET_INDEX_DATABASE_URL =
+  "postgres://arbigamefi:arbigamefi_dev_only@127.0.0.1:54329/arbigamefi";
 
 function parseEnvFile(filePath, target) {
   if (!fs.existsSync(filePath)) return;
@@ -72,6 +75,39 @@ async function fetchLatestBlock(rpcUrl) {
   return BigInt(body.result);
 }
 
+function canConnectTcp({ host, port, timeoutMs = 250 }) {
+  return new Promise((resolve) => {
+    const socket = net.createConnection({ host, port });
+    const done = (ok) => {
+      socket.removeAllListeners();
+      socket.destroy();
+      resolve(ok);
+    };
+    socket.setTimeout(timeoutMs);
+    socket.once("connect", () => done(true));
+    socket.once("error", () => done(false));
+    socket.once("timeout", () => done(false));
+  });
+}
+
+async function applyLocalBetIndexDefaults(env) {
+  if (!env.BET_INDEX_DATABASE_URL?.trim()) {
+    const localPostgresReady = await canConnectTcp({ host: "127.0.0.1", port: 54329 });
+    if (!localPostgresReady) {
+      console.error(
+        "[casino-keeper-dev] local bet-index Postgres is not reachable; run `pnpm bet-index:db:up` to enable durable bet feeds."
+      );
+      return;
+    }
+    env.BET_INDEX_DATABASE_URL = DEFAULT_LOCAL_BET_INDEX_DATABASE_URL;
+    console.error("[casino-keeper-dev] using local bet-index Postgres on 127.0.0.1:54329");
+  }
+
+  env.BET_INDEX_SSL ??= "false";
+  env.BET_INDEX_READ_ENABLED ??= "true";
+  env.BET_INDEX_WRITE_ENABLED ??= "true";
+}
+
 async function applyDevStartBlock(env) {
   if (env.KEEPER_START_BLOCK?.trim()) return;
   if (!env.KEEPER_RPC_HTTP?.trim()) return;
@@ -130,6 +166,7 @@ async function keeperEnv() {
   env.KEEPER_SCAN_CHUNK_BLOCKS ??= "10";
   env.KEEPER_HEALTH_PATH ??= path.join(FRONTEND_ROOT, ".runtime/casino-keeper-health.json");
   env.KEEPER_HEALTH_PATH = resolveRepoPath(env.KEEPER_HEALTH_PATH);
+  await applyLocalBetIndexDefaults(env);
   await applyDevStartBlock(env);
 
   return env;

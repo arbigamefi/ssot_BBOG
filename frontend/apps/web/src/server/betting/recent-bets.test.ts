@@ -1,11 +1,13 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  clearRecentBetsCache,
   clampRecentBetsLimit,
   clampPlayerBetsLimit,
   foldRecentBetLogs,
   normalizeGameId,
   normalizePlayerAddress,
+  queryRecentBets,
   queryPlayerBets
 } from "./recent-bets";
 
@@ -13,7 +15,37 @@ const GAME_ID = `0x${"11".repeat(32)}` as const;
 const PLAYER = "0x2222222222222222222222222222222222222222" as const;
 const GAME_HUB = "0x3333333333333333333333333333333333333333" as const;
 
+const ENV_KEYS = [
+  "BET_INDEX_READ_ENABLED",
+  "PLAYER_BETS_LOG_CHUNK_BLOCKS",
+  "PLAYER_BETS_WINDOW_BLOCKS",
+  "RECENT_BETS_LOG_CHUNK_BLOCKS",
+  "RECENT_BETS_WINDOW_BLOCKS"
+];
+
 describe("recent bets server aggregation", () => {
+  const envSnapshot = new Map<string, string | undefined>();
+
+  beforeEach(() => {
+    for (const key of ENV_KEYS) {
+      envSnapshot.set(key, process.env[key]);
+    }
+    clearRecentBetsCache();
+  });
+
+  afterEach(() => {
+    for (const [key, value] of envSnapshot.entries()) {
+      if (value == null) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
+    }
+    envSnapshot.clear();
+    clearRecentBetsCache();
+    vi.restoreAllMocks();
+  });
+
   it("normalizes and validates game ids", () => {
     expect(normalizeGameId(GAME_ID.toUpperCase())).toBe(GAME_ID);
     expect(() => normalizeGameId("0x1234")).toThrow("gameId");
@@ -89,7 +121,58 @@ describe("recent bets server aggregation", () => {
     });
   });
 
+  it("chunks recent fallback log scans for free-tier RPC providers", async () => {
+    process.env.BET_INDEX_READ_ENABLED = "0";
+    process.env.RECENT_BETS_WINDOW_BLOCKS = "25";
+    process.env.RECENT_BETS_LOG_CHUNK_BLOCKS = "10";
+
+    const getLogs = vi.fn().mockResolvedValue([]);
+    const response = await queryRecentBets({
+      chainId: 84532,
+      client: {
+        getBlockNumber: vi.fn().mockResolvedValue(41_600_000n),
+        getLogs
+      } as any,
+      limit: 10,
+      now: () => 1234
+    });
+
+    expect(response.source).toBe("rpc-window");
+    expect(response.rows).toHaveLength(0);
+    expect(getLogs).toHaveBeenCalledTimes(12);
+    for (const call of getLogs.mock.calls) {
+      const params = call[0] as { fromBlock: bigint; toBlock: bigint };
+      expect(params.toBlock - params.fromBlock + 1n).toBeLessThanOrEqual(10n);
+    }
+  });
+
+  it("returns an empty best-effort recent feed when RPC fallback is unavailable", async () => {
+    process.env.BET_INDEX_READ_ENABLED = "0";
+
+    const response = await queryRecentBets({
+      chainId: 84532,
+      client: {
+        getBlockNumber: vi.fn().mockResolvedValue(41_600_000n),
+        getLogs: vi.fn().mockRejectedValue(new Error("rate limited"))
+      } as any,
+      limit: 10,
+      now: () => 1234
+    });
+
+    expect(response).toMatchObject({
+      chainId: 84532,
+      fromBlock: 0,
+      rows: [],
+      source: "rpc-window",
+      toBlock: 0
+    });
+  });
+
   it("queries player placed logs and folds matching terminal events", async () => {
+    process.env.BET_INDEX_READ_ENABLED = "0";
+    process.env.PLAYER_BETS_WINDOW_BLOCKS = "9";
+    process.env.PLAYER_BETS_LOG_CHUNK_BLOCKS = "10";
+
     const getLogs = vi
       .fn()
       .mockResolvedValueOnce([
