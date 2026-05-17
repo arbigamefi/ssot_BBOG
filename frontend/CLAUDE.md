@@ -1,16 +1,18 @@
 # ArbiGameFi Frontend — Rules for AI Coding Assistants
 
 This file is the **runtime contract** loaded by Claude Code and other AI
-assistants working in the `frontend/` workspace. The authoritative,
-verbose version is `../docs/frontend/32-ai-pairing.md`. This file is its
-condensed, machine-readable companion.
+assistants working in the `frontend/` workspace. The policy companion is
+`../docs/frontend/32-ai-pairing.md`; the fullstack product boundary is
+`../docs/strategy/fullstack-product-architecture.md`.
 
-If anything below conflicts with `../docs/design/00-charter.md`, the Charter wins.
+If anything below conflicts with release artifacts, contract SSOT, or the
+fullstack strategy, those sources win.
 
 ## 1. Where rules live
 
 | Domain                                       | Document                                                                                |
 | -------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Fullstack strategy and complexity budget     | `../docs/strategy/fullstack-product-architecture.md`                                    |
 | Mission, success metrics, Non-Negotiables    | `../docs/design/00-charter.md`                                                          |
 | Brand, logo, palette, typography roles       | `../docs/design/01-brand.md`, `../docs/design/10-design-tokens.md`                      |
 | Voice, copy, number / time / address formats | `../docs/design/02-voice-and-copy.md`                                                   |
@@ -31,8 +33,8 @@ If anything below conflicts with `../docs/design/00-charter.md`, the Charter win
 | Governance, ADR                              | `../docs/frontend/31-governance.md`                                                     |
 | **You are here**                             | `frontend/CLAUDE.md`                                                                    |
 
-Always check the relevant SSOT document **before** suggesting code that
-touches its surface.
+Check the relevant document before suggesting code that touches its surface, but
+do not block P0 runtime fixes on historical design/process docs.
 
 ## 2. Hard rules — refuse to violate
 
@@ -74,8 +76,9 @@ suggest the conformant alternative.
 15. **No `parseFloat` / `Number(...)` on user-entered amounts.** Native
     bigint via shared parsing helpers.
 16. **No inline JSX strings** in `apps/web/src/app/`, `apps/web/src/features/`
-    that should be translated. Use the i18n key system. Exception: `/ops`
-    routes may bypass with `// i18n: deferred`.
+    that should be translated. Use the i18n key system.
+17. **No raw RPC, viem, ABI, contract, or server errors as product copy.**
+18. **No white-label/operator UI surfaces** before a real requirement exists.
 
 ## 3. Preferred patterns
 
@@ -140,10 +143,9 @@ ESLint `boundaries/element-types` enforces this. Don't bypass.
 
 ## 7. When uncertain
 
-If you're not sure whether a change is allowed, say so. Suggest opening
-an ADR (`../docs/design/adr/`) or asking the relevant doc owner per
-`../docs/frontend/31-governance.md §1`. Do **not** silently invent a new
-pattern.
+If you're not sure whether a change is allowed, say so. Use
+`../docs/frontend/31-governance.md` to decide whether an ADR is required. Do
+**not** silently invent a new pattern.
 
 ## 8. PR annotation contract
 
