@@ -28,6 +28,33 @@ vi.mock("./WalletButton", () => ({
   useConnectModal: () => ({ openConnectModal: vi.fn() })
 }));
 
+vi.mock("../components/LocaleSwitcher", () => ({
+  LocaleSwitcher: () => <div data-testid="locale-switcher">English</div>
+}));
+
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string) =>
+    ({
+      "app.unknownNetwork": "Unknown network",
+      "app.writesDisabled": "Writes are disabled.",
+      "nav.account": "Account",
+      "nav.affiliates": "Affiliates",
+      "nav.bets": "Bets",
+      "nav.casino": "Casino",
+      "nav.claims": "Claims",
+      "nav.coinToss": "Coin Toss",
+      "nav.dice": "Dice",
+      "nav.games": "Games",
+      "nav.keno": "Keno",
+      "nav.liquidity": "Liquidity",
+      "nav.openRooms": "Open Rooms",
+      "nav.ops": "Ops",
+      "nav.rooms": "Rooms",
+      "nav.roulette": "Roulette",
+      "nav.sportsbook": "Sportsbook"
+    })[key] ?? key
+}));
+
 vi.mock("next/link", () => ({
   default: ({ href, children, ...props }: any) => (
     <a href={href} {...props}>
@@ -37,7 +64,8 @@ vi.mock("next/link", () => ({
 }));
 
 vi.mock("next/navigation", () => ({
-  usePathname: () => state.pathname
+  usePathname: () => state.pathname,
+  useRouter: () => ({ refresh: vi.fn() })
 }));
 
 vi.mock("@ssot/ui", () => ({

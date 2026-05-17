@@ -1,9 +1,11 @@
 import React from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { ShellHeader, ShellHeaderBrand, ShellHeaderNav, ShellHeaderActions } from "@ssot/ui";
 import { cn } from "@ssot/ui";
 import { WalletButton } from "../app-shell/WalletButton";
 import { useRelease } from "../ssot/release/ReleaseProvider";
+import { LocaleSwitcher } from "./LocaleSwitcher";
 
 export type AppRoute =
   | "directory"
@@ -29,6 +31,7 @@ interface AppHeaderProps {
 export function AppHeader({ activeRoute = "none", variant = "default" }: AppHeaderProps) {
   const isTransparent = variant === "transparent";
   const { release } = useRelease();
+  const t = useTranslations();
 
   if (isTransparent) {
     return (
@@ -40,14 +43,15 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
             </Link>
             <nav className="hidden items-center gap-6 text-sm font-medium text-fg-muted md:flex">
               <Link href="/casino" className="transition-colors hover:text-fg">
-                Rooms
+                {t("nav.rooms")}
               </Link>
               <Link href="/earn" className="transition-colors hover:text-fg">
-                Liquidity
+                {t("nav.liquidity")}
               </Link>
             </nav>
           </div>
           <div className="flex items-center gap-4">
+            <LocaleSwitcher compact />
             <div className="hidden md:block">
               <WalletButton />
             </div>
@@ -55,7 +59,7 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
               href="/casino"
               className="rounded-full bg-fg px-5 py-2.5 text-sm font-semibold text-fg-inverse transition-colors hover:bg-fg/90"
             >
-              Open Rooms
+              {t("nav.openRooms")}
             </Link>
           </div>
         </div>
@@ -64,14 +68,14 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
   }
 
   const navLinks = [
-    { id: "directory", label: "Games", href: "/casino" },
-    { id: "sportsbook", label: "Sportsbook", href: "/sportsbook" },
-    { id: "bets", label: "Bets", href: "/portfolio/activity" },
-    { id: "liquidity", label: "Liquidity", href: "/earn" },
-    { id: "claims", label: "Claims", href: "/portfolio/claims" },
-    { id: "referral", label: "Affiliates", href: "/portfolio" },
-    { id: "account", label: "Account", href: "/portfolio" },
-    { id: "ops", label: "Ops", href: "/ops" }
+    { id: "directory", label: t("nav.games"), href: "/casino" },
+    { id: "sportsbook", label: t("nav.sportsbook"), href: "/sportsbook" },
+    { id: "bets", label: t("nav.bets"), href: "/portfolio/activity" },
+    { id: "liquidity", label: t("nav.liquidity"), href: "/earn" },
+    { id: "claims", label: t("nav.claims"), href: "/portfolio/claims" },
+    { id: "referral", label: t("nav.affiliates"), href: "/portfolio" },
+    { id: "account", label: t("nav.account"), href: "/portfolio" },
+    { id: "ops", label: t("nav.ops"), href: "/ops" }
   ] as const;
 
   return (
@@ -90,7 +94,7 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
                   : "text-fg-subtle hover:text-fg"
               )}
             >
-              Dice
+              {t("nav.dice")}
             </Link>
             <Link
               href="/casino/roulette"
@@ -101,7 +105,7 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
                   : "text-fg-subtle hover:text-fg"
               )}
             >
-              Roulette
+              {t("nav.roulette")}
             </Link>
             <Link
               href="/casino/coin-toss"
@@ -112,7 +116,7 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
                   : "text-fg-subtle hover:text-fg"
               )}
             >
-              Coin Toss
+              {t("nav.coinToss")}
             </Link>
             <Link
               href="/casino/keno"
@@ -123,7 +127,7 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
                   : "text-fg-subtle hover:text-fg"
               )}
             >
-              Keno
+              {t("nav.keno")}
             </Link>
 
             <div className="hidden h-6 border-l border-border-soft pl-6 ml-2 sm:block">
@@ -132,7 +136,7 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
                 className="flex h-full items-center gap-2 text-sm font-bold uppercase tracking-wider text-fg-subtle transition-colors hover:text-fg"
               >
                 <span>←</span>
-                <span>Casino</span>
+                <span>{t("nav.casino")}</span>
               </Link>
             </div>
           </ShellHeaderNav>
@@ -157,9 +161,10 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
       </div>
 
       <ShellHeaderActions>
+        <LocaleSwitcher compact />
         <div className="hidden items-center gap-2 rounded-full border border-border-soft bg-surface-2 px-3 py-1.5 font-mono text-xs text-fg-muted sm:flex">
           <span className="h-1.5 w-1.5 rounded-full bg-brand"></span>
-          {release?.name ?? "Unknown network"}
+          {release?.name ?? t("app.unknownNetwork")}
         </div>
         <WalletButton />
       </ShellHeaderActions>

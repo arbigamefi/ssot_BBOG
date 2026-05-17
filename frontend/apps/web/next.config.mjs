@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import createNextIntlPlugin from "next-intl/plugin";
 
 const appDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(appDir, "../../..");
@@ -118,6 +119,7 @@ const nextConfig = {
 };
 
 const sentryDsn = process.env.NEXT_PUBLIC_SENTRY_DSN || process.env.SENTRY_DSN;
+const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const sentryConfig = {
   // Suppress Sentry CLI logs in dev
@@ -133,8 +135,9 @@ const sentryConfig = {
 };
 
 // Keep local and preview bundles lean when Sentry is not configured.
+const configWithIntl = withNextIntl(nextConfig);
 const config = sentryDsn
-  ? (await import("@sentry/nextjs")).withSentryConfig(nextConfig, sentryConfig)
-  : nextConfig;
+  ? (await import("@sentry/nextjs")).withSentryConfig(configWithIntl, sentryConfig)
+  : configWithIntl;
 
 export default config;

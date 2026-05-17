@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
+import { NextIntlClientProvider } from "next-intl";
 import "./globals.css";
 
 import { Toaster } from "@ssot/ui";
 import { AppShell } from "../app-shell/AppShell";
 import { ProductProviders } from "../app-shell/ProductProviders";
 import { ThemeInitScript } from "../app-shell/ThemeProvider";
+import { getRequestI18n } from "../i18n/request";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://arbigamefi.com"),
@@ -32,17 +34,21 @@ export const metadata: Metadata = {
   }
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const { locale, messages } = await getRequestI18n();
+
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning>
       <head>
         <ThemeInitScript />
       </head>
       <body className="min-h-screen">
-        <ProductProviders>
-          <AppShell>{children}</AppShell>
-          <Toaster />
-        </ProductProviders>
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <ProductProviders>
+            <AppShell>{children}</AppShell>
+            <Toaster />
+          </ProductProviders>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

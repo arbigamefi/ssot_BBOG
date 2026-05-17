@@ -4,6 +4,7 @@ import * as React from "react";
 import { ReadOnlyBanner } from "@ssot/ui";
 import { AppShell as AppShellFrame } from "@ssot/ui/patterns";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 import { useRelease } from "../ssot/release/ReleaseProvider";
 import { AppHeader, type AppRoute } from "../components/AppHeader";
@@ -41,6 +42,7 @@ function getShellVariant(pathname: string) {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const t = useTranslations();
   const { readOnly, readOnlyReason, warnings } = useRelease();
   const variant = getShellVariant(pathname);
   const headerVariant =
@@ -52,7 +54,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       header={<AppHeader activeRoute={getActiveRoute(pathname)} variant={headerVariant} />}
       readOnlyBanner={
         readOnly ? (
-          <ReadOnlyBanner reason={readOnlyReason ?? "Writes are disabled."} details={warnings} />
+          <ReadOnlyBanner reason={readOnlyReason ?? t("app.writesDisabled")} details={warnings} />
         ) : undefined
       }
       variant={variant}

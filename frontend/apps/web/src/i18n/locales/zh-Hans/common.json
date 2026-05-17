@@ -1,0 +1,28 @@
+{
+  "app": {
+    "unknownNetwork": "未知网络",
+    "writesDisabled": "当前写入已关闭。"
+  },
+  "locale": {
+    "label": "语言",
+    "en": "English",
+    "zhHans": "简体中文"
+  },
+  "nav": {
+    "account": "账户",
+    "affiliates": "推广",
+    "bets": "投注",
+    "casino": "赌场",
+    "claims": "领取",
+    "coinToss": "抛硬币",
+    "dice": "骰子",
+    "games": "游戏",
+    "keno": "Keno",
+    "liquidity": "流动性",
+    "openRooms": "进入游戏",
+    "ops": "运维",
+    "rooms": "游戏",
+    "roulette": "轮盘",
+    "sportsbook": "体育投注"
+  }
+}

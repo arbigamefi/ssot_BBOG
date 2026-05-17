@@ -1,0 +1,28 @@
+{
+  "app": {
+    "unknownNetwork": "Unknown network",
+    "writesDisabled": "Writes are disabled."
+  },
+  "locale": {
+    "label": "Language",
+    "en": "English",
+    "zhHans": "简体中文"
+  },
+  "nav": {
+    "account": "Account",
+    "affiliates": "Affiliates",
+    "bets": "Bets",
+    "casino": "Casino",
+    "claims": "Claims",
+    "coinToss": "Coin Toss",
+    "dice": "Dice",
+    "games": "Games",
+    "keno": "Keno",
+    "liquidity": "Liquidity",
+    "openRooms": "Open Rooms",
+    "ops": "Ops",
+    "rooms": "Rooms",
+    "roulette": "Roulette",
+    "sportsbook": "Sportsbook"
+  }
+}
