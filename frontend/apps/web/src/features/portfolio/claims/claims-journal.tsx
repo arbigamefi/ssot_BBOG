@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { TxStatusChip, type TxStatus } from "@ssot/ui";
 
 import { shortHex } from "./format";
@@ -18,23 +19,27 @@ export function ClaimsJournal({
   rows: readonly ClaimsJournalRow[];
   explorerBaseUrl?: string;
 }) {
+  const t = useTranslations();
+
   return (
     <section className="rounded-md border border-border bg-surface-1 shadow-e2">
       <div className="flex items-center justify-between border-b border-border px-5 py-4">
         <div>
           <div className="text-xs font-black uppercase tracking-[0.16em] text-fg-subtle">
-            Journal
+            {t("portfolio.claims.journal.eyebrow")}
           </div>
-          <h2 className="mt-2 text-2xl font-black text-fg">Session claim activity</h2>
+          <h2 className="mt-2 text-2xl font-black text-fg">
+            {t("portfolio.claims.journal.title")}
+          </h2>
         </div>
       </div>
 
       <div className="overflow-hidden">
         <div className="grid grid-cols-[1.2fr_1fr_1fr_96px] border-b border-border bg-surface-2 px-5 py-3 text-[10px] font-black uppercase tracking-[0.14em] text-fg-subtle">
-          <div>Hash</div>
-          <div>Action</div>
-          <div>Amount</div>
-          <div className="text-right">Status</div>
+          <div>{t("portfolio.claims.journal.columns.hash")}</div>
+          <div>{t("portfolio.claims.journal.columns.action")}</div>
+          <div>{t("portfolio.claims.journal.columns.amount")}</div>
+          <div className="text-right">{t("portfolio.claims.journal.columns.status")}</div>
         </div>
         {rows.length > 0 ? (
           rows.map((row) => (
@@ -65,7 +70,7 @@ export function ClaimsJournal({
           ))
         ) : (
           <div className="px-5 py-12 text-center text-sm text-fg-muted">
-            No claim transactions in this browser session.
+            {t("portfolio.claims.journal.empty")}
           </div>
         )}
       </div>

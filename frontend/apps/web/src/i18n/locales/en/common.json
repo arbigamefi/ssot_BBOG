@@ -726,6 +726,167 @@
       }
     }
   },
+  "portfolio": {
+    "claims": {
+      "common": {
+        "pending": "Pending",
+        "walletRequired": "Wallet required"
+      },
+      "state": {
+        "noRelease": {
+          "title": "Claims",
+          "description": "No embedded release available."
+        }
+      },
+      "errors": {
+        "walletUnavailable": "Wallet unavailable",
+        "poolUnavailable": "Pool unavailable",
+        "bankUnavailable": "Bank unavailable",
+        "positiveAmount": "Amount must be positive."
+      },
+      "hero": {
+        "eyebrow": "Claims vault",
+        "title": "Rewards and protocol claims.",
+        "description": "Inspect XP buckets, synchronize holdback state, and execute claim transactions without hiding pending liabilities behind promotional balances.",
+        "connectedPayee": "Connected payee"
+      },
+      "metrics": {
+        "accrued": {
+          "label": "Accrued",
+          "detail": "Ready for XP claim."
+        },
+        "holdback": {
+          "label": "Holdback",
+          "detail": "Pending release buffer."
+        },
+        "protocolFees": {
+          "label": "Protocol fees",
+          "detail": "Governance claim surface."
+        }
+      },
+      "buckets": {
+        "title": "XP bucket ledger",
+        "syncing": "syncing",
+        "readModel": "read model",
+        "cards": {
+          "accrued": {
+            "label": "Accrued",
+            "detail": "Claimable XP currently credited to the payee."
+          },
+          "locked": {
+            "label": "Locked",
+            "detail": "XP that requires unlock conditions before extraction."
+          },
+          "holdback": {
+            "label": "Holdback",
+            "detail": "Pending buffer awaiting a holdback sync."
+          },
+          "releasable": {
+            "label": "Releasable",
+            "detail": "Holdback amount currently releasable by protocol rules."
+          },
+          "protocolFees": {
+            "label": "Protocol fees",
+            "detail": "External payables {externalPayables}"
+          },
+          "bank": {
+            "label": "Bank reference",
+            "detail": "Reserved {reserved} · Assets {assets}"
+          }
+        }
+      },
+      "actions": {
+        "eyebrow": "Execution",
+        "title": "Claims transaction console",
+        "connectWallet": "Connect a wallet to run claim actions.",
+        "readOnly": "Writes are disabled for this release.",
+        "max": "Max {amount}",
+        "holdbackPending": "Holdback pending",
+        "holdbackDetail": "Syncing updates the XP ledger based on the current on-chain holdback state.",
+        "tabs": {
+          "claim": {
+            "label": "Claim XP",
+            "detail": "Extract accrued XP to your wallet."
+          },
+          "sync": {
+            "label": "Sync",
+            "detail": "Move releasable holdback into the current XP ledger."
+          },
+          "fees": {
+            "label": "Fees",
+            "detail": "Governance-only protocol fee claim surface."
+          }
+        },
+        "amounts": {
+          "claim": "Claim amount",
+          "fees": "Fee amount"
+        },
+        "submit": {
+          "executing": "Executing",
+          "claim": "Claim XP",
+          "sync": "Sync holdback",
+          "fees": "Claim protocol fees"
+        },
+        "trace": {
+          "claim": "Claim trace",
+          "sync": "Holdback sync trace",
+          "fees": "Fee claim trace"
+        }
+      },
+      "flows": {
+        "preflight": "Preflight",
+        "submitClaim": "Submit claim",
+        "submitSync": "Submit sync",
+        "confirm": "Confirm on-chain",
+        "receipt": "Wait for receipt.",
+        "claim": {
+          "preflight": "Simulate claim call.",
+          "submit": "Broadcast claimXPAccrued."
+        },
+        "sync": {
+          "preflight": "Validate sync action.",
+          "submit": "Broadcast syncXPHoldback."
+        },
+        "fees": {
+          "preflight": "Validate governance call.",
+          "submit": "Broadcast claimProtocolFees."
+        }
+      },
+      "trace": {
+        "waiting": "Waiting for claim intent.",
+        "error": "Transaction error",
+        "subtitle": "Wallet signature, broadcast, and receipt state.",
+        "status": "Status",
+        "viewExplorer": "View explorer",
+        "block": "Block {blockNumber}",
+        "reset": "Reset trace"
+      },
+      "journal": {
+        "eyebrow": "Journal",
+        "title": "Session claim activity",
+        "columns": {
+          "hash": "Hash",
+          "action": "Action",
+          "amount": "Amount",
+          "status": "Status"
+        },
+        "empty": "No claim transactions in this browser session.",
+        "actions": {
+          "claimXP": "Claim XP",
+          "syncHoldback": "Sync holdback",
+          "claimFees": "Claim fees"
+        }
+      },
+      "toast": {
+        "claimedXP": "Claimed {amount} {symbol}",
+        "xpClaimFailed": "XP claim failed",
+        "holdbackSynced": "Holdback synced",
+        "syncHoldbackFailed": "Sync holdback failed",
+        "claimedFees": "Claimed {amount} {symbol} protocol fees",
+        "protocolFeeFailed": "Protocol fee claim failed"
+      }
+    }
+  },
   "earn": {
     "state": {
       "noRelease": {

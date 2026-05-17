@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import type { Address } from "@ssot/ssot/sdk";
 import { toast, type TxStatus } from "@ssot/ui";
@@ -30,6 +31,7 @@ import { useRelease } from "../../../../ssot/release/ReleaseProvider";
 import { useSSOTSDK } from "../../../../ssot/sdk";
 
 export function ClaimsPageClient() {
+  const t = useTranslations();
   const { release, readOnly, readOnlyReason, chainId } = useRelease();
   const { sdk, ready } = useSSOTSDK();
   const explorerBaseUrl = React.useMemo(() => getExplorerBaseUrl(chainId), [chainId]);
@@ -45,42 +47,42 @@ export function ClaimsPageClient() {
   const xpClaimFlow = useDirectTxAction({
     action: "CLAIM_XP_ACCRUED",
     labels: {
-      preflight: "Preflight",
-      submit: "Submit claim",
-      confirm: "Confirm on-chain"
+      preflight: t("portfolio.claims.flows.preflight"),
+      submit: t("portfolio.claims.flows.submitClaim"),
+      confirm: t("portfolio.claims.flows.confirm")
     },
     descriptions: {
-      preflight: "Simulate claim call.",
-      submit: "Broadcast claimXPAccrued.",
-      confirm: "Wait for receipt."
+      preflight: t("portfolio.claims.flows.claim.preflight"),
+      submit: t("portfolio.claims.flows.claim.submit"),
+      confirm: t("portfolio.claims.flows.receipt")
     }
   });
 
   const syncHoldbackFlow = useDirectTxAction({
     action: "SYNC_XP_HOLDBACK",
     labels: {
-      preflight: "Preflight",
-      submit: "Submit sync",
-      confirm: "Confirm on-chain"
+      preflight: t("portfolio.claims.flows.preflight"),
+      submit: t("portfolio.claims.flows.submitSync"),
+      confirm: t("portfolio.claims.flows.confirm")
     },
     descriptions: {
-      preflight: "Validate sync action.",
-      submit: "Broadcast syncXPHoldback.",
-      confirm: "Wait for receipt."
+      preflight: t("portfolio.claims.flows.sync.preflight"),
+      submit: t("portfolio.claims.flows.sync.submit"),
+      confirm: t("portfolio.claims.flows.receipt")
     }
   });
 
   const protocolFeeFlow = useDirectTxAction({
     action: "CLAIM_PROTOCOL_FEES",
     labels: {
-      preflight: "Preflight",
-      submit: "Submit claim",
-      confirm: "Confirm on-chain"
+      preflight: t("portfolio.claims.flows.preflight"),
+      submit: t("portfolio.claims.flows.submitClaim"),
+      confirm: t("portfolio.claims.flows.confirm")
     },
     descriptions: {
-      preflight: "Validate governance call.",
-      submit: "Broadcast claimProtocolFees.",
-      confirm: "Wait for receipt."
+      preflight: t("portfolio.claims.flows.fees.preflight"),
+      submit: t("portfolio.claims.flows.fees.submit"),
+      confirm: t("portfolio.claims.flows.receipt")
     }
   });
 
@@ -93,8 +95,8 @@ export function ClaimsPageClient() {
     queryKey: ["ssot", "claims", "xp", chainId, poolId, sdk?.account ?? "anonymous"],
     enabled: Boolean(sdk?.account && ready && poolId),
     queryFn: async () => {
-      if (!sdk?.account) throw new Error("Wallet unavailable");
-      if (!poolId) throw new Error("Pool unavailable");
+      if (!sdk?.account) throw new Error(t("portfolio.claims.errors.walletUnavailable"));
+      if (!poolId) throw new Error(t("portfolio.claims.errors.poolUnavailable"));
       return sdk.bank.getXPBuckets(poolId, sdk.account);
     },
     refetchInterval: 8_000
@@ -104,8 +106,8 @@ export function ClaimsPageClient() {
     queryKey: ["ssot", "claims", "bank", chainId, poolId],
     enabled: Boolean(sdk && ready && asset && poolId),
     queryFn: async () => {
-      if (!sdk || !asset) throw new Error("Bank unavailable");
-      if (!poolId) throw new Error("Pool unavailable");
+      if (!sdk || !asset) throw new Error(t("portfolio.claims.errors.bankUnavailable"));
+      if (!poolId) throw new Error(t("portfolio.claims.errors.poolUnavailable"));
       return sdk.bank.getSnapshot(poolId);
     },
     refetchInterval: 8_000
@@ -120,82 +122,90 @@ export function ClaimsPageClient() {
     try {
       const parsed = parseDecimalToUnits(xpClaimAmount || "0", decimals);
       if (parsed <= 0n) {
-        toast.error("Amount must be positive.");
+        toast.error(t("portfolio.claims.errors.positiveAmount"));
         return;
       }
-      if (!poolId) throw new Error("Pool unavailable");
+      if (!poolId) throw new Error(t("portfolio.claims.errors.poolUnavailable"));
       const result = await xpClaimFlow.execute(() =>
         sdk.bank.claimXPAccrued(poolId, parsed, sdk.account!)
       );
       if (!result.ok) return;
-      toast.success(`Claimed ${formatUnits(parsed, decimals)} ${symbol}`);
+      toast.success(
+        t("portfolio.claims.toast.claimedXP", { amount: formatUnits(parsed, decimals), symbol })
+      );
       setXPClaimAmount("");
       await refetchXP();
     } catch (error) {
-      toast.error((error as Error)?.message ?? "XP claim failed");
+      toast.error((error as Error)?.message ?? t("portfolio.claims.toast.xpClaimFailed"));
     }
-  }, [decimals, poolId, readOnly, refetchXP, sdk, symbol, xpClaimAmount, xpClaimFlow]);
+  }, [decimals, poolId, readOnly, refetchXP, sdk, symbol, t, xpClaimAmount, xpClaimFlow]);
 
   const handleSyncHoldback = React.useCallback(async () => {
     if (!sdk?.account || readOnly) return;
     try {
-      if (!poolId) throw new Error("Pool unavailable");
+      if (!poolId) throw new Error(t("portfolio.claims.errors.poolUnavailable"));
       const result = await syncHoldbackFlow.execute(() =>
         sdk.bank.syncXPHoldback(poolId, sdk.account!)
       );
       if (!result.ok) return;
-      toast.success("Holdback synced");
+      toast.success(t("portfolio.claims.toast.holdbackSynced"));
       await refetchXP();
     } catch (error) {
-      toast.error((error as Error)?.message ?? "Sync holdback failed");
+      toast.error((error as Error)?.message ?? t("portfolio.claims.toast.syncHoldbackFailed"));
     }
-  }, [poolId, readOnly, refetchXP, sdk, syncHoldbackFlow]);
+  }, [poolId, readOnly, refetchXP, sdk, syncHoldbackFlow, t]);
 
   const handleClaimFees = React.useCallback(async () => {
     if (!sdk?.account || readOnly) return;
     try {
       const parsed = parseDecimalToUnits(feeAmount || "0", decimals);
       if (parsed <= 0n) {
-        toast.error("Amount must be positive.");
+        toast.error(t("portfolio.claims.errors.positiveAmount"));
         return;
       }
-      if (!poolId) throw new Error("Pool unavailable");
+      if (!poolId) throw new Error(t("portfolio.claims.errors.poolUnavailable"));
       const result = await protocolFeeFlow.execute(() =>
         sdk.bank.claimProtocolFees(poolId, parsed, sdk.account!)
       );
       if (!result.ok) return;
-      toast.success(`Claimed ${formatUnits(parsed, decimals)} ${symbol} protocol fees`);
+      toast.success(
+        t("portfolio.claims.toast.claimedFees", {
+          amount: formatUnits(parsed, decimals),
+          symbol
+        })
+      );
       setFeeAmount("");
       await refetchSnapshot();
     } catch (error) {
-      toast.error((error as Error)?.message ?? "Protocol fee claim failed");
+      toast.error((error as Error)?.message ?? t("portfolio.claims.toast.protocolFeeFailed"));
     }
-  }, [decimals, feeAmount, poolId, protocolFeeFlow, readOnly, refetchSnapshot, sdk, symbol]);
+  }, [decimals, feeAmount, poolId, protocolFeeFlow, readOnly, refetchSnapshot, sdk, symbol, t]);
 
   if (!release) {
     return (
       <ProductStateCard
-        title="Claims"
-        description={readOnlyReason ?? "No embedded release available."}
+        title={t("portfolio.claims.state.noRelease.title")}
+        description={readOnlyReason ?? t("portfolio.claims.state.noRelease.description")}
       />
     );
   }
 
+  const pendingLabel = t("portfolio.claims.common.pending");
   const metrics: ClaimsMetric[] = [
     {
-      label: "Accrued",
-      value: formatTokenAmount(xpBuckets?.accrued, decimals, symbol, 2),
-      detail: "Ready for XP claim."
+      label: t("portfolio.claims.metrics.accrued.label"),
+      value: formatTokenAmount(xpBuckets?.accrued, decimals, symbol, 2, pendingLabel),
+      detail: t("portfolio.claims.metrics.accrued.detail")
     },
     {
-      label: "Holdback",
-      value: formatTokenAmount(xpBuckets?.holdback, decimals, symbol, 2),
-      detail: "Pending release buffer."
+      label: t("portfolio.claims.metrics.holdback.label"),
+      value: formatTokenAmount(xpBuckets?.holdback, decimals, symbol, 2, pendingLabel),
+      detail: t("portfolio.claims.metrics.holdback.detail")
     },
     {
-      label: "Protocol fees",
-      value: formatTokenAmount(snapshot?.protocolFeesPayable, decimals, symbol, 2),
-      detail: "Governance claim surface."
+      label: t("portfolio.claims.metrics.protocolFees.label"),
+      value: formatTokenAmount(snapshot?.protocolFeesPayable, decimals, symbol, 2, pendingLabel),
+      detail: t("portfolio.claims.metrics.protocolFees.detail")
     }
   ];
 
@@ -208,18 +218,18 @@ export function ClaimsPageClient() {
 
   const journalRows: ClaimsJournalRow[] = [
     ...toJournalRows({
-      action: "Claim XP",
-      amount: `${xpClaimAmount || formatTokenAmount(xpBuckets?.accrued, decimals, symbol, 2)}`,
+      action: t("portfolio.claims.journal.actions.claimXP"),
+      amount: `${xpClaimAmount || formatTokenAmount(xpBuckets?.accrued, decimals, symbol, 2, pendingLabel)}`,
       flow: toFlowState(xpClaimFlow)
     }),
     ...toJournalRows({
-      action: "Sync holdback",
-      amount: formatTokenAmount(xpBuckets?.holdback, decimals, symbol, 2),
+      action: t("portfolio.claims.journal.actions.syncHoldback"),
+      amount: formatTokenAmount(xpBuckets?.holdback, decimals, symbol, 2, pendingLabel),
       flow: toFlowState(syncHoldbackFlow)
     }),
     ...toJournalRows({
-      action: "Claim fees",
-      amount: `${feeAmount || formatTokenAmount(snapshot?.protocolFeesPayable, decimals, symbol, 2)}`,
+      action: t("portfolio.claims.journal.actions.claimFees"),
+      amount: `${feeAmount || formatTokenAmount(snapshot?.protocolFeesPayable, decimals, symbol, 2, pendingLabel)}`,
       flow: toFlowState(protocolFeeFlow)
     })
   ];
@@ -227,7 +237,10 @@ export function ClaimsPageClient() {
   return (
     <PageTransition pageKey="claims">
       <div className="space-y-8">
-        <ClaimsHero wallet={shortHex(sdk?.account)} metrics={metrics} />
+        <ClaimsHero
+          wallet={sdk?.account ? shortHex(sdk.account, pendingLabel) : undefined}
+          metrics={metrics}
+        />
         <div className="grid gap-6 xl:grid-cols-[1fr_420px]">
           <div className="space-y-6">
             <ClaimsBuckets

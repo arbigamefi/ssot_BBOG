@@ -726,6 +726,167 @@
       }
     }
   },
+  "portfolio": {
+    "claims": {
+      "common": {
+        "pending": "待读取",
+        "walletRequired": "需要连接钱包"
+      },
+      "state": {
+        "noRelease": {
+          "title": "领取",
+          "description": "当前链没有内嵌 release。"
+        }
+      },
+      "errors": {
+        "walletUnavailable": "钱包不可用",
+        "poolUnavailable": "资金池不可用",
+        "bankUnavailable": "Bank 不可用",
+        "positiveAmount": "金额必须大于 0。"
+      },
+      "hero": {
+        "eyebrow": "领取金库",
+        "title": "奖励与协议领取。",
+        "description": "检查 XP 桶、同步 holdback 状态，并执行领取交易，不用营销化余额遮住待处理负债。",
+        "connectedPayee": "已连接收款方"
+      },
+      "metrics": {
+        "accrued": {
+          "label": "已累积",
+          "detail": "可直接领取的 XP。"
+        },
+        "holdback": {
+          "label": "Holdback",
+          "detail": "等待释放的缓冲区。"
+        },
+        "protocolFees": {
+          "label": "协议费用",
+          "detail": "治理领取入口。"
+        }
+      },
+      "buckets": {
+        "title": "XP 桶账本",
+        "syncing": "同步中",
+        "readModel": "读取模型",
+        "cards": {
+          "accrued": {
+            "label": "已累积",
+            "detail": "当前计入收款方、可领取的 XP。"
+          },
+          "locked": {
+            "label": "已锁定",
+            "detail": "提取前需要满足解锁条件的 XP。"
+          },
+          "holdback": {
+            "label": "Holdback",
+            "detail": "等待 holdback 同步的缓冲区。"
+          },
+          "releasable": {
+            "label": "可释放",
+            "detail": "按协议规则当前可释放的 holdback 数量。"
+          },
+          "protocolFees": {
+            "label": "协议费用",
+            "detail": "外部应付款 {externalPayables}"
+          },
+          "bank": {
+            "label": "Bank 引用",
+            "detail": "已预留 {reserved} · 资产 {assets}"
+          }
+        }
+      },
+      "actions": {
+        "eyebrow": "执行",
+        "title": "领取交易控制台",
+        "connectWallet": "连接钱包后才能执行领取操作。",
+        "readOnly": "当前 release 禁用了写入。",
+        "max": "最大 {amount}",
+        "holdbackPending": "待同步 Holdback",
+        "holdbackDetail": "同步会基于当前链上 holdback 状态更新 XP 账本。",
+        "tabs": {
+          "claim": {
+            "label": "领取 XP",
+            "detail": "将已累积 XP 提取到你的钱包。"
+          },
+          "sync": {
+            "label": "同步",
+            "detail": "把可释放 holdback 移入当前 XP 账本。"
+          },
+          "fees": {
+            "label": "费用",
+            "detail": "仅治理可用的协议费用领取入口。"
+          }
+        },
+        "amounts": {
+          "claim": "领取金额",
+          "fees": "费用金额"
+        },
+        "submit": {
+          "executing": "执行中",
+          "claim": "领取 XP",
+          "sync": "同步 holdback",
+          "fees": "领取协议费用"
+        },
+        "trace": {
+          "claim": "领取追踪",
+          "sync": "Holdback 同步追踪",
+          "fees": "费用领取追踪"
+        }
+      },
+      "flows": {
+        "preflight": "预检查",
+        "submitClaim": "提交领取",
+        "submitSync": "提交同步",
+        "confirm": "链上确认",
+        "receipt": "等待交易回执。",
+        "claim": {
+          "preflight": "模拟领取调用。",
+          "submit": "广播 claimXPAccrued。"
+        },
+        "sync": {
+          "preflight": "校验同步操作。",
+          "submit": "广播 syncXPHoldback。"
+        },
+        "fees": {
+          "preflight": "校验治理调用。",
+          "submit": "广播 claimProtocolFees。"
+        }
+      },
+      "trace": {
+        "waiting": "等待领取意图。",
+        "error": "交易错误",
+        "subtitle": "钱包签名、广播和回执状态。",
+        "status": "状态",
+        "viewExplorer": "查看浏览器",
+        "block": "区块 {blockNumber}",
+        "reset": "重置追踪"
+      },
+      "journal": {
+        "eyebrow": "日志",
+        "title": "本次会话领取活动",
+        "columns": {
+          "hash": "哈希",
+          "action": "操作",
+          "amount": "金额",
+          "status": "状态"
+        },
+        "empty": "当前浏览器会话还没有领取交易。",
+        "actions": {
+          "claimXP": "领取 XP",
+          "syncHoldback": "同步 holdback",
+          "claimFees": "领取费用"
+        }
+      },
+      "toast": {
+        "claimedXP": "已领取 {amount} {symbol}",
+        "xpClaimFailed": "XP 领取失败",
+        "holdbackSynced": "Holdback 已同步",
+        "syncHoldbackFailed": "Holdback 同步失败",
+        "claimedFees": "已领取 {amount} {symbol} 协议费用",
+        "protocolFeeFailed": "协议费用领取失败"
+      }
+    }
+  },
   "earn": {
     "state": {
       "noRelease": {

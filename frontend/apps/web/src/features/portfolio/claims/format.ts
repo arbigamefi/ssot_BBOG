@@ -17,8 +17,8 @@ export function getExplorerBaseUrl(chainId: number) {
   }
 }
 
-export function shortHex(value?: string) {
-  if (!value) return "Pending";
+export function shortHex(value?: string, pendingLabel = "Pending") {
+  if (!value) return pendingLabel;
   return `${value.slice(0, 6)}...${value.slice(-4)}`;
 }
 
@@ -26,9 +26,10 @@ export function formatTokenAmount(
   value: bigint | undefined,
   decimals: number,
   symbol?: string,
-  maxFractionDigits = 4
+  maxFractionDigits = 4,
+  pendingLabel = "Pending"
 ) {
-  if (value == null) return "Pending";
+  if (value == null) return pendingLabel;
   const raw = formatUnits(value, decimals);
   const negative = raw.startsWith("-");
   const normalized = negative ? raw.slice(1) : raw;
