@@ -1,467 +1,169 @@
 # 14 · Data & State Architecture
 
 | Owner | Frontend Lead |
-| Status | Draft v1 |
-| Last Updated | 2026-05-14 |
-| Depends on | `00-charter.md`, `11-component-library.md`, `13-web3-ux.md` |
-| Supersedes | every ad-hoc `useQuery` declaration across `apps/web/src/app/**` |
+| Status | Active |
+| Last Updated | 2026-05-18 |
+| Depends on | `13-web3-ux.md`, `durable-bet-index.md`, `indexing-strategy.md` |
+| Supersedes | Draft v1 data platform spec |
 
-This document defines the **data flow architecture** of the frontend:
-how data is fetched, cached, invalidated, mutated, and shared across server
-and client. The goal is to make the system predictable: any future engineer
-should be able to add a new query/mutation by following the rules below
-without reading any other code.
+Data architecture should keep truth simple: contracts are truth, release
+metadata is configuration truth, indexes are acceleration.
 
-## 1. Architecture Layers
+## 1. Truth Hierarchy
 
-```mermaid
-flowchart TB
-  C[On-chain contracts] --> S
-  I[Optional shared indexer/API cache] --> S
-  S["@ssot/ssot/sdk · @ssot/ssot/indexer"] --> D
-  D[features/<vertical>/data] --> A[features/<vertical>/actions]
-  D --> P["@ssot/ui/patterns"]
-  A --> P
-  P --> Page[app/.../page.tsx]
-```
+| Source               | Role                                                                           |
+| -------------------- | ------------------------------------------------------------------------------ |
+| Contracts            | Authoritative balances, bets, tickets, settlements, and payouts.               |
+| Release manifest     | Authoritative addresses, game ids, asset metadata, decimals, and chain config. |
+| `@ssot/ssot`         | Typed contract/read/write helpers and event reducers.                          |
+| Durable bet index    | Postgres read model for recent/player bet feeds.                               |
+| Browser Dexie replay | User-verifiable local replay and activity cache.                               |
+| TanStack Query       | UI cache only.                                                                 |
 
-Layers (read top-down):
+Never use an index row as final proof when a direct chain read or terminal log
+is required.
 
-| Layer                               | Responsibility                                        | Owner package      |
-| ----------------------------------- | ----------------------------------------------------- | ------------------ |
-| Source                              | Chain RPC + optional shared indexer/API cache         | external           |
-| SDK                                 | typed reads, calldata builders, action calls          | `@ssot/ssot`       |
-| Data hooks (`features/*/data`)      | query keys, cache config, view-model mapping          | `apps/web`         |
-| Action hooks (`features/*/actions`) | the tx state machine wrappers from `13-web3-ux.md §5` | `apps/web`         |
-| Patterns                            | render data + actions                                 | `@ssot/ui`         |
-| Pages                               | compose patterns                                      | `apps/web/src/app` |
+## 2. Runtime Boundaries
 
-Pages don't talk to layers above the patterns layer. Patterns don't talk to
-layers above the data/actions layer. SDK doesn't know about React.
+Keep these boundaries because they represent real runtimes:
 
-## 2. RSC vs Client
+- `frontend/apps/web`: Next.js UI and API routes.
+- `frontend/apps/keeper`: casino settlement keeper and index writer.
+- `frontend/packages/ssot`: release, SDK, encoding, and reducers.
+- `frontend/packages/bet-index`: Node-only Postgres read model shared by web
+  API routes and keeper/backfill.
 
-### 2.1 Default: Server Components
+Do not collapse these packages only to reduce file count.
 
-Server Components are the default render mode. They:
+## 3. Server And Client
 
-- Read release manifest at request time.
-- Pre-fetch top-of-page data through SDK server entry (`@ssot/ssot/sdk-node`).
-- Stream layout and skeletons.
-- Embed the initial query cache via React Query's `Hydrate` for handoff.
+Server code may:
 
-### 2.2 Client only when needed
+- read release files;
+- query Postgres bet-index;
+- scan bounded RPC windows as fallback;
+- call SDK read helpers.
 
-A Client Component (`'use client'`) is required for:
+Client code may:
 
-- wallet / signer / wagmi
-- IndexedDB / localStorage reads
-- charts using browser canvas APIs
-- bet-parameter forms with bigint inputs
-- live indexer subscriptions (WebSocket / SSE)
-- interactive bet stage (animation)
+- render wallet state;
+- run feature hooks;
+- poll direct chain state for active casino rounds;
+- read browser-local preferences or Dexie caches.
 
-A Client Component must:
+Client components must not import `@ssot/bet-index`, database URLs, filesystem
+helpers, or private RPC/keeper secrets.
 
-- be the smallest subtree possible
-- not import server-only code (SDK Node)
-- be named `<X.client>` only when the same module also has a server export
+## 4. Query Keys
 
-## 3. Query Layer (TanStack Query)
+TanStack keys are tuples:
 
-### 3.1 Singleton client
-
-One QueryClient per request on server, one per browser tab on client. The
-client is created in `apps/web/src/app-shell/QueryProvider.tsx`.
-
-Defaults:
-
-```ts
-new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 30_000,
-      gcTime: 5 * 60_000,
-      retry: (failureCount, error) => isRetriable(error) && failureCount < 2,
-      retryDelay: (n) => Math.min(1000 * 2 ** n, 8_000),
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: true,
-    },
-    mutations: {
-      retry: false,
-    },
-  },
-});
-```
-
-### 3.2 Query keys (canonical)
-
-Every query key follows the pattern:
-
-```ts
-['ssot', <domain>, <subject>, ...<scope>]
-```
-
-Examples:
-
-```ts
-["ssot", "release"][("ssot", "bank", "snapshot", assetAddress)][
-  ("ssot", "bank", "position", assetAddress, account)
-][("ssot", "bet", betId)][("ssot", "bets", { player, slug, limit, cursor })][
-  ("ssot", "sportsbook", "market", marketId)
-][("ssot", "sportsbook", "tickets", { player, marketId, status })][
-  ("ssot", "tx-journal", { limit, cursor })
-];
+```text
+["ssot", "release"]
+["ssot", "bets", "recent", { chainId, gameId, limit }]
+["ssot", "bets", "player", { chainId, player, limit }]
+["ssot", "casino", "round", betId]
+["ssot", "sportsbook", "market", marketId]
 ```
 
 Rules:
 
-- First segment is always `'ssot'`.
-- Domain is one of `release | bank | bet | bets | sportsbook | tx-journal |
-ops`.
-- Subject is the noun being read.
-- Scope is an object (alphabetized) or the immutable id.
-- **No** `[v]` or version segment — that's encoded in the release digest if
-  needed.
-- **No** strings concatenated as keys — always tuples.
+- first segment is always `ssot`;
+- scope objects use stable property names;
+- pages should use feature hooks, not inline query definitions;
+- terminal query data can become effectively static after finality.
 
-Centralized in `apps/web/src/features/*/data/keys.ts`. Pages do not write
-keys inline.
+## 5. Recent And Player Bets
 
-### 3.3 staleTime / gcTime defaults
+Recent bet feeds use:
 
-| Concept           | staleTime                                 | gcTime   |
-| ----------------- | ----------------------------------------- | -------- |
-| release manifest  | Infinity                                  | Infinity |
-| bank snapshot     | 15s                                       | 5min     |
-| bet detail        | 15s if not terminal, Infinity if terminal | 30min    |
-| bets list         | 30s                                       | 5min     |
-| sportsbook market | 15s                                       | 5min     |
-| signed odds       | (expiry - now - 5s)                       | 1min     |
-| tx journal        | 60s                                       | 30min    |
-| account balance   | 30s                                       | 5min     |
-| allowance         | 30s                                       | 5min     |
+1. `/api/bets/recent`;
+2. `/api/bets/player/[address]`;
+3. Postgres when `BET_INDEX_DATABASE_URL` is configured and readable;
+4. bounded RPC-window fallback when Postgres is unavailable.
 
-Overrides require an inline comment justifying the deviation.
+The API response must expose source/degraded information so UI and ops can tell
+whether data came from Postgres or fallback.
 
-### 3.4 Invalidation Topology
+## 6. Active Casino Round
 
-```mermaid
-flowchart LR
-  placeBet -->|invalidate| Bbets
-  placeBet -->|invalidate| Bbank
-  placeBet -->|invalidate| Bwallet
-  finalize -->|invalidate| Bbet
-  finalize -->|invalidate| Bbets
-  finalize -->|invalidate| Bbank
-  refund -->|invalidate| Bbet
-  refund -->|invalidate| Bbets
-  refund -->|invalidate| Bbank
-  deposit -->|invalidate| Bbank
-  deposit -->|invalidate| Bposition
-  withdraw -->|invalidate| Bbank
-  withdraw -->|invalidate| Bposition
-  claim -->|invalidate| Bclaim
-  claim -->|invalidate| Bbank
-```
+Active rounds prioritize direct chain reads:
 
-The invalidation map is one source-of-truth file:
-`features/_shared/data/invalidation-map.ts`.
+- poll `GameHub.getBet(betId)` for round state;
+- detect `RandomReady`, `Settled`, refundability, and missing bet separately;
+- show final receipt only after terminal readback;
+- refetch recent feeds after terminal state, but do not wait on them to show
+  the player result.
 
-After a tx is mined, the SDK action returns a list of keys to invalidate;
-the hook calling the action passes them to `queryClient.invalidateQueries`.
-Pages do not write `invalidateQueries` calls by hand.
+This avoids the previous failure mode where settlement was complete on-chain
+but the UI waited minutes for list/index data.
 
-### 3.5 Optimistic updates
+## 7. Invalidation
 
-Used sparingly. **Default is no optimism.** A bet is not "placed" until the
-tx is mined. Optimistic updates are allowed only when:
+After mined writes:
 
-- the change is local (no consensus involvement), e.g., dismissing a toast
-- the change is reversible without user confusion, e.g., a UI sort order
+- approval: refresh allowance and balance;
+- place bet: refresh active round, recent feeds, player activity, balances;
+- finalize/refund: refresh active round first, then recent feeds and balances;
+- deposit/withdraw: refresh bank snapshot, position, balance;
+- claim: refresh claimable state and activity.
 
-Forbidden optimisms:
-
-- showing a bet as `Held` before the tx is mined
-- displaying a deposit-completed state during `pending`
-- moving a row to "won" before the receipt is in
-
-## 4. Pagination
-
-**Cursor-based only.** Indexer exposes `cursor` for every paginated source.
-No offset/limit calls in product UI — they break under reorgs and indexer
-lag.
-
-Pattern: `useInfiniteQuery` with `getNextPageParam: (last) => last.nextCursor`.
-
-UI affordance: a single `Load more` button below the list. Infinite scroll
-is only used when:
-
-- the list represents a feed (live bets ticker)
-- the user explicitly enables it via a setting
-
-Default everywhere else is the button.
-
-## 5. Real-time
-
-### 5.1 Strategy
-
-Three tiers, in order of preference:
-
-1. **WebSocket** from the indexer for subscriptions of low-volume,
-   high-priority events (bet settled, tx mined, market state change).
-2. **SSE** if WS isn't available and the source supports SSE.
-3. **Polling** as fallback, on the visibility-aware schedule:
-   - 5s when tab visible and user is in a bet-relevant page
-   - 15s when tab visible but page is dashboard
-   - 60s when tab visible and page is marketing
-   - paused when tab hidden
-
-`useEffect` for `document.visibilitychange` rotates the schedule.
-
-### 5.2 Connection state
-
-Available globally as `useIndexerStatus()`:
-
-```ts
-type IndexerStatus =
-  | { kind: "live"; lastBlock: bigint; lagSeconds: number }
-  | { kind: "lagging"; lastBlock: bigint; lagSeconds: number }
-  | { kind: "down"; lastSeenAt: Date };
-```
-
-Status drives the `<ReleaseProof>` indicator and global toast banner on
-extended outages.
-
-### 5.3 Stale data guard
-
-If `lagSeconds > 60`, every data hook returns a `stale: true` flag.
-Patterns surface this via a `(stale)` caption next to the value. Pages do
-not implement this — patterns do.
-
-## 6. Error Strategy
-
-### 6.1 Error boundaries
-
-`react-error-boundary` mounted at three levels:
-
-1. App-shell boundary — last resort; shows a global error page.
-2. Route-segment boundary — every `app/.../error.tsx` file.
-3. Pattern boundary — `<LedgerTable>`, `<BetSlip>`, `<RiskPanel>`, etc.
-   wrap their internals so one failure doesn't tank the page.
-
-### 6.2 Error UI
-
-- Boundary fallback uses `<ErrorState>` pattern (`11-`).
-- Retries refetch all queries within the boundary, not the whole app.
-- Sentry captures the error with breadcrumbs (`../frontend/25-observability.md`).
-
-### 6.3 Mutation errors
-
-Toast pattern from `13-web3-ux.md §8`. The mutation hook decides whether
-the error blocks UI (in-place) or is dismissable (toast).
-
-## 7. Server / Client Boundary Rules
-
-### 7.1 Server-only modules
-
-Files importing `server-only` package:
-
-- `@ssot/ssot/sdk-node`
-- any `featuresvertical/data/server-*.ts` file
-- the page-level `generateMetadata` and RSC `loader`
-
-### 7.2 Client-only modules
-
-Files marked `'use client'`:
-
-- providers (`QueryProvider`, `WalletProviderIsland`, `ThemeProvider`)
-- patterns that need DOM or browser APIs (most of them)
-- charts
-- bet stages with animation
-- form inputs
-
-### 7.3 Hydration handoff
-
-Server pre-fetches relevant queries:
-
-```ts
-// app/(product)/casino/[slug]/page.tsx
-export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
-  const qc = makeServerQueryClient();
-  await qc.prefetchQuery({
-    queryKey: ['ssot', 'casino', 'catalog'],
-    queryFn: () => sdkServer.casino.catalog(),
-  });
-  await qc.prefetchQuery({
-    queryKey: ['ssot', 'casino', 'recent', slug, { limit: 20 }],
-    queryFn: () => sdkServer.casino.recentBets(slug, 20),
-  });
-  return (
-    <Hydrate state={dehydrate(qc)}>
-      <CasinoRoomClient slug={slug} />
-    </Hydrate>
-  );
-}
-```
-
-The Client Component uses `useQuery` with the same key and finds the
-hydrated cache. No double fetch.
+Prefer targeted invalidation over global query clearing.
 
 ## 8. Local State
 
-### 8.1 React state
+Use local component state for:
 
-For UI-only ephemeral state (open modal, hover index, form draft). Lives in
-the component that owns it.
+- open panels;
+- selected tab;
+- casino stage animation state;
+- temporary form input strings.
 
-### 8.2 URL state
+Use URL state only when users should be able to share or return to it:
 
-For state that should be shareable or back-button safe:
+- sportsbook market id;
+- list filter;
+- pagination cursor.
 
-- list filters
-- pagination cursor (when bookmarkable)
-- selected outcome in a sportsbook market
+Use persisted local storage only for preferences and safe drafts. Never store
+secrets, signatures, private keys, approval payloads, or stale odds.
 
-Use `nuqs` (or equivalent typed URL state library) — never `useSearchParams`
-manually.
+## 9. Indexing Strategy
 
-### 8.3 Global client state
+Do not introduce a subgraph for MVP indexing. Current query shapes are recent
+feeds, player feeds, and terminal receipts; Postgres plus bounded RPC fallback
+covers those needs with less operational surface.
 
-For wallet, theme, query cache, indexer status, feature flags. Lives in:
+Postgres details live in `durable-bet-index.md`. This document only defines how
+the UI consumes that read model.
 
-- `WalletProviderIsland` (wagmi config)
-- `QueryProvider` (cache)
-- `ThemeProvider` (cookie-backed)
-- `FlagsProvider` (cookie-backed)
-- `IndexerStatusProvider` (subscribed to WS)
+## 10. Errors And Degradation
 
-No Redux. No Zustand for cross-cutting state. If a Zustand store is
-proposed, write an ADR explaining why React Query + context is insufficient.
+Data hooks return explicit degraded state when possible:
 
-### 8.4 Persistent client state
+- `source: "postgres" | "rpc-window"`;
+- `degraded: boolean`;
+- `lastIndexedBlock` or equivalent when available;
+- stable product error message.
 
-For user preferences (theme, density, columns visible in tables):
+Player UI should keep working when the index is down. Ops UI should surface the
+failure clearly.
 
-- store in `localStorage` under `arbi:<feature>:<key>` prefix
-- read once at mount, write on change
-- export through a typed `usePreference(key)` hook
+## 11. Do Not Do
 
-For data persistence between sessions (recent transactions, draft bets):
+- Do not fetch with ad-hoc `useEffect` when a query hook is appropriate.
+- Do not import database packages into client components.
+- Do not expose `BET_INDEX_DATABASE_URL` or private RPC URLs to the browser.
+- Do not use recent-feed lag as final-result state.
+- Do not infer token decimals from ERC-20 calls when release metadata exists.
+- Do not add WebSocket/SSE infrastructure before polling and API cache fail real
+  usage needs.
 
-- store in IndexedDB via `idb-keyval` or `dexie`
-- module wrapper in `apps/web/src/lib/storage/`
-
-Never store secrets, signatures, or private keys.
-
-## 9. Mutation Contracts
-
-Every mutation hook signature:
-
-```ts
-type UseXMutation = {
-  status:
-    | "idle"
-    | "simulating"
-    | "preview"
-    | "signing"
-    | "pending"
-    | "mining"
-    | "success"
-    | "error"
-    | "rejected"
-    | "timeout";
-  error?: TypedError;
-  preview?: PreviewResult;
-  txHash?: `0x${string}`;
-  receipt?: TransactionReceipt;
-  reset: () => void;
-  simulate: (input: Input) => Promise<PreviewResult>;
-  submit: (input: Input) => Promise<SubmitResult>;
-};
-```
-
-The mutation hook:
-
-- runs simulation first (`13-web3-ux.md §7`)
-- waits for receipt
-- invalidates the configured query keys
-- emits observability events (`../frontend/25-observability.md`)
-
-Pages call `submit` once and consume `status`, `error`, `preview`, etc.
-
-## 10. SSOT Indexer Reducers
-
-The indexer turns raw event logs into denormalized rows. Reducers live in
-`@ssot/ssot/indexer` and emit:
-
-- `BetRow`
-- `PositionRow`
-- `SettlementRow`
-- `XPAccrualRow`
-- `BankSnapshotRow`
-- `SportsMarketRow`
-- `SportsTicketRow`
-
-Each row is **versioned**; schema bumps require ADR.
-
-When the indexer schema changes:
-
-- bump indexer version
-- clear IndexedDB cache for affected stores (forward migration)
-- pre-deploy a `STATE_SCHEMA_BUMP` banner for 24h
-
-## 11. Don'ts
-
-- No `useQuery` calls in `page.tsx` files. Wrap in a feature hook.
-- No `useEffect`-based fetching. Use TanStack Query.
-- No global setInterval polling. Use `useQuery` with `refetchInterval`.
-- No localStorage reads at module top level (SSR-breaking).
-- No bigint values in URL state without explicit serialization.
-- No `JSON.parse(localStorage.getItem(...))` without zod parsing.
-- No silent fallbacks: a stale query must surface visible "(stale)"
-  affordance.
-- No mutations without prior simulation.
-- No invalidation by string key — always reference `invalidation-map.ts`.
-
-## 12. How To Enforce
+## 12. Verification
 
 ```bash
-# useQuery only inside feature hooks
-rg -nE "useQuery|useInfiniteQuery|useMutation" frontend/apps/web/src/app \
-  | rg -v "messages|metadata"
-
-# Query keys are tuples; no strings
-rg -nE "queryKey:\\s*\\[?\"" frontend/apps/web/src
-
-# useEffect-based fetching ban
-rg -nE "useEffect.*fetch\\(|useEffect.*axios|useEffect.*await" frontend/apps/web/src
-
-# Offset pagination ban
-rg -nE "offset:\\s*[0-9]+|limit.*offset" frontend/apps/web/src
-
-# All mutation hooks import from features/*/actions
-node scripts/check-mutation-paths.mjs
-
-# bigint in URL state
-rg -nE "useSearchParams\\(\\).get.*BigInt|nuqs\\.bigint" frontend/apps/web/src
+rg -nE "BET_INDEX_DATABASE_URL|@ssot/bet-index" frontend/apps/web/src | rg -v "src/server|src/app/api"
+rg -nE "useEffect\\(.*fetch|useEffect\\(.*axios" frontend/apps/web/src
+rg -nE "queryKey:\\s*['\\\"]" frontend/apps/web/src
+pnpm -C frontend test
 ```
-
-## 13. Migration
-
-- New rewrite uses the rules above from day one.
-- The old `useBets`, `useTxJournal`, etc. hooks are rewritten into the new
-  `features/*/data` layout.
-- Old TanStack queries with string keys are normalized to tuple keys.
-
-## 14. Glossary
-
-| Term              | Meaning                                                       |
-| ----------------- | ------------------------------------------------------------- |
-| RSC               | React Server Component                                        |
-| Hydration handoff | Server-prefetched query cache rehydrated on client            |
-| Cursor pagination | Pagination via opaque cursor, robust to reorgs                |
-| SSE               | Server-Sent Events                                            |
-| Provider island   | Client-Component subtree wrapping global providers            |
-| Invalidation map  | The central registry of (mutation → query keys to invalidate) |
