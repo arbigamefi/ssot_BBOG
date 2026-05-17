@@ -202,6 +202,37 @@ describe("createSSOTSDK", () => {
     });
   });
 
+  it("reads GameHub terminal results from getBetTerminal before scanning event logs", async () => {
+    pub.readContract.mockResolvedValueOnce({
+      state: 4,
+      payoutGross: 2_000_000n,
+      payoutNet: 1_960_000n,
+      feeOnPayout: 40_000n,
+      protocolFeeAccrual: 20_000n,
+      refundAmount: 0n
+    });
+
+    const proof = await sdk.gameHub.getTerminalProof(7n);
+
+    expect(pub.readContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        address: getAddress(TEST_RELEASE.contracts.gameHub),
+        functionName: "getBetTerminal",
+        args: [7n]
+      })
+    );
+    expect(pub.getContractEvents).not.toHaveBeenCalled();
+    expect(proof).toEqual({
+      kind: "settled",
+      settlement: {
+        payoutGross: 2_000_000n,
+        payoutNet: 1_960_000n,
+        feeOnPayout: 40_000n,
+        protocolFeeAccrual: 20_000n
+      }
+    });
+  });
+
   it("scans recent GameHub terminal proof ranges backwards in RPC-safe chunks", async () => {
     const settlementTx =
       "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc" as Hex;

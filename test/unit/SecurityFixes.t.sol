@@ -202,7 +202,11 @@ contract SecurityFixes is Test {
         hub.finalize(betId);
 
         b = hub.getBet(betId);
+        SSOTTypes.BetTerminal memory terminal = hub.getBetTerminal(betId);
         assertEq(uint256(b.state), uint256(SSOTTypes.BetState.Refunded), "invalid module output should debt-out refund");
+        assertEq(uint256(terminal.state), uint256(SSOTTypes.BetState.Refunded), "terminal receipt should be refunded");
+        assertEq(terminal.refundAmount, 10 ether, "terminal receipt should record the full fallback refund");
+        assertEq(terminal.payoutNet, 0, "fallback refund should not masquerade as payout");
         assertEq(asset.balanceOf(player), 10 ether, "player stake should be returned");
         assertEq(bank.totalReserved(), 0, "reserved capital should be released");
     }

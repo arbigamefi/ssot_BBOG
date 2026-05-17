@@ -50,6 +50,7 @@ interface IGameHub {
 
     function nextPositionIdHint() external view returns (uint256);
     function getBet(uint256 positionId) external view returns (SSOTTypes.Bet memory);
+    function getBetTerminal(uint256 positionId) external view returns (SSOTTypes.BetTerminal memory);
     function getBetParams(uint256 positionId) external view returns (bytes memory);
     function getDeltaSkyline(uint256 positionId) external view returns (bytes memory);
 

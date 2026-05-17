@@ -13,6 +13,7 @@ ADR process.
 | [0003](./0003-single-design-token-source.md)                    | Single design-token source                    | Accepted | 2026-05-14 |
 | [0004](./0004-no-subgraph-for-mvp-indexing.md)                  | No subgraph for MVP indexing                  | Accepted | 2026-05-17 |
 | [0005](./0005-postgres-durable-bet-index.md)                    | Postgres durable bet index                    | Accepted | 2026-05-17 |
+| [0006](./0006-casino-terminal-receipt-view.md)                  | Casino terminal receipt view                  | Accepted | 2026-05-17 |
 
 ## Conventions
 

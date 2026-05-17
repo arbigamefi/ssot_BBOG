@@ -4,7 +4,7 @@
   "contracts": [
     {
       "abiFile": "GameHub.abi.json",
-      "abiSha256": "3f90388c65a1f9153ff34c63a8390b644fa473ceefeaf8ddf01839871d35382c",
+      "abiSha256": "12f78b79cd3c772eeeb53e11b16207173e707128b1eb087585bb31f800cd1674",
       "address": "0x1FC18758b64205313F920cfc7fFc7dC343a892E6",
       "addressKey": "gameHub",
       "name": "GameHub"
@@ -145,7 +145,7 @@
       "poolId": 2
     }
   ],
-  "generatedAt": 1778894622,
+  "generatedAt": 1778999034,
   "gitSha": "",
   "manifestPath": "deployments/frontend-manifest-latest-v13.json",
   "schemaVersion": 2

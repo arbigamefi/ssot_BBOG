@@ -224,6 +224,45 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
     });
   }
 
+  async function readTerminalReceipt(betId: bigint): Promise<GameHubTerminalProof | null> {
+    let receipt: any;
+    try {
+      receipt = await publicClient.readContract({
+        address: gameHubAddress,
+        abi: GAME_HUB_ABI,
+        functionName: "getBetTerminal",
+        args: [betId]
+      } as any);
+    } catch {
+      // Older dev deployments do not expose getBetTerminal. Keep event-log proof as fallback.
+      return null;
+    }
+
+    const state = Number(receipt?.state ?? 0);
+    if (state === 4) {
+      return {
+        kind: "settled",
+        settlement: {
+          payoutGross: BigInt(receipt.payoutGross ?? 0n),
+          payoutNet: BigInt(receipt.payoutNet ?? 0n),
+          feeOnPayout: BigInt(receipt.feeOnPayout ?? 0n),
+          protocolFeeAccrual: BigInt(receipt.protocolFeeAccrual ?? 0n)
+        }
+      };
+    }
+
+    if (state === 5) {
+      return {
+        kind: "refunded",
+        refund: {
+          refundAmount: BigInt(receipt.refundAmount ?? 0n)
+        }
+      };
+    }
+
+    return null;
+  }
+
   const gameHub: SSOTGameHubAPI = {
     async quoteVRFFee(betCount: number): Promise<bigint> {
       const [fee] = (await publicClient.readContract({
@@ -717,6 +756,9 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
     },
 
     async getTerminalProof(betId: bigint): Promise<GameHubTerminalProof | null> {
+      const terminalReceipt = await readTerminalReceipt(betId);
+      if (terminalReceipt) return terminalReceipt;
+
       const latestBlock = await publicClient.getBlockNumber();
       let latest: Awaited<ReturnType<typeof readTerminalEventsInRange>>[number] | undefined;
 
