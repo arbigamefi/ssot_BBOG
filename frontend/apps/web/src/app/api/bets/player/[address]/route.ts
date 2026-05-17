@@ -18,11 +18,26 @@ function parseChainId(value: string | null) {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : 84532;
 }
 
+function emptyPlayerBetsResponse({ chainId, player }: { chainId: number; player: string }) {
+  return {
+    schemaVersion: 1 as const,
+    cached: false,
+    chainId,
+    fromBlock: 0,
+    generatedAt: Date.now(),
+    player,
+    rows: [],
+    source: "rpc-window" as const,
+    toBlock: 0
+  };
+}
+
 export async function GET(request: Request, context: { params: Promise<{ address: string }> }) {
+  const url = new URL(request.url);
+  const chainId = parseChainId(url.searchParams.get("chainId"));
+
   try {
-    const url = new URL(request.url);
     const params = await context.params;
-    const chainId = parseChainId(url.searchParams.get("chainId"));
     const limit = clampPlayerBetsLimit(Number(url.searchParams.get("limit") ?? ""));
     const player = normalizePlayerAddress(params.address);
     const response = await queryPlayerBets({ chainId, limit, player });
@@ -34,6 +49,15 @@ export async function GET(request: Request, context: { params: Promise<{ address
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to query player bets.";
-    return jsonError(message, message.includes("player") ? 400 : 500, "PLAYER_BETS_FAILED");
+    if (message.includes("player")) {
+      return jsonError(message, 400, "PLAYER_BETS_FAILED");
+    }
+
+    const params = await context.params;
+    return NextResponse.json(emptyPlayerBetsResponse({ chainId, player: params.address }), {
+      headers: {
+        "cache-control": "no-store"
+      }
+    });
   }
 }

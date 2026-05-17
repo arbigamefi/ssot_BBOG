@@ -18,10 +18,24 @@ function parseChainId(value: string | null) {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : 84532;
 }
 
+function emptyRecentBetsResponse(chainId: number) {
+  return {
+    schemaVersion: 1 as const,
+    cached: false,
+    chainId,
+    fromBlock: 0,
+    generatedAt: Date.now(),
+    rows: [],
+    source: "rpc-window" as const,
+    toBlock: 0
+  };
+}
+
 export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const chainId = parseChainId(url.searchParams.get("chainId"));
+
   try {
-    const url = new URL(request.url);
-    const chainId = parseChainId(url.searchParams.get("chainId"));
     const limit = clampRecentBetsLimit(Number(url.searchParams.get("limit") ?? ""));
     const gameId = normalizeGameId(url.searchParams.get("gameId") ?? undefined);
     const response = await queryRecentBets({ chainId, gameId, limit });
@@ -33,6 +47,14 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to query recent bets.";
-    return jsonError(message, message.includes("gameId") ? 400 : 500, "RECENT_BETS_FAILED");
+    if (message.includes("gameId")) {
+      return jsonError(message, 400, "RECENT_BETS_FAILED");
+    }
+
+    return NextResponse.json(emptyRecentBetsResponse(chainId), {
+      headers: {
+        "cache-control": "no-store"
+      }
+    });
   }
 }

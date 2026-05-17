@@ -57,4 +57,22 @@ describe("GET /api/bets/recent", () => {
     expect((await json(response)).error.code).toBe("RECENT_BETS_FAILED");
     expect(queryRecentBetsMock).not.toHaveBeenCalled();
   });
+
+  it("returns an empty best-effort feed when aggregation is unavailable", async () => {
+    queryRecentBetsMock.mockRejectedValueOnce(new Error("database unavailable"));
+    const { GET } = await import("./route");
+    const response = await GET(request("/api/bets/recent?chainId=84532&limit=12"));
+    const body = await json(response);
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      cached: false,
+      chainId: 84532,
+      fromBlock: 0,
+      rows: [],
+      schemaVersion: 1,
+      source: "rpc-window",
+      toBlock: 0
+    });
+  });
 });

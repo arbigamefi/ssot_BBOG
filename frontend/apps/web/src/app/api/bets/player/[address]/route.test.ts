@@ -63,4 +63,25 @@ describe("GET /api/bets/player/[address]", () => {
     expect((await json(response)).error.code).toBe("PLAYER_BETS_FAILED");
     expect(queryPlayerBetsMock).not.toHaveBeenCalled();
   });
+
+  it("returns an empty best-effort ledger when aggregation is unavailable", async () => {
+    queryPlayerBetsMock.mockRejectedValueOnce(new Error("database unavailable"));
+    const { GET } = await import("./route");
+    const response = await GET(request(`/api/bets/player/${player}?chainId=84532&limit=12`), {
+      params: Promise.resolve({ address: player })
+    });
+    const body = await json(response);
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      cached: false,
+      chainId: 84532,
+      fromBlock: 0,
+      player,
+      rows: [],
+      schemaVersion: 1,
+      source: "rpc-window",
+      toBlock: 0
+    });
+  });
 });
