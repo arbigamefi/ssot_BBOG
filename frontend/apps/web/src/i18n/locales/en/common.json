@@ -25,6 +25,77 @@
     "docs": "Docs"
   },
   "casino": {
+    "room": {
+      "shell": {
+        "liveModule": "Live SSOT Module",
+        "houseEdge": "House edge",
+        "maxPayout": "Max payout"
+      },
+      "roundStatus": {
+        "title": "Round status",
+        "phases": {
+          "loadingQuote": {
+            "label": "Estimating VRF fee",
+            "detail": "Reading the current randomness fee before you place a round.",
+            "status": "Estimating"
+          },
+          "waitingVrf": {
+            "label": "Rolling",
+            "detail": "PlaceBet is mined. Waiting for verifiable randomness.",
+            "status": "Waiting VRF"
+          },
+          "timeoutSoft": {
+            "label": "VRF is taking longer than usual",
+            "detail": "The round is still safe. Keep this page open while Chainlink fulfills the request.",
+            "status": "Waiting"
+          },
+          "placing": {
+            "label": "Placing bet",
+            "detail": "Approve if needed, then sign PlaceBet. The round starts once the transaction is mined.",
+            "status": "Placing"
+          },
+          "settling": {
+            "label": "Settling result",
+            "detail": "Randomness is ready. Keeper settlement should complete automatically.",
+            "status": "Settling"
+          },
+          "manualSettleOffered": {
+            "label": "Keeper delay",
+            "detail": "Settlement is delayed. You can manually settle this result as a fallback.",
+            "status": "Manual settle offered"
+          },
+          "settled": {
+            "label": "Round settled",
+            "detail": "Settlement is confirmed on-chain. Preparing the final result proof.",
+            "status": "Settled"
+          },
+          "refundable": {
+            "label": "Refund path available",
+            "detail": "VRF did not complete before the protocol timeout. You can refund the stake.",
+            "status": "Refundable"
+          },
+          "failed": {
+            "label": "Round monitor failed",
+            "detail": "Unable to read the latest round state from the RPC provider.",
+            "status": "Failed"
+          },
+          "ready": {
+            "label": "Ready",
+            "detail": "One click will approve if needed, place the bet, and watch settlement.",
+            "status": "Ready"
+          }
+        },
+        "metrics": {
+          "vrfEstimate": "VRF estimate",
+          "betId": "Bet ID",
+          "vrfRequest": "VRF request"
+        },
+        "actions": {
+          "settleResult": "Settle result",
+          "refundStake": "Refund stake"
+        }
+      }
+    },
     "directory": {
       "empty": {
         "noRelease": "No embedded release available for the connected chain.",

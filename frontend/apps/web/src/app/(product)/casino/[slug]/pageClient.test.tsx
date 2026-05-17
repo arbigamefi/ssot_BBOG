@@ -65,6 +65,61 @@ vi.mock("../../../../app-shell/WalletButton", () => ({
   })
 }));
 
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string) =>
+    ({
+      "casino.room.shell.liveModule": "Live SSOT Module",
+      "casino.room.shell.houseEdge": "House edge",
+      "casino.room.shell.maxPayout": "Max payout",
+      "casino.room.roundStatus.title": "Round status",
+      "casino.room.roundStatus.phases.loadingQuote.label": "Estimating VRF fee",
+      "casino.room.roundStatus.phases.loadingQuote.detail":
+        "Reading the current randomness fee before you place a round.",
+      "casino.room.roundStatus.phases.loadingQuote.status": "Estimating",
+      "casino.room.roundStatus.phases.waitingVrf.label": "Rolling",
+      "casino.room.roundStatus.phases.waitingVrf.detail":
+        "PlaceBet is mined. Waiting for verifiable randomness.",
+      "casino.room.roundStatus.phases.waitingVrf.status": "Waiting VRF",
+      "casino.room.roundStatus.phases.timeoutSoft.label": "VRF is taking longer than usual",
+      "casino.room.roundStatus.phases.timeoutSoft.detail":
+        "The round is still safe. Keep this page open while Chainlink fulfills the request.",
+      "casino.room.roundStatus.phases.timeoutSoft.status": "Waiting",
+      "casino.room.roundStatus.phases.placing.label": "Placing bet",
+      "casino.room.roundStatus.phases.placing.detail":
+        "Approve if needed, then sign PlaceBet. The round starts once the transaction is mined.",
+      "casino.room.roundStatus.phases.placing.status": "Placing",
+      "casino.room.roundStatus.phases.settling.label": "Settling result",
+      "casino.room.roundStatus.phases.settling.detail":
+        "Randomness is ready. Keeper settlement should complete automatically.",
+      "casino.room.roundStatus.phases.settling.status": "Settling",
+      "casino.room.roundStatus.phases.manualSettleOffered.label": "Keeper delay",
+      "casino.room.roundStatus.phases.manualSettleOffered.detail":
+        "Settlement is delayed. You can manually settle this result as a fallback.",
+      "casino.room.roundStatus.phases.manualSettleOffered.status": "Manual settle offered",
+      "casino.room.roundStatus.phases.settled.label": "Round settled",
+      "casino.room.roundStatus.phases.settled.detail":
+        "Settlement is confirmed on-chain. Preparing the final result proof.",
+      "casino.room.roundStatus.phases.settled.status": "Settled",
+      "casino.room.roundStatus.phases.refundable.label": "Refund path available",
+      "casino.room.roundStatus.phases.refundable.detail":
+        "VRF did not complete before the protocol timeout. You can refund the stake.",
+      "casino.room.roundStatus.phases.refundable.status": "Refundable",
+      "casino.room.roundStatus.phases.failed.label": "Round monitor failed",
+      "casino.room.roundStatus.phases.failed.detail":
+        "Unable to read the latest round state from the RPC provider.",
+      "casino.room.roundStatus.phases.failed.status": "Failed",
+      "casino.room.roundStatus.phases.ready.label": "Ready",
+      "casino.room.roundStatus.phases.ready.detail":
+        "One click will approve if needed, place the bet, and watch settlement.",
+      "casino.room.roundStatus.phases.ready.status": "Ready",
+      "casino.room.roundStatus.metrics.vrfEstimate": "VRF estimate",
+      "casino.room.roundStatus.metrics.betId": "Bet ID",
+      "casino.room.roundStatus.metrics.vrfRequest": "VRF request",
+      "casino.room.roundStatus.actions.settleResult": "Settle result",
+      "casino.room.roundStatus.actions.refundStake": "Refund stake"
+    })[key] ?? key
+}));
+
 vi.mock("../../../../components/ProductStateCard", () => ({
   ProductStateCard: ({ title, description }: any) => (
     <div data-testid="placeholder">

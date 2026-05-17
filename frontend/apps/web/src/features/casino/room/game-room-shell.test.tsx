@@ -1,8 +1,17 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import * as React from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { GameRoomShell } from "./game-room-shell";
+
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string) =>
+    ({
+      "casino.room.shell.liveModule": "Live SSOT Module",
+      "casino.room.shell.houseEdge": "House edge",
+      "casino.room.shell.maxPayout": "Max payout"
+    })[key] ?? key
+}));
 
 describe("GameRoomShell", () => {
   afterEach(() => cleanup());

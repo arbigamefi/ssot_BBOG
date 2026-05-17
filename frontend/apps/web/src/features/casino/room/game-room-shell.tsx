@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useTranslations } from "next-intl";
 
 export function GameRoomShell({
   gameName,
@@ -17,24 +18,30 @@ export function GameRoomShell({
   auditLedgerContent: React.ReactNode;
   isInteractive?: boolean;
 }) {
+  const t = useTranslations();
+
   return (
     <section className="flex min-h-[calc(100vh-8rem)] flex-col gap-6">
       <header className="flex flex-col gap-5 border-b border-border-soft pb-6 md:flex-row md:items-end md:justify-between">
         <div>
           <div className="flex items-center gap-3 text-xs font-semibold uppercase text-accent">
             <span className="h-2.5 w-2.5 rounded-full bg-accent shadow-glow" />
-            Live SSOT Module
+            {t("casino.room.shell.liveModule")}
           </div>
           <h1 className="mt-3 text-4xl font-semibold text-fg md:text-5xl">{gameName}</h1>
         </div>
 
         <dl className="grid grid-cols-2 gap-3 md:min-w-72">
           <div className="rounded-lg border border-border-soft bg-surface-1 px-4 py-3 shadow-e1">
-            <dt className="text-xs font-semibold uppercase text-fg-subtle">House edge</dt>
+            <dt className="text-xs font-semibold uppercase text-fg-subtle">
+              {t("casino.room.shell.houseEdge")}
+            </dt>
             <dd className="mt-1 font-mono text-lg text-accent">{houseEdge}</dd>
           </div>
           <div className="rounded-lg border border-border-soft bg-surface-1 px-4 py-3 shadow-e1">
-            <dt className="text-xs font-semibold uppercase text-fg-subtle">Max payout</dt>
+            <dt className="text-xs font-semibold uppercase text-fg-subtle">
+              {t("casino.room.shell.maxPayout")}
+            </dt>
             <dd className="mt-1 font-mono text-lg text-fg">{maxPayout}</dd>
           </div>
         </dl>

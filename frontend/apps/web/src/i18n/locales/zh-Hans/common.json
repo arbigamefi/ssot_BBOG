@@ -25,6 +25,77 @@
     "docs": "文档"
   },
   "casino": {
+    "room": {
+      "shell": {
+        "liveModule": "实时 SSOT 模块",
+        "houseEdge": "庄家优势",
+        "maxPayout": "最高赔付"
+      },
+      "roundStatus": {
+        "title": "回合状态",
+        "phases": {
+          "loadingQuote": {
+            "label": "估算 VRF 费用",
+            "detail": "下注前正在读取当前随机数费用。",
+            "status": "估算中"
+          },
+          "waitingVrf": {
+            "label": "等待开奖",
+            "detail": "PlaceBet 已上链，正在等待可验证随机数。",
+            "status": "等待 VRF"
+          },
+          "timeoutSoft": {
+            "label": "VRF 等待时间较长",
+            "detail": "本回合仍然安全。请保持页面打开，等待 Chainlink 完成请求。",
+            "status": "等待中"
+          },
+          "placing": {
+            "label": "正在下注",
+            "detail": "如有需要先授权，然后签名 PlaceBet。交易上链后回合开始。",
+            "status": "下注中"
+          },
+          "settling": {
+            "label": "正在结算结果",
+            "detail": "随机数已准备好，keeper 应会自动完成结算。",
+            "status": "结算中"
+          },
+          "manualSettleOffered": {
+            "label": "Keeper 延迟",
+            "detail": "结算延迟。你可以作为兜底手动结算本回合。",
+            "status": "可手动结算"
+          },
+          "settled": {
+            "label": "回合已结算",
+            "detail": "链上结算已确认，正在准备最终结果证明。",
+            "status": "已结算"
+          },
+          "refundable": {
+            "label": "可退款",
+            "detail": "VRF 未在协议超时时间前完成。你可以退回本金。",
+            "status": "可退款"
+          },
+          "failed": {
+            "label": "回合监控失败",
+            "detail": "无法从 RPC provider 读取最新回合状态。",
+            "status": "失败"
+          },
+          "ready": {
+            "label": "准备就绪",
+            "detail": "点击一次即可在需要时完成授权、下注，并自动跟踪结算。",
+            "status": "就绪"
+          }
+        },
+        "metrics": {
+          "vrfEstimate": "VRF 预估费用",
+          "betId": "投注 ID",
+          "vrfRequest": "VRF 请求"
+        },
+        "actions": {
+          "settleResult": "结算结果",
+          "refundStake": "退回本金"
+        }
+      }
+    },
     "directory": {
       "empty": {
         "noRelease": "当前链没有可用的内嵌 release。",
