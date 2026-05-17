@@ -93,7 +93,7 @@ export function BetsPageClient() {
   }, [enrichedBets]);
 
   return (
-    <PageTransition pageKey="bets">
+    <PageTransition pageKey="portfolio-activity">
       <div className="space-y-8">
         <BetsHero metrics={metrics} />
         <BetsFilterTabs active={statusFilter} onChange={setStatusFilter} />

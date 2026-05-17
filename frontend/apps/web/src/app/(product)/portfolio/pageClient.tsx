@@ -203,7 +203,7 @@ export function AccountPageClient() {
   const journalRows = txRows as AccountJournalRow[];
 
   return (
-    <PageTransition pageKey="account">
+    <PageTransition pageKey="portfolio">
       <div className="space-y-8">
         <AccountHero account={shortHex(account)} metrics={metrics} />
 

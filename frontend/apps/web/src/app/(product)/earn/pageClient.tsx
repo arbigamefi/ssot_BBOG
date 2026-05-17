@@ -276,7 +276,7 @@ export function InvestPageClient() {
   ];
 
   return (
-    <PageTransition pageKey="invest">
+    <PageTransition pageKey="earn">
       <div className="space-y-8">
         <EarnHero symbol={symbol} bankAddress={shortHex(snapshot?.bank)} metrics={metrics} />
         <div className="grid gap-6 xl:grid-cols-[1fr_420px]">
