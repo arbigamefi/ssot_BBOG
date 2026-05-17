@@ -1562,6 +1562,135 @@
       "pending": "{count} 待处理"
     }
   },
+  "marketing": {
+    "format": {
+      "syncing": "同步中",
+      "awaitingReserveSync": "等待储备同步",
+      "pending": "等待中",
+      "walletPending": "钱包待确认",
+      "assetFallback": "资产",
+      "roomFallback": "房间",
+      "placedFallback": "已下注"
+    },
+    "timeAgo": {
+      "now": "刚刚",
+      "seconds": "{count}s 前",
+      "minutes": "{count}m 前",
+      "hours": "{count}h 前",
+      "days": "{count}d 前"
+    },
+    "hero": {
+      "channel": "Base Sepolia release 通道",
+      "title": "ArbiGameFi",
+      "description": "面向透明 Bank、可验证随机数和自动结算的链上赌场轨道。首屏就是产品界面，不是承诺型展示页。",
+      "enterCasino": "进入赌场",
+      "viewBank": "查看 Bank",
+      "consoleLabel": "协议控制台",
+      "live": "实时",
+      "metrics": {
+        "freeReserve": "可用储备",
+        "bankAssets": "Bank 资产",
+        "rooms": "房间"
+      },
+      "proofRows": {
+        "vrf": {
+          "title": "VRF 结算路径",
+          "detail": "随机数、票据和派奖事件都可从 release 元数据审计。"
+        },
+        "bytecode": {
+          "title": "字节码锚定 release",
+          "detail": "前端展示从 SSOT release 读取合约地址和游戏元数据。"
+        }
+      }
+    },
+    "stats": {
+      "freeReserve": {
+        "label": "可用储备",
+        "detail": "扣除已保留负债后的可读 Bank 容量。"
+      },
+      "bankAssets": {
+        "label": "Bank 资产",
+        "detail": "从 release 关联的 Bank 快照聚合。"
+      },
+      "release": {
+        "label": "Release",
+        "detail": "前端状态锚定到 release manifest。"
+      }
+    },
+    "rooms": {
+      "eyebrow": "赌场房间",
+      "title": "四个一次性 RNG 游戏，一条结算轨道。",
+      "detail": "每个房间映射到 release 定义的模块。UI 可以变化，但游戏身份、参数和派奖路径都锚定到 SSOT release。",
+      "actionLabel": "打开目录"
+    },
+    "roomCards": {
+      "dice": {
+        "badge": "精密房间",
+        "summary": "设置上限、确定票据规模，然后进入快速骰子房间。",
+        "facts": {
+          "0": "快速票据",
+          "1": "实时结算",
+          "2": "单一资产"
+        }
+      },
+      "coinToss": {
+        "badge": "二元房间",
+        "summary": "Heads 或 Tails，使用最干净的房间入口。",
+        "facts": {
+          "0": "快速进入",
+          "1": "二元玩法",
+          "2": "单一结果"
+        }
+      },
+      "roulette": {
+        "badge": "欧式桌台",
+        "summary": "进入标准欧式轮盘桌：真实桌面、清晰票据、可读票据复核。",
+        "facts": {
+          "0": "0-36 桌台",
+          "1": "清晰票据",
+          "2": "标准下注"
+        }
+      },
+      "keno": {
+        "badge": "矩阵房间",
+        "summary": "选择棋盘、确定票据规模，并让开奖保持在房间中心。",
+        "facts": {
+          "0": "棋盘优先",
+          "1": "实时开奖",
+          "2": "重复游玩"
+        }
+      }
+    },
+    "bank": {
+      "eyebrow": "Bank 储备",
+      "title": "先展示储备账本，再谈营销收益。",
+      "description": "Bank 余额和已保留负债都来自协议读取。页面不会编造 APY，也不会用促销数字遮住待履约义务。",
+      "freeReserve": "可用储备",
+      "totalBankAssets": "Bank 总资产",
+      "releaseDigest": "Release 摘要",
+      "inspectBank": "检查 Bank"
+    },
+    "activity": {
+      "eyebrow": "协议活动",
+      "title": "最新已索引票据",
+      "viewAll": "查看全部",
+      "headers": {
+        "player": "玩家",
+        "room": "房间",
+        "state": "状态",
+        "age": "时间"
+      },
+      "empty": "当前浏览器会话还没有已索引票据。"
+    },
+    "proof": {
+      "traceLabel": "settlement_trace.sol",
+      "proofSurface": "只读证明界面",
+      "eyebrow": "信任模型",
+      "title": "透明结算轨道。",
+      "description": "托管、游戏模块和随机数是彼此分离的界面。这让 UI 可以重写，而不扰动协议正确性。",
+      "actionLabel": "打开运维"
+    }
+  },
   "nav": {
     "account": "账户",
     "affiliates": "推广",

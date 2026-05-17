@@ -1562,6 +1562,135 @@
       "pending": "{count} pending"
     }
   },
+  "marketing": {
+    "format": {
+      "syncing": "Syncing",
+      "awaitingReserveSync": "Awaiting reserve sync",
+      "pending": "Pending",
+      "walletPending": "Wallet pending",
+      "assetFallback": "Asset",
+      "roomFallback": "Room",
+      "placedFallback": "Placed"
+    },
+    "timeAgo": {
+      "now": "just now",
+      "seconds": "{count}s ago",
+      "minutes": "{count}m ago",
+      "hours": "{count}h ago",
+      "days": "{count}d ago"
+    },
+    "hero": {
+      "channel": "Base Sepolia release channel",
+      "title": "ArbiGameFi",
+      "description": "On-chain casino rails for transparent bankroll, verifiable randomness, and automatic settlement. The first screen is the product surface, not a promise deck.",
+      "enterCasino": "Enter Casino",
+      "viewBank": "View Bank",
+      "consoleLabel": "Protocol Console",
+      "live": "Live",
+      "metrics": {
+        "freeReserve": "Free reserve",
+        "bankAssets": "Bank assets",
+        "rooms": "Rooms"
+      },
+      "proofRows": {
+        "vrf": {
+          "title": "VRF settlement path",
+          "detail": "Randomness, ticket, and payout events remain auditable from release metadata."
+        },
+        "bytecode": {
+          "title": "Bytecode anchored release",
+          "detail": "Frontend display reads contract addresses and game metadata from the SSOT release."
+        }
+      }
+    },
+    "stats": {
+      "freeReserve": {
+        "label": "Free reserve",
+        "detail": "Readable bank capacity after reserved liabilities."
+      },
+      "bankAssets": {
+        "label": "Bank assets",
+        "detail": "Aggregated from release-linked bank snapshots."
+      },
+      "release": {
+        "label": "Release",
+        "detail": "Frontend state is anchored to a release manifest."
+      }
+    },
+    "rooms": {
+      "eyebrow": "Casino rooms",
+      "title": "Four one-shot RNG games, one settlement rail.",
+      "detail": "Each room maps to a release-defined module. The UI can change, but game identity, parameters, and payout path stay anchored to the SSOT release.",
+      "actionLabel": "Open directory"
+    },
+    "roomCards": {
+      "dice": {
+        "badge": "Precision room",
+        "summary": "Set the cap, size the ticket, and step into a fast dice room.",
+        "facts": {
+          "0": "Fast ticket",
+          "1": "Live settlement",
+          "2": "Single asset"
+        }
+      },
+      "coinToss": {
+        "badge": "Binary room",
+        "summary": "Heads or tails with the cleanest room entry on the floor.",
+        "facts": {
+          "0": "Quick entry",
+          "1": "Binary play",
+          "2": "Single outcome"
+        }
+      },
+      "roulette": {
+        "badge": "European table",
+        "summary": "Step into a standard European roulette table with a real board, a clear slip, and readable ticket review.",
+        "facts": {
+          "0": "0-36 table",
+          "1": "Clear slip",
+          "2": "Standard bets"
+        }
+      },
+      "keno": {
+        "badge": "Matrix room",
+        "summary": "Pick the board, size the ticket, and keep the draw centered on the room.",
+        "facts": {
+          "0": "Board-first",
+          "1": "Live draw",
+          "2": "Repeat plays"
+        }
+      }
+    },
+    "bank": {
+      "eyebrow": "Bank reserve",
+      "title": "Reserve ledger before marketing yield.",
+      "description": "Bank balances and reserved liabilities are displayed from protocol reads. The page does not invent APY or hide pending obligations behind a promotional number.",
+      "freeReserve": "Free reserve",
+      "totalBankAssets": "Total bank assets",
+      "releaseDigest": "Release digest",
+      "inspectBank": "Inspect bank"
+    },
+    "activity": {
+      "eyebrow": "Protocol activity",
+      "title": "Latest indexed tickets",
+      "viewAll": "View all",
+      "headers": {
+        "player": "Player",
+        "room": "Room",
+        "state": "State",
+        "age": "Age"
+      },
+      "empty": "No indexed tickets in this browser session yet."
+    },
+    "proof": {
+      "traceLabel": "settlement_trace.sol",
+      "proofSurface": "read-only proof surface",
+      "eyebrow": "Trust model",
+      "title": "Transparent settlement rails.",
+      "description": "Custody, game modules, and randomness are separate surfaces. This makes the UI easier to rewrite without disturbing protocol correctness.",
+      "actionLabel": "Open ops"
+    }
+  },
   "nav": {
     "account": "Account",
     "affiliates": "Affiliates",
