@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { SparklesIcon } from "@heroicons/react/24/outline";
 import { cn } from "@ssot/ui";
 
@@ -33,26 +34,30 @@ export function RouletteSelectionPanel({
   spots: readonly string[];
   onClear: () => void;
 }) {
+  const t = useTranslations();
+
   return (
     <div className="relative mb-6 flex flex-col gap-3 overflow-hidden rounded-xl border border-border bg-surface-0 p-5 shadow-inner-e1">
       <div className="absolute inset-x-0 top-0 h-1 bg-brand" />
       <div className="z-10 flex items-center justify-between">
         <span className="flex items-center gap-2 font-mono text-xl font-black text-fg">
           {spots.length}{" "}
-          <span className="mt-1 text-xs uppercase tracking-widest text-fg-subtle">Bets</span>
+          <span className="mt-1 text-xs uppercase tracking-widest text-fg-subtle">
+            {t("casino.room.selection.roulette.bets")}
+          </span>
         </span>
         <button
           type="button"
           onClick={onClear}
           className="rounded-lg border border-border bg-surface-1 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-fg-subtle transition-colors hover:border-danger/40 hover:bg-danger-soft hover:text-danger"
         >
-          Clear All
+          {t("casino.room.selection.roulette.clearAll")}
         </button>
       </div>
       <div className="custom-scrollbar z-10 mt-2 flex max-h-[140px] flex-wrap gap-1.5 overflow-y-auto border-t border-border-soft pt-2 pr-2">
         {spots.length === 0 ? (
           <span className="py-2 text-xs font-bold italic text-fg-subtle">
-            No bets placed. Click the felt to bet.
+            {t("casino.room.selection.roulette.empty")}
           </span>
         ) : (
           spots.map((spot) => (
@@ -88,10 +93,12 @@ export function CoinSideSelector({
   coinSide: CoinSide;
   onChange: (side: CoinSide) => void;
 }) {
+  const t = useTranslations();
+
   return (
     <div className="relative mb-6 flex flex-col gap-2">
       <label className="mb-1 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-fg-subtle">
-        <SparklesIcon className="h-3 w-3" /> Select Face
+        <SparklesIcon className="h-3 w-3" /> {t("casino.room.selection.coin.selectFace")}
       </label>
       <div className="relative flex rounded-xl border border-border bg-surface-0 p-1.5 shadow-inner-e1">
         <div
@@ -108,7 +115,7 @@ export function CoinSideSelector({
             coinSide === "HEADS" ? "font-black text-fg" : "text-fg-subtle hover:text-fg"
           )}
         >
-          Heads
+          {t("casino.room.selection.coin.heads")}
         </button>
         <button
           type="button"
@@ -118,7 +125,7 @@ export function CoinSideSelector({
             coinSide === "TAILS" ? "font-black text-fg" : "text-fg-subtle hover:text-fg"
           )}
         >
-          Tails
+          {t("casino.room.selection.coin.tails")}
         </button>
       </div>
     </div>
@@ -134,6 +141,7 @@ export function KenoSelectionPanel({
   onChange: (spots: number[]) => void;
   onResetResult: () => void;
 }) {
+  const t = useTranslations();
   const sortedSpots = [...spots].sort((a, b) => a - b);
 
   return (
@@ -142,7 +150,9 @@ export function KenoSelectionPanel({
       <div className="z-10 flex items-center justify-between">
         <span className="flex items-center gap-2 font-mono text-xl font-black text-fg">
           {spots.length}{" "}
-          <span className="mt-1 text-xs uppercase tracking-widest text-fg-subtle">/ 10 Spots</span>
+          <span className="mt-1 text-xs uppercase tracking-widest text-fg-subtle">
+            {t("casino.room.selection.keno.spotsLabel")}
+          </span>
         </span>
         <div className="flex gap-2">
           <button
@@ -153,7 +163,7 @@ export function KenoSelectionPanel({
             }}
             className="rounded-lg border border-brand/40 bg-brand-soft px-4 py-2 text-[10px] font-black uppercase tracking-widest text-brand transition-colors hover:bg-brand/20"
           >
-            Auto Pick
+            {t("casino.room.selection.keno.autoPick")}
           </button>
           <button
             type="button"
@@ -163,14 +173,14 @@ export function KenoSelectionPanel({
             }}
             className="rounded-lg border border-border bg-surface-1 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg"
           >
-            Clear
+            {t("casino.room.selection.keno.clear")}
           </button>
         </div>
       </div>
       <div className="z-10 mt-2 flex flex-wrap gap-1.5 border-t border-border-soft pt-2">
         {spots.length === 0 && (
           <span className="py-2 text-xs font-bold italic text-fg-subtle">
-            No spots selected. Click the grid to pick numbers.
+            {t("casino.room.selection.keno.empty")}
           </span>
         )}
         {sortedSpots.map((n) => (

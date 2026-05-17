@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { cn } from "@ssot/ui";
 
 import type { GameRoomBetPanelState } from "./bet-panel-state";
@@ -43,6 +44,29 @@ export function isPlaceBetButtonDisabled({
   );
 }
 
+function getPlaceBetButtonLabelKey({
+  hasAccount,
+  state,
+  isPending
+}: {
+  hasAccount: boolean;
+  state: GameRoomBetPanelState;
+  isPending: boolean;
+}) {
+  if (!hasAccount) return "casino.room.betPanel.placeBet.connectWallet";
+  if (state.status === "failed") return "casino.room.betPanel.placeBet.failedRetry";
+  if (isPending || state.status === "reconciled")
+    return "casino.room.betPanel.placeBet.roundInProgress";
+  if (state.status === "mined") return "casino.room.betPanel.placeBet.betMined";
+  if (state.status === "submitting") return "casino.room.betPanel.placeBet.signing";
+  if (state.plan)
+    return state.plan.preview?.needsApproval
+      ? "casino.room.betPanel.placeBet.approveThenPlace"
+      : "casino.room.betPanel.placeBet.placeBet";
+  if (state.status === "planning") return "casino.room.betPanel.placeBet.preparing";
+  return "casino.room.betPanel.placeBet.placeBet";
+}
+
 export function PlaceBetButton({
   gameSlug,
   hasAccount,
@@ -58,6 +82,7 @@ export function PlaceBetButton({
   state: GameRoomBetPanelState;
   onClick: () => void;
 }) {
+  const t = useTranslations();
   const disabled = isPlaceBetButtonDisabled({ gameSlug, isPending, winChance, state });
 
   return (
@@ -78,7 +103,7 @@ export function PlaceBetButton({
             : "border-brand-active bg-brand text-fg shadow-glow hover:bg-brand-hover"
       )}
     >
-      {getPlaceBetButtonLabel({ hasAccount, state, isPending })}
+      {t(getPlaceBetButtonLabelKey({ hasAccount, state, isPending }))}
     </button>
   );
 }

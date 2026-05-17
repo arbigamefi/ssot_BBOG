@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { InformationCircleIcon, WalletIcon } from "@heroicons/react/24/outline";
 
 import {
@@ -95,14 +96,16 @@ export function GameRoomBetPanel({
   onManualRefund?: () => void;
   onPlaceBet: () => void;
 }) {
+  const t = useTranslations();
+
   return (
     <>
       <div className="mb-6 flex items-center justify-between">
         <span className="flex items-center gap-2 text-sm font-bold text-fg-muted">
-          <WalletIcon className="h-4 w-4" /> Wallet Balance
+          <WalletIcon className="h-4 w-4" /> {t("casino.room.betPanel.walletBalance")}
         </span>
         <span className="rounded-lg border border-border bg-surface-1 px-3 py-1 font-mono text-fg shadow-inner-e1">
-          {!isSynced ? "Syncing..." : (walletBalance ?? "-")}
+          {!isSynced ? t("casino.room.betPanel.syncing") : (walletBalance ?? "-")}
         </span>
       </div>
 

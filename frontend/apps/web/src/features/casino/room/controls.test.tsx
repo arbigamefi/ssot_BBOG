@@ -12,6 +12,22 @@ vi.mock("@ssot/ui", async (importOriginal) => {
   };
 });
 
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string) =>
+    ({
+      "casino.room.selection.roulette.bets": "Bets",
+      "casino.room.selection.roulette.clearAll": "Clear All",
+      "casino.room.selection.roulette.empty": "No bets placed. Click the felt to bet.",
+      "casino.room.selection.coin.selectFace": "Select Face",
+      "casino.room.selection.coin.heads": "Heads",
+      "casino.room.selection.coin.tails": "Tails",
+      "casino.room.selection.keno.spotsLabel": "/ 10 Spots",
+      "casino.room.selection.keno.autoPick": "Auto Pick",
+      "casino.room.selection.keno.clear": "Clear",
+      "casino.room.selection.keno.empty": "No spots selected. Click the grid to pick numbers."
+    })[key] ?? key
+}));
+
 describe("game room controls", () => {
   afterEach(() => cleanup());
 

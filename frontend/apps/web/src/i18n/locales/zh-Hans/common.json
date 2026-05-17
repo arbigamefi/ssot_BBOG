@@ -94,6 +94,62 @@
           "settleResult": "结算结果",
           "refundStake": "退回本金"
         }
+      },
+      "betPanel": {
+        "walletBalance": "钱包余额",
+        "syncing": "同步中...",
+        "amount": {
+          "label": "下注金额",
+          "aria": "下注金额",
+          "min": "最小",
+          "max": "最大"
+        },
+        "rolls": {
+          "label": "回合数",
+          "total": "合计: {amount} USDC",
+          "aria": "回合数量"
+        },
+        "advanced": {
+          "label": "高级设置",
+          "stopGain": "止盈 (USDC)",
+          "stopLoss": "止损 (USDC)",
+          "offPlaceholder": "0 = 关闭",
+          "gainStop": "盈利达到 +{amount} USDC 时停止",
+          "lossStop": "亏损达到 {amount} USDC 时停止"
+        },
+        "summary": {
+          "multiplier": "倍率",
+          "winChance": "胜率",
+          "expectedPayout": "预期赔付"
+        },
+        "placeBet": {
+          "connectWallet": "连接钱包",
+          "failedRetry": "交易失败 - 重试",
+          "roundInProgress": "回合进行中",
+          "betMined": "投注已上链...",
+          "signing": "签名 / 下注中...",
+          "approveThenPlace": "先授权，再下注",
+          "preparing": "准备回合...",
+          "placeBet": "下注"
+        }
+      },
+      "selection": {
+        "roulette": {
+          "bets": "投注",
+          "clearAll": "全部清除",
+          "empty": "还没有投注。点击桌面选择投注项。"
+        },
+        "coin": {
+          "selectFace": "选择正反面",
+          "heads": "正面",
+          "tails": "反面"
+        },
+        "keno": {
+          "spotsLabel": "/ 10 个号码",
+          "autoPick": "自动选择",
+          "clear": "清除",
+          "empty": "还没有选择号码。点击网格选择数字。"
+        }
       }
     },
     "directory": {

@@ -94,6 +94,62 @@
           "settleResult": "Settle result",
           "refundStake": "Refund stake"
         }
+      },
+      "betPanel": {
+        "walletBalance": "Wallet Balance",
+        "syncing": "Syncing...",
+        "amount": {
+          "label": "Bet Amount",
+          "aria": "Bet amount",
+          "min": "Min",
+          "max": "Max"
+        },
+        "rolls": {
+          "label": "Rolls",
+          "total": "Total: {amount} USDC",
+          "aria": "Roll count"
+        },
+        "advanced": {
+          "label": "Advanced",
+          "stopGain": "Stop Gain (USDC)",
+          "stopLoss": "Stop Loss (USDC)",
+          "offPlaceholder": "0 = off",
+          "gainStop": "Gain stop at +{amount} USDC",
+          "lossStop": "Loss stop at {amount} USDC"
+        },
+        "summary": {
+          "multiplier": "Multiplier",
+          "winChance": "Win Chance",
+          "expectedPayout": "Expected Payout"
+        },
+        "placeBet": {
+          "connectWallet": "CONNECT WALLET",
+          "failedRetry": "TRANSACTION FAILED - RETRY",
+          "roundInProgress": "ROUND IN PROGRESS",
+          "betMined": "BET MINED...",
+          "signing": "SIGNING / PLACING...",
+          "approveThenPlace": "APPROVE, THEN PLACE BET",
+          "preparing": "PREPARING ROUND...",
+          "placeBet": "PLACE BET"
+        }
+      },
+      "selection": {
+        "roulette": {
+          "bets": "Bets",
+          "clearAll": "Clear All",
+          "empty": "No bets placed. Click the felt to bet."
+        },
+        "coin": {
+          "selectFace": "Select Face",
+          "heads": "Heads",
+          "tails": "Tails"
+        },
+        "keno": {
+          "spotsLabel": "/ 10 Spots",
+          "autoPick": "Auto Pick",
+          "clear": "Clear",
+          "empty": "No spots selected. Click the grid to pick numbers."
+        }
       }
     },
     "directory": {
