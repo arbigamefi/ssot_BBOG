@@ -1393,6 +1393,175 @@
       "sharesLower": "shares"
     }
   },
+  "ops": {
+    "hero": {
+      "eyebrow": "Operational proof",
+      "title": "Release and worker pulse.",
+      "description": "Verify release identity, indexer health, and worker freshness from one compact operator surface without mixing production controls into player pages.",
+      "summaryLabel": "Runtime summary",
+      "summaryDescription": "Local browser indexer session"
+    },
+    "metrics": {
+      "releaseDigest": {
+        "label": "Release digest",
+        "detail": "Canonical bundle currently served by the frontend."
+      },
+      "indexerLag": {
+        "label": "Indexer lag",
+        "healthyWindow": "Healthy window: {count} confirmations.",
+        "unavailable": "Confirmation window unavailable."
+      },
+      "safeHead": {
+        "label": "Safe head",
+        "detail": "Worker-confirmed event horizon used by room surfaces."
+      },
+      "workerState": {
+        "label": "Worker state",
+        "polling": "Polling every {seconds}s.",
+        "unavailable": "Worker polling unavailable."
+      },
+      "keeperState": {
+        "label": "Keeper state"
+      }
+    },
+    "releaseRows": {
+      "network": "Network",
+      "chainId": "Chain id",
+      "releaseDigest": "Release digest",
+      "gameHub": "GameHub",
+      "vrfHub": "VRFHub",
+      "poolRegistry": "PoolRegistry",
+      "primaryBank": "Primary bank",
+      "manifest": "Manifest"
+    },
+    "workerRows": {
+      "health": {
+        "label": "Health",
+        "currentLag": "Current lag is {count} blocks.",
+        "unavailable": "Lag data unavailable."
+      },
+      "confirmations": {
+        "label": "Confirmations",
+        "detail": "Finality window before the UI reflects settled state."
+      },
+      "rewindWindow": {
+        "label": "Rewind window",
+        "detail": "Replay buffer used to recover from transient misses."
+      },
+      "batchSize": {
+        "label": "Batch size",
+        "detail": "Maximum event slice processed per sweep."
+      },
+      "latestBlock": {
+        "label": "Latest block",
+        "detail": "Latest block observed by the worker public client."
+      },
+      "lastError": {
+        "label": "Last error",
+        "none": "None",
+        "detail": "Last worker error surfaced by the runtime provider."
+      },
+      "casinoKeeper": {
+        "label": "Casino keeper"
+      },
+      "keeperRole": {
+        "label": "Keeper role",
+        "detail": "EOA {eoa} on chain {chainId}.",
+        "unavailable": "Snapshot unavailable."
+      },
+      "keeperQueue": {
+        "label": "Keeper queue",
+        "lastScannedBlock": "Last scanned block {block}.",
+        "unavailable": "Scan cursor unavailable."
+      },
+      "lastKeeperSuccess": {
+        "label": "Last keeper success",
+        "detail": "Bet {betId}; tx {tx}; {latencyMs}ms.",
+        "none": "No keeper finalize success in the current snapshot."
+      },
+      "lastKeeperFailure": {
+        "label": "Last keeper failure",
+        "none": "No keeper failure in the snapshot."
+      }
+    },
+    "releasePanel": {
+      "eyebrow": "Release bundle",
+      "title": "Canonical release proof",
+      "description": "The exact chain, contract, and manifest surface currently presented by the frontend.",
+      "sync": "Sync indexer",
+      "refresh": "Refresh"
+    },
+    "workerPanel": {
+      "eyebrow": "Worker health",
+      "title": "Operational focus",
+      "description": "Room surfaces depend on a healthy indexer and keeper. These summaries expose drift before it leaks into player views."
+    },
+    "eventTrail": {
+      "eyebrow": "Worker event trail",
+      "title": "Recent operational receipts",
+      "description": "A compact table of worker and release facts. The route stays precise enough for operators and readable enough for auditors.",
+      "headers": {
+        "timeBlock": "Time / block",
+        "event": "Event",
+        "status": "Status",
+        "context": "Context",
+        "flow": "Flow"
+      },
+      "flowLabel": "Live",
+      "mobileBlockLabel": "Block"
+    },
+    "status": {
+      "running": "Running",
+      "stopped": "Stopped",
+      "completed": "Completed",
+      "paused": "Paused",
+      "locked": "Locked"
+    },
+    "health": {
+      "unknown": "Unknown",
+      "healthy": "Healthy",
+      "behind": "Behind",
+      "stalled": "Stalled"
+    },
+    "keeperHealth": {
+      "unavailable": "Unavailable",
+      "unavailableDefault": "No keeper health snapshot has been published.",
+      "stale": "Stale",
+      "invalidTimestamp": "Keeper snapshot timestamp is invalid.",
+      "staleAge": "Keeper snapshot is {seconds}s old.",
+      "degraded": "Degraded",
+      "degradedDefault": "Keeper reported a degraded status.",
+      "stopped": "Stopped",
+      "stoppedDetail": "Keeper process reported a stopped status.",
+      "starting": "Starting",
+      "startingDetail": "Keeper {role} is starting.",
+      "healthy": "Healthy",
+      "healthyDetail": "Keeper {role} updated {seconds}s ago."
+    },
+    "trail": {
+      "recent": "Recent",
+      "live": "Live",
+      "release": "Release",
+      "events": {
+        "indexerSweep": "Indexer sweep",
+        "safeHeadAdvance": "Safe head advance",
+        "casinoKeeper": "Casino keeper",
+        "releaseIdentity": "Release identity"
+      },
+      "context": {
+        "eventsPerSweep": "{count} events per sweep",
+        "awaitingWorkerConfig": "Awaiting worker config",
+        "lagBlocks": "{count} lag blocks",
+        "lagUnknown": "Lag unknown",
+        "embeddedRelease": "Embedded release"
+      }
+    },
+    "units": {
+      "blocks": "{count} blocks",
+      "events": "{count} events",
+      "pending": "{count} pending"
+    }
+  },
   "nav": {
     "account": "Account",
     "affiliates": "Affiliates",

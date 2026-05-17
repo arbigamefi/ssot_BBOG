@@ -45,23 +45,57 @@ export type KeeperHealthView = {
   detail: string;
 };
 
+export type KeeperHealthLabels = {
+  unavailable: string;
+  unavailableDefault: string;
+  stale: string;
+  invalidTimestamp: string;
+  staleAge: (seconds: number) => string;
+  degraded: string;
+  degradedDefault: string;
+  stopped: string;
+  stoppedDetail: string;
+  starting: string;
+  startingDetail: (role: string) => string;
+  healthy: string;
+  healthyDetail: (role: string, seconds: number) => string;
+};
+
 const HEALTH_URL = "/ops/casino-keeper-health.json";
 const STALE_MS = 2 * 60 * 1000;
+
+const DEFAULT_KEEPER_HEALTH_LABELS: KeeperHealthLabels = {
+  unavailable: "Unavailable",
+  unavailableDefault: "No keeper health snapshot has been published.",
+  stale: "Stale",
+  invalidTimestamp: "Keeper snapshot timestamp is invalid.",
+  staleAge: (seconds) => `Keeper snapshot is ${seconds}s old.`,
+  degraded: "Degraded",
+  degradedDefault: "Keeper reported a degraded status.",
+  stopped: "Stopped",
+  stoppedDetail: "Keeper process reported a stopped status.",
+  starting: "Starting",
+  startingDetail: (role) => `Keeper ${role} is starting.`,
+  healthy: "Healthy",
+  healthyDetail: (role, seconds) => `Keeper ${role} updated ${seconds}s ago.`
+};
 
 export function deriveKeeperHealthView({
   snapshot,
   loadError,
-  nowMs = Date.now()
+  nowMs = Date.now(),
+  labels = DEFAULT_KEEPER_HEALTH_LABELS
 }: {
   snapshot: KeeperHealthSnapshot | null;
   loadError?: string;
   nowMs?: number;
+  labels?: KeeperHealthLabels;
 }): KeeperHealthView {
   if (!snapshot) {
     return {
-      label: "Unavailable",
+      label: labels.unavailable,
       tone: "warn",
-      detail: loadError ?? "No keeper health snapshot has been published."
+      detail: loadError ?? labels.unavailableDefault
     };
   }
 
@@ -73,47 +107,44 @@ export function deriveKeeperHealthView({
 
   if (!Number.isFinite(ageMs) || ageMs > STALE_MS) {
     return {
-      label: "Stale",
+      label: labels.stale,
       tone: "warn",
-      detail:
-        ageSeconds == null
-          ? "Keeper snapshot timestamp is invalid."
-          : `Keeper snapshot is ${ageSeconds}s old.`
+      detail: ageSeconds == null ? labels.invalidTimestamp : labels.staleAge(ageSeconds)
     };
   }
 
   if (snapshot.status === "degraded" || snapshot.lastError) {
     return {
-      label: "Degraded",
+      label: labels.degraded,
       tone: "danger",
-      detail: snapshot.lastError ?? "Keeper reported a degraded status."
+      detail: snapshot.lastError ?? labels.degradedDefault
     };
   }
 
   if (snapshot.status === "stopped") {
     return {
-      label: "Stopped",
+      label: labels.stopped,
       tone: "danger",
-      detail: "Keeper process reported a stopped status."
+      detail: labels.stoppedDetail
     };
   }
 
   if (snapshot.status === "starting") {
     return {
-      label: "Starting",
+      label: labels.starting,
       tone: "warn",
-      detail: `Keeper ${snapshot.role} is starting.`
+      detail: labels.startingDetail(snapshot.role)
     };
   }
 
   return {
-    label: "Healthy",
+    label: labels.healthy,
     tone: "success",
-    detail: `Keeper ${snapshot.role} updated ${ageSeconds ?? 0}s ago.`
+    detail: labels.healthyDetail(snapshot.role, ageSeconds ?? 0)
   };
 }
 
-export function useKeeperHealth() {
+export function useKeeperHealth(labels?: KeeperHealthLabels) {
   const [snapshot, setSnapshot] = React.useState<KeeperHealthSnapshot | null>(null);
   const [loadError, setLoadError] = React.useState<string | undefined>();
   const [nowMs, setNowMs] = React.useState(() => Date.now());
@@ -127,10 +158,14 @@ export function useKeeperHealth() {
       setNowMs(Date.now());
     } catch (error) {
       setSnapshot(null);
-      setLoadError((error as Error)?.message ?? "Keeper health unavailable");
+      setLoadError(
+        (error as Error)?.message ??
+          labels?.unavailableDefault ??
+          DEFAULT_KEEPER_HEALTH_LABELS.unavailableDefault
+      );
       setNowMs(Date.now());
     }
-  }, []);
+  }, [labels]);
 
   React.useEffect(() => {
     void refresh();
@@ -142,7 +177,7 @@ export function useKeeperHealth() {
 
   return {
     snapshot,
-    view: deriveKeeperHealthView({ snapshot, loadError, nowMs }),
+    view: deriveKeeperHealthView({ snapshot, loadError, nowMs, labels }),
     refresh
   };
 }

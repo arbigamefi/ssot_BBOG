@@ -1393,6 +1393,175 @@
       "sharesLower": "份额"
     }
   },
+  "ops": {
+    "hero": {
+      "eyebrow": "运维证明",
+      "title": "Release 与 Worker 脉搏。",
+      "description": "在一个紧凑的运营界面里核验 release 身份、索引器健康和 worker 新鲜度，不把生产控制混进玩家页面。",
+      "summaryLabel": "运行时摘要",
+      "summaryDescription": "本地浏览器索引会话"
+    },
+    "metrics": {
+      "releaseDigest": {
+        "label": "Release 摘要",
+        "detail": "当前前端正在提供的规范 bundle。"
+      },
+      "indexerLag": {
+        "label": "索引器延迟",
+        "healthyWindow": "健康窗口：{count} 个确认。",
+        "unavailable": "确认窗口不可用。"
+      },
+      "safeHead": {
+        "label": "安全头",
+        "detail": "房间界面使用的 worker 确认事件边界。"
+      },
+      "workerState": {
+        "label": "Worker 状态",
+        "polling": "每 {seconds}s 轮询一次。",
+        "unavailable": "Worker 轮询配置不可用。"
+      },
+      "keeperState": {
+        "label": "Keeper 状态"
+      }
+    },
+    "releaseRows": {
+      "network": "网络",
+      "chainId": "链 ID",
+      "releaseDigest": "Release 摘要",
+      "gameHub": "GameHub",
+      "vrfHub": "VRFHub",
+      "poolRegistry": "PoolRegistry",
+      "primaryBank": "主 Bank",
+      "manifest": "Manifest"
+    },
+    "workerRows": {
+      "health": {
+        "label": "健康",
+        "currentLag": "当前延迟 {count} 个区块。",
+        "unavailable": "延迟数据不可用。"
+      },
+      "confirmations": {
+        "label": "确认数",
+        "detail": "UI 反映已结算状态前使用的最终性窗口。"
+      },
+      "rewindWindow": {
+        "label": "回放窗口",
+        "detail": "用于从临时漏扫中恢复的回放缓冲。"
+      },
+      "batchSize": {
+        "label": "批大小",
+        "detail": "每轮扫描处理的最大事件切片。"
+      },
+      "latestBlock": {
+        "label": "最新区块",
+        "detail": "Worker public client 观察到的最新区块。"
+      },
+      "lastError": {
+        "label": "最近错误",
+        "none": "无",
+        "detail": "运行时 provider 暴露的最近 worker 错误。"
+      },
+      "casinoKeeper": {
+        "label": "赌场 Keeper"
+      },
+      "keeperRole": {
+        "label": "Keeper 角色",
+        "detail": "EOA {eoa}，链 {chainId}。",
+        "unavailable": "快照不可用。"
+      },
+      "keeperQueue": {
+        "label": "Keeper 队列",
+        "lastScannedBlock": "最近扫描区块 {block}。",
+        "unavailable": "扫描游标不可用。"
+      },
+      "lastKeeperSuccess": {
+        "label": "最近 Keeper 成功",
+        "detail": "投注 {betId}；tx {tx}；{latencyMs}ms。",
+        "none": "当前快照里没有 keeper finalize 成功记录。"
+      },
+      "lastKeeperFailure": {
+        "label": "最近 Keeper 失败",
+        "none": "快照里没有 keeper 失败记录。"
+      }
+    },
+    "releasePanel": {
+      "eyebrow": "Release bundle",
+      "title": "规范 release 证明",
+      "description": "前端当前呈现的精确链、合约和 manifest 界面。",
+      "sync": "同步索引器",
+      "refresh": "刷新"
+    },
+    "workerPanel": {
+      "eyebrow": "Worker 健康",
+      "title": "运维焦点",
+      "description": "房间界面依赖健康的索引器和 keeper。这些摘要在漂移影响玩家视图前先暴露出来。"
+    },
+    "eventTrail": {
+      "eyebrow": "Worker 事件轨迹",
+      "title": "近期运维回执",
+      "description": "紧凑展示 worker 与 release 事实的表格：对运营足够精确，对审计也足够可读。",
+      "headers": {
+        "timeBlock": "时间 / 区块",
+        "event": "事件",
+        "status": "状态",
+        "context": "上下文",
+        "flow": "流"
+      },
+      "flowLabel": "实时",
+      "mobileBlockLabel": "区块"
+    },
+    "status": {
+      "running": "运行中",
+      "stopped": "已停止",
+      "completed": "已完成",
+      "paused": "已暂停",
+      "locked": "已锁定"
+    },
+    "health": {
+      "unknown": "未知",
+      "healthy": "健康",
+      "behind": "滞后",
+      "stalled": "停滞"
+    },
+    "keeperHealth": {
+      "unavailable": "不可用",
+      "unavailableDefault": "尚未发布 keeper 健康快照。",
+      "stale": "过期",
+      "invalidTimestamp": "Keeper 快照时间戳无效。",
+      "staleAge": "Keeper 快照已过期 {seconds}s。",
+      "degraded": "降级",
+      "degradedDefault": "Keeper 报告降级状态。",
+      "stopped": "已停止",
+      "stoppedDetail": "Keeper 进程报告已停止。",
+      "starting": "启动中",
+      "startingDetail": "Keeper {role} 正在启动。",
+      "healthy": "健康",
+      "healthyDetail": "Keeper {role} 于 {seconds}s 前更新。"
+    },
+    "trail": {
+      "recent": "最近",
+      "live": "实时",
+      "release": "Release",
+      "events": {
+        "indexerSweep": "索引器扫描",
+        "safeHeadAdvance": "安全头推进",
+        "casinoKeeper": "赌场 Keeper",
+        "releaseIdentity": "Release 身份"
+      },
+      "context": {
+        "eventsPerSweep": "每轮 {count} 个事件",
+        "awaitingWorkerConfig": "等待 worker 配置",
+        "lagBlocks": "延迟 {count} 个区块",
+        "lagUnknown": "延迟未知",
+        "embeddedRelease": "内置 release"
+      }
+    },
+    "units": {
+      "blocks": "{count} 个区块",
+      "events": "{count} 个事件",
+      "pending": "{count} 待处理"
+    }
+  },
   "nav": {
     "account": "账户",
     "affiliates": "推广",
