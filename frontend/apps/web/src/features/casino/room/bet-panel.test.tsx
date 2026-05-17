@@ -8,7 +8,7 @@ import {
   isPlaceBetButtonDisabled,
   type GameRoomBetPanelState
 } from "./bet-panel";
-import { parseWalletBalanceAmount } from "./bet-amount-section";
+import { parseWalletBalanceAmount } from "./bet-panel-sections";
 import type { GameMeta } from "./model";
 
 vi.mock("@ssot/ui", async () => {

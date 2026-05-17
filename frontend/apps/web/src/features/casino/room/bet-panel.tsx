@@ -1,10 +1,12 @@
 import * as React from "react";
 import { InformationCircleIcon, WalletIcon } from "@heroicons/react/24/outline";
 
-import { BetAdvancedSection } from "./bet-advanced-section";
-import { BetAmountSection } from "./bet-amount-section";
-import { BetPayoutSummary } from "./bet-payout-summary";
-import { BetRollsSection } from "./bet-rolls-section";
+import {
+  BetAdvancedSection,
+  BetAmountSection,
+  BetPayoutSummary,
+  BetRollsSection
+} from "./bet-panel-sections";
 import type { GameRoomBetPanelState } from "./bet-panel-state";
 import { GameSelectionControls } from "./game-selection-controls";
 import type { GameMeta } from "./model";
