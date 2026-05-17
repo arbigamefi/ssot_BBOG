@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 
-import { LEGAL_PAGES } from "../../../../features/legal/content";
 import { LegalPage } from "../../../../features/legal/legal-page";
 
 export const metadata: Metadata = {
@@ -9,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function TermsPage() {
-  return <LegalPage content={LEGAL_PAGES.terms} />;
+  return <LegalPage slug="terms" />;
 }
