@@ -3,7 +3,7 @@ import * as React from "react";
 import { BET_STATUS_TABS } from "./format";
 import type { BetStatusFilter } from "./types";
 
-export function BetsFilterTabs({
+export function ActivityFilterTabs({
   active,
   onChange
 }: {

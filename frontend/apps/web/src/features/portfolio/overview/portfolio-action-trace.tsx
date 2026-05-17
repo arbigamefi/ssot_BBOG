@@ -2,13 +2,13 @@ import * as React from "react";
 import { ErrorCallout, TxStepper, TxStatusChip } from "@ssot/ui";
 
 import { shortHex } from "./format";
-import type { AccountFlowState } from "./types";
+import type { PortfolioFlowState } from "./types";
 
-export function AccountActionTrace({
+export function PortfolioActionTrace({
   flow,
   explorerBaseUrl
 }: {
-  flow: AccountFlowState;
+  flow: PortfolioFlowState;
   explorerBaseUrl?: string;
 }) {
   if (!flow.hasActivity && !flow.error) {

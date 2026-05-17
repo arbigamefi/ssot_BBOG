@@ -1,6 +1,6 @@
 import type { TxStepItem, TxStatus } from "@ssot/ui";
 
-export type AccountAssetRow = {
+export type PortfolioAssetRow = {
   id: string;
   symbol: string;
   decimals: number;
@@ -12,7 +12,7 @@ export type AccountAssetRow = {
   allowance: bigint;
 };
 
-export type AccountJournalRow = {
+export type PortfolioJournalRow = {
   id: string;
   createdAt: number;
   action: string;
@@ -23,13 +23,13 @@ export type AccountJournalRow = {
   chainId: number;
 };
 
-export type AccountMetric = {
+export type PortfolioMetric = {
   label: string;
   value: string;
   detail: string;
 };
 
-export type AccountFlowState = {
+export type PortfolioFlowState = {
   status: TxStatus;
   steps: readonly TxStepItem[];
   hasActivity: boolean;

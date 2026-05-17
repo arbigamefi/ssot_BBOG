@@ -666,6 +666,131 @@ Only after C1-C2:
 5. settlement/readback path;
 6. challenge/void/admin ops surfaces.
 
+### C5 - Sportsbook Frontend Env Purity
+
+The C4 MVP surface exists, but the frontend-owned odds signing route still
+accepted historical canary aliases for the signer private key. That is a
+compatibility path, not a production frontend contract.
+
+Scope:
+
+1. Require `SPORTS_ODDS_SIGNER_PRIVATE_KEY` in
+   `POST /api/sportsbook/odds-snapshot`.
+2. Remove `FOOTBALL_ODDS_SIGNER_PRIVATE_KEY` and
+   `CANARY_ODDS_SIGNER_PRIVATE_KEY` from frontend docs and tests.
+3. Keep canary script aliases out of scope; they are ops rehearsal inputs, not
+   browser/API runtime configuration.
+
+Exit criteria:
+
+```bash
+pnpm -C frontend/apps/web test -- src/app/api/sportsbook/odds-snapshot/route.test.ts
+pnpm -C frontend/apps/web typecheck
+rg -n "FOOTBALL_ODDS_SIGNER_PRIVATE_KEY|CANARY_ODDS_SIGNER_PRIVATE_KEY" \
+  frontend/apps/web/src frontend/apps/web/.env.example docs/frontend -S
+```
+
+Implementation result:
+
+- `POST /api/sportsbook/odds-snapshot` now fails closed unless
+  `SPORTS_ODDS_SIGNER_PRIVATE_KEY` is present;
+- frontend docs and route tests no longer mention canary signer aliases;
+- removed the unused milestone-era `SDKStatusCard`;
+- renamed stale product page client names and transition keys from old route
+  labels to canonical `earn`, `portfolio`, and `portfolio-activity` names;
+- renamed portfolio overview and activity-list feature components so the
+  physical file layout matches the clean-room route model.
+
+Evidence:
+
+```bash
+pnpm -C frontend/apps/web test -- src/app/api/sportsbook/odds-snapshot/route.test.ts
+pnpm -C frontend/apps/web test -- src/components src/app-shell/AppShell.test.tsx
+pnpm -C frontend/apps/web test -- src/app/\(product\)/portfolio/pageClient.test.tsx \
+  src/app/\(product\)/portfolio/activity/pageClient.test.tsx \
+  src/app/\(product\)/portfolio/activity/\[betId\]/pageClient.test.tsx \
+  src/app/\(product\)/portfolio/claims/pageClient.test.tsx
+pnpm -C frontend/apps/web test
+pnpm -C frontend/apps/web typecheck
+pnpm -C frontend precheck:frontend -- --strict
+pnpm -C frontend/apps/web build
+git diff --check
+```
+
+Observed:
+
+- web test suite passed: 38 files / 144 tests;
+- strict frontend precheck passed with 0 findings;
+- production build passed;
+- post-cleanup source scan has no old page client names, transition keys,
+  frontend canary signer aliases, milestone SDK card, or old portfolio feature
+  file names;
+- expected local warnings remain unchanged: Node v22 vs project Node 20 and
+  the existing Next ESLint plugin warning.
+
+### C6 - Node 24 LTS Runtime Upgrade
+
+The frontend and keeper gates pass under Node 24, and the previous Node 20
+runtime pin is now below the active production baseline. The clean-room
+frontend should pin the same LTS line for local development, GitHub Actions,
+and Vercel deployments.
+
+Scope:
+
+1. Pin root and frontend `.node-version` to Node `24.15.0`.
+2. Update root and frontend `engines.node` from `20.x` to `24.x`.
+3. Update runtime documentation from Node 20 LTS to Node 24 LTS.
+4. Align frontend Node type packages to `@types/node@24`.
+5. Keep `pnpm@9.12.3` unchanged; package manager upgrades are a separate
+   dependency-management change.
+
+Acceptance checks:
+
+```bash
+npx -y -p node@24 -p pnpm@9.12.3 sh -lc 'node -v && \
+  pnpm -C frontend precheck:frontend -- --strict && \
+  pnpm -C frontend typecheck && \
+  pnpm -C frontend test && \
+  pnpm -C frontend/apps/web build && \
+  pnpm -C frontend check:bundle'
+git diff --check
+```
+
+Implementation result:
+
+- root and frontend `.node-version` now pin Node `24.15.0`;
+- root and frontend `engines.node` now require `24.x`;
+- frontend web and keeper `@types/node` dev dependencies now target Node 24;
+- `docs/frontend/30-build-and-release.md` lists Node 24 LTS as the runtime;
+- CI continues to consume `.node-version`, so GitHub Actions moves with the
+  repo pin without workflow-specific version drift.
+
+Evidence:
+
+```bash
+npx -y -p node@24 -p pnpm@9.12.3 sh -lc 'node -v && \
+  pnpm -C frontend precheck:frontend -- --strict && \
+  pnpm -C frontend typecheck && \
+  pnpm -C frontend test'
+npx -y -p node@24 -p pnpm@9.12.3 sh -lc 'pnpm -C frontend/apps/web test'
+npx -y -p node@24 -p pnpm@9.12.3 sh -lc \
+  'pnpm -C frontend/apps/web build && pnpm -C frontend check:bundle'
+git diff --check
+```
+
+Observed:
+
+- Node 24.15.0 was used for validation;
+- strict frontend precheck passed with 0 findings;
+- workspace typecheck passed;
+- package tests passed for keeper, UI, and SSOT;
+- web test suite passed on rerun: 38 files / 144 tests;
+- production build passed;
+- bundle budget passed for all tracked routes;
+- one first-pass web test run hit an existing portfolio detail fixture race
+  (`Dice receipt` vs fallback `Ticket detail receipt`), but the same test
+  passed in isolation and the full web suite passed on rerun under Node 24.
+
 ## 8. Historical Execution Phases
 
 The phase names below are retained as an implementation log and audit trail.

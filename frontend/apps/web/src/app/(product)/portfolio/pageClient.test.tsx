@@ -83,7 +83,7 @@ vi.mock("@ssot/ui", () => ({
   }
 }));
 
-import { AccountPageClient } from "./pageClient";
+import { PortfolioPageClient } from "./pageClient";
 
 function renderWithQueryClient(ui: React.ReactElement) {
   const queryClient = new QueryClient({
@@ -95,7 +95,7 @@ function renderWithQueryClient(ui: React.ReactElement) {
   return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 }
 
-describe("AccountPageClient", () => {
+describe("PortfolioPageClient", () => {
   afterEach(() => {
     cleanup();
     localStorage.clear();
@@ -113,8 +113,8 @@ describe("AccountPageClient", () => {
     state.ready = false;
   });
 
-  it("frames account as a wallet profile and ledger console", () => {
-    renderWithQueryClient(<AccountPageClient />);
+  it("frames portfolio as a wallet profile and ledger console", () => {
+    renderWithQueryClient(<PortfolioPageClient />);
 
     expect(screen.getByRole("heading", { name: /Wallet profile/i })).toBeDefined();
     expect(screen.getByText("Player identity")).toBeDefined();

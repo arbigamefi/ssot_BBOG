@@ -1,13 +1,13 @@
 import * as React from "react";
 
 import { formatAllowance, formatAmount } from "./format";
-import type { AccountAssetRow } from "./types";
+import type { PortfolioAssetRow } from "./types";
 
-export function AccountPositionsPanel({
+export function PortfolioPositionsPanel({
   rows,
   loading
 }: {
-  rows: readonly AccountAssetRow[];
+  rows: readonly PortfolioAssetRow[];
   loading: boolean;
 }) {
   return (

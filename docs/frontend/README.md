@@ -89,8 +89,7 @@ The web API route `POST /api/sportsbook/odds-snapshot` is the only frontend-owne
 The Odds API `h2h` prices into a signed ticket snapshot. It requires server-only environment variables:
 
 - `THE_ODDS_API_KEY`
-- `SPORTS_ODDS_SIGNER_PRIVATE_KEY` (or the legacy aliases `FOOTBALL_ODDS_SIGNER_PRIVATE_KEY` /
-  `CANARY_ODDS_SIGNER_PRIVATE_KEY`)
+- `SPORTS_ODDS_SIGNER_PRIVATE_KEY`
 - `RPC_URL`
 - optional `SPORTS_ODDS_SIGNER`, `SPORTS_PROVIDER_SPORT_KEY`, `SPORTS_PROVIDER_EVENT_ID`,
   `SPORTS_BOOKMAKER_KEY`, `THE_ODDS_API_REGIONS`, and `SPORTS_ODDS_TTL_SECONDS`

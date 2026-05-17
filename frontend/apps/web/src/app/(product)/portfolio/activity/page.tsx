@@ -1,5 +1,5 @@
-import { BetsPageClient } from "./pageClient";
+import { PortfolioActivityPageClient } from "./pageClient";
 
-export default function BetsPage() {
-  return <BetsPageClient />;
+export default function PortfolioActivityPage() {
+  return <PortfolioActivityPageClient />;
 }

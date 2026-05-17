@@ -4,9 +4,9 @@ import * as React from "react";
 import type { BetRow } from "@ssot/ssot/indexer";
 
 import { PageTransition } from "../../../../components/PageTransition";
-import { BetsFilterTabs } from "../../../../features/portfolio/activity/bets-filter-tabs";
-import { BetsHero } from "../../../../features/portfolio/activity/bets-hero";
-import { BetsLedger } from "../../../../features/portfolio/activity/bets-ledger";
+import { ActivityFilterTabs } from "../../../../features/portfolio/activity/activity-filter-tabs";
+import { ActivityHero } from "../../../../features/portfolio/activity/activity-hero";
+import { ActivityLedger } from "../../../../features/portfolio/activity/activity-ledger";
 import {
   formatOutcome,
   formatRelativeTime,
@@ -24,7 +24,7 @@ import type {
 import { useBets } from "../../../../features/betting/useBets";
 import { useRelease } from "../../../../ssot/release/ReleaseProvider";
 
-export function BetsPageClient() {
+export function PortfolioActivityPageClient() {
   const { release } = useRelease();
   const { data: bets = [], isLoading } = useBets(500);
   const [statusFilter, setStatusFilter] = React.useState<BetStatusFilter>("all");
@@ -93,11 +93,11 @@ export function BetsPageClient() {
   }, [enrichedBets]);
 
   return (
-    <PageTransition pageKey="bets">
+    <PageTransition pageKey="portfolio-activity">
       <div className="space-y-8">
-        <BetsHero metrics={metrics} />
-        <BetsFilterTabs active={statusFilter} onChange={setStatusFilter} />
-        <BetsLedger rows={filteredBets} loading={isLoading} />
+        <ActivityHero metrics={metrics} />
+        <ActivityFilterTabs active={statusFilter} onChange={setStatusFilter} />
+        <ActivityLedger rows={filteredBets} loading={isLoading} />
       </div>
     </PageTransition>
   );

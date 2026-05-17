@@ -4,7 +4,7 @@ import Link from "next/link";
 import { formatTokenAmount } from "./format";
 import type { EnrichedBetRow } from "./types";
 
-export function BetsLedger({
+export function ActivityLedger({
   rows,
   loading
 }: {

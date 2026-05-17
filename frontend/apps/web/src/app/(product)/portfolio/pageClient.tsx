@@ -8,22 +8,22 @@ import { ErrorCallout, toast, type TxStatus } from "@ssot/ui";
 
 import { PageTransition } from "../../../components/PageTransition";
 import { ProductStateCard } from "../../../components/ProductStateCard";
-import { AccountContextCard } from "../../../features/portfolio/overview/account-context-card";
-import { AccountHero } from "../../../features/portfolio/overview/account-hero";
-import { AccountIdentityCard } from "../../../features/portfolio/overview/account-identity-card";
-import { AccountJournal } from "../../../features/portfolio/overview/account-journal";
-import { AccountPositionsPanel } from "../../../features/portfolio/overview/account-positions-panel";
-import { AccountRefundCard } from "../../../features/portfolio/overview/account-refund-card";
+import { PortfolioContextCard } from "../../../features/portfolio/overview/portfolio-context-card";
+import { PortfolioHero } from "../../../features/portfolio/overview/portfolio-hero";
+import { PortfolioIdentityCard } from "../../../features/portfolio/overview/portfolio-identity-card";
+import { PortfolioJournal } from "../../../features/portfolio/overview/portfolio-journal";
+import { PortfolioPositionsPanel } from "../../../features/portfolio/overview/portfolio-positions-panel";
+import { PortfolioRefundCard } from "../../../features/portfolio/overview/portfolio-refund-card";
 import {
   formatAmount,
   getExplorerBaseUrl,
   shortHex
 } from "../../../features/portfolio/overview/format";
 import type {
-  AccountAssetRow,
-  AccountFlowState,
-  AccountJournalRow,
-  AccountMetric
+  PortfolioAssetRow,
+  PortfolioFlowState,
+  PortfolioJournalRow,
+  PortfolioMetric
 } from "../../../features/portfolio/overview/types";
 import { useTxJournal } from "../../../features/portfolio/overview/useTxJournal";
 import { useDirectTxAction } from "../../../features/tx/useDirectTxAction";
@@ -32,7 +32,7 @@ import { useSSOTSDK } from "../../../ssot/sdk";
 
 const ALIAS_STORAGE_KEY = "ssot.player_alias";
 
-export function AccountPageClient() {
+export function PortfolioPageClient() {
   const { release, chainId, readOnly, readOnlyReason } = useRelease();
   const { sdk, ready } = useSSOTSDK();
   const explorerBaseUrl = React.useMemo(() => getExplorerBaseUrl(chainId), [chainId]);
@@ -47,7 +47,7 @@ export function AccountPageClient() {
   } = useQuery({
     queryKey: ["ssot", "account", "assets", release?.releaseDigest, account],
     enabled: Boolean(release && ready && sdk && account),
-    queryFn: async (): Promise<AccountAssetRow[]> => {
+    queryFn: async (): Promise<PortfolioAssetRow[]> => {
       if (!release || !sdk || !account) return [];
       return Promise.all(
         release.pools.map(async (pool) => {
@@ -156,7 +156,7 @@ export function AccountPageClient() {
   if (!release) {
     return (
       <ProductStateCard
-        title="Account"
+        title="Portfolio"
         description={readOnlyReason ?? "No embedded release available."}
       />
     );
@@ -171,7 +171,7 @@ export function AccountPageClient() {
       : account
         ? "Pending"
         : "Wallet required";
-  const metrics: AccountMetric[] = [
+  const metrics: PortfolioMetric[] = [
     {
       label: "Wallet balance",
       value:
@@ -200,12 +200,12 @@ export function AccountPageClient() {
   ];
 
   const refundFlow = toFlowState(claimRefundFlow);
-  const journalRows = txRows as AccountJournalRow[];
+  const journalRows = txRows as PortfolioJournalRow[];
 
   return (
-    <PageTransition pageKey="account">
+    <PageTransition pageKey="portfolio">
       <div className="space-y-8">
-        <AccountHero account={shortHex(account)} metrics={metrics} />
+        <PortfolioHero account={shortHex(account)} metrics={metrics} />
 
         {readOnly ? (
           <ErrorCallout
@@ -222,14 +222,14 @@ export function AccountPageClient() {
 
         <div className="grid gap-6 xl:grid-cols-[360px_1fr_420px]">
           <div className="space-y-6">
-            <AccountIdentityCard
+            <PortfolioIdentityCard
               account={account}
               alias={alias}
               saved={debouncedAlias === alias}
               onAliasChange={setAlias}
               onCopyAccount={handleCopyAccount}
             />
-            <AccountContextCard
+            <PortfolioContextCard
               readOnly={readOnly}
               releaseName={release.name}
               releaseDigest={release.releaseDigest}
@@ -243,7 +243,7 @@ export function AccountPageClient() {
           </div>
 
           <div className="space-y-6">
-            <AccountPositionsPanel rows={assetRows} loading={balancesLoading} />
+            <PortfolioPositionsPanel rows={assetRows} loading={balancesLoading} />
             {!account ? (
               <div className="rounded-md border border-dashed border-border bg-surface-1 p-5 text-sm text-fg-muted">
                 Connect a wallet to inspect account state.
@@ -252,7 +252,7 @@ export function AccountPageClient() {
           </div>
 
           <div className="space-y-6">
-            <AccountRefundCard
+            <PortfolioRefundCard
               amount={refundAmount}
               connected={Boolean(account)}
               readOnly={readOnly}
@@ -261,7 +261,7 @@ export function AccountPageClient() {
               explorerBaseUrl={explorerBaseUrl}
               onClaim={() => void handleClaimRefund()}
             />
-            <AccountJournal rows={journalRows} explorerBaseUrl={explorerBaseUrl} />
+            <PortfolioJournal rows={journalRows} explorerBaseUrl={explorerBaseUrl} />
           </div>
         </div>
       </div>
@@ -271,14 +271,14 @@ export function AccountPageClient() {
 
 function toFlowState(flow: {
   status: TxStatus;
-  steps: AccountFlowState["steps"];
+  steps: PortfolioFlowState["steps"];
   hasActivity: boolean;
   busy: boolean;
-  error?: AccountFlowState["error"];
+  error?: PortfolioFlowState["error"];
   txHash?: string;
   journalEntry?: { blockNumber?: number } | null;
   reset: () => void;
-}): AccountFlowState {
+}): PortfolioFlowState {
   return {
     status: flow.status,
     steps: flow.steps,

@@ -15,7 +15,7 @@ manual surgery.
 | Concern         | Choice                                                                  |
 | --------------- | ----------------------------------------------------------------------- |
 | Framework       | Next.js 15.x App Router                                                 |
-| Runtime         | Node 20 LTS                                                             |
+| Runtime         | Node 24 LTS                                                             |
 | Package manager | pnpm 9.x with workspace                                                 |
 | Bundler         | Next.js (Turbopack in dev, webpack in prod until Turbopack-prod stable) |
 | Deploy target   | Vercel (primary) + IPFS pin (fallback)                                  |
