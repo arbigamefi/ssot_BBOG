@@ -64,32 +64,16 @@ export type KeeperHealthLabels = {
 const HEALTH_URL = "/ops/casino-keeper-health.json";
 const STALE_MS = 2 * 60 * 1000;
 
-const DEFAULT_KEEPER_HEALTH_LABELS: KeeperHealthLabels = {
-  unavailable: "Unavailable",
-  unavailableDefault: "No keeper health snapshot has been published.",
-  stale: "Stale",
-  invalidTimestamp: "Keeper snapshot timestamp is invalid.",
-  staleAge: (seconds) => `Keeper snapshot is ${seconds}s old.`,
-  degraded: "Degraded",
-  degradedDefault: "Keeper reported a degraded status.",
-  stopped: "Stopped",
-  stoppedDetail: "Keeper process reported a stopped status.",
-  starting: "Starting",
-  startingDetail: (role) => `Keeper ${role} is starting.`,
-  healthy: "Healthy",
-  healthyDetail: (role, seconds) => `Keeper ${role} updated ${seconds}s ago.`
-};
-
 export function deriveKeeperHealthView({
   snapshot,
   loadError,
   nowMs = Date.now(),
-  labels = DEFAULT_KEEPER_HEALTH_LABELS
+  labels
 }: {
   snapshot: KeeperHealthSnapshot | null;
   loadError?: string;
   nowMs?: number;
-  labels?: KeeperHealthLabels;
+  labels: KeeperHealthLabels;
 }): KeeperHealthView {
   if (!snapshot) {
     return {
@@ -144,7 +128,7 @@ export function deriveKeeperHealthView({
   };
 }
 
-export function useKeeperHealth(labels?: KeeperHealthLabels) {
+export function useKeeperHealth(labels: KeeperHealthLabels) {
   const [snapshot, setSnapshot] = React.useState<KeeperHealthSnapshot | null>(null);
   const [loadError, setLoadError] = React.useState<string | undefined>();
   const [nowMs, setNowMs] = React.useState(() => Date.now());
@@ -158,11 +142,7 @@ export function useKeeperHealth(labels?: KeeperHealthLabels) {
       setNowMs(Date.now());
     } catch (error) {
       setSnapshot(null);
-      setLoadError(
-        (error as Error)?.message ??
-          labels?.unavailableDefault ??
-          DEFAULT_KEEPER_HEALTH_LABELS.unavailableDefault
-      );
+      setLoadError((error as Error)?.message ?? labels.unavailableDefault);
       setNowMs(Date.now());
     }
   }, [labels]);

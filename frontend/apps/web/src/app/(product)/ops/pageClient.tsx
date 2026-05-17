@@ -51,11 +51,15 @@ export function OpsPageClient() {
 
   const health = React.useMemo(
     () =>
-      deriveHealth(indexerStatus?.lagBlocks, indexerStatus?.config?.confirmations, {
-        unknown: t("health.unknown"),
-        healthy: t("health.healthy"),
-        behind: t("health.behind"),
-        stalled: t("health.stalled")
+      deriveHealth({
+        lag: indexerStatus?.lagBlocks,
+        confirmations: indexerStatus?.config?.confirmations,
+        labels: {
+          unknown: t("health.unknown"),
+          healthy: t("health.healthy"),
+          behind: t("health.behind"),
+          stalled: t("health.stalled")
+        }
       }),
     [indexerStatus?.config?.confirmations, indexerStatus?.lagBlocks, t]
   );
@@ -345,21 +349,20 @@ export function OpsPageClient() {
   );
 }
 
-function deriveHealth(
-  lag?: number,
-  confirmations?: number,
+function deriveHealth({
+  lag,
+  confirmations,
+  labels
+}: {
+  lag?: number;
+  confirmations?: number;
   labels: {
     unknown: string;
     healthy: string;
     behind: string;
     stalled: string;
-  } = {
-    unknown: "Unknown",
-    healthy: "Healthy",
-    behind: "Behind",
-    stalled: "Stalled"
-  }
-): { label: string; tone: OpsStatusTone } {
+  };
+}): { label: string; tone: OpsStatusTone } {
   if (typeof lag !== "number" || typeof confirmations !== "number") {
     return { label: labels.unknown, tone: "default" };
   }
