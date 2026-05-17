@@ -123,50 +123,68 @@ export function useGameResolutionEffect({
   reset: () => void;
 }) {
   const latestBetIdRef = React.useRef<bigint | undefined>();
+  const displayedBetIdRef = React.useRef<bigint | undefined>();
   const hideTimerRef = React.useRef<ReturnType<typeof setTimeout> | undefined>();
+  const proofTimerRef = React.useRef<ReturnType<typeof setTimeout> | undefined>();
 
   React.useEffect(() => {
     if (!isTerminalDomainBet(terminalBet)) return;
 
     if (latestBetIdRef.current !== terminalBet.betId) {
       latestBetIdRef.current = terminalBet.betId;
-      setIsPending(false);
-      setShowResult(true);
-      setResultProof(buildCasinoRoundResult({ bet: terminalBet }));
+      displayedBetIdRef.current = undefined;
+      setIsPending(true);
+      setShowResult(false);
+      setResultProof(null);
 
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-      hideTimerRef.current = setTimeout(() => {
-        setShowResult(false);
-        setResultProof(null);
-      }, 8_000);
+      if (proofTimerRef.current) clearTimeout(proofTimerRef.current);
       reset();
     }
 
     let cancelled = false;
     const resolveProof = async () => {
+      if (displayedBetIdRef.current === terminalBet.betId) return;
+
       const proof = await resolveCasinoTerminalProof({
         terminalBet,
         recentBets,
         db,
         gameHub
       });
-      if (cancelled || !proof) return;
+      if (cancelled) return;
+      if (!proof) {
+        proofTimerRef.current = setTimeout(() => void resolveProof(), 1_500);
+        return;
+      }
+
+      displayedBetIdRef.current = terminalBet.betId;
+      setIsPending(false);
       setResultProof(
         proof.kind === "settled"
           ? buildCasinoRoundResult({ bet: terminalBet, settlement: proof.settlement })
           : buildCasinoRoundResult({ bet: terminalBet, refund: proof.refund })
       );
+      setShowResult(true);
+
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = setTimeout(() => {
+        setShowResult(false);
+        setResultProof(null);
+      }, 8_000);
     };
 
     void resolveProof();
     return () => {
       cancelled = true;
+      if (proofTimerRef.current) clearTimeout(proofTimerRef.current);
     };
   }, [terminalBet, recentBets, db, gameHub, setIsPending, setShowResult, setResultProof, reset]);
 
   React.useEffect(
     () => () => {
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+      if (proofTimerRef.current) clearTimeout(proofTimerRef.current);
     },
     []
   );

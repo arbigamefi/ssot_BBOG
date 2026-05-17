@@ -1,10 +1,12 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { act, renderHook } from "@testing-library/react";
 import type { DomainBet } from "@ssot/ssot";
 
 import {
   appendGameHistoryEntry,
   buildCasinoRoundResult,
   isTerminalDomainBet,
+  useGameResolutionEffect,
   resolveCasinoTerminalProof
 } from "./resolution";
 
@@ -30,6 +32,10 @@ const baseBet: DomainBet = {
 };
 
 describe("game room resolution helpers", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("prepends resolved game history and caps the visible feed", () => {
     const history = [
       { val: 1, win: false },
@@ -118,5 +124,55 @@ describe("game room resolution helpers", () => {
         gameHub: { getTerminalProof }
       })
     ).resolves.toBeNull();
+  });
+
+  it("only opens the final result modal after terminal proof is available", async () => {
+    vi.useFakeTimers();
+    const proof = {
+      kind: "settled" as const,
+      settlement: {
+        txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as const,
+        payoutGross: 20_000n,
+        payoutNet: 19_600n
+      }
+    };
+    const getTerminalProof = vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce(proof);
+    const setIsPending = vi.fn();
+    const setShowResult = vi.fn();
+    const setResultProof = vi.fn();
+    const reset = vi.fn();
+
+    renderHook(() =>
+      useGameResolutionEffect({
+        terminalBet: baseBet,
+        recentBets: [],
+        db: undefined,
+        gameHub: { getTerminalProof },
+        setIsPending,
+        setShowResult,
+        setResultProof,
+        reset
+      })
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(setIsPending).toHaveBeenCalledWith(true);
+    expect(setShowResult).toHaveBeenCalledWith(false);
+    expect(setShowResult).not.toHaveBeenCalledWith(true);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_500);
+      await Promise.resolve();
+    });
+
+    expect(setShowResult).toHaveBeenCalledWith(true);
+    expect(setResultProof).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        kind: "settled",
+        settlement: expect.objectContaining({ payoutNet: 19_600n })
+      })
+    );
   });
 });

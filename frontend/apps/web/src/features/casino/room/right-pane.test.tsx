@@ -78,7 +78,7 @@ describe("GameRoomRightPane", () => {
     expect(screen.getByText("19.6 USDC")).toBeDefined();
   });
 
-  it("does not present missing payout proof as a completed result", () => {
+  it("does not open the result overlay until terminal proof is available", () => {
     render(
       <GameRoomRightPane
         {...baseProps}
@@ -94,8 +94,8 @@ describe("GameRoomRightPane", () => {
       />
     );
 
-    expect(screen.getByText("Reading result")).toBeDefined();
-    expect(screen.getByText("Fetching BetFinalized proof directly from GameHub.")).toBeDefined();
+    expect(screen.queryByText("Chain result")).toBeNull();
+    expect(screen.queryByText("Reading result")).toBeNull();
     expect(screen.queryByText("Settlement confirmed")).toBeNull();
   });
 });

@@ -164,7 +164,7 @@ export function GameRoomRightPane({
         />
       )}
 
-      {showResult && (
+      {showResult && resultProof && resultProof.kind !== "indexing" && (
         <GameRoomResultOverlay
           result={resultProof}
           chainId={chainId}

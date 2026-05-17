@@ -39,7 +39,7 @@ function getPhaseCopy(phase: CasinoRoundPhase) {
     case "settled":
       return {
         label: "Round settled",
-        detail: "Settlement is confirmed on-chain. Indexing proof for the result modal."
+        detail: "Settlement is confirmed on-chain. Preparing the final result proof."
       };
     case "refundable":
       return {
