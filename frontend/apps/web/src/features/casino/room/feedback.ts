@@ -2,10 +2,7 @@ import * as React from "react";
 import type { DomainError } from "@ssot/ssot";
 import { toast } from "@ssot/ui";
 
-export function getStepperErrorMessage(
-  error: DomainError | undefined,
-  fallbackMessage = "Transaction failed. Please try again."
-) {
+export function getStepperErrorMessage(error: DomainError | undefined, fallbackMessage = "—") {
   return error?.message ?? fallbackMessage;
 }
 
@@ -28,10 +25,7 @@ export function useBetStepperFailureToast({
   }, [status, error, fallbackMessage]);
 }
 
-export function useVrfTimeoutToast(
-  isSoftTimeout: boolean,
-  message = "Waiting for oracle... VRF resolution can take 30-120s on testnets."
-) {
+export function useVrfTimeoutToast(isSoftTimeout: boolean, message = "—") {
   const shownRef = React.useRef(false);
 
   React.useEffect(() => {

@@ -13,8 +13,8 @@ describe("game room feedback helpers", () => {
     ).toBe("User rejected transaction.");
   });
 
-  it("falls back to the generic transaction failure message", () => {
-    expect(getStepperErrorMessage(undefined)).toBe("Transaction failed. Please try again.");
+  it("falls back to a neutral placeholder when no localized fallback is provided", () => {
+    expect(getStepperErrorMessage(undefined)).toBe("—");
   });
 
   it("accepts a localized fallback message", () => {
