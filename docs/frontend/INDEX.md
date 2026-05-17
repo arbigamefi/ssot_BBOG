@@ -1,39 +1,44 @@
-# Frontend Engineering Quality SSOT — Index
+# Frontend Engineering Docs — Lean Index
 
-This directory hosts **engineering-quality SSOT** (a11y, i18n, performance,
-security, testing, observability, build, governance, AI-pairing) alongside the
-existing release-artifact contract in [`README.md`](./README.md).
+| Owner | Frontend Lead |
+| Status | Active |
+| Last Updated | 2026-05-18 |
+| Depends on | `../strategy/fullstack-product-architecture.md`, `../design/frontend-implementation-roadmap.md` |
 
-For visual / product SSOT (brand, voice, tokens, components), see
-[`../design/`](../design/).
+This directory contains launch-relevant engineering references for the frontend
+and adjacent runtimes. It is no longer a Gate A/B/C process directory.
 
-The older pre-clean-room frontend planning directory has been removed. Active
-frontend SSOT lives only under `docs/design/` and `docs/frontend/`.
+## Required For Launch
 
-Most commands in Layer 3/4 are target-state enforcement contracts. If the script
-or CI job does not exist yet, the related gate cannot close until it is
-implemented.
+- [`README.md`](./README.md) — release artifact contract, frontend manifest,
+  golden vectors, v1.3 ABI/release rules, and sportsbook release gates.
+- [`21-i18n.md`](./21-i18n.md) — multilingual launch policy.
+- [`23-security.md`](./23-security.md) — wallet, RPC, CSP, secret, and supply
+  chain rules.
+- [`24-testing.md`](./24-testing.md) — tests and proof gates.
+- [`30-build-and-release.md`](./30-build-and-release.md) — build, release,
+  preview, rollback, and environment handling.
+- [`casino-keeper-v1.md`](./casino-keeper-v1.md) — casino keeper operation and
+  automatic settlement contract.
 
-## Layer 3 · Engineering Quality
+## Keep As Reference
 
-- [`20-accessibility.md`](./20-accessibility.md)
-- [`21-i18n.md`](./21-i18n.md)
-- [`22-performance.md`](./22-performance.md)
-- [`23-security.md`](./23-security.md)
-- [`24-testing.md`](./24-testing.md)
-- [`25-observability.md`](./25-observability.md)
+- [`20-accessibility.md`](./20-accessibility.md) — accessibility baseline.
+- [`22-performance.md`](./22-performance.md) — bundle/Core Web Vitals targets.
+- [`25-observability.md`](./25-observability.md) — Sentry/RUM/event guidance.
 
-## Layer 4 · Governance & Workflow
+## Low-Churn / Historical Process Docs
 
-- [`30-build-and-release.md`](./30-build-and-release.md)
+These may be slimmed or folded into the required docs when touched:
+
 - [`31-governance.md`](./31-governance.md)
 - [`32-ai-pairing.md`](./32-ai-pairing.md)
 
-## Companion Specs
+The runtime assistant rules live in [`../../frontend/CLAUDE.md`](../../frontend/CLAUDE.md);
+that file is more important than keeping process theory in this directory.
 
-- [`casino-keeper-v1.md`](./casino-keeper-v1.md)
+## Operating Rule
 
-## Gates
-
-Layer 3 documents must reach `Status: Accepted` before public launch. The
-overall gate definition is in `../design/README.md`.
+Before adding a new frontend engineering document, name the launch risk or
+runtime boundary it protects. If the answer is only "process consistency", add
+the rule to the active roadmap or an existing doc instead.

@@ -1,14 +1,20 @@
-# Frontend Clean-Room Kill List
+# Frontend Historical Kill List
 
 | Owner | Frontend Lead |
-| Status | Draft v1 |
-| Last Updated | 2026-05-14 |
-| Depends on | `00-charter.md`, `frontend-rewrite-blueprint.md`, `03-information-architecture.md`, `11-component-library.md` |
+| Status | Historical reference |
+| Last Updated | 2026-05-18 |
+| Depends on | `../strategy/fullstack-product-architecture.md`, `frontend-implementation-roadmap.md` |
 | Supersedes | ad-hoc frontend cleanup notes and legacy prototype-first route plans |
 
-This is the physical inventory for the clean-room frontend rewrite. It decides
-which files are deleted, rewritten, preserved, or kept only as routing boundary
-glue. It does not authorize code changes by itself; it scopes Phase 1+ work.
+This file is the historical physical inventory from the clean-room frontend
+rewrite. It no longer decides current priorities by itself. Current work is
+sequenced by [`frontend-implementation-roadmap.md`](./frontend-implementation-roadmap.md)
+and bounded by
+[`../strategy/fullstack-product-architecture.md`](../strategy/fullstack-product-architecture.md).
+
+Use this file only to understand why old routes, shells, prototypes, and token
+systems were removed. Do not use it to justify deleting real runtime boundaries
+such as `packages/ssot`, `packages/bet-index`, or `apps/keeper`.
 
 ## 1. Decision Labels
 
@@ -168,8 +174,8 @@ owns byte-level correctness against release manifests and golden vectors.
 | --------------------------- | ------------------------------------------------------------ |
 | `frontend/docs/frontend/**` | Delete. New SSOT is under `docs/design` and `docs/frontend`. |
 | `docs/frontend/README.md`   | Keep. It remains the release-artifact contract.              |
-| `docs/design/**`            | Active planning SSOT for clean-room rewrite.                 |
-| `docs/frontend/{20..32}.md` | Active engineering-quality SSOT for clean-room rewrite.      |
+| `docs/design/**`            | Lean design and UX references; not a clean-room gate system. |
+| `docs/frontend/{20..32}.md` | Launch-relevant engineering references; slim when touched.   |
 | `frontend/CLAUDE.md`        | Active AI assistant runtime rules.                           |
 
 ## 12. Don'ts
