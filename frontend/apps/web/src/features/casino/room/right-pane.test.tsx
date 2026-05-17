@@ -77,4 +77,25 @@ describe("GameRoomRightPane", () => {
     expect(screen.getByText("Win confirmed")).toBeDefined();
     expect(screen.getByText("19.6 USDC")).toBeDefined();
   });
+
+  it("does not present missing payout proof as a completed result", () => {
+    render(
+      <GameRoomRightPane
+        {...baseProps}
+        gameSlug="roulette"
+        showResult
+        resultProof={{
+          kind: "indexing",
+          betId: 13n,
+          requestId: 88n,
+          randomHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          stake: 10_000_000n
+        }}
+      />
+    );
+
+    expect(screen.getByText("Reading result")).toBeDefined();
+    expect(screen.getByText("Fetching BetFinalized proof directly from GameHub.")).toBeDefined();
+    expect(screen.queryByText("Settlement confirmed")).toBeNull();
+  });
 });

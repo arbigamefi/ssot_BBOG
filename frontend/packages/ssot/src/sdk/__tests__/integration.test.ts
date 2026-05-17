@@ -109,6 +109,7 @@ const RECEIPT = { blockNumber: 100n, status: "success" as const, logs: [] };
 
 function mockPublicClient(overrides?: Record<string, any>) {
   return {
+    getContractEvents: vi.fn().mockResolvedValue([]),
     getTransactionReceipt: vi.fn().mockResolvedValue(RECEIPT),
     readContract: vi.fn().mockResolvedValue(0n),
     simulateContract: vi.fn().mockResolvedValue({ request: { mock: true } }),
@@ -154,6 +155,50 @@ describe("createSSOTSDK", () => {
     expect(sdk).toHaveProperty("bank");
     expect(sdk).toHaveProperty("vrfHub");
     expect(sdk).toHaveProperty("sportsHub");
+  });
+
+  it("reads GameHub terminal proof directly from BetFinalized logs", async () => {
+    const settlementTx =
+      "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Hex;
+    pub.getContractEvents
+      .mockResolvedValueOnce([
+        {
+          args: {
+            positionId: 7n,
+            payoutGross: 2_000_000n,
+            payoutNet: 1_960_000n,
+            feeOnPayout: 40_000n,
+            protocolFeeAccrual: 20_000n
+          },
+          transactionHash: settlementTx,
+          blockNumber: 123n,
+          logIndex: 4
+        }
+      ])
+      .mockResolvedValueOnce([]);
+
+    const proof = await sdk.gameHub.getTerminalProof(7n);
+
+    expect(pub.getContractEvents).toHaveBeenCalledWith(
+      expect.objectContaining({
+        address: getAddress(TEST_RELEASE.contracts.gameHub),
+        eventName: "BetFinalized",
+        args: { positionId: 7n },
+        fromBlock: 100n,
+        toBlock: "latest"
+      })
+    );
+    expect(proof).toEqual({
+      kind: "settled",
+      settlement: {
+        txHash: settlementTx,
+        blockNumber: 123n,
+        payoutGross: 2_000_000n,
+        payoutNet: 1_960_000n,
+        feeOnPayout: 40_000n,
+        protocolFeeAccrual: 20_000n
+      }
+    });
   });
 
   it("reads SportsHub market state through the v1.3 SportsHub address", async () => {

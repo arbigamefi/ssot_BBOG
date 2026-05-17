@@ -1,7 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { DomainBet } from "@ssot/ssot";
 
-import { appendGameHistoryEntry, buildCasinoRoundResult, isTerminalDomainBet } from "./resolution";
+import {
+  appendGameHistoryEntry,
+  buildCasinoRoundResult,
+  isTerminalDomainBet,
+  resolveCasinoTerminalProof
+} from "./resolution";
 
 const baseBet: DomainBet = {
   betId: 7n,
@@ -72,5 +77,46 @@ describe("game room resolution helpers", () => {
       kind: "settled",
       settlement: { payoutNet: 19_600n }
     });
+  });
+
+  it("falls back to direct GameHub terminal proof when the indexer has not caught up", async () => {
+    const getTerminalProof = vi.fn().mockResolvedValue({
+      kind: "settled",
+      settlement: {
+        txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        payoutGross: 20_000n,
+        payoutNet: 19_600n,
+        feeOnPayout: 400n,
+        protocolFeeAccrual: 200n
+      }
+    });
+
+    const proof = await resolveCasinoTerminalProof({
+      terminalBet: baseBet,
+      recentBets: [],
+      db: undefined,
+      gameHub: { getTerminalProof }
+    });
+
+    expect(getTerminalProof).toHaveBeenCalledWith(7n);
+    expect(proof).toMatchObject({
+      kind: "settled",
+      settlement: {
+        payoutNet: 19_600n
+      }
+    });
+  });
+
+  it("keeps the result in reading state when direct GameHub proof read fails", async () => {
+    const getTerminalProof = vi.fn().mockRejectedValue(new Error("range limit"));
+
+    await expect(
+      resolveCasinoTerminalProof({
+        terminalBet: baseBet,
+        recentBets: [],
+        db: undefined,
+        gameHub: { getTerminalProof }
+      })
+    ).resolves.toBeNull();
   });
 });

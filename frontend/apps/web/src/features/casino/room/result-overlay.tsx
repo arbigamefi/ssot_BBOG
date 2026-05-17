@@ -29,9 +29,9 @@ function explorerTxUrl(chainId: number | undefined, txHash: string | undefined) 
 function getOutcome(result: CasinoRoundResult | null) {
   if (!result) {
     return {
-      label: "Settlement confirmed",
+      label: "Reading result",
       tone: "indexing" as const,
-      detail: "Indexing payout proof from GameHub events."
+      detail: "Fetching payout proof from GameHub."
     };
   }
 
@@ -45,9 +45,9 @@ function getOutcome(result: CasinoRoundResult | null) {
 
   if (result.kind === "indexing" || result.settlement?.payoutNet == null) {
     return {
-      label: "Settlement confirmed",
+      label: "Reading result",
       tone: "indexing" as const,
-      detail: "Indexing payout proof from GameHub events."
+      detail: "Fetching BetFinalized proof directly from GameHub."
     };
   }
 
@@ -56,7 +56,7 @@ function getOutcome(result: CasinoRoundResult | null) {
     return {
       label: "Win confirmed",
       tone: "win" as const,
-      detail: "Payout proof is indexed from BetFinalized."
+      detail: "Payout proof is confirmed from BetFinalized."
     };
   }
   if (net === 0n) {
@@ -69,7 +69,7 @@ function getOutcome(result: CasinoRoundResult | null) {
   return {
     label: "Loss confirmed",
     tone: "loss" as const,
-    detail: "BetFinalized is indexed with zero or below-stake payout."
+    detail: "BetFinalized is confirmed with zero or below-stake payout."
   };
 }
 

@@ -1,5 +1,6 @@
 import * as React from "react";
 import type { DomainBet } from "@ssot/ssot";
+import type { GameHubTerminalProof, SSOTGameHubAPI } from "@ssot/ssot/sdk";
 import type { SSOTDb } from "@ssot/ssot/indexer";
 
 import {
@@ -8,6 +9,7 @@ import {
   readTerminalProof,
   type RefundProof,
   type SettlementProof,
+  type TerminalProof,
   type IndexedBetSummary
 } from "./reconciliation";
 
@@ -73,10 +75,39 @@ export function buildCasinoRoundResult({
   };
 }
 
+export async function resolveCasinoTerminalProof({
+  terminalBet,
+  recentBets,
+  db,
+  gameHub
+}: {
+  terminalBet: DomainBet;
+  recentBets: readonly IndexedBetSummary[];
+  db: Pick<SSOTDb, "gameHubEvents"> | undefined;
+  gameHub: Pick<SSOTGameHubAPI, "getTerminalProof"> | undefined;
+}): Promise<TerminalProof | GameHubTerminalProof | null> {
+  const indexedBet = findIndexedBetById(recentBets, terminalBet.betId);
+  if (isTerminalIndexedBet(indexedBet)) {
+    const indexedProof = await readTerminalProof({
+      db,
+      betId: terminalBet.betId,
+      txHash: indexedBet?.lastTxHash
+    });
+    if (indexedProof) return indexedProof;
+  }
+
+  try {
+    return (await gameHub?.getTerminalProof(terminalBet.betId)) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export function useGameResolutionEffect({
   terminalBet,
   recentBets,
   db,
+  gameHub,
   setIsPending,
   setShowResult,
   setResultProof,
@@ -85,6 +116,7 @@ export function useGameResolutionEffect({
   terminalBet: DomainBet | null;
   recentBets: readonly IndexedBetSummary[];
   db: Pick<SSOTDb, "gameHubEvents"> | undefined;
+  gameHub: Pick<SSOTGameHubAPI, "getTerminalProof"> | undefined;
   setIsPending: React.Dispatch<React.SetStateAction<boolean>>;
   setShowResult: React.Dispatch<React.SetStateAction<boolean>>;
   setResultProof: React.Dispatch<React.SetStateAction<CasinoRoundResult | null>>;
@@ -110,15 +142,13 @@ export function useGameResolutionEffect({
       reset();
     }
 
-    const indexedBet = findIndexedBetById(recentBets, terminalBet.betId);
-    if (!isTerminalIndexedBet(indexedBet)) return;
-
     let cancelled = false;
     const resolveProof = async () => {
-      const proof = await readTerminalProof({
+      const proof = await resolveCasinoTerminalProof({
+        terminalBet,
+        recentBets,
         db,
-        betId: terminalBet.betId,
-        txHash: indexedBet?.lastTxHash
+        gameHub
       });
       if (cancelled || !proof) return;
       setResultProof(
@@ -132,7 +162,7 @@ export function useGameResolutionEffect({
     return () => {
       cancelled = true;
     };
-  }, [terminalBet, recentBets, db, setIsPending, setShowResult, setResultProof, reset]);
+  }, [terminalBet, recentBets, db, gameHub, setIsPending, setShowResult, setResultProof, reset]);
 
   React.useEffect(
     () => () => {

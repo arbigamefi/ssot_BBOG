@@ -28,6 +28,7 @@ import type {
   ProposeSportsResultInput,
   ResolveSportsChallengeDecision,
   ResolveSportsChallengeInput,
+  GameHubTerminalProof,
   SSOTGameHubAPI,
   SSOTBankAPI,
   SSOTVRFHubAPI,
@@ -640,6 +641,74 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         vrfRequestedAt: numberOrUndefined(bet.vrfRequestedAt),
         resolvedAt: numberOrUndefined(bet.resolvedAt),
         settledAt: numberOrUndefined(bet.resolvedAt)
+      };
+    },
+
+    async getTerminalProof(betId: bigint): Promise<GameHubTerminalProof | null> {
+      const fromBlock = BigInt(release.meta?.blockNumber ?? 0);
+      const eventBase = {
+        address: gameHubAddress,
+        abi: GAME_HUB_ABI,
+        fromBlock,
+        toBlock: "latest" as const,
+        args: { positionId: betId }
+      };
+
+      const [settled, refunded] = await Promise.all([
+        publicClient.getContractEvents({
+          ...eventBase,
+          eventName: "BetFinalized"
+        } as any),
+        publicClient.getContractEvents({
+          ...eventBase,
+          eventName: "BetRefunded"
+        } as any)
+      ]);
+
+      const events = [
+        ...settled.map((event: any) => ({
+          kind: "settled" as const,
+          event
+        })),
+        ...refunded.map((event: any) => ({
+          kind: "refunded" as const,
+          event
+        }))
+      ].sort((a, b) => {
+        const blockA = BigInt(a.event.blockNumber ?? 0n);
+        const blockB = BigInt(b.event.blockNumber ?? 0n);
+        if (blockA !== blockB) return blockA > blockB ? -1 : 1;
+        return Number(b.event.logIndex ?? 0) - Number(a.event.logIndex ?? 0);
+      });
+
+      const latest = events[0];
+      if (!latest) return null;
+
+      const args = latest.event.args ?? {};
+      const txHash = latest.event.transactionHash as Hex | undefined;
+      const blockNumber = latest.event.blockNumber as bigint | undefined;
+
+      if (latest.kind === "settled") {
+        return {
+          kind: "settled",
+          settlement: {
+            txHash,
+            blockNumber,
+            payoutGross: BigInt(args.payoutGross ?? 0n),
+            payoutNet: BigInt(args.payoutNet ?? 0n),
+            feeOnPayout: BigInt(args.feeOnPayout ?? 0n),
+            protocolFeeAccrual: BigInt(args.protocolFeeAccrual ?? 0n)
+          }
+        };
+      }
+
+      return {
+        kind: "refunded",
+        refund: {
+          txHash,
+          blockNumber,
+          refundAmount: BigInt(args.refundAmount ?? 0n)
+        }
       };
     }
   };

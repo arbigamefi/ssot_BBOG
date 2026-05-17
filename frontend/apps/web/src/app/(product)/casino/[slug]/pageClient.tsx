@@ -155,6 +155,7 @@ export function GamePageClient({ slug }: { slug: string }) {
     terminalBet,
     recentBets,
     db,
+    gameHub: sdk?.gameHub,
     setIsPending,
     setShowResult,
     setResultProof,
