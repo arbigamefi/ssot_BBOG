@@ -113,6 +113,33 @@ describe("game room resolution helpers", () => {
     });
   });
 
+  it("keeps waiting when a terminal proof is missing payout facts", async () => {
+    await expect(
+      resolveCasinoTerminalProof({
+        terminalBet: baseBet,
+        recentBets: [],
+        db: undefined,
+        gameHub: {
+          getTerminalProof: vi.fn().mockResolvedValue({
+            kind: "settled",
+            settlement: {
+              txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            }
+          })
+        }
+      })
+    ).resolves.toBeNull();
+
+    expect(
+      buildCasinoRoundResult({
+        bet: baseBet,
+        settlement: {
+          txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        }
+      })
+    ).toMatchObject({ kind: "indexing" });
+  });
+
   it("keeps the result in reading state when direct GameHub proof read fails", async () => {
     const getTerminalProof = vi.fn().mockRejectedValue(new Error("range limit"));
 
@@ -174,5 +201,44 @@ describe("game room resolution helpers", () => {
         settlement: expect.objectContaining({ payoutNet: 19_600n })
       })
     );
+  });
+
+  it("does not open the final result modal for incomplete terminal proof", async () => {
+    vi.useFakeTimers();
+    const getTerminalProof = vi.fn().mockResolvedValue({
+      kind: "settled",
+      settlement: {
+        txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    });
+    const setIsPending = vi.fn();
+    const setShowResult = vi.fn();
+    const setResultProof = vi.fn();
+    const reset = vi.fn();
+
+    renderHook(() =>
+      useGameResolutionEffect({
+        terminalBet: baseBet,
+        recentBets: [],
+        db: undefined,
+        gameHub: { getTerminalProof },
+        setIsPending,
+        setShowResult,
+        setResultProof,
+        reset
+      })
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_500);
+      await Promise.resolve();
+    });
+
+    expect(setShowResult).toHaveBeenCalledWith(false);
+    expect(setShowResult).not.toHaveBeenCalledWith(true);
+    expect(setResultProof).not.toHaveBeenCalledWith(expect.objectContaining({ kind: "settled" }));
   });
 });

@@ -54,7 +54,7 @@ export function buildCasinoRoundResult({
 }): CasinoRoundResult {
   if (bet.state === "refunded") {
     return {
-      kind: refund ? "refunded" : "indexing",
+      kind: refund?.refundAmount == null ? "indexing" : "refunded",
       betId: bet.betId,
       requestId: bet.requestId,
       randomHash: bet.randomHash,
@@ -65,7 +65,7 @@ export function buildCasinoRoundResult({
   }
 
   return {
-    kind: settlement ? "settled" : "indexing",
+    kind: settlement?.payoutNet == null ? "indexing" : "settled",
     betId: bet.betId,
     requestId: bet.requestId,
     randomHash: bet.randomHash,
@@ -73,6 +73,14 @@ export function buildCasinoRoundResult({
     resolvedAt: bet.resolvedAt,
     settlement
   };
+}
+
+export function isCompleteTerminalProof(
+  proof: TerminalProof | GameHubTerminalProof | null | undefined
+) {
+  if (!proof) return false;
+  if (proof.kind === "settled") return proof.settlement.payoutNet != null;
+  return proof.refund.refundAmount != null;
 }
 
 export async function resolveCasinoTerminalProof({
@@ -93,11 +101,12 @@ export async function resolveCasinoTerminalProof({
       betId: terminalBet.betId,
       txHash: indexedBet?.lastTxHash
     });
-    if (indexedProof) return indexedProof;
+    if (isCompleteTerminalProof(indexedProof)) return indexedProof;
   }
 
   try {
-    return (await gameHub?.getTerminalProof(terminalBet.betId)) ?? null;
+    const directProof = (await gameHub?.getTerminalProof(terminalBet.betId)) ?? null;
+    return isCompleteTerminalProof(directProof) ? directProof : null;
   } catch {
     return null;
   }
@@ -158,13 +167,19 @@ export function useGameResolutionEffect({
         return;
       }
 
-      displayedBetIdRef.current = terminalBet.betId;
-      setIsPending(false);
-      setResultProof(
+      const result =
         proof.kind === "settled"
           ? buildCasinoRoundResult({ bet: terminalBet, settlement: proof.settlement })
-          : buildCasinoRoundResult({ bet: terminalBet, refund: proof.refund })
-      );
+          : buildCasinoRoundResult({ bet: terminalBet, refund: proof.refund });
+
+      if (result.kind === "indexing") {
+        proofTimerRef.current = setTimeout(() => void resolveProof(), 1_500);
+        return;
+      }
+
+      displayedBetIdRef.current = terminalBet.betId;
+      setIsPending(false);
+      setResultProof(result);
       setShowResult(true);
 
       if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
