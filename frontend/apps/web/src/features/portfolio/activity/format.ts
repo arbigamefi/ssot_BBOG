@@ -27,7 +27,7 @@ export const BET_STATUS_TABS: Array<{ key: BetStatusFilter; labelKey: string; de
     }
   ];
 
-export function shortHex(value?: string | null, pendingLabel = "Pending") {
+export function shortHex(value?: string | null, pendingLabel = "—") {
   if (!value) return pendingLabel;
   if (value.length <= 12) return value;
   return `${value.slice(0, 6)}...${value.slice(-4)}`;
@@ -86,11 +86,11 @@ export function formatRelativeTime(
     hoursAgo: (hours: number) => string;
     daysAgo: (days: number) => string;
   } = {
-    pending: "Pending",
-    justNow: "just now",
-    minutesAgo: (minutes) => `${minutes}m ago`,
-    hoursAgo: (hours) => `${hours}h ago`,
-    daysAgo: (days) => `${days}d ago`
+    pending: "—",
+    justNow: "—",
+    minutesAgo: () => "—",
+    hoursAgo: () => "—",
+    daysAgo: () => "—"
   }
 ) {
   if (!timestamp) return labels.pending;
@@ -108,7 +108,7 @@ export function formatTokenAmount(
   value: bigint | undefined,
   decimals: number,
   symbol?: string,
-  pendingLabel = "Pending"
+  pendingLabel = "—"
 ) {
   if (value == null) return pendingLabel;
   const raw = formatUnits(value, decimals);
@@ -145,5 +145,5 @@ export function formatOutcome({
   if (status === "settled" && payout != null) {
     return formatTokenAmount(payout, decimals, symbol, pendingLabel);
   }
-  return pendingLabel ?? "Pending";
+  return pendingLabel ?? "—";
 }

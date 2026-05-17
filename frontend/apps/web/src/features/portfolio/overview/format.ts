@@ -1,6 +1,6 @@
 import { formatUnits } from "../../betting/model/units";
 
-export function shortHex(value?: string | null, pendingLabel = "Pending") {
+export function shortHex(value?: string | null, pendingLabel = "—") {
   if (!value) return pendingLabel;
   if (value.length <= 12) return value;
   return `${value.slice(0, 6)}...${value.slice(-4)}`;
@@ -10,7 +10,7 @@ export function formatAmount(
   value: bigint | undefined,
   decimals: number,
   symbol?: string,
-  pendingLabel = "Pending"
+  pendingLabel = "—"
 ) {
   if (value == null) return pendingLabel;
   const raw = formatUnits(value, decimals);
@@ -26,8 +26,8 @@ export function formatAmount(
 export function formatAllowance(
   value: bigint,
   decimals: number,
-  unlimitedLabel = "Unlimited",
-  pendingLabel = "Pending"
+  unlimitedLabel = "∞",
+  pendingLabel = "—"
 ) {
   return value > 1_000_000_000_000_000_000n
     ? unlimitedLabel
