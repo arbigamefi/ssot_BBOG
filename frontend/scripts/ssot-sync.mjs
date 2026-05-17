@@ -130,14 +130,30 @@ function normalizeNumeric(value, fallback = 0) {
   return Number.isFinite(n) ? n : fallback;
 }
 
+function requireString(value, label) {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new Error(`${label} is required`);
+  }
+  return value;
+}
+
+function requireNumeric(value, label) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) throw new Error(`${label} is required`);
+  return n;
+}
+
 function buildEmbeddedAssets(manifest) {
   if (Array.isArray(manifest.assets) && manifest.assets.length > 0) {
-    return manifest.assets.map((a) => ({
-      symbol: a.symbol,
-      decimals: normalizeNumeric(a.decimals, 18),
-      address: normalizeAddress(a.asset),
-      bank: normalizeAddress(a.bank)
-    }));
+    return manifest.assets.map((a, index) => {
+      const assetAddress = a.asset ?? a.address;
+      return {
+        symbol: requireString(a.symbol, `assets[${index}].symbol`),
+        decimals: requireNumeric(a.decimals, `assets[${index}].decimals`),
+        address: normalizeAddress(requireString(assetAddress, `assets[${index}].asset`)),
+        bank: normalizeAddress(requireString(a.bank, `assets[${index}].bank`))
+      };
+    });
   }
 
   const pools = Array.isArray(manifest.pools) ? manifest.pools : [];
@@ -153,8 +169,8 @@ function buildEmbeddedAssets(manifest) {
     if (seenAssets.has(asset)) continue;
     seenAssets.add(asset);
     assets.push({
-      symbol: pool.symbol || `POOL_${pool.poolId}`,
-      decimals: normalizeNumeric(pool.decimals, 18),
+      symbol: requireString(pool.symbol, `pools[${pool.poolId ?? assets.length}].symbol`),
+      decimals: requireNumeric(pool.decimals, `pools[${pool.poolId ?? assets.length}].decimals`),
       address: asset,
       bank: normalizeAddress(pool.bank)
     });
@@ -210,15 +226,15 @@ function buildEmbeddedSports(manifest) {
 
 function buildEmbeddedPools(manifest) {
   if (!Array.isArray(manifest.pools)) return undefined;
-  return manifest.pools.map((pool) => ({
+  return manifest.pools.map((pool, index) => ({
     poolId: normalizeNumeric(pool.poolId),
     domainId: normalizeNumeric(pool.domainId),
     domain: String(pool.domain ?? ""),
     active: Boolean(pool.active),
-    asset: normalizeAddress(pool.asset),
-    bank: normalizeAddress(pool.bank),
-    symbol: pool.symbol || "",
-    decimals: normalizeNumeric(pool.decimals, 18),
+    asset: normalizeAddress(requireString(pool.asset, `pools[${index}].asset`)),
+    bank: normalizeAddress(requireString(pool.bank, `pools[${index}].bank`)),
+    symbol: requireString(pool.symbol, `pools[${index}].symbol`),
+    decimals: requireNumeric(pool.decimals, `pools[${index}].decimals`),
     sportsRisk: pool.sportsRisk
       ? {
           maxStake: String(pool.sportsRisk.maxStake ?? "0"),
@@ -326,20 +342,20 @@ async function main() {
   const abisDir = path.join(bundleRoot, "abis");
 
   const manifestPath = await firstExistingPath(deploymentsDir, [
-    "frontend-manifest-latest.json",
-    "frontend-manifest-latest-v13.json"
+    "frontend-manifest-latest-v13.json",
+    "frontend-manifest-latest.json"
   ]);
   const vectorsPath = await firstExistingPath(deploymentsDir, [
-    "golden-vectors-latest.json",
-    "golden-vectors-latest-v13.json"
+    "golden-vectors-latest-v13.json",
+    "golden-vectors-latest.json"
   ]);
   const releaseLockPath = await firstExistingPath(deploymentsDir, [
-    "release-latest.json",
-    "release-latest-v13.json"
+    "release-latest-v13.json",
+    "release-latest.json"
   ]);
   const latestSnapshotPath = await firstExistingPath(deploymentsDir, [
-    "latest.json",
-    "latest-v13.json"
+    "latest-v13.json",
+    "latest.json"
   ]);
   const abiIndexPath = path.join(abisDir, "index.json");
 
@@ -369,6 +385,11 @@ async function main() {
   const blockNumber = Number(manifest.blockNumber);
   const digest = String(releaseLock.digest);
   const addresses = manifest.addresses ?? {};
+  const embeddedAssets = buildEmbeddedAssets(manifest);
+  const embeddedGames = buildEmbeddedGames(manifest);
+  const embeddedGamesMeta = buildEmbeddedGamesMeta(manifest);
+  const embeddedSports = buildEmbeddedSports(manifest);
+  const embeddedPools = buildEmbeddedPools(manifest);
 
   const fixtureDir = path.join(
     OUT_FIXT,
@@ -413,11 +434,11 @@ async function main() {
       refEngine: normalizeAddress(addresses.refEngine ?? addresses.referralEngine),
       adapter: normalizeAddress(addresses.adapter ?? addresses.adapterChainlinkV2PlusWrapper)
     },
-    assets: buildEmbeddedAssets(manifest),
-    games: buildEmbeddedGames(manifest),
-    gamesMeta: buildEmbeddedGamesMeta(manifest),
-    sports: buildEmbeddedSports(manifest),
-    pools: buildEmbeddedPools(manifest),
+    assets: embeddedAssets,
+    games: embeddedGames,
+    gamesMeta: embeddedGamesMeta,
+    sports: embeddedSports,
+    pools: embeddedPools,
     meta: {
       blockNumber,
       schemaVersion: manifest.schemaVersion,
