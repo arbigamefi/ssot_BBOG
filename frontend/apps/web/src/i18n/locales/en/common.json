@@ -150,6 +150,62 @@
           "clear": "Clear",
           "empty": "No spots selected. Click the grid to pick numbers."
         }
+      },
+      "stage": {
+        "loading": "Loading stage"
+      },
+      "history": {
+        "recent": {
+          "rolls": "RECENT ROLLS",
+          "numbers": "RECENT NUMBERS",
+          "draws": "RECENT DRAWS",
+          "flips": "RECENT FLIPS"
+        },
+        "states": {
+          "settled": "SETTLED",
+          "refunded": "REFUNDED",
+          "vrfReady": "VRF READY",
+          "placed": "PLACED"
+        },
+        "empty": "Waiting for first play..."
+      },
+      "result": {
+        "title": "Chain result",
+        "indexing": "Indexing",
+        "outcomes": {
+          "reading": {
+            "label": "Reading result",
+            "detail": "Fetching payout proof from GameHub."
+          },
+          "readingFinalized": {
+            "detail": "Fetching BetFinalized proof directly from GameHub."
+          },
+          "refunded": {
+            "label": "Stake refunded",
+            "detail": "The refund path returned the stake after the VRF timeout window."
+          },
+          "win": {
+            "label": "Win confirmed",
+            "detail": "Payout proof is confirmed from BetFinalized."
+          },
+          "returned": {
+            "label": "Stake returned",
+            "detail": "The settled payout equals the stake."
+          },
+          "loss": {
+            "label": "Loss confirmed",
+            "detail": "BetFinalized is confirmed with zero or below-stake payout."
+          }
+        },
+        "facts": {
+          "betId": "Bet ID",
+          "netPayout": "Net payout",
+          "refund": "Refund",
+          "requestId": "Request ID",
+          "netResult": "Net result",
+          "randomHash": "Random hash",
+          "settlementTx": "Settlement tx"
+        }
       }
     },
     "directory": {

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import dynamic from "next/dynamic";
+import { useTranslations } from "next-intl";
 
 import {
   GameRoomHistoryWidget,
@@ -15,9 +16,11 @@ import type { CasinoRoundResult } from "./resolution";
 export type { GameHistoryEntry, RecentBetSummary } from "./history-widget";
 
 function StageLoading() {
+  const t = useTranslations();
+
   return (
     <div className="flex min-h-[280px] items-center justify-center text-sm font-bold uppercase tracking-[0.18em] text-fg-subtle">
-      Loading stage
+      {t("casino.room.stage.loading")}
     </div>
   );
 }

@@ -8,6 +8,45 @@ vi.mock("@ssot/ui", () => ({
   cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" ")
 }));
 
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string) =>
+    ({
+      "casino.room.stage.loading": "Loading stage",
+      "casino.room.history.recent.rolls": "RECENT ROLLS",
+      "casino.room.history.recent.numbers": "RECENT NUMBERS",
+      "casino.room.history.recent.draws": "RECENT DRAWS",
+      "casino.room.history.recent.flips": "RECENT FLIPS",
+      "casino.room.history.states.settled": "SETTLED",
+      "casino.room.history.states.refunded": "REFUNDED",
+      "casino.room.history.states.vrfReady": "VRF READY",
+      "casino.room.history.states.placed": "PLACED",
+      "casino.room.history.empty": "Waiting for first play...",
+      "casino.room.result.title": "Chain result",
+      "casino.room.result.indexing": "Indexing",
+      "casino.room.result.outcomes.reading.label": "Reading result",
+      "casino.room.result.outcomes.reading.detail": "Fetching payout proof from GameHub.",
+      "casino.room.result.outcomes.readingFinalized.detail":
+        "Fetching BetFinalized proof directly from GameHub.",
+      "casino.room.result.outcomes.refunded.label": "Stake refunded",
+      "casino.room.result.outcomes.refunded.detail":
+        "The refund path returned the stake after the VRF timeout window.",
+      "casino.room.result.outcomes.win.label": "Win confirmed",
+      "casino.room.result.outcomes.win.detail": "Payout proof is confirmed from BetFinalized.",
+      "casino.room.result.outcomes.returned.label": "Stake returned",
+      "casino.room.result.outcomes.returned.detail": "The settled payout equals the stake.",
+      "casino.room.result.outcomes.loss.label": "Loss confirmed",
+      "casino.room.result.outcomes.loss.detail":
+        "BetFinalized is confirmed with zero or below-stake payout.",
+      "casino.room.result.facts.betId": "Bet ID",
+      "casino.room.result.facts.netPayout": "Net payout",
+      "casino.room.result.facts.refund": "Refund",
+      "casino.room.result.facts.requestId": "Request ID",
+      "casino.room.result.facts.netResult": "Net result",
+      "casino.room.result.facts.randomHash": "Random hash",
+      "casino.room.result.facts.settlementTx": "Settlement tx"
+    })[key] ?? key
+}));
+
 const baseProps = {
   coinSide: "HEADS" as const,
   flipCount: 0,

@@ -1,11 +1,17 @@
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { cn } from "@ssot/ui";
 
 import { formatUnits } from "../../betting/model/units";
 import type { CasinoRoundResult } from "./resolution";
 
-function formatTokenAmount(value: bigint | undefined, decimals: number, symbol: string) {
-  if (value == null) return "Indexing";
+function formatTokenAmount(
+  value: bigint | undefined,
+  decimals: number,
+  symbol: string,
+  indexingLabel: string
+) {
+  if (value == null) return indexingLabel;
   const raw = formatUnits(value, decimals);
   const [intPart = "0", fracPart = ""] = raw.split(".");
   const fraction = fracPart.slice(0, 4).replace(/0+$/, "");
@@ -26,50 +32,52 @@ function explorerTxUrl(chainId: number | undefined, txHash: string | undefined) 
   return undefined;
 }
 
-function getOutcome(result: CasinoRoundResult | null) {
+type Translate = ReturnType<typeof useTranslations>;
+
+function getOutcome(result: CasinoRoundResult | null, t: Translate) {
   if (!result) {
     return {
-      label: "Reading result",
+      label: t("casino.room.result.outcomes.reading.label"),
       tone: "indexing" as const,
-      detail: "Fetching payout proof from GameHub."
+      detail: t("casino.room.result.outcomes.reading.detail")
     };
   }
 
   if (result.kind === "refunded") {
     return {
-      label: "Stake refunded",
+      label: t("casino.room.result.outcomes.refunded.label"),
       tone: "neutral" as const,
-      detail: "The refund path returned the stake after the VRF timeout window."
+      detail: t("casino.room.result.outcomes.refunded.detail")
     };
   }
 
   if (result.kind === "indexing" || result.settlement?.payoutNet == null) {
     return {
-      label: "Reading result",
+      label: t("casino.room.result.outcomes.reading.label"),
       tone: "indexing" as const,
-      detail: "Fetching BetFinalized proof directly from GameHub."
+      detail: t("casino.room.result.outcomes.readingFinalized.detail")
     };
   }
 
   const net = result.settlement.payoutNet - result.stake;
   if (net > 0n) {
     return {
-      label: "Win confirmed",
+      label: t("casino.room.result.outcomes.win.label"),
       tone: "win" as const,
-      detail: "Payout proof is confirmed from BetFinalized."
+      detail: t("casino.room.result.outcomes.win.detail")
     };
   }
   if (net === 0n) {
     return {
-      label: "Stake returned",
+      label: t("casino.room.result.outcomes.returned.label"),
       tone: "neutral" as const,
-      detail: "The settled payout equals the stake."
+      detail: t("casino.room.result.outcomes.returned.detail")
     };
   }
   return {
-    label: "Loss confirmed",
+    label: t("casino.room.result.outcomes.loss.label"),
     tone: "loss" as const,
-    detail: "BetFinalized is confirmed with zero or below-stake payout."
+    detail: t("casino.room.result.outcomes.loss.detail")
   };
 }
 
@@ -104,7 +112,9 @@ export function GameRoomResultOverlay({
   assetSymbol?: string;
   assetDecimals?: number;
 }) {
-  const outcome = getOutcome(result);
+  const t = useTranslations();
+  const indexingLabel = t("casino.room.result.indexing");
+  const outcome = getOutcome(result, t);
   const txHash = result?.settlement?.txHash ?? result?.refund?.txHash;
   const txHref = explorerTxUrl(chainId, txHash);
   const payout =
@@ -132,7 +142,7 @@ export function GameRoomResultOverlay({
         />
         <div className="relative">
           <p className="text-xs font-black uppercase tracking-[0.24em] text-fg-subtle">
-            Chain result
+            {t("casino.room.result.title")}
           </p>
           <h3
             className={cn(
@@ -148,18 +158,39 @@ export function GameRoomResultOverlay({
           <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-fg-muted">{outcome.detail}</p>
 
           <div className="mt-6 grid grid-cols-2 gap-3">
-            <Fact label="Bet ID" value={result?.betId?.toString() ?? "—"} />
             <Fact
-              label={result?.kind === "refunded" ? "Refund" : "Net payout"}
-              value={formatTokenAmount(payout, assetDecimals, assetSymbol)}
+              label={t("casino.room.result.facts.betId")}
+              value={result?.betId?.toString() ?? "—"}
             />
-            <Fact label="Request ID" value={result?.requestId?.toString() ?? "—"} />
             <Fact
-              label="Net result"
-              value={net == null ? "Indexing" : formatTokenAmount(net, assetDecimals, assetSymbol)}
+              label={
+                result?.kind === "refunded"
+                  ? t("casino.room.result.facts.refund")
+                  : t("casino.room.result.facts.netPayout")
+              }
+              value={formatTokenAmount(payout, assetDecimals, assetSymbol, indexingLabel)}
             />
-            <Fact label="Random hash" value={shortHash(result?.randomHash)} />
-            <Fact label="Settlement tx" value={shortHash(txHash)} href={txHref} />
+            <Fact
+              label={t("casino.room.result.facts.requestId")}
+              value={result?.requestId?.toString() ?? "—"}
+            />
+            <Fact
+              label={t("casino.room.result.facts.netResult")}
+              value={
+                net == null
+                  ? indexingLabel
+                  : formatTokenAmount(net, assetDecimals, assetSymbol, indexingLabel)
+              }
+            />
+            <Fact
+              label={t("casino.room.result.facts.randomHash")}
+              value={shortHash(result?.randomHash)}
+            />
+            <Fact
+              label={t("casino.room.result.facts.settlementTx")}
+              value={shortHash(txHash)}
+              href={txHref}
+            />
           </div>
         </div>
       </div>
