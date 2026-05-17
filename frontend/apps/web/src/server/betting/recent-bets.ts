@@ -414,6 +414,13 @@ export async function queryRecentBets({
           release: loaded.release,
           windowBlocks
         });
+        if (fromBlock > toBlock) {
+          return emptyRecentBetsResponse({
+            chainId,
+            generatedAt: now(),
+            source: "rpc-window"
+          });
+        }
         const gameHub = loaded.gameHub;
         const logs: Array<EventLogLike & { eventName: GameHubEventName }> = [];
 
@@ -544,6 +551,16 @@ export async function queryPlayerBets({
           release: loaded.release,
           windowBlocks
         });
+        if (fromBlock > toBlock) {
+          return {
+            ...emptyRecentBetsResponse({
+              chainId,
+              generatedAt: now(),
+              source: "rpc-window"
+            }),
+            player: normalizedPlayer
+          };
+        }
         const gameHub = loaded.gameHub;
 
         const placedLogs = await getGameHubLogsInChunks({

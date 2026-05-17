@@ -10,10 +10,17 @@ import {
   queryRecentBets,
   queryPlayerBets
 } from "./recent-bets";
+import { loadEmbeddedRelease } from "@ssot/ssot/release";
 
 const GAME_ID = `0x${"11".repeat(32)}` as const;
 const PLAYER = "0x2222222222222222222222222222222222222222" as const;
 const GAME_HUB = "0x3333333333333333333333333333333333333333" as const;
+
+function latestBlockAfterEmbeddedRelease(windowBlocks: bigint) {
+  const release = loadEmbeddedRelease(84532);
+  if (!release.ok) throw new Error(release.error);
+  return BigInt(release.release.meta?.blockNumber ?? 0) + 2n + windowBlocks;
+}
 
 const ENV_KEYS = [
   "BET_INDEX_READ_ENABLED",
@@ -130,7 +137,7 @@ describe("recent bets server aggregation", () => {
     const response = await queryRecentBets({
       chainId: 84532,
       client: {
-        getBlockNumber: vi.fn().mockResolvedValue(41_600_000n),
+        getBlockNumber: vi.fn().mockResolvedValue(latestBlockAfterEmbeddedRelease(25n)),
         getLogs
       } as any,
       limit: 10,
@@ -152,7 +159,7 @@ describe("recent bets server aggregation", () => {
     const response = await queryRecentBets({
       chainId: 84532,
       client: {
-        getBlockNumber: vi.fn().mockResolvedValue(41_600_000n),
+        getBlockNumber: vi.fn().mockResolvedValue(latestBlockAfterEmbeddedRelease(25n)),
         getLogs: vi.fn().mockRejectedValue(new Error("rate limited"))
       } as any,
       limit: 10,
@@ -223,7 +230,7 @@ describe("recent bets server aggregation", () => {
     const response = await queryPlayerBets({
       chainId: 84532,
       client: {
-        getBlockNumber: vi.fn().mockResolvedValue(41_600_000n),
+        getBlockNumber: vi.fn().mockResolvedValue(latestBlockAfterEmbeddedRelease(9n)),
         getLogs
       } as any,
       limit: 10,
