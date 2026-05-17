@@ -18,16 +18,114 @@ export type GameHistoryEntry = {
   win: boolean;
 };
 
-export type CasinoRoundResult = {
-  kind: "settled" | "refunded" | "indexing";
+type CasinoRoundResultBase = {
   betId: bigint;
   requestId: bigint;
   randomHash: `0x${string}`;
   stake: bigint;
   resolvedAt?: number;
+};
+
+type CompleteSettlementProof = SettlementProof & { payoutNet: bigint };
+type CompleteRefundProof = RefundProof & { refundAmount: bigint };
+
+export type CasinoRoundIndexingResult = CasinoRoundResultBase & {
+  kind: "indexing";
   settlement?: SettlementProof;
   refund?: RefundProof;
 };
+
+export type CasinoRoundSettledResult = CasinoRoundResultBase & {
+  kind: "settled";
+  settlement: CompleteSettlementProof;
+};
+
+export type CasinoRoundRefundedResult = CasinoRoundResultBase & {
+  kind: "refunded";
+  refund: CompleteRefundProof;
+};
+
+export type CasinoTerminalRoundResult = CasinoRoundSettledResult | CasinoRoundRefundedResult;
+
+export type CasinoRoundResult =
+  | CasinoRoundIndexingResult
+  | CasinoRoundSettledResult
+  | CasinoRoundRefundedResult;
+
+function hasCompleteSettlement(
+  settlement: SettlementProof | undefined
+): settlement is CompleteSettlementProof {
+  return settlement?.payoutNet != null;
+}
+
+function hasCompleteRefund(refund: RefundProof | undefined): refund is CompleteRefundProof {
+  return refund?.refundAmount != null;
+}
+
+export function isCasinoTerminalRoundResult(
+  result: CasinoRoundResult | null | undefined
+): result is CasinoTerminalRoundResult {
+  if (result?.kind === "settled") return hasCompleteSettlement(result.settlement);
+  if (result?.kind === "refunded") return hasCompleteRefund(result.refund);
+  return false;
+}
+
+function buildIndexingRoundResult({
+  bet,
+  settlement,
+  refund
+}: {
+  bet: DomainBet;
+  settlement?: SettlementProof;
+  refund?: RefundProof;
+}): CasinoRoundIndexingResult {
+  return {
+    kind: "indexing",
+    betId: bet.betId,
+    requestId: bet.requestId,
+    randomHash: bet.randomHash,
+    stake: bet.stake,
+    resolvedAt: bet.resolvedAt,
+    settlement,
+    refund
+  };
+}
+
+function buildSettledRoundResult({
+  bet,
+  settlement
+}: {
+  bet: DomainBet;
+  settlement: CompleteSettlementProof;
+}): CasinoRoundSettledResult {
+  return {
+    kind: "settled",
+    betId: bet.betId,
+    requestId: bet.requestId,
+    randomHash: bet.randomHash,
+    stake: bet.stake,
+    resolvedAt: bet.resolvedAt,
+    settlement
+  };
+}
+
+function buildRefundedRoundResult({
+  bet,
+  refund
+}: {
+  bet: DomainBet;
+  refund: CompleteRefundProof;
+}): CasinoRoundRefundedResult {
+  return {
+    kind: "refunded",
+    betId: bet.betId,
+    requestId: bet.requestId,
+    randomHash: bet.randomHash,
+    stake: bet.stake,
+    resolvedAt: bet.resolvedAt,
+    refund
+  };
+}
 
 export function appendGameHistoryEntry(
   history: readonly GameHistoryEntry[],
@@ -53,26 +151,14 @@ export function buildCasinoRoundResult({
   refund?: RefundProof;
 }): CasinoRoundResult {
   if (bet.state === "refunded") {
-    return {
-      kind: refund?.refundAmount == null ? "indexing" : "refunded",
-      betId: bet.betId,
-      requestId: bet.requestId,
-      randomHash: bet.randomHash,
-      stake: bet.stake,
-      resolvedAt: bet.resolvedAt,
-      refund
-    };
+    return hasCompleteRefund(refund)
+      ? buildRefundedRoundResult({ bet, refund })
+      : buildIndexingRoundResult({ bet, refund });
   }
 
-  return {
-    kind: settlement?.payoutNet == null ? "indexing" : "settled",
-    betId: bet.betId,
-    requestId: bet.requestId,
-    randomHash: bet.randomHash,
-    stake: bet.stake,
-    resolvedAt: bet.resolvedAt,
-    settlement
-  };
+  return hasCompleteSettlement(settlement)
+    ? buildSettledRoundResult({ bet, settlement })
+    : buildIndexingRoundResult({ bet, settlement });
 }
 
 export function isCompleteTerminalProof(

@@ -11,7 +11,7 @@ import {
 } from "./history-widget";
 import type { CoinSide, DiceDirection } from "./params";
 import { GameRoomResultOverlay } from "./result-overlay";
-import type { CasinoRoundResult } from "./resolution";
+import { isCasinoTerminalRoundResult, type CasinoRoundResult } from "./resolution";
 
 export type { GameHistoryEntry, RecentBetSummary } from "./history-widget";
 
@@ -167,7 +167,7 @@ export function GameRoomRightPane({
         />
       )}
 
-      {showResult && resultProof && resultProof.kind !== "indexing" && (
+      {showResult && isCasinoTerminalRoundResult(resultProof) && (
         <GameRoomResultOverlay
           result={resultProof}
           chainId={chainId}

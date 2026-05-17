@@ -178,11 +178,6 @@ vi.mock("next-intl", () => ({
       "casino.room.history.states.placed": "PLACED",
       "casino.room.history.empty": "Waiting for first play...",
       "casino.room.result.title": "Chain result",
-      "casino.room.result.indexing": "Indexing",
-      "casino.room.result.outcomes.reading.label": "Reading result",
-      "casino.room.result.outcomes.reading.detail": "Fetching payout proof from GameHub.",
-      "casino.room.result.outcomes.readingFinalized.detail":
-        "Fetching BetFinalized proof directly from GameHub.",
       "casino.room.result.outcomes.refunded.label": "Stake refunded",
       "casino.room.result.outcomes.refunded.detail":
         "The refund path returned the stake after the VRF timeout window.",

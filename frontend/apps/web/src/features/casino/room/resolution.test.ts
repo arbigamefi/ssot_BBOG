@@ -6,6 +6,7 @@ import {
   appendGameHistoryEntry,
   buildCasinoRoundResult,
   isTerminalDomainBet,
+  isCasinoTerminalRoundResult,
   useGameResolutionEffect,
   resolveCasinoTerminalProof
 } from "./resolution";
@@ -138,6 +139,31 @@ describe("game room resolution helpers", () => {
         }
       })
     ).toMatchObject({ kind: "indexing" });
+  });
+
+  it("does not treat incomplete round results as final overlay data", () => {
+    expect(
+      isCasinoTerminalRoundResult(
+        buildCasinoRoundResult({
+          bet: baseBet,
+          settlement: {
+            txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          }
+        })
+      )
+    ).toBe(false);
+
+    expect(
+      isCasinoTerminalRoundResult(
+        buildCasinoRoundResult({
+          bet: baseBet,
+          settlement: {
+            txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            payoutNet: 19_600n
+          }
+        })
+      )
+    ).toBe(true);
   });
 
   it("keeps the result in reading state when direct GameHub proof read fails", async () => {

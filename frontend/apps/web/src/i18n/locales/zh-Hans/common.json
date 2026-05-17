@@ -302,15 +302,7 @@
       },
       "result": {
         "title": "链上结果",
-        "indexing": "读取中",
         "outcomes": {
-          "reading": {
-            "label": "读取结果",
-            "detail": "正在从 GameHub 获取赔付证明。"
-          },
-          "readingFinalized": {
-            "detail": "正在直接从 GameHub 获取 BetFinalized 证明。"
-          },
           "refunded": {
             "label": "本金已退回",
             "detail": "VRF 超时窗口后，退款路径已退回本金。"
