@@ -5,7 +5,7 @@ import {
   UserCircleIcon
 } from "@heroicons/react/24/outline";
 
-export function AccountIdentityCard({
+export function PortfolioIdentityCard({
   account,
   alias,
   saved,

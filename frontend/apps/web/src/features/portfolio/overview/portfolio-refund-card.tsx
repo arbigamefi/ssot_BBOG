@@ -1,10 +1,10 @@
 import * as React from "react";
 import { ArrowPathIcon } from "@heroicons/react/24/outline";
 
-import { AccountActionTrace } from "./account-action-trace";
-import type { AccountFlowState } from "./types";
+import { PortfolioActionTrace } from "./portfolio-action-trace";
+import type { PortfolioFlowState } from "./types";
 
-export function AccountRefundCard({
+export function PortfolioRefundCard({
   amount,
   connected,
   readOnly,
@@ -17,7 +17,7 @@ export function AccountRefundCard({
   connected: boolean;
   readOnly: boolean;
   disabled: boolean;
-  flow: AccountFlowState;
+  flow: PortfolioFlowState;
   explorerBaseUrl?: string;
   onClaim: () => void;
 }) {
@@ -57,7 +57,7 @@ export function AccountRefundCard({
       </button>
 
       <div className="mt-4">
-        <AccountActionTrace flow={flow} explorerBaseUrl={explorerBaseUrl} />
+        <PortfolioActionTrace flow={flow} explorerBaseUrl={explorerBaseUrl} />
       </div>
     </section>
   );

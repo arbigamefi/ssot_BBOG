@@ -2,13 +2,13 @@ import * as React from "react";
 import { TxStatusChip } from "@ssot/ui";
 
 import { mapJournalStatus, shortHex } from "./format";
-import type { AccountJournalRow } from "./types";
+import type { PortfolioJournalRow } from "./types";
 
-export function AccountJournal({
+export function PortfolioJournal({
   rows,
   explorerBaseUrl
 }: {
-  rows: readonly AccountJournalRow[];
+  rows: readonly PortfolioJournalRow[];
   explorerBaseUrl?: string;
 }) {
   return (

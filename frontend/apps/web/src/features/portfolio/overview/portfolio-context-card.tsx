@@ -2,7 +2,7 @@ import * as React from "react";
 
 import { shortHex } from "./format";
 
-export function AccountContextCard({
+export function PortfolioContextCard({
   readOnly,
   releaseName,
   releaseDigest
