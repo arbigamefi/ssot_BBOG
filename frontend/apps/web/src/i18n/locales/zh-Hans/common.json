@@ -18,6 +18,11 @@
       "tryAgain": "重试"
     }
   },
+  "metadata": {
+    "siteTitle": "ArbiGameFi",
+    "titleTemplate": "%s | ArbiGameFi",
+    "description": "非托管链上游戏协议，提供可验证随机数与透明结算。"
+  },
   "locale": {
     "label": "语言",
     "en": "English",

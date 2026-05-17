@@ -18,6 +18,11 @@
       "tryAgain": "Try again"
     }
   },
+  "metadata": {
+    "siteTitle": "ArbiGameFi",
+    "titleTemplate": "%s | ArbiGameFi",
+    "description": "Non-custodial on-chain gaming platform with verifiable settlement."
+  },
   "locale": {
     "label": "Language",
     "en": "English",
