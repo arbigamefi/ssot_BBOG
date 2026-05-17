@@ -197,6 +197,36 @@ describe("GameRoomBetPanel", () => {
     expect(parseWalletBalanceAmount(null)).toBe(1450);
   });
 
+  it("uses text inputs for casino amounts and sanitizes whole-unit changes", () => {
+    const props = renderPanel({
+      advancedOpen: true,
+      onBetAmountChange: vi.fn(),
+      onBetCountChange: vi.fn(),
+      onStopGainChange: vi.fn(),
+      onStopLossChange: vi.fn()
+    });
+
+    expect(screen.queryByRole("spinbutton")).toBeNull();
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Bet amount" }), {
+      target: { value: "abc25.5" }
+    });
+    fireEvent.change(screen.getByRole("textbox", { name: "Roll count" }), {
+      target: { value: "120" }
+    });
+    fireEvent.change(screen.getByRole("textbox", { name: "Stop Gain (USDC)" }), {
+      target: { value: "30x" }
+    });
+    fireEvent.change(screen.getByRole("textbox", { name: "Stop Loss (USDC)" }), {
+      target: { value: "" }
+    });
+
+    expect(props.onBetAmountChange).toHaveBeenCalledWith(25);
+    expect(props.onBetCountChange).toHaveBeenCalledWith(100);
+    expect(props.onStopGainChange).toHaveBeenCalledWith(30);
+    expect(props.onStopLossChange).toHaveBeenCalledWith(0);
+  });
+
   it("shows explicit manual settlement and refund fallback controls only when provided", () => {
     const onManualSettle = vi.fn();
     const onManualRefund = vi.fn();

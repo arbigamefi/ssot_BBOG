@@ -8,8 +8,21 @@ import {
 } from "@heroicons/react/24/outline";
 import { cn } from "@ssot/ui";
 
+const WHOLE_UNIT_PATTERN = "[0-9]*";
+
+function parseWholeUnitInput(input: string, { min, max }: { min: number; max?: number }) {
+  const digits = input.match(/\d+/)?.[0] ?? "";
+  if (!digits) return min;
+  const value = Number(digits);
+  if (!Number.isSafeInteger(value)) return max ?? min;
+  return Math.max(min, Math.min(max ?? value, value));
+}
+
 export function parseWalletBalanceAmount(walletBalance: string | null) {
-  return walletBalance ? parseFloat(walletBalance.replace(/,/g, "").replace(" USDC", "")) : 1450;
+  const raw = walletBalance?.replace(/,/g, "").replace(" USDC", "").trim();
+  if (!raw) return 1450;
+  const wholeUnits = raw.split(".")[0] ?? "";
+  return parseWholeUnitInput(wholeUnits, { min: 1 });
 }
 
 export function BetAmountSection({
@@ -42,10 +55,16 @@ export function BetAmountSection({
         <div className="flex items-center px-4 pt-2">
           <CurrencyDollarIcon className="h-6 w-6 text-fg-subtle" />
           <input
-            type="number"
+            type="text"
+            inputMode="numeric"
+            pattern={WHOLE_UNIT_PATTERN}
+            autoComplete="off"
             aria-label={t("casino.room.betPanel.amount.aria")}
-            value={betAmount}
-            onChange={(event) => onBetAmountChange(Math.max(1, parseInt(event.target.value) || 0))}
+            value={String(betAmount)}
+            onChange={(event) =>
+              onBetAmountChange(parseWholeUnitInput(event.target.value, { min: 1 }))
+            }
+            disabled={isPending}
             className="w-full border-none bg-transparent pr-2 text-right font-mono text-4xl text-fg outline-none"
           />
         </div>
@@ -129,13 +148,14 @@ export function BetRollsSection({
           </button>
         ))}
         <input
-          type="number"
-          min={1}
-          max={100}
+          type="text"
+          inputMode="numeric"
+          pattern={WHOLE_UNIT_PATTERN}
+          autoComplete="off"
           aria-label={t("casino.room.betPanel.rolls.aria")}
-          value={betCount}
+          value={String(betCount)}
           onChange={(event) =>
-            onBetCountChange(Math.max(1, Math.min(100, parseInt(event.target.value) || 1)))
+            onBetCountChange(parseWholeUnitInput(event.target.value, { min: 1, max: 100 }))
           }
           disabled={isPending}
           className="w-14 rounded-lg border border-border bg-surface-1 text-center font-mono text-xs text-fg focus:border-brand/40 focus:outline-none"
@@ -181,10 +201,15 @@ export function BetAdvancedSection({
               {t("casino.room.betPanel.advanced.stopGain")}
             </label>
             <input
-              type="number"
-              min={0}
-              value={stopGain}
-              onChange={(event) => onStopGainChange(Math.max(0, parseInt(event.target.value) || 0))}
+              type="text"
+              inputMode="numeric"
+              pattern={WHOLE_UNIT_PATTERN}
+              autoComplete="off"
+              aria-label={t("casino.room.betPanel.advanced.stopGain")}
+              value={String(stopGain)}
+              onChange={(event) =>
+                onStopGainChange(parseWholeUnitInput(event.target.value, { min: 0 }))
+              }
               placeholder={t("casino.room.betPanel.advanced.offPlaceholder")}
               className="rounded-lg border border-border bg-surface-1 px-3 py-2 font-mono text-sm text-fg placeholder:text-fg-subtle focus:border-success/40 focus:outline-none"
             />
@@ -194,10 +219,15 @@ export function BetAdvancedSection({
               {t("casino.room.betPanel.advanced.stopLoss")}
             </label>
             <input
-              type="number"
-              min={0}
-              value={stopLoss}
-              onChange={(event) => onStopLossChange(Math.max(0, parseInt(event.target.value) || 0))}
+              type="text"
+              inputMode="numeric"
+              pattern={WHOLE_UNIT_PATTERN}
+              autoComplete="off"
+              aria-label={t("casino.room.betPanel.advanced.stopLoss")}
+              value={String(stopLoss)}
+              onChange={(event) =>
+                onStopLossChange(parseWholeUnitInput(event.target.value, { min: 0 }))
+              }
               placeholder={t("casino.room.betPanel.advanced.offPlaceholder")}
               className="rounded-lg border border-border bg-surface-1 px-3 py-2 font-mono text-sm text-fg placeholder:text-fg-subtle focus:border-danger/40 focus:outline-none"
             />
