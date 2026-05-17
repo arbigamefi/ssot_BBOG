@@ -1,351 +1,165 @@
 # 15 · Forms, Numbers & Validation
 
 | Owner | Frontend Lead |
-| Status | Draft v1 |
-| Last Updated | 2026-05-14 |
-| Depends on | `00-charter.md`, `02-voice-and-copy.md`, `11-component-library.md`, `13-web3-ux.md`, `14-data-and-state.md` |
-| Supersedes | every ad-hoc input handler across `apps/web/src/app/**` |
+| Status | Active |
+| Last Updated | 2026-05-18 |
+| Depends on | `02-voice-and-copy.md`, `11-component-library.md`, `13-web3-ux.md`, `14-data-and-state.md` |
+| Supersedes | Draft v1 form platform spec |
 
-This document specifies how every form in the product is built — single
-inputs, multi-step flows, validation strategy, bigint numeric handling, and
-form state machines.
+Forms exist to help users complete money-moving actions without ambiguity. They
+are not a separate framework project.
 
-## 1. Selection: `react-hook-form` + `zod`
+## 1. Scope
 
-Every form uses:
+This document covers:
 
-- **`react-hook-form`** (RHF) for form state and registration.
-- **`zod`** for schema and inference.
-- **`@hookform/resolvers/zod`** for bridging.
+- casino bet slips;
+- sportsbook ticket slips;
+- deposit, withdraw, claim, and referral forms;
+- operator forms in `/ops`.
 
-Forbidden: Formik, native `useState`-based forms, raw HTML form submit. RHF
-is the only allowed form library.
+Legal copy and long-form content are outside this document.
 
-## 2. Schema Authoring
+## 2. Form Ownership
 
-### 2.1 Where schemas live
+Prefer feature-owned form state. A form can use `react-hook-form` and `zod`
+when that keeps the code simpler, but they are not mandatory for every field or
+small control.
 
-Per feature: `apps/web/src/features/<vertical>/forms/<name>.schema.ts`.
+Required in all cases:
 
-### 2.2 Inference
+- typed input/output shape;
+- deterministic validation;
+- tests for non-trivial parsing or state transitions;
+- no duplicated amount parsing logic.
 
-```ts
-import { z } from "zod";
-export const placeBetSchema = z.object({
-  asset: zAddress,
-  amount: zAmountBigint(),
-  betCount: z.number().int().min(1).max(100),
-  maxHouseEdgeBps: zHouseEdgeBps(),
-  stopGain: z.bigint().nonnegative().optional(),
-  stopLoss: z.bigint().nonnegative().optional(),
-  affiliate: zAddress.optional(),
-});
-export type PlaceBetInput = z.infer<typeof placeBetSchema>;
+Schemas live next to the feature that owns the form. Shared schema helpers are
+allowed only when two or more features use the same rule.
+
+## 3. Bigint Amount Rules
+
+Asset amounts are bigint values at the contract boundary.
+
+- Keep user input as a string while editing.
+- Parse with a bigint-safe decimal parser.
+- Use decimals from release metadata.
+- Reject scientific notation.
+- Reject negative values.
+- Do not use native `<input type="number">` for asset amounts.
+- Do not use `parseFloat`, `Number(...)`, or floating point math for stake,
+  payout, balance, fee, allowance, or settlement values.
+
+`Max` sets the exact available bigint after reserving any required fee or
+minimum balance. It must not rely on rounded display values.
+
+## 4. Validation Order
+
+Write flows validate in this order:
+
+1. Local shape: required fields, allowed option, valid address or hash.
+2. Amount math: min, max, decimals, allowance, balance.
+3. Quote or estimate: VRF fee, odds expiry, gas-sensitive preview.
+4. Contract simulation or typed SDK preflight.
+5. Wallet signature.
+6. Receipt and terminal readback.
+
+Do not let a user sign while any earlier layer is unresolved.
+
+## 5. Canonical Write Flow
+
+Casino, sportsbook, earn, and claims use the same product contract:
+
+```text
+edit -> validate -> quote -> approve if needed -> simulate/preflight
+     -> sign -> mined -> terminal readback -> receipt
 ```
 
-### 2.3 Shared zod helpers
+Casino adds the round states from `casino-placebet-ux.md`:
 
-Centralized in `packages/ssot/src/encoding/zod-helpers.ts`:
-
-```ts
-export const zAddress = z.string().regex(/^0x[a-fA-F0-9]{40}$/);
-export const zHash = z.string().regex(/^0x[a-fA-F0-9]{64}$/);
-export const zBytes = z.string().regex(/^0x[a-fA-F0-9]+$/);
-
-export const zAmountBigint = (opts?: { min?: bigint; max?: bigint }) =>
-  z
-    .bigint()
-    .refine((v) => v > 0n, "Amount must be greater than zero")
-    .refine((v) => opts?.min == null || v >= opts.min, "Amount below minimum")
-    .refine((v) => opts?.max == null || v <= opts.max, "Amount above maximum");
-
-export const zHouseEdgeBps = () => z.number().int().min(0).max(10_000);
+```text
+placing -> waiting_vrf -> settling -> settled | refundable | failed
 ```
 
-No inline regex. No inline zod predicates that duplicate shared helpers.
+The result receipt is shown only after terminal chain state is known. A
+placeholder receipt that says "indexing" is not acceptable for the final result
+surface.
 
-## 3. `<NumberInput>` for Bigint
+## 6. Error Copy
 
-The canonical input for asset amounts is `<NumberInput>` (defined in
-`11-component-library.md §3.3`):
+Errors are product copy, not RPC dumps.
 
-```tsx
-<NumberInput
-  value={form.watch('amount')}
-  onChange={(v) => form.setValue('amount', v, { shouldValidate: true })}
-  decimals={asset.decimals}
-  max={asset.balance}
-  displayPrecision={undefined /* uses 02-voice §5 default */}
-  trailingNode={<MaxButton onClick={...} />}
-/>
-```
+Use:
 
-### 3.1 Behavior
-
-- Internal state is a **string** to allow trailing decimal point during
-  typing (`1.`).
-- On every keystroke, the string is parsed to bigint via
-  `parseAmount(text, decimals)`. If parsing fails partially (`1.`), the
-  field reports `null` until valid.
-- `onChange` receives `bigint | null`. The form treats `null` as
-  "incomplete, do not validate yet, do not submit".
-- On focus, locale-aware grouping is removed (`1,234.5` → `1234.5`).
-- On blur, grouping is reapplied for display.
-- `Max` button sets value to `max`, fires `shouldValidate: true`.
-
-### 3.2 Edge cases
-
-- Paste of scientific notation (`1.5e6`) is rejected with an `aria-live`
-  hint: `Use the standard number form.`
-- Negative numbers blocked at keystroke level.
-- More decimal places than the asset supports are truncated on blur with a
-  hint: `Truncated to <decimals> decimal places.`
-- Numbers exceeding `max` highlight `--danger` and show an inline error.
-
-### 3.3 Forbidden
-
-- Native `<input type="number">` for bigint values (loses precision).
-- `parseFloat` / `Number(...)` on user amounts (precision loss).
-- Using BigNumber.js or ethers.BigNumber. We use **native bigint** end-to-end.
-
-## 4. Form State Machines
-
-Every multi-step write flow (place bet, deposit, withdraw, claim) follows the
-canonical state machine from `13-web3-ux.md §5`. The form layer adds:
-
-```mermaid
-stateDiagram-v2
-  [*] --> editing
-  editing --> validating: blur / submit
-  validating --> editing: errors
-  validating --> simulating: schema ok
-  simulating --> approving: needs approval
-  approving --> editing: approval rejected
-  approving --> simulating: approval confirmed
-  simulating --> previewing: tx simulated
-  previewing --> editing: user edits → restart
-  previewing --> signing: confirm
-  signing --> pending: signed
-  pending --> success: receipt 1
-  pending --> failed: receipt 0
-  failed --> editing
-  success --> [*]
-```
-
-State is owned by RHF + a thin orchestrator hook:
-
-```ts
-const form = useForm<PlaceBetInput>({ resolver, defaultValues });
-const flow = usePlaceBetFlow(form);
-
-flow.state; // 'editing' | 'validating' | 'simulating' | …
-flow.simulationResult;
-flow.error;
-flow.submit();
-flow.reset();
-```
-
-The form UI binds to `flow.state` to render the right CTA label and
-disabled states.
-
-## 5. Validation Layering
-
-Three layers, in order:
-
-1. **Type-level** — TypeScript prevents wrong shapes at compile time.
-2. **Schema** — zod catches structural and value errors before simulation.
-3. **Simulation** — `eth_call` catches contract-level reverts not visible to
-   the schema (e.g., bank paused, insufficient allowance).
-
-Schema validation triggers on:
-
-- field blur (immediate feedback)
-- form submit (full validation)
-- value-changed-from-pristine + form-is-submitted (re-validate touched
-  fields)
-
-Schema **does not** trigger on every keystroke. Aggressive validation is a
-known UX anti-pattern (constant error flicker while typing).
-
-## 6. Error Surface
-
-### 6.1 Where errors show
-
-| Error class                          | UI                                                     |
-| ------------------------------------ | ------------------------------------------------------ |
-| Field-level (schema)                 | `aria-invalid` + inline message under field            |
-| Cross-field (e.g., amount + balance) | banner at top of form                                  |
-| Simulation revert                    | toast OR inline depending on `13-web3-ux §8` placement |
-| Async (RPC down)                     | banner with retry                                      |
-
-### 6.2 Wording
-
-Per `02-voice-and-copy.md §4.2`. Field errors are short noun phrases:
-
-- `Amount must be greater than zero.`
 - `Amount above your balance.`
-- `House edge cap below current effective edge.`
+- `Wallet rejected the request.`
+- `Result is not indexed yet. Refresh or verify on-chain.`
+- `Keeper is delayed. You can settle manually as a fallback.`
 
-Never:
+Do not show raw viem, wagmi, JSON-RPC, Solidity selector, or stack-trace text in
+normal player UI. Raw diagnostics belong in developer details, logs, tests, or
+ops-only views.
 
-- `Please enter a valid amount.` (vague)
-- `Amount > 0 required.` (math notation)
-- `Invalid input.` (uninformative)
-
-## 7. Accessibility for Forms
+## 7. Accessibility
 
 Every field has:
 
-- a `<label>` (visible or `sr-only`).
-- `aria-describedby` to hint + error nodes.
-- `aria-invalid` when in error.
-- `aria-required` when required.
-- focus order that follows visual order.
-- a stable `id` (`useId` from React) — no `Math.random()` ids.
+- a visible label or `sr-only` label;
+- `aria-invalid` when invalid;
+- `aria-describedby` pointing to hint and error text;
+- a stable id;
+- focus-visible styling;
+- keyboard-reachable actions.
 
-Submit button:
+Do not disable the submit button in a way that hides why the user cannot
+continue. If the button is blocked, the blocking reason must be visible nearby.
 
-- disabled state is announced via `aria-disabled` (not the HTML `disabled`
-  attribute when keyboard focus is needed for tooltips).
-- loading state replaces label per `02-voice-and-copy.md §4.1`.
+## 8. Draft Persistence
 
-## 8. Multi-step Flows
+Persist drafts only when it improves repeat play or prevents obvious loss:
 
-Multi-step flows (e.g., `Approve → Place bet`) use a single form with derived
-"current step" state, not multiple forms. Reasons:
+- casino advanced bet options;
+- sportsbook partially built ticket;
+- operator market form.
 
-- shared field values persist across steps without prop drilling
-- back navigation is one `setStep('approve')` call
-- the validation schema is one zod object
+Do not persist:
 
-Step transitions are driven by the flow state machine (§4), not user clicks.
-Clicks dispatch events ("confirm", "back"), the machine decides the next
-state.
+- wallet signatures;
+- private keys or secrets;
+- approval payloads;
+- stale odds beyond their expiry.
 
-## 9. Draft Persistence
+Use a namespaced key:
 
-For long-lived forms (e.g., a casino bet panel with custom stopGain/stopLoss
-config), the draft persists to IndexedDB under
-`arbi:<vertical>:<form>:draft:<slug>` after debounce 500ms.
+```text
+arbigamefi:<chainId>:<feature>:<form>:<scope>
+```
 
-Restored on mount. Cleared on success or explicit reset.
+## 9. Formatting
 
-Don't persist:
+Display formatting follows `02-voice-and-copy.md`.
 
-- wallet addresses entered as text (auto-fill from `useAccount()`)
-- signature payloads
-- raw private inputs (none should exist)
+- Amounts trim trailing zeros.
+- Addresses use the shared short form.
+- Transaction hashes and request ids can be copied and expanded.
+- Time copy uses explicit UTC for audit or ops surfaces.
 
-## 10. Number / Percent / Time Display
+Forms do not invent local formatters. Add shared helpers when a formatter is
+missing.
 
-Display formatters live in `@ssot/ui/utils`:
+## 10. Do Not Do
 
-- `formatAmount(value, decimals, opts)` — implements `02-voice-and-copy.md §5.1`.
-- `formatPercent(bps, opts)` — implements §5.2-3.
-- `formatMultiplier(value)` — implements §5.4.
-- `shortAddress(addr)` — implements §5.5.
-- `shortDigest(hash)` — implements §5.6.
-- `formatRelativeTime(ms)` — implements §5.7-8.
+- Do not ask users to read docs to know how to place a bet.
+- Do not show raw RPC errors in player flows.
+- Do not validate currency inputs on every keystroke with flickering errors.
+- Do not add a "force submit" escape hatch.
+- Do not mix display decimals with contract decimals.
+- Do not infer asset metadata from token address when release metadata exists.
 
-Forms never compute these locally. If a formatter is missing, add it to the
-shared module and document.
-
-## 11. Don'ts
-
-- No native `<input type="number">` for asset amounts.
-- No `parseFloat`/`Number` on user-entered amount strings.
-- No form library other than RHF.
-- No validation on every keystroke for currency inputs.
-- No alert-style errors (`window.alert`).
-- No "soft" validation that bypasses schema (e.g., a "force submit" toggle).
-- No persisting drafts containing signatures or secrets.
-- No `defaultValue` to bigint zero — null is the canonical "empty" value.
-- No CTA enabled until at least one field is touched (avoid accidental
-  submit on Enter).
-
-## 12. How To Enforce
+## 11. Verification
 
 ```bash
-# Native number inputs banned
-rg -nE 'type=\"number\"' frontend/apps/web/src
-
-# parseFloat / Number on inputs banned
-rg -nE "parseFloat\\(|Number\\(.*input|toFixed" frontend/apps/web/src/features
-
-# Forbidden form libraries
-rg -nE "from 'formik'|from 'final-form'" frontend
-
-# Inline zod regex duplicates of shared helpers
-rg -nE "regex\\(/\\^0x" frontend/apps/web/src
-
-# Schema files exist where required
-node scripts/check-form-schemas.mjs
+rg -nE "type=['\\\"]number['\\\"]" frontend/apps/web/src
+rg -nE "parseFloat|Number\\(" frontend/apps/web/src/features frontend/apps/web/src/components
+rg -nE "viem@|Contract Call:|execution reverted|JSON-RPC" frontend/apps/web/src
+pnpm -C frontend test
 ```
-
-## 13. Examples
-
-### 13.1 Place bet form
-
-```tsx
-"use client";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { NumberInput, Button, Tabs } from "@ssot/ui/primitives";
-import { BetSlip } from "@ssot/ui/patterns";
-
-export function DiceBetForm({ asset, module }: Props) {
-  const form = useForm<PlaceBetInput>({
-    resolver: zodResolver(placeBetSchema),
-    defaultValues: {
-      asset: asset.address,
-      amount: null,
-      betCount: 1,
-      maxHouseEdgeBps: 200,
-    },
-    mode: "onBlur",
-  });
-  const flow = usePlaceBetFlow(form);
-  return (
-    <BetSlip flow={flow}>
-      <BetSlip.AmountInput>
-        <NumberInput
-          value={form.watch("amount")}
-          onChange={(v) => form.setValue("amount", v, { shouldValidate: true })}
-          decimals={asset.decimals}
-          max={asset.balance}
-          aria-invalid={!!form.formState.errors.amount}
-          aria-describedby="amount-hint amount-error"
-        />
-        {form.formState.errors.amount && (
-          <p id="amount-error" className="text-danger t-caption">
-            {form.formState.errors.amount.message}
-          </p>
-        )}
-      </BetSlip.AmountInput>
-      <BetSlip.Action />
-    </BetSlip>
-  );
-}
-```
-
-### 13.2 LP withdraw form
-
-```tsx
-const form = useForm<WithdrawInput>({
-  resolver: zodResolver(withdrawSchema),
-  defaultValues: { asset, mode: "shares", amount: null },
-});
-const flow = useWithdrawFlow(form);
-```
-
-Both forms share the same orchestrator pattern with different schemas and
-flows. No copy-pasted boilerplate.
-
-## 14. Glossary
-
-| Term               | Meaning                                                 |
-| ------------------ | ------------------------------------------------------- |
-| RHF                | react-hook-form                                         |
-| zod resolver       | `@hookform/resolvers/zod` adapter                       |
-| Form state machine | Wrapper hook coupling RHF state to the tx state machine |
-| Draft persistence  | IndexedDB-backed restore of form values across sessions |
