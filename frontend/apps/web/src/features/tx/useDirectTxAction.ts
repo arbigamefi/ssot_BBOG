@@ -128,7 +128,7 @@ function buildSteps(
   ];
 }
 
-function toDomainError(error: unknown, fallbackMessage = "Transaction failed"): DomainError {
+function toDomainError(error: unknown, fallbackMessage = "—"): DomainError {
   if (typeof error === "object" && error && "message" in error) {
     return {
       code: "UNKNOWN_TX_ERROR",

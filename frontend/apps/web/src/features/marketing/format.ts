@@ -5,7 +5,7 @@ export function formatTokenAmount(
   decimals: number,
   symbol?: string,
   locale = "en-US",
-  pendingLabel = "Syncing"
+  pendingLabel = "—"
 ) {
   if (value == null) return pendingLabel;
   const raw = formatUnits(value, decimals);
@@ -15,12 +15,12 @@ export function formatTokenAmount(
   return symbol ? `${amount} ${symbol}` : amount;
 }
 
-export function shortDigest(value?: string, pendingLabel = "Pending") {
+export function shortDigest(value?: string, pendingLabel = "—") {
   if (!value) return pendingLabel;
   return `${value.slice(0, 10)}...${value.slice(-6)}`;
 }
 
-export function shortAddress(value?: string, pendingLabel = "Wallet pending") {
+export function shortAddress(value?: string, pendingLabel = "—") {
   if (!value) return pendingLabel;
   return `${value.slice(0, 6)}...${value.slice(-4)}`;
 }
@@ -34,11 +34,11 @@ export type TimeAgoLabels = {
 };
 
 const DEFAULT_TIME_AGO_LABELS: TimeAgoLabels = {
-  now: "just now",
-  seconds: (count) => `${count}s ago`,
-  minutes: (count) => `${count}m ago`,
-  hours: (count) => `${count}h ago`,
-  days: (count) => `${count}d ago`
+  now: "—",
+  seconds: () => "—",
+  minutes: () => "—",
+  hours: () => "—",
+  days: () => "—"
 };
 
 export function timeAgo(value?: number, labels = DEFAULT_TIME_AGO_LABELS) {

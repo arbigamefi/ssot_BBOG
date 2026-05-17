@@ -37,11 +37,10 @@ export function usePlaceBetStepper(
   messages: UsePlaceBetStepperMessages = {}
 ): UsePlaceBetStepperReturn {
   const { sdk } = useSSOTSDK();
-  const sdkNotReadyMessage =
-    messages.sdkNotReady ?? "SSOT SDK is not ready. Please connect your wallet.";
-  const transactionFailedMessage = messages.transactionFailed ?? "Transaction failed";
-  const reconcileFailedMessage = messages.reconcileFailed ?? "Reconcile failed";
-  const bindFailedMessage = messages.bindFailed ?? "Bind failed";
+  const sdkNotReadyMessage = messages.sdkNotReady ?? "—";
+  const transactionFailedMessage = messages.transactionFailed ?? "—";
+  const reconcileFailedMessage = messages.reconcileFailed ?? "—";
+  const bindFailedMessage = messages.bindFailed ?? "—";
 
   const noopError: DomainError = useMemo(
     () => ({
