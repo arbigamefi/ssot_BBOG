@@ -1,4 +1,4 @@
-import { useCallback, useReducer, useState } from "react";
+import { useCallback, useMemo, useReducer, useState } from "react";
 
 import type { DomainError, PlaceBetInput, PlaceBetPlan } from "@ssot/ssot";
 
@@ -26,14 +26,31 @@ export type UsePlaceBetStepperReturn = {
   reset: () => void;
 };
 
-export function usePlaceBetStepper(): UsePlaceBetStepperReturn {
-  const { sdk } = useSSOTSDK();
+export type UsePlaceBetStepperMessages = {
+  sdkNotReady?: string;
+  transactionFailed?: string;
+  reconcileFailed?: string;
+  bindFailed?: string;
+};
 
-  const noopError: DomainError = {
-    code: "SDK_NOT_READY",
-    message: "SSOT SDK is not ready. Please connect your wallet.",
-    severity: "warning"
-  };
+export function usePlaceBetStepper(
+  messages: UsePlaceBetStepperMessages = {}
+): UsePlaceBetStepperReturn {
+  const { sdk } = useSSOTSDK();
+  const sdkNotReadyMessage =
+    messages.sdkNotReady ?? "SSOT SDK is not ready. Please connect your wallet.";
+  const transactionFailedMessage = messages.transactionFailed ?? "Transaction failed";
+  const reconcileFailedMessage = messages.reconcileFailed ?? "Reconcile failed";
+  const bindFailedMessage = messages.bindFailed ?? "Bind failed";
+
+  const noopError: DomainError = useMemo(
+    () => ({
+      code: "SDK_NOT_READY",
+      message: sdkNotReadyMessage,
+      severity: "warning"
+    }),
+    [sdkNotReadyMessage]
+  );
 
   const [state, dispatch] = useReducer(reduceBetStepper, initialBetStepperState);
 
@@ -81,17 +98,19 @@ export function usePlaceBetStepper(): UsePlaceBetStepperReturn {
         const result = await sdk.gameHub.executePlan(plan);
         if (!result.placeBetTx.ok) {
           const error: DomainError =
-            result.placeBetTx.error ?? unknownTxError("Transaction failed");
+            result.placeBetTx.error ?? unknownTxError(transactionFailedMessage);
           dispatch({ type: "EXECUTE_ERROR", error });
           return;
         }
         dispatch({ type: "EXECUTE_SUCCESS", result });
       } catch (e) {
-        const error: DomainError = unknownTxError((e as Error)?.message ?? "Transaction failed");
+        const error: DomainError = unknownTxError(
+          (e as Error)?.message ?? transactionFailedMessage
+        );
         dispatch({ type: "EXECUTE_ERROR", error });
       }
     },
-    [sdk, state.plan, unknownTxError, noopError]
+    [sdk, state.plan, unknownTxError, noopError, transactionFailedMessage]
   );
 
   const reconcileNow = useCallback(async () => {
@@ -111,12 +130,12 @@ export function usePlaceBetStepper(): UsePlaceBetStepperReturn {
     } catch (e) {
       dispatch({
         type: "RECONCILE_ERROR",
-        error: unknownTxError((e as Error)?.message ?? "Reconcile failed")
+        error: unknownTxError((e as Error)?.message ?? reconcileFailedMessage)
       });
     } finally {
       setReconciling(false);
     }
-  }, [sdk, state.result, unknownTxError]);
+  }, [sdk, state.result, unknownTxError, reconcileFailedMessage]);
 
   const bindNow = useCallback(
     async (betId: bigint) => {
@@ -136,13 +155,13 @@ export function usePlaceBetStepper(): UsePlaceBetStepperReturn {
       } catch (e) {
         dispatch({
           type: "RECONCILE_ERROR",
-          error: unknownTxError((e as Error)?.message ?? "Bind failed")
+          error: unknownTxError((e as Error)?.message ?? bindFailedMessage)
         });
       } finally {
         setBinding(false);
       }
     },
-    [sdk, state.result, unknownTxError]
+    [sdk, state.result, unknownTxError, bindFailedMessage]
   );
 
   const reset = useCallback(() => dispatch({ type: "RESET" }), []);

@@ -51,7 +51,12 @@ export function useCasinoRound({
   onRoundReset
 }: UseCasinoRoundArgs) {
   const t = useTranslations();
-  const { planNow, executeNow, state, reset } = usePlaceBetStepper();
+  const { planNow, executeNow, state, reset } = usePlaceBetStepper({
+    sdkNotReady: t("casino.room.errors.sdkNotReady"),
+    transactionFailed: t("casino.room.errors.transactionFailedShort"),
+    reconcileFailed: t("casino.room.errors.reconcileFailed"),
+    bindFailed: t("casino.room.errors.bindFailed")
+  });
   const vrfQuote = useCasinoVrfQuote({
     sdk,
     betCount,
