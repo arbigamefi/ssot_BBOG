@@ -6,7 +6,7 @@
 | Depends on | `../strategy/fullstack-product-architecture.md`, `../design/frontend-implementation-roadmap.md` |
 
 This directory contains launch-relevant engineering references for the frontend
-and adjacent runtimes. It is no longer a Gate A/B/C process directory.
+and adjacent runtimes. It is no longer a process-gate directory.
 
 ## Required For Launch
 

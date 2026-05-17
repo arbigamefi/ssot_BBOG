@@ -4,7 +4,7 @@
 | Status | Active |
 | Last Updated | 2026-05-18 |
 | Depends on | `../strategy/fullstack-product-architecture.md`, `frontend-implementation-roadmap.md` |
-| Supersedes | monolithic North Star and Gate A/B/C rewrite index |
+| Supersedes | monolithic North Star and rewrite index |
 
 This file is now a short orientation page. It should not grow back into a
 monolithic design constitution.

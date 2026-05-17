@@ -4,11 +4,11 @@
 | Status | Active |
 | Last Updated | 2026-05-18 |
 | Depends on | `../strategy/fullstack-product-architecture.md`, `frontend-implementation-roadmap.md` |
-| Supersedes | clean-room Gate A/B/C execution playbook |
+| Supersedes | historical gate-driven execution playbook |
 
-This file is no longer a gate-driven rewrite plan. The clean-room rewrite has
-already cut over. This document now records the surviving architecture,
-boundaries, deletion principles, and verification commands.
+This file is no longer a rewrite plan. The frontend cutover has already landed.
+This document now records the surviving architecture, runtime boundaries,
+cleanup principles, and verification commands.
 
 For current sequencing, use
 [`frontend-implementation-roadmap.md`](./frontend-implementation-roadmap.md).

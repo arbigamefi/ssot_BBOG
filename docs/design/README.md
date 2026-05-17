@@ -12,10 +12,10 @@ ArbiGameFi. The fullstack boundary is defined by
 > Protocol-grade contracts; lean B2C casino/sportsbook product; optional future
 > infrastructure.
 
-The previous clean-room rewrite plan used Gate A/B/C and a large numbered SSOT
-set. That was useful during the rewrite, but it is no longer the operating
-model. New frontend work should use the current roadmap, launch requirements,
-and runtime evidence instead of reopening the gate process.
+The previous rewrite used a larger numbered SSOT set. That was useful during
+cutover, but it is no longer the operating model. New frontend work should use
+the current roadmap, launch requirements, and runtime evidence instead of
+reopening process gates.
 
 ## Current Execution Entry Points
 
@@ -84,7 +84,7 @@ Current high-signal ADRs:
 
 ## Do Not Do
 
-- Do not reintroduce Gate A/B/C as frontend workflow.
+- Do not reintroduce gate ceremony as frontend workflow.
 - Do not add frontend complexity for white-label/operator workflows before a
   real operator requirement exists.
 - Do not collapse `packages/ssot`, `packages/bet-index`, or `apps/keeper` only
