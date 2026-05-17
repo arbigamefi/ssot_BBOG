@@ -15,6 +15,20 @@ pnpm -C frontend keeper:build
 
 Start from `frontend/apps/keeper/.env.example` and keep the real file local.
 
+For local Base Sepolia development, the repo root `.env` can be reused. This
+starts Next.js and the keeper together, writes the health snapshot, and lets the
+casino room auto-settle after VRF fulfills:
+
+```bash
+pnpm -C frontend dev:with-keeper -- --port 3002
+```
+
+Keeper-only local run:
+
+```bash
+pnpm -C frontend keeper:dev
+```
+
 ```bash
 KEEPER_PRIVATE_KEY=0x... \
 KEEPER_CHAIN_ID=84532 \
