@@ -649,6 +649,81 @@
       },
       "loading": "正在加载 SportsHub 票据...",
       "empty": "先检查票据，以便在广播债务退出前确认仓位 ID、本金、赔付和终结状态。"
+    },
+    "operator": {
+      "validation": {
+        "positiveInteger": "{label} 必须是正整数。",
+        "bytes32": "{label} 必须是 32-byte hex 值。"
+      },
+      "status": {
+        "noTransaction": "尚未提交运营交易。",
+        "failed": "{label} 失败。",
+        "submitted": "{label} 已提交",
+        "sdkUnavailable": "SDK 不可用。"
+      },
+      "summary": {
+        "writeStatus": "写入状态",
+        "walletConnected": "钱包已连接",
+        "walletRequired": "需要钱包",
+        "rolesHelper": "合约角色由 SportsHub 在链上强制执行。",
+        "lastAction": "上一操作",
+        "lastTx": "上一笔交易",
+        "readOnly": "只读",
+        "writable": "可写",
+        "noWallet": "未连接钱包"
+      },
+      "create": {
+        "title": "创建固定赔率市场"
+      },
+      "lifecycle": {
+        "title": "生命周期与赛果"
+      },
+      "fields": {
+        "eventId": "赛事 ID",
+        "poolId": "资金池 ID",
+        "outcomeCount": "结果数量",
+        "outcomes": "结果数",
+        "startsAt": "开始时间",
+        "startsAtUnix": "开始时间 unix",
+        "lockTime": "锁定时间",
+        "lockTimeUnix": "锁定时间 unix",
+        "resultFinality": "赛果 finality",
+        "finalitySeconds": "Finality 秒",
+        "marketKey": "市场 key",
+        "rulebookHash": "规则书哈希",
+        "marketId": "市场 ID",
+        "targetMarketId": "目标市场 ID",
+        "winningOutcome": "获胜结果",
+        "resultSourceHash": "赛果来源哈希",
+        "evidenceHash": "证据哈希",
+        "observedAt": "观察时间",
+        "observedAtUnix": "观察时间 unix",
+        "challengeReasonHash": "挑战原因哈希",
+        "decisionHash": "决策哈希",
+        "arbitrationDecisionHash": "仲裁决策哈希",
+        "voidReasonHash": "作废原因哈希"
+      },
+      "actions": {
+        "createMarket": "创建市场",
+        "openMarket": "打开市场",
+        "lockMarket": "锁定市场",
+        "proposeResult": "提议赛果",
+        "finalizeResult": "最终确认赛果",
+        "challengeResult": "挑战赛果",
+        "resolveChallenge": "处理挑战",
+        "voidMarket": "作废市场"
+      },
+      "buttons": {
+        "open": "打开",
+        "lock": "锁定",
+        "proposeResult": "提议赛果",
+        "finalize": "最终确认",
+        "challenge": "挑战",
+        "uphold": "维持",
+        "reopen": "重开",
+        "voidChallenged": "作废被挑战市场",
+        "void": "作废"
+      }
     }
   },
   "nav": {

@@ -649,6 +649,81 @@
       },
       "loading": "Loading SportsHub ticket...",
       "empty": "Inspect a ticket to verify position id, stake, payout, and terminal state before broadcasting debt-out."
+    },
+    "operator": {
+      "validation": {
+        "positiveInteger": "{label} must be a positive integer.",
+        "bytes32": "{label} must be a 32-byte hex value."
+      },
+      "status": {
+        "noTransaction": "No operator transaction submitted.",
+        "failed": "{label} failed.",
+        "submitted": "{label} submitted",
+        "sdkUnavailable": "SDK unavailable."
+      },
+      "summary": {
+        "writeStatus": "Write status",
+        "walletConnected": "Wallet connected",
+        "walletRequired": "Wallet required",
+        "rolesHelper": "Contract roles are enforced on-chain by SportsHub.",
+        "lastAction": "Last action",
+        "lastTx": "Last tx",
+        "readOnly": "Read-only",
+        "writable": "Writable",
+        "noWallet": "No wallet"
+      },
+      "create": {
+        "title": "Create fixed-odds market"
+      },
+      "lifecycle": {
+        "title": "Lifecycle and result"
+      },
+      "fields": {
+        "eventId": "Event id",
+        "poolId": "Pool id",
+        "outcomeCount": "Outcome count",
+        "outcomes": "Outcomes",
+        "startsAt": "Starts at",
+        "startsAtUnix": "Starts at unix",
+        "lockTime": "Lock time",
+        "lockTimeUnix": "Lock time unix",
+        "resultFinality": "Result finality",
+        "finalitySeconds": "Finality seconds",
+        "marketKey": "Market key",
+        "rulebookHash": "Rulebook hash",
+        "marketId": "Market id",
+        "targetMarketId": "Target market id",
+        "winningOutcome": "Winning outcome",
+        "resultSourceHash": "Result source hash",
+        "evidenceHash": "Evidence hash",
+        "observedAt": "Observed at",
+        "observedAtUnix": "Observed at unix",
+        "challengeReasonHash": "Challenge reason hash",
+        "decisionHash": "Decision hash",
+        "arbitrationDecisionHash": "Arbitration decision hash",
+        "voidReasonHash": "Void reason hash"
+      },
+      "actions": {
+        "createMarket": "Create market",
+        "openMarket": "Open market",
+        "lockMarket": "Lock market",
+        "proposeResult": "Propose result",
+        "finalizeResult": "Finalize result",
+        "challengeResult": "Challenge result",
+        "resolveChallenge": "Resolve challenge",
+        "voidMarket": "Void market"
+      },
+      "buttons": {
+        "open": "Open",
+        "lock": "Lock",
+        "proposeResult": "Propose result",
+        "finalize": "Finalize",
+        "challenge": "Challenge",
+        "uphold": "Uphold",
+        "reopen": "Reopen",
+        "voidChallenged": "Void challenged",
+        "void": "Void"
+      }
     }
   },
   "nav": {
