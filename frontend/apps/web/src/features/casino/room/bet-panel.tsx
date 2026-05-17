@@ -8,15 +8,15 @@ import {
   BetPayoutSummary,
   BetRollsSection
 } from "./bet-panel-sections";
-import type { GameRoomBetPanelState } from "./bet-panel-state";
 import { GameSelectionControls } from "./game-selection-controls";
 import type { GameMeta } from "./model";
 import type { CoinSide } from "./params";
+import type { GameRoomBetPanelState } from "./place-bet-button";
 import { PlaceBetButton } from "./place-bet-button";
 import { CasinoRoundStatusPanel } from "./round-status-panel";
 import type { CasinoRoundPhase } from "./casino-round";
 
-export type { GameRoomBetPanelState } from "./bet-panel-state";
+export type { GameRoomBetPanelState } from "./place-bet-button";
 export { isPlaceBetButtonDisabled } from "./place-bet-button";
 
 export function GameRoomBetPanel({

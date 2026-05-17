@@ -2,7 +2,11 @@ import * as React from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "@ssot/ui";
 
-import type { GameRoomBetPanelState } from "./bet-panel-state";
+export type GameRoomBetPanelState = {
+  status: string;
+  error?: { message?: string };
+  plan?: { preview?: { needsApproval?: boolean } };
+};
 
 export function isPlaceBetButtonDisabled({
   gameSlug,
