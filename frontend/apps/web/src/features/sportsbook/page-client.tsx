@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import type { SSOTRelease } from "@ssot/ssot/release";
 
@@ -31,17 +32,17 @@ import { SportsbookOperatorPanel } from "./operator-panel";
 
 const CONTROL_LINKS = [
   {
-    label: "Go/no-go packet",
+    labelKey: "sportsbook.index.controls.links.goNoGo",
     href: "/ops",
     detail: "docs/ops/sportsbook-phase2-gonogo-2026-05-14.md"
   },
   {
-    label: "Frontend access policy",
+    labelKey: "sportsbook.index.controls.links.frontendAccess",
     href: "/ops",
     detail: "docs/ops/sportsbook-frontend-access.md"
   },
   {
-    label: "Provider policy",
+    labelKey: "sportsbook.index.controls.links.providerPolicy",
     href: "/ops",
     detail: "docs/ops/sportsbook-provider-the-odds-api.md"
   }
@@ -71,6 +72,7 @@ function isMarketTapeRow(row: MarketTapeRow | undefined): row is MarketTapeRow {
 }
 
 export function SportsbookPageClient() {
+  const t = useTranslations();
   const { release, readOnly, readOnlyReason, sportsbook } = useRelease();
   const { sdk, ready } = useSSOTSDK();
   const [marketInput, setMarketInput] = React.useState("");
@@ -186,22 +188,22 @@ export function SportsbookPageClient() {
   const submitMarketLookup = React.useCallback(() => {
     const parsed = parseLookupId(marketInput);
     if (parsed === undefined) {
-      setMarketInputError("Enter a numeric market id.");
+      setMarketInputError(t("sportsbook.index.lookup.marketNumericError"));
       return;
     }
     setMarketInputError(undefined);
     setMarketLookupId(parsed);
-  }, [marketInput]);
+  }, [marketInput, t]);
 
   const submitTicketLookup = React.useCallback(() => {
     const parsed = parseLookupId(ticketInput);
     if (parsed === undefined) {
-      setTicketInputError("Enter a numeric ticket id.");
+      setTicketInputError(t("sportsbook.index.lookup.ticketNumericError"));
       return;
     }
     setTicketInputError(undefined);
     setTicketLookupId(parsed);
-  }, [ticketInput]);
+  }, [ticketInput, t]);
 
   const inspectRecentMarket = React.useCallback((marketId: bigint) => {
     setMarketInput(marketId.toString());
@@ -218,11 +220,11 @@ export function SportsbookPageClient() {
       <PageTransition pageKey="sportsbook">
         <div className="mx-auto max-w-3xl py-16">
           <SectionShell
-            eyebrow="Sportsbook"
-            title="No release loaded"
-            description={readOnlyReason ?? "The embedded release snapshot is unavailable."}
+            eyebrow={t("nav.sportsbook")}
+            title={t("sportsbook.index.noRelease.title")}
+            description={readOnlyReason ?? t("sportsbook.index.noRelease.description")}
           >
-            <StatusPill tone="warn">Unavailable</StatusPill>
+            <StatusPill tone="warn">{t("sportsbook.index.noRelease.status")}</StatusPill>
           </SectionShell>
         </div>
       </PageTransition>
@@ -261,114 +263,154 @@ export function SportsbookPageClient() {
           <div className="max-w-4xl">
             <div className="flex flex-wrap items-center gap-3">
               <StatusPill tone={statusTone}>
-                {sportsbook.enabled ? "Metadata enabled" : "Read-only preview"}
+                {sportsbook.enabled
+                  ? t("sportsbook.index.header.metadataEnabled")
+                  : t("sportsbook.index.header.readOnlyPreview")}
               </StatusPill>
               <StatusPill tone={sportsbook.hasSportsRelease ? "success" : "warn"}>
-                {sportsbook.hasSportsRelease ? "SportsHub present" : "SportsHub missing"}
+                {sportsbook.hasSportsRelease
+                  ? t("sportsbook.index.header.sportsHubPresent")
+                  : t("sportsbook.index.header.sportsHubMissing")}
               </StatusPill>
             </div>
             <h1 className="mt-5 text-4xl font-black tracking-tight text-fg md:text-5xl">
-              Sportsbook Control Room
+              {t("sportsbook.index.header.title")}
             </h1>
             <p className="mt-4 max-w-3xl text-sm leading-7 text-fg-muted md:text-[15px]">
-              Fixed-odds sports markets stay behind explicit launch controls. This entry exposes the
-              deployed SportsHub surface, release risk caps, and the signed-odds ticket path when
-              the frontend gate is enabled.
+              {t("sportsbook.index.header.description")}
             </p>
           </div>
 
           <div className="rounded-lg border border-border bg-surface-1/70 p-5 shadow-e2">
             <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-fg-subtle">
-              Public risk-in
+              {t("sportsbook.index.riskCard.eyebrow")}
             </div>
             <div className="mt-3 text-2xl font-black text-fg">
-              {sportsbook.enabled ? "Signed odds only" : "Locked"}
+              {sportsbook.enabled
+                ? t("sportsbook.index.riskCard.signedOddsOnly")
+                : t("sportsbook.index.riskCard.locked")}
             </div>
             <p className="mt-2 text-sm leading-6 text-fg-muted">
-              {sportsbook.disabledReason ??
-                "Open a market detail page and provide a signed odds snapshot before placement."}
+              {sportsbook.disabledReason ?? t("sportsbook.index.riskCard.description")}
             </p>
             <Link
               href={latestMarketHref}
               className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-border bg-surface-2 px-4 text-sm font-semibold text-fg transition-colors hover:border-brand/40 hover:bg-surface-3"
             >
-              Inspect market before placing
+              {t("sportsbook.index.riskCard.inspect")}
             </Link>
           </div>
         </header>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <DetailCell
-            label="Release"
+            label={t("sportsbook.index.details.release")}
             value={shortHex(release.releaseDigest)}
             helper={release.name}
           />
           <DetailCell
-            label="SportsHub"
+            label={t("sportsbook.index.details.sportsHub")}
             value={shortHex(sportsHub)}
-            helper={sportsbook.hasSportsRelease ? "Embedded metadata present" : "Not available"}
+            helper={
+              sportsbook.hasSportsRelease
+                ? t("sportsbook.index.details.embeddedMetadataPresent")
+                : t("sportsbook.index.details.notAvailable")
+            }
           />
           <DetailCell
-            label="Risk engine"
+            label={t("sportsbook.index.details.riskEngine")}
             value={shortHex(riskEngine)}
-            helper="Shared cap enforcement surface"
+            helper={t("sportsbook.index.details.riskEngineHelper")}
           />
           <DetailCell
-            label="Challenge window"
+            label={t("sportsbook.index.details.challengeWindow")}
             value={formatDuration(sports?.resultChallengeTimeoutSeconds)}
-            helper="Result dispute timeout"
+            helper={t("sportsbook.index.details.challengeWindowHelper")}
           />
           <DetailCell
-            label="Next market"
+            label={t("sportsbook.index.details.nextMarket")}
             value={formatCounter(runtimeCounters?.nextMarketId)}
-            helper={runtimeError ? "SportsHub runtime read failed" : "Read through @ssot/ssot SDK"}
+            helper={
+              runtimeError
+                ? t("sportsbook.index.details.runtimeReadFailed")
+                : t("sportsbook.index.details.sdkRead")
+            }
           />
           <DetailCell
-            label="Next ticket"
+            label={t("sportsbook.index.details.nextTicket")}
             value={formatCounter(runtimeCounters?.nextTicketId)}
-            helper={runtimeError ? "SportsHub runtime read failed" : "Read through @ssot/ssot SDK"}
+            helper={
+              runtimeError
+                ? t("sportsbook.index.details.runtimeReadFailed")
+                : t("sportsbook.index.details.sdkRead")
+            }
           />
         </div>
 
         <div className="grid gap-8 xl:grid-cols-[1fr_0.9fr]">
           <SectionShell
-            eyebrow="Sports release"
-            title="Oracle and settlement surface"
-            description="The active bundle exposes signed odds identity, result reporter quorum, and the bootstrap dispute roles needed by SportsHub settlement."
+            eyebrow={t("sportsbook.index.release.eyebrow")}
+            title={t("sportsbook.index.release.title")}
+            description={t("sportsbook.index.release.description")}
           >
             <div className="grid gap-4 md:grid-cols-2">
-              <DetailCell label="Odds signer set" value={shortHex(sports?.oddsSignerSetHash)} />
               <DetailCell
-                label="Result reporter set"
+                label={t("sportsbook.index.release.oddsSignerSet")}
+                value={shortHex(sports?.oddsSignerSetHash)}
+              />
+              <DetailCell
+                label={t("sportsbook.index.release.resultReporterSet")}
                 value={shortHex(sports?.resultReporterSetHash)}
               />
               <DetailCell
-                label="Reporter threshold"
-                value={sports?.resultReporterThreshold ?? "N/A"}
-                helper="Minimum result reporters"
+                label={t("sportsbook.index.release.reporterThreshold")}
+                value={sports?.resultReporterThreshold ?? t("sportsbook.components.na")}
+                helper={t("sportsbook.index.release.reporterThresholdHelper")}
               />
               <DetailCell
-                label="Frontend flag"
-                value={sportsbook.frontendEnabled ? "true" : "false"}
+                label={t("sportsbook.index.release.frontendFlag")}
+                value={
+                  sportsbook.frontendEnabled
+                    ? t("sportsbook.index.release.booleanTrue")
+                    : t("sportsbook.index.release.booleanFalse")
+                }
                 helper={sportsbook.enablementFlag}
                 mono={false}
               />
-              <DetailCell label="Challenger" value={shortHex(sports?.resultChallenger)} />
-              <DetailCell label="Arbitrator" value={shortHex(sports?.resultArbitrator)} />
+              <DetailCell
+                label={t("sportsbook.index.release.challenger")}
+                value={shortHex(sports?.resultChallenger)}
+              />
+              <DetailCell
+                label={t("sportsbook.index.release.arbitrator")}
+                value={shortHex(sports?.resultArbitrator)}
+              />
             </div>
           </SectionShell>
 
           <SectionShell
-            eyebrow="MVP market"
-            title="Football 1X2 readiness"
-            description="The current provider path is scoped to pre-match fixed odds, signed snapshots, and explicit result evidence before any public launch decision."
+            eyebrow={t("sportsbook.index.mvp.eyebrow")}
+            title={t("sportsbook.index.mvp.title")}
+            description={t("sportsbook.index.mvp.description")}
           >
             <div className="grid gap-3">
               {[
-                ["Market type", "Pre-match football 1X2"],
-                ["Odds source", "The Odds API candidate"],
-                ["Settlement", "Reporter result plus challenge window"],
-                ["Launch state", "Phase 2 NO-GO for public risk-in"]
+                [
+                  t("sportsbook.index.mvp.rows.marketType.label"),
+                  t("sportsbook.index.mvp.rows.marketType.value")
+                ],
+                [
+                  t("sportsbook.index.mvp.rows.oddsSource.label"),
+                  t("sportsbook.index.mvp.rows.oddsSource.value")
+                ],
+                [
+                  t("sportsbook.index.mvp.rows.settlement.label"),
+                  t("sportsbook.index.mvp.rows.settlement.value")
+                ],
+                [
+                  t("sportsbook.index.mvp.rows.launchState.label"),
+                  t("sportsbook.index.mvp.rows.launchState.value")
+                ]
               ].map(([label, value]) => (
                 <div
                   key={label}
@@ -384,18 +426,18 @@ export function SportsbookPageClient() {
 
         {riskSummary ? (
           <SectionShell
-            eyebrow="Protocol caps"
-            title="Top-level SportsHub limits"
-            description="These raw-unit caps are copied from the embedded release and should stay aligned with the deployment bundle and ops approval memos."
+            eyebrow={t("sportsbook.index.caps.eyebrow")}
+            title={t("sportsbook.index.caps.title")}
+            description={t("sportsbook.index.caps.description")}
           >
-            <RiskRows title="SportsHub global risk caps" risk={riskSummary} />
+            <RiskRows title={t("sportsbook.index.caps.riskTitle")} risk={riskSummary} />
           </SectionShell>
         ) : null}
 
         <SectionShell
-          eyebrow="Market tape"
-          title="Recent SportsHub markets"
-          description="The frontend reads the latest on-chain SportsHub market ids directly through the v1.3 SDK. Ticket placement is only available from a market detail page after the signed-odds gate is satisfied."
+          eyebrow={t("sportsbook.index.marketTape.eyebrow")}
+          title={t("sportsbook.index.marketTape.title")}
+          description={t("sportsbook.index.marketTape.description")}
         >
           <MarketTape
             rows={recentMarkets ?? []}
@@ -406,15 +448,15 @@ export function SportsbookPageClient() {
         </SectionShell>
 
         <SectionShell
-          eyebrow="On-chain lookup"
-          title="Inspect SportsHub records"
-          description="Lookup stays read-only and goes through the v1.3 SDK. Use market detail for the signed-odds ticket flow."
+          eyebrow={t("sportsbook.index.lookup.eyebrow")}
+          title={t("sportsbook.index.lookup.title")}
+          description={t("sportsbook.index.lookup.description")}
         >
           <div className="grid gap-5 xl:grid-cols-2">
             <div className="grid gap-4">
               <LookupForm
                 id="sports-market-id"
-                label="Market id"
+                label={t("sportsbook.index.lookup.marketId")}
                 value={marketInput}
                 onChange={setMarketInput}
                 onSubmit={submitMarketLookup}
@@ -429,8 +471,7 @@ export function SportsbookPageClient() {
                 />
               ) : (
                 <div className="rounded-lg border border-border bg-surface-2/50 p-4 text-sm leading-6 text-fg-muted">
-                  Enter a SportsHub market id to inspect state, result status, and reserved
-                  exposure.
+                  {t("sportsbook.index.lookup.marketEmpty")}
                 </div>
               )}
             </div>
@@ -438,7 +479,7 @@ export function SportsbookPageClient() {
             <div className="grid gap-4">
               <LookupForm
                 id="sports-ticket-id"
-                label="Ticket id"
+                label={t("sportsbook.index.lookup.ticketId")}
                 value={ticketInput}
                 onChange={setTicketInput}
                 onSubmit={submitTicketLookup}
@@ -449,7 +490,7 @@ export function SportsbookPageClient() {
                 <TicketInspector ticket={ticketLookup} />
               ) : (
                 <div className="rounded-lg border border-border bg-surface-2/50 p-4 text-sm leading-6 text-fg-muted">
-                  Enter a SportsHub ticket id to inspect position, stake, payout, and ticket state.
+                  {t("sportsbook.index.lookup.ticketEmpty")}
                 </div>
               )}
             </div>
@@ -457,9 +498,9 @@ export function SportsbookPageClient() {
         </SectionShell>
 
         <SectionShell
-          eyebrow="Operator writes"
-          title="Market and result administration"
-          description="Governance and reporter actions are exposed as typed SDK calls for authorized wallets. Public ticket placement uses a separate signed-odds path and contract roles still enforce every write."
+          eyebrow={t("sportsbook.index.operator.eyebrow")}
+          title={t("sportsbook.index.operator.title")}
+          description={t("sportsbook.index.operator.description")}
         >
           <SportsbookOperatorPanel
             sdk={sdk}
@@ -468,7 +509,7 @@ export function SportsbookPageClient() {
               readOnly
                 ? readOnlyReason
                 : sportsbook.hasSportsRelease
-                  ? "Wallet role must be authorized on SportsHub."
+                  ? t("sportsbook.index.operator.walletRoleRequired")
                   : sportsbook.disabledReason
             }
             defaultPoolId={sportsPools[0]?.poolId}
@@ -478,9 +519,9 @@ export function SportsbookPageClient() {
         </SectionShell>
 
         <SectionShell
-          eyebrow="Bankroll"
-          title="Sports pool isolation"
-          description="Sports liquidity is kept separate from casino game liquidity, so sportsbook exposure can be capped, paused, and monitored independently."
+          eyebrow={t("sportsbook.index.bankroll.eyebrow")}
+          title={t("sportsbook.index.bankroll.title")}
+          description={t("sportsbook.index.bankroll.description")}
         >
           {sportsPools.length ? (
             <div className="grid gap-5">
@@ -490,15 +531,15 @@ export function SportsbookPageClient() {
             </div>
           ) : (
             <div className="rounded-lg border border-warn/25 bg-warn-soft p-4 text-sm leading-6 text-warn">
-              No Sports pool metadata is available in this release.
+              {t("sportsbook.index.bankroll.noPool")}
             </div>
           )}
         </SectionShell>
 
         <SectionShell
-          eyebrow="Controls"
-          title="Launch blockers remain explicit"
-          description="The page is intentionally operational: it keeps the SportsHub deployment visible while preserving the public-launch blockers tracked in the ops packet."
+          eyebrow={t("sportsbook.index.controls.eyebrow")}
+          title={t("sportsbook.index.controls.title")}
+          description={t("sportsbook.index.controls.description")}
         >
           <div className="grid gap-4 md:grid-cols-3">
             {CONTROL_LINKS.map((link) => (
@@ -507,7 +548,7 @@ export function SportsbookPageClient() {
                 href={link.href}
                 className="rounded-lg border border-border bg-surface-2/70 p-4 transition-colors hover:border-brand/30 hover:bg-surface-3"
               >
-                <div className="text-sm font-semibold text-fg">{link.label}</div>
+                <div className="text-sm font-semibold text-fg">{t(link.labelKey)}</div>
                 <div className="mt-3 break-all font-mono text-xs leading-5 text-fg-muted">
                   {link.detail}
                 </div>

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import type { DomainSportsMarket, DomainSportsResult, DomainSportsTicket } from "@ssot/ssot";
 import type { SSOTRelease } from "@ssot/ssot/release";
 import { cn } from "@ssot/ui";
@@ -55,6 +56,8 @@ export function LookupForm({
   disabled?: boolean;
   error?: string;
 }) {
+  const t = useTranslations();
+
   return (
     <form
       noValidate
@@ -82,7 +85,7 @@ export function LookupForm({
           disabled={disabled}
           className="min-h-11 rounded-md bg-brand px-4 text-sm font-black text-fg-inverse shadow-glow transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Inspect
+          {t("sportsbook.components.lookup.inspect")}
         </button>
       </div>
       {error ? <div className="mt-3 text-xs leading-5 text-danger">{error}</div> : null}
@@ -114,30 +117,54 @@ export function MarketInspector({
   result?: DomainSportsResult;
   reserved?: bigint;
 }) {
+  const t = useTranslations();
   const resultStatus =
-    !result || result.proposedAt === 0 ? "No result proposed" : "Result proposed";
+    !result || result.proposedAt === 0
+      ? t("sportsbook.components.marketInspector.resultStatus.none")
+      : t("sportsbook.components.marketInspector.resultStatus.proposed");
   return (
     <div className="grid gap-5">
       <div>
-        <div className="text-sm font-semibold text-fg">Market {market.marketId.toString()}</div>
+        <div className="text-sm font-semibold text-fg">
+          {t("sportsbook.components.marketInspector.title", {
+            marketId: market.marketId.toString()
+          })}
+        </div>
         <div className="mt-1 text-xs uppercase tracking-[0.16em] text-fg-subtle">
-          {market.state} / pool {market.poolId}
+          {t("sportsbook.components.marketInspector.stateLine", {
+            state: market.state,
+            poolId: String(market.poolId)
+          })}
         </div>
       </div>
       <KeyValueRows
         rows={[
-          ["Event", market.eventId.toString()],
-          ["Outcome count", String(market.outcomeCount)],
-          ["Starts at", formatTimestamp(market.startsAt)],
-          ["Locks at", formatTimestamp(market.lockTime)],
-          ["Version", market.version.toString()],
-          ["Market reserved", reserved === undefined ? "N/A" : reserved.toString()],
-          ["Market key", shortHex(market.marketKey)],
-          ["Rulebook", shortHex(market.rulebookHash)],
-          ["Result", resultStatus],
+          [t("sportsbook.components.marketInspector.rows.event"), market.eventId.toString()],
           [
-            "Winning outcome",
-            result && result.proposedAt > 0 ? String(result.winningOutcomeId) : "N/A"
+            t("sportsbook.components.marketInspector.rows.outcomeCount"),
+            String(market.outcomeCount)
+          ],
+          [
+            t("sportsbook.components.marketInspector.rows.startsAt"),
+            formatTimestamp(market.startsAt)
+          ],
+          [
+            t("sportsbook.components.marketInspector.rows.locksAt"),
+            formatTimestamp(market.lockTime)
+          ],
+          [t("sportsbook.components.marketInspector.rows.version"), market.version.toString()],
+          [
+            t("sportsbook.components.marketInspector.rows.marketReserved"),
+            reserved === undefined ? t("sportsbook.components.na") : reserved.toString()
+          ],
+          [t("sportsbook.components.marketInspector.rows.marketKey"), shortHex(market.marketKey)],
+          [t("sportsbook.components.marketInspector.rows.rulebook"), shortHex(market.rulebookHash)],
+          [t("sportsbook.components.marketInspector.rows.result"), resultStatus],
+          [
+            t("sportsbook.components.marketInspector.rows.winningOutcome"),
+            result && result.proposedAt > 0
+              ? String(result.winningOutcomeId)
+              : t("sportsbook.components.na")
           ]
         ]}
       />
@@ -146,26 +173,40 @@ export function MarketInspector({
 }
 
 export function TicketInspector({ ticket }: { ticket: DomainSportsTicket }) {
+  const t = useTranslations();
   return (
     <div className="grid gap-5">
       <div>
-        <div className="text-sm font-semibold text-fg">Ticket {ticket.ticketId.toString()}</div>
+        <div className="text-sm font-semibold text-fg">
+          {t("sportsbook.components.ticketInspector.title", {
+            ticketId: ticket.ticketId.toString()
+          })}
+        </div>
         <div className="mt-1 text-xs uppercase tracking-[0.16em] text-fg-subtle">
-          {ticket.state} / market {ticket.marketId.toString()}
+          {t("sportsbook.components.ticketInspector.stateLine", {
+            state: ticket.state,
+            marketId: ticket.marketId.toString()
+          })}
         </div>
       </div>
       <KeyValueRows
         rows={[
-          ["Position", ticket.positionId.toString()],
-          ["Event", ticket.eventId.toString()],
-          ["Pool", String(ticket.poolId)],
-          ["Outcome", String(ticket.outcomeId)],
-          ["Player", shortHex(ticket.player)],
-          ["Stake", ticket.stake.toString()],
-          ["Payout", ticket.payout.toString()],
-          ["Reserved", ticket.reserved.toString()],
-          ["Accepted at", formatTimestamp(ticket.acceptedAt)],
-          ["Odds snapshot", shortHex(ticket.oddsSnapshotHash)]
+          [t("sportsbook.components.ticketInspector.rows.position"), ticket.positionId.toString()],
+          [t("sportsbook.components.ticketInspector.rows.event"), ticket.eventId.toString()],
+          [t("sportsbook.components.ticketInspector.rows.pool"), String(ticket.poolId)],
+          [t("sportsbook.components.ticketInspector.rows.outcome"), String(ticket.outcomeId)],
+          [t("sportsbook.components.ticketInspector.rows.player"), shortHex(ticket.player)],
+          [t("sportsbook.components.ticketInspector.rows.stake"), ticket.stake.toString()],
+          [t("sportsbook.components.ticketInspector.rows.payout"), ticket.payout.toString()],
+          [t("sportsbook.components.ticketInspector.rows.reserved"), ticket.reserved.toString()],
+          [
+            t("sportsbook.components.ticketInspector.rows.acceptedAt"),
+            formatTimestamp(ticket.acceptedAt)
+          ],
+          [
+            t("sportsbook.components.ticketInspector.rows.oddsSnapshot"),
+            shortHex(ticket.oddsSnapshotHash)
+          ]
         ]}
       />
     </div>
@@ -199,10 +240,15 @@ function marketTone(state: DomainSportsMarket["state"]): "success" | "warn" | "n
   return "neutral";
 }
 
-function resultLabel(result?: DomainSportsResult) {
-  if (!result || result.proposedAt === 0) return "No result";
-  if (result.challenged) return "Challenged";
-  return `Outcome ${result.winningOutcomeId}`;
+function resultLabel(
+  result: DomainSportsResult | undefined,
+  t: ReturnType<typeof useTranslations>
+) {
+  if (!result || result.proposedAt === 0) return t("sportsbook.components.marketTape.result.none");
+  if (result.challenged) return t("sportsbook.components.marketTape.result.challenged");
+  return t("sportsbook.components.marketTape.result.outcome", {
+    outcomeId: String(result.winningOutcomeId)
+  });
 }
 
 export function MarketTape({
@@ -216,10 +262,12 @@ export function MarketTape({
   error?: string;
   onInspect: (marketId: bigint) => void;
 }) {
+  const t = useTranslations();
+
   if (loading) {
     return (
       <div className="rounded-lg border border-border bg-surface-2/50 p-4 text-sm leading-6 text-fg-muted">
-        Loading recent SportsHub markets...
+        {t("sportsbook.components.marketTape.loading")}
       </div>
     );
   }
@@ -235,7 +283,7 @@ export function MarketTape({
   if (!rows.length) {
     return (
       <div className="rounded-lg border border-border bg-surface-2/50 p-4 text-sm leading-6 text-fg-muted">
-        No SportsHub markets have been created in this release yet.
+        {t("sportsbook.components.marketTape.empty")}
       </div>
     );
   }
@@ -243,11 +291,17 @@ export function MarketTape({
   return (
     <div className="overflow-hidden rounded-lg border border-border">
       <div className="grid grid-cols-[1fr_auto] gap-3 border-b border-border bg-surface-2 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.18em] text-fg-subtle md:grid-cols-[1fr_140px_140px_120px_auto]">
-        <div>Market</div>
-        <div className="hidden md:block">Starts</div>
-        <div className="hidden md:block">Reserved</div>
-        <div className="hidden md:block">Result</div>
-        <div className="text-right">Actions</div>
+        <div>{t("sportsbook.components.marketTape.columns.market")}</div>
+        <div className="hidden md:block">
+          {t("sportsbook.components.marketTape.columns.starts")}
+        </div>
+        <div className="hidden md:block">
+          {t("sportsbook.components.marketTape.columns.reserved")}
+        </div>
+        <div className="hidden md:block">
+          {t("sportsbook.components.marketTape.columns.result")}
+        </div>
+        <div className="text-right">{t("sportsbook.components.marketTape.columns.actions")}</div>
       </div>
       <div className="divide-y divide-border-soft">
         {rows.map(({ market, result, reserved }) => (
@@ -258,39 +312,59 @@ export function MarketTape({
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <div className="text-sm font-semibold text-fg">
-                  Market {market.marketId.toString()}
+                  {t("sportsbook.components.marketTape.marketTitle", {
+                    marketId: market.marketId.toString()
+                  })}
                 </div>
                 <StatusPill tone={marketTone(market.state)}>{market.state}</StatusPill>
               </div>
               <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs leading-5 text-fg-muted">
-                <span>Event {market.eventId.toString()}</span>
-                <span>Pool {market.poolId}</span>
-                <span>{market.outcomeCount} outcomes</span>
-                <span>Locks {formatTimestamp(market.lockTime)}</span>
+                <span>
+                  {t("sportsbook.components.marketTape.event", {
+                    eventId: market.eventId.toString()
+                  })}
+                </span>
+                <span>
+                  {t("sportsbook.components.marketTape.pool", {
+                    poolId: String(market.poolId)
+                  })}
+                </span>
+                <span>
+                  {t("sportsbook.components.marketTape.outcomes", {
+                    count: String(market.outcomeCount)
+                  })}
+                </span>
+                <span>
+                  {t("sportsbook.components.marketTape.locks", {
+                    time: formatTimestamp(market.lockTime)
+                  })}
+                </span>
               </div>
             </div>
             <div className="hidden text-xs leading-5 text-fg-muted md:block">
               {formatTimestamp(market.startsAt)}
             </div>
             <div className="hidden font-mono text-xs font-semibold text-fg md:block">
-              {reserved === undefined ? "N/A" : reserved.toLocaleString("en-US")}
+              {reserved === undefined
+                ? t("sportsbook.components.na")
+                : reserved.toLocaleString("en-US")}
             </div>
             <div className="hidden text-xs font-semibold text-fg md:block">
-              {resultLabel(result)}
+              {resultLabel(result, t)}
             </div>
             <div className="flex flex-col justify-end gap-2 sm:flex-row">
               <Link
                 href={`/sportsbook/${market.marketId.toString()}`}
                 className="inline-flex min-h-10 items-center justify-center rounded-md bg-brand px-3 text-xs font-bold text-fg-inverse shadow-glow transition-colors hover:bg-brand-hover"
               >
-                Open
+                {t("sportsbook.components.marketTape.actions.open")}
               </Link>
               <button
                 type="button"
                 onClick={() => onInspect(market.marketId)}
                 className="min-h-10 rounded-md border border-border bg-surface-2 px-3 text-xs font-bold text-fg transition-colors hover:border-brand/40 hover:bg-surface-3"
               >
-                Load
+                {t("sportsbook.components.marketTape.actions.load")}
               </button>
             </div>
           </div>
@@ -339,13 +413,18 @@ export function RiskRows({
     riskHash?: string;
   };
 }) {
+  const t = useTranslations();
   const rows = [
-    ["Max stake", risk.maxStake],
-    ["Max payout", risk.maxPayout],
-    ["Market reserved", risk.maxMarketReserved],
-    ["Outcome reserved", risk.maxOutcomeReserved],
-    ["Event reserved", risk.maxEventReserved],
-    ["Risk hash", risk.riskHash]
+    ["maxStake", t("sportsbook.components.riskRows.maxStake"), risk.maxStake],
+    ["maxPayout", t("sportsbook.components.riskRows.maxPayout"), risk.maxPayout],
+    ["marketReserved", t("sportsbook.components.riskRows.marketReserved"), risk.maxMarketReserved],
+    [
+      "outcomeReserved",
+      t("sportsbook.components.riskRows.outcomeReserved"),
+      risk.maxOutcomeReserved
+    ],
+    ["eventReserved", t("sportsbook.components.riskRows.eventReserved"), risk.maxEventReserved],
+    ["riskHash", t("sportsbook.components.riskRows.riskHash"), risk.riskHash]
   ] as const;
 
   return (
@@ -354,11 +433,11 @@ export function RiskRows({
         {title}
       </div>
       <div className="divide-y divide-border-soft">
-        {rows.map(([label, value]) => (
-          <div key={label} className="grid gap-3 px-4 py-3 text-sm md:grid-cols-[180px_1fr]">
+        {rows.map(([key, label, value]) => (
+          <div key={key} className="grid gap-3 px-4 py-3 text-sm md:grid-cols-[180px_1fr]">
             <div className="text-fg-muted">{label}</div>
             <div className="break-all font-mono text-fg">
-              {label === "Risk hash" ? shortHex(value) : formatRawUnits(value)}
+              {key === "riskHash" ? shortHex(value) : formatRawUnits(value)}
             </div>
           </div>
         ))}
@@ -368,33 +447,47 @@ export function RiskRows({
 }
 
 export function PoolPanel({ pool }: { pool: SportsPool }) {
+  const t = useTranslations();
   return (
     <div className="rounded-lg border border-border bg-surface-2/70 p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div className="text-sm font-semibold text-fg">Pool {pool.poolId}</div>
+          <div className="text-sm font-semibold text-fg">
+            {t("sportsbook.components.poolPanel.title", { poolId: String(pool.poolId) })}
+          </div>
           <div className="mt-1 text-xs uppercase tracking-[0.16em] text-fg-subtle">
-            {pool.domain || "Sports"} / domain {pool.domainId}
+            {t("sportsbook.components.poolPanel.domainLine", {
+              domain: pool.domain || t("sportsbook.components.poolPanel.defaultDomain"),
+              domainId: String(pool.domainId)
+            })}
           </div>
         </div>
         <StatusPill tone={pool.active ? "success" : "warn"}>
-          {pool.active ? "Active" : "Paused"}
+          {pool.active
+            ? t("sportsbook.components.poolPanel.active")
+            : t("sportsbook.components.poolPanel.paused")}
         </StatusPill>
       </div>
 
       <div className="mt-5 grid gap-3 md:grid-cols-3">
-        <DetailCell label="Bank" value={shortHex(pool.bank)} />
-        <DetailCell label="Asset" value={shortHex(pool.asset)} />
+        <DetailCell label={t("sportsbook.components.poolPanel.bank")} value={shortHex(pool.bank)} />
         <DetailCell
-          label="Units"
-          value={pool.symbol || `raw / ${pool.decimals} decimals`}
+          label={t("sportsbook.components.poolPanel.asset")}
+          value={shortHex(pool.asset)}
+        />
+        <DetailCell
+          label={t("sportsbook.components.poolPanel.units")}
+          value={
+            pool.symbol ||
+            t("sportsbook.components.poolPanel.rawUnits", { decimals: String(pool.decimals) })
+          }
           mono={false}
         />
       </div>
 
       {pool.sportsRisk ? (
         <div className="mt-5">
-          <RiskRows title="Pool risk caps" risk={pool.sportsRisk} />
+          <RiskRows title={t("sportsbook.components.poolPanel.riskTitle")} risk={pool.sportsRisk} />
         </div>
       ) : null}
     </div>

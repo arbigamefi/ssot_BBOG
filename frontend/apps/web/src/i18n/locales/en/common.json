@@ -271,6 +271,212 @@
       }
     }
   },
+  "sportsbook": {
+    "index": {
+      "noRelease": {
+        "title": "No release loaded",
+        "description": "The embedded release snapshot is unavailable.",
+        "status": "Unavailable"
+      },
+      "header": {
+        "metadataEnabled": "Metadata enabled",
+        "readOnlyPreview": "Read-only preview",
+        "sportsHubPresent": "SportsHub present",
+        "sportsHubMissing": "SportsHub missing",
+        "title": "Sportsbook Control Room",
+        "description": "Fixed-odds sports markets stay behind explicit launch controls. This entry exposes the deployed SportsHub surface, release risk caps, and the signed-odds ticket path when the frontend gate is enabled."
+      },
+      "riskCard": {
+        "eyebrow": "Public risk-in",
+        "signedOddsOnly": "Signed odds only",
+        "locked": "Locked",
+        "description": "Open a market detail page and provide a signed odds snapshot before placement.",
+        "inspect": "Inspect market before placing"
+      },
+      "details": {
+        "release": "Release",
+        "sportsHub": "SportsHub",
+        "embeddedMetadataPresent": "Embedded metadata present",
+        "notAvailable": "Not available",
+        "riskEngine": "Risk engine",
+        "riskEngineHelper": "Shared cap enforcement surface",
+        "challengeWindow": "Challenge window",
+        "challengeWindowHelper": "Result dispute timeout",
+        "nextMarket": "Next market",
+        "nextTicket": "Next ticket",
+        "runtimeReadFailed": "SportsHub runtime read failed",
+        "sdkRead": "Read through @ssot/ssot SDK"
+      },
+      "release": {
+        "eyebrow": "Sports release",
+        "title": "Oracle and settlement surface",
+        "description": "The active bundle exposes signed odds identity, result reporter quorum, and the bootstrap dispute roles needed by SportsHub settlement.",
+        "oddsSignerSet": "Odds signer set",
+        "resultReporterSet": "Result reporter set",
+        "reporterThreshold": "Reporter threshold",
+        "reporterThresholdHelper": "Minimum result reporters",
+        "frontendFlag": "Frontend flag",
+        "booleanTrue": "true",
+        "booleanFalse": "false",
+        "challenger": "Challenger",
+        "arbitrator": "Arbitrator"
+      },
+      "mvp": {
+        "eyebrow": "MVP market",
+        "title": "Football 1X2 readiness",
+        "description": "The current provider path is scoped to pre-match fixed odds, signed snapshots, and explicit result evidence before any public launch decision.",
+        "rows": {
+          "marketType": {
+            "label": "Market type",
+            "value": "Pre-match football 1X2"
+          },
+          "oddsSource": {
+            "label": "Odds source",
+            "value": "The Odds API candidate"
+          },
+          "settlement": {
+            "label": "Settlement",
+            "value": "Reporter result plus challenge window"
+          },
+          "launchState": {
+            "label": "Launch state",
+            "value": "Phase 2 NO-GO for public risk-in"
+          }
+        }
+      },
+      "caps": {
+        "eyebrow": "Protocol caps",
+        "title": "Top-level SportsHub limits",
+        "description": "These raw-unit caps are copied from the embedded release and should stay aligned with the deployment bundle and ops approval memos.",
+        "riskTitle": "SportsHub global risk caps"
+      },
+      "marketTape": {
+        "eyebrow": "Market tape",
+        "title": "Recent SportsHub markets",
+        "description": "The frontend reads the latest on-chain SportsHub market ids directly through the v1.3 SDK. Ticket placement is only available from a market detail page after the signed-odds gate is satisfied."
+      },
+      "lookup": {
+        "eyebrow": "On-chain lookup",
+        "title": "Inspect SportsHub records",
+        "description": "Lookup stays read-only and goes through the v1.3 SDK. Use market detail for the signed-odds ticket flow.",
+        "marketId": "Market id",
+        "ticketId": "Ticket id",
+        "marketEmpty": "Enter a SportsHub market id to inspect state, result status, and reserved exposure.",
+        "ticketEmpty": "Enter a SportsHub ticket id to inspect position, stake, payout, and ticket state.",
+        "marketNumericError": "Enter a numeric market id.",
+        "ticketNumericError": "Enter a numeric ticket id."
+      },
+      "operator": {
+        "eyebrow": "Operator writes",
+        "title": "Market and result administration",
+        "description": "Governance and reporter actions are exposed as typed SDK calls for authorized wallets. Public ticket placement uses a separate signed-odds path and contract roles still enforce every write.",
+        "walletRoleRequired": "Wallet role must be authorized on SportsHub."
+      },
+      "bankroll": {
+        "eyebrow": "Bankroll",
+        "title": "Sports pool isolation",
+        "description": "Sports liquidity is kept separate from casino game liquidity, so sportsbook exposure can be capped, paused, and monitored independently.",
+        "noPool": "No Sports pool metadata is available in this release."
+      },
+      "controls": {
+        "eyebrow": "Controls",
+        "title": "Launch blockers remain explicit",
+        "description": "The page is intentionally operational: it keeps the SportsHub deployment visible while preserving the public-launch blockers tracked in the ops packet.",
+        "links": {
+          "goNoGo": "Go/no-go packet",
+          "frontendAccess": "Frontend access policy",
+          "providerPolicy": "Provider policy"
+        }
+      }
+    },
+    "components": {
+      "na": "N/A",
+      "lookup": {
+        "inspect": "Inspect"
+      },
+      "marketInspector": {
+        "title": "Market {marketId}",
+        "stateLine": "{state} / pool {poolId}",
+        "resultStatus": {
+          "none": "No result proposed",
+          "proposed": "Result proposed"
+        },
+        "rows": {
+          "event": "Event",
+          "outcomeCount": "Outcome count",
+          "startsAt": "Starts at",
+          "locksAt": "Locks at",
+          "version": "Version",
+          "marketReserved": "Market reserved",
+          "marketKey": "Market key",
+          "rulebook": "Rulebook",
+          "result": "Result",
+          "winningOutcome": "Winning outcome"
+        }
+      },
+      "ticketInspector": {
+        "title": "Ticket {ticketId}",
+        "stateLine": "{state} / market {marketId}",
+        "rows": {
+          "position": "Position",
+          "event": "Event",
+          "pool": "Pool",
+          "outcome": "Outcome",
+          "player": "Player",
+          "stake": "Stake",
+          "payout": "Payout",
+          "reserved": "Reserved",
+          "acceptedAt": "Accepted at",
+          "oddsSnapshot": "Odds snapshot"
+        }
+      },
+      "marketTape": {
+        "loading": "Loading recent SportsHub markets...",
+        "empty": "No SportsHub markets have been created in this release yet.",
+        "columns": {
+          "market": "Market",
+          "starts": "Starts",
+          "reserved": "Reserved",
+          "result": "Result",
+          "actions": "Actions"
+        },
+        "marketTitle": "Market {marketId}",
+        "event": "Event {eventId}",
+        "pool": "Pool {poolId}",
+        "outcomes": "{count} outcomes",
+        "locks": "Locks {time}",
+        "result": {
+          "none": "No result",
+          "challenged": "Challenged",
+          "outcome": "Outcome {outcomeId}"
+        },
+        "actions": {
+          "open": "Open",
+          "load": "Load"
+        }
+      },
+      "riskRows": {
+        "maxStake": "Max stake",
+        "maxPayout": "Max payout",
+        "marketReserved": "Market reserved",
+        "outcomeReserved": "Outcome reserved",
+        "eventReserved": "Event reserved",
+        "riskHash": "Risk hash"
+      },
+      "poolPanel": {
+        "title": "Pool {poolId}",
+        "domainLine": "{domain} / domain {domainId}",
+        "defaultDomain": "Sports",
+        "active": "Active",
+        "paused": "Paused",
+        "bank": "Bank",
+        "asset": "Asset",
+        "units": "Units",
+        "rawUnits": "raw / {decimals} decimals",
+        "riskTitle": "Pool risk caps"
+      }
+    }
+  },
   "nav": {
     "account": "Account",
     "affiliates": "Affiliates",

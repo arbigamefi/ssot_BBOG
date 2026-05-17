@@ -271,6 +271,212 @@
       }
     }
   },
+  "sportsbook": {
+    "index": {
+      "noRelease": {
+        "title": "未加载 release",
+        "description": "内嵌 release 快照不可用。",
+        "status": "不可用"
+      },
+      "header": {
+        "metadataEnabled": "元数据已启用",
+        "readOnlyPreview": "只读预览",
+        "sportsHubPresent": "SportsHub 已配置",
+        "sportsHubMissing": "缺少 SportsHub",
+        "title": "体育投注控制台",
+        "description": "固定赔率体育市场仍受显式上线开关保护。本入口展示已部署的 SportsHub、release 风险上限，以及在前端开关开启后的签名赔率出票路径。"
+      },
+      "riskCard": {
+        "eyebrow": "公开风险入口",
+        "signedOddsOnly": "仅允许签名赔率",
+        "locked": "已锁定",
+        "description": "进入市场详情页，并在下注前提供签名赔率快照。",
+        "inspect": "下注前检查市场"
+      },
+      "details": {
+        "release": "Release",
+        "sportsHub": "SportsHub",
+        "embeddedMetadataPresent": "内嵌元数据已存在",
+        "notAvailable": "不可用",
+        "riskEngine": "风险引擎",
+        "riskEngineHelper": "共享上限执行面",
+        "challengeWindow": "挑战窗口",
+        "challengeWindowHelper": "赛果争议超时时间",
+        "nextMarket": "下一个市场",
+        "nextTicket": "下一个票据",
+        "runtimeReadFailed": "SportsHub 运行时读取失败",
+        "sdkRead": "通过 @ssot/ssot SDK 读取"
+      },
+      "release": {
+        "eyebrow": "Sports release",
+        "title": "Oracle 与结算面",
+        "description": "当前 bundle 暴露签名赔率身份、赛果 reporter 法定人数，以及 SportsHub 结算所需的初始争议角色。",
+        "oddsSignerSet": "赔率签名集合",
+        "resultReporterSet": "赛果 reporter 集合",
+        "reporterThreshold": "Reporter 阈值",
+        "reporterThresholdHelper": "最少赛果 reporter 数",
+        "frontendFlag": "前端开关",
+        "booleanTrue": "true",
+        "booleanFalse": "false",
+        "challenger": "挑战者",
+        "arbitrator": "仲裁者"
+      },
+      "mvp": {
+        "eyebrow": "MVP 市场",
+        "title": "足球 1X2 准备状态",
+        "description": "当前 provider 路径限定为赛前固定赔率、签名快照，以及公开上线决策前的显式赛果证据。",
+        "rows": {
+          "marketType": {
+            "label": "市场类型",
+            "value": "赛前足球 1X2"
+          },
+          "oddsSource": {
+            "label": "赔率来源",
+            "value": "The Odds API 候选源"
+          },
+          "settlement": {
+            "label": "结算",
+            "value": "Reporter 赛果 + 挑战窗口"
+          },
+          "launchState": {
+            "label": "上线状态",
+            "value": "Phase 2 暂不开放公开风险入口"
+          }
+        }
+      },
+      "caps": {
+        "eyebrow": "协议上限",
+        "title": "SportsHub 顶层限制",
+        "description": "这些 raw-unit 上限复制自内嵌 release，应始终与部署 bundle 和运维批准备忘录保持一致。",
+        "riskTitle": "SportsHub 全局风险上限"
+      },
+      "marketTape": {
+        "eyebrow": "市场列表",
+        "title": "最近 SportsHub 市场",
+        "description": "前端通过 v1.3 SDK 直接读取最新的链上 SportsHub market id。签名赔率 gate 满足后，出票只能从市场详情页发起。"
+      },
+      "lookup": {
+        "eyebrow": "链上查询",
+        "title": "检查 SportsHub 记录",
+        "description": "查询保持只读，并通过 v1.3 SDK 完成。签名赔率出票流程请使用市场详情页。",
+        "marketId": "市场 ID",
+        "ticketId": "票据 ID",
+        "marketEmpty": "输入 SportsHub 市场 ID，用于检查状态、赛果状态和保留敞口。",
+        "ticketEmpty": "输入 SportsHub 票据 ID，用于检查仓位、本金、赔付和票据状态。",
+        "marketNumericError": "请输入数字市场 ID。",
+        "ticketNumericError": "请输入数字票据 ID。"
+      },
+      "operator": {
+        "eyebrow": "运营写入",
+        "title": "市场与赛果管理",
+        "description": "治理与 reporter 操作通过类型化 SDK 调用暴露给授权钱包。公开出票使用独立的签名赔率路径，合约角色仍会强制校验每一次写入。",
+        "walletRoleRequired": "钱包角色必须在 SportsHub 上获得授权。"
+      },
+      "bankroll": {
+        "eyebrow": "资金池",
+        "title": "体育资金池隔离",
+        "description": "体育流动性与赌场游戏流动性隔离，因此 sportsbook 敞口可以独立设置上限、暂停和监控。",
+        "noPool": "当前 release 没有可用的 Sports pool 元数据。"
+      },
+      "controls": {
+        "eyebrow": "控制项",
+        "title": "上线阻塞项保持显式",
+        "description": "该页面刻意保持运营视角：在展示 SportsHub 部署面的同时，保留 ops packet 中跟踪的公开上线阻塞项。",
+        "links": {
+          "goNoGo": "Go/no-go 包",
+          "frontendAccess": "前端访问策略",
+          "providerPolicy": "Provider 策略"
+        }
+      }
+    },
+    "components": {
+      "na": "N/A",
+      "lookup": {
+        "inspect": "检查"
+      },
+      "marketInspector": {
+        "title": "市场 {marketId}",
+        "stateLine": "{state} / 池 {poolId}",
+        "resultStatus": {
+          "none": "未提议赛果",
+          "proposed": "赛果已提议"
+        },
+        "rows": {
+          "event": "赛事",
+          "outcomeCount": "结果数量",
+          "startsAt": "开始时间",
+          "locksAt": "锁定时间",
+          "version": "版本",
+          "marketReserved": "市场保留",
+          "marketKey": "市场 key",
+          "rulebook": "规则书",
+          "result": "赛果",
+          "winningOutcome": "获胜结果"
+        }
+      },
+      "ticketInspector": {
+        "title": "票据 {ticketId}",
+        "stateLine": "{state} / 市场 {marketId}",
+        "rows": {
+          "position": "仓位",
+          "event": "赛事",
+          "pool": "资金池",
+          "outcome": "结果",
+          "player": "玩家",
+          "stake": "本金",
+          "payout": "赔付",
+          "reserved": "保留",
+          "acceptedAt": "接受时间",
+          "oddsSnapshot": "赔率快照"
+        }
+      },
+      "marketTape": {
+        "loading": "正在加载最近 SportsHub 市场...",
+        "empty": "当前 release 还没有创建 SportsHub 市场。",
+        "columns": {
+          "market": "市场",
+          "starts": "开始",
+          "reserved": "保留",
+          "result": "赛果",
+          "actions": "操作"
+        },
+        "marketTitle": "市场 {marketId}",
+        "event": "赛事 {eventId}",
+        "pool": "池 {poolId}",
+        "outcomes": "{count} 个结果",
+        "locks": "锁定 {time}",
+        "result": {
+          "none": "无赛果",
+          "challenged": "已挑战",
+          "outcome": "结果 {outcomeId}"
+        },
+        "actions": {
+          "open": "打开",
+          "load": "载入"
+        }
+      },
+      "riskRows": {
+        "maxStake": "最大本金",
+        "maxPayout": "最大赔付",
+        "marketReserved": "市场保留",
+        "outcomeReserved": "结果保留",
+        "eventReserved": "赛事保留",
+        "riskHash": "风险哈希"
+      },
+      "poolPanel": {
+        "title": "资金池 {poolId}",
+        "domainLine": "{domain} / domain {domainId}",
+        "defaultDomain": "Sports",
+        "active": "启用",
+        "paused": "暂停",
+        "bank": "Bank",
+        "asset": "资产",
+        "units": "单位",
+        "rawUnits": "raw / {decimals} 位小数",
+        "riskTitle": "资金池风险上限"
+      }
+    }
+  },
   "nav": {
     "account": "账户",
     "affiliates": "推广",
