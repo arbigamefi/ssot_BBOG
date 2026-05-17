@@ -23,6 +23,11 @@ casino room auto-settle after VRF fulfills:
 pnpm -C frontend dev:with-keeper -- --port 3002
 ```
 
+The dev wrapper resolves relative keeper paths from the repo root and derives
+`KEEPER_START_BLOCK` from the current chain head when it is not set, rewinding
+2,000 blocks by default. Override with `KEEPER_DEV_REWIND_BLOCKS` or an explicit
+`KEEPER_START_BLOCK` when you need a longer catch-up window.
+
 Keeper-only local run:
 
 ```bash

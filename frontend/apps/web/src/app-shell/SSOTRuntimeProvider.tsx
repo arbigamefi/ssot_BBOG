@@ -68,26 +68,38 @@ export function SSOTRuntimeProvider({ children }: { children: React.ReactNode })
       workerRef.current = null;
     }
 
-    const client = new GameHubIndexerWorkerClient({
-      init: {
+    let client: GameHubIndexerWorkerClient;
+    try {
+      client = new GameHubIndexerWorkerClient({
+        init: {
+          chainId: rel.release.chainId,
+          config: indexerConfig,
+          dbName: `ssot_frontend_v2_${rel.release.chainId}`,
+          release: rel.release,
+          rpcUrl
+        },
+        onError: (e) =>
+          setIndexerStatus((prev) => ({
+            ...(prev ?? {
+              chainId: rel.release!.chainId,
+              config: indexerConfig,
+              gameHub: rel.release!.contracts.gameHub as any,
+              running: false
+            }),
+            lastError: e.message
+          })),
+        onStatus: (s) => setIndexerStatus(s)
+      });
+    } catch (error) {
+      setIndexerStatus({
         chainId: rel.release.chainId,
         config: indexerConfig,
-        dbName: `ssot_frontend_v2_${rel.release.chainId}`,
-        release: rel.release,
-        rpcUrl
-      },
-      onError: (e) =>
-        setIndexerStatus((prev) => ({
-          ...(prev ?? {
-            chainId: rel.release!.chainId,
-            config: indexerConfig,
-            gameHub: rel.release!.contracts.gameHub as any,
-            running: false
-          }),
-          lastError: e.message
-        })),
-      onStatus: (s) => setIndexerStatus(s)
-    });
+        gameHub: rel.release.contracts.gameHub as any,
+        lastError: (error as Error)?.message ?? "Indexer worker failed to start",
+        running: false
+      });
+      return;
+    }
 
     workerRef.current = client;
     client.start();

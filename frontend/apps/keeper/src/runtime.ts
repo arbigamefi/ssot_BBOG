@@ -77,6 +77,7 @@ export function createKeeperRuntime({
   const timers: Array<ReturnType<typeof setInterval>> = [];
   const unwatchers: Array<() => void> = [];
   let stopped = false;
+  let scanning = false;
   let lastScannedBlock = config.startBlock ?? 0n;
 
   const writeHealth = (op: Promise<void>) => {
@@ -256,6 +257,20 @@ export function createKeeperRuntime({
     }
   };
 
+  const runScan = async () => {
+    if (stopped || scanning) return;
+    scanning = true;
+    try {
+      await scanMissedEvents();
+    } catch (error) {
+      const message = (error as Error)?.message ?? "scan failed";
+      logger.error("casino.keeper.scan_failed", { message });
+      writeHealth(health.recordError(message, queue.size));
+    } finally {
+      scanning = false;
+    }
+  };
+
   const start = async () => {
     logger.info("casino.keeper.starting", {
       chainId: config.chainId,
@@ -291,11 +306,11 @@ export function createKeeperRuntime({
       );
     }
 
-    await scanMissedEvents();
-    writeHealth(health.recordRunning(lastScannedBlock, queue.size));
-    timers.push(setInterval(() => void scanMissedEvents(), config.pollIntervalMs));
     timers.push(setInterval(() => void drainQueue(), 500));
+    timers.push(setInterval(() => void runScan(), config.pollIntervalMs));
     timers.push(setInterval(() => writeHealth(health.recordHeartbeat(queue.size)), 10_000));
+    void runScan();
+    writeHealth(health.recordRunning(lastScannedBlock, queue.size));
   };
 
   const stop = async () => {

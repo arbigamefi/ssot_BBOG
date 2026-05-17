@@ -91,6 +91,12 @@ Every `KEEPER_POLL_INTERVAL_SECONDS`, scan the event window from
 `lastScannedBlock` to `latestBlock` for `BetRandomReady` and enqueue any missed
 bet. This protects against WebSocket disconnects.
 
+The scan loop must not block queue draining. A long catch-up window can contain
+thousands of small `eth_getLogs` chunks on Base Sepolia, so the worker starts the
+drain loop before the initial catch-up scan and runs scans with a single-flight
+guard. Local development may derive a recent `KEEPER_START_BLOCK` from the
+current chain head to avoid replaying the full release window on every restart.
+
 The keeper does not need a full indexer in v1. It only needs the latest scanned
 block persisted to a small JSON file or durable KV.
 
