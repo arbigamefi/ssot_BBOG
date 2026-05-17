@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import {
   ArrowTrendingUpIcon,
   ChartBarIcon,
@@ -25,6 +26,7 @@ export function EarnBankSummary({
   loading: boolean;
   error?: string;
 }) {
+  const t = useTranslations();
   const snapshot = data?.snapshot;
   const position = data?.position;
   const minLiquidity =
@@ -38,10 +40,10 @@ export function EarnBankSummary({
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <div className="flex items-center gap-2 text-sm font-black text-fg">
             <ChartBarIcon className="h-5 w-5 text-brand" />
-            Capital posture
+            {t("earn.summary.capitalPosture.title")}
           </div>
           <span className="rounded-full border border-border bg-surface-2 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-fg-subtle">
-            read model
+            {t("earn.summary.capitalPosture.readModel")}
           </span>
         </div>
 
@@ -78,17 +80,17 @@ export function EarnBankSummary({
           </div>
           <div className="relative z-10 max-w-md">
             <div className="text-xs font-black uppercase tracking-[0.16em] text-fg-subtle">
-              Total assets
+              {t("earn.summary.capitalPosture.totalAssets")}
             </div>
             <div className="mt-2 font-mono text-4xl font-black text-fg">
               {formatTokenAmount(snapshot?.totalAssets, decimals, symbol, 2)}
             </div>
             <p className="mt-3 text-sm leading-6 text-fg-muted">
               {loading
-                ? "Synchronizing bank snapshot from the selected release."
+                ? t("earn.summary.capitalPosture.loading")
                 : error
                   ? error
-                  : "Chart is a posture visual. Numeric truth comes from the bank snapshot below."}
+                  : t("earn.summary.capitalPosture.detail")}
             </p>
           </div>
         </div>
@@ -97,27 +99,33 @@ export function EarnBankSummary({
       <div className="grid gap-4">
         <SummaryCard
           icon={<ArrowTrendingUpIcon className="h-5 w-5" />}
-          label="Your position"
+          label={t("earn.summary.position.label")}
           value={formatTokenAmount(position?.assetsEquivalent, decimals, symbol, 4)}
-          detail="Assets equivalent for the connected wallet."
+          detail={t("earn.summary.position.detail")}
         />
         <SummaryCard
           icon={<InformationCircleIcon className="h-5 w-5" />}
-          label="Liquidity policy"
+          label={t("earn.summary.liquidity.label")}
           value={formatPctFromBps(snapshot?.minLiquidityBps)}
-          detail={`Floor ${formatBps(snapshot?.minLiquidityBps)} · Bank ${shortHex(snapshot?.bank)}`}
+          detail={t("earn.summary.liquidity.detail", {
+            floor: formatBps(snapshot?.minLiquidityBps),
+            bank: shortHex(snapshot?.bank)
+          })}
         />
         <SummaryCard
-          label="Reserved liabilities"
+          label={t("earn.summary.reserved.label")}
           value={formatTokenAmount(snapshot?.totalReserved, decimals, symbol, 2)}
-          detail={`Free reserve ${formatTokenAmount(
-            snapshot && snapshot.totalAssets > snapshot.totalReserved
-              ? snapshot.totalAssets - snapshot.totalReserved
-              : undefined,
-            decimals,
-            symbol,
-            2
-          )} · Min liquidity ${formatTokenAmount(minLiquidity, decimals, symbol, 2)}`}
+          detail={t("earn.summary.reserved.detail", {
+            freeReserve: formatTokenAmount(
+              snapshot && snapshot.totalAssets > snapshot.totalReserved
+                ? snapshot.totalAssets - snapshot.totalReserved
+                : undefined,
+              decimals,
+              symbol,
+              2
+            ),
+            minLiquidity: formatTokenAmount(minLiquidity, decimals, symbol, 2)
+          })}
         />
       </div>
     </section>

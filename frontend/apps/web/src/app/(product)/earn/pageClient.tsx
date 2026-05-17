@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import type { Address } from "@ssot/ssot/sdk";
 import type { AssetOption } from "@ssot/ui";
@@ -27,6 +28,7 @@ import { toast } from "@ssot/ui";
 const ZERO_ADDRESS = `0x${"0".repeat(40)}` as Address;
 
 export function EarnPageClient() {
+  const t = useTranslations();
   const { release, readOnly, readOnlyReason, chainId } = useRelease();
   const { sdk, ready } = useSSOTSDK();
   const explorerBaseUrl = React.useMemo(() => getExplorerBaseUrl(chainId), [chainId]);
@@ -84,8 +86,8 @@ export function EarnPageClient() {
     queryKey: ["ssot", "earn", "bank", chainId, poolId, sdk?.account ?? "anonymous"],
     enabled: Boolean(sdk && ready && assetMeta && poolId),
     queryFn: async (): Promise<EarnBankData> => {
-      if (!sdk) throw new Error("SDK unavailable");
-      if (!poolId) throw new Error("Pool unavailable");
+      if (!sdk) throw new Error(t("earn.errors.sdkUnavailable"));
+      if (!poolId) throw new Error(t("earn.errors.poolUnavailable"));
       const snapshot = await sdk.bank.getSnapshot(poolId);
       const position = sdk.account ? await sdk.bank.getPosition(poolId, sdk.account) : null;
       return { snapshot, position };
@@ -105,18 +107,22 @@ export function EarnPageClient() {
   const depositFlow = useSequencedTxAction({
     finalAction: "DEPOSIT",
     steps: [
-      { key: "preflight", title: "Preflight", description: "Validate inputs and simulate flow." },
+      {
+        key: "preflight",
+        title: t("earn.flows.preflight.title"),
+        description: t("earn.flows.deposit.preflight")
+      },
       {
         key: "approve",
-        title: "Approve Bank",
-        description: "Set ERC20 allowance.",
+        title: t("earn.flows.deposit.approveTitle"),
+        description: t("earn.flows.deposit.approveDescription"),
         action: "APPROVE_DEPOSIT",
         optional: true
       },
       {
         key: "deposit",
-        title: "Deposit Assets",
-        description: "Broadcast Bank.deposit.",
+        title: t("earn.flows.deposit.depositTitle"),
+        description: t("earn.flows.deposit.depositDescription"),
         action: "DEPOSIT"
       }
     ]
@@ -124,21 +130,29 @@ export function EarnPageClient() {
 
   const withdrawFlow = useDirectTxAction({
     action: "WITHDRAW",
-    labels: { preflight: "Preflight", submit: "Submit", confirm: "Confirm" },
+    labels: {
+      preflight: t("earn.flows.preflight.title"),
+      submit: t("earn.flows.direct.submit"),
+      confirm: t("earn.flows.direct.confirm")
+    },
     descriptions: {
-      preflight: "Validate constraints.",
-      submit: "Broadcast Bank.withdraw.",
-      confirm: "Wait for receipt."
+      preflight: t("earn.flows.direct.validate"),
+      submit: t("earn.flows.withdraw.submit"),
+      confirm: t("earn.flows.direct.receipt")
     }
   });
 
   const redeemFlow = useDirectTxAction({
     action: "REDEEM",
-    labels: { preflight: "Preflight", submit: "Submit", confirm: "Confirm" },
+    labels: {
+      preflight: t("earn.flows.preflight.title"),
+      submit: t("earn.flows.direct.submit"),
+      confirm: t("earn.flows.direct.confirm")
+    },
     descriptions: {
-      preflight: "Validate constraints.",
-      submit: "Broadcast Bank.redeem.",
-      confirm: "Wait for receipt."
+      preflight: t("earn.flows.direct.validate"),
+      submit: t("earn.flows.redeem.submit"),
+      confirm: t("earn.flows.direct.receipt")
     }
   });
 
@@ -176,10 +190,17 @@ export function EarnPageClient() {
   const maxActionAmount = tab === "withdraw" ? maxWithdraw : tab === "redeem" ? maxRedeem : null;
   const maxLabel =
     tab === "deposit"
-      ? "Wallet balance"
+      ? t("earn.actions.max.walletBalance")
       : maxActionAmount == null
-        ? "Max pending"
-        : `Max ${formatTokenAmount(maxActionAmount, decimals, tab === "redeem" ? "shares" : symbol, 2)}`;
+        ? t("earn.actions.max.pending")
+        : t("earn.actions.max.value", {
+            amount: formatTokenAmount(
+              maxActionAmount,
+              decimals,
+              tab === "redeem" ? t("earn.units.sharesLower") : symbol,
+              2
+            )
+          });
 
   const handleUseMax = React.useCallback(() => {
     if (tab === "withdraw" && maxWithdraw != null) setAmount(formatUnits(maxWithdraw, decimals));
@@ -191,18 +212,18 @@ export function EarnPageClient() {
     setFormError(undefined);
 
     if (!writesSupportedForSelectedAsset || !poolId) {
-      setFormError("Write flows require an active casino pool for the selected asset.");
+      setFormError(t("earn.errors.unsupportedWriteAsset"));
       return;
     }
 
     try {
       const parsed = parseDecimalToUnits(amount, decimals);
       if (parsed <= 0n) {
-        setFormError("Amount must be positive.");
+        setFormError(t("earn.errors.positiveAmount"));
         return;
       }
 
-      const toastId = toast.loading("Processing bank transaction...");
+      const toastId = toast.loading(t("earn.toast.processing"));
       const account = sdk.account;
       const result =
         tab === "deposit"
@@ -218,14 +239,17 @@ export function EarnPageClient() {
 
       toast.success(
         tab === "redeem"
-          ? `Redeemed ${formatUnits(parsed, decimals)} shares`
-          : `${tab === "deposit" ? "Deposited" : "Withdrew"} ${formatUnits(parsed, decimals)} ${symbol}`,
+          ? t("earn.toast.redeemed", { amount: formatUnits(parsed, decimals) })
+          : t(tab === "deposit" ? "earn.toast.deposited" : "earn.toast.withdrew", {
+              amount: formatUnits(parsed, decimals),
+              symbol
+            }),
         { id: toastId }
       );
       setAmount("");
       await refetch();
     } catch (error) {
-      toast.error((error as Error)?.message ?? "Transaction failed");
+      toast.error((error as Error)?.message ?? t("earn.toast.failed"));
     }
   }, [
     amount,
@@ -239,14 +263,15 @@ export function EarnPageClient() {
     tab,
     withdrawFlow,
     poolId,
+    t,
     writesSupportedForSelectedAsset
   ]);
 
   if (!release) {
     return (
       <ProductStateCard
-        title="Earn"
-        description={readOnlyReason ?? "No embedded release available."}
+        title={t("earn.state.noRelease.title")}
+        description={readOnlyReason ?? t("earn.state.noRelease.description")}
       />
     );
   }
@@ -259,19 +284,19 @@ export function EarnPageClient() {
 
   const metrics: EarnMetric[] = [
     {
-      label: "Free reserve",
+      label: t("earn.metrics.freeReserve.label"),
       value: formatTokenAmount(freeReserve, decimals, symbol, 2),
-      detail: "Assets not reserved for open liabilities."
+      detail: t("earn.metrics.freeReserve.detail")
     },
     {
-      label: "Total assets",
+      label: t("earn.metrics.totalAssets.label"),
       value: formatTokenAmount(snapshot?.totalAssets, decimals, symbol, 2),
-      detail: "Current bank assets from protocol read."
+      detail: t("earn.metrics.totalAssets.detail")
     },
     {
-      label: "Min liquidity",
+      label: t("earn.metrics.minLiquidity.label"),
       value: formatBps(snapshot?.minLiquidityBps),
-      detail: "Configured floor before withdrawals."
+      detail: t("earn.metrics.minLiquidity.detail")
     }
   ];
 

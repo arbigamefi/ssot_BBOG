@@ -726,6 +726,159 @@
       }
     }
   },
+  "earn": {
+    "state": {
+      "noRelease": {
+        "title": "Earn",
+        "description": "No embedded release available."
+      }
+    },
+    "errors": {
+      "sdkUnavailable": "SDK unavailable",
+      "poolUnavailable": "Pool unavailable",
+      "unsupportedWriteAsset": "Write flows require an active casino pool for the selected asset.",
+      "positiveAmount": "Amount must be positive.",
+      "primaryAssetOnly": "Write flows currently support only the primary asset."
+    },
+    "hero": {
+      "eyebrow": "Bank reserve",
+      "title": "{symbol} bankroll control.",
+      "description": "Deposit, withdraw, and redeem against the protocol bank with the same release-anchored settlement model used by casino tickets. No promotional APY is shown before reserve facts.",
+      "bankAddress": "Bank address"
+    },
+    "metrics": {
+      "freeReserve": {
+        "label": "Free reserve",
+        "detail": "Assets not reserved for open liabilities."
+      },
+      "totalAssets": {
+        "label": "Total assets",
+        "detail": "Current bank assets from protocol read."
+      },
+      "minLiquidity": {
+        "label": "Min liquidity",
+        "detail": "Configured floor before withdrawals."
+      }
+    },
+    "summary": {
+      "capitalPosture": {
+        "title": "Capital posture",
+        "readModel": "read model",
+        "totalAssets": "Total assets",
+        "loading": "Synchronizing bank snapshot from the selected release.",
+        "detail": "Chart is a posture visual. Numeric truth comes from the bank snapshot below."
+      },
+      "position": {
+        "label": "Your position",
+        "detail": "Assets equivalent for the connected wallet."
+      },
+      "liquidity": {
+        "label": "Liquidity policy",
+        "detail": "Floor {floor} · Bank {bank}"
+      },
+      "reserved": {
+        "label": "Reserved liabilities",
+        "detail": "Free reserve {freeReserve} · Min liquidity {minLiquidity}"
+      }
+    },
+    "actions": {
+      "eyebrow": "LP actions",
+      "title": "Bank transaction console",
+      "asset": "Asset",
+      "amount": "Amount",
+      "connectWallet": "Connect a wallet to run bank actions.",
+      "readOnly": "Writes are disabled for this release.",
+      "tabs": {
+        "deposit": {
+          "label": "Deposit",
+          "description": "Supply assets to the bank."
+        },
+        "withdraw": {
+          "label": "Withdraw",
+          "description": "Withdraw available assets."
+        },
+        "redeem": {
+          "label": "Redeem",
+          "description": "Redeem bank shares for assets."
+        }
+      },
+      "max": {
+        "walletBalance": "Wallet balance",
+        "pending": "Max pending",
+        "value": "Max {amount}"
+      },
+      "submit": {
+        "executing": "Executing",
+        "deposit": "Deposit assets",
+        "withdraw": "Withdraw assets",
+        "redeem": "Redeem shares"
+      },
+      "trace": {
+        "deposit": "Deposit trace",
+        "withdraw": "Withdraw trace",
+        "redeem": "Redeem trace"
+      }
+    },
+    "flows": {
+      "preflight": {
+        "title": "Preflight"
+      },
+      "deposit": {
+        "preflight": "Validate inputs and simulate flow.",
+        "approveTitle": "Approve Bank",
+        "approveDescription": "Set ERC20 allowance.",
+        "depositTitle": "Deposit Assets",
+        "depositDescription": "Broadcast Bank.deposit."
+      },
+      "direct": {
+        "submit": "Submit",
+        "confirm": "Confirm",
+        "validate": "Validate constraints.",
+        "receipt": "Wait for receipt."
+      },
+      "withdraw": {
+        "submit": "Broadcast Bank.withdraw."
+      },
+      "redeem": {
+        "submit": "Broadcast Bank.redeem."
+      }
+    },
+    "trace": {
+      "waiting": "Waiting for transaction intent.",
+      "error": "Transaction error",
+      "subtitle": "Wallet signature, broadcast, and receipt state.",
+      "status": "Status",
+      "viewExplorer": "View explorer",
+      "block": "Block {blockNumber}",
+      "reset": "Reset trace"
+    },
+    "risk": {
+      "custody": {
+        "label": "Custody boundary",
+        "title": "Bank first, marketing second.",
+        "detail": "The LP screen exposes reserved liabilities and free reserve before any yield narrative."
+      },
+      "release": {
+        "label": "Release digest",
+        "detail": "Asset identity, bank address, and UI reads are anchored to the active release manifest."
+      },
+      "protocolFees": {
+        "label": "Protocol fees",
+        "detail": "External payables {externalPayables} · Assets {assets}"
+      }
+    },
+    "toast": {
+      "processing": "Processing bank transaction...",
+      "redeemed": "Redeemed {amount} shares",
+      "deposited": "Deposited {amount} {symbol}",
+      "withdrew": "Withdrew {amount} {symbol}",
+      "failed": "Transaction failed"
+    },
+    "units": {
+      "shares": "Shares",
+      "sharesLower": "shares"
+    }
+  },
   "nav": {
     "account": "Account",
     "affiliates": "Affiliates",

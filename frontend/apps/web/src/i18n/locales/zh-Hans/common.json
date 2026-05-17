@@ -726,6 +726,159 @@
       }
     }
   },
+  "earn": {
+    "state": {
+      "noRelease": {
+        "title": "赚取收益",
+        "description": "当前链没有内嵌 release。"
+      }
+    },
+    "errors": {
+      "sdkUnavailable": "SDK 不可用",
+      "poolUnavailable": "资金池不可用",
+      "unsupportedWriteAsset": "写入流程需要所选资产存在 active casino pool。",
+      "positiveAmount": "金额必须大于 0。",
+      "primaryAssetOnly": "当前写入流程仅支持主资产。"
+    },
+    "hero": {
+      "eyebrow": "Bank 储备",
+      "title": "{symbol} Bankroll 控制台。",
+      "description": "围绕协议 Bank 执行存入、取出和赎回，沿用赌场票据相同的 release 锚定结算模型。展示储备事实之前，不展示任何营销化 APY。",
+      "bankAddress": "Bank 地址"
+    },
+    "metrics": {
+      "freeReserve": {
+        "label": "可用储备",
+        "detail": "未被未结算负债占用的资产。"
+      },
+      "totalAssets": {
+        "label": "总资产",
+        "detail": "来自协议读取的当前 Bank 资产。"
+      },
+      "minLiquidity": {
+        "label": "最低流动性",
+        "detail": "取款前必须保留的配置下限。"
+      }
+    },
+    "summary": {
+      "capitalPosture": {
+        "title": "资本状态",
+        "readModel": "读取模型",
+        "totalAssets": "总资产",
+        "loading": "正在从所选 release 同步 Bank 快照。",
+        "detail": "图表仅展示资金姿态。数值真相来自下方 Bank 快照。"
+      },
+      "position": {
+        "label": "你的仓位",
+        "detail": "已连接钱包对应的资产等价值。"
+      },
+      "liquidity": {
+        "label": "流动性策略",
+        "detail": "下限 {floor} · Bank {bank}"
+      },
+      "reserved": {
+        "label": "已预留负债",
+        "detail": "可用储备 {freeReserve} · 最低流动性 {minLiquidity}"
+      }
+    },
+    "actions": {
+      "eyebrow": "LP 操作",
+      "title": "Bank 交易控制台",
+      "asset": "资产",
+      "amount": "金额",
+      "connectWallet": "连接钱包后才能执行 Bank 操作。",
+      "readOnly": "当前 release 禁用了写入。",
+      "tabs": {
+        "deposit": {
+          "label": "存入",
+          "description": "向 Bank 提供资产。"
+        },
+        "withdraw": {
+          "label": "取出",
+          "description": "取出可用资产。"
+        },
+        "redeem": {
+          "label": "赎回",
+          "description": "将 Bank 份额赎回为资产。"
+        }
+      },
+      "max": {
+        "walletBalance": "钱包余额",
+        "pending": "最大值读取中",
+        "value": "最大 {amount}"
+      },
+      "submit": {
+        "executing": "执行中",
+        "deposit": "存入资产",
+        "withdraw": "取出资产",
+        "redeem": "赎回份额"
+      },
+      "trace": {
+        "deposit": "存入追踪",
+        "withdraw": "取出追踪",
+        "redeem": "赎回追踪"
+      }
+    },
+    "flows": {
+      "preflight": {
+        "title": "预检查"
+      },
+      "deposit": {
+        "preflight": "校验输入并模拟流程。",
+        "approveTitle": "授权 Bank",
+        "approveDescription": "设置 ERC20 allowance。",
+        "depositTitle": "存入资产",
+        "depositDescription": "广播 Bank.deposit。"
+      },
+      "direct": {
+        "submit": "提交",
+        "confirm": "确认",
+        "validate": "校验约束。",
+        "receipt": "等待交易回执。"
+      },
+      "withdraw": {
+        "submit": "广播 Bank.withdraw。"
+      },
+      "redeem": {
+        "submit": "广播 Bank.redeem。"
+      }
+    },
+    "trace": {
+      "waiting": "等待交易意图。",
+      "error": "交易错误",
+      "subtitle": "钱包签名、广播和回执状态。",
+      "status": "状态",
+      "viewExplorer": "查看浏览器",
+      "block": "区块 {blockNumber}",
+      "reset": "重置追踪"
+    },
+    "risk": {
+      "custody": {
+        "label": "托管边界",
+        "title": "Bank 优先，营销其次。",
+        "detail": "LP 页面先暴露已预留负债和可用储备，再谈任何收益叙事。"
+      },
+      "release": {
+        "label": "Release 摘要",
+        "detail": "资产身份、Bank 地址和 UI 读取都锚定到当前 active release manifest。"
+      },
+      "protocolFees": {
+        "label": "协议费用",
+        "detail": "外部应付款 {externalPayables} · 资产 {assets}"
+      }
+    },
+    "toast": {
+      "processing": "正在处理 Bank 交易...",
+      "redeemed": "已赎回 {amount} 份额",
+      "deposited": "已存入 {amount} {symbol}",
+      "withdrew": "已取出 {amount} {symbol}",
+      "failed": "交易失败"
+    },
+    "units": {
+      "shares": "份额",
+      "sharesLower": "份额"
+    }
+  },
   "nav": {
     "account": "账户",
     "affiliates": "推广",
