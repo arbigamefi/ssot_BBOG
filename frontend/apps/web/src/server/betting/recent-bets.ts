@@ -98,6 +98,14 @@ function isFalseyEnv(value: string | undefined) {
   );
 }
 
+function shouldUseRpcFallback(name: string, durableStoreEnabled: boolean) {
+  const scoped = cleanEnvValue(process.env[name]);
+  const global = cleanEnvValue(process.env.BET_INDEX_RPC_FALLBACK_ENABLED);
+  const value = scoped ?? global;
+  if (value !== undefined) return isTruthyEnv(value);
+  return !durableStoreEnabled;
+}
+
 function getDurableBetIndexStore() {
   if (durableBetIndexStore !== undefined) return durableBetIndexStore;
   const connectionString = cleanEnvValue(process.env.BET_INDEX_DATABASE_URL);
@@ -368,6 +376,7 @@ export async function queryRecentBets({
     return { ...cached.response, cached: true };
   }
 
+  const durableStoreEnabled = Boolean(getDurableBetIndexStore());
   const durableRows = await queryDurableRecentBets({
     chainId,
     gameId: normalizedGameId,
@@ -380,6 +389,15 @@ export async function queryRecentBets({
       chainId,
       generatedAt,
       rows: durableRows,
+      source: "postgres"
+    });
+    recentBetsCache.set(cacheKey, { expiresAt: now() + cacheTtlMs, response });
+    return response;
+  }
+  if (!shouldUseRpcFallback("RECENT_BETS_RPC_FALLBACK_ENABLED", durableStoreEnabled)) {
+    const response = emptyRecentBetsResponse({
+      chainId,
+      generatedAt: now(),
       source: "postgres"
     });
     recentBetsCache.set(cacheKey, { expiresAt: now() + cacheTtlMs, response });
@@ -482,6 +500,7 @@ export async function queryPlayerBets({
     return { ...(cached.response as PlayerBetsResponse), cached: true };
   }
 
+  const durableStoreEnabled = Boolean(getDurableBetIndexStore());
   const durableRows = await queryDurablePlayerBets({
     chainId,
     limit: normalizedLimit,
@@ -495,6 +514,18 @@ export async function queryPlayerBets({
         chainId,
         generatedAt,
         rows: durableRows,
+        source: "postgres"
+      }),
+      player: normalizedPlayer
+    };
+    recentBetsCache.set(cacheKey, { expiresAt: now() + cacheTtlMs, response });
+    return response;
+  }
+  if (!shouldUseRpcFallback("PLAYER_BETS_RPC_FALLBACK_ENABLED", durableStoreEnabled)) {
+    const response = {
+      ...emptyRecentBetsResponse({
+        chainId,
+        generatedAt: now(),
         source: "postgres"
       }),
       player: normalizedPlayer
