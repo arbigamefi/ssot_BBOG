@@ -8,6 +8,22 @@
     "en": "English",
     "zhHans": "简体中文"
   },
+  "footer": {
+    "brandSubtitle": "钱包原生游戏",
+    "description": "钱包原生游戏房间、可读结算结果，以及链上执行之上的资金池上下文。",
+    "liveRooms": "实时游戏",
+    "games": "游戏",
+    "platform": "平台",
+    "resources": "资源",
+    "legal": "法律",
+    "earn": "赚取收益",
+    "portfolio": "账户组合",
+    "terms": "服务条款",
+    "privacy": "隐私政策",
+    "disclaimer": "风险提示",
+    "copyright": "ArbiGameFi 前端用于钱包原生游戏与透明结算。",
+    "docs": "文档"
+  },
   "nav": {
     "account": "账户",
     "affiliates": "推广",

@@ -8,6 +8,22 @@
     "en": "English",
     "zhHans": "简体中文"
   },
+  "footer": {
+    "brandSubtitle": "Wallet-native rooms",
+    "description": "Wallet-native game rooms, readable settlement, and visible bankroll context on top of on-chain execution.",
+    "liveRooms": "Live rooms",
+    "games": "Games",
+    "platform": "Platform",
+    "resources": "Resources",
+    "legal": "Legal",
+    "earn": "Earn",
+    "portfolio": "Portfolio",
+    "terms": "Terms",
+    "privacy": "Privacy",
+    "disclaimer": "Disclaimer",
+    "copyright": "ArbiGameFi frontend for wallet-native rooms and transparent settlement.",
+    "docs": "Docs"
+  },
   "nav": {
     "account": "Account",
     "affiliates": "Affiliates",
