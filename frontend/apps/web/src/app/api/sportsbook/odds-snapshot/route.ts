@@ -27,15 +27,6 @@ function sportsbookEnabled() {
   return env("NEXT_PUBLIC_SPORTSBOOK_ENABLED")?.toLowerCase() === "true";
 }
 
-function oddsSignerPrivateKey() {
-  return (
-    env("SPORTS_ODDS_SIGNER_PRIVATE_KEY") ??
-    env("FOOTBALL_ODDS_SIGNER_PRIVATE_KEY") ??
-    env("CANARY_ODDS_SIGNER_PRIVATE_KEY") ??
-    ""
-  );
-}
-
 export async function POST(request: Request) {
   try {
     if (!sportsbookEnabled()) {
@@ -46,7 +37,7 @@ export async function POST(request: Request) {
     const snapshot = await createSignedSportsOddsSnapshot({
       request: body,
       oddsApiKey: requiredEnv("THE_ODDS_API_KEY"),
-      oddsSignerPrivateKey: oddsSignerPrivateKey(),
+      oddsSignerPrivateKey: requiredEnv("SPORTS_ODDS_SIGNER_PRIVATE_KEY"),
       rpcUrl: env("RPC_URL"),
       expectedOddsSigner: env("SPORTS_ODDS_SIGNER"),
       defaultSportKey: env("SPORTS_PROVIDER_SPORT_KEY"),

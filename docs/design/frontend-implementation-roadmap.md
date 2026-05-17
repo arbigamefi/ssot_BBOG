@@ -666,6 +666,30 @@ Only after C1-C2:
 5. settlement/readback path;
 6. challenge/void/admin ops surfaces.
 
+### C5 - Sportsbook Frontend Env Purity
+
+The C4 MVP surface exists, but the frontend-owned odds signing route still
+accepted historical canary aliases for the signer private key. That is a
+compatibility path, not a production frontend contract.
+
+Scope:
+
+1. Require `SPORTS_ODDS_SIGNER_PRIVATE_KEY` in
+   `POST /api/sportsbook/odds-snapshot`.
+2. Remove `FOOTBALL_ODDS_SIGNER_PRIVATE_KEY` and
+   `CANARY_ODDS_SIGNER_PRIVATE_KEY` from frontend docs and tests.
+3. Keep canary script aliases out of scope; they are ops rehearsal inputs, not
+   browser/API runtime configuration.
+
+Exit criteria:
+
+```bash
+pnpm -C frontend/apps/web test -- src/app/api/sportsbook/odds-snapshot/route.test.ts
+pnpm -C frontend/apps/web typecheck
+rg -n "FOOTBALL_ODDS_SIGNER_PRIVATE_KEY|CANARY_ODDS_SIGNER_PRIVATE_KEY" \
+  frontend/apps/web/src frontend/apps/web/.env.example docs/frontend -S
+```
+
 ## 8. Historical Execution Phases
 
 The phase names below are retained as an implementation log and audit trail.

@@ -41,7 +41,7 @@ describe("POST /api/sportsbook/odds-snapshot", () => {
       ...originalEnv,
       NEXT_PUBLIC_SPORTSBOOK_ENABLED: "true",
       THE_ODDS_API_KEY: "test-odds-key",
-      CANARY_ODDS_SIGNER_PRIVATE_KEY: "11".repeat(32),
+      SPORTS_ODDS_SIGNER_PRIVATE_KEY: "11".repeat(32),
       SPORTS_ODDS_SIGNER: "0x1111111111111111111111111111111111111111",
       RPC_URL: "https://base-sepolia.example",
       SPORTS_PROVIDER_SPORT_KEY: "soccer_usa_mls",
@@ -147,5 +147,21 @@ describe("POST /api/sportsbook/odds-snapshot", () => {
     expect(await json(response)).toEqual({
       error: { code: "MARKET_NOT_OPEN", message: "Market is not open." }
     });
+  });
+
+  it("fails closed without the sportsbook signer private key", async () => {
+    delete process.env.SPORTS_ODDS_SIGNER_PRIVATE_KEY;
+    const { POST } = await import("./route");
+
+    const response = await POST(request({ marketId: "7", stake: "1000000" }));
+
+    expect(response.status).toBe(500);
+    expect(await json(response)).toEqual({
+      error: {
+        code: "ODDS_SNAPSHOT_FAILED",
+        message: "Missing SPORTS_ODDS_SIGNER_PRIVATE_KEY."
+      }
+    });
+    expect(sdkMock.createSignedSportsOddsSnapshot).not.toHaveBeenCalled();
   });
 });
