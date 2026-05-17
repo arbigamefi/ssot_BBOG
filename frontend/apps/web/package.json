@@ -4,7 +4,9 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "predev": "pnpm -C ../../packages/bet-index build",
     "dev": "next dev",
+    "prebuild": "pnpm -C ../../packages/bet-index build",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",

@@ -5,7 +5,11 @@
   "type": "module",
   "main": "dist/cli.js",
   "scripts": {
+    "backfill": "node dist/backfill.js",
+    "prebackfill": "pnpm -C ../../packages/bet-index build && tsc -p tsconfig.json",
+    "prebuild": "pnpm -C ../../packages/bet-index build",
     "build": "tsc -p tsconfig.json",
+    "prestart": "pnpm -C ../../packages/bet-index build",
     "start": "node dist/cli.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run -c vitest.config.ts"

@@ -70,6 +70,20 @@ events, and resumes scan windows from the persisted `gamehub-events` cursor when
 that cursor is ahead of `KEEPER_START_BLOCK`. Index writes are best-effort:
 failures are logged and do not block `finalize`.
 
+One-shot durable index backfill or canary run:
+
+```bash
+BET_INDEX_DATABASE_URL=postgres://... \
+BET_INDEX_FROM_BLOCK=41562978 \
+BET_INDEX_TO_BLOCK=41570000 \
+pnpm -C frontend keeper:backfill
+```
+
+The wrapper reads the repo root `.env`, builds the keeper, scans `BetPlaced`,
+`BetRandomReady`, `BetFinalized`, and `BetRefunded`, writes idempotent rows, and
+prints a JSON summary with the block range and recent rows. Use
+`BET_INDEX_DRY_RUN=true` to verify RPC/event access without writing Postgres.
+
 `KEEPER_SCAN_CHUNK_BLOCKS` defaults to `10` so Base Sepolia free RPC providers
 with tight `eth_getLogs` range limits can still catch delayed events. Increase it
 only for providers with a documented larger logs range.

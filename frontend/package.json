@@ -23,6 +23,7 @@
     "dev:with-keeper": "node scripts/dev-casino-keeper.mjs --with-web",
     "build": "pnpm -C apps/web build",
     "keeper:build": "pnpm -C apps/keeper build",
+    "keeper:backfill": "node scripts/bet-index-backfill.mjs",
     "keeper:dev": "node scripts/dev-casino-keeper.mjs",
     "keeper:start": "pnpm -C apps/keeper start",
     "keeper:test": "pnpm -C apps/keeper test",

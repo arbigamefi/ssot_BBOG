@@ -81,6 +81,8 @@ Neutral:
 - [x] `@ssot/bet-index` package implemented and tested.
 - [x] Keeper write path is optional and does not block finalize.
 - [x] Web API read path falls back to RPC-window aggregation.
+- [x] One-shot backfill/canary command exists and does not require keeper
+      private key.
 - [ ] Canaried on Base Sepolia before mainnet.
 
 ## 9. References

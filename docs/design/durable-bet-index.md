@@ -143,6 +143,11 @@ best-effort operational telemetry and feed acceleration; they must never block
 | `BET_INDEX_SSL` | keeper + web | optional `true` for managed Postgres SSL |
 | `BET_INDEX_WRITE_ENABLED` | keeper | defaults false until canary |
 | `BET_INDEX_READ_ENABLED` | web | defaults true when database URL exists |
+| `BET_INDEX_FROM_BLOCK` | backfill | optional explicit backfill start block |
+| `BET_INDEX_TO_BLOCK` | backfill | optional explicit backfill end block |
+| `BET_INDEX_CONFIRMATIONS` | backfill | default `2`, caps end block below latest |
+| `BET_INDEX_SCAN_CHUNK_BLOCKS` | backfill | default `10`, safe for Base Sepolia public RPC |
+| `BET_INDEX_DRY_RUN` | backfill | scan and fold into memory without Postgres writes |
 
 Implementation lives in `frontend/packages/bet-index`. The package is Node-only;
 client components must not import it.
@@ -153,6 +158,17 @@ Keeper startup must run migrations before scanning and then read the
 block windows after restarts. If Postgres is unavailable, connection attempts
 must fail quickly and settlement must continue with the configured
 `KEEPER_START_BLOCK`.
+
+Backfill and canary use the same package contract through:
+
+```bash
+pnpm -C frontend keeper:backfill
+```
+
+The command reads the repo root `.env`, scans `GameHub` lifecycle events, writes
+idempotent rows, advances the same `gamehub-events` cursor, and prints a JSON
+summary. It does not require the keeper private key and must never call
+`GameHub.finalize`.
 
 ## 8. Don'ts
 
