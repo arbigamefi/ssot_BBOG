@@ -41,7 +41,7 @@ Read top-down. Lower-numbered documents constrain higher-numbered ones.
 
 - [`north-star.md`](./north-star.md) — Visual-language summary (entry point for cross-team readers)
 - [`frontend-rewrite-blueprint.md`](./frontend-rewrite-blueprint.md) — Execution playbook (rebuild order, deletion ledger, cutover)
-- [`frontend-implementation-roadmap.md`](./frontend-implementation-roadmap.md) — Current branch gap audit and phase-by-phase execution order
+- [`frontend-implementation-roadmap.md`](./frontend-implementation-roadmap.md) — Lean closeout priorities, keep/collapse decisions, and local verification order
 - [`frontend-kill-list.md`](./frontend-kill-list.md) — Physical keep / rewrite / delete inventory
 - [`casino-placebet-ux.md`](./casino-placebet-ux.md) — Casino round UX, VRF waiting, keeper settlement, and manual fallback contract
 

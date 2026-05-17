@@ -94,7 +94,7 @@ clean-room rewrite delivery order, target directory layout, deletion
 ledger, and cutover plan.
 
 [`frontend-implementation-roadmap.md`](./frontend-implementation-roadmap.md) —
-current branch gap audit, Gate status, and phase-by-phase implementation
+lean closeout priorities, keep/collapse decisions, and local verification
 order.
 
 [`frontend-kill-list.md`](./frontend-kill-list.md) — physical keep /
