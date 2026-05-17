@@ -924,6 +924,160 @@
         "closed": "已关闭",
         "settled": "已结算",
         "open": "未关闭"
+      },
+      "detail": {
+        "common": {
+          "empty": "—",
+          "ticketDetail": "票据详情"
+        },
+        "state": {
+          "won": "获胜",
+          "lost": "未获胜",
+          "randomReady": "随机数已就绪",
+          "placed": "已下注",
+          "refunded": "已退款",
+          "pending": "待读取",
+          "refreshing": "刷新中"
+        },
+        "hero": {
+          "back": "返回账本",
+          "eyebrow": "回执档案",
+          "title": "{gameLabel} 回执。",
+          "description": "本金、生命周期证明、结算事实和可执行协议操作都归集在同一个可审计票据页面。",
+          "ticketContext": "票据上下文",
+          "settlementState": "结算状态"
+        },
+        "flows": {
+          "preflight": "预检查",
+          "confirm": "链上确认",
+          "receipt": "等待回执和日志对账。",
+          "refund": {
+            "submit": "提交退款",
+            "preflight": "校验退款资格并模拟 GameHub 调用。",
+            "broadcast": "通过钱包客户端广播退款。"
+          },
+          "finalize": {
+            "submit": "提交结算",
+            "preflight": "校验结算资格并模拟 GameHub 调用。",
+            "broadcast": "通过钱包客户端广播 finalize。"
+          }
+        },
+        "toast": {
+          "refunded": "投注已成功退款",
+          "refundFailed": "退款交易失败",
+          "finalized": "投注已成功结算",
+          "finalizeFailed": "结算交易失败"
+        },
+        "outcomes": {
+          "refunded": "已退款",
+          "netResult": "净结果",
+          "loss": "亏损"
+        },
+        "metrics": {
+          "settlementState": {
+            "label": "结算状态",
+            "detail": "来自本地和链上来源的当前生命周期状态。"
+          },
+          "capitalAtRisk": {
+            "label": "风险本金",
+            "detail": "票据下注时锁定的原始本金。"
+          },
+          "settlement": {
+            "label": "结算",
+            "realized": "已在链上实现的结果。",
+            "pending": "结果尚未结算。"
+          },
+          "receiptId": {
+            "label": "回执 ID",
+            "detail": "运行时和索引器追踪共用的稳定标识。"
+          }
+        },
+        "facts": {
+          "room": "房间",
+          "ticketId": "票据 ID",
+          "stake": "本金",
+          "vrfFeePaid": "已付 VRF 费用",
+          "vrfFeeCharged": "已计费 VRF 费用",
+          "vrfRequestId": "VRF 请求 ID",
+          "randomHash": "随机哈希",
+          "payout": "赔付",
+          "protocolFee": "协议费用",
+          "refund": "退款",
+          "placedAt": "下注时间",
+          "vrfRequestedAt": "VRF 请求时间",
+          "settledAt": "结算时间",
+          "primaryTx": "主交易",
+          "player": "玩家"
+        },
+        "factsSection": {
+          "eyebrow": "执行事实",
+          "title": "回执矩阵"
+        },
+        "copy": {
+          "title": "复制 {value}",
+          "copy": "复制",
+          "copied": "已复制",
+          "failed": "失败"
+        },
+        "lifecycle": {
+          "eyebrow": "生命周期证明",
+          "title": "GameHub 状态",
+          "stepperTitle": "票据生命周期",
+          "stepperSubtitle": "下注、随机数和结算都保持可独立检查。",
+          "releaseDigest": "Release 摘要",
+          "asset": "资产",
+          "latestIndexedEvent": "最新索引事件",
+          "steps": {
+            "placed": {
+              "title": "已下注",
+              "description": "GameHub 接受票据并锁定本金。"
+            },
+            "randomReady": {
+              "title": "随机数已就绪",
+              "description": "VRF 已交付用于结算的随机数。"
+            },
+            "finalized": {
+              "title": "已结算",
+              "description": "GameHub 已结算赔付或亏损。"
+            },
+            "refunded": {
+              "title": "已退款",
+              "description": "本金已返还给玩家。"
+            }
+          }
+        },
+        "actions": {
+          "eyebrow": "协议操作",
+          "refundSurface": "退款入口",
+          "finalizeSurface": "结算入口",
+          "description": "只有 GameHub 状态允许时才显示操作。执行追踪始终附着在这张回执上。",
+          "finalizing": "结算中...",
+          "finalizeTicket": "结算票据",
+          "refunding": "退款中...",
+          "refundStake": "退回本金",
+          "transactionError": "交易错误",
+          "refundTrace": "退款追踪",
+          "finalizeTrace": "结算追踪",
+          "traceSubtitle": "钱包签名、广播和回执状态。",
+          "status": "状态",
+          "viewExplorer": "查看浏览器",
+          "block": "区块 {blockNumber}",
+          "resetTrace": "重置追踪"
+        },
+        "timeline": {
+          "eyebrow": "时间线",
+          "title": "已索引生命周期事件",
+          "columns": {
+            "timeTx": "时间 / 交易",
+            "event": "事件",
+            "block": "区块",
+            "status": "状态"
+          },
+          "mobile": {
+            "time": "时间"
+          },
+          "empty": "还没有已索引生命周期事件。"
+        }
       }
     },
     "claims": {

@@ -22,22 +22,61 @@ export function matchesBetId(argsJson: string, expectedBetId: string) {
   }
 }
 
-export function getStateLabel(state?: string | null, bet?: DomainBet | null) {
-  if (state === "finalized" && bet?.payout != null) {
-    return bet.payout > bet.stake ? "Won" : "Lost";
+export function getStateLabel(
+  state?: string | null,
+  bet?: DomainBet | null,
+  labels: {
+    won: string;
+    lost: string;
+    randomReady: string;
+    placed: string;
+    refunded: string;
+    pending: string;
+  } = {
+    won: "Won",
+    lost: "Lost",
+    randomReady: "Random ready",
+    placed: "Placed",
+    refunded: "Refunded",
+    pending: "Pending"
   }
-  if (state === "randomReady") return "Random ready";
-  if (state === "placed") return "Placed";
-  if (state === "refunded") return "Refunded";
-  if (!state) return "Pending";
+) {
+  if (state === "finalized" && bet?.payout != null) {
+    return bet.payout > bet.stake ? labels.won : labels.lost;
+  }
+  if (state === "randomReady") return labels.randomReady;
+  if (state === "placed") return labels.placed;
+  if (state === "refunded") return labels.refunded;
+  if (!state) return labels.pending;
   return `${state.charAt(0).toUpperCase()}${state.slice(1)}`;
 }
 
-export function buildLifecycleSteps(state?: string | null): TxStepItem[] {
+export function buildLifecycleSteps(
+  state?: string | null,
+  labels: {
+    placed: string;
+    refunded: string;
+    refundedDescription: string;
+    placedDescription: string;
+    randomReady: string;
+    randomReadyDescription: string;
+    finalized: string;
+    finalizedDescription: string;
+  } = {
+    placed: "Placed",
+    refunded: "Refunded",
+    refundedDescription: "Stake returned to the player.",
+    placedDescription: "GameHub accepted the ticket and locked stake.",
+    randomReady: "Random ready",
+    randomReadyDescription: "VRF delivered randomness for settlement.",
+    finalized: "Finalized",
+    finalizedDescription: "GameHub settled payout or loss."
+  }
+): TxStepItem[] {
   if (state === "refunded") {
     return [
-      { title: "Placed", state: "done" },
-      { title: "Refunded", description: "Stake returned to the player.", state: "done" }
+      { title: labels.placed, state: "done" },
+      { title: labels.refunded, description: labels.refundedDescription, state: "done" }
     ];
   }
 
@@ -46,18 +85,18 @@ export function buildLifecycleSteps(state?: string | null): TxStepItem[] {
 
   return [
     {
-      title: "Placed",
-      description: "GameHub accepted the ticket and locked stake.",
+      title: labels.placed,
+      description: labels.placedDescription,
       state: stepState(currentIndex, 0)
     },
     {
-      title: "Random ready",
-      description: "VRF delivered randomness for settlement.",
+      title: labels.randomReady,
+      description: labels.randomReadyDescription,
       state: stepState(currentIndex, 1)
     },
     {
-      title: "Finalized",
-      description: "GameHub settled payout or loss.",
+      title: labels.finalized,
+      description: labels.finalizedDescription,
       state: stepState(currentIndex, 2)
     }
   ];

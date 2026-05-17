@@ -924,6 +924,160 @@
         "closed": "Closed",
         "settled": "Settled",
         "open": "Open"
+      },
+      "detail": {
+        "common": {
+          "empty": "—",
+          "ticketDetail": "Ticket detail"
+        },
+        "state": {
+          "won": "Won",
+          "lost": "Lost",
+          "randomReady": "Random ready",
+          "placed": "Placed",
+          "refunded": "Refunded",
+          "pending": "Pending",
+          "refreshing": "Refreshing"
+        },
+        "hero": {
+          "back": "Back to ledger",
+          "eyebrow": "Receipt dossier",
+          "title": "{gameLabel} receipt.",
+          "description": "Stake, lifecycle proof, settlement facts, and eligible protocol actions stay attached to one auditable ticket surface.",
+          "ticketContext": "Ticket context",
+          "settlementState": "Settlement state"
+        },
+        "flows": {
+          "preflight": "Preflight",
+          "confirm": "Confirm on-chain",
+          "receipt": "Wait for receipt and journal reconciliation.",
+          "refund": {
+            "submit": "Submit refund",
+            "preflight": "Validate refund eligibility and simulate the GameHub call.",
+            "broadcast": "Broadcast refund through the wallet client."
+          },
+          "finalize": {
+            "submit": "Submit finalize",
+            "preflight": "Validate finalize eligibility and simulate the GameHub call.",
+            "broadcast": "Broadcast finalize through the wallet client."
+          }
+        },
+        "toast": {
+          "refunded": "Bet refunded successfully",
+          "refundFailed": "Refund transaction failed",
+          "finalized": "Bet finalized successfully",
+          "finalizeFailed": "Finalize transaction failed"
+        },
+        "outcomes": {
+          "refunded": "Refunded",
+          "netResult": "Net result",
+          "loss": "Loss"
+        },
+        "metrics": {
+          "settlementState": {
+            "label": "Settlement state",
+            "detail": "Current lifecycle state from local and on-chain sources."
+          },
+          "capitalAtRisk": {
+            "label": "Capital at risk",
+            "detail": "Original stake committed when the ticket was placed."
+          },
+          "settlement": {
+            "label": "Settlement",
+            "realized": "Realized on-chain result.",
+            "pending": "Outcome not settled yet."
+          },
+          "receiptId": {
+            "label": "Receipt id",
+            "detail": "Stable identifier used across runtime and indexer traces."
+          }
+        },
+        "facts": {
+          "room": "Room",
+          "ticketId": "Ticket id",
+          "stake": "Stake",
+          "vrfFeePaid": "VRF fee paid",
+          "vrfFeeCharged": "VRF fee charged",
+          "vrfRequestId": "VRF request id",
+          "randomHash": "Random hash",
+          "payout": "Payout",
+          "protocolFee": "Protocol fee",
+          "refund": "Refund",
+          "placedAt": "Placed at",
+          "vrfRequestedAt": "VRF requested at",
+          "settledAt": "Settled at",
+          "primaryTx": "Primary tx",
+          "player": "Player"
+        },
+        "factsSection": {
+          "eyebrow": "Execution facts",
+          "title": "Receipt matrix"
+        },
+        "copy": {
+          "title": "Copy {value}",
+          "copy": "Copy",
+          "copied": "Copied",
+          "failed": "Failed"
+        },
+        "lifecycle": {
+          "eyebrow": "Lifecycle proof",
+          "title": "GameHub state",
+          "stepperTitle": "Ticket lifecycle",
+          "stepperSubtitle": "Placement, randomness, and settlement remain independently inspectable.",
+          "releaseDigest": "Release digest",
+          "asset": "Asset",
+          "latestIndexedEvent": "Latest indexed event",
+          "steps": {
+            "placed": {
+              "title": "Placed",
+              "description": "GameHub accepted the ticket and locked stake."
+            },
+            "randomReady": {
+              "title": "Random ready",
+              "description": "VRF delivered randomness for settlement."
+            },
+            "finalized": {
+              "title": "Finalized",
+              "description": "GameHub settled payout or loss."
+            },
+            "refunded": {
+              "title": "Refunded",
+              "description": "Stake returned to the player."
+            }
+          }
+        },
+        "actions": {
+          "eyebrow": "Protocol action",
+          "refundSurface": "Refund surface",
+          "finalizeSurface": "Finalize surface",
+          "description": "Actions only appear when GameHub state allows them. The execution trace remains attached to this receipt.",
+          "finalizing": "Finalizing...",
+          "finalizeTicket": "Finalize ticket",
+          "refunding": "Refunding...",
+          "refundStake": "Refund stake",
+          "transactionError": "Transaction error",
+          "refundTrace": "Refund trace",
+          "finalizeTrace": "Finalize trace",
+          "traceSubtitle": "Wallet signature, broadcast, and receipt state.",
+          "status": "Status",
+          "viewExplorer": "View explorer",
+          "block": "Block {blockNumber}",
+          "resetTrace": "Reset trace"
+        },
+        "timeline": {
+          "eyebrow": "Timeline",
+          "title": "Indexed lifecycle events",
+          "columns": {
+            "timeTx": "Time / tx",
+            "event": "Event",
+            "block": "Block",
+            "status": "Status"
+          },
+          "mobile": {
+            "time": "Time"
+          },
+          "empty": "No indexed lifecycle events yet."
+        }
       }
     },
     "claims": {

@@ -1,7 +1,7 @@
 import { formatUnits } from "../../../betting/model/units";
 
-export function shortHex(value?: string | null) {
-  if (!value) return "—";
+export function shortHex(value?: string | null, emptyLabel = "—") {
+  if (!value) return emptyLabel;
   if (value.length <= 12) return value;
   return `${value.slice(0, 6)}...${value.slice(-4)}`;
 }
@@ -10,9 +10,10 @@ export function formatTokenAmount(
   value: bigint | undefined,
   decimals: number,
   symbol?: string,
-  maxFractionDigits = 4
+  maxFractionDigits = 4,
+  emptyLabel = "—"
 ) {
-  if (value == null) return "—";
+  if (value == null) return emptyLabel;
   const raw = formatUnits(value, decimals);
   const negative = raw.startsWith("-");
   const normalized = negative ? raw.slice(1) : raw;
@@ -27,8 +28,8 @@ export function formatNativeAmount(value: bigint | undefined, symbol = "ETH") {
   return formatTokenAmount(value, 18, symbol, 8);
 }
 
-export function formatTimestamp(value?: number | bigint) {
-  if (!value) return "—";
+export function formatTimestamp(value?: number | bigint, emptyLabel = "—") {
+  if (!value) return emptyLabel;
   const numeric = Number(value);
   const millis = numeric > 1_000_000_000_000 ? numeric : numeric * 1000;
   return new Date(millis).toLocaleString();
