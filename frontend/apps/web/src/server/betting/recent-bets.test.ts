@@ -94,7 +94,9 @@ describe("recent bets server aggregation", () => {
             asset: "0x4444444444444444444444444444444444444444",
             gameId: GAME_ID,
             player: PLAYER,
-            positionId: 7n
+            positionId: 7n,
+            requestId: 99n,
+            stake: 10n
           },
           blockNumber: 10n,
           eventName: "BetPlaced",
@@ -122,8 +124,13 @@ describe("recent bets server aggregation", () => {
       gameId: GAME_ID,
       lastEventName: "BetFinalized",
       lastTxHash: "0xccc",
+      payout: "19",
+      payoutGross: "20",
       player: PLAYER,
+      randomHash: `0x${"55".repeat(32)}`,
+      requestId: "99",
       state: "finalized",
+      stake: "10",
       updatedBlock: 12
     });
   });
@@ -188,7 +195,8 @@ describe("recent bets server aggregation", () => {
             asset: "0x4444444444444444444444444444444444444444",
             gameId: GAME_ID,
             player: PLAYER,
-            positionId: 8n
+            positionId: 8n,
+            stake: 10n
           },
           blockNumber: 20n,
           logIndex: 1,
@@ -243,6 +251,7 @@ describe("recent bets server aggregation", () => {
     expect(response.rows[0]).toMatchObject({
       betId: "8",
       lastEventName: "BetFinalized",
+      payout: "19",
       player: PLAYER,
       state: "finalized"
     });

@@ -90,6 +90,15 @@ Folded current state, using the same reducer semantics as browser Dexie replay.
 | `game_id`         | text        | nullable                                         |
 | `asset`           | text        | nullable                                         |
 | `player`          | text        | nullable wallet address                          |
+| `stake`           | text        | nullable raw asset amount from `BetPlaced`       |
+| `payout`          | text        | nullable raw net payout/refund for UI rows       |
+| `payout_gross`    | text        | nullable raw gross payout from `BetFinalized`    |
+| `refund_amount`   | text        | nullable raw refund amount from `BetRefunded`    |
+| `request_id`      | text        | nullable VRF request id                          |
+| `random_hash`     | text        | nullable VRF random hash                         |
+| `terminal_tx_hash` | text       | nullable finalized/refunded tx hash              |
+| `finalized_tx_hash` | text      | nullable `BetFinalized` tx hash                  |
+| `refunded_tx_hash` | text       | nullable `BetRefunded` tx hash                   |
 | `placed_block`    | bigint      | nullable                                         |
 | `updated_block`   | bigint      | latest folded event block                        |
 | `last_tx_hash`    | text        | latest folded event tx                           |
@@ -141,7 +150,11 @@ Ingestion must be idempotent:
 
 1. insert raw `gamehub_events` with `on conflict do nothing`;
 2. fold the full batch into `bets`;
-3. upsert `bets` only when `excluded.updated_block >= bets.updated_block`;
+3. upsert `bets` idempotently:
+   - lifecycle fields (`state`, `last_tx_hash`, `last_event_name`, `updated_block`)
+     only advance when `excluded.updated_block >= bets.updated_block`;
+   - metadata/economics fields (`stake`, `request_id`, `random_hash`, `payout`,
+     terminal tx hashes) may be filled by older replayed events during backfill;
 4. update `indexer_cursors` after the block range is fully written.
 
 If Postgres is unavailable, keeper settlement must continue. Index writes are

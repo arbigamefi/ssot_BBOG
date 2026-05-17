@@ -16,7 +16,9 @@ describe("memory bet index store", () => {
           asset: "0x4444444444444444444444444444444444444444",
           gameId: GAME_ID,
           player: PLAYER,
-          positionId: 7n
+          positionId: 7n,
+          requestId: 77n,
+          stake: 10n
         },
         blockNumber: 10n,
         chainId: 84532,
@@ -49,6 +51,11 @@ describe("memory bet index store", () => {
       betId: "7",
       gameId: GAME_ID,
       player: PLAYER,
+      payout: "19",
+      payoutGross: "20",
+      stake: "10",
+      finalizedTxHash: "0xbbb",
+      terminalTxHash: "0xbbb",
       state: "finalized",
       updatedBlock: 12
     });
@@ -75,7 +82,8 @@ describe("memory bet index store", () => {
           asset: "0x4444444444444444444444444444444444444444",
           gameId: GAME_ID,
           player: PLAYER,
-          positionId: 9n
+          positionId: 9n,
+          stake: 10n
         },
         blockNumber: 20n,
         chainId: 84532,
@@ -106,7 +114,9 @@ describe("memory bet index store", () => {
     expect(player[0]).toMatchObject({
       betId: "9",
       gameId: GAME_ID,
+      payout: "0",
       player: PLAYER,
+      stake: "10",
       state: "finalized",
       updatedBlock: 25
     });

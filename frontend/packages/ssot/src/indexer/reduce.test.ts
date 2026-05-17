@@ -86,6 +86,31 @@ describe("indexer reducer", () => {
     expect(bet.lastEventName).toBe("BetRandomReady");
   });
 
+  it("stores terminal economics for product-facing rows", () => {
+    let bet = applyGameHubEventToBet(undefined, {
+      ...mk("BetPlaced", 10, TX1),
+      args: { ...mk("BetPlaced", 10, TX1).args, requestId: 99n, stake: 100n }
+    });
+    bet = applyGameHubEventToBet(bet, {
+      ...mk("BetRandomReady", 11, TX2),
+      args: { betId: 123n, requestId: 99n, randomHash: "0x" + "55".repeat(32) }
+    });
+    bet = applyGameHubEventToBet(bet, {
+      ...mk("BetFinalized", 12, TX3),
+      args: { betId: 123n, payoutGross: 200n, payoutNet: 196n }
+    });
+
+    expect(bet).toMatchObject({
+      finalizedTxHash: TX3,
+      payout: "196",
+      payoutGross: "200",
+      randomHash: "0x" + "55".repeat(32),
+      requestId: "99",
+      stake: "100",
+      terminalTxHash: TX3
+    });
+  });
+
   // ——— Refund from placed (skip finalized) ———
   it("placed -> refunded directly", () => {
     let bet = applyGameHubEventToBet(undefined, mk("BetPlaced", 10, TX1));
