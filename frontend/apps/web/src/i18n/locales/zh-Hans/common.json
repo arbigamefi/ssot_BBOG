@@ -21,7 +21,49 @@
   "metadata": {
     "siteTitle": "ArbiGameFi",
     "titleTemplate": "%s | ArbiGameFi",
-    "description": "非托管链上游戏协议，提供可验证随机数与透明结算。"
+    "description": "非托管链上游戏协议，提供可验证随机数与透明结算。",
+    "pages": {
+      "casino": {
+        "title": "赌场",
+        "description": "浏览钱包原生赌场房间，使用链上随机数、可见资金池状态和 keeper 辅助结算。"
+      },
+      "casinoRoom": {
+        "title": "{game}",
+        "description": "游玩 {game}，查看可验证随机数、VRF 状态和链上结果凭证。"
+      },
+      "sportsbook": {
+        "title": "体育投注",
+        "description": "查看固定赔率体育市场、签名赔率快照和 SportsHub 结算准备状态。"
+      },
+      "sportsbookMarket": {
+        "title": "体育市场 {marketId}",
+        "description": "查看 SportsHub 市场 {marketId} 的下注准备、票据状态和结果证据。"
+      },
+      "portfolio": {
+        "title": "组合",
+        "description": "查看钱包身份、资产仓位、退款额度和近期协议活动。"
+      },
+      "portfolioActivity": {
+        "title": "活动",
+        "description": "查看带链上结算状态的赌场与体育投注索引活动。"
+      },
+      "portfolioBetDetail": {
+        "title": "投注 {betId}",
+        "description": "查看投注 {betId} 的生命周期、赔付、随机数和结算证明。"
+      },
+      "portfolioClaims": {
+        "title": "领取",
+        "description": "查看可领取 XP、协议费用、holdback 桶和领取交易准备状态。"
+      },
+      "earn": {
+        "title": "赚取",
+        "description": "查看资金池存款、提款、储备状态和 LP 风险控制。"
+      },
+      "ops": {
+        "title": "运维",
+        "description": "监控 release proof、keeper 健康、索引器状态和运维收据。"
+      }
+    }
   },
   "locale": {
     "label": "语言",

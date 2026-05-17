@@ -76,7 +76,7 @@ export default function GlobalError({
         >
           <h1 style={{ fontSize: 20, marginBottom: 8 }}>{copy.title}</h1>
           <p style={{ fontSize: 14, color: token("--fg-muted", "215 16% 65%"), marginBottom: 16 }}>
-            {error.message || copy.fallback}
+            {copy.fallback}
           </p>
           {error.digest && (
             <p

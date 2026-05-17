@@ -21,7 +21,49 @@
   "metadata": {
     "siteTitle": "ArbiGameFi",
     "titleTemplate": "%s | ArbiGameFi",
-    "description": "Non-custodial on-chain gaming platform with verifiable settlement."
+    "description": "Non-custodial on-chain gaming platform with verifiable settlement.",
+    "pages": {
+      "casino": {
+        "title": "Casino",
+        "description": "Browse wallet-native casino rooms backed by on-chain randomness, visible bankroll state, and keeper-assisted settlement."
+      },
+      "casinoRoom": {
+        "title": "{game}",
+        "description": "Play {game} with verifiable randomness, visible VRF status, and a chain-derived result receipt."
+      },
+      "sportsbook": {
+        "title": "Sportsbook",
+        "description": "Inspect fixed-odds sports markets, signed odds snapshots, and SportsHub settlement readiness."
+      },
+      "sportsbookMarket": {
+        "title": "Sports Market {marketId}",
+        "description": "Inspect SportsHub market {marketId}, ticket placement readiness, and result evidence state."
+      },
+      "portfolio": {
+        "title": "Portfolio",
+        "description": "Review wallet identity, asset positions, refund credits, and recent protocol activity."
+      },
+      "portfolioActivity": {
+        "title": "Activity",
+        "description": "Review indexed casino and sportsbook activity with chain-aware settlement state."
+      },
+      "portfolioBetDetail": {
+        "title": "Bet {betId}",
+        "description": "Inspect bet {betId} with lifecycle, payout, randomness, and settlement proof details."
+      },
+      "portfolioClaims": {
+        "title": "Claims",
+        "description": "Inspect claimable XP, protocol fees, holdback buckets, and claim transaction readiness."
+      },
+      "earn": {
+        "title": "Earn",
+        "description": "Inspect bankroll deposits, withdrawals, reserve posture, and LP risk controls."
+      },
+      "ops": {
+        "title": "Ops",
+        "description": "Monitor release proof, keeper health, indexer state, and operational receipts."
+      }
+    }
   },
   "locale": {
     "label": "Language",
