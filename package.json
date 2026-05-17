@@ -5,7 +5,7 @@
   "description": "Unified repo entrypoint for the SSOT contracts and frontend workspaces.",
   "packageManager": "pnpm@9.12.3",
   "engines": {
-    "node": "20.x",
+    "node": "24.x",
     "pnpm": "9.x"
   },
   "scripts": {
