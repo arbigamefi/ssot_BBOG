@@ -39,11 +39,17 @@ export function LocaleSwitcher({ compact = false }: { compact?: boolean }) {
               router.refresh();
             }}
             className={cn(
-              "rounded-full px-2.5 py-1 text-xs font-bold transition-colors",
+              "whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-bold transition-colors",
               active ? "bg-fg text-fg-inverse" : "text-fg-subtle hover:text-fg"
             )}
           >
-            {item === "zh-Hans" ? t("zhHans") : t("en")}
+            {compact
+              ? item === "zh-Hans"
+                ? "中文"
+                : "EN"
+              : item === "zh-Hans"
+                ? t("zhHans")
+                : t("en")}
           </button>
         );
       })}
