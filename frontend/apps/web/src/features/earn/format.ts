@@ -18,15 +18,15 @@ export function getExplorerBaseUrl(chainId: number) {
 }
 
 export function formatBps(value?: number) {
-  return value == null ? "Pending" : `${value} bps`;
+  return value == null ? "—" : `${value} bps`;
 }
 
 export function formatPctFromBps(value?: number) {
-  return value == null ? "Pending" : `${(value / 100).toFixed(value % 100 === 0 ? 0 : 2)}%`;
+  return value == null ? "—" : `${(value / 100).toFixed(value % 100 === 0 ? 0 : 2)}%`;
 }
 
 export function shortHex(value?: string) {
-  if (!value) return "Pending";
+  if (!value) return "—";
   return `${value.slice(0, 6)}...${value.slice(-4)}`;
 }
 
@@ -36,7 +36,7 @@ export function formatTokenAmount(
   symbol?: string,
   maxFractionDigits = 4
 ) {
-  if (value == null) return "Pending";
+  if (value == null) return "—";
   const raw = formatUnits(value, decimals);
   const negative = raw.startsWith("-");
   const normalized = negative ? raw.slice(1) : raw;

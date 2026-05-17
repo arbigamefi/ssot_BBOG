@@ -26,7 +26,7 @@ interface MarketDetailReadback extends MarketTapeRow {
 }
 
 function formatUnits(value?: bigint) {
-  return value === undefined ? "N/A" : value.toLocaleString("en-US");
+  return value === undefined ? "—" : value.toLocaleString("en-US");
 }
 
 export function SportsbookMarketDetailPageClient({ marketId }: { marketId: string }) {

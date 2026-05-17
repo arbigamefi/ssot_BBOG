@@ -1,11 +1,11 @@
 export function shortHex(value?: string) {
-  if (!value) return "N/A";
+  if (!value) return "—";
   if (value.length <= 12) return value;
   return `${value.slice(0, 6)}...${value.slice(-4)}`;
 }
 
 export function formatRawUnits(value?: string) {
-  if (!value) return "N/A";
+  if (!value) return "—";
   try {
     return BigInt(value).toLocaleString("en-US");
   } catch {
@@ -14,7 +14,7 @@ export function formatRawUnits(value?: string) {
 }
 
 export function formatCounter(value?: bigint) {
-  return value === undefined ? "N/A" : value.toString();
+  return value === undefined ? "—" : value.toString();
 }
 
 const utcDateTimeFormatter = new Intl.DateTimeFormat("en", {
@@ -24,12 +24,12 @@ const utcDateTimeFormatter = new Intl.DateTimeFormat("en", {
 });
 
 export function formatTimestamp(value?: number) {
-  if (!value) return "N/A";
+  if (!value) return "—";
   return utcDateTimeFormatter.format(new Date(value * 1000));
 }
 
 export function formatDuration(value?: string) {
-  if (!value) return "N/A";
+  if (!value) return "—";
   const seconds = Number(value);
   if (!Number.isFinite(seconds) || seconds <= 0) return value;
   const days = seconds / 86_400;
