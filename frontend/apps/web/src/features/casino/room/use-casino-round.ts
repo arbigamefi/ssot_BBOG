@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import type { DomainBet } from "@ssot/ssot";
 import type { SSOTSDK } from "@ssot/ssot/sdk";
 
@@ -49,14 +50,22 @@ export function useCasinoRound({
   onRoundTerminal,
   onRoundReset
 }: UseCasinoRoundArgs) {
+  const t = useTranslations();
   const { planNow, executeNow, state, reset } = usePlaceBetStepper();
-  const vrfQuote = useCasinoVrfQuote({ sdk, betCount });
+  const vrfQuote = useCasinoVrfQuote({
+    sdk,
+    betCount,
+    quoteErrorMessage: t("casino.room.errors.quoteFailed")
+  });
   const roundWatcher = useCasinoRoundWatcher({
     sdk,
     betId: state.betId,
     active: state.status === "reconciled",
     refundTimeoutSeconds: release?.refundTimeoutSeconds,
-    onTerminal: onRoundTerminal
+    onTerminal: onRoundTerminal,
+    readErrorMessage: t("casino.room.errors.readRoundFailed"),
+    manualSettleErrorMessage: t("casino.room.errors.manualSettleFailed"),
+    refundErrorMessage: t("casino.room.errors.refundFailed")
   });
 
   const roundPhase = React.useMemo<CasinoRoundPhase>(() => {
@@ -72,8 +81,12 @@ export function useCasinoRound({
     state.status === "mined" ||
     roundWatcher.isLive;
 
-  useBetStepperFailureToast({ status: state.status, error: state.error });
-  useVrfTimeoutToast(roundPhase === "timeout_soft");
+  useBetStepperFailureToast({
+    status: state.status,
+    error: state.error,
+    fallbackMessage: t("casino.room.errors.transactionFailed")
+  });
+  useVrfTimeoutToast(roundPhase === "timeout_soft", t("casino.room.warnings.vrfTimeout"));
 
   const placeBet = React.useCallback(() => {
     onRoundStart();
@@ -98,7 +111,13 @@ export function useCasinoRound({
       diceTarget,
       coinSide,
       rouletteSpots,
-      kenoSpots
+      kenoSpots,
+      messages: {
+        rouletteSelectionRequired: t("casino.room.errors.rouletteSelectionRequired"),
+        kenoSelectionRequired: t("casino.room.errors.kenoSelectionRequired"),
+        noActiveCasinoPool: t("casino.room.errors.noActiveCasinoPool"),
+        unexpectedError: t("casino.room.errors.unexpected")
+      }
     });
   }, [
     betAmount,
@@ -119,6 +138,7 @@ export function useCasinoRound({
     state,
     stopGain,
     stopLoss,
+    t,
     winChance
   ]);
 

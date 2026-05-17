@@ -114,4 +114,27 @@ describe("game room place bet builder", () => {
       message: "No active casino pool is available in the current release."
     });
   });
+
+  it("allows UI layers to provide localized pool errors", () => {
+    const result = buildGamePlaceBetInput({
+      release: { chainId: 84532, assets: [], pools: [] },
+      game,
+      betAmount: 10,
+      betCount: 1,
+      stopGain: 0,
+      stopLoss: 0,
+      diceTarget: 50,
+      coinSide: "HEADS",
+      rouletteSpots: [],
+      kenoSpots: [],
+      messages: {
+        noActiveCasinoPool: "当前 release 中没有可用的赌场资金池。"
+      }
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      message: "当前 release 中没有可用的赌场资金池。"
+    });
+  });
 });

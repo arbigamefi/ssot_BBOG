@@ -152,4 +152,22 @@ describe("game room params", () => {
       })
     ).toEqual({ ok: false, message: "Please select at least 1 number on the Keno grid." });
   });
+
+  it("allows UI layers to provide localized validation copy", () => {
+    expect(
+      buildGameParams({
+        slug: "roulette",
+        diceTarget: 50,
+        coinSide: "HEADS",
+        rouletteSpots: [],
+        kenoSpots: [],
+        messages: {
+          rouletteSelectionRequired: "请选择至少一个轮盘投注项。"
+        }
+      })
+    ).toEqual({
+      ok: false,
+      message: "请选择至少一个轮盘投注项。"
+    });
+  });
 });

@@ -87,10 +87,12 @@ function toUnixMs(value: number | undefined) {
 
 export function useCasinoVrfQuote({
   sdk,
-  betCount
+  betCount,
+  quoteErrorMessage = "Unable to estimate VRF fee."
 }: {
   sdk: SSOTSDK | undefined;
   betCount: number;
+  quoteErrorMessage?: string;
 }) {
   const [snapshot, setSnapshot] = React.useState<CasinoRoundSnapshot>({ phase: "idle" });
 
@@ -114,7 +116,7 @@ export function useCasinoVrfQuote({
         if (!cancelled) {
           setSnapshot({
             phase: "ready",
-            quoteError: (error as Error)?.message ?? "Unable to estimate VRF fee."
+            quoteError: (error as Error)?.message ?? quoteErrorMessage
           });
         }
       });
@@ -122,7 +124,7 @@ export function useCasinoVrfQuote({
     return () => {
       cancelled = true;
     };
-  }, [sdk, betCount]);
+  }, [sdk, betCount, quoteErrorMessage]);
 
   return snapshot;
 }
@@ -135,7 +137,10 @@ export function useCasinoRoundWatcher({
   refundTimeoutSeconds,
   pollIntervalMs = 2_000,
   softVrfTimeoutMs = CASINO_ROUND_SOFT_VRF_TIMEOUT_MS,
-  manualSettleDelayMs = CASINO_ROUND_MANUAL_SETTLE_DELAY_MS
+  manualSettleDelayMs = CASINO_ROUND_MANUAL_SETTLE_DELAY_MS,
+  readErrorMessage = "Unable to read the live round state.",
+  manualSettleErrorMessage = "Manual settlement failed.",
+  refundErrorMessage = "Refund failed."
 }: {
   sdk: SSOTSDK | undefined;
   betId: bigint | undefined;
@@ -145,6 +150,9 @@ export function useCasinoRoundWatcher({
   pollIntervalMs?: number;
   softVrfTimeoutMs?: number;
   manualSettleDelayMs?: number;
+  readErrorMessage?: string;
+  manualSettleErrorMessage?: string;
+  refundErrorMessage?: string;
 }) {
   const [snapshot, setSnapshot] = React.useState<CasinoRoundSnapshot>({ phase: "idle" });
   const terminalBetIdRef = React.useRef<bigint | undefined>();
@@ -196,7 +204,7 @@ export function useCasinoRoundWatcher({
           setSnapshot((current) => ({
             ...current,
             phase: "failed",
-            error: (error as Error)?.message ?? "Unable to read the live round state."
+            error: (error as Error)?.message ?? readErrorMessage
           }));
         }
       }
@@ -214,6 +222,7 @@ export function useCasinoRoundWatcher({
     betId,
     onTerminal,
     pollIntervalMs,
+    readErrorMessage,
     refundTimeoutSeconds,
     softVrfTimeoutMs,
     manualSettleDelayMs
@@ -229,9 +238,9 @@ export function useCasinoRoundWatcher({
       phase: manualSettleTx.ok ? "settling" : "manual_settle_offered",
       error: manualSettleTx.ok
         ? undefined
-        : (manualSettleTx.error?.message ?? "Manual settlement failed.")
+        : (manualSettleTx.error?.message ?? manualSettleErrorMessage)
     }));
-  }, [sdk, betId]);
+  }, [sdk, betId, manualSettleErrorMessage]);
 
   const manualRefund = React.useCallback(async () => {
     if (!sdk || betId === undefined) return;
@@ -241,9 +250,9 @@ export function useCasinoRoundWatcher({
       ...current,
       refundTx,
       phase: "refundable",
-      error: refundTx.ok ? undefined : (refundTx.error?.message ?? "Refund failed.")
+      error: refundTx.ok ? undefined : (refundTx.error?.message ?? refundErrorMessage)
     }));
-  }, [sdk, betId]);
+  }, [sdk, betId, refundErrorMessage]);
 
   return {
     ...snapshot,

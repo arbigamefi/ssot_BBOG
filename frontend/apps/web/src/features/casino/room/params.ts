@@ -18,11 +18,17 @@ export type BuildGameParamsInput = {
   coinSide: CoinSide;
   rouletteSpots: readonly string[];
   kenoSpots: readonly number[];
+  messages?: GameParamsMessages;
 };
 
 export type BuildGameParamsResult =
   | { ok: true; params: GameParamsHex }
   | { ok: false; message: string };
+
+export type GameParamsMessages = {
+  rouletteSelectionRequired?: string;
+  kenoSelectionRequired?: string;
+};
 
 const NAMED_ROULETTE_BETS: Record<string, "red" | "black" | "odd" | "even" | "low" | "high"> = {
   RED: "red",
@@ -149,7 +155,9 @@ export function buildGameParams(input: BuildGameParamsInput): BuildGameParamsRes
     if (!rouletteInput) {
       return {
         ok: false,
-        message: "Please select at least one number or bet type on the Roulette board."
+        message:
+          input.messages?.rouletteSelectionRequired ??
+          "Please select at least one number or bet type on the Roulette board."
       };
     }
     return { ok: true, params: encodeRouletteParams(rouletteInput) };
@@ -157,7 +165,12 @@ export function buildGameParams(input: BuildGameParamsInput): BuildGameParamsRes
 
   if (input.slug === "keno") {
     if (input.kenoSpots.length === 0) {
-      return { ok: false, message: "Please select at least 1 number on the Keno grid." };
+      return {
+        ok: false,
+        message:
+          input.messages?.kenoSelectionRequired ??
+          "Please select at least 1 number on the Keno grid."
+      };
     }
     return { ok: true, params: encodeKenoParams(buildKenoMask(input.kenoSpots)) };
   }

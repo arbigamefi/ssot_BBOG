@@ -36,7 +36,8 @@ export async function executeGamePlaceBetAction({
   diceTarget,
   coinSide,
   rouletteSpots,
-  kenoSpots
+  kenoSpots,
+  messages
 }: {
   account: string | undefined;
   openConnectModal: (() => void) | undefined;
@@ -56,6 +57,12 @@ export async function executeGamePlaceBetAction({
   coinSide: CoinSide;
   rouletteSpots: readonly string[];
   kenoSpots: readonly number[];
+  messages?: {
+    rouletteSelectionRequired?: string;
+    kenoSelectionRequired?: string;
+    noActiveCasinoPool?: string;
+    unexpectedError?: string;
+  };
 }) {
   if (!account) {
     openConnectModal?.();
@@ -86,7 +93,8 @@ export async function executeGamePlaceBetAction({
       diceTarget,
       coinSide,
       rouletteSpots,
-      kenoSpots
+      kenoSpots,
+      messages
     });
     if (!placeBet.ok) {
       toast.error(placeBet.message);
@@ -98,7 +106,9 @@ export async function executeGamePlaceBetAction({
       await executeNow(plan);
     }
   } catch (error) {
-    toast.error((error as Error)?.message ?? "An unexpected error occurred.");
+    toast.error(
+      (error as Error)?.message ?? messages?.unexpectedError ?? "An unexpected error occurred."
+    );
     console.error(error);
   }
 }

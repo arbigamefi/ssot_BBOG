@@ -2,7 +2,12 @@ import type { PlaceBetInput } from "@ssot/ssot";
 import { encodeStakeSpec } from "@ssot/ssot/encoding";
 
 import type { GameMeta } from "./model";
-import { buildGameParams, type CoinSide, type GameParamsHex } from "./params";
+import {
+  buildGameParams,
+  type CoinSide,
+  type GameParamsHex,
+  type GameParamsMessages
+} from "./params";
 
 type ReleaseAsset = {
   symbol?: string;
@@ -39,11 +44,16 @@ export type BuildGamePlaceBetInputArgs = {
   rouletteSpots: readonly string[];
   kenoSpots: readonly number[];
   maxHouseEdgeBps?: number;
+  messages?: GamePlaceBetMessages;
 };
 
 export type BuildGamePlaceBetInputResult =
   | { ok: true; input: PlaceBetInput; params: GameParamsHex }
   | { ok: false; message: string };
+
+export type GamePlaceBetMessages = GameParamsMessages & {
+  noActiveCasinoPool?: string;
+};
 
 function toUnits(amount: number, decimals: number) {
   return BigInt(Math.floor(Math.max(0, amount))) * BigInt(Math.pow(10, decimals));
@@ -72,14 +82,16 @@ export function buildGamePlaceBetInput({
   coinSide,
   rouletteSpots,
   kenoSpots,
-  maxHouseEdgeBps = 10000
+  maxHouseEdgeBps = 10000,
+  messages
 }: BuildGamePlaceBetInputArgs): BuildGamePlaceBetInputResult {
   const gameParams = buildGameParams({
     slug: game.slug,
     diceTarget,
     coinSide,
     rouletteSpots,
-    kenoSpots
+    kenoSpots,
+    messages
   });
 
   if (!gameParams.ok) {
@@ -88,7 +100,11 @@ export function buildGamePlaceBetInput({
 
   const casinoPool = findCasinoPool(release.pools);
   if (!casinoPool?.asset) {
-    return { ok: false, message: "No active casino pool is available in the current release." };
+    return {
+      ok: false,
+      message:
+        messages?.noActiveCasinoPool ?? "No active casino pool is available in the current release."
+    };
   }
 
   const assetMeta =

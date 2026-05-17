@@ -64,6 +64,20 @@
           "description": "Standby for on-chain transaction emit..."
         }
       },
+      "errors": {
+        "quoteFailed": "Unable to estimate VRF fee.",
+        "readRoundFailed": "Unable to read the live round state.",
+        "manualSettleFailed": "Manual settlement failed.",
+        "refundFailed": "Refund failed.",
+        "transactionFailed": "Transaction failed. Please try again.",
+        "rouletteSelectionRequired": "Please select at least one number or bet type on the Roulette board.",
+        "kenoSelectionRequired": "Please select at least 1 number on the Keno grid.",
+        "noActiveCasinoPool": "No active casino pool is available in the current release.",
+        "unexpected": "An unexpected error occurred."
+      },
+      "warnings": {
+        "vrfTimeout": "Waiting for oracle... VRF resolution can take 30-120s on testnets."
+      },
       "roundStatus": {
         "title": "Round status",
         "phases": {
