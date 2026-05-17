@@ -26,7 +26,7 @@ import { toast } from "@ssot/ui";
 
 const ZERO_ADDRESS = `0x${"0".repeat(40)}` as Address;
 
-export function InvestPageClient() {
+export function EarnPageClient() {
   const { release, readOnly, readOnlyReason, chainId } = useRelease();
   const { sdk, ready } = useSSOTSDK();
   const explorerBaseUrl = React.useMemo(() => getExplorerBaseUrl(chainId), [chainId]);
@@ -245,7 +245,7 @@ export function InvestPageClient() {
   if (!release) {
     return (
       <ProductStateCard
-        title="Invest"
+        title="Earn"
         description={readOnlyReason ?? "No embedded release available."}
       />
     );

@@ -1,5 +1,5 @@
-import { AccountPageClient } from "./pageClient";
+import { PortfolioPageClient } from "./pageClient";
 
-export default function AccountPage() {
-  return <AccountPageClient />;
+export default function PortfolioPage() {
+  return <PortfolioPageClient />;
 }

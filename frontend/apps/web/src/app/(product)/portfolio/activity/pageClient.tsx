@@ -24,7 +24,7 @@ import type {
 import { useBets } from "../../../../features/betting/useBets";
 import { useRelease } from "../../../../ssot/release/ReleaseProvider";
 
-export function BetsPageClient() {
+export function PortfolioActivityPageClient() {
   const { release } = useRelease();
   const { data: bets = [], isLoading } = useBets(500);
   const [statusFilter, setStatusFilter] = React.useState<BetStatusFilter>("all");

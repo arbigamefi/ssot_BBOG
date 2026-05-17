@@ -38,9 +38,9 @@ vi.mock("next/link", () => ({
   )
 }));
 
-import { BetsPageClient } from "./pageClient";
+import { PortfolioActivityPageClient } from "./pageClient";
 
-describe("BetsPageClient", () => {
+describe("PortfolioActivityPageClient", () => {
   afterEach(() => {
     cleanup();
     state.bets = [];
@@ -48,7 +48,7 @@ describe("BetsPageClient", () => {
   });
 
   it("frames bets as an activity ledger", () => {
-    render(<BetsPageClient />);
+    render(<PortfolioActivityPageClient />);
 
     expect(screen.getByRole("heading", { name: /Betting activity/i })).toBeDefined();
     expect(screen.getByText("Ledger summary")).toBeDefined();
@@ -75,7 +75,7 @@ describe("BetsPageClient", () => {
       }
     ];
 
-    render(<BetsPageClient />);
+    render(<PortfolioActivityPageClient />);
 
     expect(screen.getAllByText("#42").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Dice").length).toBeGreaterThan(0);

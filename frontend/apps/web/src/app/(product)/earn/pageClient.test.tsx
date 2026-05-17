@@ -106,7 +106,7 @@ vi.mock("@ssot/ui", () => ({
   }
 }));
 
-import { InvestPageClient } from "./pageClient";
+import { EarnPageClient } from "./pageClient";
 
 function renderWithQueryClient(ui: React.ReactElement) {
   const queryClient = new QueryClient({
@@ -118,7 +118,7 @@ function renderWithQueryClient(ui: React.ReactElement) {
   return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 }
 
-describe("InvestPageClient", () => {
+describe("EarnPageClient", () => {
   afterEach(() => {
     cleanup();
     state.release = {
@@ -146,8 +146,8 @@ describe("InvestPageClient", () => {
     state.ready = false;
   });
 
-  it("frames invest as a bank reserve console", () => {
-    renderWithQueryClient(<InvestPageClient />);
+  it("frames earn as a bank reserve console", () => {
+    renderWithQueryClient(<EarnPageClient />);
 
     expect(screen.getByRole("heading", { name: /USDC bankroll control/i })).toBeDefined();
     expect(screen.getByText("Bank transaction console")).toBeDefined();

@@ -32,7 +32,7 @@ import { useSSOTSDK } from "../../../ssot/sdk";
 
 const ALIAS_STORAGE_KEY = "ssot.player_alias";
 
-export function AccountPageClient() {
+export function PortfolioPageClient() {
   const { release, chainId, readOnly, readOnlyReason } = useRelease();
   const { sdk, ready } = useSSOTSDK();
   const explorerBaseUrl = React.useMemo(() => getExplorerBaseUrl(chainId), [chainId]);
@@ -156,7 +156,7 @@ export function AccountPageClient() {
   if (!release) {
     return (
       <ProductStateCard
-        title="Account"
+        title="Portfolio"
         description={readOnlyReason ?? "No embedded release available."}
       />
     );

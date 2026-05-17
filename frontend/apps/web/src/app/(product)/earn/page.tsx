@@ -1,5 +1,5 @@
-import { InvestPageClient } from "./pageClient";
+import { EarnPageClient } from "./pageClient";
 
-export default function InvestPage() {
-  return <InvestPageClient />;
+export default function EarnPage() {
+  return <EarnPageClient />;
 }
