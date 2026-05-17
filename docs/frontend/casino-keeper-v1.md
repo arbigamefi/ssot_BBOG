@@ -1,7 +1,7 @@
 # Casino Keeper v1
 
 | Owner | Frontend Lead + SRE |
-| Status | Draft v1 |
+| Status | Accepted v1 |
 | Last Updated | 2026-05-17 |
 | Depends-on | `../design/casino-placebet-ux.md`, `../design/durable-bet-index.md`, `25-observability.md`, `30-build-and-release.md` |
 | Supersedes | manual-by-default casino finalize operations |

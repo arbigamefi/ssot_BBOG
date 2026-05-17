@@ -115,6 +115,12 @@ BET_INDEX_TO_BLOCK=41570000 \
 pnpm -C frontend keeper:backfill
 ```
 
+Show the no-side-effect usage summary:
+
+```bash
+pnpm -C frontend keeper:backfill --help
+```
+
 The wrapper reads the repo root `.env`, builds the keeper, scans `BetPlaced`,
 `BetRandomReady`, `BetFinalized`, and `BetRefunded`, writes idempotent rows, and
 prints a JSON summary with the block range and recent rows. Use

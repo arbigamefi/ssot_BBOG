@@ -190,6 +190,7 @@ export function createPostgresBetIndexStore(config: PostgresBetIndexConfig): Bet
   const sql = postgres(config.connectionString, {
     connect_timeout: config.connectTimeoutSeconds ?? 5,
     max: 5,
+    onnotice: () => undefined,
     ssl: config.ssl ? "require" : undefined,
     transform: postgres.camel
   });

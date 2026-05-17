@@ -91,7 +91,35 @@ function run(command, args, options = {}) {
   });
 }
 
+function printHelp() {
+  console.log(`Usage:
+  pnpm -C frontend keeper:backfill
+  pnpm -C frontend bet-index:backfill:local
+
+Environment:
+  KEEPER_RPC_HTTP              RPC HTTP endpoint; falls back to RPC_URL / BASE_SEPOLIA_RPC_URL
+  KEEPER_RELEASE_PATH          Release manifest path; defaults to embedded Base Sepolia release
+  BET_INDEX_DATABASE_URL       Postgres URL; required unless BET_INDEX_DRY_RUN=true
+  BET_INDEX_SSL                Set true for managed Postgres SSL
+  BET_INDEX_FROM_BLOCK         Optional explicit start block
+  BET_INDEX_TO_BLOCK           Optional explicit end block
+  BET_INDEX_CONFIRMATIONS      Default 2
+  BET_INDEX_SCAN_CHUNK_BLOCKS  Default 10
+  BET_INDEX_DRY_RUN            true for a no-write scan
+
+Local Docker:
+  pnpm -C frontend bet-index:db:up
+  BET_INDEX_FROM_BLOCK=1 BET_INDEX_TO_BLOCK=1 pnpm -C frontend bet-index:backfill:local
+`);
+}
+
 async function main() {
+  const args = process.argv.slice(2);
+  if (args.includes("--help") || args.includes("-h")) {
+    printHelp();
+    return;
+  }
+
   const env = backfillEnv();
   requireBackfillEnv(env);
   await run("pnpm", ["-C", "apps/keeper", "backfill"], { env });
