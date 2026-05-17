@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import {
   createDexieJournalSink,
   getSSOTDb,
@@ -17,6 +18,7 @@ import {
 } from "../ssot/runtime/indexerWorkerClient";
 
 export function SSOTRuntimeProvider({ children }: { children: React.ReactNode }) {
+  const t = useTranslations("app");
   const chainId = useChainId();
   const wagmiConfig = useConfig();
   const rel = useRelease();
@@ -95,7 +97,7 @@ export function SSOTRuntimeProvider({ children }: { children: React.ReactNode })
         chainId: rel.release.chainId,
         config: indexerConfig,
         gameHub: rel.release.contracts.gameHub as any,
-        lastError: (error as Error)?.message ?? "Indexer worker failed to start",
+        lastError: (error as Error)?.message ?? t("indexerWorkerFailed"),
         running: false
       });
       return;
@@ -108,7 +110,7 @@ export function SSOTRuntimeProvider({ children }: { children: React.ReactNode })
       client.terminate();
       if (workerRef.current === client) workerRef.current = null;
     };
-  }, [rel.release, rel.readOnly, db, rpcUrl, indexerConfig]);
+  }, [rel.release, rel.readOnly, db, rpcUrl, indexerConfig, t]);
 
   const value = React.useMemo(
     () => ({ db, indexer: undefined, indexerStatus, journal, refreshIndexerStatus, syncNow }),

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 
 function shortAddress(address: string) {
@@ -26,6 +27,7 @@ export function useConnectModal() {
 }
 
 export function WalletButton() {
+  const t = useTranslations("app");
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
   const { openConnectModal, isConnecting } = useConnectModal();
@@ -49,7 +51,7 @@ export function WalletButton() {
       disabled={isConnecting}
       className="inline-flex min-h-10 items-center justify-center rounded-md bg-brand px-4 py-2 text-sm font-bold text-fg-inverse shadow-glow transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60"
     >
-      {isConnecting ? "Connecting..." : "Connect Wallet"}
+      {isConnecting ? t("connectingWallet") : t("connectWalletButton")}
     </button>
   );
 }

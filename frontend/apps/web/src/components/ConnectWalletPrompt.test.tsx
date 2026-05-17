@@ -21,6 +21,35 @@ vi.mock("@ssot/ui", () => ({
   CardContent: ({ children }: any) => <div>{children}</div>
 }));
 
+vi.mock("next-intl", async () => {
+  const messages = (await import("../i18n/locales/en/common.json")).default as Record<
+    string,
+    unknown
+  >;
+
+  function resolveMessage(key: string) {
+    return key.split(".").reduce<unknown>((value, part) => {
+      if (value && typeof value === "object" && part in value) {
+        return (value as Record<string, unknown>)[part];
+      }
+      return undefined;
+    }, messages);
+  }
+
+  function translate(key: string, values?: Record<string, string | number>) {
+    const message = resolveMessage(`app.${key}`);
+    if (typeof message !== "string") return key;
+    return Object.entries(values ?? {}).reduce(
+      (text, [name, value]) => text.replaceAll(`{${name}}`, String(value)),
+      message
+    );
+  }
+
+  return {
+    useTranslations: () => translate
+  };
+});
+
 describe("ConnectWalletPrompt", () => {
   afterEach(() => cleanup());
   it("renders 'Wallet required' title", () => {
