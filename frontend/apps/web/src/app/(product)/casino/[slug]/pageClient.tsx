@@ -18,8 +18,7 @@ import { toGameMeta, type GameMeta } from "../../../../features/casino/room/mode
 import { calculateGameWinChance } from "../../../../features/casino/room/params";
 import {
   formatGameMaxPayout,
-  formatHouseEdge,
-  getGameDisplayName
+  formatHouseEdge
 } from "../../../../features/casino/room/presentation";
 import { GameRoomBetPanel } from "../../../../features/casino/room/bet-panel";
 import { useGameWalletBalance, useKenoStrobeSpots } from "../../../../features/casino/room/hooks";
@@ -53,7 +52,7 @@ function getLocalizedGameName(t: (key: string) => string, game: GameMeta) {
     case "keno":
       return t("casino.room.names.keno");
     default:
-      return getGameDisplayName(game);
+      return game.label;
   }
 }
 

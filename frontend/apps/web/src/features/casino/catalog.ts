@@ -1,4 +1,3 @@
-import { getPrimaryGameHref } from "./routes";
 import {
   CASINO_MODULES,
   compareCasinoModules,
@@ -46,7 +45,7 @@ export function getCatalogRooms(rawGamesMeta?: Array<ReleaseGameMetaLike | null 
     return {
       slug: game.slug,
       label: game.label,
-      href: getPrimaryGameHref(game.slug),
+      href: module?.canonicalHref ?? `/casino/${game.slug}`,
       badge: module?.roomLabel ?? game.label,
       summary: "",
       facts: []

@@ -1,17 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { formatGameMaxPayout, formatHouseEdge, getGameDisplayName } from "./presentation";
+import { formatGameMaxPayout, formatHouseEdge } from "./presentation";
 
 describe("game room presentation helpers", () => {
-  it("formats display names and house edge fallbacks", () => {
-    expect(
-      getGameDisplayName({
-        gameId: "0x1111111111111111111111111111111111111111",
-        slug: "dice",
-        label: "Dice",
-        module: "0x2222222222222222222222222222222222222222"
-      })
-    ).toBe("Precision Dice");
+  it("formats house edge fallbacks", () => {
     expect(formatHouseEdge(undefined, "roulette")).toBe("2.70%");
     expect(formatHouseEdge({ houseEdgeBps: 150 }, "dice")).toBe("1.50%");
   });
