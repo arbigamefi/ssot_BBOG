@@ -190,82 +190,34 @@ vi.mock("@ssot/ui", () => ({
   }
 }));
 
-const sportsbookTranslations: Record<string, string> = {
-  "sportsbook.components.na": "N/A",
-  "sportsbook.components.lookup.inspect": "Inspect",
-  "sportsbook.components.marketInspector.title": "Market {marketId}",
-  "sportsbook.components.marketInspector.stateLine": "{state} / pool {poolId}",
-  "sportsbook.components.marketInspector.resultStatus.none": "No result proposed",
-  "sportsbook.components.marketInspector.resultStatus.proposed": "Result proposed",
-  "sportsbook.components.marketInspector.rows.event": "Event",
-  "sportsbook.components.marketInspector.rows.outcomeCount": "Outcome count",
-  "sportsbook.components.marketInspector.rows.startsAt": "Starts at",
-  "sportsbook.components.marketInspector.rows.locksAt": "Locks at",
-  "sportsbook.components.marketInspector.rows.version": "Version",
-  "sportsbook.components.marketInspector.rows.marketReserved": "Market reserved",
-  "sportsbook.components.marketInspector.rows.marketKey": "Market key",
-  "sportsbook.components.marketInspector.rows.rulebook": "Rulebook",
-  "sportsbook.components.marketInspector.rows.result": "Result",
-  "sportsbook.components.marketInspector.rows.winningOutcome": "Winning outcome",
-  "sportsbook.components.ticketInspector.title": "Ticket {ticketId}",
-  "sportsbook.components.ticketInspector.stateLine": "{state} / market {marketId}",
-  "sportsbook.components.ticketInspector.rows.position": "Position",
-  "sportsbook.components.ticketInspector.rows.event": "Event",
-  "sportsbook.components.ticketInspector.rows.pool": "Pool",
-  "sportsbook.components.ticketInspector.rows.outcome": "Outcome",
-  "sportsbook.components.ticketInspector.rows.player": "Player",
-  "sportsbook.components.ticketInspector.rows.stake": "Stake",
-  "sportsbook.components.ticketInspector.rows.payout": "Payout",
-  "sportsbook.components.ticketInspector.rows.reserved": "Reserved",
-  "sportsbook.components.ticketInspector.rows.acceptedAt": "Accepted at",
-  "sportsbook.components.ticketInspector.rows.oddsSnapshot": "Odds snapshot",
-  "sportsbook.components.marketTape.loading": "Loading recent SportsHub markets...",
-  "sportsbook.components.marketTape.empty":
-    "No SportsHub markets have been created in this release yet.",
-  "sportsbook.components.marketTape.columns.market": "Market",
-  "sportsbook.components.marketTape.columns.starts": "Starts",
-  "sportsbook.components.marketTape.columns.reserved": "Reserved",
-  "sportsbook.components.marketTape.columns.result": "Result",
-  "sportsbook.components.marketTape.columns.actions": "Actions",
-  "sportsbook.components.marketTape.marketTitle": "Market {marketId}",
-  "sportsbook.components.marketTape.event": "Event {eventId}",
-  "sportsbook.components.marketTape.pool": "Pool {poolId}",
-  "sportsbook.components.marketTape.outcomes": "{count} outcomes",
-  "sportsbook.components.marketTape.locks": "Locks {time}",
-  "sportsbook.components.marketTape.result.none": "No result",
-  "sportsbook.components.marketTape.result.challenged": "Challenged",
-  "sportsbook.components.marketTape.result.outcome": "Outcome {outcomeId}",
-  "sportsbook.components.marketTape.actions.open": "Open",
-  "sportsbook.components.marketTape.actions.load": "Load",
-  "sportsbook.components.riskRows.maxStake": "Max stake",
-  "sportsbook.components.riskRows.maxPayout": "Max payout",
-  "sportsbook.components.riskRows.marketReserved": "Market reserved",
-  "sportsbook.components.riskRows.outcomeReserved": "Outcome reserved",
-  "sportsbook.components.riskRows.eventReserved": "Event reserved",
-  "sportsbook.components.riskRows.riskHash": "Risk hash",
-  "sportsbook.components.poolPanel.title": "Pool {poolId}",
-  "sportsbook.components.poolPanel.domainLine": "{domain} / domain {domainId}",
-  "sportsbook.components.poolPanel.defaultDomain": "Sports",
-  "sportsbook.components.poolPanel.active": "Active",
-  "sportsbook.components.poolPanel.paused": "Paused",
-  "sportsbook.components.poolPanel.bank": "Bank",
-  "sportsbook.components.poolPanel.asset": "Asset",
-  "sportsbook.components.poolPanel.units": "Units",
-  "sportsbook.components.poolPanel.rawUnits": "raw / {decimals} decimals",
-  "sportsbook.components.poolPanel.riskTitle": "Pool risk caps"
-};
+vi.mock("next-intl", async () => {
+  const messages = (await import("../../../../i18n/locales/en/common.json")).default as Record<
+    string,
+    unknown
+  >;
 
-function translateSportsbook(key: string, values?: Record<string, string>) {
-  let message = sportsbookTranslations[key] ?? key;
-  for (const [name, value] of Object.entries(values ?? {})) {
-    message = message.replace(`{${name}}`, value);
+  function resolveMessage(key: string) {
+    return key.split(".").reduce<unknown>((node, segment) => {
+      if (node && typeof node === "object" && segment in node) {
+        return (node as Record<string, unknown>)[segment];
+      }
+      return undefined;
+    }, messages);
   }
-  return message;
-}
 
-vi.mock("next-intl", () => ({
-  useTranslations: () => translateSportsbook
-}));
+  function translate(key: string, values?: Record<string, string>) {
+    const resolved = resolveMessage(key);
+    let message = typeof resolved === "string" ? resolved : key;
+    for (const [name, value] of Object.entries(values ?? {})) {
+      message = message.replace(`{${name}}`, value);
+    }
+    return message;
+  }
+
+  return {
+    useTranslations: () => translate
+  };
+});
 
 import { SportsbookMarketDetailPageClient } from "./pageClient";
 

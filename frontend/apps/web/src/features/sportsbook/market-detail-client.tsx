@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 
 import { PageTransition } from "../../components/PageTransition";
@@ -29,6 +30,7 @@ function formatUnits(value?: bigint) {
 }
 
 export function SportsbookMarketDetailPageClient({ marketId }: { marketId: string }) {
+  const t = useTranslations();
   const { release, readOnly, readOnlyReason, sportsbook, chainId } = useRelease();
   const { sdk, ready } = useSSOTSDK();
   const parsedMarketId = React.useMemo(() => parseLookupId(marketId), [marketId]);
@@ -74,11 +76,11 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
       <PageTransition pageKey={`sports-market-${marketId}`}>
         <div className="mx-auto max-w-3xl py-16">
           <SectionShell
-            eyebrow="Sportsbook"
-            title="No release loaded"
-            description={readOnlyReason ?? "The embedded release snapshot is unavailable."}
+            eyebrow={t("nav.sportsbook")}
+            title={t("sportsbook.detail.noRelease.title")}
+            description={readOnlyReason ?? t("sportsbook.detail.noRelease.description")}
           >
-            <StatusPill tone="warn">Unavailable</StatusPill>
+            <StatusPill tone="warn">{t("sportsbook.detail.noRelease.status")}</StatusPill>
           </SectionShell>
         </div>
       </PageTransition>
@@ -94,20 +96,21 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
               href="/sportsbook"
               className="text-sm font-semibold text-fg-muted transition-colors hover:text-fg"
             >
-              Back to sportsbook
+              {t("sportsbook.detail.back")}
             </Link>
             <div className="mt-5 flex flex-wrap items-center gap-3">
               <StatusPill tone={sportsbook.enabled ? "success" : "warn"}>
-                {sportsbook.enabled ? "Metadata enabled" : "Read-only preview"}
+                {sportsbook.enabled
+                  ? t("sportsbook.index.header.metadataEnabled")
+                  : t("sportsbook.index.header.readOnlyPreview")}
               </StatusPill>
-              <StatusPill tone="neutral">Market detail</StatusPill>
+              <StatusPill tone="neutral">{t("sportsbook.detail.marketDetailPill")}</StatusPill>
             </div>
             <h1 className="mt-5 text-4xl font-black tracking-tight text-fg md:text-5xl">
-              Market {marketId}
+              {t("sportsbook.detail.title", { marketId })}
             </h1>
             <p className="mt-4 max-w-3xl text-sm leading-7 text-fg-muted md:text-[15px]">
-              Direct SportsHub readback for one fixed-odds market. Ticket placement stays behind the
-              frontend release gate and requires a complete signed odds snapshot before broadcast.
+              {t("sportsbook.detail.description")}
             </p>
           </div>
 
@@ -123,22 +126,22 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
 
         {parsedMarketId === undefined ? (
           <SectionShell
-            eyebrow="Invalid route"
-            title="Invalid market id"
-            description="SportsHub market routes require a numeric market id."
+            eyebrow={t("sportsbook.detail.invalid.eyebrow")}
+            title={t("sportsbook.detail.invalid.title")}
+            description={t("sportsbook.detail.invalid.description")}
           >
             <Link
               href="/sportsbook"
               className="inline-flex min-h-11 items-center rounded-md bg-brand px-4 text-sm font-black text-fg-inverse shadow-glow transition-colors hover:bg-brand-hover"
             >
-              Return to sportsbook
+              {t("sportsbook.detail.return")}
             </Link>
           </SectionShell>
         ) : error ? (
           <SectionShell
-            eyebrow="Read failed"
-            title="Market readback failed"
-            description="The SDK could not read this SportsHub market from the active release."
+            eyebrow={t("sportsbook.detail.readFailed.eyebrow")}
+            title={t("sportsbook.detail.readFailed.title")}
+            description={t("sportsbook.detail.readFailed.description")}
           >
             <div className="rounded-lg border border-danger/25 bg-danger-soft p-4 text-sm leading-6 text-danger">
               {formatLookupError(error)}
@@ -146,21 +149,21 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
           </SectionShell>
         ) : isFetching && !readback ? (
           <SectionShell
-            eyebrow="Readback"
-            title="Loading market"
-            description="Reading market, result, and exposure records through the v1.3 SDK."
+            eyebrow={t("sportsbook.detail.loading.eyebrow")}
+            title={t("sportsbook.detail.loading.title")}
+            description={t("sportsbook.detail.loading.description")}
           >
             <div className="rounded-lg border border-border bg-surface-2/50 p-4 text-sm leading-6 text-fg-muted">
-              Loading SportsHub market state...
+              {t("sportsbook.detail.loading.body")}
             </div>
           </SectionShell>
         ) : readback ? (
           <>
             <div className="grid gap-8 xl:grid-cols-[1.1fr_0.9fr]">
               <SectionShell
-                eyebrow="Market"
-                title="Lifecycle and result"
-                description="Market state is read directly from SportsHub. Result state is displayed when a reporter proposal exists."
+                eyebrow={t("sportsbook.detail.market.eyebrow")}
+                title={t("sportsbook.detail.market.title")}
+                description={t("sportsbook.detail.market.description")}
               >
                 <MarketInspector
                   market={readback.market}
@@ -170,30 +173,33 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
               </SectionShell>
 
               <SectionShell
-                eyebrow="Exposure"
-                title="Reserved capital"
-                description="These values are the on-chain exposure readback used by ops to validate market, outcome, event, and pool-event caps."
+                eyebrow={t("sportsbook.detail.exposure.eyebrow")}
+                title={t("sportsbook.detail.exposure.title")}
+                description={t("sportsbook.detail.exposure.description")}
               >
                 <div className="grid gap-4">
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <DetailCell label="Market reserved" value={formatUnits(readback.reserved)} />
                     <DetailCell
-                      label="Event reserved"
+                      label={t("sportsbook.detail.exposure.marketReserved")}
+                      value={formatUnits(readback.reserved)}
+                    />
+                    <DetailCell
+                      label={t("sportsbook.detail.exposure.eventReserved")}
                       value={formatUnits(readback.eventReserved)}
                     />
                     <DetailCell
-                      label="Pool-event reserved"
+                      label={t("sportsbook.detail.exposure.poolEventReserved")}
                       value={formatUnits(readback.poolEventReserved)}
                     />
                     <DetailCell
-                      label="Outcome count"
+                      label={t("sportsbook.detail.exposure.outcomeCount")}
                       value={readback.market.outcomeCount.toString()}
                     />
                   </div>
 
                   <div className="overflow-hidden rounded-lg border border-border">
                     <div className="border-b border-border bg-surface-2 px-4 py-3 text-sm font-semibold text-fg">
-                      Outcome exposure
+                      {t("sportsbook.detail.exposure.outcomeExposure")}
                     </div>
                     <div className="divide-y divide-border-soft">
                       {readback.outcomeReserved.map((row) => (
@@ -201,7 +207,11 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
                           key={row.outcomeId}
                           className="flex items-center justify-between gap-4 px-4 py-3 text-sm"
                         >
-                          <div className="text-fg-muted">Outcome {row.outcomeId}</div>
+                          <div className="text-fg-muted">
+                            {t("sportsbook.detail.exposure.outcome", {
+                              outcomeId: String(row.outcomeId)
+                            })}
+                          </div>
                           <div className="font-mono font-semibold text-fg">
                             {formatUnits(row.reserved)}
                           </div>
@@ -214,9 +224,9 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
             </div>
 
             <SectionShell
-              eyebrow="Ticket placement"
-              title="Signed odds ticket"
-              description="This is the only public risk-in path for the MVP: it plans ERC20 approval, validates the signed odds snapshot against the active market, then calls SportsHub.placeTicket through the SDK."
+              eyebrow={t("sportsbook.detail.ticketPlacement.eyebrow")}
+              title={t("sportsbook.detail.ticketPlacement.title")}
+              description={t("sportsbook.detail.ticketPlacement.description")}
             >
               <SportsbookTicketPlacementPanel
                 sdk={sdk}
@@ -232,25 +242,23 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
                     : !sportsbook.enabled
                       ? sportsbook.disabledReason
                       : readback.market.state !== "open"
-                        ? "Market must be open before ticket placement."
-                        : "A connected wallet and signed odds snapshot are required."
+                        ? t("sportsbook.detail.ticketPlacement.marketMustBeOpen")
+                        : t("sportsbook.detail.ticketPlacement.walletAndSnapshotRequired")
                 }
                 onMutated={() => void refetchReadback()}
               />
             </SectionShell>
 
             <SectionShell
-              eyebrow="Ticket terminalization"
-              title="Settle, refund, or void tickets"
-              description="Debt-out calls remain wallet-gated and use SportsHub terminal helpers. Inspect a ticket before broadcasting to verify the state and payout path."
+              eyebrow={t("sportsbook.detail.ticketTerminal.eyebrow")}
+              title={t("sportsbook.detail.ticketTerminal.title")}
+              description={t("sportsbook.detail.ticketTerminal.description")}
             >
               <SportsbookTicketTerminalPanel
                 sdk={sdk}
                 disabled={readOnly || !ready}
                 disabledReason={
-                  readOnly
-                    ? readOnlyReason
-                    : "A connected wallet is required to broadcast terminal ticket calls."
+                  readOnly ? readOnlyReason : t("sportsbook.detail.ticketTerminal.walletRequired")
                 }
                 onMutated={() => void refetchReadback()}
               />
@@ -258,15 +266,15 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
           </>
         ) : (
           <SectionShell
-            eyebrow="Readback"
-            title="No market data"
-            description="No market was returned for this id from the active SportsHub."
+            eyebrow={t("sportsbook.detail.noMarket.eyebrow")}
+            title={t("sportsbook.detail.noMarket.title")}
+            description={t("sportsbook.detail.noMarket.description")}
           >
             <Link
               href="/sportsbook"
               className="inline-flex min-h-11 items-center rounded-md bg-brand px-4 text-sm font-black text-fg-inverse shadow-glow transition-colors hover:bg-brand-hover"
             >
-              Return to sportsbook
+              {t("sportsbook.detail.return")}
             </Link>
           </SectionShell>
         )}

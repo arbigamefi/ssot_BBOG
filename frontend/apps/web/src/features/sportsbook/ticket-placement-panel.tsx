@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import type { DomainSportsMarket } from "@ssot/ssot";
 import type {
   PlaceSportsTicketInput,
@@ -76,36 +77,59 @@ type SignedOddsSnapshotResponse = {
   signature: string;
 };
 
-function parsePositiveBigInt(value: string, label: string) {
+type Translate = ReturnType<typeof useTranslations>;
+
+function parsePositiveBigInt(value: string, label: string, t: Translate) {
   const trimmed = value.trim();
-  if (!/^[0-9]+$/.test(trimmed)) throw new Error(`${label} must be a positive integer.`);
+  if (!/^[0-9]+$/.test(trimmed)) {
+    throw new Error(t("sportsbook.ticketPlacement.validation.positiveInteger", { label }));
+  }
   const parsed = BigInt(trimmed);
-  if (parsed <= 0n) throw new Error(`${label} must be greater than zero.`);
-  return parsed;
-}
-
-function parseNonNegativeBigInt(value: string, label: string) {
-  const trimmed = value.trim();
-  if (!/^[0-9]+$/.test(trimmed)) throw new Error(`${label} must be an integer.`);
-  return BigInt(trimmed);
-}
-
-function parseOutcomeId(value: string, market: DomainSportsMarket) {
-  const trimmed = value.trim();
-  if (!/^[0-9]+$/.test(trimmed)) throw new Error("Outcome id must be a non-negative integer.");
-  const parsed = Number(trimmed);
-  if (!Number.isSafeInteger(parsed)) throw new Error("Outcome id is too large.");
-  if (parsed < 0 || parsed >= market.outcomeCount) {
-    throw new Error(`Outcome id must be between 0 and ${market.outcomeCount - 1}.`);
+  if (parsed <= 0n) {
+    throw new Error(t("sportsbook.ticketPlacement.validation.greaterThanZero", { label }));
   }
   return parsed;
 }
 
-function parseHex(value: string, label: string, exactBytes?: number) {
+function parseNonNegativeBigInt(value: string, label: string, t: Translate) {
   const trimmed = value.trim();
-  if (!/^0x[0-9a-fA-F]*$/.test(trimmed)) throw new Error(`${label} must be 0x-prefixed hex.`);
+  if (!/^[0-9]+$/.test(trimmed)) {
+    throw new Error(t("sportsbook.ticketPlacement.validation.integer", { label }));
+  }
+  return BigInt(trimmed);
+}
+
+function parseOutcomeId(value: string, market: DomainSportsMarket, t: Translate) {
+  const trimmed = value.trim();
+  if (!/^[0-9]+$/.test(trimmed)) {
+    throw new Error(t("sportsbook.ticketPlacement.validation.outcomeNonNegative"));
+  }
+  const parsed = Number(trimmed);
+  if (!Number.isSafeInteger(parsed)) {
+    throw new Error(t("sportsbook.ticketPlacement.validation.outcomeTooLarge"));
+  }
+  if (parsed < 0 || parsed >= market.outcomeCount) {
+    throw new Error(
+      t("sportsbook.ticketPlacement.validation.outcomeRange", {
+        max: String(market.outcomeCount - 1)
+      })
+    );
+  }
+  return parsed;
+}
+
+function parseHex(value: string, label: string, t: Translate, exactBytes?: number) {
+  const trimmed = value.trim();
+  if (!/^0x[0-9a-fA-F]*$/.test(trimmed)) {
+    throw new Error(t("sportsbook.ticketPlacement.validation.hex", { label }));
+  }
   if (exactBytes !== undefined && trimmed.length !== 2 + exactBytes * 2) {
-    throw new Error(`${label} must be ${exactBytes} bytes.`);
+    throw new Error(
+      t("sportsbook.ticketPlacement.validation.exactBytes", {
+        label,
+        bytes: String(exactBytes)
+      })
+    );
   }
   return trimmed as `0x${string}`;
 }
@@ -117,28 +141,41 @@ function getPoolRiskHash(release: SSOTRelease, poolId: number) {
 function makeInput(
   chainId: number,
   market: DomainSportsMarket,
-  form: TicketPlacementForm
+  form: TicketPlacementForm,
+  t: Translate
 ): PlaceSportsTicketInput {
-  const outcomeId = parseOutcomeId(form.outcomeId, market);
+  const outcomeId = parseOutcomeId(form.outcomeId, market, t);
   const odds: SportsOddsSnapshotInput = {
     marketId: market.marketId,
     outcomeId,
     marketVersion: market.version,
-    oddsWad: parsePositiveBigInt(form.oddsWad, "Odds WAD"),
-    maxStake: parsePositiveBigInt(form.maxStake, "Max stake"),
-    maxPayout: parsePositiveBigInt(form.maxPayout, "Max payout"),
-    expiresAt: parsePositiveBigInt(form.expiresAt, "Expires at"),
-    nonce: parseNonNegativeBigInt(form.nonce, "Nonce"),
-    riskHash: parseHex(form.riskHash, "Risk hash", 32)
+    oddsWad: parsePositiveBigInt(form.oddsWad, t("sportsbook.ticketPlacement.fields.oddsWad"), t),
+    maxStake: parsePositiveBigInt(
+      form.maxStake,
+      t("sportsbook.ticketPlacement.fields.maxStake"),
+      t
+    ),
+    maxPayout: parsePositiveBigInt(
+      form.maxPayout,
+      t("sportsbook.ticketPlacement.fields.maxPayout"),
+      t
+    ),
+    expiresAt: parsePositiveBigInt(
+      form.expiresAt,
+      t("sportsbook.ticketPlacement.fields.expiresAt"),
+      t
+    ),
+    nonce: parseNonNegativeBigInt(form.nonce, t("sportsbook.ticketPlacement.fields.nonce"), t),
+    riskHash: parseHex(form.riskHash, t("sportsbook.ticketPlacement.fields.riskHash"), t, 32)
   };
 
   return {
     chainId,
     marketId: market.marketId,
     outcomeId,
-    stake: parsePositiveBigInt(form.stake, "Stake"),
+    stake: parsePositiveBigInt(form.stake, t("sportsbook.ticketPlacement.fields.stake"), t),
     odds,
-    signature: parseHex(form.signature, "Signature")
+    signature: parseHex(form.signature, t("sportsbook.ticketPlacement.fields.signature"), t)
   };
 }
 
@@ -194,6 +231,7 @@ export function SportsbookTicketPlacementPanel({
   disabledReason?: string;
   onMutated?: () => void;
 }) {
+  const t = useTranslations();
   const defaultRiskHash = getPoolRiskHash(release, market.poolId) ?? "";
   const [form, setForm] = React.useState<TicketPlacementForm>({
     ...EMPTY_FORM,
@@ -202,7 +240,7 @@ export function SportsbookTicketPlacementPanel({
   const [plan, setPlan] = React.useState<PlaceSportsTicketPlan | undefined>();
   const [status, setStatus] = React.useState<TicketPlacementStatus>({
     busy: false,
-    label: "No ticket plan created."
+    label: t("sportsbook.ticketPlacement.status.noPlan")
   });
 
   React.useEffect(() => {
@@ -221,36 +259,47 @@ export function SportsbookTicketPlacementPanel({
 
   const buildPlan = React.useCallback(async () => {
     if (!sdk) return undefined;
-    const input = makeInput(chainId, market, form);
+    const input = makeInput(chainId, market, form, t);
     const result = await sdk.sportsHub.planPlaceTicket(input);
     if ("error" in result) {
       throw new Error(result.error.message);
     }
     setPlan(result);
     return result;
-  }, [chainId, form, market, sdk]);
+  }, [chainId, form, market, sdk, t]);
 
   const onPlan = React.useCallback(async () => {
     try {
-      setStatus({ busy: true, label: "Planning ticket..." });
+      setStatus({ busy: true, label: t("sportsbook.ticketPlacement.status.planning") });
       const nextPlan = await buildPlan();
       setStatus({
         busy: false,
-        label: nextPlan?.preview.needsApproval ? "Plan ready: approval required." : "Plan ready."
+        label: nextPlan?.preview.needsApproval
+          ? t("sportsbook.ticketPlacement.status.planReadyApproval")
+          : t("sportsbook.ticketPlacement.status.planReady")
       });
     } catch (error) {
-      const message = formatLookupError(error) ?? "Ticket planning failed.";
-      setStatus({ busy: false, label: "Planning failed.", error: message });
+      const message =
+        formatLookupError(error) ?? t("sportsbook.ticketPlacement.status.ticketPlanningFailed");
+      setStatus({
+        busy: false,
+        label: t("sportsbook.ticketPlacement.status.planningFailed"),
+        error: message
+      });
       toast.error(message);
     }
-  }, [buildPlan]);
+  }, [buildPlan, t]);
 
   const onFetchProviderOdds = React.useCallback(async () => {
     if (!sdk?.account) return;
     try {
-      const outcomeId = parseOutcomeId(form.outcomeId, market);
-      const stake = parsePositiveBigInt(form.stake, "Stake");
-      setStatus({ busy: true, label: "Fetching provider odds..." });
+      const outcomeId = parseOutcomeId(form.outcomeId, market, t);
+      const stake = parsePositiveBigInt(
+        form.stake,
+        t("sportsbook.ticketPlacement.fields.stake"),
+        t
+      );
+      setStatus({ busy: true, label: t("sportsbook.ticketPlacement.status.fetchingProviderOdds") });
       const response = await fetch("/api/sportsbook/odds-snapshot", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -270,7 +319,8 @@ export function SportsbookTicketPlacementPanel({
         | { error?: { message?: string } };
       if (!response.ok) {
         throw new Error(
-          ("error" in body && body.error?.message) || "Provider odds request failed."
+          ("error" in body && body.error?.message) ||
+            t("sportsbook.ticketPlacement.status.providerOddsRequestFailed")
         );
       }
       const signed = body as SignedOddsSnapshotResponse;
@@ -291,45 +341,69 @@ export function SportsbookTicketPlacementPanel({
       setPlan(undefined);
       setStatus({
         busy: false,
-        label: `Signed odds ready: ${signed.outcome.name} @ ${signed.outcome.decimalPrice}.`,
+        label: t("sportsbook.ticketPlacement.status.signedOddsReady", {
+          outcome: signed.outcome.name,
+          price: signed.outcome.decimalPrice
+        }),
         txHash: signed.oddsTicketHash
       });
-      toast.success("Signed odds snapshot ready");
+      toast.success(t("sportsbook.ticketPlacement.status.providerOddsReadyToast"));
     } catch (error) {
-      const message = formatLookupError(error) ?? "Provider odds request failed.";
-      setStatus({ busy: false, label: "Provider odds failed.", error: message });
+      const message =
+        formatLookupError(error) ??
+        t("sportsbook.ticketPlacement.status.providerOddsRequestFailed");
+      setStatus({
+        busy: false,
+        label: t("sportsbook.ticketPlacement.status.providerOddsFailed"),
+        error: message
+      });
       toast.error(message);
     }
-  }, [chainId, form, market, sdk?.account]);
+  }, [chainId, form, market, sdk?.account, t]);
 
   const onPlace = React.useCallback(async () => {
     if (!sdk) return;
     try {
-      setStatus({ busy: true, label: "Submitting ticket..." });
+      setStatus({ busy: true, label: t("sportsbook.ticketPlacement.status.submittingTicket") });
       const executablePlan = plan ?? (await buildPlan());
-      if (!executablePlan) throw new Error("Ticket plan is unavailable.");
+      if (!executablePlan) {
+        throw new Error(t("sportsbook.ticketPlacement.status.planUnavailable"));
+      }
       const result = await sdk.sportsHub.executeTicketPlan(executablePlan);
       if (!result.placeTicketTx.ok) {
-        const message = result.placeTicketTx.error?.message ?? "Ticket placement failed.";
-        setStatus({ busy: false, label: "Ticket failed.", error: message });
+        const message =
+          result.placeTicketTx.error?.message ??
+          t("sportsbook.ticketPlacement.status.ticketPlacementFailed");
+        setStatus({
+          busy: false,
+          label: t("sportsbook.ticketPlacement.status.ticketFailed"),
+          error: message
+        });
         toast.error(message);
         return;
       }
       setStatus({
         busy: false,
         label: result.ticketId
-          ? `Ticket ${result.ticketId.toString()} submitted.`
-          : "Ticket submitted.",
+          ? t("sportsbook.ticketPlacement.status.ticketSubmittedWithId", {
+              ticketId: result.ticketId.toString()
+            })
+          : t("sportsbook.ticketPlacement.status.ticketSubmitted"),
         txHash: result.placeTicketTx.txHash
       });
-      toast.success("Ticket submitted");
+      toast.success(t("sportsbook.ticketPlacement.status.ticketSubmittedToast"));
       onMutated?.();
     } catch (error) {
-      const message = formatLookupError(error) ?? "Ticket placement failed.";
-      setStatus({ busy: false, label: "Ticket failed.", error: message });
+      const message =
+        formatLookupError(error) ?? t("sportsbook.ticketPlacement.status.ticketPlacementFailed");
+      setStatus({
+        busy: false,
+        label: t("sportsbook.ticketPlacement.status.ticketFailed"),
+        error: message
+      });
       toast.error(message);
     }
-  }, [buildPlan, onMutated, plan, sdk]);
+  }, [buildPlan, onMutated, plan, sdk, t]);
 
   const actionDisabled = disabled || status.busy || !sdk?.account || market.state !== "open";
 
@@ -337,89 +411,104 @@ export function SportsbookTicketPlacementPanel({
     <div className="grid gap-5">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <DetailCell
-          label="Gate"
-          value={disabled ? "Locked" : "Enabled"}
-          helper={disabledReason ?? "Requires enabled release metadata, frontend flag, and wallet."}
+          label={t("sportsbook.ticketPlacement.summary.gate")}
+          value={
+            disabled
+              ? t("sportsbook.ticketPlacement.summary.locked")
+              : t("sportsbook.ticketPlacement.summary.enabled")
+          }
+          helper={disabledReason ?? t("sportsbook.ticketPlacement.summary.gateHelper")}
           mono={false}
         />
         <DetailCell
-          label="Market"
+          label={t("sportsbook.ticketPlacement.summary.market")}
           value={`${market.state} / v${market.version.toString()}`}
-          helper={`Pool ${market.poolId}, ${market.outcomeCount} outcomes`}
+          helper={t("sportsbook.ticketPlacement.summary.marketHelper", {
+            poolId: String(market.poolId),
+            outcomeCount: String(market.outcomeCount)
+          })}
           mono={false}
         />
-        <DetailCell label="Status" value={status.label} helper={status.error} mono={false} />
-        <DetailCell label="Last tx" value={status.txHash ?? "N/A"} />
+        <DetailCell
+          label={t("sportsbook.ticketPlacement.summary.status")}
+          value={status.label}
+          helper={status.error}
+          mono={false}
+        />
+        <DetailCell
+          label={t("sportsbook.ticketPlacement.summary.lastTx")}
+          value={status.txHash ?? t("sportsbook.components.na")}
+        />
       </div>
 
       <div className="rounded-lg border border-border bg-surface-2/70 p-5">
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <Field
             id="sports-ticket-provider-event"
-            label="Provider event id"
+            label={t("sportsbook.ticketPlacement.fields.providerEventId")}
             value={form.providerEventId}
             onChange={(value) => update("providerEventId", value)}
-            placeholder="Optional"
+            placeholder={t("sportsbook.ticketPlacement.placeholders.optional")}
           />
           <Field
             id="sports-ticket-bookmaker"
-            label="Bookmaker key"
+            label={t("sportsbook.ticketPlacement.fields.bookmakerKey")}
             value={form.bookmakerKey}
             onChange={(value) => update("bookmakerKey", value)}
-            placeholder="Optional"
+            placeholder={t("sportsbook.ticketPlacement.placeholders.optional")}
           />
           <Field
             id="sports-ticket-sport"
-            label="Sport key"
+            label={t("sportsbook.ticketPlacement.fields.sportKey")}
             value={form.sportKey}
             onChange={(value) => update("sportKey", value)}
             placeholder="soccer_fifa_world_cup"
           />
           <Field
             id="sports-ticket-outcome"
-            label="Outcome id"
+            label={t("sportsbook.ticketPlacement.fields.outcomeId")}
             value={form.outcomeId}
             onChange={(value) => update("outcomeId", value)}
             placeholder="0"
           />
           <Field
             id="sports-ticket-stake"
-            label="Stake raw units"
+            label={t("sportsbook.ticketPlacement.fields.stakeRawUnits")}
             value={form.stake}
             onChange={(value) => update("stake", value)}
             placeholder="1000000"
           />
           <Field
             id="sports-ticket-odds"
-            label="Odds WAD"
+            label={t("sportsbook.ticketPlacement.fields.oddsWad")}
             value={form.oddsWad}
             onChange={(value) => update("oddsWad", value)}
             placeholder="2100000000000000000"
           />
           <Field
             id="sports-ticket-max-stake"
-            label="Max stake"
+            label={t("sportsbook.ticketPlacement.fields.maxStake")}
             value={form.maxStake}
             onChange={(value) => update("maxStake", value)}
             placeholder="2000000"
           />
           <Field
             id="sports-ticket-max-payout"
-            label="Max payout"
+            label={t("sportsbook.ticketPlacement.fields.maxPayout")}
             value={form.maxPayout}
             onChange={(value) => update("maxPayout", value)}
             placeholder="4200000"
           />
           <Field
             id="sports-ticket-expires"
-            label="Expires at"
+            label={t("sportsbook.ticketPlacement.fields.expiresAt")}
             value={form.expiresAt}
             onChange={(value) => update("expiresAt", value)}
-            placeholder="Unix seconds"
+            placeholder={t("sportsbook.ticketPlacement.placeholders.unixSeconds")}
           />
           <Field
             id="sports-ticket-nonce"
-            label="Nonce"
+            label={t("sportsbook.ticketPlacement.fields.nonce")}
             value={form.nonce}
             onChange={(value) => update("nonce", value)}
             placeholder="0"
@@ -427,7 +516,7 @@ export function SportsbookTicketPlacementPanel({
           <div className="xl:col-span-2">
             <Field
               id="sports-ticket-risk-hash"
-              label="Risk hash"
+              label={t("sportsbook.ticketPlacement.fields.riskHash")}
               value={form.riskHash}
               onChange={(value) => update("riskHash", value)}
               placeholder="0x..."
@@ -436,7 +525,7 @@ export function SportsbookTicketPlacementPanel({
           <div className="md:col-span-2 xl:col-span-3">
             <Field
               id="sports-ticket-signature"
-              label="Odds signature"
+              label={t("sportsbook.ticketPlacement.fields.oddsSignature")}
               value={form.signature}
               onChange={(value) => update("signature", value)}
               placeholder="0x..."
@@ -451,7 +540,7 @@ export function SportsbookTicketPlacementPanel({
             onClick={onFetchProviderOdds}
             className="min-h-11 rounded-md border border-brand/30 bg-brand-soft px-4 text-sm font-black text-brand transition-colors hover:border-brand/50 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Fetch signed odds
+            {t("sportsbook.ticketPlacement.actions.fetchSignedOdds")}
           </button>
           <button
             type="button"
@@ -459,7 +548,7 @@ export function SportsbookTicketPlacementPanel({
             onClick={onPlan}
             className="min-h-11 rounded-md border border-border bg-surface-1 px-4 text-sm font-black text-fg transition-colors hover:border-brand/40 hover:bg-surface-3 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Plan ticket
+            {t("sportsbook.ticketPlacement.actions.planTicket")}
           </button>
           <button
             type="button"
@@ -467,7 +556,7 @@ export function SportsbookTicketPlacementPanel({
             onClick={onPlace}
             className="min-h-11 rounded-md bg-brand px-4 text-sm font-black text-fg-inverse shadow-glow transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Place ticket
+            {t("sportsbook.ticketPlacement.actions.placeTicket")}
           </button>
         </div>
 
@@ -475,29 +564,46 @@ export function SportsbookTicketPlacementPanel({
           <div className="mt-3 text-xs leading-5 text-danger">{status.error}</div>
         ) : null}
         {!sdk?.account ? (
-          <div className="mt-3 text-xs leading-5 text-warn">Connect a wallet to place tickets.</div>
+          <div className="mt-3 text-xs leading-5 text-warn">
+            {t("sportsbook.ticketPlacement.walletRequired")}
+          </div>
         ) : null}
       </div>
 
       {plan ? (
         <div className="grid gap-4 md:grid-cols-3">
           <DetailCell
-            label="Approval"
-            value={plan.preview.needsApproval ? "Required" : "Not required"}
+            label={t("sportsbook.ticketPlacement.plan.approval")}
+            value={
+              plan.preview.needsApproval
+                ? t("sportsbook.ticketPlacement.plan.required")
+                : t("sportsbook.ticketPlacement.plan.notRequired")
+            }
             helper={
               plan.preview.needsApproval
-                ? `Approve ${plan.preview.approveAmount?.toString() ?? "0"}`
-                : `Allowance ${plan.preview.allowance.toString()}`
+                ? t("sportsbook.ticketPlacement.plan.approveAmount", {
+                    amount: plan.preview.approveAmount?.toString() ?? "0"
+                  })
+                : t("sportsbook.ticketPlacement.plan.allowance", {
+                    amount: plan.preview.allowance.toString()
+                  })
             }
             mono={false}
           />
-          <DetailCell label="Odds ticket hash" value={shortHex(plan.preview.oddsTicketHash)} />
-          <DetailCell label="Plan state" value={status.label} helper={status.error} mono={false} />
+          <DetailCell
+            label={t("sportsbook.ticketPlacement.plan.oddsTicketHash")}
+            value={shortHex(plan.preview.oddsTicketHash)}
+          />
+          <DetailCell
+            label={t("sportsbook.ticketPlacement.plan.planState")}
+            value={status.label}
+            helper={status.error}
+            mono={false}
+          />
         </div>
       ) : (
         <div className="rounded-lg border border-border bg-surface-2/50 p-4 text-sm leading-6 text-fg-muted">
-          Paste a signed odds snapshot from the provider path, plan it, then submit through the SDK.
-          Unsigned or stale odds are rejected before broadcast.
+          {t("sportsbook.ticketPlacement.plan.empty")}
         </div>
       )}
     </div>

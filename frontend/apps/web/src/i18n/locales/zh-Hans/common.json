@@ -475,6 +475,180 @@
         "rawUnits": "raw / {decimals} 位小数",
         "riskTitle": "资金池风险上限"
       }
+    },
+    "detail": {
+      "noRelease": {
+        "title": "未加载 release",
+        "description": "内嵌 release 快照不可用。",
+        "status": "不可用"
+      },
+      "back": "返回体育投注",
+      "return": "返回体育投注",
+      "marketDetailPill": "市场详情",
+      "title": "市场 {marketId}",
+      "description": "单个固定赔率市场的 SportsHub 直接读回。出票仍受前端 release gate 保护，并且广播前必须提供完整的签名赔率快照。",
+      "invalid": {
+        "eyebrow": "无效路由",
+        "title": "无效市场 ID",
+        "description": "SportsHub 市场路由需要数字 market id。"
+      },
+      "readFailed": {
+        "eyebrow": "读取失败",
+        "title": "市场读回失败",
+        "description": "SDK 无法从当前 release 的 SportsHub 读取该市场。"
+      },
+      "loading": {
+        "eyebrow": "读回",
+        "title": "正在加载市场",
+        "description": "正在通过 v1.3 SDK 读取市场、赛果和敞口记录。",
+        "body": "正在加载 SportsHub 市场状态..."
+      },
+      "market": {
+        "eyebrow": "市场",
+        "title": "生命周期与赛果",
+        "description": "市场状态直接从 SportsHub 读取。有 reporter 提议后，会显示赛果状态。"
+      },
+      "exposure": {
+        "eyebrow": "敞口",
+        "title": "保留资本",
+        "description": "这些值是运维用于验证市场、结果、赛事和池-赛事上限的链上敞口读回。",
+        "marketReserved": "市场保留",
+        "eventReserved": "赛事保留",
+        "poolEventReserved": "池-赛事保留",
+        "outcomeCount": "结果数量",
+        "outcomeExposure": "结果敞口",
+        "outcome": "结果 {outcomeId}"
+      },
+      "ticketPlacement": {
+        "eyebrow": "出票",
+        "title": "签名赔率票据",
+        "description": "这是 MVP 唯一的公开风险入口：规划 ERC20 授权、按当前市场验证签名赔率快照，然后通过 SDK 调用 SportsHub.placeTicket。",
+        "marketMustBeOpen": "市场必须处于 open 状态才能出票。",
+        "walletAndSnapshotRequired": "需要连接钱包并提供签名赔率快照。"
+      },
+      "ticketTerminal": {
+        "eyebrow": "票据终结",
+        "title": "结算、退款或作废票据",
+        "description": "债务退出调用仍需要钱包，并通过 SportsHub 终结 helper 执行。广播前先检查票据，确认状态和赔付路径。",
+        "walletRequired": "需要连接钱包才能广播票据终结调用。"
+      },
+      "noMarket": {
+        "eyebrow": "读回",
+        "title": "没有市场数据",
+        "description": "当前 SportsHub 没有返回这个 id 对应的市场。"
+      }
+    },
+    "ticketPlacement": {
+      "fields": {
+        "providerEventId": "Provider 赛事 ID",
+        "bookmakerKey": "Bookmaker key",
+        "sportKey": "Sport key",
+        "outcomeId": "结果 ID",
+        "stake": "本金",
+        "stakeRawUnits": "本金 raw units",
+        "oddsWad": "赔率 WAD",
+        "maxStake": "最大本金",
+        "maxPayout": "最大赔付",
+        "expiresAt": "过期时间",
+        "nonce": "Nonce",
+        "riskHash": "风险哈希",
+        "signature": "签名",
+        "oddsSignature": "赔率签名"
+      },
+      "placeholders": {
+        "optional": "可选",
+        "unixSeconds": "Unix 秒"
+      },
+      "validation": {
+        "positiveInteger": "{label} 必须是正整数。",
+        "greaterThanZero": "{label} 必须大于 0。",
+        "integer": "{label} 必须是整数。",
+        "outcomeNonNegative": "结果 ID 必须是非负整数。",
+        "outcomeTooLarge": "结果 ID 过大。",
+        "outcomeRange": "结果 ID 必须在 0 到 {max} 之间。",
+        "hex": "{label} 必须是 0x 前缀 hex。",
+        "exactBytes": "{label} 必须是 {bytes} bytes。"
+      },
+      "status": {
+        "noPlan": "尚未创建票据计划。",
+        "planning": "正在规划票据...",
+        "planReadyApproval": "计划已就绪：需要授权。",
+        "planReady": "计划已就绪。",
+        "planningFailed": "规划失败。",
+        "ticketPlanningFailed": "票据规划失败。",
+        "fetchingProviderOdds": "正在获取 provider 赔率...",
+        "providerOddsRequestFailed": "Provider 赔率请求失败。",
+        "providerOddsFailed": "Provider 赔率失败。",
+        "signedOddsReady": "签名赔率已就绪：{outcome} @ {price}。",
+        "providerOddsReadyToast": "签名赔率快照已就绪",
+        "submittingTicket": "正在提交票据...",
+        "planUnavailable": "票据计划不可用。",
+        "ticketPlacementFailed": "出票失败。",
+        "ticketFailed": "票据失败。",
+        "ticketSubmittedWithId": "票据 {ticketId} 已提交。",
+        "ticketSubmitted": "票据已提交。",
+        "ticketSubmittedToast": "票据已提交"
+      },
+      "summary": {
+        "gate": "Gate",
+        "locked": "锁定",
+        "enabled": "启用",
+        "gateHelper": "需要启用 release 元数据、前端开关和钱包。",
+        "market": "市场",
+        "marketHelper": "池 {poolId}，{outcomeCount} 个结果",
+        "status": "状态",
+        "lastTx": "上一笔交易"
+      },
+      "actions": {
+        "fetchSignedOdds": "获取签名赔率",
+        "planTicket": "规划票据",
+        "placeTicket": "出票"
+      },
+      "walletRequired": "连接钱包后才能出票。",
+      "plan": {
+        "approval": "授权",
+        "required": "需要",
+        "notRequired": "不需要",
+        "approveAmount": "授权 {amount}",
+        "allowance": "Allowance {amount}",
+        "oddsTicketHash": "赔率票据哈希",
+        "planState": "计划状态",
+        "empty": "粘贴 provider 路径生成的签名赔率快照，先规划，再通过 SDK 提交。未签名或过期赔率会在广播前被拒绝。"
+      }
+    },
+    "ticketTerminal": {
+      "validation": {
+        "oneTicket": "请输入至少一个票据 ID。",
+        "numeric": "票据 ID 必须是数字。",
+        "positive": "票据 ID 必须为正数。"
+      },
+      "status": {
+        "noAction": "尚未提交票据操作。",
+        "actionFailed": "{label} 失败。",
+        "actionSubmitted": "{label} 已提交"
+      },
+      "actions": {
+        "settleTickets": "结算票据",
+        "refundTickets": "退款票据",
+        "voidTickets": "作废票据",
+        "inspectTicket": "检查票据",
+        "settle": "结算",
+        "refund": "退款",
+        "void": "作废"
+      },
+      "summary": {
+        "wallet": "钱包",
+        "connected": "已连接",
+        "required": "需要",
+        "walletHelper": "票据终结调用是公开的，但仍需要钱包广播。",
+        "lastAction": "上一操作",
+        "lastTx": "上一笔交易"
+      },
+      "form": {
+        "ticketIds": "票据 ID"
+      },
+      "loading": "正在加载 SportsHub 票据...",
+      "empty": "先检查票据，以便在广播债务退出前确认仓位 ID、本金、赔付和终结状态。"
     }
   },
   "nav": {
