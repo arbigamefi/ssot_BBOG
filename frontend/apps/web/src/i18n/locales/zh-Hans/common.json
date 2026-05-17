@@ -24,6 +24,70 @@
     "copyright": "ArbiGameFi 前端用于钱包原生游戏与透明结算。",
     "docs": "文档"
   },
+  "casino": {
+    "directory": {
+      "empty": {
+        "noRelease": "当前链没有可用的内嵌 release。",
+        "noGames": "当前 release 没有注册游戏。"
+      },
+      "hero": {
+        "eyebrow": "全球赌场大厅",
+        "title": "进入游戏大厅",
+        "description": "所有模块都在链上执行、可验证，并直接连接到隔离资金池。连接钱包即可开始游戏。"
+      },
+      "stats": {
+        "livePlayers": "在线玩家",
+        "maxWin": "24 小时最高奖金"
+      },
+      "filters": {
+        "all": "全部模块",
+        "table": "桌面游戏",
+        "binary": "快速二选一",
+        "lottery": "彩票类"
+      },
+      "search": {
+        "placeholder": "搜索游戏...",
+        "aria": "搜索游戏"
+      },
+      "tags": {
+        "binary": "二选一",
+        "table": "桌面",
+        "lottery": "彩票",
+        "module": "模块"
+      },
+      "rooms": {
+        "dice": {
+          "title": "精准骰子",
+          "promise": "1 到 99 的范围选择，数秒内完成。",
+          "badge": "1% 庄家优势"
+        },
+        "roulette": {
+          "title": "欧式轮盘",
+          "promise": "经典 37 格物理机制。",
+          "badge": "最高 36x 赔付"
+        },
+        "coinToss": {
+          "title": "抛硬币",
+          "promise": "高速 50/50 结算。",
+          "badge": "1% 庄家优势"
+        },
+        "keno": {
+          "title": "Keno 选号",
+          "promise": "选择多个号码，争取更高倍率。",
+          "badge": "最高 1,000x"
+        }
+      },
+      "card": {
+        "playing": "{count} 人正在玩",
+        "playNow": "开始游戏"
+      },
+      "reserve": {
+        "title": "累进储备池",
+        "subtitle": "透明 / 可验证 / 可退出",
+        "status": "实时产生收益"
+      }
+    }
+  },
   "nav": {
     "account": "账户",
     "affiliates": "推广",

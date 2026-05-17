@@ -24,6 +24,70 @@
     "copyright": "ArbiGameFi frontend for wallet-native rooms and transparent settlement.",
     "docs": "Docs"
   },
+  "casino": {
+    "directory": {
+      "empty": {
+        "noRelease": "No embedded release available for the connected chain.",
+        "noGames": "No games registered in the active release."
+      },
+      "hero": {
+        "eyebrow": "Global Casino Lobby",
+        "title": "Enter the Floor",
+        "description": "All modules are 100% on-chain, verifiable, and connected directly to the isolated reserve bank. Play directly from your wallet."
+      },
+      "stats": {
+        "livePlayers": "Live Players",
+        "maxWin": "Max Win (24H)"
+      },
+      "filters": {
+        "all": "All Modules",
+        "table": "Table Games",
+        "binary": "Binary / Fast",
+        "lottery": "Lottery"
+      },
+      "search": {
+        "placeholder": "Search games...",
+        "aria": "Search games"
+      },
+      "tags": {
+        "binary": "Binary",
+        "table": "Table",
+        "lottery": "Lottery",
+        "module": "Module"
+      },
+      "rooms": {
+        "dice": {
+          "title": "Precision Dice",
+          "promise": "1-99 sizing in seconds.",
+          "badge": "1% House Edge"
+        },
+        "roulette": {
+          "title": "European Roulette",
+          "promise": "Classic 37-slot physical mechanics.",
+          "badge": "Max Payout 36x"
+        },
+        "coinToss": {
+          "title": "Coin Toss",
+          "promise": "High-speed 50/50 resolution.",
+          "badge": "1% House Edge"
+        },
+        "keno": {
+          "title": "Keno Draft",
+          "promise": "Pick multi-spots for massive multipliers.",
+          "badge": "Huge 1,000x Win"
+        }
+      },
+      "card": {
+        "playing": "{count} playing",
+        "playNow": "Play Now"
+      },
+      "reserve": {
+        "title": "Progressive Reserve Pool",
+        "subtitle": "Transparent / Verifiable / Unlocked",
+        "status": "Yielding Real Time"
+      }
+    }
+  },
   "nav": {
     "account": "Account",
     "affiliates": "Affiliates",

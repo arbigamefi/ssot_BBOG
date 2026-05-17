@@ -34,6 +34,48 @@ vi.mock("@ssot/ui", () => ({
   cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" ")
 }));
 
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string, values?: Record<string, string>) =>
+    ({
+      "nav.games": "Games",
+      "casino.directory.empty.noRelease": "No embedded release available for the connected chain.",
+      "casino.directory.empty.noGames": "No games registered in the active release.",
+      "casino.directory.hero.eyebrow": "Global Casino Lobby",
+      "casino.directory.hero.title": "Enter the Floor",
+      "casino.directory.hero.description":
+        "All modules are 100% on-chain, verifiable, and connected directly to the isolated reserve bank. Play directly from your wallet.",
+      "casino.directory.stats.livePlayers": "Live Players",
+      "casino.directory.stats.maxWin": "Max Win (24H)",
+      "casino.directory.filters.all": "All Modules",
+      "casino.directory.filters.table": "Table Games",
+      "casino.directory.filters.binary": "Binary / Fast",
+      "casino.directory.filters.lottery": "Lottery",
+      "casino.directory.search.placeholder": "Search games...",
+      "casino.directory.search.aria": "Search games",
+      "casino.directory.tags.binary": "Binary",
+      "casino.directory.tags.table": "Table",
+      "casino.directory.tags.lottery": "Lottery",
+      "casino.directory.tags.module": "Module",
+      "casino.directory.rooms.dice.title": "Precision Dice",
+      "casino.directory.rooms.dice.promise": "1-99 sizing in seconds.",
+      "casino.directory.rooms.dice.badge": "1% House Edge",
+      "casino.directory.rooms.roulette.title": "European Roulette",
+      "casino.directory.rooms.roulette.promise": "Classic 37-slot physical mechanics.",
+      "casino.directory.rooms.roulette.badge": "Max Payout 36x",
+      "casino.directory.rooms.coinToss.title": "Coin Toss",
+      "casino.directory.rooms.coinToss.promise": "High-speed 50/50 resolution.",
+      "casino.directory.rooms.coinToss.badge": "1% House Edge",
+      "casino.directory.rooms.keno.title": "Keno Draft",
+      "casino.directory.rooms.keno.promise": "Pick multi-spots for massive multipliers.",
+      "casino.directory.rooms.keno.badge": "Huge 1,000x Win",
+      "casino.directory.card.playing": `${values?.count ?? "{count}"} playing`,
+      "casino.directory.card.playNow": "Play Now",
+      "casino.directory.reserve.title": "Progressive Reserve Pool",
+      "casino.directory.reserve.subtitle": "Transparent / Verifiable / Unlocked",
+      "casino.directory.reserve.status": "Yielding Real Time"
+    })[key] ?? key
+}));
+
 import { GamesListClient } from "./pageClient";
 
 const MOCK_GAMES_META = [

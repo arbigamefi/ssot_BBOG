@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { cn } from "@ssot/ui";
 import {
   MagnifyingGlassIcon,
@@ -27,53 +28,51 @@ const ROOM_ICON_MAP: Record<string, React.ReactNode> = {
   keno: <KenoMiniIcon />
 };
 
-const ROOM_TAG_MAP: Record<string, string> = {
-  dice: "Binary",
-  roulette: "Table",
-  "coin-toss": "Binary",
-  keno: "Lottery"
-};
-
-const ROOM_COPY_MAP: Record<
+const ROOM_COPY_KEYS: Record<
   string,
   {
-    title: string;
-    promise: string;
+    titleKey: string;
+    promiseKey: string;
     live: string;
-    badge: string;
+    badgeKey: string;
+    tagKey: string;
   }
 > = {
   dice: {
-    title: "Precision Dice",
-    promise: "1-99 sizing in seconds.",
+    titleKey: "casino.directory.rooms.dice.title",
+    promiseKey: "casino.directory.rooms.dice.promise",
     live: "124",
-    badge: "1% House Edge"
+    badgeKey: "casino.directory.rooms.dice.badge",
+    tagKey: "casino.directory.tags.binary"
   },
   roulette: {
-    title: "European Roulette",
-    promise: "Classic 37-slot physical mechanics.",
+    titleKey: "casino.directory.rooms.roulette.title",
+    promiseKey: "casino.directory.rooms.roulette.promise",
     live: "312",
-    badge: "Max Payout 36x"
+    badgeKey: "casino.directory.rooms.roulette.badge",
+    tagKey: "casino.directory.tags.table"
   },
   "coin-toss": {
-    title: "Coin Toss",
-    promise: "High-speed 50/50 resolution.",
+    titleKey: "casino.directory.rooms.coinToss.title",
+    promiseKey: "casino.directory.rooms.coinToss.promise",
     live: "89",
-    badge: "1% House Edge"
+    badgeKey: "casino.directory.rooms.coinToss.badge",
+    tagKey: "casino.directory.tags.binary"
   },
   keno: {
-    title: "Keno Draft",
-    promise: "Pick multi-spots for massive multipliers.",
+    titleKey: "casino.directory.rooms.keno.title",
+    promiseKey: "casino.directory.rooms.keno.promise",
     live: "45",
-    badge: "Huge 1,000x Win"
+    badgeKey: "casino.directory.rooms.keno.badge",
+    tagKey: "casino.directory.tags.lottery"
   }
 };
 
 const FILTERS = [
-  { key: "all", label: "All Modules" },
-  { key: "table", label: "Table Games" },
-  { key: "binary", label: "Binary / Fast" },
-  { key: "lottery", label: "Lottery" }
+  { key: "all", labelKey: "casino.directory.filters.all" },
+  { key: "table", labelKey: "casino.directory.filters.table" },
+  { key: "binary", labelKey: "casino.directory.filters.binary" },
+  { key: "lottery", labelKey: "casino.directory.filters.lottery" }
 ] as const;
 
 type FilterKey = (typeof FILTERS)[number]["key"];
@@ -92,6 +91,7 @@ function matchesFilter(slug: string, filter: FilterKey) {
 }
 
 export function GamesListClient() {
+  const t = useTranslations();
   const { release, readOnlyReason } = useRelease();
   const [query, setQuery] = React.useState("");
   const [filter, setFilter] = React.useState<FilterKey>("all");
@@ -99,8 +99,8 @@ export function GamesListClient() {
   if (!release) {
     return (
       <ProductStateCard
-        title="Games"
-        description={readOnlyReason ?? "No embedded release available for the connected chain."}
+        title={t("nav.games")}
+        description={readOnlyReason ?? t("casino.directory.empty.noRelease")}
       />
     );
   }
@@ -111,16 +111,21 @@ export function GamesListClient() {
 
   if (!rooms.length) {
     return (
-      <ProductStateCard title="Games" description="No games registered in the active release." />
+      <ProductStateCard title={t("nav.games")} description={t("casino.directory.empty.noGames")} />
     );
   }
 
   const filteredRooms = rooms.filter((room) => {
+    const copyKeys = ROOM_COPY_KEYS[room.slug];
+    const title = copyKeys ? t(copyKeys.titleKey) : room.label;
+    const promise = copyKeys ? t(copyKeys.promiseKey) : room.summary;
     const normalizedQuery = query.trim().toLowerCase();
     const matchesQuery =
       !normalizedQuery ||
       room.label.toLowerCase().includes(normalizedQuery) ||
-      room.summary.toLowerCase().includes(normalizedQuery);
+      room.summary.toLowerCase().includes(normalizedQuery) ||
+      title.toLowerCase().includes(normalizedQuery) ||
+      promise.toLowerCase().includes(normalizedQuery);
     return matchesQuery && matchesFilter(room.slug, filter);
   });
 
@@ -144,14 +149,13 @@ export function GamesListClient() {
           <div className="max-w-2xl">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand/30 bg-brand-soft px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-brand">
               <SparklesIcon className="h-4 w-4" />
-              Global Casino Lobby
+              {t("casino.directory.hero.eyebrow")}
             </div>
             <h1 className="text-5xl font-extrabold leading-tight tracking-tight text-fg md:text-6xl">
-              Enter the Floor
+              {t("casino.directory.hero.title")}
             </h1>
             <p className="mt-5 max-w-2xl text-lg leading-relaxed text-fg-muted md:text-xl">
-              All modules are 100% on-chain, verifiable, and connected directly to the isolated
-              reserve bank. Play directly from your wallet.
+              {t("casino.directory.hero.description")}
             </p>
           </div>
 
@@ -159,14 +163,14 @@ export function GamesListClient() {
             <div className="rounded-xl border border-border bg-surface-1 p-5 shadow-e1">
               <dt className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-accent">
                 <span className="h-1.5 w-1.5 rounded-full bg-accent shadow-glow" />
-                Live Players
+                {t("casino.directory.stats.livePlayers")}
               </dt>
               <dd className="mt-3 font-mono text-3xl font-black text-fg">1,842</dd>
             </div>
             <div className="rounded-xl border border-border bg-surface-1 p-5 shadow-e1">
               <dt className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-brand">
                 <TrophyIcon className="h-3.5 w-3.5" />
-                Max Win (24H)
+                {t("casino.directory.stats.maxWin")}
               </dt>
               <dd className="mt-3 font-mono text-3xl font-black text-fg">$35,000</dd>
             </div>
@@ -191,7 +195,7 @@ export function GamesListClient() {
                       : "text-fg-subtle hover:bg-surface-2 hover:text-fg"
                   )}
                 >
-                  {item.label}
+                  {t(item.labelKey)}
                   {isActive ? (
                     <span className="absolute -bottom-[1.55rem] left-1/2 h-0.5 w-8 -translate-x-1/2 rounded-full bg-brand shadow-glow" />
                   ) : null}
@@ -206,8 +210,8 @@ export function GamesListClient() {
               type="text"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search games..."
-              aria-label="Search games"
+              placeholder={t("casino.directory.search.placeholder")}
+              aria-label={t("casino.directory.search.aria")}
               className="relative z-0 w-full rounded-full border border-border bg-surface-1 py-3 pl-12 pr-4 text-sm text-fg shadow-inner-e1 transition-colors placeholder:text-fg-subtle hover:border-brand/30 focus:border-brand focus:bg-surface-2 focus:outline-none focus:ring-2 focus:ring-brand-ring"
             />
           </div>
@@ -215,12 +219,22 @@ export function GamesListClient() {
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
           {roomsToRender.map((room) => {
-            const copy = ROOM_COPY_MAP[room.slug] ?? {
-              title: room.label,
-              promise: room.summary,
-              live: "--",
-              badge: room.badge
-            };
+            const copyKeys = ROOM_COPY_KEYS[room.slug];
+            const copy = copyKeys
+              ? {
+                  title: t(copyKeys.titleKey),
+                  promise: t(copyKeys.promiseKey),
+                  live: copyKeys.live,
+                  badge: t(copyKeys.badgeKey),
+                  tag: t(copyKeys.tagKey)
+                }
+              : {
+                  title: room.label,
+                  promise: room.summary,
+                  live: "--",
+                  badge: room.badge,
+                  tag: t("casino.directory.tags.module")
+                };
 
             return (
               <Link
@@ -235,7 +249,7 @@ export function GamesListClient() {
                 <div className="absolute left-4 top-4 z-20 rounded-full border border-border bg-surface-0/80 px-3 py-1.5 backdrop-blur">
                   <span className="flex items-center gap-2 text-[10px] font-mono font-bold uppercase tracking-widest text-fg-muted">
                     <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-                    {copy.live} playing
+                    {t("casino.directory.card.playing", { count: copy.live })}
                   </span>
                 </div>
 
@@ -251,7 +265,7 @@ export function GamesListClient() {
 
                 <div className="relative z-20 border-t border-border-soft bg-surface-2/90 p-6 backdrop-blur">
                   <div className="mb-3 text-[10px] font-bold uppercase tracking-widest text-accent">
-                    {ROOM_TAG_MAP[room.slug] ?? "Module"}
+                    {copy.tag}
                   </div>
                   <h3 className="text-2xl font-bold text-fg">{copy.title}</h3>
                   <p className="mt-2 min-h-10 text-sm leading-relaxed text-fg-muted">
@@ -259,7 +273,8 @@ export function GamesListClient() {
                   </p>
 
                   <span className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-surface-1 py-4 text-sm font-black text-fg-muted transition-colors group-hover:border-brand/40 group-hover:text-brand">
-                    Play Now <PlayCircleIcon className="h-5 w-5 flex-shrink-0" />
+                    {t("casino.directory.card.playNow")}{" "}
+                    <PlayCircleIcon className="h-5 w-5 flex-shrink-0" />
                   </span>
                 </div>
               </Link>
@@ -277,10 +292,10 @@ export function GamesListClient() {
                 </div>
                 <div>
                   <h3 className="text-3xl font-black tracking-tight text-fg">
-                    Progressive Reserve Pool
+                    {t("casino.directory.reserve.title")}
                   </h3>
                   <p className="mt-2 font-mono text-sm font-medium uppercase tracking-widest text-fg-subtle">
-                    Transparent / Verifiable / Unlocked
+                    {t("casino.directory.reserve.subtitle")}
                   </p>
                 </div>
               </div>
@@ -291,7 +306,7 @@ export function GamesListClient() {
                 <div className="mt-4 flex items-center gap-2 rounded-lg border border-accent/30 bg-accent-soft px-3 py-1">
                   <span className="h-2 w-2 rounded-full bg-accent" />
                   <span className="text-[10px] font-bold uppercase tracking-widest text-accent">
-                    Yielding Real Time
+                    {t("casino.directory.reserve.status")}
                   </span>
                 </div>
               </div>
