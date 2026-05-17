@@ -231,6 +231,7 @@ function localizeLandingRoom(
   const key = room.slug === "coin-toss" ? "coinToss" : room.slug;
   return {
     ...room,
+    label: t(`roomCards.${key}.title`),
     badge: t(`roomCards.${key}.badge`),
     summary: t(`roomCards.${key}.summary`),
     facts: [0, 1, 2].map((index) => t(`roomCards.${key}.facts.${index}`))

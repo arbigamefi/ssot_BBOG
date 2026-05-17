@@ -1704,6 +1704,7 @@
     },
     "roomCards": {
       "dice": {
+        "title": "Dice",
         "badge": "Precision room",
         "summary": "Set the cap, size the ticket, and step into a fast dice room.",
         "facts": {
@@ -1713,6 +1714,7 @@
         }
       },
       "coinToss": {
+        "title": "Coin Toss",
         "badge": "Binary room",
         "summary": "Heads or tails with the cleanest room entry on the floor.",
         "facts": {
@@ -1722,6 +1724,7 @@
         }
       },
       "roulette": {
+        "title": "Roulette",
         "badge": "European table",
         "summary": "Step into a standard European roulette table with a real board, a clear slip, and readable ticket review.",
         "facts": {
@@ -1731,6 +1734,7 @@
         }
       },
       "keno": {
+        "title": "Keno",
         "badge": "Matrix room",
         "summary": "Pick the board, size the ticket, and keep the draw centered on the room.",
         "facts": {

@@ -1704,6 +1704,7 @@
     },
     "roomCards": {
       "dice": {
+        "title": "骰子",
         "badge": "精密房间",
         "summary": "设置上限、确定票据规模，然后进入快速骰子房间。",
         "facts": {
@@ -1713,6 +1714,7 @@
         }
       },
       "coinToss": {
+        "title": "抛硬币",
         "badge": "二元房间",
         "summary": "Heads 或 Tails，使用最干净的房间入口。",
         "facts": {
@@ -1722,6 +1724,7 @@
         }
       },
       "roulette": {
+        "title": "轮盘",
         "badge": "欧式桌台",
         "summary": "进入标准欧式轮盘桌：真实桌面、清晰票据、可读票据复核。",
         "facts": {
@@ -1731,6 +1734,7 @@
         }
       },
       "keno": {
+        "title": "Keno",
         "badge": "矩阵房间",
         "summary": "选择棋盘、确定票据规模，并让开奖保持在房间中心。",
         "facts": {
