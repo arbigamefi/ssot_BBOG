@@ -1,8 +1,8 @@
 import * as React from "react";
 
-import { DiceCubeDisplay } from "../../room/dice-cube-display";
-import { DiceRangeControl } from "../../room/dice-range-control";
 import type { DiceDirection } from "../../room/params";
+import { DiceCubeDisplay } from "./dice-cube-display";
+import { DiceRangeControl } from "./dice-range-control";
 
 export function DiceStage({
   isPending,

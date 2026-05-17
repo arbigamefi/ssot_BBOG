@@ -2,7 +2,7 @@ import * as React from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "@ssot/ui";
 
-import type { DiceDirection } from "./params";
+import type { DiceDirection } from "../../room/params";
 
 export function DiceRangeControl({
   isPending,
