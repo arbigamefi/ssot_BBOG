@@ -4,7 +4,7 @@
 | Status | Active reference |
 | Last Updated | 2026-05-18 |
 | Depends on | `../strategy/fullstack-product-architecture.md`, `frontend-implementation-roadmap.md` |
-| Supersedes | clean-room physical inventory and legacy prototype-first route plans |
+| Supersedes | historical physical inventory and legacy prototype-first route plans |
 
 This file is no longer a rewrite ledger. It is a short inventory for deciding
 whether a cleanup is still valid under the current lean B2C frontend strategy.
@@ -15,26 +15,26 @@ Execution order remains in
 
 Do not collapse these only to reduce file or package count:
 
-| Boundary | Why it stays |
-| --- | --- |
-| `frontend/packages/ssot/**` | Contract-facing SDK, encoding, release manifests, generated ABI surfaces, and golden-vector tests. |
-| `frontend/packages/bet-index/**` | Shared durable bet read model used by web API routes and keeper. |
-| `frontend/apps/keeper/**` | Separate runtime for automatic casino settlement and durable feed backfill. |
-| `deployments/**` | Contract-generated release artifacts and verification materials. |
-| `docs/frontend/{21,23,24,30}-*.md` | Launch requirements for i18n, security, testing, and release operations. |
+| Boundary                           | Why it stays                                                                                       |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `frontend/packages/ssot/**`        | Contract-facing SDK, encoding, release manifests, generated ABI surfaces, and golden-vector tests. |
+| `frontend/packages/bet-index/**`   | Shared durable bet read model used by web API routes and keeper.                                   |
+| `frontend/apps/keeper/**`          | Separate runtime for automatic casino settlement and durable feed backfill.                        |
+| `deployments/**`                   | Contract-generated release artifacts and verification materials.                                   |
+| `docs/frontend/{21,23,24,30}-*.md` | Launch requirements for i18n, security, testing, and release operations.                           |
 
 ## Already Removed
 
 These should not reappear in production code:
 
-| Area | Current expectation |
-| --- | --- |
-| Prototype routes | No `frontend/apps/web/src/app/prototype`. |
-| Legacy casino aliases | No `/dice`, `/cointoss`, `/roulette`, `/keno` App Router pages. |
-| Placeholder product routes | `/invest`, `/liquidity`, `/claims`, `/referral`, `/account`, `/bets` should not return as production pages. |
-| Old shell history | No `SiteChrome`, `TrustShell`, `ImmersiveGameLayout`, `PrototypeGameLayout`, or `ShellSwitcher` in product code. |
-| Old token systems | No `visual-system.ts`, `--ag-*`, hard-coded product UI hex, or `cyber-*` UI components. |
-| Public keeper health files | No `apps/web/public/ops/casino-keeper-health.json`; health is served by a route from `.runtime`. |
+| Area                       | Current expectation                                                                                              |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Prototype routes           | No `frontend/apps/web/src/app/prototype`.                                                                        |
+| Legacy casino aliases      | No `/dice`, `/cointoss`, `/roulette`, `/keno` App Router pages.                                                  |
+| Placeholder product routes | `/invest`, `/liquidity`, `/claims`, `/referral`, `/account`, `/bets` should not return as production pages.      |
+| Old shell history          | No `SiteChrome`, `TrustShell`, `ImmersiveGameLayout`, `PrototypeGameLayout`, or `ShellSwitcher` in product code. |
+| Old token systems          | No `visual-system.ts`, `--ag-*`, hard-coded product UI hex, or `cyber-*` UI components.                          |
+| Public keeper health files | No `apps/web/public/ops/casino-keeper-health.json`; health is served by a route from `.runtime`.                 |
 
 ## Cleanup Still Allowed
 
