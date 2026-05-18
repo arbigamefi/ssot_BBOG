@@ -43,7 +43,7 @@ export function RouletteSelectionPanel({
   const t = useTranslations();
 
   return (
-    <div className="relative mb-6 flex flex-col gap-3 overflow-hidden rounded-xl border border-border bg-surface-0 p-5 shadow-inner-e1">
+    <div className="relative mb-4 flex flex-col gap-3 overflow-hidden rounded-xl border border-border bg-surface-0 p-4 shadow-inner-e1">
       <div className="absolute inset-x-0 top-0 h-1 bg-brand" />
       <div className="z-10 flex items-center justify-between">
         <span className="flex items-center gap-2 font-mono text-xl font-black text-fg">
@@ -102,7 +102,7 @@ export function CoinSideSelector({
   const t = useTranslations();
 
   return (
-    <div className="relative mb-6 flex flex-col gap-2">
+    <div className="relative mb-4 flex flex-col gap-2">
       <label className="mb-1 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-fg-subtle">
         <SparklesIcon className="h-3 w-3" /> {t("casino.room.selection.coin.selectFace")}
       </label>
@@ -117,7 +117,7 @@ export function CoinSideSelector({
           type="button"
           onClick={() => onChange("HEADS")}
           className={cn(
-            "relative z-10 flex flex-1 items-center justify-center gap-2 rounded-lg py-3 text-xs font-bold uppercase tracking-widest transition-colors",
+            "relative z-10 flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-bold uppercase tracking-widest transition-colors",
             coinSide === "HEADS" ? "font-black text-fg" : "text-fg-subtle hover:text-fg"
           )}
         >
@@ -127,7 +127,7 @@ export function CoinSideSelector({
           type="button"
           onClick={() => onChange("TAILS")}
           className={cn(
-            "relative z-10 flex flex-1 items-center justify-center gap-2 rounded-lg py-3 text-xs font-bold uppercase tracking-widest transition-colors",
+            "relative z-10 flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-bold uppercase tracking-widest transition-colors",
             coinSide === "TAILS" ? "font-black text-fg" : "text-fg-subtle hover:text-fg"
           )}
         >
@@ -150,7 +150,7 @@ export function BaccaratSideSelector({
   const t = useTranslations();
 
   return (
-    <div className="relative mb-6 flex flex-col gap-3 rounded-xl border border-border bg-surface-0 p-5 shadow-inner-e1">
+    <div className="relative mb-4 flex flex-col gap-3 rounded-xl border border-border bg-surface-0 p-4 shadow-inner-e1">
       <div className="absolute inset-x-0 top-0 h-1 bg-brand" />
       <label className="z-10 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-fg-subtle">
         <SparklesIcon className="h-3 w-3" /> {t("casino.room.selection.baccarat.betOn")}
@@ -164,7 +164,7 @@ export function BaccaratSideSelector({
               type="button"
               onClick={() => onChange(item)}
               className={cn(
-                "rounded-lg border px-3 py-3 text-center transition-colors",
+                "rounded-lg border px-3 py-2.5 text-center transition-colors",
                 active
                   ? "border-brand bg-brand-soft text-fg shadow-glow"
                   : "border-border bg-surface-1 text-fg-muted hover:border-brand/40 hover:bg-surface-2 hover:text-fg"
@@ -193,7 +193,7 @@ export function PlinkoRiskSelector({
   const t = useTranslations();
 
   return (
-    <div className="relative mb-6 flex flex-col gap-3 rounded-xl border border-border bg-surface-0 p-5 shadow-inner-e1">
+    <div className="relative mb-4 flex flex-col gap-3 rounded-xl border border-border bg-surface-0 p-4 shadow-inner-e1">
       <div className="absolute inset-x-0 top-0 h-1 bg-brand" />
       <label className="z-10 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-fg-subtle">
         <SparklesIcon className="h-3 w-3" /> {t("casino.room.selection.plinko.riskProfile")}
@@ -207,7 +207,7 @@ export function PlinkoRiskSelector({
               type="button"
               onClick={() => onChange(item)}
               className={cn(
-                "rounded-lg border px-3 py-3 text-left transition-colors",
+                "rounded-lg border px-3 py-2.5 text-left transition-colors",
                 active
                   ? "border-brand bg-brand-soft text-fg shadow-glow"
                   : "border-border bg-surface-1 text-fg-muted hover:border-brand/40 hover:bg-surface-2 hover:text-fg"
@@ -269,7 +269,7 @@ export function SicBoBetSelector({
   const values = kind === "total" ? SIC_BO_TOTAL_VALUES : SIC_BO_FACE_VALUES;
 
   return (
-    <div className="relative mb-6 flex flex-col gap-3 rounded-xl border border-border bg-surface-0 p-5 shadow-inner-e1">
+    <div className="relative mb-4 flex flex-col gap-3 rounded-xl border border-border bg-surface-0 p-4 shadow-inner-e1">
       <div className="absolute inset-x-0 top-0 h-1 bg-brand" />
       <label className="z-10 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-fg-subtle">
         <SparklesIcon className="h-3 w-3" /> {t("casino.room.selection.sicBo.betType")}
@@ -283,7 +283,7 @@ export function SicBoBetSelector({
               type="button"
               onClick={() => onChange(item, defaultSicBoValue(item))}
               className={cn(
-                "rounded-lg border px-3 py-3 text-left transition-colors",
+                "rounded-lg border px-3 py-2.5 text-left transition-colors",
                 active
                   ? "border-brand bg-brand-soft text-fg shadow-glow"
                   : "border-border bg-surface-1 text-fg-muted hover:border-brand/40 hover:bg-surface-2 hover:text-fg"
@@ -342,7 +342,7 @@ export function KenoSelectionPanel({
   const sortedSpots = [...spots].sort((a, b) => a - b);
 
   return (
-    <div className="relative mb-6 flex flex-col gap-3 overflow-hidden rounded-xl border border-border bg-surface-0 p-5 shadow-inner-e1">
+    <div className="relative mb-4 flex flex-col gap-3 overflow-hidden rounded-xl border border-border bg-surface-0 p-4 shadow-inner-e1">
       <div className="absolute inset-x-0 top-0 h-1 bg-brand" />
       <div className="z-10 flex items-center justify-between">
         <span className="flex items-center gap-2 font-mono text-xl font-black text-fg">

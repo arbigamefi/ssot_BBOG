@@ -41,7 +41,7 @@ function HandPanel({
   return (
     <div
       className={cn(
-        "flex flex-col gap-4 rounded-xl border bg-surface-1 p-5 shadow-e2",
+        "flex flex-col gap-3 rounded-xl border bg-surface-1 p-4 shadow-e2",
         winner ? "border-accent/60 bg-accent-soft" : "border-border"
       )}
     >
@@ -79,9 +79,9 @@ export function BaccaratStage({
   const winner = roll?.outcome;
 
   return (
-    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center overflow-hidden p-8">
+    <div className="absolute inset-0 z-10 flex flex-col items-center justify-start overflow-hidden px-6 pb-6 pt-28">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,hsl(var(--brand)/0.06)_0%,transparent_62%)]" />
-      <div className="relative flex w-full max-w-4xl flex-col items-center gap-7">
+      <div className="relative flex w-full max-w-4xl flex-col items-center gap-6">
         <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-2">
           <HandPanel
             title={formatSide("player", t)}

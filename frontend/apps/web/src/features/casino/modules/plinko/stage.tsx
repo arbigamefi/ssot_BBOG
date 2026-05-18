@@ -24,13 +24,13 @@ export function PlinkoStage({
   const factors = PLINKO_FACTOR_TABLE[risk];
 
   return (
-    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center overflow-hidden p-8">
+    <div className="absolute inset-0 z-10 flex flex-col items-center justify-start overflow-hidden px-6 pb-6 pt-10 md:pt-12">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,hsl(var(--brand)/0.06)_0%,transparent_62%)]" />
-      <div className="relative flex w-full max-w-3xl flex-col items-center gap-8">
-        <div className="relative flex h-20 w-20 items-center justify-center">
+      <div className="relative flex w-full max-w-3xl flex-col items-center gap-5">
+        <div className="relative flex h-16 w-16 items-center justify-center">
           <div
             className={cn(
-              "absolute h-16 w-16 rounded-full border border-brand/40 bg-brand-soft shadow-glow transition-transform",
+              "absolute h-14 w-14 rounded-full border border-brand/40 bg-brand-soft shadow-glow transition-transform",
               isPending && "animate-bounce",
               showResult && "scale-110 border-accent/50 bg-accent-soft"
             )}
@@ -40,17 +40,17 @@ export function PlinkoStage({
           </span>
         </div>
 
-        <div className="flex flex-col items-center gap-3">
+        <div className="flex flex-col items-center gap-2.5">
           {Array.from({ length: 8 }).map((_, row) => (
             <div
               key={row}
-              className="flex justify-center gap-5"
-              style={{ width: `${(row + 2) * 2.25}rem` }}
+              className="flex justify-center gap-4"
+              style={{ width: `${(row + 2) * 2}rem` }}
             >
               {Array.from({ length: row + 1 }).map((__, index) => (
                 <span
                   key={index}
-                  className="h-2.5 w-2.5 rounded-full border border-brand/30 bg-fg/80 shadow-glow"
+                  className="h-2 w-2 rounded-full border border-brand/30 bg-fg/80 shadow-glow"
                 />
               ))}
             </div>
@@ -64,14 +64,16 @@ export function PlinkoStage({
               <div
                 key={bucket}
                 className={cn(
-                  "flex min-h-16 flex-col items-center justify-center rounded-md border bg-surface-1 px-1 py-2 text-center shadow-inner-e1",
+                  "flex min-h-12 flex-col items-center justify-center rounded-md border bg-surface-1 px-1 py-1.5 text-center shadow-inner-e1",
                   active
                     ? "border-accent bg-accent-soft text-accent shadow-glow"
                     : "border-border text-fg-muted"
                 )}
               >
                 <span className="font-mono text-xs font-black">{bucket}</span>
-                <span className="mt-1 font-mono text-[10px] font-bold">{formatFactor(factor)}</span>
+                <span className="mt-0.5 font-mono text-[10px] font-bold">
+                  {formatFactor(factor)}
+                </span>
               </div>
             );
           })}

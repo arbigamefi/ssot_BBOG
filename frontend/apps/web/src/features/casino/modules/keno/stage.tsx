@@ -19,10 +19,10 @@ export function KenoStage({
   onResetResult: () => void;
 }) {
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center p-8 z-10 overflow-hidden">
+    <div className="absolute inset-0 z-10 flex flex-col items-center justify-start overflow-hidden px-6 pb-6 pt-16">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,hsl(var(--brand)/0.08)_0%,transparent_70%)] pointer-events-none" />
 
-      <div className="relative z-20 mb-8 w-full max-w-[800px] overflow-hidden rounded-xl border border-border bg-surface-1/90 p-4 shadow-e2 backdrop-blur-3xl">
+      <div className="relative z-20 mb-5 w-full max-w-[800px] overflow-hidden rounded-xl border border-border bg-surface-1/90 p-3 shadow-e2 backdrop-blur-3xl">
         <div className="absolute bottom-0 left-0 top-0 w-32 bg-gradient-to-r from-brand/10 to-transparent pointer-events-none" />
         <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar pb-1">
           <div
@@ -39,7 +39,7 @@ export function KenoStage({
               <div
                 key={hits}
                 className={cn(
-                  "flex h-16 min-w-[70px] flex-col items-center justify-center rounded-md border-2 transition-[transform,border-color,background-color]",
+                  "flex h-14 min-w-[66px] flex-col items-center justify-center rounded-md border-2 transition-[transform,border-color,background-color]",
                   isCurrentTarget
                     ? "scale-105 border-brand bg-brand-soft shadow-e2"
                     : pay > 0
@@ -71,7 +71,7 @@ export function KenoStage({
 
       <div
         className={cn(
-          "relative z-10 w-full max-w-[800px] rounded-xl border border-border bg-surface-1/95 p-8 shadow-e3 backdrop-blur-3xl transition-transform md:p-12",
+          "relative z-10 w-full max-w-[800px] rounded-xl border border-border bg-surface-1/95 p-6 shadow-e3 backdrop-blur-3xl transition-transform md:p-8",
           isPending ? "scale-[0.98] shadow-glow" : ""
         )}
       >

@@ -42,7 +42,7 @@ export function BetAmountSection({
   };
 
   return (
-    <div className="mb-4">
+    <div className="mb-3">
       <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-fg-subtle">
         {t("casino.room.betPanel.amount.label")}
       </label>
@@ -117,7 +117,7 @@ export function BetRollsSection({
   const t = useTranslations();
 
   return (
-    <div className="mb-4">
+    <div className="mb-3">
       <div className="mb-2 flex items-center justify-between">
         <label className="text-[10px] font-bold uppercase tracking-widest text-fg-subtle">
           {t("casino.room.betPanel.rolls.label")}
@@ -183,7 +183,7 @@ export function BetAdvancedSection({
   const t = useTranslations();
 
   return (
-    <div className="mb-4">
+    <div className="mb-3">
       <button
         type="button"
         onClick={() => onAdvancedOpenChange(!advancedOpen)}
@@ -265,27 +265,27 @@ export function BetPayoutSummary({
   const t = useTranslations();
 
   return (
-    <div className="mb-4 grid grid-cols-3 gap-2">
-      <div className="flex flex-col rounded-lg border border-border bg-surface-0 p-3 shadow-inner-e1">
+    <div className="mb-3 grid grid-cols-3 gap-2">
+      <div className="flex flex-col rounded-lg border border-border bg-surface-0 p-2.5 shadow-inner-e1">
         <span className="mb-1 flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-fg-subtle">
           {t("casino.room.betPanel.summary.multiplier")}{" "}
           <InformationCircleIcon className="h-3 w-3" />
         </span>
-        <span className="font-mono text-xl font-bold text-brand transition-colors">
+        <span className="font-mono text-lg font-bold text-brand transition-colors">
           {multiplier.toFixed(2)}x
         </span>
       </div>
-      <div className="flex flex-col rounded-lg border border-border bg-surface-0 p-3 shadow-inner-e1">
+      <div className="flex flex-col rounded-lg border border-border bg-surface-0 p-2.5 shadow-inner-e1">
         <span className="mb-1 flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-fg-subtle">
           {t("casino.room.betPanel.summary.winChance")} <ChartBarIcon className="h-3 w-3" />
         </span>
-        <span className="font-mono text-xl font-bold text-fg">{winChance.toFixed(2)}%</span>
+        <span className="font-mono text-lg font-bold text-fg">{winChance.toFixed(2)}%</span>
       </div>
-      <div className="flex select-none flex-col rounded-lg border border-border bg-surface-0 p-3 shadow-inner-e1">
+      <div className="flex select-none flex-col rounded-lg border border-border bg-surface-0 p-2.5 shadow-inner-e1">
         <span className="mb-1 text-[10px] font-bold uppercase tracking-widest text-fg-subtle">
           {t("casino.room.betPanel.summary.expectedPayout")}
         </span>
-        <span className="flex items-baseline gap-1 font-mono text-xl font-extrabold text-brand">
+        <span className="flex items-baseline gap-1 font-mono text-lg font-extrabold text-brand">
           {expectedPayout.toFixed(2)} <span className="text-xs font-bold text-fg-subtle">USDC</span>
         </span>
       </div>

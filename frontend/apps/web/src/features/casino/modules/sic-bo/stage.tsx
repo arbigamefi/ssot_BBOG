@@ -49,10 +49,10 @@ export function SicBoStage({
   const hasResult = Boolean(showResult && roll);
 
   return (
-    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center overflow-hidden p-8">
+    <div className="absolute inset-0 z-10 flex flex-col items-center justify-start overflow-hidden px-6 pb-6 pt-28">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,hsl(var(--brand)/0.07)_0%,transparent_62%)]" />
-      <div className="relative flex w-full max-w-3xl flex-col items-center gap-8">
-        <div className="grid grid-cols-3 gap-4 rounded-xl border border-border bg-surface-1 p-5 shadow-e2">
+      <div className="relative flex w-full max-w-3xl flex-col items-center gap-6">
+        <div className="grid grid-cols-3 gap-4 rounded-xl border border-border bg-surface-1 p-4 shadow-e2">
           {[0, 1, 2].map((index) => (
             <DieFace
               key={index}

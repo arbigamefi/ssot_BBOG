@@ -23,16 +23,16 @@ export function CoinTossStage({
       : t("casino.room.selection.coin.tails");
 
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center p-8 z-10 overflow-hidden">
+    <div className="absolute inset-0 z-10 flex flex-col items-center justify-start overflow-hidden px-6 pb-6 pt-28">
       <div className="absolute inset-x-0 bottom-0 h-[60%] bg-gradient-to-t from-brand/5 to-transparent pointer-events-none" />
       <div
         className={cn(
-          "absolute top-1/2 left-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[120px] opacity-20 pointer-events-none transition-colors duration-1000",
+          "absolute left-1/2 top-[46%] h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[120px] opacity-20 pointer-events-none transition-colors duration-1000",
           isPending ? "bg-accent" : "bg-brand"
         )}
       />
 
-      <div className="relative h-56 w-56 md:h-72 md:w-72" style={{ perspective: "1200px" }}>
+      <div className="relative h-56 w-56 md:h-64 md:w-64" style={{ perspective: "1200px" }}>
         <div
           className={cn(
             "relative h-full w-full transition-[transform] ease-out",
