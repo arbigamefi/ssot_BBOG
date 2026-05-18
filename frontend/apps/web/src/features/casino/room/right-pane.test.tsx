@@ -39,6 +39,18 @@ vi.mock("next-intl", () => ({
       "casino.room.result.outcomes.returned.detail": "The settled payout equals the stake.",
       "casino.room.result.outcomes.loss.label": "Lost bet",
       "casino.room.result.outcomes.loss.detail": "The round settled on-chain with no net payout.",
+      "casino.room.result.outcomes.winPending.label": "Won bet",
+      "casino.room.result.outcomes.winPending.detail":
+        "The VRF result is revealed. Payout settlement is still pending.",
+      "casino.room.result.outcomes.returnedPending.label": "Stake returned",
+      "casino.room.result.outcomes.returnedPending.detail":
+        "The VRF result is revealed. Settlement confirmation is still pending.",
+      "casino.room.result.outcomes.lossPending.label": "Lost bet",
+      "casino.room.result.outcomes.lossPending.detail":
+        "The VRF result is revealed. Final settlement is still pending.",
+      "casino.room.result.outcomes.revealed.label": "Result revealed",
+      "casino.room.result.outcomes.revealed.detail":
+        "Opened numbers are available from VRF. Settlement is still pending.",
       "casino.room.result.sections.gameResult": "Game result",
       "casino.room.result.sections.fairnessData": "Fairness data",
       "casino.room.result.facts.status": "Status",
@@ -46,6 +58,7 @@ vi.mock("next-intl", () => ({
       "casino.room.result.facts.multiplier": "Multiplier",
       "casino.room.result.facts.betAmount": "Bet amount",
       "casino.room.result.facts.payout": "Payout",
+      "casino.room.result.facts.expectedPayout": "Expected payout",
       "casino.room.result.facts.betId": "Bet ID",
       "casino.room.result.facts.refund": "Refund",
       "casino.room.result.facts.requestId": "Request ID",
@@ -54,6 +67,7 @@ vi.mock("next-intl", () => ({
       "casino.room.result.facts.settlementTx": "Settlement tx",
       "casino.room.result.facts.resolvedTime": "Resolved time",
       "casino.room.result.facts.vrfFee": "RNG fees (VRF)",
+      "casino.room.result.facts.pending": "Pending",
       "casino.room.result.facts.diceTarget": "Dice target",
       "casino.room.result.facts.diceNumber": "Number drawn",
       "casino.room.result.facts.coinChoice": "Chosen side",
@@ -64,7 +78,8 @@ vi.mock("next-intl", () => ({
       "casino.room.result.facts.kenoDrawn": "Numbers drawn",
       "casino.room.result.facts.kenoHits": "Hits",
       "casino.room.result.actions.close": "Close",
-      "casino.room.result.actions.viewSettlement": "View settlement"
+      "casino.room.result.actions.viewSettlement": "View settlement",
+      "casino.room.result.actions.settlementPending": "Settlement pending"
     })[key] ?? key
 }));
 
@@ -167,5 +182,45 @@ describe("GameRoomRightPane", () => {
     expect(screen.queryByText("Bet details")).toBeNull();
     expect(screen.queryByText("Reading result")).toBeNull();
     expect(screen.queryByText("Won bet")).toBeNull();
+  });
+
+  it("opens the result overlay before settlement when VRF outcome is available", () => {
+    render(
+      <GameRoomRightPane
+        {...baseProps}
+        gameSlug="dice"
+        showResult
+        resultProof={{
+          kind: "indexing",
+          betId: 13n,
+          requestId: 88n,
+          randomHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          player: "0xc8ec9920d573893e888db5d30b2b3b3824b1b684",
+          stake: 10_000_000n,
+          vrfFeeCharged: 100_000_000_000_000n,
+          resolvedAt: 1_778_888_888
+        }}
+        casinoOutcome={{
+          kind: "dice",
+          direction: "under",
+          target: 50,
+          rolls: [{ value: 17, won: true }],
+          payoutGross: 20_000_000n,
+          payoutNet: 19_600_000n,
+          refundAmount: 0n,
+          feeOnPayout: 400_000n,
+          playerOwed: 19_600_000n,
+          netResult: 9_600_000n
+        }}
+      />
+    );
+
+    expect(screen.getByText("Bet details")).toBeDefined();
+    expect(screen.getAllByText("Won bet").length).toBeGreaterThan(0);
+    expect(screen.getByText("Expected payout")).toBeDefined();
+    expect(screen.getByText("Number drawn")).toBeDefined();
+    expect(screen.getAllByText("17").length).toBeGreaterThan(0);
+    expect(screen.getByText("Pending")).toBeDefined();
+    expect(screen.getByText("Settlement pending")).toBeDefined();
   });
 });

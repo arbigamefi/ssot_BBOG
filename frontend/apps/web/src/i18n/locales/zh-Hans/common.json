@@ -368,7 +368,8 @@
         },
         "actions": {
           "close": "关闭",
-          "viewSettlement": "查看结算"
+          "viewSettlement": "查看结算",
+          "settlementPending": "结算确认中"
         }
       }
     },

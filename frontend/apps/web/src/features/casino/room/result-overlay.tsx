@@ -550,7 +550,7 @@ export function GameRoomResultOverlay({
                 disabled
                 className="rounded-lg border border-border bg-surface-2 px-5 py-3 text-sm font-black text-fg-subtle"
               >
-                {t("casino.room.result.actions.viewSettlement")}
+                {t("casino.room.result.actions.settlementPending")}
               </button>
             )}
           </div>

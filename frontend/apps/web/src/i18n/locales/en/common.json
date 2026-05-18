@@ -368,7 +368,8 @@
         },
         "actions": {
           "close": "Close",
-          "viewSettlement": "View settlement"
+          "viewSettlement": "View settlement",
+          "settlementPending": "Settlement pending"
         }
       }
     },
