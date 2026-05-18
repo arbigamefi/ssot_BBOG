@@ -148,7 +148,9 @@ export function ReferralPageClient() {
                 {t("portfolio.referral.hero.connected")}
               </p>
               <div className="mt-2 font-mono text-2xl font-black text-fg">
-                {sdk?.account ? shortHex(sdk.account, pendingLabel) : pendingLabel}
+                {sdk?.account
+                  ? shortHex(sdk.account, pendingLabel)
+                  : t("portfolio.referral.common.notConnected")}
               </div>
             </div>
           </div>

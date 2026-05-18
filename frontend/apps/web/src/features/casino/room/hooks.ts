@@ -39,9 +39,15 @@ export function useGameWalletBalance({
   const [walletBalance, setWalletBalance] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    if (!sdk?.account || !assets) return;
+    if (!sdk?.account || !assets) {
+      setWalletBalance(null);
+      return;
+    }
     const usdcAsset = assets.find((asset) => asset.symbol === "USDC");
-    if (!usdcAsset?.address || !sdk.bank) return;
+    if (!usdcAsset?.address || !sdk.bank) {
+      setWalletBalance(null);
+      return;
+    }
 
     sdk.bank
       .getAssetBalance(usdcAsset.address as `0x${string}`, sdk.account)

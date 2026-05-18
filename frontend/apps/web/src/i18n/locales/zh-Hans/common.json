@@ -218,6 +218,7 @@
       "betPanel": {
         "walletBalance": "钱包余额",
         "syncing": "同步中...",
+        "notConnected": "未连接",
         "amount": {
           "label": "下注金额",
           "aria": "下注金额",
@@ -1539,7 +1540,8 @@
     },
     "referral": {
       "common": {
-        "pending": "待连接"
+        "pending": "待处理",
+        "notConnected": "未连接"
       },
       "state": {
         "noRelease": {
@@ -1555,7 +1557,7 @@
         "eyebrow": "推广账户",
         "title": "推广奖励。",
         "description": "生成赌场推广链接，查看不可变的 first-touch 绑定，并检查由 Bank 账本结算的 XP 奖励桶。",
-        "connected": "已连接钱包"
+        "connected": "钱包"
       },
       "link": {
         "title": "你的推广链接",
@@ -1993,7 +1995,7 @@
     },
     "rooms": {
       "eyebrow": "赌场房间",
-      "title": "四个一次性 RNG 游戏，一条结算轨道。",
+      "title": "八个一次性 RNG 游戏，一条结算轨道。",
       "detail": "每个房间映射到 release 定义的模块。UI 可以变化，但游戏身份、参数和派奖路径都锚定到 SSOT release。",
       "actionLabel": "打开目录"
     },
@@ -2036,6 +2038,46 @@
           "0": "棋盘优先",
           "1": "实时开奖",
           "2": "重复游玩"
+        }
+      },
+      "plinko": {
+        "title": "Plinko",
+        "badge": "弹珠板",
+        "summary": "选择风险档位，落入桶位后由链上随机数揭示结果。",
+        "facts": {
+          "0": "风险档位",
+          "1": "桶位揭示",
+          "2": "快速复玩"
+        }
+      },
+      "slots": {
+        "title": "Slots",
+        "badge": "转轮房间",
+        "summary": "三符号转轮，倍率清晰，最终结果带链上凭证。",
+        "facts": {
+          "0": "3 个转轮",
+          "1": "符号可见",
+          "2": "凭证回执"
+        }
+      },
+      "baccarat": {
+        "title": "百家乐",
+        "badge": "桌台房间",
+        "summary": "选择闲、庄或和，VRF 返回后直接查看开牌结果。",
+        "facts": {
+          "0": "开牌可见",
+          "1": "闲庄和",
+          "2": "最终回执"
+        }
+      },
+      "sic-bo": {
+        "title": "骰宝",
+        "badge": "三骰桌台",
+        "summary": "选择桌面投注，掷出三颗骰子，并查看总点数、围骰和赔付。",
+        "facts": {
+          "0": "3 颗骰子",
+          "1": "总点投注",
+          "2": "开骰结果"
         }
       }
     },

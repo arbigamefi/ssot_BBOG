@@ -69,6 +69,7 @@ vi.mock("next-intl", () => ({
       "casino.room.roundStatus.actions.refundStake": "Refund stake",
       "casino.room.betPanel.walletBalance": "Wallet Balance",
       "casino.room.betPanel.syncing": "Syncing...",
+      "casino.room.betPanel.notConnected": "Not connected",
       "casino.room.betPanel.amount.label": "Bet Amount",
       "casino.room.betPanel.amount.aria": "Bet amount",
       "casino.room.betPanel.amount.min": "Min",
@@ -185,11 +186,18 @@ describe("GameRoomBetPanel", () => {
     renderPanel();
 
     expect(screen.getByText("Wallet Balance")).toBeDefined();
-    expect(screen.getByText("1,450.00 USDC")).toBeDefined();
+    expect(screen.getByText("Not connected")).toBeDefined();
     expect(screen.getByText("VRF estimate")).toBeDefined();
     expect(screen.getByText("1.98x")).toBeDefined();
     expect(screen.getByText("50.00%")).toBeDefined();
     expect(screen.getByRole("button", { name: "CONNECT WALLET" })).toBeDefined();
+  });
+
+  it("shows the wallet balance only after an account is connected", () => {
+    renderPanel({ hasAccount: true });
+
+    expect(screen.getByText("Wallet Balance")).toBeDefined();
+    expect(screen.getByText("1,450.00 USDC")).toBeDefined();
   });
 
   it("routes amount shortcuts and place action through callbacks", () => {

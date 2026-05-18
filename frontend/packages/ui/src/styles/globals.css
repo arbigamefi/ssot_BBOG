@@ -12,11 +12,13 @@
 
   html {
     min-height: 100%;
+    overflow-x: clip;
     background: hsl(var(--surface-0));
   }
 
   body {
     min-height: 100vh;
+    overflow-x: clip;
     background:
       radial-gradient(circle at top, hsl(var(--brand) / 0.08), transparent 34rem),
       hsl(var(--surface-0));

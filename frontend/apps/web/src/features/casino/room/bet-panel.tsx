@@ -185,6 +185,11 @@ export function GameRoomBetPanel({
   onPlaceBet: () => void;
 }) {
   const t = useTranslations();
+  const balanceLabel = !hasAccount
+    ? t("casino.room.betPanel.notConnected")
+    : !isSynced
+      ? t("casino.room.betPanel.syncing")
+      : (walletBalance ?? "-");
 
   return (
     <>
@@ -193,7 +198,7 @@ export function GameRoomBetPanel({
           <WalletIcon className="h-4 w-4" /> {t("casino.room.betPanel.walletBalance")}
         </span>
         <span className="rounded-lg border border-border bg-surface-1 px-3 py-1 font-mono text-fg shadow-inner-e1">
-          {!isSynced ? t("casino.room.betPanel.syncing") : (walletBalance ?? "-")}
+          {balanceLabel}
         </span>
       </div>
 

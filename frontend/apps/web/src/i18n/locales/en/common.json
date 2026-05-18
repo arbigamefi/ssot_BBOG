@@ -218,6 +218,7 @@
       "betPanel": {
         "walletBalance": "Wallet Balance",
         "syncing": "Syncing...",
+        "notConnected": "Not connected",
         "amount": {
           "label": "Bet Amount",
           "aria": "Bet amount",
@@ -1539,7 +1540,8 @@
     },
     "referral": {
       "common": {
-        "pending": "Pending"
+        "pending": "Pending",
+        "notConnected": "Not connected"
       },
       "state": {
         "noRelease": {
@@ -1555,7 +1557,7 @@
         "eyebrow": "Affiliate account",
         "title": "Referral rewards.",
         "description": "Create a casino link, inspect your immutable first-touch referrer, and review XP buckets that are paid by the active Bank ledger.",
-        "connected": "Connected wallet"
+        "connected": "Wallet"
       },
       "link": {
         "title": "Your referral link",
@@ -1993,7 +1995,7 @@
     },
     "rooms": {
       "eyebrow": "Casino rooms",
-      "title": "Four one-shot RNG games, one settlement rail.",
+      "title": "Eight one-shot RNG games, one settlement rail.",
       "detail": "Each room maps to a release-defined module. The UI can change, but game identity, parameters, and payout path stay anchored to the SSOT release.",
       "actionLabel": "Open directory"
     },
@@ -2036,6 +2038,46 @@
           "0": "Board-first",
           "1": "Live draw",
           "2": "Repeat plays"
+        }
+      },
+      "plinko": {
+        "title": "Plinko",
+        "badge": "Arcade board",
+        "summary": "Drop through a compact risk board and reveal the bucket from on-chain randomness.",
+        "facts": {
+          "0": "Risk profiles",
+          "1": "Bucket reveal",
+          "2": "Fast replay"
+        }
+      },
+      "slots": {
+        "title": "Slots",
+        "badge": "Reel room",
+        "summary": "Spin a simple three-symbol room with readable multipliers and terminal proof.",
+        "facts": {
+          "0": "3 reels",
+          "1": "Visible symbols",
+          "2": "Proof receipt"
+        }
+      },
+      "baccarat": {
+        "title": "Baccarat",
+        "badge": "Table room",
+        "summary": "Pick player, banker, or tie and inspect the opened cards after VRF returns.",
+        "facts": {
+          "0": "Card reveal",
+          "1": "Player banker tie",
+          "2": "Terminal receipt"
+        }
+      },
+      "sic-bo": {
+        "title": "Sic Bo",
+        "badge": "Triple dice",
+        "summary": "Choose a table bet, roll three dice, and review total, triple, and payout.",
+        "facts": {
+          "0": "3 dice",
+          "1": "Total bets",
+          "2": "Opened roll"
         }
       }
     },
