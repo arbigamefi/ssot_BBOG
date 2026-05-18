@@ -75,7 +75,7 @@ export function PlaceBetButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "mt-4 w-full rounded-lg border-b-[4px] py-4 text-lg font-extrabold transition-colors",
+        "w-full rounded-lg border-b-[4px] py-4 text-lg font-extrabold transition-colors",
         isPending ||
           state.status === "reconciled" ||
           state.status === "submitting" ||
