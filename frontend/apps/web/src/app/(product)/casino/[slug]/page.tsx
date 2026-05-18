@@ -22,6 +22,8 @@ function localizedGameName(
       return messages.casino.room.names.keno;
     case "plinko":
       return messages.casino.room.names.plinko;
+    case "slots":
+      return messages.casino.room.names.slots;
     default:
       return slug;
   }

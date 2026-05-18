@@ -6,6 +6,7 @@ import { CoinTossStage } from "./coin-toss/stage";
 import { DiceStage } from "./dice/stage";
 import { KenoStage } from "./keno/stage";
 import { PlinkoStage } from "./plinko/stage";
+import { SlotsStage } from "./slots/stage";
 
 vi.mock("@ssot/ui", () => ({
   cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" ")
@@ -32,7 +33,19 @@ vi.mock("next-intl", () => ({
       "casino.room.stage.plinko.dropZone": "Set risk and drop",
       "casino.room.stage.plinko.waitingVrf": "Waiting for VRF Oracle...",
       "casino.room.stage.plinko.slot": `Slot ${values?.slot}`,
-      "casino.room.stage.plinko.risk": `Risk: ${values?.risk}`
+      "casino.room.stage.plinko.risk": `Risk: ${values?.risk}`,
+      "casino.room.stage.slots.ready": "Match 3 symbols to win",
+      "casino.room.stage.slots.spinning": "Waiting for VRF Oracle...",
+      "casino.room.stage.slots.result": values?.symbols ?? "",
+      "casino.room.stage.slots.classic": "Classic profile",
+      "casino.room.selection.slots.symbols.0": "Cherry",
+      "casino.room.selection.slots.symbols.1": "Lemon",
+      "casino.room.selection.slots.symbols.2": "Bell",
+      "casino.room.selection.slots.symbols.3": "Diamond",
+      "casino.room.selection.slots.symbols.4": "Crown",
+      "casino.room.selection.slots.symbols.5": "Star",
+      "casino.room.selection.slots.symbols.6": "Bar",
+      "casino.room.selection.slots.symbols.7": "Seven"
     })[key] ?? key
 }));
 
@@ -99,5 +112,13 @@ describe("game room stages", () => {
     expect(screen.getByText("Slot 8")).toBeDefined();
     expect(screen.getByText("Risk: High")).toBeDefined();
     expect(screen.getAllByText("8").length).toBeGreaterThan(0);
+  });
+
+  it("renders Slots stage with revealed symbols", () => {
+    render(<SlotsStage isPending={false} showResult symbols={[0, 7, 7]} />);
+
+    expect(screen.getByText("Cherry / Seven / Seven")).toBeDefined();
+    expect(screen.getByText("Classic profile")).toBeDefined();
+    expect(screen.getAllByText("7").length).toBeGreaterThan(0);
   });
 });

@@ -4,8 +4,10 @@ import {
   decodeKenoParams,
   decodePlinkoParams,
   decodeRouletteParams,
+  decodeSlotsParams,
   type DiceDirection,
-  type PlinkoRisk
+  type PlinkoRisk,
+  type SlotsProfile
 } from "../encoding";
 import type { DomainBet } from "./bet";
 import { encodePacked, keccak256, stringToHex, type Hex } from "viem";
@@ -79,6 +81,16 @@ export type CasinoOutcome =
         path: Array<"L" | "R">;
         factorBps: number;
         won: boolean;
+      }>;
+    })
+  | (OutcomeFinancials & {
+      kind: "slots";
+      profile: SlotsProfile;
+      rolls: Array<{
+        symbols: [number, number, number];
+        multiplier: 0 | 2 | 16 | 64;
+        won: boolean;
+        jackpot: boolean;
       }>;
     });
 
@@ -236,7 +248,51 @@ export function deriveCasinoOutcome({
     };
   }
 
+  if (gameSlug === "slots") {
+    const { profile } = decodeSlotsParams(params);
+    const rolls: Array<{
+      symbols: [number, number, number];
+      multiplier: 0 | 2 | 16 | 64;
+      won: boolean;
+      jackpot: boolean;
+    }> = [];
+    let usedTurnover = 0n;
+    let payoutGross = 0n;
+
+    for (let i = 0; i < bet.betCount; i += 1) {
+      usedTurnover += bet.amountPerRoll;
+      const symbols: [number, number, number] = [
+        Number(rngRoll2(bet.betId, i, 0, seed) % 8n),
+        Number(rngRoll2(bet.betId, i, 1, seed) % 8n),
+        Number(rngRoll2(bet.betId, i, 2, seed) % 8n)
+      ];
+      const multiplier = slotsMultiplier(symbols);
+      if (multiplier > 0) payoutGross += bet.amountPerRoll * BigInt(multiplier);
+      rolls.push({
+        symbols,
+        multiplier,
+        won: multiplier > 0,
+        jackpot: multiplier === 64
+      });
+      if (shouldStop(bet.stopGain, bet.stopLoss, usedTurnover, payoutGross)) break;
+    }
+
+    return {
+      kind: "slots",
+      profile,
+      rolls,
+      ...financials(bet, payoutGross, bet.stake - usedTurnover)
+    };
+  }
+
   return null;
+}
+
+function slotsMultiplier(symbols: readonly [number, number, number]): 0 | 2 | 16 | 64 {
+  const [a, b, c] = symbols;
+  if (a === b && b === c) return a === 7 ? 64 : 16;
+  if (a === b || a === c || b === c) return 2;
+  return 0;
 }
 
 function rngRoll(betId: bigint, rollIndex: number, seed: bigint) {

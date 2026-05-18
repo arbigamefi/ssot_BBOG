@@ -3,7 +3,8 @@ import {
   encodeDiceParams,
   encodeKenoParams,
   encodePlinkoParams,
-  encodeRouletteParams
+  encodeRouletteParams,
+  encodeSlotsParams
 } from "@ssot/ssot/encoding";
 import type { DomainBet } from "@ssot/ssot";
 import { describe, expect, it } from "vitest";
@@ -112,5 +113,22 @@ describe("casino outcome derivation", () => {
     expect(outcome.rolls[0]?.bucket).toBeGreaterThanOrEqual(0);
     expect(outcome.rolls[0]?.bucket).toBeLessThanOrEqual(8);
     expect(outcome.rolls[0]?.factorBps).toBeGreaterThanOrEqual(0);
+  });
+
+  it("derives slots symbols and multiplier", () => {
+    const outcome = deriveCasinoOutcome({
+      bet: baseBet,
+      gameSlug: "slots",
+      params: encodeSlotsParams("classic"),
+      randomWords: [123n]
+    });
+
+    expect(outcome?.kind).toBe("slots");
+    if (outcome?.kind !== "slots") return;
+    expect(outcome.profile).toBe("classic");
+    expect(outcome.rolls).toHaveLength(1);
+    expect(outcome.rolls[0]?.symbols).toHaveLength(3);
+    expect(outcome.rolls[0]?.symbols.every((symbol) => symbol >= 0 && symbol <= 7)).toBe(true);
+    expect([0, 2, 16, 64]).toContain(outcome.rolls[0]?.multiplier);
   });
 });

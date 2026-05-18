@@ -25,6 +25,7 @@ describe("casino module registry", () => {
     expect(isCasinoModuleSlug("sportsbook")).toBe(false);
     expect(getCasinoModule("dice")?.contractParams).toBe("dice-threshold");
     expect(getCasinoModule("plinko")?.contractParams).toBe("plinko-risk");
+    expect(getCasinoModule("slots")?.contractParams).toBe("slots-profile");
     expect(getCasinoModule("sportsbook")).toBeUndefined();
   });
 
@@ -33,9 +34,16 @@ describe("casino module registry", () => {
       { slug: "custom", label: "Custom" },
       { slug: "keno", label: "Keno" },
       { slug: "plinko", label: "Plinko" },
+      { slug: "slots", label: "Slots" },
       { slug: "roulette", label: "Roulette" }
     ].sort(compareCasinoModules);
 
-    expect(ordered.map((item) => item.slug)).toEqual(["roulette", "keno", "plinko", "custom"]);
+    expect(ordered.map((item) => item.slug)).toEqual([
+      "roulette",
+      "keno",
+      "plinko",
+      "slots",
+      "custom"
+    ]);
   });
 });

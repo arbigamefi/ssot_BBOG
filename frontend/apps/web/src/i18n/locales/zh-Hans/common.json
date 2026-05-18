@@ -110,7 +110,8 @@
         "roulette": "欧式轮盘",
         "coinToss": "抛硬币",
         "keno": "Keno 选号",
-        "plinko": "Plinko 弹珠盘"
+        "plinko": "Plinko 弹珠盘",
+        "slots": "Slots 拉霸"
       },
       "audit": {
         "loading": "正在加载审计流",
@@ -293,6 +294,23 @@
           "lowDetail": "波动更平滑",
           "mediumDetail": "风险均衡",
           "highDetail": "冲击边缘槽"
+        },
+        "slots": {
+          "profiles": {
+            "classic": "经典 3 轴"
+          },
+          "symbols": {
+            "0": "樱桃",
+            "1": "柠檬",
+            "2": "铃铛",
+            "3": "钻石",
+            "4": "皇冠",
+            "5": "星星",
+            "6": "Bar",
+            "7": "Seven"
+          },
+          "yes": "是",
+          "no": "否"
         }
       },
       "stage": {
@@ -307,6 +325,12 @@
           "waitingVrf": "等待 VRF oracle...",
           "slot": "落入 {slot} 槽",
           "risk": "风险: {risk}"
+        },
+        "slots": {
+          "ready": "匹配 3 个符号赢取赔付",
+          "spinning": "等待 VRF oracle...",
+          "result": "{symbols}",
+          "classic": "经典档位"
         }
       },
       "history": {
@@ -314,7 +338,8 @@
           "rolls": "最近点数",
           "numbers": "最近号码",
           "draws": "最近开奖",
-          "slots": "最近槽位",
+          "buckets": "最近槽位",
+          "slots": "最近转轴",
           "flips": "最近抛掷"
         },
         "states": {
@@ -393,7 +418,11 @@
           "plinkoRisk": "风险档位",
           "plinkoSlot": "落点槽位",
           "plinkoPath": "路径",
-          "plinkoMultiplier": "槽位倍率"
+          "plinkoMultiplier": "槽位倍率",
+          "slotsProfile": "档位",
+          "slotsSymbols": "开出符号",
+          "slotsMultiplier": "转轴倍率",
+          "slotsJackpot": "Jackpot"
         },
         "actions": {
           "close": "关闭",
@@ -460,6 +489,11 @@
           "title": "Plinko 弹珠盘",
           "promise": "穿过 8 行钉板，冲击两侧高倍率槽。",
           "badge": "最高 24.6x"
+        },
+        "slots": {
+          "title": "Slots 拉霸",
+          "promise": "匹配对子、三连或 777 Jackpot。",
+          "badge": "最高 64x"
         }
       },
       "card": {

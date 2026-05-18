@@ -158,6 +158,14 @@ function formatPlinkoRisk(risk: string, t: Translate) {
   return risk;
 }
 
+function formatSlotsMultiplier(multiplier: number) {
+  return `${multiplier.toFixed(2)}x`;
+}
+
+function formatSlotsSymbols(symbols: readonly number[], t: Translate) {
+  return symbols.map((symbol) => t(`casino.room.selection.slots.symbols.${symbol}`)).join(" / ");
+}
+
 function getGameResultRows(context: GameResultContext, t: Translate) {
   if (context.casinoOutcome?.kind === "dice") {
     return [
@@ -244,6 +252,40 @@ function getGameResultRows(context: GameResultContext, t: Translate) {
         value: context.casinoOutcome.rolls
           .map((roll) => `${(roll.factorBps / 10_000).toFixed(roll.factorBps >= 100_000 ? 1 : 2)}x`)
           .join(", ")
+      }
+    ] satisfies GameResultRow[];
+  }
+
+  if (context.casinoOutcome?.kind === "slots") {
+    return [
+      {
+        label: t("casino.room.result.facts.slotsProfile"),
+        value: t(`casino.room.selection.slots.profiles.${context.casinoOutcome.profile}`)
+      },
+      {
+        label: t("casino.room.result.facts.slotsSymbols"),
+        value: context.casinoOutcome.rolls
+          .map((roll) => formatSlotsSymbols(roll.symbols, t))
+          .join(" / "),
+        tone:
+          context.casinoOutcome.netResult > 0n
+            ? "win"
+            : context.casinoOutcome.netResult < 0n
+              ? "loss"
+              : "neutral"
+      },
+      {
+        label: t("casino.room.result.facts.slotsMultiplier"),
+        value: context.casinoOutcome.rolls
+          .map((roll) => formatSlotsMultiplier(roll.multiplier))
+          .join(", ")
+      },
+      {
+        label: t("casino.room.result.facts.slotsJackpot"),
+        value: context.casinoOutcome.rolls.some((roll) => roll.jackpot)
+          ? t("casino.room.selection.slots.yes")
+          : t("casino.room.selection.slots.no"),
+        tone: context.casinoOutcome.rolls.some((roll) => roll.jackpot) ? "win" : "neutral"
       }
     ] satisfies GameResultRow[];
   }

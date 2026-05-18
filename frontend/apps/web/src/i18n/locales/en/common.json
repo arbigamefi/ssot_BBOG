@@ -110,7 +110,8 @@
         "roulette": "European Roulette",
         "coinToss": "Coin Toss",
         "keno": "Keno Draft",
-        "plinko": "Plinko"
+        "plinko": "Plinko",
+        "slots": "Slots"
       },
       "audit": {
         "loading": "Loading audit stream",
@@ -293,6 +294,23 @@
           "lowDetail": "Smoother board",
           "mediumDetail": "Balanced edge",
           "highDetail": "Extreme buckets"
+        },
+        "slots": {
+          "profiles": {
+            "classic": "Classic 3 reels"
+          },
+          "symbols": {
+            "0": "Cherry",
+            "1": "Lemon",
+            "2": "Bell",
+            "3": "Diamond",
+            "4": "Crown",
+            "5": "Star",
+            "6": "Bar",
+            "7": "Seven"
+          },
+          "yes": "Yes",
+          "no": "No"
         }
       },
       "stage": {
@@ -307,6 +325,12 @@
           "waitingVrf": "Waiting for VRF oracle...",
           "slot": "Slot {slot}",
           "risk": "Risk: {risk}"
+        },
+        "slots": {
+          "ready": "Match 3 symbols to win",
+          "spinning": "Waiting for VRF oracle...",
+          "result": "{symbols}",
+          "classic": "Classic profile"
         }
       },
       "history": {
@@ -314,6 +338,7 @@
           "rolls": "RECENT ROLLS",
           "numbers": "RECENT NUMBERS",
           "draws": "RECENT DRAWS",
+          "buckets": "RECENT BUCKETS",
           "slots": "RECENT SLOTS",
           "flips": "RECENT FLIPS"
         },
@@ -393,7 +418,11 @@
           "plinkoRisk": "Risk profile",
           "plinkoSlot": "Slot",
           "plinkoPath": "Path",
-          "plinkoMultiplier": "Slot multiplier"
+          "plinkoMultiplier": "Slot multiplier",
+          "slotsProfile": "Profile",
+          "slotsSymbols": "Symbols drawn",
+          "slotsMultiplier": "Reel multiplier",
+          "slotsJackpot": "Jackpot"
         },
         "actions": {
           "close": "Close",
@@ -460,6 +489,11 @@
           "title": "Plinko",
           "promise": "Drop through eight rows and chase edge buckets.",
           "badge": "Up to 24.6x"
+        },
+        "slots": {
+          "title": "Slots",
+          "promise": "Match pairs, triples, or the triple-seven jackpot.",
+          "badge": "Up to 64x"
         }
       },
       "card": {

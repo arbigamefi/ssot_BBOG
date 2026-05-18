@@ -19,6 +19,7 @@ import { toGameMeta, type GameMeta } from "../../../../features/casino/room/mode
 import {
   calculateGameWinChance,
   plinkoMaxMultiplier,
+  slotsMaxMultiplier,
   type PlinkoRisk
 } from "../../../../features/casino/room/params";
 import {
@@ -61,6 +62,8 @@ function getLocalizedGameName(t: (key: string) => string, game: GameMeta) {
       return t("casino.room.names.keno");
     case "plinko":
       return t("casino.room.names.plinko");
+    case "slots":
+      return t("casino.room.names.slots");
     default:
       return game.label;
   }
@@ -125,6 +128,7 @@ export function GamePageClient({ slug }: { slug: string }) {
   const [resultNum, setResultNum] = React.useState<number | null>(null);
   const [kenoResultDrawn, setKenoResultDrawn] = React.useState<number[]>([]);
   const [plinkoBuckets, setPlinkoBuckets] = React.useState<number[]>([]);
+  const [slotsSymbols, setSlotsSymbols] = React.useState<number[]>([]);
 
   // History state for widgets
   const [gameHistory, setGameHistory] = React.useState<GameHistoryEntry[]>([]);
@@ -157,6 +161,7 @@ export function GamePageClient({ slug }: { slug: string }) {
     setResultProof(null);
     setCasinoOutcome(null);
     setPlinkoBuckets([]);
+    setSlotsSymbols([]);
   }, []);
   const handleRoundReset = React.useCallback(() => {
     revealedBetIdRef.current = null;
@@ -165,6 +170,7 @@ export function GamePageClient({ slug }: { slug: string }) {
     setResultProof(null);
     setCasinoOutcome(null);
     setPlinkoBuckets([]);
+    setSlotsSymbols([]);
   }, []);
   const handleResultClose = React.useCallback(() => {
     setShowResult(false);
@@ -255,6 +261,11 @@ export function GamePageClient({ slug }: { slug: string }) {
         setResultNum(outcome.rolls.at(-1)?.bucket ?? null);
         setPlinkoBuckets(outcome.rolls.map((roll) => roll.bucket));
       }
+      if (outcome?.kind === "slots") {
+        const lastRoll = outcome.rolls.at(-1);
+        setResultNum(lastRoll?.multiplier ?? null);
+        setSlotsSymbols(lastRoll ? [...lastRoll.symbols] : []);
+      }
 
       if (bet.state === "randomReady" && revealedBetIdRef.current !== bet.betId) {
         revealedBetIdRef.current = bet.betId;
@@ -284,7 +295,13 @@ export function GamePageClient({ slug }: { slug: string }) {
   const maxPayout = formatGameMaxPayout({ gameMeta, slug: game.slug, usdcDecimals });
 
   const multiplier =
-    game.slug === "plinko" ? plinkoMaxMultiplier(plinkoRisk) : winChance === 0 ? 0 : 99 / winChance;
+    game.slug === "plinko"
+      ? plinkoMaxMultiplier(plinkoRisk)
+      : game.slug === "slots"
+        ? slotsMaxMultiplier()
+        : winChance === 0
+          ? 0
+          : 99 / winChance;
   const expectedPayout = betAmount * multiplier;
 
   const LeftPane = (
@@ -349,6 +366,7 @@ export function GamePageClient({ slug }: { slug: string }) {
       kenoSpots={kenoSpots}
       plinkoRisk={plinkoRisk}
       plinkoBuckets={plinkoBuckets}
+      slotsSymbols={slotsSymbols}
       animatingKenoSpots={animatingKenoSpots}
       kenoResultDrawn={kenoResultDrawn}
       casinoOutcome={casinoOutcome}

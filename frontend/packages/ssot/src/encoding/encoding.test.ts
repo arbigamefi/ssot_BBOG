@@ -6,6 +6,7 @@ import { decodeCoinTossParams, encodeCoinTossParams } from "./cointoss";
 import { decodeRouletteParams, encodeRouletteParams } from "./roulette";
 import { decodeKenoParams, encodeKenoParams } from "./keno";
 import { decodePlinkoParams, encodePlinkoParams } from "./plinko";
+import { decodeSlotsParams, encodeSlotsParams } from "./slots";
 
 describe("encoding", () => {
   it("stakeSpec roundtrip", () => {
@@ -43,5 +44,10 @@ describe("encoding", () => {
   it("plinko roundtrip", () => {
     const hex = encodePlinkoParams("high");
     expect(decodePlinkoParams(hex)).toEqual({ risk: "high", riskId: 2 });
+  });
+
+  it("slots roundtrip", () => {
+    const hex = encodeSlotsParams("classic");
+    expect(decodeSlotsParams(hex)).toEqual({ profile: "classic", profileId: 0 });
   });
 });

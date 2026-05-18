@@ -9,7 +9,8 @@ describe("GameEncoderRegistry", () => {
     expect(slugs).toContain("roulette");
     expect(slugs).toContain("keno");
     expect(slugs).toContain("plinko");
-    expect(slugs.length).toBe(5);
+    expect(slugs).toContain("slots");
+    expect(slugs.length).toBe(6);
   });
 
   it("getGameEncoder returns undefined for unknown slug", () => {
@@ -110,6 +111,20 @@ describe("GameEncoderRegistry", () => {
     it("has correct defaults", () => {
       const enc = requireGameEncoder("plinko");
       expect(enc.defaultParams).toEqual({ risk: "medium" });
+    });
+  });
+
+  describe("slots encoder", () => {
+    it("encodes and decodes roundtrip", () => {
+      const enc = requireGameEncoder("slots");
+      const hex = enc.encode({ profile: "classic" });
+      const decoded = enc.decode(hex);
+      expect(decoded).toEqual({ profile: "classic", profileId: 0 });
+    });
+
+    it("has correct defaults", () => {
+      const enc = requireGameEncoder("slots");
+      expect(enc.defaultParams).toEqual({ profile: "classic" });
     });
   });
 

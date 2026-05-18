@@ -60,6 +60,11 @@ const PlinkoStage = dynamic(
   }
 );
 
+const SlotsStage = dynamic(() => import("../modules/slots/stage").then((mod) => mod.SlotsStage), {
+  loading: StageLoading,
+  ssr: false
+});
+
 export function GameRoomRightPane({
   gameSlug,
   coinSide,
@@ -77,6 +82,7 @@ export function GameRoomRightPane({
   kenoSpots,
   plinkoRisk,
   plinkoBuckets,
+  slotsSymbols,
   animatingKenoSpots,
   kenoResultDrawn,
   casinoOutcome,
@@ -107,6 +113,7 @@ export function GameRoomRightPane({
   kenoSpots: readonly number[];
   plinkoRisk: PlinkoRisk;
   plinkoBuckets: readonly number[];
+  slotsSymbols: readonly number[];
   animatingKenoSpots: readonly number[];
   kenoResultDrawn: readonly number[];
   casinoOutcome?: CasinoOutcome | null;
@@ -191,6 +198,10 @@ export function GameRoomRightPane({
           risk={plinkoRisk}
           buckets={plinkoBuckets}
         />
+      )}
+
+      {gameSlug === "slots" && (
+        <SlotsStage isPending={isPending} showResult={showResult} symbols={slotsSymbols} />
       )}
 
       {showResult && resultProof && (isCasinoTerminalRoundResult(resultProof) || casinoOutcome) && (

@@ -1,4 +1,11 @@
-export const CASINO_MODULE_SLUGS = ["roulette", "dice", "coin-toss", "keno", "plinko"] as const;
+export const CASINO_MODULE_SLUGS = [
+  "roulette",
+  "dice",
+  "coin-toss",
+  "keno",
+  "plinko",
+  "slots"
+] as const;
 
 export type CasinoModuleSlug = (typeof CASINO_MODULE_SLUGS)[number];
 
@@ -10,7 +17,13 @@ export type CasinoModuleRegistration = {
   category: CasinoModuleCategory;
   canonicalHref: `/casino/${CasinoModuleSlug}`;
   roomLabel: string;
-  contractParams: "roulette" | "dice-threshold" | "coin-side" | "keno-mask" | "plinko-risk";
+  contractParams:
+    | "roulette"
+    | "dice-threshold"
+    | "coin-side"
+    | "keno-mask"
+    | "plinko-risk"
+    | "slots-profile";
 };
 
 export const CASINO_MODULES: readonly CasinoModuleRegistration[] = [
@@ -53,6 +66,14 @@ export const CASINO_MODULES: readonly CasinoModuleRegistration[] = [
     canonicalHref: "/casino/plinko",
     roomLabel: "Peg board",
     contractParams: "plinko-risk"
+  },
+  {
+    slug: "slots",
+    label: "Slots",
+    category: "arcade",
+    canonicalHref: "/casino/slots",
+    roomLabel: "Classic reels",
+    contractParams: "slots-profile"
   }
 ] as const;
 

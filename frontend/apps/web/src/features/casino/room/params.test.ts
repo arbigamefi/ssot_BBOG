@@ -3,7 +3,8 @@ import {
   decodeDiceParams,
   decodeKenoParams,
   decodePlinkoParams,
-  decodeRouletteParams
+  decodeRouletteParams,
+  decodeSlotsParams
 } from "@ssot/ssot/encoding";
 import { describe, expect, it } from "vitest";
 
@@ -79,6 +80,16 @@ describe("game room params", () => {
         plinkoRisk: "high"
       })
     ).toBeCloseTo(28.90625);
+    expect(
+      calculateGameWinChance({
+        slug: "slots",
+        diceTarget: 50,
+        diceDirection: "under",
+        rouletteSpots: [],
+        kenoSpots: [],
+        plinkoRisk: "medium"
+      })
+    ).toBeCloseTo(34.375);
   });
 
   it("normalizes Roulette covered numbers and chance", () => {
@@ -168,6 +179,20 @@ describe("game room params", () => {
     expect(plinko.ok && decodePlinkoParams(plinko.params)).toEqual({
       risk: "high",
       riskId: 2
+    });
+
+    const slots = buildGameParams({
+      slug: "slots",
+      diceTarget: 50,
+      diceDirection: "under",
+      coinSide: "HEADS",
+      rouletteSpots: [],
+      kenoSpots: [],
+      plinkoRisk: "medium"
+    });
+    expect(slots.ok && decodeSlotsParams(slots.params)).toEqual({
+      profile: "classic",
+      profileId: 0
     });
   });
 

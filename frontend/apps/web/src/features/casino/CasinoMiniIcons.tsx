@@ -159,3 +159,25 @@ export function PlinkoMiniIcon({ className }: GameMiniIconProps) {
     </IconFrame>
   );
 }
+
+export function SlotsMiniIcon({ className }: GameMiniIconProps) {
+  return (
+    <IconFrame className={className}>
+      <div className="grid h-20 w-20 grid-cols-3 gap-1.5">
+        {["CH", "7", "BA", "DI", "CR", "ST", "LE", "BE", "7"].map((symbol, index) => (
+          <div
+            key={`${symbol}-${index}`}
+            className={cx(
+              "flex items-center justify-center rounded-md border bg-surface-2 font-mono text-[10px] font-black",
+              symbol === "7"
+                ? "border-brand bg-brand text-fg-inverse"
+                : "border-border-soft text-fg-subtle"
+            )}
+          >
+            {symbol}
+          </div>
+        ))}
+      </div>
+    </IconFrame>
+  );
+}

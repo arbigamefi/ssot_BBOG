@@ -4,6 +4,7 @@ import {
   encodeKenoParams,
   encodePlinkoParams,
   encodeRouletteParams,
+  encodeSlotsParams,
   type PlinkoRisk,
   type RouletteParamsInput
 } from "@ssot/ssot/encoding";
@@ -150,6 +151,14 @@ export function plinkoMaxMultiplier(risk: PlinkoRisk): number {
   return Math.max(...PLINKO_FACTOR_TABLE[risk]) / 10_000;
 }
 
+export function slotsPositiveChance(): number {
+  return (176 / 512) * 100;
+}
+
+export function slotsMaxMultiplier(): number {
+  return 64;
+}
+
 export function calculateGameWinChance(input: {
   slug: string;
   diceTarget: number;
@@ -166,6 +175,7 @@ export function calculateGameWinChance(input: {
   if (input.slug === "keno")
     return input.kenoSpots.length > 0 ? kenoWinChance(input.kenoSpots.length) : 0;
   if (input.slug === "plinko") return plinkoPositiveChance(input.plinkoRisk);
+  if (input.slug === "slots") return slotsPositiveChance();
   return 100;
 }
 
@@ -204,6 +214,10 @@ export function buildGameParams(input: BuildGameParamsInput): BuildGameParamsRes
 
   if (input.slug === "plinko") {
     return { ok: true, params: encodePlinkoParams(input.plinkoRisk) };
+  }
+
+  if (input.slug === "slots") {
+    return { ok: true, params: encodeSlotsParams("classic") };
   }
 
   return { ok: true, params: "0x" };

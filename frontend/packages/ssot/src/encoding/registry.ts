@@ -4,6 +4,7 @@ import { encodeCoinTossParams, decodeCoinTossParams } from "./cointoss";
 import { encodeRouletteParams, decodeRouletteParams } from "./roulette";
 import { encodeKenoParams, decodeKenoParams } from "./keno";
 import { encodePlinkoParams, decodePlinkoParams } from "./plinko";
+import { encodeSlotsParams, decodeSlotsParams } from "./slots";
 
 /**
  * A registered game encoder with encode/decode functions and
@@ -87,6 +88,17 @@ const REGISTRY: ReadonlyMap<string, GameEncoder> = new Map<string, GameEncoder>(
       decode: (hex: Hex) => decodePlinkoParams(hex),
       defaultParams: { risk: "medium" },
       paramsDescription: "uint8 risk (0=low, 1=medium, 2=high)"
+    }
+  ],
+  [
+    "slots",
+    {
+      slug: "slots",
+      label: "Slots",
+      encode: (p: { profile?: "classic" | 0 }) => encodeSlotsParams(p.profile ?? "classic"),
+      decode: (hex: Hex) => decodeSlotsParams(hex),
+      defaultParams: { profile: "classic" },
+      paramsDescription: "uint8 profile (0=classic)"
     }
   ]
 ]);
