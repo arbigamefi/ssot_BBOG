@@ -317,7 +317,7 @@ contract GameHubCanaryV13 is Script {
             amountPerRoll: cfg.stake, betCount: cfg.betCount, stopGain: cfg.stopGain, stopLoss: cfg.stopLoss
         });
 
-        bytes memory params = abi.encode(cfg.diceCap);
+        bytes memory params = abi.encode(true, cfg.diceCap);
 
         vm.startBroadcast(cfg.playerPrivateKey);
         if (allowance < totalStake) {

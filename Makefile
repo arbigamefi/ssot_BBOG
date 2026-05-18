@@ -79,9 +79,8 @@ fork:
 
 deploy:
 	@$(MAKE) check-deps
-	# Clean build/cache artifacts before broadcast.
-	# If you ever hit Foundry broadcaster decode errors, rerun with CLEAN_BROADCAST=1.
-	bash script/ci/clean_foundry.sh
+	# Fresh deployments must not reuse stale broadcaster nonce/address state.
+	CLEAN_BROADCAST=1 bash script/ci/clean_foundry.sh
 	FOUNDRY_PROFILE=$(DEPLOY_PROFILE) forge script script/DeployV13.s.sol:DeployV13 --rpc-url $$RPC_URL --broadcast -vvv
 
 verify:

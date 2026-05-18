@@ -32,7 +32,10 @@ command -v forge >/dev/null 2>&1 || fail "missing command: forge"
 [[ -n "${RPC_URL:-}" ]] || fail "missing env: RPC_URL"
 [[ -n "${PRIVATE_KEY:-}" ]] || fail "missing env: PRIVATE_KEY"
 
-args=(script/ops/GameHubCanaryV13.s.sol:GameHubCanaryV13 --rpc-url "$RPC_URL" -vvv)
+args=(script/ops/GameHubCanaryV13.s.sol:GameHubCanaryV13 --rpc-url "$RPC_URL")
+if [[ -n "${FOUNDRY_VERBOSITY:-}" ]]; then
+  args+=("$FOUNDRY_VERBOSITY")
+fi
 if [[ "${BROADCAST:-0}" == "1" ]]; then
   args+=(--broadcast)
 fi
