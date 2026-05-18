@@ -22,7 +22,7 @@
 
 - `docs/WHITEPAPER.zh-CN.md` — formal Chinese technical whitepaper derived from the current contract implementation
 - `docs/WHITEPAPER.product.zh-CN.md` — product and business whitepaper grounded in the current protocol capabilities
-- `docs/ARBIGAMEFI-EXECUTIVE-BRIEF.zh-CN.md` — short outward-facing executive brief for partners, investors, and contributors
+- `docs/ARBIGAMEFI-EXECUTIVE-BRIEF.zh-CN.md` — short outward-facing executive brief for players, LPs, referrers, investors, and contributors
 - `docs/WHITEPAPER-PUBLISHING-STANDARD.zh-CN.md` — publishing standard for naming, versioning, and scope separation across the whitepaper set
 
 This repository is designed to be **auditable by construction**. The documentation is part of the SSOT.

@@ -10,7 +10,7 @@
 >
 > 语言：`zh-CN`
 >
-> 日期：`2026-03-07`
+> 日期：`2026-05-18`
 
 ## 1. 目的
 
@@ -40,9 +40,10 @@
 推荐用法：
 
 - `ArbiGameFi`
-- `ArbiGameFi protocol`
-- `ArbiGameFi platform`
+- `ArbiGameFi casino and sportsbook`
+- `ArbiGameFi protocol-grade settlement kernel`
 - `ArbiGameFi, built on an SSOT architecture`
+- `ArbiGameFi protocol`（仅在讨论合约、结算内核或审计事实时使用）
 
 不推荐用法：
 
@@ -163,6 +164,6 @@
 | 文件 | 角色 | 主要读者 |
 | --- | --- | --- |
 | `docs/WHITEPAPER.zh-CN.md` | 技术白皮书 | 审计、LP、技术合作方 |
-| `docs/WHITEPAPER.product.zh-CN.md` | 产品与商业白皮书 | 运营、BD、投资人 |
-| `docs/ARBIGAMEFI-EXECUTIVE-BRIEF.zh-CN.md` | 对外摘要 | 合作方、顾问、首次阅读者 |
+| `docs/WHITEPAPER.product.zh-CN.md` | 产品与商业白皮书 | 玩家、LP、推荐方、运营、BD、投资人 |
+| `docs/ARBIGAMEFI-EXECUTIVE-BRIEF.zh-CN.md` | 对外摘要 | 玩家、LP、推荐方、顾问、首次阅读者 |
 | `docs/WHITEPAPER-PUBLISHING-STANDARD.zh-CN.md` | 发布规范 | 核心贡献者 |
