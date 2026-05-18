@@ -275,20 +275,24 @@ describe("SportsbookPageClient", () => {
     renderWithQueryClient(<SportsbookPageClient />);
 
     expect(screen.getByText("Available football markets")).toBeDefined();
+    expect(await screen.findAllByText("Football 1X2")).not.toHaveLength(0);
     expect(await screen.findByText("Market 7")).toBeDefined();
     expect(screen.getByText("Event 97")).toBeDefined();
-    expect(screen.getAllByRole("link", { name: "Open" })[0]?.getAttribute("href")).toBe(
+    expect(screen.getAllByRole("link", { name: "View market" })[0]?.getAttribute("href")).toBe(
       "/sportsbook/7"
     );
+    expect(screen.getAllByText("Home").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Draw").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Away").length).toBeGreaterThan(0);
 
-    fireEvent.click(screen.getAllByRole("button", { name: "Load" })[0]!);
-
+    fireEvent.change(screen.getByLabelText("Market id"), { target: { value: "7" } });
+    fireEvent.click(screen.getAllByRole("button", { name: "Inspect" })[1]!);
     expect((screen.getByLabelText("Market id") as HTMLInputElement).value).toBe("7");
     expect(await screen.findByText("open / pool 2")).toBeDefined();
     expect(state.sdk.sportsHub.getMarket).toHaveBeenCalledWith(7n);
   });
 
-  it("points enabled ticket placement to market detail instead of the index page", () => {
+  it("points enabled ticket placement to market detail instead of the index page", async () => {
     state.sportsbook = {
       enabled: true,
       frontendEnabled: true,
@@ -301,6 +305,7 @@ describe("SportsbookPageClient", () => {
     expect(screen.getByText("Tickets enabled")).toBeDefined();
     expect(screen.getByText("Signed odds only")).toBeDefined();
     expect(screen.getByText("Canary tickets enabled")).toBeDefined();
+    expect((await screen.findAllByRole("link", { name: "Open ticket" })).length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "Place ticket" })).toBeNull();
   });
 
@@ -318,7 +323,7 @@ describe("SportsbookPageClient", () => {
     renderWithQueryClient(<SportsbookPageClient />);
 
     fireEvent.change(screen.getByLabelText("Market id"), { target: { value: "7" } });
-    fireEvent.click(screen.getAllByRole("button", { name: "Inspect" })[0]!);
+    fireEvent.click(screen.getAllByRole("button", { name: "Inspect" })[1]!);
 
     expect(await screen.findByText("open / pool 2")).toBeDefined();
     expect(screen.getAllByText("Market 7").length).toBeGreaterThan(0);
@@ -329,7 +334,7 @@ describe("SportsbookPageClient", () => {
     expect(state.sdk.sportsHub.getMarketReserved).toHaveBeenCalledWith(7n);
 
     fireEvent.change(screen.getByLabelText("Ticket id"), { target: { value: "12" } });
-    fireEvent.click(screen.getAllByRole("button", { name: "Inspect" })[1]!);
+    fireEvent.click(screen.getAllByRole("button", { name: "Inspect" })[0]!);
 
     expect(await screen.findByText("Ticket 12")).toBeDefined();
     expect(screen.getByText("held / market 7")).toBeDefined();

@@ -12,9 +12,9 @@ import { useSSOTSDK } from "../../ssot/sdk";
 import {
   DetailCell,
   LookupForm,
-  MarketTape,
   type MarketTapeRow,
   MarketInspector,
+  PlayerMarketList,
   PoolPanel,
   RiskRows,
   SectionShell,
@@ -205,12 +205,6 @@ export function SportsbookPageClient() {
     setTicketLookupId(parsed);
   }, [ticketInput, t]);
 
-  const inspectRecentMarket = React.useCallback((marketId: bigint) => {
-    setMarketInput(marketId.toString());
-    setMarketInputError(undefined);
-    setMarketLookupId(marketId);
-  }, []);
-
   const refreshSportsbookReads = React.useCallback(() => {
     void Promise.all([refetchRuntimeCounters(), refetchRecentMarkets(), refetchMarketLookup()]);
   }, [refetchMarketLookup, refetchRecentMarkets, refetchRuntimeCounters]);
@@ -341,11 +335,11 @@ export function SportsbookPageClient() {
           title={t("sportsbook.index.marketTape.title")}
           description={marketTapeDescription}
         >
-          <MarketTape
+          <PlayerMarketList
             rows={recentMarkets ?? []}
             loading={marketTapeLoading}
             error={formatLookupError(recentMarketsError ?? runtimeError)}
-            onInspect={inspectRecentMarket}
+            ticketsEnabled={sportsbook.enabled}
           />
         </SectionShell>
 
@@ -383,91 +377,10 @@ export function SportsbookPageClient() {
           </SectionShell>
 
           <SectionShell
-            eyebrow={t("sportsbook.index.release.eyebrow")}
-            title={t("sportsbook.index.release.title")}
-            description={t("sportsbook.index.release.description")}
+            eyebrow={t("sportsbook.index.lookup.eyebrow")}
+            title={t("sportsbook.index.lookup.title")}
+            description={t("sportsbook.index.lookup.description")}
           >
-            <div className="grid gap-4 md:grid-cols-2">
-              <DetailCell
-                label={t("sportsbook.index.details.release")}
-                value={shortHex(release.releaseDigest)}
-                helper={release.name}
-              />
-              <DetailCell
-                label={t("sportsbook.index.details.sportsHub")}
-                value={shortHex(sportsHub)}
-                helper={
-                  sportsbook.hasSportsRelease
-                    ? t("sportsbook.index.details.embeddedMetadataPresent")
-                    : t("sportsbook.index.details.notAvailable")
-                }
-              />
-              <DetailCell
-                label={t("sportsbook.index.details.riskEngine")}
-                value={shortHex(riskEngine)}
-                helper={t("sportsbook.index.details.riskEngineHelper")}
-              />
-              <DetailCell
-                label={t("sportsbook.index.release.oddsSignerSet")}
-                value={shortHex(sports?.oddsSignerSetHash)}
-              />
-              <DetailCell
-                label={t("sportsbook.index.release.resultReporterSet")}
-                value={shortHex(sports?.resultReporterSetHash)}
-              />
-              <DetailCell
-                label={t("sportsbook.index.release.frontendFlag")}
-                value={
-                  sportsbook.frontendEnabled
-                    ? t("sportsbook.index.release.booleanTrue")
-                    : t("sportsbook.index.release.booleanFalse")
-                }
-                helper={sportsbook.enablementFlag}
-                mono={false}
-              />
-            </div>
-          </SectionShell>
-        </div>
-
-        {riskSummary ? (
-          <SectionShell
-            eyebrow={t("sportsbook.index.caps.eyebrow")}
-            title={t("sportsbook.index.caps.title")}
-            description={t("sportsbook.index.caps.description")}
-          >
-            <RiskRows title={t("sportsbook.index.caps.riskTitle")} risk={riskSummary} />
-          </SectionShell>
-        ) : null}
-
-        <SectionShell
-          eyebrow={t("sportsbook.index.lookup.eyebrow")}
-          title={t("sportsbook.index.lookup.title")}
-          description={t("sportsbook.index.lookup.description")}
-        >
-          <div className="grid gap-5 xl:grid-cols-2">
-            <div className="grid gap-4">
-              <LookupForm
-                id="sports-market-id"
-                label={t("sportsbook.index.lookup.marketId")}
-                value={marketInput}
-                onChange={setMarketInput}
-                onSubmit={submitMarketLookup}
-                disabled={!sdk || !ready || marketFetching}
-                error={marketInputError ?? formatLookupError(marketLookupError)}
-              />
-              {marketLookup?.market ? (
-                <MarketInspector
-                  market={marketLookup.market}
-                  result={marketLookup.result}
-                  reserved={marketLookup.reserved}
-                />
-              ) : (
-                <div className="rounded-lg border border-border bg-surface-2/50 p-4 text-sm leading-6 text-fg-muted">
-                  {t("sportsbook.index.lookup.marketEmpty")}
-                </div>
-              )}
-            </div>
-
             <div className="grid gap-4">
               <LookupForm
                 id="sports-ticket-id"
@@ -486,68 +399,160 @@ export function SportsbookPageClient() {
                 </div>
               )}
             </div>
-          </div>
-        </SectionShell>
+          </SectionShell>
+        </div>
 
-        <SectionShell
-          eyebrow={t("sportsbook.index.operator.eyebrow")}
-          title={t("sportsbook.index.operator.title")}
-          description={t("sportsbook.index.operator.description")}
-        >
-          <SportsbookOperatorPanel
-            sdk={sdk}
-            disabled={readOnly || !ready || !sportsbook.hasSportsRelease}
-            disabledReason={
-              readOnly
-                ? readOnlyReason
-                : sportsbook.hasSportsRelease
-                  ? t("sportsbook.index.operator.walletRoleRequired")
-                  : sportsbook.disabledReason
-            }
-            defaultPoolId={sportsPools[0]?.poolId}
-            defaultFinalitySeconds={sports?.resultChallengeTimeoutSeconds}
-            onMutated={refreshSportsbookReads}
-          />
-        </SectionShell>
+        <details className="rounded-lg border border-border bg-surface-1 p-5 shadow-e2">
+          <summary className="cursor-pointer text-sm font-black text-fg">
+            {t("sportsbook.index.advanced.summary")}
+          </summary>
+          <div className="mt-6 grid gap-8">
+            <SectionShell
+              eyebrow={t("sportsbook.index.release.eyebrow")}
+              title={t("sportsbook.index.release.title")}
+              description={t("sportsbook.index.release.description")}
+            >
+              <div className="grid gap-4 md:grid-cols-2">
+                <DetailCell
+                  label={t("sportsbook.index.details.release")}
+                  value={shortHex(release.releaseDigest)}
+                  helper={release.name}
+                />
+                <DetailCell
+                  label={t("sportsbook.index.details.sportsHub")}
+                  value={shortHex(sportsHub)}
+                  helper={
+                    sportsbook.hasSportsRelease
+                      ? t("sportsbook.index.details.embeddedMetadataPresent")
+                      : t("sportsbook.index.details.notAvailable")
+                  }
+                />
+                <DetailCell
+                  label={t("sportsbook.index.details.riskEngine")}
+                  value={shortHex(riskEngine)}
+                  helper={t("sportsbook.index.details.riskEngineHelper")}
+                />
+                <DetailCell
+                  label={t("sportsbook.index.release.oddsSignerSet")}
+                  value={shortHex(sports?.oddsSignerSetHash)}
+                />
+                <DetailCell
+                  label={t("sportsbook.index.release.resultReporterSet")}
+                  value={shortHex(sports?.resultReporterSetHash)}
+                />
+                <DetailCell
+                  label={t("sportsbook.index.release.frontendFlag")}
+                  value={
+                    sportsbook.frontendEnabled
+                      ? t("sportsbook.index.release.booleanTrue")
+                      : t("sportsbook.index.release.booleanFalse")
+                  }
+                  helper={sportsbook.enablementFlag}
+                  mono={false}
+                />
+              </div>
+            </SectionShell>
 
-        <SectionShell
-          eyebrow={t("sportsbook.index.bankroll.eyebrow")}
-          title={t("sportsbook.index.bankroll.title")}
-          description={t("sportsbook.index.bankroll.description")}
-        >
-          {sportsPools.length ? (
-            <div className="grid gap-5">
-              {sportsPools.map((pool) => (
-                <PoolPanel key={pool.poolId} pool={pool} />
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-lg border border-warn/25 bg-warn-soft p-4 text-sm leading-6 text-warn">
-              {t("sportsbook.index.bankroll.noPool")}
-            </div>
-          )}
-        </SectionShell>
-
-        <SectionShell
-          eyebrow={t("sportsbook.index.controls.eyebrow")}
-          title={t("sportsbook.index.controls.title")}
-          description={t("sportsbook.index.controls.description")}
-        >
-          <div className="grid gap-4 md:grid-cols-3">
-            {CONTROL_LINKS.map((link) => (
-              <Link
-                key={link.detail}
-                href={link.href}
-                className="rounded-lg border border-border bg-surface-2/70 p-4 transition-colors hover:border-brand/30 hover:bg-surface-3"
+            {riskSummary ? (
+              <SectionShell
+                eyebrow={t("sportsbook.index.caps.eyebrow")}
+                title={t("sportsbook.index.caps.title")}
+                description={t("sportsbook.index.caps.description")}
               >
-                <div className="text-sm font-semibold text-fg">{t(link.labelKey)}</div>
-                <div className="mt-3 break-all font-mono text-xs leading-5 text-fg-muted">
-                  {link.detail}
+                <RiskRows title={t("sportsbook.index.caps.riskTitle")} risk={riskSummary} />
+              </SectionShell>
+            ) : null}
+
+            <SectionShell
+              eyebrow={t("sportsbook.index.advanced.marketLookupEyebrow")}
+              title={t("sportsbook.index.advanced.marketLookupTitle")}
+              description={t("sportsbook.index.advanced.marketLookupDescription")}
+            >
+              <div className="grid gap-4">
+                <LookupForm
+                  id="sports-market-id"
+                  label={t("sportsbook.index.lookup.marketId")}
+                  value={marketInput}
+                  onChange={setMarketInput}
+                  onSubmit={submitMarketLookup}
+                  disabled={!sdk || !ready || marketFetching}
+                  error={marketInputError ?? formatLookupError(marketLookupError)}
+                />
+                {marketLookup?.market ? (
+                  <MarketInspector
+                    market={marketLookup.market}
+                    result={marketLookup.result}
+                    reserved={marketLookup.reserved}
+                  />
+                ) : (
+                  <div className="rounded-lg border border-border bg-surface-2/50 p-4 text-sm leading-6 text-fg-muted">
+                    {t("sportsbook.index.lookup.marketEmpty")}
+                  </div>
+                )}
+              </div>
+            </SectionShell>
+
+            <SectionShell
+              eyebrow={t("sportsbook.index.operator.eyebrow")}
+              title={t("sportsbook.index.operator.title")}
+              description={t("sportsbook.index.operator.description")}
+            >
+              <SportsbookOperatorPanel
+                sdk={sdk}
+                disabled={readOnly || !ready || !sportsbook.hasSportsRelease}
+                disabledReason={
+                  readOnly
+                    ? readOnlyReason
+                    : sportsbook.hasSportsRelease
+                      ? t("sportsbook.index.operator.walletRoleRequired")
+                      : sportsbook.disabledReason
+                }
+                defaultPoolId={sportsPools[0]?.poolId}
+                defaultFinalitySeconds={sports?.resultChallengeTimeoutSeconds}
+                onMutated={refreshSportsbookReads}
+              />
+            </SectionShell>
+
+            <SectionShell
+              eyebrow={t("sportsbook.index.bankroll.eyebrow")}
+              title={t("sportsbook.index.bankroll.title")}
+              description={t("sportsbook.index.bankroll.description")}
+            >
+              {sportsPools.length ? (
+                <div className="grid gap-5">
+                  {sportsPools.map((pool) => (
+                    <PoolPanel key={pool.poolId} pool={pool} />
+                  ))}
                 </div>
-              </Link>
-            ))}
+              ) : (
+                <div className="rounded-lg border border-warn/25 bg-warn-soft p-4 text-sm leading-6 text-warn">
+                  {t("sportsbook.index.bankroll.noPool")}
+                </div>
+              )}
+            </SectionShell>
+
+            <SectionShell
+              eyebrow={t("sportsbook.index.controls.eyebrow")}
+              title={t("sportsbook.index.controls.title")}
+              description={t("sportsbook.index.controls.description")}
+            >
+              <div className="grid gap-4 md:grid-cols-3">
+                {CONTROL_LINKS.map((link) => (
+                  <Link
+                    key={link.detail}
+                    href={link.href}
+                    className="rounded-lg border border-border bg-surface-2/70 p-4 transition-colors hover:border-brand/30 hover:bg-surface-3"
+                  >
+                    <div className="text-sm font-semibold text-fg">{t(link.labelKey)}</div>
+                    <div className="mt-3 break-all font-mono text-xs leading-5 text-fg-muted">
+                      {link.detail}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </SectionShell>
           </div>
-        </SectionShell>
+        </details>
       </div>
     </PageTransition>
   );

@@ -254,10 +254,14 @@ describe("SportsbookMarketDetailPageClient", () => {
   it("reads a SportsHub market detail and exposure records", async () => {
     renderWithQueryClient(<SportsbookMarketDetailPageClient marketId="7" />);
 
-    expect(screen.getByRole("heading", { name: "Market 7" })).toBeDefined();
+    expect(screen.getByRole("heading", { name: "Football 1X2" })).toBeDefined();
     expect(screen.getByRole("link", { name: "Back to sportsbook" }).getAttribute("href")).toBe(
       "/sportsbook"
     );
+    expect(await screen.findByText("Home / Draw / Away")).toBeDefined();
+    expect(screen.getAllByText("Home").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Draw").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Away").length).toBeGreaterThan(0);
     expect(await screen.findByText("open / pool 2")).toBeDefined();
     expect(screen.getByText("Result proposed")).toBeDefined();
     expect(screen.getByText("Pool-event reserved")).toBeDefined();
@@ -298,7 +302,7 @@ describe("SportsbookMarketDetailPageClient", () => {
     };
     renderWithQueryClient(<SportsbookMarketDetailPageClient marketId="7" />);
 
-    expect(await screen.findByText("Signed odds ticket")).toBeDefined();
+    expect((await screen.findAllByText("Place ticket")).length).toBeGreaterThan(0);
     fireEvent.change(screen.getByLabelText("Stake (USDC)"), { target: { value: "1" } });
     fireEvent.click(screen.getByText("Advanced odds proof"));
     fireEvent.change(screen.getByLabelText("Odds WAD"), {
@@ -362,7 +366,7 @@ describe("SportsbookMarketDetailPageClient", () => {
 
     renderWithQueryClient(<SportsbookMarketDetailPageClient marketId="7" />);
 
-    expect(await screen.findByText("Signed odds ticket")).toBeDefined();
+    expect((await screen.findAllByText("Place ticket")).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByText("Advanced odds proof"));
     fireEvent.change(screen.getByLabelText("Provider event id"), { target: { value: "event-1" } });
     fireEvent.change(screen.getByLabelText("Bookmaker key"), { target: { value: "draftkings" } });

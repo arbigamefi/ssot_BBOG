@@ -12,6 +12,7 @@ import {
   DetailCell,
   MarketInspector,
   SectionShell,
+  sportsOutcomeLabel,
   StatusPill,
   type MarketTapeRow
 } from "./components";
@@ -29,6 +30,12 @@ const SPORTSBOOK_DETAIL_READ_TIMEOUT_MS = 8_000;
 
 function formatUnits(value?: bigint) {
   return value === undefined ? "—" : value.toLocaleString("en-US");
+}
+
+function marketStatusTone(state: string): "success" | "warn" | "neutral" {
+  if (state === "open") return "success";
+  if (state === "suspended" || state === "challenged" || state === "voided") return "warn";
+  return "neutral";
 }
 
 async function withReadTimeout<T>(promise: Promise<T>): Promise<T> {
@@ -186,110 +193,209 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
           </SectionShell>
         ) : readback ? (
           <>
-            <div className="grid gap-8 xl:grid-cols-[1.1fr_0.9fr]">
+            <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_420px] xl:items-start">
               <SectionShell
-                eyebrow={t("sportsbook.detail.market.eyebrow")}
-                title={t("sportsbook.detail.market.title")}
-                description={t("sportsbook.detail.market.description")}
+                eyebrow={t("sportsbook.detail.playerMarket.eyebrow")}
+                title={t("sportsbook.detail.playerMarket.title")}
+                description={t("sportsbook.detail.playerMarket.description")}
               >
-                <MarketInspector
-                  market={readback.market}
-                  result={readback.result}
-                  reserved={readback.reserved}
-                />
-              </SectionShell>
+                <div className="grid gap-5">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <StatusPill tone={marketStatusTone(readback.market.state)}>
+                      {readback.market.state}
+                    </StatusPill>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-fg-subtle">
+                      {t("sportsbook.detail.playerMarket.marketId", {
+                        marketId: readback.market.marketId.toString()
+                      })}
+                    </span>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-fg-subtle">
+                      {t("sportsbook.components.marketTape.event", {
+                        eventId: readback.market.eventId.toString()
+                      })}
+                    </span>
+                  </div>
 
-              <SectionShell
-                eyebrow={t("sportsbook.detail.exposure.eyebrow")}
-                title={t("sportsbook.detail.exposure.title")}
-                description={t("sportsbook.detail.exposure.description")}
-              >
-                <div className="grid gap-4">
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    {Array.from({ length: readback.market.outcomeCount }, (_, outcomeId) => {
+                      const resultReady = Boolean(
+                        readback.result && readback.result.proposedAt > 0
+                      );
+                      const isWinner =
+                        resultReady &&
+                        Number(readback.result?.winningOutcomeId ?? -1) === outcomeId;
+                      return (
+                        <div
+                          key={outcomeId}
+                          className={
+                            isWinner
+                              ? "rounded-lg border border-success/35 bg-success-soft p-4"
+                              : "rounded-lg border border-border bg-surface-2/70 p-4"
+                          }
+                        >
+                          <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
+                            {t("sportsbook.detail.playerMarket.outcome")}
+                          </div>
+                          <div
+                            className={
+                              isWinner
+                                ? "mt-2 text-lg font-black text-success"
+                                : "mt-2 text-lg font-black text-fg"
+                            }
+                          >
+                            {sportsOutcomeLabel(outcomeId, readback.market.outcomeCount, t)}
+                          </div>
+                          {isWinner ? (
+                            <div className="mt-2 text-xs font-semibold text-success">
+                              {t("sportsbook.detail.playerMarket.winner")}
+                            </div>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+
                   <div className="grid gap-4 sm:grid-cols-2">
                     <DetailCell
-                      label={t("sportsbook.detail.exposure.marketReserved")}
-                      value={formatUnits(readback.reserved)}
+                      label={t("sportsbook.detail.playerMarket.startsAt")}
+                      value={new Date(readback.market.startsAt * 1000).toLocaleString()}
+                      mono={false}
                     />
                     <DetailCell
-                      label={t("sportsbook.detail.exposure.eventReserved")}
-                      value={formatUnits(readback.eventReserved)}
-                    />
-                    <DetailCell
-                      label={t("sportsbook.detail.exposure.poolEventReserved")}
-                      value={formatUnits(readback.poolEventReserved)}
-                    />
-                    <DetailCell
-                      label={t("sportsbook.detail.exposure.outcomeCount")}
-                      value={readback.market.outcomeCount.toString()}
+                      label={t("sportsbook.detail.playerMarket.locksAt")}
+                      value={new Date(readback.market.lockTime * 1000).toLocaleString()}
+                      mono={false}
                     />
                   </div>
 
-                  <div className="overflow-hidden rounded-lg border border-border">
-                    <div className="border-b border-border bg-surface-2 px-4 py-3 text-sm font-semibold text-fg">
-                      {t("sportsbook.detail.exposure.outcomeExposure")}
-                    </div>
-                    <div className="divide-y divide-border-soft">
-                      {readback.outcomeReserved.map((row) => (
-                        <div
-                          key={row.outcomeId}
-                          className="flex items-center justify-between gap-4 px-4 py-3 text-sm"
-                        >
-                          <div className="text-fg-muted">
-                            {t("sportsbook.detail.exposure.outcome", {
-                              outcomeId: String(row.outcomeId)
-                            })}
-                          </div>
-                          <div className="font-mono font-semibold text-fg">
-                            {formatUnits(row.reserved)}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                  <div className="rounded-lg border border-border bg-surface-2/50 p-4 text-sm leading-6 text-fg-muted">
+                    {readback.result && readback.result.proposedAt > 0
+                      ? t("sportsbook.detail.playerMarket.resultReady", {
+                          outcome: sportsOutcomeLabel(
+                            Number(readback.result.winningOutcomeId),
+                            readback.market.outcomeCount,
+                            t
+                          )
+                        })
+                      : t("sportsbook.detail.playerMarket.resultPending")}
                   </div>
                 </div>
               </SectionShell>
+
+              <SectionShell
+                eyebrow={t("sportsbook.detail.ticketPlacement.eyebrow")}
+                title={t("sportsbook.detail.ticketPlacement.title")}
+                description={t("sportsbook.detail.ticketPlacement.description")}
+              >
+                <SportsbookTicketPlacementPanel
+                  sdk={sdk}
+                  release={release}
+                  chainId={chainId}
+                  market={readback.market}
+                  disabled={
+                    readOnly || !ready || !sportsbook.enabled || readback.market.state !== "open"
+                  }
+                  disabledReason={
+                    readOnly
+                      ? readOnlyReason
+                      : !sportsbook.enabled
+                        ? sportsbook.disabledReason
+                        : readback.market.state !== "open"
+                          ? t("sportsbook.detail.ticketPlacement.marketMustBeOpen")
+                          : t("sportsbook.detail.ticketPlacement.walletAndSnapshotRequired")
+                  }
+                  onMutated={() => void refetchReadback()}
+                />
+              </SectionShell>
             </div>
 
-            <SectionShell
-              eyebrow={t("sportsbook.detail.ticketPlacement.eyebrow")}
-              title={t("sportsbook.detail.ticketPlacement.title")}
-              description={t("sportsbook.detail.ticketPlacement.description")}
-            >
-              <SportsbookTicketPlacementPanel
-                sdk={sdk}
-                release={release}
-                chainId={chainId}
-                market={readback.market}
-                disabled={
-                  readOnly || !ready || !sportsbook.enabled || readback.market.state !== "open"
-                }
-                disabledReason={
-                  readOnly
-                    ? readOnlyReason
-                    : !sportsbook.enabled
-                      ? sportsbook.disabledReason
-                      : readback.market.state !== "open"
-                        ? t("sportsbook.detail.ticketPlacement.marketMustBeOpen")
-                        : t("sportsbook.detail.ticketPlacement.walletAndSnapshotRequired")
-                }
-                onMutated={() => void refetchReadback()}
-              />
-            </SectionShell>
+            <details className="rounded-lg border border-border bg-surface-1 p-5 shadow-e2">
+              <summary className="cursor-pointer text-sm font-black text-fg">
+                {t("sportsbook.detail.advanced.summary")}
+              </summary>
+              <div className="mt-6 grid gap-8">
+                <div className="grid gap-8 xl:grid-cols-[1.1fr_0.9fr]">
+                  <SectionShell
+                    eyebrow={t("sportsbook.detail.market.eyebrow")}
+                    title={t("sportsbook.detail.market.title")}
+                    description={t("sportsbook.detail.market.description")}
+                  >
+                    <MarketInspector
+                      market={readback.market}
+                      result={readback.result}
+                      reserved={readback.reserved}
+                    />
+                  </SectionShell>
 
-            <SectionShell
-              eyebrow={t("sportsbook.detail.ticketTerminal.eyebrow")}
-              title={t("sportsbook.detail.ticketTerminal.title")}
-              description={t("sportsbook.detail.ticketTerminal.description")}
-            >
-              <SportsbookTicketTerminalPanel
-                sdk={sdk}
-                disabled={readOnly || !ready}
-                disabledReason={
-                  readOnly ? readOnlyReason : t("sportsbook.detail.ticketTerminal.walletRequired")
-                }
-                onMutated={() => void refetchReadback()}
-              />
-            </SectionShell>
+                  <SectionShell
+                    eyebrow={t("sportsbook.detail.exposure.eyebrow")}
+                    title={t("sportsbook.detail.exposure.title")}
+                    description={t("sportsbook.detail.exposure.description")}
+                  >
+                    <div className="grid gap-4">
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <DetailCell
+                          label={t("sportsbook.detail.exposure.marketReserved")}
+                          value={formatUnits(readback.reserved)}
+                        />
+                        <DetailCell
+                          label={t("sportsbook.detail.exposure.eventReserved")}
+                          value={formatUnits(readback.eventReserved)}
+                        />
+                        <DetailCell
+                          label={t("sportsbook.detail.exposure.poolEventReserved")}
+                          value={formatUnits(readback.poolEventReserved)}
+                        />
+                        <DetailCell
+                          label={t("sportsbook.detail.exposure.outcomeCount")}
+                          value={readback.market.outcomeCount.toString()}
+                        />
+                      </div>
+
+                      <div className="overflow-hidden rounded-lg border border-border">
+                        <div className="border-b border-border bg-surface-2 px-4 py-3 text-sm font-semibold text-fg">
+                          {t("sportsbook.detail.exposure.outcomeExposure")}
+                        </div>
+                        <div className="divide-y divide-border-soft">
+                          {readback.outcomeReserved.map((row) => (
+                            <div
+                              key={row.outcomeId}
+                              className="flex items-center justify-between gap-4 px-4 py-3 text-sm"
+                            >
+                              <div className="text-fg-muted">
+                                {t("sportsbook.detail.exposure.outcome", {
+                                  outcomeId: String(row.outcomeId)
+                                })}
+                              </div>
+                              <div className="font-mono font-semibold text-fg">
+                                {formatUnits(row.reserved)}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </SectionShell>
+                </div>
+
+                <SectionShell
+                  eyebrow={t("sportsbook.detail.ticketTerminal.eyebrow")}
+                  title={t("sportsbook.detail.ticketTerminal.title")}
+                  description={t("sportsbook.detail.ticketTerminal.description")}
+                >
+                  <SportsbookTicketTerminalPanel
+                    sdk={sdk}
+                    disabled={readOnly || !ready}
+                    disabledReason={
+                      readOnly
+                        ? readOnlyReason
+                        : t("sportsbook.detail.ticketTerminal.walletRequired")
+                    }
+                    onMutated={() => void refetchReadback()}
+                  />
+                </SectionShell>
+              </div>
+            </details>
           </>
         ) : (
           <SectionShell

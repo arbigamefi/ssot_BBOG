@@ -583,7 +583,7 @@
         "sportsHubPresent": "SportsHub present",
         "sportsHubMissing": "SportsHub missing",
         "title": "Sportsbook",
-        "description": "Browse fixed-odds football markets, inspect live risk, and open a market when you are ready to place a signed ticket. Settlement stays on-chain through SportsHub."
+        "description": "Pick a football market, choose Home, Draw, or Away, and place a fixed-odds ticket with on-chain settlement through SportsHub."
       },
       "riskCard": {
         "eyebrow": "Ticket placement",
@@ -660,15 +660,21 @@
         "descriptionDisabled": "Open a market to review outcomes, timing, and reserved exposure. Ticket placement remains disabled for this build."
       },
       "lookup": {
-        "eyebrow": "On-chain lookup",
-        "title": "Inspect SportsHub records",
-        "description": "Lookup stays read-only and goes through the v1.3 SDK. Use market detail for the signed-odds ticket flow.",
+        "eyebrow": "My ticket",
+        "title": "Track a ticket",
+        "description": "Enter a ticket id to check stake, selected outcome, payout, and terminal state directly from SportsHub.",
         "marketId": "Market id",
         "ticketId": "Ticket id",
         "marketEmpty": "Enter a SportsHub market id to inspect state, result status, and reserved exposure.",
         "ticketEmpty": "Enter a SportsHub ticket id to inspect position, stake, payout, and ticket state.",
         "marketNumericError": "Enter a numeric market id.",
         "ticketNumericError": "Enter a numeric ticket id."
+      },
+      "advanced": {
+        "summary": "Advanced chain proof and operator tools",
+        "marketLookupEyebrow": "Market lookup",
+        "marketLookupTitle": "Inspect a SportsHub market",
+        "marketLookupDescription": "Developer readback for market state, result proposal, and reserved exposure."
       },
       "operator": {
         "eyebrow": "Operator writes",
@@ -759,6 +765,19 @@
           "load": "Load"
         }
       },
+      "playerMarkets": {
+        "loading": "Loading football markets...",
+        "empty": "No football markets are open in this release yet.",
+        "title": "Football 1X2",
+        "marketId": "Market {marketId}",
+        "starts": "Starts {time}",
+        "outcome": "Pick",
+        "openTicket": "Open ticket",
+        "viewMarket": "View market",
+        "openHelper": "Open the market to fetch a live signed price before you place a ticket.",
+        "closedHelper": "This market is no longer accepting tickets.",
+        "result": "Result proposed: {outcome}"
+      },
       "riskRows": {
         "maxStake": "Max stake",
         "maxPayout": "Max payout",
@@ -789,8 +808,8 @@
       "back": "Back to sportsbook",
       "return": "Return to sportsbook",
       "marketDetailPill": "Market detail",
-      "title": "Market {marketId}",
-      "description": "Direct SportsHub readback for one fixed-odds market. Ticket placement stays behind the frontend release gate and requires a complete signed odds snapshot before broadcast.",
+      "title": "Football 1X2",
+      "description": "Choose Home, Draw, or Away and place a signed fixed-odds ticket while the market is open.",
       "invalid": {
         "eyebrow": "Invalid route",
         "title": "Invalid market id",
@@ -813,6 +832,21 @@
         "title": "Lifecycle and result",
         "description": "Market state is read directly from SportsHub. Result state is displayed when a reporter proposal exists."
       },
+      "playerMarket": {
+        "eyebrow": "Match market",
+        "title": "Home / Draw / Away",
+        "description": "The public view keeps the decision simple: pick one side, get live odds, then submit the ticket.",
+        "marketId": "Market {marketId}",
+        "outcome": "Outcome",
+        "winner": "Winning outcome",
+        "startsAt": "Starts",
+        "locksAt": "Ticket lock",
+        "resultReady": "Reporter result is available: {outcome}. Settlement remains governed by the challenge window.",
+        "resultPending": "No final result has been reported yet. Tickets remain auditable on-chain."
+      },
+      "advanced": {
+        "summary": "Advanced chain proof and settlement tools"
+      },
       "exposure": {
         "eyebrow": "Exposure",
         "title": "Reserved capital",
@@ -825,9 +859,9 @@
         "outcome": "Outcome {outcomeId}"
       },
       "ticketPlacement": {
-        "eyebrow": "Ticket placement",
-        "title": "Signed odds ticket",
-        "description": "This is the only public risk-in path for the MVP: it plans ERC20 approval, validates the signed odds snapshot against the active market, then calls SportsHub.placeTicket through the SDK.",
+        "eyebrow": "Bet slip",
+        "title": "Place ticket",
+        "description": "Choose an outcome, enter stake, fetch a signed provider price, and submit the ticket.",
         "marketMustBeOpen": "Market must be open before ticket placement.",
         "walletAndSnapshotRequired": "A connected wallet and signed odds snapshot are required."
       },

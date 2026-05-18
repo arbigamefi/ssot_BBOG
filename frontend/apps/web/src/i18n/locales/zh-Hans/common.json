@@ -583,7 +583,7 @@
         "sportsHubPresent": "SportsHub 已配置",
         "sportsHubMissing": "缺少 SportsHub",
         "title": "体育投注",
-        "description": "浏览固定赔率足球市场、检查实时敞口，并在准备好后进入市场用签名赔率出票。结算仍通过 SportsHub 在链上完成。"
+        "description": "选择足球市场，投注主胜、平局或客胜，并通过 SportsHub 完成链上结算。"
       },
       "riskCard": {
         "eyebrow": "出票状态",
@@ -660,15 +660,21 @@
         "descriptionDisabled": "打开市场可查看 outcome、开赛时间和保留敞口。当前构建仍关闭出票。"
       },
       "lookup": {
-        "eyebrow": "链上查询",
-        "title": "检查 SportsHub 记录",
-        "description": "查询保持只读，并通过 v1.3 SDK 完成。签名赔率出票流程请使用市场详情页。",
+        "eyebrow": "我的票据",
+        "title": "追踪票据",
+        "description": "输入票据 ID，直接从 SportsHub 查看本金、选择结果、赔付和终态。",
         "marketId": "市场 ID",
         "ticketId": "票据 ID",
         "marketEmpty": "输入 SportsHub 市场 ID，用于检查状态、赛果状态和保留敞口。",
         "ticketEmpty": "输入 SportsHub 票据 ID，用于检查仓位、本金、赔付和票据状态。",
         "marketNumericError": "请输入数字市场 ID。",
         "ticketNumericError": "请输入数字票据 ID。"
+      },
+      "advanced": {
+        "summary": "高级链上证明与运营工具",
+        "marketLookupEyebrow": "市场查询",
+        "marketLookupTitle": "检查 SportsHub 市场",
+        "marketLookupDescription": "开发者读回市场状态、赛果提议和保留敞口。"
       },
       "operator": {
         "eyebrow": "运营写入",
@@ -759,6 +765,19 @@
           "load": "载入"
         }
       },
+      "playerMarkets": {
+        "loading": "正在加载足球市场...",
+        "empty": "当前 release 暂无开放的足球市场。",
+        "title": "足球 1X2",
+        "marketId": "市场 {marketId}",
+        "starts": "开始 {time}",
+        "outcome": "选项",
+        "openTicket": "打开投注单",
+        "viewMarket": "查看市场",
+        "openHelper": "打开市场后先获取实时签名赔率，再提交票据。",
+        "closedHelper": "该市场已不再接受出票。",
+        "result": "赛果已提议：{outcome}"
+      },
       "riskRows": {
         "maxStake": "最大本金",
         "maxPayout": "最大赔付",
@@ -789,8 +808,8 @@
       "back": "返回体育投注",
       "return": "返回体育投注",
       "marketDetailPill": "市场详情",
-      "title": "市场 {marketId}",
-      "description": "单个固定赔率市场的 SportsHub 直接读回。出票仍受前端 release gate 保护，并且广播前必须提供完整的签名赔率快照。",
+      "title": "足球 1X2",
+      "description": "选择主胜、平局或客胜，并在市场开放时提交签名固定赔率票据。",
       "invalid": {
         "eyebrow": "无效路由",
         "title": "无效市场 ID",
@@ -813,6 +832,21 @@
         "title": "生命周期与赛果",
         "description": "市场状态直接从 SportsHub 读取。有 reporter 提议后，会显示赛果状态。"
       },
+      "playerMarket": {
+        "eyebrow": "比赛市场",
+        "title": "主胜 / 平局 / 客胜",
+        "description": "公开页面只保留玩家决策：选择结果、获取实时赔率、提交票据。",
+        "marketId": "市场 {marketId}",
+        "outcome": "结果",
+        "winner": "获胜结果",
+        "startsAt": "开始",
+        "locksAt": "出票锁定",
+        "resultReady": "Reporter 赛果已可用：{outcome}。结算仍受挑战窗口约束。",
+        "resultPending": "尚未上报最终赛果。票据仍可在链上审计。"
+      },
+      "advanced": {
+        "summary": "高级链上证明与结算工具"
+      },
       "exposure": {
         "eyebrow": "敞口",
         "title": "保留资本",
@@ -825,9 +859,9 @@
         "outcome": "结果 {outcomeId}"
       },
       "ticketPlacement": {
-        "eyebrow": "出票",
-        "title": "签名赔率票据",
-        "description": "这是 MVP 唯一的公开风险入口：规划 ERC20 授权、按当前市场验证签名赔率快照，然后通过 SDK 调用 SportsHub.placeTicket。",
+        "eyebrow": "投注单",
+        "title": "提交票据",
+        "description": "选择结果、输入金额、获取 provider 签名价格，然后提交票据。",
         "marketMustBeOpen": "市场必须处于 open 状态才能出票。",
         "walletAndSnapshotRequired": "需要连接钱包并提供签名赔率快照。"
       },

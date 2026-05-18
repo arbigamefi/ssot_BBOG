@@ -19,9 +19,10 @@ import {
 
 export function SSOTRuntimeProvider({ children }: { children: React.ReactNode }) {
   const t = useTranslations("app");
-  const chainId = useChainId();
+  const connectedChainId = useChainId();
   const wagmiConfig = useConfig();
   const rel = useRelease();
+  const releaseChainId = rel.release?.chainId ?? rel.chainId ?? connectedChainId;
 
   const db: SSOTDb | undefined = React.useMemo(() => {
     if (!rel.release) return undefined;
@@ -44,9 +45,9 @@ export function SSOTRuntimeProvider({ children }: { children: React.ReactNode })
   );
 
   const rpcUrl = React.useMemo(() => {
-    const chain = wagmiConfig.chains.find((c) => c.id === chainId);
+    const chain = wagmiConfig.chains.find((c) => c.id === releaseChainId);
     return chain?.rpcUrls?.default?.http?.[0] ?? chain?.rpcUrls?.public?.http?.[0];
-  }, [wagmiConfig.chains, chainId]);
+  }, [wagmiConfig.chains, releaseChainId]);
 
   const refreshIndexerStatus = React.useCallback(() => {
     workerRef.current?.refreshStatus();
