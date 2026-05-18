@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import type { DomainBet } from "@ssot/ssot";
-import type { SSOTSDK } from "@ssot/ssot/sdk";
+import type { Address, SSOTSDK } from "@ssot/ssot/sdk";
 
 import { usePlaceBetStepper } from "../../betting/usePlaceBetStepper";
 import type { GameMeta } from "./model";
@@ -28,6 +28,7 @@ export type UseCasinoRoundArgs = {
   coinSide: CoinSide;
   rouletteSpots: readonly string[];
   kenoSpots: readonly number[];
+  affiliate?: Address;
   onRoundStart: () => void;
   onRoundTerminal: (bet: DomainBet) => void;
   onRoundReset: () => void;
@@ -48,6 +49,7 @@ export function useCasinoRound({
   coinSide,
   rouletteSpots,
   kenoSpots,
+  affiliate,
   onRoundStart,
   onRoundTerminal,
   onRoundReset
@@ -121,6 +123,7 @@ export function useCasinoRound({
       coinSide,
       rouletteSpots,
       kenoSpots,
+      affiliate,
       messages: {
         rouletteSelectionRequired: t("casino.room.errors.rouletteSelectionRequired"),
         kenoSelectionRequired: t("casino.room.errors.kenoSelectionRequired"),
@@ -135,6 +138,7 @@ export function useCasinoRound({
     diceDirection,
     diceTarget,
     executeNow,
+    affiliate,
     game,
     kenoSpots,
     onRoundReset,

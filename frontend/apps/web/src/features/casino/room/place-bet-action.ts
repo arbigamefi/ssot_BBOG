@@ -1,4 +1,5 @@
 import type { PlaceBetInput, PlaceBetPlan } from "@ssot/ssot";
+import type { Address } from "@ssot/ssot/sdk";
 import { toast } from "@ssot/ui";
 
 import type { GameMeta } from "./model";
@@ -38,6 +39,7 @@ export async function executeGamePlaceBetAction({
   coinSide,
   rouletteSpots,
   kenoSpots,
+  affiliate,
   messages
 }: {
   account: string | undefined;
@@ -59,6 +61,7 @@ export async function executeGamePlaceBetAction({
   coinSide: CoinSide;
   rouletteSpots: readonly string[];
   kenoSpots: readonly number[];
+  affiliate?: Address;
   messages?: {
     rouletteSelectionRequired?: string;
     kenoSelectionRequired?: string;
@@ -97,6 +100,7 @@ export async function executeGamePlaceBetAction({
       coinSide,
       rouletteSpots,
       kenoSpots,
+      affiliate,
       messages
     });
     if (!placeBet.ok) {

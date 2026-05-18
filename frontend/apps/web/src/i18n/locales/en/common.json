@@ -55,6 +55,14 @@
         "title": "Claims",
         "description": "Inspect claimable XP, protocol fees, holdback buckets, and claim transaction readiness."
       },
+      "portfolioReferral": {
+        "title": "Referral",
+        "description": "Create a referral link, inspect first-touch binding, and review affiliate reward buckets."
+      },
+      "affiliate": {
+        "title": "Affiliates",
+        "description": "Share wallet-native casino rooms and route referral rewards through the on-chain XP ledger."
+      },
       "earn": {
         "title": "Earn",
         "description": "Inspect bankroll deposits, withdrawals, reserve posture, and LP risk controls."
@@ -1405,6 +1413,65 @@
         "claimedFees": "Claimed {amount} {symbol} protocol fees",
         "protocolFeeFailed": "Protocol fee claim failed"
       }
+    },
+    "referral": {
+      "common": {
+        "pending": "Pending"
+      },
+      "state": {
+        "noRelease": {
+          "title": "Referral",
+          "description": "No embedded release available."
+        }
+      },
+      "errors": {
+        "walletUnavailable": "Wallet unavailable",
+        "poolUnavailable": "Pool unavailable"
+      },
+      "hero": {
+        "eyebrow": "Affiliate account",
+        "title": "Referral rewards.",
+        "description": "Create a casino link, inspect your immutable first-touch referrer, and review XP buckets that are paid by the active Bank ledger.",
+        "connected": "Connected wallet"
+      },
+      "link": {
+        "title": "Your referral link",
+        "description": "Share this link with players. When they place a casino bet, GameHub forwards the affiliate hint for first-touch binding and skyline pricing.",
+        "learn": "Model",
+        "connect": "Connect a wallet to generate a referral link.",
+        "copy": "Copy link",
+        "copied": "Copied"
+      },
+      "metrics": {
+        "accrued": {
+          "label": "Accrued",
+          "detail": "XP currently claimable from the Bank ledger."
+        },
+        "locked": {
+          "label": "Locked",
+          "detail": "XP awaiting unlock conditions before extraction."
+        },
+        "holdback": {
+          "label": "Holdback",
+          "detail": "Reward buffer that can become releasable after sync."
+        }
+      },
+      "binding": {
+        "eyebrow": "First touch",
+        "title": "Binding state",
+        "description": "A player can bind only once. If this page has a valid ref parameter and no referrer is bound yet, the wallet can bind it explicitly.",
+        "current": "Current",
+        "pending": "Pending",
+        "none": "None",
+        "noPending": "No pending ref",
+        "bind": "Bind referrer",
+        "binding": "Binding",
+        "claims": "Open claims"
+      },
+      "toast": {
+        "bound": "Referrer bound",
+        "bindFailed": "Failed to bind referrer"
+      }
     }
   },
   "earn": {
@@ -1959,6 +2026,57 @@
             "title": "Jurisdiction and compliance",
             "body": "Users must determine for themselves whether use of the frontend, room participation, sports market participation, or LP activity is lawful in their jurisdiction."
           }
+        }
+      }
+    }
+  },
+  "affiliate": {
+    "hero": {
+      "eyebrow": "Affiliate growth",
+      "title": "Share the casino. Keep the proof on-chain.",
+      "description": "ArbiGameFi uses first-touch referral binding and Bank-side XP buckets, so affiliate rewards are tied to actual wallet-native play instead of spreadsheet reconciliation.",
+      "primary": "Open Dice",
+      "secondary": "Referral console"
+    },
+    "linkCard": {
+      "eyebrow": "Referral link",
+      "title": "One link to the room",
+      "connect": "Connect a wallet to generate your referral link.",
+      "copy": "Copy link",
+      "copied": "Copied",
+      "wallet": "Wallet {wallet}",
+      "walletPending": "Wallet not connected"
+    },
+    "pillars": {
+      "firstTouch": {
+        "title": "First-touch binding",
+        "body": "A valid referral hint is forwarded with casino bets. Once bound, the relationship is immutable."
+      },
+      "xp": {
+        "title": "XP buckets",
+        "body": "Rewards surface as accrued, locked, and holdback balances on the active Bank ledger."
+      },
+      "chain": {
+        "title": "Auditable settlement",
+        "body": "Referral value is tied to on-chain play, payout, and claim state rather than off-platform reporting."
+      }
+    },
+    "flow": {
+      "eyebrow": "How it works",
+      "title": "Built for B2C distribution.",
+      "body": "The MVP path keeps the growth loop simple: share a room, bind the player, then let the Bank ledger expose claimable rewards.",
+      "steps": {
+        "0": {
+          "title": "Share",
+          "body": "Generate a casino link from your wallet and send players directly to a room."
+        },
+        "1": {
+          "title": "Bind",
+          "body": "GameHub uses the ref hint for best-effort first-touch binding when a player bets."
+        },
+        "2": {
+          "title": "Claim",
+          "body": "Review XP buckets and claim available rewards from the portfolio surface."
         }
       }
     }

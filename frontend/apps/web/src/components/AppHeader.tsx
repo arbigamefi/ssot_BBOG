@@ -48,6 +48,9 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
               <Link href="/earn" className="transition-colors hover:text-fg">
                 {t("nav.liquidity")}
               </Link>
+              <Link href="/affiliate" className="transition-colors hover:text-fg">
+                {t("nav.affiliates")}
+              </Link>
             </nav>
           </div>
           <div className="flex items-center gap-4">
@@ -73,7 +76,7 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
     { id: "bets", label: t("nav.bets"), href: "/portfolio/activity" },
     { id: "liquidity", label: t("nav.liquidity"), href: "/earn" },
     { id: "claims", label: t("nav.claims"), href: "/portfolio/claims" },
-    { id: "referral", label: t("nav.affiliates"), href: "/portfolio" },
+    { id: "referral", label: t("nav.affiliates"), href: "/portfolio/referral" },
     { id: "account", label: t("nav.account"), href: "/portfolio" },
     { id: "ops", label: t("nav.ops"), href: "/ops" }
   ] as const;

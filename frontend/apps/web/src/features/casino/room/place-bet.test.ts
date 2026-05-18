@@ -46,6 +46,7 @@ describe("game room place bet builder", () => {
   });
 
   it("builds a typed PlaceBetInput with encoded params and stake spec", () => {
+    const affiliate = "0x5555555555555555555555555555555555555555";
     const result = buildGamePlaceBetInput({
       release,
       game,
@@ -57,7 +58,8 @@ describe("game room place bet builder", () => {
       diceDirection: "under",
       coinSide: "HEADS",
       rouletteSpots: [],
-      kenoSpots: []
+      kenoSpots: [],
+      affiliate
     });
 
     expect(result.ok).toBe(true);
@@ -65,6 +67,7 @@ describe("game room place bet builder", () => {
 
     expect(result.input.chainId).toBe(84532);
     expect(result.input.poolId).toBe(1);
+    expect(result.input.affiliate).toBe(affiliate);
     expect(result.input.betCount).toBe(3);
     expect(result.input.stake).toBe(75_000_000n);
     expect(decodeDiceParams(result.input.params)).toEqual({

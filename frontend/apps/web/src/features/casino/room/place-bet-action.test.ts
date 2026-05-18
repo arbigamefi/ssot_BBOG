@@ -133,12 +133,14 @@ describe("game room place bet action", () => {
   });
 
   it("plans a valid bet request", async () => {
-    const args = baseArgs();
+    const affiliate = "0x6666666666666666666666666666666666666666";
+    const args = baseArgs({ affiliate });
     await executeGamePlaceBetAction(args);
 
     expect(args.planNow).toHaveBeenCalledTimes(1);
     expect(args.executeNow).toHaveBeenCalledWith(plannedBet);
     expect((args.planNow as any).mock.calls[0]?.[0].stake).toBe(10_000_000n);
+    expect((args.planNow as any).mock.calls[0]?.[0].affiliate).toBe(affiliate);
   });
 
   it("does not expose raw unexpected errors as player copy", async () => {

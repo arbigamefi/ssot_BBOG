@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import dynamic from "next/dynamic";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type { DomainBet } from "@ssot/ssot";
 
@@ -32,6 +33,7 @@ import { readCasinoOutcome, type CasinoOutcome } from "../../../../features/casi
 import { GameRoomRightPane } from "../../../../features/casino/room/right-pane";
 import { GameRoomShell } from "../../../../features/casino/room/game-room-shell";
 import { useCasinoRound } from "../../../../features/casino/room/use-casino-round";
+import { normalizeReferralAddress } from "../../../../features/referral/referral-link";
 
 function AuditLedgerLoading() {
   const t = useTranslations();
@@ -71,6 +73,7 @@ const GameRoomAuditLedger = dynamic(
 
 export function GamePageClient({ slug }: { slug: string }) {
   const t = useTranslations();
+  const searchParams = useSearchParams();
   const { release, readOnlyReason, chainId } = useRelease();
   const { sdk } = useSSOTSDK();
   const { indexerStatus } = useIndexer();
@@ -124,6 +127,11 @@ export function GamePageClient({ slug }: { slug: string }) {
   const [advancedOpen, setAdvancedOpen] = React.useState(false);
 
   const walletBalance = useGameWalletBalance({ sdk, assets: release?.assets });
+  const referrerParam = searchParams.get("ref");
+  const referralAffiliate = React.useMemo(
+    () => normalizeReferralAddress(referrerParam, sdk?.account),
+    [referrerParam, sdk?.account]
+  );
 
   const { openConnectModal } = useConnectModal();
   const { db } = useSSOTRuntime();
@@ -180,6 +188,7 @@ export function GamePageClient({ slug }: { slug: string }) {
     coinSide,
     rouletteSpots,
     kenoSpots,
+    affiliate: referralAffiliate,
     onRoundStart: handleRoundStart,
     onRoundTerminal: handleRoundTerminal,
     onRoundReset: handleRoundReset

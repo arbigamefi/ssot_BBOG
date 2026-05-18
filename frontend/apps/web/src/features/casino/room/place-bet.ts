@@ -1,4 +1,5 @@
 import type { PlaceBetInput } from "@ssot/ssot";
+import type { Address } from "@ssot/ssot/sdk";
 import { encodeStakeSpec } from "@ssot/ssot/encoding";
 
 import type { GameMeta } from "./model";
@@ -45,6 +46,7 @@ export type BuildGamePlaceBetInputArgs = {
   coinSide: CoinSide;
   rouletteSpots: readonly string[];
   kenoSpots: readonly number[];
+  affiliate?: Address;
   maxHouseEdgeBps?: number;
   messages?: GamePlaceBetMessages;
 };
@@ -85,6 +87,7 @@ export function buildGamePlaceBetInput({
   coinSide,
   rouletteSpots,
   kenoSpots,
+  affiliate,
   maxHouseEdgeBps = 10000,
   messages
 }: BuildGamePlaceBetInputArgs): BuildGamePlaceBetInputResult {
@@ -137,6 +140,7 @@ export function buildGamePlaceBetInput({
       stake: totalStake,
       params: gameParams.params,
       stakeSpec,
+      affiliate,
       maxHouseEdgeBps: Math.max(0, Math.min(10000, Math.floor(maxHouseEdgeBps)))
     }
   };

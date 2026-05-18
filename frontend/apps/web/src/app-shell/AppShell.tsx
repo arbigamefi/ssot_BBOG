@@ -18,6 +18,7 @@ function getActiveRoute(pathname: string): AppRoute {
   }
   if (pathname === "/earn") return "liquidity";
   if (pathname === "/portfolio/claims") return "claims";
+  if (pathname === "/affiliate" || pathname === "/portfolio/referral") return "referral";
   if (pathname === "/portfolio") return "account";
   if (pathname === "/ops") return "ops";
   if (pathname === "/casino/roulette") return "roulette";
@@ -28,7 +29,7 @@ function getActiveRoute(pathname: string): AppRoute {
 }
 
 function getShellVariant(pathname: string) {
-  if (pathname === "/") return "marketing";
+  if (pathname === "/" || pathname === "/affiliate") return "marketing";
   if (
     pathname === "/legal/terms" ||
     pathname === "/legal/privacy" ||

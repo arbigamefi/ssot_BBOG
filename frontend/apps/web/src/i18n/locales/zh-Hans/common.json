@@ -55,6 +55,14 @@
         "title": "领取",
         "description": "查看可领取 XP、协议费用、holdback 桶和领取交易准备状态。"
       },
+      "portfolioReferral": {
+        "title": "推广",
+        "description": "生成推广链接、查看 first-touch 绑定，以及推广奖励桶。"
+      },
+      "affiliate": {
+        "title": "推广计划",
+        "description": "分享钱包原生赌场房间，并通过链上 XP 账本结算推广奖励。"
+      },
       "earn": {
         "title": "赚取",
         "description": "查看资金池存款、提款、储备状态和 LP 风险控制。"
@@ -1405,6 +1413,65 @@
         "claimedFees": "已领取 {amount} {symbol} 协议费用",
         "protocolFeeFailed": "协议费用领取失败"
       }
+    },
+    "referral": {
+      "common": {
+        "pending": "待连接"
+      },
+      "state": {
+        "noRelease": {
+          "title": "推广",
+          "description": "当前链没有内嵌 release。"
+        }
+      },
+      "errors": {
+        "walletUnavailable": "钱包不可用",
+        "poolUnavailable": "资金池不可用"
+      },
+      "hero": {
+        "eyebrow": "推广账户",
+        "title": "推广奖励。",
+        "description": "生成赌场推广链接，查看不可变的 first-touch 绑定，并检查由 Bank 账本结算的 XP 奖励桶。",
+        "connected": "已连接钱包"
+      },
+      "link": {
+        "title": "你的推广链接",
+        "description": "分享这个链接给玩家。玩家下注时，GameHub 会把 affiliate hint 传入 first-touch 绑定和 skyline pricing。",
+        "learn": "模型",
+        "connect": "连接钱包以生成推广链接。",
+        "copy": "复制链接",
+        "copied": "已复制"
+      },
+      "metrics": {
+        "accrued": {
+          "label": "已累积",
+          "detail": "当前可从 Bank 账本领取的 XP。"
+        },
+        "locked": {
+          "label": "锁定",
+          "detail": "满足解锁条件前不能提取的 XP。"
+        },
+        "holdback": {
+          "label": "Holdback",
+          "detail": "同步后可能变为可释放的奖励缓冲。"
+        }
+      },
+      "binding": {
+        "eyebrow": "First touch",
+        "title": "绑定状态",
+        "description": "玩家只能绑定一次。如果当前页面带有有效 ref 参数，且尚未绑定 referrer，钱包可以显式完成绑定。",
+        "current": "当前",
+        "pending": "待绑定",
+        "none": "未绑定",
+        "noPending": "无待绑定 ref",
+        "bind": "绑定 referrer",
+        "binding": "绑定中",
+        "claims": "打开领取"
+      },
+      "toast": {
+        "bound": "Referrer 已绑定",
+        "bindFailed": "Referrer 绑定失败"
+      }
     }
   },
   "earn": {
@@ -1959,6 +2026,57 @@
             "title": "司法辖区与合规",
             "body": "用户必须自行判断是否可以在其司法辖区使用前端、参与房间、参与体育市场或 LP 活动。"
           }
+        }
+      }
+    }
+  },
+  "affiliate": {
+    "hero": {
+      "eyebrow": "推广增长",
+      "title": "分享赌场，证明留在链上。",
+      "description": "ArbiGameFi 使用 first-touch 推广绑定和 Bank 侧 XP 桶，让推广奖励绑定真实的钱包原生投注，而不是表格对账。",
+      "primary": "打开骰子",
+      "secondary": "推广控制台"
+    },
+    "linkCard": {
+      "eyebrow": "推广链接",
+      "title": "一个链接进入房间",
+      "connect": "连接钱包以生成你的推广链接。",
+      "copy": "复制链接",
+      "copied": "已复制",
+      "wallet": "钱包 {wallet}",
+      "walletPending": "钱包未连接"
+    },
+    "pillars": {
+      "firstTouch": {
+        "title": "First-touch 绑定",
+        "body": "有效 referral hint 会随赌场下注传入。一旦绑定，关系不可变。"
+      },
+      "xp": {
+        "title": "XP 桶",
+        "body": "奖励以已累积、锁定和 holdback 余额显示在当前 Bank 账本上。"
+      },
+      "chain": {
+        "title": "可审计结算",
+        "body": "推广价值绑定链上玩法、赔付和领取状态，而不是站外报表。"
+      }
+    },
+    "flow": {
+      "eyebrow": "工作方式",
+      "title": "面向 B2C 分发。",
+      "body": "MVP 增长路径保持简单：分享房间、绑定玩家，然后由 Bank 账本展示可领取奖励。",
+      "steps": {
+        "0": {
+          "title": "分享",
+          "body": "用你的钱包生成赌场链接，直接把玩家带到游戏房间。"
+        },
+        "1": {
+          "title": "绑定",
+          "body": "玩家下注时，GameHub 使用 ref hint 尝试完成 first-touch 绑定。"
+        },
+        "2": {
+          "title": "领取",
+          "body": "在账户组合中查看 XP 桶，并领取可用奖励。"
         }
       }
     }
