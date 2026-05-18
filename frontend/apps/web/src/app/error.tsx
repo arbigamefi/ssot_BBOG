@@ -27,9 +27,9 @@ export default function ErrorPage({
           <CardTitle>{t("app.errors.boundaryTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">{t("app.errors.unexpected")}</p>
+          <p className="text-sm text-fg-muted">{t("app.errors.unexpected")}</p>
           {error.digest && (
-            <p className="mt-2 font-mono text-xs text-muted-foreground">
+            <p className="mt-2 font-mono text-xs text-fg-muted">
               {t("app.errors.errorId", { digest: error.digest })}
             </p>
           )}

@@ -195,7 +195,7 @@ export function GamesListClient() {
       <div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-gradient-to-b from-brand-soft to-transparent" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[36rem] bg-[url('/textures/noise.svg')] opacity-10 mix-blend-overlay" />
 
-      <section className="relative border-b border-border-soft py-12 md:py-16">
+      <section className="relative border-b border-border-soft py-10 md:py-12">
         <header className="flex flex-col gap-10 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand/30 bg-brand-soft px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-brand">
@@ -293,7 +293,7 @@ export function GamesListClient() {
                 href={room.href}
                 data-testid="room-entry-card"
                 data-slug={room.slug}
-                className="group relative flex min-h-[24rem] flex-col overflow-hidden rounded-xl border border-border bg-surface-1 shadow-e1 transition duration-300 hover:-translate-y-1 hover:border-brand/50 hover:bg-surface-2 hover:shadow-glow"
+                className="group relative flex min-h-[21rem] flex-col overflow-hidden rounded-xl border border-border bg-surface-1 shadow-e1 transition duration-300 hover:-translate-y-1 hover:border-brand/50 hover:bg-surface-2 hover:shadow-glow"
               >
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-brand-soft to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
@@ -308,13 +308,13 @@ export function GamesListClient() {
                   {copy.badge}
                 </div>
 
-                <div className="relative z-10 mt-10 flex flex-1 items-center justify-center p-6">
+                <div className="relative z-10 mt-8 flex flex-1 items-center justify-center p-5">
                   {ROOM_ICON_MAP[room.slug] ?? (
                     <div className="text-3xl font-bold text-fg-subtle">[{room.slug}]</div>
                   )}
                 </div>
 
-                <div className="relative z-20 border-t border-border-soft bg-surface-2/90 p-6 backdrop-blur">
+                <div className="relative z-20 border-t border-border-soft bg-surface-2/90 p-5 backdrop-blur">
                   <div className="mb-3 text-[10px] font-bold uppercase tracking-widest text-accent">
                     {copy.tag}
                   </div>

@@ -147,7 +147,7 @@ export function DiceCubeDisplay({
   resultNum: number | null;
 }) {
   return (
-    <div className="relative mb-24 flex flex-col items-center z-10 scale-90 md:scale-100">
+    <div className="relative z-10 flex flex-col items-center scale-90 md:scale-100">
       <div className="absolute -bottom-8 h-12 w-48 rounded-full bg-brand/25 blur-[40px] pointer-events-none" />
       <div className="relative h-40 w-40" style={{ perspective: "1500px" }}>
         <div

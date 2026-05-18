@@ -25,7 +25,7 @@ export function ConnectWalletPrompt({ action }: { action?: string }) {
         <button
           type="button"
           onClick={openConnectModal}
-          className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+          className="inline-flex items-center justify-center rounded-md bg-brand px-4 py-2 text-sm font-bold text-fg-inverse transition-colors hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         >
           {t("connectWalletButton")}
         </button>

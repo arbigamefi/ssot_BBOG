@@ -42,8 +42,8 @@ export function BetAmountSection({
   };
 
   return (
-    <div className="mb-6">
-      <label className="mb-2 block text-[10px] font-bold uppercase tracking-widest text-fg-subtle">
+    <div className="mb-4">
+      <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-fg-subtle">
         {t("casino.room.betPanel.amount.label")}
       </label>
       <div
@@ -52,8 +52,8 @@ export function BetAmountSection({
           isPending ? "opacity-50" : "focus-within:border-brand/40"
         )}
       >
-        <div className="flex items-center px-4 pt-2">
-          <CurrencyDollarIcon className="h-6 w-6 text-fg-subtle" />
+        <div className="flex items-center px-4 pt-1">
+          <CurrencyDollarIcon className="h-5 w-5 text-fg-subtle" />
           <input
             type="text"
             inputMode="numeric"
@@ -65,7 +65,7 @@ export function BetAmountSection({
               onBetAmountChange(parseWholeUnitInput(event.target.value, { min: 1 }))
             }
             disabled={isPending}
-            className="w-full border-none bg-transparent pr-2 text-right font-mono text-4xl text-fg outline-none"
+            className="w-full border-none bg-transparent pr-2 text-right font-mono text-3xl text-fg outline-none"
           />
         </div>
         <div className="flex gap-1 rounded-lg border border-border-soft bg-surface-1 p-1">
@@ -117,7 +117,7 @@ export function BetRollsSection({
   const t = useTranslations();
 
   return (
-    <div className="mb-6">
+    <div className="mb-4">
       <div className="mb-2 flex items-center justify-between">
         <label className="text-[10px] font-bold uppercase tracking-widest text-fg-subtle">
           {t("casino.room.betPanel.rolls.label")}
@@ -138,7 +138,7 @@ export function BetRollsSection({
             onClick={() => onBetCountChange(count)}
             disabled={isPending}
             className={cn(
-              "flex-1 rounded-lg border py-2.5 text-xs font-black uppercase tracking-wide transition-colors",
+              "flex-1 rounded-lg border py-2 text-xs font-black uppercase tracking-wide transition-colors",
               betCount === count
                 ? "border-brand bg-brand text-fg-inverse shadow-glow"
                 : "border-border bg-surface-1 text-fg-subtle hover:border-brand/40 hover:bg-surface-2 hover:text-fg"
@@ -183,7 +183,7 @@ export function BetAdvancedSection({
   const t = useTranslations();
 
   return (
-    <div className="mb-6">
+    <div className="mb-4">
       <button
         type="button"
         onClick={() => onAdvancedOpenChange(!advancedOpen)}
@@ -265,28 +265,28 @@ export function BetPayoutSummary({
   const t = useTranslations();
 
   return (
-    <div className="mb-auto grid grid-cols-2 gap-4">
-      <div className="flex flex-col rounded-lg border border-border bg-surface-0 p-4 shadow-inner-e1">
+    <div className="mb-4 grid grid-cols-3 gap-2">
+      <div className="flex flex-col rounded-lg border border-border bg-surface-0 p-3 shadow-inner-e1">
         <span className="mb-1 flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-fg-subtle">
           {t("casino.room.betPanel.summary.multiplier")}{" "}
           <InformationCircleIcon className="h-3 w-3" />
         </span>
-        <span className="font-mono text-2xl font-bold text-brand transition-colors">
+        <span className="font-mono text-xl font-bold text-brand transition-colors">
           {multiplier.toFixed(2)}x
         </span>
       </div>
-      <div className="flex flex-col rounded-lg border border-border bg-surface-0 p-4 shadow-inner-e1">
+      <div className="flex flex-col rounded-lg border border-border bg-surface-0 p-3 shadow-inner-e1">
         <span className="mb-1 flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-fg-subtle">
           {t("casino.room.betPanel.summary.winChance")} <ChartBarIcon className="h-3 w-3" />
         </span>
-        <span className="font-mono text-2xl font-bold text-fg">{winChance.toFixed(2)}%</span>
+        <span className="font-mono text-xl font-bold text-fg">{winChance.toFixed(2)}%</span>
       </div>
-      <div className="col-span-2 flex select-none flex-col rounded-lg border border-border bg-surface-0 p-4 shadow-inner-e1">
+      <div className="flex select-none flex-col rounded-lg border border-border bg-surface-0 p-3 shadow-inner-e1">
         <span className="mb-1 text-[10px] font-bold uppercase tracking-widest text-fg-subtle">
           {t("casino.room.betPanel.summary.expectedPayout")}
         </span>
-        <span className="flex items-baseline gap-2 font-mono text-3xl font-extrabold text-brand">
-          {expectedPayout.toFixed(2)} <span className="text-sm font-bold text-fg-subtle">USDC</span>
+        <span className="flex items-baseline gap-1 font-mono text-xl font-extrabold text-brand">
+          {expectedPayout.toFixed(2)} <span className="text-xs font-bold text-fg-subtle">USDC</span>
         </span>
       </div>
     </div>

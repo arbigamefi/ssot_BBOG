@@ -134,9 +134,9 @@ export function Toaster({ className }: ToasterProps) {
             toneClassName[toastItem.tone]
           )}
         >
-          <div className="text-[15px] font-bold text-fg">{toastItem.message}</div>
+          <div className="text-sm font-bold text-fg">{toastItem.message}</div>
           {toastItem.description ? (
-            <div className="mt-1 text-[13px] leading-relaxed text-fg-muted">
+            <div className="mt-1 text-xs leading-relaxed text-fg-muted">
               {toastItem.description}
             </div>
           ) : null}

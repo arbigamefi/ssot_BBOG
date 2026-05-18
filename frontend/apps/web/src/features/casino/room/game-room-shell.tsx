@@ -21,14 +21,14 @@ export function GameRoomShell({
   const t = useTranslations();
 
   return (
-    <section className="flex min-h-[calc(100vh-8rem)] flex-col gap-6">
-      <header className="flex flex-col gap-5 border-b border-border-soft pb-6 md:flex-row md:items-end md:justify-between">
+    <section className="flex min-h-[calc(100vh-8rem)] flex-col gap-4">
+      <header className="flex flex-col gap-3 border-b border-border-soft pb-4 md:flex-row md:items-end md:justify-between">
         <div>
           <div className="flex items-center gap-3 text-xs font-semibold uppercase text-accent">
             <span className="h-2.5 w-2.5 rounded-full bg-accent shadow-glow" />
             {t("casino.room.shell.liveModule")}
           </div>
-          <h1 className="mt-3 text-4xl font-semibold text-fg md:text-5xl">{gameName}</h1>
+          <h1 className="mt-1 text-4xl font-semibold text-fg md:text-5xl">{gameName}</h1>
         </div>
 
         <dl className="grid grid-cols-2 gap-3 md:min-w-72">
@@ -47,8 +47,8 @@ export function GameRoomShell({
         </dl>
       </header>
 
-      <div className="grid overflow-hidden rounded-xl border border-border bg-surface-1 shadow-e2 lg:min-h-[44rem] lg:grid-cols-[28rem_1fr]">
-        <aside className="relative z-20 border-b border-border bg-surface-2 p-5 lg:border-b-0 lg:border-r lg:p-6">
+      <div className="grid overflow-hidden rounded-xl border border-border bg-surface-1 shadow-e2 lg:min-h-[38rem] lg:grid-cols-[28rem_1fr]">
+        <aside className="relative z-20 border-b border-border bg-surface-2 p-4 lg:border-b-0 lg:border-r lg:p-5">
           {leftPaneContent}
         </aside>
 

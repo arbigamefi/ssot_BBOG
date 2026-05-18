@@ -24,8 +24,8 @@ export function DiceRangeControl({
   const t = useTranslations();
 
   return (
-    <div className="absolute bottom-12 w-full max-w-3xl px-6 z-20">
-      <div className="relative flex flex-col gap-8 overflow-hidden rounded-xl border border-border bg-surface-1/95 p-8 shadow-e3 backdrop-blur-3xl">
+    <div className="absolute bottom-8 z-20 w-full max-w-3xl px-6">
+      <div className="relative flex flex-col gap-6 overflow-hidden rounded-xl border border-border bg-surface-1/95 p-6 shadow-e3 backdrop-blur-3xl">
         <div className="absolute inset-0 bg-gradient-to-t from-brand/10 to-transparent pointer-events-none" />
 
         <div className="flex justify-between items-center relative z-10 px-4">
@@ -70,7 +70,7 @@ export function DiceRangeControl({
           </div>
         </div>
 
-        <div className="relative h-28 flex items-center group mt-4 mb-2 mx-4 z-20">
+        <div className="group relative z-20 mx-4 mb-2 mt-2 flex h-24 items-center">
           <div className="absolute inset-x-0 h-6 overflow-hidden rounded-full border-[3px] border-border-soft bg-surface-0 shadow-e1">
             <div
               className={cn(

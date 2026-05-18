@@ -153,9 +153,9 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
     <button
       type="button"
       className={cn(
-        "inline-flex items-center justify-center rounded-md p-2 text-sm transition-colors",
-        "hover:bg-accent hover:text-accent-foreground",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "inline-flex items-center justify-center rounded-md p-2 text-sm text-fg-muted transition-colors duration-200",
+        "hover:bg-surface-2 hover:text-fg",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
         className
       )}
       onClick={cycleTheme}

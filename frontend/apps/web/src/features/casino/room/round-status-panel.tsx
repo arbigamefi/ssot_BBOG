@@ -107,7 +107,7 @@ export function CasinoRoundStatusPanel({
   return (
     <div
       className={cn(
-        "mb-4 rounded-lg border bg-surface-1 p-4 text-sm shadow-inner-e1",
+        "mb-3 rounded-lg border bg-surface-1 p-3 text-sm shadow-inner-e1",
         active ? "border-brand/30" : "border-border"
       )}
     >
@@ -133,7 +133,7 @@ export function CasinoRoundStatusPanel({
         </span>
       </div>
 
-      <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
+      <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
         <div className="rounded-md border border-border bg-surface-2 p-2">
           <p className="text-fg-subtle">{t("casino.room.roundStatus.metrics.vrfEstimate")}</p>
           <p className="mt-1 font-mono font-bold text-fg">{formatNativeFee(quote)}</p>

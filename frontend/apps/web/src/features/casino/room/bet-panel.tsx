@@ -193,7 +193,7 @@ export function GameRoomBetPanel({
 
   return (
     <>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between">
         <span className="flex items-center gap-2 text-sm font-bold text-fg-muted">
           <WalletIcon className="h-4 w-4" /> {t("casino.room.betPanel.walletBalance")}
         </span>
@@ -258,6 +258,15 @@ export function GameRoomBetPanel({
         </div>
       )}
 
+      <PlaceBetButton
+        gameSlug={game.slug}
+        hasAccount={hasAccount}
+        isPending={isPending}
+        winChance={winChance}
+        state={state}
+        onClick={onPlaceBet}
+      />
+
       <CasinoRoundStatusPanel
         phase={roundPhase}
         quote={vrfQuote}
@@ -269,15 +278,6 @@ export function GameRoomBetPanel({
         onManualSettle={onManualSettle}
         manualRefundAvailable={manualRefundAvailable}
         onManualRefund={onManualRefund}
-      />
-
-      <PlaceBetButton
-        gameSlug={game.slug}
-        hasAccount={hasAccount}
-        isPending={isPending}
-        winChance={winChance}
-        state={state}
-        onClick={onPlaceBet}
       />
     </>
   );

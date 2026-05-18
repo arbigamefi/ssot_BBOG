@@ -26,7 +26,7 @@ export function DiceStage({
   onTargetChange: (target: number) => void;
 }) {
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center p-8 z-10 overflow-hidden">
+    <div className="absolute inset-0 z-10 flex flex-col items-center justify-start overflow-hidden px-6 pb-8 pt-12 md:pt-16">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,hsl(var(--brand)/0.05)_0%,transparent_60%)]" />
       <DiceCubeDisplay isPending={isPending} showResult={showResult} resultNum={resultNum} />
       <DiceRangeControl

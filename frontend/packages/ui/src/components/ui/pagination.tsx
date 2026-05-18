@@ -32,20 +32,28 @@ export function Pagination({ page, pageCount, onPageChange, className }: Paginat
         disabled={page <= 1}
         onClick={() => onPageChange(page - 1)}
         className={cn(
-          "inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-3 text-sm font-medium transition-colors",
-          "hover:bg-accent hover:text-accent-foreground",
-          "disabled:pointer-events-none disabled:opacity-50",
+          "inline-flex h-9 items-center justify-center rounded-md border border-border bg-surface-1 px-3 text-sm font-semibold text-fg transition-colors duration-200",
+          "hover:border-brand/40 hover:bg-surface-2 hover:text-fg",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+          "disabled:pointer-events-none disabled:border-border-soft disabled:bg-surface-0 disabled:text-fg-subtle"
         )}
         aria-label="Previous page"
         data-testid="pagination-prev"
       >
-        <svg className="mr-1 h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden="true">
+        <svg
+          className="mr-1 h-4 w-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={1.5}
+          stroke="currentColor"
+          aria-hidden="true"
+        >
           <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
         </svg>
         Prev
       </button>
 
-      <span className="text-sm text-muted-foreground" data-testid="pagination-info">
+      <span className="text-sm font-medium text-fg-muted" data-testid="pagination-info">
         {page} / {pageCount}
       </span>
 
@@ -54,15 +62,23 @@ export function Pagination({ page, pageCount, onPageChange, className }: Paginat
         disabled={page >= pageCount}
         onClick={() => onPageChange(page + 1)}
         className={cn(
-          "inline-flex h-9 items-center justify-center rounded-md border border-input bg-background px-3 text-sm font-medium transition-colors",
-          "hover:bg-accent hover:text-accent-foreground",
-          "disabled:pointer-events-none disabled:opacity-50",
+          "inline-flex h-9 items-center justify-center rounded-md border border-border bg-surface-1 px-3 text-sm font-semibold text-fg transition-colors duration-200",
+          "hover:border-brand/40 hover:bg-surface-2 hover:text-fg",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+          "disabled:pointer-events-none disabled:border-border-soft disabled:bg-surface-0 disabled:text-fg-subtle"
         )}
         aria-label="Next page"
         data-testid="pagination-next"
       >
         Next
-        <svg className="ml-1 h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden="true">
+        <svg
+          className="ml-1 h-4 w-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          strokeWidth={1.5}
+          stroke="currentColor"
+          aria-hidden="true"
+        >
           <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
         </svg>
       </button>
@@ -96,7 +112,10 @@ export interface UsePaginationResult {
  * Hook to manage pagination state with automatic clamping.
  * Returns page, pageCount, startIndex, endIndex for slicing arrays.
  */
-export function usePagination({ totalItems, pageSize = 20 }: UsePaginationOptions): UsePaginationResult {
+export function usePagination({
+  totalItems,
+  pageSize = 20
+}: UsePaginationOptions): UsePaginationResult {
   const [page, setPage] = React.useState(1);
   const pageCount = Math.max(1, Math.ceil(totalItems / pageSize));
 
