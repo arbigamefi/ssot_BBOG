@@ -602,7 +602,8 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         const ev = tx.extractEventArgs({
           abi: GAME_HUB_ABI,
           receiptLogs: receipt.logs as any,
-          eventName: "BetPlaced"
+          eventName: "BetPlaced",
+          address: gameHubAddress
         });
         const first = ev[0];
         const rawBetId = first?.positionId ?? first?.betId;
@@ -630,7 +631,8 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         const ev = tx.extractEventArgs({
           abi: GAME_HUB_ABI,
           receiptLogs: receipt.logs as any,
-          eventName: "BetPlaced"
+          eventName: "BetPlaced",
+          address: gameHubAddress
         });
         const first = ev[0];
         const rawBetId = first?.positionId ?? first?.betId;

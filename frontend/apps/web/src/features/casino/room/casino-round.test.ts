@@ -4,7 +4,8 @@ import {
   deriveCasinoRoundPhase,
   formatNativeFee,
   getCasinoRoundReadErrorMessage,
-  isBetNotFoundError
+  isBetNotFoundError,
+  shouldDeferCasinoRoundReadError
 } from "./casino-round";
 
 describe("casino round helpers", () => {
@@ -86,5 +87,29 @@ describe("casino round helpers", () => {
         betNotFoundFallback: "This round was not found on the current GameHub."
       })
     ).toBe("Unable to read the live round state.");
+  });
+
+  it("defers early BetNotFound reads while RPC state catches up", () => {
+    const rawViemError = new Error(
+      'The contract function "getBet" reverted. Error: BetNotFound(uint256 positionId) (5)'
+    );
+
+    expect(
+      shouldDeferCasinoRoundReadError({
+        error: rawViemError,
+        startedAt: 10_000,
+        now: 20_000,
+        graceMs: 15_000
+      })
+    ).toBe(true);
+
+    expect(
+      shouldDeferCasinoRoundReadError({
+        error: rawViemError,
+        startedAt: 10_000,
+        now: 30_001,
+        graceMs: 15_000
+      })
+    ).toBe(false);
   });
 });

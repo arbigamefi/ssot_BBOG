@@ -44,5 +44,5 @@ export default async function GameRoomPage({ params }: { params: Promise<{ slug:
     notFound();
   }
 
-  return <GamePageClient slug={slug} />;
+  return <GamePageClient key={slug} slug={slug} />;
 }

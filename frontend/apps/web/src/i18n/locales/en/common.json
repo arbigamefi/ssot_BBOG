@@ -123,7 +123,7 @@
       "errors": {
         "quoteFailed": "Unable to estimate VRF fee.",
         "readRoundFailed": "Unable to read the live round state.",
-        "roundNotFound": "This round was not found on the current GameHub. Refresh the page, then place a new bet.",
+        "roundNotFound": "This round is not visible on the current GameHub yet. Check the transaction before placing another bet.",
         "manualSettleFailed": "Manual settlement failed.",
         "refundFailed": "Refund failed.",
         "sdkNotReady": "SSOT SDK is not ready. Please connect your wallet.",

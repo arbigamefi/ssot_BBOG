@@ -123,7 +123,7 @@
       "errors": {
         "quoteFailed": "无法估算 VRF 费用。",
         "readRoundFailed": "无法读取最新回合状态。",
-        "roundNotFound": "当前 GameHub 上没有找到这个回合。请刷新页面后重新下注。",
+        "roundNotFound": "当前 GameHub 暂时还没有读到这个回合。再次下注前请先核对交易记录。",
         "manualSettleFailed": "手动结算失败。",
         "refundFailed": "退款失败。",
         "sdkNotReady": "SSOT SDK 尚未就绪。请先连接钱包。",

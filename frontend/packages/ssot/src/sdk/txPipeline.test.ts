@@ -1,13 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { BaseError, type Hex, type Address } from "viem";
-import { createTxPipeline, isTransientError, type JournalSink, type TxJournalEntry } from "./txPipeline";
+import { BaseError, parseEventLogs, type Hex, type Address } from "viem";
+import {
+  createTxPipeline,
+  isTransientError,
+  type JournalSink,
+  type TxJournalEntry
+} from "./txPipeline";
 
 // ——— Mock viem parseEventLogs ———
 vi.mock("viem", async (importOriginal) => {
   const orig = (await importOriginal()) as any;
   return {
     ...orig,
-    parseEventLogs: vi.fn(() => [{ args: { betId: 42n } }]),
+    parseEventLogs: vi.fn(() => [{ args: { betId: 42n } }])
   };
 });
 
@@ -21,14 +26,14 @@ function mockPublicClient(overrides?: Partial<Record<string, unknown>>) {
   return {
     simulateContract: vi.fn().mockResolvedValue({ request: { mock: true } }),
     waitForTransactionReceipt: vi.fn().mockResolvedValue(RECEIPT),
-    ...overrides,
+    ...overrides
   } as any;
 }
 
 function mockWalletClient(overrides?: Partial<Record<string, unknown>>) {
   return {
     writeContract: vi.fn().mockResolvedValue(TX_HASH),
-    ...overrides,
+    ...overrides
   } as any;
 }
 
@@ -39,7 +44,7 @@ const BASE_PARAMS = {
   address: "0x0000000000000000000000000000000000000001" as Address,
   abi: [] as any,
   functionName: "testFn",
-  args: [] as readonly unknown[],
+  args: [] as readonly unknown[]
 };
 
 /** Create a BaseError that looks like an HttpRequestError */
@@ -75,7 +80,7 @@ describe("createTxPipeline", () => {
         ...BASE_PARAMS,
         publicClient: pub,
         walletClient: wal,
-        account: ACCOUNT,
+        account: ACCOUNT
       });
 
       expect(result.ok).toBe(true);
@@ -94,7 +99,7 @@ describe("createTxPipeline", () => {
         ...BASE_PARAMS,
         publicClient: pub,
         walletClient: wal,
-        account: ACCOUNT,
+        account: ACCOUNT
       });
 
       expect(journal).toHaveLength(2);
@@ -106,7 +111,7 @@ describe("createTxPipeline", () => {
 
     it("returns error result when simulate rejects", async () => {
       const pub = mockPublicClient({
-        simulateContract: vi.fn().mockRejectedValue(new Error("simulate fail")),
+        simulateContract: vi.fn().mockRejectedValue(new Error("simulate fail"))
       });
       const wal = mockWalletClient();
       const pipeline = createTxPipeline({ journal: journalSink });
@@ -115,7 +120,7 @@ describe("createTxPipeline", () => {
         ...BASE_PARAMS,
         publicClient: pub,
         walletClient: wal,
-        account: ACCOUNT,
+        account: ACCOUNT
       });
 
       expect(result.ok).toBe(false);
@@ -125,7 +130,7 @@ describe("createTxPipeline", () => {
 
     it("records failed journal entry on error", async () => {
       const pub = mockPublicClient({
-        simulateContract: vi.fn().mockRejectedValue(new Error("boom")),
+        simulateContract: vi.fn().mockRejectedValue(new Error("boom"))
       });
       const wal = mockWalletClient();
       const pipeline = createTxPipeline({ journal: journalSink });
@@ -134,7 +139,7 @@ describe("createTxPipeline", () => {
         ...BASE_PARAMS,
         publicClient: pub,
         walletClient: wal,
-        account: ACCOUNT,
+        account: ACCOUNT
       });
 
       expect(journal).toHaveLength(1);
@@ -152,12 +157,10 @@ describe("createTxPipeline", () => {
         publicClient: pub,
         walletClient: wal,
         account: ACCOUNT,
-        value: 100n,
+        value: 100n
       });
 
-      expect(pub.simulateContract).toHaveBeenCalledWith(
-        expect.objectContaining({ value: 100n })
-      );
+      expect(pub.simulateContract).toHaveBeenCalledWith(expect.objectContaining({ value: 100n }));
     });
   });
 
@@ -171,7 +174,7 @@ describe("createTxPipeline", () => {
       const result = await pipeline.writeNoSimulate({
         ...BASE_PARAMS,
         publicClient: pub,
-        walletClient: wal,
+        walletClient: wal
       });
 
       expect(result.ok).toBe(true);
@@ -188,7 +191,7 @@ describe("createTxPipeline", () => {
       await pipeline.writeNoSimulate({
         ...BASE_PARAMS,
         publicClient: pub,
-        walletClient: wal,
+        walletClient: wal
       });
 
       expect(journal).toHaveLength(2);
@@ -199,14 +202,14 @@ describe("createTxPipeline", () => {
     it("returns error result when writeContract rejects", async () => {
       const pub = mockPublicClient();
       const wal = mockWalletClient({
-        writeContract: vi.fn().mockRejectedValue(new Error("user rejected")),
+        writeContract: vi.fn().mockRejectedValue(new Error("user rejected"))
       });
       const pipeline = createTxPipeline({ journal: journalSink });
 
       const result = await pipeline.writeNoSimulate({
         ...BASE_PARAMS,
         publicClient: pub,
-        walletClient: wal,
+        walletClient: wal
       });
 
       expect(result.ok).toBe(false);
@@ -218,7 +221,7 @@ describe("createTxPipeline", () => {
   describe("on-chain revert detection", () => {
     it("simulateAndWrite returns ok:false with TX_REVERTED when receipt.status is reverted", async () => {
       const pub = mockPublicClient({
-        waitForTransactionReceipt: vi.fn().mockResolvedValue(REVERTED_RECEIPT),
+        waitForTransactionReceipt: vi.fn().mockResolvedValue(REVERTED_RECEIPT)
       });
       const wal = mockWalletClient();
       const pipeline = createTxPipeline({ journal: journalSink, config: { minIntervalMs: 0 } });
@@ -227,7 +230,7 @@ describe("createTxPipeline", () => {
         ...BASE_PARAMS,
         publicClient: pub,
         walletClient: wal,
-        account: ACCOUNT,
+        account: ACCOUNT
       });
 
       expect(result.ok).toBe(false);
@@ -239,7 +242,7 @@ describe("createTxPipeline", () => {
 
     it("simulateAndWrite journals submitted → failed on revert", async () => {
       const pub = mockPublicClient({
-        waitForTransactionReceipt: vi.fn().mockResolvedValue(REVERTED_RECEIPT),
+        waitForTransactionReceipt: vi.fn().mockResolvedValue(REVERTED_RECEIPT)
       });
       const wal = mockWalletClient();
       const pipeline = createTxPipeline({ journal: journalSink, config: { minIntervalMs: 0 } });
@@ -248,7 +251,7 @@ describe("createTxPipeline", () => {
         ...BASE_PARAMS,
         publicClient: pub,
         walletClient: wal,
-        account: ACCOUNT,
+        account: ACCOUNT
       });
 
       expect(journal).toHaveLength(2);
@@ -262,7 +265,7 @@ describe("createTxPipeline", () => {
 
     it("writeNoSimulate returns ok:false with TX_REVERTED when receipt.status is reverted", async () => {
       const pub = mockPublicClient({
-        waitForTransactionReceipt: vi.fn().mockResolvedValue(REVERTED_RECEIPT),
+        waitForTransactionReceipt: vi.fn().mockResolvedValue(REVERTED_RECEIPT)
       });
       const wal = mockWalletClient();
       const pipeline = createTxPipeline({ journal: journalSink, config: { minIntervalMs: 0 } });
@@ -270,7 +273,7 @@ describe("createTxPipeline", () => {
       const result = await pipeline.writeNoSimulate({
         ...BASE_PARAMS,
         publicClient: pub,
-        walletClient: wal,
+        walletClient: wal
       });
 
       expect(result.ok).toBe(false);
@@ -281,7 +284,7 @@ describe("createTxPipeline", () => {
 
     it("writeNoSimulate journals submitted → failed on revert", async () => {
       const pub = mockPublicClient({
-        waitForTransactionReceipt: vi.fn().mockResolvedValue(REVERTED_RECEIPT),
+        waitForTransactionReceipt: vi.fn().mockResolvedValue(REVERTED_RECEIPT)
       });
       const wal = mockWalletClient();
       const pipeline = createTxPipeline({ journal: journalSink, config: { minIntervalMs: 0 } });
@@ -289,7 +292,7 @@ describe("createTxPipeline", () => {
       await pipeline.writeNoSimulate({
         ...BASE_PARAMS,
         publicClient: pub,
-        walletClient: wal,
+        walletClient: wal
       });
 
       expect(journal).toHaveLength(2);
@@ -309,11 +312,33 @@ describe("createTxPipeline", () => {
       const args = pipeline.extractEventArgs({
         abi: [] as any,
         receiptLogs: [],
-        eventName: "BetPlaced",
+        eventName: "BetPlaced"
       });
 
       // Our mock returns [{ args: { betId: 42n } }]
       expect(args).toEqual([{ betId: 42n }]);
+    });
+
+    it("filters event logs to the expected emitter address", () => {
+      const pipeline = createTxPipeline();
+      const target = "0x00000000000000000000000000000000000000aa" as Address;
+      const ignored = "0x00000000000000000000000000000000000000bb" as Address;
+      const targetLog = { address: target, data: "0x" as Hex, topics: [] as Hex[] };
+      const ignoredLog = { address: ignored, data: "0x" as Hex, topics: [] as Hex[] };
+
+      pipeline.extractEventArgs({
+        abi: [] as any,
+        receiptLogs: [ignoredLog, targetLog],
+        eventName: "BetPlaced",
+        address: target
+      });
+
+      expect(parseEventLogs).toHaveBeenCalledWith(
+        expect.objectContaining({
+          logs: [targetLog],
+          eventName: "BetPlaced"
+        })
+      );
     });
   });
 
@@ -328,7 +353,7 @@ describe("createTxPipeline", () => {
         ...BASE_PARAMS,
         publicClient: pub,
         walletClient: wal,
-        account: ACCOUNT,
+        account: ACCOUNT
       });
 
       expect(result.ok).toBe(true);
@@ -340,19 +365,19 @@ describe("createTxPipeline", () => {
     it("simulateAndWrite returns TX_TIMEOUT when receipt exceeds timeout", async () => {
       const pub = mockPublicClient({
         // waitForTransactionReceipt never resolves (hangs forever)
-        waitForTransactionReceipt: vi.fn().mockReturnValue(new Promise(() => {})),
+        waitForTransactionReceipt: vi.fn().mockReturnValue(new Promise(() => {}))
       });
       const wal = mockWalletClient();
       const pipeline = createTxPipeline({
         journal: journalSink,
-        config: { receiptTimeoutMs: 50, minIntervalMs: 0 },
+        config: { receiptTimeoutMs: 50, minIntervalMs: 0 }
       });
 
       const result = await pipeline.simulateAndWrite({
         ...BASE_PARAMS,
         publicClient: pub,
         walletClient: wal,
-        account: ACCOUNT,
+        account: ACCOUNT
       });
 
       expect(result.ok).toBe(false);
@@ -369,18 +394,18 @@ describe("createTxPipeline", () => {
 
     it("writeNoSimulate returns TX_TIMEOUT when receipt exceeds timeout", async () => {
       const pub = mockPublicClient({
-        waitForTransactionReceipt: vi.fn().mockReturnValue(new Promise(() => {})),
+        waitForTransactionReceipt: vi.fn().mockReturnValue(new Promise(() => {}))
       });
       const wal = mockWalletClient();
       const pipeline = createTxPipeline({
         journal: journalSink,
-        config: { receiptTimeoutMs: 50, minIntervalMs: 0 },
+        config: { receiptTimeoutMs: 50, minIntervalMs: 0 }
       });
 
       const result = await pipeline.writeNoSimulate({
         ...BASE_PARAMS,
         publicClient: pub,
-        walletClient: wal,
+        walletClient: wal
       });
 
       expect(result.ok).toBe(false);
@@ -396,21 +421,22 @@ describe("createTxPipeline", () => {
   // ——— Retry behavior ———
   describe("retry behavior", () => {
     it("retries transient simulate error then succeeds", async () => {
-      const simMock = vi.fn()
+      const simMock = vi
+        .fn()
         .mockRejectedValueOnce(makeHttpRequestError())
         .mockResolvedValueOnce({ request: { mock: true } });
       const pub = mockPublicClient({ simulateContract: simMock });
       const wal = mockWalletClient();
       const pipeline = createTxPipeline({
         journal: journalSink,
-        config: { maxRetries: 1, retryDelayMs: 10, minIntervalMs: 0 },
+        config: { maxRetries: 1, retryDelayMs: 10, minIntervalMs: 0 }
       });
 
       const result = await pipeline.simulateAndWrite({
         ...BASE_PARAMS,
         publicClient: pub,
         walletClient: wal,
-        account: ACCOUNT,
+        account: ACCOUNT
       });
 
       expect(result.ok).toBe(true);
@@ -423,14 +449,14 @@ describe("createTxPipeline", () => {
       const wal = mockWalletClient();
       const pipeline = createTxPipeline({
         journal: journalSink,
-        config: { maxRetries: 1, retryDelayMs: 10, minIntervalMs: 0 },
+        config: { maxRetries: 1, retryDelayMs: 10, minIntervalMs: 0 }
       });
 
       const result = await pipeline.simulateAndWrite({
         ...BASE_PARAMS,
         publicClient: pub,
         walletClient: wal,
-        account: ACCOUNT,
+        account: ACCOUNT
       });
 
       expect(result.ok).toBe(false);
@@ -443,14 +469,14 @@ describe("createTxPipeline", () => {
       const wal = mockWalletClient();
       const pipeline = createTxPipeline({
         journal: journalSink,
-        config: { maxRetries: 1, retryDelayMs: 10, minIntervalMs: 0 },
+        config: { maxRetries: 1, retryDelayMs: 10, minIntervalMs: 0 }
       });
 
       const result = await pipeline.simulateAndWrite({
         ...BASE_PARAMS,
         publicClient: pub,
         walletClient: wal,
-        account: ACCOUNT,
+        account: ACCOUNT
       });
 
       expect(result.ok).toBe(false);
@@ -467,14 +493,14 @@ describe("createTxPipeline", () => {
       const wal = mockWalletClient();
       const pipeline = createTxPipeline({
         journal: journalSink,
-        config: { maxRetries: 3, retryDelayMs: 10, minIntervalMs: 0 },
+        config: { maxRetries: 3, retryDelayMs: 10, minIntervalMs: 0 }
       });
 
       const result = await pipeline.simulateAndWrite({
         ...BASE_PARAMS,
         publicClient: pub,
         walletClient: wal,
-        account: ACCOUNT,
+        account: ACCOUNT
       });
 
       expect(result.ok).toBe(false);

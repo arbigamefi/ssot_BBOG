@@ -8,6 +8,7 @@ import { formatUnits } from "../../betting/model/units";
 
 export const CASINO_ROUND_MANUAL_SETTLE_DELAY_MS = 30_000;
 export const CASINO_ROUND_SOFT_VRF_TIMEOUT_MS = 60_000;
+export const CASINO_ROUND_READ_RETRY_GRACE_MS = 15_000;
 
 export type CasinoRoundPhase =
   | "idle"
@@ -102,6 +103,20 @@ export function getCasinoRoundReadErrorMessage({
   return isBetNotFoundError(error) ? (betNotFoundFallback ?? fallback) : fallback;
 }
 
+export function shouldDeferCasinoRoundReadError({
+  error,
+  startedAt,
+  now,
+  graceMs = CASINO_ROUND_READ_RETRY_GRACE_MS
+}: {
+  error: unknown;
+  startedAt: number;
+  now: number;
+  graceMs?: number;
+}) {
+  return isBetNotFoundError(error) && now - startedAt < graceMs;
+}
+
 export function useCasinoVrfQuote({
   sdk,
   betCount,
@@ -183,6 +198,7 @@ export function useCasinoRoundWatcher({
     }
 
     let cancelled = false;
+    const startedAt = Date.now();
 
     const poll = async () => {
       try {
@@ -220,15 +236,27 @@ export function useCasinoRoundWatcher({
         }
       } catch (error) {
         if (!cancelled) {
-          setSnapshot((current) => ({
-            ...current,
-            phase: "failed",
-            error: getCasinoRoundReadErrorMessage({
-              error,
-              fallback: readErrorMessage,
-              betNotFoundFallback: betNotFoundErrorMessage
-            })
-          }));
+          const now = Date.now();
+          const deferReadError = shouldDeferCasinoRoundReadError({ error, startedAt, now });
+          setSnapshot((current) => {
+            const keepCurrentRound = Boolean(current.bet) || deferReadError;
+            const phase = keepCurrentRound
+              ? current.phase === "idle" || current.phase === "failed"
+                ? "waiting_vrf"
+                : current.phase
+              : "failed";
+            return {
+              ...current,
+              phase,
+              error: keepCurrentRound
+                ? undefined
+                : getCasinoRoundReadErrorMessage({
+                    error,
+                    fallback: readErrorMessage,
+                    betNotFoundFallback: betNotFoundErrorMessage
+                  })
+            };
+          });
         }
       }
     };

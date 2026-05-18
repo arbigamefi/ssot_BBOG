@@ -44,7 +44,7 @@ const DEFAULT_CONFIG: Required<TxPipelineConfig> = {
   receiptTimeoutMs: 120_000,
   maxRetries: 1,
   retryDelayMs: 2_000,
-  minIntervalMs: 200,
+  minIntervalMs: 200
 };
 
 export interface TxPipeline {
@@ -77,6 +77,7 @@ export interface TxPipeline {
     abi: Abi;
     receiptLogs: { data: Hex; topics: Hex[]; address: Address }[];
     eventName: string;
+    address?: Address;
   }): Array<Record<string, unknown>>;
 }
 
@@ -97,7 +98,10 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export function createTxPipeline(opts?: { journal?: JournalSink; config?: TxPipelineConfig }): TxPipeline {
+export function createTxPipeline(opts?: {
+  journal?: JournalSink;
+  config?: TxPipelineConfig;
+}): TxPipeline {
   const journal = opts?.journal;
   const cfg = { ...DEFAULT_CONFIG, ...opts?.config };
 
@@ -113,7 +117,10 @@ export function createTxPipeline(opts?: { journal?: JournalSink; config?: TxPipe
     lastCallAt = Date.now();
   }
 
-  async function waitReceipt(publicClient: PublicClient, txHash: Hex): Promise<{
+  async function waitReceipt(
+    publicClient: PublicClient,
+    txHash: Hex
+  ): Promise<{
     blockNumber: bigint;
     status: "success" | "reverted";
     logs: any[];
@@ -124,13 +131,20 @@ export function createTxPipeline(opts?: { journal?: JournalSink; config?: TxPipe
     const receiptPromise = publicClient.waitForTransactionReceipt({ hash: txHash });
 
     if (cfg.receiptTimeoutMs <= 0) {
-      return receiptPromise as Promise<{ blockNumber: bigint; status: "success" | "reverted"; logs: any[] }>;
+      return receiptPromise as Promise<{
+        blockNumber: bigint;
+        status: "success" | "reverted";
+        logs: any[];
+      }>;
     }
 
     const timeoutPromise = sleep(cfg.receiptTimeoutMs).then(() => {
-      throw Object.assign(new Error(`Transaction receipt timeout after ${cfg.receiptTimeoutMs}ms`), {
-        name: "TxTimeoutError",
-      });
+      throw Object.assign(
+        new Error(`Transaction receipt timeout after ${cfg.receiptTimeoutMs}ms`),
+        {
+          name: "TxTimeoutError"
+        }
+      );
     });
 
     return Promise.race([receiptPromise, timeoutPromise]) as Promise<{
@@ -145,7 +159,7 @@ export function createTxPipeline(opts?: { journal?: JournalSink; config?: TxPipe
       code: "TX_TIMEOUT",
       message: `Transaction was not confirmed within ${Math.round(cfg.receiptTimeoutMs / 1000)}s. It may still confirm later.`,
       severity: "warning",
-      retryable: true,
+      retryable: true
     };
   }
 
@@ -227,8 +241,9 @@ export function createTxPipeline(opts?: { journal?: JournalSink; config?: TxPipe
       if (receipt.status === "reverted") {
         const error: DomainError = {
           code: "TX_REVERTED",
-          message: "Transaction was mined but reverted on-chain. Gas was consumed but the operation had no effect.",
-          severity: "error",
+          message:
+            "Transaction was mined but reverted on-chain. Gas was consumed but the operation had no effect.",
+          severity: "error"
         };
         journal?.({
           chainId: params.chainId,
@@ -240,7 +255,7 @@ export function createTxPipeline(opts?: { journal?: JournalSink; config?: TxPipe
           createdAt: Date.now(),
           minedAt: Date.now(),
           blockNumber: Number(receipt.blockNumber),
-          errorCode: error.code,
+          errorCode: error.code
         });
         return { txHash, ok: false, error };
       }
@@ -315,8 +330,9 @@ export function createTxPipeline(opts?: { journal?: JournalSink; config?: TxPipe
       if (receipt.status === "reverted") {
         const error: DomainError = {
           code: "TX_REVERTED",
-          message: "Transaction was mined but reverted on-chain. Gas was consumed but the operation had no effect.",
-          severity: "error",
+          message:
+            "Transaction was mined but reverted on-chain. Gas was consumed but the operation had no effect.",
+          severity: "error"
         };
         journal?.({
           chainId: params.chainId,
@@ -328,7 +344,7 @@ export function createTxPipeline(opts?: { journal?: JournalSink; config?: TxPipe
           createdAt: Date.now(),
           minedAt: Date.now(),
           blockNumber: Number(receipt.blockNumber),
-          errorCode: error.code,
+          errorCode: error.code
         });
         return { txHash, ok: false, error };
       }
@@ -367,10 +383,16 @@ export function createTxPipeline(opts?: { journal?: JournalSink; config?: TxPipe
     abi: Abi;
     receiptLogs: { data: Hex; topics: Hex[]; address: Address }[];
     eventName: string;
+    address?: Address;
   }): Array<Record<string, unknown>> {
+    const receiptLogs = params.address
+      ? params.receiptLogs.filter(
+          (log) => log.address.toLowerCase() === params.address!.toLowerCase()
+        )
+      : params.receiptLogs;
     const decoded = parseEventLogs({
       abi: params.abi,
-      logs: params.receiptLogs as any,
+      logs: receiptLogs as any,
       eventName: params.eventName as any
     });
     return decoded.map((l) => (l as any).args as Record<string, unknown>);
