@@ -67,6 +67,15 @@ export POOL_DOMAIN_0=1
 export POOL_ASSET_0=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913  # USDC (Base)
 ```
 
+For the v1.3 Base mainnet router/pool topology, use the dedicated packet instead of this minimal
+single-pool example:
+
+- `docs/deploy/base-mainnet-v13.env.example`
+- `docs/deploy/base-mainnet-v13-readiness.md`
+
+That packet covers the Casino pool, optional Sports pool, release artifacts, frontend sync, keeper
+production readiness, and the SportsHub Phase 2 NO-GO controls.
+
 ### Arbitrum One (example)
 Chainlink VRF Wrapper (direct funding): `0x14632CD5c12eC5875D41350B55e825c54406BaaB`
 
@@ -125,6 +134,18 @@ forge script script/DeployV13.s.sol:DeployV13 --rpc-url $RPC_URL --broadcast -vv
 ```
 
 The same flow applies to `docs/deploy/arbitrum-sepolia-v13-sports.env.example`.
+
+For a Base mainnet v1.3 readiness review, start from `docs/deploy/base-mainnet-v13.env.example` and
+run the mainnet preflight:
+
+```bash
+cp docs/deploy/base-mainnet-v13.env.example .env.base-mainnet-v13
+# edit .env.base-mainnet-v13 using approved mainnet values
+ENV_FILE=.env.base-mainnet-v13 make sports-mainnet-preflight-v13
+```
+
+This checks env shape, chain id `8453`, wrapper/asset bytecode, and Sports role/cap placeholders. It
+does not authorize a deployment broadcast.
 
 For the narrow football MVP product canary, use
 `docs/deploy/worldcup-football-mvp-canary-2026.md` after the v1.3 Sports deployment and role canary are
