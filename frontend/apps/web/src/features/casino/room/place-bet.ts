@@ -8,7 +8,8 @@ import {
   type CoinSide,
   type DiceDirection,
   type GameParamsHex,
-  type GameParamsMessages
+  type GameParamsMessages,
+  type PlinkoRisk
 } from "./params";
 
 type ReleaseAsset = {
@@ -46,6 +47,7 @@ export type BuildGamePlaceBetInputArgs = {
   coinSide: CoinSide;
   rouletteSpots: readonly string[];
   kenoSpots: readonly number[];
+  plinkoRisk: PlinkoRisk;
   affiliate?: Address;
   maxHouseEdgeBps?: number;
   messages?: GamePlaceBetMessages;
@@ -87,6 +89,7 @@ export function buildGamePlaceBetInput({
   coinSide,
   rouletteSpots,
   kenoSpots,
+  plinkoRisk,
   affiliate,
   maxHouseEdgeBps = 10000,
   messages
@@ -98,6 +101,7 @@ export function buildGamePlaceBetInput({
     coinSide,
     rouletteSpots,
     kenoSpots,
+    plinkoRisk,
     messages
   });
 

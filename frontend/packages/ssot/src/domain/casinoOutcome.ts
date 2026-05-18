@@ -2,8 +2,10 @@ import {
   decodeCoinTossParams,
   decodeDiceParams,
   decodeKenoParams,
+  decodePlinkoParams,
   decodeRouletteParams,
-  type DiceDirection
+  type DiceDirection,
+  type PlinkoRisk
 } from "../encoding";
 import type { DomainBet } from "./bet";
 import { encodePacked, keccak256, stringToHex, type Hex } from "viem";
@@ -21,6 +23,12 @@ const KENO_GAIN_TABLE: Record<number, number[]> = {
   8: [0, 0, 0, 0, 101, 505, 5051, 50505, 1010101],
   9: [0, 0, 0, 0, 0, 126, 1262, 12626, 252525, 5050505],
   10: [0, 0, 0, 0, 0, 0, 505, 5050, 50505, 1262626, 25252525]
+};
+
+const PLINKO_FACTOR_TABLE: Record<PlinkoRisk, readonly number[]> = {
+  low: [15264, 13083, 10902, 9812, 8722, 9812, 10902, 13083, 15264],
+  medium: [82714, 34464, 16542, 6892, 2067, 6892, 16542, 34464, 82714],
+  high: [246153, 61538, 13186, 3076, 0, 3076, 13186, 61538, 246153]
 };
 
 const RED_NUMBERS: readonly number[] = [
@@ -62,6 +70,16 @@ export type CasinoOutcome =
       kind: "keno";
       pickedNumbers: number[];
       draws: Array<{ numbers: number[]; hits: number; won: boolean }>;
+    })
+  | (OutcomeFinancials & {
+      kind: "plinko";
+      risk: PlinkoRisk;
+      rolls: Array<{
+        bucket: number;
+        path: Array<"L" | "R">;
+        factorBps: number;
+        won: boolean;
+      }>;
     });
 
 export function deriveCasinoOutcome({
@@ -179,6 +197,41 @@ export function deriveCasinoOutcome({
       kind: "keno",
       pickedNumbers,
       draws,
+      ...financials(bet, payoutGross, bet.stake - usedTurnover)
+    };
+  }
+
+  if (gameSlug === "plinko") {
+    const { risk } = decodePlinkoParams(params);
+    const rolls: Array<{
+      bucket: number;
+      path: Array<"L" | "R">;
+      factorBps: number;
+      won: boolean;
+    }> = [];
+    let usedTurnover = 0n;
+    let payoutGross = 0n;
+
+    for (let i = 0; i < bet.betCount; i += 1) {
+      usedTurnover += bet.amountPerRoll;
+      const path: Array<"L" | "R"> = [];
+      let bucket = 0;
+      for (let row = 0; row < 8; row += 1) {
+        const right = (rngRoll2(bet.betId, i, row, seed) & 1n) === 1n;
+        path.push(right ? "R" : "L");
+        if (right) bucket += 1;
+      }
+
+      const factor = PLINKO_FACTOR_TABLE[risk][bucket] ?? 0;
+      if (factor > 0) payoutGross += mulDiv(bet.amountPerRoll, BigInt(factor), 10_000n);
+      rolls.push({ bucket, path, factorBps: factor, won: factor > 10_000 });
+      if (shouldStop(bet.stopGain, bet.stopLoss, usedTurnover, payoutGross)) break;
+    }
+
+    return {
+      kind: "plinko",
+      risk,
+      rolls,
       ...financials(bet, payoutGross, bet.stake - usedTurnover)
     };
   }

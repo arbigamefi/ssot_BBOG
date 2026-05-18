@@ -3,6 +3,7 @@ import { encodeDiceParams, decodeDiceParams } from "./dice";
 import { encodeCoinTossParams, decodeCoinTossParams } from "./cointoss";
 import { encodeRouletteParams, decodeRouletteParams } from "./roulette";
 import { encodeKenoParams, decodeKenoParams } from "./keno";
+import { encodePlinkoParams, decodePlinkoParams } from "./plinko";
 
 /**
  * A registered game encoder with encode/decode functions and
@@ -74,6 +75,18 @@ const REGISTRY: ReadonlyMap<string, GameEncoder> = new Map<string, GameEncoder>(
       decode: (hex: Hex) => decodeKenoParams(hex),
       defaultParams: { mask: 0xabcden },
       paramsDescription: "uint40 mask"
+    }
+  ],
+  [
+    "plinko",
+    {
+      slug: "plinko",
+      label: "Plinko",
+      encode: (p: { risk?: "low" | "medium" | "high" | 0 | 1 | 2 }) =>
+        encodePlinkoParams(p.risk ?? "medium"),
+      decode: (hex: Hex) => decodePlinkoParams(hex),
+      defaultParams: { risk: "medium" },
+      paramsDescription: "uint8 risk (0=low, 1=medium, 2=high)"
     }
   ]
 ]);

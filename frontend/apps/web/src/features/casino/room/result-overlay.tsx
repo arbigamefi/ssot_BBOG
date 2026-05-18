@@ -151,6 +151,13 @@ function formatCoinSide(side: CoinSide, t: Translate) {
     : t("casino.room.selection.coin.tails");
 }
 
+function formatPlinkoRisk(risk: string, t: Translate) {
+  if (risk === "low" || risk === "medium" || risk === "high") {
+    return t(`casino.room.selection.plinko.${risk}`);
+  }
+  return risk;
+}
+
 function getGameResultRows(context: GameResultContext, t: Translate) {
   if (context.casinoOutcome?.kind === "dice") {
     return [
@@ -208,6 +215,35 @@ function getGameResultRows(context: GameResultContext, t: Translate) {
       {
         label: t("casino.room.result.facts.kenoHits"),
         value: context.casinoOutcome.draws.map((draw) => draw.hits).join(", ")
+      }
+    ] satisfies GameResultRow[];
+  }
+
+  if (context.casinoOutcome?.kind === "plinko") {
+    return [
+      {
+        label: t("casino.room.result.facts.plinkoRisk"),
+        value: formatPlinkoRisk(context.casinoOutcome.risk, t)
+      },
+      {
+        label: t("casino.room.result.facts.plinkoSlot"),
+        value: context.casinoOutcome.rolls.map((roll) => roll.bucket).join(", "),
+        tone:
+          context.casinoOutcome.netResult > 0n
+            ? "win"
+            : context.casinoOutcome.netResult < 0n
+              ? "loss"
+              : "neutral"
+      },
+      {
+        label: t("casino.room.result.facts.plinkoPath"),
+        value: context.casinoOutcome.rolls.map((roll) => roll.path.join("")).join(" / ")
+      },
+      {
+        label: t("casino.room.result.facts.plinkoMultiplier"),
+        value: context.casinoOutcome.rolls
+          .map((roll) => `${(roll.factorBps / 10_000).toFixed(roll.factorBps >= 100_000 ? 1 : 2)}x`)
+          .join(", ")
       }
     ] satisfies GameResultRow[];
   }

@@ -8,9 +8,14 @@ import {
   BetPayoutSummary,
   BetRollsSection
 } from "./bet-panel-sections";
-import { CoinSideSelector, KenoSelectionPanel, RouletteSelectionPanel } from "./controls";
+import {
+  CoinSideSelector,
+  KenoSelectionPanel,
+  PlinkoRiskSelector,
+  RouletteSelectionPanel
+} from "./controls";
 import type { GameMeta } from "./model";
-import type { CoinSide } from "./params";
+import type { CoinSide, PlinkoRisk } from "./params";
 import type { GameRoomBetPanelState } from "./place-bet-button";
 import { PlaceBetButton } from "./place-bet-button";
 import { CasinoRoundStatusPanel } from "./round-status-panel";
@@ -28,7 +33,9 @@ function GameSelectionControls({
   onRouletteClear,
   kenoSpots,
   onKenoChange,
-  onKenoResetResult
+  onKenoResetResult,
+  plinkoRisk,
+  onPlinkoRiskChange
 }: {
   game: GameMeta;
   coinSide: CoinSide;
@@ -38,6 +45,8 @@ function GameSelectionControls({
   kenoSpots: readonly number[];
   onKenoChange: (spots: number[]) => void;
   onKenoResetResult: () => void;
+  plinkoRisk: PlinkoRisk;
+  onPlinkoRiskChange: (risk: PlinkoRisk) => void;
 }) {
   if (game.slug === "roulette") {
     return <RouletteSelectionPanel spots={rouletteSpots} onClear={onRouletteClear} />;
@@ -55,6 +64,10 @@ function GameSelectionControls({
         onResetResult={onKenoResetResult}
       />
     );
+  }
+
+  if (game.slug === "plinko") {
+    return <PlinkoRiskSelector risk={plinkoRisk} onChange={onPlinkoRiskChange} />;
   }
 
   return null;
@@ -87,6 +100,8 @@ export function GameRoomBetPanel({
   kenoSpots,
   onKenoChange,
   onKenoResetResult,
+  plinkoRisk,
+  onPlinkoRiskChange,
   roundPhase,
   vrfQuote,
   vrfQuoteError,
@@ -125,6 +140,8 @@ export function GameRoomBetPanel({
   kenoSpots: readonly number[];
   onKenoChange: (spots: number[]) => void;
   onKenoResetResult: () => void;
+  plinkoRisk: PlinkoRisk;
+  onPlinkoRiskChange: (risk: PlinkoRisk) => void;
   roundPhase: CasinoRoundPhase;
   vrfQuote?: bigint;
   vrfQuoteError?: string;
@@ -159,6 +176,8 @@ export function GameRoomBetPanel({
         kenoSpots={kenoSpots}
         onKenoChange={onKenoChange}
         onKenoResetResult={onKenoResetResult}
+        plinkoRisk={plinkoRisk}
+        onPlinkoRiskChange={onPlinkoRiskChange}
       />
 
       <BetAmountSection

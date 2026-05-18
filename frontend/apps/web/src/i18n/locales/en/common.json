@@ -109,7 +109,8 @@
         "dice": "Precision Dice",
         "roulette": "European Roulette",
         "coinToss": "Coin Toss",
-        "keno": "Keno Draft"
+        "keno": "Keno Draft",
+        "plinko": "Plinko"
       },
       "audit": {
         "loading": "Loading audit stream",
@@ -236,7 +237,7 @@
         "summary": {
           "multiplier": "Multiplier",
           "winChance": "Win Chance",
-          "expectedPayout": "Expected Payout"
+          "expectedPayout": "Potential Payout"
         },
         "placeBet": {
           "connectWallet": "CONNECT WALLET",
@@ -283,6 +284,15 @@
           "autoPick": "Auto Pick",
           "clear": "Clear",
           "empty": "No spots selected. Click the grid to pick numbers."
+        },
+        "plinko": {
+          "riskProfile": "Risk Profile",
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High",
+          "lowDetail": "Smoother board",
+          "mediumDetail": "Balanced edge",
+          "highDetail": "Extreme buckets"
         }
       },
       "stage": {
@@ -291,6 +301,12 @@
           "awaitingSelection": "Awaiting toss selection",
           "selected": "{side} selected",
           "waitingVrf": "Waiting for VRF oracle..."
+        },
+        "plinko": {
+          "dropZone": "Set risk and drop",
+          "waitingVrf": "Waiting for VRF oracle...",
+          "slot": "Slot {slot}",
+          "risk": "Risk: {risk}"
         }
       },
       "history": {
@@ -298,6 +314,7 @@
           "rolls": "RECENT ROLLS",
           "numbers": "RECENT NUMBERS",
           "draws": "RECENT DRAWS",
+          "slots": "RECENT SLOTS",
           "flips": "RECENT FLIPS"
         },
         "states": {
@@ -354,7 +371,7 @@
           "multiplier": "Multiplier",
           "betAmount": "Bet amount",
           "payout": "Payout",
-          "expectedPayout": "Expected payout",
+          "expectedPayout": "Potential payout",
           "pending": "Pending",
           "betId": "Bet ID",
           "refund": "Refund",
@@ -372,7 +389,11 @@
           "rouletteWinningNumber": "Winning number",
           "kenoPicked": "Numbers picked",
           "kenoDrawn": "Numbers drawn",
-          "kenoHits": "Hits"
+          "kenoHits": "Hits",
+          "plinkoRisk": "Risk profile",
+          "plinkoSlot": "Slot",
+          "plinkoPath": "Path",
+          "plinkoMultiplier": "Slot multiplier"
         },
         "actions": {
           "close": "Close",
@@ -400,7 +421,8 @@
         "all": "All Modules",
         "table": "Table Games",
         "binary": "Binary / Fast",
-        "lottery": "Lottery"
+        "lottery": "Lottery",
+        "arcade": "Arcade"
       },
       "search": {
         "placeholder": "Search games...",
@@ -410,6 +432,7 @@
         "binary": "Binary",
         "table": "Table",
         "lottery": "Lottery",
+        "arcade": "Arcade",
         "module": "Module"
       },
       "rooms": {
@@ -432,6 +455,11 @@
           "title": "Keno Draft",
           "promise": "Pick multi-spots for massive multipliers.",
           "badge": "Huge 1,000x Win"
+        },
+        "plinko": {
+          "title": "Plinko",
+          "promise": "Drop through eight rows and chase edge buckets.",
+          "badge": "Up to 24.6x"
         }
       },
       "card": {

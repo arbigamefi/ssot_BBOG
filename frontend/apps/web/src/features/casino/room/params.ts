@@ -2,7 +2,9 @@ import {
   encodeCoinTossParams,
   encodeDiceParams,
   encodeKenoParams,
+  encodePlinkoParams,
   encodeRouletteParams,
+  type PlinkoRisk,
   type RouletteParamsInput
 } from "@ssot/ssot/encoding";
 
@@ -10,7 +12,16 @@ import { RED_NUMBER_SET, RED_NUMBERS, kenoWinChance } from "./model";
 
 export type CoinSide = "HEADS" | "TAILS";
 export type DiceDirection = "under" | "over";
+export type { PlinkoRisk };
 export type GameParamsHex = `0x${string}`;
+
+export const PLINKO_FACTOR_TABLE: Record<PlinkoRisk, readonly number[]> = {
+  low: [15264, 13083, 10902, 9812, 8722, 9812, 10902, 13083, 15264],
+  medium: [82714, 34464, 16542, 6892, 2067, 6892, 16542, 34464, 82714],
+  high: [246153, 61538, 13186, 3076, 0, 3076, 13186, 61538, 246153]
+};
+
+const PLINKO_BUCKET_WEIGHTS = [1, 8, 28, 56, 70, 56, 28, 8, 1] as const;
 
 export type BuildGameParamsInput = {
   slug: string;
@@ -19,6 +30,7 @@ export type BuildGameParamsInput = {
   coinSide: CoinSide;
   rouletteSpots: readonly string[];
   kenoSpots: readonly number[];
+  plinkoRisk: PlinkoRisk;
   messages?: GameParamsMessages;
 };
 
@@ -125,12 +137,26 @@ export function buildKenoMask(spots: readonly number[]): bigint {
   return mask;
 }
 
+export function plinkoPositiveChance(risk: PlinkoRisk): number {
+  const table = PLINKO_FACTOR_TABLE[risk];
+  const positiveWeight = table.reduce(
+    (sum, factor, index) => sum + (factor > 10_000 ? (PLINKO_BUCKET_WEIGHTS[index] ?? 0) : 0),
+    0
+  );
+  return (positiveWeight / 256) * 100;
+}
+
+export function plinkoMaxMultiplier(risk: PlinkoRisk): number {
+  return Math.max(...PLINKO_FACTOR_TABLE[risk]) / 10_000;
+}
+
 export function calculateGameWinChance(input: {
   slug: string;
   diceTarget: number;
   diceDirection: DiceDirection;
   rouletteSpots: readonly string[];
   kenoSpots: readonly number[];
+  plinkoRisk: PlinkoRisk;
 }): number {
   if (input.slug === "dice") {
     return input.diceDirection === "under" ? input.diceTarget : 100 - input.diceTarget;
@@ -139,6 +165,7 @@ export function calculateGameWinChance(input: {
   if (input.slug === "roulette") return rouletteWinChance(input.rouletteSpots);
   if (input.slug === "keno")
     return input.kenoSpots.length > 0 ? kenoWinChance(input.kenoSpots.length) : 0;
+  if (input.slug === "plinko") return plinkoPositiveChance(input.plinkoRisk);
   return 100;
 }
 
@@ -173,6 +200,10 @@ export function buildGameParams(input: BuildGameParamsInput): BuildGameParamsRes
       };
     }
     return { ok: true, params: encodeKenoParams(buildKenoMask(input.kenoSpots)) };
+  }
+
+  if (input.slug === "plinko") {
+    return { ok: true, params: encodePlinkoParams(input.plinkoRisk) };
   }
 
   return { ok: true, params: "0x" };

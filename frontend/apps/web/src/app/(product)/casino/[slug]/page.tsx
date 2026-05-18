@@ -20,6 +20,8 @@ function localizedGameName(
       return messages.casino.room.names.coinToss;
     case "keno":
       return messages.casino.room.names.keno;
+    case "plinko":
+      return messages.casino.room.names.plinko;
     default:
       return slug;
   }

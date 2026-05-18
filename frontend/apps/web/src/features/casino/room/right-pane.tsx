@@ -10,7 +10,7 @@ import {
   type RecentBetSummary
 } from "./history-widget";
 import type { CasinoOutcome } from "./outcome";
-import type { CoinSide, DiceDirection } from "./params";
+import type { CoinSide, DiceDirection, PlinkoRisk } from "./params";
 import { GameRoomResultOverlay } from "./result-overlay";
 import { isCasinoTerminalRoundResult, type CasinoRoundResult } from "./resolution";
 
@@ -52,6 +52,14 @@ const KenoStage = dynamic(() => import("../modules/keno/stage").then((mod) => mo
   ssr: false
 });
 
+const PlinkoStage = dynamic(
+  () => import("../modules/plinko/stage").then((mod) => mod.PlinkoStage),
+  {
+    loading: StageLoading,
+    ssr: false
+  }
+);
+
 export function GameRoomRightPane({
   gameSlug,
   coinSide,
@@ -67,6 +75,8 @@ export function GameRoomRightPane({
   winChance,
   rouletteSpots,
   kenoSpots,
+  plinkoRisk,
+  plinkoBuckets,
   animatingKenoSpots,
   kenoResultDrawn,
   casinoOutcome,
@@ -95,6 +105,8 @@ export function GameRoomRightPane({
   winChance: number;
   rouletteSpots: readonly string[];
   kenoSpots: readonly number[];
+  plinkoRisk: PlinkoRisk;
+  plinkoBuckets: readonly number[];
   animatingKenoSpots: readonly number[];
   kenoResultDrawn: readonly number[];
   casinoOutcome?: CasinoOutcome | null;
@@ -169,6 +181,15 @@ export function GameRoomRightPane({
           resultDrawn={kenoResultDrawn}
           onChange={onKenoChange}
           onResetResult={onKenoResetResult}
+        />
+      )}
+
+      {gameSlug === "plinko" && (
+        <PlinkoStage
+          isPending={isPending}
+          showResult={showResult}
+          risk={plinkoRisk}
+          buckets={plinkoBuckets}
         />
       )}
 

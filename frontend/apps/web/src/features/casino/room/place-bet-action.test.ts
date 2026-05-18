@@ -77,6 +77,7 @@ function baseArgs(overrides: Partial<Parameters<typeof executeGamePlaceBetAction
     coinSide: "HEADS" as const,
     rouletteSpots: [],
     kenoSpots: [],
+    plinkoRisk: "medium" as const,
     ...overrides
   };
 }

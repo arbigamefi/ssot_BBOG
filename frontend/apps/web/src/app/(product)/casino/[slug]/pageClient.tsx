@@ -16,7 +16,11 @@ import { useSSOTSDK } from "../../../../ssot/sdk";
 import { useSSOTRuntime } from "../../../../ssot/runtime";
 import { useConnectModal } from "../../../../app-shell/WalletButton";
 import { toGameMeta, type GameMeta } from "../../../../features/casino/room/model";
-import { calculateGameWinChance } from "../../../../features/casino/room/params";
+import {
+  calculateGameWinChance,
+  plinkoMaxMultiplier,
+  type PlinkoRisk
+} from "../../../../features/casino/room/params";
 import {
   formatGameMaxPayout,
   formatHouseEdge
@@ -55,6 +59,8 @@ function getLocalizedGameName(t: (key: string) => string, game: GameMeta) {
       return t("casino.room.names.coinToss");
     case "keno":
       return t("casino.room.names.keno");
+    case "plinko":
+      return t("casino.room.names.plinko");
     default:
       return game.label;
   }
@@ -112,11 +118,13 @@ export function GamePageClient({ slug }: { slug: string }) {
   const [coinSide, setCoinSide] = React.useState<"HEADS" | "TAILS">("HEADS");
   const [rouletteSpots, setRouletteSpots] = React.useState<string[]>([]);
   const [kenoSpots, setKenoSpots] = React.useState<number[]>([]);
+  const [plinkoRisk, setPlinkoRisk] = React.useState<PlinkoRisk>("medium");
 
   // Simulation state
   const [flipCount, setFlipCount] = React.useState(0);
   const [resultNum, setResultNum] = React.useState<number | null>(null);
   const [kenoResultDrawn, setKenoResultDrawn] = React.useState<number[]>([]);
+  const [plinkoBuckets, setPlinkoBuckets] = React.useState<number[]>([]);
 
   // History state for widgets
   const [gameHistory, setGameHistory] = React.useState<GameHistoryEntry[]>([]);
@@ -148,6 +156,7 @@ export function GamePageClient({ slug }: { slug: string }) {
     setTerminalBet(null);
     setResultProof(null);
     setCasinoOutcome(null);
+    setPlinkoBuckets([]);
   }, []);
   const handleRoundReset = React.useCallback(() => {
     revealedBetIdRef.current = null;
@@ -155,6 +164,7 @@ export function GamePageClient({ slug }: { slug: string }) {
     setTerminalBet(null);
     setResultProof(null);
     setCasinoOutcome(null);
+    setPlinkoBuckets([]);
   }, []);
   const handleResultClose = React.useCallback(() => {
     setShowResult(false);
@@ -169,7 +179,8 @@ export function GamePageClient({ slug }: { slug: string }) {
         diceTarget,
         diceDirection,
         rouletteSpots,
-        kenoSpots
+        kenoSpots,
+        plinkoRisk
       })
     : 0;
 
@@ -188,6 +199,7 @@ export function GamePageClient({ slug }: { slug: string }) {
     coinSide,
     rouletteSpots,
     kenoSpots,
+    plinkoRisk,
     affiliate: referralAffiliate,
     onRoundStart: handleRoundStart,
     onRoundTerminal: handleRoundTerminal,
@@ -239,6 +251,10 @@ export function GamePageClient({ slug }: { slug: string }) {
       }
       if (outcome?.kind === "roulette") setResultNum(outcome.rolls.at(-1)?.value ?? null);
       if (outcome?.kind === "keno") setKenoResultDrawn(outcome.draws.at(-1)?.numbers ?? []);
+      if (outcome?.kind === "plinko") {
+        setResultNum(outcome.rolls.at(-1)?.bucket ?? null);
+        setPlinkoBuckets(outcome.rolls.map((roll) => roll.bucket));
+      }
 
       if (bet.state === "randomReady" && revealedBetIdRef.current !== bet.betId) {
         revealedBetIdRef.current = bet.betId;
@@ -267,7 +283,8 @@ export function GamePageClient({ slug }: { slug: string }) {
   const usdcDecimals = release?.assets?.find((a: any) => a.symbol === "USDC")?.decimals ?? 6;
   const maxPayout = formatGameMaxPayout({ gameMeta, slug: game.slug, usdcDecimals });
 
-  const multiplier = winChance === 0 ? 0 : 99 / winChance;
+  const multiplier =
+    game.slug === "plinko" ? plinkoMaxMultiplier(plinkoRisk) : winChance === 0 ? 0 : 99 / winChance;
   const expectedPayout = betAmount * multiplier;
 
   const LeftPane = (
@@ -298,6 +315,8 @@ export function GamePageClient({ slug }: { slug: string }) {
       kenoSpots={kenoSpots}
       onKenoChange={setKenoSpots}
       onKenoResetResult={() => setKenoResultDrawn([])}
+      plinkoRisk={plinkoRisk}
+      onPlinkoRiskChange={setPlinkoRisk}
       roundPhase={casinoRound.roundPhase}
       vrfQuote={casinoRound.vrfQuote}
       vrfQuoteError={casinoRound.vrfQuoteError}
@@ -328,6 +347,8 @@ export function GamePageClient({ slug }: { slug: string }) {
       winChance={winChance}
       rouletteSpots={rouletteSpots}
       kenoSpots={kenoSpots}
+      plinkoRisk={plinkoRisk}
+      plinkoBuckets={plinkoBuckets}
       animatingKenoSpots={animatingKenoSpots}
       kenoResultDrawn={kenoResultDrawn}
       casinoOutcome={casinoOutcome}

@@ -2,13 +2,14 @@ import { describe, it, expect } from "vitest";
 import { getGameEncoder, requireGameEncoder, registeredGameSlugs } from "./registry";
 
 describe("GameEncoderRegistry", () => {
-  it("has all 4 known game slugs registered", () => {
+  it("has all supported casino game slugs registered", () => {
     const slugs = registeredGameSlugs();
     expect(slugs).toContain("dice");
     expect(slugs).toContain("coin-toss");
     expect(slugs).toContain("roulette");
     expect(slugs).toContain("keno");
-    expect(slugs.length).toBe(4);
+    expect(slugs).toContain("plinko");
+    expect(slugs.length).toBe(5);
   });
 
   it("getGameEncoder returns undefined for unknown slug", () => {
@@ -95,6 +96,20 @@ describe("GameEncoderRegistry", () => {
     it("has correct defaults", () => {
       const enc = requireGameEncoder("keno");
       expect(enc.defaultParams.mask).toBe(0xabcden);
+    });
+  });
+
+  describe("plinko encoder", () => {
+    it("encodes and decodes roundtrip", () => {
+      const enc = requireGameEncoder("plinko");
+      const hex = enc.encode({ risk: "high" });
+      const decoded = enc.decode(hex);
+      expect(decoded).toEqual({ risk: "high", riskId: 2 });
+    });
+
+    it("has correct defaults", () => {
+      const enc = requireGameEncoder("plinko");
+      expect(enc.defaultParams).toEqual({ risk: "medium" });
     });
   });
 

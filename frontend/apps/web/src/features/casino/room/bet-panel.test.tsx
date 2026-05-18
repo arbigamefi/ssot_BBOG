@@ -92,7 +92,14 @@ vi.mock("next-intl", () => ({
       "casino.room.betPanel.placeBet.signing": "SIGNING / PLACING...",
       "casino.room.betPanel.placeBet.approveThenPlace": "APPROVE, THEN PLACE BET",
       "casino.room.betPanel.placeBet.preparing": "PREPARING ROUND...",
-      "casino.room.betPanel.placeBet.placeBet": "PLACE BET"
+      "casino.room.betPanel.placeBet.placeBet": "PLACE BET",
+      "casino.room.selection.plinko.riskProfile": "Risk Profile",
+      "casino.room.selection.plinko.low": "Low",
+      "casino.room.selection.plinko.medium": "Medium",
+      "casino.room.selection.plinko.high": "High",
+      "casino.room.selection.plinko.lowDetail": "Smoother board",
+      "casino.room.selection.plinko.mediumDetail": "Balanced edge",
+      "casino.room.selection.plinko.highDetail": "Extreme buckets"
     })[key] ?? key
 }));
 
@@ -133,6 +140,8 @@ function renderPanel(overrides: Partial<React.ComponentProps<typeof GameRoomBetP
     kenoSpots: [],
     onKenoChange: vi.fn(),
     onKenoResetResult: vi.fn(),
+    plinkoRisk: "medium",
+    onPlinkoRiskChange: vi.fn(),
     roundPhase: "ready",
     vrfQuote: 73_169_600_001_705n,
     vrfQuoteError: undefined,

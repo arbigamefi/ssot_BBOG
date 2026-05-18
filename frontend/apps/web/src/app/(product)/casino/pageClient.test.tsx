@@ -50,11 +50,13 @@ vi.mock("next-intl", () => ({
       "casino.directory.filters.table": "Table Games",
       "casino.directory.filters.binary": "Binary / Fast",
       "casino.directory.filters.lottery": "Lottery",
+      "casino.directory.filters.arcade": "Arcade",
       "casino.directory.search.placeholder": "Search games...",
       "casino.directory.search.aria": "Search games",
       "casino.directory.tags.binary": "Binary",
       "casino.directory.tags.table": "Table",
       "casino.directory.tags.lottery": "Lottery",
+      "casino.directory.tags.arcade": "Arcade",
       "casino.directory.tags.module": "Module",
       "casino.directory.rooms.dice.title": "Precision Dice",
       "casino.directory.rooms.dice.promise": "1-99 sizing in seconds.",
@@ -68,6 +70,9 @@ vi.mock("next-intl", () => ({
       "casino.directory.rooms.keno.title": "Keno Draft",
       "casino.directory.rooms.keno.promise": "Pick multi-spots for massive multipliers.",
       "casino.directory.rooms.keno.badge": "Huge 1,000x Win",
+      "casino.directory.rooms.plinko.title": "Plinko",
+      "casino.directory.rooms.plinko.promise": "Drop through eight rows and chase edge buckets.",
+      "casino.directory.rooms.plinko.badge": "Up to 24.6x",
       "casino.directory.card.playing": `${values?.count ?? "{count}"} playing`,
       "casino.directory.card.playNow": "Play Now",
       "casino.directory.reserve.title": "Progressive Reserve Pool",
@@ -94,9 +99,15 @@ const MOCK_GAMES_META = [
   },
   {
     gameId: "0x03",
+    slug: "plinko",
+    label: "Plinko",
+    module: "0x8888888888888888888888888888888888888888"
+  },
+  {
+    gameId: "0x04",
     slug: "baccarat",
     label: "Baccarat",
-    module: "0x8888888888888888888888888888888888888888"
+    module: "0x9999999999999999999999999999999999999999"
   }
 ];
 
@@ -136,6 +147,7 @@ describe("GamesListClient", () => {
     expect(screen.getByText("Global Casino Lobby")).toBeDefined();
     expect(screen.getByText("Precision Dice")).toBeDefined();
     expect(screen.getAllByText("Coin Toss").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Plinko").length).toBeGreaterThan(0);
     expect(screen.getByText("Progressive Reserve Pool")).toBeDefined();
   });
 
@@ -149,7 +161,7 @@ describe("GamesListClient", () => {
     };
     render(<GamesListClient />);
     const cards = screen.getAllByTestId("room-entry-card");
-    expect(cards.length).toBe(2);
+    expect(cards.length).toBe(3);
   });
 
   it("does not render release games without implemented route modules", () => {
@@ -166,7 +178,7 @@ describe("GamesListClient", () => {
       Array.from(screen.getAllByTestId("room-entry-card")).map((card) =>
         card.getAttribute("data-slug")
       )
-    ).toEqual(["dice", "coin-toss"]);
+    ).toEqual(["dice", "plinko", "coin-toss"]);
   });
 
   it("links each game card to canonical game room routes", () => {
@@ -187,6 +199,11 @@ describe("GamesListClient", () => {
       .getAllByText("Coin Toss")
       .map((node) => node.closest("a")?.getAttribute("href"));
     expect(coinLinks).toContain("/casino/coin-toss");
+
+    const plinkoLinks = screen
+      .getAllByText("Plinko")
+      .map((node) => node.closest("a")?.getAttribute("href"));
+    expect(plinkoLinks).toContain("/casino/plinko");
   });
 
   it("room entry cards have correct slug data attributes", () => {
@@ -200,7 +217,8 @@ describe("GamesListClient", () => {
     render(<GamesListClient />);
     const cards = screen.getAllByTestId("room-entry-card");
     expect(cards[0]?.getAttribute("data-slug")).toBe("dice");
-    expect(cards[1]?.getAttribute("data-slug")).toBe("coin-toss");
+    expect(cards[1]?.getAttribute("data-slug")).toBe("plinko");
+    expect(cards[2]?.getAttribute("data-slug")).toBe("coin-toss");
   });
 
   it("handles gamesMeta undefined by rendering canonical fallback rooms", () => {

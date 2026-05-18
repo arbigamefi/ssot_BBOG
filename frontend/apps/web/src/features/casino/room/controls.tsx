@@ -4,7 +4,7 @@ import { SparklesIcon } from "@heroicons/react/24/outline";
 import { cn } from "@ssot/ui";
 
 import { RED_NUMBER_SET } from "./model";
-import type { CoinSide } from "./params";
+import type { CoinSide, PlinkoRisk } from "./params";
 
 const ROULETTE_NAMED_SPOTS = [
   "RED",
@@ -127,6 +127,52 @@ export function CoinSideSelector({
         >
           {t("casino.room.selection.coin.tails")}
         </button>
+      </div>
+    </div>
+  );
+}
+
+const PLINKO_RISKS: readonly PlinkoRisk[] = ["low", "medium", "high"] as const;
+
+export function PlinkoRiskSelector({
+  risk,
+  onChange
+}: {
+  risk: PlinkoRisk;
+  onChange: (risk: PlinkoRisk) => void;
+}) {
+  const t = useTranslations();
+
+  return (
+    <div className="relative mb-6 flex flex-col gap-3 rounded-xl border border-border bg-surface-0 p-5 shadow-inner-e1">
+      <div className="absolute inset-x-0 top-0 h-1 bg-brand" />
+      <label className="z-10 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-fg-subtle">
+        <SparklesIcon className="h-3 w-3" /> {t("casino.room.selection.plinko.riskProfile")}
+      </label>
+      <div className="z-10 grid grid-cols-3 gap-2">
+        {PLINKO_RISKS.map((item) => {
+          const active = item === risk;
+          return (
+            <button
+              key={item}
+              type="button"
+              onClick={() => onChange(item)}
+              className={cn(
+                "rounded-lg border px-3 py-3 text-left transition-colors",
+                active
+                  ? "border-brand bg-brand-soft text-fg shadow-glow"
+                  : "border-border bg-surface-1 text-fg-muted hover:border-brand/40 hover:bg-surface-2 hover:text-fg"
+              )}
+            >
+              <span className="block text-xs font-black uppercase tracking-widest">
+                {t(`casino.room.selection.plinko.${item}`)}
+              </span>
+              <span className="mt-1 block text-[10px] font-semibold leading-4 text-fg-subtle">
+                {t(`casino.room.selection.plinko.${item}Detail`)}
+              </span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

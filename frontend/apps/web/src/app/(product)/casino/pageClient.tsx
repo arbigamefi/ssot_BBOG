@@ -17,6 +17,7 @@ import {
   CoinTossMiniIcon,
   DiceMiniIcon,
   KenoMiniIcon,
+  PlinkoMiniIcon,
   RouletteMiniIcon
 } from "../../../features/casino/CasinoMiniIcons";
 import { useRelease } from "../../../ssot/release/ReleaseProvider";
@@ -25,7 +26,8 @@ const ROOM_ICON_MAP: Record<string, React.ReactNode> = {
   dice: <DiceMiniIcon />,
   roulette: <RouletteMiniIcon />,
   "coin-toss": <CoinTossMiniIcon />,
-  keno: <KenoMiniIcon />
+  keno: <KenoMiniIcon />,
+  plinko: <PlinkoMiniIcon />
 };
 
 const ROOM_COPY_KEYS: Record<
@@ -65,6 +67,13 @@ const ROOM_COPY_KEYS: Record<
     live: "45",
     badgeKey: "casino.directory.rooms.keno.badge",
     tagKey: "casino.directory.tags.lottery"
+  },
+  plinko: {
+    titleKey: "casino.directory.rooms.plinko.title",
+    promiseKey: "casino.directory.rooms.plinko.promise",
+    live: "156",
+    badgeKey: "casino.directory.rooms.plinko.badge",
+    tagKey: "casino.directory.tags.arcade"
   }
 };
 
@@ -72,7 +81,8 @@ const FILTERS = [
   { key: "all", labelKey: "casino.directory.filters.all" },
   { key: "table", labelKey: "casino.directory.filters.table" },
   { key: "binary", labelKey: "casino.directory.filters.binary" },
-  { key: "lottery", labelKey: "casino.directory.filters.lottery" }
+  { key: "lottery", labelKey: "casino.directory.filters.lottery" },
+  { key: "arcade", labelKey: "casino.directory.filters.arcade" }
 ] as const;
 
 type FilterKey = (typeof FILTERS)[number]["key"];
@@ -85,6 +95,8 @@ function matchesFilter(slug: string, filter: FilterKey) {
       return slug === "dice" || slug === "coin-toss";
     case "lottery":
       return slug === "keno";
+    case "arcade":
+      return slug === "plinko";
     default:
       return true;
   }
@@ -129,7 +141,7 @@ export function GamesListClient() {
     return matchesQuery && matchesFilter(room.slug, filter);
   });
 
-  const canonicalOrder = ["dice", "roulette", "coin-toss", "keno"];
+  const canonicalOrder = ["dice", "plinko", "roulette", "coin-toss", "keno"];
   const roomsToRender = (filteredRooms.length ? filteredRooms : rooms).sort((a, b) => {
     const idxA = canonicalOrder.indexOf(a.slug);
     const idxB = canonicalOrder.indexOf(b.slug);

@@ -9,7 +9,7 @@ import { usePlaceBetStepper } from "../../betting/usePlaceBetStepper";
 import type { GameMeta } from "./model";
 import { executeGamePlaceBetAction } from "./place-bet-action";
 import type { GameRoomRelease } from "./place-bet";
-import type { CoinSide, DiceDirection } from "./params";
+import type { CoinSide, DiceDirection, PlinkoRisk } from "./params";
 import { useBetStepperFailureToast, useVrfTimeoutToast } from "./feedback";
 import { useCasinoRoundWatcher, useCasinoVrfQuote, type CasinoRoundPhase } from "./casino-round";
 
@@ -28,6 +28,7 @@ export type UseCasinoRoundArgs = {
   coinSide: CoinSide;
   rouletteSpots: readonly string[];
   kenoSpots: readonly number[];
+  plinkoRisk: PlinkoRisk;
   affiliate?: Address;
   onRoundStart: () => void;
   onRoundTerminal: (bet: DomainBet) => void;
@@ -49,6 +50,7 @@ export function useCasinoRound({
   coinSide,
   rouletteSpots,
   kenoSpots,
+  plinkoRisk,
   affiliate,
   onRoundStart,
   onRoundTerminal,
@@ -123,6 +125,7 @@ export function useCasinoRound({
       coinSide,
       rouletteSpots,
       kenoSpots,
+      plinkoRisk,
       affiliate,
       messages: {
         rouletteSelectionRequired: t("casino.room.errors.rouletteSelectionRequired"),
@@ -144,6 +147,7 @@ export function useCasinoRound({
     onRoundReset,
     onRoundStart,
     openConnectModal,
+    plinkoRisk,
     planNow,
     release,
     reset,

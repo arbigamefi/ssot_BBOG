@@ -130,3 +130,32 @@ export function KenoMiniIcon({ className }: GameMiniIconProps) {
     </IconFrame>
   );
 }
+
+export function PlinkoMiniIcon({ className }: GameMiniIconProps) {
+  return (
+    <IconFrame className={className}>
+      <div className="flex h-20 w-20 flex-col items-center justify-center gap-1">
+        {Array.from({ length: 5 }).map((_, row) => (
+          <div key={row} className="flex gap-1.5">
+            {Array.from({ length: row + 1 }).map((__, index) => (
+              <span
+                key={index}
+                className="h-2.5 w-2.5 rounded-full border border-brand/40 bg-fg/80"
+              />
+            ))}
+          </div>
+        ))}
+        <div className="mt-2 grid w-full grid-cols-5 gap-1">
+          {[8, 4, 1, 4, 8].map((value, index) => (
+            <span
+              key={`${value}-${index}`}
+              className="rounded-sm border border-border-soft bg-surface-2 py-1 text-center font-mono text-[8px] font-black text-fg-subtle"
+            >
+              {value}x
+            </span>
+          ))}
+        </div>
+      </div>
+    </IconFrame>
+  );
+}

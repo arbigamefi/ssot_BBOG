@@ -2,6 +2,7 @@ import {
   decodeCoinTossParams,
   decodeDiceParams,
   decodeKenoParams,
+  decodePlinkoParams,
   decodeRouletteParams
 } from "@ssot/ssot/encoding";
 import { describe, expect, it } from "vitest";
@@ -24,7 +25,8 @@ describe("game room params", () => {
         diceTarget: 42,
         diceDirection: "under",
         rouletteSpots: [],
-        kenoSpots: []
+        kenoSpots: [],
+        plinkoRisk: "medium"
       })
     ).toBe(42);
     expect(
@@ -33,7 +35,8 @@ describe("game room params", () => {
         diceTarget: 42,
         diceDirection: "over",
         rouletteSpots: [],
-        kenoSpots: []
+        kenoSpots: [],
+        plinkoRisk: "medium"
       })
     ).toBe(58);
     expect(
@@ -42,7 +45,8 @@ describe("game room params", () => {
         diceTarget: 50,
         diceDirection: "under",
         rouletteSpots: [],
-        kenoSpots: []
+        kenoSpots: [],
+        plinkoRisk: "medium"
       })
     ).toBe(50);
     expect(
@@ -51,7 +55,8 @@ describe("game room params", () => {
         diceTarget: 50,
         diceDirection: "under",
         rouletteSpots: ["RED"],
-        kenoSpots: []
+        kenoSpots: [],
+        plinkoRisk: "medium"
       })
     ).toBeCloseTo(18 * (100 / 37));
     expect(
@@ -60,9 +65,20 @@ describe("game room params", () => {
         diceTarget: 50,
         diceDirection: "under",
         rouletteSpots: [],
-        kenoSpots: [1, 2, 3]
+        kenoSpots: [1, 2, 3],
+        plinkoRisk: "medium"
       })
     ).toBeGreaterThan(0);
+    expect(
+      calculateGameWinChance({
+        slug: "plinko",
+        diceTarget: 50,
+        diceDirection: "under",
+        rouletteSpots: [],
+        kenoSpots: [],
+        plinkoRisk: "high"
+      })
+    ).toBeCloseTo(28.90625);
   });
 
   it("normalizes Roulette covered numbers and chance", () => {
@@ -95,7 +111,8 @@ describe("game room params", () => {
       diceDirection: "under",
       coinSide: "HEADS",
       rouletteSpots: [],
-      kenoSpots: []
+      kenoSpots: [],
+      plinkoRisk: "medium"
     });
     expect(dice.ok && decodeDiceParams(dice.params)).toEqual({
       cap: 55,
@@ -109,7 +126,8 @@ describe("game room params", () => {
       diceDirection: "under",
       coinSide: "TAILS",
       rouletteSpots: [],
-      kenoSpots: []
+      kenoSpots: [],
+      plinkoRisk: "medium"
     });
     expect(coin.ok && decodeCoinTossParams(coin.params)).toEqual({ face: true });
 
@@ -119,7 +137,8 @@ describe("game room params", () => {
       diceDirection: "under",
       coinSide: "HEADS",
       rouletteSpots: ["1st 12"],
-      kenoSpots: []
+      kenoSpots: [],
+      plinkoRisk: "medium"
     });
     expect(roulette.ok && decodeRouletteParams(roulette.params)).toEqual({
       kind: "dozen",
@@ -132,9 +151,24 @@ describe("game room params", () => {
       diceDirection: "under",
       coinSide: "HEADS",
       rouletteSpots: [],
-      kenoSpots: [1, 40]
+      kenoSpots: [1, 40],
+      plinkoRisk: "medium"
     });
     expect(keno.ok && decodeKenoParams(keno.params)).toEqual({ mask: buildKenoMask([1, 40]) });
+
+    const plinko = buildGameParams({
+      slug: "plinko",
+      diceTarget: 50,
+      diceDirection: "under",
+      coinSide: "HEADS",
+      rouletteSpots: [],
+      kenoSpots: [],
+      plinkoRisk: "high"
+    });
+    expect(plinko.ok && decodePlinkoParams(plinko.params)).toEqual({
+      risk: "high",
+      riskId: 2
+    });
   });
 
   it("uses neutral validation fallbacks when UI copy is not provided", () => {
@@ -145,7 +179,8 @@ describe("game room params", () => {
         diceDirection: "under",
         coinSide: "HEADS",
         rouletteSpots: [],
-        kenoSpots: []
+        kenoSpots: [],
+        plinkoRisk: "medium"
       })
     ).toEqual({
       ok: false,
@@ -158,7 +193,8 @@ describe("game room params", () => {
         diceDirection: "under",
         coinSide: "HEADS",
         rouletteSpots: [],
-        kenoSpots: []
+        kenoSpots: [],
+        plinkoRisk: "medium"
       })
     ).toEqual({ ok: false, message: "—" });
   });
@@ -172,6 +208,7 @@ describe("game room params", () => {
         coinSide: "HEADS",
         rouletteSpots: [],
         kenoSpots: [],
+        plinkoRisk: "medium",
         messages: {
           rouletteSelectionRequired: "请选择至少一个轮盘投注项。"
         }

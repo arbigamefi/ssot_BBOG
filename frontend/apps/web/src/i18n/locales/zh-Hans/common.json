@@ -109,7 +109,8 @@
         "dice": "精准骰子",
         "roulette": "欧式轮盘",
         "coinToss": "抛硬币",
-        "keno": "Keno 选号"
+        "keno": "Keno 选号",
+        "plinko": "Plinko 弹珠盘"
       },
       "audit": {
         "loading": "正在加载审计流",
@@ -236,7 +237,7 @@
         "summary": {
           "multiplier": "倍率",
           "winChance": "胜率",
-          "expectedPayout": "预期赔付"
+          "expectedPayout": "潜在赔付"
         },
         "placeBet": {
           "connectWallet": "连接钱包",
@@ -283,6 +284,15 @@
           "autoPick": "自动选择",
           "clear": "清除",
           "empty": "还没有选择号码。点击网格选择数字。"
+        },
+        "plinko": {
+          "riskProfile": "风险档位",
+          "low": "低",
+          "medium": "中",
+          "high": "高",
+          "lowDetail": "波动更平滑",
+          "mediumDetail": "风险均衡",
+          "highDetail": "冲击边缘槽"
         }
       },
       "stage": {
@@ -291,6 +301,12 @@
           "awaitingSelection": "等待选择正反面",
           "selected": "已选择{side}",
           "waitingVrf": "等待 VRF oracle..."
+        },
+        "plinko": {
+          "dropZone": "设置风险后落球",
+          "waitingVrf": "等待 VRF oracle...",
+          "slot": "落入 {slot} 槽",
+          "risk": "风险: {risk}"
         }
       },
       "history": {
@@ -298,6 +314,7 @@
           "rolls": "最近点数",
           "numbers": "最近号码",
           "draws": "最近开奖",
+          "slots": "最近槽位",
           "flips": "最近抛掷"
         },
         "states": {
@@ -354,7 +371,7 @@
           "multiplier": "倍率",
           "betAmount": "投注金额",
           "payout": "赔付",
-          "expectedPayout": "预计赔付",
+          "expectedPayout": "潜在赔付",
           "pending": "等待中",
           "betId": "投注 ID",
           "refund": "退款",
@@ -372,7 +389,11 @@
           "rouletteWinningNumber": "中奖号码",
           "kenoPicked": "已选号码",
           "kenoDrawn": "开奖号码",
-          "kenoHits": "命中数"
+          "kenoHits": "命中数",
+          "plinkoRisk": "风险档位",
+          "plinkoSlot": "落点槽位",
+          "plinkoPath": "路径",
+          "plinkoMultiplier": "槽位倍率"
         },
         "actions": {
           "close": "关闭",
@@ -400,7 +421,8 @@
         "all": "全部模块",
         "table": "桌面游戏",
         "binary": "快速二选一",
-        "lottery": "彩票类"
+        "lottery": "彩票类",
+        "arcade": "街机类"
       },
       "search": {
         "placeholder": "搜索游戏...",
@@ -410,6 +432,7 @@
         "binary": "二选一",
         "table": "桌面",
         "lottery": "彩票",
+        "arcade": "街机",
         "module": "模块"
       },
       "rooms": {
@@ -432,6 +455,11 @@
           "title": "Keno 选号",
           "promise": "选择多个号码，争取更高倍率。",
           "badge": "最高 1,000x"
+        },
+        "plinko": {
+          "title": "Plinko 弹珠盘",
+          "promise": "穿过 8 行钉板，冲击两侧高倍率槽。",
+          "badge": "最高 24.6x"
         }
       },
       "card": {

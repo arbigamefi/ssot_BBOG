@@ -59,6 +59,7 @@ describe("game room place bet builder", () => {
       coinSide: "HEADS",
       rouletteSpots: [],
       kenoSpots: [],
+      plinkoRisk: "medium",
       affiliate
     });
 
@@ -95,7 +96,8 @@ describe("game room place bet builder", () => {
       diceDirection: "under",
       coinSide: "HEADS",
       rouletteSpots: [],
-      kenoSpots: []
+      kenoSpots: [],
+      plinkoRisk: "medium"
     });
 
     expect(result).toEqual({
@@ -116,7 +118,8 @@ describe("game room place bet builder", () => {
       diceDirection: "under",
       coinSide: "HEADS",
       rouletteSpots: [],
-      kenoSpots: []
+      kenoSpots: [],
+      plinkoRisk: "medium"
     });
 
     expect(result).toEqual({
@@ -138,6 +141,7 @@ describe("game room place bet builder", () => {
       coinSide: "HEADS",
       rouletteSpots: [],
       kenoSpots: [],
+      plinkoRisk: "medium",
       messages: {
         noActiveCasinoPool: "当前 release 中没有可用的赌场资金池。"
       }

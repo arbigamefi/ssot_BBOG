@@ -21,6 +21,7 @@ function getRecentLabel(gameSlug: string, t: Translate) {
   if (gameSlug === "dice") return t("casino.room.history.recent.rolls");
   if (gameSlug === "roulette") return t("casino.room.history.recent.numbers");
   if (gameSlug === "keno") return t("casino.room.history.recent.draws");
+  if (gameSlug === "plinko") return t("casino.room.history.recent.slots");
   return t("casino.room.history.recent.flips");
 }
 

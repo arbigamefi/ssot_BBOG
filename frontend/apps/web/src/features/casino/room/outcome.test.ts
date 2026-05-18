@@ -2,6 +2,7 @@ import {
   encodeCoinTossParams,
   encodeDiceParams,
   encodeKenoParams,
+  encodePlinkoParams,
   encodeRouletteParams
 } from "@ssot/ssot/encoding";
 import type { DomainBet } from "@ssot/ssot";
@@ -93,5 +94,23 @@ describe("casino outcome derivation", () => {
     expect(outcome.pickedNumbers).toEqual([1, 2]);
     expect(outcome.draws[0]?.numbers).toHaveLength(10);
     expect(outcome.draws[0]?.hits).toBeGreaterThanOrEqual(0);
+  });
+
+  it("derives plinko bucket, path, and factor", () => {
+    const outcome = deriveCasinoOutcome({
+      bet: baseBet,
+      gameSlug: "plinko",
+      params: encodePlinkoParams("medium"),
+      randomWords: [123n]
+    });
+
+    expect(outcome?.kind).toBe("plinko");
+    if (outcome?.kind !== "plinko") return;
+    expect(outcome.risk).toBe("medium");
+    expect(outcome.rolls).toHaveLength(1);
+    expect(outcome.rolls[0]?.path).toHaveLength(8);
+    expect(outcome.rolls[0]?.bucket).toBeGreaterThanOrEqual(0);
+    expect(outcome.rolls[0]?.bucket).toBeLessThanOrEqual(8);
+    expect(outcome.rolls[0]?.factorBps).toBeGreaterThanOrEqual(0);
   });
 });

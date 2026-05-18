@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { CoinTossStage } from "./coin-toss/stage";
 import { DiceStage } from "./dice/stage";
 import { KenoStage } from "./keno/stage";
+import { PlinkoStage } from "./plinko/stage";
 
 vi.mock("@ssot/ui", () => ({
   cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" ")
@@ -22,9 +23,16 @@ vi.mock("next-intl", () => ({
       "casino.room.selection.dice.winChance": "Win",
       "casino.room.selection.coin.heads": "HEADS",
       "casino.room.selection.coin.tails": "TAILS",
+      "casino.room.selection.plinko.low": "Low",
+      "casino.room.selection.plinko.medium": "Medium",
+      "casino.room.selection.plinko.high": "High",
       "casino.room.stage.coin.awaitingSelection": "Awaiting Toss Selection",
       "casino.room.stage.coin.selected": `${values?.side} SELECTED`,
-      "casino.room.stage.coin.waitingVrf": "Waiting for VRF Oracle..."
+      "casino.room.stage.coin.waitingVrf": "Waiting for VRF Oracle...",
+      "casino.room.stage.plinko.dropZone": "Set risk and drop",
+      "casino.room.stage.plinko.waitingVrf": "Waiting for VRF Oracle...",
+      "casino.room.stage.plinko.slot": `Slot ${values?.slot}`,
+      "casino.room.stage.plinko.risk": `Risk: ${values?.risk}`
     })[key] ?? key
 }));
 
@@ -83,5 +91,13 @@ describe("game room stages", () => {
     fireEvent.click(screen.getByText("3"));
     expect(onChange).toHaveBeenCalledWith([1, 2, 3]);
     expect(onResetResult).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders Plinko stage risk and highlighted result slot", () => {
+    render(<PlinkoStage isPending={false} showResult risk="high" buckets={[8]} />);
+
+    expect(screen.getByText("Slot 8")).toBeDefined();
+    expect(screen.getByText("Risk: High")).toBeDefined();
+    expect(screen.getAllByText("8").length).toBeGreaterThan(0);
   });
 });

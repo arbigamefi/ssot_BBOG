@@ -14,7 +14,8 @@ const state = {
 };
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn() })
+  useRouter: () => ({ push: vi.fn() }),
+  useSearchParams: () => new URLSearchParams()
 }));
 
 vi.mock("next/link", () => ({
@@ -77,6 +78,7 @@ vi.mock("next-intl", () => ({
       "casino.room.names.roulette": "European Roulette",
       "casino.room.names.coinToss": "Coin Toss",
       "casino.room.names.keno": "Keno Draft",
+      "casino.room.names.plinko": "Plinko",
       "casino.room.audit.loading": "Loading audit stream",
       "casino.room.roundStatus.title": "Round status",
       "casino.room.roundStatus.phases.loadingQuote.label": "Estimating VRF fee",
@@ -167,10 +169,18 @@ vi.mock("next-intl", () => ({
       "casino.room.selection.keno.autoPick": "Auto Pick",
       "casino.room.selection.keno.clear": "Clear",
       "casino.room.selection.keno.empty": "No spots selected. Click the grid to pick numbers.",
+      "casino.room.selection.plinko.riskProfile": "Risk Profile",
+      "casino.room.selection.plinko.low": "Low",
+      "casino.room.selection.plinko.medium": "Medium",
+      "casino.room.selection.plinko.high": "High",
+      "casino.room.selection.plinko.lowDetail": "Smoother board",
+      "casino.room.selection.plinko.mediumDetail": "Balanced edge",
+      "casino.room.selection.plinko.highDetail": "Extreme buckets",
       "casino.room.stage.loading": "Loading stage",
       "casino.room.history.recent.rolls": "RECENT ROLLS",
       "casino.room.history.recent.numbers": "RECENT NUMBERS",
       "casino.room.history.recent.draws": "RECENT DRAWS",
+      "casino.room.history.recent.slots": "RECENT SLOTS",
       "casino.room.history.recent.flips": "RECENT FLIPS",
       "casino.room.history.states.settled": "SETTLED",
       "casino.room.history.states.refunded": "REFUNDED",
