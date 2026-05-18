@@ -1,0 +1,189 @@
+# Casino Keeper Production Runbook
+
+| Owner | Frontend Lead + SRE |
+| Status | Accepted |
+| Last Updated | 2026-05-18 |
+| Depends-on | `../../frontend/casino-keeper-v1.md`, `../../design/durable-bet-index.md` |
+| Scope | Casino `RandomReady -> GameHub.finalize -> Settled/Refunded` automation |
+
+This runbook installs and operates the casino keeper as two independent
+instances: primary and backup. The keeper is an operational convenience, not a
+settlement authority. `GameHub.finalize(betId)` remains permissionless.
+
+## 1. Preconditions
+
+- The release JSON is present on the host:
+  `frontend/packages/ssot/src/release/embedded/chain-84532.json` for Base
+  Sepolia, or the active mainnet release path.
+- Keeper EOAs have enough native gas token for at least 24 hours of expected
+  settlement traffic.
+- Primary and backup use different EOAs, RPC providers, and hosts or regions.
+- Managed Postgres is provisioned for the durable bet index, or
+  `BET_INDEX_WRITE_ENABLED=false` is explicitly accepted for a canary.
+- The web app reads keeper health from a path outside `apps/web/public` through
+  `/ops/casino-keeper-health.json`.
+
+## 2. Build
+
+Run from the repo root on each keeper host:
+
+```bash
+corepack enable
+pnpm -C frontend install --frozen-lockfile
+pnpm -C frontend keeper:build
+pnpm -C frontend/apps/keeper test
+```
+
+The systemd unit executes `apps/keeper/dist/cli.js`, so the build step is
+required before starting or restarting the service after a code deploy.
+
+## 3. Environment Files
+
+Templates live under:
+
+```text
+frontend/deploy/casino-keeper/primary.env.example
+frontend/deploy/casino-keeper/backup.env.example
+```
+
+Install them as root-owned files:
+
+```bash
+sudo install -d -m 0750 /etc/arbigamefi/casino-keeper
+sudo install -d -m 0750 /var/lib/arbigamefi/casino-keeper
+sudo cp frontend/deploy/casino-keeper/primary.env.example \
+  /etc/arbigamefi/casino-keeper/primary.env
+sudo cp frontend/deploy/casino-keeper/backup.env.example \
+  /etc/arbigamefi/casino-keeper/backup.env
+sudo chmod 0600 /etc/arbigamefi/casino-keeper/*.env
+```
+
+Edit the real files and set:
+
+| Variable | Production rule |
+| --- | --- |
+| `KEEPER_PRIVATE_KEY` | Dedicated bounded-balance keeper EOA. Never reuse deployer or governance keys. |
+| `KEEPER_RPC_HTTP` / `KEEPER_RPC_WS` | Use provider-specific endpoints; primary and backup should differ. |
+| `KEEPER_START_BLOCK` | Use the active release block or a recent canary block after backfill is complete. |
+| `KEEPER_ROLE` | `primary` or `backup`. |
+| `KEEPER_BACKUP_DELAY_SECONDS` | `0` for primary, `5` for backup. |
+| `KEEPER_HEALTH_PATH` | Role-specific file under `/var/lib/arbigamefi/casino-keeper`. |
+| `BET_INDEX_DATABASE_URL` | Managed Postgres connection string. |
+| `BET_INDEX_SSL` | `true` for managed Postgres unless the provider documents otherwise. |
+
+## 4. Install systemd Unit
+
+```bash
+sudo install -m 0644 \
+  frontend/deploy/casino-keeper/arbigamefi-casino-keeper@.service \
+  /etc/systemd/system/arbigamefi-casino-keeper@.service
+sudo systemctl daemon-reload
+```
+
+Start the primary:
+
+```bash
+sudo systemctl enable --now arbigamefi-casino-keeper@primary
+sudo journalctl -u arbigamefi-casino-keeper@primary -f
+```
+
+Start the backup on the backup host:
+
+```bash
+sudo systemctl enable --now arbigamefi-casino-keeper@backup
+sudo journalctl -u arbigamefi-casino-keeper@backup -f
+```
+
+## 5. Health Wiring
+
+For a single-host staging deployment, point the web route to the primary health
+file:
+
+```bash
+KEEPER_HEALTH_PATH=/var/lib/arbigamefi/casino-keeper/primary-health.json
+```
+
+For multi-host production, publish the primary health snapshot to the web
+runtime through the deployment platform's secret volume, object store, or
+authenticated internal fetch. Do not copy it to `apps/web/public`.
+
+Expected route:
+
+```bash
+curl -fsS https://<ops-host>/ops/casino-keeper-health.json | jq .
+```
+
+The route should show:
+
+- `status: "running"`;
+- `role: "primary"` for the primary health file;
+- a fresh `updatedAt`;
+- non-decreasing `lastScannedBlock`;
+- `lastFinalizeFailureAt` absent or older than the most recent recovery.
+
+## 6. Canary
+
+Before mainnet or after keeper deploy:
+
+1. Open `/casino/dice`.
+2. Place a minimal stake canary bet.
+3. Confirm the frontend reaches `Randomness ready`.
+4. Confirm the keeper logs one enqueue and one terminal verification:
+
+```bash
+sudo journalctl -u arbigamefi-casino-keeper@primary --since "10 minutes ago" \
+  | rg "casino.keeper.enqueued|casino.keeper.finalize"
+```
+
+5. Confirm `/portfolio/activity/<betId>` or the result modal shows a terminal
+   chain proof.
+6. Record bet id, place tx, VRF request, finalize tx, and health snapshot age in
+   `docs/deploy/` when the canary is part of a release rehearsal.
+
+## 7. Failure Handling
+
+| Symptom | First check | Action |
+| --- | --- | --- |
+| `RandomReady` bets stay unfinalized | `journalctl` for enqueue/finalize errors | Restart primary once; if still failing, start or promote backup and manually finalize stuck ids. |
+| Health route stale | `KEEPER_HEALTH_PATH`, file permissions, unit status | Fix path/ownership; do not treat missing health as healthy. |
+| RPC errors | provider dashboard and keeper logs | Switch primary RPC endpoint; backup should already use a different provider. |
+| Postgres unavailable | keeper logs `bet_index_*_failed` | Settlement should continue. Disable `BET_INDEX_WRITE_ENABLED` only if connection churn threatens process stability. |
+| Repeated finalize revert | inspect `getBet(betId)` and contract state | If state is already terminal, mark as raced success. Otherwise escalate as protocol incident. |
+
+Manual fallback remains permissionless:
+
+```bash
+cast send $GAME_HUB "finalize(uint256)" $BET_ID --rpc-url $RPC --private-key $KEEPER_PK
+```
+
+## 8. Rollback
+
+Rollback means reverting the keeper process, not the contracts.
+
+```bash
+sudo systemctl stop arbigamefi-casino-keeper@primary
+sudo systemctl start arbigamefi-casino-keeper@backup
+```
+
+If both automated keepers are down, the frontend exposes manual `Settle result`
+after the keeper delay threshold, and operators can use the `cast send` fallback
+above.
+
+## 9. Acceptance Checklist
+
+- [ ] Primary keeper unit starts and writes a fresh health snapshot.
+- [ ] Backup keeper unit starts with `KEEPER_BACKUP_DELAY_SECONDS=5`.
+- [ ] Primary and backup use different EOAs and RPC providers.
+- [ ] Durable bet index migration succeeds when `BET_INDEX_WRITE_ENABLED=true`.
+- [ ] A minimal canary bet reaches terminal state without player manual settle.
+- [ ] `/ops/casino-keeper-health.json` reports a fresh primary snapshot.
+- [ ] Stuck `RandomReady` alert owner and escalation channel are documented.
+
+## 10. Don'ts
+
+- Do not run primary and backup with the same private key.
+- Do not write keeper health snapshots under `apps/web/public`.
+- Do not make Postgres availability a precondition for settlement.
+- Do not restart from the release block on every production restart after the
+  durable cursor has been seeded.
+- Do not hide manual fallback; it is the emergency path when both keepers fail.

@@ -54,6 +54,30 @@ KEEPER_BACKUP_DELAY_SECONDS=5 \
 pnpm -C frontend keeper:start
 ```
 
+## Production
+
+Production deployment templates live in:
+
+```text
+frontend/deploy/casino-keeper/
+```
+
+Use `arbigamefi-casino-keeper@.service` with separate `primary.env` and
+`backup.env` files. The full procedure is documented in:
+
+```text
+docs/ops/runbooks/casino-keeper-production.md
+```
+
+Primary and backup should run on different hosts or regions, with different
+keeper EOAs and RPC providers. Build before starting the systemd unit:
+
+```bash
+pnpm -C frontend install --frozen-lockfile
+pnpm -C frontend keeper:build
+pnpm -C frontend/apps/keeper test
+```
+
 The keeper always re-reads `getBet(betId)` before broadcasting and only calls
 `finalize` when the bet state is `RandomReady`.
 

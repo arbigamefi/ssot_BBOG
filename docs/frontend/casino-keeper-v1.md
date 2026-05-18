@@ -34,6 +34,18 @@ casino round.
 | Deployment | one primary instance, one backup instance after canary |
 | Secrets | env vars only, never committed |
 
+Production systemd and environment templates live in:
+
+```text
+frontend/deploy/casino-keeper/
+```
+
+The operational install, health wiring, canary, and rollback procedure is:
+
+```text
+docs/ops/runbooks/casino-keeper-production.md
+```
+
 ## 4. Inputs
 
 Required environment:
@@ -51,6 +63,10 @@ KEEPER_HEALTH_PATH=
 ```
 
 Backup keeper uses `KEEPER_BACKUP_DELAY_SECONDS=5`.
+
+Primary and backup must use separate EOAs and separate RPC providers. Running
+both roles with the same key defeats the redundancy model and makes nonce
+contention harder to diagnose.
 
 `KEEPER_HEALTH_PATH` is optional. When set, the keeper writes a small JSON
 snapshot after startup, enqueue, scan, finalize, and heartbeat events. For local

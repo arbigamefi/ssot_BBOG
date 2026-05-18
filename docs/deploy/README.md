@@ -142,6 +142,10 @@ The casino keeper auto-settlement rehearsal is recorded in
 `placeBet -> Chainlink fulfill -> RandomReady -> keeper finalize -> Settled` and records the VRF fee
 buffer fix required for live public-testnet canaries.
 
+Production keeper install templates live in `frontend/deploy/casino-keeper/`, with the operator
+runbook in `docs/ops/runbooks/casino-keeper-production.md`. They define the primary/backup systemd
+units, role-specific env files, and health snapshot wiring required before a mainnet casino launch.
+
 The v1.3 script deploys and wires:
 - `PoolRegistry`
 - `SettlementRouter`
