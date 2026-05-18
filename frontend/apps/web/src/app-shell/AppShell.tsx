@@ -23,6 +23,8 @@ function getActiveRoute(pathname: string): AppRoute {
   if (pathname === "/ops") return "ops";
   if (pathname === "/casino/roulette") return "roulette";
   if (pathname === "/casino/dice") return "dice";
+  if (pathname === "/casino/plinko") return "plinko";
+  if (pathname === "/casino/slots") return "slots";
   if (pathname === "/casino/coin-toss") return "cointoss";
   if (pathname === "/casino/keno") return "keno";
   return "none";

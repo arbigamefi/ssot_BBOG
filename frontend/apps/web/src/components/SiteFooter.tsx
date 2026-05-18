@@ -9,6 +9,8 @@ import { LocaleSwitcher } from "./LocaleSwitcher";
 
 const GAME_LINKS = [
   { href: "/casino/dice", labelKey: "nav.dice" },
+  { href: "/casino/plinko", labelKey: "nav.plinko" },
+  { href: "/casino/slots", labelKey: "nav.slots" },
   { href: "/casino/coin-toss", labelKey: "nav.coinToss" },
   { href: "/casino/roulette", labelKey: "nav.roulette" },
   { href: "/casino/keno", labelKey: "nav.keno" }

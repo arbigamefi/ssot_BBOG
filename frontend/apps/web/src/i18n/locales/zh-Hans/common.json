@@ -2156,8 +2156,10 @@
     "liquidity": "流动性",
     "openRooms": "进入游戏",
     "ops": "运维",
+    "plinko": "Plinko 弹珠盘",
     "rooms": "游戏",
     "roulette": "轮盘",
+    "slots": "Slots 拉霸",
     "sportsbook": "体育投注"
   }
 }

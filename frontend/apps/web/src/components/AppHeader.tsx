@@ -18,6 +18,8 @@ export type AppRoute =
   | "ops"
   | "none"
   | "dice"
+  | "plinko"
+  | "slots"
   | "roulette"
   | "cointoss"
   | "keno";
@@ -27,6 +29,15 @@ interface AppHeaderProps {
   activeRoute?: AppRoute;
   variant?: HeaderVariant;
 }
+
+const GAME_NAV_LINKS = [
+  { id: "dice", labelKey: "nav.dice", href: "/casino/dice" },
+  { id: "plinko", labelKey: "nav.plinko", href: "/casino/plinko" },
+  { id: "slots", labelKey: "nav.slots", href: "/casino/slots" },
+  { id: "roulette", labelKey: "nav.roulette", href: "/casino/roulette" },
+  { id: "cointoss", labelKey: "nav.coinToss", href: "/casino/coin-toss" },
+  { id: "keno", labelKey: "nav.keno", href: "/casino/keno" }
+] as const;
 
 export function AppHeader({ activeRoute = "none", variant = "default" }: AppHeaderProps) {
   const isTransparent = variant === "transparent";
@@ -88,50 +99,20 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
 
         {variant === "game" ? (
           <ShellHeaderNav>
-            <Link
-              href="/casino/dice"
-              className={cn(
-                "transition-colors",
-                activeRoute === "dice"
-                  ? "border-b-2 border-brand pb-1 text-brand"
-                  : "text-fg-subtle hover:text-fg"
-              )}
-            >
-              {t("nav.dice")}
-            </Link>
-            <Link
-              href="/casino/roulette"
-              className={cn(
-                "transition-colors",
-                activeRoute === "roulette"
-                  ? "border-b-2 border-brand pb-1 text-brand"
-                  : "text-fg-subtle hover:text-fg"
-              )}
-            >
-              {t("nav.roulette")}
-            </Link>
-            <Link
-              href="/casino/coin-toss"
-              className={cn(
-                "transition-colors",
-                activeRoute === "cointoss"
-                  ? "border-b-2 border-brand pb-1 text-brand"
-                  : "text-fg-subtle hover:text-fg"
-              )}
-            >
-              {t("nav.coinToss")}
-            </Link>
-            <Link
-              href="/casino/keno"
-              className={cn(
-                "transition-colors",
-                activeRoute === "keno"
-                  ? "border-b-2 border-brand pb-1 text-brand"
-                  : "text-fg-subtle hover:text-fg"
-              )}
-            >
-              {t("nav.keno")}
-            </Link>
+            {GAME_NAV_LINKS.map((link) => (
+              <Link
+                key={link.id}
+                href={link.href}
+                className={cn(
+                  "transition-colors",
+                  activeRoute === link.id
+                    ? "border-b-2 border-brand pb-1 text-brand"
+                    : "text-fg-subtle hover:text-fg"
+                )}
+              >
+                {t(link.labelKey)}
+              </Link>
+            ))}
 
             <div className="hidden h-6 border-l border-border-soft pl-6 ml-2 sm:block">
               <Link

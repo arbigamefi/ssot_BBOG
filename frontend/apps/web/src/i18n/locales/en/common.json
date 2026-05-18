@@ -2156,8 +2156,10 @@
     "liquidity": "Liquidity",
     "openRooms": "Open Rooms",
     "ops": "Ops",
+    "plinko": "Plinko",
     "rooms": "Rooms",
     "roulette": "Roulette",
+    "slots": "Slots",
     "sportsbook": "Sportsbook"
   }
 }
