@@ -10,7 +10,7 @@ import {
   type RecentBetSummary
 } from "./history-widget";
 import type { CasinoOutcome } from "./outcome";
-import type { BaccaratSide, CoinSide, DiceDirection, PlinkoRisk } from "./params";
+import type { BaccaratSide, CoinSide, DiceDirection, PlinkoRisk, SicBoKind } from "./params";
 import { GameRoomResultOverlay } from "./result-overlay";
 import { isCasinoTerminalRoundResult, type CasinoRoundResult } from "./resolution";
 
@@ -73,6 +73,11 @@ const BaccaratStage = dynamic(
   }
 );
 
+const SicBoStage = dynamic(() => import("../modules/sic-bo/stage").then((mod) => mod.SicBoStage), {
+  loading: StageLoading,
+  ssr: false
+});
+
 export function GameRoomRightPane({
   gameSlug,
   coinSide,
@@ -90,6 +95,8 @@ export function GameRoomRightPane({
   kenoSpots,
   plinkoRisk,
   baccaratSide,
+  sicBoKind,
+  sicBoValue,
   plinkoBuckets,
   slotsSymbols,
   animatingKenoSpots,
@@ -122,6 +129,8 @@ export function GameRoomRightPane({
   kenoSpots: readonly number[];
   plinkoRisk: PlinkoRisk;
   baccaratSide: BaccaratSide;
+  sicBoKind: SicBoKind;
+  sicBoValue: number;
   plinkoBuckets: readonly number[];
   slotsSymbols: readonly number[];
   animatingKenoSpots: readonly number[];
@@ -220,6 +229,16 @@ export function GameRoomRightPane({
           showResult={showResult}
           selectedSide={baccaratSide}
           outcome={casinoOutcome?.kind === "baccarat" ? casinoOutcome : null}
+        />
+      )}
+
+      {gameSlug === "sic-bo" && (
+        <SicBoStage
+          isPending={isPending}
+          showResult={showResult}
+          betKind={sicBoKind}
+          betValue={sicBoValue}
+          outcome={casinoOutcome?.kind === "sic-bo" ? casinoOutcome : null}
         />
       )}
 

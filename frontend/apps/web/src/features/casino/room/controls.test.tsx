@@ -6,7 +6,8 @@ import {
   BaccaratSideSelector,
   CoinSideSelector,
   KenoSelectionPanel,
-  RouletteSelectionPanel
+  RouletteSelectionPanel,
+  SicBoBetSelector
 } from "./controls";
 
 vi.mock("@ssot/ui", async (importOriginal) => {
@@ -30,6 +31,16 @@ vi.mock("next-intl", () => ({
       "casino.room.selection.baccarat.player": "Player",
       "casino.room.selection.baccarat.banker": "Banker",
       "casino.room.selection.baccarat.tie": "Tie",
+      "casino.room.selection.sicBo.betType": "Bet type",
+      "casino.room.selection.sicBo.face": "Face",
+      "casino.room.selection.sicBo.total": "Total",
+      "casino.room.selection.sicBo.kinds.small": "Small",
+      "casino.room.selection.sicBo.kinds.big": "Big",
+      "casino.room.selection.sicBo.kinds.anyTriple": "Any triple",
+      "casino.room.selection.sicBo.kinds.specificTriple": "Specific triple",
+      "casino.room.selection.sicBo.kinds.total": "Exact total",
+      "casino.room.selection.sicBo.kinds.specificDouble": "Specific double",
+      "casino.room.selection.sicBo.kinds.singleFace": "Single face",
       "casino.room.selection.keno.spotsLabel": "/ 10 Spots",
       "casino.room.selection.keno.autoPick": "Auto Pick",
       "casino.room.selection.keno.clear": "Clear",
@@ -69,6 +80,18 @@ describe("game room controls", () => {
 
     fireEvent.click(screen.getByText("Banker"));
     expect(onChange).toHaveBeenCalledWith("banker");
+  });
+
+  it("changes sic bo bet type and value through the selector", () => {
+    const onChange = vi.fn();
+    const { rerender } = render(<SicBoBetSelector kind="small" value={0} onChange={onChange} />);
+
+    fireEvent.click(screen.getByText("Exact total"));
+    expect(onChange).toHaveBeenCalledWith("total", 10);
+
+    rerender(<SicBoBetSelector kind="total" value={10} onChange={onChange} />);
+    fireEvent.click(screen.getByText("12"));
+    expect(onChange).toHaveBeenCalledWith("total", 12);
   });
 
   it("renders sorted Keno spots and clears the result", () => {

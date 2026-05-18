@@ -20,9 +20,11 @@ import {
   baccaratMultiplier,
   calculateGameWinChance,
   plinkoMaxMultiplier,
+  sicBoMultiplier,
   slotsMaxMultiplier,
   type BaccaratSide,
-  type PlinkoRisk
+  type PlinkoRisk,
+  type SicBoKind
 } from "../../../../features/casino/room/params";
 import {
   formatGameMaxPayout,
@@ -68,6 +70,8 @@ function getLocalizedGameName(t: (key: string) => string, game: GameMeta) {
       return t("casino.room.names.slots");
     case "baccarat":
       return t("casino.room.names.baccarat");
+    case "sic-bo":
+      return t("casino.room.names.sicBo");
     default:
       return game.label;
   }
@@ -127,6 +131,8 @@ export function GamePageClient({ slug }: { slug: string }) {
   const [kenoSpots, setKenoSpots] = React.useState<number[]>([]);
   const [plinkoRisk, setPlinkoRisk] = React.useState<PlinkoRisk>("medium");
   const [baccaratSide, setBaccaratSide] = React.useState<BaccaratSide>("player");
+  const [sicBoKind, setSicBoKind] = React.useState<SicBoKind>("small");
+  const [sicBoValue, setSicBoValue] = React.useState<number>(0);
 
   // Simulation state
   const [flipCount, setFlipCount] = React.useState(0);
@@ -192,9 +198,16 @@ export function GamePageClient({ slug }: { slug: string }) {
         rouletteSpots,
         kenoSpots,
         plinkoRisk,
-        baccaratSide
+        baccaratSide,
+        sicBoKind,
+        sicBoValue
       })
     : 0;
+
+  const handleSicBoChange = React.useCallback((kind: SicBoKind, value: number) => {
+    setSicBoKind(kind);
+    setSicBoValue(value);
+  }, []);
 
   const casinoRound = useCasinoRound({
     sdk,
@@ -213,6 +226,8 @@ export function GamePageClient({ slug }: { slug: string }) {
     kenoSpots,
     plinkoRisk,
     baccaratSide,
+    sicBoKind,
+    sicBoValue,
     affiliate: referralAffiliate,
     onRoundStart: handleRoundStart,
     onRoundTerminal: handleRoundTerminal,
@@ -273,6 +288,7 @@ export function GamePageClient({ slug }: { slug: string }) {
         setResultNum(lastRoll?.multiplier ?? null);
         setSlotsSymbols(lastRoll ? [...lastRoll.symbols] : []);
       }
+      if (outcome?.kind === "sic-bo") setResultNum(outcome.rolls.at(-1)?.total ?? null);
 
       if (bet.state === "randomReady" && revealedBetIdRef.current !== bet.betId) {
         revealedBetIdRef.current = bet.betId;
@@ -308,9 +324,11 @@ export function GamePageClient({ slug }: { slug: string }) {
         ? slotsMaxMultiplier()
         : game.slug === "baccarat"
           ? baccaratMultiplier(baccaratSide)
-          : winChance === 0
-            ? 0
-            : 99 / winChance;
+          : game.slug === "sic-bo"
+            ? sicBoMultiplier(sicBoKind, sicBoValue)
+            : winChance === 0
+              ? 0
+              : 99 / winChance;
   const expectedPayout = betAmount * multiplier;
 
   const LeftPane = (
@@ -345,6 +363,9 @@ export function GamePageClient({ slug }: { slug: string }) {
       onPlinkoRiskChange={setPlinkoRisk}
       baccaratSide={baccaratSide}
       onBaccaratSideChange={setBaccaratSide}
+      sicBoKind={sicBoKind}
+      sicBoValue={sicBoValue}
+      onSicBoChange={handleSicBoChange}
       roundPhase={casinoRound.roundPhase}
       vrfQuote={casinoRound.vrfQuote}
       vrfQuoteError={casinoRound.vrfQuoteError}
@@ -377,6 +398,8 @@ export function GamePageClient({ slug }: { slug: string }) {
       kenoSpots={kenoSpots}
       plinkoRisk={plinkoRisk}
       baccaratSide={baccaratSide}
+      sicBoKind={sicBoKind}
+      sicBoValue={sicBoValue}
       plinkoBuckets={plinkoBuckets}
       slotsSymbols={slotsSymbols}
       animatingKenoSpots={animatingKenoSpots}

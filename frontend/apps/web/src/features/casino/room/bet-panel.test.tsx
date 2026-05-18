@@ -103,7 +103,17 @@ vi.mock("next-intl", () => ({
       "casino.room.selection.baccarat.betOn": "Bet on",
       "casino.room.selection.baccarat.player": "Player",
       "casino.room.selection.baccarat.banker": "Banker",
-      "casino.room.selection.baccarat.tie": "Tie"
+      "casino.room.selection.baccarat.tie": "Tie",
+      "casino.room.selection.sicBo.betType": "Bet type",
+      "casino.room.selection.sicBo.face": "Face",
+      "casino.room.selection.sicBo.total": "Total",
+      "casino.room.selection.sicBo.kinds.small": "Small",
+      "casino.room.selection.sicBo.kinds.big": "Big",
+      "casino.room.selection.sicBo.kinds.anyTriple": "Any triple",
+      "casino.room.selection.sicBo.kinds.specificTriple": "Specific triple",
+      "casino.room.selection.sicBo.kinds.total": "Exact total",
+      "casino.room.selection.sicBo.kinds.specificDouble": "Specific double",
+      "casino.room.selection.sicBo.kinds.singleFace": "Single face"
     })[key] ?? key
 }));
 
@@ -148,6 +158,9 @@ function renderPanel(overrides: Partial<React.ComponentProps<typeof GameRoomBetP
     onPlinkoRiskChange: vi.fn(),
     baccaratSide: "player",
     onBaccaratSideChange: vi.fn(),
+    sicBoKind: "small",
+    sicBoValue: 0,
+    onSicBoChange: vi.fn(),
     roundPhase: "ready",
     vrfQuote: 73_169_600_001_705n,
     vrfQuoteError: undefined,

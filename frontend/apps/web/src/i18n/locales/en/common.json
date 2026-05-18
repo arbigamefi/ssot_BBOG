@@ -112,7 +112,8 @@
         "keno": "Keno Draft",
         "plinko": "Plinko",
         "slots": "Slots",
-        "baccarat": "Baccarat"
+        "baccarat": "Baccarat",
+        "sicBo": "Sic Bo"
       },
       "audit": {
         "loading": "Loading audit stream",
@@ -302,6 +303,20 @@
           "banker": "Banker",
           "tie": "Tie"
         },
+        "sicBo": {
+          "betType": "Bet type",
+          "face": "Face",
+          "total": "Total",
+          "kinds": {
+            "small": "Small",
+            "big": "Big",
+            "anyTriple": "Any triple",
+            "specificTriple": "Specific triple",
+            "total": "Exact total",
+            "specificDouble": "Specific double",
+            "singleFace": "Single face"
+          }
+        },
         "slots": {
           "profiles": {
             "classic": "Classic 3 reels"
@@ -344,6 +359,14 @@
           "dealing": "Waiting for VRF oracle...",
           "result": "{side} wins",
           "selected": "Selected: {side}"
+        },
+        "sicBo": {
+          "ready": "Choose a Sic Bo table bet",
+          "rolling": "Waiting for VRF oracle...",
+          "opened": "Dice opened: {dice}",
+          "total": "Total",
+          "triple": "Triple",
+          "result": "Result"
         }
       },
       "history": {
@@ -354,6 +377,7 @@
           "buckets": "RECENT BUCKETS",
           "slots": "RECENT SLOTS",
           "hands": "RECENT HANDS",
+          "dice": "RECENT DICE",
           "flips": "RECENT FLIPS"
         },
         "states": {
@@ -442,7 +466,12 @@
           "baccaratPlayerTotal": "Player total",
           "baccaratBankerTotal": "Banker total",
           "baccaratPlayerCards": "Player cards",
-          "baccaratBankerCards": "Banker cards"
+          "baccaratBankerCards": "Banker cards",
+          "sicBoBet": "Sic Bo bet",
+          "sicBoDice": "Dice opened",
+          "sicBoTotal": "Total",
+          "sicBoTriple": "Triple",
+          "sicBoMultiplier": "Roll multiplier"
         },
         "actions": {
           "close": "Close",
@@ -469,6 +498,7 @@
       "filters": {
         "all": "All Modules",
         "table": "Table Games",
+        "dice": "Dice Games",
         "binary": "Binary / Fast",
         "lottery": "Lottery",
         "arcade": "Arcade"
@@ -482,6 +512,7 @@
         "table": "Table",
         "lottery": "Lottery",
         "arcade": "Arcade",
+        "dice": "Dice",
         "module": "Module"
       },
       "rooms": {
@@ -519,6 +550,11 @@
           "title": "Baccarat",
           "promise": "Player vs banker hands with tie upside.",
           "badge": "Up to 10.4x"
+        },
+        "sicBo": {
+          "title": "Sic Bo",
+          "promise": "Three dice, classic table bets, and triple upside.",
+          "badge": "Up to 216x"
         }
       },
       "card": {
@@ -2185,6 +2221,7 @@
     "plinko": "Plinko",
     "rooms": "Rooms",
     "roulette": "Roulette",
+    "sicBo": "Sic Bo",
     "slots": "Slots",
     "sportsbook": "Sportsbook"
   }

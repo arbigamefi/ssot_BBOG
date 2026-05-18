@@ -11,7 +11,8 @@ describe("GameEncoderRegistry", () => {
     expect(slugs).toContain("plinko");
     expect(slugs).toContain("slots");
     expect(slugs).toContain("baccarat");
-    expect(slugs.length).toBe(7);
+    expect(slugs).toContain("sic-bo");
+    expect(slugs.length).toBe(8);
   });
 
   it("getGameEncoder returns undefined for unknown slug", () => {
@@ -140,6 +141,20 @@ describe("GameEncoderRegistry", () => {
     it("has correct defaults", () => {
       const enc = requireGameEncoder("baccarat");
       expect(enc.defaultParams).toEqual({ side: "player" });
+    });
+  });
+
+  describe("sic bo encoder", () => {
+    it("encodes and decodes roundtrip", () => {
+      const enc = requireGameEncoder("sic-bo");
+      const hex = enc.encode({ kind: "total", value: 10 });
+      const decoded = enc.decode(hex);
+      expect(decoded).toEqual({ kind: "total", kindId: 4, value: 10 });
+    });
+
+    it("has correct defaults", () => {
+      const enc = requireGameEncoder("sic-bo");
+      expect(enc.defaultParams).toEqual({ kind: "small", value: 0 });
     });
   });
 

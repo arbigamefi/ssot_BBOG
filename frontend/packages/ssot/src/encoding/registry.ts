@@ -6,6 +6,7 @@ import { encodeKenoParams, decodeKenoParams } from "./keno";
 import { encodePlinkoParams, decodePlinkoParams } from "./plinko";
 import { encodeSlotsParams, decodeSlotsParams } from "./slots";
 import { encodeBaccaratParams, decodeBaccaratParams } from "./baccarat";
+import { encodeSicBoParams, decodeSicBoParams } from "./sicbo";
 
 /**
  * A registered game encoder with encode/decode functions and
@@ -112,6 +113,34 @@ const REGISTRY: ReadonlyMap<string, GameEncoder> = new Map<string, GameEncoder>(
       decode: (hex: Hex) => decodeBaccaratParams(hex),
       defaultParams: { side: "player" },
       paramsDescription: "uint8 side (0=player, 1=banker, 2=tie)"
+    }
+  ],
+  [
+    "sic-bo",
+    {
+      slug: "sic-bo",
+      label: "Sic Bo",
+      encode: (p: {
+        kind?:
+          | "small"
+          | "big"
+          | "anyTriple"
+          | "specificTriple"
+          | "total"
+          | "specificDouble"
+          | "singleFace"
+          | 0
+          | 1
+          | 2
+          | 3
+          | 4
+          | 5
+          | 6;
+        value?: number;
+      }) => encodeSicBoParams({ kind: p.kind ?? "small", value: p.value }),
+      decode: (hex: Hex) => decodeSicBoParams(hex),
+      defaultParams: { kind: "small", value: 0 },
+      paramsDescription: "uint8 kind, uint8 value"
     }
   ]
 ]);

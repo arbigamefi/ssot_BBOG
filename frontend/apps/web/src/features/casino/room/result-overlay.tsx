@@ -6,7 +6,7 @@ import { cn } from "@ssot/ui";
 import { formatUnits } from "../../betting/model/units";
 import { formatNativeFee } from "./casino-round";
 import type { CasinoOutcome } from "./outcome";
-import type { BaccaratSide, CoinSide, DiceDirection } from "./params";
+import type { BaccaratSide, CoinSide, DiceDirection, SicBoKind } from "./params";
 import type { CasinoRoundResult } from "./resolution";
 
 function formatTokenAmount(value: bigint, decimals: number, symbol: string) {
@@ -160,6 +160,19 @@ function formatPlinkoRisk(risk: string, t: Translate) {
 
 function formatBaccaratSide(side: BaccaratSide, t: Translate) {
   return t(`casino.room.selection.baccarat.${side}`);
+}
+
+function formatSicBoBet(kind: SicBoKind, value: number, t: Translate) {
+  const label = t(`casino.room.selection.sicBo.kinds.${kind}`);
+  if (
+    kind === "total" ||
+    kind === "specificTriple" ||
+    kind === "specificDouble" ||
+    kind === "singleFace"
+  ) {
+    return `${label} ${value}`;
+  }
+  return label;
 }
 
 function formatSlotsMultiplier(multiplier: number) {
@@ -327,6 +340,43 @@ function getGameResultRows(context: GameResultContext, t: Translate) {
           ? t("casino.room.selection.slots.yes")
           : t("casino.room.selection.slots.no"),
         tone: context.casinoOutcome.rolls.some((roll) => roll.jackpot) ? "win" : "neutral"
+      }
+    ] satisfies GameResultRow[];
+  }
+
+  if (context.casinoOutcome?.kind === "sic-bo") {
+    return [
+      {
+        label: t("casino.room.result.facts.sicBoBet"),
+        value: formatSicBoBet(context.casinoOutcome.betKind, context.casinoOutcome.betValue, t)
+      },
+      {
+        label: t("casino.room.result.facts.sicBoDice"),
+        value: context.casinoOutcome.rolls.map((roll) => roll.dice.join(" / ")).join(", "),
+        tone:
+          context.casinoOutcome.netResult > 0n
+            ? "win"
+            : context.casinoOutcome.netResult < 0n
+              ? "loss"
+              : "neutral"
+      },
+      {
+        label: t("casino.room.result.facts.sicBoTotal"),
+        value: context.casinoOutcome.rolls.map((roll) => roll.total).join(", ")
+      },
+      {
+        label: t("casino.room.result.facts.sicBoTriple"),
+        value: context.casinoOutcome.rolls
+          .map((roll) =>
+            roll.triple ? t("casino.room.selection.slots.yes") : t("casino.room.selection.slots.no")
+          )
+          .join(", ")
+      },
+      {
+        label: t("casino.room.result.facts.sicBoMultiplier"),
+        value: context.casinoOutcome.rolls
+          .map((roll) => `${(roll.factorBps / 10_000).toFixed(roll.factorBps >= 100_000 ? 1 : 2)}x`)
+          .join(", ")
       }
     ] satisfies GameResultRow[];
   }

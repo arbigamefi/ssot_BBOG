@@ -5,6 +5,7 @@ import {
   decodeKenoParams,
   decodePlinkoParams,
   decodeRouletteParams,
+  decodeSicBoParams,
   decodeSlotsParams
 } from "@ssot/ssot/encoding";
 import { describe, expect, it } from "vitest";
@@ -102,6 +103,18 @@ describe("game room params", () => {
         baccaratSide: "banker"
       })
     ).toBeCloseTo((2_212_744 / 4_826_809) * 100);
+    expect(
+      calculateGameWinChance({
+        slug: "sic-bo",
+        diceTarget: 50,
+        diceDirection: "under",
+        rouletteSpots: [],
+        kenoSpots: [],
+        plinkoRisk: "medium",
+        sicBoKind: "small",
+        sicBoValue: 0
+      })
+    ).toBeCloseTo((105 / 216) * 100);
   });
 
   it("normalizes Roulette covered numbers and chance", () => {
@@ -220,6 +233,23 @@ describe("game room params", () => {
     expect(baccarat.ok && decodeBaccaratParams(baccarat.params)).toEqual({
       side: "tie",
       sideId: 2
+    });
+
+    const sicBo = buildGameParams({
+      slug: "sic-bo",
+      diceTarget: 50,
+      diceDirection: "under",
+      coinSide: "HEADS",
+      rouletteSpots: [],
+      kenoSpots: [],
+      plinkoRisk: "medium",
+      sicBoKind: "total",
+      sicBoValue: 12
+    });
+    expect(sicBo.ok && decodeSicBoParams(sicBo.params)).toEqual({
+      kind: "total",
+      kindId: 4,
+      value: 12
     });
   });
 

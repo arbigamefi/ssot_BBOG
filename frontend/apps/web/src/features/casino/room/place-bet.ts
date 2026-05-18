@@ -10,7 +10,8 @@ import {
   type DiceDirection,
   type GameParamsHex,
   type GameParamsMessages,
-  type PlinkoRisk
+  type PlinkoRisk,
+  type SicBoKind
 } from "./params";
 
 type ReleaseAsset = {
@@ -50,6 +51,8 @@ export type BuildGamePlaceBetInputArgs = {
   kenoSpots: readonly number[];
   plinkoRisk: PlinkoRisk;
   baccaratSide?: BaccaratSide;
+  sicBoKind?: SicBoKind;
+  sicBoValue?: number;
   affiliate?: Address;
   maxHouseEdgeBps?: number;
   messages?: GamePlaceBetMessages;
@@ -93,6 +96,8 @@ export function buildGamePlaceBetInput({
   kenoSpots,
   plinkoRisk,
   baccaratSide,
+  sicBoKind,
+  sicBoValue,
   affiliate,
   maxHouseEdgeBps = 10000,
   messages
@@ -106,6 +111,8 @@ export function buildGamePlaceBetInput({
     kenoSpots,
     plinkoRisk,
     baccaratSide,
+    sicBoKind,
+    sicBoValue,
     messages
   });
 

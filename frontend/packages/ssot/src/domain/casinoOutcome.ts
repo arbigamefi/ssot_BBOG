@@ -5,10 +5,12 @@ import {
   decodeKenoParams,
   decodePlinkoParams,
   decodeRouletteParams,
+  decodeSicBoParams,
   decodeSlotsParams,
   type BaccaratSide,
   type DiceDirection,
   type PlinkoRisk,
+  type SicBoKind,
   type SlotsProfile
 } from "../encoding";
 import type { DomainBet } from "./bet";
@@ -40,6 +42,12 @@ const BACCARAT_FACTOR_TABLE: Record<BaccaratSide, number> = {
   banker: 21813,
   tie: 104793
 };
+
+const SIC_BO_SMALL_BIG_FACTOR = 20_571;
+const SIC_BO_ANY_TRIPLE_FACTOR = 360_000;
+const SIC_BO_SPECIFIC_TRIPLE_FACTOR = 2_160_000;
+const SIC_BO_SPECIFIC_DOUBLE_FACTOR = 135_000;
+const SIC_BO_SINGLE_FACE_UNIT_FACTOR = 20_000;
 
 const RED_NUMBERS: readonly number[] = [
   1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36
@@ -110,6 +118,19 @@ export type CasinoOutcome =
         playerTotal: number;
         bankerTotal: number;
         outcome: BaccaratSide;
+        factorBps: number;
+        won: boolean;
+      }>;
+    })
+  | (OutcomeFinancials & {
+      kind: "sic-bo";
+      betKind: SicBoKind;
+      betValue: number;
+      rolls: Array<{
+        dice: [number, number, number];
+        total: number;
+        triple: boolean;
+        faceCount: number;
         factorBps: number;
         won: boolean;
       }>;
@@ -338,6 +359,44 @@ export function deriveCasinoOutcome({
     };
   }
 
+  if (gameSlug === "sic-bo") {
+    const { kind, value } = decodeSicBoParams(params);
+    const rolls: Array<{
+      dice: [number, number, number];
+      total: number;
+      triple: boolean;
+      faceCount: number;
+      factorBps: number;
+      won: boolean;
+    }> = [];
+    let usedTurnover = 0n;
+    let payoutGross = 0n;
+
+    for (let i = 0; i < bet.betCount; i += 1) {
+      usedTurnover += bet.amountPerRoll;
+      const dice: [number, number, number] = [
+        sicBoDie(bet.betId, i, 0, seed),
+        sicBoDie(bet.betId, i, 1, seed),
+        sicBoDie(bet.betId, i, 2, seed)
+      ];
+      const total = dice[0] + dice[1] + dice[2];
+      const triple = dice[0] === dice[1] && dice[1] === dice[2];
+      const faceCount = value > 0 ? dice.filter((die) => die === value).length : 0;
+      const factor = sicBoRollFactor(kind, value, dice);
+      if (factor > 0) payoutGross += mulDiv(bet.amountPerRoll, BigInt(factor), 10_000n);
+      rolls.push({ dice, total, triple, faceCount, factorBps: factor, won: factor > 0 });
+      if (shouldStop(bet.stopGain, bet.stopLoss, usedTurnover, payoutGross)) break;
+    }
+
+    return {
+      kind: "sic-bo",
+      betKind: kind,
+      betValue: value,
+      rolls,
+      ...financials(bet, payoutGross, bet.stake - usedTurnover)
+    };
+  }
+
   return null;
 }
 
@@ -404,6 +463,41 @@ function bankerDraws(bankerTotal: number, playerDraws: boolean, playerThird: num
   if (bankerTotal === 5) return playerThird >= 4 && playerThird <= 7;
   if (bankerTotal === 6) return playerThird === 6 || playerThird === 7;
   return false;
+}
+
+function sicBoDie(betId: bigint, rollIndex: number, dieIndex: number, seed: bigint) {
+  return Number(rngRoll2(betId, rollIndex, dieIndex, seed) % 6n) + 1;
+}
+
+function sicBoRollFactor(kind: SicBoKind, value: number, dice: readonly [number, number, number]) {
+  const [a, b, c] = dice;
+  const total = a + b + c;
+  const triple = a === b && b === c;
+  const faceCount = value > 0 ? dice.filter((die) => die === value).length : 0;
+
+  if (kind === "small") return !triple && total >= 4 && total <= 10 ? SIC_BO_SMALL_BIG_FACTOR : 0;
+  if (kind === "big") return !triple && total >= 11 && total <= 17 ? SIC_BO_SMALL_BIG_FACTOR : 0;
+  if (kind === "anyTriple") return triple ? SIC_BO_ANY_TRIPLE_FACTOR : 0;
+  if (kind === "specificTriple") return triple && a === value ? SIC_BO_SPECIFIC_TRIPLE_FACTOR : 0;
+  if (kind === "total") return total === value ? sicBoTotalFactor(value) : 0;
+  if (kind === "specificDouble") return faceCount >= 2 ? SIC_BO_SPECIFIC_DOUBLE_FACTOR : 0;
+  return SIC_BO_SINGLE_FACE_UNIT_FACTOR * faceCount;
+}
+
+function sicBoTotalFactor(total: number) {
+  const count = sicBoTotalCount(total);
+  return count > 0 ? Math.floor((216 * 10_000) / count) : 0;
+}
+
+function sicBoTotalCount(total: number) {
+  if (total === 4 || total === 17) return 3;
+  if (total === 5 || total === 16) return 6;
+  if (total === 6 || total === 15) return 10;
+  if (total === 7 || total === 14) return 15;
+  if (total === 8 || total === 13) return 21;
+  if (total === 9 || total === 12) return 25;
+  if (total === 10 || total === 11) return 27;
+  return 0;
 }
 
 function rngRoll(betId: bigint, rollIndex: number, seed: bigint) {

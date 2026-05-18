@@ -112,7 +112,8 @@
         "keno": "Keno 选号",
         "plinko": "Plinko 弹珠盘",
         "slots": "Slots 拉霸",
-        "baccarat": "百家乐"
+        "baccarat": "百家乐",
+        "sicBo": "骰宝"
       },
       "audit": {
         "loading": "正在加载审计流",
@@ -302,6 +303,20 @@
           "banker": "庄",
           "tie": "和"
         },
+        "sicBo": {
+          "betType": "投注类型",
+          "face": "点数",
+          "total": "总点数",
+          "kinds": {
+            "small": "小",
+            "big": "大",
+            "anyTriple": "任意围骰",
+            "specificTriple": "指定围骰",
+            "total": "指定总点",
+            "specificDouble": "指定对子",
+            "singleFace": "单骰点数"
+          }
+        },
         "slots": {
           "profiles": {
             "classic": "经典 3 轴"
@@ -344,6 +359,14 @@
           "dealing": "等待 VRF oracle...",
           "result": "{side} 胜出",
           "selected": "已选择: {side}"
+        },
+        "sicBo": {
+          "ready": "选择一个骰宝投注项",
+          "rolling": "等待 VRF oracle...",
+          "opened": "开出骰子: {dice}",
+          "total": "总点",
+          "triple": "围骰",
+          "result": "结果"
         }
       },
       "history": {
@@ -354,6 +377,7 @@
           "buckets": "最近槽位",
           "slots": "最近转轴",
           "hands": "最近牌局",
+          "dice": "最近骰子",
           "flips": "最近抛掷"
         },
         "states": {
@@ -442,7 +466,12 @@
           "baccaratPlayerTotal": "闲点数",
           "baccaratBankerTotal": "庄点数",
           "baccaratPlayerCards": "闲开牌",
-          "baccaratBankerCards": "庄开牌"
+          "baccaratBankerCards": "庄开牌",
+          "sicBoBet": "骰宝投注",
+          "sicBoDice": "开出骰子",
+          "sicBoTotal": "总点数",
+          "sicBoTriple": "围骰",
+          "sicBoMultiplier": "本局倍率"
         },
         "actions": {
           "close": "关闭",
@@ -469,6 +498,7 @@
       "filters": {
         "all": "全部模块",
         "table": "桌面游戏",
+        "dice": "骰子游戏",
         "binary": "快速二选一",
         "lottery": "彩票类",
         "arcade": "街机类"
@@ -482,6 +512,7 @@
         "table": "桌面",
         "lottery": "彩票",
         "arcade": "街机",
+        "dice": "骰子",
         "module": "模块"
       },
       "rooms": {
@@ -519,6 +550,11 @@
           "title": "百家乐",
           "promise": "闲家对庄家，和局提供更高赔率。",
           "badge": "最高 10.4x"
+        },
+        "sicBo": {
+          "title": "骰宝",
+          "promise": "三颗骰子、经典桌面投注和围骰高赔率。",
+          "badge": "最高 216x"
         }
       },
       "card": {
@@ -2185,6 +2221,7 @@
     "plinko": "Plinko 弹珠盘",
     "rooms": "游戏",
     "roulette": "轮盘",
+    "sicBo": "骰宝",
     "slots": "Slots 拉霸",
     "sportsbook": "体育投注"
   }

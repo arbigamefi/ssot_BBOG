@@ -1,6 +1,7 @@
 export const CASINO_MODULE_SLUGS = [
   "roulette",
   "baccarat",
+  "sic-bo",
   "dice",
   "coin-toss",
   "keno",
@@ -25,7 +26,8 @@ export type CasinoModuleRegistration = {
     | "keno-mask"
     | "plinko-risk"
     | "slots-profile"
-    | "baccarat-side";
+    | "baccarat-side"
+    | "sic-bo";
 };
 
 export const CASINO_MODULES: readonly CasinoModuleRegistration[] = [
@@ -44,6 +46,14 @@ export const CASINO_MODULES: readonly CasinoModuleRegistration[] = [
     canonicalHref: "/casino/baccarat",
     roomLabel: "Player vs banker",
     contractParams: "baccarat-side"
+  },
+  {
+    slug: "sic-bo",
+    label: "Sic Bo",
+    category: "dice",
+    canonicalHref: "/casino/sic-bo",
+    roomLabel: "Three dice table",
+    contractParams: "sic-bo"
   },
   {
     slug: "dice",

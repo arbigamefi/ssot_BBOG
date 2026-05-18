@@ -13,10 +13,11 @@ import {
   CoinSideSelector,
   KenoSelectionPanel,
   PlinkoRiskSelector,
-  RouletteSelectionPanel
+  RouletteSelectionPanel,
+  SicBoBetSelector
 } from "./controls";
 import type { GameMeta } from "./model";
-import type { BaccaratSide, CoinSide, PlinkoRisk } from "./params";
+import type { BaccaratSide, CoinSide, PlinkoRisk, SicBoKind } from "./params";
 import type { GameRoomBetPanelState } from "./place-bet-button";
 import { PlaceBetButton } from "./place-bet-button";
 import { CasinoRoundStatusPanel } from "./round-status-panel";
@@ -38,7 +39,10 @@ function GameSelectionControls({
   plinkoRisk,
   onPlinkoRiskChange,
   baccaratSide,
-  onBaccaratSideChange
+  onBaccaratSideChange,
+  sicBoKind,
+  sicBoValue,
+  onSicBoChange
 }: {
   game: GameMeta;
   coinSide: CoinSide;
@@ -52,6 +56,9 @@ function GameSelectionControls({
   onPlinkoRiskChange: (risk: PlinkoRisk) => void;
   baccaratSide: BaccaratSide;
   onBaccaratSideChange: (side: BaccaratSide) => void;
+  sicBoKind: SicBoKind;
+  sicBoValue: number;
+  onSicBoChange: (kind: SicBoKind, value: number) => void;
 }) {
   if (game.slug === "roulette") {
     return <RouletteSelectionPanel spots={rouletteSpots} onClear={onRouletteClear} />;
@@ -77,6 +84,10 @@ function GameSelectionControls({
 
   if (game.slug === "baccarat") {
     return <BaccaratSideSelector side={baccaratSide} onChange={onBaccaratSideChange} />;
+  }
+
+  if (game.slug === "sic-bo") {
+    return <SicBoBetSelector kind={sicBoKind} value={sicBoValue} onChange={onSicBoChange} />;
   }
 
   return null;
@@ -113,6 +124,9 @@ export function GameRoomBetPanel({
   onPlinkoRiskChange,
   baccaratSide,
   onBaccaratSideChange,
+  sicBoKind,
+  sicBoValue,
+  onSicBoChange,
   roundPhase,
   vrfQuote,
   vrfQuoteError,
@@ -155,6 +169,9 @@ export function GameRoomBetPanel({
   onPlinkoRiskChange: (risk: PlinkoRisk) => void;
   baccaratSide: BaccaratSide;
   onBaccaratSideChange: (side: BaccaratSide) => void;
+  sicBoKind: SicBoKind;
+  sicBoValue: number;
+  onSicBoChange: (kind: SicBoKind, value: number) => void;
   roundPhase: CasinoRoundPhase;
   vrfQuote?: bigint;
   vrfQuoteError?: string;
@@ -193,6 +210,9 @@ export function GameRoomBetPanel({
         onPlinkoRiskChange={onPlinkoRiskChange}
         baccaratSide={baccaratSide}
         onBaccaratSideChange={onBaccaratSideChange}
+        sicBoKind={sicBoKind}
+        sicBoValue={sicBoValue}
+        onSicBoChange={onSicBoChange}
       />
 
       <BetAmountSection

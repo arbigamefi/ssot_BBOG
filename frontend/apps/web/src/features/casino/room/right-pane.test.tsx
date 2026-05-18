@@ -25,6 +25,7 @@ vi.mock("next-intl", () => ({
       "casino.room.history.recent.buckets": "RECENT BUCKETS",
       "casino.room.history.recent.slots": "RECENT SLOTS",
       "casino.room.history.recent.hands": "RECENT HANDS",
+      "casino.room.history.recent.dice": "RECENT DICE",
       "casino.room.history.recent.flips": "RECENT FLIPS",
       "casino.room.history.states.settled": "SETTLED",
       "casino.room.history.states.refunded": "REFUNDED",
@@ -94,6 +95,11 @@ vi.mock("next-intl", () => ({
       "casino.room.result.facts.baccaratBankerTotal": "Banker total",
       "casino.room.result.facts.baccaratPlayerCards": "Player cards",
       "casino.room.result.facts.baccaratBankerCards": "Banker cards",
+      "casino.room.result.facts.sicBoBet": "Sic Bo bet",
+      "casino.room.result.facts.sicBoDice": "Dice opened",
+      "casino.room.result.facts.sicBoTotal": "Total",
+      "casino.room.result.facts.sicBoTriple": "Triple",
+      "casino.room.result.facts.sicBoMultiplier": "Roll multiplier",
       "casino.room.selection.plinko.low": "Low",
       "casino.room.selection.plinko.medium": "Medium",
       "casino.room.selection.plinko.high": "High",
@@ -111,6 +117,13 @@ vi.mock("next-intl", () => ({
       "casino.room.selection.baccarat.player": "Player",
       "casino.room.selection.baccarat.banker": "Banker",
       "casino.room.selection.baccarat.tie": "Tie",
+      "casino.room.selection.sicBo.kinds.small": "Small",
+      "casino.room.selection.sicBo.kinds.big": "Big",
+      "casino.room.selection.sicBo.kinds.anyTriple": "Any triple",
+      "casino.room.selection.sicBo.kinds.specificTriple": "Specific triple",
+      "casino.room.selection.sicBo.kinds.total": "Exact total",
+      "casino.room.selection.sicBo.kinds.specificDouble": "Specific double",
+      "casino.room.selection.sicBo.kinds.singleFace": "Single face",
       "casino.room.stage.plinko.dropZone": "Set risk and drop",
       "casino.room.stage.plinko.waitingVrf": "Waiting for VRF oracle...",
       "casino.room.stage.plinko.slot": "Slot {slot}",
@@ -123,6 +136,12 @@ vi.mock("next-intl", () => ({
       "casino.room.stage.baccarat.dealing": "Waiting for VRF oracle...",
       "casino.room.stage.baccarat.result": "Player wins",
       "casino.room.stage.baccarat.selected": "Selected: Player",
+      "casino.room.stage.sicBo.ready": "Choose a Sic Bo table bet",
+      "casino.room.stage.sicBo.rolling": "Waiting for VRF oracle...",
+      "casino.room.stage.sicBo.opened": "Dice opened: 2 / 3 / 4",
+      "casino.room.stage.sicBo.total": "Total",
+      "casino.room.stage.sicBo.triple": "Triple",
+      "casino.room.stage.sicBo.result": "Result",
       "casino.room.result.actions.close": "Close",
       "casino.room.result.actions.viewSettlement": "View settlement",
       "casino.room.result.actions.settlementPending": "Settlement pending"
@@ -145,6 +164,8 @@ const baseProps = {
   kenoSpots: [],
   plinkoRisk: "medium" as const,
   baccaratSide: "player" as const,
+  sicBoKind: "small" as const,
+  sicBoValue: 0,
   plinkoBuckets: [],
   slotsSymbols: [],
   animatingKenoSpots: [],
@@ -373,5 +394,62 @@ describe("GameRoomRightPane", () => {
     expect(screen.getByText("5, 4")).toBeDefined();
     expect(screen.getByText("Banker cards")).toBeDefined();
     expect(screen.getByText("8, 0")).toBeDefined();
+  });
+
+  it("shows sic bo dice, total, and bet detail in the result overlay", () => {
+    render(
+      <GameRoomRightPane
+        {...baseProps}
+        gameSlug="sic-bo"
+        showResult
+        sicBoKind="total"
+        sicBoValue={9}
+        resultProof={{
+          kind: "settled",
+          betId: 79n,
+          requestId: 90n,
+          randomHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          player: "0xc8ec9920d573893e888db5d30b2b3b3824b1b684",
+          stake: 10_000_000n,
+          vrfFeeCharged: 100_000_000_000_000n,
+          resolvedAt: 1_778_888_888,
+          settlement: {
+            txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            payoutGross: 86_400_000n,
+            payoutNet: 84_672_000n,
+            feeOnPayout: 1_728_000n,
+            protocolFeeAccrual: 864_000n
+          }
+        }}
+        casinoOutcome={{
+          kind: "sic-bo",
+          betKind: "total",
+          betValue: 9,
+          rolls: [
+            {
+              dice: [2, 3, 4],
+              total: 9,
+              triple: false,
+              faceCount: 0,
+              factorBps: 86_400,
+              won: true
+            }
+          ],
+          payoutGross: 86_400_000n,
+          payoutNet: 84_672_000n,
+          refundAmount: 0n,
+          feeOnPayout: 1_728_000n,
+          playerOwed: 84_672_000n,
+          netResult: 74_672_000n
+        }}
+      />
+    );
+
+    expect(screen.getByText("RECENT DICE")).toBeDefined();
+    expect(screen.getByText("Sic Bo bet")).toBeDefined();
+    expect(screen.getByText("Exact total 9")).toBeDefined();
+    expect(screen.getByText("Dice opened")).toBeDefined();
+    expect(screen.getByText("2 / 3 / 4")).toBeDefined();
+    expect(screen.getByText("Total")).toBeDefined();
   });
 });

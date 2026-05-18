@@ -8,6 +8,7 @@ import { KenoStage } from "./keno/stage";
 import { PlinkoStage } from "./plinko/stage";
 import { SlotsStage } from "./slots/stage";
 import { BaccaratStage } from "./baccarat/stage";
+import { SicBoStage } from "./sic-bo/stage";
 
 vi.mock("@ssot/ui", () => ({
   cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" ")
@@ -28,6 +29,13 @@ vi.mock("next-intl", () => ({
       "casino.room.selection.baccarat.player": "Player",
       "casino.room.selection.baccarat.banker": "Banker",
       "casino.room.selection.baccarat.tie": "Tie",
+      "casino.room.selection.sicBo.kinds.small": "Small",
+      "casino.room.selection.sicBo.kinds.big": "Big",
+      "casino.room.selection.sicBo.kinds.anyTriple": "Any triple",
+      "casino.room.selection.sicBo.kinds.specificTriple": "Specific triple",
+      "casino.room.selection.sicBo.kinds.total": "Exact total",
+      "casino.room.selection.sicBo.kinds.specificDouble": "Specific double",
+      "casino.room.selection.sicBo.kinds.singleFace": "Single face",
       "casino.room.selection.plinko.low": "Low",
       "casino.room.selection.plinko.medium": "Medium",
       "casino.room.selection.plinko.high": "High",
@@ -46,6 +54,16 @@ vi.mock("next-intl", () => ({
       "casino.room.stage.baccarat.dealing": "Waiting for VRF Oracle...",
       "casino.room.stage.baccarat.result": `${values?.side} wins`,
       "casino.room.stage.baccarat.selected": `Selected: ${values?.side}`,
+      "casino.room.stage.sicBo.ready": "Choose a Sic Bo table bet",
+      "casino.room.stage.sicBo.rolling": "Waiting for VRF Oracle...",
+      "casino.room.stage.sicBo.opened": `Dice opened: ${values?.dice}`,
+      "casino.room.stage.sicBo.total": "Total",
+      "casino.room.stage.sicBo.triple": "Triple",
+      "casino.room.stage.sicBo.result": "Result",
+      "casino.room.result.outcomes.win.label": "Won bet",
+      "casino.room.result.outcomes.loss.label": "Lost bet",
+      "casino.room.selection.slots.yes": "Yes",
+      "casino.room.selection.slots.no": "No",
       "casino.room.selection.slots.symbols.0": "Cherry",
       "casino.room.selection.slots.symbols.1": "Lemon",
       "casino.room.selection.slots.symbols.2": "Bell",
@@ -164,5 +182,41 @@ describe("game room stages", () => {
     expect(screen.getByText("Selected: Player")).toBeDefined();
     expect(screen.getByText("9")).toBeDefined();
     expect(screen.getAllByText("8").length).toBeGreaterThan(0);
+  });
+
+  it("renders Sic Bo stage with opened dice and total", () => {
+    render(
+      <SicBoStage
+        isPending={false}
+        showResult
+        betKind="total"
+        betValue={9}
+        outcome={{
+          kind: "sic-bo",
+          betKind: "total",
+          betValue: 9,
+          payoutGross: 8_640_000n,
+          payoutNet: 8_467_200n,
+          refundAmount: 0n,
+          feeOnPayout: 172_800n,
+          playerOwed: 8_467_200n,
+          netResult: 7_467_200n,
+          rolls: [
+            {
+              dice: [2, 3, 4],
+              total: 9,
+              triple: false,
+              faceCount: 0,
+              factorBps: 86_400,
+              won: true
+            }
+          ]
+        }}
+      />
+    );
+
+    expect(screen.getByText("Dice opened: 2 / 3 / 4")).toBeDefined();
+    expect(screen.getByText("Exact total 9")).toBeDefined();
+    expect(screen.getByText("Won bet")).toBeDefined();
   });
 });

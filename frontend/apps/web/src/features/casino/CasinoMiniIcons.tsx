@@ -188,6 +188,28 @@ export function BaccaratMiniIcon({ className }: GameMiniIconProps) {
   );
 }
 
+export function SicBoMiniIcon({ className }: GameMiniIconProps) {
+  return (
+    <IconFrame className={className}>
+      <div className="grid h-20 w-20 grid-cols-3 gap-1.5">
+        {[1, 2, 3, 4, 5, 6, 2, 5, 6].map((value, index) => (
+          <div
+            key={`${value}-${index}`}
+            className={cx(
+              "flex items-center justify-center rounded-md border bg-surface-2 font-mono text-sm font-black",
+              index < 3
+                ? "border-brand bg-brand-soft text-brand"
+                : "border-border-soft text-fg-subtle"
+            )}
+          >
+            {value}
+          </div>
+        ))}
+      </div>
+    </IconFrame>
+  );
+}
+
 export function SlotsMiniIcon({ className }: GameMiniIconProps) {
   return (
     <IconFrame className={className}>

@@ -26,6 +26,8 @@ function localizedGameName(
       return messages.casino.room.names.slots;
     case "baccarat":
       return messages.casino.room.names.baccarat;
+    case "sic-bo":
+      return messages.casino.room.names.sicBo;
     default:
       return slug;
   }

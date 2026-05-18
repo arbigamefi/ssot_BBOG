@@ -20,6 +20,7 @@ import {
   KenoMiniIcon,
   PlinkoMiniIcon,
   RouletteMiniIcon,
+  SicBoMiniIcon,
   SlotsMiniIcon
 } from "../../../features/casino/CasinoMiniIcons";
 import { useRelease } from "../../../ssot/release/ReleaseProvider";
@@ -31,7 +32,8 @@ const ROOM_ICON_MAP: Record<string, React.ReactNode> = {
   keno: <KenoMiniIcon />,
   plinko: <PlinkoMiniIcon />,
   slots: <SlotsMiniIcon />,
-  baccarat: <BaccaratMiniIcon />
+  baccarat: <BaccaratMiniIcon />,
+  "sic-bo": <SicBoMiniIcon />
 };
 
 const ROOM_COPY_KEYS: Record<
@@ -92,12 +94,20 @@ const ROOM_COPY_KEYS: Record<
     live: "118",
     badgeKey: "casino.directory.rooms.baccarat.badge",
     tagKey: "casino.directory.tags.table"
+  },
+  "sic-bo": {
+    titleKey: "casino.directory.rooms.sicBo.title",
+    promiseKey: "casino.directory.rooms.sicBo.promise",
+    live: "96",
+    badgeKey: "casino.directory.rooms.sicBo.badge",
+    tagKey: "casino.directory.tags.dice"
   }
 };
 
 const FILTERS = [
   { key: "all", labelKey: "casino.directory.filters.all" },
   { key: "table", labelKey: "casino.directory.filters.table" },
+  { key: "dice", labelKey: "casino.directory.filters.dice" },
   { key: "binary", labelKey: "casino.directory.filters.binary" },
   { key: "lottery", labelKey: "casino.directory.filters.lottery" },
   { key: "arcade", labelKey: "casino.directory.filters.arcade" }
@@ -109,8 +119,10 @@ function matchesFilter(slug: string, filter: FilterKey) {
   switch (filter) {
     case "table":
       return slug === "roulette" || slug === "baccarat";
+    case "dice":
+      return slug === "dice" || slug === "sic-bo";
     case "binary":
-      return slug === "dice" || slug === "coin-toss";
+      return slug === "coin-toss";
     case "lottery":
       return slug === "keno";
     case "arcade":
@@ -159,7 +171,16 @@ export function GamesListClient() {
     return matchesQuery && matchesFilter(room.slug, filter);
   });
 
-  const canonicalOrder = ["dice", "plinko", "slots", "baccarat", "roulette", "coin-toss", "keno"];
+  const canonicalOrder = [
+    "dice",
+    "plinko",
+    "slots",
+    "baccarat",
+    "sic-bo",
+    "roulette",
+    "coin-toss",
+    "keno"
+  ];
   const roomsToRender = (filteredRooms.length ? filteredRooms : rooms).sort((a, b) => {
     const idxA = canonicalOrder.indexOf(a.slug);
     const idxB = canonicalOrder.indexOf(b.slug);

@@ -5,17 +5,19 @@ import {
   encodeKenoParams,
   encodePlinkoParams,
   encodeRouletteParams,
+  encodeSicBoParams,
   encodeSlotsParams,
   type BaccaratSide,
   type PlinkoRisk,
-  type RouletteParamsInput
+  type RouletteParamsInput,
+  type SicBoKind
 } from "@ssot/ssot/encoding";
 
 import { RED_NUMBER_SET, RED_NUMBERS, kenoWinChance } from "./model";
 
 export type CoinSide = "HEADS" | "TAILS";
 export type DiceDirection = "under" | "over";
-export type { BaccaratSide, PlinkoRisk };
+export type { BaccaratSide, PlinkoRisk, SicBoKind };
 export type GameParamsHex = `0x${string}`;
 
 export const PLINKO_FACTOR_TABLE: Record<PlinkoRisk, readonly number[]> = {
@@ -38,6 +40,32 @@ const BACCARAT_FACTOR_TABLE: Record<BaccaratSide, number> = {
   tie: 104793
 };
 
+const SIC_BO_TOTAL_OUTCOMES = 216;
+const SIC_BO_SMALL_BIG_COUNT = 105;
+const SIC_BO_TOTAL_COUNTS: Record<number, number> = {
+  4: 3,
+  5: 6,
+  6: 10,
+  7: 15,
+  8: 21,
+  9: 25,
+  10: 27,
+  11: 27,
+  12: 25,
+  13: 21,
+  14: 15,
+  15: 10,
+  16: 6,
+  17: 3
+};
+const SIC_BO_FACTOR_TABLE = {
+  smallBig: 20_571,
+  anyTriple: 360_000,
+  specificTriple: 2_160_000,
+  specificDouble: 135_000,
+  singleFaceMax: 60_000
+} as const;
+
 export type BuildGameParamsInput = {
   slug: string;
   diceTarget: number;
@@ -47,6 +75,8 @@ export type BuildGameParamsInput = {
   kenoSpots: readonly number[];
   plinkoRisk: PlinkoRisk;
   baccaratSide?: BaccaratSide;
+  sicBoKind?: SicBoKind;
+  sicBoValue?: number;
   messages?: GameParamsMessages;
 };
 
@@ -182,6 +212,39 @@ export function baccaratMultiplier(side: BaccaratSide): number {
   return BACCARAT_FACTOR_TABLE[side] / 10_000;
 }
 
+export function normalizeSicBoValue(kind: SicBoKind, value: number | undefined): number {
+  if (kind === "total") return Math.min(17, Math.max(4, Math.floor(value ?? 10)));
+  if (kind === "specificTriple" || kind === "specificDouble" || kind === "singleFace") {
+    return Math.min(6, Math.max(1, Math.floor(value ?? 1)));
+  }
+  return 0;
+}
+
+export function sicBoWinChance(kind: SicBoKind, value: number): number {
+  if (kind === "small" || kind === "big") return (SIC_BO_SMALL_BIG_COUNT / 216) * 100;
+  if (kind === "anyTriple") return (6 / SIC_BO_TOTAL_OUTCOMES) * 100;
+  if (kind === "specificTriple") return (1 / SIC_BO_TOTAL_OUTCOMES) * 100;
+  if (kind === "total") {
+    return (
+      ((SIC_BO_TOTAL_COUNTS[normalizeSicBoValue(kind, value)] ?? 0) / SIC_BO_TOTAL_OUTCOMES) * 100
+    );
+  }
+  if (kind === "specificDouble") return (16 / SIC_BO_TOTAL_OUTCOMES) * 100;
+  return (91 / SIC_BO_TOTAL_OUTCOMES) * 100;
+}
+
+export function sicBoMultiplier(kind: SicBoKind, value: number): number {
+  if (kind === "small" || kind === "big") return SIC_BO_FACTOR_TABLE.smallBig / 10_000;
+  if (kind === "anyTriple") return SIC_BO_FACTOR_TABLE.anyTriple / 10_000;
+  if (kind === "specificTriple") return SIC_BO_FACTOR_TABLE.specificTriple / 10_000;
+  if (kind === "total") {
+    const count = SIC_BO_TOTAL_COUNTS[normalizeSicBoValue(kind, value)] ?? 0;
+    return count > 0 ? Math.floor((216 * 10_000) / count) / 10_000 : 0;
+  }
+  if (kind === "specificDouble") return SIC_BO_FACTOR_TABLE.specificDouble / 10_000;
+  return SIC_BO_FACTOR_TABLE.singleFaceMax / 10_000;
+}
+
 export function calculateGameWinChance(input: {
   slug: string;
   diceTarget: number;
@@ -190,6 +253,8 @@ export function calculateGameWinChance(input: {
   kenoSpots: readonly number[];
   plinkoRisk: PlinkoRisk;
   baccaratSide?: BaccaratSide;
+  sicBoKind?: SicBoKind;
+  sicBoValue?: number;
 }): number {
   if (input.slug === "dice") {
     return input.diceDirection === "under" ? input.diceTarget : 100 - input.diceTarget;
@@ -201,6 +266,10 @@ export function calculateGameWinChance(input: {
   if (input.slug === "plinko") return plinkoPositiveChance(input.plinkoRisk);
   if (input.slug === "slots") return slotsPositiveChance();
   if (input.slug === "baccarat") return baccaratWinChance(input.baccaratSide ?? "player");
+  if (input.slug === "sic-bo") {
+    const kind = input.sicBoKind ?? "small";
+    return sicBoWinChance(kind, normalizeSicBoValue(kind, input.sicBoValue));
+  }
   return 100;
 }
 
@@ -247,6 +316,14 @@ export function buildGameParams(input: BuildGameParamsInput): BuildGameParamsRes
 
   if (input.slug === "baccarat") {
     return { ok: true, params: encodeBaccaratParams(input.baccaratSide ?? "player") };
+  }
+
+  if (input.slug === "sic-bo") {
+    const kind = input.sicBoKind ?? "small";
+    return {
+      ok: true,
+      params: encodeSicBoParams({ kind, value: normalizeSicBoValue(kind, input.sicBoValue) })
+    };
   }
 
   return { ok: true, params: "0x" };

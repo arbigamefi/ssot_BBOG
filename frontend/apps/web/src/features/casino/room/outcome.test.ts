@@ -5,6 +5,7 @@ import {
   encodeKenoParams,
   encodePlinkoParams,
   encodeRouletteParams,
+  encodeSicBoParams,
   encodeSlotsParams
 } from "@ssot/ssot/encoding";
 import type { DomainBet } from "@ssot/ssot";
@@ -152,5 +153,24 @@ describe("casino outcome derivation", () => {
     expect(roll?.bankerTotal).toBeGreaterThanOrEqual(0);
     expect(roll?.bankerTotal).toBeLessThanOrEqual(9);
     expect(["player", "banker", "tie"]).toContain(roll?.outcome);
+  });
+
+  it("derives sic bo dice, total, and roll factor", () => {
+    const outcome = deriveCasinoOutcome({
+      bet: baseBet,
+      gameSlug: "sic-bo",
+      params: encodeSicBoParams({ kind: "singleFace", value: 6 }),
+      randomWords: [123n]
+    });
+
+    expect(outcome?.kind).toBe("sic-bo");
+    if (outcome?.kind !== "sic-bo") return;
+    const [roll] = outcome.rolls;
+    expect(outcome.betKind).toBe("singleFace");
+    expect(outcome.betValue).toBe(6);
+    expect(roll?.dice).toHaveLength(3);
+    expect(roll?.dice.every((die) => die >= 1 && die <= 6)).toBe(true);
+    expect(roll?.total).toBe((roll?.dice[0] ?? 0) + (roll?.dice[1] ?? 0) + (roll?.dice[2] ?? 0));
+    expect(roll?.factorBps).toBe((roll?.faceCount ?? 0) * 20_000);
   });
 });

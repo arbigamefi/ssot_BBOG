@@ -4,7 +4,13 @@ import { SparklesIcon } from "@heroicons/react/24/outline";
 import { cn } from "@ssot/ui";
 
 import { RED_NUMBER_SET } from "./model";
-import type { BaccaratSide, CoinSide, PlinkoRisk } from "./params";
+import {
+  normalizeSicBoValue,
+  type BaccaratSide,
+  type CoinSide,
+  type PlinkoRisk,
+  type SicBoKind
+} from "./params";
 
 const ROULETTE_NAMED_SPOTS = [
   "RED",
@@ -217,6 +223,108 @@ export function PlinkoRiskSelector({
           );
         })}
       </div>
+    </div>
+  );
+}
+
+const SIC_BO_KINDS: readonly SicBoKind[] = [
+  "small",
+  "big",
+  "anyTriple",
+  "specificTriple",
+  "total",
+  "specificDouble",
+  "singleFace"
+] as const;
+
+const SIC_BO_FACE_VALUES = [1, 2, 3, 4, 5, 6] as const;
+const SIC_BO_TOTAL_VALUES = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17] as const;
+
+function sicBoRequiresValue(kind: SicBoKind) {
+  return (
+    kind === "specificTriple" ||
+    kind === "specificDouble" ||
+    kind === "singleFace" ||
+    kind === "total"
+  );
+}
+
+function defaultSicBoValue(kind: SicBoKind) {
+  if (kind === "total") return 10;
+  if (sicBoRequiresValue(kind)) return 1;
+  return 0;
+}
+
+export function SicBoBetSelector({
+  kind,
+  value,
+  onChange
+}: {
+  kind: SicBoKind;
+  value: number;
+  onChange: (kind: SicBoKind, value: number) => void;
+}) {
+  const t = useTranslations();
+  const normalizedValue = normalizeSicBoValue(kind, value);
+  const values = kind === "total" ? SIC_BO_TOTAL_VALUES : SIC_BO_FACE_VALUES;
+
+  return (
+    <div className="relative mb-6 flex flex-col gap-3 rounded-xl border border-border bg-surface-0 p-5 shadow-inner-e1">
+      <div className="absolute inset-x-0 top-0 h-1 bg-brand" />
+      <label className="z-10 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-fg-subtle">
+        <SparklesIcon className="h-3 w-3" /> {t("casino.room.selection.sicBo.betType")}
+      </label>
+      <div className="z-10 grid grid-cols-2 gap-2">
+        {SIC_BO_KINDS.map((item) => {
+          const active = item === kind;
+          return (
+            <button
+              key={item}
+              type="button"
+              onClick={() => onChange(item, defaultSicBoValue(item))}
+              className={cn(
+                "rounded-lg border px-3 py-3 text-left transition-colors",
+                active
+                  ? "border-brand bg-brand-soft text-fg shadow-glow"
+                  : "border-border bg-surface-1 text-fg-muted hover:border-brand/40 hover:bg-surface-2 hover:text-fg"
+              )}
+            >
+              <span className="block text-xs font-black uppercase tracking-widest">
+                {t(`casino.room.selection.sicBo.kinds.${item}`)}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      {sicBoRequiresValue(kind) && (
+        <div className="z-10 border-t border-border-soft pt-3">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-fg-subtle">
+            {kind === "total"
+              ? t("casino.room.selection.sicBo.total")
+              : t("casino.room.selection.sicBo.face")}
+          </p>
+          <div className="grid grid-cols-7 gap-1.5">
+            {values.map((item) => {
+              const active = item === normalizedValue;
+              return (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => onChange(kind, item)}
+                  className={cn(
+                    "rounded-md border px-2 py-2 font-mono text-xs font-black transition-colors",
+                    active
+                      ? "border-brand bg-brand text-fg-inverse"
+                      : "border-border bg-surface-1 text-fg-muted hover:border-brand/40 hover:text-fg"
+                  )}
+                >
+                  {item}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
