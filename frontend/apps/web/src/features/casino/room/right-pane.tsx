@@ -10,7 +10,7 @@ import {
   type RecentBetSummary
 } from "./history-widget";
 import type { CasinoOutcome } from "./outcome";
-import type { CoinSide, DiceDirection, PlinkoRisk } from "./params";
+import type { BaccaratSide, CoinSide, DiceDirection, PlinkoRisk } from "./params";
 import { GameRoomResultOverlay } from "./result-overlay";
 import { isCasinoTerminalRoundResult, type CasinoRoundResult } from "./resolution";
 
@@ -65,6 +65,14 @@ const SlotsStage = dynamic(() => import("../modules/slots/stage").then((mod) => 
   ssr: false
 });
 
+const BaccaratStage = dynamic(
+  () => import("../modules/baccarat/stage").then((mod) => mod.BaccaratStage),
+  {
+    loading: StageLoading,
+    ssr: false
+  }
+);
+
 export function GameRoomRightPane({
   gameSlug,
   coinSide,
@@ -81,6 +89,7 @@ export function GameRoomRightPane({
   rouletteSpots,
   kenoSpots,
   plinkoRisk,
+  baccaratSide,
   plinkoBuckets,
   slotsSymbols,
   animatingKenoSpots,
@@ -112,6 +121,7 @@ export function GameRoomRightPane({
   rouletteSpots: readonly string[];
   kenoSpots: readonly number[];
   plinkoRisk: PlinkoRisk;
+  baccaratSide: BaccaratSide;
   plinkoBuckets: readonly number[];
   slotsSymbols: readonly number[];
   animatingKenoSpots: readonly number[];
@@ -202,6 +212,15 @@ export function GameRoomRightPane({
 
       {gameSlug === "slots" && (
         <SlotsStage isPending={isPending} showResult={showResult} symbols={slotsSymbols} />
+      )}
+
+      {gameSlug === "baccarat" && (
+        <BaccaratStage
+          isPending={isPending}
+          showResult={showResult}
+          selectedSide={baccaratSide}
+          outcome={casinoOutcome?.kind === "baccarat" ? casinoOutcome : null}
+        />
       )}
 
       {showResult && resultProof && (isCasinoTerminalRoundResult(resultProof) || casinoOutcome) && (

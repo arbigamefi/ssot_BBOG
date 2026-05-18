@@ -7,6 +7,7 @@ import { DiceStage } from "./dice/stage";
 import { KenoStage } from "./keno/stage";
 import { PlinkoStage } from "./plinko/stage";
 import { SlotsStage } from "./slots/stage";
+import { BaccaratStage } from "./baccarat/stage";
 
 vi.mock("@ssot/ui", () => ({
   cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" ")
@@ -24,6 +25,9 @@ vi.mock("next-intl", () => ({
       "casino.room.selection.dice.winChance": "Win",
       "casino.room.selection.coin.heads": "HEADS",
       "casino.room.selection.coin.tails": "TAILS",
+      "casino.room.selection.baccarat.player": "Player",
+      "casino.room.selection.baccarat.banker": "Banker",
+      "casino.room.selection.baccarat.tie": "Tie",
       "casino.room.selection.plinko.low": "Low",
       "casino.room.selection.plinko.medium": "Medium",
       "casino.room.selection.plinko.high": "High",
@@ -38,6 +42,10 @@ vi.mock("next-intl", () => ({
       "casino.room.stage.slots.spinning": "Waiting for VRF Oracle...",
       "casino.room.stage.slots.result": values?.symbols ?? "",
       "casino.room.stage.slots.classic": "Classic profile",
+      "casino.room.stage.baccarat.ready": "Bet player, banker, or tie",
+      "casino.room.stage.baccarat.dealing": "Waiting for VRF Oracle...",
+      "casino.room.stage.baccarat.result": `${values?.side} wins`,
+      "casino.room.stage.baccarat.selected": `Selected: ${values?.side}`,
       "casino.room.selection.slots.symbols.0": "Cherry",
       "casino.room.selection.slots.symbols.1": "Lemon",
       "casino.room.selection.slots.symbols.2": "Bell",
@@ -120,5 +128,41 @@ describe("game room stages", () => {
     expect(screen.getByText("Cherry / Seven / Seven")).toBeDefined();
     expect(screen.getByText("Classic profile")).toBeDefined();
     expect(screen.getAllByText("7").length).toBeGreaterThan(0);
+  });
+
+  it("renders Baccarat stage with opened cards and totals", () => {
+    render(
+      <BaccaratStage
+        isPending={false}
+        showResult
+        selectedSide="player"
+        outcome={{
+          kind: "baccarat",
+          side: "player",
+          payoutGross: 2_241_400n,
+          payoutNet: 2_196_572n,
+          refundAmount: 0n,
+          feeOnPayout: 44_828n,
+          playerOwed: 2_196_572n,
+          netResult: 1_196_572n,
+          rolls: [
+            {
+              playerCards: [5, 4],
+              bankerCards: [8, 0],
+              playerTotal: 9,
+              bankerTotal: 8,
+              outcome: "player",
+              factorBps: 22414,
+              won: true
+            }
+          ]
+        }}
+      />
+    );
+
+    expect(screen.getByText("Player wins")).toBeDefined();
+    expect(screen.getByText("Selected: Player")).toBeDefined();
+    expect(screen.getByText("9")).toBeDefined();
+    expect(screen.getAllByText("8").length).toBeGreaterThan(0);
   });
 });

@@ -24,6 +24,7 @@ vi.mock("next-intl", () => ({
       "casino.room.history.recent.draws": "RECENT DRAWS",
       "casino.room.history.recent.buckets": "RECENT BUCKETS",
       "casino.room.history.recent.slots": "RECENT SLOTS",
+      "casino.room.history.recent.hands": "RECENT HANDS",
       "casino.room.history.recent.flips": "RECENT FLIPS",
       "casino.room.history.states.settled": "SETTLED",
       "casino.room.history.states.refunded": "REFUNDED",
@@ -87,6 +88,12 @@ vi.mock("next-intl", () => ({
       "casino.room.result.facts.slotsSymbols": "Symbols drawn",
       "casino.room.result.facts.slotsMultiplier": "Reel multiplier",
       "casino.room.result.facts.slotsJackpot": "Jackpot",
+      "casino.room.result.facts.baccaratChoice": "Chosen side",
+      "casino.room.result.facts.baccaratWinner": "Winning side",
+      "casino.room.result.facts.baccaratPlayerTotal": "Player total",
+      "casino.room.result.facts.baccaratBankerTotal": "Banker total",
+      "casino.room.result.facts.baccaratPlayerCards": "Player cards",
+      "casino.room.result.facts.baccaratBankerCards": "Banker cards",
       "casino.room.selection.plinko.low": "Low",
       "casino.room.selection.plinko.medium": "Medium",
       "casino.room.selection.plinko.high": "High",
@@ -101,6 +108,9 @@ vi.mock("next-intl", () => ({
       "casino.room.selection.slots.symbols.7": "Seven",
       "casino.room.selection.slots.yes": "Yes",
       "casino.room.selection.slots.no": "No",
+      "casino.room.selection.baccarat.player": "Player",
+      "casino.room.selection.baccarat.banker": "Banker",
+      "casino.room.selection.baccarat.tie": "Tie",
       "casino.room.stage.plinko.dropZone": "Set risk and drop",
       "casino.room.stage.plinko.waitingVrf": "Waiting for VRF oracle...",
       "casino.room.stage.plinko.slot": "Slot {slot}",
@@ -109,6 +119,10 @@ vi.mock("next-intl", () => ({
       "casino.room.stage.slots.spinning": "Waiting for VRF oracle...",
       "casino.room.stage.slots.result": "Cherry / Seven / Seven",
       "casino.room.stage.slots.classic": "Classic profile",
+      "casino.room.stage.baccarat.ready": "Bet player, banker, or tie",
+      "casino.room.stage.baccarat.dealing": "Waiting for VRF oracle...",
+      "casino.room.stage.baccarat.result": "Player wins",
+      "casino.room.stage.baccarat.selected": "Selected: Player",
       "casino.room.result.actions.close": "Close",
       "casino.room.result.actions.viewSettlement": "View settlement",
       "casino.room.result.actions.settlementPending": "Settlement pending"
@@ -130,6 +144,7 @@ const baseProps = {
   rouletteSpots: [],
   kenoSpots: [],
   plinkoRisk: "medium" as const,
+  baccaratSide: "player" as const,
   plinkoBuckets: [],
   slotsSymbols: [],
   animatingKenoSpots: [],
@@ -302,5 +317,61 @@ describe("GameRoomRightPane", () => {
     expect(screen.getByText("64.00x")).toBeDefined();
     expect(screen.getByText("Jackpot")).toBeDefined();
     expect(screen.getByText("Yes")).toBeDefined();
+  });
+
+  it("shows baccarat opened cards, totals, and winning side in the result overlay", () => {
+    render(
+      <GameRoomRightPane
+        {...baseProps}
+        gameSlug="baccarat"
+        showResult
+        resultProof={{
+          kind: "settled",
+          betId: 78n,
+          requestId: 89n,
+          randomHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          player: "0xc8ec9920d573893e888db5d30b2b3b3824b1b684",
+          stake: 10_000_000n,
+          vrfFeeCharged: 100_000_000_000_000n,
+          resolvedAt: 1_778_888_888,
+          settlement: {
+            txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            payoutGross: 22_414_000n,
+            payoutNet: 21_965_720n,
+            feeOnPayout: 448_280n,
+            protocolFeeAccrual: 224_140n
+          }
+        }}
+        casinoOutcome={{
+          kind: "baccarat",
+          side: "player",
+          rolls: [
+            {
+              playerCards: [5, 4],
+              bankerCards: [8, 0],
+              playerTotal: 9,
+              bankerTotal: 8,
+              outcome: "player",
+              factorBps: 22414,
+              won: true
+            }
+          ],
+          payoutGross: 22_414_000n,
+          payoutNet: 21_965_720n,
+          refundAmount: 0n,
+          feeOnPayout: 448_280n,
+          playerOwed: 21_965_720n,
+          netResult: 11_965_720n
+        }}
+      />
+    );
+
+    expect(screen.getByText("RECENT HANDS")).toBeDefined();
+    expect(screen.getByText("Winning side")).toBeDefined();
+    expect(screen.getAllByText("Player").length).toBeGreaterThan(0);
+    expect(screen.getByText("Player cards")).toBeDefined();
+    expect(screen.getByText("5, 4")).toBeDefined();
+    expect(screen.getByText("Banker cards")).toBeDefined();
+    expect(screen.getByText("8, 0")).toBeDefined();
   });
 });

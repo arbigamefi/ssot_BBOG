@@ -17,9 +17,11 @@ import { useSSOTRuntime } from "../../../../ssot/runtime";
 import { useConnectModal } from "../../../../app-shell/WalletButton";
 import { toGameMeta, type GameMeta } from "../../../../features/casino/room/model";
 import {
+  baccaratMultiplier,
   calculateGameWinChance,
   plinkoMaxMultiplier,
   slotsMaxMultiplier,
+  type BaccaratSide,
   type PlinkoRisk
 } from "../../../../features/casino/room/params";
 import {
@@ -64,6 +66,8 @@ function getLocalizedGameName(t: (key: string) => string, game: GameMeta) {
       return t("casino.room.names.plinko");
     case "slots":
       return t("casino.room.names.slots");
+    case "baccarat":
+      return t("casino.room.names.baccarat");
     default:
       return game.label;
   }
@@ -122,6 +126,7 @@ export function GamePageClient({ slug }: { slug: string }) {
   const [rouletteSpots, setRouletteSpots] = React.useState<string[]>([]);
   const [kenoSpots, setKenoSpots] = React.useState<number[]>([]);
   const [plinkoRisk, setPlinkoRisk] = React.useState<PlinkoRisk>("medium");
+  const [baccaratSide, setBaccaratSide] = React.useState<BaccaratSide>("player");
 
   // Simulation state
   const [flipCount, setFlipCount] = React.useState(0);
@@ -186,7 +191,8 @@ export function GamePageClient({ slug }: { slug: string }) {
         diceDirection,
         rouletteSpots,
         kenoSpots,
-        plinkoRisk
+        plinkoRisk,
+        baccaratSide
       })
     : 0;
 
@@ -206,6 +212,7 @@ export function GamePageClient({ slug }: { slug: string }) {
     rouletteSpots,
     kenoSpots,
     plinkoRisk,
+    baccaratSide,
     affiliate: referralAffiliate,
     onRoundStart: handleRoundStart,
     onRoundTerminal: handleRoundTerminal,
@@ -299,9 +306,11 @@ export function GamePageClient({ slug }: { slug: string }) {
       ? plinkoMaxMultiplier(plinkoRisk)
       : game.slug === "slots"
         ? slotsMaxMultiplier()
-        : winChance === 0
-          ? 0
-          : 99 / winChance;
+        : game.slug === "baccarat"
+          ? baccaratMultiplier(baccaratSide)
+          : winChance === 0
+            ? 0
+            : 99 / winChance;
   const expectedPayout = betAmount * multiplier;
 
   const LeftPane = (
@@ -334,6 +343,8 @@ export function GamePageClient({ slug }: { slug: string }) {
       onKenoResetResult={() => setKenoResultDrawn([])}
       plinkoRisk={plinkoRisk}
       onPlinkoRiskChange={setPlinkoRisk}
+      baccaratSide={baccaratSide}
+      onBaccaratSideChange={setBaccaratSide}
       roundPhase={casinoRound.roundPhase}
       vrfQuote={casinoRound.vrfQuote}
       vrfQuoteError={casinoRound.vrfQuoteError}
@@ -365,6 +376,7 @@ export function GamePageClient({ slug }: { slug: string }) {
       rouletteSpots={rouletteSpots}
       kenoSpots={kenoSpots}
       plinkoRisk={plinkoRisk}
+      baccaratSide={baccaratSide}
       plinkoBuckets={plinkoBuckets}
       slotsSymbols={slotsSymbols}
       animatingKenoSpots={animatingKenoSpots}

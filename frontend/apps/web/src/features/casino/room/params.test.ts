@@ -1,4 +1,5 @@
 import {
+  decodeBaccaratParams,
   decodeCoinTossParams,
   decodeDiceParams,
   decodeKenoParams,
@@ -90,6 +91,17 @@ describe("game room params", () => {
         plinkoRisk: "medium"
       })
     ).toBeCloseTo(34.375);
+    expect(
+      calculateGameWinChance({
+        slug: "baccarat",
+        diceTarget: 50,
+        diceDirection: "under",
+        rouletteSpots: [],
+        kenoSpots: [],
+        plinkoRisk: "medium",
+        baccaratSide: "banker"
+      })
+    ).toBeCloseTo((2_212_744 / 4_826_809) * 100);
   });
 
   it("normalizes Roulette covered numbers and chance", () => {
@@ -193,6 +205,21 @@ describe("game room params", () => {
     expect(slots.ok && decodeSlotsParams(slots.params)).toEqual({
       profile: "classic",
       profileId: 0
+    });
+
+    const baccarat = buildGameParams({
+      slug: "baccarat",
+      diceTarget: 50,
+      diceDirection: "under",
+      coinSide: "HEADS",
+      rouletteSpots: [],
+      kenoSpots: [],
+      plinkoRisk: "medium",
+      baccaratSide: "tie"
+    });
+    expect(baccarat.ok && decodeBaccaratParams(baccarat.params)).toEqual({
+      side: "tie",
+      sideId: 2
     });
   });
 

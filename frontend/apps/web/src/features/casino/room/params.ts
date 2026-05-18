@@ -1,10 +1,12 @@
 import {
+  encodeBaccaratParams,
   encodeCoinTossParams,
   encodeDiceParams,
   encodeKenoParams,
   encodePlinkoParams,
   encodeRouletteParams,
   encodeSlotsParams,
+  type BaccaratSide,
   type PlinkoRisk,
   type RouletteParamsInput
 } from "@ssot/ssot/encoding";
@@ -13,7 +15,7 @@ import { RED_NUMBER_SET, RED_NUMBERS, kenoWinChance } from "./model";
 
 export type CoinSide = "HEADS" | "TAILS";
 export type DiceDirection = "under" | "over";
-export type { PlinkoRisk };
+export type { BaccaratSide, PlinkoRisk };
 export type GameParamsHex = `0x${string}`;
 
 export const PLINKO_FACTOR_TABLE: Record<PlinkoRisk, readonly number[]> = {
@@ -24,6 +26,18 @@ export const PLINKO_FACTOR_TABLE: Record<PlinkoRisk, readonly number[]> = {
 
 const PLINKO_BUCKET_WEIGHTS = [1, 8, 28, 56, 70, 56, 28, 8, 1] as const;
 
+const BACCARAT_TOTAL_OUTCOMES = 4_826_809;
+const BACCARAT_WIN_COUNTS: Record<BaccaratSide, number> = {
+  player: 2_153_464,
+  banker: 2_212_744,
+  tie: 460_601
+};
+const BACCARAT_FACTOR_TABLE: Record<BaccaratSide, number> = {
+  player: 22414,
+  banker: 21813,
+  tie: 104793
+};
+
 export type BuildGameParamsInput = {
   slug: string;
   diceTarget: number;
@@ -32,6 +46,7 @@ export type BuildGameParamsInput = {
   rouletteSpots: readonly string[];
   kenoSpots: readonly number[];
   plinkoRisk: PlinkoRisk;
+  baccaratSide?: BaccaratSide;
   messages?: GameParamsMessages;
 };
 
@@ -159,6 +174,14 @@ export function slotsMaxMultiplier(): number {
   return 64;
 }
 
+export function baccaratWinChance(side: BaccaratSide): number {
+  return (BACCARAT_WIN_COUNTS[side] / BACCARAT_TOTAL_OUTCOMES) * 100;
+}
+
+export function baccaratMultiplier(side: BaccaratSide): number {
+  return BACCARAT_FACTOR_TABLE[side] / 10_000;
+}
+
 export function calculateGameWinChance(input: {
   slug: string;
   diceTarget: number;
@@ -166,6 +189,7 @@ export function calculateGameWinChance(input: {
   rouletteSpots: readonly string[];
   kenoSpots: readonly number[];
   plinkoRisk: PlinkoRisk;
+  baccaratSide?: BaccaratSide;
 }): number {
   if (input.slug === "dice") {
     return input.diceDirection === "under" ? input.diceTarget : 100 - input.diceTarget;
@@ -176,6 +200,7 @@ export function calculateGameWinChance(input: {
     return input.kenoSpots.length > 0 ? kenoWinChance(input.kenoSpots.length) : 0;
   if (input.slug === "plinko") return plinkoPositiveChance(input.plinkoRisk);
   if (input.slug === "slots") return slotsPositiveChance();
+  if (input.slug === "baccarat") return baccaratWinChance(input.baccaratSide ?? "player");
   return 100;
 }
 
@@ -218,6 +243,10 @@ export function buildGameParams(input: BuildGameParamsInput): BuildGameParamsRes
 
   if (input.slug === "slots") {
     return { ok: true, params: encodeSlotsParams("classic") };
+  }
+
+  if (input.slug === "baccarat") {
+    return { ok: true, params: encodeBaccaratParams(input.baccaratSide ?? "player") };
   }
 
   return { ok: true, params: "0x" };

@@ -4,7 +4,7 @@ import { SparklesIcon } from "@heroicons/react/24/outline";
 import { cn } from "@ssot/ui";
 
 import { RED_NUMBER_SET } from "./model";
-import type { CoinSide, PlinkoRisk } from "./params";
+import type { BaccaratSide, CoinSide, PlinkoRisk } from "./params";
 
 const ROULETTE_NAMED_SPOTS = [
   "RED",
@@ -127,6 +127,49 @@ export function CoinSideSelector({
         >
           {t("casino.room.selection.coin.tails")}
         </button>
+      </div>
+    </div>
+  );
+}
+
+const BACCARAT_SIDES: readonly BaccaratSide[] = ["player", "banker", "tie"] as const;
+
+export function BaccaratSideSelector({
+  side,
+  onChange
+}: {
+  side: BaccaratSide;
+  onChange: (side: BaccaratSide) => void;
+}) {
+  const t = useTranslations();
+
+  return (
+    <div className="relative mb-6 flex flex-col gap-3 rounded-xl border border-border bg-surface-0 p-5 shadow-inner-e1">
+      <div className="absolute inset-x-0 top-0 h-1 bg-brand" />
+      <label className="z-10 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-fg-subtle">
+        <SparklesIcon className="h-3 w-3" /> {t("casino.room.selection.baccarat.betOn")}
+      </label>
+      <div className="z-10 grid grid-cols-3 gap-2">
+        {BACCARAT_SIDES.map((item) => {
+          const active = item === side;
+          return (
+            <button
+              key={item}
+              type="button"
+              onClick={() => onChange(item)}
+              className={cn(
+                "rounded-lg border px-3 py-3 text-center transition-colors",
+                active
+                  ? "border-brand bg-brand-soft text-fg shadow-glow"
+                  : "border-border bg-surface-1 text-fg-muted hover:border-brand/40 hover:bg-surface-2 hover:text-fg"
+              )}
+            >
+              <span className="block text-xs font-black uppercase tracking-widest">
+                {t(`casino.room.selection.baccarat.${item}`)}
+              </span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

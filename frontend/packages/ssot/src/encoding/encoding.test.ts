@@ -7,6 +7,7 @@ import { decodeRouletteParams, encodeRouletteParams } from "./roulette";
 import { decodeKenoParams, encodeKenoParams } from "./keno";
 import { decodePlinkoParams, encodePlinkoParams } from "./plinko";
 import { decodeSlotsParams, encodeSlotsParams } from "./slots";
+import { decodeBaccaratParams, encodeBaccaratParams } from "./baccarat";
 
 describe("encoding", () => {
   it("stakeSpec roundtrip", () => {
@@ -49,5 +50,10 @@ describe("encoding", () => {
   it("slots roundtrip", () => {
     const hex = encodeSlotsParams("classic");
     expect(decodeSlotsParams(hex)).toEqual({ profile: "classic", profileId: 0 });
+  });
+
+  it("baccarat roundtrip", () => {
+    const hex = encodeBaccaratParams("banker");
+    expect(decodeBaccaratParams(hex)).toEqual({ side: "banker", sideId: 1 });
   });
 });

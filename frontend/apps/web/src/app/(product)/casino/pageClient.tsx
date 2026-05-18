@@ -14,6 +14,7 @@ import {
 import { ProductStateCard } from "../../../components/ProductStateCard";
 import { getCatalogRooms } from "../../../features/casino/catalog";
 import {
+  BaccaratMiniIcon,
   CoinTossMiniIcon,
   DiceMiniIcon,
   KenoMiniIcon,
@@ -29,7 +30,8 @@ const ROOM_ICON_MAP: Record<string, React.ReactNode> = {
   "coin-toss": <CoinTossMiniIcon />,
   keno: <KenoMiniIcon />,
   plinko: <PlinkoMiniIcon />,
-  slots: <SlotsMiniIcon />
+  slots: <SlotsMiniIcon />,
+  baccarat: <BaccaratMiniIcon />
 };
 
 const ROOM_COPY_KEYS: Record<
@@ -83,6 +85,13 @@ const ROOM_COPY_KEYS: Record<
     live: "203",
     badgeKey: "casino.directory.rooms.slots.badge",
     tagKey: "casino.directory.tags.arcade"
+  },
+  baccarat: {
+    titleKey: "casino.directory.rooms.baccarat.title",
+    promiseKey: "casino.directory.rooms.baccarat.promise",
+    live: "118",
+    badgeKey: "casino.directory.rooms.baccarat.badge",
+    tagKey: "casino.directory.tags.table"
   }
 };
 
@@ -99,7 +108,7 @@ type FilterKey = (typeof FILTERS)[number]["key"];
 function matchesFilter(slug: string, filter: FilterKey) {
   switch (filter) {
     case "table":
-      return slug === "roulette";
+      return slug === "roulette" || slug === "baccarat";
     case "binary":
       return slug === "dice" || slug === "coin-toss";
     case "lottery":
@@ -150,7 +159,7 @@ export function GamesListClient() {
     return matchesQuery && matchesFilter(room.slug, filter);
   });
 
-  const canonicalOrder = ["dice", "plinko", "slots", "roulette", "coin-toss", "keno"];
+  const canonicalOrder = ["dice", "plinko", "slots", "baccarat", "roulette", "coin-toss", "keno"];
   const roomsToRender = (filteredRooms.length ? filteredRooms : rooms).sort((a, b) => {
     const idxA = canonicalOrder.indexOf(a.slug);
     const idxB = canonicalOrder.indexOf(b.slug);

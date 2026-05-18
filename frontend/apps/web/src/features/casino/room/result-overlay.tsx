@@ -6,7 +6,7 @@ import { cn } from "@ssot/ui";
 import { formatUnits } from "../../betting/model/units";
 import { formatNativeFee } from "./casino-round";
 import type { CasinoOutcome } from "./outcome";
-import type { CoinSide, DiceDirection } from "./params";
+import type { BaccaratSide, CoinSide, DiceDirection } from "./params";
 import type { CasinoRoundResult } from "./resolution";
 
 function formatTokenAmount(value: bigint, decimals: number, symbol: string) {
@@ -158,6 +158,10 @@ function formatPlinkoRisk(risk: string, t: Translate) {
   return risk;
 }
 
+function formatBaccaratSide(side: BaccaratSide, t: Translate) {
+  return t(`casino.room.selection.baccarat.${side}`);
+}
+
 function formatSlotsMultiplier(multiplier: number) {
   return `${multiplier.toFixed(2)}x`;
 }
@@ -252,6 +256,43 @@ function getGameResultRows(context: GameResultContext, t: Translate) {
         value: context.casinoOutcome.rolls
           .map((roll) => `${(roll.factorBps / 10_000).toFixed(roll.factorBps >= 100_000 ? 1 : 2)}x`)
           .join(", ")
+      }
+    ] satisfies GameResultRow[];
+  }
+
+  if (context.casinoOutcome?.kind === "baccarat") {
+    return [
+      {
+        label: t("casino.room.result.facts.baccaratChoice"),
+        value: formatBaccaratSide(context.casinoOutcome.side, t)
+      },
+      {
+        label: t("casino.room.result.facts.baccaratWinner"),
+        value: context.casinoOutcome.rolls
+          .map((roll) => formatBaccaratSide(roll.outcome, t))
+          .join(", "),
+        tone:
+          context.casinoOutcome.netResult > 0n
+            ? "win"
+            : context.casinoOutcome.netResult < 0n
+              ? "loss"
+              : "neutral"
+      },
+      {
+        label: t("casino.room.result.facts.baccaratPlayerTotal"),
+        value: context.casinoOutcome.rolls.map((roll) => roll.playerTotal).join(", ")
+      },
+      {
+        label: t("casino.room.result.facts.baccaratBankerTotal"),
+        value: context.casinoOutcome.rolls.map((roll) => roll.bankerTotal).join(", ")
+      },
+      {
+        label: t("casino.room.result.facts.baccaratPlayerCards"),
+        value: context.casinoOutcome.rolls.map((roll) => formatList(roll.playerCards)).join(" / ")
+      },
+      {
+        label: t("casino.room.result.facts.baccaratBankerCards"),
+        value: context.casinoOutcome.rolls.map((roll) => formatList(roll.bankerCards)).join(" / ")
       }
     ] satisfies GameResultRow[];
   }

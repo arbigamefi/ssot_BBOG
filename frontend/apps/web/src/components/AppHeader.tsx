@@ -20,6 +20,7 @@ export type AppRoute =
   | "dice"
   | "plinko"
   | "slots"
+  | "baccarat"
   | "roulette"
   | "cointoss"
   | "keno";
@@ -34,6 +35,7 @@ const GAME_NAV_LINKS = [
   { id: "dice", labelKey: "nav.dice", href: "/casino/dice" },
   { id: "plinko", labelKey: "nav.plinko", href: "/casino/plinko" },
   { id: "slots", labelKey: "nav.slots", href: "/casino/slots" },
+  { id: "baccarat", labelKey: "nav.baccarat", href: "/casino/baccarat" },
   { id: "roulette", labelKey: "nav.roulette", href: "/casino/roulette" },
   { id: "cointoss", labelKey: "nav.coinToss", href: "/casino/coin-toss" },
   { id: "keno", labelKey: "nav.keno", href: "/casino/keno" }

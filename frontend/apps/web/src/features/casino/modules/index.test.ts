@@ -24,6 +24,7 @@ describe("casino module registry", () => {
     expect(isCasinoModuleSlug("roulette")).toBe(true);
     expect(isCasinoModuleSlug("sportsbook")).toBe(false);
     expect(getCasinoModule("dice")?.contractParams).toBe("dice-threshold");
+    expect(getCasinoModule("baccarat")?.contractParams).toBe("baccarat-side");
     expect(getCasinoModule("plinko")?.contractParams).toBe("plinko-risk");
     expect(getCasinoModule("slots")?.contractParams).toBe("slots-profile");
     expect(getCasinoModule("sportsbook")).toBeUndefined();
@@ -32,6 +33,7 @@ describe("casino module registry", () => {
   it("keeps canonical modules ahead of release-only metadata", () => {
     const ordered = [
       { slug: "custom", label: "Custom" },
+      { slug: "baccarat", label: "Baccarat" },
       { slug: "keno", label: "Keno" },
       { slug: "plinko", label: "Plinko" },
       { slug: "slots", label: "Slots" },
@@ -40,6 +42,7 @@ describe("casino module registry", () => {
 
     expect(ordered.map((item) => item.slug)).toEqual([
       "roulette",
+      "baccarat",
       "keno",
       "plinko",
       "slots",

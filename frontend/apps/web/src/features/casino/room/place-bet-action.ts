@@ -4,7 +4,7 @@ import { toast } from "@ssot/ui";
 
 import type { GameMeta } from "./model";
 import { buildGamePlaceBetInput, type GameRoomRelease } from "./place-bet";
-import type { CoinSide, PlinkoRisk } from "./params";
+import type { BaccaratSide, CoinSide, PlinkoRisk } from "./params";
 
 export type GamePlaceBetStepperState = {
   status: string;
@@ -40,6 +40,7 @@ export async function executeGamePlaceBetAction({
   rouletteSpots,
   kenoSpots,
   plinkoRisk,
+  baccaratSide,
   affiliate,
   messages
 }: {
@@ -63,6 +64,7 @@ export async function executeGamePlaceBetAction({
   rouletteSpots: readonly string[];
   kenoSpots: readonly number[];
   plinkoRisk: PlinkoRisk;
+  baccaratSide?: BaccaratSide;
   affiliate?: Address;
   messages?: {
     rouletteSelectionRequired?: string;
@@ -103,6 +105,7 @@ export async function executeGamePlaceBetAction({
       rouletteSpots,
       kenoSpots,
       plinkoRisk,
+      baccaratSide,
       affiliate,
       messages
     });

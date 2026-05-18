@@ -76,6 +76,9 @@ vi.mock("next-intl", () => ({
       "casino.directory.rooms.slots.title": "Slots",
       "casino.directory.rooms.slots.promise": "Match pairs, triples, or the triple-seven jackpot.",
       "casino.directory.rooms.slots.badge": "Up to 64x",
+      "casino.directory.rooms.baccarat.title": "Baccarat",
+      "casino.directory.rooms.baccarat.promise": "Player vs banker hands with tie upside.",
+      "casino.directory.rooms.baccarat.badge": "Up to 10.4x",
       "casino.directory.card.playing": `${values?.count ?? "{count}"} playing`,
       "casino.directory.card.playNow": "Play Now",
       "casino.directory.reserve.title": "Progressive Reserve Pool",
@@ -157,6 +160,7 @@ describe("GamesListClient", () => {
     expect(screen.getByText("Precision Dice")).toBeDefined();
     expect(screen.getAllByText("Coin Toss").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Plinko").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Baccarat").length).toBeGreaterThan(0);
     expect(screen.getByText("Progressive Reserve Pool")).toBeDefined();
   });
 
@@ -170,10 +174,10 @@ describe("GamesListClient", () => {
     };
     render(<GamesListClient />);
     const cards = screen.getAllByTestId("room-entry-card");
-    expect(cards.length).toBe(4);
+    expect(cards.length).toBe(5);
   });
 
-  it("does not render release games without implemented route modules", () => {
+  it("renders implemented release games and filters unknown modules", () => {
     state.release = {
       name: "Base Sepolia",
       releaseDigest: "0xdeadbeefcafefeed",
@@ -182,12 +186,12 @@ describe("GamesListClient", () => {
       gamesMeta: MOCK_GAMES_META
     };
     render(<GamesListClient />);
-    expect(screen.queryByText("Baccarat")).toBeNull();
+    expect(screen.getAllByText("Baccarat").length).toBeGreaterThan(0);
     expect(
       Array.from(screen.getAllByTestId("room-entry-card")).map((card) =>
         card.getAttribute("data-slug")
       )
-    ).toEqual(["dice", "plinko", "slots", "coin-toss"]);
+    ).toEqual(["dice", "plinko", "slots", "baccarat", "coin-toss"]);
   });
 
   it("links each game card to canonical game room routes", () => {
@@ -218,6 +222,11 @@ describe("GamesListClient", () => {
       .getAllByText("Slots")
       .map((node) => node.closest("a")?.getAttribute("href"));
     expect(slotsLinks).toContain("/casino/slots");
+
+    const baccaratLinks = screen
+      .getAllByText("Baccarat")
+      .map((node) => node.closest("a")?.getAttribute("href"));
+    expect(baccaratLinks).toContain("/casino/baccarat");
   });
 
   it("room entry cards have correct slug data attributes", () => {
@@ -233,7 +242,8 @@ describe("GamesListClient", () => {
     expect(cards[0]?.getAttribute("data-slug")).toBe("dice");
     expect(cards[1]?.getAttribute("data-slug")).toBe("plinko");
     expect(cards[2]?.getAttribute("data-slug")).toBe("slots");
-    expect(cards[3]?.getAttribute("data-slug")).toBe("coin-toss");
+    expect(cards[3]?.getAttribute("data-slug")).toBe("baccarat");
+    expect(cards[4]?.getAttribute("data-slug")).toBe("coin-toss");
   });
 
   it("handles gamesMeta undefined by rendering canonical fallback rooms", () => {

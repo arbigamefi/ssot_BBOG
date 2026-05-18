@@ -9,13 +9,14 @@ import {
   BetRollsSection
 } from "./bet-panel-sections";
 import {
+  BaccaratSideSelector,
   CoinSideSelector,
   KenoSelectionPanel,
   PlinkoRiskSelector,
   RouletteSelectionPanel
 } from "./controls";
 import type { GameMeta } from "./model";
-import type { CoinSide, PlinkoRisk } from "./params";
+import type { BaccaratSide, CoinSide, PlinkoRisk } from "./params";
 import type { GameRoomBetPanelState } from "./place-bet-button";
 import { PlaceBetButton } from "./place-bet-button";
 import { CasinoRoundStatusPanel } from "./round-status-panel";
@@ -35,7 +36,9 @@ function GameSelectionControls({
   onKenoChange,
   onKenoResetResult,
   plinkoRisk,
-  onPlinkoRiskChange
+  onPlinkoRiskChange,
+  baccaratSide,
+  onBaccaratSideChange
 }: {
   game: GameMeta;
   coinSide: CoinSide;
@@ -47,6 +50,8 @@ function GameSelectionControls({
   onKenoResetResult: () => void;
   plinkoRisk: PlinkoRisk;
   onPlinkoRiskChange: (risk: PlinkoRisk) => void;
+  baccaratSide: BaccaratSide;
+  onBaccaratSideChange: (side: BaccaratSide) => void;
 }) {
   if (game.slug === "roulette") {
     return <RouletteSelectionPanel spots={rouletteSpots} onClear={onRouletteClear} />;
@@ -68,6 +73,10 @@ function GameSelectionControls({
 
   if (game.slug === "plinko") {
     return <PlinkoRiskSelector risk={plinkoRisk} onChange={onPlinkoRiskChange} />;
+  }
+
+  if (game.slug === "baccarat") {
+    return <BaccaratSideSelector side={baccaratSide} onChange={onBaccaratSideChange} />;
   }
 
   return null;
@@ -102,6 +111,8 @@ export function GameRoomBetPanel({
   onKenoResetResult,
   plinkoRisk,
   onPlinkoRiskChange,
+  baccaratSide,
+  onBaccaratSideChange,
   roundPhase,
   vrfQuote,
   vrfQuoteError,
@@ -142,6 +153,8 @@ export function GameRoomBetPanel({
   onKenoResetResult: () => void;
   plinkoRisk: PlinkoRisk;
   onPlinkoRiskChange: (risk: PlinkoRisk) => void;
+  baccaratSide: BaccaratSide;
+  onBaccaratSideChange: (side: BaccaratSide) => void;
   roundPhase: CasinoRoundPhase;
   vrfQuote?: bigint;
   vrfQuoteError?: string;
@@ -178,6 +191,8 @@ export function GameRoomBetPanel({
         onKenoResetResult={onKenoResetResult}
         plinkoRisk={plinkoRisk}
         onPlinkoRiskChange={onPlinkoRiskChange}
+        baccaratSide={baccaratSide}
+        onBaccaratSideChange={onBaccaratSideChange}
       />
 
       <BetAmountSection

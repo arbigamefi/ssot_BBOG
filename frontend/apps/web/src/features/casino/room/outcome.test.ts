@@ -1,4 +1,5 @@
 import {
+  encodeBaccaratParams,
   encodeCoinTossParams,
   encodeDiceParams,
   encodeKenoParams,
@@ -130,5 +131,26 @@ describe("casino outcome derivation", () => {
     expect(outcome.rolls[0]?.symbols).toHaveLength(3);
     expect(outcome.rolls[0]?.symbols.every((symbol) => symbol >= 0 && symbol <= 7)).toBe(true);
     expect([0, 2, 16, 64]).toContain(outcome.rolls[0]?.multiplier);
+  });
+
+  it("derives baccarat cards, totals, and winning side", () => {
+    const outcome = deriveCasinoOutcome({
+      bet: baseBet,
+      gameSlug: "baccarat",
+      params: encodeBaccaratParams("player"),
+      randomWords: [123n]
+    });
+
+    expect(outcome?.kind).toBe("baccarat");
+    if (outcome?.kind !== "baccarat") return;
+    const [roll] = outcome.rolls;
+    expect(outcome.side).toBe("player");
+    expect(roll?.playerCards.length).toBeGreaterThanOrEqual(2);
+    expect(roll?.bankerCards.length).toBeGreaterThanOrEqual(2);
+    expect(roll?.playerTotal).toBeGreaterThanOrEqual(0);
+    expect(roll?.playerTotal).toBeLessThanOrEqual(9);
+    expect(roll?.bankerTotal).toBeGreaterThanOrEqual(0);
+    expect(roll?.bankerTotal).toBeLessThanOrEqual(9);
+    expect(["player", "banker", "tie"]).toContain(roll?.outcome);
   });
 });

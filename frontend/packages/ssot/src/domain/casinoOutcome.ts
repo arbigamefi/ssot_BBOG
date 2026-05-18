@@ -1,10 +1,12 @@
 import {
+  decodeBaccaratParams,
   decodeCoinTossParams,
   decodeDiceParams,
   decodeKenoParams,
   decodePlinkoParams,
   decodeRouletteParams,
   decodeSlotsParams,
+  type BaccaratSide,
   type DiceDirection,
   type PlinkoRisk,
   type SlotsProfile
@@ -31,6 +33,12 @@ const PLINKO_FACTOR_TABLE: Record<PlinkoRisk, readonly number[]> = {
   low: [15264, 13083, 10902, 9812, 8722, 9812, 10902, 13083, 15264],
   medium: [82714, 34464, 16542, 6892, 2067, 6892, 16542, 34464, 82714],
   high: [246153, 61538, 13186, 3076, 0, 3076, 13186, 61538, 246153]
+};
+
+const BACCARAT_FACTOR_TABLE: Record<BaccaratSide, number> = {
+  player: 22414,
+  banker: 21813,
+  tie: 104793
 };
 
 const RED_NUMBERS: readonly number[] = [
@@ -91,6 +99,19 @@ export type CasinoOutcome =
         multiplier: 0 | 2 | 16 | 64;
         won: boolean;
         jackpot: boolean;
+      }>;
+    })
+  | (OutcomeFinancials & {
+      kind: "baccarat";
+      side: BaccaratSide;
+      rolls: Array<{
+        playerCards: number[];
+        bankerCards: number[];
+        playerTotal: number;
+        bankerTotal: number;
+        outcome: BaccaratSide;
+        factorBps: number;
+        won: boolean;
       }>;
     });
 
@@ -285,6 +306,38 @@ export function deriveCasinoOutcome({
     };
   }
 
+  if (gameSlug === "baccarat") {
+    const { side } = decodeBaccaratParams(params);
+    const factor = BACCARAT_FACTOR_TABLE[side];
+    const rolls: Array<{
+      playerCards: number[];
+      bankerCards: number[];
+      playerTotal: number;
+      bankerTotal: number;
+      outcome: BaccaratSide;
+      factorBps: number;
+      won: boolean;
+    }> = [];
+    let usedTurnover = 0n;
+    let payoutGross = 0n;
+
+    for (let i = 0; i < bet.betCount; i += 1) {
+      usedTurnover += bet.amountPerRoll;
+      const roll = baccaratRoll(bet.betId, i, seed);
+      const won = roll.outcome === side;
+      if (won) payoutGross += mulDiv(bet.amountPerRoll, BigInt(factor), 10_000n);
+      rolls.push({ ...roll, factorBps: factor, won });
+      if (shouldStop(bet.stopGain, bet.stopLoss, usedTurnover, payoutGross)) break;
+    }
+
+    return {
+      kind: "baccarat",
+      side,
+      rolls,
+      ...financials(bet, payoutGross, bet.stake - usedTurnover)
+    };
+  }
+
   return null;
 }
 
@@ -293,6 +346,64 @@ function slotsMultiplier(symbols: readonly [number, number, number]): 0 | 2 | 16
   if (a === b && b === c) return a === 7 ? 64 : 16;
   if (a === b || a === c || b === c) return 2;
   return 0;
+}
+
+function baccaratRoll(betId: bigint, rollIndex: number, seed: bigint) {
+  const playerCards = [
+    baccaratCardValue(betId, rollIndex, 0, seed),
+    baccaratCardValue(betId, rollIndex, 2, seed)
+  ];
+  const bankerCards = [
+    baccaratCardValue(betId, rollIndex, 1, seed),
+    baccaratCardValue(betId, rollIndex, 3, seed)
+  ];
+  let playerTotal = baccaratTotal(playerCards);
+  let bankerTotal = baccaratTotal(bankerCards);
+
+  if (playerTotal < 8 && bankerTotal < 8) {
+    const playerDraws = playerTotal <= 5;
+    let playerThird = 0;
+    if (playerDraws) {
+      playerThird = baccaratCardValue(betId, rollIndex, 4, seed);
+      playerCards.push(playerThird);
+      playerTotal = baccaratTotal(playerCards);
+    }
+
+    if (bankerDraws(bankerTotal, playerDraws, playerThird)) {
+      bankerCards.push(baccaratCardValue(betId, rollIndex, 5, seed));
+      bankerTotal = baccaratTotal(bankerCards);
+    }
+  }
+
+  const outcome: BaccaratSide =
+    playerTotal > bankerTotal ? "player" : bankerTotal > playerTotal ? "banker" : "tie";
+
+  return {
+    playerCards,
+    bankerCards,
+    playerTotal,
+    bankerTotal,
+    outcome
+  };
+}
+
+function baccaratCardValue(betId: bigint, rollIndex: number, cardIndex: number, seed: bigint) {
+  const rank = Number(rngRoll2(betId, rollIndex, cardIndex, seed) % 13n);
+  return rank <= 8 ? rank + 1 : 0;
+}
+
+function baccaratTotal(cards: readonly number[]) {
+  return cards.reduce((sum, value) => sum + value, 0) % 10;
+}
+
+function bankerDraws(bankerTotal: number, playerDraws: boolean, playerThird: number) {
+  if (!playerDraws) return bankerTotal <= 5;
+  if (bankerTotal <= 2) return true;
+  if (bankerTotal === 3) return playerThird !== 8;
+  if (bankerTotal === 4) return playerThird >= 2 && playerThird <= 7;
+  if (bankerTotal === 5) return playerThird >= 4 && playerThird <= 7;
+  if (bankerTotal === 6) return playerThird === 6 || playerThird === 7;
+  return false;
 }
 
 function rngRoll(betId: bigint, rollIndex: number, seed: bigint) {

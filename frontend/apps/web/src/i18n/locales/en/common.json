@@ -111,7 +111,8 @@
         "coinToss": "Coin Toss",
         "keno": "Keno Draft",
         "plinko": "Plinko",
-        "slots": "Slots"
+        "slots": "Slots",
+        "baccarat": "Baccarat"
       },
       "audit": {
         "loading": "Loading audit stream",
@@ -295,6 +296,12 @@
           "mediumDetail": "Balanced edge",
           "highDetail": "Extreme buckets"
         },
+        "baccarat": {
+          "betOn": "Bet on",
+          "player": "Player",
+          "banker": "Banker",
+          "tie": "Tie"
+        },
         "slots": {
           "profiles": {
             "classic": "Classic 3 reels"
@@ -331,6 +338,12 @@
           "spinning": "Waiting for VRF oracle...",
           "result": "{symbols}",
           "classic": "Classic profile"
+        },
+        "baccarat": {
+          "ready": "Bet player, banker, or tie",
+          "dealing": "Waiting for VRF oracle...",
+          "result": "{side} wins",
+          "selected": "Selected: {side}"
         }
       },
       "history": {
@@ -340,6 +353,7 @@
           "draws": "RECENT DRAWS",
           "buckets": "RECENT BUCKETS",
           "slots": "RECENT SLOTS",
+          "hands": "RECENT HANDS",
           "flips": "RECENT FLIPS"
         },
         "states": {
@@ -422,7 +436,13 @@
           "slotsProfile": "Profile",
           "slotsSymbols": "Symbols drawn",
           "slotsMultiplier": "Reel multiplier",
-          "slotsJackpot": "Jackpot"
+          "slotsJackpot": "Jackpot",
+          "baccaratChoice": "Chosen side",
+          "baccaratWinner": "Winning side",
+          "baccaratPlayerTotal": "Player total",
+          "baccaratBankerTotal": "Banker total",
+          "baccaratPlayerCards": "Player cards",
+          "baccaratBankerCards": "Banker cards"
         },
         "actions": {
           "close": "Close",
@@ -494,6 +514,11 @@
           "title": "Slots",
           "promise": "Match pairs, triples, or the triple-seven jackpot.",
           "badge": "Up to 64x"
+        },
+        "baccarat": {
+          "title": "Baccarat",
+          "promise": "Player vs banker hands with tie upside.",
+          "badge": "Up to 10.4x"
         }
       },
       "card": {
@@ -2149,6 +2174,7 @@
     "bets": "Bets",
     "casino": "Casino",
     "claims": "Claims",
+    "baccarat": "Baccarat",
     "coinToss": "Coin Toss",
     "dice": "Dice",
     "games": "Games",

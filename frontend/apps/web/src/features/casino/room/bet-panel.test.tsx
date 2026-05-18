@@ -99,7 +99,11 @@ vi.mock("next-intl", () => ({
       "casino.room.selection.plinko.high": "High",
       "casino.room.selection.plinko.lowDetail": "Smoother board",
       "casino.room.selection.plinko.mediumDetail": "Balanced edge",
-      "casino.room.selection.plinko.highDetail": "Extreme buckets"
+      "casino.room.selection.plinko.highDetail": "Extreme buckets",
+      "casino.room.selection.baccarat.betOn": "Bet on",
+      "casino.room.selection.baccarat.player": "Player",
+      "casino.room.selection.baccarat.banker": "Banker",
+      "casino.room.selection.baccarat.tie": "Tie"
     })[key] ?? key
 }));
 
@@ -142,6 +146,8 @@ function renderPanel(overrides: Partial<React.ComponentProps<typeof GameRoomBetP
     onKenoResetResult: vi.fn(),
     plinkoRisk: "medium",
     onPlinkoRiskChange: vi.fn(),
+    baccaratSide: "player",
+    onBaccaratSideChange: vi.fn(),
     roundPhase: "ready",
     vrfQuote: 73_169_600_001_705n,
     vrfQuoteError: undefined,

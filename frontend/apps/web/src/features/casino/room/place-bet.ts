@@ -5,6 +5,7 @@ import { encodeStakeSpec } from "@ssot/ssot/encoding";
 import type { GameMeta } from "./model";
 import {
   buildGameParams,
+  type BaccaratSide,
   type CoinSide,
   type DiceDirection,
   type GameParamsHex,
@@ -48,6 +49,7 @@ export type BuildGamePlaceBetInputArgs = {
   rouletteSpots: readonly string[];
   kenoSpots: readonly number[];
   plinkoRisk: PlinkoRisk;
+  baccaratSide?: BaccaratSide;
   affiliate?: Address;
   maxHouseEdgeBps?: number;
   messages?: GamePlaceBetMessages;
@@ -90,6 +92,7 @@ export function buildGamePlaceBetInput({
   rouletteSpots,
   kenoSpots,
   plinkoRisk,
+  baccaratSide,
   affiliate,
   maxHouseEdgeBps = 10000,
   messages
@@ -102,6 +105,7 @@ export function buildGamePlaceBetInput({
     rouletteSpots,
     kenoSpots,
     plinkoRisk,
+    baccaratSide,
     messages
   });
 

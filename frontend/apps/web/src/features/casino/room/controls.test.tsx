@@ -2,7 +2,12 @@ import * as React from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { CoinSideSelector, KenoSelectionPanel, RouletteSelectionPanel } from "./controls";
+import {
+  BaccaratSideSelector,
+  CoinSideSelector,
+  KenoSelectionPanel,
+  RouletteSelectionPanel
+} from "./controls";
 
 vi.mock("@ssot/ui", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@ssot/ui")>();
@@ -21,6 +26,10 @@ vi.mock("next-intl", () => ({
       "casino.room.selection.coin.selectFace": "Select Face",
       "casino.room.selection.coin.heads": "Heads",
       "casino.room.selection.coin.tails": "Tails",
+      "casino.room.selection.baccarat.betOn": "Bet on",
+      "casino.room.selection.baccarat.player": "Player",
+      "casino.room.selection.baccarat.banker": "Banker",
+      "casino.room.selection.baccarat.tie": "Tie",
       "casino.room.selection.keno.spotsLabel": "/ 10 Spots",
       "casino.room.selection.keno.autoPick": "Auto Pick",
       "casino.room.selection.keno.clear": "Clear",
@@ -52,6 +61,14 @@ describe("game room controls", () => {
 
     fireEvent.click(screen.getByText("Tails"));
     expect(onChange).toHaveBeenCalledWith("TAILS");
+  });
+
+  it("changes baccarat side through the selector", () => {
+    const onChange = vi.fn();
+    render(<BaccaratSideSelector side="player" onChange={onChange} />);
+
+    fireEvent.click(screen.getByText("Banker"));
+    expect(onChange).toHaveBeenCalledWith("banker");
   });
 
   it("renders sorted Keno spots and clears the result", () => {

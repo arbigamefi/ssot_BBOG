@@ -111,7 +111,8 @@
         "coinToss": "抛硬币",
         "keno": "Keno 选号",
         "plinko": "Plinko 弹珠盘",
-        "slots": "Slots 拉霸"
+        "slots": "Slots 拉霸",
+        "baccarat": "百家乐"
       },
       "audit": {
         "loading": "正在加载审计流",
@@ -295,6 +296,12 @@
           "mediumDetail": "风险均衡",
           "highDetail": "冲击边缘槽"
         },
+        "baccarat": {
+          "betOn": "下注边",
+          "player": "闲",
+          "banker": "庄",
+          "tie": "和"
+        },
         "slots": {
           "profiles": {
             "classic": "经典 3 轴"
@@ -331,6 +338,12 @@
           "spinning": "等待 VRF oracle...",
           "result": "{symbols}",
           "classic": "经典档位"
+        },
+        "baccarat": {
+          "ready": "选择闲、庄或和",
+          "dealing": "等待 VRF oracle...",
+          "result": "{side} 胜出",
+          "selected": "已选择: {side}"
         }
       },
       "history": {
@@ -340,6 +353,7 @@
           "draws": "最近开奖",
           "buckets": "最近槽位",
           "slots": "最近转轴",
+          "hands": "最近牌局",
           "flips": "最近抛掷"
         },
         "states": {
@@ -422,7 +436,13 @@
           "slotsProfile": "档位",
           "slotsSymbols": "开出符号",
           "slotsMultiplier": "转轴倍率",
-          "slotsJackpot": "Jackpot"
+          "slotsJackpot": "Jackpot",
+          "baccaratChoice": "下注边",
+          "baccaratWinner": "胜出边",
+          "baccaratPlayerTotal": "闲点数",
+          "baccaratBankerTotal": "庄点数",
+          "baccaratPlayerCards": "闲开牌",
+          "baccaratBankerCards": "庄开牌"
         },
         "actions": {
           "close": "关闭",
@@ -494,6 +514,11 @@
           "title": "Slots 拉霸",
           "promise": "匹配对子、三连或 777 Jackpot。",
           "badge": "最高 64x"
+        },
+        "baccarat": {
+          "title": "百家乐",
+          "promise": "闲家对庄家，和局提供更高赔率。",
+          "badge": "最高 10.4x"
         }
       },
       "card": {
@@ -2149,6 +2174,7 @@
     "bets": "投注",
     "casino": "赌场",
     "claims": "领取",
+    "baccarat": "百家乐",
     "coinToss": "抛硬币",
     "dice": "骰子",
     "games": "游戏",

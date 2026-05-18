@@ -42,6 +42,7 @@ vi.mock("next-intl", () => ({
       "nav.bets": "Bets",
       "nav.casino": "Casino",
       "nav.claims": "Claims",
+      "nav.baccarat": "Baccarat",
       "nav.coinToss": "Coin Toss",
       "nav.dice": "Dice",
       "nav.games": "Games",
@@ -178,6 +179,7 @@ describe("AppShell", () => {
       ["Dice", "/casino/dice"],
       ["Plinko", "/casino/plinko"],
       ["Slots", "/casino/slots"],
+      ["Baccarat", "/casino/baccarat"],
       ["Roulette", "/casino/roulette"],
       ["Coin Toss", "/casino/coin-toss"],
       ["Keno", "/casino/keno"]

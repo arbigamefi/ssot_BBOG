@@ -5,6 +5,7 @@ import { encodeRouletteParams, decodeRouletteParams } from "./roulette";
 import { encodeKenoParams, decodeKenoParams } from "./keno";
 import { encodePlinkoParams, decodePlinkoParams } from "./plinko";
 import { encodeSlotsParams, decodeSlotsParams } from "./slots";
+import { encodeBaccaratParams, decodeBaccaratParams } from "./baccarat";
 
 /**
  * A registered game encoder with encode/decode functions and
@@ -99,6 +100,18 @@ const REGISTRY: ReadonlyMap<string, GameEncoder> = new Map<string, GameEncoder>(
       decode: (hex: Hex) => decodeSlotsParams(hex),
       defaultParams: { profile: "classic" },
       paramsDescription: "uint8 profile (0=classic)"
+    }
+  ],
+  [
+    "baccarat",
+    {
+      slug: "baccarat",
+      label: "Baccarat",
+      encode: (p: { side?: "player" | "banker" | "tie" | 0 | 1 | 2 }) =>
+        encodeBaccaratParams(p.side ?? "player"),
+      decode: (hex: Hex) => decodeBaccaratParams(hex),
+      defaultParams: { side: "player" },
+      paramsDescription: "uint8 side (0=player, 1=banker, 2=tie)"
     }
   ]
 ]);

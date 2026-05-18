@@ -160,6 +160,34 @@ export function PlinkoMiniIcon({ className }: GameMiniIconProps) {
   );
 }
 
+export function BaccaratMiniIcon({ className }: GameMiniIconProps) {
+  return (
+    <IconFrame className={className}>
+      <div className="grid h-20 w-20 grid-cols-2 gap-2">
+        {[
+          ["P", "9"],
+          ["B", "8"],
+          ["T", "="],
+          ["P", "3"]
+        ].map(([label, value], index) => (
+          <div
+            key={`${label}-${value}-${index}`}
+            className={cx(
+              "flex flex-col items-center justify-center rounded-md border bg-surface-2 font-mono",
+              index === 0 || index === 3
+                ? "border-brand bg-brand-soft text-brand"
+                : "border-border-soft text-fg-subtle"
+            )}
+          >
+            <span className="text-[8px] font-black uppercase tracking-wider">{label}</span>
+            <span className="text-lg font-black">{value}</span>
+          </div>
+        ))}
+      </div>
+    </IconFrame>
+  );
+}
+
 export function SlotsMiniIcon({ className }: GameMiniIconProps) {
   return (
     <IconFrame className={className}>

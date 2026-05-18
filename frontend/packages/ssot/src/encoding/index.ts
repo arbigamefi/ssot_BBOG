@@ -5,4 +5,5 @@ export * from "./roulette";
 export * from "./keno";
 export * from "./plinko";
 export * from "./slots";
+export * from "./baccarat";
 export * from "./registry";
