@@ -23,6 +23,20 @@ function requiredEnv(name: string) {
   return value;
 }
 
+function envAny(names: string[]) {
+  for (const name of names) {
+    const value = env(name);
+    if (value) return value;
+  }
+  return undefined;
+}
+
+function requiredEnvAny(names: string[]) {
+  const value = envAny(names);
+  if (!value) throw new Error(`Missing one of ${names.join(", ")}.`);
+  return value;
+}
+
 function sportsbookEnabled() {
   return env("NEXT_PUBLIC_SPORTSBOOK_ENABLED")?.toLowerCase() === "true";
 }
@@ -37,7 +51,11 @@ export async function POST(request: Request) {
     const snapshot = await createSignedSportsOddsSnapshot({
       request: body,
       oddsApiKey: requiredEnv("THE_ODDS_API_KEY"),
-      oddsSignerPrivateKey: requiredEnv("SPORTS_ODDS_SIGNER_PRIVATE_KEY"),
+      oddsSignerPrivateKey: requiredEnvAny([
+        "SPORTS_ODDS_SIGNER_PRIVATE_KEY",
+        "FOOTBALL_ODDS_SIGNER_PRIVATE_KEY",
+        "CANARY_ODDS_SIGNER_PRIVATE_KEY"
+      ]),
       rpcUrl: env("RPC_URL"),
       expectedOddsSigner: env("SPORTS_ODDS_SIGNER"),
       defaultSportKey: env("SPORTS_PROVIDER_SPORT_KEY"),

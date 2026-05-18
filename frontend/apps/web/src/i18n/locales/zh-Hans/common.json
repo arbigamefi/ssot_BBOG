@@ -642,7 +642,8 @@
           },
           "launchState": {
             "label": "上线状态",
-            "value": "当前预览，公开出票仍受 gate 控制"
+            "enabled": "Canary 出票已启用",
+            "disabled": "出票开启前保持只读"
           }
         }
       },
@@ -655,7 +656,8 @@
       "marketTape": {
         "eyebrow": "市场",
         "title": "可用足球市场",
-        "description": "打开市场可查看 outcome、开赛时间、保留敞口和出票表单。公开出票未开放时，这里仍作为实时市场预览。"
+        "descriptionEnabled": "打开市场可查看 outcome、开赛时间、保留敞口，并在市场开放时提交签名赔率票据。",
+        "descriptionDisabled": "打开市场可查看 outcome、开赛时间和保留敞口。当前构建仍关闭出票。"
       },
       "lookup": {
         "eyebrow": "链上查询",
@@ -856,7 +858,8 @@
         "nonce": "Nonce",
         "riskHash": "风险哈希",
         "signature": "签名",
-        "oddsSignature": "赔率签名"
+        "oddsSignature": "赔率签名",
+        "stakeWithSymbol": "投注金额（{symbol}）"
       },
       "placeholders": {
         "optional": "可选",
@@ -864,7 +867,9 @@
       },
       "validation": {
         "positiveInteger": "{label} 必须是正整数。",
+        "positiveAmount": "{label} 必须是正数金额。",
         "greaterThanZero": "{label} 必须大于 0。",
+        "decimals": "{label} 最多支持 {decimals} 位小数。",
         "integer": "{label} 必须是整数。",
         "outcomeNonNegative": "结果 ID 必须是非负整数。",
         "outcomeTooLarge": "结果 ID 过大。",
@@ -903,11 +908,34 @@
         "lastTx": "上一笔交易"
       },
       "actions": {
-        "fetchSignedOdds": "获取签名赔率",
+        "fetchSignedOdds": "获取实时赔率",
         "planTicket": "规划票据",
         "placeTicket": "出票"
       },
       "walletRequired": "连接钱包后才能出票。",
+      "sections": {
+        "selection": "选择结果",
+        "selectionHelper": "先选择投注结果并输入金额，再获取 provider 签名赔率。",
+        "advanced": "高级赔率证明",
+        "ticketPreview": "票据预览"
+      },
+      "outcomes": {
+        "option": "选项 {outcomeId}",
+        "home": "主胜",
+        "draw": "平局",
+        "away": "客胜",
+        "generic": "结果 {outcomeId}",
+        "price": "{price}x"
+      },
+      "preview": {
+        "selection": "选择",
+        "provider": "{sport} / {bookmaker}",
+        "needsOdds": "获取实时赔率后会锁定签名价格。",
+        "price": "赔率",
+        "priceHelper": "Provider decimal odds",
+        "payout": "预计赔付",
+        "payoutHelper": "该结果获胜时的 gross payout"
+      },
       "plan": {
         "approval": "授权",
         "required": "需要",
@@ -916,7 +944,7 @@
         "allowance": "Allowance {amount}",
         "oddsTicketHash": "赔率票据哈希",
         "planState": "计划状态",
-        "empty": "粘贴 provider 路径生成的签名赔率快照，先规划，再通过 SDK 提交。未签名或过期赔率会在广播前被拒绝。"
+        "empty": "先获取实时赔率。签名快照会在广播前校验，过期或未签名赔率会被拒绝。"
       }
     },
     "ticketTerminal": {

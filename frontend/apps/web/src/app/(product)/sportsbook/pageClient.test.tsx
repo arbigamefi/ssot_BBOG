@@ -268,7 +268,7 @@ describe("SportsbookPageClient", () => {
     expect(screen.getByText("Pre-match football 1X2")).toBeDefined();
     expect(screen.getByText("Pool 2")).toBeDefined();
     expect(screen.getAllByText("10,000,000").length).toBeGreaterThan(0);
-    expect(screen.getByText("Preview now, public tickets gated")).toBeDefined();
+    expect(screen.getByText("Read-only until ticketing is enabled")).toBeDefined();
   });
 
   it("renders recent SportsHub markets and loads one into the inspector", async () => {
@@ -300,6 +300,7 @@ describe("SportsbookPageClient", () => {
 
     expect(screen.getByText("Tickets enabled")).toBeDefined();
     expect(screen.getByText("Signed odds only")).toBeDefined();
+    expect(screen.getByText("Canary tickets enabled")).toBeDefined();
     expect(screen.queryByRole("button", { name: "Place ticket" })).toBeNull();
   });
 

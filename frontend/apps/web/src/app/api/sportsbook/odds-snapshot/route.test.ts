@@ -151,6 +151,8 @@ describe("POST /api/sportsbook/odds-snapshot", () => {
 
   it("fails closed without the sportsbook signer private key", async () => {
     delete process.env.SPORTS_ODDS_SIGNER_PRIVATE_KEY;
+    delete process.env.FOOTBALL_ODDS_SIGNER_PRIVATE_KEY;
+    delete process.env.CANARY_ODDS_SIGNER_PRIVATE_KEY;
     const { POST } = await import("./route");
 
     const response = await POST(request({ marketId: "7", stake: "1000000" }));
@@ -159,9 +161,42 @@ describe("POST /api/sportsbook/odds-snapshot", () => {
     expect(await json(response)).toEqual({
       error: {
         code: "ODDS_SNAPSHOT_FAILED",
-        message: "Missing SPORTS_ODDS_SIGNER_PRIVATE_KEY."
+        message:
+          "Missing one of SPORTS_ODDS_SIGNER_PRIVATE_KEY, FOOTBALL_ODDS_SIGNER_PRIVATE_KEY, CANARY_ODDS_SIGNER_PRIVATE_KEY."
       }
     });
     expect(sdkMock.createSignedSportsOddsSnapshot).not.toHaveBeenCalled();
+  });
+
+  it("accepts the canary odds signer private key alias for local canaries", async () => {
+    delete process.env.SPORTS_ODDS_SIGNER_PRIVATE_KEY;
+    process.env.CANARY_ODDS_SIGNER_PRIVATE_KEY = "22".repeat(32);
+    sdkMock.createSignedSportsOddsSnapshot.mockResolvedValue({
+      schemaVersion: "sportsbook.signed-odds-ticket.v1",
+      provider: {},
+      outcome: { name: "Home FC", decimalPrice: "2.1", oddsWad: "2100000000000000000" },
+      stake: "1000000",
+      payout: "2100000",
+      odds: {
+        oddsWad: "2100000000000000000",
+        maxStake: "2000000",
+        maxPayout: "4200000",
+        expiresAt: "1900000000",
+        nonce: "44",
+        riskHash: `0x${"07".repeat(32)}`
+      },
+      oddsTicketHash: `0x${"dd".repeat(32)}`,
+      signature: `0x${"22".repeat(65)}`
+    });
+    const { POST } = await import("./route");
+
+    const response = await POST(request({ marketId: "7", stake: "1000000" }));
+
+    expect(response.status).toBe(200);
+    expect(sdkMock.createSignedSportsOddsSnapshot).toHaveBeenCalledWith(
+      expect.objectContaining({
+        oddsSignerPrivateKey: "22".repeat(32)
+      })
+    );
   });
 });

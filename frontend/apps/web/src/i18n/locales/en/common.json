@@ -642,7 +642,8 @@
           },
           "launchState": {
             "label": "Launch state",
-            "value": "Preview now, public tickets gated"
+            "enabled": "Canary tickets enabled",
+            "disabled": "Read-only until ticketing is enabled"
           }
         }
       },
@@ -655,7 +656,8 @@
       "marketTape": {
         "eyebrow": "Markets",
         "title": "Available football markets",
-        "description": "Open a market to review outcomes, timing, reserved exposure, and the ticket form. When public ticketing is gated, this page remains a live market preview."
+        "descriptionEnabled": "Open a market to review outcomes, timing, reserved exposure, and place a signed-odds ticket while the market is open.",
+        "descriptionDisabled": "Open a market to review outcomes, timing, and reserved exposure. Ticket placement remains disabled for this build."
       },
       "lookup": {
         "eyebrow": "On-chain lookup",
@@ -856,7 +858,8 @@
         "nonce": "Nonce",
         "riskHash": "Risk hash",
         "signature": "Signature",
-        "oddsSignature": "Odds signature"
+        "oddsSignature": "Odds signature",
+        "stakeWithSymbol": "Stake ({symbol})"
       },
       "placeholders": {
         "optional": "Optional",
@@ -864,7 +867,9 @@
       },
       "validation": {
         "positiveInteger": "{label} must be a positive integer.",
+        "positiveAmount": "{label} must be a positive amount.",
         "greaterThanZero": "{label} must be greater than zero.",
+        "decimals": "{label} supports at most {decimals} decimal places.",
         "integer": "{label} must be an integer.",
         "outcomeNonNegative": "Outcome id must be a non-negative integer.",
         "outcomeTooLarge": "Outcome id is too large.",
@@ -903,11 +908,34 @@
         "lastTx": "Last tx"
       },
       "actions": {
-        "fetchSignedOdds": "Fetch signed odds",
+        "fetchSignedOdds": "Get live odds",
         "planTicket": "Plan ticket",
         "placeTicket": "Place ticket"
       },
       "walletRequired": "Connect a wallet to place tickets.",
+      "sections": {
+        "selection": "Pick outcome",
+        "selectionHelper": "Choose the side, enter stake, then get a signed provider price.",
+        "advanced": "Advanced odds proof",
+        "ticketPreview": "Ticket preview"
+      },
+      "outcomes": {
+        "option": "Option {outcomeId}",
+        "home": "Home",
+        "draw": "Draw",
+        "away": "Away",
+        "generic": "Outcome {outcomeId}",
+        "price": "{price}x"
+      },
+      "preview": {
+        "selection": "Selection",
+        "provider": "{sport} / {bookmaker}",
+        "needsOdds": "Get live odds to lock a signed price.",
+        "price": "Price",
+        "priceHelper": "Provider decimal odds",
+        "payout": "Potential payout",
+        "payoutHelper": "Gross payout if this outcome wins"
+      },
       "plan": {
         "approval": "Approval",
         "required": "Required",
@@ -916,7 +944,7 @@
         "allowance": "Allowance {amount}",
         "oddsTicketHash": "Odds ticket hash",
         "planState": "Plan state",
-        "empty": "Paste a signed odds snapshot from the provider path, plan it, then submit through the SDK. Unsigned or stale odds are rejected before broadcast."
+        "empty": "Get live odds first. The signed snapshot is checked before broadcast; stale or unsigned odds are rejected."
       }
     },
     "ticketTerminal": {

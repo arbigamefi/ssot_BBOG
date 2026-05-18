@@ -37,10 +37,12 @@ type TicketPlacementForm = {
   signature: string;
 };
 
+const DEFAULT_SPORT_KEY = process.env.NEXT_PUBLIC_SPORTS_PROVIDER_SPORT_KEY ?? "soccer_usa_mls";
+
 const EMPTY_FORM: TicketPlacementForm = {
   providerEventId: "",
   bookmakerKey: "",
-  sportKey: "soccer_fifa_world_cup",
+  sportKey: DEFAULT_SPORT_KEY,
   outcomeId: "0",
   stake: "",
   oddsWad: "",
@@ -78,6 +80,38 @@ type SignedOddsSnapshotResponse = {
 };
 
 type Translate = ReturnType<typeof useTranslations>;
+
+function parseDecimalUnits(value: string, decimals: number, label: string, t: Translate) {
+  const trimmed = value.trim();
+  if (!/^[0-9]+(?:\.[0-9]+)?$/.test(trimmed)) {
+    throw new Error(t("sportsbook.ticketPlacement.validation.positiveAmount", { label }));
+  }
+  const [wholePart, fraction = ""] = trimmed.split(".");
+  const whole = wholePart ?? "0";
+  if (fraction.length > decimals) {
+    throw new Error(
+      t("sportsbook.ticketPlacement.validation.decimals", {
+        label,
+        decimals: String(decimals)
+      })
+    );
+  }
+  const raw = BigInt(whole) * 10n ** BigInt(decimals) + BigInt(fraction.padEnd(decimals, "0"));
+  if (raw <= 0n) {
+    throw new Error(t("sportsbook.ticketPlacement.validation.greaterThanZero", { label }));
+  }
+  return raw;
+}
+
+function formatUnits(value: string | bigint | undefined, decimals: number) {
+  if (value === undefined) return "—";
+  const raw = typeof value === "bigint" ? value : BigInt(value);
+  const scale = 10n ** BigInt(decimals);
+  const whole = raw / scale;
+  const fraction = raw % scale;
+  if (fraction === 0n) return whole.toString();
+  return `${whole.toString()}.${fraction.toString().padStart(decimals, "0").replace(/0+$/, "")}`;
+}
 
 function parsePositiveBigInt(value: string, label: string, t: Translate) {
   const trimmed = value.trim();
@@ -138,10 +172,32 @@ function getPoolRiskHash(release: SSOTRelease, poolId: number) {
   return release.pools.find((pool) => pool.poolId === poolId)?.sportsRisk?.riskHash;
 }
 
+function getPoolAsset(release: SSOTRelease, poolId: number) {
+  const pool = release.pools.find((item) => item.poolId === poolId);
+  return {
+    symbol: pool?.symbol ?? "USDC",
+    decimals: typeof pool?.decimals === "number" ? pool.decimals : 6
+  };
+}
+
+function defaultOutcomeLabel(outcomeId: number, market: DomainSportsMarket, t: Translate) {
+  if (market.outcomeCount === 3) {
+    if (outcomeId === 0) return t("sportsbook.ticketPlacement.outcomes.home");
+    if (outcomeId === 1) return t("sportsbook.ticketPlacement.outcomes.draw");
+    if (outcomeId === 2) return t("sportsbook.ticketPlacement.outcomes.away");
+  }
+  if (market.outcomeCount === 2) {
+    if (outcomeId === 0) return t("sportsbook.ticketPlacement.outcomes.home");
+    if (outcomeId === 1) return t("sportsbook.ticketPlacement.outcomes.away");
+  }
+  return t("sportsbook.ticketPlacement.outcomes.generic", { outcomeId: String(outcomeId) });
+}
+
 function makeInput(
   chainId: number,
   market: DomainSportsMarket,
   form: TicketPlacementForm,
+  assetDecimals: number,
   t: Translate
 ): PlaceSportsTicketInput {
   const outcomeId = parseOutcomeId(form.outcomeId, market, t);
@@ -173,7 +229,12 @@ function makeInput(
     chainId,
     marketId: market.marketId,
     outcomeId,
-    stake: parsePositiveBigInt(form.stake, t("sportsbook.ticketPlacement.fields.stake"), t),
+    stake: parseDecimalUnits(
+      form.stake,
+      assetDecimals,
+      t("sportsbook.ticketPlacement.fields.stake"),
+      t
+    ),
     odds,
     signature: parseHex(form.signature, t("sportsbook.ticketPlacement.fields.signature"), t)
   };
@@ -233,10 +294,12 @@ export function SportsbookTicketPlacementPanel({
 }) {
   const t = useTranslations();
   const defaultRiskHash = getPoolRiskHash(release, market.poolId) ?? "";
+  const poolAsset = getPoolAsset(release, market.poolId);
   const [form, setForm] = React.useState<TicketPlacementForm>({
     ...EMPTY_FORM,
     riskHash: defaultRiskHash
   });
+  const [signedOdds, setSignedOdds] = React.useState<SignedOddsSnapshotResponse | undefined>();
   const [plan, setPlan] = React.useState<PlaceSportsTicketPlan | undefined>();
   const [status, setStatus] = React.useState<TicketPlacementStatus>({
     busy: false,
@@ -250,23 +313,27 @@ export function SportsbookTicketPlacementPanel({
       riskHash: getPoolRiskHash(release, market.poolId) ?? ""
     }));
     setPlan(undefined);
+    setSignedOdds(undefined);
   }, [market.marketId, market.poolId, release]);
 
   const update = React.useCallback((key: keyof TicketPlacementForm, value: string) => {
     setForm((current) => ({ ...current, [key]: value }));
     setPlan(undefined);
+    if (["outcomeId", "stake", "providerEventId", "bookmakerKey", "sportKey"].includes(key)) {
+      setSignedOdds(undefined);
+    }
   }, []);
 
   const buildPlan = React.useCallback(async () => {
     if (!sdk) return undefined;
-    const input = makeInput(chainId, market, form, t);
+    const input = makeInput(chainId, market, form, poolAsset.decimals, t);
     const result = await sdk.sportsHub.planPlaceTicket(input);
     if ("error" in result) {
       throw new Error(result.error.message);
     }
     setPlan(result);
     return result;
-  }, [chainId, form, market, sdk, t]);
+  }, [chainId, form, market, poolAsset.decimals, sdk, t]);
 
   const onPlan = React.useCallback(async () => {
     try {
@@ -294,8 +361,9 @@ export function SportsbookTicketPlacementPanel({
     if (!sdk?.account) return;
     try {
       const outcomeId = parseOutcomeId(form.outcomeId, market, t);
-      const stake = parsePositiveBigInt(
+      const stake = parseDecimalUnits(
         form.stake,
+        poolAsset.decimals,
         t("sportsbook.ticketPlacement.fields.stake"),
         t
       );
@@ -326,7 +394,6 @@ export function SportsbookTicketPlacementPanel({
         providerEventId: signed.provider.providerEventId ?? current.providerEventId,
         bookmakerKey: signed.provider.bookmakerKey ?? current.bookmakerKey,
         sportKey: signed.provider.sportKey ?? current.sportKey,
-        stake: signed.stake,
         oddsWad: signed.odds.oddsWad,
         maxStake: signed.odds.maxStake,
         maxPayout: signed.odds.maxPayout,
@@ -335,6 +402,7 @@ export function SportsbookTicketPlacementPanel({
         riskHash: signed.odds.riskHash,
         signature: signed.signature
       }));
+      setSignedOdds(signed);
       setPlan(undefined);
       setStatus({
         busy: false,
@@ -356,7 +424,7 @@ export function SportsbookTicketPlacementPanel({
       });
       toast.error(message);
     }
-  }, [chainId, form, market, sdk?.account, t]);
+  }, [chainId, form, market, poolAsset.decimals, sdk?.account, t]);
 
   const onPlace = React.useCallback(async () => {
     if (!sdk) return;
@@ -403,6 +471,11 @@ export function SportsbookTicketPlacementPanel({
   }, [buildPlan, onMutated, plan, sdk, t]);
 
   const actionDisabled = disabled || status.busy || !sdk?.account || market.state !== "open";
+  const hasSignedOdds = Boolean(form.signature && form.oddsWad && form.maxStake && form.maxPayout);
+  const selectedOutcomeId = Number(form.outcomeId);
+  const selectedOutcomeName = Number.isSafeInteger(selectedOutcomeId)
+    ? defaultOutcomeLabel(selectedOutcomeId, market, t)
+    : t("sportsbook.ticketPlacement.outcomes.generic", { outcomeId: form.outcomeId || "0" });
 
   return (
     <div className="grid gap-5">
@@ -439,94 +512,188 @@ export function SportsbookTicketPlacementPanel({
       </div>
 
       <div className="rounded-lg border border-border bg-surface-2/70 p-5">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <Field
-            id="sports-ticket-provider-event"
-            label={t("sportsbook.ticketPlacement.fields.providerEventId")}
-            value={form.providerEventId}
-            onChange={(value) => update("providerEventId", value)}
-            placeholder={t("sportsbook.ticketPlacement.placeholders.optional")}
-          />
-          <Field
-            id="sports-ticket-bookmaker"
-            label={t("sportsbook.ticketPlacement.fields.bookmakerKey")}
-            value={form.bookmakerKey}
-            onChange={(value) => update("bookmakerKey", value)}
-            placeholder={t("sportsbook.ticketPlacement.placeholders.optional")}
-          />
-          <Field
-            id="sports-ticket-sport"
-            label={t("sportsbook.ticketPlacement.fields.sportKey")}
-            value={form.sportKey}
-            onChange={(value) => update("sportKey", value)}
-            placeholder="soccer_fifa_world_cup"
-          />
-          <Field
-            id="sports-ticket-outcome"
-            label={t("sportsbook.ticketPlacement.fields.outcomeId")}
-            value={form.outcomeId}
-            onChange={(value) => update("outcomeId", value)}
-            placeholder="0"
-          />
-          <Field
-            id="sports-ticket-stake"
-            label={t("sportsbook.ticketPlacement.fields.stakeRawUnits")}
-            value={form.stake}
-            onChange={(value) => update("stake", value)}
-            placeholder="1000000"
-          />
-          <Field
-            id="sports-ticket-odds"
-            label={t("sportsbook.ticketPlacement.fields.oddsWad")}
-            value={form.oddsWad}
-            onChange={(value) => update("oddsWad", value)}
-            placeholder="2100000000000000000"
-          />
-          <Field
-            id="sports-ticket-max-stake"
-            label={t("sportsbook.ticketPlacement.fields.maxStake")}
-            value={form.maxStake}
-            onChange={(value) => update("maxStake", value)}
-            placeholder="2000000"
-          />
-          <Field
-            id="sports-ticket-max-payout"
-            label={t("sportsbook.ticketPlacement.fields.maxPayout")}
-            value={form.maxPayout}
-            onChange={(value) => update("maxPayout", value)}
-            placeholder="4200000"
-          />
-          <Field
-            id="sports-ticket-expires"
-            label={t("sportsbook.ticketPlacement.fields.expiresAt")}
-            value={form.expiresAt}
-            onChange={(value) => update("expiresAt", value)}
-            placeholder={t("sportsbook.ticketPlacement.placeholders.unixSeconds")}
-          />
-          <Field
-            id="sports-ticket-nonce"
-            label={t("sportsbook.ticketPlacement.fields.nonce")}
-            value={form.nonce}
-            onChange={(value) => update("nonce", value)}
-            placeholder="0"
-          />
-          <div className="xl:col-span-2">
-            <Field
-              id="sports-ticket-risk-hash"
-              label={t("sportsbook.ticketPlacement.fields.riskHash")}
-              value={form.riskHash}
-              onChange={(value) => update("riskHash", value)}
-              placeholder="0x..."
-            />
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
+          <div className="grid gap-5">
+            <div className="grid gap-3">
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
+                  {t("sportsbook.ticketPlacement.sections.selection")}
+                </div>
+                <div className="mt-1 text-sm text-fg-muted">
+                  {t("sportsbook.ticketPlacement.sections.selectionHelper")}
+                </div>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {Array.from({ length: market.outcomeCount }, (_, outcomeId) => {
+                  const selected = form.outcomeId === String(outcomeId);
+                  const signedForOutcome =
+                    signedOdds && Number(form.outcomeId) === outcomeId
+                      ? signedOdds.outcome
+                      : undefined;
+                  return (
+                    <button
+                      key={outcomeId}
+                      type="button"
+                      onClick={() => update("outcomeId", String(outcomeId))}
+                      className={[
+                        "min-h-20 rounded-md border p-3 text-left transition-colors",
+                        selected
+                          ? "border-brand bg-brand-soft text-brand"
+                          : "border-border bg-surface-1 text-fg hover:border-brand/40"
+                      ].join(" ")}
+                    >
+                      <div className="text-[10px] font-bold uppercase tracking-[0.16em] opacity-70">
+                        {t("sportsbook.ticketPlacement.outcomes.option", {
+                          outcomeId: String(outcomeId)
+                        })}
+                      </div>
+                      <div className="mt-2 text-base font-black">
+                        {signedForOutcome?.name ?? defaultOutcomeLabel(outcomeId, market, t)}
+                      </div>
+                      {signedForOutcome ? (
+                        <div className="mt-1 font-mono text-xs">
+                          {t("sportsbook.ticketPlacement.outcomes.price", {
+                            price: signedForOutcome.decimalPrice
+                          })}
+                        </div>
+                      ) : null}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field
+                id="sports-ticket-stake"
+                label={t("sportsbook.ticketPlacement.fields.stakeWithSymbol", {
+                  symbol: poolAsset.symbol
+                })}
+                value={form.stake}
+                onChange={(value) => update("stake", value)}
+                placeholder="1.00"
+                mono={false}
+              />
+              <Field
+                id="sports-ticket-sport"
+                label={t("sportsbook.ticketPlacement.fields.sportKey")}
+                value={form.sportKey}
+                onChange={(value) => update("sportKey", value)}
+                placeholder="soccer_usa_mls"
+              />
+            </div>
+
+            <details className="rounded-md border border-border bg-surface-1 p-4">
+              <summary className="cursor-pointer text-xs font-black uppercase tracking-[0.16em] text-fg-muted">
+                {t("sportsbook.ticketPlacement.sections.advanced")}
+              </summary>
+              <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <Field
+                  id="sports-ticket-provider-event"
+                  label={t("sportsbook.ticketPlacement.fields.providerEventId")}
+                  value={form.providerEventId}
+                  onChange={(value) => update("providerEventId", value)}
+                  placeholder={t("sportsbook.ticketPlacement.placeholders.optional")}
+                />
+                <Field
+                  id="sports-ticket-bookmaker"
+                  label={t("sportsbook.ticketPlacement.fields.bookmakerKey")}
+                  value={form.bookmakerKey}
+                  onChange={(value) => update("bookmakerKey", value)}
+                  placeholder={t("sportsbook.ticketPlacement.placeholders.optional")}
+                />
+                <Field
+                  id="sports-ticket-odds"
+                  label={t("sportsbook.ticketPlacement.fields.oddsWad")}
+                  value={form.oddsWad}
+                  onChange={(value) => update("oddsWad", value)}
+                  placeholder="2100000000000000000"
+                />
+                <Field
+                  id="sports-ticket-max-stake"
+                  label={t("sportsbook.ticketPlacement.fields.maxStake")}
+                  value={form.maxStake}
+                  onChange={(value) => update("maxStake", value)}
+                  placeholder="2000000"
+                />
+                <Field
+                  id="sports-ticket-max-payout"
+                  label={t("sportsbook.ticketPlacement.fields.maxPayout")}
+                  value={form.maxPayout}
+                  onChange={(value) => update("maxPayout", value)}
+                  placeholder="4200000"
+                />
+                <Field
+                  id="sports-ticket-expires"
+                  label={t("sportsbook.ticketPlacement.fields.expiresAt")}
+                  value={form.expiresAt}
+                  onChange={(value) => update("expiresAt", value)}
+                  placeholder={t("sportsbook.ticketPlacement.placeholders.unixSeconds")}
+                />
+                <Field
+                  id="sports-ticket-nonce"
+                  label={t("sportsbook.ticketPlacement.fields.nonce")}
+                  value={form.nonce}
+                  onChange={(value) => update("nonce", value)}
+                  placeholder="0"
+                />
+                <div className="xl:col-span-2">
+                  <Field
+                    id="sports-ticket-risk-hash"
+                    label={t("sportsbook.ticketPlacement.fields.riskHash")}
+                    value={form.riskHash}
+                    onChange={(value) => update("riskHash", value)}
+                    placeholder="0x..."
+                  />
+                </div>
+                <div className="md:col-span-2 xl:col-span-3">
+                  <Field
+                    id="sports-ticket-signature"
+                    label={t("sportsbook.ticketPlacement.fields.oddsSignature")}
+                    value={form.signature}
+                    onChange={(value) => update("signature", value)}
+                    placeholder="0x..."
+                  />
+                </div>
+              </div>
+            </details>
           </div>
-          <div className="md:col-span-2 xl:col-span-3">
-            <Field
-              id="sports-ticket-signature"
-              label={t("sportsbook.ticketPlacement.fields.oddsSignature")}
-              value={form.signature}
-              onChange={(value) => update("signature", value)}
-              placeholder="0x..."
-            />
+
+          <div className="grid content-start gap-3 rounded-md border border-border bg-surface-0 p-4">
+            <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
+              {t("sportsbook.ticketPlacement.sections.ticketPreview")}
+            </div>
+            <div className="grid gap-3">
+              <DetailCell
+                label={t("sportsbook.ticketPlacement.preview.selection")}
+                value={signedOdds?.outcome.name ?? selectedOutcomeName}
+                helper={
+                  signedOdds
+                    ? t("sportsbook.ticketPlacement.preview.provider", {
+                        sport: (signedOdds.provider.sportKey ?? form.sportKey) || "—",
+                        bookmaker: (signedOdds.provider.bookmakerKey ?? form.bookmakerKey) || "—"
+                      })
+                    : t("sportsbook.ticketPlacement.preview.needsOdds")
+                }
+                mono={false}
+              />
+              <DetailCell
+                label={t("sportsbook.ticketPlacement.preview.price")}
+                value={signedOdds?.outcome.decimalPrice ?? "—"}
+                helper={t("sportsbook.ticketPlacement.preview.priceHelper")}
+                mono={false}
+              />
+              <DetailCell
+                label={t("sportsbook.ticketPlacement.preview.payout")}
+                value={
+                  signedOdds
+                    ? `${formatUnits(signedOdds.payout, poolAsset.decimals)} ${poolAsset.symbol}`
+                    : "—"
+                }
+                helper={t("sportsbook.ticketPlacement.preview.payoutHelper")}
+                mono={false}
+              />
+            </div>
           </div>
         </div>
 
@@ -549,7 +716,7 @@ export function SportsbookTicketPlacementPanel({
           </button>
           <button
             type="button"
-            disabled={actionDisabled}
+            disabled={actionDisabled || !hasSignedOdds}
             onClick={onPlace}
             className="min-h-11 rounded-md bg-brand px-4 text-sm font-black text-fg-inverse shadow-glow transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
           >

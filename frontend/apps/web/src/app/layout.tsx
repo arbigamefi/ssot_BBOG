@@ -41,6 +41,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const { locale, messages } = await getRequestI18n();
+  const sportsbookEnabledFlag = process.env.NEXT_PUBLIC_SPORTSBOOK_ENABLED;
 
   return (
     <html lang={locale} suppressHydrationWarning>
@@ -49,7 +50,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body className="min-h-screen">
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <ProductProviders>
+          <ProductProviders sportsbookEnabledFlag={sportsbookEnabledFlag}>
             <AppShell>{children}</AppShell>
             <Toaster />
           </ProductProviders>

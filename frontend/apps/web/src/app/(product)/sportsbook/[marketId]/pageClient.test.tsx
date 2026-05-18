@@ -299,7 +299,8 @@ describe("SportsbookMarketDetailPageClient", () => {
     renderWithQueryClient(<SportsbookMarketDetailPageClient marketId="7" />);
 
     expect(await screen.findByText("Signed odds ticket")).toBeDefined();
-    fireEvent.change(screen.getByLabelText("Stake raw units"), { target: { value: "1000000" } });
+    fireEvent.change(screen.getByLabelText("Stake (USDC)"), { target: { value: "1" } });
+    fireEvent.click(screen.getByText("Advanced odds proof"));
     fireEvent.change(screen.getByLabelText("Odds WAD"), {
       target: { value: "2100000000000000000" }
     });
@@ -362,11 +363,12 @@ describe("SportsbookMarketDetailPageClient", () => {
     renderWithQueryClient(<SportsbookMarketDetailPageClient marketId="7" />);
 
     expect(await screen.findByText("Signed odds ticket")).toBeDefined();
+    fireEvent.click(screen.getByText("Advanced odds proof"));
     fireEvent.change(screen.getByLabelText("Provider event id"), { target: { value: "event-1" } });
     fireEvent.change(screen.getByLabelText("Bookmaker key"), { target: { value: "draftkings" } });
     fireEvent.change(screen.getByLabelText("Sport key"), { target: { value: "soccer_usa_mls" } });
-    fireEvent.change(screen.getByLabelText("Stake raw units"), { target: { value: "1000000" } });
-    fireEvent.click(screen.getByRole("button", { name: "Fetch signed odds" }));
+    fireEvent.change(screen.getByLabelText("Stake (USDC)"), { target: { value: "1" } });
+    fireEvent.click(screen.getByRole("button", { name: "Get live odds" }));
 
     expect(await screen.findByText("Signed odds ready: Home FC @ 2.1.")).toBeDefined();
     expect((screen.getByLabelText("Odds WAD") as HTMLInputElement).value).toBe(

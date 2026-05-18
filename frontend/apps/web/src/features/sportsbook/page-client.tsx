@@ -255,6 +255,12 @@ export function SportsbookPageClient() {
   const latestMarketHref = recentMarkets?.[0]?.market
     ? `/sportsbook/${recentMarkets[0].market.marketId.toString()}`
     : "/sportsbook";
+  const marketTapeDescription = sportsbook.enabled
+    ? t("sportsbook.index.marketTape.descriptionEnabled")
+    : t("sportsbook.index.marketTape.descriptionDisabled");
+  const launchStateValue = sportsbook.enabled
+    ? t("sportsbook.index.mvp.rows.launchState.enabled")
+    : t("sportsbook.index.mvp.rows.launchState.disabled");
 
   return (
     <PageTransition pageKey="sportsbook">
@@ -333,7 +339,7 @@ export function SportsbookPageClient() {
         <SectionShell
           eyebrow={t("sportsbook.index.marketTape.eyebrow")}
           title={t("sportsbook.index.marketTape.title")}
-          description={t("sportsbook.index.marketTape.description")}
+          description={marketTapeDescription}
         >
           <MarketTape
             rows={recentMarkets ?? []}
@@ -363,10 +369,7 @@ export function SportsbookPageClient() {
                   t("sportsbook.index.mvp.rows.settlement.label"),
                   t("sportsbook.index.mvp.rows.settlement.value")
                 ],
-                [
-                  t("sportsbook.index.mvp.rows.launchState.label"),
-                  t("sportsbook.index.mvp.rows.launchState.value")
-                ]
+                [t("sportsbook.index.mvp.rows.launchState.label"), launchStateValue]
               ].map(([label, value]) => (
                 <div
                   key={label}

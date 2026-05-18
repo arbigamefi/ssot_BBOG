@@ -331,3 +331,130 @@ Final readbacks after settlement:
 This closes the live provider-backed MVP loop for one football single: provider odds snapshot, signed
 ticket placement, result proposal, finality, finalization, ticket settlement, and reserved-liability
 release.
+
+## Base Sepolia Latest Deployment Ticket + Settlement Evidence - 2026-05-18
+
+This run was executed against the current v1.3 Base Sepolia deployment snapshot after the latest
+frontend release sync:
+
+- Chain ID: `84532`
+- SportsHub: `0x1175343A5F66d73C3c3599A0cDdB70454Ba07980`
+- Sports Bank: `0x3B1dcC35344739a58EC907958233D2E30939988b`
+- Sports asset: `0x036CbD53842c5426634e7929541eC2318f3dCF7e`
+- Sports asset metadata: `USDC`, `6` decimals
+- Risk engine: `0x117C0682E39d9a8674cd7708C3dc1146544ab100`
+
+Before opening markets, SportsHub roles were rotated from the governance key to the role-specific
+canary keys in `.env.sports-roles.local`, and the Sports Bank was funded with `25 USDC`.
+
+Role rotation transactions:
+
+- `setOddsSignerSetHash(bytes32)`: `0x76dec4d974fca7bfa7bd90c8f28fd76cb8a924e921ad267e79817a973eefd42f`
+- `setResultReporterSetHash(bytes32)`: `0xbe7119540a96d3eab4ee0e7adf4533f24dd5f421a137c5ea1212a88b39807405`
+- Allow/revoke role update batch:
+  - `0x87cda77702b4283da6772908fe4b956fdcffc37b9294e5674d83a1a0a8e84dc4`
+  - `0x560e1ade9555d2b6549a7514086d885256d7d24ec81411563725067c130f7729`
+  - `0x01f4b057b1de638753f711bd45938b3cb38449159cdab4b999ebeacf0b7083dd`
+  - `0xa18e8610572c1a7adf7b2b613da168d6005ee1110493c2892b97930b803c313c`
+  - `0xfb6709ea66230a69d3a11950d24ad87cc73795f5b6a40d28409f56c227fab283`
+  - `0xe4d591560cbd4c1a983f57d15bacdbbc2deea669b053f418cb7ac54f0bde88a8`
+  - `0x6b481dbf5936bd646bc92e2963752074f0454a5bdcb3c2c1743a36b8254e25cc`
+  - `0x57497d517718161af29e627983e576b9206b5475863e6edd9157866ad5ed0083`
+
+Sports Bank funding transactions:
+
+- USDC approve: `0xecc45bbeb944616fd9e34f73eebe163bc4b0adddd5c8549b49dfbdddbaa09f92`
+- Bank deposit: `0x53527d01d86a6b3f879996bb5ad7c2bed6545bc4796d7b183d81705a023e4536`
+- Post-funding `totalAssets() = 25000000`
+
+### Provider-backed ticket placement
+
+Market `1` was opened as the live frontend ticket placement canary:
+
+- Market ID: `1`
+- Event ID: `2026061101`
+- State after open: `Open`
+- Lock time: `1779127160`
+- Starts at: `1779127760`
+- Market create: `0xc34b7d914d6d03c65780c3325b3d80fb46eb29cf037461c54f487d53111d6dee`
+- Market open: `0x2668cf760fe17b4503ebfb7fedbd741bd4e4e864c085f1cc698c816b7c03d161`
+
+The frontend `POST /api/sportsbook/odds-snapshot` route fetched and signed a live The Odds API
+snapshot:
+
+- Sport key: `soccer_usa_mls`
+- Provider event id: `ef978450f880d76aaa1bee4b40b3cc84`
+- Bookmaker: `betrivers` / `BetRivers`
+- Selected outcome: `0` / home / `St. Louis City SC`
+- Decimal odds: `1.68`
+- Odds WAD: `1680000000000000000`
+- Stake: `1000000`
+- Payout / reserved: `1680000`
+- Odds signer: `0x871FbF5FF3FD3515636dACAafcEF1a008F1853Eb`
+- Odds ticket hash: `0x8df58289ee86a1a80c3c3587d418f8dbd75b4595972d1bdb4ea815f51e3dc735`
+
+Ticket transactions and readbacks:
+
+- USDC approve: `0x448924b32c9d338cd76b60137d1d43fac94da3e744c0c0ced8e2ab28fdd5b474`
+- Place ticket: `0xdc4586ae8edb341b6bdfe63f45a41f4deb608ec18bc0e516c432b421f3b9de36`
+- Ticket ID: `1`
+- Position ID: `21`
+- `getTicket(1).state = Held`
+- `marketReserved(1) = 1680000`
+
+This proves the current frontend odds route is not just a UI preview: it produces a signed odds
+snapshot accepted by `SportsHub.placeTicket(...)` on the latest deployment.
+
+### Short-cycle settlement closeout
+
+Market `3` was created with a short open window to prove the reporter/finality/settlement side on the
+same deployment:
+
+- Market ID: `3`
+- Event ID: `2026061103`
+- Winning outcome ID: `0`
+- Stake: `100000`
+- Payout / reserved: `168000`
+- Result payload hash: `0x202b022029e3f3ffd1310104694e212b9c3c7701cb11d708bf22dc7899fec69a`
+- Result source hash: `0x62c337d20a198e88b610bb8ac55374f0d49d704a4a828f6e0644328f92d0b46e`
+- Evidence hash: `0x18496841a3d487a1113a3070c866c182ea7d068a69631349cf54274602d372ae`
+- `getResult(3).finalizesAt = 1779122558`
+
+Transactions:
+
+- Market create: `0x0cce4dbee07008b0fe2d189cf5a417d3d141a445fea4a74367cc09c2576c14f0`
+- Market open: `0xfa3498edcd9217591a8a07e03320ce3de2b3bd9456b0e9bdf0aa292cedbd4f89`
+- USDC approve: `0xe53981e25cfe18040b0ce76bf0c0c1ea5e6e897268e735f9b2a256284b010be9`
+- Place ticket: `0x21d82cad4244be7dfed6cdaa95140b82ec916364b9b018d8515a6962c6832351`
+- Lock market: `0x5be7eced0b01f36e636d6d3b7240667f7d9838e69f2ce5e34d9c4a01480ba722`
+- Propose result: `0x6cd6a90c8dbfa0dbf919aea86b7796f58c2e5f68c6dedeb9c5eb249a773f4fc1`
+- Finalize result: `0xbc1ba474ccddae0d4d3bcd5b0aaffe29258f20558b46b19bb56a2e4f8192a404`
+- Settle ticket: `0x4d0296cad47a6a10e71450b849063be27476b1d19d542ab3fc33d972877360f2`
+
+Final readbacks:
+
+- `getMarket(3).state = Resolved`
+- `getTicket(2).state = Settled`
+- `getTicket(2).stake = 100000`
+- `getTicket(2).payout = 168000`
+- `marketReserved(3) = 0`
+- Sports Bank `totalReserved() = 1680000`
+
+The non-zero Sports Bank `totalReserved()` after market `3` settlement is expected: market `1` still
+has a held frontend-placement canary ticket with `1680000` reserved until its scheduled lock/start and
+result path is executed.
+
+### Cleanup
+
+Market `2` was opened with an intentionally short window while testing direct lifecycle commands, but
+no ticket was placed before lock time. It was voided to keep the product market tape clean:
+
+- Market 2 create: `0x3560415901146696a929228f3598f2937b54cd576437e8ed214ce57121ad725f`
+- Market 2 open: `0x590eb1a93d16b52765f843f1fca67718df592ce7333c1182241efa6d5ff944f3`
+- Market 2 void: `0x35b740fe28e72f6651a637fe1b281740245639c7865cf29df5e4ab70a87d5db4`
+- Void reason hash: `0x14c2fb36b4517c9240b3fb97b0190a7cc419ca16fb39720c38dcad01f9aac864`
+- `getMarket(2).state = Voided`
+
+This closes the latest deployment's sportsbook MVP at product level: current release roles, funded
+sports pool, provider-backed signed odds, accepted on-chain ticket, result reporting, finality,
+settlement, and reserved-liability release.
