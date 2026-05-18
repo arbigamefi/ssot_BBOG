@@ -304,7 +304,7 @@ describe("SportsbookMarketDetailPageClient", () => {
 
     expect((await screen.findAllByText("Place ticket")).length).toBeGreaterThan(0);
     fireEvent.change(screen.getByLabelText("Stake (USDC)"), { target: { value: "1" } });
-    fireEvent.click(screen.getByText("Advanced odds proof"));
+    fireEvent.click(screen.getByText("Chain odds proof"));
     fireEvent.change(screen.getByLabelText("Odds WAD"), {
       target: { value: "2100000000000000000" }
     });
@@ -314,7 +314,7 @@ describe("SportsbookMarketDetailPageClient", () => {
     fireEvent.change(screen.getByLabelText("Odds signature"), {
       target: { value: `0x${"11".repeat(65)}` }
     });
-    fireEvent.click(screen.getByRole("button", { name: "Plan ticket" }));
+    fireEvent.click(screen.getByRole("button", { name: "Review transaction plan" }));
 
     expect((await screen.findAllByText("Plan ready.")).length).toBeGreaterThan(0);
     expect(state.sdk.sportsHub.planPlaceTicket).toHaveBeenCalledWith(
@@ -367,7 +367,7 @@ describe("SportsbookMarketDetailPageClient", () => {
     renderWithQueryClient(<SportsbookMarketDetailPageClient marketId="7" />);
 
     expect((await screen.findAllByText("Place ticket")).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByText("Advanced odds proof"));
+    fireEvent.click(screen.getByText("Chain odds proof"));
     fireEvent.change(screen.getByLabelText("Provider event id"), { target: { value: "event-1" } });
     fireEvent.change(screen.getByLabelText("Bookmaker key"), { target: { value: "draftkings" } });
     fireEvent.change(screen.getByLabelText("Sport key"), { target: { value: "soccer_usa_mls" } });

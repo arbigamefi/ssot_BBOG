@@ -195,6 +195,7 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
           <>
             <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_420px] xl:items-start">
               <SectionShell
+                className="order-2 xl:order-1"
                 eyebrow={t("sportsbook.detail.playerMarket.eyebrow")}
                 title={t("sportsbook.detail.playerMarket.title")}
                 description={t("sportsbook.detail.playerMarket.description")}
@@ -283,6 +284,7 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
               </SectionShell>
 
               <SectionShell
+                className="order-1 xl:order-2 xl:sticky xl:top-24"
                 eyebrow={t("sportsbook.detail.ticketPlacement.eyebrow")}
                 title={t("sportsbook.detail.ticketPlacement.title")}
                 description={t("sportsbook.detail.ticketPlacement.description")}

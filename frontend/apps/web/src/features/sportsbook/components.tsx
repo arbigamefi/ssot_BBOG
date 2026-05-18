@@ -541,15 +541,19 @@ export function SectionShell({
   eyebrow,
   title,
   description,
+  className,
   children
 }: {
   eyebrow: string;
   title: string;
   description: React.ReactNode;
+  className?: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-lg border border-border bg-surface-1 p-6 shadow-e2 md:p-8">
+    <section
+      className={cn("rounded-lg border border-border bg-surface-1 p-6 shadow-e2 md:p-8", className)}
+    >
       <div className="max-w-3xl">
         <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-fg-subtle">
           {eyebrow}

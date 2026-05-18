@@ -472,47 +472,65 @@ export function SportsbookTicketPlacementPanel({
 
   const actionDisabled = disabled || status.busy || !sdk?.account || market.state !== "open";
   const hasSignedOdds = Boolean(form.signature && form.oddsWad && form.maxStake && form.maxPayout);
+  const hasStake = form.stake.trim().length > 0;
+  const canFetchOdds = !actionDisabled && hasStake;
+  const canPlaceTicket = !actionDisabled && hasSignedOdds;
+  const canReviewPlan = canPlaceTicket;
   const selectedOutcomeId = Number(form.outcomeId);
   const selectedOutcomeName = Number.isSafeInteger(selectedOutcomeId)
     ? defaultOutcomeLabel(selectedOutcomeId, market, t)
     : t("sportsbook.ticketPlacement.outcomes.generic", { outcomeId: form.outcomeId || "0" });
+  const actionHint = !sdk?.account
+    ? t("sportsbook.ticketPlacement.walletRequired")
+    : disabled
+      ? disabledReason
+      : market.state !== "open"
+        ? t("sportsbook.detail.ticketPlacement.marketMustBeOpen")
+        : !hasStake
+          ? t("sportsbook.ticketPlacement.hints.enterStake")
+          : !hasSignedOdds
+            ? t("sportsbook.ticketPlacement.hints.getLiveOdds")
+            : t("sportsbook.ticketPlacement.hints.readyToPlace");
 
   return (
     <div className="grid gap-5">
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <DetailCell
-          label={t("sportsbook.ticketPlacement.summary.gate")}
-          value={
-            disabled
-              ? t("sportsbook.ticketPlacement.summary.locked")
-              : t("sportsbook.ticketPlacement.summary.enabled")
-          }
-          helper={disabledReason ?? t("sportsbook.ticketPlacement.summary.gateHelper")}
-          mono={false}
-        />
-        <DetailCell
-          label={t("sportsbook.ticketPlacement.summary.market")}
-          value={`${market.state} / v${market.version.toString()}`}
-          helper={t("sportsbook.ticketPlacement.summary.marketHelper", {
-            poolId: String(market.poolId),
-            outcomeCount: String(market.outcomeCount)
-          })}
-          mono={false}
-        />
-        <DetailCell
-          label={t("sportsbook.ticketPlacement.summary.status")}
-          value={status.label}
-          helper={status.error}
-          mono={false}
-        />
-        <DetailCell
-          label={t("sportsbook.ticketPlacement.summary.lastTx")}
-          value={status.txHash ?? t("sportsbook.components.na")}
-        />
+      <div className="rounded-md border border-border bg-surface-1/70 p-3">
+        <div className="grid grid-cols-2 gap-3 text-xs">
+          <div>
+            <div className="font-bold uppercase tracking-[0.16em] text-fg-subtle">
+              {t("sportsbook.ticketPlacement.summary.gate")}
+            </div>
+            <div className="mt-1 font-semibold text-fg">
+              {disabled
+                ? t("sportsbook.ticketPlacement.summary.locked")
+                : t("sportsbook.ticketPlacement.summary.enabled")}
+            </div>
+          </div>
+          <div>
+            <div className="font-bold uppercase tracking-[0.16em] text-fg-subtle">
+              {t("sportsbook.ticketPlacement.summary.market")}
+            </div>
+            <div className="mt-1 font-semibold text-fg">{`${market.state} / v${market.version.toString()}`}</div>
+          </div>
+          <div>
+            <div className="font-bold uppercase tracking-[0.16em] text-fg-subtle">
+              {t("sportsbook.ticketPlacement.summary.status")}
+            </div>
+            <div className="mt-1 font-semibold text-fg">{status.label}</div>
+          </div>
+          <div>
+            <div className="font-bold uppercase tracking-[0.16em] text-fg-subtle">
+              {t("sportsbook.ticketPlacement.summary.lastTx")}
+            </div>
+            <div className="mt-1 font-mono font-semibold text-fg">
+              {status.txHash ? shortHex(status.txHash) : t("sportsbook.components.na")}
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="rounded-lg border border-border bg-surface-2/70 p-5">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <div className="grid gap-4">
           <div className="grid gap-5">
             <div className="grid gap-3">
               <div>
@@ -563,7 +581,7 @@ export function SportsbookTicketPlacementPanel({
               </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4">
               <Field
                 id="sports-ticket-stake"
                 label={t("sportsbook.ticketPlacement.fields.stakeWithSymbol", {
@@ -574,20 +592,52 @@ export function SportsbookTicketPlacementPanel({
                 placeholder="1.00"
                 mono={false}
               />
-              <Field
-                id="sports-ticket-sport"
-                label={t("sportsbook.ticketPlacement.fields.sportKey")}
-                value={form.sportKey}
-                onChange={(value) => update("sportKey", value)}
-                placeholder="soccer_usa_mls"
-              />
             </div>
+
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+              <button
+                type="button"
+                disabled={!canFetchOdds}
+                onClick={onFetchProviderOdds}
+                className={[
+                  "min-h-12 rounded-md px-4 text-sm font-black transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+                  hasSignedOdds
+                    ? "border border-border bg-surface-1 text-fg hover:border-brand/40 hover:bg-surface-3"
+                    : "border border-brand/30 bg-brand-soft text-brand hover:border-brand/50"
+                ].join(" ")}
+              >
+                {hasSignedOdds
+                  ? t("sportsbook.ticketPlacement.actions.refreshOdds")
+                  : t("sportsbook.ticketPlacement.actions.fetchSignedOdds")}
+              </button>
+              <button
+                type="button"
+                disabled={!canPlaceTicket}
+                onClick={onPlace}
+                className="min-h-12 rounded-md bg-brand px-4 text-sm font-black text-fg-inverse shadow-glow transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {t("sportsbook.ticketPlacement.actions.placeTicket")}
+              </button>
+            </div>
+            {actionHint ? (
+              <div className="text-xs leading-5 text-fg-muted">{actionHint}</div>
+            ) : null}
+            {status.error ? (
+              <div className="text-xs leading-5 text-danger">{status.error}</div>
+            ) : null}
 
             <details className="rounded-md border border-border bg-surface-1 p-4">
               <summary className="cursor-pointer text-xs font-black uppercase tracking-[0.16em] text-fg-muted">
                 {t("sportsbook.ticketPlacement.sections.advanced")}
               </summary>
               <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <Field
+                  id="sports-ticket-sport"
+                  label={t("sportsbook.ticketPlacement.fields.sportKey")}
+                  value={form.sportKey}
+                  onChange={(value) => update("sportKey", value)}
+                  placeholder="soccer_usa_mls"
+                />
                 <Field
                   id="sports-ticket-provider-event"
                   label={t("sportsbook.ticketPlacement.fields.providerEventId")}
@@ -656,6 +706,17 @@ export function SportsbookTicketPlacementPanel({
                   />
                 </div>
               </div>
+              <div className="mt-4 grid gap-3 rounded-md border border-border-soft bg-surface-0 p-3 text-xs leading-5 text-fg-muted md:grid-cols-[1fr_auto] md:items-center">
+                <div>{t("sportsbook.ticketPlacement.plan.advancedHelper")}</div>
+                <button
+                  type="button"
+                  disabled={!canReviewPlan}
+                  onClick={onPlan}
+                  className="min-h-10 rounded-md border border-border bg-surface-1 px-3 text-xs font-black text-fg transition-colors hover:border-brand/40 hover:bg-surface-3 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {t("sportsbook.ticketPlacement.actions.planTicket")}
+                </button>
+              </div>
             </details>
           </div>
 
@@ -694,44 +755,20 @@ export function SportsbookTicketPlacementPanel({
                 mono={false}
               />
             </div>
+            <div
+              className={[
+                "rounded-md border p-3 text-xs leading-5",
+                hasSignedOdds
+                  ? "border-success/30 bg-success/10 text-success"
+                  : "border-border bg-surface-1 text-fg-muted"
+              ].join(" ")}
+            >
+              {hasSignedOdds
+                ? t("sportsbook.ticketPlacement.preview.priceLocked")
+                : t("sportsbook.ticketPlacement.preview.priceNotLocked")}
+            </div>
           </div>
         </div>
-
-        <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-          <button
-            type="button"
-            disabled={actionDisabled}
-            onClick={onFetchProviderOdds}
-            className="min-h-11 rounded-md border border-brand/30 bg-brand-soft px-4 text-sm font-black text-brand transition-colors hover:border-brand/50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {t("sportsbook.ticketPlacement.actions.fetchSignedOdds")}
-          </button>
-          <button
-            type="button"
-            disabled={actionDisabled}
-            onClick={onPlan}
-            className="min-h-11 rounded-md border border-border bg-surface-1 px-4 text-sm font-black text-fg transition-colors hover:border-brand/40 hover:bg-surface-3 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {t("sportsbook.ticketPlacement.actions.planTicket")}
-          </button>
-          <button
-            type="button"
-            disabled={actionDisabled || !hasSignedOdds}
-            onClick={onPlace}
-            className="min-h-11 rounded-md bg-brand px-4 text-sm font-black text-fg-inverse shadow-glow transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {t("sportsbook.ticketPlacement.actions.placeTicket")}
-          </button>
-        </div>
-
-        {status.error ? (
-          <div className="mt-3 text-xs leading-5 text-danger">{status.error}</div>
-        ) : null}
-        {!sdk?.account ? (
-          <div className="mt-3 text-xs leading-5 text-warn">
-            {t("sportsbook.ticketPlacement.walletRequired")}
-          </div>
-        ) : null}
       </div>
 
       {plan ? (

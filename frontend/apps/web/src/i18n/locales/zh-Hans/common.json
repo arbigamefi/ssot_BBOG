@@ -861,9 +861,9 @@
       "ticketPlacement": {
         "eyebrow": "投注单",
         "title": "提交票据",
-        "description": "选择结果、输入金额、获取 provider 签名价格，然后提交票据。",
+        "description": "选择一边、输入金额、锁定实时固定赔率，然后出票。",
         "marketMustBeOpen": "市场必须处于 open 状态才能出票。",
-        "walletAndSnapshotRequired": "需要连接钱包并提供签名赔率快照。"
+        "walletAndSnapshotRequired": "连接钱包后，先锁定实时赔率再出票。"
       },
       "ticketTerminal": {
         "eyebrow": "票据终结",
@@ -935,7 +935,7 @@
         "gate": "Gate",
         "locked": "锁定",
         "enabled": "启用",
-        "gateHelper": "需要启用 release 元数据、前端开关和钱包。",
+        "gateHelper": "连接钱包并锁定实时赔率。",
         "market": "市场",
         "marketHelper": "池 {poolId}，{outcomeCount} 个结果",
         "status": "状态",
@@ -943,14 +943,20 @@
       },
       "actions": {
         "fetchSignedOdds": "获取实时赔率",
-        "planTicket": "规划票据",
+        "refreshOdds": "刷新赔率",
+        "planTicket": "查看交易计划",
         "placeTicket": "出票"
       },
       "walletRequired": "连接钱包后才能出票。",
+      "hints": {
+        "enterStake": "输入投注金额后再请求实时签名赔率。",
+        "getLiveOdds": "先获取实时赔率。只有锁定签名价格后才能出票。",
+        "readyToPlace": "赔率已锁定。确认后即可出票。"
+      },
       "sections": {
         "selection": "选择结果",
-        "selectionHelper": "先选择投注结果并输入金额，再获取 provider 签名赔率。",
-        "advanced": "高级赔率证明",
+        "selectionHelper": "选择结果并输入金额，然后锁定实时签名赔率。",
+        "advanced": "链上赔率证明",
         "ticketPreview": "票据预览"
       },
       "outcomes": {
@@ -968,7 +974,9 @@
         "price": "赔率",
         "priceHelper": "Provider decimal odds",
         "payout": "预计赔付",
-        "payoutHelper": "该结果获胜时的 gross payout"
+        "payoutHelper": "该结果获胜时的 gross payout",
+        "priceLocked": "实时赔率已锁定。广播前仍会再次校验签名。",
+        "priceNotLocked": "尚未锁定实时赔率。请求签名报价前，赔率可能变化。"
       },
       "plan": {
         "approval": "授权",
@@ -978,6 +986,7 @@
         "allowance": "Allowance {amount}",
         "oddsTicketHash": "赔率票据哈希",
         "planState": "计划状态",
+        "advancedHelper": "这是给高级用户的可选检查。普通玩家可以直接获取实时赔率并出票。",
         "empty": "先获取实时赔率。签名快照会在广播前校验，过期或未签名赔率会被拒绝。"
       }
     },

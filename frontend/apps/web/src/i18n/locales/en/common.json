@@ -861,9 +861,9 @@
       "ticketPlacement": {
         "eyebrow": "Bet slip",
         "title": "Place ticket",
-        "description": "Choose an outcome, enter stake, fetch a signed provider price, and submit the ticket.",
+        "description": "Pick a side, enter stake, lock a live fixed price, and submit the ticket.",
         "marketMustBeOpen": "Market must be open before ticket placement.",
-        "walletAndSnapshotRequired": "A connected wallet and signed odds snapshot are required."
+        "walletAndSnapshotRequired": "Connect a wallet, then lock live odds before placing the ticket."
       },
       "ticketTerminal": {
         "eyebrow": "Ticket terminalization",
@@ -935,7 +935,7 @@
         "gate": "Gate",
         "locked": "Locked",
         "enabled": "Enabled",
-        "gateHelper": "Requires enabled release metadata, frontend flag, and wallet.",
+        "gateHelper": "Connect wallet and lock live odds.",
         "market": "Market",
         "marketHelper": "Pool {poolId}, {outcomeCount} outcomes",
         "status": "Status",
@@ -943,14 +943,20 @@
       },
       "actions": {
         "fetchSignedOdds": "Get live odds",
-        "planTicket": "Plan ticket",
+        "refreshOdds": "Refresh odds",
+        "planTicket": "Review transaction plan",
         "placeTicket": "Place ticket"
       },
       "walletRequired": "Connect a wallet to place tickets.",
+      "hints": {
+        "enterStake": "Enter stake to request a live signed price.",
+        "getLiveOdds": "Get live odds first. The ticket can only be placed after a signed price is locked.",
+        "readyToPlace": "Price is locked. Place ticket when you are ready."
+      },
       "sections": {
         "selection": "Pick outcome",
-        "selectionHelper": "Choose the side, enter stake, then get a signed provider price.",
-        "advanced": "Advanced odds proof",
+        "selectionHelper": "Choose an outcome, enter stake, then lock a live signed price.",
+        "advanced": "Chain odds proof",
         "ticketPreview": "Ticket preview"
       },
       "outcomes": {
@@ -968,7 +974,9 @@
         "price": "Price",
         "priceHelper": "Provider decimal odds",
         "payout": "Potential payout",
-        "payoutHelper": "Gross payout if this outcome wins"
+        "payoutHelper": "Gross payout if this outcome wins",
+        "priceLocked": "Live price locked. The signature will be checked again before broadcast.",
+        "priceNotLocked": "No live price is locked yet. Odds can change until you request a signed quote."
       },
       "plan": {
         "approval": "Approval",
@@ -978,6 +986,7 @@
         "allowance": "Allowance {amount}",
         "oddsTicketHash": "Odds ticket hash",
         "planState": "Plan state",
+        "advancedHelper": "Optional review for power users. Normal players can get live odds and place the ticket directly.",
         "empty": "Get live odds first. The signed snapshot is checked before broadcast; stale or unsigned odds are rejected."
       }
     },
