@@ -182,6 +182,10 @@ vi.mock("next/link", () => ({
   )
 }));
 
+vi.mock("next/navigation", () => ({
+  useSearchParams: () => new URLSearchParams()
+}));
+
 vi.mock("@ssot/ui", () => ({
   cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" "),
   toast: {
@@ -339,28 +343,56 @@ describe("SportsbookMarketDetailPageClient", () => {
       account: "0x1111111111111111111111111111111111111111",
       sportsHub: createSportsHubMock()
     };
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        provider: {
-          providerEventId: "event-1",
-          bookmakerKey: "draftkings",
-          sportKey: "soccer_usa_mls"
-        },
-        outcome: { name: "Home FC", decimalPrice: "2.1", oddsWad: "2100000000000000000" },
-        stake: "1000000",
-        payout: "2100000",
-        odds: {
-          oddsWad: "2100000000000000000",
-          maxStake: "2000000",
-          maxPayout: "4200000",
-          expiresAt: "1900000000",
-          nonce: "44",
-          riskHash: "0x0707ba776912152fe0028608c2b31e2ac864f24ed79351eaa10ea012303793e6"
-        },
-        oddsTicketHash: "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
-        signature: `0x${"11".repeat(65)}`
-      })
+    const fetchMock = vi.fn().mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.startsWith("/api/sportsbook/provider-odds")) {
+        return {
+          ok: true,
+          json: async () => ({
+            schemaVersion: "sportsbook.provider-odds.v1",
+            provider: {
+              name: "the-odds-api",
+              providerEventId: "event-1",
+              bookmakerKey: "draftkings",
+              bookmakerTitle: "DraftKings",
+              sportKey: "soccer_usa_mls"
+            },
+            event: {
+              homeTeam: "Home FC",
+              awayTeam: "Away FC",
+              commenceTime: "2026-06-11T19:00:00Z"
+            },
+            outcomes: [
+              { outcomeId: 0, side: "home", name: "Home FC", decimalPrice: "2.1" },
+              { outcomeId: 1, side: "draw", name: "Draw", decimalPrice: "3.4" },
+              { outcomeId: 2, side: "away", name: "Away FC", decimalPrice: "2.9" }
+            ]
+          })
+        };
+      }
+      return {
+        ok: true,
+        json: async () => ({
+          provider: {
+            providerEventId: "event-1",
+            bookmakerKey: "draftkings",
+            sportKey: "soccer_usa_mls"
+          },
+          outcome: { name: "Home FC", decimalPrice: "2.1", oddsWad: "2100000000000000000" },
+          stake: "1000000",
+          payout: "2100000",
+          odds: {
+            oddsWad: "2100000000000000000",
+            maxStake: "2000000",
+            maxPayout: "4200000",
+            expiresAt: "1900000000",
+            nonce: "44",
+            riskHash: "0x0707ba776912152fe0028608c2b31e2ac864f24ed79351eaa10ea012303793e6"
+          },
+          oddsTicketHash: "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          signature: `0x${"11".repeat(65)}`
+        })
+      };
     });
     vi.stubGlobal("fetch", fetchMock);
 

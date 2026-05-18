@@ -8,6 +8,8 @@ import type { SSOTRelease } from "@ssot/ssot/release";
 import { cn } from "@ssot/ui";
 
 import { formatRawUnits, formatTimestamp, shortHex } from "./format";
+import { providerOutcomeById } from "./provider-odds";
+import { useSportsbookProviderOdds } from "./use-provider-odds";
 
 type SportsPool = NonNullable<SSOTRelease["pools"]>[number];
 
@@ -268,6 +270,141 @@ function resultLabel(
   });
 }
 
+function PlayerMarketCard({
+  row,
+  ticketsEnabled
+}: {
+  row: MarketTapeRow;
+  ticketsEnabled: boolean;
+}) {
+  const t = useTranslations();
+  const { market, result } = row;
+  const isOpen = market.state === "open";
+  const providerOddsQuery = useSportsbookProviderOdds({
+    marketId: market.marketId,
+    enabled: ticketsEnabled && isOpen && market.outcomeCount === 3
+  });
+  const providerOdds = providerOddsQuery.data;
+  const resultIsProposed = Boolean(result && result.proposedAt > 0);
+  const winningOutcomeId = Number(result?.winningOutcomeId ?? -1);
+  const winningOutcome =
+    resultIsProposed && winningOutcomeId >= 0
+      ? (providerOutcomeById(providerOdds, winningOutcomeId)?.name ??
+        sportsOutcomeLabel(winningOutcomeId, market.outcomeCount, t))
+      : undefined;
+  const matchTitle = providerOdds
+    ? t("sportsbook.components.playerMarkets.matchup", {
+        home: providerOdds.event.homeTeam,
+        away: providerOdds.event.awayTeam
+      })
+    : t("sportsbook.components.playerMarkets.title");
+
+  return (
+    <article className="rounded-lg border border-border bg-surface-2/70 p-5 transition-colors hover:border-brand/35 hover:bg-surface-2">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusPill tone={marketTone(market.state)}>{market.state}</StatusPill>
+            <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-fg-subtle">
+              {t("sportsbook.components.playerMarkets.marketId", {
+                marketId: market.marketId.toString()
+              })}
+            </span>
+          </div>
+          <h3 className="mt-3 text-xl font-black tracking-tight text-fg">{matchTitle}</h3>
+          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs leading-5 text-fg-muted">
+            <span>
+              {t("sportsbook.components.marketTape.event", {
+                eventId: market.eventId.toString()
+              })}
+            </span>
+            <span>
+              {t("sportsbook.components.playerMarkets.starts", {
+                time: providerOdds?.event.commenceTime
+                  ? new Date(providerOdds.event.commenceTime).toLocaleString()
+                  : formatTimestamp(market.startsAt)
+              })}
+            </span>
+            <span>
+              {t("sportsbook.components.marketTape.locks", {
+                time: formatTimestamp(market.lockTime)
+              })}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex flex-col items-stretch gap-2 sm:flex-row lg:min-w-[260px]">
+          <Link
+            href={`/sportsbook/${market.marketId.toString()}`}
+            className={cn(
+              "inline-flex min-h-11 items-center justify-center rounded-md px-4 text-sm font-black transition-colors",
+              isOpen && ticketsEnabled
+                ? "bg-brand text-fg-inverse shadow-glow hover:bg-brand-hover"
+                : "border border-border bg-surface-1 text-fg hover:border-brand/40 hover:bg-surface-3"
+            )}
+          >
+            {isOpen && ticketsEnabled
+              ? t("sportsbook.components.playerMarkets.openTicket")
+              : t("sportsbook.components.playerMarkets.viewMarket")}
+          </Link>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-2 sm:grid-cols-3">
+        {Array.from({ length: market.outcomeCount }, (_, outcomeId) => {
+          const isWinner = resultIsProposed && Number(result?.winningOutcomeId ?? -1) === outcomeId;
+          const providerOutcome = providerOutcomeById(providerOdds, outcomeId);
+          return (
+            <Link
+              key={outcomeId}
+              href={`/sportsbook/${market.marketId.toString()}?outcome=${outcomeId}`}
+              className={cn(
+                "rounded-md border px-4 py-3 transition-colors",
+                isWinner
+                  ? "border-success/35 bg-success-soft hover:border-success"
+                  : "border-border bg-surface-1/70 hover:border-brand/40 hover:bg-surface-3"
+              )}
+            >
+              <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
+                {t("sportsbook.components.playerMarkets.outcome")}
+              </div>
+              <div className={cn("mt-1 text-sm font-black", isWinner ? "text-success" : "text-fg")}>
+                {providerOutcome?.name ?? sportsOutcomeLabel(outcomeId, market.outcomeCount, t)}
+              </div>
+              {providerOutcome ? (
+                <div className="mt-2 font-mono text-lg font-black text-brand">
+                  {t("sportsbook.ticketPlacement.outcomes.price", {
+                    price: providerOutcome.decimalPrice
+                  })}
+                </div>
+              ) : null}
+            </Link>
+          );
+        })}
+      </div>
+
+      <div className="mt-4 text-xs leading-5 text-fg-muted">
+        {resultIsProposed
+          ? t("sportsbook.components.playerMarkets.result", {
+              outcome: winningOutcome ?? sportsOutcomeLabel(0, market.outcomeCount, t)
+            })
+          : providerOdds
+            ? t("sportsbook.components.playerMarkets.liveOddsHelper", {
+                bookmaker:
+                  providerOdds.provider.bookmakerTitle ??
+                  providerOdds.provider.bookmakerKey ??
+                  "provider"
+              })
+            : providerOddsQuery.error
+              ? t("sportsbook.components.playerMarkets.providerUnavailable")
+              : isOpen
+                ? t("sportsbook.components.playerMarkets.openHelper")
+                : t("sportsbook.components.playerMarkets.closedHelper")}
+      </div>
+    </article>
+  );
+}
+
 export function PlayerMarketList({
   rows,
   loading,
@@ -307,109 +444,13 @@ export function PlayerMarketList({
 
   return (
     <div className="grid gap-4">
-      {rows.map(({ market, result }) => {
-        const isOpen = market.state === "open";
-        const resultIsProposed = Boolean(result && result.proposedAt > 0);
-        return (
-          <article
-            key={market.marketId.toString()}
-            className="rounded-lg border border-border bg-surface-2/70 p-5 transition-colors hover:border-brand/35 hover:bg-surface-2"
-          >
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <StatusPill tone={marketTone(market.state)}>{market.state}</StatusPill>
-                  <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-fg-subtle">
-                    {t("sportsbook.components.playerMarkets.marketId", {
-                      marketId: market.marketId.toString()
-                    })}
-                  </span>
-                </div>
-                <h3 className="mt-3 text-xl font-black tracking-tight text-fg">
-                  {t("sportsbook.components.playerMarkets.title")}
-                </h3>
-                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs leading-5 text-fg-muted">
-                  <span>
-                    {t("sportsbook.components.marketTape.event", {
-                      eventId: market.eventId.toString()
-                    })}
-                  </span>
-                  <span>
-                    {t("sportsbook.components.playerMarkets.starts", {
-                      time: formatTimestamp(market.startsAt)
-                    })}
-                  </span>
-                  <span>
-                    {t("sportsbook.components.marketTape.locks", {
-                      time: formatTimestamp(market.lockTime)
-                    })}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex flex-col items-stretch gap-2 sm:flex-row lg:min-w-[260px]">
-                <Link
-                  href={`/sportsbook/${market.marketId.toString()}`}
-                  className={cn(
-                    "inline-flex min-h-11 items-center justify-center rounded-md px-4 text-sm font-black transition-colors",
-                    isOpen && ticketsEnabled
-                      ? "bg-brand text-fg-inverse shadow-glow hover:bg-brand-hover"
-                      : "border border-border bg-surface-1 text-fg hover:border-brand/40 hover:bg-surface-3"
-                  )}
-                >
-                  {isOpen && ticketsEnabled
-                    ? t("sportsbook.components.playerMarkets.openTicket")
-                    : t("sportsbook.components.playerMarkets.viewMarket")}
-                </Link>
-              </div>
-            </div>
-
-            <div className="mt-5 grid gap-2 sm:grid-cols-3">
-              {Array.from({ length: market.outcomeCount }, (_, outcomeId) => {
-                const isWinner =
-                  resultIsProposed && Number(result?.winningOutcomeId ?? -1) === outcomeId;
-                return (
-                  <div
-                    key={outcomeId}
-                    className={cn(
-                      "rounded-md border px-4 py-3",
-                      isWinner
-                        ? "border-success/35 bg-success-soft"
-                        : "border-border bg-surface-1/70"
-                    )}
-                  >
-                    <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
-                      {t("sportsbook.components.playerMarkets.outcome")}
-                    </div>
-                    <div
-                      className={cn(
-                        "mt-1 text-sm font-black",
-                        isWinner ? "text-success" : "text-fg"
-                      )}
-                    >
-                      {sportsOutcomeLabel(outcomeId, market.outcomeCount, t)}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="mt-4 text-xs leading-5 text-fg-muted">
-              {resultIsProposed
-                ? t("sportsbook.components.playerMarkets.result", {
-                    outcome: sportsOutcomeLabel(
-                      Number(result?.winningOutcomeId ?? 0),
-                      market.outcomeCount,
-                      t
-                    )
-                  })
-                : isOpen
-                  ? t("sportsbook.components.playerMarkets.openHelper")
-                  : t("sportsbook.components.playerMarkets.closedHelper")}
-            </div>
-          </article>
-        );
-      })}
+      {rows.map((row) => (
+        <PlayerMarketCard
+          key={row.market.marketId.toString()}
+          row={row}
+          ticketsEnabled={ticketsEnabled}
+        />
+      ))}
     </div>
   );
 }

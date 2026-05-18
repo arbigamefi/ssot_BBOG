@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 
@@ -17,8 +18,10 @@ import {
   type MarketTapeRow
 } from "./components";
 import { formatLookupError, getLookupErrorKind, parseLookupId, shortHex } from "./format";
+import { providerOutcomeById } from "./provider-odds";
 import { SportsbookTicketPlacementPanel } from "./ticket-placement-panel";
 import { SportsbookTicketTerminalPanel } from "./ticket-terminal-panel";
+import { useSportsbookProviderOdds } from "./use-provider-odds";
 
 interface MarketDetailReadback extends MarketTapeRow {
   eventReserved?: bigint;
@@ -56,7 +59,9 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
   const t = useTranslations();
   const { release, readOnly, readOnlyReason, sportsbook, chainId } = useRelease();
   const { sdk, ready } = useSSOTSDK();
+  const searchParams = useSearchParams();
   const parsedMarketId = React.useMemo(() => parseLookupId(marketId), [marketId]);
+  const initialOutcomeId = searchParams.get("outcome") ?? undefined;
 
   const {
     data: readback,
@@ -98,6 +103,11 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
       );
     }
   });
+  const providerOddsQuery = useSportsbookProviderOdds({
+    marketId: readback?.market.marketId,
+    enabled: Boolean(sportsbook.enabled && readback?.market.outcomeCount === 3)
+  });
+  const providerOdds = providerOddsQuery.data;
 
   if (!release) {
     return (
@@ -120,6 +130,18 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
     readbackErrorKind === "marketNotFound"
       ? t("sportsbook.detail.readFailed.marketNotFound")
       : formatLookupError(error);
+  const matchTitle = providerOdds
+    ? t("sportsbook.detail.playerMarket.matchup", {
+        home: providerOdds.event.homeTeam,
+        away: providerOdds.event.awayTeam
+      })
+    : t("sportsbook.detail.playerMarket.title");
+  const matchDescription = providerOdds
+    ? t("sportsbook.detail.playerMarket.providerDescription", {
+        bookmaker:
+          providerOdds.provider.bookmakerTitle ?? providerOdds.provider.bookmakerKey ?? "provider"
+      })
+    : t("sportsbook.detail.playerMarket.description");
 
   return (
     <PageTransition pageKey={`sports-market-${marketId}`}>
@@ -141,10 +163,10 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
               <StatusPill tone="neutral">{t("sportsbook.detail.marketDetailPill")}</StatusPill>
             </div>
             <h1 className="mt-5 text-4xl font-black tracking-tight text-fg md:text-5xl">
-              {t("sportsbook.detail.title", { marketId })}
+              {providerOdds ? matchTitle : t("sportsbook.detail.title", { marketId })}
             </h1>
             <p className="mt-4 max-w-3xl text-sm leading-7 text-fg-muted md:text-[15px]">
-              {t("sportsbook.detail.description")}
+              {providerOdds ? matchDescription : t("sportsbook.detail.description")}
             </p>
           </div>
 
@@ -197,8 +219,8 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
               <SectionShell
                 className="order-2 xl:order-1"
                 eyebrow={t("sportsbook.detail.playerMarket.eyebrow")}
-                title={t("sportsbook.detail.playerMarket.title")}
-                description={t("sportsbook.detail.playerMarket.description")}
+                title={matchTitle}
+                description={matchDescription}
               >
                 <div className="grid gap-5">
                   <div className="flex flex-wrap items-center gap-3">
@@ -225,13 +247,15 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
                       const isWinner =
                         resultReady &&
                         Number(readback.result?.winningOutcomeId ?? -1) === outcomeId;
+                      const providerOutcome = providerOutcomeById(providerOdds, outcomeId);
                       return (
-                        <div
+                        <Link
                           key={outcomeId}
+                          href={`/sportsbook/${readback.market.marketId.toString()}?outcome=${outcomeId}`}
                           className={
                             isWinner
-                              ? "rounded-lg border border-success/35 bg-success-soft p-4"
-                              : "rounded-lg border border-border bg-surface-2/70 p-4"
+                              ? "rounded-lg border border-success/35 bg-success-soft p-4 transition-colors hover:border-success"
+                              : "rounded-lg border border-border bg-surface-2/70 p-4 transition-colors hover:border-brand/40 hover:bg-surface-3"
                           }
                         >
                           <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
@@ -244,17 +268,30 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
                                 : "mt-2 text-lg font-black text-fg"
                             }
                           >
-                            {sportsOutcomeLabel(outcomeId, readback.market.outcomeCount, t)}
+                            {providerOutcome?.name ??
+                              sportsOutcomeLabel(outcomeId, readback.market.outcomeCount, t)}
                           </div>
+                          {providerOutcome ? (
+                            <div className="mt-2 font-mono text-xl font-black text-brand">
+                              {t("sportsbook.ticketPlacement.outcomes.price", {
+                                price: providerOutcome.decimalPrice
+                              })}
+                            </div>
+                          ) : null}
                           {isWinner ? (
                             <div className="mt-2 text-xs font-semibold text-success">
                               {t("sportsbook.detail.playerMarket.winner")}
                             </div>
                           ) : null}
-                        </div>
+                        </Link>
                       );
                     })}
                   </div>
+                  {providerOddsQuery.error ? (
+                    <div className="rounded-lg border border-warn/25 bg-warn-soft p-4 text-sm leading-6 text-warn">
+                      {t("sportsbook.detail.playerMarket.providerUnavailable")}
+                    </div>
+                  ) : null}
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <DetailCell
@@ -294,6 +331,8 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
                   release={release}
                   chainId={chainId}
                   market={readback.market}
+                  providerOdds={providerOdds}
+                  initialOutcomeId={initialOutcomeId}
                   disabled={
                     readOnly || !ready || !sportsbook.enabled || readback.market.state !== "open"
                   }

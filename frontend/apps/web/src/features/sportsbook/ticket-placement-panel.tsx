@@ -14,6 +14,7 @@ import { toast } from "@ssot/ui";
 
 import { DetailCell } from "./components";
 import { formatLookupError, shortHex } from "./format";
+import { providerOutcomeById, type SportsbookProviderOdds } from "./provider-odds";
 
 type TicketPlacementStatus = {
   busy: boolean;
@@ -280,6 +281,8 @@ export function SportsbookTicketPlacementPanel({
   release,
   chainId,
   market,
+  providerOdds,
+  initialOutcomeId,
   disabled,
   disabledReason,
   onMutated
@@ -288,6 +291,8 @@ export function SportsbookTicketPlacementPanel({
   release: SSOTRelease;
   chainId: number;
   market: DomainSportsMarket;
+  providerOdds?: SportsbookProviderOdds;
+  initialOutcomeId?: string;
   disabled: boolean;
   disabledReason?: string;
   onMutated?: () => void;
@@ -307,14 +312,28 @@ export function SportsbookTicketPlacementPanel({
   });
 
   React.useEffect(() => {
+    const nextOutcomeId =
+      initialOutcomeId && /^[0-9]+$/.test(initialOutcomeId)
+        ? Math.min(Number(initialOutcomeId), market.outcomeCount - 1).toString()
+        : "0";
     setForm((current) => ({
       ...current,
-      outcomeId: "0",
+      outcomeId: nextOutcomeId,
       riskHash: getPoolRiskHash(release, market.poolId) ?? ""
     }));
     setPlan(undefined);
     setSignedOdds(undefined);
-  }, [market.marketId, market.poolId, release]);
+  }, [initialOutcomeId, market.marketId, market.outcomeCount, market.poolId, release]);
+
+  React.useEffect(() => {
+    if (!providerOdds) return;
+    setForm((current) => ({
+      ...current,
+      providerEventId: providerOdds.provider.providerEventId || current.providerEventId,
+      bookmakerKey: providerOdds.provider.bookmakerKey ?? current.bookmakerKey,
+      sportKey: providerOdds.provider.sportKey || current.sportKey
+    }));
+  }, [providerOdds]);
 
   const update = React.useCallback((key: keyof TicketPlacementForm, value: string) => {
     setForm((current) => ({ ...current, [key]: value }));
@@ -548,6 +567,7 @@ export function SportsbookTicketPlacementPanel({
                     signedOdds && Number(form.outcomeId) === outcomeId
                       ? signedOdds.outcome
                       : undefined;
+                  const providerOutcome = providerOutcomeById(providerOdds, outcomeId);
                   return (
                     <button
                       key={outcomeId}
@@ -566,12 +586,15 @@ export function SportsbookTicketPlacementPanel({
                         })}
                       </div>
                       <div className="mt-2 text-base font-black">
-                        {signedForOutcome?.name ?? defaultOutcomeLabel(outcomeId, market, t)}
+                        {signedForOutcome?.name ??
+                          providerOutcome?.name ??
+                          defaultOutcomeLabel(outcomeId, market, t)}
                       </div>
-                      {signedForOutcome ? (
+                      {signedForOutcome || providerOutcome ? (
                         <div className="mt-1 font-mono text-xs">
                           {t("sportsbook.ticketPlacement.outcomes.price", {
-                            price: signedForOutcome.decimalPrice
+                            price:
+                              signedForOutcome?.decimalPrice ?? providerOutcome?.decimalPrice ?? "—"
                           })}
                         </div>
                       ) : null}
@@ -727,21 +750,43 @@ export function SportsbookTicketPlacementPanel({
             <div className="grid gap-3">
               <DetailCell
                 label={t("sportsbook.ticketPlacement.preview.selection")}
-                value={signedOdds?.outcome.name ?? selectedOutcomeName}
+                value={
+                  signedOdds?.outcome.name ??
+                  providerOutcomeById(providerOdds, selectedOutcomeId)?.name ??
+                  selectedOutcomeName
+                }
                 helper={
                   signedOdds
                     ? t("sportsbook.ticketPlacement.preview.provider", {
                         sport: (signedOdds.provider.sportKey ?? form.sportKey) || "—",
                         bookmaker: (signedOdds.provider.bookmakerKey ?? form.bookmakerKey) || "—"
                       })
-                    : t("sportsbook.ticketPlacement.preview.needsOdds")
+                    : providerOdds
+                      ? t("sportsbook.ticketPlacement.preview.provider", {
+                          sport: providerOdds.provider.sportKey,
+                          bookmaker:
+                            providerOdds.provider.bookmakerTitle ??
+                            providerOdds.provider.bookmakerKey ??
+                            "—"
+                        })
+                      : t("sportsbook.ticketPlacement.preview.needsOdds")
                 }
                 mono={false}
               />
               <DetailCell
                 label={t("sportsbook.ticketPlacement.preview.price")}
-                value={signedOdds?.outcome.decimalPrice ?? "—"}
-                helper={t("sportsbook.ticketPlacement.preview.priceHelper")}
+                value={
+                  signedOdds?.outcome.decimalPrice ??
+                  providerOutcomeById(providerOdds, selectedOutcomeId)?.decimalPrice ??
+                  "—"
+                }
+                helper={
+                  signedOdds
+                    ? t("sportsbook.ticketPlacement.preview.priceHelper")
+                    : providerOdds
+                      ? t("sportsbook.ticketPlacement.preview.publicPriceHelper")
+                      : t("sportsbook.ticketPlacement.preview.priceHelper")
+                }
                 mono={false}
               />
               <DetailCell
