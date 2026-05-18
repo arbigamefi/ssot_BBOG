@@ -17,6 +17,7 @@ import {
 
 import { PageTransition } from "../../../../components/PageTransition";
 import { ProductStateCard } from "../../../../components/ProductStateCard";
+import { useAffiliateBets } from "../../../../features/betting/useAffiliateBets";
 import { useRelease } from "../../../../ssot/release/ReleaseProvider";
 import { useSSOTSDK } from "../../../../ssot/sdk";
 import { formatTokenAmount, shortHex } from "../../../../features/portfolio/claims/format";
@@ -75,6 +76,12 @@ export function ReferralPageClient() {
       return sdk.bank.getXPBuckets(poolId, sdk.account);
     },
     refetchInterval: 10_000
+  });
+  const affiliateBetsQuery = useAffiliateBets({
+    affiliate: sdk?.account,
+    chainId,
+    enabled: Boolean(sdk?.account && ready),
+    limit: 8
   });
 
   if (!release) {
@@ -204,6 +211,70 @@ export function ReferralPageClient() {
                 loading={xpLoading}
               />
             </div>
+
+            <div className="rounded-md border border-border bg-surface-1 p-5 shadow-e1">
+              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <div className="text-sm font-black text-fg">
+                    {t("portfolio.referral.activity.title")}
+                  </div>
+                  <p className="mt-2 text-sm leading-6 text-fg-muted">
+                    {t("portfolio.referral.activity.description")}
+                  </p>
+                </div>
+                <div className="rounded-full border border-border bg-surface-0 px-3 py-1 font-mono text-xs font-bold text-fg-subtle">
+                  {affiliateBetsQuery.data?.source ?? "—"}
+                </div>
+              </div>
+
+              <div className="mt-5 grid gap-3 md:grid-cols-3">
+                <AffiliateStat
+                  label={t("portfolio.referral.activity.stats.bets")}
+                  value={String(affiliateBetsQuery.data?.stats.betCount ?? 0)}
+                />
+                <AffiliateStat
+                  label={t("portfolio.referral.activity.stats.turnover")}
+                  value={formatIndexedAmount(
+                    affiliateBetsQuery.data?.stats.turnover,
+                    decimals,
+                    symbol,
+                    pendingLabel
+                  )}
+                />
+                <AffiliateStat
+                  label={t("portfolio.referral.activity.stats.settled")}
+                  value={String(affiliateBetsQuery.data?.stats.settledCount ?? 0)}
+                />
+              </div>
+
+              <div className="mt-5 overflow-hidden rounded-md border border-border">
+                {(affiliateBetsQuery.data?.rows ?? []).length > 0 ? (
+                  <div className="divide-y divide-border">
+                    {affiliateBetsQuery.data!.rows.slice(0, 5).map((row) => (
+                      <div
+                        key={row.id}
+                        className="grid gap-3 bg-surface-0 px-4 py-3 text-sm md:grid-cols-[1fr_1fr_0.8fr_0.8fr]"
+                      >
+                        <span className="font-mono text-fg">{shortHex(row.player)}</span>
+                        <span className="font-mono text-fg-muted">
+                          {formatIndexedAmount(row.stake, decimals, symbol, pendingLabel)}
+                        </span>
+                        <span className="font-mono text-fg-muted">#{row.betId}</span>
+                        <span className="text-right text-xs font-black uppercase tracking-[0.12em] text-brand">
+                          {row.state}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-surface-0 px-4 py-6 text-sm text-fg-muted">
+                    {affiliateBetsQuery.isLoading
+                      ? t("portfolio.referral.activity.loading")
+                      : t("portfolio.referral.activity.empty")}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           <aside className="rounded-md border border-border bg-surface-1 p-5 shadow-e1">
@@ -286,6 +357,17 @@ function ReferralMetric({
   );
 }
 
+function AffiliateStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border border-border bg-surface-0 p-4">
+      <div className="text-[10px] font-black uppercase tracking-[0.16em] text-fg-subtle">
+        {label}
+      </div>
+      <div className="mt-2 font-mono text-xl font-black text-fg">{value}</div>
+    </div>
+  );
+}
+
 function BindingRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-4 rounded-md border border-border bg-surface-0 px-4 py-3">
@@ -293,4 +375,18 @@ function BindingRow({ label, value }: { label: string; value: string }) {
       <span className="font-mono text-sm font-bold text-fg">{value}</span>
     </div>
   );
+}
+
+function formatIndexedAmount(
+  value: string | undefined,
+  decimals: number,
+  symbol: string,
+  pendingLabel: string
+) {
+  if (value == null) return pendingLabel;
+  try {
+    return formatTokenAmount(BigInt(value), decimals, symbol, 4, pendingLabel);
+  } catch {
+    return pendingLabel;
+  }
 }

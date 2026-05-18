@@ -1579,6 +1579,17 @@
           "detail": "同步后可能变为可释放的奖励缓冲。"
         }
       },
+      "activity": {
+        "title": "推广投注",
+        "description": "通过持久投注索引追踪带有你 affiliate 地址的赌场投注。",
+        "loading": "正在加载推广投注...",
+        "empty": "还没有索引到推广投注。",
+        "stats": {
+          "bets": "投注数",
+          "turnover": "流水",
+          "settled": "已结算"
+        }
+      },
       "binding": {
         "eyebrow": "First touch",
         "title": "绑定状态",

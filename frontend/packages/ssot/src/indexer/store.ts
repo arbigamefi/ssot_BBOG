@@ -30,6 +30,7 @@ export interface BetRow {
   gameId?: Hex;
   asset?: Address;
   player?: Address;
+  pricingAffiliate?: Address;
   stake?: string;
   payout?: string;
   payoutGross?: string;

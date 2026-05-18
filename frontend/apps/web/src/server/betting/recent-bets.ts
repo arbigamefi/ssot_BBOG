@@ -13,7 +13,11 @@ import { applyGameHubEventToBet, type BetRow, type GameHubEventName } from "@sso
 import { loadEmbeddedRelease, type SSOTRelease } from "@ssot/ssot/release";
 
 import { resolvePublicRpcUrl } from "../../app-shell/rpc";
-import type { PlayerBetsResponse, RecentBetsResponse } from "../../features/betting/recent-bets";
+import type {
+  AffiliateBetsResponse,
+  PlayerBetsResponse,
+  RecentBetsResponse
+} from "../../features/betting/recent-bets";
 
 const GAME_HUB_EVENTS: GameHubEventName[] = [
   "BetPlaced",
@@ -33,8 +37,11 @@ const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
 const DEFAULT_PLAYER_LIMIT = 100;
 const MAX_PLAYER_LIMIT = 500;
+const DEFAULT_AFFILIATE_LIMIT = 100;
+const MAX_AFFILIATE_LIMIT = 500;
 const DEFAULT_WINDOW_BLOCKS = 200;
 const DEFAULT_PLAYER_WINDOW_BLOCKS = 500;
+const DEFAULT_AFFILIATE_WINDOW_BLOCKS = 1_000;
 const DEFAULT_LOG_CHUNK_BLOCKS = 10;
 const DEFAULT_LOG_CONCURRENCY = 12;
 const DEFAULT_CONFIRMATIONS = 2;
@@ -145,6 +152,11 @@ export function clampPlayerBetsLimit(limit: number | undefined) {
   return Math.min(MAX_PLAYER_LIMIT, Math.max(1, Math.floor(limit)));
 }
 
+export function clampAffiliateBetsLimit(limit: number | undefined) {
+  if (!Number.isFinite(limit) || !limit || limit <= 0) return DEFAULT_AFFILIATE_LIMIT;
+  return Math.min(MAX_AFFILIATE_LIMIT, Math.max(1, Math.floor(limit)));
+}
+
 export function normalizeGameId(gameId: string | undefined) {
   const value = cleanEnvValue(gameId);
   if (!value) return undefined;
@@ -161,6 +173,16 @@ export function normalizePlayerAddress(player: string | undefined) {
     return getAddress(value);
   } catch {
     throw new Error("player must be a valid address.");
+  }
+}
+
+export function normalizeAffiliateAddress(affiliate: string | undefined) {
+  const value = cleanEnvValue(affiliate);
+  if (!value) throw new Error("affiliate address is required.");
+  try {
+    return getAddress(value);
+  } catch {
+    throw new Error("affiliate must be a valid address.");
   }
 }
 
@@ -641,6 +663,156 @@ export async function queryPlayerBets({
   }
 }
 
+export async function queryAffiliateBets({
+  affiliate,
+  chainId,
+  limit,
+  client,
+  now = () => Date.now()
+}: {
+  affiliate: string;
+  chainId: number;
+  limit?: number;
+  client?: PublicClient;
+  now?: () => number;
+}): Promise<AffiliateBetsResponse> {
+  const normalizedLimit = clampAffiliateBetsLimit(limit);
+  const normalizedAffiliate = normalizeAffiliateAddress(affiliate);
+  const cacheTtlMs = numberEnv("AFFILIATE_BETS_CACHE_TTL_MS", DEFAULT_CACHE_TTL_MS);
+  const windowBlocks = bigintEnv("AFFILIATE_BETS_WINDOW_BLOCKS", DEFAULT_AFFILIATE_WINDOW_BLOCKS);
+  const confirmations = bigintEnv("AFFILIATE_BETS_CONFIRMATIONS", DEFAULT_CONFIRMATIONS);
+  const chunkBlocks = bigintEnv("AFFILIATE_BETS_LOG_CHUNK_BLOCKS", DEFAULT_LOG_CHUNK_BLOCKS);
+  const logConcurrency = numberEnv("AFFILIATE_BETS_LOG_CONCURRENCY", DEFAULT_LOG_CONCURRENCY);
+  const rpcTimeoutMs = numberEnv("AFFILIATE_BETS_RPC_TIMEOUT_MS", DEFAULT_PLAYER_RPC_TIMEOUT_MS);
+  const cacheKey = [
+    "affiliate",
+    chainId,
+    normalizedAffiliate.toLowerCase(),
+    normalizedLimit,
+    windowBlocks,
+    confirmations,
+    chunkBlocks,
+    logConcurrency,
+    rpcTimeoutMs
+  ].join(":");
+  const cached = recentBetsCache.get(cacheKey);
+  if (cached && cached.expiresAt > now()) {
+    return { ...(cached.response as AffiliateBetsResponse), cached: true };
+  }
+
+  const durableStoreEnabled = Boolean(getDurableBetIndexStore());
+  const [durableRows, durableStats] = await Promise.all([
+    queryDurableAffiliateBets({
+      affiliate: normalizedAffiliate,
+      chainId,
+      limit: normalizedLimit
+    }),
+    queryDurableAffiliateStats({ affiliate: normalizedAffiliate, chainId })
+  ]);
+  if (durableRows.length > 0 || (durableStoreEnabled && durableStats.betCount > 0)) {
+    const generatedAt = now();
+    const response = {
+      ...responseFromRows({
+        cached: false,
+        chainId,
+        generatedAt,
+        rows: durableRows,
+        source: "postgres"
+      }),
+      affiliate: normalizedAffiliate,
+      stats: durableStats
+    };
+    recentBetsCache.set(cacheKey, { expiresAt: now() + cacheTtlMs, response });
+    return response;
+  }
+  if (!shouldUseRpcFallback("AFFILIATE_BETS_RPC_FALLBACK_ENABLED", durableStoreEnabled)) {
+    const response = {
+      ...emptyRecentBetsResponse({
+        chainId,
+        generatedAt: now(),
+        source: "postgres"
+      }),
+      affiliate: normalizedAffiliate,
+      stats: emptyAffiliateStats(normalizedAffiliate)
+    };
+    recentBetsCache.set(cacheKey, { expiresAt: now() + cacheTtlMs, response });
+    return response;
+  }
+
+  try {
+    const response = await withTimeout(
+      (async () => {
+        const loaded = await loadGameHubClient({ chainId, client });
+        const { fromBlock, toBlock } = resolveBlockWindow({
+          confirmations,
+          latestBlock: loaded.latestBlock,
+          release: loaded.release,
+          windowBlocks
+        });
+        if (fromBlock > toBlock) {
+          return {
+            ...emptyRecentBetsResponse({
+              chainId,
+              generatedAt: now(),
+              source: "rpc-window"
+            }),
+            affiliate: normalizedAffiliate,
+            stats: emptyAffiliateStats(normalizedAffiliate)
+          };
+        }
+        const gameHub = loaded.gameHub;
+        const logs: Array<EventLogLike & { eventName: GameHubEventName }> = [];
+
+        for (const eventName of GAME_HUB_EVENTS) {
+          const eventLogs = await getGameHubLogsInChunks({
+            chunkBlocks,
+            concurrency: logConcurrency,
+            client: loaded.client,
+            eventName,
+            fromBlock,
+            gameHub,
+            toBlock
+          });
+          logs.push(...eventLogs.map((log) => ({ ...log, eventName })));
+        }
+
+        const rows = foldRecentBetLogs({ chainId, gameHub, logs }).filter(
+          (row) => row.pricingAffiliate?.toLowerCase() === normalizedAffiliate.toLowerCase()
+        );
+        const generatedAt = now();
+        const response: AffiliateBetsResponse = {
+          schemaVersion: 1,
+          cached: false,
+          chainId,
+          affiliate: normalizedAffiliate,
+          fromBlock: Number(fromBlock),
+          generatedAt,
+          rows: rows.slice(0, normalizedLimit),
+          source: "rpc-window",
+          stats: affiliateStatsFromRows(normalizedAffiliate, rows),
+          toBlock: Number(toBlock)
+        };
+        return response;
+      })(),
+      rpcTimeoutMs
+    );
+    recentBetsCache.set(cacheKey, { expiresAt: now() + cacheTtlMs, response });
+    return response;
+  } catch {
+    const response = {
+      ...emptyRecentBetsResponse({
+        chainId,
+        generatedAt: now(),
+        source: "rpc-window"
+      }),
+      affiliate: normalizedAffiliate,
+      stats: emptyAffiliateStats(normalizedAffiliate)
+    };
+    recentBetsCache.set(cacheKey, { expiresAt: now() + cacheTtlMs, response });
+    return response;
+  }
+}
+
 async function queryDurableRecentBets({
   chainId,
   gameId,
@@ -675,6 +847,69 @@ async function queryDurablePlayerBets({
   } catch {
     return [];
   }
+}
+
+async function queryDurableAffiliateBets({
+  affiliate,
+  chainId,
+  limit
+}: {
+  affiliate: Address;
+  chainId: number;
+  limit: number;
+}) {
+  const store = getDurableBetIndexStore();
+  if (!store) return [];
+  try {
+    return await store.getAffiliateBets({ affiliate, chainId, limit });
+  } catch {
+    return [];
+  }
+}
+
+async function queryDurableAffiliateStats({
+  affiliate,
+  chainId
+}: {
+  affiliate: Address;
+  chainId: number;
+}) {
+  const store = getDurableBetIndexStore();
+  if (!store) return emptyAffiliateStats(affiliate);
+  try {
+    return await store.getAffiliateStats({ affiliate, chainId });
+  } catch {
+    return emptyAffiliateStats(affiliate);
+  }
+}
+
+function emptyAffiliateStats(affiliate: Address): AffiliateBetsResponse["stats"] {
+  return {
+    affiliate,
+    betCount: 0,
+    payout: "0",
+    payoutGross: "0",
+    settledCount: 0,
+    turnover: "0"
+  };
+}
+
+function affiliateStatsFromRows(
+  affiliate: Address,
+  rows: readonly BetRow[]
+): AffiliateBetsResponse["stats"] {
+  return rows.reduce<AffiliateBetsResponse["stats"]>((stats, row) => {
+    stats.betCount += 1;
+    if (row.state === "finalized" || row.state === "refunded") stats.settledCount += 1;
+    stats.turnover = addStringBigints(stats.turnover, row.stake);
+    stats.payout = addStringBigints(stats.payout, row.payout);
+    stats.payoutGross = addStringBigints(stats.payoutGross, row.payoutGross);
+    return stats;
+  }, emptyAffiliateStats(affiliate));
+}
+
+function addStringBigints(left: string, right: string | undefined) {
+  return (BigInt(left || "0") + BigInt(right || "0")).toString();
 }
 
 function responseFromRows({

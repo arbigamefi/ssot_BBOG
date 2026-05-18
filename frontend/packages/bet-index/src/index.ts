@@ -13,6 +13,7 @@ export type BetRow = {
   gameId?: Hex;
   asset?: Address;
   player?: Address;
+  pricingAffiliate?: Address;
   stake?: string;
   payout?: string;
   payoutGross?: string;
@@ -44,6 +45,16 @@ export type BetIndexQuery = {
   limit: number;
   gameId?: Hex;
   player?: Address;
+  affiliate?: Address;
+};
+
+export type BetIndexAffiliateStats = {
+  affiliate: Address;
+  betCount: number;
+  settledCount: number;
+  turnover: string;
+  payout: string;
+  payoutGross: string;
 };
 
 export type BetIndexCursor = {
@@ -60,6 +71,12 @@ export type BetIndexStore = {
   getPlayerBets: (
     query: Required<Pick<BetIndexQuery, "chainId" | "limit" | "player">>
   ) => Promise<BetRow[]>;
+  getAffiliateBets: (
+    query: Required<Pick<BetIndexQuery, "chainId" | "limit" | "affiliate">>
+  ) => Promise<BetRow[]>;
+  getAffiliateStats: (
+    query: Required<Pick<BetIndexQuery, "chainId" | "affiliate">>
+  ) => Promise<BetIndexAffiliateStats>;
   getCursor: (chainId: number, source: string, cursorKey: string) => Promise<bigint | null>;
   setCursor: (cursor: BetIndexCursor) => Promise<void>;
   close?: () => Promise<void>;
@@ -88,6 +105,7 @@ create table if not exists bets (
   game_id text,
   asset text,
   player text,
+  pricing_affiliate text,
   stake text,
   payout text,
   payout_gross text,
@@ -106,6 +124,7 @@ create table if not exists bets (
 );
 
 alter table bets add column if not exists stake text;
+alter table bets add column if not exists pricing_affiliate text;
 alter table bets add column if not exists payout text;
 alter table bets add column if not exists payout_gross text;
 alter table bets add column if not exists refund_amount text;
@@ -120,6 +139,9 @@ create index if not exists bets_recent_idx
 
 create index if not exists bets_player_idx
   on bets (chain_id, player, updated_block desc);
+
+create index if not exists bets_affiliate_idx
+  on bets (chain_id, pricing_affiliate, updated_block desc);
 
 create index if not exists bets_game_idx
   on bets (chain_id, game_id, updated_block desc);
@@ -178,6 +200,21 @@ export function createMemoryBetIndexStore(): BetIndexStore {
         .filter((row) => row.player?.toLowerCase() === player.toLowerCase())
         .sort(compareBetRows)
         .slice(0, limit),
+    getAffiliateBets: async ({ affiliate, chainId, limit }) =>
+      [...bets.values()]
+        .filter((row) => row.chainId === chainId)
+        .filter((row) => row.pricingAffiliate?.toLowerCase() === affiliate.toLowerCase())
+        .sort(compareBetRows)
+        .slice(0, limit),
+    getAffiliateStats: async ({ affiliate, chainId }) =>
+      affiliateStatsFromRows({
+        affiliate,
+        rows: [...bets.values()].filter(
+          (row) =>
+            row.chainId === chainId &&
+            row.pricingAffiliate?.toLowerCase() === affiliate.toLowerCase()
+        )
+      }),
     getCursor: async (chainId: number, source: string, cursorKey: string) =>
       cursors.get(cursorId(chainId, source, cursorKey)) ?? null,
     setCursor: async (cursor: BetIndexCursor) => {
@@ -227,7 +264,7 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
         for (const row of rows) {
           await tx`
             insert into bets (
-              chain_id, bet_id, state, game_id, asset, player, stake, payout,
+              chain_id, bet_id, state, game_id, asset, player, pricing_affiliate, stake, payout,
               payout_gross, refund_amount, request_id, random_hash, terminal_tx_hash,
               finalized_tx_hash, refunded_tx_hash, placed_block,
               updated_block, last_tx_hash, last_event_name, updated_at
@@ -238,6 +275,7 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
               ${row.gameId?.toLowerCase() ?? null},
               ${row.asset?.toLowerCase() ?? null},
               ${row.player?.toLowerCase() ?? null},
+              ${row.pricingAffiliate?.toLowerCase() ?? null},
               ${row.stake ?? null},
               ${row.payout ?? null},
               ${row.payoutGross ?? null},
@@ -261,6 +299,7 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
               game_id = coalesce(excluded.game_id, bets.game_id),
               asset = coalesce(excluded.asset, bets.asset),
               player = coalesce(excluded.player, bets.player),
+              pricing_affiliate = coalesce(excluded.pricing_affiliate, bets.pricing_affiliate),
               stake = coalesce(excluded.stake, bets.stake),
               payout = coalesce(excluded.payout, bets.payout),
               payout_gross = coalesce(excluded.payout_gross, bets.payout_gross),
@@ -313,6 +352,36 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
         limit ${limit}
       `;
       return rows.map(rowFromDatabase).sort(compareBetRows);
+    },
+    getAffiliateBets: async ({ affiliate, chainId, limit }) => {
+      const rows = await sql`
+        select * from bets
+        where chain_id = ${chainId} and pricing_affiliate = ${affiliate.toLowerCase()}
+        order by updated_block desc, bet_id desc
+        limit ${limit}
+      `;
+      return rows.map(rowFromDatabase).sort(compareBetRows);
+    },
+    getAffiliateStats: async ({ affiliate, chainId }) => {
+      const rows = await sql`
+        select
+          count(*)::text as bet_count,
+          count(*) filter (where state in ('finalized', 'refunded'))::text as settled_count,
+          coalesce(sum(nullif(stake, '')::numeric), 0)::text as turnover,
+          coalesce(sum(nullif(payout, '')::numeric), 0)::text as payout,
+          coalesce(sum(nullif(payout_gross, '')::numeric), 0)::text as payout_gross
+        from bets
+        where chain_id = ${chainId} and pricing_affiliate = ${affiliate.toLowerCase()}
+      `;
+      const row = rows[0] ?? {};
+      return {
+        affiliate,
+        betCount: Number(row.betCount ?? 0),
+        settledCount: Number(row.settledCount ?? 0),
+        turnover: String(row.turnover ?? "0"),
+        payout: String(row.payout ?? "0"),
+        payoutGross: String(row.payoutGross ?? "0")
+      };
     },
     getCursor: async (chainId: number, source: string, cursorKey: string) => {
       const rows = await sql`
@@ -383,6 +452,37 @@ export function compareBetRows(a: BetRow, b: BetRow) {
   return bId > aId ? 1 : -1;
 }
 
+function affiliateStatsFromRows({
+  affiliate,
+  rows
+}: {
+  affiliate: Address;
+  rows: readonly BetRow[];
+}): BetIndexAffiliateStats {
+  return rows.reduce<BetIndexAffiliateStats>(
+    (stats, row) => {
+      stats.betCount += 1;
+      if (row.state === "finalized" || row.state === "refunded") stats.settledCount += 1;
+      stats.turnover = addStringBigints(stats.turnover, row.stake);
+      stats.payout = addStringBigints(stats.payout, row.payout);
+      stats.payoutGross = addStringBigints(stats.payoutGross, row.payoutGross);
+      return stats;
+    },
+    {
+      affiliate,
+      betCount: 0,
+      payout: "0",
+      payoutGross: "0",
+      settledCount: 0,
+      turnover: "0"
+    }
+  );
+}
+
+function addStringBigints(left: string, right: string | undefined) {
+  return (BigInt(left || "0") + BigInt(right || "0")).toString();
+}
+
 function applyEventToBet(prev: BetRow | undefined, event: BetIndexEvent): BetRow {
   const betId = String(event.args.positionId ?? event.args.betId ?? event.args.id ?? "0");
   const next: BetRow = prev
@@ -403,6 +503,9 @@ function applyEventToBet(prev: BetRow | undefined, event: BetIndexEvent): BetRow
     if (event.args.asset) next.asset = event.args.asset as BetRow["asset"];
     if (event.args.player) next.player = event.args.player as BetRow["player"];
     if (event.args.user && !next.player) next.player = event.args.user as BetRow["player"];
+    if (event.args.pricingAffiliate) {
+      next.pricingAffiliate = event.args.pricingAffiliate as BetRow["pricingAffiliate"];
+    }
     if (event.args.stake != null) next.stake = toBigintString(event.args.stake);
     if (event.args.requestId != null) next.requestId = toBigintString(event.args.requestId);
     next.placedBlock = Number(event.blockNumber);
@@ -461,6 +564,7 @@ function rowFromDatabase(row: Record<string, unknown>): BetRow {
     payoutGross: optionalString(row.payoutGross),
     placedBlock: optionalNumber(row.placedBlock),
     player: optionalAddress(row.player),
+    pricingAffiliate: optionalAddress(row.pricingAffiliate),
     randomHash: optionalHex(row.randomHash),
     refundedTxHash: optionalHex(row.refundedTxHash),
     refundAmount: optionalString(row.refundAmount),

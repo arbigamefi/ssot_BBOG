@@ -17,6 +17,18 @@ export type PlayerBetsResponse = RecentBetsResponse & {
   player: string;
 };
 
+export type AffiliateBetsResponse = RecentBetsResponse & {
+  affiliate: string;
+  stats: {
+    affiliate: string;
+    betCount: number;
+    settledCount: number;
+    turnover: string;
+    payout: string;
+    payoutGross: string;
+  };
+};
+
 export type RecentBetsQuery = {
   chainId: number;
   gameId?: string;

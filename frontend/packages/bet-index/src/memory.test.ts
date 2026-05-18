@@ -4,6 +4,7 @@ import { createMemoryBetIndexStore } from "./index";
 
 const GAME_ID = `0x${"11".repeat(32)}` as const;
 const PLAYER = "0x2222222222222222222222222222222222222222" as const;
+const AFFILIATE = "0x5555555555555555555555555555555555555555" as const;
 const GAME_HUB = "0x3333333333333333333333333333333333333333" as const;
 
 describe("memory bet index store", () => {
@@ -16,6 +17,7 @@ describe("memory bet index store", () => {
           asset: "0x4444444444444444444444444444444444444444",
           gameId: GAME_ID,
           player: PLAYER,
+          pricingAffiliate: AFFILIATE,
           positionId: 7n,
           requestId: 77n,
           stake: 10n
@@ -44,13 +46,24 @@ describe("memory bet index store", () => {
 
     const recent = await store.getRecentBets({ chainId: 84532, limit: 10 });
     const player = await store.getPlayerBets({ chainId: 84532, limit: 10, player: PLAYER });
+    const affiliate = await store.getAffiliateBets({
+      affiliate: AFFILIATE,
+      chainId: 84532,
+      limit: 10
+    });
+    const affiliateStats = await store.getAffiliateStats({
+      affiliate: AFFILIATE,
+      chainId: 84532
+    });
 
     expect(recent).toHaveLength(1);
     expect(player).toHaveLength(1);
+    expect(affiliate).toHaveLength(1);
     expect(player[0]).toMatchObject({
       betId: "7",
       gameId: GAME_ID,
       player: PLAYER,
+      pricingAffiliate: AFFILIATE,
       payout: "19",
       payoutGross: "20",
       stake: "10",
@@ -58,6 +71,14 @@ describe("memory bet index store", () => {
       terminalTxHash: "0xbbb",
       state: "finalized",
       updatedBlock: 12
+    });
+    expect(affiliateStats).toMatchObject({
+      affiliate: AFFILIATE,
+      betCount: 1,
+      payout: "19",
+      payoutGross: "20",
+      settledCount: 1,
+      turnover: "10"
     });
   });
 

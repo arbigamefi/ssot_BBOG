@@ -2,11 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   clearRecentBetsCache,
+  clampAffiliateBetsLimit,
   clampRecentBetsLimit,
   clampPlayerBetsLimit,
   foldRecentBetLogs,
+  normalizeAffiliateAddress,
   normalizeGameId,
   normalizePlayerAddress,
+  queryAffiliateBets,
   queryRecentBets,
   queryPlayerBets
 } from "./recent-bets";
@@ -14,6 +17,7 @@ import { loadEmbeddedRelease } from "@ssot/ssot/release";
 
 const GAME_ID = `0x${"11".repeat(32)}` as const;
 const PLAYER = "0x2222222222222222222222222222222222222222" as const;
+const AFFILIATE = "0x5555555555555555555555555555555555555555" as const;
 const GAME_HUB = "0x3333333333333333333333333333333333333333" as const;
 
 function latestBlockAfterEmbeddedRelease(windowBlocks: bigint) {
@@ -24,6 +28,8 @@ function latestBlockAfterEmbeddedRelease(windowBlocks: bigint) {
 
 const ENV_KEYS = [
   "BET_INDEX_READ_ENABLED",
+  "AFFILIATE_BETS_LOG_CHUNK_BLOCKS",
+  "AFFILIATE_BETS_WINDOW_BLOCKS",
   "PLAYER_BETS_LOG_CHUNK_BLOCKS",
   "PLAYER_BETS_WINDOW_BLOCKS",
   "RECENT_BETS_LOG_CHUNK_BLOCKS",
@@ -66,11 +72,15 @@ describe("recent bets server aggregation", () => {
     expect(clampPlayerBetsLimit(undefined)).toBe(100);
     expect(clampPlayerBetsLimit(500)).toBe(500);
     expect(clampPlayerBetsLimit(999)).toBe(500);
+    expect(clampAffiliateBetsLimit(undefined)).toBe(100);
+    expect(clampAffiliateBetsLimit(999)).toBe(500);
   });
 
   it("normalizes and validates player addresses", () => {
     expect(normalizePlayerAddress(PLAYER)).toBe(PLAYER);
     expect(() => normalizePlayerAddress("0x1234")).toThrow("player");
+    expect(normalizeAffiliateAddress(AFFILIATE)).toBe(AFFILIATE);
+    expect(() => normalizeAffiliateAddress("0x1234")).toThrow("affiliate");
   });
 
   it("folds GameHub logs into terminal recent bet rows", () => {
@@ -94,6 +104,7 @@ describe("recent bets server aggregation", () => {
             asset: "0x4444444444444444444444444444444444444444",
             gameId: GAME_ID,
             player: PLAYER,
+            pricingAffiliate: AFFILIATE,
             positionId: 7n,
             requestId: 99n,
             stake: 10n
@@ -127,6 +138,7 @@ describe("recent bets server aggregation", () => {
       payout: "19",
       payoutGross: "20",
       player: PLAYER,
+      pricingAffiliate: AFFILIATE,
       randomHash: `0x${"55".repeat(32)}`,
       requestId: "99",
       state: "finalized",
@@ -254,6 +266,96 @@ describe("recent bets server aggregation", () => {
       payout: "19",
       player: PLAYER,
       state: "finalized"
+    });
+  });
+
+  it("queries affiliate rows and computes indexed turnover stats", async () => {
+    process.env.BET_INDEX_READ_ENABLED = "0";
+    process.env.AFFILIATE_BETS_WINDOW_BLOCKS = "9";
+    process.env.AFFILIATE_BETS_LOG_CHUNK_BLOCKS = "10";
+
+    const getLogs = vi
+      .fn()
+      .mockResolvedValueOnce([
+        {
+          args: {
+            asset: "0x4444444444444444444444444444444444444444",
+            gameId: GAME_ID,
+            player: PLAYER,
+            pricingAffiliate: AFFILIATE,
+            positionId: 8n,
+            stake: 10n
+          },
+          blockNumber: 20n,
+          logIndex: 1,
+          transactionHash: "0xaaa"
+        },
+        {
+          args: {
+            gameId: GAME_ID,
+            player: "0x6666666666666666666666666666666666666666",
+            pricingAffiliate: "0x7777777777777777777777777777777777777777",
+            positionId: 9n,
+            stake: 33n
+          },
+          blockNumber: 20n,
+          logIndex: 2,
+          transactionHash: "0xddd"
+        }
+      ])
+      .mockResolvedValueOnce([
+        {
+          args: {
+            positionId: 8n,
+            randomHash: `0x${"55".repeat(32)}`,
+            requestId: 99n
+          },
+          blockNumber: 21n,
+          logIndex: 3,
+          transactionHash: "0xbbb"
+        }
+      ])
+      .mockResolvedValueOnce([
+        {
+          args: {
+            positionId: 8n,
+            payoutGross: 20n,
+            payoutNet: 19n
+          },
+          blockNumber: 22n,
+          logIndex: 4,
+          transactionHash: "0xccc"
+        }
+      ])
+      .mockResolvedValueOnce([]);
+
+    const response = await queryAffiliateBets({
+      affiliate: AFFILIATE,
+      chainId: 84532,
+      client: {
+        getBlockNumber: vi.fn().mockResolvedValue(latestBlockAfterEmbeddedRelease(9n)),
+        getLogs
+      } as any,
+      limit: 10,
+      now: () => 1234
+    });
+
+    expect(response.affiliate).toBe(AFFILIATE);
+    expect(response.rows).toHaveLength(1);
+    expect(response.rows[0]).toMatchObject({
+      betId: "8",
+      payout: "19",
+      pricingAffiliate: AFFILIATE,
+      stake: "10",
+      state: "finalized"
+    });
+    expect(response.stats).toMatchObject({
+      affiliate: AFFILIATE,
+      betCount: 1,
+      payout: "19",
+      payoutGross: "20",
+      settledCount: 1,
+      turnover: "10"
     });
   });
 });

@@ -1579,6 +1579,17 @@
           "detail": "Reward buffer that can become releasable after sync."
         }
       },
+      "activity": {
+        "title": "Referred play",
+        "description": "Track casino bets that carried your affiliate address through the durable bet index.",
+        "loading": "Loading referred bets...",
+        "empty": "No referred casino bets indexed yet.",
+        "stats": {
+          "bets": "Bets",
+          "turnover": "Turnover",
+          "settled": "Settled"
+        }
+      },
       "binding": {
         "eyebrow": "First touch",
         "title": "Binding state",
