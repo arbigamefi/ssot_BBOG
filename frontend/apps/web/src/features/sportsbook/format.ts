@@ -45,7 +45,31 @@ export function parseLookupId(value: string) {
   return BigInt(normalized);
 }
 
+export type LookupErrorKind = "marketNotFound" | "ticketNotFound" | "contractReverted" | "unknown";
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+export function getLookupErrorKind(error: unknown): LookupErrorKind {
+  if (!error) return "unknown";
+  const message = getErrorMessage(error);
+  if (message.includes("UnknownMarket")) return "marketNotFound";
+  if (message.includes("UnknownTicket")) return "ticketNotFound";
+  if (message.includes("Contract Call:") || message.includes("execution reverted")) {
+    return "contractReverted";
+  }
+  return "unknown";
+}
+
 export function formatLookupError(error: unknown) {
   if (!error) return undefined;
-  return error instanceof Error ? error.message : String(error);
+  const message = getErrorMessage(error);
+  if (message.includes("UnknownMarket")) return "Market not found on SportsHub.";
+  if (message.includes("UnknownTicket")) return "Ticket not found on SportsHub.";
+  const compact = message
+    .replace(/^The contract function ".+?" reverted\. Error: /, "")
+    .split(" Contract Call:")[0]
+    ?.trim();
+  return compact || message;
 }

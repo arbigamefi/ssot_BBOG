@@ -15,7 +15,7 @@ import {
   StatusPill,
   type MarketTapeRow
 } from "./components";
-import { formatLookupError, parseLookupId, shortHex } from "./format";
+import { formatLookupError, getLookupErrorKind, parseLookupId, shortHex } from "./format";
 import { SportsbookTicketPlacementPanel } from "./ticket-placement-panel";
 import { SportsbookTicketTerminalPanel } from "./ticket-terminal-panel";
 
@@ -25,8 +25,24 @@ interface MarketDetailReadback extends MarketTapeRow {
   outcomeReserved: Array<{ outcomeId: number; reserved?: bigint }>;
 }
 
+const SPORTSBOOK_DETAIL_READ_TIMEOUT_MS = 8_000;
+
 function formatUnits(value?: bigint) {
   return value === undefined ? "—" : value.toLocaleString("en-US");
+}
+
+async function withReadTimeout<T>(promise: Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error("SportsHub read timed out. Check the RPC connection and try again."));
+    }, SPORTSBOOK_DETAIL_READ_TIMEOUT_MS);
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
 
 export function SportsbookMarketDetailPageClient({ marketId }: { marketId: string }) {
@@ -49,25 +65,30 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
       parsedMarketId?.toString() ?? "invalid"
     ],
     enabled: Boolean(release && sdk && ready && parsedMarketId !== undefined),
+    retry: false,
     staleTime: 15_000,
     queryFn: async (): Promise<MarketDetailReadback | undefined> => {
       if (!sdk || parsedMarketId === undefined) return undefined;
-      const market = await sdk.sportsHub.getMarket(parsedMarketId);
-      const [result, reserved, eventReserved, poolEventReserved] = await Promise.all([
-        sdk.sportsHub.getResult(parsedMarketId).catch(() => undefined),
-        sdk.sportsHub.getMarketReserved(parsedMarketId).catch(() => undefined),
-        sdk.sportsHub.getEventReserved(market.eventId).catch(() => undefined),
-        sdk.sportsHub.getPoolEventReserved(market.poolId, market.eventId).catch(() => undefined)
-      ]);
-      const outcomeReserved = await Promise.all(
-        Array.from({ length: market.outcomeCount }, async (_, outcomeId) => ({
-          outcomeId,
-          reserved: await sdk.sportsHub
-            .getMarketOutcomeReserved(parsedMarketId, outcomeId)
-            .catch(() => undefined)
-        }))
+      return await withReadTimeout(
+        (async () => {
+          const market = await sdk.sportsHub.getMarket(parsedMarketId);
+          const [result, reserved, eventReserved, poolEventReserved] = await Promise.all([
+            sdk.sportsHub.getResult(parsedMarketId).catch(() => undefined),
+            sdk.sportsHub.getMarketReserved(parsedMarketId).catch(() => undefined),
+            sdk.sportsHub.getEventReserved(market.eventId).catch(() => undefined),
+            sdk.sportsHub.getPoolEventReserved(market.poolId, market.eventId).catch(() => undefined)
+          ]);
+          const outcomeReserved = await Promise.all(
+            Array.from({ length: market.outcomeCount }, async (_, outcomeId) => ({
+              outcomeId,
+              reserved: await sdk.sportsHub
+                .getMarketOutcomeReserved(parsedMarketId, outcomeId)
+                .catch(() => undefined)
+            }))
+          );
+          return { market, result, reserved, eventReserved, poolEventReserved, outcomeReserved };
+        })()
       );
-      return { market, result, reserved, eventReserved, poolEventReserved, outcomeReserved };
     }
   });
 
@@ -86,6 +107,12 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
       </PageTransition>
     );
   }
+
+  const readbackErrorKind = getLookupErrorKind(error);
+  const readbackErrorMessage =
+    readbackErrorKind === "marketNotFound"
+      ? t("sportsbook.detail.readFailed.marketNotFound")
+      : formatLookupError(error);
 
   return (
     <PageTransition pageKey={`sports-market-${marketId}`}>
@@ -144,7 +171,7 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
             description={t("sportsbook.detail.readFailed.description")}
           >
             <div className="rounded-lg border border-danger/25 bg-danger-soft p-4 text-sm leading-6 text-danger">
-              {formatLookupError(error)}
+              {readbackErrorMessage}
             </div>
           </SectionShell>
         ) : isFetching && !readback ? (

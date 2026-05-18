@@ -390,4 +390,29 @@ describe("SportsbookMarketDetailPageClient", () => {
     expect(screen.getByText("Invalid market id")).toBeDefined();
     expect(state.sdk.sportsHub.getMarket).not.toHaveBeenCalled();
   });
+
+  it("sanitizes unknown market readback errors", async () => {
+    state.sdk = {
+      sportsHub: {
+        ...createSportsHubMock(),
+        getMarket: vi
+          .fn()
+          .mockRejectedValue(
+            new Error(
+              'The contract function "getMarket" reverted. Error: UnknownMarket(uint64 marketId) (1) Contract Call: address: 0x111 function: getMarket(uint64 marketId) args: (1)'
+            )
+          )
+      }
+    };
+
+    renderWithQueryClient(<SportsbookMarketDetailPageClient marketId="1" />);
+
+    expect(await screen.findByText("Market readback failed")).toBeDefined();
+    expect(
+      screen.getByText(
+        "This market does not exist on the active SportsHub yet. Return to the sportsbook and open a listed market."
+      )
+    ).toBeDefined();
+    expect(screen.queryByText(/Contract Call:/)).toBeNull();
+  });
 });

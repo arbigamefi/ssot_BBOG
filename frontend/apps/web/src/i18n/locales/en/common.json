@@ -578,19 +578,20 @@
         "status": "Unavailable"
       },
       "header": {
-        "metadataEnabled": "Metadata enabled",
-        "readOnlyPreview": "Read-only preview",
+        "metadataEnabled": "Tickets enabled",
+        "readOnlyPreview": "Preview mode",
         "sportsHubPresent": "SportsHub present",
         "sportsHubMissing": "SportsHub missing",
-        "title": "Sportsbook Control Room",
-        "description": "Fixed-odds sports markets stay behind explicit launch controls. This entry exposes the deployed SportsHub surface, release risk caps, and the signed-odds ticket path when the frontend gate is enabled."
+        "title": "Sportsbook",
+        "description": "Browse fixed-odds football markets, inspect live risk, and open a market when you are ready to place a signed ticket. Settlement stays on-chain through SportsHub."
       },
       "riskCard": {
-        "eyebrow": "Public risk-in",
+        "eyebrow": "Ticket placement",
         "signedOddsOnly": "Signed odds only",
-        "locked": "Locked",
+        "locked": "Preview mode",
         "description": "Open a market detail page and provide a signed odds snapshot before placement.",
-        "inspect": "Inspect market before placing"
+        "lockedDescription": "Market reads are live, but public ticket placement is disabled for this build. You can still inspect the latest market and settlement rules.",
+        "inspect": "Open latest market"
       },
       "details": {
         "release": "Release",
@@ -602,14 +603,16 @@
         "challengeWindow": "Challenge window",
         "challengeWindowHelper": "Result dispute timeout",
         "nextMarket": "Next market",
+        "marketHelper": "Latest on-chain market counter",
         "nextTicket": "Next ticket",
+        "ticketHelper": "Latest on-chain ticket counter",
         "runtimeReadFailed": "SportsHub runtime read failed",
         "sdkRead": "Read through @ssot/ssot SDK"
       },
       "release": {
-        "eyebrow": "Sports release",
-        "title": "Oracle and settlement surface",
-        "description": "The active bundle exposes signed odds identity, result reporter quorum, and the bootstrap dispute roles needed by SportsHub settlement.",
+        "eyebrow": "Proof surface",
+        "title": "Oracle, release, and settlement anchors",
+        "description": "The active bundle exposes the signed odds identity, result reporter set, and contract addresses that make every sportsbook ticket auditable.",
         "oddsSignerSet": "Odds signer set",
         "resultReporterSet": "Result reporter set",
         "reporterThreshold": "Reporter threshold",
@@ -621,9 +624,9 @@
         "arbitrator": "Arbitrator"
       },
       "mvp": {
-        "eyebrow": "MVP market",
-        "title": "Football 1X2 readiness",
-        "description": "The current provider path is scoped to pre-match fixed odds, signed snapshots, and explicit result evidence before any public launch decision.",
+        "eyebrow": "Market format",
+        "title": "Football 1X2 ticket flow",
+        "description": "The MVP path is intentionally narrow: pre-match fixed odds, signed snapshots, explicit result evidence, and a challenge window before settlement finality.",
         "rows": {
           "marketType": {
             "label": "Market type",
@@ -639,7 +642,7 @@
           },
           "launchState": {
             "label": "Launch state",
-            "value": "Phase 2 NO-GO for public risk-in"
+            "value": "Preview now, public tickets gated"
           }
         }
       },
@@ -650,9 +653,9 @@
         "riskTitle": "SportsHub global risk caps"
       },
       "marketTape": {
-        "eyebrow": "Market tape",
-        "title": "Recent SportsHub markets",
-        "description": "The frontend reads the latest on-chain SportsHub market ids directly through the v1.3 SDK. Ticket placement is only available from a market detail page after the signed-odds gate is satisfied."
+        "eyebrow": "Markets",
+        "title": "Available football markets",
+        "description": "Open a market to review outcomes, timing, reserved exposure, and the ticket form. When public ticketing is gated, this page remains a live market preview."
       },
       "lookup": {
         "eyebrow": "On-chain lookup",
@@ -794,7 +797,8 @@
       "readFailed": {
         "eyebrow": "Read failed",
         "title": "Market readback failed",
-        "description": "The SDK could not read this SportsHub market from the active release."
+        "description": "The SDK could not read this SportsHub market from the active release.",
+        "marketNotFound": "This market does not exist on the active SportsHub yet. Return to the sportsbook and open a listed market."
       },
       "loading": {
         "eyebrow": "Readback",

@@ -244,16 +244,19 @@ describe("SportsbookPageClient", () => {
     };
   });
 
-  it("renders SportsHub metadata without direct ticket placement on the index page", async () => {
+  it("renders a player-facing sportsbook overview without direct ticket placement", async () => {
     renderWithQueryClient(<SportsbookPageClient />);
 
-    expect(screen.getByRole("heading", { name: "Sportsbook Control Room" })).toBeDefined();
-    expect(screen.getByText("Read-only preview")).toBeDefined();
+    expect(screen.getByRole("heading", { name: "Sportsbook" })).toBeDefined();
+    expect(screen.getAllByText("Preview mode").length).toBeGreaterThan(0);
     expect(screen.getByText("SportsHub present")).toBeDefined();
-    expect(screen.getAllByText("0x2db4...fa4b").length).toBeGreaterThan(0);
-    expect(screen.getByText("NEXT_PUBLIC_SPORTSBOOK_ENABLED is not true.")).toBeDefined();
-    expect(screen.getByText("Locked")).toBeDefined();
-    expect(screen.getByRole("link", { name: "Inspect market before placing" })).toBeDefined();
+    expect(screen.getByText("Ticket placement")).toBeDefined();
+    expect(
+      screen.getByText(
+        "Market reads are live, but public ticket placement is disabled for this build. You can still inspect the latest market and settlement rules."
+      )
+    ).toBeDefined();
+    expect(screen.getByRole("link", { name: "Open latest market" })).toBeDefined();
     expect(await screen.findByText("8")).toBeDefined();
     expect(screen.getByText("13")).toBeDefined();
   });
@@ -261,17 +264,17 @@ describe("SportsbookPageClient", () => {
   it("surfaces MVP market scope and Sports pool caps", () => {
     renderWithQueryClient(<SportsbookPageClient />);
 
-    expect(screen.getByText("Football 1X2 readiness")).toBeDefined();
+    expect(screen.getByText("Football 1X2 ticket flow")).toBeDefined();
     expect(screen.getByText("Pre-match football 1X2")).toBeDefined();
     expect(screen.getByText("Pool 2")).toBeDefined();
     expect(screen.getAllByText("10,000,000").length).toBeGreaterThan(0);
-    expect(screen.getByText("Phase 2 NO-GO for public risk-in")).toBeDefined();
+    expect(screen.getByText("Preview now, public tickets gated")).toBeDefined();
   });
 
   it("renders recent SportsHub markets and loads one into the inspector", async () => {
     renderWithQueryClient(<SportsbookPageClient />);
 
-    expect(screen.getByText("Recent SportsHub markets")).toBeDefined();
+    expect(screen.getByText("Available football markets")).toBeDefined();
     expect(await screen.findByText("Market 7")).toBeDefined();
     expect(screen.getByText("Event 97")).toBeDefined();
     expect(screen.getAllByRole("link", { name: "Open" })[0]?.getAttribute("href")).toBe(
@@ -295,7 +298,7 @@ describe("SportsbookPageClient", () => {
 
     renderWithQueryClient(<SportsbookPageClient />);
 
-    expect(screen.getByText("Metadata enabled")).toBeDefined();
+    expect(screen.getByText("Tickets enabled")).toBeDefined();
     expect(screen.getByText("Signed odds only")).toBeDefined();
     expect(screen.queryByRole("button", { name: "Place ticket" })).toBeNull();
   });

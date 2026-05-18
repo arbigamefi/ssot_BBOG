@@ -258,8 +258,8 @@ export function SportsbookPageClient() {
 
   return (
     <PageTransition pageKey="sportsbook">
-      <div className="mx-auto flex max-w-[1440px] flex-col gap-8 py-12 md:py-16">
-        <header className="grid gap-8 lg:grid-cols-[1fr_360px] lg:items-end">
+      <div className="mx-auto flex max-w-[1440px] flex-col gap-6 py-10 md:gap-8 md:py-14">
+        <header className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-stretch">
           <div className="max-w-4xl">
             <div className="flex flex-wrap items-center gap-3">
               <StatusPill tone={statusTone}>
@@ -281,7 +281,7 @@ export function SportsbookPageClient() {
             </p>
           </div>
 
-          <div className="rounded-lg border border-border bg-surface-1/70 p-5 shadow-e2">
+          <div className="flex flex-col justify-between rounded-lg border border-border bg-surface-1/70 p-5 shadow-e2">
             <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-fg-subtle">
               {t("sportsbook.index.riskCard.eyebrow")}
             </div>
@@ -291,7 +291,9 @@ export function SportsbookPageClient() {
                 : t("sportsbook.index.riskCard.locked")}
             </div>
             <p className="mt-2 text-sm leading-6 text-fg-muted">
-              {sportsbook.disabledReason ?? t("sportsbook.index.riskCard.description")}
+              {sportsbook.enabled
+                ? t("sportsbook.index.riskCard.description")
+                : t("sportsbook.index.riskCard.lockedDescription")}
             </p>
             <Link
               href={latestMarketHref}
@@ -302,38 +304,14 @@ export function SportsbookPageClient() {
           </div>
         </header>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <DetailCell
-            label={t("sportsbook.index.details.release")}
-            value={shortHex(release.releaseDigest)}
-            helper={release.name}
-          />
-          <DetailCell
-            label={t("sportsbook.index.details.sportsHub")}
-            value={shortHex(sportsHub)}
-            helper={
-              sportsbook.hasSportsRelease
-                ? t("sportsbook.index.details.embeddedMetadataPresent")
-                : t("sportsbook.index.details.notAvailable")
-            }
-          />
-          <DetailCell
-            label={t("sportsbook.index.details.riskEngine")}
-            value={shortHex(riskEngine)}
-            helper={t("sportsbook.index.details.riskEngineHelper")}
-          />
-          <DetailCell
-            label={t("sportsbook.index.details.challengeWindow")}
-            value={formatDuration(sports?.resultChallengeTimeoutSeconds)}
-            helper={t("sportsbook.index.details.challengeWindowHelper")}
-          />
+        <div className="grid gap-3 sm:grid-cols-3">
           <DetailCell
             label={t("sportsbook.index.details.nextMarket")}
             value={formatCounter(runtimeCounters?.nextMarketId)}
             helper={
               runtimeError
                 ? t("sportsbook.index.details.runtimeReadFailed")
-                : t("sportsbook.index.details.sdkRead")
+                : t("sportsbook.index.details.marketHelper")
             }
           />
           <DetailCell
@@ -342,52 +320,30 @@ export function SportsbookPageClient() {
             helper={
               runtimeError
                 ? t("sportsbook.index.details.runtimeReadFailed")
-                : t("sportsbook.index.details.sdkRead")
+                : t("sportsbook.index.details.ticketHelper")
             }
+          />
+          <DetailCell
+            label={t("sportsbook.index.details.challengeWindow")}
+            value={formatDuration(sports?.resultChallengeTimeoutSeconds)}
+            helper={t("sportsbook.index.details.challengeWindowHelper")}
           />
         </div>
 
-        <div className="grid gap-8 xl:grid-cols-[1fr_0.9fr]">
-          <SectionShell
-            eyebrow={t("sportsbook.index.release.eyebrow")}
-            title={t("sportsbook.index.release.title")}
-            description={t("sportsbook.index.release.description")}
-          >
-            <div className="grid gap-4 md:grid-cols-2">
-              <DetailCell
-                label={t("sportsbook.index.release.oddsSignerSet")}
-                value={shortHex(sports?.oddsSignerSetHash)}
-              />
-              <DetailCell
-                label={t("sportsbook.index.release.resultReporterSet")}
-                value={shortHex(sports?.resultReporterSetHash)}
-              />
-              <DetailCell
-                label={t("sportsbook.index.release.reporterThreshold")}
-                value={sports?.resultReporterThreshold ?? t("sportsbook.components.na")}
-                helper={t("sportsbook.index.release.reporterThresholdHelper")}
-              />
-              <DetailCell
-                label={t("sportsbook.index.release.frontendFlag")}
-                value={
-                  sportsbook.frontendEnabled
-                    ? t("sportsbook.index.release.booleanTrue")
-                    : t("sportsbook.index.release.booleanFalse")
-                }
-                helper={sportsbook.enablementFlag}
-                mono={false}
-              />
-              <DetailCell
-                label={t("sportsbook.index.release.challenger")}
-                value={shortHex(sports?.resultChallenger)}
-              />
-              <DetailCell
-                label={t("sportsbook.index.release.arbitrator")}
-                value={shortHex(sports?.resultArbitrator)}
-              />
-            </div>
-          </SectionShell>
+        <SectionShell
+          eyebrow={t("sportsbook.index.marketTape.eyebrow")}
+          title={t("sportsbook.index.marketTape.title")}
+          description={t("sportsbook.index.marketTape.description")}
+        >
+          <MarketTape
+            rows={recentMarkets ?? []}
+            loading={marketTapeLoading}
+            error={formatLookupError(recentMarketsError ?? runtimeError)}
+            onInspect={inspectRecentMarket}
+          />
+        </SectionShell>
 
+        <div className="grid gap-8 xl:grid-cols-[0.9fr_1.1fr]">
           <SectionShell
             eyebrow={t("sportsbook.index.mvp.eyebrow")}
             title={t("sportsbook.index.mvp.title")}
@@ -422,6 +378,52 @@ export function SportsbookPageClient() {
               ))}
             </div>
           </SectionShell>
+
+          <SectionShell
+            eyebrow={t("sportsbook.index.release.eyebrow")}
+            title={t("sportsbook.index.release.title")}
+            description={t("sportsbook.index.release.description")}
+          >
+            <div className="grid gap-4 md:grid-cols-2">
+              <DetailCell
+                label={t("sportsbook.index.details.release")}
+                value={shortHex(release.releaseDigest)}
+                helper={release.name}
+              />
+              <DetailCell
+                label={t("sportsbook.index.details.sportsHub")}
+                value={shortHex(sportsHub)}
+                helper={
+                  sportsbook.hasSportsRelease
+                    ? t("sportsbook.index.details.embeddedMetadataPresent")
+                    : t("sportsbook.index.details.notAvailable")
+                }
+              />
+              <DetailCell
+                label={t("sportsbook.index.details.riskEngine")}
+                value={shortHex(riskEngine)}
+                helper={t("sportsbook.index.details.riskEngineHelper")}
+              />
+              <DetailCell
+                label={t("sportsbook.index.release.oddsSignerSet")}
+                value={shortHex(sports?.oddsSignerSetHash)}
+              />
+              <DetailCell
+                label={t("sportsbook.index.release.resultReporterSet")}
+                value={shortHex(sports?.resultReporterSetHash)}
+              />
+              <DetailCell
+                label={t("sportsbook.index.release.frontendFlag")}
+                value={
+                  sportsbook.frontendEnabled
+                    ? t("sportsbook.index.release.booleanTrue")
+                    : t("sportsbook.index.release.booleanFalse")
+                }
+                helper={sportsbook.enablementFlag}
+                mono={false}
+              />
+            </div>
+          </SectionShell>
         </div>
 
         {riskSummary ? (
@@ -433,19 +435,6 @@ export function SportsbookPageClient() {
             <RiskRows title={t("sportsbook.index.caps.riskTitle")} risk={riskSummary} />
           </SectionShell>
         ) : null}
-
-        <SectionShell
-          eyebrow={t("sportsbook.index.marketTape.eyebrow")}
-          title={t("sportsbook.index.marketTape.title")}
-          description={t("sportsbook.index.marketTape.description")}
-        >
-          <MarketTape
-            rows={recentMarkets ?? []}
-            loading={marketTapeLoading}
-            error={formatLookupError(recentMarketsError ?? runtimeError)}
-            onInspect={inspectRecentMarket}
-          />
-        </SectionShell>
 
         <SectionShell
           eyebrow={t("sportsbook.index.lookup.eyebrow")}

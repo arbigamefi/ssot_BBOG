@@ -578,19 +578,20 @@
         "status": "不可用"
       },
       "header": {
-        "metadataEnabled": "元数据已启用",
-        "readOnlyPreview": "只读预览",
+        "metadataEnabled": "出票已启用",
+        "readOnlyPreview": "预览模式",
         "sportsHubPresent": "SportsHub 已配置",
         "sportsHubMissing": "缺少 SportsHub",
-        "title": "体育投注控制台",
-        "description": "固定赔率体育市场仍受显式上线开关保护。本入口展示已部署的 SportsHub、release 风险上限，以及在前端开关开启后的签名赔率出票路径。"
+        "title": "体育投注",
+        "description": "浏览固定赔率足球市场、检查实时敞口，并在准备好后进入市场用签名赔率出票。结算仍通过 SportsHub 在链上完成。"
       },
       "riskCard": {
-        "eyebrow": "公开风险入口",
+        "eyebrow": "出票状态",
         "signedOddsOnly": "仅允许签名赔率",
-        "locked": "已锁定",
+        "locked": "预览模式",
         "description": "进入市场详情页，并在下注前提供签名赔率快照。",
-        "inspect": "下注前检查市场"
+        "lockedDescription": "市场读取是实时的，但当前构建暂未开放公开出票。你仍然可以查看最新市场和结算规则。",
+        "inspect": "打开最新市场"
       },
       "details": {
         "release": "Release",
@@ -602,14 +603,16 @@
         "challengeWindow": "挑战窗口",
         "challengeWindowHelper": "赛果争议超时时间",
         "nextMarket": "下一个市场",
+        "marketHelper": "链上最新市场计数器",
         "nextTicket": "下一个票据",
+        "ticketHelper": "链上最新票据计数器",
         "runtimeReadFailed": "SportsHub 运行时读取失败",
         "sdkRead": "通过 @ssot/ssot SDK 读取"
       },
       "release": {
-        "eyebrow": "Sports release",
-        "title": "Oracle 与结算面",
-        "description": "当前 bundle 暴露签名赔率身份、赛果 reporter 法定人数，以及 SportsHub 结算所需的初始争议角色。",
+        "eyebrow": "凭证面",
+        "title": "Oracle、Release 与结算锚点",
+        "description": "当前 bundle 暴露签名赔率身份、赛果 reporter 集合和合约地址，让每张体育票据都可以被审计。",
         "oddsSignerSet": "赔率签名集合",
         "resultReporterSet": "赛果 reporter 集合",
         "reporterThreshold": "Reporter 阈值",
@@ -621,9 +624,9 @@
         "arbitrator": "仲裁者"
       },
       "mvp": {
-        "eyebrow": "MVP 市场",
-        "title": "足球 1X2 准备状态",
-        "description": "当前 provider 路径限定为赛前固定赔率、签名快照，以及公开上线决策前的显式赛果证据。",
+        "eyebrow": "市场格式",
+        "title": "足球 1X2 出票流程",
+        "description": "MVP 路径刻意收窄：赛前固定赔率、签名快照、显式赛果证据，以及最终结算前的挑战窗口。",
         "rows": {
           "marketType": {
             "label": "市场类型",
@@ -639,7 +642,7 @@
           },
           "launchState": {
             "label": "上线状态",
-            "value": "Phase 2 暂不开放公开风险入口"
+            "value": "当前预览，公开出票仍受 gate 控制"
           }
         }
       },
@@ -650,9 +653,9 @@
         "riskTitle": "SportsHub 全局风险上限"
       },
       "marketTape": {
-        "eyebrow": "市场列表",
-        "title": "最近 SportsHub 市场",
-        "description": "前端通过 v1.3 SDK 直接读取最新的链上 SportsHub market id。签名赔率 gate 满足后，出票只能从市场详情页发起。"
+        "eyebrow": "市场",
+        "title": "可用足球市场",
+        "description": "打开市场可查看 outcome、开赛时间、保留敞口和出票表单。公开出票未开放时，这里仍作为实时市场预览。"
       },
       "lookup": {
         "eyebrow": "链上查询",
@@ -794,7 +797,8 @@
       "readFailed": {
         "eyebrow": "读取失败",
         "title": "市场读回失败",
-        "description": "SDK 无法从当前 release 的 SportsHub 读取该市场。"
+        "description": "SDK 无法从当前 release 的 SportsHub 读取该市场。",
+        "marketNotFound": "当前 SportsHub 还不存在这个市场。请返回体育投注页，打开列表中的市场。"
       },
       "loading": {
         "eyebrow": "读回",
