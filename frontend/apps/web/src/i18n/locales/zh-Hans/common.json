@@ -954,6 +954,27 @@
           "winner": "获胜结果: {outcome}",
           "pendingResult": "等待官方赛果"
         },
+        "receipt": {
+          "eyebrow": "票据收据",
+          "wonTitle": "中奖票据",
+          "wonDescription": "你的选择命中了最终市场结果。下方返还金额来自链上票据赔付。",
+          "lostTitle": "票据未中奖",
+          "lostDescription": "你的选择没有命中最终市场结果。净结果反映本次下注本金。",
+          "refundedTitle": "票据已退款",
+          "refundedDescription": "这张票据通过退款或作废路径结束。下方显示已返还金额。",
+          "openTitle": "票据已接受",
+          "openDescription": "票据已在 SportsHub 上生效。市场最终化前，返还和利润仍为潜在值。",
+          "pick": "你的选择",
+          "winner": "最终赢家",
+          "winnerValue": "获胜结果: {outcome}",
+          "pendingWinner": "等待官方赛果",
+          "stake": "本金",
+          "return": "返还",
+          "potentialReturn": "潜在返还",
+          "netResult": "净结果",
+          "potentialProfit": "潜在利润",
+          "pool": "池"
+        },
         "facts": {
           "title": "票据证明",
           "ticketId": "票据 ID",

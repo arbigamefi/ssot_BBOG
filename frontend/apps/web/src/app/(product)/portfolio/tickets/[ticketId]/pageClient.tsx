@@ -272,30 +272,15 @@ export function SportsTicketDetailPageClient({ ticketId }: { ticketId: string })
 
         {market ? <ResultPanel market={market} result={result} odds={providerOdds} /> : null}
 
-        <section className="grid gap-4 md:grid-cols-3">
-          <Metric
-            label={t("metrics.selection")}
-            value={outcomeLabel}
-            detail={
-              selected?.decimalPrice ? t("metrics.price", { price: selected.decimalPrice }) : "—"
-            }
-          />
-          <Metric
-            label={t("metrics.stake")}
-            value={formatAmount(ticket.stake, asset.decimals, asset.symbol)}
-            detail={t("metrics.pool", { poolId: ticket.poolId })}
-          />
-          <Metric
-            label={t("metrics.payout")}
-            value={formatAmount(ticket.payout, asset.decimals, asset.symbol)}
-            detail={
-              winningLabel
-                ? t("metrics.winner", { outcome: winningLabel })
-                : t("metrics.pendingResult")
-            }
-            tone={status.tone}
-          />
-        </section>
+        <TicketReceiptPanel
+          asset={asset}
+          outcomeLabel={outcomeLabel}
+          selectedPrice={selected?.decimalPrice}
+          status={status}
+          ticket={ticket}
+          winningLabel={winningLabel}
+          t={t}
+        />
 
         <TicketLifecyclePanel
           lifecycle={lifecycle}
@@ -511,32 +496,115 @@ function TicketLifecyclePanel({
   );
 }
 
-function Metric({
+function TicketReceiptPanel({
+  asset,
+  outcomeLabel,
+  selectedPrice,
+  status,
+  ticket,
+  winningLabel,
+  t
+}: {
+  asset: { symbol: string; decimals: number };
+  outcomeLabel: string;
+  selectedPrice?: string;
+  status: ReturnType<typeof describeTicketStatus>;
+  ticket: DomainSportsTicket;
+  winningLabel?: string;
+  t: ReturnType<typeof useTranslations>;
+}) {
+  const terminal =
+    ticket.state === "settled" || ticket.state === "refunded" || ticket.state === "voided";
+  const won = ticket.state === "settled" && status.tone === "success";
+  const net = ticket.payout - ticket.stake;
+  const netTone = net > 0n ? "text-success" : net < 0n ? "text-danger" : "text-fg";
+  const headline =
+    ticket.state === "settled"
+      ? won
+        ? t("receipt.wonTitle")
+        : t("receipt.lostTitle")
+      : ticket.state === "refunded" || ticket.state === "voided"
+        ? t("receipt.refundedTitle")
+        : t("receipt.openTitle");
+  const description =
+    ticket.state === "settled"
+      ? won
+        ? t("receipt.wonDescription")
+        : t("receipt.lostDescription")
+      : ticket.state === "refunded" || ticket.state === "voided"
+        ? t("receipt.refundedDescription")
+        : t("receipt.openDescription");
+  const returnLabel = terminal ? t("receipt.return") : t("receipt.potentialReturn");
+  const netLabel = terminal ? t("receipt.netResult") : t("receipt.potentialProfit");
+  const winnerText = winningLabel
+    ? t("receipt.winnerValue", { outcome: winningLabel })
+    : t("receipt.pendingWinner");
+
+  return (
+    <section className="rounded-lg border border-border bg-surface-1 p-4 md:p-5">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-fg-subtle">
+            {t("receipt.eyebrow")}
+          </div>
+          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-fg">{headline}</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-fg-muted">{description}</p>
+        </div>
+        <span
+          className={`w-fit rounded-full border border-border bg-surface-2 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${status.className}`}
+        >
+          {status.label}
+        </span>
+      </div>
+
+      <dl className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+        <ReceiptCell
+          label={t("receipt.pick")}
+          value={outcomeLabel}
+          detail={selectedPrice ? t("metrics.price", { price: selectedPrice }) : undefined}
+        />
+        <ReceiptCell label={t("receipt.winner")} value={winnerText} />
+        <ReceiptCell
+          label={t("receipt.stake")}
+          value={formatAmount(ticket.stake, asset.decimals, asset.symbol)}
+        />
+        <ReceiptCell
+          label={returnLabel}
+          value={formatAmount(ticket.payout, asset.decimals, asset.symbol)}
+          valueClassName={status.tone === "danger" ? "text-fg" : status.className}
+        />
+        <ReceiptCell
+          label={netLabel}
+          value={formatSignedAmount(net, asset.decimals, asset.symbol)}
+          valueClassName={netTone}
+        />
+        <ReceiptCell
+          label={t("receipt.pool")}
+          value={t("metrics.pool", { poolId: ticket.poolId })}
+        />
+      </dl>
+    </section>
+  );
+}
+
+function ReceiptCell({
+  detail,
   label,
   value,
-  detail,
-  tone = "default"
+  valueClassName = "text-fg"
 }: {
+  detail?: string;
   label: string;
   value: string;
-  detail: string;
-  tone?: "default" | "success" | "danger" | "brand";
+  valueClassName?: string;
 }) {
-  const toneClass =
-    tone === "success"
-      ? "text-success"
-      : tone === "danger"
-        ? "text-danger"
-        : tone === "brand"
-          ? "text-brand"
-          : "text-fg";
   return (
-    <div className="rounded-lg border border-border bg-surface-1 p-4">
-      <div className="text-[11px] font-medium uppercase tracking-[0.14em] text-fg-subtle">
+    <div className="rounded-md border border-border-soft bg-surface-2/60 px-3 py-3">
+      <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-subtle">
         {label}
-      </div>
-      <div className={`mt-2 truncate text-xl font-semibold ${toneClass}`}>{value}</div>
-      <div className="mt-1 text-xs text-fg-muted">{detail}</div>
+      </dt>
+      <dd className={`mt-1 text-base font-semibold ${valueClassName}`}>{value}</dd>
+      {detail ? <dd className="mt-1 text-xs text-fg-muted">{detail}</dd> : null}
     </div>
   );
 }
@@ -717,6 +785,13 @@ function formatAmount(value: bigint, decimals: number, symbol: string): string {
   const fractionStr = fraction.toString().padStart(decimals, "0").replace(/0+$/, "");
   const numeric = fractionStr ? `${whole.toString()}.${fractionStr}` : whole.toString();
   return `${negative ? "-" : ""}${numeric} ${symbol}`;
+}
+
+function formatSignedAmount(value: bigint, decimals: number, symbol: string): string {
+  if (value === 0n) return `0 ${symbol}`;
+  return value > 0n
+    ? `+${formatAmount(value, decimals, symbol)}`
+    : formatAmount(value, decimals, symbol);
 }
 
 function formatTimestamp(value: number, locale: string): string {

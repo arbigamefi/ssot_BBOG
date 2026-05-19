@@ -954,6 +954,27 @@
           "winner": "Winner: {outcome}",
           "pendingResult": "Waiting for official result"
         },
+        "receipt": {
+          "eyebrow": "Ticket receipt",
+          "wonTitle": "Winning ticket",
+          "wonDescription": "Your pick matched the finalized market result. The return shown below is the on-chain ticket payout.",
+          "lostTitle": "Ticket lost",
+          "lostDescription": "Your pick did not match the finalized market result. The net result reflects the staked amount.",
+          "refundedTitle": "Ticket refunded",
+          "refundedDescription": "This ticket ended through a refund or void path. The returned amount is shown below.",
+          "openTitle": "Ticket accepted",
+          "openDescription": "The ticket is live on SportsHub. The return and profit values remain potential until the market is finalized.",
+          "pick": "Your pick",
+          "winner": "Final winner",
+          "winnerValue": "Winner: {outcome}",
+          "pendingWinner": "Waiting for official result",
+          "stake": "Stake",
+          "return": "Return",
+          "potentialReturn": "Potential return",
+          "netResult": "Net result",
+          "potentialProfit": "Potential profit",
+          "pool": "Pool"
+        },
         "facts": {
           "title": "Ticket proof",
           "ticketId": "Ticket id",
