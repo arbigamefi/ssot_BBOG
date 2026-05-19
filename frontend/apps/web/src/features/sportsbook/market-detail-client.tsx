@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { SportsTicketRow } from "@ssot/bet-index";
 import type { DomainSportsMarket, DomainSportsResult } from "@ssot/ssot";
 
@@ -20,8 +20,13 @@ import { ResultPanel } from "./ResultPanel";
 import { describeMarketWallClock, marketShortTag } from "./player-format";
 import { providerOutcomeById, type SportsbookProviderOdds } from "./provider-odds";
 import { useBetSlip, type BetSlipReceipt } from "./useBetSlip";
-import { usePlayerSportsTickets } from "./usePlayerSportsTickets";
+import {
+  mergeSportsTicketRows,
+  playerSportsTicketsQueryKey,
+  usePlayerSportsTickets
+} from "./usePlayerSportsTickets";
 import { useSportsbookProviderOdds } from "./use-provider-odds";
+import { useSportsRound, type SportsRoundState } from "./useSportsRound";
 
 const READ_TIMEOUT_MS = 8_000;
 
@@ -71,6 +76,7 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
   const locale = useLocale();
   const { release, readOnly, readOnlyReason, sportsbook, chainId } = useRelease();
   const { sdk, ready } = useSSOTSDK();
+  const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const parsedMarketId = React.useMemo(() => parseMarketId(marketId), [marketId]);
   const initialOutcomeId = React.useMemo(() => {
@@ -168,10 +174,27 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
           ? t("slip.marketMustBeOpen")
           : undefined,
     decimals: poolAsset.decimals,
-    onPlaced: () => {
+    onPlaced: (receipt) => {
+      if (sdk?.account && receipt.ticketId && receipt.txHash) {
+        queryClient.setQueryData<SportsTicketRow[]>(
+          playerSportsTicketsQueryKey({ chainId, limit: 50, player: sdk.account }),
+          (rows) => mergeSportsTicketRows(rows, buildOptimisticSportsTicketRow(chainId, receipt))
+        );
+      }
       void refetch();
       playerTickets.refetch();
     }
+  });
+  const latestTicketRow = React.useMemo(() => {
+    const ticketId = slip.receipt?.ticketId?.toString();
+    if (!ticketId) return undefined;
+    return playerMarketTickets.find((row) => row.ticketId === ticketId);
+  }, [playerMarketTickets, slip.receipt?.ticketId]);
+  const round = useSportsRound({
+    error: slip.error,
+    receipt: slip.receipt,
+    slipState: slip.state,
+    ticket: latestTicketRow
   });
 
   // ---- Early returns -----------------------------------------------------
@@ -259,6 +282,7 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
           <LatestTicketTracker
             decimals={poolAsset.decimals}
             receipt={slip.receipt}
+            round={round}
             symbol={poolAsset.symbol}
             txHash={slip.receipt.txHash}
           />
@@ -327,11 +351,13 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
 function LatestTicketTracker({
   decimals,
   receipt,
+  round,
   symbol,
   txHash
 }: {
   decimals: number;
   receipt: BetSlipReceipt;
+  round: SportsRoundState;
   symbol: string;
   txHash?: string;
 }) {
@@ -346,7 +372,9 @@ function LatestTicketTracker({
           <h2 className="mt-2 text-xl font-semibold text-fg">
             {t("title", { ticketId: receipt.ticketId?.toString() ?? "—" })}
           </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-fg-muted">{t("description")}</p>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-fg-muted">
+            {t(`stage.${round.kind}`)}
+          </p>
         </div>
         <Link
           href={`/portfolio/tickets/${receipt.ticketId?.toString()}${txHash ? `?tx=${encodeURIComponent(txHash)}` : ""}`}
@@ -368,6 +396,28 @@ function LatestTicketTracker({
       </dl>
     </section>
   );
+}
+
+function buildOptimisticSportsTicketRow(chainId: number, receipt: BetSlipReceipt): SportsTicketRow {
+  const ticketId = receipt.ticketId?.toString() ?? "0";
+  const txHash = (receipt.txHash ?? "0x0") as SportsTicketRow["lastTxHash"];
+  return {
+    chainId,
+    eventId: receipt.eventId?.toString(),
+    id: `${chainId}:sports:${ticketId}`,
+    lastEventName: "TicketPlaced",
+    lastTxHash: txHash,
+    marketId: receipt.marketId?.toString(),
+    outcomeId: receipt.outcomeId,
+    payout: receipt.payout,
+    player: receipt.player as SportsTicketRow["player"],
+    poolId: receipt.poolId?.toString(),
+    stake: receipt.stake,
+    state: "held",
+    ticketId,
+    updatedAt: Date.now(),
+    updatedBlock: Number.MAX_SAFE_INTEGER
+  };
 }
 
 function PlayerMarketTicketsPanel({
@@ -659,8 +709,21 @@ function HeaderSkeleton() {
 function BoardSkeleton() {
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-      <div className="h-48 animate-pulse rounded-lg border border-border bg-surface-1" />
-      <div className="h-72 animate-pulse rounded-lg border border-border bg-surface-1" />
+      <div className="grid animate-pulse gap-3 rounded-lg border border-border bg-surface-1 p-5">
+        <div className="h-4 w-32 rounded bg-surface-2" />
+        <div className="grid gap-3 md:grid-cols-3">
+          <div className="h-24 rounded-md bg-surface-2" />
+          <div className="h-24 rounded-md bg-surface-2" />
+          <div className="h-24 rounded-md bg-surface-2" />
+        </div>
+        <div className="h-16 rounded-md bg-surface-2/70" />
+      </div>
+      <div className="grid animate-pulse gap-4 rounded-lg border border-border bg-surface-1 p-5">
+        <div className="h-4 w-24 rounded bg-surface-2" />
+        <div className="h-16 rounded-md bg-surface-2" />
+        <div className="h-12 rounded-md bg-surface-2" />
+        <div className="h-12 rounded-md bg-brand/30" />
+      </div>
     </div>
   );
 }

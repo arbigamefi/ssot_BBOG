@@ -10,6 +10,7 @@ import type {
 } from "@ssot/ssot/sdk";
 import type { SSOTRelease } from "@ssot/ssot/release";
 import type { SportsbookProviderOdds } from "./provider-odds";
+import { toSportsbookPlayerError } from "./sports-errors";
 
 /**
  * useBetSlip — the player-facing ticket placement state machine.
@@ -19,10 +20,9 @@ import type { SportsbookProviderOdds } from "./provider-odds";
  * player presses "Place bet". The state machine surfaces explicit transition
  * points so the BetSlip UI can render meaningful copy at each step.
  *
- * The hook does NOT replace the operator-grade `SportsbookTicketPlacementPanel`
- * — that panel keeps raw signature / nonce / risk-hash inputs for power users
- * and lives on /ops/sportsbook. The player path here auto-fills those fields
- * from the signed odds endpoint.
+ * The player path auto-fills signed odds, nonce, and risk-hash fields from the
+ * signed odds endpoint. Operator-only market controls stay isolated on
+ * /ops/sportsbook; public players should never see raw placement plumbing.
  *
  * State machine:
  *
@@ -43,6 +43,12 @@ export type BetSlipState =
   | "error";
 
 export interface BetSlipReceipt {
+  eventId?: bigint;
+  marketId?: bigint;
+  outcomeId?: number;
+  player?: string;
+  poolId?: number;
+  stake?: string;
   ticketId?: bigint;
   txHash?: string;
   payout?: string;
@@ -302,6 +308,12 @@ export function useBetSlip(params: UseBetSlipParams): BetSlipController {
       setState("mining");
       await new Promise((r) => setTimeout(r, 250));
       const nextReceipt: BetSlipReceipt = {
+        eventId: market.eventId,
+        marketId: market.marketId,
+        outcomeId: selectedOutcomeId,
+        player: sdk.account,
+        poolId: market.poolId,
+        stake: stakeBigint.toString(),
         ticketId: result.ticketId,
         txHash: result.placeTicketTx.txHash,
         payout: signed.payout,
@@ -312,8 +324,7 @@ export function useBetSlip(params: UseBetSlipParams): BetSlipController {
       setState("placed");
       onPlaced?.(nextReceipt);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Ticket placement failed.";
-      setError(message);
+      setError(toSportsbookPlayerError(err));
       setState("error");
     }
   }, [buildPlan, decimals, fetchSignedOdds, onPlaced, sdk, selectedOutcomeId, stake]);

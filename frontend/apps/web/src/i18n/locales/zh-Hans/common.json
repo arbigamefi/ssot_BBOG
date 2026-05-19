@@ -909,7 +909,20 @@
           "viewTicket": "跟踪票据",
           "pick": "选择",
           "price": "成交赔率",
-          "potentialPayout": "潜在赔付"
+          "potentialPayout": "潜在赔付",
+          "stage": {
+            "idle": "设置本金并选择一个结果。",
+            "ready": "可以提交这张票据。",
+            "quoting": "正在获取签名赔率。",
+            "planning": "正在准备链上票据。",
+            "signing": "等待钱包签名。",
+            "mining": "正在广播票据。",
+            "tracking": "票据已上链，正在跟踪赛果提议、最终确认和结算。",
+            "settled": "票据已结算。打开收据查看赔付详情。",
+            "refunded": "票据已退款。打开收据查看退款详情。",
+            "voided": "票据已作废。打开收据查看退款详情。",
+            "failed": "票据提交需要处理。请检查投注单后重试。"
+          }
         },
         "meta": {
           "title": "市场信息",

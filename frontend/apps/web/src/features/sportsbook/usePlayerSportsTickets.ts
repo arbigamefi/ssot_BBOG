@@ -7,6 +7,28 @@ import type { SportsTicketRow } from "@ssot/bet-index";
 import { useRelease } from "../../ssot/release/ReleaseProvider";
 import type { PlayerSportsTicketsResponse } from "./recent-tickets";
 
+export function playerSportsTicketsQueryKey({
+  chainId,
+  limit,
+  player
+}: {
+  chainId: number;
+  limit: number;
+  player?: string;
+}) {
+  return ["ssot", "sportsbook", "tickets", "player", { chainId, limit, player }] as const;
+}
+
+export function mergeSportsTicketRows(
+  rows: readonly SportsTicketRow[] | undefined,
+  optimistic: SportsTicketRow
+) {
+  const byId = new Map<string, SportsTicketRow>();
+  for (const row of rows ?? []) byId.set(row.id, row);
+  byId.set(optimistic.id, { ...byId.get(optimistic.id), ...optimistic });
+  return [...byId.values()].sort(compareSportsTicketRows);
+}
+
 export function usePlayerSportsTickets({
   enabled = true,
   limit = 100,
@@ -22,7 +44,7 @@ export function usePlayerSportsTickets({
 
   const query = useQuery({
     enabled: Boolean(enabled && player),
-    queryKey: ["ssot", "sportsbook", "tickets", "player", { chainId, limit, player }],
+    queryKey: playerSportsTicketsQueryKey({ chainId, limit, player }),
     queryFn: async () => {
       if (!player) return [];
       const params = new URLSearchParams({

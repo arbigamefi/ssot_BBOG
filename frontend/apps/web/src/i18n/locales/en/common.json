@@ -909,7 +909,20 @@
           "viewTicket": "Track ticket",
           "pick": "Pick",
           "price": "Accepted price",
-          "potentialPayout": "Potential payout"
+          "potentialPayout": "Potential payout",
+          "stage": {
+            "idle": "Set a stake and choose an outcome.",
+            "ready": "Ready to place this ticket.",
+            "quoting": "Fetching a signed price.",
+            "planning": "Preparing the on-chain ticket.",
+            "signing": "Waiting for wallet signature.",
+            "mining": "Broadcasting the ticket.",
+            "tracking": "Ticket is on-chain. Tracking result proposal, finality, and settlement.",
+            "settled": "Ticket settled. Open the receipt for payout details.",
+            "refunded": "Ticket refunded. Open the receipt for refund details.",
+            "voided": "Ticket voided. Open the receipt for refund details.",
+            "failed": "Ticket placement needs attention. Review the bet slip and retry."
+          }
         },
         "meta": {
           "title": "Market details",

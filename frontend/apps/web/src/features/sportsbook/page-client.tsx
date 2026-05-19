@@ -530,9 +530,24 @@ function BoardSkeleton() {
       {Array.from({ length: 4 }).map((_, idx) => (
         <div
           key={idx}
-          className="h-20 animate-pulse rounded-lg border border-border bg-surface-1"
+          className="grid animate-pulse gap-4 rounded-lg border border-border bg-surface-1 p-4 md:grid-cols-[minmax(0,1fr)_360px] md:items-center md:p-5"
           aria-hidden
-        />
+        >
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="h-5 w-16 rounded-full bg-surface-3" />
+              <span className="h-3 w-20 rounded bg-surface-2" />
+              <span className="ml-auto h-3 w-12 rounded bg-surface-2" />
+            </div>
+            <div className="mt-4 h-5 w-3/4 rounded bg-surface-3" />
+            <div className="mt-2 h-3 w-44 rounded bg-surface-2" />
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <span className="h-12 rounded-md bg-surface-2" />
+            <span className="h-12 rounded-md bg-surface-2" />
+            <span className="h-12 rounded-md bg-surface-2" />
+          </div>
+        </div>
       ))}
     </div>
   );
