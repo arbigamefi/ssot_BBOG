@@ -25,9 +25,7 @@ export function DiceRangeControl({
 
   return (
     <div className="absolute bottom-8 z-20 w-full max-w-3xl px-6">
-      <div className="relative flex flex-col gap-6 overflow-hidden rounded-xl border border-border bg-surface-1/95 p-6 shadow-e3 backdrop-blur-3xl">
-        <div className="absolute inset-0 bg-gradient-to-t from-brand/10 to-transparent pointer-events-none" />
-
+      <div className="relative flex flex-col gap-6 overflow-hidden rounded-xl border border-border bg-surface-1/95 p-6 shadow-e2 backdrop-blur-3xl">
         <div className="flex justify-between items-center relative z-10 px-4">
           <div className="relative flex h-12 w-64 rounded-lg border border-border bg-surface-2 p-1.5 shadow-e1">
             <div
@@ -57,7 +55,7 @@ export function DiceRangeControl({
           </div>
 
           <div className="text-right flex flex-col items-end">
-            <span className="mb-1 block text-[10px] font-black uppercase tracking-widest text-fg-subtle">
+            <span className="mb-1 block text-[10px] font-semibold uppercase tracking-widest text-fg-subtle">
               {t("casino.room.selection.dice.targetRange")}
             </span>
             <div className="flex items-center gap-2 rounded-lg border border-border-soft bg-surface-2 px-4 py-1.5 font-mono">
@@ -103,18 +101,18 @@ export function DiceRangeControl({
             className="absolute z-10 flex h-24 w-24 -ml-12 flex-col items-center justify-center transition-[left] ease-out pointer-events-none"
             style={{ left: `${diceTarget}%` }}
           >
-            <div className="absolute bottom-[80%] mb-4 flex min-w-[130px] scale-100 flex-col items-center rounded-lg border border-brand/35 bg-surface-1/95 px-4 py-3 shadow-e2 backdrop-blur-md transition-transform group-hover:scale-[1.08]">
-              <span className="mb-1 text-[10px] font-black uppercase tracking-widest text-fg-subtle">
+            <div className="absolute bottom-[80%] mb-4 flex min-w-[130px] flex-col items-center rounded-lg border border-brand/35 bg-surface-1/95 px-4 py-3 shadow-e2 backdrop-blur-md">
+              <span className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-fg-subtle">
                 {t("casino.room.selection.dice.target")}
               </span>
-              <span className="font-mono text-4xl font-black text-fg">{diceTarget}</span>
+              <span className="font-mono text-4xl font-semibold text-fg">{diceTarget}</span>
 
               <div className="mt-2 flex w-full justify-between gap-4 border-t border-border-soft px-1 pt-2">
                 <div className="flex flex-col items-center">
                   <span className="text-[8px] font-bold uppercase tracking-widest text-fg-subtle">
                     {t("casino.room.selection.dice.multiplier")}
                   </span>
-                  <span className="font-mono text-[11px] font-black text-brand">
+                  <span className="font-mono text-[11px] font-semibold text-brand">
                     {multiplier.toFixed(2)}x
                   </span>
                 </div>
@@ -122,7 +120,7 @@ export function DiceRangeControl({
                   <span className="text-[8px] font-bold uppercase tracking-widest text-fg-subtle">
                     {t("casino.room.selection.dice.winChance")}
                   </span>
-                  <span className="font-mono text-[11px] font-black text-accent">
+                  <span className="font-mono text-[11px] font-semibold text-accent">
                     {winChance.toFixed(2)}%
                   </span>
                 </div>
@@ -145,7 +143,7 @@ export function DiceRangeControl({
             </div>
           </div>
 
-          <div className="absolute -bottom-6 inset-x-4 flex justify-between px-1 font-mono text-[9px] font-black tracking-widest text-fg-subtle/70">
+          <div className="absolute -bottom-6 inset-x-4 flex justify-between px-1 font-mono text-[9px] font-semibold tracking-widest text-fg-subtle/70">
             {[0, 25, 50, 75, 100].map((val) => (
               <div key={val} className="flex flex-col items-center opacity-70">
                 <div className="mb-1 h-1.5 w-0.5 rounded-full bg-border" />

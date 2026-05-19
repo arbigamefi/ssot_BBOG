@@ -35,7 +35,6 @@ export function SlotsStage({
 
   return (
     <div className="absolute inset-0 z-10 flex flex-col items-center justify-start overflow-hidden px-6 pb-6 pt-16">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,hsl(var(--brand)/0.07)_0%,transparent_62%)]" />
       <div className="relative flex w-full max-w-3xl flex-col items-center gap-6">
         <div className="grid w-full max-w-xl grid-cols-3 gap-3 rounded-xl border border-border bg-surface-1 p-4 shadow-e2">
           {reels.map((symbol, index) => {
@@ -49,7 +48,7 @@ export function SlotsStage({
                   hasResult && "border-accent/50 bg-accent-soft"
                 )}
               >
-                <span className="font-mono text-4xl font-black text-fg">{meta.mark}</span>
+                <span className="font-mono text-4xl font-semibold text-fg">{meta.mark}</span>
                 <span className="mt-3 text-[10px] font-bold uppercase tracking-[0.2em] text-fg-subtle">
                   {symbol == null ? "—" : t(`casino.room.selection.slots.symbols.${symbol}`)}
                 </span>
@@ -67,7 +66,7 @@ export function SlotsStage({
                 hasResult && symbols.includes(index) && "border-brand/40 bg-brand-soft"
               )}
             >
-              <div className="font-mono text-sm font-black text-fg">{symbol.mark}</div>
+              <div className="font-mono text-sm font-semibold text-fg">{symbol.mark}</div>
               <div className="mt-1 text-[8px] font-bold uppercase tracking-widest text-fg-subtle">
                 {t(`casino.room.selection.slots.symbols.${index}`)}
               </div>
@@ -83,7 +82,7 @@ export function SlotsStage({
                 ? t("casino.room.stage.slots.result", { symbols: symbolResult })
                 : t("casino.room.stage.slots.ready")}
           </p>
-          <p className="mt-1 font-mono text-sm font-black uppercase tracking-widest text-fg">
+          <p className="mt-1 font-mono text-sm font-semibold uppercase tracking-widest text-fg">
             {t("casino.room.stage.slots.classic")}
           </p>
         </div>

@@ -146,6 +146,14 @@ export function DiceCubeDisplay({
   showResult: boolean;
   resultNum: number | null;
 }) {
+  const settledRotation =
+    resultNum == null
+      ? null
+      : {
+          x: 40 + resultNum * 47,
+          y: 20 + resultNum * 83
+        };
+
   return (
     <div className="relative z-10 flex flex-col items-center scale-90 md:scale-100">
       <div className="absolute -bottom-8 h-12 w-48 rounded-full bg-brand/25 blur-[40px] pointer-events-none" />
@@ -160,8 +168,8 @@ export function DiceCubeDisplay({
           style={{
             transformStyle: "preserve-3d",
             transform:
-              !isPending && showResult
-                ? `rotateX(${Math.random() * 360}deg) rotateY(${Math.random() * 360}deg)`
+              !isPending && showResult && settledRotation
+                ? `rotateX(${settledRotation.x}deg) rotateY(${settledRotation.y}deg)`
                 : "rotateX(-20deg) rotateY(30deg)"
           }}
         >
@@ -176,7 +184,7 @@ export function DiceCubeDisplay({
 
       {showResult && resultNum !== null && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50 mt-10">
-          <div className="rounded-full border border-brand/40 bg-brand px-6 py-2 font-mono text-3xl font-black text-fg-inverse shadow-glow backdrop-blur-xl animate-in zoom-in spin-in-12 duration-500">
+          <div className="rounded-full border border-brand/40 bg-brand px-6 py-2 font-mono text-3xl font-semibold text-fg-inverse shadow-e2 backdrop-blur-xl animate-in zoom-in spin-in-12 duration-500">
             {resultNum}
           </div>
         </div>
