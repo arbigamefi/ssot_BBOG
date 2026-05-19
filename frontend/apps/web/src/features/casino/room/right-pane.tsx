@@ -116,6 +116,7 @@ export function GameRoomRightPane({
   onKenoResetResult,
   onPlinkoRiskChange,
   onPlinkoRevealComplete,
+  onSlotsRevealComplete,
   onBaccaratSideChange,
   onSicBoChange
 }: {
@@ -155,6 +156,7 @@ export function GameRoomRightPane({
   onKenoResetResult: () => void;
   onPlinkoRiskChange: (risk: PlinkoRisk) => void;
   onPlinkoRevealComplete?: () => void;
+  onSlotsRevealComplete?: () => void;
   onBaccaratSideChange: (side: BaccaratSide) => void;
   onSicBoChange: (kind: SicBoKind, value: number) => void;
 }) {
@@ -242,7 +244,13 @@ export function GameRoomRightPane({
       )}
 
       {gameSlug === "slots" && (
-        <SlotsStage isPending={isPending} showResult={showResult} symbols={slotsSymbols} />
+        <SlotsStage
+          isPending={isPending}
+          isRevealing={Boolean(isRevealing)}
+          showResult={showResult}
+          symbols={slotsSymbols}
+          onRevealComplete={onSlotsRevealComplete}
+        />
       )}
 
       {gameSlug === "baccarat" && (

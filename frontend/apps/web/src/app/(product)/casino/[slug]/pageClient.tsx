@@ -171,7 +171,7 @@ export function GamePageClient({ slug }: { slug: string }) {
   const startStageReveal = React.useCallback(
     (betId: bigint, gameSlug: string) => {
       clearStageRevealTimer();
-      const durationMs = gameSlug === "plinko" ? 6_000 : 0;
+      const durationMs = gameSlug === "plinko" ? 6_000 : gameSlug === "slots" ? 3_400 : 0;
 
       if (durationMs === 0) {
         setStageReveal({ betId, phase: "revealed" });
@@ -444,6 +444,7 @@ export function GamePageClient({ slug }: { slug: string }) {
       onKenoResetResult={() => setKenoResultDrawn([])}
       onPlinkoRiskChange={setPlinkoRisk}
       onPlinkoRevealComplete={handleStageRevealComplete}
+      onSlotsRevealComplete={handleStageRevealComplete}
       onBaccaratSideChange={setBaccaratSide}
       onSicBoChange={handleSicBoChange}
     />

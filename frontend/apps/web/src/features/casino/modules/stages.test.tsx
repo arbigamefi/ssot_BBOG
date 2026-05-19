@@ -230,6 +230,31 @@ describe("game room stages", () => {
     expect(screen.getAllByText("7").length).toBeGreaterThan(0);
   });
 
+  it("runs Slots reveal before completing the stage", () => {
+    const onRevealComplete = vi.fn();
+    vi.useFakeTimers();
+    try {
+      render(
+        <SlotsStage
+          isPending={false}
+          isRevealing
+          showResult
+          symbols={[0, 7, 7]}
+          onRevealComplete={onRevealComplete}
+        />
+      );
+
+      expect(screen.getByText("Waiting for VRF Oracle...")).toBeDefined();
+
+      act(() => {
+        vi.advanceTimersByTime(2_500);
+      });
+      expect(onRevealComplete).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("renders Baccarat stage with opened cards and totals", () => {
     const onSideChange = vi.fn();
     render(

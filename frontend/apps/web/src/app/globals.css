@@ -57,3 +57,27 @@
     transform: translate(-50%, -50%) scale(1);
   }
 }
+
+@keyframes slots-reel-spin {
+  0% {
+    transform: translateY(-0.45rem);
+  }
+  50% {
+    transform: translateY(0.45rem);
+  }
+  100% {
+    transform: translateY(-0.45rem);
+  }
+}
+
+@keyframes slots-reel-stop {
+  0% {
+    transform: translateY(-0.7rem) scale(0.98);
+  }
+  55% {
+    transform: translateY(0.15rem) scale(1.03);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
