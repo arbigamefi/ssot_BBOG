@@ -18,6 +18,8 @@ export function RouletteStage({
   onChange: (spots: string[]) => void;
 }) {
   const t = useTranslations();
+  const selectedCountLabel =
+    spots.length === 0 ? t("casino.room.selection.roulette.empty") : spots.join(" / ");
 
   const toggleSpot = React.useCallback(
     (spot: string) => {
@@ -28,10 +30,30 @@ export function RouletteStage({
 
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-between p-4 pb-6 z-10 overflow-hidden">
+      <div className="pointer-events-auto relative z-30 flex w-full max-w-4xl flex-col gap-3 rounded-xl border border-border bg-surface-1/90 p-3 shadow-e2 backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="font-mono text-2xl font-semibold text-fg">
+            {spots.length}{" "}
+            <span className="text-sm uppercase tracking-[0.2em] text-fg-subtle">
+              {t("casino.room.selection.roulette.bets")}
+            </span>
+          </div>
+          <p className="mt-1 max-w-2xl truncate text-sm text-fg-muted">{selectedCountLabel}</p>
+        </div>
+        <button
+          type="button"
+          disabled={isPending || showResult || spots.length === 0}
+          onClick={() => onChange([])}
+          className="rounded-lg border border-border bg-surface-0 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg disabled:cursor-default disabled:opacity-50"
+        >
+          {t("casino.room.selection.roulette.clearAll")}
+        </button>
+      </div>
+
       <div className="relative z-10 flex-1 w-full flex items-center justify-center min-h-[220px]">
         <div className="absolute top-0 inset-x-0 h-32 bg-[radial-gradient(ellipse_at_top,hsl(var(--brand)/0.06),transparent_70%)] pointer-events-none" />
 
-        <div className="relative flex h-[280px] w-[280px] transform-gpu items-center justify-center rounded-full border-[10px] border-surface-3 bg-surface-1 p-1 shadow-e3 ring-2 ring-brand/40 transition-transform hover:scale-[1.02] md:h-[340px] md:w-[340px] md:border-[16px] md:p-2 lg:h-[380px] lg:w-[380px]">
+        <div className="relative flex h-[280px] w-[280px] transform-gpu items-center justify-center rounded-full border-[10px] border-surface-3 bg-surface-1 p-1 shadow-e3 ring-2 ring-brand/40 md:h-[340px] md:w-[340px] md:border-[16px] md:p-2 lg:h-[380px] lg:w-[380px]">
           <div
             className={cn(
               "relative flex h-full w-full items-center justify-center overflow-hidden rounded-full border border-brand/25 transition-[transform,filter] duration-[3000ms]",
@@ -59,7 +81,7 @@ export function RouletteStage({
                   className="absolute inset-0 flex flex-col items-center justify-start pointer-events-none"
                   style={{ transform: `rotate(${i * (360 / 37)}deg)` }}
                 >
-                  <div className="mt-0.5 flex h-[40px] w-[20px] items-center justify-center font-mono text-[10px] font-black text-fg md:mt-2 md:h-[50px] md:text-[14px] lg:h-[55px] lg:text-[16px]">
+                  <div className="mt-0.5 flex h-[40px] w-[20px] items-center justify-center font-mono text-[10px] font-semibold text-fg md:mt-2 md:h-[50px] md:text-[14px] lg:h-[55px] lg:text-[16px]">
                     {num}
                   </div>
                 </div>
@@ -128,9 +150,9 @@ export function RouletteStage({
             <button
               onClick={() => toggleSpot("0")}
               className={cn(
-                "group relative flex w-10 items-center justify-center overflow-hidden rounded-l-lg border font-mono text-lg font-black transition-[transform,border-color,background-color,color] sm:w-12 md:w-14 md:text-xl",
+                "group relative flex w-10 items-center justify-center overflow-hidden rounded-l-lg border font-mono text-lg font-semibold transition-[border-color,background-color,color] sm:w-12 md:w-14 md:text-xl",
                 spots.includes("0")
-                  ? "z-10 scale-[1.05] border-success bg-success text-fg-inverse shadow-glow"
+                  ? "z-10 border-success bg-success text-fg-inverse shadow-e2"
                   : "border-success/25 bg-success-soft text-success hover:bg-success/20"
               )}
             >
@@ -151,9 +173,9 @@ export function RouletteStage({
                         key={num}
                         onClick={() => toggleSpot(num.toString())}
                         className={cn(
-                          "group relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-sm border font-mono text-xs font-black shadow-e1 transition-[transform,border-color,background-color,color] sm:h-10 sm:w-10 md:h-11 md:w-11 md:text-sm",
+                          "group relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-sm border font-mono text-xs font-semibold shadow-e1 transition-[border-color,background-color,color] sm:h-10 sm:w-10 md:h-11 md:w-11 md:text-sm",
                           isSelected
-                            ? "z-10 scale-110 border-fg bg-fg text-fg-inverse shadow-glow"
+                            ? "z-10 border-fg bg-fg text-fg-inverse shadow-e2"
                             : RED_NUMBER_SET.has(num)
                               ? "border-danger/35 bg-danger-soft text-danger hover:bg-danger/20"
                               : "border-border bg-surface-2 text-fg-muted hover:bg-surface-3 hover:text-fg"
@@ -166,7 +188,7 @@ export function RouletteStage({
                       </button>
                     );
                   })}
-                  <button className="w-10 rounded-r-md border border-border bg-surface-2 text-[9px] font-black uppercase tracking-tighter text-fg-subtle transition-colors hover:bg-surface-3 hover:text-fg sm:w-12 md:w-14 md:text-[10px]">
+                  <button className="w-10 rounded-r-md border border-border bg-surface-2 text-[9px] font-semibold uppercase tracking-tighter text-fg-subtle transition-colors hover:bg-surface-3 hover:text-fg sm:w-12 md:w-14 md:text-[10px]">
                     2:1
                   </button>
                 </div>
@@ -180,9 +202,9 @@ export function RouletteStage({
                 key={dozen}
                 onClick={() => toggleSpot(dozen)}
                 className={cn(
-                  "relative flex-1 overflow-hidden rounded-md border py-1.5 text-[9px] font-black uppercase transition-[transform,border-color,background-color,color] md:py-2 md:text-[11px]",
+                  "relative flex-1 overflow-hidden rounded-md border py-1.5 text-[9px] font-semibold uppercase transition-[border-color,background-color,color] md:py-2 md:text-[11px]",
                   spots.includes(dozen)
-                    ? "z-10 scale-[1.02] border-brand bg-brand text-fg-inverse shadow-glow"
+                    ? "z-10 border-brand bg-brand text-fg-inverse shadow-e2"
                     : "border-border bg-surface-2 text-fg-subtle hover:bg-surface-3 hover:text-fg"
                 )}
               >
@@ -198,9 +220,9 @@ export function RouletteStage({
                 onClick={() => toggleSpot(outsideBet)}
                 aria-label={getRouletteBetLabel(t, outsideBet)}
                 className={cn(
-                  "relative flex flex-1 items-center justify-center overflow-hidden rounded-md border py-1.5 text-[8px] font-black uppercase shadow-inner transition-[transform,border-color,background-color,color] md:py-2 md:text-[10px]",
+                  "relative flex flex-1 items-center justify-center overflow-hidden rounded-md border py-1.5 text-[8px] font-semibold uppercase shadow-inner transition-[border-color,background-color,color] md:py-2 md:text-[10px]",
                   spots.includes(outsideBet)
-                    ? "z-10 scale-[1.02] border-brand bg-brand text-fg-inverse shadow-glow"
+                    ? "z-10 border-brand bg-brand text-fg-inverse shadow-e2"
                     : "border-border bg-surface-2 text-fg-subtle hover:bg-surface-3 hover:text-fg"
                 )}
               >

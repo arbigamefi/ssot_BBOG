@@ -14,6 +14,9 @@ vi.mock("next-intl", () => ({
       "casino.room.selection.roulette.labels.firstDozen": "1st 12",
       "casino.room.selection.roulette.labels.secondDozen": "2nd 12",
       "casino.room.selection.roulette.labels.thirdDozen": "3rd 12",
+      "casino.room.selection.roulette.bets": "Bets",
+      "casino.room.selection.roulette.clearAll": "Clear All",
+      "casino.room.selection.roulette.empty": "No bets placed. Click the felt to bet.",
       "casino.room.selection.roulette.labels.even": "EVEN",
       "casino.room.selection.roulette.labels.red": "RED",
       "casino.room.selection.roulette.labels.black": "BLACK",
@@ -41,5 +44,8 @@ describe("RouletteStage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "EVEN" }));
     expect(onChange).toHaveBeenCalledWith(["RED", "EVEN"]);
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear All" }));
+    expect(onChange).toHaveBeenCalledWith([]);
   });
 });

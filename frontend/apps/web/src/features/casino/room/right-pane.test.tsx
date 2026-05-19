@@ -181,6 +181,7 @@ const baseProps = {
   onRouletteChange: vi.fn(),
   onKenoChange: vi.fn(),
   onKenoResetResult: vi.fn(),
+  onPlinkoRiskChange: vi.fn(),
   onBaccaratSideChange: vi.fn(),
   onSicBoChange: vi.fn()
 };

@@ -48,15 +48,15 @@ export function GameRoomShell({
       </header>
 
       <div className="grid overflow-hidden rounded-xl border border-border bg-surface-1 shadow-e2 lg:min-h-[42rem] lg:grid-cols-[20rem_minmax(0,1fr)]">
-        <aside className="relative z-20 border-b border-border bg-surface-2 p-4 lg:h-full lg:overflow-hidden lg:border-b-0 lg:border-r">
+        <aside className="order-2 relative z-20 border-t border-border bg-surface-2 p-4 lg:order-1 lg:h-full lg:overflow-hidden lg:border-r lg:border-t-0">
           {leftPaneContent}
         </aside>
 
         <div
           className={
             isInteractive
-              ? "relative min-h-[34rem] overflow-hidden bg-surface-0 lg:min-h-0"
-              : "pointer-events-none relative min-h-[34rem] overflow-hidden bg-surface-0 lg:min-h-0"
+              ? "order-1 relative min-h-[34rem] overflow-hidden bg-surface-0 lg:order-2 lg:min-h-0"
+              : "pointer-events-none order-1 relative min-h-[34rem] overflow-hidden bg-surface-0 lg:order-2 lg:min-h-0"
           }
         >
           <div className="pointer-events-none absolute inset-0 bg-[url('/textures/noise.svg')] opacity-10 mix-blend-overlay" />

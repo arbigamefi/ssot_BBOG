@@ -351,10 +351,6 @@ export function GamePageClient({ slug }: { slug: string }) {
       winChance={winChance}
       multiplier={multiplier}
       expectedPayout={expectedPayout}
-      rouletteSpots={rouletteSpots}
-      onRouletteClear={() => setRouletteSpots([])}
-      plinkoRisk={plinkoRisk}
-      onPlinkoRiskChange={setPlinkoRisk}
       roundPhase={casinoRound.roundPhase}
       vrfQuote={casinoRound.vrfQuote}
       vrfQuoteError={casinoRound.vrfQuoteError}
@@ -404,6 +400,7 @@ export function GamePageClient({ slug }: { slug: string }) {
       onRouletteChange={setRouletteSpots}
       onKenoChange={setKenoSpots}
       onKenoResetResult={() => setKenoResultDrawn([])}
+      onPlinkoRiskChange={setPlinkoRisk}
       onBaccaratSideChange={setBaccaratSide}
       onSicBoChange={handleSicBoChange}
     />

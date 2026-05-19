@@ -113,6 +113,7 @@ export function GameRoomRightPane({
   onRouletteChange,
   onKenoChange,
   onKenoResetResult,
+  onPlinkoRiskChange,
   onBaccaratSideChange,
   onSicBoChange
 }: {
@@ -149,6 +150,7 @@ export function GameRoomRightPane({
   onRouletteChange: (spots: string[]) => void;
   onKenoChange: (spots: number[]) => void;
   onKenoResetResult: () => void;
+  onPlinkoRiskChange: (risk: PlinkoRisk) => void;
   onBaccaratSideChange: (side: BaccaratSide) => void;
   onSicBoChange: (kind: SicBoKind, value: number) => void;
 }) {
@@ -228,6 +230,7 @@ export function GameRoomRightPane({
           showResult={showResult}
           risk={plinkoRisk}
           buckets={plinkoBuckets}
+          onRiskChange={onPlinkoRiskChange}
         />
       )}
 

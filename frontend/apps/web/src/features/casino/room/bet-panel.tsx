@@ -8,9 +8,7 @@ import {
   BetPayoutSummary,
   BetRollsSection
 } from "./bet-panel-sections";
-import { PlinkoRiskSelector, RouletteSelectionPanel } from "./controls";
 import type { GameMeta } from "./model";
-import type { PlinkoRisk } from "./params";
 import type { GameRoomBetPanelState } from "./place-bet-button";
 import { PlaceBetButton } from "./place-bet-button";
 import { CasinoRoundStatusPanel } from "./round-status-panel";
@@ -19,30 +17,6 @@ import { getStepperErrorMessage } from "./feedback";
 
 export type { GameRoomBetPanelState } from "./place-bet-button";
 export { isPlaceBetButtonDisabled } from "./place-bet-button";
-
-function GameSelectionControls({
-  game,
-  rouletteSpots,
-  onRouletteClear,
-  plinkoRisk,
-  onPlinkoRiskChange
-}: {
-  game: GameMeta;
-  rouletteSpots: readonly string[];
-  onRouletteClear: () => void;
-  plinkoRisk: PlinkoRisk;
-  onPlinkoRiskChange: (risk: PlinkoRisk) => void;
-}) {
-  if (game.slug === "roulette") {
-    return <RouletteSelectionPanel spots={rouletteSpots} onClear={onRouletteClear} />;
-  }
-
-  if (game.slug === "plinko") {
-    return <PlinkoRiskSelector risk={plinkoRisk} onChange={onPlinkoRiskChange} />;
-  }
-
-  return null;
-}
 
 export function GameRoomBetPanel({
   game,
@@ -64,10 +38,6 @@ export function GameRoomBetPanel({
   winChance,
   multiplier,
   expectedPayout,
-  rouletteSpots,
-  onRouletteClear,
-  plinkoRisk,
-  onPlinkoRiskChange,
   roundPhase,
   vrfQuote,
   vrfQuoteError,
@@ -99,10 +69,6 @@ export function GameRoomBetPanel({
   winChance: number;
   multiplier: number;
   expectedPayout: number;
-  rouletteSpots: readonly string[];
-  onRouletteClear: () => void;
-  plinkoRisk: PlinkoRisk;
-  onPlinkoRiskChange: (risk: PlinkoRisk) => void;
   roundPhase: CasinoRoundPhase;
   vrfQuote?: bigint;
   vrfQuoteError?: string;
@@ -149,14 +115,6 @@ export function GameRoomBetPanel({
             </div>
           </div>
         )}
-
-        <GameSelectionControls
-          game={game}
-          rouletteSpots={rouletteSpots}
-          onRouletteClear={onRouletteClear}
-          plinkoRisk={plinkoRisk}
-          onPlinkoRiskChange={onPlinkoRiskChange}
-        />
 
         <BetAmountSection
           betAmount={betAmount}

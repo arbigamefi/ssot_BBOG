@@ -43,6 +43,7 @@ vi.mock("next-intl", () => ({
       "casino.room.selection.plinko.low": "Low",
       "casino.room.selection.plinko.medium": "Medium",
       "casino.room.selection.plinko.high": "High",
+      "casino.room.selection.plinko.riskProfile": "Risk Profile",
       "casino.room.stage.coin.awaitingSelection": "Awaiting Toss Selection",
       "casino.room.stage.coin.selected": `${values?.side} SELECTED`,
       "casino.room.stage.coin.waitingVrf": "Waiting for VRF Oracle...",
@@ -162,10 +163,32 @@ describe("game room stages", () => {
   });
 
   it("renders Plinko stage risk and highlighted result slot", () => {
-    render(<PlinkoStage isPending={false} showResult risk="high" buckets={[8]} />);
+    const onRiskChange = vi.fn();
+    const { rerender } = render(
+      <PlinkoStage
+        isPending={false}
+        showResult={false}
+        risk="high"
+        buckets={[]}
+        onRiskChange={onRiskChange}
+      />
+    );
+
+    expect(screen.getAllByText("Risk: High").length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("button", { name: "Low" }));
+    expect(onRiskChange).toHaveBeenCalledWith("low");
+
+    rerender(
+      <PlinkoStage
+        isPending={false}
+        showResult
+        risk="high"
+        buckets={[8]}
+        onRiskChange={onRiskChange}
+      />
+    );
 
     expect(screen.getByText("Slot 8")).toBeDefined();
-    expect(screen.getByText("Risk: High")).toBeDefined();
     expect(screen.getAllByText("8").length).toBeGreaterThan(0);
   });
 
