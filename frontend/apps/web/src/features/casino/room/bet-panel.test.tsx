@@ -70,6 +70,9 @@ vi.mock("next-intl", () => ({
       "casino.room.betPanel.walletBalance": "Wallet Balance",
       "casino.room.betPanel.syncing": "Syncing...",
       "casino.room.betPanel.notConnected": "Not connected",
+      "casino.room.betPanel.walletGate.title": "Connect wallet to place a round",
+      "casino.room.betPanel.walletGate.detail":
+        "Pick the room settings now. The bet is signed only after your wallet is connected.",
       "casino.room.betPanel.amount.label": "Bet Amount",
       "casino.room.betPanel.amount.aria": "Bet amount",
       "casino.room.betPanel.amount.min": "Min",
@@ -81,6 +84,10 @@ vi.mock("next-intl", () => ({
       "casino.room.betPanel.advanced.stopGain": "Stop Gain (USDC)",
       "casino.room.betPanel.advanced.stopLoss": "Stop Loss (USDC)",
       "casino.room.betPanel.advanced.offPlaceholder": "0 = off",
+      "casino.room.betPanel.advanced.help":
+        "Optional auto-stop rules for multi-roll rounds. Set 0 to disable a rule.",
+      "casino.room.betPanel.advanced.stopGainHelp": "Stops after total profit reaches this amount.",
+      "casino.room.betPanel.advanced.stopLossHelp": "Stops after total loss reaches this amount.",
       "casino.room.betPanel.advanced.gainStop": "Gain stop at +0 USDC",
       "casino.room.betPanel.advanced.lossStop": "Loss stop at 0 USDC",
       "casino.room.betPanel.summary.multiplier": "Multiplier",
@@ -187,6 +194,12 @@ describe("GameRoomBetPanel", () => {
 
     expect(screen.getByText("Wallet Balance")).toBeDefined();
     expect(screen.getByText("Not connected")).toBeDefined();
+    expect(screen.getByText("Connect wallet to place a round")).toBeDefined();
+    expect(
+      screen.getByText(
+        "Pick the room settings now. The bet is signed only after your wallet is connected."
+      )
+    ).toBeDefined();
     expect(screen.getByText("VRF estimate")).toBeDefined();
     expect(screen.getByText("1.98x")).toBeDefined();
     expect(screen.getByText("50.00%")).toBeDefined();
@@ -243,6 +256,11 @@ describe("GameRoomBetPanel", () => {
     });
 
     expect(screen.queryByRole("spinbutton")).toBeNull();
+    expect(
+      screen.getByText("Optional auto-stop rules for multi-roll rounds. Set 0 to disable a rule.")
+    ).toBeDefined();
+    expect(screen.getByText("Stops after total profit reaches this amount.")).toBeDefined();
+    expect(screen.getByText("Stops after total loss reaches this amount.")).toBeDefined();
 
     fireEvent.change(screen.getByRole("textbox", { name: "Bet amount" }), {
       target: { value: "abc25.5" }

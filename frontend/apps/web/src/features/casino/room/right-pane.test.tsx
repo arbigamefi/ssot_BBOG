@@ -143,6 +143,7 @@ vi.mock("next-intl", () => ({
       "casino.room.stage.sicBo.triple": "Triple",
       "casino.room.stage.sicBo.result": "Result",
       "casino.room.result.actions.close": "Close",
+      "casino.room.result.actions.playAgain": "Play again",
       "casino.room.result.actions.viewSettlement": "View settlement",
       "casino.room.result.actions.settlementPending": "Settlement pending"
     })[key] ?? key
@@ -230,6 +231,7 @@ describe("GameRoomRightPane", () => {
     expect(screen.getByText("19.6 USDC")).toBeDefined();
     expect(screen.getByText("+ 9.6 USDC")).toBeDefined();
     expect(screen.getAllByText("17").length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: "Play again" })).toBeDefined();
   });
 
   it("does not open the result overlay until terminal proof is available", () => {

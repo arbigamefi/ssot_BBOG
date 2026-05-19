@@ -228,6 +228,10 @@
         "walletBalance": "钱包余额",
         "syncing": "同步中...",
         "notConnected": "未连接",
+        "walletGate": {
+          "title": "连接钱包后即可下注",
+          "detail": "你可以先调整房间参数。连接钱包后，只在真正下注时签名。"
+        },
         "amount": {
           "label": "下注金额",
           "aria": "下注金额",
@@ -244,6 +248,9 @@
           "stopGain": "止盈 (USDC)",
           "stopLoss": "止损 (USDC)",
           "offPlaceholder": "0 = 关闭",
+          "help": "多回合下注的可选自动停止规则。填 0 表示不启用。",
+          "stopGainHelp": "总盈利达到该金额后停止。",
+          "stopLossHelp": "总亏损达到该金额后停止。",
           "gainStop": "盈利达到 +{amount} USDC 时停止",
           "lossStop": "亏损达到 {amount} USDC 时停止"
         },
@@ -485,6 +492,7 @@
         },
         "actions": {
           "close": "关闭",
+          "playAgain": "再玩一次",
           "viewSettlement": "查看结算",
           "settlementPending": "结算确认中"
         }

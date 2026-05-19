@@ -228,6 +228,10 @@
         "walletBalance": "Wallet Balance",
         "syncing": "Syncing...",
         "notConnected": "Not connected",
+        "walletGate": {
+          "title": "Connect wallet to place a round",
+          "detail": "Pick the room settings now. The bet is signed only after your wallet is connected."
+        },
         "amount": {
           "label": "Bet Amount",
           "aria": "Bet amount",
@@ -244,6 +248,9 @@
           "stopGain": "Stop Gain (USDC)",
           "stopLoss": "Stop Loss (USDC)",
           "offPlaceholder": "0 = off",
+          "help": "Optional auto-stop rules for multi-roll rounds. Set 0 to disable a rule.",
+          "stopGainHelp": "Stops after total profit reaches this amount.",
+          "stopLossHelp": "Stops after total loss reaches this amount.",
           "gainStop": "Gain stop at +{amount} USDC",
           "lossStop": "Loss stop at {amount} USDC"
         },
@@ -485,6 +492,7 @@
         },
         "actions": {
           "close": "Close",
+          "playAgain": "Play again",
           "viewSettlement": "View settlement",
           "settlementPending": "Settlement pending"
         }

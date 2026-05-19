@@ -193,7 +193,7 @@ export function GameRoomBetPanel({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="min-h-0 flex-1 lg:overflow-y-auto lg:pr-1">
+      <div className="min-h-0 flex-1 pb-4 lg:overflow-y-auto lg:pr-1">
         <div className="mb-3 flex items-center justify-between">
           <span className="flex items-center gap-2 text-sm font-bold text-fg-muted">
             <WalletIcon className="h-4 w-4" /> {t("casino.room.betPanel.walletBalance")}
@@ -202,6 +202,22 @@ export function GameRoomBetPanel({
             {balanceLabel}
           </span>
         </div>
+
+        {!hasAccount && (
+          <div className="mb-3 rounded-xl border border-brand/30 bg-brand-soft p-4">
+            <div className="flex items-start gap-3">
+              <WalletIcon className="mt-0.5 h-5 w-5 flex-shrink-0 text-brand" />
+              <div>
+                <p className="text-sm font-semibold text-fg">
+                  {t("casino.room.betPanel.walletGate.title")}
+                </p>
+                <p className="mt-1 text-sm leading-5 text-fg-muted">
+                  {t("casino.room.betPanel.walletGate.detail")}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <GameSelectionControls
           game={game}

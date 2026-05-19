@@ -181,6 +181,15 @@ export function BetAdvancedSection({
   onStopLossChange: (amount: number) => void;
 }) {
   const t = useTranslations();
+  const advancedContentRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!advancedOpen) return;
+    const frame = window.requestAnimationFrame(() => {
+      advancedContentRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [advancedOpen]);
 
   return (
     <div className="mb-3">
@@ -195,7 +204,10 @@ export function BetAdvancedSection({
         />
       </button>
       {advancedOpen && (
-        <div className="mt-3 grid grid-cols-2 gap-3">
+        <div ref={advancedContentRef} className="mt-3 grid grid-cols-2 gap-3">
+          <p className="col-span-2 text-xs leading-5 text-fg-muted">
+            {t("casino.room.betPanel.advanced.help")}
+          </p>
           <div className="flex flex-col gap-1">
             <label className="text-[9px] font-bold uppercase tracking-widest text-fg-subtle">
               {t("casino.room.betPanel.advanced.stopGain")}
@@ -213,6 +225,9 @@ export function BetAdvancedSection({
               placeholder={t("casino.room.betPanel.advanced.offPlaceholder")}
               className="rounded-lg border border-border bg-surface-1 px-3 py-2 font-mono text-sm text-fg placeholder:text-fg-subtle focus:border-success/40 focus:outline-none"
             />
+            <p className="text-[10px] leading-4 text-fg-subtle">
+              {t("casino.room.betPanel.advanced.stopGainHelp")}
+            </p>
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-[9px] font-bold uppercase tracking-widest text-fg-subtle">
@@ -231,6 +246,9 @@ export function BetAdvancedSection({
               placeholder={t("casino.room.betPanel.advanced.offPlaceholder")}
               className="rounded-lg border border-border bg-surface-1 px-3 py-2 font-mono text-sm text-fg placeholder:text-fg-subtle focus:border-danger/40 focus:outline-none"
             />
+            <p className="text-[10px] leading-4 text-fg-subtle">
+              {t("casino.room.betPanel.advanced.stopLossHelp")}
+            </p>
           </div>
           {(stopGain > 0 || stopLoss > 0) && (
             <div className="col-span-2 font-mono text-[9px] text-fg-subtle">

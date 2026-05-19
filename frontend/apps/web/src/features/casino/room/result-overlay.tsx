@@ -699,16 +699,16 @@ export function GameRoomResultOverlay({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-border bg-surface-2 px-5 py-3 text-sm font-black text-fg transition-colors hover:border-brand/40 hover:bg-surface-3"
+              className="rounded-lg border border-border bg-surface-2 px-5 py-3 text-sm font-semibold text-fg transition-colors hover:border-brand/40 hover:bg-surface-3"
             >
-              {t("casino.room.result.actions.close")}
+              {t("casino.room.result.actions.playAgain")}
             </button>
             {txHref ? (
               <a
                 href={txHref}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center justify-center gap-2 rounded-lg border border-brand/40 bg-brand px-5 py-3 text-sm font-black text-fg-inverse shadow-glow transition-colors hover:bg-brand-hover"
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-brand/40 bg-brand px-5 py-3 text-sm font-semibold text-fg-inverse shadow-e1 transition-colors hover:bg-brand-hover"
               >
                 {t("casino.room.result.actions.viewSettlement")}
                 <ArrowTopRightOnSquareIcon className="h-4 w-4" />
@@ -717,7 +717,7 @@ export function GameRoomResultOverlay({
               <button
                 type="button"
                 disabled
-                className="rounded-lg border border-border bg-surface-2 px-5 py-3 text-sm font-black text-fg-subtle"
+                className="rounded-lg border border-border bg-surface-2 px-5 py-3 text-sm font-semibold text-fg-subtle"
               >
                 {t("casino.room.result.actions.settlementPending")}
               </button>
