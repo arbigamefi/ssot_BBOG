@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
+import type { SportsTicketRow } from "@ssot/bet-index";
 import type { DomainSportsMarket, DomainSportsResult } from "@ssot/ssot";
 
 import { PageTransition } from "../../components/PageTransition";
@@ -17,8 +18,9 @@ import { MarketStateBadge } from "./MarketStateBadge";
 import { OutcomesBoard } from "./OutcomesBoard";
 import { ResultPanel } from "./ResultPanel";
 import { describeMarketWallClock, marketShortTag } from "./player-format";
-import { providerOutcomeById } from "./provider-odds";
+import { providerOutcomeById, type SportsbookProviderOdds } from "./provider-odds";
 import { useBetSlip } from "./useBetSlip";
+import { usePlayerSportsTickets } from "./usePlayerSportsTickets";
 import { useSportsbookProviderOdds } from "./use-provider-odds";
 
 const READ_TIMEOUT_MS = 8_000;
@@ -112,9 +114,20 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
     enabled: Boolean(readback?.market)
   });
   const providerOdds = providerOddsQuery.data;
+  const playerTickets = usePlayerSportsTickets({
+    enabled: Boolean(sdk?.account && parsedMarketId !== undefined),
+    errorMessage: t("myTickets.error"),
+    limit: 50,
+    player: sdk?.account
+  });
   const poolAsset = readback
     ? getPoolAsset(release, readback.market.poolId)
     : { symbol: "UNIT", decimals: 18 };
+  const playerMarketTickets = React.useMemo(() => {
+    const currentMarketId = readback?.market.marketId.toString();
+    if (!currentMarketId) return [];
+    return playerTickets.data.filter((row) => row.marketId === currentMarketId).slice(0, 8);
+  }, [playerTickets.data, readback?.market.marketId]);
 
   // useBetSlip needs a stable market input; pass a fallback skeleton when
   // readback hasn't resolved yet so the hook can keep its identity. The
@@ -155,7 +168,10 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
           ? t("slip.marketMustBeOpen")
           : undefined,
     decimals: poolAsset.decimals,
-    onPlaced: () => void refetch()
+    onPlaced: () => {
+      void refetch();
+      playerTickets.refetch();
+    }
   });
 
   // ---- Early returns -----------------------------------------------------
@@ -255,6 +271,19 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
               </div>
             ) : null}
 
+            <PlayerMarketTicketsPanel
+              connected={Boolean(sdk?.account)}
+              decimals={poolAsset.decimals}
+              error={playerTickets.error}
+              isFetching={playerTickets.isFetching}
+              isLoading={playerTickets.isLoading}
+              odds={providerOdds}
+              outcomeCount={readback.market.outcomeCount}
+              result={readback.result}
+              rows={playerMarketTickets}
+              symbol={poolAsset.symbol}
+            />
+
             <MarketMeta
               market={readback.market}
               reserved={readback.reserved}
@@ -284,6 +313,188 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
       </div>
     </PageTransition>
   );
+}
+
+function PlayerMarketTicketsPanel({
+  connected,
+  decimals,
+  error,
+  isFetching,
+  isLoading,
+  odds,
+  outcomeCount,
+  result,
+  rows,
+  symbol
+}: {
+  connected: boolean;
+  decimals: number;
+  error: unknown;
+  isFetching: boolean;
+  isLoading: boolean;
+  odds?: SportsbookProviderOdds;
+  outcomeCount: number;
+  result?: DomainSportsResult;
+  rows: SportsTicketRow[];
+  symbol: string;
+}) {
+  const t = useTranslations("sportsbook.player.detail.myTickets");
+
+  return (
+    <section className="rounded-lg border border-border bg-surface-1 p-4 md:p-5">
+      <header className="mb-3 flex items-baseline justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-fg-subtle">
+            {t("title")}
+          </h2>
+          <p className="mt-1 text-xs leading-5 text-fg-muted">{t("description")}</p>
+        </div>
+        {isFetching ? (
+          <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-brand">
+            {t("refreshing")}
+          </span>
+        ) : null}
+      </header>
+
+      {!connected ? (
+        <EmptyTicketsMessage>{t("connect")}</EmptyTicketsMessage>
+      ) : error ? (
+        <EmptyTicketsMessage tone="danger">{t("error")}</EmptyTicketsMessage>
+      ) : isLoading ? (
+        <EmptyTicketsMessage>{t("loading")}</EmptyTicketsMessage>
+      ) : rows.length === 0 ? (
+        <EmptyTicketsMessage>{t("empty")}</EmptyTicketsMessage>
+      ) : (
+        <div className="overflow-hidden rounded-md border border-border-soft">
+          <div className="hidden grid-cols-[88px_minmax(0,1fr)_120px_120px_96px] gap-3 border-b border-border-soft bg-surface-2/70 px-3 py-2 text-[11px] font-medium uppercase tracking-[0.12em] text-fg-subtle md:grid">
+            <span>{t("columns.ticket")}</span>
+            <span>{t("columns.pick")}</span>
+            <span>{t("columns.stake")}</span>
+            <span>{t("columns.payout")}</span>
+            <span>{t("columns.status")}</span>
+          </div>
+          <div className="divide-y divide-border-soft">
+            {rows.map((row) => {
+              const status = describeTicketRowStatus(row, result, t);
+              return (
+                <Link
+                  key={row.id}
+                  href={`/portfolio/tickets/${row.ticketId}`}
+                  className="grid gap-2 bg-surface-1 px-3 py-3 transition-colors hover:bg-surface-2 md:grid-cols-[88px_minmax(0,1fr)_120px_120px_96px] md:items-center md:gap-3"
+                >
+                  <span className="font-mono text-sm font-semibold text-fg">
+                    {t("ticketNumber", { ticketId: row.ticketId })}
+                  </span>
+                  <span className="min-w-0 text-sm text-fg">
+                    {describeTicketOutcome(row, odds, outcomeCount, t)}
+                  </span>
+                  <span className="font-mono text-sm tabular-nums text-fg-muted">
+                    {formatTokenAmount(row.stake, decimals, symbol)}
+                  </span>
+                  <span className="font-mono text-sm tabular-nums text-fg-muted">
+                    {formatTicketPayout(row, decimals, symbol, t)}
+                  </span>
+                  <span
+                    className={`w-fit rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] ${status.className}`}
+                  >
+                    {status.label}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function EmptyTicketsMessage({
+  children,
+  tone = "neutral"
+}: {
+  children: React.ReactNode;
+  tone?: "neutral" | "danger";
+}) {
+  const className =
+    tone === "danger"
+      ? "border-danger/25 bg-danger-soft text-danger"
+      : "border-border-soft bg-surface-2/60 text-fg-muted";
+  return <p className={`rounded-md border px-3 py-3 text-sm leading-6 ${className}`}>{children}</p>;
+}
+
+function describeTicketOutcome(
+  row: SportsTicketRow,
+  odds: SportsbookProviderOdds | undefined,
+  outcomeCount: number,
+  t: ReturnType<typeof useTranslations>
+) {
+  if (row.outcomeId === undefined) return t("unknownOutcome");
+  const provider = providerOutcomeById(odds, row.outcomeId);
+  if (provider) return provider.name;
+  if (outcomeCount === 2) return row.outcomeId === 0 ? t("binaryYes") : t("binaryNo");
+  if (outcomeCount === 3) {
+    if (row.outcomeId === 0) return t("home");
+    if (row.outcomeId === 1) return t("draw");
+    if (row.outcomeId === 2) return t("away");
+  }
+  return t("outcomeFallback", { outcomeId: row.outcomeId + 1 });
+}
+
+function describeTicketRowStatus(
+  row: SportsTicketRow,
+  result: DomainSportsResult | undefined,
+  t: ReturnType<typeof useTranslations>
+) {
+  const success = "bg-success-soft text-success ring-1 ring-inset ring-success/25";
+  const danger = "bg-danger-soft text-danger ring-1 ring-inset ring-danger/25";
+  const warn = "bg-warn-soft text-warn ring-1 ring-inset ring-warn/25";
+  const neutral = "bg-surface-3 text-fg-subtle ring-1 ring-inset ring-border";
+
+  if (row.state === "held") return { label: t("status.open"), className: neutral };
+  if (row.state === "refunded" || row.state === "voided") {
+    return { label: t("status.refunded"), className: warn };
+  }
+  if (row.state === "settled") {
+    const won =
+      result?.proposedAt && row.outcomeId !== undefined
+        ? Number(result.winningOutcomeId) === row.outcomeId
+        : BigInt(row.payout ?? "0") > 0n;
+    return won
+      ? { label: t("status.won"), className: success }
+      : { label: t("status.lost"), className: danger };
+  }
+  return { label: t("status.open"), className: neutral };
+}
+
+function formatTicketPayout(
+  row: SportsTicketRow,
+  decimals: number,
+  symbol: string,
+  t: ReturnType<typeof useTranslations>
+) {
+  if (row.state === "held") {
+    return row.payout ? formatTokenAmount(row.payout, decimals, symbol) : t("pending");
+  }
+  if (row.state === "settled") return formatTokenAmount(row.payout, decimals, symbol);
+  if (row.state === "refunded" || row.state === "voided") {
+    return formatTokenAmount(row.refundAmount ?? row.payout, decimals, symbol);
+  }
+  return t("pending");
+}
+
+function formatTokenAmount(value: string | undefined, decimals: number, symbol: string) {
+  if (!value) return `— ${symbol}`;
+  try {
+    const raw = BigInt(value);
+    const scale = 10n ** BigInt(decimals);
+    const whole = raw / scale;
+    const fraction = raw % scale;
+    const fractionText = fraction.toString().padStart(decimals, "0").replace(/0+$/, "").slice(0, 6);
+    return `${whole.toLocaleString("en-US")}${fractionText ? `.${fractionText}` : ""} ${symbol}`;
+  } catch {
+    return `${value} ${symbol}`;
+  }
 }
 
 function MarketMeta({

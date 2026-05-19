@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import * as React from "react";
+import type { SportsTicketRow } from "@ssot/bet-index";
 
 const zeroAddress = `0x${"0".repeat(40)}`;
 
@@ -109,6 +110,19 @@ let providerOddsMock:
     }
   | undefined;
 let searchParamsMock = new URLSearchParams();
+let playerTicketsMock: {
+  data: SportsTicketRow[];
+  isLoading: boolean;
+  isFetching: boolean;
+  error: Error | null;
+  refetch: ReturnType<typeof vi.fn>;
+} = {
+  data: [],
+  error: null,
+  isFetching: false,
+  isLoading: false,
+  refetch: vi.fn()
+};
 
 vi.mock("../../../../ssot/release/ReleaseProvider", () => ({
   useRelease: () => ({
@@ -148,6 +162,10 @@ vi.mock("@ssot/ui", () => ({
 // gracefully renders fallback labels when odds aren't available.
 vi.mock("../../../../features/sportsbook/use-provider-odds", () => ({
   useSportsbookProviderOdds: () => ({ data: providerOddsMock, isLoading: false, error: null })
+}));
+
+vi.mock("../../../../features/sportsbook/usePlayerSportsTickets", () => ({
+  usePlayerSportsTickets: () => playerTicketsMock
 }));
 
 vi.mock("next-intl", async () => {
@@ -206,6 +224,13 @@ function resetState() {
   state.readOnlyReason = null;
   state.sdk = { sportsHub: createSportsHubMock() };
   providerOddsMock = undefined;
+  playerTicketsMock = {
+    data: [],
+    error: null,
+    isFetching: false,
+    isLoading: false,
+    refetch: vi.fn()
+  };
   searchParamsMock = new URLSearchParams();
 }
 
@@ -262,6 +287,73 @@ describe("SportsbookMarketDetailPageClient (player-facing)", () => {
       .find((b) => b.textContent === "Place bet") as HTMLButtonElement;
     expect(placeButton).toBeDefined();
     expect(placeButton.disabled).toBe(true);
+  });
+
+  it("shows connected player tickets for the current market", async () => {
+    state.sportsbook = {
+      ...state.sportsbook,
+      enabled: true,
+      frontendEnabled: true,
+      disabledReason: undefined
+    };
+    state.sdk = {
+      sportsHub: createSportsHubMock(),
+      account: "0x1111111111111111111111111111111111111111"
+    };
+    providerOddsMock = {
+      schemaVersion: "sportsbook.provider-odds.v1",
+      provider: {
+        name: "the-odds-api",
+        sportKey: "soccer_fifa_world_cup",
+        providerEventId: "event-7",
+        bookmakerKey: "betmgm",
+        bookmakerTitle: "BetMGM",
+        marketLastUpdate: "2026-05-19T00:00:00.000Z"
+      },
+      event: {
+        homeTeam: "Mexico",
+        awayTeam: "South Africa",
+        commenceTime: "2026-06-11T19:00:00.000Z"
+      },
+      outcomes: [
+        { outcomeId: 0, side: "home", name: "Mexico", decimalPrice: "1.65" },
+        { outcomeId: 1, side: "draw", name: "Draw", decimalPrice: "3.80" },
+        { outcomeId: 2, side: "away", name: "South Africa", decimalPrice: "5.50" }
+      ]
+    };
+    playerTicketsMock = {
+      data: [
+        {
+          chainId: 84532,
+          id: "84532:sports:12",
+          lastEventName: "TicketPlaced",
+          lastTxHash: "0xabc123",
+          marketId: "7",
+          outcomeId: 2,
+          payout: "55000000",
+          player: "0x1111111111111111111111111111111111111111",
+          stake: "10000000",
+          state: "held",
+          ticketId: "12",
+          updatedAt: Date.now(),
+          updatedBlock: 41562000
+        }
+      ],
+      error: null,
+      isFetching: false,
+      isLoading: false,
+      refetch: vi.fn()
+    };
+
+    renderWithQueryClient(<SportsbookMarketDetailPageClient marketId="7" />);
+
+    expect(await screen.findByText("Your tickets")).toBeDefined();
+    expect(screen.getByText("S#12")).toBeDefined();
+    expect(screen.getAllByText("South Africa").length).toBeGreaterThan(0);
+    expect(screen.getByText("10 USDC")).toBeDefined();
+    expect(screen.getByText("55 USDC")).toBeDefined();
+    const ticketLink = screen.getByRole("link", { name: /S#12/i });
+    expect(ticketLink.getAttribute("href")).toBe("/portfolio/tickets/12");
   });
 
   it("preview mode keeps the slip visible but disabled with a helpful reason", async () => {

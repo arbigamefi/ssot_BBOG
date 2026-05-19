@@ -833,6 +833,37 @@
           "marketMustBeOpen": "市场当前不接受下注。",
           "outcomeFallback": "结果 {outcomeId}"
         },
+        "myTickets": {
+          "title": "你的票据",
+          "description": "不离开当前市场即可跟踪你已经下注的票据。",
+          "refreshing": "刷新中",
+          "connect": "连接钱包后查看你在本市场的票据。",
+          "loading": "正在加载你的票据…",
+          "empty": "你还没有在本市场下注。",
+          "error": "当前无法加载你的体育投注票据。",
+          "pending": "等待中",
+          "ticketNumber": "S#{ticketId}",
+          "unknownOutcome": "结果待定",
+          "binaryYes": "是",
+          "binaryNo": "否",
+          "home": "主胜",
+          "draw": "平局",
+          "away": "客胜",
+          "outcomeFallback": "结果 {outcomeId}",
+          "columns": {
+            "ticket": "票据",
+            "pick": "选择",
+            "stake": "本金",
+            "payout": "赔付",
+            "status": "状态"
+          },
+          "status": {
+            "open": "待结算",
+            "won": "已中奖",
+            "lost": "未中奖",
+            "refunded": "已退款"
+          }
+        },
         "meta": {
           "title": "市场信息",
           "outcomes": "结果数",
@@ -864,7 +895,7 @@
           "fetchingOdds": "正在获取签名赔率…",
           "planning": "正在构建票据方案…",
           "signing": "请在钱包中确认…",
-          "mining": "等待链上确认…",
+          "mining": "正在链上提交票据…",
           "placed": "票据已下注。",
           "error": "票据下注失败。"
         },

@@ -833,6 +833,37 @@
           "marketMustBeOpen": "Market is not accepting tickets right now.",
           "outcomeFallback": "Outcome {outcomeId}"
         },
+        "myTickets": {
+          "title": "Your tickets",
+          "description": "Track tickets you placed on this market without leaving the page.",
+          "refreshing": "Refreshing",
+          "connect": "Connect wallet to see your tickets for this market.",
+          "loading": "Loading your tickets…",
+          "empty": "No tickets on this market yet.",
+          "error": "Could not load your sports tickets right now.",
+          "pending": "Pending",
+          "ticketNumber": "S#{ticketId}",
+          "unknownOutcome": "Outcome pending",
+          "binaryYes": "Yes",
+          "binaryNo": "No",
+          "home": "Home",
+          "draw": "Draw",
+          "away": "Away",
+          "outcomeFallback": "Outcome {outcomeId}",
+          "columns": {
+            "ticket": "Ticket",
+            "pick": "Pick",
+            "stake": "Stake",
+            "payout": "Payout",
+            "status": "Status"
+          },
+          "status": {
+            "open": "Open",
+            "won": "Won",
+            "lost": "Lost",
+            "refunded": "Refunded"
+          }
+        },
         "meta": {
           "title": "Market details",
           "outcomes": "Outcomes",
@@ -864,7 +895,7 @@
           "fetchingOdds": "Fetching signed odds…",
           "planning": "Building the ticket plan…",
           "signing": "Confirm in your wallet…",
-          "mining": "Waiting for on-chain settlement…",
+          "mining": "Submitting ticket on chain…",
           "placed": "Ticket placed.",
           "error": "Ticket placement failed."
         },
