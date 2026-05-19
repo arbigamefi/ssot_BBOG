@@ -166,6 +166,7 @@ async function keeperEnv() {
   env.KEEPER_SCAN_CHUNK_BLOCKS ??= "10";
   env.KEEPER_HEALTH_PATH ??= path.join(FRONTEND_ROOT, ".runtime/casino-keeper-health.json");
   env.KEEPER_HEALTH_PATH = resolveRepoPath(env.KEEPER_HEALTH_PATH);
+  env.KEEPER_SPORTS_TERMINALIZER_ENABLED ??= env.NEXT_PUBLIC_SPORTSBOOK_ENABLED ?? "false";
   await applyLocalBetIndexDefaults(env);
   await applyDevStartBlock(env);
 

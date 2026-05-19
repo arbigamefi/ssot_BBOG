@@ -81,6 +81,21 @@ pnpm -C frontend/apps/keeper test
 The keeper always re-reads `getBet(betId)` before broadcasting and only calls
 `finalize` when the bet state is `RandomReady`.
 
+Sportsbook automatic terminalization is opt-in:
+
+```bash
+KEEPER_SPORTS_TERMINALIZER_ENABLED=true \
+KEEPER_SPORTS_TERMINALIZER_MAX_TICKETS_PER_MARKET=200 \
+pnpm -C frontend keeper:start
+```
+
+When enabled and the active release exposes `SportsHub`, the keeper listens for
+`ResultProposed`, `ResultFinalized`, `MarketVoided`, and challenge resolution
+events. It waits until result finality, calls `SportsHub.finalizeResult`, then
+settles held tickets for resolved markets or refunds held tickets for voided
+markets. Every write is simulated first; player-side ticket actions remain a
+fallback path.
+
 Durable bet-feed indexing can be enabled with:
 
 ```bash

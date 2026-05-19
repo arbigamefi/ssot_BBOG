@@ -18,7 +18,10 @@ const baseConfig: KeeperConfig = {
   scanChunkBlocks: 10n,
   startBlock: 100n,
   betIndexSsl: false,
-  betIndexWriteEnabled: false
+  betIndexWriteEnabled: false,
+  sportsTerminalizerEnabled: false,
+  sportsTerminalizerMaxTicketsPerMarket: 200,
+  sportsTicketScanStartBlock: 100n
 };
 
 const keeper = "0x3333333333333333333333333333333333333333";

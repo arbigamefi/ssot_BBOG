@@ -22,6 +22,8 @@ docs/ops/runbooks/casino-keeper-production.md
 - Use different keeper EOAs and different RPC providers.
 - Keep `KEEPER_HEALTH_PATH` outside `apps/web/public`.
 - Prefer managed Postgres for `BET_INDEX_DATABASE_URL`; Docker Postgres is local/staging only.
+- Enable `KEEPER_SPORTS_TERMINALIZER_ENABLED=true` only after the active release
+  exposes `SportsHub` and sportsbook result canaries have passed.
 - Build the keeper before starting the unit:
 
 ```bash

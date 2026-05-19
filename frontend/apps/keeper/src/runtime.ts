@@ -25,14 +25,30 @@ import { createFileHealthSink, KeeperHealthReporter } from "./health.js";
 import { FinalizeQueue, type QueueItem } from "./queue.js";
 import { splitBlockRange } from "./scan.js";
 import { mapBetState } from "./state.js";
+import {
+  mapSportsMarketState,
+  mapSportsTicketState,
+  terminalizeSportsMarket
+} from "./sports-terminalizer.js";
 import type { BetRead, KeeperConfig, KeeperEvent, KeeperLogger } from "./types.js";
 
 type GameHubEventName = BetIndexEvent["eventName"];
+type SportsTerminalizerEventName =
+  | "MarketVoided"
+  | "ResultChallengeResolved"
+  | "ResultFinalized"
+  | "ResultProposed";
 const SPORTS_TICKET_EVENTS: SportsHubEventName[] = [
   "TicketPlaced",
   "TicketSettled",
   "TicketRefunded",
   "TicketVoided"
+];
+const SPORTS_TERMINALIZER_EVENTS: SportsTerminalizerEventName[] = [
+  "ResultProposed",
+  "ResultFinalized",
+  "MarketVoided",
+  "ResultChallengeResolved"
 ];
 const BET_INDEX_CURSOR_SOURCE = "gamehub-events";
 
@@ -91,6 +107,10 @@ export function createKeeperRuntime({
     sink: config.healthPath ? createFileHealthSink(config.healthPath) : undefined
   });
   const timers: Array<ReturnType<typeof setInterval>> = [];
+  const sportsMarketTimers = new Map<
+    string,
+    { dueAt: number; timer: ReturnType<typeof setTimeout> }
+  >();
   const unwatchers: Array<() => void> = [];
   let stopped = false;
   let scanning = false;
@@ -161,6 +181,111 @@ export function createKeeperRuntime({
     return { status: receipt.status };
   };
 
+  const waitSportsReceipt = async (txHash: Hex) => {
+    const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+    return { status: receipt.status };
+  };
+
+  const readSportsMarket = async (marketId: bigint) => {
+    if (!config.sportsHub) throw new Error("sportsHub is not configured");
+    const market = (await publicClient.readContract({
+      address: config.sportsHub,
+      abi: SPORTS_HUB_KEEPER_ABI,
+      functionName: "getMarket",
+      args: [marketId]
+    })) as unknown as { marketId: bigint; state: number };
+    return {
+      marketId: BigInt(market.marketId),
+      state: mapSportsMarketState(Number(market.state))
+    };
+  };
+
+  const readSportsResult = async (marketId: bigint) => {
+    if (!config.sportsHub) throw new Error("sportsHub is not configured");
+    const result = (await publicClient.readContract({
+      address: config.sportsHub,
+      abi: SPORTS_HUB_KEEPER_ABI,
+      functionName: "getResult",
+      args: [marketId]
+    })) as unknown as { challenged: boolean; finalizesAt: number | bigint; marketId: bigint };
+    return {
+      challenged: Boolean(result.challenged),
+      finalizesAt: Number(result.finalizesAt),
+      marketId: BigInt(result.marketId)
+    };
+  };
+
+  const readSportsTicket = async (ticketId: bigint) => {
+    if (!config.sportsHub) throw new Error("sportsHub is not configured");
+    const ticket = (await publicClient.readContract({
+      address: config.sportsHub,
+      abi: SPORTS_HUB_KEEPER_ABI,
+      functionName: "getTicket",
+      args: [ticketId]
+    })) as unknown as { state: number; ticketId: bigint };
+    return {
+      state: mapSportsTicketState(Number(ticket.state)),
+      ticketId: BigInt(ticket.ticketId)
+    };
+  };
+
+  const findSportsTicketIds = async (marketId: bigint) => {
+    if (!config.sportsHub) return [];
+    const latest = await publicClient.getBlockNumber();
+    if (latest < config.sportsTicketScanStartBlock) return [];
+    const ticketIds = new Set<bigint>();
+    for (const range of splitBlockRange({
+      fromBlock: config.sportsTicketScanStartBlock,
+      toBlock: latest,
+      chunkSize: config.scanChunkBlocks
+    })) {
+      const logs = await publicClient.getContractEvents({
+        address: config.sportsHub,
+        abi: SPORTS_HUB_KEEPER_ABI,
+        eventName: "TicketPlaced",
+        args: { marketId },
+        fromBlock: range.fromBlock,
+        toBlock: range.toBlock
+      });
+      for (const log of logs) {
+        if (log.args.ticketId != null) ticketIds.add(BigInt(log.args.ticketId));
+        if (ticketIds.size >= config.sportsTerminalizerMaxTicketsPerMarket) {
+          return [...ticketIds];
+        }
+      }
+    }
+    return [...ticketIds];
+  };
+
+  const simulateSportsWrite = async (
+    functionName: "finalizeResult" | "refundTicket" | "settleTicket",
+    id: bigint
+  ) => {
+    if (!config.sportsHub) throw new Error("sportsHub is not configured");
+    await publicClient.simulateContract({
+      account: account.address,
+      address: config.sportsHub,
+      abi: SPORTS_HUB_KEEPER_ABI,
+      functionName,
+      args: [id]
+    });
+  };
+
+  const writeSportsContract = async (
+    functionName: "finalizeResult" | "refundTicket" | "settleTicket",
+    id: bigint
+  ) => {
+    if (!config.sportsHub) throw new Error("sportsHub is not configured");
+    return walletClient.writeContract({
+      account,
+      address: config.sportsHub,
+      abi: SPORTS_HUB_KEEPER_ABI,
+      functionName,
+      args: [id],
+      chain
+    });
+  };
+
   const processItem = async (item: QueueItem) => {
     try {
       const outcome = await finalizeIfReady(item, {
@@ -208,6 +333,84 @@ export function createKeeperRuntime({
       void processItem(item);
     }
   };
+
+  const processSportsMarket = async (
+    marketId: bigint,
+    source: SportsTerminalizerEventName,
+    attempts = 0
+  ) => {
+    if (!config.sportsTerminalizerEnabled || !config.sportsHub || stopped) return;
+    const outcome = await terminalizeSportsMarket(marketId, {
+      findTicketIds: findSportsTicketIds,
+      logger,
+      readMarket: readSportsMarket,
+      readResult: readSportsResult,
+      readTicket: readSportsTicket,
+      simulateFinalizeResult: (id) => simulateSportsWrite("finalizeResult", id),
+      simulateRefundTicket: (id) => simulateSportsWrite("refundTicket", id),
+      simulateSettleTicket: (id) => simulateSportsWrite("settleTicket", id),
+      waitReceipt: waitSportsReceipt,
+      writeFinalizeResult: (id) => writeSportsContract("finalizeResult", id),
+      writeRefundTicket: (id) => writeSportsContract("refundTicket", id),
+      writeSettleTicket: (id) => writeSportsContract("settleTicket", id)
+    });
+
+    if (
+      outcome.kind === "skipped" &&
+      outcome.reason === "finality-pending" &&
+      outcome.finalizesAt
+    ) {
+      scheduleSportsMarket(marketId, source, outcome.finalizesAt, attempts);
+      return;
+    }
+
+    if (outcome.kind === "failed" && outcome.retryable && attempts < 8) {
+      logger.warn("sports.terminalizer.retry_scheduled", {
+        attempts: attempts + 1,
+        marketId: marketId.toString(),
+        reason: outcome.reason
+      });
+      scheduleSportsMarket(marketId, source, undefined, attempts + 1);
+      return;
+    }
+
+    logger.info("sports.terminalizer.outcome", {
+      marketId: marketId.toString(),
+      outcome,
+      source
+    });
+  };
+
+  function scheduleSportsMarket(
+    marketId: bigint,
+    source: SportsTerminalizerEventName,
+    finalizesAt?: number,
+    attempts = 0
+  ) {
+    if (!config.sportsTerminalizerEnabled || !config.sportsHub || stopped) return;
+    const key = marketId.toString();
+    if (sportsMarketTimers.has(key)) return;
+    const nowMs = Date.now();
+    const finalityDelayMs = finalizesAt == null ? 0 : Math.max(0, finalizesAt * 1000 - nowMs);
+    const roleDelayMs = config.role === "backup" ? config.backupDelayMs : 0;
+    const retryDelay = attempts > 0 ? retryDelayMs(attempts - 1) : 0;
+    const delayMs = Math.max(finalityDelayMs, retryDelay) + roleDelayMs;
+    const dueAt = nowMs + delayMs;
+    const existing = sportsMarketTimers.get(key);
+    if (existing && existing.dueAt <= dueAt) return;
+    if (existing) clearTimeout(existing.timer);
+    const timer = setTimeout(() => {
+      sportsMarketTimers.delete(key);
+      void processSportsMarket(marketId, source, attempts);
+    }, delayMs);
+    sportsMarketTimers.set(key, { dueAt, timer });
+    logger.info("sports.terminalizer.scheduled", {
+      attempts,
+      delayMs,
+      marketId: key,
+      source
+    });
+  }
 
   const enqueueBetRandomReadyLog = (log: {
     args?: { betId?: bigint; requestId?: bigint; randomHash?: Hex };
@@ -275,6 +478,23 @@ export function createKeeperRuntime({
     }
   };
 
+  const scheduleSportsTerminalizerLogs = (
+    eventName: SportsTerminalizerEventName,
+    logs: Array<{
+      args?: { finalizesAt?: bigint | number; marketId?: bigint | number };
+    }>
+  ) => {
+    if (!config.sportsTerminalizerEnabled || !config.sportsHub || logs.length === 0) return;
+    for (const log of logs) {
+      if (log.args?.marketId == null) continue;
+      scheduleSportsMarket(
+        BigInt(log.args.marketId),
+        eventName,
+        log.args.finalizesAt == null ? undefined : Number(log.args.finalizesAt)
+      );
+    }
+  };
+
   const initializeBetIndex = async () => {
     if (!betIndexStore) return;
     try {
@@ -339,6 +559,12 @@ export function createKeeperRuntime({
         toBlock: range.toBlock
       });
       await writeBetIndexRange(betIndexStore, publicClient, config, range, logger);
+      await scanSportsTerminalizerRange(
+        publicClient,
+        config,
+        range,
+        scheduleSportsTerminalizerLogs
+      );
       for (const log of logs) {
         if (log.args.betId == null) continue;
         enqueue({
@@ -381,6 +607,9 @@ export function createKeeperRuntime({
       startBlock: lastScannedBlock.toString(),
       scanChunkBlocks: config.scanChunkBlocks.toString()
     });
+    if (config.sportsTerminalizerEnabled && !config.sportsHub) {
+      logger.warn("sports.terminalizer.disabled_missing_sports_hub");
+    }
     writeHealth(health.recordStarted(lastScannedBlock, queue.size));
     await initializeBetIndex();
 
@@ -432,6 +661,23 @@ export function createKeeperRuntime({
           }
         }
       }
+      if (config.sportsTerminalizerEnabled && config.sportsHub) {
+        for (const eventName of SPORTS_TERMINALIZER_EVENTS) {
+          unwatchers.push(
+            wsClient.watchContractEvent({
+              address: config.sportsHub,
+              abi: SPORTS_HUB_KEEPER_ABI,
+              eventName,
+              onLogs: (logs) => scheduleSportsTerminalizerLogs(eventName, logs),
+              onError: (error) =>
+                logger.error("sports.terminalizer.watch_error", {
+                  eventName,
+                  message: error.message
+                })
+            })
+          );
+        }
+      }
       unwatchers.push(
         wsClient.watchContractEvent({
           address: config.vrfHub,
@@ -454,6 +700,8 @@ export function createKeeperRuntime({
   const stop = async () => {
     stopped = true;
     timers.forEach(clearInterval);
+    sportsMarketTimers.forEach(({ timer }) => clearTimeout(timer));
+    sportsMarketTimers.clear();
     unwatchers.forEach((unwatch) => unwatch());
     await betIndexStore?.close?.();
     await health.recordStopped(queue.size);
@@ -517,6 +765,28 @@ async function writeBetIndexRange(
       message: (error as Error)?.message ?? "index scan failed",
       toBlock: range.toBlock.toString()
     });
+  }
+}
+
+async function scanSportsTerminalizerRange(
+  publicClient: PublicClient,
+  config: KeeperConfig,
+  range: { fromBlock: bigint; toBlock: bigint },
+  scheduleLogs: (
+    eventName: SportsTerminalizerEventName,
+    logs: Array<{ args?: { finalizesAt?: bigint | number; marketId?: bigint | number } }>
+  ) => void
+) {
+  if (!config.sportsTerminalizerEnabled || !config.sportsHub) return;
+  for (const eventName of SPORTS_TERMINALIZER_EVENTS) {
+    const logs = await publicClient.getContractEvents({
+      address: config.sportsHub,
+      abi: SPORTS_HUB_KEEPER_ABI,
+      eventName,
+      fromBlock: range.fromBlock,
+      toBlock: range.toBlock
+    });
+    scheduleLogs(eventName, logs);
   }
 }
 

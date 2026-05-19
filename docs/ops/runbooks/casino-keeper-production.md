@@ -4,11 +4,12 @@
 | Status | Accepted |
 | Last Updated | 2026-05-18 |
 | Depends-on | `../../frontend/casino-keeper-v1.md`, `../../design/durable-bet-index.md` |
-| Scope | Casino `RandomReady -> GameHub.finalize -> Settled/Refunded` automation |
+| Scope | Casino `RandomReady -> GameHub.finalize -> Settled/Refunded` automation; optional sportsbook result and ticket terminalization |
 
 This runbook installs and operates the casino keeper as two independent
 instances: primary and backup. The keeper is an operational convenience, not a
-settlement authority. `GameHub.finalize(betId)` remains permissionless.
+settlement authority. `GameHub.finalize(betId)`, `SportsHub.finalizeResult`,
+`SportsHub.settleTicket`, and `SportsHub.refundTicket` remain permissionless.
 
 ## 1. Preconditions
 
@@ -20,6 +21,8 @@ settlement authority. `GameHub.finalize(betId)` remains permissionless.
 - Primary and backup use different EOAs, RPC providers, and hosts or regions.
 - Managed Postgres is provisioned for the durable bet index, or
   `BET_INDEX_WRITE_ENABLED=false` is explicitly accepted for a canary.
+- Sportsbook terminalization is enabled only after the active release exposes
+  `SportsHub` and sportsbook result canaries have passed.
 - The web app reads keeper health from a path outside `apps/web/public` through
   `/ops/casino-keeper-health.json`.
 
@@ -68,6 +71,9 @@ Edit the real files and set:
 | `KEEPER_ROLE` | `primary` or `backup`. |
 | `KEEPER_BACKUP_DELAY_SECONDS` | `0` for primary, `5` for backup. |
 | `KEEPER_HEALTH_PATH` | Role-specific file under `/var/lib/arbigamefi/casino-keeper`. |
+| `KEEPER_SPORTS_TERMINALIZER_ENABLED` | `true` only when the keeper should auto-finalize sportsbook results and settle/refund held tickets. |
+| `KEEPER_SPORTS_TERMINALIZER_MAX_TICKETS_PER_MARKET` | Safety cap for tickets processed per market scan. Start at `200` unless the approved launch memo says otherwise. |
+| `KEEPER_SPORTS_TICKET_SCAN_START_BLOCK` | Optional lower bound for `TicketPlaced` scans. Leave empty to use the active release block, or set to the sportsbook canary start block after backfill. |
 | `BET_INDEX_DATABASE_URL` | Managed Postgres connection string. |
 | `BET_INDEX_SSL` | `true` for managed Postgres unless the provider documents otherwise. |
 
@@ -123,6 +129,8 @@ The route should show:
 
 ## 6. Canary
 
+### 6.1 Casino
+
 Before mainnet or after keeper deploy:
 
 1. Open `/casino/dice`.
@@ -140,11 +148,33 @@ sudo journalctl -u arbigamefi-casino-keeper@primary --since "10 minutes ago" \
 6. Record bet id, place tx, VRF request, finalize tx, and health snapshot age in
    `docs/deploy/` when the canary is part of a release rehearsal.
 
+### 6.2 Sportsbook
+
+Before enabling `KEEPER_SPORTS_TERMINALIZER_ENABLED=true` in production:
+
+1. Create or reuse a sportsbook canary market with at least one held ticket.
+2. Propose a result and wait until `finalizesAt`.
+3. Confirm the primary logs a sportsbook terminalizer schedule and terminal
+   outcome:
+
+```bash
+sudo journalctl -u arbigamefi-casino-keeper@primary --since "30 minutes ago" \
+  | rg "sports.terminalizer.scheduled|sports.terminalizer.outcome"
+```
+
+4. Confirm `SportsHub.getMarket(marketId)` reaches `Resolved` or `Voided`.
+5. Confirm every held canary ticket reaches `Settled` or `Refunded` without the
+   player-side fallback button.
+6. Record market id, ticket ids, result tx, finalize tx, terminal ticket txs,
+   and health snapshot age in `docs/deploy/`.
+
 ## 7. Failure Handling
 
 | Symptom | First check | Action |
 | --- | --- | --- |
 | `RandomReady` bets stay unfinalized | `journalctl` for enqueue/finalize errors | Restart primary once; if still failing, start or promote backup and manually finalize stuck ids. |
+| Sportsbook result stays finality-ready | `journalctl` for `sports.terminalizer.*`, `getResult(marketId)`, and `getMarket(marketId)` | Restart primary once; if still failing, promote backup or manually call `finalizeResult`. |
+| Sportsbook held tickets stay terminalizable | ticket state, market state, and `sports.terminalizer.outcome` counts | Manually call `settleTicket` for resolved markets or `refundTicket` for voided markets; then inspect keeper ticket scan start block and cap. |
 | Health route stale | `KEEPER_HEALTH_PATH`, file permissions, unit status | Fix path/ownership; do not treat missing health as healthy. |
 | RPC errors | provider dashboard and keeper logs | Switch primary RPC endpoint; backup should already use a different provider. |
 | Postgres unavailable | keeper logs `bet_index_*_failed` | Settlement should continue. Disable `BET_INDEX_WRITE_ENABLED` only if connection churn threatens process stability. |
@@ -154,6 +184,9 @@ Manual fallback remains permissionless:
 
 ```bash
 cast send $GAME_HUB "finalize(uint256)" $BET_ID --rpc-url $RPC --private-key $KEEPER_PK
+cast send $SPORTS_HUB "finalizeResult(uint64)" $MARKET_ID --rpc-url $RPC --private-key $KEEPER_PK
+cast send $SPORTS_HUB "settleTicket(uint256)" $TICKET_ID --rpc-url $RPC --private-key $KEEPER_PK
+cast send $SPORTS_HUB "refundTicket(uint256)" $TICKET_ID --rpc-url $RPC --private-key $KEEPER_PK
 ```
 
 ## 8. Rollback
@@ -176,8 +209,11 @@ above.
 - [ ] Primary and backup use different EOAs and RPC providers.
 - [ ] Durable bet index migration succeeds when `BET_INDEX_WRITE_ENABLED=true`.
 - [ ] A minimal canary bet reaches terminal state without player manual settle.
+- [ ] If sportsbook terminalization is enabled, a canary market finalizes and
+      all held canary tickets settle/refund without player manual action.
 - [ ] `/ops/casino-keeper-health.json` reports a fresh primary snapshot.
 - [ ] Stuck `RandomReady` alert owner and escalation channel are documented.
+- [ ] Sportsbook finality-ready and terminalizable-ticket alert owners are documented.
 
 ## 10. Don'ts
 
@@ -187,3 +223,5 @@ above.
 - Do not restart from the release block on every production restart after the
   durable cursor has been seeded.
 - Do not hide manual fallback; it is the emergency path when both keepers fail.
+- Do not enable sportsbook terminalization against a release without `SportsHub`
+  or before the sportsbook canary has passed.

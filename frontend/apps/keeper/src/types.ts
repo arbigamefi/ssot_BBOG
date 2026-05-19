@@ -33,6 +33,9 @@ export type KeeperConfig = {
   betIndexDatabaseUrl?: string;
   betIndexSsl: boolean;
   betIndexWriteEnabled: boolean;
+  sportsTerminalizerEnabled: boolean;
+  sportsTerminalizerMaxTicketsPerMarket: number;
+  sportsTicketScanStartBlock: bigint;
 };
 
 export type BetRead = {

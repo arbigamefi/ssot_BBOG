@@ -124,6 +124,16 @@ export const VRF_HUB_KEEPER_ABI = [
 export const SPORTS_HUB_KEEPER_ABI = [
   {
     type: "event",
+    name: "MarketVoided",
+    inputs: [
+      { indexed: true, name: "marketId", type: "uint64" },
+      { indexed: true, name: "eventId", type: "uint64" },
+      { indexed: false, name: "reasonHash", type: "bytes32" },
+      { indexed: false, name: "operator", type: "address" }
+    ]
+  },
+  {
+    type: "event",
     name: "TicketPlaced",
     inputs: [
       { indexed: true, name: "ticketId", type: "uint256" },
@@ -138,6 +148,46 @@ export const SPORTS_HUB_KEEPER_ABI = [
       { indexed: false, name: "reserved", type: "uint256" },
       { indexed: false, name: "oddsSnapshotHash", type: "bytes32" },
       { indexed: false, name: "rulebookHash", type: "bytes32" }
+    ]
+  },
+  {
+    type: "event",
+    name: "ResultProposed",
+    inputs: [
+      { indexed: true, name: "marketId", type: "uint64" },
+      { indexed: true, name: "eventId", type: "uint64" },
+      { indexed: false, name: "winningOutcomeId", type: "uint32" },
+      { indexed: false, name: "resultPayloadHash", type: "bytes32" },
+      { indexed: false, name: "resultSourceHash", type: "bytes32" },
+      { indexed: false, name: "evidenceHash", type: "bytes32" },
+      { indexed: false, name: "rulebookHash", type: "bytes32" },
+      { indexed: false, name: "reporterSetHash", type: "bytes32" },
+      { indexed: false, name: "reporterThreshold", type: "uint8" },
+      { indexed: false, name: "reporterCount", type: "uint8" },
+      { indexed: false, name: "proposer", type: "address" },
+      { indexed: false, name: "observedAt", type: "uint64" },
+      { indexed: false, name: "finalizesAt", type: "uint64" }
+    ]
+  },
+  {
+    type: "event",
+    name: "ResultChallengeResolved",
+    inputs: [
+      { indexed: true, name: "marketId", type: "uint64" },
+      { indexed: true, name: "resultPayloadHash", type: "bytes32" },
+      { indexed: false, name: "decision", type: "uint8" },
+      { indexed: false, name: "decisionHash", type: "bytes32" },
+      { indexed: false, name: "arbitrator", type: "address" }
+    ]
+  },
+  {
+    type: "event",
+    name: "ResultFinalized",
+    inputs: [
+      { indexed: true, name: "marketId", type: "uint64" },
+      { indexed: true, name: "eventId", type: "uint64" },
+      { indexed: false, name: "winningOutcomeId", type: "uint32" },
+      { indexed: false, name: "resultPayloadHash", type: "bytes32" }
     ]
   },
   {
@@ -165,6 +215,118 @@ export const SPORTS_HUB_KEEPER_ABI = [
       { indexed: true, name: "ticketId", type: "uint256" },
       { indexed: true, name: "positionId", type: "uint256" },
       { indexed: false, name: "refundAmount", type: "uint256" }
+    ]
+  },
+  {
+    type: "function",
+    name: "finalizeResult",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "marketId", type: "uint64" }],
+    outputs: []
+  },
+  {
+    type: "function",
+    name: "settleTicket",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "ticketId", type: "uint256" }],
+    outputs: []
+  },
+  {
+    type: "function",
+    name: "refundTicket",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "ticketId", type: "uint256" }],
+    outputs: []
+  },
+  {
+    type: "function",
+    name: "getMarket",
+    stateMutability: "view",
+    inputs: [{ name: "marketId", type: "uint64" }],
+    outputs: [
+      {
+        name: "",
+        type: "tuple",
+        components: [
+          { name: "marketId", type: "uint64" },
+          { name: "eventId", type: "uint64" },
+          { name: "poolId", type: "uint64" },
+          { name: "outcomeCount", type: "uint32" },
+          { name: "startsAt", type: "uint64" },
+          { name: "lockTime", type: "uint64" },
+          { name: "resultFinalitySeconds", type: "uint64" },
+          { name: "version", type: "uint64" },
+          { name: "marketKey", type: "bytes32" },
+          { name: "rulebookHash", type: "bytes32" },
+          { name: "state", type: "uint8" }
+        ]
+      }
+    ]
+  },
+  {
+    type: "function",
+    name: "getTicket",
+    stateMutability: "view",
+    inputs: [{ name: "ticketId", type: "uint256" }],
+    outputs: [
+      {
+        name: "",
+        type: "tuple",
+        components: [
+          { name: "ticketId", type: "uint256" },
+          { name: "positionId", type: "uint256" },
+          { name: "marketId", type: "uint64" },
+          { name: "eventId", type: "uint64" },
+          { name: "poolId", type: "uint64" },
+          { name: "outcomeId", type: "uint32" },
+          { name: "player", type: "address" },
+          { name: "stake", type: "uint256" },
+          { name: "payout", type: "uint256" },
+          { name: "reserved", type: "uint256" },
+          { name: "oddsSnapshotHash", type: "bytes32" },
+          { name: "rulebookHash", type: "bytes32" },
+          { name: "acceptedAt", type: "uint64" },
+          { name: "state", type: "uint8" }
+        ]
+      }
+    ]
+  },
+  {
+    type: "function",
+    name: "getResult",
+    stateMutability: "view",
+    inputs: [{ name: "marketId", type: "uint64" }],
+    outputs: [
+      {
+        name: "",
+        type: "tuple",
+        components: [
+          { name: "marketId", type: "uint64" },
+          { name: "eventId", type: "uint64" },
+          { name: "poolId", type: "uint64" },
+          { name: "winningOutcomeId", type: "uint32" },
+          { name: "marketVersion", type: "uint64" },
+          { name: "resultPayloadHash", type: "bytes32" },
+          { name: "resultSourceHash", type: "bytes32" },
+          { name: "evidenceHash", type: "bytes32" },
+          { name: "rulebookHash", type: "bytes32" },
+          { name: "reporterSetHash", type: "bytes32" },
+          { name: "reporterThreshold", type: "uint8" },
+          { name: "reporterCount", type: "uint8" },
+          { name: "proposer", type: "address" },
+          { name: "observedAt", type: "uint64" },
+          { name: "proposedAt", type: "uint64" },
+          { name: "finalizesAt", type: "uint64" },
+          { name: "challenged", type: "bool" },
+          { name: "challengeReasonHash", type: "bytes32" },
+          { name: "challenger", type: "address" },
+          { name: "challengedAt", type: "uint64" },
+          { name: "challengeDecision", type: "uint8" },
+          { name: "arbitrationDecisionHash", type: "bytes32" },
+          { name: "arbitrator", type: "address" },
+          { name: "arbitratedAt", type: "uint64" }
+        ]
+      }
     ]
   }
 ] as const;

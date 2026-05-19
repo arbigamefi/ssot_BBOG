@@ -50,6 +50,15 @@ function parseBlockCount(value: string | undefined, fallback: bigint) {
   return parsed;
 }
 
+function parsePositiveInteger(value: string | undefined, fallback: number, name: string) {
+  if (!value) return fallback;
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+    throw new Error(`${name} must be a positive integer`);
+  }
+  return parsed;
+}
+
 export function loadRelease(path: string): ReleaseLike {
   const raw = JSON.parse(readFileSync(path, "utf8")) as ReleaseLike;
   if (!raw.chainId || !raw.contracts?.gameHub || !raw.contracts?.vrfHub) {
@@ -83,6 +92,15 @@ export function loadKeeperConfig(env: NodeJS.ProcessEnv = process.env): KeeperCo
     healthPath: env.KEEPER_HEALTH_PATH?.trim() || undefined,
     betIndexDatabaseUrl: env.BET_INDEX_DATABASE_URL?.trim() || undefined,
     betIndexSsl: parseBool(env.BET_INDEX_SSL),
-    betIndexWriteEnabled: parseBool(env.BET_INDEX_WRITE_ENABLED)
+    betIndexWriteEnabled: parseBool(env.BET_INDEX_WRITE_ENABLED),
+    sportsTerminalizerEnabled: parseBool(env.KEEPER_SPORTS_TERMINALIZER_ENABLED),
+    sportsTerminalizerMaxTicketsPerMarket: parsePositiveInteger(
+      env.KEEPER_SPORTS_TERMINALIZER_MAX_TICKETS_PER_MARKET,
+      200,
+      "KEEPER_SPORTS_TERMINALIZER_MAX_TICKETS_PER_MARKET"
+    ),
+    sportsTicketScanStartBlock:
+      parseOptionalBlock(env.KEEPER_SPORTS_TICKET_SCAN_START_BLOCK) ??
+      BigInt(release.meta?.blockNumber ?? 0)
   };
 }
