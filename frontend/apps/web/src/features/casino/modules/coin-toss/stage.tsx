@@ -7,22 +7,34 @@ import type { CoinSide } from "../../room/params";
 
 export function CoinTossStage({
   isPending,
+  isRevealing,
   showResult,
   resultNum,
   coinSide,
-  onSideChange
+  onSideChange,
+  onRevealComplete
 }: {
   isPending: boolean;
+  isRevealing?: boolean;
   showResult: boolean;
   resultNum: number | null;
   coinSide: CoinSide;
   onSideChange: (side: CoinSide) => void;
+  onRevealComplete?: () => void;
 }) {
   const t = useTranslations();
+  const spinning = isPending || Boolean(isRevealing);
+  const resultVisible = showResult && !isRevealing;
   const selectedSideLabel =
     coinSide === "HEADS"
       ? t("casino.room.selection.coin.heads")
       : t("casino.room.selection.coin.tails");
+
+  React.useEffect(() => {
+    if (!isRevealing || resultNum == null) return;
+    const timeout = window.setTimeout(() => onRevealComplete?.(), 1_250);
+    return () => window.clearTimeout(timeout);
+  }, [isRevealing, onRevealComplete, resultNum]);
 
   return (
     <div className="absolute inset-0 z-10 flex flex-col items-center justify-center overflow-hidden px-5 py-8">
@@ -31,7 +43,7 @@ export function CoinTossStage({
           side="HEADS"
           label={t("casino.room.selection.coin.heads")}
           active={coinSide === "HEADS"}
-          disabled={isPending || showResult}
+          disabled={spinning || showResult}
           icon={<SparklesIcon className="h-8 w-8" />}
           onClick={() => onSideChange("HEADS")}
         />
@@ -56,14 +68,14 @@ export function CoinTossStage({
           <div
             className={cn(
               "relative h-full w-full transition-[transform] ease-out",
-              isPending ? "animate-[spin-coin-fast_0.5s_linear_infinite]" : "duration-700"
+              spinning ? "animate-[spin-coin-fast_0.5s_linear_infinite]" : "duration-700"
             )}
             style={{
               transformStyle: "preserve-3d",
               transform:
-                !isPending && showResult
+                !spinning && resultVisible
                   ? `rotateX(15deg) rotateY(${resultNum === 1 ? 0 : 180}deg)`
-                  : isPending
+                  : spinning
                     ? "none"
                     : `rotateX(15deg) rotateY(${coinSide === "TAILS" ? 180 : 0}deg)`
             }}
@@ -113,13 +125,13 @@ export function CoinTossStage({
           side="TAILS"
           label={t("casino.room.selection.coin.tails")}
           active={coinSide === "TAILS"}
-          disabled={isPending || showResult}
+          disabled={spinning || showResult}
           icon={<ShieldCheckIcon className="h-8 w-8" />}
           onClick={() => onSideChange("TAILS")}
         />
       </div>
 
-      {!isPending && !showResult && (
+      {!spinning && !showResult && (
         <div className="relative z-20 mt-8 flex flex-col items-center animate-in slide-in-from-bottom-4 fade-in duration-500">
           <span className="mb-4 text-[10px] uppercase tracking-[0.4em] text-fg-subtle">
             {t("casino.room.stage.coin.awaitingSelection")}
@@ -138,7 +150,7 @@ export function CoinTossStage({
         </div>
       )}
 
-      {isPending && (
+      {spinning && (
         <div className="relative z-20 mt-8 flex flex-col items-center animate-pulse">
           <span className="text-sm font-semibold uppercase tracking-[0.3em] text-fg">
             {t("casino.room.stage.coin.waitingVrf")}

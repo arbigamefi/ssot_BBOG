@@ -165,6 +165,33 @@ describe("game room stages", () => {
     expect(screen.getByText("Waiting for VRF Oracle...")).toBeDefined();
   });
 
+  it("runs Coin Toss reveal before completing the stage", () => {
+    const onRevealComplete = vi.fn();
+    vi.useFakeTimers();
+    try {
+      render(
+        <CoinTossStage
+          isPending={false}
+          isRevealing
+          showResult
+          resultNum={1}
+          coinSide="HEADS"
+          onSideChange={vi.fn()}
+          onRevealComplete={onRevealComplete}
+        />
+      );
+
+      expect(screen.getByText("Waiting for VRF Oracle...")).toBeDefined();
+
+      act(() => {
+        vi.advanceTimersByTime(1_300);
+      });
+      expect(onRevealComplete).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("renders Keno stage and toggles spots", () => {
     const onChange = vi.fn();
     const onResetResult = vi.fn();

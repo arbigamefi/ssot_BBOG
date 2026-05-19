@@ -109,6 +109,7 @@ export function GameRoomRightPane({
   assetDecimals,
   onResultClose,
   onDiceRevealComplete,
+  onCoinRevealComplete,
   onDiceDirectionChange,
   onDiceTargetChange,
   onCoinSideChange,
@@ -153,6 +154,7 @@ export function GameRoomRightPane({
   assetDecimals?: number;
   onResultClose?: () => void;
   onDiceRevealComplete?: () => void;
+  onCoinRevealComplete?: () => void;
   onDiceDirectionChange: (direction: DiceDirection) => void;
   onDiceTargetChange: (target: number) => void;
   onCoinSideChange: (side: CoinSide) => void;
@@ -211,10 +213,12 @@ export function GameRoomRightPane({
       {gameSlug === "coin-toss" && (
         <CoinTossStage
           isPending={isPending}
+          isRevealing={Boolean(isRevealing)}
           showResult={showResult}
           resultNum={resultNum}
           coinSide={coinSide}
           onSideChange={onCoinSideChange}
+          onRevealComplete={onCoinRevealComplete}
         />
       )}
 
