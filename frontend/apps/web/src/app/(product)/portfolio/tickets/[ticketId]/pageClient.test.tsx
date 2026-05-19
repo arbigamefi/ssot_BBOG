@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import * as React from "react";
 
 const zeroAddress = `0x${"0".repeat(40)}`;
@@ -61,7 +61,9 @@ function createSportsHubMock() {
       arbitrationDecisionHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
       arbitrator: zeroAddress,
       arbitratedAt: 0
-    })
+    }),
+    settleTicket: vi.fn().mockResolvedValue({ ok: true, txHash: "0xsettled" }),
+    refundTicket: vi.fn().mockResolvedValue({ ok: true, txHash: "0xrefunded" })
   };
 }
 
@@ -83,12 +85,14 @@ const state = {
     ]
   },
   chainId: 84532,
-  sdk: { sportsHub: createSportsHubMock() }
+  sdk: { account: undefined as string | undefined, sportsHub: createSportsHubMock() },
+  readOnly: false
 };
 
 vi.mock("../../../../../ssot/release/ReleaseProvider", () => ({
   useRelease: () => ({
     chainId: state.chainId,
+    readOnly: state.readOnly,
     release: state.release
   })
 }));
@@ -96,6 +100,44 @@ vi.mock("../../../../../ssot/release/ReleaseProvider", () => ({
 vi.mock("../../../../../ssot/sdk", () => ({
   useSSOTSDK: () => ({ sdk: state.sdk, ready: Boolean(state.sdk) })
 }));
+
+vi.mock("../../../../../features/tx/useDirectTxAction", () => ({
+  useDirectTxAction: () => ({
+    status: "idle",
+    steps: [],
+    hasActivity: false,
+    error: undefined,
+    txHash: undefined,
+    journalEntry: undefined,
+    busy: false,
+    reset: vi.fn(),
+    execute: vi.fn(async (run: () => Promise<unknown>) => run())
+  })
+}));
+
+vi.mock("@ssot/ui", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@ssot/ui")>();
+  return {
+    ...actual,
+    ErrorCallout: ({ title, message }: { title?: string; message: string }) => (
+      <div>
+        <strong>{title}</strong>
+        <span>{message}</span>
+      </div>
+    ),
+    TxStatusChip: ({ status }: { status: string }) => <span>{status}</span>,
+    TxStepper: ({ title, subtitle }: { title: string; subtitle?: string }) => (
+      <div>
+        <span>{title}</span>
+        <span>{subtitle}</span>
+      </div>
+    ),
+    toast: {
+      success: vi.fn(),
+      error: vi.fn()
+    }
+  };
+});
 
 vi.mock("../../../../../components/PageTransition", () => ({
   PageTransition: ({ children }: { children: React.ReactNode }) => <div>{children}</div>
@@ -184,7 +226,8 @@ describe("SportsTicketDetailPageClient", () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
-    state.sdk = { sportsHub: createSportsHubMock() };
+    state.sdk = { account: undefined, sportsHub: createSportsHubMock() };
+    state.readOnly = false;
   });
 
   it("renders a SportsHub ticket as a player-readable receipt", async () => {
@@ -202,6 +245,64 @@ describe("SportsTicketDetailPageClient", () => {
     expect(screen.getByText("0xabc123")).toBeDefined();
     expect(state.sdk.sportsHub.getTicket).toHaveBeenCalledWith(12n);
     expect(state.sdk.sportsHub.getMarket).toHaveBeenCalledWith(7n);
+  });
+
+  it("offers player settlement only when a held ticket belongs to a resolved market", async () => {
+    state.sdk = {
+      account: "0x1111111111111111111111111111111111111111",
+      sportsHub: createSportsHubMock()
+    };
+    state.sdk.sportsHub.getMarket.mockResolvedValue({
+      marketId: 7n,
+      eventId: 97n,
+      poolId: 2,
+      outcomeCount: 3,
+      startsAt: 1_800_010_000,
+      lockTime: 1_800_009_000,
+      resultFinalitySeconds: 604_800,
+      version: 1n,
+      marketKey: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      rulebookHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      state: "resolved"
+    });
+
+    renderWithQueryClient(<SportsTicketDetailPageClient ticketId="12" />);
+
+    expect(await screen.findByText("Ready to settle")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Settle ticket" }));
+
+    await waitFor(() => {
+      expect(state.sdk.sportsHub.settleTicket).toHaveBeenCalledWith(12n);
+    });
+  });
+
+  it("offers stake refund when a held ticket belongs to a voided market", async () => {
+    state.sdk = {
+      account: "0x1111111111111111111111111111111111111111",
+      sportsHub: createSportsHubMock()
+    };
+    state.sdk.sportsHub.getMarket.mockResolvedValue({
+      marketId: 7n,
+      eventId: 97n,
+      poolId: 2,
+      outcomeCount: 3,
+      startsAt: 1_800_010_000,
+      lockTime: 1_800_009_000,
+      resultFinalitySeconds: 604_800,
+      version: 1n,
+      marketKey: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      rulebookHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      state: "voided"
+    });
+
+    renderWithQueryClient(<SportsTicketDetailPageClient ticketId="12" />);
+
+    expect(await screen.findByText("Refund available")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Refund stake" }));
+
+    await waitFor(() => {
+      expect(state.sdk.sportsHub.refundTicket).toHaveBeenCalledWith(12n);
+    });
   });
 
   it("rejects malformed ticket ids without a SportsHub read", () => {

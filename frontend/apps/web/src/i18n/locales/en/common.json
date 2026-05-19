@@ -935,9 +935,77 @@
           "rulebookHash": "Rulebook",
           "placeTx": "Placement tx"
         },
+        "lifecycle": {
+          "eyebrow": "Ticket lifecycle",
+          "held": {
+            "title": "Waiting for official result",
+            "description": "The ticket is accepted on-chain. It will become settleable after the market result is finalized."
+          },
+          "finalityPending": {
+            "title": "Result proposed",
+            "description": "The official result has been proposed. Settlement opens after the challenge window closes.",
+            "detail": "Finality target: {time}"
+          },
+          "resultReady": {
+            "title": "Result finality reached",
+            "description": "The result proof exists, but the market has not been finalized to resolved state yet."
+          },
+          "settleReady": {
+            "title": "Ready to settle",
+            "description": "The market is resolved. Anyone can settle this held ticket and release the final payout."
+          },
+          "refundReady": {
+            "title": "Refund available",
+            "description": "The market was voided. This ticket can return the original stake."
+          },
+          "settled": {
+            "title": "Ticket settled",
+            "description": "SportsHub has terminalized the ticket and released the final payout path."
+          },
+          "refunded": {
+            "title": "Stake refunded",
+            "description": "The void/refund path returned the original stake."
+          },
+          "voided": {
+            "title": "Ticket voided",
+            "description": "The market was voided and this ticket was terminalized through the void path."
+          }
+        },
         "actions": {
           "openMarket": "Open market",
-          "ops": "Inspect in ops"
+          "ops": "Inspect in ops",
+          "settle": "Settle ticket",
+          "settling": "Settling…",
+          "refund": "Refund stake",
+          "refunding": "Refunding…",
+          "settleTrace": "Settlement trace",
+          "refundTrace": "Refund trace",
+          "traceSubtitle": "Wallet transaction status",
+          "status": "Status",
+          "viewExplorer": "View explorer",
+          "resetTrace": "Reset trace",
+          "transactionError": "Transaction failed"
+        },
+        "flows": {
+          "preflight": "Preflight",
+          "confirm": "Confirm receipt",
+          "receipt": "Wait for the transaction receipt.",
+          "settle": {
+            "submit": "Settle ticket",
+            "preflight": "Confirm the ticket is still held and the market is resolved.",
+            "broadcast": "Broadcast SportsHub.settleTicket."
+          },
+          "refund": {
+            "submit": "Refund stake",
+            "preflight": "Confirm the ticket is still held and the market is voided.",
+            "broadcast": "Broadcast SportsHub.refundTicket."
+          }
+        },
+        "toast": {
+          "settled": "Ticket settlement confirmed.",
+          "settleFailed": "Ticket settlement failed.",
+          "refunded": "Ticket refund confirmed.",
+          "refundFailed": "Ticket refund failed."
         }
       }
     },

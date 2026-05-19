@@ -935,9 +935,77 @@
           "rulebookHash": "规则书",
           "placeTx": "下注交易"
         },
+        "lifecycle": {
+          "eyebrow": "票据生命周期",
+          "held": {
+            "title": "等待官方赛果",
+            "description": "票据已在链上接受。市场赛果完成最终确认后即可结算。"
+          },
+          "finalityPending": {
+            "title": "赛果已提议",
+            "description": "官方赛果已提交。挑战窗口关闭后才能开放结算。",
+            "detail": "最终确认目标时间: {time}"
+          },
+          "resultReady": {
+            "title": "赛果最终确认已到期",
+            "description": "赛果证明已经存在，但市场还没有进入 resolved 状态。"
+          },
+          "settleReady": {
+            "title": "可以结算",
+            "description": "市场已 resolved。任何人都可以结算这张 held 票据并释放最终赔付。"
+          },
+          "refundReady": {
+            "title": "可以退款",
+            "description": "市场已作废。这张票据可以退回原始本金。"
+          },
+          "settled": {
+            "title": "票据已结算",
+            "description": "SportsHub 已终结该票据，并释放最终赔付路径。"
+          },
+          "refunded": {
+            "title": "本金已退款",
+            "description": "作废/退款路径已退回原始本金。"
+          },
+          "voided": {
+            "title": "票据已作废",
+            "description": "市场已作废，该票据已通过 void 路径终结。"
+          }
+        },
         "actions": {
           "openMarket": "打开市场",
-          "ops": "在运营台检查"
+          "ops": "在运营台检查",
+          "settle": "结算票据",
+          "settling": "结算中…",
+          "refund": "退回本金",
+          "refunding": "退款中…",
+          "settleTrace": "结算交易轨迹",
+          "refundTrace": "退款交易轨迹",
+          "traceSubtitle": "钱包交易状态",
+          "status": "状态",
+          "viewExplorer": "查看浏览器",
+          "resetTrace": "重置轨迹",
+          "transactionError": "交易失败"
+        },
+        "flows": {
+          "preflight": "预检查",
+          "confirm": "确认收据",
+          "receipt": "等待交易收据。",
+          "settle": {
+            "submit": "结算票据",
+            "preflight": "确认票据仍为 held，且市场已 resolved。",
+            "broadcast": "广播 SportsHub.settleTicket。"
+          },
+          "refund": {
+            "submit": "退回本金",
+            "preflight": "确认票据仍为 held，且市场已 voided。",
+            "broadcast": "广播 SportsHub.refundTicket。"
+          }
+        },
+        "toast": {
+          "settled": "票据结算已确认。",
+          "settleFailed": "票据结算失败。",
+          "refunded": "票据退款已确认。",
+          "refundFailed": "票据退款失败。"
         }
       }
     },
