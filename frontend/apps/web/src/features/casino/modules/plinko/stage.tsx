@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { cn } from "@ssot/ui";
 
@@ -80,7 +81,8 @@ export function PlinkoStage({
   risk,
   buckets,
   onRiskChange,
-  randomHash
+  randomHash,
+  onRevealComplete
 }: {
   isPending: boolean;
   isRevealing?: boolean;
@@ -89,8 +91,10 @@ export function PlinkoStage({
   buckets: readonly number[];
   onRiskChange: (risk: PlinkoRisk) => void;
   randomHash?: string | null;
+  onRevealComplete?: () => void;
 }) {
   const t = useTranslations();
+  const prefersReducedMotion = useReducedMotion();
   const lastBucket = buckets.at(-1);
   const factors = PLINKO_FACTOR_TABLE[risk];
   const targetBucket = clampBucket(lastBucket);
@@ -109,25 +113,46 @@ export function PlinkoStage({
     }
 
     let cancelled = false;
+    const timeouts: number[] = [];
     let step = 0;
     setRevealStep(0);
+    const schedule = (callback: () => void, delay: number) => {
+      const timeout = window.setTimeout(callback, delay);
+      timeouts.push(timeout);
+      return timeout;
+    };
+
+    if (prefersReducedMotion) {
+      setRevealStep(PLINKO_ROWS);
+      schedule(() => {
+        if (!cancelled) onRevealComplete?.();
+      }, 200);
+      return () => {
+        cancelled = true;
+        timeouts.forEach((timeout) => window.clearTimeout(timeout));
+      };
+    }
 
     const tick = () => {
       if (cancelled || step >= PLINKO_ROWS) return;
       step += 1;
       setRevealStep(step);
       if (step < PLINKO_ROWS) {
-        window.setTimeout(tick, stepDuration(step));
+        schedule(tick, stepDuration(step));
+      } else {
+        schedule(() => {
+          if (!cancelled) onRevealComplete?.();
+        }, 280);
       }
     };
 
-    const timeout = window.setTimeout(tick, stepDuration(0));
+    schedule(tick, stepDuration(0));
 
     return () => {
       cancelled = true;
-      window.clearTimeout(timeout);
+      timeouts.forEach((timeout) => window.clearTimeout(timeout));
     };
-  }, [isRevealing, lastBucket, showResult]);
+  }, [isRevealing, lastBucket, onRevealComplete, prefersReducedMotion, showResult]);
 
   return (
     <div className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden px-4 py-4 md:px-6 md:py-6">
@@ -173,6 +198,10 @@ export function PlinkoStage({
         </div>
 
         <div className="relative z-10 mt-3 h-[calc(100%-4.25rem)] min-h-[20rem] overflow-hidden rounded-lg border border-border-soft bg-surface-0/80 shadow-inner-e1">
+          <div className="absolute left-1/2 top-0 z-10 flex h-6 w-14 -translate-x-1/2 items-end justify-center rounded-b-md border-x border-b border-border-soft bg-surface-1 shadow-inner-e1">
+            <span className="mb-1 h-1 w-7 rounded-full bg-fg/40" />
+          </div>
+
           {Array.from({ length: PLINKO_ROWS }).map((_, row) =>
             Array.from({ length: row + 1 }).map((__, index) => {
               const point = getPegPoint(row, index);
@@ -182,7 +211,7 @@ export function PlinkoStage({
                   key={`${row}-${index}`}
                   className={cn(
                     "absolute h-2.5 w-2.5 rounded-full border border-brand/30 bg-fg/80 shadow-e1 transition-[transform,background-color,border-color]",
-                    activePeg && "scale-125 border-accent bg-accent"
+                    activePeg && "animate-[plinko-peg-bonk_240ms_ease-out] border-accent bg-accent"
                   )}
                   style={{
                     left: `${point.x}%`,
@@ -195,14 +224,26 @@ export function PlinkoStage({
           )}
 
           <div
+            className="absolute z-10 h-2 w-9 rounded-full bg-fg/25 blur-sm transition-[left,top,opacity] ease-in"
+            aria-hidden
+            style={{
+              left: `${activePoint.x}%`,
+              opacity: isRevealing || landed ? 0.2 + (revealStep / PLINKO_ROWS) * 0.35 : 0.16,
+              top: `${Math.min(activePoint.y + 4, 88)}%`,
+              transform: "translate(-50%, -50%)",
+              transitionDuration: `${isRevealing ? stepDuration(revealStep) : 360}ms`
+            }}
+          />
+
+          <div
             className={cn(
               "absolute z-20 flex h-12 w-12 items-center justify-center rounded-full border font-mono text-sm font-semibold shadow-e2 transition-[left,top,transform,background-color,border-color] ease-in",
               isPending
                 ? "animate-bounce border-brand/40 bg-brand-soft text-fg"
                 : isRevealing
                   ? "border-brand bg-brand text-fg-inverse"
-                  : showResult
-                    ? "border-accent bg-accent text-fg-inverse"
+                  : landed
+                    ? "animate-[plinko-land_360ms_ease-out] border-accent bg-accent text-fg-inverse"
                     : "border-brand/40 bg-brand-soft text-fg"
             )}
             style={{
@@ -224,7 +265,7 @@ export function PlinkoStage({
                   className={cn(
                     "flex min-h-12 flex-col items-center justify-center rounded-md border bg-surface-1 px-1 py-1.5 text-center shadow-inner-e1 transition-[border-color,background-color,color,transform]",
                     active
-                      ? "scale-[1.03] border-accent bg-accent-soft text-accent shadow-e2"
+                      ? "animate-[plinko-bucket-land_360ms_ease-out] border-accent bg-accent-soft text-accent shadow-e2"
                       : "border-border text-fg-muted"
                   )}
                 >

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CoinTossStage } from "./coin-toss/stage";
@@ -195,19 +195,31 @@ describe("game room stages", () => {
   });
 
   it("renders Plinko reveal state while the ball travels the board", () => {
-    render(
-      <PlinkoStage
-        isPending={false}
-        isRevealing
-        showResult={false}
-        risk="medium"
-        buckets={[6]}
-        onRiskChange={vi.fn()}
-      />
-    );
+    const onRevealComplete = vi.fn();
+    vi.useFakeTimers();
+    try {
+      render(
+        <PlinkoStage
+          isPending={false}
+          isRevealing
+          showResult={false}
+          risk="medium"
+          buckets={[6]}
+          onRiskChange={vi.fn()}
+          onRevealComplete={onRevealComplete}
+        />
+      );
 
-    expect(screen.getAllByText("Dropping through the board...").length).toBeGreaterThan(0);
-    expect(screen.getByLabelText("Plinko board")).toBeDefined();
+      expect(screen.getAllByText("Dropping through the board...").length).toBeGreaterThan(0);
+      expect(screen.getByLabelText("Plinko board")).toBeDefined();
+
+      act(() => {
+        vi.advanceTimersByTime(4_000);
+      });
+      expect(onRevealComplete).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("renders Slots stage with revealed symbols", () => {
