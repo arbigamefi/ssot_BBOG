@@ -360,11 +360,6 @@ export function GamePageClient({ slug }: { slug: string }) {
       onKenoResetResult={() => setKenoResultDrawn([])}
       plinkoRisk={plinkoRisk}
       onPlinkoRiskChange={setPlinkoRisk}
-      baccaratSide={baccaratSide}
-      onBaccaratSideChange={setBaccaratSide}
-      sicBoKind={sicBoKind}
-      sicBoValue={sicBoValue}
-      onSicBoChange={handleSicBoChange}
       roundPhase={casinoRound.roundPhase}
       vrfQuote={casinoRound.vrfQuote}
       vrfQuoteError={casinoRound.vrfQuoteError}
@@ -413,6 +408,8 @@ export function GamePageClient({ slug }: { slug: string }) {
       onRouletteChange={setRouletteSpots}
       onKenoChange={setKenoSpots}
       onKenoResetResult={() => setKenoResultDrawn([])}
+      onBaccaratSideChange={setBaccaratSide}
+      onSicBoChange={handleSicBoChange}
     />
   );
 

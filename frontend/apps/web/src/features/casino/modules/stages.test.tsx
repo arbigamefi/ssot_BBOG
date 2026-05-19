@@ -149,11 +149,13 @@ describe("game room stages", () => {
   });
 
   it("renders Baccarat stage with opened cards and totals", () => {
+    const onSideChange = vi.fn();
     render(
       <BaccaratStage
         isPending={false}
         showResult
         selectedSide="player"
+        onSideChange={onSideChange}
         outcome={{
           kind: "baccarat",
           side: "player",
@@ -182,15 +184,20 @@ describe("game room stages", () => {
     expect(screen.getByText("Selected: Player")).toBeDefined();
     expect(screen.getByText("9")).toBeDefined();
     expect(screen.getAllByText("8").length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole("button", { name: /Banker/i }));
+    expect(onSideChange).toHaveBeenCalledWith("banker");
   });
 
   it("renders Sic Bo stage with opened dice and total", () => {
+    const onBetChange = vi.fn();
     render(
       <SicBoStage
         isPending={false}
         showResult
         betKind="total"
         betValue={9}
+        onBetChange={onBetChange}
         outcome={{
           kind: "sic-bo",
           betKind: "total",
@@ -218,5 +225,8 @@ describe("game room stages", () => {
     expect(screen.getByText("Dice opened: 2 / 3 / 4")).toBeDefined();
     expect(screen.getByText("Exact total 9")).toBeDefined();
     expect(screen.getByText("Won bet")).toBeDefined();
+
+    fireEvent.click(screen.getByRole("button", { name: "12" }));
+    expect(onBetChange).toHaveBeenCalledWith("total", 12);
   });
 });

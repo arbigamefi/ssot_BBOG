@@ -179,7 +179,9 @@ const baseProps = {
   onDiceTargetChange: vi.fn(),
   onRouletteChange: vi.fn(),
   onKenoChange: vi.fn(),
-  onKenoResetResult: vi.fn()
+  onKenoResetResult: vi.fn(),
+  onBaccaratSideChange: vi.fn(),
+  onSicBoChange: vi.fn()
 };
 
 describe("GameRoomRightPane", () => {

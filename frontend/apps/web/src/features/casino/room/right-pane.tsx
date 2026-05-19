@@ -3,6 +3,7 @@
 import * as React from "react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
+import { cn } from "@ssot/ui";
 
 import {
   GameRoomHistoryWidget,
@@ -110,7 +111,9 @@ export function GameRoomRightPane({
   onDiceTargetChange,
   onRouletteChange,
   onKenoChange,
-  onKenoResetResult
+  onKenoResetResult,
+  onBaccaratSideChange,
+  onSicBoChange
 }: {
   gameSlug: string;
   coinSide: CoinSide;
@@ -144,9 +147,23 @@ export function GameRoomRightPane({
   onRouletteChange: (spots: string[]) => void;
   onKenoChange: (spots: number[]) => void;
   onKenoResetResult: () => void;
+  onBaccaratSideChange: (side: BaccaratSide) => void;
+  onSicBoChange: (kind: SicBoKind, value: number) => void;
 }) {
+  const stageHeightClass =
+    gameSlug === "sic-bo"
+      ? "min-h-[58rem] sm:min-h-[56rem] lg:min-h-0"
+      : gameSlug === "baccarat"
+        ? "min-h-[54rem] sm:min-h-[50rem] lg:min-h-0"
+        : "min-h-[34rem] lg:min-h-0";
+
   return (
-    <div className="relative w-full h-full flex flex-col items-center justify-center p-8">
+    <div
+      className={cn(
+        "relative flex h-full w-full flex-col items-center justify-center p-8",
+        stageHeightClass
+      )}
+    >
       <GameRoomHistoryWidget
         gameSlug={gameSlug}
         gameHistory={gameHistory}
@@ -216,6 +233,7 @@ export function GameRoomRightPane({
           isPending={isPending}
           showResult={showResult}
           selectedSide={baccaratSide}
+          onSideChange={onBaccaratSideChange}
           outcome={casinoOutcome?.kind === "baccarat" ? casinoOutcome : null}
         />
       )}
@@ -226,6 +244,7 @@ export function GameRoomRightPane({
           showResult={showResult}
           betKind={sicBoKind}
           betValue={sicBoValue}
+          onBetChange={onSicBoChange}
           outcome={casinoOutcome?.kind === "sic-bo" ? casinoOutcome : null}
         />
       )}

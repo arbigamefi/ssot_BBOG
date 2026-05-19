@@ -283,7 +283,7 @@ export function BetPayoutSummary({
   const t = useTranslations();
 
   return (
-    <div className="mb-3 grid grid-cols-3 gap-2">
+    <div className="mb-3 grid grid-cols-2 gap-2">
       <div className="flex flex-col rounded-lg border border-border bg-surface-0 p-2.5 shadow-inner-e1">
         <span className="mb-1 flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-fg-subtle">
           {t("casino.room.betPanel.summary.multiplier")}{" "}
@@ -299,11 +299,11 @@ export function BetPayoutSummary({
         </span>
         <span className="font-mono text-lg font-bold text-fg">{winChance.toFixed(2)}%</span>
       </div>
-      <div className="flex select-none flex-col rounded-lg border border-border bg-surface-0 p-2.5 shadow-inner-e1">
+      <div className="col-span-2 flex select-none items-center justify-between gap-3 rounded-lg border border-border bg-surface-0 p-2.5 shadow-inner-e1">
         <span className="mb-1 text-[10px] font-bold uppercase tracking-widest text-fg-subtle">
           {t("casino.room.betPanel.summary.expectedPayout")}
         </span>
-        <span className="flex items-baseline gap-1 font-mono text-lg font-extrabold text-brand">
+        <span className="flex shrink-0 items-baseline gap-1 whitespace-nowrap font-mono text-lg font-bold text-brand">
           {expectedPayout.toFixed(2)} <span className="text-xs font-bold text-fg-subtle">USDC</span>
         </span>
       </div>
