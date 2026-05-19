@@ -53,9 +53,14 @@ function getPhaseCopy(phase: CasinoRoundPhase, t: Translate) {
 
 function RoundProofRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-1.5 text-xs">
-      <span className="text-fg-subtle">{label}</span>
-      <span className="truncate text-right font-mono font-semibold text-fg">{value}</span>
+    <div className="grid min-w-0 grid-cols-[5.5rem_minmax(0,1fr)] items-center gap-3 py-1.5 text-xs">
+      <span className="whitespace-nowrap text-fg-subtle">{label}</span>
+      <span
+        className="block min-w-0 truncate text-right font-mono font-semibold text-fg"
+        title={value}
+      >
+        {value}
+      </span>
     </div>
   );
 }

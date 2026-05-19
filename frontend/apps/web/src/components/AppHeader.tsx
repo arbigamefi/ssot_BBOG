@@ -97,17 +97,17 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
 
   return (
     <ShellHeader variant="solid">
-      <div className="flex items-center gap-6 md:gap-12 w-full">
-        <ShellHeaderBrand name="ArbiGameFi" />
+      <div className="flex min-w-0 flex-1 items-center gap-6 md:gap-8">
+        <ShellHeaderBrand name="ArbiGameFi" className="shrink-0" />
 
         {variant === "game" ? (
-          <ShellHeaderNav>
+          <ShellHeaderNav className="flex-1">
             {GAME_NAV_LINKS.map((link) => (
               <Link
                 key={link.id}
                 href={link.href}
                 className={cn(
-                  "transition-colors",
+                  "shrink-0 whitespace-nowrap transition-colors",
                   activeRoute === link.id
                     ? "border-b-2 border-brand pb-1 text-brand"
                     : "text-fg-subtle hover:text-fg"
@@ -117,10 +117,10 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
               </Link>
             ))}
 
-            <div className="hidden h-6 border-l border-border-soft pl-6 ml-2 sm:block">
+            <div className="ml-2 hidden h-6 shrink-0 border-l border-border-soft pl-6 sm:block">
               <Link
                 href="/casino"
-                className="flex h-full items-center gap-2 text-sm font-bold uppercase tracking-wider text-fg-subtle transition-colors hover:text-fg"
+                className="flex h-full items-center gap-2 whitespace-nowrap text-sm font-bold uppercase tracking-wider text-fg-subtle transition-colors hover:text-fg"
               >
                 <span>←</span>
                 <span>{t("nav.casino")}</span>
@@ -128,13 +128,13 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
             </div>
           </ShellHeaderNav>
         ) : (
-          <ShellHeaderNav>
+          <ShellHeaderNav className="flex-1">
             {navLinks.map((link) => (
               <Link
                 key={link.id}
                 href={link.href}
                 className={cn(
-                  "transition-colors",
+                  "shrink-0 whitespace-nowrap transition-colors",
                   activeRoute === link.id
                     ? "border-b-2 border-fg pb-1 text-fg"
                     : "text-fg-subtle hover:text-fg"
