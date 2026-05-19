@@ -85,7 +85,7 @@ export function GameRoomBetPanel({
     : (walletBalance ?? "—");
 
   return (
-    <div className="grid min-h-0 grid-rows-[minmax(0,1fr)_auto] lg:max-h-[calc(100vh-19.5rem)] lg:overflow-hidden">
+    <div className="grid min-h-0 grid-rows-[minmax(0,1fr)_auto] overflow-hidden lg:h-full">
       <div className="min-h-0 pb-2 lg:overflow-y-auto lg:pr-1">
         <div className="mb-2 flex items-center justify-between">
           <span className="flex items-center gap-2 text-sm font-bold text-fg-muted">
