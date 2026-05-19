@@ -138,6 +138,22 @@ approve a provider or evidence-storage vendor. They also define role-custody, ba
 monitoring/keeper memo shapes and the frontend-access approval shape, but do not approve production
 keys, production bankroll, operator coverage, or public sportsbook frontend access.
 
+### Frontend product-surface evidence
+
+Documented in `docs/strategy/sportsbook-production-roadmap.md`.
+
+Current player-facing sportsbook work covers:
+
+- public market lobby with open/live/today/upcoming/settled scanning;
+- market detail with provider odds, outcome selection, and a one-button player bet slip;
+- immediate ticket tracker after placement so a new ticket does not depend on index backfill;
+- portfolio ticket receipt with selected outcome, final winner, stake, return, net result, lifecycle,
+  and advanced proof hashes behind a drawer;
+- normal player pages no longer route primary CTAs to `/ops/sportsbook`.
+
+This improves player readiness, but it does not approve public risk-in. The frontend still depends on
+the jurisdiction/access, provider/evidence, bankroll/risk, keeper, and mainnet artifact gates below.
+
 ## Open No-Go Items
 
 | Gate | Status | Required before GO |

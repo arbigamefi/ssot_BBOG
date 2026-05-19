@@ -19,7 +19,7 @@ import { OutcomesBoard } from "./OutcomesBoard";
 import { ResultPanel } from "./ResultPanel";
 import { describeMarketWallClock, marketShortTag } from "./player-format";
 import { providerOutcomeById, type SportsbookProviderOdds } from "./provider-odds";
-import { useBetSlip } from "./useBetSlip";
+import { useBetSlip, type BetSlipReceipt } from "./useBetSlip";
 import { usePlayerSportsTickets } from "./usePlayerSportsTickets";
 import { useSportsbookProviderOdds } from "./use-provider-odds";
 
@@ -255,6 +255,15 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
 
         <ResultPanel market={readback.market} result={readback.result} odds={providerOdds} />
 
+        {slip.receipt?.ticketId ? (
+          <LatestTicketTracker
+            decimals={poolAsset.decimals}
+            receipt={slip.receipt}
+            symbol={poolAsset.symbol}
+            txHash={slip.receipt.txHash}
+          />
+        ) : null}
+
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px] xl:items-start">
           <div className="flex flex-col gap-4">
             <OutcomesBoard
@@ -312,6 +321,52 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
         ) : null}
       </div>
     </PageTransition>
+  );
+}
+
+function LatestTicketTracker({
+  decimals,
+  receipt,
+  symbol,
+  txHash
+}: {
+  decimals: number;
+  receipt: BetSlipReceipt;
+  symbol: string;
+  txHash?: string;
+}) {
+  const t = useTranslations("sportsbook.player.detail.latestTicket");
+  return (
+    <section className="rounded-lg border border-success/30 bg-success-soft p-4 md:p-5">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-success">
+            {t("eyebrow")}
+          </div>
+          <h2 className="mt-2 text-xl font-semibold text-fg">
+            {t("title", { ticketId: receipt.ticketId?.toString() ?? "—" })}
+          </h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-fg-muted">{t("description")}</p>
+        </div>
+        <Link
+          href={`/portfolio/tickets/${receipt.ticketId?.toString()}${txHash ? `?tx=${encodeURIComponent(txHash)}` : ""}`}
+          className="inline-flex h-10 shrink-0 items-center justify-center rounded-md bg-brand px-4 text-sm font-semibold text-fg-inverse transition-colors hover:bg-brand-hover"
+        >
+          {t("viewTicket")}
+        </Link>
+      </div>
+      <dl className="mt-4 grid gap-3 md:grid-cols-3">
+        <Cell label={t("pick")} value={receipt.outcomeName ?? "—"} />
+        <Cell label={t("price")} value={receipt.decimalPrice ?? "—"} mono />
+        <Cell
+          label={t("potentialPayout")}
+          value={
+            receipt.payout ? formatTokenAmount(receipt.payout, decimals, symbol) : `— ${symbol}`
+          }
+          mono
+        />
+      </dl>
+    </section>
   );
 }
 
@@ -550,15 +605,13 @@ function ExpertProofDrawer({ marketKey, marketId }: { marketKey: string; marketI
       <summary className="cursor-pointer text-sm font-semibold text-fg">{t("summary")}</summary>
       <div className="mt-3 grid gap-2 text-xs">
         <div className="flex items-center justify-between gap-3 rounded-md border border-border-soft bg-surface-2/60 px-3 py-2">
+          <span className="text-fg-subtle">{t("rows.marketId")}</span>
+          <span className="font-mono text-fg">{marketId}</span>
+        </div>
+        <div className="flex items-center justify-between gap-3 rounded-md border border-border-soft bg-surface-2/60 px-3 py-2">
           <span className="text-fg-subtle">{t("rows.marketKey")}</span>
           <span className="font-mono text-fg">{marketKey}</span>
         </div>
-        <Link
-          href={`/ops/sportsbook?marketId=${marketId}`}
-          className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-surface-2 text-sm font-medium text-fg-muted transition-colors hover:text-fg"
-        >
-          {t("opsLink")}
-        </Link>
       </div>
     </details>
   );

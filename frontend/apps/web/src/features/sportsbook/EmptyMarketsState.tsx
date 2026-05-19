@@ -7,8 +7,8 @@ import { useTranslations } from "next-intl";
  *
  * Two variants:
  * - `preview`  — the sportsbook feature flag is off; explain the launch state
- *   in calm copy and give a link back to ops or to the casino product so the
- *   visitor doesn't bounce.
+ *   in calm copy and give a link back to the casino product so the visitor
+ *   doesn't bounce.
  * - `quiet`    — markets exist on the contract but none are live or upcoming
  *   in the current view; suggest filters or coming events.
  *
@@ -48,12 +48,6 @@ export function EmptyMarketsState({
             className="inline-flex h-9 items-center rounded-md border border-border bg-surface-2 px-3 text-sm font-medium text-fg transition-colors hover:border-brand/40 hover:bg-surface-3"
           >
             {t("ctaCasino")}
-          </Link>
-          <Link
-            href="/ops/sportsbook"
-            className="inline-flex h-9 items-center rounded-md border border-border bg-surface-2 px-3 text-sm font-medium text-fg-muted transition-colors hover:border-brand/40 hover:text-fg"
-          >
-            {t("ctaOps")}
           </Link>
         </div>
       </div>

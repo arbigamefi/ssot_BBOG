@@ -295,14 +295,14 @@ export function SportsTicketDetailPageClient({ ticketId }: { ticketId: string })
           t={t}
         />
 
-        <section className="rounded-lg border border-border bg-surface-1 p-4 md:p-5">
-          <header className="mb-4 flex items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-fg-subtle">
-              {t("facts.title")}
-            </h2>
-            {isFetching ? <span className="text-xs text-fg-subtle">{t("refreshing")}</span> : null}
-          </header>
-          <dl className="grid gap-3 md:grid-cols-2">
+        <details className="rounded-lg border border-border bg-surface-1 p-4 md:p-5">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold uppercase tracking-[0.16em] text-fg-subtle">
+            <span>{t("facts.title")}</span>
+            <span className="text-xs normal-case tracking-normal text-fg-subtle">
+              {isFetching ? t("refreshing") : t("facts.summaryHint")}
+            </span>
+          </summary>
+          <dl className="mt-4 grid gap-3 md:grid-cols-2">
             <Fact label={t("facts.ticketId")} value={`#${ticket.ticketId.toString()}`} />
             <Fact label={t("facts.marketId")} value={`#${ticket.marketId.toString()}`} />
             <Fact label={t("facts.positionId")} value={ticket.positionId.toString()} />
@@ -331,7 +331,10 @@ export function SportsTicketDetailPageClient({ ticketId }: { ticketId: string })
               />
             ) : null}
           </dl>
-        </section>
+          {ticket.ticketId ? (
+            <div className="mt-3 text-xs leading-5 text-fg-muted">{t("facts.description")}</div>
+          ) : null}
+        </details>
 
         <div className="flex flex-wrap gap-3">
           {market ? (
@@ -342,12 +345,6 @@ export function SportsTicketDetailPageClient({ ticketId }: { ticketId: string })
               {t("actions.openMarket")}
             </Link>
           ) : null}
-          <Link
-            href={`/ops/sportsbook?ticketId=${ticket.ticketId.toString()}`}
-            className="inline-flex h-10 items-center rounded-md border border-border bg-surface-2 px-4 text-sm font-medium text-fg transition-colors hover:bg-surface-3"
-          >
-            {t("actions.ops")}
-          </Link>
         </div>
       </div>
     </PageTransition>

@@ -45,7 +45,7 @@ BankCredit -> PlayerClaimable`}</code>
           <h2 className="text-4xl font-black tracking-normal text-fg md:text-5xl">{copy.title}</h2>
           <p className="mt-5 max-w-2xl text-base leading-7 text-fg-muted">{copy.description}</p>
           <Link
-            href="/ops"
+            href="/portfolio/activity"
             className="mt-8 inline-flex items-center gap-2 rounded-md bg-brand px-5 py-3 text-sm font-black uppercase tracking-[0.12em] text-fg-inverse transition hover:bg-brand-hover"
           >
             {copy.actionLabel} <ArrowRightIcon className="h-4 w-4" />

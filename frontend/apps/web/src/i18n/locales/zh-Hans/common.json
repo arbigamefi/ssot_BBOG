@@ -751,6 +751,21 @@
           "home": "主胜",
           "draw": "平局",
           "away": "客胜"
+        },
+        "filters": {
+          "ariaLabel": "筛选体育投注市场",
+          "all": "全部",
+          "live": "进行中",
+          "today": "今天",
+          "upcoming": "即将开赛",
+          "past": "已结算",
+          "empty": {
+            "all": "当前没有已发布的体育投注市场。",
+            "live": "当前没有进行中的市场。",
+            "today": "今天没有已发布市场。",
+            "upcoming": "暂未发布即将开赛的市场。",
+            "past": "当前发布窗口内没有已结算市场。"
+          }
         }
       },
       "event": {
@@ -887,6 +902,15 @@
             "refunded": "已退款"
           }
         },
+        "latestTicket": {
+          "eyebrow": "票据已接受",
+          "title": "票据 S#{ticketId} 已生效",
+          "description": "你的票据已经上链。可以留在当前页面，也可以打开收据，继续跟踪赛果提议、最终确认和结算。",
+          "viewTicket": "跟踪票据",
+          "pick": "选择",
+          "price": "成交赔率",
+          "potentialPayout": "潜在赔付"
+        },
         "meta": {
           "title": "市场信息",
           "outcomes": "结果数",
@@ -895,9 +919,9 @@
           "state": "状态"
         },
         "proof": {
-          "summary": "链上证明与运营入口",
-          "opsLink": "在运营控制台中查看",
+          "summary": "链上证明",
           "rows": {
+            "marketId": "市场 ID",
             "marketKey": "marketKey"
           }
         }
@@ -1000,6 +1024,8 @@
         },
         "facts": {
           "title": "票据证明",
+          "summaryHint": "高级",
+          "description": "这些哈希绑定了票据、赔率快照、规则书和下注交易。默认折叠，因为上方收据才是主要玩家视图。",
           "ticketId": "票据 ID",
           "marketId": "市场 ID",
           "positionId": "Position ID",
@@ -2655,7 +2681,7 @@
       "eyebrow": "信任模型",
       "title": "透明结算轨道。",
       "description": "托管、游戏模块和随机数是彼此分离的界面。这让 UI 可以重写，而不扰动协议正确性。",
-      "actionLabel": "打开运维"
+      "actionLabel": "查看证明票据"
     }
   },
   "legal": {

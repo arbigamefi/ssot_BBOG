@@ -92,8 +92,7 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
     { id: "liquidity", label: t("nav.liquidity"), href: "/earn" },
     { id: "claims", label: t("nav.claims"), href: "/portfolio/claims" },
     { id: "referral", label: t("nav.affiliates"), href: "/portfolio/referral" },
-    { id: "account", label: t("nav.account"), href: "/portfolio" },
-    { id: "ops", label: t("nav.ops"), href: "/ops" }
+    { id: "account", label: t("nav.account"), href: "/portfolio" }
   ] as const;
 
   return (

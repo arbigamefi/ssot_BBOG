@@ -475,5 +475,9 @@ describe("SportsbookMarketDetailPageClient (player-facing)", () => {
         })
       )
     );
+    expect(await screen.findByText("Ticket S#99 is live")).toBeDefined();
+    expect(screen.getByRole("link", { name: "Track ticket" }).getAttribute("href")).toBe(
+      "/portfolio/tickets/99?tx=0xabc123"
+    );
   });
 });

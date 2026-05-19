@@ -26,8 +26,7 @@ const PLATFORM_LINKS = [
 
 const RESOURCE_LINKS = [
   { href: "/portfolio", labelKey: "nav.account" },
-  { href: "/portfolio/claims", labelKey: "nav.claims" },
-  { href: "/ops", labelKey: "nav.ops" }
+  { href: "/portfolio/claims", labelKey: "nav.claims" }
 ] as const;
 
 const LEGAL_LINKS = [

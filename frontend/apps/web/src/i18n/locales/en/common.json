@@ -751,6 +751,21 @@
           "home": "Home",
           "draw": "Draw",
           "away": "Away"
+        },
+        "filters": {
+          "ariaLabel": "Filter sportsbook markets",
+          "all": "All",
+          "live": "Live",
+          "today": "Today",
+          "upcoming": "Upcoming",
+          "past": "Settled",
+          "empty": {
+            "all": "No sportsbook markets are published right now.",
+            "live": "No live markets are available right now.",
+            "today": "No markets are scheduled for today.",
+            "upcoming": "No upcoming markets are published yet.",
+            "past": "No settled markets are available in this release window."
+          }
         }
       },
       "event": {
@@ -887,6 +902,15 @@
             "refunded": "Refunded"
           }
         },
+        "latestTicket": {
+          "eyebrow": "Ticket accepted",
+          "title": "Ticket S#{ticketId} is live",
+          "description": "Your ticket is on-chain. Keep this page open or view the receipt to track result proposal, finality, and settlement.",
+          "viewTicket": "Track ticket",
+          "pick": "Pick",
+          "price": "Accepted price",
+          "potentialPayout": "Potential payout"
+        },
         "meta": {
           "title": "Market details",
           "outcomes": "Outcomes",
@@ -895,9 +919,9 @@
           "state": "State"
         },
         "proof": {
-          "summary": "Chain proof and operator links",
-          "opsLink": "Open in operator console",
+          "summary": "Chain proof",
           "rows": {
+            "marketId": "Market ID",
             "marketKey": "marketKey"
           }
         }
@@ -1000,6 +1024,8 @@
         },
         "facts": {
           "title": "Ticket proof",
+          "summaryHint": "Advanced",
+          "description": "These hashes bind the ticket, odds snapshot, rulebook, and placement transaction. They are hidden by default because the receipt above is the primary player view.",
           "ticketId": "Ticket id",
           "marketId": "Market id",
           "positionId": "Position id",
@@ -2655,7 +2681,7 @@
       "eyebrow": "Trust model",
       "title": "Transparent settlement rails.",
       "description": "Custody, game modules, and randomness are separate surfaces. This makes the UI easier to rewrite without disturbing protocol correctness.",
-      "actionLabel": "Open ops"
+      "actionLabel": "View proof receipts"
     }
   },
   "legal": {

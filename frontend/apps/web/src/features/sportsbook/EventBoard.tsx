@@ -12,6 +12,8 @@ export interface EventBoardEntry {
   href: string;
 }
 
+export type EventBoardFilter = "all" | SportsMarketBucket;
+
 interface SortedBuckets {
   live: EventBoardEntry[];
   today: EventBoardEntry[];
@@ -51,10 +53,12 @@ function partition(
  */
 export function EventBoard({
   entries,
+  filter = "all",
   locale,
   showPast = false
 }: {
   entries: readonly EventBoardEntry[];
+  filter?: EventBoardFilter;
   locale: string;
   showPast?: boolean;
 }) {
@@ -65,6 +69,7 @@ export function EventBoard({
   return (
     <div className="flex flex-col gap-8">
       {ORDER.map((bucket) => {
+        if (filter !== "all" && filter !== bucket) return null;
         if (bucket === "past" && !showPast) return null;
         const rows = buckets[bucket];
         if (rows.length === 0) return null;

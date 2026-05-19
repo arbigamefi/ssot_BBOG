@@ -139,6 +139,32 @@ No-go:
 - `REQUIRE_APPROVED=1 make sports-frontend-access-check-v13` fails for the approved frontend-access
   memo.
 
+## Player UX Gate
+
+The sportsbook frontend must be player-grade before any public risk-in. Contract correctness alone is
+not enough; players must be able to understand market availability, place one ticket, and track the
+ticket without reading operator documentation.
+
+Before enabling public sportsbook tickets:
+
+- `/sportsbook` must provide clear market scanning by open/live/today/upcoming/settled state;
+- `/sportsbook/[marketId]` must keep raw odds signing fields out of the player path;
+- after `placeTicket`, the market page must show the newly placed ticket immediately, even if the
+  durable index is still catching up;
+- `/portfolio/tickets/[ticketId]` must default to receipt, result, lifecycle, and payout/return fields;
+- raw hashes and operator proof links must be behind an advanced proof drawer;
+- normal player CTAs must not route to `/ops/sportsbook`;
+- the same surface must pass English and Simplified Chinese localization.
+
+No-go:
+
+- the public page requires the player to enter odds hashes, nonces, risk hashes, provider IDs, or raw
+  signatures;
+- a placed ticket disappears until the indexer backfills;
+- terminal ticket views show only "won/lost" without the selected outcome, winning outcome, stake,
+  return, and net result;
+- the primary player surface sends users to an operator console.
+
 ## Monitoring And Keeper Coverage
 
 SportsHub canary operation must have named alert ownership and keeper debt-out coverage. The repo-side

@@ -158,12 +158,12 @@ describe("SportsbookPageClient (player-facing)", () => {
     expect(screen.getByText("Preview only")).toBeDefined();
   });
 
-  it("links to the operator console instead of inlining operator panels", () => {
+  it("keeps operator console links off the public sportsbook header", () => {
     renderWithQueryClient(<SportsbookPageClient />);
     const opsLinks = screen
-      .getAllByRole("link")
+      .queryAllByRole("link")
       .filter((node) => node.getAttribute("href") === "/ops/sportsbook");
-    expect(opsLinks.length).toBeGreaterThan(0);
+    expect(opsLinks).toHaveLength(0);
   });
 
   it("shows the preview empty state when public tickets are disabled", () => {
@@ -192,6 +192,7 @@ describe("SportsbookPageClient (player-facing)", () => {
     // Lobby context and board render because at least one fixture sits in the future.
     expect(await screen.findByText("Featured market")).toBeDefined();
     expect(screen.getByText("Market board")).toBeDefined();
+    expect(screen.getByRole("tab", { name: /All/i })).toBeDefined();
     expect(screen.getAllByText("Upcoming").length).toBeGreaterThan(0);
     // Past bucket is hidden on the board by default; that's the intended
     // public behavior — past events do not crowd the live + upcoming feed.

@@ -11,7 +11,7 @@ import { useRelease } from "../../ssot/release/ReleaseProvider";
 import { useSSOTSDK } from "../../ssot/sdk";
 
 import { EmptyMarketsState } from "./EmptyMarketsState";
-import { EventBoard, type EventBoardEntry } from "./EventBoard";
+import { EventBoard, type EventBoardEntry, type EventBoardFilter } from "./EventBoard";
 import { MarketStateBadge } from "./MarketStateBadge";
 import {
   bucketMarket,
@@ -157,9 +157,14 @@ export function SportsbookPageClient() {
   const locale = useLocale();
   const { release, sportsbook, readOnly, readOnlyReason } = useRelease();
   const enabled = sportsbook.enabled && sportsbook.hasSportsRelease;
+  const [activeFilter, setActiveFilter] = React.useState<EventBoardFilter>("all");
 
   const { data: board, isLoading, error } = useSportsbookBoard(enabled);
   const stitched = useStitchProviderOdds(board?.entries ?? []);
+  const filteredEntryCount = React.useMemo(
+    () => countFilterEntries(stitched, activeFilter, locale),
+    [stitched, activeFilter, locale]
+  );
 
   if (!release) {
     return (
@@ -185,7 +190,6 @@ export function SportsbookPageClient() {
           sportsHubMissing={sportsHubMissing}
           readOnly={readOnly}
           readOnlyReason={readOnlyReason}
-          onOpenOps={null}
         />
 
         {!enabled ? (
@@ -223,11 +227,21 @@ export function SportsbookPageClient() {
                       </p>
                     </div>
                   </header>
-                  <EventBoard
+                  <MarketFilterTabs
+                    activeFilter={activeFilter}
                     entries={stitched}
                     locale={locale}
-                    showPast={shouldShowPastBoard(stitched)}
+                    onChange={setActiveFilter}
                   />
+                  <EventBoard
+                    filter={activeFilter}
+                    entries={stitched}
+                    locale={locale}
+                    showPast={activeFilter === "past" || shouldShowPastBoard(stitched)}
+                  />
+                  {filteredEntryCount === 0 ? (
+                    <FilteredMarketsEmpty activeFilter={activeFilter} />
+                  ) : null}
                 </section>
               </>
             ) : null}
@@ -235,6 +249,71 @@ export function SportsbookPageClient() {
         ) : null}
       </div>
     </PageTransition>
+  );
+}
+
+const MARKET_FILTERS: EventBoardFilter[] = ["all", "live", "today", "upcoming", "past"];
+
+function MarketFilterTabs({
+  activeFilter,
+  entries,
+  locale,
+  onChange
+}: {
+  activeFilter: EventBoardFilter;
+  entries: readonly EventBoardEntry[];
+  locale: string;
+  onChange: (filter: EventBoardFilter) => void;
+}) {
+  const t = useTranslations("sportsbook.player.lobby.filters");
+  const now = React.useMemo(() => Date.now(), [entries]);
+  const counts = React.useMemo(() => countBuckets(entries, now, locale), [entries, now, locale]);
+  const activeCount = counts.live + counts.today + counts.upcoming;
+  const allCount = activeCount + counts.past;
+  const countFor = (filter: EventBoardFilter) => (filter === "all" ? allCount : counts[filter]);
+
+  return (
+    <div
+      className="flex gap-2 overflow-x-auto rounded-lg border border-border bg-surface-1 p-1"
+      role="tablist"
+      aria-label={t("ariaLabel")}
+    >
+      {MARKET_FILTERS.map((filter) => {
+        const selected = filter === activeFilter;
+        return (
+          <button
+            key={filter}
+            type="button"
+            role="tab"
+            aria-selected={selected}
+            onClick={() => onChange(filter)}
+            className={`inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-3 text-sm font-semibold transition-colors ${
+              selected
+                ? "bg-brand text-fg-inverse"
+                : "text-fg-muted hover:bg-surface-2 hover:text-fg"
+            }`}
+          >
+            <span>{t(filter)}</span>
+            <span
+              className={`rounded-full px-1.5 py-0.5 font-mono text-[10px] tabular-nums ${
+                selected ? "bg-fg-inverse/15" : "bg-surface-3 text-fg-subtle"
+              }`}
+            >
+              {countFor(filter)}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function FilteredMarketsEmpty({ activeFilter }: { activeFilter: EventBoardFilter }) {
+  const t = useTranslations("sportsbook.player.lobby.filters");
+  return (
+    <p className="rounded-lg border border-border bg-surface-1 px-4 py-5 text-sm leading-6 text-fg-muted">
+      {t(`empty.${activeFilter}`)}
+    </p>
   );
 }
 
@@ -378,6 +457,20 @@ function countBuckets(
   );
 }
 
+function countFilterEntries(
+  entries: readonly EventBoardEntry[],
+  filter: EventBoardFilter,
+  locale: string
+) {
+  const now = Date.now();
+  const buckets = countBuckets(entries, now, locale);
+  if (filter === "all") {
+    const active = buckets.live + buckets.today + buckets.upcoming;
+    return active > 0 ? active : buckets.past;
+  }
+  return buckets[filter];
+}
+
 function sortProviderOutcomes(odds: SportsbookProviderOdds | undefined) {
   const order = { home: 0, draw: 1, away: 2 };
   return [...(odds?.outcomes ?? [])].sort((a, b) => order[a.side] - order[b.side]);
@@ -387,14 +480,12 @@ function SportsbookHeader({
   ticketsDisabled,
   sportsHubMissing,
   readOnly,
-  readOnlyReason,
-  onOpenOps
+  readOnlyReason
 }: {
   ticketsDisabled: boolean;
   sportsHubMissing: boolean;
   readOnly?: boolean;
   readOnlyReason?: string;
-  onOpenOps: (() => void) | null;
 }) {
   const t = useTranslations("sportsbook.player.header");
 
@@ -428,15 +519,6 @@ function SportsbookHeader({
         {readOnly && readOnlyReason ? (
           <p className="mt-2 max-w-xl text-xs leading-5 text-fg-subtle">{readOnlyReason}</p>
         ) : null}
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <Link
-          href="/ops/sportsbook"
-          onClick={onOpenOps ?? undefined}
-          className="inline-flex h-9 items-center rounded-md border border-border bg-surface-2 px-3 text-sm font-medium text-fg-muted transition-colors hover:border-brand/40 hover:text-fg"
-        >
-          {t("opsLink")}
-        </Link>
       </div>
     </header>
   );
