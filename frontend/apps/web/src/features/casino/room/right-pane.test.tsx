@@ -150,7 +150,6 @@ vi.mock("next-intl", () => ({
 
 const baseProps = {
   coinSide: "HEADS" as const,
-  flipCount: 0,
   gameHistory: [],
   recentBets: [],
   isPending: false,

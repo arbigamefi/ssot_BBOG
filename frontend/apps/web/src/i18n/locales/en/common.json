@@ -494,7 +494,10 @@
       "loading": "Loading games...",
       "empty": {
         "noRelease": "No embedded release available for the connected chain.",
-        "noGames": "No games registered in the active release."
+        "noGames": "No games registered in the active release.",
+        "noResults": "No matching rooms",
+        "noResultsDetail": "No casino room matches \"{query}\". Clear the search or choose another category.",
+        "clearSearch": "Clear search"
       },
       "hero": {
         "eyebrow": "Global Casino Lobby",
@@ -502,8 +505,8 @@
         "description": "All modules are 100% on-chain, verifiable, and connected directly to the isolated reserve bank. Play directly from your wallet."
       },
       "stats": {
-        "livePlayers": "Live Players",
-        "maxWin": "Max Win (24H)"
+        "rooms": "On-chain rooms",
+        "asset": "Bank asset"
       },
       "filters": {
         "all": "All Modules",
@@ -568,13 +571,14 @@
         }
       },
       "card": {
-        "playing": "{count} playing",
+        "releaseAnchored": "Release anchored",
         "playNow": "Play Now"
       },
       "reserve": {
-        "title": "Progressive Reserve Pool",
-        "subtitle": "Transparent / Verifiable / Unlocked",
-        "status": "Yielding Real Time"
+        "title": "Casino bankroll",
+        "subtitle": "Bank {bank}",
+        "status": "Release anchored",
+        "cta": "Inspect bank"
       }
     }
   },

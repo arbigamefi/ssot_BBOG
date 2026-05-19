@@ -1,2 +1,23 @@
 @import "@rainbow-me/rainbowkit/styles.css";
 @import "@ssot/ui/styles/globals.css";
+
+@keyframes dice-roll-3d {
+  0% {
+    transform: rotateX(0deg) rotateY(0deg) scale(0.8);
+  }
+  50% {
+    transform: rotateX(540deg) rotateY(720deg) scale(1.2);
+  }
+  100% {
+    transform: rotateX(1080deg) rotateY(1440deg) scale(1);
+  }
+}
+
+@keyframes spin-coin-fast {
+  0% {
+    transform: rotateX(10deg) rotateY(0deg) scale(1.2);
+  }
+  100% {
+    transform: rotateX(10deg) rotateY(360deg) scale(1.2);
+  }
+}

@@ -494,7 +494,10 @@
       "loading": "正在加载游戏...",
       "empty": {
         "noRelease": "当前链没有可用的内嵌 release。",
-        "noGames": "当前 release 没有注册游戏。"
+        "noGames": "当前 release 没有注册游戏。",
+        "noResults": "没有匹配的房间",
+        "noResultsDetail": "没有赌场房间匹配“{query}”。清空搜索或切换分类。",
+        "clearSearch": "清空搜索"
       },
       "hero": {
         "eyebrow": "全球赌场大厅",
@@ -502,8 +505,8 @@
         "description": "所有模块都在链上执行、可验证，并直接连接到隔离资金池。连接钱包即可开始游戏。"
       },
       "stats": {
-        "livePlayers": "在线玩家",
-        "maxWin": "24 小时最高奖金"
+        "rooms": "链上房间",
+        "asset": "Bank 资产"
       },
       "filters": {
         "all": "全部模块",
@@ -568,13 +571,14 @@
         }
       },
       "card": {
-        "playing": "{count} 人正在玩",
+        "releaseAnchored": "Release 锚定",
         "playNow": "开始游戏"
       },
       "reserve": {
-        "title": "累进储备池",
-        "subtitle": "透明 / 可验证 / 可退出",
-        "status": "实时产生收益"
+        "title": "赌场 Bankroll",
+        "subtitle": "Bank {bank}",
+        "status": "Release 锚定",
+        "cta": "查看 Bank"
       }
     }
   },

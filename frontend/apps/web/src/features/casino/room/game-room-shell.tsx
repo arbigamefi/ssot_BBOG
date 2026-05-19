@@ -25,7 +25,7 @@ export function GameRoomShell({
       <header className="flex flex-col gap-3 border-b border-border-soft pb-4 md:flex-row md:items-end md:justify-between">
         <div>
           <div className="flex items-center gap-3 text-xs font-semibold uppercase text-accent">
-            <span className="h-2.5 w-2.5 rounded-full bg-accent shadow-glow" />
+            <span className="h-2.5 w-2.5 rounded-full bg-accent" />
             {t("casino.room.shell.liveModule")}
           </div>
           <h1 className="mt-1 text-4xl font-semibold text-fg md:text-5xl">{gameName}</h1>
@@ -60,7 +60,6 @@ export function GameRoomShell({
           }
         >
           <div className="pointer-events-none absolute inset-0 bg-[url('/textures/noise.svg')] opacity-10 mix-blend-overlay" />
-          <div className="pointer-events-none absolute left-1/2 top-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-soft blur-3xl" />
           {rightPaneContent}
         </div>
       </div>

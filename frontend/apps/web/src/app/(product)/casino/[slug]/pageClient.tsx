@@ -135,7 +135,6 @@ export function GamePageClient({ slug }: { slug: string }) {
   const [sicBoValue, setSicBoValue] = React.useState<number>(0);
 
   // Simulation state
-  const [flipCount, setFlipCount] = React.useState(0);
   const [resultNum, setResultNum] = React.useState<number | null>(null);
   const [kenoResultDrawn, setKenoResultDrawn] = React.useState<number[]>([]);
   const [plinkoBuckets, setPlinkoBuckets] = React.useState<number[]>([]);
@@ -384,7 +383,6 @@ export function GamePageClient({ slug }: { slug: string }) {
     <GameRoomRightPane
       gameSlug={game.slug}
       coinSide={coinSide}
-      flipCount={flipCount}
       gameHistory={gameHistory}
       recentBets={recentBets}
       isPending={isRoundAnimating}

@@ -81,7 +81,6 @@ const SicBoStage = dynamic(() => import("../modules/sic-bo/stage").then((mod) =>
 export function GameRoomRightPane({
   gameSlug,
   coinSide,
-  flipCount,
   gameHistory,
   recentBets,
   isPending,
@@ -115,7 +114,6 @@ export function GameRoomRightPane({
 }: {
   gameSlug: string;
   coinSide: CoinSide;
-  flipCount: number;
   gameHistory: readonly GameHistoryEntry[];
   recentBets: readonly RecentBetSummary[];
   isPending: boolean;
@@ -149,16 +147,6 @@ export function GameRoomRightPane({
 }) {
   return (
     <div className="relative w-full h-full flex flex-col items-center justify-center p-8">
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `
-         @keyframes dice-roll-3d { 0% { transform: rotateX(0deg) rotateY(0deg) scale(0.8); } 50% { transform: rotateX(540deg) rotateY(720deg) scale(1.2); } 100% { transform: rotateX(1080deg) rotateY(1440deg) scale(1); } }
-         @keyframes toss-anim { 0% { transform: rotateX(20deg) rotateY(0deg) translateY(0px); } 50% { transform: rotateX(80deg) rotateY(900deg) translateY(-400px) scale(1.5); } 100% { transform: rotateX(20deg) rotateY(${flipCount * 1800 + (coinSide === "TAILS" ? 180 : 0)}deg) translateY(0px); } }
-         @keyframes spin-coin-fast { 0% { transform: rotateX(10deg) rotateY(0deg) scale(1.2); } 100% { transform: rotateX(10deg) rotateY(360deg) scale(1.2); } }
-       `
-        }}
-      />
-
       <GameRoomHistoryWidget
         gameSlug={gameSlug}
         gameHistory={gameHistory}

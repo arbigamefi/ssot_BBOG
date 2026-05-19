@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import * as React from "react";
 
 // ——— Shared mock state via object ref ———
@@ -44,8 +44,11 @@ vi.mock("next-intl", () => ({
       "casino.directory.hero.title": "Enter the Floor",
       "casino.directory.hero.description":
         "All modules are 100% on-chain, verifiable, and connected directly to the isolated reserve bank. Play directly from your wallet.",
-      "casino.directory.stats.livePlayers": "Live Players",
-      "casino.directory.stats.maxWin": "Max Win (24H)",
+      "casino.directory.empty.noResults": "No matching rooms",
+      "casino.directory.empty.noResultsDetail": `No casino room matches "${values?.query ?? "{query}"}". Clear the search or choose another category.`,
+      "casino.directory.empty.clearSearch": "Clear search",
+      "casino.directory.stats.rooms": "On-chain rooms",
+      "casino.directory.stats.asset": "Bank asset",
       "casino.directory.filters.all": "All Modules",
       "casino.directory.filters.table": "Table Games",
       "casino.directory.filters.binary": "Binary / Fast",
@@ -79,11 +82,12 @@ vi.mock("next-intl", () => ({
       "casino.directory.rooms.baccarat.title": "Baccarat",
       "casino.directory.rooms.baccarat.promise": "Player vs banker hands with tie upside.",
       "casino.directory.rooms.baccarat.badge": "Up to 10.4x",
-      "casino.directory.card.playing": `${values?.count ?? "{count}"} playing`,
+      "casino.directory.card.releaseAnchored": "Release anchored",
       "casino.directory.card.playNow": "Play Now",
-      "casino.directory.reserve.title": "Progressive Reserve Pool",
-      "casino.directory.reserve.subtitle": "Transparent / Verifiable / Unlocked",
-      "casino.directory.reserve.status": "Yielding Real Time"
+      "casino.directory.reserve.title": "Casino bankroll",
+      "casino.directory.reserve.subtitle": `Bank ${values?.bank ?? "{bank}"}`,
+      "casino.directory.reserve.status": "Release anchored",
+      "casino.directory.reserve.cta": "Inspect bank"
     })[key] ?? key
 }));
 
@@ -161,7 +165,9 @@ describe("GamesListClient", () => {
     expect(screen.getAllByText("Coin Toss").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Plinko").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Baccarat").length).toBeGreaterThan(0);
-    expect(screen.getByText("Progressive Reserve Pool")).toBeDefined();
+    expect(screen.getByText("Casino bankroll")).toBeDefined();
+    expect(screen.queryByText("1,842")).toBeNull();
+    expect(screen.queryByText("$35,000")).toBeNull();
   });
 
   it("renders correct number of room entry cards", () => {
@@ -251,5 +257,23 @@ describe("GamesListClient", () => {
     render(<GamesListClient />);
     expect(screen.getAllByTestId("room-entry-card").length).toBeGreaterThan(0);
     expect(screen.getByText("Precision Dice")).toBeDefined();
+  });
+
+  it("shows an empty state instead of falling back to all rooms when search misses", () => {
+    state.release = {
+      name: "Base Sepolia",
+      releaseDigest: "0xdeadbeefcafefeed",
+      contracts: { gameHub: "0x1234567890abcdef1234567890abcdef12345678" },
+      assets: [{ address: "0x01", symbol: "USDC", decimals: 6 }],
+      gamesMeta: MOCK_GAMES_META
+    };
+    render(<GamesListClient />);
+
+    fireEvent.change(screen.getByLabelText("Search games"), {
+      target: { value: "not-a-room" }
+    });
+
+    expect(screen.getByText("No matching rooms")).toBeDefined();
+    expect(screen.queryAllByTestId("room-entry-card")).toHaveLength(0);
   });
 });
