@@ -72,4 +72,18 @@ describe("EventBoard", () => {
     expect(screen.getByText("Today")).toBeDefined();
     expect(screen.queryByText("Recently settled")).toBeNull();
   });
+
+  it("shows settled markets when the past filter is selected directly", () => {
+    const now = Date.UTC(2026, 4, 19, 12, 0, 0);
+    vi.useFakeTimers();
+    vi.setSystemTime(now);
+    const nowSeconds = Math.floor(now / 1000);
+    const entries: EventBoardEntry[] = [
+      { href: "/sportsbook/2", market: market(2n, nowSeconds - 24 * 60 * 60, "resolved") }
+    ];
+
+    render(<EventBoard entries={entries} filter="past" locale="en" />);
+
+    expect(screen.getByText("Recently settled")).toBeDefined();
+  });
 });

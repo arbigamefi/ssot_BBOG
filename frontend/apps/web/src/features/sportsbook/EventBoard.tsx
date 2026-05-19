@@ -70,7 +70,7 @@ export function EventBoard({
     <div className="flex flex-col gap-8">
       {ORDER.map((bucket) => {
         if (filter !== "all" && filter !== bucket) return null;
-        if (bucket === "past" && !showPast) return null;
+        if (bucket === "past" && filter !== "past" && !showPast) return null;
         const rows = buckets[bucket];
         if (rows.length === 0) return null;
         return (
