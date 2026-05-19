@@ -29,7 +29,7 @@ export function PlinkoStage({
 
   return (
     <div className="absolute inset-0 z-10 flex flex-col items-center justify-start overflow-hidden px-5 pb-6 pt-8 md:pt-10">
-      <div className="relative flex w-full max-w-3xl flex-col items-center gap-5">
+      <div className="relative flex w-full max-w-4xl flex-col items-center gap-6">
         <div className="flex w-full flex-col gap-3 rounded-xl border border-border bg-surface-1/90 p-3 shadow-e2 backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-fg-subtle">
@@ -65,44 +65,44 @@ export function PlinkoStage({
           </div>
         </div>
 
-        <div className="relative flex h-16 w-16 items-center justify-center">
+        <div className="relative flex h-20 w-20 items-center justify-center">
           <div
             className={cn(
-              "absolute h-14 w-14 rounded-full border border-brand/40 bg-brand-soft shadow-e2 transition-transform",
+              "absolute h-16 w-16 rounded-full border border-brand/40 bg-brand-soft shadow-e2 transition-transform",
               isPending && "animate-bounce",
               showResult && "scale-110 border-accent/50 bg-accent-soft"
             )}
           />
-          <span className="relative font-mono text-xl font-semibold text-fg">
+          <span className="relative font-mono text-2xl font-semibold text-fg">
             {lastBucket == null ? "P" : lastBucket}
           </span>
         </div>
 
-        <div className="flex flex-col items-center gap-2.5">
+        <div className="flex flex-col items-center gap-3">
           {Array.from({ length: 8 }).map((_, row) => (
             <div
               key={row}
-              className="flex justify-center gap-4"
-              style={{ width: `${(row + 2) * 2}rem` }}
+              className="flex justify-center gap-5"
+              style={{ width: `${(row + 2) * 2.4}rem` }}
             >
               {Array.from({ length: row + 1 }).map((__, index) => (
                 <span
                   key={index}
-                  className="h-2 w-2 rounded-full border border-brand/30 bg-fg/80 shadow-e1"
+                  className="h-2.5 w-2.5 rounded-full border border-brand/30 bg-fg/80 shadow-e1"
                 />
               ))}
             </div>
           ))}
         </div>
 
-        <div className="grid w-full grid-cols-9 gap-1.5">
+        <div className="grid w-full grid-cols-9 gap-2">
           {factors.map((factor, bucket) => {
             const active = showResult && lastBucket === bucket;
             return (
               <div
                 key={bucket}
                 className={cn(
-                  "flex min-h-12 flex-col items-center justify-center rounded-md border bg-surface-1 px-1 py-1.5 text-center shadow-inner-e1",
+                  "flex min-h-14 flex-col items-center justify-center rounded-md border bg-surface-1 px-1 py-2 text-center shadow-inner-e1",
                   active
                     ? "border-accent bg-accent-soft text-accent shadow-e2"
                     : "border-border text-fg-muted"

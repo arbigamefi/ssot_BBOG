@@ -25,7 +25,7 @@ export function DiceRangeControl({
 
   return (
     <div className="absolute bottom-8 z-20 w-full max-w-3xl px-6">
-      <div className="relative flex flex-col gap-5 overflow-hidden rounded-xl border border-border bg-surface-1/95 p-4 shadow-e2 backdrop-blur-3xl sm:gap-6 sm:p-6">
+      <div className="relative flex flex-col gap-5 overflow-hidden rounded-xl border border-border bg-surface-1/95 p-4 shadow-e2 backdrop-blur-xl sm:gap-6 sm:p-6">
         <div className="relative z-10 flex flex-col gap-4 px-1 sm:flex-row sm:items-center sm:justify-between sm:px-4">
           <div className="relative flex h-12 w-full rounded-lg border border-border bg-surface-2 p-1.5 shadow-e1 sm:w-64">
             <div

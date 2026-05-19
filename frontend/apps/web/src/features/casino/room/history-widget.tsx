@@ -72,7 +72,7 @@ export function GameRoomHistoryWidget({
   const t = useTranslations();
 
   return (
-    <div className="absolute top-6 right-6 lg:top-8 lg:right-8 z-20 hidden md:block">
+    <div className="absolute right-8 top-8 z-20 hidden 2xl:block">
       <div className="flex min-w-[200px] max-w-[260px] flex-col items-end gap-2 rounded-lg border border-border bg-surface-1/90 p-3 shadow-e2 backdrop-blur-xl">
         <div className="w-full px-1 text-[10px] font-bold uppercase tracking-widest text-fg-subtle">
           {getRecentLabel(gameSlug, t)}
