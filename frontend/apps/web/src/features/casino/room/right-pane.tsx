@@ -234,6 +234,7 @@ export function GameRoomRightPane({
           risk={plinkoRisk}
           buckets={plinkoBuckets}
           onRiskChange={onPlinkoRiskChange}
+          randomHash={resultProof?.randomHash}
         />
       )}
 
