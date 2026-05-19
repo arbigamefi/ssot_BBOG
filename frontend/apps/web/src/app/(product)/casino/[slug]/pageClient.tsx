@@ -351,13 +351,8 @@ export function GamePageClient({ slug }: { slug: string }) {
       winChance={winChance}
       multiplier={multiplier}
       expectedPayout={expectedPayout}
-      coinSide={coinSide}
-      onCoinSideChange={setCoinSide}
       rouletteSpots={rouletteSpots}
       onRouletteClear={() => setRouletteSpots([])}
-      kenoSpots={kenoSpots}
-      onKenoChange={setKenoSpots}
-      onKenoResetResult={() => setKenoResultDrawn([])}
       plinkoRisk={plinkoRisk}
       onPlinkoRiskChange={setPlinkoRisk}
       roundPhase={casinoRound.roundPhase}
@@ -405,6 +400,7 @@ export function GamePageClient({ slug }: { slug: string }) {
       onResultClose={handleResultClose}
       onDiceDirectionChange={setDiceDirection}
       onDiceTargetChange={setDiceTarget}
+      onCoinSideChange={setCoinSide}
       onRouletteChange={setRouletteSpots}
       onKenoChange={setKenoSpots}
       onKenoResetResult={() => setKenoResultDrawn([])}

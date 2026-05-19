@@ -109,6 +109,7 @@ export function GameRoomRightPane({
   onResultClose,
   onDiceDirectionChange,
   onDiceTargetChange,
+  onCoinSideChange,
   onRouletteChange,
   onKenoChange,
   onKenoResetResult,
@@ -144,6 +145,7 @@ export function GameRoomRightPane({
   onResultClose?: () => void;
   onDiceDirectionChange: (direction: DiceDirection) => void;
   onDiceTargetChange: (target: number) => void;
+  onCoinSideChange: (side: CoinSide) => void;
   onRouletteChange: (spots: string[]) => void;
   onKenoChange: (spots: number[]) => void;
   onKenoResetResult: () => void;
@@ -155,7 +157,11 @@ export function GameRoomRightPane({
       ? "min-h-[58rem] sm:min-h-[56rem] lg:min-h-0"
       : gameSlug === "baccarat"
         ? "min-h-[54rem] sm:min-h-[50rem] lg:min-h-0"
-        : "min-h-[34rem] lg:min-h-0";
+        : gameSlug === "keno"
+          ? "min-h-[34rem] sm:min-h-[42rem] lg:min-h-0"
+          : gameSlug === "coin-toss"
+            ? "min-h-[48rem] sm:min-h-[44rem] lg:min-h-0"
+            : "min-h-[34rem] lg:min-h-0";
 
   return (
     <div
@@ -190,6 +196,7 @@ export function GameRoomRightPane({
           showResult={showResult}
           resultNum={resultNum}
           coinSide={coinSide}
+          onSideChange={onCoinSideChange}
         />
       )}
 

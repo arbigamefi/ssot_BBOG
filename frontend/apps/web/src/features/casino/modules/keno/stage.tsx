@@ -1,5 +1,15 @@
 import * as React from "react";
 import { cn } from "@ssot/ui";
+import { useTranslations } from "next-intl";
+
+function pickKenoSpots(count: number): number[] {
+  const spots: number[] = [];
+  while (spots.length < count) {
+    const n = Math.floor(Math.random() * 40) + 1;
+    if (!spots.includes(n)) spots.push(n);
+  }
+  return spots.sort((a, b) => a - b);
+}
 
 export function KenoStage({
   isPending,
@@ -18,19 +28,53 @@ export function KenoStage({
   onChange: (spots: number[]) => void;
   onResetResult: () => void;
 }) {
-  return (
-    <div className="absolute inset-0 z-10 flex flex-col items-center justify-start overflow-hidden px-6 pb-6 pt-16">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,hsl(var(--brand)/0.08)_0%,transparent_70%)] pointer-events-none" />
+  const t = useTranslations();
+  const controlsDisabled = isPending || showResult;
 
-      <div className="relative z-20 mb-5 w-full max-w-[800px] overflow-hidden rounded-xl border border-border bg-surface-1/90 p-3 shadow-e2 backdrop-blur-3xl">
-        <div className="absolute bottom-0 left-0 top-0 w-32 bg-gradient-to-r from-brand/10 to-transparent pointer-events-none" />
-        <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar pb-1">
-          <div
-            className="mr-4 flex-shrink-0 text-[10px] font-black uppercase tracking-widest text-brand"
-            style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
-          >
-            Payouts
+  return (
+    <div className="absolute inset-0 z-10 flex flex-col items-center justify-start overflow-hidden px-5 pb-6 pt-10">
+      <div className="relative z-20 mb-4 flex w-full max-w-[820px] flex-col gap-3 rounded-xl border border-border bg-surface-1/90 p-4 shadow-e2 backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="font-mono text-3xl font-semibold text-fg">
+            {spots.length}{" "}
+            <span className="text-sm uppercase tracking-[0.2em] text-fg-subtle">
+              {t("casino.room.selection.keno.spotsLabel")}
+            </span>
           </div>
+          <p className="mt-1 text-sm text-fg-muted">
+            {spots.length === 0
+              ? t("casino.room.selection.keno.empty")
+              : [...spots].sort((a, b) => a - b).join(" / ")}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={controlsDisabled}
+            onClick={() => {
+              onChange(pickKenoSpots(10));
+              onResetResult();
+            }}
+            className="rounded-lg border border-brand/40 bg-brand-soft px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-brand transition-colors hover:bg-brand/20 disabled:cursor-default disabled:opacity-50"
+          >
+            {t("casino.room.selection.keno.autoPick")}
+          </button>
+          <button
+            type="button"
+            disabled={controlsDisabled}
+            onClick={() => {
+              onChange([]);
+              onResetResult();
+            }}
+            className="rounded-lg border border-border bg-surface-0 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg disabled:cursor-default disabled:opacity-50"
+          >
+            {t("casino.room.selection.keno.clear")}
+          </button>
+        </div>
+      </div>
+
+      <div className="relative z-20 mb-4 w-full max-w-[820px] overflow-hidden rounded-xl border border-border bg-surface-1/90 p-3 shadow-e2 backdrop-blur-xl">
+        <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar pb-1">
           {Array.from({ length: Math.max(5, spots.length + 1) }).map((_, hits) => {
             const pay =
               hits === 0 ? 0 : Math.pow(Math.max(1, hits - Math.floor(spots.length / 3)), 1.8);
@@ -41,7 +85,7 @@ export function KenoStage({
                 className={cn(
                   "flex h-14 min-w-[66px] flex-col items-center justify-center rounded-md border-2 transition-[transform,border-color,background-color]",
                   isCurrentTarget
-                    ? "scale-105 border-brand bg-brand-soft shadow-e2"
+                    ? "border-brand bg-brand-soft shadow-e2"
                     : pay > 0
                       ? "border-border-soft bg-surface-2"
                       : "bg-transparent border-transparent opacity-40"
@@ -49,7 +93,7 @@ export function KenoStage({
               >
                 <span
                   className={cn(
-                    "text-[9px] uppercase font-bold tracking-widest mb-1",
+                    "text-[9px] uppercase font-semibold tracking-widest mb-1",
                     isCurrentTarget ? "text-brand" : "text-fg-subtle"
                   )}
                 >
@@ -57,7 +101,7 @@ export function KenoStage({
                 </span>
                 <span
                   className={cn(
-                    "text-sm font-mono font-black",
+                    "text-sm font-mono font-semibold",
                     isCurrentTarget ? "text-fg" : pay > 0 ? "text-brand" : "text-fg-subtle"
                   )}
                 >
@@ -71,8 +115,8 @@ export function KenoStage({
 
       <div
         className={cn(
-          "relative z-10 w-full max-w-[800px] rounded-xl border border-border bg-surface-1/95 p-6 shadow-e3 backdrop-blur-3xl transition-transform md:p-8",
-          isPending ? "scale-[0.98] shadow-glow" : ""
+          "relative z-10 w-full max-w-[820px] rounded-xl border border-border bg-surface-1/95 p-5 shadow-e3 backdrop-blur-xl md:p-8",
+          isPending ? "opacity-95" : ""
         )}
       >
         <div className="grid grid-cols-8 md:grid-cols-10 gap-3 relative z-10">
@@ -94,17 +138,17 @@ export function KenoStage({
                   onResetResult();
                 }}
                 className={cn(
-                  "group relative flex aspect-square items-center justify-center overflow-hidden rounded-lg border-2 font-mono text-xl font-black transition-[transform,border-color,background-color,color] md:text-2xl",
+                  "group relative flex aspect-square items-center justify-center overflow-hidden rounded-lg border-2 font-mono text-xl font-semibold transition-[border-color,background-color,color] md:text-2xl",
                   isAnimating
-                    ? "z-20 scale-110 border-brand bg-brand text-fg-inverse shadow-glow duration-75"
+                    ? "z-20 border-brand bg-brand text-fg-inverse shadow-e2 duration-75"
                     : isDrawnWinner
-                      ? "z-30 scale-110 border-success bg-success text-fg-inverse shadow-glow animate-[pulse_1s_ease-in-out_infinite]"
+                      ? "z-30 border-success bg-success text-fg-inverse shadow-e2 animate-[pulse_1s_ease-in-out_infinite]"
                       : isDrawnMiss
-                        ? "z-20 scale-105 border-border bg-surface-3 text-fg shadow-e2"
+                        ? "z-20 border-border bg-surface-3 text-fg shadow-e2"
                         : isMissedPick
-                          ? "scale-95 border-brand/20 bg-brand-soft text-brand opacity-50 shadow-inner"
+                          ? "border-brand/20 bg-brand-soft text-brand opacity-50 shadow-inner"
                           : isSelected
-                            ? "z-10 border-brand bg-brand text-fg-inverse shadow-e2 hover:-translate-y-1 hover:scale-105"
+                            ? "z-10 border-brand bg-brand text-fg-inverse shadow-e2"
                             : "border-border-soft bg-surface-2 text-fg-subtle shadow-inner hover:border-border hover:bg-surface-3 hover:text-fg"
                 )}
               >
@@ -116,14 +160,6 @@ export function KenoStage({
             );
           })}
         </div>
-
-        {!isPending && !showResult && spots.length === 0 && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
-            <div className="rounded-full border border-border bg-surface-1/80 px-12 py-5 text-sm font-black uppercase tracking-[0.4em] text-fg-muted shadow-e2 backdrop-blur-xl">
-              Select 1 to 10 Spots
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

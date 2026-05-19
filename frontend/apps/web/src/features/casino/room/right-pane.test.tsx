@@ -177,6 +177,7 @@ const baseProps = {
   onResultClose: vi.fn(),
   onDiceDirectionChange: vi.fn(),
   onDiceTargetChange: vi.fn(),
+  onCoinSideChange: vi.fn(),
   onRouletteChange: vi.fn(),
   onKenoChange: vi.fn(),
   onKenoResetResult: vi.fn(),

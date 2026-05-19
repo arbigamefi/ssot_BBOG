@@ -26,6 +26,10 @@ vi.mock("next-intl", () => ({
       "casino.room.selection.dice.winChance": "Win",
       "casino.room.selection.coin.heads": "HEADS",
       "casino.room.selection.coin.tails": "TAILS",
+      "casino.room.selection.keno.spotsLabel": "/ 10 Spots",
+      "casino.room.selection.keno.autoPick": "Auto Pick",
+      "casino.room.selection.keno.clear": "Clear",
+      "casino.room.selection.keno.empty": "No spots selected. Click the grid to pick numbers.",
       "casino.room.selection.baccarat.player": "Player",
       "casino.room.selection.baccarat.banker": "Banker",
       "casino.room.selection.baccarat.tie": "Tie",
@@ -103,12 +107,29 @@ describe("game room stages", () => {
   });
 
   it("renders Coin Toss stage selected side and pending state", () => {
+    const onSideChange = vi.fn();
     const { rerender } = render(
-      <CoinTossStage isPending={false} showResult={false} resultNum={null} coinSide="HEADS" />
+      <CoinTossStage
+        isPending={false}
+        showResult={false}
+        resultNum={null}
+        coinSide="HEADS"
+        onSideChange={onSideChange}
+      />
     );
     expect(screen.getByText("HEADS SELECTED")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: /TAILS/i }));
+    expect(onSideChange).toHaveBeenCalledWith("TAILS");
 
-    rerender(<CoinTossStage isPending showResult={false} resultNum={null} coinSide="TAILS" />);
+    rerender(
+      <CoinTossStage
+        isPending
+        showResult={false}
+        resultNum={null}
+        coinSide="TAILS"
+        onSideChange={onSideChange}
+      />
+    );
     expect(screen.getByText("Waiting for VRF Oracle...")).toBeDefined();
   });
 
@@ -130,6 +151,14 @@ describe("game room stages", () => {
     fireEvent.click(screen.getByText("3"));
     expect(onChange).toHaveBeenCalledWith([1, 2, 3]);
     expect(onResetResult).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByText("Clear"));
+    expect(onChange).toHaveBeenCalledWith([]);
+    expect(onResetResult).toHaveBeenCalledTimes(2);
+
+    fireEvent.click(screen.getByText("Auto Pick"));
+    expect(onChange).toHaveBeenLastCalledWith(expect.arrayContaining([]));
+    expect(onChange.mock.calls.at(-1)?.[0]).toHaveLength(10);
   });
 
   it("renders Plinko stage risk and highlighted result slot", () => {

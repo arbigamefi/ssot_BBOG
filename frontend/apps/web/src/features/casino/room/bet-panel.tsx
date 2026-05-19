@@ -8,14 +8,9 @@ import {
   BetPayoutSummary,
   BetRollsSection
 } from "./bet-panel-sections";
-import {
-  CoinSideSelector,
-  KenoSelectionPanel,
-  PlinkoRiskSelector,
-  RouletteSelectionPanel
-} from "./controls";
+import { PlinkoRiskSelector, RouletteSelectionPanel } from "./controls";
 import type { GameMeta } from "./model";
-import type { CoinSide, PlinkoRisk } from "./params";
+import type { PlinkoRisk } from "./params";
 import type { GameRoomBetPanelState } from "./place-bet-button";
 import { PlaceBetButton } from "./place-bet-button";
 import { CasinoRoundStatusPanel } from "./round-status-panel";
@@ -27,43 +22,19 @@ export { isPlaceBetButtonDisabled } from "./place-bet-button";
 
 function GameSelectionControls({
   game,
-  coinSide,
-  onCoinSideChange,
   rouletteSpots,
   onRouletteClear,
-  kenoSpots,
-  onKenoChange,
-  onKenoResetResult,
   plinkoRisk,
   onPlinkoRiskChange
 }: {
   game: GameMeta;
-  coinSide: CoinSide;
-  onCoinSideChange: (side: CoinSide) => void;
   rouletteSpots: readonly string[];
   onRouletteClear: () => void;
-  kenoSpots: readonly number[];
-  onKenoChange: (spots: number[]) => void;
-  onKenoResetResult: () => void;
   plinkoRisk: PlinkoRisk;
   onPlinkoRiskChange: (risk: PlinkoRisk) => void;
 }) {
   if (game.slug === "roulette") {
     return <RouletteSelectionPanel spots={rouletteSpots} onClear={onRouletteClear} />;
-  }
-
-  if (game.slug === "coin-toss") {
-    return <CoinSideSelector coinSide={coinSide} onChange={onCoinSideChange} />;
-  }
-
-  if (game.slug === "keno") {
-    return (
-      <KenoSelectionPanel
-        spots={kenoSpots}
-        onChange={onKenoChange}
-        onResetResult={onKenoResetResult}
-      />
-    );
   }
 
   if (game.slug === "plinko") {
@@ -93,13 +64,8 @@ export function GameRoomBetPanel({
   winChance,
   multiplier,
   expectedPayout,
-  coinSide,
-  onCoinSideChange,
   rouletteSpots,
   onRouletteClear,
-  kenoSpots,
-  onKenoChange,
-  onKenoResetResult,
   plinkoRisk,
   onPlinkoRiskChange,
   roundPhase,
@@ -133,13 +99,8 @@ export function GameRoomBetPanel({
   winChance: number;
   multiplier: number;
   expectedPayout: number;
-  coinSide: CoinSide;
-  onCoinSideChange: (side: CoinSide) => void;
   rouletteSpots: readonly string[];
   onRouletteClear: () => void;
-  kenoSpots: readonly number[];
-  onKenoChange: (spots: number[]) => void;
-  onKenoResetResult: () => void;
   plinkoRisk: PlinkoRisk;
   onPlinkoRiskChange: (risk: PlinkoRisk) => void;
   roundPhase: CasinoRoundPhase;
@@ -191,13 +152,8 @@ export function GameRoomBetPanel({
 
         <GameSelectionControls
           game={game}
-          coinSide={coinSide}
-          onCoinSideChange={onCoinSideChange}
           rouletteSpots={rouletteSpots}
           onRouletteClear={onRouletteClear}
-          kenoSpots={kenoSpots}
-          onKenoChange={onKenoChange}
-          onKenoResetResult={onKenoResetResult}
           plinkoRisk={plinkoRisk}
           onPlinkoRiskChange={onPlinkoRiskChange}
         />
