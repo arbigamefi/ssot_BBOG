@@ -10,52 +10,42 @@ function getPhaseCopy(phase: CasinoRoundPhase, t: Translate) {
   switch (phase) {
     case "loading_quote":
       return {
-        label: t("casino.room.roundStatus.phases.loadingQuote.label"),
         status: t("casino.room.roundStatus.phases.loadingQuote.status")
       };
     case "waiting_vrf":
       return {
-        label: t("casino.room.roundStatus.phases.waitingVrf.label"),
         status: t("casino.room.roundStatus.phases.waitingVrf.status")
       };
     case "timeout_soft":
       return {
-        label: t("casino.room.roundStatus.phases.timeoutSoft.label"),
         status: t("casino.room.roundStatus.phases.timeoutSoft.status")
       };
     case "placing":
       return {
-        label: t("casino.room.roundStatus.phases.placing.label"),
         status: t("casino.room.roundStatus.phases.placing.status")
       };
     case "settling":
       return {
-        label: t("casino.room.roundStatus.phases.settling.label"),
         status: t("casino.room.roundStatus.phases.settling.status")
       };
     case "manual_settle_offered":
       return {
-        label: t("casino.room.roundStatus.phases.manualSettleOffered.label"),
         status: t("casino.room.roundStatus.phases.manualSettleOffered.status")
       };
     case "settled":
       return {
-        label: t("casino.room.roundStatus.phases.settled.label"),
         status: t("casino.room.roundStatus.phases.settled.status")
       };
     case "refundable":
       return {
-        label: t("casino.room.roundStatus.phases.refundable.label"),
         status: t("casino.room.roundStatus.phases.refundable.status")
       };
     case "failed":
       return {
-        label: t("casino.room.roundStatus.phases.failed.label"),
         status: t("casino.room.roundStatus.phases.failed.status")
       };
     default:
       return {
-        label: t("casino.room.roundStatus.phases.ready.label"),
         status: t("casino.room.roundStatus.phases.ready.status")
       };
   }
@@ -63,7 +53,7 @@ function getPhaseCopy(phase: CasinoRoundPhase, t: Translate) {
 
 function RoundProofRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="grid grid-cols-[90px_minmax(0,1fr)] items-center gap-3 px-3 py-2 text-xs">
+    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-1.5 text-xs">
       <span className="text-fg-subtle">{label}</span>
       <span className="truncate text-right font-mono font-semibold text-fg">{value}</span>
     </div>
@@ -104,20 +94,17 @@ export function CasinoRoundStatusPanel({
   return (
     <div
       className={cn(
-        "mb-2 rounded-lg border bg-surface-1 p-2 text-sm shadow-inner-e1",
+        "mb-2 rounded-lg border bg-surface-1 px-3 py-2 text-sm shadow-inner-e1",
         active ? "border-brand/30" : "border-border"
       )}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-fg-subtle">
-            {t("casino.room.roundStatus.title")}
-          </p>
-          <p className="mt-0.5 font-bold text-fg">{copy.label}</p>
-        </div>
+      <div className="flex items-center justify-between gap-3 pb-1">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-fg-subtle">
+          {t("casino.room.roundStatus.title")}
+        </p>
         <span
           className={cn(
-            "rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]",
+            "rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em]",
             active
               ? "border-brand/30 bg-brand-soft text-brand"
               : "border-border bg-surface-2 text-fg-subtle"
@@ -127,7 +114,7 @@ export function CasinoRoundStatusPanel({
         </span>
       </div>
 
-      <div className="mt-2 divide-y divide-border-soft rounded-md border border-border bg-surface-2">
+      <div className="divide-y divide-border-soft">
         <RoundProofRow
           label={t("casino.room.roundStatus.metrics.vrfEstimate")}
           value={formatNativeFee(quote)}
@@ -146,7 +133,7 @@ export function CasinoRoundStatusPanel({
         <button
           type="button"
           onClick={onManualSettle}
-          className="mt-4 w-full rounded-lg border border-warn/40 bg-warn-soft px-4 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-warn transition-colors hover:bg-warn/15"
+          className="mt-2 w-full rounded-lg border border-warn/40 bg-warn-soft px-4 py-2 text-sm font-semibold uppercase tracking-[0.14em] text-warn transition-colors hover:bg-warn/15"
         >
           {t("casino.room.roundStatus.actions.settleResult")}
         </button>
@@ -156,7 +143,7 @@ export function CasinoRoundStatusPanel({
         <button
           type="button"
           onClick={onManualRefund}
-          className="mt-4 w-full rounded-lg border border-danger/35 bg-danger-soft px-4 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-danger transition-colors hover:bg-danger/15"
+          className="mt-2 w-full rounded-lg border border-danger/35 bg-danger-soft px-4 py-2 text-sm font-semibold uppercase tracking-[0.14em] text-danger transition-colors hover:bg-danger/15"
         >
           {t("casino.room.roundStatus.actions.refundStake")}
         </button>

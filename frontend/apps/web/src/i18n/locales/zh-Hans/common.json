@@ -215,9 +215,9 @@
           }
         },
         "metrics": {
-          "vrfEstimate": "VRF 费用",
-          "betId": "ID",
-          "vrfRequest": "VRF ReqID"
+          "vrfEstimate": "VRF 预估费用",
+          "betId": "投注 ID",
+          "vrfRequest": "VRF 请求"
         },
         "actions": {
           "settleResult": "结算结果",

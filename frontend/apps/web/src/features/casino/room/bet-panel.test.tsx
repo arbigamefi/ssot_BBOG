@@ -62,9 +62,9 @@ vi.mock("next-intl", () => ({
       "casino.room.roundStatus.phases.ready.detail":
         "One click will approve if needed, place the bet, and watch settlement.",
       "casino.room.roundStatus.phases.ready.status": "Ready",
-      "casino.room.roundStatus.metrics.vrfEstimate": "VRF fee",
-      "casino.room.roundStatus.metrics.betId": "ID",
-      "casino.room.roundStatus.metrics.vrfRequest": "VRF ReqID",
+      "casino.room.roundStatus.metrics.vrfEstimate": "VRF estimate",
+      "casino.room.roundStatus.metrics.betId": "Bet ID",
+      "casino.room.roundStatus.metrics.vrfRequest": "VRF request",
       "casino.room.roundStatus.actions.settleResult": "Settle result",
       "casino.room.roundStatus.actions.refundStake": "Refund stake",
       "casino.room.betPanel.walletBalance": "Wallet Balance",
@@ -180,7 +180,7 @@ describe("GameRoomBetPanel", () => {
     expect(screen.getByText("Wallet Balance")).toBeDefined();
     expect(screen.getByText("Not connected")).toBeDefined();
     expect(screen.getByText("Connect wallet to place a round")).toBeDefined();
-    expect(screen.getByText("VRF fee")).toBeDefined();
+    expect(screen.getByText("VRF estimate")).toBeDefined();
     expect(screen.getByText("1.98x")).toBeDefined();
     expect(screen.getByText("50.00%")).toBeDefined();
     expect(screen.getByRole("button", { name: "CONNECT WALLET" })).toBeDefined();
