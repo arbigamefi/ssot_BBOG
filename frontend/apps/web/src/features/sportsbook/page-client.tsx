@@ -274,7 +274,7 @@ function MarketFilterTabs({
 
   return (
     <div
-      className="flex gap-2 overflow-x-auto rounded-lg border border-border bg-surface-1 p-1"
+      className="sticky top-20 z-20 flex gap-2 overflow-x-auto rounded-lg border border-border bg-surface-1/95 p-1 backdrop-blur"
       role="tablist"
       aria-label={t("ariaLabel")}
     >

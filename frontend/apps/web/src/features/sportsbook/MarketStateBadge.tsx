@@ -74,7 +74,7 @@ export function MarketStateBadge({
       )}
     >
       {clock?.kind === "live" ? (
-        <span aria-hidden className="h-1.5 w-1.5 animate-pulse rounded-full bg-danger" />
+        <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-danger" />
       ) : null}
       {label}
     </span>
