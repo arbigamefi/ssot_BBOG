@@ -109,6 +109,35 @@ describe("game room stages", () => {
     expect(onTargetChange).toHaveBeenCalledWith(60);
   });
 
+  it("runs Dice reveal before completing the stage", () => {
+    const onRevealComplete = vi.fn();
+    vi.useFakeTimers();
+    try {
+      render(
+        <DiceStage
+          isPending={false}
+          isRevealing
+          showResult
+          resultNum={42}
+          diceDirection="under"
+          diceTarget={50}
+          multiplier={1.98}
+          winChance={50}
+          onDirectionChange={vi.fn()}
+          onTargetChange={vi.fn()}
+          onRevealComplete={onRevealComplete}
+        />
+      );
+
+      act(() => {
+        vi.advanceTimersByTime(1_700);
+      });
+      expect(onRevealComplete).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("renders Coin Toss stage selected side and pending state", () => {
     const onSideChange = vi.fn();
     const { rerender } = render(

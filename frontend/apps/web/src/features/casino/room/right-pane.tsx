@@ -108,6 +108,7 @@ export function GameRoomRightPane({
   assetSymbol,
   assetDecimals,
   onResultClose,
+  onDiceRevealComplete,
   onDiceDirectionChange,
   onDiceTargetChange,
   onCoinSideChange,
@@ -151,6 +152,7 @@ export function GameRoomRightPane({
   assetSymbol?: string;
   assetDecimals?: number;
   onResultClose?: () => void;
+  onDiceRevealComplete?: () => void;
   onDiceDirectionChange: (direction: DiceDirection) => void;
   onDiceTargetChange: (target: number) => void;
   onCoinSideChange: (side: CoinSide) => void;
@@ -193,6 +195,7 @@ export function GameRoomRightPane({
       {gameSlug === "dice" && (
         <DiceStage
           isPending={isPending}
+          isRevealing={Boolean(isRevealing)}
           showResult={showResult}
           resultNum={resultNum}
           diceDirection={diceDirection}
@@ -201,6 +204,7 @@ export function GameRoomRightPane({
           winChance={winChance}
           onDirectionChange={onDiceDirectionChange}
           onTargetChange={onDiceTargetChange}
+          onRevealComplete={onDiceRevealComplete}
         />
       )}
 

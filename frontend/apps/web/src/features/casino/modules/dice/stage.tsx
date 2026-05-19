@@ -6,6 +6,7 @@ import { DiceRangeControl } from "./dice-range-control";
 
 export function DiceStage({
   isPending,
+  isRevealing,
   showResult,
   resultNum,
   diceDirection,
@@ -13,9 +14,11 @@ export function DiceStage({
   multiplier,
   winChance,
   onDirectionChange,
-  onTargetChange
+  onTargetChange,
+  onRevealComplete
 }: {
   isPending: boolean;
+  isRevealing?: boolean;
   showResult: boolean;
   resultNum: number | null;
   diceDirection: DiceDirection;
@@ -24,12 +27,23 @@ export function DiceStage({
   winChance: number;
   onDirectionChange: (direction: DiceDirection) => void;
   onTargetChange: (target: number) => void;
+  onRevealComplete?: () => void;
 }) {
+  React.useEffect(() => {
+    if (!isRevealing || resultNum == null) return;
+    const timeout = window.setTimeout(() => onRevealComplete?.(), 1_600);
+    return () => window.clearTimeout(timeout);
+  }, [isRevealing, onRevealComplete, resultNum]);
+
   return (
     <div className="absolute inset-0 z-10 flex flex-col items-center justify-start overflow-hidden px-6 pb-8 pt-12 md:pt-16">
-      <DiceCubeDisplay isPending={isPending} showResult={showResult} resultNum={resultNum} />
+      <DiceCubeDisplay
+        isPending={isPending || Boolean(isRevealing)}
+        showResult={showResult && !isRevealing}
+        resultNum={resultNum}
+      />
       <DiceRangeControl
-        isPending={isPending}
+        isPending={isPending || Boolean(isRevealing)}
         diceDirection={diceDirection}
         diceTarget={diceTarget}
         multiplier={multiplier}

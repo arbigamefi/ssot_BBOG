@@ -172,17 +172,19 @@ export function GamePageClient({ slug }: { slug: string }) {
     (betId: bigint, gameSlug: string) => {
       clearStageRevealTimer();
       const durationMs =
-        gameSlug === "plinko"
-          ? 6_000
-          : gameSlug === "slots"
-            ? 3_400
-            : gameSlug === "keno"
-              ? 4_000
-              : gameSlug === "baccarat"
-                ? 4_200
-                : gameSlug === "sic-bo"
-                  ? 2_100
-                  : 0;
+        gameSlug === "dice"
+          ? 2_000
+          : gameSlug === "plinko"
+            ? 6_000
+            : gameSlug === "slots"
+              ? 3_400
+              : gameSlug === "keno"
+                ? 4_000
+                : gameSlug === "baccarat"
+                  ? 4_200
+                  : gameSlug === "sic-bo"
+                    ? 2_100
+                    : 0;
 
       if (durationMs === 0) {
         setStageReveal({ betId, phase: "revealed" });
@@ -447,6 +449,7 @@ export function GamePageClient({ slug }: { slug: string }) {
       assetSymbol="USDC"
       assetDecimals={usdcDecimals}
       onResultClose={handleResultClose}
+      onDiceRevealComplete={handleStageRevealComplete}
       onDiceDirectionChange={setDiceDirection}
       onDiceTargetChange={setDiceTarget}
       onCoinSideChange={setCoinSide}

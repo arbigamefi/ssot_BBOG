@@ -182,7 +182,7 @@ export function DiceCubeDisplay({
         </div>
       </div>
 
-      {showResult && resultNum !== null && (
+      {showResult && !isPending && resultNum !== null && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50 mt-10">
           <div className="rounded-full border border-brand/40 bg-brand px-6 py-2 font-mono text-3xl font-semibold text-fg-inverse shadow-e2 backdrop-blur-xl animate-in zoom-in spin-in-12 duration-500">
             {resultNum}
