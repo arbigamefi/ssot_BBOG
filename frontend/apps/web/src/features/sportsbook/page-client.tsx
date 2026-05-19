@@ -12,6 +12,13 @@ import { useSSOTSDK } from "../../ssot/sdk";
 
 import { EmptyMarketsState } from "./EmptyMarketsState";
 import { EventBoard, type EventBoardEntry } from "./EventBoard";
+import { MarketStateBadge } from "./MarketStateBadge";
+import {
+  bucketMarket,
+  describeMarketWallClock,
+  marketShortTag,
+  type SportsMarketBucket
+} from "./player-format";
 import type { SportsbookProviderOdds } from "./provider-odds";
 import { useSportsbookProviderOdds } from "./use-provider-odds";
 
@@ -203,13 +210,177 @@ export function SportsbookPageClient() {
               <EmptyMarketsState variant="quiet" />
             ) : null}
             {!isLoading && !error && board?.source === "live" ? (
-              <EventBoard entries={stitched} locale={locale} />
+              <>
+                <SportsbookLobbyPanel entries={stitched} locale={locale} />
+                <section className="flex flex-col gap-3">
+                  <header className="flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
+                    <div>
+                      <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-fg-subtle">
+                        {t("sportsbook.player.lobby.boardTitle")}
+                      </h2>
+                      <p className="mt-1 text-xs leading-5 text-fg-muted">
+                        {t("sportsbook.player.lobby.boardDescription")}
+                      </p>
+                    </div>
+                  </header>
+                  <EventBoard
+                    entries={stitched}
+                    locale={locale}
+                    showPast={shouldShowPastBoard(stitched)}
+                  />
+                </section>
+              </>
             ) : null}
           </div>
         ) : null}
       </div>
     </PageTransition>
   );
+}
+
+function SportsbookLobbyPanel({
+  entries,
+  locale
+}: {
+  entries: readonly EventBoardEntry[];
+  locale: string;
+}) {
+  const t = useTranslations("sportsbook.player.lobby");
+  const now = React.useMemo(() => Date.now(), [entries]);
+  const featured = React.useMemo(() => selectFeaturedEntry(entries, now), [entries, now]);
+  const counts = React.useMemo(() => countBuckets(entries, now, locale), [entries, now, locale]);
+
+  if (!featured) return null;
+
+  return (
+    <section className="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(280px,0.8fr)]">
+      <FeaturedMarketCard entry={featured} locale={locale} />
+      <aside className="rounded-lg border border-border bg-surface-1 p-4 md:p-5">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-fg-subtle">
+          {t("snapshotEyebrow")}
+        </div>
+        <h2 className="mt-2 text-xl font-semibold text-fg">{t("snapshotTitle")}</h2>
+        <p className="mt-2 text-sm leading-6 text-fg-muted">{t("snapshotDescription")}</p>
+        <dl className="mt-5 grid grid-cols-2 gap-3">
+          <SnapshotCell label={t("live")} value={counts.live.toString()} />
+          <SnapshotCell label={t("today")} value={counts.today.toString()} />
+          <SnapshotCell label={t("upcoming")} value={counts.upcoming.toString()} />
+          <SnapshotCell label={t("settled")} value={counts.past.toString()} />
+        </dl>
+      </aside>
+    </section>
+  );
+}
+
+function FeaturedMarketCard({ entry, locale }: { entry: EventBoardEntry; locale: string }) {
+  const t = useTranslations("sportsbook.player.lobby");
+  const now = Date.now();
+  const clock = describeMarketWallClock(entry.market, now, locale);
+  const bucket = bucketMarket(clock, now);
+  const canPlaceTicket = entry.market.state === "open" && bucket !== "past";
+  const title = entry.odds
+    ? t("eventTitle", { away: entry.odds.event.awayTeam, home: entry.odds.event.homeTeam })
+    : t("fallbackTitle", { tag: marketShortTag(entry.market.marketKey) });
+  const sortedOutcomes = React.useMemo(() => sortProviderOutcomes(entry.odds), [entry.odds]);
+
+  return (
+    <article className="rounded-lg border border-brand/25 bg-surface-1 p-4 shadow-e2 md:p-5">
+      <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium uppercase tracking-[0.14em] text-fg-subtle">
+        <span className="text-brand">{t("featuredEyebrow")}</span>
+        <span aria-hidden>·</span>
+        <MarketStateBadge state={entry.market.state} clock={clock} size="small" />
+        <span aria-hidden>·</span>
+        <span>{clock.label}</span>
+      </div>
+
+      <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight text-fg md:text-3xl">{title}</h2>
+          <p className="mt-1 text-sm text-fg-muted">{t("kickoff", { time: clock.absolute })}</p>
+        </div>
+        <Link
+          href={entry.href}
+          className="inline-flex h-10 w-fit items-center justify-center rounded-md bg-brand px-4 text-sm font-semibold text-fg-inverse transition-colors hover:bg-brand-hover"
+        >
+          {canPlaceTicket ? t("openMarket") : t("viewMarket")}
+        </Link>
+      </div>
+
+      {sortedOutcomes.length > 0 ? (
+        <div className="mt-5 grid gap-2 sm:grid-cols-3">
+          {sortedOutcomes.map((outcome) => (
+            <Link
+              key={outcome.outcomeId}
+              href={`${entry.href}?outcome=${outcome.outcomeId}`}
+              className="rounded-md border border-border bg-surface-2 px-3 py-3 transition-colors hover:border-brand/50 hover:bg-surface-3"
+            >
+              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-subtle">
+                {t(`side.${outcome.side}`)}
+              </div>
+              <div className="mt-1 flex items-baseline justify-between gap-3">
+                <span className="min-w-0 truncate text-sm font-semibold text-fg">
+                  {outcome.name}
+                </span>
+                <span className="font-mono text-base tabular-nums text-fg">
+                  {outcome.decimalPrice}
+                </span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-5 rounded-md border border-border-soft bg-surface-2/60 px-3 py-3 text-sm text-fg-muted">
+          {t("oddsPending", { count: entry.market.outcomeCount })}
+        </p>
+      )}
+    </article>
+  );
+}
+
+function SnapshotCell({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border border-border-soft bg-surface-2/60 px-3 py-3">
+      <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-subtle">
+        {label}
+      </dt>
+      <dd className="mt-1 font-mono text-xl font-semibold tabular-nums text-fg">{value}</dd>
+    </div>
+  );
+}
+
+function selectFeaturedEntry(entries: readonly EventBoardEntry[], now: number) {
+  const active = entries.filter(
+    (entry) => bucketMarket(describeMarketWallClock(entry.market, now), now) !== "past"
+  );
+  const open = active.find((entry) => entry.market.state === "open");
+  return open ?? active[0] ?? entries[0];
+}
+
+function shouldShowPastBoard(entries: readonly EventBoardEntry[]) {
+  const now = Date.now();
+  return !entries.some(
+    (entry) => bucketMarket(describeMarketWallClock(entry.market, now), now) !== "past"
+  );
+}
+
+function countBuckets(
+  entries: readonly EventBoardEntry[],
+  now: number,
+  locale: string
+): Record<SportsMarketBucket, number> {
+  return entries.reduce<Record<SportsMarketBucket, number>>(
+    (acc, entry) => {
+      const bucket = bucketMarket(describeMarketWallClock(entry.market, now, locale), now);
+      acc[bucket] += 1;
+      return acc;
+    },
+    { live: 0, today: 0, upcoming: 0, past: 0 }
+  );
+}
+
+function sortProviderOutcomes(odds: SportsbookProviderOdds | undefined) {
+  const order = { home: 0, draw: 1, away: 2 };
+  return [...(odds?.outcomes ?? [])].sort((a, b) => order[a.side] - order[b.side]);
 }
 
 function SportsbookHeader({

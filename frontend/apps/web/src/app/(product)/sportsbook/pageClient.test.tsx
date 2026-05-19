@@ -189,8 +189,10 @@ describe("SportsbookPageClient (player-facing)", () => {
     renderWithQueryClient(<SportsbookPageClient />);
     // Header status flips to "Tickets live"
     expect(screen.getByText("Tickets live")).toBeDefined();
-    // Upcoming bucket renders because at least one fixture sits in the future.
-    expect(await screen.findByText("Upcoming")).toBeDefined();
+    // Lobby context and board render because at least one fixture sits in the future.
+    expect(await screen.findByText("Featured market")).toBeDefined();
+    expect(screen.getByText("Market board")).toBeDefined();
+    expect(screen.getAllByText("Upcoming").length).toBeGreaterThan(0);
     // Past bucket is hidden on the board by default; that's the intended
     // public behavior — past events do not crowd the live + upcoming feed.
     expect(screen.queryByText("Recently settled")).toBeNull();

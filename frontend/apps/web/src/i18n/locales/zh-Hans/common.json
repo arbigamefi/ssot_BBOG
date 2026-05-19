@@ -730,6 +730,29 @@
         },
         "count": "{count} 场市场"
       },
+      "lobby": {
+        "featuredEyebrow": "推荐市场",
+        "eventTitle": "{away} @ {home}",
+        "fallbackTitle": "市场 {tag}",
+        "kickoff": "开赛 {time}",
+        "openMarket": "打开市场",
+        "viewMarket": "查看市场",
+        "oddsPending": "{count} 个结果 · 赔率待发布",
+        "snapshotEyebrow": "市场概览",
+        "snapshotTitle": "足球盘口",
+        "snapshotDescription": "先快速浏览进行中、即将开赛和最近结算的固定赔率市场，再进入票据下注。",
+        "live": "进行中",
+        "today": "今天",
+        "upcoming": "即将开赛",
+        "settled": "已结算",
+        "boardTitle": "市场列表",
+        "boardDescription": "打开任一市场，查看赔率、下注、赛果证明和市场级结算状态。",
+        "side": {
+          "home": "主胜",
+          "draw": "平局",
+          "away": "客胜"
+        }
+      },
       "event": {
         "fallbackTitle": "市场 {tag}",
         "kickoffAt": "开赛 {time}",

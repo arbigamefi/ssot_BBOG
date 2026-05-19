@@ -730,6 +730,29 @@
         },
         "count": "{count, plural, one {1 market} other {# markets}}"
       },
+      "lobby": {
+        "featuredEyebrow": "Featured market",
+        "eventTitle": "{away} @ {home}",
+        "fallbackTitle": "Market {tag}",
+        "kickoff": "Kickoff {time}",
+        "openMarket": "Open market",
+        "viewMarket": "View market",
+        "oddsPending": "{count} outcomes · prices pending",
+        "snapshotEyebrow": "Market snapshot",
+        "snapshotTitle": "Football board",
+        "snapshotDescription": "Scan live, upcoming, and recently settled fixed-odds markets before opening a ticket.",
+        "live": "Live",
+        "today": "Today",
+        "upcoming": "Upcoming",
+        "settled": "Settled",
+        "boardTitle": "Market board",
+        "boardDescription": "Open a row for odds, ticket placement, result proof, and market-level settlement state.",
+        "side": {
+          "home": "Home",
+          "draw": "Draw",
+          "away": "Away"
+        }
+      },
       "event": {
         "fallbackTitle": "Market {tag}",
         "kickoffAt": "Kickoff {time}",
