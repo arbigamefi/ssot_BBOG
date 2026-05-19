@@ -360,8 +360,10 @@
           "waitingVrf": "Waiting for VRF oracle..."
         },
         "plinko": {
+          "board": "Plinko board",
           "dropZone": "Set risk and drop",
           "waitingVrf": "Waiting for VRF oracle...",
+          "revealing": "Dropping through the board...",
           "slot": "Slot {slot}",
           "risk": "Risk: {risk}"
         },

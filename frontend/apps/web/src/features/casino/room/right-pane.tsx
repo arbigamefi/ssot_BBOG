@@ -85,6 +85,7 @@ export function GameRoomRightPane({
   gameHistory,
   recentBets,
   isPending,
+  isRevealing,
   showResult,
   resultNum,
   diceDirection,
@@ -122,6 +123,7 @@ export function GameRoomRightPane({
   gameHistory: readonly GameHistoryEntry[];
   recentBets: readonly RecentBetSummary[];
   isPending: boolean;
+  isRevealing?: boolean;
   showResult: boolean;
   resultNum: number | null;
   diceDirection: DiceDirection;
@@ -227,6 +229,7 @@ export function GameRoomRightPane({
       {gameSlug === "plinko" && (
         <PlinkoStage
           isPending={isPending}
+          isRevealing={Boolean(isRevealing)}
           showResult={showResult}
           risk={plinkoRisk}
           buckets={plinkoBuckets}
@@ -259,7 +262,7 @@ export function GameRoomRightPane({
         />
       )}
 
-      {showResult && resultProof && (isCasinoTerminalRoundResult(resultProof) || casinoOutcome) && (
+      {showResult && resultProof && isCasinoTerminalRoundResult(resultProof) && (
         <GameRoomResultOverlay
           result={resultProof}
           chainId={chainId}

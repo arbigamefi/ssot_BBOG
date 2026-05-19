@@ -49,6 +49,8 @@ vi.mock("next-intl", () => ({
       "casino.room.stage.coin.waitingVrf": "Waiting for VRF Oracle...",
       "casino.room.stage.plinko.dropZone": "Set risk and drop",
       "casino.room.stage.plinko.waitingVrf": "Waiting for VRF Oracle...",
+      "casino.room.stage.plinko.board": "Plinko board",
+      "casino.room.stage.plinko.revealing": "Dropping through the board...",
       "casino.room.stage.plinko.slot": `Slot ${values?.slot}`,
       "casino.room.stage.plinko.risk": `Risk: ${values?.risk}`,
       "casino.room.stage.slots.ready": "Match 3 symbols to win",
@@ -188,8 +190,24 @@ describe("game room stages", () => {
       />
     );
 
-    expect(screen.getByText("Slot 8")).toBeDefined();
+    expect(screen.getAllByText("Slot 8").length).toBeGreaterThan(0);
     expect(screen.getAllByText("8").length).toBeGreaterThan(0);
+  });
+
+  it("renders Plinko reveal state while the ball travels the board", () => {
+    render(
+      <PlinkoStage
+        isPending={false}
+        isRevealing
+        showResult={false}
+        risk="medium"
+        buckets={[6]}
+        onRiskChange={vi.fn()}
+      />
+    );
+
+    expect(screen.getAllByText("Dropping through the board...").length).toBeGreaterThan(0);
+    expect(screen.getByLabelText("Plinko board")).toBeDefined();
   });
 
   it("renders Slots stage with revealed symbols", () => {

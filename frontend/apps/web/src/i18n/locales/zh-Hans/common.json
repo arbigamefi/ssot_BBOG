@@ -360,8 +360,10 @@
           "waitingVrf": "等待 VRF oracle..."
         },
         "plinko": {
+          "board": "Plinko 弹珠盘",
           "dropZone": "设置风险后落球",
           "waitingVrf": "等待 VRF oracle...",
+          "revealing": "弹珠正在穿过钉板...",
           "slot": "落入 {slot} 槽",
           "risk": "风险: {risk}"
         },

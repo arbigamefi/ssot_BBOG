@@ -113,7 +113,12 @@ export function GamePageClient({ slug }: { slug: string }) {
   const [terminalBet, setTerminalBet] = React.useState<DomainBet | null>(null);
   const [resultProof, setResultProof] = React.useState<CasinoRoundResult | null>(null);
   const [casinoOutcome, setCasinoOutcome] = React.useState<CasinoOutcome | null>(null);
+  const [stageReveal, setStageReveal] = React.useState<{
+    betId: bigint;
+    phase: "revealing" | "revealed";
+  } | null>(null);
   const revealedBetIdRef = React.useRef<bigint | null>(null);
+  const revealTimerRef = React.useRef<ReturnType<typeof setTimeout> | undefined>();
 
   // Game-specific params
   const [diceTarget, setDiceTarget] = React.useState<number>(50);
@@ -157,28 +162,60 @@ export function GamePageClient({ slug }: { slug: string }) {
     },
     [refetchRecentBets]
   );
+  const clearStageRevealTimer = React.useCallback(() => {
+    if (revealTimerRef.current) {
+      clearTimeout(revealTimerRef.current);
+      revealTimerRef.current = undefined;
+    }
+  }, []);
+  const startStageReveal = React.useCallback(
+    (betId: bigint, gameSlug: string) => {
+      clearStageRevealTimer();
+      const durationMs = gameSlug === "plinko" ? 4_200 : 0;
+
+      if (durationMs === 0) {
+        setStageReveal({ betId, phase: "revealed" });
+        return;
+      }
+
+      setStageReveal({ betId, phase: "revealing" });
+      revealTimerRef.current = setTimeout(() => {
+        setStageReveal((current) =>
+          current?.betId === betId ? { betId, phase: "revealed" } : current
+        );
+        revealTimerRef.current = undefined;
+      }, durationMs);
+    },
+    [clearStageRevealTimer]
+  );
   const handleRoundStart = React.useCallback(() => {
+    clearStageRevealTimer();
     revealedBetIdRef.current = null;
     setTerminalBet(null);
     setResultProof(null);
     setCasinoOutcome(null);
+    setStageReveal(null);
     setPlinkoBuckets([]);
     setSlotsSymbols([]);
-  }, []);
+  }, [clearStageRevealTimer]);
   const handleRoundReset = React.useCallback(() => {
+    clearStageRevealTimer();
     revealedBetIdRef.current = null;
     setShowResult(false);
     setTerminalBet(null);
     setResultProof(null);
     setCasinoOutcome(null);
+    setStageReveal(null);
     setPlinkoBuckets([]);
     setSlotsSymbols([]);
-  }, []);
+  }, [clearStageRevealTimer]);
   const handleResultClose = React.useCallback(() => {
     setShowResult(false);
     setResultProof(null);
     setCasinoOutcome(null);
   }, []);
+
+  React.useEffect(() => () => clearStageRevealTimer(), [clearStageRevealTimer]);
 
   // B2: Accurate win-chance using proper math per game module
   const winChance = game
@@ -233,7 +270,10 @@ export function GamePageClient({ slug }: { slug: string }) {
   });
 
   useGameResolutionEffect({
-    terminalBet,
+    terminalBet:
+      stageReveal?.phase === "revealing" && terminalBet?.betId === stageReveal.betId
+        ? null
+        : terminalBet,
     recentBets,
     db,
     gameHub: sdk?.gameHub,
@@ -285,14 +325,14 @@ export function GamePageClient({ slug }: { slug: string }) {
         revealedBetIdRef.current = bet.betId;
         setIsPending(false);
         setResultProof(buildCasinoRoundResult({ bet }));
-        setShowResult(true);
+        startStageReveal(bet.betId, game.slug);
       }
     });
 
     return () => {
       cancelled = true;
     };
-  }, [casinoRound.activeBet, game, sdk?.gameHub, terminalBet]);
+  }, [casinoRound.activeBet, game, sdk?.gameHub, startStageReveal, terminalBet]);
 
   if (!release || !game)
     return (
@@ -356,14 +396,19 @@ export function GamePageClient({ slug }: { slug: string }) {
     />
   );
 
+  const stageShowResult = Boolean(stageReveal || showResult);
+  const stageIsRevealing = stageReveal?.phase === "revealing";
+  const stageIsPending = isRoundAnimating && !stageReveal && !casinoOutcome;
+
   const RightPane = (
     <GameRoomRightPane
       gameSlug={game.slug}
       coinSide={coinSide}
       gameHistory={gameHistory}
       recentBets={recentBets}
-      isPending={isRoundAnimating}
-      showResult={showResult}
+      isPending={stageIsPending}
+      isRevealing={stageIsRevealing}
+      showResult={stageShowResult}
       resultNum={resultNum}
       diceDirection={diceDirection}
       diceTarget={diceTarget}

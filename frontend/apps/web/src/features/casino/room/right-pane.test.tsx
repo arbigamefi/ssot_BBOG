@@ -260,12 +260,13 @@ describe("GameRoomRightPane", () => {
     expect(screen.queryByText("Won bet")).toBeNull();
   });
 
-  it("opens the result overlay before settlement when VRF outcome is available", () => {
+  it("keeps the receipt overlay closed before terminal settlement even when VRF outcome is available", () => {
     render(
       <GameRoomRightPane
         {...baseProps}
         gameSlug="dice"
         showResult
+        resultNum={17}
         resultProof={{
           kind: "indexing",
           betId: 13n,
@@ -291,13 +292,10 @@ describe("GameRoomRightPane", () => {
       />
     );
 
-    expect(screen.getByText("Bet details")).toBeDefined();
-    expect(screen.getAllByText("Won bet").length).toBeGreaterThan(0);
-    expect(screen.getByText("Expected payout")).toBeDefined();
-    expect(screen.getByText("Number drawn")).toBeDefined();
+    expect(screen.queryByText("Bet details")).toBeNull();
+    expect(screen.queryByText("Expected payout")).toBeNull();
+    expect(screen.queryByText("Settlement pending")).toBeNull();
     expect(screen.getAllByText("17").length).toBeGreaterThan(0);
-    expect(screen.getByText("Pending")).toBeDefined();
-    expect(screen.getByText("Settlement pending")).toBeDefined();
   });
 
   it("shows slots symbols, multiplier, and jackpot detail in the result overlay", () => {
