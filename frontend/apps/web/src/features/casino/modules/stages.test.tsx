@@ -323,6 +323,53 @@ describe("game room stages", () => {
     expect(onSideChange).toHaveBeenCalledWith("banker");
   });
 
+  it("runs Baccarat reveal before completing the deal", () => {
+    const onRevealComplete = vi.fn();
+    vi.useFakeTimers();
+    try {
+      render(
+        <BaccaratStage
+          isPending={false}
+          isRevealing
+          showResult
+          selectedSide="player"
+          onSideChange={vi.fn()}
+          onRevealComplete={onRevealComplete}
+          outcome={{
+            kind: "baccarat",
+            side: "player",
+            payoutGross: 2_241_400n,
+            payoutNet: 2_196_572n,
+            refundAmount: 0n,
+            feeOnPayout: 44_828n,
+            playerOwed: 2_196_572n,
+            netResult: 1_196_572n,
+            rolls: [
+              {
+                playerCards: [5, 4],
+                bankerCards: [8, 0],
+                playerTotal: 9,
+                bankerTotal: 8,
+                outcome: "player",
+                factorBps: 22414,
+                won: true
+              }
+            ]
+          }}
+        />
+      );
+
+      expect(screen.getByText("Waiting for VRF Oracle...")).toBeDefined();
+
+      act(() => {
+        vi.advanceTimersByTime(3_000);
+      });
+      expect(onRevealComplete).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("renders Sic Bo stage with opened dice and total", () => {
     const onBetChange = vi.fn();
     render(

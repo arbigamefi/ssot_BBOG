@@ -119,6 +119,7 @@ export function GameRoomRightPane({
   onPlinkoRevealComplete,
   onSlotsRevealComplete,
   onSicBoRevealComplete,
+  onBaccaratRevealComplete,
   onBaccaratSideChange,
   onSicBoChange
 }: {
@@ -161,6 +162,7 @@ export function GameRoomRightPane({
   onPlinkoRevealComplete?: () => void;
   onSlotsRevealComplete?: () => void;
   onSicBoRevealComplete?: () => void;
+  onBaccaratRevealComplete?: () => void;
   onBaccaratSideChange: (side: BaccaratSide) => void;
   onSicBoChange: (kind: SicBoKind, value: number) => void;
 }) {
@@ -262,10 +264,12 @@ export function GameRoomRightPane({
       {gameSlug === "baccarat" && (
         <BaccaratStage
           isPending={isPending}
+          isRevealing={Boolean(isRevealing)}
           showResult={showResult}
           selectedSide={baccaratSide}
           onSideChange={onBaccaratSideChange}
           outcome={casinoOutcome?.kind === "baccarat" ? casinoOutcome : null}
+          onRevealComplete={onBaccaratRevealComplete}
         />
       )}
 

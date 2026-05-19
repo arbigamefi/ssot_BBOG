@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { cn } from "@ssot/ui";
 
@@ -12,12 +13,21 @@ function formatSide(side: BaccaratSide, t: ReturnType<typeof useTranslations>) {
   return t(`casino.room.selection.baccarat.${side}`);
 }
 
-function CardPip({ value, active }: { value: number | undefined; active: boolean }) {
+function CardPip({
+  value,
+  active,
+  dealing
+}: {
+  value: number | undefined;
+  active: boolean;
+  dealing?: boolean;
+}) {
   return (
     <div
       className={cn(
-        "flex h-24 w-16 flex-col items-center justify-center rounded-lg border bg-surface-2 shadow-inner-e1",
-        active ? "border-brand/50 bg-brand-soft" : "border-border"
+        "flex h-24 w-16 flex-col items-center justify-center rounded-lg border bg-surface-2 shadow-inner-e1 transition-[border-color,background-color,transform]",
+        active ? "border-brand/50 bg-brand-soft" : "border-border",
+        dealing && "animate-[baccarat-card-deal_360ms_ease-out] border-brand/40 bg-brand-soft"
       )}
     >
       <span className="text-[9px] font-semibold uppercase tracking-widest text-fg-subtle">
@@ -32,12 +42,14 @@ function HandPanel({
   title,
   cards,
   total,
-  winner
+  winner,
+  revealed
 }: {
   title: string;
-  cards: readonly number[];
+  cards: readonly (number | undefined)[];
   total: number | undefined;
   winner: boolean;
+  revealed: number;
 }) {
   return (
     <div
@@ -58,7 +70,12 @@ function HandPanel({
       </div>
       <div className="flex gap-3">
         {[0, 1, 2].map((index) => (
-          <CardPip key={index} value={cards[index]} active={winner && cards[index] != null} />
+          <CardPip
+            key={index}
+            value={cards[index]}
+            active={winner && cards[index] != null}
+            dealing={revealed === index + 1 && cards[index] != null}
+          />
         ))}
       </div>
     </div>
@@ -105,21 +122,86 @@ function BettingSideButton({
 
 export function BaccaratStage({
   isPending,
+  isRevealing,
   showResult,
   selectedSide,
   onSideChange,
-  outcome
+  outcome,
+  onRevealComplete
 }: {
   isPending: boolean;
+  isRevealing?: boolean;
   showResult: boolean;
   selectedSide: BaccaratSide;
   onSideChange: (side: BaccaratSide) => void;
   outcome?: Extract<CasinoOutcome, { kind: "baccarat" }> | null;
+  onRevealComplete?: () => void;
 }) {
   const t = useTranslations();
+  const prefersReducedMotion = useReducedMotion();
   const roll: BaccaratRoll | undefined = outcome?.rolls.at(-1);
-  const hasResult = Boolean(showResult && roll);
+  const dealOrder = React.useMemo(() => {
+    if (!roll) return [];
+    return [
+      { side: "player" as const, index: 0 },
+      { side: "banker" as const, index: 0 },
+      { side: "player" as const, index: 1 },
+      { side: "banker" as const, index: 1 },
+      ...(roll.playerCards[2] != null ? [{ side: "player" as const, index: 2 }] : []),
+      ...(roll.bankerCards[2] != null ? [{ side: "banker" as const, index: 2 }] : [])
+    ];
+  }, [roll]);
+  const [revealedCards, setRevealedCards] = React.useState(() =>
+    showResult && roll ? dealOrder.length : 0
+  );
+  const dealComplete = Boolean(roll && revealedCards >= dealOrder.length);
+  const hasResult = Boolean(showResult && roll && (dealComplete || !isRevealing));
   const winner = roll?.outcome;
+  const visiblePlayerCards =
+    roll?.playerCards.map((card, index) =>
+      dealOrder.findIndex((item) => item.side === "player" && item.index === index) < revealedCards
+        ? card
+        : undefined
+    ) ?? [];
+  const visibleBankerCards =
+    roll?.bankerCards.map((card, index) =>
+      dealOrder.findIndex((item) => item.side === "banker" && item.index === index) < revealedCards
+        ? card
+        : undefined
+    ) ?? [];
+  const playerRevealed = visiblePlayerCards.filter((card) => card != null).length;
+  const bankerRevealed = visibleBankerCards.filter((card) => card != null).length;
+
+  React.useEffect(() => {
+    if (!isRevealing || !roll || dealOrder.length === 0) {
+      setRevealedCards(showResult && roll ? dealOrder.length : 0);
+      return;
+    }
+
+    setRevealedCards(0);
+    const timeouts: number[] = [];
+    const schedule = (callback: () => void, delay: number) => {
+      const timeout = window.setTimeout(callback, delay);
+      timeouts.push(timeout);
+    };
+
+    if (prefersReducedMotion) {
+      setRevealedCards(dealOrder.length);
+      schedule(() => onRevealComplete?.(), 180);
+      return () => {
+        timeouts.forEach((timeout) => window.clearTimeout(timeout));
+      };
+    }
+
+    dealOrder.forEach((_, index) => {
+      schedule(() => setRevealedCards(index + 1), 260 + index * 520);
+    });
+    schedule(() => onRevealComplete?.(), 260 + dealOrder.length * 520 + 320);
+
+    return () => {
+      timeouts.forEach((timeout) => window.clearTimeout(timeout));
+    };
+  }, [dealOrder, isRevealing, onRevealComplete, prefersReducedMotion, roll, showResult]);
 
   return (
     <div className="absolute inset-0 z-10 flex flex-col items-center justify-start overflow-hidden px-6 pb-6 pt-24">
@@ -127,15 +209,17 @@ export function BaccaratStage({
         <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-2">
           <HandPanel
             title={formatSide("player", t)}
-            cards={roll?.playerCards ?? []}
-            total={roll?.playerTotal}
+            cards={visiblePlayerCards}
+            total={hasResult ? roll?.playerTotal : undefined}
             winner={winner === "player"}
+            revealed={playerRevealed}
           />
           <HandPanel
             title={formatSide("banker", t)}
-            cards={roll?.bankerCards ?? []}
-            total={roll?.bankerTotal}
+            cards={visibleBankerCards}
+            total={hasResult ? roll?.bankerTotal : undefined}
             winner={winner === "banker"}
+            revealed={bankerRevealed}
           />
         </div>
 
@@ -154,7 +238,7 @@ export function BaccaratStage({
 
         <div className="w-full rounded-lg border border-border bg-surface-1/90 px-5 py-3 text-center shadow-e1 backdrop-blur">
           <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-fg-subtle">
-            {isPending
+            {isPending || isRevealing
               ? t("casino.room.stage.baccarat.dealing")
               : hasResult
                 ? t("casino.room.stage.baccarat.result", {

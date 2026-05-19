@@ -178,9 +178,11 @@ export function GamePageClient({ slug }: { slug: string }) {
             ? 3_400
             : gameSlug === "keno"
               ? 4_000
-              : gameSlug === "sic-bo"
-                ? 2_100
-                : 0;
+              : gameSlug === "baccarat"
+                ? 4_200
+                : gameSlug === "sic-bo"
+                  ? 2_100
+                  : 0;
 
       if (durationMs === 0) {
         setStageReveal({ betId, phase: "revealed" });
@@ -456,6 +458,7 @@ export function GamePageClient({ slug }: { slug: string }) {
       onPlinkoRevealComplete={handleStageRevealComplete}
       onSlotsRevealComplete={handleStageRevealComplete}
       onSicBoRevealComplete={handleStageRevealComplete}
+      onBaccaratRevealComplete={handleStageRevealComplete}
       onBaccaratSideChange={setBaccaratSide}
       onSicBoChange={handleSicBoChange}
     />
