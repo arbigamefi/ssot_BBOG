@@ -42,17 +42,17 @@ export function BetAmountSection({
   };
 
   return (
-    <div className="mb-3">
+    <div className="mb-2">
       <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-fg-subtle">
         {t("casino.room.betPanel.amount.label")}
       </label>
       <div
         className={cn(
-          "relative flex flex-col gap-2 rounded-xl border border-border bg-surface-0 p-2 shadow-inner-e1",
+          "relative flex flex-col gap-1.5 rounded-xl border border-border bg-surface-0 p-2 shadow-inner-e1",
           isPending ? "opacity-50" : "focus-within:border-brand/40"
         )}
       >
-        <div className="flex items-center px-4 pt-1">
+        <div className="flex items-center px-3">
           <CurrencyDollarIcon className="h-5 w-5 text-fg-subtle" />
           <input
             type="text"
@@ -65,35 +65,35 @@ export function BetAmountSection({
               onBetAmountChange(parseWholeUnitInput(event.target.value, { min: 1 }))
             }
             disabled={isPending}
-            className="w-full border-none bg-transparent pr-2 text-right font-mono text-3xl text-fg outline-none"
+            className="w-full border-none bg-transparent pr-2 text-right font-mono text-2xl text-fg outline-none"
           />
         </div>
         <div className="flex gap-1 rounded-lg border border-border-soft bg-surface-1 p-1">
           <button
             type="button"
             onClick={() => setRoundedBetAmount(1)}
-            className="flex-1 rounded-md bg-surface-0 py-1.5 text-[10px] font-bold uppercase text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg"
+            className="flex-1 rounded-md bg-surface-0 py-1 text-[10px] font-bold uppercase text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg"
           >
             {t("casino.room.betPanel.amount.min")}
           </button>
           <button
             type="button"
             onClick={() => setRoundedBetAmount(betAmount / 2)}
-            className="flex-1 rounded-md bg-surface-0 py-1.5 text-[10px] font-bold uppercase text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg"
+            className="flex-1 rounded-md bg-surface-0 py-1 text-[10px] font-bold uppercase text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg"
           >
             1/2
           </button>
           <button
             type="button"
             onClick={() => setRoundedBetAmount(betAmount * 2)}
-            className="flex-1 rounded-md bg-surface-0 py-1.5 text-[10px] font-bold uppercase text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg"
+            className="flex-1 rounded-md bg-surface-0 py-1 text-[10px] font-bold uppercase text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg"
           >
             2x
           </button>
           <button
             type="button"
             onClick={() => setRoundedBetAmount(parseWalletBalanceAmount(walletBalance))}
-            className="flex-1 rounded-md bg-surface-0 py-1.5 text-[10px] font-bold uppercase text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg"
+            className="flex-1 rounded-md bg-surface-0 py-1 text-[10px] font-bold uppercase text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg"
           >
             {t("casino.room.betPanel.amount.max")}
           </button>
@@ -117,8 +117,8 @@ export function BetRollsSection({
   const t = useTranslations();
 
   return (
-    <div className="mb-3">
-      <div className="mb-2 flex items-center justify-between">
+    <div className="mb-2">
+      <div className="mb-1.5 flex items-center justify-between">
         <label className="text-[10px] font-bold uppercase tracking-widest text-fg-subtle">
           {t("casino.room.betPanel.rolls.label")}
         </label>
@@ -138,7 +138,7 @@ export function BetRollsSection({
             onClick={() => onBetCountChange(count)}
             disabled={isPending}
             className={cn(
-              "flex-1 rounded-lg border py-2 text-xs font-semibold uppercase tracking-wide transition-colors",
+              "flex-1 rounded-lg border py-1.5 text-xs font-semibold uppercase tracking-wide transition-colors",
               betCount === count
                 ? "border-brand bg-brand text-fg-inverse shadow-e1"
                 : "border-border bg-surface-1 text-fg-subtle hover:border-brand/40 hover:bg-surface-2 hover:text-fg"
@@ -192,11 +192,11 @@ export function BetAdvancedSection({
   }, [advancedOpen]);
 
   return (
-    <div className="mb-3">
+    <div className="mb-2">
       <button
         type="button"
         onClick={() => onAdvancedOpenChange(!advancedOpen)}
-        className="flex w-full items-center justify-between border-b border-border-soft pb-2 text-[10px] font-bold uppercase tracking-widest text-fg-subtle transition-colors hover:text-fg-muted"
+        className="flex w-full items-center justify-between border-b border-border-soft pb-1.5 text-[10px] font-bold uppercase tracking-widest text-fg-subtle transition-colors hover:text-fg-muted"
       >
         <span>{t("casino.room.betPanel.advanced.label")}</span>
         <ChevronDownIcon
@@ -204,10 +204,7 @@ export function BetAdvancedSection({
         />
       </button>
       {advancedOpen && (
-        <div ref={advancedContentRef} className="mt-3 grid grid-cols-2 gap-3">
-          <p className="col-span-2 text-xs leading-5 text-fg-muted">
-            {t("casino.room.betPanel.advanced.help")}
-          </p>
+        <div ref={advancedContentRef} className="mt-2 grid grid-cols-2 gap-2">
           <div className="flex flex-col gap-1">
             <label className="text-[9px] font-bold uppercase tracking-widest text-fg-subtle">
               {t("casino.room.betPanel.advanced.stopGain")}
@@ -223,11 +220,8 @@ export function BetAdvancedSection({
                 onStopGainChange(parseWholeUnitInput(event.target.value, { min: 0 }))
               }
               placeholder={t("casino.room.betPanel.advanced.offPlaceholder")}
-              className="rounded-lg border border-border bg-surface-1 px-3 py-2 font-mono text-sm text-fg placeholder:text-fg-subtle focus:border-success/40 focus:outline-none"
+              className="rounded-lg border border-border bg-surface-1 px-3 py-1.5 font-mono text-sm text-fg placeholder:text-fg-subtle focus:border-success/40 focus:outline-none"
             />
-            <p className="text-[10px] leading-4 text-fg-subtle">
-              {t("casino.room.betPanel.advanced.stopGainHelp")}
-            </p>
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-[9px] font-bold uppercase tracking-widest text-fg-subtle">
@@ -244,11 +238,8 @@ export function BetAdvancedSection({
                 onStopLossChange(parseWholeUnitInput(event.target.value, { min: 0 }))
               }
               placeholder={t("casino.room.betPanel.advanced.offPlaceholder")}
-              className="rounded-lg border border-border bg-surface-1 px-3 py-2 font-mono text-sm text-fg placeholder:text-fg-subtle focus:border-danger/40 focus:outline-none"
+              className="rounded-lg border border-border bg-surface-1 px-3 py-1.5 font-mono text-sm text-fg placeholder:text-fg-subtle focus:border-danger/40 focus:outline-none"
             />
-            <p className="text-[10px] leading-4 text-fg-subtle">
-              {t("casino.room.betPanel.advanced.stopLossHelp")}
-            </p>
           </div>
           {(stopGain > 0 || stopLoss > 0) && (
             <div className="col-span-2 font-mono text-[9px] text-fg-subtle">
@@ -283,8 +274,8 @@ export function BetPayoutSummary({
   const t = useTranslations();
 
   return (
-    <div className="mb-3 grid grid-cols-2 gap-2">
-      <div className="flex flex-col rounded-lg border border-border bg-surface-0 p-2.5 shadow-inner-e1">
+    <div className="mb-2 grid grid-cols-2 gap-2">
+      <div className="flex flex-col rounded-lg border border-border bg-surface-0 p-2 shadow-inner-e1">
         <span className="mb-1 flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-fg-subtle">
           {t("casino.room.betPanel.summary.multiplier")}{" "}
           <InformationCircleIcon className="h-3 w-3" />
@@ -293,13 +284,13 @@ export function BetPayoutSummary({
           {multiplier.toFixed(2)}x
         </span>
       </div>
-      <div className="flex flex-col rounded-lg border border-border bg-surface-0 p-2.5 shadow-inner-e1">
+      <div className="flex flex-col rounded-lg border border-border bg-surface-0 p-2 shadow-inner-e1">
         <span className="mb-1 flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-fg-subtle">
           {t("casino.room.betPanel.summary.winChance")} <ChartBarIcon className="h-3 w-3" />
         </span>
         <span className="font-mono text-lg font-bold text-fg">{winChance.toFixed(2)}%</span>
       </div>
-      <div className="col-span-2 flex select-none items-center justify-between gap-3 rounded-lg border border-border bg-surface-0 p-2.5 shadow-inner-e1">
+      <div className="col-span-2 flex select-none items-center justify-between gap-3 rounded-lg border border-border bg-surface-0 p-2 shadow-inner-e1">
         <span className="mb-1 text-[10px] font-bold uppercase tracking-widest text-fg-subtle">
           {t("casino.room.betPanel.summary.expectedPayout")}
         </span>

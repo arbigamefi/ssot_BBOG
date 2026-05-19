@@ -215,9 +215,9 @@
           }
         },
         "metrics": {
-          "vrfEstimate": "VRF estimate",
-          "betId": "Bet ID",
-          "vrfRequest": "VRF request"
+          "vrfEstimate": "VRF fee",
+          "betId": "ID",
+          "vrfRequest": "VRF ReqID"
         },
         "actions": {
           "settleResult": "Settle result",

@@ -62,9 +62,9 @@ vi.mock("next-intl", () => ({
       "casino.room.roundStatus.phases.ready.detail":
         "One click will approve if needed, place the bet, and watch settlement.",
       "casino.room.roundStatus.phases.ready.status": "Ready",
-      "casino.room.roundStatus.metrics.vrfEstimate": "VRF estimate",
-      "casino.room.roundStatus.metrics.betId": "Bet ID",
-      "casino.room.roundStatus.metrics.vrfRequest": "VRF request",
+      "casino.room.roundStatus.metrics.vrfEstimate": "VRF fee",
+      "casino.room.roundStatus.metrics.betId": "ID",
+      "casino.room.roundStatus.metrics.vrfRequest": "VRF ReqID",
       "casino.room.roundStatus.actions.settleResult": "Settle result",
       "casino.room.roundStatus.actions.refundStake": "Refund stake",
       "casino.room.betPanel.walletBalance": "Wallet Balance",
@@ -138,7 +138,6 @@ function renderPanel(overrides: Partial<React.ComponentProps<typeof GameRoomBetP
   const props: React.ComponentProps<typeof GameRoomBetPanel> = {
     game: diceGame,
     walletBalance: "1,450.00 USDC",
-    isSynced: true,
     betAmount: 10,
     onBetAmountChange: vi.fn(),
     betCount: 1,
@@ -181,12 +180,7 @@ describe("GameRoomBetPanel", () => {
     expect(screen.getByText("Wallet Balance")).toBeDefined();
     expect(screen.getByText("Not connected")).toBeDefined();
     expect(screen.getByText("Connect wallet to place a round")).toBeDefined();
-    expect(
-      screen.getByText(
-        "Pick the room settings now. The bet is signed only after your wallet is connected."
-      )
-    ).toBeDefined();
-    expect(screen.getByText("VRF estimate")).toBeDefined();
+    expect(screen.getByText("VRF fee")).toBeDefined();
     expect(screen.getByText("1.98x")).toBeDefined();
     expect(screen.getByText("50.00%")).toBeDefined();
     expect(screen.getByRole("button", { name: "CONNECT WALLET" })).toBeDefined();
@@ -242,11 +236,6 @@ describe("GameRoomBetPanel", () => {
     });
 
     expect(screen.queryByRole("spinbutton")).toBeNull();
-    expect(
-      screen.getByText("Optional auto-stop rules for multi-roll rounds. Set 0 to disable a rule.")
-    ).toBeDefined();
-    expect(screen.getByText("Stops after total profit reaches this amount.")).toBeDefined();
-    expect(screen.getByText("Stops after total loss reaches this amount.")).toBeDefined();
 
     fireEvent.change(screen.getByRole("textbox", { name: "Bet amount" }), {
       target: { value: "abc25.5" }

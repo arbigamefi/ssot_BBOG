@@ -47,7 +47,7 @@ export function GameRoomShell({
         </dl>
       </header>
 
-      <div className="grid overflow-hidden rounded-xl border border-border bg-surface-1 shadow-e2 lg:min-h-[42rem] lg:grid-cols-[20rem_minmax(0,1fr)]">
+      <div className="grid overflow-hidden rounded-xl border border-border bg-surface-1 shadow-e2 lg:h-[calc(100vh-13rem)] lg:min-h-[34rem] lg:grid-cols-[20rem_minmax(0,1fr)]">
         <aside className="order-2 relative z-20 border-t border-border bg-surface-2 p-4 lg:order-1 lg:h-full lg:overflow-hidden lg:border-r lg:border-t-0">
           {leftPaneContent}
         </aside>

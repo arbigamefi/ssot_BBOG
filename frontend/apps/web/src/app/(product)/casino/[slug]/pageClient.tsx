@@ -10,7 +10,6 @@ import { ProductStateCard } from "../../../../components/ProductStateCard";
 import { PageTransition } from "../../../../components/PageTransition";
 
 import { useRecentBets } from "../../../../features/betting/useRecentBets";
-import { useIndexer } from "../../../../features/ops/useIndexer";
 import { useRelease } from "../../../../ssot/release/ReleaseProvider";
 import { useSSOTSDK } from "../../../../ssot/sdk";
 import { useSSOTRuntime } from "../../../../ssot/runtime";
@@ -93,13 +92,6 @@ export function GamePageClient({ slug }: { slug: string }) {
   const searchParams = useSearchParams();
   const { release, readOnlyReason, chainId } = useRelease();
   const { sdk } = useSSOTSDK();
-  const { indexerStatus } = useIndexer();
-
-  const isSynced =
-    indexerStatus?.latestBlock &&
-    indexerStatus?.lastSyncedBlock &&
-    indexerStatus.latestBlock <= indexerStatus.lastSyncedBlock;
-
   const game = React.useMemo(() => {
     const found = release?.gamesMeta?.find((item: any) => item.slug === slug);
     return found ? toGameMeta(found) : null;
@@ -334,7 +326,6 @@ export function GamePageClient({ slug }: { slug: string }) {
     <GameRoomBetPanel
       game={game}
       walletBalance={walletBalance}
-      isSynced={Boolean(isSynced)}
       betAmount={betAmount}
       onBetAmountChange={setBetAmount}
       betCount={betCount}
