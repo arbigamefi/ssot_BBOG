@@ -1,9 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import * as React from "react";
 
-const zeroHash = `0x${"0".repeat(64)}`;
 const zeroAddress = `0x${"0".repeat(40)}`;
 
 function createSportsHubMock() {
@@ -13,70 +12,17 @@ function createSportsHubMock() {
       eventId: 90n + marketId,
       poolId: 2,
       outcomeCount: 3,
-      startsAt: 1_800_000_000,
-      lockTime: 1_800_003_600,
+      // Future kickoff so the wall-clock summary lands in "scheduled".
+      startsAt: Math.floor(Date.now() / 1000) + 7 * 86400,
+      lockTime: Math.floor(Date.now() / 1000) + 7 * 86400 + 3600,
       resultFinalitySeconds: 604_800,
       version: 1n,
       marketKey: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       rulebookHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       state: "open"
     })),
-    getResult: vi.fn().mockImplementation(async (marketId: bigint) => ({
-      marketId,
-      eventId: 90n + marketId,
-      poolId: 2,
-      winningOutcomeId: 1,
-      marketVersion: 1n,
-      resultPayloadHash: "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
-      resultSourceHash: "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
-      evidenceHash: "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-      rulebookHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-      reporterSetHash: "0x9999999999999999999999999999999999999999999999999999999999999999",
-      reporterThreshold: 1,
-      reporterCount: 1,
-      proposer: "0x1111111111111111111111111111111111111111",
-      observedAt: 1_800_010_000,
-      proposedAt: 1_800_010_100,
-      finalizesAt: 1_800_614_900,
-      challenged: false,
-      challengeReasonHash: zeroHash,
-      challenger: zeroAddress,
-      challengedAt: 0,
-      challengeDecision: "none",
-      arbitrationDecisionHash: zeroHash,
-      arbitrator: zeroAddress,
-      arbitratedAt: 0
-    })),
+    getResult: vi.fn().mockImplementation(async () => undefined),
     getMarketReserved: vi.fn().mockResolvedValue(2_000_000n),
-    getEventReserved: vi.fn().mockResolvedValue(4_000_000n),
-    getPoolEventReserved: vi.fn().mockResolvedValue(3_500_000n),
-    getMarketOutcomeReserved: vi
-      .fn()
-      .mockImplementation(async (_marketId: bigint, outcomeId: number) =>
-        BigInt(100_000 + outcomeId)
-      ),
-    getTicket: vi.fn().mockResolvedValue({
-      ticketId: 12n,
-      positionId: 34n,
-      marketId: 7n,
-      eventId: 97n,
-      poolId: 2,
-      outcomeId: 1,
-      player: "0x1111111111111111111111111111111111111111",
-      stake: 1_000_000n,
-      payout: 1_800_000n,
-      reserved: 1_800_000n,
-      oddsSnapshotHash: "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-      rulebookHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-      acceptedAt: 1_800_000_100,
-      state: "held"
-    }),
-    settleTicket: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
-    settleTickets: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
-    refundTicket: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
-    refundTickets: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
-    voidTicket: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
-    voidTickets: vi.fn().mockResolvedValue({ ok: true, txHash: "0xabc123" }),
     planPlaceTicket: vi.fn().mockResolvedValue({
       chainId: 84532,
       releaseDigest: "0x7ad0f2cb1a996251325c00441b125ca5276c5bf70f011577222ce588cae1349f",
@@ -84,98 +30,106 @@ function createSportsHubMock() {
       steps: [],
       payload: {},
       preview: {
-        allowance: 0n,
-        needsApproval: false,
-        asset: "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
-        bank: "0x3686664d8d92feab8c4c9ac0baaeb07c8bddbc85",
-        marketState: "open",
-        oddsTicketHash: "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+        marketId: 7n,
+        outcomeId: 2,
+        stake: 10_000_000n,
+        payout: 55_000_000n
       }
     }),
     executeTicketPlan: vi.fn().mockResolvedValue({
-      placeTicketTx: { ok: true, txHash: "0xabc123" },
-      ticketId: 99n
+      ticketId: 99n,
+      placeTicketTx: { ok: true, txHash: "0xabc123" }
     })
   };
 }
 
-const state = {
+const state: {
+  release: unknown;
+  readOnly: boolean;
+  readOnlyReason: string | null;
+  chainId: number;
+  sportsbook: {
+    enabled: boolean;
+    frontendEnabled: boolean;
+    hasSportsRelease: boolean;
+    enablementFlag: string;
+    disabledReason?: string;
+  };
+  sdk: { sportsHub: ReturnType<typeof createSportsHubMock>; account?: string } | undefined;
+} = {
   release: {
     chainId: 84532,
     name: "Base Sepolia",
     releaseDigest: "0x7ad0f2cb1a996251325c00441b125ca5276c5bf70f011577222ce588cae1349f",
-    contracts: {
-      gameHub: "0x1111111111111111111111111111111111111111",
-      vrfHub: "0x2222222222222222222222222222222222222222",
-      poolRegistry: "0x3333333333333333333333333333333333333333",
-      sportsHub: "0x2db4ba326c2c3e5830b0da10f0c52b4097f9fa4b",
-      sportsRiskEngine: "0xb9c3647cb5daf23dea8335b7d91c7aa5f6bc2579"
-    },
-    assets: [],
-    games: {},
-    sports: {
-      enabled: true,
-      sportsHub: "0x2db4ba326c2c3e5830b0da10f0c52b4097f9fa4b",
-      riskEngine: "0xb9c3647cb5daf23dea8335b7d91c7aa5f6bc2579"
-    },
+    contracts: { sportsHub: "0x2db4ba326c2c3e5830b0da10f0c52b4097f9fa4b" },
+    sports: { enabled: true },
     pools: [
       {
         poolId: 2,
         domainId: 2,
         domain: "Sports",
         active: true,
-        asset: "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
-        bank: "0x3686664d8d92feab8c4c9ac0baaeb07c8bddbc85",
+        asset: zeroAddress,
+        bank: zeroAddress,
         symbol: "USDC",
-        decimals: 6,
-        sportsRisk: {
-          maxStake: "10000000",
-          maxPayout: "20000000",
-          maxMarketReserved: "100000000",
-          maxOutcomeReserved: "50000000",
-          maxEventReserved: "150000000",
-          riskHash: "0x0707ba776912152fe0028608c2b31e2ac864f24ed79351eaa10ea012303793e6"
-        }
+        decimals: 6
       }
     ]
-  } as any,
-  readOnlyReason: null as string | null,
+  },
+  readOnly: false,
+  readOnlyReason: null,
+  chainId: 84532,
   sportsbook: {
     enabled: false,
     frontendEnabled: false,
     hasSportsRelease: true,
     enablementFlag: "NEXT_PUBLIC_SPORTSBOOK_ENABLED",
     disabledReason: "NEXT_PUBLIC_SPORTSBOOK_ENABLED is not true."
-  } as any,
-  sdk: {
-    sportsHub: createSportsHubMock()
-  } as any
+  },
+  sdk: { sportsHub: createSportsHubMock() }
 };
+let providerOddsMock:
+  | {
+      schemaVersion: "sportsbook.provider-odds.v1";
+      provider: {
+        name: "the-odds-api";
+        sportKey: string;
+        providerEventId: string;
+        bookmakerKey?: string;
+        bookmakerTitle?: string;
+        marketLastUpdate?: string;
+      };
+      event: { homeTeam: string; awayTeam: string; commenceTime?: string };
+      outcomes: Array<{
+        outcomeId: number;
+        side: "home" | "draw" | "away";
+        name: string;
+        decimalPrice: string;
+      }>;
+    }
+  | undefined;
+let searchParamsMock = new URLSearchParams();
 
 vi.mock("../../../../ssot/release/ReleaseProvider", () => ({
   useRelease: () => ({
-    chainId: 84532,
+    chainId: state.chainId,
     release: state.release,
-    readOnly: false,
+    readOnly: state.readOnly,
     readOnlyReason: state.readOnlyReason,
     sportsbook: state.sportsbook
   })
 }));
 
 vi.mock("../../../../ssot/sdk", () => ({
-  useSSOTSDK: () => ({
-    sdk: state.sdk,
-    ready: Boolean(state.sdk),
-    readOnly: false
-  })
+  useSSOTSDK: () => ({ sdk: state.sdk, ready: Boolean(state.sdk), readOnly: state.readOnly })
 }));
 
 vi.mock("../../../../components/PageTransition", () => ({
-  PageTransition: ({ children }: any) => <div>{children}</div>
+  PageTransition: ({ children }: { children: React.ReactNode }) => <div>{children}</div>
 }));
 
 vi.mock("next/link", () => ({
-  default: ({ href, children, ...props }: any) => (
+  default: ({ href, children, ...props }: { href: string; children: React.ReactNode }) => (
     <a href={href} {...props}>
       {children}
     </a>
@@ -183,15 +137,17 @@ vi.mock("next/link", () => ({
 }));
 
 vi.mock("next/navigation", () => ({
-  useSearchParams: () => new URLSearchParams()
+  useSearchParams: () => searchParamsMock
 }));
 
 vi.mock("@ssot/ui", () => ({
-  cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" "),
-  toast: {
-    error: vi.fn(),
-    success: vi.fn()
-  }
+  cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" ")
+}));
+
+// The detail page calls useSportsbookProviderOdds; in the new player UI it
+// gracefully renders fallback labels when odds aren't available.
+vi.mock("../../../../features/sportsbook/use-provider-odds", () => ({
+  useSportsbookProviderOdds: () => ({ data: providerOddsMock, isLoading: false, error: null })
 }));
 
 vi.mock("next-intl", async () => {
@@ -199,7 +155,6 @@ vi.mock("next-intl", async () => {
     string,
     unknown
   >;
-
   function resolveMessage(key: string) {
     return key.split(".").reduce<unknown>((node, segment) => {
       if (node && typeof node === "object" && segment in node) {
@@ -208,18 +163,25 @@ vi.mock("next-intl", async () => {
       return undefined;
     }, messages);
   }
-
-  function translate(key: string, values?: Record<string, string>) {
-    const resolved = resolveMessage(key);
-    let message = typeof resolved === "string" ? resolved : key;
-    for (const [name, value] of Object.entries(values ?? {})) {
-      message = message.replace(`{${name}}`, value);
+  function translate(scope: string | undefined = "") {
+    function t(key: string, values?: Record<string, string | number>) {
+      const full = scope ? `${scope}.${key}` : key;
+      const resolved = resolveMessage(full);
+      let message = typeof resolved === "string" ? resolved : full;
+      for (const [name, value] of Object.entries(values ?? {})) {
+        message = message.replace(`{${name}}`, String(value));
+      }
+      return message;
     }
-    return message;
+    (t as unknown as { has: (key: string) => boolean }).has = (key: string) => {
+      const full = scope ? `${scope}.${key}` : key;
+      return typeof resolveMessage(full) === "string";
+    };
+    return t;
   }
-
   return {
-    useTranslations: () => translate
+    useTranslations: (scope?: string) => translate(scope),
+    useLocale: () => "en"
   };
 });
 
@@ -232,225 +194,194 @@ function renderWithQueryClient(ui: React.ReactElement) {
   return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 }
 
-describe("SportsbookMarketDetailPageClient", () => {
+function resetState() {
+  state.sportsbook = {
+    enabled: false,
+    frontendEnabled: false,
+    hasSportsRelease: true,
+    enablementFlag: "NEXT_PUBLIC_SPORTSBOOK_ENABLED",
+    disabledReason: "NEXT_PUBLIC_SPORTSBOOK_ENABLED is not true."
+  };
+  state.readOnly = false;
+  state.readOnlyReason = null;
+  state.sdk = { sportsHub: createSportsHubMock() };
+  providerOddsMock = undefined;
+  searchParamsMock = new URLSearchParams();
+}
+
+describe("SportsbookMarketDetailPageClient (player-facing)", () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
     vi.unstubAllGlobals();
-    state.release = {
-      ...state.release,
-      sports: {
-        ...state.release.sports
-      }
-    };
-    state.sportsbook = {
-      enabled: false,
-      frontendEnabled: false,
-      hasSportsRelease: true,
-      enablementFlag: "NEXT_PUBLIC_SPORTSBOOK_ENABLED",
-      disabledReason: "NEXT_PUBLIC_SPORTSBOOK_ENABLED is not true."
-    };
-    state.sdk = {
-      sportsHub: createSportsHubMock()
-    };
+    resetState();
   });
 
-  it("reads a SportsHub market detail and exposure records", async () => {
+  it("renders the player detail header with a back link to the sportsbook", async () => {
     renderWithQueryClient(<SportsbookMarketDetailPageClient marketId="7" />);
-
-    expect(screen.getByRole("heading", { name: "Football 1X2" })).toBeDefined();
-    expect(screen.getByRole("link", { name: "Back to sportsbook" }).getAttribute("href")).toBe(
-      "/sportsbook"
-    );
-    expect(await screen.findByText("Home / Draw / Away")).toBeDefined();
-    expect(screen.getAllByText("Home").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Draw").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Away").length).toBeGreaterThan(0);
-    expect(await screen.findByText("open / pool 2")).toBeDefined();
-    expect(screen.getByText("Result proposed")).toBeDefined();
-    expect(screen.getByText("Pool-event reserved")).toBeDefined();
-    expect(screen.getByText("3,500,000")).toBeDefined();
-    expect(screen.getByText("Outcome 2")).toBeDefined();
-    expect(screen.getByText("100,002")).toBeDefined();
-
-    expect(state.sdk.sportsHub.getMarket).toHaveBeenCalledWith(7n);
-    expect(state.sdk.sportsHub.getResult).toHaveBeenCalledWith(7n);
-    expect(state.sdk.sportsHub.getMarketOutcomeReserved).toHaveBeenCalledWith(7n, 2);
+    expect(await screen.findByRole("heading", { level: 1 })).toBeDefined();
+    const backLinks = screen
+      .getAllByRole("link")
+      .filter((node) => node.getAttribute("href") === "/sportsbook");
+    expect(backLinks.length).toBeGreaterThan(0);
+    expect(state.sdk?.sportsHub.getMarket).toHaveBeenCalledWith(7n);
   });
 
-  it("inspects ticket terminalization state without requiring an operator wallet", async () => {
+  it("hides the old inspector / operator form (raw odds fields are gone)", async () => {
     renderWithQueryClient(<SportsbookMarketDetailPageClient marketId="7" />);
-
-    expect(await screen.findByText("Settle, refund, or void tickets")).toBeDefined();
-    fireEvent.change(screen.getByLabelText("Ticket ids"), { target: { value: "12" } });
-    fireEvent.click(screen.getByRole("button", { name: "Inspect ticket" }));
-
-    expect(await screen.findByText("Ticket 12")).toBeDefined();
-    expect(screen.getByText("held / market 7")).toBeDefined();
-    expect((screen.getByRole("button", { name: "Settle" }) as HTMLButtonElement).disabled).toBe(
-      true
-    );
-    expect(state.sdk.sportsHub.getTicket).toHaveBeenCalledWith(12n);
+    await screen.findByRole("heading", { level: 1 });
+    // None of the old raw form labels survive on the public page.
+    expect(screen.queryByLabelText("Odds WAD")).toBeNull();
+    expect(screen.queryByLabelText("Odds signature")).toBeNull();
+    expect(screen.queryByLabelText("Max stake")).toBeNull();
+    expect(screen.queryByLabelText("Max payout")).toBeNull();
+    expect(screen.queryByLabelText("Provider event id")).toBeNull();
+    expect(screen.queryByLabelText("Bookmaker key")).toBeNull();
+    expect(screen.queryByText("Settle, refund, or void tickets")).toBeNull();
+    expect(screen.queryByText("Chain odds proof")).toBeNull();
   });
 
-  it("plans signed odds ticket placement only after the sportsbook gate is enabled", async () => {
+  it("renders the bet slip with stake input + place button surface", async () => {
     state.sportsbook = {
+      ...state.sportsbook,
       enabled: true,
       frontendEnabled: true,
-      hasSportsRelease: true,
-      enablementFlag: "NEXT_PUBLIC_SPORTSBOOK_ENABLED"
+      disabledReason: undefined
     };
     state.sdk = {
-      account: "0x1111111111111111111111111111111111111111",
-      sportsHub: createSportsHubMock()
+      sportsHub: createSportsHubMock(),
+      account: "0x1111111111111111111111111111111111111111"
     };
     renderWithQueryClient(<SportsbookMarketDetailPageClient marketId="7" />);
+    await screen.findByRole("heading", { level: 1 });
+    // Bet slip is rendered: title + stake input + place button surface.
+    expect(screen.getAllByText("Bet slip").length).toBeGreaterThan(0);
+    expect(screen.getByLabelText("Stake (USDC)")).toBeDefined();
+    const placeButton = screen
+      .getAllByRole("button")
+      .find((b) => b.textContent === "Place bet") as HTMLButtonElement;
+    expect(placeButton).toBeDefined();
+    expect(placeButton.disabled).toBe(true);
+  });
 
-    expect((await screen.findAllByText("Place ticket")).length).toBeGreaterThan(0);
-    fireEvent.change(screen.getByLabelText("Stake (USDC)"), { target: { value: "1" } });
-    fireEvent.click(screen.getByText("Chain odds proof"));
-    fireEvent.change(screen.getByLabelText("Odds WAD"), {
-      target: { value: "2100000000000000000" }
-    });
-    fireEvent.change(screen.getByLabelText("Max stake"), { target: { value: "2000000" } });
-    fireEvent.change(screen.getByLabelText("Max payout"), { target: { value: "4200000" } });
-    fireEvent.change(screen.getByLabelText("Expires at"), { target: { value: "1900000000" } });
-    fireEvent.change(screen.getByLabelText("Odds signature"), {
-      target: { value: `0x${"11".repeat(65)}` }
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Review transaction plan" }));
+  it("preview mode keeps the slip visible but disabled with a helpful reason", async () => {
+    renderWithQueryClient(<SportsbookMarketDetailPageClient marketId="7" />);
+    await screen.findByRole("heading", { level: 1 });
+    expect(screen.getAllByText("Bet slip").length).toBeGreaterThan(0);
+    const placeButton = screen
+      .getAllByRole("button")
+      .find((b) => b.textContent === "Place bet") as HTMLButtonElement;
+    expect(placeButton.disabled).toBe(true);
+  });
 
-    expect((await screen.findAllByText("Plan ready.")).length).toBeGreaterThan(0);
-    expect(state.sdk.sportsHub.planPlaceTicket).toHaveBeenCalledWith(
-      expect.objectContaining({
-        chainId: 84532,
-        marketId: 7n,
-        outcomeId: 0,
-        stake: 1_000_000n,
-        signature: `0x${"11".repeat(65)}`
+  it("rejects invalid market id with a clean notice (no SDK call)", () => {
+    renderWithQueryClient(<SportsbookMarketDetailPageClient marketId="abc" />);
+    expect(screen.getByText("Invalid market id")).toBeDefined();
+    expect(state.sdk?.sportsHub.getMarket).not.toHaveBeenCalled();
+  });
+
+  it("renders a danger notice when the market read fails", async () => {
+    state.sdk = {
+      sportsHub: {
+        ...createSportsHubMock(),
+        getMarket: vi.fn().mockRejectedValue(new Error("UnknownMarket"))
+      }
+    };
+    renderWithQueryClient(<SportsbookMarketDetailPageClient marketId="1" />);
+    expect(await screen.findByText("Could not load this market")).toBeDefined();
+  });
+
+  it("binds the signed odds request to the provider event and bookmaker visible to the player", async () => {
+    state.sportsbook = {
+      ...state.sportsbook,
+      enabled: true,
+      frontendEnabled: true,
+      disabledReason: undefined
+    };
+    state.sdk = {
+      sportsHub: createSportsHubMock(),
+      account: "0x1111111111111111111111111111111111111111"
+    };
+    searchParamsMock = new URLSearchParams("outcome=2");
+    providerOddsMock = {
+      schemaVersion: "sportsbook.provider-odds.v1",
+      provider: {
+        name: "the-odds-api",
+        sportKey: "soccer_fifa_world_cup",
+        providerEventId: "event-7",
+        bookmakerKey: "betmgm",
+        bookmakerTitle: "BetMGM",
+        marketLastUpdate: "2026-05-19T00:00:00.000Z"
+      },
+      event: {
+        homeTeam: "Mexico",
+        awayTeam: "South Africa",
+        commenceTime: "2026-06-11T19:00:00.000Z"
+      },
+      outcomes: [
+        { outcomeId: 0, side: "home", name: "Mexico", decimalPrice: "1.65" },
+        { outcomeId: 1, side: "draw", name: "Draw", decimalPrice: "3.80" },
+        { outcomeId: 2, side: "away", name: "South Africa", decimalPrice: "5.50" }
+      ]
+    };
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        provider: {
+          providerEventId: "event-7",
+          bookmakerKey: "betmgm",
+          sportKey: "soccer_fifa_world_cup"
+        },
+        outcome: {
+          name: "South Africa",
+          decimalPrice: "5.50",
+          oddsWad: "5500000000000000000"
+        },
+        payout: "55000000",
+        odds: {
+          oddsWad: "5500000000000000000",
+          maxStake: "1000000000",
+          maxPayout: "5500000000",
+          expiresAt: "1770000000",
+          nonce: "42",
+          riskHash: "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+        },
+        signature: "0xdddd"
       })
-    );
-  });
-
-  it("fetches provider-backed signed odds into the ticket form", async () => {
-    state.sportsbook = {
-      enabled: true,
-      frontendEnabled: true,
-      hasSportsRelease: true,
-      enablementFlag: "NEXT_PUBLIC_SPORTSBOOK_ENABLED"
-    };
-    state.sdk = {
-      account: "0x1111111111111111111111111111111111111111",
-      sportsHub: createSportsHubMock()
-    };
-    const fetchMock = vi.fn().mockImplementation(async (input: RequestInfo | URL) => {
-      const url = String(input);
-      if (url.startsWith("/api/sportsbook/provider-odds")) {
-        return {
-          ok: true,
-          json: async () => ({
-            schemaVersion: "sportsbook.provider-odds.v1",
-            provider: {
-              name: "the-odds-api",
-              providerEventId: "event-1",
-              bookmakerKey: "draftkings",
-              bookmakerTitle: "DraftKings",
-              sportKey: "soccer_usa_mls"
-            },
-            event: {
-              homeTeam: "Home FC",
-              awayTeam: "Away FC",
-              commenceTime: "2026-06-11T19:00:00Z"
-            },
-            outcomes: [
-              { outcomeId: 0, side: "home", name: "Home FC", decimalPrice: "2.1" },
-              { outcomeId: 1, side: "draw", name: "Draw", decimalPrice: "3.4" },
-              { outcomeId: 2, side: "away", name: "Away FC", decimalPrice: "2.9" }
-            ]
-          })
-        };
-      }
-      return {
-        ok: true,
-        json: async () => ({
-          provider: {
-            providerEventId: "event-1",
-            bookmakerKey: "draftkings",
-            sportKey: "soccer_usa_mls"
-          },
-          outcome: { name: "Home FC", decimalPrice: "2.1", oddsWad: "2100000000000000000" },
-          stake: "1000000",
-          payout: "2100000",
-          odds: {
-            oddsWad: "2100000000000000000",
-            maxStake: "2000000",
-            maxPayout: "4200000",
-            expiresAt: "1900000000",
-            nonce: "44",
-            riskHash: "0x0707ba776912152fe0028608c2b31e2ac864f24ed79351eaa10ea012303793e6"
-          },
-          oddsTicketHash: "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
-          signature: `0x${"11".repeat(65)}`
-        })
-      };
     });
     vi.stubGlobal("fetch", fetchMock);
 
     renderWithQueryClient(<SportsbookMarketDetailPageClient marketId="7" />);
 
-    expect((await screen.findAllByText("Place ticket")).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByText("Chain odds proof"));
-    fireEvent.change(screen.getByLabelText("Provider event id"), { target: { value: "event-1" } });
-    fireEvent.change(screen.getByLabelText("Bookmaker key"), { target: { value: "draftkings" } });
-    fireEvent.change(screen.getByLabelText("Sport key"), { target: { value: "soccer_usa_mls" } });
-    fireEvent.change(screen.getByLabelText("Stake (USDC)"), { target: { value: "1" } });
-    fireEvent.click(screen.getByRole("button", { name: "Get live odds" }));
+    expect(await screen.findByRole("heading", { level: 1 })).toBeDefined();
+    expect(screen.getAllByText("South Africa").length).toBeGreaterThan(0);
+    fireEvent.change(screen.getByLabelText("Stake (USDC)"), { target: { value: "10" } });
+    const placeButton = screen
+      .getAllByRole("button")
+      .find((b) => b.textContent === "Place bet") as HTMLButtonElement;
+    await waitFor(() => expect(placeButton.disabled).toBe(false));
+    fireEvent.click(placeButton);
 
-    expect(await screen.findByText("Signed odds ready: Home FC @ 2.1.")).toBeDefined();
-    expect((screen.getByLabelText("Odds WAD") as HTMLInputElement).value).toBe(
-      "2100000000000000000"
-    );
-    expect((screen.getByLabelText("Odds signature") as HTMLInputElement).value).toBe(
-      `0x${"11".repeat(65)}`
-    );
-    expect(fetchMock).toHaveBeenCalledWith(
-      "/api/sportsbook/odds-snapshot",
-      expect.objectContaining({
-        method: "POST",
-        body: expect.stringContaining('"providerEventId":"event-1"')
-      })
-    );
-  });
-
-  it("does not call SportsHub for invalid market ids", () => {
-    renderWithQueryClient(<SportsbookMarketDetailPageClient marketId="abc" />);
-
-    expect(screen.getByText("Invalid market id")).toBeDefined();
-    expect(state.sdk.sportsHub.getMarket).not.toHaveBeenCalled();
-  });
-
-  it("sanitizes unknown market readback errors", async () => {
-    state.sdk = {
-      sportsHub: {
-        ...createSportsHubMock(),
-        getMarket: vi
-          .fn()
-          .mockRejectedValue(
-            new Error(
-              'The contract function "getMarket" reverted. Error: UnknownMarket(uint64 marketId) (1) Contract Call: address: 0x111 function: getMarket(uint64 marketId) args: (1)'
-            )
-          )
-      }
-    };
-
-    renderWithQueryClient(<SportsbookMarketDetailPageClient marketId="1" />);
-
-    expect(await screen.findByText("Market readback failed")).toBeDefined();
-    expect(
-      screen.getByText(
-        "This market does not exist on the active SportsHub yet. Return to the sportsbook and open a listed market."
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const requestBody = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+    expect(requestBody).toMatchObject({
+      chainId: 84532,
+      marketId: "7",
+      outcomeId: 2,
+      player: "0x1111111111111111111111111111111111111111",
+      stake: "10000000",
+      providerEventId: "event-7",
+      bookmakerKey: "betmgm",
+      sportKey: "soccer_fifa_world_cup"
+    });
+    await waitFor(() =>
+      expect(state.sdk?.sportsHub.planPlaceTicket).toHaveBeenCalledWith(
+        expect.objectContaining({
+          marketId: 7n,
+          outcomeId: 2,
+          stake: 10_000_000n
+        })
       )
-    ).toBeDefined();
-    expect(screen.queryByText(/Contract Call:/)).toBeNull();
+    );
   });
 });

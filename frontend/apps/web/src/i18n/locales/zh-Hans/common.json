@@ -33,7 +33,11 @@
       },
       "sportsbook": {
         "title": "体育投注",
-        "description": "查看固定赔率体育市场、签名赔率快照和 SportsHub 结算准备状态。"
+        "description": "浏览固定赔率体育市场，链上结算 + 签名赔率快照。"
+      },
+      "opsSportsbook": {
+        "title": "Sportsbook · 运营",
+        "description": "SportsHub 市场、票据、风险上限以及裁定 / 仲裁写入的运营控制台。"
       },
       "sportsbookMarket": {
         "title": "体育市场 {marketId}",
@@ -699,6 +703,182 @@
         }
       }
     },
+    "player": {
+      "header": {
+        "title": "体育博彩",
+        "description": "选择市场、选择结果，下注以链上结算的定额赔率票。",
+        "descriptionPreview": "公开下注暂未开放，但市场仍可查看，便于上线前熟悉规则。",
+        "opsLink": "运营控制台",
+        "status": {
+          "ready": "可下注",
+          "previewOnly": "仅预览",
+          "notInRelease": "未在发布中",
+          "readOnly": "只读"
+        }
+      },
+      "board": {
+        "bucket": {
+          "live": "进行中",
+          "today": "今天",
+          "upcoming": "即将开赛",
+          "past": "近期结算"
+        },
+        "count": "{count} 场市场"
+      },
+      "event": {
+        "fallbackTitle": "市场 {tag}",
+        "kickoffAt": "开赛 {time}",
+        "outcomesPending": "{count} 个结果 · 赔率待发布",
+        "outcomeShort": {
+          "home": "主胜",
+          "draw": "平局",
+          "away": "客胜"
+        }
+      },
+      "marketState": {
+        "none": "未知",
+        "draft": "草稿",
+        "open": "开放",
+        "locked": "已锁定",
+        "suspended": "已暂停",
+        "resultProposed": "赛果待确认",
+        "challenged": "申诉中",
+        "resolved": "已结算",
+        "voided": "已作废",
+        "live": "直播中"
+      },
+      "empty": {
+        "ctaCasino": "前往赌场",
+        "ctaOps": "运营控制台",
+        "preview": {
+          "title": "体育博彩处于预览阶段",
+          "description": "上线检查完成后将开放公开下注。当前可查看即将开赛的市场和链上结算规则。"
+        },
+        "quiet": {
+          "title": "暂无开赛市场",
+          "description": "目前没有进行中或即将开赛的市场。请在临近开赛时回来查看。"
+        }
+      },
+      "error": {
+        "title": "无法加载体育博彩市场。请稍后刷新。"
+      },
+      "detail": {
+        "noRelease": {
+          "title": "体育博彩不可用",
+          "description": "当前版本未加载发布快照。"
+        },
+        "invalid": {
+          "title": "市场 id 无效",
+          "description": "链接格式错误。请从市场列表选择一个市场。",
+          "back": "返回市场列表"
+        },
+        "readFailed": {
+          "title": "无法加载该市场",
+          "description": "合约读取失败。请刷新页面或选择其他市场。",
+          "return": "返回市场列表"
+        },
+        "refreshing": "正在刷新市场状态…",
+        "header": {
+          "back": "返回市场列表",
+          "fallback": "市场 {tag}",
+          "bookmaker": "来自 {name}",
+          "kickoff": "开赛 {time}",
+          "locks": "截止 {time}"
+        },
+        "board": {
+          "title": "选择结果",
+          "titleResolved": "结果已结算",
+          "snapshotTime": "赔率截至 {time}",
+          "winner": "胜出",
+          "outcomeShort": "结果 {outcomeId}",
+          "outcomeSide": {
+            "home": "主胜",
+            "draw": "平局",
+            "away": "客胜"
+          },
+          "fallback": {
+            "binaryYes": "是",
+            "binaryNo": "否",
+            "threeWayHome": "主胜",
+            "threeWayDraw": "平局",
+            "threeWayAway": "客胜",
+            "generic": "结果 {outcomeId}"
+          },
+          "oddsPending": "本市场的赔率尚未发布。",
+          "providerUnavailable": "签名赔率获取失败,结果选择已禁用。"
+        },
+        "result": {
+          "voidedTitle": "市场已作废",
+          "voidedDescription": "本市场所有票据将退款,无需进一步操作。",
+          "challengedTitle": "赛果申诉中",
+          "challengedDescription": "裁定结果正在仲裁,结算暂停直至争议解决。",
+          "settledTitle": "已结算 · {outcome} 胜",
+          "settledDescription": "市场已在链上最终化。中奖票据现在可以结算。",
+          "proposedTitle": "赛果已提议 · {outcome}",
+          "proposedDescription": "申诉窗口已开放。若无人申诉,将于 {finalizes} 最终化。",
+          "outcomeIdFallback": "结果 {outcomeId}",
+          "rows": {
+            "proposer": "提议人",
+            "reporterCount": "裁定人数",
+            "proposedAt": "提议时间",
+            "finalizesAt": "最终化时间"
+          }
+        },
+        "slip": {
+          "marketMustBeOpen": "市场当前不接受下注。",
+          "outcomeFallback": "结果 {outcomeId}"
+        },
+        "meta": {
+          "title": "市场信息",
+          "outcomes": "结果数",
+          "reserved": "已预留",
+          "version": "版本",
+          "state": "状态"
+        },
+        "proof": {
+          "summary": "链上证明与运营入口",
+          "opsLink": "在运营控制台中查看",
+          "rows": {
+            "marketKey": "marketKey"
+          }
+        }
+      },
+      "slip": {
+        "ariaLabel": "投注单",
+        "title": "投注单",
+        "selection": "已选结果",
+        "emptySelection": "请先选择一个结果。",
+        "priceUnknown": "—",
+        "stakeLabel": "本金 ({symbol})",
+        "stakeRow": "本金",
+        "payoutRow": "潜在赔付",
+        "stageLabel": "状态",
+        "stage": {
+          "idle": "请选择结果并输入本金。",
+          "ready": "可以下注。",
+          "fetchingOdds": "正在获取签名赔率…",
+          "planning": "正在构建票据方案…",
+          "signing": "请在钱包中确认…",
+          "mining": "等待链上确认…",
+          "placed": "票据已下注。",
+          "error": "票据下注失败。"
+        },
+        "action": {
+          "idle": "下注",
+          "ready": "下注",
+          "busy": "下注中…",
+          "placed": "已下注",
+          "retry": "重试"
+        },
+        "receipt": {
+          "title": "票据已生成",
+          "payout": "潜在赔付",
+          "ticketId": "票号",
+          "viewTicket": "查看票据",
+          "placeAnother": "再下一注"
+        }
+      }
+    },
     "components": {
       "na": "N/A",
       "lookup": {
@@ -1104,6 +1284,85 @@
         "reopen": "重开",
         "voidChallenged": "作废被挑战市场",
         "void": "作废"
+      }
+    }
+  },
+  "opsSportsbook": {
+    "eyebrow": "体育投注控制台",
+    "title": "Sportsbook 运营",
+    "description": "查看 SportsHub 市场与票据、风险上限，并执行裁定/仲裁写入。公开下注入口在 /sportsbook。",
+    "noRelease": {
+      "title": "未加载发布",
+      "description": "嵌入的发布快照不可用。",
+      "status": "不可用"
+    },
+    "flags": {
+      "enabled": "下注开放",
+      "readonly": "仅预览",
+      "present": "SportsHub 已部署",
+      "missing": "SportsHub 缺失",
+      "notes": "运营控制台始终可用；公开页是否暴露下注由 sportsbook 标志位决定。"
+    },
+    "counters": {
+      "nextMarket": "下一 market id",
+      "nextTicket": "下一 ticket id",
+      "challengeWindow": "申诉窗口",
+      "challengeWindowHelper": "来自发布的赛果申诉超时。",
+      "runtimeReadFailed": "SportsHub 运行时读取失败"
+    },
+    "release": {
+      "eyebrow": "发布",
+      "title": "锚点与合约地址",
+      "description": "当前发布的赔率签名身份、赛果裁定者集合与合约地址。",
+      "releaseField": "发布",
+      "sportsHub": "SportsHub",
+      "riskEngine": "风险引擎",
+      "oddsSignerSet": "赔率签名集",
+      "resultReporterSet": "赛果裁定集",
+      "frontendFlag": "前端标志",
+      "booleanTrue": "true",
+      "booleanFalse": "false"
+    },
+    "caps": {
+      "eyebrow": "上限",
+      "title": "SportsHub 顶层上限",
+      "description": "来自嵌入发布的原始单位上限，应与运营备忘对齐。",
+      "riskTitle": "SportsHub 全局风险上限"
+    },
+    "lookup": {
+      "marketEyebrow": "市场查询",
+      "marketTitle": "查询市场",
+      "marketDescription": "按 id 查看市场状态、赛果与已预留敞口。",
+      "marketLabel": "市场 id",
+      "marketEmpty": "输入 SportsHub 市场 id 以查看状态、赛果与预留敞口。",
+      "marketNumericError": "请输入数字市场 id。",
+      "ticketEyebrow": "票据查询",
+      "ticketTitle": "查询票据",
+      "ticketDescription": "按 id 查看票据头寸、本金、赔付与终态。",
+      "ticketLabel": "票据 id",
+      "ticketEmpty": "输入 SportsHub 票据 id 以查看头寸、本金、赔付与状态。",
+      "ticketNumericError": "请输入数字票据 id。"
+    },
+    "operator": {
+      "eyebrow": "运营写入",
+      "title": "市场与赛果管理",
+      "description": "通过 SDK 暴露的类型化写入。合约角色仍会拦截每一次写入。",
+      "walletRoleRequired": "钱包角色必须已在 SportsHub 上授权。"
+    },
+    "bankroll": {
+      "eyebrow": "资金池",
+      "title": "体育池隔离",
+      "description": "体育流动性与赌场流动性隔离，敞口、暂停可独立管理。",
+      "noPool": "该发布未提供体育池元数据。"
+    },
+    "controls": {
+      "eyebrow": "控制项",
+      "title": "上线阻塞项",
+      "description": "仍然阻塞公开上线的运营文档链接。",
+      "links": {
+        "goNoGo": "Go/no-go 包",
+        "frontendAccess": "前端访问策略",
+        "providerPolicy": "Provider 策略"
       }
     }
   },

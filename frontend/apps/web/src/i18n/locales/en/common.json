@@ -33,7 +33,11 @@
       },
       "sportsbook": {
         "title": "Sportsbook",
-        "description": "Inspect fixed-odds sports markets, signed odds snapshots, and SportsHub settlement readiness."
+        "description": "Browse fixed-odds sports markets with on-chain settlement and signed odds snapshots."
+      },
+      "opsSportsbook": {
+        "title": "Sportsbook · Ops",
+        "description": "Operator console for SportsHub markets, tickets, risk caps, and reporter / arbitrator writes."
       },
       "sportsbookMarket": {
         "title": "Sports Market {marketId}",
@@ -699,6 +703,182 @@
         }
       }
     },
+    "player": {
+      "header": {
+        "title": "Sportsbook",
+        "description": "Pick a market, choose an outcome, and place a fixed-odds ticket settled on-chain.",
+        "descriptionPreview": "Markets are visible while public tickets remain disabled for this build. Inspect outcomes ahead of launch.",
+        "opsLink": "Operator console",
+        "status": {
+          "ready": "Tickets live",
+          "previewOnly": "Preview only",
+          "notInRelease": "Not in release",
+          "readOnly": "Read-only"
+        }
+      },
+      "board": {
+        "bucket": {
+          "live": "Live now",
+          "today": "Today",
+          "upcoming": "Upcoming",
+          "past": "Recently settled"
+        },
+        "count": "{count, plural, one {1 market} other {# markets}}"
+      },
+      "event": {
+        "fallbackTitle": "Market {tag}",
+        "kickoffAt": "Kickoff {time}",
+        "outcomesPending": "{count} outcomes · prices pending",
+        "outcomeShort": {
+          "home": "Home",
+          "draw": "Draw",
+          "away": "Away"
+        }
+      },
+      "marketState": {
+        "none": "Unknown",
+        "draft": "Draft",
+        "open": "Open",
+        "locked": "Locked",
+        "suspended": "Suspended",
+        "resultProposed": "Result proposed",
+        "challenged": "Challenged",
+        "resolved": "Settled",
+        "voided": "Voided",
+        "live": "Live"
+      },
+      "empty": {
+        "ctaCasino": "Browse casino",
+        "ctaOps": "Operator console",
+        "preview": {
+          "title": "Sportsbook is in preview",
+          "description": "Public tickets open after the launch checklist completes. You can still inspect upcoming markets and the on-chain settlement model."
+        },
+        "quiet": {
+          "title": "No markets scheduled",
+          "description": "There are no live or upcoming markets right now. Check back closer to kickoff for the next slate."
+        }
+      },
+      "error": {
+        "title": "Could not load sportsbook markets. Refresh in a moment."
+      },
+      "detail": {
+        "noRelease": {
+          "title": "Sportsbook is unavailable",
+          "description": "No release snapshot was loaded for this build."
+        },
+        "invalid": {
+          "title": "Invalid market id",
+          "description": "The link is malformed. Choose a market from the sportsbook list.",
+          "back": "Back to sportsbook"
+        },
+        "readFailed": {
+          "title": "Could not load this market",
+          "description": "The contract read failed. Refresh the page or pick another market.",
+          "return": "Back to sportsbook"
+        },
+        "refreshing": "Refreshing market state…",
+        "header": {
+          "back": "Back to sportsbook",
+          "fallback": "Market {tag}",
+          "bookmaker": "via {name}",
+          "kickoff": "Kickoff {time}",
+          "locks": "Closes {time}"
+        },
+        "board": {
+          "title": "Pick an outcome",
+          "titleResolved": "Outcome settled",
+          "snapshotTime": "Prices as of {time}",
+          "winner": "Winner",
+          "outcomeShort": "Outcome {outcomeId}",
+          "outcomeSide": {
+            "home": "Home",
+            "draw": "Draw",
+            "away": "Away"
+          },
+          "fallback": {
+            "binaryYes": "Yes",
+            "binaryNo": "No",
+            "threeWayHome": "Home",
+            "threeWayDraw": "Draw",
+            "threeWayAway": "Away",
+            "generic": "Outcome {outcomeId}"
+          },
+          "oddsPending": "Prices are not published yet for this market.",
+          "providerUnavailable": "Signed odds could not be fetched. Outcome selection is disabled until odds return."
+        },
+        "result": {
+          "voidedTitle": "Market voided",
+          "voidedDescription": "All tickets on this market are refunded. No further action is required.",
+          "challengedTitle": "Result challenged",
+          "challengedDescription": "A reporter result is under arbitration. Settlement is on hold until the dispute is resolved.",
+          "settledTitle": "Settled · {outcome} wins",
+          "settledDescription": "The market has been finalized on chain. Winning tickets can be settled now.",
+          "proposedTitle": "Result proposed · {outcome}",
+          "proposedDescription": "The challenge window is open. Settlement finalizes {finalizes} unless the proposal is challenged.",
+          "outcomeIdFallback": "Outcome {outcomeId}",
+          "rows": {
+            "proposer": "Proposer",
+            "reporterCount": "Reporters",
+            "proposedAt": "Proposed at",
+            "finalizesAt": "Finalizes at"
+          }
+        },
+        "slip": {
+          "marketMustBeOpen": "Market is not accepting tickets right now.",
+          "outcomeFallback": "Outcome {outcomeId}"
+        },
+        "meta": {
+          "title": "Market details",
+          "outcomes": "Outcomes",
+          "reserved": "Reserved",
+          "version": "Version",
+          "state": "State"
+        },
+        "proof": {
+          "summary": "Chain proof and operator links",
+          "opsLink": "Open in operator console",
+          "rows": {
+            "marketKey": "marketKey"
+          }
+        }
+      },
+      "slip": {
+        "ariaLabel": "Bet slip",
+        "title": "Bet slip",
+        "selection": "Selected outcome",
+        "emptySelection": "Pick an outcome to start.",
+        "priceUnknown": "—",
+        "stakeLabel": "Stake ({symbol})",
+        "stakeRow": "Stake",
+        "payoutRow": "Potential payout",
+        "stageLabel": "Status",
+        "stage": {
+          "idle": "Pick an outcome and enter your stake.",
+          "ready": "Ready to place.",
+          "fetchingOdds": "Fetching signed odds…",
+          "planning": "Building the ticket plan…",
+          "signing": "Confirm in your wallet…",
+          "mining": "Waiting for on-chain settlement…",
+          "placed": "Ticket placed.",
+          "error": "Ticket placement failed."
+        },
+        "action": {
+          "idle": "Place bet",
+          "ready": "Place bet",
+          "busy": "Placing…",
+          "placed": "Ticket placed",
+          "retry": "Try again"
+        },
+        "receipt": {
+          "title": "Ticket placed",
+          "payout": "Potential payout",
+          "ticketId": "Ticket",
+          "viewTicket": "View ticket",
+          "placeAnother": "Place another bet"
+        }
+      }
+    },
     "components": {
       "na": "N/A",
       "lookup": {
@@ -1104,6 +1284,85 @@
         "reopen": "Reopen",
         "voidChallenged": "Void challenged",
         "void": "Void"
+      }
+    }
+  },
+  "opsSportsbook": {
+    "eyebrow": "Sportsbook console",
+    "title": "Sportsbook operations",
+    "description": "Inspect SportsHub markets, tickets, risk caps, and run reporter / arbitrator writes. Public ticket placement is on the consumer sportsbook route.",
+    "noRelease": {
+      "title": "No release loaded",
+      "description": "The embedded release snapshot is unavailable.",
+      "status": "Unavailable"
+    },
+    "flags": {
+      "enabled": "Tickets enabled",
+      "readonly": "Preview only",
+      "present": "SportsHub present",
+      "missing": "SportsHub missing",
+      "notes": "Operator console always renders; sportsbook flags drive what the public page exposes."
+    },
+    "counters": {
+      "nextMarket": "Next market id",
+      "nextTicket": "Next ticket id",
+      "challengeWindow": "Challenge window",
+      "challengeWindowHelper": "Result dispute timeout from release.",
+      "runtimeReadFailed": "SportsHub runtime read failed"
+    },
+    "release": {
+      "eyebrow": "Release",
+      "title": "Anchors and contract addresses",
+      "description": "Signed odds identity, result reporter set, and contract addresses for the current release.",
+      "releaseField": "Release",
+      "sportsHub": "SportsHub",
+      "riskEngine": "Risk engine",
+      "oddsSignerSet": "Odds signer set",
+      "resultReporterSet": "Result reporter set",
+      "frontendFlag": "Frontend flag",
+      "booleanTrue": "true",
+      "booleanFalse": "false"
+    },
+    "caps": {
+      "eyebrow": "Caps",
+      "title": "Top-level SportsHub limits",
+      "description": "Raw-unit caps copied from the embedded release. Should stay aligned with ops approval memos.",
+      "riskTitle": "SportsHub global risk caps"
+    },
+    "lookup": {
+      "marketEyebrow": "Market lookup",
+      "marketTitle": "Inspect a market",
+      "marketDescription": "Read market state, result proposal, and reserved exposure by id.",
+      "marketLabel": "Market id",
+      "marketEmpty": "Enter a SportsHub market id to inspect state, result, and reserved exposure.",
+      "marketNumericError": "Enter a numeric market id.",
+      "ticketEyebrow": "Ticket lookup",
+      "ticketTitle": "Inspect a ticket",
+      "ticketDescription": "Read ticket position, stake, payout, and terminal state by id.",
+      "ticketLabel": "Ticket id",
+      "ticketEmpty": "Enter a SportsHub ticket id to inspect position, stake, payout, and state.",
+      "ticketNumericError": "Enter a numeric ticket id."
+    },
+    "operator": {
+      "eyebrow": "Operator writes",
+      "title": "Market and result administration",
+      "description": "Governance and reporter actions exposed as typed SDK calls. Contract roles still gate every write.",
+      "walletRoleRequired": "Wallet role must be authorized on SportsHub."
+    },
+    "bankroll": {
+      "eyebrow": "Bankroll",
+      "title": "Sports pool isolation",
+      "description": "Sports liquidity is isolated from casino game liquidity for independent caps and pause control.",
+      "noPool": "No Sports pool metadata is available in this release."
+    },
+    "controls": {
+      "eyebrow": "Controls",
+      "title": "Launch blockers",
+      "description": "Links to the ops documents that still gate public launch.",
+      "links": {
+        "goNoGo": "Go/no-go packet",
+        "frontendAccess": "Frontend access policy",
+        "providerPolicy": "Provider policy"
       }
     }
   },
