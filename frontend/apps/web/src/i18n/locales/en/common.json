@@ -55,6 +55,10 @@
         "title": "Bet {betId}",
         "description": "Inspect bet {betId} with lifecycle, payout, randomness, and settlement proof details."
       },
+      "portfolioSportsTicket": {
+        "title": "Sports Ticket {ticketId}",
+        "description": "Inspect SportsHub ticket {ticketId} with selected outcome, payout, result, and proof details."
+      },
       "portfolioClaims": {
         "title": "Claims",
         "description": "Inspect claimable XP, protocol fees, holdback buckets, and claim transaction readiness."
@@ -876,6 +880,63 @@
           "ticketId": "Ticket",
           "viewTicket": "View ticket",
           "placeAnother": "Place another bet"
+        }
+      },
+      "ticket": {
+        "back": "Back to activity",
+        "bookmaker": "via {name}",
+        "subtitle": "SportsHub ticket #{ticketId}",
+        "eventTitle": "{away} @ {home}",
+        "fallbackMarket": "Market {tag}",
+        "fallbackTicket": "Ticket {ticketId}",
+        "fallbackOutcome": "Outcome {outcomeId}",
+        "refreshing": "Refreshing…",
+        "noRelease": {
+          "title": "Ticket is unavailable",
+          "description": "No release snapshot was loaded for this build."
+        },
+        "invalid": {
+          "title": "Invalid ticket id",
+          "description": "The link is malformed. Return to activity and choose a SportsHub ticket.",
+          "back": "Back to activity"
+        },
+        "readFailed": {
+          "title": "Could not load this ticket",
+          "description": "SportsHub did not return a ticket for this id, or the RPC read failed."
+        },
+        "status": {
+          "held": "Ticket accepted",
+          "resultReady": "Result ready",
+          "settled": "Settled",
+          "won": "Won ticket",
+          "lost": "Lost ticket",
+          "refunded": "Refunded",
+          "voided": "Voided"
+        },
+        "metrics": {
+          "selection": "Your pick",
+          "price": "Accepted price {price}",
+          "stake": "Stake",
+          "pool": "Pool {poolId}",
+          "payout": "Potential payout",
+          "winner": "Winner: {outcome}",
+          "pendingResult": "Waiting for official result"
+        },
+        "facts": {
+          "title": "Ticket proof",
+          "ticketId": "Ticket id",
+          "marketId": "Market id",
+          "positionId": "Position id",
+          "acceptedAt": "Accepted at",
+          "player": "Player",
+          "ticketState": "Ticket state",
+          "oddsSnapshotHash": "Odds snapshot",
+          "rulebookHash": "Rulebook",
+          "placeTx": "Placement tx"
+        },
+        "actions": {
+          "openMarket": "Open market",
+          "ops": "Inspect in ops"
         }
       }
     },

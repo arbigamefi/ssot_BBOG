@@ -57,7 +57,7 @@ export function BetSlip({
 }) {
   const t = useTranslations("sportsbook.player.slip");
   const stakeParsed = parseStake(controller.stake, decimals);
-  const previewPayout = computePayout(stakeParsed, selectedOutcome?.price);
+  const previewPayout = computePayout(stakeParsed, selectedOutcome?.price, decimals, symbol);
 
   return (
     <aside
@@ -221,7 +221,7 @@ function ReceiptSummary({
       <div className="mt-3 flex flex-wrap gap-2">
         {ticketId ? (
           <Link
-            href={`/portfolio/activity/${ticketId.toString()}`}
+            href={`/portfolio/tickets/${ticketId.toString()}${txHash ? `?tx=${encodeURIComponent(txHash)}` : ""}`}
             className="inline-flex h-9 items-center rounded-md border border-success/30 bg-surface-1 px-3 text-sm font-medium text-fg transition-colors hover:bg-surface-2"
           >
             {t("viewTicket")}
@@ -268,14 +268,19 @@ function formatAmount(value: bigint, decimals: number, symbol: string): string {
   return `${negative ? "-" : ""}${numeric} ${symbol}`;
 }
 
-function computePayout(stake: bigint | undefined, price?: string): string | undefined {
+function computePayout(
+  stake: bigint | undefined,
+  price: string | undefined,
+  decimals: number,
+  symbol: string
+): string | undefined {
   if (!stake || !price) return undefined;
   const decimalPrice = Number(price);
   if (!Number.isFinite(decimalPrice) || decimalPrice <= 0) return undefined;
   const stakeNumber = Number(stake);
   if (!Number.isFinite(stakeNumber)) return undefined;
   const payout = Math.floor(stakeNumber * decimalPrice);
-  return `≈ ${payout.toString()} (raw units)`;
+  return `≈ ${formatAmount(BigInt(payout), decimals, symbol)}`;
 }
 
 function shortHex(value: string): string {

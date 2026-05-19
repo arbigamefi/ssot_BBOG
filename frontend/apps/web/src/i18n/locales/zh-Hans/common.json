@@ -55,6 +55,10 @@
         "title": "投注 {betId}",
         "description": "查看投注 {betId} 的生命周期、赔付、随机数和结算证明。"
       },
+      "portfolioSportsTicket": {
+        "title": "体育票据 {ticketId}",
+        "description": "查看 SportsHub 票据 {ticketId} 的选择结果、赔付、赛果和证明。"
+      },
       "portfolioClaims": {
         "title": "领取",
         "description": "查看可领取 XP、协议费用、holdback 桶和领取交易准备状态。"
@@ -876,6 +880,63 @@
           "ticketId": "票号",
           "viewTicket": "查看票据",
           "placeAnother": "再下一注"
+        }
+      },
+      "ticket": {
+        "back": "返回活动",
+        "bookmaker": "来源 {name}",
+        "subtitle": "SportsHub 票据 #{ticketId}",
+        "eventTitle": "{away} @ {home}",
+        "fallbackMarket": "市场 {tag}",
+        "fallbackTicket": "票据 {ticketId}",
+        "fallbackOutcome": "结果 {outcomeId}",
+        "refreshing": "刷新中…",
+        "noRelease": {
+          "title": "票据不可用",
+          "description": "当前构建没有加载 release 快照。"
+        },
+        "invalid": {
+          "title": "票据 ID 无效",
+          "description": "链接格式错误。请返回活动页选择 SportsHub 票据。",
+          "back": "返回活动"
+        },
+        "readFailed": {
+          "title": "无法加载该票据",
+          "description": "SportsHub 没有返回该 ID 的票据，或 RPC 读取失败。"
+        },
+        "status": {
+          "held": "票据已接受",
+          "resultReady": "赛果已出",
+          "settled": "已结算",
+          "won": "中奖票据",
+          "lost": "未中奖",
+          "refunded": "已退款",
+          "voided": "已作废"
+        },
+        "metrics": {
+          "selection": "你的选择",
+          "price": "成交赔率 {price}",
+          "stake": "本金",
+          "pool": "池 {poolId}",
+          "payout": "潜在赔付",
+          "winner": "获胜结果: {outcome}",
+          "pendingResult": "等待官方赛果"
+        },
+        "facts": {
+          "title": "票据证明",
+          "ticketId": "票据 ID",
+          "marketId": "市场 ID",
+          "positionId": "Position ID",
+          "acceptedAt": "接受时间",
+          "player": "玩家",
+          "ticketState": "票据状态",
+          "oddsSnapshotHash": "赔率快照",
+          "rulebookHash": "规则书",
+          "placeTx": "下注交易"
+        },
+        "actions": {
+          "openMarket": "打开市场",
+          "ops": "在运营台检查"
         }
       }
     },
