@@ -25,9 +25,9 @@ export function DiceRangeControl({
 
   return (
     <div className="absolute bottom-8 z-20 w-full max-w-3xl px-6">
-      <div className="relative flex flex-col gap-6 overflow-hidden rounded-xl border border-border bg-surface-1/95 p-6 shadow-e2 backdrop-blur-3xl">
-        <div className="flex justify-between items-center relative z-10 px-4">
-          <div className="relative flex h-12 w-64 rounded-lg border border-border bg-surface-2 p-1.5 shadow-e1">
+      <div className="relative flex flex-col gap-5 overflow-hidden rounded-xl border border-border bg-surface-1/95 p-4 shadow-e2 backdrop-blur-3xl sm:gap-6 sm:p-6">
+        <div className="relative z-10 flex flex-col gap-4 px-1 sm:flex-row sm:items-center sm:justify-between sm:px-4">
+          <div className="relative flex h-12 w-full rounded-lg border border-border bg-surface-2 p-1.5 shadow-e1 sm:w-64">
             <div
               className={cn(
                 "absolute inset-y-1.5 w-[calc(50%-6px)] rounded-md bg-brand shadow-e2 transition-[left] duration-300",
@@ -54,7 +54,7 @@ export function DiceRangeControl({
             </button>
           </div>
 
-          <div className="text-right flex flex-col items-end">
+          <div className="flex flex-col items-start sm:items-end sm:text-right">
             <span className="mb-1 block text-[10px] font-semibold uppercase tracking-widest text-fg-subtle">
               {t("casino.room.selection.dice.targetRange")}
             </span>
@@ -68,7 +68,7 @@ export function DiceRangeControl({
           </div>
         </div>
 
-        <div className="group relative z-20 mx-4 mb-2 mt-2 flex h-24 items-center">
+        <div className="group relative z-20 mx-2 mb-2 mt-1 flex h-20 items-center sm:mx-4 sm:mt-2 sm:h-24">
           <div className="absolute inset-x-0 h-6 overflow-hidden rounded-full border-[3px] border-border-soft bg-surface-0 shadow-e1">
             <div
               className={cn(
@@ -101,7 +101,7 @@ export function DiceRangeControl({
             className="absolute z-10 flex h-24 w-24 -ml-12 flex-col items-center justify-center transition-[left] ease-out pointer-events-none"
             style={{ left: `${diceTarget}%` }}
           >
-            <div className="absolute bottom-[80%] mb-4 flex min-w-[130px] flex-col items-center rounded-lg border border-brand/35 bg-surface-1/95 px-4 py-3 shadow-e2 backdrop-blur-md">
+            <div className="absolute bottom-[80%] mb-4 hidden min-w-[130px] flex-col items-center rounded-lg border border-brand/35 bg-surface-1/95 px-4 py-3 shadow-e2 backdrop-blur-md sm:flex">
               <span className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-fg-subtle">
                 {t("casino.room.selection.dice.target")}
               </span>

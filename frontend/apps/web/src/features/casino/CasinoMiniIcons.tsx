@@ -13,7 +13,6 @@ function IconFrame({ className, children }: React.PropsWithChildren<GameMiniIcon
     <div
       className={cx(
         "relative flex h-32 w-32 items-center justify-center rounded-xl border border-brand/20 bg-surface-1 text-brand shadow-e2",
-        "transition-transform duration-300 group-hover:scale-105",
         className
       )}
     >
@@ -149,7 +148,7 @@ export function PlinkoMiniIcon({ className }: GameMiniIconProps) {
           {[8, 4, 1, 4, 8].map((value, index) => (
             <span
               key={`${value}-${index}`}
-              className="rounded-sm border border-border-soft bg-surface-2 py-1 text-center font-mono text-[8px] font-black text-fg-subtle"
+              className="rounded-sm border border-border-soft bg-surface-2 py-1 text-center font-mono text-[8px] font-semibold text-fg-subtle"
             >
               {value}x
             </span>
@@ -179,8 +178,8 @@ export function BaccaratMiniIcon({ className }: GameMiniIconProps) {
                 : "border-border-soft text-fg-subtle"
             )}
           >
-            <span className="text-[8px] font-black uppercase tracking-wider">{label}</span>
-            <span className="text-lg font-black">{value}</span>
+            <span className="text-[8px] font-semibold uppercase tracking-wider">{label}</span>
+            <span className="text-lg font-semibold">{value}</span>
           </div>
         ))}
       </div>
@@ -196,7 +195,7 @@ export function SicBoMiniIcon({ className }: GameMiniIconProps) {
           <div
             key={`${value}-${index}`}
             className={cx(
-              "flex items-center justify-center rounded-md border bg-surface-2 font-mono text-sm font-black",
+              "flex items-center justify-center rounded-md border bg-surface-2 font-mono text-sm font-semibold",
               index < 3
                 ? "border-brand bg-brand-soft text-brand"
                 : "border-border-soft text-fg-subtle"
@@ -218,7 +217,7 @@ export function SlotsMiniIcon({ className }: GameMiniIconProps) {
           <div
             key={`${symbol}-${index}`}
             className={cx(
-              "flex items-center justify-center rounded-md border bg-surface-2 font-mono text-[10px] font-black",
+              "flex items-center justify-center rounded-md border bg-surface-2 font-mono text-[10px] font-semibold",
               symbol === "7"
                 ? "border-brand bg-brand text-fg-inverse"
                 : "border-border-soft text-fg-subtle"

@@ -29,7 +29,7 @@ export function GameRoomAuditLedger({
       <div className="border-b border-border-soft bg-surface-1 px-8 py-6">
         <AuditTabs activeColorClass="border-brand text-brand">
           <AuditTableHeader>
-            <div className="grid w-full grid-cols-[1.2fr_1fr_1.5fr_1.2fr_80px] px-6 text-[10px] font-black uppercase tracking-[0.2em] text-fg-subtle">
+            <div className="grid w-full grid-cols-[1.2fr_1fr_1.5fr_1.2fr_80px] px-6 text-[10px] font-semibold uppercase tracking-[0.2em] text-fg-subtle">
               <div>{t("casino.room.audit.headers.timestampAuth")}</div>
               <div>{t("casino.room.audit.headers.submodule")}</div>
               <div>{t("casino.room.audit.headers.wagerParameters")}</div>
@@ -56,11 +56,11 @@ export function GameRoomAuditLedger({
                       </div>
                     </AuditTableCell>
                     <AuditTableCell>
-                      <span className="text-sm font-black text-fg">{gameName}</span>
+                      <span className="text-sm font-semibold text-fg">{gameName}</span>
                     </AuditTableCell>
                     <AuditTableCell>
                       <div className="flex flex-col">
-                        <span className="mb-1 font-mono text-xs font-black text-brand">
+                        <span className="mb-1 font-mono text-xs font-semibold text-brand">
                           {t("casino.room.audit.selection", { game: game.slug.toUpperCase() })}
                         </span>
                         <span className="font-mono text-[10px] tracking-tight text-fg-subtle">
@@ -81,7 +81,7 @@ export function GameRoomAuditLedger({
                         aria-label={t("casino.room.audit.openAudit", {
                           betId: bet.betId.toString()
                         })}
-                        className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface-1 transition-transform hover:bg-surface-2 group-hover:scale-105"
+                        className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface-1 transition-colors hover:bg-surface-2"
                       >
                         <ArrowTopRightOnSquareIcon className="h-4 w-4 text-fg-muted" />
                       </button>
@@ -91,7 +91,7 @@ export function GameRoomAuditLedger({
               ))
             ) : (
               <div className="rounded-xl border-2 border-dashed border-border-soft py-24 text-center">
-                <div className="mb-2 text-[10px] font-black uppercase tracking-[0.5em] text-fg-subtle">
+                <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.5em] text-fg-subtle">
                   {t("casino.room.audit.empty.title")}
                 </div>
                 <div className="font-mono text-xs font-bold text-fg-subtle">

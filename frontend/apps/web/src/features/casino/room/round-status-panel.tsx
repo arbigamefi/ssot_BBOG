@@ -113,7 +113,7 @@ export function CasinoRoundStatusPanel({
     >
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-fg-subtle">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-fg-subtle">
             {t("casino.room.roundStatus.title")}
           </p>
           <p className="mt-1 font-bold text-fg">{copy.label}</p>
@@ -123,7 +123,7 @@ export function CasinoRoundStatusPanel({
         </div>
         <span
           className={cn(
-            "rounded-full border px-2 py-1 text-[10px] font-black uppercase tracking-[0.16em]",
+            "rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]",
             active
               ? "border-brand/30 bg-brand-soft text-brand"
               : "border-border bg-surface-2 text-fg-subtle"
@@ -156,7 +156,7 @@ export function CasinoRoundStatusPanel({
         <button
           type="button"
           onClick={onManualSettle}
-          className="mt-4 w-full rounded-lg border border-warn/40 bg-warn-soft px-4 py-3 text-sm font-black uppercase tracking-[0.14em] text-warn transition-colors hover:bg-warn/15"
+          className="mt-4 w-full rounded-lg border border-warn/40 bg-warn-soft px-4 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-warn transition-colors hover:bg-warn/15"
         >
           {t("casino.room.roundStatus.actions.settleResult")}
         </button>
@@ -166,7 +166,7 @@ export function CasinoRoundStatusPanel({
         <button
           type="button"
           onClick={onManualRefund}
-          className="mt-4 w-full rounded-lg border border-danger/35 bg-danger-soft px-4 py-3 text-sm font-black uppercase tracking-[0.14em] text-danger transition-colors hover:bg-danger/15"
+          className="mt-4 w-full rounded-lg border border-danger/35 bg-danger-soft px-4 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-danger transition-colors hover:bg-danger/15"
         >
           {t("casino.room.roundStatus.actions.refundStake")}
         </button>

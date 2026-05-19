@@ -138,9 +138,9 @@ export function BetRollsSection({
             onClick={() => onBetCountChange(count)}
             disabled={isPending}
             className={cn(
-              "flex-1 rounded-lg border py-2 text-xs font-black uppercase tracking-wide transition-colors",
+              "flex-1 rounded-lg border py-2 text-xs font-semibold uppercase tracking-wide transition-colors",
               betCount === count
-                ? "border-brand bg-brand text-fg-inverse shadow-glow"
+                ? "border-brand bg-brand text-fg-inverse shadow-e1"
                 : "border-border bg-surface-1 text-fg-subtle hover:border-brand/40 hover:bg-surface-2 hover:text-fg"
             )}
           >

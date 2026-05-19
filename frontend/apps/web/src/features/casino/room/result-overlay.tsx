@@ -504,7 +504,7 @@ function DetailRow({
 function DetailSection({ title, children }: { title?: string; children: React.ReactNode }) {
   return (
     <section className="rounded-lg border border-border bg-surface-2 p-5 text-left">
-      {title && <h4 className="mb-3 text-sm font-black text-fg">{title}</h4>}
+      {title && <h4 className="mb-3 text-sm font-semibold text-fg">{title}</h4>}
       <div className="divide-y divide-border-soft">{children}</div>
     </section>
   );
@@ -599,10 +599,12 @@ export function GameRoomResultOverlay({
         </button>
 
         <div className="relative min-h-0 overflow-y-auto pr-1">
-          <p className="text-left text-2xl font-black text-fg">{t("casino.room.result.title")}</p>
+          <p className="text-left text-2xl font-semibold text-fg">
+            {t("casino.room.result.title")}
+          </p>
           <h3
             className={cn(
-              "mt-5 text-left text-4xl font-black tracking-normal",
+              "mt-5 text-left text-4xl font-semibold tracking-normal",
               outcome.tone === "win" && "text-success",
               outcome.tone === "loss" && "text-danger",
               outcome.tone === "neutral" && "text-fg"
