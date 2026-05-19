@@ -1,5 +1,5 @@
 import * as React from "react";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { RouletteStage } from "./stage";
@@ -47,5 +47,30 @@ describe("RouletteStage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Clear All" }));
     expect(onChange).toHaveBeenCalledWith([]);
+  });
+
+  it("runs reveal before completing the wheel", () => {
+    const onRevealComplete = vi.fn();
+    vi.useFakeTimers();
+    try {
+      render(
+        <RouletteStage
+          isPending={false}
+          isRevealing
+          showResult
+          resultNum={17}
+          spots={["RED"]}
+          onChange={vi.fn()}
+          onRevealComplete={onRevealComplete}
+        />
+      );
+
+      act(() => {
+        vi.advanceTimersByTime(2_500);
+      });
+      expect(onRevealComplete).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

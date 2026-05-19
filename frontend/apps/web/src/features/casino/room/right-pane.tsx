@@ -110,6 +110,7 @@ export function GameRoomRightPane({
   onResultClose,
   onDiceRevealComplete,
   onCoinRevealComplete,
+  onRouletteRevealComplete,
   onDiceDirectionChange,
   onDiceTargetChange,
   onCoinSideChange,
@@ -155,6 +156,7 @@ export function GameRoomRightPane({
   onResultClose?: () => void;
   onDiceRevealComplete?: () => void;
   onCoinRevealComplete?: () => void;
+  onRouletteRevealComplete?: () => void;
   onDiceDirectionChange: (direction: DiceDirection) => void;
   onDiceTargetChange: (target: number) => void;
   onCoinSideChange: (side: CoinSide) => void;
@@ -225,10 +227,12 @@ export function GameRoomRightPane({
       {gameSlug === "roulette" && (
         <RouletteStage
           isPending={isPending}
+          isRevealing={Boolean(isRevealing)}
           showResult={showResult}
           resultNum={resultNum}
           spots={rouletteSpots}
           onChange={onRouletteChange}
+          onRevealComplete={onRouletteRevealComplete}
         />
       )}
 

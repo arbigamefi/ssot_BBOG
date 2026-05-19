@@ -6,18 +6,24 @@ import { EUROPEAN_WHEEL_ORDER, RED_NUMBER_SET } from "../../room/model";
 
 export function RouletteStage({
   isPending,
+  isRevealing,
   showResult,
   resultNum,
   spots,
-  onChange
+  onChange,
+  onRevealComplete
 }: {
   isPending: boolean;
+  isRevealing?: boolean;
   showResult: boolean;
   resultNum: number | null;
   spots: readonly string[];
   onChange: (spots: string[]) => void;
+  onRevealComplete?: () => void;
 }) {
   const t = useTranslations();
+  const spinning = isPending || Boolean(isRevealing);
+  const resultVisible = showResult && !isRevealing;
   const selectedCountLabel =
     spots.length === 0 ? t("casino.room.selection.roulette.empty") : spots.join(" / ");
 
@@ -27,6 +33,12 @@ export function RouletteStage({
     },
     [onChange, spots]
   );
+
+  React.useEffect(() => {
+    if (!isRevealing || resultNum == null) return;
+    const timeout = window.setTimeout(() => onRevealComplete?.(), 2_400);
+    return () => window.clearTimeout(timeout);
+  }, [isRevealing, onRevealComplete, resultNum]);
 
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-between p-4 pb-6 z-10 overflow-hidden">
@@ -42,7 +54,7 @@ export function RouletteStage({
         </div>
         <button
           type="button"
-          disabled={isPending || showResult || spots.length === 0}
+          disabled={spinning || showResult || spots.length === 0}
           onClick={() => onChange([])}
           className="rounded-lg border border-border bg-surface-0 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg disabled:cursor-default disabled:opacity-50"
         >
@@ -57,7 +69,7 @@ export function RouletteStage({
           <div
             className={cn(
               "relative flex h-full w-full items-center justify-center overflow-hidden rounded-full border border-brand/25 transition-[transform,filter] duration-[3000ms]",
-              isPending
+              spinning
                 ? "animate-[spin_4s_cubic-bezier(0.1,0.7,0.1,1)_forwards] blur-[0.5px]"
                 : "rotate-0"
             )}
@@ -119,10 +131,10 @@ export function RouletteStage({
           <div
             className={cn(
               "absolute inset-0 rounded-full z-20 pointer-events-none transition-transform",
-              isPending ? "animate-[spin_2s_linear_infinite_reverse]" : "duration-1000 ease-out"
+              spinning ? "animate-[spin_2s_linear_infinite_reverse]" : "duration-1000 ease-out"
             )}
             style={
-              !isPending && showResult && resultNum !== null
+              !spinning && resultVisible && resultNum !== null
                 ? {
                     transform: `rotate(${EUROPEAN_WHEEL_ORDER.indexOf(resultNum) * (360 / 37)}deg)`
                   }
@@ -148,6 +160,7 @@ export function RouletteStage({
 
           <div className="flex">
             <button
+              disabled={spinning || showResult}
               onClick={() => toggleSpot("0")}
               className={cn(
                 "group relative flex w-10 items-center justify-center overflow-hidden rounded-l-lg border font-mono text-lg font-semibold transition-[border-color,background-color,color] sm:w-12 md:w-14 md:text-xl",
@@ -171,6 +184,7 @@ export function RouletteStage({
                     return (
                       <button
                         key={num}
+                        disabled={spinning || showResult}
                         onClick={() => toggleSpot(num.toString())}
                         className={cn(
                           "group relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-sm border font-mono text-xs font-semibold shadow-e1 transition-[border-color,background-color,color] sm:h-10 sm:w-10 md:h-11 md:w-11 md:text-sm",
@@ -200,6 +214,7 @@ export function RouletteStage({
             {["1st 12", "2nd 12", "3rd 12"].map((dozen) => (
               <button
                 key={dozen}
+                disabled={spinning || showResult}
                 onClick={() => toggleSpot(dozen)}
                 className={cn(
                   "relative flex-1 overflow-hidden rounded-md border py-1.5 text-[9px] font-semibold uppercase transition-[border-color,background-color,color] md:py-2 md:text-[11px]",
@@ -217,6 +232,7 @@ export function RouletteStage({
             {["1-18", "EVEN", "RED", "BLACK", "ODD", "19-36"].map((outsideBet) => (
               <button
                 key={outsideBet}
+                disabled={spinning || showResult}
                 onClick={() => toggleSpot(outsideBet)}
                 aria-label={getRouletteBetLabel(t, outsideBet)}
                 className={cn(
