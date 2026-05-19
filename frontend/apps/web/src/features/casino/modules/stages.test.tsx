@@ -164,6 +164,33 @@ describe("game room stages", () => {
     expect(onChange.mock.calls.at(-1)?.[0]).toHaveLength(10);
   });
 
+  it("reveals Keno draw numbers before completing the stage", () => {
+    const onRevealComplete = vi.fn();
+    vi.useFakeTimers();
+    try {
+      render(
+        <KenoStage
+          isPending={false}
+          isRevealing
+          showResult
+          spots={[1, 2, 3, 4, 5]}
+          animatingSpots={[]}
+          resultDrawn={[1, 6, 12, 18, 24, 30, 36, 37, 38, 39]}
+          onChange={vi.fn()}
+          onResetResult={vi.fn()}
+          onRevealComplete={onRevealComplete}
+        />
+      );
+
+      act(() => {
+        vi.advanceTimersByTime(3_400);
+      });
+      expect(onRevealComplete).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("renders Plinko stage risk and highlighted result slot", () => {
     const onRiskChange = vi.fn();
     const { rerender } = render(

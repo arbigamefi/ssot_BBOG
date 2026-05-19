@@ -114,6 +114,7 @@ export function GameRoomRightPane({
   onRouletteChange,
   onKenoChange,
   onKenoResetResult,
+  onKenoRevealComplete,
   onPlinkoRiskChange,
   onPlinkoRevealComplete,
   onSlotsRevealComplete,
@@ -155,6 +156,7 @@ export function GameRoomRightPane({
   onRouletteChange: (spots: string[]) => void;
   onKenoChange: (spots: number[]) => void;
   onKenoResetResult: () => void;
+  onKenoRevealComplete?: () => void;
   onPlinkoRiskChange: (risk: PlinkoRisk) => void;
   onPlinkoRevealComplete?: () => void;
   onSlotsRevealComplete?: () => void;
@@ -223,12 +225,14 @@ export function GameRoomRightPane({
       {gameSlug === "keno" && (
         <KenoStage
           isPending={isPending}
+          isRevealing={Boolean(isRevealing)}
           showResult={showResult}
           spots={kenoSpots}
           animatingSpots={animatingKenoSpots}
           resultDrawn={kenoResultDrawn}
           onChange={onKenoChange}
           onResetResult={onKenoResetResult}
+          onRevealComplete={onKenoRevealComplete}
         />
       )}
 

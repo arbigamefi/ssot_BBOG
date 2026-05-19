@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useReducedMotion } from "framer-motion";
 import { cn } from "@ssot/ui";
 import { useTranslations } from "next-intl";
 
@@ -13,23 +14,71 @@ function pickKenoSpots(count: number): number[] {
 
 export function KenoStage({
   isPending,
+  isRevealing,
   showResult,
   spots,
   animatingSpots,
   resultDrawn,
   onChange,
-  onResetResult
+  onResetResult,
+  onRevealComplete
 }: {
   isPending: boolean;
+  isRevealing?: boolean;
   showResult: boolean;
   spots: readonly number[];
   animatingSpots: readonly number[];
   resultDrawn: readonly number[];
   onChange: (spots: number[]) => void;
   onResetResult: () => void;
+  onRevealComplete?: () => void;
 }) {
   const t = useTranslations();
-  const controlsDisabled = isPending || showResult;
+  const prefersReducedMotion = useReducedMotion();
+  const controlsDisabled = isPending || isRevealing || showResult;
+  const resultKey = resultDrawn.join(",");
+  const [revealedCount, setRevealedCount] = React.useState(() =>
+    showResult ? resultDrawn.length : 0
+  );
+  const visibleDrawn = isRevealing ? resultDrawn.slice(0, revealedCount) : resultDrawn;
+
+  React.useEffect(() => {
+    if (!isRevealing || resultDrawn.length === 0) {
+      setRevealedCount(showResult ? resultDrawn.length : 0);
+      return;
+    }
+
+    setRevealedCount(0);
+    const timeouts: number[] = [];
+    const schedule = (callback: () => void, delay: number) => {
+      const timeout = window.setTimeout(callback, delay);
+      timeouts.push(timeout);
+    };
+
+    if (prefersReducedMotion) {
+      setRevealedCount(resultDrawn.length);
+      schedule(() => onRevealComplete?.(), 180);
+      return () => {
+        timeouts.forEach((timeout) => window.clearTimeout(timeout));
+      };
+    }
+
+    resultDrawn.forEach((_, index) => {
+      schedule(() => setRevealedCount(index + 1), 240 + index * 280);
+    });
+    schedule(() => onRevealComplete?.(), 240 + resultDrawn.length * 280 + 260);
+
+    return () => {
+      timeouts.forEach((timeout) => window.clearTimeout(timeout));
+    };
+  }, [
+    isRevealing,
+    onRevealComplete,
+    prefersReducedMotion,
+    resultDrawn.length,
+    resultKey,
+    showResult
+  ]);
 
   return (
     <div className="absolute inset-0 z-10 flex flex-col items-center justify-start overflow-hidden px-5 pb-6 pt-10">
@@ -124,9 +173,12 @@ export function KenoStage({
             const n = i + 1;
             const isSelected = spots.includes(n);
             const isAnimating = isPending && animatingSpots.includes(n);
-            const isDrawnWinner = !isPending && showResult && resultDrawn.includes(n) && isSelected;
-            const isDrawnMiss = !isPending && showResult && resultDrawn.includes(n) && !isSelected;
-            const isMissedPick = !isPending && showResult && !resultDrawn.includes(n) && isSelected;
+            const isRevealDraw = isRevealing && visibleDrawn.at(-1) === n;
+            const isDrawnWinner =
+              !isPending && showResult && visibleDrawn.includes(n) && isSelected;
+            const isDrawnMiss = !isPending && showResult && visibleDrawn.includes(n) && !isSelected;
+            const isMissedPick =
+              !isPending && showResult && !isRevealing && !visibleDrawn.includes(n) && isSelected;
 
             return (
               <button
@@ -139,17 +191,19 @@ export function KenoStage({
                 }}
                 className={cn(
                   "group relative flex aspect-square items-center justify-center overflow-hidden rounded-lg border-2 font-mono text-xl font-semibold transition-[border-color,background-color,color] md:text-2xl",
-                  isAnimating
-                    ? "z-20 border-brand bg-brand text-fg-inverse shadow-e2 duration-75"
-                    : isDrawnWinner
-                      ? "z-30 border-success bg-success text-fg-inverse shadow-e2 animate-[pulse_1s_ease-in-out_infinite]"
-                      : isDrawnMiss
-                        ? "z-20 border-border bg-surface-3 text-fg shadow-e2"
-                        : isMissedPick
-                          ? "border-brand/20 bg-brand-soft text-brand opacity-50 shadow-inner"
-                          : isSelected
-                            ? "z-10 border-brand bg-brand text-fg-inverse shadow-e2"
-                            : "border-border-soft bg-surface-2 text-fg-subtle shadow-inner hover:border-border hover:bg-surface-3 hover:text-fg"
+                  isRevealDraw
+                    ? "z-30 animate-[keno-ball-reveal_320ms_ease-out] border-accent bg-accent text-fg-inverse shadow-e2"
+                    : isAnimating
+                      ? "z-20 border-brand bg-brand text-fg-inverse shadow-e2 duration-75"
+                      : isDrawnWinner
+                        ? "z-30 border-success bg-success text-fg-inverse shadow-e2 animate-[pulse_1s_ease-in-out_infinite]"
+                        : isDrawnMiss
+                          ? "z-20 border-border bg-surface-3 text-fg shadow-e2"
+                          : isMissedPick
+                            ? "border-brand/20 bg-brand-soft text-brand opacity-50 shadow-inner"
+                            : isSelected
+                              ? "z-10 border-brand bg-brand text-fg-inverse shadow-e2"
+                              : "border-border-soft bg-surface-2 text-fg-subtle shadow-inner hover:border-border hover:bg-surface-3 hover:text-fg"
                 )}
               >
                 <span className="relative z-10 drop-shadow-md">{n}</span>

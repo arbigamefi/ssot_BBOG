@@ -176,9 +176,11 @@ export function GamePageClient({ slug }: { slug: string }) {
           ? 6_000
           : gameSlug === "slots"
             ? 3_400
-            : gameSlug === "sic-bo"
-              ? 2_100
-              : 0;
+            : gameSlug === "keno"
+              ? 4_000
+              : gameSlug === "sic-bo"
+                ? 2_100
+                : 0;
 
       if (durationMs === 0) {
         setStageReveal({ betId, phase: "revealed" });
@@ -449,6 +451,7 @@ export function GamePageClient({ slug }: { slug: string }) {
       onRouletteChange={setRouletteSpots}
       onKenoChange={setKenoSpots}
       onKenoResetResult={() => setKenoResultDrawn([])}
+      onKenoRevealComplete={handleStageRevealComplete}
       onPlinkoRiskChange={setPlinkoRisk}
       onPlinkoRevealComplete={handleStageRevealComplete}
       onSlotsRevealComplete={handleStageRevealComplete}
