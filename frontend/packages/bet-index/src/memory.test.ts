@@ -6,6 +6,7 @@ const GAME_ID = `0x${"11".repeat(32)}` as const;
 const PLAYER = "0x2222222222222222222222222222222222222222" as const;
 const AFFILIATE = "0x5555555555555555555555555555555555555555" as const;
 const GAME_HUB = "0x3333333333333333333333333333333333333333" as const;
+const SPORTS_HUB = "0x6666666666666666666666666666666666666666" as const;
 
 describe("memory bet index store", () => {
   it("folds gamehub events and queries recent/player rows", async () => {
@@ -92,6 +93,69 @@ describe("memory bet index store", () => {
     });
 
     await expect(store.getCursor(84532, "gamehub-events", GAME_HUB)).resolves.toBe(123n);
+  });
+
+  it("folds sport ticket events and queries player rows", async () => {
+    const store = createMemoryBetIndexStore();
+
+    await store.writeSportsHubEvents([
+      {
+        args: {
+          eventId: 1001n,
+          marketId: 6n,
+          oddsSnapshotHash: `0x${"77".repeat(32)}`,
+          outcomeId: 2,
+          payout: 55_000000n,
+          player: PLAYER,
+          poolId: 1n,
+          positionId: 22n,
+          reserved: 45_000000n,
+          rulebookHash: `0x${"88".repeat(32)}`,
+          stake: 10_000000n,
+          ticketId: 12n
+        },
+        blockNumber: 30n,
+        chainId: 84532,
+        eventName: "TicketPlaced",
+        logIndex: 1,
+        sportsHub: SPORTS_HUB,
+        txHash: "0xeee"
+      },
+      {
+        args: {
+          payout: 55_000000n,
+          positionId: 22n,
+          ticketId: 12n
+        },
+        blockNumber: 40n,
+        chainId: 84532,
+        eventName: "TicketSettled",
+        logIndex: 2,
+        sportsHub: SPORTS_HUB,
+        txHash: "0xfff"
+      }
+    ]);
+
+    const tickets = await store.getPlayerSportsTickets({
+      chainId: 84532,
+      limit: 10,
+      player: PLAYER
+    });
+
+    expect(tickets).toHaveLength(1);
+    expect(tickets[0]).toMatchObject({
+      eventId: "1001",
+      marketId: "6",
+      outcomeId: 2,
+      payout: "55000000",
+      player: PLAYER,
+      positionId: "22",
+      stake: "10000000",
+      state: "settled",
+      ticketId: "12",
+      terminalTxHash: "0xfff",
+      updatedBlock: 40
+    });
   });
 
   it("preserves placed metadata when lifecycle events arrive in later writes", async () => {

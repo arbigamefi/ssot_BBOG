@@ -6,6 +6,7 @@ type ReleaseLike = {
   chainId: number;
   contracts: {
     gameHub: Address;
+    sportsHub?: Address;
     vrfHub: Address;
   };
   meta?: {
@@ -68,6 +69,7 @@ export function loadKeeperConfig(env: NodeJS.ProcessEnv = process.env): KeeperCo
   return {
     chainId,
     gameHub: release.contracts.gameHub,
+    sportsHub: release.contracts.sportsHub,
     vrfHub: release.contracts.vrfHub,
     httpRpcUrl: requireEnv(env, "KEEPER_RPC_HTTP"),
     wsRpcUrl: env.KEEPER_RPC_WS?.trim() || undefined,

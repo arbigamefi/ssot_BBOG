@@ -14,6 +14,7 @@
       "transactionFailed": "交易失败",
       "recentBetsFailed": "最近投注读取失败",
       "playerBetsFailed": "玩家投注读取失败",
+      "playerSportsTicketsFailed": "玩家体育票据读取失败",
       "errorId": "错误 ID: {digest}",
       "tryAgain": "重试"
     }
@@ -1552,7 +1553,8 @@
       "common": {
         "pending": "待读取",
         "unknownGame": "未知游戏",
-        "asset": "资产"
+        "asset": "资产",
+        "sportsbook": "体育投注"
       },
       "time": {
         "justNow": "刚刚",

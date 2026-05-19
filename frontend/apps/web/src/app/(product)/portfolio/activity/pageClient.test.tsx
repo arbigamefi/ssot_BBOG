@@ -15,6 +15,7 @@ const state = {
     ]
   } as any,
   bets: [] as any[],
+  sportsTickets: [] as any[],
   loading: false
 };
 
@@ -64,6 +65,13 @@ vi.mock("../../../../features/betting/usePlayerBets", () => ({
   })
 }));
 
+vi.mock("../../../../features/sportsbook/usePlayerSportsTickets", () => ({
+  usePlayerSportsTickets: () => ({
+    data: state.sportsTickets,
+    isLoading: state.loading
+  })
+}));
+
 vi.mock("../../../../components/PageTransition", () => ({
   PageTransition: ({ children }: { children: React.ReactNode }) => <div>{children}</div>
 }));
@@ -82,6 +90,7 @@ describe("PortfolioActivityPageClient", () => {
   afterEach(() => {
     cleanup();
     state.bets = [];
+    state.sportsTickets = [];
     state.loading = false;
   });
 
@@ -120,6 +129,34 @@ describe("PortfolioActivityPageClient", () => {
     expect(screen.getAllByText("1 USDC").length).toBeGreaterThan(0);
     expect(screen.getByText("View").closest("a")?.getAttribute("href")).toBe(
       "/portfolio/activity/42"
+    );
+  });
+
+  it("renders sportsbook tickets with their ticket detail link", () => {
+    state.sportsTickets = [
+      {
+        id: "84532:sports:12",
+        chainId: 84532,
+        ticketId: "12",
+        state: "held",
+        marketId: "6",
+        player: "0x1111111111111111111111111111111111111111",
+        updatedBlock: 12,
+        lastTxHash: "0xabcd",
+        lastEventName: "TicketPlaced",
+        updatedAt: Date.now(),
+        stake: "10000000",
+        payout: "55000000"
+      }
+    ];
+
+    render(<PortfolioActivityPageClient />);
+
+    expect(screen.getAllByText("S#12").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Sportsbook #6").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("10 USDC").length).toBeGreaterThan(0);
+    expect(screen.getByText("View").closest("a")?.getAttribute("href")).toBe(
+      "/portfolio/tickets/12"
     );
   });
 });

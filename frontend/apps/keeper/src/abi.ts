@@ -120,3 +120,51 @@ export const VRF_HUB_KEEPER_ABI = [
     ]
   }
 ] as const;
+
+export const SPORTS_HUB_KEEPER_ABI = [
+  {
+    type: "event",
+    name: "TicketPlaced",
+    inputs: [
+      { indexed: true, name: "ticketId", type: "uint256" },
+      { indexed: true, name: "positionId", type: "uint256" },
+      { indexed: true, name: "marketId", type: "uint64" },
+      { indexed: false, name: "eventId", type: "uint64" },
+      { indexed: false, name: "poolId", type: "uint64" },
+      { indexed: false, name: "outcomeId", type: "uint32" },
+      { indexed: false, name: "player", type: "address" },
+      { indexed: false, name: "stake", type: "uint256" },
+      { indexed: false, name: "payout", type: "uint256" },
+      { indexed: false, name: "reserved", type: "uint256" },
+      { indexed: false, name: "oddsSnapshotHash", type: "bytes32" },
+      { indexed: false, name: "rulebookHash", type: "bytes32" }
+    ]
+  },
+  {
+    type: "event",
+    name: "TicketSettled",
+    inputs: [
+      { indexed: true, name: "ticketId", type: "uint256" },
+      { indexed: true, name: "positionId", type: "uint256" },
+      { indexed: false, name: "payout", type: "uint256" }
+    ]
+  },
+  {
+    type: "event",
+    name: "TicketRefunded",
+    inputs: [
+      { indexed: true, name: "ticketId", type: "uint256" },
+      { indexed: true, name: "positionId", type: "uint256" },
+      { indexed: false, name: "refundAmount", type: "uint256" }
+    ]
+  },
+  {
+    type: "event",
+    name: "TicketVoided",
+    inputs: [
+      { indexed: true, name: "ticketId", type: "uint256" },
+      { indexed: true, name: "positionId", type: "uint256" },
+      { indexed: false, name: "refundAmount", type: "uint256" }
+    ]
+  }
+] as const;

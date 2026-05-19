@@ -14,10 +14,12 @@ import { privateKeyToAccount } from "viem/accounts";
 import {
   createPostgresBetIndexStore,
   type BetIndexEvent,
-  type BetIndexStore
+  type BetIndexStore,
+  type SportsHubEventName,
+  type SportsTicketIndexEvent
 } from "@ssot/bet-index";
 
-import { GAME_HUB_KEEPER_ABI, VRF_HUB_KEEPER_ABI } from "./abi.js";
+import { GAME_HUB_KEEPER_ABI, SPORTS_HUB_KEEPER_ABI, VRF_HUB_KEEPER_ABI } from "./abi.js";
 import { finalizeIfReady, retryDelayMs } from "./finalizer.js";
 import { createFileHealthSink, KeeperHealthReporter } from "./health.js";
 import { FinalizeQueue, type QueueItem } from "./queue.js";
@@ -26,6 +28,12 @@ import { mapBetState } from "./state.js";
 import type { BetRead, KeeperConfig, KeeperEvent, KeeperLogger } from "./types.js";
 
 type GameHubEventName = BetIndexEvent["eventName"];
+const SPORTS_TICKET_EVENTS: SportsHubEventName[] = [
+  "TicketPlaced",
+  "TicketSettled",
+  "TicketRefunded",
+  "TicketVoided"
+];
 const BET_INDEX_CURSOR_SOURCE = "gamehub-events";
 
 export function createKeeperChain(config: KeeperConfig) {
@@ -243,6 +251,30 @@ export function createKeeperRuntime({
     }
   };
 
+  const writeSportsTicketIndexLogs = async (
+    eventName: SportsHubEventName,
+    logs: Array<{
+      args?: Record<string, unknown>;
+      blockNumber?: bigint;
+      logIndex?: number;
+      transactionHash?: Hex;
+    }>
+  ) => {
+    if (!betIndexStore || !config.sportsHub || logs.length === 0) return;
+    const events = logs
+      .map((log) => toSportsTicketIndexEvent(config.chainId, config.sportsHub!, eventName, log))
+      .filter((event): event is SportsTicketIndexEvent => Boolean(event));
+    if (events.length === 0) return;
+    try {
+      await betIndexStore.writeSportsHubEvents(events);
+    } catch (error) {
+      logger.error("casino.keeper.sports_ticket_index_write_failed", {
+        eventName,
+        message: (error as Error)?.message ?? "sports ticket index write failed"
+      });
+    }
+  };
+
   const initializeBetIndex = async () => {
     if (!betIndexStore) return;
     try {
@@ -343,6 +375,7 @@ export function createKeeperRuntime({
       chainId: config.chainId,
       role: config.role,
       gameHub: config.gameHub,
+      sportsHub: config.sportsHub,
       vrfHub: config.vrfHub,
       keeper: account.address,
       startBlock: lastScannedBlock.toString(),
@@ -380,6 +413,23 @@ export function createKeeperRuntime({
                 })
             })
           );
+        }
+        if (config.sportsHub) {
+          for (const eventName of SPORTS_TICKET_EVENTS) {
+            unwatchers.push(
+              wsClient.watchContractEvent({
+                address: config.sportsHub,
+                abi: SPORTS_HUB_KEEPER_ABI,
+                eventName,
+                onLogs: (logs) => void writeSportsTicketIndexLogs(eventName, logs),
+                onError: (error) =>
+                  logger.error("casino.keeper.sports_ticket_index_watch_error", {
+                    eventName,
+                    message: error.message
+                  })
+              })
+            );
+          }
         }
       }
       unwatchers.push(
@@ -440,6 +490,21 @@ async function writeBetIndexRange(
         .filter((event): event is BetIndexEvent => Boolean(event));
       await store.writeGameHubEvents(events);
     }
+    if (config.sportsHub) {
+      for (const eventName of SPORTS_TICKET_EVENTS) {
+        const logs = await publicClient.getContractEvents({
+          address: config.sportsHub,
+          abi: SPORTS_HUB_KEEPER_ABI,
+          eventName,
+          fromBlock: range.fromBlock,
+          toBlock: range.toBlock
+        });
+        const events = logs
+          .map((log) => toSportsTicketIndexEvent(config.chainId, config.sportsHub!, eventName, log))
+          .filter((event): event is SportsTicketIndexEvent => Boolean(event));
+        await store.writeSportsHubEvents(events);
+      }
+    }
     await store.setCursor({
       blockNumber: range.toBlock,
       chainId: config.chainId,
@@ -474,6 +539,29 @@ function toBetIndexEvent(
     eventName,
     gameHub,
     logIndex: log.logIndex,
+    txHash: log.transactionHash
+  };
+}
+
+function toSportsTicketIndexEvent(
+  chainId: number,
+  sportsHub: Address,
+  eventName: SportsHubEventName,
+  log: {
+    args?: Record<string, unknown>;
+    blockNumber?: bigint;
+    logIndex?: number;
+    transactionHash?: Hex;
+  }
+): SportsTicketIndexEvent | null {
+  if (log.blockNumber == null || log.transactionHash == null || log.logIndex == null) return null;
+  return {
+    args: log.args ?? {},
+    blockNumber: log.blockNumber,
+    chainId,
+    eventName,
+    logIndex: log.logIndex,
+    sportsHub,
     txHash: log.transactionHash
   };
 }

@@ -3,13 +3,13 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 
 import { formatTokenAmount } from "./format";
-import type { EnrichedBetRow } from "./types";
+import type { EnrichedActivityRow } from "./types";
 
 export function ActivityLedger({
   rows,
   loading
 }: {
-  rows: readonly EnrichedBetRow[];
+  rows: readonly EnrichedActivityRow[];
   loading: boolean;
 }) {
   const t = useTranslations();
@@ -43,7 +43,7 @@ export function ActivityLedger({
             {t("portfolio.activity.ledger.loading")}
           </div>
         ) : rows.length > 0 ? (
-          rows.map((item) => <MobileRow key={item.row.id} item={item} />)
+          rows.map((item) => <MobileRow key={item.id} item={item} />)
         ) : (
           <div className="rounded-md border border-dashed border-border bg-surface-0 p-5 text-center text-sm text-fg-muted">
             {t("portfolio.activity.ledger.empty")}
@@ -54,7 +54,7 @@ export function ActivityLedger({
   );
 }
 
-function Rows({ rows, loading }: { rows: readonly EnrichedBetRow[]; loading: boolean }) {
+function Rows({ rows, loading }: { rows: readonly EnrichedActivityRow[]; loading: boolean }) {
   const t = useTranslations();
   const pendingLabel = t("portfolio.activity.common.pending");
 
@@ -76,11 +76,11 @@ function Rows({ rows, loading }: { rows: readonly EnrichedBetRow[]; loading: boo
     <div>
       {rows.map((item) => (
         <Link
-          key={item.row.id}
-          href={`/portfolio/activity/${item.row.betId}`}
+          key={item.id}
+          href={item.detailHref}
           className="grid grid-cols-[120px_1.4fr_1fr_1fr_120px_120px] items-center border-b border-border-soft px-5 py-4 text-sm transition last:border-b-0 hover:bg-surface-2"
         >
-          <div className="font-mono font-black text-fg">#{item.row.betId}</div>
+          <div className="font-mono font-black text-fg">{formatActivityId(item)}</div>
           <div>
             <div className="font-bold text-fg">{item.gameLabel}</div>
             <div className="mt-1 font-mono text-xs text-fg-subtle">{item.relativeTime}</div>
@@ -101,18 +101,18 @@ function Rows({ rows, loading }: { rows: readonly EnrichedBetRow[]; loading: boo
   );
 }
 
-function MobileRow({ item }: { item: EnrichedBetRow }) {
+function MobileRow({ item }: { item: EnrichedActivityRow }) {
   const t = useTranslations();
   const pendingLabel = t("portfolio.activity.common.pending");
 
   return (
     <Link
-      href={`/portfolio/activity/${item.row.betId}`}
+      href={item.detailHref}
       className="rounded-md border border-border bg-surface-0 p-4 transition hover:bg-surface-2"
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="font-mono text-sm font-black text-fg">#{item.row.betId}</div>
+          <div className="font-mono text-sm font-black text-fg">{formatActivityId(item)}</div>
           <div className="mt-1 text-sm font-bold text-fg-muted">{item.gameLabel}</div>
         </div>
         <StatusBadge status={item.status} />
@@ -137,7 +137,7 @@ function MobileRow({ item }: { item: EnrichedBetRow }) {
   );
 }
 
-function StatusBadge({ status }: { status: EnrichedBetRow["status"] }) {
+function StatusBadge({ status }: { status: EnrichedActivityRow["status"] }) {
   const t = useTranslations();
   const label =
     status === "won"
@@ -162,10 +162,14 @@ function StatusBadge({ status }: { status: EnrichedBetRow["status"] }) {
   );
 }
 
-function getOutcomeClass(status: EnrichedBetRow["status"]) {
+function getOutcomeClass(status: EnrichedActivityRow["status"]) {
   if (status === "won") return "font-mono font-bold text-success";
   if (status === "lost" || status === "refunded" || status === "failed") {
     return "font-mono font-bold text-danger";
   }
   return "font-mono font-bold text-brand";
+}
+
+function formatActivityId(item: EnrichedActivityRow) {
+  return item.kind === "sports" ? `S#${item.row.ticketId}` : `#${item.row.betId}`;
 }

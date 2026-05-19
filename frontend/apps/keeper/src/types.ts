@@ -19,6 +19,7 @@ export type KeeperEvent = {
 export type KeeperConfig = {
   chainId: number;
   gameHub: Address;
+  sportsHub?: Address;
   vrfHub: Address;
   httpRpcUrl: string;
   wsRpcUrl?: string;
