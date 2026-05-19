@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { cn } from "@ssot/ui";
 
@@ -98,12 +99,22 @@ function NumberBetButton({
   );
 }
 
-function DieFace({ value, active }: { value: number | undefined; active: boolean }) {
+function DieFace({
+  value,
+  active,
+  rolling
+}: {
+  value: number | undefined;
+  active: boolean;
+  rolling?: boolean;
+}) {
   return (
     <div
       className={cn(
-        "flex h-24 w-24 items-center justify-center rounded-lg border bg-surface-2 shadow-inner-e1",
-        active ? "border-accent/60 bg-accent-soft" : "border-border"
+        "flex h-24 w-24 items-center justify-center rounded-lg border bg-surface-2 shadow-inner-e1 transition-[border-color,background-color,transform]",
+        active ? "border-accent/60 bg-accent-soft" : "border-border",
+        rolling &&
+          "animate-[sicbo-die-tumble_420ms_ease-in-out_infinite] border-brand/50 bg-brand-soft"
       )}
     >
       <span className={cn("font-mono text-4xl font-semibold", active ? "text-accent" : "text-fg")}>
@@ -115,32 +126,87 @@ function DieFace({ value, active }: { value: number | undefined; active: boolean
 
 export function SicBoStage({
   isPending,
+  isRevealing,
   showResult,
   betKind,
   betValue,
   onBetChange,
-  outcome
+  outcome,
+  onRevealComplete
 }: {
   isPending: boolean;
+  isRevealing?: boolean;
   showResult: boolean;
   betKind: SicBoKind;
   betValue: number;
   onBetChange: (kind: SicBoKind, value: number) => void;
   outcome?: Extract<CasinoOutcome, { kind: "sic-bo" }> | null;
+  onRevealComplete?: () => void;
 }) {
   const t = useTranslations();
+  const prefersReducedMotion = useReducedMotion();
   const roll: SicBoRoll | undefined = outcome?.rolls.at(-1);
-  const hasResult = Boolean(showResult && roll);
+  const [revealFrame, setRevealFrame] = React.useState(0);
+  const [diceOpened, setDiceOpened] = React.useState(() => Boolean(showResult && roll));
+  const hasResult = Boolean(showResult && roll && (diceOpened || !isRevealing));
+  const isRollingReveal = Boolean(isRevealing && roll && !diceOpened);
+  const displayDice = FACE_VALUES.slice(0, 3).map((_, index) =>
+    hasResult
+      ? roll?.dice[index]
+      : isRollingReveal
+        ? FACE_VALUES[(revealFrame + index * 2) % FACE_VALUES.length]
+        : undefined
+  );
+
+  React.useEffect(() => {
+    if (!isRevealing || !roll) {
+      setDiceOpened(Boolean(showResult && roll));
+      return;
+    }
+
+    setDiceOpened(false);
+    const timeouts: number[] = [];
+    const schedule = (callback: () => void, delay: number) => {
+      const timeout = window.setTimeout(callback, delay);
+      timeouts.push(timeout);
+    };
+
+    if (prefersReducedMotion) {
+      setDiceOpened(true);
+      schedule(() => onRevealComplete?.(), 180);
+      return () => {
+        timeouts.forEach((timeout) => window.clearTimeout(timeout));
+      };
+    }
+
+    const interval = window.setInterval(() => {
+      setRevealFrame((frame) => frame + 1);
+    }, 110);
+    schedule(() => setDiceOpened(true), 1_050);
+    schedule(() => onRevealComplete?.(), 1_520);
+
+    return () => {
+      window.clearInterval(interval);
+      timeouts.forEach((timeout) => window.clearTimeout(timeout));
+    };
+  }, [isRevealing, onRevealComplete, prefersReducedMotion, roll, showResult]);
 
   return (
     <div className="absolute inset-0 z-10 flex flex-col items-center justify-start overflow-hidden px-6 pb-6 pt-20">
       <div className="relative flex w-full max-w-5xl flex-col items-center gap-4">
-        <div className="grid grid-cols-3 gap-3 rounded-xl border border-border bg-surface-1 p-3 shadow-e2">
+        <div className="relative grid grid-cols-3 gap-3 rounded-xl border border-border bg-surface-1 p-3 shadow-e2">
+          {isRollingReveal && (
+            <div
+              aria-hidden
+              className="absolute inset-x-5 top-3 z-10 h-16 rounded-b-3xl border border-brand/30 bg-surface-2/95 shadow-e2 animate-[sicbo-cup-shake_520ms_ease-in-out_infinite]"
+            />
+          )}
           {[0, 1, 2].map((index) => (
             <DieFace
               key={index}
-              value={roll?.dice[index]}
+              value={displayDice[index]}
               active={Boolean(hasResult && roll?.won)}
+              rolling={isRollingReveal}
             />
           ))}
         </div>
@@ -292,7 +358,7 @@ export function SicBoStage({
 
         <div className="rounded-lg border border-border bg-surface-1/90 px-5 py-3 text-center shadow-e1 backdrop-blur">
           <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-fg-subtle">
-            {isPending
+            {isPending || isRevealing
               ? t("casino.room.stage.sicBo.rolling")
               : hasResult
                 ? t("casino.room.stage.sicBo.opened", { dice: roll?.dice.join(" / ") ?? "—" })

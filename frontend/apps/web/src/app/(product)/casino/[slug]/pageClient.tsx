@@ -171,7 +171,14 @@ export function GamePageClient({ slug }: { slug: string }) {
   const startStageReveal = React.useCallback(
     (betId: bigint, gameSlug: string) => {
       clearStageRevealTimer();
-      const durationMs = gameSlug === "plinko" ? 6_000 : gameSlug === "slots" ? 3_400 : 0;
+      const durationMs =
+        gameSlug === "plinko"
+          ? 6_000
+          : gameSlug === "slots"
+            ? 3_400
+            : gameSlug === "sic-bo"
+              ? 2_100
+              : 0;
 
       if (durationMs === 0) {
         setStageReveal({ betId, phase: "revealed" });
@@ -445,6 +452,7 @@ export function GamePageClient({ slug }: { slug: string }) {
       onPlinkoRiskChange={setPlinkoRisk}
       onPlinkoRevealComplete={handleStageRevealComplete}
       onSlotsRevealComplete={handleStageRevealComplete}
+      onSicBoRevealComplete={handleStageRevealComplete}
       onBaccaratSideChange={setBaccaratSide}
       onSicBoChange={handleSicBoChange}
     />

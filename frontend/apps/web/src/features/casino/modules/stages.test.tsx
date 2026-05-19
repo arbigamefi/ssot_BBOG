@@ -336,4 +336,52 @@ describe("game room stages", () => {
     fireEvent.click(screen.getByRole("button", { name: "12" }));
     expect(onBetChange).toHaveBeenCalledWith("total", 12);
   });
+
+  it("runs Sic Bo reveal before opening the dice", () => {
+    const onRevealComplete = vi.fn();
+    vi.useFakeTimers();
+    try {
+      render(
+        <SicBoStage
+          isPending={false}
+          isRevealing
+          showResult
+          betKind="small"
+          betValue={0}
+          onBetChange={vi.fn()}
+          onRevealComplete={onRevealComplete}
+          outcome={{
+            kind: "sic-bo",
+            betKind: "small",
+            betValue: 0,
+            payoutGross: 2_060_000n,
+            payoutNet: 2_018_800n,
+            refundAmount: 0n,
+            feeOnPayout: 41_200n,
+            playerOwed: 2_018_800n,
+            netResult: 1_018_800n,
+            rolls: [
+              {
+                dice: [1, 2, 3],
+                total: 6,
+                triple: false,
+                faceCount: 0,
+                factorBps: 20_600,
+                won: true
+              }
+            ]
+          }}
+        />
+      );
+
+      expect(screen.getByText("Waiting for VRF Oracle...")).toBeDefined();
+
+      act(() => {
+        vi.advanceTimersByTime(1_600);
+      });
+      expect(onRevealComplete).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
