@@ -72,7 +72,11 @@ Edit the real files and set:
 | `KEEPER_BACKUP_DELAY_SECONDS` | `0` for primary, `5` for backup. |
 | `KEEPER_HEALTH_PATH` | Role-specific file under `/var/lib/arbigamefi/casino-keeper`. |
 | `KEEPER_SPORTS_TERMINALIZER_ENABLED` | `true` only when the keeper should auto-finalize sportsbook results and settle/refund held tickets. |
+| `KEEPER_SPORTS_TERMINALIZER_SCAN_CHUNK_BLOCKS` | Sports result/void event scan chunk size. Defaults to `KEEPER_SCAN_CHUNK_BLOCKS`; raise it only after the RPC provider allows wider filtered ranges. |
+| `KEEPER_SPORTS_TERMINALIZER_MARKET_IDS` | Optional comma-separated recovery/canary markets to process once at startup. Leave empty in steady-state production. |
 | `KEEPER_SPORTS_TERMINALIZER_MAX_TICKETS_PER_MARKET` | Safety cap for tickets processed per market scan. Start at `200` unless the approved launch memo says otherwise. |
+| `KEEPER_SPORTS_TICKET_ENUMERATION_MAX` | Bounded `nextTicketId` fallback scan size when Postgres has no held tickets for a terminal market. |
+| `KEEPER_SPORTS_TICKET_SCAN_CHUNK_BLOCKS` | Last-resort `TicketPlaced` log-scan chunk size. Defaults to `KEEPER_SCAN_CHUNK_BLOCKS`; raise it only after the RPC provider allows wider filtered ranges. |
 | `KEEPER_SPORTS_TICKET_SCAN_START_BLOCK` | Optional lower bound for `TicketPlaced` scans. Leave empty to use the active release block, or set to the sportsbook canary start block after backfill. |
 | `BET_INDEX_DATABASE_URL` | Managed Postgres connection string. |
 | `BET_INDEX_SSL` | `true` for managed Postgres unless the provider documents otherwise. |

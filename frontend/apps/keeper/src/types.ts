@@ -34,7 +34,11 @@ export type KeeperConfig = {
   betIndexSsl: boolean;
   betIndexWriteEnabled: boolean;
   sportsTerminalizerEnabled: boolean;
+  sportsTerminalizerScanChunkBlocks: bigint;
+  sportsTerminalizerMarketIds: bigint[];
   sportsTerminalizerMaxTicketsPerMarket: number;
+  sportsTicketEnumerationMax: number;
+  sportsTicketScanChunkBlocks: bigint;
   sportsTicketScanStartBlock: bigint;
 };
 

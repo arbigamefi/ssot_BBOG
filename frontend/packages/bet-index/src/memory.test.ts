@@ -141,8 +141,14 @@ describe("memory bet index store", () => {
       limit: 10,
       player: PLAYER
     });
+    const heldTicketIds = await store.getHeldSportsTicketIdsByMarket({
+      chainId: 84532,
+      limit: 10,
+      marketId: "6"
+    });
 
     expect(tickets).toHaveLength(1);
+    expect(heldTicketIds).toEqual([]);
     expect(tickets[0]).toMatchObject({
       eventId: "1001",
       marketId: "6",
@@ -156,6 +162,51 @@ describe("memory bet index store", () => {
       terminalTxHash: "0xfff",
       updatedBlock: 40
     });
+  });
+
+  it("queries held sports ticket ids by market", async () => {
+    const store = createMemoryBetIndexStore();
+
+    await store.writeSportsHubEvents([
+      {
+        args: {
+          eventId: 1001n,
+          marketId: 6n,
+          outcomeId: 0,
+          player: PLAYER,
+          positionId: 22n,
+          stake: 1_000000n,
+          ticketId: 12n
+        },
+        blockNumber: 30n,
+        chainId: 84532,
+        eventName: "TicketPlaced",
+        logIndex: 1,
+        sportsHub: SPORTS_HUB,
+        txHash: "0xeee"
+      },
+      {
+        args: {
+          eventId: 1002n,
+          marketId: 7n,
+          outcomeId: 1,
+          player: PLAYER,
+          positionId: 23n,
+          stake: 1_000000n,
+          ticketId: 13n
+        },
+        blockNumber: 31n,
+        chainId: 84532,
+        eventName: "TicketPlaced",
+        logIndex: 2,
+        sportsHub: SPORTS_HUB,
+        txHash: "0xeef"
+      }
+    ]);
+
+    await expect(
+      store.getHeldSportsTicketIdsByMarket({ chainId: 84532, limit: 10, marketId: "6" })
+    ).resolves.toEqual([12n]);
   });
 
   it("preserves placed metadata when lifecycle events arrive in later writes", async () => {

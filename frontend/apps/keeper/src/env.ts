@@ -59,6 +59,20 @@ function parsePositiveInteger(value: string | undefined, fallback: number, name:
   return parsed;
 }
 
+function parseBigintList(value: string | undefined, name: string) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => {
+      const parsed = BigInt(part);
+      if (parsed <= 0n) throw new Error(`${name} must contain positive integer ids`);
+      return parsed;
+    });
+}
+
 export function loadRelease(path: string): ReleaseLike {
   const raw = JSON.parse(readFileSync(path, "utf8")) as ReleaseLike;
   if (!raw.chainId || !raw.contracts?.gameHub || !raw.contracts?.vrfHub) {
@@ -74,6 +88,7 @@ export function loadKeeperConfig(env: NodeJS.ProcessEnv = process.env): KeeperCo
   if (chainId !== release.chainId) {
     throw new Error(`KEEPER_CHAIN_ID=${chainId} does not match release chainId=${release.chainId}`);
   }
+  const scanChunkBlocks = parseBlockCount(env.KEEPER_SCAN_CHUNK_BLOCKS, 10n);
 
   return {
     chainId,
@@ -86,7 +101,7 @@ export function loadKeeperConfig(env: NodeJS.ProcessEnv = process.env): KeeperCo
     role: parseRole(env.KEEPER_ROLE),
     backupDelayMs: parseMs(env.KEEPER_BACKUP_DELAY_SECONDS, 0),
     pollIntervalMs: parseMs(env.KEEPER_POLL_INTERVAL_SECONDS, 15_000),
-    scanChunkBlocks: parseBlockCount(env.KEEPER_SCAN_CHUNK_BLOCKS, 10n),
+    scanChunkBlocks,
     startBlock:
       parseOptionalBlock(env.KEEPER_START_BLOCK) ?? BigInt(release.meta?.blockNumber ?? 0),
     healthPath: env.KEEPER_HEALTH_PATH?.trim() || undefined,
@@ -94,10 +109,27 @@ export function loadKeeperConfig(env: NodeJS.ProcessEnv = process.env): KeeperCo
     betIndexSsl: parseBool(env.BET_INDEX_SSL),
     betIndexWriteEnabled: parseBool(env.BET_INDEX_WRITE_ENABLED),
     sportsTerminalizerEnabled: parseBool(env.KEEPER_SPORTS_TERMINALIZER_ENABLED),
+    sportsTerminalizerScanChunkBlocks: parseBlockCount(
+      env.KEEPER_SPORTS_TERMINALIZER_SCAN_CHUNK_BLOCKS,
+      scanChunkBlocks
+    ),
+    sportsTerminalizerMarketIds: parseBigintList(
+      env.KEEPER_SPORTS_TERMINALIZER_MARKET_IDS,
+      "KEEPER_SPORTS_TERMINALIZER_MARKET_IDS"
+    ),
     sportsTerminalizerMaxTicketsPerMarket: parsePositiveInteger(
       env.KEEPER_SPORTS_TERMINALIZER_MAX_TICKETS_PER_MARKET,
       200,
       "KEEPER_SPORTS_TERMINALIZER_MAX_TICKETS_PER_MARKET"
+    ),
+    sportsTicketEnumerationMax: parsePositiveInteger(
+      env.KEEPER_SPORTS_TICKET_ENUMERATION_MAX,
+      500,
+      "KEEPER_SPORTS_TICKET_ENUMERATION_MAX"
+    ),
+    sportsTicketScanChunkBlocks: parseBlockCount(
+      env.KEEPER_SPORTS_TICKET_SCAN_CHUNK_BLOCKS,
+      scanChunkBlocks
     ),
     sportsTicketScanStartBlock:
       parseOptionalBlock(env.KEEPER_SPORTS_TICKET_SCAN_START_BLOCK) ??

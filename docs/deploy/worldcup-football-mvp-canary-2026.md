@@ -458,3 +458,46 @@ no ticket was placed before lock time. It was voided to keep the product market 
 This closes the latest deployment's sportsbook MVP at product level: current release roles, funded
 sports pool, provider-backed signed odds, accepted on-chain ticket, result reporting, finality,
 settlement, and reserved-liability release.
+
+### Keeper terminalizer closeout for market 1
+
+Market `1` was later closed by the sportsbook terminalizer path to prove the keeper can process an
+already-terminal market and release a frontend-placed ticket without player intervention:
+
+- Market ID: `1`
+- Ticket ID: `1`
+- Winning outcome ID: `0`
+- Reporter finality: `1779165600` (`2026-05-19T04:40:00Z`)
+- Lock market transaction:
+  `0xfb084092f8dd449162c2b3bca6ea0361c8ef095d9de75e4eaab20092d30d205c`
+- Result proposal transaction:
+  `0xbf0b9faa1f6b65a20025416e6681b7de93206b9648a17c1f2f2778f0887f8ea1`
+- Keeper `finalizeResult` transaction:
+  `0xc217782abf1695799bab67d25e40f81c4c81db6e9ef1557aaaa4851e7d20f534`
+- Keeper `settleTicket(1)` transaction:
+  `0x74eca15c8af52dc98d2388ab0e2e8da5f5861f5bf48a00f46c7da0340e1f811d`
+
+Keeper evidence:
+
+- The keeper startup recovery used `KEEPER_SPORTS_TERMINALIZER_MARKET_IDS=1`.
+- Ticket discovery used the bounded contract-enumeration fallback:
+  `source = contract-enumeration`, `nextTicketId = 3`, `checked = 2`, `ticketCount = 1`.
+- Terminalizer outcome:
+  `kind = terminalized`, `marketState = resolved`, `settled = 1`, `refunded = 0`, `skipped = 0`.
+
+Final readbacks after keeper settlement:
+
+- `getMarket(1).state = Resolved`
+- `getTicket(1).state = Settled`
+- `getTicket(1).stake = 1000000`
+- `getTicket(1).payout = 1680000`
+- `marketReserved(1) = 0`
+- Sports Bank `totalReserved() = 0`
+
+The keeper closeout exposed two operational issues that were fixed in the frontend keeper:
+
+- Sports terminalizer event replay now has an independent scan cursor and no longer inherits the
+  GameHub bet-index cursor.
+- Held ticket discovery is Postgres-first, then bounded `nextTicketId` / `getTicket` enumeration,
+  then last-resort `TicketPlaced` log scanning. This keeps terminalization working even when the RPC
+  provider restricts `eth_getLogs` to narrow ranges.

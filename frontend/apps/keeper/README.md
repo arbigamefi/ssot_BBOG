@@ -85,7 +85,10 @@ Sportsbook automatic terminalization is opt-in:
 
 ```bash
 KEEPER_SPORTS_TERMINALIZER_ENABLED=true \
+KEEPER_SPORTS_TERMINALIZER_SCAN_CHUNK_BLOCKS=10 \
 KEEPER_SPORTS_TERMINALIZER_MAX_TICKETS_PER_MARKET=200 \
+KEEPER_SPORTS_TICKET_ENUMERATION_MAX=500 \
+KEEPER_SPORTS_TICKET_SCAN_CHUNK_BLOCKS=10 \
 pnpm -C frontend keeper:start
 ```
 
@@ -95,6 +98,12 @@ events. It waits until result finality, calls `SportsHub.finalizeResult`, then
 settles held tickets for resolved markets or refunds held tickets for voided
 markets. Every write is simulated first; player-side ticket actions remain a
 fallback path.
+
+Held ticket discovery is Postgres-first. If the durable bet index has not
+backfilled a market yet, the keeper falls back to a bounded `nextTicketId` /
+`getTicket` enumeration, then to a last-resort `TicketPlaced` log scan. Use
+`KEEPER_SPORTS_TERMINALIZER_MARKET_IDS=1,2` only for recovery or canary replay
+when an already-terminal market must be processed at startup.
 
 Durable bet-feed indexing can be enabled with:
 

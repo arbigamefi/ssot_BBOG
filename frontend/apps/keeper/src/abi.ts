@@ -293,6 +293,13 @@ export const SPORTS_HUB_KEEPER_ABI = [
   },
   {
     type: "function",
+    name: "nextTicketId",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ name: "", type: "uint256" }]
+  },
+  {
+    type: "function",
     name: "getResult",
     stateMutability: "view",
     inputs: [{ name: "marketId", type: "uint64" }],

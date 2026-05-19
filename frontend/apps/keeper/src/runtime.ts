@@ -115,6 +115,7 @@ export function createKeeperRuntime({
   let stopped = false;
   let scanning = false;
   let lastScannedBlock = config.startBlock ?? 0n;
+  let sportsTerminalizerLastScannedBlock = config.startBlock ?? 0n;
   const betIndexStore =
     config.betIndexWriteEnabled && config.betIndexDatabaseUrl
       ? createPostgresBetIndexStore({
@@ -222,8 +223,9 @@ export function createKeeperRuntime({
       abi: SPORTS_HUB_KEEPER_ABI,
       functionName: "getTicket",
       args: [ticketId]
-    })) as unknown as { state: number; ticketId: bigint };
+    })) as unknown as { marketId: bigint | number; state: number; ticketId: bigint };
     return {
+      marketId: BigInt(ticket.marketId),
       state: mapSportsTicketState(Number(ticket.state)),
       ticketId: BigInt(ticket.ticketId)
     };
@@ -231,31 +233,111 @@ export function createKeeperRuntime({
 
   const findSportsTicketIds = async (marketId: bigint) => {
     if (!config.sportsHub) return [];
+    if (betIndexStore) {
+      try {
+        const ticketIds = await betIndexStore.getHeldSportsTicketIdsByMarket({
+          chainId: config.chainId,
+          limit: config.sportsTerminalizerMaxTicketsPerMarket,
+          marketId: marketId.toString()
+        });
+        if (ticketIds.length > 0) {
+          logger.info("sports.terminalizer.ticket_discovery", {
+            marketId: marketId.toString(),
+            source: "bet-index",
+            ticketCount: ticketIds.length
+          });
+          return ticketIds;
+        }
+      } catch (error) {
+        logger.warn("sports.terminalizer.ticket_index_lookup_failed", {
+          marketId: marketId.toString(),
+          message: (error as Error)?.message ?? "ticket index lookup failed"
+        });
+      }
+    }
+
+    const enumeratedTicketIds = await findSportsTicketIdsByEnumeration(marketId);
+    if (enumeratedTicketIds.length > 0) return enumeratedTicketIds;
+
     const latest = await publicClient.getBlockNumber();
     if (latest < config.sportsTicketScanStartBlock) return [];
     const ticketIds = new Set<bigint>();
-    for (const range of splitBlockRange({
-      fromBlock: config.sportsTicketScanStartBlock,
-      toBlock: latest,
-      chunkSize: config.scanChunkBlocks
-    })) {
-      const logs = await publicClient.getContractEvents({
-        address: config.sportsHub,
-        abi: SPORTS_HUB_KEEPER_ABI,
-        eventName: "TicketPlaced",
-        args: { marketId },
-        fromBlock: range.fromBlock,
-        toBlock: range.toBlock
-      });
-      for (const log of logs) {
-        if (log.args.ticketId != null) ticketIds.add(BigInt(log.args.ticketId));
-        if (ticketIds.size >= config.sportsTerminalizerMaxTicketsPerMarket) {
-          return [...ticketIds];
+    try {
+      for (const range of splitBlockRange({
+        fromBlock: config.sportsTicketScanStartBlock,
+        toBlock: latest,
+        chunkSize: config.sportsTicketScanChunkBlocks
+      })) {
+        const logs = await publicClient.getContractEvents({
+          address: config.sportsHub,
+          abi: SPORTS_HUB_KEEPER_ABI,
+          eventName: "TicketPlaced",
+          args: { marketId },
+          fromBlock: range.fromBlock,
+          toBlock: range.toBlock
+        });
+        for (const log of logs) {
+          if (log.args.ticketId != null) ticketIds.add(BigInt(log.args.ticketId));
+          if (ticketIds.size >= config.sportsTerminalizerMaxTicketsPerMarket) {
+            return [...ticketIds];
+          }
         }
       }
+    } catch (error) {
+      logger.warn("sports.terminalizer.ticket_log_lookup_failed", {
+        fromBlock: config.sportsTicketScanStartBlock.toString(),
+        marketId: marketId.toString(),
+        message: (error as Error)?.message ?? "ticket log lookup failed",
+        toBlock: latest.toString()
+      });
     }
+    logger.info("sports.terminalizer.ticket_discovery", {
+      fromBlock: config.sportsTicketScanStartBlock.toString(),
+      marketId: marketId.toString(),
+      source: "logs",
+      ticketCount: ticketIds.size,
+      toBlock: latest.toString()
+    });
     return [...ticketIds];
   };
+
+  async function findSportsTicketIdsByEnumeration(marketId: bigint) {
+    if (!config.sportsHub || config.sportsTicketEnumerationMax <= 0) return [];
+    try {
+      const nextTicketId = (await publicClient.readContract({
+        address: config.sportsHub,
+        abi: SPORTS_HUB_KEEPER_ABI,
+        functionName: "nextTicketId"
+      })) as bigint;
+      const ticketIds: bigint[] = [];
+      let checked = 0;
+      for (
+        let ticketId = nextTicketId > 0n ? nextTicketId - 1n : 0n;
+        ticketId > 0n && checked < config.sportsTicketEnumerationMax;
+        ticketId -= 1n
+      ) {
+        checked += 1;
+        const ticket = await readSportsTicket(ticketId);
+        if (ticket.marketId !== marketId || ticket.state !== "held") continue;
+        ticketIds.push(ticketId);
+        if (ticketIds.length >= config.sportsTerminalizerMaxTicketsPerMarket) break;
+      }
+      logger.info("sports.terminalizer.ticket_discovery", {
+        checked,
+        marketId: marketId.toString(),
+        nextTicketId: nextTicketId.toString(),
+        source: "contract-enumeration",
+        ticketCount: ticketIds.length
+      });
+      return ticketIds;
+    } catch (error) {
+      logger.warn("sports.terminalizer.ticket_enumeration_failed", {
+        marketId: marketId.toString(),
+        message: (error as Error)?.message ?? "ticket enumeration failed"
+      });
+      return [];
+    }
+  }
 
   const simulateSportsWrite = async (
     functionName: "finalizeResult" | "refundTicket" | "settleTicket",
@@ -559,12 +641,6 @@ export function createKeeperRuntime({
         toBlock: range.toBlock
       });
       await writeBetIndexRange(betIndexStore, publicClient, config, range, logger);
-      await scanSportsTerminalizerRange(
-        publicClient,
-        config,
-        range,
-        scheduleSportsTerminalizerLogs
-      );
       for (const log of logs) {
         if (log.args.betId == null) continue;
         enqueue({
@@ -582,11 +658,34 @@ export function createKeeperRuntime({
     }
   };
 
+  const scanMissedSportsTerminalizerEvents = async () => {
+    if (!config.sportsTerminalizerEnabled || !config.sportsHub) return;
+    const latest = await publicClient.getBlockNumber();
+    if (latest <= sportsTerminalizerLastScannedBlock) return;
+
+    const fromBlock =
+      sportsTerminalizerLastScannedBlock === 0n ? latest : sportsTerminalizerLastScannedBlock + 1n;
+    for (const range of splitBlockRange({
+      fromBlock,
+      toBlock: latest,
+      chunkSize: config.sportsTerminalizerScanChunkBlocks
+    })) {
+      await scanSportsTerminalizerRange(
+        publicClient,
+        config,
+        range,
+        scheduleSportsTerminalizerLogs
+      );
+      sportsTerminalizerLastScannedBlock = range.toBlock;
+    }
+  };
+
   const runScan = async () => {
     if (stopped || scanning) return;
     scanning = true;
     try {
       await scanMissedEvents();
+      await scanMissedSportsTerminalizerEvents();
     } catch (error) {
       const message = (error as Error)?.message ?? "scan failed";
       logger.error("casino.keeper.scan_failed", { message });
@@ -605,7 +704,12 @@ export function createKeeperRuntime({
       vrfHub: config.vrfHub,
       keeper: account.address,
       startBlock: lastScannedBlock.toString(),
-      scanChunkBlocks: config.scanChunkBlocks.toString()
+      scanChunkBlocks: config.scanChunkBlocks.toString(),
+      sportsTerminalizerScanChunkBlocks: config.sportsTerminalizerScanChunkBlocks.toString(),
+      sportsTerminalizerMarketIds: config.sportsTerminalizerMarketIds.map((id) => id.toString()),
+      sportsTicketScanChunkBlocks: config.sportsTicketScanChunkBlocks.toString(),
+      sportsTicketEnumerationMax: config.sportsTicketEnumerationMax,
+      sportsTicketScanStartBlock: config.sportsTicketScanStartBlock.toString()
     });
     if (config.sportsTerminalizerEnabled && !config.sportsHub) {
       logger.warn("sports.terminalizer.disabled_missing_sports_hub");
@@ -694,6 +798,9 @@ export function createKeeperRuntime({
     timers.push(setInterval(() => void runScan(), config.pollIntervalMs));
     timers.push(setInterval(() => writeHealth(health.recordHeartbeat(queue.size)), 10_000));
     void runScan();
+    for (const marketId of config.sportsTerminalizerMarketIds) {
+      scheduleSportsMarket(marketId, "ResultFinalized");
+    }
     writeHealth(health.recordRunning(lastScannedBlock, queue.size));
   };
 

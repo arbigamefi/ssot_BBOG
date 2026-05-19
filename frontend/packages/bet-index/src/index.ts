@@ -125,6 +125,11 @@ export type BetIndexStore = {
   getPlayerSportsTickets: (
     query: Required<Pick<SportsTicketIndexQuery, "chainId" | "limit" | "player">>
   ) => Promise<SportsTicketRow[]>;
+  getHeldSportsTicketIdsByMarket: (query: {
+    chainId: number;
+    limit: number;
+    marketId: string;
+  }) => Promise<bigint[]>;
   getAffiliateBets: (
     query: Required<Pick<BetIndexQuery, "chainId" | "limit" | "affiliate">>
   ) => Promise<BetRow[]>;
@@ -257,6 +262,9 @@ create index if not exists sport_tickets_player_idx
 create index if not exists sport_tickets_market_idx
   on sport_tickets (chain_id, market_id, updated_block desc);
 
+create index if not exists sport_tickets_market_state_idx
+  on sport_tickets (chain_id, market_id, state, updated_block desc, ticket_id desc);
+
 create table if not exists indexer_cursors (
   chain_id integer not null,
   source text not null,
@@ -331,6 +339,14 @@ export function createMemoryBetIndexStore(): BetIndexStore {
         .filter((row) => row.player?.toLowerCase() === player.toLowerCase())
         .sort(compareSportsTicketRows)
         .slice(0, limit),
+    getHeldSportsTicketIdsByMarket: async ({ chainId, limit, marketId }) =>
+      [...sportsTickets.values()]
+        .filter((row) => row.chainId === chainId)
+        .filter((row) => row.marketId === marketId)
+        .filter((row) => row.state === "held")
+        .sort(compareSportsTicketRows)
+        .slice(0, limit)
+        .map((row) => BigInt(row.ticketId)),
     getAffiliateBets: async ({ affiliate, chainId, limit }) =>
       [...bets.values()]
         .filter((row) => row.chainId === chainId)
@@ -578,6 +594,15 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
         limit ${limit}
       `;
       return rows.map(sportsTicketRowFromDatabase).sort(compareSportsTicketRows);
+    },
+    getHeldSportsTicketIdsByMarket: async ({ chainId, limit, marketId }) => {
+      const rows = await sql`
+        select ticket_id from sport_tickets
+        where chain_id = ${chainId} and market_id = ${marketId} and state = 'held'
+        order by updated_block desc, ticket_id desc
+        limit ${limit}
+      `;
+      return rows.map((row) => BigInt(String(row.ticketId)));
     },
     getAffiliateBets: async ({ affiliate, chainId, limit }) => {
       const rows = await sql`

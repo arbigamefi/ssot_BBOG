@@ -20,7 +20,11 @@ const baseConfig: KeeperConfig = {
   betIndexSsl: false,
   betIndexWriteEnabled: false,
   sportsTerminalizerEnabled: false,
+  sportsTerminalizerScanChunkBlocks: 2_000n,
+  sportsTerminalizerMarketIds: [],
   sportsTerminalizerMaxTicketsPerMarket: 200,
+  sportsTicketEnumerationMax: 500,
+  sportsTicketScanChunkBlocks: 2_000n,
   sportsTicketScanStartBlock: 100n
 };
 
