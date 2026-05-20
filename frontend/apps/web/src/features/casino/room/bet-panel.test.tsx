@@ -197,7 +197,7 @@ describe("GameRoomBetPanel", () => {
     const props = renderPanel({ hasAccount: true });
 
     fireEvent.click(screen.getByRole("button", { name: "Min" }));
-    expect(props.onBetAmountChange).toHaveBeenCalledWith(1);
+    expect(props.onBetAmountChange).toHaveBeenCalledWith(0.01);
 
     fireEvent.click(screen.getByRole("button", { name: "PLACE BET" }));
     expect(props.onPlaceBet).toHaveBeenCalledTimes(1);
@@ -226,7 +226,7 @@ describe("GameRoomBetPanel", () => {
     expect(parseWalletBalanceAmount(null)).toBe(1450);
   });
 
-  it("uses text inputs for casino amounts and sanitizes whole-unit changes", () => {
+  it("uses text inputs for casino amounts and sanitizes amount changes", () => {
     const props = renderPanel({
       advancedOpen: true,
       onBetAmountChange: vi.fn(),
@@ -250,7 +250,7 @@ describe("GameRoomBetPanel", () => {
       target: { value: "" }
     });
 
-    expect(props.onBetAmountChange).toHaveBeenCalledWith(25);
+    expect(props.onBetAmountChange).toHaveBeenCalledWith(25.5);
     expect(props.onBetCountChange).toHaveBeenCalledWith(100);
     expect(props.onStopGainChange).toHaveBeenCalledWith(30);
     expect(props.onStopLossChange).toHaveBeenCalledWith(0);

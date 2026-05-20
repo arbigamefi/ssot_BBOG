@@ -9,6 +9,8 @@ import {
 import { cn } from "@ssot/ui";
 
 const WHOLE_UNIT_PATTERN = "[0-9]*";
+const BET_AMOUNT_PATTERN = "[0-9]*[.]?[0-9]*";
+export const MIN_BET_AMOUNT = 0.01;
 
 function parseWholeUnitInput(input: string, { min, max }: { min: number; max?: number }) {
   const digits = input.match(/\d+/)?.[0] ?? "";
@@ -18,11 +20,23 @@ function parseWholeUnitInput(input: string, { min, max }: { min: number; max?: n
   return Math.max(min, Math.min(max ?? value, value));
 }
 
+function toCents(value: number) {
+  return Math.floor(value * 100) / 100;
+}
+
+function parseBetAmountInput(input: string, { min, max }: { min: number; max?: number }) {
+  const normalized = input.replace(/,/g, "").trim();
+  const match = normalized.match(/\d+(?:\.\d{0,2})?/);
+  if (!match) return min;
+  const value = Number(match[0]);
+  if (!Number.isFinite(value)) return max ?? min;
+  return Math.max(min, Math.min(max ?? value, toCents(value)));
+}
+
 export function parseWalletBalanceAmount(walletBalance: string | null) {
   const raw = walletBalance?.replace(/,/g, "").replace(" USDC", "").trim();
   if (!raw) return 1450;
-  const wholeUnits = raw.split(".")[0] ?? "";
-  return parseWholeUnitInput(wholeUnits, { min: 1 });
+  return parseBetAmountInput(raw, { min: MIN_BET_AMOUNT });
 }
 
 export function BetAmountSection({
@@ -37,8 +51,8 @@ export function BetAmountSection({
   onBetAmountChange: (amount: number) => void;
 }) {
   const t = useTranslations();
-  const setRoundedBetAmount = (value: number) => {
-    onBetAmountChange(Math.floor(Math.max(1, value)));
+  const setBetAmount = (value: number) => {
+    onBetAmountChange(toCents(Math.max(MIN_BET_AMOUNT, value)));
   };
 
   return (
@@ -56,13 +70,13 @@ export function BetAmountSection({
           <CurrencyDollarIcon className="h-5 w-5 text-fg-subtle" />
           <input
             type="text"
-            inputMode="numeric"
-            pattern={WHOLE_UNIT_PATTERN}
+            inputMode="decimal"
+            pattern={BET_AMOUNT_PATTERN}
             autoComplete="off"
             aria-label={t("casino.room.betPanel.amount.aria")}
             value={String(betAmount)}
             onChange={(event) =>
-              onBetAmountChange(parseWholeUnitInput(event.target.value, { min: 1 }))
+              onBetAmountChange(parseBetAmountInput(event.target.value, { min: MIN_BET_AMOUNT }))
             }
             disabled={isPending}
             className="w-full border-none bg-transparent pr-2 text-right font-mono text-2xl text-fg outline-none"
@@ -71,28 +85,28 @@ export function BetAmountSection({
         <div className="flex gap-1 rounded-lg border border-border-soft bg-surface-1 p-1">
           <button
             type="button"
-            onClick={() => setRoundedBetAmount(1)}
+            onClick={() => setBetAmount(MIN_BET_AMOUNT)}
             className="flex-1 rounded-md bg-surface-0 py-1 text-[10px] font-bold uppercase text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg"
           >
             {t("casino.room.betPanel.amount.min")}
           </button>
           <button
             type="button"
-            onClick={() => setRoundedBetAmount(betAmount / 2)}
+            onClick={() => setBetAmount(betAmount / 2)}
             className="flex-1 rounded-md bg-surface-0 py-1 text-[10px] font-bold uppercase text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg"
           >
             1/2
           </button>
           <button
             type="button"
-            onClick={() => setRoundedBetAmount(betAmount * 2)}
+            onClick={() => setBetAmount(betAmount * 2)}
             className="flex-1 rounded-md bg-surface-0 py-1 text-[10px] font-bold uppercase text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg"
           >
             2x
           </button>
           <button
             type="button"
-            onClick={() => setRoundedBetAmount(parseWalletBalanceAmount(walletBalance))}
+            onClick={() => setBetAmount(parseWalletBalanceAmount(walletBalance))}
             className="flex-1 rounded-md bg-surface-0 py-1 text-[10px] font-bold uppercase text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg"
           >
             {t("casino.room.betPanel.amount.max")}

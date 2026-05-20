@@ -278,7 +278,8 @@
           "targetAria": "Dice target",
           "target": "Target",
           "multiplier": "Mult",
-          "winChance": "Win"
+          "winChance": "Win",
+          "roll": "Roll"
         },
         "roulette": {
           "bets": "Bets",

@@ -34,15 +34,6 @@
   }
 }
 
-@keyframes spin-coin-fast {
-  0% {
-    transform: rotateX(10deg) rotateY(0deg) scale(1.2);
-  }
-  100% {
-    transform: rotateX(10deg) rotateY(360deg) scale(1.2);
-  }
-}
-
 @keyframes plinko-land {
   0% {
     transform: translate(-50%, -50%) scale(1);
@@ -100,33 +91,6 @@
   }
   100% {
     transform: translateY(0) scale(1);
-  }
-}
-
-@keyframes sicbo-die-tumble {
-  0% {
-    transform: translate3d(-0.25rem, -0.15rem, 0) rotate(-8deg);
-  }
-  35% {
-    transform: translate3d(0.2rem, 0.15rem, 0) rotate(10deg);
-  }
-  70% {
-    transform: translate3d(-0.1rem, 0.25rem, 0) rotate(-5deg);
-  }
-  100% {
-    transform: translate3d(-0.25rem, -0.15rem, 0) rotate(-8deg);
-  }
-}
-
-@keyframes sicbo-cup-shake {
-  0% {
-    transform: translateX(-0.25rem) rotate(-1deg);
-  }
-  50% {
-    transform: translateX(0.25rem) rotate(1deg);
-  }
-  100% {
-    transform: translateX(-0.25rem) rotate(-1deg);
   }
 }
 

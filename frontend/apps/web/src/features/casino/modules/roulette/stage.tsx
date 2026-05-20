@@ -1,8 +1,10 @@
 import * as React from "react";
+import { useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { cn } from "@ssot/ui";
 
-import { EUROPEAN_WHEEL_ORDER, RED_NUMBER_SET } from "../../room/model";
+import { RED_NUMBER_SET } from "../../room/model";
+import { RouletteWheel, type RouletteWheelMode } from "./roulette-wheel";
 
 export function RouletteStage({
   isPending,
@@ -22,8 +24,15 @@ export function RouletteStage({
   onRevealComplete?: () => void;
 }) {
   const t = useTranslations();
+  const reduced = useReducedMotion() ?? false;
   const spinning = isPending || Boolean(isRevealing);
-  const resultVisible = showResult && !isRevealing;
+  const wheelMode: RouletteWheelMode = isRevealing
+    ? "settling"
+    : isPending
+      ? "spinning"
+      : showResult
+        ? "settled"
+        : "idle";
   const selectedCountLabel =
     spots.length === 0 ? t("casino.room.selection.roulette.empty") : spots.join(" / ");
 
@@ -62,95 +71,9 @@ export function RouletteStage({
         </button>
       </div>
 
-      <div className="relative z-10 flex-1 w-full flex items-center justify-center min-h-[220px]">
-        <div className="absolute top-0 inset-x-0 h-32 bg-[radial-gradient(ellipse_at_top,hsl(var(--brand)/0.06),transparent_70%)] pointer-events-none" />
-
-        <div className="relative flex h-[280px] w-[280px] transform-gpu items-center justify-center rounded-full border-[10px] border-surface-3 bg-surface-1 p-1 shadow-e3 ring-2 ring-brand/40 md:h-[340px] md:w-[340px] md:border-[16px] md:p-2 lg:h-[380px] lg:w-[380px]">
-          <div
-            className={cn(
-              "relative flex h-full w-full items-center justify-center overflow-hidden rounded-full border border-brand/25 transition-[transform,filter] duration-[3000ms]",
-              spinning
-                ? "animate-[spin_4s_cubic-bezier(0.1,0.7,0.1,1)_forwards] blur-[0.5px]"
-                : "rotate-0"
-            )}
-            style={{
-              background: `conic-gradient(from -4.86deg, ${EUROPEAN_WHEEL_ORDER.map((num, i) => {
-                const color =
-                  num === 0
-                    ? "hsl(var(--success))"
-                    : RED_NUMBER_SET.has(num)
-                      ? "hsl(var(--danger))"
-                      : "hsl(var(--surface-2))";
-                const deg = 360 / 37;
-                return `${color} ${i * deg}deg ${(i + 1) * deg}deg`;
-              }).join(", ")})`
-            }}
-          >
-            <div className="absolute inset-0 rounded-full flex items-center justify-center">
-              {EUROPEAN_WHEEL_ORDER.map((num, i) => (
-                <div
-                  key={num}
-                  className="absolute inset-0 flex flex-col items-center justify-start pointer-events-none"
-                  style={{ transform: `rotate(${i * (360 / 37)}deg)` }}
-                >
-                  <div className="mt-0.5 flex h-[40px] w-[20px] items-center justify-center font-mono text-[10px] font-semibold text-fg md:mt-2 md:h-[50px] md:text-[14px] lg:h-[55px] lg:text-[16px]">
-                    {num}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="absolute inset-0 rounded-full flex items-center justify-center pointer-events-none">
-              {EUROPEAN_WHEEL_ORDER.map((num, i) => (
-                <div
-                  key={`fret-${num}`}
-                  className="absolute inset-0 flex flex-col items-center justify-start pointer-events-none"
-                  style={{ transform: `rotate(${i * (360 / 37) + 360 / 37 / 2}deg)` }}
-                >
-                  <div className="h-[60px] w-[2px] bg-gradient-to-b from-accent via-brand to-transparent md:h-[80px]" />
-                </div>
-              ))}
-            </div>
-
-            <div className="absolute left-1/2 top-1/2 z-10 flex h-[200px] w-[200px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-[5px] border-surface-3 bg-[radial-gradient(circle_at_30%_30%,hsl(var(--accent)),hsl(var(--brand))_70%,hsl(var(--surface-2)))] shadow-e3 md:h-[240px] md:w-[240px]">
-              <div className="flex h-24 w-24 items-center justify-center rounded-full bg-surface-0 shadow-e1 md:h-28 md:w-28">
-                <div className="h-10 w-10 rounded-full border border-border bg-gradient-to-br from-fg-muted via-fg to-fg-subtle shadow-e2" />
-              </div>
-              {[0, 45, 90, 135].map((deg) => (
-                <div
-                  key={deg}
-                  className="absolute h-[12px] w-full bg-accent/20 mix-blend-overlay blur-[0.5px]"
-                  style={{ transform: `rotate(${deg}deg)` }}
-                />
-              ))}
-            </div>
-
-            <div className="absolute left-1/2 top-1/2 z-0 h-[200px] w-[200px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-brand/20 bg-surface-0/60 shadow-inner md:h-[260px] md:w-[260px] lg:h-[290px] lg:w-[290px]" />
-          </div>
-
-          <div
-            className={cn(
-              "absolute inset-0 rounded-full z-20 pointer-events-none transition-transform",
-              spinning ? "animate-[spin_2s_linear_infinite_reverse]" : "duration-1000 ease-out"
-            )}
-            style={
-              !spinning && resultVisible && resultNum !== null
-                ? {
-                    transform: `rotate(${EUROPEAN_WHEEL_ORDER.indexOf(resultNum) * (360 / 37)}deg)`
-                  }
-                : {}
-            }
-          >
-            <div
-              className={cn(
-                "absolute left-1/2 h-4 w-4 -translate-x-1/2 rounded-full bg-fg transition-[top,transform,filter] md:h-5 md:w-5",
-                isPending
-                  ? "top-[12px] scale-125 blur-[1.5px] duration-[2000ms] md:top-[16px]"
-                  : "top-[40px] scale-100 duration-1000 md:top-[50px] lg:top-[55px]"
-              )}
-            />
-          </div>
-        </div>
+      <div className="relative z-10 flex w-full flex-1 items-center justify-center min-h-[260px]">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-[radial-gradient(ellipse_at_top,hsl(var(--brand)/0.06),transparent_70%)]" />
+        <RouletteWheel mode={wheelMode} resultNum={resultNum} reduced={reduced} />
       </div>
 
       <div className="relative z-20 w-fit max-w-full overflow-x-auto overflow-y-hidden custom-scrollbar pointer-events-auto transform-gpu origin-bottom scale-[0.85] sm:scale-95 xl:scale-100 pb-2 px-1">

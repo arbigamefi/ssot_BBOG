@@ -278,7 +278,8 @@
           "targetAria": "骰子目标点数",
           "target": "目标",
           "multiplier": "倍数",
-          "winChance": "胜率"
+          "winChance": "胜率",
+          "roll": "结果"
         },
         "roulette": {
           "bets": "投注",

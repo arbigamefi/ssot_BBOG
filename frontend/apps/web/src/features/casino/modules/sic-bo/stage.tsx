@@ -1,41 +1,27 @@
 import * as React from "react";
-import { useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { cn } from "@ssot/ui";
 
 import type { CasinoOutcome } from "../../room/outcome";
 import { normalizeSicBoValue, sicBoMultiplier, type SicBoKind } from "../../room/params";
+import { SicBoDie, type SicBoDieMode } from "./sic-bo-die";
+
+/**
+ * SicBoStage — a Sic Bo table, not a dashboard panel.
+ *
+ * Stage realism: a felt table with a recessed dice well and a frosted dice
+ * dome (cup) that sits over the dice, plus the on-felt bet layout.
+ *
+ * Animation realism: three real 3D pip dice tumble inside the covered dome,
+ * the dome lifts away, and the dice spring-settle onto their result faces
+ * (see SicBoDie). The reveal timing and VRF state machine are preserved.
+ */
 
 type SicBoRoll = Extract<CasinoOutcome, { kind: "sic-bo" }>["rolls"][number];
 
 const FACE_VALUES = [1, 2, 3, 4, 5, 6] as const;
 const TOTAL_VALUES = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17] as const;
-const DIE_PIP_POSITIONS: Record<number, string[]> = {
-  1: ["col-start-2 row-start-2"],
-  2: ["col-start-3 row-start-1", "col-start-1 row-start-3"],
-  3: ["col-start-3 row-start-1", "col-start-2 row-start-2", "col-start-1 row-start-3"],
-  4: [
-    "col-start-1 row-start-1",
-    "col-start-3 row-start-1",
-    "col-start-1 row-start-3",
-    "col-start-3 row-start-3"
-  ],
-  5: [
-    "col-start-1 row-start-1",
-    "col-start-3 row-start-1",
-    "col-start-2 row-start-2",
-    "col-start-1 row-start-3",
-    "col-start-3 row-start-3"
-  ],
-  6: [
-    "col-start-1 row-start-1",
-    "col-start-3 row-start-1",
-    "col-start-1 row-start-2",
-    "col-start-3 row-start-2",
-    "col-start-1 row-start-3",
-    "col-start-3 row-start-3"
-  ]
-};
 
 function formatSicBoBet(kind: SicBoKind, value: number, t: ReturnType<typeof useTranslations>) {
   const label = t(`casino.room.selection.sicBo.kinds.${kind}`);
@@ -125,55 +111,6 @@ function NumberBetButton({
   );
 }
 
-function DieFace({
-  value,
-  active,
-  rolling
-}: {
-  value: number | undefined;
-  active: boolean;
-  rolling?: boolean;
-}) {
-  const pips = value == null ? [] : (DIE_PIP_POSITIONS[value] ?? []);
-
-  return (
-    <div
-      className={cn(
-        "flex h-24 w-24 items-center justify-center rounded-xl border shadow-inner-e1 transition-[border-color,background-color,transform]",
-        active
-          ? "border-accent/60 bg-accent-soft"
-          : "border-border bg-[linear-gradient(145deg,hsl(var(--surface-3)),hsl(var(--surface-1)))]",
-        rolling &&
-          "animate-[sicbo-die-tumble_420ms_ease-in-out_infinite] border-brand/50 bg-brand-soft"
-      )}
-      aria-label={value == null ? "Unopened die" : `Die ${value}`}
-    >
-      <span className="grid h-16 w-16 grid-cols-3 grid-rows-3" aria-hidden>
-        {value == null
-          ? DIE_PIP_POSITIONS[5]?.map((position, index) => (
-              <span
-                key={`idle-${index}`}
-                className={cn(
-                  "h-3 w-3 place-self-center rounded-full bg-fg-subtle/40 shadow-inner-e1",
-                  position
-                )}
-              />
-            ))
-          : pips.map((position, index) => (
-              <span
-                key={`${value}-${index}`}
-                className={cn(
-                  "h-3.5 w-3.5 place-self-center rounded-full shadow-e1",
-                  position,
-                  active ? "bg-accent" : "bg-fg"
-                )}
-              />
-            ))}
-      </span>
-    </div>
-  );
-}
-
 export function SicBoStage({
   isPending,
   isRevealing,
@@ -194,20 +131,14 @@ export function SicBoStage({
   onRevealComplete?: () => void;
 }) {
   const t = useTranslations();
-  const prefersReducedMotion = useReducedMotion();
+  const prefersReducedMotion = useReducedMotion() ?? false;
   const roll: SicBoRoll | undefined = outcome?.rolls.at(-1);
-  const [revealFrame, setRevealFrame] = React.useState(0);
   const [diceOpened, setDiceOpened] = React.useState(() => Boolean(showResult && roll));
   const hasResult = Boolean(showResult && roll && (diceOpened || !isRevealing));
   const isRollingReveal = Boolean(isRevealing && roll && !diceOpened);
-  const displayDice = FACE_VALUES.slice(0, 3).map((_, index) =>
-    hasResult
-      ? roll?.dice[index]
-      : isRollingReveal
-        ? FACE_VALUES[(revealFrame + index * 2) % FACE_VALUES.length]
-        : undefined
-  );
+  const covered = isPending || isRollingReveal;
 
+  // VRF reveal state machine — unchanged timing: dome lift + completion.
   React.useEffect(() => {
     if (!isRevealing || !roll) {
       setDiceOpened(Boolean(showResult && roll));
@@ -217,50 +148,77 @@ export function SicBoStage({
     setDiceOpened(false);
     const timeouts: number[] = [];
     const schedule = (callback: () => void, delay: number) => {
-      const timeout = window.setTimeout(callback, delay);
-      timeouts.push(timeout);
+      timeouts.push(window.setTimeout(callback, delay));
     };
 
     if (prefersReducedMotion) {
       setDiceOpened(true);
       schedule(() => onRevealComplete?.(), 180);
-      return () => {
-        timeouts.forEach((timeout) => window.clearTimeout(timeout));
-      };
+      return () => timeouts.forEach((timeout) => window.clearTimeout(timeout));
     }
 
-    const interval = window.setInterval(() => {
-      setRevealFrame((frame) => frame + 1);
-    }, 110);
     schedule(() => setDiceOpened(true), 1_050);
     schedule(() => onRevealComplete?.(), 1_520);
 
-    return () => {
-      window.clearInterval(interval);
-      timeouts.forEach((timeout) => window.clearTimeout(timeout));
-    };
+    return () => timeouts.forEach((timeout) => window.clearTimeout(timeout));
   }, [isRevealing, onRevealComplete, prefersReducedMotion, roll, showResult]);
 
+  const dieMode: SicBoDieMode = covered ? "rolling" : hasResult ? "settled" : "idle";
+
   return (
-    <div className="absolute inset-0 z-10 flex flex-col items-center justify-start overflow-hidden px-6 pb-6 pt-20">
+    <div className="absolute inset-0 z-10 flex flex-col items-center justify-start overflow-hidden px-6 pb-6 pt-16">
       <div className="relative flex w-full max-w-5xl flex-col items-center gap-4">
-        <div className="relative grid grid-cols-3 gap-3 rounded-xl border border-border bg-surface-1 p-3 shadow-e2">
-          {isRollingReveal && (
-            <div
-              aria-hidden
-              className="absolute inset-x-5 top-3 z-10 h-16 rounded-b-3xl border border-brand/30 bg-surface-2/95 shadow-e2 animate-[sicbo-cup-shake_520ms_ease-in-out_infinite]"
-            />
-          )}
-          {[0, 1, 2].map((index) => (
-            <DieFace
-              key={index}
-              value={displayDice[index]}
-              active={Boolean(hasResult && roll?.won)}
-              rolling={isRollingReveal}
-            />
-          ))}
+        {/* ---- Dice well ---- */}
+        <div className="relative w-full max-w-md">
+          <div className="relative rounded-xl border-4 border-border-strong bg-surface-1 p-2 shadow-e3">
+            <div className="relative flex items-center justify-center gap-3 overflow-hidden rounded-lg border border-border bg-surface-0 px-4 py-6 shadow-inner-e1">
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_120%,hsl(var(--brand)/0.12),transparent_60%)]"
+              />
+              {[0, 1, 2].map((index) => (
+                <SicBoDie
+                  key={index}
+                  value={roll?.dice[index] ?? FACE_VALUES[index] ?? 1}
+                  mode={dieMode}
+                  seed={index}
+                  won={Boolean(hasResult && roll?.won)}
+                  reduced={prefersReducedMotion}
+                />
+              ))}
+
+              {/* Frosted dome / dice cup */}
+              <AnimatePresence>
+                {covered ? (
+                  <motion.div
+                    aria-hidden
+                    className="pointer-events-none absolute left-1/2 bottom-3 z-10 h-36 w-64 rounded-t-full rounded-b-lg border border-border-strong bg-surface-2/85 backdrop-blur-sm"
+                    initial={{ y: 0, opacity: 1 }}
+                    animate={
+                      prefersReducedMotion
+                        ? { y: 0, opacity: 1 }
+                        : { x: [-4, 4, -4], rotate: [-1.4, 1.4, -1.4] }
+                    }
+                    exit={{ y: -150, opacity: 0 }}
+                    transition={
+                      prefersReducedMotion
+                        ? { duration: 0 }
+                        : {
+                            x: { repeat: Infinity, duration: 0.42 },
+                            rotate: { repeat: Infinity, duration: 0.42 }
+                          }
+                    }
+                    style={{ transformOrigin: "50% 100%", marginLeft: -128 }}
+                  >
+                    <span className="absolute inset-x-6 top-5 h-px bg-fg/10" />
+                  </motion.div>
+                ) : null}
+              </AnimatePresence>
+            </div>
+          </div>
         </div>
 
+        {/* ---- Bet layout ---- */}
         <div className="grid w-full grid-cols-1 gap-3 lg:grid-cols-[1fr_1.35fr]">
           <div className="grid grid-cols-2 gap-2">
             <TableBetButton
@@ -368,6 +326,7 @@ export function SicBoStage({
           </div>
         </div>
 
+        {/* ---- Result row ---- */}
         <div className="grid w-full max-w-xl grid-cols-3 gap-3">
           <div className="rounded-lg border border-border bg-surface-1 px-4 py-3 text-center shadow-inner-e1">
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-fg-subtle">
@@ -406,7 +365,8 @@ export function SicBoStage({
           </div>
         </div>
 
-        <div className="rounded-lg border border-border bg-surface-1/90 px-5 py-3 text-center shadow-e1 backdrop-blur">
+        {/* ---- Status readout ---- */}
+        <div className="rounded-lg border border-border bg-surface-1 px-5 py-2.5 text-center shadow-e1">
           <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-fg-subtle">
             {isPending || isRevealing
               ? t("casino.room.stage.sicBo.rolling")

@@ -1,6 +1,7 @@
 import type { PlaceBetInput } from "@ssot/ssot";
 import type { Address } from "@ssot/ssot/sdk";
 import { encodeStakeSpec } from "@ssot/ssot/encoding";
+import { parseDecimalToUnits } from "../../betting/model/units";
 
 import type { GameMeta } from "./model";
 import {
@@ -67,7 +68,13 @@ export type GamePlaceBetMessages = GameParamsMessages & {
 };
 
 function toUnits(amount: number, decimals: number) {
-  return BigInt(Math.floor(Math.max(0, amount))) * BigInt(Math.pow(10, decimals));
+  const normalized = Math.max(0, amount);
+  const precision = Math.max(0, Math.min(18, decimals));
+  const value = normalized.toLocaleString("en-US", {
+    useGrouping: false,
+    maximumFractionDigits: precision
+  });
+  return parseDecimalToUnits(value, decimals);
 }
 
 export function findUSDCAsset(assets: readonly ReleaseAsset[]) {

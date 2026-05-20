@@ -84,6 +84,34 @@ describe("game room place bet builder", () => {
     });
   });
 
+  it("keeps cent-level casino stakes when building contract units", () => {
+    const result = buildGamePlaceBetInput({
+      release,
+      game,
+      betAmount: 0.01,
+      betCount: 2,
+      stopGain: 0.02,
+      stopLoss: 0.01,
+      diceTarget: 55,
+      diceDirection: "under",
+      coinSide: "HEADS",
+      rouletteSpots: [],
+      kenoSpots: [],
+      plinkoRisk: "medium"
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.input.stake).toBe(20_000n);
+    expect(decodeStakeSpec(result.input.stakeSpec)).toEqual({
+      amountPerRoll: 10_000n,
+      betCount: 2,
+      stopGain: 20_000n,
+      stopLoss: 10_000n
+    });
+  });
+
   it("returns neutral selection validation when UI copy is not provided", () => {
     const result = buildGamePlaceBetInput({
       release,

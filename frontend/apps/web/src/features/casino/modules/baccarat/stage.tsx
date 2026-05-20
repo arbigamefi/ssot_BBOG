@@ -1,146 +1,137 @@
 import * as React from "react";
-import { useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { cn } from "@ssot/ui";
 
 import type { CasinoOutcome } from "../../room/outcome";
 import { baccaratMultiplier, type BaccaratSide } from "../../room/params";
+import { BaccaratCard, EmptyCardSlot } from "./baccarat-card";
+
+/**
+ * BaccaratStage — a baccarat table with a full round lifecycle.
+ *
+ * Stage realism: a felt table with a raised rail, a dealing shoe, stencilled
+ * PLAYER / BANKER zones, and on-felt betting boxes.
+ *
+ * Animation realism, beat by beat:
+ *   - bet placed / VRF pending → four cards are dealt face-down out of the
+ *     shoe into the zones, and the shoe glows with a card peeking from it;
+ *   - VRF ready / revealing    → the croupier turns the cards one by one, any
+ *     third card is drawn, then the winning zone lights up;
+ *   - resolved on load         → cards mount face-up with no animation.
+ *
+ * The deal order, reveal timing, and VRF state machine are preserved.
+ */
 
 type BaccaratRoll = Extract<CasinoOutcome, { kind: "baccarat" }>["rolls"][number];
+type SlotState = "empty" | "back" | "face";
+
 const BACCARAT_SIDES: readonly BaccaratSide[] = ["player", "banker", "tie"] as const;
-const CARD_SUITS = [
-  {
-    className: "text-fg",
-    path: "M12 3c-2.9 3.1-6.4 5.4-6.4 9.1 0 2.5 1.7 4.2 4 4.2.9 0 1.7-.3 2.4-.8-.2 1.5-.8 2.9-1.8 4.2h3.6c-1-1.3-1.6-2.7-1.8-4.2.7.5 1.5.8 2.4.8 2.3 0 4-1.7 4-4.2C18.4 8.4 14.9 6.1 12 3Z"
-  },
-  {
-    className: "text-danger",
-    path: "M12 20s-7.2-4.4-7.2-10.1C4.8 6.9 6.7 5 9.2 5c1.2 0 2.3.6 2.8 1.5C12.5 5.6 13.6 5 14.8 5c2.5 0 4.4 1.9 4.4 4.9C19.2 15.6 12 20 12 20Z"
-  },
-  {
-    className: "text-danger",
-    path: "M12 3 19 12 12 21 5 12 12 3Z"
-  },
-  {
-    className: "text-fg",
-    path: "M9.1 10.8A3.2 3.2 0 1 1 12 8.9a3.2 3.2 0 1 1 2.9 1.9 3.2 3.2 0 1 1-3.3 4.8c-.1 1.5-.7 2.8-1.7 4.1h4.2c-1-1.3-1.6-2.6-1.7-4.1a3.2 3.2 0 1 1-3.3-4.8Z"
-  }
-] as const;
+
+// Entrance stagger so the four face-down cards deal one at a time.
+const SLOT_DEAL_DELAY: Record<string, number> = {
+  "player-0": 0,
+  "banker-0": 90,
+  "player-1": 180,
+  "banker-1": 270,
+  "player-2": 360,
+  "banker-2": 450
+};
 
 function formatSide(side: BaccaratSide, t: ReturnType<typeof useTranslations>) {
   return t(`casino.room.selection.baccarat.${side}`);
 }
 
-function CardSuitIcon({ suitIndex }: { suitIndex: number }) {
-  const suit = CARD_SUITS[suitIndex % CARD_SUITS.length] ?? CARD_SUITS[0];
+type HandSlot = { state: SlotState; value: number | undefined; dealDelayMs: number };
 
-  return (
-    <svg
-      aria-hidden
-      viewBox="0 0 24 24"
-      className={cn("h-8 w-8 drop-shadow-md", suit.className)}
-      fill="currentColor"
-    >
-      <path d={suit.path} />
-    </svg>
-  );
-}
-
-function CardFace({
-  value,
-  active,
-  dealing,
-  suitIndex
-}: {
-  value: number | undefined;
-  active: boolean;
-  dealing?: boolean;
-  suitIndex: number;
-}) {
-  const label = value == null ? "—" : value === 0 ? "10" : String(value);
-
-  return (
-    <div
-      className={cn(
-        "relative flex h-28 w-20 flex-col items-center justify-center overflow-hidden rounded-xl border shadow-inner-e1 transition-[border-color,background-color,transform]",
-        active ? "border-brand/50 bg-brand-soft" : "border-border",
-        value == null ? "bg-surface-2" : "bg-fg",
-        dealing && "animate-[baccarat-card-deal_360ms_ease-out] border-brand/40 bg-brand-soft"
-      )}
-      aria-label={value == null ? "Unrevealed card" : `Card value ${value}`}
-    >
-      {value == null ? (
-        <>
-          <span className="absolute inset-2 rounded-lg border border-border-soft bg-brand-soft" />
-          <span className="absolute left-3 top-3 h-2 w-2 rounded-full bg-brand/70" />
-          <span className="absolute bottom-3 right-3 h-2 w-2 rounded-full bg-brand/70" />
-          <span className="relative h-10 w-7 rounded-md border border-brand/30 bg-surface-0/40 shadow-inner-e1" />
-        </>
-      ) : (
-        <>
-          <span className="absolute left-2 top-2 font-mono text-sm font-semibold text-surface-0">
-            {label}
-          </span>
-          <span className="absolute bottom-2 right-2 rotate-180 font-mono text-sm font-semibold text-surface-0">
-            {label}
-          </span>
-          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-0/10">
-            <CardSuitIcon suitIndex={suitIndex} />
-          </span>
-        </>
-      )}
-    </div>
-  );
-}
-
-function HandPanel({
+function HandZone({
   title,
   suitOffset,
-  cards,
+  slots,
   total,
   winner,
-  revealed
+  instant
 }: {
   title: string;
   suitOffset: number;
-  cards: readonly (number | undefined)[];
+  slots: readonly HandSlot[];
   total: number | undefined;
   winner: boolean;
-  revealed: number;
+  instant: boolean;
 }) {
+  const faceCount = slots.filter((slot) => slot.state === "face").length;
   return (
     <div
       className={cn(
-        "flex flex-col gap-3 rounded-xl border bg-surface-1 p-4 shadow-e2",
-        winner ? "border-accent/60 bg-accent-soft" : "border-border"
+        "relative flex flex-col items-center gap-3 rounded-xl border p-4 transition-colors",
+        winner
+          ? "border-accent/60 bg-accent-soft shadow-glow"
+          : "border-border-soft bg-surface-0/40"
       )}
     >
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-[0.2em] text-fg-subtle">
-          {title}
-        </span>
-        <span
-          className={cn("font-mono text-3xl font-semibold", winner ? "text-accent" : "text-fg")}
-        >
-          {total ?? "—"}
-        </span>
+      <span className="text-[11px] font-semibold uppercase tracking-[0.32em] text-fg-subtle">
+        {title}
+      </span>
+      <div className="flex gap-2.5">
+        {slots.map((slot, index) =>
+          slot.state === "empty" ? (
+            <EmptyCardSlot key={index} />
+          ) : (
+            <BaccaratCard
+              key={index}
+              value={slot.value}
+              suitIndex={suitOffset + index}
+              faceUp={slot.state === "face"}
+              instant={instant}
+              dealDelayMs={slot.dealDelayMs}
+            />
+          )
+        )}
       </div>
-      <div className="flex gap-3">
-        {[0, 1, 2].map((index) => (
-          <CardFace
-            key={index}
-            value={cards[index]}
-            active={winner && cards[index] != null}
-            dealing={revealed === index + 1 && cards[index] != null}
-            suitIndex={suitOffset + index}
-          />
-        ))}
-      </div>
+      <span
+        className={cn(
+          "font-mono text-3xl font-semibold tabular-nums",
+          winner ? "text-accent" : "text-fg"
+        )}
+      >
+        {total ?? "—"}
+      </span>
+      <span className="sr-only">{`${title} revealed ${faceCount}`}</span>
     </div>
   );
 }
 
-function BettingSideButton({
+function DealingShoe({ active, reduced }: { active: boolean; reduced: boolean }) {
+  return (
+    <div
+      aria-hidden
+      className="absolute right-4 top-3 h-12 w-16"
+      style={{ transform: "skewX(-12deg)" }}
+    >
+      <div className="absolute inset-0 rounded-md border border-border-strong bg-surface-2 shadow-e2" />
+      {active && !reduced ? (
+        <motion.div
+          className="absolute inset-0 rounded-md ring-1 ring-brand"
+          animate={{ opacity: [0.15, 0.65, 0.15] }}
+          transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
+        />
+      ) : null}
+      {/* Card peeking from the shoe mouth */}
+      <motion.div
+        className="absolute bottom-1.5 left-1/2 h-7 w-9 rounded-sm border border-brand/30 bg-surface-0/80"
+        style={{ marginLeft: -18 }}
+        animate={active && !reduced ? { y: [0, 4, 0] } : { y: 0 }}
+        transition={
+          active && !reduced
+            ? { duration: 0.95, repeat: Infinity, ease: "easeInOut" }
+            : { duration: 0.2 }
+        }
+      />
+    </div>
+  );
+}
+
+function BetBox({
   side,
   active,
   disabled,
@@ -158,20 +149,20 @@ function BettingSideButton({
       type="button"
       disabled={disabled}
       onClick={onClick}
+      aria-pressed={active}
       className={cn(
-        "group min-h-28 rounded-xl border px-4 py-4 text-left transition-colors",
+        "group relative flex flex-col items-center gap-1 rounded-xl border-2 px-4 py-3 transition-colors",
         active
           ? "border-brand bg-brand-soft text-fg"
-          : "border-border bg-surface-1 text-fg-muted hover:border-brand/50 hover:bg-surface-2 hover:text-fg",
+          : "border-dashed border-border-strong bg-surface-0/50 text-fg-muted hover:border-brand/55 hover:text-fg",
         disabled && "cursor-not-allowed opacity-70"
       )}
-      aria-pressed={active}
     >
-      <span className="block text-[10px] font-semibold uppercase tracking-[0.22em] text-fg-subtle">
+      <span className="text-[9px] font-semibold uppercase tracking-[0.22em] text-fg-subtle">
         {t("casino.room.selection.baccarat.betOn")}
       </span>
-      <span className="mt-2 block text-xl font-semibold">{formatSide(side, t)}</span>
-      <span className="mt-3 block font-mono text-sm text-accent">
+      <span className="text-base font-semibold">{formatSide(side, t)}</span>
+      <span className="font-mono text-xs text-accent">
         {baccaratMultiplier(side).toFixed(side === "tie" ? 2 : 3)}x
       </span>
     </button>
@@ -196,7 +187,7 @@ export function BaccaratStage({
   onRevealComplete?: () => void;
 }) {
   const t = useTranslations();
-  const prefersReducedMotion = useReducedMotion();
+  const prefersReducedMotion = useReducedMotion() ?? false;
   const roll: BaccaratRoll | undefined = outcome?.rolls.at(-1);
   const dealOrder = React.useMemo(() => {
     if (!roll) return [];
@@ -209,27 +200,43 @@ export function BaccaratStage({
       ...(roll.bankerCards[2] != null ? [{ side: "banker" as const, index: 2 }] : [])
     ];
   }, [roll]);
+
+  // revealedCards = how many cards have been turned face-up during the reveal.
   const [revealedCards, setRevealedCards] = React.useState(() =>
     showResult && roll ? dealOrder.length : 0
   );
   const dealComplete = Boolean(roll && revealedCards >= dealOrder.length);
   const hasResult = Boolean(showResult && roll && (dealComplete || !isRevealing));
   const winner = roll?.outcome;
-  const visiblePlayerCards =
-    roll?.playerCards.map((card, index) =>
-      dealOrder.findIndex((item) => item.side === "player" && item.index === index) < revealedCards
-        ? card
-        : undefined
-    ) ?? [];
-  const visibleBankerCards =
-    roll?.bankerCards.map((card, index) =>
-      dealOrder.findIndex((item) => item.side === "banker" && item.index === index) < revealedCards
-        ? card
-        : undefined
-    ) ?? [];
-  const playerRevealed = visiblePlayerCards.filter((card) => card != null).length;
-  const bankerRevealed = visibleBankerCards.filter((card) => card != null).length;
+  const instantCards = Boolean(showResult && roll && !isRevealing);
+  const dealingActive = isPending || Boolean(isRevealing);
 
+  const slotState = (side: "player" | "banker", index: number): SlotState => {
+    // VRF pending: the four base cards sit face-down, no third card yet.
+    if (isPending) return index < 2 ? "back" : "empty";
+    if (!roll) return "empty";
+    const exists = (side === "player" ? roll.playerCards : roll.bankerCards)[index] != null;
+    if (!exists) return "empty";
+    if (showResult && !isRevealing) return "face";
+    if (isRevealing) {
+      const position = dealOrder.findIndex((item) => item.side === side && item.index === index);
+      if (position >= 0 && revealedCards > position) return "face";
+      return index < 2 ? "back" : "empty";
+    }
+    return "empty";
+  };
+
+  const slotsFor = (side: "player" | "banker"): HandSlot[] =>
+    [0, 1, 2].map((index) => ({
+      state: slotState(side, index),
+      value: (side === "player" ? roll?.playerCards : roll?.bankerCards)?.[index],
+      dealDelayMs: SLOT_DEAL_DELAY[`${side}-${index}`] ?? 0
+    }));
+
+  const playerSlots = slotsFor("player");
+  const bankerSlots = slotsFor("banker");
+
+  // VRF reveal state machine — turn the cards over one by one, then complete.
   React.useEffect(() => {
     if (!isRevealing || !roll || dealOrder.length === 0) {
       setRevealedCards(showResult && roll ? dealOrder.length : 0);
@@ -239,79 +246,101 @@ export function BaccaratStage({
     setRevealedCards(0);
     const timeouts: number[] = [];
     const schedule = (callback: () => void, delay: number) => {
-      const timeout = window.setTimeout(callback, delay);
-      timeouts.push(timeout);
+      timeouts.push(window.setTimeout(callback, delay));
     };
 
     if (prefersReducedMotion) {
       setRevealedCards(dealOrder.length);
       schedule(() => onRevealComplete?.(), 180);
-      return () => {
-        timeouts.forEach((timeout) => window.clearTimeout(timeout));
-      };
+      return () => timeouts.forEach((timeout) => window.clearTimeout(timeout));
     }
 
     dealOrder.forEach((_, index) => {
-      schedule(() => setRevealedCards(index + 1), 260 + index * 520);
+      schedule(() => setRevealedCards(index + 1), 280 + index * 520);
     });
-    schedule(() => onRevealComplete?.(), 260 + dealOrder.length * 520 + 320);
+    schedule(() => onRevealComplete?.(), 280 + dealOrder.length * 520 + 320);
 
-    return () => {
-      timeouts.forEach((timeout) => window.clearTimeout(timeout));
-    };
+    return () => timeouts.forEach((timeout) => window.clearTimeout(timeout));
   }, [dealOrder, isRevealing, onRevealComplete, prefersReducedMotion, roll, showResult]);
 
+  const statusText =
+    isPending || isRevealing
+      ? t("casino.room.stage.baccarat.dealing")
+      : hasResult
+        ? t("casino.room.stage.baccarat.result", { side: formatSide(winner ?? "tie", t) })
+        : t("casino.room.stage.baccarat.ready");
+
   return (
-    <div className="absolute inset-0 z-10 flex flex-col items-center justify-start overflow-hidden px-6 pb-6 pt-24">
-      <div className="relative flex w-full max-w-4xl flex-col items-center gap-5">
-        <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-2">
-          <HandPanel
-            title={formatSide("player", t)}
-            suitOffset={0}
-            cards={visiblePlayerCards}
-            total={hasResult ? roll?.playerTotal : undefined}
-            winner={winner === "player"}
-            revealed={playerRevealed}
-          />
-          <HandPanel
-            title={formatSide("banker", t)}
-            suitOffset={2}
-            cards={visibleBankerCards}
-            total={hasResult ? roll?.bankerTotal : undefined}
-            winner={winner === "banker"}
-            revealed={bankerRevealed}
-          />
-        </div>
+    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-5 overflow-hidden px-6 py-8">
+      {/* ---- Felt table ---- */}
+      <div className="relative w-full max-w-3xl">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -bottom-5 left-1/2 h-9 w-3/4 -translate-x-1/2 rounded-[50%] bg-black/45 blur-2xl"
+        />
 
-        <div className="grid w-full grid-cols-1 gap-3 md:grid-cols-3">
-          {BACCARAT_SIDES.map((side) => (
-            <BettingSideButton
-              key={side}
-              side={side}
-              active={side === selectedSide}
-              disabled={isPending}
-              onClick={() => onSideChange(side)}
-              t={t}
+        {/* table rail */}
+        <div className="relative rounded-xl border-4 border-border-strong bg-surface-1 p-2 shadow-e3">
+          {/* felt surface */}
+          <div className="relative overflow-hidden rounded-lg border border-border bg-surface-0 p-5 shadow-inner-e1">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,hsl(var(--brand)/0.1),transparent_62%)]"
             />
-          ))}
-        </div>
 
-        <div className="w-full rounded-lg border border-border bg-surface-1/90 px-5 py-3 text-center shadow-e1 backdrop-blur">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-fg-subtle">
-            {isPending || isRevealing
-              ? t("casino.room.stage.baccarat.dealing")
-              : hasResult
-                ? t("casino.room.stage.baccarat.result", {
-                    side: formatSide(winner ?? "tie", t)
-                  })
-                : t("casino.room.stage.baccarat.ready")}
-          </p>
-          <p className="mt-1 font-mono text-sm font-semibold uppercase tracking-widest text-fg">
-            {t("casino.room.stage.baccarat.selected", {
-              side: formatSide(selectedSide, t)
-            })}
-          </p>
+            <DealingShoe active={dealingActive} reduced={prefersReducedMotion} />
+
+            {/* hands */}
+            <div className="relative grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <HandZone
+                title={formatSide("player", t)}
+                suitOffset={0}
+                slots={playerSlots}
+                total={hasResult ? roll?.playerTotal : undefined}
+                winner={winner === "player"}
+                instant={instantCards}
+              />
+              <HandZone
+                title={formatSide("banker", t)}
+                suitOffset={2}
+                slots={bankerSlots}
+                total={hasResult ? roll?.bankerTotal : undefined}
+                winner={winner === "banker"}
+                instant={instantCards}
+              />
+            </div>
+
+            {/* on-felt betting boxes */}
+            <div className="relative mt-5 grid grid-cols-3 gap-3">
+              {BACCARAT_SIDES.map((side) => (
+                <BetBox
+                  key={side}
+                  side={side}
+                  active={side === selectedSide}
+                  disabled={isPending}
+                  onClick={() => onSideChange(side)}
+                  t={t}
+                />
+              ))}
+            </div>
+          </div>
         </div>
+      </div>
+
+      {/* ---- Status readout ---- */}
+      <div
+        className={cn(
+          "rounded-lg border bg-surface-1 px-5 py-2.5 text-center shadow-e1",
+          hasResult && winner && winner === selectedSide ? "border-accent/45" : "border-border"
+        )}
+        aria-live="polite"
+      >
+        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-fg-subtle">
+          {statusText}
+        </p>
+        <p className="mt-0.5 font-mono text-sm font-semibold uppercase tracking-widest text-fg">
+          {t("casino.room.stage.baccarat.selected", { side: formatSide(selectedSide, t) })}
+        </p>
       </div>
     </div>
   );
