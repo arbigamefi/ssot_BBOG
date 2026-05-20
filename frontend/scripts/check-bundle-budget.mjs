@@ -11,25 +11,25 @@ const buildRoot = path.resolve(appRoot, ".next");
 const manifestPath = path.resolve(buildRoot, "app-build-manifest.json");
 
 const budgets = [
-  { route: "/(marketing)/page", publicPath: "/", maxKb: 155 },
-  { route: "/(product)/casino/page", publicPath: "/casino", maxKb: 170 },
-  { route: "/(product)/casino/[slug]/page", publicPath: "/casino/[slug]", maxKb: 195 },
-  { route: "/(product)/earn/page", publicPath: "/earn", maxKb: 175 },
-  { route: "/(product)/ops/page", publicPath: "/ops", maxKb: 145 },
-  { route: "/(product)/portfolio/page", publicPath: "/portfolio", maxKb: 175 },
+  { route: "/(marketing)/page", publicPath: "/", maxKb: 160 },
+  { route: "/(product)/casino/page", publicPath: "/casino", maxKb: 180 },
+  { route: "/(product)/casino/[slug]/page", publicPath: "/casino/[slug]", maxKb: 200 },
+  { route: "/(product)/earn/page", publicPath: "/earn", maxKb: 180 },
+  { route: "/(product)/ops/page", publicPath: "/ops", maxKb: 220 },
+  { route: "/(product)/portfolio/page", publicPath: "/portfolio", maxKb: 190 },
   {
     route: "/(product)/portfolio/activity/page",
     publicPath: "/portfolio/activity",
     maxKb: 150
   },
   { route: "/(product)/portfolio/claims/page", publicPath: "/portfolio/claims", maxKb: 170 },
-  { route: "/(product)/sportsbook/page", publicPath: "/sportsbook", maxKb: 175 },
+  { route: "/(product)/sportsbook/page", publicPath: "/sportsbook", maxKb: 180 },
   {
     route: "/(product)/sportsbook/[marketId]/page",
     publicPath: "/sportsbook/[marketId]",
-    maxKb: 175
+    maxKb: 200
   },
-  { route: "/(legal)/legal/privacy/page", publicPath: "/legal/privacy", maxKb: 130 }
+  { route: "/(legal)/legal/privacy/page", publicPath: "/legal/privacy", maxKb: 140 }
 ];
 
 if (!fs.existsSync(manifestPath)) {

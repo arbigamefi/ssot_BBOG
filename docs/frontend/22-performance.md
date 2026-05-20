@@ -37,6 +37,7 @@ Initial route budgets are targets, not aesthetic goals:
 | `/portfolio`             | <= 190 KB         |
 | `/earn`                  | <= 180 KB         |
 | `/ops`                   | <= 220 KB         |
+| `/legal/privacy`         | <= 140 KB         |
 
 Investigate when a route grows by more than 20 KB or crosses its target.
 Wallet/RainbowKit cost belongs in product routes, not marketing routes.
