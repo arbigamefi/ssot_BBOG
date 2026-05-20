@@ -10,8 +10,10 @@
     "prebuild": "pnpm -C ../../packages/bet-index build",
     "build": "tsc -p tsconfig.json",
     "prestart": "pnpm -C ../../packages/bet-index build",
+    "pretypecheck": "pnpm -C ../../packages/bet-index build",
     "start": "node dist/cli.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "pretest": "pnpm -C ../../packages/bet-index build",
     "test": "vitest run -c vitest.config.ts"
   },
   "dependencies": {
