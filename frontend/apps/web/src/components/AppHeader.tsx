@@ -138,7 +138,7 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
                   key={link.id}
                   href={link.href}
                   className={cn(
-                    "shrink-0 whitespace-nowrap transition-colors",
+                    "inline-flex shrink-0 items-center whitespace-nowrap [word-break:keep-all] transition-colors",
                     activeRoute === link.id
                       ? "border-b-2 border-brand pb-1 text-brand"
                       : "text-fg-subtle hover:text-fg"
@@ -165,7 +165,7 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
                   key={link.id}
                   href={link.href}
                   className={cn(
-                    "shrink-0 whitespace-nowrap transition-colors",
+                    "inline-flex shrink-0 items-center whitespace-nowrap [word-break:keep-all] transition-colors",
                     activeRoute === link.id
                       ? "border-b-2 border-fg pb-1 text-fg"
                       : "text-fg-subtle hover:text-fg"
