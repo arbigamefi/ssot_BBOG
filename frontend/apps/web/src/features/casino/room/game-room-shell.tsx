@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useTranslations } from "next-intl";
 
 export function GameRoomShell({
   gameName,
@@ -7,6 +8,7 @@ export function GameRoomShell({
   leftPaneContent,
   rightPaneContent,
   auditLedgerContent,
+  mobileActionContent,
   isInteractive = false
 }: {
   gameName: React.ReactNode;
@@ -15,45 +17,57 @@ export function GameRoomShell({
   leftPaneContent: React.ReactNode;
   rightPaneContent: React.ReactNode;
   auditLedgerContent: React.ReactNode;
+  mobileActionContent?: React.ReactNode;
   isInteractive?: boolean;
 }) {
+  const t = useTranslations();
+
   return (
-    <section className="flex min-h-[calc(100vh-8rem)] flex-col gap-6">
-      <header className="flex flex-col gap-5 border-b border-border-soft pb-6 md:flex-row md:items-end md:justify-between">
+    <section
+      className={
+        mobileActionContent
+          ? "flex min-h-[calc(100vh-8rem)] flex-col gap-4 pb-24 lg:pb-0"
+          : "flex min-h-[calc(100vh-8rem)] flex-col gap-4"
+      }
+    >
+      <header className="flex flex-col gap-3 border-b border-border-soft pb-4 md:flex-row md:items-end md:justify-between">
         <div>
           <div className="flex items-center gap-3 text-xs font-semibold uppercase text-accent">
-            <span className="h-2.5 w-2.5 rounded-full bg-accent shadow-glow" />
-            Live SSOT Module
+            <span className="h-2.5 w-2.5 rounded-full bg-accent" />
+            {t("casino.room.shell.liveModule")}
           </div>
-          <h1 className="mt-3 text-4xl font-semibold text-fg md:text-5xl">{gameName}</h1>
+          <h1 className="mt-1 text-4xl font-semibold text-fg md:text-5xl">{gameName}</h1>
         </div>
 
         <dl className="grid grid-cols-2 gap-3 md:min-w-72">
           <div className="rounded-lg border border-border-soft bg-surface-1 px-4 py-3 shadow-e1">
-            <dt className="text-xs font-semibold uppercase text-fg-subtle">House edge</dt>
+            <dt className="text-xs font-semibold uppercase text-fg-subtle">
+              {t("casino.room.shell.houseEdge")}
+            </dt>
             <dd className="mt-1 font-mono text-lg text-accent">{houseEdge}</dd>
           </div>
           <div className="rounded-lg border border-border-soft bg-surface-1 px-4 py-3 shadow-e1">
-            <dt className="text-xs font-semibold uppercase text-fg-subtle">Max payout</dt>
+            <dt className="text-xs font-semibold uppercase text-fg-subtle">
+              {t("casino.room.shell.maxPayout")}
+            </dt>
             <dd className="mt-1 font-mono text-lg text-fg">{maxPayout}</dd>
           </div>
         </dl>
       </header>
 
-      <div className="grid overflow-hidden rounded-xl border border-border bg-surface-1 shadow-e2 lg:min-h-[44rem] lg:grid-cols-[28rem_1fr]">
-        <aside className="relative z-20 border-b border-border bg-surface-2 p-5 lg:border-b-0 lg:border-r lg:p-6">
+      <div className="grid overflow-hidden rounded-xl border border-border bg-surface-1 shadow-e2 lg:min-h-[34rem] lg:grid-cols-[20rem_minmax(0,1fr)]">
+        <aside className="order-2 relative z-20 border-t border-border bg-surface-2 p-4 lg:order-1 lg:max-h-[calc(100vh-13rem)] lg:overflow-hidden lg:border-r lg:border-t-0">
           {leftPaneContent}
         </aside>
 
         <div
           className={
             isInteractive
-              ? "relative min-h-[34rem] overflow-hidden bg-surface-0 lg:min-h-0"
-              : "pointer-events-none relative min-h-[34rem] overflow-hidden bg-surface-0 lg:min-h-0"
+              ? "order-1 relative min-h-[34rem] overflow-hidden bg-surface-0 lg:order-2 lg:min-h-0"
+              : "pointer-events-none order-1 relative min-h-[34rem] overflow-hidden bg-surface-0 lg:order-2 lg:min-h-0"
           }
         >
           <div className="pointer-events-none absolute inset-0 bg-[url('/textures/noise.svg')] opacity-10 mix-blend-overlay" />
-          <div className="pointer-events-none absolute left-1/2 top-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-soft blur-3xl" />
           {rightPaneContent}
         </div>
       </div>
@@ -61,6 +75,12 @@ export function GameRoomShell({
       <section className="overflow-hidden rounded-xl border border-border bg-surface-1 shadow-e1">
         {auditLedgerContent}
       </section>
+
+      {mobileActionContent && (
+        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-surface-2/95 px-4 py-3 shadow-e3 backdrop-blur lg:hidden">
+          <div className="mx-auto max-w-md">{mobileActionContent}</div>
+        </div>
+      )}
     </section>
   );
 }

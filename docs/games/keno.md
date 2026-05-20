@@ -6,11 +6,11 @@ This repository includes a pure, deterministic **Keno** module (`KenoModule`) de
 - House edge is **not baked into the module**; it is applied by `GameHub` as **fee-on-payout** (ADR-0007).
 - Multi-roll semantics (refund + stopGain/stopLoss) follow SSOT.v1.1 / ADR-0013.
 
-## Rules (default config)
+## Rules (current config)
 
-- Pool size: **N = 40** numbers, encoded as bits **0..39**.
-- Draw size: **M = 10** numbers drawn **without replacement**.
-- Player selection: select `played` numbers where `1 <= played <= 10`.
+- Pool size: **N = 15** numbers, encoded as bits **0..14**.
+- Draw size: **M = 5** numbers drawn **without replacement**.
+- Player selection: select `played` numbers where `1 <= played <= 5`.
 
 ## Parameter encoding
 
@@ -18,8 +18,8 @@ This repository includes a pure, deterministic **Keno** module (`KenoModule`) de
 - Bit `i` set => number `i` selected
 - Validity:
   - `numbers != 0`
-  - `numbers < 2^40 - 1` (cannot select all numbers)
-  - `popcount(numbers) <= 10`
+  - `numbers < 2^15 - 1` (cannot select all numbers)
+  - `popcount(numbers) <= 5`
 
 Helper library: `KenoParams.encode/decode`.
 
@@ -31,7 +31,7 @@ Per SSOT canonical RNG expansion (`RNG.roll2`):
 - For roll `r` and draw step `j`:
   - `x = keccak256("SSOT_RNG_V1", betId, r, j, seed)`
 
-The module implements a **partial Fisher–Yates shuffle** to select 10 unique indices from `[0..39]`.
+The module implements a **partial Fisher–Yates shuffle** to select 5 unique indices from `[0..14]`.
 
 ## Payout model (gross)
 
@@ -43,7 +43,7 @@ Define the hypergeometric probability:
 
 - `P(k) = C(played, k) * C(N - played, M - k) / C(N, M)`
 
-The module uses the same fair-outcome construction as `refactored/KenoV2`:
+The module uses the same fair-outcome construction:
 
 - `gainFactor(played,k) = floor( 10000 / (P(k) * (played + 1)) )`
 - `payoutGross = amountPerRoll * gainFactor / 10000`
@@ -52,7 +52,7 @@ This yields (approximately) fair expectation (integer truncation introduces a ti
 
 ### Precomputed table
 
-For N=40, M=10, the module uses a precomputed table of gain factors for `played ∈ [1..10]` and `k ∈ [0..played]`.
+For N=15, M=5, the module uses a precomputed table of gain factors for `played ∈ [1..5]` and `k ∈ [0..played]`.
 This avoids expensive factorial/combination math during settlement.
 
 ## Reserve (maxPayout)
@@ -63,4 +63,4 @@ This avoids expensive factorial/combination math during settlement.
 - where `stake = amountPerRoll * betCount`
 - and `maxFactor = gainFactor(played, played)` (all selected numbers match)
 
-Note: for `played=10`, `maxFactor` is very large (rare-event payout), which naturally limits bet sizes unless liquidity is extremely deep.
+Note: for `played=5`, the all-hit max factor is 500.5x gross before fee-on-payout.

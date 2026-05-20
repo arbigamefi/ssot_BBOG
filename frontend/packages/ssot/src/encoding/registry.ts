@@ -3,6 +3,10 @@ import { encodeDiceParams, decodeDiceParams } from "./dice";
 import { encodeCoinTossParams, decodeCoinTossParams } from "./cointoss";
 import { encodeRouletteParams, decodeRouletteParams } from "./roulette";
 import { encodeKenoParams, decodeKenoParams } from "./keno";
+import { encodePlinkoParams, decodePlinkoParams } from "./plinko";
+import { encodeSlotsParams, decodeSlotsParams } from "./slots";
+import { encodeBaccaratParams, decodeBaccaratParams } from "./baccarat";
+import { encodeSicBoParams, decodeSicBoParams } from "./sicbo";
 
 /**
  * A registered game encoder with encode/decode functions and
@@ -36,11 +40,12 @@ const REGISTRY: ReadonlyMap<string, GameEncoder> = new Map<string, GameEncoder>(
     {
       slug: "dice",
       label: "Dice",
-      encode: (p: { cap: number }) => encodeDiceParams(p.cap),
+      encode: (p: { cap?: number; target?: number; direction?: "under" | "over" }) =>
+        encodeDiceParams({ direction: p.direction ?? "over", target: p.target ?? p.cap ?? 50 }),
       decode: (hex: Hex) => decodeDiceParams(hex),
-      defaultParams: { cap: 50 },
-      paramsDescription: "uint8 cap (0-255)",
-    },
+      defaultParams: { direction: "under", target: 50 },
+      paramsDescription: "bool isOver, uint8 target"
+    }
   ],
   [
     "coin-toss",
@@ -50,8 +55,8 @@ const REGISTRY: ReadonlyMap<string, GameEncoder> = new Map<string, GameEncoder>(
       encode: (p: { face: boolean }) => encodeCoinTossParams(p.face),
       decode: (hex: Hex) => decodeCoinTossParams(hex),
       defaultParams: { face: true },
-      paramsDescription: "bool face (true=heads)",
-    },
+      paramsDescription: "bool face (true=heads)"
+    }
   ],
   [
     "roulette",
@@ -61,8 +66,8 @@ const REGISTRY: ReadonlyMap<string, GameEncoder> = new Map<string, GameEncoder>(
       encode: (p: any) => encodeRouletteParams(p),
       decode: (hex: Hex) => decodeRouletteParams(hex),
       defaultParams: { kind: "straight", number: 0 },
-      paramsDescription: "uint40 mask OR (uint8 kind, uint40 payload)",
-    },
+      paramsDescription: "uint40 mask OR (uint8 kind, uint40 payload)"
+    }
   ],
   [
     "keno",
@@ -72,9 +77,72 @@ const REGISTRY: ReadonlyMap<string, GameEncoder> = new Map<string, GameEncoder>(
       encode: (p: { mask: bigint }) => encodeKenoParams(p.mask),
       decode: (hex: Hex) => decodeKenoParams(hex),
       defaultParams: { mask: 0xabcden },
-      paramsDescription: "uint40 mask",
-    },
+      paramsDescription: "uint40 mask"
+    }
   ],
+  [
+    "plinko",
+    {
+      slug: "plinko",
+      label: "Plinko",
+      encode: (p: { risk?: "low" | "medium" | "high" | 0 | 1 | 2 }) =>
+        encodePlinkoParams(p.risk ?? "medium"),
+      decode: (hex: Hex) => decodePlinkoParams(hex),
+      defaultParams: { risk: "medium" },
+      paramsDescription: "uint8 risk (0=low, 1=medium, 2=high)"
+    }
+  ],
+  [
+    "slots",
+    {
+      slug: "slots",
+      label: "Slots",
+      encode: (p: { profile?: "classic" | 0 }) => encodeSlotsParams(p.profile ?? "classic"),
+      decode: (hex: Hex) => decodeSlotsParams(hex),
+      defaultParams: { profile: "classic" },
+      paramsDescription: "uint8 profile (0=classic)"
+    }
+  ],
+  [
+    "baccarat",
+    {
+      slug: "baccarat",
+      label: "Baccarat",
+      encode: (p: { side?: "player" | "banker" | "tie" | 0 | 1 | 2 }) =>
+        encodeBaccaratParams(p.side ?? "player"),
+      decode: (hex: Hex) => decodeBaccaratParams(hex),
+      defaultParams: { side: "player" },
+      paramsDescription: "uint8 side (0=player, 1=banker, 2=tie)"
+    }
+  ],
+  [
+    "sic-bo",
+    {
+      slug: "sic-bo",
+      label: "Sic Bo",
+      encode: (p: {
+        kind?:
+          | "small"
+          | "big"
+          | "anyTriple"
+          | "specificTriple"
+          | "total"
+          | "specificDouble"
+          | "singleFace"
+          | 0
+          | 1
+          | 2
+          | 3
+          | 4
+          | 5
+          | 6;
+        value?: number;
+      }) => encodeSicBoParams({ kind: p.kind ?? "small", value: p.value }),
+      decode: (hex: Hex) => decodeSicBoParams(hex),
+      defaultParams: { kind: "small", value: 0 },
+      paramsDescription: "uint8 kind, uint8 value"
+    }
+  ]
 ]);
 
 /**

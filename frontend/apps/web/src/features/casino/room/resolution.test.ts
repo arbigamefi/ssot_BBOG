@@ -1,7 +1,15 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { act, renderHook } from "@testing-library/react";
 import type { DomainBet } from "@ssot/ssot";
 
-import { appendGameHistoryEntry, buildCasinoRoundResult, isTerminalDomainBet } from "./resolution";
+import {
+  appendGameHistoryEntry,
+  buildCasinoRoundResult,
+  isTerminalDomainBet,
+  isCasinoTerminalRoundResult,
+  useGameResolutionEffect,
+  resolveCasinoTerminalProof
+} from "./resolution";
 
 const baseBet: DomainBet = {
   betId: 7n,
@@ -14,6 +22,9 @@ const baseBet: DomainBet = {
   reserved: 20_000n,
   amountPerRoll: 10_000n,
   betCount: 1,
+  stopGain: 0n,
+  stopLoss: 0n,
+  effectiveHouseEdgeBps: 200,
   vrfFeePaid: 100n,
   vrfFeeCharged: 90n,
   vrfCallbackGasLimit: 320_000,
@@ -25,6 +36,10 @@ const baseBet: DomainBet = {
 };
 
 describe("game room resolution helpers", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("prepends resolved game history and caps the visible feed", () => {
     const history = [
       { val: 1, win: false },
@@ -54,7 +69,9 @@ describe("game room resolution helpers", () => {
       betId: 7n,
       requestId: 88n,
       randomHash: baseBet.randomHash,
+      player: baseBet.player,
       stake: 10_000n,
+      vrfFeeCharged: 90n,
       resolvedAt: 2,
       settlement: undefined
     });
@@ -72,5 +89,185 @@ describe("game room resolution helpers", () => {
       kind: "settled",
       settlement: { payoutNet: 19_600n }
     });
+  });
+
+  it("falls back to direct GameHub terminal proof when the indexer has not caught up", async () => {
+    const getTerminalProof = vi.fn().mockResolvedValue({
+      kind: "settled",
+      settlement: {
+        txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        payoutGross: 20_000n,
+        payoutNet: 19_600n,
+        feeOnPayout: 400n,
+        protocolFeeAccrual: 200n
+      }
+    });
+
+    const proof = await resolveCasinoTerminalProof({
+      terminalBet: baseBet,
+      recentBets: [],
+      db: undefined,
+      gameHub: { getTerminalProof }
+    });
+
+    expect(getTerminalProof).toHaveBeenCalledWith(7n);
+    expect(proof).toMatchObject({
+      kind: "settled",
+      settlement: {
+        payoutNet: 19_600n
+      }
+    });
+  });
+
+  it("keeps waiting when a terminal proof is missing payout facts", async () => {
+    await expect(
+      resolveCasinoTerminalProof({
+        terminalBet: baseBet,
+        recentBets: [],
+        db: undefined,
+        gameHub: {
+          getTerminalProof: vi.fn().mockResolvedValue({
+            kind: "settled",
+            settlement: {
+              txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+            }
+          })
+        }
+      })
+    ).resolves.toBeNull();
+
+    expect(
+      buildCasinoRoundResult({
+        bet: baseBet,
+        settlement: {
+          txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+        }
+      })
+    ).toMatchObject({ kind: "indexing" });
+  });
+
+  it("does not treat incomplete round results as final overlay data", () => {
+    expect(
+      isCasinoTerminalRoundResult(
+        buildCasinoRoundResult({
+          bet: baseBet,
+          settlement: {
+            txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          }
+        })
+      )
+    ).toBe(false);
+
+    expect(
+      isCasinoTerminalRoundResult(
+        buildCasinoRoundResult({
+          bet: baseBet,
+          settlement: {
+            txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            payoutNet: 19_600n
+          }
+        })
+      )
+    ).toBe(true);
+  });
+
+  it("keeps the result in reading state when direct GameHub proof read fails", async () => {
+    const getTerminalProof = vi.fn().mockRejectedValue(new Error("range limit"));
+
+    await expect(
+      resolveCasinoTerminalProof({
+        terminalBet: baseBet,
+        recentBets: [],
+        db: undefined,
+        gameHub: { getTerminalProof }
+      })
+    ).resolves.toBeNull();
+  });
+
+  it("only opens the final result modal after terminal proof is available", async () => {
+    vi.useFakeTimers();
+    const proof = {
+      kind: "settled" as const,
+      settlement: {
+        txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as const,
+        payoutGross: 20_000n,
+        payoutNet: 19_600n
+      }
+    };
+    const getTerminalProof = vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce(proof);
+    const setIsPending = vi.fn();
+    const setShowResult = vi.fn();
+    const setResultProof = vi.fn();
+    const reset = vi.fn();
+
+    renderHook(() =>
+      useGameResolutionEffect({
+        terminalBet: baseBet,
+        recentBets: [],
+        db: undefined,
+        gameHub: { getTerminalProof },
+        setIsPending,
+        setShowResult,
+        setResultProof,
+        reset
+      })
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(setIsPending).toHaveBeenCalledWith(true);
+    expect(setShowResult).not.toHaveBeenCalledWith(true);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_500);
+      await Promise.resolve();
+    });
+
+    expect(setShowResult).toHaveBeenCalledWith(true);
+    expect(setResultProof).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        kind: "settled",
+        settlement: expect.objectContaining({ payoutNet: 19_600n })
+      })
+    );
+  });
+
+  it("does not open the final result modal for incomplete terminal proof", async () => {
+    vi.useFakeTimers();
+    const getTerminalProof = vi.fn().mockResolvedValue({
+      kind: "settled",
+      settlement: {
+        txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    });
+    const setIsPending = vi.fn();
+    const setShowResult = vi.fn();
+    const setResultProof = vi.fn();
+    const reset = vi.fn();
+
+    renderHook(() =>
+      useGameResolutionEffect({
+        terminalBet: baseBet,
+        recentBets: [],
+        db: undefined,
+        gameHub: { getTerminalProof },
+        setIsPending,
+        setShowResult,
+        setResultProof,
+        reset
+      })
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1_500);
+      await Promise.resolve();
+    });
+
+    expect(setShowResult).not.toHaveBeenCalledWith(true);
+    expect(setResultProof).not.toHaveBeenCalledWith(expect.objectContaining({ kind: "settled" }));
   });
 });

@@ -2,61 +2,30 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useLocale, useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
-import type { SSOTRelease } from "@ssot/ssot/release";
+import type { DomainSportsMarket } from "@ssot/ssot";
 
 import { PageTransition } from "../../components/PageTransition";
 import { useRelease } from "../../ssot/release/ReleaseProvider";
 import { useSSOTSDK } from "../../ssot/sdk";
+
+import { EmptyMarketsState } from "./EmptyMarketsState";
+import { EventBoard, type EventBoardEntry, type EventBoardFilter } from "./EventBoard";
+import { MarketStateBadge } from "./MarketStateBadge";
 import {
-  DetailCell,
-  LookupForm,
-  MarketTape,
-  type MarketTapeRow,
-  MarketInspector,
-  PoolPanel,
-  RiskRows,
-  SectionShell,
-  StatusPill,
-  TicketInspector
-} from "./components";
-import {
-  formatCounter,
-  formatDuration,
-  formatLookupError,
-  parseLookupId,
-  shortHex
-} from "./format";
-import { SportsbookOperatorPanel } from "./operator-panel";
+  bucketMarket,
+  describeMarketWallClock,
+  marketShortTag,
+  type SportsMarketBucket
+} from "./player-format";
+import type { SportsbookProviderOdds } from "./provider-odds";
+import { useSportsbookProviderOdds } from "./use-provider-odds";
 
-const CONTROL_LINKS = [
-  {
-    label: "Go/no-go packet",
-    href: "/ops",
-    detail: "docs/ops/sportsbook-phase2-gonogo-2026-05-14.md"
-  },
-  {
-    label: "Frontend access policy",
-    href: "/ops",
-    detail: "docs/ops/sportsbook-frontend-access.md"
-  },
-  {
-    label: "Provider policy",
-    href: "/ops",
-    detail: "docs/ops/sportsbook-provider-the-odds-api.md"
-  }
-] as const;
+const PUBLIC_LIST_LIMIT = 24;
 
-const RECENT_MARKET_LIMIT = 8;
-
-function getSportsPools(release: SSOTRelease) {
-  return (release.pools ?? []).filter(
-    (pool) => pool.domain.toLowerCase() === "sports" || Boolean(pool.sportsRisk)
-  );
-}
-
-function getRecentMarketIds(nextMarketId: bigint, limit: number) {
-  if (nextMarketId <= 1n || limit <= 0) return [];
+function buildRecentMarketIds(nextMarketId: bigint, limit: number) {
+  if (nextMarketId <= 1n || limit <= 0) return [] as bigint[];
   const ids: bigint[] = [];
   let current = nextMarketId - 1n;
   while (current >= 1n && ids.length < limit) {
@@ -66,456 +35,520 @@ function getRecentMarketIds(nextMarketId: bigint, limit: number) {
   return ids;
 }
 
-function isMarketTapeRow(row: MarketTapeRow | undefined): row is MarketTapeRow {
-  return row !== undefined;
+interface EventBoardData {
+  entries: EventBoardEntry[];
+  source: "live" | "empty" | "preview";
 }
 
-export function SportsbookPageClient() {
-  const { release, readOnly, readOnlyReason, sportsbook } = useRelease();
+function useSportsbookBoard(enabled: boolean): {
+  data: EventBoardData | undefined;
+  isLoading: boolean;
+  error: unknown;
+} {
+  const { release } = useRelease();
   const { sdk, ready } = useSSOTSDK();
-  const [marketInput, setMarketInput] = React.useState("");
-  const [ticketInput, setTicketInput] = React.useState("");
-  const [marketLookupId, setMarketLookupId] = React.useState<bigint | undefined>();
-  const [ticketLookupId, setTicketLookupId] = React.useState<bigint | undefined>();
-  const [marketInputError, setMarketInputError] = React.useState<string | undefined>();
-  const [ticketInputError, setTicketInputError] = React.useState<string | undefined>();
-  const {
-    data: runtimeCounters,
-    error: runtimeError,
-    refetch: refetchRuntimeCounters
-  } = useQuery({
-    queryKey: ["ssot", "sportsbook", "runtime-counters", release?.releaseDigest ?? "none"],
-    enabled: Boolean(release && sdk && ready && sportsbook.hasSportsRelease),
+  const releaseDigest = release?.releaseDigest;
+
+  const nextMarketIdQuery = useQuery({
+    queryKey: ["sportsbook", "player", "next-market-id", releaseDigest ?? "none"],
+    enabled: Boolean(enabled && release && sdk && ready),
     staleTime: 15_000,
     queryFn: async () => {
-      if (!release || !sdk) return undefined;
-      const [nextMarketId, nextTicketId] = await Promise.all([
-        sdk.sportsHub.getNextMarketId(),
-        sdk.sportsHub.getNextTicketId()
-      ]);
-      return { nextMarketId, nextTicketId };
+      if (!sdk) return undefined;
+      return await sdk.sportsHub.getNextMarketId();
     }
   });
-  const {
-    data: recentMarkets,
-    error: recentMarketsError,
-    isFetching: recentMarketsFetching,
-    refetch: refetchRecentMarkets
-  } = useQuery({
+
+  const marketsQuery = useQuery({
     queryKey: [
-      "ssot",
       "sportsbook",
-      "recent-markets",
-      release?.releaseDigest ?? "none",
-      runtimeCounters?.nextMarketId?.toString() ?? "none"
+      "player",
+      "markets",
+      releaseDigest ?? "none",
+      nextMarketIdQuery.data?.toString() ?? "none"
     ],
     enabled: Boolean(
-      release &&
-      sdk &&
-      ready &&
-      sportsbook.hasSportsRelease &&
-      runtimeCounters?.nextMarketId &&
-      runtimeCounters.nextMarketId > 1n
+      enabled && release && sdk && ready && nextMarketIdQuery.data && nextMarketIdQuery.data > 1n
     ),
     staleTime: 15_000,
     queryFn: async () => {
-      if (!sdk || !runtimeCounters?.nextMarketId) return [];
-      const marketIds = getRecentMarketIds(runtimeCounters.nextMarketId, RECENT_MARKET_LIMIT);
-      const rows = await Promise.all(
-        marketIds.map(async (marketId): Promise<MarketTapeRow | undefined> => {
+      if (!sdk || !nextMarketIdQuery.data) return [] as DomainSportsMarket[];
+      const marketIds = buildRecentMarketIds(nextMarketIdQuery.data, PUBLIC_LIST_LIMIT);
+      const markets = await Promise.all(
+        marketIds.map(async (marketId) => {
           try {
-            const market = await sdk.sportsHub.getMarket(marketId);
-            const [result, reserved] = await Promise.all([
-              sdk.sportsHub.getResult(marketId).catch(() => undefined),
-              sdk.sportsHub.getMarketReserved(marketId).catch(() => undefined)
-            ]);
-            return { market, result, reserved };
+            return await sdk.sportsHub.getMarket(marketId);
           } catch {
             return undefined;
           }
         })
       );
-      return rows.filter(isMarketTapeRow);
-    }
-  });
-  const {
-    data: marketLookup,
-    error: marketLookupError,
-    isFetching: marketFetching,
-    refetch: refetchMarketLookup
-  } = useQuery({
-    queryKey: [
-      "ssot",
-      "sportsbook",
-      "market",
-      release?.releaseDigest ?? "none",
-      marketLookupId?.toString() ?? "none"
-    ],
-    enabled: Boolean(release && sdk && ready && marketLookupId !== undefined),
-    staleTime: 15_000,
-    queryFn: async () => {
-      if (!sdk || marketLookupId === undefined) return undefined;
-      const [market, result, reserved] = await Promise.all([
-        sdk.sportsHub.getMarket(marketLookupId),
-        sdk.sportsHub.getResult(marketLookupId).catch(() => undefined),
-        sdk.sportsHub.getMarketReserved(marketLookupId)
-      ]);
-      return { market, result, reserved };
-    }
-  });
-  const {
-    data: ticketLookup,
-    error: ticketLookupError,
-    isFetching: ticketFetching
-  } = useQuery({
-    queryKey: [
-      "ssot",
-      "sportsbook",
-      "ticket",
-      release?.releaseDigest ?? "none",
-      ticketLookupId?.toString() ?? "none"
-    ],
-    enabled: Boolean(release && sdk && ready && ticketLookupId !== undefined),
-    staleTime: 15_000,
-    queryFn: async () => {
-      if (!sdk || ticketLookupId === undefined) return undefined;
-      return await sdk.sportsHub.getTicket(ticketLookupId);
+      return markets.filter((m): m is DomainSportsMarket => Boolean(m));
     }
   });
 
-  const submitMarketLookup = React.useCallback(() => {
-    const parsed = parseLookupId(marketInput);
-    if (parsed === undefined) {
-      setMarketInputError("Enter a numeric market id.");
-      return;
-    }
-    setMarketInputError(undefined);
-    setMarketLookupId(parsed);
-  }, [marketInput]);
+  const isLoading = nextMarketIdQuery.isLoading || marketsQuery.isLoading;
+  const error = nextMarketIdQuery.error ?? marketsQuery.error;
 
-  const submitTicketLookup = React.useCallback(() => {
-    const parsed = parseLookupId(ticketInput);
-    if (parsed === undefined) {
-      setTicketInputError("Enter a numeric ticket id.");
-      return;
-    }
-    setTicketInputError(undefined);
-    setTicketLookupId(parsed);
-  }, [ticketInput]);
+  const data = React.useMemo<EventBoardData | undefined>(() => {
+    if (!enabled) return { entries: [], source: "preview" };
+    if (!marketsQuery.data) return undefined;
+    if (marketsQuery.data.length === 0) return { entries: [], source: "empty" };
+    return {
+      entries: marketsQuery.data.map((market) => ({
+        market,
+        href: `/sportsbook/${market.marketId.toString()}`
+      })),
+      source: "live"
+    };
+  }, [enabled, marketsQuery.data]);
 
-  const inspectRecentMarket = React.useCallback((marketId: bigint) => {
-    setMarketInput(marketId.toString());
-    setMarketInputError(undefined);
-    setMarketLookupId(marketId);
-  }, []);
+  return { data, isLoading, error };
+}
 
-  const refreshSportsbookReads = React.useCallback(() => {
-    void Promise.all([refetchRuntimeCounters(), refetchRecentMarkets(), refetchMarketLookup()]);
-  }, [refetchMarketLookup, refetchRecentMarkets, refetchRuntimeCounters]);
+/**
+ * Stitch provider odds into the board entries when the indexer has hydrated
+ * the matching marketId. Provider odds are fetched per-market by the existing
+ * `useSportsbookProviderOdds` hook; we hydrate all rows once the page mounts
+ * so the directory itself can render `Home / Draw / Away` prices.
+ */
+function useStitchProviderOdds(entries: readonly EventBoardEntry[]): EventBoardEntry[] {
+  // Note: in this MVP each market has a single provider snapshot fetched
+  // through the public odds-snapshot API. The hook below is the existing
+  // per-market provider hook, called for the first ~6 entries (visible above
+  // the fold) to avoid N requests on initial paint. Below-the-fold rows show
+  // outcome count + state without prices, which is acceptable for the
+  // directory view; the detail page will fetch full odds on click.
+  const oddsBySlot = useSportsbookProviderOddsSlots(entries.slice(0, 6));
+
+  return React.useMemo(
+    () =>
+      entries.map((entry, index) => {
+        if (index >= oddsBySlot.length) return entry;
+        const stitched = oddsBySlot[index];
+        if (!stitched) return entry;
+        return { ...entry, odds: stitched };
+      }),
+    [entries, oddsBySlot]
+  );
+}
+
+function useSportsbookProviderOddsSlots(
+  entries: readonly EventBoardEntry[]
+): Array<SportsbookProviderOdds | undefined> {
+  // Hooks must run in a stable count. We pre-allocate 6 slots so the order of
+  // hook calls never changes between renders. Slots beyond the entries length
+  // pass enabled=false to suppress the network request.
+  const slots = Array.from(
+    { length: 6 },
+    (_, idx) => entries[idx]?.market.marketId as bigint | undefined
+  );
+  const r0 = useSportsbookProviderOdds({ marketId: slots[0], enabled: slots[0] !== undefined });
+  const r1 = useSportsbookProviderOdds({ marketId: slots[1], enabled: slots[1] !== undefined });
+  const r2 = useSportsbookProviderOdds({ marketId: slots[2], enabled: slots[2] !== undefined });
+  const r3 = useSportsbookProviderOdds({ marketId: slots[3], enabled: slots[3] !== undefined });
+  const r4 = useSportsbookProviderOdds({ marketId: slots[4], enabled: slots[4] !== undefined });
+  const r5 = useSportsbookProviderOdds({ marketId: slots[5], enabled: slots[5] !== undefined });
+  return [r0.data, r1.data, r2.data, r3.data, r4.data, r5.data];
+}
+
+export function SportsbookPageClient() {
+  const t = useTranslations();
+  const locale = useLocale();
+  const { release, sportsbook, readOnly, readOnlyReason } = useRelease();
+  const enabled = sportsbook.enabled && sportsbook.hasSportsRelease;
+  const [activeFilter, setActiveFilter] = React.useState<EventBoardFilter>("all");
+
+  const { data: board, isLoading, error } = useSportsbookBoard(enabled);
+  const stitched = useStitchProviderOdds(board?.entries ?? []);
+  const filteredEntryCount = React.useMemo(
+    () => countFilterEntries(stitched, activeFilter, locale),
+    [stitched, activeFilter, locale]
+  );
 
   if (!release) {
     return (
       <PageTransition pageKey="sportsbook">
         <div className="mx-auto max-w-3xl py-16">
-          <SectionShell
-            eyebrow="Sportsbook"
-            title="No release loaded"
-            description={readOnlyReason ?? "The embedded release snapshot is unavailable."}
-          >
-            <StatusPill tone="warn">Unavailable</StatusPill>
-          </SectionShell>
+          <EmptyMarketsState
+            variant="preview"
+            reason={readOnlyReason ?? t("sportsbook.player.empty.preview.description")}
+          />
         </div>
       </PageTransition>
     );
   }
 
-  const sports = release.sports;
-  const sportsHub = sports?.sportsHub ?? release.contracts.sportsHub;
-  const riskEngine = sports?.riskEngine ?? release.contracts.sportsRiskEngine;
-  const sportsPools = getSportsPools(release);
-  const statusTone = sportsbook.enabled ? "success" : "warn";
-  const marketTapeLoading = Boolean(
-    sdk &&
-    ready &&
-    sportsbook.hasSportsRelease &&
-    !runtimeError &&
-    (!runtimeCounters || (recentMarketsFetching && !recentMarkets))
-  );
-  const riskSummary = sports
-    ? {
-        maxStake: sports.maxStake,
-        maxPayout: sports.maxPayout,
-        maxMarketReserved: sports.maxMarketReserved,
-        maxOutcomeReserved: sports.maxOutcomeReserved,
-        maxEventReserved: sports.maxEventReserved
-      }
-    : undefined;
-  const latestMarketHref = recentMarkets?.[0]?.market
-    ? `/sportsbook/${recentMarkets[0].market.marketId.toString()}`
-    : "/sportsbook";
+  const sportsHubMissing = !sportsbook.hasSportsRelease;
+  const ticketsDisabled = !sportsbook.enabled;
 
   return (
     <PageTransition pageKey="sportsbook">
-      <div className="mx-auto flex max-w-[1440px] flex-col gap-8 py-12 md:py-16">
-        <header className="grid gap-8 lg:grid-cols-[1fr_360px] lg:items-end">
-          <div className="max-w-4xl">
-            <div className="flex flex-wrap items-center gap-3">
-              <StatusPill tone={statusTone}>
-                {sportsbook.enabled ? "Metadata enabled" : "Read-only preview"}
-              </StatusPill>
-              <StatusPill tone={sportsbook.hasSportsRelease ? "success" : "warn"}>
-                {sportsbook.hasSportsRelease ? "SportsHub present" : "SportsHub missing"}
-              </StatusPill>
-            </div>
-            <h1 className="mt-5 text-4xl font-black tracking-tight text-fg md:text-5xl">
-              Sportsbook Control Room
-            </h1>
-            <p className="mt-4 max-w-3xl text-sm leading-7 text-fg-muted md:text-[15px]">
-              Fixed-odds sports markets stay behind explicit launch controls. This entry exposes the
-              deployed SportsHub surface, release risk caps, and the signed-odds ticket path when
-              the frontend gate is enabled.
-            </p>
-          </div>
+      <div className="mx-auto flex max-w-[1280px] flex-col gap-10 py-10 md:py-12">
+        <SportsbookHeader
+          ticketsDisabled={ticketsDisabled}
+          sportsHubMissing={sportsHubMissing}
+          readOnly={readOnly}
+          readOnlyReason={readOnlyReason}
+        />
 
-          <div className="rounded-lg border border-border bg-surface-1/70 p-5 shadow-e2">
-            <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-fg-subtle">
-              Public risk-in
-            </div>
-            <div className="mt-3 text-2xl font-black text-fg">
-              {sportsbook.enabled ? "Signed odds only" : "Locked"}
-            </div>
-            <p className="mt-2 text-sm leading-6 text-fg-muted">
-              {sportsbook.disabledReason ??
-                "Open a market detail page and provide a signed odds snapshot before placement."}
-            </p>
-            <Link
-              href={latestMarketHref}
-              className="mt-5 inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-border bg-surface-2 px-4 text-sm font-semibold text-fg transition-colors hover:border-brand/40 hover:bg-surface-3"
-            >
-              Inspect market before placing
-            </Link>
-          </div>
-        </header>
-
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <DetailCell
-            label="Release"
-            value={shortHex(release.releaseDigest)}
-            helper={release.name}
+        {!enabled ? (
+          <EmptyMarketsState
+            variant="preview"
+            reason={
+              sportsbook.disabledReason ??
+              (readOnly ? readOnlyReason : t("sportsbook.player.empty.preview.description"))
+            }
           />
-          <DetailCell
-            label="SportsHub"
-            value={shortHex(sportsHub)}
-            helper={sportsbook.hasSportsRelease ? "Embedded metadata present" : "Not available"}
-          />
-          <DetailCell
-            label="Risk engine"
-            value={shortHex(riskEngine)}
-            helper="Shared cap enforcement surface"
-          />
-          <DetailCell
-            label="Challenge window"
-            value={formatDuration(sports?.resultChallengeTimeoutSeconds)}
-            helper="Result dispute timeout"
-          />
-          <DetailCell
-            label="Next market"
-            value={formatCounter(runtimeCounters?.nextMarketId)}
-            helper={runtimeError ? "SportsHub runtime read failed" : "Read through @ssot/ssot SDK"}
-          />
-          <DetailCell
-            label="Next ticket"
-            value={formatCounter(runtimeCounters?.nextTicketId)}
-            helper={runtimeError ? "SportsHub runtime read failed" : "Read through @ssot/ssot SDK"}
-          />
-        </div>
-
-        <div className="grid gap-8 xl:grid-cols-[1fr_0.9fr]">
-          <SectionShell
-            eyebrow="Sports release"
-            title="Oracle and settlement surface"
-            description="The active bundle exposes signed odds identity, result reporter quorum, and the bootstrap dispute roles needed by SportsHub settlement."
-          >
-            <div className="grid gap-4 md:grid-cols-2">
-              <DetailCell label="Odds signer set" value={shortHex(sports?.oddsSignerSetHash)} />
-              <DetailCell
-                label="Result reporter set"
-                value={shortHex(sports?.resultReporterSetHash)}
-              />
-              <DetailCell
-                label="Reporter threshold"
-                value={sports?.resultReporterThreshold ?? "N/A"}
-                helper="Minimum result reporters"
-              />
-              <DetailCell
-                label="Frontend flag"
-                value={sportsbook.frontendEnabled ? "true" : "false"}
-                helper={sportsbook.enablementFlag}
-                mono={false}
-              />
-              <DetailCell label="Challenger" value={shortHex(sports?.resultChallenger)} />
-              <DetailCell label="Arbitrator" value={shortHex(sports?.resultArbitrator)} />
-            </div>
-          </SectionShell>
-
-          <SectionShell
-            eyebrow="MVP market"
-            title="Football 1X2 readiness"
-            description="The current provider path is scoped to pre-match fixed odds, signed snapshots, and explicit result evidence before any public launch decision."
-          >
-            <div className="grid gap-3">
-              {[
-                ["Market type", "Pre-match football 1X2"],
-                ["Odds source", "The Odds API candidate"],
-                ["Settlement", "Reporter result plus challenge window"],
-                ["Launch state", "Phase 2 NO-GO for public risk-in"]
-              ].map(([label, value]) => (
-                <div
-                  key={label}
-                  className="flex items-center justify-between gap-4 rounded-lg border border-border bg-surface-2/70 px-4 py-3"
-                >
-                  <div className="text-sm text-fg-muted">{label}</div>
-                  <div className="text-right text-sm font-semibold text-fg">{value}</div>
-                </div>
-              ))}
-            </div>
-          </SectionShell>
-        </div>
-
-        {riskSummary ? (
-          <SectionShell
-            eyebrow="Protocol caps"
-            title="Top-level SportsHub limits"
-            description="These raw-unit caps are copied from the embedded release and should stay aligned with the deployment bundle and ops approval memos."
-          >
-            <RiskRows title="SportsHub global risk caps" risk={riskSummary} />
-          </SectionShell>
         ) : null}
 
-        <SectionShell
-          eyebrow="Market tape"
-          title="Recent SportsHub markets"
-          description="The frontend reads the latest on-chain SportsHub market ids directly through the v1.3 SDK. Ticket placement is only available from a market detail page after the signed-odds gate is satisfied."
-        >
-          <MarketTape
-            rows={recentMarkets ?? []}
-            loading={marketTapeLoading}
-            error={formatLookupError(recentMarketsError ?? runtimeError)}
-            onInspect={inspectRecentMarket}
-          />
-        </SectionShell>
-
-        <SectionShell
-          eyebrow="On-chain lookup"
-          title="Inspect SportsHub records"
-          description="Lookup stays read-only and goes through the v1.3 SDK. Use market detail for the signed-odds ticket flow."
-        >
-          <div className="grid gap-5 xl:grid-cols-2">
-            <div className="grid gap-4">
-              <LookupForm
-                id="sports-market-id"
-                label="Market id"
-                value={marketInput}
-                onChange={setMarketInput}
-                onSubmit={submitMarketLookup}
-                disabled={!sdk || !ready || marketFetching}
-                error={marketInputError ?? formatLookupError(marketLookupError)}
-              />
-              {marketLookup?.market ? (
-                <MarketInspector
-                  market={marketLookup.market}
-                  result={marketLookup.result}
-                  reserved={marketLookup.reserved}
-                />
-              ) : (
-                <div className="rounded-lg border border-border bg-surface-2/50 p-4 text-sm leading-6 text-fg-muted">
-                  Enter a SportsHub market id to inspect state, result status, and reserved
-                  exposure.
-                </div>
-              )}
-            </div>
-
-            <div className="grid gap-4">
-              <LookupForm
-                id="sports-ticket-id"
-                label="Ticket id"
-                value={ticketInput}
-                onChange={setTicketInput}
-                onSubmit={submitTicketLookup}
-                disabled={!sdk || !ready || ticketFetching}
-                error={ticketInputError ?? formatLookupError(ticketLookupError)}
-              />
-              {ticketLookup ? (
-                <TicketInspector ticket={ticketLookup} />
-              ) : (
-                <div className="rounded-lg border border-border bg-surface-2/50 p-4 text-sm leading-6 text-fg-muted">
-                  Enter a SportsHub ticket id to inspect position, stake, payout, and ticket state.
-                </div>
-              )}
-            </div>
+        {enabled ? (
+          <div className="flex flex-col gap-6">
+            {isLoading ? <BoardSkeleton /> : null}
+            {!isLoading && error ? (
+              <div className="rounded-lg border border-danger/30 bg-danger-soft p-4 text-sm leading-6 text-danger">
+                {t("sportsbook.player.error.title")}
+              </div>
+            ) : null}
+            {!isLoading && !error && board?.source === "empty" ? (
+              <EmptyMarketsState variant="quiet" />
+            ) : null}
+            {!isLoading && !error && board?.source === "live" ? (
+              <>
+                <SportsbookLobbyPanel entries={stitched} locale={locale} />
+                <section className="flex flex-col gap-3">
+                  <header className="flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
+                    <div>
+                      <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-fg-subtle">
+                        {t("sportsbook.player.lobby.boardTitle")}
+                      </h2>
+                      <p className="mt-1 text-xs leading-5 text-fg-muted">
+                        {t("sportsbook.player.lobby.boardDescription")}
+                      </p>
+                    </div>
+                  </header>
+                  <MarketFilterTabs
+                    activeFilter={activeFilter}
+                    entries={stitched}
+                    locale={locale}
+                    onChange={setActiveFilter}
+                  />
+                  <EventBoard
+                    filter={activeFilter}
+                    entries={stitched}
+                    locale={locale}
+                    showPast={activeFilter === "past" || shouldShowPastBoard(stitched)}
+                  />
+                  {filteredEntryCount === 0 ? (
+                    <FilteredMarketsEmpty activeFilter={activeFilter} />
+                  ) : null}
+                </section>
+              </>
+            ) : null}
           </div>
-        </SectionShell>
-
-        <SectionShell
-          eyebrow="Operator writes"
-          title="Market and result administration"
-          description="Governance and reporter actions are exposed as typed SDK calls for authorized wallets. Public ticket placement uses a separate signed-odds path and contract roles still enforce every write."
-        >
-          <SportsbookOperatorPanel
-            sdk={sdk}
-            disabled={readOnly || !ready || !sportsbook.hasSportsRelease}
-            disabledReason={
-              readOnly
-                ? readOnlyReason
-                : sportsbook.hasSportsRelease
-                  ? "Wallet role must be authorized on SportsHub."
-                  : sportsbook.disabledReason
-            }
-            defaultPoolId={sportsPools[0]?.poolId}
-            defaultFinalitySeconds={sports?.resultChallengeTimeoutSeconds}
-            onMutated={refreshSportsbookReads}
-          />
-        </SectionShell>
-
-        <SectionShell
-          eyebrow="Bankroll"
-          title="Sports pool isolation"
-          description="Sports liquidity is kept separate from casino game liquidity, so sportsbook exposure can be capped, paused, and monitored independently."
-        >
-          {sportsPools.length ? (
-            <div className="grid gap-5">
-              {sportsPools.map((pool) => (
-                <PoolPanel key={pool.poolId} pool={pool} />
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-lg border border-warn/25 bg-warn-soft p-4 text-sm leading-6 text-warn">
-              No Sports pool metadata is available in this release.
-            </div>
-          )}
-        </SectionShell>
-
-        <SectionShell
-          eyebrow="Controls"
-          title="Launch blockers remain explicit"
-          description="The page is intentionally operational: it keeps the SportsHub deployment visible while preserving the public-launch blockers tracked in the ops packet."
-        >
-          <div className="grid gap-4 md:grid-cols-3">
-            {CONTROL_LINKS.map((link) => (
-              <Link
-                key={link.detail}
-                href={link.href}
-                className="rounded-lg border border-border bg-surface-2/70 p-4 transition-colors hover:border-brand/30 hover:bg-surface-3"
-              >
-                <div className="text-sm font-semibold text-fg">{link.label}</div>
-                <div className="mt-3 break-all font-mono text-xs leading-5 text-fg-muted">
-                  {link.detail}
-                </div>
-              </Link>
-            ))}
-          </div>
-        </SectionShell>
+        ) : null}
       </div>
     </PageTransition>
+  );
+}
+
+const MARKET_FILTERS: EventBoardFilter[] = ["all", "live", "today", "upcoming", "past"];
+
+function MarketFilterTabs({
+  activeFilter,
+  entries,
+  locale,
+  onChange
+}: {
+  activeFilter: EventBoardFilter;
+  entries: readonly EventBoardEntry[];
+  locale: string;
+  onChange: (filter: EventBoardFilter) => void;
+}) {
+  const t = useTranslations("sportsbook.player.lobby.filters");
+  const now = React.useMemo(() => Date.now(), [entries]);
+  const counts = React.useMemo(() => countBuckets(entries, now, locale), [entries, now, locale]);
+  const activeCount = counts.live + counts.today + counts.upcoming;
+  const allCount = activeCount + counts.past;
+  const countFor = (filter: EventBoardFilter) => (filter === "all" ? allCount : counts[filter]);
+
+  return (
+    <div
+      className="sticky top-20 z-20 flex gap-2 overflow-x-auto rounded-lg border border-border bg-surface-1/95 p-1 backdrop-blur"
+      role="tablist"
+      aria-label={t("ariaLabel")}
+    >
+      {MARKET_FILTERS.map((filter) => {
+        const selected = filter === activeFilter;
+        return (
+          <button
+            key={filter}
+            type="button"
+            role="tab"
+            aria-selected={selected}
+            onClick={() => onChange(filter)}
+            className={`inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-3 text-sm font-semibold transition-colors ${
+              selected
+                ? "bg-brand text-fg-inverse"
+                : "text-fg-muted hover:bg-surface-2 hover:text-fg"
+            }`}
+          >
+            <span>{t(filter)}</span>
+            <span
+              className={`rounded-full px-1.5 py-0.5 font-mono text-[10px] tabular-nums ${
+                selected ? "bg-fg-inverse/15" : "bg-surface-3 text-fg-subtle"
+              }`}
+            >
+              {countFor(filter)}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function FilteredMarketsEmpty({ activeFilter }: { activeFilter: EventBoardFilter }) {
+  const t = useTranslations("sportsbook.player.lobby.filters");
+  return (
+    <p className="rounded-lg border border-border bg-surface-1 px-4 py-5 text-sm leading-6 text-fg-muted">
+      {t(`empty.${activeFilter}`)}
+    </p>
+  );
+}
+
+function SportsbookLobbyPanel({
+  entries,
+  locale
+}: {
+  entries: readonly EventBoardEntry[];
+  locale: string;
+}) {
+  const t = useTranslations("sportsbook.player.lobby");
+  const now = React.useMemo(() => Date.now(), [entries]);
+  const featured = React.useMemo(() => selectFeaturedEntry(entries, now), [entries, now]);
+  const counts = React.useMemo(() => countBuckets(entries, now, locale), [entries, now, locale]);
+
+  if (!featured) return null;
+
+  return (
+    <section className="grid gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(280px,0.8fr)]">
+      <FeaturedMarketCard entry={featured} locale={locale} />
+      <aside className="rounded-lg border border-border bg-surface-1 p-4 md:p-5">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-fg-subtle">
+          {t("snapshotEyebrow")}
+        </div>
+        <h2 className="mt-2 text-xl font-semibold text-fg">{t("snapshotTitle")}</h2>
+        <p className="mt-2 text-sm leading-6 text-fg-muted">{t("snapshotDescription")}</p>
+        <dl className="mt-5 grid grid-cols-2 gap-3">
+          <SnapshotCell label={t("live")} value={counts.live.toString()} />
+          <SnapshotCell label={t("today")} value={counts.today.toString()} />
+          <SnapshotCell label={t("upcoming")} value={counts.upcoming.toString()} />
+          <SnapshotCell label={t("settled")} value={counts.past.toString()} />
+        </dl>
+      </aside>
+    </section>
+  );
+}
+
+function FeaturedMarketCard({ entry, locale }: { entry: EventBoardEntry; locale: string }) {
+  const t = useTranslations("sportsbook.player.lobby");
+  const now = Date.now();
+  const clock = describeMarketWallClock(entry.market, now, locale);
+  const bucket = bucketMarket(clock, now);
+  const canPlaceTicket = entry.market.state === "open" && bucket !== "past";
+  const title = entry.odds
+    ? t("eventTitle", { away: entry.odds.event.awayTeam, home: entry.odds.event.homeTeam })
+    : t("fallbackTitle", { tag: marketShortTag(entry.market.marketKey) });
+  const sortedOutcomes = React.useMemo(() => sortProviderOutcomes(entry.odds), [entry.odds]);
+
+  return (
+    <article className="rounded-lg border border-brand/25 bg-surface-1 p-4 shadow-e2 md:p-5">
+      <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium uppercase tracking-[0.14em] text-fg-subtle">
+        <span className="text-brand">{t("featuredEyebrow")}</span>
+        <span aria-hidden>·</span>
+        <MarketStateBadge state={entry.market.state} clock={clock} size="small" />
+        <span aria-hidden>·</span>
+        <span>{clock.label}</span>
+      </div>
+
+      <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight text-fg md:text-3xl">{title}</h2>
+          <p className="mt-1 text-sm text-fg-muted">{t("kickoff", { time: clock.absolute })}</p>
+        </div>
+        <Link
+          href={entry.href}
+          className="inline-flex h-10 w-fit items-center justify-center rounded-md bg-brand px-4 text-sm font-semibold text-fg-inverse transition-colors hover:bg-brand-hover"
+        >
+          {canPlaceTicket ? t("openMarket") : t("viewMarket")}
+        </Link>
+      </div>
+
+      {sortedOutcomes.length > 0 ? (
+        <div className="mt-5 grid gap-2 sm:grid-cols-3">
+          {sortedOutcomes.map((outcome) => (
+            <Link
+              key={outcome.outcomeId}
+              href={`${entry.href}?outcome=${outcome.outcomeId}`}
+              className="rounded-md border border-border bg-surface-2 px-3 py-3 transition-colors hover:border-brand/50 hover:bg-surface-3"
+            >
+              <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-subtle">
+                {t(`side.${outcome.side}`)}
+              </div>
+              <div className="mt-1 flex items-baseline justify-between gap-3">
+                <span className="min-w-0 truncate text-sm font-semibold text-fg">
+                  {outcome.name}
+                </span>
+                <span className="font-mono text-base tabular-nums text-fg">
+                  {outcome.decimalPrice}
+                </span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-5 rounded-md border border-border-soft bg-surface-2/60 px-3 py-3 text-sm text-fg-muted">
+          {t("oddsPending", { count: entry.market.outcomeCount })}
+        </p>
+      )}
+    </article>
+  );
+}
+
+function SnapshotCell({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border border-border-soft bg-surface-2/60 px-3 py-3">
+      <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-subtle">
+        {label}
+      </dt>
+      <dd className="mt-1 font-mono text-xl font-semibold tabular-nums text-fg">{value}</dd>
+    </div>
+  );
+}
+
+function selectFeaturedEntry(entries: readonly EventBoardEntry[], now: number) {
+  const active = entries.filter(
+    (entry) => bucketMarket(describeMarketWallClock(entry.market, now), now) !== "past"
+  );
+  const open = active.find((entry) => entry.market.state === "open");
+  return open ?? active[0] ?? entries[0];
+}
+
+function shouldShowPastBoard(entries: readonly EventBoardEntry[]) {
+  const now = Date.now();
+  return !entries.some(
+    (entry) => bucketMarket(describeMarketWallClock(entry.market, now), now) !== "past"
+  );
+}
+
+function countBuckets(
+  entries: readonly EventBoardEntry[],
+  now: number,
+  locale: string
+): Record<SportsMarketBucket, number> {
+  return entries.reduce<Record<SportsMarketBucket, number>>(
+    (acc, entry) => {
+      const bucket = bucketMarket(describeMarketWallClock(entry.market, now, locale), now);
+      acc[bucket] += 1;
+      return acc;
+    },
+    { live: 0, today: 0, upcoming: 0, past: 0 }
+  );
+}
+
+function countFilterEntries(
+  entries: readonly EventBoardEntry[],
+  filter: EventBoardFilter,
+  locale: string
+) {
+  const now = Date.now();
+  const buckets = countBuckets(entries, now, locale);
+  if (filter === "all") {
+    const active = buckets.live + buckets.today + buckets.upcoming;
+    return active > 0 ? active : buckets.past;
+  }
+  return buckets[filter];
+}
+
+function sortProviderOutcomes(odds: SportsbookProviderOdds | undefined) {
+  const order = { home: 0, draw: 1, away: 2 };
+  return [...(odds?.outcomes ?? [])].sort((a, b) => order[a.side] - order[b.side]);
+}
+
+function SportsbookHeader({
+  ticketsDisabled,
+  sportsHubMissing,
+  readOnly,
+  readOnlyReason
+}: {
+  ticketsDisabled: boolean;
+  sportsHubMissing: boolean;
+  readOnly?: boolean;
+  readOnlyReason?: string;
+}) {
+  const t = useTranslations("sportsbook.player.header");
+
+  let statusLabel = t("status.ready");
+  let statusTone = "bg-success-soft text-success ring-success/30";
+  if (sportsHubMissing) {
+    statusLabel = t("status.notInRelease");
+    statusTone = "bg-warn-soft text-warn ring-warn/30";
+  } else if (ticketsDisabled) {
+    statusLabel = t("status.previewOnly");
+    statusTone = "bg-warn-soft text-warn ring-warn/30";
+  } else if (readOnly) {
+    statusLabel = t("status.readOnly");
+    statusTone = "bg-warn-soft text-warn ring-warn/30";
+  }
+
+  return (
+    <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <div className="max-w-2xl">
+        <div
+          className={`inline-flex h-6 items-center rounded-full px-2.5 text-[11px] font-semibold uppercase tracking-[0.16em] ring-1 ring-inset ${statusTone}`}
+        >
+          {statusLabel}
+        </div>
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-fg md:text-4xl">
+          {t("title")}
+        </h1>
+        <p className="mt-2 max-w-xl text-sm leading-6 text-fg-muted">
+          {ticketsDisabled ? t("descriptionPreview") : t("description")}
+        </p>
+        {readOnly && readOnlyReason ? (
+          <p className="mt-2 max-w-xl text-xs leading-5 text-fg-subtle">{readOnlyReason}</p>
+        ) : null}
+      </div>
+    </header>
+  );
+}
+
+function BoardSkeleton() {
+  return (
+    <div className="flex flex-col gap-3">
+      {Array.from({ length: 4 }).map((_, idx) => (
+        <div
+          key={idx}
+          className="grid animate-pulse gap-4 rounded-lg border border-border bg-surface-1 p-4 md:grid-cols-[minmax(0,1fr)_360px] md:items-center md:p-5"
+          aria-hidden
+        >
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="h-5 w-16 rounded-full bg-surface-3" />
+              <span className="h-3 w-20 rounded bg-surface-2" />
+              <span className="ml-auto h-3 w-12 rounded bg-surface-2" />
+            </div>
+            <div className="mt-4 h-5 w-3/4 rounded bg-surface-3" />
+            <div className="mt-2 h-3 w-44 rounded bg-surface-2" />
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <span className="h-12 rounded-md bg-surface-2" />
+            <span className="h-12 rounded-md bg-surface-2" />
+            <span className="h-12 rounded-md bg-surface-2" />
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }

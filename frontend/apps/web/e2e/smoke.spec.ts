@@ -44,7 +44,7 @@ test.describe("current route smoke", () => {
     await page.goto("/casino");
 
     await expect(page.getByRole("heading", { name: "Enter the Floor" })).toBeVisible();
-    await expect(page.getByTestId("room-entry-card")).toHaveCount(4);
+    await expect(page.getByTestId("room-entry-card")).toHaveCount(8);
 
     await page.getByLabel("Search games").fill("roulette");
     await expect(page.getByText("European Roulette")).toBeVisible();
@@ -59,7 +59,7 @@ test.describe("current route smoke", () => {
       { path: "/portfolio", text: "Account" },
       { path: "/portfolio/activity", text: "Casino ledger" },
       { path: "/earn", text: "Liquidity" },
-      { path: "/sportsbook", text: "Sportsbook Control Room" },
+      { path: "/sportsbook", text: "Sportsbook" },
       { path: "/ops", text: "Casino keeper" },
       { path: "/legal/privacy", text: "Privacy" }
     ];

@@ -1,14 +1,17 @@
 # 00 · Frontend Charter
 
 | Owner | Frontend Lead |
-| Status | Draft v1 |
-| Last Updated | 2026-05-14 |
-| Depends on | — |
-| Supersedes | — |
+| Status | Active |
+| Last Updated | 2026-05-18 |
+| Depends on | `../strategy/fullstack-product-architecture.md` |
+| Supersedes | Draft Gate A/B/C frontend charter |
 
-The Charter is the **constitutional layer** of the ArbiGameFi frontend. Every
-later decision document inherits from it. When a lower-level decision conflicts
-with the Charter, the Charter wins until the Charter is itself amended (by ADR).
+This charter defines the frontend product bar for ArbiGameFi. It is intentionally
+lighter than the contract constitution: contracts carry protocol-grade assurance;
+the frontend carries product clarity, localization, and launch reliability.
+
+When this document conflicts with `../strategy/fullstack-product-architecture.md`,
+the fullstack strategy wins.
 
 ## 1. Mission
 
@@ -81,19 +84,16 @@ If a feature pulls the UI toward any of these non-goals, it is rejected.
 | Layer 4 (build / governance / AI)                                | Frontend Lead                | Eng manager                  |
 | Per-feature scope (casino / sportsbook / portfolio / earn / ops) | Feature Lead                 | Frontend Lead                |
 
-A single document does not move from `Status: Draft` → `Status: Accepted`
-without sign-off from the listed owner.
+Substantive changes to this charter should be reviewed by the listed owner.
+Small wording fixes can land with the relevant implementation PR.
 
 ## 6. Change Management
 
-1. Propose change via ADR (`docs/design/adr/NNNN-*.md`).
-2. Identify which SSOT documents will need updating.
-3. List every downstream consequence (UI, data, contract surface).
-4. Approve ADR before touching code.
-5. Update SSOT documents in a separate PR that references the ADR.
-
-Emergency exceptions (production-blocking): write a follow-up ADR within 1
-working day documenting what was done and why a normal cycle was skipped.
+1. Use an ADR for decisions that change product direction, runtime boundaries,
+   contract-facing behavior, or launch risk.
+2. Use a normal PR for local frontend implementation details.
+3. Update the closest affected document in the same PR when code and docs drift.
+4. Prefer tests and runtime verification over additional process documents.
 
 ## 7. Non-Negotiables
 
@@ -141,7 +141,6 @@ This document does not specify:
 
 ## 10. Don'ts
 
-- Do not write feature code while this Charter is still `Status: Draft`.
 - Do not propose any decision that conflicts with §3 (Principles) without an
   ADR.
 - Do not add a Non-Goal feature without amending §2.
@@ -151,23 +150,11 @@ This document does not specify:
 ## 11. How To Enforce
 
 ```bash
-# Gate A: Charter must be Accepted before product UI lands
-rg "^\| Status \| Accepted" docs/design/00-charter.md
-
-# CI rule (in 32-ai-pairing.md and 24-testing.md):
-# block any commit touching apps/web/src/app/**/page.tsx
-# unless docs/design/00-charter.md has Status: Accepted
+rg -nE "prototype|visual-system|cyber-|--ag-" frontend/apps/web/src frontend/packages/ui/src
+pnpm -C frontend/apps/web typecheck
+pnpm -C frontend/apps/web test
+pnpm -C frontend/apps/web build
 ```
 
-Build pipeline also requires that no commit modifying `apps/web/src/app/**/page.tsx`
-exists at a point where the Charter is still `Draft`. CI enforcement contract
-in `../frontend/30-build-and-release.md`.
-
-## 12. Sign-off
-
-| Role          | Name      | Date         | Signature  |
-| ------------- | --------- | ------------ | ---------- |
-| Product Lead  | _to fill_ | _yyyy-mm-dd_ | _initials_ |
-| Frontend Lead | _to fill_ | _yyyy-mm-dd_ | _initials_ |
-| Design Lead   | _to fill_ | _yyyy-mm-dd_ | _initials_ |
-| Eng Manager   | _to fill_ | _yyyy-mm-dd_ | _initials_ |
+After `pnpm -C frontend/apps/web build`, restore
+`frontend/apps/web/next-env.d.ts` to `.next-dev` before committing.

@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
 
-import { LEGAL_PAGES } from "../../../../features/legal/content";
 import { LegalPage } from "../../../../features/legal/legal-page";
+import { generateLegalMetadata } from "../../../../features/legal/metadata";
 
-export const metadata: Metadata = {
-  title: "Terms of Service",
-  description: "Terms governing access to the ArbiGameFi frontend and wallet-native interfaces."
-};
+export function generateMetadata(): Promise<Metadata> {
+  return generateLegalMetadata("terms");
+}
 
 export default function TermsPage() {
-  return <LegalPage content={LEGAL_PAGES.terms} />;
+  return <LegalPage slug="terms" />;
 }

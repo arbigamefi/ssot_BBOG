@@ -2,12 +2,12 @@
 
 ## Goal
 
-Deliver a deterministic, stateless Keno module matching `refactored/KenoV2` default configuration (N=40, M=10) under the SSOT architecture, including multi-roll/stopGain/stopLoss semantics and reserve calculation.
+Deliver a deterministic, stateless Keno module under the SSOT architecture, including multi-roll/stopGain/stopLoss semantics and reserve calculation. Current product rules use N=15 and M=5.
 
 ## Acceptance criteria
 
 - `KenoModule` implements `IGameModule`:
-  - `validate` rejects invalid selections (0, all, >10 picks)
+  - `validate` rejects invalid selections (0, all, >5 picks)
   - `maxPayout` returns conservative bound covering `payoutGross + refundAmount`
   - `resolve` supports multi-roll with correct refund and stopGain/stopLoss
 - Unit tests cover:

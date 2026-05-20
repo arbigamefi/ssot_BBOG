@@ -19,6 +19,7 @@ export type KeeperEvent = {
 export type KeeperConfig = {
   chainId: number;
   gameHub: Address;
+  sportsHub?: Address;
   vrfHub: Address;
   httpRpcUrl: string;
   wsRpcUrl?: string;
@@ -29,6 +30,16 @@ export type KeeperConfig = {
   scanChunkBlocks: bigint;
   startBlock?: bigint;
   healthPath?: string;
+  betIndexDatabaseUrl?: string;
+  betIndexSsl: boolean;
+  betIndexWriteEnabled: boolean;
+  sportsTerminalizerEnabled: boolean;
+  sportsTerminalizerScanChunkBlocks: bigint;
+  sportsTerminalizerMarketIds: bigint[];
+  sportsTerminalizerMaxTicketsPerMarket: number;
+  sportsTicketEnumerationMax: number;
+  sportsTicketScanChunkBlocks: bigint;
+  sportsTicketScanStartBlock: bigint;
 };
 
 export type BetRead = {

@@ -1,71 +1,75 @@
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { cn } from "@ssot/ui";
 
 import { formatNativeFee, type CasinoRoundPhase } from "./casino-round";
 
-function getPhaseCopy(phase: CasinoRoundPhase) {
+type Translate = ReturnType<typeof useTranslations>;
+
+function getPhaseCopy(phase: CasinoRoundPhase, t: Translate) {
   switch (phase) {
     case "loading_quote":
       return {
-        label: "Estimating VRF fee",
-        detail: "Reading the current randomness fee before you place a round."
+        status: t("casino.room.roundStatus.phases.loadingQuote.status")
       };
     case "waiting_vrf":
       return {
-        label: "Rolling",
-        detail: "PlaceBet is mined. Waiting for verifiable randomness."
+        status: t("casino.room.roundStatus.phases.waitingVrf.status")
       };
     case "timeout_soft":
       return {
-        label: "VRF is taking longer than usual",
-        detail: "The round is still safe. Keep this page open while Chainlink fulfills the request."
+        status: t("casino.room.roundStatus.phases.timeoutSoft.status")
       };
     case "placing":
       return {
-        label: "Placing bet",
-        detail:
-          "Approve if needed, then sign PlaceBet. The round starts once the transaction is mined."
+        status: t("casino.room.roundStatus.phases.placing.status")
       };
     case "settling":
       return {
-        label: "Settling result",
-        detail: "Randomness is ready. Keeper settlement should complete automatically."
+        status: t("casino.room.roundStatus.phases.settling.status")
       };
     case "manual_settle_offered":
       return {
-        label: "Keeper delay",
-        detail: "Settlement is delayed. You can manually settle this result as a fallback."
+        status: t("casino.room.roundStatus.phases.manualSettleOffered.status")
       };
     case "settled":
       return {
-        label: "Round settled",
-        detail: "Settlement is confirmed on-chain. Indexing proof for the result modal."
+        status: t("casino.room.roundStatus.phases.settled.status")
       };
     case "refundable":
       return {
-        label: "Refund path available",
-        detail: "VRF did not complete before the protocol timeout. You can refund the stake."
+        status: t("casino.room.roundStatus.phases.refundable.status")
       };
     case "failed":
       return {
-        label: "Round monitor failed",
-        detail: "Unable to read the latest round state from the RPC provider."
+        status: t("casino.room.roundStatus.phases.failed.status")
       };
     default:
       return {
-        label: "Ready",
-        detail: "One click will approve if needed, place the bet, and watch settlement."
+        status: t("casino.room.roundStatus.phases.ready.status")
       };
   }
+}
+
+function RoundProofRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="grid min-w-0 grid-cols-[5.5rem_minmax(0,1fr)] items-center gap-3 py-1.5 text-xs">
+      <span className="whitespace-nowrap text-fg-subtle">{label}</span>
+      <span
+        className="block min-w-0 truncate text-right font-mono font-semibold text-fg"
+        title={value}
+      >
+        {value}
+      </span>
+    </div>
+  );
 }
 
 export function CasinoRoundStatusPanel({
   phase,
   quote,
-  quoteError,
   betId,
   requestId,
-  error,
   manualSettleAvailable,
   onManualSettle,
   manualRefundAvailable,
@@ -82,7 +86,8 @@ export function CasinoRoundStatusPanel({
   manualRefundAvailable?: boolean;
   onManualRefund?: () => void;
 }) {
-  const copy = getPhaseCopy(phase);
+  const t = useTranslations();
+  const copy = getPhaseCopy(phase, t);
   const active =
     phase === "waiting_vrf" ||
     phase === "timeout_soft" ||
@@ -94,58 +99,48 @@ export function CasinoRoundStatusPanel({
   return (
     <div
       className={cn(
-        "mb-4 rounded-lg border bg-surface-1 p-4 text-sm shadow-inner-e1",
+        "mb-2 rounded-lg border bg-surface-1 px-3 py-2 text-sm shadow-inner-e1",
         active ? "border-brand/30" : "border-border"
       )}
     >
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-fg-subtle">
-            Round status
-          </p>
-          <p className="mt-1 font-bold text-fg">{copy.label}</p>
-          <p className="mt-1 text-xs leading-5 text-fg-muted">
-            {error ?? quoteError ?? copy.detail}
-          </p>
-        </div>
+      <div className="flex items-center justify-between gap-3 pb-1">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-fg-subtle">
+          {t("casino.room.roundStatus.title")}
+        </p>
         <span
           className={cn(
-            "rounded-full border px-2 py-1 text-[10px] font-black uppercase tracking-[0.16em]",
+            "rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em]",
             active
               ? "border-brand/30 bg-brand-soft text-brand"
               : "border-border bg-surface-2 text-fg-subtle"
           )}
         >
-          {phase.replaceAll("_", " ")}
+          {copy.status}
         </span>
       </div>
 
-      <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
-        <div className="rounded-md border border-border bg-surface-2 p-2">
-          <p className="text-fg-subtle">VRF estimate</p>
-          <p className="mt-1 font-mono font-bold text-fg">{formatNativeFee(quote)}</p>
-        </div>
-        <div className="rounded-md border border-border bg-surface-2 p-2">
-          <p className="text-fg-subtle">Bet ID</p>
-          <p className="mt-1 truncate font-mono font-bold text-fg">
-            {betId == null ? "—" : betId.toString()}
-          </p>
-        </div>
-        <div className="rounded-md border border-border bg-surface-2 p-2">
-          <p className="text-fg-subtle">VRF request</p>
-          <p className="mt-1 truncate font-mono font-bold text-fg">
-            {requestId == null || requestId === 0n ? "—" : requestId.toString()}
-          </p>
-        </div>
+      <div className="divide-y divide-border-soft">
+        <RoundProofRow
+          label={t("casino.room.roundStatus.metrics.vrfEstimate")}
+          value={formatNativeFee(quote)}
+        />
+        <RoundProofRow
+          label={t("casino.room.roundStatus.metrics.betId")}
+          value={betId == null ? "—" : betId.toString()}
+        />
+        <RoundProofRow
+          label={t("casino.room.roundStatus.metrics.vrfRequest")}
+          value={requestId == null || requestId === 0n ? "—" : requestId.toString()}
+        />
       </div>
 
       {manualSettleAvailable && (
         <button
           type="button"
           onClick={onManualSettle}
-          className="mt-4 w-full rounded-lg border border-warn/40 bg-warn-soft px-4 py-3 text-sm font-black uppercase tracking-[0.14em] text-warn transition-colors hover:bg-warn/15"
+          className="mt-2 w-full rounded-lg border border-warn/40 bg-warn-soft px-4 py-2 text-sm font-semibold uppercase tracking-[0.14em] text-warn transition-colors hover:bg-warn/15"
         >
-          Settle result
+          {t("casino.room.roundStatus.actions.settleResult")}
         </button>
       )}
 
@@ -153,9 +148,9 @@ export function CasinoRoundStatusPanel({
         <button
           type="button"
           onClick={onManualRefund}
-          className="mt-4 w-full rounded-lg border border-danger/35 bg-danger-soft px-4 py-3 text-sm font-black uppercase tracking-[0.14em] text-danger transition-colors hover:bg-danger/15"
+          className="mt-2 w-full rounded-lg border border-danger/35 bg-danger-soft px-4 py-2 text-sm font-semibold uppercase tracking-[0.14em] text-danger transition-colors hover:bg-danger/15"
         >
-          Refund stake
+          {t("casino.room.roundStatus.actions.refundStake")}
         </button>
       )}
     </div>

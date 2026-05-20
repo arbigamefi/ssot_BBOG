@@ -1,14 +1,15 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import type { DomainBet } from "@ssot/ssot";
-import type { SSOTSDK } from "@ssot/ssot/sdk";
+import type { Address, SSOTSDK } from "@ssot/ssot/sdk";
 
 import { usePlaceBetStepper } from "../../betting/usePlaceBetStepper";
 import type { GameMeta } from "./model";
 import { executeGamePlaceBetAction } from "./place-bet-action";
 import type { GameRoomRelease } from "./place-bet";
-import type { CoinSide } from "./params";
+import type { BaccaratSide, CoinSide, DiceDirection, PlinkoRisk, SicBoKind } from "./params";
 import { useBetStepperFailureToast, useVrfTimeoutToast } from "./feedback";
 import { useCasinoRoundWatcher, useCasinoVrfQuote, type CasinoRoundPhase } from "./casino-round";
 
@@ -23,9 +24,15 @@ export type UseCasinoRoundArgs = {
   stopGain: number;
   stopLoss: number;
   diceTarget: number;
+  diceDirection: DiceDirection;
   coinSide: CoinSide;
   rouletteSpots: readonly string[];
   kenoSpots: readonly number[];
+  plinkoRisk: PlinkoRisk;
+  baccaratSide: BaccaratSide;
+  sicBoKind: SicBoKind;
+  sicBoValue: number;
+  affiliate?: Address;
   onRoundStart: () => void;
   onRoundTerminal: (bet: DomainBet) => void;
   onRoundReset: () => void;
@@ -42,21 +49,41 @@ export function useCasinoRound({
   stopGain,
   stopLoss,
   diceTarget,
+  diceDirection,
   coinSide,
   rouletteSpots,
   kenoSpots,
+  plinkoRisk,
+  baccaratSide,
+  sicBoKind,
+  sicBoValue,
+  affiliate,
   onRoundStart,
   onRoundTerminal,
   onRoundReset
 }: UseCasinoRoundArgs) {
-  const { planNow, executeNow, state, reset } = usePlaceBetStepper();
-  const vrfQuote = useCasinoVrfQuote({ sdk, betCount });
+  const t = useTranslations();
+  const { planNow, executeNow, state, reset } = usePlaceBetStepper({
+    sdkNotReady: t("casino.room.errors.sdkNotReady"),
+    transactionFailed: t("casino.room.errors.transactionFailedShort"),
+    reconcileFailed: t("casino.room.errors.reconcileFailed"),
+    bindFailed: t("casino.room.errors.bindFailed")
+  });
+  const vrfQuote = useCasinoVrfQuote({
+    sdk,
+    betCount,
+    quoteErrorMessage: t("casino.room.errors.quoteFailed")
+  });
   const roundWatcher = useCasinoRoundWatcher({
     sdk,
     betId: state.betId,
     active: state.status === "reconciled",
     refundTimeoutSeconds: release?.refundTimeoutSeconds,
-    onTerminal: onRoundTerminal
+    onTerminal: onRoundTerminal,
+    readErrorMessage: t("casino.room.errors.readRoundFailed"),
+    betNotFoundErrorMessage: t("casino.room.errors.roundNotFound"),
+    manualSettleErrorMessage: t("casino.room.errors.manualSettleFailed"),
+    refundErrorMessage: t("casino.room.errors.refundFailed")
   });
 
   const roundPhase = React.useMemo<CasinoRoundPhase>(() => {
@@ -66,14 +93,16 @@ export function useCasinoRound({
     return vrfQuote.phase === "loading_quote" ? "loading_quote" : "ready";
   }, [roundWatcher.phase, state.status, vrfQuote.phase]);
 
-  const isRoundAnimating =
-    state.status === "planning" ||
-    state.status === "submitting" ||
-    state.status === "mined" ||
-    roundWatcher.isLive;
+  const isTransactionActive =
+    state.status === "planning" || state.status === "submitting" || state.status === "mined";
+  const isRoundAnimating = roundWatcher.isLive;
 
-  useBetStepperFailureToast({ status: state.status, error: state.error });
-  useVrfTimeoutToast(roundPhase === "timeout_soft");
+  useBetStepperFailureToast({
+    status: state.status,
+    error: state.error,
+    fallbackMessage: t("casino.room.errors.transactionFailed")
+  });
+  useVrfTimeoutToast(roundPhase === "timeout_soft", t("casino.room.warnings.vrfTimeout"));
 
   const placeBet = React.useCallback(() => {
     onRoundStart();
@@ -96,21 +125,40 @@ export function useCasinoRound({
       stopGain,
       stopLoss,
       diceTarget,
+      diceDirection,
       coinSide,
       rouletteSpots,
-      kenoSpots
+      kenoSpots,
+      plinkoRisk,
+      baccaratSide,
+      sicBoKind,
+      sicBoValue,
+      affiliate,
+      messages: {
+        rouletteSelectionRequired: t("casino.room.errors.rouletteSelectionRequired"),
+        kenoSelectionRequired: t("casino.room.errors.kenoSelectionRequired"),
+        kenoSelectionInvalid: t("casino.room.errors.kenoSelectionInvalid"),
+        noActiveCasinoPool: t("casino.room.errors.noActiveCasinoPool"),
+        unexpectedError: t("casino.room.errors.unexpected")
+      }
     });
   }, [
     betAmount,
     betCount,
     coinSide,
+    diceDirection,
     diceTarget,
     executeNow,
+    affiliate,
+    baccaratSide,
     game,
     kenoSpots,
     onRoundReset,
     onRoundStart,
     openConnectModal,
+    plinkoRisk,
+    sicBoKind,
+    sicBoValue,
     planNow,
     release,
     reset,
@@ -119,6 +167,7 @@ export function useCasinoRound({
     state,
     stopGain,
     stopLoss,
+    t,
     winChance
   ]);
 
@@ -127,10 +176,12 @@ export function useCasinoRound({
     reset,
     placeBet,
     roundPhase,
+    isTransactionActive,
     isRoundAnimating,
     vrfQuote: vrfQuote.quote,
     vrfQuoteError: vrfQuote.quoteError,
     activeBetId: state.betId,
+    activeBet: roundWatcher.bet,
     activeRequestId: roundWatcher.bet?.requestId,
     roundError: roundWatcher.error,
     manualSettleAvailable: roundWatcher.manualSettleAvailable,

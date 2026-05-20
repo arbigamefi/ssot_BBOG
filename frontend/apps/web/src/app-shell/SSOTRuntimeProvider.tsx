@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import {
   createDexieJournalSink,
   getSSOTDb,
@@ -17,9 +18,11 @@ import {
 } from "../ssot/runtime/indexerWorkerClient";
 
 export function SSOTRuntimeProvider({ children }: { children: React.ReactNode }) {
-  const chainId = useChainId();
+  const t = useTranslations("app");
+  const connectedChainId = useChainId();
   const wagmiConfig = useConfig();
   const rel = useRelease();
+  const releaseChainId = rel.release?.chainId ?? rel.chainId ?? connectedChainId;
 
   const db: SSOTDb | undefined = React.useMemo(() => {
     if (!rel.release) return undefined;
@@ -42,9 +45,9 @@ export function SSOTRuntimeProvider({ children }: { children: React.ReactNode })
   );
 
   const rpcUrl = React.useMemo(() => {
-    const chain = wagmiConfig.chains.find((c) => c.id === chainId);
+    const chain = wagmiConfig.chains.find((c) => c.id === releaseChainId);
     return chain?.rpcUrls?.default?.http?.[0] ?? chain?.rpcUrls?.public?.http?.[0];
-  }, [wagmiConfig.chains, chainId]);
+  }, [wagmiConfig.chains, releaseChainId]);
 
   const refreshIndexerStatus = React.useCallback(() => {
     workerRef.current?.refreshStatus();
@@ -68,26 +71,38 @@ export function SSOTRuntimeProvider({ children }: { children: React.ReactNode })
       workerRef.current = null;
     }
 
-    const client = new GameHubIndexerWorkerClient({
-      init: {
+    let client: GameHubIndexerWorkerClient;
+    try {
+      client = new GameHubIndexerWorkerClient({
+        init: {
+          chainId: rel.release.chainId,
+          config: indexerConfig,
+          dbName: `ssot_frontend_v2_${rel.release.chainId}`,
+          release: rel.release,
+          rpcUrl
+        },
+        onError: (e) =>
+          setIndexerStatus((prev) => ({
+            ...(prev ?? {
+              chainId: rel.release!.chainId,
+              config: indexerConfig,
+              gameHub: rel.release!.contracts.gameHub as any,
+              running: false
+            }),
+            lastError: e.message
+          })),
+        onStatus: (s) => setIndexerStatus(s)
+      });
+    } catch (error) {
+      setIndexerStatus({
         chainId: rel.release.chainId,
         config: indexerConfig,
-        dbName: `ssot_frontend_v2_${rel.release.chainId}`,
-        release: rel.release,
-        rpcUrl
-      },
-      onError: (e) =>
-        setIndexerStatus((prev) => ({
-          ...(prev ?? {
-            chainId: rel.release!.chainId,
-            config: indexerConfig,
-            gameHub: rel.release!.contracts.gameHub as any,
-            running: false
-          }),
-          lastError: e.message
-        })),
-      onStatus: (s) => setIndexerStatus(s)
-    });
+        gameHub: rel.release.contracts.gameHub as any,
+        lastError: (error as Error)?.message ?? t("indexerWorkerFailed"),
+        running: false
+      });
+      return;
+    }
 
     workerRef.current = client;
     client.start();
@@ -96,7 +111,7 @@ export function SSOTRuntimeProvider({ children }: { children: React.ReactNode })
       client.terminate();
       if (workerRef.current === client) workerRef.current = null;
     };
-  }, [rel.release, rel.readOnly, db, rpcUrl, indexerConfig]);
+  }, [rel.release, rel.readOnly, db, rpcUrl, indexerConfig, t]);
 
   const value = React.useMemo(
     () => ({ db, indexer: undefined, indexerStatus, journal, refreshIndexerStatus, syncNow }),

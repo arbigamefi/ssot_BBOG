@@ -1,9 +1,10 @@
 import type { PlaceBetInput, PlaceBetPlan } from "@ssot/ssot";
+import type { Address } from "@ssot/ssot/sdk";
 import { toast } from "@ssot/ui";
 
 import type { GameMeta } from "./model";
 import { buildGamePlaceBetInput, type GameRoomRelease } from "./place-bet";
-import type { CoinSide } from "./params";
+import type { BaccaratSide, CoinSide, PlinkoRisk, SicBoKind } from "./params";
 
 export type GamePlaceBetStepperState = {
   status: string;
@@ -34,9 +35,16 @@ export async function executeGamePlaceBetAction({
   stopGain,
   stopLoss,
   diceTarget,
+  diceDirection,
   coinSide,
   rouletteSpots,
-  kenoSpots
+  kenoSpots,
+  plinkoRisk,
+  baccaratSide,
+  sicBoKind,
+  sicBoValue,
+  affiliate,
+  messages
 }: {
   account: string | undefined;
   openConnectModal: (() => void) | undefined;
@@ -53,9 +61,22 @@ export async function executeGamePlaceBetAction({
   stopGain: number;
   stopLoss: number;
   diceTarget: number;
+  diceDirection: "under" | "over";
   coinSide: CoinSide;
   rouletteSpots: readonly string[];
   kenoSpots: readonly number[];
+  plinkoRisk: PlinkoRisk;
+  baccaratSide?: BaccaratSide;
+  sicBoKind?: SicBoKind;
+  sicBoValue?: number;
+  affiliate?: Address;
+  messages?: {
+    rouletteSelectionRequired?: string;
+    kenoSelectionRequired?: string;
+    kenoSelectionInvalid?: string;
+    noActiveCasinoPool?: string;
+    unexpectedError?: string;
+  };
 }) {
   if (!account) {
     openConnectModal?.();
@@ -84,9 +105,16 @@ export async function executeGamePlaceBetAction({
       stopGain,
       stopLoss,
       diceTarget,
+      diceDirection,
       coinSide,
       rouletteSpots,
-      kenoSpots
+      kenoSpots,
+      plinkoRisk,
+      baccaratSide,
+      sicBoKind,
+      sicBoValue,
+      affiliate,
+      messages
     });
     if (!placeBet.ok) {
       toast.error(placeBet.message);
@@ -98,7 +126,7 @@ export async function executeGamePlaceBetAction({
       await executeNow(plan);
     }
   } catch (error) {
-    toast.error((error as Error)?.message ?? "An unexpected error occurred.");
+    toast.error(messages?.unexpectedError ?? "—");
     console.error(error);
   }
 }

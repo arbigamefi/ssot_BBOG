@@ -22,7 +22,8 @@ function mk(
       betId: 123n,
       gameId: "0x" + "11".repeat(32),
       asset: "0x0000000000000000000000000000000000000002",
-      player: "0x0000000000000000000000000000000000000003"
+      player: "0x0000000000000000000000000000000000000003",
+      pricingAffiliate: "0x0000000000000000000000000000000000000004"
     }
   };
 }
@@ -50,11 +51,12 @@ describe("indexer reducer", () => {
   });
 
   // ——— BetPlaced enrichment ———
-  it("enriches row with gameId, asset, player on BetPlaced", () => {
+  it("enriches row with gameId, asset, player, and affiliate on BetPlaced", () => {
     const bet = applyGameHubEventToBet(undefined, mk("BetPlaced", 10, TX1));
     expect(bet.gameId).toBe("0x" + "11".repeat(32));
     expect(bet.asset).toBe("0x0000000000000000000000000000000000000002");
     expect(bet.player).toBe("0x0000000000000000000000000000000000000003");
+    expect(bet.pricingAffiliate).toBe("0x0000000000000000000000000000000000000004");
     expect(bet.placedBlock).toBe(10);
   });
 
@@ -84,6 +86,31 @@ describe("indexer reducer", () => {
     bet = applyGameHubEventToBet(bet, mk("BetRandomReady", 11, TX2));
     expect(bet.lastTxHash).toBe(TX2);
     expect(bet.lastEventName).toBe("BetRandomReady");
+  });
+
+  it("stores terminal economics for product-facing rows", () => {
+    let bet = applyGameHubEventToBet(undefined, {
+      ...mk("BetPlaced", 10, TX1),
+      args: { ...mk("BetPlaced", 10, TX1).args, requestId: 99n, stake: 100n }
+    });
+    bet = applyGameHubEventToBet(bet, {
+      ...mk("BetRandomReady", 11, TX2),
+      args: { betId: 123n, requestId: 99n, randomHash: "0x" + "55".repeat(32) }
+    });
+    bet = applyGameHubEventToBet(bet, {
+      ...mk("BetFinalized", 12, TX3),
+      args: { betId: 123n, payoutGross: 200n, payoutNet: 196n }
+    });
+
+    expect(bet).toMatchObject({
+      finalizedTxHash: TX3,
+      payout: "196",
+      payoutGross: "200",
+      randomHash: "0x" + "55".repeat(32),
+      requestId: "99",
+      stake: "100",
+      terminalTxHash: TX3
+    });
   });
 
   // ——— Refund from placed (skip finalized) ———

@@ -75,7 +75,7 @@ KEEPER_RELEASE_PATH=/Users/kevin/arbigamefi_ssot_project_all/frontend/packages/s
 KEEPER_START_BLOCK=41589704 \
 KEEPER_POLL_INTERVAL_SECONDS=5 \
 KEEPER_SCAN_CHUNK_BLOCKS=10 \
-KEEPER_HEALTH_PATH=frontend/apps/web/public/ops/casino-keeper-health.json \
+KEEPER_HEALTH_PATH=frontend/.runtime/casino-keeper-health.json \
 pnpm -C frontend keeper:start
 ```
 

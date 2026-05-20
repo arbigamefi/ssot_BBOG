@@ -1,0 +1,792 @@
+{
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "gov_",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "maxStake_",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "maxPayout_",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "maxMarketReserved_",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "maxOutcomeReserved_",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "maxEventReserved_",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "acceptGovernance",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "components": [
+                {
+                  "internalType": "uint64",
+                  "name": "marketId",
+                  "type": "uint64"
+                },
+                {
+                  "internalType": "uint64",
+                  "name": "eventId",
+                  "type": "uint64"
+                },
+                {
+                  "internalType": "uint64",
+                  "name": "poolId",
+                  "type": "uint64"
+                },
+                {
+                  "internalType": "uint32",
+                  "name": "outcomeCount",
+                  "type": "uint32"
+                },
+                {
+                  "internalType": "uint64",
+                  "name": "startsAt",
+                  "type": "uint64"
+                },
+                {
+                  "internalType": "uint64",
+                  "name": "lockTime",
+                  "type": "uint64"
+                },
+                {
+                  "internalType": "uint64",
+                  "name": "resultFinalitySeconds",
+                  "type": "uint64"
+                },
+                {
+                  "internalType": "uint64",
+                  "name": "version",
+                  "type": "uint64"
+                },
+                {
+                  "internalType": "bytes32",
+                  "name": "marketKey",
+                  "type": "bytes32"
+                },
+                {
+                  "internalType": "bytes32",
+                  "name": "rulebookHash",
+                  "type": "bytes32"
+                },
+                {
+                  "internalType": "enum SSOTTypes.SportsMarketState",
+                  "name": "state",
+                  "type": "uint8"
+                }
+              ],
+              "internalType": "struct SSOTTypes.SportsMarket",
+              "name": "market",
+              "type": "tuple"
+            },
+            {
+              "components": [
+                {
+                  "internalType": "uint64",
+                  "name": "marketId",
+                  "type": "uint64"
+                },
+                {
+                  "internalType": "uint32",
+                  "name": "outcomeId",
+                  "type": "uint32"
+                },
+                {
+                  "internalType": "uint64",
+                  "name": "marketVersion",
+                  "type": "uint64"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "oddsWad",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "maxStake",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "maxPayout",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint64",
+                  "name": "expiresAt",
+                  "type": "uint64"
+                },
+                {
+                  "internalType": "uint64",
+                  "name": "nonce",
+                  "type": "uint64"
+                },
+                {
+                  "internalType": "bytes32",
+                  "name": "riskHash",
+                  "type": "bytes32"
+                }
+              ],
+              "internalType": "struct SSOTTypes.SportsOddsSnapshot",
+              "name": "odds",
+              "type": "tuple"
+            },
+            {
+              "internalType": "uint256",
+              "name": "stake",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "marketReserved",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "outcomeReserved",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "eventReserved",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct ISportsRiskEngine.RiskInput",
+          "name": "input",
+          "type": "tuple"
+        }
+      ],
+      "name": "checkTicket",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "payout",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "reserved",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "riskHash",
+              "type": "bytes32"
+            }
+          ],
+          "internalType": "struct ISportsRiskEngine.RiskDecision",
+          "name": "decision",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "currentRiskHash",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint64",
+          "name": "poolId",
+          "type": "uint64"
+        }
+      ],
+      "name": "currentRiskHashForPool",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "governance",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint64",
+          "name": "poolId",
+          "type": "uint64"
+        }
+      ],
+      "name": "hasPoolLimits",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "limits",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "maxStake",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "maxPayout",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "maxMarketReserved",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "maxOutcomeReserved",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "maxEventReserved",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct SportsRiskEngine.RiskLimits",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint64",
+          "name": "poolId",
+          "type": "uint64"
+        }
+      ],
+      "name": "limitsForPool",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "maxStake",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "maxPayout",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "maxMarketReserved",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "maxOutcomeReserved",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "maxEventReserved",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct SportsRiskEngine.RiskLimits",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "pendingGovernance",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "maxStake_",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "maxPayout_",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "maxMarketReserved_",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "maxOutcomeReserved_",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "maxEventReserved_",
+          "type": "uint256"
+        }
+      ],
+      "name": "setLimits",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint64",
+          "name": "poolId",
+          "type": "uint64"
+        },
+        {
+          "internalType": "uint256",
+          "name": "maxStake_",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "maxPayout_",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "maxMarketReserved_",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "maxOutcomeReserved_",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "maxEventReserved_",
+          "type": "uint256"
+        }
+      ],
+      "name": "setPoolLimits",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "newGov",
+          "type": "address"
+        }
+      ],
+      "name": "transferGovernance",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "oldGov",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newGov",
+          "type": "address"
+        }
+      ],
+      "name": "GovernanceTransferStarted",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "oldGov",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newGov",
+          "type": "address"
+        }
+      ],
+      "name": "GovernanceTransferred",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "uint64",
+          "name": "poolId",
+          "type": "uint64"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "maxStake",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "maxPayout",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "maxMarketReserved",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "maxOutcomeReserved",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "maxEventReserved",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "riskHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "PoolRiskLimitsSet",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "maxStake",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "maxPayout",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "maxMarketReserved",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "maxOutcomeReserved",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "maxEventReserved",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "bytes32",
+          "name": "riskHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "RiskLimitsSet",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint64",
+          "name": "marketId",
+          "type": "uint64"
+        },
+        {
+          "internalType": "uint32",
+          "name": "outcomeId",
+          "type": "uint32"
+        }
+      ],
+      "name": "BadOddsSnapshot",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint64",
+          "name": "eventId",
+          "type": "uint64"
+        },
+        {
+          "internalType": "uint256",
+          "name": "nextReserved",
+          "type": "uint256"
+        }
+      ],
+      "name": "EventExposureExceeded",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidConfig",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint64",
+          "name": "marketId",
+          "type": "uint64"
+        },
+        {
+          "internalType": "uint256",
+          "name": "nextReserved",
+          "type": "uint256"
+        }
+      ],
+      "name": "MarketExposureExceeded",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint64",
+          "name": "marketId",
+          "type": "uint64"
+        },
+        {
+          "internalType": "uint256",
+          "name": "nowTs",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "lockTime",
+          "type": "uint256"
+        }
+      ],
+      "name": "MarketLocked",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint64",
+          "name": "marketId",
+          "type": "uint64"
+        },
+        {
+          "internalType": "enum SSOTTypes.SportsMarketState",
+          "name": "state",
+          "type": "uint8"
+        }
+      ],
+      "name": "MarketNotOpen",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint64",
+          "name": "marketId",
+          "type": "uint64"
+        }
+      ],
+      "name": "MarketSuspended",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint64",
+          "name": "marketId",
+          "type": "uint64"
+        },
+        {
+          "internalType": "uint64",
+          "name": "expiresAt",
+          "type": "uint64"
+        },
+        {
+          "internalType": "uint256",
+          "name": "nowTs",
+          "type": "uint256"
+        }
+      ],
+      "name": "OddsExpired",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint64",
+          "name": "marketId",
+          "type": "uint64"
+        },
+        {
+          "internalType": "uint32",
+          "name": "outcomeId",
+          "type": "uint32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "nextReserved",
+          "type": "uint256"
+        }
+      ],
+      "name": "OutcomeExposureExceeded",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint64",
+          "name": "marketId",
+          "type": "uint64"
+        },
+        {
+          "internalType": "uint256",
+          "name": "payout",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "maxPayout",
+          "type": "uint256"
+        }
+      ],
+      "name": "PayoutTooLarge",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint64",
+          "name": "marketId",
+          "type": "uint64"
+        },
+        {
+          "internalType": "uint256",
+          "name": "stake",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "maxStake",
+          "type": "uint256"
+        }
+      ],
+      "name": "StakeTooLarge",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "Unauthorized",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "ZeroAddress",
+      "type": "error"
+    }
+  ],
+  "contract": "SportsRiskEngine"
+}

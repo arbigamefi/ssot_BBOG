@@ -1,5 +1,3 @@
-import { getGamePresentation } from "./presentation";
-import { getPrimaryGameHref } from "./routes";
 import {
   CASINO_MODULES,
   compareCasinoModules,
@@ -12,7 +10,6 @@ export type CatalogRoom = {
   label: string;
   href: string;
   badge: string;
-  icon: string;
   summary: string;
   facts: string[];
 };
@@ -45,15 +42,13 @@ export function getCatalogRooms(rawGamesMeta?: Array<ReleaseGameMetaLike | null 
 
   return ordered.map<CatalogRoom>((game) => {
     const module = getCasinoModule(game.slug);
-    const presentation = getGamePresentation(game.slug, game.label);
     return {
       slug: game.slug,
       label: game.label,
-      href: getPrimaryGameHref(game.slug),
-      badge: module?.roomLabel ?? presentation.roomLabel,
-      icon: presentation.icon,
-      summary: presentation.listDescription,
-      facts: presentation.cardFacts
+      href: module?.canonicalHref ?? `/casino/${game.slug}`,
+      badge: module?.roomLabel ?? game.label,
+      summary: "",
+      facts: []
     };
   });
 }

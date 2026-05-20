@@ -212,6 +212,7 @@ function checkForbiddenWeb3Imports() {
     extensions: /\.(ts|tsx)$/,
     exclude: (file) =>
       formatPath(file).startsWith("apps/web/src/app-shell/") ||
+      formatPath(file).startsWith("apps/web/src/server/") ||
       formatPath(file).startsWith("apps/web/src/workers/"),
     roots: [resolve(root, "apps/web/src")],
     pattern,

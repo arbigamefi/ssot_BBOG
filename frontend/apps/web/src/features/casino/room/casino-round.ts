@@ -8,6 +8,7 @@ import { formatUnits } from "../../betting/model/units";
 
 export const CASINO_ROUND_MANUAL_SETTLE_DELAY_MS = 30_000;
 export const CASINO_ROUND_SOFT_VRF_TIMEOUT_MS = 60_000;
+export const CASINO_ROUND_READ_RETRY_GRACE_MS = 15_000;
 
 export type CasinoRoundPhase =
   | "idle"
@@ -85,12 +86,45 @@ function toUnixMs(value: number | undefined) {
   return value > 1_000_000_000_000 ? value : value * 1_000;
 }
 
+export function isBetNotFoundError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return /\bBetNotFound\b/.test(message);
+}
+
+export function getCasinoRoundReadErrorMessage({
+  error,
+  fallback,
+  betNotFoundFallback
+}: {
+  error: unknown;
+  fallback: string;
+  betNotFoundFallback?: string;
+}) {
+  return isBetNotFoundError(error) ? (betNotFoundFallback ?? fallback) : fallback;
+}
+
+export function shouldDeferCasinoRoundReadError({
+  error,
+  startedAt,
+  now,
+  graceMs = CASINO_ROUND_READ_RETRY_GRACE_MS
+}: {
+  error: unknown;
+  startedAt: number;
+  now: number;
+  graceMs?: number;
+}) {
+  return isBetNotFoundError(error) && now - startedAt < graceMs;
+}
+
 export function useCasinoVrfQuote({
   sdk,
-  betCount
+  betCount,
+  quoteErrorMessage = "—"
 }: {
   sdk: SSOTSDK | undefined;
   betCount: number;
+  quoteErrorMessage?: string;
 }) {
   const [snapshot, setSnapshot] = React.useState<CasinoRoundSnapshot>({ phase: "idle" });
 
@@ -110,11 +144,11 @@ export function useCasinoVrfQuote({
       .then((quote) => {
         if (!cancelled) setSnapshot({ phase: "ready", quote });
       })
-      .catch((error) => {
+      .catch(() => {
         if (!cancelled) {
           setSnapshot({
             phase: "ready",
-            quoteError: (error as Error)?.message ?? "Unable to estimate VRF fee."
+            quoteError: quoteErrorMessage
           });
         }
       });
@@ -122,7 +156,7 @@ export function useCasinoVrfQuote({
     return () => {
       cancelled = true;
     };
-  }, [sdk, betCount]);
+  }, [sdk, betCount, quoteErrorMessage]);
 
   return snapshot;
 }
@@ -135,7 +169,11 @@ export function useCasinoRoundWatcher({
   refundTimeoutSeconds,
   pollIntervalMs = 2_000,
   softVrfTimeoutMs = CASINO_ROUND_SOFT_VRF_TIMEOUT_MS,
-  manualSettleDelayMs = CASINO_ROUND_MANUAL_SETTLE_DELAY_MS
+  manualSettleDelayMs = CASINO_ROUND_MANUAL_SETTLE_DELAY_MS,
+  readErrorMessage = "—",
+  betNotFoundErrorMessage,
+  manualSettleErrorMessage = "—",
+  refundErrorMessage = "—"
 }: {
   sdk: SSOTSDK | undefined;
   betId: bigint | undefined;
@@ -145,6 +183,10 @@ export function useCasinoRoundWatcher({
   pollIntervalMs?: number;
   softVrfTimeoutMs?: number;
   manualSettleDelayMs?: number;
+  readErrorMessage?: string;
+  betNotFoundErrorMessage?: string;
+  manualSettleErrorMessage?: string;
+  refundErrorMessage?: string;
 }) {
   const [snapshot, setSnapshot] = React.useState<CasinoRoundSnapshot>({ phase: "idle" });
   const terminalBetIdRef = React.useRef<bigint | undefined>();
@@ -156,6 +198,7 @@ export function useCasinoRoundWatcher({
     }
 
     let cancelled = false;
+    const startedAt = Date.now();
 
     const poll = async () => {
       try {
@@ -193,11 +236,27 @@ export function useCasinoRoundWatcher({
         }
       } catch (error) {
         if (!cancelled) {
-          setSnapshot((current) => ({
-            ...current,
-            phase: "failed",
-            error: (error as Error)?.message ?? "Unable to read the live round state."
-          }));
+          const now = Date.now();
+          const deferReadError = shouldDeferCasinoRoundReadError({ error, startedAt, now });
+          setSnapshot((current) => {
+            const keepCurrentRound = Boolean(current.bet) || deferReadError;
+            const phase = keepCurrentRound
+              ? current.phase === "idle" || current.phase === "failed"
+                ? "waiting_vrf"
+                : current.phase
+              : "failed";
+            return {
+              ...current,
+              phase,
+              error: keepCurrentRound
+                ? undefined
+                : getCasinoRoundReadErrorMessage({
+                    error,
+                    fallback: readErrorMessage,
+                    betNotFoundFallback: betNotFoundErrorMessage
+                  })
+            };
+          });
         }
       }
     };
@@ -214,6 +273,8 @@ export function useCasinoRoundWatcher({
     betId,
     onTerminal,
     pollIntervalMs,
+    betNotFoundErrorMessage,
+    readErrorMessage,
     refundTimeoutSeconds,
     softVrfTimeoutMs,
     manualSettleDelayMs
@@ -227,11 +288,9 @@ export function useCasinoRoundWatcher({
       ...current,
       settleTx: manualSettleTx,
       phase: manualSettleTx.ok ? "settling" : "manual_settle_offered",
-      error: manualSettleTx.ok
-        ? undefined
-        : (manualSettleTx.error?.message ?? "Manual settlement failed.")
+      error: manualSettleTx.ok ? undefined : manualSettleErrorMessage
     }));
-  }, [sdk, betId]);
+  }, [sdk, betId, manualSettleErrorMessage]);
 
   const manualRefund = React.useCallback(async () => {
     if (!sdk || betId === undefined) return;
@@ -241,9 +300,9 @@ export function useCasinoRoundWatcher({
       ...current,
       refundTx,
       phase: "refundable",
-      error: refundTx.ok ? undefined : (refundTx.error?.message ?? "Refund failed.")
+      error: refundTx.ok ? undefined : refundErrorMessage
     }));
-  }, [sdk, betId]);
+  }, [sdk, betId, refundErrorMessage]);
 
   return {
     ...snapshot,

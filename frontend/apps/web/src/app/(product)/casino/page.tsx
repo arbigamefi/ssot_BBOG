@@ -1,15 +1,19 @@
+import type { Metadata } from "next";
 import dynamic from "next/dynamic";
+
+import { generatePageMetadata } from "../../../i18n/metadata";
+import { LoadingGames } from "./LoadingGames";
 
 const GamesListClient = dynamic(
   () => import("./pageClient").then((m) => ({ default: m.GamesListClient })),
   {
-    loading: () => (
-      <div className="flex min-h-[40vh] items-center justify-center">
-        <p className="text-sm text-muted-foreground">Loading games...</p>
-      </div>
-    )
+    loading: () => <LoadingGames />
   }
 );
+
+export function generateMetadata(): Promise<Metadata> {
+  return generatePageMetadata("casino");
+}
 
 export default function GamesPage() {
   return <GamesListClient />;

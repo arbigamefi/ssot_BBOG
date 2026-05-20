@@ -21,6 +21,35 @@ const state = {
   sdkAccount: null as string | null
 };
 
+vi.mock("next-intl", async () => {
+  const messages = (await import("../../../../../i18n/locales/en/common.json")).default as Record<
+    string,
+    unknown
+  >;
+
+  function resolveMessage(key: string) {
+    return key.split(".").reduce<unknown>((current, part) => {
+      if (current && typeof current === "object" && part in current) {
+        return (current as Record<string, unknown>)[part];
+      }
+      return undefined;
+    }, messages);
+  }
+
+  function translate(key: string, values?: Record<string, string | number>) {
+    const message = resolveMessage(key);
+    if (typeof message !== "string") return key;
+    return Object.entries(values ?? {}).reduce(
+      (text, [name, value]) => text.replaceAll(`{${name}}`, String(value)),
+      message
+    );
+  }
+
+  return {
+    useTranslations: () => translate
+  };
+});
+
 function createDb() {
   return {
     bets: {
@@ -147,6 +176,9 @@ function seedBet(overrides: Record<string, unknown> = {}) {
     reserved: 1_980_000n,
     amountPerRoll: 1_000_000n,
     betCount: 1,
+    stopGain: 0n,
+    stopLoss: 0n,
+    effectiveHouseEdgeBps: 200,
     vrfFeePaid: 10_000n,
     vrfFeeCharged: 0n,
     vrfCallbackGasLimit: 220_000,

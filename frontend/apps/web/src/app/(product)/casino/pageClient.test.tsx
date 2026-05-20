@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import * as React from "react";
 
 // ——— Shared mock state via object ref ———
@@ -34,6 +34,63 @@ vi.mock("@ssot/ui", () => ({
   cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" ")
 }));
 
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string, values?: Record<string, string>) =>
+    ({
+      "nav.games": "Games",
+      "casino.directory.empty.noRelease": "No embedded release available for the connected chain.",
+      "casino.directory.empty.noGames": "No games registered in the active release.",
+      "casino.directory.hero.eyebrow": "Global Casino Lobby",
+      "casino.directory.hero.title": "Enter the Floor",
+      "casino.directory.hero.description":
+        "All modules are 100% on-chain, verifiable, and connected directly to the isolated reserve bank. Play directly from your wallet.",
+      "casino.directory.empty.noResults": "No matching rooms",
+      "casino.directory.empty.noResultsDetail": `No casino room matches "${values?.query ?? "{query}"}". Clear the search or choose another category.`,
+      "casino.directory.empty.clearSearch": "Clear search",
+      "casino.directory.stats.rooms": "On-chain rooms",
+      "casino.directory.stats.asset": "Bank asset",
+      "casino.directory.filters.all": "All Modules",
+      "casino.directory.filters.table": "Table Games",
+      "casino.directory.filters.binary": "Binary / Fast",
+      "casino.directory.filters.lottery": "Lottery",
+      "casino.directory.filters.arcade": "Arcade",
+      "casino.directory.search.placeholder": "Search games...",
+      "casino.directory.search.aria": "Search games",
+      "casino.directory.tags.binary": "Binary",
+      "casino.directory.tags.table": "Table",
+      "casino.directory.tags.lottery": "Lottery",
+      "casino.directory.tags.arcade": "Arcade",
+      "casino.directory.tags.module": "Module",
+      "casino.directory.rooms.dice.title": "Precision Dice",
+      "casino.directory.rooms.dice.promise": "1-99 sizing in seconds.",
+      "casino.directory.rooms.dice.badge": "1% House Edge",
+      "casino.directory.rooms.roulette.title": "European Roulette",
+      "casino.directory.rooms.roulette.promise": "Classic 37-slot physical mechanics.",
+      "casino.directory.rooms.roulette.badge": "Max Payout 36x",
+      "casino.directory.rooms.coinToss.title": "Coin Toss",
+      "casino.directory.rooms.coinToss.promise": "High-speed 50/50 resolution.",
+      "casino.directory.rooms.coinToss.badge": "1% House Edge",
+      "casino.directory.rooms.keno.title": "Keno Draft",
+      "casino.directory.rooms.keno.promise": "Pick multi-spots for massive multipliers.",
+      "casino.directory.rooms.keno.badge": "Up to 500.5x",
+      "casino.directory.rooms.plinko.title": "Plinko",
+      "casino.directory.rooms.plinko.promise": "Drop through eight rows and chase edge buckets.",
+      "casino.directory.rooms.plinko.badge": "Up to 24.6x",
+      "casino.directory.rooms.slots.title": "Slots",
+      "casino.directory.rooms.slots.promise": "Match pairs, triples, or the triple-seven jackpot.",
+      "casino.directory.rooms.slots.badge": "Up to 64x",
+      "casino.directory.rooms.baccarat.title": "Baccarat",
+      "casino.directory.rooms.baccarat.promise": "Player vs banker hands with tie upside.",
+      "casino.directory.rooms.baccarat.badge": "Up to 10.4x",
+      "casino.directory.card.releaseAnchored": "Release anchored",
+      "casino.directory.card.playNow": "Play Now",
+      "casino.directory.reserve.title": "Casino bankroll",
+      "casino.directory.reserve.subtitle": `Bank ${values?.bank ?? "{bank}"}`,
+      "casino.directory.reserve.status": "Release anchored",
+      "casino.directory.reserve.cta": "Inspect bank"
+    })[key] ?? key
+}));
+
 import { GamesListClient } from "./pageClient";
 
 const MOCK_GAMES_META = [
@@ -52,9 +109,21 @@ const MOCK_GAMES_META = [
   },
   {
     gameId: "0x03",
+    slug: "plinko",
+    label: "Plinko",
+    module: "0x8888888888888888888888888888888888888888"
+  },
+  {
+    gameId: "0x05",
+    slug: "slots",
+    label: "Slots",
+    module: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  {
+    gameId: "0x04",
     slug: "baccarat",
     label: "Baccarat",
-    module: "0x8888888888888888888888888888888888888888"
+    module: "0x9999999999999999999999999999999999999999"
   }
 ];
 
@@ -94,7 +163,11 @@ describe("GamesListClient", () => {
     expect(screen.getByText("Global Casino Lobby")).toBeDefined();
     expect(screen.getByText("Precision Dice")).toBeDefined();
     expect(screen.getAllByText("Coin Toss").length).toBeGreaterThan(0);
-    expect(screen.getByText("Progressive Reserve Pool")).toBeDefined();
+    expect(screen.getAllByText("Plinko").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Baccarat").length).toBeGreaterThan(0);
+    expect(screen.getByText("Casino bankroll")).toBeDefined();
+    expect(screen.queryByText("1,842")).toBeNull();
+    expect(screen.queryByText("$35,000")).toBeNull();
   });
 
   it("renders correct number of room entry cards", () => {
@@ -107,10 +180,10 @@ describe("GamesListClient", () => {
     };
     render(<GamesListClient />);
     const cards = screen.getAllByTestId("room-entry-card");
-    expect(cards.length).toBe(2);
+    expect(cards.length).toBe(5);
   });
 
-  it("does not render release games without implemented route modules", () => {
+  it("renders implemented release games and filters unknown modules", () => {
     state.release = {
       name: "Base Sepolia",
       releaseDigest: "0xdeadbeefcafefeed",
@@ -119,12 +192,12 @@ describe("GamesListClient", () => {
       gamesMeta: MOCK_GAMES_META
     };
     render(<GamesListClient />);
-    expect(screen.queryByText("Baccarat")).toBeNull();
+    expect(screen.getAllByText("Baccarat").length).toBeGreaterThan(0);
     expect(
       Array.from(screen.getAllByTestId("room-entry-card")).map((card) =>
         card.getAttribute("data-slug")
       )
-    ).toEqual(["dice", "coin-toss"]);
+    ).toEqual(["dice", "plinko", "slots", "baccarat", "coin-toss"]);
   });
 
   it("links each game card to canonical game room routes", () => {
@@ -145,6 +218,21 @@ describe("GamesListClient", () => {
       .getAllByText("Coin Toss")
       .map((node) => node.closest("a")?.getAttribute("href"));
     expect(coinLinks).toContain("/casino/coin-toss");
+
+    const plinkoLinks = screen
+      .getAllByText("Plinko")
+      .map((node) => node.closest("a")?.getAttribute("href"));
+    expect(plinkoLinks).toContain("/casino/plinko");
+
+    const slotsLinks = screen
+      .getAllByText("Slots")
+      .map((node) => node.closest("a")?.getAttribute("href"));
+    expect(slotsLinks).toContain("/casino/slots");
+
+    const baccaratLinks = screen
+      .getAllByText("Baccarat")
+      .map((node) => node.closest("a")?.getAttribute("href"));
+    expect(baccaratLinks).toContain("/casino/baccarat");
   });
 
   it("room entry cards have correct slug data attributes", () => {
@@ -158,7 +246,10 @@ describe("GamesListClient", () => {
     render(<GamesListClient />);
     const cards = screen.getAllByTestId("room-entry-card");
     expect(cards[0]?.getAttribute("data-slug")).toBe("dice");
-    expect(cards[1]?.getAttribute("data-slug")).toBe("coin-toss");
+    expect(cards[1]?.getAttribute("data-slug")).toBe("plinko");
+    expect(cards[2]?.getAttribute("data-slug")).toBe("slots");
+    expect(cards[3]?.getAttribute("data-slug")).toBe("baccarat");
+    expect(cards[4]?.getAttribute("data-slug")).toBe("coin-toss");
   });
 
   it("handles gamesMeta undefined by rendering canonical fallback rooms", () => {
@@ -166,5 +257,23 @@ describe("GamesListClient", () => {
     render(<GamesListClient />);
     expect(screen.getAllByTestId("room-entry-card").length).toBeGreaterThan(0);
     expect(screen.getByText("Precision Dice")).toBeDefined();
+  });
+
+  it("shows an empty state instead of falling back to all rooms when search misses", () => {
+    state.release = {
+      name: "Base Sepolia",
+      releaseDigest: "0xdeadbeefcafefeed",
+      contracts: { gameHub: "0x1234567890abcdef1234567890abcdef12345678" },
+      assets: [{ address: "0x01", symbol: "USDC", decimals: 6 }],
+      gamesMeta: MOCK_GAMES_META
+    };
+    render(<GamesListClient />);
+
+    fireEvent.change(screen.getByLabelText("Search games"), {
+      target: { value: "not-a-room" }
+    });
+
+    expect(screen.getByText("No matching rooms")).toBeDefined();
+    expect(screen.queryAllByTestId("room-entry-card")).toHaveLength(0);
   });
 });

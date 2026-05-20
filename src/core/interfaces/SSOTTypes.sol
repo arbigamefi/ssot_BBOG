@@ -158,6 +158,18 @@ library SSOTTypes {
         BetState state;
     }
 
+    /// @notice Casino terminal settlement/refund receipt.
+    /// @dev Bet stores lifecycle inputs; this stores final financial outputs so
+    ///      frontends and keepers can read terminal results without scanning logs.
+    struct BetTerminal {
+        BetState state; // None until terminal; Settled or Refunded once written.
+        uint256 payoutGross;
+        uint256 payoutNet;
+        uint256 feeOnPayout;
+        uint256 protocolFeeAccrual;
+        uint256 refundAmount;
+    }
+
     /// @notice Sports market record. The rulebook hash defines market-specific void/push semantics.
     struct SportsMarket {
         uint64 marketId;

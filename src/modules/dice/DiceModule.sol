@@ -8,17 +8,18 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {RNG} from "../../libs/RNG.sol";
 import {StopLogic} from "../../libs/StopLogic.sol";
 
-/// @notice 100-sided dice (1..100) where player chooses cap in [1..99] and wins if rolled > cap.
+/// @notice 100-sided dice (1..100) where player chooses target in [1..99].
+///         - Roll Over wins if rolled > target.
+///         - Roll Under wins if rolled <= target.
 ///
-/// Per-roll payout (gross): amountPerRoll * 100 / (100 - cap)
-/// Win probability: (100 - cap) / 100
-/// Max multiplier (cap=99): 100x
+/// Per-roll payout (gross): amountPerRoll * 100 / winCount
+/// Max multiplier: 100x
 contract DiceModule is IGameModule {
     using Math for uint256;
 
     function validate(bytes calldata params, SSOTTypes.StakeSpec calldata stakeSpec) external pure override {
-        uint8 cap = DiceParams.decode(params);
-        require(cap >= 1 && cap <= 99, "cap");
+        (, uint8 target) = DiceParams.decode(params);
+        require(target >= 1 && target <= 99, "target");
         require(stakeSpec.amountPerRoll > 0, "amount=0");
         require(stakeSpec.betCount > 0, "betCount=0");
     }
@@ -29,11 +30,11 @@ contract DiceModule is IGameModule {
         override
         returns (uint256 reserved)
     {
-        uint8 cap = DiceParams.decode(params);
-        require(cap >= 1 && cap <= 99, "cap");
+        (bool isOver, uint8 target) = DiceParams.decode(params);
+        require(target >= 1 && target <= 99, "target");
 
         uint256 stake = stakeSpec.amountPerRoll * uint256(stakeSpec.betCount);
-        uint256 denom = uint256(100 - cap);
+        uint256 denom = isOver ? uint256(100 - target) : uint256(target);
 
         // reserved must cover total owed (payoutGross + refund). Using stake * multiplier is sufficient.
         reserved = Math.mulDiv(stake, 100, denom);
@@ -45,8 +46,8 @@ contract DiceModule is IGameModule {
         uint256 betId,
         uint256[] calldata randomWords
     ) external pure override returns (uint256 payoutGross, uint256 refundAmount) {
-        uint8 cap = DiceParams.decode(params);
-        require(cap >= 1 && cap <= 99, "cap");
+        (bool isOver, uint8 target) = DiceParams.decode(params);
+        require(target >= 1 && target <= 99, "target");
         require(stakeSpec.amountPerRoll > 0, "amount=0");
         uint32 n = stakeSpec.betCount;
         require(n > 0, "betCount=0");
@@ -55,7 +56,7 @@ contract DiceModule is IGameModule {
         uint256 amount = stakeSpec.amountPerRoll;
         uint256 stake = amount * uint256(n);
         uint256 seed = randomWords[0];
-        uint256 denom = uint256(100 - cap);
+        uint256 denom = isOver ? uint256(100 - target) : uint256(target);
 
         uint256 usedTurnover = 0;
         uint256 cumPayout = 0;
@@ -65,7 +66,8 @@ contract DiceModule is IGameModule {
 
             uint256 r = RNG.roll(betId, uint256(i), seed);
             uint256 rolled = (r % 100) + 1; // 1..100
-            if (rolled > cap) {
+            bool won = isOver ? rolled > target : rolled <= target;
+            if (won) {
                 cumPayout += Math.mulDiv(amount, 100, denom);
             }
 

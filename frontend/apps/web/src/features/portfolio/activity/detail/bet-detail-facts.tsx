@@ -1,16 +1,21 @@
 import * as React from "react";
+import { useTranslations } from "next-intl";
 
 import { shortHex } from "./format";
 import type { BetDetailFact } from "./types";
 
 export function BetDetailFacts({ facts }: { facts: readonly BetDetailFact[] }) {
+  const t = useTranslations();
+
   return (
     <section className="rounded-md border border-border bg-surface-1 shadow-e2">
       <div className="border-b border-border px-5 py-4">
         <div className="text-xs font-black uppercase tracking-[0.16em] text-fg-subtle">
-          Execution facts
+          {t("portfolio.activity.detail.factsSection.eyebrow")}
         </div>
-        <h2 className="mt-2 text-2xl font-black text-fg">Receipt matrix</h2>
+        <h2 className="mt-2 text-2xl font-black text-fg">
+          {t("portfolio.activity.detail.factsSection.title")}
+        </h2>
       </div>
       <div className="grid gap-3 p-5">
         {facts.map((fact) => (
@@ -45,6 +50,7 @@ function FactRow({ fact }: { fact: BetDetailFact }) {
 }
 
 function CopyAction({ value }: { value: string }) {
+  const t = useTranslations();
   const [copyState, setCopyState] = React.useState<"idle" | "copied" | "failed">("idle");
 
   const handleCopy = React.useCallback(async () => {
@@ -68,9 +74,13 @@ function CopyAction({ value }: { value: string }) {
       type="button"
       onClick={() => void handleCopy()}
       className="rounded-sm border border-border px-2 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-fg-muted transition hover:text-fg"
-      title={`Copy ${shortHex(value)}`}
+      title={t("portfolio.activity.detail.copy.title", { value: shortHex(value) })}
     >
-      {copyState === "copied" ? "Copied" : copyState === "failed" ? "Failed" : "Copy"}
+      {copyState === "copied"
+        ? t("portfolio.activity.detail.copy.copied")
+        : copyState === "failed"
+          ? t("portfolio.activity.detail.copy.failed")
+          : t("portfolio.activity.detail.copy.copy")}
     </button>
   );
 }

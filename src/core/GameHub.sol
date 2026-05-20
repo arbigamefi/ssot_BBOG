@@ -55,6 +55,7 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
     mapping(bytes32 => address) public override gameModule;
 
     mapping(uint256 => SSOTTypes.Bet) internal bets;
+    mapping(uint256 => SSOTTypes.BetTerminal) internal betTerminals;
     mapping(uint256 => bytes) internal betParams;
     mapping(uint256 => bytes) internal betRandomData;
     mapping(uint256 => bytes) internal betDeltaSkyline;
@@ -226,10 +227,24 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         return b;
     }
 
+    function getBetTerminal(uint256 betId) external view override returns (SSOTTypes.BetTerminal memory) {
+        SSOTTypes.Bet memory b = bets[betId];
+        if (b.state == SSOTTypes.BetState.None) revert BetNotFound(betId);
+        return betTerminals[betId];
+    }
+
     function getBetParams(uint256 betId) external view override returns (bytes memory) {
         SSOTTypes.Bet memory b = bets[betId];
         if (b.state == SSOTTypes.BetState.None) revert BetNotFound(betId);
         return betParams[betId];
+    }
+
+    function getBetRandomWords(uint256 betId) external view override returns (uint256[] memory) {
+        SSOTTypes.Bet memory b = bets[betId];
+        if (b.state == SSOTTypes.BetState.None) revert BetNotFound(betId);
+        bytes memory data = betRandomData[betId];
+        if (data.length == 0) return new uint256[](0);
+        return abi.decode(data, (uint256[]));
     }
 
     function getDeltaSkyline(uint256 betId) external view override returns (bytes memory) {
@@ -437,6 +452,14 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         if (refundAmount > b.stake) {
             b.resolvedAt = uint64(block.timestamp);
             b.state = SSOTTypes.BetState.Refunded;
+            betTerminals[betId] = SSOTTypes.BetTerminal({
+                state: SSOTTypes.BetState.Refunded,
+                payoutGross: 0,
+                payoutNet: 0,
+                feeOnPayout: 0,
+                protocolFeeAccrual: 0,
+                refundAmount: b.stake
+            });
 
             _clearRequest(b);
             ISettlementRouter(settlementRouter).refundPosition(betId, b.stake);
@@ -518,6 +541,14 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
 
         b.resolvedAt = uint64(block.timestamp);
         b.state = SSOTTypes.BetState.Settled;
+        betTerminals[betId] = SSOTTypes.BetTerminal({
+            state: SSOTTypes.BetState.Settled,
+            payoutGross: payoutGross,
+            payoutNet: payoutNet,
+            feeOnPayout: feeOnPayout,
+            protocolFeeAccrual: protocolFeeAccrual,
+            refundAmount: refundAmount
+        });
 
         // clear request mapping to prevent any late transport artifacts
         _clearRequest(b);
@@ -542,6 +573,14 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
 
         b.resolvedAt = uint64(block.timestamp);
         b.state = SSOTTypes.BetState.Refunded;
+        betTerminals[betId] = SSOTTypes.BetTerminal({
+            state: SSOTTypes.BetState.Refunded,
+            payoutGross: 0,
+            payoutNet: 0,
+            feeOnPayout: 0,
+            protocolFeeAccrual: 0,
+            refundAmount: b.stake
+        });
 
         uint256 requestId = b.requestId;
         if (requestId != 0) {

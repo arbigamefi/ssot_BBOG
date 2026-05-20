@@ -18,16 +18,27 @@ const ROOM_ICON_MAP: Record<string, React.ReactNode> = {
   keno: <KenoMiniIcon />
 };
 
-export function HomeRoomDirectory({ rooms }: { rooms: readonly LandingRoom[] }) {
+export function HomeRoomDirectory({
+  rooms,
+  copy
+}: {
+  rooms: readonly LandingRoom[];
+  copy: {
+    eyebrow: string;
+    title: string;
+    detail: string;
+    actionLabel: string;
+  };
+}) {
   return (
     <section className="border-b border-border bg-surface-0 py-20">
       <div className="mx-auto max-w-[1440px] px-6 lg:px-10">
         <SectionHeader
-          eyebrow="Casino rooms"
-          title="Four one-shot RNG games, one settlement rail."
-          detail="Each room maps to a release-defined module. The UI can change, but game identity, parameters, and payout path stay anchored to the SSOT release."
+          eyebrow={copy.eyebrow}
+          title={copy.title}
+          detail={copy.detail}
           actionHref="/casino"
-          actionLabel="Open directory"
+          actionLabel={copy.actionLabel}
         />
 
         <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">

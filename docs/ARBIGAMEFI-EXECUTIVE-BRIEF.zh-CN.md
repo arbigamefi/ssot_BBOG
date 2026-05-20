@@ -12,19 +12,19 @@
 >
 > 语言：`zh-CN`
 >
-> 日期：`2026-03-07`
+> 日期：`2026-05-18`
 >
-> 用途：`short outward-facing summary for partners, investors, advisors, and contributors`
+> 用途：`short outward-facing summary for players, LPs, referrers, investors, advisors, and contributors`
 >
 > 关联文档：`docs/WHITEPAPER.zh-CN.md` · `docs/WHITEPAPER.product.zh-CN.md`
 
 ## 一句话
 
-ArbiGameFi 是一个面向全链上概率游戏场景的非托管游戏平台与结算协议，其底层采用 SSOT 架构，把资金托管、注单生命周期、随机数费用与推荐负债全部收敛成可验证的链上事实。
+ArbiGameFi 是一个单品牌 B2C 的全链上 casino 与 sportsbook 产品，底层由协议级 SSOT 结算内核支撑，把玩家资金、注单生命周期、随机数费用、体育投注结果与推荐负债收敛成可验证的链上事实。
 
 ## One-line Summary (EN)
 
-ArbiGameFi is a non-custodial on-chain gaming platform and settlement protocol built on an SSOT architecture that turns custody, bet lifecycle, randomness fees, and referral liabilities into verifiable on-chain facts.
+ArbiGameFi is a single-brand B2C on-chain casino and sportsbook product built on a protocol-grade SSOT settlement kernel that turns player funds, bet lifecycle, randomness fees, sportsbook outcomes, and referral liabilities into verifiable on-chain facts.
 
 ## 我们为什么存在
 
@@ -41,20 +41,24 @@ ArbiGameFi 的核心命题是：
 
 ## 我们到底做了什么
 
-ArbiGameFi 当前不是一个单纯的网站，而是一套已经具备明确底层边界的协议栈：
+ArbiGameFi 当前首先是一个玩家可以直接使用的 B2C 产品；它之所以可信，是因为下面这套协议栈把资金和结果边界放到了链上：
 
 - 每资产独立 Bank，负责托管、准备金和净值
-- 全局 Hub，负责每笔下注的生命周期与快照
-- VRFHub，负责随机数费用、请求状态和退款信用
-- 纯函数游戏模块，负责开奖语义，不碰资金
+- SettlementRouter，负责把结算权路由到对应垂直 Hub
+- GameHub，负责 casino 注单生命周期与快照
+- SportsHub，负责 sportsbook 市场、票据、结果与风险路径
+- VRFHub，负责 casino 随机数费用、请求状态和退款信用
+- 纯函数 casino 游戏模块，负责开奖语义，不碰资金
 - 推荐与返利系统，先形成链上负债，再按规则成熟和提取
 
-目前已落地的标准房间包括：
+当前产品主入口优先打磨的标准房间包括：
 
 - Dice
 - Coin Toss
 - Roulette
 - Keno
+
+v1.3 合约层还保留了 Baccarat、Plinko、Sic Bo、Slots 等扩展模块，但这些不应削弱当前第一优先级：先把现有房间的下注、VRF、自动结算和结果回执体验做顺。
 
 ## 为什么可信
 
@@ -153,7 +157,7 @@ ArbiGameFi 的推荐系统不是“后台表格发佣金”，而是链上可解
 - 白标或集成分发
 - 更丰富的 LP 产品层包装
 
-但这些属于产品和 BD 层的扩展，不应被写成当前已实现事实。
+但这些属于产品和 BD 层的扩展，不应被写成当前已实现事实，也不应倒逼当前前端为未验证的第三方 operator 需求承担复杂度。
 
 ## 增长飞轮是什么
 
@@ -222,9 +226,9 @@ ArbiGameFi 最自然的增长飞轮是：
 
 ## 最准确的定位
 
-ArbiGameFi 最准确的定位不是“又一个链上赌场站点”，而是：
+ArbiGameFi 最准确的定位不是“又一个链上赌场站点”，也不是当前阶段的白标 operator 平台，而是：
 
-> 一个以 SSOT 架构为底层、面向全链上概率游戏的非托管游戏平台与结算协议。
+> 一个以协议级 SSOT 结算内核为底层、面向玩家、LP 与推荐方的非托管链上 casino/sportsbook 产品。
 
 它最长期的价值，不在于某一个房间，而在于三层能力同时成立：
 
@@ -232,4 +236,4 @@ ArbiGameFi 最准确的定位不是“又一个链上赌场站点”，而是：
 - 可扩展结算层
 - 可分发增长层
 
-如果这三层都能持续做实，ArbiGameFi 就有机会从一个产品，演化成一个真正的平台。
+如果这三层都能持续做实，ArbiGameFi 才有机会在未来开放更多外部集成；在此之前，最重要的不是讲平台故事，而是把自营 B2C 产品的真实下注、真实结算、真实 LP 信任和真实渠道转化跑通。

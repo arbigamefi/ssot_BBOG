@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { AssetSelector, type AssetOption, type TxStepItem, type TxStatus } from "@ssot/ui";
 import type { DomainError } from "@ssot/ssot";
 
@@ -6,9 +7,21 @@ import { EarnActionTrace } from "./earn-action-trace";
 import type { EarnTab } from "./types";
 
 const TABS: Array<{ key: EarnTab; label: string; description: string }> = [
-  { key: "deposit", label: "Deposit", description: "Supply assets to the bank." },
-  { key: "withdraw", label: "Withdraw", description: "Withdraw available assets." },
-  { key: "redeem", label: "Redeem", description: "Redeem bank shares for assets." }
+  {
+    key: "deposit",
+    label: "earn.actions.tabs.deposit.label",
+    description: "earn.actions.tabs.deposit.description"
+  },
+  {
+    key: "withdraw",
+    label: "earn.actions.tabs.withdraw.label",
+    description: "earn.actions.tabs.withdraw.description"
+  },
+  {
+    key: "redeem",
+    label: "earn.actions.tabs.redeem.label",
+    description: "earn.actions.tabs.redeem.description"
+  }
 ];
 
 export type EarnFlowState = {
@@ -61,13 +74,16 @@ export function EarnActionPanel({
   onSubmit: () => void;
   connected: boolean;
 }) {
+  const t = useTranslations();
+  const activeTab = TABS.find((item) => item.key === tab);
+
   return (
     <section className="rounded-md border border-border bg-surface-1 shadow-e2">
       <div className="border-b border-border p-5">
         <div className="text-xs font-black uppercase tracking-[0.16em] text-fg-subtle">
-          LP actions
+          {t("earn.actions.eyebrow")}
         </div>
-        <h2 className="mt-2 text-2xl font-black text-fg">Bank transaction console</h2>
+        <h2 className="mt-2 text-2xl font-black text-fg">{t("earn.actions.title")}</h2>
       </div>
 
       <div className="grid gap-5 p-5">
@@ -83,25 +99,23 @@ export function EarnActionPanel({
                   : "text-fg-muted hover:bg-surface-2 hover:text-fg"
               }`}
             >
-              {item.label}
+              {t(item.label)}
             </button>
           ))}
         </div>
 
         <p className="text-sm leading-6 text-fg-muted">
-          {TABS.find((item) => item.key === tab)?.description}
+          {activeTab ? t(activeTab.description) : ""}
         </p>
 
         <AssetSelector
-          title="Asset"
+          title={t("earn.actions.asset")}
           assets={[...assets]}
           value={asset}
           onValueChange={onAssetChange}
           showAddress
           disabled={flow.busy}
-          error={
-            unsupportedAsset ? "Write flows currently support only the primary asset." : undefined
-          }
+          error={unsupportedAsset ? t("earn.errors.primaryAssetOnly") : undefined}
         />
 
         <div className="rounded-md border border-border bg-surface-0 p-4">
@@ -110,7 +124,7 @@ export function EarnActionPanel({
               htmlFor="earn-amount"
               className="text-[10px] font-black uppercase tracking-[0.16em] text-fg-subtle"
             >
-              Amount
+              {t("earn.actions.amount")}
             </label>
             <button
               type="button"
@@ -131,7 +145,7 @@ export function EarnActionPanel({
               className="w-full bg-transparent font-mono text-3xl font-black text-fg outline-none placeholder:text-fg-subtle"
             />
             <span className="text-sm font-black uppercase tracking-[0.12em] text-fg-muted">
-              {tab === "redeem" ? "Shares" : symbol}
+              {tab === "redeem" ? t("earn.units.shares") : symbol}
             </span>
           </div>
         </div>
@@ -144,13 +158,13 @@ export function EarnActionPanel({
 
         {!connected ? (
           <div className="rounded-md border border-dashed border-border bg-surface-0 p-5 text-sm text-fg-muted">
-            Connect a wallet to run bank actions.
+            {t("earn.actions.connectWallet")}
           </div>
         ) : null}
 
         {readOnly ? (
           <div className="rounded-md border border-warn/30 bg-warn/10 p-3 text-sm text-warn">
-            Writes are disabled for this release.
+            {t("earn.actions.readOnly")}
           </div>
         ) : null}
 
@@ -161,21 +175,21 @@ export function EarnActionPanel({
           className="rounded-md bg-brand px-5 py-4 text-sm font-black uppercase tracking-[0.12em] text-fg-inverse shadow-glow transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
         >
           {flow.busy
-            ? "Executing"
+            ? t("earn.actions.submit.executing")
             : tab === "deposit"
-              ? "Deposit assets"
+              ? t("earn.actions.submit.deposit")
               : tab === "withdraw"
-                ? "Withdraw assets"
-                : "Redeem shares"}
+                ? t("earn.actions.submit.withdraw")
+                : t("earn.actions.submit.redeem")}
         </button>
 
         <EarnActionTrace
           title={
             tab === "deposit"
-              ? "Deposit trace"
+              ? t("earn.actions.trace.deposit")
               : tab === "withdraw"
-                ? "Withdraw trace"
-                : "Redeem trace"
+                ? t("earn.actions.trace.withdraw")
+                : t("earn.actions.trace.redeem")
           }
           status={flow.status}
           steps={flow.steps}

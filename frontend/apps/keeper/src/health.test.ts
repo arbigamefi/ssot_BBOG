@@ -16,7 +16,16 @@ const baseConfig: KeeperConfig = {
   backupDelayMs: 0,
   pollIntervalMs: 15_000,
   scanChunkBlocks: 10n,
-  startBlock: 100n
+  startBlock: 100n,
+  betIndexSsl: false,
+  betIndexWriteEnabled: false,
+  sportsTerminalizerEnabled: false,
+  sportsTerminalizerScanChunkBlocks: 2_000n,
+  sportsTerminalizerMarketIds: [],
+  sportsTerminalizerMaxTicketsPerMarket: 200,
+  sportsTicketEnumerationMax: 500,
+  sportsTicketScanChunkBlocks: 2_000n,
+  sportsTicketScanStartBlock: 100n
 };
 
 const keeper = "0x3333333333333333333333333333333333333333";
@@ -133,5 +142,33 @@ describe("KeeperHealthReporter", () => {
       lastScannedBlock: "120",
       queueDepth: 0
     });
+  });
+
+  it("allows overlapping file health writes without tmp rename collisions", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "keeper-health-"));
+    const path = join(dir, "casino-keeper-health.json");
+    const sink = createFileHealthSink(path);
+
+    await Promise.all(
+      [0, 1, 2, 3].map((queueDepth) =>
+        sink.write({
+          schemaVersion: 1,
+          status: "running",
+          role: "primary",
+          chainId: 84532,
+          gameHub: baseConfig.gameHub,
+          vrfHub: baseConfig.vrfHub,
+          keeper,
+          startedAt: "2026-05-17T00:00:00.000Z",
+          updatedAt: "2026-05-17T00:00:00.000Z",
+          queueDepth
+        })
+      )
+    );
+
+    const saved = JSON.parse(await readFile(path, "utf8")) as KeeperHealthSnapshot;
+    expect(saved.schemaVersion).toBe(1);
+    expect(saved.status).toBe("running");
+    expect(saved.queueDepth).toBeGreaterThanOrEqual(0);
   });
 });

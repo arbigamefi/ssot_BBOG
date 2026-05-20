@@ -2,8 +2,9 @@
 pragma solidity ^0.8.20;
 
 library DiceParams {
-    /// @notice Decode dice params (cap in [1..99]).
-    function decode(bytes calldata params) internal pure returns (uint8 cap) {
-        cap = abi.decode(params, (uint8));
+    /// @notice Decode dice params.
+    /// @dev `isOver == true` wins when rolled > target; otherwise wins when rolled <= target.
+    function decode(bytes calldata params) internal pure returns (bool isOver, uint8 target) {
+        (isOver, target) = abi.decode(params, (bool, uint8));
     }
 }

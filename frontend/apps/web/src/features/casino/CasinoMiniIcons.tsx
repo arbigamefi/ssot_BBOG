@@ -13,7 +13,6 @@ function IconFrame({ className, children }: React.PropsWithChildren<GameMiniIcon
     <div
       className={cx(
         "relative flex h-32 w-32 items-center justify-center rounded-xl border border-brand/20 bg-surface-1 text-brand shadow-e2",
-        "transition-transform duration-300 group-hover:scale-105",
         className
       )}
     >
@@ -126,6 +125,107 @@ export function KenoMiniIcon({ className }: GameMiniIconProps) {
             </div>
           );
         })}
+      </div>
+    </IconFrame>
+  );
+}
+
+export function PlinkoMiniIcon({ className }: GameMiniIconProps) {
+  return (
+    <IconFrame className={className}>
+      <div className="flex h-20 w-20 flex-col items-center justify-center gap-1">
+        {Array.from({ length: 5 }).map((_, row) => (
+          <div key={row} className="flex gap-1.5">
+            {Array.from({ length: row + 1 }).map((__, index) => (
+              <span
+                key={index}
+                className="h-2.5 w-2.5 rounded-full border border-brand/40 bg-fg/80"
+              />
+            ))}
+          </div>
+        ))}
+        <div className="mt-2 grid w-full grid-cols-5 gap-1">
+          {[8, 4, 1, 4, 8].map((value, index) => (
+            <span
+              key={`${value}-${index}`}
+              className="rounded-sm border border-border-soft bg-surface-2 py-1 text-center font-mono text-[8px] font-semibold text-fg-subtle"
+            >
+              {value}x
+            </span>
+          ))}
+        </div>
+      </div>
+    </IconFrame>
+  );
+}
+
+export function BaccaratMiniIcon({ className }: GameMiniIconProps) {
+  return (
+    <IconFrame className={className}>
+      <div className="grid h-20 w-20 grid-cols-2 gap-2">
+        {[
+          ["P", "9"],
+          ["B", "8"],
+          ["T", "="],
+          ["P", "3"]
+        ].map(([label, value], index) => (
+          <div
+            key={`${label}-${value}-${index}`}
+            className={cx(
+              "flex flex-col items-center justify-center rounded-md border bg-surface-2 font-mono",
+              index === 0 || index === 3
+                ? "border-brand bg-brand-soft text-brand"
+                : "border-border-soft text-fg-subtle"
+            )}
+          >
+            <span className="text-[8px] font-semibold uppercase tracking-wider">{label}</span>
+            <span className="text-lg font-semibold">{value}</span>
+          </div>
+        ))}
+      </div>
+    </IconFrame>
+  );
+}
+
+export function SicBoMiniIcon({ className }: GameMiniIconProps) {
+  return (
+    <IconFrame className={className}>
+      <div className="grid h-20 w-20 grid-cols-3 gap-1.5">
+        {[1, 2, 3, 4, 5, 6, 2, 5, 6].map((value, index) => (
+          <div
+            key={`${value}-${index}`}
+            className={cx(
+              "flex items-center justify-center rounded-md border bg-surface-2 font-mono text-sm font-semibold",
+              index < 3
+                ? "border-brand bg-brand-soft text-brand"
+                : "border-border-soft text-fg-subtle"
+            )}
+          >
+            {value}
+          </div>
+        ))}
+      </div>
+    </IconFrame>
+  );
+}
+
+export function SlotsMiniIcon({ className }: GameMiniIconProps) {
+  return (
+    <IconFrame className={className}>
+      <div className="grid h-20 w-20 grid-cols-3 gap-1.5">
+        {["CH", "7", "BA", "DI", "CR", "ST", "LE", "BE", "7"].map((symbol, index) => (
+          <div
+            key={`${symbol}-${index}`}
+            className={cx(
+              "flex items-center justify-center rounded-md border bg-surface-2 font-mono text-[10px] font-semibold",
+              symbol === "7"
+                ? "border-brand bg-brand text-fg-inverse"
+                : "border-border-soft text-fg-subtle"
+            )}
+          >
+            {symbol}
+          </div>
+        ))}
       </div>
     </IconFrame>
   );

@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { TxStatusChip } from "@ssot/ui";
 
 import { mapJournalStatus, shortHex } from "./format";
@@ -11,17 +12,23 @@ export function PortfolioJournal({
   rows: readonly PortfolioJournalRow[];
   explorerBaseUrl?: string;
 }) {
+  const t = useTranslations();
+
   return (
     <section className="rounded-md border border-border bg-surface-1 shadow-e2">
       <div className="border-b border-border px-5 py-4">
-        <div className="text-xs font-black uppercase tracking-[0.16em] text-fg-subtle">Journal</div>
-        <h2 className="mt-2 text-2xl font-black text-fg">Transaction journal</h2>
+        <div className="text-xs font-black uppercase tracking-[0.16em] text-fg-subtle">
+          {t("portfolio.overview.journal.eyebrow")}
+        </div>
+        <h2 className="mt-2 text-2xl font-black text-fg">
+          {t("portfolio.overview.journal.title")}
+        </h2>
       </div>
 
       <div className="overflow-hidden">
         <div className="grid grid-cols-[1fr_96px] border-b border-border bg-surface-2 px-5 py-3 text-[10px] font-black uppercase tracking-[0.14em] text-fg-subtle">
-          <div>Action</div>
-          <div className="text-right">Status</div>
+          <div>{t("portfolio.overview.journal.columns.action")}</div>
+          <div className="text-right">{t("portfolio.overview.journal.columns.status")}</div>
         </div>
         {rows.length > 0 ? (
           rows.map((row) => (
@@ -56,7 +63,7 @@ export function PortfolioJournal({
           ))
         ) : (
           <div className="px-5 py-12 text-center text-sm text-fg-muted">
-            No account transactions in this browser session.
+            {t("portfolio.overview.journal.empty")}
           </div>
         )}
       </div>

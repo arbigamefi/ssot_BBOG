@@ -15,15 +15,61 @@ const state = {
     ]
   } as any,
   bets: [] as any[],
+  sportsTickets: [] as any[],
   loading: false
 };
+
+vi.mock("next-intl", async () => {
+  const messages = (await import("../../../../i18n/locales/en/common.json")).default as Record<
+    string,
+    unknown
+  >;
+
+  function resolveMessage(key: string) {
+    return key.split(".").reduce<unknown>((current, part) => {
+      if (current && typeof current === "object" && part in current) {
+        return (current as Record<string, unknown>)[part];
+      }
+      return undefined;
+    }, messages);
+  }
+
+  function translate(key: string, values?: Record<string, string | number>) {
+    const message = resolveMessage(key);
+    if (typeof message !== "string") return key;
+    return Object.entries(values ?? {}).reduce(
+      (text, [name, value]) => text.replaceAll(`{${name}}`, String(value)),
+      message
+    );
+  }
+
+  return {
+    useTranslations: () => translate
+  };
+});
 
 vi.mock("../../../../ssot/release/ReleaseProvider", () => ({
   useRelease: () => ({ release: state.release })
 }));
 
-vi.mock("../../../../features/betting/useBets", () => ({
-  useBets: () => ({ data: state.bets, isLoading: state.loading })
+vi.mock("../../../../ssot/sdk", () => ({
+  useSSOTSDK: () => ({ sdk: { account: "0x1111111111111111111111111111111111111111" } })
+}));
+
+vi.mock("../../../../features/betting/usePlayerBets", () => ({
+  usePlayerBets: () => ({
+    data: state.bets,
+    isLoading: state.loading,
+    localRows: state.bets,
+    serverRows: []
+  })
+}));
+
+vi.mock("../../../../features/sportsbook/usePlayerSportsTickets", () => ({
+  usePlayerSportsTickets: () => ({
+    data: state.sportsTickets,
+    isLoading: state.loading
+  })
 }));
 
 vi.mock("../../../../components/PageTransition", () => ({
@@ -44,6 +90,7 @@ describe("PortfolioActivityPageClient", () => {
   afterEach(() => {
     cleanup();
     state.bets = [];
+    state.sportsTickets = [];
     state.loading = false;
   });
 
@@ -82,6 +129,34 @@ describe("PortfolioActivityPageClient", () => {
     expect(screen.getAllByText("1 USDC").length).toBeGreaterThan(0);
     expect(screen.getByText("View").closest("a")?.getAttribute("href")).toBe(
       "/portfolio/activity/42"
+    );
+  });
+
+  it("renders sportsbook tickets with their ticket detail link", () => {
+    state.sportsTickets = [
+      {
+        id: "84532:sports:12",
+        chainId: 84532,
+        ticketId: "12",
+        state: "held",
+        marketId: "6",
+        player: "0x1111111111111111111111111111111111111111",
+        updatedBlock: 12,
+        lastTxHash: "0xabcd",
+        lastEventName: "TicketPlaced",
+        updatedAt: Date.now(),
+        stake: "10000000",
+        payout: "55000000"
+      }
+    ];
+
+    render(<PortfolioActivityPageClient />);
+
+    expect(screen.getAllByText("S#12").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Sportsbook #6").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("10 USDC").length).toBeGreaterThan(0);
+    expect(screen.getByText("View").closest("a")?.getAttribute("href")).toBe(
+      "/portfolio/tickets/12"
     );
   });
 });

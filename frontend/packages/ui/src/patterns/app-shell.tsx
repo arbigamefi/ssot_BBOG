@@ -54,7 +54,7 @@ export function AppShell({
         className={cn(
           "relative z-10 mx-auto w-full pb-16",
           isGame ? "flex max-w-[1600px] flex-col gap-6 px-4 pb-12 md:px-8" : "max-w-[1440px] px-6",
-          readOnlyBanner ? "pt-5" : isMarketing ? "pt-0" : "pt-[5.5rem]"
+          readOnlyBanner ? "pt-5" : isMarketing ? "pt-0" : isGame ? "pt-5" : "pt-10"
         )}
       >
         {children}

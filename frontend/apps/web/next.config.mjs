@@ -1,3 +1,49 @@
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import createNextIntlPlugin from "next-intl/plugin";
+
+const appDir = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(appDir, "../../..");
+const initialEnvKeys = new Set(Object.keys(process.env));
+
+for (const envFile of [".env", ".env.local"]) {
+  const envPath = path.join(repoRoot, envFile);
+  if (!fs.existsSync(envPath)) continue;
+  const parsed = {};
+  for (const rawLine of fs.readFileSync(envPath, "utf8").split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) continue;
+    const match = /^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/.exec(line);
+    if (!match) continue;
+    const [, key, rawValue] = match;
+    const unquoted = rawValue.trim().replace(/^(['"])(.*)\1$/, "$2");
+    parsed[key] = unquoted.replace(/\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g, (_, name) => {
+      return parsed[name] ?? process.env[name] ?? "";
+    });
+  }
+  for (const [key, value] of Object.entries(parsed)) {
+    if (!initialEnvKeys.has(key)) process.env[key] = value;
+  }
+}
+
+const configuredRpcOrigins = [
+  process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL,
+  process.env.NEXT_PUBLIC_ARBITRUM_SEPOLIA_RPC_URL,
+  process.env.NEXT_PUBLIC_BASE_RPC_URL,
+  process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL,
+  process.env.NEXT_PUBLIC_RPC_URL
+]
+  .map((value) => {
+    if (!value) return undefined;
+    try {
+      return new URL(value).origin;
+    } catch {
+      return undefined;
+    }
+  })
+  .filter(Boolean);
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -44,7 +90,24 @@ const nextConfig = {
               "img-src 'self' data: blob: https:",
               "font-src 'self' data:",
               // RPC endpoints + WalletConnect relay + Sentry
-              "connect-src 'self' https://mcp.figma.com https://*.walletconnect.com https://*.walletconnect.org wss://*.walletconnect.com wss://*.walletconnect.org https://sepolia.base.org https://mainnet.base.org https://arb1.arbitrum.io https://*.sentry.io https://*.ingest.sentry.io",
+              [
+                "connect-src 'self'",
+                "https://mcp.figma.com",
+                "https://*.walletconnect.com",
+                "https://*.walletconnect.org",
+                "wss://*.walletconnect.com",
+                "wss://*.walletconnect.org",
+                "https://sepolia.base.org",
+                "https://mainnet.base.org",
+                "https://arb1.arbitrum.io",
+                "https://base-sepolia.g.alchemy.com",
+                "https://base-mainnet.g.alchemy.com",
+                "https://arb-sepolia.g.alchemy.com",
+                "https://arb-mainnet.g.alchemy.com",
+                ...configuredRpcOrigins,
+                "https://*.sentry.io",
+                "https://*.ingest.sentry.io"
+              ].join(" "),
               "frame-src 'self' https://*.walletconnect.com https://*.walletconnect.org",
               "worker-src 'self' blob:"
             ].join("; ")
@@ -56,6 +119,7 @@ const nextConfig = {
 };
 
 const sentryDsn = process.env.NEXT_PUBLIC_SENTRY_DSN || process.env.SENTRY_DSN;
+const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const sentryConfig = {
   // Suppress Sentry CLI logs in dev
@@ -71,8 +135,9 @@ const sentryConfig = {
 };
 
 // Keep local and preview bundles lean when Sentry is not configured.
+const configWithIntl = withNextIntl(nextConfig);
 const config = sentryDsn
-  ? (await import("@sentry/nextjs")).withSentryConfig(nextConfig, sentryConfig)
-  : nextConfig;
+  ? (await import("@sentry/nextjs")).withSentryConfig(configWithIntl, sentryConfig)
+  : configWithIntl;
 
 export default config;

@@ -1,0 +1,2883 @@
+{
+  "app": {
+    "connectWalletActionDescription": "Connect a wallet to {action}.",
+    "connectWalletButton": "Connect Wallet",
+    "connectWalletDescription": "Connect a wallet to use this feature.",
+    "connectingWallet": "Connecting...",
+    "indexerWorkerFailed": "Indexer worker failed to start",
+    "unknownNetwork": "Unknown network",
+    "walletRequired": "Wallet required",
+    "writesDisabled": "Writes are disabled.",
+    "errors": {
+      "boundaryTitle": "Something went wrong",
+      "unexpected": "An unexpected error occurred.",
+      "transactionFailed": "Transaction failed",
+      "recentBetsFailed": "Recent bets failed",
+      "playerBetsFailed": "Player bets failed",
+      "playerSportsTicketsFailed": "Player sports tickets failed",
+      "errorId": "Error ID: {digest}",
+      "tryAgain": "Try again"
+    }
+  },
+  "metadata": {
+    "siteTitle": "ArbiGameFi",
+    "titleTemplate": "%s | ArbiGameFi",
+    "description": "Non-custodial on-chain gaming platform with verifiable settlement.",
+    "pages": {
+      "casino": {
+        "title": "Casino",
+        "description": "Browse wallet-native casino rooms backed by on-chain randomness, visible bankroll state, and keeper-assisted settlement."
+      },
+      "casinoRoom": {
+        "title": "{game}",
+        "description": "Play {game} with verifiable randomness, visible VRF status, and a chain-derived result receipt."
+      },
+      "sportsbook": {
+        "title": "Sportsbook",
+        "description": "Browse fixed-odds sports markets with on-chain settlement and signed odds snapshots."
+      },
+      "opsSportsbook": {
+        "title": "Sportsbook · Ops",
+        "description": "Operator console for SportsHub markets, tickets, risk caps, and reporter / arbitrator writes."
+      },
+      "sportsbookMarket": {
+        "title": "Sports Market {marketId}",
+        "description": "Inspect SportsHub market {marketId}, ticket placement readiness, and result evidence state."
+      },
+      "portfolio": {
+        "title": "Portfolio",
+        "description": "Review wallet identity, asset positions, refund credits, and recent protocol activity."
+      },
+      "portfolioActivity": {
+        "title": "Activity",
+        "description": "Review indexed casino and sportsbook activity with chain-aware settlement state."
+      },
+      "portfolioBetDetail": {
+        "title": "Bet {betId}",
+        "description": "Inspect bet {betId} with lifecycle, payout, randomness, and settlement proof details."
+      },
+      "portfolioSportsTicket": {
+        "title": "Sports Ticket {ticketId}",
+        "description": "Inspect SportsHub ticket {ticketId} with selected outcome, payout, result, and proof details."
+      },
+      "portfolioClaims": {
+        "title": "Claims",
+        "description": "Inspect claimable XP, protocol fees, holdback buckets, and claim transaction readiness."
+      },
+      "portfolioReferral": {
+        "title": "Referral",
+        "description": "Create a referral link, inspect first-touch binding, and review affiliate reward buckets."
+      },
+      "affiliate": {
+        "title": "Affiliates",
+        "description": "Share wallet-native casino rooms and route referral rewards through the on-chain XP ledger."
+      },
+      "earn": {
+        "title": "Earn",
+        "description": "Inspect bankroll deposits, withdrawals, reserve posture, and LP risk controls."
+      },
+      "ops": {
+        "title": "Ops",
+        "description": "Monitor release proof, keeper health, indexer state, and operational receipts."
+      }
+    }
+  },
+  "locale": {
+    "label": "Language",
+    "en": "English",
+    "zhHans": "简体中文"
+  },
+  "footer": {
+    "brandSubtitle": "Wallet-native rooms",
+    "description": "Wallet-native game rooms, readable settlement, and visible bankroll context on top of on-chain execution.",
+    "liveRooms": "Live rooms",
+    "games": "Games",
+    "platform": "Platform",
+    "resources": "Resources",
+    "legal": "Legal",
+    "earn": "Earn",
+    "portfolio": "Portfolio",
+    "terms": "Terms",
+    "privacy": "Privacy",
+    "disclaimer": "Disclaimer",
+    "copyright": "ArbiGameFi frontend for wallet-native rooms and transparent settlement.",
+    "docs": "Docs"
+  },
+  "casino": {
+    "room": {
+      "shell": {
+        "liveModule": "Live SSOT Module",
+        "houseEdge": "House edge",
+        "maxPayout": "Max payout"
+      },
+      "empty": {
+        "moduleNotFound": "Module not found",
+        "gameNotFound": "Game not found."
+      },
+      "names": {
+        "dice": "Precision Dice",
+        "roulette": "European Roulette",
+        "coinToss": "Coin Toss",
+        "keno": "Keno Draft",
+        "plinko": "Plinko",
+        "slots": "Slots",
+        "baccarat": "Baccarat",
+        "sicBo": "Sic Bo"
+      },
+      "audit": {
+        "loading": "Loading audit stream",
+        "headers": {
+          "timestampAuth": "Timestamp / Auth",
+          "submodule": "Submodule",
+          "wagerParameters": "Wager Parameters",
+          "settlementState": "Settlement State",
+          "audit": "Audit"
+        },
+        "selection": "{game} Selection",
+        "amountAndId": "{amount} {asset} - ID: {id}",
+        "openAudit": "Open audit for bet {betId}",
+        "empty": {
+          "title": "Immutable Audit Stream",
+          "description": "Standby for on-chain transaction emit..."
+        }
+      },
+      "errors": {
+        "quoteFailed": "Unable to estimate VRF fee.",
+        "readRoundFailed": "Unable to read the live round state.",
+        "roundNotFound": "This round is not visible on the current GameHub yet. Check the transaction before placing another bet.",
+        "manualSettleFailed": "Manual settlement failed.",
+        "refundFailed": "Refund failed.",
+        "sdkNotReady": "SSOT SDK is not ready. Please connect your wallet.",
+        "transactionFailedShort": "Transaction failed",
+        "transactionFailed": "Transaction failed. Please try again.",
+        "reconcileFailed": "Reconcile failed",
+        "bindFailed": "Bind failed",
+        "rouletteSelectionRequired": "Please select at least one number or bet type on the Roulette board.",
+        "kenoSelectionRequired": "Please select at least 1 number on the Keno grid.",
+        "kenoSelectionInvalid": "Select 1 to 5 Keno numbers between 1 and 15.",
+        "noActiveCasinoPool": "No active casino pool is available in the current release.",
+        "unexpected": "An unexpected error occurred."
+      },
+      "warnings": {
+        "vrfTimeout": "Waiting for oracle... VRF resolution can take 30-120s on testnets."
+      },
+      "roundStatus": {
+        "title": "Round status",
+        "phases": {
+          "loadingQuote": {
+            "label": "Estimating VRF fee",
+            "detail": "Reading the current randomness fee before you place a round.",
+            "status": "Estimating"
+          },
+          "waitingVrf": {
+            "label": "Rolling",
+            "detail": "PlaceBet is mined. Waiting for verifiable randomness.",
+            "status": "Waiting VRF"
+          },
+          "timeoutSoft": {
+            "label": "VRF is taking longer than usual",
+            "detail": "The round is still safe. Keep this page open while Chainlink fulfills the request.",
+            "status": "Waiting"
+          },
+          "placing": {
+            "label": "Placing bet",
+            "detail": "Approve if needed, then sign PlaceBet. The round starts once the transaction is mined.",
+            "status": "Placing"
+          },
+          "settling": {
+            "label": "Result revealed",
+            "detail": "Randomness is ready. Opened numbers are visible while keeper settlement completes.",
+            "status": "Settling"
+          },
+          "manualSettleOffered": {
+            "label": "Keeper delay",
+            "detail": "Settlement is delayed. You can manually settle this result as a fallback.",
+            "status": "Manual settle offered"
+          },
+          "settled": {
+            "label": "Round settled",
+            "detail": "Settlement is confirmed on-chain. Preparing the final result proof.",
+            "status": "Settled"
+          },
+          "refundable": {
+            "label": "Refund path available",
+            "detail": "VRF did not complete before the protocol timeout. You can refund the stake.",
+            "status": "Refundable"
+          },
+          "failed": {
+            "label": "Round monitor failed",
+            "detail": "Unable to read the latest round state from the RPC provider.",
+            "status": "Failed"
+          },
+          "ready": {
+            "label": "Ready",
+            "detail": "One click will approve if needed, place the bet, and watch settlement.",
+            "status": "Ready"
+          }
+        },
+        "metrics": {
+          "vrfEstimate": "VRF estimate",
+          "betId": "Bet ID",
+          "vrfRequest": "VRF request"
+        },
+        "actions": {
+          "settleResult": "Settle result",
+          "refundStake": "Refund stake"
+        }
+      },
+      "betPanel": {
+        "walletBalance": "Wallet Balance",
+        "syncing": "Syncing...",
+        "notConnected": "Not connected",
+        "walletGate": {
+          "title": "Connect wallet to place a round",
+          "detail": "Pick the room settings now. The bet is signed only after your wallet is connected."
+        },
+        "amount": {
+          "label": "Bet Amount",
+          "aria": "Bet amount",
+          "min": "Min",
+          "max": "Max"
+        },
+        "rolls": {
+          "label": "Rolls",
+          "total": "Total: {amount} USDC",
+          "aria": "Roll count"
+        },
+        "advanced": {
+          "label": "Advanced",
+          "stopGain": "Stop Gain (USDC)",
+          "stopLoss": "Stop Loss (USDC)",
+          "offPlaceholder": "0 = off",
+          "help": "Optional auto-stop rules for multi-roll rounds. Set 0 to disable a rule.",
+          "stopGainHelp": "Stops after total profit reaches this amount.",
+          "stopLossHelp": "Stops after total loss reaches this amount.",
+          "gainStop": "Gain stop at +{amount} USDC",
+          "lossStop": "Loss stop at {amount} USDC"
+        },
+        "summary": {
+          "multiplier": "Multiplier",
+          "winChance": "Win Chance",
+          "expectedPayout": "Potential Payout"
+        },
+        "placeBet": {
+          "connectWallet": "CONNECT WALLET",
+          "failedRetry": "TRANSACTION FAILED - RETRY",
+          "roundInProgress": "ROUND IN PROGRESS",
+          "betMined": "BET MINED...",
+          "signing": "SIGNING / PLACING...",
+          "approveThenPlace": "APPROVE, THEN PLACE BET",
+          "preparing": "PREPARING ROUND...",
+          "placeBet": "PLACE BET"
+        }
+      },
+      "selection": {
+        "dice": {
+          "rollUnder": "Roll Under",
+          "rollOver": "Roll Over",
+          "targetRange": "Target Range",
+          "targetAria": "Dice target",
+          "target": "Target",
+          "multiplier": "Mult",
+          "winChance": "Win",
+          "roll": "Roll"
+        },
+        "roulette": {
+          "bets": "Bets",
+          "clearAll": "Clear All",
+          "empty": "No bets placed. Click the felt to bet.",
+          "labels": {
+            "firstDozen": "1st 12",
+            "secondDozen": "2nd 12",
+            "thirdDozen": "3rd 12",
+            "even": "Even",
+            "red": "Red",
+            "black": "Black",
+            "odd": "Odd"
+          }
+        },
+        "coin": {
+          "selectFace": "Select Face",
+          "heads": "Heads",
+          "tails": "Tails"
+        },
+        "keno": {
+          "spotsLabel": "/ 5 Spots",
+          "autoPick": "Auto Pick",
+          "clear": "Clear",
+          "empty": "No spots selected. Click the grid to pick numbers."
+        },
+        "plinko": {
+          "riskProfile": "Risk Profile",
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High",
+          "lowDetail": "Smoother board",
+          "mediumDetail": "Balanced edge",
+          "highDetail": "Extreme buckets"
+        },
+        "baccarat": {
+          "betOn": "Bet on",
+          "player": "Player",
+          "banker": "Banker",
+          "tie": "Tie"
+        },
+        "sicBo": {
+          "betType": "Bet type",
+          "face": "Face",
+          "total": "Total",
+          "kinds": {
+            "small": "Small",
+            "big": "Big",
+            "anyTriple": "Any triple",
+            "specificTriple": "Specific triple",
+            "total": "Exact total",
+            "specificDouble": "Specific double",
+            "singleFace": "Single face"
+          }
+        },
+        "slots": {
+          "profiles": {
+            "classic": "Classic 3 reels"
+          },
+          "symbols": {
+            "0": "Cherry",
+            "1": "Lemon",
+            "2": "Bell",
+            "3": "Diamond",
+            "4": "Crown",
+            "5": "Star",
+            "6": "Bar",
+            "7": "Seven"
+          },
+          "yes": "Yes",
+          "no": "No"
+        }
+      },
+      "stage": {
+        "loading": "Loading stage",
+        "coin": {
+          "awaitingSelection": "Awaiting toss selection",
+          "selected": "{side} selected",
+          "waitingVrf": "Waiting for VRF oracle..."
+        },
+        "plinko": {
+          "board": "Plinko board",
+          "dropZone": "Set risk and drop",
+          "waitingVrf": "Waiting for VRF oracle...",
+          "revealing": "Dropping through the board...",
+          "slot": "Slot {slot}",
+          "risk": "Risk: {risk}"
+        },
+        "slots": {
+          "ready": "Match 3 symbols to win",
+          "spinning": "Waiting for VRF oracle...",
+          "result": "{symbols}",
+          "classic": "Classic profile"
+        },
+        "baccarat": {
+          "ready": "Bet player, banker, or tie",
+          "dealing": "Waiting for VRF oracle...",
+          "result": "{side} wins",
+          "selected": "Selected: {side}"
+        },
+        "sicBo": {
+          "ready": "Choose a Sic Bo table bet",
+          "rolling": "Waiting for VRF oracle...",
+          "opened": "Dice opened: {dice}",
+          "total": "Total",
+          "triple": "Triple",
+          "result": "Result"
+        }
+      },
+      "history": {
+        "recent": {
+          "rolls": "RECENT ROLLS",
+          "numbers": "RECENT NUMBERS",
+          "draws": "RECENT DRAWS",
+          "buckets": "RECENT BUCKETS",
+          "slots": "RECENT SLOTS",
+          "hands": "RECENT HANDS",
+          "dice": "RECENT DICE",
+          "flips": "RECENT FLIPS"
+        },
+        "states": {
+          "settled": "SETTLED",
+          "refunded": "REFUNDED",
+          "vrfReady": "VRF READY",
+          "placed": "PLACED"
+        },
+        "empty": "Waiting for first play..."
+      },
+      "result": {
+        "title": "Bet details",
+        "outcomes": {
+          "refunded": {
+            "label": "Stake refunded",
+            "detail": "The refund path returned the stake after the VRF timeout window."
+          },
+          "win": {
+            "label": "Won bet",
+            "detail": "The round settled on-chain and payout is confirmed."
+          },
+          "winPending": {
+            "label": "Won bet",
+            "detail": "The VRF result is revealed. Payout settlement is still pending."
+          },
+          "returned": {
+            "label": "Stake returned",
+            "detail": "The settled payout equals the stake."
+          },
+          "returnedPending": {
+            "label": "Stake returned",
+            "detail": "The VRF result is revealed. Settlement confirmation is still pending."
+          },
+          "loss": {
+            "label": "Lost bet",
+            "detail": "The round settled on-chain with no net payout."
+          },
+          "lossPending": {
+            "label": "Lost bet",
+            "detail": "The VRF result is revealed. Final settlement is still pending."
+          },
+          "revealed": {
+            "label": "Result revealed",
+            "detail": "Opened numbers are available from VRF. Settlement is still pending."
+          }
+        },
+        "sections": {
+          "gameResult": "Game result",
+          "fairnessData": "Fairness data"
+        },
+        "facts": {
+          "status": "Status",
+          "player": "Player",
+          "multiplier": "Multiplier",
+          "betAmount": "Bet amount",
+          "payout": "Payout",
+          "expectedPayout": "Potential payout",
+          "pending": "Pending",
+          "betId": "Bet ID",
+          "refund": "Refund",
+          "requestId": "Request ID",
+          "netResult": "Net result",
+          "randomHash": "Random hash",
+          "settlementTx": "Settlement tx",
+          "resolvedTime": "Resolved time",
+          "vrfFee": "RNG fees (VRF)",
+          "diceTarget": "Dice target",
+          "diceNumber": "Number drawn",
+          "coinChoice": "Chosen side",
+          "coinDrawn": "Side drawn",
+          "rouletteBet": "Roulette bet",
+          "rouletteWinningNumber": "Winning number",
+          "kenoPicked": "Numbers picked",
+          "kenoDrawn": "Numbers drawn",
+          "kenoHits": "Hits",
+          "plinkoRisk": "Risk profile",
+          "plinkoSlot": "Slot",
+          "plinkoPath": "Path",
+          "plinkoMultiplier": "Slot multiplier",
+          "slotsProfile": "Profile",
+          "slotsSymbols": "Symbols drawn",
+          "slotsMultiplier": "Reel multiplier",
+          "slotsJackpot": "Jackpot",
+          "baccaratChoice": "Chosen side",
+          "baccaratWinner": "Winning side",
+          "baccaratPlayerTotal": "Player total",
+          "baccaratBankerTotal": "Banker total",
+          "baccaratPlayerCards": "Player cards",
+          "baccaratBankerCards": "Banker cards",
+          "sicBoBet": "Sic Bo bet",
+          "sicBoDice": "Dice opened",
+          "sicBoTotal": "Total",
+          "sicBoTriple": "Triple",
+          "sicBoMultiplier": "Roll multiplier"
+        },
+        "actions": {
+          "close": "Close",
+          "playAgain": "Play again",
+          "viewSettlement": "View settlement",
+          "settlementPending": "Settlement pending"
+        }
+      }
+    },
+    "directory": {
+      "loading": "Loading games...",
+      "empty": {
+        "noRelease": "No embedded release available for the connected chain.",
+        "noGames": "No games registered in the active release.",
+        "noResults": "No matching rooms",
+        "noResultsDetail": "No casino room matches \"{query}\". Clear the search or choose another category.",
+        "clearSearch": "Clear search"
+      },
+      "hero": {
+        "eyebrow": "Global Casino Lobby",
+        "title": "Enter the Floor",
+        "description": "All modules are 100% on-chain, verifiable, and connected directly to the isolated reserve bank. Play directly from your wallet."
+      },
+      "stats": {
+        "rooms": "On-chain rooms",
+        "asset": "Bank asset"
+      },
+      "filters": {
+        "all": "All Modules",
+        "table": "Table Games",
+        "dice": "Dice Games",
+        "binary": "Binary / Fast",
+        "lottery": "Lottery",
+        "arcade": "Arcade"
+      },
+      "search": {
+        "placeholder": "Search games...",
+        "aria": "Search games"
+      },
+      "tags": {
+        "binary": "Binary",
+        "table": "Table",
+        "lottery": "Lottery",
+        "arcade": "Arcade",
+        "dice": "Dice",
+        "module": "Module"
+      },
+      "rooms": {
+        "dice": {
+          "title": "Precision Dice",
+          "promise": "1-99 sizing in seconds.",
+          "badge": "1% House Edge"
+        },
+        "roulette": {
+          "title": "European Roulette",
+          "promise": "Classic 37-slot physical mechanics.",
+          "badge": "Max Payout 36x"
+        },
+        "coinToss": {
+          "title": "Coin Toss",
+          "promise": "High-speed 50/50 resolution.",
+          "badge": "1% House Edge"
+        },
+        "keno": {
+          "title": "Keno Draft",
+          "promise": "Pick multi-spots for massive multipliers.",
+          "badge": "Up to 500.5x"
+        },
+        "plinko": {
+          "title": "Plinko",
+          "promise": "Drop through eight rows and chase edge buckets.",
+          "badge": "Up to 24.6x"
+        },
+        "slots": {
+          "title": "Slots",
+          "promise": "Match pairs, triples, or the triple-seven jackpot.",
+          "badge": "Up to 64x"
+        },
+        "baccarat": {
+          "title": "Baccarat",
+          "promise": "Player vs banker hands with tie upside.",
+          "badge": "Up to 10.4x"
+        },
+        "sicBo": {
+          "title": "Sic Bo",
+          "promise": "Three dice, classic table bets, and triple upside.",
+          "badge": "Up to 216x"
+        }
+      },
+      "card": {
+        "releaseAnchored": "Release anchored",
+        "playNow": "Play Now"
+      },
+      "reserve": {
+        "title": "Casino bankroll",
+        "subtitle": "Bank {bank}",
+        "status": "Release anchored",
+        "cta": "Inspect bank"
+      }
+    }
+  },
+  "sportsbook": {
+    "index": {
+      "loading": "Loading sportsbook...",
+      "noRelease": {
+        "title": "No release loaded",
+        "description": "The embedded release snapshot is unavailable.",
+        "status": "Unavailable"
+      },
+      "header": {
+        "metadataEnabled": "Tickets enabled",
+        "readOnlyPreview": "Preview mode",
+        "sportsHubPresent": "SportsHub present",
+        "sportsHubMissing": "SportsHub missing",
+        "title": "Sportsbook",
+        "description": "Pick a football market, choose Home, Draw, or Away, and place a fixed-odds ticket with on-chain settlement through SportsHub."
+      },
+      "riskCard": {
+        "eyebrow": "Ticket placement",
+        "signedOddsOnly": "Signed odds only",
+        "locked": "Preview mode",
+        "description": "Open a market detail page and provide a signed odds snapshot before placement.",
+        "lockedDescription": "Market reads are live, but public ticket placement is disabled for this build. You can still inspect the latest market and settlement rules.",
+        "inspect": "Open latest market"
+      },
+      "details": {
+        "release": "Release",
+        "sportsHub": "SportsHub",
+        "embeddedMetadataPresent": "Embedded metadata present",
+        "notAvailable": "Not available",
+        "riskEngine": "Risk engine",
+        "riskEngineHelper": "Shared cap enforcement surface",
+        "challengeWindow": "Challenge window",
+        "challengeWindowHelper": "Result dispute timeout",
+        "nextMarket": "Next market",
+        "marketHelper": "Latest on-chain market counter",
+        "nextTicket": "Next ticket",
+        "ticketHelper": "Latest on-chain ticket counter",
+        "runtimeReadFailed": "SportsHub runtime read failed",
+        "sdkRead": "Read through @ssot/ssot SDK"
+      },
+      "release": {
+        "eyebrow": "Proof surface",
+        "title": "Oracle, release, and settlement anchors",
+        "description": "The active bundle exposes the signed odds identity, result reporter set, and contract addresses that make every sportsbook ticket auditable.",
+        "oddsSignerSet": "Odds signer set",
+        "resultReporterSet": "Result reporter set",
+        "reporterThreshold": "Reporter threshold",
+        "reporterThresholdHelper": "Minimum result reporters",
+        "frontendFlag": "Frontend flag",
+        "booleanTrue": "true",
+        "booleanFalse": "false",
+        "challenger": "Challenger",
+        "arbitrator": "Arbitrator"
+      },
+      "mvp": {
+        "eyebrow": "Market format",
+        "title": "Football 1X2 ticket flow",
+        "description": "The MVP path is intentionally narrow: pre-match fixed odds, signed snapshots, explicit result evidence, and a challenge window before settlement finality.",
+        "rows": {
+          "marketType": {
+            "label": "Market type",
+            "value": "Pre-match football 1X2"
+          },
+          "oddsSource": {
+            "label": "Odds source",
+            "value": "The Odds API candidate"
+          },
+          "settlement": {
+            "label": "Settlement",
+            "value": "Reporter result plus challenge window"
+          },
+          "launchState": {
+            "label": "Launch state",
+            "enabled": "Canary tickets enabled",
+            "disabled": "Read-only until ticketing is enabled"
+          }
+        }
+      },
+      "caps": {
+        "eyebrow": "Protocol caps",
+        "title": "Top-level SportsHub limits",
+        "description": "These raw-unit caps are copied from the embedded release and should stay aligned with the deployment bundle and ops approval memos.",
+        "riskTitle": "SportsHub global risk caps"
+      },
+      "marketTape": {
+        "eyebrow": "Markets",
+        "title": "Available football markets",
+        "descriptionEnabled": "Open a market to review outcomes, timing, reserved exposure, and place a signed-odds ticket while the market is open.",
+        "descriptionDisabled": "Open a market to review outcomes, timing, and reserved exposure. Ticket placement remains disabled for this build."
+      },
+      "lookup": {
+        "eyebrow": "My ticket",
+        "title": "Track a ticket",
+        "description": "Enter a ticket id to check stake, selected outcome, payout, and terminal state directly from SportsHub.",
+        "marketId": "Market id",
+        "ticketId": "Ticket id",
+        "marketEmpty": "Enter a SportsHub market id to inspect state, result status, and reserved exposure.",
+        "ticketEmpty": "Enter a SportsHub ticket id to inspect position, stake, payout, and ticket state.",
+        "marketNumericError": "Enter a numeric market id.",
+        "ticketNumericError": "Enter a numeric ticket id."
+      },
+      "advanced": {
+        "summary": "Advanced chain proof and operator tools",
+        "marketLookupEyebrow": "Market lookup",
+        "marketLookupTitle": "Inspect a SportsHub market",
+        "marketLookupDescription": "Developer readback for market state, result proposal, and reserved exposure."
+      },
+      "operator": {
+        "eyebrow": "Operator writes",
+        "title": "Market and result administration",
+        "description": "Governance and reporter actions are exposed as typed SDK calls for authorized wallets. Public ticket placement uses a separate signed-odds path and contract roles still enforce every write.",
+        "walletRoleRequired": "Wallet role must be authorized on SportsHub."
+      },
+      "bankroll": {
+        "eyebrow": "Bankroll",
+        "title": "Sports pool isolation",
+        "description": "Sports liquidity is kept separate from casino game liquidity, so sportsbook exposure can be capped, paused, and monitored independently.",
+        "noPool": "No Sports pool metadata is available in this release."
+      },
+      "controls": {
+        "eyebrow": "Controls",
+        "title": "Launch blockers remain explicit",
+        "description": "The page is intentionally operational: it keeps the SportsHub deployment visible while preserving the public-launch blockers tracked in the ops packet.",
+        "links": {
+          "goNoGo": "Go/no-go packet",
+          "frontendAccess": "Frontend access policy",
+          "providerPolicy": "Provider policy"
+        }
+      }
+    },
+    "player": {
+      "header": {
+        "title": "Sportsbook",
+        "description": "Pick a market, choose an outcome, and place a fixed-odds ticket settled on-chain.",
+        "descriptionPreview": "Markets are visible while public tickets remain disabled for this build. Inspect outcomes ahead of launch.",
+        "opsLink": "Operator console",
+        "status": {
+          "ready": "Tickets live",
+          "previewOnly": "Preview only",
+          "notInRelease": "Not in release",
+          "readOnly": "Read-only"
+        }
+      },
+      "board": {
+        "bucket": {
+          "live": "Live now",
+          "today": "Today",
+          "upcoming": "Upcoming",
+          "past": "Recently settled"
+        },
+        "count": "{count, plural, one {1 market} other {# markets}}"
+      },
+      "lobby": {
+        "featuredEyebrow": "Featured market",
+        "eventTitle": "{away} @ {home}",
+        "fallbackTitle": "Market {tag}",
+        "kickoff": "Kickoff {time}",
+        "openMarket": "Open market",
+        "viewMarket": "View market",
+        "oddsPending": "{count} outcomes · prices pending",
+        "snapshotEyebrow": "Market snapshot",
+        "snapshotTitle": "Football board",
+        "snapshotDescription": "Scan live, upcoming, and recently settled fixed-odds markets before opening a ticket.",
+        "live": "Live",
+        "today": "Today",
+        "upcoming": "Upcoming",
+        "settled": "Settled",
+        "boardTitle": "Market board",
+        "boardDescription": "Open a row for odds, ticket placement, result proof, and market-level settlement state.",
+        "side": {
+          "home": "Home",
+          "draw": "Draw",
+          "away": "Away"
+        },
+        "filters": {
+          "ariaLabel": "Filter sportsbook markets",
+          "all": "All",
+          "live": "Live",
+          "today": "Today",
+          "upcoming": "Upcoming",
+          "past": "Settled",
+          "empty": {
+            "all": "No sportsbook markets are published right now.",
+            "live": "No live markets are available right now.",
+            "today": "No markets are scheduled for today.",
+            "upcoming": "No upcoming markets are published yet.",
+            "past": "No settled markets are available in this release window."
+          }
+        }
+      },
+      "event": {
+        "fallbackTitle": "Market {tag}",
+        "kickoffAt": "Kickoff {time}",
+        "outcomesPending": "{count} outcomes · prices pending",
+        "outcomeShort": {
+          "home": "Home",
+          "draw": "Draw",
+          "away": "Away"
+        }
+      },
+      "marketState": {
+        "none": "Unknown",
+        "draft": "Draft",
+        "open": "Open",
+        "locked": "Locked",
+        "suspended": "Suspended",
+        "resultProposed": "Result proposed",
+        "challenged": "Challenged",
+        "resolved": "Settled",
+        "voided": "Voided",
+        "live": "Live"
+      },
+      "empty": {
+        "ctaCasino": "Browse casino",
+        "ctaOps": "Operator console",
+        "preview": {
+          "title": "Sportsbook is in preview",
+          "description": "Public tickets open after the launch checklist completes. You can still inspect upcoming markets and the on-chain settlement model."
+        },
+        "quiet": {
+          "title": "No markets scheduled",
+          "description": "There are no live or upcoming markets right now. Check back closer to kickoff for the next slate."
+        }
+      },
+      "error": {
+        "title": "Could not load sportsbook markets. Refresh in a moment."
+      },
+      "detail": {
+        "noRelease": {
+          "title": "Sportsbook is unavailable",
+          "description": "No release snapshot was loaded for this build."
+        },
+        "invalid": {
+          "title": "Invalid market id",
+          "description": "The link is malformed. Choose a market from the sportsbook list.",
+          "back": "Back to sportsbook"
+        },
+        "readFailed": {
+          "title": "Could not load this market",
+          "description": "The contract read failed. Refresh the page or pick another market.",
+          "return": "Back to sportsbook"
+        },
+        "refreshing": "Refreshing market state…",
+        "header": {
+          "back": "Back to sportsbook",
+          "fallback": "Market {tag}",
+          "bookmaker": "via {name}",
+          "kickoff": "Kickoff {time}",
+          "locks": "Closes {time}"
+        },
+        "board": {
+          "title": "Pick an outcome",
+          "titleResolved": "Outcome settled",
+          "snapshotTime": "Prices as of {time}",
+          "winner": "Winner",
+          "outcomeShort": "Outcome {outcomeId}",
+          "outcomeSide": {
+            "home": "Home",
+            "draw": "Draw",
+            "away": "Away"
+          },
+          "fallback": {
+            "binaryYes": "Yes",
+            "binaryNo": "No",
+            "threeWayHome": "Home",
+            "threeWayDraw": "Draw",
+            "threeWayAway": "Away",
+            "generic": "Outcome {outcomeId}"
+          },
+          "oddsPending": "Prices are not published yet for this market.",
+          "providerUnavailable": "Signed odds could not be fetched. Outcome selection is disabled until odds return."
+        },
+        "result": {
+          "voidedTitle": "Market voided",
+          "voidedDescription": "All tickets on this market are refunded. No further action is required.",
+          "challengedTitle": "Result challenged",
+          "challengedDescription": "A reporter result is under arbitration. Settlement is on hold until the dispute is resolved.",
+          "settledTitle": "Settled · {outcome} wins",
+          "settledDescription": "The market has been finalized on chain. Winning tickets can be settled now.",
+          "proposedTitle": "Result proposed · {outcome}",
+          "proposedDescription": "The challenge window is open. Settlement finalizes {finalizes} unless the proposal is challenged.",
+          "outcomeIdFallback": "Outcome {outcomeId}",
+          "rows": {
+            "proposer": "Proposer",
+            "reporterCount": "Reporters",
+            "proposedAt": "Proposed at",
+            "finalizesAt": "Finalizes at"
+          }
+        },
+        "slip": {
+          "marketMustBeOpen": "Market is not accepting tickets right now.",
+          "outcomeFallback": "Outcome {outcomeId}"
+        },
+        "myTickets": {
+          "title": "Your tickets",
+          "description": "Track tickets you placed on this market without leaving the page.",
+          "refreshing": "Refreshing",
+          "connect": "Connect wallet to see your tickets for this market.",
+          "loading": "Loading your tickets…",
+          "empty": "No tickets on this market yet.",
+          "error": "Could not load your sports tickets right now.",
+          "pending": "Pending",
+          "ticketNumber": "S#{ticketId}",
+          "unknownOutcome": "Outcome pending",
+          "binaryYes": "Yes",
+          "binaryNo": "No",
+          "home": "Home",
+          "draw": "Draw",
+          "away": "Away",
+          "outcomeFallback": "Outcome {outcomeId}",
+          "columns": {
+            "ticket": "Ticket",
+            "pick": "Pick",
+            "stake": "Stake",
+            "payout": "Payout",
+            "status": "Status"
+          },
+          "status": {
+            "open": "Open",
+            "won": "Won",
+            "lost": "Lost",
+            "refunded": "Refunded"
+          }
+        },
+        "latestTicket": {
+          "eyebrow": "Ticket accepted",
+          "title": "Ticket S#{ticketId} is live",
+          "description": "Your ticket is on-chain. Keep this page open or view the receipt to track result proposal, finality, and settlement.",
+          "viewTicket": "Track ticket",
+          "pick": "Pick",
+          "price": "Accepted price",
+          "potentialPayout": "Potential payout",
+          "stage": {
+            "idle": "Set a stake and choose an outcome.",
+            "ready": "Ready to place this ticket.",
+            "quoting": "Fetching a signed price.",
+            "planning": "Preparing the on-chain ticket.",
+            "signing": "Waiting for wallet signature.",
+            "mining": "Broadcasting the ticket.",
+            "tracking": "Ticket is on-chain. Tracking result proposal, finality, and settlement.",
+            "settled": "Ticket settled. Open the receipt for payout details.",
+            "refunded": "Ticket refunded. Open the receipt for refund details.",
+            "voided": "Ticket voided. Open the receipt for refund details.",
+            "failed": "Ticket placement needs attention. Review the bet slip and retry."
+          }
+        },
+        "meta": {
+          "title": "Market details",
+          "outcomes": "Outcomes",
+          "reserved": "Reserved",
+          "version": "Version",
+          "state": "State"
+        },
+        "proof": {
+          "summary": "Chain proof",
+          "rows": {
+            "marketId": "Market ID",
+            "marketKey": "marketKey"
+          }
+        }
+      },
+      "slip": {
+        "ariaLabel": "Bet slip",
+        "title": "Bet slip",
+        "selection": "Selected outcome",
+        "emptySelection": "Pick an outcome to start.",
+        "priceUnknown": "—",
+        "stakeLabel": "Stake ({symbol})",
+        "stakeRow": "Stake",
+        "payoutRow": "Potential payout",
+        "stageLabel": "Status",
+        "stage": {
+          "idle": "Pick an outcome and enter your stake.",
+          "ready": "Ready to place.",
+          "fetchingOdds": "Fetching signed odds…",
+          "planning": "Building the ticket plan…",
+          "signing": "Confirm in your wallet…",
+          "mining": "Submitting ticket on chain…",
+          "placed": "Ticket placed.",
+          "error": "Ticket placement failed."
+        },
+        "action": {
+          "idle": "Place bet",
+          "ready": "Place bet",
+          "busy": "Placing…",
+          "placed": "Ticket placed",
+          "retry": "Try again"
+        },
+        "receipt": {
+          "title": "Ticket placed",
+          "payout": "Potential payout",
+          "ticketId": "Ticket",
+          "viewTicket": "View ticket",
+          "placeAnother": "Place another bet"
+        }
+      },
+      "ticket": {
+        "back": "Back to activity",
+        "bookmaker": "via {name}",
+        "subtitle": "SportsHub ticket #{ticketId}",
+        "eventTitle": "{away} @ {home}",
+        "fallbackMarket": "Market {tag}",
+        "fallbackTicket": "Ticket {ticketId}",
+        "fallbackOutcome": "Outcome {outcomeId}",
+        "refreshing": "Refreshing…",
+        "noRelease": {
+          "title": "Ticket is unavailable",
+          "description": "No release snapshot was loaded for this build."
+        },
+        "invalid": {
+          "title": "Invalid ticket id",
+          "description": "The link is malformed. Return to activity and choose a SportsHub ticket.",
+          "back": "Back to activity"
+        },
+        "readFailed": {
+          "title": "Could not load this ticket",
+          "description": "SportsHub did not return a ticket for this id, or the RPC read failed."
+        },
+        "status": {
+          "held": "Ticket accepted",
+          "resultReady": "Result ready",
+          "settled": "Settled",
+          "won": "Won ticket",
+          "lost": "Lost ticket",
+          "refunded": "Refunded",
+          "voided": "Voided"
+        },
+        "metrics": {
+          "selection": "Your pick",
+          "price": "Accepted price {price}",
+          "stake": "Stake",
+          "pool": "Pool {poolId}",
+          "payout": "Potential payout",
+          "winner": "Winner: {outcome}",
+          "pendingResult": "Waiting for official result"
+        },
+        "receipt": {
+          "eyebrow": "Ticket receipt",
+          "wonTitle": "Winning ticket",
+          "wonDescription": "Your pick matched the finalized market result. The return shown below is the on-chain ticket payout.",
+          "lostTitle": "Ticket lost",
+          "lostDescription": "Your pick did not match the finalized market result. The net result reflects the staked amount.",
+          "refundedTitle": "Ticket refunded",
+          "refundedDescription": "This ticket ended through a refund or void path. The returned amount is shown below.",
+          "openTitle": "Ticket accepted",
+          "openDescription": "The ticket is live on SportsHub. The return and profit values remain potential until the market is finalized.",
+          "pick": "Your pick",
+          "winner": "Final winner",
+          "winnerValue": "Winner: {outcome}",
+          "pendingWinner": "Waiting for official result",
+          "stake": "Stake",
+          "return": "Return",
+          "potentialReturn": "Potential return",
+          "netResult": "Net result",
+          "potentialProfit": "Potential profit",
+          "pool": "Pool"
+        },
+        "facts": {
+          "title": "Ticket proof",
+          "summaryHint": "Advanced",
+          "description": "These hashes bind the ticket, odds snapshot, rulebook, and placement transaction. They are hidden by default because the receipt above is the primary player view.",
+          "ticketId": "Ticket id",
+          "marketId": "Market id",
+          "positionId": "Position id",
+          "acceptedAt": "Accepted at",
+          "player": "Player",
+          "ticketState": "Ticket state",
+          "oddsSnapshotHash": "Odds snapshot",
+          "rulebookHash": "Rulebook",
+          "placeTx": "Placement tx"
+        },
+        "lifecycle": {
+          "eyebrow": "Ticket lifecycle",
+          "held": {
+            "title": "Waiting for official result",
+            "description": "The ticket is accepted on-chain. It will become settleable after the market result is finalized."
+          },
+          "finalityPending": {
+            "title": "Result proposed",
+            "description": "The official result has been proposed. Settlement opens after the challenge window closes.",
+            "detail": "Finality target: {time}"
+          },
+          "resultReady": {
+            "title": "Result finality reached",
+            "description": "The result proof exists, but the market has not been finalized to resolved state yet."
+          },
+          "settleReady": {
+            "title": "Ready to settle",
+            "description": "The market is resolved. Anyone can settle this held ticket and release the final payout."
+          },
+          "refundReady": {
+            "title": "Refund available",
+            "description": "The market was voided. This ticket can return the original stake."
+          },
+          "settled": {
+            "title": "Ticket settled",
+            "description": "SportsHub has terminalized the ticket and released the final payout path."
+          },
+          "refunded": {
+            "title": "Stake refunded",
+            "description": "The void/refund path returned the original stake."
+          },
+          "voided": {
+            "title": "Ticket voided",
+            "description": "The market was voided and this ticket was terminalized through the void path."
+          }
+        },
+        "actions": {
+          "openMarket": "Open market",
+          "ops": "Inspect in ops",
+          "settle": "Settle ticket",
+          "settling": "Settling…",
+          "refund": "Refund stake",
+          "refunding": "Refunding…",
+          "settleTrace": "Settlement trace",
+          "refundTrace": "Refund trace",
+          "traceSubtitle": "Wallet transaction status",
+          "status": "Status",
+          "viewExplorer": "View explorer",
+          "resetTrace": "Reset trace",
+          "transactionError": "Transaction failed"
+        },
+        "flows": {
+          "preflight": "Preflight",
+          "confirm": "Confirm receipt",
+          "receipt": "Wait for the transaction receipt.",
+          "settle": {
+            "submit": "Settle ticket",
+            "preflight": "Confirm the ticket is still held and the market is resolved.",
+            "broadcast": "Broadcast SportsHub.settleTicket."
+          },
+          "refund": {
+            "submit": "Refund stake",
+            "preflight": "Confirm the ticket is still held and the market is voided.",
+            "broadcast": "Broadcast SportsHub.refundTicket."
+          }
+        },
+        "toast": {
+          "settled": "Ticket settlement confirmed.",
+          "settleFailed": "Ticket settlement failed.",
+          "refunded": "Ticket refund confirmed.",
+          "refundFailed": "Ticket refund failed."
+        }
+      }
+    },
+    "components": {
+      "na": "N/A",
+      "lookup": {
+        "inspect": "Inspect"
+      },
+      "marketInspector": {
+        "title": "Market {marketId}",
+        "stateLine": "{state} / pool {poolId}",
+        "resultStatus": {
+          "none": "No result proposed",
+          "proposed": "Result proposed"
+        },
+        "rows": {
+          "event": "Event",
+          "outcomeCount": "Outcome count",
+          "startsAt": "Starts at",
+          "locksAt": "Locks at",
+          "version": "Version",
+          "marketReserved": "Market reserved",
+          "marketKey": "Market key",
+          "rulebook": "Rulebook",
+          "result": "Result",
+          "winningOutcome": "Winning outcome"
+        }
+      },
+      "ticketInspector": {
+        "title": "Ticket {ticketId}",
+        "stateLine": "{state} / market {marketId}",
+        "rows": {
+          "position": "Position",
+          "event": "Event",
+          "pool": "Pool",
+          "outcome": "Outcome",
+          "player": "Player",
+          "stake": "Stake",
+          "payout": "Payout",
+          "reserved": "Reserved",
+          "acceptedAt": "Accepted at",
+          "oddsSnapshot": "Odds snapshot"
+        }
+      },
+      "marketTape": {
+        "loading": "Loading recent SportsHub markets...",
+        "empty": "No SportsHub markets have been created in this release yet.",
+        "columns": {
+          "market": "Market",
+          "starts": "Starts",
+          "reserved": "Reserved",
+          "result": "Result",
+          "actions": "Actions"
+        },
+        "marketTitle": "Market {marketId}",
+        "event": "Event {eventId}",
+        "pool": "Pool {poolId}",
+        "outcomes": "{count} outcomes",
+        "locks": "Locks {time}",
+        "result": {
+          "none": "No result",
+          "challenged": "Challenged",
+          "outcome": "Outcome {outcomeId}"
+        },
+        "actions": {
+          "open": "Open",
+          "load": "Load"
+        }
+      },
+      "playerMarkets": {
+        "loading": "Loading football markets...",
+        "empty": "No football markets are open in this release yet.",
+        "title": "Football 1X2",
+        "matchup": "{home} vs {away}",
+        "marketId": "Market {marketId}",
+        "starts": "Starts {time}",
+        "outcome": "Pick",
+        "openTicket": "Open ticket",
+        "viewMarket": "View market",
+        "openHelper": "Open the market to fetch a live signed price before you place a ticket.",
+        "liveOddsHelper": "Live prices from {bookmaker}. Pick a price to open the bet slip.",
+        "providerUnavailable": "Live provider odds are unavailable. You can still open the market and retry.",
+        "closedHelper": "This market is no longer accepting tickets.",
+        "result": "Result proposed: {outcome}"
+      },
+      "riskRows": {
+        "maxStake": "Max stake",
+        "maxPayout": "Max payout",
+        "marketReserved": "Market reserved",
+        "outcomeReserved": "Outcome reserved",
+        "eventReserved": "Event reserved",
+        "riskHash": "Risk hash"
+      },
+      "poolPanel": {
+        "title": "Pool {poolId}",
+        "domainLine": "{domain} / domain {domainId}",
+        "defaultDomain": "Sports",
+        "active": "Active",
+        "paused": "Paused",
+        "bank": "Bank",
+        "asset": "Asset",
+        "units": "Units",
+        "rawUnits": "raw / {decimals} decimals",
+        "riskTitle": "Pool risk caps"
+      }
+    },
+    "detail": {
+      "noRelease": {
+        "title": "No release loaded",
+        "description": "The embedded release snapshot is unavailable.",
+        "status": "Unavailable"
+      },
+      "back": "Back to sportsbook",
+      "return": "Return to sportsbook",
+      "marketDetailPill": "Market detail",
+      "title": "Football 1X2",
+      "description": "Choose Home, Draw, or Away and place a signed fixed-odds ticket while the market is open.",
+      "invalid": {
+        "eyebrow": "Invalid route",
+        "title": "Invalid market id",
+        "description": "SportsHub market routes require a numeric market id."
+      },
+      "readFailed": {
+        "eyebrow": "Read failed",
+        "title": "Market readback failed",
+        "description": "The SDK could not read this SportsHub market from the active release.",
+        "marketNotFound": "This market does not exist on the active SportsHub yet. Return to the sportsbook and open a listed market."
+      },
+      "loading": {
+        "eyebrow": "Readback",
+        "title": "Loading market",
+        "description": "Reading market, result, and exposure records through the v1.3 SDK.",
+        "body": "Loading SportsHub market state..."
+      },
+      "market": {
+        "eyebrow": "Market",
+        "title": "Lifecycle and result",
+        "description": "Market state is read directly from SportsHub. Result state is displayed when a reporter proposal exists."
+      },
+      "playerMarket": {
+        "eyebrow": "Match market",
+        "title": "Home / Draw / Away",
+        "matchup": "{home} vs {away}",
+        "description": "The public view keeps the decision simple: pick one side, get live odds, then submit the ticket.",
+        "providerDescription": "Live 1X2 prices from {bookmaker}. Pick a price to preselect the bet slip.",
+        "marketId": "Market {marketId}",
+        "outcome": "Outcome",
+        "winner": "Winning outcome",
+        "startsAt": "Starts",
+        "locksAt": "Ticket lock",
+        "providerUnavailable": "Live provider odds are unavailable for this market. Use the bet slip to retry.",
+        "resultReady": "Reporter result is available: {outcome}. Settlement remains governed by the challenge window.",
+        "resultPending": "No final result has been reported yet. Tickets remain auditable on-chain."
+      },
+      "advanced": {
+        "summary": "Advanced chain proof and settlement tools"
+      },
+      "exposure": {
+        "eyebrow": "Exposure",
+        "title": "Reserved capital",
+        "description": "These values are the on-chain exposure readback used by ops to validate market, outcome, event, and pool-event caps.",
+        "marketReserved": "Market reserved",
+        "eventReserved": "Event reserved",
+        "poolEventReserved": "Pool-event reserved",
+        "outcomeCount": "Outcome count",
+        "outcomeExposure": "Outcome exposure",
+        "outcome": "Outcome {outcomeId}"
+      },
+      "ticketPlacement": {
+        "eyebrow": "Bet slip",
+        "title": "Place ticket",
+        "description": "Pick a side, enter stake, lock a live fixed price, and submit the ticket.",
+        "marketMustBeOpen": "Market must be open before ticket placement.",
+        "walletAndSnapshotRequired": "Connect a wallet, then lock live odds before placing the ticket."
+      },
+      "ticketTerminal": {
+        "eyebrow": "Ticket terminalization",
+        "title": "Settle, refund, or void tickets",
+        "description": "Debt-out calls remain wallet-gated and use SportsHub terminal helpers. Inspect a ticket before broadcasting to verify the state and payout path.",
+        "walletRequired": "A connected wallet is required to broadcast terminal ticket calls."
+      },
+      "noMarket": {
+        "eyebrow": "Readback",
+        "title": "No market data",
+        "description": "No market was returned for this id from the active SportsHub."
+      }
+    },
+    "ticketPlacement": {
+      "fields": {
+        "providerEventId": "Provider event id",
+        "bookmakerKey": "Bookmaker key",
+        "sportKey": "Sport key",
+        "outcomeId": "Outcome id",
+        "stake": "Stake",
+        "stakeRawUnits": "Stake raw units",
+        "oddsWad": "Odds WAD",
+        "maxStake": "Max stake",
+        "maxPayout": "Max payout",
+        "expiresAt": "Expires at",
+        "nonce": "Nonce",
+        "riskHash": "Risk hash",
+        "signature": "Signature",
+        "oddsSignature": "Odds signature",
+        "stakeWithSymbol": "Stake ({symbol})"
+      },
+      "placeholders": {
+        "optional": "Optional",
+        "unixSeconds": "Unix seconds"
+      },
+      "validation": {
+        "positiveInteger": "{label} must be a positive integer.",
+        "positiveAmount": "{label} must be a positive amount.",
+        "greaterThanZero": "{label} must be greater than zero.",
+        "decimals": "{label} supports at most {decimals} decimal places.",
+        "integer": "{label} must be an integer.",
+        "outcomeNonNegative": "Outcome id must be a non-negative integer.",
+        "outcomeTooLarge": "Outcome id is too large.",
+        "outcomeRange": "Outcome id must be between 0 and {max}.",
+        "hex": "{label} must be 0x-prefixed hex.",
+        "exactBytes": "{label} must be {bytes} bytes."
+      },
+      "status": {
+        "noPlan": "No ticket plan created.",
+        "planning": "Planning ticket...",
+        "planReadyApproval": "Plan ready: approval required.",
+        "planReady": "Plan ready.",
+        "planningFailed": "Planning failed.",
+        "ticketPlanningFailed": "Ticket planning failed.",
+        "fetchingProviderOdds": "Fetching provider odds...",
+        "providerOddsRequestFailed": "Provider odds request failed.",
+        "providerOddsFailed": "Provider odds failed.",
+        "signedOddsReady": "Signed odds ready: {outcome} @ {price}.",
+        "providerOddsReadyToast": "Signed odds snapshot ready",
+        "submittingTicket": "Submitting ticket...",
+        "planUnavailable": "Ticket plan is unavailable.",
+        "ticketPlacementFailed": "Ticket placement failed.",
+        "ticketFailed": "Ticket failed.",
+        "ticketSubmittedWithId": "Ticket {ticketId} submitted.",
+        "ticketSubmitted": "Ticket submitted.",
+        "ticketSubmittedToast": "Ticket submitted"
+      },
+      "summary": {
+        "gate": "Gate",
+        "locked": "Locked",
+        "enabled": "Enabled",
+        "gateHelper": "Connect wallet and lock live odds.",
+        "market": "Market",
+        "marketHelper": "Pool {poolId}, {outcomeCount} outcomes",
+        "status": "Status",
+        "lastTx": "Last tx"
+      },
+      "actions": {
+        "fetchSignedOdds": "Get live odds",
+        "refreshOdds": "Refresh odds",
+        "planTicket": "Review transaction plan",
+        "placeTicket": "Place ticket"
+      },
+      "walletRequired": "Connect a wallet to place tickets.",
+      "hints": {
+        "enterStake": "Enter stake to request a live signed price.",
+        "getLiveOdds": "Get live odds first. The ticket can only be placed after a signed price is locked.",
+        "readyToPlace": "Price is locked. Place ticket when you are ready."
+      },
+      "sections": {
+        "selection": "Pick outcome",
+        "selectionHelper": "Choose an outcome, enter stake, then lock a live signed price.",
+        "advanced": "Chain odds proof",
+        "ticketPreview": "Ticket preview"
+      },
+      "outcomes": {
+        "option": "Option {outcomeId}",
+        "home": "Home",
+        "draw": "Draw",
+        "away": "Away",
+        "generic": "Outcome {outcomeId}",
+        "price": "{price}x"
+      },
+      "preview": {
+        "selection": "Selection",
+        "provider": "{sport} / {bookmaker}",
+        "needsOdds": "Get live odds to lock a signed price.",
+        "price": "Price",
+        "priceHelper": "Provider decimal odds",
+        "publicPriceHelper": "Indicative provider odds. Lock the price before placing.",
+        "payout": "Potential payout",
+        "payoutHelper": "Gross payout if this outcome wins",
+        "priceLocked": "Live price locked. The signature will be checked again before broadcast.",
+        "priceNotLocked": "No live price is locked yet. Odds can change until you request a signed quote."
+      },
+      "plan": {
+        "approval": "Approval",
+        "required": "Required",
+        "notRequired": "Not required",
+        "approveAmount": "Approve {amount}",
+        "allowance": "Allowance {amount}",
+        "oddsTicketHash": "Odds ticket hash",
+        "planState": "Plan state",
+        "advancedHelper": "Optional review for power users. Normal players can get live odds and place the ticket directly.",
+        "empty": "Get live odds first. The signed snapshot is checked before broadcast; stale or unsigned odds are rejected."
+      }
+    },
+    "ticketTerminal": {
+      "validation": {
+        "oneTicket": "Enter at least one ticket id.",
+        "numeric": "Ticket ids must be numeric.",
+        "positive": "Ticket ids must be positive."
+      },
+      "status": {
+        "noAction": "No ticket action submitted.",
+        "actionFailed": "{label} failed.",
+        "actionSubmitted": "{label} submitted"
+      },
+      "actions": {
+        "settleTickets": "Settle tickets",
+        "refundTickets": "Refund tickets",
+        "voidTickets": "Void tickets",
+        "inspectTicket": "Inspect ticket",
+        "settle": "Settle",
+        "refund": "Refund",
+        "void": "Void"
+      },
+      "summary": {
+        "wallet": "Wallet",
+        "connected": "Connected",
+        "required": "Required",
+        "walletHelper": "Terminal ticket calls are public, but still require a wallet.",
+        "lastAction": "Last action",
+        "lastTx": "Last tx"
+      },
+      "form": {
+        "ticketIds": "Ticket ids"
+      },
+      "loading": "Loading SportsHub ticket...",
+      "empty": "Inspect a ticket to verify position id, stake, payout, and terminal state before broadcasting debt-out."
+    },
+    "operator": {
+      "validation": {
+        "positiveInteger": "{label} must be a positive integer.",
+        "bytes32": "{label} must be a 32-byte hex value."
+      },
+      "status": {
+        "noTransaction": "No operator transaction submitted.",
+        "failed": "{label} failed.",
+        "submitted": "{label} submitted",
+        "sdkUnavailable": "SDK unavailable."
+      },
+      "summary": {
+        "writeStatus": "Write status",
+        "walletConnected": "Wallet connected",
+        "walletRequired": "Wallet required",
+        "rolesHelper": "Contract roles are enforced on-chain by SportsHub.",
+        "lastAction": "Last action",
+        "lastTx": "Last tx",
+        "readOnly": "Read-only",
+        "writable": "Writable",
+        "noWallet": "No wallet"
+      },
+      "create": {
+        "title": "Create fixed-odds market"
+      },
+      "lifecycle": {
+        "title": "Lifecycle and result"
+      },
+      "fields": {
+        "eventId": "Event id",
+        "poolId": "Pool id",
+        "outcomeCount": "Outcome count",
+        "outcomes": "Outcomes",
+        "startsAt": "Starts at",
+        "startsAtUnix": "Starts at unix",
+        "lockTime": "Lock time",
+        "lockTimeUnix": "Lock time unix",
+        "resultFinality": "Result finality",
+        "finalitySeconds": "Finality seconds",
+        "marketKey": "Market key",
+        "rulebookHash": "Rulebook hash",
+        "marketId": "Market id",
+        "targetMarketId": "Target market id",
+        "winningOutcome": "Winning outcome",
+        "resultSourceHash": "Result source hash",
+        "evidenceHash": "Evidence hash",
+        "observedAt": "Observed at",
+        "observedAtUnix": "Observed at unix",
+        "challengeReasonHash": "Challenge reason hash",
+        "decisionHash": "Decision hash",
+        "arbitrationDecisionHash": "Arbitration decision hash",
+        "voidReasonHash": "Void reason hash"
+      },
+      "actions": {
+        "createMarket": "Create market",
+        "openMarket": "Open market",
+        "lockMarket": "Lock market",
+        "proposeResult": "Propose result",
+        "finalizeResult": "Finalize result",
+        "challengeResult": "Challenge result",
+        "resolveChallenge": "Resolve challenge",
+        "voidMarket": "Void market"
+      },
+      "buttons": {
+        "open": "Open",
+        "lock": "Lock",
+        "proposeResult": "Propose result",
+        "finalize": "Finalize",
+        "challenge": "Challenge",
+        "uphold": "Uphold",
+        "reopen": "Reopen",
+        "voidChallenged": "Void challenged",
+        "void": "Void"
+      }
+    }
+  },
+  "opsSportsbook": {
+    "eyebrow": "Sportsbook console",
+    "title": "Sportsbook operations",
+    "description": "Inspect SportsHub markets, tickets, risk caps, and run reporter / arbitrator writes. Public ticket placement is on the consumer sportsbook route.",
+    "noRelease": {
+      "title": "No release loaded",
+      "description": "The embedded release snapshot is unavailable.",
+      "status": "Unavailable"
+    },
+    "flags": {
+      "enabled": "Tickets enabled",
+      "readonly": "Preview only",
+      "present": "SportsHub present",
+      "missing": "SportsHub missing",
+      "notes": "Operator console always renders; sportsbook flags drive what the public page exposes."
+    },
+    "counters": {
+      "nextMarket": "Next market id",
+      "nextTicket": "Next ticket id",
+      "challengeWindow": "Challenge window",
+      "challengeWindowHelper": "Result dispute timeout from release.",
+      "runtimeReadFailed": "SportsHub runtime read failed"
+    },
+    "release": {
+      "eyebrow": "Release",
+      "title": "Anchors and contract addresses",
+      "description": "Signed odds identity, result reporter set, and contract addresses for the current release.",
+      "releaseField": "Release",
+      "sportsHub": "SportsHub",
+      "riskEngine": "Risk engine",
+      "oddsSignerSet": "Odds signer set",
+      "resultReporterSet": "Result reporter set",
+      "frontendFlag": "Frontend flag",
+      "booleanTrue": "true",
+      "booleanFalse": "false"
+    },
+    "caps": {
+      "eyebrow": "Caps",
+      "title": "Top-level SportsHub limits",
+      "description": "Raw-unit caps copied from the embedded release. Should stay aligned with ops approval memos.",
+      "riskTitle": "SportsHub global risk caps"
+    },
+    "lookup": {
+      "marketEyebrow": "Market lookup",
+      "marketTitle": "Inspect a market",
+      "marketDescription": "Read market state, result proposal, and reserved exposure by id.",
+      "marketLabel": "Market id",
+      "marketEmpty": "Enter a SportsHub market id to inspect state, result, and reserved exposure.",
+      "marketNumericError": "Enter a numeric market id.",
+      "ticketEyebrow": "Ticket lookup",
+      "ticketTitle": "Inspect a ticket",
+      "ticketDescription": "Read ticket position, stake, payout, and terminal state by id.",
+      "ticketLabel": "Ticket id",
+      "ticketEmpty": "Enter a SportsHub ticket id to inspect position, stake, payout, and state.",
+      "ticketNumericError": "Enter a numeric ticket id."
+    },
+    "operator": {
+      "eyebrow": "Operator writes",
+      "title": "Market and result administration",
+      "description": "Governance and reporter actions exposed as typed SDK calls. Contract roles still gate every write.",
+      "walletRoleRequired": "Wallet role must be authorized on SportsHub."
+    },
+    "bankroll": {
+      "eyebrow": "Bankroll",
+      "title": "Sports pool isolation",
+      "description": "Sports liquidity is isolated from casino game liquidity for independent caps and pause control.",
+      "noPool": "No Sports pool metadata is available in this release."
+    },
+    "controls": {
+      "eyebrow": "Controls",
+      "title": "Launch blockers",
+      "description": "Links to the ops documents that still gate public launch.",
+      "links": {
+        "goNoGo": "Go/no-go packet",
+        "frontendAccess": "Frontend access policy",
+        "providerPolicy": "Provider policy"
+      }
+    }
+  },
+  "portfolio": {
+    "overview": {
+      "common": {
+        "asset": "Asset",
+        "pending": "Pending",
+        "walletRequired": "Wallet required",
+        "unknown": "Unknown",
+        "unconnected": "Unconnected",
+        "unlimited": "Unlimited",
+        "connectWalletInspect": "Connect a wallet to inspect account state."
+      },
+      "state": {
+        "noRelease": {
+          "title": "Portfolio",
+          "description": "No embedded release available."
+        }
+      },
+      "hero": {
+        "eyebrow": "Account registry",
+        "title": "Wallet profile.",
+        "description": "Inspect wallet balances, Bank positions, refund credits, and local execution history from the active release context.",
+        "connectedAccount": "Connected account"
+      },
+      "metrics": {
+        "walletBalance": {
+          "label": "Wallet balance",
+          "detail": "Free balance across the active release asset set."
+        },
+        "bankPosition": {
+          "label": "Bank position",
+          "detail": "Assets equivalent for connected Bank shares."
+        },
+        "refundCredit": {
+          "label": "Refund credit",
+          "detail": "Recoverable VRF balance credited to the wallet."
+        }
+      },
+      "alerts": {
+        "readOnly": {
+          "title": "Read-only session",
+          "message": "Writes are disabled."
+        },
+        "assetQueryFailed": "Asset query failed",
+        "refundQueryFailed": "Refund query failed"
+      },
+      "links": {
+        "openBankConsole": "Open bank console"
+      },
+      "context": {
+        "title": "Execution context",
+        "session": "Session",
+        "readOnly": "Read-only",
+        "writable": "Writable",
+        "network": "Network",
+        "digest": "Digest"
+      },
+      "identity": {
+        "eyebrow": "Profile",
+        "title": "Player identity",
+        "playerLabel": "Player label",
+        "placeholder": "Enter label",
+        "saved": "Saved locally",
+        "saving": "Saving locally",
+        "walletAddress": "Wallet address",
+        "copyWalletAddress": "Copy wallet address"
+      },
+      "positions": {
+        "eyebrow": "Ledger",
+        "title": "Asset positions",
+        "loading": "Loading balances.",
+        "shares": "{amount} shares",
+        "columns": {
+          "asset": "Asset",
+          "wallet": "Wallet",
+          "bankPosition": "Bank position",
+          "allowance": "Allowance"
+        }
+      },
+      "refund": {
+        "title": "VRF refund credit",
+        "connectWallet": "Connect a wallet to inspect and claim recoverable VRF credit.",
+        "readOnly": "Writes are disabled for this release.",
+        "claiming": "Claiming",
+        "claim": "Claim credit",
+        "flow": {
+          "preflight": "Preflight",
+          "submit": "Submit claim",
+          "confirm": "Confirm on-chain",
+          "preflightDetail": "Validate refund credit.",
+          "submitDetail": "Broadcast claimRefundCredit.",
+          "confirmDetail": "Wait for receipt."
+        }
+      },
+      "trace": {
+        "waiting": "Waiting for refund claim intent.",
+        "error": "Transaction error",
+        "title": "Refund claim trace",
+        "subtitle": "Wallet signature, broadcast, and receipt state.",
+        "status": "Status",
+        "viewExplorer": "View explorer",
+        "block": "Block {blockNumber}",
+        "reset": "Reset trace"
+      },
+      "journal": {
+        "eyebrow": "Journal",
+        "title": "Transaction journal",
+        "columns": {
+          "action": "Action",
+          "status": "Status"
+        },
+        "empty": "No account transactions in this browser session."
+      },
+      "toast": {
+        "labelSaved": "Player label saved locally.",
+        "clipboardUnavailable": "Clipboard is unavailable in this browser.",
+        "walletCopied": "Wallet address copied",
+        "walletCopyFailed": "Failed to copy wallet address",
+        "refundClaimed": "Refund credit claimed",
+        "refundClaimFailed": "Refund claim failed"
+      }
+    },
+    "activity": {
+      "common": {
+        "pending": "Pending",
+        "unknownGame": "Unknown game",
+        "asset": "Asset",
+        "sportsbook": "Sportsbook"
+      },
+      "time": {
+        "justNow": "just now",
+        "minutesAgo": "{minutes}m ago",
+        "hoursAgo": "{hours}h ago",
+        "daysAgo": "{days}d ago"
+      },
+      "hero": {
+        "eyebrow": "Activity ledger",
+        "title": "Betting activity.",
+        "description": "Review indexed tickets, settlement state, and capital outcomes without mixing detail actions into the activity surface.",
+        "summary": "Ledger summary",
+        "session": "Indexed browser session"
+      },
+      "metrics": {
+        "indexed": {
+          "label": "Indexed tickets",
+          "connected": "Rows merged from shared cache ({serverRows}) and local replay ({localRows}).",
+          "disconnected": "Connect a wallet to load account-scoped tickets."
+        },
+        "open": {
+          "label": "Open tickets",
+          "detail": "Placed or VRF-ready tickets that still need closure."
+        },
+        "settled": {
+          "label": "Settled outcomes",
+          "detail": "Tickets with final win, loss, refund, or failure state."
+        }
+      },
+      "filters": {
+        "all": {
+          "label": "All",
+          "detail": "Every indexed ticket."
+        },
+        "open": {
+          "label": "Open",
+          "detail": "Placed or waiting for VRF."
+        },
+        "won": {
+          "label": "Won",
+          "detail": "Positive settled tickets."
+        },
+        "lost": {
+          "label": "Lost",
+          "detail": "Loss, refund, or failure states."
+        }
+      },
+      "ledger": {
+        "eyebrow": "Tickets",
+        "title": "Casino ledger",
+        "loading": "Synchronizing ledger.",
+        "empty": "No tickets align with the current filter.",
+        "view": "View",
+        "columns": {
+          "ticket": "Ticket",
+          "module": "Module",
+          "stake": "Stake",
+          "settlement": "Settlement",
+          "status": "Status",
+          "action": "Action"
+        },
+        "mobile": {
+          "stake": "Stake",
+          "settlement": "Settlement",
+          "updated": "Updated"
+        }
+      },
+      "status": {
+        "won": "Won",
+        "closed": "Closed",
+        "settled": "Settled",
+        "open": "Open"
+      },
+      "detail": {
+        "common": {
+          "empty": "—",
+          "ticketDetail": "Ticket detail"
+        },
+        "state": {
+          "won": "Won",
+          "lost": "Lost",
+          "randomReady": "Random ready",
+          "placed": "Placed",
+          "refunded": "Refunded",
+          "pending": "Pending",
+          "refreshing": "Refreshing"
+        },
+        "hero": {
+          "back": "Back to ledger",
+          "eyebrow": "Receipt dossier",
+          "title": "{gameLabel} receipt.",
+          "description": "Stake, lifecycle proof, settlement facts, and eligible protocol actions stay attached to one auditable ticket surface.",
+          "ticketContext": "Ticket context",
+          "settlementState": "Settlement state"
+        },
+        "flows": {
+          "preflight": "Preflight",
+          "confirm": "Confirm on-chain",
+          "receipt": "Wait for receipt and journal reconciliation.",
+          "refund": {
+            "submit": "Submit refund",
+            "preflight": "Validate refund eligibility and simulate the GameHub call.",
+            "broadcast": "Broadcast refund through the wallet client."
+          },
+          "finalize": {
+            "submit": "Submit finalize",
+            "preflight": "Validate finalize eligibility and simulate the GameHub call.",
+            "broadcast": "Broadcast finalize through the wallet client."
+          }
+        },
+        "toast": {
+          "refunded": "Bet refunded successfully",
+          "refundFailed": "Refund transaction failed",
+          "finalized": "Bet finalized successfully",
+          "finalizeFailed": "Finalize transaction failed"
+        },
+        "outcomes": {
+          "refunded": "Refunded",
+          "netResult": "Net result",
+          "loss": "Loss"
+        },
+        "metrics": {
+          "settlementState": {
+            "label": "Settlement state",
+            "detail": "Current lifecycle state from local and on-chain sources."
+          },
+          "capitalAtRisk": {
+            "label": "Capital at risk",
+            "detail": "Original stake committed when the ticket was placed."
+          },
+          "settlement": {
+            "label": "Settlement",
+            "realized": "Realized on-chain result.",
+            "pending": "Outcome not settled yet."
+          },
+          "receiptId": {
+            "label": "Receipt id",
+            "detail": "Stable identifier used across runtime and indexer traces."
+          }
+        },
+        "facts": {
+          "room": "Room",
+          "ticketId": "Ticket id",
+          "stake": "Stake",
+          "vrfFeePaid": "VRF fee paid",
+          "vrfFeeCharged": "VRF fee charged",
+          "vrfRequestId": "VRF request id",
+          "randomHash": "Random hash",
+          "payout": "Payout",
+          "protocolFee": "Protocol fee",
+          "refund": "Refund",
+          "placedAt": "Placed at",
+          "vrfRequestedAt": "VRF requested at",
+          "settledAt": "Settled at",
+          "primaryTx": "Primary tx",
+          "player": "Player"
+        },
+        "factsSection": {
+          "eyebrow": "Execution facts",
+          "title": "Receipt matrix"
+        },
+        "copy": {
+          "title": "Copy {value}",
+          "copy": "Copy",
+          "copied": "Copied",
+          "failed": "Failed"
+        },
+        "lifecycle": {
+          "eyebrow": "Lifecycle proof",
+          "title": "GameHub state",
+          "stepperTitle": "Ticket lifecycle",
+          "stepperSubtitle": "Placement, randomness, and settlement remain independently inspectable.",
+          "releaseDigest": "Release digest",
+          "asset": "Asset",
+          "latestIndexedEvent": "Latest indexed event",
+          "steps": {
+            "placed": {
+              "title": "Placed",
+              "description": "GameHub accepted the ticket and locked stake."
+            },
+            "randomReady": {
+              "title": "Random ready",
+              "description": "VRF delivered randomness for settlement."
+            },
+            "finalized": {
+              "title": "Finalized",
+              "description": "GameHub settled payout or loss."
+            },
+            "refunded": {
+              "title": "Refunded",
+              "description": "Stake returned to the player."
+            }
+          }
+        },
+        "actions": {
+          "eyebrow": "Protocol action",
+          "refundSurface": "Refund surface",
+          "finalizeSurface": "Finalize surface",
+          "description": "Actions only appear when GameHub state allows them. The execution trace remains attached to this receipt.",
+          "finalizing": "Finalizing...",
+          "finalizeTicket": "Finalize ticket",
+          "refunding": "Refunding...",
+          "refundStake": "Refund stake",
+          "transactionError": "Transaction error",
+          "refundTrace": "Refund trace",
+          "finalizeTrace": "Finalize trace",
+          "traceSubtitle": "Wallet signature, broadcast, and receipt state.",
+          "status": "Status",
+          "viewExplorer": "View explorer",
+          "block": "Block {blockNumber}",
+          "resetTrace": "Reset trace"
+        },
+        "timeline": {
+          "eyebrow": "Timeline",
+          "title": "Indexed lifecycle events",
+          "columns": {
+            "timeTx": "Time / tx",
+            "event": "Event",
+            "block": "Block",
+            "status": "Status"
+          },
+          "mobile": {
+            "time": "Time"
+          },
+          "empty": "No indexed lifecycle events yet."
+        }
+      }
+    },
+    "claims": {
+      "common": {
+        "pending": "Pending",
+        "walletRequired": "Wallet required"
+      },
+      "state": {
+        "noRelease": {
+          "title": "Claims",
+          "description": "No embedded release available."
+        }
+      },
+      "errors": {
+        "walletUnavailable": "Wallet unavailable",
+        "poolUnavailable": "Pool unavailable",
+        "bankUnavailable": "Bank unavailable",
+        "positiveAmount": "Amount must be positive."
+      },
+      "hero": {
+        "eyebrow": "Claims vault",
+        "title": "Rewards and protocol claims.",
+        "description": "Inspect XP buckets, synchronize holdback state, and execute claim transactions without hiding pending liabilities behind promotional balances.",
+        "connectedPayee": "Connected payee"
+      },
+      "metrics": {
+        "accrued": {
+          "label": "Accrued",
+          "detail": "Ready for XP claim."
+        },
+        "holdback": {
+          "label": "Holdback",
+          "detail": "Pending release buffer."
+        },
+        "protocolFees": {
+          "label": "Protocol fees",
+          "detail": "Governance claim surface."
+        }
+      },
+      "buckets": {
+        "title": "XP bucket ledger",
+        "syncing": "syncing",
+        "readModel": "read model",
+        "cards": {
+          "accrued": {
+            "label": "Accrued",
+            "detail": "Claimable XP currently credited to the payee."
+          },
+          "locked": {
+            "label": "Locked",
+            "detail": "XP that requires unlock conditions before extraction."
+          },
+          "holdback": {
+            "label": "Holdback",
+            "detail": "Pending buffer awaiting a holdback sync."
+          },
+          "releasable": {
+            "label": "Releasable",
+            "detail": "Holdback amount currently releasable by protocol rules."
+          },
+          "protocolFees": {
+            "label": "Protocol fees",
+            "detail": "External payables {externalPayables}"
+          },
+          "bank": {
+            "label": "Bank reference",
+            "detail": "Reserved {reserved} · Assets {assets}"
+          }
+        }
+      },
+      "actions": {
+        "eyebrow": "Execution",
+        "title": "Claims transaction console",
+        "connectWallet": "Connect a wallet to run claim actions.",
+        "readOnly": "Writes are disabled for this release.",
+        "max": "Max {amount}",
+        "holdbackPending": "Holdback pending",
+        "holdbackDetail": "Syncing updates the XP ledger based on the current on-chain holdback state.",
+        "tabs": {
+          "claim": {
+            "label": "Claim XP",
+            "detail": "Extract accrued XP to your wallet."
+          },
+          "sync": {
+            "label": "Sync",
+            "detail": "Move releasable holdback into the current XP ledger."
+          },
+          "fees": {
+            "label": "Fees",
+            "detail": "Governance-only protocol fee claim surface."
+          }
+        },
+        "amounts": {
+          "claim": "Claim amount",
+          "fees": "Fee amount"
+        },
+        "submit": {
+          "executing": "Executing",
+          "claim": "Claim XP",
+          "sync": "Sync holdback",
+          "fees": "Claim protocol fees"
+        },
+        "trace": {
+          "claim": "Claim trace",
+          "sync": "Holdback sync trace",
+          "fees": "Fee claim trace"
+        }
+      },
+      "flows": {
+        "preflight": "Preflight",
+        "submitClaim": "Submit claim",
+        "submitSync": "Submit sync",
+        "confirm": "Confirm on-chain",
+        "receipt": "Wait for receipt.",
+        "claim": {
+          "preflight": "Simulate claim call.",
+          "submit": "Broadcast claimXPAccrued."
+        },
+        "sync": {
+          "preflight": "Validate sync action.",
+          "submit": "Broadcast syncXPHoldback."
+        },
+        "fees": {
+          "preflight": "Validate governance call.",
+          "submit": "Broadcast claimProtocolFees."
+        }
+      },
+      "trace": {
+        "waiting": "Waiting for claim intent.",
+        "error": "Transaction error",
+        "subtitle": "Wallet signature, broadcast, and receipt state.",
+        "status": "Status",
+        "viewExplorer": "View explorer",
+        "block": "Block {blockNumber}",
+        "reset": "Reset trace"
+      },
+      "journal": {
+        "eyebrow": "Journal",
+        "title": "Session claim activity",
+        "columns": {
+          "hash": "Hash",
+          "action": "Action",
+          "amount": "Amount",
+          "status": "Status"
+        },
+        "empty": "No claim transactions in this browser session.",
+        "actions": {
+          "claimXP": "Claim XP",
+          "syncHoldback": "Sync holdback",
+          "claimFees": "Claim fees"
+        }
+      },
+      "toast": {
+        "claimedXP": "Claimed {amount} {symbol}",
+        "xpClaimFailed": "XP claim failed",
+        "holdbackSynced": "Holdback synced",
+        "syncHoldbackFailed": "Sync holdback failed",
+        "claimedFees": "Claimed {amount} {symbol} protocol fees",
+        "protocolFeeFailed": "Protocol fee claim failed"
+      }
+    },
+    "referral": {
+      "common": {
+        "pending": "Pending",
+        "notConnected": "Not connected"
+      },
+      "state": {
+        "noRelease": {
+          "title": "Referral",
+          "description": "No embedded release available."
+        }
+      },
+      "errors": {
+        "walletUnavailable": "Wallet unavailable",
+        "poolUnavailable": "Pool unavailable"
+      },
+      "hero": {
+        "eyebrow": "Affiliate account",
+        "title": "Referral rewards.",
+        "description": "Create a casino link, inspect your immutable first-touch referrer, and review XP buckets that are paid by the active Bank ledger.",
+        "connected": "Wallet"
+      },
+      "link": {
+        "title": "Your referral link",
+        "description": "Share this link with players. When they place a casino bet, GameHub forwards the affiliate hint for first-touch binding and skyline pricing.",
+        "learn": "Model",
+        "connect": "Connect a wallet to generate a referral link.",
+        "copy": "Copy link",
+        "copied": "Copied"
+      },
+      "metrics": {
+        "accrued": {
+          "label": "Accrued",
+          "detail": "XP currently claimable from the Bank ledger."
+        },
+        "locked": {
+          "label": "Locked",
+          "detail": "XP awaiting unlock conditions before extraction."
+        },
+        "holdback": {
+          "label": "Holdback",
+          "detail": "Reward buffer that can become releasable after sync."
+        }
+      },
+      "activity": {
+        "title": "Referred play",
+        "description": "Track casino bets that carried your affiliate address through the durable bet index.",
+        "loading": "Loading referred bets...",
+        "empty": "No referred casino bets indexed yet.",
+        "stats": {
+          "bets": "Bets",
+          "turnover": "Turnover",
+          "settled": "Settled"
+        }
+      },
+      "binding": {
+        "eyebrow": "First touch",
+        "title": "Binding state",
+        "description": "A player can bind only once. If this page has a valid ref parameter and no referrer is bound yet, the wallet can bind it explicitly.",
+        "current": "Current",
+        "pending": "Pending",
+        "none": "None",
+        "noPending": "No pending ref",
+        "bind": "Bind referrer",
+        "binding": "Binding",
+        "claims": "Open claims"
+      },
+      "toast": {
+        "bound": "Referrer bound",
+        "bindFailed": "Failed to bind referrer"
+      }
+    }
+  },
+  "earn": {
+    "state": {
+      "noRelease": {
+        "title": "Earn",
+        "description": "No embedded release available."
+      }
+    },
+    "errors": {
+      "sdkUnavailable": "SDK unavailable",
+      "poolUnavailable": "Pool unavailable",
+      "unsupportedWriteAsset": "Write flows require an active casino pool for the selected asset.",
+      "positiveAmount": "Amount must be positive.",
+      "primaryAssetOnly": "Write flows currently support only the primary asset."
+    },
+    "format": {
+      "assetFallback": "Asset"
+    },
+    "hero": {
+      "eyebrow": "Bank reserve",
+      "title": "{symbol} bankroll control.",
+      "description": "Deposit, withdraw, and redeem against the protocol bank with the same release-anchored settlement model used by casino tickets. No promotional APY is shown before reserve facts.",
+      "bankAddress": "Bank address"
+    },
+    "metrics": {
+      "freeReserve": {
+        "label": "Free reserve",
+        "detail": "Assets not reserved for open liabilities."
+      },
+      "totalAssets": {
+        "label": "Total assets",
+        "detail": "Current bank assets from protocol read."
+      },
+      "minLiquidity": {
+        "label": "Min liquidity",
+        "detail": "Configured floor before withdrawals."
+      }
+    },
+    "summary": {
+      "capitalPosture": {
+        "title": "Capital posture",
+        "readModel": "read model",
+        "totalAssets": "Total assets",
+        "loading": "Synchronizing bank snapshot from the selected release.",
+        "detail": "Chart is a posture visual. Numeric truth comes from the bank snapshot below."
+      },
+      "position": {
+        "label": "Your position",
+        "detail": "Assets equivalent for the connected wallet."
+      },
+      "liquidity": {
+        "label": "Liquidity policy",
+        "detail": "Floor {floor} · Bank {bank}"
+      },
+      "reserved": {
+        "label": "Reserved liabilities",
+        "detail": "Free reserve {freeReserve} · Min liquidity {minLiquidity}"
+      }
+    },
+    "actions": {
+      "eyebrow": "LP actions",
+      "title": "Bank transaction console",
+      "asset": "Asset",
+      "amount": "Amount",
+      "connectWallet": "Connect a wallet to run bank actions.",
+      "readOnly": "Writes are disabled for this release.",
+      "tabs": {
+        "deposit": {
+          "label": "Deposit",
+          "description": "Supply assets to the bank."
+        },
+        "withdraw": {
+          "label": "Withdraw",
+          "description": "Withdraw available assets."
+        },
+        "redeem": {
+          "label": "Redeem",
+          "description": "Redeem bank shares for assets."
+        }
+      },
+      "max": {
+        "walletBalance": "Wallet balance",
+        "pending": "Max pending",
+        "value": "Max {amount}"
+      },
+      "submit": {
+        "executing": "Executing",
+        "deposit": "Deposit assets",
+        "withdraw": "Withdraw assets",
+        "redeem": "Redeem shares"
+      },
+      "trace": {
+        "deposit": "Deposit trace",
+        "withdraw": "Withdraw trace",
+        "redeem": "Redeem trace"
+      }
+    },
+    "flows": {
+      "preflight": {
+        "title": "Preflight"
+      },
+      "deposit": {
+        "preflight": "Validate inputs and simulate flow.",
+        "approveTitle": "Approve Bank",
+        "approveDescription": "Set ERC20 allowance.",
+        "depositTitle": "Deposit Assets",
+        "depositDescription": "Broadcast Bank.deposit."
+      },
+      "direct": {
+        "submit": "Submit",
+        "confirm": "Confirm",
+        "validate": "Validate constraints.",
+        "receipt": "Wait for receipt."
+      },
+      "withdraw": {
+        "submit": "Broadcast Bank.withdraw."
+      },
+      "redeem": {
+        "submit": "Broadcast Bank.redeem."
+      }
+    },
+    "trace": {
+      "waiting": "Waiting for transaction intent.",
+      "error": "Transaction error",
+      "subtitle": "Wallet signature, broadcast, and receipt state.",
+      "status": "Status",
+      "viewExplorer": "View explorer",
+      "block": "Block {blockNumber}",
+      "reset": "Reset trace"
+    },
+    "risk": {
+      "custody": {
+        "label": "Custody boundary",
+        "title": "Bank first, marketing second.",
+        "detail": "The LP screen exposes reserved liabilities and free reserve before any yield narrative."
+      },
+      "release": {
+        "label": "Release digest",
+        "detail": "Asset identity, bank address, and UI reads are anchored to the active release manifest."
+      },
+      "protocolFees": {
+        "label": "Protocol fees",
+        "detail": "External payables {externalPayables} · Assets {assets}"
+      }
+    },
+    "toast": {
+      "processing": "Processing bank transaction...",
+      "redeemed": "Redeemed {amount} shares",
+      "deposited": "Deposited {amount} {symbol}",
+      "withdrew": "Withdrew {amount} {symbol}",
+      "failed": "Transaction failed"
+    },
+    "units": {
+      "shares": "Shares",
+      "sharesLower": "shares"
+    }
+  },
+  "ops": {
+    "hero": {
+      "eyebrow": "Operational proof",
+      "title": "Release and worker pulse.",
+      "description": "Verify release identity, indexer health, and worker freshness from one compact operator surface without mixing production controls into player pages.",
+      "summaryLabel": "Runtime summary",
+      "summaryDescription": "Local browser indexer session"
+    },
+    "metrics": {
+      "releaseDigest": {
+        "label": "Release digest",
+        "detail": "Canonical bundle currently served by the frontend."
+      },
+      "indexerLag": {
+        "label": "Indexer lag",
+        "healthyWindow": "Healthy window: {count} confirmations.",
+        "unavailable": "Confirmation window unavailable."
+      },
+      "safeHead": {
+        "label": "Safe head",
+        "detail": "Worker-confirmed event horizon used by room surfaces."
+      },
+      "workerState": {
+        "label": "Worker state",
+        "polling": "Polling every {seconds}s.",
+        "unavailable": "Worker polling unavailable."
+      },
+      "keeperState": {
+        "label": "Keeper state"
+      }
+    },
+    "releaseRows": {
+      "network": "Network",
+      "chainId": "Chain id",
+      "releaseDigest": "Release digest",
+      "gameHub": "GameHub",
+      "vrfHub": "VRFHub",
+      "poolRegistry": "PoolRegistry",
+      "primaryBank": "Primary bank",
+      "manifest": "Manifest"
+    },
+    "workerRows": {
+      "health": {
+        "label": "Health",
+        "currentLag": "Current lag is {count} blocks.",
+        "unavailable": "Lag data unavailable."
+      },
+      "confirmations": {
+        "label": "Confirmations",
+        "detail": "Finality window before the UI reflects settled state."
+      },
+      "rewindWindow": {
+        "label": "Rewind window",
+        "detail": "Replay buffer used to recover from transient misses."
+      },
+      "batchSize": {
+        "label": "Batch size",
+        "detail": "Maximum event slice processed per sweep."
+      },
+      "latestBlock": {
+        "label": "Latest block",
+        "detail": "Latest block observed by the worker public client."
+      },
+      "lastError": {
+        "label": "Last error",
+        "none": "None",
+        "detail": "Last worker error surfaced by the runtime provider."
+      },
+      "casinoKeeper": {
+        "label": "Casino keeper"
+      },
+      "keeperRole": {
+        "label": "Keeper role",
+        "detail": "EOA {eoa} on chain {chainId}.",
+        "unavailable": "Snapshot unavailable."
+      },
+      "keeperQueue": {
+        "label": "Keeper queue",
+        "lastScannedBlock": "Last scanned block {block}.",
+        "unavailable": "Scan cursor unavailable."
+      },
+      "lastKeeperSuccess": {
+        "label": "Last keeper success",
+        "detail": "Bet {betId}; tx {tx}; {latencyMs}ms.",
+        "none": "No keeper finalize success in the current snapshot."
+      },
+      "lastKeeperFailure": {
+        "label": "Last keeper failure",
+        "none": "No keeper failure in the snapshot."
+      }
+    },
+    "releasePanel": {
+      "eyebrow": "Release bundle",
+      "title": "Canonical release proof",
+      "description": "The exact chain, contract, and manifest surface currently presented by the frontend.",
+      "sync": "Sync indexer",
+      "refresh": "Refresh"
+    },
+    "workerPanel": {
+      "eyebrow": "Worker health",
+      "title": "Operational focus",
+      "description": "Room surfaces depend on a healthy indexer and keeper. These summaries expose drift before it leaks into player views."
+    },
+    "eventTrail": {
+      "eyebrow": "Worker event trail",
+      "title": "Recent operational receipts",
+      "description": "A compact table of worker and release facts. The route stays precise enough for operators and readable enough for auditors.",
+      "headers": {
+        "timeBlock": "Time / block",
+        "event": "Event",
+        "status": "Status",
+        "context": "Context",
+        "flow": "Flow"
+      },
+      "flowLabel": "Live",
+      "mobileBlockLabel": "Block"
+    },
+    "status": {
+      "running": "Running",
+      "stopped": "Stopped",
+      "completed": "Completed",
+      "paused": "Paused",
+      "locked": "Locked"
+    },
+    "health": {
+      "unknown": "Unknown",
+      "healthy": "Healthy",
+      "behind": "Behind",
+      "stalled": "Stalled"
+    },
+    "keeperHealth": {
+      "unavailable": "Unavailable",
+      "unavailableDefault": "No keeper health snapshot has been published.",
+      "stale": "Stale",
+      "invalidTimestamp": "Keeper snapshot timestamp is invalid.",
+      "staleAge": "Keeper snapshot is {seconds}s old.",
+      "degraded": "Degraded",
+      "degradedDefault": "Keeper reported a degraded status.",
+      "stopped": "Stopped",
+      "stoppedDetail": "Keeper process reported a stopped status.",
+      "starting": "Starting",
+      "startingDetail": "Keeper {role} is starting.",
+      "healthy": "Healthy",
+      "healthyDetail": "Keeper {role} updated {seconds}s ago."
+    },
+    "trail": {
+      "recent": "Recent",
+      "live": "Live",
+      "release": "Release",
+      "events": {
+        "indexerSweep": "Indexer sweep",
+        "safeHeadAdvance": "Safe head advance",
+        "casinoKeeper": "Casino keeper",
+        "releaseIdentity": "Release identity"
+      },
+      "context": {
+        "eventsPerSweep": "{count} events per sweep",
+        "awaitingWorkerConfig": "Awaiting worker config",
+        "lagBlocks": "{count} lag blocks",
+        "lagUnknown": "Lag unknown",
+        "embeddedRelease": "Embedded release"
+      }
+    },
+    "units": {
+      "blocks": "{count} blocks",
+      "events": "{count} events",
+      "pending": "{count} pending"
+    }
+  },
+  "marketing": {
+    "errors": {
+      "recentBetsFailed": "Recent activity failed to load"
+    },
+    "format": {
+      "syncing": "Syncing",
+      "awaitingReserveSync": "Awaiting reserve sync",
+      "pending": "Pending",
+      "walletPending": "Wallet pending",
+      "assetFallback": "Asset",
+      "roomFallback": "Room",
+      "placedFallback": "Placed"
+    },
+    "timeAgo": {
+      "now": "just now",
+      "seconds": "{count}s ago",
+      "minutes": "{count}m ago",
+      "hours": "{count}h ago",
+      "days": "{count}d ago"
+    },
+    "hero": {
+      "channel": "Base Sepolia release channel",
+      "title": "ArbiGameFi",
+      "description": "On-chain casino rails for transparent bankroll, verifiable randomness, and automatic settlement. The first screen is the product surface, not a promise deck.",
+      "enterCasino": "Enter Casino",
+      "viewBank": "View Bank",
+      "consoleLabel": "Protocol Console",
+      "live": "Live",
+      "metrics": {
+        "freeReserve": "Free reserve",
+        "bankAssets": "Bank assets",
+        "rooms": "Rooms"
+      },
+      "proofRows": {
+        "vrf": {
+          "title": "VRF settlement path",
+          "detail": "Randomness, ticket, and payout events remain auditable from release metadata."
+        },
+        "bytecode": {
+          "title": "Bytecode anchored release",
+          "detail": "Frontend display reads contract addresses and game metadata from the SSOT release."
+        }
+      }
+    },
+    "stats": {
+      "freeReserve": {
+        "label": "Free reserve",
+        "detail": "Readable bank capacity after reserved liabilities."
+      },
+      "bankAssets": {
+        "label": "Bank assets",
+        "detail": "Aggregated from release-linked bank snapshots."
+      },
+      "release": {
+        "label": "Release",
+        "detail": "Frontend state is anchored to a release manifest."
+      }
+    },
+    "rooms": {
+      "eyebrow": "Casino rooms",
+      "title": "Eight one-shot RNG games, one settlement rail.",
+      "detail": "Each room maps to a release-defined module. The UI can change, but game identity, parameters, and payout path stay anchored to the SSOT release.",
+      "actionLabel": "Open directory"
+    },
+    "roomCards": {
+      "dice": {
+        "title": "Dice",
+        "badge": "Precision room",
+        "summary": "Set the cap, size the ticket, and step into a fast dice room.",
+        "facts": {
+          "0": "Fast ticket",
+          "1": "Live settlement",
+          "2": "Single asset"
+        }
+      },
+      "coinToss": {
+        "title": "Coin Toss",
+        "badge": "Binary room",
+        "summary": "Heads or tails with the cleanest room entry on the floor.",
+        "facts": {
+          "0": "Quick entry",
+          "1": "Binary play",
+          "2": "Single outcome"
+        }
+      },
+      "roulette": {
+        "title": "Roulette",
+        "badge": "European table",
+        "summary": "Step into a standard European roulette table with a real board, a clear slip, and readable ticket review.",
+        "facts": {
+          "0": "0-36 table",
+          "1": "Clear slip",
+          "2": "Standard bets"
+        }
+      },
+      "keno": {
+        "title": "Keno",
+        "badge": "Matrix room",
+        "summary": "Pick the board, size the ticket, and keep the draw centered on the room.",
+        "facts": {
+          "0": "Board-first",
+          "1": "Live draw",
+          "2": "Repeat plays"
+        }
+      },
+      "plinko": {
+        "title": "Plinko",
+        "badge": "Arcade board",
+        "summary": "Drop through a compact risk board and reveal the bucket from on-chain randomness.",
+        "facts": {
+          "0": "Risk profiles",
+          "1": "Bucket reveal",
+          "2": "Fast replay"
+        }
+      },
+      "slots": {
+        "title": "Slots",
+        "badge": "Reel room",
+        "summary": "Spin a simple three-symbol room with readable multipliers and terminal proof.",
+        "facts": {
+          "0": "3 reels",
+          "1": "Visible symbols",
+          "2": "Proof receipt"
+        }
+      },
+      "baccarat": {
+        "title": "Baccarat",
+        "badge": "Table room",
+        "summary": "Pick player, banker, or tie and inspect the opened cards after VRF returns.",
+        "facts": {
+          "0": "Card reveal",
+          "1": "Player banker tie",
+          "2": "Terminal receipt"
+        }
+      },
+      "sic-bo": {
+        "title": "Sic Bo",
+        "badge": "Triple dice",
+        "summary": "Choose a table bet, roll three dice, and review total, triple, and payout.",
+        "facts": {
+          "0": "3 dice",
+          "1": "Total bets",
+          "2": "Opened roll"
+        }
+      }
+    },
+    "bank": {
+      "eyebrow": "Bank reserve",
+      "title": "Reserve ledger before marketing yield.",
+      "description": "Bank balances and reserved liabilities are displayed from protocol reads. The page does not invent APY or hide pending obligations behind a promotional number.",
+      "freeReserve": "Free reserve",
+      "totalBankAssets": "Total bank assets",
+      "releaseDigest": "Release digest",
+      "inspectBank": "Inspect bank"
+    },
+    "activity": {
+      "eyebrow": "Protocol activity",
+      "title": "Latest indexed tickets",
+      "viewAll": "View all",
+      "headers": {
+        "player": "Player",
+        "room": "Room",
+        "state": "State",
+        "age": "Age"
+      },
+      "empty": "No indexed tickets in this browser session yet."
+    },
+    "proof": {
+      "traceLabel": "settlement_trace.sol",
+      "proofSurface": "read-only proof surface",
+      "eyebrow": "Trust model",
+      "title": "Transparent settlement rails.",
+      "description": "Custody, game modules, and randomness are separate surfaces. This makes the UI easier to rewrite without disturbing protocol correctness.",
+      "actionLabel": "View proof receipts"
+    }
+  },
+  "legal": {
+    "navAria": "Legal pages",
+    "keyPoints": "Key points",
+    "nav": {
+      "terms": "Terms",
+      "privacy": "Privacy",
+      "disclaimer": "Risk disclaimer"
+    },
+    "pages": {
+      "terms": {
+        "eyebrow": "Legal",
+        "title": "Terms of Service",
+        "description": "These terms govern access to the ArbiGameFi frontend and the wallet-native interfaces used to reach rooms, bankroll pages, referral surfaces, and operational proof views.",
+        "highlights": {
+          "0": "The frontend is an interface for public on-chain systems.",
+          "1": "Users remain responsible for wallet custody, transaction review, gas, and local compliance.",
+          "2": "Availability can depend on RPC providers, indexers, oracle flows, wallets, and smart contracts."
+        },
+        "sections": {
+          "0": {
+            "title": "Use of the frontend",
+            "body": "The ArbiGameFi frontend presents wallet-native access to on-chain game rooms and bankroll surfaces. Access to the frontend does not remove the need to review transaction contents, quoted fees, network conditions, or the contracts being called before signing."
+          },
+          "1": {
+            "title": "Wallets and execution",
+            "body": "Users retain custody of their wallets and private keys. ArbiGameFi does not take custody of wallets, cannot recover private keys, and cannot reverse transactions that have been confirmed by the relevant network."
+          },
+          "2": {
+            "title": "Protocol and room risk",
+            "body": "Live rooms depend on smart contracts, randomness or oracle providers, indexers, RPC infrastructure, and third-party wallet providers. Service availability and outcome visibility may be affected by any of these layers."
+          },
+          "3": {
+            "title": "No universal availability",
+            "body": "The frontend may not be available in every jurisdiction, network condition, browser environment, or release channel. Users are responsible for determining whether access or participation is permitted where they are located."
+          }
+        }
+      },
+      "privacy": {
+        "eyebrow": "Legal",
+        "title": "Privacy Policy",
+        "description": "ArbiGameFi is built around public-chain execution. This policy explains the limited data the frontend may process in addition to wallet and transaction data already visible on-chain.",
+        "highlights": {
+          "0": "Wallet addresses and transaction hashes may be displayed when they are already public on-chain.",
+          "1": "Product analytics and performance telemetry may be used to improve reliability and usability.",
+          "2": "Wallet connectors, RPC providers, indexers, and oracle integrations may process request metadata."
+        },
+        "sections": {
+          "0": {
+            "title": "Public blockchain data",
+            "body": "Wallet addresses, transaction hashes, bet states, settlement outcomes, and bankroll activity may be rendered in public room feeds because they are already visible on-chain."
+          },
+          "1": {
+            "title": "Frontend analytics",
+            "body": "The frontend may collect product analytics, performance metrics, and engagement signals to improve room layouts, onboarding, operational visibility, and release quality."
+          },
+          "2": {
+            "title": "Third-party services",
+            "body": "Wallet connectors, RPC providers, indexers, analytics services, and oracle integrations may process request metadata as part of normal operation. Their own terms and privacy rules also apply."
+          },
+          "3": {
+            "title": "Data minimization",
+            "body": "The product should avoid collecting private keys, seed phrases, unnecessary personal identifiers, or raw wallet activity that is not required for product reliability, fraud prevention, or legal compliance."
+          }
+        }
+      },
+      "disclaimer": {
+        "eyebrow": "Risk notice",
+        "title": "Risk Disclaimer",
+        "description": "ArbiGameFi presents interfaces for on-chain gaming and bankroll participation. Interacting with these systems involves financial, legal, and technical risks.",
+        "highlights": {
+          "0": "Smart contracts, randomness providers, indexers, RPC endpoints, and wallet clients can fail or lag.",
+          "1": "Bankroll participation is subject to reserve usage, liability accounting, and protocol-specific exits.",
+          "2": "Users are responsible for determining whether participation is lawful in their jurisdiction."
+        },
+        "sections": {
+          "0": {
+            "title": "Protocol risk",
+            "body": "Smart contract bugs, oracle disruptions, delayed finality, indexer lag, wallet client failures, or network congestion can affect the user experience or temporarily affect room visibility."
+          },
+          "1": {
+            "title": "Market and liquidity risk",
+            "body": "Bankroll participation is subject to reserve usage, liability accounting, and protocol-specific exit rules. Availability of deposits, withdrawals, and redemptions may change with room activity."
+          },
+          "2": {
+            "title": "Outcome and settlement risk",
+            "body": "Casino rooms and sports markets can depend on randomness or external facts. Settlement may be delayed when providers lag, disputes occur, or network conditions prevent timely transaction confirmation."
+          },
+          "3": {
+            "title": "Jurisdiction and compliance",
+            "body": "Users must determine for themselves whether use of the frontend, room participation, sports market participation, or LP activity is lawful in their jurisdiction."
+          }
+        }
+      }
+    }
+  },
+  "affiliate": {
+    "hero": {
+      "eyebrow": "Affiliate growth",
+      "title": "Share the casino. Keep the proof on-chain.",
+      "description": "ArbiGameFi uses first-touch referral binding and Bank-side XP buckets, so affiliate rewards are tied to actual wallet-native play instead of spreadsheet reconciliation.",
+      "primary": "Open Dice",
+      "secondary": "Referral console"
+    },
+    "linkCard": {
+      "eyebrow": "Referral link",
+      "title": "One link to the room",
+      "connect": "Connect a wallet to generate your referral link.",
+      "copy": "Copy link",
+      "copied": "Copied",
+      "wallet": "Wallet {wallet}",
+      "walletPending": "Wallet not connected"
+    },
+    "pillars": {
+      "firstTouch": {
+        "title": "First-touch binding",
+        "body": "A valid referral hint is forwarded with casino bets. Once bound, the relationship is immutable."
+      },
+      "xp": {
+        "title": "XP buckets",
+        "body": "Rewards surface as accrued, locked, and holdback balances on the active Bank ledger."
+      },
+      "chain": {
+        "title": "Auditable settlement",
+        "body": "Referral value is tied to on-chain play, payout, and claim state rather than off-platform reporting."
+      }
+    },
+    "flow": {
+      "eyebrow": "How it works",
+      "title": "Built for B2C distribution.",
+      "body": "The MVP path keeps the growth loop simple: share a room, bind the player, then let the Bank ledger expose claimable rewards.",
+      "steps": {
+        "0": {
+          "title": "Share",
+          "body": "Generate a casino link from your wallet and send players directly to a room."
+        },
+        "1": {
+          "title": "Bind",
+          "body": "GameHub uses the ref hint for best-effort first-touch binding when a player bets."
+        },
+        "2": {
+          "title": "Claim",
+          "body": "Review XP buckets and claim available rewards from the portfolio surface."
+        }
+      }
+    }
+  },
+  "nav": {
+    "account": "Account",
+    "affiliates": "Affiliates",
+    "bets": "Bets",
+    "casino": "Casino",
+    "claims": "Claims",
+    "baccarat": "Baccarat",
+    "coinToss": "Coin Toss",
+    "dice": "Dice",
+    "games": "Games",
+    "keno": "Keno",
+    "liquidity": "Liquidity",
+    "openRooms": "Open Rooms",
+    "ops": "Ops",
+    "plinko": "Plinko",
+    "rooms": "Rooms",
+    "roulette": "Roulette",
+    "sicBo": "Sic Bo",
+    "slots": "Slots",
+    "sportsbook": "Sportsbook"
+  }
+}

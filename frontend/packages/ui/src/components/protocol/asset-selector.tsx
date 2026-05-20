@@ -4,6 +4,7 @@ import * as React from "react";
 
 import { Card } from "../ui/card";
 import { Label } from "../ui/label";
+import { cn } from "../../lib/utils";
 
 export type AssetOption = {
   address: `0x${string}`;
@@ -58,16 +59,18 @@ export function AssetSelector(props: AssetSelectorProps) {
       <div className="space-y-2 p-4">
         <div className="space-y-1">
           <Label htmlFor={selectId}>{title}</Label>
-          {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
+          {description ? <p className="text-sm text-fg-muted">{description}</p> : null}
         </div>
 
         <select
           id={selectId}
-          className={[
-            "h-10 w-full rounded-md border bg-background px-3 text-sm",
-            "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-            disabled ? "opacity-60" : ""
-          ].join(" ")}
+          className={cn(
+            "h-10 w-full rounded-md border border-border bg-surface-0 px-3 text-sm text-fg transition-colors duration-200",
+            "focus:outline-none focus:ring-2 focus:ring-brand",
+            "disabled:cursor-not-allowed disabled:border-border-soft disabled:text-fg-subtle",
+            error ? "border-danger/50 focus:ring-danger/40" : "",
+            disabled ? "opacity-70" : ""
+          )}
           value={selected}
           disabled={disabled || assets.length === 0}
           onChange={(e) => {
@@ -84,7 +87,7 @@ export function AssetSelector(props: AssetSelectorProps) {
           ))}
         </select>
 
-        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        {error ? <p className="text-sm font-medium text-danger">{error}</p> : null}
       </div>
     </Card>
   );

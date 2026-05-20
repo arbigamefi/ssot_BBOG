@@ -1,8 +1,17 @@
-export const CASINO_MODULE_SLUGS = ["roulette", "dice", "coin-toss", "keno"] as const;
+export const CASINO_MODULE_SLUGS = [
+  "roulette",
+  "baccarat",
+  "sic-bo",
+  "dice",
+  "coin-toss",
+  "keno",
+  "plinko",
+  "slots"
+] as const;
 
 export type CasinoModuleSlug = (typeof CASINO_MODULE_SLUGS)[number];
 
-export type CasinoModuleCategory = "table" | "dice" | "binary" | "lottery";
+export type CasinoModuleCategory = "table" | "dice" | "binary" | "lottery" | "arcade";
 
 export type CasinoModuleRegistration = {
   slug: CasinoModuleSlug;
@@ -10,7 +19,15 @@ export type CasinoModuleRegistration = {
   category: CasinoModuleCategory;
   canonicalHref: `/casino/${CasinoModuleSlug}`;
   roomLabel: string;
-  contractParams: "roulette" | "dice-threshold" | "coin-side" | "keno-mask";
+  contractParams:
+    | "roulette"
+    | "dice-threshold"
+    | "coin-side"
+    | "keno-mask"
+    | "plinko-risk"
+    | "slots-profile"
+    | "baccarat-side"
+    | "sic-bo";
 };
 
 export const CASINO_MODULES: readonly CasinoModuleRegistration[] = [
@@ -21,6 +38,22 @@ export const CASINO_MODULES: readonly CasinoModuleRegistration[] = [
     canonicalHref: "/casino/roulette",
     roomLabel: "European table",
     contractParams: "roulette"
+  },
+  {
+    slug: "baccarat",
+    label: "Baccarat",
+    category: "table",
+    canonicalHref: "/casino/baccarat",
+    roomLabel: "Player vs banker",
+    contractParams: "baccarat-side"
+  },
+  {
+    slug: "sic-bo",
+    label: "Sic Bo",
+    category: "dice",
+    canonicalHref: "/casino/sic-bo",
+    roomLabel: "Three dice table",
+    contractParams: "sic-bo"
   },
   {
     slug: "dice",
@@ -45,6 +78,22 @@ export const CASINO_MODULES: readonly CasinoModuleRegistration[] = [
     canonicalHref: "/casino/keno",
     roomLabel: "Matrix room",
     contractParams: "keno-mask"
+  },
+  {
+    slug: "plinko",
+    label: "Plinko",
+    category: "arcade",
+    canonicalHref: "/casino/plinko",
+    roomLabel: "Peg board",
+    contractParams: "plinko-risk"
+  },
+  {
+    slug: "slots",
+    label: "Slots",
+    category: "arcade",
+    canonicalHref: "/casino/slots",
+    roomLabel: "Classic reels",
+    contractParams: "slots-profile"
   }
 ] as const;
 

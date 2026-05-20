@@ -4,6 +4,7 @@ import * as React from "react";
 import { ReadOnlyBanner } from "@ssot/ui";
 import { AppShell as AppShellFrame } from "@ssot/ui/patterns";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 import { useRelease } from "../ssot/release/ReleaseProvider";
 import { AppHeader, type AppRoute } from "../components/AppHeader";
@@ -17,17 +18,22 @@ function getActiveRoute(pathname: string): AppRoute {
   }
   if (pathname === "/earn") return "liquidity";
   if (pathname === "/portfolio/claims") return "claims";
+  if (pathname === "/affiliate" || pathname === "/portfolio/referral") return "referral";
   if (pathname === "/portfolio") return "account";
   if (pathname === "/ops") return "ops";
   if (pathname === "/casino/roulette") return "roulette";
+  if (pathname === "/casino/baccarat") return "baccarat";
+  if (pathname === "/casino/sic-bo") return "sicbo";
   if (pathname === "/casino/dice") return "dice";
+  if (pathname === "/casino/plinko") return "plinko";
+  if (pathname === "/casino/slots") return "slots";
   if (pathname === "/casino/coin-toss") return "cointoss";
   if (pathname === "/casino/keno") return "keno";
   return "none";
 }
 
 function getShellVariant(pathname: string) {
-  if (pathname === "/") return "marketing";
+  if (pathname === "/" || pathname === "/affiliate") return "marketing";
   if (
     pathname === "/legal/terms" ||
     pathname === "/legal/privacy" ||
@@ -41,6 +47,7 @@ function getShellVariant(pathname: string) {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const t = useTranslations();
   const { readOnly, readOnlyReason, warnings } = useRelease();
   const variant = getShellVariant(pathname);
   const headerVariant =
@@ -52,7 +59,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       header={<AppHeader activeRoute={getActiveRoute(pathname)} variant={headerVariant} />}
       readOnlyBanner={
         readOnly ? (
-          <ReadOnlyBanner reason={readOnlyReason ?? "Writes are disabled."} details={warnings} />
+          <ReadOnlyBanner reason={readOnlyReason ?? t("app.writesDisabled")} details={warnings} />
         ) : undefined
       }
       variant={variant}

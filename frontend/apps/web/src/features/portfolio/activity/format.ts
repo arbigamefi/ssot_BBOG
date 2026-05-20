@@ -3,15 +3,32 @@ import type { BetRow } from "@ssot/ssot/indexer";
 import { formatUnits } from "../../betting/model/units";
 import type { BetStatusFilter, BetStatusGroup } from "./types";
 
-export const BET_STATUS_TABS: Array<{ key: BetStatusFilter; label: string; detail: string }> = [
-  { key: "all", label: "All", detail: "Every indexed ticket." },
-  { key: "open", label: "Open", detail: "Placed or waiting for VRF." },
-  { key: "won", label: "Won", detail: "Positive settled tickets." },
-  { key: "lost", label: "Lost", detail: "Loss, refund, or failure states." }
-];
+export const BET_STATUS_TABS: Array<{ key: BetStatusFilter; labelKey: string; detailKey: string }> =
+  [
+    {
+      key: "all",
+      labelKey: "portfolio.activity.filters.all.label",
+      detailKey: "portfolio.activity.filters.all.detail"
+    },
+    {
+      key: "open",
+      labelKey: "portfolio.activity.filters.open.label",
+      detailKey: "portfolio.activity.filters.open.detail"
+    },
+    {
+      key: "won",
+      labelKey: "portfolio.activity.filters.won.label",
+      detailKey: "portfolio.activity.filters.won.detail"
+    },
+    {
+      key: "lost",
+      labelKey: "portfolio.activity.filters.lost.label",
+      detailKey: "portfolio.activity.filters.lost.detail"
+    }
+  ];
 
-export function shortHex(value?: string | null) {
-  if (!value) return "Pending";
+export function shortHex(value?: string | null, pendingLabel = "—") {
+  if (!value) return pendingLabel;
   if (value.length <= 12) return value;
   return `${value.slice(0, 6)}...${value.slice(-4)}`;
 }
@@ -60,20 +77,40 @@ export function isLossStatus(status: BetStatusGroup) {
   return status === "lost" || status === "refunded" || status === "failed";
 }
 
-export function formatRelativeTime(timestamp?: number) {
-  if (!timestamp) return "Pending";
+export function formatRelativeTime(
+  timestamp: number | undefined,
+  labels: {
+    pending: string;
+    justNow: string;
+    minutesAgo: (minutes: number) => string;
+    hoursAgo: (hours: number) => string;
+    daysAgo: (days: number) => string;
+  } = {
+    pending: "—",
+    justNow: "—",
+    minutesAgo: () => "—",
+    hoursAgo: () => "—",
+    daysAgo: () => "—"
+  }
+) {
+  if (!timestamp) return labels.pending;
   const deltaMs = Math.max(0, Date.now() - timestamp);
   const minutes = Math.floor(deltaMs / 60_000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 1) return labels.justNow;
+  if (minutes < 60) return labels.minutesAgo(minutes);
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return labels.hoursAgo(hours);
   const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+  return labels.daysAgo(days);
 }
 
-export function formatTokenAmount(value: bigint | undefined, decimals: number, symbol?: string) {
-  if (value == null) return "Pending";
+export function formatTokenAmount(
+  value: bigint | undefined,
+  decimals: number,
+  symbol?: string,
+  pendingLabel = "—"
+) {
+  if (value == null) return pendingLabel;
   const raw = formatUnits(value, decimals);
   const negative = raw.startsWith("-");
   const normalized = negative ? raw.slice(1) : raw;
@@ -89,22 +126,24 @@ export function formatOutcome({
   stake,
   payout,
   decimals,
-  symbol
+  symbol,
+  pendingLabel
 }: {
   status: BetStatusGroup;
   stake: bigint;
   payout?: bigint;
   decimals: number;
   symbol: string;
+  pendingLabel?: string;
 }) {
   if (status === "won" && payout != null) {
-    return `+${formatTokenAmount(payout, decimals, symbol)}`;
+    return `+${formatTokenAmount(payout, decimals, symbol, pendingLabel)}`;
   }
   if (isLossStatus(status)) {
-    return `-${formatTokenAmount(stake, decimals, symbol)}`;
+    return `-${formatTokenAmount(stake, decimals, symbol, pendingLabel)}`;
   }
   if (status === "settled" && payout != null) {
-    return formatTokenAmount(payout, decimals, symbol);
+    return formatTokenAmount(payout, decimals, symbol, pendingLabel);
   }
-  return "Pending";
+  return pendingLabel ?? "—";
 }

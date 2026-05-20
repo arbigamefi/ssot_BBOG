@@ -46,6 +46,7 @@ describe("game room place bet builder", () => {
   });
 
   it("builds a typed PlaceBetInput with encoded params and stake spec", () => {
+    const affiliate = "0x5555555555555555555555555555555555555555";
     const result = buildGamePlaceBetInput({
       release,
       game,
@@ -54,9 +55,12 @@ describe("game room place bet builder", () => {
       stopGain: 50,
       stopLoss: 10,
       diceTarget: 55,
+      diceDirection: "under",
       coinSide: "HEADS",
       rouletteSpots: [],
-      kenoSpots: []
+      kenoSpots: [],
+      plinkoRisk: "medium",
+      affiliate
     });
 
     expect(result.ok).toBe(true);
@@ -64,9 +68,14 @@ describe("game room place bet builder", () => {
 
     expect(result.input.chainId).toBe(84532);
     expect(result.input.poolId).toBe(1);
+    expect(result.input.affiliate).toBe(affiliate);
     expect(result.input.betCount).toBe(3);
     expect(result.input.stake).toBe(75_000_000n);
-    expect(decodeDiceParams(result.input.params)).toEqual({ cap: 55 });
+    expect(decodeDiceParams(result.input.params)).toEqual({
+      cap: 55,
+      direction: "under",
+      target: 55
+    });
     expect(decodeStakeSpec(result.input.stakeSpec)).toEqual({
       amountPerRoll: 25_000_000n,
       betCount: 3,
@@ -75,7 +84,35 @@ describe("game room place bet builder", () => {
     });
   });
 
-  it("returns selection validation from game param encoding", () => {
+  it("keeps cent-level casino stakes when building contract units", () => {
+    const result = buildGamePlaceBetInput({
+      release,
+      game,
+      betAmount: 0.01,
+      betCount: 2,
+      stopGain: 0.02,
+      stopLoss: 0.01,
+      diceTarget: 55,
+      diceDirection: "under",
+      coinSide: "HEADS",
+      rouletteSpots: [],
+      kenoSpots: [],
+      plinkoRisk: "medium"
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.input.stake).toBe(20_000n);
+    expect(decodeStakeSpec(result.input.stakeSpec)).toEqual({
+      amountPerRoll: 10_000n,
+      betCount: 2,
+      stopGain: 20_000n,
+      stopLoss: 10_000n
+    });
+  });
+
+  it("returns neutral selection validation when UI copy is not provided", () => {
     const result = buildGamePlaceBetInput({
       release,
       game: { ...game, slug: "roulette", label: "Roulette" },
@@ -84,14 +121,16 @@ describe("game room place bet builder", () => {
       stopGain: 0,
       stopLoss: 0,
       diceTarget: 50,
+      diceDirection: "under",
       coinSide: "HEADS",
       rouletteSpots: [],
-      kenoSpots: []
+      kenoSpots: [],
+      plinkoRisk: "medium"
     });
 
     expect(result).toEqual({
       ok: false,
-      message: "Please select at least one number or bet type on the Roulette board."
+      message: "—"
     });
   });
 
@@ -104,14 +143,41 @@ describe("game room place bet builder", () => {
       stopGain: 0,
       stopLoss: 0,
       diceTarget: 50,
+      diceDirection: "under",
       coinSide: "HEADS",
       rouletteSpots: [],
-      kenoSpots: []
+      kenoSpots: [],
+      plinkoRisk: "medium"
     });
 
     expect(result).toEqual({
       ok: false,
-      message: "No active casino pool is available in the current release."
+      message: "—"
+    });
+  });
+
+  it("allows UI layers to provide localized pool errors", () => {
+    const result = buildGamePlaceBetInput({
+      release: { chainId: 84532, assets: [], pools: [] },
+      game,
+      betAmount: 10,
+      betCount: 1,
+      stopGain: 0,
+      stopLoss: 0,
+      diceTarget: 50,
+      diceDirection: "under",
+      coinSide: "HEADS",
+      rouletteSpots: [],
+      kenoSpots: [],
+      plinkoRisk: "medium",
+      messages: {
+        noActiveCasinoPool: "当前 release 中没有可用的赌场资金池。"
+      }
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      message: "当前 release 中没有可用的赌场资金池。"
     });
   });
 });

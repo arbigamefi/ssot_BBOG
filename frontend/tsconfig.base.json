@@ -13,6 +13,8 @@
     "paths": {
       "@ssot/ui": ["packages/ui/src"],
       "@ssot/ui/*": ["packages/ui/src/*"],
+      "@ssot/bet-index": ["packages/bet-index/src"],
+      "@ssot/bet-index/*": ["packages/bet-index/src/*"],
       "@ssot/ssot": ["packages/ssot/src"],
       "@ssot/ssot/*": ["packages/ssot/src/*"]
     }

@@ -1,8 +1,19 @@
 import type { PlaceBetInput } from "@ssot/ssot";
+import type { Address } from "@ssot/ssot/sdk";
 import { encodeStakeSpec } from "@ssot/ssot/encoding";
+import { parseDecimalToUnits } from "../../betting/model/units";
 
 import type { GameMeta } from "./model";
-import { buildGameParams, type CoinSide, type GameParamsHex } from "./params";
+import {
+  buildGameParams,
+  type BaccaratSide,
+  type CoinSide,
+  type DiceDirection,
+  type GameParamsHex,
+  type GameParamsMessages,
+  type PlinkoRisk,
+  type SicBoKind
+} from "./params";
 
 type ReleaseAsset = {
   symbol?: string;
@@ -35,18 +46,35 @@ export type BuildGamePlaceBetInputArgs = {
   stopGain: number;
   stopLoss: number;
   diceTarget: number;
+  diceDirection: DiceDirection;
   coinSide: CoinSide;
   rouletteSpots: readonly string[];
   kenoSpots: readonly number[];
+  plinkoRisk: PlinkoRisk;
+  baccaratSide?: BaccaratSide;
+  sicBoKind?: SicBoKind;
+  sicBoValue?: number;
+  affiliate?: Address;
   maxHouseEdgeBps?: number;
+  messages?: GamePlaceBetMessages;
 };
 
 export type BuildGamePlaceBetInputResult =
   | { ok: true; input: PlaceBetInput; params: GameParamsHex }
   | { ok: false; message: string };
 
+export type GamePlaceBetMessages = GameParamsMessages & {
+  noActiveCasinoPool?: string;
+};
+
 function toUnits(amount: number, decimals: number) {
-  return BigInt(Math.floor(Math.max(0, amount))) * BigInt(Math.pow(10, decimals));
+  const normalized = Math.max(0, amount);
+  const precision = Math.max(0, Math.min(18, decimals));
+  const value = normalized.toLocaleString("en-US", {
+    useGrouping: false,
+    maximumFractionDigits: precision
+  });
+  return parseDecimalToUnits(value, decimals);
 }
 
 export function findUSDCAsset(assets: readonly ReleaseAsset[]) {
@@ -69,17 +97,30 @@ export function buildGamePlaceBetInput({
   stopGain,
   stopLoss,
   diceTarget,
+  diceDirection,
   coinSide,
   rouletteSpots,
   kenoSpots,
-  maxHouseEdgeBps = 10000
+  plinkoRisk,
+  baccaratSide,
+  sicBoKind,
+  sicBoValue,
+  affiliate,
+  maxHouseEdgeBps = 10000,
+  messages
 }: BuildGamePlaceBetInputArgs): BuildGamePlaceBetInputResult {
   const gameParams = buildGameParams({
     slug: game.slug,
     diceTarget,
+    diceDirection,
     coinSide,
     rouletteSpots,
-    kenoSpots
+    kenoSpots,
+    plinkoRisk,
+    baccaratSide,
+    sicBoKind,
+    sicBoValue,
+    messages
   });
 
   if (!gameParams.ok) {
@@ -88,7 +129,10 @@ export function buildGamePlaceBetInput({
 
   const casinoPool = findCasinoPool(release.pools);
   if (!casinoPool?.asset) {
-    return { ok: false, message: "No active casino pool is available in the current release." };
+    return {
+      ok: false,
+      message: messages?.noActiveCasinoPool ?? "—"
+    };
   }
 
   const assetMeta =
@@ -118,6 +162,7 @@ export function buildGamePlaceBetInput({
       stake: totalStake,
       params: gameParams.params,
       stakeSpec,
+      affiliate,
       maxHouseEdgeBps: Math.max(0, Math.min(10000, Math.floor(maxHouseEdgeBps)))
     }
   };

@@ -1,0 +1,28 @@
+[Unit]
+Description=ArbiGameFi casino keeper (%i)
+Documentation=file:/opt/arbigamefi_ssot_project_all/docs/ops/runbooks/casino-keeper-production.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=arbigamefi
+Group=arbigamefi
+WorkingDirectory=/opt/arbigamefi_ssot_project_all/frontend
+Environment=NODE_ENV=production
+EnvironmentFile=/etc/arbigamefi/casino-keeper/%i.env
+ExecStartPre=/usr/bin/test -f apps/keeper/dist/cli.js
+ExecStart=/usr/bin/env node apps/keeper/dist/cli.js
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+KillSignal=SIGTERM
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=/var/lib/arbigamefi/casino-keeper
+StateDirectory=arbigamefi/casino-keeper
+
+[Install]
+WantedBy=multi-user.target

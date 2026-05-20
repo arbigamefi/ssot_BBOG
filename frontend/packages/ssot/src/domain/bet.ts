@@ -11,6 +11,9 @@ export interface DomainBet {
   reserved: bigint;
   amountPerRoll: bigint;
   betCount: number;
+  stopGain: bigint;
+  stopLoss: bigint;
+  effectiveHouseEdgeBps: number;
   vrfFeePaid: bigint;
   vrfFeeCharged: bigint;
   vrfCallbackGasLimit: number;

@@ -4,6 +4,10 @@
 
 - `docs/closeout/README.md` — one-page institutional handoff (proof + release + ops)
 
+## Strategy
+
+- `docs/strategy/fullstack-product-architecture.md` — fullstack commitment: protocol-grade settlement kernel, lean B2C casino/sportsbook product, optional future infrastructure
+
 ## Release materials
 
 - `docs/release/ARBIGAMEFI-RELEASE-PACK.zh-CN.md` — outward-facing release pack for partners, LPs, auditors, and technical integrators
@@ -18,7 +22,7 @@
 
 - `docs/WHITEPAPER.zh-CN.md` — formal Chinese technical whitepaper derived from the current contract implementation
 - `docs/WHITEPAPER.product.zh-CN.md` — product and business whitepaper grounded in the current protocol capabilities
-- `docs/ARBIGAMEFI-EXECUTIVE-BRIEF.zh-CN.md` — short outward-facing executive brief for partners, investors, and contributors
+- `docs/ARBIGAMEFI-EXECUTIVE-BRIEF.zh-CN.md` — short outward-facing executive brief for players, LPs, referrers, investors, and contributors
 - `docs/WHITEPAPER-PUBLISHING-STANDARD.zh-CN.md` — publishing standard for naming, versioning, and scope separation across the whitepaper set
 
 This repository is designed to be **auditable by construction**. The documentation is part of the SSOT.
@@ -41,11 +45,12 @@ This repository is designed to be **auditable by construction**. The documentati
 
 ## Design system
 
-- `docs/design/README.md` — frontend clean-room rewrite design SSOT index
-- `docs/design/north-star.md` — frontend design-system SSOT, route taxonomy, and phased migration plan
-- `docs/design/frontend-rewrite-blueprint.md` — clean-room frontend rewrite architecture, UI/UX planning, deletion plan, and quality gates
-- `docs/design/frontend-kill-list.md` — physical delete / rewrite / keep inventory for the frontend clean-room rewrite
-- `docs/frontend/INDEX.md` — frontend engineering-quality SSOT index
+- `docs/design/README.md` — lean frontend design and UX reference index
+- `docs/design/north-star.md` — short frontend product and visual orientation
+- `docs/design/frontend-rewrite-blueprint.md` — current frontend architecture snapshot and cutover reference
+- `docs/design/frontend-implementation-roadmap.md` — active frontend closeout priority order
+- `docs/design/frontend-kill-list.md` — concise cleanup inventory for route, shell, token, and prototype residues
+- `docs/frontend/INDEX.md` — launch-relevant frontend engineering reference index
 
 ## Research
 
@@ -62,7 +67,7 @@ This repository is designed to be **auditable by construction**. The documentati
 - `docs/roadmap.md` — roadmap, milestones, acceptance criteria
 - `docs/plan/README.md` — implementation-grade action plans (PR-sized work breakdowns)
 - `docs/plan/Milestone-3.1-SportsHub-MVP.md` — sportsbook MVP implementation plan on top of SettlementRouter
-- `docs/migration/refactored-mapping.md` — mapping of refactored features to the clean-room design
+- `docs/migration/refactored-mapping.md` — mapping of refactored features to the current frontend design
 
 ## Games
 

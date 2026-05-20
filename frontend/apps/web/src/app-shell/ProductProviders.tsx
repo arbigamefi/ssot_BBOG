@@ -8,11 +8,17 @@ import { SSOTRuntimeProvider } from "./SSOTRuntimeProvider";
 import { SSOTSDKProvider } from "./SSOTSDKProvider";
 import { WalletProviderIsland } from "./WalletProviderIsland";
 
-export function ProductProviders({ children }: { children: React.ReactNode }) {
+export function ProductProviders({
+  children,
+  sportsbookEnabledFlag
+}: {
+  children: React.ReactNode;
+  sportsbookEnabledFlag?: string;
+}) {
   return (
     <WalletProviderIsland>
       <AnalyticsProvider>
-        <ReleaseProviderWagmi>
+        <ReleaseProviderWagmi sportsbookEnabledFlag={sportsbookEnabledFlag}>
           <SSOTRuntimeProvider>
             <SSOTSDKProvider>{children}</SSOTSDKProvider>
           </SSOTRuntimeProvider>

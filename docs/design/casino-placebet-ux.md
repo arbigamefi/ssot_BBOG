@@ -1,8 +1,8 @@
 # Casino Place Bet UX & Keeper Settlement
 
 | Owner | Frontend Lead + Protocol Lead |
-| Status | Draft v1 |
-| Last Updated | 2026-05-16 |
+| Status | Active |
+| Last Updated | 2026-05-18 |
 | Depends-on | `13-web3-ux.md`, `14-data-and-state.md`, `../frontend/25-observability.md`, `../constitution/SSOT.v1.3.md` |
 | Supersedes | two-click casino `plan -> execute` UX and any user-default `finalize` flow |
 
@@ -146,19 +146,23 @@ clicks it. The frontend must never auto-refund a player round.
 
 ## 7. Result Modal Contract
 
+The result modal is the final receipt, not a loading screen. It should open only
+after the frontend has a terminal chain read or terminal receipt with enough
+facts to tell the player the outcome.
+
 The result modal must show only chain-derived facts:
 
 - `betId`
 - `requestId`
 - `randomHash`
 - `placeBet` transaction hash
-- `BetFinalized` or `BetRefunded` transaction hash when indexed
-- payout or refund amount when indexed
+- `BetFinalized` or `BetRefunded` transaction hash when available
+- payout or refund amount from terminal chain state
 - explorer links
 
-If the chain is already `Settled` but the indexer has not indexed payout fields,
-the modal must say `Settlement confirmed. Indexing payout proof` instead of
-showing a mocked amount.
+If the chain is already terminal but the frontend still lacks the payout/refund
+amount, keep the user in the round status panel (`Reading result`) and continue
+polling. Do not open a large final modal that only says `Indexing`.
 
 ## 8. Don'ts
 

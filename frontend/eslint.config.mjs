@@ -88,6 +88,38 @@ export default [
     }
   },
 
+  // apps/web server boundary: allow viem for server-side aggregation routes.
+  // This code runs behind API routes and must not be imported by client components.
+  {
+    files: ["apps/web/src/server/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            "../../packages/*/src/*",
+            "../..//packages/*/src/*",
+            "packages/*/src/*",
+            "@ssot/ui/src/*",
+            "@ssot/ssot/src/*"
+          ],
+          paths: [
+            { name: "wagmi", message: "wagmi is not available in server aggregation modules." },
+            {
+              name: "@wagmi/core",
+              message: "Use viem clients directly in server aggregation modules."
+            },
+            {
+              name: "@rainbow-me/rainbowkit",
+              message: "RainbowKit is not available in server aggregation modules."
+            },
+            { name: "ethers", message: "Do not introduce ethers; use viem." }
+          ]
+        }
+      ]
+    }
+  },
+
   // apps/web workers: allow viem for direct chain I/O (off-thread indexers).
   // Workers cannot use SDK factories — they need direct viem RPC access.
   {

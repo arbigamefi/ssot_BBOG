@@ -3,27 +3,45 @@ import * as React from "react";
 import { toneBadgeClass } from "./format";
 import type { OpsTrailRow } from "./types";
 
-export function OpsEventTrail({ rows }: { rows: readonly OpsTrailRow[] }) {
+export type OpsEventTrailCopy = {
+  eyebrow: string;
+  title: string;
+  description: string;
+  headers: {
+    timeBlock: string;
+    event: string;
+    status: string;
+    context: string;
+    flow: string;
+  };
+  flowLabel: string;
+  mobileBlockLabel: string;
+};
+
+export function OpsEventTrail({
+  rows,
+  copy
+}: {
+  rows: readonly OpsTrailRow[];
+  copy: OpsEventTrailCopy;
+}) {
   return (
     <section className="rounded-md border border-border bg-surface-1 shadow-e2">
       <div className="border-b border-border px-5 py-4">
         <div className="text-xs font-black uppercase tracking-[0.16em] text-fg-subtle">
-          Worker event trail
+          {copy.eyebrow}
         </div>
-        <h2 className="mt-2 text-2xl font-black text-fg">Recent operational receipts</h2>
-        <p className="mt-2 text-sm leading-6 text-fg-muted">
-          A compact table of worker and release facts. The route stays precise enough for operators
-          and readable enough for auditors.
-        </p>
+        <h2 className="mt-2 text-2xl font-black text-fg">{copy.title}</h2>
+        <p className="mt-2 text-sm leading-6 text-fg-muted">{copy.description}</p>
       </div>
 
       <div className="hidden md:block">
         <div className="grid grid-cols-[1.1fr_1.1fr_1fr_1.3fr_80px] border-b border-border bg-surface-2 px-5 py-3 text-[10px] font-black uppercase tracking-[0.14em] text-fg-subtle">
-          <div>Time / block</div>
-          <div>Event</div>
-          <div>Status</div>
-          <div>Context</div>
-          <div className="text-right">Flow</div>
+          <div>{copy.headers.timeBlock}</div>
+          <div>{copy.headers.event}</div>
+          <div>{copy.headers.status}</div>
+          <div>{copy.headers.context}</div>
+          <div className="text-right">{copy.headers.flow}</div>
         </div>
         {rows.map((row) => (
           <div
@@ -40,7 +58,7 @@ export function OpsEventTrail({ rows }: { rows: readonly OpsTrailRow[] }) {
             </div>
             <div className="text-fg-muted">{row.context}</div>
             <div className="text-right text-xs font-black uppercase tracking-[0.12em] text-brand">
-              Live
+              {copy.flowLabel}
             </div>
           </div>
         ))}
@@ -61,7 +79,7 @@ export function OpsEventTrail({ rows }: { rows: readonly OpsTrailRow[] }) {
             </div>
             <div className="mt-4 grid gap-2 text-sm">
               <div className="flex items-center justify-between gap-3">
-                <span className="text-fg-subtle">Block</span>
+                <span className="text-fg-subtle">{copy.mobileBlockLabel}</span>
                 <span className="font-mono text-fg-muted">{row.block}</span>
               </div>
               <div className="text-fg-muted">{row.context}</div>

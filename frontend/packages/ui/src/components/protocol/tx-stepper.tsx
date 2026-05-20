@@ -42,7 +42,7 @@ export function TxStepper({ title, subtitle, steps, footer, className }: TxStepp
         <CardTitle className="flex items-center justify-between gap-3">
           <span>{title}</span>
         </CardTitle>
-        {subtitle ? <div className="text-sm text-muted-foreground">{subtitle}</div> : null}
+        {subtitle ? <div className="text-sm text-fg-muted">{subtitle}</div> : null}
       </CardHeader>
       <CardContent>
         <div className="space-y-3" role="list" aria-label={title}>
@@ -59,7 +59,9 @@ export function TxStepper({ title, subtitle, steps, footer, className }: TxStepp
                 </div>
                 <div>
                   <div className="font-medium">{s.title}</div>
-                  {s.description ? <div className="text-sm text-muted-foreground">{s.description}</div> : null}
+                  {s.description ? (
+                    <div className="text-sm text-fg-muted">{s.description}</div>
+                  ) : null}
                 </div>
               </div>
               {s.right ? <div className="shrink-0">{s.right}</div> : null}

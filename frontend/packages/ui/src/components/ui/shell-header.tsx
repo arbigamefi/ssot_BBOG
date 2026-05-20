@@ -22,7 +22,7 @@ export function ShellHeader({ className, children, variant = "solid" }: ShellHea
         className
       )}
     >
-      <div className="mx-auto flex h-20 max-w-[1440px] items-center justify-between px-6">
+      <div className="mx-auto flex h-20 max-w-[1440px] items-center justify-between px-4 sm:px-6">
         {children}
       </div>
     </header>
@@ -41,11 +41,17 @@ export function ShellHeaderBrand({ name = "ArbiGameFi", className }: ShellHeader
 }
 
 interface ShellHeaderNavProps {
+  className?: string;
   children?: React.ReactNode;
 }
-export function ShellHeaderNav({ children }: ShellHeaderNavProps) {
+export function ShellHeaderNav({ className, children }: ShellHeaderNavProps) {
   return (
-    <nav className="hidden items-center gap-6 text-sm font-medium text-fg-muted md:flex">
+    <nav
+      className={cn(
+        "hidden min-w-0 items-center gap-6 overflow-x-auto whitespace-nowrap text-sm font-medium text-fg-muted md:flex [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        className
+      )}
+    >
       {children}
     </nav>
   );
@@ -55,5 +61,5 @@ interface ShellHeaderActionsProps {
   children?: React.ReactNode;
 }
 export function ShellHeaderActions({ children }: ShellHeaderActionsProps) {
-  return <div className="flex items-center gap-4">{children}</div>;
+  return <div className="flex shrink-0 items-center gap-2 sm:gap-4">{children}</div>;
 }

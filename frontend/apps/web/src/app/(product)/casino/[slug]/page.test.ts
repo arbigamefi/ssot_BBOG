@@ -36,6 +36,24 @@ describe("GameRoomPage", () => {
     expect((page as React.ReactElement).props.slug).toBe("coin-toss");
   });
 
+  it("renders plinko through the shared game page client", async () => {
+    const page = await GameRoomPage({ params: Promise.resolve({ slug: "plinko" }) });
+    expect((page as React.ReactElement).type).toBe(gamePageClientMock);
+    expect((page as React.ReactElement).props.slug).toBe("plinko");
+  });
+
+  it("renders slots through the shared game page client", async () => {
+    const page = await GameRoomPage({ params: Promise.resolve({ slug: "slots" }) });
+    expect((page as React.ReactElement).type).toBe(gamePageClientMock);
+    expect((page as React.ReactElement).props.slug).toBe("slots");
+  });
+
+  it("renders baccarat through the shared game page client", async () => {
+    const page = await GameRoomPage({ params: Promise.resolve({ slug: "baccarat" }) });
+    expect((page as React.ReactElement).type).toBe(gamePageClientMock);
+    expect((page as React.ReactElement).props.slug).toBe("baccarat");
+  });
+
   it("404s unknown slugs before they reach the shared client", async () => {
     await expect(
       GameRoomPage({ params: Promise.resolve({ slug: "unknown-room" }) })

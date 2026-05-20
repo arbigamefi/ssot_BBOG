@@ -6,6 +6,7 @@ import { WagmiProvider, createConfig, http, injected } from "wagmi";
 import { arbitrum, arbitrumSepolia, base, baseSepolia } from "wagmi/chains";
 
 import { QueryProvider } from "./QueryProvider";
+import { resolvePublicRpcUrl, withConfiguredRpc } from "./rpc";
 import { WalletConnectModalHost } from "./WalletConnectModalHost";
 
 const CHAIN_BY_ID: Record<number, any> = {
@@ -15,13 +16,21 @@ const CHAIN_BY_ID: Record<number, any> = {
   [baseSepolia.id]: baseSepolia
 };
 
-const supportedChains = embeddedChainIds.map((id) => CHAIN_BY_ID[id]).filter(Boolean);
+const supportedChains = embeddedChainIds
+  .map((id) => CHAIN_BY_ID[id])
+  .filter(Boolean)
+  .map((chain) => withConfiguredRpc(chain));
 
 const chains = (supportedChains.length > 0
   ? supportedChains
-  : [baseSepolia]) as unknown as readonly [typeof baseSepolia, ...(typeof baseSepolia)[]];
+  : [withConfiguredRpc(baseSepolia)]) as unknown as readonly [
+  typeof baseSepolia,
+  ...(typeof baseSepolia)[]
+];
 
-const transports = Object.fromEntries(chains.map((chain: any) => [chain.id, http()]));
+const transports = Object.fromEntries(
+  chains.map((chain: any) => [chain.id, http(resolvePublicRpcUrl(chain.id))])
+);
 
 const wagmiConfig = createConfig({
   chains,

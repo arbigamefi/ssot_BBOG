@@ -2,28 +2,41 @@ import * as React from "react";
 import type { DomainError } from "@ssot/ssot";
 import { toast } from "@ssot/ui";
 
-export function getStepperErrorMessage(error: DomainError | undefined) {
-  return error?.message ?? "Transaction failed. Please try again.";
+type StepperDisplayError = Partial<Pick<DomainError, "code" | "message" | "severity">>;
+
+export function getStepperErrorMessage(
+  error: StepperDisplayError | undefined,
+  fallbackMessage = "—"
+) {
+  if (!error) return fallbackMessage;
+
+  if ("code" in error && error.code === "USER_REJECTED") {
+    return error.message || fallbackMessage;
+  }
+
+  return fallbackMessage;
 }
 
 export function useBetStepperFailureToast({
   status,
-  error
+  error,
+  fallbackMessage
 }: {
   status: string;
   error: DomainError | undefined;
+  fallbackMessage?: string;
 }) {
   const prevStatusRef = React.useRef<string>("");
 
   React.useEffect(() => {
     if (status === "failed" && prevStatusRef.current !== "failed") {
-      toast.error(getStepperErrorMessage(error));
+      toast.error(getStepperErrorMessage(error, fallbackMessage));
     }
     prevStatusRef.current = status;
-  }, [status, error]);
+  }, [status, error, fallbackMessage]);
 }
 
-export function useVrfTimeoutToast(isSoftTimeout: boolean) {
+export function useVrfTimeoutToast(isSoftTimeout: boolean, message = "—") {
   const shownRef = React.useRef(false);
 
   React.useEffect(() => {
@@ -33,10 +46,10 @@ export function useVrfTimeoutToast(isSoftTimeout: boolean) {
     }
     if (!shownRef.current) {
       shownRef.current = true;
-      toast.warning("Waiting for oracle... VRF resolution can take 30-120s on testnets.", {
+      toast.warning(message, {
         duration: 20000,
         id: "vrf-timeout"
       });
     }
-  }, [isSoftTimeout]);
+  }, [isSoftTimeout, message]);
 }

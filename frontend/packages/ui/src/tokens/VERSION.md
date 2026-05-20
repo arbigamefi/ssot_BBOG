@@ -2,9 +2,9 @@
 
 | Field         | Value                             |
 | ------------- | --------------------------------- |
-| Token Version | 1.0.0-draft                       |
-| Status        | Draft                             |
-| Last Updated  | 2026-05-15                        |
+| Token Version | 1.0.0                             |
+| Status        | Active                            |
+| Last Updated  | 2026-05-18                        |
 | Source        | `docs/design/10-design-tokens.md` |
 
 This file tracks the token contract implemented by `arbi-dark.css`,

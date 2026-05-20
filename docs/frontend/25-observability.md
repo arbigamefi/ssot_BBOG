@@ -1,386 +1,137 @@
-# 25 · Observability & Analytics
+# 25 · Observability
 
 | Owner | Frontend Lead + SRE |
-| Status | Draft v1 |
-| Last Updated | 2026-05-14 |
-| Depends on | `../design/00-charter.md`, `../design/13-web3-ux.md`, `../design/14-data-and-state.md`, `23-security.md` |
-| Supersedes | — |
+| Status | Active |
+| Last Updated | 2026-05-18 |
+| Depends on | `../strategy/fullstack-product-architecture.md`, `23-security.md`, `24-testing.md` |
+| Supersedes | Draft v1 analytics taxonomy |
 
-The frontend must answer three questions at all times:
+Observability exists to answer operational questions, not to create a full
+analytics bureaucracy before product usage exists.
 
-1. **Is it broken right now?** (errors, exceptions, broken flows)
-2. **Is it slow right now?** (Core Web Vitals, RPC latency)
-3. **Are users doing the things we built it for?** (conversion, drop-off, recovery)
+The MVP questions are:
 
-This document is the operational contract for those three questions.
+1. Is the web app broken?
+2. Is the casino round flow stuck?
+3. Is the keeper healthy?
+4. Are durable bet-index reads failing or falling back?
+5. Are users reaching the main conversion steps?
 
-## 1. Tooling Selection
+## 1. Tooling
 
-| Concern                       | Tool                                           | Why                                                               |
-| ----------------------------- | ---------------------------------------------- | ----------------------------------------------------------------- |
-| Errors / breadcrumbs          | **Sentry** (`@sentry/nextjs`)                  | already in deps; RSC + Edge support; sourcemap pipeline           |
-| Real-user monitoring (RUM)    | **Sentry RUM** + **Vercel Analytics**          | Sentry covers Web Vitals + custom; Vercel adds free per-route p75 |
-| Product analytics             | **PostHog (self-hosted)**                      | event taxonomy, funnel, retention; privacy-controllable           |
-| Log aggregation (server logs) | **Vercel Logs** + **Sentry transport**         | server-side errors flow to Sentry                                 |
-| Status page                   | **Statuspage.io** (or open-source alternative) | external uptime                                                   |
+| Concern                  | Tool                                      |
+| ------------------------ | ----------------------------------------- |
+| Frontend/server errors   | Sentry via `@sentry/nextjs`               |
+| Web Vitals               | Sentry/Vercel route-level metrics         |
+| Keeper health            | `/ops/casino-keeper-health.json`          |
+| Durable bet index health | API route logs + Sentry tags              |
+| Product funnel MVP       | typed in-app events only when implemented |
 
-Rejected:
+PostHog, session replay, tag managers, and broad autocapture are out of scope
+until there is real funnel traffic and a privacy review.
 
-- Google Analytics — 3rd-party cookies, privacy regression.
-- Segment / Mixpanel — vendor lock + cost.
-- DataDog RUM — over-spec for v1.
+## 2. Privacy Rules
 
-If a different stack is adopted later, the **event taxonomy** in §3 stays
-invariant.
+- Do not send raw wallet addresses to analytics.
+- Do not send private keys, signatures, request bodies, or env values.
+- Do not enable Sentry replay by default.
+- Do not use third-party tag managers.
+- Amounts, if tracked, must be binned rather than raw bigint strings.
+- Product events should use route patterns such as `/casino/[slug]`, not full
+  URLs with query parameters.
 
-## 2. Privacy Contract
+## 3. Minimum Events
 
-Per `23-security.md §9`:
+Only track events that answer current product or operations questions:
 
-- We **never** send raw wallet addresses to analytics or Sentry.
-- A wallet identifier is computed as `sha256(address).slice(0, 12)` and used as a
-  pseudo-id. We never reverse-link it.
-- IP addresses are dropped at the edge (Sentry: `sendDefaultPii: false`).
-- No PII in event properties. Schemas in §3 enforce this.
-- DNT (`Do Not Track`) honored — no analytics or Sentry breadcrumbs.
-- Cookie-banner: not required (we don't set non-essential cookies in v1).
-  When PostHog autocapture is enabled, a consent banner becomes mandatory.
+| Event                         | Purpose                              |
+| ----------------------------- | ------------------------------------ |
+| `wallet.connected`            | Visitor reached wallet connection.   |
+| `casino.bet.place_started`    | User attempted a casino round.       |
+| `casino.bet.place_mined`      | `placeBet` landed on-chain.          |
+| `casino.bet.random_ready`     | VRF result became readable.          |
+| `casino.bet.settled`          | Round reached terminal settlement.   |
+| `casino.bet.failed`           | UI showed a terminal failure state.  |
+| `sports.ticket.place_started` | User attempted a sportsbook ticket.  |
+| `sports.ticket.place_mined`   | Ticket landed on-chain.              |
+| `lp.deposit.started`          | LP flow began.                       |
+| `error.shown`                 | A user-visible error state rendered. |
 
-## 3. Event Taxonomy
+Adding more events requires a clear question they answer. Do not add a taxonomy
+because a future dashboard might use it.
 
-A finite, versioned catalog. Adding an event requires a PR touching this
-document and `apps/web/src/lib/analytics/events.ts`.
+## 4. Required Tags
 
-### 3.1 Event naming convention
-
-`<surface>.<noun>.<verb_past_or_present>`
-
-- `wallet.connect.requested`
-- `wallet.connect.succeeded`
-- `wallet.connect.failed`
-- `bet.simulate.requested`
-- `bet.simulate.failed`
-- `bet.place.signed`
-- `bet.place.mined`
-- `bet.place.reverted`
-- `bet.finalize.requested`
-- `bet.finalize.mined`
-- `lp.deposit.signed`
-- `lp.deposit.mined`
-- `lp.withdraw.signed`
-- `lp.withdraw.mined`
-- `lp.withdraw.a4_blocked`
-- `ticket.place.signed`
-- `ticket.place.mined`
-- `ticket.settle.requested`
-- `ticket.refund.requested`
-- `error.shown`
-- `route.navigated`
-- `release.proof.opened`
-
-### 3.2 Common properties (auto-attached)
+Errors and events should attach only low-risk context:
 
 ```ts
-type CommonProps = {
-  release_digest: string; // truncated hash
-  chain_id: number;
-  app_version: string; // NEXT_PUBLIC_BUILD_SHA
-  locale: string; // resolved locale
-  theme: "dark" | "light";
-  walletHash?: string; // sha256 first 12, only when connected
-  pageRoute: string; // route pattern, not URL
-  ts: number; // ms epoch
+type ObservabilityContext = {
+  chainId: number;
+  releaseDigest?: string;
+  appVersion?: string;
+  routePattern: string;
+  locale: string;
+  walletHash?: string; // sha256(address).slice(0, 12), never raw address
 };
 ```
 
-`pageRoute` uses the Next.js route pattern (`/casino/[slug]`), never the
-expanded path.
+## 5. Casino Round SLOs
 
-### 3.3 Per-event properties (excerpt)
+Track these once Sentry metrics or equivalent are wired:
 
-```ts
-type Events = {
-  "wallet.connect.requested": { connector: string };
-  "wallet.connect.succeeded": { connector: string; chain_id: number };
-  "wallet.connect.failed": { connector: string; code: string };
+| Metric                          | Target                        | Alert          |
+| ------------------------------- | ----------------------------- | -------------- |
+| `placeBet mined -> randomReady` | p95 < 60s on testnet          | p95 > 120s     |
+| `randomReady -> settled`        | p95 < 20s with keeper running | p95 > 60s      |
+| manual settle offered rate      | < 2%                          | > 5%           |
+| refund path rate                | < 0.5%                        | > 2%           |
+| raw error copy shown            | 0                             | any occurrence |
 
-  "bet.simulate.requested": {
-    game_slug: string;
-    asset_symbol: string;
-    bet_count: number;
-  };
-  "bet.simulate.failed": { game_slug: string; code: ErrorCode };
-  "bet.place.signed": {
-    game_slug: string;
-    asset_symbol: string;
-    tx_hash: string;
-  };
-  "bet.place.mined": {
-    game_slug: string;
-    asset_symbol: string;
-    tx_hash: string;
-    outcome: "won" | "lost" | "refunded";
-  };
-  "bet.place.reverted": {
-    game_slug: string;
-    tx_hash: string;
-    reason_code?: string;
-  };
-  "bet.finalize.requested": { game_slug: string };
-  "bet.finalize.mined": {
-    game_slug: string;
-    outcome: "won" | "lost" | "refunded";
-  };
+These SLOs are product-health signals. They do not change the contract liveness
+model: permissionless finalize/refund remains the backstop.
 
-  "lp.deposit.signed": {
-    asset_symbol: string;
-    bigint_amount_bin: string /* binned, not raw */;
-    tx_hash: string;
-  };
-  "lp.deposit.mined": {
-    asset_symbol: string;
-    bigint_amount_bin: string;
-    tx_hash: string;
-  };
-  "lp.withdraw.a4_blocked": { asset_symbol: string };
+## 6. Health Surfaces
 
-  "ticket.place.signed": {
-    market_id: string;
-    outcome_id: number;
-    tx_hash: string;
-  };
-  "ticket.place.mined": {
-    market_id: string;
-    outcome_id: number;
-    tx_hash: string;
-  };
+Keep these visible to operators:
 
-  "error.shown": {
-    code: ErrorCode;
-    pageRoute: string;
-    severity: "info" | "warn" | "danger";
-  };
-  "route.navigated": {
-    from: string;
-    to: string;
-    navigation_type: "click" | "back" | "forward";
-  };
-  "release.proof.opened": { source: "header" | "banner" };
-};
-```
+- `/ops/casino-keeper-health.json`
+- `/ops` keeper health panel
+- `/api/bets/recent` degraded/fallback state
+- `/api/bets/player/[address]` degraded/fallback state
+- release digest and chain id in the product shell
 
-### 3.4 Amount handling in events
+Health files must not live in `apps/web/public/ops`; that path conflicts with
+the Next route.
 
-We never send raw `bigint` strings. Instead we **bin** amounts to coarse
-buckets (`0.01-0.1`, `0.1-1`, `1-10`, `10-100`, `100-1k`, `1k-10k`,
-`10k-100k`, `>100k`) per asset, normalized by decimals. The bin function
-lives in `apps/web/src/lib/analytics/binning.ts`.
+## 7. Sentry Setup Requirements
 
-This protects user privacy while preserving funnel insight.
+Sentry must:
 
-### 3.5 Schema enforcement
+- use release/build tags;
+- set `sendDefaultPii: false`;
+- scrub URLs and breadcrumbs;
+- group known app errors by stable error code when possible;
+- upload sourcemaps only through CI secrets;
+- avoid session replay unless explicitly reviewed.
 
-`zod` schema per event:
+## 8. Do Not Do
 
-```ts
-const Schemas = {
-  "bet.place.signed": z.object({
-    game_slug: z.enum([
-      "dice",
-      "cointoss",
-      "roulette",
-      "keno",
-      "plinko",
-      "sicbo",
-      "slots",
-      "baccarat",
-    ]),
-    asset_symbol: z.string().max(10),
-    tx_hash: zHash,
-  }),
-  // ...
-};
-```
+- Do not introduce PostHog/autocapture before consent and privacy review.
+- Do not send raw wallet addresses, raw amounts, signatures, or request bodies.
+- Do not build dashboards for events that are not emitted.
+- Do not treat analytics as the chain source of truth.
+- Do not let observability failures block settlement or keeper operation.
 
-Sending an event with the wrong shape throws in dev and is dropped (+ Sentry
-warning) in prod.
-
-## 4. Sentry Configuration
-
-### 4.1 SDK setup
-
-`sentry.client.config.ts`, `sentry.server.config.ts`, `sentry.edge.config.ts`
-generated by `@sentry/nextjs`. Required options:
-
-```ts
-Sentry.init({
-  dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
-  release: process.env.NEXT_PUBLIC_BUILD_SHA,
-  environment: process.env.NEXT_PUBLIC_ENV, // 'production' | 'preview' | 'staging' | 'development'
-  tracesSampleRate: 0.1,
-  replaysSessionSampleRate: 0, // off by default; v1 has no replays
-  replaysOnErrorSampleRate: 0.1, // only on error
-  sendDefaultPii: false,
-  beforeSend: scrubPiiBreadcrumbs,
-});
-```
-
-### 4.2 Sourcemap upload
-
-`SENTRY_AUTH_TOKEN` is a build-time CI secret. Maps are uploaded but not
-served publicly (`23-security.md §10`).
-
-### 4.3 Release tagging
-
-`release` matches `NEXT_PUBLIC_BUILD_SHA`. Sentry auto-correlates errors with
-the deploy.
-
-### 4.4 Breadcrumb hygiene
-
-`beforeBreadcrumb` strips:
-
-- URL search params named `address|account|wallet|signer|tx`
-- request bodies entirely (no inadvertent JSON capture)
-- console messages tagged with private data (we use a tag system)
-
-### 4.5 Error categorization
-
-Each application error includes a `tags.code` aligned with the error
-taxonomy from `../design/13-web3-ux.md §6`. Sentry groups by `code` so
-"100 different ways the bank is paused" aren't 100 separate issues.
-
-## 5. Web Vitals
-
-### 5.1 Capture
-
-`web-vitals` library reports LCP, INP, CLS, TTFB, FCP. Reported to both:
-
-- Sentry (`Sentry.metrics.distribution`)
-- Vercel Analytics (automatic)
-- PostHog as an event `webvitals.report`
-
-### 5.2 Dashboards
-
-- p75 per route → Sentry dashboard `Frontend / Web Vitals by Route`.
-- Bundle size per release → Sentry release page.
-- Long-task spikes → alert if p95 > 200 ms for 15 min.
-
-### 5.3 Alerts
-
-| Condition                                               | Severity | Action            |
-| ------------------------------------------------------- | -------- | ----------------- |
-| p75 LCP > 2.5 s for 1 h on `/`                          | warn     | Slack `#frontend` |
-| p75 LCP > 3.5 s on `/`                                  | critical | page on-call      |
-| Error rate > 1% for 15 min                              | critical | page on-call      |
-| Sentry crash event count > 50/h                         | critical | page on-call      |
-| New crash in last release (k = 5 occurrences in 10 min) | warn     | Slack             |
-
-## 6. Tx Funnel Metrics
-
-The "place a bet" funnel is the most important metric.
-
-```
-wallet.connect.succeeded
-   ↓
-bet.simulate.requested
-   ↓
-bet.simulate.failed              ← drop-off A
-   ↓
-bet.place.signed                  ← drop-off B (user rejected)
-   ↓
-bet.place.mined                   ← drop-off C (tx reverted)
-   ↓
-bet.finalize.mined                ← drop-off D (stuck VRF)
-```
-
-PostHog funnel auto-built. Weekly review reports A/B/C/D drop-off rates and
-trends.
-
-## 7. Audit Trail
-
-Tx events double as an in-app audit trail. `apps/web/src/features/_shared/tx-journal/`
-persists events to IndexedDB with:
-
-```ts
-type JournalEntry = {
-  id: string;
-  ts: number;
-  type: "bet.place" | "lp.deposit" | "lp.withdraw" | "claim" | "ticket.place";
-  tx_hash?: string;
-  chain_id: number;
-  status: "signed" | "mined" | "reverted" | "timeout";
-  release_digest: string;
-};
-```
-
-Available at `/portfolio/activity`. Encrypted at rest is unnecessary (no
-private info). Cleared by user via `Clear local data`.
-
-## 8. Health Checks
-
-The frontend exposes a `/api/healthz` route returning:
-
-```json
-{
-  "status": "ok",
-  "build": "<NEXT_PUBLIC_BUILD_SHA>",
-  "release_digest": "<expected digest>",
-  "ts": 1714563600000
-}
-```
-
-Used by Statuspage's HTTP monitor + Vercel monitors.
-
-A second endpoint `/api/release` returns the parsed release manifest with
-30s cache for client-side verification.
-
-## 9. Outage Playbook
-
-On a critical alert (Web Vitals breach, error spike), on-call follows
-`docs/ops/runbooks/frontend-outage.md` (to be authored under
-`docs/ops/runbooks/`). Step summary:
-
-1. Confirm via `/api/healthz` and Statuspage.
-2. Inspect Sentry release dashboard.
-3. Roll back the Vercel deployment if a recent release is implicated.
-4. Communicate on Statuspage.
-5. Post-mortem.
-
-## 10. Don'ts
-
-- No raw wallet address in any analytics payload.
-- No untyped events. New event → schema + this doc.
-- No sampling tx events. Funnels need 100% capture.
-- No PostHog autocapture without consent UI.
-- No third-party tag managers (GTM, Tealium).
-- No Sentry Replays in v1 (privacy review pending).
-- No analytics calls in RSC server boundary — events are client-side only.
-- No `console.error` in production — convert to Sentry capture.
-
-## 11. How To Enforce
+## 9. Verification
 
 ```bash
-# Event schema sync
-node scripts/check-event-schemas.mjs
-
-# Raw address scan in analytics calls
+# No obvious raw wallet tracking.
 rg -nE "track\\(.*address|track\\(.*signer|track\\(.*0x[0-9a-fA-F]{40}" frontend/apps/web/src
 
-# console.error / console.log scan
+# No product code console noise outside tests/fixtures.
 rg -nE "console\\.(log|error|warn)\\(" frontend/apps/web/src \
   | rg -v "test|stories|fixture"
 
-# Sentry release tag presence at build
-test -n "$NEXT_PUBLIC_BUILD_SHA"
+# Keeper health route test.
+pnpm -C frontend/apps/web test -- src/app/ops/casino-keeper-health.json/route.test.ts
 ```
-
-## 12. Glossary
-
-| Term            | Meaning                                                           |
-| --------------- | ----------------------------------------------------------------- |
-| RUM             | Real User Monitoring — production-user-collected performance data |
-| LCP / INP / CLS | Core Web Vitals (`22-performance.md`)                             |
-| Funnel          | A sequence of events used to measure conversion                   |
-| Binning         | Coarsening a continuous value into buckets for privacy            |
-| Walletash       | sha256(address).slice(0,12) — pseudo-id for analytics             |
-| Replay          | Sentry Session Replay — DOM event capture (not used in v1)        |

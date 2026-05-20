@@ -122,6 +122,8 @@ contract GameHubRouterTest is Test {
         assertEq(uint256(bet.state), uint256(SSOTTypes.BetState.PendingVRF));
         assertEq(bet.asset, address(asset));
         assertEq(bet.bank, address(bank));
+        SSOTTypes.BetTerminal memory terminal = gameHub.getBetTerminal(positionId);
+        assertEq(uint256(terminal.state), uint256(SSOTTypes.BetState.None));
 
         uint256[] memory words = new uint256[](1);
         words[0] = 1;
@@ -132,6 +134,13 @@ contract GameHubRouterTest is Test {
         bet = gameHub.getBet(positionId);
         assertEq(uint256(pos.state), uint256(SSOTTypes.PositionState.Settled));
         assertEq(uint256(bet.state), uint256(SSOTTypes.BetState.Settled));
+        terminal = gameHub.getBetTerminal(positionId);
+        assertEq(uint256(terminal.state), uint256(SSOTTypes.BetState.Settled));
+        assertEq(terminal.payoutGross, 10e6);
+        assertEq(terminal.payoutNet, 9_800_000);
+        assertEq(terminal.feeOnPayout, 200_000);
+        assertEq(terminal.protocolFeeAccrual, 200_000);
+        assertEq(terminal.refundAmount, 0);
         assertEq(bank.totalReserved(), 0);
         assertEq(bank.protocolFeesPayable(), 200_000);
         assertEq(asset.balanceOf(player), 99_800_000);
@@ -150,8 +159,15 @@ contract GameHubRouterTest is Test {
 
         SSOTTypes.Position memory pos = router.getPosition(positionId);
         SSOTTypes.Bet memory bet = gameHub.getBet(positionId);
+        SSOTTypes.BetTerminal memory terminal = gameHub.getBetTerminal(positionId);
         assertEq(uint256(pos.state), uint256(SSOTTypes.PositionState.Refunded));
         assertEq(uint256(bet.state), uint256(SSOTTypes.BetState.Refunded));
+        assertEq(uint256(terminal.state), uint256(SSOTTypes.BetState.Refunded));
+        assertEq(terminal.payoutGross, 0);
+        assertEq(terminal.payoutNet, 0);
+        assertEq(terminal.feeOnPayout, 0);
+        assertEq(terminal.protocolFeeAccrual, 0);
+        assertEq(terminal.refundAmount, 10e6);
         assertEq(bank.totalReserved(), 0);
         assertEq(asset.balanceOf(player), 100e6);
     }

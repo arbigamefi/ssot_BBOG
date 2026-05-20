@@ -1,8 +1,12 @@
 import {
+  decodeBaccaratParams,
   decodeCoinTossParams,
   decodeDiceParams,
   decodeKenoParams,
-  decodeRouletteParams
+  decodePlinkoParams,
+  decodeRouletteParams,
+  decodeSicBoParams,
+  decodeSlotsParams
 } from "@ssot/ssot/encoding";
 import { describe, expect, it } from "vitest";
 
@@ -24,7 +28,8 @@ describe("game room params", () => {
         diceTarget: 42,
         diceDirection: "under",
         rouletteSpots: [],
-        kenoSpots: []
+        kenoSpots: [],
+        plinkoRisk: "medium"
       })
     ).toBe(42);
     expect(
@@ -33,7 +38,8 @@ describe("game room params", () => {
         diceTarget: 42,
         diceDirection: "over",
         rouletteSpots: [],
-        kenoSpots: []
+        kenoSpots: [],
+        plinkoRisk: "medium"
       })
     ).toBe(58);
     expect(
@@ -42,7 +48,8 @@ describe("game room params", () => {
         diceTarget: 50,
         diceDirection: "under",
         rouletteSpots: [],
-        kenoSpots: []
+        kenoSpots: [],
+        plinkoRisk: "medium"
       })
     ).toBe(50);
     expect(
@@ -51,7 +58,8 @@ describe("game room params", () => {
         diceTarget: 50,
         diceDirection: "under",
         rouletteSpots: ["RED"],
-        kenoSpots: []
+        kenoSpots: [],
+        plinkoRisk: "medium"
       })
     ).toBeCloseTo(18 * (100 / 37));
     expect(
@@ -60,9 +68,53 @@ describe("game room params", () => {
         diceTarget: 50,
         diceDirection: "under",
         rouletteSpots: [],
-        kenoSpots: [1, 2, 3]
+        kenoSpots: [1, 2, 3],
+        plinkoRisk: "medium"
       })
     ).toBeGreaterThan(0);
+    expect(
+      calculateGameWinChance({
+        slug: "plinko",
+        diceTarget: 50,
+        diceDirection: "under",
+        rouletteSpots: [],
+        kenoSpots: [],
+        plinkoRisk: "high"
+      })
+    ).toBeCloseTo(28.90625);
+    expect(
+      calculateGameWinChance({
+        slug: "slots",
+        diceTarget: 50,
+        diceDirection: "under",
+        rouletteSpots: [],
+        kenoSpots: [],
+        plinkoRisk: "medium"
+      })
+    ).toBeCloseTo(34.375);
+    expect(
+      calculateGameWinChance({
+        slug: "baccarat",
+        diceTarget: 50,
+        diceDirection: "under",
+        rouletteSpots: [],
+        kenoSpots: [],
+        plinkoRisk: "medium",
+        baccaratSide: "banker"
+      })
+    ).toBeCloseTo((2_212_744 / 4_826_809) * 100);
+    expect(
+      calculateGameWinChance({
+        slug: "sic-bo",
+        diceTarget: 50,
+        diceDirection: "under",
+        rouletteSpots: [],
+        kenoSpots: [],
+        plinkoRisk: "medium",
+        sicBoKind: "small",
+        sicBoValue: 0
+      })
+    ).toBeCloseTo((105 / 216) * 100);
   });
 
   it("normalizes Roulette covered numbers and chance", () => {
@@ -92,27 +144,37 @@ describe("game room params", () => {
     const dice = buildGameParams({
       slug: "dice",
       diceTarget: 55,
+      diceDirection: "under",
       coinSide: "HEADS",
       rouletteSpots: [],
-      kenoSpots: []
+      kenoSpots: [],
+      plinkoRisk: "medium"
     });
-    expect(dice.ok && decodeDiceParams(dice.params)).toEqual({ cap: 55 });
+    expect(dice.ok && decodeDiceParams(dice.params)).toEqual({
+      cap: 55,
+      direction: "under",
+      target: 55
+    });
 
     const coin = buildGameParams({
       slug: "coin-toss",
       diceTarget: 50,
+      diceDirection: "under",
       coinSide: "TAILS",
       rouletteSpots: [],
-      kenoSpots: []
+      kenoSpots: [],
+      plinkoRisk: "medium"
     });
-    expect(coin.ok && decodeCoinTossParams(coin.params)).toEqual({ face: false });
+    expect(coin.ok && decodeCoinTossParams(coin.params)).toEqual({ face: true });
 
     const roulette = buildGameParams({
       slug: "roulette",
       diceTarget: 50,
+      diceDirection: "under",
       coinSide: "HEADS",
       rouletteSpots: ["1st 12"],
-      kenoSpots: []
+      kenoSpots: [],
+      plinkoRisk: "medium"
     });
     expect(roulette.ok && decodeRouletteParams(roulette.params)).toEqual({
       kind: "dozen",
@@ -122,34 +184,149 @@ describe("game room params", () => {
     const keno = buildGameParams({
       slug: "keno",
       diceTarget: 50,
+      diceDirection: "under",
       coinSide: "HEADS",
       rouletteSpots: [],
-      kenoSpots: [1, 40]
+      kenoSpots: [1, 15],
+      plinkoRisk: "medium"
     });
-    expect(keno.ok && decodeKenoParams(keno.params)).toEqual({ mask: buildKenoMask([1, 40]) });
+    expect(keno.ok && decodeKenoParams(keno.params)).toEqual({ mask: buildKenoMask([1, 15]) });
+
+    const plinko = buildGameParams({
+      slug: "plinko",
+      diceTarget: 50,
+      diceDirection: "under",
+      coinSide: "HEADS",
+      rouletteSpots: [],
+      kenoSpots: [],
+      plinkoRisk: "high"
+    });
+    expect(plinko.ok && decodePlinkoParams(plinko.params)).toEqual({
+      risk: "high",
+      riskId: 2
+    });
+
+    const slots = buildGameParams({
+      slug: "slots",
+      diceTarget: 50,
+      diceDirection: "under",
+      coinSide: "HEADS",
+      rouletteSpots: [],
+      kenoSpots: [],
+      plinkoRisk: "medium"
+    });
+    expect(slots.ok && decodeSlotsParams(slots.params)).toEqual({
+      profile: "classic",
+      profileId: 0
+    });
+
+    const baccarat = buildGameParams({
+      slug: "baccarat",
+      diceTarget: 50,
+      diceDirection: "under",
+      coinSide: "HEADS",
+      rouletteSpots: [],
+      kenoSpots: [],
+      plinkoRisk: "medium",
+      baccaratSide: "tie"
+    });
+    expect(baccarat.ok && decodeBaccaratParams(baccarat.params)).toEqual({
+      side: "tie",
+      sideId: 2
+    });
+
+    const sicBo = buildGameParams({
+      slug: "sic-bo",
+      diceTarget: 50,
+      diceDirection: "under",
+      coinSide: "HEADS",
+      rouletteSpots: [],
+      kenoSpots: [],
+      plinkoRisk: "medium",
+      sicBoKind: "total",
+      sicBoValue: 12
+    });
+    expect(sicBo.ok && decodeSicBoParams(sicBo.params)).toEqual({
+      kind: "total",
+      kindId: 4,
+      value: 12
+    });
   });
 
-  it("returns actionable validation messages for empty selection games", () => {
+  it("uses neutral validation fallbacks when UI copy is not provided", () => {
     expect(
       buildGameParams({
         slug: "roulette",
         diceTarget: 50,
+        diceDirection: "under",
         coinSide: "HEADS",
         rouletteSpots: [],
-        kenoSpots: []
+        kenoSpots: [],
+        plinkoRisk: "medium"
       })
     ).toEqual({
       ok: false,
-      message: "Please select at least one number or bet type on the Roulette board."
+      message: "—"
     });
     expect(
       buildGameParams({
         slug: "keno",
         diceTarget: 50,
+        diceDirection: "under",
         coinSide: "HEADS",
         rouletteSpots: [],
-        kenoSpots: []
+        kenoSpots: [],
+        plinkoRisk: "medium"
       })
-    ).toEqual({ ok: false, message: "Please select at least 1 number on the Keno grid." });
+    ).toEqual({ ok: false, message: "—" });
+  });
+
+  it("rejects Keno spots outside the 15-pick board contract", () => {
+    expect(
+      buildGameParams({
+        slug: "keno",
+        diceTarget: 50,
+        diceDirection: "under",
+        coinSide: "HEADS",
+        rouletteSpots: [],
+        kenoSpots: [1, 2, 3, 4, 5, 6],
+        plinkoRisk: "medium",
+        messages: {
+          kenoSelectionInvalid: "Invalid Keno selection"
+        }
+      })
+    ).toEqual({ ok: false, message: "Invalid Keno selection" });
+
+    expect(
+      buildGameParams({
+        slug: "keno",
+        diceTarget: 50,
+        diceDirection: "under",
+        coinSide: "HEADS",
+        rouletteSpots: [],
+        kenoSpots: [16],
+        plinkoRisk: "medium"
+      })
+    ).toEqual({ ok: false, message: "—" });
+  });
+
+  it("allows UI layers to provide localized validation copy", () => {
+    expect(
+      buildGameParams({
+        slug: "roulette",
+        diceTarget: 50,
+        diceDirection: "under",
+        coinSide: "HEADS",
+        rouletteSpots: [],
+        kenoSpots: [],
+        plinkoRisk: "medium",
+        messages: {
+          rouletteSelectionRequired: "请选择至少一个轮盘投注项。"
+        }
+      })
+    ).toEqual({
+      ok: false,
+      message: "请选择至少一个轮盘投注项。"
+    });
   });
 });

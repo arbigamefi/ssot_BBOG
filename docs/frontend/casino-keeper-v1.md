@@ -1,9 +1,9 @@
 # Casino Keeper v1
 
 | Owner | Frontend Lead + SRE |
-| Status | Draft v1 |
+| Status | Accepted v1 |
 | Last Updated | 2026-05-17 |
-| Depends-on | `../design/casino-placebet-ux.md`, `25-observability.md`, `30-build-and-release.md` |
+| Depends-on | `../design/casino-placebet-ux.md`, `../design/durable-bet-index.md`, `25-observability.md`, `30-build-and-release.md` |
 | Supersedes | manual-by-default casino finalize operations |
 
 This document specifies the first production keeper for casino settlement.
@@ -34,6 +34,18 @@ casino round.
 | Deployment | one primary instance, one backup instance after canary |
 | Secrets | env vars only, never committed |
 
+Production systemd and environment templates live in:
+
+```text
+frontend/deploy/casino-keeper/
+```
+
+The operational install, health wiring, canary, and rollback procedure is:
+
+```text
+docs/ops/runbooks/casino-keeper-production.md
+```
+
 ## 4. Inputs
 
 Required environment:
@@ -52,15 +64,20 @@ KEEPER_HEALTH_PATH=
 
 Backup keeper uses `KEEPER_BACKUP_DELAY_SECONDS=5`.
 
+Primary and backup must use separate EOAs and separate RPC providers. Running
+both roles with the same key defeats the redundancy model and makes nonce
+contention harder to diagnose.
+
 `KEEPER_HEALTH_PATH` is optional. When set, the keeper writes a small JSON
 snapshot after startup, enqueue, scan, finalize, and heartbeat events. For local
 operator visibility the recommended path is:
 
 ```bash
-KEEPER_HEALTH_PATH=frontend/apps/web/public/ops/casino-keeper-health.json
+KEEPER_HEALTH_PATH=frontend/.runtime/casino-keeper-health.json
 ```
 
-The web app then reads `/ops/casino-keeper-health.json` from the Ops page. In a
+The web app then reads `/ops/casino-keeper-health.json` from the Ops page. Keep
+the snapshot outside `apps/web/public` because that URL is served by a Next route. In a
 hosted deployment, mount the same JSON behind an authenticated ops-only route or
 object-store URL; do not expose keeper private keys, RPC credentials, or raw
 environment values.
@@ -90,8 +107,19 @@ Every `KEEPER_POLL_INTERVAL_SECONDS`, scan the event window from
 `lastScannedBlock` to `latestBlock` for `BetRandomReady` and enqueue any missed
 bet. This protects against WebSocket disconnects.
 
-The keeper does not need a full indexer in v1. It only needs the latest scanned
-block persisted to a small JSON file or durable KV.
+The scan loop must not block queue draining. A long catch-up window can contain
+thousands of small `eth_getLogs` chunks on Base Sepolia, so the worker starts the
+drain loop before the initial catch-up scan and runs scans with a single-flight
+guard. Local development may derive a recent `KEEPER_START_BLOCK` from the
+current chain head to avoid replaying the full release window on every restart.
+
+Durable bet-feed indexing is optional and controlled by
+`BET_INDEX_WRITE_ENABLED`. When enabled, the keeper may write `GameHub` event
+facts to the Postgres index defined in `docs/design/durable-bet-index.md`.
+Index writes are best-effort and must never block finalize attempts. When
+enabled, the keeper also reads the persisted `gamehub-events` cursor at startup
+and resumes from it when it is ahead of `KEEPER_START_BLOCK`. This keeps
+restarts cheap while preserving the same idempotent replay path for backfills.
 
 ## 7. Queue Semantics
 

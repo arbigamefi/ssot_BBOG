@@ -28,6 +28,37 @@ vi.mock("./WalletButton", () => ({
   useConnectModal: () => ({ openConnectModal: vi.fn() })
 }));
 
+vi.mock("../components/LocaleSwitcher", () => ({
+  LocaleSwitcher: () => <div data-testid="locale-switcher">English</div>
+}));
+
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string) =>
+    ({
+      "app.unknownNetwork": "Unknown network",
+      "app.writesDisabled": "Writes are disabled.",
+      "nav.account": "Account",
+      "nav.affiliates": "Affiliates",
+      "nav.bets": "Bets",
+      "nav.casino": "Casino",
+      "nav.claims": "Claims",
+      "nav.baccarat": "Baccarat",
+      "nav.coinToss": "Coin Toss",
+      "nav.dice": "Dice",
+      "nav.games": "Games",
+      "nav.keno": "Keno",
+      "nav.liquidity": "Liquidity",
+      "nav.openRooms": "Open Rooms",
+      "nav.ops": "Ops",
+      "nav.plinko": "Plinko",
+      "nav.rooms": "Rooms",
+      "nav.roulette": "Roulette",
+      "nav.sicBo": "Sic Bo",
+      "nav.slots": "Slots",
+      "nav.sportsbook": "Sportsbook"
+    })[key] ?? key
+}));
+
 vi.mock("next/link", () => ({
   default: ({ href, children, ...props }: any) => (
     <a href={href} {...props}>
@@ -37,7 +68,8 @@ vi.mock("next/link", () => ({
 }));
 
 vi.mock("next/navigation", () => ({
-  usePathname: () => state.pathname
+  usePathname: () => state.pathname,
+  useRouter: () => ({ refresh: vi.fn() })
 }));
 
 vi.mock("@ssot/ui", () => ({
@@ -134,6 +166,33 @@ describe("AppShell", () => {
     );
 
     expect(container.firstElementChild?.className).toContain("theme-dark");
+  });
+
+  it("renders all active casino room links in game headers", () => {
+    state.pathname = "/casino/slots";
+    render(
+      <AppShell>
+        <div>game content</div>
+      </AppShell>
+    );
+
+    const roomLinks = [
+      ["Dice", "/casino/dice"],
+      ["Plinko", "/casino/plinko"],
+      ["Slots", "/casino/slots"],
+      ["Baccarat", "/casino/baccarat"],
+      ["Sic Bo", "/casino/sic-bo"],
+      ["Roulette", "/casino/roulette"],
+      ["Coin Toss", "/casino/coin-toss"],
+      ["Keno", "/casino/keno"]
+    ] as const;
+
+    for (const [label, href] of roomLinks) {
+      expect(screen.getAllByText(label)[0]?.closest("a")?.getAttribute("href")).toBe(href);
+    }
+    expect(screen.getAllByText("Slots").some((node) => node.className.includes("text-brand"))).toBe(
+      true
+    );
   });
 
   it("uses the dark theme on the games directory route", () => {

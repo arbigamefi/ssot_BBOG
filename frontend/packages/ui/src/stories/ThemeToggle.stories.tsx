@@ -9,10 +9,10 @@ const meta: Meta<typeof ThemeToggle> = {
     docs: {
       description: {
         component:
-          "Cycles through light → dark → system on each click. Persists preference to localStorage. Shows sun, moon, or monitor icon.",
-      },
-    },
-  },
+          "Cycles through light → dark → system on each click. Persists preference to localStorage. Shows sun, moon, or monitor icon."
+      }
+    }
+  }
 };
 
 export default meta;
@@ -21,5 +21,5 @@ type Story = StoryObj<typeof ThemeToggle>;
 export const Default: Story = {};
 
 export const WithClassName: Story = {
-  args: { className: "border border-input" },
+  args: { className: "border border-border bg-surface-1" }
 };

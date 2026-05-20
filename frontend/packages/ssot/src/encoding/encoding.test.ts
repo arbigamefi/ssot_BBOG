@@ -5,6 +5,10 @@ import { decodeDiceParams, encodeDiceParams } from "./dice";
 import { decodeCoinTossParams, encodeCoinTossParams } from "./cointoss";
 import { decodeRouletteParams, encodeRouletteParams } from "./roulette";
 import { decodeKenoParams, encodeKenoParams } from "./keno";
+import { decodePlinkoParams, encodePlinkoParams } from "./plinko";
+import { decodeSlotsParams, encodeSlotsParams } from "./slots";
+import { decodeBaccaratParams, encodeBaccaratParams } from "./baccarat";
+import { decodeSicBoParams, encodeSicBoParams } from "./sicbo";
 
 describe("encoding", () => {
   it("stakeSpec roundtrip", () => {
@@ -15,8 +19,8 @@ describe("encoding", () => {
   });
 
   it("dice roundtrip", () => {
-    const hex = encodeDiceParams(42);
-    expect(decodeDiceParams(hex)).toEqual({ cap: 42 });
+    const hex = encodeDiceParams({ direction: "under", target: 42 });
+    expect(decodeDiceParams(hex)).toEqual({ cap: 42, direction: "under", target: 42 });
   });
 
   it("cointoss roundtrip", () => {
@@ -37,5 +41,29 @@ describe("encoding", () => {
   it("keno roundtrip", () => {
     const hex = encodeKenoParams(0xabcden);
     expect(decodeKenoParams(hex)).toEqual({ mask: 0xabcden });
+  });
+
+  it("plinko roundtrip", () => {
+    const hex = encodePlinkoParams("high");
+    expect(decodePlinkoParams(hex)).toEqual({ risk: "high", riskId: 2 });
+  });
+
+  it("slots roundtrip", () => {
+    const hex = encodeSlotsParams("classic");
+    expect(decodeSlotsParams(hex)).toEqual({ profile: "classic", profileId: 0 });
+  });
+
+  it("baccarat roundtrip", () => {
+    const hex = encodeBaccaratParams("banker");
+    expect(decodeBaccaratParams(hex)).toEqual({ side: "banker", sideId: 1 });
+  });
+
+  it("sic bo roundtrip", () => {
+    const hex = encodeSicBoParams({ kind: "specificDouble", value: 4 });
+    expect(decodeSicBoParams(hex)).toEqual({
+      kind: "specificDouble",
+      kindId: 5,
+      value: 4
+    });
   });
 });

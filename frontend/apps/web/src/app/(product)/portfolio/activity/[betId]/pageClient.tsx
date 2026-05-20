@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import type { DomainBet } from "@ssot/ssot";
 import type { BetRow, GameHubEventRow } from "@ssot/ssot/indexer";
@@ -34,6 +35,7 @@ import { useSSOTRuntime } from "../../../../../ssot/runtime";
 import { useSSOTSDK } from "../../../../../ssot/sdk";
 
 export function BetDetailPageClient({ betId }: { betId: string }) {
+  const t = useTranslations();
   const { db } = useSSOTRuntime();
   const { sdk } = useSSOTSDK();
   const { chainId, readOnly, release } = useRelease();
@@ -84,12 +86,23 @@ export function BetDetailPageClient({ betId }: { betId: string }) {
   const settlementProof = React.useMemo(() => extractSettlementProof(timeline), [timeline]);
   const refundProof = React.useMemo(() => extractRefundProof(timeline), [timeline]);
   const betState = onChainBet?.state ?? localBet?.state ?? null;
+  const stateLabels = React.useMemo(
+    () => ({
+      won: t("portfolio.activity.detail.state.won"),
+      lost: t("portfolio.activity.detail.state.lost"),
+      randomReady: t("portfolio.activity.detail.state.randomReady"),
+      placed: t("portfolio.activity.detail.state.placed"),
+      refunded: t("portfolio.activity.detail.state.refunded"),
+      pending: t("portfolio.activity.detail.state.pending")
+    }),
+    [t]
+  );
   const stateLabel =
     betState === "finalized" && settlementProof?.payoutNet != null
       ? settlementProof.payoutNet >= (onChainBet?.stake ?? 0n)
-        ? "Won"
-        : "Lost"
-      : getStateLabel(betState, onChainBet);
+        ? stateLabels.won
+        : stateLabels.lost
+      : getStateLabel(betState, onChainBet, stateLabels);
   const gameId = onChainBet?.gameId ?? localBet?.gameId;
   const assetAddress = onChainBet?.asset ?? localBet?.asset;
 
@@ -103,7 +116,8 @@ export function BetDetailPageClient({ betId }: { betId: string }) {
     [assetAddress, release?.assets]
   );
 
-  const gameLabel = gameMeta?.label ?? "Ticket detail";
+  const emptyLabel = t("portfolio.activity.detail.common.empty");
+  const gameLabel = gameMeta?.label ?? t("portfolio.activity.detail.common.ticketDetail");
   const symbol = assetMeta?.symbol ?? "";
   const decimals = assetMeta?.decimals ?? 18;
   const explorerBaseUrl = React.useMemo(() => getExplorerBaseUrl(chainId), [chainId]);
@@ -112,29 +126,31 @@ export function BetDetailPageClient({ betId }: { betId: string }) {
 
   const refundFlow = useDirectTxAction({
     action: "REFUND",
+    errorMessage: t("app.errors.transactionFailed"),
     labels: {
-      preflight: "Preflight",
-      submit: "Submit refund",
-      confirm: "Confirm on-chain"
+      preflight: t("portfolio.activity.detail.flows.preflight"),
+      submit: t("portfolio.activity.detail.flows.refund.submit"),
+      confirm: t("portfolio.activity.detail.flows.confirm")
     },
     descriptions: {
-      preflight: "Validate refund eligibility and simulate the GameHub call.",
-      submit: "Broadcast refund through the wallet client.",
-      confirm: "Wait for receipt and journal reconciliation."
+      preflight: t("portfolio.activity.detail.flows.refund.preflight"),
+      submit: t("portfolio.activity.detail.flows.refund.broadcast"),
+      confirm: t("portfolio.activity.detail.flows.receipt")
     }
   });
 
   const manualFinalizeFlow = useDirectTxAction({
     action: "FINALIZE",
+    errorMessage: t("app.errors.transactionFailed"),
     labels: {
-      preflight: "Preflight",
-      submit: "Submit finalize",
-      confirm: "Confirm on-chain"
+      preflight: t("portfolio.activity.detail.flows.preflight"),
+      submit: t("portfolio.activity.detail.flows.finalize.submit"),
+      confirm: t("portfolio.activity.detail.flows.confirm")
     },
     descriptions: {
-      preflight: "Validate finalize eligibility and simulate the GameHub call.",
-      submit: "Broadcast finalize through the wallet client.",
-      confirm: "Wait for receipt and journal reconciliation."
+      preflight: t("portfolio.activity.detail.flows.finalize.preflight"),
+      submit: t("portfolio.activity.detail.flows.finalize.broadcast"),
+      confirm: t("portfolio.activity.detail.flows.receipt")
     }
   });
 
@@ -146,36 +162,41 @@ export function BetDetailPageClient({ betId }: { betId: string }) {
     try {
       const result = await refundFlow.execute(() => sdk.gameHub.refund(parsedBetId));
       if (!result.ok) return;
-      toast.success("Bet refunded successfully");
+      toast.success(t("portfolio.activity.detail.toast.refunded"));
       void refetchOnChain();
     } catch (error) {
-      toast.error((error as Error).message ?? "Refund transaction failed");
+      toast.error((error as Error).message ?? t("portfolio.activity.detail.toast.refundFailed"));
     }
-  }, [parsedBetId, refetchOnChain, refundFlow, sdk]);
+  }, [parsedBetId, refetchOnChain, refundFlow, sdk, t]);
 
   const manualFinalizeHandler = React.useCallback(async () => {
     if (!sdk || parsedBetId === undefined) return;
     try {
       const result = await manualFinalizeFlow.execute(() => sdk.gameHub.finalize(parsedBetId));
       if (!result.ok) return;
-      toast.success("Bet finalized successfully");
+      toast.success(t("portfolio.activity.detail.toast.finalized"));
       void refetchOnChain();
     } catch (error) {
-      toast.error((error as Error).message ?? "Finalize transaction failed");
+      toast.error((error as Error).message ?? t("portfolio.activity.detail.toast.finalizeFailed"));
     }
-  }, [manualFinalizeFlow, parsedBetId, refetchOnChain, sdk]);
+  }, [manualFinalizeFlow, parsedBetId, refetchOnChain, sdk, t]);
 
   const outcome = React.useMemo(
-    () => deriveOutcome(onChainBet, betState, settlementProof, refundProof),
-    [betState, onChainBet, refundProof, settlementProof]
+    () =>
+      deriveOutcome(onChainBet, betState, settlementProof, refundProof, {
+        refunded: t("portfolio.activity.detail.outcomes.refunded"),
+        netResult: t("portfolio.activity.detail.outcomes.netResult"),
+        loss: t("portfolio.activity.detail.outcomes.loss")
+      }),
+    [betState, onChainBet, refundProof, settlementProof, t]
   );
 
   const metrics = React.useMemo<BetDetailMetric[]>(
     () => [
       {
-        label: "Settlement state",
-        value: isLoading ? "Refreshing" : stateLabel,
-        detail: "Current lifecycle state from local and on-chain sources.",
+        label: t("portfolio.activity.detail.metrics.settlementState.label"),
+        value: isLoading ? t("portfolio.activity.detail.state.refreshing") : stateLabel,
+        detail: t("portfolio.activity.detail.metrics.settlementState.detail"),
         tone:
           betState === "finalized"
             ? outcome?.value != null && outcome.value >= 0n
@@ -184,71 +205,117 @@ export function BetDetailPageClient({ betId }: { betId: string }) {
             : "brand"
       },
       {
-        label: "Capital at risk",
-        value: formatTokenAmount(onChainBet?.stake, decimals, symbol),
-        detail: "Original stake committed when the ticket was placed."
+        label: t("portfolio.activity.detail.metrics.capitalAtRisk.label"),
+        value: formatTokenAmount(onChainBet?.stake, decimals, symbol, 4, emptyLabel),
+        detail: t("portfolio.activity.detail.metrics.capitalAtRisk.detail")
       },
       {
-        label: outcome?.label ?? "Settlement",
-        value: formatTokenAmount(outcome?.value, decimals, symbol),
-        detail: outcome ? "Realized on-chain result." : "Outcome not settled yet.",
+        label: outcome?.label ?? t("portfolio.activity.detail.metrics.settlement.label"),
+        value: formatTokenAmount(outcome?.value, decimals, symbol, 4, emptyLabel),
+        detail: outcome
+          ? t("portfolio.activity.detail.metrics.settlement.realized")
+          : t("portfolio.activity.detail.metrics.settlement.pending"),
         tone:
           outcome?.value != null && outcome.value >= 0n ? "success" : outcome ? "danger" : "default"
       },
       {
-        label: "Receipt id",
+        label: t("portfolio.activity.detail.metrics.receiptId.label"),
         value: `#${betId}`,
-        detail: "Stable identifier used across runtime and indexer traces."
+        detail: t("portfolio.activity.detail.metrics.receiptId.detail")
       }
     ],
-    [betId, betState, decimals, isLoading, onChainBet?.stake, outcome, stateLabel, symbol]
+    [
+      betId,
+      betState,
+      decimals,
+      emptyLabel,
+      isLoading,
+      onChainBet?.stake,
+      outcome,
+      stateLabel,
+      symbol,
+      t
+    ]
   );
 
   const receiptFacts = React.useMemo<BetDetailFact[]>(
     () => [
-      { label: "Room", value: gameLabel },
-      { label: "Ticket id", value: betId, copyValue: betId },
-      { label: "Stake", value: formatTokenAmount(onChainBet?.stake, decimals, symbol) },
-      { label: "VRF fee paid", value: formatNativeAmount(onChainBet?.vrfFeePaid) },
-      { label: "VRF fee charged", value: formatNativeAmount(onChainBet?.vrfFeeCharged) },
+      { label: t("portfolio.activity.detail.facts.room"), value: gameLabel },
+      { label: t("portfolio.activity.detail.facts.ticketId"), value: betId, copyValue: betId },
       {
-        label: "VRF request id",
+        label: t("portfolio.activity.detail.facts.stake"),
+        value: formatTokenAmount(onChainBet?.stake, decimals, symbol, 4, emptyLabel)
+      },
+      {
+        label: t("portfolio.activity.detail.facts.vrfFeePaid"),
+        value: formatNativeAmount(onChainBet?.vrfFeePaid)
+      },
+      {
+        label: t("portfolio.activity.detail.facts.vrfFeeCharged"),
+        value: formatNativeAmount(onChainBet?.vrfFeeCharged)
+      },
+      {
+        label: t("portfolio.activity.detail.facts.vrfRequestId"),
         value: formatBigintId(onChainBet?.requestId),
         copyValue: copyableBigintId(onChainBet?.requestId)
       },
       {
-        label: "Random hash",
-        value: shortHex(nonZeroHex(onChainBet?.randomHash)),
+        label: t("portfolio.activity.detail.facts.randomHash"),
+        value: shortHex(nonZeroHex(onChainBet?.randomHash), emptyLabel),
         copyValue: nonZeroHex(onChainBet?.randomHash)
       },
       {
-        label: "Payout",
-        value: formatTokenAmount(settlementProof?.payoutNet ?? onChainBet?.payout, decimals, symbol)
+        label: t("portfolio.activity.detail.facts.payout"),
+        value: formatTokenAmount(
+          settlementProof?.payoutNet ?? onChainBet?.payout,
+          decimals,
+          symbol,
+          4,
+          emptyLabel
+        )
       },
       {
-        label: "Protocol fee",
-        value: formatTokenAmount(settlementProof?.protocolFeeAccrual, decimals, symbol)
+        label: t("portfolio.activity.detail.facts.protocolFee"),
+        value: formatTokenAmount(
+          settlementProof?.protocolFeeAccrual,
+          decimals,
+          symbol,
+          4,
+          emptyLabel
+        )
       },
       {
-        label: "Refund",
-        value: formatTokenAmount(refundProof?.refundAmount ?? onChainBet?.refund, decimals, symbol)
+        label: t("portfolio.activity.detail.facts.refund"),
+        value: formatTokenAmount(
+          refundProof?.refundAmount ?? onChainBet?.refund,
+          decimals,
+          symbol,
+          4,
+          emptyLabel
+        )
       },
-      { label: "Placed at", value: formatTimestamp(onChainBet?.placedAt) },
-      { label: "VRF requested at", value: formatTimestamp(onChainBet?.vrfRequestedAt) },
       {
-        label: "Settled at",
-        value: formatTimestamp(onChainBet?.resolvedAt ?? onChainBet?.settledAt)
+        label: t("portfolio.activity.detail.facts.placedAt"),
+        value: formatTimestamp(onChainBet?.placedAt, emptyLabel)
       },
       {
-        label: "Primary tx",
-        value: shortHex(primaryTxHash),
+        label: t("portfolio.activity.detail.facts.vrfRequestedAt"),
+        value: formatTimestamp(onChainBet?.vrfRequestedAt, emptyLabel)
+      },
+      {
+        label: t("portfolio.activity.detail.facts.settledAt"),
+        value: formatTimestamp(onChainBet?.resolvedAt ?? onChainBet?.settledAt, emptyLabel)
+      },
+      {
+        label: t("portfolio.activity.detail.facts.primaryTx"),
+        value: shortHex(primaryTxHash, emptyLabel),
         copyValue: primaryTxHash,
         href:
           explorerBaseUrl && primaryTxHash ? `${explorerBaseUrl}/tx/${primaryTxHash}` : undefined
       },
       {
-        label: "Player",
-        value: shortHex(onChainBet?.player ?? localBet?.player),
+        label: t("portfolio.activity.detail.facts.player"),
+        value: shortHex(onChainBet?.player ?? localBet?.player, emptyLabel),
         copyValue: onChainBet?.player ?? localBet?.player,
         href:
           explorerBaseUrl && (onChainBet?.player ?? localBet?.player)
@@ -259,6 +326,7 @@ export function BetDetailPageClient({ betId }: { betId: string }) {
     [
       betId,
       decimals,
+      emptyLabel,
       explorerBaseUrl,
       gameLabel,
       localBet?.player,
@@ -267,20 +335,27 @@ export function BetDetailPageClient({ betId }: { betId: string }) {
       refundProof?.refundAmount,
       settlementProof?.payoutNet,
       settlementProof?.protocolFeeAccrual,
-      symbol
+      symbol,
+      t
     ]
   );
 
   const lifecycleFacts = React.useMemo<BetDetailFact[]>(
     () => [
-      { label: "Release digest", value: shortHex(release?.releaseDigest) },
-      { label: "Asset", value: symbol || shortHex(assetAddress) },
       {
-        label: "Latest indexed event",
-        value: timeline[timeline.length - 1]?.eventName ?? localBet?.lastEventName ?? "—"
+        label: t("portfolio.activity.detail.lifecycle.releaseDigest"),
+        value: shortHex(release?.releaseDigest, emptyLabel)
+      },
+      {
+        label: t("portfolio.activity.detail.lifecycle.asset"),
+        value: symbol || shortHex(assetAddress, emptyLabel)
+      },
+      {
+        label: t("portfolio.activity.detail.lifecycle.latestIndexedEvent"),
+        value: timeline[timeline.length - 1]?.eventName ?? localBet?.lastEventName ?? emptyLabel
       }
     ],
-    [assetAddress, localBet?.lastEventName, release?.releaseDigest, symbol, timeline]
+    [assetAddress, emptyLabel, localBet?.lastEventName, release?.releaseDigest, symbol, t, timeline]
   );
 
   return (
@@ -334,15 +409,24 @@ function deriveOutcome(
   bet?: DomainBet | null,
   state?: string | null,
   settlementProof?: SettlementProof | null,
-  refundProof?: RefundProof | null
+  refundProof?: RefundProof | null,
+  labels: {
+    refunded: string;
+    netResult: string;
+    loss: string;
+  } = {
+    refunded: "—",
+    netResult: "—",
+    loss: "—"
+  }
 ) {
   if (!bet || !state) return null;
   if (state === "refunded")
-    return { label: "Refunded", value: refundProof?.refundAmount ?? bet.refund ?? bet.stake };
+    return { label: labels.refunded, value: refundProof?.refundAmount ?? bet.refund ?? bet.stake };
   const payout = settlementProof?.payoutNet ?? bet.payout;
   if (state === "finalized" && payout != null) {
     return {
-      label: payout >= bet.stake ? "Net result" : "Loss",
+      label: payout >= bet.stake ? labels.netResult : labels.loss,
       value: payout - bet.stake
     };
   }

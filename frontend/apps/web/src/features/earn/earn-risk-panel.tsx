@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { ClipboardDocumentCheckIcon, LockClosedIcon } from "@heroicons/react/24/outline";
 
 import { formatTokenAmount, shortHex } from "./format";
@@ -15,31 +16,30 @@ export function EarnRiskPanel({
   symbol: string;
   releaseDigest?: string;
 }) {
+  const t = useTranslations();
   const snapshot = data?.snapshot;
 
   return (
     <section className="grid gap-4 lg:grid-cols-3">
       <RiskCard
         icon={<LockClosedIcon className="h-5 w-5" />}
-        label="Custody boundary"
-        title="Bank first, marketing second."
-        detail="The LP screen exposes reserved liabilities and free reserve before any yield narrative."
+        label={t("earn.risk.custody.label")}
+        title={t("earn.risk.custody.title")}
+        detail={t("earn.risk.custody.detail")}
       />
       <RiskCard
         icon={<ClipboardDocumentCheckIcon className="h-5 w-5" />}
-        label="Release digest"
+        label={t("earn.risk.release.label")}
         title={shortHex(releaseDigest)}
-        detail="Asset identity, bank address, and UI reads are anchored to the active release manifest."
+        detail={t("earn.risk.release.detail")}
       />
       <RiskCard
-        label="Protocol fees"
+        label={t("earn.risk.protocolFees.label")}
         title={formatTokenAmount(snapshot?.protocolFeesPayable, decimals, symbol, 2)}
-        detail={`External payables ${formatTokenAmount(
-          snapshot?.externalPayablesTotal,
-          decimals,
-          symbol,
-          2
-        )} · Assets ${formatTokenAmount(snapshot?.totalAssets, decimals, symbol, 2)}`}
+        detail={t("earn.risk.protocolFees.detail", {
+          externalPayables: formatTokenAmount(snapshot?.externalPayablesTotal, decimals, symbol, 2),
+          assets: formatTokenAmount(snapshot?.totalAssets, decimals, symbol, 2)
+        })}
       />
     </section>
   );

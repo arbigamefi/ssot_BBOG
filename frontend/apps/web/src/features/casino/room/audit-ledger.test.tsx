@@ -24,6 +24,23 @@ vi.mock("@heroicons/react/24/outline", () => ({
   )
 }));
 
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string, values?: Record<string, string | number>) =>
+    ({
+      "casino.room.names.roulette": "European Roulette",
+      "casino.room.audit.headers.timestampAuth": "Timestamp / Auth",
+      "casino.room.audit.headers.submodule": "Submodule",
+      "casino.room.audit.headers.wagerParameters": "Wager Parameters",
+      "casino.room.audit.headers.settlementState": "Settlement State",
+      "casino.room.audit.headers.audit": "Audit",
+      "casino.room.audit.selection": `${values?.game} Selection`,
+      "casino.room.audit.amountAndId": `${values?.amount} ${values?.asset} - ID: ${values?.id}`,
+      "casino.room.audit.openAudit": `Open audit for bet ${values?.betId}`,
+      "casino.room.audit.empty.title": "Immutable Audit Stream",
+      "casino.room.audit.empty.description": "Standby for on-chain transaction emit..."
+    })[key] ?? key
+}));
+
 const game: GameMeta = {
   gameId: "0x1111111111111111111111111111111111111111",
   slug: "roulette",
@@ -38,7 +55,7 @@ describe("GameRoomAuditLedger", () => {
     render(<GameRoomAuditLedger game={game} betAmount={10} recentBets={[]} />);
 
     expect(screen.getByText("Immutable Audit Stream")).toBeDefined();
-    expect(screen.getByText("STANDBY FOR ON-CHAIN TRANSACTION EMIT...")).toBeDefined();
+    expect(screen.getByText("Standby for on-chain transaction emit...")).toBeDefined();
   });
 
   it("renders indexed bet rows with mapped settlement state", () => {
@@ -58,7 +75,7 @@ describe("GameRoomAuditLedger", () => {
     );
 
     expect(screen.getByText("European Roulette")).toBeDefined();
-    expect(screen.getByText("ROULETTE SELECTION")).toBeDefined();
+    expect(screen.getByText("ROULETTE Selection")).toBeDefined();
     expect(screen.getByText("25 USDC - ID: 123456789")).toBeDefined();
     expect(screen.getByText("settled")).toBeDefined();
     expect(screen.getByLabelText("Open audit for bet 123456789")).toBeDefined();

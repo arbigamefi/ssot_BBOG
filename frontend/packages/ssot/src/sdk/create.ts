@@ -28,6 +28,7 @@ import type {
   ProposeSportsResultInput,
   ResolveSportsChallengeDecision,
   ResolveSportsChallengeInput,
+  GameHubTerminalProof,
   SSOTGameHubAPI,
   SSOTBankAPI,
   SSOTVRFHubAPI,
@@ -60,6 +61,26 @@ const GAME_MODULE_ABI = [
     type: "function"
   }
 ] as const;
+
+const GAME_HUB_OUTCOME_READ_ABI = [
+  {
+    inputs: [{ name: "positionId", type: "uint256" }],
+    name: "getBetParams",
+    outputs: [{ name: "", type: "bytes" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [{ name: "positionId", type: "uint256" }],
+    name: "getBetRandomWords",
+    outputs: [{ name: "", type: "uint256[]" }],
+    stateMutability: "view",
+    type: "function"
+  }
+] as const;
+
+const GAME_HUB_TERMINAL_PROOF_LOOKBACK_BLOCKS = 250n;
+const GAME_HUB_TERMINAL_PROOF_CHUNK_BLOCKS = 10n;
 
 export interface CreateSSOTSDKParams {
   release: SSOTRelease;
@@ -150,6 +171,114 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
     VRFHubAbi: VRFHUB_ABI,
     SportsHubAbi: SPORTS_HUB_ABI
   } = getReleaseAbis(release.chainId);
+
+  function terminalProofRanges(latestBlock: bigint) {
+    const releaseBlock = BigInt(release.meta?.blockNumber ?? 0);
+    const lookbackStart =
+      latestBlock > GAME_HUB_TERMINAL_PROOF_LOOKBACK_BLOCKS
+        ? latestBlock - GAME_HUB_TERMINAL_PROOF_LOOKBACK_BLOCKS
+        : 0n;
+    const fromBlock = lookbackStart > releaseBlock ? lookbackStart : releaseBlock;
+    const ranges: Array<{ fromBlock: bigint; toBlock: bigint }> = [];
+    let cursor = latestBlock;
+
+    while (cursor >= fromBlock) {
+      const rangeFrom =
+        cursor + 1n > GAME_HUB_TERMINAL_PROOF_CHUNK_BLOCKS
+          ? cursor + 1n - GAME_HUB_TERMINAL_PROOF_CHUNK_BLOCKS
+          : 0n;
+      const boundedFrom = rangeFrom > fromBlock ? rangeFrom : fromBlock;
+      ranges.push({ fromBlock: boundedFrom, toBlock: cursor });
+      if (boundedFrom === fromBlock) break;
+      cursor = boundedFrom - 1n;
+    }
+
+    return ranges;
+  }
+
+  async function readTerminalEventsInRange({
+    betId,
+    fromBlock,
+    toBlock
+  }: {
+    betId: bigint;
+    fromBlock: bigint;
+    toBlock: bigint;
+  }) {
+    const eventBase = {
+      address: gameHubAddress,
+      abi: GAME_HUB_ABI,
+      fromBlock,
+      toBlock,
+      args: { positionId: betId }
+    };
+
+    const [settled, refunded] = await Promise.all([
+      publicClient.getContractEvents({
+        ...eventBase,
+        eventName: "BetFinalized"
+      } as any),
+      publicClient.getContractEvents({
+        ...eventBase,
+        eventName: "BetRefunded"
+      } as any)
+    ]);
+
+    return [
+      ...settled.map((event: any) => ({
+        kind: "settled" as const,
+        event
+      })),
+      ...refunded.map((event: any) => ({
+        kind: "refunded" as const,
+        event
+      }))
+    ].sort((a, b) => {
+      const blockA = BigInt(a.event.blockNumber ?? 0n);
+      const blockB = BigInt(b.event.blockNumber ?? 0n);
+      if (blockA !== blockB) return blockA > blockB ? -1 : 1;
+      return Number(b.event.logIndex ?? 0) - Number(a.event.logIndex ?? 0);
+    });
+  }
+
+  async function readTerminalReceipt(betId: bigint): Promise<GameHubTerminalProof | null> {
+    let receipt: any;
+    try {
+      receipt = await publicClient.readContract({
+        address: gameHubAddress,
+        abi: GAME_HUB_ABI,
+        functionName: "getBetTerminal",
+        args: [betId]
+      } as any);
+    } catch {
+      // Older dev deployments do not expose getBetTerminal. Keep event-log proof as fallback.
+      return null;
+    }
+
+    const state = Number(receipt?.state ?? 0);
+    if (state === 4) {
+      return {
+        kind: "settled",
+        settlement: {
+          payoutGross: BigInt(receipt.payoutGross ?? 0n),
+          payoutNet: BigInt(receipt.payoutNet ?? 0n),
+          feeOnPayout: BigInt(receipt.feeOnPayout ?? 0n),
+          protocolFeeAccrual: BigInt(receipt.protocolFeeAccrual ?? 0n)
+        }
+      };
+    }
+
+    if (state === 5) {
+      return {
+        kind: "refunded",
+        refund: {
+          refundAmount: BigInt(receipt.refundAmount ?? 0n)
+        }
+      };
+    }
+
+    return null;
+  }
 
   const gameHub: SSOTGameHubAPI = {
     async quoteVRFFee(betCount: number): Promise<bigint> {
@@ -473,7 +602,8 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         const ev = tx.extractEventArgs({
           abi: GAME_HUB_ABI,
           receiptLogs: receipt.logs as any,
-          eventName: "BetPlaced"
+          eventName: "BetPlaced",
+          address: gameHubAddress
         });
         const first = ev[0];
         const rawBetId = first?.positionId ?? first?.betId;
@@ -501,7 +631,8 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         const ev = tx.extractEventArgs({
           abi: GAME_HUB_ABI,
           receiptLogs: receipt.logs as any,
-          eventName: "BetPlaced"
+          eventName: "BetPlaced",
+          address: gameHubAddress
         });
         const first = ev[0];
         const rawBetId = first?.positionId ?? first?.betId;
@@ -630,6 +761,9 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         reserved: BigInt(bet.reserved),
         amountPerRoll: BigInt(bet.amountPerRoll),
         betCount: Number(bet.betCount),
+        stopGain: BigInt(bet.stopGain),
+        stopLoss: BigInt(bet.stopLoss),
+        effectiveHouseEdgeBps: Number(bet.effectiveHouseEdgeBps),
         vrfFeePaid: BigInt(bet.vrfFeePaid),
         vrfFeeCharged: BigInt(bet.vrfFeeCharged),
         vrfCallbackGasLimit: Number(bet.vrfCallbackGasLimit),
@@ -640,6 +774,68 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         vrfRequestedAt: numberOrUndefined(bet.vrfRequestedAt),
         resolvedAt: numberOrUndefined(bet.resolvedAt),
         settledAt: numberOrUndefined(bet.resolvedAt)
+      };
+    },
+
+    async getBetParams(betId: bigint): Promise<Hex> {
+      return (await publicClient.readContract({
+        address: gameHubAddress,
+        abi: GAME_HUB_OUTCOME_READ_ABI,
+        functionName: "getBetParams",
+        args: [betId]
+      })) as Hex;
+    },
+
+    async getBetRandomWords(betId: bigint): Promise<bigint[]> {
+      const words = (await publicClient.readContract({
+        address: gameHubAddress,
+        abi: GAME_HUB_OUTCOME_READ_ABI,
+        functionName: "getBetRandomWords",
+        args: [betId]
+      })) as readonly bigint[];
+      return [...words];
+    },
+
+    async getTerminalProof(betId: bigint): Promise<GameHubTerminalProof | null> {
+      const terminalReceipt = await readTerminalReceipt(betId);
+      if (terminalReceipt) return terminalReceipt;
+
+      const latestBlock = await publicClient.getBlockNumber();
+      let latest: Awaited<ReturnType<typeof readTerminalEventsInRange>>[number] | undefined;
+
+      for (const range of terminalProofRanges(latestBlock)) {
+        const events = await readTerminalEventsInRange({ betId, ...range });
+        latest = events[0];
+        if (latest) break;
+      }
+
+      if (!latest) return null;
+
+      const args = latest.event.args ?? {};
+      const txHash = latest.event.transactionHash as Hex | undefined;
+      const blockNumber = latest.event.blockNumber as bigint | undefined;
+
+      if (latest.kind === "settled") {
+        return {
+          kind: "settled",
+          settlement: {
+            txHash,
+            blockNumber,
+            payoutGross: BigInt(args.payoutGross ?? 0n),
+            payoutNet: BigInt(args.payoutNet ?? 0n),
+            feeOnPayout: BigInt(args.feeOnPayout ?? 0n),
+            protocolFeeAccrual: BigInt(args.protocolFeeAccrual ?? 0n)
+          }
+        };
+      }
+
+      return {
+        kind: "refunded",
+        refund: {
+          txHash,
+          blockNumber,
+          refundAmount: BigInt(args.refundAmount ?? 0n)
+        }
       };
     }
   };

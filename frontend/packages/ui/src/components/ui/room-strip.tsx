@@ -23,18 +23,18 @@ export function RoomStrip({
         {/* Status / Edge Badges */}
         <div className="hidden sm:flex items-center gap-2">
           {isLive && (
-            <span className="rounded-md border border-success/20 bg-success-soft px-3 py-1 text-[10px] font-semibold uppercase leading-none tracking-widest text-success md:text-xs">
+            <span className="rounded-md border border-success/20 bg-success-soft px-3 py-1 text-xs font-semibold uppercase leading-none tracking-widest text-success">
               Live
             </span>
           )}
-          <span className="rounded-md border border-border-soft bg-surface-2 px-3 py-1 font-mono text-[10px] leading-none text-fg-subtle shadow-e1 md:text-xs">
+          <span className="rounded-md border border-border-soft bg-surface-2 px-3 py-1 font-mono text-xs leading-none text-fg-subtle shadow-e1">
             House edge: {edgePercentage.toFixed(1)}%
           </span>
         </div>
       </div>
 
       {/* Network Sync Indicator */}
-      <div className="flex items-center gap-2 text-[10px] font-medium text-fg-subtle md:text-xs">
+      <div className="flex items-center gap-2 text-xs font-medium text-fg-subtle">
         <span className="h-2 w-2 animate-pulse rounded-full bg-info" />
         <span className="hidden sm:inline">Synchronized to Arbitrum</span>
         <span className="sm:hidden">Arbitrum</span>

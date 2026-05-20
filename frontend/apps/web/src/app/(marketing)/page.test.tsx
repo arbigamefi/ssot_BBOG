@@ -61,8 +61,8 @@ vi.mock("../../features/ops/useIndexer", () => ({
   })
 }));
 
-vi.mock("../../features/betting/useBets", () => ({
-  useBets: () => ({
+vi.mock("../../features/betting/useRecentBets", () => ({
+  useRecentBets: () => ({
     data: state.bets,
     isLoading: state.betsLoading
   })
@@ -83,6 +83,36 @@ vi.mock("next/link", () => ({
 vi.mock("@ssot/ui", () => ({
   cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" ")
 }));
+
+vi.mock("next-intl", async () => {
+  const messages = (await import("../../i18n/locales/en/common.json")).default as Record<
+    string,
+    unknown
+  >;
+
+  function resolveMessage(key: string) {
+    return key.split(".").reduce<unknown>((value, part) => {
+      if (value && typeof value === "object" && part in value) {
+        return (value as Record<string, unknown>)[part];
+      }
+      return undefined;
+    }, messages);
+  }
+
+  function translate(key: string, values?: Record<string, string | number>) {
+    const message = resolveMessage(`marketing.${key}`);
+    if (typeof message !== "string") return key;
+    return Object.entries(values ?? {}).reduce(
+      (text, [name, value]) => text.replaceAll(`{${name}}`, String(value)),
+      message
+    );
+  }
+
+  return {
+    useLocale: () => "en",
+    useTranslations: () => translate
+  };
+});
 
 import HomePage from "./page";
 

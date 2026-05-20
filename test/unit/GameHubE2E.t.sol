@@ -143,7 +143,7 @@ contract GameHubE2E is Test {
         SSOTTypes.StakeSpec memory spec =
             SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
 
-        uint256 positionId = _place(alice, GAME_DICE, POOL_A, abi.encode(cap), spec, address(0));
+        uint256 positionId = _place(alice, GAME_DICE, POOL_A, abi.encode(true, cap), spec, address(0));
 
         SSOTTypes.Position memory pos = router.getPosition(positionId);
         assertEq(pos.ownerHub, address(gameHub));
@@ -151,6 +151,28 @@ contract GameHubE2E is Test {
         assertEq(pos.bank, address(bankA));
 
         uint256 seed = _findSeedDiceWin(positionId, cap);
+        _fulfill(positionId, seed);
+        uint256[] memory words = gameHub.getBetRandomWords(positionId);
+        assertEq(words.length, 1);
+        assertEq(words[0], seed);
+
+        uint256 balBefore = assetA.balanceOf(alice);
+        gameHub.finalize(positionId);
+        uint256 balAfter = assetA.balanceOf(alice);
+
+        assertEq(balAfter - balBefore, (196 ether) / 10);
+        assertEq(uint256(router.getPosition(positionId).state), uint256(SSOTTypes.PositionState.Settled));
+    }
+
+    function test_diceUnderWinSettlesThroughRouterPoolA() external {
+        uint8 target = 50;
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
+
+        uint256 positionId = _place(alice, GAME_DICE, POOL_A, abi.encode(false, target), spec, address(0));
+        assertEq(gameHub.getBet(positionId).reserved, 20 ether);
+
+        uint256 seed = _findSeedDiceUnderWin(positionId, target);
         _fulfill(positionId, seed);
 
         uint256 balBefore = assetA.balanceOf(alice);
@@ -166,7 +188,7 @@ contract GameHubE2E is Test {
         SSOTTypes.StakeSpec memory spec =
             SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
 
-        uint256 positionId = _place(alice, GAME_DICE, POOL_A, abi.encode(cap), spec, address(0));
+        uint256 positionId = _place(alice, GAME_DICE, POOL_A, abi.encode(true, cap), spec, address(0));
         uint256 requestId = gameHub.getBet(positionId).requestId;
 
         uint256 seed = _findSeedDiceWin(positionId, cap);
@@ -223,7 +245,7 @@ contract GameHubE2E is Test {
             SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
 
         uint256 positionId = _place(alice, GAME_KENO, POOL_A, KenoParams.encode(numbers), spec, address(0));
-        assertEq(gameHub.getBet(positionId).reserved, 20 ether);
+        assertEq(gameHub.getBet(positionId).reserved, 15 ether);
 
         _fulfill(positionId, _findSeedKenoHit(positionId, numbers, true));
 
@@ -231,7 +253,9 @@ contract GameHubE2E is Test {
         gameHub.finalize(positionId);
         uint256 balAfter = assetA.balanceOf(alice);
 
-        assertEq(balAfter - balBefore, (196 ether) / 10);
+        uint256 expectedGross = 15 ether;
+        uint256 fee = Math.mulDiv(expectedGross, gameHub.defaultHouseEdgeBps(), 10_000);
+        assertEq(balAfter - balBefore, expectedGross - fee);
     }
 
     function test_slotsJackpotSettlesThroughRouter() external {
@@ -323,7 +347,7 @@ contract GameHubE2E is Test {
         uint8 cap = 50;
         SSOTTypes.StakeSpec memory spec =
             SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
-        uint256 positionId = _place(alice, GAME_DICE, POOL_A, abi.encode(cap), spec, bob);
+        uint256 positionId = _place(alice, GAME_DICE, POOL_A, abi.encode(true, cap), spec, bob);
 
         _fulfill(positionId, _findSeedDiceLose(positionId, cap));
         gameHub.finalize(positionId);
@@ -389,6 +413,14 @@ contract GameHubE2E is Test {
         for (uint256 seed = 0; seed < 2048; seed++) {
             uint256 rolled = (_rng(betId, 0, seed) % 100) + 1;
             if (rolled <= cap) return seed;
+        }
+        revert("no seed");
+    }
+
+    function _findSeedDiceUnderWin(uint256 betId, uint8 target) internal pure returns (uint256) {
+        for (uint256 seed = 0; seed < 2048; seed++) {
+            uint256 rolled = (_rng(betId, 0, seed) % 100) + 1;
+            if (rolled <= target) return seed;
         }
         revert("no seed");
     }
@@ -507,8 +539,8 @@ contract GameHubE2E is Test {
     }
 
     function _kenoDraw0(uint256 betId, uint256 seed) internal pure returns (uint40 rolled) {
-        uint8[40] memory available;
-        for (uint8 i = 0; i < 40;) {
+        uint8[15] memory available;
+        for (uint8 i = 0; i < 15;) {
             available[i] = i;
             unchecked {
                 ++i;
@@ -516,8 +548,8 @@ contract GameHubE2E is Test {
         }
 
         uint256 result = 0;
-        uint256 remaining = 40;
-        for (uint8 i = 0; i < 10;) {
+        uint256 remaining = 15;
+        for (uint8 i = 0; i < 5;) {
             uint256 r = _rng2(betId, 0, uint256(i), seed);
             uint256 randomIndex = (r % remaining) + uint256(i);
             uint8 selected = available[randomIndex];

@@ -1,17 +1,8 @@
-import type { GameMeta } from "./model";
-
 export type ReleaseGamePresentationMeta = {
   slug?: string;
   houseEdgeBps?: number;
   maxPayout?: string | number | bigint;
 };
-
-export function getGameDisplayName(game: GameMeta) {
-  if (game.slug === "dice") return "Precision Dice";
-  if (game.slug === "roulette") return "European Roulette";
-  if (game.slug === "keno") return "Keno Draft";
-  return game.label;
-}
 
 export function formatHouseEdge(gameMeta: ReleaseGamePresentationMeta | undefined, slug: string) {
   const houseEdgeBps = gameMeta?.houseEdgeBps ?? (slug === "roulette" ? 270 : 100);

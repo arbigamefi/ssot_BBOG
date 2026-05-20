@@ -109,6 +109,8 @@ const RECEIPT = { blockNumber: 100n, status: "success" as const, logs: [] };
 
 function mockPublicClient(overrides?: Record<string, any>) {
   return {
+    getContractEvents: vi.fn().mockResolvedValue([]),
+    getBlockNumber: vi.fn().mockResolvedValue(130n),
     getTransactionReceipt: vi.fn().mockResolvedValue(RECEIPT),
     readContract: vi.fn().mockResolvedValue(0n),
     simulateContract: vi.fn().mockResolvedValue({ request: { mock: true } }),
@@ -154,6 +156,136 @@ describe("createSSOTSDK", () => {
     expect(sdk).toHaveProperty("bank");
     expect(sdk).toHaveProperty("vrfHub");
     expect(sdk).toHaveProperty("sportsHub");
+  });
+
+  it("reads GameHub terminal proof directly from BetFinalized logs", async () => {
+    const settlementTx =
+      "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Hex;
+    pub.getContractEvents
+      .mockResolvedValueOnce([
+        {
+          args: {
+            positionId: 7n,
+            payoutGross: 2_000_000n,
+            payoutNet: 1_960_000n,
+            feeOnPayout: 40_000n,
+            protocolFeeAccrual: 20_000n
+          },
+          transactionHash: settlementTx,
+          blockNumber: 123n,
+          logIndex: 4
+        }
+      ])
+      .mockResolvedValueOnce([]);
+
+    const proof = await sdk.gameHub.getTerminalProof(7n);
+
+    expect(pub.getContractEvents).toHaveBeenCalledWith(
+      expect.objectContaining({
+        address: getAddress(TEST_RELEASE.contracts.gameHub),
+        eventName: "BetFinalized",
+        args: { positionId: 7n },
+        fromBlock: 121n,
+        toBlock: 130n
+      })
+    );
+    expect(proof).toEqual({
+      kind: "settled",
+      settlement: {
+        txHash: settlementTx,
+        blockNumber: 123n,
+        payoutGross: 2_000_000n,
+        payoutNet: 1_960_000n,
+        feeOnPayout: 40_000n,
+        protocolFeeAccrual: 20_000n
+      }
+    });
+  });
+
+  it("reads GameHub terminal results from getBetTerminal before scanning event logs", async () => {
+    pub.readContract.mockResolvedValueOnce({
+      state: 4,
+      payoutGross: 2_000_000n,
+      payoutNet: 1_960_000n,
+      feeOnPayout: 40_000n,
+      protocolFeeAccrual: 20_000n,
+      refundAmount: 0n
+    });
+
+    const proof = await sdk.gameHub.getTerminalProof(7n);
+
+    expect(pub.readContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        address: getAddress(TEST_RELEASE.contracts.gameHub),
+        functionName: "getBetTerminal",
+        args: [7n]
+      })
+    );
+    expect(pub.getContractEvents).not.toHaveBeenCalled();
+    expect(proof).toEqual({
+      kind: "settled",
+      settlement: {
+        payoutGross: 2_000_000n,
+        payoutNet: 1_960_000n,
+        feeOnPayout: 40_000n,
+        protocolFeeAccrual: 20_000n
+      }
+    });
+  });
+
+  it("scans recent GameHub terminal proof ranges backwards in RPC-safe chunks", async () => {
+    const settlementTx =
+      "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc" as Hex;
+    pub.getContractEvents
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          args: {
+            positionId: 8n,
+            payoutGross: 1_000_000n,
+            payoutNet: 980_000n,
+            feeOnPayout: 20_000n,
+            protocolFeeAccrual: 10_000n
+          },
+          transactionHash: settlementTx,
+          blockNumber: 119n,
+          logIndex: 2
+        }
+      ])
+      .mockResolvedValueOnce([]);
+
+    const proof = await sdk.gameHub.getTerminalProof(8n);
+
+    expect(pub.getContractEvents).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        eventName: "BetFinalized",
+        args: { positionId: 8n },
+        fromBlock: 121n,
+        toBlock: 130n
+      })
+    );
+    expect(pub.getContractEvents).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({
+        eventName: "BetFinalized",
+        args: { positionId: 8n },
+        fromBlock: 111n,
+        toBlock: 120n
+      })
+    );
+    expect(proof).toEqual({
+      kind: "settled",
+      settlement: {
+        txHash: settlementTx,
+        blockNumber: 119n,
+        payoutGross: 1_000_000n,
+        payoutNet: 980_000n,
+        feeOnPayout: 20_000n,
+        protocolFeeAccrual: 10_000n
+      }
+    });
   });
 
   it("reads SportsHub market state through the v1.3 SportsHub address", async () => {

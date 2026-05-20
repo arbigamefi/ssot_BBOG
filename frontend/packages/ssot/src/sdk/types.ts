@@ -89,6 +89,25 @@ export interface TxResult {
   error?: DomainError;
 }
 
+export type GameHubSettlementProof = {
+  txHash?: Hex;
+  blockNumber?: bigint;
+  payoutGross?: bigint;
+  payoutNet?: bigint;
+  feeOnPayout?: bigint;
+  protocolFeeAccrual?: bigint;
+};
+
+export type GameHubRefundProof = {
+  txHash?: Hex;
+  blockNumber?: bigint;
+  refundAmount?: bigint;
+};
+
+export type GameHubTerminalProof =
+  | { kind: "settled"; settlement: GameHubSettlementProof }
+  | { kind: "refunded"; refund: GameHubRefundProof };
+
 export interface ExecutePlanResult {
   approveTx?: TxResult;
   placeBetTx: TxResult;
@@ -143,6 +162,9 @@ export interface SSOTGameHubAPI {
   referrerOf(player: Address): Promise<Address>;
 
   getBet(betId: bigint): Promise<DomainBet>;
+  getBetParams(betId: bigint): Promise<Hex>;
+  getBetRandomWords(betId: bigint): Promise<bigint[]>;
+  getTerminalProof(betId: bigint): Promise<GameHubTerminalProof | null>;
 }
 
 export interface SSOTBankAPI {

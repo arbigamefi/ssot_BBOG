@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useTranslations } from "next-intl";
 
 import { formatUnits } from "../../betting/model/units";
 import { formatTokenAmount } from "./format";
@@ -6,9 +7,21 @@ import { ClaimsActionTrace } from "./claims-action-trace";
 import type { ClaimsAction, ClaimsFlowState } from "./types";
 
 const ACTIONS: Array<{ key: ClaimsAction; label: string; detail: string }> = [
-  { key: "claim", label: "Claim XP", detail: "Extract accrued XP to your wallet." },
-  { key: "sync", label: "Sync", detail: "Move releasable holdback into the current XP ledger." },
-  { key: "fees", label: "Fees", detail: "Governance-only protocol fee claim surface." }
+  {
+    key: "claim",
+    label: "portfolio.claims.actions.tabs.claim.label",
+    detail: "portfolio.claims.actions.tabs.claim.detail"
+  },
+  {
+    key: "sync",
+    label: "portfolio.claims.actions.tabs.sync.label",
+    detail: "portfolio.claims.actions.tabs.sync.detail"
+  },
+  {
+    key: "fees",
+    label: "portfolio.claims.actions.tabs.fees.label",
+    detail: "portfolio.claims.actions.tabs.fees.detail"
+  }
 ];
 
 export function ClaimsActionPanel({
@@ -50,21 +63,23 @@ export function ClaimsActionPanel({
   onSyncHoldback: () => void;
   onClaimFees: () => void;
 }) {
+  const t = useTranslations();
   const disabled = readOnly || !connected || flow.busy;
   const actionTitle =
     action === "claim"
-      ? "Claim trace"
+      ? t("portfolio.claims.actions.trace.claim")
       : action === "sync"
-        ? "Holdback sync trace"
-        : "Fee claim trace";
+        ? t("portfolio.claims.actions.trace.sync")
+        : t("portfolio.claims.actions.trace.fees");
+  const activeAction = ACTIONS.find((item) => item.key === action);
 
   return (
     <section className="rounded-md border border-border bg-surface-1 shadow-e2">
       <div className="border-b border-border p-5">
         <div className="text-xs font-black uppercase tracking-[0.16em] text-fg-subtle">
-          Execution
+          {t("portfolio.claims.actions.eyebrow")}
         </div>
-        <h2 className="mt-2 text-2xl font-black text-fg">Claims transaction console</h2>
+        <h2 className="mt-2 text-2xl font-black text-fg">{t("portfolio.claims.actions.title")}</h2>
       </div>
 
       <div className="grid gap-5 p-5">
@@ -80,22 +95,30 @@ export function ClaimsActionPanel({
                   : "text-fg-muted hover:bg-surface-2 hover:text-fg"
               }`}
             >
-              {item.label}
+              {t(item.label)}
             </button>
           ))}
         </div>
 
         <p className="text-sm leading-6 text-fg-muted">
-          {ACTIONS.find((item) => item.key === action)?.detail}
+          {activeAction ? t(activeAction.detail) : ""}
         </p>
 
         {action === "claim" ? (
           <AmountBox
-            label="Claim amount"
+            label={t("portfolio.claims.actions.amounts.claim")}
             value={xpAmount}
             onChange={onXPAmountChange}
             symbol={symbol}
-            maxLabel={`Max ${formatTokenAmount(claimable, decimals, symbol, 2)}`}
+            maxLabel={t("portfolio.claims.actions.max", {
+              amount: formatTokenAmount(
+                claimable,
+                decimals,
+                symbol,
+                2,
+                t("portfolio.claims.common.pending")
+              )
+            })}
             onUseMax={() =>
               onXPAmountChange(claimable == null ? "" : formatUnits(claimable, decimals))
             }
@@ -105,24 +128,38 @@ export function ClaimsActionPanel({
         {action === "sync" ? (
           <div className="rounded-md border border-border bg-surface-0 p-5">
             <div className="text-[10px] font-black uppercase tracking-[0.16em] text-fg-subtle">
-              Holdback pending
+              {t("portfolio.claims.actions.holdbackPending")}
             </div>
             <div className="mt-3 font-mono text-3xl font-black text-fg">
-              {formatTokenAmount(holdback, decimals, symbol)}
+              {formatTokenAmount(
+                holdback,
+                decimals,
+                symbol,
+                4,
+                t("portfolio.claims.common.pending")
+              )}
             </div>
             <p className="mt-2 text-sm leading-6 text-fg-muted">
-              Syncing updates the XP ledger based on the current on-chain holdback state.
+              {t("portfolio.claims.actions.holdbackDetail")}
             </p>
           </div>
         ) : null}
 
         {action === "fees" ? (
           <AmountBox
-            label="Fee amount"
+            label={t("portfolio.claims.actions.amounts.fees")}
             value={feeAmount}
             onChange={onFeeAmountChange}
             symbol={symbol}
-            maxLabel={`Max ${formatTokenAmount(feeClaimable, decimals, symbol, 2)}`}
+            maxLabel={t("portfolio.claims.actions.max", {
+              amount: formatTokenAmount(
+                feeClaimable,
+                decimals,
+                symbol,
+                2,
+                t("portfolio.claims.common.pending")
+              )
+            })}
             onUseMax={() =>
               onFeeAmountChange(feeClaimable == null ? "" : formatUnits(feeClaimable, decimals))
             }
@@ -131,13 +168,13 @@ export function ClaimsActionPanel({
 
         {!connected ? (
           <div className="rounded-md border border-dashed border-border bg-surface-0 p-5 text-sm text-fg-muted">
-            Connect a wallet to run claim actions.
+            {t("portfolio.claims.actions.connectWallet")}
           </div>
         ) : null}
 
         {readOnly ? (
           <div className="rounded-md border border-warn/30 bg-warn/10 p-3 text-sm text-warn">
-            Writes are disabled for this release.
+            {t("portfolio.claims.actions.readOnly")}
           </div>
         ) : null}
 
@@ -152,12 +189,12 @@ export function ClaimsActionPanel({
           className="rounded-md bg-brand px-5 py-4 text-sm font-black uppercase tracking-[0.12em] text-fg-inverse shadow-glow transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
         >
           {flow.busy
-            ? "Executing"
+            ? t("portfolio.claims.actions.submit.executing")
             : action === "claim"
-              ? "Claim XP"
+              ? t("portfolio.claims.actions.submit.claim")
               : action === "sync"
-                ? "Sync holdback"
-                : "Claim protocol fees"}
+                ? t("portfolio.claims.actions.submit.sync")
+                : t("portfolio.claims.actions.submit.fees")}
         </button>
 
         <ClaimsActionTrace title={actionTitle} flow={flow} explorerBaseUrl={explorerBaseUrl} />

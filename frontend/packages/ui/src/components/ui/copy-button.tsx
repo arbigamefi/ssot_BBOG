@@ -34,9 +34,9 @@ export function CopyButton({ value, className, label = "Copy to clipboard" }: Co
       type="button"
       onClick={() => void handleCopy()}
       className={cn(
-        "inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors",
-        "hover:bg-accent hover:text-accent-foreground",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "inline-flex h-7 w-7 items-center justify-center rounded-md text-fg-muted transition-colors duration-200",
+        "hover:bg-surface-2 hover:text-fg",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
         className
       )}
       aria-label={label}

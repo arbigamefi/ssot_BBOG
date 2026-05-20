@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { cn } from "@ssot/ui";
 
 import { RED_NUMBER_SET } from "./model";
@@ -14,18 +15,24 @@ export type RecentBetSummary = {
   state: string;
 };
 
-function getRecentLabel(gameSlug: string) {
-  if (gameSlug === "dice") return "RECENT ROLLS";
-  if (gameSlug === "roulette") return "RECENT NUMBERS";
-  if (gameSlug === "keno") return "RECENT DRAWS";
-  return "RECENT FLIPS";
+type Translate = ReturnType<typeof useTranslations>;
+
+function getRecentLabel(gameSlug: string, t: Translate) {
+  if (gameSlug === "dice") return t("casino.room.history.recent.rolls");
+  if (gameSlug === "roulette") return t("casino.room.history.recent.numbers");
+  if (gameSlug === "keno") return t("casino.room.history.recent.draws");
+  if (gameSlug === "plinko") return t("casino.room.history.recent.buckets");
+  if (gameSlug === "slots") return t("casino.room.history.recent.slots");
+  if (gameSlug === "baccarat") return t("casino.room.history.recent.hands");
+  if (gameSlug === "sic-bo") return t("casino.room.history.recent.dice");
+  return t("casino.room.history.recent.flips");
 }
 
-function getBetStateLabel(state: string) {
-  if (state === "finalized") return "SETTLED";
-  if (state === "refunded") return "REFUNDED";
-  if (state === "randomReady") return "VRF READY";
-  return "PLACED";
+function getBetStateLabel(state: string, t: Translate) {
+  if (state === "finalized") return t("casino.room.history.states.settled");
+  if (state === "refunded") return t("casino.room.history.states.refunded");
+  if (state === "randomReady") return t("casino.room.history.states.vrfReady");
+  return t("casino.room.history.states.placed");
 }
 
 function getBetStateClass(state: string) {
@@ -62,11 +69,13 @@ export function GameRoomHistoryWidget({
   gameHistory: readonly GameHistoryEntry[];
   recentBets: readonly RecentBetSummary[];
 }) {
+  const t = useTranslations();
+
   return (
-    <div className="absolute top-6 right-6 lg:top-8 lg:right-8 z-20 hidden md:block">
+    <div className="absolute right-8 top-8 z-20 hidden 2xl:block">
       <div className="flex min-w-[200px] max-w-[260px] flex-col items-end gap-2 rounded-lg border border-border bg-surface-1/90 p-3 shadow-e2 backdrop-blur-xl">
         <div className="w-full px-1 text-[10px] font-bold uppercase tracking-widest text-fg-subtle">
-          {getRecentLabel(gameSlug)}
+          {getRecentLabel(gameSlug, t)}
         </div>
         {gameHistory.length > 0 && (
           <div className="flex gap-1.5 justify-end flex-wrap w-full">
@@ -98,14 +107,16 @@ export function GameRoomHistoryWidget({
                     getBetStateClass(bet.state)
                   )}
                 >
-                  {getBetStateLabel(bet.state)}
+                  {getBetStateLabel(bet.state, t)}
                 </span>
               </div>
             ))}
           </div>
         )}
         {gameHistory.length === 0 && recentBets.length === 0 && (
-          <span className="px-2 py-1 text-[10px] text-fg-subtle">Waiting for first play...</span>
+          <span className="px-2 py-1 text-[10px] text-fg-subtle">
+            {t("casino.room.history.empty")}
+          </span>
         )}
       </div>
     </div>

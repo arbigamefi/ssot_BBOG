@@ -1,0 +1,2883 @@
+{
+  "app": {
+    "connectWalletActionDescription": "连接钱包以{action}。",
+    "connectWalletButton": "连接钱包",
+    "connectWalletDescription": "连接钱包以使用此功能。",
+    "connectingWallet": "连接中...",
+    "indexerWorkerFailed": "索引器 worker 启动失败",
+    "unknownNetwork": "未知网络",
+    "walletRequired": "需要钱包",
+    "writesDisabled": "当前写入已关闭。",
+    "errors": {
+      "boundaryTitle": "页面出现错误",
+      "unexpected": "发生了非预期错误。",
+      "transactionFailed": "交易失败",
+      "recentBetsFailed": "最近投注读取失败",
+      "playerBetsFailed": "玩家投注读取失败",
+      "playerSportsTicketsFailed": "玩家体育票据读取失败",
+      "errorId": "错误 ID: {digest}",
+      "tryAgain": "重试"
+    }
+  },
+  "metadata": {
+    "siteTitle": "ArbiGameFi",
+    "titleTemplate": "%s | ArbiGameFi",
+    "description": "非托管链上游戏协议，提供可验证随机数与透明结算。",
+    "pages": {
+      "casino": {
+        "title": "赌场",
+        "description": "浏览钱包原生赌场房间，使用链上随机数、可见资金池状态和 keeper 辅助结算。"
+      },
+      "casinoRoom": {
+        "title": "{game}",
+        "description": "游玩 {game}，查看可验证随机数、VRF 状态和链上结果凭证。"
+      },
+      "sportsbook": {
+        "title": "体育投注",
+        "description": "浏览固定赔率体育市场，链上结算 + 签名赔率快照。"
+      },
+      "opsSportsbook": {
+        "title": "Sportsbook · 运营",
+        "description": "SportsHub 市场、票据、风险上限以及裁定 / 仲裁写入的运营控制台。"
+      },
+      "sportsbookMarket": {
+        "title": "体育市场 {marketId}",
+        "description": "查看 SportsHub 市场 {marketId} 的下注准备、票据状态和结果证据。"
+      },
+      "portfolio": {
+        "title": "组合",
+        "description": "查看钱包身份、资产仓位、退款额度和近期协议活动。"
+      },
+      "portfolioActivity": {
+        "title": "活动",
+        "description": "查看带链上结算状态的赌场与体育投注索引活动。"
+      },
+      "portfolioBetDetail": {
+        "title": "投注 {betId}",
+        "description": "查看投注 {betId} 的生命周期、赔付、随机数和结算证明。"
+      },
+      "portfolioSportsTicket": {
+        "title": "体育票据 {ticketId}",
+        "description": "查看 SportsHub 票据 {ticketId} 的选择结果、赔付、赛果和证明。"
+      },
+      "portfolioClaims": {
+        "title": "领取",
+        "description": "查看可领取 XP、协议费用、holdback 桶和领取交易准备状态。"
+      },
+      "portfolioReferral": {
+        "title": "推广",
+        "description": "生成推广链接、查看 first-touch 绑定，以及推广奖励桶。"
+      },
+      "affiliate": {
+        "title": "推广计划",
+        "description": "分享钱包原生赌场房间，并通过链上 XP 账本结算推广奖励。"
+      },
+      "earn": {
+        "title": "赚取",
+        "description": "查看资金池存款、提款、储备状态和 LP 风险控制。"
+      },
+      "ops": {
+        "title": "运维",
+        "description": "监控 release proof、keeper 健康、索引器状态和运维收据。"
+      }
+    }
+  },
+  "locale": {
+    "label": "语言",
+    "en": "English",
+    "zhHans": "简体中文"
+  },
+  "footer": {
+    "brandSubtitle": "钱包原生游戏",
+    "description": "钱包原生游戏房间、可读结算结果，以及链上执行之上的资金池上下文。",
+    "liveRooms": "实时游戏",
+    "games": "游戏",
+    "platform": "平台",
+    "resources": "资源",
+    "legal": "法律",
+    "earn": "赚取收益",
+    "portfolio": "账户组合",
+    "terms": "服务条款",
+    "privacy": "隐私政策",
+    "disclaimer": "风险提示",
+    "copyright": "ArbiGameFi 前端用于钱包原生游戏与透明结算。",
+    "docs": "文档"
+  },
+  "casino": {
+    "room": {
+      "shell": {
+        "liveModule": "实时 SSOT 模块",
+        "houseEdge": "庄家优势",
+        "maxPayout": "最高赔付"
+      },
+      "empty": {
+        "moduleNotFound": "未找到游戏模块",
+        "gameNotFound": "未找到该游戏。"
+      },
+      "names": {
+        "dice": "精准骰子",
+        "roulette": "欧式轮盘",
+        "coinToss": "抛硬币",
+        "keno": "Keno 选号",
+        "plinko": "Plinko 弹珠盘",
+        "slots": "Slots 拉霸",
+        "baccarat": "百家乐",
+        "sicBo": "骰宝"
+      },
+      "audit": {
+        "loading": "正在加载审计流",
+        "headers": {
+          "timestampAuth": "时间 / 身份",
+          "submodule": "子模块",
+          "wagerParameters": "投注参数",
+          "settlementState": "结算状态",
+          "audit": "审计"
+        },
+        "selection": "{game} 选择",
+        "amountAndId": "{amount} {asset} - ID: {id}",
+        "openAudit": "打开投注 {betId} 的审计记录",
+        "empty": {
+          "title": "不可篡改审计流",
+          "description": "等待链上交易事件写入..."
+        }
+      },
+      "errors": {
+        "quoteFailed": "无法估算 VRF 费用。",
+        "readRoundFailed": "无法读取最新回合状态。",
+        "roundNotFound": "当前 GameHub 暂时还没有读到这个回合。再次下注前请先核对交易记录。",
+        "manualSettleFailed": "手动结算失败。",
+        "refundFailed": "退款失败。",
+        "sdkNotReady": "SSOT SDK 尚未就绪。请先连接钱包。",
+        "transactionFailedShort": "交易失败",
+        "transactionFailed": "交易失败，请重试。",
+        "reconcileFailed": "交易关联失败",
+        "bindFailed": "绑定投注 ID 失败",
+        "rouletteSelectionRequired": "请先在轮盘桌面选择至少一个号码或投注类型。",
+        "kenoSelectionRequired": "请在 Keno 网格中至少选择 1 个号码。",
+        "kenoSelectionInvalid": "Keno 只能选择 1 到 5 个号码，号码范围为 1 到 15。",
+        "noActiveCasinoPool": "当前 release 中没有可用的赌场资金池。",
+        "unexpected": "发生了非预期错误。"
+      },
+      "warnings": {
+        "vrfTimeout": "正在等待 oracle。测试网 VRF 可能需要 30-120 秒完成。"
+      },
+      "roundStatus": {
+        "title": "回合状态",
+        "phases": {
+          "loadingQuote": {
+            "label": "估算 VRF 费用",
+            "detail": "下注前正在读取当前随机数费用。",
+            "status": "估算中"
+          },
+          "waitingVrf": {
+            "label": "等待开奖",
+            "detail": "PlaceBet 已上链，正在等待可验证随机数。",
+            "status": "等待 VRF"
+          },
+          "timeoutSoft": {
+            "label": "VRF 等待时间较长",
+            "detail": "本回合仍然安全。请保持页面打开，等待 Chainlink 完成请求。",
+            "status": "等待中"
+          },
+          "placing": {
+            "label": "正在下注",
+            "detail": "如有需要先授权，然后签名 PlaceBet。交易上链后回合开始。",
+            "status": "下注中"
+          },
+          "settling": {
+            "label": "结果已揭晓",
+            "detail": "随机数已准备好，开奖号码已可见，keeper 正在完成资金结算。",
+            "status": "结算中"
+          },
+          "manualSettleOffered": {
+            "label": "Keeper 延迟",
+            "detail": "结算延迟。你可以作为兜底手动结算本回合。",
+            "status": "可手动结算"
+          },
+          "settled": {
+            "label": "回合已结算",
+            "detail": "链上结算已确认，正在准备最终结果证明。",
+            "status": "已结算"
+          },
+          "refundable": {
+            "label": "可退款",
+            "detail": "VRF 未在协议超时时间前完成。你可以退回本金。",
+            "status": "可退款"
+          },
+          "failed": {
+            "label": "回合监控失败",
+            "detail": "无法从 RPC provider 读取最新回合状态。",
+            "status": "失败"
+          },
+          "ready": {
+            "label": "准备就绪",
+            "detail": "点击一次即可在需要时完成授权、下注，并自动跟踪结算。",
+            "status": "就绪"
+          }
+        },
+        "metrics": {
+          "vrfEstimate": "VRF 预估费用",
+          "betId": "投注 ID",
+          "vrfRequest": "VRF 请求"
+        },
+        "actions": {
+          "settleResult": "结算结果",
+          "refundStake": "退回本金"
+        }
+      },
+      "betPanel": {
+        "walletBalance": "钱包余额",
+        "syncing": "同步中...",
+        "notConnected": "未连接",
+        "walletGate": {
+          "title": "连接钱包后即可下注",
+          "detail": "你可以先调整房间参数。连接钱包后，只在真正下注时签名。"
+        },
+        "amount": {
+          "label": "下注金额",
+          "aria": "下注金额",
+          "min": "最小",
+          "max": "最大"
+        },
+        "rolls": {
+          "label": "回合数",
+          "total": "合计: {amount} USDC",
+          "aria": "回合数量"
+        },
+        "advanced": {
+          "label": "高级设置",
+          "stopGain": "止盈 (USDC)",
+          "stopLoss": "止损 (USDC)",
+          "offPlaceholder": "0 = 关闭",
+          "help": "多回合下注的可选自动停止规则。填 0 表示不启用。",
+          "stopGainHelp": "总盈利达到该金额后停止。",
+          "stopLossHelp": "总亏损达到该金额后停止。",
+          "gainStop": "盈利达到 +{amount} USDC 时停止",
+          "lossStop": "亏损达到 {amount} USDC 时停止"
+        },
+        "summary": {
+          "multiplier": "倍率",
+          "winChance": "胜率",
+          "expectedPayout": "潜在赔付"
+        },
+        "placeBet": {
+          "connectWallet": "连接钱包",
+          "failedRetry": "交易失败 - 重试",
+          "roundInProgress": "回合进行中",
+          "betMined": "投注已上链...",
+          "signing": "签名 / 下注中...",
+          "approveThenPlace": "先授权，再下注",
+          "preparing": "准备回合...",
+          "placeBet": "下注"
+        }
+      },
+      "selection": {
+        "dice": {
+          "rollUnder": "小于目标",
+          "rollOver": "大于目标",
+          "targetRange": "目标区间",
+          "targetAria": "骰子目标点数",
+          "target": "目标",
+          "multiplier": "倍数",
+          "winChance": "胜率",
+          "roll": "结果"
+        },
+        "roulette": {
+          "bets": "投注",
+          "clearAll": "全部清除",
+          "empty": "还没有投注。点击桌面选择投注项。",
+          "labels": {
+            "firstDozen": "第 1 打",
+            "secondDozen": "第 2 打",
+            "thirdDozen": "第 3 打",
+            "even": "双数",
+            "red": "红",
+            "black": "黑",
+            "odd": "单数"
+          }
+        },
+        "coin": {
+          "selectFace": "选择正反面",
+          "heads": "正面",
+          "tails": "反面"
+        },
+        "keno": {
+          "spotsLabel": "/ 5 个号码",
+          "autoPick": "自动选择",
+          "clear": "清除",
+          "empty": "还没有选择号码。点击网格选择数字。"
+        },
+        "plinko": {
+          "riskProfile": "风险档位",
+          "low": "低",
+          "medium": "中",
+          "high": "高",
+          "lowDetail": "波动更平滑",
+          "mediumDetail": "风险均衡",
+          "highDetail": "冲击边缘槽"
+        },
+        "baccarat": {
+          "betOn": "下注边",
+          "player": "闲",
+          "banker": "庄",
+          "tie": "和"
+        },
+        "sicBo": {
+          "betType": "投注类型",
+          "face": "点数",
+          "total": "总点数",
+          "kinds": {
+            "small": "小",
+            "big": "大",
+            "anyTriple": "任意围骰",
+            "specificTriple": "指定围骰",
+            "total": "指定总点",
+            "specificDouble": "指定对子",
+            "singleFace": "单骰点数"
+          }
+        },
+        "slots": {
+          "profiles": {
+            "classic": "经典 3 轴"
+          },
+          "symbols": {
+            "0": "樱桃",
+            "1": "柠檬",
+            "2": "铃铛",
+            "3": "钻石",
+            "4": "皇冠",
+            "5": "星星",
+            "6": "Bar",
+            "7": "Seven"
+          },
+          "yes": "是",
+          "no": "否"
+        }
+      },
+      "stage": {
+        "loading": "正在加载舞台",
+        "coin": {
+          "awaitingSelection": "等待选择正反面",
+          "selected": "已选择{side}",
+          "waitingVrf": "等待 VRF oracle..."
+        },
+        "plinko": {
+          "board": "Plinko 弹珠盘",
+          "dropZone": "设置风险后落球",
+          "waitingVrf": "等待 VRF oracle...",
+          "revealing": "弹珠正在穿过钉板...",
+          "slot": "落入 {slot} 槽",
+          "risk": "风险: {risk}"
+        },
+        "slots": {
+          "ready": "匹配 3 个符号赢取赔付",
+          "spinning": "等待 VRF oracle...",
+          "result": "{symbols}",
+          "classic": "经典档位"
+        },
+        "baccarat": {
+          "ready": "选择闲、庄或和",
+          "dealing": "等待 VRF oracle...",
+          "result": "{side} 胜出",
+          "selected": "已选择: {side}"
+        },
+        "sicBo": {
+          "ready": "选择一个骰宝投注项",
+          "rolling": "等待 VRF oracle...",
+          "opened": "开出骰子: {dice}",
+          "total": "总点",
+          "triple": "围骰",
+          "result": "结果"
+        }
+      },
+      "history": {
+        "recent": {
+          "rolls": "最近点数",
+          "numbers": "最近号码",
+          "draws": "最近开奖",
+          "buckets": "最近槽位",
+          "slots": "最近转轴",
+          "hands": "最近牌局",
+          "dice": "最近骰子",
+          "flips": "最近抛掷"
+        },
+        "states": {
+          "settled": "已结算",
+          "refunded": "已退款",
+          "vrfReady": "VRF 就绪",
+          "placed": "已下注"
+        },
+        "empty": "等待第一局..."
+      },
+      "result": {
+        "title": "投注详情",
+        "outcomes": {
+          "refunded": {
+            "label": "本金已退回",
+            "detail": "VRF 超时窗口后，退款路径已退回本金。"
+          },
+          "win": {
+            "label": "本局中奖",
+            "detail": "本局已在链上完成结算，赔付已确认。"
+          },
+          "winPending": {
+            "label": "本局中奖",
+            "detail": "VRF 结果已揭晓，赔付结算仍在确认中。"
+          },
+          "returned": {
+            "label": "本金已返回",
+            "detail": "本次结算赔付等于本金。"
+          },
+          "returnedPending": {
+            "label": "本金返回",
+            "detail": "VRF 结果已揭晓，结算确认仍在等待中。"
+          },
+          "loss": {
+            "label": "本局未中奖",
+            "detail": "本局已在链上完成结算，没有净赔付。"
+          },
+          "lossPending": {
+            "label": "本局未中奖",
+            "detail": "VRF 结果已揭晓，最终结算仍在确认中。"
+          },
+          "revealed": {
+            "label": "结果已揭晓",
+            "detail": "开奖号码已由 VRF 给出，资金结算仍在等待中。"
+          }
+        },
+        "sections": {
+          "gameResult": "游戏结果",
+          "fairnessData": "公平性数据"
+        },
+        "facts": {
+          "status": "状态",
+          "player": "玩家",
+          "multiplier": "倍率",
+          "betAmount": "投注金额",
+          "payout": "赔付",
+          "expectedPayout": "潜在赔付",
+          "pending": "等待中",
+          "betId": "投注 ID",
+          "refund": "退款",
+          "requestId": "请求 ID",
+          "netResult": "净结果",
+          "randomHash": "随机哈希",
+          "settlementTx": "结算交易",
+          "resolvedTime": "结算时间",
+          "vrfFee": "随机费用 (VRF)",
+          "diceTarget": "骰子目标",
+          "diceNumber": "开出点数",
+          "coinChoice": "选择面",
+          "coinDrawn": "开出面",
+          "rouletteBet": "轮盘投注",
+          "rouletteWinningNumber": "中奖号码",
+          "kenoPicked": "已选号码",
+          "kenoDrawn": "开奖号码",
+          "kenoHits": "命中数",
+          "plinkoRisk": "风险档位",
+          "plinkoSlot": "落点槽位",
+          "plinkoPath": "路径",
+          "plinkoMultiplier": "槽位倍率",
+          "slotsProfile": "档位",
+          "slotsSymbols": "开出符号",
+          "slotsMultiplier": "转轴倍率",
+          "slotsJackpot": "Jackpot",
+          "baccaratChoice": "下注边",
+          "baccaratWinner": "胜出边",
+          "baccaratPlayerTotal": "闲点数",
+          "baccaratBankerTotal": "庄点数",
+          "baccaratPlayerCards": "闲开牌",
+          "baccaratBankerCards": "庄开牌",
+          "sicBoBet": "骰宝投注",
+          "sicBoDice": "开出骰子",
+          "sicBoTotal": "总点数",
+          "sicBoTriple": "围骰",
+          "sicBoMultiplier": "本局倍率"
+        },
+        "actions": {
+          "close": "关闭",
+          "playAgain": "再玩一次",
+          "viewSettlement": "查看结算",
+          "settlementPending": "结算确认中"
+        }
+      }
+    },
+    "directory": {
+      "loading": "正在加载游戏...",
+      "empty": {
+        "noRelease": "当前链没有可用的内嵌 release。",
+        "noGames": "当前 release 没有注册游戏。",
+        "noResults": "没有匹配的房间",
+        "noResultsDetail": "没有赌场房间匹配“{query}”。清空搜索或切换分类。",
+        "clearSearch": "清空搜索"
+      },
+      "hero": {
+        "eyebrow": "全球赌场大厅",
+        "title": "进入游戏大厅",
+        "description": "所有模块都在链上执行、可验证，并直接连接到隔离资金池。连接钱包即可开始游戏。"
+      },
+      "stats": {
+        "rooms": "链上房间",
+        "asset": "Bank 资产"
+      },
+      "filters": {
+        "all": "全部模块",
+        "table": "桌面游戏",
+        "dice": "骰子游戏",
+        "binary": "快速二选一",
+        "lottery": "彩票类",
+        "arcade": "街机类"
+      },
+      "search": {
+        "placeholder": "搜索游戏...",
+        "aria": "搜索游戏"
+      },
+      "tags": {
+        "binary": "二选一",
+        "table": "桌面",
+        "lottery": "彩票",
+        "arcade": "街机",
+        "dice": "骰子",
+        "module": "模块"
+      },
+      "rooms": {
+        "dice": {
+          "title": "精准骰子",
+          "promise": "1 到 99 的范围选择，数秒内完成。",
+          "badge": "1% 庄家优势"
+        },
+        "roulette": {
+          "title": "欧式轮盘",
+          "promise": "经典 37 格物理机制。",
+          "badge": "最高 36x 赔付"
+        },
+        "coinToss": {
+          "title": "抛硬币",
+          "promise": "高速 50/50 结算。",
+          "badge": "1% 庄家优势"
+        },
+        "keno": {
+          "title": "Keno 选号",
+          "promise": "选择多个号码，争取更高倍率。",
+          "badge": "最高 500.5x"
+        },
+        "plinko": {
+          "title": "Plinko 弹珠盘",
+          "promise": "穿过 8 行钉板，冲击两侧高倍率槽。",
+          "badge": "最高 24.6x"
+        },
+        "slots": {
+          "title": "Slots 拉霸",
+          "promise": "匹配对子、三连或 777 Jackpot。",
+          "badge": "最高 64x"
+        },
+        "baccarat": {
+          "title": "百家乐",
+          "promise": "闲家对庄家，和局提供更高赔率。",
+          "badge": "最高 10.4x"
+        },
+        "sicBo": {
+          "title": "骰宝",
+          "promise": "三颗骰子、经典桌面投注和围骰高赔率。",
+          "badge": "最高 216x"
+        }
+      },
+      "card": {
+        "releaseAnchored": "Release 锚定",
+        "playNow": "开始游戏"
+      },
+      "reserve": {
+        "title": "赌场 Bankroll",
+        "subtitle": "Bank {bank}",
+        "status": "Release 锚定",
+        "cta": "查看 Bank"
+      }
+    }
+  },
+  "sportsbook": {
+    "index": {
+      "loading": "正在加载体育投注...",
+      "noRelease": {
+        "title": "未加载 release",
+        "description": "内嵌 release 快照不可用。",
+        "status": "不可用"
+      },
+      "header": {
+        "metadataEnabled": "出票已启用",
+        "readOnlyPreview": "预览模式",
+        "sportsHubPresent": "SportsHub 已配置",
+        "sportsHubMissing": "缺少 SportsHub",
+        "title": "体育投注",
+        "description": "选择足球市场，投注主胜、平局或客胜，并通过 SportsHub 完成链上结算。"
+      },
+      "riskCard": {
+        "eyebrow": "出票状态",
+        "signedOddsOnly": "仅允许签名赔率",
+        "locked": "预览模式",
+        "description": "进入市场详情页，并在下注前提供签名赔率快照。",
+        "lockedDescription": "市场读取是实时的，但当前构建暂未开放公开出票。你仍然可以查看最新市场和结算规则。",
+        "inspect": "打开最新市场"
+      },
+      "details": {
+        "release": "Release",
+        "sportsHub": "SportsHub",
+        "embeddedMetadataPresent": "内嵌元数据已存在",
+        "notAvailable": "不可用",
+        "riskEngine": "风险引擎",
+        "riskEngineHelper": "共享上限执行面",
+        "challengeWindow": "挑战窗口",
+        "challengeWindowHelper": "赛果争议超时时间",
+        "nextMarket": "下一个市场",
+        "marketHelper": "链上最新市场计数器",
+        "nextTicket": "下一个票据",
+        "ticketHelper": "链上最新票据计数器",
+        "runtimeReadFailed": "SportsHub 运行时读取失败",
+        "sdkRead": "通过 @ssot/ssot SDK 读取"
+      },
+      "release": {
+        "eyebrow": "凭证面",
+        "title": "Oracle、Release 与结算锚点",
+        "description": "当前 bundle 暴露签名赔率身份、赛果 reporter 集合和合约地址，让每张体育票据都可以被审计。",
+        "oddsSignerSet": "赔率签名集合",
+        "resultReporterSet": "赛果 reporter 集合",
+        "reporterThreshold": "Reporter 阈值",
+        "reporterThresholdHelper": "最少赛果 reporter 数",
+        "frontendFlag": "前端开关",
+        "booleanTrue": "true",
+        "booleanFalse": "false",
+        "challenger": "挑战者",
+        "arbitrator": "仲裁者"
+      },
+      "mvp": {
+        "eyebrow": "市场格式",
+        "title": "足球 1X2 出票流程",
+        "description": "MVP 路径刻意收窄：赛前固定赔率、签名快照、显式赛果证据，以及最终结算前的挑战窗口。",
+        "rows": {
+          "marketType": {
+            "label": "市场类型",
+            "value": "赛前足球 1X2"
+          },
+          "oddsSource": {
+            "label": "赔率来源",
+            "value": "The Odds API 候选源"
+          },
+          "settlement": {
+            "label": "结算",
+            "value": "Reporter 赛果 + 挑战窗口"
+          },
+          "launchState": {
+            "label": "上线状态",
+            "enabled": "Canary 出票已启用",
+            "disabled": "出票开启前保持只读"
+          }
+        }
+      },
+      "caps": {
+        "eyebrow": "协议上限",
+        "title": "SportsHub 顶层限制",
+        "description": "这些 raw-unit 上限复制自内嵌 release，应始终与部署 bundle 和运维批准备忘录保持一致。",
+        "riskTitle": "SportsHub 全局风险上限"
+      },
+      "marketTape": {
+        "eyebrow": "市场",
+        "title": "可用足球市场",
+        "descriptionEnabled": "打开市场可查看 outcome、开赛时间、保留敞口，并在市场开放时提交签名赔率票据。",
+        "descriptionDisabled": "打开市场可查看 outcome、开赛时间和保留敞口。当前构建仍关闭出票。"
+      },
+      "lookup": {
+        "eyebrow": "我的票据",
+        "title": "追踪票据",
+        "description": "输入票据 ID，直接从 SportsHub 查看本金、选择结果、赔付和终态。",
+        "marketId": "市场 ID",
+        "ticketId": "票据 ID",
+        "marketEmpty": "输入 SportsHub 市场 ID，用于检查状态、赛果状态和保留敞口。",
+        "ticketEmpty": "输入 SportsHub 票据 ID，用于检查仓位、本金、赔付和票据状态。",
+        "marketNumericError": "请输入数字市场 ID。",
+        "ticketNumericError": "请输入数字票据 ID。"
+      },
+      "advanced": {
+        "summary": "高级链上证明与运营工具",
+        "marketLookupEyebrow": "市场查询",
+        "marketLookupTitle": "检查 SportsHub 市场",
+        "marketLookupDescription": "开发者读回市场状态、赛果提议和保留敞口。"
+      },
+      "operator": {
+        "eyebrow": "运营写入",
+        "title": "市场与赛果管理",
+        "description": "治理与 reporter 操作通过类型化 SDK 调用暴露给授权钱包。公开出票使用独立的签名赔率路径，合约角色仍会强制校验每一次写入。",
+        "walletRoleRequired": "钱包角色必须在 SportsHub 上获得授权。"
+      },
+      "bankroll": {
+        "eyebrow": "资金池",
+        "title": "体育资金池隔离",
+        "description": "体育流动性与赌场游戏流动性隔离，因此 sportsbook 敞口可以独立设置上限、暂停和监控。",
+        "noPool": "当前 release 没有可用的 Sports pool 元数据。"
+      },
+      "controls": {
+        "eyebrow": "控制项",
+        "title": "上线阻塞项保持显式",
+        "description": "该页面刻意保持运营视角：在展示 SportsHub 部署面的同时，保留 ops packet 中跟踪的公开上线阻塞项。",
+        "links": {
+          "goNoGo": "Go/no-go 包",
+          "frontendAccess": "前端访问策略",
+          "providerPolicy": "Provider 策略"
+        }
+      }
+    },
+    "player": {
+      "header": {
+        "title": "体育博彩",
+        "description": "选择市场、选择结果，下注以链上结算的定额赔率票。",
+        "descriptionPreview": "公开下注暂未开放，但市场仍可查看，便于上线前熟悉规则。",
+        "opsLink": "运营控制台",
+        "status": {
+          "ready": "可下注",
+          "previewOnly": "仅预览",
+          "notInRelease": "未在发布中",
+          "readOnly": "只读"
+        }
+      },
+      "board": {
+        "bucket": {
+          "live": "进行中",
+          "today": "今天",
+          "upcoming": "即将开赛",
+          "past": "近期结算"
+        },
+        "count": "{count} 场市场"
+      },
+      "lobby": {
+        "featuredEyebrow": "推荐市场",
+        "eventTitle": "{away} @ {home}",
+        "fallbackTitle": "市场 {tag}",
+        "kickoff": "开赛 {time}",
+        "openMarket": "打开市场",
+        "viewMarket": "查看市场",
+        "oddsPending": "{count} 个结果 · 赔率待发布",
+        "snapshotEyebrow": "市场概览",
+        "snapshotTitle": "足球盘口",
+        "snapshotDescription": "先快速浏览进行中、即将开赛和最近结算的固定赔率市场，再进入票据下注。",
+        "live": "进行中",
+        "today": "今天",
+        "upcoming": "即将开赛",
+        "settled": "已结算",
+        "boardTitle": "市场列表",
+        "boardDescription": "打开任一市场，查看赔率、下注、赛果证明和市场级结算状态。",
+        "side": {
+          "home": "主胜",
+          "draw": "平局",
+          "away": "客胜"
+        },
+        "filters": {
+          "ariaLabel": "筛选体育投注市场",
+          "all": "全部",
+          "live": "进行中",
+          "today": "今天",
+          "upcoming": "即将开赛",
+          "past": "已结算",
+          "empty": {
+            "all": "当前没有已发布的体育投注市场。",
+            "live": "当前没有进行中的市场。",
+            "today": "今天没有已发布市场。",
+            "upcoming": "暂未发布即将开赛的市场。",
+            "past": "当前发布窗口内没有已结算市场。"
+          }
+        }
+      },
+      "event": {
+        "fallbackTitle": "市场 {tag}",
+        "kickoffAt": "开赛 {time}",
+        "outcomesPending": "{count} 个结果 · 赔率待发布",
+        "outcomeShort": {
+          "home": "主胜",
+          "draw": "平局",
+          "away": "客胜"
+        }
+      },
+      "marketState": {
+        "none": "未知",
+        "draft": "草稿",
+        "open": "开放",
+        "locked": "已锁定",
+        "suspended": "已暂停",
+        "resultProposed": "赛果待确认",
+        "challenged": "申诉中",
+        "resolved": "已结算",
+        "voided": "已作废",
+        "live": "直播中"
+      },
+      "empty": {
+        "ctaCasino": "前往赌场",
+        "ctaOps": "运营控制台",
+        "preview": {
+          "title": "体育博彩处于预览阶段",
+          "description": "上线检查完成后将开放公开下注。当前可查看即将开赛的市场和链上结算规则。"
+        },
+        "quiet": {
+          "title": "暂无开赛市场",
+          "description": "目前没有进行中或即将开赛的市场。请在临近开赛时回来查看。"
+        }
+      },
+      "error": {
+        "title": "无法加载体育博彩市场。请稍后刷新。"
+      },
+      "detail": {
+        "noRelease": {
+          "title": "体育博彩不可用",
+          "description": "当前版本未加载发布快照。"
+        },
+        "invalid": {
+          "title": "市场 id 无效",
+          "description": "链接格式错误。请从市场列表选择一个市场。",
+          "back": "返回市场列表"
+        },
+        "readFailed": {
+          "title": "无法加载该市场",
+          "description": "合约读取失败。请刷新页面或选择其他市场。",
+          "return": "返回市场列表"
+        },
+        "refreshing": "正在刷新市场状态…",
+        "header": {
+          "back": "返回市场列表",
+          "fallback": "市场 {tag}",
+          "bookmaker": "来自 {name}",
+          "kickoff": "开赛 {time}",
+          "locks": "截止 {time}"
+        },
+        "board": {
+          "title": "选择结果",
+          "titleResolved": "结果已结算",
+          "snapshotTime": "赔率截至 {time}",
+          "winner": "胜出",
+          "outcomeShort": "结果 {outcomeId}",
+          "outcomeSide": {
+            "home": "主胜",
+            "draw": "平局",
+            "away": "客胜"
+          },
+          "fallback": {
+            "binaryYes": "是",
+            "binaryNo": "否",
+            "threeWayHome": "主胜",
+            "threeWayDraw": "平局",
+            "threeWayAway": "客胜",
+            "generic": "结果 {outcomeId}"
+          },
+          "oddsPending": "本市场的赔率尚未发布。",
+          "providerUnavailable": "签名赔率获取失败,结果选择已禁用。"
+        },
+        "result": {
+          "voidedTitle": "市场已作废",
+          "voidedDescription": "本市场所有票据将退款,无需进一步操作。",
+          "challengedTitle": "赛果申诉中",
+          "challengedDescription": "裁定结果正在仲裁,结算暂停直至争议解决。",
+          "settledTitle": "已结算 · {outcome} 胜",
+          "settledDescription": "市场已在链上最终化。中奖票据现在可以结算。",
+          "proposedTitle": "赛果已提议 · {outcome}",
+          "proposedDescription": "申诉窗口已开放。若无人申诉,将于 {finalizes} 最终化。",
+          "outcomeIdFallback": "结果 {outcomeId}",
+          "rows": {
+            "proposer": "提议人",
+            "reporterCount": "裁定人数",
+            "proposedAt": "提议时间",
+            "finalizesAt": "最终化时间"
+          }
+        },
+        "slip": {
+          "marketMustBeOpen": "市场当前不接受下注。",
+          "outcomeFallback": "结果 {outcomeId}"
+        },
+        "myTickets": {
+          "title": "你的票据",
+          "description": "不离开当前市场即可跟踪你已经下注的票据。",
+          "refreshing": "刷新中",
+          "connect": "连接钱包后查看你在本市场的票据。",
+          "loading": "正在加载你的票据…",
+          "empty": "你还没有在本市场下注。",
+          "error": "当前无法加载你的体育投注票据。",
+          "pending": "等待中",
+          "ticketNumber": "S#{ticketId}",
+          "unknownOutcome": "结果待定",
+          "binaryYes": "是",
+          "binaryNo": "否",
+          "home": "主胜",
+          "draw": "平局",
+          "away": "客胜",
+          "outcomeFallback": "结果 {outcomeId}",
+          "columns": {
+            "ticket": "票据",
+            "pick": "选择",
+            "stake": "本金",
+            "payout": "赔付",
+            "status": "状态"
+          },
+          "status": {
+            "open": "待结算",
+            "won": "已中奖",
+            "lost": "未中奖",
+            "refunded": "已退款"
+          }
+        },
+        "latestTicket": {
+          "eyebrow": "票据已接受",
+          "title": "票据 S#{ticketId} 已生效",
+          "description": "你的票据已经上链。可以留在当前页面，也可以打开收据，继续跟踪赛果提议、最终确认和结算。",
+          "viewTicket": "跟踪票据",
+          "pick": "选择",
+          "price": "成交赔率",
+          "potentialPayout": "潜在赔付",
+          "stage": {
+            "idle": "设置本金并选择一个结果。",
+            "ready": "可以提交这张票据。",
+            "quoting": "正在获取签名赔率。",
+            "planning": "正在准备链上票据。",
+            "signing": "等待钱包签名。",
+            "mining": "正在广播票据。",
+            "tracking": "票据已上链，正在跟踪赛果提议、最终确认和结算。",
+            "settled": "票据已结算。打开收据查看赔付详情。",
+            "refunded": "票据已退款。打开收据查看退款详情。",
+            "voided": "票据已作废。打开收据查看退款详情。",
+            "failed": "票据提交需要处理。请检查投注单后重试。"
+          }
+        },
+        "meta": {
+          "title": "市场信息",
+          "outcomes": "结果数",
+          "reserved": "已预留",
+          "version": "版本",
+          "state": "状态"
+        },
+        "proof": {
+          "summary": "链上证明",
+          "rows": {
+            "marketId": "市场 ID",
+            "marketKey": "marketKey"
+          }
+        }
+      },
+      "slip": {
+        "ariaLabel": "投注单",
+        "title": "投注单",
+        "selection": "已选结果",
+        "emptySelection": "请先选择一个结果。",
+        "priceUnknown": "—",
+        "stakeLabel": "本金 ({symbol})",
+        "stakeRow": "本金",
+        "payoutRow": "潜在赔付",
+        "stageLabel": "状态",
+        "stage": {
+          "idle": "请选择结果并输入本金。",
+          "ready": "可以下注。",
+          "fetchingOdds": "正在获取签名赔率…",
+          "planning": "正在构建票据方案…",
+          "signing": "请在钱包中确认…",
+          "mining": "正在链上提交票据…",
+          "placed": "票据已下注。",
+          "error": "票据下注失败。"
+        },
+        "action": {
+          "idle": "下注",
+          "ready": "下注",
+          "busy": "下注中…",
+          "placed": "已下注",
+          "retry": "重试"
+        },
+        "receipt": {
+          "title": "票据已生成",
+          "payout": "潜在赔付",
+          "ticketId": "票号",
+          "viewTicket": "查看票据",
+          "placeAnother": "再下一注"
+        }
+      },
+      "ticket": {
+        "back": "返回活动",
+        "bookmaker": "来源 {name}",
+        "subtitle": "SportsHub 票据 #{ticketId}",
+        "eventTitle": "{away} @ {home}",
+        "fallbackMarket": "市场 {tag}",
+        "fallbackTicket": "票据 {ticketId}",
+        "fallbackOutcome": "结果 {outcomeId}",
+        "refreshing": "刷新中…",
+        "noRelease": {
+          "title": "票据不可用",
+          "description": "当前构建没有加载 release 快照。"
+        },
+        "invalid": {
+          "title": "票据 ID 无效",
+          "description": "链接格式错误。请返回活动页选择 SportsHub 票据。",
+          "back": "返回活动"
+        },
+        "readFailed": {
+          "title": "无法加载该票据",
+          "description": "SportsHub 没有返回该 ID 的票据，或 RPC 读取失败。"
+        },
+        "status": {
+          "held": "票据已接受",
+          "resultReady": "赛果已出",
+          "settled": "已结算",
+          "won": "中奖票据",
+          "lost": "未中奖",
+          "refunded": "已退款",
+          "voided": "已作废"
+        },
+        "metrics": {
+          "selection": "你的选择",
+          "price": "成交赔率 {price}",
+          "stake": "本金",
+          "pool": "池 {poolId}",
+          "payout": "潜在赔付",
+          "winner": "获胜结果: {outcome}",
+          "pendingResult": "等待官方赛果"
+        },
+        "receipt": {
+          "eyebrow": "票据收据",
+          "wonTitle": "中奖票据",
+          "wonDescription": "你的选择命中了最终市场结果。下方返还金额来自链上票据赔付。",
+          "lostTitle": "票据未中奖",
+          "lostDescription": "你的选择没有命中最终市场结果。净结果反映本次下注本金。",
+          "refundedTitle": "票据已退款",
+          "refundedDescription": "这张票据通过退款或作废路径结束。下方显示已返还金额。",
+          "openTitle": "票据已接受",
+          "openDescription": "票据已在 SportsHub 上生效。市场最终化前，返还和利润仍为潜在值。",
+          "pick": "你的选择",
+          "winner": "最终赢家",
+          "winnerValue": "获胜结果: {outcome}",
+          "pendingWinner": "等待官方赛果",
+          "stake": "本金",
+          "return": "返还",
+          "potentialReturn": "潜在返还",
+          "netResult": "净结果",
+          "potentialProfit": "潜在利润",
+          "pool": "池"
+        },
+        "facts": {
+          "title": "票据证明",
+          "summaryHint": "高级",
+          "description": "这些哈希绑定了票据、赔率快照、规则书和下注交易。默认折叠，因为上方收据才是主要玩家视图。",
+          "ticketId": "票据 ID",
+          "marketId": "市场 ID",
+          "positionId": "Position ID",
+          "acceptedAt": "接受时间",
+          "player": "玩家",
+          "ticketState": "票据状态",
+          "oddsSnapshotHash": "赔率快照",
+          "rulebookHash": "规则书",
+          "placeTx": "下注交易"
+        },
+        "lifecycle": {
+          "eyebrow": "票据生命周期",
+          "held": {
+            "title": "等待官方赛果",
+            "description": "票据已在链上接受。市场赛果完成最终确认后即可结算。"
+          },
+          "finalityPending": {
+            "title": "赛果已提议",
+            "description": "官方赛果已提交。挑战窗口关闭后才能开放结算。",
+            "detail": "最终确认目标时间: {time}"
+          },
+          "resultReady": {
+            "title": "赛果最终确认已到期",
+            "description": "赛果证明已经存在，但市场还没有进入 resolved 状态。"
+          },
+          "settleReady": {
+            "title": "可以结算",
+            "description": "市场已 resolved。任何人都可以结算这张 held 票据并释放最终赔付。"
+          },
+          "refundReady": {
+            "title": "可以退款",
+            "description": "市场已作废。这张票据可以退回原始本金。"
+          },
+          "settled": {
+            "title": "票据已结算",
+            "description": "SportsHub 已终结该票据，并释放最终赔付路径。"
+          },
+          "refunded": {
+            "title": "本金已退款",
+            "description": "作废/退款路径已退回原始本金。"
+          },
+          "voided": {
+            "title": "票据已作废",
+            "description": "市场已作废，该票据已通过 void 路径终结。"
+          }
+        },
+        "actions": {
+          "openMarket": "打开市场",
+          "ops": "在运营台检查",
+          "settle": "结算票据",
+          "settling": "结算中…",
+          "refund": "退回本金",
+          "refunding": "退款中…",
+          "settleTrace": "结算交易轨迹",
+          "refundTrace": "退款交易轨迹",
+          "traceSubtitle": "钱包交易状态",
+          "status": "状态",
+          "viewExplorer": "查看浏览器",
+          "resetTrace": "重置轨迹",
+          "transactionError": "交易失败"
+        },
+        "flows": {
+          "preflight": "预检查",
+          "confirm": "确认收据",
+          "receipt": "等待交易收据。",
+          "settle": {
+            "submit": "结算票据",
+            "preflight": "确认票据仍为 held，且市场已 resolved。",
+            "broadcast": "广播 SportsHub.settleTicket。"
+          },
+          "refund": {
+            "submit": "退回本金",
+            "preflight": "确认票据仍为 held，且市场已 voided。",
+            "broadcast": "广播 SportsHub.refundTicket。"
+          }
+        },
+        "toast": {
+          "settled": "票据结算已确认。",
+          "settleFailed": "票据结算失败。",
+          "refunded": "票据退款已确认。",
+          "refundFailed": "票据退款失败。"
+        }
+      }
+    },
+    "components": {
+      "na": "N/A",
+      "lookup": {
+        "inspect": "检查"
+      },
+      "marketInspector": {
+        "title": "市场 {marketId}",
+        "stateLine": "{state} / 池 {poolId}",
+        "resultStatus": {
+          "none": "未提议赛果",
+          "proposed": "赛果已提议"
+        },
+        "rows": {
+          "event": "赛事",
+          "outcomeCount": "结果数量",
+          "startsAt": "开始时间",
+          "locksAt": "锁定时间",
+          "version": "版本",
+          "marketReserved": "市场保留",
+          "marketKey": "市场 key",
+          "rulebook": "规则书",
+          "result": "赛果",
+          "winningOutcome": "获胜结果"
+        }
+      },
+      "ticketInspector": {
+        "title": "票据 {ticketId}",
+        "stateLine": "{state} / 市场 {marketId}",
+        "rows": {
+          "position": "仓位",
+          "event": "赛事",
+          "pool": "资金池",
+          "outcome": "结果",
+          "player": "玩家",
+          "stake": "本金",
+          "payout": "赔付",
+          "reserved": "保留",
+          "acceptedAt": "接受时间",
+          "oddsSnapshot": "赔率快照"
+        }
+      },
+      "marketTape": {
+        "loading": "正在加载最近 SportsHub 市场...",
+        "empty": "当前 release 还没有创建 SportsHub 市场。",
+        "columns": {
+          "market": "市场",
+          "starts": "开始",
+          "reserved": "保留",
+          "result": "赛果",
+          "actions": "操作"
+        },
+        "marketTitle": "市场 {marketId}",
+        "event": "赛事 {eventId}",
+        "pool": "池 {poolId}",
+        "outcomes": "{count} 个结果",
+        "locks": "锁定 {time}",
+        "result": {
+          "none": "无赛果",
+          "challenged": "已挑战",
+          "outcome": "结果 {outcomeId}"
+        },
+        "actions": {
+          "open": "打开",
+          "load": "载入"
+        }
+      },
+      "playerMarkets": {
+        "loading": "正在加载足球市场...",
+        "empty": "当前 release 暂无开放的足球市场。",
+        "title": "足球 1X2",
+        "matchup": "{home} vs {away}",
+        "marketId": "市场 {marketId}",
+        "starts": "开始 {time}",
+        "outcome": "选项",
+        "openTicket": "打开投注单",
+        "viewMarket": "查看市场",
+        "openHelper": "打开市场后先获取实时签名赔率，再提交票据。",
+        "liveOddsHelper": "实时赔率来自 {bookmaker}。点击赔率可打开投注单。",
+        "providerUnavailable": "暂时无法读取实时 provider 赔率。仍可打开市场后重试。",
+        "closedHelper": "该市场已不再接受出票。",
+        "result": "赛果已提议：{outcome}"
+      },
+      "riskRows": {
+        "maxStake": "最大本金",
+        "maxPayout": "最大赔付",
+        "marketReserved": "市场保留",
+        "outcomeReserved": "结果保留",
+        "eventReserved": "赛事保留",
+        "riskHash": "风险哈希"
+      },
+      "poolPanel": {
+        "title": "资金池 {poolId}",
+        "domainLine": "{domain} / domain {domainId}",
+        "defaultDomain": "Sports",
+        "active": "启用",
+        "paused": "暂停",
+        "bank": "Bank",
+        "asset": "资产",
+        "units": "单位",
+        "rawUnits": "raw / {decimals} 位小数",
+        "riskTitle": "资金池风险上限"
+      }
+    },
+    "detail": {
+      "noRelease": {
+        "title": "未加载 release",
+        "description": "内嵌 release 快照不可用。",
+        "status": "不可用"
+      },
+      "back": "返回体育投注",
+      "return": "返回体育投注",
+      "marketDetailPill": "市场详情",
+      "title": "足球 1X2",
+      "description": "选择主胜、平局或客胜，并在市场开放时提交签名固定赔率票据。",
+      "invalid": {
+        "eyebrow": "无效路由",
+        "title": "无效市场 ID",
+        "description": "SportsHub 市场路由需要数字 market id。"
+      },
+      "readFailed": {
+        "eyebrow": "读取失败",
+        "title": "市场读回失败",
+        "description": "SDK 无法从当前 release 的 SportsHub 读取该市场。",
+        "marketNotFound": "当前 SportsHub 还不存在这个市场。请返回体育投注页，打开列表中的市场。"
+      },
+      "loading": {
+        "eyebrow": "读回",
+        "title": "正在加载市场",
+        "description": "正在通过 v1.3 SDK 读取市场、赛果和敞口记录。",
+        "body": "正在加载 SportsHub 市场状态..."
+      },
+      "market": {
+        "eyebrow": "市场",
+        "title": "生命周期与赛果",
+        "description": "市场状态直接从 SportsHub 读取。有 reporter 提议后，会显示赛果状态。"
+      },
+      "playerMarket": {
+        "eyebrow": "比赛市场",
+        "title": "主胜 / 平局 / 客胜",
+        "matchup": "{home} vs {away}",
+        "description": "公开页面只保留玩家决策：选择结果、获取实时赔率、提交票据。",
+        "providerDescription": "实时 1X2 赔率来自 {bookmaker}。点击赔率会预选投注单。",
+        "marketId": "市场 {marketId}",
+        "outcome": "结果",
+        "winner": "获胜结果",
+        "startsAt": "开始",
+        "locksAt": "出票锁定",
+        "providerUnavailable": "当前市场暂时无法读取实时 provider 赔率。可在投注单里重试。",
+        "resultReady": "Reporter 赛果已可用：{outcome}。结算仍受挑战窗口约束。",
+        "resultPending": "尚未上报最终赛果。票据仍可在链上审计。"
+      },
+      "advanced": {
+        "summary": "高级链上证明与结算工具"
+      },
+      "exposure": {
+        "eyebrow": "敞口",
+        "title": "保留资本",
+        "description": "这些值是运维用于验证市场、结果、赛事和池-赛事上限的链上敞口读回。",
+        "marketReserved": "市场保留",
+        "eventReserved": "赛事保留",
+        "poolEventReserved": "池-赛事保留",
+        "outcomeCount": "结果数量",
+        "outcomeExposure": "结果敞口",
+        "outcome": "结果 {outcomeId}"
+      },
+      "ticketPlacement": {
+        "eyebrow": "投注单",
+        "title": "提交票据",
+        "description": "选择一边、输入金额、锁定实时固定赔率，然后出票。",
+        "marketMustBeOpen": "市场必须处于 open 状态才能出票。",
+        "walletAndSnapshotRequired": "连接钱包后，先锁定实时赔率再出票。"
+      },
+      "ticketTerminal": {
+        "eyebrow": "票据终结",
+        "title": "结算、退款或作废票据",
+        "description": "债务退出调用仍需要钱包，并通过 SportsHub 终结 helper 执行。广播前先检查票据，确认状态和赔付路径。",
+        "walletRequired": "需要连接钱包才能广播票据终结调用。"
+      },
+      "noMarket": {
+        "eyebrow": "读回",
+        "title": "没有市场数据",
+        "description": "当前 SportsHub 没有返回这个 id 对应的市场。"
+      }
+    },
+    "ticketPlacement": {
+      "fields": {
+        "providerEventId": "Provider 赛事 ID",
+        "bookmakerKey": "Bookmaker key",
+        "sportKey": "Sport key",
+        "outcomeId": "结果 ID",
+        "stake": "本金",
+        "stakeRawUnits": "本金 raw units",
+        "oddsWad": "赔率 WAD",
+        "maxStake": "最大本金",
+        "maxPayout": "最大赔付",
+        "expiresAt": "过期时间",
+        "nonce": "Nonce",
+        "riskHash": "风险哈希",
+        "signature": "签名",
+        "oddsSignature": "赔率签名",
+        "stakeWithSymbol": "投注金额（{symbol}）"
+      },
+      "placeholders": {
+        "optional": "可选",
+        "unixSeconds": "Unix 秒"
+      },
+      "validation": {
+        "positiveInteger": "{label} 必须是正整数。",
+        "positiveAmount": "{label} 必须是正数金额。",
+        "greaterThanZero": "{label} 必须大于 0。",
+        "decimals": "{label} 最多支持 {decimals} 位小数。",
+        "integer": "{label} 必须是整数。",
+        "outcomeNonNegative": "结果 ID 必须是非负整数。",
+        "outcomeTooLarge": "结果 ID 过大。",
+        "outcomeRange": "结果 ID 必须在 0 到 {max} 之间。",
+        "hex": "{label} 必须是 0x 前缀 hex。",
+        "exactBytes": "{label} 必须是 {bytes} bytes。"
+      },
+      "status": {
+        "noPlan": "尚未创建票据计划。",
+        "planning": "正在规划票据...",
+        "planReadyApproval": "计划已就绪：需要授权。",
+        "planReady": "计划已就绪。",
+        "planningFailed": "规划失败。",
+        "ticketPlanningFailed": "票据规划失败。",
+        "fetchingProviderOdds": "正在获取 provider 赔率...",
+        "providerOddsRequestFailed": "Provider 赔率请求失败。",
+        "providerOddsFailed": "Provider 赔率失败。",
+        "signedOddsReady": "签名赔率已就绪：{outcome} @ {price}。",
+        "providerOddsReadyToast": "签名赔率快照已就绪",
+        "submittingTicket": "正在提交票据...",
+        "planUnavailable": "票据计划不可用。",
+        "ticketPlacementFailed": "出票失败。",
+        "ticketFailed": "票据失败。",
+        "ticketSubmittedWithId": "票据 {ticketId} 已提交。",
+        "ticketSubmitted": "票据已提交。",
+        "ticketSubmittedToast": "票据已提交"
+      },
+      "summary": {
+        "gate": "Gate",
+        "locked": "锁定",
+        "enabled": "启用",
+        "gateHelper": "连接钱包并锁定实时赔率。",
+        "market": "市场",
+        "marketHelper": "池 {poolId}，{outcomeCount} 个结果",
+        "status": "状态",
+        "lastTx": "上一笔交易"
+      },
+      "actions": {
+        "fetchSignedOdds": "获取实时赔率",
+        "refreshOdds": "刷新赔率",
+        "planTicket": "查看交易计划",
+        "placeTicket": "出票"
+      },
+      "walletRequired": "连接钱包后才能出票。",
+      "hints": {
+        "enterStake": "输入投注金额后再请求实时签名赔率。",
+        "getLiveOdds": "先获取实时赔率。只有锁定签名价格后才能出票。",
+        "readyToPlace": "赔率已锁定。确认后即可出票。"
+      },
+      "sections": {
+        "selection": "选择结果",
+        "selectionHelper": "选择结果并输入金额，然后锁定实时签名赔率。",
+        "advanced": "链上赔率证明",
+        "ticketPreview": "票据预览"
+      },
+      "outcomes": {
+        "option": "选项 {outcomeId}",
+        "home": "主胜",
+        "draw": "平局",
+        "away": "客胜",
+        "generic": "结果 {outcomeId}",
+        "price": "{price}x"
+      },
+      "preview": {
+        "selection": "选择",
+        "provider": "{sport} / {bookmaker}",
+        "needsOdds": "获取实时赔率后会锁定签名价格。",
+        "price": "赔率",
+        "priceHelper": "Provider decimal odds",
+        "publicPriceHelper": "展示中的 provider 赔率。出票前需要先锁定价格。",
+        "payout": "预计赔付",
+        "payoutHelper": "该结果获胜时的 gross payout",
+        "priceLocked": "实时赔率已锁定。广播前仍会再次校验签名。",
+        "priceNotLocked": "尚未锁定实时赔率。请求签名报价前，赔率可能变化。"
+      },
+      "plan": {
+        "approval": "授权",
+        "required": "需要",
+        "notRequired": "不需要",
+        "approveAmount": "授权 {amount}",
+        "allowance": "Allowance {amount}",
+        "oddsTicketHash": "赔率票据哈希",
+        "planState": "计划状态",
+        "advancedHelper": "这是给高级用户的可选检查。普通玩家可以直接获取实时赔率并出票。",
+        "empty": "先获取实时赔率。签名快照会在广播前校验，过期或未签名赔率会被拒绝。"
+      }
+    },
+    "ticketTerminal": {
+      "validation": {
+        "oneTicket": "请输入至少一个票据 ID。",
+        "numeric": "票据 ID 必须是数字。",
+        "positive": "票据 ID 必须为正数。"
+      },
+      "status": {
+        "noAction": "尚未提交票据操作。",
+        "actionFailed": "{label} 失败。",
+        "actionSubmitted": "{label} 已提交"
+      },
+      "actions": {
+        "settleTickets": "结算票据",
+        "refundTickets": "退款票据",
+        "voidTickets": "作废票据",
+        "inspectTicket": "检查票据",
+        "settle": "结算",
+        "refund": "退款",
+        "void": "作废"
+      },
+      "summary": {
+        "wallet": "钱包",
+        "connected": "已连接",
+        "required": "需要",
+        "walletHelper": "票据终结调用是公开的，但仍需要钱包广播。",
+        "lastAction": "上一操作",
+        "lastTx": "上一笔交易"
+      },
+      "form": {
+        "ticketIds": "票据 ID"
+      },
+      "loading": "正在加载 SportsHub 票据...",
+      "empty": "先检查票据，以便在广播债务退出前确认仓位 ID、本金、赔付和终结状态。"
+    },
+    "operator": {
+      "validation": {
+        "positiveInteger": "{label} 必须是正整数。",
+        "bytes32": "{label} 必须是 32-byte hex 值。"
+      },
+      "status": {
+        "noTransaction": "尚未提交运营交易。",
+        "failed": "{label} 失败。",
+        "submitted": "{label} 已提交",
+        "sdkUnavailable": "SDK 不可用。"
+      },
+      "summary": {
+        "writeStatus": "写入状态",
+        "walletConnected": "钱包已连接",
+        "walletRequired": "需要钱包",
+        "rolesHelper": "合约角色由 SportsHub 在链上强制执行。",
+        "lastAction": "上一操作",
+        "lastTx": "上一笔交易",
+        "readOnly": "只读",
+        "writable": "可写",
+        "noWallet": "未连接钱包"
+      },
+      "create": {
+        "title": "创建固定赔率市场"
+      },
+      "lifecycle": {
+        "title": "生命周期与赛果"
+      },
+      "fields": {
+        "eventId": "赛事 ID",
+        "poolId": "资金池 ID",
+        "outcomeCount": "结果数量",
+        "outcomes": "结果数",
+        "startsAt": "开始时间",
+        "startsAtUnix": "开始时间 unix",
+        "lockTime": "锁定时间",
+        "lockTimeUnix": "锁定时间 unix",
+        "resultFinality": "赛果 finality",
+        "finalitySeconds": "Finality 秒",
+        "marketKey": "市场 key",
+        "rulebookHash": "规则书哈希",
+        "marketId": "市场 ID",
+        "targetMarketId": "目标市场 ID",
+        "winningOutcome": "获胜结果",
+        "resultSourceHash": "赛果来源哈希",
+        "evidenceHash": "证据哈希",
+        "observedAt": "观察时间",
+        "observedAtUnix": "观察时间 unix",
+        "challengeReasonHash": "挑战原因哈希",
+        "decisionHash": "决策哈希",
+        "arbitrationDecisionHash": "仲裁决策哈希",
+        "voidReasonHash": "作废原因哈希"
+      },
+      "actions": {
+        "createMarket": "创建市场",
+        "openMarket": "打开市场",
+        "lockMarket": "锁定市场",
+        "proposeResult": "提议赛果",
+        "finalizeResult": "最终确认赛果",
+        "challengeResult": "挑战赛果",
+        "resolveChallenge": "处理挑战",
+        "voidMarket": "作废市场"
+      },
+      "buttons": {
+        "open": "打开",
+        "lock": "锁定",
+        "proposeResult": "提议赛果",
+        "finalize": "最终确认",
+        "challenge": "挑战",
+        "uphold": "维持",
+        "reopen": "重开",
+        "voidChallenged": "作废被挑战市场",
+        "void": "作废"
+      }
+    }
+  },
+  "opsSportsbook": {
+    "eyebrow": "体育投注控制台",
+    "title": "Sportsbook 运营",
+    "description": "查看 SportsHub 市场与票据、风险上限，并执行裁定/仲裁写入。公开下注入口在 /sportsbook。",
+    "noRelease": {
+      "title": "未加载发布",
+      "description": "嵌入的发布快照不可用。",
+      "status": "不可用"
+    },
+    "flags": {
+      "enabled": "下注开放",
+      "readonly": "仅预览",
+      "present": "SportsHub 已部署",
+      "missing": "SportsHub 缺失",
+      "notes": "运营控制台始终可用；公开页是否暴露下注由 sportsbook 标志位决定。"
+    },
+    "counters": {
+      "nextMarket": "下一 market id",
+      "nextTicket": "下一 ticket id",
+      "challengeWindow": "申诉窗口",
+      "challengeWindowHelper": "来自发布的赛果申诉超时。",
+      "runtimeReadFailed": "SportsHub 运行时读取失败"
+    },
+    "release": {
+      "eyebrow": "发布",
+      "title": "锚点与合约地址",
+      "description": "当前发布的赔率签名身份、赛果裁定者集合与合约地址。",
+      "releaseField": "发布",
+      "sportsHub": "SportsHub",
+      "riskEngine": "风险引擎",
+      "oddsSignerSet": "赔率签名集",
+      "resultReporterSet": "赛果裁定集",
+      "frontendFlag": "前端标志",
+      "booleanTrue": "true",
+      "booleanFalse": "false"
+    },
+    "caps": {
+      "eyebrow": "上限",
+      "title": "SportsHub 顶层上限",
+      "description": "来自嵌入发布的原始单位上限，应与运营备忘对齐。",
+      "riskTitle": "SportsHub 全局风险上限"
+    },
+    "lookup": {
+      "marketEyebrow": "市场查询",
+      "marketTitle": "查询市场",
+      "marketDescription": "按 id 查看市场状态、赛果与已预留敞口。",
+      "marketLabel": "市场 id",
+      "marketEmpty": "输入 SportsHub 市场 id 以查看状态、赛果与预留敞口。",
+      "marketNumericError": "请输入数字市场 id。",
+      "ticketEyebrow": "票据查询",
+      "ticketTitle": "查询票据",
+      "ticketDescription": "按 id 查看票据头寸、本金、赔付与终态。",
+      "ticketLabel": "票据 id",
+      "ticketEmpty": "输入 SportsHub 票据 id 以查看头寸、本金、赔付与状态。",
+      "ticketNumericError": "请输入数字票据 id。"
+    },
+    "operator": {
+      "eyebrow": "运营写入",
+      "title": "市场与赛果管理",
+      "description": "通过 SDK 暴露的类型化写入。合约角色仍会拦截每一次写入。",
+      "walletRoleRequired": "钱包角色必须已在 SportsHub 上授权。"
+    },
+    "bankroll": {
+      "eyebrow": "资金池",
+      "title": "体育池隔离",
+      "description": "体育流动性与赌场流动性隔离，敞口、暂停可独立管理。",
+      "noPool": "该发布未提供体育池元数据。"
+    },
+    "controls": {
+      "eyebrow": "控制项",
+      "title": "上线阻塞项",
+      "description": "仍然阻塞公开上线的运营文档链接。",
+      "links": {
+        "goNoGo": "Go/no-go 包",
+        "frontendAccess": "前端访问策略",
+        "providerPolicy": "Provider 策略"
+      }
+    }
+  },
+  "portfolio": {
+    "overview": {
+      "common": {
+        "asset": "资产",
+        "pending": "待读取",
+        "walletRequired": "需要连接钱包",
+        "unknown": "未知",
+        "unconnected": "未连接",
+        "unlimited": "无限额度",
+        "connectWalletInspect": "连接钱包后才能查看账户状态。"
+      },
+      "state": {
+        "noRelease": {
+          "title": "账户组合",
+          "description": "当前链没有内嵌 release。"
+        }
+      },
+      "hero": {
+        "eyebrow": "账户注册表",
+        "title": "钱包档案。",
+        "description": "在当前 active release 语境下查看钱包余额、Bank 仓位、退款 credit 和本地执行历史。",
+        "connectedAccount": "已连接账户"
+      },
+      "metrics": {
+        "walletBalance": {
+          "label": "钱包余额",
+          "detail": "active release 资产集中的可用余额。"
+        },
+        "bankPosition": {
+          "label": "Bank 仓位",
+          "detail": "已连接钱包 Bank 份额对应的资产等价值。"
+        },
+        "refundCredit": {
+          "label": "退款 credit",
+          "detail": "计入钱包、可追回的 VRF 余额。"
+        }
+      },
+      "alerts": {
+        "readOnly": {
+          "title": "只读会话",
+          "message": "写入已禁用。"
+        },
+        "assetQueryFailed": "资产查询失败",
+        "refundQueryFailed": "退款查询失败"
+      },
+      "links": {
+        "openBankConsole": "打开 Bank 控制台"
+      },
+      "context": {
+        "title": "执行上下文",
+        "session": "会话",
+        "readOnly": "只读",
+        "writable": "可写",
+        "network": "网络",
+        "digest": "摘要"
+      },
+      "identity": {
+        "eyebrow": "档案",
+        "title": "玩家身份",
+        "playerLabel": "玩家标签",
+        "placeholder": "输入标签",
+        "saved": "已保存到本地",
+        "saving": "正在保存到本地",
+        "walletAddress": "钱包地址",
+        "copyWalletAddress": "复制钱包地址"
+      },
+      "positions": {
+        "eyebrow": "账本",
+        "title": "资产仓位",
+        "loading": "正在加载余额。",
+        "shares": "{amount} 份额",
+        "columns": {
+          "asset": "资产",
+          "wallet": "钱包",
+          "bankPosition": "Bank 仓位",
+          "allowance": "授权额度"
+        }
+      },
+      "refund": {
+        "title": "VRF 退款 credit",
+        "connectWallet": "连接钱包后才能查看并领取可追回的 VRF credit。",
+        "readOnly": "当前 release 禁用了写入。",
+        "claiming": "领取中",
+        "claim": "领取 credit",
+        "flow": {
+          "preflight": "预检查",
+          "submit": "提交领取",
+          "confirm": "链上确认",
+          "preflightDetail": "校验退款 credit。",
+          "submitDetail": "广播 claimRefundCredit。",
+          "confirmDetail": "等待交易回执。"
+        }
+      },
+      "trace": {
+        "waiting": "等待退款领取意图。",
+        "error": "交易错误",
+        "title": "退款领取追踪",
+        "subtitle": "钱包签名、广播和回执状态。",
+        "status": "状态",
+        "viewExplorer": "查看浏览器",
+        "block": "区块 {blockNumber}",
+        "reset": "重置追踪"
+      },
+      "journal": {
+        "eyebrow": "日志",
+        "title": "交易日志",
+        "columns": {
+          "action": "操作",
+          "status": "状态"
+        },
+        "empty": "当前浏览器会话还没有账户交易。"
+      },
+      "toast": {
+        "labelSaved": "玩家标签已保存到本地。",
+        "clipboardUnavailable": "当前浏览器不可用剪贴板。",
+        "walletCopied": "钱包地址已复制",
+        "walletCopyFailed": "复制钱包地址失败",
+        "refundClaimed": "退款 credit 已领取",
+        "refundClaimFailed": "退款领取失败"
+      }
+    },
+    "activity": {
+      "common": {
+        "pending": "待读取",
+        "unknownGame": "未知游戏",
+        "asset": "资产",
+        "sportsbook": "体育投注"
+      },
+      "time": {
+        "justNow": "刚刚",
+        "minutesAgo": "{minutes} 分钟前",
+        "hoursAgo": "{hours} 小时前",
+        "daysAgo": "{days} 天前"
+      },
+      "hero": {
+        "eyebrow": "活动账本",
+        "title": "投注活动。",
+        "description": "查看已索引票据、结算状态和资金结果，同时把详情操作留在详情页处理。",
+        "summary": "账本摘要",
+        "session": "浏览器会话索引"
+      },
+      "metrics": {
+        "indexed": {
+          "label": "已索引票据",
+          "connected": "合并共享缓存（{serverRows}）和本地重放（{localRows}）的记录。",
+          "disconnected": "连接钱包后加载账户范围内的票据。"
+        },
+        "open": {
+          "label": "未关闭票据",
+          "detail": "已下注或 VRF 已就绪、仍需关闭的票据。"
+        },
+        "settled": {
+          "label": "已结算结果",
+          "detail": "已有最终胜、负、退款或失败状态的票据。"
+        }
+      },
+      "filters": {
+        "all": {
+          "label": "全部",
+          "detail": "所有已索引票据。"
+        },
+        "open": {
+          "label": "未关闭",
+          "detail": "已下注或等待 VRF。"
+        },
+        "won": {
+          "label": "获胜",
+          "detail": "正收益的已结算票据。"
+        },
+        "lost": {
+          "label": "未获胜",
+          "detail": "亏损、退款或失败状态。"
+        }
+      },
+      "ledger": {
+        "eyebrow": "票据",
+        "title": "赌场账本",
+        "loading": "正在同步账本。",
+        "empty": "当前筛选条件下没有票据。",
+        "view": "查看",
+        "columns": {
+          "ticket": "票据",
+          "module": "模块",
+          "stake": "本金",
+          "settlement": "结算",
+          "status": "状态",
+          "action": "操作"
+        },
+        "mobile": {
+          "stake": "本金",
+          "settlement": "结算",
+          "updated": "更新"
+        }
+      },
+      "status": {
+        "won": "获胜",
+        "closed": "已关闭",
+        "settled": "已结算",
+        "open": "未关闭"
+      },
+      "detail": {
+        "common": {
+          "empty": "—",
+          "ticketDetail": "票据详情"
+        },
+        "state": {
+          "won": "获胜",
+          "lost": "未获胜",
+          "randomReady": "随机数已就绪",
+          "placed": "已下注",
+          "refunded": "已退款",
+          "pending": "待读取",
+          "refreshing": "刷新中"
+        },
+        "hero": {
+          "back": "返回账本",
+          "eyebrow": "回执档案",
+          "title": "{gameLabel} 回执。",
+          "description": "本金、生命周期证明、结算事实和可执行协议操作都归集在同一个可审计票据页面。",
+          "ticketContext": "票据上下文",
+          "settlementState": "结算状态"
+        },
+        "flows": {
+          "preflight": "预检查",
+          "confirm": "链上确认",
+          "receipt": "等待回执和日志对账。",
+          "refund": {
+            "submit": "提交退款",
+            "preflight": "校验退款资格并模拟 GameHub 调用。",
+            "broadcast": "通过钱包客户端广播退款。"
+          },
+          "finalize": {
+            "submit": "提交结算",
+            "preflight": "校验结算资格并模拟 GameHub 调用。",
+            "broadcast": "通过钱包客户端广播 finalize。"
+          }
+        },
+        "toast": {
+          "refunded": "投注已成功退款",
+          "refundFailed": "退款交易失败",
+          "finalized": "投注已成功结算",
+          "finalizeFailed": "结算交易失败"
+        },
+        "outcomes": {
+          "refunded": "已退款",
+          "netResult": "净结果",
+          "loss": "亏损"
+        },
+        "metrics": {
+          "settlementState": {
+            "label": "结算状态",
+            "detail": "来自本地和链上来源的当前生命周期状态。"
+          },
+          "capitalAtRisk": {
+            "label": "风险本金",
+            "detail": "票据下注时锁定的原始本金。"
+          },
+          "settlement": {
+            "label": "结算",
+            "realized": "已在链上实现的结果。",
+            "pending": "结果尚未结算。"
+          },
+          "receiptId": {
+            "label": "回执 ID",
+            "detail": "运行时和索引器追踪共用的稳定标识。"
+          }
+        },
+        "facts": {
+          "room": "房间",
+          "ticketId": "票据 ID",
+          "stake": "本金",
+          "vrfFeePaid": "已付 VRF 费用",
+          "vrfFeeCharged": "已计费 VRF 费用",
+          "vrfRequestId": "VRF 请求 ID",
+          "randomHash": "随机哈希",
+          "payout": "赔付",
+          "protocolFee": "协议费用",
+          "refund": "退款",
+          "placedAt": "下注时间",
+          "vrfRequestedAt": "VRF 请求时间",
+          "settledAt": "结算时间",
+          "primaryTx": "主交易",
+          "player": "玩家"
+        },
+        "factsSection": {
+          "eyebrow": "执行事实",
+          "title": "回执矩阵"
+        },
+        "copy": {
+          "title": "复制 {value}",
+          "copy": "复制",
+          "copied": "已复制",
+          "failed": "失败"
+        },
+        "lifecycle": {
+          "eyebrow": "生命周期证明",
+          "title": "GameHub 状态",
+          "stepperTitle": "票据生命周期",
+          "stepperSubtitle": "下注、随机数和结算都保持可独立检查。",
+          "releaseDigest": "Release 摘要",
+          "asset": "资产",
+          "latestIndexedEvent": "最新索引事件",
+          "steps": {
+            "placed": {
+              "title": "已下注",
+              "description": "GameHub 接受票据并锁定本金。"
+            },
+            "randomReady": {
+              "title": "随机数已就绪",
+              "description": "VRF 已交付用于结算的随机数。"
+            },
+            "finalized": {
+              "title": "已结算",
+              "description": "GameHub 已结算赔付或亏损。"
+            },
+            "refunded": {
+              "title": "已退款",
+              "description": "本金已返还给玩家。"
+            }
+          }
+        },
+        "actions": {
+          "eyebrow": "协议操作",
+          "refundSurface": "退款入口",
+          "finalizeSurface": "结算入口",
+          "description": "只有 GameHub 状态允许时才显示操作。执行追踪始终附着在这张回执上。",
+          "finalizing": "结算中...",
+          "finalizeTicket": "结算票据",
+          "refunding": "退款中...",
+          "refundStake": "退回本金",
+          "transactionError": "交易错误",
+          "refundTrace": "退款追踪",
+          "finalizeTrace": "结算追踪",
+          "traceSubtitle": "钱包签名、广播和回执状态。",
+          "status": "状态",
+          "viewExplorer": "查看浏览器",
+          "block": "区块 {blockNumber}",
+          "resetTrace": "重置追踪"
+        },
+        "timeline": {
+          "eyebrow": "时间线",
+          "title": "已索引生命周期事件",
+          "columns": {
+            "timeTx": "时间 / 交易",
+            "event": "事件",
+            "block": "区块",
+            "status": "状态"
+          },
+          "mobile": {
+            "time": "时间"
+          },
+          "empty": "还没有已索引生命周期事件。"
+        }
+      }
+    },
+    "claims": {
+      "common": {
+        "pending": "待读取",
+        "walletRequired": "需要连接钱包"
+      },
+      "state": {
+        "noRelease": {
+          "title": "领取",
+          "description": "当前链没有内嵌 release。"
+        }
+      },
+      "errors": {
+        "walletUnavailable": "钱包不可用",
+        "poolUnavailable": "资金池不可用",
+        "bankUnavailable": "Bank 不可用",
+        "positiveAmount": "金额必须大于 0。"
+      },
+      "hero": {
+        "eyebrow": "领取金库",
+        "title": "奖励与协议领取。",
+        "description": "检查 XP 桶、同步 holdback 状态，并执行领取交易，不用营销化余额遮住待处理负债。",
+        "connectedPayee": "已连接收款方"
+      },
+      "metrics": {
+        "accrued": {
+          "label": "已累积",
+          "detail": "可直接领取的 XP。"
+        },
+        "holdback": {
+          "label": "Holdback",
+          "detail": "等待释放的缓冲区。"
+        },
+        "protocolFees": {
+          "label": "协议费用",
+          "detail": "治理领取入口。"
+        }
+      },
+      "buckets": {
+        "title": "XP 桶账本",
+        "syncing": "同步中",
+        "readModel": "读取模型",
+        "cards": {
+          "accrued": {
+            "label": "已累积",
+            "detail": "当前计入收款方、可领取的 XP。"
+          },
+          "locked": {
+            "label": "已锁定",
+            "detail": "提取前需要满足解锁条件的 XP。"
+          },
+          "holdback": {
+            "label": "Holdback",
+            "detail": "等待 holdback 同步的缓冲区。"
+          },
+          "releasable": {
+            "label": "可释放",
+            "detail": "按协议规则当前可释放的 holdback 数量。"
+          },
+          "protocolFees": {
+            "label": "协议费用",
+            "detail": "外部应付款 {externalPayables}"
+          },
+          "bank": {
+            "label": "Bank 引用",
+            "detail": "已预留 {reserved} · 资产 {assets}"
+          }
+        }
+      },
+      "actions": {
+        "eyebrow": "执行",
+        "title": "领取交易控制台",
+        "connectWallet": "连接钱包后才能执行领取操作。",
+        "readOnly": "当前 release 禁用了写入。",
+        "max": "最大 {amount}",
+        "holdbackPending": "待同步 Holdback",
+        "holdbackDetail": "同步会基于当前链上 holdback 状态更新 XP 账本。",
+        "tabs": {
+          "claim": {
+            "label": "领取 XP",
+            "detail": "将已累积 XP 提取到你的钱包。"
+          },
+          "sync": {
+            "label": "同步",
+            "detail": "把可释放 holdback 移入当前 XP 账本。"
+          },
+          "fees": {
+            "label": "费用",
+            "detail": "仅治理可用的协议费用领取入口。"
+          }
+        },
+        "amounts": {
+          "claim": "领取金额",
+          "fees": "费用金额"
+        },
+        "submit": {
+          "executing": "执行中",
+          "claim": "领取 XP",
+          "sync": "同步 holdback",
+          "fees": "领取协议费用"
+        },
+        "trace": {
+          "claim": "领取追踪",
+          "sync": "Holdback 同步追踪",
+          "fees": "费用领取追踪"
+        }
+      },
+      "flows": {
+        "preflight": "预检查",
+        "submitClaim": "提交领取",
+        "submitSync": "提交同步",
+        "confirm": "链上确认",
+        "receipt": "等待交易回执。",
+        "claim": {
+          "preflight": "模拟领取调用。",
+          "submit": "广播 claimXPAccrued。"
+        },
+        "sync": {
+          "preflight": "校验同步操作。",
+          "submit": "广播 syncXPHoldback。"
+        },
+        "fees": {
+          "preflight": "校验治理调用。",
+          "submit": "广播 claimProtocolFees。"
+        }
+      },
+      "trace": {
+        "waiting": "等待领取意图。",
+        "error": "交易错误",
+        "subtitle": "钱包签名、广播和回执状态。",
+        "status": "状态",
+        "viewExplorer": "查看浏览器",
+        "block": "区块 {blockNumber}",
+        "reset": "重置追踪"
+      },
+      "journal": {
+        "eyebrow": "日志",
+        "title": "本次会话领取活动",
+        "columns": {
+          "hash": "哈希",
+          "action": "操作",
+          "amount": "金额",
+          "status": "状态"
+        },
+        "empty": "当前浏览器会话还没有领取交易。",
+        "actions": {
+          "claimXP": "领取 XP",
+          "syncHoldback": "同步 holdback",
+          "claimFees": "领取费用"
+        }
+      },
+      "toast": {
+        "claimedXP": "已领取 {amount} {symbol}",
+        "xpClaimFailed": "XP 领取失败",
+        "holdbackSynced": "Holdback 已同步",
+        "syncHoldbackFailed": "Holdback 同步失败",
+        "claimedFees": "已领取 {amount} {symbol} 协议费用",
+        "protocolFeeFailed": "协议费用领取失败"
+      }
+    },
+    "referral": {
+      "common": {
+        "pending": "待处理",
+        "notConnected": "未连接"
+      },
+      "state": {
+        "noRelease": {
+          "title": "推广",
+          "description": "当前链没有内嵌 release。"
+        }
+      },
+      "errors": {
+        "walletUnavailable": "钱包不可用",
+        "poolUnavailable": "资金池不可用"
+      },
+      "hero": {
+        "eyebrow": "推广账户",
+        "title": "推广奖励。",
+        "description": "生成赌场推广链接，查看不可变的 first-touch 绑定，并检查由 Bank 账本结算的 XP 奖励桶。",
+        "connected": "钱包"
+      },
+      "link": {
+        "title": "你的推广链接",
+        "description": "分享这个链接给玩家。玩家下注时，GameHub 会把 affiliate hint 传入 first-touch 绑定和 skyline pricing。",
+        "learn": "模型",
+        "connect": "连接钱包以生成推广链接。",
+        "copy": "复制链接",
+        "copied": "已复制"
+      },
+      "metrics": {
+        "accrued": {
+          "label": "已累积",
+          "detail": "当前可从 Bank 账本领取的 XP。"
+        },
+        "locked": {
+          "label": "锁定",
+          "detail": "满足解锁条件前不能提取的 XP。"
+        },
+        "holdback": {
+          "label": "Holdback",
+          "detail": "同步后可能变为可释放的奖励缓冲。"
+        }
+      },
+      "activity": {
+        "title": "推广投注",
+        "description": "通过持久投注索引追踪带有你 affiliate 地址的赌场投注。",
+        "loading": "正在加载推广投注...",
+        "empty": "还没有索引到推广投注。",
+        "stats": {
+          "bets": "投注数",
+          "turnover": "流水",
+          "settled": "已结算"
+        }
+      },
+      "binding": {
+        "eyebrow": "First touch",
+        "title": "绑定状态",
+        "description": "玩家只能绑定一次。如果当前页面带有有效 ref 参数，且尚未绑定 referrer，钱包可以显式完成绑定。",
+        "current": "当前",
+        "pending": "待绑定",
+        "none": "未绑定",
+        "noPending": "无待绑定 ref",
+        "bind": "绑定 referrer",
+        "binding": "绑定中",
+        "claims": "打开领取"
+      },
+      "toast": {
+        "bound": "Referrer 已绑定",
+        "bindFailed": "Referrer 绑定失败"
+      }
+    }
+  },
+  "earn": {
+    "state": {
+      "noRelease": {
+        "title": "赚取收益",
+        "description": "当前链没有内嵌 release。"
+      }
+    },
+    "errors": {
+      "sdkUnavailable": "SDK 不可用",
+      "poolUnavailable": "资金池不可用",
+      "unsupportedWriteAsset": "写入流程需要所选资产存在 active casino pool。",
+      "positiveAmount": "金额必须大于 0。",
+      "primaryAssetOnly": "当前写入流程仅支持主资产。"
+    },
+    "format": {
+      "assetFallback": "资产"
+    },
+    "hero": {
+      "eyebrow": "Bank 储备",
+      "title": "{symbol} Bankroll 控制台。",
+      "description": "围绕协议 Bank 执行存入、取出和赎回，沿用赌场票据相同的 release 锚定结算模型。展示储备事实之前，不展示任何营销化 APY。",
+      "bankAddress": "Bank 地址"
+    },
+    "metrics": {
+      "freeReserve": {
+        "label": "可用储备",
+        "detail": "未被未结算负债占用的资产。"
+      },
+      "totalAssets": {
+        "label": "总资产",
+        "detail": "来自协议读取的当前 Bank 资产。"
+      },
+      "minLiquidity": {
+        "label": "最低流动性",
+        "detail": "取款前必须保留的配置下限。"
+      }
+    },
+    "summary": {
+      "capitalPosture": {
+        "title": "资本状态",
+        "readModel": "读取模型",
+        "totalAssets": "总资产",
+        "loading": "正在从所选 release 同步 Bank 快照。",
+        "detail": "图表仅展示资金姿态。数值真相来自下方 Bank 快照。"
+      },
+      "position": {
+        "label": "你的仓位",
+        "detail": "已连接钱包对应的资产等价值。"
+      },
+      "liquidity": {
+        "label": "流动性策略",
+        "detail": "下限 {floor} · Bank {bank}"
+      },
+      "reserved": {
+        "label": "已预留负债",
+        "detail": "可用储备 {freeReserve} · 最低流动性 {minLiquidity}"
+      }
+    },
+    "actions": {
+      "eyebrow": "LP 操作",
+      "title": "Bank 交易控制台",
+      "asset": "资产",
+      "amount": "金额",
+      "connectWallet": "连接钱包后才能执行 Bank 操作。",
+      "readOnly": "当前 release 禁用了写入。",
+      "tabs": {
+        "deposit": {
+          "label": "存入",
+          "description": "向 Bank 提供资产。"
+        },
+        "withdraw": {
+          "label": "取出",
+          "description": "取出可用资产。"
+        },
+        "redeem": {
+          "label": "赎回",
+          "description": "将 Bank 份额赎回为资产。"
+        }
+      },
+      "max": {
+        "walletBalance": "钱包余额",
+        "pending": "最大值读取中",
+        "value": "最大 {amount}"
+      },
+      "submit": {
+        "executing": "执行中",
+        "deposit": "存入资产",
+        "withdraw": "取出资产",
+        "redeem": "赎回份额"
+      },
+      "trace": {
+        "deposit": "存入追踪",
+        "withdraw": "取出追踪",
+        "redeem": "赎回追踪"
+      }
+    },
+    "flows": {
+      "preflight": {
+        "title": "预检查"
+      },
+      "deposit": {
+        "preflight": "校验输入并模拟流程。",
+        "approveTitle": "授权 Bank",
+        "approveDescription": "设置 ERC20 allowance。",
+        "depositTitle": "存入资产",
+        "depositDescription": "广播 Bank.deposit。"
+      },
+      "direct": {
+        "submit": "提交",
+        "confirm": "确认",
+        "validate": "校验约束。",
+        "receipt": "等待交易回执。"
+      },
+      "withdraw": {
+        "submit": "广播 Bank.withdraw。"
+      },
+      "redeem": {
+        "submit": "广播 Bank.redeem。"
+      }
+    },
+    "trace": {
+      "waiting": "等待交易意图。",
+      "error": "交易错误",
+      "subtitle": "钱包签名、广播和回执状态。",
+      "status": "状态",
+      "viewExplorer": "查看浏览器",
+      "block": "区块 {blockNumber}",
+      "reset": "重置追踪"
+    },
+    "risk": {
+      "custody": {
+        "label": "托管边界",
+        "title": "Bank 优先，营销其次。",
+        "detail": "LP 页面先暴露已预留负债和可用储备，再谈任何收益叙事。"
+      },
+      "release": {
+        "label": "Release 摘要",
+        "detail": "资产身份、Bank 地址和 UI 读取都锚定到当前 active release manifest。"
+      },
+      "protocolFees": {
+        "label": "协议费用",
+        "detail": "外部应付款 {externalPayables} · 资产 {assets}"
+      }
+    },
+    "toast": {
+      "processing": "正在处理 Bank 交易...",
+      "redeemed": "已赎回 {amount} 份额",
+      "deposited": "已存入 {amount} {symbol}",
+      "withdrew": "已取出 {amount} {symbol}",
+      "failed": "交易失败"
+    },
+    "units": {
+      "shares": "份额",
+      "sharesLower": "份额"
+    }
+  },
+  "ops": {
+    "hero": {
+      "eyebrow": "运维证明",
+      "title": "Release 与 Worker 脉搏。",
+      "description": "在一个紧凑的运营界面里核验 release 身份、索引器健康和 worker 新鲜度，不把生产控制混进玩家页面。",
+      "summaryLabel": "运行时摘要",
+      "summaryDescription": "本地浏览器索引会话"
+    },
+    "metrics": {
+      "releaseDigest": {
+        "label": "Release 摘要",
+        "detail": "当前前端正在提供的规范 bundle。"
+      },
+      "indexerLag": {
+        "label": "索引器延迟",
+        "healthyWindow": "健康窗口：{count} 个确认。",
+        "unavailable": "确认窗口不可用。"
+      },
+      "safeHead": {
+        "label": "安全头",
+        "detail": "房间界面使用的 worker 确认事件边界。"
+      },
+      "workerState": {
+        "label": "Worker 状态",
+        "polling": "每 {seconds}s 轮询一次。",
+        "unavailable": "Worker 轮询配置不可用。"
+      },
+      "keeperState": {
+        "label": "Keeper 状态"
+      }
+    },
+    "releaseRows": {
+      "network": "网络",
+      "chainId": "链 ID",
+      "releaseDigest": "Release 摘要",
+      "gameHub": "GameHub",
+      "vrfHub": "VRFHub",
+      "poolRegistry": "PoolRegistry",
+      "primaryBank": "主 Bank",
+      "manifest": "Manifest"
+    },
+    "workerRows": {
+      "health": {
+        "label": "健康",
+        "currentLag": "当前延迟 {count} 个区块。",
+        "unavailable": "延迟数据不可用。"
+      },
+      "confirmations": {
+        "label": "确认数",
+        "detail": "UI 反映已结算状态前使用的最终性窗口。"
+      },
+      "rewindWindow": {
+        "label": "回放窗口",
+        "detail": "用于从临时漏扫中恢复的回放缓冲。"
+      },
+      "batchSize": {
+        "label": "批大小",
+        "detail": "每轮扫描处理的最大事件切片。"
+      },
+      "latestBlock": {
+        "label": "最新区块",
+        "detail": "Worker public client 观察到的最新区块。"
+      },
+      "lastError": {
+        "label": "最近错误",
+        "none": "无",
+        "detail": "运行时 provider 暴露的最近 worker 错误。"
+      },
+      "casinoKeeper": {
+        "label": "赌场 Keeper"
+      },
+      "keeperRole": {
+        "label": "Keeper 角色",
+        "detail": "EOA {eoa}，链 {chainId}。",
+        "unavailable": "快照不可用。"
+      },
+      "keeperQueue": {
+        "label": "Keeper 队列",
+        "lastScannedBlock": "最近扫描区块 {block}。",
+        "unavailable": "扫描游标不可用。"
+      },
+      "lastKeeperSuccess": {
+        "label": "最近 Keeper 成功",
+        "detail": "投注 {betId}；tx {tx}；{latencyMs}ms。",
+        "none": "当前快照里没有 keeper finalize 成功记录。"
+      },
+      "lastKeeperFailure": {
+        "label": "最近 Keeper 失败",
+        "none": "快照里没有 keeper 失败记录。"
+      }
+    },
+    "releasePanel": {
+      "eyebrow": "Release bundle",
+      "title": "规范 release 证明",
+      "description": "前端当前呈现的精确链、合约和 manifest 界面。",
+      "sync": "同步索引器",
+      "refresh": "刷新"
+    },
+    "workerPanel": {
+      "eyebrow": "Worker 健康",
+      "title": "运维焦点",
+      "description": "房间界面依赖健康的索引器和 keeper。这些摘要在漂移影响玩家视图前先暴露出来。"
+    },
+    "eventTrail": {
+      "eyebrow": "Worker 事件轨迹",
+      "title": "近期运维回执",
+      "description": "紧凑展示 worker 与 release 事实的表格：对运营足够精确，对审计也足够可读。",
+      "headers": {
+        "timeBlock": "时间 / 区块",
+        "event": "事件",
+        "status": "状态",
+        "context": "上下文",
+        "flow": "流"
+      },
+      "flowLabel": "实时",
+      "mobileBlockLabel": "区块"
+    },
+    "status": {
+      "running": "运行中",
+      "stopped": "已停止",
+      "completed": "已完成",
+      "paused": "已暂停",
+      "locked": "已锁定"
+    },
+    "health": {
+      "unknown": "未知",
+      "healthy": "健康",
+      "behind": "滞后",
+      "stalled": "停滞"
+    },
+    "keeperHealth": {
+      "unavailable": "不可用",
+      "unavailableDefault": "尚未发布 keeper 健康快照。",
+      "stale": "过期",
+      "invalidTimestamp": "Keeper 快照时间戳无效。",
+      "staleAge": "Keeper 快照已过期 {seconds}s。",
+      "degraded": "降级",
+      "degradedDefault": "Keeper 报告降级状态。",
+      "stopped": "已停止",
+      "stoppedDetail": "Keeper 进程报告已停止。",
+      "starting": "启动中",
+      "startingDetail": "Keeper {role} 正在启动。",
+      "healthy": "健康",
+      "healthyDetail": "Keeper {role} 于 {seconds}s 前更新。"
+    },
+    "trail": {
+      "recent": "最近",
+      "live": "实时",
+      "release": "Release",
+      "events": {
+        "indexerSweep": "索引器扫描",
+        "safeHeadAdvance": "安全头推进",
+        "casinoKeeper": "赌场 Keeper",
+        "releaseIdentity": "Release 身份"
+      },
+      "context": {
+        "eventsPerSweep": "每轮 {count} 个事件",
+        "awaitingWorkerConfig": "等待 worker 配置",
+        "lagBlocks": "延迟 {count} 个区块",
+        "lagUnknown": "延迟未知",
+        "embeddedRelease": "内置 release"
+      }
+    },
+    "units": {
+      "blocks": "{count} 个区块",
+      "events": "{count} 个事件",
+      "pending": "{count} 待处理"
+    }
+  },
+  "marketing": {
+    "errors": {
+      "recentBetsFailed": "最近活动加载失败"
+    },
+    "format": {
+      "syncing": "同步中",
+      "awaitingReserveSync": "等待储备同步",
+      "pending": "等待中",
+      "walletPending": "钱包待确认",
+      "assetFallback": "资产",
+      "roomFallback": "房间",
+      "placedFallback": "已下注"
+    },
+    "timeAgo": {
+      "now": "刚刚",
+      "seconds": "{count}s 前",
+      "minutes": "{count}m 前",
+      "hours": "{count}h 前",
+      "days": "{count}d 前"
+    },
+    "hero": {
+      "channel": "Base Sepolia release 通道",
+      "title": "ArbiGameFi",
+      "description": "面向透明 Bank、可验证随机数和自动结算的链上赌场轨道。首屏就是产品界面，不是承诺型展示页。",
+      "enterCasino": "进入赌场",
+      "viewBank": "查看 Bank",
+      "consoleLabel": "协议控制台",
+      "live": "实时",
+      "metrics": {
+        "freeReserve": "可用储备",
+        "bankAssets": "Bank 资产",
+        "rooms": "房间"
+      },
+      "proofRows": {
+        "vrf": {
+          "title": "VRF 结算路径",
+          "detail": "随机数、票据和派奖事件都可从 release 元数据审计。"
+        },
+        "bytecode": {
+          "title": "字节码锚定 release",
+          "detail": "前端展示从 SSOT release 读取合约地址和游戏元数据。"
+        }
+      }
+    },
+    "stats": {
+      "freeReserve": {
+        "label": "可用储备",
+        "detail": "扣除已保留负债后的可读 Bank 容量。"
+      },
+      "bankAssets": {
+        "label": "Bank 资产",
+        "detail": "从 release 关联的 Bank 快照聚合。"
+      },
+      "release": {
+        "label": "Release",
+        "detail": "前端状态锚定到 release manifest。"
+      }
+    },
+    "rooms": {
+      "eyebrow": "赌场房间",
+      "title": "八个一次性 RNG 游戏，一条结算轨道。",
+      "detail": "每个房间映射到 release 定义的模块。UI 可以变化，但游戏身份、参数和派奖路径都锚定到 SSOT release。",
+      "actionLabel": "打开目录"
+    },
+    "roomCards": {
+      "dice": {
+        "title": "骰子",
+        "badge": "精密房间",
+        "summary": "设置上限、确定票据规模，然后进入快速骰子房间。",
+        "facts": {
+          "0": "快速票据",
+          "1": "实时结算",
+          "2": "单一资产"
+        }
+      },
+      "coinToss": {
+        "title": "抛硬币",
+        "badge": "二元房间",
+        "summary": "Heads 或 Tails，使用最干净的房间入口。",
+        "facts": {
+          "0": "快速进入",
+          "1": "二元玩法",
+          "2": "单一结果"
+        }
+      },
+      "roulette": {
+        "title": "轮盘",
+        "badge": "欧式桌台",
+        "summary": "进入标准欧式轮盘桌：真实桌面、清晰票据、可读票据复核。",
+        "facts": {
+          "0": "0-36 桌台",
+          "1": "清晰票据",
+          "2": "标准下注"
+        }
+      },
+      "keno": {
+        "title": "Keno",
+        "badge": "矩阵房间",
+        "summary": "选择棋盘、确定票据规模，并让开奖保持在房间中心。",
+        "facts": {
+          "0": "棋盘优先",
+          "1": "实时开奖",
+          "2": "重复游玩"
+        }
+      },
+      "plinko": {
+        "title": "Plinko",
+        "badge": "弹珠板",
+        "summary": "选择风险档位，落入桶位后由链上随机数揭示结果。",
+        "facts": {
+          "0": "风险档位",
+          "1": "桶位揭示",
+          "2": "快速复玩"
+        }
+      },
+      "slots": {
+        "title": "Slots",
+        "badge": "转轮房间",
+        "summary": "三符号转轮，倍率清晰，最终结果带链上凭证。",
+        "facts": {
+          "0": "3 个转轮",
+          "1": "符号可见",
+          "2": "凭证回执"
+        }
+      },
+      "baccarat": {
+        "title": "百家乐",
+        "badge": "桌台房间",
+        "summary": "选择闲、庄或和，VRF 返回后直接查看开牌结果。",
+        "facts": {
+          "0": "开牌可见",
+          "1": "闲庄和",
+          "2": "最终回执"
+        }
+      },
+      "sic-bo": {
+        "title": "骰宝",
+        "badge": "三骰桌台",
+        "summary": "选择桌面投注，掷出三颗骰子，并查看总点数、围骰和赔付。",
+        "facts": {
+          "0": "3 颗骰子",
+          "1": "总点投注",
+          "2": "开骰结果"
+        }
+      }
+    },
+    "bank": {
+      "eyebrow": "Bank 储备",
+      "title": "先展示储备账本，再谈营销收益。",
+      "description": "Bank 余额和已保留负债都来自协议读取。页面不会编造 APY，也不会用促销数字遮住待履约义务。",
+      "freeReserve": "可用储备",
+      "totalBankAssets": "Bank 总资产",
+      "releaseDigest": "Release 摘要",
+      "inspectBank": "检查 Bank"
+    },
+    "activity": {
+      "eyebrow": "协议活动",
+      "title": "最新已索引票据",
+      "viewAll": "查看全部",
+      "headers": {
+        "player": "玩家",
+        "room": "房间",
+        "state": "状态",
+        "age": "时间"
+      },
+      "empty": "当前浏览器会话还没有已索引票据。"
+    },
+    "proof": {
+      "traceLabel": "settlement_trace.sol",
+      "proofSurface": "只读证明界面",
+      "eyebrow": "信任模型",
+      "title": "透明结算轨道。",
+      "description": "托管、游戏模块和随机数是彼此分离的界面。这让 UI 可以重写，而不扰动协议正确性。",
+      "actionLabel": "查看证明票据"
+    }
+  },
+  "legal": {
+    "navAria": "法律页面",
+    "keyPoints": "要点",
+    "nav": {
+      "terms": "条款",
+      "privacy": "隐私",
+      "disclaimer": "风险免责声明"
+    },
+    "pages": {
+      "terms": {
+        "eyebrow": "法律",
+        "title": "服务条款",
+        "description": "这些条款约束对 ArbiGameFi 前端及其钱包原生界面的访问，包括游戏房间、Bank 页面、推广界面和运维证明视图。",
+        "highlights": {
+          "0": "前端是访问公开链上系统的界面。",
+          "1": "用户仍需自行负责钱包托管、交易复核、gas 和本地合规。",
+          "2": "可用性可能取决于 RPC provider、索引器、预言机流程、钱包和智能合约。"
+        },
+        "sections": {
+          "0": {
+            "title": "前端使用",
+            "body": "ArbiGameFi 前端提供钱包原生的链上游戏房间和 Bank 界面访问。访问前端并不免除用户在签名前复核交易内容、报价费用、网络状况和被调用合约的责任。"
+          },
+          "1": {
+            "title": "钱包与执行",
+            "body": "用户自行保管钱包和私钥。ArbiGameFi 不托管钱包，不能恢复私钥，也不能逆转已经由相关网络确认的交易。"
+          },
+          "2": {
+            "title": "协议与房间风险",
+            "body": "实时房间依赖智能合约、随机数或预言机 provider、索引器、RPC 基础设施和第三方钱包 provider。任一层都可能影响服务可用性和结果可见性。"
+          },
+          "3": {
+            "title": "非普遍可用",
+            "body": "前端不一定在所有司法辖区、网络条件、浏览器环境或 release 通道中可用。用户需要自行判断其所在地是否允许访问或参与。"
+          }
+        }
+      },
+      "privacy": {
+        "eyebrow": "法律",
+        "title": "隐私政策",
+        "description": "ArbiGameFi 围绕公开链执行构建。本政策说明除链上已经公开的钱包和交易数据外，前端可能处理的有限数据。",
+        "highlights": {
+          "0": "钱包地址和交易哈希在链上已经公开时，可能会被前端展示。",
+          "1": "产品分析和性能遥测可能用于提升可靠性和可用性。",
+          "2": "钱包连接器、RPC provider、索引器和预言机集成可能处理请求元数据。"
+        },
+        "sections": {
+          "0": {
+            "title": "公开区块链数据",
+            "body": "钱包地址、交易哈希、投注状态、结算结果和 Bank 活动可能出现在公开房间 feed 中，因为这些数据本就已在链上可见。"
+          },
+          "1": {
+            "title": "前端分析",
+            "body": "前端可能收集产品分析、性能指标和交互信号，用于改善房间布局、引导流程、运维可见性和 release 质量。"
+          },
+          "2": {
+            "title": "第三方服务",
+            "body": "钱包连接器、RPC provider、索引器、分析服务和预言机集成可能在正常运行中处理请求元数据。它们自己的条款和隐私规则也适用。"
+          },
+          "3": {
+            "title": "数据最小化",
+            "body": "产品应避免收集私钥、助记词、不必要的个人标识符，或与产品可靠性、反欺诈、法律合规无关的原始钱包活动。"
+          }
+        }
+      },
+      "disclaimer": {
+        "eyebrow": "风险提示",
+        "title": "风险免责声明",
+        "description": "ArbiGameFi 提供链上游戏和 Bank 参与界面。与这些系统交互涉及金融、法律和技术风险。",
+        "highlights": {
+          "0": "智能合约、随机数 provider、索引器、RPC endpoint 和钱包客户端都可能失败或滞后。",
+          "1": "Bank 参与受储备使用、负债记账和协议特定退出规则影响。",
+          "2": "用户需要自行判断其所在地是否允许参与。"
+        },
+        "sections": {
+          "0": {
+            "title": "协议风险",
+            "body": "智能合约漏洞、预言机中断、最终性延迟、索引器滞后、钱包客户端失败或网络拥堵，都可能影响用户体验或暂时影响房间可见性。"
+          },
+          "1": {
+            "title": "市场与流动性风险",
+            "body": "Bank 参与受储备使用、负债记账和协议特定退出规则影响。存入、提取和赎回的可用性可能随房间活动变化。"
+          },
+          "2": {
+            "title": "结果与结算风险",
+            "body": "赌场房间和体育投注市场可能依赖随机数或外部事实。当 provider 滞后、发生争议或网络条件阻止及时交易确认时，结算可能延迟。"
+          },
+          "3": {
+            "title": "司法辖区与合规",
+            "body": "用户必须自行判断是否可以在其司法辖区使用前端、参与房间、参与体育市场或 LP 活动。"
+          }
+        }
+      }
+    }
+  },
+  "affiliate": {
+    "hero": {
+      "eyebrow": "推广增长",
+      "title": "分享赌场，证明留在链上。",
+      "description": "ArbiGameFi 使用 first-touch 推广绑定和 Bank 侧 XP 桶，让推广奖励绑定真实的钱包原生投注，而不是表格对账。",
+      "primary": "打开骰子",
+      "secondary": "推广控制台"
+    },
+    "linkCard": {
+      "eyebrow": "推广链接",
+      "title": "一个链接进入房间",
+      "connect": "连接钱包以生成你的推广链接。",
+      "copy": "复制链接",
+      "copied": "已复制",
+      "wallet": "钱包 {wallet}",
+      "walletPending": "钱包未连接"
+    },
+    "pillars": {
+      "firstTouch": {
+        "title": "First-touch 绑定",
+        "body": "有效 referral hint 会随赌场下注传入。一旦绑定，关系不可变。"
+      },
+      "xp": {
+        "title": "XP 桶",
+        "body": "奖励以已累积、锁定和 holdback 余额显示在当前 Bank 账本上。"
+      },
+      "chain": {
+        "title": "可审计结算",
+        "body": "推广价值绑定链上玩法、赔付和领取状态，而不是站外报表。"
+      }
+    },
+    "flow": {
+      "eyebrow": "工作方式",
+      "title": "面向 B2C 分发。",
+      "body": "MVP 增长路径保持简单：分享房间、绑定玩家，然后由 Bank 账本展示可领取奖励。",
+      "steps": {
+        "0": {
+          "title": "分享",
+          "body": "用你的钱包生成赌场链接，直接把玩家带到游戏房间。"
+        },
+        "1": {
+          "title": "绑定",
+          "body": "玩家下注时，GameHub 使用 ref hint 尝试完成 first-touch 绑定。"
+        },
+        "2": {
+          "title": "领取",
+          "body": "在账户组合中查看 XP 桶，并领取可用奖励。"
+        }
+      }
+    }
+  },
+  "nav": {
+    "account": "账户",
+    "affiliates": "推广",
+    "bets": "投注",
+    "casino": "赌场",
+    "claims": "领取",
+    "baccarat": "百家乐",
+    "coinToss": "抛硬币",
+    "dice": "骰子",
+    "games": "游戏",
+    "keno": "Keno",
+    "liquidity": "流动性",
+    "openRooms": "进入游戏",
+    "ops": "运维",
+    "plinko": "Plinko 弹珠盘",
+    "rooms": "游戏",
+    "roulette": "轮盘",
+    "sicBo": "骰宝",
+    "slots": "Slots 拉霸",
+    "sportsbook": "体育投注"
+  }
+}

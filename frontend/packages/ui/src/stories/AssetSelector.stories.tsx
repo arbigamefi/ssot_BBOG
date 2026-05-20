@@ -8,8 +8,8 @@ const meta: Meta<typeof AssetSelector> = {
   title: "Forms/AssetSelector",
   component: AssetSelector,
   parameters: {
-    layout: "centered",
-  },
+    layout: "centered"
+  }
 };
 
 export default meta;
@@ -21,14 +21,14 @@ const assets: AssetOption[] = [
     address: "0x0000000000000000000000000000000000000001",
     symbol: "USDC",
     decimals: 6,
-    label: "USDC",
+    label: "USDC"
   },
   {
     address: "0x0000000000000000000000000000000000000002",
     symbol: "WETH",
     decimals: 18,
-    label: "WETH",
-  },
+    label: "WETH"
+  }
 ];
 
 export const Default: Story = {
@@ -42,11 +42,13 @@ export const Default: Story = {
         </CardHeader>
         <CardContent>
           <AssetSelector assets={assets} value={value} onValueChange={setValue} showAddress />
-          <pre className="mt-4 rounded-md bg-muted p-3 text-xs">{JSON.stringify({ value }, null, 2)}</pre>
+          <pre className="mt-4 rounded-md bg-surface-2 p-3 text-xs text-fg-muted">
+            {JSON.stringify({ value }, null, 2)}
+          </pre>
         </CardContent>
       </Card>
     );
-  },
+  }
 };
 
 export const WithErrors: Story = {
@@ -69,5 +71,5 @@ export const WithErrors: Story = {
         </CardContent>
       </Card>
     );
-  },
+  }
 };

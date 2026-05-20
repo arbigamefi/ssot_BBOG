@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { deriveCasinoRoundPhase, formatNativeFee } from "./casino-round";
+import {
+  deriveCasinoRoundPhase,
+  formatNativeFee,
+  getCasinoRoundReadErrorMessage,
+  isBetNotFoundError,
+  shouldDeferCasinoRoundReadError
+} from "./casino-round";
 
 describe("casino round helpers", () => {
   it("derives live settlement phases from on-chain bet state", () => {
@@ -58,5 +64,52 @@ describe("casino round helpers", () => {
   it("formats native VRF fees without scientific notation", () => {
     expect(formatNativeFee(73_169_600_001_705n)).toBe("0.00007316 ETH");
     expect(formatNativeFee(undefined)).toBe("—");
+  });
+
+  it("maps chain read failures to product copy", () => {
+    const rawViemError = new Error(
+      'The contract function "getBet" reverted. Error: BetNotFound(uint256 positionId) (13)'
+    );
+
+    expect(isBetNotFoundError(rawViemError)).toBe(true);
+    expect(
+      getCasinoRoundReadErrorMessage({
+        error: rawViemError,
+        fallback: "Unable to read the live round state.",
+        betNotFoundFallback: "This round was not found on the current GameHub."
+      })
+    ).toBe("This round was not found on the current GameHub.");
+
+    expect(
+      getCasinoRoundReadErrorMessage({
+        error: new Error("network changed"),
+        fallback: "Unable to read the live round state.",
+        betNotFoundFallback: "This round was not found on the current GameHub."
+      })
+    ).toBe("Unable to read the live round state.");
+  });
+
+  it("defers early BetNotFound reads while RPC state catches up", () => {
+    const rawViemError = new Error(
+      'The contract function "getBet" reverted. Error: BetNotFound(uint256 positionId) (5)'
+    );
+
+    expect(
+      shouldDeferCasinoRoundReadError({
+        error: rawViemError,
+        startedAt: 10_000,
+        now: 20_000,
+        graceMs: 15_000
+      })
+    ).toBe(true);
+
+    expect(
+      shouldDeferCasinoRoundReadError({
+        error: rawViemError,
+        startedAt: 10_000,
+        now: 30_001,
+        graceMs: 15_000
+      })
+    ).toBe(false);
   });
 });

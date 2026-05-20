@@ -17,6 +17,7 @@
     "contracts:release-check": "make release-check",
     "frontend:install": "pnpm -C frontend install",
     "frontend:dev": "pnpm -C frontend dev",
+    "frontend:dev:with-keeper": "pnpm -C frontend dev:with-keeper",
     "frontend:build": "pnpm -C frontend build",
     "frontend:lint": "pnpm -C frontend lint",
     "frontend:typecheck": "pnpm -C frontend typecheck",

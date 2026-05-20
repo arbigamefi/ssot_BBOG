@@ -1,371 +1,179 @@
-# Frontend Rewrite Blueprint — Execution Playbook
+# Frontend Rewrite Blueprint — Slim Architecture Reference
 
 | Owner | Frontend Lead |
-| Status | Draft v2 — execution form, pending Gate A/B/C sign-off |
-| Last Updated | 2026-05-14 |
-| Depends on | `00-charter.md`, `10-design-tokens.md`, `11-component-library.md`, `03-information-architecture.md`, `04-page-blueprints.md`, the entire `../frontend/` Engineering SSOT |
-| Supersedes | the v1 monolithic Rewrite Blueprint (file contents re-distributed across numbered SSOT docs) |
+| Status | Active |
+| Last Updated | 2026-05-18 |
+| Depends on | `../strategy/fullstack-product-architecture.md`, `frontend-implementation-roadmap.md` |
+| Supersedes | historical gate-driven execution playbook |
 
-This is the **execution playbook** for the clean-room frontend rewrite. The
-constitutional and specification content lives in the numbered SSOT
-documents under [`./`](./) and [`../frontend/`](../frontend/). This file
-sequences the work, lists the cutover steps, the deletion ledger, and the
-quality gates between phases.
+This file is no longer a rewrite plan. The frontend cutover has already landed.
+This document now records the surviving architecture, runtime boundaries,
+cleanup principles, and verification commands.
 
-## 1. Non-Negotiables (from `00-charter.md §7`)
+For current sequencing, use
+[`frontend-implementation-roadmap.md`](./frontend-implementation-roadmap.md).
 
-| #   | Rule                                                                                                                   |
-| --- | ---------------------------------------------------------------------------------------------------------------------- |
-| N1  | Single design-token source ([ADR-0003](./adr/0003-single-design-token-source.md))                                      |
-| N2  | No per-game color family ([ADR-0001](./adr/0001-no-per-game-color-family.md))                                          |
-| N3  | One `AppShell` with variants                                                                                           |
-| N4  | No prototype routes in production App Router ([ADR-0002](./adr/0002-prototype-routes-out-of-production-app-router.md)) |
-| N5  | No hex literal in product UI                                                                                           |
-| N6  | No external decorative URLs                                                                                            |
-| N7  | No god `pageClient.tsx` over 600 lines                                                                                 |
-| N8  | Every CTA points to a real product route                                                                               |
-| N9  | wagmi / viem / RainbowKit only in approved paths                                                                       |
-| N10 | All txs simulate before signing                                                                                        |
+## 1. Fullstack Boundary
 
-CI enforces all 10. See [`../frontend/24-testing.md`](../frontend/24-testing.md) and
-[`../frontend/32-ai-pairing.md`](../frontend/32-ai-pairing.md).
+ArbiGameFi is a B2C casino/sportsbook product on a protocol-grade settlement
+kernel.
 
-## 2. Gates
+Frontend work must optimize for:
 
-| Gate             | Closes when                                                                        | What it unlocks            |
-| ---------------- | ---------------------------------------------------------------------------------- | -------------------------- |
-| **A — Identity** | Layer 0 + Layer 1 docs `Accepted` (Charter / Brand / Voice / IA / Page Blueprints) | UI design begins           |
-| **B — System**   | Layer 2 docs `Accepted` + `@ssot/ui` rebuilt + Storybook coverage met              | Page implementation begins |
-| **C — Quality**  | Layer 3 + Layer 4 docs `Accepted` + CI green + Sentry/RUM/analytics wired          | Public launch              |
+1. player conversion and clarity;
+2. LP and portfolio trust;
+3. keeper and settlement operations;
+4. multilingual launch;
+5. contract-release correctness.
 
-No phase below crosses a gate that has not closed. Until those gates are
-closed, this playbook is a Draft execution plan, not approval to rewrite
-production pages.
+It must not optimize for unvalidated white-label or third-party operator
+workflows.
 
-## 3. Target Physical Architecture
+## 2. Runtime Boundaries To Keep
+
+| Boundary                      | Keep because                                                                                                        |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `frontend/packages/ssot`      | Owns contract-facing release, SDK, encoding, and indexer helpers. It prevents UI code from guessing contract truth. |
+| `frontend/apps/keeper`        | Owns automatic casino finalization and health snapshots outside the browser runtime.                                |
+| `frontend/packages/bet-index` | Shared durable Postgres read-model used by both web API routes and keeper/backfill.                                 |
+| `frontend/apps/web`           | Owns the B2C product UI, API routes, i18n, and browser state.                                                       |
+| `frontend/packages/ui`        | Can be reconsidered later, but only after runtime correctness and i18n are stable.                                  |
+
+Do not collapse a boundary merely to reduce package count. Collapse only when
+there is one consumer and no runtime, release, or test seam.
+
+## 3. Current Product Route Shape
 
 ```text
-frontend/
-├── CLAUDE.md                                   # AI-pairing runtime rules
-├── packages/
-│   └── ui/
-│       └── src/
-│           ├── tokens/                          # 10-design-tokens.md realization
-│           │   ├── arbi-dark.css
-│           │   ├── arbi-light.css
-│           │   ├── tailwind-preset.ts
-│           │   └── VERSION.md
-│           ├── primitives/                      # 11-component-library.md §2
-│           ├── patterns/                        # 11-component-library.md §4
-│           ├── motion/                          # 12-motion.md §5
-│           ├── icons/                           # 01-brand.md §5
-│           ├── utils/
-│           ├── styles/globals.css
-│           └── index.ts
-├── apps/
-│   └── web/
-│       └── src/
-│           ├── app/
-│           │   ├── layout.tsx
-│           │   ├── global-error.tsx
-│           │   ├── error.tsx
-│           │   ├── (marketing)/
-│           │   │   └── page.tsx
-│           │   ├── (product)/
-│           │   │   ├── layout.tsx
-│           │   │   ├── casino/
-│           │   │   │   ├── page.tsx
-│           │   │   │   └── [slug]/page.tsx
-│           │   │   ├── sportsbook/
-│           │   │   │   ├── page.tsx
-│           │   │   │   └── [marketId]/page.tsx
-│           │   │   ├── portfolio/
-│           │   │   │   ├── page.tsx
-│           │   │   │   ├── activity/page.tsx
-│           │   │   │   └── claims/page.tsx
-│           │   │   ├── earn/page.tsx
-│           │   │   └── ops/page.tsx
-│           │   └── (legal)/
-│           │       └── legal/
-│           │           ├── privacy/page.tsx
-│           │           ├── terms/page.tsx
-│           │           └── disclaimer/page.tsx
-│           ├── app-shell/
-│           │   ├── ProductProviders.tsx
-│           │   ├── WalletProviderIsland.tsx
-│           │   ├── QueryProvider.tsx
-│           │   └── ThemeProvider.tsx
-│           ├── features/
-│           │   ├── casino/
-│           │   ├── sportsbook/
-│           │   ├── portfolio/
-│           │   ├── earn/
-│           │   ├── ops/
-│           │   └── _shared/
-│           ├── i18n/                             # 21-i18n.md
-│           ├── lib/
-│           │   ├── analytics/                    # 25-observability.md
-│           │   ├── format/
-│           │   ├── routes/
-│           │   ├── env/
-│           │   └── storage/
-│           ├── workers/
-│           ├── sandbox/                          # 02 (replaces the old /prototype routes)
-│           └── middleware.ts                    # ADR-0002 enforcement
-└── pnpm-workspace.yaml
+apps/web/src/app/
+├── (marketing)/page.tsx
+├── (product)/
+│   ├── casino/page.tsx
+│   ├── casino/[slug]/page.tsx
+│   ├── sportsbook/page.tsx
+│   ├── sportsbook/[marketId]/page.tsx
+│   ├── portfolio/page.tsx
+│   ├── portfolio/activity/page.tsx
+│   ├── portfolio/activity/[betId]/page.tsx
+│   ├── portfolio/claims/page.tsx
+│   ├── earn/page.tsx
+│   └── ops/page.tsx
+├── (legal)/legal/{privacy,terms,disclaimer}/page.tsx
+├── api/bets/recent/route.ts
+├── api/bets/player/[address]/route.ts
+├── api/sportsbook/odds-snapshot/route.ts
+└── ops/casino-keeper-health.json/route.ts
 ```
 
-## 4. Logical Layers
+Prototype routes and one-line compatibility pages should stay out of the
+production App Router.
 
-1. **Protocol layer** — `@ssot/ssot` (SDK, indexer, release).
-2. **Product data layer** — `apps/web/src/features/*/data` (TanStack Query hooks).
-3. **Product action layer** — `apps/web/src/features/*/actions` (tx flow hooks).
-4. **UI pattern layer** — `@ssot/ui/patterns`.
-5. **Page composition layer** — `apps/web/src/app/.../page.tsx`.
+## 4. Feature Boundaries
 
-Arrows flow downward. Pages never import wagmi/viem; patterns never
-import features; primitives never import patterns. See
-`docs/frontend/32-ai-pairing.md §5` for the boundary contract.
+| Feature               | Owns                                                                                                |
+| --------------------- | --------------------------------------------------------------------------------------------------- |
+| `features/casino`     | room UX, module stages, placeBet orchestration, round watcher, result receipt, casino audit ledger. |
+| `features/sportsbook` | market list/detail, odds snapshot request, ticket placement, result and challenge UI.               |
+| `features/portfolio`  | balances, player activity, bet detail, claims, player-scoped history.                               |
+| `features/earn`       | LP-facing bankroll and deposit/withdraw surfaces.                                                   |
+| `features/ops`        | keeper health, release status, operations surfaces.                                                 |
+| `server/betting`      | API read aggregation from durable index and chain fallback.                                         |
 
-## 5. Server / Client Boundary
+Pages compose features. Features may consume `@ssot/ssot`. Shared UI should not
+import feature code.
 
-Default: React Server Components.
+## 5. Product Rules That Survived The Rewrite
 
-Client Component required only for: wallet, IndexedDB, bigint form inputs,
-WebSocket subscriptions, animation, charts with browser APIs.
+- One design-token source.
+- No per-game brand color family.
+- No hard-coded product UI hex literals.
+- No production prototype routes.
+- No god `pageClient.tsx` files.
+- No raw RPC/viem/server errors as user-facing product copy.
+- All user transactions must simulate or plan before broadcast.
+- Result receipts must show chain-derived facts, not simulations as proof.
+- Normal casino path should be `approve? -> placeBet -> VRF -> keeper finalize
+-> result receipt` without asking the player to manually settle.
 
-Providers (wagmi, RainbowKit, React Query, theme) mount in the **product
-route group** (`(product)/layout.tsx`), not the root layout. Marketing
-and legal pages skip the wallet provider entirely.
+## 6. Deletion / Cleanup Rules
 
-## 6. Delivery Sequence
+Safe cleanup candidates:
 
-Each phase is a **shippable increment**. Do not start phase N+1 until
-phase N's quality gate passes.
+- one-consumer wrapper files;
+- historical compatibility files no longer referenced;
+- stale docs that duplicate accepted ADRs or the active roadmap;
+- UI helpers that only forward props without owning behavior.
 
-### Phase 0 — Gate A (Identity)
+Do not delete:
 
-- Land all Layer 0 + Layer 1 SSOT docs.
-- Produce hi-fi concepts for every primary route (desktop + mobile).
-- Land ADR-0001, ADR-0002, ADR-0003.
+- contract-release parsing;
+- golden-vector encoding tests;
+- keeper runtime and health route;
+- durable index schema/store code;
+- i18n/security/testing/release docs that are still launch requirements.
 
-Exit when: docs `Accepted`, ADRs `Accepted`, concept package approved.
+Every deletion should include `rg` evidence of zero production imports.
 
-### Phase 1 — Token + Primitive Rebuild (Gate B start)
+## 7. Standard Verification
 
-1. Implement `frontend/packages/ui/src/tokens/arbi-dark.css` + `arbi-light.css`.
-2. Rewrite `tailwind-preset.ts` to consume the variables.
-3. Rebuild primitives: Button, Input, NumberInput, Select, Tabs, Dialog,
-   Drawer, Popover, Tooltip, Table, Skeleton, Toast, Badge, StatusDot,
-   Progress, Alert, Separator.
-4. Storybook 100% primitive coverage.
-5. Visual regression baseline.
-
-Exit when: primitives shipped, stories passing axe, ADR-0003 acceptance
-criteria met.
-
-### Phase 2 — Pattern Build
-
-1. Implement patterns: AppShell, PageHeader, EmptyState, ErrorState,
-   WalletGate, ReleaseProof, StatBlock, StatStrip, LedgerTable, FilterBar,
-   CopyButton, AddressDisplay, AmountDisplay, TxStatusChip, TxStepper,
-   BetSlip, TicketSlip, RiskPanel, AnimatedNumber.
-2. Storybook ≥ 80% pattern coverage.
-3. Mobile stories per pattern.
-
-Exit when: patterns shipped, ≥ 80% Storybook coverage, visual baseline.
-
-### Phase 3 — Route Skeleton (Gate B close)
-
-1. Create `app/(marketing)`, `app/(product)`, `app/(legal)` route groups.
-2. Implement `<AppShell variant>` per route group layout.
-3. Wire `ProductProviders` island; ensure marketing has no wagmi bundle.
-4. Implement `middleware.ts` blocking `/prototype/*`.
-5. Add `apps/web/src/sandbox/` for design sandbox (ADR-0002).
-
-Exit when: bundle budgets per route met
-([`../frontend/22-performance.md §3`](../frontend/22-performance.md)),
-route map matches [`03-information-architecture.md §3`](./03-information-architecture.md).
-
-### Phase 4 — Marketing + Legal Pages
-
-1. Implement `/` from the new patterns.
-2. Implement `/legal/{privacy,terms,disclaimer}`.
-3. Real-data reserve ticker; no mockLiveFeed.
-4. Visual baseline and Lighthouse on home.
-
-Exit when: Lighthouse ≥ 95 mobile / 98 desktop on `/`, every CTA points to
-a live product route.
-
-### Phase 5 — Casino Vertical
-
-1. Implement `features/casino/` per
-   [`04-page-blueprints.md §3`](./04-page-blueprints.md):
-   - `data/useCasinoCatalog.ts`, `useCasinoBets.ts`
-   - `room/CasinoRoom.tsx`, `CasinoBetRail.tsx`, `CasinoLedger.tsx`
-   - `modules/registry.ts` + one module (Dice) end-to-end
-2. Ship `/casino`, `/casino/dice`.
-3. Add `/casino/cointoss`, `/casino/roulette`, `/casino/keno` by registering
-   modules; no new central code per game.
-4. Add `/casino/baccarat`, `/casino/plinko`, `/casino/sicbo`, `/casino/slots`
-   the same way (per `v1.3` contract additions).
-
-Exit when: all 8 games live, no `pageClient.tsx` over 600 lines, golden
-vectors equality green.
-
-### Phase 6 — Portfolio + Earn
-
-1. Implement `features/portfolio/` and `features/earn/`.
-2. Ship `/portfolio`, `/portfolio/activity`, `/portfolio/claims`, `/earn`.
-3. Wire claim flows for XP buckets + refundCredit.
-4. Wire LP deposit / withdraw with A4 check.
-
-Exit when: portfolio and earn surfaces complete; redirects from
-legacy routes live.
-
-### Phase 7 — Sportsbook Vertical
-
-1. Implement `features/sportsbook/` per
-   [`04-page-blueprints.md §4`](./04-page-blueprints.md).
-2. Ship `/sportsbook` (read-only initially; ticket placement behind ops gate).
-3. EIP-712 odds signature panel, challenge / arbitration states.
-
-Exit when: read flows live, ticket placement gated until ops approves,
-audit `NEW-H1` mitigation surfaced (see contract audit
-`docs/audit/FullAudit-2026-05.md`).
-
-### Phase 8 — Ops Rebuild
-
-1. Implement `/ops` per
-   [`04-page-blueprints.md §9`](./04-page-blueprints.md).
-2. Dense tables, severity strips, runbook links.
-
-Exit when: control-room surfaces ready for production operators.
-
-### Phase 9 — Deletion + Cutover (Gate C close)
-
-Run the deletion ledger (§7) end-to-end.
-
-Run the full quality matrix (§8). When all checks pass, launch.
-
-## 7. Deletion Ledger
-
-Run deletions in this order. Each row is one PR.
-
-| #   | What                                                                                                                                                                                                          | From                      | When safe                    |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | ---------------------------- |
-| D1  | `apps/web/src/app/prototype/**`                                                                                                                                                                               | App Router                | after Phase 3                |
-| D2  | All `*Shell*.tsx` competing layouts (`SiteChrome`, `AppShell`, `TrustShell`, `ImmersiveGameLayout`, `PrototypeGameLayout`, `RoomHud`, `LowerRoomTabs`, `HeroProofRibbon`, `TrustStatsStrip`, `ShellSwitcher`) | components                | after Phase 3                |
-| D3  | `frontend/packages/ui/src/themes/visual-system.ts`                                                                                                                                                            | `@ssot/ui`                | after Phase 1                |
-| D4  | `frontend/packages/ui/src/themes/brand-example.css`                                                                                                                                                           | `@ssot/ui`                | after Phase 1                |
-| D5  | `cyber-*` primitives (`cyber-button`, `cyber-input`, `cyber-table`, `cyber-header`, `cyber-icons`, `cyber-layout`, `cyber-slider`)                                                                            | `@ssot/ui/components/ui/` | after Phase 1                |
-| D6  | `app/games/[slug]/pageClient.tsx` (2030 LOC)                                                                                                                                                                  | App Router                | after Phase 5                |
-| D7  | Legacy `/dice`, `/cointoss`, `/roulette`, `/keno` page files                                                                                                                                                  | App Router                | after Phase 5 redirects land |
-| D8  | Legacy `/account`, `/bets`, `/claims`, `/referral` page files                                                                                                                                                 | App Router                | after Phase 6                |
-| D9  | Legacy `/invest`, `/liquidity` page files                                                                                                                                                                     | App Router                | after Phase 6                |
-| D10 | External texture URLs (`grainy-gradients.vercel.app`)                                                                                                                                                         | grep + replace            | after Phase 1                |
-
-Each deletion PR must include `rg` evidence (no remaining imports / usages).
-
-## 8. Quality Matrix (final pre-launch)
+Use this local gate for frontend changes:
 
 ```bash
-# Tokens
-rg -nE "bg-\\[#|text-\\[#|border-\\[#|shadow-\\[" frontend/apps/web/src frontend/packages/ui/src
-rg -nE "rounded-(2xl|3xl|\\[)" frontend/apps/web/src frontend/packages/ui/src
-rg -nE "transition-all|animate-(pulse|bounce|spin|ping)" frontend/apps/web/src
-rg -nE "from .*visual-system" frontend/
-rg -nE "--ag-" frontend/apps/web/src frontend/packages/ui/src
-
-# Routes
-test ! -d frontend/apps/web/src/app/prototype
-node scripts/check-route-blueprints.mjs
-
-# Imports
-rg -nE "from 'wagmi'|from 'viem'|from '@rainbow" frontend/apps/web/src \
-  | rg -v "app-shell/WalletProviderIsland|features/.*/data|features/.*/actions|@ssot/ui"
-
-# Game client size
-awk 'FNR==1{file=FILENAME} END{print FILENAME, NR}' frontend/apps/web/src/features/casino/room/*.tsx \
-  | awk '{ if ($2 > 600) print "FAIL: " $1 " has " $2 " lines"; }'
-
-# Tests, lint, types
-pnpm typecheck
-pnpm lint
-pnpm test
-pnpm test:contract
-
-# Storybook coverage
-node scripts/check-storybook-coverage.mjs
-
-# Lighthouse / a11y / bundle / e2e
-pnpm lighthouse:ci
-pnpm e2e
-pnpm e2e:a11y
-node scripts/check-bundle-budget.mjs
-
-# Security
-gitleaks detect
-pnpm audit --prod
-node scripts/check-csp-headers.mjs
-
-# Doc freshness
-node scripts/check-doc-freshness.mjs
+pnpm -C frontend/apps/web typecheck
+pnpm -C frontend/apps/web test
+pnpm -C frontend/apps/web build
+git diff --check
 ```
 
-All must return zero violations / pass.
+For changes that affect shared packages or keeper:
 
-## 9. Rollback
+```bash
+pnpm -C frontend typecheck
+pnpm -C frontend test
+pnpm -C frontend build
+```
 
-The frontend has no database migrations. Rollback is a Vercel deployment
-promotion: ≤ 5 minutes. Detailed steps in
-[`../frontend/30-build-and-release.md §7`](../frontend/30-build-and-release.md).
+After `pnpm -C frontend/apps/web build`, restore
+`frontend/apps/web/next-env.d.ts` to reference `.next-dev/types/routes.d.ts`
+before committing.
 
-## 10. Don'ts (carry-overs)
+## 8. Targeted Verification
 
-- Do not preserve historical component names "for compatibility" inside
-  the new app code. Redirects belong at the routing boundary, not in
-  components.
-- Do not run two App Shells in parallel "during transition". The cutover
-  happens in one PR.
-- Do not start Phase N+1 if Phase N's quality gate isn't green.
-- Do not delete a directory without rg-evidence of zero remaining imports.
-- Do not bundle a deletion PR with new feature work.
+Casino round:
 
-## 11. Where The v1 Content Went
+```bash
+pnpm -C frontend/apps/web test -- \
+  src/features/casino/room/casino-round.test.ts \
+  src/features/casino/room/resolution.test.ts \
+  src/app/\(product\)/casino/\[slug\]/pageClient.test.tsx
+```
 
-The v1 monolithic Blueprint (539 lines) discussed 15 topics. Their new
-homes:
+Keeper:
 
-| v1 §                            | Now lives in                                          |
-| ------------------------------- | ----------------------------------------------------- |
-| §1 Rewrite Thesis               | `00-charter.md §2` + this file §0                     |
-| §2 Non-Negotiables              | `00-charter.md §7` + this file §1                     |
-| §3 Physical Architecture        | this file §3                                          |
-| §4 Logical Architecture         | this file §4 + `14-data-and-state.md §1`              |
-| §5 Server/Client                | this file §5 + `14-data-and-state.md §2`              |
-| §6 Route & Product Model        | `03-information-architecture.md §3`                   |
-| §7 UI/UX Concept Package        | `04-page-blueprints.md`                               |
-| §8 Design System Build Order    | this file §6 (Phase 1-2)                              |
-| §9 Casino Rebuild               | this file §6 (Phase 5) + `04-page-blueprints.md §3`   |
-| §10 Sportsbook Rebuild          | this file §6 (Phase 7) + `04-page-blueprints.md §4`   |
-| §11 Portfolio & Earn Rebuild    | this file §6 (Phase 6) + `04-page-blueprints.md §5-8` |
-| §12 Ops Rebuild                 | this file §6 (Phase 8) + `04-page-blueprints.md §9`   |
-| §13 Deletion & Cutover          | this file §7                                          |
-| §14 Quality Gates               | this file §8 + `../frontend/24-testing.md`            |
-| §15 Suggested Delivery Sequence | this file §6                                          |
+```bash
+pnpm -C frontend/apps/keeper test
+pnpm -C frontend dev:with-keeper -- --port 3002
+```
 
-The v1 file is preserved in git history. This v2 replaces it; do not
-expand v2 with content that should live in a numbered SSOT doc.
+Bet index/API:
 
-## 12. References
+```bash
+pnpm -C frontend/apps/web test -- \
+  src/app/api/bets/recent/route.test.ts \
+  src/app/api/bets/player/\[address\]/route.test.ts \
+  src/server/betting/recent-bets.test.ts
+```
 
-- Charter [`00-charter.md`](./00-charter.md)
-- IA [`03-information-architecture.md`](./03-information-architecture.md)
-- Page Blueprints [`04-page-blueprints.md`](./04-page-blueprints.md)
-- Tokens [`10-design-tokens.md`](./10-design-tokens.md)
-- Components [`11-component-library.md`](./11-component-library.md)
-- Implementation Roadmap [`frontend-implementation-roadmap.md`](./frontend-implementation-roadmap.md)
-- ADRs [`adr/`](./adr/)
-- Engineering SSOT [`../frontend/INDEX.md`](../frontend/INDEX.md)
-- AI runtime rules [`../../frontend/CLAUDE.md`](../../frontend/CLAUDE.md)
+## 9. References
+
+- Strategy:
+  [`../strategy/fullstack-product-architecture.md`](../strategy/fullstack-product-architecture.md)
+- Current roadmap:
+  [`frontend-implementation-roadmap.md`](./frontend-implementation-roadmap.md)
+- Casino UX:
+  [`casino-placebet-ux.md`](./casino-placebet-ux.md)
+- Indexing:
+  [`indexing-strategy.md`](./indexing-strategy.md),
+  [`durable-bet-index.md`](./durable-bet-index.md)
+- Frontend release artifacts:
+  [`../frontend/README.md`](../frontend/README.md)

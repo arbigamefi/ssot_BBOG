@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useLocale, useTranslations } from "next-intl";
 
 import { PageTransition } from "../../../components/PageTransition";
 import { shortHex } from "../../../features/ops/format";
@@ -19,17 +20,48 @@ import { useKeeperHealth } from "../../../features/ops/useKeeperHealth";
 import { useRelease } from "../../../ssot/release/ReleaseProvider";
 
 export function OpsPageClient() {
+  const t = useTranslations("ops");
+  const locale = useLocale();
   const { release } = useRelease();
   const { indexerStatus, syncNow, refreshIndexerStatus } = useIndexer();
+  const keeperLabels = React.useMemo(
+    () => ({
+      unavailable: t("keeperHealth.unavailable"),
+      unavailableDefault: t("keeperHealth.unavailableDefault"),
+      stale: t("keeperHealth.stale"),
+      invalidTimestamp: t("keeperHealth.invalidTimestamp"),
+      staleAge: (seconds: number) => t("keeperHealth.staleAge", { seconds }),
+      degraded: t("keeperHealth.degraded"),
+      degradedDefault: t("keeperHealth.degradedDefault"),
+      stopped: t("keeperHealth.stopped"),
+      stoppedDetail: t("keeperHealth.stoppedDetail"),
+      starting: t("keeperHealth.starting"),
+      startingDetail: (role: string) => t("keeperHealth.startingDetail", { role }),
+      healthy: t("keeperHealth.healthy"),
+      healthyDetail: (role: string, seconds: number) =>
+        t("keeperHealth.healthyDetail", { role, seconds })
+    }),
+    [t]
+  );
   const {
     snapshot: keeperHealth,
     view: keeperHealthView,
     refresh: refreshKeeperHealth
-  } = useKeeperHealth();
+  } = useKeeperHealth(keeperLabels);
 
   const health = React.useMemo(
-    () => deriveHealth(indexerStatus?.lagBlocks, indexerStatus?.config?.confirmations),
-    [indexerStatus?.config?.confirmations, indexerStatus?.lagBlocks]
+    () =>
+      deriveHealth({
+        lag: indexerStatus?.lagBlocks,
+        confirmations: indexerStatus?.config?.confirmations,
+        labels: {
+          unknown: t("health.unknown"),
+          healthy: t("health.healthy"),
+          behind: t("health.behind"),
+          stalled: t("health.stalled")
+        }
+      }),
+    [indexerStatus?.config?.confirmations, indexerStatus?.lagBlocks, t]
   );
 
   const refreshOps = React.useCallback(() => {
@@ -40,227 +72,308 @@ export function OpsPageClient() {
   const metrics = React.useMemo<OpsMetric[]>(
     () => [
       {
-        label: "Release digest",
+        label: t("metrics.releaseDigest.label"),
         value: shortHex(release?.releaseDigest),
-        detail: "Canonical bundle currently served by the frontend."
+        detail: t("metrics.releaseDigest.detail")
       },
       {
-        label: "Indexer lag",
+        label: t("metrics.indexerLag.label"),
         value:
-          typeof indexerStatus?.lagBlocks === "number" ? `${indexerStatus.lagBlocks} blocks` : "—",
+          typeof indexerStatus?.lagBlocks === "number"
+            ? t("units.blocks", { count: indexerStatus.lagBlocks })
+            : "—",
         detail:
           typeof indexerStatus?.config?.confirmations === "number"
-            ? `Healthy window: ${indexerStatus.config.confirmations} confirmations.`
-            : "Confirmation window unavailable.",
+            ? t("metrics.indexerLag.healthyWindow", {
+                count: indexerStatus.config.confirmations
+              })
+            : t("metrics.indexerLag.unavailable"),
         tone: health.tone
       },
       {
-        label: "Safe head",
+        label: t("metrics.safeHead.label"),
         value: String(indexerStatus?.safeHeadBlock ?? "—"),
-        detail: "Worker-confirmed event horizon used by room surfaces."
+        detail: t("metrics.safeHead.detail")
       },
       {
-        label: "Worker state",
-        value: indexerStatus?.running ? "Running" : "Stopped",
+        label: t("metrics.workerState.label"),
+        value: indexerStatus?.running ? t("status.running") : t("status.stopped"),
         detail:
           typeof indexerStatus?.config?.pollIntervalMs === "number"
-            ? `Polling every ${Math.round(indexerStatus.config.pollIntervalMs / 1000)}s.`
-            : "Worker polling unavailable.",
+            ? t("metrics.workerState.polling", {
+                seconds: Math.round(indexerStatus.config.pollIntervalMs / 1000)
+              })
+            : t("metrics.workerState.unavailable"),
         tone: indexerStatus?.running ? "success" : "warn"
       },
       {
-        label: "Keeper state",
+        label: t("metrics.keeperState.label"),
         value: keeperHealthView.label,
         detail: keeperHealthView.detail,
         tone: keeperHealthView.tone
       }
     ],
-    [health.tone, indexerStatus, keeperHealthView, release?.releaseDigest]
+    [health.tone, indexerStatus, keeperHealthView, release?.releaseDigest, t]
   );
 
   const releaseRows = React.useMemo(
     () => [
-      { label: "Network", value: release?.name ?? "—" },
-      { label: "Chain id", value: String(release?.chainId ?? "—") },
-      { label: "Release digest", value: shortHex(release?.releaseDigest) },
-      { label: "GameHub", value: shortHex(release?.contracts.gameHub) },
-      { label: "VRFHub", value: shortHex(release?.contracts.vrfHub) },
-      { label: "PoolRegistry", value: shortHex(release?.contracts.poolRegistry) },
-      { label: "Primary bank", value: shortHex(release?.assets?.[0]?.bank) },
-      { label: "Manifest", value: "release-latest.json" }
+      { label: t("releaseRows.network"), value: release?.name ?? "—" },
+      { label: t("releaseRows.chainId"), value: String(release?.chainId ?? "—") },
+      { label: t("releaseRows.releaseDigest"), value: shortHex(release?.releaseDigest) },
+      { label: t("releaseRows.gameHub"), value: shortHex(release?.contracts.gameHub) },
+      { label: t("releaseRows.vrfHub"), value: shortHex(release?.contracts.vrfHub) },
+      { label: t("releaseRows.poolRegistry"), value: shortHex(release?.contracts.poolRegistry) },
+      { label: t("releaseRows.primaryBank"), value: shortHex(release?.assets?.[0]?.bank) },
+      { label: t("releaseRows.manifest"), value: "release-latest.json" }
     ],
-    [release]
+    [release, t]
   );
 
   const workerRows = React.useMemo<OpsKeyValueRow[]>(
     () => [
       {
-        label: "Health",
+        label: t("workerRows.health.label"),
         value: health.label,
         detail:
           typeof indexerStatus?.lagBlocks === "number"
-            ? `Current lag is ${indexerStatus.lagBlocks} blocks.`
-            : "Lag data unavailable.",
+            ? t("workerRows.health.currentLag", { count: indexerStatus.lagBlocks })
+            : t("workerRows.health.unavailable"),
         tone: health.tone
       },
       {
-        label: "Confirmations",
+        label: t("workerRows.confirmations.label"),
         value:
           typeof indexerStatus?.config?.confirmations === "number"
-            ? `${indexerStatus.config.confirmations} blocks`
+            ? t("units.blocks", { count: indexerStatus.config.confirmations })
             : "—",
-        detail: "Finality window before the UI reflects settled state."
+        detail: t("workerRows.confirmations.detail")
       },
       {
-        label: "Rewind window",
+        label: t("workerRows.rewindWindow.label"),
         value:
           typeof indexerStatus?.config?.rewindBlocks === "number"
-            ? `${indexerStatus.config.rewindBlocks} blocks`
+            ? t("units.blocks", { count: indexerStatus.config.rewindBlocks })
             : "—",
-        detail: "Replay buffer used to recover from transient misses."
+        detail: t("workerRows.rewindWindow.detail")
       },
       {
-        label: "Batch size",
+        label: t("workerRows.batchSize.label"),
         value:
           typeof indexerStatus?.config?.batchSize === "number"
-            ? `${indexerStatus.config.batchSize.toLocaleString("en-US")} events`
+            ? t("units.events", {
+                count: indexerStatus.config.batchSize.toLocaleString(locale)
+              })
             : "—",
-        detail: "Maximum event slice processed per sweep."
+        detail: t("workerRows.batchSize.detail")
       },
       {
-        label: "Latest block",
+        label: t("workerRows.latestBlock.label"),
         value: String(indexerStatus?.latestBlock ?? "—"),
-        detail: "Latest block observed by the worker public client."
+        detail: t("workerRows.latestBlock.detail")
       },
       {
-        label: "Last error",
-        value: indexerStatus?.lastError ?? "None",
-        detail: "Last worker error surfaced by the runtime provider.",
+        label: t("workerRows.lastError.label"),
+        value: indexerStatus?.lastError ?? t("workerRows.lastError.none"),
+        detail: t("workerRows.lastError.detail"),
         tone: indexerStatus?.lastError ? "danger" : "success"
       },
       {
-        label: "Casino keeper",
+        label: t("workerRows.casinoKeeper.label"),
         value: keeperHealthView.label,
         detail: keeperHealthView.detail,
         tone: keeperHealthView.tone
       },
       {
-        label: "Keeper role",
+        label: t("workerRows.keeperRole.label"),
         value: keeperHealth?.role ?? "—",
         detail: keeperHealth
-          ? `EOA ${shortHex(keeperHealth.keeper)} on chain ${keeperHealth.chainId}.`
-          : "Snapshot unavailable."
+          ? t("workerRows.keeperRole.detail", {
+              eoa: shortHex(keeperHealth.keeper),
+              chainId: keeperHealth.chainId
+            })
+          : t("workerRows.keeperRole.unavailable")
       },
       {
-        label: "Keeper queue",
+        label: t("workerRows.keeperQueue.label"),
         value:
-          typeof keeperHealth?.queueDepth === "number" ? `${keeperHealth.queueDepth} pending` : "—",
+          typeof keeperHealth?.queueDepth === "number"
+            ? t("units.pending", { count: keeperHealth.queueDepth })
+            : "—",
         detail:
           keeperHealth?.lastScannedBlock != null
-            ? `Last scanned block ${keeperHealth.lastScannedBlock}.`
-            : "Scan cursor unavailable.",
+            ? t("workerRows.keeperQueue.lastScannedBlock", {
+                block: keeperHealth.lastScannedBlock
+              })
+            : t("workerRows.keeperQueue.unavailable"),
         tone:
           typeof keeperHealth?.queueDepth === "number" && keeperHealth.queueDepth > 0
             ? "warn"
             : "default"
       },
       {
-        label: "Last keeper success",
-        value: formatIsoTime(keeperHealth?.lastFinalizeSuccessAt),
+        label: t("workerRows.lastKeeperSuccess.label"),
+        value: formatIsoTime(keeperHealth?.lastFinalizeSuccessAt, locale),
         detail: keeperHealth?.lastFinalizeSuccess
-          ? `Bet ${keeperHealth.lastFinalizeSuccess.betId}; tx ${shortHex(keeperHealth.lastFinalizeSuccess.txHash)}; ${keeperHealth.lastFinalizeSuccess.latencyMs}ms.`
-          : "No keeper finalize success in the current snapshot.",
+          ? t("workerRows.lastKeeperSuccess.detail", {
+              betId: keeperHealth.lastFinalizeSuccess.betId,
+              tx: shortHex(keeperHealth.lastFinalizeSuccess.txHash),
+              latencyMs: keeperHealth.lastFinalizeSuccess.latencyMs
+            })
+          : t("workerRows.lastKeeperSuccess.none"),
         tone: keeperHealth?.lastFinalizeSuccess ? "success" : "warn"
       },
       {
-        label: "Last keeper failure",
-        value: formatIsoTime(keeperHealth?.lastFinalizeFailureAt),
-        detail: keeperHealth?.lastFinalizeFailure?.reason ?? "No keeper failure in the snapshot.",
+        label: t("workerRows.lastKeeperFailure.label"),
+        value: formatIsoTime(keeperHealth?.lastFinalizeFailureAt, locale),
+        detail: keeperHealth?.lastFinalizeFailure?.reason ?? t("workerRows.lastKeeperFailure.none"),
         tone: keeperHealth?.lastFinalizeFailure ? "danger" : "success"
       }
     ],
-    [health, indexerStatus, keeperHealth, keeperHealthView]
+    [health, indexerStatus, keeperHealth, keeperHealthView, locale, t]
   );
 
   const trail = React.useMemo<OpsTrailRow[]>(
     () => [
       {
         time: indexerStatus?.lastRunAt
-          ? new Date(indexerStatus.lastRunAt).toLocaleTimeString()
-          : "Recent",
+          ? new Date(indexerStatus.lastRunAt).toLocaleTimeString(locale)
+          : t("trail.recent"),
         block: String(indexerStatus?.lastSyncedBlock ?? "—"),
-        event: "Indexer sweep",
-        status: indexerStatus?.running ? "Completed" : "Paused",
+        event: t("trail.events.indexerSweep"),
+        status: indexerStatus?.running ? t("status.completed") : t("status.paused"),
         tone: indexerStatus?.running ? "success" : "warn",
         context:
           typeof indexerStatus?.config?.batchSize === "number"
-            ? `${indexerStatus.config.batchSize.toLocaleString("en-US")} events per sweep`
-            : "Awaiting worker config"
+            ? t("trail.context.eventsPerSweep", {
+                count: indexerStatus.config.batchSize.toLocaleString(locale)
+              })
+            : t("trail.context.awaitingWorkerConfig")
       },
       {
-        time: "Live",
+        time: t("trail.live"),
         block: String(indexerStatus?.safeHeadBlock ?? "—"),
-        event: "Safe head advance",
+        event: t("trail.events.safeHeadAdvance"),
         status: health.label,
         tone: health.tone,
         context:
           typeof indexerStatus?.lagBlocks === "number"
-            ? `${indexerStatus.lagBlocks} lag blocks`
-            : "Lag unknown"
+            ? t("trail.context.lagBlocks", { count: indexerStatus.lagBlocks })
+            : t("trail.context.lagUnknown")
       },
       {
-        time: keeperHealth?.updatedAt ? new Date(keeperHealth.updatedAt).toLocaleTimeString() : "—",
+        time: keeperHealth?.updatedAt
+          ? new Date(keeperHealth.updatedAt).toLocaleTimeString(locale)
+          : "—",
         block: keeperHealth?.lastScannedBlock ?? "—",
-        event: "Casino keeper",
+        event: t("trail.events.casinoKeeper"),
         status: keeperHealthView.label,
         tone: keeperHealthView.tone,
         context: keeperHealthView.detail
       },
       {
-        time: "Release",
+        time: t("trail.release"),
         block: shortHex(release?.releaseDigest),
-        event: "Release identity",
-        status: "Locked",
+        event: t("trail.events.releaseIdentity"),
+        status: t("status.locked"),
         tone: "success",
-        context: release?.name ?? "Embedded release"
+        context: release?.name ?? t("trail.context.embeddedRelease")
       }
     ],
-    [health, indexerStatus, keeperHealth, keeperHealthView, release?.name, release?.releaseDigest]
+    [
+      health,
+      indexerStatus,
+      keeperHealth,
+      keeperHealthView,
+      locale,
+      release?.name,
+      release?.releaseDigest,
+      t
+    ]
   );
 
   return (
     <PageTransition pageKey="ops">
       <div className="space-y-8">
-        <OpsHero metrics={metrics} />
+        <OpsHero
+          metrics={metrics}
+          copy={{
+            eyebrow: t("hero.eyebrow"),
+            title: t("hero.title"),
+            description: t("hero.description"),
+            summaryLabel: t("hero.summaryLabel"),
+            summaryDescription: t("hero.summaryDescription")
+          }}
+        />
         <div className="grid gap-8 xl:grid-cols-[1.1fr_0.9fr]">
           <OpsReleasePanel
             rows={releaseRows}
             onSync={() => void syncNow()}
             onRefresh={refreshOps}
+            copy={{
+              eyebrow: t("releasePanel.eyebrow"),
+              title: t("releasePanel.title"),
+              description: t("releasePanel.description"),
+              sync: t("releasePanel.sync"),
+              refresh: t("releasePanel.refresh")
+            }}
           />
-          <OpsWorkerPanel rows={workerRows} />
+          <OpsWorkerPanel
+            rows={workerRows}
+            copy={{
+              eyebrow: t("workerPanel.eyebrow"),
+              title: t("workerPanel.title"),
+              description: t("workerPanel.description")
+            }}
+          />
         </div>
-        <OpsEventTrail rows={trail} />
+        <OpsEventTrail
+          rows={trail}
+          copy={{
+            eyebrow: t("eventTrail.eyebrow"),
+            title: t("eventTrail.title"),
+            description: t("eventTrail.description"),
+            headers: {
+              timeBlock: t("eventTrail.headers.timeBlock"),
+              event: t("eventTrail.headers.event"),
+              status: t("eventTrail.headers.status"),
+              context: t("eventTrail.headers.context"),
+              flow: t("eventTrail.headers.flow")
+            },
+            flowLabel: t("eventTrail.flowLabel"),
+            mobileBlockLabel: t("eventTrail.mobileBlockLabel")
+          }}
+        />
       </div>
     </PageTransition>
   );
 }
 
-function deriveHealth(
-  lag?: number,
-  confirmations?: number
-): { label: string; tone: OpsStatusTone } {
+function deriveHealth({
+  lag,
+  confirmations,
+  labels
+}: {
+  lag?: number;
+  confirmations?: number;
+  labels: {
+    unknown: string;
+    healthy: string;
+    behind: string;
+    stalled: string;
+  };
+}): { label: string; tone: OpsStatusTone } {
   if (typeof lag !== "number" || typeof confirmations !== "number") {
-    return { label: "Unknown", tone: "default" };
+    return { label: labels.unknown, tone: "default" };
   }
-  if (lag <= confirmations) return { label: "Healthy", tone: "success" };
-  if (lag <= confirmations * 3) return { label: "Behind", tone: "warn" };
-  return { label: "Stalled", tone: "danger" };
+  if (lag <= confirmations) return { label: labels.healthy, tone: "success" };
+  if (lag <= confirmations * 3) return { label: labels.behind, tone: "warn" };
+  return { label: labels.stalled, tone: "danger" };
 }
 
-function formatIsoTime(value?: string) {
+function formatIsoTime(value?: string, locale?: string) {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.valueOf())) return "—";
-  return date.toLocaleTimeString();
+  return date.toLocaleTimeString(locale);
 }

@@ -3,33 +3,41 @@ import { ArrowPathIcon } from "@heroicons/react/24/outline";
 
 import type { OpsKeyValueRow } from "./types";
 
+export type OpsReleasePanelCopy = {
+  eyebrow: string;
+  title: string;
+  description: string;
+  sync: string;
+  refresh: string;
+};
+
 export function OpsReleasePanel({
   rows,
   onSync,
-  onRefresh
+  onRefresh,
+  copy
 }: {
   rows: readonly OpsKeyValueRow[];
   onSync: () => void;
   onRefresh: () => void;
+  copy: OpsReleasePanelCopy;
 }) {
   return (
     <section className="rounded-md border border-border bg-surface-1 shadow-e2">
       <div className="flex flex-col gap-4 border-b border-border p-5 md:flex-row md:items-start md:justify-between">
         <div>
           <div className="text-xs font-black uppercase tracking-[0.16em] text-fg-subtle">
-            Release bundle
+            {copy.eyebrow}
           </div>
-          <h2 className="mt-2 text-2xl font-black text-fg">Canonical release proof</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-fg-muted">
-            The exact chain, contract, and manifest surface currently presented by the frontend.
-          </p>
+          <h2 className="mt-2 text-2xl font-black text-fg">{copy.title}</h2>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-fg-muted">{copy.description}</p>
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <OpsButton onClick={onSync}>Sync indexer</OpsButton>
+          <OpsButton onClick={onSync}>{copy.sync}</OpsButton>
           <OpsButton onClick={onRefresh} subtle>
             <ArrowPathIcon className="h-4 w-4" />
-            Refresh
+            {copy.refresh}
           </OpsButton>
         </div>
       </div>

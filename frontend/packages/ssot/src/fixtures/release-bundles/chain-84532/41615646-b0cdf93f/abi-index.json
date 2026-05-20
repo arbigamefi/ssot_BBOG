@@ -1,0 +1,152 @@
+{
+  "blockNumber": 41615646,
+  "chainId": 84532,
+  "contracts": [
+    {
+      "abiFile": "GameHub.abi.json",
+      "abiSha256": "12f78b79cd3c772eeeb53e11b16207173e707128b1eb087585bb31f800cd1674",
+      "address": "0xcBa18427b101D86A6A24BD5059f7FbdC50c1c20A",
+      "addressKey": "gameHub",
+      "name": "GameHub"
+    },
+    {
+      "abiFile": "VRFHub.abi.json",
+      "abiSha256": "89e8d7a520d4a7f7e72113d1af01c97a96182349d9f012eb35832958a518283a",
+      "address": "0x391fD53E205B28061618603b78d49c978E36c04C",
+      "addressKey": "vrfHub",
+      "name": "VRFHub"
+    },
+    {
+      "abiFile": "PoolRegistry.abi.json",
+      "abiSha256": "a63721691df619e568921cbbfc1d5634f48e12fe7ad10110918eb3dbf3b25449",
+      "address": "0xF6887fF9eea3e40BCAcbd58c6f4767452195DBC8",
+      "addressKey": "poolRegistry",
+      "name": "PoolRegistry"
+    },
+    {
+      "abiFile": "SettlementRouter.abi.json",
+      "abiSha256": "3e7ad9709eaa5d81ae68a051e750d96f9e7ab1d44ab4cef406c7be6d6b6bf1de",
+      "address": "0xc5A521F6CcB9eE9Db9fcba8348673F97D5257117",
+      "addressKey": "settlementRouter",
+      "name": "SettlementRouter"
+    },
+    {
+      "abiFile": "SportsRiskEngine.abi.json",
+      "abiSha256": "0601fa52b58bfcbd1249897c51f9b2a0164ba9d74d8ddb5db0f2154ffe74c897",
+      "address": "0x45FfF67Ee3B14AcA16F292F38Ee08a37866276f4",
+      "addressKey": "sportsRiskEngine",
+      "name": "SportsRiskEngine"
+    },
+    {
+      "abiFile": "SportsHub.abi.json",
+      "abiSha256": "0028dac98758d6839b12cf4ab2672ca93a0694b5115eb7c2aca71ec03a21c3bf",
+      "address": "0xC2A2dfdd685cD518B0e1a6A9ABfF43d6b0DB618A",
+      "addressKey": "sportsHub",
+      "name": "SportsHub"
+    },
+    {
+      "abiFile": "ReferralRegistry.abi.json",
+      "abiSha256": "71546e063fe44772416f62343913054adbdbc9ce2d53bbf0ca79b3010dd07e49",
+      "address": "0x861bE35cA3618398523d37e2e241affA84b691b0",
+      "addressKey": "refRegistry",
+      "name": "ReferralRegistry"
+    },
+    {
+      "abiFile": "DefaultReferralEngine.abi.json",
+      "abiSha256": "e204ff307924f5d0396ee4376e83987c49fdca1f0b7ed4fc746f18b98415e17a",
+      "address": "0x7a86d0E4542fd830b5804b18416711f20D107f3D",
+      "addressKey": "refEngine",
+      "name": "DefaultReferralEngine"
+    },
+    {
+      "abiFile": "ChainlinkV2PlusWrapperAdapter.abi.json",
+      "abiSha256": "95e2fa5e552786226351c258c1687fb35b3819b3614c0a72242a6ae72f296629",
+      "address": "0x1beBcADb2ffC3941d5332a5497325E224E21d915",
+      "addressKey": "adapter",
+      "name": "ChainlinkV2PlusWrapperAdapter"
+    },
+    {
+      "abiFile": "DiceModule.abi.json",
+      "abiSha256": "07222d0fcfdfa9fbbdad85b3d1b54aa6f8e529f188d4a1ad8e5d00be2e0d6834",
+      "address": "0xD2ee0A0015Ea9fB850c9F2a8cf0C6e0F9e36e4bA",
+      "addressKey": "moduleDice",
+      "name": "DiceModule"
+    },
+    {
+      "abiFile": "CoinTossModule.abi.json",
+      "abiSha256": "2da3e5e40642da8d22e92cd8226ab20480d103d0b897f04b32db8ee8b5a59f51",
+      "address": "0x3f27Ad7199E84665c3D57eEA6E3D1Ea98fc38334",
+      "addressKey": "moduleCoinToss",
+      "name": "CoinTossModule"
+    },
+    {
+      "abiFile": "RouletteModule.abi.json",
+      "abiSha256": "4f292eee875c73a3fd491feeabc2baed1354aadbeb30bf51d23c204382997e48",
+      "address": "0x823290A2E93e8D229776ADfd3028D7Ad575C9Cbd",
+      "addressKey": "moduleRoulette",
+      "name": "RouletteModule"
+    },
+    {
+      "abiFile": "KenoModule.abi.json",
+      "abiSha256": "134fed8be94da4080ac9a8f1e1fba39df1c10b71c02655f8a0cb34b5faba1868",
+      "address": "0x0464473C9ea53aE5675D438d18f51DecD81e184c",
+      "addressKey": "moduleKeno",
+      "name": "KenoModule"
+    },
+    {
+      "abiFile": "PlinkoModule.abi.json",
+      "abiSha256": "0a64e593b3836745e8c45c41550dd546adb4b7c28c373f198251696ed434e3c9",
+      "address": "0xB8D1C424ceA73C7f778169cCa2D0185D9Cdd8FbF",
+      "addressKey": "modulePlinko",
+      "name": "PlinkoModule"
+    },
+    {
+      "abiFile": "SicBoModule.abi.json",
+      "abiSha256": "9e9c2f7aece412d0cb1db9b004b3d96eb4345a84a7149a79dc0d140c245dc235",
+      "address": "0x10A096518570De4CF9c6756616Fc8D7D8a0dC1bE",
+      "addressKey": "moduleSicBo",
+      "name": "SicBoModule"
+    },
+    {
+      "abiFile": "SlotsModule.abi.json",
+      "abiSha256": "d258f846181cae348e5c15833f7e3cd0b57ba6534bc06faeded1d7d902695816",
+      "address": "0xf879Aa624651117E064D033FC37e314A8dd41586",
+      "addressKey": "moduleSlots",
+      "name": "SlotsModule"
+    },
+    {
+      "abiFile": "BaccaratModule.abi.json",
+      "abiSha256": "8561ea7e373a2adf5bad84b2978880cc016848813b2e533bba291f1cb336a393",
+      "address": "0xF27F264eC79425703Da338CB4fDc8F2cdD83BF18",
+      "addressKey": "moduleBaccarat",
+      "name": "BaccaratModule"
+    },
+    {
+      "abiFile": "Bank.abi.json",
+      "abiSha256": "9753d0d67255a189c47d75d523f2867bce5cfa32af6208f06979229677d17272",
+      "address": null,
+      "addressKey": "__bank_type__",
+      "name": "Bank"
+    },
+    {
+      "abiFile": "Bank.abi.json",
+      "address": "0x552063BA55ac0A4AEf3fb764957912056FB3A7f0",
+      "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      "domain": "Casino",
+      "name": "BankInstance",
+      "poolId": 1
+    },
+    {
+      "abiFile": "Bank.abi.json",
+      "address": "0xf97C13205038C1Ecf088bcc5A591E62966172Af8",
+      "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      "domain": "Sports",
+      "name": "BankInstance",
+      "poolId": 2
+    }
+  ],
+  "generatedAt": 1778999652,
+  "gitSha": "",
+  "manifestPath": "deployments/frontend-manifest-latest-v13.json",
+  "schemaVersion": 2
+}

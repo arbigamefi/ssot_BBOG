@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Preflight for public testnet v1.3 Casino+Sports rehearsals.
+# Preflight for public-network v1.3 Casino+Sports rehearsals and mainnet readiness.
 #
 # Usage:
 #   bash script/ci/v13_sports_testnet_preflight.sh [env-file]
@@ -116,9 +116,22 @@ DERIVED_GOV="$(cast wallet address --private-key "$PRIVATE_KEY")"
 
 CHAIN_ID="$(cast chain-id --rpc-url "$RPC_URL")"
 [[ -n "$CHAIN_ID" ]] || fail "could not read chain id from RPC_URL"
-case "$CHAIN_ID" in
-  84532|421614) ;;
-  *) warn "chain id $CHAIN_ID is not a documented testnet target for this repo" ;;
+case "${V13_SPORTS_PREFLIGHT_TARGET:-testnet}" in
+  testnet)
+    case "$CHAIN_ID" in
+      84532|421614) ;;
+      *) warn "chain id $CHAIN_ID is not a documented testnet target for this repo" ;;
+    esac
+    ;;
+  mainnet)
+    case "$CHAIN_ID" in
+      8453|42161) ;;
+      *) fail "chain id $CHAIN_ID is not a documented mainnet target for this repo" ;;
+    esac
+    ;;
+  *)
+    fail "V13_SPORTS_PREFLIGHT_TARGET must be testnet or mainnet"
+    ;;
 esac
 
 need_contract_code "VRF_WRAPPER" "$VRF_WRAPPER"
@@ -194,7 +207,7 @@ need_address SPORTS_RESULT_ARBITRATOR
   bash script/ci/check_deps.sh
 )
 
-echo "v1.3 Sports testnet preflight passed:"
+echo "v1.3 Sports ${V13_SPORTS_PREFLIGHT_TARGET:-testnet} preflight passed:"
 echo "  chainId: $CHAIN_ID"
 echo "  gov: $GOV"
 echo "  vrfWrapper: $VRF_WRAPPER"

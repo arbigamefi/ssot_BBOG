@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { mkdir, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { Address, Hex } from "viem";
@@ -49,7 +50,7 @@ export function createFileHealthSink(path: string): KeeperHealthSink {
   return {
     async write(snapshot) {
       await mkdir(dirname(path), { recursive: true });
-      const tmpPath = `${path}.tmp`;
+      const tmpPath = `${path}.${process.pid}.${randomUUID()}.tmp`;
       await writeFile(tmpPath, `${JSON.stringify(snapshot, null, 2)}\n`, "utf8");
       await rename(tmpPath, path);
     }

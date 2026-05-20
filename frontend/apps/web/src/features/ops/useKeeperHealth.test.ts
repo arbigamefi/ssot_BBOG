@@ -2,6 +2,22 @@ import { describe, expect, it } from "vitest";
 
 import { deriveKeeperHealthView, type KeeperHealthSnapshot } from "./useKeeperHealth";
 
+const labels = {
+  unavailable: "Unavailable",
+  unavailableDefault: "No keeper health snapshot has been published.",
+  stale: "Stale",
+  invalidTimestamp: "Keeper snapshot timestamp is invalid.",
+  staleAge: (seconds: number) => `Keeper snapshot is ${seconds}s old.`,
+  degraded: "Degraded",
+  degradedDefault: "Keeper reported a degraded status.",
+  stopped: "Stopped",
+  stoppedDetail: "Keeper process reported a stopped status.",
+  starting: "Starting",
+  startingDetail: (role: string) => `Keeper ${role} is starting.`,
+  healthy: "Healthy",
+  healthyDetail: (role: string, seconds: number) => `Keeper ${role} updated ${seconds}s ago.`
+};
+
 const baseSnapshot: KeeperHealthSnapshot = {
   schemaVersion: 1,
   status: "running",
@@ -20,6 +36,7 @@ describe("deriveKeeperHealthView", () => {
   it("treats a fresh running snapshot as healthy", () => {
     expect(
       deriveKeeperHealthView({
+        labels,
         snapshot: baseSnapshot,
         nowMs: Date.parse("2026-05-17T00:00:20.000Z")
       })
@@ -30,14 +47,17 @@ describe("deriveKeeperHealthView", () => {
   });
 
   it("warns when the snapshot is missing or stale", () => {
-    expect(deriveKeeperHealthView({ snapshot: null, loadError: "HTTP 404" })).toMatchObject({
-      label: "Unavailable",
-      tone: "warn",
-      detail: "HTTP 404"
-    });
+    expect(deriveKeeperHealthView({ labels, snapshot: null, loadError: "HTTP 404" })).toMatchObject(
+      {
+        label: "Unavailable",
+        tone: "warn",
+        detail: "HTTP 404"
+      }
+    );
 
     expect(
       deriveKeeperHealthView({
+        labels,
         snapshot: baseSnapshot,
         nowMs: Date.parse("2026-05-17T00:03:00.000Z")
       })
@@ -50,6 +70,7 @@ describe("deriveKeeperHealthView", () => {
   it("marks degraded and stopped snapshots as danger", () => {
     expect(
       deriveKeeperHealthView({
+        labels,
         snapshot: { ...baseSnapshot, status: "degraded", lastError: "simulate reverted" },
         nowMs: Date.parse("2026-05-17T00:00:20.000Z")
       })
@@ -61,6 +82,7 @@ describe("deriveKeeperHealthView", () => {
 
     expect(
       deriveKeeperHealthView({
+        labels,
         snapshot: { ...baseSnapshot, status: "stopped" },
         nowMs: Date.parse("2026-05-17T00:00:20.000Z")
       })

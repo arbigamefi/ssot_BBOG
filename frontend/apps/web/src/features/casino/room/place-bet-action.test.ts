@@ -73,9 +73,11 @@ function baseArgs(overrides: Partial<Parameters<typeof executeGamePlaceBetAction
     stopGain: 0,
     stopLoss: 0,
     diceTarget: 50,
+    diceDirection: "under" as const,
     coinSide: "HEADS" as const,
     rouletteSpots: [],
     kenoSpots: [],
+    plinkoRisk: "medium" as const,
     ...overrides
   };
 }
@@ -120,22 +122,45 @@ describe("game room place bet action", () => {
     const args = baseArgs({
       game: { ...game, slug: "roulette", label: "Roulette" },
       rouletteSpots: [],
-      winChance: 1
+      winChance: 1,
+      messages: {
+        rouletteSelectionRequired: "请选择至少一个轮盘投注项。"
+      }
     });
     await executeGamePlaceBetAction(args);
 
-    expect(mocks.toastError).toHaveBeenCalledWith(
-      "Please select at least one number or bet type on the Roulette board."
-    );
+    expect(mocks.toastError).toHaveBeenCalledWith("请选择至少一个轮盘投注项。");
     expect(args.planNow).not.toHaveBeenCalled();
   });
 
   it("plans a valid bet request", async () => {
-    const args = baseArgs();
+    const affiliate = "0x6666666666666666666666666666666666666666";
+    const args = baseArgs({ affiliate });
     await executeGamePlaceBetAction(args);
 
     expect(args.planNow).toHaveBeenCalledTimes(1);
     expect(args.executeNow).toHaveBeenCalledWith(plannedBet);
     expect((args.planNow as any).mock.calls[0]?.[0].stake).toBe(10_000_000n);
+    expect((args.planNow as any).mock.calls[0]?.[0].affiliate).toBe(affiliate);
+  });
+
+  it("does not expose raw unexpected errors as player copy", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const args = baseArgs({
+        planNow: vi.fn(async () => {
+          throw new Error('The contract function "placeBet" reverted.');
+        }),
+        messages: {
+          unexpectedError: "发生了非预期错误。"
+        }
+      });
+      await executeGamePlaceBetAction(args);
+
+      expect(mocks.toastError).toHaveBeenCalledWith("发生了非预期错误。");
+      expect(consoleError).toHaveBeenCalledTimes(1);
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 });

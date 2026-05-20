@@ -2,13 +2,17 @@ import { describe, it, expect } from "vitest";
 import { getGameEncoder, requireGameEncoder, registeredGameSlugs } from "./registry";
 
 describe("GameEncoderRegistry", () => {
-  it("has all 4 known game slugs registered", () => {
+  it("has all supported casino game slugs registered", () => {
     const slugs = registeredGameSlugs();
     expect(slugs).toContain("dice");
     expect(slugs).toContain("coin-toss");
     expect(slugs).toContain("roulette");
     expect(slugs).toContain("keno");
-    expect(slugs.length).toBe(4);
+    expect(slugs).toContain("plinko");
+    expect(slugs).toContain("slots");
+    expect(slugs).toContain("baccarat");
+    expect(slugs).toContain("sic-bo");
+    expect(slugs.length).toBe(8);
   });
 
   it("getGameEncoder returns undefined for unknown slug", () => {
@@ -31,7 +35,7 @@ describe("GameEncoderRegistry", () => {
 
     it("has correct defaults", () => {
       const enc = requireGameEncoder("dice");
-      expect(enc.defaultParams.cap).toBe(50);
+      expect(enc.defaultParams).toEqual({ direction: "under", target: 50 });
     });
 
     it("has correct label", () => {
@@ -95,6 +99,62 @@ describe("GameEncoderRegistry", () => {
     it("has correct defaults", () => {
       const enc = requireGameEncoder("keno");
       expect(enc.defaultParams.mask).toBe(0xabcden);
+    });
+  });
+
+  describe("plinko encoder", () => {
+    it("encodes and decodes roundtrip", () => {
+      const enc = requireGameEncoder("plinko");
+      const hex = enc.encode({ risk: "high" });
+      const decoded = enc.decode(hex);
+      expect(decoded).toEqual({ risk: "high", riskId: 2 });
+    });
+
+    it("has correct defaults", () => {
+      const enc = requireGameEncoder("plinko");
+      expect(enc.defaultParams).toEqual({ risk: "medium" });
+    });
+  });
+
+  describe("slots encoder", () => {
+    it("encodes and decodes roundtrip", () => {
+      const enc = requireGameEncoder("slots");
+      const hex = enc.encode({ profile: "classic" });
+      const decoded = enc.decode(hex);
+      expect(decoded).toEqual({ profile: "classic", profileId: 0 });
+    });
+
+    it("has correct defaults", () => {
+      const enc = requireGameEncoder("slots");
+      expect(enc.defaultParams).toEqual({ profile: "classic" });
+    });
+  });
+
+  describe("baccarat encoder", () => {
+    it("encodes and decodes roundtrip", () => {
+      const enc = requireGameEncoder("baccarat");
+      const hex = enc.encode({ side: "tie" });
+      const decoded = enc.decode(hex);
+      expect(decoded).toEqual({ side: "tie", sideId: 2 });
+    });
+
+    it("has correct defaults", () => {
+      const enc = requireGameEncoder("baccarat");
+      expect(enc.defaultParams).toEqual({ side: "player" });
+    });
+  });
+
+  describe("sic bo encoder", () => {
+    it("encodes and decodes roundtrip", () => {
+      const enc = requireGameEncoder("sic-bo");
+      const hex = enc.encode({ kind: "total", value: 10 });
+      const decoded = enc.decode(hex);
+      expect(decoded).toEqual({ kind: "total", kindId: 4, value: 10 });
+    });
+
+    it("has correct defaults", () => {
+      const enc = requireGameEncoder("sic-bo");
+      expect(enc.defaultParams).toEqual({ kind: "small", value: 0 });
     });
   });
 

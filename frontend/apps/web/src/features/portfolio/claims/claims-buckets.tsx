@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import {
   ArrowPathIcon,
   ClockIcon,
@@ -22,6 +23,8 @@ export function ClaimsBuckets({
   loading: boolean;
   error?: string;
 }) {
+  const t = useTranslations();
+  const pendingLabel = t("portfolio.claims.common.pending");
   const buckets = data.buckets;
   const snapshot = data.snapshot;
 
@@ -31,37 +34,45 @@ export function ClaimsBuckets({
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <div className="flex items-center gap-2 text-sm font-black text-fg">
             <SparklesIcon className="h-5 w-5 text-brand" />
-            XP bucket ledger
+            {t("portfolio.claims.buckets.title")}
           </div>
           <span className="rounded-full border border-border bg-surface-2 px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-fg-subtle">
-            {loading ? "syncing" : "read model"}
+            {loading
+              ? t("portfolio.claims.buckets.syncing")
+              : t("portfolio.claims.buckets.readModel")}
           </span>
         </div>
 
         <div className="grid gap-4 p-5 md:grid-cols-2">
           <BucketCard
             icon={<SparklesIcon className="h-5 w-5" />}
-            label="Accrued"
-            value={formatTokenAmount(buckets?.accrued, decimals, symbol)}
-            detail="Claimable XP currently credited to the payee."
+            label={t("portfolio.claims.buckets.cards.accrued.label")}
+            value={formatTokenAmount(buckets?.accrued, decimals, symbol, 4, pendingLabel)}
+            detail={t("portfolio.claims.buckets.cards.accrued.detail")}
           />
           <BucketCard
             icon={<LockClosedIcon className="h-5 w-5" />}
-            label="Locked"
-            value={formatTokenAmount(buckets?.locked, decimals, symbol)}
-            detail="XP that requires unlock conditions before extraction."
+            label={t("portfolio.claims.buckets.cards.locked.label")}
+            value={formatTokenAmount(buckets?.locked, decimals, symbol, 4, pendingLabel)}
+            detail={t("portfolio.claims.buckets.cards.locked.detail")}
           />
           <BucketCard
             icon={<ClockIcon className="h-5 w-5" />}
-            label="Holdback"
-            value={formatTokenAmount(buckets?.holdback, decimals, symbol)}
-            detail="Pending buffer awaiting a holdback sync."
+            label={t("portfolio.claims.buckets.cards.holdback.label")}
+            value={formatTokenAmount(buckets?.holdback, decimals, symbol, 4, pendingLabel)}
+            detail={t("portfolio.claims.buckets.cards.holdback.detail")}
           />
           <BucketCard
             icon={<ArrowPathIcon className="h-5 w-5" />}
-            label="Releasable"
-            value={formatTokenAmount(buckets?.holdbackReleasable, decimals, symbol)}
-            detail="Holdback amount currently releasable by protocol rules."
+            label={t("portfolio.claims.buckets.cards.releasable.label")}
+            value={formatTokenAmount(
+              buckets?.holdbackReleasable,
+              decimals,
+              symbol,
+              4,
+              pendingLabel
+            )}
+            detail={t("portfolio.claims.buckets.cards.releasable.detail")}
           />
         </div>
 
@@ -72,24 +83,31 @@ export function ClaimsBuckets({
 
       <div className="grid gap-4">
         <BucketCard
-          label="Protocol fees"
-          value={formatTokenAmount(snapshot?.protocolFeesPayable, decimals, symbol, 2)}
-          detail={`External payables ${formatTokenAmount(
-            snapshot?.externalPayablesTotal,
+          label={t("portfolio.claims.buckets.cards.protocolFees.label")}
+          value={formatTokenAmount(
+            snapshot?.protocolFeesPayable,
             decimals,
             symbol,
-            2
-          )}`}
+            2,
+            pendingLabel
+          )}
+          detail={t("portfolio.claims.buckets.cards.protocolFees.detail", {
+            externalPayables: formatTokenAmount(
+              snapshot?.externalPayablesTotal,
+              decimals,
+              symbol,
+              2,
+              pendingLabel
+            )
+          })}
         />
         <BucketCard
-          label="Bank reference"
-          value={shortHex(snapshot?.bank)}
-          detail={`Reserved ${formatTokenAmount(snapshot?.totalReserved, decimals, symbol, 2)} · Assets ${formatTokenAmount(
-            snapshot?.totalAssets,
-            decimals,
-            symbol,
-            2
-          )}`}
+          label={t("portfolio.claims.buckets.cards.bank.label")}
+          value={shortHex(snapshot?.bank, pendingLabel)}
+          detail={t("portfolio.claims.buckets.cards.bank.detail", {
+            reserved: formatTokenAmount(snapshot?.totalReserved, decimals, symbol, 2, pendingLabel),
+            assets: formatTokenAmount(snapshot?.totalAssets, decimals, symbol, 2, pendingLabel)
+          })}
         />
       </div>
     </section>

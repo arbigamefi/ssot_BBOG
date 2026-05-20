@@ -73,13 +73,16 @@ export function resolveSportsbookAccess(
 
 export function ReleaseProvider({
   children,
-  chainId
+  chainId,
+  sportsbookEnabledFlag
 }: {
   children: React.ReactNode;
   chainId?: number;
+  sportsbookEnabledFlag?: string;
 }) {
   const resolvedChainId = chainId ?? embeddedChainIds[0] ?? 84532;
   const value = React.useMemo<ReleaseContextValue>(() => {
+    const rawSportsbookFlag = sportsbookEnabledFlag ?? process.env.NEXT_PUBLIC_SPORTSBOOK_ENABLED;
     const r = loadEmbeddedRelease(resolvedChainId);
     if (!r.ok) {
       return {
@@ -87,18 +90,18 @@ export function ReleaseProvider({
         warnings: [],
         readOnly: true,
         readOnlyReason: r.error,
-        sportsbook: resolveSportsbookAccess(undefined, process.env.NEXT_PUBLIC_SPORTSBOOK_ENABLED)
+        sportsbook: resolveSportsbookAccess(undefined, rawSportsbookFlag)
       };
     }
     const release = r.release;
     const warnings = r.warnings;
-    const sportsbook = resolveSportsbookAccess(release, process.env.NEXT_PUBLIC_SPORTSBOOK_ENABLED);
+    const sportsbook = resolveSportsbookAccess(release, rawSportsbookFlag);
 
     const readOnly = warnings.length > 0;
     const readOnlyReason = readOnly ? "Release snapshot is not usable for writes." : undefined;
 
     return { chainId: resolvedChainId, release, warnings, readOnly, readOnlyReason, sportsbook };
-  }, [resolvedChainId]);
+  }, [resolvedChainId, sportsbookEnabledFlag]);
 
   return <ReleaseContext.Provider value={value}>{children}</ReleaseContext.Provider>;
 }

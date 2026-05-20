@@ -13,12 +13,32 @@ export function HomeHero({
   reserveFloor,
   totalAssets,
   releaseDigest,
-  roomCount
+  roomCount,
+  copy
 }: {
   reserveFloor: string;
   totalAssets: string;
   releaseDigest?: string;
   roomCount: number;
+  copy: {
+    channel: string;
+    title: string;
+    description: string;
+    enterCasino: string;
+    viewBank: string;
+    consoleLabel: string;
+    live: string;
+    metrics: {
+      freeReserve: string;
+      bankAssets: string;
+      rooms: string;
+    };
+    proofRows: Array<{
+      title: string;
+      detail: string;
+    }>;
+    pendingDigest: string;
+  };
 }) {
   return (
     <section className="relative overflow-hidden border-b border-border bg-surface-0">
@@ -26,15 +46,14 @@ export function HomeHero({
         <div className="max-w-3xl">
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-surface-1 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-fg-muted shadow-e1">
             <span className="h-2 w-2 rounded-full bg-accent" />
-            Base Sepolia release channel
+            {copy.channel}
           </div>
 
           <h1 className="max-w-4xl text-5xl font-black leading-[1.03] tracking-normal text-fg md:text-7xl">
-            ArbiGameFi
+            {copy.title}
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-fg-muted md:text-xl">
-            On-chain casino rails for transparent bankroll, verifiable randomness, and automatic
-            settlement. The first screen is the product surface, not a promise deck.
+            {copy.description}
           </p>
 
           <div className="mt-10 flex flex-col gap-3 sm:flex-row">
@@ -42,13 +61,13 @@ export function HomeHero({
               href="/casino"
               className="inline-flex items-center justify-center gap-3 rounded-md bg-brand px-6 py-4 text-sm font-black uppercase tracking-[0.12em] text-fg-inverse shadow-glow transition hover:bg-brand-hover"
             >
-              Enter Casino <ArrowRightIcon className="h-5 w-5" />
+              {copy.enterCasino} <ArrowRightIcon className="h-5 w-5" />
             </Link>
             <Link
               href="/earn"
               className="inline-flex items-center justify-center rounded-md border border-border bg-surface-1 px-6 py-4 text-sm font-black uppercase tracking-[0.12em] text-fg transition hover:bg-surface-2"
             >
-              View Bank
+              {copy.viewBank}
             </Link>
           </div>
         </div>
@@ -58,37 +77,37 @@ export function HomeHero({
             <div className="flex items-center justify-between border-b border-border px-5 py-4">
               <div>
                 <div className="text-xs font-bold uppercase tracking-[0.18em] text-fg-subtle">
-                  Protocol Console
+                  {copy.consoleLabel}
                 </div>
                 <div className="mt-1 font-mono text-sm text-fg-muted">
-                  {shortDigest(releaseDigest)}
+                  {shortDigest(releaseDigest, copy.pendingDigest)}
                 </div>
               </div>
               <div className="rounded-md border border-accent/30 bg-accent-soft px-3 py-1 text-xs font-black uppercase tracking-[0.14em] text-accent">
-                Live
+                {copy.live}
               </div>
             </div>
 
             <div className="grid grid-cols-1 border-b border-border md:grid-cols-3">
               <HeroMetric
                 icon={<CircleStackIcon className="h-5 w-5" />}
-                label="Free reserve"
+                label={copy.metrics.freeReserve}
                 value={reserveFloor}
               />
-              <HeroMetric label="Bank assets" value={totalAssets} />
-              <HeroMetric label="Rooms" value={roomCount.toString()} />
+              <HeroMetric label={copy.metrics.bankAssets} value={totalAssets} />
+              <HeroMetric label={copy.metrics.rooms} value={roomCount.toString()} />
             </div>
 
             <div className="grid gap-3 p-5">
               <ProofRow
                 icon={<ShieldCheckIcon className="h-5 w-5" />}
-                title="VRF settlement path"
-                detail="Randomness, ticket, and payout events remain auditable from release metadata."
+                title={copy.proofRows[0]?.title ?? ""}
+                detail={copy.proofRows[0]?.detail ?? ""}
               />
               <ProofRow
                 icon={<CodeBracketSquareIcon className="h-5 w-5" />}
-                title="Bytecode anchored release"
-                detail="Frontend display reads contract addresses and game metadata from the SSOT release."
+                title={copy.proofRows[1]?.title ?? ""}
+                detail={copy.proofRows[1]?.detail ?? ""}
               />
             </div>
           </div>

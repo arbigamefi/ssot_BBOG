@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { ErrorCallout, TxStatusChip, TxStepper } from "@ssot/ui";
 
 import { shortHex } from "./format";
@@ -23,6 +24,7 @@ export function BetDetailActions({
   onRefund: () => void;
   explorerBaseUrl?: string;
 }) {
+  const t = useTranslations();
   const activeFlow = finalizeFlow.hasActivity
     ? finalizeFlow
     : refundFlow.hasActivity
@@ -35,20 +37,24 @@ export function BetDetailActions({
 
   if (!canFinalize && !canRefund && !activeFlow?.hasActivity) return null;
 
-  const activeTitle = activeFlow === refundFlow ? "Refund trace" : "Finalize trace";
+  const activeTitle =
+    activeFlow === refundFlow
+      ? t("portfolio.activity.detail.actions.refundTrace")
+      : t("portfolio.activity.detail.actions.finalizeTrace");
   const busy = finalizeFlow.busy || refundFlow.busy;
 
   return (
     <section className="rounded-md border border-border bg-surface-1 p-5 shadow-e2">
       <div className="text-xs font-black uppercase tracking-[0.16em] text-fg-subtle">
-        Protocol action
+        {t("portfolio.activity.detail.actions.eyebrow")}
       </div>
       <h2 className="mt-2 text-2xl font-black text-fg">
-        {canRefund ? "Refund surface" : "Finalize surface"}
+        {canRefund
+          ? t("portfolio.activity.detail.actions.refundSurface")
+          : t("portfolio.activity.detail.actions.finalizeSurface")}
       </h2>
       <p className="mt-2 text-sm leading-6 text-fg-muted">
-        Actions only appear when GameHub state allows them. The execution trace remains attached to
-        this receipt.
+        {t("portfolio.activity.detail.actions.description")}
       </p>
 
       <div className="mt-5 flex flex-col gap-3 sm:flex-row">
@@ -59,7 +65,9 @@ export function BetDetailActions({
             disabled={busy}
             className="rounded-md bg-brand px-4 py-3 text-sm font-black text-fg-inverse shadow-glow transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {finalizeFlow.busy ? "Finalizing..." : "Finalize ticket"}
+            {finalizeFlow.busy
+              ? t("portfolio.activity.detail.actions.finalizing")
+              : t("portfolio.activity.detail.actions.finalizeTicket")}
           </button>
         ) : null}
         {canRefund ? (
@@ -69,7 +77,9 @@ export function BetDetailActions({
             disabled={busy}
             className="rounded-md border border-border bg-surface-2 px-4 py-3 text-sm font-black text-fg transition hover:bg-surface-3 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {refundFlow.busy ? "Refunding..." : "Refund stake"}
+            {refundFlow.busy
+              ? t("portfolio.activity.detail.actions.refunding")
+              : t("portfolio.activity.detail.actions.refundStake")}
           </button>
         ) : null}
       </div>
@@ -77,16 +87,19 @@ export function BetDetailActions({
       {activeFlow?.hasActivity ? (
         <div className="mt-5 space-y-3">
           {activeFlow.error ? (
-            <ErrorCallout title="Transaction error" message={activeFlow.error.message} />
+            <ErrorCallout
+              title={t("portfolio.activity.detail.actions.transactionError")}
+              message={activeFlow.error.message}
+            />
           ) : null}
           <TxStepper
             title={activeTitle}
-            subtitle="Wallet signature, broadcast, and receipt state."
+            subtitle={t("portfolio.activity.detail.actions.traceSubtitle")}
             steps={[...activeFlow.steps]}
             footer={
               <div className="space-y-2 text-xs text-fg-muted">
                 <div className="flex items-center justify-between">
-                  <span>Status</span>
+                  <span>{t("portfolio.activity.detail.actions.status")}</span>
                   <TxStatusChip status={activeFlow.status} />
                 </div>
                 {activeFlow.txHash ? (
@@ -99,20 +112,24 @@ export function BetDetailActions({
                         rel="noreferrer"
                         className="font-bold text-brand hover:text-brand-hover"
                       >
-                        View explorer
+                        {t("portfolio.activity.detail.actions.viewExplorer")}
                       </a>
                     ) : null}
                   </div>
                 ) : null}
                 {activeFlow.journalEntry?.blockNumber ? (
-                  <div>Block {activeFlow.journalEntry.blockNumber}</div>
+                  <div>
+                    {t("portfolio.activity.detail.actions.block", {
+                      blockNumber: activeFlow.journalEntry.blockNumber
+                    })}
+                  </div>
                 ) : null}
                 <button
                   type="button"
                   onClick={activeFlow.reset}
                   className="font-bold hover:text-fg"
                 >
-                  Reset trace
+                  {t("portfolio.activity.detail.actions.resetTrace")}
                 </button>
               </div>
             }

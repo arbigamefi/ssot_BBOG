@@ -45,8 +45,32 @@ export function applyGameHubEventToBet(
     if (ev.args.asset) next.asset = ev.args.asset as Address;
     if (ev.args.player) next.player = ev.args.player as Address;
     if (ev.args.user && !next.player) next.player = ev.args.user as Address;
+    if (ev.args.pricingAffiliate) next.pricingAffiliate = ev.args.pricingAffiliate as Address;
+    if (ev.args.stake != null) next.stake = toBigintString(ev.args.stake);
+    if (ev.args.requestId != null) next.requestId = toBigintString(ev.args.requestId);
     next.placedBlock = ev.blockNumber;
     next.state = "placed";
+  }
+
+  if (ev.eventName === "BetRandomReady") {
+    if (ev.args.requestId != null) next.requestId = toBigintString(ev.args.requestId);
+    if (ev.args.randomHash) next.randomHash = ev.args.randomHash as Hex;
+  }
+
+  if (ev.eventName === "BetFinalized") {
+    if (ev.args.payoutGross != null) next.payoutGross = toBigintString(ev.args.payoutGross);
+    if (ev.args.payoutNet != null) next.payout = toBigintString(ev.args.payoutNet);
+    next.terminalTxHash = ev.txHash;
+    next.finalizedTxHash = ev.txHash;
+  }
+
+  if (ev.eventName === "BetRefunded") {
+    if (ev.args.refundAmount != null) {
+      next.refundAmount = toBigintString(ev.args.refundAmount);
+      next.payout = next.refundAmount;
+    }
+    next.terminalTxHash = ev.txHash;
+    next.refundedTxHash = ev.txHash;
   }
 
   // state transitions

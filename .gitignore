@@ -28,6 +28,7 @@ frontend/packages/ui/node_modules
 frontend/apps/web/.next
 frontend/apps/web/.next-dev
 frontend/.turbo
+frontend/.runtime/
 frontend/storybook-static
 frontend/coverage
 frontend/.nyc_output

@@ -1,4 +1,5 @@
 import type { BetRow } from "@ssot/ssot/indexer";
+import type { SportsTicketRow } from "@ssot/bet-index";
 
 export type BetStatusFilter = "all" | "open" | "won" | "lost";
 
@@ -19,6 +20,9 @@ export type BetMetric = {
 };
 
 export type EnrichedBetRow = {
+  kind: "casino";
+  id: string;
+  detailHref: string;
   row: BetRow;
   status: BetStatusGroup;
   gameLabel: string;
@@ -28,4 +32,23 @@ export type EnrichedBetRow = {
   payout?: bigint;
   outcomeLabel: string;
   relativeTime: string;
+  updatedBlock: number;
 };
+
+export type EnrichedSportsTicketRow = {
+  kind: "sports";
+  id: string;
+  detailHref: string;
+  row: SportsTicketRow;
+  status: BetStatusGroup;
+  gameLabel: string;
+  assetSymbol: string;
+  decimals: number;
+  stake: bigint;
+  payout?: bigint;
+  outcomeLabel: string;
+  relativeTime: string;
+  updatedBlock: number;
+};
+
+export type EnrichedActivityRow = EnrichedBetRow | EnrichedSportsTicketRow;

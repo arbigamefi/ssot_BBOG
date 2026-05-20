@@ -1,8 +1,9 @@
 # ArbiGameFi 技术白皮书
 
-> **版本提示 (2026-05-13)**: 本白皮书是 v1.3 SettlementRouter / vertical hubs 改造前的技术草稿。
-> 文中 `Hub` / `src/core/Hub.sol` 口径属于历史架构。当前合约架构为
-> `Bank -> SettlementRouter -> GameHub / SportsHub`；当前规范见
+> **版本提示 (2026-05-18)**: 本白皮书已经把摘要、范围和结论口径对齐到
+> v1.3 SettlementRouter / vertical hubs 架构。正文中若仍出现 `Hub` /
+> `src/core/Hub.sol` 的历史段落，应按 v1.3 规范映射到
+> `SettlementRouter -> GameHub / SportsHub`；当前规范见
 > `docs/constitution/SSOT.v1.3.md` 与 `docs/architecture/overview.md`。
 
 > 项目：`ArbiGameFi`
@@ -17,11 +18,11 @@
 >
 > 语言：`zh-CN`
 >
-> 日期：`2026-03-07`
+> 日期：`2026-05-18`
 >
 > 代码基线：`current mainline contracts`
 >
-> 目标读者：`auditors / LPs / technical partners / investors`
+> 目标读者：`auditors / LPs / technical integrators / investors / protocol operators`
 >
 > 关联文档：`docs/WHITEPAPER.product.zh-CN.md` · `docs/ARBIGAMEFI-EXECUTIVE-BRIEF.zh-CN.md`
 
@@ -29,19 +30,22 @@
 
 ArbiGameFi 是一套面向全链上概率游戏场景的资金、结算与随机数协调协议。它的目标不是仅仅把若干游戏规则部署到链上，而是把博彩业务中最关键、最容易失去信任的几个环节做成可验证的链上事实：
 
-- 资金托管由每资产独立金库承担
+- 资金托管由每 pool / 每资产隔离金库承担
 - 每笔下注都有全局唯一生命周期记录
 - 随机数请求、收费、退款与回调状态可重建
 - 推荐返利与玩家回馈首先表现为链上负债，而不是离链记账
 - 风险流入可以暂停，但已形成债务必须保持可结算、可退款
 
-ArbiGameFi 当前实现围绕三个单一事实源构建，也就是其底层的 SSOT 架构：
+ArbiGameFi 当前实现围绕协议级 SSOT 结算内核构建，核心事实源已经从旧版单 Hub 演进为 router + vertical hubs：
 
 - `Bank`：每种资产的会计与托管事实源
-- `Hub`：每笔下注的生命周期事实源
-- `VRFHub`：随机数费用、请求状态和退款信用事实源
+- `PoolRegistry`：`poolId -> asset / Bank / domain` 的风险域事实源
+- `SettlementRouter`：全局 `positionId`、owner hub、池子、准备金与结算状态事实源
+- `GameHub`：casino 注单生命周期与 VRF 请求事实源
+- `SportsHub`：sportsbook 市场、票据、结果、挑战与 void 事实源
+- `VRFHub`：casino 随机数费用、请求状态和退款信用事实源
 
-在此基础上，游戏模块被收敛为纯语义模块，只负责校验、最大赔付上界计算和开奖解析，不直接触碰资金。协议因此形成一套清晰的责任划分：游戏决定结果，资金系统决定偿付边界，Hub 决定生命周期，VRFHub 决定随机数运输与费用记账。
+在此基础上，casino 游戏模块被收敛为纯语义模块，只负责校验、最大赔付上界计算和开奖解析，不直接触碰资金。协议因此形成一套清晰的责任划分：游戏决定结果，Bank 决定偿付边界，SettlementRouter 决定资金移动权限，GameHub / SportsHub 决定各自垂直生命周期，VRFHub 决定 casino 随机数运输与费用记账。
 
 本文严格基于当前仓库中的合约代码、部署脚本、架构文档与不变量测试撰写。它描述的是“当前实现已经做到了什么”，而不是未来路线图或市场宣传版本。
 
@@ -49,14 +53,14 @@ ArbiGameFi 当前实现围绕三个单一事实源构建，也就是其底层的
 
 ArbiGameFi is an on-chain capital, settlement, and randomness-coordination protocol for probability-based gaming. Its core design does not center on front-end presentation, but on turning the most trust-sensitive parts of gaming into auditable on-chain facts: segregated per-asset custody, a global bet lifecycle registry, explicit VRF fee and refund accounting, and liabilities for referral and player rewards that are recorded before they are paid out.
 
-The current implementation is built around an SSOT architecture with three primary sources of truth: `Bank` for per-asset accounting and custody, `Hub` for bet lifecycle, and `VRFHub` for randomness transport and fee bookkeeping. Game modules remain pure semantic modules. This document describes what the current contracts actually implement, the solvency model they enforce, the trust assumptions they still rely on, and the limits of the present design.
+The current implementation is built around a protocol-grade SSOT settlement kernel: `Bank` for per-pool accounting and custody, `PoolRegistry` for pool domains, `SettlementRouter` for global position settlement authority, `GameHub` for casino lifecycle, `SportsHub` for sportsbook lifecycle, and `VRFHub` for casino randomness transport and fee bookkeeping. Casino game modules remain pure semantic modules. This document describes what the current contracts actually implement, the solvency model they enforce, the trust assumptions they still rely on, and the limits of the present design.
 
 ## 1. 文档范围与读者
 
 本文主要面向以下读者：
 
 - 审计机构与安全研究者
-- 机构合作方与流动性提供者
+- 流动性提供者与技术集成方
 - 需要理解协议边界的前端、SDK 与数据团队
 - 需要掌握协议真实能力与约束的投资人和运营方
 
@@ -102,12 +106,15 @@ ArbiGameFi 的协议命题是：
 协议不使用一个“大而全”的万能合约，而是按事实类型拆分：
 
 - 资产事实写入 `Bank`
-- 生命周期事实写入 `Hub`
-- 随机数费用与请求事实写入 `VRFHub`
+- 池子与风险域事实写入 `PoolRegistry`
+- 结算权限与全局仓位事实写入 `SettlementRouter`
+- casino 生命周期事实写入 `GameHub`
+- sportsbook 生命周期事实写入 `SportsHub`
+- casino 随机数费用与请求事实写入 `VRFHub`
 
-### 3.2 每资产隔离
+### 3.2 每 pool / 每资产隔离
 
-每种支持的 ERC20 资产对应一个独立 `Bank(asset)`。协议不使用跨资产共享资金池，也不允许在 v1.x 中把某个资产重新映射到另一家 Bank。
+每个 `poolId` 绑定一个不可变 `Bank` 与结算资产。同一种 ERC20 资产可以被拆到不同 pool，但它们的准备金、LP 份额、暂停状态、协议费与 XP 负债必须独立证明，不能跨池净额抵消。
 
 ### 3.3 风险流入与债务流出分离
 
@@ -142,46 +149,53 @@ ArbiGameFi 的协议命题是：
 
 | 组件 | 职责 | 是否托管资产 |
 | --- | --- | --- |
-| `Bank` | 单资产托管、净值计算、准备金、LP 份额、协议费与 XP 负债桶 | 是 |
-| `BankRegistry` | `asset -> Bank` 单向注册表 | 否 |
-| `Hub` | 注单注册、定价快照、VRF 协调、结算与退款 | 否 |
-| `VRFHub` | VRF 报价、收费、退款信用、请求簿记、回调桥接 | 适配器模式下主要保留退款信用；内置模式下也可能保留已收取费用 |
+| `Bank` | 单池托管、净值计算、准备金、LP 份额、协议费与 XP 负债桶 | 是 |
+| `PoolRegistry` | `poolId -> asset / Bank / domain` 风险域注册表 | 否 |
+| `SettlementRouter` | 全局 `positionId`、owner hub、Bank 快照与资金结算权限 | 否 |
+| `GameHub` | casino 注单注册、定价快照、VRF 协调、permissionless finalize/refund | 否 |
+| `SportsHub` | sportsbook 市场、票据、结果、挑战、void 与风险路径 | 否 |
+| `VRFHub` | casino VRF 报价、收费、退款信用、请求簿记、回调桥接 | 适配器模式下主要保留退款信用；内置模式下也可能保留已收取费用 |
 | `ReferralRegistry` | 首触推荐关系图 | 否 |
 | `DefaultReferralEngine` | 推荐预算数学分配 | 否 |
-| 游戏模块 | 校验、最大赔付、开奖解析 | 否 |
+| casino 游戏模块 | 校验、最大赔付、开奖解析 | 否 |
 | `ChainlinkV2PlusWrapperAdapter` | 外部 VRF 包装器适配 | 否 |
 
 ### 4.2 架构图
 
 ```mermaid
 flowchart LR
-    P["Player"] -->|"Approve asset / pay native VRF fee"| H["Hub"]
-    H -->|"lookup bank"| BR["BankRegistry"]
-    H -->|"holdBet / settleBet / refundBet"| B["Bank(asset)"]
-    H -->|"requestRandomWords"| V["VRFHub"]
+    P["Player"] -->|"Approve asset / pay native VRF fee"| G["GameHub"]
+    G -->|"open / settle / refund position"| R["SettlementRouter"]
+    R -->|"lookup pool"| PR["PoolRegistry"]
+    R -->|"holdBet / settleBet / refundBet"| B["Bank(pool)"]
+    G -->|"requestRandomWords"| V["VRFHub"]
     V -->|"adapter mode"| A["VRF Adapter"]
     A -->|"provider request"| C["VRF Coordinator / Wrapper"]
     C -->|"fulfill"| V
-    V -->|"onRandomWords"| H
-    H -->|"validate / maxPayout / resolve"| G["Game Module"]
-    H -->|"bind / read referrer"| RR["ReferralRegistry"]
-    H -->|"split budgets"| RE["ReferralEngine"]
+    V -->|"onRandomWords"| G
+    G -->|"validate / maxPayout / resolve"| M["Casino Game Module"]
+    G -->|"bind / read referrer"| RR["ReferralRegistry"]
+    G -->|"split budgets"| RE["ReferralEngine"]
+    S["SportsHub"] -->|"open / settle / void tickets"| R
 ```
 
 ### 4.3 责任边界
 
 协议的依赖方向是硬约束，而不是编码习惯：
 
-- `Bank` 不依赖具体游戏模块
-- `Hub` 不直接实现游戏规则
+- `Bank` 不依赖具体游戏模块或垂直 Hub
+- `SettlementRouter` 是唯一的 Bank 结算权限入口
+- `GameHub` / `SportsHub` 不直接调用 Bank 结算 API
 - `VRFHub` 不知道资金如何托管
-- 模块不直接依赖 `Bank` 或 `VRFHub`
+- casino 模块不直接依赖 `Bank`、`SettlementRouter` 或 `VRFHub`
 
 这样可以把协议拆成三条清晰链路：
 
-- 资金链路
-- 生命周期链路
-- 随机数链路
+- 资金链路：`Bank`
+- 风险域链路：`PoolRegistry`
+- 结算权限链路：`SettlementRouter`
+- 垂直生命周期链路：`GameHub` / `SportsHub`
+- casino 随机数链路：`VRFHub`
 
 ## 5. 信任模型
 
@@ -664,12 +678,14 @@ stateDiagram-v2
 
 1. 部署 `ChainlinkV2PlusWrapperAdapter`
 2. 部署 `VRFHub`
-3. 部署 `BankRegistry`
-4. 部署 `ReferralRegistry`
-5. 部署 `DefaultReferralEngine`
-6. 部署 `Hub`
-7. 为每种资产部署一个 `Bank`
-8. 注册游戏模块
+3. 部署 `PoolRegistry`
+4. 部署 `SettlementRouter`
+5. 部署 `ReferralRegistry`
+6. 部署 `DefaultReferralEngine`
+7. 部署 `GameHub`
+8. 部署 `SportsHub` 与 `SportsRiskEngine`（若启用 sportsbook 垂直）
+9. 为每个 pool 部署对应 `Bank`
+10. 注册 casino 游戏模块、pool 与允许的垂直 Hub
 
 这说明当前协议更接近“参数可治理的固定逻辑系统”，而不是“通过代理持续可变更核心逻辑”的系统。
 
@@ -677,9 +693,12 @@ stateDiagram-v2
 
 ### 13.1 已实现的能力
 
-- 每资产独立托管金库
-- 全局注单生命周期注册
-- 四个标准游戏模块
+- 每 pool / 每资产隔离托管金库
+- `PoolRegistry` 风险域隔离
+- `SettlementRouter` 全局 position 结算权限
+- casino `GameHub` 生命周期
+- sportsbook `SportsHub` 生命周期
+- 八个 casino 游戏模块
 - 多轮下注与停止条件
 - 随机数收费、回调、退款信用
 - 首触推荐图
@@ -712,9 +731,9 @@ stateDiagram-v2
 
 ### 13.4 最准确的协议定位
 
-如果仅以当前代码为准，ArbiGameFi 最准确的定位不是“一个链上赌场前端项目”，而是：
+如果仅以当前代码为准，ArbiGameFi 的技术定位不是“一个链上赌场前端项目”，而是：
 
-> 一套面向全链上概率游戏场景的、可证明资金托管、注单生命周期管理、随机数费用协调与返利负债记账协议。
+> 一套服务于自营 B2C casino/sportsbook 产品的协议级 SSOT 结算内核：Bank 负责资金和负债，PoolRegistry 负责风险域，SettlementRouter 负责全局 position 结算权限，GameHub / SportsHub 负责各自垂直生命周期。
 
 ## 14. 后续演进方向
 
@@ -726,11 +745,13 @@ stateDiagram-v2
 - 提升监控、异常恢复和发布工件体系
 - 在保持预算守恒的前提下，扩展更复杂的推荐策略
 
-这些演进的前提不应是牺牲事实源清晰度，而是让更多功能继续锚定在现有三类真相上：
+这些演进的前提不应是牺牲事实源清晰度，而是让更多功能继续锚定在现有事实源上：
 
 - `Bank` 的资产与负债真相
-- `Hub` 的生命周期真相
-- `VRFHub` 的随机数与费用真相
+- `PoolRegistry` 的风险域真相
+- `SettlementRouter` 的全局 position 与结算权限真相
+- `GameHub` / `SportsHub` 的垂直生命周期真相
+- `VRFHub` 的 casino 随机数与费用真相
 
 ## 15. 结论
 
@@ -750,7 +771,7 @@ ArbiGameFi 当前实现真正有价值的地方，不是“已经做了多少个
 - 前端可以重做
 - 运营可以调整
 
-但只要不破坏 SSOT 的三套核心事实源，协议的底层可信度仍然可以维持一致。
+但只要不破坏 SSOT 的核心事实源，协议的底层可信度仍然可以维持一致。
 
 ## 附录 A：核心公式
 
@@ -785,9 +806,12 @@ ArbiGameFi 当前实现真正有价值的地方，不是“已经做了多少个
 | 术语 | 含义 |
 | --- | --- |
 | SSOT | Single Source of Truth |
-| Bank | 单资产托管与会计事实源 |
-| Hub | 注单生命周期事实源 |
-| VRFHub | 随机数费用与请求事实源 |
+| Bank | 单池托管与会计事实源 |
+| PoolRegistry | pool、资产、Bank 与垂直域的风险域事实源 |
+| SettlementRouter | 全局 position、owner hub 与 Bank 结算权限事实源 |
+| GameHub | casino 注单生命周期事实源 |
+| SportsHub | sportsbook 市场、票据与结果生命周期事实源 |
+| VRFHub | casino 随机数费用与请求事实源 |
 | PF | 协议费用负债 |
 | XP | 外部收益负债总额 |
 | R | 未开奖准备金总额 |
@@ -800,15 +824,22 @@ ArbiGameFi 当前实现真正有价值的地方，不是“已经做了多少个
 建议按如下顺序进入代码：
 
 1. `src/core/Bank.sol`
-2. `src/core/Hub.sol`
-3. `src/core/VRFHub.sol`
-4. `src/core/interfaces/SSOTTypes.sol`
-5. `src/engines/referral/ReferralRegistry.sol`
-6. `src/engines/referral/DefaultReferralEngine.sol`
-7. `src/modules/dice/DiceModule.sol`
-8. `src/modules/cointoss/CoinTossModule.sol`
-9. `src/modules/roulette/RouletteModule.sol`
-10. `src/modules/keno/KenoModule.sol`
-11. `docs/constitution/SSOT.v1.2.md`
-12. `docs/audit/invariants-map.md`
-13. `test/invariants/Invariants.t.sol`
+2. `src/core/PoolRegistry.sol`
+3. `src/core/SettlementRouter.sol`
+4. `src/core/GameHub.sol`
+5. `src/core/SportsHub.sol`
+6. `src/core/VRFHub.sol`
+7. `src/core/interfaces/SSOTTypes.sol`
+8. `src/engines/referral/ReferralRegistry.sol`
+9. `src/engines/referral/DefaultReferralEngine.sol`
+10. `src/modules/dice/DiceModule.sol`
+11. `src/modules/cointoss/CoinTossModule.sol`
+12. `src/modules/roulette/RouletteModule.sol`
+13. `src/modules/keno/KenoModule.sol`
+14. `src/modules/plinko/PlinkoModule.sol`
+15. `src/modules/sicbo/SicBoModule.sol`
+16. `src/modules/slots/SlotsModule.sol`
+17. `src/modules/baccarat/BaccaratModule.sol`
+18. `docs/constitution/SSOT.v1.3.md`
+19. `docs/audit/invariants-map.md`
+20. `test/invariants/Invariants.t.sol`

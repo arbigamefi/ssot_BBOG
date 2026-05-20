@@ -1,8 +1,17 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import * as React from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { GameRoomShell } from "./game-room-shell";
+
+vi.mock("next-intl", () => ({
+  useTranslations: () => (key: string) =>
+    ({
+      "casino.room.shell.liveModule": "Live SSOT Module",
+      "casino.room.shell.houseEdge": "House edge",
+      "casino.room.shell.maxPayout": "Max payout"
+    })[key] ?? key
+}));
 
 describe("GameRoomShell", () => {
   afterEach(() => cleanup());
@@ -16,6 +25,7 @@ describe("GameRoomShell", () => {
         leftPaneContent={<div>Bet controls</div>}
         rightPaneContent={<div>Stage canvas</div>}
         auditLedgerContent={<div>Audit stream</div>}
+        mobileActionContent={<button type="button">Mobile place</button>}
         isInteractive
       />
     );
@@ -27,5 +37,6 @@ describe("GameRoomShell", () => {
     expect(screen.getByText("Bet controls")).toBeDefined();
     expect(screen.getByText("Stage canvas")).toBeDefined();
     expect(screen.getByText("Audit stream")).toBeDefined();
+    expect(screen.getByRole("button", { name: "Mobile place" })).toBeDefined();
   });
 });

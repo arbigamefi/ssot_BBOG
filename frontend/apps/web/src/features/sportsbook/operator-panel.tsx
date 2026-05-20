@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import type { SSOTSDK, TxResult } from "@ssot/ssot/sdk";
 import { toast } from "@ssot/ui";
 
@@ -16,24 +17,28 @@ type OperatorStatus = {
   error?: string;
 };
 
-function parsePositiveBigInt(value: string, label: string) {
-  const parsed = parseLookupId(value);
-  if (parsed === undefined || parsed <= 0n) throw new Error(`${label} must be a positive integer.`);
-  return parsed;
-}
+type Translate = ReturnType<typeof useTranslations>;
 
-function parsePositiveNumber(value: string, label: string) {
-  const parsed = Number(value.trim());
-  if (!Number.isInteger(parsed) || parsed <= 0) {
-    throw new Error(`${label} must be a positive integer.`);
+function parsePositiveBigInt(value: string, label: string, t: Translate) {
+  const parsed = parseLookupId(value);
+  if (parsed === undefined || parsed <= 0n) {
+    throw new Error(t("sportsbook.operator.validation.positiveInteger", { label }));
   }
   return parsed;
 }
 
-function parseBytes32(value: string, label: string) {
+function parsePositiveNumber(value: string, label: string, t: Translate) {
+  const parsed = Number(value.trim());
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new Error(t("sportsbook.operator.validation.positiveInteger", { label }));
+  }
+  return parsed;
+}
+
+function parseBytes32(value: string, label: string, t: Translate) {
   const normalized = value.trim();
   if (!BYTES32_PATTERN.test(normalized)) {
-    throw new Error(`${label} must be a 32-byte hex value.`);
+    throw new Error(t("sportsbook.operator.validation.bytes32", { label }));
   }
   return normalized as `0x${string}`;
 }
@@ -110,9 +115,10 @@ export function SportsbookOperatorPanel({
   defaultFinalitySeconds?: string;
   onMutated?: () => void;
 }) {
+  const t = useTranslations();
   const [status, setStatus] = React.useState<OperatorStatus>({
     busy: false,
-    label: "No operator transaction submitted."
+    label: t("sportsbook.operator.status.noTransaction")
   });
   const [eventId, setEventId] = React.useState("");
   const [poolId, setPoolId] = React.useState(defaultPoolId ? String(defaultPoolId) : "");
@@ -143,16 +149,16 @@ export function SportsbookOperatorPanel({
     try {
       const result = await action();
       if (!result.ok) {
-        const message = result.error?.message ?? `${label} failed.`;
+        const message = result.error?.message ?? t("sportsbook.operator.status.failed", { label });
         setStatus({ busy: false, label, error: message });
         toast.error(message);
         return;
       }
       setStatus({ busy: false, label, txHash: result.txHash });
-      toast.success(`${label} submitted`);
+      toast.success(t("sportsbook.operator.status.submitted", { label }));
       onMutated?.();
     } catch (error) {
-      const message = formatLookupError(error) ?? `${label} failed.`;
+      const message = formatLookupError(error) ?? t("sportsbook.operator.status.failed", { label });
       setStatus({ busy: false, label, error: message });
       toast.error(message);
     }
@@ -161,17 +167,25 @@ export function SportsbookOperatorPanel({
   const actionDisabled = disabled || status.busy || !sdk?.account;
 
   const createMarket = React.useCallback(() => {
-    void run("Create market", async () => {
-      if (!sdk) throw new Error("SDK unavailable.");
+    void run(t("sportsbook.operator.actions.createMarket"), async () => {
+      if (!sdk) throw new Error(t("sportsbook.operator.status.sdkUnavailable"));
       return sdk.sportsHub.createMarket({
-        eventId: parsePositiveBigInt(eventId, "Event id"),
-        poolId: parsePositiveNumber(poolId, "Pool id"),
-        outcomeCount: parsePositiveNumber(outcomeCount, "Outcome count"),
-        startsAt: parsePositiveBigInt(startsAt, "Starts at"),
-        lockTime: parsePositiveBigInt(lockTime, "Lock time"),
-        resultFinalitySeconds: parsePositiveBigInt(resultFinalitySeconds, "Result finality"),
-        marketKey: parseBytes32(marketKey, "Market key"),
-        rulebookHash: parseBytes32(rulebookHash, "Rulebook hash")
+        eventId: parsePositiveBigInt(eventId, t("sportsbook.operator.fields.eventId"), t),
+        poolId: parsePositiveNumber(poolId, t("sportsbook.operator.fields.poolId"), t),
+        outcomeCount: parsePositiveNumber(
+          outcomeCount,
+          t("sportsbook.operator.fields.outcomeCount"),
+          t
+        ),
+        startsAt: parsePositiveBigInt(startsAt, t("sportsbook.operator.fields.startsAt"), t),
+        lockTime: parsePositiveBigInt(lockTime, t("sportsbook.operator.fields.lockTime"), t),
+        resultFinalitySeconds: parsePositiveBigInt(
+          resultFinalitySeconds,
+          t("sportsbook.operator.fields.resultFinality"),
+          t
+        ),
+        marketKey: parseBytes32(marketKey, t("sportsbook.operator.fields.marketKey"), t),
+        rulebookHash: parseBytes32(rulebookHash, t("sportsbook.operator.fields.rulebookHash"), t)
       });
     });
   }, [
@@ -183,143 +197,174 @@ export function SportsbookOperatorPanel({
     resultFinalitySeconds,
     rulebookHash,
     sdk,
-    startsAt
+    startsAt,
+    t
   ]);
 
   const openMarket = React.useCallback(() => {
-    void run("Open market", async () => {
-      if (!sdk) throw new Error("SDK unavailable.");
-      return sdk.sportsHub.openMarket(parsePositiveBigInt(marketId, "Market id"));
-    });
-  }, [marketId, sdk]);
-
-  const lockMarket = React.useCallback(() => {
-    void run("Lock market", async () => {
-      if (!sdk) throw new Error("SDK unavailable.");
-      return sdk.sportsHub.lockMarket(parsePositiveBigInt(marketId, "Market id"));
-    });
-  }, [marketId, sdk]);
-
-  const proposeResult = React.useCallback(() => {
-    void run("Propose result", async () => {
-      if (!sdk) throw new Error("SDK unavailable.");
-      return sdk.sportsHub.proposeResult({
-        marketId: parsePositiveBigInt(marketId, "Market id"),
-        winningOutcomeId: parsePositiveNumber(winningOutcomeId, "Winning outcome"),
-        resultSourceHash: parseBytes32(resultSourceHash, "Result source hash"),
-        evidenceHash: parseBytes32(evidenceHash, "Evidence hash"),
-        observedAt: parsePositiveBigInt(observedAt, "Observed at")
-      });
-    });
-  }, [evidenceHash, marketId, observedAt, resultSourceHash, sdk, winningOutcomeId]);
-
-  const finalizeResult = React.useCallback(() => {
-    void run("Finalize result", async () => {
-      if (!sdk) throw new Error("SDK unavailable.");
-      return sdk.sportsHub.finalizeResult(parsePositiveBigInt(marketId, "Market id"));
-    });
-  }, [marketId, sdk]);
-
-  const challengeResult = React.useCallback(() => {
-    void run("Challenge result", async () => {
-      if (!sdk) throw new Error("SDK unavailable.");
-      return sdk.sportsHub.challengeResult(
-        parsePositiveBigInt(marketId, "Market id"),
-        parseBytes32(challengeReasonHash, "Challenge reason hash")
+    void run(t("sportsbook.operator.actions.openMarket"), async () => {
+      if (!sdk) throw new Error(t("sportsbook.operator.status.sdkUnavailable"));
+      return sdk.sportsHub.openMarket(
+        parsePositiveBigInt(marketId, t("sportsbook.operator.fields.marketId"), t)
       );
     });
-  }, [challengeReasonHash, marketId, sdk]);
+  }, [marketId, sdk, t]);
+
+  const lockMarket = React.useCallback(() => {
+    void run(t("sportsbook.operator.actions.lockMarket"), async () => {
+      if (!sdk) throw new Error(t("sportsbook.operator.status.sdkUnavailable"));
+      return sdk.sportsHub.lockMarket(
+        parsePositiveBigInt(marketId, t("sportsbook.operator.fields.marketId"), t)
+      );
+    });
+  }, [marketId, sdk, t]);
+
+  const proposeResult = React.useCallback(() => {
+    void run(t("sportsbook.operator.actions.proposeResult"), async () => {
+      if (!sdk) throw new Error(t("sportsbook.operator.status.sdkUnavailable"));
+      return sdk.sportsHub.proposeResult({
+        marketId: parsePositiveBigInt(marketId, t("sportsbook.operator.fields.marketId"), t),
+        winningOutcomeId: parsePositiveNumber(
+          winningOutcomeId,
+          t("sportsbook.operator.fields.winningOutcome"),
+          t
+        ),
+        resultSourceHash: parseBytes32(
+          resultSourceHash,
+          t("sportsbook.operator.fields.resultSourceHash"),
+          t
+        ),
+        evidenceHash: parseBytes32(evidenceHash, t("sportsbook.operator.fields.evidenceHash"), t),
+        observedAt: parsePositiveBigInt(observedAt, t("sportsbook.operator.fields.observedAt"), t)
+      });
+    });
+  }, [evidenceHash, marketId, observedAt, resultSourceHash, sdk, t, winningOutcomeId]);
+
+  const finalizeResult = React.useCallback(() => {
+    void run(t("sportsbook.operator.actions.finalizeResult"), async () => {
+      if (!sdk) throw new Error(t("sportsbook.operator.status.sdkUnavailable"));
+      return sdk.sportsHub.finalizeResult(
+        parsePositiveBigInt(marketId, t("sportsbook.operator.fields.marketId"), t)
+      );
+    });
+  }, [marketId, sdk, t]);
+
+  const challengeResult = React.useCallback(() => {
+    void run(t("sportsbook.operator.actions.challengeResult"), async () => {
+      if (!sdk) throw new Error(t("sportsbook.operator.status.sdkUnavailable"));
+      return sdk.sportsHub.challengeResult(
+        parsePositiveBigInt(marketId, t("sportsbook.operator.fields.marketId"), t),
+        parseBytes32(challengeReasonHash, t("sportsbook.operator.fields.challengeReasonHash"), t)
+      );
+    });
+  }, [challengeReasonHash, marketId, sdk, t]);
 
   const resolveChallenge = React.useCallback(
     (decision: "upholdResult" | "reopenResult" | "voidMarket") => {
-      void run("Resolve challenge", async () => {
-        if (!sdk) throw new Error("SDK unavailable.");
+      void run(t("sportsbook.operator.actions.resolveChallenge"), async () => {
+        if (!sdk) throw new Error(t("sportsbook.operator.status.sdkUnavailable"));
         return sdk.sportsHub.resolveResultChallenge({
-          marketId: parsePositiveBigInt(marketId, "Market id"),
+          marketId: parsePositiveBigInt(marketId, t("sportsbook.operator.fields.marketId"), t),
           decision,
-          decisionHash: parseBytes32(decisionHash, "Decision hash")
+          decisionHash: parseBytes32(decisionHash, t("sportsbook.operator.fields.decisionHash"), t)
         });
       });
     },
-    [decisionHash, marketId, sdk]
+    [decisionHash, marketId, sdk, t]
   );
 
   const voidMarket = React.useCallback(() => {
-    void run("Void market", async () => {
-      if (!sdk) throw new Error("SDK unavailable.");
+    void run(t("sportsbook.operator.actions.voidMarket"), async () => {
+      if (!sdk) throw new Error(t("sportsbook.operator.status.sdkUnavailable"));
       return sdk.sportsHub.voidMarket(
-        parsePositiveBigInt(marketId, "Market id"),
-        parseBytes32(voidReasonHash, "Void reason hash")
+        parsePositiveBigInt(marketId, t("sportsbook.operator.fields.marketId"), t),
+        parseBytes32(voidReasonHash, t("sportsbook.operator.fields.voidReasonHash"), t)
       );
     });
-  }, [marketId, sdk, voidReasonHash]);
+  }, [marketId, sdk, t, voidReasonHash]);
 
   return (
     <div className="grid gap-6">
       <div className="grid gap-4 md:grid-cols-3">
         <DetailCell
-          label="Write status"
-          value={sdk?.account ? "Wallet connected" : "Wallet required"}
-          helper={disabledReason ?? "Contract roles are enforced on-chain by SportsHub."}
+          label={t("sportsbook.operator.summary.writeStatus")}
+          value={
+            sdk?.account
+              ? t("sportsbook.operator.summary.walletConnected")
+              : t("sportsbook.operator.summary.walletRequired")
+          }
+          helper={disabledReason ?? t("sportsbook.operator.summary.rolesHelper")}
           mono={false}
         />
-        <DetailCell label="Last action" value={status.label} helper={status.error} mono={false} />
-        <DetailCell label="Last tx" value={status.txHash ?? "N/A"} />
+        <DetailCell
+          label={t("sportsbook.operator.summary.lastAction")}
+          value={status.label}
+          helper={status.error}
+          mono={false}
+        />
+        <DetailCell
+          label={t("sportsbook.operator.summary.lastTx")}
+          value={status.txHash ?? t("sportsbook.components.na")}
+        />
       </div>
 
       <div className="flex flex-wrap gap-3">
         <StatusPill tone={disabled ? "warn" : "success"}>
-          {disabled ? "Read-only" : "Writable"}
+          {disabled
+            ? t("sportsbook.operator.summary.readOnly")
+            : t("sportsbook.operator.summary.writable")}
         </StatusPill>
         <StatusPill tone={sdk?.account ? "success" : "warn"}>
-          {sdk?.account ? "Wallet connected" : "No wallet"}
+          {sdk?.account
+            ? t("sportsbook.operator.summary.walletConnected")
+            : t("sportsbook.operator.summary.noWallet")}
         </StatusPill>
       </div>
 
       <div className="grid gap-5 xl:grid-cols-2">
         <div className="rounded-lg border border-border bg-surface-2/70 p-5">
-          <div className="text-sm font-black text-fg">Create fixed-odds market</div>
+          <div className="text-sm font-black text-fg">{t("sportsbook.operator.create.title")}</div>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <OperatorInput
               id="sports-create-event"
-              label="Event id"
+              label={t("sportsbook.operator.fields.eventId")}
               value={eventId}
               onChange={setEventId}
             />
             <OperatorInput
               id="sports-create-pool"
-              label="Pool id"
+              label={t("sportsbook.operator.fields.poolId")}
               value={poolId}
               onChange={setPoolId}
             />
             <OperatorInput
               id="sports-create-outcomes"
-              label="Outcomes"
+              label={t("sportsbook.operator.fields.outcomes")}
               value={outcomeCount}
               onChange={setOutcomeCount}
             />
             <OperatorInput
               id="sports-create-finality"
-              label="Finality seconds"
+              label={t("sportsbook.operator.fields.finalitySeconds")}
               value={resultFinalitySeconds}
               onChange={setResultFinalitySeconds}
             />
             <OperatorInput
               id="sports-create-start"
-              label="Starts at unix"
+              label={t("sportsbook.operator.fields.startsAtUnix")}
               value={startsAt}
               onChange={setStartsAt}
             />
             <OperatorInput
               id="sports-create-lock"
-              label="Lock time unix"
+              label={t("sportsbook.operator.fields.lockTimeUnix")}
               value={lockTime}
               onChange={setLockTime}
             />
             <div className="sm:col-span-2">
               <OperatorInput
                 id="sports-create-market-key"
-                label="Market key"
+                label={t("sportsbook.operator.fields.marketKey")}
                 value={marketKey}
                 onChange={setMarketKey}
                 placeholder="0x..."
@@ -328,7 +373,7 @@ export function SportsbookOperatorPanel({
             <div className="sm:col-span-2">
               <OperatorInput
                 id="sports-create-rulebook"
-                label="Rulebook hash"
+                label={t("sportsbook.operator.fields.rulebookHash")}
                 value={rulebookHash}
                 onChange={setRulebookHash}
                 placeholder="0x..."
@@ -337,30 +382,32 @@ export function SportsbookOperatorPanel({
           </div>
           <div className="mt-5">
             <OperatorButton disabled={actionDisabled} onClick={createMarket}>
-              Create market
+              {t("sportsbook.operator.actions.createMarket")}
             </OperatorButton>
           </div>
         </div>
 
         <div className="rounded-lg border border-border bg-surface-2/70 p-5">
-          <div className="text-sm font-black text-fg">Lifecycle and result</div>
+          <div className="text-sm font-black text-fg">
+            {t("sportsbook.operator.lifecycle.title")}
+          </div>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <OperatorInput
               id="sports-op-market"
-              label="Target market id"
+              label={t("sportsbook.operator.fields.targetMarketId")}
               value={marketId}
               onChange={setMarketId}
             />
             <OperatorInput
               id="sports-op-outcome"
-              label="Winning outcome"
+              label={t("sportsbook.operator.fields.winningOutcome")}
               value={winningOutcomeId}
               onChange={setWinningOutcomeId}
             />
             <div className="sm:col-span-2">
               <OperatorInput
                 id="sports-op-source"
-                label="Result source hash"
+                label={t("sportsbook.operator.fields.resultSourceHash")}
                 value={resultSourceHash}
                 onChange={setResultSourceHash}
                 placeholder="0x..."
@@ -369,7 +416,7 @@ export function SportsbookOperatorPanel({
             <div className="sm:col-span-2">
               <OperatorInput
                 id="sports-op-evidence"
-                label="Evidence hash"
+                label={t("sportsbook.operator.fields.evidenceHash")}
                 value={evidenceHash}
                 onChange={setEvidenceHash}
                 placeholder="0x..."
@@ -377,13 +424,13 @@ export function SportsbookOperatorPanel({
             </div>
             <OperatorInput
               id="sports-op-observed"
-              label="Observed at unix"
+              label={t("sportsbook.operator.fields.observedAtUnix")}
               value={observedAt}
               onChange={setObservedAt}
             />
             <OperatorInput
               id="sports-op-void"
-              label="Void reason hash"
+              label={t("sportsbook.operator.fields.voidReasonHash")}
               value={voidReasonHash}
               onChange={setVoidReasonHash}
               placeholder="0x..."
@@ -391,7 +438,7 @@ export function SportsbookOperatorPanel({
             <div className="sm:col-span-2">
               <OperatorInput
                 id="sports-op-challenge"
-                label="Challenge reason hash"
+                label={t("sportsbook.operator.fields.challengeReasonHash")}
                 value={challengeReasonHash}
                 onChange={setChallengeReasonHash}
                 placeholder="0x..."
@@ -400,7 +447,7 @@ export function SportsbookOperatorPanel({
             <div className="sm:col-span-2">
               <OperatorInput
                 id="sports-op-decision"
-                label="Arbitration decision hash"
+                label={t("sportsbook.operator.fields.arbitrationDecisionHash")}
                 value={decisionHash}
                 onChange={setDecisionHash}
                 placeholder="0x..."
@@ -409,40 +456,40 @@ export function SportsbookOperatorPanel({
           </div>
           <div className="mt-5 flex flex-wrap gap-3">
             <OperatorButton disabled={actionDisabled} onClick={openMarket}>
-              Open
+              {t("sportsbook.operator.buttons.open")}
             </OperatorButton>
             <OperatorButton disabled={actionDisabled} onClick={lockMarket}>
-              Lock
+              {t("sportsbook.operator.buttons.lock")}
             </OperatorButton>
             <OperatorButton disabled={actionDisabled} onClick={proposeResult}>
-              Propose result
+              {t("sportsbook.operator.buttons.proposeResult")}
             </OperatorButton>
             <OperatorButton disabled={actionDisabled} onClick={finalizeResult}>
-              Finalize
+              {t("sportsbook.operator.buttons.finalize")}
             </OperatorButton>
             <OperatorButton disabled={actionDisabled} onClick={challengeResult}>
-              Challenge
+              {t("sportsbook.operator.buttons.challenge")}
             </OperatorButton>
             <OperatorButton
               disabled={actionDisabled}
               onClick={() => resolveChallenge("upholdResult")}
             >
-              Uphold
+              {t("sportsbook.operator.buttons.uphold")}
             </OperatorButton>
             <OperatorButton
               disabled={actionDisabled}
               onClick={() => resolveChallenge("reopenResult")}
             >
-              Reopen
+              {t("sportsbook.operator.buttons.reopen")}
             </OperatorButton>
             <OperatorButton
               disabled={actionDisabled}
               onClick={() => resolveChallenge("voidMarket")}
             >
-              Void challenged
+              {t("sportsbook.operator.buttons.voidChallenged")}
             </OperatorButton>
             <OperatorButton disabled={actionDisabled} onClick={voidMarket} variant="danger">
-              Void
+              {t("sportsbook.operator.buttons.void")}
             </OperatorButton>
           </div>
         </div>

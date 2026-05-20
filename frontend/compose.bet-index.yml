@@ -1,0 +1,22 @@
+name: arbigamefi-bet-index
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    ports:
+      - "${BET_INDEX_POSTGRES_PORT:-54329}:5432"
+    environment:
+      POSTGRES_DB: "${BET_INDEX_POSTGRES_DB:-arbigamefi}"
+      POSTGRES_USER: "${BET_INDEX_POSTGRES_USER:-arbigamefi}"
+      POSTGRES_PASSWORD: "${BET_INDEX_POSTGRES_PASSWORD:-arbigamefi_dev_only}"
+    healthcheck:
+      test: ["CMD-SHELL", 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    volumes:
+      - bet_index_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  bet_index_postgres_data:

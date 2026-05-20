@@ -1,9 +1,11 @@
 import React from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { ShellHeader, ShellHeaderBrand, ShellHeaderNav, ShellHeaderActions } from "@ssot/ui";
 import { cn } from "@ssot/ui";
 import { WalletButton } from "../app-shell/WalletButton";
 import { useRelease } from "../ssot/release/ReleaseProvider";
+import { LocaleSwitcher } from "./LocaleSwitcher";
 
 export type AppRoute =
   | "directory"
@@ -16,6 +18,10 @@ export type AppRoute =
   | "ops"
   | "none"
   | "dice"
+  | "plinko"
+  | "slots"
+  | "baccarat"
+  | "sicbo"
   | "roulette"
   | "cointoss"
   | "keno";
@@ -26,9 +32,21 @@ interface AppHeaderProps {
   variant?: HeaderVariant;
 }
 
+const GAME_NAV_LINKS = [
+  { id: "dice", labelKey: "nav.dice", href: "/casino/dice" },
+  { id: "plinko", labelKey: "nav.plinko", href: "/casino/plinko" },
+  { id: "slots", labelKey: "nav.slots", href: "/casino/slots" },
+  { id: "baccarat", labelKey: "nav.baccarat", href: "/casino/baccarat" },
+  { id: "sicbo", labelKey: "nav.sicBo", href: "/casino/sic-bo" },
+  { id: "roulette", labelKey: "nav.roulette", href: "/casino/roulette" },
+  { id: "cointoss", labelKey: "nav.coinToss", href: "/casino/coin-toss" },
+  { id: "keno", labelKey: "nav.keno", href: "/casino/keno" }
+] as const;
+
 export function AppHeader({ activeRoute = "none", variant = "default" }: AppHeaderProps) {
   const isTransparent = variant === "transparent";
   const { release } = useRelease();
+  const t = useTranslations();
 
   if (isTransparent) {
     return (
@@ -40,14 +58,18 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
             </Link>
             <nav className="hidden items-center gap-6 text-sm font-medium text-fg-muted md:flex">
               <Link href="/casino" className="transition-colors hover:text-fg">
-                Rooms
+                {t("nav.rooms")}
               </Link>
               <Link href="/earn" className="transition-colors hover:text-fg">
-                Liquidity
+                {t("nav.liquidity")}
+              </Link>
+              <Link href="/affiliate" className="transition-colors hover:text-fg">
+                {t("nav.affiliates")}
               </Link>
             </nav>
           </div>
           <div className="flex items-center gap-4">
+            <LocaleSwitcher compact />
             <div className="hidden md:block">
               <WalletButton />
             </div>
@@ -55,7 +77,7 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
               href="/casino"
               className="rounded-full bg-fg px-5 py-2.5 text-sm font-semibold text-fg-inverse transition-colors hover:bg-fg/90"
             >
-              Open Rooms
+              {t("nav.openRooms")}
             </Link>
           </div>
         </div>
@@ -64,105 +86,108 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
   }
 
   const navLinks = [
-    { id: "directory", label: "Games", href: "/casino" },
-    { id: "sportsbook", label: "Sportsbook", href: "/sportsbook" },
-    { id: "bets", label: "Bets", href: "/portfolio/activity" },
-    { id: "liquidity", label: "Liquidity", href: "/earn" },
-    { id: "claims", label: "Claims", href: "/portfolio/claims" },
-    { id: "referral", label: "Affiliates", href: "/portfolio" },
-    { id: "account", label: "Account", href: "/portfolio" },
-    { id: "ops", label: "Ops", href: "/ops" }
+    { id: "directory", label: t("nav.games"), href: "/casino" },
+    { id: "sportsbook", label: t("nav.sportsbook"), href: "/sportsbook" },
+    { id: "bets", label: t("nav.bets"), href: "/portfolio/activity" },
+    { id: "liquidity", label: t("nav.liquidity"), href: "/earn" },
+    { id: "claims", label: t("nav.claims"), href: "/portfolio/claims" },
+    { id: "referral", label: t("nav.affiliates"), href: "/portfolio/referral" },
+    { id: "account", label: t("nav.account"), href: "/portfolio" }
   ] as const;
+  const mobileGameNav =
+    variant === "game" ? (
+      <div className="sticky top-20 z-40 border-b border-border bg-surface-0/95 px-4 py-2 backdrop-blur md:hidden">
+        <nav
+          aria-label={t("nav.casino")}
+          className="flex gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          <Link
+            href="/casino"
+            className="shrink-0 rounded-full border border-border-soft bg-surface-2 px-3 py-2 text-xs font-semibold text-fg-subtle"
+          >
+            ← {t("nav.casino")}
+          </Link>
+          {GAME_NAV_LINKS.map((link) => (
+            <Link
+              key={link.id}
+              href={link.href}
+              className={cn(
+                "shrink-0 rounded-full border px-3 py-2 text-xs font-semibold transition-colors",
+                activeRoute === link.id
+                  ? "border-brand bg-brand text-fg-inverse"
+                  : "border-border-soft bg-surface-2 text-fg-subtle hover:text-fg"
+              )}
+            >
+              {t(link.labelKey)}
+            </Link>
+          ))}
+        </nav>
+      </div>
+    ) : null;
 
   return (
-    <ShellHeader variant="solid">
-      <div className="flex items-center gap-6 md:gap-12 w-full">
-        <ShellHeaderBrand name="ArbiGameFi" />
+    <>
+      <ShellHeader variant="solid">
+        <div className="flex min-w-0 flex-1 items-center gap-3 md:gap-8">
+          <ShellHeaderBrand name="ArbiGameFi" className="shrink-0" />
 
-        {variant === "game" ? (
-          <ShellHeaderNav>
-            <Link
-              href="/casino/dice"
-              className={cn(
-                "transition-colors",
-                activeRoute === "dice"
-                  ? "border-b-2 border-brand pb-1 text-brand"
-                  : "text-fg-subtle hover:text-fg"
-              )}
-            >
-              Dice
-            </Link>
-            <Link
-              href="/casino/roulette"
-              className={cn(
-                "transition-colors",
-                activeRoute === "roulette"
-                  ? "border-b-2 border-brand pb-1 text-brand"
-                  : "text-fg-subtle hover:text-fg"
-              )}
-            >
-              Roulette
-            </Link>
-            <Link
-              href="/casino/coin-toss"
-              className={cn(
-                "transition-colors",
-                activeRoute === "cointoss"
-                  ? "border-b-2 border-brand pb-1 text-brand"
-                  : "text-fg-subtle hover:text-fg"
-              )}
-            >
-              Coin Toss
-            </Link>
-            <Link
-              href="/casino/keno"
-              className={cn(
-                "transition-colors",
-                activeRoute === "keno"
-                  ? "border-b-2 border-brand pb-1 text-brand"
-                  : "text-fg-subtle hover:text-fg"
-              )}
-            >
-              Keno
-            </Link>
+          {variant === "game" ? (
+            <ShellHeaderNav className="flex-1">
+              {GAME_NAV_LINKS.map((link) => (
+                <Link
+                  key={link.id}
+                  href={link.href}
+                  className={cn(
+                    "shrink-0 whitespace-nowrap transition-colors",
+                    activeRoute === link.id
+                      ? "border-b-2 border-brand pb-1 text-brand"
+                      : "text-fg-subtle hover:text-fg"
+                  )}
+                >
+                  {t(link.labelKey)}
+                </Link>
+              ))}
 
-            <div className="hidden h-6 border-l border-border-soft pl-6 ml-2 sm:block">
-              <Link
-                href="/casino"
-                className="flex h-full items-center gap-2 text-sm font-bold uppercase tracking-wider text-fg-subtle transition-colors hover:text-fg"
-              >
-                <span>←</span>
-                <span>Casino</span>
-              </Link>
-            </div>
-          </ShellHeaderNav>
-        ) : (
-          <ShellHeaderNav>
-            {navLinks.map((link) => (
-              <Link
-                key={link.id}
-                href={link.href}
-                className={cn(
-                  "transition-colors",
-                  activeRoute === link.id
-                    ? "border-b-2 border-fg pb-1 text-fg"
-                    : "text-fg-subtle hover:text-fg"
-                )}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </ShellHeaderNav>
-        )}
-      </div>
-
-      <ShellHeaderActions>
-        <div className="hidden items-center gap-2 rounded-full border border-border-soft bg-surface-2 px-3 py-1.5 font-mono text-xs text-fg-muted sm:flex">
-          <span className="h-1.5 w-1.5 rounded-full bg-brand"></span>
-          {release?.name ?? "Unknown network"}
+              <div className="ml-2 hidden h-6 shrink-0 border-l border-border-soft pl-6 sm:block">
+                <Link
+                  href="/casino"
+                  className="flex h-full items-center gap-2 whitespace-nowrap text-sm font-bold uppercase tracking-wider text-fg-subtle transition-colors hover:text-fg"
+                >
+                  <span>←</span>
+                  <span>{t("nav.casino")}</span>
+                </Link>
+              </div>
+            </ShellHeaderNav>
+          ) : (
+            <ShellHeaderNav className="flex-1">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.id}
+                  href={link.href}
+                  className={cn(
+                    "shrink-0 whitespace-nowrap transition-colors",
+                    activeRoute === link.id
+                      ? "border-b-2 border-fg pb-1 text-fg"
+                      : "text-fg-subtle hover:text-fg"
+                  )}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </ShellHeaderNav>
+          )}
         </div>
-        <WalletButton />
-      </ShellHeaderActions>
-    </ShellHeader>
+
+        <ShellHeaderActions>
+          <LocaleSwitcher compact />
+          <div className="hidden items-center gap-2 rounded-full border border-border-soft bg-surface-2 px-3 py-1.5 font-mono text-xs text-fg-muted sm:flex">
+            <span className="h-1.5 w-1.5 rounded-full bg-brand"></span>
+            {release?.name ?? t("app.unknownNetwork")}
+          </div>
+          <WalletButton />
+        </ShellHeaderActions>
+      </ShellHeader>
+      {mobileGameNav}
+    </>
   );
 }
