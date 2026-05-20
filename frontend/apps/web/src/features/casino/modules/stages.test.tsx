@@ -310,7 +310,7 @@ describe("game room stages", () => {
 
     expect(screen.getByText("Cherry / Seven / Seven")).toBeDefined();
     expect(screen.getByText("Classic profile")).toBeDefined();
-    expect(screen.getAllByText("7").length).toBeGreaterThan(0);
+    expect(screen.getAllByLabelText("Seven").length).toBeGreaterThan(0);
   });
 
   it("runs Slots reveal before completing the stage", () => {
