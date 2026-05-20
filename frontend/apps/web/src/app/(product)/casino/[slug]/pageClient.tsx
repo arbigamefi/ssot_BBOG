@@ -85,6 +85,25 @@ const GameRoomAuditLedger = dynamic(
   }
 );
 
+export function getCasinoRoomPendingStates({
+  isLocalPending,
+  isTransactionActive,
+  isOutcomeTracking,
+  hasStageReveal,
+  hasCasinoOutcome
+}: {
+  isLocalPending: boolean;
+  isTransactionActive: boolean;
+  isOutcomeTracking: boolean;
+  hasStageReveal: boolean;
+  hasCasinoOutcome: boolean;
+}) {
+  return {
+    isBetPanelPending: isLocalPending || isTransactionActive || isOutcomeTracking,
+    isStagePending: isOutcomeTracking && !hasStageReveal && !hasCasinoOutcome
+  };
+}
+
 /* ─── Main Logic ─── */
 
 export function GamePageClient({ slug }: { slug: string }) {
@@ -286,9 +305,15 @@ export function GamePageClient({ slug }: { slug: string }) {
   });
   const { state, reset } = casinoRound;
 
-  const isRoundAnimating = isPending || casinoRound.isRoundAnimating;
+  const { isBetPanelPending, isStagePending } = getCasinoRoomPendingStates({
+    isLocalPending: isPending,
+    isTransactionActive: casinoRound.isTransactionActive,
+    isOutcomeTracking: casinoRound.isRoundAnimating,
+    hasStageReveal: Boolean(stageReveal),
+    hasCasinoOutcome: Boolean(casinoOutcome)
+  });
   const animatingKenoSpots = useKenoStrobeSpots({
-    isPending: isRoundAnimating,
+    isPending: isStagePending,
     gameSlug: game?.slug
   });
 
@@ -399,7 +424,7 @@ export function GamePageClient({ slug }: { slug: string }) {
       onStopLossChange={setStopLoss}
       advancedOpen={advancedOpen}
       onAdvancedOpenChange={setAdvancedOpen}
-      isPending={isRoundAnimating}
+      isPending={isBetPanelPending}
       state={state}
       hasAccount={Boolean(sdk?.account)}
       winChance={winChance}
@@ -421,7 +446,6 @@ export function GamePageClient({ slug }: { slug: string }) {
 
   const stageShowResult = Boolean(stageReveal || showResult);
   const stageIsRevealing = stageReveal?.phase === "revealing";
-  const stageIsPending = isRoundAnimating && !stageReveal && !casinoOutcome;
 
   const RightPane = (
     <GameRoomRightPane
@@ -429,7 +453,7 @@ export function GamePageClient({ slug }: { slug: string }) {
       coinSide={coinSide}
       gameHistory={gameHistory}
       recentBets={recentBets}
-      isPending={stageIsPending}
+      isPending={isStagePending}
       isRevealing={stageIsRevealing}
       showResult={stageShowResult}
       resultNum={resultNum}

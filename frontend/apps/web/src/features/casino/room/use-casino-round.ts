@@ -93,11 +93,9 @@ export function useCasinoRound({
     return vrfQuote.phase === "loading_quote" ? "loading_quote" : "ready";
   }, [roundWatcher.phase, state.status, vrfQuote.phase]);
 
-  const isRoundAnimating =
-    state.status === "planning" ||
-    state.status === "submitting" ||
-    state.status === "mined" ||
-    roundWatcher.isLive;
+  const isTransactionActive =
+    state.status === "planning" || state.status === "submitting" || state.status === "mined";
+  const isRoundAnimating = roundWatcher.isLive;
 
   useBetStepperFailureToast({
     status: state.status,
@@ -177,6 +175,7 @@ export function useCasinoRound({
     reset,
     placeBet,
     roundPhase,
+    isTransactionActive,
     isRoundAnimating,
     vrfQuote: vrfQuote.quote,
     vrfQuoteError: vrfQuote.quoteError,

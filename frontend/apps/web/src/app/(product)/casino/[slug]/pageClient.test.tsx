@@ -304,7 +304,7 @@ vi.mock("@ssot/ui", () => ({
   cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" ")
 }));
 
-import { GamePageClient } from "./pageClient";
+import { GamePageClient, getCasinoRoomPendingStates } from "./pageClient";
 
 const MOCK_RELEASE = {
   name: "Base Sepolia",
@@ -367,6 +367,60 @@ describe("GamePageClient", () => {
     render(<GamePageClient slug="dice" />);
     expect(screen.getByTestId("placeholder")).toBeDefined();
     expect(screen.getByText("No release")).toBeDefined();
+  });
+
+  it("separates wallet transaction progress from game-stage waiting animation", () => {
+    expect(
+      getCasinoRoomPendingStates({
+        isLocalPending: false,
+        isTransactionActive: true,
+        isOutcomeTracking: false,
+        hasStageReveal: false,
+        hasCasinoOutcome: false
+      })
+    ).toEqual({
+      isBetPanelPending: true,
+      isStagePending: false
+    });
+
+    expect(
+      getCasinoRoomPendingStates({
+        isLocalPending: false,
+        isTransactionActive: false,
+        isOutcomeTracking: true,
+        hasStageReveal: false,
+        hasCasinoOutcome: false
+      })
+    ).toEqual({
+      isBetPanelPending: true,
+      isStagePending: true
+    });
+
+    expect(
+      getCasinoRoomPendingStates({
+        isLocalPending: true,
+        isTransactionActive: false,
+        isOutcomeTracking: false,
+        hasStageReveal: false,
+        hasCasinoOutcome: false
+      })
+    ).toEqual({
+      isBetPanelPending: true,
+      isStagePending: false
+    });
+
+    expect(
+      getCasinoRoomPendingStates({
+        isLocalPending: false,
+        isTransactionActive: false,
+        isOutcomeTracking: true,
+        hasStageReveal: true,
+        hasCasinoOutcome: false
+      })
+    ).toEqual({
+      isBetPanelPending: true,
+      isStagePending: false
+    });
   });
 
   it("renders release-driven game room and recent bets", () => {
