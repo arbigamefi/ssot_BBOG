@@ -156,7 +156,7 @@ export function DiceDie({
       {/* Contact shadow under the die. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute bottom-3 h-5 w-40 rounded-[50%] bg-black/45 blur-xl"
+        className="pointer-events-none absolute bottom-3 h-5 w-40 rounded-full bg-surface-0/45 blur-xl"
       />
 
       {/* One-shot win/loss flash ring on settle. */}

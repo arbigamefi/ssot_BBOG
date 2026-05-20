@@ -94,7 +94,7 @@ export function RouletteWheel({
       aria-hidden
     >
       {/* Drop shadow on the table */}
-      <div className="pointer-events-none absolute left-1/2 -bottom-3 h-7 w-3/4 -translate-x-1/2 rounded-[50%] bg-black/55 blur-2xl" />
+      <div className="pointer-events-none absolute left-1/2 -bottom-3 h-7 w-3/4 -translate-x-1/2 rounded-full bg-surface-0/55 blur-2xl" />
 
       {/* Tilted bowl assembly */}
       <div
@@ -102,9 +102,21 @@ export function RouletteWheel({
         style={{ transform: "rotateX(22deg)", transformStyle: "preserve-3d" }}
       >
         {/* Outer rim / bowl frame */}
-        <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_50%_30%,hsl(var(--surface-3)),hsl(var(--surface-0))_72%)] shadow-e3" />
+        <div
+          className="absolute inset-0 rounded-full shadow-e3"
+          style={{
+            background:
+              "radial-gradient(circle at 50% 30%, hsl(var(--surface-3)), hsl(var(--surface-0)) 72%)"
+          }}
+        />
         {/* Ball track (apron) */}
-        <div className="absolute inset-[18px] rounded-full border border-border-strong bg-[radial-gradient(circle_at_50%_35%,hsl(var(--surface-2)),hsl(var(--surface-0)))] shadow-inner-e1" />
+        <div
+          className="absolute inset-[18px] rounded-full border border-border-strong shadow-inner-e1"
+          style={{
+            background:
+              "radial-gradient(circle at 50% 35%, hsl(var(--surface-2)), hsl(var(--surface-0)))"
+          }}
+        />
         <div className="absolute inset-[30px] rounded-full border border-border-soft" />
 
         {/* Wheel head */}
@@ -148,8 +160,20 @@ export function RouletteWheel({
           <div className="absolute inset-[34px] rounded-full border-2 border-border-strong bg-surface-0/70 shadow-inner-e1" />
 
           {/* Central cone / turret */}
-          <div className="absolute inset-[58px] rounded-full bg-[radial-gradient(circle_at_38%_32%,hsl(var(--accent)),hsl(var(--brand))_62%,hsl(var(--surface-2)))] shadow-e3">
-            <div className="absolute inset-[26%] rounded-full bg-[radial-gradient(circle_at_40%_35%,hsl(var(--surface-2)),hsl(var(--surface-0)))] shadow-inner-e1" />
+          <div
+            className="absolute inset-[58px] rounded-full shadow-e3"
+            style={{
+              background:
+                "radial-gradient(circle at 38% 32%, hsl(var(--accent)), hsl(var(--brand)) 62%, hsl(var(--surface-2)))"
+            }}
+          >
+            <div
+              className="absolute inset-[26%] rounded-full shadow-inner-e1"
+              style={{
+                background:
+                  "radial-gradient(circle at 40% 35%, hsl(var(--surface-2)), hsl(var(--surface-0)))"
+              }}
+            />
             <div className="absolute left-1/2 top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border border-border bg-gradient-to-br from-fg via-fg-muted to-fg-subtle shadow-e1" />
             {/* Turret arms */}
             {[0, 90].map((deg) => (
@@ -170,8 +194,12 @@ export function RouletteWheel({
           transition={ballRingTransition}
         >
           <motion.div
-            className="absolute left-1/2 top-[20px] h-[14px] w-[14px] rounded-full bg-[radial-gradient(circle_at_35%_30%,#fff,hsl(var(--fg-muted))_75%,hsl(var(--fg-subtle)))] shadow-e2"
-            style={{ marginLeft: -7 }}
+            className="absolute left-1/2 top-[20px] h-[14px] w-[14px] rounded-full shadow-e2"
+            style={{
+              marginLeft: -7,
+              background:
+                "radial-gradient(circle at 35% 30%, white, hsl(var(--fg-muted)) 75%, hsl(var(--fg-subtle)))"
+            }}
             initial={false}
             animate={ballAnimate}
             transition={ballTransition}
@@ -179,11 +207,14 @@ export function RouletteWheel({
         </motion.div>
 
         {/* Glass sheen */}
-        <div className="pointer-events-none absolute inset-[18px] rounded-full bg-[linear-gradient(150deg,hsl(var(--fg)/0.16),transparent_45%)]" />
+        <div
+          className="pointer-events-none absolute inset-[18px] rounded-full"
+          style={{ background: "linear-gradient(150deg, hsl(var(--fg) / 0.16), transparent 45%)" }}
+        />
       </div>
 
       {/* Fixed pointer diamond */}
-      <div className="absolute left-1/2 top-[6px] h-3 w-3 -translate-x-1/2 rotate-45 rounded-[2px] bg-accent shadow-glow" />
+      <div className="absolute left-1/2 top-[6px] h-3 w-3 -translate-x-1/2 rotate-45 rounded-sm bg-accent shadow-glow" />
     </div>
   );
 }

@@ -174,7 +174,11 @@ export function SicBoStage({
             <div className="relative flex items-center justify-center gap-3 overflow-hidden rounded-lg border border-border bg-surface-0 px-4 py-6 shadow-inner-e1">
               <div
                 aria-hidden
-                className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_120%,hsl(var(--brand)/0.12),transparent_60%)]"
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  background:
+                    "radial-gradient(ellipse at 50% 120%, hsl(var(--brand) / 0.12), transparent 60%)"
+                }}
               />
               {[0, 1, 2].map((index) => (
                 <SicBoDie

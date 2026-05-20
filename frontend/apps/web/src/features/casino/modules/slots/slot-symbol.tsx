@@ -50,7 +50,7 @@ export function SlotSymbolArt({
     );
   }
 
-  const iconClass = cn(sizeClass, meta.tone, "drop-shadow-[0_8px_18px_hsl(var(--surface-0)/0.7)]");
+  const iconClass = cn(sizeClass, meta.tone, "drop-shadow-md");
 
   return (
     <span className="relative inline-flex items-center justify-center" aria-label={label}>

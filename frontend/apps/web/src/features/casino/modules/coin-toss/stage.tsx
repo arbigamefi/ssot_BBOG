@@ -71,15 +71,26 @@ export function CoinTossStage({
             aria-hidden
             className="pointer-events-none absolute left-1/2 bottom-[-46px] h-[72px] w-[122%] -translate-x-1/2"
           >
-            <div className="absolute inset-0 rounded-[50%] border-[3px] border-border-strong bg-surface-1 shadow-e3" />
-            <div className="absolute inset-[5px] rounded-[50%] bg-[radial-gradient(ellipse_at_50%_24%,hsl(var(--surface-2)),hsl(var(--surface-0)))] shadow-inner-e1" />
-            <div className="absolute inset-[5px] rounded-[50%] bg-[linear-gradient(160deg,hsl(var(--fg)/0.12),transparent_46%)]" />
+            <div className="absolute inset-0 rounded-full border-[3px] border-border-strong bg-surface-1 shadow-e3" />
+            <div
+              className="absolute inset-[5px] rounded-full shadow-inner-e1"
+              style={{
+                background:
+                  "radial-gradient(ellipse at 50% 24%, hsl(var(--surface-2)), hsl(var(--surface-0)))"
+              }}
+            />
+            <div
+              className="absolute inset-[5px] rounded-full"
+              style={{
+                background: "linear-gradient(160deg, hsl(var(--fg) / 0.12), transparent 46%)"
+              }}
+            />
           </div>
 
           {/* Landing shadow on the felt */}
           <motion.div
             aria-hidden
-            className="pointer-events-none absolute left-1/2 bottom-2 h-4 w-3/5 rounded-[50%] bg-black/55 blur-xl"
+            className="pointer-events-none absolute left-1/2 bottom-2 h-4 w-3/5 rounded-full bg-surface-0/55 blur-xl"
             initial={false}
             animate={{
               x: "-50%",
@@ -243,7 +254,10 @@ function CoinDisc({
         style={{ transform: "translateZ(16px)" }}
       >
         <div className="absolute inset-4 flex flex-col items-center justify-center rounded-full border border-brand/25 bg-surface-1">
-          <div className="absolute inset-0 bg-[url('/textures/noise.svg')] opacity-20 mix-blend-overlay" />
+          <div
+            className="absolute inset-0 opacity-20 mix-blend-overlay"
+            style={{ backgroundImage: "url('/textures/noise.svg')" }}
+          />
           <SparklesIcon className="h-24 w-24 p-4 text-fg" />
           <span className="mt-[-10px] text-3xl font-semibold tracking-[0.2em] text-fg">
             {headsLabel}
@@ -257,7 +271,10 @@ function CoinDisc({
         style={{ transform: "rotateX(180deg) translateZ(16px)" }}
       >
         <div className="absolute inset-4 flex flex-col items-center justify-center rounded-full border border-accent/25 bg-surface-1">
-          <div className="absolute inset-0 bg-[url('/textures/noise.svg')] opacity-20 mix-blend-overlay" />
+          <div
+            className="absolute inset-0 opacity-20 mix-blend-overlay"
+            style={{ backgroundImage: "url('/textures/noise.svg')" }}
+          />
           <ShieldCheckIcon className="h-24 w-24 p-4 text-fg" />
           <span className="mt-[-10px] text-3xl font-semibold tracking-[0.2em] text-fg">
             {tailsLabel}

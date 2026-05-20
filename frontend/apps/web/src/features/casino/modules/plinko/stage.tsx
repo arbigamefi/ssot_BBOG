@@ -217,10 +217,10 @@ export function PlinkoStage({
 
   return (
     <div className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden p-4">
-      <div className="relative rounded-2xl border border-border-strong bg-surface-1 p-2.5 shadow-e3">
+      <div className="relative rounded-xl border border-border-strong bg-surface-1 p-2.5 shadow-e3">
         <div
           aria-hidden
-          className="pointer-events-none absolute -bottom-5 left-1/2 h-9 w-3/4 -translate-x-1/2 rounded-[50%] bg-black/50 blur-2xl"
+          className="pointer-events-none absolute -bottom-5 left-1/2 h-9 w-3/4 -translate-x-1/2 rounded-full bg-surface-0/50 blur-2xl"
         />
 
         {/* ---- Risk selector ---- */}
@@ -264,7 +264,13 @@ export function PlinkoStage({
           aria-label={t("casino.room.stage.plinko.board")}
           className="relative h-[490px] w-[480px] max-w-full overflow-hidden rounded-xl border border-border-strong bg-surface-0 shadow-inner-e1"
         >
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,hsl(var(--brand)/0.1),transparent_56%)]" />
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background:
+                "radial-gradient(circle at 50% 0%, hsl(var(--brand) / 0.1), transparent 56%)"
+            }}
+          />
 
           {/* drop chute */}
           <div className="absolute left-1/2 top-0 z-10 flex h-6 w-14 -translate-x-1/2 items-end justify-center rounded-b-md border-x border-b border-border-soft bg-surface-1 shadow-inner-e1">

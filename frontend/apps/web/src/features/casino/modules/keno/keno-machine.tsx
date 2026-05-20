@@ -118,8 +118,14 @@ function GlobeBall({
 
   return (
     <motion.span
-      className="absolute left-1/2 top-1/2 rounded-full bg-[radial-gradient(circle_at_34%_30%,#fff,hsl(var(--brand))_78%)] shadow-e1"
-      style={{ width: size, height: size, marginLeft: -size / 2, marginTop: -size / 2 }}
+      className="absolute left-1/2 top-1/2 rounded-full shadow-e1"
+      style={{
+        width: size,
+        height: size,
+        marginLeft: -size / 2,
+        marginTop: -size / 2,
+        background: "radial-gradient(circle at 34% 30%, white, hsl(var(--brand)) 78%)"
+      }}
       initial={false}
       animate={animate}
       transition={transition}
@@ -142,11 +148,16 @@ function RackBall({
     <motion.span
       className={cn(
         "flex shrink-0 items-center justify-center rounded-full border font-mono font-semibold shadow-e1",
-        hit
-          ? "border-success bg-success text-fg-inverse"
-          : "border-border-strong bg-[radial-gradient(circle_at_36%_28%,hsl(var(--surface-3)),hsl(var(--surface-1)))] text-fg"
+        hit ? "border-success bg-success text-fg-inverse" : "border-border-strong text-fg"
       )}
-      style={{ width: size, height: size, fontSize: Math.max(11, Math.round(size * 0.32)) }}
+      style={{
+        width: size,
+        height: size,
+        fontSize: Math.max(11, Math.round(size * 0.32)),
+        background: hit
+          ? undefined
+          : "radial-gradient(circle at 36% 28%, hsl(var(--surface-3)), hsl(var(--surface-1)))"
+      }}
       initial={animateEntry ? { y: -(size * 1.15), opacity: 0, scale: 0.7 } : false}
       animate={{ y: 0, opacity: 1, scale: 1 }}
       transition={
@@ -190,7 +201,13 @@ export function KenoDrawMachine({
         style={{ width: globe, height: globe }}
         aria-hidden
       >
-        <div className="absolute inset-0 rounded-full border-4 border-border-strong bg-[radial-gradient(circle_at_38%_30%,hsl(var(--surface-2)),hsl(var(--surface-0)))] shadow-e3" />
+        <div
+          className="absolute inset-0 rounded-full border-4 border-border-strong shadow-e3"
+          style={{
+            background:
+              "radial-gradient(circle at 38% 30%, hsl(var(--surface-2)), hsl(var(--surface-0)))"
+          }}
+        />
         <div
           className="absolute overflow-hidden rounded-full border border-border-soft bg-surface-0/70 shadow-inner-e1"
           style={{ inset: wall }}
@@ -201,8 +218,11 @@ export function KenoDrawMachine({
         </div>
         {/* Glass highlight */}
         <div
-          className="pointer-events-none absolute rounded-full bg-[linear-gradient(145deg,hsl(var(--fg)/0.22),transparent_46%)]"
-          style={{ inset: wall }}
+          className="pointer-events-none absolute rounded-full"
+          style={{
+            inset: wall,
+            background: "linear-gradient(145deg, hsl(var(--fg) / 0.22), transparent 46%)"
+          }}
         />
         {/* Chute toward the rack */}
         <div

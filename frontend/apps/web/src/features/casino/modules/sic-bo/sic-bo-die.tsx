@@ -136,7 +136,7 @@ export function SicBoDie({
     >
       <div
         aria-hidden
-        className="pointer-events-none absolute bottom-1 h-3 w-16 rounded-[50%] bg-black/45 blur-md"
+        className="pointer-events-none absolute bottom-1 h-3 w-16 rounded-full bg-surface-0/45 blur-md"
       />
       <motion.div
         className="relative"

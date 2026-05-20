@@ -107,10 +107,10 @@ export function SlotsStage({
       <div className="relative w-full max-w-xl">
         <div
           aria-hidden
-          className="pointer-events-none absolute -bottom-6 left-1/2 h-10 w-3/4 -translate-x-1/2 rounded-[50%] bg-black/50 blur-2xl"
+          className="pointer-events-none absolute -bottom-6 left-1/2 h-10 w-3/4 -translate-x-1/2 rounded-full bg-surface-0/50 blur-2xl"
         />
 
-        <div className="relative rounded-2xl border border-border-strong bg-surface-1 p-3 shadow-e3">
+        <div className="relative rounded-xl border border-border-strong bg-surface-1 p-3 shadow-e3">
           {/* Marquee */}
           <div className="mb-3 flex items-center justify-center rounded-lg border border-border-soft bg-gradient-to-b from-surface-2 to-surface-1 py-2 shadow-inner-e1">
             <span className="text-[11px] font-semibold uppercase tracking-[0.42em] text-fg-muted">

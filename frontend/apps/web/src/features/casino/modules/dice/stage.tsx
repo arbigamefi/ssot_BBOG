@@ -80,13 +80,17 @@ export function DiceStage({
       <div className="relative w-full max-w-md">
         <div
           aria-hidden
-          className="pointer-events-none absolute -bottom-4 left-1/2 h-8 w-3/4 -translate-x-1/2 rounded-[50%] bg-black/50 blur-2xl"
+          className="pointer-events-none absolute -bottom-4 left-1/2 h-8 w-3/4 -translate-x-1/2 rounded-full bg-surface-0/50 blur-2xl"
         />
-        <div className="relative rounded-2xl border-4 border-border-strong bg-surface-1 p-2 shadow-e3">
+        <div className="relative rounded-xl border-4 border-border-strong bg-surface-1 p-2 shadow-e3">
           <div className="relative flex items-center justify-center overflow-hidden rounded-xl border border-border bg-surface-0 py-3 shadow-inner-e1">
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_28%,hsl(var(--brand)/0.1),transparent_62%)]"
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background:
+                  "radial-gradient(ellipse at 50% 28%, hsl(var(--brand) / 0.1), transparent 62%)"
+              }}
             />
             {/* felt landing-zone stencil */}
             <div
@@ -118,7 +122,7 @@ export function DiceStage({
           <span
             aria-hidden
             className={cn(
-              "absolute inset-y-1 w-[calc(50%-4px)] rounded-[5px] bg-brand transition-[left] duration-200 ease-out",
+              "absolute inset-y-1 w-[calc(50%-4px)] rounded-sm bg-brand transition-[left] duration-200 ease-out",
               diceDirection === "under" ? "left-1" : "left-[calc(50%+3px)]"
             )}
           />
@@ -127,7 +131,7 @@ export function DiceStage({
             disabled={locked}
             onClick={() => onDirectionChange("under")}
             className={cn(
-              "relative z-10 flex-1 rounded-[5px] text-xs font-semibold uppercase tracking-[0.12em] transition-colors disabled:cursor-not-allowed",
+              "relative z-10 flex-1 rounded-sm text-xs font-semibold uppercase tracking-[0.12em] transition-colors disabled:cursor-not-allowed",
               diceDirection === "under" ? "text-fg-inverse" : "text-fg-subtle hover:text-fg"
             )}
           >
@@ -138,7 +142,7 @@ export function DiceStage({
             disabled={locked}
             onClick={() => onDirectionChange("over")}
             className={cn(
-              "relative z-10 flex-1 rounded-[5px] text-xs font-semibold uppercase tracking-[0.12em] transition-colors disabled:cursor-not-allowed",
+              "relative z-10 flex-1 rounded-sm text-xs font-semibold uppercase tracking-[0.12em] transition-colors disabled:cursor-not-allowed",
               diceDirection === "over" ? "text-fg-inverse" : "text-fg-subtle hover:text-fg"
             )}
           >

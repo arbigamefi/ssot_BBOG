@@ -72,13 +72,21 @@ export function RouletteStage({
       </div>
 
       <div className="relative z-10 flex w-full flex-1 items-center justify-center min-h-[260px]">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-[radial-gradient(ellipse_at_top,hsl(var(--brand)/0.06),transparent_70%)]" />
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 h-32"
+          style={{
+            background: "radial-gradient(ellipse at top, hsl(var(--brand) / 0.06), transparent 70%)"
+          }}
+        />
         <RouletteWheel mode={wheelMode} resultNum={resultNum} reduced={reduced} />
       </div>
 
       <div className="relative z-20 w-fit max-w-full overflow-x-auto overflow-y-hidden custom-scrollbar pointer-events-auto transform-gpu origin-bottom scale-[0.85] sm:scale-95 xl:scale-100 pb-2 px-1">
         <div className="relative flex min-w-[500px] flex-col gap-1.5 overflow-hidden rounded-lg border-[4px] border-border bg-surface-1 p-2 shadow-e3 sm:p-4 md:min-w-fit md:p-3">
-          <div className="absolute inset-0 bg-[url('/textures/noise.svg')] opacity-25 pointer-events-none mix-blend-overlay" />
+          <div
+            className="pointer-events-none absolute inset-0 opacity-25 mix-blend-overlay"
+            style={{ backgroundImage: "url('/textures/noise.svg')" }}
+          />
           <div className="absolute inset-0 bg-gradient-to-b from-brand/5 to-transparent pointer-events-none" />
 
           <div className="flex">

@@ -276,7 +276,7 @@ export function BaccaratStage({
       <div className="relative w-full max-w-3xl">
         <div
           aria-hidden
-          className="pointer-events-none absolute -bottom-5 left-1/2 h-9 w-3/4 -translate-x-1/2 rounded-[50%] bg-black/45 blur-2xl"
+          className="pointer-events-none absolute -bottom-5 left-1/2 h-9 w-3/4 -translate-x-1/2 rounded-full bg-surface-0/45 blur-2xl"
         />
 
         {/* table rail */}
@@ -285,7 +285,11 @@ export function BaccaratStage({
           <div className="relative overflow-hidden rounded-lg border border-border bg-surface-0 p-5 shadow-inner-e1">
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,hsl(var(--brand)/0.1),transparent_62%)]"
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background:
+                  "radial-gradient(ellipse at 50% 0%, hsl(var(--brand) / 0.1), transparent 62%)"
+              }}
             />
 
             <DealingShoe active={dealingActive} reduced={prefersReducedMotion} />
