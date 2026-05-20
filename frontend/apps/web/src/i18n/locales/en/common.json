@@ -303,6 +303,7 @@
         },
         "keno": {
           "spotsLabel": "/ 5 Spots",
+          "hits": "{hits} Hits",
           "autoPick": "Auto Pick",
           "clear": "Clear",
           "empty": "No spots selected. Click the grid to pick numbers."

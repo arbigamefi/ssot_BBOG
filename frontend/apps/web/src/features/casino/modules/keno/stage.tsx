@@ -30,10 +30,12 @@ function formatKenoPay(multiplier: number): string {
 function KenoPayoutTable({
   spots,
   settledHits,
+  hitLabel,
   className
 }: {
   spots: readonly number[];
   settledHits: number | null;
+  hitLabel: (hits: number) => string;
   className?: string;
 }) {
   return (
@@ -60,7 +62,7 @@ function KenoPayoutTable({
                 isSettled ? "text-accent" : isTarget ? "text-brand" : "text-fg-subtle"
               )}
             >
-              {hits} Hits
+              {hitLabel(hits)}
             </span>
             <span
               className={cn(
@@ -99,6 +101,10 @@ export function KenoStage({
   onRevealComplete?: () => void;
 }) {
   const t = useTranslations();
+  const hitLabel = React.useCallback(
+    (hits: number) => t("casino.room.selection.keno.hits", { hits }),
+    [t]
+  );
   const prefersReducedMotion = useReducedMotion();
   const controlsDisabled = isPending || isRevealing || showResult;
   const resultKey = resultDrawn.join(",");
@@ -212,7 +218,12 @@ export function KenoStage({
               variant="active"
             />
             {spots.length > 0 && (
-              <KenoPayoutTable spots={spots} settledHits={settledHits} className="mt-3" />
+              <KenoPayoutTable
+                spots={spots}
+                settledHits={settledHits}
+                hitLabel={hitLabel}
+                className="mt-3"
+              />
             )}
           </>
         ) : (
@@ -226,7 +237,12 @@ export function KenoStage({
               variant="idle"
             />
             {spots.length > 0 && (
-              <KenoPayoutTable spots={spots} settledHits={settledHits} className="min-w-0 flex-1" />
+              <KenoPayoutTable
+                spots={spots}
+                settledHits={settledHits}
+                hitLabel={hitLabel}
+                className="min-w-0 flex-1"
+              />
             )}
           </div>
         )}

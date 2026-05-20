@@ -15,7 +15,7 @@ vi.mock("@ssot/ui", () => ({
 }));
 
 vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string, values?: Record<string, string>) =>
+  useTranslations: () => (key: string, values?: Record<string, number | string>) =>
     ({
       "casino.room.selection.dice.rollUnder": "Roll Under",
       "casino.room.selection.dice.rollOver": "Roll Over",
@@ -30,6 +30,7 @@ vi.mock("next-intl", () => ({
       "casino.room.selection.keno.autoPick": "Auto Pick",
       "casino.room.selection.keno.clear": "Clear",
       "casino.room.selection.keno.empty": "No spots selected. Click the grid to pick numbers.",
+      "casino.room.selection.keno.hits": `${values?.hits} Hits`,
       "casino.room.selection.baccarat.player": "Player",
       "casino.room.selection.baccarat.banker": "Banker",
       "casino.room.selection.baccarat.tie": "Tie",
@@ -218,6 +219,7 @@ describe("game room stages", () => {
     fireEvent.click(screen.getByText("Auto Pick"));
     expect(onChange).toHaveBeenLastCalledWith(expect.arrayContaining([]));
     expect(onChange.mock.calls.at(-1)?.[0]).toHaveLength(5);
+    expect(screen.getByText("2 Hits")).toBeDefined();
   });
 
   it("reveals Keno draw numbers before completing the stage", () => {
