@@ -20,10 +20,10 @@ export function formatTokenBalance(raw: bigint, decimals: number) {
   })} USDC`;
 }
 
-export function pickKenoStrobeSpots(count = 8) {
+export function pickKenoStrobeSpots(count = 5) {
   const spots: number[] = [];
   while (spots.length < count) {
-    const num = Math.floor(Math.random() * 40) + 1;
+    const num = Math.floor(Math.random() * 15) + 1;
     if (!spots.includes(num)) spots.push(num);
   }
   return spots;

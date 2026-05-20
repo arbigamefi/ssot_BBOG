@@ -456,9 +456,9 @@ contract StatefulSystemDiff is Test {
                 params = RouletteParams.encode(RouletteParams.Kind.Bitmask, mask);
             } else if (g == 3) {
                 gameId = GAME_KENO;
-                // keno numbers: 1..10 picks from 40
-                uint8 picks = uint8(bound(uint256(state >> 56), 1, 10));
-                uint40 mask = _randomBitmask40(state >> 64, 40, picks);
+                // keno numbers: 1..5 picks from 15
+                uint8 picks = uint8(bound(uint256(state >> 56), 1, 5));
+                uint40 mask = _randomBitmask40(state >> 64, 15, picks);
                 params = abi.encode(mask);
             } else if (g == 4) {
                 gameId = GAME_SLOTS;

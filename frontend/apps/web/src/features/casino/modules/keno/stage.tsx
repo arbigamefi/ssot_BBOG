@@ -1,6 +1,7 @@
 import * as React from "react";
 import { useReducedMotion } from "framer-motion";
 import { cn } from "@ssot/ui";
+import { kenoMultiplier } from "@ssot/ssot/domain";
 import { useTranslations } from "next-intl";
 
 import { KenoDrawMachine } from "./keno-machine";
@@ -8,10 +9,72 @@ import { KenoDrawMachine } from "./keno-machine";
 function pickKenoSpots(count: number): number[] {
   const spots: number[] = [];
   while (spots.length < count) {
-    const n = Math.floor(Math.random() * 40) + 1;
+    const n = Math.floor(Math.random() * 15) + 1;
     if (!spots.includes(n)) spots.push(n);
   }
   return spots.sort((a, b) => a - b);
+}
+
+// Keno multipliers span 0.42x to 500.5x — keep small ones precise and large
+// ones readable without overflowing the payout tile.
+function formatKenoPay(multiplier: number): string {
+  if (multiplier >= 1000) return `${Math.round(multiplier).toLocaleString("en-US")}x`;
+  return `${multiplier.toFixed(2)}x`;
+}
+
+/**
+ * Payout reference: one tile per possible hit count for the current pick size.
+ * While picking it marks the all-hit jackpot row; once a draw settles it marks
+ * the row actually landed on. Multipliers come from the on-chain gain table.
+ */
+function KenoPayoutTable({
+  spots,
+  settledHits,
+  className
+}: {
+  spots: readonly number[];
+  settledHits: number | null;
+  className?: string;
+}) {
+  return (
+    <div className={cn("flex items-center gap-2 overflow-x-auto custom-scrollbar pb-1", className)}>
+      {Array.from({ length: spots.length + 1 }).map((_, hits) => {
+        const pay = kenoMultiplier(spots.length, hits);
+        const isSettled = settledHits === hits;
+        const isTarget = settledHits == null && hits === spots.length;
+        return (
+          <div
+            key={hits}
+            className={cn(
+              "flex h-14 min-w-[66px] flex-col items-center justify-center rounded-md border-2 transition-[border-color,background-color]",
+              isSettled
+                ? "border-accent bg-surface-3 shadow-e2"
+                : isTarget
+                  ? "border-brand bg-brand-soft shadow-e2"
+                  : "border-border-soft bg-surface-2"
+            )}
+          >
+            <span
+              className={cn(
+                "mb-1 text-[9px] font-semibold uppercase tracking-widest",
+                isSettled ? "text-accent" : isTarget ? "text-brand" : "text-fg-subtle"
+              )}
+            >
+              {hits} Hits
+            </span>
+            <span
+              className={cn(
+                "font-mono text-sm font-semibold",
+                isSettled || isTarget ? "text-fg" : "text-brand"
+              )}
+            >
+              {formatKenoPay(pay)}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 export function KenoStage({
@@ -43,6 +106,14 @@ export function KenoStage({
     showResult ? resultDrawn.length : 0
   );
   const visibleDrawn = isRevealing ? resultDrawn.slice(0, revealedCount) : resultDrawn;
+  // Protagonist by state: while picking, the 15-cell board leads and the
+  // machine waits compactly; once a draw is live or its result is up, the
+  // machine becomes the hero and the board recedes to a reference scoreboard.
+  const phase: "pick" | "draw" = isPending || isRevealing || showResult ? "draw" : "pick";
+  // Hit count actually achieved once the draw has settled — used to mark the
+  // matching payout row so the odds table connects to the result.
+  const settledHits =
+    showResult && !isRevealing ? spots.filter((spot) => resultDrawn.includes(spot)).length : null;
 
   React.useEffect(() => {
     if (!isRevealing || resultDrawn.length === 0) {
@@ -83,8 +154,8 @@ export function KenoStage({
   ]);
 
   return (
-    <div className="absolute inset-0 z-10 flex flex-col items-center justify-start overflow-hidden px-5 pb-6 pt-10">
-      <div className="relative z-20 mb-4 flex w-full max-w-[820px] flex-col gap-3 rounded-xl border border-border bg-surface-1/90 p-4 shadow-e2 backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between">
+    <div className="absolute inset-0 z-10 flex flex-col items-center justify-start overflow-y-auto custom-scrollbar px-5 pb-6 pt-10">
+      <div className="relative z-20 mb-4 flex w-full max-w-[820px] shrink-0 flex-col gap-3 rounded-xl border border-border bg-surface-1/90 p-4 shadow-e2 backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="font-mono text-3xl font-semibold text-fg">
             {spots.length}{" "}
@@ -103,7 +174,7 @@ export function KenoStage({
             type="button"
             disabled={controlsDisabled}
             onClick={() => {
-              onChange(pickKenoSpots(10));
+              onChange(pickKenoSpots(5));
               onResetResult();
             }}
             className="rounded-lg border border-brand/40 bg-brand-soft px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-brand transition-colors hover:bg-brand/20 disabled:cursor-default disabled:opacity-50"
@@ -124,64 +195,51 @@ export function KenoStage({
         </div>
       </div>
 
-      <div className="relative z-20 mb-4 w-full max-w-[820px] overflow-hidden rounded-xl border border-border bg-surface-1/90 p-3 shadow-e2 backdrop-blur-xl">
-        <div className="mb-3">
-          <KenoDrawMachine
-            drawn={visibleDrawn}
-            spots={spots}
-            agitated={isPending || Boolean(isRevealing)}
-            animateEntry={Boolean(isRevealing)}
-            reduced={Boolean(prefersReducedMotion)}
-          />
-        </div>
-
-        <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar pb-1">
-          {Array.from({ length: Math.max(5, spots.length + 1) }).map((_, hits) => {
-            const pay =
-              hits === 0 ? 0 : Math.pow(Math.max(1, hits - Math.floor(spots.length / 3)), 1.8);
-            const isCurrentTarget = spots.length > 0 && hits === spots.length;
-            return (
-              <div
-                key={hits}
-                className={cn(
-                  "flex h-14 min-w-[66px] flex-col items-center justify-center rounded-md border-2 transition-[transform,border-color,background-color]",
-                  isCurrentTarget
-                    ? "border-brand bg-brand-soft shadow-e2"
-                    : pay > 0
-                      ? "border-border-soft bg-surface-2"
-                      : "bg-transparent border-transparent opacity-40"
-                )}
-              >
-                <span
-                  className={cn(
-                    "text-[9px] uppercase font-semibold tracking-widest mb-1",
-                    isCurrentTarget ? "text-brand" : "text-fg-subtle"
-                  )}
-                >
-                  {hits} Hits
-                </span>
-                <span
-                  className={cn(
-                    "text-sm font-mono font-semibold",
-                    isCurrentTarget ? "text-fg" : pay > 0 ? "text-brand" : "text-fg-subtle"
-                  )}
-                >
-                  {pay.toFixed(2)}x
-                </span>
-              </div>
-            );
-          })}
-        </div>
+      <div
+        className={cn(
+          "relative z-20 mb-4 w-full max-w-[820px] shrink-0 overflow-hidden rounded-xl border bg-surface-1/90 backdrop-blur-xl transition-[padding,box-shadow] duration-300",
+          phase === "draw" ? "border-border-strong p-5 shadow-e3" : "border-border p-3 shadow-e1"
+        )}
+      >
+        {phase === "draw" ? (
+          <>
+            <KenoDrawMachine
+              drawn={visibleDrawn}
+              spots={spots}
+              agitated={isPending || Boolean(isRevealing)}
+              animateEntry={Boolean(isRevealing)}
+              reduced={Boolean(prefersReducedMotion)}
+              variant="active"
+            />
+            {spots.length > 0 && (
+              <KenoPayoutTable spots={spots} settledHits={settledHits} className="mt-3" />
+            )}
+          </>
+        ) : (
+          <div className="flex items-center gap-4 sm:gap-6">
+            <KenoDrawMachine
+              drawn={visibleDrawn}
+              spots={spots}
+              agitated={false}
+              animateEntry={false}
+              reduced={Boolean(prefersReducedMotion)}
+              variant="idle"
+            />
+            {spots.length > 0 && (
+              <KenoPayoutTable spots={spots} settledHits={settledHits} className="min-w-0 flex-1" />
+            )}
+          </div>
+        )}
       </div>
 
       <div
         className={cn(
-          "relative z-10 w-full max-w-[820px] rounded-xl border border-border bg-surface-1/95 p-5 shadow-e3 backdrop-blur-xl md:p-8",
-          isPending ? "opacity-95" : ""
+          "relative z-10 w-full shrink-0 rounded-xl border border-border bg-surface-1/95 backdrop-blur-xl transition-[max-width,padding,box-shadow] duration-300",
+          phase === "draw" ? "max-w-[560px] p-4 shadow-e1" : "max-w-[820px] p-5 shadow-e3 md:p-8"
         )}
       >
-        <div className="grid grid-cols-8 md:grid-cols-10 gap-3 relative z-10">
-          {Array.from({ length: 40 }).map((_, i) => {
+        <div className="grid grid-cols-5 gap-3 relative z-10">
+          {Array.from({ length: 15 }).map((_, i) => {
             const n = i + 1;
             const isSelected = spots.includes(n);
             const isAnimating = isPending && animatingSpots.includes(n);
@@ -198,7 +256,7 @@ export function KenoStage({
                 disabled={isPending || showResult}
                 onClick={() => {
                   if (isSelected) onChange(spots.filter((x) => x !== n));
-                  else if (spots.length < 10) onChange([...spots, n]);
+                  else if (spots.length < 5) onChange([...spots, n]);
                   onResetResult();
                 }}
                 className={cn(

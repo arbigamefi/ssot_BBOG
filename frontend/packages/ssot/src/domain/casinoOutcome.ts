@@ -18,18 +18,38 @@ import { encodePacked, keccak256, stringToHex, type Hex } from "viem";
 
 const RNG_DOMAIN = stringToHex("SSOT_RNG_V1");
 
-const KENO_GAIN_TABLE: Record<number, number[]> = {
-  1: [0, 23636],
-  2: [0, 0, 32727],
-  3: [0, 0, 3636, 36364],
-  4: [0, 0, 909, 6818, 63636],
-  5: [0, 0, 0, 1136, 11364, 136364],
-  6: [0, 0, 0, 303, 1515, 15152, 181818],
-  7: [0, 0, 0, 0, 404, 2020, 20202, 303030],
-  8: [0, 0, 0, 0, 101, 505, 5051, 50505, 1010101],
-  9: [0, 0, 0, 0, 0, 126, 1262, 12626, 252525, 5050505],
-  10: [0, 0, 0, 0, 0, 0, 505, 5050, 50505, 1262626, 25252525]
+/**
+ * Keno gain factors in 1/10000 units, indexed as `[played][matchCount]`.
+ *
+ * Single source of truth for Keno payouts on the frontend: mirrors
+ * `KenoModule.sol` `_gain(played, matchCount)` exactly (pool N=15, draw M=5).
+ * These are gross factors — the GameHub applies house edge separately as
+ * fee-on-payout (ADR-0007), so the gross expectation is ~1.0. Total payout =
+ * `amountPerRoll * factor / 10000`.
+ *
+ * Do not hand-tune: if the contract table changes, regenerate from
+ * `src/modules/keno/KenoModule.sol`. Pinned by `casinoOutcome.test.ts`.
+ */
+export const KENO_GAIN_TABLE: Record<number, readonly number[]> = {
+  1: [7500, 15000],
+  2: [7777, 7000, 35000],
+  3: [9479, 5055, 11375, 113750],
+  4: [13000, 4550, 6066, 27300, 546000],
+  5: [19861, 4766, 4170, 11122, 100100, 5005000]
 };
+
+/** Keno gross gain factor in 1/10000 units; 0 for an invalid `(played, matchCount)`. */
+export function kenoGainFactor(played: number, matchCount: number): number {
+  if (played < 1 || played > 5) return 0;
+  const row = KENO_GAIN_TABLE[played];
+  if (!row || matchCount < 0 || matchCount > played) return 0;
+  return row[matchCount] ?? 0;
+}
+
+/** Keno total-payout multiplier (gross gain factor / 10000). */
+export function kenoMultiplier(played: number, matchCount: number): number {
+  return kenoGainFactor(played, matchCount) / 10000;
+}
 
 const PLINKO_FACTOR_TABLE: Record<PlinkoRisk, readonly number[]> = {
   low: [15264, 13083, 10902, 9812, 8722, 9812, 10902, 13083, 15264],
@@ -229,7 +249,7 @@ export function deriveCasinoOutcome({
 
   if (gameSlug === "keno") {
     const pickedMask = decodeKenoParams(params).mask;
-    const pickedNumbers = maskToNumbers(pickedMask, 40).map((n) => n + 1);
+    const pickedNumbers = maskToNumbers(pickedMask, 15).map((n) => n + 1);
     const played = pickedNumbers.length;
     if (played <= 0) return null;
     const draws: Array<{ numbers: number[]; hits: number; won: boolean }> = [];
@@ -239,9 +259,9 @@ export function deriveCasinoOutcome({
     for (let i = 0; i < bet.betCount; i += 1) {
       usedTurnover += bet.amountPerRoll;
       const drawMask = kenoDrawMask(bet.betId, i, seed);
-      const numbers = maskToNumbers(drawMask, 40).map((n) => n + 1);
+      const numbers = maskToNumbers(drawMask, 15).map((n) => n + 1);
       const hits = popcount(pickedMask & drawMask);
-      const factor = BigInt(KENO_GAIN_TABLE[played]?.[hits] ?? 0);
+      const factor = BigInt(kenoGainFactor(played, hits));
       if (factor > 0n) payoutGross += mulDiv(bet.amountPerRoll, factor, 10_000n);
       draws.push({ numbers, hits, won: factor > 0n });
       if (shouldStop(bet.stopGain, bet.stopLoss, usedTurnover, payoutGross)) break;
@@ -523,11 +543,11 @@ function rngRoll2(betId: bigint, rollIndex: number, drawIndex: number, seed: big
 }
 
 function kenoDrawMask(betId: bigint, rollIndex: number, seed: bigint) {
-  const available = Array.from({ length: 40 }, (_, i) => i);
+  const available = Array.from({ length: 15 }, (_, i) => i);
   let result = 0n;
-  let remaining = 40;
+  let remaining = 15;
 
-  for (let i = 0; i < 10; i += 1) {
+  for (let i = 0; i < 5; i += 1) {
     const randomIndex = Number(rngRoll2(betId, rollIndex, i, seed) % BigInt(remaining)) + i;
     const selectedIndex = available[randomIndex] ?? 0;
     result |= 1n << BigInt(selectedIndex);

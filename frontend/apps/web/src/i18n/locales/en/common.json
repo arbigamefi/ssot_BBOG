@@ -154,6 +154,7 @@
         "bindFailed": "Bind failed",
         "rouletteSelectionRequired": "Please select at least one number or bet type on the Roulette board.",
         "kenoSelectionRequired": "Please select at least 1 number on the Keno grid.",
+        "kenoSelectionInvalid": "Select 1 to 5 Keno numbers between 1 and 15.",
         "noActiveCasinoPool": "No active casino pool is available in the current release.",
         "unexpected": "An unexpected error occurred."
       },
@@ -301,7 +302,7 @@
           "tails": "Tails"
         },
         "keno": {
-          "spotsLabel": "/ 10 Spots",
+          "spotsLabel": "/ 5 Spots",
           "autoPick": "Auto Pick",
           "clear": "Clear",
           "empty": "No spots selected. Click the grid to pick numbers."
@@ -558,7 +559,7 @@
         "keno": {
           "title": "Keno Draft",
           "promise": "Pick multi-spots for massive multipliers.",
-          "badge": "Huge 1,000x Win"
+          "badge": "Up to 500.5x"
         },
         "plinko": {
           "title": "Plinko",

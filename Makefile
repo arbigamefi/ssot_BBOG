@@ -5,7 +5,7 @@ DEPLOY_PROFILE ?= default
 VERIFY_PROFILE ?= default
 FRONTEND_DIR ?= frontend
 
-.PHONY: deps check-deps check test pr nightly fork deploy verify verify-helpers sports-dry-run-v13 sports-lifecycle-dry-run sports-phase0-readiness sports-testnet-preflight-v13 sports-mainnet-preflight-v13 sports-roles-v13 sports-canary-v13 sports-football-canary-v13 sports-provider-evidence-v13 sports-provider-odds-v13 sports-provider-e2e-v13 sports-provider-policy-check-v13 sports-frontend-access-check-v13 gamehub-canary-v13 sports-phase1-closeout-v13 sports-phase2-gonogo-v13 sports-bankroll-caps-check-v13 sports-role-custody-check-v13 sports-ops-coverage-check-v13 release release-v13 release-digest release-digest-v13 release-verify release-verify-v13 release-check release-check-v13 release-notes release-notes-v13 release-package release-package-v13 audit-package lint release-frontend-manifest release-frontend-manifest-v13 release-golden-vectors release-golden-vectors-v13 release-abis release-abis-v13 frontend-install frontend-dev frontend-build frontend-lint frontend-typecheck frontend-test frontend-test-strict frontend-storybook frontend-storybook-build frontend-release-check frontend-check
+.PHONY: deps check-deps check test pr nightly fork deploy keno-upgrade-v13 keno-upgrade-apply-v13 verify verify-helpers sports-dry-run-v13 sports-lifecycle-dry-run sports-phase0-readiness sports-testnet-preflight-v13 sports-mainnet-preflight-v13 sports-roles-v13 sports-canary-v13 sports-football-canary-v13 sports-provider-evidence-v13 sports-provider-odds-v13 sports-provider-e2e-v13 sports-provider-policy-check-v13 sports-frontend-access-check-v13 gamehub-canary-v13 sports-phase1-closeout-v13 sports-phase2-gonogo-v13 sports-bankroll-caps-check-v13 sports-role-custody-check-v13 sports-ops-coverage-check-v13 release release-v13 release-digest release-digest-v13 release-verify release-verify-v13 release-check release-check-v13 release-notes release-notes-v13 release-package release-package-v13 audit-package lint release-frontend-manifest release-frontend-manifest-v13 release-golden-vectors release-golden-vectors-v13 release-abis release-abis-v13 frontend-install frontend-dev frontend-build frontend-lint frontend-typecheck frontend-test frontend-test-strict frontend-storybook frontend-storybook-build frontend-release-check frontend-check
 
 deps:
 	bash script/ci/install_deps.sh
@@ -82,6 +82,13 @@ deploy:
 	# Fresh deployments must not reuse stale broadcaster nonce/address state.
 	CLEAN_BROADCAST=1 bash script/ci/clean_foundry.sh
 	FOUNDRY_PROFILE=$(DEPLOY_PROFILE) forge script script/DeployV13.s.sol:DeployV13 --rpc-url $$RPC_URL --broadcast -vvv
+
+keno-upgrade-v13:
+	@$(MAKE) check-deps
+	FOUNDRY_PROFILE=$(DEPLOY_PROFILE) forge script script/ops/KenoModuleUpgradeV13.s.sol:KenoModuleUpgradeV13 --rpc-url $$RPC_URL --broadcast -vvv
+
+keno-upgrade-apply-v13:
+	python3 script/release/apply_keno_upgrade_v13.py
 
 verify:
 	@$(MAKE) check-deps

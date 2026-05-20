@@ -72,7 +72,7 @@ vi.mock("next-intl", () => ({
       "casino.directory.rooms.coinToss.badge": "1% House Edge",
       "casino.directory.rooms.keno.title": "Keno Draft",
       "casino.directory.rooms.keno.promise": "Pick multi-spots for massive multipliers.",
-      "casino.directory.rooms.keno.badge": "Huge 1,000x Win",
+      "casino.directory.rooms.keno.badge": "Up to 500.5x",
       "casino.directory.rooms.plinko.title": "Plinko",
       "casino.directory.rooms.plinko.promise": "Drop through eight rows and chase edge buckets.",
       "casino.directory.rooms.plinko.badge": "Up to 24.6x",

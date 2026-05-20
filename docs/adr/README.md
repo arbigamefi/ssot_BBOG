@@ -28,7 +28,7 @@ Each ADR:
 - ADR-0014: Player equals receiver (no recipient separation)
 - ADR-0015: Adopt OpenZeppelin primitives (SafeERC20/Math/Pausable/ReentrancyGuard)
 - ADR-0016: Roulette typed parameter encoding (kind+payload) with legacy bitmask support
-- ADR-0017: Keno module (default N=40, M=10) with precomputed gain table
+- ADR-0017: Keno module (current N=15, M=5) with precomputed gain table
 - ADR-0018: Proof hardening — complete B/C/D invariants and initial diff suite
 - ADR-0019: CI proof gates tiers + stateful system-level diff
 - ADR-0020: Charged VRF fee in native token (refactored parity)

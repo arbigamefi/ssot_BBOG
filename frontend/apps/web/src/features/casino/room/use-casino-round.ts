@@ -137,6 +137,7 @@ export function useCasinoRound({
       messages: {
         rouletteSelectionRequired: t("casino.room.errors.rouletteSelectionRequired"),
         kenoSelectionRequired: t("casino.room.errors.kenoSelectionRequired"),
+        kenoSelectionInvalid: t("casino.room.errors.kenoSelectionInvalid"),
         noActiveCasinoPool: t("casino.room.errors.noActiveCasinoPool"),
         unexpectedError: t("casino.room.errors.unexpected")
       }

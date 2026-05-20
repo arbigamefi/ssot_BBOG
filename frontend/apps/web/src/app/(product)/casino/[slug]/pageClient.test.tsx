@@ -166,7 +166,7 @@ vi.mock("next-intl", () => ({
       "casino.room.selection.coin.selectFace": "Select Face",
       "casino.room.selection.coin.heads": "Heads",
       "casino.room.selection.coin.tails": "Tails",
-      "casino.room.selection.keno.spotsLabel": "/ 10 Spots",
+      "casino.room.selection.keno.spotsLabel": "/ 5 Spots",
       "casino.room.selection.keno.autoPick": "Auto Pick",
       "casino.room.selection.keno.clear": "Clear",
       "casino.room.selection.keno.empty": "No spots selected. Click the grid to pick numbers.",

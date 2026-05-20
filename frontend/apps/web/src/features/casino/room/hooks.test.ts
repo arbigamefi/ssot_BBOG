@@ -18,9 +18,9 @@ describe("game room hooks helpers", () => {
 
     const spots = pickKenoStrobeSpots(4);
 
-    expect(spots).toEqual([1, 5, 9, 13]);
+    expect(spots).toEqual([1, 2, 4, 5]);
     expect(new Set(spots).size).toBe(spots.length);
-    expect(spots.every((spot) => spot >= 1 && spot <= 40)).toBe(true);
+    expect(spots.every((spot) => spot >= 1 && spot <= 15)).toBe(true);
     random.mockRestore();
   });
 });

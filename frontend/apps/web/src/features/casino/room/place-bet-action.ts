@@ -73,6 +73,7 @@ export async function executeGamePlaceBetAction({
   messages?: {
     rouletteSelectionRequired?: string;
     kenoSelectionRequired?: string;
+    kenoSelectionInvalid?: string;
     noActiveCasinoPool?: string;
     unexpectedError?: string;
   };

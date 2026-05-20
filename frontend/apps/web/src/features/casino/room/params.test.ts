@@ -187,10 +187,10 @@ describe("game room params", () => {
       diceDirection: "under",
       coinSide: "HEADS",
       rouletteSpots: [],
-      kenoSpots: [1, 40],
+      kenoSpots: [1, 15],
       plinkoRisk: "medium"
     });
-    expect(keno.ok && decodeKenoParams(keno.params)).toEqual({ mask: buildKenoMask([1, 40]) });
+    expect(keno.ok && decodeKenoParams(keno.params)).toEqual({ mask: buildKenoMask([1, 15]) });
 
     const plinko = buildGameParams({
       slug: "plinko",
@@ -276,6 +276,35 @@ describe("game room params", () => {
         coinSide: "HEADS",
         rouletteSpots: [],
         kenoSpots: [],
+        plinkoRisk: "medium"
+      })
+    ).toEqual({ ok: false, message: "—" });
+  });
+
+  it("rejects Keno spots outside the 15-pick board contract", () => {
+    expect(
+      buildGameParams({
+        slug: "keno",
+        diceTarget: 50,
+        diceDirection: "under",
+        coinSide: "HEADS",
+        rouletteSpots: [],
+        kenoSpots: [1, 2, 3, 4, 5, 6],
+        plinkoRisk: "medium",
+        messages: {
+          kenoSelectionInvalid: "Invalid Keno selection"
+        }
+      })
+    ).toEqual({ ok: false, message: "Invalid Keno selection" });
+
+    expect(
+      buildGameParams({
+        slug: "keno",
+        diceTarget: 50,
+        diceDirection: "under",
+        coinSide: "HEADS",
+        rouletteSpots: [],
+        kenoSpots: [16],
         plinkoRisk: "medium"
       })
     ).toEqual({ ok: false, message: "—" });

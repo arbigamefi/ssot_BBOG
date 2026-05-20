@@ -1,7 +1,7 @@
 {
   "chainId": 84532,
   "name": "Base Sepolia",
-  "releaseDigest": "0xc61adcdf9c80e8a35f340e8087298638fef0079f13e5bda683f34d4291e4c1c7",
+  "releaseDigest": "0x2a3db090c24089944a0f23df63eb970c89c6f3529970c85c29b8cf3de9aba176",
   "isPlaceholder": false,
   "refundTimeoutSeconds": 3600,
   "contracts": {
@@ -27,7 +27,7 @@
     "0x8d8e6987fb3617c00abdd68d6c1f7eac28b7f9f96b25367e9b65dacaa0914a8b": "0x2e900f670ec608d02dca77905da9d60d03cbc557",
     "0x6e800792927dde77598bf8cf4e8d9832799fbff08d7fbb3989225097ac6fa4e7": "0xbb9cbaf2f98b5209ec49bd2a497489d5831b6f4f",
     "0x41541f350c1da9780d719f9ebc2dd9d5883bf8c8df895243a1696bede4a708c0": "0x7714ec9e6d4e213f479378605ad33b5842f905fe",
-    "0xb4aacd27778fcc813ac1737807c34d5d4193c514f0d91a0caeeada2d6752baf0": "0x0105b62c29480b630309db018aab9dabd1071d93",
+    "0xb4aacd27778fcc813ac1737807c34d5d4193c514f0d91a0caeeada2d6752baf0": "0xe0883dce4038b1c070cbba3ad6e46a859bc6dd0e",
     "0xf079b0c3d932c294ee3983751f8789be874f0ceef4ce93c84fc7e6be1e9f3bd2": "0xf72230a2372f2e23f0ea949338e0b8c9789fd013",
     "0x3f8a7d05df6b7136e6cb9eb13e763fb722015b2357a0378af58fea0efcabce1d": "0xb56bd70af4fa5d0c9a3a53ee93524ef4e864f31d",
     "0x3b985d08128ef7b25e693a611fb5ae6f2d2b2974adbec7deb83c4f95c2562e6b": "0x041d14b63fe573a0e359a0cad0950a193c444e7b",
@@ -59,7 +59,7 @@
       "gameId": "0xb4aacd27778fcc813ac1737807c34d5d4193c514f0d91a0caeeada2d6752baf0",
       "slug": "keno",
       "label": "Keno",
-      "module": "0x0105b62c29480b630309db018aab9dabd1071d93",
+      "module": "0xe0883dce4038b1c070cbba3ad6e46a859bc6dd0e",
       "paramsEncoding": "abi.encode(uint40 numbersPacked)"
     },
     {
@@ -139,7 +139,7 @@
     }
   ],
   "meta": {
-    "blockNumber": 41650184,
+    "blockNumber": 41760321,
     "schemaVersion": 2,
     "generatedAt": 1,
     "bundle": {
@@ -149,19 +149,19 @@
       "abiIndexPath": "abis/index.json"
     },
     "releaseLock": {
-      "blockNumber": 41650184,
+      "blockNumber": 41760321,
       "chainId": 84532,
-      "digest": "0xc61adcdf9c80e8a35f340e8087298638fef0079f13e5bda683f34d4291e4c1c7",
-      "r": "0x2437226f026825dc0f97965d1fb29192e5818d8289adbbd00449e58fa6e66c1f",
-      "s": "0x612cd261304d504335cc0fc3a952cfb21ca791b021feb334ea6d7d0a775c641c",
+      "digest": "0x2a3db090c24089944a0f23df63eb970c89c6f3529970c85c29b8cf3de9aba176",
+      "r": "0x29e111460224145758188c06adc0a2edf55616d4279db79d6abdea6af085a6d5",
+      "s": "0x43d97076ec29e35ec6ccd509543eb94f84809251177ff20b2faa9653a31c9b8a",
       "schema": "SSOT_RELEASE_DIGEST_V13",
       "schemaHash": "0x0826906b33a459e6656bcfe343f78ad0d5b6f6adc2b3a287f410a888fc804db5",
       "signer": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684",
       "snapshotPath": "deployments/latest-v13.json",
-      "v": 27
+      "v": 28
     },
     "abiIndex": {
-      "blockNumber": 41650184,
+      "blockNumber": 41760321,
       "chainId": 84532,
       "contracts": [
         {
@@ -251,7 +251,7 @@
         {
           "abiFile": "KenoModule.abi.json",
           "abiSha256": "134fed8be94da4080ac9a8f1e1fba39df1c10b71c02655f8a0cb34b5faba1868",
-          "address": "0x0105b62C29480B630309db018aAb9DAbd1071d93",
+          "address": "0xe0883dce4038B1c070CBbA3AD6E46a859Bc6DD0E",
           "addressKey": "moduleKeno",
           "name": "KenoModule"
         },
@@ -307,7 +307,7 @@
           "poolId": 2
         }
       ],
-      "generatedAt": 1779069441,
+      "generatedAt": 1779288993,
       "gitSha": "",
       "manifestPath": "deployments/frontend-manifest-latest-v13.json",
       "schemaVersion": 2

@@ -245,7 +245,7 @@ contract GameHubE2E is Test {
             SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
 
         uint256 positionId = _place(alice, GAME_KENO, POOL_A, KenoParams.encode(numbers), spec, address(0));
-        assertEq(gameHub.getBet(positionId).reserved, 20 ether);
+        assertEq(gameHub.getBet(positionId).reserved, 15 ether);
 
         _fulfill(positionId, _findSeedKenoHit(positionId, numbers, true));
 
@@ -253,7 +253,9 @@ contract GameHubE2E is Test {
         gameHub.finalize(positionId);
         uint256 balAfter = assetA.balanceOf(alice);
 
-        assertEq(balAfter - balBefore, (196 ether) / 10);
+        uint256 expectedGross = 15 ether;
+        uint256 fee = Math.mulDiv(expectedGross, gameHub.defaultHouseEdgeBps(), 10_000);
+        assertEq(balAfter - balBefore, expectedGross - fee);
     }
 
     function test_slotsJackpotSettlesThroughRouter() external {
@@ -537,8 +539,8 @@ contract GameHubE2E is Test {
     }
 
     function _kenoDraw0(uint256 betId, uint256 seed) internal pure returns (uint40 rolled) {
-        uint8[40] memory available;
-        for (uint8 i = 0; i < 40;) {
+        uint8[15] memory available;
+        for (uint8 i = 0; i < 15;) {
             available[i] = i;
             unchecked {
                 ++i;
@@ -546,8 +548,8 @@ contract GameHubE2E is Test {
         }
 
         uint256 result = 0;
-        uint256 remaining = 40;
-        for (uint8 i = 0; i < 10;) {
+        uint256 remaining = 15;
+        for (uint8 i = 0; i < 5;) {
             uint256 r = _rng2(betId, 0, uint256(i), seed);
             uint256 randomIndex = (r % remaining) + uint256(i);
             uint8 selected = available[randomIndex];

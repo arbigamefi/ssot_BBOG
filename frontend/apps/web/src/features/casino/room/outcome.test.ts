@@ -95,7 +95,8 @@ describe("casino outcome derivation", () => {
     expect(outcome?.kind).toBe("keno");
     if (outcome?.kind !== "keno") return;
     expect(outcome.pickedNumbers).toEqual([1, 2]);
-    expect(outcome.draws[0]?.numbers).toHaveLength(10);
+    expect(outcome.draws[0]?.numbers).toHaveLength(5);
+    expect(outcome.draws[0]?.numbers.every((number) => number >= 1 && number <= 15)).toBe(true);
     expect(outcome.draws[0]?.hits).toBeGreaterThanOrEqual(0);
   });
 

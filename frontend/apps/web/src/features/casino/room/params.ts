@@ -87,6 +87,7 @@ export type BuildGameParamsResult =
 export type GameParamsMessages = {
   rouletteSelectionRequired?: string;
   kenoSelectionRequired?: string;
+  kenoSelectionInvalid?: string;
 };
 
 const NAMED_ROULETTE_BETS: Record<string, "red" | "black" | "odd" | "even" | "low" | "high"> = {
@@ -176,7 +177,7 @@ export function createRouletteParamsInput(spots: readonly string[]): RoulettePar
 export function buildKenoMask(spots: readonly number[]): bigint {
   let mask = 0n;
   for (const n of spots) {
-    if (Number.isInteger(n) && n >= 1 && n <= 40) {
+    if (Number.isInteger(n) && n >= 1 && n <= 15) {
       mask |= 1n << BigInt(n - 1);
     }
   }
@@ -301,6 +302,17 @@ export function buildGameParams(input: BuildGameParamsInput): BuildGameParamsRes
       return {
         ok: false,
         message: input.messages?.kenoSelectionRequired ?? "—"
+      };
+    }
+    const uniqueSpots = new Set(input.kenoSpots);
+    if (
+      input.kenoSpots.length > 5 ||
+      uniqueSpots.size !== input.kenoSpots.length ||
+      input.kenoSpots.some((spot) => !Number.isInteger(spot) || spot < 1 || spot > 15)
+    ) {
+      return {
+        ok: false,
+        message: input.messages?.kenoSelectionInvalid ?? "—"
       };
     }
     return { ok: true, params: encodeKenoParams(buildKenoMask(input.kenoSpots)) };

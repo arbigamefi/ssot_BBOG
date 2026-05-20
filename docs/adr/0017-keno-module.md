@@ -1,4 +1,4 @@
-# ADR-0017: Keno module (default N=40, M=10) with precomputed gain table
+# ADR-0017: Keno module (current N=15, M=5) with precomputed gain table
 
 ## Context
 
@@ -14,11 +14,11 @@ The refactored implementation uses a hypergeometric model with a gain-factor tab
 
 ## Decision
 
-We implement `KenoModule` as a pure module with **default** configuration matching refactored defaults:
+We implement `KenoModule` as a pure module with the current product configuration:
 
-- Pool size: `N = 40`
-- Draw size: `M = 10`
-- Player selection size: `1..10`
+- Pool size: `N = 15`
+- Draw size: `M = 5`
+- Player selection size: `1..5`
 
 Parameters:
 
@@ -27,14 +27,14 @@ Parameters:
 Randomness:
 
 - Use SSOT canonical RNG expansion with domain separation (`RNG.roll2(betId, rollIndex, drawStep, seed)`)
-- Draw `M=10` numbers without replacement via partial Fisher–Yates
+- Draw `M=5` numbers without replacement via partial Fisher–Yates
 
 Payout model:
 
 - Use the same fair-outcome construction as refactored:
   - `gainFactor(played,k) = floor( 10000 / (P(k) * (played+1)) )`
   - `payoutGross = amountPerRoll * gainFactor / 10000`
-- Precompute gain factors for all `(played,k)` under `N=40, M=10` and embed as constants
+- Precompute gain factors for all `(played,k)` under `N=15, M=5` and embed as constants
   to avoid factorial/combination computation during settlement.
 
 Reserve:
@@ -51,8 +51,7 @@ Positive:
 
 Trade-offs:
 
-- The maximum multiplier for `played=10` is extremely high (rare-event payout), which may cause many large bets to be rejected by reserve checks unless liquidity is deep.
-  This is inherent in the fair payout model and also present in the refactored default configuration.
+- The maximum multiplier for `played=5` is 500.5x gross before fee-on-payout, which is still high enough to require reserve checks but is product-appropriate for a compact 15-number board.
 - Per-token configurability (changing `N` or `M`) is not included in v1.1 to preserve determinism and avoid introducing mutable module config.
 
 ## Alternatives considered
