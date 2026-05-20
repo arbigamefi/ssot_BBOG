@@ -35,17 +35,20 @@ export function SlotReel({
   resultSymbol,
   symbolLabel,
   reduced,
-  spinDurationMs = 420
+  spinDurationMs = 420,
+  spinningLabel
 }: {
   mode: SlotReelMode;
   /** Result symbol index; required to land correctly when stopped. */
   resultSymbol: number;
   /** i18n label resolver for symbol accessibility. */
   symbolLabel: (symbol: number) => string;
+  spinningLabel: string;
   reduced: boolean;
   spinDurationMs?: number;
 }) {
   const spinning = mode === "spinning" && !reduced;
+  const accessibleLabel = mode === "stopped" ? symbolLabel(resultSymbol) : spinningLabel;
 
   const animate = spinning ? { y: [BASE_Y, BASE_Y - SET_HEIGHT] } : { y: finalY(resultSymbol) };
 
@@ -58,6 +61,8 @@ export function SlotReel({
   return (
     <div
       className="relative overflow-hidden rounded-lg border border-border-soft bg-gradient-to-b from-surface-2 to-surface-1"
+      role="img"
+      aria-label={accessibleLabel}
       style={{ height: REEL_WINDOW }}
     >
       <motion.div
@@ -75,7 +80,7 @@ export function SlotReel({
               className="flex shrink-0 items-center justify-center"
               style={{ height: REEL_CELL }}
             >
-              <SlotSymbolArt value={symbol} size="lg" label={symbolLabel(symbol)} />
+              <SlotSymbolArt value={symbol} size="lg" label={symbolLabel(symbol)} decorative />
             </div>
           );
         })}

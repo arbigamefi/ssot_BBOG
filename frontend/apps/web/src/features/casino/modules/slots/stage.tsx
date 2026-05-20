@@ -127,6 +127,7 @@ export function SlotsStage({
                   mode={reelMode(index)}
                   resultSymbol={typeof symbol === "number" ? symbol : 0}
                   symbolLabel={symbolLabel}
+                  spinningLabel={t("casino.room.stage.slots.spinning")}
                   reduced={prefersReducedMotion}
                   spinDurationMs={360 + index * 60}
                 />
