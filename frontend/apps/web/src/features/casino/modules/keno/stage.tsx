@@ -155,7 +155,7 @@ export function KenoStage({
 
   return (
     <div className="absolute inset-0 z-10 flex flex-col items-center justify-start overflow-y-auto custom-scrollbar px-5 pb-6 pt-10">
-      <div className="relative z-20 mb-4 flex w-full max-w-[820px] shrink-0 flex-col gap-3 rounded-xl border border-border bg-surface-1/90 p-4 shadow-e2 backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between">
+      <div className="relative z-20 mb-4 flex w-full max-w-[560px] shrink-0 flex-col gap-3 rounded-xl border border-border bg-surface-1/90 p-4 shadow-e2 backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="font-mono text-3xl font-semibold text-fg">
             {spots.length}{" "}
@@ -197,7 +197,7 @@ export function KenoStage({
 
       <div
         className={cn(
-          "relative z-20 mb-4 w-full max-w-[820px] shrink-0 overflow-hidden rounded-xl border bg-surface-1/90 backdrop-blur-xl transition-[padding,box-shadow] duration-300",
+          "relative z-20 mb-4 w-full max-w-[560px] shrink-0 overflow-hidden rounded-xl border bg-surface-1/90 backdrop-blur-xl transition-[padding,box-shadow] duration-300",
           phase === "draw" ? "border-border-strong p-5 shadow-e3" : "border-border p-3 shadow-e1"
         )}
       >
@@ -235,7 +235,7 @@ export function KenoStage({
       <div
         className={cn(
           "relative z-10 w-full shrink-0 rounded-xl border border-border bg-surface-1/95 backdrop-blur-xl transition-[max-width,padding,box-shadow] duration-300",
-          phase === "draw" ? "max-w-[560px] p-4 shadow-e1" : "max-w-[820px] p-5 shadow-e3 md:p-8"
+          phase === "draw" ? "max-w-[440px] p-4 shadow-e1" : "max-w-[560px] p-5 shadow-e3"
         )}
       >
         <div className="grid grid-cols-5 gap-3 relative z-10">
