@@ -30,6 +30,7 @@ export async function executeGamePlaceBetAction({
   setShowResult,
   executeNow,
   planNow,
+  onBeforeExecute,
   betAmount,
   betCount,
   stopGain,
@@ -56,6 +57,7 @@ export async function executeGamePlaceBetAction({
   setShowResult: (visible: boolean) => void;
   executeNow: (planOverride?: PlaceBetPlan) => Promise<void>;
   planNow: (input: PlaceBetInput) => Promise<PlaceBetPlan | undefined>;
+  onBeforeExecute?: () => void;
   betAmount: number;
   betCount: number;
   stopGain: number;
@@ -92,6 +94,7 @@ export async function executeGamePlaceBetAction({
   }
 
   if (state.plan) {
+    onBeforeExecute?.();
     await executeNow();
     return;
   }
@@ -123,6 +126,7 @@ export async function executeGamePlaceBetAction({
 
     const plan = await planNow(placeBet.input);
     if (plan) {
+      onBeforeExecute?.();
       await executeNow(plan);
     }
   } catch (error) {

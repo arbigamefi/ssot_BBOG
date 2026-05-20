@@ -68,6 +68,7 @@ function baseArgs(overrides: Partial<Parameters<typeof executeGamePlaceBetAction
     setShowResult: vi.fn(),
     executeNow: vi.fn(async () => undefined),
     planNow: vi.fn(async () => plannedBet as any),
+    onBeforeExecute: vi.fn(),
     betAmount: 10,
     betCount: 1,
     stopGain: 0,
@@ -100,6 +101,7 @@ describe("game room place bet action", () => {
 
     expect(args.openConnectModal).toHaveBeenCalledTimes(1);
     expect(args.planNow).not.toHaveBeenCalled();
+    expect(args.onBeforeExecute).not.toHaveBeenCalled();
   });
 
   it("resets after a terminal stepper state", async () => {
@@ -108,12 +110,14 @@ describe("game room place bet action", () => {
 
     expect(args.reset).toHaveBeenCalledTimes(1);
     expect(args.setShowResult).toHaveBeenCalledWith(false);
+    expect(args.onBeforeExecute).not.toHaveBeenCalled();
   });
 
   it("executes an existing plan before planning a new one", async () => {
     const args = baseArgs({ state: { status: "ready", plan: { preview: {} } } });
     await executeGamePlaceBetAction(args);
 
+    expect(args.onBeforeExecute).toHaveBeenCalledTimes(1);
     expect(args.executeNow).toHaveBeenCalledTimes(1);
     expect(args.planNow).not.toHaveBeenCalled();
   });
@@ -131,6 +135,7 @@ describe("game room place bet action", () => {
 
     expect(mocks.toastError).toHaveBeenCalledWith("请选择至少一个轮盘投注项。");
     expect(args.planNow).not.toHaveBeenCalled();
+    expect(args.onBeforeExecute).not.toHaveBeenCalled();
   });
 
   it("plans a valid bet request", async () => {
@@ -139,7 +144,11 @@ describe("game room place bet action", () => {
     await executeGamePlaceBetAction(args);
 
     expect(args.planNow).toHaveBeenCalledTimes(1);
+    expect(args.onBeforeExecute).toHaveBeenCalledTimes(1);
     expect(args.executeNow).toHaveBeenCalledWith(plannedBet);
+    expect((args.onBeforeExecute as any).mock.invocationCallOrder[0]).toBeLessThan(
+      (args.executeNow as any).mock.invocationCallOrder[0]
+    );
     expect((args.planNow as any).mock.calls[0]?.[0].stake).toBe(10_000_000n);
     expect((args.planNow as any).mock.calls[0]?.[0].affiliate).toBe(affiliate);
   });
@@ -159,6 +168,7 @@ describe("game room place bet action", () => {
 
       expect(mocks.toastError).toHaveBeenCalledWith("发生了非预期错误。");
       expect(consoleError).toHaveBeenCalledTimes(1);
+      expect(args.onBeforeExecute).not.toHaveBeenCalled();
     } finally {
       consoleError.mockRestore();
     }
