@@ -86,8 +86,8 @@ export function PlaceBetButton({
           state.status === "planning"
           ? "cursor-not-allowed border-border bg-surface-3 text-fg-subtle opacity-50 shadow-none"
           : state.status === "failed"
-            ? "border-danger bg-danger text-fg hover:bg-danger/90"
-            : "border-brand-active bg-brand text-fg shadow-glow hover:bg-brand-hover"
+            ? "border-danger bg-danger text-fg-inverse hover:bg-danger/90"
+            : "border-brand-active bg-brand text-fg-inverse shadow-glow hover:bg-brand-hover"
       )}
     >
       {t(getPlaceBetButtonLabelKey({ hasAccount, state, isPending }))}
