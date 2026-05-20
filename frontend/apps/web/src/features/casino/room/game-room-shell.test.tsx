@@ -25,6 +25,7 @@ describe("GameRoomShell", () => {
         leftPaneContent={<div>Bet controls</div>}
         rightPaneContent={<div>Stage canvas</div>}
         auditLedgerContent={<div>Audit stream</div>}
+        mobileActionContent={<button type="button">Mobile place</button>}
         isInteractive
       />
     );
@@ -36,5 +37,6 @@ describe("GameRoomShell", () => {
     expect(screen.getByText("Bet controls")).toBeDefined();
     expect(screen.getByText("Stage canvas")).toBeDefined();
     expect(screen.getByText("Audit stream")).toBeDefined();
+    expect(screen.getByRole("button", { name: "Mobile place" })).toBeDefined();
   });
 });

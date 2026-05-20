@@ -8,6 +8,7 @@ export function GameRoomShell({
   leftPaneContent,
   rightPaneContent,
   auditLedgerContent,
+  mobileActionContent,
   isInteractive = false
 }: {
   gameName: React.ReactNode;
@@ -16,12 +17,19 @@ export function GameRoomShell({
   leftPaneContent: React.ReactNode;
   rightPaneContent: React.ReactNode;
   auditLedgerContent: React.ReactNode;
+  mobileActionContent?: React.ReactNode;
   isInteractive?: boolean;
 }) {
   const t = useTranslations();
 
   return (
-    <section className="flex min-h-[calc(100vh-8rem)] flex-col gap-4">
+    <section
+      className={
+        mobileActionContent
+          ? "flex min-h-[calc(100vh-8rem)] flex-col gap-4 pb-24 lg:pb-0"
+          : "flex min-h-[calc(100vh-8rem)] flex-col gap-4"
+      }
+    >
       <header className="flex flex-col gap-3 border-b border-border-soft pb-4 md:flex-row md:items-end md:justify-between">
         <div>
           <div className="flex items-center gap-3 text-xs font-semibold uppercase text-accent">
@@ -67,6 +75,12 @@ export function GameRoomShell({
       <section className="overflow-hidden rounded-xl border border-border bg-surface-1 shadow-e1">
         {auditLedgerContent}
       </section>
+
+      {mobileActionContent && (
+        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-surface-2/95 px-4 py-3 shadow-e3 backdrop-blur lg:hidden">
+          <div className="mx-auto max-w-md">{mobileActionContent}</div>
+        </div>
+      )}
     </section>
   );
 }

@@ -57,7 +57,8 @@ export function PlaceBetButton({
   isPending,
   winChance,
   state,
-  onClick
+  onClick,
+  density = "normal"
 }: {
   gameSlug: string;
   hasAccount: boolean;
@@ -65,6 +66,7 @@ export function PlaceBetButton({
   winChance: number;
   state: GameRoomBetPanelState;
   onClick: () => void;
+  density?: "normal" | "compact";
 }) {
   const t = useTranslations();
   const disabled = isPlaceBetButtonDisabled({ gameSlug, isPending, winChance, state });
@@ -75,7 +77,8 @@ export function PlaceBetButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "w-full rounded-lg border-b-[4px] py-4 text-lg font-extrabold transition-colors",
+        "w-full rounded-lg border-b-[4px] font-extrabold transition-colors",
+        density === "compact" ? "py-3 text-sm" : "py-4 text-lg",
         isPending ||
           state.status === "reconciled" ||
           state.status === "submitting" ||

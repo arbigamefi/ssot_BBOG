@@ -1,6 +1,7 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { InformationCircleIcon, WalletIcon } from "@heroicons/react/24/outline";
+import { cn } from "@ssot/ui";
 
 import {
   BetAdvancedSection,
@@ -47,6 +48,7 @@ export function GameRoomBetPanel({
   onManualSettle,
   manualRefundAvailable,
   onManualRefund,
+  hideMobileAction = false,
   onPlaceBet
 }: {
   game: GameMeta;
@@ -77,6 +79,7 @@ export function GameRoomBetPanel({
   onManualSettle?: () => void;
   manualRefundAvailable?: boolean;
   onManualRefund?: () => void;
+  hideMobileAction?: boolean;
   onPlaceBet: () => void;
 }) {
   const t = useTranslations();
@@ -161,7 +164,12 @@ export function GameRoomBetPanel({
         />
       </div>
 
-      <div className="-mx-4 mt-2 shrink-0 border-t border-border-soft bg-surface-2/95 px-4 pt-2 shadow-e2 backdrop-blur lg:mx-0 lg:bg-surface-2 lg:px-0 lg:shadow-none">
+      <div
+        className={cn(
+          "-mx-4 mt-2 shrink-0 border-t border-border-soft bg-surface-2/95 px-4 pt-2 shadow-e2 backdrop-blur lg:mx-0 lg:bg-surface-2 lg:px-0 lg:shadow-none",
+          hideMobileAction && "hidden lg:block"
+        )}
+      >
         <PlaceBetButton
           gameSlug={game.slug}
           hasAccount={hasAccount}

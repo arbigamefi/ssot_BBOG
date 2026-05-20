@@ -432,7 +432,7 @@ describe("GamePageClient", () => {
     expect(screen.getByText("Precision Dice")).toBeDefined();
     expect(screen.getByText("Live SSOT Module")).toBeDefined();
     expect(screen.getByText("Wallet Balance")).toBeDefined();
-    expect(screen.getByText("Bet Amount")).toBeDefined();
+    expect(screen.getAllByText("Bet Amount").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders roulette as a standard European table room", () => {
@@ -442,7 +442,7 @@ describe("GamePageClient", () => {
 
     expect(screen.getByText("European Roulette")).toBeDefined();
     expect(screen.getByText("Wallet Balance")).toBeDefined();
-    expect(screen.getByText("Bet Amount")).toBeDefined();
+    expect(screen.getAllByText("Bet Amount").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders coin toss as a canonical room shell", () => {
@@ -464,7 +464,7 @@ describe("GamePageClient", () => {
 
     expect(screen.getByText("Coin Toss")).toBeDefined();
     expect(screen.getByText("Wallet Balance")).toBeDefined();
-    expect(screen.getByText("Bet Amount")).toBeDefined();
+    expect(screen.getAllByText("Bet Amount").length).toBeGreaterThanOrEqual(1);
   });
 
   it("shows placeholder when slug is not present in release", () => {

@@ -94,67 +94,100 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
     { id: "referral", label: t("nav.affiliates"), href: "/portfolio/referral" },
     { id: "account", label: t("nav.account"), href: "/portfolio" }
   ] as const;
+  const mobileGameNav =
+    variant === "game" ? (
+      <div className="sticky top-20 z-40 border-b border-border bg-surface-0/95 px-4 py-2 backdrop-blur md:hidden">
+        <nav
+          aria-label={t("nav.casino")}
+          className="flex gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          <Link
+            href="/casino"
+            className="shrink-0 rounded-full border border-border-soft bg-surface-2 px-3 py-2 text-xs font-semibold text-fg-subtle"
+          >
+            ← {t("nav.casino")}
+          </Link>
+          {GAME_NAV_LINKS.map((link) => (
+            <Link
+              key={link.id}
+              href={link.href}
+              className={cn(
+                "shrink-0 rounded-full border px-3 py-2 text-xs font-semibold transition-colors",
+                activeRoute === link.id
+                  ? "border-brand bg-brand text-fg-inverse"
+                  : "border-border-soft bg-surface-2 text-fg-subtle hover:text-fg"
+              )}
+            >
+              {t(link.labelKey)}
+            </Link>
+          ))}
+        </nav>
+      </div>
+    ) : null;
 
   return (
-    <ShellHeader variant="solid">
-      <div className="flex min-w-0 flex-1 items-center gap-6 md:gap-8">
-        <ShellHeaderBrand name="ArbiGameFi" className="shrink-0" />
+    <>
+      <ShellHeader variant="solid">
+        <div className="flex min-w-0 flex-1 items-center gap-3 md:gap-8">
+          <ShellHeaderBrand name="ArbiGameFi" className="shrink-0" />
 
-        {variant === "game" ? (
-          <ShellHeaderNav className="flex-1">
-            {GAME_NAV_LINKS.map((link) => (
-              <Link
-                key={link.id}
-                href={link.href}
-                className={cn(
-                  "shrink-0 whitespace-nowrap transition-colors",
-                  activeRoute === link.id
-                    ? "border-b-2 border-brand pb-1 text-brand"
-                    : "text-fg-subtle hover:text-fg"
-                )}
-              >
-                {t(link.labelKey)}
-              </Link>
-            ))}
+          {variant === "game" ? (
+            <ShellHeaderNav className="flex-1">
+              {GAME_NAV_LINKS.map((link) => (
+                <Link
+                  key={link.id}
+                  href={link.href}
+                  className={cn(
+                    "shrink-0 whitespace-nowrap transition-colors",
+                    activeRoute === link.id
+                      ? "border-b-2 border-brand pb-1 text-brand"
+                      : "text-fg-subtle hover:text-fg"
+                  )}
+                >
+                  {t(link.labelKey)}
+                </Link>
+              ))}
 
-            <div className="ml-2 hidden h-6 shrink-0 border-l border-border-soft pl-6 sm:block">
-              <Link
-                href="/casino"
-                className="flex h-full items-center gap-2 whitespace-nowrap text-sm font-bold uppercase tracking-wider text-fg-subtle transition-colors hover:text-fg"
-              >
-                <span>←</span>
-                <span>{t("nav.casino")}</span>
-              </Link>
-            </div>
-          </ShellHeaderNav>
-        ) : (
-          <ShellHeaderNav className="flex-1">
-            {navLinks.map((link) => (
-              <Link
-                key={link.id}
-                href={link.href}
-                className={cn(
-                  "shrink-0 whitespace-nowrap transition-colors",
-                  activeRoute === link.id
-                    ? "border-b-2 border-fg pb-1 text-fg"
-                    : "text-fg-subtle hover:text-fg"
-                )}
-              >
-                {link.label}
-              </Link>
-            ))}
-          </ShellHeaderNav>
-        )}
-      </div>
-
-      <ShellHeaderActions>
-        <LocaleSwitcher compact />
-        <div className="hidden items-center gap-2 rounded-full border border-border-soft bg-surface-2 px-3 py-1.5 font-mono text-xs text-fg-muted sm:flex">
-          <span className="h-1.5 w-1.5 rounded-full bg-brand"></span>
-          {release?.name ?? t("app.unknownNetwork")}
+              <div className="ml-2 hidden h-6 shrink-0 border-l border-border-soft pl-6 sm:block">
+                <Link
+                  href="/casino"
+                  className="flex h-full items-center gap-2 whitespace-nowrap text-sm font-bold uppercase tracking-wider text-fg-subtle transition-colors hover:text-fg"
+                >
+                  <span>←</span>
+                  <span>{t("nav.casino")}</span>
+                </Link>
+              </div>
+            </ShellHeaderNav>
+          ) : (
+            <ShellHeaderNav className="flex-1">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.id}
+                  href={link.href}
+                  className={cn(
+                    "shrink-0 whitespace-nowrap transition-colors",
+                    activeRoute === link.id
+                      ? "border-b-2 border-fg pb-1 text-fg"
+                      : "text-fg-subtle hover:text-fg"
+                  )}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </ShellHeaderNav>
+          )}
         </div>
-        <WalletButton />
-      </ShellHeaderActions>
-    </ShellHeader>
+
+        <ShellHeaderActions>
+          <LocaleSwitcher compact />
+          <div className="hidden items-center gap-2 rounded-full border border-border-soft bg-surface-2 px-3 py-1.5 font-mono text-xs text-fg-muted sm:flex">
+            <span className="h-1.5 w-1.5 rounded-full bg-brand"></span>
+            {release?.name ?? t("app.unknownNetwork")}
+          </div>
+          <WalletButton />
+        </ShellHeaderActions>
+      </ShellHeader>
+      {mobileGameNav}
+    </>
   );
 }

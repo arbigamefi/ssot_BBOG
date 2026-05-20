@@ -30,6 +30,7 @@ import {
   formatHouseEdge
 } from "../../../../features/casino/room/presentation";
 import { GameRoomBetPanel } from "../../../../features/casino/room/bet-panel";
+import { PlaceBetButton } from "../../../../features/casino/room/place-bet-button";
 import { useGameWalletBalance, useKenoStrobeSpots } from "../../../../features/casino/room/hooks";
 import {
   useGameResolutionEffect,
@@ -84,6 +85,51 @@ const GameRoomAuditLedger = dynamic(
     ssr: false
   }
 );
+
+function MobileCasinoActionBar({
+  game,
+  betAmount,
+  expectedPayout,
+  hasAccount,
+  isPending,
+  winChance,
+  state,
+  onPlaceBet
+}: {
+  game: GameMeta;
+  betAmount: number;
+  expectedPayout: number;
+  hasAccount: boolean;
+  isPending: boolean;
+  winChance: number;
+  state: React.ComponentProps<typeof PlaceBetButton>["state"];
+  onPlaceBet: () => void;
+}) {
+  const t = useTranslations();
+
+  return (
+    <div className="grid grid-cols-[minmax(0,1fr)_minmax(9.5rem,11rem)] items-center gap-3">
+      <div className="min-w-0">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-fg-subtle">
+          {t("casino.room.betPanel.amount.label")}
+        </p>
+        <p className="truncate font-mono text-sm font-semibold text-fg">
+          {betAmount.toFixed(2)} USDC · {t("casino.room.betPanel.summary.expectedPayout")}{" "}
+          {expectedPayout.toFixed(2)}
+        </p>
+      </div>
+      <PlaceBetButton
+        gameSlug={game.slug}
+        hasAccount={hasAccount}
+        isPending={isPending}
+        winChance={winChance}
+        state={state}
+        onClick={onPlaceBet}
+        density="compact"
+      />
+    </div>
+  );
+}
 
 export function getCasinoRoomPendingStates({
   isLocalPending,
@@ -440,6 +486,20 @@ export function GamePageClient({ slug }: { slug: string }) {
       onManualSettle={casinoRound.manualSettle}
       manualRefundAvailable={casinoRound.manualRefundAvailable}
       onManualRefund={casinoRound.manualRefund}
+      hideMobileAction
+      onPlaceBet={casinoRound.placeBet}
+    />
+  );
+
+  const MobileAction = (
+    <MobileCasinoActionBar
+      game={game}
+      betAmount={betAmount}
+      expectedPayout={expectedPayout}
+      hasAccount={Boolean(sdk?.account)}
+      isPending={isBetPanelPending}
+      winChance={winChance}
+      state={state}
       onPlaceBet={casinoRound.placeBet}
     />
   );
@@ -511,6 +571,7 @@ export function GamePageClient({ slug }: { slug: string }) {
         leftPaneContent={LeftPane}
         rightPaneContent={RightPane}
         auditLedgerContent={AuditLedger}
+        mobileActionContent={MobileAction}
       />
     </PageTransition>
   );

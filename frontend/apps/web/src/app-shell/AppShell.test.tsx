@@ -53,6 +53,7 @@ vi.mock("next-intl", () => ({
       "nav.plinko": "Plinko",
       "nav.rooms": "Rooms",
       "nav.roulette": "Roulette",
+      "nav.sicBo": "Sic Bo",
       "nav.slots": "Slots",
       "nav.sportsbook": "Sportsbook"
     })[key] ?? key
@@ -180,16 +181,18 @@ describe("AppShell", () => {
       ["Plinko", "/casino/plinko"],
       ["Slots", "/casino/slots"],
       ["Baccarat", "/casino/baccarat"],
+      ["Sic Bo", "/casino/sic-bo"],
       ["Roulette", "/casino/roulette"],
       ["Coin Toss", "/casino/coin-toss"],
       ["Keno", "/casino/keno"]
     ] as const;
 
     for (const [label, href] of roomLinks) {
-      expect(screen.getByText(label).closest("a")?.getAttribute("href")).toBe(href);
+      expect(screen.getAllByText(label)[0]?.closest("a")?.getAttribute("href")).toBe(href);
     }
-    expect(screen.getByText("Slots").className).toContain("border-b-2");
-    expect(screen.getByText("Slots").className).toContain("text-brand");
+    expect(screen.getAllByText("Slots").some((node) => node.className.includes("text-brand"))).toBe(
+      true
+    );
   });
 
   it("uses the dark theme on the games directory route", () => {
