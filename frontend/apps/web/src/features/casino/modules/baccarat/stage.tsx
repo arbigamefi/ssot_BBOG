@@ -8,44 +8,101 @@ import { baccaratMultiplier, type BaccaratSide } from "../../room/params";
 
 type BaccaratRoll = Extract<CasinoOutcome, { kind: "baccarat" }>["rolls"][number];
 const BACCARAT_SIDES: readonly BaccaratSide[] = ["player", "banker", "tie"] as const;
+const CARD_SUITS = [
+  {
+    className: "text-fg",
+    path: "M12 3c-2.9 3.1-6.4 5.4-6.4 9.1 0 2.5 1.7 4.2 4 4.2.9 0 1.7-.3 2.4-.8-.2 1.5-.8 2.9-1.8 4.2h3.6c-1-1.3-1.6-2.7-1.8-4.2.7.5 1.5.8 2.4.8 2.3 0 4-1.7 4-4.2C18.4 8.4 14.9 6.1 12 3Z"
+  },
+  {
+    className: "text-danger",
+    path: "M12 20s-7.2-4.4-7.2-10.1C4.8 6.9 6.7 5 9.2 5c1.2 0 2.3.6 2.8 1.5C12.5 5.6 13.6 5 14.8 5c2.5 0 4.4 1.9 4.4 4.9C19.2 15.6 12 20 12 20Z"
+  },
+  {
+    className: "text-danger",
+    path: "M12 3 19 12 12 21 5 12 12 3Z"
+  },
+  {
+    className: "text-fg",
+    path: "M9.1 10.8A3.2 3.2 0 1 1 12 8.9a3.2 3.2 0 1 1 2.9 1.9 3.2 3.2 0 1 1-3.3 4.8c-.1 1.5-.7 2.8-1.7 4.1h4.2c-1-1.3-1.6-2.6-1.7-4.1a3.2 3.2 0 1 1-3.3-4.8Z"
+  }
+] as const;
 
 function formatSide(side: BaccaratSide, t: ReturnType<typeof useTranslations>) {
   return t(`casino.room.selection.baccarat.${side}`);
 }
 
-function CardPip({
+function CardSuitIcon({ suitIndex }: { suitIndex: number }) {
+  const suit = CARD_SUITS[suitIndex % CARD_SUITS.length] ?? CARD_SUITS[0];
+
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      className={cn("h-8 w-8 drop-shadow-md", suit.className)}
+      fill="currentColor"
+    >
+      <path d={suit.path} />
+    </svg>
+  );
+}
+
+function CardFace({
   value,
   active,
-  dealing
+  dealing,
+  suitIndex
 }: {
   value: number | undefined;
   active: boolean;
   dealing?: boolean;
+  suitIndex: number;
 }) {
+  const label = value == null ? "—" : value === 0 ? "10" : String(value);
+
   return (
     <div
       className={cn(
-        "flex h-24 w-16 flex-col items-center justify-center rounded-lg border bg-surface-2 shadow-inner-e1 transition-[border-color,background-color,transform]",
+        "relative flex h-28 w-20 flex-col items-center justify-center overflow-hidden rounded-xl border shadow-inner-e1 transition-[border-color,background-color,transform]",
         active ? "border-brand/50 bg-brand-soft" : "border-border",
+        value == null ? "bg-surface-2" : "bg-fg",
         dealing && "animate-[baccarat-card-deal_360ms_ease-out] border-brand/40 bg-brand-soft"
       )}
+      aria-label={value == null ? "Unrevealed card" : `Card value ${value}`}
     >
-      <span className="text-[9px] font-semibold uppercase tracking-widest text-fg-subtle">
-        {value == null ? "—" : value === 0 ? "10/J/Q/K" : "A-9"}
-      </span>
-      <span className="mt-1 font-mono text-3xl font-semibold text-fg">{value ?? "—"}</span>
+      {value == null ? (
+        <>
+          <span className="absolute inset-2 rounded-lg border border-border-soft bg-brand-soft" />
+          <span className="absolute left-3 top-3 h-2 w-2 rounded-full bg-brand/70" />
+          <span className="absolute bottom-3 right-3 h-2 w-2 rounded-full bg-brand/70" />
+          <span className="relative h-10 w-7 rounded-md border border-brand/30 bg-surface-0/40 shadow-inner-e1" />
+        </>
+      ) : (
+        <>
+          <span className="absolute left-2 top-2 font-mono text-sm font-semibold text-surface-0">
+            {label}
+          </span>
+          <span className="absolute bottom-2 right-2 rotate-180 font-mono text-sm font-semibold text-surface-0">
+            {label}
+          </span>
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-0/10">
+            <CardSuitIcon suitIndex={suitIndex} />
+          </span>
+        </>
+      )}
     </div>
   );
 }
 
 function HandPanel({
   title,
+  suitOffset,
   cards,
   total,
   winner,
   revealed
 }: {
   title: string;
+  suitOffset: number;
   cards: readonly (number | undefined)[];
   total: number | undefined;
   winner: boolean;
@@ -70,11 +127,12 @@ function HandPanel({
       </div>
       <div className="flex gap-3">
         {[0, 1, 2].map((index) => (
-          <CardPip
+          <CardFace
             key={index}
             value={cards[index]}
             active={winner && cards[index] != null}
             dealing={revealed === index + 1 && cards[index] != null}
+            suitIndex={suitOffset + index}
           />
         ))}
       </div>
@@ -209,6 +267,7 @@ export function BaccaratStage({
         <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-2">
           <HandPanel
             title={formatSide("player", t)}
+            suitOffset={0}
             cards={visiblePlayerCards}
             total={hasResult ? roll?.playerTotal : undefined}
             winner={winner === "player"}
@@ -216,6 +275,7 @@ export function BaccaratStage({
           />
           <HandPanel
             title={formatSide("banker", t)}
+            suitOffset={2}
             cards={visibleBankerCards}
             total={hasResult ? roll?.bankerTotal : undefined}
             winner={winner === "banker"}

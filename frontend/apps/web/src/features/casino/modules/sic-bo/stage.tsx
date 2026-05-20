@@ -10,6 +10,32 @@ type SicBoRoll = Extract<CasinoOutcome, { kind: "sic-bo" }>["rolls"][number];
 
 const FACE_VALUES = [1, 2, 3, 4, 5, 6] as const;
 const TOTAL_VALUES = [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17] as const;
+const DIE_PIP_POSITIONS: Record<number, string[]> = {
+  1: ["col-start-2 row-start-2"],
+  2: ["col-start-3 row-start-1", "col-start-1 row-start-3"],
+  3: ["col-start-3 row-start-1", "col-start-2 row-start-2", "col-start-1 row-start-3"],
+  4: [
+    "col-start-1 row-start-1",
+    "col-start-3 row-start-1",
+    "col-start-1 row-start-3",
+    "col-start-3 row-start-3"
+  ],
+  5: [
+    "col-start-1 row-start-1",
+    "col-start-3 row-start-1",
+    "col-start-2 row-start-2",
+    "col-start-1 row-start-3",
+    "col-start-3 row-start-3"
+  ],
+  6: [
+    "col-start-1 row-start-1",
+    "col-start-3 row-start-1",
+    "col-start-1 row-start-2",
+    "col-start-3 row-start-2",
+    "col-start-1 row-start-3",
+    "col-start-3 row-start-3"
+  ]
+};
 
 function formatSicBoBet(kind: SicBoKind, value: number, t: ReturnType<typeof useTranslations>) {
   const label = t(`casino.room.selection.sicBo.kinds.${kind}`);
@@ -108,17 +134,41 @@ function DieFace({
   active: boolean;
   rolling?: boolean;
 }) {
+  const pips = value == null ? [] : (DIE_PIP_POSITIONS[value] ?? []);
+
   return (
     <div
       className={cn(
-        "flex h-24 w-24 items-center justify-center rounded-lg border bg-surface-2 shadow-inner-e1 transition-[border-color,background-color,transform]",
-        active ? "border-accent/60 bg-accent-soft" : "border-border",
+        "flex h-24 w-24 items-center justify-center rounded-xl border shadow-inner-e1 transition-[border-color,background-color,transform]",
+        active
+          ? "border-accent/60 bg-accent-soft"
+          : "border-border bg-[linear-gradient(145deg,hsl(var(--surface-3)),hsl(var(--surface-1)))]",
         rolling &&
           "animate-[sicbo-die-tumble_420ms_ease-in-out_infinite] border-brand/50 bg-brand-soft"
       )}
+      aria-label={value == null ? "Unopened die" : `Die ${value}`}
     >
-      <span className={cn("font-mono text-4xl font-semibold", active ? "text-accent" : "text-fg")}>
-        {value ?? "—"}
+      <span className="grid h-16 w-16 grid-cols-3 grid-rows-3" aria-hidden>
+        {value == null
+          ? DIE_PIP_POSITIONS[5]?.map((position, index) => (
+              <span
+                key={`idle-${index}`}
+                className={cn(
+                  "h-3 w-3 place-self-center rounded-full bg-fg-subtle/40 shadow-inner-e1",
+                  position
+                )}
+              />
+            ))
+          : pips.map((position, index) => (
+              <span
+                key={`${value}-${index}`}
+                className={cn(
+                  "h-3.5 w-3.5 place-self-center rounded-full shadow-e1",
+                  position,
+                  active ? "bg-accent" : "bg-fg"
+                )}
+              />
+            ))}
       </span>
     </div>
   );

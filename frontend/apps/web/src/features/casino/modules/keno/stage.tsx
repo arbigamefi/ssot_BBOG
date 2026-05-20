@@ -123,6 +123,36 @@ export function KenoStage({
       </div>
 
       <div className="relative z-20 mb-4 w-full max-w-[820px] overflow-hidden rounded-xl border border-border bg-surface-1/90 p-3 shadow-e2 backdrop-blur-xl">
+        <div className="mb-3 flex items-center gap-2 overflow-x-auto custom-scrollbar pb-1">
+          {Array.from({ length: 10 }).map((_, index) => {
+            const n = visibleDrawn[index];
+            const isHit = n != null && spots.includes(n);
+            const isCurrent = isRevealing && n != null && visibleDrawn.at(-1) === n;
+
+            return (
+              <span
+                key={index}
+                className={cn(
+                  "flex h-11 w-11 shrink-0 items-center justify-center rounded-full border font-mono text-sm font-semibold shadow-inner-e1 transition-[border-color,background-color,color,transform]",
+                  n == null
+                    ? "border-border-soft bg-surface-0 text-fg-subtle"
+                    : isHit
+                      ? "border-success bg-success text-fg-inverse shadow-e2"
+                      : "border-border bg-surface-3 text-fg",
+                  isCurrent && "animate-[keno-ball-reveal_320ms_ease-out]"
+                )}
+                aria-label={n == null ? undefined : `Drawn ${n}`}
+              >
+                {n == null ? (
+                  <span className="h-2.5 w-2.5 rounded-full bg-fg-subtle/45" aria-hidden />
+                ) : (
+                  n
+                )}
+              </span>
+            );
+          })}
+        </div>
+
         <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar pb-1">
           {Array.from({ length: Math.max(5, spots.length + 1) }).map((_, hits) => {
             const pay =
