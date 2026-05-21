@@ -1,37 +1,23 @@
 import * as React from "react";
 import { motion, type Transition } from "framer-motion";
-import { cn } from "@ssot/ui";
 
 /**
- * KenoDrawMachine — a lottery air-blower, not a flat row of dots.
+ * KenoDrawMachine — a glass draw sphere seated in a console, feeding a tray of
+ * numbered balls. Modern crypto-betting styling: layered glass material, a rim
+ * light, and a brand-coloured energy glow while a draw is live.
  *
- * Stage realism: a glass globe with loose balls jostling inside, a chute that
- * carries a drawn ball down to a numbered rack.
- *
- * Animation realism: while a draw is live the globe balls bounce; each drawn
- * number rides out of the chute and drops into the next rack slot with a small
- * settle bounce. `prefers-reduced-motion` seats every ball instantly.
- *
- * `variant` drives stage prominence: "idle" is the compact globe shown while
- * the player is still picking numbers (the 15-cell board is the protagonist);
- * "active" is the enlarged hero shown once a draw is live or its result is on
- * screen (the machine becomes the protagonist).
+ * While `agitated` (VRF pending or reveal running) the loose balls tumble and
+ * the sphere lights up. `reduced` seats every motion instantly for
+ * `prefers-reduced-motion`.
  */
 
+const GLOBE = 128;
+const WALL = 9; // glass housing thickness
 const RACK_SLOTS = 5;
-// Jitter waypoints below are authored against this globe diameter; every other
-// size is derived by scaling against it so the tumble stays proportional.
-const REFERENCE_GLOBE = 132;
+const RACK_BALL = 40;
+const BALL_SCALE = GLOBE / 132; // jitter waypoints below are authored for 132
 
-export type KenoMachineVariant = "idle" | "active";
-
-const VARIANT: Record<KenoMachineVariant, { globe: number; rackBall: number; gap: string }> = {
-  idle: { globe: 116, rackBall: 36, gap: "gap-4" },
-  // active rack fits all 5 balls within the panel without a horizontal scrollbar.
-  active: { globe: 200, rackBall: 46, gap: "gap-6" }
-};
-
-// Loose balls inside the globe — fixed jitter waypoints so the tumble is
+// Loose balls inside the sphere — fixed jitter waypoints so the tumble is
 // deterministic but unsynchronised between balls.
 const GLOBE_BALLS = [
   {
@@ -99,32 +85,33 @@ const GLOBE_BALLS = [
 function GlobeBall({
   ball,
   agitated,
-  reduced,
-  scale
+  reduced
 }: {
   ball: (typeof GLOBE_BALLS)[number];
   agitated: boolean;
   reduced: boolean;
-  scale: number;
 }) {
   const active = agitated && !reduced;
   const animate = active
-    ? { x: ball.jitter.map((p) => p.x * scale), y: ball.jitter.map((p) => p.y * scale) }
-    : { x: ball.rest.x * scale, y: ball.rest.y * scale };
+    ? { x: ball.jitter.map((p) => p.x * BALL_SCALE), y: ball.jitter.map((p) => p.y * BALL_SCALE) }
+    : { x: ball.rest.x * BALL_SCALE, y: ball.rest.y * BALL_SCALE };
   const transition: Transition = active
     ? { duration: ball.dur, ease: "easeInOut", repeat: Infinity, repeatType: "mirror" }
     : { type: "spring", stiffness: 120, damping: 14 };
-  const size = Math.round(18 * scale);
+  const size = Math.round(20 * BALL_SCALE);
 
   return (
     <motion.span
-      className="absolute left-1/2 top-1/2 rounded-full shadow-e1"
+      className="absolute left-1/2 top-1/2 rounded-full"
       style={{
         width: size,
         height: size,
         marginLeft: -size / 2,
         marginTop: -size / 2,
-        background: "radial-gradient(circle at 34% 30%, white, hsl(var(--brand)) 78%)"
+        background:
+          "radial-gradient(circle at 32% 28%, white, hsl(var(--brand)) 70%, hsl(var(--brand-active)) 100%)",
+        boxShadow:
+          "0 2px 5px hsl(var(--surface-0) / 0.5), inset 0 -2px 3px hsl(var(--brand-active))"
       }}
       initial={false}
       animate={animate}
@@ -136,32 +123,31 @@ function GlobeBall({
 function RackBall({
   num,
   hit,
-  animateEntry,
-  size
+  animateEntry
 }: {
   num: number;
   hit: boolean;
   animateEntry: boolean;
-  size: number;
 }) {
   return (
     <motion.span
-      className={cn(
-        "flex shrink-0 items-center justify-center rounded-full border font-mono font-semibold shadow-e1",
-        hit ? "border-success bg-success text-fg-inverse" : "border-border-strong text-fg"
-      )}
+      className="relative flex shrink-0 items-center justify-center rounded-full font-mono font-bold"
       style={{
-        width: size,
-        height: size,
-        fontSize: Math.max(11, Math.round(size * 0.32)),
+        width: RACK_BALL,
+        height: RACK_BALL,
+        fontSize: 15,
+        color: hit ? "hsl(var(--fg-inverse))" : "hsl(var(--fg))",
         background: hit
-          ? undefined
-          : "radial-gradient(circle at 36% 28%, hsl(var(--surface-3)), hsl(var(--surface-1)))"
+          ? "radial-gradient(circle at 34% 26%, hsl(var(--fg) / 0.4), transparent 56%), hsl(var(--success))"
+          : "radial-gradient(circle at 36% 28%, hsl(var(--surface-3)), hsl(var(--surface-1)))",
+        boxShadow: hit
+          ? "0 0 0 1px hsl(var(--success) / 0.6), 0 5px 16px hsl(var(--success) / 0.45)"
+          : "0 3px 9px hsl(var(--surface-0) / 0.55), inset 0 2px 3px hsl(var(--fg) / 0.12)"
       }}
-      initial={animateEntry ? { y: -(size * 1.15), opacity: 0, scale: 0.7 } : false}
+      initial={animateEntry ? { y: -58, opacity: 0, scale: 0.6 } : false}
       animate={{ y: 0, opacity: 1, scale: 1 }}
       transition={
-        animateEntry ? { type: "spring", stiffness: 240, damping: 17, mass: 0.7 } : { duration: 0 }
+        animateEntry ? { type: "spring", stiffness: 240, damping: 18, mass: 0.7 } : { duration: 0 }
       }
     >
       {num}
@@ -174,101 +160,114 @@ export function KenoDrawMachine({
   spots,
   agitated,
   animateEntry,
-  reduced,
-  variant = "active"
+  reduced
 }: {
   drawn: readonly number[];
   spots: readonly number[];
-  /** Globe balls jostle (VRF pending or reveal running). */
+  /** Globe balls tumble and the sphere lights up (VRF pending or reveal). */
   agitated: boolean;
-  /** Newly seated rack balls drop in from the chute. */
+  /** Newly seated tray balls drop in from the chute. */
   animateEntry: boolean;
   reduced: boolean;
-  /** Stage prominence — see file header. */
-  variant?: KenoMachineVariant;
 }) {
-  const { globe, rackBall, gap } = VARIANT[variant];
-  const scale = globe / REFERENCE_GLOBE;
-  const wall = Math.round(globe * 0.066);
-  const chuteH = Math.round(11 * scale);
-  const chuteW = Math.round(22 * scale);
+  const live = agitated && !reduced;
 
   return (
-    <div className={cn("flex shrink-0 items-center", gap)}>
-      {/* Glass blower globe */}
-      <div
-        className="relative shrink-0 transition-[width,height] duration-300"
-        style={{ width: globe, height: globe }}
-        aria-hidden
-      >
+    <div className="flex items-center justify-center gap-5">
+      {/* Draw sphere */}
+      <div className="relative shrink-0" style={{ width: GLOBE, height: GLOBE }} aria-hidden>
+        {/* energy bloom while drawing */}
         <div
-          className="absolute inset-0 rounded-full border-4 border-border-strong shadow-e3"
+          className="pointer-events-none absolute -inset-3 rounded-full transition-opacity duration-500"
           style={{
-            background:
-              "radial-gradient(circle at 38% 30%, hsl(var(--surface-2)), hsl(var(--surface-0)))"
+            opacity: live ? 1 : 0,
+            background: "radial-gradient(circle, hsl(var(--brand) / 0.5), transparent 66%)"
           }}
         />
+        {/* metal housing */}
         <div
-          className="absolute overflow-hidden rounded-full border border-border-soft bg-surface-0/70 shadow-inner-e1"
-          style={{ inset: wall }}
+          className="absolute inset-0 rounded-full"
+          style={{
+            background: "linear-gradient(158deg, hsl(var(--surface-3)), hsl(var(--surface-0)) 68%)",
+            boxShadow: "0 10px 28px hsl(var(--surface-0) / 0.55)"
+          }}
+        />
+        {/* glass cavity */}
+        <div
+          className="absolute overflow-hidden rounded-full"
+          style={{
+            inset: WALL,
+            background:
+              "radial-gradient(circle at 38% 26%, hsl(var(--surface-2)), hsl(var(--surface-0)) 80%)",
+            boxShadow:
+              "inset 0 8px 20px hsl(var(--surface-0) / 0.6), inset 0 -3px 8px hsl(var(--fg) / 0.05)"
+          }}
         >
           {GLOBE_BALLS.map((ball, i) => (
-            <GlobeBall key={i} ball={ball} agitated={agitated} reduced={reduced} scale={scale} />
+            <GlobeBall key={i} ball={ball} agitated={agitated} reduced={reduced} />
           ))}
         </div>
-        {/* Glass highlight */}
+        {/* rim light */}
+        <div
+          className="pointer-events-none absolute inset-0 rounded-full"
+          style={{
+            boxShadow:
+              "inset 0 3px 4px hsl(var(--fg) / 0.22), inset 0 -10px 18px hsl(var(--surface-0) / 0.55)"
+          }}
+        />
+        {/* specular highlight */}
         <div
           className="pointer-events-none absolute rounded-full"
           style={{
-            inset: wall,
-            background: "linear-gradient(145deg, hsl(var(--fg) / 0.22), transparent 46%)"
+            inset: WALL,
+            background:
+              "radial-gradient(46% 34% at 32% 22%, hsl(var(--fg) / 0.34), transparent 70%)"
           }}
         />
-        {/* Chute toward the rack */}
+        {/* chute toward the tray */}
         <div
-          className="absolute top-1/2 -translate-y-1/2 rounded-r-md border border-l-0 border-border-strong bg-surface-2 shadow-e1"
-          style={{ width: chuteW, height: chuteH, right: -chuteW / 2 }}
+          className="absolute right-0 top-1/2 h-4 w-5 -translate-y-1/2 translate-x-[55%] rounded-r-md"
+          style={{
+            background: "linear-gradient(180deg, hsl(var(--surface-3)), hsl(var(--surface-1)))"
+          }}
         />
       </div>
 
-      {/* Drawn-ball rack — only while a draw is live or its result is up.
-          During picking there are no draws, so the rack would just be ten
-          empty slots taking the player's eye away from the number board. */}
-      {variant === "active" && (
-        <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto custom-scrollbar pb-1">
-          {Array.from({ length: RACK_SLOTS }).map((_, index) => {
-            const num = drawn[index];
-            const isLatest = index === drawn.length - 1;
-            if (num == null) {
-              return (
-                <span
-                  key={index}
-                  className="flex shrink-0 items-center justify-center rounded-full border border-dashed border-border-soft bg-surface-0"
-                  style={{ width: rackBall, height: rackBall }}
-                >
-                  <span
-                    className="rounded-full bg-fg-subtle/35"
-                    style={{
-                      width: Math.round(rackBall * 0.24),
-                      height: Math.round(rackBall * 0.24)
-                    }}
-                    aria-hidden
-                  />
-                </span>
-              );
-            }
+      {/* Drawn-ball tray */}
+      <div
+        className="flex items-center gap-2 rounded-full p-2"
+        style={{
+          background: "hsl(var(--surface-0))",
+          boxShadow: "inset 0 2px 8px hsl(var(--surface-0) / 0.55)"
+        }}
+      >
+        {Array.from({ length: RACK_SLOTS }).map((_, index) => {
+          const num = drawn[index];
+          if (num == null) {
             return (
-              <RackBall
+              <span
                 key={index}
-                num={num}
-                hit={spots.includes(num)}
-                animateEntry={animateEntry && isLatest && !reduced}
-                size={rackBall}
+                className="shrink-0 rounded-full"
+                style={{
+                  width: RACK_BALL,
+                  height: RACK_BALL,
+                  background: "hsl(var(--surface-1))",
+                  boxShadow: "inset 0 2px 6px hsl(var(--surface-0) / 0.6)"
+                }}
+                aria-hidden
               />
             );
-          })}
-        </div>
-      )}
+          }
+          return (
+            <RackBall
+              key={index}
+              num={num}
+              hit={spots.includes(num)}
+              animateEntry={animateEntry && index === drawn.length - 1 && !reduced}
+            />
+          );
+        })}
+      </div>
     </div>
   );
 }

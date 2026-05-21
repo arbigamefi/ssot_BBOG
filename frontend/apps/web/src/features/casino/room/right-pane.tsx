@@ -174,14 +174,22 @@ export function GameRoomRightPane({
 }) {
   const stageHeightClass =
     gameSlug === "sic-bo"
-      ? "min-h-[58rem] sm:min-h-[56rem] lg:min-h-0"
+      ? "min-h-[38rem]"
       : gameSlug === "baccarat"
-        ? "min-h-[54rem] sm:min-h-[50rem] lg:min-h-0"
+        ? "min-h-[34rem]"
         : gameSlug === "keno"
-          ? "min-h-[34rem] sm:min-h-[42rem] lg:min-h-0"
+          ? "min-h-[38rem]"
           : gameSlug === "coin-toss"
-            ? "min-h-[48rem] sm:min-h-[44rem] lg:min-h-0"
-            : "min-h-[34rem] lg:min-h-0";
+            ? "min-h-[34rem]"
+            : gameSlug === "roulette"
+              ? "min-h-[38rem]"
+              : gameSlug === "dice"
+                ? "min-h-[34rem]"
+                : gameSlug === "plinko"
+                  ? "min-h-[38rem]"
+                  : gameSlug === "slots"
+                    ? "min-h-[34rem]"
+                    : "min-h-[34rem] lg:min-h-0";
 
   return (
     <div

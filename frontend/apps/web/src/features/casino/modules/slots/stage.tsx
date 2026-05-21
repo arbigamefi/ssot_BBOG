@@ -7,17 +7,25 @@ import { SLOT_SYMBOLS, SlotSymbolArt } from "./slot-symbol";
 import { SlotReel, type SlotReelMode } from "./slot-reel";
 
 /**
- * SlotsStage — a slot-machine cabinet, not a dashboard card.
+ * SlotsStage — a slot machine inside the shared game console.
  *
- * Stage realism: the three reels are recessed into a cabinet body with a
- * marquee, an inset reel deck, a brand payline across the centre, edge
- * vignettes that clip the symbols, and a glass sheen.
- *
- * Animation realism: each reel is a framer-motion symbol strip that scrolls
- * continuously and spring-decelerates onto the payline (see SlotReel). The
- * staggered stop timing (reel 1 → 2 → 3) and the VRF reveal state machine are
- * preserved from the previous implementation so the round timing is unchanged.
+ * The three reels stay a recessed deck with a marquee, a brand payline, edge
+ * vignettes and a glass sheen. Each reel is a framer-motion symbol strip that
+ * scrolls and spring-decelerates onto the payline (see SlotReel). The staggered
+ * stop timing and the VRF reveal state machine are unchanged — only the cabinet
+ * chrome was rebuilt into the shared console language.
  */
+
+/** Hairline section divider that fades out at both ends. */
+function Divider() {
+  return (
+    <div
+      aria-hidden
+      className="mx-5 h-px"
+      style={{ background: "linear-gradient(90deg, transparent, hsl(var(--border)), transparent)" }}
+    />
+  );
+}
 
 export function SlotsStage({
   isPending,
@@ -102,116 +110,150 @@ export function SlotsStage({
         : t("casino.room.stage.slots.ready");
 
   return (
-    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-6 overflow-hidden px-6 py-10">
-      {/* ---- Cabinet ---- */}
-      <div className="relative w-full max-w-xl">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -bottom-6 left-1/2 h-10 w-3/4 -translate-x-1/2 rounded-full bg-surface-0/50 blur-2xl"
-        />
+    <div className="absolute inset-0 z-10 overflow-y-auto custom-scrollbar">
+      {/* Stage atmosphere. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(130% 80% at 50% -8%, hsl(var(--surface-2)), hsl(var(--surface-0)) 60%)"
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-12 h-[420px] w-[620px] max-w-full -translate-x-1/2 rounded-full"
+        style={{ background: "radial-gradient(circle, hsl(var(--brand) / 0.13), transparent 68%)" }}
+      />
 
-        <div className="relative rounded-xl border border-border-strong bg-surface-1 p-3 shadow-e3">
-          {/* Marquee */}
-          <div className="mb-3 flex items-center justify-center rounded-lg border border-border-soft bg-gradient-to-b from-surface-2 to-surface-1 py-2 shadow-inner-e1">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.42em] text-fg-muted">
-              {t("casino.room.stage.slots.classic")}
-            </span>
+      <div className="relative flex min-h-full items-center justify-center px-4 py-4">
+        <div
+          className="relative w-full max-w-[480px] overflow-hidden rounded-xl border border-border-soft shadow-e3"
+          style={{
+            background: "linear-gradient(180deg, hsl(var(--surface-2)), hsl(var(--surface-1)))"
+          }}
+        >
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 h-px"
+            style={{
+              background: "linear-gradient(90deg, transparent, hsl(var(--fg) / 0.16), transparent)"
+            }}
+          />
+
+          {/* Marquee. */}
+          <div className="px-5 pb-3 pt-4">
+            <div
+              className="flex items-center justify-center rounded-lg border border-border-soft py-2 shadow-inner-e1"
+              style={{
+                background: "linear-gradient(180deg, hsl(var(--surface-2)), hsl(var(--surface-1)))"
+              }}
+            >
+              <span className="text-[11px] font-semibold uppercase tracking-[0.42em] text-fg-muted">
+                {t("casino.room.stage.slots.classic")}
+              </span>
+            </div>
           </div>
 
-          {/* Reel deck — recessed */}
-          <div className="relative overflow-hidden rounded-xl border border-border-strong bg-surface-0 p-2.5 shadow-inner-e1">
-            <div className="grid grid-cols-3 gap-2.5">
-              {reels.map((symbol, index) => (
-                <SlotReel
-                  key={index}
-                  mode={reelMode(index)}
-                  resultSymbol={typeof symbol === "number" ? symbol : 0}
-                  symbolLabel={symbolLabel}
-                  reduced={prefersReducedMotion}
-                  spinDurationMs={360 + index * 60}
+          {/* Reel deck — recessed. */}
+          <div className="px-5 pb-4">
+            <div
+              className="relative overflow-hidden rounded-xl border border-border-soft bg-surface-0 p-2.5"
+              style={{ boxShadow: "inset 0 2px 14px hsl(var(--surface-0) / 0.6)" }}
+            >
+              <div className="grid grid-cols-3 gap-2.5">
+                {reels.map((symbol, index) => (
+                  <SlotReel
+                    key={index}
+                    mode={reelMode(index)}
+                    resultSymbol={typeof symbol === "number" ? symbol : 0}
+                    symbolLabel={symbolLabel}
+                    spinningLabel={t("casino.room.stage.slots.spinning")}
+                    reduced={prefersReducedMotion}
+                    spinDurationMs={360 + index * 60}
+                  />
+                ))}
+              </div>
+
+              {/* Edge vignettes — clip the symbols like a real reel window. */}
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-surface-0 via-surface-0/70 to-transparent"
+              />
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-surface-0 via-surface-0/70 to-transparent"
+              />
+              {/* Glass sheen */}
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0 bg-gradient-to-b from-fg/10 via-transparent to-transparent"
+              />
+
+              {/* Payline */}
+              <motion.div
+                aria-hidden
+                className="pointer-events-none absolute inset-x-2 top-1/2 z-20 -translate-y-1/2"
+                animate={isWin && !prefersReducedMotion ? { opacity: [1, 0.4, 1] } : { opacity: 1 }}
+                transition={isWin ? { duration: 0.7, repeat: 2 } : { duration: 0.2 }}
+                style={{ height: 2 }}
+              >
+                <div
+                  className={cn(
+                    "h-full w-full rounded-full",
+                    isWin ? "bg-accent shadow-glow" : "bg-brand/70"
+                  )}
                 />
-              ))}
+                <span
+                  className={cn(
+                    "absolute -left-1 top-1/2 h-2 w-2 -translate-y-1/2 rotate-45",
+                    isWin ? "bg-accent" : "bg-brand/70"
+                  )}
+                />
+                <span
+                  className={cn(
+                    "absolute -right-1 top-1/2 h-2 w-2 -translate-y-1/2 rotate-45",
+                    isWin ? "bg-accent" : "bg-brand/70"
+                  )}
+                />
+              </motion.div>
+            </div>
+          </div>
+
+          <Divider />
+
+          {/* Paytable + status. */}
+          <div className="flex flex-col gap-3 px-5 py-4">
+            <div className="grid grid-cols-8 gap-1.5">
+              {SLOT_SYMBOLS.map((symbol, index) => {
+                const lit = allStopped && symbols.includes(index);
+                return (
+                  <div
+                    key={symbol.id}
+                    className={cn(
+                      "flex flex-col items-center rounded-md px-1 py-1.5 transition-[background-color,box-shadow]",
+                      lit
+                        ? "bg-brand-soft ring-1 ring-inset ring-brand/40"
+                        : "bg-surface-2 ring-1 ring-inset ring-border-soft"
+                    )}
+                  >
+                    <SlotSymbolArt value={index} size="xs" label={symbolLabel(index)} />
+                  </div>
+                );
+              })}
             </div>
 
-            {/* Edge vignettes — clip the symbols like a real reel window */}
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-surface-0 via-surface-0/70 to-transparent"
-            />
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-surface-0 via-surface-0/70 to-transparent"
-            />
-            {/* Glass sheen */}
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0 bg-gradient-to-b from-fg/10 via-transparent to-transparent"
-            />
-
-            {/* Payline */}
-            <motion.div
-              aria-hidden
-              className="pointer-events-none absolute inset-x-2 top-1/2 z-20 -translate-y-1/2"
-              animate={isWin && !prefersReducedMotion ? { opacity: [1, 0.4, 1] } : { opacity: 1 }}
-              transition={isWin ? { duration: 0.7, repeat: 2 } : { duration: 0.2 }}
-              style={{ height: 2 }}
+            <p
+              aria-live="polite"
+              className={cn(
+                "text-center font-mono text-xs font-semibold uppercase tracking-[0.18em]",
+                isWin ? "text-accent" : "text-fg-subtle"
+              )}
             >
-              <div
-                className={cn(
-                  "h-full w-full rounded-full",
-                  isWin ? "bg-accent shadow-glow" : "bg-brand/70"
-                )}
-              />
-              <span
-                className={cn(
-                  "absolute -left-1 top-1/2 h-2 w-2 -translate-y-1/2 rotate-45",
-                  isWin ? "bg-accent" : "bg-brand/70"
-                )}
-              />
-              <span
-                className={cn(
-                  "absolute -right-1 top-1/2 h-2 w-2 -translate-y-1/2 rotate-45",
-                  isWin ? "bg-accent" : "bg-brand/70"
-                )}
-              />
-            </motion.div>
+              {statusText}
+            </p>
           </div>
         </div>
-      </div>
-
-      {/* ---- Paytable strip ---- */}
-      <div className="grid w-full max-w-xl grid-cols-8 gap-1.5">
-        {SLOT_SYMBOLS.map((symbol, index) => (
-          <div
-            key={symbol.id}
-            className={cn(
-              "flex flex-col items-center rounded-md border bg-surface-1 px-1 py-1.5 transition-colors",
-              allStopped && symbols.includes(index)
-                ? "border-brand/45 bg-brand-soft"
-                : "border-border"
-            )}
-          >
-            <SlotSymbolArt value={index} size="xs" label={symbolLabel(index)} />
-          </div>
-        ))}
-      </div>
-
-      {/* ---- Status readout ---- */}
-      <div
-        className={cn(
-          "rounded-lg border bg-surface-1 px-5 py-2.5 text-center shadow-e1",
-          isWin ? "border-accent/45" : "border-border"
-        )}
-        aria-live="polite"
-      >
-        <p
-          className={cn(
-            "font-mono text-xs font-semibold uppercase tracking-[0.18em]",
-            isWin ? "text-accent" : "text-fg-subtle"
-          )}
-        >
-          {statusText}
-        </p>
       </div>
     </div>
   );

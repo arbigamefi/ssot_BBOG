@@ -105,7 +105,6 @@ export function useCasinoRound({
   useVrfTimeoutToast(roundPhase === "timeout_soft", t("casino.room.warnings.vrfTimeout"));
 
   const placeBet = React.useCallback(() => {
-    onRoundStart();
     if (!release || !game) return;
     return executeGamePlaceBetAction({
       account: sdk?.account,
@@ -120,6 +119,7 @@ export function useCasinoRound({
       },
       executeNow,
       planNow,
+      onBeforeExecute: onRoundStart,
       betAmount,
       betCount,
       stopGain,

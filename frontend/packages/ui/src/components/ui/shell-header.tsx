@@ -48,7 +48,7 @@ export function ShellHeaderNav({ className, children }: ShellHeaderNavProps) {
   return (
     <nav
       className={cn(
-        "hidden min-w-0 items-center gap-6 overflow-x-auto whitespace-nowrap text-sm font-medium text-fg-muted md:flex [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        "hidden min-w-0 items-center gap-6 overflow-x-auto whitespace-nowrap [word-break:keep-all] text-sm font-medium text-fg-muted md:flex [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         className
       )}
     >

@@ -303,6 +303,7 @@
         },
         "keno": {
           "spotsLabel": "/ 5 个号码",
+          "hits": "{hits} 命中",
           "autoPick": "自动选择",
           "clear": "清除",
           "empty": "还没有选择号码。点击网格选择数字。"

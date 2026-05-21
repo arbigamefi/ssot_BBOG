@@ -26,11 +26,13 @@ export function symbolFor(value: number | undefined) {
 export function SlotSymbolArt({
   value,
   size = "lg",
-  label
+  label,
+  decorative = false
 }: {
   value: number | undefined;
   size?: "xs" | "sm" | "lg";
   label: string;
+  decorative?: boolean;
 }) {
   const meta = symbolFor(value);
   const sizeClass =
@@ -44,6 +46,7 @@ export function SlotSymbolArt({
     return (
       <span
         className={cn("font-mono font-semibold text-fg", size === "lg" ? "text-5xl" : "text-2xl")}
+        {...(decorative ? { "aria-hidden": true } : { role: "img", "aria-label": label })}
       >
         —
       </span>
@@ -53,8 +56,10 @@ export function SlotSymbolArt({
   const iconClass = cn(sizeClass, meta.tone, "drop-shadow-md");
 
   return (
-    <span className="relative inline-flex items-center justify-center" aria-label={label}>
-      <span className="sr-only">{label}</span>
+    <span
+      className="relative inline-flex items-center justify-center"
+      {...(decorative ? { "aria-hidden": true } : { role: "img", "aria-label": label })}
+    >
       {meta.id === "cherry" && (
         <svg className={iconClass} viewBox="0 0 96 96" aria-hidden="true">
           <path
