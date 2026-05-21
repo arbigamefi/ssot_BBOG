@@ -2,6 +2,7 @@
 set -euo pipefail
 
 STRICT="${STRICT:-0}"
+PYTHON="${PYTHON:-python}"
 
 RELEASE_PATH="${RELEASE_PATH:-deployments/release-latest-v13.json}"
 SNAPSHOT_PATH="${SNAPSHOT_PATH:-deployments/latest-v13.json}"
@@ -31,7 +32,7 @@ else
 fi
 
 # Validate frontend artifacts deterministically (no RPC). This is a hard gate in STRICT=1.
-python3 script/release/validate_frontend_artifacts.py \
+"$PYTHON" script/release/validate_frontend_artifacts.py \
   --strict "$STRICT" \
   --release "$RELEASE_PATH" \
   --snapshot "$SNAPSHOT_PATH" \

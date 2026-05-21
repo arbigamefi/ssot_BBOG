@@ -28,6 +28,27 @@ Supporting proof:
 - Slither High/Medium detector triage: `docs/audit/slither-triage-2026-05.md`
 - SSOT/deploy docs updated where public semantics changed.
 
+## v1.3 SportsHub Addendum (2026-05-21)
+
+The source report still contains the historical `[NEW-H1] SportsHub: Challenged state can freeze tickets`
+finding. That finding is closed in the current v1.3 codebase.
+
+Current closure evidence:
+
+- `src/core/SportsHub.sol::voidMarket` now allows governance to void a `Challenged` market after
+  `resultChallengeTimeoutSeconds` has elapsed, while still blocking early void attempts with
+  `ResultChallengePending`.
+- `test/unit/SportsHubSettlement.t.sol::test_challengedMarketCanBeVoidedAfterTimeoutAndRefunded`
+  proves the timeout escape and ticket refund path.
+- `test/unit/SportsHubResult.t.sol::test_challengeResult_blocksFinalizationAndCanBeVoided`
+  proves the challenge blocks normal finalization until the timeout escape path is available.
+- `FOUNDRY_PROFILE=pr forge test -vv` on 2026-05-21 passed with `121 passed; 0 failed; 1 skipped`.
+
+This closes the old P0 liveness blocker for contract review. It does not by itself approve public
+SportsHub risk-in on mainnet; `docs/deploy/base-mainnet-v13-readiness.md` still requires a separate
+Sports Phase 2 GO packet and approved mainnet risk/role values before public sportsbook entrypoints
+can be opened.
+
 ## Low-Severity Follow-Up
 
 | Finding | Resolution | Status |

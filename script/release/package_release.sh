@@ -11,6 +11,7 @@ set -euo pipefail
 # Output: dist/ssot-release-<TAG>-<digestPrefix>.tar.gz
 
 RELEASE_PATH="${RELEASE_PATH:-deployments/release-latest-v13.json}"
+PYTHON="${PYTHON:-python}"
 SNAPSHOT_PATH="${SNAPSHOT_PATH:-deployments/latest-v13.json}"
 NOTES_PATH="${NOTES_PATH:-deployments/release-notes-latest-v13.md}"
 
@@ -38,7 +39,7 @@ GOLDEN_VECTORS_LATEST_NAME="${GOLDEN_VECTORS_LATEST_NAME:-golden-vectors-latest-
 [[ -f "$ABIS_INDEX_PATH" ]] || { echo "missing $ABIS_INDEX_PATH (run: make release-abis)"; exit 1; }
 
 export RELEASE_PATH
-python3 - <<'PY'
+"$PYTHON" - <<'PY'
 import json, os, sys
 p=os.environ["RELEASE_PATH"]
 j=json.load(open(p,"r",encoding="utf-8"))
@@ -47,9 +48,9 @@ for k in ("chainId","blockNumber","digest"):
         print(f"missing {k} in {p}", file=sys.stderr); sys.exit(1)
 PY
 
-CHAIN_ID=$(python3 -c 'import json;print(json.load(open("'"$RELEASE_PATH"'"))["chainId"])')
-BLOCK_NUMBER=$(python3 -c 'import json;print(json.load(open("'"$RELEASE_PATH"'"))["blockNumber"])')
-DIGEST=$(python3 -c 'import json;print(json.load(open("'"$RELEASE_PATH"'"))["digest"])')
+CHAIN_ID=$("$PYTHON" -c 'import json;print(json.load(open("'"$RELEASE_PATH"'"))["chainId"])')
+BLOCK_NUMBER=$("$PYTHON" -c 'import json;print(json.load(open("'"$RELEASE_PATH"'"))["blockNumber"])')
+DIGEST=$("$PYTHON" -c 'import json;print(json.load(open("'"$RELEASE_PATH"'"))["digest"])')
 
 DIGEST_PREFIX="${DIGEST:0:10}"
 
@@ -90,7 +91,7 @@ cp "$ABIS_DIR"/*.abi.json "$STAGE/abis/"
 cp "$ABIS_INDEX_PATH" "$STAGE/abis/index.json"
 
 # Integrity manifest
-python3 - <<'PY'
+"$PYTHON" - <<'PY'
 import hashlib, os
 from pathlib import Path
 root=Path(os.environ["STAGE"])
