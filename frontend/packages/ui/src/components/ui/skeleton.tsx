@@ -7,12 +7,12 @@ export type SkeletonProps = React.HTMLAttributes<HTMLDivElement>;
  * Loading skeleton placeholder.
  *
  * Use to indicate content that is still loading.
- * Renders as a pulsing rounded rectangle.
+ * Renders as a tokenized shimmer block.
  */
 export function Skeleton({ className, ...props }: SkeletonProps) {
   return (
     <div
-      className={cn("animate-pulse rounded-md bg-surface-2", className)}
+      className={cn("animate-shimmer rounded-md bg-skeleton bg-skeleton-size", className)}
       aria-hidden="true"
       {...props}
     />

@@ -98,6 +98,18 @@ const preset: Config = {
         glow: "var(--elev-glow)",
         "inner-e1": "var(--elev-inner-1)"
       },
+      backgroundImage: {
+        skeleton:
+          "linear-gradient(90deg, hsl(var(--surface-2)), hsl(var(--surface-3)), hsl(var(--surface-2)))"
+      },
+      backgroundSize: {
+        "skeleton-size": "200% 100%"
+      },
+      transitionDuration: {
+        fast: "var(--motion-fast)",
+        base: "var(--motion-base)",
+        slow: "var(--motion-slow)"
+      },
       keyframes: {
         "accordion-down": {
           from: { height: "0" },
@@ -106,11 +118,16 @@ const preset: Config = {
         "accordion-up": {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" }
+        },
+        shimmer: {
+          "0%": { backgroundPosition: "200% 0" },
+          "100%": { backgroundPosition: "-200% 0" }
         }
       },
       animation: {
-        "accordion-down": "accordion-down 0.2s ease-out",
-        "accordion-up": "accordion-up 0.2s ease-out"
+        "accordion-down": "accordion-down var(--motion-base) ease-out",
+        "accordion-up": "accordion-up var(--motion-base) ease-out",
+        shimmer: "shimmer 1.4s ease-in-out infinite"
       }
     }
   }

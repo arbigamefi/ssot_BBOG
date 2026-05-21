@@ -18,14 +18,14 @@ export function PageHeader({ title, description, actions, className }: PageHeade
     <div className={cn("mb-8", className)}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
-          <h1 className="text-3xl font-black tracking-tight text-fg">{title}</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-fg md:text-3xl">{title}</h1>
           {description ? (
             <p className="max-w-xl text-sm leading-relaxed text-fg-muted">{description}</p>
           ) : null}
         </div>
         {actions ? <div className="flex flex-shrink-0 items-center gap-3">{actions}</div> : null}
       </div>
-      <div className="mt-4 h-px bg-gradient-to-r from-border via-border-soft to-transparent" />
+      <div className="mt-4 border-b border-border-soft" />
     </div>
   );
 }

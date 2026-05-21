@@ -59,4 +59,8 @@
   --elev-3: 0 12px 32px rgb(0 0 0 / 0.45), 0 2px 6px rgb(0 0 0 / 0.4);
   --elev-glow: 0 0 0 1px hsl(var(--brand) / 0.45), 0 8px 32px hsl(var(--brand) / 0.18);
   --elev-inner-1: inset 0 1px 0 hsl(var(--fg) / 0.06);
+
+  --motion-fast: 120ms;
+  --motion-base: 200ms;
+  --motion-slow: 320ms;
 }
