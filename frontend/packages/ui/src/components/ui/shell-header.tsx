@@ -15,14 +15,14 @@ export function ShellHeader({ className, children, variant = "solid" }: ShellHea
   return (
     <header
       className={cn(
-        "sticky top-0 z-50 flex-shrink-0 transition-colors duration-300",
+        "sticky top-0 z-50 flex-shrink-0 transition-colors duration-base",
         variant === "solid"
-          ? "border-b border-border bg-surface-0/80 backdrop-blur-md"
+          ? "border-b border-border bg-surface-0/95 supports-[backdrop-filter]:bg-surface-0/80 supports-[backdrop-filter]:backdrop-blur-md"
           : "border-transparent bg-transparent",
         className
       )}
     >
-      <div className="mx-auto flex h-20 max-w-[1440px] items-center justify-between px-4 sm:px-6">
+      <div className="mx-auto flex h-16 max-w-screen-2xl items-center justify-between px-4 sm:px-6 md:h-20">
         {children}
       </div>
     </header>

@@ -80,6 +80,47 @@ const toneClassName: Record<ToastTone, string> = {
   warning: "border-warn/35"
 };
 
+const toneIconClassName: Record<ToastTone, string> = {
+  error: "text-danger",
+  info: "text-info",
+  loading: "text-fg-muted",
+  success: "text-success",
+  warning: "text-warn"
+};
+
+function ToastIcon({ tone }: { tone: ToastTone }) {
+  if (tone === "loading") {
+    return (
+      <span
+        aria-hidden="true"
+        className="mt-0.5 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+      />
+    );
+  }
+
+  const path =
+    tone === "success"
+      ? "M4.5 12.75l6 6 9-13.5"
+      : tone === "error"
+        ? "M6 18L18 6M6 6l12 12"
+        : tone === "warning"
+          ? "M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+          : "M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M12 8h.01";
+
+  return (
+    <svg
+      aria-hidden="true"
+      className="mt-0.5 h-4 w-4"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d={path} />
+    </svg>
+  );
+}
+
 function removeToast(toasts: ToastRecord[], id?: ToastId) {
   if (id === undefined) return [];
   return toasts.filter((toastItem) => toastItem.id !== id);
@@ -134,12 +175,38 @@ export function Toaster({ className }: ToasterProps) {
             toneClassName[toastItem.tone]
           )}
         >
-          <div className="text-sm font-bold text-fg">{toastItem.message}</div>
-          {toastItem.description ? (
-            <div className="mt-1 text-xs leading-relaxed text-fg-muted">
-              {toastItem.description}
+          <div className="flex items-start gap-3">
+            <span className={cn("shrink-0", toneIconClassName[toastItem.tone])}>
+              <ToastIcon tone={toastItem.tone} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-bold text-fg">{toastItem.message}</div>
+              {toastItem.description ? (
+                <div className="mt-1 text-xs leading-relaxed text-fg-muted">
+                  {toastItem.description}
+                </div>
+              ) : null}
             </div>
-          ) : null}
+            {toastItem.tone !== "loading" ? (
+              <button
+                type="button"
+                className="-mr-1 -mt-1 rounded-md p-1 text-fg-subtle transition-colors duration-base hover:bg-surface-2 hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                aria-label="Dismiss notification"
+                onClick={() => setToasts((current) => removeToast(current, toastItem.id))}
+              >
+                <svg
+                  aria-hidden="true"
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            ) : null}
+          </div>
         </div>
       ))}
     </div>
