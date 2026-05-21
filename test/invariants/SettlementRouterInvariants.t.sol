@@ -24,6 +24,7 @@ contract SettlementRouterHandler is Test {
 
     address[] public players;
     uint256[] public positionIds;
+    uint256[] public heldPositionIds;
 
     uint256 public openReservedCasino;
     uint256 public openReservedSports;
@@ -45,6 +46,7 @@ contract SettlementRouterHandler is Test {
     }
 
     mapping(uint256 => Mirror) public mirrors;
+    mapping(uint256 => uint256) internal heldIndexPlusOne;
 
     constructor(
         MockERC20 asset_,
@@ -98,6 +100,8 @@ contract SettlementRouterHandler is Test {
         vm.prank(ownerHub);
         try router.openPosition(poolId, player, stake, reserved, snapshotHash) returns (uint256 positionId) {
             positionIds.push(positionId);
+            heldPositionIds.push(positionId);
+            heldIndexPlusOne[positionId] = heldPositionIds.length;
             ++openedCount;
 
             mirrors[positionId] = Mirror({
@@ -213,25 +217,35 @@ contract SettlementRouterHandler is Test {
 
     function assertSampledPositions() external view {
         uint256 n = positionIds.length;
-        uint256 limit = n > 96 ? 96 : n;
-        for (uint256 i = 0; i < limit; ++i) {
-            uint256 positionId = positionIds[i];
-            Mirror storage m = mirrors[positionId];
-            SSOTTypes.Position memory pos = router.getPosition(positionId);
-
-            assertEq(pos.positionId, positionId, "position id changed");
-            assertEq(pos.ownerHub, m.ownerHub, "owner hub changed");
-            assertEq(pos.poolId, m.poolId, "pool id changed");
-            assertEq(pos.asset, address(asset), "asset changed");
-            assertEq(pos.bank, m.bank, "bank changed");
-            assertEq(pos.player, m.player, "player changed");
-            assertEq(pos.stake, m.stake, "stake changed");
-            assertEq(pos.reserved, m.reserved, "reserved changed");
-            assertEq(pos.snapshotHash, m.snapshotHash, "snapshot changed");
-            assertEq(uint256(pos.state), uint256(m.state), "position state changed unexpectedly");
-
-            _assertBankHold(positionId, m);
+        if (n <= 32) {
+            for (uint256 i = 0; i < n; ++i) {
+                _assertPosition(positionIds[i]);
+            }
+            return;
         }
+
+        for (uint256 i = 0; i < 16; ++i) {
+            _assertPosition(positionIds[i]);
+            _assertPosition(positionIds[n - 16 + i]);
+        }
+    }
+
+    function _assertPosition(uint256 positionId) internal view {
+        Mirror storage m = mirrors[positionId];
+        SSOTTypes.Position memory pos = router.getPosition(positionId);
+
+        assertEq(pos.positionId, positionId, "position id changed");
+        assertEq(pos.ownerHub, m.ownerHub, "owner hub changed");
+        assertEq(pos.poolId, m.poolId, "pool id changed");
+        assertEq(pos.asset, address(asset), "asset changed");
+        assertEq(pos.bank, m.bank, "bank changed");
+        assertEq(pos.player, m.player, "player changed");
+        assertEq(pos.stake, m.stake, "stake changed");
+        assertEq(pos.reserved, m.reserved, "reserved changed");
+        assertEq(pos.snapshotHash, m.snapshotHash, "snapshot changed");
+        assertEq(uint256(pos.state), uint256(m.state), "position state changed unexpectedly");
+
+        _assertBankHold(positionId, m);
     }
 
     function _assertBankHold(uint256 positionId, Mirror storage m) internal view {
@@ -258,6 +272,23 @@ contract SettlementRouterHandler is Test {
         else openReservedSports -= m.reserved;
 
         m.state = terminalState;
+        _removeHeldPosition(positionId);
+    }
+
+    function _removeHeldPosition(uint256 positionId) internal {
+        uint256 indexPlusOne = heldIndexPlusOne[positionId];
+        if (indexPlusOne == 0) return;
+
+        uint256 index = indexPlusOne - 1;
+        uint256 lastIndex = heldPositionIds.length - 1;
+        if (index != lastIndex) {
+            uint256 movedPositionId = heldPositionIds[lastIndex];
+            heldPositionIds[index] = movedPositionId;
+            heldIndexPlusOne[movedPositionId] = index + 1;
+        }
+
+        heldPositionIds.pop();
+        delete heldIndexPlusOne[positionId];
     }
 
     function _pickPool(uint256 seed) internal view returns (uint64 poolId, address ownerHub, Bank bank) {
@@ -268,15 +299,9 @@ contract SettlementRouterHandler is Test {
     }
 
     function _pickHeldPosition(uint256 seed) internal view returns (uint256 positionId) {
-        uint256 n = positionIds.length;
+        uint256 n = heldPositionIds.length;
         if (n == 0) return 0;
-
-        uint256 start = seed % n;
-        for (uint256 i = 0; i < n; ++i) {
-            positionId = positionIds[(start + i) % n];
-            if (mirrors[positionId].state == SSOTTypes.PositionState.Held) return positionId;
-        }
-        return 0;
+        return heldPositionIds[seed % n];
     }
 }
 

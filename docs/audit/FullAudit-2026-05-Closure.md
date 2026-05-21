@@ -49,6 +49,31 @@ SportsHub risk-in on mainnet; `docs/deploy/base-mainnet-v13-readiness.md` still 
 Sports Phase 2 GO packet and approved mainnet risk/role values before public sportsbook entrypoints
 can be opened.
 
+## v1.3 GameHub Liveness Addendum (2026-05-21)
+
+The independent 2026-05-21 full-audit pass found one additional Medium liveness issue:
+`registerGame` allowed governance to overwrite an active `gameId`. If this happened after a bet
+entered `RandomReady`, `finalize` could resolve old params through a new module and permanently
+strand the bet if the new module reverted or returned an amount above the old reserved cap.
+
+Current closure evidence:
+
+- `src/core/GameHub.sol::registerGame` now rejects any attempt to overwrite an existing `gameId`.
+  Module upgrades must use a new game id or a separately audited migration path.
+- `src/core/GameHub.sol::finalize` now wraps `IGameModule.resolve` in `try/catch` and routes
+  resolve reverts, over-refunds, and over-payouts into a full-stake `Refunded` terminal path.
+- `test/unit/SecurityFixes.t.sol::test_registerGameRejectsOverwrite` covers the governance overwrite
+  guard.
+- `test/unit/SecurityFixes.t.sol::test_revertingModuleResolveFallsBackToFullRefund` covers module
+  resolve revert liveness.
+- `test/unit/SecurityFixes.t.sol::test_overPayoutModuleFallsBackToFullRefund` covers impossible
+  payout liveness.
+- `FOUNDRY_PROFILE=pr forge test -vv` on 2026-05-21 passed with `124 passed; 0 failed; 1 skipped`.
+
+This closes the open Medium contract-code finding from `docs/audit/FullAudit-2026-05-21.md`.
+It does not approve Base mainnet deployment by itself; `docs/deploy/base-mainnet-v13-readiness.md`
+still remains the project-level go/no-go source.
+
 ## Low-Severity Follow-Up
 
 | Finding | Resolution | Status |

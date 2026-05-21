@@ -55,11 +55,50 @@ contract SecurityRefundTooLargeModule is IGameModule {
     }
 }
 
+contract SecurityRevertingResolveModule is IGameModule {
+    function validate(bytes calldata, SSOTTypes.StakeSpec calldata stakeSpec) external pure {
+        require(stakeSpec.amountPerRoll > 0 && stakeSpec.betCount > 0, "bad spec");
+    }
+
+    function maxPayout(bytes calldata, SSOTTypes.StakeSpec calldata stakeSpec) external pure returns (uint256) {
+        return stakeSpec.amountPerRoll * uint256(stakeSpec.betCount);
+    }
+
+    function resolve(bytes calldata, SSOTTypes.StakeSpec calldata, uint256, uint256[] calldata)
+        external
+        pure
+        returns (uint256, uint256)
+    {
+        revert("resolve failed");
+    }
+}
+
+contract SecurityOverPayoutModule is IGameModule {
+    function validate(bytes calldata, SSOTTypes.StakeSpec calldata stakeSpec) external pure {
+        require(stakeSpec.amountPerRoll > 0 && stakeSpec.betCount > 0, "bad spec");
+    }
+
+    function maxPayout(bytes calldata, SSOTTypes.StakeSpec calldata stakeSpec) external pure returns (uint256) {
+        return stakeSpec.amountPerRoll * uint256(stakeSpec.betCount);
+    }
+
+    function resolve(bytes calldata, SSOTTypes.StakeSpec calldata stakeSpec, uint256, uint256[] calldata)
+        external
+        pure
+        returns (uint256 payoutGross, uint256 refundAmount)
+    {
+        payoutGross = stakeSpec.amountPerRoll * uint256(stakeSpec.betCount) + 1;
+        refundAmount = 0;
+    }
+}
+
 contract SecurityFixes is Test {
     event BetReserveReleased(uint256 indexed betId, address indexed player, uint256 reserved);
 
     bytes32 internal constant GAME_STAKE = keccak256("SECURITY_STAKE");
     bytes32 internal constant GAME_BAD_REFUND = keccak256("SECURITY_BAD_REFUND");
+    bytes32 internal constant GAME_REVERTING = keccak256("SECURITY_REVERTING");
+    bytes32 internal constant GAME_OVER_PAYOUT = keccak256("SECURITY_OVER_PAYOUT");
 
     address internal gov = address(0xA11CE);
     address internal player = address(0xBEEF);
@@ -211,6 +250,59 @@ contract SecurityFixes is Test {
         assertEq(bank.totalReserved(), 0, "reserved capital should be released");
     }
 
+    function test_registerGameRejectsOverwrite() external {
+        uint16[6] memory levels;
+        (,, GameHub hub,) = _deploy(levels, 0, 0, 200, 0);
+        SecurityStakePayoutModule module = new SecurityStakePayoutModule();
+        SecurityRefundTooLargeModule replacement = new SecurityRefundTooLargeModule();
+
+        vm.startPrank(gov);
+        hub.registerGame(GAME_STAKE, address(module));
+        vm.expectRevert(Errors.InvalidConfig.selector);
+        hub.registerGame(GAME_STAKE, address(replacement));
+        vm.stopPrank();
+    }
+
+    function test_revertingModuleResolveFallsBackToFullRefund() external {
+        uint16[6] memory levels;
+        (MockERC20 asset, Bank bank, GameHub hub, VRFHub vrf) = _deploy(levels, 0, 0, 200, 0);
+        SecurityRevertingResolveModule module = new SecurityRevertingResolveModule();
+
+        vm.prank(gov);
+        hub.registerGame(GAME_REVERTING, address(module));
+
+        uint256 betId = _placeAndFulfill(asset, bank, hub, vrf, GAME_REVERTING);
+        hub.finalize(betId);
+
+        SSOTTypes.Bet memory b = hub.getBet(betId);
+        SSOTTypes.BetTerminal memory terminal = hub.getBetTerminal(betId);
+        assertEq(uint256(b.state), uint256(SSOTTypes.BetState.Refunded), "resolve revert should refund");
+        assertEq(uint256(terminal.state), uint256(SSOTTypes.BetState.Refunded), "terminal should be refunded");
+        assertEq(terminal.refundAmount, 10 ether, "full stake should be refunded");
+        assertEq(asset.balanceOf(player), 10 ether, "player stake should be returned");
+        assertEq(bank.totalReserved(), 0, "reserved capital should be released");
+    }
+
+    function test_overPayoutModuleFallsBackToFullRefund() external {
+        uint16[6] memory levels;
+        (MockERC20 asset, Bank bank, GameHub hub, VRFHub vrf) = _deploy(levels, 0, 0, 200, 0);
+        SecurityOverPayoutModule module = new SecurityOverPayoutModule();
+
+        vm.prank(gov);
+        hub.registerGame(GAME_OVER_PAYOUT, address(module));
+
+        uint256 betId = _placeAndFulfill(asset, bank, hub, vrf, GAME_OVER_PAYOUT);
+        hub.finalize(betId);
+
+        SSOTTypes.Bet memory b = hub.getBet(betId);
+        SSOTTypes.BetTerminal memory terminal = hub.getBetTerminal(betId);
+        assertEq(uint256(b.state), uint256(SSOTTypes.BetState.Refunded), "over-payout should refund");
+        assertEq(uint256(terminal.state), uint256(SSOTTypes.BetState.Refunded), "terminal should be refunded");
+        assertEq(terminal.refundAmount, 10 ether, "full stake should be refunded");
+        assertEq(asset.balanceOf(player), 10 ether, "player stake should be returned");
+        assertEq(bank.totalReserved(), 0, "reserved capital should be released");
+    }
+
     function test_newHoldbackAwardDoesNotDelayExistingVesting() external {
         MockERC20 asset = new MockERC20("Asset", "AST", 18);
         Bank bank = new Bank(address(asset), gov, 0, "LP", "LP", 18);
@@ -341,6 +433,28 @@ contract SecurityFixes is Test {
         asset.approve(address(bank), type(uint256).max);
         bank.deposit(1_000_000 ether, gov);
         vm.stopPrank();
+    }
+
+    function _placeAndFulfill(MockERC20 asset, Bank bank, GameHub hub, VRFHub vrf, bytes32 gameId)
+        internal
+        returns (uint256 betId)
+    {
+        asset.mint(player, 10 ether);
+        vm.deal(player, 10 ether);
+        vm.prank(player);
+        asset.approve(address(bank), type(uint256).max);
+
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
+        (uint256 fee,) = hub.quoteVRFFee(1);
+
+        vm.prank(player);
+        betId = hub.placeBet{value: fee}(gameId, 1, "", spec, address(0), 10_000);
+
+        SSOTTypes.Bet memory b = hub.getBet(betId);
+        uint256[] memory words = new uint256[](1);
+        words[0] = 1;
+        vrf.fulfillRandomWords(b.requestId, words);
     }
 
     function _settleDirectHoldback(Bank bank, uint256 betId, address player_, address payee, uint256 amount) internal {
