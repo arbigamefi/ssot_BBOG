@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isSportsbookProviderOdds } from "./provider-odds";
+import { isSportsbookProviderOdds, isSportsbookProviderOddsUnavailable } from "./provider-odds";
 
 describe("isSportsbookProviderOdds", () => {
   it("accepts provider odds payloads and rejects signed snapshot payloads", () => {
@@ -30,6 +30,29 @@ describe("isSportsbookProviderOdds", () => {
         provider: { providerEventId: "event-1", sportKey: "soccer_usa_mls" },
         odds: { oddsWad: "2100000000000000000" },
         signature: `0x${"11".repeat(65)}`
+      })
+    ).toBe(false);
+  });
+});
+
+describe("isSportsbookProviderOddsUnavailable", () => {
+  it("accepts the provider-unavailable envelope", () => {
+    expect(
+      isSportsbookProviderOddsUnavailable({
+        schemaVersion: "sportsbook.provider-odds-unavailable.v1",
+        unavailable: {
+          code: "PROVIDER_REQUEST_FAILED",
+          message: "Provider request failed."
+        }
+      })
+    ).toBe(true);
+  });
+
+  it("rejects malformed unavailable envelopes", () => {
+    expect(
+      isSportsbookProviderOddsUnavailable({
+        schemaVersion: "sportsbook.provider-odds-unavailable.v1",
+        unavailable: { code: "PROVIDER_REQUEST_FAILED" }
       })
     ).toBe(false);
   });
