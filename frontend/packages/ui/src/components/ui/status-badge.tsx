@@ -46,6 +46,7 @@ export function StatusBadge({ status, label, size = "sm", className }: StatusBad
         size === "sm" ? "px-2 py-0.5 text-xs" : "px-3 py-1 text-sm",
         className
       )}
+      aria-label={`Status: ${displayLabel}`}
     >
       <span
         className={cn(

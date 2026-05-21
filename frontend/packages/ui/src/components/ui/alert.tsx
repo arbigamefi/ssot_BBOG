@@ -9,8 +9,8 @@ const alertVariants = cva(
     variants: {
       variant: {
         default: "border-border bg-surface-1 text-fg",
-        warning: "border-warn/40 bg-warn-soft text-warn",
-        destructive: "border-danger/40 bg-danger-soft text-danger"
+        warning: "border-warn/40 bg-warn-soft text-fg",
+        destructive: "border-danger/40 bg-danger-soft text-fg"
       }
     },
     defaultVariants: {
@@ -28,7 +28,7 @@ export function Alert({ className, variant, ...props }: AlertProps) {
 
 export function AlertTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
   return (
-    <h5 className={cn("mb-1 font-medium leading-none tracking-tight", className)} {...props} />
+    <h5 className={cn("mb-1 font-semibold leading-none tracking-tight", className)} {...props} />
   );
 }
 

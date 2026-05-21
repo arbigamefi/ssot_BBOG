@@ -46,3 +46,28 @@ export const Default: Story = {
     </Card>
   )
 };
+
+export const Variants: Story = {
+  render: () => (
+    <div className="grid max-w-4xl gap-4 md:grid-cols-3">
+      <Card>
+        <CardHeader>
+          <CardTitle>Default</CardTitle>
+          <CardDescription>Neutral framed content.</CardDescription>
+        </CardHeader>
+      </Card>
+      <Card variant="interactive">
+        <CardHeader>
+          <CardTitle>Interactive</CardTitle>
+          <CardDescription>Hoverable cards used in lists.</CardDescription>
+        </CardHeader>
+      </Card>
+      <Card variant="featured">
+        <CardHeader>
+          <CardTitle>Featured</CardTitle>
+          <CardDescription>Use sparingly for primary proof surfaces.</CardDescription>
+        </CardHeader>
+      </Card>
+    </div>
+  )
+};
