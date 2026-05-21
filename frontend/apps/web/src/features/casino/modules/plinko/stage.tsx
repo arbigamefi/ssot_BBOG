@@ -140,6 +140,7 @@ function pathRotation(path: Array<{ x: number; y: number }>, step: number) {
 
 export function PlinkoStage({
   isPending,
+  controlsLocked = false,
   isRevealing = false,
   showResult,
   risk,
@@ -149,6 +150,7 @@ export function PlinkoStage({
   onRevealComplete
 }: {
   isPending: boolean;
+  controlsLocked?: boolean;
   isRevealing?: boolean;
   showResult: boolean;
   risk: PlinkoRisk;
@@ -176,7 +178,7 @@ export function PlinkoStage({
       : isPending
         ? "pending"
         : "idle";
-  const controlsLocked = isPending || isRevealing || showResult;
+  const controlsDisabled = controlsLocked || isPending || isRevealing;
 
   React.useEffect(() => {
     if (!isRevealing || lastBucket == null) {
@@ -277,7 +279,7 @@ export function PlinkoStage({
                   <button
                     key={item}
                     type="button"
-                    disabled={controlsLocked}
+                    disabled={controlsDisabled}
                     onClick={() => onRiskChange(item)}
                     className={cn(
                       "rounded-md px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] transition-colors",

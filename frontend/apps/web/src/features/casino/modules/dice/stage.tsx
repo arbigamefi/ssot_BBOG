@@ -26,6 +26,7 @@ function clampRoll(value: number | null): number {
 
 export function DiceStage({
   isPending,
+  controlsLocked = false,
   isRevealing,
   showResult,
   resultNum,
@@ -38,6 +39,7 @@ export function DiceStage({
   onRevealComplete
 }: {
   isPending: boolean;
+  controlsLocked?: boolean;
   isRevealing?: boolean;
   showResult: boolean;
   resultNum: number | null;
@@ -51,7 +53,7 @@ export function DiceStage({
 }) {
   const t = useTranslations();
   const revealing = Boolean(isRevealing);
-  const locked = isPending || revealing;
+  const locked = controlsLocked || isPending || revealing;
   const hasResult = resultNum != null;
   const settled = showResult && !revealing && hasResult;
 

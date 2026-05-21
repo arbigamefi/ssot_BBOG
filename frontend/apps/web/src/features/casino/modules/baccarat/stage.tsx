@@ -185,6 +185,7 @@ function BetBox({
 
 export function BaccaratStage({
   isPending,
+  controlsLocked = false,
   isRevealing,
   showResult,
   selectedSide,
@@ -193,6 +194,7 @@ export function BaccaratStage({
   onRevealComplete
 }: {
   isPending: boolean;
+  controlsLocked?: boolean;
   isRevealing?: boolean;
   showResult: boolean;
   selectedSide: BaccaratSide;
@@ -224,6 +226,7 @@ export function BaccaratStage({
   const winner = roll?.outcome;
   const instantCards = Boolean(showResult && roll && !isRevealing);
   const dealingActive = isPending || Boolean(isRevealing);
+  const selectionDisabled = controlsLocked || isPending || Boolean(isRevealing);
 
   const slotState = (side: "player" | "banker", index: number): SlotState => {
     // VRF pending: the four base cards sit face-down, no third card yet.
@@ -358,7 +361,7 @@ export function BaccaratStage({
                     key={side}
                     side={side}
                     active={side === selectedSide}
-                    disabled={isPending}
+                    disabled={selectionDisabled}
                     onClick={() => onSideChange(side)}
                     t={t}
                   />

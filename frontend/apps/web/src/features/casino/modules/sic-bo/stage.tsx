@@ -161,6 +161,7 @@ function NumberBetButton({
 
 export function SicBoStage({
   isPending,
+  controlsLocked = false,
   isRevealing,
   showResult,
   betKind,
@@ -170,6 +171,7 @@ export function SicBoStage({
   onRevealComplete
 }: {
   isPending: boolean;
+  controlsLocked?: boolean;
   isRevealing?: boolean;
   showResult: boolean;
   betKind: SicBoKind;
@@ -185,6 +187,7 @@ export function SicBoStage({
   const hasResult = Boolean(showResult && roll && (diceOpened || !isRevealing));
   const isRollingReveal = Boolean(isRevealing && roll && !diceOpened);
   const covered = isPending || isRollingReveal;
+  const selectionDisabled = controlsLocked || isPending || Boolean(isRevealing);
 
   // VRF reveal state machine — unchanged timing: dome lift + completion.
   React.useEffect(() => {
@@ -317,21 +320,21 @@ export function SicBoStage({
                   label={t("casino.room.selection.sicBo.kinds.small")}
                   detail={`${sicBoMultiplier("small", 0).toFixed(2)}x`}
                   active={betKind === "small"}
-                  disabled={isPending}
+                  disabled={selectionDisabled}
                   onClick={() => onBetChange("small", 0)}
                 />
                 <TableBetButton
                   label={t("casino.room.selection.sicBo.kinds.big")}
                   detail={`${sicBoMultiplier("big", 0).toFixed(2)}x`}
                   active={betKind === "big"}
-                  disabled={isPending}
+                  disabled={selectionDisabled}
                   onClick={() => onBetChange("big", 0)}
                 />
                 <TableBetButton
                   label={t("casino.room.selection.sicBo.kinds.anyTriple")}
                   detail={`${sicBoMultiplier("anyTriple", 0).toFixed(2)}x`}
                   active={betKind === "anyTriple"}
-                  disabled={isPending}
+                  disabled={selectionDisabled}
                   onClick={() => onBetChange("anyTriple", 0)}
                   wide
                 />
@@ -343,7 +346,7 @@ export function SicBoStage({
                         key={value}
                         value={value}
                         active={isSicBoActive(betKind, betValue, "singleFace", value)}
-                        disabled={isPending}
+                        disabled={selectionDisabled}
                         onClick={() => onBetChange("singleFace", value)}
                         compact
                       />
@@ -367,7 +370,7 @@ export function SicBoStage({
                         key={value}
                         value={value}
                         active={isSicBoActive(betKind, betValue, "total", value)}
-                        disabled={isPending}
+                        disabled={selectionDisabled}
                         onClick={() => onBetChange("total", value)}
                       />
                     ))}
@@ -382,7 +385,7 @@ export function SicBoStage({
                           key={value}
                           value={value}
                           active={isSicBoActive(betKind, betValue, "specificDouble", value)}
-                          disabled={isPending}
+                          disabled={selectionDisabled}
                           onClick={() => onBetChange("specificDouble", value)}
                           compact
                         />
@@ -397,7 +400,7 @@ export function SicBoStage({
                           key={value}
                           value={value}
                           active={isSicBoActive(betKind, betValue, "specificTriple", value)}
-                          disabled={isPending}
+                          disabled={selectionDisabled}
                           onClick={() => onBetChange("specificTriple", value)}
                           compact
                         />

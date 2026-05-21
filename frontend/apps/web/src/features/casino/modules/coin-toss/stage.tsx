@@ -97,6 +97,7 @@ function CoinFace({ side }: { side: CoinSide }) {
 
 export function CoinTossStage({
   isPending,
+  controlsLocked = false,
   isRevealing,
   showResult,
   resultNum,
@@ -105,6 +106,7 @@ export function CoinTossStage({
   onRevealComplete
 }: {
   isPending: boolean;
+  controlsLocked?: boolean;
   isRevealing?: boolean;
   showResult: boolean;
   resultNum: number | null;
@@ -115,7 +117,7 @@ export function CoinTossStage({
   const t = useTranslations();
   const reduced = useReducedMotion() ?? false;
   const spinning = isPending || Boolean(isRevealing);
-  const controlsDisabled = spinning || showResult;
+  const controlsDisabled = controlsLocked || spinning;
   const selectedSideLabel =
     coinSide === "HEADS"
       ? t("casino.room.selection.coin.heads")

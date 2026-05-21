@@ -85,6 +85,7 @@ export function GameRoomRightPane({
   gameHistory,
   recentBets,
   isPending,
+  controlsLocked = false,
   isRevealing,
   showResult,
   resultNum,
@@ -131,6 +132,7 @@ export function GameRoomRightPane({
   gameHistory: readonly GameHistoryEntry[];
   recentBets: readonly RecentBetSummary[];
   isPending: boolean;
+  controlsLocked?: boolean;
   isRevealing?: boolean;
   showResult: boolean;
   resultNum: number | null;
@@ -207,6 +209,7 @@ export function GameRoomRightPane({
       {gameSlug === "dice" && (
         <DiceStage
           isPending={isPending}
+          controlsLocked={controlsLocked}
           isRevealing={Boolean(isRevealing)}
           showResult={showResult}
           resultNum={resultNum}
@@ -223,6 +226,7 @@ export function GameRoomRightPane({
       {gameSlug === "coin-toss" && (
         <CoinTossStage
           isPending={isPending}
+          controlsLocked={controlsLocked}
           isRevealing={Boolean(isRevealing)}
           showResult={showResult}
           resultNum={resultNum}
@@ -235,6 +239,7 @@ export function GameRoomRightPane({
       {gameSlug === "roulette" && (
         <RouletteStage
           isPending={isPending}
+          controlsLocked={controlsLocked}
           isRevealing={Boolean(isRevealing)}
           showResult={showResult}
           resultNum={resultNum}
@@ -247,6 +252,7 @@ export function GameRoomRightPane({
       {gameSlug === "keno" && (
         <KenoStage
           isPending={isPending}
+          controlsLocked={controlsLocked}
           isRevealing={Boolean(isRevealing)}
           showResult={showResult}
           spots={kenoSpots}
@@ -261,6 +267,7 @@ export function GameRoomRightPane({
       {gameSlug === "plinko" && (
         <PlinkoStage
           isPending={isPending}
+          controlsLocked={controlsLocked}
           isRevealing={Boolean(isRevealing)}
           showResult={showResult}
           risk={plinkoRisk}
@@ -274,6 +281,7 @@ export function GameRoomRightPane({
       {gameSlug === "slots" && (
         <SlotsStage
           isPending={isPending}
+          controlsLocked={controlsLocked}
           isRevealing={Boolean(isRevealing)}
           showResult={showResult}
           symbols={slotsSymbols}
@@ -284,6 +292,7 @@ export function GameRoomRightPane({
       {gameSlug === "baccarat" && (
         <BaccaratStage
           isPending={isPending}
+          controlsLocked={controlsLocked}
           isRevealing={Boolean(isRevealing)}
           showResult={showResult}
           selectedSide={baccaratSide}
@@ -296,6 +305,7 @@ export function GameRoomRightPane({
       {gameSlug === "sic-bo" && (
         <SicBoStage
           isPending={isPending}
+          controlsLocked={controlsLocked}
           isRevealing={Boolean(isRevealing)}
           showResult={showResult}
           betKind={sicBoKind}

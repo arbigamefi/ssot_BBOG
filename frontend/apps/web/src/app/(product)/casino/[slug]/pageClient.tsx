@@ -136,16 +136,21 @@ export function getCasinoRoomPendingStates({
   isTransactionActive,
   isOutcomeTracking,
   hasStageReveal,
-  hasCasinoOutcome
+  hasCasinoOutcome,
+  isResultVisible = false
 }: {
   isLocalPending: boolean;
   isTransactionActive: boolean;
   isOutcomeTracking: boolean;
   hasStageReveal: boolean;
   hasCasinoOutcome: boolean;
+  isResultVisible?: boolean;
 }) {
+  const isRoundInputLocked =
+    isLocalPending || isTransactionActive || isOutcomeTracking || hasStageReveal || isResultVisible;
+
   return {
-    isBetPanelPending: isLocalPending || isTransactionActive || isOutcomeTracking,
+    isBetPanelPending: isRoundInputLocked,
     isStagePending: isOutcomeTracking && !hasStageReveal && !hasCasinoOutcome
   };
 }
@@ -298,10 +303,12 @@ export function GamePageClient({ slug }: { slug: string }) {
     setSlotsSymbols([]);
   }, [clearStageRevealTimer]);
   const handleResultClose = React.useCallback(() => {
+    clearStageRevealTimer();
     setShowResult(false);
     setResultProof(null);
     setCasinoOutcome(null);
-  }, []);
+    setStageReveal(null);
+  }, [clearStageRevealTimer]);
 
   React.useEffect(() => () => clearStageRevealTimer(), [clearStageRevealTimer]);
 
@@ -356,7 +363,8 @@ export function GamePageClient({ slug }: { slug: string }) {
     isTransactionActive: casinoRound.isTransactionActive,
     isOutcomeTracking: casinoRound.isRoundAnimating,
     hasStageReveal: Boolean(stageReveal),
-    hasCasinoOutcome: Boolean(casinoOutcome)
+    hasCasinoOutcome: Boolean(casinoOutcome),
+    isResultVisible: showResult
   });
   const animatingKenoSpots = useKenoStrobeSpots({
     isPending: isStagePending,
@@ -374,7 +382,8 @@ export function GamePageClient({ slug }: { slug: string }) {
     setIsPending,
     setShowResult,
     setResultProof,
-    reset
+    reset,
+    onResultHidden: handleResultClose
   });
 
   React.useEffect(() => {
@@ -514,6 +523,7 @@ export function GamePageClient({ slug }: { slug: string }) {
       gameHistory={gameHistory}
       recentBets={recentBets}
       isPending={isStagePending}
+      controlsLocked={isBetPanelPending}
       isRevealing={stageIsRevealing}
       showResult={stageShowResult}
       resultNum={resultNum}
