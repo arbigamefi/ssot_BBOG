@@ -132,7 +132,7 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
           <ShellHeaderBrand name="ArbiGameFi" className="shrink-0" />
 
           {variant === "game" ? (
-            <ShellHeaderNav className="flex-1">
+            <ShellHeaderNav className="flex-1 basis-0 gap-5 overscroll-x-contain pr-4">
               {GAME_NAV_LINKS.map((link) => (
                 <Link
                   key={link.id}
@@ -148,7 +148,7 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
                 </Link>
               ))}
 
-              <div className="ml-2 hidden h-6 shrink-0 border-l border-border-soft pl-6 sm:block">
+              <div className="ml-1 hidden h-6 shrink-0 border-l border-border-soft pl-5 2xl:block">
                 <Link
                   href="/casino"
                   className="flex h-full items-center gap-2 whitespace-nowrap text-sm font-bold uppercase tracking-wider text-fg-subtle transition-colors hover:text-fg"
