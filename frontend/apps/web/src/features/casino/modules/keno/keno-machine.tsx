@@ -110,7 +110,8 @@ function GlobeBall({
         marginTop: -size / 2,
         background:
           "radial-gradient(circle at 32% 28%, white, hsl(var(--brand)) 70%, hsl(var(--brand-active)) 100%)",
-        boxShadow: "0 2px 5px rgb(0 0 0 / 0.5), inset 0 -2px 3px hsl(var(--brand-active))"
+        boxShadow:
+          "0 2px 5px hsl(var(--surface-0) / 0.5), inset 0 -2px 3px hsl(var(--brand-active))"
       }}
       initial={false}
       animate={animate}
@@ -141,7 +142,7 @@ function RackBall({
           : "radial-gradient(circle at 36% 28%, hsl(var(--surface-3)), hsl(var(--surface-1)))",
         boxShadow: hit
           ? "0 0 0 1px hsl(var(--success) / 0.6), 0 5px 16px hsl(var(--success) / 0.45)"
-          : "0 3px 9px rgb(0 0 0 / 0.55), inset 0 2px 3px hsl(var(--fg) / 0.12)"
+          : "0 3px 9px hsl(var(--surface-0) / 0.55), inset 0 2px 3px hsl(var(--fg) / 0.12)"
       }}
       initial={animateEntry ? { y: -58, opacity: 0, scale: 0.6 } : false}
       animate={{ y: 0, opacity: 1, scale: 1 }}
@@ -188,7 +189,7 @@ export function KenoDrawMachine({
           className="absolute inset-0 rounded-full"
           style={{
             background: "linear-gradient(158deg, hsl(var(--surface-3)), hsl(var(--surface-0)) 68%)",
-            boxShadow: "0 10px 28px rgb(0 0 0 / 0.55)"
+            boxShadow: "0 10px 28px hsl(var(--surface-0) / 0.55)"
           }}
         />
         {/* glass cavity */}
@@ -198,7 +199,8 @@ export function KenoDrawMachine({
             inset: WALL,
             background:
               "radial-gradient(circle at 38% 26%, hsl(var(--surface-2)), hsl(var(--surface-0)) 80%)",
-            boxShadow: "inset 0 8px 20px rgb(0 0 0 / 0.6), inset 0 -3px 8px hsl(var(--fg) / 0.05)"
+            boxShadow:
+              "inset 0 8px 20px hsl(var(--surface-0) / 0.6), inset 0 -3px 8px hsl(var(--fg) / 0.05)"
           }}
         >
           {GLOBE_BALLS.map((ball, i) => (
@@ -209,7 +211,8 @@ export function KenoDrawMachine({
         <div
           className="pointer-events-none absolute inset-0 rounded-full"
           style={{
-            boxShadow: "inset 0 3px 4px hsl(var(--fg) / 0.22), inset 0 -10px 18px rgb(0 0 0 / 0.55)"
+            boxShadow:
+              "inset 0 3px 4px hsl(var(--fg) / 0.22), inset 0 -10px 18px hsl(var(--surface-0) / 0.55)"
           }}
         />
         {/* specular highlight */}
@@ -235,7 +238,7 @@ export function KenoDrawMachine({
         className="flex items-center gap-2 rounded-full p-2"
         style={{
           background: "hsl(var(--surface-0))",
-          boxShadow: "inset 0 2px 8px rgb(0 0 0 / 0.55)"
+          boxShadow: "inset 0 2px 8px hsl(var(--surface-0) / 0.55)"
         }}
       >
         {Array.from({ length: RACK_SLOTS }).map((_, index) => {
@@ -249,7 +252,7 @@ export function KenoDrawMachine({
                   width: RACK_BALL,
                   height: RACK_BALL,
                   background: "hsl(var(--surface-1))",
-                  boxShadow: "inset 0 2px 6px rgb(0 0 0 / 0.6)"
+                  boxShadow: "inset 0 2px 6px hsl(var(--surface-0) / 0.6)"
                 }}
                 aria-hidden
               />

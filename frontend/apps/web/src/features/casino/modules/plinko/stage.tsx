@@ -301,7 +301,7 @@ export function PlinkoStage({
             <div
               aria-label={t("casino.room.stage.plinko.board")}
               className="relative h-[490px] w-[480px] max-w-full overflow-hidden rounded-xl border border-border-soft bg-surface-0"
-              style={{ boxShadow: "inset 0 2px 14px rgb(0 0 0 / 0.6)" }}
+              style={{ boxShadow: "inset 0 2px 14px hsl(var(--surface-0) / 0.6)" }}
             >
               <div
                 className="pointer-events-none absolute inset-0"

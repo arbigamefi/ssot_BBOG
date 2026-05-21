@@ -249,7 +249,7 @@ export function SicBoStage({
           <div className="px-5 py-3">
             <div
               className="relative flex items-center justify-center gap-5 overflow-hidden rounded-lg border border-border-soft bg-surface-0 px-4 py-4"
-              style={{ boxShadow: "inset 0 2px 14px rgb(0 0 0 / 0.6)" }}
+              style={{ boxShadow: "inset 0 2px 14px hsl(var(--surface-0) / 0.6)" }}
             >
               <div
                 aria-hidden

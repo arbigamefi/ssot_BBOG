@@ -180,14 +180,15 @@ export function CoinTossStage({
               {/* Felt landing pad */}
               <div className="pointer-events-none absolute bottom-[-38px] left-1/2 h-[64px] w-[132%] -translate-x-1/2">
                 <div
-                  className="absolute inset-0 rounded-[50%]"
+                  className="absolute inset-0 rounded-full"
                   style={{
                     background: "hsl(var(--surface-0))",
-                    boxShadow: "inset 0 2px 10px rgb(0 0 0 / 0.6), 0 6px 22px rgb(0 0 0 / 0.5)"
+                    boxShadow:
+                      "inset 0 2px 10px hsl(var(--surface-0) / 0.6), 0 6px 22px hsl(var(--surface-0) / 0.5)"
                   }}
                 />
                 <div
-                  className="absolute inset-[5px] rounded-[50%]"
+                  className="absolute inset-1 rounded-full"
                   style={{
                     background:
                       "radial-gradient(ellipse at 50% 22%, hsl(var(--surface-2)), hsl(var(--surface-0)))"
@@ -199,7 +200,7 @@ export function CoinTossStage({
               <motion.div
                 aria-hidden
                 className="pointer-events-none absolute bottom-1 left-1/2 h-3 w-3/5 rounded-full blur-md"
-                style={{ background: "rgb(0 0 0 / 0.55)" }}
+                style={{ background: "hsl(var(--surface-0) / 0.55)" }}
                 initial={false}
                 animate={{ x: "-50%", scale: spinning ? 0.7 : 1, opacity: spinning ? 0.4 : 0.75 }}
                 transition={{ duration: 0.5 }}

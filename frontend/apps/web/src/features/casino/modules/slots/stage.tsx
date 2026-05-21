@@ -159,7 +159,7 @@ export function SlotsStage({
           <div className="px-5 pb-4">
             <div
               className="relative overflow-hidden rounded-xl border border-border-soft bg-surface-0 p-2.5"
-              style={{ boxShadow: "inset 0 2px 14px rgb(0 0 0 / 0.6)" }}
+              style={{ boxShadow: "inset 0 2px 14px hsl(var(--surface-0) / 0.6)" }}
             >
               <div className="grid grid-cols-3 gap-2.5">
                 {reels.map((symbol, index) => (

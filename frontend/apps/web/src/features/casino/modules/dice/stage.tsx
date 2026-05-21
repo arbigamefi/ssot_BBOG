@@ -131,14 +131,15 @@ export function DiceStage({
               {/* Felt landing pad */}
               <div className="pointer-events-none absolute bottom-2 left-1/2 h-[54px] w-[180px] -translate-x-1/2">
                 <div
-                  className="absolute inset-0 rounded-[50%]"
+                  className="absolute inset-0 rounded-full"
                   style={{
                     background: "hsl(var(--surface-0))",
-                    boxShadow: "inset 0 2px 10px rgb(0 0 0 / 0.6), 0 6px 22px rgb(0 0 0 / 0.5)"
+                    boxShadow:
+                      "inset 0 2px 10px hsl(var(--surface-0) / 0.6), 0 6px 22px hsl(var(--surface-0) / 0.5)"
                   }}
                 />
                 <div
-                  className="absolute inset-[5px] rounded-[50%]"
+                  className="absolute inset-1 rounded-full"
                   style={{
                     background:
                       "radial-gradient(ellipse at 50% 22%, hsl(var(--surface-2)), hsl(var(--surface-0)))"

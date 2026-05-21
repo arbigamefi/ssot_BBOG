@@ -340,7 +340,7 @@ export function KenoStage({
               className="rounded-lg p-2.5"
               style={{
                 background: "hsl(var(--surface-0))",
-                boxShadow: "inset 0 2px 12px rgb(0 0 0 / 0.55)"
+                boxShadow: "inset 0 2px 12px hsl(var(--surface-0) / 0.55)"
               }}
             >
               <div className="grid grid-cols-5 gap-2">

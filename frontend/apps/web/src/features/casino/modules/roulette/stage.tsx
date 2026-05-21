@@ -270,7 +270,7 @@ export function RouletteStage({
               style={{
                 background:
                   "linear-gradient(180deg, hsl(var(--success) / 0.05), transparent 60%), hsl(var(--surface-0))",
-                boxShadow: "inset 0 2px 12px rgb(0 0 0 / 0.55)"
+                boxShadow: "inset 0 2px 12px hsl(var(--surface-0) / 0.55)"
               }}
             >
               <div className="mx-auto flex w-max flex-col gap-1.5">

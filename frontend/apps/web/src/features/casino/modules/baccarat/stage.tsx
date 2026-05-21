@@ -320,7 +320,7 @@ export function BaccaratStage({
           <div className="px-5 py-5">
             <div
               className="relative overflow-hidden rounded-lg border border-border-soft bg-surface-0 p-3"
-              style={{ boxShadow: "inset 0 2px 14px rgb(0 0 0 / 0.55)" }}
+              style={{ boxShadow: "inset 0 2px 14px hsl(var(--surface-0) / 0.55)" }}
             >
               <div
                 aria-hidden
