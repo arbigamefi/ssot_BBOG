@@ -75,7 +75,7 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
             </div>
             <Link
               href="/casino"
-              className="rounded-full bg-fg px-5 py-2.5 text-sm font-semibold text-fg-inverse transition-colors hover:bg-fg/90"
+              className="hidden rounded-full bg-fg px-5 py-2.5 text-sm font-semibold text-fg-inverse transition-colors hover:bg-fg/90 sm:inline-flex"
             >
               {t("nav.openRooms")}
             </Link>
