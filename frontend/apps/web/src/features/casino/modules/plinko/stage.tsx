@@ -7,7 +7,7 @@ import { PLINKO_FACTOR_TABLE, type PlinkoRisk } from "../../room/params";
 import { PlinkoBall, type PlinkoBallMode } from "./plinko-ball";
 
 /**
- * PlinkoStage — a fixed-size plinko cabinet.
+ * PlinkoStage — a fixed-size plinko cabinet inside the shared game console.
  *
  * The board play field is a fixed-size fixture: pegs, ball and buckets are all
  * placed in one shared coordinate system (percent of that fixed field), so the
@@ -27,6 +27,17 @@ const PEG_TOP = 13; // y of the row-0 peg
 const DROP_Y = 4; // y where the ball is released
 const BALL_REST_Y = 80; // y where the ball settles — resting ON TOP of the tile
 const BUCKET_Y = 88; // y of the multiplier-tile centres (kept clear of the ball)
+
+/** Hairline section divider that fades out at both ends. */
+function Divider() {
+  return (
+    <div
+      aria-hidden
+      className="mx-5 h-px"
+      style={{ background: "linear-gradient(90deg, transparent, hsl(var(--border)), transparent)" }}
+    />
+  );
+}
 
 function stepDuration(step: number) {
   return Math.round(480 - (Math.min(step, PLINKO_ROWS) / PLINKO_ROWS) * 260);
@@ -216,146 +227,177 @@ export function PlinkoStage({
   }, [isRevealing, lastBucket, onRevealComplete, prefersReducedMotion, showResult]);
 
   return (
-    <div className="absolute inset-0 z-10 flex items-center justify-center overflow-hidden p-4">
-      <div className="relative rounded-xl border border-border-strong bg-surface-1 p-2.5 shadow-e3">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -bottom-5 left-1/2 h-9 w-3/4 -translate-x-1/2 rounded-full bg-surface-0/50 blur-2xl"
-        />
+    <div className="absolute inset-0 z-10 overflow-y-auto custom-scrollbar">
+      {/* Stage atmosphere. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(130% 80% at 50% -8%, hsl(var(--surface-2)), hsl(var(--surface-0)) 60%)"
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-12 h-[420px] w-[620px] max-w-full -translate-x-1/2 rounded-full"
+        style={{ background: "radial-gradient(circle, hsl(var(--brand) / 0.13), transparent 68%)" }}
+      />
 
-        {/* ---- Risk selector ---- */}
-        <div className="mb-2.5 flex items-center justify-between gap-3 rounded-lg border border-border-soft bg-surface-0 px-3 py-2 shadow-inner-e1">
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-fg-subtle">
-              {t("casino.room.selection.plinko.riskProfile")}
-            </p>
-            <p className="truncate font-mono text-xs font-semibold uppercase tracking-[0.14em] text-fg">
-              {t("casino.room.stage.plinko.risk", {
-                risk: t(`casino.room.selection.plinko.${risk}`)
-              })}
-            </p>
-          </div>
-          <div className="grid shrink-0 grid-cols-3 gap-1 rounded-md border border-border bg-surface-1 p-1">
-            {PLINKO_RISKS.map((item) => {
-              const active = item === risk;
-              return (
-                <button
-                  key={item}
-                  type="button"
-                  disabled={controlsLocked}
-                  onClick={() => onRiskChange(item)}
-                  className={cn(
-                    "rounded px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] transition-colors",
-                    active
-                      ? "bg-brand text-fg-inverse shadow-e1"
-                      : "text-fg-subtle hover:bg-surface-2 hover:text-fg",
-                    controlsLocked ? "cursor-default opacity-70" : ""
-                  )}
-                >
-                  {t(`casino.room.selection.plinko.${item}`)}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* ---- Fixed-size play field — one coordinate system for pegs/ball/buckets ---- */}
+      <div className="relative flex min-h-full items-center justify-center px-4 py-3">
         <div
-          aria-label={t("casino.room.stage.plinko.board")}
-          className="relative h-[490px] w-[480px] max-w-full overflow-hidden rounded-xl border border-border-strong bg-surface-0 shadow-inner-e1"
+          className="relative w-full max-w-[520px] overflow-hidden rounded-xl border border-border-soft shadow-e3"
+          style={{
+            background: "linear-gradient(180deg, hsl(var(--surface-2)), hsl(var(--surface-1)))"
+          }}
         >
           <div
-            className="pointer-events-none absolute inset-0"
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 h-px"
             style={{
-              background:
-                "radial-gradient(circle at 50% 0%, hsl(var(--brand) / 0.1), transparent 56%)"
+              background: "linear-gradient(90deg, transparent, hsl(var(--fg) / 0.16), transparent)"
             }}
           />
 
-          {/* drop chute */}
-          <div className="absolute left-1/2 top-0 z-10 flex h-6 w-14 -translate-x-1/2 items-end justify-center rounded-b-md border-x border-b border-border-soft bg-surface-1 shadow-inner-e1">
-            <span className="mb-1 h-1 w-7 rounded-full bg-fg/40" />
+          {/* Risk zone. */}
+          <div className="flex items-center justify-between gap-3 px-5 py-3">
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-fg-subtle">
+                {t("casino.room.selection.plinko.riskProfile")}
+              </p>
+              <p className="truncate font-mono text-xs font-semibold uppercase tracking-[0.14em] text-fg">
+                {t("casino.room.stage.plinko.risk", {
+                  risk: t(`casino.room.selection.plinko.${risk}`)
+                })}
+              </p>
+            </div>
+            <div className="grid shrink-0 grid-cols-3 gap-1 rounded-lg bg-surface-0 p-1 shadow-inner-e1">
+              {PLINKO_RISKS.map((item) => {
+                const active = item === risk;
+                return (
+                  <button
+                    key={item}
+                    type="button"
+                    disabled={controlsLocked}
+                    onClick={() => onRiskChange(item)}
+                    className={cn(
+                      "rounded-md px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] transition-colors",
+                      active
+                        ? "bg-brand text-fg-inverse shadow-glow"
+                        : "text-fg-subtle hover:bg-surface-2 hover:text-fg",
+                      controlsLocked && !active && "cursor-default opacity-60"
+                    )}
+                  >
+                    {t(`casino.room.selection.plinko.${item}`)}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          {/* pegs */}
-          {Array.from({ length: PLINKO_ROWS }).map((_, row) =>
-            Array.from({ length: row + 1 }).map((__, index) => {
-              const point = pegPoint(row, index);
-              const activePeg = isRevealing && revealStep === row;
-              return (
-                <span
-                  key={`${row}-${index}`}
-                  className={cn(
-                    "absolute h-3 w-3 rounded-full border border-brand/30 bg-fg/80 shadow-e1 transition-[transform,background-color,border-color]",
-                    activePeg && "animate-[plinko-peg-bonk_240ms_ease-out] border-accent bg-accent"
-                  )}
-                  style={{
-                    left: `${point.x}%`,
-                    top: `${point.y}%`,
-                    transform: "translate(-50%, -50%)"
-                  }}
-                />
-              );
-            })
-          )}
+          <Divider />
 
-          <PlinkoBall
-            mode={ballMode}
-            point={activePoint}
-            rotation={pathRotation(path, isRevealing ? revealStep : landed ? PLINKO_ROWS : 0)}
-            durationMs={isRevealing ? stepDuration(revealStep) : 360}
-            label={landed ? (lastBucket ?? "") : ""}
-          />
-
-          {/* multiplier tray */}
-          <div
-            aria-hidden
-            className="absolute inset-x-2 bottom-2 top-[80%] rounded-lg border border-border-soft bg-surface-1/60 shadow-inner-e1"
-          />
-          {factors.map((factor, bucket) => {
-            const active = landed && lastBucket === bucket;
-            return (
+          {/* Board zone — fixed-size play field fixture. */}
+          <div className="flex justify-center px-5 py-3">
+            <div
+              aria-label={t("casino.room.stage.plinko.board")}
+              className="relative h-[490px] w-[480px] max-w-full overflow-hidden rounded-xl border border-border-soft bg-surface-0"
+              style={{ boxShadow: "inset 0 2px 14px rgb(0 0 0 / 0.6)" }}
+            >
               <div
-                key={bucket}
-                className={cn(
-                  "absolute flex items-center justify-center overflow-hidden rounded-md border shadow-e1 transition-[border-color,background-color,color,transform]",
-                  bucketTone(factor, active),
-                  active && "animate-[plinko-bucket-land_360ms_ease-out]"
-                )}
+                className="pointer-events-none absolute inset-0"
                 style={{
-                  left: `${bucketX(bucket)}%`,
-                  top: `${BUCKET_Y}%`,
-                  width: `${COL * 0.96}%`,
-                  height: "8%",
-                  transform: "translate(-50%, -50%)"
+                  background:
+                    "radial-gradient(circle at 50% 0%, hsl(var(--brand) / 0.12), transparent 56%)"
                 }}
-              >
-                <span className="font-mono text-[11px] font-semibold tabular-nums sm:text-xs">
-                  {formatFactor(factor)}
-                </span>
-              </div>
-            );
-          })}
+              />
 
-          {/* status line */}
-          <div className="absolute inset-x-3 top-2 z-10 flex items-center justify-between gap-3">
-            <p className="truncate text-[10px] font-semibold uppercase tracking-[0.18em] text-fg-subtle">
-              {isPending
-                ? t("casino.room.stage.plinko.waitingVrf")
-                : isRevealing
+              {/* drop chute */}
+              <div className="absolute left-1/2 top-0 z-10 flex h-6 w-14 -translate-x-1/2 items-end justify-center rounded-b-md border-x border-b border-border-soft bg-surface-1 shadow-inner-e1">
+                <span className="mb-1 h-1 w-7 rounded-full bg-fg/40" />
+              </div>
+
+              {/* pegs */}
+              {Array.from({ length: PLINKO_ROWS }).map((_, row) =>
+                Array.from({ length: row + 1 }).map((__, index) => {
+                  const point = pegPoint(row, index);
+                  const activePeg = isRevealing && revealStep === row;
+                  return (
+                    <span
+                      key={`${row}-${index}`}
+                      className={cn(
+                        "absolute h-3 w-3 rounded-full border border-brand/30 bg-fg/80 shadow-e1 transition-[transform,background-color,border-color]",
+                        activePeg &&
+                          "animate-[plinko-peg-bonk_240ms_ease-out] border-accent bg-accent"
+                      )}
+                      style={{
+                        left: `${point.x}%`,
+                        top: `${point.y}%`,
+                        transform: "translate(-50%, -50%)"
+                      }}
+                    />
+                  );
+                })
+              )}
+
+              <PlinkoBall
+                mode={ballMode}
+                point={activePoint}
+                rotation={pathRotation(path, isRevealing ? revealStep : landed ? PLINKO_ROWS : 0)}
+                durationMs={isRevealing ? stepDuration(revealStep) : 360}
+                label={landed ? (lastBucket ?? "") : ""}
+              />
+
+              {/* multiplier tray */}
+              <div
+                aria-hidden
+                className="absolute inset-x-2 bottom-2 top-[80%] rounded-lg border border-border-soft bg-surface-1/60 shadow-inner-e1"
+              />
+              {factors.map((factor, bucket) => {
+                const active = landed && lastBucket === bucket;
+                return (
+                  <div
+                    key={bucket}
+                    className={cn(
+                      "absolute flex items-center justify-center overflow-hidden rounded-md border shadow-e1 transition-[border-color,background-color,color,transform]",
+                      bucketTone(factor, active),
+                      active && "animate-[plinko-bucket-land_360ms_ease-out]"
+                    )}
+                    style={{
+                      left: `${bucketX(bucket)}%`,
+                      top: `${BUCKET_Y}%`,
+                      width: `${COL * 0.96}%`,
+                      height: "8%",
+                      transform: "translate(-50%, -50%)"
+                    }}
+                  >
+                    <span className="font-mono text-[11px] font-semibold tabular-nums sm:text-xs">
+                      {formatFactor(factor)}
+                    </span>
+                  </div>
+                );
+              })}
+
+              {/* status line */}
+              <div className="absolute inset-x-3 top-2 z-10 flex items-center justify-between gap-3">
+                <p className="truncate text-[10px] font-semibold uppercase tracking-[0.18em] text-fg-subtle">
+                  {isPending
+                    ? t("casino.room.stage.plinko.waitingVrf")
+                    : isRevealing
+                      ? t("casino.room.stage.plinko.revealing")
+                      : showResult
+                        ? t("casino.room.stage.plinko.slot", { slot: lastBucket ?? "—" })
+                        : t("casino.room.stage.plinko.dropZone")}
+                </p>
+              </div>
+
+              <div className="sr-only" aria-live="polite">
+                {isRevealing
                   ? t("casino.room.stage.plinko.revealing")
                   : showResult
                     ? t("casino.room.stage.plinko.slot", { slot: lastBucket ?? "—" })
                     : t("casino.room.stage.plinko.dropZone")}
-            </p>
-          </div>
-
-          <div className="sr-only" aria-live="polite">
-            {isRevealing
-              ? t("casino.room.stage.plinko.revealing")
-              : showResult
-                ? t("casino.room.stage.plinko.slot", { slot: lastBucket ?? "—" })
-                : t("casino.room.stage.plinko.dropZone")}
+              </div>
+            </div>
           </div>
         </div>
       </div>

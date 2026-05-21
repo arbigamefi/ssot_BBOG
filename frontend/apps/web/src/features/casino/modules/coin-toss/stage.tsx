@@ -1,10 +1,99 @@
 import * as React from "react";
 import { animate, motion, useMotionValue, useReducedMotion } from "framer-motion";
-import { ShieldCheckIcon, SparklesIcon } from "@heroicons/react/24/outline";
 import { cn } from "@ssot/ui";
 import { useTranslations } from "next-intl";
 
 import type { CoinSide } from "../../room/params";
+
+/** Hairline section divider that fades out at both ends. */
+function Divider() {
+  return (
+    <div
+      aria-hidden
+      className="mx-5 h-px"
+      style={{ background: "linear-gradient(90deg, transparent, hsl(var(--border)), transparent)" }}
+    />
+  );
+}
+
+/**
+ * CoinFace — a minted medallion drawn as scalable SVG so it stays crisp on the
+ * large flipping disc and the small choice tiles alike. HEADS is brand-toned
+ * metal, TAILS accent-toned; each carries a milled rim and an embossed
+ * monogram instead of a generic icon.
+ */
+function CoinFace({ side }: { side: CoinSide }) {
+  const uid = React.useId();
+  const heads = side === "HEADS";
+  const tone = heads ? "var(--brand)" : "var(--accent)";
+  const mono = heads ? "H" : "T";
+  const metalId = `cm-${uid}`;
+  const fieldId = `cf-${uid}`;
+  const monoFamily = "ui-monospace, SFMono-Regular, Menlo, monospace";
+  return (
+    <svg viewBox="0 0 120 120" className="h-full w-full" aria-hidden>
+      <defs>
+        <radialGradient id={metalId} cx="36%" cy="28%" r="82%">
+          <stop offset="0%" stopColor="hsl(var(--fg) / 0.6)" />
+          <stop offset="44%" stopColor={`hsl(${tone})`} />
+          <stop offset="100%" stopColor={`hsl(${tone} / 0.6)`} />
+        </radialGradient>
+        <radialGradient id={fieldId} cx="40%" cy="32%" r="78%">
+          <stop offset="0%" stopColor={`hsl(${tone} / 0.92)`} />
+          <stop offset="100%" stopColor={`hsl(${tone} / 0.5)`} />
+        </radialGradient>
+      </defs>
+      {/* metal disc */}
+      <circle cx="60" cy="60" r="60" fill={`url(#${metalId})`} />
+      {/* milled edge */}
+      <circle
+        cx="60"
+        cy="60"
+        r="53.5"
+        fill="none"
+        stroke="hsl(var(--surface-0) / 0.6)"
+        strokeWidth="9"
+        strokeDasharray="1.7 3.1"
+        strokeLinecap="round"
+      />
+      {/* bevel ring + recessed field */}
+      <circle
+        cx="60"
+        cy="60"
+        r="46.5"
+        fill="none"
+        stroke="hsl(var(--fg) / 0.28)"
+        strokeWidth="1.3"
+      />
+      <circle cx="60" cy="60" r="45" fill={`url(#${fieldId})`} />
+      {/* embossed monogram — dark drop then bright relief */}
+      <text
+        x="60"
+        y="64.5"
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize="60"
+        fontWeight="800"
+        fontFamily={monoFamily}
+        fill="hsl(var(--surface-0) / 0.5)"
+      >
+        {mono}
+      </text>
+      <text
+        x="60"
+        y="62"
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize="60"
+        fontWeight="800"
+        fontFamily={monoFamily}
+        fill="hsl(var(--fg) / 0.92)"
+      >
+        {mono}
+      </text>
+    </svg>
+  );
+}
 
 export function CoinTossStage({
   isPending,
@@ -26,6 +115,7 @@ export function CoinTossStage({
   const t = useTranslations();
   const reduced = useReducedMotion() ?? false;
   const spinning = isPending || Boolean(isRevealing);
+  const controlsDisabled = spinning || showResult;
   const selectedSideLabel =
     coinSide === "HEADS"
       ? t("casino.room.selection.coin.heads")
@@ -38,116 +128,131 @@ export function CoinTossStage({
   }, [isRevealing, onRevealComplete, resultNum]);
 
   return (
-    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center overflow-hidden px-5 py-8">
-      <div className="relative z-20 grid w-full max-w-5xl grid-cols-1 items-center gap-4 md:grid-cols-[minmax(0,1fr)_16rem_minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_18rem_minmax(0,1fr)]">
-        <CoinChoiceButton
-          side="HEADS"
-          label={t("casino.room.selection.coin.heads")}
-          active={coinSide === "HEADS"}
-          disabled={spinning || showResult}
-          icon={<SparklesIcon className="h-8 w-8" />}
-          onClick={() => onSideChange("HEADS")}
-        />
+    <div className="absolute inset-0 z-10 overflow-y-auto custom-scrollbar">
+      {/* Stage atmosphere — a top-down lift and a soft brand bloom. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(130% 80% at 50% -8%, hsl(var(--surface-2)), hsl(var(--surface-0)) 60%)"
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-12 h-[420px] w-[620px] max-w-full -translate-x-1/2 rounded-full"
+        style={{ background: "radial-gradient(circle, hsl(var(--brand) / 0.13), transparent 68%)" }}
+      />
 
-        <div className="mx-auto flex h-40 w-40 items-center justify-center rounded-full border-2 border-brand/35 bg-surface-1 shadow-e2 sm:hidden">
-          <div className="flex h-32 w-32 flex-col items-center justify-center rounded-full border border-brand/25 bg-brand-soft text-fg">
-            {coinSide === "HEADS" ? (
-              <SparklesIcon className="h-12 w-12" />
-            ) : (
-              <ShieldCheckIcon className="h-12 w-12" />
-            )}
-            <span className="mt-2 text-lg font-semibold uppercase tracking-[0.18em]">
-              {selectedSideLabel}
-            </span>
-          </div>
-        </div>
-
+      <div className="relative flex min-h-full items-center justify-center px-4 py-6">
         <div
-          className="relative mx-auto hidden h-52 w-52 sm:block md:h-64 md:w-64"
-          style={{ perspective: "1200px" }}
+          className="relative w-full max-w-[480px] overflow-hidden rounded-xl border border-border-soft shadow-e3"
+          style={{
+            background: "linear-gradient(180deg, hsl(var(--surface-2)), hsl(var(--surface-1)))"
+          }}
         >
-          {/* Felt toss pad — the surface the coin is tossed over and lands on */}
+          {/* top edge sheen */}
           <div
             aria-hidden
-            className="pointer-events-none absolute left-1/2 bottom-[-46px] h-[72px] w-[122%] -translate-x-1/2"
-          >
-            <div className="absolute inset-0 rounded-full border-[3px] border-border-strong bg-surface-1 shadow-e3" />
-            <div
-              className="absolute inset-[5px] rounded-full shadow-inner-e1"
-              style={{
-                background:
-                  "radial-gradient(ellipse at 50% 24%, hsl(var(--surface-2)), hsl(var(--surface-0)))"
-              }}
-            />
-            <div
-              className="absolute inset-[5px] rounded-full"
-              style={{
-                background: "linear-gradient(160deg, hsl(var(--fg) / 0.12), transparent 46%)"
-              }}
-            />
-          </div>
-
-          {/* Landing shadow on the felt */}
-          <motion.div
-            aria-hidden
-            className="pointer-events-none absolute left-1/2 bottom-2 h-4 w-3/5 rounded-full bg-surface-0/55 blur-xl"
-            initial={false}
-            animate={{
-              x: "-50%",
-              scale: spinning ? 0.7 : 1,
-              opacity: spinning ? 0.45 : 0.8
+            className="pointer-events-none absolute inset-x-0 top-0 h-px"
+            style={{
+              background: "linear-gradient(90deg, transparent, hsl(var(--fg) / 0.16), transparent)"
             }}
-            transition={{ duration: 0.5 }}
           />
 
-          <CoinDisc
-            spinning={spinning}
-            isRevealing={Boolean(isRevealing)}
-            showResult={showResult}
-            resultNum={resultNum}
-            coinSide={coinSide}
-            reduced={reduced}
-            headsLabel={t("casino.room.selection.coin.heads")}
-            tailsLabel={t("casino.room.selection.coin.tails")}
-          />
-        </div>
-
-        <CoinChoiceButton
-          side="TAILS"
-          label={t("casino.room.selection.coin.tails")}
-          active={coinSide === "TAILS"}
-          disabled={spinning || showResult}
-          icon={<ShieldCheckIcon className="h-8 w-8" />}
-          onClick={() => onSideChange("TAILS")}
-        />
-      </div>
-
-      {!spinning && !showResult && (
-        <div className="relative z-20 mt-8 flex flex-col items-center animate-in slide-in-from-bottom-4 fade-in duration-500">
-          <span className="mb-4 text-[10px] uppercase tracking-[0.4em] text-fg-subtle">
-            {t("casino.room.stage.coin.awaitingSelection")}
-          </span>
-          <div className="flex w-72 items-center justify-center gap-4 rounded-xl border border-border bg-surface-1/85 px-8 py-4 shadow-e2 backdrop-blur-xl">
+          {/* Coin zone — generous headroom above the rest pose for the toss arc. */}
+          <div className="relative px-5 pb-12 pt-[84px]">
+            {/* energy bloom while tossing */}
             <div
-              className={cn(
-                "h-3 w-3 rounded-full animate-pulse",
-                coinSide === "HEADS" ? "bg-brand" : "bg-accent"
-              )}
+              aria-hidden
+              className="pointer-events-none absolute left-1/2 top-7 h-[230px] w-[270px] -translate-x-1/2 rounded-full transition-opacity duration-500"
+              style={{
+                opacity: spinning ? 1 : 0,
+                background: "radial-gradient(circle, hsl(var(--brand) / 0.3), transparent 70%)"
+              }}
             />
-            <span className="font-mono text-xl font-semibold uppercase tracking-widest text-fg">
-              {t("casino.room.stage.coin.selected", { side: selectedSideLabel })}
-            </span>
+
+            <div
+              className="relative mx-auto h-[168px] w-[168px]"
+              style={{ perspective: "1200px" }}
+              aria-hidden
+            >
+              {/* Felt landing pad */}
+              <div className="pointer-events-none absolute bottom-[-38px] left-1/2 h-[64px] w-[132%] -translate-x-1/2">
+                <div
+                  className="absolute inset-0 rounded-[50%]"
+                  style={{
+                    background: "hsl(var(--surface-0))",
+                    boxShadow: "inset 0 2px 10px rgb(0 0 0 / 0.6), 0 6px 22px rgb(0 0 0 / 0.5)"
+                  }}
+                />
+                <div
+                  className="absolute inset-[5px] rounded-[50%]"
+                  style={{
+                    background:
+                      "radial-gradient(ellipse at 50% 22%, hsl(var(--surface-2)), hsl(var(--surface-0)))"
+                  }}
+                />
+              </div>
+
+              {/* Landing shadow */}
+              <motion.div
+                aria-hidden
+                className="pointer-events-none absolute bottom-1 left-1/2 h-3 w-3/5 rounded-full blur-md"
+                style={{ background: "rgb(0 0 0 / 0.55)" }}
+                initial={false}
+                animate={{ x: "-50%", scale: spinning ? 0.7 : 1, opacity: spinning ? 0.4 : 0.75 }}
+                transition={{ duration: 0.5 }}
+              />
+
+              <CoinDisc
+                spinning={spinning}
+                isRevealing={Boolean(isRevealing)}
+                showResult={showResult}
+                resultNum={resultNum}
+                coinSide={coinSide}
+                reduced={reduced}
+              />
+            </div>
+          </div>
+
+          <Divider />
+
+          {/* Choice zone — status line then the HEADS / TAILS selector. */}
+          <div className="px-5 py-4">
+            <div className="mb-3 flex items-center justify-center gap-2">
+              <span
+                className="h-1.5 w-1.5 rounded-full"
+                style={{
+                  background: coinSide === "HEADS" ? "hsl(var(--brand))" : "hsl(var(--accent))"
+                }}
+              />
+              <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-fg-muted">
+                {spinning
+                  ? t("casino.room.stage.coin.waitingVrf")
+                  : t("casino.room.stage.coin.selected", { side: selectedSideLabel })}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <CoinChoiceTile
+                side="HEADS"
+                label={t("casino.room.selection.coin.heads")}
+                active={coinSide === "HEADS"}
+                disabled={controlsDisabled}
+                onClick={() => onSideChange("HEADS")}
+              />
+              <CoinChoiceTile
+                side="TAILS"
+                label={t("casino.room.selection.coin.tails")}
+                active={coinSide === "TAILS"}
+                disabled={controlsDisabled}
+                onClick={() => onSideChange("TAILS")}
+              />
+            </div>
           </div>
         </div>
-      )}
-
-      {spinning && (
-        <div className="relative z-20 mt-8 flex flex-col items-center animate-pulse">
-          <span className="text-sm font-semibold uppercase tracking-[0.3em] text-fg">
-            {t("casino.room.stage.coin.waitingVrf")}
-          </span>
-        </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -159,7 +264,8 @@ export function CoinTossStage({
  * than spinning flat. Rotation is driven through a motion value so each phase
  * continues forward from the last: idle settle → continuous toss while VRF is
  * pending → a final arc that lands on the result face. `prefers-reduced-motion`
- * snaps to the correct face.
+ * snaps to the correct face. The flip physics below are unchanged — only the
+ * coin's surface material was restyled.
  */
 function CoinDisc({
   spinning,
@@ -167,9 +273,7 @@ function CoinDisc({
   showResult,
   resultNum,
   coinSide,
-  reduced,
-  headsLabel,
-  tailsLabel
+  reduced
 }: {
   spinning: boolean;
   isRevealing: boolean;
@@ -177,8 +281,6 @@ function CoinDisc({
   resultNum: number | null;
   coinSide: CoinSide;
   reduced: boolean;
-  headsLabel: string;
-  tailsLabel: string;
 }) {
   const restRotateX = coinSide === "TAILS" ? 180 : 0;
   const resultRotateX = resultNum === 1 ? 0 : 180;
@@ -233,95 +335,92 @@ function CoinDisc({
     <motion.div
       className="relative h-full w-full"
       style={{ transformStyle: "preserve-3d", rotateX, rotateZ: -6, y: liftY }}
-      aria-label={`Coin ${spinning ? "tossing" : coinSide}`}
     >
-      {/* Coin edge — stacked rings give the disc real thickness */}
+      {/* Coin edge — stacked rings give the disc real thickness and milling. */}
       {Array.from({ length: 30 }).map((_, i) => (
         <div
           key={i}
           className="absolute inset-0 rounded-full border-[6px]"
           style={{
             transform: `translateZ(${15 - i}px)`,
-            borderColor: i % 2 === 0 ? "hsl(var(--brand) / 0.4)" : "hsl(var(--accent) / 0.3)",
-            filter: "brightness(0.78)"
+            borderColor: i % 2 === 0 ? "hsl(var(--fg) / 0.22)" : "hsl(var(--surface-0))"
           }}
         />
       ))}
 
       {/* Heads face */}
       <div
-        className="[backface-visibility:hidden] absolute inset-0 flex flex-col items-center justify-center overflow-hidden rounded-full border-2 border-brand/35 bg-brand/20 shadow-e3"
+        className="[backface-visibility:hidden] absolute inset-0 overflow-hidden rounded-full shadow-e3"
         style={{ transform: "translateZ(16px)" }}
       >
-        <div className="absolute inset-4 flex flex-col items-center justify-center rounded-full border border-brand/25 bg-surface-1">
-          <div
-            className="absolute inset-0 opacity-20 mix-blend-overlay"
-            style={{ backgroundImage: "url('/textures/noise.svg')" }}
-          />
-          <SparklesIcon className="h-24 w-24 p-4 text-fg" />
-          <span className="mt-[-10px] text-3xl font-semibold tracking-[0.2em] text-fg">
-            {headsLabel}
-          </span>
-        </div>
+        <CoinFace side="HEADS" />
       </div>
 
       {/* Tails face */}
       <div
-        className="[backface-visibility:hidden] absolute inset-0 flex flex-col items-center justify-center overflow-hidden rounded-full border-2 border-accent/35 bg-accent/20 shadow-e3"
+        className="[backface-visibility:hidden] absolute inset-0 overflow-hidden rounded-full shadow-e3"
         style={{ transform: "rotateX(180deg) translateZ(16px)" }}
       >
-        <div className="absolute inset-4 flex flex-col items-center justify-center rounded-full border border-accent/25 bg-surface-1">
-          <div
-            className="absolute inset-0 opacity-20 mix-blend-overlay"
-            style={{ backgroundImage: "url('/textures/noise.svg')" }}
-          />
-          <ShieldCheckIcon className="h-24 w-24 p-4 text-fg" />
-          <span className="mt-[-10px] text-3xl font-semibold tracking-[0.2em] text-fg">
-            {tailsLabel}
-          </span>
-        </div>
+        <CoinFace side="TAILS" />
       </div>
     </motion.div>
   );
 }
 
-function CoinChoiceButton({
+function CoinChoiceTile({
   side,
   label,
   active,
   disabled,
-  icon,
   onClick
 }: {
   side: CoinSide;
   label: string;
   active: boolean;
   disabled: boolean;
-  icon: React.ReactNode;
   onClick: () => void;
 }) {
+  const heads = side === "HEADS";
   return (
     <button
       type="button"
       disabled={disabled}
       aria-pressed={active}
       onClick={onClick}
+      style={
+        active && !heads
+          ? {
+              boxShadow:
+                "0 0 0 1px hsl(var(--accent) / 0.5), 0 10px 26px -6px hsl(var(--accent) / 0.45)"
+            }
+          : undefined
+      }
       className={cn(
-        "group flex min-h-40 flex-col justify-between rounded-xl border p-5 text-left transition-colors md:min-h-56",
+        "flex items-center gap-3 rounded-lg p-3 text-left transition-[transform,box-shadow,background-color]",
         active
-          ? "border-brand bg-brand-soft text-fg shadow-e2"
-          : "border-border bg-surface-1/90 text-fg-muted hover:border-brand/45 hover:bg-surface-2 hover:text-fg",
-        disabled ? "cursor-default opacity-70" : ""
+          ? heads
+            ? "bg-brand-soft shadow-glow ring-1 ring-inset ring-brand"
+            : "bg-accent/15 ring-1 ring-inset ring-accent"
+          : "bg-surface-3 shadow-e1 ring-1 ring-inset ring-border-soft",
+        !active && !disabled && "hover:-translate-y-0.5 hover:shadow-e2 hover:ring-brand/40",
+        disabled && "cursor-default opacity-60"
       )}
     >
-      <span className="flex items-center justify-between">
-        <span className="rounded-lg border border-border bg-surface-0 p-3 text-brand">{icon}</span>
-        <span className="font-mono text-xs font-semibold uppercase tracking-[0.24em] text-fg-subtle">
+      <span className="h-12 w-12 shrink-0">
+        <CoinFace side={side} />
+      </span>
+      <span className="flex min-w-0 flex-col">
+        <span
+          className={cn(
+            "text-base font-bold uppercase tracking-wide",
+            active ? "text-fg" : "text-fg-muted"
+          )}
+        >
+          {label}
+        </span>
+        <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-fg-subtle">
           {side}
         </span>
-      </span>
-      <span className="mt-8 text-3xl font-semibold uppercase tracking-[0.12em] md:text-4xl">
-        {label}
       </span>
     </button>
   );

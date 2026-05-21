@@ -197,8 +197,20 @@ export function GamesListClient() {
 
   return (
     <div className="relative overflow-hidden pb-16 text-fg selection:bg-brand/20">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-gradient-to-b from-brand/10 to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[36rem] bg-[url('/textures/noise.svg')] opacity-10 mix-blend-overlay" />
+      {/* Atmosphere — matches the rebuilt game consoles: a top-down surface
+          lift and a soft brand bloom instead of the old noise texture. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-[44rem]"
+        style={{
+          background: "radial-gradient(120% 70% at 50% -6%, hsl(var(--surface-2)), transparent 72%)"
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-6 h-[440px] w-[820px] max-w-full -translate-x-1/2 rounded-full"
+        style={{ background: "radial-gradient(circle, hsl(var(--brand) / 0.12), transparent 68%)" }}
+      />
 
       <section className="relative border-b border-border-soft py-10 md:py-12">
         <header className="flex flex-col gap-10 lg:flex-row lg:items-end lg:justify-between">
@@ -216,14 +228,14 @@ export function GamesListClient() {
           </div>
 
           <dl className="grid gap-4 sm:grid-cols-2 lg:min-w-[25rem]">
-            <div className="rounded-xl border border-border bg-surface-1 p-5 shadow-e1">
+            <div className="rounded-xl border border-border-soft bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-1)))] p-5 shadow-e2">
               <dt className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-accent">
                 <span className="h-1.5 w-1.5 rounded-full bg-accent" />
                 {t("casino.directory.stats.rooms")}
               </dt>
               <dd className="mt-3 font-mono text-3xl font-semibold text-fg">{rooms.length}</dd>
             </div>
-            <div className="rounded-xl border border-border bg-surface-1 p-5 shadow-e1">
+            <div className="rounded-xl border border-border-soft bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-1)))] p-5 shadow-e2">
               <dt className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-brand">
                 <TrophyIcon className="h-3.5 w-3.5" />
                 {t("casino.directory.stats.asset")}
@@ -247,7 +259,7 @@ export function GamesListClient() {
                   className={cn(
                     "relative flex-shrink-0 rounded-md px-5 py-3 text-sm font-bold transition-colors",
                     isActive
-                      ? "bg-surface-3 text-fg"
+                      ? "bg-brand-soft text-brand ring-1 ring-inset ring-brand/30"
                       : "text-fg-subtle hover:bg-surface-2 hover:text-fg"
                   )}
                 >
@@ -271,7 +283,7 @@ export function GamesListClient() {
         </div>
 
         {roomsToRender.length === 0 ? (
-          <div className="rounded-xl border border-border bg-surface-1 p-8 text-center shadow-e1">
+          <div className="rounded-xl border border-border-soft bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-1)))] p-8 text-center shadow-e2">
             <p className="text-lg font-semibold text-fg">{t("casino.directory.empty.noResults")}</p>
             <p className="mt-2 text-sm text-fg-muted">
               {t("casino.directory.empty.noResultsDetail", { query: query.trim() })}
@@ -311,10 +323,20 @@ export function GamesListClient() {
                   href={room.href}
                   data-testid="room-entry-card"
                   data-slug={room.slug}
-                  className="group relative flex min-h-[21rem] flex-col overflow-hidden rounded-xl border border-border bg-surface-1 shadow-e1 transition-colors duration-200 hover:border-brand/45 hover:bg-surface-2"
+                  className="group relative flex min-h-[21rem] flex-col overflow-hidden rounded-xl border border-border-soft bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-1)))] shadow-e2 transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-1 hover:border-brand/40 hover:shadow-glow"
                 >
-                  <div className="absolute left-4 top-4 z-20 rounded-full border border-border bg-surface-0/80 px-3 py-1.5 backdrop-blur">
-                    <span className="flex items-center gap-2 text-[10px] font-mono font-bold uppercase tracking-widest text-fg-muted">
+                  {/* top edge sheen */}
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute inset-x-0 top-0 z-20 h-px"
+                    style={{
+                      background:
+                        "linear-gradient(90deg, transparent, hsl(var(--fg) / 0.16), transparent)"
+                    }}
+                  />
+
+                  <div className="absolute left-4 top-4 z-20 rounded-full border border-border-soft bg-surface-0/80 px-3 py-1.5 backdrop-blur">
+                    <span className="flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-widest text-fg-muted">
                       <span className="h-1.5 w-1.5 rounded-full bg-accent" />
                       {t("casino.directory.card.releaseAnchored")}
                     </span>
@@ -325,12 +347,23 @@ export function GamesListClient() {
                   </div>
 
                   <div className="relative z-10 mt-8 flex flex-1 items-center justify-center p-5">
-                    {ROOM_ICON_MAP[room.slug] ?? (
-                      <div className="text-3xl font-bold text-fg-subtle">[{room.slug}]</div>
-                    )}
+                    {/* brand bloom behind the room icon — echoes the game stages */}
+                    <div
+                      aria-hidden
+                      className="pointer-events-none absolute left-1/2 top-1/2 h-44 w-44 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-60 transition-opacity duration-200 group-hover:opacity-100"
+                      style={{
+                        background:
+                          "radial-gradient(circle, hsl(var(--brand) / 0.16), transparent 70%)"
+                      }}
+                    />
+                    <div className="relative">
+                      {ROOM_ICON_MAP[room.slug] ?? (
+                        <div className="text-3xl font-bold text-fg-subtle">[{room.slug}]</div>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="relative z-20 border-t border-border-soft bg-surface-2/90 p-5 backdrop-blur">
+                  <div className="relative z-20 border-t border-border-soft bg-surface-2/85 p-5 backdrop-blur">
                     <div className="mb-3 text-[10px] font-bold uppercase tracking-widest text-accent">
                       {copy.tag}
                     </div>
@@ -339,7 +372,7 @@ export function GamesListClient() {
                       {copy.promise}
                     </p>
 
-                    <span className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-surface-1 py-4 text-sm font-bold text-fg-muted transition-colors group-hover:border-brand/40 group-hover:text-brand">
+                    <span className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg border border-border-soft bg-surface-2 py-4 text-sm font-bold text-fg-muted transition-colors group-hover:border-brand/40 group-hover:bg-brand-soft group-hover:text-brand">
                       {t("casino.directory.card.playNow")}{" "}
                       <PlayCircleIcon className="h-5 w-5 flex-shrink-0" />
                     </span>
@@ -350,7 +383,7 @@ export function GamesListClient() {
           </div>
         )}
 
-        <aside className="mt-10 overflow-hidden rounded-xl border border-border bg-surface-1 p-1 shadow-e2">
+        <aside className="mt-10 overflow-hidden rounded-xl border border-border-soft bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-1)))] p-1 shadow-e3">
           <div className="relative overflow-hidden rounded-lg border border-border-soft bg-surface-2 px-6 py-8 md:px-8 md:py-10">
             <div className="relative z-10 flex flex-col items-start justify-between gap-8 md:flex-row md:items-center">
               <div className="flex flex-col gap-5 md:flex-row md:items-center">

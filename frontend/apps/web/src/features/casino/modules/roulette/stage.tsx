@@ -6,186 +6,14 @@ import { cn } from "@ssot/ui";
 import { RED_NUMBER_SET } from "../../room/model";
 import { RouletteWheel, type RouletteWheelMode } from "./roulette-wheel";
 
-export function RouletteStage({
-  isPending,
-  isRevealing,
-  showResult,
-  resultNum,
-  spots,
-  onChange,
-  onRevealComplete
-}: {
-  isPending: boolean;
-  isRevealing?: boolean;
-  showResult: boolean;
-  resultNum: number | null;
-  spots: readonly string[];
-  onChange: (spots: string[]) => void;
-  onRevealComplete?: () => void;
-}) {
-  const t = useTranslations();
-  const reduced = useReducedMotion() ?? false;
-  const spinning = isPending || Boolean(isRevealing);
-  const wheelMode: RouletteWheelMode = isRevealing
-    ? "settling"
-    : isPending
-      ? "spinning"
-      : showResult
-        ? "settled"
-        : "idle";
-  const selectedCountLabel =
-    spots.length === 0 ? t("casino.room.selection.roulette.empty") : spots.join(" / ");
-
-  const toggleSpot = React.useCallback(
-    (spot: string) => {
-      onChange(spots.includes(spot) ? spots.filter((s) => s !== spot) : [...spots, spot]);
-    },
-    [onChange, spots]
-  );
-
-  React.useEffect(() => {
-    if (!isRevealing || resultNum == null) return;
-    const timeout = window.setTimeout(() => onRevealComplete?.(), 2_400);
-    return () => window.clearTimeout(timeout);
-  }, [isRevealing, onRevealComplete, resultNum]);
-
+/** Hairline section divider that fades out at both ends. */
+function Divider() {
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-between p-4 pb-6 z-10 overflow-hidden">
-      <div className="pointer-events-auto relative z-30 flex w-full max-w-4xl flex-col gap-3 rounded-xl border border-border bg-surface-1/90 p-3 shadow-e2 backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="font-mono text-2xl font-semibold text-fg">
-            {spots.length}{" "}
-            <span className="text-sm uppercase tracking-[0.2em] text-fg-subtle">
-              {t("casino.room.selection.roulette.bets")}
-            </span>
-          </div>
-          <p className="mt-1 max-w-2xl truncate text-sm text-fg-muted">{selectedCountLabel}</p>
-        </div>
-        <button
-          type="button"
-          disabled={spinning || showResult || spots.length === 0}
-          onClick={() => onChange([])}
-          className="rounded-lg border border-border bg-surface-0 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg disabled:cursor-default disabled:opacity-50"
-        >
-          {t("casino.room.selection.roulette.clearAll")}
-        </button>
-      </div>
-
-      <div className="relative z-10 flex w-full flex-1 items-center justify-center min-h-[260px]">
-        <div
-          className="pointer-events-none absolute inset-x-0 top-0 h-32"
-          style={{
-            background: "radial-gradient(ellipse at top, hsl(var(--brand) / 0.06), transparent 70%)"
-          }}
-        />
-        <RouletteWheel mode={wheelMode} resultNum={resultNum} reduced={reduced} />
-      </div>
-
-      <div className="relative z-20 w-fit max-w-full overflow-x-auto overflow-y-hidden custom-scrollbar pointer-events-auto transform-gpu origin-bottom scale-[0.85] sm:scale-95 xl:scale-100 pb-2 px-1">
-        <div className="relative flex min-w-[500px] flex-col gap-1.5 overflow-hidden rounded-lg border-[4px] border-border bg-surface-1 p-2 shadow-e3 sm:p-4 md:min-w-fit md:p-3">
-          <div
-            className="pointer-events-none absolute inset-0 opacity-25 mix-blend-overlay"
-            style={{ backgroundImage: "url('/textures/noise.svg')" }}
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-brand/5 to-transparent pointer-events-none" />
-
-          <div className="flex">
-            <button
-              disabled={spinning || showResult}
-              onClick={() => toggleSpot("0")}
-              className={cn(
-                "group relative flex w-10 items-center justify-center overflow-hidden rounded-l-lg border font-mono text-lg font-semibold transition-[border-color,background-color,color] sm:w-12 md:w-14 md:text-xl",
-                spots.includes("0")
-                  ? "z-10 border-success bg-success text-fg-inverse shadow-e2"
-                  : "border-success/25 bg-success-soft text-success hover:bg-success/20"
-              )}
-            >
-              <div className="relative z-10">0</div>
-              {spots.includes("0") && (
-                <div className="absolute inset-0 bg-gradient-to-tr from-fg/30 to-transparent animate-pulse" />
-              )}
-            </button>
-
-            <div className="flex flex-col gap-1.5 ml-1.5">
-              {[3, 2, 1].map((rN) => (
-                <div key={rN} className="flex gap-1.5">
-                  {Array.from({ length: 12 }).map((_, cI) => {
-                    const num = cI * 3 + rN;
-                    const isSelected = spots.includes(num.toString());
-                    return (
-                      <button
-                        key={num}
-                        disabled={spinning || showResult}
-                        onClick={() => toggleSpot(num.toString())}
-                        className={cn(
-                          "group relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-sm border font-mono text-xs font-semibold shadow-e1 transition-[border-color,background-color,color] sm:h-10 sm:w-10 md:h-11 md:w-11 md:text-sm",
-                          isSelected
-                            ? "z-10 border-fg bg-fg text-fg-inverse shadow-e2"
-                            : RED_NUMBER_SET.has(num)
-                              ? "border-danger/35 bg-danger-soft text-danger hover:bg-danger/20"
-                              : "border-border bg-surface-2 text-fg-muted hover:bg-surface-3 hover:text-fg"
-                        )}
-                      >
-                        <span className="relative z-10">{num}</span>
-                        {isSelected && (
-                          <div className="absolute inset-0 bg-gradient-to-tr from-surface-0/5 to-transparent shadow-inner" />
-                        )}
-                      </button>
-                    );
-                  })}
-                  <button className="w-10 rounded-r-md border border-border bg-surface-2 text-[9px] font-semibold uppercase tracking-tighter text-fg-subtle transition-colors hover:bg-surface-3 hover:text-fg sm:w-12 md:w-14 md:text-[10px]">
-                    2:1
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex gap-1.5 pl-12 sm:pl-14 md:pl-[64px] mt-1">
-            {["1st 12", "2nd 12", "3rd 12"].map((dozen) => (
-              <button
-                key={dozen}
-                disabled={spinning || showResult}
-                onClick={() => toggleSpot(dozen)}
-                className={cn(
-                  "relative flex-1 overflow-hidden rounded-md border py-1.5 text-[9px] font-semibold uppercase transition-[border-color,background-color,color] md:py-2 md:text-[11px]",
-                  spots.includes(dozen)
-                    ? "z-10 border-brand bg-brand text-fg-inverse shadow-e2"
-                    : "border-border bg-surface-2 text-fg-subtle hover:bg-surface-3 hover:text-fg"
-                )}
-              >
-                {getRouletteBetLabel(t, dozen)}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex gap-1.5 pl-12 sm:pl-14 md:pl-[64px]">
-            {["1-18", "EVEN", "RED", "BLACK", "ODD", "19-36"].map((outsideBet) => (
-              <button
-                key={outsideBet}
-                disabled={spinning || showResult}
-                onClick={() => toggleSpot(outsideBet)}
-                aria-label={getRouletteBetLabel(t, outsideBet)}
-                className={cn(
-                  "relative flex flex-1 items-center justify-center overflow-hidden rounded-md border py-1.5 text-[8px] font-semibold uppercase shadow-inner transition-[border-color,background-color,color] md:py-2 md:text-[10px]",
-                  spots.includes(outsideBet)
-                    ? "z-10 border-brand bg-brand text-fg-inverse shadow-e2"
-                    : "border-border bg-surface-2 text-fg-subtle hover:bg-surface-3 hover:text-fg"
-                )}
-              >
-                {outsideBet === "RED" ? (
-                  <div className="h-3 w-3 rounded-sm bg-danger md:h-4 md:w-4" />
-                ) : outsideBet === "BLACK" ? (
-                  <div className="h-3 w-3 rounded-sm bg-surface-0 md:h-4 md:w-4" />
-                ) : (
-                  getRouletteBetLabel(t, outsideBet)
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
+    <div
+      aria-hidden
+      className="mx-5 h-px"
+      style={{ background: "linear-gradient(90deg, transparent, hsl(var(--border)), transparent)" }}
+    />
   );
 }
 
@@ -208,4 +36,328 @@ function getRouletteBetLabel(t: (key: string) => string, bet: string) {
     default:
       return bet;
   }
+}
+
+type BetTone = "red" | "black" | "zero" | "neutral";
+type BetStatus = "idle" | "selected" | "won" | "result" | "lost";
+
+function numberTone(num: number): BetTone {
+  if (num === 0) return "zero";
+  return RED_NUMBER_SET.has(num) ? "red" : "black";
+}
+
+/** Whether the settled wheel number `n` satisfies bet `spot`. */
+function betResultHit(spot: string, n: number): boolean {
+  if (/^\d+$/.test(spot)) return Number(spot) === n;
+  switch (spot) {
+    case "RED":
+      return RED_NUMBER_SET.has(n);
+    case "BLACK":
+      return n !== 0 && !RED_NUMBER_SET.has(n);
+    case "EVEN":
+      return n !== 0 && n % 2 === 0;
+    case "ODD":
+      return n % 2 === 1;
+    case "1-18":
+      return n >= 1 && n <= 18;
+    case "19-36":
+      return n >= 19 && n <= 36;
+    case "1st 12":
+      return n >= 1 && n <= 12;
+    case "2nd 12":
+      return n >= 13 && n <= 24;
+    case "3rd 12":
+      return n >= 25 && n <= 36;
+    default:
+      return false;
+  }
+}
+
+const TONE_BG: Record<BetTone, string> = {
+  red: "bg-[linear-gradient(180deg,hsl(var(--danger)),hsl(var(--danger)/0.78))] text-fg",
+  black: "bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-0)))] text-fg",
+  zero: "bg-[linear-gradient(180deg,hsl(var(--success)),hsl(var(--success)/0.78))] text-fg-inverse",
+  neutral: "bg-surface-2 text-fg-muted"
+};
+
+const STATUS_RING: Record<BetStatus, string> = {
+  idle: "ring-1 ring-inset ring-border-soft",
+  selected: "-translate-y-0.5 ring-2 ring-inset ring-brand shadow-glow",
+  won: "-translate-y-0.5 ring-2 ring-inset ring-success",
+  result: "ring-2 ring-inset ring-accent",
+  lost: "opacity-40 ring-1 ring-inset ring-border-soft"
+};
+
+const STATUS_GLOW: Partial<Record<BetStatus, string>> = {
+  won: "0 0 0 1px hsl(var(--success) / 0.6), 0 10px 24px -6px hsl(var(--success) / 0.5)",
+  result: "0 0 0 1px hsl(var(--accent) / 0.55), 0 10px 24px -6px hsl(var(--accent) / 0.45)"
+};
+
+function BetCell({
+  tone,
+  status,
+  disabled,
+  onClick,
+  ariaLabel,
+  className,
+  children
+}: {
+  tone: BetTone;
+  status: BetStatus;
+  disabled: boolean;
+  onClick: () => void;
+  ariaLabel?: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const glow = STATUS_GLOW[status];
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      aria-label={ariaLabel}
+      onClick={onClick}
+      style={glow ? { boxShadow: glow } : undefined}
+      className={cn(
+        "relative flex items-center justify-center rounded-md font-mono font-bold shadow-e1 transition-[transform,box-shadow,background-color,opacity,color]",
+        TONE_BG[tone],
+        STATUS_RING[status],
+        status === "idle" &&
+          !disabled &&
+          "hover:-translate-y-0.5 hover:shadow-e2 hover:ring-brand/45",
+        disabled && "cursor-default",
+        className
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+export function RouletteStage({
+  isPending,
+  isRevealing,
+  showResult,
+  resultNum,
+  spots,
+  onChange,
+  onRevealComplete
+}: {
+  isPending: boolean;
+  isRevealing?: boolean;
+  showResult: boolean;
+  resultNum: number | null;
+  spots: readonly string[];
+  onChange: (spots: string[]) => void;
+  onRevealComplete?: () => void;
+}) {
+  const t = useTranslations();
+  const reduced = useReducedMotion() ?? false;
+  const spinning = isPending || Boolean(isRevealing);
+  const locked = spinning || showResult;
+  const wheelMode: RouletteWheelMode = isRevealing
+    ? "settling"
+    : isPending
+      ? "spinning"
+      : showResult
+        ? "settled"
+        : "idle";
+  const settled = showResult && !isRevealing && resultNum != null;
+
+  const toggleSpot = React.useCallback(
+    (spot: string) => {
+      onChange(spots.includes(spot) ? spots.filter((s) => s !== spot) : [...spots, spot]);
+    },
+    [onChange, spots]
+  );
+
+  const spotStatus = React.useCallback(
+    (spot: string): BetStatus => {
+      const selected = spots.includes(spot);
+      if (!settled || resultNum == null) return selected ? "selected" : "idle";
+      const hit = betResultHit(spot, resultNum);
+      if (hit && selected) return "won";
+      if (hit) return "result";
+      if (selected) return "lost";
+      return "idle";
+    },
+    [resultNum, settled, spots]
+  );
+
+  React.useEffect(() => {
+    if (!isRevealing || resultNum == null) return;
+    const timeout = window.setTimeout(() => onRevealComplete?.(), 2_400);
+    return () => window.clearTimeout(timeout);
+  }, [isRevealing, onRevealComplete, resultNum]);
+
+  return (
+    <div className="absolute inset-0 z-10 overflow-y-auto custom-scrollbar">
+      {/* Stage atmosphere. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(130% 80% at 50% -8%, hsl(var(--surface-2)), hsl(var(--surface-0)) 60%)"
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-12 h-[420px] w-[640px] max-w-full -translate-x-1/2 rounded-full"
+        style={{ background: "radial-gradient(circle, hsl(var(--brand) / 0.12), transparent 68%)" }}
+      />
+
+      <div className="relative flex min-h-full items-center justify-center px-4 py-3">
+        <div
+          className="relative w-full max-w-[680px] overflow-hidden rounded-xl border border-border-soft shadow-e3"
+          style={{
+            background: "linear-gradient(180deg, hsl(var(--surface-2)), hsl(var(--surface-1)))"
+          }}
+        >
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 h-px"
+            style={{
+              background: "linear-gradient(90deg, transparent, hsl(var(--fg) / 0.16), transparent)"
+            }}
+          />
+
+          {/* Header — bet count caption and clear action. */}
+          <div className="flex items-center justify-between gap-3 px-5 py-2.5">
+            <p className="truncate text-xs text-fg-muted">
+              {spots.length === 0
+                ? t("casino.room.selection.roulette.empty")
+                : `${spots.length} ${t("casino.room.selection.roulette.bets")}`}
+            </p>
+            <button
+              type="button"
+              disabled={locked || spots.length === 0}
+              onClick={() => onChange([])}
+              className="shrink-0 rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-fg-muted ring-1 ring-inset ring-border transition-colors hover:text-fg disabled:opacity-40"
+            >
+              {t("casino.room.selection.roulette.clearAll")}
+            </button>
+          </div>
+
+          <Divider />
+
+          {/* Wheel — lights up while spinning. */}
+          <div className="relative flex justify-center px-5 py-3">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute left-1/2 top-1/2 h-[300px] w-[340px] -translate-x-1/2 -translate-y-1/2 rounded-full transition-opacity duration-500"
+              style={{
+                opacity: spinning ? 1 : 0,
+                background: "radial-gradient(circle, hsl(var(--brand) / 0.28), transparent 68%)"
+              }}
+            />
+            {/* The 320px wheel is uniformly scaled to fit — smaller on phones,
+                full on >=sm. Its coordinate system and ball physics are
+                untouched (scale is a uniform transform). */}
+            <div className="relative h-[230px] w-[230px] sm:h-[272px] sm:w-[272px]">
+              <div className="absolute left-0 top-0 origin-top-left scale-[0.72] sm:scale-[0.85]">
+                <RouletteWheel mode={wheelMode} resultNum={resultNum} reduced={reduced} />
+              </div>
+            </div>
+          </div>
+
+          <Divider />
+
+          {/* Betting table — recessed felt, fully responsive (no scale hack). */}
+          <div className="px-5 py-3">
+            <div
+              className="overflow-x-auto custom-scrollbar rounded-lg p-3"
+              style={{
+                background:
+                  "linear-gradient(180deg, hsl(var(--success) / 0.05), transparent 60%), hsl(var(--surface-0))",
+                boxShadow: "inset 0 2px 12px rgb(0 0 0 / 0.55)"
+              }}
+            >
+              <div className="mx-auto flex w-max flex-col gap-1.5">
+                {/* Zero + number grid — the zero spans exactly the three rows. */}
+                <div className="flex gap-1.5">
+                  <BetCell
+                    tone="zero"
+                    status={spotStatus("0")}
+                    disabled={locked}
+                    onClick={() => toggleSpot("0")}
+                    className="w-10 shrink-0 self-stretch text-base"
+                  >
+                    0
+                  </BetCell>
+
+                  <div className="flex flex-1 flex-col gap-1.5">
+                    {[3, 2, 1].map((rN) => (
+                      <div key={rN} className="flex gap-1.5">
+                        {Array.from({ length: 12 }).map((_, cI) => {
+                          const num = cI * 3 + rN;
+                          return (
+                            <BetCell
+                              key={num}
+                              tone={numberTone(num)}
+                              status={spotStatus(String(num))}
+                              disabled={locked}
+                              onClick={() => toggleSpot(String(num))}
+                              className="aspect-square w-9 shrink-0 text-xs"
+                            >
+                              {num}
+                            </BetCell>
+                          );
+                        })}
+                        <div
+                          aria-hidden
+                          className="flex w-10 shrink-0 items-center justify-center rounded-md bg-surface-1/70 text-[9px] font-semibold tracking-tight text-fg-subtle ring-1 ring-inset ring-border-soft"
+                        >
+                          2:1
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Dozens — aligned under the twelve number columns. */}
+                <div className="flex gap-1.5 pl-[46px] pr-[46px]">
+                  {["1st 12", "2nd 12", "3rd 12"].map((dozen) => (
+                    <BetCell
+                      key={dozen}
+                      tone="neutral"
+                      status={spotStatus(dozen)}
+                      disabled={locked}
+                      onClick={() => toggleSpot(dozen)}
+                      className="h-7 flex-1 text-[9px] uppercase tracking-wide sm:text-[10px]"
+                    >
+                      {getRouletteBetLabel(t, dozen)}
+                    </BetCell>
+                  ))}
+                </div>
+
+                {/* Outside bets. */}
+                <div className="flex gap-1.5 pl-[46px] pr-[46px]">
+                  {["1-18", "EVEN", "RED", "BLACK", "ODD", "19-36"].map((bet) => (
+                    <BetCell
+                      key={bet}
+                      tone="neutral"
+                      status={spotStatus(bet)}
+                      disabled={locked}
+                      onClick={() => toggleSpot(bet)}
+                      ariaLabel={getRouletteBetLabel(t, bet)}
+                      className="h-7 flex-1 text-[8px] uppercase tracking-wide sm:text-[10px]"
+                    >
+                      {bet === "RED" ? (
+                        <span className="h-3.5 w-3.5 rounded-sm bg-danger" />
+                      ) : bet === "BLACK" ? (
+                        <span className="h-3.5 w-3.5 rounded-sm bg-surface-0 ring-1 ring-inset ring-border" />
+                      ) : (
+                        getRouletteBetLabel(t, bet)
+                      )}
+                    </BetCell>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }

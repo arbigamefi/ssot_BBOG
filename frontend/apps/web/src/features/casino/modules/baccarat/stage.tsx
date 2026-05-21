@@ -8,19 +8,11 @@ import { baccaratMultiplier, type BaccaratSide } from "../../room/params";
 import { BaccaratCard, EmptyCardSlot } from "./baccarat-card";
 
 /**
- * BaccaratStage — a baccarat table with a full round lifecycle.
+ * BaccaratStage — a baccarat table inside the shared game console.
  *
- * Stage realism: a felt table with a raised rail, a dealing shoe, stencilled
- * PLAYER / BANKER zones, and on-felt betting boxes.
- *
- * Animation realism, beat by beat:
- *   - bet placed / VRF pending → four cards are dealt face-down out of the
- *     shoe into the zones, and the shoe glows with a card peeking from it;
- *   - VRF ready / revealing    → the croupier turns the cards one by one, any
- *     third card is drawn, then the winning zone lights up;
- *   - resolved on load         → cards mount face-up with no animation.
- *
- * The deal order, reveal timing, and VRF state machine are preserved.
+ * The felt keeps a dealing shoe, PLAYER / BANKER hand zones and on-felt betting
+ * boxes. The deal order, card flip lifecycle and VRF reveal state machine are
+ * unchanged — only the cabinet chrome was rebuilt into the console language.
  */
 
 type BaccaratRoll = Extract<CasinoOutcome, { kind: "baccarat" }>["rolls"][number];
@@ -37,6 +29,17 @@ const SLOT_DEAL_DELAY: Record<string, number> = {
   "player-2": 360,
   "banker-2": 450
 };
+
+/** Hairline section divider that fades out at both ends. */
+function Divider() {
+  return (
+    <div
+      aria-hidden
+      className="mx-5 h-px"
+      style={{ background: "linear-gradient(90deg, transparent, hsl(var(--border)), transparent)" }}
+    />
+  );
+}
 
 function formatSide(side: BaccaratSide, t: ReturnType<typeof useTranslations>) {
   return t(`casino.room.selection.baccarat.${side}`);
@@ -62,17 +65,25 @@ function HandZone({
   const faceCount = slots.filter((slot) => slot.state === "face").length;
   return (
     <div
-      className={cn(
-        "relative flex flex-col items-center gap-3 rounded-xl border p-4 transition-colors",
+      style={
         winner
-          ? "border-accent/60 bg-accent-soft shadow-glow"
-          : "border-border-soft bg-surface-0/40"
+          ? {
+              boxShadow:
+                "0 0 0 1px hsl(var(--accent) / 0.55), 0 10px 26px -8px hsl(var(--accent) / 0.45)"
+            }
+          : undefined
+      }
+      className={cn(
+        "relative flex flex-col items-center gap-3 rounded-xl p-3 transition-[box-shadow,background-color]",
+        winner
+          ? "bg-accent-soft ring-1 ring-inset ring-accent/60"
+          : "bg-surface-0/50 ring-1 ring-inset ring-border-soft"
       )}
     >
       <span className="text-[11px] font-semibold uppercase tracking-[0.32em] text-fg-subtle">
         {title}
       </span>
-      <div className="flex gap-2.5">
+      <div className="flex gap-1.5">
         {slots.map((slot, index) =>
           slot.state === "empty" ? (
             <EmptyCardSlot key={index} />
@@ -90,7 +101,7 @@ function HandZone({
       </div>
       <span
         className={cn(
-          "font-mono text-3xl font-semibold tabular-nums",
+          "font-mono text-3xl font-bold tabular-nums",
           winner ? "text-accent" : "text-fg"
         )}
       >
@@ -108,7 +119,7 @@ function DealingShoe({ active, reduced }: { active: boolean; reduced: boolean })
       className="absolute right-4 top-3 h-12 w-16"
       style={{ transform: "skewX(-12deg)" }}
     >
-      <div className="absolute inset-0 rounded-md border border-border-strong bg-surface-2 shadow-e2" />
+      <div className="absolute inset-0 rounded-md border border-border bg-surface-2 shadow-e2" />
       {active && !reduced ? (
         <motion.div
           className="absolute inset-0 rounded-md ring-1 ring-brand"
@@ -151,17 +162,20 @@ function BetBox({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "group relative flex flex-col items-center gap-1 rounded-xl border-2 px-4 py-3 transition-colors",
+        "relative flex flex-col items-center gap-1 rounded-lg px-4 py-3 transition-[transform,box-shadow,background-color]",
         active
-          ? "border-brand bg-brand-soft text-fg"
-          : "border-dashed border-border-strong bg-surface-0/50 text-fg-muted hover:border-brand/55 hover:text-fg",
-        disabled && "cursor-not-allowed opacity-70"
+          ? "-translate-y-0.5 bg-brand-soft shadow-glow ring-1 ring-inset ring-brand"
+          : "bg-surface-3 shadow-e1 ring-1 ring-inset ring-border-soft",
+        !active && !disabled && "hover:-translate-y-0.5 hover:shadow-e2 hover:ring-brand/40",
+        disabled && "cursor-default opacity-60"
       )}
     >
       <span className="text-[9px] font-semibold uppercase tracking-[0.22em] text-fg-subtle">
         {t("casino.room.selection.baccarat.betOn")}
       </span>
-      <span className="text-base font-semibold">{formatSide(side, t)}</span>
+      <span className={cn("text-base font-bold", active ? "text-fg" : "text-fg-muted")}>
+        {formatSide(side, t)}
+      </span>
       <span className="font-mono text-xs text-accent">
         {baccaratMultiplier(side).toFixed(side === "tie" ? 2 : 3)}x
       </span>
@@ -271,80 +285,105 @@ export function BaccaratStage({
         : t("casino.room.stage.baccarat.ready");
 
   return (
-    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-5 overflow-hidden px-6 py-8">
-      {/* ---- Felt table ---- */}
-      <div className="relative w-full max-w-3xl">
+    <div className="absolute inset-0 z-10 overflow-y-auto custom-scrollbar">
+      {/* Stage atmosphere. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(130% 80% at 50% -8%, hsl(var(--surface-2)), hsl(var(--surface-0)) 60%)"
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-12 h-[420px] w-[640px] max-w-full -translate-x-1/2 rounded-full"
+        style={{ background: "radial-gradient(circle, hsl(var(--brand) / 0.12), transparent 68%)" }}
+      />
+
+      <div className="relative flex min-h-full items-center justify-center px-4 py-4">
         <div
-          aria-hidden
-          className="pointer-events-none absolute -bottom-5 left-1/2 h-9 w-3/4 -translate-x-1/2 rounded-full bg-surface-0/45 blur-2xl"
-        />
+          className="relative w-full max-w-[640px] overflow-hidden rounded-xl border border-border-soft shadow-e3"
+          style={{
+            background: "linear-gradient(180deg, hsl(var(--surface-2)), hsl(var(--surface-1)))"
+          }}
+        >
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 h-px"
+            style={{
+              background: "linear-gradient(90deg, transparent, hsl(var(--fg) / 0.16), transparent)"
+            }}
+          />
 
-        {/* table rail */}
-        <div className="relative rounded-xl border-4 border-border-strong bg-surface-1 p-2 shadow-e3">
-          {/* felt surface */}
-          <div className="relative overflow-hidden rounded-lg border border-border bg-surface-0 p-5 shadow-inner-e1">
+          {/* Felt — recessed table with hands and betting boxes. */}
+          <div className="px-5 py-5">
             <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0"
-              style={{
-                background:
-                  "radial-gradient(ellipse at 50% 0%, hsl(var(--brand) / 0.1), transparent 62%)"
-              }}
-            />
-
-            <DealingShoe active={dealingActive} reduced={prefersReducedMotion} />
-
-            {/* hands */}
-            <div className="relative grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <HandZone
-                title={formatSide("player", t)}
-                suitOffset={0}
-                slots={playerSlots}
-                total={hasResult ? roll?.playerTotal : undefined}
-                winner={winner === "player"}
-                instant={instantCards}
+              className="relative overflow-hidden rounded-lg border border-border-soft bg-surface-0 p-3"
+              style={{ boxShadow: "inset 0 2px 14px rgb(0 0 0 / 0.55)" }}
+            >
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0"
+                style={{
+                  background:
+                    "radial-gradient(ellipse at 50% 0%, hsl(var(--brand) / 0.1), transparent 62%)"
+                }}
               />
-              <HandZone
-                title={formatSide("banker", t)}
-                suitOffset={2}
-                slots={bankerSlots}
-                total={hasResult ? roll?.bankerTotal : undefined}
-                winner={winner === "banker"}
-                instant={instantCards}
-              />
-            </div>
 
-            {/* on-felt betting boxes */}
-            <div className="relative mt-5 grid grid-cols-3 gap-3">
-              {BACCARAT_SIDES.map((side) => (
-                <BetBox
-                  key={side}
-                  side={side}
-                  active={side === selectedSide}
-                  disabled={isPending}
-                  onClick={() => onSideChange(side)}
-                  t={t}
+              <DealingShoe active={dealingActive} reduced={prefersReducedMotion} />
+
+              <div className="relative grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <HandZone
+                  title={formatSide("player", t)}
+                  suitOffset={0}
+                  slots={playerSlots}
+                  total={hasResult ? roll?.playerTotal : undefined}
+                  winner={winner === "player"}
+                  instant={instantCards}
                 />
-              ))}
+                <HandZone
+                  title={formatSide("banker", t)}
+                  suitOffset={2}
+                  slots={bankerSlots}
+                  total={hasResult ? roll?.bankerTotal : undefined}
+                  winner={winner === "banker"}
+                  instant={instantCards}
+                />
+              </div>
+
+              <div className="relative mt-4 grid grid-cols-3 gap-2.5">
+                {BACCARAT_SIDES.map((side) => (
+                  <BetBox
+                    key={side}
+                    side={side}
+                    active={side === selectedSide}
+                    disabled={isPending}
+                    onClick={() => onSideChange(side)}
+                    t={t}
+                  />
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* ---- Status readout ---- */}
-      <div
-        className={cn(
-          "rounded-lg border bg-surface-1 px-5 py-2.5 text-center shadow-e1",
-          hasResult && winner && winner === selectedSide ? "border-accent/45" : "border-border"
-        )}
-        aria-live="polite"
-      >
-        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-fg-subtle">
-          {statusText}
-        </p>
-        <p className="mt-0.5 font-mono text-sm font-semibold uppercase tracking-widest text-fg">
-          {t("casino.room.stage.baccarat.selected", { side: formatSide(selectedSide, t) })}
-        </p>
+          <Divider />
+
+          {/* Status readout. */}
+          <div className="px-5 py-3.5 text-center" aria-live="polite">
+            <p
+              className={cn(
+                "text-[10px] font-semibold uppercase tracking-[0.22em]",
+                hasResult && winner && winner === selectedSide ? "text-accent" : "text-fg-subtle"
+              )}
+            >
+              {statusText}
+            </p>
+            <p className="mt-0.5 font-mono text-sm font-bold uppercase tracking-widest text-fg">
+              {t("casino.room.stage.baccarat.selected", { side: formatSide(selectedSide, t) })}
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
