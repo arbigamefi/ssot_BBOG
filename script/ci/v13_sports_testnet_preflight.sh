@@ -131,6 +131,9 @@ need_erc20_decimals_match() {
 
 need_cmd cast
 
+BASE_MAINNET_VRF_WRAPPER="0xb0407dbe851f8318bd31404A49e658143C982F23"
+BASE_MAINNET_USDC="0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+
 need_var RPC_URL
 need_var PRIVATE_KEY
 need_address GOV
@@ -172,6 +175,12 @@ case "${V13_SPORTS_PREFLIGHT_TARGET:-testnet}" in
     ;;
 esac
 
+if [[ "${V13_SPORTS_PREFLIGHT_TARGET:-testnet}" == "mainnet" && "$CHAIN_ID" == "8453" ]]; then
+  [[ "$(lower "$VRF_WRAPPER")" == "$(lower "$BASE_MAINNET_VRF_WRAPPER")" ]] || {
+    fail "VRF_WRAPPER must be the canonical Base mainnet Chainlink wrapper: $BASE_MAINNET_VRF_WRAPPER"
+  }
+fi
+
 need_contract_code "VRF_WRAPPER" "$VRF_WRAPPER"
 
 has_casino=0
@@ -192,6 +201,11 @@ for ((i = 0; i < POOL_COUNT; ++i)); do
   is_positive_decimal "$pool_id" || fail "$pool_id_var must be a positive integer: $pool_id"
   is_address "$pool_asset" || fail "$pool_asset_var must be an address: $pool_asset"
   [[ "$(lower "$pool_asset")" != "0x0000000000000000000000000000000000000000" ]] || fail "$pool_asset_var is zero address"
+  if [[ "${V13_SPORTS_PREFLIGHT_TARGET:-testnet}" == "mainnet" && "$CHAIN_ID" == "8453" ]]; then
+    [[ "$(lower "$pool_asset")" == "$(lower "$BASE_MAINNET_USDC")" ]] || {
+      fail "$pool_asset_var must be canonical Base mainnet USDC: $BASE_MAINNET_USDC"
+    }
+  fi
   need_uint8_decimal "$lp_decimals_var"
   lp_decimals="${!lp_decimals_var}"
   need_contract_code "$pool_asset_var" "$pool_asset"

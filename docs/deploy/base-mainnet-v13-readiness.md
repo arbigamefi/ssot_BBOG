@@ -71,6 +71,9 @@ Notes:
 
 - `sports-mainnet-preflight-v13` checks the RPC chain id, `GOV`/`PRIVATE_KEY` match, VRF wrapper
   bytecode, every pool asset bytecode, Sports raw caps, role-set hashes, and role addresses.
+- For Base mainnet `8453`, the preflight also requires the canonical Chainlink VRF v2.5 wrapper and
+  canonical Circle USDC address recorded in the env template. Re-check both official tables on
+  deploy day before broadcast.
 - Both mainnet preflight paths require `LP_DECIMALS_i` to match the ERC20 `decimals()` value read
   from `POOL_ASSET_i`, preventing USDC-style 6-decimal assets from being deployed with an 18-decimal
   LP/release mismatch.

@@ -83,7 +83,8 @@ pnpm -C frontend/apps/keeper test
 ## Next required evidence before broadcast
 
 - Filled env stored outside `docs/`.
-- Official Base mainnet USDC and Chainlink VRF wrapper re-check on deploy day.
+- Official Base mainnet USDC and Chainlink VRF wrapper re-check on deploy day. The preflight rejects
+  non-canonical Base mainnet values, but deploy day still needs a fresh official-source check.
 - `GOV` and `PRIVATE_KEY` derivation confirmed by preflight.
 - Every `LP_DECIMALS_i` value confirmed by preflight against the on-chain ERC20 `decimals()` value
   for `POOL_ASSET_i`.
