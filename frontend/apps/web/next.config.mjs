@@ -44,6 +44,29 @@ const configuredRpcOrigins = [
   })
   .filter(Boolean);
 
+const isDev = process.env.NODE_ENV === "development";
+const scriptSrc = isDev
+  ? ["script-src 'self' 'unsafe-eval' 'unsafe-inline' https://mcp.figma.com"]
+  : ["script-src 'self' 'unsafe-inline'"];
+const connectSrc = [
+  "connect-src 'self'",
+  ...(isDev ? ["https://mcp.figma.com"] : []),
+  "https://*.walletconnect.com",
+  "https://*.walletconnect.org",
+  "wss://*.walletconnect.com",
+  "wss://*.walletconnect.org",
+  "https://sepolia.base.org",
+  "https://mainnet.base.org",
+  "https://arb1.arbitrum.io",
+  "https://base-sepolia.g.alchemy.com",
+  "https://base-mainnet.g.alchemy.com",
+  "https://arb-sepolia.g.alchemy.com",
+  "https://arb-mainnet.g.alchemy.com",
+  ...configuredRpcOrigins,
+  "https://*.sentry.io",
+  "https://*.ingest.sentry.io"
+].join(" ");
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -84,30 +107,13 @@ const nextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              // Next.js requires inline scripts for hydration + hot-reload in dev
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://mcp.figma.com",
+              // Next.js dev server needs eval and the Figma MCP bridge; public builds do not.
+              ...scriptSrc,
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https:",
               "font-src 'self' data:",
               // RPC endpoints + WalletConnect relay + Sentry
-              [
-                "connect-src 'self'",
-                "https://mcp.figma.com",
-                "https://*.walletconnect.com",
-                "https://*.walletconnect.org",
-                "wss://*.walletconnect.com",
-                "wss://*.walletconnect.org",
-                "https://sepolia.base.org",
-                "https://mainnet.base.org",
-                "https://arb1.arbitrum.io",
-                "https://base-sepolia.g.alchemy.com",
-                "https://base-mainnet.g.alchemy.com",
-                "https://arb-sepolia.g.alchemy.com",
-                "https://arb-mainnet.g.alchemy.com",
-                ...configuredRpcOrigins,
-                "https://*.sentry.io",
-                "https://*.ingest.sentry.io"
-              ].join(" "),
+              connectSrc,
               "frame-src 'self' https://*.walletconnect.com https://*.walletconnect.org",
               "worker-src 'self' blob:"
             ].join("; ")

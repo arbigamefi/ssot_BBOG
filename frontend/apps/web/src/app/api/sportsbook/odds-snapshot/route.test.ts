@@ -1,4 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { __resetRateLimitBucketsForTests } from "../../../../server/http/rate-limit";
 
 const sdkMock = vi.hoisted(() => {
   class SignedSportsOddsSnapshotError extends Error {
@@ -27,16 +28,18 @@ async function json(response: Response) {
   return (await response.json()) as any;
 }
 
-function request(body: Record<string, unknown>) {
+function request(body: Record<string, unknown>, init?: RequestInit) {
   return new Request("http://localhost/api/sportsbook/odds-snapshot", {
     method: "POST",
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
+    ...init
   });
 }
 
 describe("POST /api/sportsbook/odds-snapshot", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    __resetRateLimitBucketsForTests();
     process.env = {
       ...originalEnv,
       NEXT_PUBLIC_SPORTSBOOK_ENABLED: "true",
@@ -147,6 +150,53 @@ describe("POST /api/sportsbook/odds-snapshot", () => {
     expect(await json(response)).toEqual({
       error: { code: "MARKET_NOT_OPEN", message: "Market is not open." }
     });
+  });
+
+  it("rate limits signed odds creation per client", async () => {
+    process.env.SPORTSBOOK_ODDS_SNAPSHOT_RATE_LIMIT_PER_MINUTE = "1";
+    sdkMock.createSignedSportsOddsSnapshot.mockResolvedValue({
+      schemaVersion: "sportsbook.signed-odds-ticket.v1",
+      provider: {},
+      outcome: { name: "Home FC", decimalPrice: "2.1", oddsWad: "2100000000000000000" },
+      stake: "1000000",
+      payout: "2100000",
+      odds: {
+        oddsWad: "2100000000000000000",
+        maxStake: "2000000",
+        maxPayout: "4200000",
+        expiresAt: "1900000000",
+        nonce: "44",
+        riskHash: `0x${"07".repeat(32)}`
+      },
+      oddsTicketHash: `0x${"dd".repeat(32)}`,
+      signature: `0x${"22".repeat(65)}`
+    });
+    const { POST } = await import("./route");
+
+    const first = await POST(
+      request(
+        { marketId: "7", stake: "1000000" },
+        { headers: { "x-forwarded-for": "203.0.113.9" } }
+      )
+    );
+    const second = await POST(
+      request(
+        { marketId: "7", stake: "1000000" },
+        { headers: { "x-forwarded-for": "203.0.113.9" } }
+      )
+    );
+
+    expect(first.status).toBe(200);
+    expect(first.headers.get("X-RateLimit-Remaining")).toBe("0");
+    expect(second.status).toBe(429);
+    expect(second.headers.get("Retry-After")).toBeTruthy();
+    expect(await json(second)).toEqual({
+      error: {
+        code: "RATE_LIMITED",
+        message: "Too many sportsbook odds snapshot requests. Please retry shortly."
+      }
+    });
+    expect(sdkMock.createSignedSportsOddsSnapshot).toHaveBeenCalledTimes(1);
   });
 
   it("fails closed without the sportsbook signer private key", async () => {

@@ -92,11 +92,15 @@ The Odds API `h2h` prices into a signed ticket snapshot. It requires server-only
 - `SPORTS_ODDS_SIGNER_PRIVATE_KEY`
 - `RPC_URL`
 - optional `SPORTS_ODDS_SIGNER`, `SPORTS_PROVIDER_SPORT_KEY`, `SPORTS_PROVIDER_EVENT_ID`,
-  `SPORTS_BOOKMAKER_KEY`, `THE_ODDS_API_REGIONS`, and `SPORTS_ODDS_TTL_SECONDS`
+  `SPORTS_BOOKMAKER_KEY`, `THE_ODDS_API_REGIONS`, `SPORTS_ODDS_TTL_SECONDS`,
+  `SPORTSBOOK_PROVIDER_ODDS_RATE_LIMIT_PER_MINUTE`, and
+  `SPORTSBOOK_ODDS_SNAPSHOT_RATE_LIMIT_PER_MINUTE`
 
 The route must fail closed when sportsbook is disabled, release metadata lacks SportsHub, the market is
 not open, risk metadata is missing, the provider payout exceeds pool caps, or the signing key does not
-match `SPORTS_ODDS_SIGNER`.
+match `SPORTS_ODDS_SIGNER`. Public provider and snapshot routes also apply a per-client in-memory
+rate limit as an abuse guard; production deployments should still enforce the same or stricter limits
+at the edge/load-balancer layer.
 
 ## ABIs
 
