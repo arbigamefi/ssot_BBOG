@@ -142,6 +142,8 @@ Before any public casino traffic:
 
 - Install the primary and backup units from `frontend/deploy/casino-keeper/`.
 - Follow `docs/ops/runbooks/casino-keeper-production.md`.
+- Follow `docs/ops/runbooks/bet-index-production.md` for managed Postgres backup and restore
+  evidence.
 - Use `KEEPER_CHAIN_ID=8453` and `KEEPER_RELEASE_PATH` pointing at the embedded `chain-8453.json`.
 - Use two independent RPC providers and two independent hosts/regions.
 - Confirm `/ops/casino-keeper-health.json` reports the expected chain id, role, cursor, and last
@@ -185,6 +187,6 @@ PHASE2_PACKET=<go-packet.md> make sports-phase2-gonogo-v13
 - [ ] Release digest, frontend manifest, golden vectors, notes, and package generated and committed.
 - [ ] Frontend embedded release synced and read-only smoke green.
 - [ ] Primary and backup casino keepers live and healthy.
-- [ ] Postgres bet index live, backed up, and connected to web API routes.
+- [ ] Postgres bet index live, backed up, restore-tested, and connected to web API routes.
 - [ ] Small-stake casino canary complete with terminal receipt.
 - [ ] SportsHub public risk-in remains disabled unless Phase 2 records GO.
