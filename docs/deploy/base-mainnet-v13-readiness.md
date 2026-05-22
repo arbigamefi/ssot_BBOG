@@ -127,6 +127,7 @@ pnpm -C frontend ssot:sync -- --from dist/ssot-release-chain-8453-<block>-<diges
 pnpm -C frontend check:release
 pnpm -C frontend check:mainnet-release
 pnpm -C frontend smoke:release-readonly -- --chain-id 8453
+pnpm -C frontend/apps/web test -- src/server/security-headers.test.ts
 pnpm -C frontend typecheck
 pnpm -C frontend test
 pnpm -C frontend build

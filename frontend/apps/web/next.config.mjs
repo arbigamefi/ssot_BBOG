@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import createNextIntlPlugin from "next-intl/plugin";
+import { buildSecurityHeaders } from "./src/server/security-headers.mjs";
 
 const appDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(appDir, "../../..");
@@ -27,45 +28,7 @@ for (const envFile of [".env", ".env.local"]) {
   }
 }
 
-const configuredRpcOrigins = [
-  process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL,
-  process.env.NEXT_PUBLIC_ARBITRUM_SEPOLIA_RPC_URL,
-  process.env.NEXT_PUBLIC_BASE_RPC_URL,
-  process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL,
-  process.env.NEXT_PUBLIC_RPC_URL
-]
-  .map((value) => {
-    if (!value) return undefined;
-    try {
-      return new URL(value).origin;
-    } catch {
-      return undefined;
-    }
-  })
-  .filter(Boolean);
-
 const isDev = process.env.NODE_ENV === "development";
-const scriptSrc = isDev
-  ? ["script-src 'self' 'unsafe-eval' 'unsafe-inline' https://mcp.figma.com"]
-  : ["script-src 'self' 'unsafe-inline'"];
-const connectSrc = [
-  "connect-src 'self'",
-  ...(isDev ? ["https://mcp.figma.com"] : []),
-  "https://*.walletconnect.com",
-  "https://*.walletconnect.org",
-  "wss://*.walletconnect.com",
-  "wss://*.walletconnect.org",
-  "https://sepolia.base.org",
-  "https://mainnet.base.org",
-  "https://arb1.arbitrum.io",
-  "https://base-sepolia.g.alchemy.com",
-  "https://base-mainnet.g.alchemy.com",
-  "https://arb-sepolia.g.alchemy.com",
-  "https://arb-mainnet.g.alchemy.com",
-  ...configuredRpcOrigins,
-  "https://*.sentry.io",
-  "https://*.ingest.sentry.io"
-].join(" ");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -78,47 +41,7 @@ const nextConfig = {
       {
         // Apply security headers to all routes
         source: "/(.*)",
-        headers: [
-          {
-            key: "X-Frame-Options",
-            value: "DENY"
-          },
-          {
-            key: "X-Content-Type-Options",
-            value: "nosniff"
-          },
-          {
-            key: "Referrer-Policy",
-            value: "strict-origin-when-cross-origin"
-          },
-          {
-            key: "X-DNS-Prefetch-Control",
-            value: "on"
-          },
-          {
-            key: "Strict-Transport-Security",
-            value: "max-age=63072000; includeSubDomains; preload"
-          },
-          {
-            key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=()"
-          },
-          {
-            key: "Content-Security-Policy",
-            value: [
-              "default-src 'self'",
-              // Next.js dev server needs eval and the Figma MCP bridge; public builds do not.
-              ...scriptSrc,
-              "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob: https:",
-              "font-src 'self' data:",
-              // RPC endpoints + WalletConnect relay + Sentry
-              connectSrc,
-              "frame-src 'self' https://*.walletconnect.com https://*.walletconnect.org",
-              "worker-src 'self' blob:"
-            ].join("; ")
-          }
-        ]
+        headers: buildSecurityHeaders({ env: process.env, isDev })
       }
     ];
   }

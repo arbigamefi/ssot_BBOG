@@ -67,6 +67,16 @@ Strict-Transport-Security
 The CSP may need framework allowances, but it should not allow arbitrary remote
 scripts.
 
+Production CSP requirements:
+
+- no `unsafe-eval`;
+- no Figma MCP capture bridge;
+- `object-src 'none'`;
+- `base-uri 'self'`;
+- `form-action 'self'`;
+- `frame-ancestors 'none'`;
+- `upgrade-insecure-requests`.
+
 ## 5. Data And Privacy
 
 Do not collect account-profile data in v1. Wallet activity is public on-chain;
@@ -124,6 +134,7 @@ If a frontend security issue is suspected:
 ```bash
 rg -nE "\\beval\\(|new Function\\(|dangerouslySetInnerHTML" frontend/apps/web/src
 rg -nE "NEXT_PUBLIC_.*(KEY|SECRET|TOKEN|DATABASE|PRIVATE)" frontend
+pnpm -C frontend/apps/web test -- src/server/security-headers.test.ts
 pnpm -C frontend lint
 pnpm -C frontend test
 ```
