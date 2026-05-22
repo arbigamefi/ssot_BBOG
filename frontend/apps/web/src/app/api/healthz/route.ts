@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server";
 
-import { readKeeperHealthSnapshot } from "../../../server/ops/keeper-health";
+import { getHealthzSnapshot } from "../../../server/healthz";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET() {
-  const snapshot = await readKeeperHealthSnapshot();
+  const snapshot = await getHealthzSnapshot();
   return NextResponse.json(snapshot, {
-    headers: { "Cache-Control": "no-store" }
+    headers: {
+      "cache-control": "no-store"
+    }
   });
 }

@@ -127,6 +127,8 @@ Alert on:
 - failed automated backup;
 - no keeper cursor advancement for 10 minutes while chain head advances;
 - web API `/api/bets/recent` returns 5xx for more than 2 minutes.
+- web API `/api/healthz` returns `checks.betIndex.status != "ok"` for more
+  than 2 minutes on chain `8453`.
 
 Postgres degradation should not block settlement. If connection failures create
 keeper instability, set `BET_INDEX_WRITE_ENABLED=false`, restart the keeper, and
@@ -143,6 +145,7 @@ backfill the missing window after the database is healthy.
 - [ ] Manual `pg_dump` backup created and stored in encrypted storage.
 - [ ] Restore drill into disposable database completed.
 - [ ] Cursor advancement and `/api/bets/recent` monitors configured.
+- [ ] `/api/healthz` monitor configured and showing `checks.betIndex.status: "ok"`.
 - [ ] Keeper restart with `BET_INDEX_WRITE_ENABLED=false` rehearsed or accepted
       as the degraded-mode fallback.
 

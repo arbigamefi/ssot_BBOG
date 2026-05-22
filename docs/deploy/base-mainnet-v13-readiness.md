@@ -136,6 +136,16 @@ The read-only smoke must use a Base mainnet RPC endpoint and must not require a 
 If `smoke:release-readonly` fails on `quoteVRFFee`, PoolRegistry rows, Bank SSOT, SportsHub wiring,
 or bytecode checks, stop and fix the release artifact before changing frontend code.
 
+After deploying the web app, verify the production health endpoint:
+
+```bash
+curl -fsS https://<web-host>/api/healthz | jq .
+```
+
+The top-level `status` must be `ok` before public traffic. On chain `8453`, the endpoint degrades
+until `chain-8453.json` is embedded, the primary keeper health snapshot is fresh, and the web API is
+serving recent bets from the durable Postgres index.
+
 ## Casino keeper readiness
 
 Before any public casino traffic:
@@ -148,6 +158,7 @@ Before any public casino traffic:
 - Use two independent RPC providers and two independent hosts/regions.
 - Confirm `/ops/casino-keeper-health.json` reports the expected chain id, role, cursor, and last
   successful finalize timestamp.
+- Confirm `/api/healthz` reports `status: "ok"` and `checks.keeper.status: "ok"`.
 - Run one small-stake casino canary and archive placeBet, VRF fulfill, keeper finalize, terminal
   receipt, and Bank SSOT readbacks using `docs/deploy/base-mainnet-casino-canary-template.md`.
 
@@ -188,5 +199,6 @@ PHASE2_PACKET=<go-packet.md> make sports-phase2-gonogo-v13
 - [ ] Frontend embedded release synced and read-only smoke green.
 - [ ] Primary and backup casino keepers live and healthy.
 - [ ] Postgres bet index live, backed up, restore-tested, and connected to web API routes.
+- [ ] `/api/healthz` reports `ok` for release, keeper, and bet-index checks.
 - [ ] Small-stake casino canary complete with terminal receipt.
 - [ ] SportsHub public risk-in remains disabled unless Phase 2 records GO.

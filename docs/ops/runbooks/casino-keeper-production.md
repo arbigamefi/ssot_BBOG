@@ -128,15 +128,20 @@ Expected route:
 
 ```bash
 curl -fsS https://<ops-host>/ops/casino-keeper-health.json | jq .
+curl -fsS https://<web-host>/api/healthz | jq '.checks.keeper'
 ```
 
-The route should show:
+The keeper route should show:
 
 - `status: "running"`;
 - `role: "primary"` for the primary health file;
 - a fresh `updatedAt`;
 - non-decreasing `lastScannedBlock`;
 - `lastFinalizeFailureAt` absent or older than the most recent recovery.
+
+The web health endpoint should show `checks.keeper.status: "ok"`. A stale or
+missing health snapshot degrades `/api/healthz`; do not treat the public web app
+as launch-ready while that check is degraded.
 
 ## 6. Canary
 
@@ -225,6 +230,7 @@ above.
 - [ ] If sportsbook terminalization is enabled, a canary market finalizes and
       all held canary tickets settle/refund without player manual action.
 - [ ] `/ops/casino-keeper-health.json` reports a fresh primary snapshot.
+- [ ] `/api/healthz` reports `checks.keeper.status: "ok"`.
 - [ ] Stuck `RandomReady` alert owner and escalation channel are documented.
 - [ ] Sportsbook finality-ready and terminalizable-ticket alert owners are documented.
 
