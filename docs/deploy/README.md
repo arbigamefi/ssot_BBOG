@@ -135,8 +135,19 @@ forge script script/DeployV13.s.sol:DeployV13 --rpc-url $RPC_URL --broadcast -vv
 
 The same flow applies to `docs/deploy/arbitrum-sepolia-v13-sports.env.example`.
 
-For a Base mainnet v1.3 readiness review, start from `docs/deploy/base-mainnet-v13.env.example` and
-run the mainnet preflight:
+For a Base mainnet v1.3 readiness review, follow `docs/deploy/base-mainnet-v13-readiness.md`.
+
+For a casino-only launch review, start from `docs/deploy/base-mainnet-v13-casino.env.example` and
+run the casino mainnet preflight:
+
+```bash
+cp docs/deploy/base-mainnet-v13-casino.env.example .env.base-mainnet-v13-casino
+# edit .env.base-mainnet-v13-casino using approved mainnet values
+ENV_FILE=.env.base-mainnet-v13-casino make casino-mainnet-preflight-v13
+```
+
+For a Casino+Sports topology review, start from `docs/deploy/base-mainnet-v13.env.example` and run
+the Sports-aware mainnet preflight:
 
 ```bash
 cp docs/deploy/base-mainnet-v13.env.example .env.base-mainnet-v13
@@ -144,8 +155,8 @@ cp docs/deploy/base-mainnet-v13.env.example .env.base-mainnet-v13
 ENV_FILE=.env.base-mainnet-v13 make sports-mainnet-preflight-v13
 ```
 
-This checks env shape, chain id `8453`, wrapper/asset bytecode, and Sports role/cap placeholders. It
-does not authorize a deployment broadcast.
+These checks validate env shape, chain id `8453`, wrapper/asset bytecode, and, when a Sports pool is
+configured, Sports role/cap placeholders. They do not authorize a deployment broadcast.
 
 For the narrow football MVP product canary, use
 `docs/deploy/worldcup-football-mvp-canary-2026.md` after the v1.3 Sports deployment and role canary are
@@ -164,8 +175,10 @@ The casino keeper auto-settlement rehearsal is recorded in
 buffer fix required for live public-testnet canaries.
 
 Production keeper install templates live in `frontend/deploy/casino-keeper/`, with the operator
-runbook in `docs/ops/runbooks/casino-keeper-production.md`. They define the primary/backup systemd
-units, role-specific env files, and health snapshot wiring required before a mainnet casino launch.
+runbook in `docs/ops/runbooks/casino-keeper-production.md`. Base mainnet uses the
+`*.base-mainnet.env.example` files. The durable Postgres read-model runbook is
+`docs/ops/runbooks/bet-index-production.md`. Archive the mainnet canary evidence with
+`docs/deploy/base-mainnet-casino-canary-template.md`.
 
 The v1.3 script deploys and wires:
 - `PoolRegistry`

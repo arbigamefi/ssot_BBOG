@@ -9,6 +9,7 @@
   - `docs/deploy/base-sepolia-v13-sports.env.example`
   - `docs/deploy/arbitrum-sepolia-v13-sports.env.example`
 - [ ] For Base mainnet v1.3 readiness, start from:
+  - `docs/deploy/base-mainnet-v13-casino.env.example` for casino-only launch review
   - `docs/deploy/base-mainnet-v13.env.example`
   - `docs/deploy/base-mainnet-v13-readiness.md`
 - [ ] Decide initial:
@@ -34,7 +35,9 @@
 - [ ] Run `make sports-phase0-readiness` locally to prove both the v1.3 Casino+Sports artifact path
   and the Phase 0 mock event lifecycle before using real deployment parameters.
 - [ ] Run `ENV_FILE=<filled-env> make sports-testnet-preflight-v13` before broadcasting a public testnet deployment.
-- [ ] Run `ENV_FILE=<filled-base-mainnet-env> make sports-mainnet-preflight-v13` before any Base mainnet v1.3 deployment review. This is an env/RPC/code sanity gate, not a broadcast approval.
+- [ ] Run the matching Base mainnet preflight before any v1.3 deployment review. These are env/RPC/code sanity gates, not broadcast approvals:
+  - casino-only: `ENV_FILE=<filled-base-mainnet-casino-env> make casino-mainnet-preflight-v13`
+  - Casino+Sports: `ENV_FILE=<filled-base-mainnet-env> make sports-mainnet-preflight-v13`
 
 ## Deploy
 - [ ] Run `bash script/ci/install_deps.sh`
@@ -83,8 +86,9 @@
 - [ ] Before any SportsHub mainnet canary or public risk-in, run `make sports-phase2-gonogo-v13`
   and confirm the Phase 2 packet records GO with every production approval linked.
 - [ ] Before any Base mainnet casino launch, follow `docs/deploy/base-mainnet-v13-readiness.md`,
-  install the primary/backup casino keepers from `frontend/deploy/casino-keeper/`, and archive one
-  small-stake terminal receipt canary.
+  install the Base mainnet primary/backup casino keepers from `frontend/deploy/casino-keeper/`, run
+  `docs/ops/runbooks/bet-index-production.md`, and archive one small-stake terminal receipt canary
+  using `docs/deploy/base-mainnet-casino-canary-template.md`.
 - [ ] For SportsHub production roles, run
   `REQUIRE_APPROVED=1 make sports-role-custody-check-v13 ROLE_CUSTODY_FILE=<approved-role-custody.json>`
   before allowlisting routine odds/reporting/challenge/arbitration keys.
