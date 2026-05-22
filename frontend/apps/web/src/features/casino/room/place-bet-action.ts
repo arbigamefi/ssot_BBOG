@@ -19,6 +19,11 @@ export function shouldResetGamePlaceBet(status: string) {
   return status === "reconciled" || status === "failed";
 }
 
+export function isCasinoRiskInEnabledForChain(chainId: number) {
+  if (chainId !== 8453) return true;
+  return process.env.NEXT_PUBLIC_CASINO_RISK_IN_ENABLED === "true";
+}
+
 export async function executeGamePlaceBetAction({
   account,
   openConnectModal,
@@ -76,6 +81,7 @@ export async function executeGamePlaceBetAction({
     rouletteSelectionRequired?: string;
     kenoSelectionRequired?: string;
     kenoSelectionInvalid?: string;
+    mainnetRiskInDisabled?: string;
     noActiveCasinoPool?: string;
     unexpectedError?: string;
   };
@@ -90,6 +96,11 @@ export async function executeGamePlaceBetAction({
   if (shouldResetGamePlaceBet(state.status)) {
     reset();
     setShowResult(false);
+    return;
+  }
+
+  if (!isCasinoRiskInEnabledForChain(release.chainId)) {
+    toast.error(messages?.mainnetRiskInDisabled ?? "Casino mainnet risk-in is disabled.");
     return;
   }
 

@@ -155,6 +155,7 @@
         "rouletteSelectionRequired": "请先在轮盘桌面选择至少一个号码或投注类型。",
         "kenoSelectionRequired": "请在 Keno 网格中至少选择 1 个号码。",
         "kenoSelectionInvalid": "Keno 只能选择 1 到 5 个号码，号码范围为 1 到 15。",
+        "mainnetRiskInDisabled": "赌场主网下注已关闭，需完成前端准入审批后才能开启。",
         "noActiveCasinoPool": "当前 release 中没有可用的赌场资金池。",
         "unexpected": "发生了非预期错误。"
       },

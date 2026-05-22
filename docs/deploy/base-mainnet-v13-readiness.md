@@ -143,6 +143,8 @@ Production web environment must also include a Sentry DSN and CI-only source-map
 - `NEXT_PUBLIC_SENTRY_DSN` set for client and server error capture.
 - `SENTRY_AUTH_TOKEN` set only in CI/deploy secrets.
 - Sentry events scrub raw wallet addresses, signatures, and private-key-like URL parameters.
+- `NEXT_PUBLIC_CASINO_RISK_IN_ENABLED=false` until an approved
+  `casino.frontend-access.v1` memo passes `REQUIRE_APPROVED=1`.
 
 After deploying the web app, verify the production health endpoint:
 
@@ -158,6 +160,8 @@ serving recent bets from the durable Postgres index.
 
 Before any public casino traffic:
 
+- Validate `docs/ops/casino-frontend-access.md` in approval mode and only then set
+  `NEXT_PUBLIC_CASINO_RISK_IN_ENABLED=true` for the production web deployment.
 - Install the primary and backup units from `frontend/deploy/casino-keeper/`.
 - Follow `docs/ops/runbooks/casino-keeper-production.md`.
 - Follow `docs/ops/runbooks/bet-index-production.md` for managed Postgres backup and restore

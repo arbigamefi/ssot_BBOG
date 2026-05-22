@@ -105,6 +105,9 @@ public_enabled = require_bool(
     require(frontend, "publicCasinoEnabled", "frontend.publicCasinoEnabled"),
     "frontend.publicCasinoEnabled",
 )
+enablement_flag = require(frontend, "enablementFlag", "frontend.enablementFlag")
+if enablement_flag != "NEXT_PUBLIC_CASINO_RISK_IN_ENABLED":
+    fail("frontend.enablementFlag must be NEXT_PUBLIC_CASINO_RISK_IN_ENABLED")
 default_state = require(frontend, "defaultState", "frontend.defaultState")
 if default_state not in {"off", "on"}:
     fail("frontend.defaultState must be off or on")
@@ -189,6 +192,7 @@ print(f"  status: {status}")
 print(f"  chainId: {chain_id}")
 print(f"  gameHub: {game_hub}")
 print(f"  publicCasinoEnabled: {public_enabled}")
+print(f"  enablementFlag: {enablement_flag}")
 print(f"  targetJurisdictions: {len(targets)}")
 print(f"  restrictedJurisdictions: {len(restricted)}")
 print(f"  minimumAge: {minimum_age}")

@@ -36,6 +36,7 @@ The approved memo must record:
 - cookie-consent policy before analytics or marketing tracking;
 - responsible-gaming controls, self-exclusion policy, and stake-limit policy;
 - frontend enablement behavior for unknown or restricted jurisdictions;
+- the runtime enablement flag `NEXT_PUBLIC_CASINO_RISK_IN_ENABLED`;
 - links to terms, privacy policy, risk disclaimer, responsible-gaming page, and
   support channel;
 - legal, compliance, frontend, and operations approvals with evidence URI.
@@ -52,6 +53,7 @@ For the first Base mainnet casino launch, the default position is:
 - unknown jurisdiction blocks risk-in;
 - restricted jurisdiction blocks risk-in;
 - public casino launch is not coupled to contract deployment;
+- Base mainnet risk-in remains disabled unless `NEXT_PUBLIC_CASINO_RISK_IN_ENABLED=true`;
 - any public canary starts with minimal stake, named support owner, and live
   keeper/bet-index monitoring.
 
@@ -60,6 +62,7 @@ For the first Base mainnet casino launch, the default position is:
 Do not enable public casino risk-in if any of these are true:
 
 - the approval memo is missing, still `draft`, or fails `REQUIRE_APPROVED=1`;
+- the approved deployment does not explicitly set `NEXT_PUBLIC_CASINO_RISK_IN_ENABLED=true`;
 - target and restricted jurisdictions overlap;
 - age, KYC, sanctions, geo-restriction, VPN/proxy, cookie-consent, or
   responsible-gaming handling is unresolved;

@@ -5,6 +5,7 @@
   "gameHub": "0x0000000000000000000000000000000000000000",
   "frontend": {
     "publicCasinoEnabled": false,
+    "enablementFlag": "NEXT_PUBLIC_CASINO_RISK_IN_ENABLED",
     "defaultState": "off",
     "unknownJurisdictionBehavior": "block-risk-in",
     "restrictedJurisdictionBehavior": "block-risk-in"
