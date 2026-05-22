@@ -94,6 +94,7 @@ model: permissionless finalize/refund remains the backstop.
 
 Keep these visible to operators:
 
+- `/api/healthz`
 - `/ops/casino-keeper-health.json`
 - `/ops` keeper health panel
 - `/api/bets/recent` degraded/fallback state
@@ -134,4 +135,9 @@ rg -nE "console\\.(log|error|warn)\\(" frontend/apps/web/src \
 
 # Keeper health route test.
 pnpm -C frontend/apps/web test -- src/app/ops/casino-keeper-health.json/route.test.ts
+
+# Healthz and Sentry scrubbing tests.
+pnpm -C frontend/apps/web test -- \
+  src/app/api/healthz/route.test.ts \
+  src/observability/sentry-scrub.test.ts
 ```

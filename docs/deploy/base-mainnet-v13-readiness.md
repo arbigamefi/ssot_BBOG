@@ -136,6 +136,12 @@ The read-only smoke must use a Base mainnet RPC endpoint and must not require a 
 If `smoke:release-readonly` fails on `quoteVRFFee`, PoolRegistry rows, Bank SSOT, SportsHub wiring,
 or bytecode checks, stop and fix the release artifact before changing frontend code.
 
+Production web environment must also include a Sentry DSN and CI-only source-map upload secret:
+
+- `NEXT_PUBLIC_SENTRY_DSN` set for client and server error capture.
+- `SENTRY_AUTH_TOKEN` set only in CI/deploy secrets.
+- Sentry events scrub raw wallet addresses, signatures, and private-key-like URL parameters.
+
 After deploying the web app, verify the production health endpoint:
 
 ```bash
@@ -197,6 +203,7 @@ PHASE2_PACKET=<go-packet.md> make sports-phase2-gonogo-v13
 - [ ] Explorer verification complete or a documented verification exception exists.
 - [ ] Release digest, frontend manifest, golden vectors, notes, and package generated and committed.
 - [ ] Frontend embedded release synced and read-only smoke green.
+- [ ] Sentry DSN configured, source maps uploaded from CI, and address/signature scrubbing verified.
 - [ ] Primary and backup casino keepers live and healthy.
 - [ ] Postgres bet index live, backed up, restore-tested, and connected to web API routes.
 - [ ] `/api/healthz` reports `ok` for release, keeper, and bet-index checks.

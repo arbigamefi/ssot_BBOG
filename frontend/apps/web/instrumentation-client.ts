@@ -3,6 +3,8 @@
  * Runs once in the browser before the app hydrates.
  * @see https://nextjs.org/docs/app/api-reference/file-conventions/instrumentation-client
  */
+import { scrubSentryEvent } from "./src/observability/sentry-scrub";
+
 const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
 let captureRouterTransitionStart: ((...args: unknown[]) => void) | undefined;
 
@@ -35,7 +37,8 @@ if (dsn) {
         "Load failed",
         // User-initiated abort
         "AbortError"
-      ]
+      ],
+      beforeSend: scrubSentryEvent
     });
     window.__ssotCaptureException = Sentry.captureException;
     captureRouterTransitionStart = Sentry.captureRouterTransitionStart as (
