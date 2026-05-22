@@ -146,8 +146,11 @@ or bytecode checks, stop and fix the release artifact before changing frontend c
 
 Production web environment must also include a Sentry DSN and CI-only source-map upload secret:
 
+- `NEXT_PUBLIC_ENV=production`.
+- `NEXT_PUBLIC_SENTRY_RELEASE` set to the deploy commit SHA or signed release tag.
 - `NEXT_PUBLIC_SENTRY_DSN` set for client and server error capture.
-- `SENTRY_AUTH_TOKEN` set only in CI/deploy secrets.
+- `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, and `SENTRY_PROJECT` set only in CI/deploy secrets for source
+  map upload.
 - Sentry events scrub raw wallet addresses, signatures, and private-key-like URL parameters.
 - `NEXT_PUBLIC_CASINO_RISK_IN_ENABLED=false` until an approved
   `casino.frontend-access.v1` memo passes `REQUIRE_APPROVED=1`.

@@ -3,6 +3,7 @@
  * Runs once in the browser before the app hydrates.
  * @see https://nextjs.org/docs/app/api-reference/file-conventions/instrumentation-client
  */
+import { getSentryEnvironment, getSentryRelease } from "./src/observability/sentry-config";
 import { scrubSentryEvent } from "./src/observability/sentry-scrub";
 
 const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
@@ -18,7 +19,8 @@ if (dsn) {
   void import("@sentry/nextjs").then((Sentry) => {
     Sentry.init({
       dsn,
-      environment: process.env.NODE_ENV,
+      environment: getSentryEnvironment(),
+      release: getSentryRelease(),
 
       // Performance monitoring — sample 10% of transactions in production
       tracesSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 1.0,
