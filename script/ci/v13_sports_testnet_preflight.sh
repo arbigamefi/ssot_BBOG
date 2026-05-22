@@ -58,6 +58,12 @@ is_positive_decimal() {
   [[ "$1" =~ ^[0-9]+$ ]] && [[ "${1//0/}" != "" ]]
 }
 
+is_uint8_decimal() {
+  [[ "$1" =~ ^[0-9]+$ ]] || return 1
+  local value=$((10#$1))
+  (( value >= 0 && value <= 255 ))
+}
+
 lower() {
   printf '%s' "$1" | tr '[:upper:]' '[:lower:]'
 }
@@ -89,12 +95,38 @@ need_positive_decimal() {
   is_positive_decimal "$value" || fail "$name must be a positive integer: $value"
 }
 
+need_uint8_decimal() {
+  local name="$1"
+  need_var "$name"
+  local value="${!name}"
+  is_uint8_decimal "$value" || fail "$name must be an integer between 0 and 255: $value"
+}
+
 need_contract_code() {
   local label="$1"
   local address="$2"
   local code
   code="$(cast code "$address" --rpc-url "$RPC_URL")"
   [[ "$code" != "0x" ]] || fail "$label has no code at $address on chain $CHAIN_ID"
+}
+
+need_erc20_decimals_match() {
+  local asset_label="$1"
+  local asset_address="$2"
+  local decimals_label="$3"
+  local expected_decimals="$4"
+  local actual_decimals
+
+  actual_decimals="$(cast call "$asset_address" "decimals()(uint8)" --rpc-url "$RPC_URL" 2>/dev/null)" || {
+    fail "$asset_label does not expose decimals()(uint8): $asset_address"
+  }
+  actual_decimals="${actual_decimals//$'\n'/}"
+  [[ "$actual_decimals" =~ ^[0-9]+$ ]] || {
+    fail "$asset_label decimals() returned an unexpected value: $actual_decimals"
+  }
+  [[ "$((10#$expected_decimals))" == "$((10#$actual_decimals))" ]] || {
+    fail "$decimals_label=$expected_decimals does not match $asset_label decimals()=$actual_decimals"
+  }
 }
 
 need_cmd cast
@@ -148,6 +180,7 @@ for ((i = 0; i < POOL_COUNT; ++i)); do
   pool_id_var="POOL_ID_${i}"
   pool_asset_var="POOL_ASSET_${i}"
   pool_domain_var="POOL_DOMAIN_${i}"
+  lp_decimals_var="LP_DECIMALS_${i}"
 
   need_var "$pool_id_var"
   need_var "$pool_asset_var"
@@ -156,11 +189,13 @@ for ((i = 0; i < POOL_COUNT; ++i)); do
   pool_id="${!pool_id_var}"
   pool_domain="${!pool_domain_var}"
   pool_asset="${!pool_asset_var}"
-
   is_positive_decimal "$pool_id" || fail "$pool_id_var must be a positive integer: $pool_id"
   is_address "$pool_asset" || fail "$pool_asset_var must be an address: $pool_asset"
   [[ "$(lower "$pool_asset")" != "0x0000000000000000000000000000000000000000" ]] || fail "$pool_asset_var is zero address"
+  need_uint8_decimal "$lp_decimals_var"
+  lp_decimals="${!lp_decimals_var}"
   need_contract_code "$pool_asset_var" "$pool_asset"
+  need_erc20_decimals_match "$pool_asset_var" "$pool_asset" "$lp_decimals_var" "$lp_decimals"
 
   case "$pool_domain" in
     1) has_casino=1 ;;

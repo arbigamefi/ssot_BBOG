@@ -71,6 +71,9 @@ Notes:
 
 - `sports-mainnet-preflight-v13` checks the RPC chain id, `GOV`/`PRIVATE_KEY` match, VRF wrapper
   bytecode, every pool asset bytecode, Sports raw caps, role-set hashes, and role addresses.
+- Both mainnet preflight paths require `LP_DECIMALS_i` to match the ERC20 `decimals()` value read
+  from `POOL_ASSET_i`, preventing USDC-style 6-decimal assets from being deployed with an 18-decimal
+  LP/release mismatch.
 - `sports-phase2-gonogo-v13` is expected to remain NO-GO until the sportsbook production packet is
   formally updated. A failing/no-go result blocks public sportsbook entrypoints and SportsHub market
   risk-in; it does not by itself block a casino-only launch review.

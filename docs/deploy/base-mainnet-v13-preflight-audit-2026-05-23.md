@@ -85,6 +85,8 @@ pnpm -C frontend/apps/keeper test
 - Filled env stored outside `docs/`.
 - Official Base mainnet USDC and Chainlink VRF wrapper re-check on deploy day.
 - `GOV` and `PRIVATE_KEY` derivation confirmed by preflight.
+- Every `LP_DECIMALS_i` value confirmed by preflight against the on-chain ERC20 `decimals()` value
+  for `POOL_ASSET_i`.
 - Casino bankroll, house edge, affiliate, refund timeout, and bank threshold values approved.
 - If any Sports pool is deployed, Sports role hashes, role addresses, and raw risk caps approved.
 - `make sports-phase0-readiness` green.
