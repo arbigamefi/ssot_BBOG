@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { __resetRateLimitBucketsForTests } from "../../../../server/http/rate-limit";
 
 const queryRecentBetsMock = vi.hoisted(() => vi.fn());
 
@@ -22,6 +23,8 @@ async function json(response: Response) {
 
 describe("GET /api/bets/recent", () => {
   beforeEach(() => {
+    __resetRateLimitBucketsForTests();
+    delete process.env.BETS_RECENT_RATE_LIMIT_PER_MINUTE;
     queryRecentBetsMock.mockReset();
     queryRecentBetsMock.mockResolvedValue({
       cached: false,
@@ -74,5 +77,18 @@ describe("GET /api/bets/recent", () => {
       source: "rpc-window",
       toBlock: 0
     });
+  });
+
+  it("rate limits public recent bet reads", async () => {
+    process.env.BETS_RECENT_RATE_LIMIT_PER_MINUTE = "1";
+    const { GET } = await import("./route");
+
+    expect((await GET(request("/api/bets/recent?chainId=84532"))).status).toBe(200);
+    const response = await GET(request("/api/bets/recent?chainId=84532"));
+    const body = await json(response);
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get("retry-after")).toBeTruthy();
+    expect(body.error.code).toBe("RATE_LIMITED");
   });
 });

@@ -5,6 +5,12 @@ import {
   normalizeGameId,
   queryRecentBets
 } from "../../../../server/betting/recent-bets";
+import {
+  mergeHeaders,
+  noStoreHeaders,
+  publicReadRateLimit,
+  rateLimitedJson
+} from "../../../../server/http/public-read-limit";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -34,6 +40,15 @@ function emptyRecentBetsResponse(chainId: number) {
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const chainId = parseChainId(url.searchParams.get("chainId"));
+  const quota = publicReadRateLimit({
+    envName: "BETS_RECENT_RATE_LIMIT_PER_MINUTE",
+    fallback: 120,
+    keyPrefix: "bets:recent",
+    request
+  });
+  if (!quota.allowed) {
+    return rateLimitedJson("Too many recent-bets requests. Please retry shortly.", quota.headers);
+  }
 
   try {
     const limit = clampRecentBetsLimit(Number(url.searchParams.get("limit") ?? ""));
@@ -41,9 +56,7 @@ export async function GET(request: Request) {
     const response = await queryRecentBets({ chainId, gameId, limit });
 
     return NextResponse.json(response, {
-      headers: {
-        "cache-control": "no-store"
-      }
+      headers: mergeHeaders(noStoreHeaders(), quota.headers)
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to query recent bets.";
@@ -52,9 +65,7 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json(emptyRecentBetsResponse(chainId), {
-      headers: {
-        "cache-control": "no-store"
-      }
+      headers: mergeHeaders(noStoreHeaders(), quota.headers)
     });
   }
 }

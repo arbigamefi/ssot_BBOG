@@ -130,6 +130,13 @@ Alert on:
 - web API `/api/healthz` returns `checks.betIndex.status != "ok"` for more
   than 2 minutes on chain `8453`.
 
+Public read routes must keep per-client rate limits configured:
+
+- `BETS_RECENT_RATE_LIMIT_PER_MINUTE`
+- `BETS_PLAYER_RATE_LIMIT_PER_MINUTE`
+- `BETS_AFFILIATE_RATE_LIMIT_PER_MINUTE`
+- `SPORTSBOOK_PLAYER_TICKETS_RATE_LIMIT_PER_MINUTE`
+
 Postgres degradation should not block settlement. If connection failures create
 keeper instability, set `BET_INDEX_WRITE_ENABLED=false`, restart the keeper, and
 backfill the missing window after the database is healthy.
@@ -146,6 +153,8 @@ backfill the missing window after the database is healthy.
 - [ ] Restore drill into disposable database completed.
 - [ ] Cursor advancement and `/api/bets/recent` monitors configured.
 - [ ] `/api/healthz` monitor configured and showing `checks.betIndex.status: "ok"`.
+- [ ] Public read API rate limits configured for recent bets, player bets,
+      affiliate bets, and sportsbook tickets.
 - [ ] Keeper restart with `BET_INDEX_WRITE_ENABLED=false` rehearsed or accepted
       as the degraded-mode fallback.
 

@@ -5,6 +5,12 @@ import {
   normalizeAffiliateAddress,
   queryAffiliateBets
 } from "../../../../../server/betting/recent-bets";
+import {
+  mergeHeaders,
+  noStoreHeaders,
+  publicReadRateLimit,
+  rateLimitedJson
+} from "../../../../../server/http/public-read-limit";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -49,6 +55,18 @@ function emptyAffiliateBetsResponse({
 export async function GET(request: Request, context: { params: Promise<{ address: string }> }) {
   const url = new URL(request.url);
   const chainId = parseChainId(url.searchParams.get("chainId"));
+  const quota = publicReadRateLimit({
+    envName: "BETS_AFFILIATE_RATE_LIMIT_PER_MINUTE",
+    fallback: 120,
+    keyPrefix: "bets:affiliate",
+    request
+  });
+  if (!quota.allowed) {
+    return rateLimitedJson(
+      "Too many affiliate-bets requests. Please retry shortly.",
+      quota.headers
+    );
+  }
 
   try {
     const params = await context.params;
@@ -57,9 +75,7 @@ export async function GET(request: Request, context: { params: Promise<{ address
     const response = await queryAffiliateBets({ affiliate, chainId, limit });
 
     return NextResponse.json(response, {
-      headers: {
-        "cache-control": "no-store"
-      }
+      headers: mergeHeaders(noStoreHeaders(), quota.headers)
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to query affiliate bets.";
@@ -69,9 +85,7 @@ export async function GET(request: Request, context: { params: Promise<{ address
 
     const params = await context.params;
     return NextResponse.json(emptyAffiliateBetsResponse({ affiliate: params.address, chainId }), {
-      headers: {
-        "cache-control": "no-store"
-      }
+      headers: mergeHeaders(noStoreHeaders(), quota.headers)
     });
   }
 }
