@@ -13,6 +13,7 @@
 - [Game finalization stalls / diff anomalies](runbooks/game-finalization-diffs.md)
 - [SportsHub odds, result finality, and exposure caps](runbooks/sportsbook-ops.md)
 - [Sportsbook production controls](sportsbook-production-controls.md)
+- [Casino frontend access policy](casino-frontend-access.md)
 - [Sportsbook key custody and role control](sportsbook-key-custody-roles.md)
 - [Sportsbook provider and evidence policy](sportsbook-provider-evidence-policy.md)
 - [The Odds API provider ingestion](sportsbook-provider-the-odds-api.md)

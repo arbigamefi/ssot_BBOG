@@ -81,6 +81,7 @@ For a casino-only launch review, replace the topology preflight with:
 
 ```bash
 ENV_FILE=.env.base-mainnet-v13-casino make casino-mainnet-preflight-v13
+make casino-frontend-access-check-v13
 ```
 
 Do not run `DeployV13` with `NUM_POOLS=2` unless the Sports pool values are approved for the
@@ -194,6 +195,8 @@ PHASE2_PACKET=<go-packet.md> make sports-phase2-gonogo-v13
 ## Final GO checklist
 
 - [ ] Base mainnet env reviewed and stored outside `docs/`.
+- [ ] Casino frontend-access memo approved with
+      `REQUIRE_APPROVED=1 make casino-frontend-access-check-v13 FRONTEND_ACCESS_FILE=<approved-casino-frontend-access.json>`.
 - [ ] Deployer/governance/treasury/key custody sign-off linked.
 - [ ] VRF wrapper and USDC addresses re-checked against official sources on deploy day.
 - [ ] `REQUEST_GAS_PRICE_WEI` refreshed on deploy day.
