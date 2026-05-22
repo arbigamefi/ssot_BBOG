@@ -36,10 +36,16 @@ Out of scope:
 
 ## Environment template
 
-Start from:
+For a Casino+Sports topology review, start from:
 
 ```bash
 cp docs/deploy/base-mainnet-v13.env.example .env.base-mainnet-v13
+```
+
+For a casino-only launch review, start from:
+
+```bash
+cp docs/deploy/base-mainnet-v13-casino.env.example .env.base-mainnet-v13-casino
 ```
 
 Fill all placeholders from the approved deployment packet. Do not copy Base Sepolia role hashes,
@@ -50,7 +56,7 @@ reviewers should approve those values explicitly instead of relying on script de
 
 ## Pre-broadcast command order
 
-Run these commands before any `--broadcast` invocation:
+Run these commands before any `--broadcast` invocation for the Casino+Sports topology:
 
 ```bash
 bash script/ci/install_deps.sh
@@ -71,9 +77,28 @@ Notes:
 - If the deployment plan is casino-only, use a separate casino-only env and deployment review. Do
   not leave a half-approved Sports pool in a public mainnet env.
 
+For a casino-only launch review, replace the topology preflight with:
+
+```bash
+ENV_FILE=.env.base-mainnet-v13-casino make casino-mainnet-preflight-v13
+```
+
+Do not run `DeployV13` with `NUM_POOLS=2` unless the Sports pool values are approved for the
+deployment record; a deployed Sports pool must still remain closed to public risk-in until Phase 2
+records GO.
+
 ## Broadcast and release lock
 
 Broadcast only after the pre-broadcast gates are reviewed:
+
+Casino-only launch review:
+
+```bash
+source .env.base-mainnet-v13-casino
+FOUNDRY_PROFILE=default forge script script/DeployV13.s.sol:DeployV13 --rpc-url "$RPC_URL" --broadcast -vvv
+```
+
+Casino+Sports topology review:
 
 ```bash
 source .env.base-mainnet-v13
@@ -100,6 +125,7 @@ After the release package exists:
 ```bash
 pnpm -C frontend ssot:sync -- --from dist/ssot-release-chain-8453-<block>-<digest>.tar.gz
 pnpm -C frontend check:release
+pnpm -C frontend check:mainnet-release
 pnpm -C frontend smoke:release-readonly -- --chain-id 8453
 pnpm -C frontend typecheck
 pnpm -C frontend test

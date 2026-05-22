@@ -8,6 +8,7 @@ set -euo pipefail
 #
 # The env file, when provided, is sourced with `set -a` so values become exported for Foundry scripts.
 # This script does not broadcast transactions.
+# Set V13_REQUIRE_SPORTS_POOL=false for casino-only deployment reviews.
 
 fail() {
   echo "error: $*" >&2
@@ -109,6 +110,11 @@ if (( POOL_COUNT > 32 )); then
   fail "NUM_POOLS out of range: $NUM_POOLS"
 fi
 
+case "${V13_REQUIRE_SPORTS_POOL:-true}" in
+  true|false) ;;
+  *) fail "V13_REQUIRE_SPORTS_POOL must be true or false when set" ;;
+esac
+
 DERIVED_GOV="$(cast wallet address --private-key "$PRIVATE_KEY")"
 [[ "$(lower "$DERIVED_GOV")" == "$(lower "$GOV")" ]] || {
   fail "PRIVATE_KEY derives $DERIVED_GOV, not GOV=$GOV"
@@ -165,53 +171,60 @@ for ((i = 0; i < POOL_COUNT; ++i)); do
 done
 
 [[ "$has_casino" == "1" ]] || fail "at least one Casino pool is required for the v1.3 rehearsal topology"
-[[ "$has_sports" == "1" ]] || fail "at least one Sports pool is required for the SportsHub rehearsal topology"
-
-need_positive_decimal SPORTS_MAX_STAKE
-need_positive_decimal SPORTS_MAX_PAYOUT
-need_positive_decimal SPORTS_MAX_MARKET_RESERVED
-need_positive_decimal SPORTS_MAX_OUTCOME_RESERVED
-need_positive_decimal SPORTS_MAX_EVENT_RESERVED
-need_bytes32 SPORTS_ODDS_SIGNER_SET_HASH
-need_bytes32 SPORTS_RESULT_REPORTER_SET_HASH
-need_positive_decimal SPORTS_RESULT_REPORTER_THRESHOLD
-SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS="${SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS:-604800}"
-need_positive_decimal SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS
-
-if [[ "$SPORTS_RESULT_REPORTER_THRESHOLD" =~ ^[0-9]+$ ]]; then
-  result_reporter_threshold=$((10#$SPORTS_RESULT_REPORTER_THRESHOLD))
-  if (( result_reporter_threshold > 255 )); then
-    fail "SPORTS_RESULT_REPORTER_THRESHOLD must fit uint8"
-  fi
+if [[ "${V13_REQUIRE_SPORTS_POOL:-true}" == "true" ]]; then
+  [[ "$has_sports" == "1" ]] || fail "at least one Sports pool is required for the SportsHub rehearsal topology"
 fi
 
-if [[ "$SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS" =~ ^[0-9]+$ ]]; then
-  result_challenge_timeout=$((10#$SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS))
-  if (( result_challenge_timeout < 600 )); then
-    fail "SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS must be >= 600"
+if [[ "$has_sports" == "1" ]]; then
+  need_positive_decimal SPORTS_MAX_STAKE
+  need_positive_decimal SPORTS_MAX_PAYOUT
+  need_positive_decimal SPORTS_MAX_MARKET_RESERVED
+  need_positive_decimal SPORTS_MAX_OUTCOME_RESERVED
+  need_positive_decimal SPORTS_MAX_EVENT_RESERVED
+  need_bytes32 SPORTS_ODDS_SIGNER_SET_HASH
+  need_bytes32 SPORTS_RESULT_REPORTER_SET_HASH
+  need_positive_decimal SPORTS_RESULT_REPORTER_THRESHOLD
+  SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS="${SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS:-604800}"
+  need_positive_decimal SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS
+
+  if [[ "$SPORTS_RESULT_REPORTER_THRESHOLD" =~ ^[0-9]+$ ]]; then
+    result_reporter_threshold=$((10#$SPORTS_RESULT_REPORTER_THRESHOLD))
+    if (( result_reporter_threshold > 255 )); then
+      fail "SPORTS_RESULT_REPORTER_THRESHOLD must fit uint8"
+    fi
   fi
+
+  if [[ "$SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS" =~ ^[0-9]+$ ]]; then
+    result_challenge_timeout=$((10#$SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS))
+    if (( result_challenge_timeout < 600 )); then
+      fail "SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS must be >= 600"
+    fi
+  fi
+
+  case "${SPORTS_DERIVE_ROLE_SET_HASHES:-false}" in
+    true|false) ;;
+    *) fail "SPORTS_DERIVE_ROLE_SET_HASHES must be true or false when set" ;;
+  esac
+
+  need_address SPORTS_ODDS_SIGNER
+  need_address SPORTS_RESULT_REPORTER
+  need_address SPORTS_RESULT_CHALLENGER
+  need_address SPORTS_RESULT_ARBITRATOR
 fi
-
-case "${SPORTS_DERIVE_ROLE_SET_HASHES:-false}" in
-  true|false) ;;
-  *) fail "SPORTS_DERIVE_ROLE_SET_HASHES must be true or false when set" ;;
-esac
-
-need_address SPORTS_ODDS_SIGNER
-need_address SPORTS_RESULT_REPORTER
-need_address SPORTS_RESULT_CHALLENGER
-need_address SPORTS_RESULT_ARBITRATOR
 
 (
   cd "$ROOT_DIR"
   bash script/ci/check_deps.sh
 )
 
-echo "v1.3 Sports ${V13_SPORTS_PREFLIGHT_TARGET:-testnet} preflight passed:"
+echo "v1.3 public-network ${V13_SPORTS_PREFLIGHT_TARGET:-testnet} preflight passed:"
 echo "  chainId: $CHAIN_ID"
 echo "  gov: $GOV"
 echo "  vrfWrapper: $VRF_WRAPPER"
 echo "  pools: $POOL_COUNT"
-echo "  sportsResultReporterThreshold: $SPORTS_RESULT_REPORTER_THRESHOLD"
-echo "  sportsResultChallengeTimeoutSeconds: $SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS"
-echo "  sportsDeriveRoleSetHashes: ${SPORTS_DERIVE_ROLE_SET_HASHES:-false}"
+echo "  hasSportsPool: $has_sports"
+if [[ "$has_sports" == "1" ]]; then
+  echo "  sportsResultReporterThreshold: $SPORTS_RESULT_REPORTER_THRESHOLD"
+  echo "  sportsResultChallengeTimeoutSeconds: $SPORTS_RESULT_CHALLENGE_TIMEOUT_SECONDS"
+  echo "  sportsDeriveRoleSetHashes: ${SPORTS_DERIVE_ROLE_SET_HASHES:-false}"
+fi
