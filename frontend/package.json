@@ -39,6 +39,7 @@
     "e2e": "pnpm -C apps/web e2e",
     "ssot:sync": "node scripts/ssot-sync.mjs",
     "check:release": "node scripts/check-release.mjs",
+    "check:mainnet-release": "REQUIRED_EMBEDDED_CHAIN_IDS=8453 STRICT_RELEASE=1 node scripts/check-release.mjs",
     "smoke:release-readonly": "node scripts/release-readonly-smoke.mjs",
     "storybook": "pnpm -C packages/ui storybook",
     "storybook:build": "pnpm -C packages/ui build-storybook",

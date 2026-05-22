@@ -19,6 +19,7 @@ Frontend release gates:
 - `pnpm -C frontend check:release` rejects embedded release bundles that reintroduce v1/v1.2 keys such as `contracts.hub`, `contracts.bankRegistry`, or `sports.hub`.
 - `pnpm -C frontend precheck:frontend -- --strict` rejects runtime/SDK source references to the old hub namespace.
 - `pnpm -C frontend smoke:release-readonly` performs a read-only Base Sepolia RPC smoke against the embedded release without using a wallet or broadcasting transactions.
+- `pnpm -C frontend check:mainnet-release` fails until the embedded Base mainnet `chain-8453.json` exists and passes strict release validation.
 
 Frontend rule: **copy + consume**. Do not derive `gameId` or token metadata.
 

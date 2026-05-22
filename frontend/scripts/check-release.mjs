@@ -16,10 +16,12 @@ const REQUIRED_CONTRACTS = [
 ];
 const LEGACY_GAME_AGGREGATOR_KEY = `hu${"b"}`;
 const LEGACY_BANK_DIRECTORY_KEY = `bank${"Registry"}`;
+const requiredChainIds = parseRequiredChainIds(process.env.REQUIRED_EMBEDDED_CHAIN_IDS);
 
 const dir = path.resolve(process.cwd(), "packages/ssot/src/release/embedded");
 const entries = await fs.readdir(dir);
 const jsons = entries.filter((f) => f.endsWith(".json"));
+const seenChainIds = new Set();
 
 function isValidDecimals(value) {
   return Number.isInteger(value) && value >= 0 && value <= 36;
@@ -35,6 +37,7 @@ let fatal = false;
 for (const f of jsons) {
   const p = path.join(dir, f);
   const raw = JSON.parse(await fs.readFile(p, "utf8"));
+  if (Number.isInteger(raw?.chainId)) seenChainIds.add(raw.chainId);
   const issues = [];
   const fatalIssues = [];
   const contracts = raw?.contracts ?? {};
@@ -114,6 +117,22 @@ for (const f of jsons) {
   }
 }
 
+for (const chainId of requiredChainIds) {
+  if (!seenChainIds.has(chainId)) {
+    ok = false;
+    fatal = true;
+    console.error(`[release-check] missing required embedded release chain-${chainId}.json`);
+  }
+}
+
 if (fatal || (!ok && STRICT)) {
   process.exit(1);
+}
+
+function parseRequiredChainIds(value) {
+  if (!value) return [];
+  return value
+    .split(",")
+    .map((entry) => Number(entry.trim()))
+    .filter((entry) => Number.isInteger(entry) && entry > 0);
 }
