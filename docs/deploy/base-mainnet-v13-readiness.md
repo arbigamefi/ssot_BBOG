@@ -162,6 +162,12 @@ The top-level `status` must be `ok` before public traffic. On chain `8453`, the 
 until `chain-8453.json` is embedded, the primary keeper health snapshot is fresh, and the web API is
 serving recent bets from the durable Postgres index.
 
+The same checks are exposed for operators and support at:
+
+```text
+https://<web-host>/status
+```
+
 ## Casino keeper readiness
 
 Before any public casino traffic:
