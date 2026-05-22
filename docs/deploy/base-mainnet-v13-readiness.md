@@ -149,7 +149,7 @@ Before any public casino traffic:
 - Confirm `/ops/casino-keeper-health.json` reports the expected chain id, role, cursor, and last
   successful finalize timestamp.
 - Run one small-stake casino canary and archive placeBet, VRF fulfill, keeper finalize, terminal
-  receipt, and Bank SSOT readbacks.
+  receipt, and Bank SSOT readbacks using `docs/deploy/base-mainnet-casino-canary-template.md`.
 
 ## Sports NO-GO controls
 
