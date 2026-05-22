@@ -136,6 +136,7 @@ function BetCell({
 
 export function RouletteStage({
   isPending,
+  controlsLocked = false,
   isRevealing,
   showResult,
   resultNum,
@@ -144,6 +145,7 @@ export function RouletteStage({
   onRevealComplete
 }: {
   isPending: boolean;
+  controlsLocked?: boolean;
   isRevealing?: boolean;
   showResult: boolean;
   resultNum: number | null;
@@ -154,7 +156,7 @@ export function RouletteStage({
   const t = useTranslations();
   const reduced = useReducedMotion() ?? false;
   const spinning = isPending || Boolean(isRevealing);
-  const locked = spinning || showResult;
+  const locked = controlsLocked || spinning;
   const wheelMode: RouletteWheelMode = isRevealing
     ? "settling"
     : isPending

@@ -75,7 +75,7 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
             </div>
             <Link
               href="/casino"
-              className="rounded-full bg-fg px-5 py-2.5 text-sm font-semibold text-fg-inverse transition-colors hover:bg-fg/90"
+              className="hidden rounded-full bg-fg px-5 py-2.5 text-sm font-semibold text-fg-inverse transition-colors hover:bg-fg/90 sm:inline-flex"
             >
               {t("nav.openRooms")}
             </Link>
@@ -133,6 +133,14 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
 
           {variant === "game" ? (
             <ShellHeaderNav className="flex-1 basis-0 gap-5 overscroll-x-contain pr-4">
+              <Link
+                href="/casino"
+                className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap [word-break:keep-all] text-fg-subtle transition-colors hover:text-fg"
+              >
+                <span>←</span>
+                <span>{t("nav.casino")}</span>
+              </Link>
+
               {GAME_NAV_LINKS.map((link) => (
                 <Link
                   key={link.id}
@@ -147,16 +155,6 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
                   {t(link.labelKey)}
                 </Link>
               ))}
-
-              <div className="ml-1 hidden h-6 shrink-0 border-l border-border-soft pl-5 2xl:block">
-                <Link
-                  href="/casino"
-                  className="flex h-full items-center gap-2 whitespace-nowrap text-sm font-bold uppercase tracking-wider text-fg-subtle transition-colors hover:text-fg"
-                >
-                  <span>←</span>
-                  <span>{t("nav.casino")}</span>
-                </Link>
-              </div>
             </ShellHeaderNav>
           ) : (
             <ShellHeaderNav className="flex-1">

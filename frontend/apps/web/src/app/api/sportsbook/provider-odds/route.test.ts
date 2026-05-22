@@ -143,4 +143,43 @@ describe("GET /api/sportsbook/provider-odds", () => {
     expect(calledUrl.searchParams.get("eventIds")).toBe("event-7");
     expect(calledUrl.searchParams.get("bookmakers")).toBe("fanduel");
   });
+
+  it("returns an unavailable envelope instead of a 5xx when the provider rejects the request", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 401,
+        json: async () => ({ message: "unauthorized" })
+      })
+    );
+    const { GET } = await import("./route");
+
+    const response = await GET(request("?marketId=7"));
+
+    expect(response.status).toBe(200);
+    expect(await json(response)).toEqual({
+      schemaVersion: "sportsbook.provider-odds-unavailable.v1",
+      unavailable: {
+        code: "PROVIDER_REQUEST_FAILED",
+        message: "The Odds API request failed with status 401."
+      }
+    });
+  });
+
+  it("returns an unavailable envelope instead of a 5xx when the provider key is missing", async () => {
+    delete process.env.THE_ODDS_API_KEY;
+    const { GET } = await import("./route");
+
+    const response = await GET(request("?marketId=7"));
+
+    expect(response.status).toBe(200);
+    expect(await json(response)).toEqual({
+      schemaVersion: "sportsbook.provider-odds-unavailable.v1",
+      unavailable: {
+        code: "ODDS_PROVIDER_CONFIG_MISSING",
+        message: "Missing THE_ODDS_API_KEY."
+      }
+    });
+  });
 });

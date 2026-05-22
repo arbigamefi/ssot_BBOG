@@ -214,7 +214,8 @@ export function useGameResolutionEffect({
   setIsPending,
   setShowResult,
   setResultProof,
-  reset
+  reset,
+  onResultHidden
 }: {
   terminalBet: DomainBet | null;
   recentBets: readonly IndexedBetSummary[];
@@ -224,6 +225,7 @@ export function useGameResolutionEffect({
   setShowResult: React.Dispatch<React.SetStateAction<boolean>>;
   setResultProof: React.Dispatch<React.SetStateAction<CasinoRoundResult | null>>;
   reset: () => void;
+  onResultHidden?: () => void;
 }) {
   const latestBetIdRef = React.useRef<bigint | undefined>();
   const displayedBetIdRef = React.useRef<bigint | undefined>();
@@ -278,6 +280,7 @@ export function useGameResolutionEffect({
       hideTimerRef.current = setTimeout(() => {
         setShowResult(false);
         setResultProof(null);
+        onResultHidden?.();
       }, 8_000);
     };
 
@@ -286,7 +289,17 @@ export function useGameResolutionEffect({
       cancelled = true;
       if (proofTimerRef.current) clearTimeout(proofTimerRef.current);
     };
-  }, [terminalBet, recentBets, db, gameHub, setIsPending, setShowResult, setResultProof, reset]);
+  }, [
+    terminalBet,
+    recentBets,
+    db,
+    gameHub,
+    setIsPending,
+    setShowResult,
+    setResultProof,
+    reset,
+    onResultHidden
+  ]);
 
   React.useEffect(
     () => () => {

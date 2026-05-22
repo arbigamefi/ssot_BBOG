@@ -149,7 +149,14 @@ function useSportsbookProviderOddsSlots(
   const r3 = useSportsbookProviderOdds({ marketId: slots[3], enabled: slots[3] !== undefined });
   const r4 = useSportsbookProviderOdds({ marketId: slots[4], enabled: slots[4] !== undefined });
   const r5 = useSportsbookProviderOdds({ marketId: slots[5], enabled: slots[5] !== undefined });
-  return [r0.data, r1.data, r2.data, r3.data, r4.data, r5.data];
+  return [
+    r0.data ?? undefined,
+    r1.data ?? undefined,
+    r2.data ?? undefined,
+    r3.data ?? undefined,
+    r4.data ?? undefined,
+    r5.data ?? undefined
+  ];
 }
 
 export function SportsbookPageClient() {

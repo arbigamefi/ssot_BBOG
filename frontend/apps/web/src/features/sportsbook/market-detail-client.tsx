@@ -119,7 +119,7 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
     marketId: readback?.market.marketId,
     enabled: Boolean(readback?.market)
   });
-  const providerOdds = providerOddsQuery.data;
+  const providerOdds = providerOddsQuery.data ?? undefined;
   const playerTickets = usePlayerSportsTickets({
     enabled: Boolean(sdk?.account && parsedMarketId !== undefined),
     errorMessage: t("myTickets.error"),

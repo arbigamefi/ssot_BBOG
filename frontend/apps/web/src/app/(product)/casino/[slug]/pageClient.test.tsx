@@ -421,6 +421,33 @@ describe("GamePageClient", () => {
       isBetPanelPending: true,
       isStagePending: false
     });
+
+    expect(
+      getCasinoRoomPendingStates({
+        isLocalPending: false,
+        isTransactionActive: false,
+        isOutcomeTracking: false,
+        hasStageReveal: true,
+        hasCasinoOutcome: true
+      })
+    ).toEqual({
+      isBetPanelPending: true,
+      isStagePending: false
+    });
+
+    expect(
+      getCasinoRoomPendingStates({
+        isLocalPending: false,
+        isTransactionActive: false,
+        isOutcomeTracking: false,
+        hasStageReveal: false,
+        hasCasinoOutcome: true,
+        isResultVisible: true
+      })
+    ).toEqual({
+      isBetPanelPending: true,
+      isStagePending: false
+    });
   });
 
   it("renders release-driven game room and recent bets", () => {

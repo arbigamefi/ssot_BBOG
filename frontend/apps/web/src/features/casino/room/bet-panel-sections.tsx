@@ -75,9 +75,10 @@ export function BetAmountSection({
             autoComplete="off"
             aria-label={t("casino.room.betPanel.amount.aria")}
             value={String(betAmount)}
-            onChange={(event) =>
-              onBetAmountChange(parseBetAmountInput(event.target.value, { min: MIN_BET_AMOUNT }))
-            }
+            onChange={(event) => {
+              if (isPending) return;
+              onBetAmountChange(parseBetAmountInput(event.target.value, { min: MIN_BET_AMOUNT }));
+            }}
             disabled={isPending}
             className="w-full border-none bg-transparent pr-2 text-right font-mono text-2xl text-fg outline-none"
           />
@@ -86,28 +87,32 @@ export function BetAmountSection({
           <button
             type="button"
             onClick={() => setBetAmount(MIN_BET_AMOUNT)}
-            className="flex-1 rounded-md bg-surface-0 py-1 text-[10px] font-bold uppercase text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg"
+            disabled={isPending}
+            className="flex-1 rounded-md bg-surface-0 py-1 text-[10px] font-bold uppercase text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg disabled:cursor-default disabled:opacity-50 disabled:hover:bg-surface-0 disabled:hover:text-fg-subtle"
           >
             {t("casino.room.betPanel.amount.min")}
           </button>
           <button
             type="button"
             onClick={() => setBetAmount(betAmount / 2)}
-            className="flex-1 rounded-md bg-surface-0 py-1 text-[10px] font-bold uppercase text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg"
+            disabled={isPending}
+            className="flex-1 rounded-md bg-surface-0 py-1 text-[10px] font-bold uppercase text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg disabled:cursor-default disabled:opacity-50 disabled:hover:bg-surface-0 disabled:hover:text-fg-subtle"
           >
             1/2
           </button>
           <button
             type="button"
             onClick={() => setBetAmount(betAmount * 2)}
-            className="flex-1 rounded-md bg-surface-0 py-1 text-[10px] font-bold uppercase text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg"
+            disabled={isPending}
+            className="flex-1 rounded-md bg-surface-0 py-1 text-[10px] font-bold uppercase text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg disabled:cursor-default disabled:opacity-50 disabled:hover:bg-surface-0 disabled:hover:text-fg-subtle"
           >
             2x
           </button>
           <button
             type="button"
             onClick={() => setBetAmount(parseWalletBalanceAmount(walletBalance))}
-            className="flex-1 rounded-md bg-surface-0 py-1 text-[10px] font-bold uppercase text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg"
+            disabled={isPending}
+            className="flex-1 rounded-md bg-surface-0 py-1 text-[10px] font-bold uppercase text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg disabled:cursor-default disabled:opacity-50 disabled:hover:bg-surface-0 disabled:hover:text-fg-subtle"
           >
             {t("casino.room.betPanel.amount.max")}
           </button>
@@ -168,9 +173,10 @@ export function BetRollsSection({
           autoComplete="off"
           aria-label={t("casino.room.betPanel.rolls.aria")}
           value={String(betCount)}
-          onChange={(event) =>
-            onBetCountChange(parseWholeUnitInput(event.target.value, { min: 1, max: 100 }))
-          }
+          onChange={(event) => {
+            if (isPending) return;
+            onBetCountChange(parseWholeUnitInput(event.target.value, { min: 1, max: 100 }));
+          }}
           disabled={isPending}
           className="w-14 rounded-lg border border-border bg-surface-1 text-center font-mono text-xs text-fg focus:border-brand/40 focus:outline-none"
         />
@@ -181,6 +187,7 @@ export function BetRollsSection({
 
 export function BetAdvancedSection({
   advancedOpen,
+  isPending,
   stopGain,
   stopLoss,
   onAdvancedOpenChange,
@@ -188,6 +195,7 @@ export function BetAdvancedSection({
   onStopLossChange
 }: {
   advancedOpen: boolean;
+  isPending?: boolean;
   stopGain: number;
   stopLoss: number;
   onAdvancedOpenChange: (open: boolean) => void;
@@ -210,7 +218,8 @@ export function BetAdvancedSection({
       <button
         type="button"
         onClick={() => onAdvancedOpenChange(!advancedOpen)}
-        className="flex w-full items-center justify-between border-b border-border-soft pb-1.5 text-[10px] font-bold uppercase tracking-widest text-fg-subtle transition-colors hover:text-fg-muted"
+        disabled={isPending}
+        className="flex w-full items-center justify-between border-b border-border-soft pb-1.5 text-[10px] font-bold uppercase tracking-widest text-fg-subtle transition-colors hover:text-fg-muted disabled:cursor-default disabled:opacity-60 disabled:hover:text-fg-subtle"
       >
         <span>{t("casino.room.betPanel.advanced.label")}</span>
         <ChevronDownIcon
@@ -230,11 +239,13 @@ export function BetAdvancedSection({
               autoComplete="off"
               aria-label={t("casino.room.betPanel.advanced.stopGain")}
               value={String(stopGain)}
-              onChange={(event) =>
-                onStopGainChange(parseWholeUnitInput(event.target.value, { min: 0 }))
-              }
+              disabled={isPending}
+              onChange={(event) => {
+                if (isPending) return;
+                onStopGainChange(parseWholeUnitInput(event.target.value, { min: 0 }));
+              }}
               placeholder={t("casino.room.betPanel.advanced.offPlaceholder")}
-              className="rounded-lg border border-border bg-surface-1 px-3 py-1.5 font-mono text-sm text-fg placeholder:text-fg-subtle focus:border-success/40 focus:outline-none"
+              className="rounded-lg border border-border bg-surface-1 px-3 py-1.5 font-mono text-sm text-fg placeholder:text-fg-subtle focus:border-success/40 focus:outline-none disabled:cursor-default disabled:opacity-60"
             />
           </div>
           <div className="flex flex-col gap-1">
@@ -248,11 +259,13 @@ export function BetAdvancedSection({
               autoComplete="off"
               aria-label={t("casino.room.betPanel.advanced.stopLoss")}
               value={String(stopLoss)}
-              onChange={(event) =>
-                onStopLossChange(parseWholeUnitInput(event.target.value, { min: 0 }))
-              }
+              disabled={isPending}
+              onChange={(event) => {
+                if (isPending) return;
+                onStopLossChange(parseWholeUnitInput(event.target.value, { min: 0 }));
+              }}
               placeholder={t("casino.room.betPanel.advanced.offPlaceholder")}
-              className="rounded-lg border border-border bg-surface-1 px-3 py-1.5 font-mono text-sm text-fg placeholder:text-fg-subtle focus:border-danger/40 focus:outline-none"
+              className="rounded-lg border border-border bg-surface-1 px-3 py-1.5 font-mono text-sm text-fg placeholder:text-fg-subtle focus:border-danger/40 focus:outline-none disabled:cursor-default disabled:opacity-60"
             />
           </div>
           {(stopGain > 0 || stopLoss > 0) && (

@@ -161,6 +161,7 @@ function KenoPayoutTable({
 
 export function KenoStage({
   isPending,
+  controlsLocked = false,
   isRevealing,
   showResult,
   spots,
@@ -171,6 +172,7 @@ export function KenoStage({
   onRevealComplete
 }: {
   isPending: boolean;
+  controlsLocked?: boolean;
   isRevealing?: boolean;
   showResult: boolean;
   spots: readonly number[];
@@ -186,7 +188,7 @@ export function KenoStage({
     [t]
   );
   const prefersReducedMotion = useReducedMotion();
-  const controlsDisabled = isPending || isRevealing || showResult;
+  const controlsDisabled = controlsLocked || isPending || Boolean(isRevealing);
   const resultKey = resultDrawn.join(",");
   const [revealedCount, setRevealedCount] = React.useState(() =>
     showResult ? resultDrawn.length : 0
@@ -373,7 +375,7 @@ export function KenoStage({
                       key={n}
                       n={n}
                       state={state}
-                      disabled={isPending || showResult}
+                      disabled={controlsDisabled}
                       onClick={() => {
                         if (isSelected) onChange(spots.filter((x) => x !== n));
                         else if (spots.length < 5) onChange([...spots, n]);

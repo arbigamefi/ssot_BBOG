@@ -35,6 +35,7 @@ export function SlotsStage({
   onRevealComplete
 }: {
   isPending: boolean;
+  controlsLocked?: boolean;
   isRevealing?: boolean;
   showResult: boolean;
   symbols: readonly number[];

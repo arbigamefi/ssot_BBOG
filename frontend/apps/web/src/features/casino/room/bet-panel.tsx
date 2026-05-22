@@ -128,6 +128,7 @@ export function GameRoomBetPanel({
 
         <BetAdvancedSection
           advancedOpen={advancedOpen}
+          isPending={isPending}
           stopGain={stopGain}
           stopLoss={stopLoss}
           onAdvancedOpenChange={onAdvancedOpenChange}

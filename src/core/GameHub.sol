@@ -217,6 +217,7 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
 
     function registerGame(bytes32 gameId, address module) external override onlyGov {
         if (module == address(0)) revert Errors.ZeroAddress();
+        if (gameModule[gameId] != address(0)) revert Errors.InvalidConfig();
         gameModule[gameId] = module;
         emit GameRegistered(gameId, module);
     }
@@ -447,28 +448,27 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         SSOTTypes.StakeSpec memory spec = SSOTTypes.StakeSpec({
             amountPerRoll: b.amountPerRoll, betCount: b.betCount, stopGain: b.stopGain, stopLoss: b.stopLoss
         });
-        (uint256 payoutGross, uint256 refundAmount) =
-            IGameModule(module).resolve(betParams[betId], spec, betId, randomWords);
+        uint256 payoutGross;
+        uint256 refundAmount;
+        try IGameModule(module).resolve(betParams[betId], spec, betId, randomWords) returns (
+            uint256 resolvedPayoutGross,
+            uint256 resolvedRefundAmount
+        ) {
+            payoutGross = resolvedPayoutGross;
+            refundAmount = resolvedRefundAmount;
+        } catch {
+            _refundInvalidRandomReadyBet(betId, b);
+            return;
+        }
         if (refundAmount > b.stake) {
-            b.resolvedAt = uint64(block.timestamp);
-            b.state = SSOTTypes.BetState.Refunded;
-            betTerminals[betId] = SSOTTypes.BetTerminal({
-                state: SSOTTypes.BetState.Refunded,
-                payoutGross: 0,
-                payoutNet: 0,
-                feeOnPayout: 0,
-                protocolFeeAccrual: 0,
-                refundAmount: b.stake
-            });
-
-            _clearRequest(b);
-            ISettlementRouter(settlementRouter).refundPosition(betId, b.stake);
-
-            emit BetRefunded(betId, b.stake);
+            _refundInvalidRandomReadyBet(betId, b);
             return;
         }
         // reserved must cover total owed (payoutGross + refundAmount)
-        if (payoutGross + refundAmount > b.reserved) revert Errors.InsufficientBalance();
+        if (payoutGross > b.reserved || refundAmount > b.reserved - payoutGross) {
+            _refundInvalidRandomReadyBet(betId, b);
+            return;
+        }
 
         // ---- Fee-on-payout ----
         uint256 feeOnPayout = 0;
@@ -650,6 +650,24 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
             requestToBetId[requestId] = 0;
             _detachRequestIfOwned(requestId);
         }
+    }
+
+    function _refundInvalidRandomReadyBet(uint256 betId, SSOTTypes.Bet storage b) internal {
+        b.resolvedAt = uint64(block.timestamp);
+        b.state = SSOTTypes.BetState.Refunded;
+        betTerminals[betId] = SSOTTypes.BetTerminal({
+            state: SSOTTypes.BetState.Refunded,
+            payoutGross: 0,
+            payoutNet: 0,
+            feeOnPayout: 0,
+            protocolFeeAccrual: 0,
+            refundAmount: b.stake
+        });
+
+        _clearRequest(b);
+        ISettlementRouter(settlementRouter).refundPosition(betId, b.stake);
+
+        emit BetRefunded(betId, b.stake);
     }
 
     function _detachRequestIfOwned(uint256 requestId) internal {

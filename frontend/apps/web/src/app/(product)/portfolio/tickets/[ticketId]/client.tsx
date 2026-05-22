@@ -118,7 +118,7 @@ export function SportsTicketDetailPageClient({ ticketId }: { ticketId: string })
     marketId: readback?.ticket.marketId,
     enabled: Boolean(readback?.ticket.marketId)
   });
-  const providerOdds = providerOddsQuery.data;
+  const providerOdds = providerOddsQuery.data ?? undefined;
 
   const handleSettle = React.useCallback(async () => {
     if (!sdk || parsedTicketId === undefined) return;

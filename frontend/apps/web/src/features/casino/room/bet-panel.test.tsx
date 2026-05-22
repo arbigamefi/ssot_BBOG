@@ -203,6 +203,27 @@ describe("GameRoomBetPanel", () => {
     expect(props.onPlaceBet).toHaveBeenCalledTimes(1);
   });
 
+  it("locks amount shortcuts and advanced inputs while a round is active", () => {
+    const props = renderPanel({
+      hasAccount: true,
+      isPending: true,
+      advancedOpen: true,
+      onBetAmountChange: vi.fn(),
+      onAdvancedOpenChange: vi.fn(),
+      onStopGainChange: vi.fn()
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Min" }));
+    fireEvent.click(screen.getByRole("button", { name: "Advanced" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Stop Gain (USDC)" }), {
+      target: { value: "50" }
+    });
+
+    expect(props.onBetAmountChange).not.toHaveBeenCalled();
+    expect(props.onAdvancedOpenChange).not.toHaveBeenCalled();
+    expect(props.onStopGainChange).not.toHaveBeenCalled();
+  });
+
   it("renders deterministic CTA labels and exposes disabled helpers", () => {
     cleanup();
     renderPanel({

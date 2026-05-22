@@ -14,7 +14,7 @@ export function PortfolioHero({
   const t = useTranslations();
 
   return (
-    <section className="grid gap-6 lg:grid-cols-[1fr_420px]">
+    <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(560px,0.82fr)] lg:items-start">
       <div>
         <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-border bg-surface-1 px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-accent">
           <IdentificationIcon className="h-4 w-4" />
@@ -41,7 +41,7 @@ export function PortfolioHero({
           </div>
         </div>
 
-        <div className="mt-5 grid gap-3">
+        <div className="mt-5 grid gap-3 md:grid-cols-3">
           {metrics.map((metric) => (
             <div
               key={metric.label}
@@ -50,7 +50,9 @@ export function PortfolioHero({
               <div className="text-[10px] font-black uppercase tracking-[0.16em] text-fg-subtle">
                 {metric.label}
               </div>
-              <div className="mt-2 font-mono text-xl font-black text-fg">{metric.value}</div>
+              <div className="mt-2 break-words font-mono text-lg font-black leading-tight text-fg">
+                {metric.value}
+              </div>
               <div className="mt-1 text-xs leading-5 text-fg-muted">{metric.detail}</div>
             </div>
           ))}

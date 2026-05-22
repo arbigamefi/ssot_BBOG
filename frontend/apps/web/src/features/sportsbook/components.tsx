@@ -284,7 +284,7 @@ function PlayerMarketCard({
     marketId: market.marketId,
     enabled: ticketsEnabled && isOpen && market.outcomeCount === 3
   });
-  const providerOdds = providerOddsQuery.data;
+  const providerOdds = providerOddsQuery.data ?? undefined;
   const resultIsProposed = Boolean(result && result.proposedAt > 0);
   const winningOutcomeId = Number(result?.winningOutcomeId ?? -1);
   const winningOutcome =

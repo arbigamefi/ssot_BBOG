@@ -22,6 +22,56 @@ Result summary:
 - `reentrancy-no-eth` was removed from the High/Medium set after CEI hardening in `Hub.finalize` and `Hub.refund`.
 - No `unused-state` / `constable-states` findings remain for the earlier incomplete `_trackedAssets` approach.
 
+## v1.3 Refresh (2026-05-21)
+
+Current command:
+
+```text
+slither . --filter-paths "test/|src/mocks/|lib/" --json /tmp/arbigamefi_slither_current.json
+slither . --filter-paths "test/|src/mocks/|lib/" --json /tmp/arbigamefi_slither_after_m01.json
+```
+
+Current result summary:
+
+- Slither JSON completed successfully.
+- Slither exit code remains non-zero because detectors remain.
+- Slither detector count: 112 total after the M-01 GameHub liveness patch.
+- Current High buckets: `arbitrary-send-erc20` (1), `arbitrary-send-eth` (1),
+  `reentrancy-eth` (2).
+- Current Medium buckets: `incorrect-equality` (14), `reentrancy-no-eth` (1),
+  `uninitialized-local` (12), `unused-return` (5).
+
+v1.3 disposition:
+
+- `arbitrary-send-erc20` now points at `Bank.holdBet`. This is still suppressed:
+  `holdBet` is `onlySettlementRouter`, and `SettlementRouter.openPosition` only accepts registered
+  hubs allowed for the target pool. The production asset is a governance-approved pool asset; a
+  malicious token/pool requires compromised governance and is outside the threat model.
+- `arbitrary-send-eth` and `reentrancy-eth` in `VRFHub` remain suppressed: direct calls are
+  self-funded, overpay refund credits are accounted before provider request storage is used for
+  fulfillment, and `claimRefund` zeroes credit before the native-token transfer.
+- `reentrancy-eth` in `GameHub.placeBet` remains suppressed: `placeBet` is `nonReentrant`; VRF
+  callback entry is gated by `msg.sender == vrfHub`, and a callback before `requestToBetId` is bound
+  is soft-ignored.
+- The new `reentrancy-no-eth` row in `SportsHub.placeTicket` is suppressed: `placeTicket` is
+  `nonReentrant`, the external route goes through `SettlementRouter -> Bank.holdBet`, and follow-up
+  SportsHub state writes are protected from same-contract reentry. A malicious pool asset again
+  requires governance-approved malicious configuration.
+- `incorrect-equality` rows are sentinel/state-boundary checks: unset ids, zero/default config
+  values, vesting boundaries, expiry/finality state checks, and existence checks.
+- `uninitialized-local` rows are Solidity zero-initialized accumulators, memory structs, fixed arrays,
+  and cached values that are intentionally filled conditionally before use. The M-01 patch adds two
+  intentional zero-start locals in `GameHub.finalize` (`payoutGross`, `refundAmount`) before
+  assignment through the `try IGameModule.resolve(...) returns (...)` branch.
+- `unused-return` rows are canonical decode / ECDSA recover patterns where validation happens through
+  revert behavior or the checked `RecoverError`.
+- `timestamp` rows are Low-impact detector noise for lock time, start time, odds expiry, finality,
+  and challenge timeout semantics; those flows are intentionally time-based.
+
+No current High/Medium Slither row is a release-blocking funds-safety finding under the current trust
+model. This triage is not a mainnet GO by itself; release readiness still depends on the mainnet
+packet, deployment artifacts, keeper/index readiness, and canary evidence.
+
 ## Validation Rubric
 
 - Is the detector reachable from an untrusted caller without privileged setup?

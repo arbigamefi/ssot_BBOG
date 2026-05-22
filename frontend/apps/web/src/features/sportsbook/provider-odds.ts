@@ -25,6 +25,18 @@ export interface SportsbookProviderOdds {
   outcomes: SportsbookProviderOutcome[];
 }
 
+export interface SportsbookProviderOddsUnavailable {
+  schemaVersion: "sportsbook.provider-odds-unavailable.v1";
+  unavailable: {
+    code: string;
+    message: string;
+  };
+}
+
+export type SportsbookProviderOddsResponse =
+  | SportsbookProviderOdds
+  | SportsbookProviderOddsUnavailable;
+
 export function providerOutcomeById(odds: SportsbookProviderOdds | undefined, outcomeId: number) {
   return odds?.outcomes.find((item) => item.outcomeId === outcomeId);
 }
@@ -50,5 +62,18 @@ export function isSportsbookProviderOdds(value: unknown): value is SportsbookPro
         typeof outcome.name === "string" &&
         typeof outcome.decimalPrice === "string"
     )
+  );
+}
+
+export function isSportsbookProviderOddsUnavailable(
+  value: unknown
+): value is SportsbookProviderOddsUnavailable {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<SportsbookProviderOddsUnavailable>;
+  return (
+    candidate.schemaVersion === "sportsbook.provider-odds-unavailable.v1" &&
+    Boolean(candidate.unavailable) &&
+    typeof candidate.unavailable?.code === "string" &&
+    typeof candidate.unavailable?.message === "string"
   );
 }

@@ -2,7 +2,12 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { isSportsbookProviderOdds, type SportsbookProviderOdds } from "./provider-odds";
+import {
+  isSportsbookProviderOdds,
+  isSportsbookProviderOddsUnavailable,
+  type SportsbookProviderOdds,
+  type SportsbookProviderOddsResponse
+} from "./provider-odds";
 
 export function useSportsbookProviderOdds({
   marketId,
@@ -16,7 +21,7 @@ export function useSportsbookProviderOdds({
     enabled: enabled && marketId !== undefined,
     staleTime: 30_000,
     retry: false,
-    queryFn: async (): Promise<SportsbookProviderOdds> => {
+    queryFn: async (): Promise<SportsbookProviderOdds | null> => {
       if (marketId === undefined) {
         throw new Error("marketId is required.");
       }
@@ -25,12 +30,15 @@ export function useSportsbookProviderOdds({
         { cache: "no-store" }
       );
       const body = (await response.json()) as
-        | SportsbookProviderOdds
+        | SportsbookProviderOddsResponse
         | { error?: { message?: string } };
       if (!response.ok) {
         throw new Error(
           "error" in body && body.error?.message ? body.error.message : "Provider odds failed."
         );
+      }
+      if (isSportsbookProviderOddsUnavailable(body)) {
+        return null;
       }
       if (!isSportsbookProviderOdds(body)) {
         throw new Error("Provider odds response is invalid.");
