@@ -423,17 +423,31 @@ function expandEnvRefs(value) {
 }
 
 function resolveRpcUrl() {
-  const direct =
-    process.env.RPC_URL ??
-    process.env.BASE_SEPOLIA_RPC_URL ??
-    process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL ??
-    process.env.NEXT_PUBLIC_RPC_URL;
+  const direct = firstDefined(
+    process.env.RPC_URL,
+    ...(chainId === 8453
+      ? [
+          process.env.BASE_MAINNET_RPC_URL,
+          process.env.BASE_RPC_URL,
+          process.env.NEXT_PUBLIC_BASE_RPC_URL
+        ]
+      : []),
+    ...(chainId === 84532
+      ? [process.env.BASE_SEPOLIA_RPC_URL, process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL]
+      : []),
+    process.env.NEXT_PUBLIC_RPC_URL
+  );
   if (direct) return expandEnvRefs(direct);
   const alchemyKey = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY;
-  if (alchemyKey) return `https://base-sepolia.g.alchemy.com/v2/${alchemyKey}`;
+  if (alchemyKey && chainId === 8453) return `https://base-mainnet.g.alchemy.com/v2/${alchemyKey}`;
+  if (alchemyKey && chainId === 84532) return `https://base-sepolia.g.alchemy.com/v2/${alchemyKey}`;
   throw new Error(
-    "Missing RPC URL. Set RPC_URL, BASE_SEPOLIA_RPC_URL, NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL, NEXT_PUBLIC_RPC_URL, or NEXT_PUBLIC_ALCHEMY_API_KEY."
+    "Missing RPC URL. Set RPC_URL, BASE_MAINNET_RPC_URL, NEXT_PUBLIC_BASE_RPC_URL, BASE_SEPOLIA_RPC_URL, NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL, NEXT_PUBLIC_RPC_URL, or NEXT_PUBLIC_ALCHEMY_API_KEY."
   );
+}
+
+function firstDefined(...values) {
+  return values.find((value) => typeof value === "string" && value.length > 0);
 }
 
 function readArg(name) {

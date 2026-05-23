@@ -145,6 +145,9 @@ It must also confirm that every embedded asset and pool decimal value matches th
 value on chain. If `smoke:release-readonly` fails on `quoteVRFFee`, PoolRegistry rows, ERC20
 decimals, Bank SSOT, SportsHub wiring, or bytecode checks, stop and fix the release artifact before
 changing frontend code.
+For Base mainnet, the smoke accepts `RPC_URL`, `BASE_MAINNET_RPC_URL`, `BASE_RPC_URL`,
+`NEXT_PUBLIC_BASE_RPC_URL`, `NEXT_PUBLIC_RPC_URL`, or `NEXT_PUBLIC_ALCHEMY_API_KEY` and must resolve
+to chain id `8453`.
 
 Production web environment must also include a Sentry DSN and CI-only source-map upload secret:
 

@@ -42,7 +42,9 @@ pnpm typecheck
 
 `smoke:release-readonly` uses RPC only. It does not require a wallet and does
 not broadcast transactions. It also verifies embedded asset and pool decimals
-against each ERC20 `decimals()` value on chain.
+against each ERC20 `decimals()` value on chain. For Base mainnet, provide
+`RPC_URL`, `BASE_MAINNET_RPC_URL`, `BASE_RPC_URL`, `NEXT_PUBLIC_BASE_RPC_URL`,
+`NEXT_PUBLIC_RPC_URL`, or `NEXT_PUBLIC_ALCHEMY_API_KEY`.
 
 ## Active Docs
 
