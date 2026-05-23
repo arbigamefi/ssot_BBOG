@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { __resetRateLimitBucketsForTests } from "../../../server/http/rate-limit";
 
 const queryRecentBetsMock = vi.hoisted(() => vi.fn());
 const readKeeperHealthSnapshotMock = vi.hoisted(() => vi.fn());
@@ -13,8 +14,13 @@ vi.mock("../../../server/ops/keeper-health", () => ({
 
 const originalEnv = process.env;
 
+function request() {
+  return new Request("http://localhost/api/healthz");
+}
+
 describe("GET /api/healthz", () => {
   beforeEach(() => {
+    __resetRateLimitBucketsForTests();
     process.env = {
       ...originalEnv,
       NEXT_PUBLIC_CHAIN_ID: "84532",
@@ -48,11 +54,12 @@ describe("GET /api/healthz", () => {
 
   it("returns ok when release, keeper, and optional index checks are healthy", async () => {
     const { GET } = await import("./route");
-    const response = await GET();
+    const response = await GET(request());
     const body = (await response.json()) as any;
 
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(response.headers.get("x-ratelimit-limit")).toBe("120");
     expect(body).toMatchObject({
       schemaVersion: 1,
       status: "ok",
@@ -97,7 +104,7 @@ describe("GET /api/healthz", () => {
     });
 
     const { GET } = await import("./route");
-    const response = await GET();
+    const response = await GET(request());
     const body = (await response.json()) as any;
 
     expect(response.status).toBe(200);
@@ -127,7 +134,7 @@ describe("GET /api/healthz", () => {
     });
 
     const { GET } = await import("./route");
-    const response = await GET();
+    const response = await GET(request());
     const body = (await response.json()) as any;
 
     expect(body.status).toBe("degraded");
@@ -136,5 +143,18 @@ describe("GET /api/healthz", () => {
       keeperStatus: "running"
     });
     expect(body.checks.keeper.message).toContain("stale");
+  });
+
+  it("rate limits public health checks per client", async () => {
+    process.env.HEALTHZ_RATE_LIMIT_PER_MINUTE = "1";
+    const { GET } = await import("./route");
+
+    expect((await GET(request())).status).toBe(200);
+    const response = await GET(request());
+    const body = (await response.json()) as any;
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get("retry-after")).toBeTruthy();
+    expect(body.error.code).toBe("RATE_LIMITED");
   });
 });

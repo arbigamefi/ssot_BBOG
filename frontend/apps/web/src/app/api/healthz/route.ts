@@ -1,15 +1,29 @@
 import { NextResponse } from "next/server";
 
+import {
+  mergeHeaders,
+  noStoreHeaders,
+  publicReadRateLimit,
+  rateLimitedJson
+} from "../../../server/http/public-read-limit";
 import { getHealthzSnapshot } from "../../../server/healthz";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const quota = publicReadRateLimit({
+    envName: "HEALTHZ_RATE_LIMIT_PER_MINUTE",
+    fallback: 120,
+    keyPrefix: "healthz",
+    request
+  });
+  if (!quota.allowed) {
+    return rateLimitedJson("Too many health check requests. Please retry shortly.", quota.headers);
+  }
+
   const snapshot = await getHealthzSnapshot();
   return NextResponse.json(snapshot, {
-    headers: {
-      "cache-control": "no-store"
-    }
+    headers: mergeHeaders(noStoreHeaders(), quota.headers)
   });
 }
