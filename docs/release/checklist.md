@@ -33,6 +33,10 @@ Confirm the deployment artifacts are produced:
 - [ ] `deployments/snapshots/deploy-<chainId>-<block>-v13.json`
 - [ ] `deployments/verify-latest-v13.sh` and/or `deployments/verify/verify-<chainId>-<block>-v13.sh`
 
+`deployments/` is ignored by default to avoid accidental local deployment noise. Production release
+artifacts must be staged explicitly with `git add -f`; `git status` will not show new ignored
+artifacts until they are force-added.
+
 ## 3. Explorer verification (recommended)
 
 - [ ] Set `ETHERSCAN_API_KEY`
