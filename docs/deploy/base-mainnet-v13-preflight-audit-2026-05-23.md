@@ -1,6 +1,6 @@
 # Base mainnet v1.3 preflight audit — 2026-05-23
 
-Status: **NO-GO for broadcast; preflight path repaired for casino-only review**
+Status: **NO-GO for broadcast; casino-only contract preflight path repaired; frontend mainnet gate intentionally red**
 
 ## Scope
 
@@ -10,6 +10,7 @@ This audit checked the Base mainnet v1.3 pre-broadcast path:
 - `docs/deploy/base-mainnet-v13.env.example`
 - `script/DeployV13.s.sol`
 - `script/ci/v13_sports_testnet_preflight.sh`
+- `script/ci/v13_casino_mainnet_frontend_readiness.sh`
 - release package and frontend sync references
 
 No transaction was broadcast.
@@ -55,6 +56,23 @@ SportsHub public risk-in remains blocked unless an approved Phase 2 packet recor
 role custody, provider evidence, frontend access, bankroll caps, and ops coverage checks pass with
 `REQUIRE_APPROVED=1`.
 
+### F4 — Frontend mainnet readiness is machine-blocked until `chain-8453.json` exists
+
+`make casino-mainnet-frontend-readiness-v13` now combines:
+
+- `v13_casino_web_env_check.sh`;
+- `pnpm -C frontend check:mainnet-release`;
+- `pnpm -C frontend smoke:release-readonly -- --chain-id 8453`.
+
+It must stay red until the signed Base mainnet release bundle has been generated and synced into
+`frontend/packages/ssot/src/release/embedded/chain-8453.json`.
+
+### F5 — Local release artifacts can be ignored by git
+
+`deployments/` is ignored by default. A local `STRICT=1 make release-check` can therefore pass from
+ignored local artifacts that a clean checkout or CI job does not have. Production release artifact
+commits must explicitly force-add the required files with `git add -f`.
+
 ## Current pre-broadcast command paths
 
 ### Casino-only launch review
@@ -94,8 +112,14 @@ pnpm -C frontend/apps/keeper test
 - Relevant mainnet preflight target green.
 - Frontend `pnpm -C frontend check:mainnet-release` green after syncing the generated Base mainnet
   release bundle.
+- `ENV_FILE=.env.web-production make casino-mainnet-frontend-readiness-v13` green after syncing the
+  generated Base mainnet release bundle.
+- Generated deployment snapshots, release lock, release package metadata, frontend manifest, golden
+  vectors, ABI index, and notes force-added and committed despite the `deployments/` ignore rule.
 - Keeper primary/backup deployment owners assigned.
 - Postgres bet-index production owner, backup, and restore path assigned.
+- Approved `casino.frontend-access.v1` memo validated with `REQUIRE_APPROVED=1` before enabling
+  `NEXT_PUBLIC_CASINO_RISK_IN_ENABLED=true`.
 
 ## Verification performed
 
@@ -105,6 +129,27 @@ make -n casino-mainnet-preflight-v13 ENV_FILE=.env.base-mainnet-v13-casino
 make -n sports-mainnet-preflight-v13 ENV_FILE=.env.base-mainnet-v13
 make sports-phase2-gonogo-v13
 ```
+
+Follow-up verification on the same date:
+
+```bash
+ENV_FILE=<filled-temp-base-mainnet-casino-env> make casino-mainnet-preflight-v13
+ENV_FILE=<filled-temp-web-production-env> make casino-mainnet-frontend-readiness-v13
+STRICT=1 make release-check
+FOUNDRY_PROFILE=pr forge test --match-path 'test/unit/*' -vvv
+FOUNDRY_PROFILE=pr forge test --match-path 'test/diff/*' -vvv
+FOUNDRY_PROFILE=pr forge test --match-path 'test/invariants/*' -vvv
+FORK_RPC_URL_BASE_SEPOLIA=https://sepolia.base.org bash script/ci/fork_release_gate.sh
+```
+
+Observed result:
+
+- `casino-mainnet-preflight-v13` passed as a no-broadcast env/RPC/code sanity check against Base
+  mainnet.
+- `casino-mainnet-frontend-readiness-v13` failed as expected because `chain-8453.json` is missing.
+- `STRICT=1 make release-check`, the focused Forge suites, and the Base Sepolia fork release gate
+  passed for the current local release artifacts. Those are not broadcast authorization and do not
+  prove Base mainnet readiness.
 
 On 2026-05-23, the template Base mainnet USDC and Chainlink VRF Wrapper addresses were spot-checked
 against Circle's official USDC contract address table and Chainlink's VRF v2.5 supported-networks
