@@ -172,6 +172,16 @@ ENV_FILE=.env.web-production make casino-web-env-check-v13
 REQUIRE_SOURCEMAPS=1 ENV_FILE=.env.web-production make casino-web-env-check-v13
 ```
 
+After `chain-8453.json` has been synced from the signed release bundle, run the no-broadcast
+frontend readiness gate:
+
+```bash
+ENV_FILE=.env.web-production make casino-mainnet-frontend-readiness-v13
+```
+
+This combines the production web env check, `check:mainnet-release`, and the read-only Base mainnet
+release smoke. It must pass before the production web app is pointed at public traffic.
+
 After deploying the web app, verify the production health endpoint:
 
 ```bash
