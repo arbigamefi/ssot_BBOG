@@ -158,6 +158,19 @@ ENV_FILE=.env.base-mainnet-v13 make sports-mainnet-preflight-v13
 These checks validate env shape, chain id `8453`, wrapper/asset bytecode, and, when a Sports pool is
 configured, Sports role/cap placeholders. They do not authorize a deployment broadcast.
 
+Before public casino risk-in, the final no-broadcast gate is:
+
+```bash
+CASINO_ENV_FILE=.env.base-mainnet-v13-casino \
+WEB_ENV_FILE=.env.web-production \
+FRONTEND_ACCESS_FILE=<approved-casino-frontend-access.json> \
+make casino-mainnet-gonogo-v13
+```
+
+This must remain red until the Base mainnet release bundle has been synced into
+`frontend/packages/ssot/src/release/embedded/chain-8453.json`, the production web env is valid, and
+the casino frontend-access memo is approved.
+
 For the narrow football MVP product canary, use
 `docs/deploy/worldcup-football-mvp-canary-2026.md` after the v1.3 Sports deployment and role canary are
 ready. It exercises one 3-outcome pre-match 1X2 market through `SportsHub` using the existing result

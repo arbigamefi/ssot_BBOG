@@ -55,6 +55,23 @@ In strict mode the check enforces:
 
 For normal PR CI, `release-check` is non-blocking if no deployment artifacts are present.
 
+## Git staging
+
+`deployments/` is ignored by default to avoid accidental local deployment noise. Production release
+artifact commits must force-add the required files:
+
+```bash
+git add -f deployments/latest-v13.json \
+  deployments/release-latest-v13.json \
+  deployments/release-notes-latest-v13.md \
+  deployments/snapshots/deploy-<chainid>-<block>-v13.json \
+  deployments/release/release-<chainid>-<block>-v13.json \
+  deployments/release/release-notes-<chainid>-<block>-v13.md
+```
+
+If frontend manifest, golden vectors, ABI indexes, verify helpers, or package metadata are generated
+for the release, force-add those files in the same release commit.
+
 ## Files
 - Generator: `script/release/ReleaseDigestV13.s.sol`
 - Verifier: `script/release/VerifyReleaseV13.s.sol`

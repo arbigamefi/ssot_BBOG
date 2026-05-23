@@ -38,6 +38,9 @@
 - [ ] Run the matching Base mainnet preflight before any v1.3 deployment review. These are env/RPC/code sanity gates, not broadcast approvals:
   - casino-only: `ENV_FILE=<filled-base-mainnet-casino-env> make casino-mainnet-preflight-v13`
   - Casino+Sports: `ENV_FILE=<filled-base-mainnet-env> make sports-mainnet-preflight-v13`
+- [ ] Before public Base mainnet casino risk-in, run the final no-broadcast GO gate with approved
+  access and synced frontend release:
+  `CASINO_ENV_FILE=<filled-base-mainnet-casino-env> WEB_ENV_FILE=<filled-web-production-env> FRONTEND_ACCESS_FILE=<approved-casino-frontend-access.json> make casino-mainnet-gonogo-v13`
 
 ## Deploy
 - [ ] Run `bash script/ci/install_deps.sh`
@@ -60,6 +63,7 @@
   - [ ] Enforce strict gate: `STRICT=1 make release-check`
   - [ ] (recommended) package artifacts for audit handoff: `TAG_NAME=vX.Y.Z make release-package`
   - [ ] (recommended) commit snapshot + release lock + notes under `deployments/` before tagging a release
+        using `git add -f`, because `deployments/` is ignored by default
 
 - [ ] Run optional fork test:
   - [ ] `FORK_RPC_URL` + `FORK_VRF_WRAPPER` set
