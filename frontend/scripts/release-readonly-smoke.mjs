@@ -9,7 +9,7 @@ import { pathToFileURL } from "node:url";
 const frontendRoot = path.resolve(import.meta.dirname, "..");
 const repoRoot = path.resolve(frontendRoot, "..");
 const ssotRequire = createRequire(path.resolve(frontendRoot, "packages/ssot/package.json"));
-const { createPublicClient, getAddress, http } = await import(
+const { createPublicClient, getAddress, http, parseAbi } = await import(
   pathToFileURL(ssotRequire.resolve("viem")).href
 );
 const { baseSepolia } = await import(pathToFileURL(ssotRequire.resolve("viem/chains")).href);
@@ -71,10 +71,13 @@ const BankAbi = await loadAbi("Bank");
 const PoolRegistryAbi = await loadAbi("PoolRegistry");
 const SportsHubAbi = await loadAbi("SportsHub");
 const SportsRiskEngineAbi = await loadAbi("SportsRiskEngine");
+const ERC20Abi = parseAbi(["function decimals() view returns (uint8)"]);
 const LEGACY_GAME_AGGREGATOR_KEY = `hu${"b"}`;
 const LEGACY_BANK_DIRECTORY_KEY = `bank${"Registry"}`;
 
 let ok = true;
+const releaseAssetsByAddress = new Map();
+const erc20DecimalsByAddress = new Map();
 
 console.log(
   `[release-smoke] chain=${chainId} release=${path.relative(process.cwd(), releasePath)}`
@@ -146,6 +149,27 @@ await check("GameHub quoteVRFFee(1)", async () => {
   return `fee=${fee.toString()} gasLimit=${gasLimit.toString()}`;
 });
 
+for (const asset of release.assets ?? []) {
+  const assetAddress = asset.address ?? asset.asset;
+  await check(`asset ${asset.symbol ?? short(assetAddress)} decimals`, async () => {
+    if (typeof assetAddress !== "string" || assetAddress.length === 0) {
+      throw new Error("asset address missing");
+    }
+    const normalized = getAddress(assetAddress);
+    const expectedDecimals = normalizeDecimals(asset.decimals, `asset ${asset.symbol} decimals`);
+    const chainDecimals = await readErc20Decimals(normalized);
+    if (chainDecimals !== expectedDecimals) {
+      throw new Error(`release=${expectedDecimals} chain=${chainDecimals}`);
+    }
+    releaseAssetsByAddress.set(normalized.toLowerCase(), {
+      ...asset,
+      address: normalized,
+      decimals: expectedDecimals
+    });
+    return `${short(normalized)} decimals=${chainDecimals}`;
+  });
+}
+
 for (const pool of release.pools ?? []) {
   await check(`PoolRegistry pool ${pool.poolId}`, async () => {
     const poolId = BigInt(pool.poolId);
@@ -179,6 +203,22 @@ for (const pool of release.pools ?? []) {
       throw new Error(`bank mismatch release=${pool.bank} chain=${bank}`);
     }
     return `${pool.domain} ${short(pool.bank)}`;
+  });
+
+  await check(`pool ${pool.poolId} asset decimals`, async () => {
+    const asset = getAddress(pool.asset);
+    const expectedDecimals = normalizeDecimals(pool.decimals, `pool ${pool.poolId} decimals`);
+    const chainDecimals = await readErc20Decimals(asset);
+    if (chainDecimals !== expectedDecimals) {
+      throw new Error(`release=${expectedDecimals} chain=${chainDecimals}`);
+    }
+    const releaseAsset = releaseAssetsByAddress.get(asset.toLowerCase());
+    if (releaseAsset && releaseAsset.decimals !== expectedDecimals) {
+      throw new Error(
+        `asset ${releaseAsset.symbol ?? short(asset)} decimals=${releaseAsset.decimals} pool=${expectedDecimals}`
+      );
+    }
+    return `${pool.symbol ?? short(asset)} decimals=${chainDecimals}`;
   });
 
   await checkCode(`pool ${pool.poolId} bank bytecode`, pool.bank);
@@ -292,6 +332,23 @@ async function rpcReadContract(params) {
   return rpcCall(`${params.functionName}:${short(params.address)}`, () =>
     client.readContract(params)
   );
+}
+
+async function readErc20Decimals(address) {
+  const normalized = getAddress(address);
+  const cacheKey = normalized.toLowerCase();
+  if (erc20DecimalsByAddress.has(cacheKey)) return erc20DecimalsByAddress.get(cacheKey);
+  const decimals = normalizeDecimals(
+    await rpcReadContract({
+      address: normalized,
+      abi: ERC20Abi,
+      functionName: "decimals",
+      args: []
+    }),
+    `ERC20 ${short(normalized)} decimals`
+  );
+  erc20DecimalsByAddress.set(cacheKey, decimals);
+  return decimals;
 }
 
 async function rpcCall(label, fn) {
@@ -413,6 +470,14 @@ function assertAddressEq(label, actual, expected) {
   if (String(actual).toLowerCase() !== String(expected).toLowerCase()) {
     throw new Error(`${label} mismatch: expected ${expected}, got ${actual}`);
   }
+}
+
+function normalizeDecimals(value, label) {
+  const decimals = typeof value === "bigint" ? Number(value) : Number(value);
+  if (!Number.isInteger(decimals) || decimals < 0 || decimals > 255) {
+    throw new Error(`${label} must be an integer between 0 and 255`);
+  }
+  return decimals;
 }
 
 function sanitizeErrorMessage(error) {

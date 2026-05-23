@@ -41,7 +41,8 @@ pnpm typecheck
 ```
 
 `smoke:release-readonly` uses RPC only. It does not require a wallet and does
-not broadcast transactions.
+not broadcast transactions. It also verifies embedded asset and pool decimals
+against each ERC20 `decimals()` value on chain.
 
 ## Active Docs
 
