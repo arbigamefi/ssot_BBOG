@@ -11,6 +11,7 @@ This audit checked the Base mainnet v1.3 pre-broadcast path:
 - `script/DeployV13.s.sol`
 - `script/ci/v13_sports_testnet_preflight.sh`
 - `script/ci/v13_casino_mainnet_frontend_readiness.sh`
+- `script/ci/v13_casino_mainnet_gonogo.sh`
 - release package and frontend sync references
 
 No transaction was broadcast.
@@ -72,6 +73,19 @@ It must stay red until the signed Base mainnet release bundle has been generated
 `deployments/` is ignored by default. A local `STRICT=1 make release-check` can therefore pass from
 ignored local artifacts that a clean checkout or CI job does not have. Production release artifact
 commits must explicitly force-add the required files with `git add -f`.
+
+### F6 — Public risk-in needs one final no-broadcast GO gate
+
+`make casino-mainnet-gonogo-v13` now bundles the final public-risk-in evidence checks:
+
+- casino-only Base mainnet contract env preflight;
+- approved `casino.frontend-access.v1` memo;
+- production web env validation;
+- embedded Base mainnet release check;
+- read-only Base mainnet release smoke.
+
+This gate must stay red until the real Base mainnet deployment artifacts are synced and the access
+memo is approved.
 
 ## Current pre-broadcast command paths
 
@@ -135,6 +149,7 @@ Follow-up verification on the same date:
 ```bash
 ENV_FILE=<filled-temp-base-mainnet-casino-env> make casino-mainnet-preflight-v13
 ENV_FILE=<filled-temp-web-production-env> make casino-mainnet-frontend-readiness-v13
+CASINO_ENV_FILE=<filled-base-mainnet-casino-env> WEB_ENV_FILE=<filled-web-production-env> FRONTEND_ACCESS_FILE=<approved-casino-frontend-access.json> make casino-mainnet-gonogo-v13
 STRICT=1 make release-check
 FOUNDRY_PROFILE=pr forge test --match-path 'test/unit/*' -vvv
 FOUNDRY_PROFILE=pr forge test --match-path 'test/diff/*' -vvv
@@ -147,6 +162,8 @@ Observed result:
 - `casino-mainnet-preflight-v13` passed as a no-broadcast env/RPC/code sanity check against Base
   mainnet.
 - `casino-mainnet-frontend-readiness-v13` failed as expected because `chain-8453.json` is missing.
+- `casino-mainnet-gonogo-v13` reached the frontend readiness stage with a temporary approved access
+  memo, then failed as expected because `chain-8453.json` is missing.
 - `STRICT=1 make release-check`, the focused Forge suites, and the Base Sepolia fork release gate
   passed for the current local release artifacts. Those are not broadcast authorization and do not
   prove Base mainnet readiness.

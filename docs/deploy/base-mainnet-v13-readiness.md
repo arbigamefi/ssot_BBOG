@@ -184,6 +184,19 @@ ENV_FILE=.env.web-production make casino-mainnet-frontend-readiness-v13
 This combines the production web env check, `check:mainnet-release`, and the read-only Base mainnet
 release smoke. It must pass before the production web app is pointed at public traffic.
 
+Immediately before public casino risk-in, run the single no-broadcast GO gate:
+
+```bash
+CASINO_ENV_FILE=.env.base-mainnet-v13-casino \
+WEB_ENV_FILE=.env.web-production \
+FRONTEND_ACCESS_FILE=<approved-casino-frontend-access.json> \
+make casino-mainnet-gonogo-v13
+```
+
+This gate combines the casino contract env preflight, approved frontend-access memo check,
+production web env validation, embedded Base mainnet release check, and read-only Base mainnet smoke.
+It must remain red until the deployment artifacts, `chain-8453.json`, and approved access memo exist.
+
 After deploying the web app, verify the production health endpoint:
 
 ```bash
@@ -255,6 +268,8 @@ PHASE2_PACKET=<go-packet.md> make sports-phase2-gonogo-v13
 - [ ] Explorer verification complete or a documented verification exception exists.
 - [ ] Release digest, frontend manifest, golden vectors, notes, and package generated and committed.
 - [ ] Frontend embedded release synced and read-only smoke green.
+- [ ] `make casino-mainnet-gonogo-v13` green with the approved casino env, web env, and
+      frontend-access memo.
 - [ ] Sentry DSN configured, source maps uploaded from CI, and address/signature scrubbing verified.
 - [ ] Primary and backup casino keepers live and healthy.
 - [ ] Postgres bet index live, backed up, restore-tested, and connected to web API routes.
