@@ -87,7 +87,7 @@ For a casino-only launch review, replace the topology preflight with:
 
 ```bash
 ENV_FILE=.env.base-mainnet-v13-casino make casino-mainnet-preflight-v13
-make casino-frontend-access-check-v13
+REQUIRE_APPROVED=1 make casino-frontend-access-check-v13 FRONTEND_ACCESS_FILE=<approved-casino-frontend-access.json>
 ```
 
 Do not run `DeployV13` with `NUM_POOLS=2` unless the Sports pool values are approved for the
