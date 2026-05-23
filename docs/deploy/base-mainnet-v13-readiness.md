@@ -126,6 +126,11 @@ Commit the generated deployment snapshot, release lock, release notes, frontend 
 vectors, ABI index, and release package metadata before any frontend sync.
 The repository ignores `deployments/` by default, so release artifact commits must use `git add -f`
 for the required deployment files. Do not rely on `git status` alone to prove they are staged.
+After staging the release artifacts, run:
+
+```bash
+make release-artifacts-tracked-v13
+```
 
 ## Frontend sync and smoke
 

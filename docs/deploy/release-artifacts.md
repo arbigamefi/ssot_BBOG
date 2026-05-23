@@ -72,6 +72,12 @@ git add -f deployments/latest-v13.json \
 If frontend manifest, golden vectors, ABI indexes, verify helpers, or package metadata are generated
 for the release, force-add those files in the same release commit.
 
+Then run:
+
+```bash
+make release-artifacts-tracked-v13
+```
+
 ## Files
 - Generator: `script/release/ReleaseDigestV13.s.sol`
 - Verifier: `script/release/VerifyReleaseV13.s.sol`

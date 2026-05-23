@@ -64,6 +64,7 @@
   - [ ] (recommended) package artifacts for audit handoff: `TAG_NAME=vX.Y.Z make release-package`
   - [ ] (recommended) commit snapshot + release lock + notes under `deployments/` before tagging a release
         using `git add -f`, because `deployments/` is ignored by default
+  - [ ] Confirm core release artifacts are tracked: `make release-artifacts-tracked-v13`
 
 - [ ] Run optional fork test:
   - [ ] `FORK_RPC_URL` + `FORK_VRF_WRAPPER` set
