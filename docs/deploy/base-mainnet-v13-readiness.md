@@ -151,6 +151,10 @@ to chain id `8453`.
 
 Production web environment must also include a Sentry DSN and CI-only source-map upload secret:
 
+```bash
+cp docs/deploy/base-mainnet-web.env.example .env.web-production
+```
+
 - `NEXT_PUBLIC_CHAIN_ID=8453`.
 - `NEXT_PUBLIC_ENV=production`.
 - `NEXT_PUBLIC_SENTRY_RELEASE` set to the deploy commit SHA or signed release tag.
