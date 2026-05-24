@@ -1,0 +1,152 @@
+{
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "bytes",
+          "name": "params",
+          "type": "bytes"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "amountPerRoll",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint32",
+              "name": "betCount",
+              "type": "uint32"
+            },
+            {
+              "internalType": "uint256",
+              "name": "stopGain",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "stopLoss",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct SSOTTypes.StakeSpec",
+          "name": "stakeSpec",
+          "type": "tuple"
+        }
+      ],
+      "name": "maxPayout",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "reserved",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes",
+          "name": "params",
+          "type": "bytes"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "amountPerRoll",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint32",
+              "name": "betCount",
+              "type": "uint32"
+            },
+            {
+              "internalType": "uint256",
+              "name": "stopGain",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "stopLoss",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct SSOTTypes.StakeSpec",
+          "name": "stakeSpec",
+          "type": "tuple"
+        },
+        {
+          "internalType": "uint256",
+          "name": "betId",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256[]",
+          "name": "randomWords",
+          "type": "uint256[]"
+        }
+      ],
+      "name": "resolve",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "payoutGross",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "refundAmount",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes",
+          "name": "params",
+          "type": "bytes"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "amountPerRoll",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint32",
+              "name": "betCount",
+              "type": "uint32"
+            },
+            {
+              "internalType": "uint256",
+              "name": "stopGain",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "stopLoss",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct SSOTTypes.StakeSpec",
+          "name": "stakeSpec",
+          "type": "tuple"
+        }
+      ],
+      "name": "validate",
+      "outputs": [],
+      "stateMutability": "pure",
+      "type": "function"
+    }
+  ],
+  "contract": "DiceModule"
+}

@@ -77,7 +77,7 @@ describe("GET /api/healthz", () => {
     expect(queryRecentBetsMock).toHaveBeenCalledWith({ chainId: 84532, limit: 1 });
   });
 
-  it("degrades Base mainnet until an embedded release and durable index are available", async () => {
+  it("degrades Base mainnet when keeper and durable index are not ready", async () => {
     process.env.NEXT_PUBLIC_CHAIN_ID = "8453";
     process.env.BET_INDEX_DATABASE_URL = "";
     queryRecentBetsMock.mockResolvedValueOnce({
@@ -109,8 +109,7 @@ describe("GET /api/healthz", () => {
 
     expect(response.status).toBe(200);
     expect(body.status).toBe("degraded");
-    expect(body.checks.release.status).toBe("degraded");
-    expect(body.checks.release.message).toContain("No embedded release");
+    expect(body.checks.release.status).toBe("ok");
     expect(body.checks.keeper.status).toBe("degraded");
     expect(body.checks.betIndex).toMatchObject({
       status: "degraded",

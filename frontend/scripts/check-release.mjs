@@ -3,17 +3,16 @@ import path from "node:path";
 
 const STRICT = process.env.STRICT_RELEASE === "1";
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
-const REQUIRED_CONTRACTS = [
+const REQUIRED_CORE_CONTRACTS = [
   "gameHub",
   "settlementRouter",
   "poolRegistry",
-  "sportsHub",
-  "sportsRiskEngine",
   "vrfHub",
   "refRegistry",
   "refEngine",
   "adapter"
 ];
+const REQUIRED_SPORTS_CONTRACTS = ["sportsHub", "sportsRiskEngine"];
 const LEGACY_GAME_AGGREGATOR_KEY = `hu${"b"}`;
 const LEGACY_BANK_DIRECTORY_KEY = `bank${"Registry"}`;
 const requiredChainIds = parseRequiredChainIds(process.env.REQUIRED_EMBEDDED_CHAIN_IDS);
@@ -53,7 +52,7 @@ for (const f of jsons) {
   }
   if (raw?.meta?.schemaVersion !== 2) issues.push("schemaVersion is not 2");
 
-  for (const key of REQUIRED_CONTRACTS) {
+  for (const key of REQUIRED_CORE_CONTRACTS) {
     const value = contracts[key];
     if (typeof value !== "string" || value.length === 0) {
       issues.push(`${key} missing`);
@@ -63,6 +62,14 @@ for (const f of jsons) {
   }
 
   if (raw?.sports?.enabled) {
+    for (const key of REQUIRED_SPORTS_CONTRACTS) {
+      const value = contracts[key];
+      if (typeof value !== "string" || value.length === 0) {
+        issues.push(`${key} missing`);
+      } else if (value.toLowerCase() === ZERO_ADDRESS) {
+        issues.push(`${key} is zero`);
+      }
+    }
     if (
       !isNonEmptyString(raw.sports.sportsHub) ||
       raw.sports.sportsHub.toLowerCase() === ZERO_ADDRESS

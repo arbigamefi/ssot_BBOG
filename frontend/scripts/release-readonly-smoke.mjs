@@ -14,17 +14,16 @@ const { createPublicClient, getAddress, http, parseAbi } = await import(
 );
 const { baseSepolia } = await import(pathToFileURL(ssotRequire.resolve("viem/chains")).href);
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
-const REQUIRED_CONTRACTS = [
+const REQUIRED_CORE_CONTRACTS = [
   "gameHub",
   "settlementRouter",
   "poolRegistry",
-  "sportsHub",
-  "sportsRiskEngine",
   "vrfHub",
   "refRegistry",
   "refEngine",
   "adapter"
 ];
+const REQUIRED_SPORTS_CONTRACTS = ["sportsHub", "sportsRiskEngine"];
 const chainId = Number(readArg("--chain-id") ?? process.env.CHAIN_ID ?? 84532);
 const releasePath =
   readArg("--release") ??
@@ -96,13 +95,24 @@ await check("release schemaVersion", () => {
   ) {
     throw new Error("legacy release keys are present in embedded release");
   }
-  for (const key of REQUIRED_CONTRACTS) {
+  for (const key of REQUIRED_CORE_CONTRACTS) {
     const address = contracts[key];
     if (typeof address !== "string" || address.length === 0) {
       throw new Error(`contracts.${key} missing`);
     }
     if (address.toLowerCase() === ZERO_ADDRESS) {
       throw new Error(`contracts.${key} is zero`);
+    }
+  }
+  if (release.sports?.enabled) {
+    for (const key of REQUIRED_SPORTS_CONTRACTS) {
+      const address = contracts[key];
+      if (typeof address !== "string" || address.length === 0) {
+        throw new Error(`contracts.${key} missing`);
+      }
+      if (address.toLowerCase() === ZERO_ADDRESS) {
+        throw new Error(`contracts.${key} is zero`);
+      }
     }
   }
   return "v1.3";
@@ -124,6 +134,14 @@ await check("rpc block height", async () => {
 });
 
 for (const [name, address] of Object.entries(release.contracts ?? {})) {
+  if (
+    !release.sports?.enabled &&
+    REQUIRED_SPORTS_CONTRACTS.includes(name) &&
+    String(address).toLowerCase() === ZERO_ADDRESS
+  ) {
+    console.log(`[skip] contract ${name}: sports disabled`);
+    continue;
+  }
   await checkCode(`contract ${name}`, address);
 }
 
