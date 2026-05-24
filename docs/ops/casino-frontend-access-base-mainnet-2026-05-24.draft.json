@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "casino.frontend-access.v1",
+  "status": "draft",
+  "chainId": 8453,
+  "gameHub": "0x9CACb3250CC648D711C14F0d39cF1EEa3B1D1Ef9",
+  "frontend": {
+    "publicCasinoEnabled": false,
+    "enablementFlag": "NEXT_PUBLIC_CASINO_RISK_IN_ENABLED",
+    "defaultState": "off",
+    "unknownJurisdictionBehavior": "block-risk-in",
+    "restrictedJurisdictionBehavior": "block-risk-in"
+  },
+  "jurisdictionDecision": {
+    "targetJurisdictions": [
+      "TBD"
+    ],
+    "restrictedJurisdictions": [
+      "TBD"
+    ],
+    "operatorLicensesOrExemptions": [
+      "TBD"
+    ]
+  },
+  "accessControls": {
+    "minimumAge": 18,
+    "agePolicy": "TBD",
+    "kycPolicy": "TBD",
+    "sanctionsPolicy": "TBD",
+    "geoRestrictionProvider": "TBD",
+    "vpnProxyPolicy": "TBD",
+    "cookieConsentPolicy": "TBD",
+    "responsibleGamingControls": [
+      "TBD"
+    ],
+    "selfExclusionPolicy": "TBD",
+    "stakeLimitPolicy": "TBD"
+  },
+  "contentLinks": {
+    "termsUri": "/legal/terms",
+    "privacyUri": "/legal/privacy",
+    "riskDisclaimerUri": "/legal/disclaimer",
+    "responsibleGamingUri": "TBD",
+    "supportUri": "TBD"
+  },
+  "technicalControls": {
+    "riskInDisabledWhenUnapproved": true,
+    "unknownJurisdictionBlocksRiskIn": true,
+    "restrictedJurisdictionBlocksRiskIn": true,
+    "walletGateRequired": true,
+    "auditLogRequired": true,
+    "healthzRequired": true
+  },
+  "approvals": {
+    "legalApproval": "TBD",
+    "complianceApproval": "TBD",
+    "frontendApproval": "TBD",
+    "operationsApproval": "TBD",
+    "approvedAt": "TBD",
+    "evidenceUri": "docs/deploy/base-mainnet-v13-casino-deployment-2026-05-24.md"
+  }
+}
