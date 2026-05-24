@@ -198,6 +198,11 @@ runbook in `docs/ops/runbooks/casino-keeper-production.md`. Base mainnet uses th
 `docs/ops/runbooks/bet-index-production.md`. Archive the mainnet canary evidence with
 `docs/deploy/base-mainnet-casino-canary-template.md`.
 
+The 2026-05-24 Base mainnet casino-only v1.3 contract deployment is recorded in
+`docs/deploy/base-mainnet-v13-casino-deployment-2026-05-24.md`. That document records deployed
+addresses, release digest, frontend sync, and read-only smoke results; it is not public risk-in
+authorization.
+
 The v1.3 script deploys and wires:
 - `PoolRegistry`
 - `SettlementRouter`
