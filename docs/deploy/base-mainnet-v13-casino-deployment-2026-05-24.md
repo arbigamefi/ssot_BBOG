@@ -78,6 +78,15 @@ git add -f deployments/... dist/ssot-release-base-mainnet-v13-2026-05-24-0x06ca8
 make release-artifacts-tracked-v13
 ```
 
+Basescan source verification:
+
+```bash
+set -a
+source .base-mainnet-v13-casino.env
+set +a
+FOUNDRY_PROFILE=default bash deployments/verify/verify-8453-46404343-v13.sh
+```
+
 Post-sync quality gates:
 
 ```bash
@@ -90,6 +99,23 @@ Observed results:
 - `DeployV13` broadcast completed successfully on chain `8453`.
 - Core deployed contract bytecode was present for adapter, `VRFHub`, `PoolRegistry`,
   `SettlementRouter`, `GameHub`, and pool `1` bank.
+- Basescan source verification returned `Pass - Verified` for:
+  - `ChainlinkV2PlusWrapperAdapter`;
+  - `VRFHub`;
+  - `PoolRegistry`;
+  - `SettlementRouter`;
+  - `ReferralRegistry`;
+  - `DefaultReferralEngine`;
+  - `GameHub`;
+  - casino pool `1` `Bank`;
+  - `DiceModule`;
+  - `CoinTossModule`;
+  - `RouletteModule`;
+  - `KenoModule`;
+  - `PlinkoModule`;
+  - `SicBoModule`;
+  - `SlotsModule`;
+  - `BaccaratModule`.
 - `release-check` verified the v1.3 release digest and signer.
 - `ssot:sync` generated `frontend/packages/ssot/src/release/embedded/chain-8453.json`, Base
   mainnet release ABIs, and a fixture bundle mirror.
