@@ -44,6 +44,8 @@
 
 ## Deploy
 - [ ] Run `bash script/ci/install_deps.sh`
+- [ ] Run a no-broadcast `forge script ...` simulation. Confirm it completes and does not write
+  `deployments/latest-v13.json` unless `WRITE_DRY_RUN_ARTIFACTS=true` was intentionally set.
 - [ ] Run `forge script script/DeployV13.s.sol:DeployV13 --rpc-url $RPC_URL --broadcast -vvv`
 - [ ] Record the printed addresses
 

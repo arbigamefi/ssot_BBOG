@@ -158,6 +158,10 @@ ENV_FILE=.env.base-mainnet-v13 make sports-mainnet-preflight-v13
 These checks validate env shape, chain id `8453`, wrapper/asset bytecode, and, when a Sports pool is
 configured, Sports role/cap placeholders. They do not authorize a deployment broadcast.
 
+For deployment script simulation, omit `--broadcast`. v1.3 `DeployV13` skips deployment artifact
+writes during dry runs by default; only `--broadcast` or `WRITE_DRY_RUN_ARTIFACTS=true` writes
+`deployments/latest-v13.json` and verify helpers.
+
 Before public casino risk-in, the final no-broadcast gate is:
 
 ```bash

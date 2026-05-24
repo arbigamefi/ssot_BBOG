@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import "forge-std/Script.sol";
 import "forge-std/console2.sol";
+import {VmSafe} from "forge-std/Vm.sol";
 
 import {Bank} from "../src/core/Bank.sol";
 import {GameHub} from "../src/core/GameHub.sol";
@@ -303,7 +304,16 @@ contract DeployV13 is Script {
         vm.stopBroadcast();
 
         _logDeployment(cfg, pools, d);
-        _writeArtifacts(cfg, pools, d);
+        if (_shouldWriteArtifacts()) {
+            _writeArtifacts(cfg, pools, d);
+        } else {
+            console2.log("Skipping v1.3 deployment artifact writes during dry run.");
+            console2.log("Set WRITE_DRY_RUN_ARTIFACTS=true to write simulated artifacts intentionally.");
+        }
+    }
+
+    function _shouldWriteArtifacts() internal view returns (bool) {
+        return vm.isContext(VmSafe.ForgeContext.ScriptBroadcast) || vm.envOr("WRITE_DRY_RUN_ARTIFACTS", false);
     }
 
     function _readDeployConfig() internal view returns (DeployConfig memory cfg) {

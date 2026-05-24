@@ -98,6 +98,11 @@ records GO.
 
 Broadcast only after the pre-broadcast gates are reviewed:
 
+For a no-broadcast simulation, omit `--broadcast`. `DeployV13` intentionally skips writing
+`deployments/latest-v13.json`, immutable snapshots, and verify helpers during dry runs so simulated
+addresses cannot be mistaken for release artifacts. Set `WRITE_DRY_RUN_ARTIFACTS=true` only when you
+explicitly want local simulated artifacts for debugging, and never commit them.
+
 Casino-only launch review:
 
 ```bash
