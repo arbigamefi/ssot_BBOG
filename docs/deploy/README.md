@@ -167,7 +167,8 @@ FRONTEND_ACCESS_FILE=<approved-casino-frontend-access.json> \
 make casino-mainnet-gonogo-v13
 ```
 
-This must remain red until the Base mainnet release bundle has been synced into
+This is a post-deploy public-risk-in gate. It must remain red before deployment, then turn green only
+after the Base mainnet release bundle has been generated from the deployment artifacts and synced into
 `frontend/packages/ssot/src/release/embedded/chain-8453.json`, the production web env is valid, and
 the casino frontend-access memo is approved.
 

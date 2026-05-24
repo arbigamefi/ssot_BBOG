@@ -1,6 +1,6 @@
 # Base mainnet v1.3 preflight audit — 2026-05-23
 
-Status: **NO-GO for broadcast; casino-only contract preflight path repaired; frontend mainnet gate intentionally red**
+Status: **NO-GO for broadcast; casino-only contract preflight path repaired; post-deploy frontend gate intentionally red**
 
 ## Scope
 
@@ -57,7 +57,7 @@ SportsHub public risk-in remains blocked unless an approved Phase 2 packet recor
 role custody, provider evidence, frontend access, bankroll caps, and ops coverage checks pass with
 `REQUIRE_APPROVED=1`.
 
-### F4 — Frontend mainnet readiness is machine-blocked until `chain-8453.json` exists
+### F4 — Frontend mainnet readiness is post-deploy and machine-blocked until `chain-8453.json` exists
 
 `make casino-mainnet-frontend-readiness-v13` now combines:
 
@@ -65,8 +65,10 @@ role custody, provider evidence, frontend access, bankroll caps, and ops coverag
 - `pnpm -C frontend check:mainnet-release`;
 - `pnpm -C frontend smoke:release-readonly -- --chain-id 8453`.
 
-It must stay red until the signed Base mainnet release bundle has been generated and synced into
-`frontend/packages/ssot/src/release/embedded/chain-8453.json`.
+This is not a pre-broadcast requirement. `chain-8453.json` is expected to be absent before the Base
+mainnet deployment. After broadcast, the release package is generated from the deployment artifacts,
+then `pnpm -C frontend ssot:sync -- --from dist/ssot-release-chain-8453-<block>-<digest>.tar.gz`
+writes `frontend/packages/ssot/src/release/embedded/chain-8453.json`.
 
 ### F5 — Local release artifacts can be ignored by git
 
@@ -84,8 +86,8 @@ commits must explicitly force-add the required files with `git add -f`.
 - embedded Base mainnet release check;
 - read-only Base mainnet release smoke.
 
-This gate must stay red until the real Base mainnet deployment artifacts are synced and the access
-memo is approved.
+This gate must stay red before deployment and stay red after deployment until the real Base mainnet
+deployment artifacts are packaged, synced into the frontend, and the access memo is approved.
 
 ## Current pre-broadcast command paths
 
