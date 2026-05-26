@@ -13,28 +13,8 @@ import {
 
 import { ProductStateCard } from "../../../components/ProductStateCard";
 import { getCatalogRooms } from "../../../features/casino/catalog";
-import {
-  BaccaratMiniIcon,
-  CoinTossMiniIcon,
-  DiceMiniIcon,
-  KenoMiniIcon,
-  PlinkoMiniIcon,
-  RouletteMiniIcon,
-  SicBoMiniIcon,
-  SlotsMiniIcon
-} from "../../../features/casino/CasinoMiniIcons";
+import { CasinoGameMark } from "../../../features/casino/CasinoMiniIcons";
 import { useRelease } from "../../../ssot/release/ReleaseProvider";
-
-const ROOM_ICON_MAP: Record<string, React.ReactNode> = {
-  dice: <DiceMiniIcon />,
-  roulette: <RouletteMiniIcon />,
-  "coin-toss": <CoinTossMiniIcon />,
-  keno: <KenoMiniIcon />,
-  plinko: <PlinkoMiniIcon />,
-  slots: <SlotsMiniIcon />,
-  baccarat: <BaccaratMiniIcon />,
-  "sic-bo": <SicBoMiniIcon />
-};
 
 const ROOM_COPY_KEYS: Record<
   string,
@@ -323,7 +303,7 @@ export function GamesListClient() {
                   href={room.href}
                   data-testid="room-entry-card"
                   data-slug={room.slug}
-                  className="group relative flex min-h-[21rem] flex-col overflow-hidden rounded-xl border border-border-soft bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-1)))] shadow-e2 transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-1 hover:border-brand/40 hover:shadow-glow"
+                  className="group relative flex min-h-[21rem] flex-col overflow-hidden rounded-xl border border-border-soft bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-1)))] shadow-e2 transition-colors duration-200 hover:border-brand/40 hover:bg-surface-2"
                 >
                   {/* top edge sheen */}
                   <div
@@ -347,19 +327,18 @@ export function GamesListClient() {
                   </div>
 
                   <div className="relative z-10 mt-8 flex flex-1 items-center justify-center p-5">
-                    {/* brand bloom behind the room icon — echoes the game stages */}
+                    {/* Shared game mark system: the lobby should feel like the
+                        same product as the individual room stages. */}
                     <div
                       aria-hidden
-                      className="pointer-events-none absolute left-1/2 top-1/2 h-44 w-44 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-60 transition-opacity duration-200 group-hover:opacity-100"
+                      className="pointer-events-none absolute left-1/2 top-1/2 h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-50 transition-opacity duration-200 group-hover:opacity-80"
                       style={{
                         background:
-                          "radial-gradient(circle, hsl(var(--brand) / 0.16), transparent 70%)"
+                          "radial-gradient(circle, hsl(var(--brand) / 0.1), transparent 70%)"
                       }}
                     />
                     <div className="relative">
-                      {ROOM_ICON_MAP[room.slug] ?? (
-                        <div className="text-3xl font-bold text-fg-subtle">[{room.slug}]</div>
-                      )}
+                      <CasinoGameMark slug={room.slug} className="h-36 w-36" />
                     </div>
                   </div>
 
