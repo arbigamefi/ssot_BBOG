@@ -5,6 +5,11 @@
     "connectWalletDescription": "连接钱包以使用此功能。",
     "connectingWallet": "连接中...",
     "indexerWorkerFailed": "索引器 worker 启动失败",
+    "network": {
+      "label": "当前网络",
+      "switchWallet": "切换",
+      "switching": "切换中"
+    },
     "unknownNetwork": "未知网络",
     "walletRequired": "需要钱包",
     "writesDisabled": "当前写入已关闭。",

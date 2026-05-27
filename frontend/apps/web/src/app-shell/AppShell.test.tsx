@@ -28,6 +28,10 @@ vi.mock("./WalletButton", () => ({
   useConnectModal: () => ({ openConnectModal: vi.fn() })
 }));
 
+vi.mock("./NetworkSwitcher", () => ({
+  NetworkSwitcher: () => <div data-testid="network-switcher">Base Mainnet</div>
+}));
+
 vi.mock("../components/LocaleSwitcher", () => ({
   LocaleSwitcher: () => <div data-testid="locale-switcher">English</div>
 }));
@@ -126,14 +130,13 @@ describe("AppShell", () => {
     expect(walletBtns.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("renders the network name", () => {
+  it("renders the network switcher", () => {
     render(
       <AppShell>
         <div>content</div>
       </AppShell>
     );
-    const networkNames = screen.getAllByText(/test-net/i);
-    expect(networkNames.length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByTestId("network-switcher").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders children in main", () => {

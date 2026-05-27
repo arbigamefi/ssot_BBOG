@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { SSOTRelease } from "@ssot/ssot/release";
+import { render, screen } from "@testing-library/react";
+import * as React from "react";
 
-import { resolveSportsbookAccess } from "./ReleaseProvider";
+import { ReleaseProvider, resolveSportsbookAccess, useRelease } from "./ReleaseProvider";
 
 const BASE_RELEASE: SSOTRelease = {
   chainId: 84532,
@@ -135,5 +137,34 @@ describe("resolveSportsbookAccess", () => {
     expect(access.frontendEnabled).toBe(true);
     expect(access.hasSportsRelease).toBe(true);
     expect(access.disabledReason).toBeUndefined();
+  });
+});
+
+function ReleaseProbe() {
+  const release = useRelease();
+  return (
+    <div>
+      <span data-testid="chain-id">{release.chainId}</span>
+      <span data-testid="read-only">{String(release.readOnly)}</span>
+      <span data-testid="release-read-only">{String(release.releaseReadOnly)}</span>
+      <span data-testid="wallet-mismatch">{String(release.walletChainMismatch)}</span>
+      <span data-testid="reason">{release.readOnlyReason ?? ""}</span>
+    </div>
+  );
+}
+
+describe("ReleaseProvider", () => {
+  it("keeps reads available while blocking writes on wallet chain mismatch", () => {
+    render(
+      <ReleaseProvider chainId={84532} selectedChainName="Base Sepolia" walletChainId={8453}>
+        <ReleaseProbe />
+      </ReleaseProvider>
+    );
+
+    expect(screen.getByTestId("chain-id").textContent).toBe("84532");
+    expect(screen.getByTestId("read-only").textContent).toBe("true");
+    expect(screen.getByTestId("release-read-only").textContent).toBe("false");
+    expect(screen.getByTestId("wallet-mismatch").textContent).toBe("true");
+    expect(screen.getByTestId("reason").textContent).toContain("Base Sepolia");
   });
 });

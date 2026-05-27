@@ -41,6 +41,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const { locale, messages } = await getRequestI18n();
+  const defaultChainId = process.env.NEXT_PUBLIC_CHAIN_ID;
   const sportsbookEnabledFlag = process.env.NEXT_PUBLIC_SPORTSBOOK_ENABLED;
 
   return (
@@ -50,7 +51,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body className="min-h-screen">
         <NextIntlClientProvider locale={locale} messages={messages}>
-          <ProductProviders sportsbookEnabledFlag={sportsbookEnabledFlag}>
+          <ProductProviders
+            defaultChainId={defaultChainId}
+            sportsbookEnabledFlag={sportsbookEnabledFlag}
+          >
             <AppShell>{children}</AppShell>
             <Toaster />
           </ProductProviders>

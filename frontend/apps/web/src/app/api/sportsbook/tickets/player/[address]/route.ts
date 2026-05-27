@@ -10,6 +10,7 @@ import {
   publicReadRateLimit,
   rateLimitedJson
 } from "../../../../../../server/http/public-read-limit";
+import { parseRequestChainId } from "../../../../../../server/chain";
 import { queryPlayerSportsTickets } from "../../../../../../server/sportsbook/player-tickets";
 
 export const dynamic = "force-dynamic";
@@ -17,11 +18,6 @@ export const runtime = "nodejs";
 
 function jsonError(message: string, status = 400, code = "BAD_REQUEST") {
   return NextResponse.json({ error: { code, message } }, { status });
-}
-
-function parseChainId(value: string | null) {
-  const parsed = Number(value ?? process.env.NEXT_PUBLIC_CHAIN_ID ?? "84532");
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : 84532;
 }
 
 function emptyPlayerSportsTicketsResponse({
@@ -46,7 +42,7 @@ function emptyPlayerSportsTicketsResponse({
 
 export async function GET(request: Request, context: { params: Promise<{ address: string }> }) {
   const url = new URL(request.url);
-  const chainId = parseChainId(url.searchParams.get("chainId"));
+  const chainId = parseRequestChainId(url.searchParams.get("chainId"));
   const params = await context.params;
   const quota = publicReadRateLimit({
     envName: "SPORTSBOOK_PLAYER_TICKETS_RATE_LIMIT_PER_MINUTE",

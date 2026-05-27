@@ -1,6 +1,7 @@
 import { loadEmbeddedRelease } from "@ssot/ssot/release";
 
 import { queryRecentBets } from "./betting/recent-bets";
+import { parseRequestChainId } from "./chain";
 import { readKeeperHealthSnapshot } from "./ops/keeper-health";
 
 type HealthCheckState = "ok" | "degraded";
@@ -36,11 +37,6 @@ export type HealthzSnapshot = {
     };
   };
 };
-
-function parseChainId(value = process.env.NEXT_PUBLIC_CHAIN_ID) {
-  const parsed = Number(value ?? "84532");
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : 84532;
-}
 
 function cleanEnv(value: string | undefined) {
   const trimmed = value?.trim();
@@ -82,7 +78,7 @@ function summarizeStatus(states: HealthCheckState[]): HealthCheckState {
 }
 
 export async function getHealthzSnapshot({
-  chainId = parseChainId()
+  chainId = parseRequestChainId(process.env.NEXT_PUBLIC_CHAIN_ID)
 }: {
   chainId?: number;
 } = {}): Promise<HealthzSnapshot> {

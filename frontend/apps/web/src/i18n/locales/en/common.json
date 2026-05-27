@@ -5,6 +5,11 @@
     "connectWalletDescription": "Connect a wallet to use this feature.",
     "connectingWallet": "Connecting...",
     "indexerWorkerFailed": "Indexer worker failed to start",
+    "network": {
+      "label": "Active network",
+      "switchWallet": "Switch",
+      "switching": "Switching"
+    },
     "unknownNetwork": "Unknown network",
     "walletRequired": "Wallet required",
     "writesDisabled": "Writes are disabled.",

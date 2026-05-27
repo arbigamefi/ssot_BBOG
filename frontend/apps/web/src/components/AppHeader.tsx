@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { ShellHeader, ShellHeaderBrand, ShellHeaderNav, ShellHeaderActions } from "@ssot/ui";
 import { cn } from "@ssot/ui";
 import { WalletButton } from "../app-shell/WalletButton";
-import { useRelease } from "../ssot/release/ReleaseProvider";
+import { NetworkSwitcher } from "../app-shell/NetworkSwitcher";
 import { LocaleSwitcher } from "./LocaleSwitcher";
 
 export type AppRoute =
@@ -45,7 +45,6 @@ const GAME_NAV_LINKS = [
 
 export function AppHeader({ activeRoute = "none", variant = "default" }: AppHeaderProps) {
   const isTransparent = variant === "transparent";
-  const { release } = useRelease();
   const t = useTranslations();
 
   if (isTransparent) {
@@ -178,10 +177,7 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
 
         <ShellHeaderActions>
           <LocaleSwitcher compact />
-          <div className="hidden items-center gap-2 rounded-full border border-border-soft bg-surface-2 px-3 py-1.5 font-mono text-xs text-fg-muted sm:flex">
-            <span className="h-1.5 w-1.5 rounded-full bg-brand"></span>
-            {release?.name ?? t("app.unknownNetwork")}
-          </div>
+          <NetworkSwitcher />
           <WalletButton />
         </ShellHeaderActions>
       </ShellHeader>
