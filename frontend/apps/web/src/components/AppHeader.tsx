@@ -1,7 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { ShellHeader, ShellHeaderBrand, ShellHeaderNav, ShellHeaderActions } from "@ssot/ui";
+import { ShellHeader, ShellHeaderNav, ShellHeaderActions } from "@ssot/ui";
 import { cn } from "@ssot/ui";
 import { WalletButton } from "../app-shell/WalletButton";
 import { NetworkSwitcher } from "../app-shell/NetworkSwitcher";
@@ -69,6 +69,7 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
           </div>
           <div className="flex items-center gap-4">
             <LocaleSwitcher compact />
+            <NetworkSwitcher />
             <div className="hidden md:block">
               <WalletButton />
             </div>
@@ -128,7 +129,10 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
     <>
       <ShellHeader variant="solid">
         <div className="flex min-w-0 flex-1 items-center gap-3 md:gap-8">
-          <ShellHeaderBrand name="ArbiGameFi" className="shrink-0" />
+          <Link href="/" className="shrink-0 text-xl font-bold tracking-tight text-fg">
+            <span className="sm:hidden">AGF</span>
+            <span className="hidden sm:inline">ArbiGameFi</span>
+          </Link>
 
           {variant === "game" ? (
             <ShellHeaderNav className="flex-1 basis-0 gap-5 overscroll-x-contain pr-4">
