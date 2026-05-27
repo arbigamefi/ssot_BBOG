@@ -512,28 +512,28 @@
     "directory": {
       "loading": "正在加载游戏...",
       "empty": {
-        "noRelease": "当前链没有可用的内嵌 release。",
-        "noGames": "当前 release 没有注册游戏。",
-        "noResults": "没有匹配的房间",
-        "noResultsDetail": "没有赌场房间匹配“{query}”。清空搜索或切换分类。",
+        "noRelease": "你连的链上没有赌场。",
+        "noGames": "目前没有游戏可玩。",
+        "noResults": "没找到匹配的游戏",
+        "noResultsDetail": "\"{query}\" 没有匹配。试试清空搜索。",
         "clearSearch": "清空搜索"
       },
       "hero": {
-        "eyebrow": "全球赌场大厅",
-        "title": "进入游戏大厅",
-        "description": "所有模块都在链上执行、可验证，并直接连接到隔离资金池。连接钱包即可开始游戏。"
+        "eyebrow": "游戏大厅",
+        "title": "挑一款游戏。",
+        "description": "八款游戏。连上钱包直接开玩。每一局都落在链上。"
       },
       "stats": {
-        "rooms": "链上房间",
-        "asset": "Bank 资产"
+        "rooms": "在线游戏",
+        "asset": "结算资产"
       },
       "filters": {
-        "all": "全部模块",
-        "table": "桌面游戏",
-        "dice": "骰子游戏",
-        "binary": "快速二选一",
-        "lottery": "彩票类",
-        "arcade": "街机类"
+        "all": "全部",
+        "table": "桌面",
+        "dice": "骰子",
+        "binary": "翻硬币",
+        "lottery": "彩票",
+        "arcade": "街机"
       },
       "search": {
         "placeholder": "搜索游戏...",
@@ -590,15 +590,17 @@
         }
       },
       "card": {
-        "releaseAnchored": "Release 锚定",
-        "playNow": "开始游戏"
+        "releaseAnchored": "在线",
+        "playNow": "开玩"
       },
       "reserve": {
-        "title": "赌场 Bankroll",
-        "subtitle": "Bank {bank}",
-        "status": "Release 锚定",
-        "cta": "查看 Bank"
-      }
+        "title": "庄家金库,链上可查",
+        "subtitle": "金库 {bank}",
+        "status": "在线",
+        "cta": "链上查看"
+      },
+      "bets": "下注",
+      "clearAll": "清空"
     }
   },
   "sportsbook": {
@@ -2565,11 +2567,11 @@
       "days": "{count}d 前"
     },
     "hero": {
-      "channel": "Base Sepolia release 通道",
-      "title": "ArbiGameFi",
-      "description": "面向透明 Bank、可验证随机数和自动结算的链上赌场轨道。首屏就是产品界面，不是承诺型展示页。",
-      "enterCasino": "进入赌场",
-      "viewBank": "查看 Bank",
+      "channel": "在 Arbitrum 上线",
+      "title": "链上可验证的赌场。",
+      "description": "八款游戏。每一局都能在链上核对。中了直接进你的钱包,几秒到账 —— 不用注册、不用托管。",
+      "enterCasino": "开始玩",
+      "viewBank": "看怎么玩",
       "consoleLabel": "协议控制台",
       "live": "实时",
       "metrics": {
@@ -2590,23 +2592,23 @@
     },
     "stats": {
       "freeReserve": {
-        "label": "可用储备",
-        "detail": "扣除已保留负债后的可读 Bank 容量。"
+        "label": "可赔付额",
+        "detail": "庄家此刻能赔出多少 —— 链上可查。"
       },
       "bankAssets": {
-        "label": "Bank 资产",
-        "detail": "从 release 关联的 Bank 快照聚合。"
+        "label": "庄家资金",
+        "detail": "赌场金库现在有多少,链上可看。"
       },
       "release": {
-        "label": "Release",
-        "detail": "前端状态锚定到 release manifest。"
+        "label": "在线游戏",
+        "detail": "八款游戏 + 金库,都在线。"
       }
     },
     "rooms": {
-      "eyebrow": "赌场房间",
-      "title": "八个一次性 RNG 游戏，一条结算轨道。",
-      "detail": "每个房间映射到 release 定义的模块。UI 可以变化，但游戏身份、参数和派奖路径都锚定到 SSOT release。",
-      "actionLabel": "打开目录"
+      "eyebrow": "全部游戏",
+      "title": "八款游戏。一个钱包。",
+      "detail": "每款游戏走自己的合约结算。挑一个点进去 —— 不用注册。",
+      "actionLabel": "全部查看"
     },
     "roomCards": {
       "dice": {
@@ -2700,16 +2702,16 @@
       "inspectBank": "检查 Bank"
     },
     "activity": {
-      "eyebrow": "协议活动",
-      "title": "最新已索引票据",
-      "viewAll": "查看全部",
+      "eyebrow": "实时",
+      "title": "最近几局",
+      "viewAll": "全部记录",
       "headers": {
         "player": "玩家",
-        "room": "房间",
+        "room": "游戏",
         "state": "状态",
         "age": "时间"
       },
-      "empty": "当前浏览器会话还没有已索引票据。"
+      "empty": "做第一个吧。"
     },
     "proof": {
       "traceLabel": "settlement_trace.sol",
@@ -2718,6 +2720,47 @@
       "title": "透明结算轨道。",
       "description": "托管、游戏模块和随机数是彼此分离的界面。这让 UI 可以重写，而不扰动协议正确性。",
       "actionLabel": "查看证明票据"
+    },
+    "whyUs": {
+      "eyebrow": "为什么在这玩",
+      "title": "我们没法做局。",
+      "items": {
+        "0": {
+          "title": "我们决定不了开奖",
+          "detail": "每一局的随机数都由 Chainlink VRF 抽出。我们只按它的结果结算。"
+        },
+        "1": {
+          "title": "中奖直接到钱包",
+          "detail": "VRF 返回那一刻,中奖款就到你钱包。没有提款排队、没有最低金额、不延迟。"
+        },
+        "2": {
+          "title": "庄家不会跑路",
+          "detail": "庄家此刻能赔多少,链上看得见。下注前可以先核。"
+        },
+        "3": {
+          "title": "合约全部公开",
+          "detail": "游戏逻辑、金库、结算 —— 全部开源。读它、fork 它、验证它。"
+        }
+      }
+    },
+    "reserveBar": {
+      "eyebrow": "庄家金库",
+      "free": "可赔付",
+      "total": "金库总额",
+      "verify": "链上查看"
+    },
+    "featured": {
+      "eyebrow": "本周主推",
+      "title": "Keno —— 选 5 个号,搏 500×。",
+      "detail": "盘面 15 个号。选 5 个。全中赔 500.5×;中 1 个也能赔。",
+      "cta": "玩 Keno"
+    },
+    "footerCta": {
+      "eyebrow": "你说开始就开始",
+      "title": "连钱包。挑游戏。开始。",
+      "description": "下注前,钱一直在你自己钱包里。中奖原路返回。",
+      "primary": "开始玩",
+      "secondary": "浏览游戏"
     }
   },
   "legal": {

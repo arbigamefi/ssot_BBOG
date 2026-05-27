@@ -8,184 +8,555 @@ type CasinoGameMarkProps = GameMiniIconProps & {
   slug: string;
 };
 
-function cx(...parts: Array<string | undefined | false>) {
+const MONO = "ui-monospace, SFMono-Regular, Menlo, monospace";
+
+function cn(...parts: Array<string | undefined | false>) {
   return parts.filter(Boolean).join(" ");
 }
 
+/**
+ * Shared icon frame — matches the rebuilt game consoles: gradient `surface`
+ * panel with a top sheen hairline and a soft brand bloom behind the mark.
+ * Every game mark below is sized to ~80% of the frame so the bloom rings the
+ * silhouette without crowding it.
+ */
 function IconFrame({ className, children }: React.PropsWithChildren<GameMiniIconProps>) {
   return (
     <div
-      className={cx(
-        "relative flex aspect-square h-32 w-32 items-center justify-center overflow-hidden rounded-2xl border border-border-soft bg-[radial-gradient(circle_at_50%_22%,hsl(var(--surface-2)),hsl(var(--surface-1))_66%,hsl(var(--surface-0)))] text-brand shadow-e2",
+      className={cn(
+        "relative flex aspect-square h-32 w-32 items-center justify-center overflow-hidden rounded-2xl border border-border-soft text-brand shadow-e2",
         className
       )}
+      style={{
+        background: "linear-gradient(180deg, hsl(var(--surface-2)), hsl(var(--surface-1)))"
+      }}
     >
-      <div className="absolute inset-2 rounded-xl border border-fg/5 bg-fg/[0.015]" />
       <div
         aria-hidden
-        className="absolute inset-x-5 top-4 h-px bg-gradient-to-r from-transparent via-fg/20 to-transparent"
+        className="pointer-events-none absolute inset-x-0 top-0 h-px"
+        style={{
+          background: "linear-gradient(90deg, transparent, hsl(var(--fg) / 0.16), transparent)"
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-1/2 h-[88%] w-[88%] -translate-x-1/2 -translate-y-1/2 rounded-full"
+        style={{ background: "radial-gradient(circle, hsl(var(--brand) / 0.18), transparent 70%)" }}
       />
       <div className="relative z-10 flex h-full w-full items-center justify-center">{children}</div>
     </div>
   );
 }
 
-function pip(x: number, y: number, key: string) {
-  return <circle key={key} cx={x} cy={y} r="2.6" fill="hsl(var(--fg))" opacity="0.9" />;
-}
-
-function svgNumber(value: number) {
-  return Number(value.toFixed(3));
-}
+/* -------------------------------------------------------------------------- */
+/* Dice — front face of the percentile die, showing TARGET / 50.              */
+/* -------------------------------------------------------------------------- */
 
 export function DiceMiniIcon({ className }: GameMiniIconProps) {
+  const uid = React.useId();
+  const fillId = `dice-face-${uid}`;
   return (
     <IconFrame className={className}>
-      <svg viewBox="0 0 120 120" aria-hidden="true" className="h-[82%] w-[82%]">
-        <path d="M60 15 97 36 60 57 23 36Z" fill="currentColor" opacity="0.28" />
-        <path d="M23 36 60 57v44L23 79Z" fill="currentColor" opacity="0.16" />
-        <path d="M97 36 60 57v44l37-22Z" fill="currentColor" opacity="0.22" />
-        <path
-          d="M60 15 97 36v43l-37 22-37-22V36Z"
-          fill="none"
-          stroke="currentColor"
-          strokeLinejoin="round"
-          strokeWidth="3"
+      <svg viewBox="0 0 120 120" aria-hidden="true" className="h-[80%] w-[80%]">
+        <defs>
+          <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="hsl(var(--surface-3))" />
+            <stop offset="100%" stopColor="hsl(var(--surface-1))" />
+          </linearGradient>
+        </defs>
+        {/* depth shadow */}
+        <rect
+          x="28"
+          y="32"
+          width="68"
+          height="68"
+          rx="12"
+          fill="hsl(var(--surface-0))"
+          opacity="0.55"
         />
-        <path
-          d="M60 57v44M23 36l37 21 37-21"
-          fill="none"
+        {/* front face */}
+        <rect
+          x="22"
+          y="24"
+          width="68"
+          height="68"
+          rx="12"
+          fill={`url(#${fillId})`}
           stroke="currentColor"
-          strokeOpacity="0.45"
+          strokeOpacity="0.55"
+          strokeWidth="2.5"
         />
-        <g>{[pip(50, 34, "top-1"), pip(60, 39, "top-2"), pip(70, 34, "top-3")]}</g>
-        <g transform="skewY(30)">{[pip(40, 47, "left-1"), pip(53, 55, "left-2")]}</g>
-        <g transform="skewY(-30)">
-          {[pip(73, 108, "right-1"), pip(86, 100, "right-2"), pip(86, 116, "right-3")]}
-        </g>
+        <text
+          x="56"
+          y="46"
+          textAnchor="middle"
+          fill="hsl(var(--fg))"
+          fillOpacity="0.55"
+          fontSize="9"
+          fontFamily={MONO}
+          fontWeight="700"
+          letterSpacing="2"
+        >
+          TARGET
+        </text>
+        <text
+          x="56"
+          y="78"
+          textAnchor="middle"
+          fill="hsl(var(--fg))"
+          fontSize="32"
+          fontFamily={MONO}
+          fontWeight="800"
+        >
+          50
+        </text>
       </svg>
     </IconFrame>
   );
 }
 
+/* -------------------------------------------------------------------------- */
+/* Roulette — 12-segment wheel with central cone and accent pointer.          */
+/* -------------------------------------------------------------------------- */
+
 export function RouletteMiniIcon({ className }: GameMiniIconProps) {
+  const uid = React.useId();
+  const coneId = `rou-cone-${uid}`;
+  const centerX = 60;
+  const centerY = 62;
+  const SEG = 12;
+  const r0 = 22; // inner edge of pocket ring
+  const r1 = 42; // outer edge of pocket ring
+  // top segment = green zero; the rest alternate red / black.
+  const colors = Array.from({ length: SEG }, (_, i) =>
+    i === 0 ? "hsl(var(--success))" : i % 2 === 1 ? "hsl(var(--danger))" : "hsl(var(--surface-0))"
+  );
   return (
     <IconFrame className={className}>
       <svg viewBox="0 0 120 120" aria-hidden="true" className="h-[82%] w-[82%]">
-        <circle cx="60" cy="60" r="43" fill="currentColor" opacity="0.12" />
-        <circle cx="60" cy="60" r="43" fill="none" stroke="currentColor" strokeWidth="3" />
+        <defs>
+          <radialGradient id={coneId} cx="40%" cy="34%" r="80%">
+            <stop offset="0%" stopColor="hsl(var(--fg) / 0.5)" />
+            <stop offset="56%" stopColor="hsl(var(--brand))" />
+            <stop offset="100%" stopColor="hsl(var(--brand-active))" />
+          </radialGradient>
+        </defs>
+        {/* apron */}
+        <circle cx={centerX} cy={centerY} r={r1 + 4} fill="hsl(var(--surface-3))" />
         <circle
-          cx="60"
-          cy="60"
-          r="27"
-          fill="hsl(var(--surface-0))"
-          stroke="currentColor"
-          strokeOpacity="0.55"
+          cx={centerX}
+          cy={centerY}
+          r={r1 + 4}
+          fill="none"
+          stroke="hsl(var(--fg) / 0.18)"
+          strokeWidth="1.5"
         />
-        {Array.from({ length: 12 }).map((_, index) => {
-          const angle = (Math.PI * 2 * index) / 12 - Math.PI / 2;
-          const x1 = svgNumber(60 + Math.cos(angle) * 27);
-          const y1 = svgNumber(60 + Math.sin(angle) * 27);
-          const x2 = svgNumber(60 + Math.cos(angle) * 43);
-          const y2 = svgNumber(60 + Math.sin(angle) * 43);
+        {/* pockets — donut segments */}
+        {colors.map((color, i) => {
+          const half = (Math.PI * 2) / SEG / 2;
+          const a0 = (i * Math.PI * 2) / SEG - Math.PI / 2 - half;
+          const a1 = ((i + 1) * Math.PI * 2) / SEG - Math.PI / 2 - half;
+          const x0 = centerX + r1 * Math.cos(a0);
+          const y0 = centerY + r1 * Math.sin(a0);
+          const x1 = centerX + r1 * Math.cos(a1);
+          const y1 = centerY + r1 * Math.sin(a1);
+          const x2 = centerX + r0 * Math.cos(a1);
+          const y2 = centerY + r0 * Math.sin(a1);
+          const x3 = centerX + r0 * Math.cos(a0);
+          const y3 = centerY + r0 * Math.sin(a0);
           return (
-            <line
-              key={index}
-              x1={x1}
-              y1={y1}
-              x2={x2}
-              y2={y2}
-              stroke="currentColor"
-              strokeOpacity={index % 2 === 0 ? "0.65" : "0.28"}
-              strokeWidth="2"
+            <path
+              key={i}
+              d={`M ${x0} ${y0} A ${r1} ${r1} 0 0 1 ${x1} ${y1} L ${x2} ${y2} A ${r0} ${r0} 0 0 0 ${x3} ${y3} Z`}
+              fill={color}
+              stroke="hsl(var(--fg) / 0.18)"
+              strokeWidth="0.6"
             />
           );
         })}
-        <circle cx="60" cy="60" r="8" fill="currentColor" />
-        <path
-          d="M30 47c11-26 48-27 62-4"
-          fill="none"
-          stroke="hsl(var(--fg))"
-          strokeLinecap="round"
-          strokeOpacity="0.35"
-          strokeWidth="3"
+        {/* central cone */}
+        <circle
+          cx={centerX}
+          cy={centerY}
+          r={r0 - 2}
+          fill={`url(#${coneId})`}
+          stroke="hsl(var(--fg) / 0.2)"
+          strokeWidth="1"
         />
-        <circle cx="86" cy="38" r="5" fill="hsl(var(--fg))" />
+        <circle cx={centerX} cy={centerY} r="3.5" fill="hsl(var(--fg))" opacity="0.95" />
+        {/* pointer diamond — accent */}
+        <rect
+          x={centerX - 5}
+          y="10"
+          width="10"
+          height="10"
+          rx="2"
+          transform={`rotate(45 ${centerX} 15)`}
+          fill="hsl(var(--accent))"
+        />
       </svg>
     </IconFrame>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Coin Toss — two minted medallions (H brand, T accent) overlapping.         */
+/* -------------------------------------------------------------------------- */
+
+function MintedCoin({
+  cx,
+  cy,
+  r,
+  letter,
+  tone,
+  uid
+}: {
+  cx: number;
+  cy: number;
+  r: number;
+  letter: "H" | "T";
+  tone: "brand" | "accent";
+  uid: string;
+}) {
+  const metalId = `coin-metal-${uid}-${letter}`;
+  const toneVar = tone === "brand" ? "var(--brand)" : "var(--accent)";
+  const toneDeep = tone === "brand" ? "var(--brand-active)" : "var(--accent)";
+  const fontSize = r * 1.0;
+  return (
+    <g>
+      <defs>
+        <radialGradient id={metalId} cx="36%" cy="28%" r="82%">
+          <stop offset="0%" stopColor="hsl(var(--fg) / 0.55)" />
+          <stop offset="46%" stopColor={`hsl(${toneVar})`} />
+          <stop offset="100%" stopColor={`hsl(${toneDeep} / 0.85)`} />
+        </radialGradient>
+      </defs>
+      <circle cx={cx} cy={cy} r={r} fill={`url(#${metalId})`} />
+      {/* milled rim */}
+      <circle
+        cx={cx}
+        cy={cy}
+        r={r - 4}
+        fill="none"
+        stroke="hsl(var(--surface-0) / 0.55)"
+        strokeWidth={r * 0.16}
+        strokeDasharray="1.6 2.9"
+        strokeLinecap="round"
+      />
+      {/* bevel ring */}
+      <circle
+        cx={cx}
+        cy={cy}
+        r={r - 10}
+        fill="none"
+        stroke="hsl(var(--fg) / 0.28)"
+        strokeWidth="0.8"
+      />
+      {/* embossed monogram (dark drop + bright top) */}
+      <text
+        x={cx}
+        y={cy + 3}
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize={fontSize}
+        fontWeight="800"
+        fontFamily={MONO}
+        fill="hsl(var(--surface-0) / 0.5)"
+      >
+        {letter}
+      </text>
+      <text
+        x={cx}
+        y={cy}
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize={fontSize}
+        fontWeight="800"
+        fontFamily={MONO}
+        fill="hsl(var(--fg) / 0.94)"
+      >
+        {letter}
+      </text>
+    </g>
   );
 }
 
 export function CoinTossMiniIcon({ className }: GameMiniIconProps) {
+  const uid = React.useId();
   return (
     <IconFrame className={className}>
-      <svg viewBox="0 0 120 120" aria-hidden="true" className="h-[82%] w-[82%]">
-        <ellipse cx="60" cy="86" rx="28" ry="6" fill="hsl(var(--fg))" opacity="0.08" />
-        <circle cx="60" cy="55" r="35" fill="currentColor" opacity="0.13" />
-        <circle cx="60" cy="55" r="35" fill="none" stroke="currentColor" strokeWidth="3" />
-        <circle cx="60" cy="55" r="24" fill="none" stroke="hsl(var(--fg))" strokeOpacity="0.28" />
+      <svg viewBox="0 0 120 120" aria-hidden="true" className="h-[84%] w-[84%]">
+        {/* T coin (behind, lower-right) */}
+        <MintedCoin cx={78} cy={74} r={26} letter="T" tone="accent" uid={uid} />
+        {/* H coin (front, upper-left) */}
+        <MintedCoin cx={48} cy={50} r={34} letter="H" tone="brand" uid={uid} />
+      </svg>
+    </IconFrame>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Keno — glass globe with brand balls inside; chute hint.                    */
+/* -------------------------------------------------------------------------- */
+
+export function KenoMiniIcon({ className }: GameMiniIconProps) {
+  const uid = React.useId();
+  const glassId = `keno-glass-${uid}`;
+  const ballId = `keno-ball-${uid}`;
+  return (
+    <IconFrame className={className}>
+      <svg viewBox="0 0 120 120" aria-hidden="true" className="h-[84%] w-[84%]">
+        <defs>
+          <radialGradient id={glassId} cx="40%" cy="28%" r="78%">
+            <stop offset="0%" stopColor="hsl(var(--surface-2))" />
+            <stop offset="100%" stopColor="hsl(var(--surface-0))" />
+          </radialGradient>
+          <radialGradient id={ballId} cx="32%" cy="28%">
+            <stop offset="0%" stopColor="white" />
+            <stop offset="70%" stopColor="hsl(var(--brand))" />
+            <stop offset="100%" stopColor="hsl(var(--brand-active))" />
+          </radialGradient>
+        </defs>
+        {/* housing ring */}
+        <circle cx="56" cy="56" r="42" fill="hsl(var(--surface-3))" />
+        {/* glass cavity */}
+        <circle cx="56" cy="56" r="35" fill={`url(#${glassId})`} />
+        {/* rim highlight */}
         <path
-          d="M60 31c10 7 15 15 15 24S70 72 60 79c-10-7-15-15-15-24s5-17 15-24Z"
-          fill="currentColor"
-          opacity="0.28"
-        />
-        <path
-          d="M45 54h30M52 43v24M68 43v24"
+          d="M 28 38 A 35 35 0 0 1 78 26"
           fill="none"
-          stroke="hsl(var(--fg))"
+          stroke="hsl(var(--fg) / 0.34)"
+          strokeWidth="2.5"
           strokeLinecap="round"
-          strokeWidth="3"
-          opacity="0.85"
+        />
+        {/* balls inside */}
+        <circle cx="46" cy="68" r="8" fill={`url(#${ballId})`} />
+        <circle cx="62" cy="72" r="8" fill={`url(#${ballId})`} />
+        <circle cx="55" cy="54" r="8" fill={`url(#${ballId})`} />
+        <circle cx="69" cy="60" r="6" fill={`url(#${ballId})`} />
+        {/* chute toward the rack */}
+        <rect
+          x="96"
+          y="52"
+          width="16"
+          height="9"
+          rx="3"
+          fill="hsl(var(--surface-3))"
+          stroke="hsl(var(--fg) / 0.18)"
+          strokeWidth="1"
         />
       </svg>
     </IconFrame>
   );
 }
 
-export function KenoMiniIcon({ className }: GameMiniIconProps) {
-  const hits = new Set([2, 5, 9, 12, 14]);
+/* -------------------------------------------------------------------------- */
+/* Plinko — five rows of pegs, a falling ball, and edge-hot buckets.          */
+/* -------------------------------------------------------------------------- */
+
+export function PlinkoMiniIcon({ className }: GameMiniIconProps) {
+  return (
+    <IconFrame className={className}>
+      <svg viewBox="0 0 120 120" aria-hidden="true" className="h-[86%] w-[86%]">
+        {/* drop chute */}
+        <rect
+          x="55"
+          y="10"
+          width="10"
+          height="7"
+          rx="2"
+          fill="hsl(var(--surface-3))"
+          stroke="hsl(var(--fg) / 0.2)"
+          strokeWidth="0.8"
+        />
+        {/* peg triangle (5 rows) */}
+        {Array.from({ length: 5 }).flatMap((_, row) =>
+          Array.from({ length: row + 1 }).map((__, i) => (
+            <circle
+              key={`peg-${row}-${i}`}
+              cx={60 + (i - row / 2) * 12}
+              cy={28 + row * 11}
+              r="2.6"
+              fill="hsl(var(--fg))"
+              opacity="0.78"
+            />
+          ))
+        )}
+        {/* ball mid-fall */}
+        <circle cx="66" cy="70" r="5" fill="hsl(var(--fg))" />
+        {/* multiplier buckets (7 across) */}
+        {[0, 1, 2, 3, 4, 5, 6].map((i) => {
+          const x = 14 + i * 13;
+          const hot = i === 0 || i === 6;
+          const mid = i === 3;
+          return (
+            <rect
+              key={`bucket-${i}`}
+              x={x}
+              y="92"
+              width="11"
+              height="14"
+              rx="3"
+              fill={hot ? "currentColor" : mid ? "hsl(var(--surface-2))" : "hsl(var(--surface-1))"}
+              stroke="hsl(var(--fg) / 0.2)"
+              strokeWidth="0.6"
+              opacity={hot ? 1 : 0.85}
+            />
+          );
+        })}
+      </svg>
+    </IconFrame>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Slots — three reels with a 7-7-7 jackpot and an accent payline.            */
+/* -------------------------------------------------------------------------- */
+
+export function SlotsMiniIcon({ className }: GameMiniIconProps) {
   return (
     <IconFrame className={className}>
       <svg viewBox="0 0 120 120" aria-hidden="true" className="h-[84%] w-[84%]">
-        <rect x="20" y="17" width="80" height="22" rx="11" fill="currentColor" opacity="0.13" />
-        {[28, 44, 60, 76, 92].map((x, index) => (
-          <circle
-            key={x}
-            cx={x}
-            cy={28}
-            r="6"
-            fill={index === 2 ? "currentColor" : "hsl(var(--surface-3))"}
-            stroke="currentColor"
-            strokeOpacity="0.7"
-          />
-        ))}
+        {/* cabinet / recess */}
         <rect
-          x="18"
-          y="48"
-          width="84"
-          height="54"
-          rx="12"
+          x="16"
+          y="20"
+          width="88"
+          height="80"
+          rx="10"
           fill="hsl(var(--surface-0))"
-          stroke="currentColor"
-          strokeOpacity="0.7"
+          stroke="hsl(var(--fg) / 0.18)"
+          strokeWidth="1.5"
         />
-        {Array.from({ length: 15 }).map((_, index) => {
-          const col = index % 5;
-          const row = Math.floor(index / 5);
-          const hit = hits.has(index);
+        {/* marquee */}
+        <rect x="20" y="24" width="80" height="10" rx="4" fill="hsl(var(--surface-2))" />
+        {/* three reels */}
+        {[0, 1, 2].map((i) => (
+          <g key={`reel-${i}`} transform={`translate(${24 + i * 25} 40)`}>
+            <rect
+              width="22"
+              height="52"
+              rx="4"
+              fill="hsl(var(--surface-1))"
+              stroke="hsl(var(--fg) / 0.14)"
+              strokeWidth="1"
+            />
+            <text
+              x="11"
+              y="36"
+              textAnchor="middle"
+              fontSize="22"
+              fontWeight="900"
+              fontFamily={MONO}
+              fill="currentColor"
+            >
+              7
+            </text>
+          </g>
+        ))}
+        {/* payline */}
+        <line
+          x1="20"
+          y1="66"
+          x2="100"
+          y2="66"
+          stroke="hsl(var(--accent))"
+          strokeWidth="2"
+          strokeLinecap="round"
+          opacity="0.95"
+        />
+        <circle cx="20" cy="66" r="2.5" fill="hsl(var(--accent))" />
+        <circle cx="100" cy="66" r="2.5" fill="hsl(var(--accent))" />
+      </svg>
+    </IconFrame>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Baccarat — two tilted playing cards and a row of chips.                    */
+/* -------------------------------------------------------------------------- */
+
+export function BaccaratMiniIcon({ className }: GameMiniIconProps) {
+  return (
+    <IconFrame className={className}>
+      <svg viewBox="0 0 120 120" aria-hidden="true" className="h-[84%] w-[84%]">
+        {/* back card */}
+        <g transform="translate(34 24) rotate(-9)">
+          <rect
+            width="34"
+            height="48"
+            rx="5"
+            fill="hsl(var(--fg))"
+            stroke="hsl(var(--fg) / 0.25)"
+            strokeWidth="1"
+          />
+          <text
+            x="6"
+            y="13"
+            fontSize="10"
+            fontFamily={MONO}
+            fontWeight="700"
+            fill="hsl(var(--surface-0))"
+          >
+            K
+          </text>
+          {/* heart suit */}
+          <path
+            d="M17 30c-3-5-10-4-10 1 0 5 10 10 10 13 0-3 10-8 10-13 0-5-7-6-10-1Z"
+            fill="hsl(var(--danger))"
+          />
+        </g>
+        {/* front card */}
+        <g transform="translate(54 28) rotate(8)">
+          <rect
+            width="34"
+            height="48"
+            rx="5"
+            fill="hsl(var(--fg))"
+            stroke="hsl(var(--fg) / 0.25)"
+            strokeWidth="1"
+          />
+          <text
+            x="6"
+            y="13"
+            fontSize="10"
+            fontFamily={MONO}
+            fontWeight="700"
+            fill="hsl(var(--surface-0))"
+          >
+            A
+          </text>
+          {/* spade suit */}
+          <path
+            d="M17 18c4 5 10 8 10 13 0 4-4 6-8 4l1 5h-6l1-5c-4 2-8 0-8-4 0-5 6-8 10-13Z"
+            fill="hsl(var(--surface-0))"
+          />
+        </g>
+        {/* three chips */}
+        {[0, 1, 2].map((i) => {
+          const cxv = 30 + i * 28;
+          const fill =
+            i === 0 ? "currentColor" : i === 1 ? "hsl(var(--accent))" : "hsl(var(--surface-3))";
           return (
-            <g key={index} transform={`translate(${29 + col * 15}, ${61 + row * 15})`}>
-              <rect
-                x="-5"
-                y="-5"
-                width="10"
-                height="10"
-                rx="3"
-                fill={hit ? "currentColor" : "hsl(var(--surface-2))"}
-                stroke={hit ? "currentColor" : "hsl(var(--border))"}
-                strokeWidth="1.5"
+            <g key={`chip-${i}`}>
+              <ellipse cx={cxv} cy={98} rx="11" ry="3" fill="hsl(var(--surface-0))" opacity="0.5" />
+              <circle
+                cx={cxv}
+                cy="96"
+                r="9.5"
+                fill={fill}
+                stroke="hsl(var(--fg) / 0.22)"
+                strokeWidth="1"
               />
-              {hit ? <circle cx="0" cy="0" r="1.5" fill="hsl(var(--fg-inverse))" /> : null}
+              <circle
+                cx={cxv}
+                cy="96"
+                r="5"
+                fill="none"
+                stroke="hsl(var(--fg) / 0.35)"
+                strokeWidth="0.9"
+                strokeDasharray="2 1.5"
+              />
             </g>
           );
         })}
@@ -194,247 +565,83 @@ export function KenoMiniIcon({ className }: GameMiniIconProps) {
   );
 }
 
-export function PlinkoMiniIcon({ className }: GameMiniIconProps) {
-  return (
-    <IconFrame className={className}>
-      <svg viewBox="0 0 120 120" aria-hidden="true" className="h-[84%] w-[84%]">
-        <path
-          d="M60 14 99 89H21Z"
-          fill="currentColor"
-          opacity="0.08"
-          stroke="currentColor"
-          strokeOpacity="0.5"
-        />
-        {Array.from({ length: 6 }).map((_, row) =>
-          Array.from({ length: row + 1 }).map((__, index) => {
-            const x = 60 + (index - row / 2) * 12;
-            const y = 25 + row * 10;
-            return (
-              <circle
-                key={`${row}-${index}`}
-                cx={x}
-                cy={y}
-                r="2.8"
-                fill="hsl(var(--fg))"
-                opacity="0.72"
-              />
-            );
-          })
-        )}
-        <path
-          d="M60 18c-9 17-3 26 8 34 10 7 14 15 2 29"
-          fill="none"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeWidth="3"
-        />
-        <circle cx="70" cy="80" r="7" fill="currentColor" />
-        <g transform="translate(23 92)">
-          {[1, 2, 8, 2, 1].map((value, index) => (
-            <rect
-              key={`${value}-${index}`}
-              x={index * 15}
-              y="0"
-              width="12"
-              height="10"
-              rx="3"
-              fill={value === 8 ? "currentColor" : "hsl(var(--surface-2))"}
-              stroke="currentColor"
-              strokeOpacity="0.65"
-            />
-          ))}
-        </g>
-      </svg>
-    </IconFrame>
-  );
-}
+/* -------------------------------------------------------------------------- */
+/* Sic Bo — three dice cluster under a dome arc.                              */
+/* -------------------------------------------------------------------------- */
 
-export function BaccaratMiniIcon({ className }: GameMiniIconProps) {
-  return (
-    <IconFrame className={className}>
-      <svg viewBox="0 0 120 120" aria-hidden="true" className="h-[84%] w-[84%]">
-        <path
-          d="M22 77c12 16 64 16 76 0"
-          fill="none"
-          stroke="currentColor"
-          strokeOpacity="0.42"
-          strokeWidth="3"
-        />
-        <g transform="translate(23 25) rotate(-8)">
-          <rect
-            width="30"
-            height="42"
-            rx="5"
-            fill="hsl(var(--surface-0))"
-            stroke="currentColor"
-            strokeWidth="2.5"
-          />
-          <circle cx="15" cy="17" r="6" fill="currentColor" opacity="0.4" />
-          <path
-            d="M9 30h12"
-            stroke="hsl(var(--fg))"
-            strokeLinecap="round"
-            strokeWidth="2"
-            opacity="0.75"
-          />
-        </g>
-        <g transform="translate(67 25) rotate(8)">
-          <rect
-            width="30"
-            height="42"
-            rx="5"
-            fill="hsl(var(--surface-0))"
-            stroke="currentColor"
-            strokeWidth="2.5"
-          />
-          <path d="M15 11 22 22H8Z" fill="currentColor" opacity="0.45" />
-          <path
-            d="M9 31h12"
-            stroke="hsl(var(--fg))"
-            strokeLinecap="round"
-            strokeWidth="2"
-            opacity="0.75"
-          />
-        </g>
-        {[35, 60, 85].map((x, index) => (
-          <g key={x}>
-            <circle
-              cx={x}
-              cy="86"
-              r={index === 1 ? "9" : "12"}
-              fill={index === 1 ? "hsl(var(--surface-2))" : "currentColor"}
-              opacity={index === 1 ? "1" : "0.18"}
-              stroke="currentColor"
-              strokeWidth="2"
-            />
-            <circle
-              cx={x}
-              cy="86"
-              r="3"
-              fill={index === 1 ? "currentColor" : "hsl(var(--fg))"}
-              opacity="0.8"
-            />
-          </g>
-        ))}
-      </svg>
-    </IconFrame>
-  );
-}
+type SicBoDieValue = 2 | 5 | 6;
+
+const SIC_BO_PIPS: Record<SicBoDieValue, Array<[number, number]>> = {
+  2: [
+    [-5, -5],
+    [5, 5]
+  ],
+  5: [
+    [-5, -5],
+    [5, -5],
+    [0, 0],
+    [-5, 5],
+    [5, 5]
+  ],
+  6: [
+    [-5, -6],
+    [5, -6],
+    [-5, 0],
+    [5, 0],
+    [-5, 6],
+    [5, 6]
+  ]
+};
 
 export function SicBoMiniIcon({ className }: GameMiniIconProps) {
-  const positions = [
-    { x: 42, y: 44, v: 4 },
-    { x: 61, y: 52, v: 2 },
-    { x: 78, y: 42, v: 6 }
-  ] as const;
-  const pipMap: Record<(typeof positions)[number]["v"], Array<[number, number]>> = {
-    2: [
-      [-4, -4],
-      [4, 4]
-    ],
-    4: [
-      [-4, -4],
-      [4, -4],
-      [-4, 4],
-      [4, 4]
-    ],
-    6: [
-      [-4, -5],
-      [4, -5],
-      [-4, 0],
-      [4, 0],
-      [-4, 5],
-      [4, 5]
-    ]
-  };
+  const dice = [
+    { x: 32, y: 64, v: 2 as const, rot: -8 },
+    { x: 60, y: 72, v: 5 as const, rot: 4 },
+    { x: 88, y: 62, v: 6 as const, rot: 10 }
+  ];
   return (
     <IconFrame className={className}>
       <svg viewBox="0 0 120 120" aria-hidden="true" className="h-[84%] w-[84%]">
+        {/* dome (cup) arc — the frosted bowl that lifts away */}
         <path
-          d="M25 31c11-12 59-12 70 0v34c-8 15-61 15-70 0Z"
-          fill="currentColor"
-          opacity="0.09"
-          stroke="currentColor"
-          strokeOpacity="0.45"
+          d="M 26 46 Q 60 22 94 46"
+          fill="none"
+          stroke="hsl(var(--fg) / 0.28)"
+          strokeWidth="2.5"
+          strokeLinecap="round"
         />
-        {positions.map((die) => (
-          <g
-            key={`${die.x}-${die.y}`}
-            transform={`translate(${die.x} ${die.y}) rotate(${die.v * 4})`}
-          >
+        <path
+          d="M 30 46 Q 60 30 90 46"
+          fill="none"
+          stroke="hsl(var(--fg) / 0.14)"
+          strokeWidth="1"
+          strokeLinecap="round"
+        />
+        {dice.map((d, i) => (
+          <g key={`die-${i}`} transform={`translate(${d.x} ${d.y}) rotate(${d.rot})`}>
             <rect
-              x="-10"
-              y="-10"
-              width="20"
-              height="20"
-              rx="5"
-              fill="hsl(var(--surface-0))"
-              stroke="currentColor"
-              strokeWidth="2"
+              x="-14"
+              y="-14"
+              width="28"
+              height="28"
+              rx="6"
+              fill="hsl(var(--surface-3))"
+              stroke="hsl(var(--fg) / 0.22)"
+              strokeWidth="1"
             />
-            {pipMap[die.v].map(([x, y], index) => (
-              <circle key={index} cx={x} cy={y} r="2" fill="hsl(var(--fg))" opacity="0.9" />
+            {SIC_BO_PIPS[d.v].map(([px, py], j) => (
+              <circle key={j} cx={px} cy={py} r="2.2" fill="hsl(var(--fg))" opacity="0.92" />
             ))}
           </g>
         ))}
-        <g transform="translate(24 81)">
-          {["small", "triple", "total"].map((name, index) => (
-            <rect
-              key={name}
-              x={index * 25}
-              y="0"
-              width="22"
-              height="16"
-              rx="5"
-              fill={index === 0 ? "currentColor" : "hsl(var(--surface-2))"}
-              opacity={index === 0 ? "0.28" : "1"}
-              stroke="currentColor"
-              strokeOpacity="0.55"
-            />
-          ))}
-        </g>
       </svg>
     </IconFrame>
   );
 }
 
-export function SlotsMiniIcon({ className }: GameMiniIconProps) {
-  return (
-    <IconFrame className={className}>
-      <svg viewBox="0 0 120 120" aria-hidden="true" className="h-[84%] w-[84%]">
-        <rect
-          x="20"
-          y="25"
-          width="80"
-          height="66"
-          rx="14"
-          fill="hsl(var(--surface-0))"
-          stroke="currentColor"
-          strokeWidth="3"
-        />
-        <path d="M20 48h80M20 69h80M47 25v66M73 25v66" stroke="currentColor" strokeOpacity="0.35" />
-        <path
-          d="M89 18h9v28"
-          fill="none"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeWidth="4"
-        />
-        <circle cx="98" cy="50" r="5" fill="currentColor" />
-        <text x="35" y="62" textAnchor="middle" className="fill-fg font-mono text-[18px] font-bold">
-          7
-        </text>
-        <path d="M58 54h10M63 49v10" stroke="currentColor" strokeLinecap="round" strokeWidth="3" />
-        <path
-          d="M82 58c6-10 15-3 7 5-2 2-5 4-7 7-2-3-5-5-7-7-8-8 1-15 7-5Z"
-          fill="currentColor"
-          opacity="0.55"
-        />
-        <rect x="35" y="94" width="50" height="6" rx="3" fill="currentColor" opacity="0.35" />
-      </svg>
-    </IconFrame>
-  );
-}
+/* -------------------------------------------------------------------------- */
+/* Dispatcher — used by the casino list page and the home directory.          */
+/* -------------------------------------------------------------------------- */
 
 export function CasinoGameMark({ slug, className }: CasinoGameMarkProps) {
   switch (slug) {
@@ -455,19 +662,6 @@ export function CasinoGameMark({ slug, className }: CasinoGameMarkProps) {
     case "sic-bo":
       return <SicBoMiniIcon className={className} />;
     default:
-      return (
-        <IconFrame className={className}>
-          <svg viewBox="0 0 120 120" aria-hidden="true" className="h-[82%] w-[82%]">
-            <circle cx="60" cy="60" r="38" fill="currentColor" opacity="0.12" />
-            <circle cx="60" cy="60" r="38" fill="none" stroke="currentColor" strokeWidth="3" />
-            <path
-              d="M38 60h44M60 38v44"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeWidth="4"
-            />
-          </svg>
-        </IconFrame>
-      );
+      return null;
   }
 }

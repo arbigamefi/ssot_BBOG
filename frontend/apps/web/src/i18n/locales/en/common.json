@@ -512,26 +512,26 @@
     "directory": {
       "loading": "Loading games...",
       "empty": {
-        "noRelease": "No embedded release available for the connected chain.",
-        "noGames": "No games registered in the active release.",
-        "noResults": "No matching rooms",
-        "noResultsDetail": "No casino room matches \"{query}\". Clear the search or choose another category.",
+        "noRelease": "Casino isn't live on the chain you're connected to.",
+        "noGames": "No games available right now.",
+        "noResults": "No games matched",
+        "noResultsDetail": "Nothing matched \"{query}\". Try clearing the search.",
         "clearSearch": "Clear search"
       },
       "hero": {
-        "eyebrow": "Global Casino Lobby",
-        "title": "Enter the Floor",
-        "description": "All modules are 100% on-chain, verifiable, and connected directly to the isolated reserve bank. Play directly from your wallet."
+        "eyebrow": "Game lobby",
+        "title": "Pick a game.",
+        "description": "Eight games. Connect your wallet, jump straight in. Every spin lands on-chain."
       },
       "stats": {
-        "rooms": "On-chain rooms",
-        "asset": "Bank asset"
+        "rooms": "Games available",
+        "asset": "Plays in"
       },
       "filters": {
-        "all": "All Modules",
-        "table": "Table Games",
-        "dice": "Dice Games",
-        "binary": "Binary / Fast",
+        "all": "All games",
+        "table": "Table",
+        "dice": "Dice",
+        "binary": "Coin flip",
         "lottery": "Lottery",
         "arcade": "Arcade"
       },
@@ -590,15 +590,17 @@
         }
       },
       "card": {
-        "releaseAnchored": "Release anchored",
+        "releaseAnchored": "Live",
         "playNow": "Play Now"
       },
       "reserve": {
-        "title": "Casino bankroll",
+        "title": "House bankroll, on-chain",
         "subtitle": "Bank {bank}",
-        "status": "Release anchored",
-        "cta": "Inspect bank"
-      }
+        "status": "Live",
+        "cta": "Check on-chain"
+      },
+      "bets": "Bets",
+      "clearAll": "Clear all"
     }
   },
   "sportsbook": {
@@ -2565,11 +2567,11 @@
       "days": "{count}d ago"
     },
     "hero": {
-      "channel": "Base Sepolia release channel",
-      "title": "ArbiGameFi",
-      "description": "On-chain casino rails for transparent bankroll, verifiable randomness, and automatic settlement. The first screen is the product surface, not a promise deck.",
-      "enterCasino": "Enter Casino",
-      "viewBank": "View Bank",
+      "channel": "Live on Arbitrum",
+      "title": "Verifiable casino on-chain.",
+      "description": "Eight games. Every spin verifiable on-chain. Win and the payout hits your wallet in seconds — no signup, no escrow, no custody.",
+      "enterCasino": "Start Playing",
+      "viewBank": "How It Works",
       "consoleLabel": "Protocol Console",
       "live": "Live",
       "metrics": {
@@ -2590,23 +2592,23 @@
     },
     "stats": {
       "freeReserve": {
-        "label": "Free reserve",
-        "detail": "Readable bank capacity after reserved liabilities."
+        "label": "Free to pay out",
+        "detail": "What the house can pay out right now — verifiable on-chain."
       },
       "bankAssets": {
-        "label": "Bank assets",
-        "detail": "Aggregated from release-linked bank snapshots."
+        "label": "House bankroll",
+        "detail": "What's parked in the casino's bank, on-chain."
       },
       "release": {
-        "label": "Release",
-        "detail": "Frontend state is anchored to a release manifest."
+        "label": "Live games",
+        "detail": "All eight games live, plus the bank."
       }
     },
     "rooms": {
-      "eyebrow": "Casino rooms",
-      "title": "Eight one-shot RNG games, one settlement rail.",
-      "detail": "Each room maps to a release-defined module. The UI can change, but game identity, parameters, and payout path stay anchored to the SSOT release.",
-      "actionLabel": "Open directory"
+      "eyebrow": "All games",
+      "title": "Eight games. One wallet.",
+      "detail": "Each game settles on its own contract. Pick one and jump in — no signup.",
+      "actionLabel": "See all"
     },
     "roomCards": {
       "dice": {
@@ -2700,16 +2702,16 @@
       "inspectBank": "Inspect bank"
     },
     "activity": {
-      "eyebrow": "Protocol activity",
-      "title": "Latest indexed tickets",
-      "viewAll": "View all",
+      "eyebrow": "Live",
+      "title": "Last few bets",
+      "viewAll": "All activity",
       "headers": {
         "player": "Player",
-        "room": "Room",
-        "state": "State",
-        "age": "Age"
+        "room": "Game",
+        "state": "Status",
+        "age": "When"
       },
-      "empty": "No indexed tickets in this browser session yet."
+      "empty": "Be the first."
     },
     "proof": {
       "traceLabel": "settlement_trace.sol",
@@ -2718,6 +2720,47 @@
       "title": "Transparent settlement rails.",
       "description": "Custody, game modules, and randomness are separate surfaces. This makes the UI easier to rewrite without disturbing protocol correctness.",
       "actionLabel": "View proof receipts"
+    },
+    "whyUs": {
+      "eyebrow": "Why play here",
+      "title": "We can't rig the spin.",
+      "items": {
+        "0": {
+          "title": "We can't pick the numbers",
+          "detail": "Every spin's random number is drawn by Chainlink VRF. We just settle whatever it returns."
+        },
+        "1": {
+          "title": "Your win hits your wallet",
+          "detail": "Once VRF returns, the win lands in your wallet on-chain — no withdrawal queue, no minimum, no delay."
+        },
+        "2": {
+          "title": "The house can't run out",
+          "detail": "How much the casino can pay out is visible on-chain. Check it before you bet."
+        },
+        "3": {
+          "title": "Every contract is public",
+          "detail": "Game logic, bank, settlement — all of it is open source. Read it, fork it, verify it."
+        }
+      }
+    },
+    "reserveBar": {
+      "eyebrow": "House bankroll",
+      "free": "Free to pay out",
+      "total": "Total in the bank",
+      "verify": "Check on-chain"
+    },
+    "featured": {
+      "eyebrow": "Featured",
+      "title": "Keno — pick 5, chase 500×.",
+      "detail": "Fifteen numbers on the board. Pick five. Match all five and the payout is 500.5×. Hit one and you still cash out.",
+      "cta": "Play Keno"
+    },
+    "footerCta": {
+      "eyebrow": "Ready when you are",
+      "title": "Connect a wallet. Pick a game. Spin.",
+      "description": "Your money stays in your wallet until you place a bet. Wins come back the same way.",
+      "primary": "Start Playing",
+      "secondary": "Browse Games"
     }
   },
   "legal": {

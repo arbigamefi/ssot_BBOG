@@ -14,11 +14,14 @@ import {
   shortDigest,
   timeAgo
 } from "../../features/marketing/format";
-import { HomeBankAndActivity } from "../../features/marketing/home-bank-activity";
+import { HomeActivity } from "../../features/marketing/home-activity";
+import { HomeFeatured } from "../../features/marketing/home-featured";
+import { HomeFooterCta } from "../../features/marketing/home-footer-cta";
 import { HomeHero } from "../../features/marketing/home-hero";
-import { HomeProofSection } from "../../features/marketing/home-proof-section";
+import { HomeReserveBar } from "../../features/marketing/home-reserve-bar";
 import { HomeRoomDirectory } from "../../features/marketing/home-room-directory";
 import { HomeStatsStrip } from "../../features/marketing/home-stats-strip";
+import { HomeWhyUs } from "../../features/marketing/home-why-us";
 import type {
   AssetOverview,
   LandingActivity,
@@ -137,40 +140,54 @@ export function HomePageClient() {
     [rooms, t]
   );
 
+  const featuredRoom = rooms.find((room) => room.slug === "keno");
+
   return (
     <main className="min-h-screen bg-surface-0 text-fg">
       <HomeHero
-        reserveFloor={reserveFloor}
-        totalAssets={totalAssetsLabel}
-        releaseDigest={release?.releaseDigest}
-        roomCount={rooms.length}
         copy={{
           channel: t("hero.channel"),
           title: t("hero.title"),
           description: t("hero.description"),
           enterCasino: t("hero.enterCasino"),
-          viewBank: t("hero.viewBank"),
-          consoleLabel: t("hero.consoleLabel"),
-          live: t("hero.live"),
-          metrics: {
-            freeReserve: t("hero.metrics.freeReserve"),
-            bankAssets: t("hero.metrics.bankAssets"),
-            rooms: t("hero.metrics.rooms")
-          },
-          proofRows: [
-            {
-              title: t("hero.proofRows.vrf.title"),
-              detail: t("hero.proofRows.vrf.detail")
-            },
-            {
-              title: t("hero.proofRows.bytecode.title"),
-              detail: t("hero.proofRows.bytecode.detail")
-            }
-          ],
-          pendingDigest: t("format.pending")
+          viewBank: t("hero.viewBank")
         }}
       />
+
+      {/* Activity is the strongest social-proof signal a casino landing page
+          has — surface it right under the hero so visitors see live play
+          before they see trust copy. */}
+      <HomeActivity
+        activity={activity}
+        copy={{
+          eyebrow: t("activity.eyebrow"),
+          title: t("activity.title"),
+          viewAll: t("activity.viewAll"),
+          headers: {
+            player: t("activity.headers.player"),
+            room: t("activity.headers.room"),
+            state: t("activity.headers.state"),
+            age: t("activity.headers.age")
+          },
+          empty: t("activity.empty")
+        }}
+      />
+
       <HomeStatsStrip stats={stats} />
+
+      {featuredRoom ? (
+        <HomeFeatured
+          slug={featuredRoom.slug}
+          href={featuredRoom.href}
+          copy={{
+            eyebrow: t("featured.eyebrow"),
+            title: t("featured.title"),
+            detail: t("featured.detail"),
+            cta: t("featured.cta")
+          }}
+        />
+      ) : null}
+
       <HomeRoomDirectory
         rooms={localizedRooms}
         copy={{
@@ -180,44 +197,36 @@ export function HomePageClient() {
           actionLabel: t("rooms.actionLabel")
         }}
       />
-      <HomeBankAndActivity
-        reserveFloor={reserveFloor}
-        totalAssets={totalAssetsLabel}
-        releaseDigest={release?.releaseDigest}
-        activity={activity}
+
+      <HomeWhyUs
         copy={{
-          bank: {
-            eyebrow: t("bank.eyebrow"),
-            title: t("bank.title"),
-            description: t("bank.description"),
-            freeReserve: t("bank.freeReserve"),
-            totalBankAssets: t("bank.totalBankAssets"),
-            releaseDigest: t("bank.releaseDigest"),
-            pending: t("format.pending"),
-            inspectBank: t("bank.inspectBank")
-          },
-          activity: {
-            eyebrow: t("activity.eyebrow"),
-            title: t("activity.title"),
-            viewAll: t("activity.viewAll"),
-            headers: {
-              player: t("activity.headers.player"),
-              room: t("activity.headers.room"),
-              state: t("activity.headers.state"),
-              age: t("activity.headers.age")
-            },
-            empty: t("activity.empty")
-          }
+          eyebrow: t("whyUs.eyebrow"),
+          title: t("whyUs.title"),
+          items: [0, 1, 2, 3].map((index) => ({
+            title: t(`whyUs.items.${index}.title`),
+            detail: t(`whyUs.items.${index}.detail`)
+          }))
         }}
       />
-      <HomeProofSection
+
+      <HomeReserveBar
+        freeReserve={reserveFloor}
+        totalAssets={totalAssetsLabel}
         copy={{
-          traceLabel: t("proof.traceLabel"),
-          proofSurface: t("proof.proofSurface"),
-          eyebrow: t("proof.eyebrow"),
-          title: t("proof.title"),
-          description: t("proof.description"),
-          actionLabel: t("proof.actionLabel")
+          eyebrow: t("reserveBar.eyebrow"),
+          free: t("reserveBar.free"),
+          total: t("reserveBar.total"),
+          verify: t("reserveBar.verify")
+        }}
+      />
+
+      <HomeFooterCta
+        copy={{
+          eyebrow: t("footerCta.eyebrow"),
+          title: t("footerCta.title"),
+          description: t("footerCta.description"),
+          primary: t("footerCta.primary"),
+          secondary: t("footerCta.secondary")
         }}
       />
     </main>
