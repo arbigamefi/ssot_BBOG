@@ -22,7 +22,7 @@ export function HomeFeatured({
     <section className="border-b border-border-soft bg-surface-1 py-20">
       <div className="mx-auto max-w-[1440px] px-6 lg:px-10">
         <div
-          className="relative overflow-hidden rounded-2xl border border-border-soft shadow-e3"
+          className="relative overflow-hidden rounded-lg border border-border-soft shadow-e3"
           style={{
             background: "linear-gradient(180deg, hsl(var(--surface-2)), hsl(var(--surface-1)))"
           }}

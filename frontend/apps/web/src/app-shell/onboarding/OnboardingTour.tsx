@@ -123,7 +123,7 @@ export function OnboardingTour() {
       {spotlight ? (
         <div
           aria-hidden
-          className="pointer-events-none fixed rounded-xl ring-2 ring-brand transition-all"
+          className="pointer-events-none fixed rounded-lg ring-2 ring-brand transition-[height,left,top,width]"
           style={{
             top: spotlight.top,
             left: spotlight.left,

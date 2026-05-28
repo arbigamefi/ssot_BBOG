@@ -77,7 +77,7 @@ function ContactCard({ t }: { t: ReturnType<typeof useTranslations> }) {
   ];
 
   return (
-    <section className="mt-10 rounded-2xl border border-border-soft bg-surface-1 p-6 shadow-e1">
+    <section className="mt-10 rounded-lg border border-border-soft bg-surface-1 p-6 shadow-e1">
       <h2 className="text-lg font-bold text-fg">{t("contact.title")}</h2>
       <p className="mt-2 text-sm leading-6 text-fg-muted">{t("contact.description")}</p>
       <div className="mt-4 flex flex-wrap gap-2">

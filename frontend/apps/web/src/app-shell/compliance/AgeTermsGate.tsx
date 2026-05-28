@@ -48,7 +48,7 @@ export function AgeTermsGate() {
     >
       <div
         ref={trapRef}
-        className="w-full max-w-lg overflow-hidden rounded-2xl border border-border-soft bg-surface-1 shadow-e3"
+        className="w-full max-w-lg overflow-hidden rounded-lg border border-border-soft bg-surface-1 shadow-e3"
       >
         <div
           className="flex items-center gap-3 border-b border-border-soft px-6 py-5"

@@ -24,7 +24,7 @@ function IconFrame({ className, children }: React.PropsWithChildren<GameMiniIcon
   return (
     <div
       className={cn(
-        "relative flex aspect-square h-32 w-32 items-center justify-center overflow-hidden rounded-2xl border border-border-soft text-brand shadow-e2",
+        "relative flex aspect-square h-32 w-32 items-center justify-center overflow-hidden rounded-lg border border-border-soft text-brand shadow-e2",
         className
       )}
       style={{

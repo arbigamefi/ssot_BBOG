@@ -61,7 +61,7 @@ export function ResponsibleGamblingDialog() {
     >
       <div
         ref={trapRef}
-        className="w-full max-w-md overflow-hidden rounded-2xl border border-border-soft bg-surface-1 shadow-e3"
+        className="w-full max-w-md overflow-hidden rounded-lg border border-border-soft bg-surface-1 shadow-e3"
       >
         <div className="flex items-center justify-between border-b border-border-soft px-6 py-4">
           <h2 id="rg-title" className="text-base font-bold text-fg">

@@ -59,7 +59,7 @@ export function HomeActivity({
 
           <div
             className="overflow-hidden rounded-lg border border-border-soft bg-surface-0/60"
-            style={{ boxShadow: "inset 0 2px 12px rgb(0 0 0 / 0.4)" }}
+            style={{ boxShadow: "inset 0 2px 12px hsl(var(--surface-0) / 0.4)" }}
           >
             <div className="grid grid-cols-[1fr_1.1fr_minmax(0,1.2fr)_72px] border-b border-border-soft px-4 py-3 text-[10px] font-bold uppercase tracking-[0.14em] text-fg-subtle">
               <div>{copy.headers.player}</div>
