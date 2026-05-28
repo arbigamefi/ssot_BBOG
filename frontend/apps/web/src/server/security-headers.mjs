@@ -37,6 +37,10 @@ export function buildContentSecurityPolicy({ env = process.env, isDev = false } 
     "https://base-mainnet.g.alchemy.com",
     "https://arb-sepolia.g.alchemy.com",
     "https://arb-mainnet.g.alchemy.com",
+    // Ethereum mainnet — ENS reverse resolution only (cloudflare keyless
+    // fallback + Alchemy when NEXT_PUBLIC_ALCHEMY_API_KEY is set).
+    "https://cloudflare-eth.com",
+    "https://eth-mainnet.g.alchemy.com",
     ...configuredRpcOrigins(env),
     "https://*.sentry.io",
     "https://*.ingest.sentry.io"

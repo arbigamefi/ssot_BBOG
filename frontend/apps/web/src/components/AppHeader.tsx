@@ -3,8 +3,8 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { ShellHeader, ShellHeaderNav, ShellHeaderActions } from "@ssot/ui";
 import { cn } from "@ssot/ui";
-import { WalletButton } from "../app-shell/WalletButton";
-import { NetworkSwitcher } from "../app-shell/NetworkSwitcher";
+import { WalletHeaderMenu } from "../app-shell/WalletHeaderMenu";
+import { MobileWalletDeepLinkBanner } from "../app-shell/MobileWalletDeepLinkBanner";
 import { LocaleSwitcher } from "./LocaleSwitcher";
 
 export type AppRoute =
@@ -69,9 +69,8 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
           </div>
           <div className="flex items-center gap-4">
             <LocaleSwitcher compact />
-            <NetworkSwitcher />
             <div className="hidden md:block">
-              <WalletButton />
+              <WalletHeaderMenu />
             </div>
             <Link
               href="/casino"
@@ -181,10 +180,10 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
 
         <ShellHeaderActions>
           <LocaleSwitcher compact />
-          <NetworkSwitcher />
-          <WalletButton />
+          <WalletHeaderMenu />
         </ShellHeaderActions>
       </ShellHeader>
+      <MobileWalletDeepLinkBanner />
       {mobileGameNav}
     </>
   );

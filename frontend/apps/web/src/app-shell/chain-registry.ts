@@ -49,6 +49,29 @@ export function isSupportedAppChain(chainId: number) {
   return getSupportedAppChains().some((chain) => chain.id === chainId);
 }
 
+/**
+ * Build a block-explorer URL for a transaction on the given chain.
+ * Returns null when the chain isn't registered or the hash is empty,
+ * so callers can fall back to an internal route or hide the link.
+ */
+export function getExplorerTxUrl(chainId: number | undefined, txHash?: string | null) {
+  if (!chainId || !txHash) return null;
+  const chain = CHAIN_METADATA[chainId];
+  if (!chain) return null;
+  return `${chain.explorerUrl}/tx/${txHash}`;
+}
+
+/**
+ * Block-explorer URL for an address. Used for shortening the player
+ * column into a clickable link on indexed bet rows.
+ */
+export function getExplorerAddressUrl(chainId: number | undefined, address?: string | null) {
+  if (!chainId || !address) return null;
+  const chain = CHAIN_METADATA[chainId];
+  if (!chain) return null;
+  return `${chain.explorerUrl}/address/${address}`;
+}
+
 export function resolveDefaultAppChainId(rawChainId?: string | number) {
   const supported = getSupportedAppChains();
   const parsed = Number(rawChainId);
