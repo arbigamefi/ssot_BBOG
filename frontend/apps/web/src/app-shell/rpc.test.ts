@@ -31,6 +31,39 @@ describe("public RPC configuration", () => {
     ).toBe("https://base-sepolia.g.alchemy.com/v2/alchemy-key");
   });
 
+  it("prefers the per-network Alchemy URL over a generic shared URL", () => {
+    // Even when both are set, the per-network Alchemy endpoint must win so
+    // multi-chain reads never get routed to the wrong network.
+    expect(
+      resolvePublicRpcUrl(
+        8453,
+        {
+          NEXT_PUBLIC_RPC_URL: "https://generic.example",
+          NEXT_PUBLIC_ALCHEMY_API_KEY: "alchemy-key"
+        },
+        { allowGenericFallback: true }
+      )
+    ).toBe("https://base-mainnet.g.alchemy.com/v2/alchemy-key");
+  });
+
+  it("ignores the generic shared URL in multi-chain mode (footgun closed)", () => {
+    // Without allowGenericFallback, a lone generic URL must NOT back a chain —
+    // a single URL can't serve multiple networks.
+    expect(
+      resolvePublicRpcUrl(8453, { NEXT_PUBLIC_RPC_URL: "https://generic.example" })
+    ).toBeUndefined();
+  });
+
+  it("uses the generic shared URL only when explicitly allowed (single chain)", () => {
+    expect(
+      resolvePublicRpcUrl(
+        8453,
+        { NEXT_PUBLIC_RPC_URL: "https://generic.example" },
+        { allowGenericFallback: true }
+      )
+    ).toBe("https://generic.example");
+  });
+
   it("patches wagmi chain rpcUrls when a public RPC is configured", () => {
     const chain = withConfiguredRpc(baseSepolia, {
       NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL: "https://base-sepolia.example"

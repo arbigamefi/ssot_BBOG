@@ -5,6 +5,7 @@ import path from "node:path";
 
 const FRONTEND_ROOT = process.cwd();
 const REPO_ROOT = path.resolve(FRONTEND_ROOT, "..");
+const WEB_ENV_PATH = path.join(FRONTEND_ROOT, "apps/web/.env.local");
 
 function parseEnvFile(filePath, target) {
   if (!fs.existsSync(filePath)) return;
@@ -44,7 +45,7 @@ function truthy(value) {
 
 function backfillEnv() {
   const env = { ...process.env };
-  for (const file of [".env", ".env.local"]) parseEnvFile(path.join(REPO_ROOT, file), env);
+  parseEnvFile(WEB_ENV_PATH, env);
 
   env.KEEPER_CHAIN_ID ??= "84532";
   env.KEEPER_RELEASE_PATH ??= path.join(
@@ -67,7 +68,9 @@ function backfillEnv() {
 function requireBackfillEnv(env) {
   const missing = ["KEEPER_RPC_HTTP", "KEEPER_RELEASE_PATH"].filter((key) => !env[key]?.trim());
   if (missing.length > 0) {
-    throw new Error(`Missing bet index backfill env: ${missing.join(", ")}. Check root .env.`);
+    throw new Error(
+      `Missing bet index backfill env: ${missing.join(", ")}. Check frontend/apps/web/.env.local.`
+    );
   }
   if (!truthy(env.BET_INDEX_DRY_RUN) && !env.BET_INDEX_DATABASE_URL?.trim()) {
     throw new Error(

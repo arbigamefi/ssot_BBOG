@@ -49,26 +49,49 @@ function cleanEnvValue(value: string | undefined) {
   return trimmed ? trimmed : undefined;
 }
 
-export function resolvePublicRpcUrl(chainId: number, env: PublicRpcEnv = DEFAULT_PUBLIC_RPC_ENV) {
+export type ResolveRpcOptions = {
+  /**
+   * Allow the generic `NEXT_PUBLIC_RPC_URL` to back this chain. A single shared
+   * URL physically points to ONE network, so it is only safe when the
+   * deployment serves a single chain. Multi-chain deployments MUST leave this
+   * off and rely on per-chain URLs or the Alchemy key (both correct per
+   * network). Defaults to off so the generic fallback is opt-in.
+   */
+  allowGenericFallback?: boolean;
+};
+
+export function resolvePublicRpcUrl(
+  chainId: number,
+  env: PublicRpcEnv = DEFAULT_PUBLIC_RPC_ENV,
+  options: ResolveRpcOptions = {}
+) {
   const chainSpecificKey = PUBLIC_RPC_ENV_BY_CHAIN_ID[chainId];
   const chainSpecific = cleanEnvValue(chainSpecificKey ? env[chainSpecificKey] : undefined);
   if (chainSpecific) return chainSpecific;
 
-  const generic = cleanEnvValue(env.NEXT_PUBLIC_RPC_URL);
-  if (generic) return generic;
-
+  // Per-network provider key — always resolves to the correct endpoint for
+  // each chain, so it takes precedence over the single shared URL.
   const alchemyNetwork = ALCHEMY_NETWORK_BY_CHAIN_ID[chainId];
   const alchemyKey = cleanEnvValue(env.NEXT_PUBLIC_ALCHEMY_API_KEY);
-  return alchemyNetwork && alchemyKey
-    ? `https://${alchemyNetwork}.g.alchemy.com/v2/${alchemyKey}`
-    : undefined;
+  if (alchemyNetwork && alchemyKey) {
+    return `https://${alchemyNetwork}.g.alchemy.com/v2/${alchemyKey}`;
+  }
+
+  // Generic single-URL fallback — single-chain deployments only.
+  if (options.allowGenericFallback) {
+    const generic = cleanEnvValue(env.NEXT_PUBLIC_RPC_URL);
+    if (generic) return generic;
+  }
+
+  return undefined;
 }
 
 export function withConfiguredRpc<TChain extends RpcChain>(
   chain: TChain,
-  env: PublicRpcEnv = DEFAULT_PUBLIC_RPC_ENV
+  env: PublicRpcEnv = DEFAULT_PUBLIC_RPC_ENV,
+  options: ResolveRpcOptions = {}
 ): TChain {
-  const rpcUrl = resolvePublicRpcUrl(chain.id, env);
+  const rpcUrl = resolvePublicRpcUrl(chain.id, env, options);
   if (!rpcUrl) return chain;
 
   return {

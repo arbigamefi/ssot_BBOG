@@ -7,7 +7,6 @@ import process from "node:process";
 import { pathToFileURL } from "node:url";
 
 const frontendRoot = path.resolve(import.meta.dirname, "..");
-const repoRoot = path.resolve(frontendRoot, "..");
 const ssotRequire = createRequire(path.resolve(frontendRoot, "packages/ssot/package.json"));
 const { createPublicClient, getAddress, http, parseAbi } = await import(
   pathToFileURL(ssotRequire.resolve("viem")).href
@@ -40,13 +39,7 @@ const rpcRetryDelayMs = readPositiveInteger(
   750
 );
 
-await loadEnvFiles([
-  path.resolve(repoRoot, ".env"),
-  path.resolve(repoRoot, ".env.v13-sports.local"),
-  path.resolve(frontendRoot, ".env"),
-  path.resolve(frontendRoot, "apps/web/.env"),
-  path.resolve(frontendRoot, "apps/web/.env.local")
-]);
+await loadEnvFiles([path.resolve(frontendRoot, "apps/web/.env.local")]);
 
 const release = JSON.parse(await fs.readFile(releasePath, "utf8"));
 const rpcUrl = resolveRpcUrl();
@@ -460,7 +453,7 @@ function resolveRpcUrl() {
   if (alchemyKey && chainId === 8453) return `https://base-mainnet.g.alchemy.com/v2/${alchemyKey}`;
   if (alchemyKey && chainId === 84532) return `https://base-sepolia.g.alchemy.com/v2/${alchemyKey}`;
   throw new Error(
-    "Missing RPC URL. Set RPC_URL, BASE_MAINNET_RPC_URL, NEXT_PUBLIC_BASE_RPC_URL, BASE_SEPOLIA_RPC_URL, NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL, NEXT_PUBLIC_RPC_URL, or NEXT_PUBLIC_ALCHEMY_API_KEY."
+    "Missing RPC URL. Set BASE_MAINNET_RPC_URL, NEXT_PUBLIC_BASE_RPC_URL, BASE_SEPOLIA_RPC_URL, NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL, NEXT_PUBLIC_RPC_URL, or NEXT_PUBLIC_ALCHEMY_API_KEY in frontend/apps/web/.env.local."
   );
 }
 

@@ -6,6 +6,7 @@ import { spawn } from "node:child_process";
 
 const FRONTEND_ROOT = process.cwd();
 const REPO_ROOT = path.resolve(FRONTEND_ROOT, "..");
+const WEB_ENV_PATH = path.join(FRONTEND_ROOT, "apps/web/.env.local");
 const LEGACY_PUBLIC_HEALTH_PATH = path.join(
   FRONTEND_ROOT,
   "apps/web/public/ops/casino-keeper-health.json"
@@ -147,7 +148,7 @@ function cleanupLegacyPublicHealthFile() {
 
 async function keeperEnv() {
   const env = { ...process.env };
-  for (const file of [".env", ".env.local"]) parseEnvFile(path.join(REPO_ROOT, file), env);
+  parseEnvFile(WEB_ENV_PATH, env);
 
   env.KEEPER_CHAIN_ID ??= "84532";
   env.KEEPER_RELEASE_PATH ??= path.join(
@@ -178,7 +179,9 @@ function requireKeeperEnv(env) {
     (key) => !env[key]?.trim()
   );
   if (missing.length > 0) {
-    throw new Error(`Missing keeper env: ${missing.join(", ")}. Check root .env.`);
+    throw new Error(
+      `Missing keeper env: ${missing.join(", ")}. Check frontend/apps/web/.env.local.`
+    );
   }
 }
 

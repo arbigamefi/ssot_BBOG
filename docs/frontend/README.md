@@ -18,7 +18,7 @@ Frontend release gates:
 
 - `pnpm -C frontend check:release` rejects embedded release bundles that reintroduce v1/v1.2 keys such as `contracts.hub`, `contracts.bankRegistry`, or `sports.hub`.
 - `pnpm -C frontend precheck:frontend -- --strict` rejects runtime/SDK source references to the old hub namespace.
-- `pnpm -C frontend smoke:release-readonly` performs a read-only RPC smoke against the embedded release without using a wallet or broadcasting transactions; it also checks embedded asset and pool decimals against each ERC20 `decimals()` value on chain and accepts Base mainnet RPC from `RPC_URL`, `BASE_MAINNET_RPC_URL`, `BASE_RPC_URL`, `NEXT_PUBLIC_BASE_RPC_URL`, `NEXT_PUBLIC_RPC_URL`, or `NEXT_PUBLIC_ALCHEMY_API_KEY`.
+- `pnpm -C frontend smoke:release-readonly` performs a read-only RPC smoke against the embedded release without using a wallet or broadcasting transactions; it also checks embedded asset and pool decimals against each ERC20 `decimals()` value on chain and reads local frontend RPC values only from `frontend/apps/web/.env.local` (copy from `frontend/apps/web/.env.example`). Base mainnet accepts `BASE_MAINNET_RPC_URL`, `BASE_RPC_URL`, `NEXT_PUBLIC_BASE_RPC_URL`, `NEXT_PUBLIC_RPC_URL`, or `NEXT_PUBLIC_ALCHEMY_API_KEY` from that file, plus explicit process env overrides.
 - `pnpm -C frontend check:mainnet-release` fails until the embedded Base mainnet `chain-8453.json` exists and passes strict release validation.
 
 Frontend rule: **copy + consume**. Do not derive `gameId` or token metadata.

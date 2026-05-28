@@ -25,12 +25,21 @@ const CHAIN_BY_ID: Record<number, any> = {
   [baseSepolia.id]: baseSepolia
 };
 
-const supportedChains = embeddedChainIds
-  .map((id) => CHAIN_BY_ID[id])
-  .filter(Boolean)
-  .map((chain) => withConfiguredRpc(chain));
+const supportedChainDefs = embeddedChainIds.map((id) => CHAIN_BY_ID[id]).filter(Boolean);
 
-const appChains = supportedChains.length > 0 ? supportedChains : [withConfiguredRpc(baseSepolia)];
+// The generic NEXT_PUBLIC_RPC_URL fallback is only safe for a single-chain
+// deployment (one URL ≠ multiple networks). With >1 embedded chain we require
+// per-chain URLs or an Alchemy key, both of which are correct per network.
+const allowGenericFallback = supportedChainDefs.length <= 1;
+
+const supportedChains = supportedChainDefs.map((chain) =>
+  withConfiguredRpc(chain, undefined, { allowGenericFallback })
+);
+
+const appChains =
+  supportedChains.length > 0
+    ? supportedChains
+    : [withConfiguredRpc(baseSepolia, undefined, { allowGenericFallback: true })];
 
 // Ethereum mainnet is appended purely as an ENS-resolution chain. It never
 // appears in the network switcher (that's driven by embeddedChainIds) and is
