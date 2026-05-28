@@ -442,7 +442,6 @@ function expandEnvRefs(value) {
 
 function resolveRpcUrl() {
   const direct = firstDefined(
-    process.env.RPC_URL,
     ...(chainId === 8453
       ? [
           process.env.BASE_MAINNET_RPC_URL,
@@ -453,6 +452,7 @@ function resolveRpcUrl() {
     ...(chainId === 84532
       ? [process.env.BASE_SEPOLIA_RPC_URL, process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL]
       : []),
+    process.env.RPC_URL,
     process.env.NEXT_PUBLIC_RPC_URL
   );
   if (direct) return expandEnvRefs(direct);

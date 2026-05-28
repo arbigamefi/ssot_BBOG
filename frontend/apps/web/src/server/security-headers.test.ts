@@ -14,6 +14,7 @@ describe("security headers", () => {
     expect(csp).not.toContain("unsafe-eval");
     expect(csp).not.toContain("mcp.figma.com");
     expect(csp).toContain("https://example-rpc.invalid");
+    expect(csp).toContain("https://api.web3modal.org");
     expect(csp).toContain("object-src 'none'");
     expect(csp).toContain("base-uri 'self'");
     expect(csp).toContain("form-action 'self'");

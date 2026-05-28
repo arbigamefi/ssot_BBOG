@@ -26,6 +26,9 @@ export function buildContentSecurityPolicy({ env = process.env, isDev = false } 
   const connectSrc = [
     "connect-src 'self'",
     ...(isDev ? ["https://mcp.figma.com"] : []),
+    // Reown / Web3Modal fetches a small remote project configuration at app
+    // bootstrap. WalletConnect websocket + relay hosts stay covered below.
+    "https://api.web3modal.org",
     "https://*.walletconnect.com",
     "https://*.walletconnect.org",
     "wss://*.walletconnect.com",

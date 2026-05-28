@@ -26,11 +26,21 @@ const PUBLIC_RPC_ENV_BY_CHAIN_ID: Record<number, string> = {
   84532: "NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL"
 };
 
+const DEFAULT_PUBLIC_RPC_ENV: PublicRpcEnv = {
+  NEXT_PUBLIC_ALCHEMY_API_KEY: process.env.NEXT_PUBLIC_ALCHEMY_API_KEY,
+  NEXT_PUBLIC_ARBITRUM_RPC_URL: process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL,
+  NEXT_PUBLIC_ARBITRUM_SEPOLIA_RPC_URL: process.env.NEXT_PUBLIC_ARBITRUM_SEPOLIA_RPC_URL,
+  NEXT_PUBLIC_BASE_RPC_URL: process.env.NEXT_PUBLIC_BASE_RPC_URL,
+  NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL: process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL,
+  NEXT_PUBLIC_MAINNET_RPC_URL: process.env.NEXT_PUBLIC_MAINNET_RPC_URL,
+  NEXT_PUBLIC_RPC_URL: process.env.NEXT_PUBLIC_RPC_URL
+};
+
 /** Public, keyless mainnet RPC used as a last-resort ENS resolver. */
 export const FALLBACK_MAINNET_RPC_URL = "https://cloudflare-eth.com";
 
 /** Mainnet RPC for ENS resolution: env → Alchemy → keyless public fallback. */
-export function resolveMainnetEnsRpcUrl(env: PublicRpcEnv = process.env) {
+export function resolveMainnetEnsRpcUrl(env: PublicRpcEnv = DEFAULT_PUBLIC_RPC_ENV) {
   return resolvePublicRpcUrl(1, env) ?? FALLBACK_MAINNET_RPC_URL;
 }
 
@@ -39,7 +49,7 @@ function cleanEnvValue(value: string | undefined) {
   return trimmed ? trimmed : undefined;
 }
 
-export function resolvePublicRpcUrl(chainId: number, env: PublicRpcEnv = process.env) {
+export function resolvePublicRpcUrl(chainId: number, env: PublicRpcEnv = DEFAULT_PUBLIC_RPC_ENV) {
   const chainSpecificKey = PUBLIC_RPC_ENV_BY_CHAIN_ID[chainId];
   const chainSpecific = cleanEnvValue(chainSpecificKey ? env[chainSpecificKey] : undefined);
   if (chainSpecific) return chainSpecific;
@@ -56,7 +66,7 @@ export function resolvePublicRpcUrl(chainId: number, env: PublicRpcEnv = process
 
 export function withConfiguredRpc<TChain extends RpcChain>(
   chain: TChain,
-  env?: PublicRpcEnv
+  env: PublicRpcEnv = DEFAULT_PUBLIC_RPC_ENV
 ): TChain {
   const rpcUrl = resolvePublicRpcUrl(chain.id, env);
   if (!rpcUrl) return chain;

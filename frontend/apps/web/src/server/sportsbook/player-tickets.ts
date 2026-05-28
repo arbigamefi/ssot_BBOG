@@ -18,9 +18,9 @@ import {
 } from "@ssot/bet-index";
 import { loadEmbeddedRelease, type SSOTRelease } from "@ssot/ssot/release";
 
-import { resolvePublicRpcUrl } from "../../app-shell/rpc";
 import type { PlayerSportsTicketsResponse } from "../../features/sportsbook/recent-tickets";
 import { normalizePlayerAddress, clampPlayerBetsLimit } from "../betting/recent-bets";
+import { resolveServerRpcUrl } from "../rpc";
 
 const SPORTS_TICKET_EVENTS: SportsHubEventName[] = [
   "TicketPlaced",
@@ -85,17 +85,6 @@ function isFalseyEnv(value: string | undefined) {
     String(value ?? "")
       .trim()
       .toLowerCase()
-  );
-}
-
-function resolveServerRpcUrl(chainId: number) {
-  return (
-    cleanEnvValue(process.env.RPC_URL) ??
-    cleanEnvValue(process.env.BASE_SEPOLIA_RPC_URL) ??
-    cleanEnvValue(process.env.BASE_RPC_URL) ??
-    cleanEnvValue(process.env.ARBITRUM_SEPOLIA_RPC_URL) ??
-    cleanEnvValue(process.env.ARBITRUM_RPC_URL) ??
-    resolvePublicRpcUrl(chainId)
   );
 }
 
