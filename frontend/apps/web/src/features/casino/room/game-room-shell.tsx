@@ -61,6 +61,7 @@ export function GameRoomShell({
         </aside>
 
         <div
+          data-tour="game-stage"
           className={
             isInteractive
               ? "order-1 relative min-h-[34rem] overflow-hidden bg-surface-0 lg:order-2 lg:min-h-0"

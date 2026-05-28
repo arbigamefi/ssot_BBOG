@@ -31,6 +31,15 @@ import type {
 import { useRelease } from "../../ssot/release/ReleaseProvider";
 import { useSSOTSDK } from "../../ssot/sdk";
 
+function toBigOrNull(value?: string | bigint | number): bigint | null {
+  if (value == null || value === "") return null;
+  try {
+    return typeof value === "bigint" ? value : BigInt(value);
+  } catch {
+    return null;
+  }
+}
+
 export function HomePageClient() {
   const t = useTranslations("marketing");
   const locale = useLocale();
@@ -101,21 +110,39 @@ export function HomePageClient() {
     return map;
   }, [release?.gamesMeta]);
 
-  const activity = latestBets.slice(0, 5).map<LandingActivity>((bet: BetRow, index: number) => ({
-    id: String(bet.id ?? bet.betId ?? index),
-    player: shortAddress(bet.player, t("format.walletPending")),
-    game: bet.gameId
-      ? (gameLabelById.get(String(bet.gameId).toLowerCase()) ?? t("format.roomFallback"))
-      : t("format.roomFallback"),
-    state: String(bet.state ?? t("format.placedFallback")),
-    time: timeAgo(typeof bet.updatedAt === "number" ? bet.updatedAt : undefined, {
-      now: t("timeAgo.now"),
-      seconds: (count) => t("timeAgo.seconds", { count }),
-      minutes: (count) => t("timeAgo.minutes", { count }),
-      hours: (count) => t("timeAgo.hours", { count }),
-      days: (count) => t("timeAgo.days", { count })
-    })
-  }));
+  const activityDecimals = primaryAsset?.decimals ?? 6;
+  const activitySymbol = primaryAsset?.symbol ?? "USDC";
+  const activity = latestBets.slice(0, 5).map<LandingActivity>((bet: BetRow, index: number) => {
+    const stake = toBigOrNull(bet.stake);
+    const payout = toBigOrNull(bet.payout);
+    const settled = bet.state === "finalized";
+    const isWin = settled && stake != null && payout != null && payout > stake;
+    const multiplier =
+      isWin && stake && payout
+        ? `${(Number((payout * 1_000_000n) / stake) / 1_000_000).toFixed(2)}×`
+        : undefined;
+    return {
+      id: String(bet.id ?? bet.betId ?? index),
+      player: shortAddress(bet.player, t("format.walletPending")),
+      game: bet.gameId
+        ? (gameLabelById.get(String(bet.gameId).toLowerCase()) ?? t("format.roomFallback"))
+        : t("format.roomFallback"),
+      state: String(bet.state ?? t("format.placedFallback")),
+      payout:
+        settled && payout != null
+          ? formatTokenAmount(payout, activityDecimals, activitySymbol, locale, "")
+          : undefined,
+      multiplier,
+      isWin,
+      time: timeAgo(typeof bet.updatedAt === "number" ? bet.updatedAt : undefined, {
+        now: t("timeAgo.now"),
+        seconds: (count) => t("timeAgo.seconds", { count }),
+        minutes: (count) => t("timeAgo.minutes", { count }),
+        hours: (count) => t("timeAgo.hours", { count }),
+        days: (count) => t("timeAgo.days", { count })
+      })
+    };
+  });
 
   const stats: LandingStat[] = [
     {
@@ -163,10 +190,11 @@ export function HomePageClient() {
           eyebrow: t("activity.eyebrow"),
           title: t("activity.title"),
           viewAll: t("activity.viewAll"),
+          live: t("activity.live"),
           headers: {
             player: t("activity.headers.player"),
             room: t("activity.headers.room"),
-            state: t("activity.headers.state"),
+            payout: t("activity.headers.payout"),
             age: t("activity.headers.age")
           },
           empty: t("activity.empty")

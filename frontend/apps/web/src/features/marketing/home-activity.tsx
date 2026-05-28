@@ -12,10 +12,11 @@ export function HomeActivity({
     eyebrow: string;
     title: string;
     viewAll: string;
+    live: string;
     headers: {
       player: string;
       room: string;
-      state: string;
+      payout: string;
       age: string;
     };
     empty: string;
@@ -39,8 +40,12 @@ export function HomeActivity({
           />
           <div className="mb-5 flex items-center justify-between gap-4">
             <div>
-              <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-fg-subtle">
+              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-fg-subtle">
                 {copy.eyebrow}
+                <span className="inline-flex items-center gap-1 rounded-full border border-success/30 bg-success-soft px-2 py-0.5 text-success">
+                  <span className="h-1.5 w-1.5 rounded-full bg-success motion-safe:animate-pulse" />
+                  {copy.live}
+                </span>
               </div>
               <h2 className="mt-2 text-2xl font-bold text-fg">{copy.title}</h2>
             </div>
@@ -56,24 +61,43 @@ export function HomeActivity({
             className="overflow-hidden rounded-lg border border-border-soft bg-surface-0/60"
             style={{ boxShadow: "inset 0 2px 12px rgb(0 0 0 / 0.4)" }}
           >
-            <div className="grid grid-cols-[1fr_1.1fr_96px_72px] border-b border-border-soft px-4 py-3 text-[10px] font-bold uppercase tracking-[0.14em] text-fg-subtle">
+            <div className="grid grid-cols-[1fr_1.1fr_minmax(0,1.2fr)_72px] border-b border-border-soft px-4 py-3 text-[10px] font-bold uppercase tracking-[0.14em] text-fg-subtle">
               <div>{copy.headers.player}</div>
               <div>{copy.headers.room}</div>
-              <div className="text-right">{copy.headers.state}</div>
+              <div className="text-right">{copy.headers.payout}</div>
               <div className="text-right">{copy.headers.age}</div>
             </div>
             {activity.length > 0 ? (
               activity.map((item) => (
                 <div
                   key={item.id}
-                  className="grid grid-cols-[1fr_1.1fr_96px_72px] items-center border-b border-border-soft px-4 py-3.5 text-sm last:border-b-0"
+                  className="grid grid-cols-[1fr_1.1fr_minmax(0,1.2fr)_72px] items-center border-b border-border-soft px-4 py-3.5 text-sm last:border-b-0"
                 >
                   <div className="font-mono text-fg-muted">{item.player}</div>
                   <div className="font-bold text-fg">{item.game}</div>
-                  <div className="text-right">
-                    <span className="rounded-md border border-border-soft bg-surface-2 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-fg-muted">
-                      {item.state}
-                    </span>
+                  <div className="flex items-center justify-end gap-2 text-right">
+                    {item.payout ? (
+                      <>
+                        {item.multiplier && (
+                          <span className="font-mono text-[10px] font-bold text-accent">
+                            {item.multiplier}
+                          </span>
+                        )}
+                        <span
+                          className={
+                            item.isWin
+                              ? "font-mono text-xs font-bold text-success"
+                              : "font-mono text-xs text-fg-muted"
+                          }
+                        >
+                          {item.payout}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="rounded-md border border-border-soft bg-surface-2 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-fg-muted">
+                        {item.state}
+                      </span>
+                    )}
                   </div>
                   <div className="text-right font-mono text-xs text-fg-subtle">{item.time}</div>
                 </div>
