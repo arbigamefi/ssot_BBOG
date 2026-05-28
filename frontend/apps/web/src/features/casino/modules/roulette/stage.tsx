@@ -33,13 +33,22 @@ function getRouletteBetLabel(t: (key: string) => string, bet: string) {
       return t("casino.room.selection.roulette.labels.black");
     case "ODD":
       return t("casino.room.selection.roulette.labels.odd");
+    case "col1":
+      return t("casino.room.selection.roulette.labels.firstColumn");
+    case "col2":
+      return t("casino.room.selection.roulette.labels.secondColumn");
+    case "col3":
+      return t("casino.room.selection.roulette.labels.thirdColumn");
     default:
       return bet;
   }
 }
 
 type BetTone = "red" | "black" | "zero" | "neutral";
-type BetStatus = "idle" | "selected" | "won" | "result" | "lost";
+// `covered` is the soft indicator a number/column cell gets when it's caught
+// by some outside-bet selection (RED/BLACK, dozens, columns…) but the user
+// hasn't directly clicked it. Direct selection still wins visually.
+type BetStatus = "idle" | "covered" | "selected" | "won" | "result" | "lost";
 
 function numberTone(num: number): BetTone {
   if (num === 0) return "zero";
@@ -68,6 +77,12 @@ function betResultHit(spot: string, n: number): boolean {
       return n >= 13 && n <= 24;
     case "3rd 12":
       return n >= 25 && n <= 36;
+    case "col1":
+      return n >= 1 && n % 3 === 1;
+    case "col2":
+      return n >= 2 && n % 3 === 2;
+    case "col3":
+      return n >= 3 && n % 3 === 0;
     default:
       return false;
   }
@@ -82,6 +97,9 @@ const TONE_BG: Record<BetTone, string> = {
 
 const STATUS_RING: Record<BetStatus, string> = {
   idle: "ring-1 ring-inset ring-border-soft",
+  // Covered cells get a soft accent ring — visible but not as loud as a
+  // direct selection. No lift, no glow.
+  covered: "ring-2 ring-inset ring-accent/55",
   selected: "-translate-y-0.5 ring-2 ring-inset ring-brand shadow-glow",
   won: "-translate-y-0.5 ring-2 ring-inset ring-success",
   result: "ring-2 ring-inset ring-accent",
@@ -173,17 +191,37 @@ export function RouletteStage({
     [onChange, spots]
   );
 
+  // Set of numbers (0-36) that are caught by any non-straight bet currently
+  // in `spots`. Used to paint a soft "covered" indicator on number cells the
+  // user hasn't directly clicked. Direct selections still take priority.
+  const coveredNumbers = React.useMemo(() => {
+    const set = new Set<number>();
+    for (const s of spots) {
+      if (/^\d+$/.test(s)) continue;
+      for (let n = 0; n <= 36; n += 1) {
+        if (betResultHit(s, n)) set.add(n);
+      }
+    }
+    return set;
+  }, [spots]);
+
   const spotStatus = React.useCallback(
     (spot: string): BetStatus => {
       const selected = spots.includes(spot);
-      if (!settled || resultNum == null) return selected ? "selected" : "idle";
+      if (!settled || resultNum == null) {
+        if (selected) return "selected";
+        // Only apply the `covered` indicator to straight-number cells —
+        // outside-bet buttons stay `idle` until clicked.
+        if (/^\d+$/.test(spot) && coveredNumbers.has(Number(spot))) return "covered";
+        return "idle";
+      }
       const hit = betResultHit(spot, resultNum);
       if (hit && selected) return "won";
       if (hit) return "result";
       if (selected) return "lost";
       return "idle";
     },
-    [resultNum, settled, spots]
+    [coveredNumbers, resultNum, settled, spots]
   );
 
   React.useEffect(() => {
@@ -289,31 +327,41 @@ export function RouletteStage({
                   </BetCell>
 
                   <div className="flex flex-1 flex-col gap-1.5">
-                    {[3, 2, 1].map((rN) => (
-                      <div key={rN} className="flex gap-1.5">
-                        {Array.from({ length: 12 }).map((_, cI) => {
-                          const num = cI * 3 + rN;
-                          return (
-                            <BetCell
-                              key={num}
-                              tone={numberTone(num)}
-                              status={spotStatus(String(num))}
-                              disabled={locked}
-                              onClick={() => toggleSpot(String(num))}
-                              className="aspect-square w-9 shrink-0 text-xs"
-                            >
-                              {num}
-                            </BetCell>
-                          );
-                        })}
-                        <div
-                          aria-hidden
-                          className="flex w-10 shrink-0 items-center justify-center rounded-md bg-surface-1/70 text-[9px] font-semibold tracking-tight text-fg-subtle ring-1 ring-inset ring-border-soft"
-                        >
-                          2:1
+                    {[3, 2, 1].map((rN) => {
+                      // Each row sits next to its column bet (rN=3 → col3,
+                      // rN=2 → col2, rN=1 → col1). The column chip pays 2:1
+                      // and covers the 12 numbers in that row.
+                      const columnSpot = `col${rN}` as "col1" | "col2" | "col3";
+                      return (
+                        <div key={rN} className="flex gap-1.5">
+                          {Array.from({ length: 12 }).map((_, cI) => {
+                            const num = cI * 3 + rN;
+                            return (
+                              <BetCell
+                                key={num}
+                                tone={numberTone(num)}
+                                status={spotStatus(String(num))}
+                                disabled={locked}
+                                onClick={() => toggleSpot(String(num))}
+                                className="aspect-square w-9 shrink-0 text-xs"
+                              >
+                                {num}
+                              </BetCell>
+                            );
+                          })}
+                          <BetCell
+                            tone="neutral"
+                            status={spotStatus(columnSpot)}
+                            disabled={locked}
+                            onClick={() => toggleSpot(columnSpot)}
+                            ariaLabel={getRouletteBetLabel(t, columnSpot)}
+                            className="w-10 shrink-0 self-stretch text-[10px] font-semibold tracking-tight"
+                          >
+                            2:1
+                          </BetCell>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -333,7 +381,9 @@ export function RouletteStage({
                   ))}
                 </div>
 
-                {/* Outside bets. */}
+                {/* Outside bets. Right-side column 2:1 chips line up with
+                    the column buttons, so we pad to the same total width
+                    (40 + 6 = 46px gap each side). */}
                 <div className="flex gap-1.5 pl-[46px] pr-[46px]">
                   {["1-18", "EVEN", "RED", "BLACK", "ODD", "19-36"].map((bet) => (
                     <BetCell
@@ -346,9 +396,17 @@ export function RouletteStage({
                       className="h-7 flex-1 text-[8px] uppercase tracking-wide sm:text-[10px]"
                     >
                       {bet === "RED" ? (
-                        <span className="h-3.5 w-3.5 rounded-sm bg-danger" />
+                        // Swatch + label for clarity — aria-label still wins
+                        // for screen readers.
+                        <span className="flex items-center gap-1">
+                          <span className="h-2.5 w-2.5 rounded-sm bg-danger" />
+                          <span>{getRouletteBetLabel(t, bet)}</span>
+                        </span>
                       ) : bet === "BLACK" ? (
-                        <span className="h-3.5 w-3.5 rounded-sm bg-surface-0 ring-1 ring-inset ring-border" />
+                        <span className="flex items-center gap-1">
+                          <span className="h-2.5 w-2.5 rounded-sm bg-surface-0 ring-1 ring-inset ring-border" />
+                          <span>{getRouletteBetLabel(t, bet)}</span>
+                        </span>
                       ) : (
                         getRouletteBetLabel(t, bet)
                       )}

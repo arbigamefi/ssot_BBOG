@@ -1,10 +1,97 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
+import { CheckIcon } from "@heroicons/react/24/solid";
 import { cn } from "@ssot/ui";
 
 import { formatNativeFee, type CasinoRoundPhase } from "./casino-round";
 
 type Translate = ReturnType<typeof useTranslations>;
+
+/**
+ * The four player-visible stages of a round. Internal phases collapse onto
+ * these so the player sees a stable "where am I" tracker instead of a
+ * shifting status string.
+ */
+const STEP_KEYS = ["place", "random", "settle", "result"] as const;
+type StepKey = (typeof STEP_KEYS)[number];
+
+/** Phase → active step index (0-3). null = round not in flight yet. */
+function phaseToStepIndex(phase: CasinoRoundPhase): number | null {
+  switch (phase) {
+    case "placing":
+      return 0;
+    case "waiting_vrf":
+    case "timeout_soft":
+      return 1;
+    case "settling":
+    case "manual_settle_offered":
+      return 2;
+    case "settled":
+    case "refundable":
+      return 3;
+    case "failed":
+      return -1; // error — handled separately
+    default:
+      return null; // idle / loading_quote / ready → no tracker
+  }
+}
+
+function RoundProgressStepper({ phase, t }: { phase: CasinoRoundPhase; t: Translate }) {
+  const activeIndex = phaseToStepIndex(phase);
+  if (activeIndex === null) return null;
+  const failed = phase === "failed";
+  const complete = phase === "settled" || phase === "refundable";
+
+  return (
+    <ol className="mb-2 flex items-center gap-1" aria-label={t("casino.room.roundStatus.title")}>
+      {STEP_KEYS.map((key: StepKey, index) => {
+        const done = !failed && (complete ? true : index < activeIndex);
+        const active = !failed && !complete && index === activeIndex;
+        const errored = failed && index === Math.max(0, lastReachedStep(phase));
+        return (
+          <li key={key} className="flex flex-1 items-center gap-1">
+            <div className="flex flex-1 flex-col items-center gap-1">
+              <span
+                className={cn(
+                  "flex h-6 w-6 items-center justify-center rounded-full border text-[10px] font-bold transition-colors",
+                  errored
+                    ? "border-danger bg-danger-soft text-danger"
+                    : done
+                      ? "border-success bg-success-soft text-success"
+                      : active
+                        ? "border-brand bg-brand-soft text-brand motion-safe:animate-pulse"
+                        : "border-border bg-surface-2 text-fg-subtle"
+                )}
+              >
+                {done ? <CheckIcon className="h-3.5 w-3.5" /> : index + 1}
+              </span>
+              <span
+                className={cn(
+                  "text-[9px] font-semibold uppercase tracking-[0.08em]",
+                  active ? "text-brand" : done ? "text-success" : "text-fg-subtle"
+                )}
+              >
+                {t(`casino.room.roundStatus.steps.${key}`)}
+              </span>
+            </div>
+            {index < STEP_KEYS.length - 1 && (
+              <span
+                aria-hidden
+                className={cn("mb-4 h-0.5 w-3 rounded-full", done ? "bg-success" : "bg-border")}
+              />
+            )}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+/** Best-effort "where did it fail" for the error highlight. */
+function lastReachedStep(phase: CasinoRoundPhase): number {
+  // We don't carry the pre-failure phase, so default to the place step.
+  return phase === "failed" ? 0 : 0;
+}
 
 function getPhaseCopy(phase: CasinoRoundPhase, t: Translate) {
   switch (phase) {
@@ -108,6 +195,8 @@ export function CasinoRoundStatusPanel({
           {t("casino.room.roundStatus.title")}
         </p>
         <span
+          role="status"
+          aria-live="polite"
           className={cn(
             "rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em]",
             active
@@ -118,6 +207,8 @@ export function CasinoRoundStatusPanel({
           {copy.status}
         </span>
       </div>
+
+      <RoundProgressStepper phase={phase} t={t} />
 
       <div className="divide-y divide-border-soft">
         <RoundProofRow

@@ -237,7 +237,7 @@ export function GamesListClient() {
                   type="button"
                   onClick={() => setFilter(item.key)}
                   className={cn(
-                    "relative flex-shrink-0 rounded-md px-5 py-3 text-sm font-bold transition-colors",
+                    "relative shrink-0 rounded-md px-5 py-3 text-sm font-bold transition-colors",
                     isActive
                       ? "bg-brand-soft text-brand ring-1 ring-inset ring-brand/30"
                       : "text-fg-subtle hover:bg-surface-2 hover:text-fg"
@@ -353,7 +353,7 @@ export function GamesListClient() {
 
                     <span className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg border border-border-soft bg-surface-2 py-4 text-sm font-bold text-fg-muted transition-colors group-hover:border-brand/40 group-hover:bg-brand-soft group-hover:text-brand">
                       {t("casino.directory.card.playNow")}{" "}
-                      <PlayCircleIcon className="h-5 w-5 flex-shrink-0" />
+                      <PlayCircleIcon className="h-5 w-5 shrink-0" />
                     </span>
                   </div>
                 </Link>
@@ -366,7 +366,7 @@ export function GamesListClient() {
           <div className="relative overflow-hidden rounded-lg border border-border-soft bg-surface-2 px-6 py-8 md:px-8 md:py-10">
             <div className="relative z-10 flex flex-col items-start justify-between gap-8 md:flex-row md:items-center">
               <div className="flex flex-col gap-5 md:flex-row md:items-center">
-                <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl border border-brand/30 bg-brand-soft text-brand">
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border border-brand/30 bg-brand-soft text-brand">
                   <TrophyIcon className="h-8 w-8" />
                 </div>
                 <div>

@@ -130,7 +130,47 @@ describe("game room params", () => {
     expect(createRouletteParamsInput(["RED"])).toEqual({ kind: "red" });
     expect(createRouletteParamsInput(["2nd 12"])).toEqual({ kind: "dozen", dozen: 2 });
     expect(createRouletteParamsInput(["17"])).toEqual({ kind: "straight", number: 17 });
+    expect(createRouletteParamsInput(["col2"])).toEqual({ kind: "column", column: 2 });
     expect(createRouletteParamsInput([])).toBeNull();
+  });
+
+  it("computes Roulette coverage as a true set union (order-independent)", () => {
+    // ODD ∪ BLACK = 18 odds + 18 blacks − 8 (numbers that are both odd and
+    // black) = 28 covered. Selection order must not change that.
+    const oddThenBlack = rouletteCoveredNumbers(["ODD", "BLACK"]);
+    const blackThenOdd = rouletteCoveredNumbers(["BLACK", "ODD"]);
+    expect(oddThenBlack).toEqual(blackThenOdd);
+    expect(oddThenBlack.length).toBe(28);
+
+    // RED + BLACK must cover all 36 non-zero numbers regardless of order —
+    // a regression for the same "delete red after add 1..36" bug.
+    expect(rouletteCoveredNumbers(["RED", "BLACK"]).length).toBe(36);
+    expect(rouletteCoveredNumbers(["BLACK", "RED"]).length).toBe(36);
+
+    // Bitmasks (which is what actually gets sent on-chain) must agree too.
+    expect(buildRouletteBitmask(["ODD", "BLACK"])).toBe(buildRouletteBitmask(["BLACK", "ODD"]));
+  });
+
+  it("expands column bets to the 12 numbers they cover", () => {
+    expect(rouletteCoveredNumbers(["col1"])).toEqual([1, 4, 7, 10, 13, 16, 19, 22, 25, 28, 31, 34]);
+    expect(rouletteCoveredNumbers(["col2"])).toEqual([2, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35]);
+    expect(rouletteCoveredNumbers(["col3"])).toEqual([3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36]);
+  });
+
+  it("encodes column bets through the SSOT column kind", () => {
+    const roulette = buildGameParams({
+      slug: "roulette",
+      diceTarget: 50,
+      diceDirection: "under",
+      coinSide: "HEADS",
+      rouletteSpots: ["col3"],
+      kenoSpots: [],
+      plinkoRisk: "medium"
+    });
+    expect(roulette.ok && decodeRouletteParams(roulette.params)).toEqual({
+      kind: "column",
+      column: 3
+    });
   });
 
   it("creates Roulette bitmasks for mixed selections", () => {

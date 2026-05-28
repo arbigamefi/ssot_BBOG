@@ -568,7 +568,15 @@ export function GamePageClient({ slug }: { slug: string }) {
   );
 
   const AuditLedger = (
-    <GameRoomAuditLedger game={game} betAmount={betAmount} recentBets={recentBets} />
+    <GameRoomAuditLedger
+      game={game}
+      betAmount={betAmount}
+      recentBets={recentBets}
+      playerAddress={sdk?.account}
+      assetSymbol="USDC"
+      assetDecimals={usdcDecimals}
+      chainId={chainId}
+    />
   );
 
   return (
