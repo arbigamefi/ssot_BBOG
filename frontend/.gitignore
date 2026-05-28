@@ -13,6 +13,7 @@ storybook-static/
 .env
 .env.local
 .env.*.local
+deploy/casino-keeper/*.env
 
 # IDE / editor
 .idea/

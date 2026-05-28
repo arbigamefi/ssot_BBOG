@@ -195,9 +195,10 @@ Backfill and canary use the same package contract through:
 pnpm -C frontend keeper:backfill
 ```
 
-The command reads the repo root `.env`, scans `GameHub` lifecycle events, writes
-idempotent rows, advances the same `gamehub-events` cursor, and prints a JSON
-summary. It does not require the keeper private key and must never call
+The command reads the selected file in `frontend/deploy/casino-keeper/`
+(`KEEPER_ENV_FILE=primary.env` by default), scans `GameHub` lifecycle events,
+writes idempotent rows, advances the same `gamehub-events` cursor, and prints a
+JSON summary. It does not require the keeper private key and must never call
 `GameHub.finalize`.
 
 Local Postgres can be started with:

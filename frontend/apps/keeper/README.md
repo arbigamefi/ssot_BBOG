@@ -13,11 +13,16 @@ pnpm -C frontend keeper:build
 
 ## Run
 
-Start from `frontend/apps/keeper/.env.example` and keep the real file local.
+Start from `frontend/deploy/casino-keeper/primary.env.example` or
+`frontend/deploy/casino-keeper/backup.env.example`, copy it to a local
+gitignored file in that same directory, and fill in the real values. The local
+wrappers read only `frontend/deploy/casino-keeper/${KEEPER_ENV_FILE:-primary.env}`;
+they do not read repo-root `.env`, frontend web `.env.local`, or legacy sports
+env files.
 
-For local Base Sepolia development, the repo root `.env` can be reused. This
-starts Next.js and the keeper together, writes the health snapshot, and lets the
-casino room auto-settle after VRF fulfills:
+For local Base Sepolia development, this starts Next.js and the keeper together,
+writes the health snapshot, and lets the casino room auto-settle after VRF
+fulfills:
 
 ```bash
 pnpm -C frontend dev:with-keeper -- --port 3002
@@ -34,24 +39,17 @@ Keeper-only local run:
 pnpm -C frontend keeper:dev
 ```
 
+Use another deploy env file by selecting a file inside
+`frontend/deploy/casino-keeper/`:
+
 ```bash
-KEEPER_PRIVATE_KEY=0x... \
-KEEPER_CHAIN_ID=84532 \
-KEEPER_RPC_HTTP=https://... \
-KEEPER_RPC_WS=wss://... \
-KEEPER_RELEASE_PATH=frontend/packages/ssot/src/release/embedded/chain-84532.json \
-KEEPER_START_BLOCK=41562978 \
-KEEPER_SCAN_CHUNK_BLOCKS=10 \
-KEEPER_HEALTH_PATH=frontend/.runtime/casino-keeper-health.json \
-pnpm -C frontend keeper:start
+KEEPER_ENV_FILE=backup.env pnpm -C frontend keeper:dev
 ```
 
 Backup instance:
 
 ```bash
-KEEPER_ROLE=backup \
-KEEPER_BACKUP_DELAY_SECONDS=5 \
-pnpm -C frontend keeper:start
+KEEPER_ENV_FILE=backup.env pnpm -C frontend keeper:dev
 ```
 
 ## Production
@@ -69,6 +67,10 @@ Use `arbigamefi-casino-keeper@.service` with separate `primary.env` and
 docs/ops/runbooks/casino-keeper-production.md
 ```
 
+Local wrappers use the same deploy-env boundary: they read only
+`frontend/deploy/casino-keeper/${KEEPER_ENV_FILE:-primary.env}` and do not fall
+back to repo-root `.env` or `apps/web/.env.local`.
+
 Primary and backup should run on different hosts or regions, with different
 keeper EOAs and RPC providers. Build before starting the systemd unit:
 
@@ -83,14 +85,8 @@ The keeper always re-reads `getBet(betId)` before broadcasting and only calls
 
 Sportsbook automatic terminalization is opt-in:
 
-```bash
-KEEPER_SPORTS_TERMINALIZER_ENABLED=true \
-KEEPER_SPORTS_TERMINALIZER_SCAN_CHUNK_BLOCKS=10 \
-KEEPER_SPORTS_TERMINALIZER_MAX_TICKETS_PER_MARKET=200 \
-KEEPER_SPORTS_TICKET_ENUMERATION_MAX=500 \
-KEEPER_SPORTS_TICKET_SCAN_CHUNK_BLOCKS=10 \
-pnpm -C frontend keeper:start
-```
+Set `KEEPER_SPORTS_TERMINALIZER_ENABLED=true` and the sports scan limits in the
+selected deploy env file only after the sportsbook Phase 2 packet records GO.
 
 When enabled and the active release exposes `SportsHub`, the keeper listens for
 `ResultProposed`, `ResultFinalized`, `MarketVoided`, and challenge resolution
@@ -157,6 +153,7 @@ those controls are explicitly owned and tested.
 One-shot durable index backfill or canary run:
 
 ```bash
+KEEPER_ENV_FILE=primary.base-mainnet.env \
 BET_INDEX_DATABASE_URL=postgres://... \
 BET_INDEX_FROM_BLOCK=41562978 \
 BET_INDEX_TO_BLOCK=41570000 \
@@ -169,9 +166,10 @@ Show the no-side-effect usage summary:
 pnpm -C frontend keeper:backfill --help
 ```
 
-The wrapper reads the repo root `.env`, builds the keeper, scans `BetPlaced`,
-`BetRandomReady`, `BetFinalized`, and `BetRefunded`, writes idempotent rows, and
-prints a JSON summary with the block range and recent rows. Use
+The wrapper reads the selected file in `frontend/deploy/casino-keeper/`, builds
+the keeper, scans `BetPlaced`, `BetRandomReady`, `BetFinalized`, and
+`BetRefunded`, writes idempotent rows, and prints a JSON summary with the block
+range and recent rows. Use
 `BET_INDEX_DRY_RUN=true` to verify RPC/event access without writing Postgres.
 
 `KEEPER_SCAN_CHUNK_BLOCKS` defaults to `10` so Base Sepolia free RPC providers

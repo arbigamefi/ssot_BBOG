@@ -5,10 +5,13 @@ import path from "node:path";
 
 const FRONTEND_ROOT = process.cwd();
 const REPO_ROOT = path.resolve(FRONTEND_ROOT, "..");
-const WEB_ENV_PATH = path.join(FRONTEND_ROOT, "apps/web/.env.local");
+const KEEPER_DEPLOY_ENV_DIR = path.join(FRONTEND_ROOT, "deploy/casino-keeper");
+const DEFAULT_KEEPER_ENV_FILE = "primary.env";
 
 function parseEnvFile(filePath, target) {
-  if (!fs.existsSync(filePath)) return;
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`Keeper env file not found: ${filePath}`);
+  }
   const parsed = {};
   for (const rawLine of fs.readFileSync(filePath, "utf8").split(/\r?\n/)) {
     const line = rawLine.trim();
@@ -26,13 +29,29 @@ function parseEnvFile(filePath, target) {
   }
 }
 
-function alchemyRpc(env) {
-  const key = env.NEXT_PUBLIC_ALCHEMY_API_KEY?.trim();
-  return key ? `https://base-sepolia.g.alchemy.com/v2/${key}` : undefined;
+function resolveRepoPath(value) {
+  if (value.startsWith("~/")) {
+    return path.join(process.env.HOME ?? "", value.slice(2));
+  }
+  return path.isAbsolute(value) ? value : path.resolve(REPO_ROOT, value);
 }
 
-function resolveRepoPath(value) {
-  return path.isAbsolute(value) ? value : path.resolve(REPO_ROOT, value);
+function resolveKeeperDeployEnvFile() {
+  const requested = process.env.KEEPER_ENV_FILE?.trim() || DEFAULT_KEEPER_ENV_FILE;
+  const resolved = path.isAbsolute(requested)
+    ? requested
+    : path.resolve(KEEPER_DEPLOY_ENV_DIR, requested);
+  const relative = path.relative(KEEPER_DEPLOY_ENV_DIR, resolved);
+  if (relative.startsWith("..") || path.isAbsolute(relative)) {
+    throw new Error(
+      `KEEPER_ENV_FILE must resolve inside frontend/deploy/casino-keeper: ${requested}`
+    );
+  }
+  return resolved;
+}
+
+function displayKeeperEnvFile(filePath) {
+  return path.relative(FRONTEND_ROOT, filePath) || filePath;
 }
 
 function truthy(value) {
@@ -45,22 +64,15 @@ function truthy(value) {
 
 function backfillEnv() {
   const env = { ...process.env };
-  parseEnvFile(WEB_ENV_PATH, env);
+  const keeperEnvFile = resolveKeeperDeployEnvFile();
+  parseEnvFile(keeperEnvFile, env);
 
-  env.KEEPER_CHAIN_ID ??= "84532";
-  env.KEEPER_RELEASE_PATH ??= path.join(
-    FRONTEND_ROOT,
-    "packages/ssot/src/release/embedded/chain-84532.json"
-  );
-  env.KEEPER_RELEASE_PATH = resolveRepoPath(env.KEEPER_RELEASE_PATH);
-  env.KEEPER_RPC_HTTP ??=
-    env.RPC_URL ??
-    env.BASE_SEPOLIA_RPC_URL ??
-    env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL ??
-    env.NEXT_PUBLIC_RPC_URL ??
-    alchemyRpc(env);
+  if (env.KEEPER_RELEASE_PATH?.trim()) {
+    env.KEEPER_RELEASE_PATH = resolveRepoPath(env.KEEPER_RELEASE_PATH);
+  }
   env.BET_INDEX_SCAN_CHUNK_BLOCKS ??= env.KEEPER_SCAN_CHUNK_BLOCKS ?? "10";
   env.BET_INDEX_CONFIRMATIONS ??= "2";
+  env.KEEPER_ENV_FILE = displayKeeperEnvFile(keeperEnvFile);
 
   return env;
 }
@@ -69,7 +81,7 @@ function requireBackfillEnv(env) {
   const missing = ["KEEPER_RPC_HTTP", "KEEPER_RELEASE_PATH"].filter((key) => !env[key]?.trim());
   if (missing.length > 0) {
     throw new Error(
-      `Missing bet index backfill env: ${missing.join(", ")}. Check frontend/apps/web/.env.local.`
+      `Missing bet index backfill env: ${missing.join(", ")}. Check frontend/deploy/casino-keeper/${DEFAULT_KEEPER_ENV_FILE} or set KEEPER_ENV_FILE to another file in that directory.`
     );
   }
   if (!truthy(env.BET_INDEX_DRY_RUN) && !env.BET_INDEX_DATABASE_URL?.trim()) {
@@ -100,8 +112,9 @@ function printHelp() {
   pnpm -C frontend bet-index:backfill:local
 
 Environment:
-  KEEPER_RPC_HTTP              RPC HTTP endpoint; falls back to RPC_URL / BASE_SEPOLIA_RPC_URL
-  KEEPER_RELEASE_PATH          Release manifest path; defaults to embedded Base Sepolia release
+  KEEPER_ENV_FILE              File under frontend/deploy/casino-keeper; default primary.env
+  KEEPER_RPC_HTTP              RPC HTTP endpoint from the keeper deploy env file
+  KEEPER_RELEASE_PATH          Release manifest path from the keeper deploy env file
   BET_INDEX_DATABASE_URL       Postgres URL; required unless BET_INDEX_DRY_RUN=true
   BET_INDEX_SSL                Set true for managed Postgres SSL
   BET_INDEX_FROM_BLOCK         Optional explicit start block

@@ -18,6 +18,18 @@ docs/ops/runbooks/casino-keeper-production.md
 | `primary.base-mainnet.env.example`  | Base mainnet primary keeper environment template.                                    |
 | `backup.base-mainnet.env.example`   | Base mainnet backup keeper environment template with the 5s delay enabled.           |
 
+Real deploy files such as `primary.env`, `backup.env`,
+`primary.base-mainnet.env`, and `backup.base-mainnet.env` are local secrets and
+are gitignored. The keeper helpers do not read repo-root `.env`, frontend web
+`.env.local`, or legacy sports env files. Local helper scripts read only:
+
+```text
+frontend/deploy/casino-keeper/${KEEPER_ENV_FILE:-primary.env}
+```
+
+`KEEPER_ENV_FILE` may name another file in this directory, for example
+`primary.base-mainnet.env` or `backup.env`.
+
 ## Production defaults
 
 - Run the primary and backup on different hosts or regions.
@@ -43,3 +55,7 @@ sudo install -m 0644 frontend/deploy/casino-keeper/arbigamefi-casino-keeper@.ser
 sudo systemctl daemon-reload
 sudo systemctl enable --now arbigamefi-casino-keeper@primary
 ```
+
+The systemd unit reads `/etc/arbigamefi/casino-keeper/%i.env` and does not load
+any repo-local env files. Copy the reviewed deploy file from this directory into
+that `/etc` path during host provisioning.
