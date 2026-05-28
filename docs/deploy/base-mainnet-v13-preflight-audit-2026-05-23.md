@@ -128,7 +128,7 @@ pnpm -C frontend/apps/keeper test
 - Relevant mainnet preflight target green.
 - Frontend `pnpm -C frontend check:mainnet-release` green after syncing the generated Base mainnet
   release bundle.
-- `ENV_FILE=.env.web-production make casino-mainnet-frontend-readiness-v13` green after syncing the
+- `make casino-mainnet-frontend-readiness-v13` green after syncing the
   generated Base mainnet release bundle.
 - Generated deployment snapshots, release lock, release package metadata, frontend manifest, golden
   vectors, ABI index, and notes force-added and committed despite the `deployments/` ignore rule.
@@ -150,8 +150,8 @@ Follow-up verification on the same date:
 
 ```bash
 ENV_FILE=<filled-temp-base-mainnet-casino-env> make casino-mainnet-preflight-v13
-ENV_FILE=<filled-temp-web-production-env> make casino-mainnet-frontend-readiness-v13
-CASINO_ENV_FILE=<filled-base-mainnet-casino-env> WEB_ENV_FILE=<filled-web-production-env> FRONTEND_ACCESS_FILE=<approved-casino-frontend-access.json> make casino-mainnet-gonogo-v13
+ENV_FILE=frontend/apps/web/.env.local make casino-mainnet-frontend-readiness-v13
+CASINO_ENV_FILE=<filled-base-mainnet-casino-env> WEB_ENV_FILE=frontend/apps/web/.env.local FRONTEND_ACCESS_FILE=<approved-casino-frontend-access.json> make casino-mainnet-gonogo-v13
 STRICT=1 make release-check
 FOUNDRY_PROFILE=pr forge test --match-path 'test/unit/*' -vvv
 FOUNDRY_PROFILE=pr forge test --match-path 'test/diff/*' -vvv

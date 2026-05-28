@@ -135,7 +135,7 @@ Observed results:
 
 ## Remaining NO-GO items before public casino risk-in
 
-- `.env.web-production` is not present yet. `casino-mainnet-frontend-readiness-v13` requires a
+- `frontend/apps/web/.env.local` must be present before public risk-in. `casino-mainnet-frontend-readiness-v13` requires a
   production web env with `NEXT_PUBLIC_CHAIN_ID=8453`, `NEXT_PUBLIC_ENV=production`, a browser-safe
   RPC setting, `NEXT_PUBLIC_SENTRY_RELEASE`, and `NEXT_PUBLIC_SENTRY_DSN`.
 - `casino-mainnet-gonogo-v13` currently fails at the missing web env check. This is expected.

@@ -9,11 +9,12 @@ set -euo pipefail
 #
 # Required inputs:
 #   CASINO_ENV_FILE=.env.base-mainnet-v13-casino
-#   WEB_ENV_FILE=.env.web-production
+#   WEB_ENV_FILE=frontend/apps/web/.env.local
 #   FRONTEND_ACCESS_FILE=<approved-casino-frontend-access.json>
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
+DEFAULT_WEB_ENV_FILE="frontend/apps/web/.env.local"
 
 fail() {
   echo "error: $*" >&2
@@ -21,7 +22,7 @@ fail() {
 }
 
 CASINO_ENV_FILE="${CASINO_ENV_FILE:-${ENV_FILE:-.env.base-mainnet-v13-casino}}"
-WEB_ENV_FILE="${WEB_ENV_FILE:-.env.web-production}"
+WEB_ENV_FILE="${WEB_ENV_FILE:-$DEFAULT_WEB_ENV_FILE}"
 FRONTEND_ACCESS_FILE="${FRONTEND_ACCESS_FILE:-}"
 
 [[ -f "$CASINO_ENV_FILE" ]] || fail "casino env file not found: $CASINO_ENV_FILE"

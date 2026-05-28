@@ -7,13 +7,14 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
+DEFAULT_WEB_ENV_FILE="frontend/apps/web/.env.local"
 
 fail() {
   echo "error: $*" >&2
   exit 1
 }
 
-ENV_FILE="${1:-${ENV_FILE:-.env.web-production}}"
+ENV_FILE="${1:-${ENV_FILE:-$DEFAULT_WEB_ENV_FILE}}"
 [[ -f "$ENV_FILE" ]] || fail "env file not found: $ENV_FILE"
 
 echo "[casino-mainnet-frontend] validating production web env"

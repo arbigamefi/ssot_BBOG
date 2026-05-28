@@ -7,6 +7,10 @@ set -euo pipefail
 #   bash script/ci/v13_casino_web_env_check.sh [env-file]
 #   REQUIRE_SOURCEMAPS=1 bash script/ci/v13_casino_web_env_check.sh [env-file]
 
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+cd "$ROOT_DIR"
+DEFAULT_WEB_ENV_FILE="frontend/apps/web/.env.local"
+
 fail() {
   echo "error: $*" >&2
   exit 1
@@ -17,14 +21,12 @@ if [[ $# -gt 1 ]]; then
   exit 2
 fi
 
-if [[ $# -eq 1 ]]; then
-  ENV_FILE="$1"
-  [[ -f "$ENV_FILE" ]] || fail "env file not found: $ENV_FILE"
-  set -a
-  # shellcheck disable=SC1090
-  source "$ENV_FILE"
-  set +a
-fi
+ENV_FILE="${1:-${ENV_FILE:-$DEFAULT_WEB_ENV_FILE}}"
+[[ -f "$ENV_FILE" ]] || fail "env file not found: $ENV_FILE"
+set -a
+# shellcheck disable=SC1090
+source "$ENV_FILE"
+set +a
 
 need_var() {
   local name="$1"

@@ -161,10 +161,12 @@ For Base mainnet, the smoke accepts `RPC_URL`, `BASE_MAINNET_RPC_URL`, `BASE_RPC
 `NEXT_PUBLIC_BASE_RPC_URL`, `NEXT_PUBLIC_RPC_URL`, or `NEXT_PUBLIC_ALCHEMY_API_KEY` and must resolve
 to chain id `8453`.
 
-Production web environment must also include a Sentry DSN and CI-only source-map upload secret:
+Production web environment lives in `frontend/apps/web/.env.local` (copy from
+`frontend/apps/web/.env.example`) and must also include a Sentry DSN plus CI-only source-map upload
+secret:
 
 ```bash
-cp docs/deploy/base-mainnet-web.env.example .env.web-production
+cp frontend/apps/web/.env.example frontend/apps/web/.env.local
 ```
 
 - `NEXT_PUBLIC_CHAIN_ID=8453`.
@@ -180,8 +182,8 @@ cp docs/deploy/base-mainnet-web.env.example .env.web-production
 Validate the production web env shape before deploying:
 
 ```bash
-ENV_FILE=.env.web-production make casino-web-env-check-v13
-REQUIRE_SOURCEMAPS=1 ENV_FILE=.env.web-production make casino-web-env-check-v13
+make casino-web-env-check-v13
+REQUIRE_SOURCEMAPS=1 make casino-web-env-check-v13
 ```
 
 `chain-8453.json` is generated after broadcast, not before it. The deploy script produces deployment
@@ -191,7 +193,7 @@ release file. After `chain-8453.json` has been synced from that signed release b
 no-broadcast frontend readiness gate:
 
 ```bash
-ENV_FILE=.env.web-production make casino-mainnet-frontend-readiness-v13
+make casino-mainnet-frontend-readiness-v13
 ```
 
 This combines the production web env check, `check:mainnet-release`, and the read-only Base mainnet
@@ -201,7 +203,7 @@ Immediately before public casino risk-in, run the single no-broadcast GO gate:
 
 ```bash
 CASINO_ENV_FILE=.env.base-mainnet-v13-casino \
-WEB_ENV_FILE=.env.web-production \
+WEB_ENV_FILE=frontend/apps/web/.env.local \
 FRONTEND_ACCESS_FILE=<approved-casino-frontend-access.json> \
 make casino-mainnet-gonogo-v13
 ```

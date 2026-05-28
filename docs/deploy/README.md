@@ -166,7 +166,7 @@ Before public casino risk-in, the final no-broadcast gate is:
 
 ```bash
 CASINO_ENV_FILE=.env.base-mainnet-v13-casino \
-WEB_ENV_FILE=.env.web-production \
+WEB_ENV_FILE=frontend/apps/web/.env.local \
 FRONTEND_ACCESS_FILE=<approved-casino-frontend-access.json> \
 make casino-mainnet-gonogo-v13
 ```

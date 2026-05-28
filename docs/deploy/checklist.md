@@ -40,7 +40,7 @@
   - Casino+Sports: `ENV_FILE=<filled-base-mainnet-env> make sports-mainnet-preflight-v13`
 - [ ] Before public Base mainnet casino risk-in, run the final no-broadcast GO gate with approved
   access and synced frontend release:
-  `CASINO_ENV_FILE=<filled-base-mainnet-casino-env> WEB_ENV_FILE=<filled-web-production-env> FRONTEND_ACCESS_FILE=<approved-casino-frontend-access.json> make casino-mainnet-gonogo-v13`
+  `CASINO_ENV_FILE=<filled-base-mainnet-casino-env> WEB_ENV_FILE=frontend/apps/web/.env.local FRONTEND_ACCESS_FILE=<approved-casino-frontend-access.json> make casino-mainnet-gonogo-v13`
 
 ## Deploy
 - [ ] Run `bash script/ci/install_deps.sh`
