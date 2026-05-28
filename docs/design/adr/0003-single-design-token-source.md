@@ -33,9 +33,15 @@ specificity bugs are common.
 ## 2. Decision
 
 There is **exactly one source of design tokens**: CSS variables defined in
-`frontend/packages/ui/src/themes/arbi-dark.css` (and sibling `arbi-light.css`
-for light theme). Tailwind aliases these variables via the preset. Pages
-never see hex literals, raw class-string tokens, or alternative variables.
+`frontend/packages/ui/src/tokens/arbi-dark.css` (and sibling `arbi-light.css`
+for light theme). Tailwind aliases these variables onto its utility layer.
+Pages never see hex literals, raw class-string tokens, or alternative variables.
+
+> **Update (2026-05, Tailwind v4):** the aliasing mechanism is now the Tailwind
+> v4 CSS-first `@theme inline` block in `styles/globals.css`, not a
+> `tailwind-preset.ts`. The "Phase 2 candidate" in §4 below has been adopted.
+> The CSS variables remain the single source of truth — only the alias layer
+> changed from JS preset to native `@theme`.
 
 ## 3. Rationale
 
@@ -50,13 +56,13 @@ never see hex literals, raw class-string tokens, or alternative variables.
 
 ## 4. Alternatives Considered
 
-| Alternative                                   | Pros                              | Cons                                        | Why not chosen                                  |
-| --------------------------------------------- | --------------------------------- | ------------------------------------------- | ----------------------------------------------- |
-| Keep three systems, document priority         | No code churn                     | Drift continues, mental load remains        | Doesn't solve root cause                        |
-| Style Dictionary multi-platform tokens        | Vendor-neutral, multi-output      | Build complexity; v1 web-only               | Overkill for v1                                 |
-| Tailwind v4 native `@theme` directive         | First-class native                | Tailwind v4 still maturing for some plugins | Phase 2 candidate; v1 sticks with preset + vars |
-| CSS-in-JS theming (Vanilla Extract, Stitches) | Type-safe, scoped                 | Adds bundle, breaks RSC boundary            | Rejected                                        |
-| **CSS variables + Tailwind preset**           | Simple, standards-based, RSC-safe | Token alias step                            | Chosen                                          |
+| Alternative                                   | Pros                              | Cons                                 | Why not chosen                               |
+| --------------------------------------------- | --------------------------------- | ------------------------------------ | -------------------------------------------- |
+| Keep three systems, document priority         | No code churn                     | Drift continues, mental load remains | Doesn't solve root cause                     |
+| Style Dictionary multi-platform tokens        | Vendor-neutral, multi-output      | Build complexity; v1 web-only        | Overkill for v1                              |
+| **Tailwind v4 native `@theme` directive**     | First-class native                | (matured)                            | **Adopted 2026-05** (replaced the JS preset) |
+| CSS-in-JS theming (Vanilla Extract, Stitches) | Type-safe, scoped                 | Adds bundle, breaks RSC boundary     | Rejected                                     |
+| CSS variables + Tailwind preset (`.ts`)       | Simple, standards-based, RSC-safe | Token alias step; duplicate config   | Original v1 choice; superseded by `@theme`   |
 
 ## 5. Consequences
 

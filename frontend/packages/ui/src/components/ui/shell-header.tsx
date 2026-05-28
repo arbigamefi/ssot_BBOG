@@ -15,7 +15,7 @@ export function ShellHeader({ className, children, variant = "solid" }: ShellHea
   return (
     <header
       className={cn(
-        "sticky top-0 z-50 flex-shrink-0 transition-colors duration-base",
+        "sticky top-0 z-50 shrink-0 transition-colors duration-base",
         variant === "solid"
           ? "border-b border-border bg-surface-0/95 supports-[backdrop-filter]:bg-surface-0/80 supports-[backdrop-filter]:backdrop-blur-md"
           : "border-transparent bg-transparent",

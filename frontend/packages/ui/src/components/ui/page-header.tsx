@@ -23,7 +23,7 @@ export function PageHeader({ title, description, actions, className }: PageHeade
             <p className="max-w-xl text-sm leading-relaxed text-fg-muted">{description}</p>
           ) : null}
         </div>
-        {actions ? <div className="flex flex-shrink-0 items-center gap-3">{actions}</div> : null}
+        {actions ? <div className="flex shrink-0 items-center gap-3">{actions}</div> : null}
       </div>
       <div className="mt-4 border-b border-border-soft" />
     </div>

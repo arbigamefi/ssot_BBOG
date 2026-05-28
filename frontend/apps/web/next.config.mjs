@@ -36,6 +36,21 @@ const nextConfig = {
   transpilePackages: ["@ssot/ui", "@ssot/ssot"],
   distDir: process.env.NODE_ENV === "development" ? ".next-dev" : ".next",
 
+  experimental: {
+    // Per-import tree-shaking for large barrel packages — Next rewrites
+    // `import { X } from "pkg"` into deep imports so unused exports don't
+    // ship. Pure bundle hygiene, no behavioural change.
+    optimizePackageImports: [
+      "@heroicons/react/24/outline",
+      "@heroicons/react/24/solid",
+      "@ssot/ui",
+      "framer-motion",
+      "wagmi",
+      "viem",
+      "@rainbow-me/rainbowkit"
+    ]
+  },
+
   async headers() {
     return [
       {

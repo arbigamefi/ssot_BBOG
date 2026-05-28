@@ -10,7 +10,8 @@ Design tokens are a code contract. The source files are:
 
 - `frontend/packages/ui/src/tokens/arbi-dark.css`;
 - `frontend/packages/ui/src/tokens/arbi-light.css`;
-- `frontend/packages/ui/src/tokens/tailwind-preset.ts`;
+- `frontend/packages/ui/src/styles/globals.css` (the Tailwind v4 `@theme inline`
+  block that maps the CSS variables onto Tailwind utility namespaces);
 - `frontend/packages/ui/src/tokens/VERSION.md`.
 
 This document defines the rules. It does not duplicate every token value.
@@ -18,7 +19,13 @@ This document defines the rules. It does not duplicate every token value.
 ## 1. Source Of Truth
 
 CSS variables in `frontend/packages/ui/src/tokens/*` are the source of truth.
-Tailwind consumes them through `tokens/tailwind-preset.ts`.
+As of Tailwind v4 the project is CSS-first: there is **no `tailwind.config.ts`
+and no `tailwind-preset.ts`**. `globals.css` consumes the variables through a
+single `@theme inline { … }` block (e.g. `--color-surface-0: hsl(var(--surface-0))`),
+which is what generates utilities like `bg-surface-0`, `shadow-e1`,
+`border-border-strong`. Named transition durations (`duration-fast/base/slow`)
+are declared as explicit `@utility` rules in the same file, because Tailwind v4
+has no theme namespace for named durations.
 
 Do not create a second token system in app routes, feature folders, or
 TypeScript class-string exports.
