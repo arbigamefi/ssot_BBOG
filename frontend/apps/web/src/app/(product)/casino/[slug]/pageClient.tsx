@@ -13,7 +13,7 @@ import { useRecentBets } from "../../../../features/betting/useRecentBets";
 import { useRelease } from "../../../../ssot/release/ReleaseProvider";
 import { useSSOTSDK } from "../../../../ssot/sdk";
 import { useSSOTRuntime } from "../../../../ssot/runtime";
-import { useConnectModal } from "../../../../app-shell/WalletButton";
+import { requestWalletConnect } from "../../../../app-shell/wallet-connect-events";
 import { toGameMeta, type GameMeta } from "../../../../features/casino/room/model";
 import {
   baccaratMultiplier,
@@ -222,7 +222,7 @@ export function GamePageClient({ slug }: { slug: string }) {
     [referrerParam, sdk?.account]
   );
 
-  const { openConnectModal } = useConnectModal();
+  const openConnectModal = React.useCallback(() => requestWalletConnect(), []);
   const { db } = useSSOTRuntime();
   const handleRoundTerminal = React.useCallback(
     (bet: DomainBet) => {

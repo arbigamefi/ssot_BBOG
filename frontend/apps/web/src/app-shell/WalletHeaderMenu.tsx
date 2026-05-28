@@ -26,6 +26,7 @@ import {
 
 import { useActiveChain } from "./ActiveChainProvider";
 import { getExplorerAddressUrl } from "./chain-registry";
+import { WALLET_CONNECT_REQUEST_EVENT } from "./wallet-connect-events";
 
 function shortAddress(address: string) {
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
@@ -76,6 +77,12 @@ export function WalletHeaderMenu() {
       document.removeEventListener("keydown", onKey);
     };
   }, [open]);
+
+  React.useEffect(() => {
+    const onWalletConnectRequest = () => openConnectModal?.();
+    window.addEventListener(WALLET_CONNECT_REQUEST_EVENT, onWalletConnectRequest);
+    return () => window.removeEventListener(WALLET_CONNECT_REQUEST_EVENT, onWalletConnectRequest);
+  }, [openConnectModal]);
 
   if (!isConnected || !address) {
     return (
