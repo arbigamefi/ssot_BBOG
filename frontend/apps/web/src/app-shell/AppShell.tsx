@@ -9,6 +9,15 @@ import { useTranslations } from "next-intl";
 import { useRelease } from "../ssot/release/ReleaseProvider";
 import { AppHeader, type AppRoute } from "../components/AppHeader";
 import { SiteFooter } from "../components/SiteFooter";
+import {
+  AgeTermsGate,
+  CookieConsentBanner,
+  RealityCheckTimer,
+  ResponsibleGamblingDialog,
+  SelfExclusionGate
+} from "./compliance";
+import { OnboardingTour } from "./onboarding/OnboardingTour";
+import { InstallPrompt } from "./pwa/InstallPrompt";
 
 function getActiveRoute(pathname: string): AppRoute {
   if (pathname === "/casino") return "directory";
@@ -54,17 +63,29 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     variant === "marketing" ? "transparent" : variant === "game" ? "game" : "default";
 
   return (
-    <AppShellFrame
-      footer={<SiteFooter />}
-      header={<AppHeader activeRoute={getActiveRoute(pathname)} variant={headerVariant} />}
-      readOnlyBanner={
-        readOnly ? (
-          <ReadOnlyBanner reason={readOnlyReason ?? t("app.writesDisabled")} details={warnings} />
-        ) : undefined
-      }
-      variant={variant}
-    >
-      {children}
-    </AppShellFrame>
+    <>
+      <AppShellFrame
+        footer={<SiteFooter />}
+        header={<AppHeader activeRoute={getActiveRoute(pathname)} variant={headerVariant} />}
+        readOnlyBanner={
+          readOnly ? (
+            <ReadOnlyBanner reason={readOnlyReason ?? t("app.writesDisabled")} details={warnings} />
+          ) : undefined
+        }
+        variant={variant}
+      >
+        <SelfExclusionGate>{children}</SelfExclusionGate>
+      </AppShellFrame>
+
+      {/* Compliance surfaces — render above the shell, ordered by priority:
+          age/terms gate blocks everything; cookie banner + RG dialog sit on
+          top; the reality-check timer is invisible bookkeeping. */}
+      <AgeTermsGate />
+      <CookieConsentBanner />
+      <ResponsibleGamblingDialog />
+      <RealityCheckTimer />
+      <OnboardingTour />
+      <InstallPrompt />
+    </>
   );
 }

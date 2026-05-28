@@ -4,6 +4,7 @@ import * as React from "react";
 
 import { AnalyticsProvider } from "./AnalyticsProvider";
 import { ActiveChainProvider } from "./ActiveChainProvider";
+import { ComplianceProvider } from "./compliance";
 import { ReleaseProviderWagmi } from "./ReleaseProviderWagmi";
 import { SSOTRuntimeProvider } from "./SSOTRuntimeProvider";
 import { SSOTSDKProvider } from "./SSOTSDKProvider";
@@ -19,16 +20,19 @@ export function ProductProviders({
   sportsbookEnabledFlag?: string;
 }) {
   return (
-    <WalletProviderIsland>
-      <ActiveChainProvider initialChainId={defaultChainId}>
-        <AnalyticsProvider>
-          <ReleaseProviderWagmi sportsbookEnabledFlag={sportsbookEnabledFlag}>
-            <SSOTRuntimeProvider>
-              <SSOTSDKProvider>{children}</SSOTSDKProvider>
-            </SSOTRuntimeProvider>
-          </ReleaseProviderWagmi>
-        </AnalyticsProvider>
-      </ActiveChainProvider>
-    </WalletProviderIsland>
+    // ComplianceProvider sits above analytics so consent can gate tracking.
+    <ComplianceProvider>
+      <WalletProviderIsland>
+        <ActiveChainProvider initialChainId={defaultChainId}>
+          <AnalyticsProvider>
+            <ReleaseProviderWagmi sportsbookEnabledFlag={sportsbookEnabledFlag}>
+              <SSOTRuntimeProvider>
+                <SSOTSDKProvider>{children}</SSOTSDKProvider>
+              </SSOTRuntimeProvider>
+            </ReleaseProviderWagmi>
+          </AnalyticsProvider>
+        </ActiveChainProvider>
+      </WalletProviderIsland>
+    </ComplianceProvider>
   );
 }

@@ -3,6 +3,8 @@
 import * as React from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
+import { useCompliance } from "./compliance";
+
 interface AnalyticsContextValue {
   trackEvent: (name: string, props?: Record<string, string | number>) => void;
 }
@@ -51,28 +53,37 @@ function sendEvent(name: string, props?: Record<string, string | number>) {
   }
 }
 
-function PageViewTracker() {
+function PageViewTracker({ enabled }: { enabled: boolean }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
   React.useEffect(() => {
+    if (!enabled) return;
     sendEvent("pageview");
-  }, [pathname, searchParams]);
+  }, [enabled, pathname, searchParams]);
 
   return null;
 }
 
 export function AnalyticsProvider({ children }: { children: React.ReactNode }) {
-  const trackEvent = React.useCallback((name: string, props?: Record<string, string | number>) => {
-    sendEvent(name, props);
-  }, []);
+  // Consent gate — no tracking (not even pageviews) until the visitor opts in.
+  const { cookieConsent } = useCompliance();
+  const enabled = cookieConsent === "accepted";
+
+  const trackEvent = React.useCallback(
+    (name: string, props?: Record<string, string | number>) => {
+      if (!enabled) return;
+      sendEvent(name, props);
+    },
+    [enabled]
+  );
 
   const value = React.useMemo(() => ({ trackEvent }), [trackEvent]);
 
   return (
     <AnalyticsContext.Provider value={value}>
       <React.Suspense fallback={null}>
-        <PageViewTracker />
+        <PageViewTracker enabled={enabled} />
       </React.Suspense>
       {children}
     </AnalyticsContext.Provider>
