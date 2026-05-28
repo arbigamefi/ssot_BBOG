@@ -1,5 +1,0 @@
-# ArbiGameFi Frontend
-User-agent: *
-Allow: /
-
-Sitemap: https://arbigamefi.com/sitemap.xml

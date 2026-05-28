@@ -4,7 +4,7 @@ import { generatePageMetadata } from "../../../../i18n/metadata";
 import { ClaimsPageClient } from "./pageClient";
 
 export function generateMetadata(): Promise<Metadata> {
-  return generatePageMetadata("portfolioClaims");
+  return generatePageMetadata("portfolioClaims", undefined, { noindex: true });
 }
 
 export default function ClaimsPage() {

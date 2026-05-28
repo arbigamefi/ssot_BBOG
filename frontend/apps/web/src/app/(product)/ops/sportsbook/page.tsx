@@ -5,7 +5,7 @@ import { generatePageMetadata } from "../../../../i18n/metadata";
 import { OpsSportsbookPageClient } from "./pageClient";
 
 export function generateMetadata(): Promise<Metadata> {
-  return generatePageMetadata("opsSportsbook");
+  return generatePageMetadata("opsSportsbook", undefined, { noindex: true });
 }
 
 export default function OpsSportsbookPage() {

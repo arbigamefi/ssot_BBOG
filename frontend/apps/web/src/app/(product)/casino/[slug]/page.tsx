@@ -42,7 +42,12 @@ export async function generateMetadata({
   if (!isCasinoModuleSlug(slug)) notFound();
 
   const { messages } = await getRequestI18n();
-  return buildPageMetadata(messages, "casinoRoom", { game: localizedGameName(messages, slug) });
+  return buildPageMetadata(
+    messages,
+    "casinoRoom",
+    { game: localizedGameName(messages, slug) },
+    { path: `/casino/${slug}` }
+  );
 }
 
 export default async function GameRoomPage({ params }: { params: Promise<{ slug: string }> }) {

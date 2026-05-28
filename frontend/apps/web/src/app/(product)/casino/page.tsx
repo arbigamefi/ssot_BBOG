@@ -12,7 +12,7 @@ const GamesListClient = dynamic(
 );
 
 export function generateMetadata(): Promise<Metadata> {
-  return generatePageMetadata("casino");
+  return generatePageMetadata("casino", undefined, { path: "/casino" });
 }
 
 export default function GamesPage() {

@@ -10,7 +10,7 @@ export async function generateMetadata({
   params: Promise<{ betId: string }>;
 }): Promise<Metadata> {
   const { betId } = await params;
-  return generatePageMetadata("portfolioBetDetail", { betId });
+  return generatePageMetadata("portfolioBetDetail", { betId }, { noindex: true });
 }
 
 export default async function BetDetailPage({ params }: { params: Promise<{ betId: string }> }) {
