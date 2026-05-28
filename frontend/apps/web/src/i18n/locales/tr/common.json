@@ -1,0 +1,642 @@
+{
+  "app": {
+    "connectWalletActionDescription": "{action} için bir cüzdan bağlayın.",
+    "connectWalletButton": "Cüzdan bağla",
+    "connectWalletDescription": "Bu özelliği kullanmak için bir cüzdan bağlayın.",
+    "connectingWallet": "Bağlanıyor...",
+    "unknownNetwork": "Bilinmeyen ağ",
+    "walletRequired": "Cüzdan gerekli",
+    "writesDisabled": "İşlemler devre dışı.",
+    "errors": {
+      "boundaryTitle": "Bir şeyler ters gitti",
+      "unexpected": "Beklenmeyen bir hata oluştu.",
+      "transactionFailed": "İşlem başarısız",
+      "recentBetsFailed": "Son bahisler yüklenemedi",
+      "playerBetsFailed": "Bahisleriniz yüklenemedi",
+      "playerSportsTicketsFailed": "Spor biletleriniz yüklenemedi",
+      "errorId": "Hata kimliği: {digest}",
+      "tryAgain": "Tekrar dene"
+    },
+    "network": {
+      "label": "Aktif ağ",
+      "switchWallet": "Değiştir",
+      "switching": "Değiştiriliyor"
+    },
+    "walletMenu": {
+      "chainSection": "Aktif ağ",
+      "connectedVia": "{wallet} ile",
+      "copyAddress": "Adresi kopyala",
+      "disconnect": "Bağlantıyı kes",
+      "mismatch": {
+        "title": "Cüzdan farklı bir ağda",
+        "description": "Bahis yapmak için cüzdanınızı {target} ağına geçirin.",
+        "switch": "Cüzdanı değiştir"
+      },
+      "viewOnExplorer": "Blok gezgininde görüntüle"
+    },
+    "mobileDeepLink": {
+      "title": "Bir cüzdan uygulamasında aç",
+      "description": "Mobilde en akıcı deneyim için bu siteyi cüzdanınızın uygulama içi tarayıcısında açın.",
+      "openIn": {
+        "metamask": "MetaMask'te aç",
+        "coinbase": "Coinbase Wallet'ta aç",
+        "trust": "Trust'ta aç"
+      },
+      "dismiss": "Kapat"
+    },
+    "install": {
+      "title": "ArbiGameFi'yi yükle",
+      "description": "Uygulama gibi daha hızlı bir deneyim için ana ekrana ekleyin.",
+      "action": "Yükle",
+      "dismiss": "Kapat"
+    }
+  },
+  "locale": {
+    "label": "Dil"
+  },
+  "nav": {
+    "account": "Hesap",
+    "affiliates": "Ortaklar",
+    "bets": "Bahisler",
+    "casino": "Casino",
+    "claims": "Talepler",
+    "baccarat": "Bakara",
+    "coinToss": "Yazı Tura",
+    "dice": "Zar",
+    "games": "Oyunlar",
+    "keno": "Keno",
+    "liquidity": "Likidite",
+    "openRooms": "Odaları aç",
+    "ops": "Operasyon",
+    "plinko": "Plinko",
+    "rooms": "Odalar",
+    "roulette": "Rulet",
+    "sicBo": "Sic Bo",
+    "slots": "Slot",
+    "sportsbook": "Spor bahisleri"
+  },
+  "footer": {
+    "brandSubtitle": "Cüzdan tabanlı odalar",
+    "description": "Cüzdan tabanlı casino ve spor bahisleri. Her dönüş ve her ödeme zincir üstünde.",
+    "liveRooms": "Canlı odalar",
+    "games": "Oyunlar",
+    "platform": "Platform",
+    "resources": "Kaynaklar",
+    "legal": "Hukuki",
+    "earn": "Kazan",
+    "portfolio": "Portföy",
+    "terms": "Koşullar",
+    "privacy": "Gizlilik",
+    "disclaimer": "Risk uyarısı",
+    "copyright": "Cüzdan tabanlı odalar ve şeffaf ödeme için ArbiGameFi arayüzü.",
+    "docs": "Belgeler",
+    "responsibleGambling": "Sorumlu oyun",
+    "responsibleNote": "Lütfen sorumlu oynayın.",
+    "support": "Destek",
+    "faq": "Yardım ve SSS",
+    "status": "Sistem durumu",
+    "community": "Topluluk"
+  },
+  "notFound": {
+    "title": "Sayfa bulunamadı",
+    "description": "Aradığınız sayfa mevcut değil veya taşındı.",
+    "home": "Ana sayfaya dön",
+    "casino": "Oyunlara göz at"
+  },
+  "compliance": {
+    "gate": {
+      "title": "Girmeden önce",
+      "subtitle": "Devam etmek için birkaç şeyi onaylayın",
+      "age": "En az 18 yaşındayım (veya bulunduğum yargı bölgesindeki yasal yaştayım).",
+      "jurisdiction": "Yaşadığım yerde çevrimiçi oyun yasaldır ve yerel yasalara uymaktan yalnızca ben sorumluyum.",
+      "termsPrefix": "Okudum ve kabul ediyorum:",
+      "termsLink": "Hizmet Koşulları",
+      "and": "ve",
+      "privacyLink": "Gizlilik Politikası",
+      "termsSuffix": ".",
+      "enter": "Gir",
+      "leave": "Ayrıl"
+    },
+    "cookies": {
+      "title": "Çerez tercihleri",
+      "description": "Trafiği anlamak için gizliliğe duyarlı analizler kullanıyoruz. Siz seçene kadar hiçbir şey yüklenmez.",
+      "learnMore": "Daha fazla bilgi",
+      "accept": "Kabul et",
+      "reject": "Reddet"
+    },
+    "responsible": {
+      "title": "Sorumlu oyun",
+      "close": "Kapat",
+      "intro": "Kişisel limitler belirleyin. Limitler cihazınızda saklanır ve ödeme sırasında uygulanır; bir limiti kaldırmak için alanı temizleyin.",
+      "dailyDeposit": "Günlük yatırma limiti",
+      "dailyLoss": "Günlük kayıp limiti",
+      "sessionReminder": "Oturum hatırlatıcısı",
+      "minutes": "dk",
+      "noLimit": "Limit yok",
+      "off": "Kapalı",
+      "saveLimits": "Limitleri kaydet",
+      "selfExclude": {
+        "title": "Kendini hariç tut",
+        "description": "Belirli bir süre boyunca kendinizi bahis yapmaktan engelleyin. Süre dolmadan geri alınamaz.",
+        "d1": "1 gün",
+        "d7": "7 gün",
+        "d30": "30 gün",
+        "d180": "180 gün",
+        "confirm": "{period} boyunca kendinizi hariç tutmak istiyor musunuz? Süre dolana kadar bahis yapamazsınız."
+      }
+    },
+    "selfExcludedGate": {
+      "title": "Kendinizi hariç tuttunuz",
+      "description": "Bu cihazda bahisler {until} tarihine kadar duraklatıldı. Geçmişinizi görüntülemeye ve destek kaynaklarına ulaşmaya devam edebilirsiniz.",
+      "viewHistory": "Geçmişi görüntüle",
+      "getHelp": "Yardım al"
+    },
+    "realityCheck": {
+      "message": "Yaklaşık {minutes} dakikadır oynuyorsunuz. İhtiyaç duyarsanız ara verin."
+    }
+  },
+  "onboarding": {
+    "aria": "Başlangıç turu",
+    "stepLabel": "Adım {current} / {total}",
+    "skip": "Atla",
+    "back": "Geri",
+    "next": "İleri",
+    "done": "Anladım",
+    "steps": {
+      "welcome": {
+        "title": "ArbiGameFi'ye hoş geldiniz",
+        "body": "Bir turun nasıl işlediğine dair 30 saniyelik hızlı bir tur. İstediğiniz an atlayabilirsiniz."
+      },
+      "wallet": {
+        "title": "Cüzdanınızı bağlayın",
+        "body": "Buradan başlayın. Bir cüzdan bağlayın ve ağınızı seçin — kayıt yok, saklama yok."
+      },
+      "stage": {
+        "title": "Bahsinizi seçin",
+        "body": "Bu oyun. Sayılarınızı, tarafınızı veya riski doğrudan tahtada seçin."
+      },
+      "amount": {
+        "title": "Tutarı belirleyin",
+        "body": "Ne kadar bahis yapacağınızı girin. Kazanma şansınız ve olası ödeme anlık güncellenir."
+      },
+      "place": {
+        "title": "Bahsi yap",
+        "body": "Cüzdanınızda onaylayın. Chainlink VRF yanıt verir vermez tur otomatik olarak sonuçlanır."
+      },
+      "fairness": {
+        "title": "Her sonucu doğrulayın",
+        "body": "Her turdan sonra bir adalet kanıtı kopyalayıp zincir üstünde kontrol edebilirsiniz. Bütün mesele bu."
+      }
+    }
+  },
+  "support": {
+    "faq": {
+      "eyebrow": "Yardım merkezi",
+      "title": "Yardım ve SSS",
+      "description": "Oynamaya başlamak, bir sonucu doğrulamak ve kontrolü elinizde tutmak için ihtiyacınız olan her şey."
+    },
+    "contact": {
+      "title": "Hâlâ yardım mı lazım?",
+      "description": "Ekibe ulaşın veya sistemin canlı durumunu kontrol edin.",
+      "discord": "Discord",
+      "email": "E-posta desteği",
+      "status": "Sistem durumu",
+      "docs": "Belgeler"
+    },
+    "items": [
+      {
+        "q": "Oynamaya nasıl başlarım?",
+        "a": "Sağ üst menüden bir cüzdan bağlayın, desteklenen bir ağda olduğunuzdan emin olun ve bir oyun seçin. Kazançlar doğrudan cüzdanınıza gelir — kayıt, yatırma hesabı veya saklama yok."
+      },
+      {
+        "q": "Base Sepolia'da test fonlarını nasıl alırım?",
+        "a": "Base Sepolia bir test ağıdır. Gas için bir Base Sepolia faucet'inden ücretsiz test ETH alın, ardından oyun bakiyesi için bir test USDC faucet'i kullanın. Test ağı fonlarının gerçek değeri yoktur."
+      },
+      {
+        "q": "Bankroll / Bank nedir?",
+        "a": "Bank, her ödemeyi karşılayan zincir üstü kasadır. Şeffaf bir rezervdir — Kazan sayfasında inceleyebilirsiniz. Her kazanç oradan ödenir ve ödeme gücü zincir üstünde kanıtlanabilir."
+      },
+      {
+        "q": "Casino avantajı (house edge) nedir?",
+        "a": "Casino avantajı, Bank'ı sürdürülebilir kılan yerleşik marjdır. Her oyun kesin değeri Oyun Bilgisi sekmesinde gösterir — örneğin rulet %2,70, zar %1."
+      },
+      {
+        "q": "Bahsim neden beklemede?",
+        "a": "Bahisler, kanıtlanabilir adil rastgelelik için Chainlink VRF ile sonuçlanır. Bahis yaptıktan sonra sözleşme bir rastgele sayı ister; sayı geldiğinde tur otomatik olarak sonuçlanır. Genellikle birkaç saniye sürer."
+      },
+      {
+        "q": "Rastgele sayı hiç gelmezse ne olur?",
+        "a": "VRF zaman aşımını geçerse, bahsinizi kendiniz iade edebilirsiniz — iade düğmesi tur durumu panelinde görünür. Hiçbir fon asla sıkışıp kalmaz."
+      },
+      {
+        "q": "Bir bahsin adil olduğunu nasıl doğrularım?",
+        "a": "Sonuçlanan her tur; bahis kimliğini, VRF istek kimliğini, rastgele hash'i ve ödeme işlemini açığa çıkarır. Sonuç ekranında \"Adalet kanıtını kopyala\"yı kullanarak herkesin zincir üstünde bağımsızca doğrulayabileceği bir JSON makbuzu dışa aktarın."
+      },
+      {
+        "q": "Hangi ücretleri öderim?",
+        "a": "İki şey: oyunun casino avantajı (oranlara dahildir) ve rastgelelik isteğini finanse etmek için yerel gas cinsinden küçük bir Chainlink VRF ücreti. İkisi de onaylamadan önce gösterilir."
+      },
+      {
+        "q": "Hangi cüzdanlar destekleniyor?",
+        "a": "MetaMask, Coinbase Wallet, Trust, Rainbow, OKX ve WalletConnect uyumlu her cüzdan. Masaüstünde bir tarayıcı uzantısı kullanın; mobilde siteyi cüzdanınızın uygulama içi tarayıcısında açın veya WalletConnect QR'ını tarayın."
+      },
+      {
+        "q": "Bu saklamalı mı? Fonlarımı siz mi tutuyorsunuz?",
+        "a": "Hayır. ArbiGameFi saklamasızdır. Fonlarınız siz bahis yapana kadar cüzdanınızda kalır ve kazançlar doğrudan cüzdanınıza geri döner. Bakiyeleri asla tutmayız."
+      },
+      {
+        "q": "Oyunumun kontrolünü nasıl elimde tutarım?",
+        "a": "Günlük yatırma ve kayıp limitleri, oturum hatırlatıcısı belirlemek veya belirli bir süre kendinizi hariç tutmak için alt bilgiden Sorumlu Oyun'u açın. Oynamak için yargı bölgenizde yasal yaşta olmalısınız."
+      }
+    ]
+  },
+  "metadata": {
+    "siteTitle": "ArbiGameFi",
+    "titleTemplate": "%s | ArbiGameFi",
+    "description": "Doğrulanabilir ödemeli, saklamasız zincir üstü oyun platformu.",
+    "pages": {
+      "casino": {
+        "title": "Casino",
+        "description": "Cüzdan tabanlı casino — sekiz oyun, her dönüş zincir üstünde doğrulanabilir. Kayıt yok, saklama yok."
+      },
+      "casinoRoom": {
+        "title": "{game}",
+        "description": "{game} oyununu doğrulanabilir rastgelelik, görünür VRF durumu ve zincirden türetilen sonuç makbuzuyla oynayın."
+      },
+      "sportsbook": {
+        "title": "Spor bahisleri",
+        "description": "Zincir üstü ödeme ve imzalı oran anlık görüntüleriyle sabit oranlı spor piyasalarına göz atın."
+      },
+      "sportsbookMarket": {
+        "title": "Spor piyasası {marketId}",
+        "description": "SportsHub piyasası {marketId}'i, bahis hazırlığını ve sonuç kanıtı durumunu inceleyin."
+      },
+      "portfolio": {
+        "title": "Portföy",
+        "description": "Cüzdan kimliğini, varlık pozisyonlarını, iade kredilerini ve son protokol etkinliğini inceleyin."
+      },
+      "portfolioActivity": {
+        "title": "Etkinlik",
+        "description": "Ağ farkında ödeme durumuyla indekslenmiş casino ve spor etkinliğini inceleyin."
+      },
+      "portfolioBetDetail": {
+        "title": "Bahis {betId}",
+        "description": "Bahis {betId}'i yaşam döngüsü, ödeme, rastgelelik ve ödeme kanıtı ayrıntılarıyla inceleyin."
+      },
+      "portfolioSportsTicket": {
+        "title": "Spor bileti {ticketId}",
+        "description": "SportsHub bileti {ticketId}'i seçilen sonuç, ödeme, sonuç ve kanıt ayrıntılarıyla inceleyin."
+      },
+      "portfolioClaims": {
+        "title": "Talepler",
+        "description": "Talep edilebilir XP'yi, protokol ücretlerini, geri tutma kovalarını ve talep işlemi hazırlığını inceleyin."
+      },
+      "portfolioReferral": {
+        "title": "Referans",
+        "description": "Bir referans bağlantısı oluşturun, ilk dokunuş bağlamasını inceleyin ve ortak ödül kovalarını görün."
+      },
+      "affiliate": {
+        "title": "Ortaklar",
+        "description": "Cüzdan tabanlı casino odalarını paylaşın ve referans ödüllerini zincir üstü XP defteri üzerinden yönlendirin."
+      },
+      "earn": {
+        "title": "Kazan",
+        "description": "Casino'yu karşılayan bankaya yatırın, çekin ve inceleyin."
+      },
+      "ops": {
+        "title": "Operasyon",
+        "description": "Sürüm kanıtını, keeper sağlığını, indeksleyici durumunu ve operasyonel makbuzları izleyin."
+      }
+    }
+  },
+  "marketing": {
+    "errors": {
+      "recentBetsFailed": "Son etkinlik yüklenemedi"
+    },
+    "format": {
+      "syncing": "Eşitleniyor",
+      "awaitingReserveSync": "Rezerv eşitlemesi bekleniyor",
+      "pending": "Beklemede",
+      "walletPending": "Cüzdan beklemede",
+      "assetFallback": "Varlık",
+      "roomFallback": "Oda",
+      "placedFallback": "Yapıldı"
+    },
+    "timeAgo": {
+      "now": "az önce",
+      "seconds": "{count}sn önce",
+      "minutes": "{count}dk önce",
+      "hours": "{count}sa önce",
+      "days": "{count}g önce"
+    },
+    "hero": {
+      "channel": "Arbitrum'da canlı",
+      "title": "Zincir üstünde doğrulanabilir casino.",
+      "description": "Sekiz oyun. Her dönüş zincir üstünde doğrulanabilir. Kazanın, ödeme saniyeler içinde cüzdanınıza gelsin — kayıt yok, emanet yok, saklama yok.",
+      "enterCasino": "Oynamaya başla",
+      "viewBank": "Nasıl çalışır",
+      "consoleLabel": "Canlı durum",
+      "live": "Canlı",
+      "metrics": {
+        "freeReserve": "Serbest rezerv",
+        "bankAssets": "Banka varlıkları",
+        "rooms": "Odalar"
+      },
+      "proofRows": {
+        "vrf": {
+          "title": "Doğrulayabileceğiniz rastgelelik",
+          "detail": "Her dönüş, sayıları seçen Chainlink VRF isteğine bağlanır."
+        },
+        "bytecode": {
+          "title": "Okuyabileceğiniz sözleşmeler",
+          "detail": "Oyun mantığı, banka ve ödeme açık kaynak — okuyun, çatallayın, doğrulayın."
+        }
+      }
+    },
+    "stats": {
+      "freeReserve": {
+        "label": "Ödenebilir",
+        "detail": "Kasanın şu anda ödeyebileceği tutar — zincir üstünde doğrulanabilir."
+      },
+      "bankAssets": {
+        "label": "Kasa bankroll'u",
+        "detail": "Casino bankasında tutulan, zincir üstünde."
+      },
+      "release": {
+        "label": "Aktif oyunlar",
+        "detail": "Sekiz oyunun hepsi canlı, ayrıca banka."
+      }
+    },
+    "rooms": {
+      "eyebrow": "Tüm oyunlar",
+      "title": "Sekiz oyun. Tek cüzdan.",
+      "detail": "Her oyun kendi sözleşmesinde sonuçlanır. Birini seçin ve girin — kayıt yok.",
+      "actionLabel": "Tümünü gör"
+    },
+    "roomCards": {
+      "dice": {
+        "title": "Zar",
+        "badge": "Hassasiyet odası",
+        "summary": "Üst sınırı belirleyin, bileti boyutlandırın ve hızlı bir zar odasına girin.",
+        "facts": {
+          "0": "Hızlı bilet",
+          "1": "Canlı ödeme",
+          "2": "Tek varlık"
+        }
+      },
+      "coinToss": {
+        "title": "Yazı Tura",
+        "badge": "İkili oda",
+        "summary": "Salonun en temiz oda girişiyle yazı ya da tura.",
+        "facts": {
+          "0": "Hızlı giriş",
+          "1": "İkili oyun",
+          "2": "Tek sonuç"
+        }
+      },
+      "roulette": {
+        "title": "Rulet",
+        "badge": "Avrupa masası",
+        "summary": "Gerçek bir tahta, net bir fiş ve okunaklı bilet incelemesiyle standart bir Avrupa rulet masasına girin.",
+        "facts": {
+          "0": "0-36 masa",
+          "1": "Net fiş",
+          "2": "Standart bahisler"
+        }
+      },
+      "keno": {
+        "title": "Keno",
+        "badge": "Matris odası",
+        "summary": "Tahtayı seçin, bileti boyutlandırın ve çekilişi odanın merkezinde tutun.",
+        "facts": {
+          "0": "Önce tahta",
+          "1": "Canlı çekiliş",
+          "2": "Tekrar oyunlar"
+        }
+      },
+      "plinko": {
+        "title": "Plinko",
+        "badge": "Arcade tahtası",
+        "summary": "Kompakt bir risk tahtasından bırakın ve kovayı zincir üstü rastgelelikten açığa çıkarın.",
+        "facts": {
+          "0": "Risk profilleri",
+          "1": "Kova açılışı",
+          "2": "Hızlı tekrar"
+        }
+      },
+      "slots": {
+        "title": "Slot",
+        "badge": "Makara odası",
+        "summary": "Okunaklı çarpanlar ve kesin kanıtla üç sembollü basit bir oda çevirin.",
+        "facts": {
+          "0": "3 makara",
+          "1": "Görünür semboller",
+          "2": "Kanıt makbuzu"
+        }
+      },
+      "baccarat": {
+        "title": "Bakara",
+        "badge": "Masa odası",
+        "summary": "Oyuncu, banko veya berabere seçin ve VRF yanıt verdikten sonra açılan kartları inceleyin.",
+        "facts": {
+          "0": "Kart açılışı",
+          "1": "Oyuncu banko berabere",
+          "2": "Kesin makbuz"
+        }
+      },
+      "sic-bo": {
+        "title": "Sic Bo",
+        "badge": "Üç zar",
+        "summary": "Bir masa bahsi seçin, üç zar atın ve toplamı, üçlüyü ve ödemeyi inceleyin.",
+        "facts": {
+          "0": "3 zar",
+          "1": "Toplam bahisleri",
+          "2": "Açık atış"
+        }
+      }
+    },
+    "bank": {
+      "eyebrow": "Kasa bankroll'u",
+      "title": "Pazarlama getirisinden önce rezerv defteri.",
+      "description": "Banka bakiyeleri ve rezerve edilmiş yükümlülükler protokol okumalarından gelir. Sayfa APY uydurmaz ve bekleyen yükümlülükleri tanıtım amaçlı bir rakamın arkasına saklamaz.",
+      "freeReserve": "Serbest rezerv",
+      "totalBankAssets": "Toplam banka varlıkları",
+      "releaseDigest": "Build",
+      "inspectBank": "Bankayı incele"
+    },
+    "activity": {
+      "eyebrow": "Canlı",
+      "title": "Son bahisler",
+      "viewAll": "Tüm etkinlik",
+      "headers": {
+        "player": "Oyuncu",
+        "room": "Oyun",
+        "state": "Durum",
+        "age": "Ne zaman",
+        "payout": "Ödeme"
+      },
+      "empty": "İlk siz olun.",
+      "live": "Canlı"
+    },
+    "proof": {
+      "traceLabel": "Zincir üstü iz",
+      "proofSurface": "zincir üstünde canlı",
+      "eyebrow": "Nasıl adil kalıyor",
+      "title": "Her bahis takip edebileceğiniz bir iz bırakır.",
+      "description": "Cüzdanınız, oyun ve rastgelelik ayrı sözleşmelerdir. Herkes aynı bahsi zincirden yeniden oynatıp aynı yanıtı alabilir.",
+      "actionLabel": "Makbuzları gör"
+    },
+    "whyUs": {
+      "eyebrow": "Neden burada",
+      "title": "Dönüşü hileli yapamayız.",
+      "items": {
+        "0": {
+          "title": "Sayıları biz seçmiyoruz",
+          "detail": "Her dönüşün rastgele sayısı Chainlink VRF tarafından çekilir. Biz yalnızca dönenleri sonuçlandırırız."
+        },
+        "1": {
+          "title": "Kazancınız cüzdanınıza gelir",
+          "detail": "VRF yanıt verir vermez kazanç zincir üstünde cüzdanınıza düşer — çekim kuyruğu yok, minimum yok, gecikme yok."
+        },
+        "2": {
+          "title": "Kasa tükenmez",
+          "detail": "Casino'nun ne kadar ödeyebileceği zincir üstünde görünür. Bahis yapmadan önce kontrol edin."
+        },
+        "3": {
+          "title": "Her sözleşme herkese açık",
+          "detail": "Oyun mantığı, banka, ödeme — hepsi açık kaynak. Okuyun, çatallayın, doğrulayın."
+        }
+      }
+    },
+    "reserveBar": {
+      "eyebrow": "Kasa bankroll'u",
+      "free": "Ödenebilir",
+      "total": "Bankadaki toplam",
+      "verify": "Zincir üstünde kontrol et"
+    },
+    "featured": {
+      "eyebrow": "Öne çıkan",
+      "title": "Keno — 5 seç, 500×'in peşine düş.",
+      "detail": "Tahtada on beş sayı. Beş tane seçin. Beşini de tutturursanız ödeme 500,5×. Birini tutturun, yine kâra geçersiniz.",
+      "cta": "Keno oyna"
+    },
+    "footerCta": {
+      "eyebrow": "Hazır olduğunuzda",
+      "title": "Cüzdan bağlayın. Oyun seçin. Çevirin.",
+      "description": "Paranız siz bahis yapana kadar cüzdanınızda kalır. Kazançlar aynı yoldan geri gelir.",
+      "primary": "Oynamaya başla",
+      "secondary": "Oyunlara göz at"
+    }
+  },
+  "affiliate": {
+    "hero": {
+      "eyebrow": "Ortak büyümesi",
+      "title": "Casino'yu paylaşın. Kanıt zincir üstünde kalsın.",
+      "description": "ArbiGameFi, ilk dokunuş referans bağlama ve Bank tarafı XP kovaları kullanır; böylece ortak ödülleri tablo mutabakatı yerine gerçek cüzdan tabanlı oyuna bağlanır.",
+      "primary": "Zar'ı aç",
+      "secondary": "Referans konsolu"
+    },
+    "linkCard": {
+      "eyebrow": "Referans bağlantısı",
+      "title": "Odaya tek bağlantı",
+      "connect": "Referans bağlantınızı oluşturmak için bir cüzdan bağlayın.",
+      "copy": "Bağlantıyı kopyala",
+      "copied": "Kopyalandı",
+      "wallet": "Cüzdan {wallet}",
+      "walletPending": "Cüzdan bağlı değil"
+    },
+    "pillars": {
+      "firstTouch": {
+        "title": "İlk dokunuş bağlama",
+        "body": "Geçerli bir referans ipucu casino bahisleriyle iletilir. Bir kez bağlandığında ilişki değişmezdir."
+      },
+      "xp": {
+        "title": "XP kovaları",
+        "body": "Ödüller, aktif Bank defterinde birikmiş, kilitli ve geri tutma bakiyeleri olarak görünür."
+      },
+      "chain": {
+        "title": "Denetlenebilir ödeme",
+        "body": "Referans değeri platform dışı raporlama yerine zincir üstü oyuna, ödemeye ve talep durumuna bağlanır."
+      }
+    },
+    "flow": {
+      "eyebrow": "Nasıl çalışır",
+      "title": "B2C dağıtımı için tasarlandı.",
+      "body": "MVP yolu büyüme döngüsünü basit tutar: bir oda paylaşın, oyuncuyu bağlayın, ardından Bank defteri talep edilebilir ödülleri göstersin.",
+      "steps": {
+        "0": {
+          "title": "Paylaş",
+          "body": "Cüzdanınızdan bir casino bağlantısı oluşturun ve oyuncuları doğrudan bir odaya gönderin."
+        },
+        "1": {
+          "title": "Bağla",
+          "body": "Bir oyuncu bahis yaptığında GameHub, ilk dokunuş bağlama için referans ipucunu kullanır."
+        },
+        "2": {
+          "title": "Talep et",
+          "body": "XP kovalarını inceleyin ve portföy alanından mevcut ödülleri talep edin."
+        }
+      }
+    }
+  },
+  "earn": {
+    "state": {
+      "noRelease": {
+        "title": "Kazan",
+        "description": "Bu ağda kullanılamıyor."
+      },
+      "loading": "Banka yükleniyor…"
+    },
+    "format": {
+      "assetFallback": "Varlık"
+    },
+    "hero": {
+      "eyebrow": "Banka rezervi",
+      "title": "{symbol} bankroll kontrolü.",
+      "description": "Casino'ya ödeme yapan bankaya yatırın, çekin ve inceleyin.",
+      "bankAddress": "Banka adresi"
+    },
+    "metrics": {
+      "freeReserve": {
+        "label": "Serbest rezerv",
+        "detail": "Açık yükümlülükler için rezerve edilmemiş varlıklar."
+      },
+      "totalAssets": {
+        "label": "Toplam varlık",
+        "detail": "Protokol okumasından mevcut banka varlıkları."
+      },
+      "minLiquidity": {
+        "label": "Min. likidite",
+        "detail": "Çekimlerden önce ayarlanan taban."
+      }
+    },
+    "actions": {
+      "eyebrow": "LP işlemleri",
+      "title": "Banka işlem konsolu",
+      "asset": "Varlık",
+      "amount": "Tutar",
+      "connectWallet": "Banka işlemleri için bir cüzdan bağlayın.",
+      "readOnly": "Salt okunur mod — işlem yapmak için ağ değiştirin.",
+      "tabs": {
+        "deposit": {
+          "label": "Yatır",
+          "description": "Bankaya varlık sağlayın."
+        },
+        "withdraw": {
+          "label": "Çek",
+          "description": "Mevcut varlıkları çekin."
+        },
+        "redeem": {
+          "label": "Geri al",
+          "description": "Banka paylarını varlıkla geri alın."
+        }
+      },
+      "submit": {
+        "executing": "Yürütülüyor",
+        "deposit": "Varlık yatır",
+        "withdraw": "Varlık çek",
+        "redeem": "Payları geri al"
+      }
+    }
+  }
+}

@@ -1,0 +1,642 @@
+{
+  "app": {
+    "connectWalletActionDescription": "Conecte uma carteira para {action}.",
+    "connectWalletButton": "Conectar carteira",
+    "connectWalletDescription": "Conecte uma carteira para usar este recurso.",
+    "connectingWallet": "Conectando...",
+    "unknownNetwork": "Rede desconhecida",
+    "walletRequired": "Carteira necessária",
+    "writesDisabled": "Operações desativadas.",
+    "errors": {
+      "boundaryTitle": "Algo deu errado",
+      "unexpected": "Ocorreu um erro inesperado.",
+      "transactionFailed": "Falha na transação",
+      "recentBetsFailed": "Falha ao carregar apostas recentes",
+      "playerBetsFailed": "Falha ao carregar suas apostas",
+      "playerSportsTicketsFailed": "Falha ao carregar seus bilhetes esportivos",
+      "errorId": "ID do erro: {digest}",
+      "tryAgain": "Tentar novamente"
+    },
+    "network": {
+      "label": "Rede ativa",
+      "switchWallet": "Trocar",
+      "switching": "Trocando"
+    },
+    "walletMenu": {
+      "chainSection": "Rede ativa",
+      "connectedVia": "via {wallet}",
+      "copyAddress": "Copiar endereço",
+      "disconnect": "Desconectar",
+      "mismatch": {
+        "title": "Carteira em outra rede",
+        "description": "Mude sua carteira para {target} para apostar.",
+        "switch": "Trocar carteira"
+      },
+      "viewOnExplorer": "Ver no explorador de blocos"
+    },
+    "mobileDeepLink": {
+      "title": "Abrir em um app de carteira",
+      "description": "Para a melhor experiência no celular, abra este site no navegador interno da sua carteira.",
+      "openIn": {
+        "metamask": "Abrir no MetaMask",
+        "coinbase": "Abrir no Coinbase Wallet",
+        "trust": "Abrir no Trust"
+      },
+      "dismiss": "Dispensar"
+    },
+    "install": {
+      "title": "Instalar o ArbiGameFi",
+      "description": "Adicione à tela inicial para uma experiência mais rápida, como um app.",
+      "action": "Instalar",
+      "dismiss": "Dispensar"
+    }
+  },
+  "locale": {
+    "label": "Idioma"
+  },
+  "nav": {
+    "account": "Conta",
+    "affiliates": "Afiliados",
+    "bets": "Apostas",
+    "casino": "Cassino",
+    "claims": "Resgates",
+    "baccarat": "Bacará",
+    "coinToss": "Cara ou Coroa",
+    "dice": "Dados",
+    "games": "Jogos",
+    "keno": "Keno",
+    "liquidity": "Liquidez",
+    "openRooms": "Abrir salas",
+    "ops": "Operações",
+    "plinko": "Plinko",
+    "rooms": "Salas",
+    "roulette": "Roleta",
+    "sicBo": "Sic Bo",
+    "slots": "Caça-níqueis",
+    "sportsbook": "Apostas esportivas"
+  },
+  "footer": {
+    "brandSubtitle": "Salas nativas de carteira",
+    "description": "Cassino e apostas esportivas nativos de carteira. Cada giro e cada liquidação ficam on-chain.",
+    "liveRooms": "Salas ao vivo",
+    "games": "Jogos",
+    "platform": "Plataforma",
+    "resources": "Recursos",
+    "legal": "Jurídico",
+    "earn": "Render",
+    "portfolio": "Portfólio",
+    "terms": "Termos",
+    "privacy": "Privacidade",
+    "disclaimer": "Aviso de risco",
+    "copyright": "Frontend ArbiGameFi para salas nativas de carteira e liquidação transparente.",
+    "docs": "Documentação",
+    "responsibleGambling": "Jogo responsável",
+    "responsibleNote": "Jogue com responsabilidade.",
+    "support": "Suporte",
+    "faq": "Ajuda e FAQ",
+    "status": "Status do sistema",
+    "community": "Comunidade"
+  },
+  "notFound": {
+    "title": "Página não encontrada",
+    "description": "A página que você procura não existe ou foi movida.",
+    "home": "Voltar ao início",
+    "casino": "Ver jogos"
+  },
+  "compliance": {
+    "gate": {
+      "title": "Antes de entrar",
+      "subtitle": "Confirme alguns pontos para continuar",
+      "age": "Tenho pelo menos 18 anos (ou a idade legal na minha jurisdição).",
+      "jurisdiction": "O jogo online é legal onde moro, e sou o único responsável por cumprir as leis locais.",
+      "termsPrefix": "Li e aceito os",
+      "termsLink": "Termos de Serviço",
+      "and": "e a",
+      "privacyLink": "Política de Privacidade",
+      "termsSuffix": ".",
+      "enter": "Entrar",
+      "leave": "Sair"
+    },
+    "cookies": {
+      "title": "Preferências de cookies",
+      "description": "Usamos análises que respeitam a privacidade para entender o tráfego. Nada carrega até você escolher.",
+      "learnMore": "Saiba mais",
+      "accept": "Aceitar",
+      "reject": "Recusar"
+    },
+    "responsible": {
+      "title": "Jogo responsável",
+      "close": "Fechar",
+      "intro": "Defina limites pessoais. Os limites ficam salvos no seu dispositivo e são aplicados na liquidação; limpe um campo para remover um limite.",
+      "dailyDeposit": "Limite diário de depósito",
+      "dailyLoss": "Limite diário de perda",
+      "sessionReminder": "Lembrete de sessão",
+      "minutes": "min",
+      "noLimit": "Sem limite",
+      "off": "Desligado",
+      "saveLimits": "Salvar limites",
+      "selfExclude": {
+        "title": "Autoexclusão",
+        "description": "Bloqueie a si mesmo de apostar por um período fixo. Isto não pode ser desfeito antes de expirar.",
+        "d1": "1 dia",
+        "d7": "7 dias",
+        "d30": "30 dias",
+        "d180": "180 dias",
+        "confirm": "Autoexcluir-se por {period}? Você não poderá apostar até expirar."
+      }
+    },
+    "selfExcludedGate": {
+      "title": "Você está autoexcluído",
+      "description": "As apostas estão pausadas neste dispositivo até {until}. Você ainda pode ver seu histórico e buscar suporte.",
+      "viewHistory": "Ver histórico",
+      "getHelp": "Obter ajuda"
+    },
+    "realityCheck": {
+      "message": "Você está jogando há cerca de {minutes} minutos. Faça uma pausa se precisar."
+    }
+  },
+  "onboarding": {
+    "aria": "Tour de introdução",
+    "stepLabel": "Passo {current} de {total}",
+    "skip": "Pular",
+    "back": "Voltar",
+    "next": "Próximo",
+    "done": "Entendi",
+    "steps": {
+      "welcome": {
+        "title": "Bem-vindo ao ArbiGameFi",
+        "body": "Um tour rápido de 30 segundos sobre como funciona uma rodada. Você pode pular a qualquer momento."
+      },
+      "wallet": {
+        "title": "Conecte sua carteira",
+        "body": "Comece aqui. Conecte uma carteira e escolha sua rede — sem cadastro, sem custódia."
+      },
+      "stage": {
+        "title": "Escolha sua aposta",
+        "body": "Este é o jogo. Escolha seus números, lado ou risco direto no tabuleiro."
+      },
+      "amount": {
+        "title": "Defina o valor",
+        "body": "Digite quanto apostar. Sua chance de ganhar e o pagamento potencial atualizam em tempo real."
+      },
+      "place": {
+        "title": "Faça a aposta",
+        "body": "Confirme na sua carteira. A rodada liquida automaticamente assim que o Chainlink VRF responde."
+      },
+      "fairness": {
+        "title": "Verifique cada resultado",
+        "body": "Após cada rodada você pode copiar um comprovante de imparcialidade e conferir on-chain. É esse o ponto."
+      }
+    }
+  },
+  "support": {
+    "faq": {
+      "eyebrow": "Central de ajuda",
+      "title": "Ajuda e FAQ",
+      "description": "Tudo que você precisa para começar a jogar, verificar um resultado e manter o controle."
+    },
+    "contact": {
+      "title": "Ainda precisa de ajuda?",
+      "description": "Fale com a equipe ou veja o status do sistema em tempo real.",
+      "discord": "Discord",
+      "email": "Suporte por e-mail",
+      "status": "Status do sistema",
+      "docs": "Documentação"
+    },
+    "items": [
+      {
+        "q": "Como começo a jogar?",
+        "a": "Conecte uma carteira no menu superior direito, confirme que está em uma rede compatível e escolha um jogo. Os prêmios vão direto para sua carteira — sem cadastro, sem conta de depósito, sem custódia."
+      },
+      {
+        "q": "Como consigo fundos de teste na Base Sepolia?",
+        "a": "A Base Sepolia é uma testnet. Pegue ETH de teste grátis em um faucet da Base Sepolia para o gas e depois use um faucet de USDC de teste para o saldo de jogo. Fundos de testnet não têm valor real."
+      },
+      {
+        "q": "O que é o bankroll / Bank?",
+        "a": "O Bank é o cofre on-chain que cobre cada pagamento. É uma reserva transparente — você pode inspecioná-la na página Render. Todo prêmio sai dele, e sua solvência é comprovável on-chain."
+      },
+      {
+        "q": "O que é a vantagem da casa?",
+        "a": "A vantagem da casa é a margem embutida que mantém o Bank sustentável. Cada jogo mostra o valor exato na aba Info do jogo — por exemplo, a roleta é 2,70% e os dados 1%."
+      },
+      {
+        "q": "Por que minha aposta está pendente?",
+        "a": "As apostas são liquidadas com Chainlink VRF para aleatoriedade comprovadamente justa. Depois de apostar, o contrato solicita um número aleatório; quando ele chega, a rodada liquida automaticamente. Costuma levar alguns segundos."
+      },
+      {
+        "q": "E se o número aleatório nunca chegar?",
+        "a": "Se o VRF atrasar além do tempo limite, você mesmo pode reembolsar sua aposta — o botão de reembolso aparece no painel de status da rodada. Nenhum fundo fica preso."
+      },
+      {
+        "q": "Como verifico se uma aposta foi justa?",
+        "a": "Cada rodada liquidada expõe o ID da aposta, o ID da solicitação VRF, o hash aleatório e a transação de liquidação. Use \"Copiar comprovante de imparcialidade\" na tela de resultado para exportar um recibo JSON que qualquer um pode verificar on-chain."
+      },
+      {
+        "q": "Quais taxas eu pago?",
+        "a": "Duas coisas: a vantagem da casa do jogo (já embutida nas probabilidades) e uma pequena taxa do Chainlink VRF em gas nativo para financiar a solicitação de aleatoriedade. Ambas são mostradas antes de você confirmar."
+      },
+      {
+        "q": "Quais carteiras são compatíveis?",
+        "a": "MetaMask, Coinbase Wallet, Trust, Rainbow, OKX e qualquer carteira compatível com WalletConnect. No desktop use uma extensão de navegador; no celular, abra o site no navegador interno da sua carteira ou escaneie o QR do WalletConnect."
+      },
+      {
+        "q": "Isto é custodial? Vocês guardam meus fundos?",
+        "a": "Não. O ArbiGameFi é não custodial. Seus fundos ficam na sua carteira até você apostar, e os prêmios voltam direto para sua carteira. Nunca guardamos saldos."
+      },
+      {
+        "q": "Como mantenho o controle do meu jogo?",
+        "a": "Abra Jogo Responsável no rodapé para definir limites diários de depósito e perda, um lembrete de sessão ou se autoexcluir por um período fixo. Você precisa ter a idade legal na sua jurisdição para jogar."
+      }
+    ]
+  },
+  "metadata": {
+    "siteTitle": "ArbiGameFi",
+    "titleTemplate": "%s | ArbiGameFi",
+    "description": "Plataforma de jogos on-chain não custodial com liquidação verificável.",
+    "pages": {
+      "casino": {
+        "title": "Cassino",
+        "description": "Cassino nativo de carteira — oito jogos, cada giro verificável on-chain. Sem cadastro, sem custódia."
+      },
+      "casinoRoom": {
+        "title": "{game}",
+        "description": "Jogue {game} com aleatoriedade verificável, status do VRF visível e um recibo de resultado derivado da blockchain."
+      },
+      "sportsbook": {
+        "title": "Apostas esportivas",
+        "description": "Explore mercados esportivos de odds fixas com liquidação on-chain e snapshots de odds assinados."
+      },
+      "sportsbookMarket": {
+        "title": "Mercado esportivo {marketId}",
+        "description": "Inspecione o mercado {marketId} do SportsHub, a prontidão de apostas e o estado das evidências de resultado."
+      },
+      "portfolio": {
+        "title": "Portfólio",
+        "description": "Veja identidade da carteira, posições de ativos, créditos de reembolso e atividade recente do protocolo."
+      },
+      "portfolioActivity": {
+        "title": "Atividade",
+        "description": "Veja a atividade indexada de cassino e esportes com estado de liquidação ciente da rede."
+      },
+      "portfolioBetDetail": {
+        "title": "Aposta {betId}",
+        "description": "Inspecione a aposta {betId} com ciclo de vida, pagamento, aleatoriedade e detalhes da prova de liquidação."
+      },
+      "portfolioSportsTicket": {
+        "title": "Bilhete esportivo {ticketId}",
+        "description": "Inspecione o bilhete {ticketId} do SportsHub com resultado selecionado, pagamento, resultado e detalhes da prova."
+      },
+      "portfolioClaims": {
+        "title": "Resgates",
+        "description": "Inspecione XP resgatável, taxas de protocolo, baldes de retenção e prontidão das transações de resgate."
+      },
+      "portfolioReferral": {
+        "title": "Indicação",
+        "description": "Crie um link de indicação, inspecione o vínculo de primeiro toque e veja os baldes de recompensa de afiliado."
+      },
+      "affiliate": {
+        "title": "Afiliados",
+        "description": "Compartilhe salas de cassino nativas de carteira e direcione recompensas de indicação pelo livro de XP on-chain."
+      },
+      "earn": {
+        "title": "Render",
+        "description": "Deposite, saque e inspecione o banco que cobre o cassino."
+      },
+      "ops": {
+        "title": "Operações",
+        "description": "Monitore a prova de release, a saúde do keeper, o estado do indexador e os recibos operacionais."
+      }
+    }
+  },
+  "marketing": {
+    "errors": {
+      "recentBetsFailed": "Falha ao carregar a atividade recente"
+    },
+    "format": {
+      "syncing": "Sincronizando",
+      "awaitingReserveSync": "Aguardando sincronização da reserva",
+      "pending": "Pendente",
+      "walletPending": "Carteira pendente",
+      "assetFallback": "Ativo",
+      "roomFallback": "Sala",
+      "placedFallback": "Apostado"
+    },
+    "timeAgo": {
+      "now": "agora mesmo",
+      "seconds": "há {count}s",
+      "minutes": "há {count}min",
+      "hours": "há {count}h",
+      "days": "há {count}d"
+    },
+    "hero": {
+      "channel": "Ao vivo na Arbitrum",
+      "title": "Cassino verificável on-chain.",
+      "description": "Oito jogos. Cada giro verificável on-chain. Ganhou, o prêmio cai na sua carteira em segundos — sem cadastro, sem custódia, sem intermediário.",
+      "enterCasino": "Começar a jogar",
+      "viewBank": "Como funciona",
+      "consoleLabel": "Status ao vivo",
+      "live": "Ao vivo",
+      "metrics": {
+        "freeReserve": "Reserva livre",
+        "bankAssets": "Ativos do banco",
+        "rooms": "Salas"
+      },
+      "proofRows": {
+        "vrf": {
+          "title": "Aleatoriedade que você pode verificar",
+          "detail": "Cada giro liga-se à solicitação do Chainlink VRF que sorteou os números."
+        },
+        "bytecode": {
+          "title": "Contratos que você pode ler",
+          "detail": "A lógica do jogo, o banco e a liquidação são open source — leia, faça fork, verifique."
+        }
+      }
+    },
+    "stats": {
+      "freeReserve": {
+        "label": "Livre para pagar",
+        "detail": "O que a casa pode pagar agora — verificável on-chain."
+      },
+      "bankAssets": {
+        "label": "Bankroll da casa",
+        "detail": "O que está guardado no banco do cassino, on-chain."
+      },
+      "release": {
+        "label": "Jogos ativos",
+        "detail": "Todos os oito jogos ao vivo, mais o banco."
+      }
+    },
+    "rooms": {
+      "eyebrow": "Todos os jogos",
+      "title": "Oito jogos. Uma carteira.",
+      "detail": "Cada jogo liquida no próprio contrato. Escolha um e entre — sem cadastro.",
+      "actionLabel": "Ver todos"
+    },
+    "roomCards": {
+      "dice": {
+        "title": "Dados",
+        "badge": "Sala de precisão",
+        "summary": "Defina o teto, dimensione o bilhete e entre numa sala de dados rápida.",
+        "facts": {
+          "0": "Bilhete rápido",
+          "1": "Liquidação ao vivo",
+          "2": "Ativo único"
+        }
+      },
+      "coinToss": {
+        "title": "Cara ou Coroa",
+        "badge": "Sala binária",
+        "summary": "Cara ou coroa com a entrada de sala mais limpa do salão.",
+        "facts": {
+          "0": "Entrada rápida",
+          "1": "Jogo binário",
+          "2": "Resultado único"
+        }
+      },
+      "roulette": {
+        "title": "Roleta",
+        "badge": "Mesa europeia",
+        "summary": "Entre numa mesa de roleta europeia padrão com tabuleiro real, slip claro e revisão de bilhete legível.",
+        "facts": {
+          "0": "Mesa 0-36",
+          "1": "Slip claro",
+          "2": "Apostas padrão"
+        }
+      },
+      "keno": {
+        "title": "Keno",
+        "badge": "Sala matriz",
+        "summary": "Escolha o tabuleiro, dimensione o bilhete e mantenha o sorteio no centro da sala.",
+        "facts": {
+          "0": "Tabuleiro primeiro",
+          "1": "Sorteio ao vivo",
+          "2": "Jogadas repetidas"
+        }
+      },
+      "plinko": {
+        "title": "Plinko",
+        "badge": "Tabuleiro arcade",
+        "summary": "Solte por um tabuleiro de risco compacto e revele o balde a partir da aleatoriedade on-chain.",
+        "facts": {
+          "0": "Perfis de risco",
+          "1": "Revelação do balde",
+          "2": "Replay rápido"
+        }
+      },
+      "slots": {
+        "title": "Caça-níqueis",
+        "badge": "Sala de rolos",
+        "summary": "Gire uma sala simples de três símbolos com multiplicadores legíveis e prova final.",
+        "facts": {
+          "0": "3 rolos",
+          "1": "Símbolos visíveis",
+          "2": "Recibo de prova"
+        }
+      },
+      "baccarat": {
+        "title": "Bacará",
+        "badge": "Sala de mesa",
+        "summary": "Escolha jogador, banca ou empate e inspecione as cartas abertas depois que o VRF responde.",
+        "facts": {
+          "0": "Revelação de cartas",
+          "1": "Jogador banca empate",
+          "2": "Recibo final"
+        }
+      },
+      "sic-bo": {
+        "title": "Sic Bo",
+        "badge": "Três dados",
+        "summary": "Escolha uma aposta de mesa, role três dados e revise total, trinca e pagamento.",
+        "facts": {
+          "0": "3 dados",
+          "1": "Apostas de total",
+          "2": "Rolagem aberta"
+        }
+      }
+    },
+    "bank": {
+      "eyebrow": "Bankroll da casa",
+      "title": "Livro de reserva antes do rendimento de marketing.",
+      "description": "Os saldos do banco e os passivos reservados vêm de leituras do protocolo. A página não inventa APY nem esconde obrigações pendentes atrás de um número promocional.",
+      "freeReserve": "Reserva livre",
+      "totalBankAssets": "Total de ativos do banco",
+      "releaseDigest": "Build",
+      "inspectBank": "Inspecionar banco"
+    },
+    "activity": {
+      "eyebrow": "Ao vivo",
+      "title": "Últimas apostas",
+      "viewAll": "Toda a atividade",
+      "headers": {
+        "player": "Jogador",
+        "room": "Jogo",
+        "state": "Status",
+        "age": "Quando",
+        "payout": "Pagamento"
+      },
+      "empty": "Seja o primeiro.",
+      "live": "Ao vivo"
+    },
+    "proof": {
+      "traceLabel": "Rastro on-chain",
+      "proofSurface": "ao vivo on-chain",
+      "eyebrow": "Como se mantém justo",
+      "title": "Cada aposta deixa um rastro que você pode seguir.",
+      "description": "Sua carteira, o jogo e a aleatoriedade são contratos separados. Qualquer um pode reproduzir a mesma aposta a partir da blockchain e obter a mesma resposta.",
+      "actionLabel": "Ver recibos"
+    },
+    "whyUs": {
+      "eyebrow": "Por que jogar aqui",
+      "title": "Não dá pra fraudar o giro.",
+      "items": {
+        "0": {
+          "title": "Não escolhemos os números",
+          "detail": "O número aleatório de cada giro é sorteado pelo Chainlink VRF. Nós apenas liquidamos o que ele retorna."
+        },
+        "1": {
+          "title": "Seu prêmio cai na sua carteira",
+          "detail": "Quando o VRF responde, o prêmio chega à sua carteira on-chain — sem fila de saque, sem mínimo, sem atraso."
+        },
+        "2": {
+          "title": "A casa não pode quebrar",
+          "detail": "Quanto o cassino pode pagar é visível on-chain. Confira antes de apostar."
+        },
+        "3": {
+          "title": "Todo contrato é público",
+          "detail": "Lógica do jogo, banco, liquidação — tudo open source. Leia, faça fork, verifique."
+        }
+      }
+    },
+    "reserveBar": {
+      "eyebrow": "Bankroll da casa",
+      "free": "Livre para pagar",
+      "total": "Total no banco",
+      "verify": "Conferir on-chain"
+    },
+    "featured": {
+      "eyebrow": "Destaque",
+      "title": "Keno — escolha 5, busque 500×.",
+      "detail": "Quinze números no tabuleiro. Escolha cinco. Acerte os cinco e o pagamento é 500,5×. Acerte um e você ainda saca.",
+      "cta": "Jogar Keno"
+    },
+    "footerCta": {
+      "eyebrow": "Quando você quiser",
+      "title": "Conecte uma carteira. Escolha um jogo. Gire.",
+      "description": "Seu dinheiro fica na sua carteira até você apostar. Os prêmios voltam do mesmo jeito.",
+      "primary": "Começar a jogar",
+      "secondary": "Ver jogos"
+    }
+  },
+  "affiliate": {
+    "hero": {
+      "eyebrow": "Crescimento de afiliados",
+      "title": "Compartilhe o cassino. Mantenha a prova on-chain.",
+      "description": "O ArbiGameFi usa vínculo de indicação por primeiro toque e baldes de XP no lado do Bank, então as recompensas de afiliado ficam atreladas ao jogo real nativo de carteira, não a planilhas de conciliação.",
+      "primary": "Abrir Dados",
+      "secondary": "Console de indicações"
+    },
+    "linkCard": {
+      "eyebrow": "Link de indicação",
+      "title": "Um link para a sala",
+      "connect": "Conecte uma carteira para gerar seu link de indicação.",
+      "copy": "Copiar link",
+      "copied": "Copiado",
+      "wallet": "Carteira {wallet}",
+      "walletPending": "Carteira não conectada"
+    },
+    "pillars": {
+      "firstTouch": {
+        "title": "Vínculo de primeiro toque",
+        "body": "Uma dica de indicação válida é enviada com as apostas do cassino. Uma vez vinculado, o relacionamento é imutável."
+      },
+      "xp": {
+        "title": "Baldes de XP",
+        "body": "As recompensas aparecem como saldos acumulados, bloqueados e de retenção no livro do Bank ativo."
+      },
+      "chain": {
+        "title": "Liquidação auditável",
+        "body": "O valor de indicação fica atrelado ao jogo, pagamento e estado de resgate on-chain, não a relatórios fora da plataforma."
+      }
+    },
+    "flow": {
+      "eyebrow": "Como funciona",
+      "title": "Feito para distribuição B2C.",
+      "body": "O caminho MVP mantém o ciclo de crescimento simples: compartilhe uma sala, vincule o jogador e deixe o livro do Bank expor as recompensas resgatáveis.",
+      "steps": {
+        "0": {
+          "title": "Compartilhar",
+          "body": "Gere um link de cassino a partir da sua carteira e envie os jogadores direto para uma sala."
+        },
+        "1": {
+          "title": "Vincular",
+          "body": "O GameHub usa a dica de indicação para o vínculo de primeiro toque quando um jogador aposta."
+        },
+        "2": {
+          "title": "Resgatar",
+          "body": "Revise os baldes de XP e resgate as recompensas disponíveis na área do portfólio."
+        }
+      }
+    }
+  },
+  "earn": {
+    "state": {
+      "noRelease": {
+        "title": "Render",
+        "description": "Indisponível nesta rede."
+      },
+      "loading": "Carregando banco…"
+    },
+    "format": {
+      "assetFallback": "Ativo"
+    },
+    "hero": {
+      "eyebrow": "Reserva do banco",
+      "title": "Controle do bankroll de {symbol}.",
+      "description": "Deposite, saque e inspecione o banco que paga o cassino.",
+      "bankAddress": "Endereço do banco"
+    },
+    "metrics": {
+      "freeReserve": {
+        "label": "Reserva livre",
+        "detail": "Ativos não reservados para passivos em aberto."
+      },
+      "totalAssets": {
+        "label": "Total de ativos",
+        "detail": "Ativos atuais do banco a partir da leitura do protocolo."
+      },
+      "minLiquidity": {
+        "label": "Liquidez mínima",
+        "detail": "Piso configurado antes dos saques."
+      }
+    },
+    "actions": {
+      "eyebrow": "Ações de LP",
+      "title": "Console de transações do banco",
+      "asset": "Ativo",
+      "amount": "Valor",
+      "connectWallet": "Conecte uma carteira para executar ações do banco.",
+      "readOnly": "Modo somente leitura — troque de rede para executar ações.",
+      "tabs": {
+        "deposit": {
+          "label": "Depositar",
+          "description": "Forneça ativos ao banco."
+        },
+        "withdraw": {
+          "label": "Sacar",
+          "description": "Saque os ativos disponíveis."
+        },
+        "redeem": {
+          "label": "Resgatar",
+          "description": "Resgate cotas do banco por ativos."
+        }
+      },
+      "submit": {
+        "executing": "Executando",
+        "deposit": "Depositar ativos",
+        "withdraw": "Sacar ativos",
+        "redeem": "Resgatar cotas"
+      }
+    }
+  }
+}

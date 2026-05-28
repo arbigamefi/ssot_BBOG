@@ -1,20 +1,39 @@
 export const ARBI_LOCALE_COOKIE = "arbi-locale";
 
-export const appLocales = ["en", "zh-Hans"] as const;
+export const appLocales = ["en", "zh-Hans", "pt-BR", "ru", "tr"] as const;
 export type AppLocale = (typeof appLocales)[number];
 
 export const defaultLocale: AppLocale = "en";
 
 export const localeLabels: Record<AppLocale, string> = {
   en: "English",
-  "zh-Hans": "简体中文"
+  "zh-Hans": "简体中文",
+  "pt-BR": "Português (BR)",
+  ru: "Русский",
+  tr: "Türkçe"
+};
+
+/** Short codes for the compact header switcher. */
+export const localeShortLabels: Record<AppLocale, string> = {
+  en: "EN",
+  "zh-Hans": "中文",
+  "pt-BR": "PT",
+  ru: "RU",
+  tr: "TR"
 };
 
 const localeAliases: Record<string, AppLocale> = {
   zh: "zh-Hans",
   "zh-cn": "zh-Hans",
   "zh-hans": "zh-Hans",
-  "zh-sg": "zh-Hans"
+  "zh-sg": "zh-Hans",
+  pt: "pt-BR",
+  "pt-br": "pt-BR",
+  "pt-pt": "pt-BR",
+  ru: "ru",
+  "ru-ru": "ru",
+  tr: "tr",
+  "tr-tr": "tr"
 };
 
 export function isAppLocale(value: string | undefined | null): value is AppLocale {
