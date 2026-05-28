@@ -70,13 +70,7 @@ function parsePositiveBlock(value: string | undefined, fallback: bigint, name: s
 }
 
 function resolveRpcUrl(env: NodeJS.ProcessEnv) {
-  return (
-    cleanEnvValue(env.KEEPER_RPC_HTTP) ??
-    cleanEnvValue(env.RPC_URL) ??
-    cleanEnvValue(env.BASE_SEPOLIA_RPC_URL) ??
-    cleanEnvValue(env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL) ??
-    cleanEnvValue(env.NEXT_PUBLIC_RPC_URL)
-  );
+  return cleanEnvValue(env.KEEPER_RPC_HTTP);
 }
 
 export function loadBackfillConfig(env: NodeJS.ProcessEnv = process.env): BackfillConfig {
