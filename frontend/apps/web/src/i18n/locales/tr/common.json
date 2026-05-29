@@ -638,5 +638,1369 @@
         "redeem": "Payları geri al"
       }
     }
+  },
+  "casino": {
+    "directory": {
+      "loading": "Oyunlar yükleniyor...",
+      "empty": {
+        "noRelease": "Bağlı olduğunuz ağda casino aktif değil.",
+        "noGames": "Şu anda kullanılabilir oyun yok.",
+        "noResults": "Oyun bulunamadı",
+        "noResultsDetail": "\"{query}\" ile eşleşen yok. Aramayı temizlemeyi deneyin.",
+        "clearSearch": "Aramayı temizle"
+      },
+      "hero": {
+        "eyebrow": "Oyun lobisi",
+        "title": "Bir oyun seçin.",
+        "description": "Sekiz oyun. Cüzdanı bağlayın, hemen girin. Her dönüş zincir üstüne işlenir."
+      },
+      "stats": {
+        "rooms": "Mevcut oyunlar",
+        "asset": "Şununla oynar"
+      },
+      "filters": {
+        "all": "Tüm oyunlar",
+        "table": "Masa",
+        "dice": "Zar",
+        "binary": "Yazı tura",
+        "lottery": "Loto",
+        "arcade": "Arcade"
+      },
+      "search": {
+        "placeholder": "Oyun ara...",
+        "aria": "Oyun ara"
+      },
+      "tags": {
+        "binary": "İkili",
+        "table": "Masa",
+        "lottery": "Loto",
+        "arcade": "Arcade",
+        "dice": "Zar",
+        "module": "Oyun"
+      },
+      "rooms": {
+        "dice": {
+          "title": "Hassas Zar",
+          "promise": "Saniyeler içinde 1-99 ayarı.",
+          "badge": "%1 avantaj"
+        },
+        "roulette": {
+          "title": "Avrupa Ruleti",
+          "promise": "Klasik 37 cepli fiziksel mekanik.",
+          "badge": "Maks. ödeme 36x"
+        },
+        "coinToss": {
+          "title": "Yazı Tura",
+          "promise": "Çok hızlı 50/50 sonuç.",
+          "badge": "%1 avantaj"
+        },
+        "keno": {
+          "title": "Keno Draft",
+          "promise": "Devasa çarpanlar için çoklu sayı seçin.",
+          "badge": "500,5x'e kadar"
+        },
+        "plinko": {
+          "title": "Plinko",
+          "promise": "Sekiz sıradan düşün ve uç kovaları hedefleyin.",
+          "badge": "24,6x'e kadar"
+        },
+        "slots": {
+          "title": "Slot",
+          "promise": "Çiftleri, üçlüleri veya üç-yedi jackpotunu yakalayın.",
+          "badge": "64x'e kadar"
+        },
+        "baccarat": {
+          "title": "Bakara",
+          "promise": "Beraberlik kazancıyla oyuncu-banko elleri.",
+          "badge": "10,4x'e kadar"
+        },
+        "sicBo": {
+          "title": "Sic Bo",
+          "promise": "Üç zar, klasik masa bahisleri ve üçlü kazanç.",
+          "badge": "216x'e kadar"
+        }
+      },
+      "card": {
+        "releaseAnchored": "Canlı",
+        "playNow": "Hemen oyna"
+      },
+      "reserve": {
+        "title": "Kasa bankroll'u, zincir üstünde",
+        "subtitle": "Banka {bank}",
+        "status": "Canlı",
+        "cta": "Zincir üstünde kontrol et"
+      },
+      "bets": "Bahisler",
+      "clearAll": "Tümünü temizle"
+    },
+    "room": {
+      "names": {
+        "dice": "Hassas Zar",
+        "roulette": "Avrupa Ruleti",
+        "coinToss": "Yazı Tura",
+        "keno": "Keno Draft",
+        "plinko": "Plinko",
+        "slots": "Slot",
+        "baccarat": "Bakara",
+        "sicBo": "Sic Bo"
+      },
+      "shell": {
+        "liveModule": "Canlı oyun",
+        "houseEdge": "Casino avantajı",
+        "maxPayout": "Maks. ödeme"
+      },
+      "empty": {
+        "moduleNotFound": "Oyun bulunamadı",
+        "gameNotFound": "Oyun bulunamadı."
+      },
+      "warnings": {
+        "vrfTimeout": "Oracle bekleniyor... VRF çözümü test ağlarında 30-120s sürebilir."
+      },
+      "stage": {
+        "loading": "Masa yükleniyor",
+        "coin": {
+          "awaitingSelection": "Taraf seçimi bekleniyor",
+          "selected": "{side} seçildi",
+          "waitingVrf": "VRF oracle bekleniyor..."
+        },
+        "plinko": {
+          "board": "Plinko tahtası",
+          "dropZone": "Riski ayarla ve bırak",
+          "waitingVrf": "VRF oracle bekleniyor...",
+          "revealing": "Tahtadan düşüyor...",
+          "slot": "Kova {slot}",
+          "risk": "Risk: {risk}"
+        },
+        "slots": {
+          "ready": "Kazanmak için 3 sembol eşle",
+          "spinning": "VRF oracle bekleniyor...",
+          "result": "{symbols}",
+          "classic": "Klasik profil"
+        },
+        "baccarat": {
+          "ready": "Oyuncu, banko veya beraberliğe bahis yap",
+          "dealing": "VRF oracle bekleniyor...",
+          "result": "{side} kazanır",
+          "selected": "Seçilen: {side}"
+        },
+        "sicBo": {
+          "ready": "Bir Sic Bo masa bahsi seç",
+          "rolling": "VRF oracle bekleniyor...",
+          "opened": "Zarlar açıldı: {dice}",
+          "total": "Toplam",
+          "triple": "Üçlü",
+          "result": "Sonuç"
+        }
+      },
+      "history": {
+        "recent": {
+          "rolls": "SON ATIŞLAR",
+          "numbers": "SON SAYILAR",
+          "draws": "SON ÇEKİLİŞLER",
+          "buckets": "SON KOVALAR",
+          "slots": "SON DÖNÜŞLER",
+          "hands": "SON ELLER",
+          "dice": "SON ZARLAR",
+          "flips": "SON ATIŞLAR"
+        },
+        "states": {
+          "settled": "ÖDENDİ",
+          "refunded": "İADE",
+          "vrfReady": "VRF HAZIR",
+          "placed": "BAHİS"
+        },
+        "empty": "İlk oyun bekleniyor..."
+      },
+      "betPanel": {
+        "walletBalance": "Cüzdan bakiyesi",
+        "syncing": "Eşitleniyor...",
+        "notConnected": "Bağlı değil",
+        "walletGate": {
+          "title": "Bahis yapmak için cüzdanı bağlayın",
+          "detail": "Oda ayarlarını şimdi belirleyin. Bahis yalnızca cüzdanınız bağlandıktan sonra imzalanır."
+        },
+        "amount": {
+          "label": "Bahis tutarı",
+          "aria": "Bahis tutarı",
+          "min": "Min",
+          "max": "Maks"
+        },
+        "rolls": {
+          "label": "Atışlar",
+          "total": "Toplam: {amount} USDC",
+          "aria": "Atış sayısı"
+        },
+        "advanced": {
+          "label": "Gelişmiş",
+          "stopGain": "Kâr durdur (USDC)",
+          "stopLoss": "Zarar durdur (USDC)",
+          "offPlaceholder": "0 = kapalı",
+          "help": "Çoklu atış turları için isteğe bağlı otomatik durdurma kuralları. Devre dışı bırakmak için 0.",
+          "stopGainHelp": "Toplam kâr bu tutara ulaşınca durur.",
+          "stopLossHelp": "Toplam zarar bu tutara ulaşınca durur.",
+          "gainStop": "+{amount} USDC kârda durdur",
+          "lossStop": "{amount} USDC zararda durdur"
+        },
+        "summary": {
+          "multiplier": "Çarpan",
+          "winChance": "Kazanma şansı",
+          "expectedPayout": "Olası ödeme"
+        },
+        "placeBet": {
+          "connectWallet": "CÜZDAN BAĞLA",
+          "failedRetry": "İŞLEM BAŞARISIZ - TEKRAR DENE",
+          "roundInProgress": "TUR DEVAM EDİYOR",
+          "betMined": "BAHİS BLOKTA...",
+          "signing": "İMZALANIYOR / BAHİS...",
+          "approveThenPlace": "ONAYLA, SONRA BAHİS YAP",
+          "preparing": "TUR HAZIRLANIYOR...",
+          "placeBet": "BAHİS YAP"
+        }
+      },
+      "roundStatus": {
+        "title": "Tur durumu",
+        "phases": {
+          "loadingQuote": {
+            "label": "VRF ücreti tahmin ediliyor",
+            "detail": "Bahis yapmadan önce güncel rastgelelik ücreti okunuyor.",
+            "status": "Tahmin ediliyor"
+          },
+          "waitingVrf": {
+            "label": "Atılıyor",
+            "detail": "Bahis bloğa girdi. Doğrulanabilir rastgelelik bekleniyor.",
+            "status": "VRF bekleniyor"
+          },
+          "timeoutSoft": {
+            "label": "VRF normalden uzun sürüyor",
+            "detail": "Tur hâlâ güvende. Chainlink isteği yerine getirirken bu sayfayı açık tutun.",
+            "status": "Bekleniyor"
+          },
+          "placing": {
+            "label": "Bahis yapılıyor",
+            "detail": "Gerekirse onaylayın, sonra bahsi imzalayın. İşlem bloğa girince tur başlar.",
+            "status": "Yapılıyor"
+          },
+          "settling": {
+            "label": "Sonuç açıklandı",
+            "detail": "Sayılar açık. Kazancınız ödeniyor.",
+            "status": "Ödeniyor"
+          },
+          "manualSettleOffered": {
+            "label": "Ödeme yavaş",
+            "detail": "Ödeme gecikti. Yedek olarak bu sonucu manuel ödeyebilirsiniz.",
+            "status": "Manuel ödeme sunuldu"
+          },
+          "settled": {
+            "label": "Tur ödendi",
+            "detail": "Ödeme zincir üstünde onaylandı. Nihai sonuç kanıtı hazırlanıyor.",
+            "status": "Ödendi"
+          },
+          "refundable": {
+            "label": "İade mümkün",
+            "detail": "VRF, protokol zaman aşımından önce tamamlanmadı. Bahsi iade edebilirsiniz.",
+            "status": "İade edilebilir"
+          },
+          "failed": {
+            "label": "Tur izleyici başarısız",
+            "detail": "RPC sağlayıcısından en son tur durumu okunamadı.",
+            "status": "Başarısız"
+          },
+          "ready": {
+            "label": "Hazır",
+            "detail": "Tek tık gerekirse onaylar, bahsi yapar ve ödemeyi izler.",
+            "status": "Hazır"
+          }
+        },
+        "metrics": {
+          "vrfEstimate": "VRF tahmini",
+          "betId": "Bahis kimliği",
+          "vrfRequest": "VRF isteği"
+        },
+        "actions": {
+          "settleResult": "Sonucu öde",
+          "refundStake": "Bahsi iade et"
+        },
+        "steps": {
+          "place": "Bahis",
+          "random": "Rastgele",
+          "settle": "Ödeme",
+          "result": "Sonuç"
+        }
+      },
+      "selection": {
+        "dice": {
+          "rollUnder": "Altında",
+          "rollOver": "Üstünde",
+          "targetRange": "Hedef aralığı",
+          "targetAria": "Zar hedefi",
+          "target": "Hedef",
+          "multiplier": "Çrpn",
+          "winChance": "Kazanç",
+          "roll": "At"
+        },
+        "roulette": {
+          "bets": "Bahisler",
+          "clearAll": "Tümünü temizle",
+          "empty": "Bahis yok. Bahis yapmak için çuhaya tıklayın.",
+          "labels": {
+            "firstDozen": "1. düzine",
+            "secondDozen": "2. düzine",
+            "thirdDozen": "3. düzine",
+            "even": "Çift",
+            "red": "Kırmızı",
+            "black": "Siyah",
+            "odd": "Tek",
+            "firstColumn": "Sütun 1 (2:1)",
+            "secondColumn": "Sütun 2 (2:1)",
+            "thirdColumn": "Sütun 3 (2:1)",
+            "column": "2:1"
+          }
+        },
+        "coin": {
+          "selectFace": "Taraf seç",
+          "heads": "Yazı",
+          "tails": "Tura"
+        },
+        "keno": {
+          "spotsLabel": "/ 5 sayı",
+          "hits": "{hits} isabet",
+          "autoPick": "Otomatik seç",
+          "clear": "Temizle",
+          "empty": "Sayı seçilmedi. Seçmek için ızgaraya tıklayın."
+        },
+        "plinko": {
+          "riskProfile": "Risk profili",
+          "low": "Düşük",
+          "medium": "Orta",
+          "high": "Yüksek",
+          "lowDetail": "Daha düz tahta",
+          "mediumDetail": "Dengeli risk",
+          "highDetail": "Uç kovalar"
+        },
+        "baccarat": {
+          "betOn": "Bahis",
+          "player": "Oyuncu",
+          "banker": "Banko",
+          "tie": "Beraberlik"
+        },
+        "sicBo": {
+          "betType": "Bahis türü",
+          "face": "Yüz",
+          "total": "Toplam",
+          "kinds": {
+            "small": "Küçük",
+            "big": "Büyük",
+            "anyTriple": "Herhangi üçlü",
+            "specificTriple": "Belirli üçlü",
+            "total": "Tam toplam",
+            "specificDouble": "Belirli çift",
+            "singleFace": "Tek yüz"
+          }
+        },
+        "slots": {
+          "profiles": {
+            "classic": "Klasik 3 makara"
+          },
+          "symbols": {
+            "0": "Kiraz",
+            "1": "Limon",
+            "2": "Çan",
+            "3": "Elmas",
+            "4": "Taç",
+            "5": "Yıldız",
+            "6": "Bar",
+            "7": "Yedi"
+          },
+          "yes": "Evet",
+          "no": "Hayır"
+        }
+      },
+      "result": {
+        "title": "Bahis detayları",
+        "outcomes": {
+          "refunded": {
+            "label": "Bahis iade edildi",
+            "detail": "VRF zaman aşımından sonra iade yolu bahsi geri verdi."
+          },
+          "win": {
+            "label": "Bahis kazanıldı",
+            "detail": "Tur zincir üstünde ödendi ve ödeme onaylandı."
+          },
+          "winPending": {
+            "label": "Bahis kazanıldı",
+            "detail": "VRF sonucu açıklandı. Ödeme hâlâ beklemede."
+          },
+          "returned": {
+            "label": "Bahis iade edildi",
+            "detail": "Ödenen tutar bahse eşit."
+          },
+          "returnedPending": {
+            "label": "Bahis iade edildi",
+            "detail": "VRF sonucu açıklandı. Ödeme onayı hâlâ beklemede."
+          },
+          "loss": {
+            "label": "Bahis kaybedildi",
+            "detail": "Tur zincir üstünde net ödeme olmadan ödendi."
+          },
+          "lossPending": {
+            "label": "Bahis kaybedildi",
+            "detail": "VRF sonucu açıklandı. Nihai ödeme hâlâ beklemede."
+          },
+          "revealed": {
+            "label": "Sonuç açıklandı",
+            "detail": "Açılan sayılar VRF'ten geldi. Ödeme hâlâ beklemede."
+          }
+        },
+        "sections": {
+          "gameResult": "Oyun sonucu",
+          "fairnessData": "Adalet verisi"
+        },
+        "facts": {
+          "status": "Durum",
+          "player": "Oyuncu",
+          "multiplier": "Çarpan",
+          "betAmount": "Bahis tutarı",
+          "payout": "Ödeme",
+          "expectedPayout": "Olası ödeme",
+          "pending": "Beklemede",
+          "betId": "Bahis kimliği",
+          "refund": "İade",
+          "requestId": "İstek kimliği",
+          "netResult": "Net sonuç",
+          "randomHash": "Rastgele hash",
+          "settlementTx": "Ödeme işlemi",
+          "resolvedTime": "Çözülme zamanı",
+          "vrfFee": "Rastgele sayı ücreti",
+          "diceTarget": "Zar hedefi",
+          "diceNumber": "Çıkan sayı",
+          "coinChoice": "Seçilen taraf",
+          "coinDrawn": "Çıkan taraf",
+          "rouletteBet": "Rulet bahsi",
+          "rouletteWinningNumber": "Kazanan sayı",
+          "kenoPicked": "Seçilen sayılar",
+          "kenoDrawn": "Çekilen sayılar",
+          "kenoHits": "İsabetler",
+          "plinkoRisk": "Risk profili",
+          "plinkoSlot": "Kova",
+          "plinkoPath": "Yol",
+          "plinkoMultiplier": "Kova çarpanı",
+          "slotsProfile": "Profil",
+          "slotsSymbols": "Çıkan semboller",
+          "slotsMultiplier": "Makara çarpanı",
+          "slotsJackpot": "Jackpot",
+          "baccaratChoice": "Seçilen taraf",
+          "baccaratWinner": "Kazanan taraf",
+          "baccaratPlayerTotal": "Oyuncu toplamı",
+          "baccaratBankerTotal": "Banko toplamı",
+          "baccaratPlayerCards": "Oyuncu kartları",
+          "baccaratBankerCards": "Banko kartları",
+          "sicBoBet": "Sic Bo bahsi",
+          "sicBoDice": "Açılan zarlar",
+          "sicBoTotal": "Toplam",
+          "sicBoTriple": "Üçlü",
+          "sicBoMultiplier": "Atış çarpanı"
+        },
+        "actions": {
+          "close": "Kapat",
+          "playAgain": "Tekrar oyna",
+          "viewSettlement": "Ödemeyi gör",
+          "settlementPending": "Ödeme beklemede",
+          "copyProof": "Adalet kanıtını kopyala",
+          "proofCopied": "Kanıt kopyalandı"
+        }
+      },
+      "audit": {
+        "loading": "Denetim akışı yükleniyor",
+        "headers": {
+          "timestampAuth": "Zaman / Auth",
+          "submodule": "Oyun",
+          "wagerParameters": "Bahis parametreleri",
+          "settlementState": "Ödeme durumu",
+          "audit": "Denetim"
+        },
+        "selection": "{game} seçimi",
+        "amountAndId": "{amount} {asset} - ID: {id}",
+        "openAudit": "{betId} bahsinin denetimini aç",
+        "empty": {
+          "title": "Değiştirilemez denetim akışı",
+          "description": "Zincir üstü işlem yayını bekleniyor..."
+        },
+        "tabs": {
+          "live": "Canlı bahisler",
+          "mine": "Bahislerim",
+          "top": "En çok kazananlar",
+          "info": "Oyun bilgisi"
+        },
+        "columns": {
+          "time": "Zaman",
+          "player": "Oyuncu",
+          "stake": "Bahis",
+          "multiplier": "Çarpan",
+          "payout": "Ödeme",
+          "state": "Durum",
+          "bet": "Bahis",
+          "coverage": "Kapsam",
+          "winChance": "Kazanma şansı"
+        },
+        "emptyStates": {
+          "live": "Henüz bahis yok — ilk oynayan siz olun.",
+          "mine": "Bu oyunu henüz oynamadınız.",
+          "top": "Bu ağda henüz indekslenmiş kazanç yok.",
+          "connectWallet": "Geçmişinizi görmek için cüzdanı bağlayın."
+        },
+        "viewBet": "{betId} bahsini gör",
+        "houseEdgeLabel": "Casino avantajı",
+        "howToPlayLabel": "Nasıl çalışır",
+        "betTypesLabel": "Bahis türleri",
+        "justNow": "az önce",
+        "minutesAgo": "{n}dk önce",
+        "hoursAgo": "{n}sa önce",
+        "daysAgo": "{n}g önce",
+        "filters": {
+          "all": "Tümü",
+          "pending": "Bekleyen",
+          "won": "Kazanan",
+          "lost": "Kaybeden",
+          "refunded": "İade edilen"
+        },
+        "stateLabel": {
+          "won": "Kazanıldı",
+          "lost": "Kaybedildi",
+          "pending": "Beklemede",
+          "settled": "Ödendi",
+          "cancelled": "İade edildi"
+        },
+        "openOnExplorer": "İşlemi blok gezgininde aç",
+        "openOnExplorerWithChain": "{chain} gezgininde aç",
+        "newActivityBadge": "{n} yeni",
+        "onChain": "{chain} ağında"
+      },
+      "errors": {
+        "quoteFailed": "VRF ücreti tahmin edilemedi.",
+        "readRoundFailed": "Canlı tur durumu okunamadı.",
+        "roundNotFound": "Bu tur henüz mevcut GameHub'da görünmüyor. Yeni bahis yapmadan önce işlemi kontrol edin.",
+        "manualSettleFailed": "Manuel ödeme başarısız.",
+        "refundFailed": "İade başarısız.",
+        "sdkNotReady": "Oynamaya başlamak için cüzdanı bağlayın.",
+        "transactionFailedShort": "İşlem başarısız",
+        "transactionFailed": "İşlem başarısız. Lütfen tekrar deneyin.",
+        "reconcileFailed": "Mutabakat başarısız",
+        "bindFailed": "Bağlama başarısız",
+        "rouletteSelectionRequired": "Rulet tahtasında en az bir sayı veya bahis türü seçin.",
+        "kenoSelectionRequired": "Keno ızgarasında en az 1 sayı seçin.",
+        "kenoSelectionInvalid": "1 ile 15 arasında 1 ila 5 Keno sayısı seçin.",
+        "mainnetRiskInDisabled": "Casino ana ağ bahisleri, frontend erişim onayı tamamlanana kadar devre dışı.",
+        "noActiveCasinoPool": "Şu anda bu ağda aktif casino oyunu yok.",
+        "unexpected": "Beklenmeyen bir hata oluştu."
+      },
+      "gameInfo": {
+        "roulette": {
+          "tagline": "Avrupa ruleti — 37 cep, her dönüş Chainlink VRF ile zincir üstünde imzalanır.",
+          "houseEdge": "2.70%",
+          "bets": [
+            {
+              "key": "straight",
+              "label": "Düz bahis (tek sayı)",
+              "coverage": "1 sayı",
+              "multiplier": "36×"
+            },
+            {
+              "key": "redBlack",
+              "label": "Kırmızı / Siyah",
+              "coverage": "18 sayı",
+              "multiplier": "2×"
+            },
+            {
+              "key": "evenOdd",
+              "label": "Çift / Tek",
+              "coverage": "18 sayı",
+              "multiplier": "2×"
+            },
+            {
+              "key": "lowHigh",
+              "label": "1–18 / 19–36",
+              "coverage": "18 sayı",
+              "multiplier": "2×"
+            },
+            {
+              "key": "dozen",
+              "label": "Düzine (1./2./3.)",
+              "coverage": "12 sayı",
+              "multiplier": "3×"
+            },
+            {
+              "key": "column",
+              "label": "Sütun (2:1)",
+              "coverage": "12 sayı",
+              "multiplier": "3×"
+            }
+          ]
+        },
+        "dice": {
+          "tagline": "0 ile 99 arası bir sayı atın. Bir hedef ve yön seçin.",
+          "houseEdge": "1.00%",
+          "bets": [
+            {
+              "key": "under",
+              "label": "Hedefin altında",
+              "coverage": "0 … hedef-1",
+              "multiplier": "99 / target"
+            },
+            {
+              "key": "over",
+              "label": "Hedefin üstünde",
+              "coverage": "hedef+1 … 99",
+              "multiplier": "99 / (99 − target)"
+            }
+          ]
+        },
+        "coin-toss": {
+          "tagline": "Saf 50/50. Bir taraf seçin; tek bir Chainlink VRF çekilişi karar verir.",
+          "houseEdge": "1.00%",
+          "bets": [
+            {
+              "key": "heads",
+              "label": "Yazı",
+              "coverage": "2 sonuçtan 1'i",
+              "multiplier": "1,98×"
+            },
+            {
+              "key": "tails",
+              "label": "Tura",
+              "coverage": "2 sonuçtan 1'i",
+              "multiplier": "1,98×"
+            }
+          ]
+        },
+        "keno": {
+          "tagline": "15'lik bir panodan 1-5 sayı seçin. Sözleşme 5 çeker; daha çok eşleşin, daha çok kazanın.",
+          "houseEdge": "≈ 3.00%",
+          "bets": [
+            {
+              "key": "p1",
+              "label": "1 sayı seç",
+              "coverage": "5'ten 1 eşleşme",
+              "multiplier": "2,97×"
+            },
+            {
+              "key": "p2",
+              "label": "2 sayı seç",
+              "coverage": "İkisi de eşleşti",
+              "multiplier": "maks. 8,91×"
+            },
+            {
+              "key": "p3",
+              "label": "3 sayı seç",
+              "coverage": "3'ü de eşleşti",
+              "multiplier": "maks. 26,7×"
+            },
+            {
+              "key": "p4",
+              "label": "4 sayı seç",
+              "coverage": "4'ü de eşleşti",
+              "multiplier": "maks. 91×"
+            },
+            {
+              "key": "p5",
+              "label": "5 sayı seç",
+              "coverage": "5'i de eşleşti",
+              "multiplier": "maks. 770×"
+            }
+          ]
+        },
+        "plinko": {
+          "tagline": "Topu 9 sıralı çivi alanından bırakın. Dış kovalar daha çok öder; risk profili eğriyi belirler.",
+          "houseEdge": "≈ 1.50%",
+          "bets": [
+            {
+              "key": "low",
+              "label": "Düşük risk",
+              "coverage": "Daha düz eğri",
+              "multiplier": "maks. 1,53×"
+            },
+            {
+              "key": "medium",
+              "label": "Orta risk",
+              "coverage": "Dengeli eğri",
+              "multiplier": "maks. 8,27×"
+            },
+            {
+              "key": "high",
+              "label": "Yüksek risk",
+              "coverage": "Ağır kuyruk",
+              "multiplier": "maks. 24,6×"
+            }
+          ]
+        },
+        "slots": {
+          "tagline": "3 makaralı klasik. 64x için üst sembolü üçlü eşleyin.",
+          "houseEdge": "≈ 4.00%",
+          "bets": [
+            {
+              "key": "classic",
+              "label": "Klasik profil",
+              "coverage": "5×5×5 makara ağırlıkları",
+              "multiplier": "maks. 64×"
+            }
+          ]
+        },
+        "baccarat": {
+          "tagline": "Oyuncu, Banko veya Beraberliğe bahis yapın. Komisyonsuz standart ödeme.",
+          "houseEdge": "1.06% – 14.4%",
+          "bets": [
+            {
+              "key": "player",
+              "label": "Oyuncu",
+              "coverage": "≈ %44,6",
+              "multiplier": "2,24×"
+            },
+            {
+              "key": "banker",
+              "label": "Banko",
+              "coverage": "≈ %45,8",
+              "multiplier": "2,18×"
+            },
+            {
+              "key": "tie",
+              "label": "Beraberlik",
+              "coverage": "≈ %9,5",
+              "multiplier": "10,48×"
+            }
+          ]
+        },
+        "sic-bo": {
+          "tagline": "Üç zar. Küçük/büyük, üçlü, çift, tek yüz veya toplam seçin.",
+          "houseEdge": "2.78% – 30.6%",
+          "bets": [
+            {
+              "key": "smallBig",
+              "label": "Küçük (4–10) / Büyük (11–17)",
+              "coverage": "48.6%",
+              "multiplier": "2,06×"
+            },
+            {
+              "key": "anyTriple",
+              "label": "Herhangi üçlü",
+              "coverage": "2.78%",
+              "multiplier": "36×"
+            },
+            {
+              "key": "specificTriple",
+              "label": "Belirli üçlü",
+              "coverage": "0.46%",
+              "multiplier": "216×"
+            },
+            {
+              "key": "specificDouble",
+              "label": "Belirli çift",
+              "coverage": "7.41%",
+              "multiplier": "13.5×"
+            },
+            {
+              "key": "singleFace",
+              "label": "Tek yüz (1–6)",
+              "coverage": "≈ 42%",
+              "multiplier": "6×'e kadar"
+            },
+            {
+              "key": "total",
+              "label": "Toplam (4–17)",
+              "coverage": "değişir",
+              "multiplier": "değişir"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "portfolio": {
+    "overview": {
+      "common": {
+        "asset": "Varlık",
+        "pending": "Beklemede",
+        "walletRequired": "Cüzdan gerekli",
+        "unknown": "Bilinmiyor",
+        "unconnected": "Bağlı değil",
+        "unlimited": "Sınırsız",
+        "connectWalletInspect": "Hesap durumunu incelemek için bir cüzdan bağlayın."
+      },
+      "state": {
+        "noRelease": {
+          "title": "Portföy",
+          "description": "Bu ağda kullanılamıyor."
+        }
+      },
+      "hero": {
+        "eyebrow": "Hesap kaydı",
+        "title": "Cüzdan profili.",
+        "description": "Bakiyeniz, açık bahisleriniz, iadeler ve yerel tur geçmişiniz — hepsi tek görünümde.",
+        "connectedAccount": "Bağlı hesap"
+      },
+      "metrics": {
+        "walletBalance": {
+          "label": "Cüzdan bakiyesi",
+          "detail": "Aktif oyun varlıklarındaki serbest bakiyeniz."
+        },
+        "bankPosition": {
+          "label": "Banka pozisyonu",
+          "detail": "Bağlı Banka paylarına eşdeğer varlıklar."
+        },
+        "refundCredit": {
+          "label": "İade kredisi",
+          "detail": "Cüzdana yatırılan geri alınabilir VRF bakiyesi."
+        }
+      },
+      "alerts": {
+        "readOnly": {
+          "title": "Salt okunur oturum",
+          "message": "İşlemler devre dışı."
+        },
+        "assetQueryFailed": "Varlık sorgusu başarısız",
+        "refundQueryFailed": "İade sorgusu başarısız"
+      },
+      "links": {
+        "openBankConsole": "Banka konsolunu aç"
+      },
+      "context": {
+        "title": "Yürütme bağlamı",
+        "session": "Oturum",
+        "readOnly": "Salt okunur",
+        "writable": "Yazılabilir",
+        "network": "Ağ",
+        "digest": "Özet"
+      },
+      "identity": {
+        "eyebrow": "Profil",
+        "title": "Oyuncu kimliği",
+        "playerLabel": "Oyuncu etiketi",
+        "placeholder": "Etiket girin",
+        "saved": "Yerel olarak kaydedildi",
+        "saving": "Yerel olarak kaydediliyor",
+        "walletAddress": "Cüzdan adresi",
+        "copyWalletAddress": "Cüzdan adresini kopyala"
+      },
+      "positions": {
+        "eyebrow": "Defter",
+        "title": "Varlık pozisyonları",
+        "loading": "Bakiyeler yükleniyor.",
+        "shares": "{amount} pay",
+        "columns": {
+          "asset": "Varlık",
+          "wallet": "Cüzdan",
+          "bankPosition": "Banka pozisyonu",
+          "allowance": "İzin"
+        }
+      },
+      "refund": {
+        "title": "VRF iade kredisi",
+        "connectWallet": "Geri alınabilir VRF kredisini incelemek ve almak için bir cüzdan bağlayın.",
+        "readOnly": "Salt okunur mod — işlem yapmak için ağ değiştirin.",
+        "claiming": "Alınıyor",
+        "claim": "Krediyi al",
+        "flow": {
+          "preflight": "Ön kontrol",
+          "submit": "Talebi gönder",
+          "confirm": "Zincir üstünde onayla",
+          "preflightDetail": "İade kredisini doğrula.",
+          "submitDetail": "claimRefundCredit yayınla.",
+          "confirmDetail": "Makbuzu bekle."
+        }
+      },
+      "trace": {
+        "waiting": "İade talebi niyeti bekleniyor.",
+        "error": "İşlem hatası",
+        "title": "İade talebi izi",
+        "subtitle": "Cüzdan imzası, yayın ve makbuz durumu.",
+        "status": "Durum",
+        "viewExplorer": "Gezgini aç",
+        "block": "Blok {blockNumber}",
+        "reset": "İzi sıfırla"
+      },
+      "journal": {
+        "eyebrow": "Günlük",
+        "title": "İşlem günlüğü",
+        "columns": {
+          "action": "Eylem",
+          "status": "Durum"
+        },
+        "empty": "Bu tarayıcı oturumunda hesap işlemi yok."
+      },
+      "toast": {
+        "labelSaved": "Oyuncu etiketi yerel olarak kaydedildi.",
+        "clipboardUnavailable": "Bu tarayıcıda pano kullanılamıyor.",
+        "walletCopied": "Cüzdan adresi kopyalandı",
+        "walletCopyFailed": "Cüzdan adresi kopyalanamadı",
+        "refundClaimed": "İade kredisi alındı",
+        "refundClaimFailed": "İade talebi başarısız"
+      },
+      "loading": "Portföy yükleniyor…"
+    },
+    "referral": {
+      "common": {
+        "pending": "Beklemede",
+        "notConnected": "Bağlı değil"
+      },
+      "state": {
+        "noRelease": {
+          "title": "Referans",
+          "description": "Bu ağda kullanılamıyor."
+        }
+      },
+      "errors": {
+        "walletUnavailable": "Cüzdan kullanılamıyor",
+        "poolUnavailable": "Havuz kullanılamıyor"
+      },
+      "hero": {
+        "eyebrow": "Ortak hesabı",
+        "title": "Referans ödülleri.",
+        "description": "Bir casino bağlantısı oluşturun, değiştirilemez ilk dokunuş referansçınızı inceleyin ve aktif Banka defteri tarafından ödenen XP kovalarını görün.",
+        "connected": "Cüzdan"
+      },
+      "link": {
+        "title": "Referans bağlantınız",
+        "description": "Bu bağlantıyı oyuncularla paylaşın. Casino bahsi yaptıklarında GameHub, ilk dokunuş bağlaması ve skyline fiyatlaması için ortak ipucunu iletir.",
+        "learn": "Model",
+        "connect": "Referans bağlantısı oluşturmak için bir cüzdan bağlayın.",
+        "copy": "Bağlantıyı kopyala",
+        "copied": "Kopyalandı"
+      },
+      "metrics": {
+        "accrued": {
+          "label": "Birikmiş",
+          "detail": "Banka defterinden şu anda alınabilir XP."
+        },
+        "locked": {
+          "label": "Kilitli",
+          "detail": "Çıkarmadan önce kilit açma koşullarını bekleyen XP."
+        },
+        "holdback": {
+          "label": "Geri tutma",
+          "detail": "Senkronizasyondan sonra serbest bırakılabilir hale gelebilen ödül tamponu."
+        }
+      },
+      "activity": {
+        "title": "Referanslı oyun",
+        "description": "Ortak adresinizi kalıcı bahis indeksinden taşıyan casino bahislerini takip edin.",
+        "loading": "Referanslı bahisler yükleniyor...",
+        "empty": "Henüz indekslenmiş referanslı casino bahsi yok.",
+        "stats": {
+          "bets": "Bahisler",
+          "turnover": "Ciro",
+          "settled": "Ödendi"
+        }
+      },
+      "binding": {
+        "eyebrow": "İlk dokunuş",
+        "title": "Bağlama durumu",
+        "description": "Bir oyuncu yalnızca bir kez bağlanabilir. Bu sayfada geçerli bir ref parametresi varsa ve henüz bir referansçı bağlı değilse, cüzdan bunu açıkça bağlayabilir.",
+        "current": "Mevcut",
+        "pending": "Beklemede",
+        "none": "Yok",
+        "noPending": "Bekleyen ref yok",
+        "bind": "Referansçıyı bağla",
+        "binding": "Bağlanıyor",
+        "claims": "Açık talepler"
+      },
+      "toast": {
+        "bound": "Referansçı bağlandı",
+        "bindFailed": "Referansçı bağlanamadı"
+      },
+      "loading": "Referanslar yükleniyor…"
+    },
+    "claims": {
+      "common": {
+        "pending": "Beklemede",
+        "walletRequired": "Cüzdan gerekli"
+      },
+      "state": {
+        "noRelease": {
+          "title": "Talepler",
+          "description": "Bu ağda kullanılamıyor."
+        }
+      },
+      "errors": {
+        "walletUnavailable": "Cüzdan kullanılamıyor",
+        "poolUnavailable": "Havuz kullanılamıyor",
+        "bankUnavailable": "Banka kullanılamıyor",
+        "positiveAmount": "Tutar pozitif olmalı."
+      },
+      "hero": {
+        "eyebrow": "Talep kasası",
+        "title": "Ödüller ve protokol talepleri.",
+        "description": "XP kovalarını inceleyin, geri tutma durumunu senkronize edin ve bekleyen yükümlülükleri tanıtım bakiyelerinin arkasına gizlemeden talep işlemlerini yürütün.",
+        "connectedPayee": "Bağlı alıcı"
+      },
+      "metrics": {
+        "accrued": {
+          "label": "Birikmiş",
+          "detail": "XP talebine hazır."
+        },
+        "holdback": {
+          "label": "Geri tutma",
+          "detail": "Ödeme beklenirken tutuluyor."
+        },
+        "protocolFees": {
+          "label": "Protokol ücretleri",
+          "detail": "Yönetişim talep alanı."
+        }
+      },
+      "buckets": {
+        "title": "XP kova defteri",
+        "syncing": "senkronize ediliyor",
+        "readModel": "okuma modeli",
+        "cards": {
+          "accrued": {
+            "label": "Birikmiş",
+            "detail": "Alıcıya yatırılan, talep edilebilir XP."
+          },
+          "locked": {
+            "label": "Kilitli",
+            "detail": "Çıkarmadan önce kilit açma koşulları gereken XP."
+          },
+          "holdback": {
+            "label": "Geri tutma",
+            "detail": "Geri tutma senkronizasyonunu bekleyen tampon."
+          },
+          "releasable": {
+            "label": "Serbest bırakılabilir",
+            "detail": "Protokol kurallarınca şu anda serbest bırakılabilir geri tutma tutarı."
+          },
+          "protocolFees": {
+            "label": "Protokol ücretleri",
+            "detail": "Dış ödenecekler {externalPayables}"
+          },
+          "bank": {
+            "label": "Banka referansı",
+            "detail": "Rezerve {reserved} · Varlıklar {assets}"
+          }
+        }
+      },
+      "actions": {
+        "eyebrow": "Yürütme",
+        "title": "Talep işlem konsolu",
+        "connectWallet": "Talep eylemlerini yürütmek için bir cüzdan bağlayın.",
+        "readOnly": "Salt okunur mod — işlem yapmak için ağ değiştirin.",
+        "max": "Maks {amount}",
+        "holdbackPending": "Geri tutma beklemede",
+        "holdbackDetail": "Senkronizasyon, XP defterini güncel zincir üstü geri tutma durumuna göre günceller.",
+        "tabs": {
+          "claim": {
+            "label": "XP talep et",
+            "detail": "Birikmiş XP'yi cüzdanınıza çıkarın."
+          },
+          "sync": {
+            "label": "Senkronize et",
+            "detail": "Serbest bırakılabilir geri tutmayı mevcut XP defterine taşıyın."
+          },
+          "fees": {
+            "label": "Ücretler",
+            "detail": "Yalnızca yönetişim için protokol ücreti talep alanı."
+          }
+        },
+        "amounts": {
+          "claim": "Talep tutarı",
+          "fees": "Ücret tutarı"
+        },
+        "submit": {
+          "executing": "Yürütülüyor",
+          "claim": "XP talep et",
+          "sync": "Geri tutmayı senkronize et",
+          "fees": "Protokol ücretlerini talep et"
+        },
+        "trace": {
+          "claim": "Talep izi",
+          "sync": "Geri tutma senkronizasyon izi",
+          "fees": "Ücret talebi izi"
+        }
+      },
+      "flows": {
+        "preflight": "Ön kontrol",
+        "submitClaim": "Talebi gönder",
+        "submitSync": "Senkronizasyonu gönder",
+        "confirm": "Zincir üstünde onayla",
+        "receipt": "Makbuzu bekle.",
+        "claim": {
+          "preflight": "Talep çağrısını simüle et.",
+          "submit": "claimXPAccrued yayınla."
+        },
+        "sync": {
+          "preflight": "Senkronizasyon eylemini doğrula.",
+          "submit": "syncXPHoldback yayınla."
+        },
+        "fees": {
+          "preflight": "Yönetişim çağrısını doğrula.",
+          "submit": "claimProtocolFees yayınla."
+        }
+      },
+      "trace": {
+        "waiting": "Talep niyeti bekleniyor.",
+        "error": "İşlem hatası",
+        "subtitle": "Cüzdan imzası, yayın ve makbuz durumu.",
+        "status": "Durum",
+        "viewExplorer": "Gezgini aç",
+        "block": "Blok {blockNumber}",
+        "reset": "İzi sıfırla"
+      },
+      "journal": {
+        "eyebrow": "Günlük",
+        "title": "Oturum talep etkinliği",
+        "columns": {
+          "hash": "Hash",
+          "action": "Eylem",
+          "amount": "Tutar",
+          "status": "Durum"
+        },
+        "empty": "Bu tarayıcı oturumunda talep işlemi yok.",
+        "actions": {
+          "claimXP": "XP talep et",
+          "syncHoldback": "Geri tutmayı senkronize et",
+          "claimFees": "Ücretleri talep et"
+        }
+      },
+      "toast": {
+        "claimedXP": "{amount} {symbol} talep edildi",
+        "xpClaimFailed": "XP talebi başarısız",
+        "holdbackSynced": "Geri tutma senkronize edildi",
+        "syncHoldbackFailed": "Geri tutma senkronizasyonu başarısız",
+        "claimedFees": "{amount} {symbol} protokol ücreti talep edildi",
+        "protocolFeeFailed": "Protokol ücreti talebi başarısız"
+      },
+      "loading": "Talepler yükleniyor…"
+    },
+    "activity": {
+      "common": {
+        "pending": "Beklemede",
+        "unknownGame": "Bilinmeyen oyun",
+        "asset": "Varlık",
+        "sportsbook": "Spor bahisleri"
+      },
+      "time": {
+        "justNow": "az önce",
+        "minutesAgo": "{minutes}dk önce",
+        "hoursAgo": "{hours}sa önce",
+        "daysAgo": "{days}g önce"
+      },
+      "hero": {
+        "eyebrow": "Etkinlik defteri",
+        "title": "Bahis etkinliği.",
+        "description": "İndekslenmiş biletleri, ödeme durumunu ve sermaye sonuçlarını, detay eylemlerini etkinlik yüzeyine karıştırmadan inceleyin.",
+        "summary": "Defter özeti",
+        "session": "İndekslenmiş tarayıcı oturumu"
+      },
+      "metrics": {
+        "indexed": {
+          "label": "İndekslenmiş biletler",
+          "connected": "Paylaşılan önbellekten ({serverRows}) ve yerel tekrardan ({localRows}) birleştirilen satırlar.",
+          "disconnected": "Hesaba özel biletleri yüklemek için bir cüzdan bağlayın."
+        },
+        "open": {
+          "label": "Açık biletler",
+          "detail": "Hâlâ kapanması gereken, yapılmış veya VRF'e hazır biletler."
+        },
+        "settled": {
+          "label": "Ödenen sonuçlar",
+          "detail": "Nihai kazanç, kayıp, iade veya hata durumundaki biletler."
+        }
+      },
+      "filters": {
+        "all": {
+          "label": "Tümü",
+          "detail": "Tüm indekslenmiş biletler."
+        },
+        "open": {
+          "label": "Açık",
+          "detail": "Yapıldı veya VRF bekliyor."
+        },
+        "won": {
+          "label": "Kazanan",
+          "detail": "Pozitif ödenen biletler."
+        },
+        "lost": {
+          "label": "Kaybeden",
+          "detail": "Kayıp, iade veya hata durumları."
+        }
+      },
+      "ledger": {
+        "eyebrow": "Biletler",
+        "title": "Casino defteri",
+        "loading": "Defter senkronize ediliyor.",
+        "empty": "Mevcut filtreyle eşleşen bilet yok.",
+        "view": "Gör",
+        "columns": {
+          "ticket": "Bilet",
+          "module": "Oyun",
+          "stake": "Bahis",
+          "settlement": "Ödeme",
+          "status": "Durum",
+          "action": "Eylem"
+        },
+        "mobile": {
+          "stake": "Bahis",
+          "settlement": "Ödeme",
+          "updated": "Güncellendi"
+        }
+      },
+      "status": {
+        "won": "Kazandı",
+        "closed": "Kapandı",
+        "settled": "Ödendi",
+        "open": "Açık"
+      },
+      "detail": {
+        "common": {
+          "empty": "—",
+          "ticketDetail": "Bilet detayı"
+        },
+        "state": {
+          "won": "Kazandı",
+          "lost": "Kaybetti",
+          "randomReady": "Rastgele hazır",
+          "placed": "Yapıldı",
+          "refunded": "İade edildi",
+          "pending": "Beklemede",
+          "refreshing": "Yenileniyor"
+        },
+        "hero": {
+          "back": "Deftere dön",
+          "eyebrow": "Makbuz dosyası",
+          "title": "{gameLabel} makbuzu.",
+          "description": "Bahis, yaşam döngüsü kanıtı, ödeme bilgileri ve uygun protokol eylemleri tek bir denetlenebilir bilet yüzeyine bağlı kalır.",
+          "ticketContext": "Bilet bağlamı",
+          "settlementState": "Ödeme durumu"
+        },
+        "flows": {
+          "preflight": "Ön kontrol",
+          "confirm": "Zincir üstünde onayla",
+          "receipt": "Makbuzu ve günlük mutabakatını bekle.",
+          "refund": {
+            "submit": "İade gönder",
+            "preflight": "İade uygunluğunu doğrula ve GameHub çağrısını simüle et.",
+            "broadcast": "İadeyi cüzdan istemcisinden yayınla."
+          },
+          "finalize": {
+            "submit": "Finalize gönder",
+            "preflight": "Finalize uygunluğunu doğrula ve GameHub çağrısını simüle et.",
+            "broadcast": "Finalize'i cüzdan istemcisinden yayınla."
+          }
+        },
+        "toast": {
+          "refunded": "Bahis başarıyla iade edildi",
+          "refundFailed": "İade işlemi başarısız",
+          "finalized": "Bahis başarıyla finalize edildi",
+          "finalizeFailed": "Finalize işlemi başarısız"
+        },
+        "outcomes": {
+          "refunded": "İade edildi",
+          "netResult": "Net sonuç",
+          "loss": "Kayıp"
+        },
+        "metrics": {
+          "settlementState": {
+            "label": "Ödeme durumu",
+            "detail": "Yerel ve zincir üstü kaynaklardan mevcut yaşam döngüsü durumu."
+          },
+          "capitalAtRisk": {
+            "label": "Risk altındaki sermaye",
+            "detail": "Bilet yapıldığında taahhüt edilen orijinal bahis."
+          },
+          "settlement": {
+            "label": "Ödeme",
+            "realized": "Zincir üstünde gerçekleşen sonuç.",
+            "pending": "Sonuç henüz ödenmedi."
+          },
+          "receiptId": {
+            "label": "Makbuz kimliği",
+            "detail": "Çalışma zamanı ve indeksleyici izlerinde kullanılan kararlı tanımlayıcı."
+          }
+        },
+        "facts": {
+          "room": "Oda",
+          "ticketId": "Bilet kimliği",
+          "stake": "Bahis",
+          "vrfFeePaid": "Ödenen VRF ücreti",
+          "vrfFeeCharged": "Tahsil edilen VRF ücreti",
+          "vrfRequestId": "VRF istek kimliği",
+          "randomHash": "Rastgele hash",
+          "payout": "Ödeme",
+          "protocolFee": "Protokol ücreti",
+          "refund": "İade",
+          "placedAt": "Yapıldığı zaman",
+          "vrfRequestedAt": "VRF istendiği zaman",
+          "settledAt": "Ödendiği zaman",
+          "primaryTx": "Birincil işlem",
+          "player": "Oyuncu"
+        },
+        "factsSection": {
+          "eyebrow": "Yürütme bilgileri",
+          "title": "Makbuz matrisi"
+        },
+        "copy": {
+          "title": "{value} kopyala",
+          "copy": "Kopyala",
+          "copied": "Kopyalandı",
+          "failed": "Başarısız"
+        },
+        "lifecycle": {
+          "eyebrow": "Yaşam döngüsü kanıtı",
+          "title": "GameHub durumu",
+          "stepperTitle": "Bilet yaşam döngüsü",
+          "stepperSubtitle": "Yerleştirme, rastgelelik ve ödeme bağımsız olarak incelenebilir kalır.",
+          "releaseDigest": "Sürüm",
+          "asset": "Varlık",
+          "latestIndexedEvent": "Son indekslenmiş olay",
+          "steps": {
+            "placed": {
+              "title": "Yapıldı",
+              "description": "GameHub bileti kabul etti ve bahsi kilitledi."
+            },
+            "randomReady": {
+              "title": "Rastgele hazır",
+              "description": "VRF ödeme için rastgeleliği teslim etti."
+            },
+            "finalized": {
+              "title": "Finalize edildi",
+              "description": "GameHub ödemeyi veya kaybı sonuçlandırdı."
+            },
+            "refunded": {
+              "title": "İade edildi",
+              "description": "Bahis oyuncuya iade edildi."
+            }
+          }
+        },
+        "actions": {
+          "eyebrow": "Protokol eylemi",
+          "refundSurface": "İade yüzeyi",
+          "finalizeSurface": "Finalize yüzeyi",
+          "description": "Eylemler yalnızca GameHub durumu izin verdiğinde görünür. Yürütme izi bu makbuza bağlı kalır.",
+          "finalizing": "Finalize ediliyor...",
+          "finalizeTicket": "Bileti finalize et",
+          "refunding": "İade ediliyor...",
+          "refundStake": "Bahsi iade et",
+          "transactionError": "İşlem hatası",
+          "refundTrace": "İade izi",
+          "finalizeTrace": "Finalize izi",
+          "traceSubtitle": "Cüzdan imzası, yayın ve makbuz durumu.",
+          "status": "Durum",
+          "viewExplorer": "Gezgini aç",
+          "block": "Blok {blockNumber}",
+          "resetTrace": "İzi sıfırla"
+        },
+        "timeline": {
+          "eyebrow": "Zaman çizelgesi",
+          "title": "İndekslenmiş yaşam döngüsü olayları",
+          "columns": {
+            "timeTx": "Zaman / tx",
+            "event": "Olay",
+            "block": "Blok",
+            "status": "Durum"
+          },
+          "mobile": {
+            "time": "Zaman"
+          },
+          "empty": "Henüz indekslenmiş yaşam döngüsü olayı yok."
+        }
+      },
+      "loading": "Etkinlik yükleniyor…"
+    }
   }
 }
