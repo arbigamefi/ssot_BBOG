@@ -1,6 +1,6 @@
 import * as React from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GameRoomAuditLedger } from "./audit-ledger";
 import type { GameMeta } from "./model";
@@ -22,14 +22,29 @@ vi.mock("next/link", () => ({
   )
 }));
 
+// Tab is URL-driven (?tab=). A module-level value backs useSearchParams; the
+// router.replace mock parses the new URL and updates it. Tests set the tab via
+// `setTab(...)` before render to land on a given tab.
+let currentTab: string | null = null;
+const replaceMock = vi.fn((url: string) => {
+  const query = url.split("?")[1] ?? "";
+  currentTab = new URLSearchParams(query).get("tab");
+});
+function setTab(tab: string | null) {
+  currentTab = tab;
+}
+vi.mock("next/navigation", () => ({
+  useSearchParams: () => new URLSearchParams(currentTab ? `tab=${currentTab}` : ""),
+  useRouter: () => ({ replace: replaceMock }),
+  usePathname: () => "/casino/roulette"
+}));
+
 vi.mock("@heroicons/react/24/outline", () => ({
   ArrowTopRightOnSquareIcon: ({ className }: { className?: string }) => (
     <svg aria-hidden="true" className={className} />
   )
 }));
 
-// The My-Bets tab uses this hook — return an empty list with no loading state
-// so the tab renders its connect-wallet / empty path deterministically.
 vi.mock("../../betting/usePlayerBets", () => ({
   usePlayerBets: () => ({
     data: [],
@@ -42,7 +57,93 @@ vi.mock("../../betting/usePlayerBets", () => ({
   })
 }));
 
-// Mock per-game-info bets array via t.raw().
+const game: GameMeta = {
+  gameId: "0x1111111111111111111111111111111111111111",
+  slug: "roulette",
+  label: "European Roulette",
+  module: "0x2222222222222222222222222222222222222222"
+};
+
+// Analytics + leaderboard hooks — fixed postgres-backed data scoped to `game`.
+vi.mock("../useCasinoStats", () => ({
+  useCasinoStats: () => ({
+    data: {
+      source: "postgres",
+      asset: { address: "0xasset", decimals: 6, symbol: "USDC" },
+      stats: {
+        betCount: 5,
+        settledCount: 4,
+        wonCount: 2,
+        uniquePlayers: 3,
+        turnover: "50000000",
+        payout: "25000000",
+        payoutGross: "0"
+      },
+      games: [
+        {
+          gameId: "0x1111111111111111111111111111111111111111",
+          slug: "roulette",
+          label: "European Roulette",
+          betCount: 5,
+          settledCount: 4,
+          wonCount: 2,
+          uniquePlayers: 3,
+          turnover: "50000000",
+          payout: "25000000",
+          payoutGross: "0"
+        }
+      ]
+    }
+  }),
+  useCasinoLeaderboard: ({ by = "turnover" }: { by?: "turnover" | "topWin" } = {}) => ({
+    data:
+      by === "topWin"
+        ? {
+            source: "postgres",
+            by: "topWin",
+            gameId: "0x1111111111111111111111111111111111111111",
+            asset: { address: "0xasset", decimals: 6, symbol: "USDC" },
+            rows: [
+              {
+                rank: 1,
+                betId: "11",
+                player: "0xbbbb000000000000000000000000000000000002",
+                stake: "10000000",
+                payout: "300000000",
+                payoutGross: "300000000",
+                multiplierPpm: "30000000"
+              },
+              {
+                rank: 2,
+                betId: "10",
+                player: "0xaaaa000000000000000000000000000000000001",
+                stake: "10000000",
+                payout: "15000000",
+                payoutGross: "15000000",
+                multiplierPpm: "1500000"
+              }
+            ]
+          }
+        : {
+            source: "postgres",
+            by: "turnover",
+            gameId: "0x1111111111111111111111111111111111111111",
+            asset: { address: "0xasset", decimals: 6, symbol: "USDC" },
+            rows: [
+              {
+                rank: 1,
+                player: "0xcccc000000000000000000000000000000000003",
+                betCount: 4,
+                settledCount: 4,
+                turnover: "30000000",
+                payout: "0",
+                payoutGross: "0"
+              }
+            ]
+          }
+  })
+}));
+
 const GAME_INFO_BETS = [
   { key: "straight", label: "Straight up", coverage: "1 number", multiplier: "36×" },
   { key: "redBlack", label: "Red / Black", coverage: "18 numbers", multiplier: "2×" }
@@ -51,7 +152,8 @@ const GAME_INFO_BETS = [
 const TRANSLATIONS: Record<string, string> = {
   "casino.room.audit.tabs.live": "Live bets",
   "casino.room.audit.tabs.mine": "My bets",
-  "casino.room.audit.tabs.top": "Top wins",
+  "casino.room.audit.tabs.leaderboard": "Leaderboard",
+  "casino.room.audit.tabs.analytics": "Analytics",
   "casino.room.audit.tabs.info": "Game info",
   "casino.room.audit.columns.time": "Time",
   "casino.room.audit.columns.player": "Player",
@@ -61,6 +163,8 @@ const TRANSLATIONS: Record<string, string> = {
   "casino.room.audit.columns.state": "State",
   "casino.room.audit.columns.bet": "Bet",
   "casino.room.audit.columns.coverage": "Coverage",
+  "casino.room.audit.columns.bets": "Bets",
+  "casino.room.audit.columns.volume": "Volume",
   "casino.room.audit.emptyStates.live": "No bets yet",
   "casino.room.audit.emptyStates.mine": "You haven't played this game yet.",
   "casino.room.audit.emptyStates.top": "No wins yet",
@@ -84,11 +188,27 @@ const TRANSLATIONS: Record<string, string> = {
   "casino.room.audit.newActivityBadge": "{n} new",
   "casino.room.audit.onChain": "On {chain}",
   "casino.room.audit.viewBet": "View bet {betId}",
+  "casino.room.audit.leaderboard.title": "Leaderboard",
+  "casino.room.audit.leaderboard.empty": "No ranked players yet on this chain.",
+  "casino.room.audit.leaderboard.scope": "Ranked by turnover",
+  "casino.room.audit.leaderboard.scopeTopWin": "Ranked by payout multiple",
+  "casino.room.audit.leaderboard.views.turnover": "By volume",
+  "casino.room.audit.leaderboard.views.topWin": "Top wins",
+  "casino.room.audit.analytics.empty": "No analytics yet on this chain.",
+  "casino.room.audit.analytics.rtp": "RTP",
+  "casino.room.audit.analytics.wagered": "Total wagered",
+  "casino.room.audit.analytics.payout": "Total payout",
+  "casino.room.audit.analytics.transactions": "Transactions",
+  "casino.room.audit.analytics.won": "Won",
+  "casino.room.audit.analytics.gainRatio": "Gain ratio",
+  "casino.room.audit.analytics.bestEffort": "Indexed · best-effort",
+  "casino.room.audit.analytics.players": "Players",
   "casino.room.gameInfo.roulette.tagline": "European roulette tagline.",
   "casino.room.gameInfo.roulette.houseEdge": "2.70%"
 };
 
 vi.mock("next-intl", () => ({
+  useLocale: () => "en",
   useTranslations: () => {
     const t = (key: string, values?: Record<string, string | number>) => {
       const template = TRANSLATIONS[key];
@@ -104,22 +224,18 @@ vi.mock("next-intl", () => ({
   }
 }));
 
-const game: GameMeta = {
-  gameId: "0x1111111111111111111111111111111111111111",
-  slug: "roulette",
-  label: "European Roulette",
-  module: "0x2222222222222222222222222222222222222222"
-};
-
 describe("GameRoomAuditLedger", () => {
+  beforeEach(() => {
+    currentTab = null;
+    replaceMock.mockClear();
+  });
   afterEach(() => cleanup());
 
-  it("renders all four tab buttons", () => {
+  it("renders all five tab buttons", () => {
     render(<GameRoomAuditLedger game={game} betAmount={10} recentBets={[]} />);
-    expect(screen.getByRole("button", { name: "Live bets" })).toBeDefined();
-    expect(screen.getByRole("button", { name: "My bets" })).toBeDefined();
-    expect(screen.getByRole("button", { name: "Top wins" })).toBeDefined();
-    expect(screen.getByRole("button", { name: "Game info" })).toBeDefined();
+    for (const name of ["Live bets", "My bets", "Leaderboard", "Analytics", "Game info"]) {
+      expect(screen.getByRole("button", { name })).toBeDefined();
+    }
   });
 
   it("shows the live-bets empty state when recentBets is empty", () => {
@@ -138,8 +254,8 @@ describe("GameRoomAuditLedger", () => {
             betId: "1",
             player: "0xabcdef1234567890abcdef1234567890abcdef12",
             state: "finalized",
-            stake: "10000000", // 10 USDC (6 decimals)
-            payout: "25000000", // 25 USDC win → 2.50×
+            stake: "10000000",
+            payout: "25000000",
             updatedAt: Date.now()
           }
         ]}
@@ -150,15 +266,21 @@ describe("GameRoomAuditLedger", () => {
     expect(screen.getByText("2.50×")).toBeDefined();
   });
 
-  it("switches to the connect-wallet empty state when My bets is opened without a wallet", () => {
+  it("writes the active tab to the URL when a tab is clicked", () => {
     render(<GameRoomAuditLedger game={game} betAmount={10} recentBets={[]} />);
-    fireEvent.click(screen.getByRole("button", { name: "My bets" }));
+    fireEvent.click(screen.getByRole("button", { name: "Leaderboard" }));
+    expect(replaceMock).toHaveBeenCalledWith("/casino/roulette?tab=leaderboard", { scroll: false });
+  });
+
+  it("shows the connect-wallet empty state on the My bets tab without a wallet", () => {
+    setTab("mine");
+    render(<GameRoomAuditLedger game={game} betAmount={10} recentBets={[]} />);
     expect(screen.getByText("Connect your wallet to see your history.")).toBeDefined();
   });
 
   it("renders the game-info table from t.raw bets array", () => {
+    setTab("info");
     render(<GameRoomAuditLedger game={game} betAmount={10} recentBets={[]} />);
-    fireEvent.click(screen.getByRole("button", { name: "Game info" }));
     expect(screen.getByText("European roulette tagline.")).toBeDefined();
     expect(screen.getByText("2.70%")).toBeDefined();
     expect(screen.getByText("Straight up")).toBeDefined();
@@ -184,7 +306,6 @@ describe("GameRoomAuditLedger", () => {
         ]}
       />
     );
-    // The explorer link replaces the internal portfolio fallback.
     const link = screen.getByRole("link", { name: "Open on Base Sepolia block explorer" });
     expect(link.getAttribute("href")).toBe("https://sepolia.basescan.org/tx/0xdeadbeef");
     expect(link.getAttribute("target")).toBe("_blank");
@@ -217,8 +338,7 @@ describe("GameRoomAuditLedger", () => {
   });
 
   it("filters My bets by state when the strip is clicked", () => {
-    // usePlayerBets is mocked to return [], so even with state filter the result
-    // is empty. We instead check that the strip is rendered and clickable.
+    setTab("mine");
     render(
       <GameRoomAuditLedger
         game={game}
@@ -228,40 +348,37 @@ describe("GameRoomAuditLedger", () => {
         playerAddress="0x1234567890abcdef1234567890abcdef12345678"
       />
     );
-    fireEvent.click(screen.getByRole("button", { name: "My bets" }));
     expect(screen.getByRole("tab", { name: "All", selected: true })).toBeDefined();
     fireEvent.click(screen.getByRole("tab", { name: "Won" }));
     expect(screen.getByRole("tab", { name: "Won", selected: true })).toBeDefined();
   });
 
-  it("ranks Top wins by multiplier and hides time column", () => {
-    render(
-      <GameRoomAuditLedger
-        game={game}
-        betAmount={10}
-        recentBets={[
-          {
-            id: "84532:10",
-            betId: "10",
-            player: "0xaaaa000000000000000000000000000000000001",
-            state: "finalized",
-            stake: "10000000",
-            payout: "15000000" // 1.50×
-          },
-          {
-            id: "84532:11",
-            betId: "11",
-            player: "0xbbbb000000000000000000000000000000000002",
-            state: "finalized",
-            stake: "10000000",
-            payout: "300000000" // 30.00× — should appear first
-          }
-        ]}
-      />
-    );
-    fireEvent.click(screen.getByRole("button", { name: "Top wins" }));
+  it("shows the per-game turnover leaderboard on the Leaderboard tab", () => {
+    setTab("leaderboard");
+    render(<GameRoomAuditLedger game={game} betAmount={10} chainId={84532} recentBets={[]} />);
+    // Ranked player + formatted turnover (30 USDC from "30000000" @ 6 decimals, trailing zeros trimmed).
+    expect(screen.getByText("30 USDC")).toBeDefined();
+    expect(screen.getByRole("tab", { name: "By volume", selected: true })).toBeDefined();
+  });
+
+  it("shows durable top wins by multiplier inside the Leaderboard tab", () => {
+    setTab("leaderboard");
+    render(<GameRoomAuditLedger game={game} betAmount={10} recentBets={[]} />);
+    fireEvent.click(screen.getByRole("tab", { name: "Top wins" }));
     const multipliers = screen.getAllByText(/\d+\.\d{2}×/);
     expect(multipliers[0]?.textContent).toBe("30.00×");
     expect(multipliers[1]?.textContent).toBe("1.50×");
+  });
+
+  it("shows per-game professional analytics (RTP, gain ratio, payout) on the Analytics tab", () => {
+    setTab("analytics");
+    render(<GameRoomAuditLedger game={game} betAmount={10} chainId={84532} recentBets={[]} />);
+    // turnover 50, payout 25 → RTP 50.00%; wonCount 2 / betCount 5 → 40.00%.
+    expect(screen.getByText("50.00%")).toBeDefined(); // RTP headline
+    expect(screen.getByText("50 USDC")).toBeDefined(); // total wagered
+    expect(screen.getByText("25 USDC")).toBeDefined(); // total payout
+    expect(screen.getByText("40.00%")).toBeDefined(); // gain ratio
+    expect(screen.getByText("2")).toBeDefined(); // won count
+    expect(screen.getByText("3")).toBeDefined(); // unique players
   });
 });

@@ -1,11 +1,14 @@
 import * as React from "react";
 import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { cn } from "@ssot/ui";
 
 import { mapBetState, shortHex, type GameMeta } from "./model";
 import { usePlayerBets } from "../../betting/usePlayerBets";
+import { useCasinoLeaderboard, useCasinoStats } from "../useCasinoStats";
+import { formatTokenAmount } from "../../marketing/format";
 import {
   getAppChain,
   getExplorerAddressUrl,
@@ -28,7 +31,8 @@ export type GameAuditBet = {
   lastTxHash?: string;
 };
 
-type AuditTab = "live" | "mine" | "top" | "info";
+type AuditTab = "live" | "mine" | "leaderboard" | "analytics" | "info";
+const AUDIT_TABS: readonly AuditTab[] = ["live", "mine", "leaderboard", "analytics", "info"];
 type StateFilter = "all" | "pending" | "won" | "lost" | "refunded";
 
 type GameInfoBet = {
@@ -45,25 +49,24 @@ type Translate = ReturnType<typeof useTranslations>;
  * When new finalized+win rows appear in a tab that isn't active, we surface
  * an unread badge until the user clicks that tab.
  */
+type UnreadTab = "live" | "mine";
+
+function emptyUnread(): Record<AuditTab, number> {
+  return { live: 0, mine: 0, leaderboard: 0, analytics: 0, info: 0 };
+}
+
 function useUnreadBadge(
   liveRows: readonly GameAuditBet[],
   myRows: readonly GameAuditBet[],
-  topRows: readonly GameAuditBet[],
   activeTab: AuditTab
 ) {
-  // Per-tab "seen" sets — sets of bet IDs we've already shown to the user.
-  const seenRef = React.useRef<Record<AuditTab, Set<string>>>({
+  // Only the row-feed tabs (live / mine) carry an unread concept. Leaderboard
+  // and analytics are aggregate views with no per-row "new" signal.
+  const seenRef = React.useRef<Record<UnreadTab, Set<string>>>({
     live: new Set(),
-    mine: new Set(),
-    top: new Set(),
-    info: new Set()
+    mine: new Set()
   });
-  const [unread, setUnread] = React.useState<Record<AuditTab, number>>({
-    live: 0,
-    mine: 0,
-    top: 0,
-    info: 0
-  });
+  const [unread, setUnread] = React.useState<Record<AuditTab, number>>(emptyUnread);
 
   // On first render, mark everything currently visible as seen — we don't
   // want stale rows to count as "new" the moment the user lands on the page.
@@ -73,25 +76,15 @@ function useUnreadBadge(
     hydratedRef.current = true;
     for (const row of liveRows) seenRef.current.live.add(String(row.betId));
     for (const row of myRows) seenRef.current.mine.add(String(row.betId));
-    for (const row of topRows) seenRef.current.top.add(String(row.betId));
-  }, [liveRows, myRows, topRows]);
+  }, [liveRows, myRows]);
 
   const bump = React.useCallback(
-    (tab: AuditTab, rows: readonly GameAuditBet[], winsOnly: boolean) => {
+    (tab: UnreadTab, rows: readonly GameAuditBet[]) => {
       const seen = seenRef.current[tab];
       let added = 0;
       for (const row of rows) {
         const id = String(row.betId);
         if (seen.has(id)) continue;
-        if (winsOnly) {
-          const stake = toBigOrNull(row.stake);
-          const payout = toBigOrNull(row.payout);
-          if (!stake || !payout || payout <= stake) {
-            // Still mark as seen so a later state transition doesn't double-count.
-            seen.add(id);
-            continue;
-          }
-        }
         seen.add(id);
         added += 1;
       }
@@ -104,16 +97,12 @@ function useUnreadBadge(
 
   React.useEffect(() => {
     if (!hydratedRef.current) return;
-    bump("live", liveRows, false);
+    bump("live", liveRows);
   }, [bump, liveRows]);
   React.useEffect(() => {
     if (!hydratedRef.current) return;
-    bump("mine", myRows, false);
+    bump("mine", myRows);
   }, [bump, myRows]);
-  React.useEffect(() => {
-    if (!hydratedRef.current) return;
-    bump("top", topRows, true);
-  }, [bump, topRows]);
 
   // Clearing on activate is intentional — clicking the tab acknowledges new rows.
   const clear = React.useCallback((tab: AuditTab) => {
@@ -143,8 +132,18 @@ export function GameRoomAuditLedger({
   chainId?: number;
 }) {
   const t = useTranslations();
-  const [activeTab, setActiveTab] = React.useState<AuditTab>("live");
+  const locale = useLocale();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [stateFilter, setStateFilter] = React.useState<StateFilter>("all");
+
+  // Tab is URL-driven (?tab=) so it's deep-linkable, shareable, and survives
+  // refresh. Falls back to "live" for missing/invalid values.
+  const tabParam = searchParams.get("tab");
+  const activeTab: AuditTab = AUDIT_TABS.includes(tabParam as AuditTab)
+    ? (tabParam as AuditTab)
+    : "live";
 
   const playerBetsQuery = usePlayerBets({
     enabled: Boolean(playerAddress && activeTab === "mine"),
@@ -163,29 +162,21 @@ export function GameRoomAuditLedger({
     [playerBets, stateFilter]
   );
 
-  // Top wins = finalized bets with a payout > stake, ranked by multiplier desc.
-  const topBets = React.useMemo(() => {
-    const scored: Array<{ row: GameAuditBet; multiplier: number }> = [];
-    for (const row of recentBets) {
-      const stake = toBigOrNull(row.stake);
-      const payout = toBigOrNull(row.payout);
-      if (!stake || stake === 0n || !payout || payout <= stake) continue;
-      const ratio = Number((payout * 1_000_000n) / stake) / 1_000_000;
-      scored.push({ row, multiplier: ratio });
-    }
-    scored.sort((a, b) => b.multiplier - a.multiplier);
-    return scored.slice(0, 10);
-  }, [recentBets]);
-  const topRows = React.useMemo(() => topBets.map((s) => s.row), [topBets]);
-
-  const { unread, clear } = useUnreadBadge(recentBets, playerBets, topRows, activeTab);
+  const { unread, clear } = useUnreadBadge(recentBets, playerBets, activeTab);
 
   const handleTab = React.useCallback(
     (tab: AuditTab) => {
-      setActiveTab(tab);
       clear(tab);
+      const params = new URLSearchParams(searchParams.toString());
+      if (tab === "live") {
+        params.delete("tab");
+      } else {
+        params.set("tab", tab);
+      }
+      const qs = params.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     },
-    [clear]
+    [clear, pathname, router, searchParams]
   );
 
   const chain = chainId != null ? getAppChain(chainId) : undefined;
@@ -193,7 +184,8 @@ export function GameRoomAuditLedger({
   const tabs: Array<{ id: AuditTab; label: string }> = [
     { id: "live", label: t("casino.room.audit.tabs.live") },
     { id: "mine", label: t("casino.room.audit.tabs.mine") },
-    { id: "top", label: t("casino.room.audit.tabs.top") },
+    { id: "leaderboard", label: t("casino.room.audit.tabs.leaderboard") },
+    { id: "analytics", label: t("casino.room.audit.tabs.analytics") },
     { id: "info", label: t("casino.room.audit.tabs.info") }
   ];
 
@@ -289,18 +281,17 @@ export function GameRoomAuditLedger({
             onStateFilterChange={setStateFilter}
           />
         )}
-        {activeTab === "top" && (
-          <BetTable
-            rows={topRows}
-            kind="top"
+        {activeTab === "leaderboard" && (
+          <LeaderboardPanel
+            gameId={game.gameId}
             t={t}
+            locale={locale}
             assetSymbol={assetSymbol}
             assetDecimals={assetDecimals}
-            emptyKey="top"
-            multipliers={topBets.map((s) => s.multiplier)}
             chainId={chainId}
           />
         )}
+        {activeTab === "analytics" && <AnalyticsPanel gameId={game.gameId} t={t} locale={locale} />}
         {activeTab === "info" && <GameInfoPanel slug={game.slug} t={t} />}
       </div>
     </div>
@@ -614,6 +605,387 @@ function GameInfoPanel({ slug, t }: { slug: string; t: Translate }) {
           </table>
         </div>
       </section>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+ *  Leaderboard tab
+ * ──────────────────────────────────────────────────────────────────────── */
+
+type LeaderboardView = "turnover" | "topWin";
+
+function LeaderboardPanel({
+  gameId,
+  t,
+  locale,
+  assetSymbol,
+  assetDecimals,
+  chainId
+}: {
+  gameId?: string;
+  t: Translate;
+  locale: string;
+  assetSymbol: string;
+  assetDecimals: number;
+  chainId?: number;
+}) {
+  const [view, setView] = React.useState<LeaderboardView>("turnover");
+  const board = useCasinoLeaderboard({
+    by: view,
+    gameId,
+    limit: 10
+  });
+
+  const rows = board.data?.rows ?? [];
+  const unavailable = board.data?.source === "unavailable";
+  const chain = chainId != null ? getAppChain(chainId) : undefined;
+  const turnoverRows: LeaderboardRow[] = rows.flatMap((row) => {
+    if (row.betCount == null || row.settledCount == null || row.turnover == null) return [];
+    return [
+      {
+        betCount: row.betCount,
+        player: row.player,
+        rank: row.rank,
+        turnover: row.turnover
+      }
+    ];
+  });
+  const topWinRows = rows.flatMap((row): GameAuditBet[] => {
+    if (!row.betId || !row.stake || !row.multiplierPpm) return [];
+    return [
+      {
+        betId: row.betId,
+        gameId: row.gameId,
+        id: `top-win:${row.betId}`,
+        payout: row.payout,
+        player: row.player,
+        stake: row.stake,
+        state: "finalized"
+      }
+    ];
+  });
+  const topWinMultipliers = rows.flatMap((row) =>
+    row.betId && row.stake && row.multiplierPpm ? [Number(row.multiplierPpm) / 1_000_000] : []
+  );
+  const hasRenderableRows = view === "topWin" ? topWinRows.length > 0 : turnoverRows.length > 0;
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* turnover ↔ top-wins toggle */}
+      <div
+        role="tablist"
+        aria-label={t("casino.room.audit.leaderboard.title")}
+        className="flex gap-1.5"
+      >
+        {(["turnover", "topWin"] as LeaderboardView[]).map((option) => {
+          const active = option === view;
+          return (
+            <button
+              key={option}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => setView(option)}
+              className={cn(
+                "rounded-md border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] transition-colors",
+                active
+                  ? "border-brand bg-brand-soft text-brand"
+                  : "border-border-soft bg-surface-0 text-fg-muted hover:border-brand/40 hover:text-fg"
+              )}
+            >
+              {t(`casino.room.audit.leaderboard.views.${option}`)}
+            </button>
+          );
+        })}
+      </div>
+
+      {unavailable || !hasRenderableRows ? (
+        <EmptyState message={t("casino.room.audit.leaderboard.empty")} />
+      ) : view === "topWin" ? (
+        <BetTable
+          rows={topWinRows}
+          kind="top"
+          t={t}
+          assetSymbol={assetSymbol}
+          assetDecimals={assetDecimals}
+          emptyKey="top"
+          multipliers={topWinMultipliers}
+          chainId={chainId}
+        />
+      ) : (
+        <div className="flex flex-col gap-4">
+          {/* Podium — top 3 get a dedicated gold/silver/bronze treatment to
+              drive aspiration. Reordered to silver-gold-bronze for a podium
+              shape on >=sm. */}
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            {podiumOrder(turnoverRows.slice(0, 3)).map((row) => (
+              <PodiumCard
+                key={row.player}
+                row={row}
+                t={t}
+                locale={locale}
+                assetSymbol={assetSymbol}
+                assetDecimals={assetDecimals}
+                chainId={chainId}
+              />
+            ))}
+          </div>
+
+          {/* Ranks 4+ as a compact list. */}
+          {turnoverRows.length > 3 && (
+            <div className="overflow-x-auto custom-scrollbar">
+              <div className="min-w-[420px]">
+                <header className="grid grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1fr)] items-center gap-3 border-b border-border-soft pb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-fg-subtle">
+                  <span>#</span>
+                  <span>{t("casino.room.audit.columns.player")}</span>
+                  <span className="text-right">{t("casino.room.audit.columns.bets")}</span>
+                  <span className="text-right">{t("casino.room.audit.columns.volume")}</span>
+                </header>
+                <ol className="mt-2 flex flex-col gap-1.5">
+                  {turnoverRows.slice(3).map((row) => {
+                    const explorer = getExplorerAddressUrl(chainId, row.player);
+                    return (
+                      <li
+                        key={row.player}
+                        className="grid grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1fr)] items-center gap-3 rounded-lg border border-border-soft bg-surface-0 px-4 py-3 text-sm"
+                      >
+                        <span className="font-mono text-xs font-bold text-fg-subtle">
+                          {row.rank}
+                        </span>
+                        <span className="font-mono text-xs text-fg">
+                          {explorer ? (
+                            <a
+                              href={explorer}
+                              target="_blank"
+                              rel="noreferrer noopener"
+                              className="hover:text-brand"
+                            >
+                              {shortHex(row.player)}
+                            </a>
+                          ) : (
+                            shortHex(row.player)
+                          )}
+                        </span>
+                        <span className="text-right font-mono text-xs text-fg-muted">
+                          {row.betCount.toLocaleString(locale)}
+                        </span>
+                        <span className="text-right font-mono text-xs font-bold text-fg">
+                          {formatTokenAmount(
+                            BigInt(row.turnover),
+                            assetDecimals,
+                            assetSymbol,
+                            locale
+                          )}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {chain && (
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-subtle">
+          {t("casino.room.audit.onChain", { chain: chain.shortName })} ·{" "}
+          {t(
+            view === "topWin"
+              ? "casino.room.audit.leaderboard.scopeTopWin"
+              : "casino.room.audit.leaderboard.scope"
+          )}
+        </p>
+      )}
+    </div>
+  );
+}
+
+type LeaderboardRow = {
+  rank: number;
+  player: string;
+  betCount: number;
+  turnover: string;
+};
+
+/** Reorder [1st,2nd,3rd] → [2nd,1st,3rd] so the winner sits center on a podium. */
+function podiumOrder(top: readonly LeaderboardRow[]): LeaderboardRow[] {
+  if (top.length === 3) return [top[1]!, top[0]!, top[2]!];
+  return [...top];
+}
+
+const PODIUM_STYLE: Record<number, { ring: string; medal: string; label: string }> = {
+  1: { ring: "border-accent/60 bg-accent-soft", medal: "bg-accent text-fg-inverse", label: "🥇" },
+  2: { ring: "border-border bg-surface-2", medal: "bg-surface-3 text-fg", label: "🥈" },
+  3: { ring: "border-border-soft bg-surface-1", medal: "bg-surface-3 text-fg-muted", label: "🥉" }
+};
+
+function PodiumCard({
+  row,
+  t,
+  locale,
+  assetSymbol,
+  assetDecimals,
+  chainId
+}: {
+  row: LeaderboardRow;
+  t: Translate;
+  locale: string;
+  assetSymbol: string;
+  assetDecimals: number;
+  chainId?: number;
+}) {
+  const style = PODIUM_STYLE[row.rank] ?? PODIUM_STYLE[3]!;
+  const explorer = getExplorerAddressUrl(chainId, row.player);
+  // The winner card lifts slightly to read as a podium center.
+  const elevated = row.rank === 1;
+  return (
+    <div
+      className={cn(
+        "flex flex-col items-center gap-2 rounded-xl border p-3 text-center shadow-e1",
+        style.ring,
+        elevated && "sm:-translate-y-2"
+      )}
+    >
+      <span
+        className={cn(
+          "flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold",
+          style.medal
+        )}
+        aria-hidden
+      >
+        {style.label}
+      </span>
+      <span className="font-mono text-[11px] text-fg">
+        {explorer ? (
+          <a href={explorer} target="_blank" rel="noreferrer noopener" className="hover:text-brand">
+            {shortHex(row.player)}
+          </a>
+        ) : (
+          shortHex(row.player)
+        )}
+      </span>
+      <span
+        className="w-full truncate font-mono text-sm font-bold text-fg"
+        title={formatTokenAmount(BigInt(row.turnover), assetDecimals, assetSymbol, locale)}
+      >
+        {formatTokenAmount(BigInt(row.turnover), assetDecimals, assetSymbol, locale)}
+      </span>
+      <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-fg-subtle">
+        {row.betCount.toLocaleString(locale)} {t("casino.room.audit.columns.bets")}
+      </span>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+ *  Analytics tab
+ * ──────────────────────────────────────────────────────────────────────── */
+
+/** Ratio of two bigint strings as a percentage string, e.g. "99.01%". */
+function percentOf(numerator: string, denominator: string): string | null {
+  const den = BigInt(denominator || "0");
+  if (den === 0n) return null;
+  const num = BigInt(numerator || "0");
+  // basis points for 2-decimal precision
+  const bps = Number((num * 10000n) / den) / 100;
+  return `${bps.toFixed(2)}%`;
+}
+
+function AnalyticsPanel({ gameId, t, locale }: { gameId?: string; t: Translate; locale: string }) {
+  const stats = useCasinoStats();
+  const game = stats.data?.games.find(
+    (g) => !gameId || g.gameId.toLowerCase() === gameId.toLowerCase()
+  );
+  const unavailable = stats.data?.source === "unavailable";
+  const decimals = stats.data?.asset.decimals ?? 6;
+  const symbol = stats.data?.asset.symbol ?? "USDC";
+
+  if (unavailable || !game) {
+    return <EmptyState message={t("casino.room.audit.analytics.empty")} />;
+  }
+
+  // RTP = total payout / total wagered. Gain ratio = winning bets / all bets.
+  // Both are indexed best-effort observations, not the contract's design edge.
+  const rtp = percentOf(game.payout, game.turnover);
+  const gainRatio =
+    game.betCount > 0 ? `${((game.wonCount / game.betCount) * 100).toFixed(2)}%` : null;
+
+  // Headline metric — RTP. Highlighted to drive the "high payout" perception.
+  const headline = {
+    label: t("casino.room.audit.analytics.rtp"),
+    value: rtp ?? "—"
+  };
+  const cards: Array<{ key: string; label: string; value: string; tone?: "win" }> = [
+    {
+      key: "wagered",
+      label: t("casino.room.audit.analytics.wagered"),
+      value: formatTokenAmount(BigInt(game.turnover), decimals, symbol, locale)
+    },
+    {
+      key: "payout",
+      label: t("casino.room.audit.analytics.payout"),
+      value: formatTokenAmount(BigInt(game.payout), decimals, symbol, locale),
+      tone: "win"
+    },
+    {
+      key: "transactions",
+      label: t("casino.room.audit.analytics.transactions"),
+      value: game.betCount.toLocaleString(locale)
+    },
+    {
+      key: "won",
+      label: t("casino.room.audit.analytics.won"),
+      value: game.wonCount.toLocaleString(locale),
+      tone: "win"
+    },
+    {
+      key: "gainRatio",
+      label: t("casino.room.audit.analytics.gainRatio"),
+      value: gainRatio ?? "—"
+    },
+    {
+      key: "players",
+      label: t("casino.room.audit.analytics.players"),
+      value: game.uniquePlayers.toLocaleString(locale)
+    }
+  ];
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Headline RTP — large, accent-framed. */}
+      <div className="rounded-xl border border-accent/30 bg-accent-soft p-5 shadow-e1">
+        <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-accent">
+          {headline.label}
+        </div>
+        <div className="mt-1 font-mono text-4xl font-bold text-accent">{headline.value}</div>
+        <div className="mt-1 text-[10px] uppercase tracking-[0.14em] text-fg-subtle">
+          {t("casino.room.audit.analytics.bestEffort")}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {cards.map((card) => (
+          <div
+            key={card.key}
+            className="rounded-xl border border-border-soft bg-surface-0 p-4 shadow-e1"
+          >
+            <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
+              {card.label}
+            </div>
+            <div
+              className={cn(
+                "mt-2 truncate font-mono text-xl font-bold",
+                card.tone === "win" ? "text-success" : "text-fg"
+              )}
+              title={card.value}
+            >
+              {card.value}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

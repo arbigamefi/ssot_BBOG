@@ -656,7 +656,10 @@
       },
       "stats": {
         "rooms": "Jogos disponíveis",
-        "asset": "Joga em"
+        "asset": "Joga em",
+        "volume": "Volume total",
+        "bets": "Total de apostas",
+        "players": "Jogadores"
       },
       "filters": {
         "all": "Todos os jogos",
@@ -1129,7 +1132,9 @@
           "live": "Apostas ao vivo",
           "mine": "Minhas apostas",
           "top": "Maiores ganhos",
-          "info": "Info do jogo"
+          "info": "Info do jogo",
+          "leaderboard": "Ranking",
+          "analytics": "Análises"
         },
         "columns": {
           "time": "Horário",
@@ -1140,12 +1145,14 @@
           "state": "Estado",
           "bet": "Aposta",
           "coverage": "Cobertura",
-          "winChance": "Chance de ganhar"
+          "winChance": "Chance de ganhar",
+          "bets": "Apostas",
+          "volume": "Volume"
         },
         "emptyStates": {
           "live": "Nenhuma aposta ainda — seja o primeiro a jogar.",
           "mine": "Você ainda não jogou este jogo.",
-          "top": "Nenhum ganho indexado nesta rede ainda.",
+          "top": "Nenhum ganho classificado nesta rede ainda.",
           "connectWallet": "Conecte a carteira para ver seu histórico."
         },
         "viewBet": "Ver aposta {betId}",
@@ -1173,7 +1180,31 @@
         "openOnExplorer": "Abrir transação no explorador de blocos",
         "openOnExplorerWithChain": "Abrir no explorador da {chain}",
         "newActivityBadge": "{n} nova(s)",
-        "onChain": "Na {chain}"
+        "onChain": "Na {chain}",
+        "leaderboard": {
+          "title": "Ranking",
+          "empty": "Nenhum jogador classificado nesta rede ainda.",
+          "scope": "Classificado por volume",
+          "scopeTopWin": "Classificado por múltiplo de pagamento",
+          "views": {
+            "turnover": "Por volume",
+            "topWin": "Maiores ganhos"
+          }
+        },
+        "analytics": {
+          "empty": "Nenhuma análise nesta rede ainda.",
+          "volume": "Volume",
+          "bets": "Apostas",
+          "players": "Jogadores",
+          "settled": "Liquidadas",
+          "rtp": "RTP",
+          "wagered": "Total apostado",
+          "payout": "Total pago",
+          "transactions": "Transações",
+          "won": "Ganhas",
+          "gainRatio": "Taxa de ganho",
+          "bestEffort": "Indexado · melhor esforço"
+        }
       },
       "errors": {
         "quoteFailed": "Não foi possível estimar a taxa do VRF.",

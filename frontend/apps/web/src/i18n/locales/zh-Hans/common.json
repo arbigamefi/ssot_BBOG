@@ -183,7 +183,9 @@
           "live": "实时下注",
           "mine": "我的记录",
           "top": "高倍中奖",
-          "info": "玩法说明"
+          "info": "玩法说明",
+          "leaderboard": "排行榜",
+          "analytics": "数据分析"
         },
         "columns": {
           "time": "时间",
@@ -194,12 +196,14 @@
           "state": "状态",
           "bet": "下注",
           "coverage": "覆盖",
-          "winChance": "胜率"
+          "winChance": "胜率",
+          "bets": "下注数",
+          "volume": "投注额"
         },
         "emptyStates": {
           "live": "暂无下注 —— 来当第一个玩家。",
           "mine": "你还没玩过这个游戏。",
-          "top": "当前链上还没有中奖记录。",
+          "top": "当前链上还没有进入排名的中奖记录。",
           "connectWallet": "连接钱包后即可查看你的下注记录。"
         },
         "viewBet": "查看下注 {betId}",
@@ -227,7 +231,31 @@
         "openOnExplorer": "在区块浏览器中打开交易",
         "openOnExplorerWithChain": "在 {chain} 区块浏览器中打开",
         "newActivityBadge": "{n} 条新",
-        "onChain": "在 {chain}"
+        "onChain": "在 {chain}",
+        "leaderboard": {
+          "title": "排行榜",
+          "empty": "当前链上还没有排名玩家。",
+          "scope": "按投注额排名",
+          "scopeTopWin": "按派彩倍数排名",
+          "views": {
+            "turnover": "按投注额",
+            "topWin": "高倍中奖"
+          }
+        },
+        "analytics": {
+          "empty": "当前链上还没有分析数据。",
+          "volume": "投注额",
+          "bets": "下注数",
+          "players": "玩家数",
+          "settled": "已结算",
+          "rtp": "返还率 (RTP)",
+          "wagered": "总投注额",
+          "payout": "总派彩",
+          "transactions": "交易数",
+          "won": "中奖数",
+          "gainRatio": "中奖率",
+          "bestEffort": "索引数据 · 仅供参考"
+        }
       },
       "errors": {
         "quoteFailed": "无法估算 VRF 费用。",
@@ -838,7 +866,10 @@
       },
       "stats": {
         "rooms": "在线游戏",
-        "asset": "结算资产"
+        "asset": "结算资产",
+        "volume": "总投注额",
+        "bets": "总下注数",
+        "players": "玩家数"
       },
       "filters": {
         "all": "全部",

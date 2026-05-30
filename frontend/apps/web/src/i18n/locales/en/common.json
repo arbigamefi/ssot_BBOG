@@ -183,7 +183,9 @@
           "live": "Live bets",
           "mine": "My bets",
           "top": "Top wins",
-          "info": "Game info"
+          "info": "Game info",
+          "leaderboard": "Leaderboard",
+          "analytics": "Analytics"
         },
         "columns": {
           "time": "Time",
@@ -194,12 +196,14 @@
           "state": "State",
           "bet": "Bet",
           "coverage": "Coverage",
-          "winChance": "Win chance"
+          "winChance": "Win chance",
+          "bets": "Bets",
+          "volume": "Volume"
         },
         "emptyStates": {
           "live": "No bets yet — be the first to play.",
           "mine": "You haven't played this game yet.",
-          "top": "No wins indexed yet on this chain.",
+          "top": "No winning bets ranked yet on this chain.",
           "connectWallet": "Connect your wallet to see your history."
         },
         "viewBet": "View bet {betId}",
@@ -227,7 +231,31 @@
         "openOnExplorer": "Open transaction on block explorer",
         "openOnExplorerWithChain": "Open on {chain} block explorer",
         "newActivityBadge": "{n} new",
-        "onChain": "On {chain}"
+        "onChain": "On {chain}",
+        "leaderboard": {
+          "title": "Leaderboard",
+          "empty": "No ranked players yet on this chain.",
+          "scope": "Ranked by turnover",
+          "scopeTopWin": "Ranked by payout multiple",
+          "views": {
+            "turnover": "By volume",
+            "topWin": "Top wins"
+          }
+        },
+        "analytics": {
+          "empty": "No analytics yet on this chain.",
+          "volume": "Volume",
+          "bets": "Bets",
+          "players": "Players",
+          "settled": "Settled",
+          "rtp": "RTP",
+          "wagered": "Total wagered",
+          "payout": "Total payout",
+          "transactions": "Transactions",
+          "won": "Won",
+          "gainRatio": "Gain ratio",
+          "bestEffort": "Indexed · best-effort"
+        }
       },
       "errors": {
         "quoteFailed": "Unable to estimate VRF fee.",
@@ -838,7 +866,10 @@
       },
       "stats": {
         "rooms": "Games available",
-        "asset": "Plays in"
+        "asset": "Plays in",
+        "volume": "Total volume",
+        "bets": "Total bets",
+        "players": "Players"
       },
       "filters": {
         "all": "All games",

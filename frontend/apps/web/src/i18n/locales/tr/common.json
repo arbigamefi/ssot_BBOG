@@ -656,7 +656,10 @@
       },
       "stats": {
         "rooms": "Mevcut oyunlar",
-        "asset": "Şununla oynar"
+        "asset": "Şununla oynar",
+        "volume": "Toplam hacim",
+        "bets": "Toplam bahis",
+        "players": "Oyuncular"
       },
       "filters": {
         "all": "Tüm oyunlar",
@@ -1129,7 +1132,9 @@
           "live": "Canlı bahisler",
           "mine": "Bahislerim",
           "top": "En çok kazananlar",
-          "info": "Oyun bilgisi"
+          "info": "Oyun bilgisi",
+          "leaderboard": "Sıralama",
+          "analytics": "Analitik"
         },
         "columns": {
           "time": "Zaman",
@@ -1140,12 +1145,14 @@
           "state": "Durum",
           "bet": "Bahis",
           "coverage": "Kapsam",
-          "winChance": "Kazanma şansı"
+          "winChance": "Kazanma şansı",
+          "bets": "Bahisler",
+          "volume": "Hacim"
         },
         "emptyStates": {
           "live": "Henüz bahis yok — ilk oynayan siz olun.",
           "mine": "Bu oyunu henüz oynamadınız.",
-          "top": "Bu ağda henüz indekslenmiş kazanç yok.",
+          "top": "Bu ağda henüz sıralanan kazanç yok.",
           "connectWallet": "Geçmişinizi görmek için cüzdanı bağlayın."
         },
         "viewBet": "{betId} bahsini gör",
@@ -1173,7 +1180,31 @@
         "openOnExplorer": "İşlemi blok gezgininde aç",
         "openOnExplorerWithChain": "{chain} gezgininde aç",
         "newActivityBadge": "{n} yeni",
-        "onChain": "{chain} ağında"
+        "onChain": "{chain} ağında",
+        "leaderboard": {
+          "title": "Sıralama",
+          "empty": "Bu ağda henüz sıralanan oyuncu yok.",
+          "scope": "Hacme göre sıralandı",
+          "scopeTopWin": "Ödeme çarpanına göre sıralandı",
+          "views": {
+            "turnover": "Hacme göre",
+            "topWin": "En çok kazananlar"
+          }
+        },
+        "analytics": {
+          "empty": "Bu ağda henüz analitik yok.",
+          "volume": "Hacim",
+          "bets": "Bahisler",
+          "players": "Oyuncular",
+          "settled": "Ödendi",
+          "rtp": "RTP",
+          "wagered": "Toplam bahis",
+          "payout": "Toplam ödeme",
+          "transactions": "İşlemler",
+          "won": "Kazanan",
+          "gainRatio": "Kazanma oranı",
+          "bestEffort": "İndekslenmiş · yaklaşık"
+        }
       },
       "errors": {
         "quoteFailed": "VRF ücreti tahmin edilemedi.",

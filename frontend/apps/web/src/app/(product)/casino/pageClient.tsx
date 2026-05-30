@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { cn } from "@ssot/ui";
 import {
   MagnifyingGlassIcon,
@@ -14,6 +14,8 @@ import {
 import { ProductStateCard } from "../../../components/ProductStateCard";
 import { getCatalogRooms } from "../../../features/casino/catalog";
 import { CasinoGameMark } from "../../../features/casino/CasinoMiniIcons";
+import { useCasinoStats } from "../../../features/casino/useCasinoStats";
+import { formatTokenAmount } from "../../../features/marketing/format";
 import { useRelease } from "../../../ssot/release/ReleaseProvider";
 
 const ROOM_COPY_KEYS: Record<
@@ -110,7 +112,9 @@ function shortAddress(value?: string | null) {
 
 export function GamesListClient() {
   const t = useTranslations();
+  const locale = useLocale();
   const { release, readOnlyReason } = useRelease();
+  const { data: casinoStats } = useCasinoStats();
   const [query, setQuery] = React.useState("");
   const [filter, setFilter] = React.useState<FilterKey>("all");
 
@@ -175,6 +179,21 @@ export function GamesListClient() {
   const bankAddress = casinoPool?.bank ?? casinoAsset?.bank;
   const assetSymbol = casinoPool?.symbol ?? casinoAsset?.symbol ?? "—";
 
+  // Real betting analytics from the durable bet index. When the Postgres
+  // source is unavailable (e.g. dev without DB) we show "—" rather than a
+  // misleading zero.
+  const statsAvailable = casinoStats?.source === "postgres";
+  const statsDecimals = casinoStats?.asset.decimals ?? casinoAsset?.decimals ?? 6;
+  const statsSymbol = casinoStats?.asset.symbol ?? assetSymbol;
+  const volumeLabel =
+    statsAvailable && casinoStats
+      ? formatTokenAmount(BigInt(casinoStats.stats.turnover), statsDecimals, statsSymbol, locale)
+      : "—";
+  const betCountLabel =
+    statsAvailable && casinoStats ? casinoStats.stats.betCount.toLocaleString(locale) : "—";
+  const playersLabel =
+    statsAvailable && casinoStats ? casinoStats.stats.uniquePlayers.toLocaleString(locale) : "—";
+
   return (
     <div className="relative overflow-hidden pb-16 text-fg selection:bg-brand/20">
       {/* Atmosphere — matches the rebuilt game consoles: a top-down surface
@@ -207,20 +226,32 @@ export function GamesListClient() {
             </p>
           </div>
 
-          <dl className="grid gap-4 sm:grid-cols-2 lg:min-w-[25rem]">
-            <div className="rounded-xl border border-border-soft bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-1)))] p-5 shadow-e2">
+          <dl className="grid gap-4 sm:grid-cols-2 lg:min-w-[27rem]">
+            <div className="rounded-xl border border-border-soft bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-1)))] p-5 shadow-e2 sm:col-span-2">
               <dt className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-accent">
                 <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-                {t("casino.directory.stats.rooms")}
+                {t("casino.directory.stats.volume")}
               </dt>
-              <dd className="mt-3 font-mono text-3xl font-semibold text-fg">{rooms.length}</dd>
+              <dd
+                className="mt-3 truncate font-mono text-3xl font-semibold text-fg"
+                title={volumeLabel}
+              >
+                {volumeLabel}
+              </dd>
             </div>
             <div className="rounded-xl border border-border-soft bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-1)))] p-5 shadow-e2">
               <dt className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-brand">
                 <TrophyIcon className="h-3.5 w-3.5" />
-                {t("casino.directory.stats.asset")}
+                {t("casino.directory.stats.bets")}
               </dt>
-              <dd className="mt-3 font-mono text-3xl font-semibold text-fg">{assetSymbol}</dd>
+              <dd className="mt-3 font-mono text-3xl font-semibold text-fg">{betCountLabel}</dd>
+            </div>
+            <div className="rounded-xl border border-border-soft bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-1)))] p-5 shadow-e2">
+              <dt className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-fg-subtle">
+                <span className="h-1.5 w-1.5 rounded-full bg-success" />
+                {t("casino.directory.stats.players")}
+              </dt>
+              <dd className="mt-3 font-mono text-3xl font-semibold text-fg">{playersLabel}</dd>
             </div>
           </dl>
         </header>
