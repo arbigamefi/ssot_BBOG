@@ -539,13 +539,23 @@ describe("memory bet index store", () => {
         txHash: "0xd03"
       },
       {
-        args: { asset: otherAsset, gameId: GAME_ID, player: PLAYER, positionId: 3n, stake: 100n },
-        blockNumber: 13n,
+        args: { asset: ASSET, gameId: GAME_ID_TWO, player: PLAYER_TWO, positionId: 4n, stake: 40n },
+        blockNumber: 14n,
         blockTimestamp: today,
         chainId: 84532,
         eventName: "BetPlaced",
         gameHub: GAME_HUB,
-        logIndex: 4,
+        logIndex: 5,
+        txHash: "0xd05"
+      },
+      {
+        args: { asset: otherAsset, gameId: GAME_ID, player: PLAYER, positionId: 3n, stake: 100n },
+        blockNumber: 15n,
+        blockTimestamp: today,
+        chainId: 84532,
+        eventName: "BetPlaced",
+        gameHub: GAME_HUB,
+        logIndex: 6,
         txHash: "0xd04"
       }
     ]);
@@ -564,10 +574,18 @@ describe("memory bet index store", () => {
     });
     expect(points[1]).toMatchObject({
       asset: ASSET,
-      betCount: 1,
+      betCount: 2,
       date: todayDate,
-      turnover: "30",
+      turnover: "70",
       uniquePlayers: 1
     });
+
+    const gameOnePoints = await store.getCasinoTimeseries({
+      asset: ASSET,
+      chainId: 84532,
+      days: 7,
+      gameId: GAME_ID
+    });
+    expect(gameOnePoints.map((point) => point.turnover)).toEqual(["10", "30"]);
   });
 });

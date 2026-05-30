@@ -217,6 +217,8 @@ export type BetIndexStore = {
     asset: Address;
     chainId: number;
     days: number;
+    /** Optional game filter — when set, groups daily volume for that game only. */
+    gameId?: Hex;
   }) => Promise<BetIndexCasinoTimeseriesPoint[]>;
   getCursor: (chainId: number, source: string, cursorKey: string) => Promise<bigint | null>;
   setCursor: (cursor: BetIndexCursor) => Promise<void>;
@@ -487,12 +489,15 @@ export function createMemoryBetIndexStore(): BetIndexStore {
           (row) => row.chainId === chainId && row.asset?.toLowerCase() === asset.toLowerCase()
         )
       }),
-    getCasinoTimeseries: async ({ asset, chainId, days }) =>
+    getCasinoTimeseries: async ({ asset, chainId, days, gameId }) =>
       casinoTimeseriesFromRows({
         asset,
         days,
         rows: [...bets.values()].filter(
-          (row) => row.chainId === chainId && row.asset?.toLowerCase() === asset.toLowerCase()
+          (row) =>
+            row.chainId === chainId &&
+            row.asset?.toLowerCase() === asset.toLowerCase() &&
+            (!gameId || row.gameId?.toLowerCase() === gameId.toLowerCase())
         )
       }),
     getCursor: async (chainId: number, source: string, cursorKey: string) =>
@@ -891,7 +896,7 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
         payoutGross: String(row.payoutGross ?? "0")
       }));
     },
-    getCasinoTimeseries: async ({ asset, chainId, days }) => {
+    getCasinoTimeseries: async ({ asset, chainId, days, gameId }) => {
       const boundedDays = Math.max(1, Math.min(366, Math.trunc(days)));
       const rows = await sql`
         select
@@ -909,6 +914,7 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
         from bets
         where chain_id = ${chainId}
           and asset = ${asset.toLowerCase()}
+          ${gameId ? sql`and game_id = ${gameId.toLowerCase()}` : sql``}
           and coalesce(placed_at, updated_at) >= now() - (${boundedDays.toString()} || ' days')::interval
         group by date
         order by date asc

@@ -1203,6 +1203,8 @@
           "transactions": "Transações",
           "won": "Ganhas",
           "gainRatio": "Taxa de ganho",
+          "trend": "Volume de 7 dias",
+          "trendWindow": "Volume diário pelo horário da aposta on-chain",
           "bestEffort": "Indexado · melhor esforço"
         }
       },

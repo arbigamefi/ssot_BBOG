@@ -254,6 +254,8 @@
           "transactions": "交易数",
           "won": "中奖数",
           "gainRatio": "中奖率",
+          "trend": "7 日投注额",
+          "trendWindow": "按链上下注时间统计的每日流水",
           "bestEffort": "索引数据 · 仅供参考"
         }
       },

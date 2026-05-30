@@ -7,7 +7,7 @@ import { cn } from "@ssot/ui";
 
 import { mapBetState, shortHex, type GameMeta } from "./model";
 import { usePlayerBets } from "../../betting/usePlayerBets";
-import { useCasinoLeaderboard, useCasinoStats } from "../useCasinoStats";
+import { useCasinoLeaderboard, useCasinoStats, useCasinoTimeseries } from "../useCasinoStats";
 import { formatTokenAmount } from "../../marketing/format";
 import {
   getAppChain,
@@ -895,12 +895,14 @@ function percentOf(numerator: string, denominator: string): string | null {
 
 function AnalyticsPanel({ gameId, t, locale }: { gameId?: string; t: Translate; locale: string }) {
   const stats = useCasinoStats();
+  const timeseries = useCasinoTimeseries({ days: 7, gameId });
   const game = stats.data?.games.find(
     (g) => !gameId || g.gameId.toLowerCase() === gameId.toLowerCase()
   );
   const unavailable = stats.data?.source === "unavailable";
   const decimals = stats.data?.asset.decimals ?? 6;
   const symbol = stats.data?.asset.symbol ?? "USDC";
+  const trendPoints = timeseries.data?.source === "postgres" ? timeseries.data.points : [];
 
   if (unavailable || !game) {
     return <EmptyState message={t("casino.room.audit.analytics.empty")} />;
@@ -965,6 +967,8 @@ function AnalyticsPanel({ gameId, t, locale }: { gameId?: string; t: Translate; 
         </div>
       </div>
 
+      <VolumeTrend decimals={decimals} locale={locale} points={trendPoints} symbol={symbol} t={t} />
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {cards.map((card) => (
           <div
@@ -985,6 +989,75 @@ function AnalyticsPanel({ gameId, t, locale }: { gameId?: string; t: Translate; 
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function VolumeTrend({
+  decimals,
+  locale,
+  points,
+  symbol,
+  t
+}: {
+  decimals: number;
+  locale: string;
+  points: Array<{ date: string; turnover: string }>;
+  symbol: string;
+  t: Translate;
+}) {
+  if (points.length === 0) return null;
+  const maxTurnover = points.reduce((max, point) => {
+    const turnover = BigInt(point.turnover || "0");
+    return turnover > max ? turnover : max;
+  }, 0n);
+
+  return (
+    <div className="rounded-xl border border-border-soft bg-surface-0 p-4 shadow-e1">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
+            {t("casino.room.audit.analytics.trend")}
+          </div>
+          <div className="mt-1 text-xs text-fg-muted">
+            {t("casino.room.audit.analytics.trendWindow")}
+          </div>
+        </div>
+        <span className="rounded-full border border-border-soft bg-surface-1 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-fg-muted">
+          {t("casino.room.audit.analytics.bestEffort")}
+        </span>
+      </div>
+      <div
+        className="mt-4 flex h-28 items-end gap-2"
+        aria-label={t("casino.room.audit.analytics.trend")}
+      >
+        {points.map((point) => {
+          const turnover = BigInt(point.turnover || "0");
+          const bps = maxTurnover > 0n ? Number((turnover * 10_000n) / maxTurnover) : 0;
+          const height = maxTurnover > 0n ? Math.max(8, bps / 100) : 8;
+          const date = new Date(`${point.date}T00:00:00.000Z`);
+          const label = new Intl.DateTimeFormat(locale, {
+            day: "2-digit",
+            month: "short",
+            timeZone: "UTC"
+          }).format(date);
+          const valueLabel = formatTokenAmount(turnover, decimals, symbol, locale);
+          return (
+            <div key={point.date} className="flex min-w-0 flex-1 flex-col items-center gap-2">
+              <div className="flex h-20 w-full items-end rounded-md bg-surface-1 px-1">
+                <div
+                  className="w-full rounded-t-md bg-brand"
+                  style={{ height: `${height}%` }}
+                  title={`${label}: ${valueLabel}`}
+                />
+              </div>
+              <span className="w-full truncate text-center text-[9px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+                {label}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

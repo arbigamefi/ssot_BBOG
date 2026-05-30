@@ -141,6 +141,35 @@ vi.mock("../useCasinoStats", () => ({
               }
             ]
           }
+  }),
+  useCasinoTimeseries: () => ({
+    data: {
+      source: "postgres",
+      gameId: "0x1111111111111111111111111111111111111111",
+      asset: { address: "0xasset", decimals: 6, symbol: "USDC" },
+      points: [
+        {
+          date: "2026-05-28",
+          betCount: 1,
+          settledCount: 1,
+          wonCount: 1,
+          uniquePlayers: 1,
+          turnover: "10000000",
+          payout: "15000000",
+          payoutGross: "15000000"
+        },
+        {
+          date: "2026-05-29",
+          betCount: 2,
+          settledCount: 2,
+          wonCount: 1,
+          uniquePlayers: 2,
+          turnover: "40000000",
+          payout: "10000000",
+          payoutGross: "10000000"
+        }
+      ]
+    }
   })
 }));
 
@@ -203,6 +232,8 @@ const TRANSLATIONS: Record<string, string> = {
   "casino.room.audit.analytics.gainRatio": "Gain ratio",
   "casino.room.audit.analytics.bestEffort": "Indexed · best-effort",
   "casino.room.audit.analytics.players": "Players",
+  "casino.room.audit.analytics.trend": "7-day volume",
+  "casino.room.audit.analytics.trendWindow": "Daily turnover by chain placement time",
   "casino.room.gameInfo.roulette.tagline": "European roulette tagline.",
   "casino.room.gameInfo.roulette.houseEdge": "2.70%"
 };

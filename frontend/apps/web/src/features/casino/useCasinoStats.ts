@@ -8,7 +8,8 @@ import { useRelease } from "../../ssot/release/ReleaseProvider";
 import type {
   CasinoLeaderboardResponse,
   CasinoLeaderboardSort,
-  CasinoStatsResponse
+  CasinoStatsResponse,
+  CasinoTimeseriesResponse
 } from "../../server/betting/casino-analytics";
 
 /**
@@ -73,6 +74,44 @@ export function useCasinoLeaderboard({
         throw new Error("casino leaderboard request failed");
       }
       return (await response.json()) as CasinoLeaderboardResponse;
+    },
+    refetchInterval: 30_000,
+    staleTime: 20_000
+  });
+}
+
+/**
+ * Daily casino volume/time-series from the durable bet index. The server
+ * groups by chain placement timestamp, not index-write time, so backfills do
+ * not distort the trend.
+ */
+export function useCasinoTimeseries({
+  days = 7,
+  gameId,
+  enabled = true
+}: {
+  days?: number;
+  gameId?: string;
+  enabled?: boolean;
+} = {}) {
+  const { chainId } = useRelease();
+
+  return useQuery<CasinoTimeseriesResponse>({
+    enabled,
+    queryKey: ["ssot", "casino", "timeseries", { chainId, days, gameId }],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        chainId: String(chainId),
+        days: String(days)
+      });
+      if (gameId) params.set("gameId", gameId);
+      const response = await fetch(`/api/casino/timeseries?${params.toString()}`, {
+        headers: { accept: "application/json" }
+      });
+      if (!response.ok) {
+        throw new Error("casino timeseries request failed");
+      }
+      return (await response.json()) as CasinoTimeseriesResponse;
     },
     refetchInterval: 30_000,
     staleTime: 20_000

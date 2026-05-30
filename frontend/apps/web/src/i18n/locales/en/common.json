@@ -254,6 +254,8 @@
           "transactions": "Transactions",
           "won": "Won",
           "gainRatio": "Gain ratio",
+          "trend": "7-day volume",
+          "trendWindow": "Daily turnover by chain placement time",
           "bestEffort": "Indexed · best-effort"
         }
       },

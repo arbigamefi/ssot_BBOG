@@ -4,6 +4,8 @@ import { loadEmbeddedRelease } from "@ssot/ssot/release";
 
 const DEFAULT_LEADERBOARD_LIMIT = 10;
 const MAX_LEADERBOARD_LIMIT = 50;
+const DEFAULT_TIMESERIES_DAYS = 7;
+const MAX_TIMESERIES_DAYS = 90;
 export type CasinoLeaderboardSort = "turnover" | "topWin";
 
 let durableBetIndexStore: BetIndexStore | null | undefined;
@@ -64,6 +66,27 @@ export type CasinoLeaderboardResponse = {
     payout: string;
     payoutGross: string;
     multiplierPpm?: string;
+  }>;
+};
+
+export type CasinoTimeseriesResponse = {
+  schemaVersion: 1;
+  chainId: number;
+  generatedAt: number;
+  source: "postgres" | "unavailable";
+  /** Present when the trend is scoped to a single game. */
+  gameId: Hex | null;
+  asset: PrimaryAsset;
+  days: number;
+  points: Array<{
+    date: string;
+    betCount: number;
+    settledCount: number;
+    wonCount: number;
+    uniquePlayers: number;
+    turnover: string;
+    payout: string;
+    payoutGross: string;
   }>;
 };
 
@@ -168,6 +191,11 @@ function emptyStatsResponse({
 export function clampCasinoLeaderboardLimit(limit: number | undefined) {
   if (!Number.isFinite(limit) || !limit || limit <= 0) return DEFAULT_LEADERBOARD_LIMIT;
   return Math.min(MAX_LEADERBOARD_LIMIT, Math.max(1, Math.floor(limit)));
+}
+
+export function clampCasinoTimeseriesDays(days: number | undefined) {
+  if (!Number.isFinite(days) || !days || days <= 0) return DEFAULT_TIMESERIES_DAYS;
+  return Math.min(MAX_TIMESERIES_DAYS, Math.max(1, Math.floor(days)));
 }
 
 export async function queryCasinoStats({
@@ -308,6 +336,75 @@ export async function queryCasinoLeaderboard({
       gameId: normalizedGameId,
       generatedAt,
       rows: [],
+      schemaVersion: 1,
+      source: "unavailable"
+    };
+  }
+}
+
+export async function queryCasinoTimeseries({
+  chainId,
+  days,
+  gameId,
+  now = Date.now
+}: {
+  chainId: number;
+  days: number;
+  gameId?: Hex;
+  now?: () => number;
+}): Promise<CasinoTimeseriesResponse> {
+  const { asset } = resolvePrimaryAsset(chainId);
+  const generatedAt = now();
+  const boundedDays = clampCasinoTimeseriesDays(days);
+  const normalizedGameId = (gameId?.toLowerCase() as Hex | undefined) ?? null;
+  const store = getDurableBetIndexStore();
+  if (!store) {
+    return {
+      asset,
+      chainId,
+      days: boundedDays,
+      generatedAt,
+      gameId: normalizedGameId,
+      points: [],
+      schemaVersion: 1,
+      source: "unavailable"
+    };
+  }
+
+  try {
+    const points = await store.getCasinoTimeseries({
+      asset: asset.address,
+      chainId,
+      days: boundedDays,
+      ...(gameId ? { gameId } : {})
+    });
+    return {
+      asset,
+      chainId,
+      days: boundedDays,
+      generatedAt,
+      gameId: normalizedGameId,
+      points: points.map((point) => ({
+        betCount: point.betCount,
+        date: point.date,
+        payout: point.payout,
+        payoutGross: point.payoutGross,
+        settledCount: point.settledCount,
+        turnover: point.turnover,
+        uniquePlayers: point.uniquePlayers,
+        wonCount: point.wonCount
+      })),
+      schemaVersion: 1,
+      source: "postgres"
+    };
+  } catch {
+    return {
+      asset,
+      chainId,
+      days: boundedDays,
+      generatedAt,
+      gameId: normalizedGameId,
+      points: [],
       schemaVersion: 1,
       source: "unavailable"
     };
