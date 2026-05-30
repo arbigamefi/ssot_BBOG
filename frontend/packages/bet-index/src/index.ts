@@ -30,6 +30,7 @@ export type BetRow = {
   finalizedTxHash?: Hex;
   refundedTxHash?: Hex;
   placedBlock?: number;
+  placedAt?: number;
   updatedBlock: number;
   lastTxHash: Hex;
   lastEventName: string;
@@ -40,6 +41,8 @@ export type BetIndexEvent = {
   chainId: number;
   gameHub: Address;
   blockNumber: bigint;
+  /** Chain block timestamp in milliseconds when available. */
+  blockTimestamp?: number;
   txHash: Hex;
   logIndex: number;
   eventName: GameHubEventName;
@@ -153,6 +156,18 @@ export type BetIndexGameVolume = {
   payoutGross: string;
 };
 
+export type BetIndexCasinoTimeseriesPoint = {
+  asset: Address;
+  date: string;
+  betCount: number;
+  settledCount: number;
+  wonCount: number;
+  uniquePlayers: number;
+  turnover: string;
+  payout: string;
+  payoutGross: string;
+};
+
 export type BetIndexCursor = {
   chainId: number;
   source: string;
@@ -198,6 +213,11 @@ export type BetIndexStore = {
     gameId?: Hex;
   }) => Promise<BetIndexCasinoTopWinEntry[]>;
   getGameVolumes: (query: { asset: Address; chainId: number }) => Promise<BetIndexGameVolume[]>;
+  getCasinoTimeseries: (query: {
+    asset: Address;
+    chainId: number;
+    days: number;
+  }) => Promise<BetIndexCasinoTimeseriesPoint[]>;
   getCursor: (chainId: number, source: string, cursorKey: string) => Promise<bigint | null>;
   setCursor: (cursor: BetIndexCursor) => Promise<void>;
   close?: () => Promise<void>;
@@ -208,6 +228,7 @@ create table if not exists gamehub_events (
   chain_id integer not null,
   game_hub text not null,
   block_number bigint not null,
+  block_timestamp timestamptz,
   tx_hash text not null,
   log_index integer not null,
   event_name text not null,
@@ -237,6 +258,7 @@ create table if not exists bets (
   finalized_tx_hash text,
   refunded_tx_hash text,
   placed_block bigint,
+  placed_at timestamptz,
   updated_block bigint not null,
   last_tx_hash text not null,
   last_event_name text not null,
@@ -254,6 +276,8 @@ alter table bets add column if not exists random_hash text;
 alter table bets add column if not exists terminal_tx_hash text;
 alter table bets add column if not exists finalized_tx_hash text;
 alter table bets add column if not exists refunded_tx_hash text;
+alter table bets add column if not exists placed_at timestamptz;
+alter table gamehub_events add column if not exists block_timestamp timestamptz;
 
 create index if not exists bets_recent_idx
   on bets (chain_id, updated_block desc, bet_id desc);
@@ -266,6 +290,9 @@ create index if not exists bets_affiliate_idx
 
 create index if not exists bets_game_idx
   on bets (chain_id, game_id, updated_block desc);
+
+create index if not exists bets_asset_placed_at_idx
+  on bets (chain_id, asset, placed_at desc);
 
 create index if not exists bets_state_idx
   on bets (chain_id, state, updated_block desc);
@@ -460,6 +487,14 @@ export function createMemoryBetIndexStore(): BetIndexStore {
           (row) => row.chainId === chainId && row.asset?.toLowerCase() === asset.toLowerCase()
         )
       }),
+    getCasinoTimeseries: async ({ asset, chainId, days }) =>
+      casinoTimeseriesFromRows({
+        asset,
+        days,
+        rows: [...bets.values()].filter(
+          (row) => row.chainId === chainId && row.asset?.toLowerCase() === asset.toLowerCase()
+        )
+      }),
     getCursor: async (chainId: number, source: string, cursorKey: string) =>
       cursors.get(cursorId(chainId, source, cursorKey)) ?? null,
     setCursor: async (cursor: BetIndexCursor) => {
@@ -492,11 +527,13 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
         for (const event of events) {
           await tx`
             insert into gamehub_events (
-              chain_id, game_hub, block_number, tx_hash, log_index, event_name, args_json
+              chain_id, game_hub, block_number, block_timestamp, tx_hash, log_index, event_name,
+              args_json
             ) values (
               ${event.chainId},
               ${event.gameHub.toLowerCase()},
               ${event.blockNumber.toString()},
+              ${event.blockTimestamp == null ? null : new Date(event.blockTimestamp)},
               ${event.txHash.toLowerCase()},
               ${event.logIndex},
               ${event.eventName},
@@ -511,7 +548,7 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
             insert into bets (
               chain_id, bet_id, state, game_id, asset, player, pricing_affiliate, stake, payout,
               payout_gross, refund_amount, request_id, random_hash, terminal_tx_hash,
-              finalized_tx_hash, refunded_tx_hash, placed_block,
+              finalized_tx_hash, refunded_tx_hash, placed_block, placed_at,
               updated_block, last_tx_hash, last_event_name, updated_at
             ) values (
               ${row.chainId},
@@ -531,6 +568,7 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
               ${row.finalizedTxHash?.toLowerCase() ?? null},
               ${row.refundedTxHash?.toLowerCase() ?? null},
               ${row.placedBlock ?? null},
+              ${row.placedAt == null ? null : new Date(row.placedAt)},
               ${row.updatedBlock},
               ${row.lastTxHash.toLowerCase()},
               ${row.lastEventName},
@@ -555,6 +593,7 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
               finalized_tx_hash = coalesce(excluded.finalized_tx_hash, bets.finalized_tx_hash),
               refunded_tx_hash = coalesce(excluded.refunded_tx_hash, bets.refunded_tx_hash),
               placed_block = coalesce(bets.placed_block, excluded.placed_block),
+              placed_at = coalesce(bets.placed_at, excluded.placed_at),
               updated_block = greatest(bets.updated_block, excluded.updated_block),
               last_tx_hash = case
                 when excluded.updated_block >= bets.updated_block then excluded.last_tx_hash
@@ -852,6 +891,40 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
         payoutGross: String(row.payoutGross ?? "0")
       }));
     },
+    getCasinoTimeseries: async ({ asset, chainId, days }) => {
+      const boundedDays = Math.max(1, Math.min(366, Math.trunc(days)));
+      const rows = await sql`
+        select
+          to_char(date_trunc('day', coalesce(placed_at, updated_at) at time zone 'utc'), 'YYYY-MM-DD') as date,
+          count(*)::text as bet_count,
+          count(*) filter (where state in ('finalized', 'refunded'))::text as settled_count,
+          count(*) filter (
+            where state = 'finalized'
+              and nullif(payout, '')::numeric > coalesce(nullif(stake, '')::numeric, 0)
+          )::text as won_count,
+          count(distinct player) filter (where player is not null)::text as unique_players,
+          coalesce(sum(nullif(stake, '')::numeric), 0)::text as turnover,
+          coalesce(sum(nullif(payout, '')::numeric), 0)::text as payout,
+          coalesce(sum(nullif(payout_gross, '')::numeric), 0)::text as payout_gross
+        from bets
+        where chain_id = ${chainId}
+          and asset = ${asset.toLowerCase()}
+          and coalesce(placed_at, updated_at) >= now() - (${boundedDays.toString()} || ' days')::interval
+        group by date
+        order by date asc
+      `;
+      return rows.map((row) => ({
+        asset: asset.toLowerCase() as Address,
+        betCount: Number(row.betCount ?? 0),
+        date: String(row.date),
+        payout: String(row.payout ?? "0"),
+        payoutGross: String(row.payoutGross ?? "0"),
+        settledCount: Number(row.settledCount ?? 0),
+        turnover: String(row.turnover ?? "0"),
+        uniquePlayers: Number(row.uniquePlayers ?? 0),
+        wonCount: Number(row.wonCount ?? 0)
+      }));
+    },
     getCursor: async (chainId: number, source: string, cursorKey: string) => {
       const rows = await sql`
         select block_number from indexer_cursors
@@ -1125,12 +1198,54 @@ function gameVolumesFromRows({
     });
 }
 
+function casinoTimeseriesFromRows({
+  asset,
+  days,
+  rows
+}: {
+  asset: Address;
+  days: number;
+  rows: readonly BetRow[];
+}): BetIndexCasinoTimeseriesPoint[] {
+  const boundedDays = Math.max(1, Math.min(366, Math.trunc(days)));
+  const cutoff = Date.now() - boundedDays * 24 * 60 * 60 * 1000;
+  const byDate = new Map<string, BetRow[]>();
+  for (const row of rows) {
+    const timestamp = row.placedAt ?? row.updatedAt;
+    if (timestamp < cutoff) continue;
+    const date = new Date(timestamp).toISOString().slice(0, 10);
+    byDate.set(date, [...(byDate.get(date) ?? []), row]);
+  }
+
+  return [...byDate.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([date, dateRows]) => {
+      const stats = casinoStatsFromRows({ asset, rows: dateRows });
+      return {
+        asset: asset.toLowerCase() as Address,
+        betCount: stats.betCount,
+        date,
+        payout: stats.payout,
+        payoutGross: stats.payoutGross,
+        settledCount: stats.settledCount,
+        turnover: stats.turnover,
+        uniquePlayers: stats.uniquePlayers,
+        wonCount: stats.wonCount
+      };
+    });
+}
+
 function addStringBigints(left: string, right: string | undefined) {
   return (BigInt(left || "0") + BigInt(right || "0")).toString();
 }
 
+function eventTimestampMs(event: BetIndexEvent) {
+  return event.blockTimestamp ?? Date.now();
+}
+
 function applyEventToBet(prev: BetRow | undefined, event: BetIndexEvent): BetRow {
   const betId = String(event.args.positionId ?? event.args.betId ?? event.args.id ?? "0");
+  const timestamp = eventTimestampMs(event);
   const next: BetRow = prev
     ? { ...prev }
     : {
@@ -1140,7 +1255,7 @@ function applyEventToBet(prev: BetRow | undefined, event: BetIndexEvent): BetRow
         lastEventName: event.eventName,
         lastTxHash: event.txHash,
         state: "placed",
-        updatedAt: Date.now(),
+        updatedAt: timestamp,
         updatedBlock: Number(event.blockNumber)
       };
 
@@ -1155,6 +1270,7 @@ function applyEventToBet(prev: BetRow | undefined, event: BetIndexEvent): BetRow
     if (event.args.stake != null) next.stake = toBigintString(event.args.stake);
     if (event.args.requestId != null) next.requestId = toBigintString(event.args.requestId);
     next.placedBlock = Number(event.blockNumber);
+    next.placedAt = timestamp;
   }
 
   if (event.eventName === "BetRandomReady") {
@@ -1182,7 +1298,7 @@ function applyEventToBet(prev: BetRow | undefined, event: BetIndexEvent): BetRow
   next.updatedBlock = Math.max(next.updatedBlock, Number(event.blockNumber));
   next.lastTxHash = event.txHash;
   next.lastEventName = event.eventName;
-  next.updatedAt = Date.now();
+  next.updatedAt = timestamp;
   return next;
 }
 
@@ -1282,6 +1398,7 @@ function rowFromDatabase(row: Record<string, unknown>): BetRow {
     lastTxHash: String(row.lastTxHash) as Hex,
     payout: optionalString(row.payout),
     payoutGross: optionalString(row.payoutGross),
+    placedAt: optionalDateMs(row.placedAt),
     placedBlock: optionalNumber(row.placedBlock),
     player: optionalAddress(row.player),
     pricingAffiliate: optionalAddress(row.pricingAffiliate),
@@ -1295,6 +1412,15 @@ function rowFromDatabase(row: Record<string, unknown>): BetRow {
     updatedAt: row.updatedAt instanceof Date ? row.updatedAt.getTime() : Date.now(),
     updatedBlock: Number(row.updatedBlock)
   };
+}
+
+function optionalDateMs(value: unknown) {
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === "string" || typeof value === "number") {
+    const parsed = new Date(value).getTime();
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
 }
 
 function sportsTicketRowFromDatabase(row: Record<string, unknown>): SportsTicketRow {

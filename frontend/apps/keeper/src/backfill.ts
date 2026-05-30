@@ -177,11 +177,13 @@ export async function runBetIndexBackfill({
           fromBlock: chunk.fromBlock,
           toBlock: chunk.toBlock
         });
-        const events = logs
+        const stampedLogs = await attachBlockTimestamps(publicClient, logs);
+        const events = stampedLogs
           .map((log) =>
             toBetIndexEvent(config.chainId, config.gameHub, eventName, {
               args: log.args,
               blockNumber: log.blockNumber,
+              blockTimestamp: log.blockTimestamp,
               logIndex: log.logIndex,
               transactionHash: log.transactionHash
             })
@@ -221,6 +223,7 @@ function toBetIndexEvent(
   log: {
     args?: Record<string, unknown>;
     blockNumber?: bigint;
+    blockTimestamp?: bigint | number;
     logIndex?: number;
     transactionHash?: Hex;
   }
@@ -229,12 +232,52 @@ function toBetIndexEvent(
   return {
     args: log.args ?? {},
     blockNumber: log.blockNumber,
+    blockTimestamp: normalizeBlockTimestamp(log.blockTimestamp),
     chainId,
     eventName,
     gameHub,
     logIndex: log.logIndex,
     txHash: log.transactionHash
   };
+}
+
+async function attachBlockTimestamps<
+  T extends {
+    blockNumber?: bigint;
+    blockTimestamp?: bigint | number;
+  }
+>(
+  publicClient: PublicClient,
+  logs: readonly T[]
+): Promise<Array<T & { blockTimestamp?: bigint | number }>> {
+  const blockTimestampPromises = new Map<string, Promise<number | undefined>>();
+
+  const getTimestamp = (blockNumber: bigint) => {
+    const key = blockNumber.toString();
+    let existing = blockTimestampPromises.get(key);
+    if (!existing) {
+      existing = publicClient
+        .getBlock({ blockNumber })
+        .then((block) => Number(block.timestamp) * 1000)
+        .catch(() => undefined);
+      blockTimestampPromises.set(key, existing);
+    }
+    return existing;
+  };
+
+  return Promise.all(
+    logs.map(async (log) => {
+      if (log.blockNumber == null) return log;
+      if (normalizeBlockTimestamp(log.blockTimestamp) != null) return log;
+      const blockTimestamp = await getTimestamp(log.blockNumber);
+      return blockTimestamp == null ? log : { ...log, blockTimestamp };
+    })
+  );
+}
+
+function normalizeBlockTimestamp(value: bigint | number | undefined) {
+  if (typeof value === "bigint") return Number(value) * 1000;
+  return typeof value === "number" ? value : undefined;
 }
 
 async function main() {

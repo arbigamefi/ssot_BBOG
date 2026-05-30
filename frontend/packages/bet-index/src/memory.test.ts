@@ -498,4 +498,76 @@ describe("memory bet index store", () => {
     });
     expect(gameTwo).toHaveLength(0);
   });
+
+  it("groups casino timeseries by chain placement date and asset", async () => {
+    const store = createMemoryBetIndexStore();
+    const yesterday = Date.now() - 24 * 60 * 60 * 1000;
+    const today = Date.now();
+    const yesterdayDate = new Date(yesterday).toISOString().slice(0, 10);
+    const todayDate = new Date(today).toISOString().slice(0, 10);
+    const otherAsset = "0x9999999999999999999999999999999999999999" as const;
+
+    await store.writeGameHubEvents([
+      {
+        args: { asset: ASSET, gameId: GAME_ID, player: PLAYER, positionId: 1n, stake: 10n },
+        blockNumber: 10n,
+        blockTimestamp: yesterday,
+        chainId: 84532,
+        eventName: "BetPlaced",
+        gameHub: GAME_HUB,
+        logIndex: 1,
+        txHash: "0xd01"
+      },
+      {
+        args: { payoutGross: 20n, payoutNet: 19n, positionId: 1n },
+        blockNumber: 11n,
+        blockTimestamp: today,
+        chainId: 84532,
+        eventName: "BetFinalized",
+        gameHub: GAME_HUB,
+        logIndex: 2,
+        txHash: "0xd02"
+      },
+      {
+        args: { asset: ASSET, gameId: GAME_ID, player: PLAYER_TWO, positionId: 2n, stake: 30n },
+        blockNumber: 12n,
+        blockTimestamp: today,
+        chainId: 84532,
+        eventName: "BetPlaced",
+        gameHub: GAME_HUB,
+        logIndex: 3,
+        txHash: "0xd03"
+      },
+      {
+        args: { asset: otherAsset, gameId: GAME_ID, player: PLAYER, positionId: 3n, stake: 100n },
+        blockNumber: 13n,
+        blockTimestamp: today,
+        chainId: 84532,
+        eventName: "BetPlaced",
+        gameHub: GAME_HUB,
+        logIndex: 4,
+        txHash: "0xd04"
+      }
+    ]);
+
+    const points = await store.getCasinoTimeseries({ asset: ASSET, chainId: 84532, days: 7 });
+    expect(points.map((point) => point.date)).toEqual([yesterdayDate, todayDate]);
+    expect(points[0]).toMatchObject({
+      asset: ASSET,
+      betCount: 1,
+      date: yesterdayDate,
+      payout: "19",
+      settledCount: 1,
+      turnover: "10",
+      uniquePlayers: 1,
+      wonCount: 1
+    });
+    expect(points[1]).toMatchObject({
+      asset: ASSET,
+      betCount: 1,
+      date: todayDate,
+      turnover: "30",
+      uniquePlayers: 1
+    });
+  });
 });
