@@ -3,9 +3,12 @@ import { describe, expect, it } from "vitest";
 import { createMemoryBetIndexStore } from "./index";
 
 const GAME_ID = `0x${"11".repeat(32)}` as const;
+const GAME_ID_TWO = `0x${"22".repeat(32)}` as const;
 const PLAYER = "0x2222222222222222222222222222222222222222" as const;
+const PLAYER_TWO = "0x8888888888888888888888888888888888888888" as const;
 const AFFILIATE = "0x5555555555555555555555555555555555555555" as const;
 const GAME_HUB = "0x3333333333333333333333333333333333333333" as const;
+const ASSET = "0x4444444444444444444444444444444444444444" as const;
 const SPORTS_HUB = "0x6666666666666666666666666666666666666666" as const;
 
 describe("memory bet index store", () => {
@@ -15,7 +18,7 @@ describe("memory bet index store", () => {
     await store.writeGameHubEvents([
       {
         args: {
-          asset: "0x4444444444444444444444444444444444444444",
+          asset: ASSET,
           gameId: GAME_ID,
           player: PLAYER,
           pricingAffiliate: AFFILIATE,
@@ -215,7 +218,7 @@ describe("memory bet index store", () => {
     await store.writeGameHubEvents([
       {
         args: {
-          asset: "0x4444444444444444444444444444444444444444",
+          asset: ASSET,
           gameId: GAME_ID,
           player: PLAYER,
           positionId: 9n,
@@ -256,5 +259,243 @@ describe("memory bet index store", () => {
       state: "finalized",
       updatedBlock: 25
     });
+  });
+
+  it("aggregates asset-scoped casino stats, leaderboard, and game volumes", async () => {
+    const store = createMemoryBetIndexStore();
+
+    await store.writeGameHubEvents([
+      {
+        args: {
+          asset: ASSET,
+          gameId: GAME_ID,
+          player: PLAYER,
+          positionId: 1n,
+          stake: 10n
+        },
+        blockNumber: 10n,
+        chainId: 84532,
+        eventName: "BetPlaced",
+        gameHub: GAME_HUB,
+        logIndex: 1,
+        txHash: "0xa01"
+      },
+      {
+        args: {
+          payoutGross: 20n,
+          payoutNet: 19n,
+          positionId: 1n
+        },
+        blockNumber: 11n,
+        chainId: 84532,
+        eventName: "BetFinalized",
+        gameHub: GAME_HUB,
+        logIndex: 2,
+        txHash: "0xa02"
+      },
+      {
+        args: {
+          asset: ASSET,
+          gameId: GAME_ID,
+          player: PLAYER_TWO,
+          positionId: 2n,
+          stake: 30n
+        },
+        blockNumber: 12n,
+        chainId: 84532,
+        eventName: "BetPlaced",
+        gameHub: GAME_HUB,
+        logIndex: 3,
+        txHash: "0xa03"
+      },
+      {
+        args: {
+          asset: "0x9999999999999999999999999999999999999999",
+          gameId: GAME_ID,
+          player: PLAYER,
+          positionId: 3n,
+          stake: 100n
+        },
+        blockNumber: 13n,
+        chainId: 84532,
+        eventName: "BetPlaced",
+        gameHub: GAME_HUB,
+        logIndex: 4,
+        txHash: "0xa04"
+      }
+    ]);
+
+    await expect(store.getCasinoStats({ asset: ASSET, chainId: 84532 })).resolves.toMatchObject({
+      asset: ASSET,
+      betCount: 2,
+      payout: "19",
+      payoutGross: "20",
+      settledCount: 1,
+      wonCount: 1,
+      turnover: "40",
+      uniquePlayers: 2
+    });
+
+    await expect(
+      store.getCasinoLeaderboard({ asset: ASSET, chainId: 84532, limit: 10 })
+    ).resolves.toMatchObject([
+      {
+        asset: ASSET,
+        player: PLAYER_TWO,
+        betCount: 1,
+        turnover: "30"
+      },
+      {
+        asset: ASSET,
+        player: PLAYER,
+        betCount: 1,
+        turnover: "10"
+      }
+    ]);
+
+    await expect(store.getGameVolumes({ asset: ASSET, chainId: 84532 })).resolves.toMatchObject([
+      {
+        asset: ASSET,
+        gameId: GAME_ID,
+        betCount: 2,
+        turnover: "40",
+        uniquePlayers: 2
+      }
+    ]);
+  });
+
+  it("scopes the leaderboard to a single game and counts unique players per game", async () => {
+    const store = createMemoryBetIndexStore();
+
+    await store.writeGameHubEvents([
+      {
+        args: { asset: ASSET, gameId: GAME_ID, player: PLAYER, positionId: 1n, stake: 10n },
+        blockNumber: 10n,
+        chainId: 84532,
+        eventName: "BetPlaced",
+        gameHub: GAME_HUB,
+        logIndex: 1,
+        txHash: "0xb01"
+      },
+      {
+        args: { asset: ASSET, gameId: GAME_ID_TWO, player: PLAYER_TWO, positionId: 2n, stake: 30n },
+        blockNumber: 11n,
+        chainId: 84532,
+        eventName: "BetPlaced",
+        gameHub: GAME_HUB,
+        logIndex: 2,
+        txHash: "0xb02"
+      }
+    ]);
+
+    // Per-game leaderboard only ranks players within that game.
+    const gameOne = await store.getCasinoLeaderboard({
+      asset: ASSET,
+      chainId: 84532,
+      limit: 10,
+      gameId: GAME_ID
+    });
+    expect(gameOne).toHaveLength(1);
+    expect(gameOne[0]).toMatchObject({ player: PLAYER, turnover: "10" });
+
+    const gameTwo = await store.getCasinoLeaderboard({
+      asset: ASSET,
+      chainId: 84532,
+      limit: 10,
+      gameId: GAME_ID_TWO
+    });
+    expect(gameTwo).toHaveLength(1);
+    expect(gameTwo[0]).toMatchObject({ player: PLAYER_TWO, turnover: "30" });
+
+    // Without a gameId the leaderboard spans every game.
+    const allGames = await store.getCasinoLeaderboard({ asset: ASSET, chainId: 84532, limit: 10 });
+    expect(allGames).toHaveLength(2);
+
+    // Per-game volumes carry a unique-player count.
+    const volumes = await store.getGameVolumes({ asset: ASSET, chainId: 84532 });
+    expect(volumes).toHaveLength(2);
+    for (const volume of volumes) {
+      expect(volume.uniquePlayers).toBe(1);
+    }
+  });
+
+  it("ranks durable top wins by multiplier with optional game scope", async () => {
+    const store = createMemoryBetIndexStore();
+
+    await store.writeGameHubEvents([
+      {
+        args: { asset: ASSET, gameId: GAME_ID, player: PLAYER, positionId: 1n, stake: 10n },
+        blockNumber: 10n,
+        chainId: 84532,
+        eventName: "BetPlaced",
+        gameHub: GAME_HUB,
+        logIndex: 1,
+        txHash: "0xc01"
+      },
+      {
+        args: { payoutGross: 30n, payoutNet: 30n, positionId: 1n },
+        blockNumber: 11n,
+        chainId: 84532,
+        eventName: "BetFinalized",
+        gameHub: GAME_HUB,
+        logIndex: 2,
+        txHash: "0xc02"
+      },
+      {
+        args: { asset: ASSET, gameId: GAME_ID, player: PLAYER_TWO, positionId: 2n, stake: 5n },
+        blockNumber: 12n,
+        chainId: 84532,
+        eventName: "BetPlaced",
+        gameHub: GAME_HUB,
+        logIndex: 3,
+        txHash: "0xc03"
+      },
+      {
+        args: { payoutGross: 25n, payoutNet: 25n, positionId: 2n },
+        blockNumber: 13n,
+        chainId: 84532,
+        eventName: "BetFinalized",
+        gameHub: GAME_HUB,
+        logIndex: 4,
+        txHash: "0xc04"
+      },
+      {
+        args: { asset: ASSET, gameId: GAME_ID_TWO, player: PLAYER, positionId: 3n, stake: 5n },
+        blockNumber: 14n,
+        chainId: 84532,
+        eventName: "BetPlaced",
+        gameHub: GAME_HUB,
+        logIndex: 5,
+        txHash: "0xc05"
+      },
+      {
+        args: { payoutGross: 0n, payoutNet: 0n, positionId: 3n },
+        blockNumber: 15n,
+        chainId: 84532,
+        eventName: "BetFinalized",
+        gameHub: GAME_HUB,
+        logIndex: 6,
+        txHash: "0xc06"
+      }
+    ]);
+
+    const allGames = await store.getCasinoTopWins({ asset: ASSET, chainId: 84532, limit: 10 });
+    expect(allGames).toHaveLength(2);
+    expect(allGames[0]).toMatchObject({
+      betId: "2",
+      multiplierPpm: "5000000",
+      payout: "25",
+      player: PLAYER_TWO,
+      stake: "5"
+    });
+    expect(allGames[1]).toMatchObject({ betId: "1", multiplierPpm: "3000000" });
+
+    const gameTwo = await store.getCasinoTopWins({
+      asset: ASSET,
+      chainId: 84532,
+      gameId: GAME_ID_TWO,
+      limit: 10
+    });
+    expect(gameTwo).toHaveLength(0);
   });
 });

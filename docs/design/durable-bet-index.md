@@ -134,6 +134,8 @@ The existing API contract stays stable:
 
 - `/api/bets/recent`
 - `/api/bets/player/[address]`
+- `/api/casino/stats`
+- `/api/casino/leaderboard`
 
 Read order:
 
@@ -143,6 +145,20 @@ Read order:
 
 Critical settlement proof pages must continue to read direct chain logs or
 `GameHub.getBet`; the durable index is not allowed to become proof authority.
+
+Casino analytics are explicitly a read-model feature, not a settlement source:
+
+- `turnover` leaderboards rank players by indexed stake volume;
+- `topWin` leaderboards rank finalized winning bets by `payout / stake`;
+- `/api/casino/stats` exposes aggregate bet count, settled count, win count,
+  unique players, turnover, payout, and per-game volume;
+- all public analytics must be labeled as indexed / best-effort when surfaced
+  next to chain-proof UX.
+
+The first release is single-asset. Aggregation is scoped by `asset` to avoid
+mixing tokens with different decimals. If additional casino assets are added,
+public dashboards must group by asset or introduce an explicit pricing oracle
+decision; they must not sum raw token units across assets.
 
 ## 6. Write Contract
 

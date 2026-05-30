@@ -107,6 +107,52 @@ export type BetIndexAffiliateStats = {
   payoutGross: string;
 };
 
+export type BetIndexCasinoStats = {
+  asset: Address;
+  betCount: number;
+  settledCount: number;
+  /** Finalized bets whose payout exceeded the stake (a net win). */
+  wonCount: number;
+  uniquePlayers: number;
+  turnover: string;
+  payout: string;
+  payoutGross: string;
+};
+
+export type BetIndexCasinoLeaderboardEntry = {
+  asset: Address;
+  player: Address;
+  betCount: number;
+  settledCount: number;
+  turnover: string;
+  payout: string;
+  payoutGross: string;
+};
+
+export type BetIndexCasinoTopWinEntry = {
+  asset: Address;
+  betId: string;
+  gameId?: Hex;
+  player: Address;
+  stake: string;
+  payout: string;
+  payoutGross: string;
+  /** payout / stake, scaled by 1e6 to avoid floating point drift. */
+  multiplierPpm: string;
+};
+
+export type BetIndexGameVolume = {
+  asset: Address;
+  gameId: Hex;
+  betCount: number;
+  settledCount: number;
+  wonCount: number;
+  uniquePlayers: number;
+  turnover: string;
+  payout: string;
+  payoutGross: string;
+};
+
 export type BetIndexCursor = {
   chainId: number;
   source: string;
@@ -136,6 +182,22 @@ export type BetIndexStore = {
   getAffiliateStats: (
     query: Required<Pick<BetIndexQuery, "chainId" | "affiliate">>
   ) => Promise<BetIndexAffiliateStats>;
+  getCasinoStats: (query: { asset: Address; chainId: number }) => Promise<BetIndexCasinoStats>;
+  getCasinoLeaderboard: (query: {
+    asset: Address;
+    chainId: number;
+    limit: number;
+    /** Optional game filter — when set, ranks players within that game only. */
+    gameId?: Hex;
+  }) => Promise<BetIndexCasinoLeaderboardEntry[]>;
+  getCasinoTopWins: (query: {
+    asset: Address;
+    chainId: number;
+    limit: number;
+    /** Optional game filter — when set, ranks winning bets within that game only. */
+    gameId?: Hex;
+  }) => Promise<BetIndexCasinoTopWinEntry[]>;
+  getGameVolumes: (query: { asset: Address; chainId: number }) => Promise<BetIndexGameVolume[]>;
   getCursor: (chainId: number, source: string, cursorKey: string) => Promise<bigint | null>;
   setCursor: (cursor: BetIndexCursor) => Promise<void>;
   close?: () => Promise<void>;
@@ -360,6 +422,42 @@ export function createMemoryBetIndexStore(): BetIndexStore {
           (row) =>
             row.chainId === chainId &&
             row.pricingAffiliate?.toLowerCase() === affiliate.toLowerCase()
+        )
+      }),
+    getCasinoStats: async ({ asset, chainId }) =>
+      casinoStatsFromRows({
+        asset,
+        rows: [...bets.values()].filter(
+          (row) => row.chainId === chainId && row.asset?.toLowerCase() === asset.toLowerCase()
+        )
+      }),
+    getCasinoLeaderboard: async ({ asset, chainId, limit, gameId }) =>
+      casinoLeaderboardFromRows({
+        asset,
+        limit,
+        rows: [...bets.values()].filter(
+          (row) =>
+            row.chainId === chainId &&
+            row.asset?.toLowerCase() === asset.toLowerCase() &&
+            (!gameId || row.gameId?.toLowerCase() === gameId.toLowerCase())
+        )
+      }),
+    getCasinoTopWins: async ({ asset, chainId, limit, gameId }) =>
+      casinoTopWinsFromRows({
+        asset,
+        limit,
+        rows: [...bets.values()].filter(
+          (row) =>
+            row.chainId === chainId &&
+            row.asset?.toLowerCase() === asset.toLowerCase() &&
+            (!gameId || row.gameId?.toLowerCase() === gameId.toLowerCase())
+        )
+      }),
+    getGameVolumes: async ({ asset, chainId }) =>
+      gameVolumesFromRows({
+        asset,
+        rows: [...bets.values()].filter(
+          (row) => row.chainId === chainId && row.asset?.toLowerCase() === asset.toLowerCase()
         )
       }),
     getCursor: async (chainId: number, source: string, cursorKey: string) =>
@@ -634,6 +732,126 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
         payoutGross: String(row.payoutGross ?? "0")
       };
     },
+    getCasinoStats: async ({ asset, chainId }) => {
+      const rows = await sql`
+        select
+          count(*)::text as bet_count,
+          count(*) filter (where state in ('finalized', 'refunded'))::text as settled_count,
+          count(*) filter (
+            where state = 'finalized'
+              and nullif(payout, '')::numeric > coalesce(nullif(stake, '')::numeric, 0)
+          )::text as won_count,
+          count(distinct player) filter (where player is not null)::text as unique_players,
+          coalesce(sum(nullif(stake, '')::numeric), 0)::text as turnover,
+          coalesce(sum(nullif(payout, '')::numeric), 0)::text as payout,
+          coalesce(sum(nullif(payout_gross, '')::numeric), 0)::text as payout_gross
+        from bets
+        where chain_id = ${chainId} and asset = ${asset.toLowerCase()}
+      `;
+      const row = rows[0] ?? {};
+      return {
+        asset: asset.toLowerCase() as Address,
+        betCount: Number(row.betCount ?? 0),
+        settledCount: Number(row.settledCount ?? 0),
+        wonCount: Number(row.wonCount ?? 0),
+        uniquePlayers: Number(row.uniquePlayers ?? 0),
+        turnover: String(row.turnover ?? "0"),
+        payout: String(row.payout ?? "0"),
+        payoutGross: String(row.payoutGross ?? "0")
+      };
+    },
+    getCasinoLeaderboard: async ({ asset, chainId, limit, gameId }) => {
+      const rows = await sql`
+        select
+          player,
+          count(*)::text as bet_count,
+          count(*) filter (where state in ('finalized', 'refunded'))::text as settled_count,
+          coalesce(sum(nullif(stake, '')::numeric), 0)::text as turnover,
+          coalesce(sum(nullif(payout, '')::numeric), 0)::text as payout,
+          coalesce(sum(nullif(payout_gross, '')::numeric), 0)::text as payout_gross
+        from bets
+        where chain_id = ${chainId} and asset = ${asset.toLowerCase()} and player is not null
+        ${gameId ? sql`and game_id = ${gameId.toLowerCase()}` : sql``}
+        group by player
+        order by coalesce(sum(nullif(stake, '')::numeric), 0) desc, count(*) desc, player asc
+        limit ${limit}
+      `;
+      return rows.map((row) => ({
+        asset: asset.toLowerCase() as Address,
+        player: String(row.player).toLowerCase() as Address,
+        betCount: Number(row.betCount ?? 0),
+        settledCount: Number(row.settledCount ?? 0),
+        turnover: String(row.turnover ?? "0"),
+        payout: String(row.payout ?? "0"),
+        payoutGross: String(row.payoutGross ?? "0")
+      }));
+    },
+    getCasinoTopWins: async ({ asset, chainId, limit, gameId }) => {
+      const rows = await sql`
+        select
+          bet_id,
+          game_id,
+          player,
+          stake,
+          payout,
+          payout_gross,
+          floor((coalesce(nullif(payout, '')::numeric, 0) * 1000000) / nullif(stake, '')::numeric)::text as multiplier_ppm
+        from bets
+        where chain_id = ${chainId}
+          and asset = ${asset.toLowerCase()}
+          and player is not null
+          and state = 'finalized'
+          and coalesce(nullif(stake, '')::numeric, 0) > 0
+          and coalesce(nullif(payout, '')::numeric, 0) > coalesce(nullif(stake, '')::numeric, 0)
+          ${gameId ? sql`and game_id = ${gameId.toLowerCase()}` : sql``}
+        order by
+          (coalesce(nullif(payout, '')::numeric, 0) / nullif(stake, '')::numeric) desc,
+          coalesce(nullif(payout, '')::numeric, 0) desc,
+          bet_id desc
+        limit ${limit}
+      `;
+      return rows.map((row) => ({
+        asset: asset.toLowerCase() as Address,
+        betId: String(row.betId),
+        gameId: row.gameId ? (String(row.gameId).toLowerCase() as Hex) : undefined,
+        multiplierPpm: String(row.multiplierPpm ?? "0"),
+        payout: String(row.payout ?? "0"),
+        payoutGross: String(row.payoutGross ?? "0"),
+        player: String(row.player).toLowerCase() as Address,
+        stake: String(row.stake ?? "0")
+      }));
+    },
+    getGameVolumes: async ({ asset, chainId }) => {
+      const rows = await sql`
+        select
+          game_id,
+          count(*)::text as bet_count,
+          count(*) filter (where state in ('finalized', 'refunded'))::text as settled_count,
+          count(*) filter (
+            where state = 'finalized'
+              and nullif(payout, '')::numeric > coalesce(nullif(stake, '')::numeric, 0)
+          )::text as won_count,
+          count(distinct player) filter (where player is not null)::text as unique_players,
+          coalesce(sum(nullif(stake, '')::numeric), 0)::text as turnover,
+          coalesce(sum(nullif(payout, '')::numeric), 0)::text as payout,
+          coalesce(sum(nullif(payout_gross, '')::numeric), 0)::text as payout_gross
+        from bets
+        where chain_id = ${chainId} and asset = ${asset.toLowerCase()} and game_id is not null
+        group by game_id
+        order by coalesce(sum(nullif(stake, '')::numeric), 0) desc, game_id asc
+      `;
+      return rows.map((row) => ({
+        asset: asset.toLowerCase() as Address,
+        gameId: String(row.gameId).toLowerCase() as Hex,
+        betCount: Number(row.betCount ?? 0),
+        settledCount: Number(row.settledCount ?? 0),
+        wonCount: Number(row.wonCount ?? 0),
+        uniquePlayers: Number(row.uniquePlayers ?? 0),
+        turnover: String(row.turnover ?? "0"),
+        payout: String(row.payout ?? "0"),
+        payoutGross: String(row.payoutGross ?? "0")
+      }));
+    },
     getCursor: async (chainId: number, source: string, cursorKey: string) => {
       const rows = await sql`
         select block_number from indexer_cursors
@@ -752,6 +970,159 @@ function affiliateStatsFromRows({
       turnover: "0"
     }
   );
+}
+
+function casinoStatsFromRows({
+  asset,
+  rows
+}: {
+  asset: Address;
+  rows: readonly BetRow[];
+}): BetIndexCasinoStats {
+  const players = new Set<string>();
+  const stats = rows.reduce<BetIndexCasinoStats>(
+    (next, row) => {
+      next.betCount += 1;
+      if (row.state === "finalized" || row.state === "refunded") next.settledCount += 1;
+      if (row.state === "finalized") {
+        const stake = BigInt(row.stake || "0");
+        const payout = BigInt(row.payout || "0");
+        if (payout > stake) next.wonCount += 1;
+      }
+      if (row.player) players.add(row.player.toLowerCase());
+      next.turnover = addStringBigints(next.turnover, row.stake);
+      next.payout = addStringBigints(next.payout, row.payout);
+      next.payoutGross = addStringBigints(next.payoutGross, row.payoutGross);
+      return next;
+    },
+    {
+      asset: asset.toLowerCase() as Address,
+      betCount: 0,
+      payout: "0",
+      payoutGross: "0",
+      settledCount: 0,
+      wonCount: 0,
+      turnover: "0",
+      uniquePlayers: 0
+    }
+  );
+  stats.uniquePlayers = players.size;
+  return stats;
+}
+
+function casinoLeaderboardFromRows({
+  asset,
+  limit,
+  rows
+}: {
+  asset: Address;
+  limit: number;
+  rows: readonly BetRow[];
+}): BetIndexCasinoLeaderboardEntry[] {
+  const byPlayer = new Map<string, BetRow[]>();
+  for (const row of rows) {
+    if (!row.player) continue;
+    const player = row.player.toLowerCase();
+    byPlayer.set(player, [...(byPlayer.get(player) ?? []), row]);
+  }
+
+  return [...byPlayer.entries()]
+    .map(([player, playerRows]) => {
+      const stats = casinoStatsFromRows({ asset, rows: playerRows });
+      return {
+        asset: asset.toLowerCase() as Address,
+        player: player as Address,
+        betCount: stats.betCount,
+        settledCount: stats.settledCount,
+        turnover: stats.turnover,
+        payout: stats.payout,
+        payoutGross: stats.payoutGross
+      };
+    })
+    .sort((a, b) => {
+      const turnoverDelta = BigInt(b.turnover || "0") - BigInt(a.turnover || "0");
+      if (turnoverDelta !== 0n) return turnoverDelta > 0n ? 1 : -1;
+      if (b.betCount !== a.betCount) return b.betCount - a.betCount;
+      return a.player.localeCompare(b.player);
+    })
+    .slice(0, limit);
+}
+
+function casinoTopWinsFromRows({
+  asset,
+  limit,
+  rows
+}: {
+  asset: Address;
+  limit: number;
+  rows: readonly BetRow[];
+}): BetIndexCasinoTopWinEntry[] {
+  return rows
+    .flatMap((row) => {
+      if (!row.player || row.state !== "finalized") return [];
+      const stake = BigInt(row.stake || "0");
+      const payout = BigInt(row.payout || "0");
+      if (stake <= 0n || payout <= stake) return [];
+      return [
+        {
+          asset: asset.toLowerCase() as Address,
+          betId: row.betId,
+          gameId: row.gameId?.toLowerCase() as Hex | undefined,
+          multiplierPpm: ((payout * 1_000_000n) / stake).toString(),
+          payout: row.payout ?? "0",
+          payoutGross: row.payoutGross ?? "0",
+          player: row.player.toLowerCase() as Address,
+          stake: row.stake ?? "0"
+        }
+      ];
+    })
+    .sort((a, b) => {
+      const multiplierDelta = BigInt(b.multiplierPpm) - BigInt(a.multiplierPpm);
+      if (multiplierDelta !== 0n) return multiplierDelta > 0n ? 1 : -1;
+      const payoutDelta = BigInt(b.payout || "0") - BigInt(a.payout || "0");
+      if (payoutDelta !== 0n) return payoutDelta > 0n ? 1 : -1;
+      const aId = BigInt(a.betId);
+      const bId = BigInt(b.betId);
+      if (bId !== aId) return bId > aId ? 1 : -1;
+      return a.player.localeCompare(b.player);
+    })
+    .slice(0, limit);
+}
+
+function gameVolumesFromRows({
+  asset,
+  rows
+}: {
+  asset: Address;
+  rows: readonly BetRow[];
+}): BetIndexGameVolume[] {
+  const byGame = new Map<string, BetRow[]>();
+  for (const row of rows) {
+    if (!row.gameId) continue;
+    const gameId = row.gameId.toLowerCase();
+    byGame.set(gameId, [...(byGame.get(gameId) ?? []), row]);
+  }
+
+  return [...byGame.entries()]
+    .map(([gameId, gameRows]) => {
+      const stats = casinoStatsFromRows({ asset, rows: gameRows });
+      return {
+        asset: asset.toLowerCase() as Address,
+        gameId: gameId as Hex,
+        betCount: stats.betCount,
+        settledCount: stats.settledCount,
+        wonCount: stats.wonCount,
+        uniquePlayers: stats.uniquePlayers,
+        turnover: stats.turnover,
+        payout: stats.payout,
+        payoutGross: stats.payoutGross
+      };
+    })
+    .sort((a, b) => {
+      const turnoverDelta = BigInt(b.turnover || "0") - BigInt(a.turnover || "0");
+      if (turnoverDelta !== 0n) return turnoverDelta > 0n ? 1 : -1;
+      return a.gameId.localeCompare(b.gameId);
+    });
 }
 
 function addStringBigints(left: string, right: string | undefined) {
