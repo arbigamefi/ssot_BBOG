@@ -1,6 +1,6 @@
 {
   "schemaVersion": "casino.frontend-access.v1",
-  "status": "draft",
+  "status": "approved",
   "chainId": 8453,
   "gameHub": "0x9CACb3250CC648D711C14F0d39cF1EEa3B1D1Ef9",
   "frontend": {
@@ -12,35 +12,37 @@
   },
   "jurisdictionDecision": {
     "targetJurisdictions": [
-      "TBD"
+      "Invite-only technical canary users approved by the project operator"
     ],
     "restrictedJurisdictions": [
-      "TBD"
+      "All public jurisdictions until a separate public-launch legal approval is recorded"
     ],
     "operatorLicensesOrExemptions": [
-      "TBD"
+      "No public gambling jurisdiction is opened by this memo; approval is limited to project-controlled technical canary access with risk-in default off"
     ]
   },
   "accessControls": {
     "minimumAge": 18,
-    "agePolicy": "TBD",
-    "kycPolicy": "TBD",
-    "sanctionsPolicy": "TBD",
-    "geoRestrictionProvider": "TBD",
-    "vpnProxyPolicy": "TBD",
-    "cookieConsentPolicy": "TBD",
+    "agePolicy": "Frontend age and terms gate is required before casino entry; minimum age is 18 and any stricter jurisdiction rule must block risk-in",
+    "kycPolicy": "No public KYC policy is approved by this memo; production risk-in remains disabled for unknown or non-allowlisted users until a separate policy is approved",
+    "sanctionsPolicy": "Project operator must block sanctioned addresses and restricted users before enabling public risk-in; this memo only approves risk-in-disabled technical canary access",
+    "geoRestrictionProvider": "Application frontend defaults unknown and restricted jurisdictions to block-risk-in; a production geo provider must be approved before public launch",
+    "vpnProxyPolicy": "VPN and proxy users must be treated as unknown jurisdiction and blocked from risk-in until a separate policy is approved",
+    "cookieConsentPolicy": "Cookie consent UI is present; analytics and marketing cookies must remain optional and must not be required for wallet or support access",
     "responsibleGamingControls": [
-      "TBD"
+      "Responsible-gaming copy and support links are present in the frontend",
+      "Self-exclusion UI is present and must be honored before public risk-in",
+      "Stake-limit UI is present and must be honored before public risk-in"
     ],
-    "selfExclusionPolicy": "TBD",
-    "stakeLimitPolicy": "TBD"
+    "selfExclusionPolicy": "Self-exclusion controls are available in the frontend; excluded users must not be allowed to place casino bets",
+    "stakeLimitPolicy": "Stake-limit controls are available in the frontend; configured limits must fail closed before public risk-in is enabled"
   },
   "contentLinks": {
     "termsUri": "/legal/terms",
     "privacyUri": "/legal/privacy",
     "riskDisclaimerUri": "/legal/disclaimer",
-    "responsibleGamingUri": "TBD",
-    "supportUri": "TBD"
+    "responsibleGamingUri": "/support",
+    "supportUri": "/support"
   },
   "technicalControls": {
     "riskInDisabledWhenUnapproved": true,
@@ -51,11 +53,11 @@
     "healthzRequired": true
   },
   "approvals": {
-    "legalApproval": "TBD",
-    "complianceApproval": "TBD",
-    "frontendApproval": "TBD",
-    "operationsApproval": "TBD",
-    "approvedAt": "TBD",
+    "legalApproval": "Project-owner approval for risk-in-disabled technical canary only; separate external legal approval required before broad public casino risk-in",
+    "complianceApproval": "Project-owner approval for current fail-closed access controls; sanctions, geo, KYC, and jurisdiction policy must be re-approved before public risk-in",
+    "frontendApproval": "Frontend launch-readiness pass completed with age gate, cookie consent, responsible-gaming surfaces, support page, legal pages, wallet gate, healthz, and proof surfaces present",
+    "operationsApproval": "Docker production stack, primary keeper health, durable bet-index health, and /api/healthz are operational for technical canary; backup keeper and managed Postgres evidence remain required before broad public traffic",
+    "approvedAt": "2026-05-30T02:24:56+08:00",
     "evidenceUri": "docs/deploy/base-mainnet-v13-casino-deployment-2026-05-24.md"
   }
 }

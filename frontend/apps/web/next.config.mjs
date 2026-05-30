@@ -1,4 +1,5 @@
 import createNextIntlPlugin from "next-intl/plugin";
+import path from "node:path";
 import { buildSecurityHeaders } from "./src/server/security-headers.mjs";
 
 const isDev = process.env.NODE_ENV === "development";
@@ -8,6 +9,8 @@ const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ["@ssot/ui", "@ssot/ssot"],
   distDir: process.env.NODE_ENV === "development" ? ".next-dev" : ".next",
+  output: "standalone",
+  outputFileTracingRoot: path.resolve(import.meta.dirname, "../.."),
 
   experimental: {
     // Per-import tree-shaking for large barrel packages — Next rewrites
