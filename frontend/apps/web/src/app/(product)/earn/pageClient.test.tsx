@@ -78,6 +78,12 @@ vi.mock("../../../components/PageTransition", () => ({
   PageTransition: ({ children }: { children: React.ReactNode }) => <div>{children}</div>
 }));
 
+// Provider performance panel pulls from the durable index over the network;
+// stub it so this page test stays focused on the bank console wiring.
+vi.mock("../../../features/earn/BankrollPerformancePanel", () => ({
+  BankrollPerformancePanel: () => <div data-testid="bankroll-performance" />
+}));
+
 vi.mock("../../../components/ProductStateCard", () => ({
   ProductStateCard: ({ title, description }: any) => (
     <div>
@@ -178,9 +184,10 @@ describe("EarnPageClient", () => {
   it("frames earn as a bank reserve console", () => {
     renderWithQueryClient(<EarnPageClient />);
 
-    expect(screen.getByRole("heading", { name: /USDC bankroll control/i })).toBeDefined();
-    expect(screen.getByText("Bank transaction console")).toBeDefined();
-    expect(screen.getByText("Capital posture")).toBeDefined();
+    expect(screen.getByRole("heading", { name: /Be the house in USDC/i })).toBeDefined();
+    expect(screen.getByTestId("bankroll-performance")).toBeDefined();
+    expect(screen.getByText("Deposit or exit")).toBeDefined();
+    expect(screen.getByText("Verifiable reserve ledger")).toBeDefined();
     expect(screen.getByText("Custody boundary")).toBeDefined();
     expect(screen.getByText("Connect a wallet to run bank actions.")).toBeDefined();
   });

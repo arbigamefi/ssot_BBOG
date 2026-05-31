@@ -591,28 +591,54 @@
       "assetFallback": "Ativo"
     },
     "hero": {
-      "eyebrow": "Reserva do banco",
-      "title": "Controle do bankroll de {symbol}.",
-      "description": "Deposite, saque e inspecione o banco que paga o cassino.",
+      "eyebrow": "Fornecedor de bankroll",
+      "title": "Seja a casa em {symbol}.",
+      "description": "Forneça capital que assume variância ao bankroll do cassino. O retorno vem do giro real dos jogadores; drawdowns fazem parte do risco.",
+      "disclosure": "Reservas vêm direto do contrato Bank. Métricas de desempenho são estimativas indexadas e podem atrasar.",
       "bankAddress": "Endereço do banco"
     },
     "metrics": {
       "freeReserve": {
         "label": "Reserva livre",
-        "detail": "Ativos não reservados para passivos em aberto."
+        "detail": "Bankroll não reservado acima dos passivos em aberto."
       },
       "totalAssets": {
         "label": "Total de ativos",
-        "detail": "Ativos atuais do banco a partir da leitura do protocolo."
+        "detail": "NAV verificável do Bank no release ativo."
       },
       "minLiquidity": {
         "label": "Liquidez mínima",
-        "detail": "Piso configurado antes dos saques."
+        "detail": "Piso de saque que protege a capacidade de pagamento."
+      }
+    },
+    "summary": {
+      "capitalPosture": {
+        "title": "Livro de reservas verificável",
+        "readModel": "leitura on-chain",
+        "totalAssets": "Total de ativos",
+        "loading": "Lendo o snapshot mais recente do Bank…",
+        "detail": "NAV do Bank lido do contrato ativo."
+      },
+      "freeReserve": {
+        "label": "Reserva livre",
+        "detail": "Capital ainda não reservado para passivos em aberto."
+      },
+      "position": {
+        "label": "Sua posição",
+        "detail": "Equivalente em ativos da carteira conectada."
+      },
+      "liquidity": {
+        "label": "Política de liquidez",
+        "detail": "Piso {floor} · Bank {bank}"
+      },
+      "reserved": {
+        "label": "Passivos reservados",
+        "detail": "Reserva livre {freeReserve} · Liquidez mínima {minLiquidity}"
       }
     },
     "actions": {
-      "eyebrow": "Ações de LP",
-      "title": "Console de transações do banco",
+      "eyebrow": "Ações da posição",
+      "title": "Depositar ou sair",
       "asset": "Ativo",
       "amount": "Valor",
       "connectWallet": "Conecte uma carteira para executar ações do banco.",
@@ -620,7 +646,7 @@
       "tabs": {
         "deposit": {
           "label": "Depositar",
-          "description": "Forneça ativos ao banco."
+          "description": "Adicione capital para subscrever pagamentos do cassino."
         },
         "withdraw": {
           "label": "Sacar",
@@ -637,6 +663,51 @@
         "withdraw": "Sacar ativos",
         "redeem": "Resgatar cotas"
       }
+    },
+    "risk": {
+      "custody": {
+        "label": "Limite de custódia",
+        "title": "Bank não custodial.",
+        "detail": "O capital do provedor fica no contrato Bank. A UI separa reservas verificáveis de estimativas indexadas."
+      },
+      "buffer": {
+        "label": "Buffer de pagamento",
+        "detail": "Reserva livre após passivos reservados ({reserved}). Compare com controles de pagamento máximo antes de abrir depósitos públicos."
+      },
+      "liquidityFloor": {
+        "label": "Piso de liquidez",
+        "detail": "Política de liquidez mínima de {bps}, atualmente {amount}."
+      },
+      "release": {
+        "label": "Digest do release",
+        "detail": "Identidade do ativo, endereço do Bank e leituras da UI são ancorados ao release manifest ativo."
+      },
+      "payables": {
+        "label": "Contas a pagar",
+        "detail": "Pagáveis externos {externalPayables} · Ativos {assets}"
+      }
+    },
+    "performance": {
+      "title": "Desempenho do cofre",
+      "bestEffort": "Indexado · melhor esforço",
+      "housePnl": "Resultado do cofre",
+      "hold": "Margem realizada",
+      "velocity": "Velocidade",
+      "grossAnnualized": "Estimativa bruta anualizada",
+      "wagered": "Total apostado",
+      "payout": "Total pago",
+      "bets": "Apostas",
+      "players": "Jogadores",
+      "pnlTrend": "Resultado diário do cofre",
+      "empty": "Nenhuma atividade do cofre nesta rede ainda.",
+      "windowLabel": "Período",
+      "windows": {
+        "all": "Tudo",
+        "d1": "24h",
+        "d7": "7d",
+        "d30": "30d"
+      },
+      "note": "Receita bruta de jogo das apostas indexadas (movimentação menos pagamentos). Velocidade e estimativas anualizadas combinam atividade indexada com ativos do cofre lidos on-chain. Exclui depósitos, taxas, resgates, capital ocioso e variância não liquidada. Não é rendimento prometido."
     }
   },
   "casino": {

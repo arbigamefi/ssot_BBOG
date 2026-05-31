@@ -2603,32 +2603,37 @@
       "assetFallback": "资产"
     },
     "hero": {
-      "eyebrow": "Bank 储备",
-      "title": "{symbol} Bankroll 控制台。",
-      "description": "存入、取出、查看赌场金库 —— 玩家中奖的钱都从这里出。",
+      "eyebrow": "金库出资人",
+      "title": "用 {symbol} 当庄。",
+      "description": "向赌场金库提供承险资本。收益来自真实玩家流水，回撤是这门生意的一部分。",
+      "disclosure": "储备数值直接读取 Bank 合约；表现指标来自索引估算，可能存在延迟。",
       "bankAddress": "Bank 地址"
     },
     "metrics": {
       "freeReserve": {
         "label": "可用储备",
-        "detail": "未被未结算负债占用的资产。"
+        "detail": "高于未结算负债的未占用金库资本。"
       },
       "totalAssets": {
         "label": "总资产",
-        "detail": "来自协议读取的当前 Bank 资产。"
+        "detail": "来自 active release 的可验证 Bank NAV。"
       },
       "minLiquidity": {
         "label": "最低流动性",
-        "detail": "取款前必须保留的配置下限。"
+        "detail": "保护赔付能力的取款流动性下限。"
       }
     },
     "summary": {
       "capitalPosture": {
-        "title": "资本状态",
-        "readModel": "读取模型",
+        "title": "可验证储备账本",
+        "readModel": "链上读取",
         "totalAssets": "总资产",
         "loading": "正在拉取最新金库快照…",
-        "detail": "图表仅展示资金姿态。数值真相来自下方 Bank 快照。"
+        "detail": "Bank NAV 直接读取自当前 active 合约。"
+      },
+      "freeReserve": {
+        "label": "可用储备",
+        "detail": "当前未被未结算负债占用的资本。"
       },
       "position": {
         "label": "你的仓位",
@@ -2644,8 +2649,8 @@
       }
     },
     "actions": {
-      "eyebrow": "LP 操作",
-      "title": "Bank 交易控制台",
+      "eyebrow": "仓位操作",
+      "title": "存入或退出",
       "asset": "资产",
       "amount": "金额",
       "connectWallet": "连接钱包后才能执行 Bank 操作。",
@@ -2653,7 +2658,7 @@
       "tabs": {
         "deposit": {
           "label": "存入",
-          "description": "向 Bank 提供资产。"
+          "description": "增加用于承保赌场赔付的资本。"
         },
         "withdraw": {
           "label": "取出",
@@ -2717,15 +2722,23 @@
     "risk": {
       "custody": {
         "label": "托管边界",
-        "title": "Bank 优先，营销其次。",
-        "detail": "LP 页面先暴露已预留负债和可用储备，再谈任何收益叙事。"
+        "title": "非托管 Bank。",
+        "detail": "出资人资本保存在 Bank 合约里。界面将可验证储备和索引表现估算分开展示。"
+      },
+      "buffer": {
+        "label": "赔付缓冲",
+        "detail": "扣除已预留负债({reserved})后的可用储备。公开开放存款前，应与最大赔付控制一起评估。"
+      },
+      "liquidityFloor": {
+        "label": "流动性下限",
+        "detail": "{bps} 最低流动性策略，当前约 {amount}。"
       },
       "release": {
         "label": "Release 摘要",
         "detail": "资产身份、Bank 地址和 UI 读取都锚定到当前 active release manifest。"
       },
-      "protocolFees": {
-        "label": "协议费用",
+      "payables": {
+        "label": "应付款",
         "detail": "外部应付款 {externalPayables} · 资产 {assets}"
       }
     },
@@ -2739,6 +2752,28 @@
     "units": {
       "shares": "份额",
       "sharesLower": "份额"
+    },
+    "performance": {
+      "title": "金库表现",
+      "bestEffort": "已索引 · 尽力而为",
+      "housePnl": "金库盈亏",
+      "hold": "实际抽水",
+      "velocity": "周转速度",
+      "grossAnnualized": "毛年化估算",
+      "wagered": "总投注额",
+      "payout": "总派彩",
+      "bets": "笔数",
+      "players": "玩家数",
+      "pnlTrend": "每日金库盈亏",
+      "empty": "当前链上还没有金库活动。",
+      "windowLabel": "时间范围",
+      "windows": {
+        "all": "全部",
+        "d1": "24小时",
+        "d7": "7天",
+        "d30": "30天"
+      },
+      "note": "毛博彩收入来自已索引投注(投注额减派彩)。周转速度和年化估算将索引活动与链上读取的金库资产组合计算。不含出入金、手续费、赎回、闲置资本及未结算方差；不是收益承诺。"
     }
   },
   "ops": {

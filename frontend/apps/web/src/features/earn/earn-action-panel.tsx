@@ -80,10 +80,10 @@ export function EarnActionPanel({
   return (
     <section className="rounded-md border border-border bg-surface-1 shadow-e2">
       <div className="border-b border-border p-5">
-        <div className="text-xs font-black uppercase tracking-[0.16em] text-fg-subtle">
+        <div className="text-xs font-bold uppercase tracking-[0.16em] text-fg-subtle">
           {t("earn.actions.eyebrow")}
         </div>
-        <h2 className="mt-2 text-2xl font-black text-fg">{t("earn.actions.title")}</h2>
+        <h2 className="mt-2 text-2xl font-bold text-fg">{t("earn.actions.title")}</h2>
       </div>
 
       <div className="grid gap-5 p-5">
@@ -93,7 +93,7 @@ export function EarnActionPanel({
               key={item.key}
               type="button"
               onClick={() => onTabChange(item.key)}
-              className={`rounded-sm px-3 py-3 text-xs font-black uppercase tracking-[0.12em] transition ${
+              className={`rounded-sm px-3 py-3 text-xs font-bold uppercase tracking-[0.12em] transition ${
                 tab === item.key
                   ? "bg-brand text-fg-inverse"
                   : "text-fg-muted hover:bg-surface-2 hover:text-fg"
@@ -122,7 +122,7 @@ export function EarnActionPanel({
           <div className="mb-2 flex items-center justify-between gap-3">
             <label
               htmlFor="earn-amount"
-              className="text-[10px] font-black uppercase tracking-[0.16em] text-fg-subtle"
+              className="text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle"
             >
               {t("earn.actions.amount")}
             </label>
@@ -130,7 +130,7 @@ export function EarnActionPanel({
               type="button"
               onClick={onUseMax}
               disabled={tab === "deposit" || flow.busy}
-              className="text-[10px] font-black uppercase tracking-[0.12em] text-brand disabled:text-fg-subtle"
+              className="text-[10px] font-bold uppercase tracking-[0.12em] text-brand disabled:text-fg-subtle"
             >
               {maxLabel}
             </button>
@@ -142,9 +142,9 @@ export function EarnActionPanel({
               onChange={(event) => onAmountChange(event.target.value)}
               inputMode="decimal"
               placeholder="0.00"
-              className="w-full bg-transparent font-mono text-3xl font-black text-fg outline-none placeholder:text-fg-subtle"
+              className="w-full bg-transparent font-mono text-3xl font-bold text-fg outline-none placeholder:text-fg-subtle"
             />
-            <span className="text-sm font-black uppercase tracking-[0.12em] text-fg-muted">
+            <span className="text-sm font-bold uppercase tracking-[0.12em] text-fg-muted">
               {tab === "redeem" ? t("earn.units.shares") : symbol}
             </span>
           </div>
@@ -172,7 +172,7 @@ export function EarnActionPanel({
           type="button"
           onClick={onSubmit}
           disabled={disabled}
-          className="rounded-md bg-brand px-5 py-4 text-sm font-black uppercase tracking-[0.12em] text-fg-inverse shadow-glow transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-md bg-brand px-5 py-4 text-sm font-bold uppercase tracking-[0.12em] text-fg-inverse shadow-glow transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
         >
           {flow.busy
             ? t("earn.actions.submit.executing")

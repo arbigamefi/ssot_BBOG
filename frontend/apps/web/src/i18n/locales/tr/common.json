@@ -591,28 +591,54 @@
       "assetFallback": "Varlık"
     },
     "hero": {
-      "eyebrow": "Banka rezervi",
-      "title": "{symbol} bankroll kontrolü.",
-      "description": "Casino'ya ödeme yapan bankaya yatırın, çekin ve inceleyin.",
+      "eyebrow": "Bankroll sağlayıcısı",
+      "title": "{symbol} ile ev olun.",
+      "description": "Casino bankroll'una varyans taşıyan sermaye sağlayın. Getiri gerçek oyuncu hacminden gelir; düşüşler riskin bir parçasıdır.",
+      "disclosure": "Rezerv değerleri Bank sözleşmesinden okunur. Performans metrikleri indekslenmiş tahminlerdir ve gecikebilir.",
       "bankAddress": "Banka adresi"
     },
     "metrics": {
       "freeReserve": {
         "label": "Serbest rezerv",
-        "detail": "Açık yükümlülükler için rezerve edilmemiş varlıklar."
+        "detail": "Açık yükümlülüklerin üzerinde rezerve edilmemiş bankroll."
       },
       "totalAssets": {
         "label": "Toplam varlık",
-        "detail": "Protokol okumasından mevcut banka varlıkları."
+        "detail": "Aktif release üzerinden doğrulanabilir Bank NAV."
       },
       "minLiquidity": {
         "label": "Min. likidite",
-        "detail": "Çekimlerden önce ayarlanan taban."
+        "detail": "Ödeme kapasitesini koruyan çekim tabanı."
+      }
+    },
+    "summary": {
+      "capitalPosture": {
+        "title": "Doğrulanabilir rezerv defteri",
+        "readModel": "zincir üstü okuma",
+        "totalAssets": "Toplam varlık",
+        "loading": "En son Bank anlık görüntüsü okunuyor…",
+        "detail": "Bank NAV aktif sözleşmeden okunur."
+      },
+      "freeReserve": {
+        "label": "Serbest rezerv",
+        "detail": "Henüz açık yükümlülükler için rezerve edilmemiş sermaye."
+      },
+      "position": {
+        "label": "Pozisyonunuz",
+        "detail": "Bağlı cüzdan için varlık karşılığı."
+      },
+      "liquidity": {
+        "label": "Likidite politikası",
+        "detail": "Taban {floor} · Bank {bank}"
+      },
+      "reserved": {
+        "label": "Rezerve yükümlülükler",
+        "detail": "Serbest rezerv {freeReserve} · Min. likidite {minLiquidity}"
       }
     },
     "actions": {
-      "eyebrow": "LP işlemleri",
-      "title": "Banka işlem konsolu",
+      "eyebrow": "Pozisyon işlemleri",
+      "title": "Yatır veya çık",
       "asset": "Varlık",
       "amount": "Tutar",
       "connectWallet": "Banka işlemleri için bir cüzdan bağlayın.",
@@ -620,7 +646,7 @@
       "tabs": {
         "deposit": {
           "label": "Yatır",
-          "description": "Bankaya varlık sağlayın."
+          "description": "Casino ödemelerini üstlenmek için sermaye ekleyin."
         },
         "withdraw": {
           "label": "Çek",
@@ -637,6 +663,51 @@
         "withdraw": "Varlık çek",
         "redeem": "Payları geri al"
       }
+    },
+    "risk": {
+      "custody": {
+        "label": "Saklama sınırı",
+        "title": "Saklamasız Bank.",
+        "detail": "Sağlayıcı sermayesi Bank sözleşmesinde durur. UI doğrulanabilir rezervleri indekslenmiş performans tahminlerinden ayırır."
+      },
+      "buffer": {
+        "label": "Ödeme tamponu",
+        "detail": "Rezerve yükümlülüklerden ({reserved}) sonra kalan serbest rezerv. Genel mevduat açılmadan önce maksimum ödeme kontrolleriyle karşılaştırın."
+      },
+      "liquidityFloor": {
+        "label": "Likidite tabanı",
+        "detail": "{bps} minimum likidite politikası, şu anda {amount}."
+      },
+      "release": {
+        "label": "Release özeti",
+        "detail": "Varlık kimliği, Bank adresi ve UI okumaları aktif release manifest'e bağlıdır."
+      },
+      "payables": {
+        "label": "Borçlar",
+        "detail": "Harici borçlar {externalPayables} · Varlıklar {assets}"
+      }
+    },
+    "performance": {
+      "title": "Kasa performansı",
+      "bestEffort": "İndekslendi · en iyi çaba",
+      "housePnl": "Kasa K/Z",
+      "hold": "Gerçekleşen pay",
+      "velocity": "Devir hızı",
+      "grossAnnualized": "Brüt yıllık tahmin",
+      "wagered": "Toplam bahis",
+      "payout": "Toplam ödeme",
+      "bets": "Bahisler",
+      "players": "Oyuncular",
+      "pnlTrend": "Günlük kasa K/Z",
+      "empty": "Bu ağda henüz kasa etkinliği yok.",
+      "windowLabel": "Zaman aralığı",
+      "windows": {
+        "all": "Tümü",
+        "d1": "24s",
+        "d7": "7g",
+        "d30": "30g"
+      },
+      "note": "İndekslenmiş bahislerden brüt oyun geliri (hacim eksi ödemeler). Devir hızı ve yıllık tahminler, indekslenmiş etkinliği zincir üstü okunan kasa varlıklarıyla birleştirir. Para yatırma, ücretler, geri alımlar, atıl sermaye ve sonuçlanmamış varyans hariçtir. Getiri vaadi değildir."
     }
   },
   "casino": {

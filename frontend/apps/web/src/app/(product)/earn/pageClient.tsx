@@ -8,6 +8,7 @@ import type { AssetOption } from "@ssot/ui";
 
 import { PageTransition } from "../../../components/PageTransition";
 import { ProductStateCard } from "../../../components/ProductStateCard";
+import { BankrollPerformancePanel } from "../../../features/earn/BankrollPerformancePanel";
 import { EarnActionPanel, type EarnFlowState } from "../../../features/earn/earn-action-panel";
 import { EarnBankSummary } from "../../../features/earn/earn-bank-summary";
 import { EarnHero } from "../../../features/earn/earn-hero";
@@ -280,10 +281,11 @@ export function EarnPageClient() {
   }
 
   const snapshot = bankData?.snapshot;
-  const freeReserve =
-    snapshot && snapshot.totalAssets > snapshot.totalReserved
+  const freeReserve = snapshot
+    ? snapshot.totalAssets > snapshot.totalReserved
       ? snapshot.totalAssets - snapshot.totalReserved
-      : undefined;
+      : 0n
+    : undefined;
 
   const metrics: EarnMetric[] = [
     {
@@ -307,6 +309,10 @@ export function EarnPageClient() {
     <PageTransition pageKey="earn">
       <div className="space-y-8">
         <EarnHero symbol={symbol} bankAddress={shortHex(snapshot?.bank)} metrics={metrics} />
+        {/* Provider diligence: how the house bankroll has actually performed
+            (indexed, best-effort) — shown before the deposit console so a
+            provider sees the evidence before they act. */}
+        <BankrollPerformancePanel vaultAssets={snapshot?.totalAssets} />
         <div className="grid gap-6 xl:grid-cols-[1fr_420px]">
           <div className="space-y-6">
             <EarnBankSummary

@@ -2603,32 +2603,37 @@
       "assetFallback": "Asset"
     },
     "hero": {
-      "eyebrow": "Bank reserve",
-      "title": "{symbol} bankroll control.",
-      "description": "Deposit, withdraw, and inspect the bank that pays the casino out.",
+      "eyebrow": "Bankroll provider",
+      "title": "Be the house in {symbol}.",
+      "description": "Supply variance-bearing capital to the casino bankroll. Returns come from real player turnover; drawdowns are part of the risk.",
+      "disclosure": "Reserve values are read from the Bank contract. Performance metrics are indexed estimates and may lag.",
       "bankAddress": "Bank address"
     },
     "metrics": {
       "freeReserve": {
         "label": "Free reserve",
-        "detail": "Assets not reserved for open liabilities."
+        "detail": "Unreserved bankroll available above open liabilities."
       },
       "totalAssets": {
         "label": "Total assets",
-        "detail": "Current bank assets from protocol read."
+        "detail": "Verifiable Bank NAV from the active release."
       },
       "minLiquidity": {
         "label": "Min liquidity",
-        "detail": "Configured floor before withdrawals."
+        "detail": "Withdrawal floor that protects payout capacity."
       }
     },
     "summary": {
       "capitalPosture": {
-        "title": "Capital posture",
-        "readModel": "read model",
+        "title": "Verifiable reserve ledger",
+        "readModel": "on-chain read",
         "totalAssets": "Total assets",
         "loading": "Reading the latest bank snapshot…",
-        "detail": "Chart is a posture visual. Numeric truth comes from the bank snapshot below."
+        "detail": "Bank NAV read from the active contract."
+      },
+      "freeReserve": {
+        "label": "Free reserve",
+        "detail": "Capital not currently reserved for open liabilities."
       },
       "position": {
         "label": "Your position",
@@ -2644,8 +2649,8 @@
       }
     },
     "actions": {
-      "eyebrow": "LP actions",
-      "title": "Bank transaction console",
+      "eyebrow": "Position actions",
+      "title": "Deposit or exit",
       "asset": "Asset",
       "amount": "Amount",
       "connectWallet": "Connect a wallet to run bank actions.",
@@ -2653,7 +2658,7 @@
       "tabs": {
         "deposit": {
           "label": "Deposit",
-          "description": "Supply assets to the bank."
+          "description": "Add capital to underwrite casino payouts."
         },
         "withdraw": {
           "label": "Withdraw",
@@ -2717,15 +2722,23 @@
     "risk": {
       "custody": {
         "label": "Custody boundary",
-        "title": "Bank first, marketing second.",
-        "detail": "The LP screen exposes reserved liabilities and free reserve before any yield narrative."
+        "title": "Non-custodial Bank.",
+        "detail": "Provider capital sits in the Bank contract. The UI separates verifiable reserves from indexed performance estimates."
+      },
+      "buffer": {
+        "label": "Payout buffer",
+        "detail": "Free reserve after reserved liabilities ({reserved}). Compare this with max-payout controls before opening deposits publicly."
+      },
+      "liquidityFloor": {
+        "label": "Liquidity floor",
+        "detail": "{bps} minimum liquidity policy, currently {amount}."
       },
       "release": {
         "label": "Release digest",
         "detail": "Asset identity, bank address, and UI reads are anchored to the active release manifest."
       },
-      "protocolFees": {
-        "label": "Protocol fees",
+      "payables": {
+        "label": "Payables",
         "detail": "External payables {externalPayables} · Assets {assets}"
       }
     },
@@ -2739,6 +2752,28 @@
     "units": {
       "shares": "Shares",
       "sharesLower": "shares"
+    },
+    "performance": {
+      "title": "Vault performance",
+      "bestEffort": "Indexed · best-effort",
+      "housePnl": "House P&L",
+      "hold": "Realized hold",
+      "velocity": "Velocity",
+      "grossAnnualized": "Gross annualized estimate",
+      "wagered": "Total wagered",
+      "payout": "Total payout",
+      "bets": "Bets",
+      "players": "Players",
+      "pnlTrend": "Daily house P&L",
+      "empty": "No vault activity yet on this chain.",
+      "windowLabel": "Time range",
+      "windows": {
+        "all": "All",
+        "d1": "24h",
+        "d7": "7d",
+        "d30": "30d"
+      },
+      "note": "Gross gaming revenue from indexed bets (turnover minus payouts). Velocity and annualized estimates combine indexed activity with chain-read vault assets. Excludes deposits, fees, redemptions, idle capital, and unsettled variance. Not promised yield."
     }
   },
   "ops": {
