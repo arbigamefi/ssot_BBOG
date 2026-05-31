@@ -28,6 +28,8 @@ import { useActiveChain } from "./ActiveChainProvider";
 import { getExplorerAddressUrl } from "./chain-registry";
 import { WALLET_CONNECT_REQUEST_EVENT } from "./wallet-connect-events";
 
+const ENS_LOOKUP_ENABLED = process.env.NEXT_PUBLIC_ENABLE_ENS_LOOKUP === "true";
+
 function shortAddress(address: string) {
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
 }
@@ -47,12 +49,19 @@ export function WalletHeaderMenu() {
   const walletChainId = useChainId();
   const { switchChain, isPending: isSwitchingWalletChain } = useSwitchChain();
 
-  // ENS reverse resolution on Ethereum mainnet (resolution-only chain). Falls
-  // back silently to the short address when the wallet has no ENS name.
-  const { data: ensName } = useEnsName({ address, chainId: mainnet.id });
+  // ENS reverse resolution is nice-to-have identity chrome, not a product
+  // dependency. Keep it opt-in so the header does not add Ethereum mainnet RPC
+  // calls to every connected wallet session by default.
+  const shouldResolveEns = ENS_LOOKUP_ENABLED && Boolean(address);
+  const { data: ensName } = useEnsName({
+    address,
+    chainId: mainnet.id,
+    query: { enabled: shouldResolveEns, retry: false }
+  });
   const { data: ensAvatar } = useEnsAvatar({
     name: ensName ? normalize(ensName) : undefined,
-    chainId: mainnet.id
+    chainId: mainnet.id,
+    query: { enabled: ENS_LOOKUP_ENABLED && Boolean(ensName), retry: false }
   });
   const displayName = ensName ?? (address ? shortAddress(address) : "");
 

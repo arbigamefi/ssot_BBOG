@@ -41,10 +41,12 @@ const appChains =
     ? supportedChains
     : [withConfiguredRpc(baseSepolia, undefined, { allowGenericFallback: true })];
 
+const enableEnsLookup = process.env.NEXT_PUBLIC_ENABLE_ENS_LOOKUP === "true";
+
 // Ethereum mainnet is appended purely as an ENS-resolution chain. It never
 // appears in the network switcher (that's driven by embeddedChainIds) and is
 // never used for transactions — only `useEnsName`/`useEnsAvatar` read it.
-const chains = [...appChains, mainnet] as unknown as readonly [
+const chains = [...appChains, ...(enableEnsLookup ? [mainnet] : [])] as unknown as readonly [
   typeof baseSepolia,
   ...(typeof baseSepolia)[]
 ];
