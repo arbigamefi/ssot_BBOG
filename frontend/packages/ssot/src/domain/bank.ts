@@ -4,6 +4,8 @@ export interface DomainBankSnapshot {
   asset: `0x${string}`;
   bank: `0x${string}`;
   totalAssets: bigint; // NAV
+  totalSupply: bigint; // LP share supply
+  assetsPerShare: bigint; // assets represented by one whole share unit
   totalReserved: bigint;
   minLiquidityBps?: number;
   protocolFeesPayable?: bigint;

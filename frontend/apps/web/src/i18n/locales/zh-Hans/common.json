@@ -2610,6 +2610,14 @@
       "bankAddress": "Bank 地址"
     },
     "metrics": {
+      "sharePrice": {
+        "label": "每份价值",
+        "detail": "每 1 份 LP share 可赎回的资产。"
+      },
+      "totalShares": {
+        "label": "总份额",
+        "detail": "当前已发行 LP share 总量。"
+      },
       "freeReserve": {
         "label": "可用储备",
         "detail": "高于未结算负债的未占用金库资本。"
@@ -2634,6 +2642,14 @@
       "freeReserve": {
         "label": "可用储备",
         "detail": "当前未被未结算负债占用的资本。"
+      },
+      "sharePrice": {
+        "label": "每份价值",
+        "detail": "ERC4626-like 直接换算：1 份 LP share 对应多少底层资产。"
+      },
+      "totalShares": {
+        "label": "总份额",
+        "detail": "当前已发行 LP share。Bank NAV 变化会反映到每份价值。"
       },
       "position": {
         "label": "你的仓位",

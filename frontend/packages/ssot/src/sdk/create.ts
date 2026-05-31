@@ -843,12 +843,27 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
   const bank: SSOTBankAPI = {
     async getSnapshot(poolId: number): Promise<DomainBankSnapshot> {
       const pool = resolvePool(poolId);
-      const ssot = (await publicClient.readContract({
-        address: pool.bank,
-        abi: BANK_ABI,
-        functionName: "getSSOT",
-        args: []
-      })) as any;
+      const shareUnit = 10n ** BigInt(pool.decimals);
+      const [ssot, totalSupply, assetsPerShare] = (await Promise.all([
+        publicClient.readContract({
+          address: pool.bank,
+          abi: BANK_ABI,
+          functionName: "getSSOT",
+          args: []
+        }),
+        publicClient.readContract({
+          address: pool.bank,
+          abi: BANK_ABI,
+          functionName: "totalSupply",
+          args: []
+        }),
+        publicClient.readContract({
+          address: pool.bank,
+          abi: BANK_ABI,
+          functionName: "convertToAssets",
+          args: [shareUnit]
+        })
+      ])) as [any, bigint, bigint];
 
       return {
         chainId: release.chainId,
@@ -856,6 +871,8 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         asset: pool.asset as AddressT,
         bank: pool.bank as AddressT,
         totalAssets: BigInt(ssot.NAV),
+        totalSupply,
+        assetsPerShare,
         totalReserved: BigInt(ssot.R),
         minLiquidityBps: Number(ssot.minLiquidityBps),
         protocolFeesPayable: BigInt(ssot.PF),

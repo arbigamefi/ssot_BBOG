@@ -598,6 +598,14 @@
       "bankAddress": "Banka adresi"
     },
     "metrics": {
+      "sharePrice": {
+        "label": "Pay fiyatı",
+        "detail": "Bir tam LP payı başına geri alınabilir varlık."
+      },
+      "totalShares": {
+        "label": "Toplam pay",
+        "detail": "Dolaşımdaki LP pay arzı."
+      },
       "freeReserve": {
         "label": "Serbest rezerv",
         "detail": "Açık yükümlülüklerin üzerinde rezerve edilmemiş bankroll."
@@ -622,6 +630,14 @@
       "freeReserve": {
         "label": "Serbest rezerv",
         "detail": "Henüz açık yükümlülükler için rezerve edilmemiş sermaye."
+      },
+      "sharePrice": {
+        "label": "Pay fiyatı",
+        "detail": "Doğrudan ERC4626-like dönüşüm: bir tam LP payının temel varlık karşılığı."
+      },
+      "totalShares": {
+        "label": "Toplam pay",
+        "detail": "Dolaşımdaki LP payları. Bank NAV değiştikçe pay fiyatı değişir."
       },
       "position": {
         "label": "Pozisyonunuz",

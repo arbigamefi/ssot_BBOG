@@ -49,6 +49,16 @@ export function EarnBankSummary({
 
       <div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-3">
         <SummaryCard
+          label={t("earn.summary.sharePrice.label")}
+          value={formatTokenAmount(snapshot?.assetsPerShare, decimals, symbol, 4)}
+          detail={t("earn.summary.sharePrice.detail")}
+        />
+        <SummaryCard
+          label={t("earn.summary.totalShares.label")}
+          value={formatTokenAmount(snapshot?.totalSupply, decimals, undefined, 2)}
+          detail={t("earn.summary.totalShares.detail")}
+        />
+        <SummaryCard
           icon={<ChartBarIcon className="h-5 w-5" />}
           label={t("earn.summary.capitalPosture.totalAssets")}
           value={formatTokenAmount(snapshot?.totalAssets, decimals, symbol, 2)}

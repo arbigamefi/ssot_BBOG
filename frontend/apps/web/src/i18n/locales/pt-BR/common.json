@@ -598,6 +598,14 @@
       "bankAddress": "Endereço do banco"
     },
     "metrics": {
+      "sharePrice": {
+        "label": "Preço por cota",
+        "detail": "Ativos resgatáveis por uma cota LP completa."
+      },
+      "totalShares": {
+        "label": "Total de cotas",
+        "detail": "Oferta de cotas LP em circulação."
+      },
       "freeReserve": {
         "label": "Reserva livre",
         "detail": "Bankroll não reservado acima dos passivos em aberto."
@@ -622,6 +630,14 @@
       "freeReserve": {
         "label": "Reserva livre",
         "detail": "Capital ainda não reservado para passivos em aberto."
+      },
+      "sharePrice": {
+        "label": "Preço por cota",
+        "detail": "Conversão ERC4626-like direta: uma cota LP completa para ativos subjacentes."
+      },
+      "totalShares": {
+        "label": "Total de cotas",
+        "detail": "Cotas LP em circulação. O preço por cota muda conforme o NAV do Bank muda."
       },
       "position": {
         "label": "Sua posição",

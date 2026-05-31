@@ -289,19 +289,19 @@ export function EarnPageClient() {
 
   const metrics: EarnMetric[] = [
     {
+      label: t("earn.metrics.sharePrice.label"),
+      value: formatTokenAmount(snapshot?.assetsPerShare, decimals, symbol, 4),
+      detail: t("earn.metrics.sharePrice.detail")
+    },
+    {
+      label: t("earn.metrics.totalShares.label"),
+      value: formatTokenAmount(snapshot?.totalSupply, decimals, undefined, 2),
+      detail: t("earn.metrics.totalShares.detail")
+    },
+    {
       label: t("earn.metrics.freeReserve.label"),
       value: formatTokenAmount(freeReserve, decimals, symbol, 2),
       detail: t("earn.metrics.freeReserve.detail")
-    },
-    {
-      label: t("earn.metrics.totalAssets.label"),
-      value: formatTokenAmount(snapshot?.totalAssets, decimals, symbol, 2),
-      detail: t("earn.metrics.totalAssets.detail")
-    },
-    {
-      label: t("earn.metrics.minLiquidity.label"),
-      value: formatBps(snapshot?.minLiquidityBps),
-      detail: t("earn.metrics.minLiquidity.detail")
     }
   ];
 

@@ -2610,6 +2610,14 @@
       "bankAddress": "Bank address"
     },
     "metrics": {
+      "sharePrice": {
+        "label": "Share price",
+        "detail": "Assets redeemable per full LP share."
+      },
+      "totalShares": {
+        "label": "Total shares",
+        "detail": "Outstanding LP share supply."
+      },
       "freeReserve": {
         "label": "Free reserve",
         "detail": "Unreserved bankroll available above open liabilities."
@@ -2634,6 +2642,14 @@
       "freeReserve": {
         "label": "Free reserve",
         "detail": "Capital not currently reserved for open liabilities."
+      },
+      "sharePrice": {
+        "label": "Share price",
+        "detail": "Direct ERC4626-like conversion: one full LP share into underlying assets."
+      },
+      "totalShares": {
+        "label": "Total shares",
+        "detail": "Outstanding LP shares. Share price moves as Bank NAV changes."
       },
       "position": {
         "label": "Your position",

@@ -657,6 +657,39 @@ describe("createSSOTSDK", () => {
     );
   });
 
+  it("includes ERC4626-like share accounting in bank snapshots", async () => {
+    pub.readContract
+      .mockResolvedValueOnce({
+        NAV: 1_250_000n,
+        R: 250_000n,
+        minLiquidityBps: 1000n,
+        PF: 10_000n,
+        XP: 20_000n
+      })
+      .mockResolvedValueOnce(1_000_000n)
+      .mockResolvedValueOnce(1_250_000n);
+
+    const result = await sdk.bank.getSnapshot(1);
+
+    expect(result.totalAssets).toBe(1_250_000n);
+    expect(result.totalSupply).toBe(1_000_000n);
+    expect(result.assetsPerShare).toBe(1_250_000n);
+    expect(pub.readContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        address: getAddress(BANK),
+        functionName: "totalSupply",
+        args: []
+      })
+    );
+    expect(pub.readContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        address: getAddress(BANK),
+        functionName: "convertToAssets",
+        args: [1_000_000n]
+      })
+    );
+  });
+
   it("builds pool-aware placeBet plans", async () => {
     pub.readContract
       .mockResolvedValueOnce(false)
