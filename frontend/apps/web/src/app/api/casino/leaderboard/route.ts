@@ -57,11 +57,29 @@ export async function GET(request: Request) {
     gameId = rawGameId as `0x${string}`;
   }
 
+  // Optional time window (in days). The service clamps unknown values to
+  // all-time, so we forward the raw number and let it validate.
+  const rawWindow = url.searchParams.get("window");
+  const windowDays = rawWindow ? Number(rawWindow) : undefined;
+
+  // Optional connected wallet to resolve a "your rank" position for. Validate
+  // the address shape before it reaches SQL.
+  const rawPlayer = url.searchParams.get("player");
+  let player: `0x${string}` | undefined;
+  if (rawPlayer) {
+    if (!/^0x[0-9a-fA-F]{40}$/.test(rawPlayer)) {
+      return jsonError("Invalid player. Expected a 0x address.", 400, "INVALID_PLAYER");
+    }
+    player = rawPlayer as `0x${string}`;
+  }
+
   const response = await queryCasinoLeaderboard({
     by: by as CasinoLeaderboardSort,
     chainId,
     limit,
-    gameId
+    gameId,
+    windowDays,
+    player
   });
   return NextResponse.json(response, {
     headers: mergeHeaders(noStoreHeaders(), quota.headers)

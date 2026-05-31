@@ -18,14 +18,19 @@ import type {
  * to `source: "unavailable"` with zeroed values when Postgres is not wired —
  * the UI degrades gracefully and never blocks.
  */
-export function useCasinoStats({ enabled = true }: { enabled?: boolean } = {}) {
+export function useCasinoStats({
+  enabled = true,
+  windowDays
+}: { enabled?: boolean; windowDays?: number } = {}) {
   const { chainId } = useRelease();
 
   return useQuery<CasinoStatsResponse>({
     enabled,
-    queryKey: ["ssot", "casino", "stats", { chainId }],
+    queryKey: ["ssot", "casino", "stats", { chainId, windowDays }],
     queryFn: async () => {
-      const response = await fetch(`/api/casino/stats?chainId=${chainId}`, {
+      const params = new URLSearchParams({ chainId: String(chainId) });
+      if (windowDays) params.set("window", String(windowDays));
+      const response = await fetch(`/api/casino/stats?${params.toString()}`, {
         headers: { accept: "application/json" }
       });
       if (!response.ok) {
@@ -48,18 +53,23 @@ export function useCasinoLeaderboard({
   by = "turnover",
   gameId,
   limit = 10,
+  windowDays,
+  player,
   enabled = true
 }: {
   by?: CasinoLeaderboardSort;
   gameId?: string;
   limit?: number;
+  windowDays?: number;
+  /** Connected wallet — asks the server for this player's "your rank" position. */
+  player?: string;
   enabled?: boolean;
 } = {}) {
   const { chainId } = useRelease();
 
   return useQuery<CasinoLeaderboardResponse>({
     enabled,
-    queryKey: ["ssot", "casino", "leaderboard", { by, chainId, gameId, limit }],
+    queryKey: ["ssot", "casino", "leaderboard", { by, chainId, gameId, limit, windowDays, player }],
     queryFn: async () => {
       const params = new URLSearchParams({
         by,
@@ -67,6 +77,8 @@ export function useCasinoLeaderboard({
         limit: String(limit)
       });
       if (gameId) params.set("gameId", gameId);
+      if (windowDays) params.set("window", String(windowDays));
+      if (player) params.set("player", player);
       const response = await fetch(`/api/casino/leaderboard?${params.toString()}`, {
         headers: { accept: "application/json" }
       });

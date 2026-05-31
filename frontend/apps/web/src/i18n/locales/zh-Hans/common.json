@@ -240,7 +240,9 @@
           "views": {
             "turnover": "按投注额",
             "topWin": "高倍中奖"
-          }
+          },
+          "you": "你",
+          "yourPosition": "你的排名"
         },
         "analytics": {
           "empty": "当前链上还没有分析数据。",
@@ -256,7 +258,18 @@
           "gainRatio": "中奖率",
           "trend": "7 日投注额",
           "trendWindow": "按链上下注时间统计的每日流水",
-          "bestEffort": "索引数据 · 仅供参考"
+          "bestEffort": "索引数据 · 仅供参考",
+          "views": {
+            "game": "本游戏",
+            "all": "全部游戏"
+          },
+          "windowLabel": "时间范围",
+          "windows": {
+            "all": "全部",
+            "d1": "24小时",
+            "d7": "7天",
+            "d30": "30天"
+          }
         }
       },
       "errors": {

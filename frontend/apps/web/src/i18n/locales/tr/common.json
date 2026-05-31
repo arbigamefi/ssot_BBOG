@@ -1189,7 +1189,9 @@
           "views": {
             "turnover": "Hacme göre",
             "topWin": "En çok kazananlar"
-          }
+          },
+          "you": "Sen",
+          "yourPosition": "Senin sıran"
         },
         "analytics": {
           "empty": "Bu ağda henüz analitik yok.",
@@ -1205,7 +1207,18 @@
           "gainRatio": "Kazanma oranı",
           "trend": "7 günlük hacim",
           "trendWindow": "Zincir üzerindeki bahis zamanına göre günlük ciro",
-          "bestEffort": "İndekslenmiş · yaklaşık"
+          "bestEffort": "İndekslenmiş · yaklaşık",
+          "views": {
+            "game": "Bu oyun",
+            "all": "Tüm oyunlar"
+          },
+          "windowLabel": "Zaman aralığı",
+          "windows": {
+            "all": "Tümü",
+            "d1": "24s",
+            "d7": "7g",
+            "d30": "30g"
+          }
         }
       },
       "errors": {

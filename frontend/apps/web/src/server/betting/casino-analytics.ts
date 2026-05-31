@@ -6,6 +6,8 @@ const DEFAULT_LEADERBOARD_LIMIT = 10;
 const MAX_LEADERBOARD_LIMIT = 50;
 const DEFAULT_TIMESERIES_DAYS = 7;
 const MAX_TIMESERIES_DAYS = 90;
+/** Allowed analytics/leaderboard time windows, in days. 24h = 1. */
+export const CASINO_WINDOW_DAYS = [1, 7, 30] as const;
 export type CasinoLeaderboardSort = "turnover" | "topWin";
 
 let durableBetIndexStore: BetIndexStore | null | undefined;
@@ -21,6 +23,8 @@ export type CasinoStatsResponse = {
   chainId: number;
   generatedAt: number;
   source: "postgres" | "unavailable";
+  /** Active time window in days; null = all-time. */
+  window: number | null;
   asset: PrimaryAsset;
   stats: {
     betCount: number;
@@ -50,6 +54,8 @@ export type CasinoLeaderboardResponse = {
   chainId: number;
   generatedAt: number;
   source: "postgres" | "unavailable";
+  /** Active time window in days; null = all-time. */
+  window: number | null;
   by: CasinoLeaderboardSort;
   /** Present when the leaderboard is scoped to a single game. */
   gameId: Hex | null;
@@ -67,6 +73,16 @@ export type CasinoLeaderboardResponse = {
     payoutGross: string;
     multiplierPpm?: string;
   }>;
+  /**
+   * The connected wallet's own turnover position, when a `player` was supplied
+   * and they have bets in scope. Lets the UI show "your rank" even when the
+   * player sits outside the rendered top rows. Only populated for by=turnover.
+   */
+  you: {
+    rank: number;
+    betCount: number;
+    turnover: string;
+  } | null;
 };
 
 export type CasinoTimeseriesResponse = {
@@ -152,17 +168,20 @@ function emptyStatsResponse({
   chainId,
   games,
   generatedAt,
-  source
+  source,
+  window
 }: {
   asset: PrimaryAsset;
   chainId: number;
   games: Array<{ gameId: Hex; label: string; slug: string }>;
   generatedAt: number;
   source: CasinoStatsResponse["source"];
+  window: number | null;
 }): CasinoStatsResponse {
   return {
     asset,
     chainId,
+    window,
     games: games.map((game) => ({
       ...game,
       betCount: 0,
@@ -193,6 +212,22 @@ export function clampCasinoLeaderboardLimit(limit: number | undefined) {
   return Math.min(MAX_LEADERBOARD_LIMIT, Math.max(1, Math.floor(limit)));
 }
 
+/**
+ * Validate a requested analytics window (in days) against the allowed set.
+ * Anything outside {1,7,30} collapses to null = all-time.
+ */
+export function clampCasinoWindowDays(days: number | undefined): number | null {
+  if (!Number.isFinite(days) || !days) return null;
+  const floored = Math.floor(days);
+  return (CASINO_WINDOW_DAYS as readonly number[]).includes(floored) ? floored : null;
+}
+
+/** Translate a window (in days) into a unix-seconds lower bound, or undefined. */
+function windowSince(windowDays: number | null, now: () => number): number | undefined {
+  if (!windowDays) return undefined;
+  return Math.floor(now() / 1000) - windowDays * 86_400;
+}
+
 export function clampCasinoTimeseriesDays(days: number | undefined) {
   if (!Number.isFinite(days) || !days || days <= 0) return DEFAULT_TIMESERIES_DAYS;
   return Math.min(MAX_TIMESERIES_DAYS, Math.max(1, Math.floor(days)));
@@ -200,22 +235,33 @@ export function clampCasinoTimeseriesDays(days: number | undefined) {
 
 export async function queryCasinoStats({
   chainId,
+  windowDays,
   now = Date.now
 }: {
   chainId: number;
+  windowDays?: number;
   now?: () => number;
 }): Promise<CasinoStatsResponse> {
   const { asset, games } = resolvePrimaryAsset(chainId);
   const generatedAt = now();
+  const window = clampCasinoWindowDays(windowDays);
+  const since = windowSince(window, now);
   const store = getDurableBetIndexStore();
   if (!store) {
-    return emptyStatsResponse({ asset, chainId, games, generatedAt, source: "unavailable" });
+    return emptyStatsResponse({
+      asset,
+      chainId,
+      games,
+      generatedAt,
+      source: "unavailable",
+      window
+    });
   }
 
   try {
     const [stats, volumes] = await Promise.all([
-      store.getCasinoStats({ asset: asset.address, chainId }),
-      store.getGameVolumes({ asset: asset.address, chainId })
+      store.getCasinoStats({ asset: asset.address, chainId, ...(since != null ? { since } : {}) }),
+      store.getGameVolumes({ asset: asset.address, chainId, ...(since != null ? { since } : {}) })
     ]);
     const byGame = new Map(volumes.map((row) => [row.gameId.toLowerCase(), row]));
     return {
@@ -237,6 +283,7 @@ export async function queryCasinoStats({
       generatedAt,
       schemaVersion: 1,
       source: "postgres",
+      window,
       stats: {
         betCount: stats.betCount,
         payout: stats.payout,
@@ -248,7 +295,14 @@ export async function queryCasinoStats({
       }
     };
   } catch {
-    return emptyStatsResponse({ asset, chainId, games, generatedAt, source: "unavailable" });
+    return emptyStatsResponse({
+      asset,
+      chainId,
+      games,
+      generatedAt,
+      source: "unavailable",
+      window
+    });
   }
 }
 
@@ -257,17 +311,24 @@ export async function queryCasinoLeaderboard({
   limit,
   gameId,
   by = "turnover",
+  windowDays,
+  player,
   now = Date.now
 }: {
   chainId: number;
   limit: number;
   gameId?: Hex;
   by?: CasinoLeaderboardSort;
+  windowDays?: number;
+  /** Connected wallet to resolve a "your rank" position for (by=turnover only). */
+  player?: Address;
   now?: () => number;
 }): Promise<CasinoLeaderboardResponse> {
   const { asset } = resolvePrimaryAsset(chainId);
   const generatedAt = now();
   const normalizedGameId = (gameId?.toLowerCase() as Hex | undefined) ?? null;
+  const window = clampCasinoWindowDays(windowDays);
+  const since = windowSince(window, now);
   const store = getDurableBetIndexStore();
   if (!store) {
     return {
@@ -278,7 +339,9 @@ export async function queryCasinoLeaderboard({
       generatedAt,
       rows: [],
       schemaVersion: 1,
-      source: "unavailable"
+      source: "unavailable",
+      window,
+      you: null
     };
   }
 
@@ -289,20 +352,40 @@ export async function queryCasinoLeaderboard({
             asset: asset.address,
             chainId,
             limit,
-            ...(gameId ? { gameId } : {})
+            ...(gameId ? { gameId } : {}),
+            ...(since != null ? { since } : {})
           })
         : await store.getCasinoLeaderboard({
             asset: asset.address,
             chainId,
             limit,
-            ...(gameId ? { gameId } : {})
+            ...(gameId ? { gameId } : {}),
+            ...(since != null ? { since } : {})
           });
+    // "Your rank" is a turnover-leaderboard concept only; top-wins ranks bets,
+    // not players. Best-effort: a failure here must not sink the whole board.
+    let you: CasinoLeaderboardResponse["you"] = null;
+    if (by !== "topWin" && player) {
+      try {
+        const rank = await store.getCasinoPlayerRank({
+          asset: asset.address,
+          chainId,
+          player,
+          ...(gameId ? { gameId } : {}),
+          ...(since != null ? { since } : {})
+        });
+        you = rank ? { betCount: rank.betCount, rank: rank.rank, turnover: rank.turnover } : null;
+      } catch {
+        you = null;
+      }
+    }
     return {
       asset,
       by,
       chainId,
       gameId: normalizedGameId,
       generatedAt,
+      you,
       rows: rows.map((row, index) =>
         by === "topWin"
           ? {
@@ -326,7 +409,8 @@ export async function queryCasinoLeaderboard({
             }
       ),
       schemaVersion: 1,
-      source: "postgres"
+      source: "postgres",
+      window
     };
   } catch {
     return {
@@ -337,7 +421,9 @@ export async function queryCasinoLeaderboard({
       generatedAt,
       rows: [],
       schemaVersion: 1,
-      source: "unavailable"
+      source: "unavailable",
+      window,
+      you: null
     };
   }
 }

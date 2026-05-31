@@ -1189,7 +1189,9 @@
           "views": {
             "turnover": "Por volume",
             "topWin": "Maiores ganhos"
-          }
+          },
+          "you": "Você",
+          "yourPosition": "Sua posição"
         },
         "analytics": {
           "empty": "Nenhuma análise nesta rede ainda.",
@@ -1205,7 +1207,18 @@
           "gainRatio": "Taxa de ganho",
           "trend": "Volume de 7 dias",
           "trendWindow": "Volume diário pelo horário da aposta on-chain",
-          "bestEffort": "Indexado · melhor esforço"
+          "bestEffort": "Indexado · melhor esforço",
+          "views": {
+            "game": "Este jogo",
+            "all": "Todos os jogos"
+          },
+          "windowLabel": "Período",
+          "windows": {
+            "all": "Tudo",
+            "d1": "24h",
+            "d7": "7d",
+            "d30": "30d"
+          }
         }
       },
       "errors": {

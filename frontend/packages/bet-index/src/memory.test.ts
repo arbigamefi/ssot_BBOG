@@ -419,6 +419,123 @@ describe("memory bet index store", () => {
     }
   });
 
+  it("filters casino aggregates by a since lower bound on placement time", async () => {
+    const store = createMemoryBetIndexStore();
+    const dayMs = 24 * 60 * 60 * 1000;
+    const old = Date.now() - 10 * dayMs;
+    const recent = Date.now() - 1 * dayMs;
+
+    await store.writeGameHubEvents([
+      {
+        args: { asset: ASSET, gameId: GAME_ID, player: PLAYER, positionId: 1n, stake: 10n },
+        blockNumber: 10n,
+        blockTimestamp: old,
+        chainId: 84532,
+        eventName: "BetPlaced",
+        gameHub: GAME_HUB,
+        logIndex: 1,
+        txHash: "0xe01"
+      },
+      {
+        args: { asset: ASSET, gameId: GAME_ID_TWO, player: PLAYER_TWO, positionId: 2n, stake: 30n },
+        blockNumber: 11n,
+        blockTimestamp: recent,
+        chainId: 84532,
+        eventName: "BetPlaced",
+        gameHub: GAME_HUB,
+        logIndex: 2,
+        txHash: "0xe02"
+      }
+    ]);
+
+    const since = Math.floor((Date.now() - 5 * dayMs) / 1000);
+
+    // Windowed stats only see the recent bet; all-time sees both.
+    await expect(
+      store.getCasinoStats({ asset: ASSET, chainId: 84532, since })
+    ).resolves.toMatchObject({ betCount: 1, turnover: "30", uniquePlayers: 1 });
+    await expect(store.getCasinoStats({ asset: ASSET, chainId: 84532 })).resolves.toMatchObject({
+      betCount: 2,
+      turnover: "40"
+    });
+
+    // Windowed leaderboard only ranks the recent player.
+    const windowedBoard = await store.getCasinoLeaderboard({
+      asset: ASSET,
+      chainId: 84532,
+      limit: 10,
+      since
+    });
+    expect(windowedBoard).toHaveLength(1);
+    expect(windowedBoard[0]).toMatchObject({ player: PLAYER_TWO, turnover: "30" });
+
+    // Windowed game volumes only include the recent game.
+    const windowedVolumes = await store.getGameVolumes({ asset: ASSET, chainId: 84532, since });
+    expect(windowedVolumes).toHaveLength(1);
+    expect(windowedVolumes[0]).toMatchObject({ gameId: GAME_ID_TWO, turnover: "30" });
+  });
+
+  it("resolves a single player's turnover rank, or null when unranked", async () => {
+    const store = createMemoryBetIndexStore();
+
+    await store.writeGameHubEvents([
+      {
+        args: { asset: ASSET, gameId: GAME_ID, player: PLAYER, positionId: 1n, stake: 10n },
+        blockNumber: 10n,
+        chainId: 84532,
+        eventName: "BetPlaced",
+        gameHub: GAME_HUB,
+        logIndex: 1,
+        txHash: "0xf01"
+      },
+      {
+        args: { asset: ASSET, gameId: GAME_ID, player: PLAYER_TWO, positionId: 2n, stake: 30n },
+        blockNumber: 11n,
+        chainId: 84532,
+        eventName: "BetPlaced",
+        gameHub: GAME_HUB,
+        logIndex: 2,
+        txHash: "0xf02"
+      }
+    ]);
+
+    // PLAYER_TWO leads by turnover (30 > 10) → rank 1; PLAYER is rank 2.
+    await expect(
+      store.getCasinoPlayerRank({ asset: ASSET, chainId: 84532, player: PLAYER_TWO })
+    ).resolves.toMatchObject({ player: PLAYER_TWO, rank: 1, turnover: "30", betCount: 1 });
+    await expect(
+      store.getCasinoPlayerRank({ asset: ASSET, chainId: 84532, player: PLAYER })
+    ).resolves.toMatchObject({ player: PLAYER, rank: 2, turnover: "10" });
+
+    // A wallet with no bets in scope is unranked.
+    await expect(
+      store.getCasinoPlayerRank({
+        asset: ASSET,
+        chainId: 84532,
+        player: "0xdddd000000000000000000000000000000000099"
+      })
+    ).resolves.toBeNull();
+
+    // Per-game scope: PLAYER_TWO only bet GAME_ID, so they are unranked in GAME_ID_TWO.
+    await expect(
+      store.getCasinoPlayerRank({
+        asset: ASSET,
+        chainId: 84532,
+        gameId: GAME_ID_TWO,
+        player: PLAYER_TWO
+      })
+    ).resolves.toBeNull();
+    // ...but rank 1 within GAME_ID.
+    await expect(
+      store.getCasinoPlayerRank({
+        asset: ASSET,
+        chainId: 84532,
+        gameId: GAME_ID,
+        player: PLAYER_TWO
+      })
+    ).resolves.toMatchObject({ rank: 1 });
+  });
+
   it("ranks durable top wins by multiplier with optional game scope", async () => {
     const store = createMemoryBetIndexStore();
 

@@ -132,6 +132,15 @@ export type BetIndexCasinoLeaderboardEntry = {
   payoutGross: string;
 };
 
+export type BetIndexCasinoPlayerRank = {
+  asset: Address;
+  player: Address;
+  /** 1-based position in the turnover ranking for the requested scope. */
+  rank: number;
+  betCount: number;
+  turnover: string;
+};
+
 export type BetIndexCasinoTopWinEntry = {
   asset: Address;
   betId: string;
@@ -197,13 +206,20 @@ export type BetIndexStore = {
   getAffiliateStats: (
     query: Required<Pick<BetIndexQuery, "chainId" | "affiliate">>
   ) => Promise<BetIndexAffiliateStats>;
-  getCasinoStats: (query: { asset: Address; chainId: number }) => Promise<BetIndexCasinoStats>;
+  getCasinoStats: (query: {
+    asset: Address;
+    chainId: number;
+    /** Optional unix-seconds lower bound on chain placement time (windowed stats). */
+    since?: number;
+  }) => Promise<BetIndexCasinoStats>;
   getCasinoLeaderboard: (query: {
     asset: Address;
     chainId: number;
     limit: number;
     /** Optional game filter — when set, ranks players within that game only. */
     gameId?: Hex;
+    /** Optional unix-seconds lower bound on chain placement time (windowed ranking). */
+    since?: number;
   }) => Promise<BetIndexCasinoLeaderboardEntry[]>;
   getCasinoTopWins: (query: {
     asset: Address;
@@ -211,8 +227,29 @@ export type BetIndexStore = {
     limit: number;
     /** Optional game filter — when set, ranks winning bets within that game only. */
     gameId?: Hex;
+    /** Optional unix-seconds lower bound on chain placement time (windowed ranking). */
+    since?: number;
   }) => Promise<BetIndexCasinoTopWinEntry[]>;
-  getGameVolumes: (query: { asset: Address; chainId: number }) => Promise<BetIndexGameVolume[]>;
+  /**
+   * Resolve a single player's 1-based position in the turnover leaderboard for
+   * the given scope, or null when they have no bets in scope. Lets the UI show
+   * "your rank" even when the player is outside the rendered top N.
+   */
+  getCasinoPlayerRank: (query: {
+    asset: Address;
+    chainId: number;
+    player: Address;
+    /** Optional game filter — ranks the player within that game only. */
+    gameId?: Hex;
+    /** Optional unix-seconds lower bound on chain placement time. */
+    since?: number;
+  }) => Promise<BetIndexCasinoPlayerRank | null>;
+  getGameVolumes: (query: {
+    asset: Address;
+    chainId: number;
+    /** Optional unix-seconds lower bound on chain placement time (windowed volume). */
+    since?: number;
+  }) => Promise<BetIndexGameVolume[]>;
   getCasinoTimeseries: (query: {
     asset: Address;
     chainId: number;
@@ -453,14 +490,17 @@ export function createMemoryBetIndexStore(): BetIndexStore {
             row.pricingAffiliate?.toLowerCase() === affiliate.toLowerCase()
         )
       }),
-    getCasinoStats: async ({ asset, chainId }) =>
+    getCasinoStats: async ({ asset, chainId, since }) =>
       casinoStatsFromRows({
         asset,
         rows: [...bets.values()].filter(
-          (row) => row.chainId === chainId && row.asset?.toLowerCase() === asset.toLowerCase()
+          (row) =>
+            row.chainId === chainId &&
+            row.asset?.toLowerCase() === asset.toLowerCase() &&
+            withinSince(row, since)
         )
       }),
-    getCasinoLeaderboard: async ({ asset, chainId, limit, gameId }) =>
+    getCasinoLeaderboard: async ({ asset, chainId, limit, gameId, since }) =>
       casinoLeaderboardFromRows({
         asset,
         limit,
@@ -468,10 +508,11 @@ export function createMemoryBetIndexStore(): BetIndexStore {
           (row) =>
             row.chainId === chainId &&
             row.asset?.toLowerCase() === asset.toLowerCase() &&
-            (!gameId || row.gameId?.toLowerCase() === gameId.toLowerCase())
+            (!gameId || row.gameId?.toLowerCase() === gameId.toLowerCase()) &&
+            withinSince(row, since)
         )
       }),
-    getCasinoTopWins: async ({ asset, chainId, limit, gameId }) =>
+    getCasinoTopWins: async ({ asset, chainId, limit, gameId, since }) =>
       casinoTopWinsFromRows({
         asset,
         limit,
@@ -479,14 +520,30 @@ export function createMemoryBetIndexStore(): BetIndexStore {
           (row) =>
             row.chainId === chainId &&
             row.asset?.toLowerCase() === asset.toLowerCase() &&
-            (!gameId || row.gameId?.toLowerCase() === gameId.toLowerCase())
+            (!gameId || row.gameId?.toLowerCase() === gameId.toLowerCase()) &&
+            withinSince(row, since)
         )
       }),
-    getGameVolumes: async ({ asset, chainId }) =>
+    getCasinoPlayerRank: async ({ asset, chainId, player, gameId, since }) =>
+      casinoPlayerRankFromRows({
+        asset,
+        player,
+        rows: [...bets.values()].filter(
+          (row) =>
+            row.chainId === chainId &&
+            row.asset?.toLowerCase() === asset.toLowerCase() &&
+            (!gameId || row.gameId?.toLowerCase() === gameId.toLowerCase()) &&
+            withinSince(row, since)
+        )
+      }),
+    getGameVolumes: async ({ asset, chainId, since }) =>
       gameVolumesFromRows({
         asset,
         rows: [...bets.values()].filter(
-          (row) => row.chainId === chainId && row.asset?.toLowerCase() === asset.toLowerCase()
+          (row) =>
+            row.chainId === chainId &&
+            row.asset?.toLowerCase() === asset.toLowerCase() &&
+            withinSince(row, since)
         )
       }),
     getCasinoTimeseries: async ({ asset, chainId, days, gameId }) =>
@@ -776,7 +833,7 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
         payoutGross: String(row.payoutGross ?? "0")
       };
     },
-    getCasinoStats: async ({ asset, chainId }) => {
+    getCasinoStats: async ({ asset, chainId, since }) => {
       const rows = await sql`
         select
           count(*)::text as bet_count,
@@ -791,6 +848,7 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
           coalesce(sum(nullif(payout_gross, '')::numeric), 0)::text as payout_gross
         from bets
         where chain_id = ${chainId} and asset = ${asset.toLowerCase()}
+          ${since != null ? sql`and coalesce(placed_at, updated_at) >= to_timestamp(${since})` : sql``}
       `;
       const row = rows[0] ?? {};
       return {
@@ -804,7 +862,7 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
         payoutGross: String(row.payoutGross ?? "0")
       };
     },
-    getCasinoLeaderboard: async ({ asset, chainId, limit, gameId }) => {
+    getCasinoLeaderboard: async ({ asset, chainId, limit, gameId, since }) => {
       const rows = await sql`
         select
           player,
@@ -816,6 +874,7 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
         from bets
         where chain_id = ${chainId} and asset = ${asset.toLowerCase()} and player is not null
         ${gameId ? sql`and game_id = ${gameId.toLowerCase()}` : sql``}
+        ${since != null ? sql`and coalesce(placed_at, updated_at) >= to_timestamp(${since})` : sql``}
         group by player
         order by coalesce(sum(nullif(stake, '')::numeric), 0) desc, count(*) desc, player asc
         limit ${limit}
@@ -830,7 +889,7 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
         payoutGross: String(row.payoutGross ?? "0")
       }));
     },
-    getCasinoTopWins: async ({ asset, chainId, limit, gameId }) => {
+    getCasinoTopWins: async ({ asset, chainId, limit, gameId, since }) => {
       const rows = await sql`
         select
           bet_id,
@@ -848,6 +907,7 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
           and coalesce(nullif(stake, '')::numeric, 0) > 0
           and coalesce(nullif(payout, '')::numeric, 0) > coalesce(nullif(stake, '')::numeric, 0)
           ${gameId ? sql`and game_id = ${gameId.toLowerCase()}` : sql``}
+          ${since != null ? sql`and coalesce(placed_at, updated_at) >= to_timestamp(${since})` : sql``}
         order by
           (coalesce(nullif(payout, '')::numeric, 0) / nullif(stake, '')::numeric) desc,
           coalesce(nullif(payout, '')::numeric, 0) desc,
@@ -865,7 +925,39 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
         stake: String(row.stake ?? "0")
       }));
     },
-    getGameVolumes: async ({ asset, chainId }) => {
+    getCasinoPlayerRank: async ({ asset, chainId, player, gameId, since }) => {
+      // Rank every player by turnover (matching the leaderboard ordering), then
+      // pluck the requested player's row. The window ordering tuple is unique
+      // per player, so rank() yields a precise 1-based position with no ties.
+      const rows = await sql`
+        select rnk, bet_count, turnover from (
+          select
+            player,
+            count(*)::text as bet_count,
+            coalesce(sum(nullif(stake, '')::numeric), 0)::text as turnover,
+            rank() over (
+              order by coalesce(sum(nullif(stake, '')::numeric), 0) desc, count(*) desc, player asc
+            )::text as rnk
+          from bets
+          where chain_id = ${chainId} and asset = ${asset.toLowerCase()} and player is not null
+          ${gameId ? sql`and game_id = ${gameId.toLowerCase()}` : sql``}
+          ${since != null ? sql`and coalesce(placed_at, updated_at) >= to_timestamp(${since})` : sql``}
+          group by player
+        ) ranked
+        where player = ${player.toLowerCase()}
+        limit 1
+      `;
+      const row = rows[0];
+      if (!row) return null;
+      return {
+        asset: asset.toLowerCase() as Address,
+        betCount: Number(row.betCount ?? 0),
+        player: player.toLowerCase() as Address,
+        rank: Number(row.rnk ?? 0),
+        turnover: String(row.turnover ?? "0")
+      };
+    },
+    getGameVolumes: async ({ asset, chainId, since }) => {
       const rows = await sql`
         select
           game_id,
@@ -881,6 +973,7 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
           coalesce(sum(nullif(payout_gross, '')::numeric), 0)::text as payout_gross
         from bets
         where chain_id = ${chainId} and asset = ${asset.toLowerCase()} and game_id is not null
+          ${since != null ? sql`and coalesce(placed_at, updated_at) >= to_timestamp(${since})` : sql``}
         group by game_id
         order by coalesce(sum(nullif(stake, '')::numeric), 0) desc, game_id asc
       `;
@@ -1127,6 +1220,31 @@ function casinoLeaderboardFromRows({
     .slice(0, limit);
 }
 
+function casinoPlayerRankFromRows({
+  asset,
+  player,
+  rows
+}: {
+  asset: Address;
+  player: Address;
+  rows: readonly BetRow[];
+}): BetIndexCasinoPlayerRank | null {
+  // Reuse the same ordering as the leaderboard so the rank matches what the
+  // player would see in the list. limit = full board so we get every position.
+  const board = casinoLeaderboardFromRows({ asset, limit: Number.MAX_SAFE_INTEGER, rows });
+  const target = player.toLowerCase();
+  const index = board.findIndex((entry) => entry.player.toLowerCase() === target);
+  if (index === -1) return null;
+  const entry = board[index]!;
+  return {
+    asset: asset.toLowerCase() as Address,
+    betCount: entry.betCount,
+    player: target as Address,
+    rank: index + 1,
+    turnover: entry.turnover
+  };
+}
+
 function casinoTopWinsFromRows({
   asset,
   limit,
@@ -1243,6 +1361,16 @@ function casinoTimeseriesFromRows({
 
 function addStringBigints(left: string, right: string | undefined) {
   return (BigInt(left || "0") + BigInt(right || "0")).toString();
+}
+
+/**
+ * In-memory time-window guard. `since` is a unix-seconds lower bound on chain
+ * placement time; rows older than it are excluded. Falls back to updatedAt when
+ * placedAt is missing (mirrors the postgres `coalesce(placed_at, updated_at)`).
+ */
+function withinSince(row: BetRow, since?: number): boolean {
+  if (since == null) return true;
+  return (row.placedAt ?? row.updatedAt) >= since * 1000;
 }
 
 function eventTimestampMs(event: BetIndexEvent) {

@@ -70,13 +70,15 @@ vi.mock("../useCasinoStats", () => ({
     data: {
       source: "postgres",
       asset: { address: "0xasset", decimals: 6, symbol: "USDC" },
+      // Site-wide aggregate — deliberately distinct from the single game below
+      // so the "All games" scope toggle can be asserted independently.
       stats: {
-        betCount: 5,
-        settledCount: 4,
-        wonCount: 2,
-        uniquePlayers: 3,
-        turnover: "50000000",
-        payout: "25000000",
+        betCount: 12,
+        settledCount: 10,
+        wonCount: 5,
+        uniquePlayers: 7,
+        turnover: "100000000",
+        payout: "60000000",
         payoutGross: "0"
       },
       games: [
@@ -95,7 +97,10 @@ vi.mock("../useCasinoStats", () => ({
       ]
     }
   }),
-  useCasinoLeaderboard: ({ by = "turnover" }: { by?: "turnover" | "topWin" } = {}) => ({
+  useCasinoLeaderboard: ({
+    by = "turnover",
+    player
+  }: { by?: "turnover" | "topWin"; player?: string } = {}) => ({
     data:
       by === "topWin"
         ? {
@@ -103,6 +108,7 @@ vi.mock("../useCasinoStats", () => ({
             by: "topWin",
             gameId: "0x1111111111111111111111111111111111111111",
             asset: { address: "0xasset", decimals: 6, symbol: "USDC" },
+            you: null,
             rows: [
               {
                 rank: 1,
@@ -129,6 +135,12 @@ vi.mock("../useCasinoStats", () => ({
             by: "turnover",
             gameId: "0x1111111111111111111111111111111111111111",
             asset: { address: "0xasset", decimals: 6, symbol: "USDC" },
+            // Only the dedicated "off-list ranked" wallet resolves a position;
+            // every other wallet is treated as unranked (you = null).
+            you:
+              player?.toLowerCase() === "0xeeee000000000000000000000000000000000007"
+                ? { rank: 7, betCount: 3, turnover: "12000000" }
+                : null,
             rows: [
               {
                 rank: 1,
@@ -223,6 +235,8 @@ const TRANSLATIONS: Record<string, string> = {
   "casino.room.audit.leaderboard.scopeTopWin": "Ranked by payout multiple",
   "casino.room.audit.leaderboard.views.turnover": "By volume",
   "casino.room.audit.leaderboard.views.topWin": "Top wins",
+  "casino.room.audit.leaderboard.you": "You",
+  "casino.room.audit.leaderboard.yourPosition": "Your position",
   "casino.room.audit.analytics.empty": "No analytics yet on this chain.",
   "casino.room.audit.analytics.rtp": "RTP",
   "casino.room.audit.analytics.wagered": "Total wagered",
@@ -232,6 +246,13 @@ const TRANSLATIONS: Record<string, string> = {
   "casino.room.audit.analytics.gainRatio": "Gain ratio",
   "casino.room.audit.analytics.bestEffort": "Indexed · best-effort",
   "casino.room.audit.analytics.players": "Players",
+  "casino.room.audit.analytics.views.game": "This game",
+  "casino.room.audit.analytics.views.all": "All games",
+  "casino.room.audit.analytics.windowLabel": "Time range",
+  "casino.room.audit.analytics.windows.all": "All",
+  "casino.room.audit.analytics.windows.d1": "24h",
+  "casino.room.audit.analytics.windows.d7": "7d",
+  "casino.room.audit.analytics.windows.d30": "30d",
   "casino.room.audit.analytics.trend": "7-day volume",
   "casino.room.audit.analytics.trendWindow": "Daily turnover by chain placement time",
   "casino.room.gameInfo.roulette.tagline": "European roulette tagline.",
@@ -392,6 +413,55 @@ describe("GameRoomAuditLedger", () => {
     expect(screen.getByRole("tab", { name: "By volume", selected: true })).toBeDefined();
   });
 
+  it("marks the connected wallet's leaderboard row with a You badge", () => {
+    setTab("leaderboard");
+    render(
+      <GameRoomAuditLedger
+        game={game}
+        betAmount={10}
+        chainId={84532}
+        recentBets={[]}
+        // Same address as the ranked turnover row (checksum-cased to prove the
+        // comparison is case-insensitive).
+        playerAddress="0xCCCC000000000000000000000000000000000003"
+      />
+    );
+    expect(screen.getByText("You")).toBeDefined();
+  });
+
+  it("does not show a You badge when the connected wallet is not ranked", () => {
+    setTab("leaderboard");
+    render(
+      <GameRoomAuditLedger
+        game={game}
+        betAmount={10}
+        chainId={84532}
+        recentBets={[]}
+        playerAddress="0xdddd000000000000000000000000000000000099"
+      />
+    );
+    expect(screen.queryByText("You")).toBeNull();
+    expect(screen.queryByText("Your position")).toBeNull();
+  });
+
+  it("shows the connected wallet's rank when it sits outside the top rows", () => {
+    setTab("leaderboard");
+    render(
+      <GameRoomAuditLedger
+        game={game}
+        betAmount={10}
+        chainId={84532}
+        recentBets={[]}
+        // Off-list ranked wallet (rank 7) — not present in the rendered rows.
+        playerAddress="0xeeee000000000000000000000000000000000007"
+      />
+    );
+    expect(screen.getByText("Your position")).toBeDefined();
+    expect(screen.getByText("7")).toBeDefined(); // rank
+    expect(screen.getByText("12 USDC")).toBeDefined(); // turnover
+    expect(screen.getByText("You")).toBeDefined(); // pill on the your-rank row
+  });
+
   it("shows durable top wins by multiplier inside the Leaderboard tab", () => {
     setTab("leaderboard");
     render(<GameRoomAuditLedger game={game} betAmount={10} recentBets={[]} />);
@@ -411,5 +481,34 @@ describe("GameRoomAuditLedger", () => {
     expect(screen.getByText("40.00%")).toBeDefined(); // gain ratio
     expect(screen.getByText("2")).toBeDefined(); // won count
     expect(screen.getByText("3")).toBeDefined(); // unique players
+  });
+
+  it("switches analytics to the all-games aggregate via the scope toggle", () => {
+    setTab("analytics");
+    render(<GameRoomAuditLedger game={game} betAmount={10} chainId={84532} recentBets={[]} />);
+    // Default scope: the per-game RTP.
+    expect(screen.getByText("50.00%")).toBeDefined();
+    expect(screen.getByRole("tab", { name: "This game", selected: true })).toBeDefined();
+
+    fireEvent.click(screen.getByRole("tab", { name: "All games" }));
+    // Aggregate: payout 60 / wagered 100 → RTP 60.00%; won 5 / bets 12 → 41.67%.
+    expect(screen.getByText("60.00%")).toBeDefined(); // RTP headline
+    expect(screen.getByText("100 USDC")).toBeDefined(); // total wagered
+    expect(screen.getByText("60 USDC")).toBeDefined(); // total payout
+    expect(screen.getByText("41.67%")).toBeDefined(); // gain ratio
+    expect(screen.getByText("5")).toBeDefined(); // won count
+    expect(screen.getByText("7")).toBeDefined(); // unique players
+  });
+
+  it("offers a 24h/7d/30d/All time-range selector on the Analytics tab", () => {
+    setTab("analytics");
+    render(<GameRoomAuditLedger game={game} betAmount={10} chainId={84532} recentBets={[]} />);
+    // Defaults to all-time.
+    expect(screen.getByRole("tab", { name: "All", selected: true })).toBeDefined();
+    for (const name of ["24h", "7d", "30d"]) {
+      expect(screen.getByRole("tab", { name })).toBeDefined();
+    }
+    fireEvent.click(screen.getByRole("tab", { name: "7d" }));
+    expect(screen.getByRole("tab", { name: "7d", selected: true })).toBeDefined();
   });
 });

@@ -289,6 +289,7 @@ export function GameRoomAuditLedger({
             assetSymbol={assetSymbol}
             assetDecimals={assetDecimals}
             chainId={chainId}
+            playerAddress={playerAddress}
           />
         )}
         {activeTab === "analytics" && <AnalyticsPanel gameId={game.gameId} t={t} locale={locale} />}
@@ -621,7 +622,8 @@ function LeaderboardPanel({
   locale,
   assetSymbol,
   assetDecimals,
-  chainId
+  chainId,
+  playerAddress
 }: {
   gameId?: string;
   t: Translate;
@@ -629,12 +631,18 @@ function LeaderboardPanel({
   assetSymbol: string;
   assetDecimals: number;
   chainId?: number;
+  /** Connected wallet — its row/card is highlighted as "You" when present. */
+  playerAddress?: string;
 }) {
   const [view, setView] = React.useState<LeaderboardView>("turnover");
+  const [windowDays, setWindowDays] = React.useState<number | undefined>(undefined);
+  const me = playerAddress?.toLowerCase();
   const board = useCasinoLeaderboard({
     by: view,
     gameId,
-    limit: 10
+    limit: 10,
+    windowDays,
+    player: playerAddress
   });
 
   const rows = board.data?.rows ?? [];
@@ -670,34 +678,44 @@ function LeaderboardPanel({
   );
   const hasRenderableRows = view === "topWin" ? topWinRows.length > 0 : turnoverRows.length > 0;
 
+  // "Your rank" — only when the connected wallet is ranked but sits outside the
+  // rendered top rows (otherwise the inline "You" highlight already covers it).
+  const youRank = board.data?.you ?? null;
+  const meInTopRows = !!me && turnoverRows.some((row) => row.player.toLowerCase() === me);
+  const showYourRank =
+    view === "turnover" && !!me && !!youRank && !meInTopRows && playerAddress != null;
+
   return (
     <div className="flex flex-col gap-4">
-      {/* turnover ↔ top-wins toggle */}
-      <div
-        role="tablist"
-        aria-label={t("casino.room.audit.leaderboard.title")}
-        className="flex gap-1.5"
-      >
-        {(["turnover", "topWin"] as LeaderboardView[]).map((option) => {
-          const active = option === view;
-          return (
-            <button
-              key={option}
-              type="button"
-              role="tab"
-              aria-selected={active}
-              onClick={() => setView(option)}
-              className={cn(
-                "rounded-md border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] transition-colors",
-                active
-                  ? "border-brand bg-brand-soft text-brand"
-                  : "border-border-soft bg-surface-0 text-fg-muted hover:border-brand/40 hover:text-fg"
-              )}
-            >
-              {t(`casino.room.audit.leaderboard.views.${option}`)}
-            </button>
-          );
-        })}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        {/* turnover ↔ top-wins toggle */}
+        <div
+          role="tablist"
+          aria-label={t("casino.room.audit.leaderboard.title")}
+          className="flex gap-1.5"
+        >
+          {(["turnover", "topWin"] as LeaderboardView[]).map((option) => {
+            const active = option === view;
+            return (
+              <button
+                key={option}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setView(option)}
+                className={cn(
+                  "rounded-md border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] transition-colors",
+                  active
+                    ? "border-brand bg-brand-soft text-brand"
+                    : "border-border-soft bg-surface-0 text-fg-muted hover:border-brand/40 hover:text-fg"
+                )}
+              >
+                {t(`casino.room.audit.leaderboard.views.${option}`)}
+              </button>
+            );
+          })}
+        </div>
+        <WindowToggle value={windowDays} onChange={setWindowDays} t={t} />
       </div>
 
       {unavailable || !hasRenderableRows ? (
@@ -728,6 +746,7 @@ function LeaderboardPanel({
                 assetSymbol={assetSymbol}
                 assetDecimals={assetDecimals}
                 chainId={chainId}
+                isMe={!!me && row.player.toLowerCase() === me}
               />
             ))}
           </div>
@@ -745,27 +764,32 @@ function LeaderboardPanel({
                 <ol className="mt-2 flex flex-col gap-1.5">
                   {turnoverRows.slice(3).map((row) => {
                     const explorer = getExplorerAddressUrl(chainId, row.player);
+                    const isMe = !!me && row.player.toLowerCase() === me;
                     return (
                       <li
                         key={row.player}
-                        className="grid grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1fr)] items-center gap-3 rounded-lg border border-border-soft bg-surface-0 px-4 py-3 text-sm"
+                        className={cn(
+                          "grid grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1fr)] items-center gap-3 rounded-lg border px-4 py-3 text-sm",
+                          isMe ? "border-brand/60 bg-brand-soft" : "border-border-soft bg-surface-0"
+                        )}
                       >
                         <span className="font-mono text-xs font-bold text-fg-subtle">
                           {row.rank}
                         </span>
-                        <span className="font-mono text-xs text-fg">
+                        <span className="flex min-w-0 items-center gap-1.5 font-mono text-xs text-fg">
                           {explorer ? (
                             <a
                               href={explorer}
                               target="_blank"
                               rel="noreferrer noopener"
-                              className="hover:text-brand"
+                              className="truncate hover:text-brand"
                             >
                               {shortHex(row.player)}
                             </a>
                           ) : (
-                            shortHex(row.player)
+                            <span className="truncate">{shortHex(row.player)}</span>
                           )}
+                          {isMe && <YouPill t={t} />}
                         </span>
                         <span className="text-right font-mono text-xs text-fg-muted">
                           {row.betCount.toLocaleString(locale)}
@@ -782,6 +806,39 @@ function LeaderboardPanel({
                     );
                   })}
                 </ol>
+              </div>
+            </div>
+          )}
+
+          {/* Your position — surfaced when the connected wallet is ranked but
+              outside the visible top rows, so players always see where they
+              stand (and how far to climb). */}
+          {showYourRank && youRank && (
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
+                {t("casino.room.audit.leaderboard.yourPosition")}
+              </span>
+              <div className="overflow-x-auto custom-scrollbar">
+                <div className="min-w-[420px]">
+                  <div className="grid grid-cols-[2.5rem_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,1fr)] items-center gap-3 rounded-lg border border-brand/60 bg-brand-soft px-4 py-3 text-sm ring-2 ring-brand">
+                    <span className="font-mono text-xs font-bold text-brand">{youRank.rank}</span>
+                    <span className="flex min-w-0 items-center gap-1.5 font-mono text-xs text-fg">
+                      <span className="truncate">{shortHex(playerAddress)}</span>
+                      <YouPill t={t} />
+                    </span>
+                    <span className="text-right font-mono text-xs text-fg-muted">
+                      {youRank.betCount.toLocaleString(locale)}
+                    </span>
+                    <span className="text-right font-mono text-xs font-bold text-fg">
+                      {formatTokenAmount(
+                        BigInt(youRank.turnover),
+                        assetDecimals,
+                        assetSymbol,
+                        locale
+                      )}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -827,7 +884,8 @@ function PodiumCard({
   locale,
   assetSymbol,
   assetDecimals,
-  chainId
+  chainId,
+  isMe
 }: {
   row: LeaderboardRow;
   t: Translate;
@@ -835,6 +893,7 @@ function PodiumCard({
   assetSymbol: string;
   assetDecimals: number;
   chainId?: number;
+  isMe?: boolean;
 }) {
   const style = PODIUM_STYLE[row.rank] ?? PODIUM_STYLE[3]!;
   const explorer = getExplorerAddressUrl(chainId, row.player);
@@ -845,7 +904,8 @@ function PodiumCard({
       className={cn(
         "flex flex-col items-center gap-2 rounded-xl border p-3 text-center shadow-e1",
         style.ring,
-        elevated && "sm:-translate-y-2"
+        elevated && "sm:-translate-y-2",
+        isMe && "ring-2 ring-brand"
       )}
     >
       <span
@@ -857,7 +917,7 @@ function PodiumCard({
       >
         {style.label}
       </span>
-      <span className="font-mono text-[11px] text-fg">
+      <span className="flex items-center gap-1.5 font-mono text-[11px] text-fg">
         {explorer ? (
           <a href={explorer} target="_blank" rel="noreferrer noopener" className="hover:text-brand">
             {shortHex(row.player)}
@@ -865,6 +925,7 @@ function PodiumCard({
         ) : (
           shortHex(row.player)
         )}
+        {isMe && <YouPill t={t} />}
       </span>
       <span
         className="w-full truncate font-mono text-sm font-bold text-fg"
@@ -876,6 +937,15 @@ function PodiumCard({
         {row.betCount.toLocaleString(locale)} {t("casino.room.audit.columns.bets")}
       </span>
     </div>
+  );
+}
+
+/** Small "You" marker for the connected wallet's leaderboard row/card. */
+function YouPill({ t }: { t: Translate }) {
+  return (
+    <span className="shrink-0 rounded-full bg-brand px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.1em] text-fg-inverse">
+      {t("casino.room.audit.leaderboard.you")}
+    </span>
   );
 }
 
@@ -893,26 +963,119 @@ function percentOf(numerator: string, denominator: string): string | null {
   return `${bps.toFixed(2)}%`;
 }
 
+/** Analytics dimension: the current game vs the whole casino. */
+type AnalyticsScope = "game" | "all";
+
+/** Time windows offered on analytics + leaderboard. `days` undefined = all-time. */
+const WINDOW_OPTIONS: Array<{ days?: number; key: "all" | "d1" | "d7" | "d30" }> = [
+  { key: "all" },
+  { days: 1, key: "d1" },
+  { days: 7, key: "d7" },
+  { days: 30, key: "d30" }
+];
+
+/** Shared 24h / 7d / 30d / All time-range selector. */
+function WindowToggle({
+  value,
+  onChange,
+  t
+}: {
+  value?: number;
+  onChange: (days?: number) => void;
+  t: Translate;
+}) {
+  return (
+    <div
+      role="tablist"
+      aria-label={t("casino.room.audit.analytics.windowLabel")}
+      className="flex flex-wrap gap-1.5"
+    >
+      {WINDOW_OPTIONS.map((option) => {
+        const active = option.days === value;
+        return (
+          <button
+            key={option.key}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(option.days)}
+            className={cn(
+              "rounded-md border px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] transition-colors",
+              active
+                ? "border-brand bg-brand-soft text-brand"
+                : "border-border-soft bg-surface-0 text-fg-muted hover:border-brand/40 hover:text-fg"
+            )}
+          >
+            {t(`casino.room.audit.analytics.windows.${option.key}`)}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function AnalyticsPanel({ gameId, t, locale }: { gameId?: string; t: Translate; locale: string }) {
-  const stats = useCasinoStats();
-  const timeseries = useCasinoTimeseries({ days: 7, gameId });
+  const [scope, setScope] = React.useState<AnalyticsScope>("game");
+  const [windowDays, setWindowDays] = React.useState<number | undefined>(undefined);
+  const stats = useCasinoStats({ windowDays });
+  // "All games" drops the per-game filter on both the metrics and the trend.
+  const timeseries = useCasinoTimeseries({
+    days: 7,
+    gameId: scope === "all" ? undefined : gameId
+  });
   const game = stats.data?.games.find(
     (g) => !gameId || g.gameId.toLowerCase() === gameId.toLowerCase()
   );
+  const metrics = scope === "all" ? stats.data?.stats : game;
   const unavailable = stats.data?.source === "unavailable";
   const decimals = stats.data?.asset.decimals ?? 6;
   const symbol = stats.data?.asset.symbol ?? "USDC";
   const trendPoints = timeseries.data?.source === "postgres" ? timeseries.data.points : [];
 
-  if (unavailable || !game) {
-    return <EmptyState message={t("casino.room.audit.analytics.empty")} />;
+  // This game ↔ all games. Stays mounted even on the empty state so the player
+  // can switch back to a populated scope.
+  const scopeToggle = (
+    <div role="tablist" aria-label={t("casino.room.audit.tabs.analytics")} className="flex gap-1.5">
+      {(["game", "all"] as AnalyticsScope[]).map((option) => {
+        const active = option === scope;
+        return (
+          <button
+            key={option}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => setScope(option)}
+            className={cn(
+              "rounded-md border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] transition-colors",
+              active
+                ? "border-brand bg-brand-soft text-brand"
+                : "border-border-soft bg-surface-0 text-fg-muted hover:border-brand/40 hover:text-fg"
+            )}
+          >
+            {t(`casino.room.audit.analytics.views.${option}`)}
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  if (unavailable || !metrics) {
+    return (
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          {scopeToggle}
+          <WindowToggle value={windowDays} onChange={setWindowDays} t={t} />
+        </div>
+        <EmptyState message={t("casino.room.audit.analytics.empty")} />
+      </div>
+    );
   }
 
   // RTP = total payout / total wagered. Gain ratio = winning bets / all bets.
   // Both are indexed best-effort observations, not the contract's design edge.
-  const rtp = percentOf(game.payout, game.turnover);
+  const rtp = percentOf(metrics.payout, metrics.turnover);
   const gainRatio =
-    game.betCount > 0 ? `${((game.wonCount / game.betCount) * 100).toFixed(2)}%` : null;
+    metrics.betCount > 0 ? `${((metrics.wonCount / metrics.betCount) * 100).toFixed(2)}%` : null;
 
   // Headline metric — RTP. Highlighted to drive the "high payout" perception.
   const headline = {
@@ -923,23 +1086,23 @@ function AnalyticsPanel({ gameId, t, locale }: { gameId?: string; t: Translate; 
     {
       key: "wagered",
       label: t("casino.room.audit.analytics.wagered"),
-      value: formatTokenAmount(BigInt(game.turnover), decimals, symbol, locale)
+      value: formatTokenAmount(BigInt(metrics.turnover), decimals, symbol, locale)
     },
     {
       key: "payout",
       label: t("casino.room.audit.analytics.payout"),
-      value: formatTokenAmount(BigInt(game.payout), decimals, symbol, locale),
+      value: formatTokenAmount(BigInt(metrics.payout), decimals, symbol, locale),
       tone: "win"
     },
     {
       key: "transactions",
       label: t("casino.room.audit.analytics.transactions"),
-      value: game.betCount.toLocaleString(locale)
+      value: metrics.betCount.toLocaleString(locale)
     },
     {
       key: "won",
       label: t("casino.room.audit.analytics.won"),
-      value: game.wonCount.toLocaleString(locale),
+      value: metrics.wonCount.toLocaleString(locale),
       tone: "win"
     },
     {
@@ -950,12 +1113,16 @@ function AnalyticsPanel({ gameId, t, locale }: { gameId?: string; t: Translate; 
     {
       key: "players",
       label: t("casino.room.audit.analytics.players"),
-      value: game.uniquePlayers.toLocaleString(locale)
+      value: metrics.uniquePlayers.toLocaleString(locale)
     }
   ];
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        {scopeToggle}
+        <WindowToggle value={windowDays} onChange={setWindowDays} t={t} />
+      </div>
       {/* Headline RTP — large, accent-framed. */}
       <div className="rounded-xl border border-accent/30 bg-accent-soft p-5 shadow-e1">
         <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-accent">

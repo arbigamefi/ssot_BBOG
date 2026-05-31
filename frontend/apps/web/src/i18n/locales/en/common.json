@@ -240,7 +240,9 @@
           "views": {
             "turnover": "By volume",
             "topWin": "Top wins"
-          }
+          },
+          "you": "You",
+          "yourPosition": "Your position"
         },
         "analytics": {
           "empty": "No analytics yet on this chain.",
@@ -256,7 +258,18 @@
           "gainRatio": "Gain ratio",
           "trend": "7-day volume",
           "trendWindow": "Daily turnover by chain placement time",
-          "bestEffort": "Indexed · best-effort"
+          "bestEffort": "Indexed · best-effort",
+          "views": {
+            "game": "This game",
+            "all": "All games"
+          },
+          "windowLabel": "Time range",
+          "windows": {
+            "all": "All",
+            "d1": "24h",
+            "d7": "7d",
+            "d30": "30d"
+          }
         }
       },
       "errors": {

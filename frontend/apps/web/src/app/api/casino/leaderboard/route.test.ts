@@ -51,7 +51,9 @@ describe("GET /api/casino/leaderboard", () => {
       by: "turnover",
       chainId: 8453,
       limit: 3,
-      gameId: undefined
+      gameId: undefined,
+      windowDays: undefined,
+      player: undefined
     });
   });
 
@@ -67,8 +69,53 @@ describe("GET /api/casino/leaderboard", () => {
       by: "turnover",
       chainId: 8453,
       limit: 5,
-      gameId
+      gameId,
+      windowDays: undefined,
+      player: undefined
     });
+  });
+
+  it("forwards a time window to the leaderboard service", async () => {
+    const { GET } = await import("./route");
+    const response = await GET(request("/api/casino/leaderboard?chainId=8453&limit=5&window=30"));
+
+    expect(response.status).toBe(200);
+    expect(queryCasinoLeaderboardMock).toHaveBeenCalledWith({
+      by: "turnover",
+      chainId: 8453,
+      limit: 5,
+      gameId: undefined,
+      windowDays: 30,
+      player: undefined
+    });
+  });
+
+  it("forwards a connected player to resolve their rank", async () => {
+    const player = `0x${"ab".repeat(20)}`;
+    const { GET } = await import("./route");
+    const response = await GET(
+      request(`/api/casino/leaderboard?chainId=8453&limit=5&player=${player}`)
+    );
+
+    expect(response.status).toBe(200);
+    expect(queryCasinoLeaderboardMock).toHaveBeenCalledWith({
+      by: "turnover",
+      chainId: 8453,
+      limit: 5,
+      gameId: undefined,
+      windowDays: undefined,
+      player
+    });
+  });
+
+  it("rejects a malformed player before hitting the service", async () => {
+    const { GET } = await import("./route");
+    const response = await GET(request("/api/casino/leaderboard?chainId=8453&player=0xnope"));
+    const body = await json(response);
+
+    expect(response.status).toBe(400);
+    expect(body.error.code).toBe("INVALID_PLAYER");
+    expect(queryCasinoLeaderboardMock).not.toHaveBeenCalled();
   });
 
   it("supports durable top-win ranking", async () => {
@@ -80,7 +127,9 @@ describe("GET /api/casino/leaderboard", () => {
       by: "topWin",
       chainId: 8453,
       limit: 7,
-      gameId: undefined
+      gameId: undefined,
+      windowDays: undefined,
+      player: undefined
     });
   });
 

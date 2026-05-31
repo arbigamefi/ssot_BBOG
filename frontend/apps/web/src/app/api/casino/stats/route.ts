@@ -25,7 +25,9 @@ export async function GET(request: Request) {
     return rateLimitedJson("Too many casino-stats requests. Please retry shortly.", quota.headers);
   }
 
-  const response = await queryCasinoStats({ chainId });
+  const rawWindow = url.searchParams.get("window");
+  const windowDays = rawWindow ? Number(rawWindow) : undefined;
+  const response = await queryCasinoStats({ chainId, windowDays });
   return NextResponse.json(response, {
     headers: mergeHeaders(noStoreHeaders(), quota.headers)
   });

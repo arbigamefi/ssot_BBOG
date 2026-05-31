@@ -54,7 +54,15 @@ describe("GET /api/casino/stats", () => {
 
     expect(response.status).toBe(200);
     expect((await json(response)).schemaVersion).toBe(1);
-    expect(queryCasinoStatsMock).toHaveBeenCalledWith({ chainId: 8453 });
+    expect(queryCasinoStatsMock).toHaveBeenCalledWith({ chainId: 8453, windowDays: undefined });
+  });
+
+  it("forwards a time window to the casino stats service", async () => {
+    const { GET } = await import("./route");
+    const response = await GET(request("/api/casino/stats?chainId=8453&window=7"));
+
+    expect(response.status).toBe(200);
+    expect(queryCasinoStatsMock).toHaveBeenCalledWith({ chainId: 8453, windowDays: 7 });
   });
 
   it("rate limits public stats reads", async () => {
