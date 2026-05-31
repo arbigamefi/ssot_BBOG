@@ -95,17 +95,17 @@ export function MobileWalletDeepLinkBanner() {
             <XMarkIcon className="h-4 w-4" />
           </button>
         </div>
-        <div className="scrollbar-hide flex gap-2 overflow-x-auto">
+        <div className="grid grid-cols-1 gap-2">
           {links.map((link) => (
             <a
               key={link.id}
               href={link.href}
               className={cn(
-                "inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border-soft bg-surface-1 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] text-fg transition-colors hover:border-brand/40 hover:text-brand"
+                "flex min-w-0 items-center justify-between gap-2 rounded-md border border-border-soft bg-surface-1 px-3 py-2.5 text-[11px] font-bold uppercase tracking-[0.1em] text-fg transition-colors hover:border-brand/40 hover:text-brand"
               )}
             >
-              {link.label}
-              <ArrowTopRightOnSquareIcon className="h-3 w-3" />
+              <span className="min-w-0 truncate">{link.label}</span>
+              <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5 shrink-0" />
             </a>
           ))}
         </div>

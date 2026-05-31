@@ -7,6 +7,7 @@ const isDev = process.env.NODE_ENV === "development";
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  devIndicators: false,
   transpilePackages: ["@ssot/ui", "@ssot/ssot"],
   distDir: process.env.NODE_ENV === "development" ? ".next-dev" : ".next",
   output: "standalone",

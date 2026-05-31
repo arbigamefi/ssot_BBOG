@@ -89,7 +89,6 @@ const GameRoomAuditLedger = dynamic(
 function MobileCasinoActionBar({
   game,
   betAmount,
-  expectedPayout,
   hasAccount,
   isPending,
   winChance,
@@ -98,7 +97,6 @@ function MobileCasinoActionBar({
 }: {
   game: GameMeta;
   betAmount: number;
-  expectedPayout: number;
   hasAccount: boolean;
   isPending: boolean;
   winChance: number;
@@ -108,14 +106,13 @@ function MobileCasinoActionBar({
   const t = useTranslations();
 
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_minmax(9.5rem,11rem)] items-center gap-3">
+    <div className="grid grid-cols-[minmax(0,1fr)_minmax(9rem,44%)] items-center gap-3">
       <div className="min-w-0">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-fg-subtle">
+        <p className="truncate text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-subtle">
           {t("casino.room.betPanel.amount.label")}
         </p>
-        <p className="truncate font-mono text-sm font-semibold text-fg">
-          {betAmount.toFixed(2)} USDC · {t("casino.room.betPanel.summary.expectedPayout")}{" "}
-          {expectedPayout.toFixed(2)}
+        <p className="truncate font-mono text-base font-semibold text-fg">
+          {betAmount.toFixed(2)} USDC
         </p>
       </div>
       <PlaceBetButton
@@ -504,7 +501,6 @@ export function GamePageClient({ slug }: { slug: string }) {
     <MobileCasinoActionBar
       game={game}
       betAmount={betAmount}
-      expectedPayout={expectedPayout}
       hasAccount={Boolean(sdk?.account)}
       isPending={isBetPanelPending}
       winChance={winChance}
