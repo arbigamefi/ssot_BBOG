@@ -29,7 +29,16 @@ import type {
   LandingStat
 } from "../../features/marketing/home-types";
 import { useRelease } from "../../ssot/release/ReleaseProvider";
-import { useSSOTSDK } from "../../ssot/sdk";
+
+type LandingAssetOverviewResponse = {
+  rows: Array<{
+    address: string;
+    symbol: string;
+    decimals: number;
+    totalAssets: string;
+    totalReserved: string;
+  }>;
+};
 
 function toBigOrNull(value?: string | bigint | number): bigint | null {
   if (value == null || value === "") return null;
@@ -43,33 +52,29 @@ function toBigOrNull(value?: string | bigint | number): bigint | null {
 export function HomePageClient() {
   const t = useTranslations("marketing");
   const locale = useLocale();
-  const { release } = useRelease();
-  const { sdk, ready } = useSSOTSDK();
+  const { chainId, release } = useRelease();
   const { data: latestBets = [] } = useRecentBets({
     errorMessage: t("errors.recentBetsFailed"),
     limit: 5
   });
 
   const { data: assetOverviews = [] } = useQuery({
-    queryKey: ["ssot", "landing", "asset-overview", release?.releaseDigest],
-    enabled: Boolean(release && sdk && ready),
+    queryKey: ["ssot", "landing", "asset-overview", chainId, release?.releaseDigest],
+    enabled: Boolean(release),
     queryFn: async (): Promise<AssetOverview[]> => {
-      if (!release || !sdk) return [];
-      return await Promise.all(
-        release.pools.map(async (pool) => {
-          const assetMeta = release.assets.find(
-            (asset) => asset.address.toLowerCase() === pool.asset.toLowerCase()
-          );
-          const snapshot = await sdk.bank.getSnapshot(pool.poolId);
-          return {
-            address: pool.asset as Address,
-            symbol: pool.symbol || assetMeta?.symbol || t("format.assetFallback"),
-            decimals: pool.decimals ?? assetMeta?.decimals ?? 18,
-            totalAssets: snapshot.totalAssets,
-            totalReserved: snapshot.totalReserved
-          };
-        })
-      );
+      const params = new URLSearchParams({ chainId: String(chainId) });
+      const response = await fetch(`/api/landing/asset-overview?${params.toString()}`, {
+        headers: { accept: "application/json" }
+      });
+      if (!response.ok) return [];
+      const body = (await response.json()) as LandingAssetOverviewResponse;
+      return body.rows.map((row) => ({
+        address: row.address as Address,
+        symbol: row.symbol || t("format.assetFallback"),
+        decimals: row.decimals,
+        totalAssets: BigInt(row.totalAssets),
+        totalReserved: BigInt(row.totalReserved)
+      }));
     }
   });
 
