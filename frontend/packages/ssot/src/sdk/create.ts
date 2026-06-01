@@ -1188,11 +1188,18 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
 
     async maxWithdraw(poolId: number, owner: AddressT): Promise<bigint> {
       const pool = resolvePool(poolId);
+      const shares = (await publicClient.readContract({
+        address: pool.bank,
+        abi: BANK_ABI,
+        functionName: "maxRedeem",
+        args: [owner]
+      })) as bigint;
+      if (shares === 0n) return 0n;
       return (await publicClient.readContract({
         address: pool.bank,
         abi: BANK_ABI,
-        functionName: "maxWithdraw",
-        args: [owner]
+        functionName: "convertToAssets",
+        args: [shares]
       })) as bigint;
     },
 

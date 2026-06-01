@@ -226,4 +226,45 @@ describe("EarnPageClient", () => {
       expect(toast.error).toHaveBeenCalledWith("Amount exceeds the connected wallet balance.");
     });
   });
+
+  it("uses account withdrawable assets for the withdraw max action", async () => {
+    state.ready = true;
+    state.sdk = {
+      account: "0x0000000000000000000000000000000000000abc",
+      bank: {
+        getSnapshot: vi.fn().mockResolvedValue({
+          bank: "0x0000000000000000000000000000000000000002",
+          totalAssets: 100_000_000n,
+          totalReserved: 0n,
+          totalSupply: 100_000_000n,
+          assetsPerShare: 1_000_000n,
+          minLiquidityBps: 1_000,
+          protocolFeesPayable: 0n,
+          externalPayablesTotal: 0n
+        }),
+        getPosition: vi.fn().mockResolvedValue(null),
+        getAssetBalance: vi.fn().mockResolvedValue(1_000_000n),
+        maxWithdraw: vi.fn().mockResolvedValue(56_999_999n),
+        maxRedeem: vi.fn().mockResolvedValue(57_000_000n)
+      }
+    };
+
+    renderWithQueryClient(<EarnPageClient />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Withdraw" }));
+
+    await waitFor(() => {
+      expect(state.sdk.bank.maxWithdraw).toHaveBeenCalled();
+    });
+
+    await waitFor(() => {
+      expect((screen.getByRole("button", { name: "Max" }) as HTMLButtonElement).disabled).toBe(
+        false
+      );
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Max" }));
+
+    expect((screen.getByLabelText("Amount") as HTMLInputElement).value).toBe("56.999999");
+  });
 });

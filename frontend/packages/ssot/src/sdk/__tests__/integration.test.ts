@@ -191,6 +191,46 @@ describe("createSSOTSDK", () => {
     expect(journal.map((entry) => entry.action)).toContain("DEPOSIT");
   });
 
+  it("derives withdrawable assets from account redeemable shares", async () => {
+    pub.readContract.mockResolvedValueOnce(57_000_000n).mockResolvedValueOnce(56_999_999n);
+
+    const result = await sdk.bank.maxWithdraw(1, ACCOUNT);
+
+    expect(result).toBe(56_999_999n);
+    expect(pub.readContract).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        address: getAddress(BANK),
+        functionName: "maxRedeem",
+        args: [ACCOUNT]
+      })
+    );
+    expect(pub.readContract).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        address: getAddress(BANK),
+        functionName: "convertToAssets",
+        args: [57_000_000n]
+      })
+    );
+  });
+
+  it("does not read asset conversion when no shares are redeemable", async () => {
+    pub.readContract.mockResolvedValueOnce(0n);
+
+    const result = await sdk.bank.maxWithdraw(1, ACCOUNT);
+
+    expect(result).toBe(0n);
+    expect(pub.readContract).toHaveBeenCalledTimes(1);
+    expect(pub.readContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        address: getAddress(BANK),
+        functionName: "maxRedeem",
+        args: [ACCOUNT]
+      })
+    );
+  });
+
   it("confirms Bank allowance after approval before placing casino bets", async () => {
     pub.readContract.mockResolvedValue(1_000_000n);
     const plan: PlaceBetPlan = {
