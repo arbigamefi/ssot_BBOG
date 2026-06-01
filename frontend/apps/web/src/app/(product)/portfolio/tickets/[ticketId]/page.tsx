@@ -13,7 +13,7 @@ export async function generateMetadata({
   const { ticketId } = await params;
   if (!/^[0-9]+$/.test(ticketId)) notFound();
 
-  return generatePageMetadata("portfolioSportsTicket", { ticketId });
+  return generatePageMetadata("portfolioSportsTicket", { ticketId }, { noindex: true });
 }
 
 export default async function SportsTicketDetailPage({

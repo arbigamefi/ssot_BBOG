@@ -5,7 +5,7 @@ import { generatePageMetadata } from "../../../i18n/metadata";
 import { OpsPageClient } from "./pageClient";
 
 export function generateMetadata(): Promise<Metadata> {
-  return generatePageMetadata("ops");
+  return generatePageMetadata("ops", undefined, { noindex: true });
 }
 
 export default function OpsPage() {

@@ -1,0 +1,43 @@
+FROM node:24.15.0-slim AS base
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
+WORKDIR /app/frontend
+
+FROM base AS deps
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends python3 make g++ \
+  && rm -rf /var/lib/apt/lists/*
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/web/package.json apps/web/package.json
+COPY apps/keeper/package.json apps/keeper/package.json
+COPY packages/bet-index/package.json packages/bet-index/package.json
+COPY packages/ssot/package.json packages/ssot/package.json
+COPY packages/ui/package.json packages/ui/package.json
+RUN --mount=type=cache,id=arbigamefi-pnpm-store,target=/pnpm/store \
+  pnpm config set store-dir /pnpm/store \
+  && pnpm install --frozen-lockfile --filter @ssot/web...
+
+FROM deps AS builder
+COPY . .
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN pnpm -C apps/web build
+
+FROM node:24.15.0-slim AS runner
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV HOSTNAME=0.0.0.0
+ENV PORT=3000
+WORKDIR /app
+
+RUN groupadd --system --gid 1001 nodejs \
+  && useradd --system --uid 1001 --gid nodejs nextjs
+
+COPY --from=builder --chown=nextjs:nodejs /app/frontend/apps/web/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/frontend/apps/web/.next/static ./apps/web/.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/frontend/apps/web/public ./apps/web/public
+
+USER nextjs
+EXPOSE 3000
+WORKDIR /app/apps/web
+CMD ["node", "server.js"]

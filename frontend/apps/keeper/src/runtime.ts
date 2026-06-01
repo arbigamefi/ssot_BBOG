@@ -20,6 +20,7 @@ import {
 } from "@ssot/bet-index";
 
 import { GAME_HUB_KEEPER_ABI, SPORTS_HUB_KEEPER_ABI, VRF_HUB_KEEPER_ABI } from "./abi.js";
+import { fetchBankProviderLedgerRows } from "./bank-provider-ledger.js";
 import { finalizeIfReady, retryDelayMs } from "./finalizer.js";
 import { createFileHealthSink, KeeperHealthReporter } from "./health.js";
 import { FinalizeQueue, type QueueItem } from "./queue.js";
@@ -517,12 +518,14 @@ export function createKeeperRuntime({
     logs: Array<{
       args?: Record<string, unknown>;
       blockNumber?: bigint;
+      blockTimestamp?: bigint | number;
       logIndex?: number;
       transactionHash?: Hex;
     }>
   ) => {
     if (!betIndexStore || logs.length === 0) return;
-    const events = logs
+    const stampedLogs = await attachBlockTimestamps(publicClient, logs);
+    const events = stampedLogs
       .map((log) => toBetIndexEvent(config.chainId, config.gameHub, eventName, log))
       .filter((event): event is BetIndexEvent => Boolean(event));
     if (events.length === 0) return;
@@ -840,7 +843,8 @@ async function writeBetIndexRange(
         fromBlock: range.fromBlock,
         toBlock: range.toBlock
       });
-      const events = logs
+      const stampedLogs = await attachBlockTimestamps(publicClient, logs);
+      const events = stampedLogs
         .map((log) => toBetIndexEvent(config.chainId, config.gameHub, eventName, log))
         .filter((event): event is BetIndexEvent => Boolean(event));
       await store.writeGameHubEvents(events);
@@ -859,6 +863,15 @@ async function writeBetIndexRange(
           .filter((event): event is SportsTicketIndexEvent => Boolean(event));
         await store.writeSportsHubEvents(events);
       }
+    }
+    for (const pool of config.bankProviderLedgerPools) {
+      const rows = await fetchBankProviderLedgerRows({
+        chainId: config.chainId,
+        pool,
+        publicClient,
+        range
+      });
+      await store.writeBankProviderLedgerRows(rows);
     }
     await store.setCursor({
       blockNumber: range.toBlock,
@@ -904,6 +917,7 @@ function toBetIndexEvent(
   log: {
     args?: Record<string, unknown>;
     blockNumber?: bigint;
+    blockTimestamp?: bigint | number;
     logIndex?: number;
     transactionHash?: Hex;
   }
@@ -912,12 +926,52 @@ function toBetIndexEvent(
   return {
     args: log.args ?? {},
     blockNumber: log.blockNumber,
+    blockTimestamp: normalizeBlockTimestamp(log.blockTimestamp),
     chainId,
     eventName,
     gameHub,
     logIndex: log.logIndex,
     txHash: log.transactionHash
   };
+}
+
+async function attachBlockTimestamps<
+  T extends {
+    blockNumber?: bigint;
+    blockTimestamp?: bigint | number;
+  }
+>(
+  publicClient: PublicClient,
+  logs: readonly T[]
+): Promise<Array<T & { blockTimestamp?: bigint | number }>> {
+  const blockTimestampPromises = new Map<string, Promise<number | undefined>>();
+
+  const getTimestamp = (blockNumber: bigint) => {
+    const key = blockNumber.toString();
+    let existing = blockTimestampPromises.get(key);
+    if (!existing) {
+      existing = publicClient
+        .getBlock({ blockNumber })
+        .then((block) => Number(block.timestamp) * 1000)
+        .catch(() => undefined);
+      blockTimestampPromises.set(key, existing);
+    }
+    return existing;
+  };
+
+  return Promise.all(
+    logs.map(async (log) => {
+      if (log.blockNumber == null) return log;
+      if (normalizeBlockTimestamp(log.blockTimestamp) != null) return log;
+      const blockTimestamp = await getTimestamp(log.blockNumber);
+      return blockTimestamp == null ? log : { ...log, blockTimestamp };
+    })
+  );
+}
+
+function normalizeBlockTimestamp(value: bigint | number | undefined) {
+  if (typeof value === "bigint") return Number(value) * 1000;
+  return typeof value === "number" ? value : undefined;
 }
 
 function toSportsTicketIndexEvent(

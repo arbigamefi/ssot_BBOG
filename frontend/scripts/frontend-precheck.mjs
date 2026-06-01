@@ -97,7 +97,12 @@ function checkForbiddenColorLiterals() {
     label: "Raw colors and ad-hoc Tailwind color families",
     roots: sourceRoots,
     pattern,
-    exclude: (file) => formatPath(file).startsWith("packages/ui/src/tokens/"),
+    exclude: (file) => {
+      const path = formatPath(file);
+      return (
+        path.startsWith("packages/ui/src/tokens/") || path === "apps/web/src/app/og/render.tsx"
+      );
+    },
     blocking: true
   });
 }

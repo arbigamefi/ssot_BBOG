@@ -1,4 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { __resetRateLimitBucketsForTests } from "../../../../server/http/rate-limit";
 
 const originalEnv = process.env;
 
@@ -6,13 +7,14 @@ async function json(response: Response) {
   return (await response.json()) as any;
 }
 
-function request(query = "") {
-  return new Request(`http://localhost/api/sportsbook/provider-odds${query}`);
+function request(query = "", init?: RequestInit) {
+  return new Request(`http://localhost/api/sportsbook/provider-odds${query}`, init);
 }
 
 describe("GET /api/sportsbook/provider-odds", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    __resetRateLimitBucketsForTests();
     process.env = {
       ...originalEnv,
       NEXT_PUBLIC_SPORTSBOOK_ENABLED: "true",
@@ -181,5 +183,55 @@ describe("GET /api/sportsbook/provider-odds", () => {
         message: "Missing THE_ODDS_API_KEY."
       }
     });
+  });
+
+  it("rate limits provider odds reads per client", async () => {
+    process.env.SPORTSBOOK_PROVIDER_ODDS_RATE_LIMIT_PER_MINUTE = "1";
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [
+        {
+          id: "event-1",
+          home_team: "Seattle Sounders",
+          away_team: "Inter Miami",
+          bookmakers: [
+            {
+              key: "draftkings",
+              markets: [
+                {
+                  key: "h2h",
+                  outcomes: [
+                    { name: "Seattle Sounders", price: 2.1 },
+                    { name: "Draw", price: 3.4 },
+                    { name: "Inter Miami", price: 2.9 }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const { GET } = await import("./route");
+
+    const first = await GET(
+      request("?marketId=7", { headers: { "x-forwarded-for": "203.0.113.10" } })
+    );
+    const second = await GET(
+      request("?marketId=7", { headers: { "x-forwarded-for": "203.0.113.10" } })
+    );
+
+    expect(first.status).toBe(200);
+    expect(first.headers.get("X-RateLimit-Remaining")).toBe("0");
+    expect(second.status).toBe(429);
+    expect(second.headers.get("Retry-After")).toBeTruthy();
+    expect(await json(second)).toEqual({
+      error: {
+        code: "RATE_LIMITED",
+        message: "Too many sportsbook provider odds requests. Please retry shortly."
+      }
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

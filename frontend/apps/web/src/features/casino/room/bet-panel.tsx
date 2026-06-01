@@ -102,7 +102,7 @@ export function GameRoomBetPanel({
         {!hasAccount && (
           <div className="mb-2 rounded-lg border border-brand/30 bg-brand-soft p-3">
             <div className="flex items-start gap-3">
-              <WalletIcon className="mt-0.5 h-5 w-5 flex-shrink-0 text-brand" />
+              <WalletIcon className="mt-0.5 h-5 w-5 shrink-0 text-brand" />
               <div>
                 <p className="text-sm font-semibold text-fg">
                   {t("casino.room.betPanel.walletGate.title")}
@@ -112,12 +112,14 @@ export function GameRoomBetPanel({
           </div>
         )}
 
-        <BetAmountSection
-          betAmount={betAmount}
-          walletBalance={walletBalance}
-          isPending={isPending}
-          onBetAmountChange={onBetAmountChange}
-        />
+        <div data-tour="bet-amount">
+          <BetAmountSection
+            betAmount={betAmount}
+            walletBalance={walletBalance}
+            isPending={isPending}
+            onBetAmountChange={onBetAmountChange}
+          />
+        </div>
 
         <BetRollsSection
           betAmount={betAmount}
@@ -144,7 +146,7 @@ export function GameRoomBetPanel({
 
         {state.status === "failed" && state.error?.message && (
           <div className="mb-4 flex items-start gap-3 rounded-lg border border-danger/30 bg-danger-soft p-4 text-danger">
-            <InformationCircleIcon className="h-5 w-5 flex-shrink-0" />
+            <InformationCircleIcon className="h-5 w-5 shrink-0" />
             <div className="font-mono text-xs font-bold">
               {getStepperErrorMessage(state.error, t("casino.room.errors.transactionFailed"))}
             </div>
@@ -166,6 +168,7 @@ export function GameRoomBetPanel({
       </div>
 
       <div
+        data-tour="place-bet"
         className={cn(
           "-mx-4 mt-2 shrink-0 border-t border-border-soft bg-surface-2/95 px-4 pt-2 shadow-e2 backdrop-blur lg:mx-0 lg:bg-surface-2 lg:px-0 lg:shadow-none",
           hideMobileAction && "hidden lg:block"

@@ -1,4 +1,5 @@
 import type { Address, Hex } from "viem";
+import type { BankProviderLedgerPool } from "./bank-provider-ledger.js";
 
 export type BetStateName = "none" | "held" | "pendingVrf" | "randomReady" | "settled" | "refunded";
 
@@ -33,6 +34,7 @@ export type KeeperConfig = {
   betIndexDatabaseUrl?: string;
   betIndexSsl: boolean;
   betIndexWriteEnabled: boolean;
+  bankProviderLedgerPools: BankProviderLedgerPool[];
   sportsTerminalizerEnabled: boolean;
   sportsTerminalizerScanChunkBlocks: bigint;
   sportsTerminalizerMarketIds: bigint[];

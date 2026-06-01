@@ -3,7 +3,7 @@
 | Owner | Frontend Lead + SRE |
 | Status | Accepted |
 | Last Updated | 2026-05-18 |
-| Depends-on | `../../frontend/casino-keeper-v1.md`, `../../design/durable-bet-index.md` |
+| Depends-on | `../../frontend/casino-keeper-v1.md`, `../../design/durable-bet-index.md`, `./bet-index-production.md` |
 | Scope | Casino `RandomReady -> GameHub.finalize -> Settled/Refunded` automation; optional sportsbook result and ticket terminalization |
 
 This runbook installs and operates the casino keeper as two independent
@@ -15,7 +15,8 @@ settlement authority. `GameHub.finalize(betId)`, `SportsHub.finalizeResult`,
 
 - The release JSON is present on the host:
   `frontend/packages/ssot/src/release/embedded/chain-84532.json` for Base
-  Sepolia, or the active mainnet release path.
+  Sepolia, or `frontend/packages/ssot/src/release/embedded/chain-8453.json`
+  for Base mainnet.
 - Keeper EOAs have enough native gas token for at least 24 hours of expected
   settlement traffic.
 - Primary and backup use different EOAs, RPC providers, and hosts or regions.
@@ -47,6 +48,8 @@ Templates live under:
 ```text
 frontend/deploy/casino-keeper/primary.env.example
 frontend/deploy/casino-keeper/backup.env.example
+frontend/deploy/casino-keeper/primary.base-mainnet.env.example
+frontend/deploy/casino-keeper/backup.base-mainnet.env.example
 ```
 
 Install them as root-owned files:
@@ -80,6 +83,10 @@ Edit the real files and set:
 | `KEEPER_SPORTS_TICKET_SCAN_START_BLOCK` | Optional lower bound for `TicketPlaced` scans. Leave empty to use the active release block, or set to the sportsbook canary start block after backfill. |
 | `BET_INDEX_DATABASE_URL` | Managed Postgres connection string. |
 | `BET_INDEX_SSL` | `true` for managed Postgres unless the provider documents otherwise. |
+
+For Base mainnet, start from the `*.base-mainnet.env.example` files and replace
+`KEEPER_START_BLOCK` with the accepted release block. Do not reuse the Base
+Sepolia chain id, release path, start block, or RPC endpoints.
 
 ## 4. Install systemd Unit
 
@@ -121,15 +128,20 @@ Expected route:
 
 ```bash
 curl -fsS https://<ops-host>/ops/casino-keeper-health.json | jq .
+curl -fsS https://<web-host>/api/healthz | jq '.checks.keeper'
 ```
 
-The route should show:
+The keeper route should show:
 
 - `status: "running"`;
 - `role: "primary"` for the primary health file;
 - a fresh `updatedAt`;
 - non-decreasing `lastScannedBlock`;
 - `lastFinalizeFailureAt` absent or older than the most recent recovery.
+
+The web health endpoint should show `checks.keeper.status: "ok"`. A stale or
+missing health snapshot degrades `/api/healthz`; do not treat the public web app
+as launch-ready while that check is degraded.
 
 ## 6. Canary
 
@@ -212,10 +224,13 @@ above.
 - [ ] Backup keeper unit starts with `KEEPER_BACKUP_DELAY_SECONDS=5`.
 - [ ] Primary and backup use different EOAs and RPC providers.
 - [ ] Durable bet index migration succeeds when `BET_INDEX_WRITE_ENABLED=true`.
+- [ ] Durable bet index backup and restore drill is recorded per
+      `docs/ops/runbooks/bet-index-production.md`.
 - [ ] A minimal canary bet reaches terminal state without player manual settle.
 - [ ] If sportsbook terminalization is enabled, a canary market finalizes and
       all held canary tickets settle/refund without player manual action.
 - [ ] `/ops/casino-keeper-health.json` reports a fresh primary snapshot.
+- [ ] `/api/healthz` reports `checks.keeper.status: "ok"`.
 - [ ] Stuck `RandomReady` alert owner and escalation channel are documented.
 - [ ] Sportsbook finality-ready and terminalizable-ticket alert owners are documented.
 

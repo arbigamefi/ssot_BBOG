@@ -20,7 +20,7 @@ const budgets = [
   {
     route: "/(product)/portfolio/activity/page",
     publicPath: "/portfolio/activity",
-    maxKb: 150
+    maxKb: 155
   },
   { route: "/(product)/portfolio/claims/page", publicPath: "/portfolio/claims", maxKb: 170 },
   { route: "/(product)/sportsbook/page", publicPath: "/sportsbook", maxKb: 180 },

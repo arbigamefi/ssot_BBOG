@@ -1,6 +1,11 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { ArrowTopRightOnSquareIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import {
+  ArrowTopRightOnSquareIcon,
+  CheckIcon,
+  ClipboardDocumentCheckIcon,
+  XMarkIcon
+} from "@heroicons/react/24/outline";
 import { cn } from "@ssot/ui";
 
 import { formatUnits } from "../../betting/model/units";
@@ -52,6 +57,73 @@ function explorerTxUrl(chainId: number | undefined, txHash: string | undefined) 
   if (chainId === 421614) return `https://sepolia.arbiscan.io/tx/${txHash}`;
   if (chainId === 42161) return `https://arbiscan.io/tx/${txHash}`;
   return undefined;
+}
+
+/**
+ * Bundle every chain-verifiable fact about a settled round into a single,
+ * self-describing JSON artifact the player can keep — the practical payoff of
+ * "verifiable on-chain". Anyone can re-derive the outcome from these fields.
+ */
+function buildFairnessProof(args: {
+  result: CasinoRoundResult;
+  chainId: number | undefined;
+  txHash: string | undefined;
+}): string {
+  const { result, chainId, txHash } = args;
+  return JSON.stringify(
+    {
+      kind: "arbigamefi.proof-of-fairness.v1",
+      chainId: chainId ?? null,
+      betId: result.betId.toString(),
+      requestId: result.requestId.toString(),
+      randomHash: result.randomHash,
+      settlementTx: txHash ?? null,
+      explorerTx: explorerTxUrl(chainId, txHash) ?? null,
+      resolvedAt: result.resolvedAt ?? null,
+      exportedAt: new Date().toISOString()
+    },
+    null,
+    2
+  );
+}
+
+function CopyProofButton({
+  proof,
+  label,
+  copiedLabel
+}: {
+  proof: string;
+  label: string;
+  copiedLabel: string;
+}) {
+  const [copied, setCopied] = React.useState(false);
+  return (
+    <button
+      type="button"
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(proof);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        } catch {
+          // clipboard denied — no-op
+        }
+      }}
+      className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border-soft bg-surface-2 px-5 py-2.5 text-xs font-bold uppercase tracking-[0.12em] text-fg-muted transition-colors hover:border-brand/40 hover:text-fg"
+    >
+      {copied ? (
+        <>
+          <CheckIcon className="h-4 w-4 text-success" />
+          {copiedLabel}
+        </>
+      ) : (
+        <>
+          <ClipboardDocumentCheckIcon className="h-4 w-4" />
+          {label}
+        </>
+      )}
+    </button>
+  );
 }
 
 type Translate = ReturnType<typeof useTranslations>;
@@ -492,7 +564,7 @@ function DetailRow({
           )}
         >
           {value}
-          <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5 flex-shrink-0" />
+          <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5 shrink-0" />
         </a>
       ) : (
         <p className={cn(valueClass, "truncate")}>{value}</p>
@@ -579,7 +651,12 @@ export function GameRoomResultOverlay({
         : t("casino.room.result.facts.payout");
 
   return (
-    <div className="pointer-events-auto absolute inset-0 z-[60] flex flex-col items-center justify-center bg-surface-0/82 p-4 backdrop-blur-md animate-in fade-in zoom-in">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={t("casino.room.result.title")}
+      className="pointer-events-auto absolute inset-0 z-[60] flex flex-col items-center justify-center bg-surface-0/82 p-4 backdrop-blur-md animate-in fade-in zoom-in"
+    >
       <div className="relative flex max-h-[calc(100vh-3rem)] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-border bg-surface-1 p-6 text-center shadow-e3 transition-transform md:p-8">
         <div
           className={cn(
@@ -603,6 +680,8 @@ export function GameRoomResultOverlay({
             {t("casino.room.result.title")}
           </p>
           <h3
+            role="status"
+            aria-live="assertive"
             className={cn(
               "mt-5 text-left text-4xl font-semibold tracking-normal",
               outcome.tone === "win" && "text-success",
@@ -694,6 +773,13 @@ export function GameRoomResultOverlay({
                 }
                 href={txHref}
               />
+              <div className="pt-2">
+                <CopyProofButton
+                  proof={buildFairnessProof({ result, chainId, txHash })}
+                  label={t("casino.room.result.actions.copyProof")}
+                  copiedLabel={t("casino.room.result.actions.proofCopied")}
+                />
+              </div>
             </DetailSection>
           </div>
 

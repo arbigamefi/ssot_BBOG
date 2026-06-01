@@ -2,6 +2,12 @@ import {
   getSportsbookProviderOdds,
   SportsbookProviderOddsError
 } from "../../../../server/sportsbook/provider-odds";
+import {
+  checkRateLimit,
+  getClientIp,
+  rateLimitHeaders,
+  readPositiveIntegerEnv
+} from "../../../../server/http/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -20,12 +26,45 @@ function noStore() {
   };
 }
 
+function mergeHeaders(...headersList: Array<HeadersInit | undefined>) {
+  const headers = new Headers();
+  for (const headerLike of headersList) {
+    if (!headerLike) continue;
+    new Headers(headerLike).forEach((value, key) => headers.set(key, value));
+  }
+  return headers;
+}
+
+function rateLimit(request: Request) {
+  const limit = readPositiveIntegerEnv("SPORTSBOOK_PROVIDER_ODDS_RATE_LIMIT_PER_MINUTE", 60);
+  const result = checkRateLimit({
+    key: `sportsbook:provider-odds:${getClientIp(request)}`,
+    limit,
+    windowMs: 60_000
+  });
+  return { limit, result };
+}
+
 export async function GET(request: Request) {
   try {
+    const quota = rateLimit(request);
+    const quotaHeaders = rateLimitHeaders(quota.result, quota.limit);
+    if (!quota.result.allowed) {
+      return Response.json(
+        {
+          error: {
+            code: "RATE_LIMITED",
+            message: "Too many sportsbook provider odds requests. Please retry shortly."
+          }
+        },
+        { status: 429, headers: mergeHeaders(noStore(), quotaHeaders) }
+      );
+    }
+
     const url = new URL(request.url);
     const odds = await getSportsbookProviderOdds({ searchParams: url.searchParams });
     return Response.json(odds, {
-      headers: noStore()
+      headers: mergeHeaders(noStore(), quotaHeaders)
     });
   } catch (error) {
     if (error instanceof SportsbookProviderOddsError) {

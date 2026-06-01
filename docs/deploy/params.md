@@ -39,6 +39,10 @@ For each `i in [0..NUM_POOLS-1]`:
 - `BANK_MIN_LIQ_BPS_i`, `BANK_MIN_TURNOVER_FOR_UNLOCK_i`, `BANK_HOLDBACK_VESTING_SECONDS_i`.
 - `LP_NAME_i`, `LP_SYMBOL_i`, `LP_DECIMALS_i`.
 
+For public-network preflight, `LP_DECIMALS_i` is required and must match `POOL_ASSET_i.decimals()`
+on chain. This prevents release metadata from treating 6-decimal assets such as USDC as 18-decimal
+assets.
+
 The deploy script writes `deployments/latest-v13.json` and `deployments/verify-latest-v13.sh`.
 Casino pools are allowlisted for `GameHub`; Sports pools are allowlisted for `SportsHub`; Future pools
 are registered and wired to `SettlementRouter` but still need their own vertical hub before risk-in can

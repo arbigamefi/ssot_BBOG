@@ -105,6 +105,14 @@ const DOZEN_ROULETTE_BETS: Record<string, 1 | 2 | 3> = {
   "3rd 12": 3
 };
 
+// Column bets ("col1" → 1,4,7,…,34; "col2" → 2,5,…,35; "col3" → 3,6,…,36).
+// Encoded against the SSOT column kind so the contract pays 2:1.
+const COLUMN_ROULETTE_BETS: Record<string, 1 | 2 | 3> = {
+  col1: 1,
+  col2: 2,
+  col3: 3
+};
+
 function addRange(target: Set<number>, start: number, end: number, step = 1) {
   for (let n = start; n <= end; n += step) {
     target.add(n);
@@ -124,8 +132,13 @@ export function rouletteCoveredNumbers(spots: readonly string[]): number[] {
     if (spot === "RED") {
       RED_NUMBERS.forEach((n) => covered.add(n));
     } else if (spot === "BLACK") {
-      addRange(covered, 1, 36);
-      RED_NUMBERS.forEach((n) => covered.delete(n));
+      // Pure add — must NOT do "add 1..36 then delete red", because that
+      // also strips red numbers contributed by an earlier RED/ODD/EVEN/etc
+      // bet, making the union order-dependent (and the on-chain bitmask
+      // wrong, since buildRouletteBitmask shares this function).
+      for (let n = 1; n <= 36; n += 1) {
+        if (!RED_NUMBER_SET.has(n)) covered.add(n);
+      }
     } else if (spot === "ODD") {
       addRange(covered, 1, 36, 2);
     } else if (spot === "EVEN") {
@@ -140,6 +153,12 @@ export function rouletteCoveredNumbers(spots: readonly string[]): number[] {
       addRange(covered, 13, 24);
     } else if (spot === "3rd 12") {
       addRange(covered, 25, 36);
+    } else if (spot === "col1") {
+      addRange(covered, 1, 34, 3);
+    } else if (spot === "col2") {
+      addRange(covered, 2, 35, 3);
+    } else if (spot === "col3") {
+      addRange(covered, 3, 36, 3);
     } else if (isStraightNumber(spot)) {
       covered.add(Number(spot));
     }
@@ -168,6 +187,8 @@ export function createRouletteParamsInput(spots: readonly string[]): RoulettePar
     if (NAMED_ROULETTE_BETS[singleSpot]) return { kind: NAMED_ROULETTE_BETS[singleSpot] };
     if (DOZEN_ROULETTE_BETS[singleSpot])
       return { kind: "dozen", dozen: DOZEN_ROULETTE_BETS[singleSpot] };
+    if (COLUMN_ROULETTE_BETS[singleSpot])
+      return { kind: "column", column: COLUMN_ROULETTE_BETS[singleSpot] };
     if (isStraightNumber(singleSpot)) return { kind: "straight", number: Number(singleSpot) };
   }
 

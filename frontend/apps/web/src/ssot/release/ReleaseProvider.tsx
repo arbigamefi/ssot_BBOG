@@ -10,6 +10,10 @@ type ReleaseContextValue = {
   warnings: string[];
   readOnly: boolean;
   readOnlyReason?: string;
+  releaseReadOnly: boolean;
+  selectedChainName?: string;
+  walletChainId?: number;
+  walletChainMismatch: boolean;
   sportsbook: SportsbookAccess;
 };
 
@@ -74,15 +78,25 @@ export function resolveSportsbookAccess(
 export function ReleaseProvider({
   children,
   chainId,
+  selectedChainName,
+  walletChainId,
   sportsbookEnabledFlag
 }: {
   children: React.ReactNode;
   chainId?: number;
+  selectedChainName?: string;
+  walletChainId?: number;
   sportsbookEnabledFlag?: string;
 }) {
   const resolvedChainId = chainId ?? embeddedChainIds[0] ?? 84532;
   const value = React.useMemo<ReleaseContextValue>(() => {
     const rawSportsbookFlag = sportsbookEnabledFlag ?? process.env.NEXT_PUBLIC_SPORTSBOOK_ENABLED;
+    const walletChainMismatch = Boolean(walletChainId && walletChainId !== resolvedChainId);
+    const walletMismatchReason = walletChainMismatch
+      ? `Wallet is connected to chainId=${walletChainId}. Switch wallet network to ${
+          selectedChainName ?? `chainId=${resolvedChainId}`
+        }.`
+      : undefined;
     const r = loadEmbeddedRelease(resolvedChainId);
     if (!r.ok) {
       return {
@@ -90,6 +104,10 @@ export function ReleaseProvider({
         warnings: [],
         readOnly: true,
         readOnlyReason: r.error,
+        releaseReadOnly: true,
+        selectedChainName,
+        walletChainId,
+        walletChainMismatch,
         sportsbook: resolveSportsbookAccess(undefined, rawSportsbookFlag)
       };
     }
@@ -97,11 +115,27 @@ export function ReleaseProvider({
     const warnings = r.warnings;
     const sportsbook = resolveSportsbookAccess(release, rawSportsbookFlag);
 
-    const readOnly = warnings.length > 0;
-    const readOnlyReason = readOnly ? "Release snapshot is not usable for writes." : undefined;
+    const releaseReadOnly = warnings.length > 0;
+    const readOnly = releaseReadOnly || walletChainMismatch;
+    const readOnlyReason = walletMismatchReason
+      ? walletMismatchReason
+      : releaseReadOnly
+        ? "Release snapshot is not usable for writes."
+        : undefined;
 
-    return { chainId: resolvedChainId, release, warnings, readOnly, readOnlyReason, sportsbook };
-  }, [resolvedChainId, sportsbookEnabledFlag]);
+    return {
+      chainId: resolvedChainId,
+      release,
+      warnings,
+      readOnly,
+      readOnlyReason,
+      releaseReadOnly,
+      selectedChainName,
+      walletChainId,
+      walletChainMismatch,
+      sportsbook
+    };
+  }, [resolvedChainId, selectedChainName, sportsbookEnabledFlag, walletChainId]);
 
   return <ReleaseContext.Provider value={value}>{children}</ReleaseContext.Provider>;
 }

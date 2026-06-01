@@ -1,5 +1,5 @@
 import type { PublicClient, WalletClient } from "viem";
-import { getAddress, type Address, type Hex } from "viem";
+import { getAddress, parseAbiItem, parseEventLogs, type Address, type Hex } from "viem";
 import type { SSOTRelease } from "../release/schema";
 import type {
   DomainBankPosition,
@@ -21,6 +21,7 @@ import type {
   CreateSportsMarketInput,
   ExecutePlanResult,
   ExecuteSportsTicketPlanResult,
+  BankProviderLedgerEntry,
   ReconcilePlaceBetTxResult,
   BindPlaceBetTxResult,
   PlaceSportsTicketInput,
@@ -81,6 +82,106 @@ const GAME_HUB_OUTCOME_READ_ABI = [
 
 const GAME_HUB_TERMINAL_PROOF_LOOKBACK_BLOCKS = 250n;
 const GAME_HUB_TERMINAL_PROOF_CHUNK_BLOCKS = 10n;
+const ALLOWANCE_CONFIRMATION_ATTEMPTS = 6;
+const ALLOWANCE_CONFIRMATION_DELAY_MS = 500;
+const ZERO_ADDRESS = `0x${"0".repeat(40)}` as Address;
+const ERC20_TRANSFER_EVENT = parseAbiItem(
+  "event Transfer(address indexed from, address indexed to, uint256 amount)"
+);
+const ERC20_TRANSFER_ABI = [ERC20_TRANSFER_EVENT] as const;
+// Base public RPC rejects eth_getLogs ranges above 2,000 blocks. Keep this
+// below the cap to avoid inclusive range interpretation differences.
+const PROVIDER_LEDGER_SCAN_CHUNK_BLOCKS = 1_900n;
+const PROVIDER_LEDGER_DEFAULT_LIMIT = 50;
+
+type TransferLogLike = {
+  transactionHash?: Hex | null;
+  blockNumber?: bigint | null;
+  logIndex?: number | null;
+  args?: {
+    from?: Address;
+    to?: Address;
+    amount?: bigint;
+  };
+};
+
+type ReceiptLogLike = { address: Address; data: Hex; topics: Hex[] };
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function sameAddress(a?: string | null, b?: string | null) {
+  return Boolean(a && b && a.toLowerCase() === b.toLowerCase());
+}
+
+function assetPerShare(assets: bigint | undefined, shares: bigint, decimals: number) {
+  if (assets == null || shares <= 0n) return undefined;
+  const shareUnit = 10n ** BigInt(decimals);
+  return (assets * shareUnit) / shares;
+}
+
+async function readProviderTransferLogs({
+  address,
+  args,
+  fromBlock,
+  publicClient,
+  toBlock
+}: {
+  address: Address;
+  args: { from?: Address; to?: Address };
+  fromBlock: bigint;
+  publicClient: PublicClient;
+  toBlock: bigint;
+}): Promise<TransferLogLike[]> {
+  const rows: TransferLogLike[] = [];
+  let cursor = fromBlock;
+  while (cursor <= toBlock) {
+    const end =
+      cursor + PROVIDER_LEDGER_SCAN_CHUNK_BLOCKS > toBlock
+        ? toBlock
+        : cursor + PROVIDER_LEDGER_SCAN_CHUNK_BLOCKS;
+    const logs = await publicClient.getLogs({
+      address,
+      args,
+      event: ERC20_TRANSFER_EVENT,
+      fromBlock: cursor,
+      toBlock: end
+    } as Parameters<PublicClient["getLogs"]>[0]);
+    rows.push(...(logs as TransferLogLike[]));
+    cursor = end + 1n;
+  }
+  return rows;
+}
+
+function extractProviderAssetAmount({
+  account,
+  action,
+  asset,
+  bank,
+  logs
+}: {
+  account: Address;
+  action: BankProviderLedgerEntry["action"];
+  asset: Address;
+  bank: Address;
+  logs: ReceiptLogLike[];
+}): bigint | undefined {
+  const decoded = parseEventLogs({
+    abi: ERC20_TRANSFER_ABI,
+    eventName: "Transfer",
+    logs: logs.filter((log) => sameAddress(log.address, asset)) as never
+  }) as Array<{ args: { from?: Address; to?: Address; amount?: bigint } }>;
+
+  const match = decoded.find((log) => {
+    const from = log.args.from;
+    const to = log.args.to;
+    if (action === "deposit") return sameAddress(from, account) && sameAddress(to, bank);
+    return sameAddress(from, bank) && sameAddress(to, account);
+  });
+
+  return match?.args.amount;
+}
 
 export interface CreateSSOTSDKParams {
   release: SSOTRelease;
@@ -171,6 +272,51 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
     VRFHubAbi: VRFHUB_ABI,
     SportsHubAbi: SPORTS_HUB_ABI
   } = getReleaseAbis(release.chainId);
+
+  async function readTokenAllowance(token: Address, owner: Address, spender: Address) {
+    return (await publicClient.readContract({
+      address: token,
+      abi: ERC20_ABI,
+      functionName: "allowance",
+      args: [owner, spender]
+    })) as bigint;
+  }
+
+  async function waitForTokenAllowance(params: {
+    token: Address;
+    owner: Address;
+    spender: Address;
+    required: bigint;
+  }) {
+    let observed = 0n;
+    for (let attempt = 0; attempt < ALLOWANCE_CONFIRMATION_ATTEMPTS; attempt += 1) {
+      observed = await readTokenAllowance(params.token, params.owner, params.spender);
+      if (observed >= params.required) return { ok: true as const, observed };
+      if (attempt < ALLOWANCE_CONFIRMATION_ATTEMPTS - 1) {
+        await sleep(ALLOWANCE_CONFIRMATION_DELAY_MS);
+      }
+    }
+    return { ok: false as const, observed };
+  }
+
+  function createAllowanceNotConfirmedError(params: {
+    action: string;
+    required: bigint;
+    observed: bigint;
+    spender: Address;
+  }): DomainError {
+    return {
+      code: "ALLOWANCE_NOT_CONFIRMED",
+      message: `Token approval was mined, but the allowance is not visible to ${params.action} yet. Retry in a few seconds.`,
+      severity: "warning",
+      retryable: true,
+      details: {
+        required: params.required.toString(),
+        observed: params.observed.toString(),
+        spender: params.spender
+      }
+    };
+  }
 
   function terminalProofRanges(latestBlock: bigint) {
     const releaseBlock = BigInt(release.meta?.blockNumber ?? 0);
@@ -541,6 +687,27 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
               placeBetTx: { txHash: "0x0" as Hex, ok: false, error: approveTx.error }
             };
           }
+          const allowanceReady = await waitForTokenAllowance({
+            token: getAddress(step.token) as Address,
+            owner: walletReq.account,
+            spender: getAddress(step.spender) as Address,
+            required: step.amount
+          });
+          if (!allowanceReady.ok) {
+            return {
+              approveTx,
+              placeBetTx: {
+                txHash: approveTx.txHash,
+                ok: false,
+                error: createAllowanceNotConfirmedError({
+                  action: "place the bet",
+                  required: step.amount,
+                  observed: allowanceReady.observed,
+                  spender: getAddress(step.spender) as Address
+                })
+              }
+            };
+          }
         }
       }
 
@@ -843,12 +1010,27 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
   const bank: SSOTBankAPI = {
     async getSnapshot(poolId: number): Promise<DomainBankSnapshot> {
       const pool = resolvePool(poolId);
-      const ssot = (await publicClient.readContract({
-        address: pool.bank,
-        abi: BANK_ABI,
-        functionName: "getSSOT",
-        args: []
-      })) as any;
+      const shareUnit = 10n ** BigInt(pool.decimals);
+      const [ssot, totalSupply, assetsPerShare] = (await Promise.all([
+        publicClient.readContract({
+          address: pool.bank,
+          abi: BANK_ABI,
+          functionName: "getSSOT",
+          args: []
+        }),
+        publicClient.readContract({
+          address: pool.bank,
+          abi: BANK_ABI,
+          functionName: "totalSupply",
+          args: []
+        }),
+        publicClient.readContract({
+          address: pool.bank,
+          abi: BANK_ABI,
+          functionName: "convertToAssets",
+          args: [shareUnit]
+        })
+      ])) as [any, bigint, bigint];
 
       return {
         chainId: release.chainId,
@@ -856,6 +1038,8 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         asset: pool.asset as AddressT,
         bank: pool.bank as AddressT,
         totalAssets: BigInt(ssot.NAV),
+        totalSupply,
+        assetsPerShare,
         totalReserved: BigInt(ssot.R),
         minLiquidityBps: Number(ssot.minLiquidityBps),
         protocolFeesPayable: BigInt(ssot.PF),
@@ -880,6 +1064,108 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
       })) as bigint;
 
       return { poolId, user, shares, assetsEquivalent };
+    },
+
+    async convertToShares(poolId: number, assets: bigint): Promise<bigint> {
+      const pool = resolvePool(poolId);
+      return (await publicClient.readContract({
+        address: pool.bank,
+        abi: BANK_ABI,
+        functionName: "convertToShares",
+        args: [assets]
+      })) as bigint;
+    },
+
+    async convertToAssets(poolId: number, shares: bigint): Promise<bigint> {
+      const pool = resolvePool(poolId);
+      return (await publicClient.readContract({
+        address: pool.bank,
+        abi: BANK_ABI,
+        functionName: "convertToAssets",
+        args: [shares]
+      })) as bigint;
+    },
+
+    async getProviderLedger(
+      poolId: number,
+      owner: AddressT,
+      opts?: { startBlock?: number; limit?: number }
+    ): Promise<BankProviderLedgerEntry[]> {
+      const pool = resolvePool(poolId);
+      const ownerAddress = getAddress(owner) as Address;
+      const latest = await publicClient.getBlockNumber();
+      const fromBlock =
+        opts?.startBlock != null && opts.startBlock >= 0
+          ? BigInt(opts.startBlock)
+          : latest > 100_000n
+            ? latest - 100_000n
+            : 0n;
+      const limit = opts?.limit ?? PROVIDER_LEDGER_DEFAULT_LIMIT;
+
+      const [mints, burns] = await Promise.all([
+        readProviderTransferLogs({
+          address: pool.bank,
+          args: { from: ZERO_ADDRESS, to: ownerAddress },
+          fromBlock,
+          publicClient,
+          toBlock: latest
+        }),
+        readProviderTransferLogs({
+          address: pool.bank,
+          args: { from: ownerAddress, to: ZERO_ADDRESS },
+          fromBlock,
+          publicClient,
+          toBlock: latest
+        })
+      ]);
+
+      const shareLogs = [
+        ...mints.map((log) => ({ ...log, action: "deposit" as const })),
+        ...burns.map((log) => ({ ...log, action: "withdraw" as const }))
+      ]
+        .filter((log) => log.transactionHash && log.blockNumber != null && log.args?.amount != null)
+        .sort((a, b) => {
+          const blockDelta = Number((b.blockNumber ?? 0n) - (a.blockNumber ?? 0n));
+          if (blockDelta !== 0) return blockDelta;
+          return Number(b.logIndex ?? 0) - Number(a.logIndex ?? 0);
+        })
+        .slice(0, limit);
+
+      const entries = await Promise.all(
+        shareLogs.map(async (log): Promise<BankProviderLedgerEntry | null> => {
+          const txHash = log.transactionHash;
+          const blockNumber = log.blockNumber;
+          const shares = log.args?.amount;
+          if (!txHash || blockNumber == null || shares == null) return null;
+
+          const [receipt, block] = await Promise.all([
+            publicClient.getTransactionReceipt({ hash: txHash }),
+            publicClient.getBlock({ blockNumber })
+          ]);
+          const receiptLogs = receipt.logs as ReceiptLogLike[];
+          const assets = extractProviderAssetAmount({
+            account: ownerAddress,
+            action: log.action,
+            asset: pool.asset,
+            bank: pool.bank,
+            logs: receiptLogs
+          });
+
+          return {
+            id: `${release.chainId}:${txHash}:${log.logIndex ?? 0}`,
+            action: log.action,
+            txHash,
+            blockNumber: Number(blockNumber),
+            logIndex: log.logIndex ?? 0,
+            timestamp: Number(block.timestamp) * 1000,
+            assets,
+            shares,
+            sharePrice: assetPerShare(assets, shares, pool.decimals)
+          };
+        })
+      );
+
+      return entries.filter((entry): entry is BankProviderLedgerEntry => Boolean(entry));
     },
 
     async getAssetBalance(asset: AddressT, user: AddressT): Promise<bigint> {
@@ -934,6 +1220,24 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
           args: [pool.bank, approveAmount!]
         });
         if (!approveTx.ok) return approveTx;
+        const allowanceReady = await waitForTokenAllowance({
+          token: pool.asset,
+          owner: walletReq.account,
+          spender: pool.bank,
+          required: assets
+        });
+        if (!allowanceReady.ok) {
+          return {
+            txHash: approveTx.txHash,
+            ok: false,
+            error: createAllowanceNotConfirmedError({
+              action: "the Bank",
+              required: assets,
+              observed: allowanceReady.observed,
+              spender: pool.bank
+            })
+          };
+        }
       }
 
       return tx.simulateAndWrite({
@@ -1045,6 +1349,24 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
           args: [pool.bank, approveAmount!]
         });
         if (!approveTx.ok) return approveTx;
+        const allowanceReady = await waitForTokenAllowance({
+          token: pool.asset,
+          owner: walletReq.account,
+          spender: pool.bank,
+          required: assetsNeeded
+        });
+        if (!allowanceReady.ok) {
+          return {
+            txHash: approveTx.txHash,
+            ok: false,
+            error: createAllowanceNotConfirmedError({
+              action: "the Bank",
+              required: assetsNeeded,
+              observed: allowanceReady.observed,
+              spender: pool.bank
+            })
+          };
+        }
       }
 
       return tx.simulateAndWrite({
@@ -1063,11 +1385,18 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
 
     async maxWithdraw(poolId: number, owner: AddressT): Promise<bigint> {
       const pool = resolvePool(poolId);
+      const shares = (await publicClient.readContract({
+        address: pool.bank,
+        abi: BANK_ABI,
+        functionName: "maxRedeem",
+        args: [owner]
+      })) as bigint;
+      if (shares === 0n) return 0n;
       return (await publicClient.readContract({
         address: pool.bank,
         abi: BANK_ABI,
-        functionName: "maxWithdraw",
-        args: [owner]
+        functionName: "convertToAssets",
+        args: [shares]
       })) as bigint;
     },
 
@@ -1574,6 +1903,27 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
             return {
               approveTx,
               placeTicketTx: { txHash: "0x0" as Hex, ok: false, error: approveTx.error }
+            };
+          }
+          const allowanceReady = await waitForTokenAllowance({
+            token: getAddress(step.token) as Address,
+            owner: walletReq.account,
+            spender: getAddress(step.spender) as Address,
+            required: step.amount
+          });
+          if (!allowanceReady.ok) {
+            return {
+              approveTx,
+              placeTicketTx: {
+                txHash: approveTx.txHash,
+                ok: false,
+                error: createAllowanceNotConfirmedError({
+                  action: "place the ticket",
+                  required: step.amount,
+                  observed: allowanceReady.observed,
+                  spender: getAddress(step.spender) as Address
+                })
+              }
             };
           }
         }

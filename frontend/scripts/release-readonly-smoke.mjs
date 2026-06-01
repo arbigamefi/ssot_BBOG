@@ -7,24 +7,22 @@ import process from "node:process";
 import { pathToFileURL } from "node:url";
 
 const frontendRoot = path.resolve(import.meta.dirname, "..");
-const repoRoot = path.resolve(frontendRoot, "..");
 const ssotRequire = createRequire(path.resolve(frontendRoot, "packages/ssot/package.json"));
-const { createPublicClient, getAddress, http } = await import(
+const { createPublicClient, getAddress, http, parseAbi } = await import(
   pathToFileURL(ssotRequire.resolve("viem")).href
 );
 const { baseSepolia } = await import(pathToFileURL(ssotRequire.resolve("viem/chains")).href);
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
-const REQUIRED_CONTRACTS = [
+const REQUIRED_CORE_CONTRACTS = [
   "gameHub",
   "settlementRouter",
   "poolRegistry",
-  "sportsHub",
-  "sportsRiskEngine",
   "vrfHub",
   "refRegistry",
   "refEngine",
   "adapter"
 ];
+const REQUIRED_SPORTS_CONTRACTS = ["sportsHub", "sportsRiskEngine"];
 const chainId = Number(readArg("--chain-id") ?? process.env.CHAIN_ID ?? 84532);
 const releasePath =
   readArg("--release") ??
@@ -32,14 +30,16 @@ const releasePath =
 const abiRoot =
   readArg("--abi-root") ??
   path.resolve(frontendRoot, "packages/ssot/src/abis/release", `chain-${chainId}`);
+const rpcRetries = readPositiveInteger(
+  readArg("--rpc-retries") ?? process.env.RELEASE_SMOKE_RPC_RETRIES,
+  2
+);
+const rpcRetryDelayMs = readPositiveInteger(
+  readArg("--rpc-retry-delay-ms") ?? process.env.RELEASE_SMOKE_RPC_RETRY_DELAY_MS,
+  750
+);
 
-await loadEnvFiles([
-  path.resolve(repoRoot, ".env"),
-  path.resolve(repoRoot, ".env.v13-sports.local"),
-  path.resolve(frontendRoot, ".env"),
-  path.resolve(frontendRoot, "apps/web/.env"),
-  path.resolve(frontendRoot, "apps/web/.env.local")
-]);
+await loadEnvFiles([path.resolve(frontendRoot, "apps/web/.env.local")]);
 
 const release = JSON.parse(await fs.readFile(releasePath, "utf8"));
 const rpcUrl = resolveRpcUrl();
@@ -63,10 +63,13 @@ const BankAbi = await loadAbi("Bank");
 const PoolRegistryAbi = await loadAbi("PoolRegistry");
 const SportsHubAbi = await loadAbi("SportsHub");
 const SportsRiskEngineAbi = await loadAbi("SportsRiskEngine");
+const ERC20Abi = parseAbi(["function decimals() view returns (uint8)"]);
 const LEGACY_GAME_AGGREGATOR_KEY = `hu${"b"}`;
 const LEGACY_BANK_DIRECTORY_KEY = `bank${"Registry"}`;
 
 let ok = true;
+const releaseAssetsByAddress = new Map();
+const erc20DecimalsByAddress = new Map();
 
 console.log(
   `[release-smoke] chain=${chainId} release=${path.relative(process.cwd(), releasePath)}`
@@ -85,7 +88,7 @@ await check("release schemaVersion", () => {
   ) {
     throw new Error("legacy release keys are present in embedded release");
   }
-  for (const key of REQUIRED_CONTRACTS) {
+  for (const key of REQUIRED_CORE_CONTRACTS) {
     const address = contracts[key];
     if (typeof address !== "string" || address.length === 0) {
       throw new Error(`contracts.${key} missing`);
@@ -94,17 +97,28 @@ await check("release schemaVersion", () => {
       throw new Error(`contracts.${key} is zero`);
     }
   }
+  if (release.sports?.enabled) {
+    for (const key of REQUIRED_SPORTS_CONTRACTS) {
+      const address = contracts[key];
+      if (typeof address !== "string" || address.length === 0) {
+        throw new Error(`contracts.${key} missing`);
+      }
+      if (address.toLowerCase() === ZERO_ADDRESS) {
+        throw new Error(`contracts.${key} is zero`);
+      }
+    }
+  }
   return "v1.3";
 });
 
 await check("rpc chainId", async () => {
-  const actual = await client.getChainId();
+  const actual = await rpcCall("getChainId", () => client.getChainId());
   if (actual !== chainId) throw new Error(`expected ${chainId}, got ${actual}`);
   return String(actual);
 });
 
 await check("rpc block height", async () => {
-  const block = await client.getBlockNumber();
+  const block = await rpcCall("getBlockNumber", () => client.getBlockNumber());
   const releaseBlock = BigInt(release.meta?.blockNumber ?? 0);
   if (releaseBlock > 0n && block < releaseBlock) {
     throw new Error(`RPC block ${block} is behind release block ${releaseBlock}`);
@@ -113,6 +127,14 @@ await check("rpc block height", async () => {
 });
 
 for (const [name, address] of Object.entries(release.contracts ?? {})) {
+  if (
+    !release.sports?.enabled &&
+    REQUIRED_SPORTS_CONTRACTS.includes(name) &&
+    String(address).toLowerCase() === ZERO_ADDRESS
+  ) {
+    console.log(`[skip] contract ${name}: sports disabled`);
+    continue;
+  }
   await checkCode(`contract ${name}`, address);
 }
 
@@ -129,7 +151,7 @@ for (const game of release.gamesMeta ?? []) {
 }
 
 await check("GameHub quoteVRFFee(1)", async () => {
-  const [fee, gasLimit] = await client.readContract({
+  const [fee, gasLimit] = await rpcReadContract({
     address: getAddress(release.contracts.gameHub),
     abi: GameHubAbi,
     functionName: "quoteVRFFee",
@@ -138,23 +160,44 @@ await check("GameHub quoteVRFFee(1)", async () => {
   return `fee=${fee.toString()} gasLimit=${gasLimit.toString()}`;
 });
 
+for (const asset of release.assets ?? []) {
+  const assetAddress = asset.address ?? asset.asset;
+  await check(`asset ${asset.symbol ?? short(assetAddress)} decimals`, async () => {
+    if (typeof assetAddress !== "string" || assetAddress.length === 0) {
+      throw new Error("asset address missing");
+    }
+    const normalized = getAddress(assetAddress);
+    const expectedDecimals = normalizeDecimals(asset.decimals, `asset ${asset.symbol} decimals`);
+    const chainDecimals = await readErc20Decimals(normalized);
+    if (chainDecimals !== expectedDecimals) {
+      throw new Error(`release=${expectedDecimals} chain=${chainDecimals}`);
+    }
+    releaseAssetsByAddress.set(normalized.toLowerCase(), {
+      ...asset,
+      address: normalized,
+      decimals: expectedDecimals
+    });
+    return `${short(normalized)} decimals=${chainDecimals}`;
+  });
+}
+
 for (const pool of release.pools ?? []) {
   await check(`PoolRegistry pool ${pool.poolId}`, async () => {
     const poolId = BigInt(pool.poolId);
     const [active, asset, bank] = await Promise.all([
-      client.readContract({
+      rpcReadContract({
         address: getAddress(release.contracts.poolRegistry),
         abi: PoolRegistryAbi,
         functionName: "isPoolActive",
         args: [poolId]
       }),
-      client.readContract({
+      rpcReadContract({
         address: getAddress(release.contracts.poolRegistry),
         abi: PoolRegistryAbi,
         functionName: "assetFor",
         args: [poolId]
       }),
-      client.readContract({
+      rpcReadContract({
         address: getAddress(release.contracts.poolRegistry),
         abi: PoolRegistryAbi,
         functionName: "bankFor",
@@ -173,10 +216,26 @@ for (const pool of release.pools ?? []) {
     return `${pool.domain} ${short(pool.bank)}`;
   });
 
+  await check(`pool ${pool.poolId} asset decimals`, async () => {
+    const asset = getAddress(pool.asset);
+    const expectedDecimals = normalizeDecimals(pool.decimals, `pool ${pool.poolId} decimals`);
+    const chainDecimals = await readErc20Decimals(asset);
+    if (chainDecimals !== expectedDecimals) {
+      throw new Error(`release=${expectedDecimals} chain=${chainDecimals}`);
+    }
+    const releaseAsset = releaseAssetsByAddress.get(asset.toLowerCase());
+    if (releaseAsset && releaseAsset.decimals !== expectedDecimals) {
+      throw new Error(
+        `asset ${releaseAsset.symbol ?? short(asset)} decimals=${releaseAsset.decimals} pool=${expectedDecimals}`
+      );
+    }
+    return `${pool.symbol ?? short(asset)} decimals=${chainDecimals}`;
+  });
+
   await checkCode(`pool ${pool.poolId} bank bytecode`, pool.bank);
 
   await check(`Bank pool ${pool.poolId} getSSOT`, async () => {
-    const ssot = await client.readContract({
+    const ssot = await rpcReadContract({
       address: getAddress(pool.bank),
       abi: BankAbi,
       functionName: "getSSOT",
@@ -187,7 +246,7 @@ for (const pool of release.pools ?? []) {
 
   if (String(pool.domain).toLowerCase() === "casino") {
     await check(`GameHub riskInPaused pool ${pool.poolId}`, async () => {
-      const paused = await client.readContract({
+      const paused = await rpcReadContract({
         address: getAddress(release.contracts.gameHub),
         abi: GameHubAbi,
         functionName: "riskInPaused",
@@ -201,19 +260,19 @@ for (const pool of release.pools ?? []) {
 if (release.sports?.enabled) {
   await check("SportsHub wiring", async () => {
     const [poolRegistry, riskEngine, settlementRouter] = await Promise.all([
-      client.readContract({
+      rpcReadContract({
         address: getAddress(release.contracts.sportsHub),
         abi: SportsHubAbi,
         functionName: "poolRegistry",
         args: []
       }),
-      client.readContract({
+      rpcReadContract({
         address: getAddress(release.contracts.sportsHub),
         abi: SportsHubAbi,
         functionName: "riskEngine",
         args: []
       }),
-      client.readContract({
+      rpcReadContract({
         address: getAddress(release.contracts.sportsHub),
         abi: SportsHubAbi,
         functionName: "settlementRouter",
@@ -235,7 +294,7 @@ if (release.sports?.enabled) {
   );
   for (const pool of sportsPools) {
     await check(`SportsRiskEngine pool ${pool.poolId} hash`, async () => {
-      const riskHash = await client.readContract({
+      const riskHash = await rpcReadContract({
         address: getAddress(release.contracts.sportsRiskEngine),
         abi: SportsRiskEngineAbi,
         functionName: "currentRiskHashForPool",
@@ -265,17 +324,71 @@ async function check(label, fn) {
     console.log(`[ok] ${label}${value === undefined ? "" : `: ${value}`}`);
   } catch (error) {
     ok = false;
-    console.error(`[fail] ${label}: ${error instanceof Error ? error.message : String(error)}`);
+    console.error(`[fail] ${label}: ${sanitizeErrorMessage(error)}`);
   }
 }
 
 async function checkCode(label, address) {
   await check(label, async () => {
     const normalized = getAddress(address);
-    const code = await client.getBytecode({ address: normalized });
+    const code = await rpcCall(`getBytecode:${short(normalized)}`, () =>
+      client.getBytecode({ address: normalized })
+    );
     if (!code || code === "0x") throw new Error(`no bytecode at ${normalized}`);
     return `${short(normalized)} bytes=${(code.length - 2) / 2}`;
   });
+}
+
+async function rpcReadContract(params) {
+  return rpcCall(`${params.functionName}:${short(params.address)}`, () =>
+    client.readContract(params)
+  );
+}
+
+async function readErc20Decimals(address) {
+  const normalized = getAddress(address);
+  const cacheKey = normalized.toLowerCase();
+  if (erc20DecimalsByAddress.has(cacheKey)) return erc20DecimalsByAddress.get(cacheKey);
+  const decimals = normalizeDecimals(
+    await rpcReadContract({
+      address: normalized,
+      abi: ERC20Abi,
+      functionName: "decimals",
+      args: []
+    }),
+    `ERC20 ${short(normalized)} decimals`
+  );
+  erc20DecimalsByAddress.set(cacheKey, decimals);
+  return decimals;
+}
+
+async function rpcCall(label, fn) {
+  let lastError;
+  for (let attempt = 0; attempt <= rpcRetries; attempt += 1) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (attempt >= rpcRetries || !isRetryableRpcError(error)) break;
+      await sleep(rpcRetryDelayMs * (attempt + 1));
+    }
+  }
+  throw new Error(`${label}: ${sanitizeErrorMessage(lastError)}`);
+}
+
+function isRetryableRpcError(error) {
+  const text = sanitizeErrorMessage(error).toLowerCase();
+  return (
+    text.includes("429") ||
+    text.includes("too many requests") ||
+    text.includes("rate limit") ||
+    text.includes("timeout") ||
+    text.includes("network")
+  );
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function loadAbi(name) {
@@ -321,23 +434,42 @@ function expandEnvRefs(value) {
 }
 
 function resolveRpcUrl() {
-  const direct =
-    process.env.RPC_URL ??
-    process.env.BASE_SEPOLIA_RPC_URL ??
-    process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL ??
-    process.env.NEXT_PUBLIC_RPC_URL;
+  const direct = firstDefined(
+    ...(chainId === 8453
+      ? [
+          process.env.BASE_MAINNET_RPC_URL,
+          process.env.BASE_RPC_URL,
+          process.env.NEXT_PUBLIC_BASE_RPC_URL
+        ]
+      : []),
+    ...(chainId === 84532
+      ? [process.env.BASE_SEPOLIA_RPC_URL, process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL]
+      : []),
+    process.env.RPC_URL,
+    process.env.NEXT_PUBLIC_RPC_URL
+  );
   if (direct) return expandEnvRefs(direct);
   const alchemyKey = process.env.NEXT_PUBLIC_ALCHEMY_API_KEY;
-  if (alchemyKey) return `https://base-sepolia.g.alchemy.com/v2/${alchemyKey}`;
+  if (alchemyKey && chainId === 8453) return `https://base-mainnet.g.alchemy.com/v2/${alchemyKey}`;
+  if (alchemyKey && chainId === 84532) return `https://base-sepolia.g.alchemy.com/v2/${alchemyKey}`;
   throw new Error(
-    "Missing RPC URL. Set RPC_URL, BASE_SEPOLIA_RPC_URL, NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL, NEXT_PUBLIC_RPC_URL, or NEXT_PUBLIC_ALCHEMY_API_KEY."
+    "Missing RPC URL. Set BASE_MAINNET_RPC_URL, NEXT_PUBLIC_BASE_RPC_URL, BASE_SEPOLIA_RPC_URL, NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL, NEXT_PUBLIC_RPC_URL, or NEXT_PUBLIC_ALCHEMY_API_KEY in frontend/apps/web/.env.local."
   );
+}
+
+function firstDefined(...values) {
+  return values.find((value) => typeof value === "string" && value.length > 0);
 }
 
 function readArg(name) {
   const index = process.argv.indexOf(name);
   if (index === -1) return undefined;
   return process.argv[index + 1];
+}
+
+function readPositiveInteger(value, fallback) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : fallback;
 }
 
 function short(value) {
@@ -363,4 +495,20 @@ function assertAddressEq(label, actual, expected) {
   if (String(actual).toLowerCase() !== String(expected).toLowerCase()) {
     throw new Error(`${label} mismatch: expected ${expected}, got ${actual}`);
   }
+}
+
+function normalizeDecimals(value, label) {
+  const decimals = typeof value === "bigint" ? Number(value) : Number(value);
+  if (!Number.isInteger(decimals) || decimals < 0 || decimals > 255) {
+    throw new Error(`${label} must be an integer between 0 and 255`);
+  }
+  return decimals;
+}
+
+function sanitizeErrorMessage(error) {
+  const text = error instanceof Error ? error.message : String(error);
+  return text
+    .replace(/(https?:\/\/[^/\s]+\/v2\/)[A-Za-z0-9_-]+/g, "$1<redacted>")
+    .replace(/([?&]apiKey=)[^&\s]+/gi, "$1<redacted>")
+    .replace(/([?&]key=)[^&\s]+/gi, "$1<redacted>");
 }

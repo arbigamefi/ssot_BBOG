@@ -1,0 +1,113 @@
+name: arbigamefi-production
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file:
+      - ./deploy/docker/env/postgres.env
+    volumes:
+      - bet_index_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks:
+      - internal
+
+  web:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.web
+    restart: unless-stopped
+    env_file:
+      - ./deploy/docker/env/web.production.env
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+      KEEPER_HEALTH_PATH: /var/lib/arbigamefi/casino-keeper/primary-health.json
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - keeper_health:/var/lib/arbigamefi/casino-keeper:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://127.0.0.1:3000/api/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 6
+      start_period: 30s
+    networks:
+      - internal
+
+  keeper-primary:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.keeper
+    restart: unless-stopped
+    env_file:
+      - ./deploy/docker/env/keeper.primary.env
+    environment:
+      KEEPER_HEALTH_PATH: /var/lib/arbigamefi/casino-keeper/primary-health.json
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - keeper_health:/var/lib/arbigamefi/casino-keeper
+    networks:
+      - internal
+
+  # Prefer running the backup keeper on a different host/region. This local
+  # profile exists for staging drills only.
+  keeper-backup:
+    profiles: ["backup-local"]
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.keeper
+    restart: unless-stopped
+    env_file:
+      - ./deploy/docker/env/keeper.backup.env
+    environment:
+      KEEPER_HEALTH_PATH: /var/lib/arbigamefi/casino-keeper/backup-health.json
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - keeper_health:/var/lib/arbigamefi/casino-keeper
+    networks:
+      - internal
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    env_file:
+      - ./deploy/docker/env/proxy.env
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+    networks:
+      - internal
+      - public
+
+volumes:
+  bet_index_postgres_data:
+  keeper_health:
+  caddy_data:
+  caddy_config:
+
+networks:
+  internal:
+  public:

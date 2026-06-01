@@ -89,6 +89,20 @@ export interface TxResult {
   error?: DomainError;
 }
 
+export type BankProviderLedgerAction = "deposit" | "withdraw";
+
+export type BankProviderLedgerEntry = {
+  id: string;
+  action: BankProviderLedgerAction;
+  txHash: Hex;
+  blockNumber: number;
+  logIndex: number;
+  timestamp?: number;
+  assets?: bigint;
+  shares: bigint;
+  sharePrice?: bigint;
+};
+
 export type GameHubSettlementProof = {
   txHash?: Hex;
   blockNumber?: bigint;
@@ -170,6 +184,13 @@ export interface SSOTGameHubAPI {
 export interface SSOTBankAPI {
   getSnapshot(poolId: number): Promise<DomainBankSnapshot>;
   getPosition(poolId: number, user: Address): Promise<DomainBankPosition>;
+  convertToShares(poolId: number, assets: bigint): Promise<bigint>;
+  convertToAssets(poolId: number, shares: bigint): Promise<bigint>;
+  getProviderLedger(
+    poolId: number,
+    owner: Address,
+    opts?: { startBlock?: number; limit?: number }
+  ): Promise<BankProviderLedgerEntry[]>;
   getAssetBalance(asset: Address, user: Address): Promise<bigint>;
   getAllowance(poolId: number, owner: Address): Promise<bigint>;
 

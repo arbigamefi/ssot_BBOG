@@ -1,0 +1,498 @@
+import { getAddress, type Address, type Hex } from "viem";
+import { createPostgresBetIndexStore, type BetIndexStore } from "@ssot/bet-index";
+import { loadEmbeddedRelease } from "@ssot/ssot/release";
+
+const DEFAULT_LEADERBOARD_LIMIT = 10;
+const MAX_LEADERBOARD_LIMIT = 50;
+const DEFAULT_TIMESERIES_DAYS = 7;
+const MAX_TIMESERIES_DAYS = 90;
+/** Allowed analytics/leaderboard time windows, in days. 24h = 1. */
+export const CASINO_WINDOW_DAYS = [1, 7, 30] as const;
+export type CasinoLeaderboardSort = "turnover" | "topWin";
+
+let durableBetIndexStore: BetIndexStore | null | undefined;
+
+type PrimaryAsset = {
+  address: Address;
+  decimals: number;
+  symbol: string;
+};
+
+export type CasinoStatsResponse = {
+  schemaVersion: 1;
+  chainId: number;
+  generatedAt: number;
+  source: "postgres" | "unavailable";
+  /** Active time window in days; null = all-time. */
+  window: number | null;
+  asset: PrimaryAsset;
+  stats: {
+    betCount: number;
+    settledCount: number;
+    wonCount: number;
+    uniquePlayers: number;
+    turnover: string;
+    payout: string;
+    payoutGross: string;
+  };
+  games: Array<{
+    gameId: Hex;
+    slug: string;
+    label: string;
+    betCount: number;
+    settledCount: number;
+    wonCount: number;
+    uniquePlayers: number;
+    turnover: string;
+    payout: string;
+    payoutGross: string;
+  }>;
+};
+
+export type CasinoLeaderboardResponse = {
+  schemaVersion: 1;
+  chainId: number;
+  generatedAt: number;
+  source: "postgres" | "unavailable";
+  /** Active time window in days; null = all-time. */
+  window: number | null;
+  by: CasinoLeaderboardSort;
+  /** Present when the leaderboard is scoped to a single game. */
+  gameId: Hex | null;
+  asset: PrimaryAsset;
+  rows: Array<{
+    rank: number;
+    player: Address;
+    betCount?: number;
+    settledCount?: number;
+    turnover?: string;
+    betId?: string;
+    gameId?: Hex;
+    stake?: string;
+    payout: string;
+    payoutGross: string;
+    multiplierPpm?: string;
+  }>;
+  /**
+   * The connected wallet's own turnover position, when a `player` was supplied
+   * and they have bets in scope. Lets the UI show "your rank" even when the
+   * player sits outside the rendered top rows. Only populated for by=turnover.
+   */
+  you: {
+    rank: number;
+    betCount: number;
+    turnover: string;
+  } | null;
+};
+
+export type CasinoTimeseriesResponse = {
+  schemaVersion: 1;
+  chainId: number;
+  generatedAt: number;
+  source: "postgres" | "unavailable";
+  /** Present when the trend is scoped to a single game. */
+  gameId: Hex | null;
+  asset: PrimaryAsset;
+  days: number;
+  points: Array<{
+    date: string;
+    betCount: number;
+    settledCount: number;
+    wonCount: number;
+    uniquePlayers: number;
+    turnover: string;
+    payout: string;
+    payoutGross: string;
+  }>;
+};
+
+function cleanEnvValue(value: string | undefined) {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+function isTruthyEnv(value: string | undefined) {
+  return ["1", "true", "yes", "on"].includes(
+    String(value ?? "")
+      .trim()
+      .toLowerCase()
+  );
+}
+
+function isFalseyEnv(value: string | undefined) {
+  return ["0", "false", "no", "off"].includes(
+    String(value ?? "")
+      .trim()
+      .toLowerCase()
+  );
+}
+
+function getDurableBetIndexStore() {
+  if (durableBetIndexStore !== undefined) return durableBetIndexStore;
+  const connectionString = cleanEnvValue(process.env.BET_INDEX_DATABASE_URL);
+  if (!connectionString || isFalseyEnv(process.env.BET_INDEX_READ_ENABLED)) {
+    durableBetIndexStore = null;
+    return durableBetIndexStore;
+  }
+  durableBetIndexStore = createPostgresBetIndexStore({
+    connectionString,
+    ssl: isTruthyEnv(process.env.BET_INDEX_SSL)
+  });
+  return durableBetIndexStore;
+}
+
+function resolvePrimaryAsset(chainId: number): {
+  asset: PrimaryAsset;
+  games: Array<{ gameId: Hex; label: string; slug: string }>;
+} {
+  const releaseResult = loadEmbeddedRelease(chainId);
+  if (!releaseResult.ok) throw new Error(releaseResult.error);
+  const asset = releaseResult.release.assets[0];
+  if (!asset) throw new Error(`No release asset configured for chainId=${chainId}.`);
+  return {
+    asset: {
+      address: getAddress(asset.address) as Address,
+      decimals: asset.decimals,
+      symbol: asset.symbol
+    },
+    games: releaseResult.release.gamesMeta.map((game) => ({
+      gameId: game.gameId as Hex,
+      label: game.label,
+      slug: game.slug
+    }))
+  };
+}
+
+function emptyStatsResponse({
+  asset,
+  chainId,
+  games,
+  generatedAt,
+  source,
+  window
+}: {
+  asset: PrimaryAsset;
+  chainId: number;
+  games: Array<{ gameId: Hex; label: string; slug: string }>;
+  generatedAt: number;
+  source: CasinoStatsResponse["source"];
+  window: number | null;
+}): CasinoStatsResponse {
+  return {
+    asset,
+    chainId,
+    window,
+    games: games.map((game) => ({
+      ...game,
+      betCount: 0,
+      payout: "0",
+      payoutGross: "0",
+      settledCount: 0,
+      wonCount: 0,
+      turnover: "0",
+      uniquePlayers: 0
+    })),
+    generatedAt,
+    schemaVersion: 1,
+    source,
+    stats: {
+      betCount: 0,
+      payout: "0",
+      payoutGross: "0",
+      settledCount: 0,
+      wonCount: 0,
+      turnover: "0",
+      uniquePlayers: 0
+    }
+  };
+}
+
+export function clampCasinoLeaderboardLimit(limit: number | undefined) {
+  if (!Number.isFinite(limit) || !limit || limit <= 0) return DEFAULT_LEADERBOARD_LIMIT;
+  return Math.min(MAX_LEADERBOARD_LIMIT, Math.max(1, Math.floor(limit)));
+}
+
+/**
+ * Validate a requested analytics window (in days) against the allowed set.
+ * Anything outside {1,7,30} collapses to null = all-time.
+ */
+export function clampCasinoWindowDays(days: number | undefined): number | null {
+  if (!Number.isFinite(days) || !days) return null;
+  const floored = Math.floor(days);
+  return (CASINO_WINDOW_DAYS as readonly number[]).includes(floored) ? floored : null;
+}
+
+/** Translate a window (in days) into a unix-seconds lower bound, or undefined. */
+function windowSince(windowDays: number | null, now: () => number): number | undefined {
+  if (!windowDays) return undefined;
+  return Math.floor(now() / 1000) - windowDays * 86_400;
+}
+
+export function clampCasinoTimeseriesDays(days: number | undefined) {
+  if (!Number.isFinite(days) || !days || days <= 0) return DEFAULT_TIMESERIES_DAYS;
+  return Math.min(MAX_TIMESERIES_DAYS, Math.max(1, Math.floor(days)));
+}
+
+export async function queryCasinoStats({
+  chainId,
+  windowDays,
+  now = Date.now
+}: {
+  chainId: number;
+  windowDays?: number;
+  now?: () => number;
+}): Promise<CasinoStatsResponse> {
+  const { asset, games } = resolvePrimaryAsset(chainId);
+  const generatedAt = now();
+  const window = clampCasinoWindowDays(windowDays);
+  const since = windowSince(window, now);
+  const store = getDurableBetIndexStore();
+  if (!store) {
+    return emptyStatsResponse({
+      asset,
+      chainId,
+      games,
+      generatedAt,
+      source: "unavailable",
+      window
+    });
+  }
+
+  try {
+    const [stats, volumes] = await Promise.all([
+      store.getCasinoStats({ asset: asset.address, chainId, ...(since != null ? { since } : {}) }),
+      store.getGameVolumes({ asset: asset.address, chainId, ...(since != null ? { since } : {}) })
+    ]);
+    const byGame = new Map(volumes.map((row) => [row.gameId.toLowerCase(), row]));
+    return {
+      asset,
+      chainId,
+      games: games.map((game) => {
+        const volume = byGame.get(game.gameId.toLowerCase());
+        return {
+          ...game,
+          betCount: volume?.betCount ?? 0,
+          payout: volume?.payout ?? "0",
+          payoutGross: volume?.payoutGross ?? "0",
+          settledCount: volume?.settledCount ?? 0,
+          wonCount: volume?.wonCount ?? 0,
+          turnover: volume?.turnover ?? "0",
+          uniquePlayers: volume?.uniquePlayers ?? 0
+        };
+      }),
+      generatedAt,
+      schemaVersion: 1,
+      source: "postgres",
+      window,
+      stats: {
+        betCount: stats.betCount,
+        payout: stats.payout,
+        payoutGross: stats.payoutGross,
+        settledCount: stats.settledCount,
+        wonCount: stats.wonCount,
+        turnover: stats.turnover,
+        uniquePlayers: stats.uniquePlayers
+      }
+    };
+  } catch {
+    return emptyStatsResponse({
+      asset,
+      chainId,
+      games,
+      generatedAt,
+      source: "unavailable",
+      window
+    });
+  }
+}
+
+export async function queryCasinoLeaderboard({
+  chainId,
+  limit,
+  gameId,
+  by = "turnover",
+  windowDays,
+  player,
+  now = Date.now
+}: {
+  chainId: number;
+  limit: number;
+  gameId?: Hex;
+  by?: CasinoLeaderboardSort;
+  windowDays?: number;
+  /** Connected wallet to resolve a "your rank" position for (by=turnover only). */
+  player?: Address;
+  now?: () => number;
+}): Promise<CasinoLeaderboardResponse> {
+  const { asset } = resolvePrimaryAsset(chainId);
+  const generatedAt = now();
+  const normalizedGameId = (gameId?.toLowerCase() as Hex | undefined) ?? null;
+  const window = clampCasinoWindowDays(windowDays);
+  const since = windowSince(window, now);
+  const store = getDurableBetIndexStore();
+  if (!store) {
+    return {
+      asset,
+      by,
+      chainId,
+      gameId: normalizedGameId,
+      generatedAt,
+      rows: [],
+      schemaVersion: 1,
+      source: "unavailable",
+      window,
+      you: null
+    };
+  }
+
+  try {
+    const rows =
+      by === "topWin"
+        ? await store.getCasinoTopWins({
+            asset: asset.address,
+            chainId,
+            limit,
+            ...(gameId ? { gameId } : {}),
+            ...(since != null ? { since } : {})
+          })
+        : await store.getCasinoLeaderboard({
+            asset: asset.address,
+            chainId,
+            limit,
+            ...(gameId ? { gameId } : {}),
+            ...(since != null ? { since } : {})
+          });
+    // "Your rank" is a turnover-leaderboard concept only; top-wins ranks bets,
+    // not players. Best-effort: a failure here must not sink the whole board.
+    let you: CasinoLeaderboardResponse["you"] = null;
+    if (by !== "topWin" && player) {
+      try {
+        const rank = await store.getCasinoPlayerRank({
+          asset: asset.address,
+          chainId,
+          player,
+          ...(gameId ? { gameId } : {}),
+          ...(since != null ? { since } : {})
+        });
+        you = rank ? { betCount: rank.betCount, rank: rank.rank, turnover: rank.turnover } : null;
+      } catch {
+        you = null;
+      }
+    }
+    return {
+      asset,
+      by,
+      chainId,
+      gameId: normalizedGameId,
+      generatedAt,
+      you,
+      rows: rows.map((row, index) =>
+        by === "topWin"
+          ? {
+              betId: "betId" in row ? row.betId : undefined,
+              gameId: "gameId" in row ? row.gameId : undefined,
+              multiplierPpm: "multiplierPpm" in row ? row.multiplierPpm : undefined,
+              payout: row.payout,
+              payoutGross: row.payoutGross,
+              player: getAddress(row.player) as Address,
+              rank: index + 1,
+              stake: "stake" in row ? row.stake : undefined
+            }
+          : {
+              betCount: "betCount" in row ? row.betCount : undefined,
+              payout: row.payout,
+              payoutGross: row.payoutGross,
+              player: getAddress(row.player) as Address,
+              rank: index + 1,
+              settledCount: "settledCount" in row ? row.settledCount : undefined,
+              turnover: "turnover" in row ? row.turnover : undefined
+            }
+      ),
+      schemaVersion: 1,
+      source: "postgres",
+      window
+    };
+  } catch {
+    return {
+      asset,
+      by,
+      chainId,
+      gameId: normalizedGameId,
+      generatedAt,
+      rows: [],
+      schemaVersion: 1,
+      source: "unavailable",
+      window,
+      you: null
+    };
+  }
+}
+
+export async function queryCasinoTimeseries({
+  chainId,
+  days,
+  gameId,
+  now = Date.now
+}: {
+  chainId: number;
+  days: number;
+  gameId?: Hex;
+  now?: () => number;
+}): Promise<CasinoTimeseriesResponse> {
+  const { asset } = resolvePrimaryAsset(chainId);
+  const generatedAt = now();
+  const boundedDays = clampCasinoTimeseriesDays(days);
+  const normalizedGameId = (gameId?.toLowerCase() as Hex | undefined) ?? null;
+  const store = getDurableBetIndexStore();
+  if (!store) {
+    return {
+      asset,
+      chainId,
+      days: boundedDays,
+      generatedAt,
+      gameId: normalizedGameId,
+      points: [],
+      schemaVersion: 1,
+      source: "unavailable"
+    };
+  }
+
+  try {
+    const points = await store.getCasinoTimeseries({
+      asset: asset.address,
+      chainId,
+      days: boundedDays,
+      ...(gameId ? { gameId } : {})
+    });
+    return {
+      asset,
+      chainId,
+      days: boundedDays,
+      generatedAt,
+      gameId: normalizedGameId,
+      points: points.map((point) => ({
+        betCount: point.betCount,
+        date: point.date,
+        payout: point.payout,
+        payoutGross: point.payoutGross,
+        settledCount: point.settledCount,
+        turnover: point.turnover,
+        uniquePlayers: point.uniquePlayers,
+        wonCount: point.wonCount
+      })),
+      schemaVersion: 1,
+      source: "postgres"
+    };
+  } catch {
+    return {
+      asset,
+      chainId,
+      days: boundedDays,
+      generatedAt,
+      gameId: normalizedGameId,
+      points: [],
+      schemaVersion: 1,
+      source: "unavailable"
+    };
+  }
+}

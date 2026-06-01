@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 
 import { ArbiGameFiBrand } from "./ArbiGameFiBrand";
 import { LocaleSwitcher } from "./LocaleSwitcher";
+import { useCompliance } from "../app-shell/compliance";
 
 const GAME_LINKS = [
   { href: "/casino/dice", labelKey: "nav.dice" },
@@ -26,7 +27,9 @@ const PLATFORM_LINKS = [
 
 const RESOURCE_LINKS = [
   { href: "/portfolio", labelKey: "nav.account" },
-  { href: "/portfolio/claims", labelKey: "nav.claims" }
+  { href: "/portfolio/claims", labelKey: "nav.claims" },
+  { href: "/support", labelKey: "footer.faq" },
+  { href: "/status", labelKey: "footer.status" }
 ] as const;
 
 const LEGAL_LINKS = [
@@ -36,6 +39,7 @@ const LEGAL_LINKS = [
 ] as const;
 
 const COMMUNITY_LINKS = [
+  { href: "https://discord.gg/arbigamefi", labelKey: "footer.community" },
   { href: "https://github.com/arbigamefi/ssot_BBOG", labelKey: "GitHub" },
   { href: "https://github.com/arbigamefi/ssot_BBOG/tree/master/docs", labelKey: "footer.docs" }
 ] as const;
@@ -68,6 +72,7 @@ function FooterColumn({
 
 export function SiteFooter() {
   const t = useTranslations();
+  const { openRgDialog } = useCompliance();
   const translateLinks = (links: ReadonlyArray<{ href: string; labelKey: string }>) =>
     links.map((link) => ({
       href: link.href,
@@ -93,11 +98,26 @@ export function SiteFooter() {
           <FooterColumn title={t("footer.legal")} links={translateLinks(LEGAL_LINKS)} />
         </div>
 
+        {/* Single bottom bar — compliance cluster on the left, community +
+            language on the right. One row instead of two. */}
         <div className="mt-12 flex flex-col gap-4 border-t border-border pt-6 text-sm text-fg-subtle md:flex-row md:items-center md:justify-between">
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <span className="inline-flex items-center gap-2">
+              <span className="inline-flex h-6 items-center rounded-md border border-danger/40 bg-danger-soft px-1.5 text-[11px] font-bold text-danger">
+                18+
+              </span>
+              <button
+                type="button"
+                onClick={openRgDialog}
+                className="font-semibold text-fg-muted underline-offset-2 transition-colors hover:text-fg hover:underline"
+              >
+                {t("footer.responsibleGambling")}
+              </button>
+            </span>
+            <span aria-hidden className="hidden h-1 w-1 rounded-full bg-border md:inline-block" />
             <p>{t("footer.copyright")}</p>
-            <LocaleSwitcher />
           </div>
+
           <div className="flex flex-wrap items-center gap-4">
             {translateLinks(COMMUNITY_LINKS).map((link) => (
               <a
@@ -110,6 +130,7 @@ export function SiteFooter() {
                 {link.label}
               </a>
             ))}
+            <LocaleSwitcher menuPlacement="top" />
           </div>
         </div>
       </div>

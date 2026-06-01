@@ -12,12 +12,12 @@ import { createPostgresBetIndexStore, type BetIndexStore } from "@ssot/bet-index
 import { applyGameHubEventToBet, type BetRow, type GameHubEventName } from "@ssot/ssot/indexer";
 import { loadEmbeddedRelease, type SSOTRelease } from "@ssot/ssot/release";
 
-import { resolvePublicRpcUrl } from "../../app-shell/rpc";
 import type {
   AffiliateBetsResponse,
   PlayerBetsResponse,
   RecentBetsResponse
 } from "../../features/betting/recent-bets";
+import { resolveServerRpcUrl } from "../rpc";
 
 const GAME_HUB_EVENTS: GameHubEventName[] = [
   "BetPlaced",
@@ -76,17 +76,6 @@ function numberEnv(name: string, fallback: number) {
 
 function bigintEnv(name: string, fallback: number) {
   return BigInt(numberEnv(name, fallback));
-}
-
-function resolveServerRpcUrl(chainId: number) {
-  return (
-    cleanEnvValue(process.env.RPC_URL) ??
-    cleanEnvValue(process.env.BASE_SEPOLIA_RPC_URL) ??
-    cleanEnvValue(process.env.BASE_RPC_URL) ??
-    cleanEnvValue(process.env.ARBITRUM_SEPOLIA_RPC_URL) ??
-    cleanEnvValue(process.env.ARBITRUM_RPC_URL) ??
-    resolvePublicRpcUrl(chainId)
-  );
 }
 
 function isTruthyEnv(value: string | undefined) {

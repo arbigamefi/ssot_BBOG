@@ -4,6 +4,12 @@ import {
   SignedSportsOddsSnapshotError,
   type SignedSportsOddsSnapshotRequest
 } from "@ssot/ssot/sdk";
+import {
+  checkRateLimit,
+  getClientIp,
+  rateLimitHeaders,
+  readPositiveIntegerEnv
+} from "../../../../server/http/rate-limit";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -41,10 +47,33 @@ function sportsbookEnabled() {
   return env("NEXT_PUBLIC_SPORTSBOOK_ENABLED")?.toLowerCase() === "true";
 }
 
+function rateLimit(request: Request) {
+  const limit = readPositiveIntegerEnv("SPORTSBOOK_ODDS_SNAPSHOT_RATE_LIMIT_PER_MINUTE", 20);
+  const result = checkRateLimit({
+    key: `sportsbook:odds-snapshot:${getClientIp(request)}`,
+    limit,
+    windowMs: 60_000
+  });
+  return { limit, result };
+}
+
 export async function POST(request: Request) {
   try {
     if (!sportsbookEnabled()) {
       return jsonError("NEXT_PUBLIC_SPORTSBOOK_ENABLED is not true.", 403, "SPORTSBOOK_DISABLED");
+    }
+
+    const quota = rateLimit(request);
+    if (!quota.result.allowed) {
+      return NextResponse.json(
+        {
+          error: {
+            code: "RATE_LIMITED",
+            message: "Too many sportsbook odds snapshot requests. Please retry shortly."
+          }
+        },
+        { status: 429, headers: rateLimitHeaders(quota.result, quota.limit) }
+      );
     }
 
     const body = (await request.json()) as SignedSportsOddsSnapshotRequest;
@@ -65,7 +94,7 @@ export async function POST(request: Request) {
       ttlSeconds: Number(env("SPORTS_ODDS_TTL_SECONDS") ?? "120")
     });
 
-    return NextResponse.json(snapshot);
+    return NextResponse.json(snapshot, { headers: rateLimitHeaders(quota.result, quota.limit) });
   } catch (error) {
     if (error instanceof SignedSportsOddsSnapshotError) {
       return jsonError(error.message, error.status, error.code);

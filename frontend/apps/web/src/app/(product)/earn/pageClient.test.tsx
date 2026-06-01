@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as React from "react";
 
@@ -54,6 +54,7 @@ vi.mock("next-intl", async () => {
   }
 
   return {
+    useLocale: () => "en",
     useTranslations: () => translate
   };
 });
@@ -76,6 +77,12 @@ vi.mock("../../../ssot/sdk", () => ({
 
 vi.mock("../../../components/PageTransition", () => ({
   PageTransition: ({ children }: { children: React.ReactNode }) => <div>{children}</div>
+}));
+
+// Provider performance panel pulls from the durable index over the network;
+// stub it so this page test stays focused on the bank console wiring.
+vi.mock("../../../features/earn/BankrollPerformancePanel", () => ({
+  BankrollPerformancePanel: () => <div data-testid="bankroll-performance" />
 }));
 
 vi.mock("../../../components/ProductStateCard", () => ({
@@ -114,6 +121,7 @@ vi.mock("../../../features/tx/useDirectTxAction", () => ({
 
 vi.mock("@ssot/ui", () => ({
   AssetSelector: ({ title }: any) => <div>{title}</div>,
+  cn: (...classes: unknown[]) => classes.filter(Boolean).join(" "),
   ErrorCallout: ({ title, message }: any) => (
     <div>
       <strong>{title}</strong>
@@ -136,6 +144,7 @@ vi.mock("@ssot/ui", () => ({
 }));
 
 import { EarnPageClient } from "./pageClient";
+import { toast } from "@ssot/ui";
 
 function renderWithQueryClient(ui: React.ReactElement) {
   const queryClient = new QueryClient({
@@ -148,8 +157,16 @@ function renderWithQueryClient(ui: React.ReactElement) {
 }
 
 describe("EarnPageClient", () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ rows: [] }), { status: 200 }))
+    );
+  });
+
   afterEach(() => {
     cleanup();
+    vi.unstubAllGlobals();
     state.release = {
       releaseDigest: "0x7ad0f2cb0000000000000000000000000000000000000000000000000000e1349f",
       assets: [
@@ -178,10 +195,86 @@ describe("EarnPageClient", () => {
   it("frames earn as a bank reserve console", () => {
     renderWithQueryClient(<EarnPageClient />);
 
-    expect(screen.getByRole("heading", { name: /USDC bankroll control/i })).toBeDefined();
-    expect(screen.getByText("Bank transaction console")).toBeDefined();
-    expect(screen.getByText("Capital posture")).toBeDefined();
+    expect(screen.getByRole("heading", { name: /Be the house in USDC/i })).toBeDefined();
+    expect(screen.getByTestId("bankroll-performance")).toBeDefined();
+    expect(screen.getByText("Deposit or exit")).toBeDefined();
+    expect(screen.getByText("Verifiable reserve ledger")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Risk checks" }));
     expect(screen.getByText("Custody boundary")).toBeDefined();
     expect(screen.getByText("Connect a wallet to run bank actions.")).toBeDefined();
+  });
+
+  it("blocks deposits above the connected wallet balance before opening wallet flow", async () => {
+    state.ready = true;
+    state.sdk = {
+      account: "0x0000000000000000000000000000000000000abc",
+      bank: {
+        getSnapshot: vi.fn().mockResolvedValue({
+          bank: "0x0000000000000000000000000000000000000002",
+          totalAssets: 10_000_000n,
+          totalReserved: 0n,
+          totalSupply: 10_000_000n,
+          assetsPerShare: 1_000_000n,
+          minLiquidityBps: 1_000,
+          protocolFeesPayable: 0n,
+          externalPayablesTotal: 0n
+        }),
+        getPosition: vi.fn().mockResolvedValue(null),
+        getAssetBalance: vi.fn().mockResolvedValue(1_000_000n)
+      }
+    };
+
+    renderWithQueryClient(<EarnPageClient />);
+
+    await waitFor(() => {
+      expect(state.sdk.bank.getAssetBalance).toHaveBeenCalled();
+    });
+    fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "2" } });
+    fireEvent.click(screen.getByRole("button", { name: "Deposit assets" }));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("Amount exceeds the connected wallet balance.");
+    });
+  });
+
+  it("uses account withdrawable assets for the withdraw max action", async () => {
+    state.ready = true;
+    state.sdk = {
+      account: "0x0000000000000000000000000000000000000abc",
+      bank: {
+        getSnapshot: vi.fn().mockResolvedValue({
+          bank: "0x0000000000000000000000000000000000000002",
+          totalAssets: 100_000_000n,
+          totalReserved: 0n,
+          totalSupply: 100_000_000n,
+          assetsPerShare: 1_000_000n,
+          minLiquidityBps: 1_000,
+          protocolFeesPayable: 0n,
+          externalPayablesTotal: 0n
+        }),
+        getPosition: vi.fn().mockResolvedValue(null),
+        getAssetBalance: vi.fn().mockResolvedValue(1_000_000n),
+        maxWithdraw: vi.fn().mockResolvedValue(56_999_999n),
+        maxRedeem: vi.fn().mockResolvedValue(57_000_000n)
+      }
+    };
+
+    renderWithQueryClient(<EarnPageClient />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Withdraw" }));
+
+    await waitFor(() => {
+      expect(state.sdk.bank.maxWithdraw).toHaveBeenCalled();
+    });
+
+    await waitFor(() => {
+      expect((screen.getByRole("button", { name: "Max" }) as HTMLButtonElement).disabled).toBe(
+        false
+      );
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Max" }));
+
+    expect((screen.getByLabelText("Amount") as HTMLInputElement).value).toBe("56.999999");
   });
 });

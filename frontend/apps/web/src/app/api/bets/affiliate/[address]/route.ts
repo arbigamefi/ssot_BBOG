@@ -5,17 +5,19 @@ import {
   normalizeAffiliateAddress,
   queryAffiliateBets
 } from "../../../../../server/betting/recent-bets";
+import {
+  mergeHeaders,
+  noStoreHeaders,
+  publicReadRateLimit,
+  rateLimitedJson
+} from "../../../../../server/http/public-read-limit";
+import { parseRequestChainId } from "../../../../../server/chain";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 function jsonError(message: string, status = 400, code = "BAD_REQUEST") {
   return NextResponse.json({ error: { code, message } }, { status });
-}
-
-function parseChainId(value: string | null) {
-  const parsed = Number(value ?? process.env.NEXT_PUBLIC_CHAIN_ID ?? "84532");
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : 84532;
 }
 
 function emptyAffiliateBetsResponse({
@@ -48,7 +50,19 @@ function emptyAffiliateBetsResponse({
 
 export async function GET(request: Request, context: { params: Promise<{ address: string }> }) {
   const url = new URL(request.url);
-  const chainId = parseChainId(url.searchParams.get("chainId"));
+  const chainId = parseRequestChainId(url.searchParams.get("chainId"));
+  const quota = publicReadRateLimit({
+    envName: "BETS_AFFILIATE_RATE_LIMIT_PER_MINUTE",
+    fallback: 120,
+    keyPrefix: "bets:affiliate",
+    request
+  });
+  if (!quota.allowed) {
+    return rateLimitedJson(
+      "Too many affiliate-bets requests. Please retry shortly.",
+      quota.headers
+    );
+  }
 
   try {
     const params = await context.params;
@@ -57,9 +71,7 @@ export async function GET(request: Request, context: { params: Promise<{ address
     const response = await queryAffiliateBets({ affiliate, chainId, limit });
 
     return NextResponse.json(response, {
-      headers: {
-        "cache-control": "no-store"
-      }
+      headers: mergeHeaders(noStoreHeaders(), quota.headers)
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to query affiliate bets.";
@@ -69,9 +81,7 @@ export async function GET(request: Request, context: { params: Promise<{ address
 
     const params = await context.params;
     return NextResponse.json(emptyAffiliateBetsResponse({ affiliate: params.address, chainId }), {
-      headers: {
-        "cache-control": "no-store"
-      }
+      headers: mergeHeaders(noStoreHeaders(), quota.headers)
     });
   }
 }

@@ -5,6 +5,11 @@
     "connectWalletDescription": "连接钱包以使用此功能。",
     "connectingWallet": "连接中...",
     "indexerWorkerFailed": "索引器 worker 启动失败",
+    "network": {
+      "label": "当前网络",
+      "switchWallet": "切换",
+      "switching": "切换中"
+    },
     "unknownNetwork": "未知网络",
     "walletRequired": "需要钱包",
     "writesDisabled": "当前写入已关闭。",
@@ -17,6 +22,34 @@
       "playerSportsTicketsFailed": "玩家体育票据读取失败",
       "errorId": "错误 ID: {digest}",
       "tryAgain": "重试"
+    },
+    "walletMenu": {
+      "chainSection": "当前链",
+      "connectedVia": "通过 {wallet}",
+      "copyAddress": "复制地址",
+      "disconnect": "断开连接",
+      "mismatch": {
+        "title": "钱包在另一条链上",
+        "description": "请将钱包切换到 {target} 才能下注。",
+        "switch": "切换钱包"
+      },
+      "viewOnExplorer": "在区块浏览器中查看"
+    },
+    "mobileDeepLink": {
+      "title": "在钱包中打开",
+      "description": "为了在手机上获得最顺畅的体验,建议在钱包内置浏览器里打开本站。",
+      "openIn": {
+        "metamask": "在 MetaMask 中打开",
+        "coinbase": "在 Coinbase Wallet 中打开",
+        "trust": "在 Trust 中打开"
+      },
+      "dismiss": "关闭"
+    },
+    "install": {
+      "title": "安装 ArbiGameFi",
+      "description": "添加到主屏幕,获得更快、类原生 app 的体验。",
+      "action": "安装",
+      "dismiss": "关闭"
     }
   },
   "metadata": {
@@ -26,7 +59,7 @@
     "pages": {
       "casino": {
         "title": "赌场",
-        "description": "浏览钱包原生赌场房间，使用链上随机数、可见资金池状态和 keeper 辅助结算。"
+        "description": "原生钱包赌场 —— 八款游戏,每一局都能在链上核。不用注册、不用托管。"
       },
       "casinoRoom": {
         "title": "{game}",
@@ -74,7 +107,7 @@
       },
       "earn": {
         "title": "赚取",
-        "description": "查看资金池存款、提款、储备状态和 LP 风险控制。"
+        "description": "存入、取出、查看支撑赌场的金库。"
       },
       "ops": {
         "title": "运维",
@@ -89,7 +122,7 @@
   },
   "footer": {
     "brandSubtitle": "钱包原生游戏",
-    "description": "钱包原生游戏房间、可读结算结果，以及链上执行之上的资金池上下文。",
+    "description": "原生钱包的赌场和体育博彩。每一局、每一笔结算都在链上。",
     "liveRooms": "实时游戏",
     "games": "游戏",
     "platform": "平台",
@@ -101,17 +134,23 @@
     "privacy": "隐私政策",
     "disclaimer": "风险提示",
     "copyright": "ArbiGameFi 前端用于钱包原生游戏与透明结算。",
-    "docs": "文档"
+    "docs": "文档",
+    "responsibleGambling": "责任游戏",
+    "responsibleNote": "请理性游戏。",
+    "support": "支持",
+    "faq": "帮助与常见问题",
+    "status": "系统状态",
+    "community": "社区"
   },
   "casino": {
     "room": {
       "shell": {
-        "liveModule": "实时 SSOT 模块",
+        "liveModule": "在线游戏",
         "houseEdge": "庄家优势",
         "maxPayout": "最高赔付"
       },
       "empty": {
-        "moduleNotFound": "未找到游戏模块",
+        "moduleNotFound": "没找到这个游戏",
         "gameNotFound": "未找到该游戏。"
       },
       "names": {
@@ -128,7 +167,7 @@
         "loading": "正在加载审计流",
         "headers": {
           "timestampAuth": "时间 / 身份",
-          "submodule": "子模块",
+          "submodule": "游戏",
           "wagerParameters": "投注参数",
           "settlementState": "结算状态",
           "audit": "审计"
@@ -139,6 +178,98 @@
         "empty": {
           "title": "不可篡改审计流",
           "description": "等待链上交易事件写入..."
+        },
+        "tabs": {
+          "live": "实时下注",
+          "mine": "我的记录",
+          "top": "高倍中奖",
+          "info": "玩法说明",
+          "leaderboard": "排行榜",
+          "analytics": "数据分析"
+        },
+        "columns": {
+          "time": "时间",
+          "player": "玩家",
+          "stake": "本金",
+          "multiplier": "倍率",
+          "payout": "派彩",
+          "state": "状态",
+          "bet": "下注",
+          "coverage": "覆盖",
+          "winChance": "胜率",
+          "bets": "下注数",
+          "volume": "投注额"
+        },
+        "emptyStates": {
+          "live": "暂无下注 —— 来当第一个玩家。",
+          "mine": "你还没玩过这个游戏。",
+          "top": "当前链上还没有进入排名的中奖记录。",
+          "connectWallet": "连接钱包后即可查看你的下注记录。"
+        },
+        "viewBet": "查看下注 {betId}",
+        "houseEdgeLabel": "庄家优势",
+        "howToPlayLabel": "玩法",
+        "betTypesLabel": "下注类型",
+        "justNow": "刚刚",
+        "minutesAgo": "{n} 分钟前",
+        "hoursAgo": "{n} 小时前",
+        "daysAgo": "{n} 天前",
+        "filters": {
+          "all": "全部",
+          "pending": "未结",
+          "won": "已赢",
+          "lost": "已输",
+          "refunded": "已退款"
+        },
+        "stateLabel": {
+          "won": "已赢",
+          "lost": "已输",
+          "pending": "未结",
+          "settled": "已结算",
+          "cancelled": "已退款"
+        },
+        "openOnExplorer": "在区块浏览器中打开交易",
+        "openOnExplorerWithChain": "在 {chain} 区块浏览器中打开",
+        "newActivityBadge": "{n} 条新",
+        "onChain": "在 {chain}",
+        "leaderboard": {
+          "title": "排行榜",
+          "empty": "当前链上还没有排名玩家。",
+          "scope": "按投注额排名",
+          "scopeTopWin": "按派彩倍数排名",
+          "views": {
+            "turnover": "按投注额",
+            "topWin": "高倍中奖"
+          },
+          "you": "你",
+          "yourPosition": "你的排名"
+        },
+        "analytics": {
+          "empty": "当前链上还没有分析数据。",
+          "volume": "投注额",
+          "bets": "下注数",
+          "players": "玩家数",
+          "settled": "已结算",
+          "rtp": "返还率 (RTP)",
+          "wagered": "总投注额",
+          "payout": "总派彩",
+          "transactions": "交易数",
+          "won": "中奖数",
+          "gainRatio": "中奖率",
+          "trend": "7 日投注额",
+          "trendWindow": "按链上下注时间统计的每日流水",
+          "bestEffort": "索引数据 · 仅供参考",
+          "views": {
+            "game": "本游戏",
+            "all": "全部游戏"
+          },
+          "windowLabel": "时间范围",
+          "windows": {
+            "all": "全部",
+            "d1": "24小时",
+            "d7": "7天",
+            "d30": "30天"
+          }
         }
       },
       "errors": {
@@ -147,7 +278,7 @@
         "roundNotFound": "当前 GameHub 暂时还没有读到这个回合。再次下注前请先核对交易记录。",
         "manualSettleFailed": "手动结算失败。",
         "refundFailed": "退款失败。",
-        "sdkNotReady": "SSOT SDK 尚未就绪。请先连接钱包。",
+        "sdkNotReady": "连上钱包就能玩。",
         "transactionFailedShort": "交易失败",
         "transactionFailed": "交易失败，请重试。",
         "reconcileFailed": "交易关联失败",
@@ -155,7 +286,8 @@
         "rouletteSelectionRequired": "请先在轮盘桌面选择至少一个号码或投注类型。",
         "kenoSelectionRequired": "请在 Keno 网格中至少选择 1 个号码。",
         "kenoSelectionInvalid": "Keno 只能选择 1 到 5 个号码，号码范围为 1 到 15。",
-        "noActiveCasinoPool": "当前 release 中没有可用的赌场资金池。",
+        "mainnetRiskInDisabled": "赌场主网下注已关闭，需完成前端准入审批后才能开启。",
+        "noActiveCasinoPool": "当前链上没有可玩的游戏。",
         "unexpected": "发生了非预期错误。"
       },
       "warnings": {
@@ -186,11 +318,11 @@
           },
           "settling": {
             "label": "结果已揭晓",
-            "detail": "随机数已准备好，开奖号码已可见，keeper 正在完成资金结算。",
+            "detail": "开奖号已出,正在结算你的中奖。",
             "status": "结算中"
           },
           "manualSettleOffered": {
-            "label": "Keeper 延迟",
+            "label": "结算慢",
             "detail": "结算延迟。你可以作为兜底手动结算本回合。",
             "status": "可手动结算"
           },
@@ -223,6 +355,12 @@
         "actions": {
           "settleResult": "结算结果",
           "refundStake": "退回本金"
+        },
+        "steps": {
+          "place": "下注",
+          "random": "随机数",
+          "settle": "结算",
+          "result": "结果"
         }
       },
       "betPanel": {
@@ -293,7 +431,11 @@
             "even": "双数",
             "red": "红",
             "black": "黑",
-            "odd": "单数"
+            "odd": "单数",
+            "firstColumn": "第 1 列 (2:1)",
+            "secondColumn": "第 2 列 (2:1)",
+            "thirdColumn": "第 3 列 (2:1)",
+            "column": "2:1"
           }
         },
         "coin": {
@@ -465,7 +607,7 @@
           "randomHash": "随机哈希",
           "settlementTx": "结算交易",
           "resolvedTime": "结算时间",
-          "vrfFee": "随机费用 (VRF)",
+          "vrfFee": "随机数费用",
           "diceTarget": "骰子目标",
           "diceNumber": "开出点数",
           "coinChoice": "选择面",
@@ -499,35 +641,258 @@
           "close": "关闭",
           "playAgain": "再玩一次",
           "viewSettlement": "查看结算",
-          "settlementPending": "结算确认中"
+          "settlementPending": "结算确认中",
+          "copyProof": "复制公平性证明",
+          "proofCopied": "已复制证明"
+        }
+      },
+      "gameInfo": {
+        "roulette": {
+          "tagline": "欧式轮盘 —— 37 个号码格,每一次旋转都由 Chainlink VRF 上链签名。",
+          "houseEdge": "2.70%",
+          "bets": [
+            {
+              "key": "straight",
+              "label": "单号 (直注)",
+              "coverage": "1 个号码",
+              "multiplier": "36×"
+            },
+            {
+              "key": "redBlack",
+              "label": "红 / 黑",
+              "coverage": "18 个号码",
+              "multiplier": "2×"
+            },
+            {
+              "key": "evenOdd",
+              "label": "单 / 双",
+              "coverage": "18 个号码",
+              "multiplier": "2×"
+            },
+            {
+              "key": "lowHigh",
+              "label": "1–18 / 19–36",
+              "coverage": "18 个号码",
+              "multiplier": "2×"
+            },
+            {
+              "key": "dozen",
+              "label": "打 (1/2/3st 12)",
+              "coverage": "12 个号码",
+              "multiplier": "3×"
+            },
+            {
+              "key": "column",
+              "label": "列 (2:1)",
+              "coverage": "12 个号码",
+              "multiplier": "3×"
+            }
+          ]
+        },
+        "dice": {
+          "tagline": "掷出 0–99 的数字,选一个目标值并选小/大。",
+          "houseEdge": "1.00%",
+          "bets": [
+            {
+              "key": "under",
+              "label": "小于目标值",
+              "coverage": "0 … 目标值-1",
+              "multiplier": "99 / 目标值"
+            },
+            {
+              "key": "over",
+              "label": "大于目标值",
+              "coverage": "目标值+1 … 99",
+              "multiplier": "99 / (99 − 目标值)"
+            }
+          ]
+        },
+        "coin-toss": {
+          "tagline": "纯粹的 50/50。选一面,Chainlink VRF 抽一次定输赢。",
+          "houseEdge": "1.00%",
+          "bets": [
+            {
+              "key": "heads",
+              "label": "正面",
+              "coverage": "2 个结果之一",
+              "multiplier": "1.98×"
+            },
+            {
+              "key": "tails",
+              "label": "反面",
+              "coverage": "2 个结果之一",
+              "multiplier": "1.98×"
+            }
+          ]
+        },
+        "keno": {
+          "tagline": "从 1–15 中挑 1–5 个号码,合约开 5 个;命中越多,赢得越多。",
+          "houseEdge": "≈ 3.00%",
+          "bets": [
+            {
+              "key": "p1",
+              "label": "选 1 个号",
+              "coverage": "命中 1/5",
+              "multiplier": "2.97×"
+            },
+            {
+              "key": "p2",
+              "label": "选 2 个号",
+              "coverage": "全中",
+              "multiplier": "最高 8.91×"
+            },
+            {
+              "key": "p3",
+              "label": "选 3 个号",
+              "coverage": "全中",
+              "multiplier": "最高 26.7×"
+            },
+            {
+              "key": "p4",
+              "label": "选 4 个号",
+              "coverage": "全中",
+              "multiplier": "最高 91×"
+            },
+            {
+              "key": "p5",
+              "label": "选 5 个号",
+              "coverage": "全中",
+              "multiplier": "最高 770×"
+            }
+          ]
+        },
+        "plinko": {
+          "tagline": "球穿过 9 行钉阵落入桶位。外侧桶赔率更高;风险档决定分布曲线。",
+          "houseEdge": "≈ 1.50%",
+          "bets": [
+            {
+              "key": "low",
+              "label": "低风险",
+              "coverage": "曲线平缓",
+              "multiplier": "最高 1.53×"
+            },
+            {
+              "key": "medium",
+              "label": "中风险",
+              "coverage": "均衡",
+              "multiplier": "最高 8.27×"
+            },
+            {
+              "key": "high",
+              "label": "高风险",
+              "coverage": "重尾分布",
+              "multiplier": "最高 24.6×"
+            }
+          ]
+        },
+        "slots": {
+          "tagline": "三轴经典老虎机。顶部符号三连得 64×。",
+          "houseEdge": "≈ 4.00%",
+          "bets": [
+            {
+              "key": "classic",
+              "label": "经典模式",
+              "coverage": "5×5×5 轴权重",
+              "multiplier": "最高 64×"
+            }
+          ]
+        },
+        "baccarat": {
+          "tagline": "押闲家、庄家或和局。免佣金标准赔付。",
+          "houseEdge": "1.06% – 14.4%",
+          "bets": [
+            {
+              "key": "player",
+              "label": "闲家",
+              "coverage": "≈ 44.6%",
+              "multiplier": "2.24×"
+            },
+            {
+              "key": "banker",
+              "label": "庄家",
+              "coverage": "≈ 45.8%",
+              "multiplier": "2.18×"
+            },
+            {
+              "key": "tie",
+              "label": "和局",
+              "coverage": "≈ 9.5%",
+              "multiplier": "10.48×"
+            }
+          ]
+        },
+        "sic-bo": {
+          "tagline": "三粒骰子。可押小/大、围骰、对子、单面或总点数。",
+          "houseEdge": "2.78% – 30.6%",
+          "bets": [
+            {
+              "key": "smallBig",
+              "label": "小 (4–10) / 大 (11–17)",
+              "coverage": "48.6%",
+              "multiplier": "2.06×"
+            },
+            {
+              "key": "anyTriple",
+              "label": "任意围骰",
+              "coverage": "2.78%",
+              "multiplier": "36×"
+            },
+            {
+              "key": "specificTriple",
+              "label": "指定围骰",
+              "coverage": "0.46%",
+              "multiplier": "216×"
+            },
+            {
+              "key": "specificDouble",
+              "label": "指定对子",
+              "coverage": "7.41%",
+              "multiplier": "13.5×"
+            },
+            {
+              "key": "singleFace",
+              "label": "单面 (1–6)",
+              "coverage": "≈ 42%",
+              "multiplier": "最高 6×"
+            },
+            {
+              "key": "total",
+              "label": "总点数 (4–17)",
+              "coverage": "因点数而异",
+              "multiplier": "因点数而异"
+            }
+          ]
         }
       }
     },
     "directory": {
       "loading": "正在加载游戏...",
       "empty": {
-        "noRelease": "当前链没有可用的内嵌 release。",
-        "noGames": "当前 release 没有注册游戏。",
-        "noResults": "没有匹配的房间",
-        "noResultsDetail": "没有赌场房间匹配“{query}”。清空搜索或切换分类。",
+        "noRelease": "你连的链上没有赌场。",
+        "noGames": "目前没有游戏可玩。",
+        "noResults": "没找到匹配的游戏",
+        "noResultsDetail": "\"{query}\" 没有匹配。试试清空搜索。",
         "clearSearch": "清空搜索"
       },
       "hero": {
-        "eyebrow": "全球赌场大厅",
-        "title": "进入游戏大厅",
-        "description": "所有模块都在链上执行、可验证，并直接连接到隔离资金池。连接钱包即可开始游戏。"
+        "eyebrow": "游戏大厅",
+        "title": "挑一款游戏。",
+        "description": "八款游戏。连上钱包直接开玩。每一局都落在链上。"
       },
       "stats": {
-        "rooms": "链上房间",
-        "asset": "Bank 资产"
+        "rooms": "在线游戏",
+        "asset": "结算资产",
+        "volume": "总投注额",
+        "bets": "总下注数",
+        "players": "玩家数"
       },
       "filters": {
-        "all": "全部模块",
-        "table": "桌面游戏",
-        "dice": "骰子游戏",
-        "binary": "快速二选一",
-        "lottery": "彩票类",
-        "arcade": "街机类"
+        "all": "全部",
+        "table": "桌面",
+        "dice": "骰子",
+        "binary": "翻硬币",
+        "lottery": "彩票",
+        "arcade": "街机"
       },
       "search": {
         "placeholder": "搜索游戏...",
@@ -539,7 +904,7 @@
         "lottery": "彩票",
         "arcade": "街机",
         "dice": "骰子",
-        "module": "模块"
+        "module": "游戏"
       },
       "rooms": {
         "dice": {
@@ -584,24 +949,25 @@
         }
       },
       "card": {
-        "releaseAnchored": "Release 锚定",
-        "playNow": "开始游戏"
+        "releaseAnchored": "在线",
+        "playNow": "开玩"
       },
       "reserve": {
-        "title": "赌场 Bankroll",
-        "subtitle": "Bank {bank}",
-        "status": "Release 锚定",
-        "cta": "查看 Bank"
-      }
+        "title": "庄家金库,链上可查",
+        "subtitle": "金库 {bank}",
+        "status": "在线",
+        "cta": "链上查看"
+      },
+      "bets": "下注",
+      "clearAll": "清空"
     }
   },
   "sportsbook": {
     "index": {
       "loading": "正在加载体育投注...",
       "noRelease": {
-        "title": "未加载 release",
-        "description": "内嵌 release 快照不可用。",
-        "status": "不可用"
+        "title": "体育博彩当前不可用",
+        "description": "你连的链上没有体育博彩。切换网络后再来浏览赛事。"
       },
       "header": {
         "metadataEnabled": "出票已启用",
@@ -620,7 +986,7 @@
         "inspect": "打开最新市场"
       },
       "details": {
-        "release": "Release",
+        "release": "版本",
         "sportsHub": "SportsHub",
         "embeddedMetadataPresent": "内嵌元数据已存在",
         "notAvailable": "不可用",
@@ -633,11 +999,11 @@
         "nextTicket": "下一个票据",
         "ticketHelper": "链上最新票据计数器",
         "runtimeReadFailed": "SportsHub 运行时读取失败",
-        "sdkRead": "通过 @ssot/ssot SDK 读取"
+        "sdkRead": "实时读取链上数据"
       },
       "release": {
-        "eyebrow": "凭证面",
-        "title": "Oracle、Release 与结算锚点",
+        "eyebrow": "为什么公平",
+        "title": "预言机、结算、派彩 —— 全部链上。",
         "description": "当前 bundle 暴露签名赔率身份、赛果 reporter 集合和合约地址，让每张体育票据都可以被审计。",
         "oddsSignerSet": "赔率签名集合",
         "resultReporterSet": "赛果 reporter 集合",
@@ -676,7 +1042,7 @@
       "caps": {
         "eyebrow": "协议上限",
         "title": "SportsHub 顶层限制",
-        "description": "这些 raw-unit 上限复制自内嵌 release，应始终与部署 bundle 和运维批准备忘录保持一致。",
+        "description": "每场比赛的下注上限,实时配置、链上可看。",
         "riskTitle": "SportsHub 全局风险上限"
       },
       "marketTape": {
@@ -712,7 +1078,7 @@
         "eyebrow": "资金池",
         "title": "体育资金池隔离",
         "description": "体育流动性与赌场游戏流动性隔离，因此 sportsbook 敞口可以独立设置上限、暂停和监控。",
-        "noPool": "当前 release 没有可用的 Sports pool 元数据。"
+        "noPool": "当前链上体育博彩金库尚未启用。"
       },
       "controls": {
         "eyebrow": "控制项",
@@ -734,7 +1100,7 @@
         "status": {
           "ready": "可下注",
           "previewOnly": "仅预览",
-          "notInRelease": "未在发布中",
+          "notInRelease": "不可用",
           "readOnly": "只读"
         }
       },
@@ -781,7 +1147,7 @@
             "live": "当前没有进行中的市场。",
             "today": "今天没有已发布市场。",
             "upcoming": "暂未发布即将开赛的市场。",
-            "past": "当前发布窗口内没有已结算市场。"
+            "past": "暂无已结束的赛事。"
           }
         }
       },
@@ -825,7 +1191,7 @@
       "detail": {
         "noRelease": {
           "title": "体育博彩不可用",
-          "description": "当前版本未加载发布快照。"
+          "description": "体育博彩当前链上不可用。"
         },
         "invalid": {
           "title": "市场 id 无效",
@@ -1002,7 +1368,7 @@
         "refreshing": "刷新中…",
         "noRelease": {
           "title": "票据不可用",
-          "description": "当前构建没有加载 release 快照。"
+          "description": "体育博彩当前链上不可用。"
         },
         "invalid": {
           "title": "票据 ID 无效",
@@ -1083,7 +1449,7 @@
           },
           "settleReady": {
             "title": "可以结算",
-            "description": "市场已 resolved。任何人都可以结算这张 held 票据并释放最终赔付。"
+            "description": "赛果已出。任何人都可以提交结算,释放派彩。"
           },
           "refundReady": {
             "title": "可以退款",
@@ -1091,7 +1457,7 @@
           },
           "settled": {
             "title": "票据已结算",
-            "description": "SportsHub 已终结该票据，并释放最终赔付路径。"
+            "description": "结算完成,派彩可以领取。"
           },
           "refunded": {
             "title": "本金已退款",
@@ -1138,7 +1504,8 @@
           "refunded": "票据退款已确认。",
           "refundFailed": "票据退款失败。"
         }
-      }
+      },
+      "loading": "正在加载赛事…"
     },
     "components": {
       "na": "N/A",
@@ -1641,19 +2008,19 @@
       "state": {
         "noRelease": {
           "title": "账户组合",
-          "description": "当前链没有内嵌 release。"
+          "description": "当前链上不可用。"
         }
       },
       "hero": {
         "eyebrow": "账户注册表",
         "title": "钱包档案。",
-        "description": "在当前 active release 语境下查看钱包余额、Bank 仓位、退款 credit 和本地执行历史。",
+        "description": "你的钱包余额、未结算下注、退款、本地历史 —— 一处看全。",
         "connectedAccount": "已连接账户"
       },
       "metrics": {
         "walletBalance": {
           "label": "钱包余额",
-          "detail": "active release 资产集中的可用余额。"
+          "detail": "你在各游戏资产里的可用余额。"
         },
         "bankPosition": {
           "label": "Bank 仓位",
@@ -1708,7 +2075,7 @@
       "refund": {
         "title": "VRF 退款 credit",
         "connectWallet": "连接钱包后才能查看并领取可追回的 VRF credit。",
-        "readOnly": "当前 release 禁用了写入。",
+        "readOnly": "只读模式 —— 切换网络才能操作。",
         "claiming": "领取中",
         "claim": "领取 credit",
         "flow": {
@@ -1746,7 +2113,8 @@
         "walletCopyFailed": "复制钱包地址失败",
         "refundClaimed": "退款 credit 已领取",
         "refundClaimFailed": "退款领取失败"
-      }
+      },
+      "loading": "正在加载账户…"
     },
     "activity": {
       "common": {
@@ -1809,7 +2177,7 @@
         "view": "查看",
         "columns": {
           "ticket": "票据",
-          "module": "模块",
+          "module": "游戏",
           "stake": "本金",
           "settlement": "结算",
           "status": "状态",
@@ -1926,7 +2294,7 @@
           "title": "GameHub 状态",
           "stepperTitle": "票据生命周期",
           "stepperSubtitle": "下注、随机数和结算都保持可独立检查。",
-          "releaseDigest": "Release 摘要",
+          "releaseDigest": "版本",
           "asset": "资产",
           "latestIndexedEvent": "最新索引事件",
           "steps": {
@@ -1980,7 +2348,8 @@
           },
           "empty": "还没有已索引生命周期事件。"
         }
-      }
+      },
+      "loading": "正在加载记录…"
     },
     "claims": {
       "common": {
@@ -1990,7 +2359,7 @@
       "state": {
         "noRelease": {
           "title": "领取",
-          "description": "当前链没有内嵌 release。"
+          "description": "当前链上不可用。"
         }
       },
       "errors": {
@@ -2012,7 +2381,7 @@
         },
         "holdback": {
           "label": "Holdback",
-          "detail": "等待释放的缓冲区。"
+          "detail": "待结算暂留。"
         },
         "protocolFees": {
           "label": "协议费用",
@@ -2054,7 +2423,7 @@
         "eyebrow": "执行",
         "title": "领取交易控制台",
         "connectWallet": "连接钱包后才能执行领取操作。",
-        "readOnly": "当前 release 禁用了写入。",
+        "readOnly": "只读模式 —— 切换网络才能操作。",
         "max": "最大 {amount}",
         "holdbackPending": "待同步 Holdback",
         "holdbackDetail": "同步会基于当前链上 holdback 状态更新 XP 账本。",
@@ -2139,7 +2508,8 @@
         "syncHoldbackFailed": "Holdback 同步失败",
         "claimedFees": "已领取 {amount} {symbol} 协议费用",
         "protocolFeeFailed": "协议费用领取失败"
-      }
+      },
+      "loading": "正在加载领取…"
     },
     "referral": {
       "common": {
@@ -2149,7 +2519,7 @@
       "state": {
         "noRelease": {
           "title": "推广",
-          "description": "当前链没有内嵌 release。"
+          "description": "当前链上不可用。"
         }
       },
       "errors": {
@@ -2210,53 +2580,81 @@
       "toast": {
         "bound": "Referrer 已绑定",
         "bindFailed": "Referrer 绑定失败"
-      }
+      },
+      "loading": "正在加载推荐…"
     }
   },
   "earn": {
     "state": {
       "noRelease": {
         "title": "赚取收益",
-        "description": "当前链没有内嵌 release。"
-      }
+        "description": "当前链上不可用。"
+      },
+      "loading": "正在加载金库…"
     },
     "errors": {
       "sdkUnavailable": "SDK 不可用",
       "poolUnavailable": "资金池不可用",
       "unsupportedWriteAsset": "写入流程需要所选资产存在 active casino pool。",
       "positiveAmount": "金额必须大于 0。",
-      "primaryAssetOnly": "当前写入流程仅支持主资产。"
+      "primaryAssetOnly": "当前写入流程仅支持主资产。",
+      "insufficientWalletBalance": "金额超过当前钱包余额。",
+      "exceedsMintable": "Share 数量超过当前钱包余额可 mint 的份额。",
+      "exceedsWithdrawable": "金额超过当前可取金额。",
+      "exceedsRedeemable": "金额超过当前可赎回份额。",
+      "allowanceNotConfirmed": "授权已确认，但 Bank allowance 还没有更新。请等待几秒后重试存入。"
     },
     "format": {
       "assetFallback": "资产"
     },
     "hero": {
-      "eyebrow": "Bank 储备",
-      "title": "{symbol} Bankroll 控制台。",
-      "description": "围绕协议 Bank 执行存入、取出和赎回，沿用赌场票据相同的 release 锚定结算模型。展示储备事实之前，不展示任何营销化 APY。",
+      "eyebrow": "金库出资人",
+      "title": "用 {symbol} 当庄。",
+      "description": "向赌场金库提供承险资本。收益来自真实玩家流水，回撤是这门生意的一部分。",
+      "disclosure": "储备数值直接读取 Bank 合约；表现指标来自索引估算，可能存在延迟。",
       "bankAddress": "Bank 地址"
     },
     "metrics": {
+      "sharePrice": {
+        "label": "每份价值",
+        "detail": "每 1 份 LP share 可赎回的资产。"
+      },
+      "totalShares": {
+        "label": "总份额",
+        "detail": "当前已发行 LP share 总量。"
+      },
       "freeReserve": {
         "label": "可用储备",
-        "detail": "未被未结算负债占用的资产。"
+        "detail": "高于未结算负债的未占用金库资本。"
       },
       "totalAssets": {
         "label": "总资产",
-        "detail": "来自协议读取的当前 Bank 资产。"
+        "detail": "来自 active release 的可验证 Bank NAV。"
       },
       "minLiquidity": {
         "label": "最低流动性",
-        "detail": "取款前必须保留的配置下限。"
+        "detail": "保护赔付能力的取款流动性下限。"
       }
     },
     "summary": {
       "capitalPosture": {
-        "title": "资本状态",
-        "readModel": "读取模型",
+        "title": "可验证储备账本",
+        "readModel": "链上读取",
         "totalAssets": "总资产",
-        "loading": "正在从所选 release 同步 Bank 快照。",
-        "detail": "图表仅展示资金姿态。数值真相来自下方 Bank 快照。"
+        "loading": "正在拉取最新金库快照…",
+        "detail": "Bank NAV 直接读取自当前 active 合约。"
+      },
+      "freeReserve": {
+        "label": "可用储备",
+        "detail": "当前未被未结算负债占用的资本。"
+      },
+      "sharePrice": {
+        "label": "每份价值",
+        "detail": "ERC4626-like 直接换算：1 份 LP share 对应多少底层资产。"
+      },
+      "totalShares": {
+        "label": "总份额",
+        "detail": "当前已发行 LP share。Bank NAV 变化会反映到每份价值。"
       },
       "position": {
         "label": "你的仓位",
@@ -2272,41 +2670,54 @@
       }
     },
     "actions": {
-      "eyebrow": "LP 操作",
-      "title": "Bank 交易控制台",
+      "eyebrow": "仓位操作",
+      "title": "存入或退出",
       "asset": "资产",
       "amount": "金额",
       "connectWallet": "连接钱包后才能执行 Bank 操作。",
-      "readOnly": "当前 release 禁用了写入。",
+      "readOnly": "只读模式 —— 切换网络才能操作。",
       "tabs": {
         "deposit": {
           "label": "存入",
-          "description": "向 Bank 提供资产。"
+          "description": "增加用于承保赌场赔付的资本。"
         },
         "withdraw": {
           "label": "取出",
-          "description": "取出可用资产。"
-        },
-        "redeem": {
-          "label": "赎回",
-          "description": "将 Bank 份额赎回为资产。"
+          "description": "按资产数量或按 share 数量退出仓位。"
         }
+      },
+      "amountMode": {
+        "label": "输入方式",
+        "assets": "按资产",
+        "shares": "按 Share"
       },
       "max": {
         "walletBalance": "钱包余额",
         "pending": "最大值读取中",
         "value": "最大 {amount}"
       },
+      "balance": {
+        "wallet": "钱包余额",
+        "mintable": "可 mint 份额",
+        "withdrawable": "可取金额",
+        "redeemable": "可赎回份额",
+        "pending": "读取中",
+        "useMax": "最大"
+      },
       "submit": {
         "executing": "执行中",
         "deposit": "存入资产",
+        "mint": "Mint 份额",
         "withdraw": "取出资产",
         "redeem": "赎回份额"
       },
       "trace": {
         "deposit": "存入追踪",
         "withdraw": "取出追踪",
-        "redeem": "赎回追踪"
+        "redeem": "赎回追踪",
+        "view": "查看交易状态",
+        "close": "关闭",
+        "statusDialog": "Bank 交易状态"
       }
     },
     "flows": {
@@ -2319,6 +2730,11 @@
         "approveDescription": "设置 ERC20 allowance。",
         "depositTitle": "存入资产",
         "depositDescription": "广播 Bank.deposit。"
+      },
+      "mint": {
+        "preflight": "校验 share 数量和所需资产。",
+        "mintTitle": "Mint 份额",
+        "mintDescription": "广播 Bank.mint。"
       },
       "direct": {
         "submit": "提交",
@@ -2343,30 +2759,104 @@
       "reset": "重置追踪"
     },
     "risk": {
+      "title": "风险检查",
+      "readModel": "混合数据源",
       "custody": {
         "label": "托管边界",
-        "title": "Bank 优先，营销其次。",
-        "detail": "LP 页面先暴露已预留负债和可用储备，再谈任何收益叙事。"
+        "title": "非托管 Bank。",
+        "detail": "出资人资本保存在 Bank 合约里。界面将可验证储备和索引表现估算分开展示。"
+      },
+      "buffer": {
+        "label": "赔付缓冲",
+        "detail": "扣除已预留负债({reserved})后的可用储备。公开开放存款前，应与最大赔付控制一起评估。"
+      },
+      "liquidityFloor": {
+        "label": "流动性下限",
+        "detail": "{bps} 最低流动性策略，当前约 {amount}。"
       },
       "release": {
         "label": "Release 摘要",
         "detail": "资产身份、Bank 地址和 UI 读取都锚定到当前 active release manifest。"
       },
-      "protocolFees": {
-        "label": "协议费用",
+      "payables": {
+        "label": "应付款",
         "detail": "外部应付款 {externalPayables} · 资产 {assets}"
       }
     },
     "toast": {
       "processing": "正在处理 Bank 交易...",
+      "minted": "已 mint {amount} 份额",
       "redeemed": "已赎回 {amount} 份额",
       "deposited": "已存入 {amount} {symbol}",
       "withdrew": "已取出 {amount} {symbol}",
+      "viewTransaction": "查看交易",
       "failed": "交易失败"
     },
     "units": {
       "shares": "份额",
       "sharesLower": "份额"
+    },
+    "performance": {
+      "title": "金库表现",
+      "bestEffort": "已索引 · 尽力而为",
+      "housePnl": "金库盈亏",
+      "hold": "实际抽水",
+      "velocity": "周转速度",
+      "grossAnnualized": "毛年化估算",
+      "wagered": "总投注额",
+      "payout": "总派彩",
+      "bets": "笔数",
+      "players": "玩家数",
+      "activityTrend": "每日金库活动",
+      "pnlTrend": "每日金库盈亏",
+      "volumeTrend": "每日成交量",
+      "sharePriceReference": "份额价格",
+      "currentSharePrice": "当前份额价格",
+      "empty": "当前链上还没有金库活动。",
+      "windowLabel": "时间范围",
+      "windows": {
+        "all": "全部",
+        "d1": "24小时",
+        "d7": "7天",
+        "d30": "30天"
+      },
+      "note": "毛博彩收入来自已索引投注(投注额减派彩)。周转速度和年化估算将索引活动与链上读取的金库资产组合计算。不含出入金、手续费、赎回、闲置资本及未结算方差；不是收益承诺。",
+      "equityTitle": "累计金库盈亏",
+      "peak": "峰值",
+      "trough": "谷值"
+    },
+    "ledger": {
+      "eyebrow": "出资人账本",
+      "title": "存款与取款记录",
+      "readModel": "服务端重建",
+      "connectWallet": "连接钱包后查看你的 Bank 出资记录。",
+      "loading": "正在加载出资人账本…",
+      "loadingMore": "正在加载更多…",
+      "loadMore": "加载更多",
+      "loadedRows": "已加载 {count} 条",
+      "end": "已到记录末尾",
+      "empty": "当前钱包还没有存款或取款记录。",
+      "note": "每一行从 Bank share 的 mint/burn Transfer 和同一笔交易里的资产 Transfer 还原。份额价格按该笔交易资产数量 / share 数量计算，不使用当前份额价格倒推。",
+      "block": "区块 {blockNumber}",
+      "actions": {
+        "deposit": "存入",
+        "withdraw": "取出"
+      },
+      "summary": {
+        "deposited": "已加载存入",
+        "withdrawn": "已加载取出",
+        "openValue": "当前价值",
+        "netPnl": "已加载净盈亏",
+        "shares": "份额"
+      },
+      "columns": {
+        "type": "类型",
+        "time": "时间",
+        "assets": "资产数量",
+        "shares": "Share 数量",
+        "sharePrice": "Share 价格",
+        "tx": "交易"
+      }
     }
   },
   "ops": {
@@ -2559,12 +3049,12 @@
       "days": "{count}d 前"
     },
     "hero": {
-      "channel": "Base Sepolia release 通道",
-      "title": "ArbiGameFi",
-      "description": "面向透明 Bank、可验证随机数和自动结算的链上赌场轨道。首屏就是产品界面，不是承诺型展示页。",
-      "enterCasino": "进入赌场",
-      "viewBank": "查看 Bank",
-      "consoleLabel": "协议控制台",
+      "channel": "在 Arbitrum 上线",
+      "title": "链上可验证的赌场。",
+      "description": "八款游戏。每一局都能在链上核对。中了直接进你的钱包,几秒到账 —— 不用注册、不用托管。",
+      "enterCasino": "开始玩",
+      "viewBank": "看怎么玩",
+      "consoleLabel": "实时状态",
       "live": "实时",
       "metrics": {
         "freeReserve": "可用储备",
@@ -2573,34 +3063,34 @@
       },
       "proofRows": {
         "vrf": {
-          "title": "VRF 结算路径",
-          "detail": "随机数、票据和派奖事件都可从 release 元数据审计。"
+          "title": "随机数可验证",
+          "detail": "每一局都对应一次 Chainlink VRF 抽号请求,可在链上核。"
         },
         "bytecode": {
-          "title": "字节码锚定 release",
-          "detail": "前端展示从 SSOT release 读取合约地址和游戏元数据。"
+          "title": "合约可阅读",
+          "detail": "游戏逻辑、金库、结算 —— 全部开源,读它、fork 它、验证它。"
         }
       }
     },
     "stats": {
       "freeReserve": {
-        "label": "可用储备",
-        "detail": "扣除已保留负债后的可读 Bank 容量。"
+        "label": "可赔付额",
+        "detail": "庄家此刻能赔出多少 —— 链上可查。"
       },
       "bankAssets": {
-        "label": "Bank 资产",
-        "detail": "从 release 关联的 Bank 快照聚合。"
+        "label": "庄家资金",
+        "detail": "赌场金库现在有多少,链上可看。"
       },
       "release": {
-        "label": "Release",
-        "detail": "前端状态锚定到 release manifest。"
+        "label": "在线游戏",
+        "detail": "八款游戏 + 金库,都在线。"
       }
     },
     "rooms": {
-      "eyebrow": "赌场房间",
-      "title": "八个一次性 RNG 游戏，一条结算轨道。",
-      "detail": "每个房间映射到 release 定义的模块。UI 可以变化，但游戏身份、参数和派奖路径都锚定到 SSOT release。",
-      "actionLabel": "打开目录"
+      "eyebrow": "全部游戏",
+      "title": "八款游戏。一个钱包。",
+      "detail": "每款游戏走自己的合约结算。挑一个点进去 —— 不用注册。",
+      "actionLabel": "全部查看"
     },
     "roomCards": {
       "dice": {
@@ -2690,28 +3180,71 @@
       "description": "Bank 余额和已保留负债都来自协议读取。页面不会编造 APY，也不会用促销数字遮住待履约义务。",
       "freeReserve": "可用储备",
       "totalBankAssets": "Bank 总资产",
-      "releaseDigest": "Release 摘要",
+      "releaseDigest": "版本",
       "inspectBank": "检查 Bank"
     },
     "activity": {
-      "eyebrow": "协议活动",
-      "title": "最新已索引票据",
-      "viewAll": "查看全部",
+      "eyebrow": "实时",
+      "title": "最近几局",
+      "viewAll": "全部记录",
       "headers": {
         "player": "玩家",
-        "room": "房间",
+        "room": "游戏",
         "state": "状态",
-        "age": "时间"
+        "age": "时间",
+        "payout": "派彩"
       },
-      "empty": "当前浏览器会话还没有已索引票据。"
+      "empty": "做第一个吧。",
+      "live": "实时"
     },
     "proof": {
-      "traceLabel": "settlement_trace.sol",
-      "proofSurface": "只读证明界面",
-      "eyebrow": "信任模型",
-      "title": "透明结算轨道。",
-      "description": "托管、游戏模块和随机数是彼此分离的界面。这让 UI 可以重写，而不扰动协议正确性。",
-      "actionLabel": "查看证明票据"
+      "traceLabel": "链上轨迹",
+      "proofSurface": "链上实时",
+      "eyebrow": "为什么公平",
+      "title": "每一笔下注都能在链上回放。",
+      "description": "你的钱包、游戏、随机数,各走各的合约。任何人都能从链上拿同一笔下注重放,结果一致。",
+      "actionLabel": "查看凭证"
+    },
+    "whyUs": {
+      "eyebrow": "为什么在这玩",
+      "title": "我们没法做局。",
+      "items": {
+        "0": {
+          "title": "我们决定不了开奖",
+          "detail": "每一局的随机数都由 Chainlink VRF 抽出。我们只按它的结果结算。"
+        },
+        "1": {
+          "title": "中奖直接到钱包",
+          "detail": "VRF 返回那一刻,中奖款就到你钱包。没有提款排队、没有最低金额、不延迟。"
+        },
+        "2": {
+          "title": "庄家不会跑路",
+          "detail": "庄家此刻能赔多少,链上看得见。下注前可以先核。"
+        },
+        "3": {
+          "title": "合约全部公开",
+          "detail": "游戏逻辑、金库、结算 —— 全部开源。读它、fork 它、验证它。"
+        }
+      }
+    },
+    "reserveBar": {
+      "eyebrow": "庄家金库",
+      "free": "可赔付",
+      "total": "金库总额",
+      "verify": "链上查看"
+    },
+    "featured": {
+      "eyebrow": "本周主推",
+      "title": "Keno —— 选 5 个号,搏 500×。",
+      "detail": "盘面 15 个号。选 5 个。全中赔 500.5×;中 1 个也能赔。",
+      "cta": "玩 Keno"
+    },
+    "footerCta": {
+      "eyebrow": "你说开始就开始",
+      "title": "连钱包。挑游戏。开始。",
+      "description": "下注前,钱一直在你自己钱包里。中奖原路返回。",
+      "primary": "开始玩",
+      "secondary": "浏览游戏"
     }
   },
   "legal": {
@@ -2880,5 +3413,158 @@
     "sicBo": "骰宝",
     "slots": "Slots 拉霸",
     "sportsbook": "体育投注"
+  },
+  "compliance": {
+    "gate": {
+      "title": "进入前请确认",
+      "subtitle": "确认以下几项后继续",
+      "age": "我已年满 18 周岁(或所在地区的法定年龄)。",
+      "jurisdiction": "在我居住地在线博彩合法,且我自行负责遵守当地法律。",
+      "termsPrefix": "我已阅读并接受",
+      "termsLink": "服务条款",
+      "and": "和",
+      "privacyLink": "隐私政策",
+      "termsSuffix": "。",
+      "enter": "进入",
+      "leave": "离开"
+    },
+    "cookies": {
+      "title": "Cookie 偏好",
+      "description": "我们使用注重隐私的统计来了解流量。在你做出选择前不会加载任何跟踪。",
+      "learnMore": "了解更多",
+      "accept": "接受",
+      "reject": "拒绝"
+    },
+    "responsible": {
+      "title": "责任游戏",
+      "close": "关闭",
+      "intro": "设置个人限额。限额保存在你的设备上并在结算时生效;清空某项即可取消该限额。",
+      "dailyDeposit": "每日存款上限",
+      "dailyLoss": "每日亏损上限",
+      "sessionReminder": "会话提醒",
+      "minutes": "分钟",
+      "noLimit": "无限额",
+      "off": "关闭",
+      "saveLimits": "保存限额",
+      "selfExclude": {
+        "title": "自我排除",
+        "description": "在固定期限内禁止自己下注。期限到期前无法撤销。",
+        "d1": "1 天",
+        "d7": "7 天",
+        "d30": "30 天",
+        "d180": "180 天",
+        "confirm": "确认自我排除 {period}?到期前你将无法下注。"
+      }
+    },
+    "selfExcludedGate": {
+      "title": "你已自我排除",
+      "description": "本设备上的下注已暂停,直到 {until}。你仍可查看历史记录和获取帮助资源。",
+      "viewHistory": "查看历史",
+      "getHelp": "获取帮助"
+    },
+    "realityCheck": {
+      "message": "你已经玩了大约 {minutes} 分钟。需要的话歇一会儿。"
+    }
+  },
+  "notFound": {
+    "title": "页面不存在",
+    "description": "你要找的页面不存在或已移动。",
+    "home": "返回首页",
+    "casino": "浏览游戏"
+  },
+  "support": {
+    "faq": {
+      "eyebrow": "帮助中心",
+      "title": "帮助与常见问题",
+      "description": "开始游戏、验证结果、掌控节奏 —— 你需要知道的都在这里。"
+    },
+    "contact": {
+      "title": "还需要帮助?",
+      "description": "联系团队,或查看系统实时状态。",
+      "discord": "Discord",
+      "email": "邮件支持",
+      "status": "系统状态",
+      "docs": "文档"
+    },
+    "items": [
+      {
+        "q": "怎么开始玩?",
+        "a": "在右上角菜单连接钱包,确认在支持的网络上,然后选一个游戏。中奖直接进你的钱包 —— 不用注册、不用充值账户、不用托管。"
+      },
+      {
+        "q": "怎么在 Base Sepolia 上拿测试资金?",
+        "a": "Base Sepolia 是测试网。先从 Base Sepolia 水龙头领免费测试 ETH 当 gas,再用测试 USDC 水龙头领游戏余额。测试网资金没有真实价值。"
+      },
+      {
+        "q": "什么是 bankroll / 金库(Bank)?",
+        "a": "Bank 是支撑每一笔派彩的链上金库。它是透明储备 —— 你可以在 Earn 页查看。每一次中奖都从这里支付,且链上可证明其偿付能力。"
+      },
+      {
+        "q": "什么是庄家优势(house edge)?",
+        "a": "庄家优势是维持金库可持续的内置利润率。每个游戏的玩法说明 tab 里都标了精确数值 —— 比如轮盘 2.70%、骰子 1%。"
+      },
+      {
+        "q": "为什么我的下注一直 pending?",
+        "a": "下注用 Chainlink VRF 提供可证明公平的随机数。下注后合约会请求一个随机数,随机数到达后自动结算。通常几秒钟。"
+      },
+      {
+        "q": "如果随机数一直没来怎么办?",
+        "a": "如果 VRF 延迟超过超时时间,你可以自己退回本金 —— 退款按钮会出现在回合状态面板里。资金永远不会被卡死。"
+      },
+      {
+        "q": "怎么验证一局是公平的?",
+        "a": "每个已结算的回合都暴露 bet ID、VRF 请求 ID、随机哈希和结算交易。在结果界面点「复制公平性证明」可导出一份 JSON 凭证,任何人都能在链上独立验证。"
+      },
+      {
+        "q": "我要付哪些费用?",
+        "a": "两项:游戏的庄家优势(已含在赔率里),以及一小笔 Chainlink VRF 费用(原生 gas,用于支付随机数请求)。两者在确认前都会显示。"
+      },
+      {
+        "q": "支持哪些钱包?",
+        "a": "MetaMask、Coinbase Wallet、Trust、Rainbow、OKX,以及任何兼容 WalletConnect 的钱包。桌面端用浏览器扩展;手机端在钱包内置浏览器打开本站,或扫 WalletConnect 二维码。"
+      },
+      {
+        "q": "这是托管的吗?你们会保管我的资金吗?",
+        "a": "不会。ArbiGameFi 是非托管的。下注前你的资金一直在你自己的钱包里,中奖直接结算回你的钱包。我们从不持有余额。"
+      },
+      {
+        "q": "怎么掌控自己的游戏节奏?",
+        "a": "从页脚打开「责任游戏」,可设置每日存款和亏损上限、会话提醒,或自我排除一段固定时间。你必须达到所在地区的法定年龄才能游玩。"
+      }
+    ]
+  },
+  "onboarding": {
+    "aria": "新手引导",
+    "stepLabel": "第 {current} / {total} 步",
+    "skip": "跳过",
+    "back": "上一步",
+    "next": "下一步",
+    "done": "明白了",
+    "steps": {
+      "welcome": {
+        "title": "欢迎来到 ArbiGameFi",
+        "body": "30 秒快速了解一局怎么玩。随时可跳过。"
+      },
+      "wallet": {
+        "title": "连接钱包",
+        "body": "从这里开始。连接钱包并选择网络 —— 不用注册、不用托管。"
+      },
+      "stage": {
+        "title": "选择下注",
+        "body": "这是游戏区。直接在面板上选号码、选边或选风险。"
+      },
+      "amount": {
+        "title": "设置金额",
+        "body": "输入下注金额。胜率和潜在派彩会实时更新。"
+      },
+      "place": {
+        "title": "下注",
+        "body": "在钱包中确认。Chainlink VRF 返回随机数后自动结算。"
+      },
+      "fairness": {
+        "title": "验证每个结果",
+        "body": "每局结束后可复制公平性证明并在链上核验。这正是我们的核心。"
+      }
+    }
   }
 }

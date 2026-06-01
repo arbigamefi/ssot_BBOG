@@ -19,6 +19,7 @@ const baseConfig: KeeperConfig = {
   startBlock: 100n,
   betIndexSsl: false,
   betIndexWriteEnabled: false,
+  bankProviderLedgerPools: [],
   sportsTerminalizerEnabled: false,
   sportsTerminalizerScanChunkBlocks: 2_000n,
   sportsTerminalizerMarketIds: [],

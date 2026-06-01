@@ -1,10 +1,10 @@
 import React from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { ShellHeader, ShellHeaderBrand, ShellHeaderNav, ShellHeaderActions } from "@ssot/ui";
+import { ShellHeader, ShellHeaderNav, ShellHeaderActions } from "@ssot/ui";
 import { cn } from "@ssot/ui";
-import { WalletButton } from "../app-shell/WalletButton";
-import { useRelease } from "../ssot/release/ReleaseProvider";
+import { WalletHeaderMenu } from "../app-shell/WalletHeaderMenu";
+import { MobileWalletDeepLinkBanner } from "../app-shell/MobileWalletDeepLinkBanner";
 import { LocaleSwitcher } from "./LocaleSwitcher";
 
 export type AppRoute =
@@ -45,7 +45,6 @@ const GAME_NAV_LINKS = [
 
 export function AppHeader({ activeRoute = "none", variant = "default" }: AppHeaderProps) {
   const isTransparent = variant === "transparent";
-  const { release } = useRelease();
   const t = useTranslations();
 
   if (isTransparent) {
@@ -71,7 +70,7 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
           <div className="flex items-center gap-4">
             <LocaleSwitcher compact />
             <div className="hidden md:block">
-              <WalletButton />
+              <WalletHeaderMenu />
             </div>
             <Link
               href="/casino"
@@ -129,7 +128,10 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
     <>
       <ShellHeader variant="solid">
         <div className="flex min-w-0 flex-1 items-center gap-3 md:gap-8">
-          <ShellHeaderBrand name="ArbiGameFi" className="shrink-0" />
+          <Link href="/" className="shrink-0 text-xl font-bold tracking-tight text-fg">
+            <span className="sm:hidden">AGF</span>
+            <span className="hidden sm:inline">ArbiGameFi</span>
+          </Link>
 
           {variant === "game" ? (
             <ShellHeaderNav className="flex-1 basis-0 gap-5 overscroll-x-contain pr-4">
@@ -178,13 +180,10 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
 
         <ShellHeaderActions>
           <LocaleSwitcher compact />
-          <div className="hidden items-center gap-2 rounded-full border border-border-soft bg-surface-2 px-3 py-1.5 font-mono text-xs text-fg-muted sm:flex">
-            <span className="h-1.5 w-1.5 rounded-full bg-brand"></span>
-            {release?.name ?? t("app.unknownNetwork")}
-          </div>
-          <WalletButton />
+          <WalletHeaderMenu />
         </ShellHeaderActions>
       </ShellHeader>
+      <MobileWalletDeepLinkBanner />
       {mobileGameNav}
     </>
   );

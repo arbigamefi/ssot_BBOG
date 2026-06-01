@@ -1,0 +1,27 @@
+.git
+.next
+.next-dev
+.runtime
+node_modules
+**/node_modules
+**/.next
+**/.next-dev
+**/dist
+**/coverage
+**/playwright-report
+**/test-results
+**/.turbo
+**/.vercel
+**/.DS_Store
+
+# Keep secrets out of the Docker build context.
+.env
+.env.*
+apps/web/.env
+apps/web/.env.*
+deploy/docker/env/*.env
+deploy/casino-keeper/*.env
+
+# Local-only artifacts.
+compose.bet-index.yml
+*.log

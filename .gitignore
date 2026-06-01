@@ -10,6 +10,8 @@ broadcast/
 .env
 .env.*
 !.env.example
+/.base-mainnet*.env
+/base-mainnet*.env
 
 # Release packaging output
 /dist/

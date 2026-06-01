@@ -29,6 +29,22 @@ describe("game room feedback helpers", () => {
     ).toBe("User rejected transaction.");
   });
 
+  it("keeps delayed allowance copy when approval has not propagated yet", () => {
+    expect(
+      getStepperErrorMessage(
+        {
+          code: "ALLOWANCE_NOT_CONFIRMED",
+          message:
+            "Token approval was mined, but the allowance is not visible to place the bet yet. Retry in a few seconds.",
+          severity: "warning"
+        },
+        "交易失败，请重试。"
+      )
+    ).toBe(
+      "Token approval was mined, but the allowance is not visible to place the bet yet. Retry in a few seconds."
+    );
+  });
+
   it("falls back to a neutral placeholder when no localized fallback is provided", () => {
     expect(getStepperErrorMessage(undefined)).toBe("—");
   });

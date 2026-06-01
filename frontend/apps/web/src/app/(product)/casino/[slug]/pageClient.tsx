@@ -13,7 +13,7 @@ import { useRecentBets } from "../../../../features/betting/useRecentBets";
 import { useRelease } from "../../../../ssot/release/ReleaseProvider";
 import { useSSOTSDK } from "../../../../ssot/sdk";
 import { useSSOTRuntime } from "../../../../ssot/runtime";
-import { useConnectModal } from "../../../../app-shell/WalletButton";
+import { requestWalletConnect } from "../../../../app-shell/wallet-connect-events";
 import { toGameMeta, type GameMeta } from "../../../../features/casino/room/model";
 import {
   baccaratMultiplier,
@@ -30,7 +30,6 @@ import {
   formatHouseEdge
 } from "../../../../features/casino/room/presentation";
 import { GameRoomBetPanel } from "../../../../features/casino/room/bet-panel";
-import { PlaceBetButton } from "../../../../features/casino/room/place-bet-button";
 import { useGameWalletBalance, useKenoStrobeSpots } from "../../../../features/casino/room/hooks";
 import {
   useGameResolutionEffect,
@@ -41,6 +40,7 @@ import {
 import { readCasinoOutcome, type CasinoOutcome } from "../../../../features/casino/room/outcome";
 import { GameRoomRightPane } from "../../../../features/casino/room/right-pane";
 import { GameRoomShell } from "../../../../features/casino/room/game-room-shell";
+import { MobileCasinoActionBar } from "../../../../features/casino/room/mobile-action-bar";
 import { useCasinoRound } from "../../../../features/casino/room/use-casino-round";
 import { normalizeReferralAddress } from "../../../../features/referral/referral-link";
 
@@ -85,51 +85,6 @@ const GameRoomAuditLedger = dynamic(
     ssr: false
   }
 );
-
-function MobileCasinoActionBar({
-  game,
-  betAmount,
-  expectedPayout,
-  hasAccount,
-  isPending,
-  winChance,
-  state,
-  onPlaceBet
-}: {
-  game: GameMeta;
-  betAmount: number;
-  expectedPayout: number;
-  hasAccount: boolean;
-  isPending: boolean;
-  winChance: number;
-  state: React.ComponentProps<typeof PlaceBetButton>["state"];
-  onPlaceBet: () => void;
-}) {
-  const t = useTranslations();
-
-  return (
-    <div className="grid grid-cols-[minmax(0,1fr)_minmax(9.5rem,11rem)] items-center gap-3">
-      <div className="min-w-0">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-fg-subtle">
-          {t("casino.room.betPanel.amount.label")}
-        </p>
-        <p className="truncate font-mono text-sm font-semibold text-fg">
-          {betAmount.toFixed(2)} USDC · {t("casino.room.betPanel.summary.expectedPayout")}{" "}
-          {expectedPayout.toFixed(2)}
-        </p>
-      </div>
-      <PlaceBetButton
-        gameSlug={game.slug}
-        hasAccount={hasAccount}
-        isPending={isPending}
-        winChance={winChance}
-        state={state}
-        onClick={onPlaceBet}
-        density="compact"
-      />
-    </div>
-  );
-}
 
 export function getCasinoRoomPendingStates({
   isLocalPending,
@@ -188,7 +143,15 @@ export function GamePageClient({ slug }: { slug: string }) {
     phase: "revealing" | "revealed";
   } | null>(null);
   const revealedBetIdRef = React.useRef<bigint | null>(null);
+  const outcomeReadKeyRef = React.useRef<string | null>(null);
   const revealTimerRef = React.useRef<ReturnType<typeof setTimeout> | undefined>();
+
+  React.useEffect(
+    () => () => {
+      outcomeReadKeyRef.current = null;
+    },
+    []
+  );
 
   // Game-specific params
   const [diceTarget, setDiceTarget] = React.useState<number>(50);
@@ -222,7 +185,7 @@ export function GamePageClient({ slug }: { slug: string }) {
     [referrerParam, sdk?.account]
   );
 
-  const { openConnectModal } = useConnectModal();
+  const openConnectModal = React.useCallback(() => requestWalletConnect(), []);
   const { db } = useSSOTRuntime();
   const handleRoundTerminal = React.useCallback(
     (bet: DomainBet) => {
@@ -284,6 +247,7 @@ export function GamePageClient({ slug }: { slug: string }) {
   const handleRoundStart = React.useCallback(() => {
     clearStageRevealTimer();
     revealedBetIdRef.current = null;
+    outcomeReadKeyRef.current = null;
     setTerminalBet(null);
     setResultProof(null);
     setCasinoOutcome(null);
@@ -294,6 +258,7 @@ export function GamePageClient({ slug }: { slug: string }) {
   const handleRoundReset = React.useCallback(() => {
     clearStageRevealTimer();
     revealedBetIdRef.current = null;
+    outcomeReadKeyRef.current = null;
     setShowResult(false);
     setTerminalBet(null);
     setResultProof(null);
@@ -387,7 +352,6 @@ export function GamePageClient({ slug }: { slug: string }) {
   });
 
   React.useEffect(() => {
-    let cancelled = false;
     const activeBet = casinoRound.activeBet;
     const bet =
       terminalBet ??
@@ -398,13 +362,20 @@ export function GamePageClient({ slug }: { slug: string }) {
       return;
     }
 
+    const outcomeReadKey = `${game.slug}:${bet.betId.toString()}`;
+    if (outcomeReadKeyRef.current === outcomeReadKey) return;
+    outcomeReadKeyRef.current = outcomeReadKey;
+
     void readCasinoOutcome({
       gameHub: sdk?.gameHub,
       bet,
       gameSlug: game.slug
     }).then((outcome) => {
-      if (cancelled) return;
-      if (!outcome) return;
+      if (outcomeReadKeyRef.current !== outcomeReadKey) return;
+      if (!outcome) {
+        outcomeReadKeyRef.current = null;
+        return;
+      }
       setCasinoOutcome(outcome);
 
       if (outcome?.kind === "dice") setResultNum(outcome.rolls.at(-1)?.value ?? null);
@@ -431,10 +402,6 @@ export function GamePageClient({ slug }: { slug: string }) {
         startStageReveal(bet.betId, game.slug);
       }
     });
-
-    return () => {
-      cancelled = true;
-    };
   }, [casinoRound.activeBet, game, sdk?.gameHub, startStageReveal, terminalBet]);
 
   if (!release || !game)
@@ -504,7 +471,6 @@ export function GamePageClient({ slug }: { slug: string }) {
     <MobileCasinoActionBar
       game={game}
       betAmount={betAmount}
-      expectedPayout={expectedPayout}
       hasAccount={Boolean(sdk?.account)}
       isPending={isBetPanelPending}
       winChance={winChance}
@@ -568,7 +534,15 @@ export function GamePageClient({ slug }: { slug: string }) {
   );
 
   const AuditLedger = (
-    <GameRoomAuditLedger game={game} betAmount={betAmount} recentBets={recentBets} />
+    <GameRoomAuditLedger
+      game={game}
+      betAmount={betAmount}
+      recentBets={recentBets}
+      playerAddress={sdk?.account}
+      assetSymbol="USDC"
+      assetDecimals={usdcDecimals}
+      chainId={chainId}
+    />
   );
 
   return (

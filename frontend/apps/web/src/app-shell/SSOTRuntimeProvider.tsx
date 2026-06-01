@@ -58,7 +58,7 @@ export function SSOTRuntimeProvider({ children }: { children: React.ReactNode })
   }, []);
 
   React.useEffect(() => {
-    if (!rel.release || !db || rel.readOnly || !rpcUrl) {
+    if (!rel.release || !db || rel.releaseReadOnly || !rpcUrl) {
       if (workerRef.current) {
         workerRef.current.terminate();
         workerRef.current = null;
@@ -111,7 +111,7 @@ export function SSOTRuntimeProvider({ children }: { children: React.ReactNode })
       client.terminate();
       if (workerRef.current === client) workerRef.current = null;
     };
-  }, [rel.release, rel.readOnly, db, rpcUrl, indexerConfig, t]);
+  }, [rel.release, rel.releaseReadOnly, db, rpcUrl, indexerConfig, t]);
 
   const value = React.useMemo(
     () => ({ db, indexer: undefined, indexerStatus, journal, refreshIndexerStatus, syncNow }),

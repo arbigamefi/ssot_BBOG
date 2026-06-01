@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { GameMeta } from "./model";
 import {
   executeGamePlaceBetAction,
+  isCasinoRiskInEnabledForChain,
   shouldBlockGamePlaceBet,
   shouldResetGamePlaceBet
 } from "./place-bet-action";
@@ -47,6 +48,11 @@ const release = {
   ]
 };
 
+const mainnetRelease = {
+  ...release,
+  chainId: 8453
+};
+
 const plannedBet = {
   chainId: 84532,
   releaseDigest: "0xrelease",
@@ -86,6 +92,7 @@ function baseArgs(overrides: Partial<Parameters<typeof executeGamePlaceBetAction
 describe("game room place bet action", () => {
   beforeEach(() => {
     mocks.toastError.mockClear();
+    delete process.env.NEXT_PUBLIC_CASINO_RISK_IN_ENABLED;
   });
 
   it("exposes small branch helpers", () => {
@@ -93,6 +100,8 @@ describe("game room place bet action", () => {
     expect(shouldBlockGamePlaceBet("dice", 0)).toBe(false);
     expect(shouldResetGamePlaceBet("failed")).toBe(true);
     expect(shouldResetGamePlaceBet("ready")).toBe(false);
+    expect(isCasinoRiskInEnabledForChain(84532)).toBe(true);
+    expect(isCasinoRiskInEnabledForChain(8453)).toBe(false);
   });
 
   it("opens wallet connect when there is no account", async () => {
@@ -151,6 +160,31 @@ describe("game room place bet action", () => {
     );
     expect((args.planNow as any).mock.calls[0]?.[0].stake).toBe(10_000_000n);
     expect((args.planNow as any).mock.calls[0]?.[0].affiliate).toBe(affiliate);
+  });
+
+  it("blocks Base mainnet betting until casino risk-in is explicitly enabled", async () => {
+    const args = baseArgs({
+      release: mainnetRelease,
+      messages: {
+        mainnetRiskInDisabled: "主网下注关闭。"
+      }
+    });
+    await executeGamePlaceBetAction(args);
+
+    expect(mocks.toastError).toHaveBeenCalledWith("主网下注关闭。");
+    expect(args.planNow).not.toHaveBeenCalled();
+    expect(args.onBeforeExecute).not.toHaveBeenCalled();
+  });
+
+  it("allows Base mainnet betting when casino risk-in is explicitly enabled", async () => {
+    process.env.NEXT_PUBLIC_CASINO_RISK_IN_ENABLED = "true";
+    const args = baseArgs({
+      release: mainnetRelease
+    });
+    await executeGamePlaceBetAction(args);
+
+    expect(args.planNow).toHaveBeenCalledTimes(1);
+    expect(args.executeNow).toHaveBeenCalledWith(plannedBet);
   });
 
   it("does not expose raw unexpected errors as player copy", async () => {

@@ -15,6 +15,12 @@ export type LandingActivity = {
   game: string;
   state: string;
   time: string;
+  /** Formatted payout, e.g. "25.00 USDC" — empty when not yet settled. */
+  payout?: string;
+  /** Win multiplier, e.g. "2.50×" — present only for winning settled bets. */
+  multiplier?: string;
+  /** True when the bet settled with payout > stake (drives win styling). */
+  isWin?: boolean;
 };
 
 export type LandingStat = {

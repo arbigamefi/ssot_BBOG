@@ -49,6 +49,9 @@ vi.mock("next-intl", () => ({
       "casino.directory.empty.clearSearch": "Clear search",
       "casino.directory.stats.rooms": "On-chain rooms",
       "casino.directory.stats.asset": "Bank asset",
+      "casino.directory.stats.volume": "Total volume",
+      "casino.directory.stats.bets": "Total bets",
+      "casino.directory.stats.players": "Players",
       "casino.directory.filters.all": "All Modules",
       "casino.directory.filters.table": "Table Games",
       "casino.directory.filters.binary": "Binary / Fast",
@@ -88,7 +91,14 @@ vi.mock("next-intl", () => ({
       "casino.directory.reserve.subtitle": `Bank ${values?.bank ?? "{bank}"}`,
       "casino.directory.reserve.status": "Release anchored",
       "casino.directory.reserve.cta": "Inspect bank"
-    })[key] ?? key
+    })[key] ?? key,
+  useLocale: () => "en"
+}));
+
+// Casino analytics hook — stub to the unavailable state so the hero stat
+// cards render "—" without pulling in react-query / fetch.
+vi.mock("../../../features/casino/useCasinoStats", () => ({
+  useCasinoStats: () => ({ data: undefined })
 }));
 
 import { GamesListClient } from "./pageClient";

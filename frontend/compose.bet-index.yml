@@ -1,3 +1,11 @@
+# Local development only.
+#
+# This starts a small Postgres instance for `pnpm bet-index:db:*` and
+# `pnpm dev:with-keeper`. Production uses `compose.production.yml`, where
+# Postgres, web, keeper, and the reverse proxy are managed as one topology.
+# Do not merge this file into production: it intentionally exposes a host port
+# and uses dev-only default credentials.
+
 name: arbigamefi-bet-index
 
 services:

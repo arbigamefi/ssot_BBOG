@@ -174,15 +174,14 @@ export function RouletteWheel({
                   "radial-gradient(circle at 40% 35%, hsl(var(--surface-2)), hsl(var(--surface-0)))"
               }}
             />
+            {/* Turret arms. Keep horizontal/vertical bars independently centered
+                instead of rotating a translated span; transform order can shift
+                the vertical arm off the spindle center. */}
+            <div className="pointer-events-none absolute left-1/2 top-1/2 h-[64%] w-[64%] -translate-x-1/2 -translate-y-1/2">
+              <span className="absolute left-1/2 top-1/2 h-[3px] w-full -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-r from-transparent via-fg/45 to-transparent" />
+              <span className="absolute left-1/2 top-1/2 h-full w-[3px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-b from-transparent via-fg/45 to-transparent" />
+            </div>
             <div className="absolute left-1/2 top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border border-border bg-gradient-to-br from-fg via-fg-muted to-fg-subtle shadow-e1" />
-            {/* Turret arms */}
-            {[0, 90].map((deg) => (
-              <span
-                key={deg}
-                className="absolute left-1/2 top-1/2 h-[3px] w-[64%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gradient-to-r from-transparent via-fg/45 to-transparent"
-                style={{ transform: `translate(-50%,-50%) rotate(${deg}deg)` }}
-              />
-            ))}
           </div>
         </motion.div>
 

@@ -6,6 +6,8 @@ import { spawn } from "node:child_process";
 
 const FRONTEND_ROOT = process.cwd();
 const REPO_ROOT = path.resolve(FRONTEND_ROOT, "..");
+const KEEPER_DEPLOY_ENV_DIR = path.join(FRONTEND_ROOT, "deploy/casino-keeper");
+const DEFAULT_KEEPER_ENV_FILE = "primary.env";
 const LEGACY_PUBLIC_HEALTH_PATH = path.join(
   FRONTEND_ROOT,
   "apps/web/public/ops/casino-keeper-health.json"
@@ -15,7 +17,9 @@ const DEFAULT_LOCAL_BET_INDEX_DATABASE_URL =
   "postgres://arbigamefi:arbigamefi_dev_only@127.0.0.1:54329/arbigamefi";
 
 function parseEnvFile(filePath, target) {
-  if (!fs.existsSync(filePath)) return;
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`Keeper env file not found: ${filePath}`);
+  }
   const parsed = {};
   for (const rawLine of fs.readFileSync(filePath, "utf8").split(/\r?\n/)) {
     const line = rawLine.trim();
@@ -33,13 +37,29 @@ function parseEnvFile(filePath, target) {
   }
 }
 
-function alchemyRpc(env) {
-  const key = env.NEXT_PUBLIC_ALCHEMY_API_KEY?.trim();
-  return key ? `https://base-sepolia.g.alchemy.com/v2/${key}` : undefined;
+function resolveRepoPath(value) {
+  if (value.startsWith("~/")) {
+    return path.join(process.env.HOME ?? "", value.slice(2));
+  }
+  return path.isAbsolute(value) ? value : path.resolve(REPO_ROOT, value);
 }
 
-function resolveRepoPath(value) {
-  return path.isAbsolute(value) ? value : path.resolve(REPO_ROOT, value);
+function resolveKeeperDeployEnvFile() {
+  const requested = process.env.KEEPER_ENV_FILE?.trim() || DEFAULT_KEEPER_ENV_FILE;
+  const resolved = path.isAbsolute(requested)
+    ? requested
+    : path.resolve(KEEPER_DEPLOY_ENV_DIR, requested);
+  const relative = path.relative(KEEPER_DEPLOY_ENV_DIR, resolved);
+  if (relative.startsWith("..") || path.isAbsolute(relative)) {
+    throw new Error(
+      `KEEPER_ENV_FILE must resolve inside frontend/deploy/casino-keeper: ${requested}`
+    );
+  }
+  return resolved;
+}
+
+function displayKeeperEnvFile(filePath) {
+  return path.relative(FRONTEND_ROOT, filePath) || filePath;
 }
 
 function readReleaseBlock(releasePath) {
@@ -147,28 +167,19 @@ function cleanupLegacyPublicHealthFile() {
 
 async function keeperEnv() {
   const env = { ...process.env };
-  for (const file of [".env", ".env.local"]) parseEnvFile(path.join(REPO_ROOT, file), env);
+  const keeperEnvFile = resolveKeeperDeployEnvFile();
+  parseEnvFile(keeperEnvFile, env);
 
-  env.KEEPER_CHAIN_ID ??= "84532";
-  env.KEEPER_RELEASE_PATH ??= path.join(
-    FRONTEND_ROOT,
-    "packages/ssot/src/release/embedded/chain-84532.json"
-  );
-  env.KEEPER_RELEASE_PATH = resolveRepoPath(env.KEEPER_RELEASE_PATH);
-  env.KEEPER_RPC_HTTP ??=
-    env.RPC_URL ??
-    env.BASE_SEPOLIA_RPC_URL ??
-    env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL ??
-    env.NEXT_PUBLIC_RPC_URL ??
-    alchemyRpc(env);
-  env.KEEPER_PRIVATE_KEY ??= env.PRIVATE_KEY;
+  if (env.KEEPER_RELEASE_PATH?.trim()) {
+    env.KEEPER_RELEASE_PATH = resolveRepoPath(env.KEEPER_RELEASE_PATH);
+  }
   env.KEEPER_POLL_INTERVAL_SECONDS ??= "5";
   env.KEEPER_SCAN_CHUNK_BLOCKS ??= "10";
   env.KEEPER_HEALTH_PATH ??= path.join(FRONTEND_ROOT, ".runtime/casino-keeper-health.json");
   env.KEEPER_HEALTH_PATH = resolveRepoPath(env.KEEPER_HEALTH_PATH);
-  env.KEEPER_SPORTS_TERMINALIZER_ENABLED ??= env.NEXT_PUBLIC_SPORTSBOOK_ENABLED ?? "false";
   await applyLocalBetIndexDefaults(env);
   await applyDevStartBlock(env);
+  env.KEEPER_ENV_FILE = displayKeeperEnvFile(keeperEnvFile);
 
   return env;
 }
@@ -178,7 +189,9 @@ function requireKeeperEnv(env) {
     (key) => !env[key]?.trim()
   );
   if (missing.length > 0) {
-    throw new Error(`Missing keeper env: ${missing.join(", ")}. Check root .env.`);
+    throw new Error(
+      `Missing keeper env: ${missing.join(", ")}. Check frontend/deploy/casino-keeper/${DEFAULT_KEEPER_ENV_FILE} or set KEEPER_ENV_FILE to another file in that directory.`
+    );
   }
 }
 

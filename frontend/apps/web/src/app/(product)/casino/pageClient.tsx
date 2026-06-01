@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { cn } from "@ssot/ui";
 import {
   MagnifyingGlassIcon,
@@ -13,28 +13,10 @@ import {
 
 import { ProductStateCard } from "../../../components/ProductStateCard";
 import { getCatalogRooms } from "../../../features/casino/catalog";
-import {
-  BaccaratMiniIcon,
-  CoinTossMiniIcon,
-  DiceMiniIcon,
-  KenoMiniIcon,
-  PlinkoMiniIcon,
-  RouletteMiniIcon,
-  SicBoMiniIcon,
-  SlotsMiniIcon
-} from "../../../features/casino/CasinoMiniIcons";
+import { CasinoGameMark } from "../../../features/casino/CasinoMiniIcons";
+import { useCasinoStats } from "../../../features/casino/useCasinoStats";
+import { formatTokenAmount } from "../../../features/marketing/format";
 import { useRelease } from "../../../ssot/release/ReleaseProvider";
-
-const ROOM_ICON_MAP: Record<string, React.ReactNode> = {
-  dice: <DiceMiniIcon />,
-  roulette: <RouletteMiniIcon />,
-  "coin-toss": <CoinTossMiniIcon />,
-  keno: <KenoMiniIcon />,
-  plinko: <PlinkoMiniIcon />,
-  slots: <SlotsMiniIcon />,
-  baccarat: <BaccaratMiniIcon />,
-  "sic-bo": <SicBoMiniIcon />
-};
 
 const ROOM_COPY_KEYS: Record<
   string,
@@ -130,7 +112,9 @@ function shortAddress(value?: string | null) {
 
 export function GamesListClient() {
   const t = useTranslations();
+  const locale = useLocale();
   const { release, readOnlyReason } = useRelease();
+  const { data: casinoStats } = useCasinoStats();
   const [query, setQuery] = React.useState("");
   const [filter, setFilter] = React.useState<FilterKey>("all");
 
@@ -195,6 +179,21 @@ export function GamesListClient() {
   const bankAddress = casinoPool?.bank ?? casinoAsset?.bank;
   const assetSymbol = casinoPool?.symbol ?? casinoAsset?.symbol ?? "—";
 
+  // Real betting analytics from the durable bet index. When the Postgres
+  // source is unavailable (e.g. dev without DB) we show "—" rather than a
+  // misleading zero.
+  const statsAvailable = casinoStats?.source === "postgres";
+  const statsDecimals = casinoStats?.asset.decimals ?? casinoAsset?.decimals ?? 6;
+  const statsSymbol = casinoStats?.asset.symbol ?? assetSymbol;
+  const volumeLabel =
+    statsAvailable && casinoStats
+      ? formatTokenAmount(BigInt(casinoStats.stats.turnover), statsDecimals, statsSymbol, locale)
+      : "—";
+  const betCountLabel =
+    statsAvailable && casinoStats ? casinoStats.stats.betCount.toLocaleString(locale) : "—";
+  const playersLabel =
+    statsAvailable && casinoStats ? casinoStats.stats.uniquePlayers.toLocaleString(locale) : "—";
+
   return (
     <div className="relative overflow-hidden pb-16 text-fg selection:bg-brand/20">
       {/* Atmosphere — matches the rebuilt game consoles: a top-down surface
@@ -227,20 +226,32 @@ export function GamesListClient() {
             </p>
           </div>
 
-          <dl className="grid gap-4 sm:grid-cols-2 lg:min-w-[25rem]">
-            <div className="rounded-xl border border-border-soft bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-1)))] p-5 shadow-e2">
+          <dl className="grid gap-4 sm:grid-cols-2 lg:min-w-[27rem]">
+            <div className="rounded-xl border border-border-soft bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-1)))] p-5 shadow-e2 sm:col-span-2">
               <dt className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-accent">
                 <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-                {t("casino.directory.stats.rooms")}
+                {t("casino.directory.stats.volume")}
               </dt>
-              <dd className="mt-3 font-mono text-3xl font-semibold text-fg">{rooms.length}</dd>
+              <dd
+                className="mt-3 truncate font-mono text-3xl font-semibold text-fg"
+                title={volumeLabel}
+              >
+                {volumeLabel}
+              </dd>
             </div>
             <div className="rounded-xl border border-border-soft bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-1)))] p-5 shadow-e2">
               <dt className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-brand">
                 <TrophyIcon className="h-3.5 w-3.5" />
-                {t("casino.directory.stats.asset")}
+                {t("casino.directory.stats.bets")}
               </dt>
-              <dd className="mt-3 font-mono text-3xl font-semibold text-fg">{assetSymbol}</dd>
+              <dd className="mt-3 font-mono text-3xl font-semibold text-fg">{betCountLabel}</dd>
+            </div>
+            <div className="rounded-xl border border-border-soft bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-1)))] p-5 shadow-e2">
+              <dt className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-fg-subtle">
+                <span className="h-1.5 w-1.5 rounded-full bg-success" />
+                {t("casino.directory.stats.players")}
+              </dt>
+              <dd className="mt-3 font-mono text-3xl font-semibold text-fg">{playersLabel}</dd>
             </div>
           </dl>
         </header>
@@ -257,7 +268,7 @@ export function GamesListClient() {
                   type="button"
                   onClick={() => setFilter(item.key)}
                   className={cn(
-                    "relative flex-shrink-0 rounded-md px-5 py-3 text-sm font-bold transition-colors",
+                    "relative shrink-0 rounded-md px-5 py-3 text-sm font-bold transition-colors",
                     isActive
                       ? "bg-brand-soft text-brand ring-1 ring-inset ring-brand/30"
                       : "text-fg-subtle hover:bg-surface-2 hover:text-fg"
@@ -323,7 +334,7 @@ export function GamesListClient() {
                   href={room.href}
                   data-testid="room-entry-card"
                   data-slug={room.slug}
-                  className="group relative flex min-h-[21rem] flex-col overflow-hidden rounded-xl border border-border-soft bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-1)))] shadow-e2 transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-1 hover:border-brand/40 hover:shadow-glow"
+                  className="group relative flex min-h-[21rem] flex-col overflow-hidden rounded-xl border border-border-soft bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-1)))] shadow-e2 transition-colors duration-200 hover:border-brand/40 hover:bg-surface-2"
                 >
                   {/* top edge sheen */}
                   <div
@@ -347,19 +358,18 @@ export function GamesListClient() {
                   </div>
 
                   <div className="relative z-10 mt-8 flex flex-1 items-center justify-center p-5">
-                    {/* brand bloom behind the room icon — echoes the game stages */}
+                    {/* Shared game mark system: the lobby should feel like the
+                        same product as the individual room stages. */}
                     <div
                       aria-hidden
-                      className="pointer-events-none absolute left-1/2 top-1/2 h-44 w-44 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-60 transition-opacity duration-200 group-hover:opacity-100"
+                      className="pointer-events-none absolute left-1/2 top-1/2 h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-50 transition-opacity duration-200 group-hover:opacity-80"
                       style={{
                         background:
-                          "radial-gradient(circle, hsl(var(--brand) / 0.16), transparent 70%)"
+                          "radial-gradient(circle, hsl(var(--brand) / 0.1), transparent 70%)"
                       }}
                     />
                     <div className="relative">
-                      {ROOM_ICON_MAP[room.slug] ?? (
-                        <div className="text-3xl font-bold text-fg-subtle">[{room.slug}]</div>
-                      )}
+                      <CasinoGameMark slug={room.slug} className="h-36 w-36" />
                     </div>
                   </div>
 
@@ -374,7 +384,7 @@ export function GamesListClient() {
 
                     <span className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg border border-border-soft bg-surface-2 py-4 text-sm font-bold text-fg-muted transition-colors group-hover:border-brand/40 group-hover:bg-brand-soft group-hover:text-brand">
                       {t("casino.directory.card.playNow")}{" "}
-                      <PlayCircleIcon className="h-5 w-5 flex-shrink-0" />
+                      <PlayCircleIcon className="h-5 w-5 shrink-0" />
                     </span>
                   </div>
                 </Link>
@@ -387,7 +397,7 @@ export function GamesListClient() {
           <div className="relative overflow-hidden rounded-lg border border-border-soft bg-surface-2 px-6 py-8 md:px-8 md:py-10">
             <div className="relative z-10 flex flex-col items-start justify-between gap-8 md:flex-row md:items-center">
               <div className="flex flex-col gap-5 md:flex-row md:items-center">
-                <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl border border-brand/30 bg-brand-soft text-brand">
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border border-brand/30 bg-brand-soft text-brand">
                   <TrophyIcon className="h-8 w-8" />
                 </div>
                 <div>

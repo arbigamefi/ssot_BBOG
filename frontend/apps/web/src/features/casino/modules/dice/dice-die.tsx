@@ -22,6 +22,8 @@ export type DiceDieMode = "idle" | "rolling" | "revealing" | "settled";
 
 const SIZE = 152;
 const HALF = SIZE / 2;
+const ROLLING_ROTATE_X: number[] = [-18, 342];
+const ROLLING_ROTATE_Y: number[] = [24, 384];
 
 const FACE_TRANSFORM: Record<string, string> = {
   front: `translateZ(${HALF}px)`,
@@ -91,7 +93,7 @@ function tumbleTarget(mode: DiceDieMode): {
   switch (mode) {
     case "rolling":
       // Continuous keyframe loop — a 360° span on both axes.
-      return { rotateX: [-18, 342], rotateY: [24, 384] };
+      return { rotateX: ROLLING_ROTATE_X, rotateY: ROLLING_ROTATE_Y };
     case "revealing":
     case "settled":
       // Two full turns, landing front-face-forward (720 ≡ 0 mod 360).

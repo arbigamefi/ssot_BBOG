@@ -18,10 +18,10 @@ export function SectionHeader({
   return (
     <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
       <div className="max-w-3xl">
-        <div className="mb-3 text-xs font-black uppercase tracking-[0.16em] text-brand">
+        <div className="mb-3 text-xs font-bold uppercase tracking-[0.16em] text-brand">
           {eyebrow}
         </div>
-        <h2 className="text-4xl font-black tracking-normal text-fg md:text-5xl">{title}</h2>
+        <h2 className="text-4xl font-bold tracking-normal text-fg md:text-5xl">{title}</h2>
         <p className="mt-4 text-base leading-7 text-fg-muted">{detail}</p>
       </div>
       <Link

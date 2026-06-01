@@ -4,7 +4,7 @@ import { generatePageMetadata } from "../../../i18n/metadata";
 import { AffiliatePageClient } from "./pageClient";
 
 export function generateMetadata(): Promise<Metadata> {
-  return generatePageMetadata("affiliate");
+  return generatePageMetadata("affiliate", undefined, { path: "/affiliate" });
 }
 
 export default function AffiliatePage() {

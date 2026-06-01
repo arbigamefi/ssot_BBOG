@@ -18,7 +18,8 @@ Frontend release gates:
 
 - `pnpm -C frontend check:release` rejects embedded release bundles that reintroduce v1/v1.2 keys such as `contracts.hub`, `contracts.bankRegistry`, or `sports.hub`.
 - `pnpm -C frontend precheck:frontend -- --strict` rejects runtime/SDK source references to the old hub namespace.
-- `pnpm -C frontend smoke:release-readonly` performs a read-only Base Sepolia RPC smoke against the embedded release without using a wallet or broadcasting transactions.
+- `pnpm -C frontend smoke:release-readonly` performs a read-only RPC smoke against the embedded release without using a wallet or broadcasting transactions; it also checks embedded asset and pool decimals against each ERC20 `decimals()` value on chain and reads local frontend RPC values only from `frontend/apps/web/.env.local` (copy from `frontend/apps/web/.env.example`). Base mainnet accepts `BASE_MAINNET_RPC_URL`, `BASE_RPC_URL`, `NEXT_PUBLIC_BASE_RPC_URL`, `NEXT_PUBLIC_RPC_URL`, or `NEXT_PUBLIC_ALCHEMY_API_KEY` from that file, plus explicit process env overrides.
+- `pnpm -C frontend check:mainnet-release` fails until the embedded Base mainnet `chain-8453.json` exists and passes strict release validation.
 
 Frontend rule: **copy + consume**. Do not derive `gameId` or token metadata.
 
@@ -92,11 +93,15 @@ The Odds API `h2h` prices into a signed ticket snapshot. It requires server-only
 - `SPORTS_ODDS_SIGNER_PRIVATE_KEY`
 - `RPC_URL`
 - optional `SPORTS_ODDS_SIGNER`, `SPORTS_PROVIDER_SPORT_KEY`, `SPORTS_PROVIDER_EVENT_ID`,
-  `SPORTS_BOOKMAKER_KEY`, `THE_ODDS_API_REGIONS`, and `SPORTS_ODDS_TTL_SECONDS`
+  `SPORTS_BOOKMAKER_KEY`, `THE_ODDS_API_REGIONS`, `SPORTS_ODDS_TTL_SECONDS`,
+  `SPORTSBOOK_PROVIDER_ODDS_RATE_LIMIT_PER_MINUTE`, and
+  `SPORTSBOOK_ODDS_SNAPSHOT_RATE_LIMIT_PER_MINUTE`
 
 The route must fail closed when sportsbook is disabled, release metadata lacks SportsHub, the market is
 not open, risk metadata is missing, the provider payout exceeds pool caps, or the signing key does not
-match `SPORTS_ODDS_SIGNER`.
+match `SPORTS_ODDS_SIGNER`. Public provider and snapshot routes also apply a per-client in-memory
+rate limit as an abuse guard; production deployments should still enforce the same or stricter limits
+at the edge/load-balancer layer.
 
 ## ABIs
 

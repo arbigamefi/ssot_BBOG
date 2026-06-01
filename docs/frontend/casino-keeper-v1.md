@@ -40,6 +40,12 @@ Production systemd and environment templates live in:
 frontend/deploy/casino-keeper/
 ```
 
+Keeper configuration has one file boundary. Production systemd reads
+`/etc/arbigamefi/casino-keeper/%i.env`; local wrappers read only
+`frontend/deploy/casino-keeper/${KEEPER_ENV_FILE:-primary.env}`. They do not
+fall back to repo-root `.env`, frontend web `.env.local`, or legacy sports env
+files.
+
 The operational install, health wiring, canary, and rollback procedure is:
 
 ```text

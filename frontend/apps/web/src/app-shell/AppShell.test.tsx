@@ -24,8 +24,39 @@ vi.mock("../ssot/release/ReleaseProvider", () => ({
 }));
 
 vi.mock("./WalletButton", () => ({
-  WalletButton: () => <button data-testid="wallet-button">Connect</button>,
   useConnectModal: () => ({ openConnectModal: vi.fn() })
+}));
+
+// The header now uses a single, unified `WalletHeaderMenu` (wallet +
+// chain switcher + network mismatch banner all in one) plus a mobile
+// deep-link banner. Stub them out so AppShell smoke-tests stay focused
+// on layout/nav and don't drag in the wagmi/RainbowKit stack.
+vi.mock("./WalletHeaderMenu", () => ({
+  WalletHeaderMenu: () => <button data-testid="wallet-button">Connect</button>
+}));
+
+vi.mock("./MobileWalletDeepLinkBanner", () => ({
+  MobileWalletDeepLinkBanner: () => null
+}));
+
+// Compliance surfaces (age gate, cookie banner, RG dialog, reality check,
+// self-exclusion route gate) need a provider; stub them so the AppShell
+// layout test stays focused. SelfExclusionGate must pass children through.
+vi.mock("./compliance", () => ({
+  AgeTermsGate: () => null,
+  CookieConsentBanner: () => null,
+  ResponsibleGamblingDialog: () => null,
+  RealityCheckTimer: () => null,
+  SelfExclusionGate: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useCompliance: () => ({ openRgDialog: vi.fn() })
+}));
+
+vi.mock("./onboarding/OnboardingTour", () => ({
+  OnboardingTour: () => null
+}));
+
+vi.mock("./pwa/InstallPrompt", () => ({
+  InstallPrompt: () => null
 }));
 
 vi.mock("../components/LocaleSwitcher", () => ({
@@ -126,14 +157,16 @@ describe("AppShell", () => {
     expect(walletBtns.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("renders the network name", () => {
+  it("renders the unified wallet menu in place of the old NetworkSwitcher", () => {
+    // Network switching is now folded into the wallet menu; the stand-alone
+    // NetworkSwitcher component no longer exists. We assert the unified
+    // wallet trigger is present (the mock returns a `wallet-button` testid).
     render(
       <AppShell>
         <div>content</div>
       </AppShell>
     );
-    const networkNames = screen.getAllByText(/test-net/i);
-    expect(networkNames.length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByTestId("wallet-button").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders children in main", () => {

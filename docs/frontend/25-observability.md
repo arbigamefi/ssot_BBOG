@@ -94,6 +94,7 @@ model: permissionless finalize/refund remains the backstop.
 
 Keep these visible to operators:
 
+- `/api/healthz`
 - `/ops/casino-keeper-health.json`
 - `/ops` keeper health panel
 - `/api/bets/recent` degraded/fallback state
@@ -107,7 +108,8 @@ the Next route.
 
 Sentry must:
 
-- use release/build tags;
+- use `NEXT_PUBLIC_SENTRY_RELEASE` or `NEXT_PUBLIC_BUILD_SHA` as the release/build tag;
+- use `NEXT_PUBLIC_ENV` for the Sentry environment label;
 - set `sendDefaultPii: false`;
 - scrub URLs and breadcrumbs;
 - group known app errors by stable error code when possible;
@@ -134,4 +136,9 @@ rg -nE "console\\.(log|error|warn)\\(" frontend/apps/web/src \
 
 # Keeper health route test.
 pnpm -C frontend/apps/web test -- src/app/ops/casino-keeper-health.json/route.test.ts
+
+# Healthz and Sentry scrubbing tests.
+pnpm -C frontend/apps/web test -- \
+  src/app/api/healthz/route.test.ts \
+  src/observability/sentry-scrub.test.ts
 ```

@@ -137,14 +137,14 @@ describe("HomePage", () => {
   it("renders the product-first landing surface", () => {
     render(<HomePage />);
 
-    expect(screen.getByRole("heading", { name: "ArbiGameFi" })).toBeDefined();
-    expect(screen.getByText("Base Sepolia release channel")).toBeDefined();
-    expect(screen.getAllByText("Enter Casino").length).toBeGreaterThan(0);
-    expect(screen.getByText("Casino rooms")).toBeDefined();
-    expect(screen.getByText("Transparent settlement rails.")).toBeDefined();
+    expect(screen.getByRole("heading", { name: "Verifiable casino on-chain." })).toBeDefined();
+    expect(screen.getByText("Live on Arbitrum")).toBeDefined();
+    expect(screen.getAllByText("Start Playing").length).toBeGreaterThan(0);
+    expect(screen.getByText("Eight games. One wallet.")).toBeDefined();
+    expect(screen.getByText("We can't rig the spin.")).toBeDefined();
   });
 
-  it("renders reserve proof and canonical room cards when release data exists", () => {
+  it("renders live activity, reserve proof, and canonical room cards when release data exists", () => {
     state.release = {
       name: "Arbitrum",
       chainId: 42161,
@@ -200,14 +200,14 @@ describe("HomePage", () => {
 
     render(<HomePage />);
 
-    expect(screen.getAllByText("Free reserve").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Bank assets").length).toBeGreaterThan(0);
-    expect(screen.getByText("Release")).toBeDefined();
+    expect(screen.getAllByText("Free to pay out").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Total in the bank").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Dice").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Keno").length).toBeGreaterThan(0);
-    expect(screen.getByText("Reserve ledger before marketing yield.")).toBeDefined();
-    expect(screen.getByText("Latest indexed tickets")).toBeDefined();
-    expect(screen.getByText("Inspect bank")).toBeDefined();
+    expect(screen.getByText("Last few bets")).toBeDefined();
+    expect(screen.getByText("Check on-chain")).toBeDefined();
+    expect(screen.getByText("Keno — pick 5, chase 500×.")).toBeDefined();
+    expect(screen.getByText("Play Keno")).toBeDefined();
 
     const kenoLinks = screen
       .getAllByText("Keno")

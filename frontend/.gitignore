@@ -13,6 +13,9 @@ storybook-static/
 .env
 .env.local
 .env.*.local
+deploy/casino-keeper/*.env
+deploy/docker/env/*.env
+!deploy/docker/env/*.env.example
 
 # IDE / editor
 .idea/

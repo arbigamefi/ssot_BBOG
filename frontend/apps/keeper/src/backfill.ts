@@ -14,6 +14,10 @@ import {
 } from "@ssot/bet-index";
 
 import { GAME_HUB_KEEPER_ABI } from "./abi.js";
+import {
+  fetchBankProviderLedgerRows,
+  type BankProviderLedgerPool
+} from "./bank-provider-ledger.js";
 import { loadRelease } from "./env.js";
 import { logger } from "./logger.js";
 import { splitBlockRange } from "./scan.js";
@@ -30,6 +34,7 @@ type BackfillConfig = {
   confirmations: bigint;
   scanChunkBlocks: bigint;
   releasePath: string;
+  bankProviderLedgerPools: BankProviderLedgerPool[];
 };
 
 const GAME_HUB_INDEX_EVENTS = [
@@ -70,13 +75,7 @@ function parsePositiveBlock(value: string | undefined, fallback: bigint, name: s
 }
 
 function resolveRpcUrl(env: NodeJS.ProcessEnv) {
-  return (
-    cleanEnvValue(env.KEEPER_RPC_HTTP) ??
-    cleanEnvValue(env.RPC_URL) ??
-    cleanEnvValue(env.BASE_SEPOLIA_RPC_URL) ??
-    cleanEnvValue(env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL) ??
-    cleanEnvValue(env.NEXT_PUBLIC_RPC_URL)
-  );
+  return cleanEnvValue(env.KEEPER_RPC_HTTP);
 }
 
 export function loadBackfillConfig(env: NodeJS.ProcessEnv = process.env): BackfillConfig {
@@ -95,6 +94,14 @@ export function loadBackfillConfig(env: NodeJS.ProcessEnv = process.env): Backfi
 
   const releaseBlock = BigInt(release.meta?.blockNumber ?? 0);
   return {
+    bankProviderLedgerPools: (release.pools ?? [])
+      .filter((pool) => pool.active !== false)
+      .map((pool) => ({
+        asset: getAddress(pool.asset),
+        bank: getAddress(pool.bank),
+        decimals: pool.decimals ?? 6,
+        poolId: pool.poolId
+      })),
     chainId,
     databaseSsl: parseBool(env.BET_INDEX_SSL),
     databaseUrl,
@@ -170,6 +177,7 @@ export async function runBetIndexBackfill({
 
     let eventCount = 0;
     let rowCount = 0;
+    let bankProviderLedgerRowCount = 0;
     for (const chunk of splitBlockRange({
       fromBlock: range.fromBlock,
       toBlock: range.toBlock,
@@ -183,11 +191,13 @@ export async function runBetIndexBackfill({
           fromBlock: chunk.fromBlock,
           toBlock: chunk.toBlock
         });
-        const events = logs
+        const stampedLogs = await attachBlockTimestamps(publicClient, logs);
+        const events = stampedLogs
           .map((log) =>
             toBetIndexEvent(config.chainId, config.gameHub, eventName, {
               args: log.args,
               blockNumber: log.blockNumber,
+              blockTimestamp: log.blockTimestamp,
               logIndex: log.logIndex,
               transactionHash: log.transactionHash
             })
@@ -195,6 +205,15 @@ export async function runBetIndexBackfill({
           .filter((event): event is BetIndexEvent => Boolean(event));
         eventCount += events.length;
         rowCount += (await indexStore.writeGameHubEvents(events)).length;
+      }
+      for (const pool of config.bankProviderLedgerPools) {
+        const rows = await fetchBankProviderLedgerRows({
+          chainId: config.chainId,
+          pool,
+          publicClient,
+          range: chunk
+        });
+        bankProviderLedgerRowCount += (await indexStore.writeBankProviderLedgerRows(rows)).length;
       }
       await indexStore.setCursor({
         blockNumber: chunk.toBlock,
@@ -209,6 +228,7 @@ export async function runBetIndexBackfill({
       chainId: config.chainId,
       dryRun: config.dryRun,
       eventCount,
+      bankProviderLedgerRowCount,
       fromBlock: range.fromBlock.toString(),
       gameHub: config.gameHub,
       recent,
@@ -227,6 +247,7 @@ function toBetIndexEvent(
   log: {
     args?: Record<string, unknown>;
     blockNumber?: bigint;
+    blockTimestamp?: bigint | number;
     logIndex?: number;
     transactionHash?: Hex;
   }
@@ -235,12 +256,52 @@ function toBetIndexEvent(
   return {
     args: log.args ?? {},
     blockNumber: log.blockNumber,
+    blockTimestamp: normalizeBlockTimestamp(log.blockTimestamp),
     chainId,
     eventName,
     gameHub,
     logIndex: log.logIndex,
     txHash: log.transactionHash
   };
+}
+
+async function attachBlockTimestamps<
+  T extends {
+    blockNumber?: bigint;
+    blockTimestamp?: bigint | number;
+  }
+>(
+  publicClient: PublicClient,
+  logs: readonly T[]
+): Promise<Array<T & { blockTimestamp?: bigint | number }>> {
+  const blockTimestampPromises = new Map<string, Promise<number | undefined>>();
+
+  const getTimestamp = (blockNumber: bigint) => {
+    const key = blockNumber.toString();
+    let existing = blockTimestampPromises.get(key);
+    if (!existing) {
+      existing = publicClient
+        .getBlock({ blockNumber })
+        .then((block) => Number(block.timestamp) * 1000)
+        .catch(() => undefined);
+      blockTimestampPromises.set(key, existing);
+    }
+    return existing;
+  };
+
+  return Promise.all(
+    logs.map(async (log) => {
+      if (log.blockNumber == null) return log;
+      if (normalizeBlockTimestamp(log.blockTimestamp) != null) return log;
+      const blockTimestamp = await getTimestamp(log.blockNumber);
+      return blockTimestamp == null ? log : { ...log, blockTimestamp };
+    })
+  );
+}
+
+function normalizeBlockTimestamp(value: bigint | number | undefined) {
+  if (typeof value === "bigint") return Number(value) * 1000;
+  return typeof value === "number" ? value : undefined;
 }
 
 async function main() {
