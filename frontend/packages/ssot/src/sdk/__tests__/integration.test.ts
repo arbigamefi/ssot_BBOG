@@ -3,7 +3,12 @@ import { getAddress, type Address, type Hex } from "viem";
 import { createSSOTSDK, type SSOTSDK } from "../create";
 import type { SSOTRelease } from "../../release/schema";
 import type { JournalSink, TxJournalEntry } from "../txPipeline";
-import type { PlaceBetInput, PlaceSportsTicketInput, PlaceSportsTicketPlan } from "../types";
+import type {
+  PlaceBetInput,
+  PlaceBetPlan,
+  PlaceSportsTicketInput,
+  PlaceSportsTicketPlan
+} from "../types";
 import { encodeStakeSpec } from "../../encoding/stakeSpec";
 
 const ACCOUNT = "0x1111111111111111111111111111111111111111" as Address;
@@ -184,6 +189,140 @@ describe("createSSOTSDK", () => {
     );
     expect(journal.map((entry) => entry.action)).toContain("APPROVE_DEPOSIT");
     expect(journal.map((entry) => entry.action)).toContain("DEPOSIT");
+  });
+
+  it("confirms Bank allowance after approval before placing casino bets", async () => {
+    pub.readContract.mockResolvedValue(1_000_000n);
+    const plan: PlaceBetPlan = {
+      chainId: 84532,
+      releaseDigest: TEST_RELEASE.releaseDigest,
+      warnings: [],
+      steps: [
+        { type: "approve", token: ASSET, spender: BANK, amount: 1_000_000n },
+        {
+          type: "placeBet",
+          to: getAddress(TEST_RELEASE.contracts.gameHub),
+          value: 100_000n,
+          call: {
+            contract: "GameHub",
+            fn: "placeBet",
+            argsSummary: {
+              gameId: GAME_ID,
+              poolId: 1,
+              betCount: 1,
+              stake: 1_000_000n
+            }
+          }
+        }
+      ],
+      payload: {
+        gameId: GAME_ID,
+        poolId: 1,
+        params: "0x0000000000000000000000000000000000000000000000000000000000000032",
+        stakeSpec: {
+          amountPerRoll: 1_000_000n,
+          betCount: 1,
+          stopGain: 0n,
+          stopLoss: 0n
+        },
+        affiliate: "0x0000000000000000000000000000000000000000",
+        maxHouseEdgeBps: 3000
+      },
+      preview: {
+        vrfFee: 100_000n,
+        stake: 1_000_000n,
+        allowance: 0n,
+        needsApproval: true,
+        approveAmount: 1_000_000n,
+        asset: ASSET,
+        bank: BANK
+      }
+    };
+
+    const result = await sdk.gameHub.executePlan(plan);
+
+    expect(result.placeBetTx.ok).toBe(true);
+    expect(pub.readContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        address: getAddress(ASSET),
+        functionName: "allowance",
+        args: [ACCOUNT, getAddress(BANK)]
+      })
+    );
+    expect(pub.simulateContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        address: getAddress(ASSET),
+        functionName: "approve",
+        args: [getAddress(BANK), 1_000_000n]
+      })
+    );
+    expect(pub.simulateContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        address: getAddress(TEST_RELEASE.contracts.gameHub),
+        functionName: "placeBet"
+      })
+    );
+  });
+
+  it("stops casino bet execution when approval allowance is not yet visible", async () => {
+    pub.readContract.mockResolvedValue(0n);
+    const plan: PlaceBetPlan = {
+      chainId: 84532,
+      releaseDigest: TEST_RELEASE.releaseDigest,
+      warnings: [],
+      steps: [
+        { type: "approve", token: ASSET, spender: BANK, amount: 1_000_000n },
+        {
+          type: "placeBet",
+          to: getAddress(TEST_RELEASE.contracts.gameHub),
+          value: 100_000n,
+          call: {
+            contract: "GameHub",
+            fn: "placeBet",
+            argsSummary: {
+              gameId: GAME_ID,
+              poolId: 1,
+              betCount: 1,
+              stake: 1_000_000n
+            }
+          }
+        }
+      ],
+      payload: {
+        gameId: GAME_ID,
+        poolId: 1,
+        params: "0x0000000000000000000000000000000000000000000000000000000000000032",
+        stakeSpec: {
+          amountPerRoll: 1_000_000n,
+          betCount: 1,
+          stopGain: 0n,
+          stopLoss: 0n
+        },
+        affiliate: "0x0000000000000000000000000000000000000000",
+        maxHouseEdgeBps: 3000
+      },
+      preview: {
+        vrfFee: 100_000n,
+        stake: 1_000_000n,
+        allowance: 0n,
+        needsApproval: true,
+        approveAmount: 1_000_000n,
+        asset: ASSET,
+        bank: BANK
+      }
+    };
+
+    const result = await sdk.gameHub.executePlan(plan);
+
+    expect(result.approveTx?.ok).toBe(true);
+    expect(result.placeBetTx.ok).toBe(false);
+    expect(result.placeBetTx.error?.code).toBe("ALLOWANCE_NOT_CONFIRMED");
+    expect(pub.simulateContract).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        address: getAddress(TEST_RELEASE.contracts.gameHub),
+        functionName: "placeBet"
+      })
+    );
   });
 
   it("reads GameHub terminal proof directly from BetFinalized logs", async () => {
@@ -608,6 +747,7 @@ describe("createSSOTSDK", () => {
       }
     };
 
+    pub.readContract.mockResolvedValue(1_000_000n);
     const result = await sportsSdk.sportsHub.executeTicketPlan(plan);
 
     expect(result.placeTicketTx.ok).toBe(true);

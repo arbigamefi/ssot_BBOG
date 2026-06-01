@@ -14,6 +14,10 @@ export function getStepperErrorMessage(
     return error.message || fallbackMessage;
   }
 
+  if ("code" in error && error.code === "ALLOWANCE_NOT_CONFIRMED") {
+    return error.message || fallbackMessage;
+  }
+
   return fallbackMessage;
 }
 

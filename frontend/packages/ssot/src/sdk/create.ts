@@ -204,6 +204,25 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
     return { ok: false as const, observed };
   }
 
+  function createAllowanceNotConfirmedError(params: {
+    action: string;
+    required: bigint;
+    observed: bigint;
+    spender: Address;
+  }): DomainError {
+    return {
+      code: "ALLOWANCE_NOT_CONFIRMED",
+      message: `Token approval was mined, but the allowance is not visible to ${params.action} yet. Retry in a few seconds.`,
+      severity: "warning",
+      retryable: true,
+      details: {
+        required: params.required.toString(),
+        observed: params.observed.toString(),
+        spender: params.spender
+      }
+    };
+  }
+
   function terminalProofRanges(latestBlock: bigint) {
     const releaseBlock = BigInt(release.meta?.blockNumber ?? 0);
     const lookbackStart =
@@ -571,6 +590,27 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
             return {
               approveTx,
               placeBetTx: { txHash: "0x0" as Hex, ok: false, error: approveTx.error }
+            };
+          }
+          const allowanceReady = await waitForTokenAllowance({
+            token: getAddress(step.token) as Address,
+            owner: walletReq.account,
+            spender: getAddress(step.spender) as Address,
+            required: step.amount
+          });
+          if (!allowanceReady.ok) {
+            return {
+              approveTx,
+              placeBetTx: {
+                txHash: approveTx.txHash,
+                ok: false,
+                error: createAllowanceNotConfirmedError({
+                  action: "place the bet",
+                  required: step.amount,
+                  observed: allowanceReady.observed,
+                  spender: getAddress(step.spender) as Address
+                })
+              }
             };
           }
         }
@@ -993,18 +1033,12 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
           return {
             txHash: approveTx.txHash,
             ok: false,
-            error: {
-              code: "ALLOWANCE_NOT_CONFIRMED",
-              message:
-                "Token approval was mined, but the allowance is not visible to the Bank yet. Retry the deposit in a few seconds.",
-              severity: "warning",
-              retryable: true,
-              details: {
-                required: assets.toString(),
-                observed: allowanceReady.observed.toString(),
-                spender: pool.bank
-              }
-            }
+            error: createAllowanceNotConfirmedError({
+              action: "the Bank",
+              required: assets,
+              observed: allowanceReady.observed,
+              spender: pool.bank
+            })
           };
         }
       }
@@ -1118,6 +1152,24 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
           args: [pool.bank, approveAmount!]
         });
         if (!approveTx.ok) return approveTx;
+        const allowanceReady = await waitForTokenAllowance({
+          token: pool.asset,
+          owner: walletReq.account,
+          spender: pool.bank,
+          required: assetsNeeded
+        });
+        if (!allowanceReady.ok) {
+          return {
+            txHash: approveTx.txHash,
+            ok: false,
+            error: createAllowanceNotConfirmedError({
+              action: "the Bank",
+              required: assetsNeeded,
+              observed: allowanceReady.observed,
+              spender: pool.bank
+            })
+          };
+        }
       }
 
       return tx.simulateAndWrite({
@@ -1647,6 +1699,27 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
             return {
               approveTx,
               placeTicketTx: { txHash: "0x0" as Hex, ok: false, error: approveTx.error }
+            };
+          }
+          const allowanceReady = await waitForTokenAllowance({
+            token: getAddress(step.token) as Address,
+            owner: walletReq.account,
+            spender: getAddress(step.spender) as Address,
+            required: step.amount
+          });
+          if (!allowanceReady.ok) {
+            return {
+              approveTx,
+              placeTicketTx: {
+                txHash: approveTx.txHash,
+                ok: false,
+                error: createAllowanceNotConfirmedError({
+                  action: "place the ticket",
+                  required: step.amount,
+                  observed: allowanceReady.observed,
+                  spender: getAddress(step.spender) as Address
+                })
+              }
             };
           }
         }
