@@ -2779,6 +2779,7 @@
       "redeemed": "已赎回 {amount} 份额",
       "deposited": "已存入 {amount} {symbol}",
       "withdrew": "已取出 {amount} {symbol}",
+      "viewTransaction": "查看交易",
       "failed": "交易失败"
     },
     "units": {

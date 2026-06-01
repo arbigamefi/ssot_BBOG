@@ -279,7 +279,20 @@ export function EarnPageClient() {
               amount: formatUnits(parsed, decimals),
               symbol
             }),
-        { id: toastId }
+        {
+          description:
+            explorerBaseUrl && result.txHash !== "0x0" ? (
+              <a
+                href={`${explorerBaseUrl}/tx/${result.txHash}`}
+                target="_blank"
+                rel="noreferrer"
+                className="font-bold text-brand hover:text-brand-hover"
+              >
+                {t("earn.toast.viewTransaction")}
+              </a>
+            ) : undefined,
+          id: toastId
+        }
       );
       setAmount("");
       await queryClient.invalidateQueries({ queryKey: ["ssot", "earn"] });
@@ -290,6 +303,7 @@ export function EarnPageClient() {
     amount,
     decimals,
     depositFlow,
+    explorerBaseUrl,
     maxRedeem,
     maxWithdraw,
     queryClient,
@@ -421,7 +435,6 @@ export function EarnPageClient() {
             canUseMax={maxActionAmount != null && maxActionAmount > 0n && !flow.busy}
             onUseMax={handleUseMax}
             flow={flow}
-            explorerBaseUrl={explorerBaseUrl}
             onSubmit={() => void handleSubmit()}
             connected={Boolean(sdk?.account)}
           />

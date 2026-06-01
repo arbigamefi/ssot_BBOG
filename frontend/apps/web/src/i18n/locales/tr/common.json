@@ -598,6 +598,14 @@
       "exceedsRedeemable": "Tutar şu anda geri alınabilir payları aşıyor.",
       "allowanceNotConfirmed": "Onay doğrulandı, ancak Bank allowance henüz güncellenmedi. Birkaç saniye sonra yatırmayı tekrar deneyin."
     },
+    "toast": {
+      "processing": "Bank işlemi işleniyor...",
+      "redeemed": "{amount} pay itfa edildi",
+      "deposited": "{amount} {symbol} yatırıldı",
+      "withdrew": "{amount} {symbol} çekildi",
+      "viewTransaction": "İşlemi görüntüle",
+      "failed": "İşlem başarısız"
+    },
     "format": {
       "assetFallback": "Varlık"
     },

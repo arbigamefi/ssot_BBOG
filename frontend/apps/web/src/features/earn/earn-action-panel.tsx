@@ -3,7 +3,6 @@ import { useTranslations } from "next-intl";
 import { AssetSelector, type AssetOption, type TxStepItem, type TxStatus } from "@ssot/ui";
 import type { DomainError } from "@ssot/ssot";
 
-import { EarnActionTrace } from "./earn-action-trace";
 import type { EarnTab } from "./types";
 
 const TABS: Array<{ key: EarnTab; label: string; description: string }> = [
@@ -52,7 +51,6 @@ export function EarnActionPanel({
   canUseMax,
   onUseMax,
   flow,
-  explorerBaseUrl,
   onSubmit,
   connected
 }: {
@@ -72,23 +70,11 @@ export function EarnActionPanel({
   canUseMax: boolean;
   onUseMax: () => void;
   flow: EarnFlowState;
-  explorerBaseUrl?: string;
   onSubmit: () => void;
   connected: boolean;
 }) {
   const t = useTranslations();
   const activeTab = TABS.find((item) => item.key === tab);
-  const [traceOpen, setTraceOpen] = React.useState(false);
-  const shouldAutoOpenTrace =
-    Boolean(flow.error) ||
-    Boolean(flow.txHash) ||
-    flow.status === "mined" ||
-    flow.status === "failed";
-  const canViewTrace = flow.hasActivity || Boolean(flow.error);
-
-  React.useEffect(() => {
-    if (shouldAutoOpenTrace) setTraceOpen(true);
-  }, [shouldAutoOpenTrace]);
 
   return (
     <section className="rounded-md border border-border bg-surface-1 shadow-e2">
@@ -197,67 +183,7 @@ export function EarnActionPanel({
                 ? t("earn.actions.submit.withdraw")
                 : t("earn.actions.submit.redeem")}
         </button>
-
-        {canViewTrace ? (
-          <button
-            type="button"
-            onClick={() => setTraceOpen(true)}
-            className="text-left text-xs font-bold uppercase tracking-[0.12em] text-brand hover:text-brand-hover"
-          >
-            {t("earn.actions.trace.view")}
-          </button>
-        ) : null}
       </div>
-
-      {traceOpen && canViewTrace ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label={t("earn.actions.trace.statusDialog")}
-        >
-          <div className="max-h-[85vh] w-full max-w-xl overflow-y-auto rounded-md border border-border bg-surface-1 shadow-e3">
-            <div className="flex items-center justify-between gap-4 border-b border-border px-5 py-4">
-              <h2 className="text-sm font-bold uppercase tracking-[0.16em] text-fg">
-                {tab === "deposit"
-                  ? t("earn.actions.trace.deposit")
-                  : tab === "withdraw"
-                    ? t("earn.actions.trace.withdraw")
-                    : t("earn.actions.trace.redeem")}
-              </h2>
-              <button
-                type="button"
-                onClick={() => setTraceOpen(false)}
-                className="rounded-md border border-border-soft px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] text-fg-muted hover:text-fg"
-              >
-                {t("earn.actions.trace.close")}
-              </button>
-            </div>
-            <div className="p-5">
-              <EarnActionTrace
-                title={
-                  tab === "deposit"
-                    ? t("earn.actions.trace.deposit")
-                    : tab === "withdraw"
-                      ? t("earn.actions.trace.withdraw")
-                      : t("earn.actions.trace.redeem")
-                }
-                status={flow.status}
-                steps={flow.steps}
-                hasActivity={flow.hasActivity}
-                error={flow.error}
-                txHash={flow.txHash}
-                blockNumber={flow.blockNumber}
-                explorerBaseUrl={explorerBaseUrl}
-                onReset={() => {
-                  flow.reset();
-                  setTraceOpen(false);
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      ) : null}
     </section>
   );
 }

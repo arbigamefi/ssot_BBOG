@@ -598,6 +598,14 @@
       "exceedsRedeemable": "Сумма превышает текущие доступные к погашению доли.",
       "allowanceNotConfirmed": "Подтверждение получено, но allowance Bank ещё не обновился. Повторите депозит через несколько секунд."
     },
+    "toast": {
+      "processing": "Обработка транзакции Bank...",
+      "redeemed": "Погашено {amount} долей",
+      "deposited": "Внесено {amount} {symbol}",
+      "withdrew": "Выведено {amount} {symbol}",
+      "viewTransaction": "Посмотреть транзакцию",
+      "failed": "Транзакция не удалась"
+    },
     "format": {
       "assetFallback": "Актив"
     },

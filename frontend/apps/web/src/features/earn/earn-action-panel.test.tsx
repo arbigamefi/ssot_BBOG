@@ -9,20 +9,7 @@ vi.mock("next-intl", () => ({
 }));
 
 vi.mock("@ssot/ui", () => ({
-  AssetSelector: ({ title }: { title: string }) => <div>{title}</div>,
-  ErrorCallout: ({ title, message }: { title: string; message: string }) => (
-    <div>
-      <strong>{title}</strong>
-      <span>{message}</span>
-    </div>
-  ),
-  TxStatusChip: ({ status }: { status: string }) => <span>{status}</span>,
-  TxStepper: ({ title, subtitle }: { title: string; subtitle: string }) => (
-    <div>
-      <span>{title}</span>
-      <span>{subtitle}</span>
-    </div>
-  )
+  AssetSelector: ({ title }: { title: string }) => <div>{title}</div>
 }));
 
 const baseFlow: EarnFlowState = {
@@ -59,7 +46,6 @@ function renderPanel(flow: EarnFlowState) {
       canUseMax
       onUseMax={vi.fn()}
       flow={flow}
-      explorerBaseUrl="https://basescan.org"
       onSubmit={vi.fn()}
       connected
     />
@@ -69,7 +55,7 @@ function renderPanel(flow: EarnFlowState) {
 describe("EarnActionPanel", () => {
   afterEach(() => cleanup());
 
-  it("does not auto-open the transaction dialog during wallet preflight", () => {
+  it("does not render transaction chrome during wallet preflight", () => {
     renderPanel({
       ...baseFlow,
       status: "planning",
@@ -78,10 +64,10 @@ describe("EarnActionPanel", () => {
     });
 
     expect(screen.queryByRole("dialog")).toBeNull();
-    expect(screen.getByRole("button", { name: "earn.actions.trace.view" })).toBeDefined();
+    expect(screen.queryByRole("button", { name: "earn.actions.trace.view" })).toBeNull();
   });
 
-  it("auto-opens the transaction dialog once a transaction hash exists", () => {
+  it("keeps transaction feedback in toast-only mode once a transaction hash exists", () => {
     renderPanel({
       ...baseFlow,
       status: "submitting",
@@ -90,6 +76,7 @@ describe("EarnActionPanel", () => {
       txHash: "0xabc"
     });
 
-    expect(screen.getByRole("dialog", { name: "earn.actions.trace.statusDialog" })).toBeDefined();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.queryByRole("button", { name: "earn.actions.trace.view" })).toBeNull();
   });
 });

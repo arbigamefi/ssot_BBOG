@@ -598,6 +598,14 @@
       "exceedsRedeemable": "O valor excede as cotas atualmente resgatáveis.",
       "allowanceNotConfirmed": "A aprovação foi confirmada, mas a allowance do Bank ainda não atualizou. Tente depositar novamente em alguns segundos."
     },
+    "toast": {
+      "processing": "Processando transação do Bank...",
+      "redeemed": "Resgatou {amount} cotas",
+      "deposited": "Depositou {amount} {symbol}",
+      "withdrew": "Sacou {amount} {symbol}",
+      "viewTransaction": "Ver transação",
+      "failed": "Falha na transação"
+    },
     "format": {
       "assetFallback": "Ativo"
     },
