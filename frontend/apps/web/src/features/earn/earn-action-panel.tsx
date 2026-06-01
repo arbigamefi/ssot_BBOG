@@ -79,10 +79,16 @@ export function EarnActionPanel({
   const t = useTranslations();
   const activeTab = TABS.find((item) => item.key === tab);
   const [traceOpen, setTraceOpen] = React.useState(false);
+  const shouldAutoOpenTrace =
+    Boolean(flow.error) ||
+    Boolean(flow.txHash) ||
+    flow.status === "mined" ||
+    flow.status === "failed";
+  const canViewTrace = flow.hasActivity || Boolean(flow.error);
 
   React.useEffect(() => {
-    if (flow.hasActivity || flow.error) setTraceOpen(true);
-  }, [flow.error, flow.hasActivity]);
+    if (shouldAutoOpenTrace) setTraceOpen(true);
+  }, [shouldAutoOpenTrace]);
 
   return (
     <section className="rounded-md border border-border bg-surface-1 shadow-e2">
@@ -192,7 +198,7 @@ export function EarnActionPanel({
                 : t("earn.actions.submit.redeem")}
         </button>
 
-        {flow.hasActivity || flow.error ? (
+        {canViewTrace ? (
           <button
             type="button"
             onClick={() => setTraceOpen(true)}
@@ -203,7 +209,7 @@ export function EarnActionPanel({
         ) : null}
       </div>
 
-      {traceOpen && (flow.hasActivity || flow.error) ? (
+      {traceOpen && canViewTrace ? (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
           role="dialog"

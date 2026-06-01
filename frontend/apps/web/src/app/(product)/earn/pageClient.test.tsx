@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as React from "react";
 
@@ -142,6 +142,7 @@ vi.mock("@ssot/ui", () => ({
 }));
 
 import { EarnPageClient } from "./pageClient";
+import { toast } from "@ssot/ui";
 
 function renderWithQueryClient(ui: React.ReactElement) {
   const queryClient = new QueryClient({
@@ -191,5 +192,38 @@ describe("EarnPageClient", () => {
     fireEvent.click(screen.getByRole("button", { name: "Risk checks" }));
     expect(screen.getByText("Custody boundary")).toBeDefined();
     expect(screen.getByText("Connect a wallet to run bank actions.")).toBeDefined();
+  });
+
+  it("blocks deposits above the connected wallet balance before opening wallet flow", async () => {
+    state.ready = true;
+    state.sdk = {
+      account: "0x0000000000000000000000000000000000000abc",
+      bank: {
+        getSnapshot: vi.fn().mockResolvedValue({
+          bank: "0x0000000000000000000000000000000000000002",
+          totalAssets: 10_000_000n,
+          totalReserved: 0n,
+          totalSupply: 10_000_000n,
+          assetsPerShare: 1_000_000n,
+          minLiquidityBps: 1_000,
+          protocolFeesPayable: 0n,
+          externalPayablesTotal: 0n
+        }),
+        getPosition: vi.fn().mockResolvedValue(null),
+        getAssetBalance: vi.fn().mockResolvedValue(1_000_000n)
+      }
+    };
+
+    renderWithQueryClient(<EarnPageClient />);
+
+    await waitFor(() => {
+      expect(state.sdk.bank.getAssetBalance).toHaveBeenCalled();
+    });
+    fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "2" } });
+    fireEvent.click(screen.getByRole("button", { name: "Deposit assets" }));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("Amount exceeds the connected wallet balance.");
+    });
   });
 });

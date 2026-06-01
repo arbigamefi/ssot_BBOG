@@ -587,6 +587,16 @@
       },
       "loading": "Загрузка банка…"
     },
+    "errors": {
+      "sdkUnavailable": "SDK недоступен",
+      "poolUnavailable": "Пул недоступен",
+      "unsupportedWriteAsset": "Операции записи требуют активный пул казино для выбранного актива.",
+      "positiveAmount": "Сумма должна быть положительной.",
+      "primaryAssetOnly": "Операции записи сейчас поддерживают только основной актив.",
+      "insufficientWalletBalance": "Сумма превышает баланс подключённого кошелька.",
+      "exceedsWithdrawable": "Сумма превышает текущий доступный вывод.",
+      "exceedsRedeemable": "Сумма превышает текущие доступные к погашению доли."
+    },
     "format": {
       "assetFallback": "Актив"
     },

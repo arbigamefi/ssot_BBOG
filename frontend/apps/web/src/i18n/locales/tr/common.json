@@ -587,6 +587,16 @@
       },
       "loading": "Banka yükleniyor…"
     },
+    "errors": {
+      "sdkUnavailable": "SDK kullanılamıyor",
+      "poolUnavailable": "Havuz kullanılamıyor",
+      "unsupportedWriteAsset": "Yazma akışları seçili varlık için aktif bir casino havuzu gerektirir.",
+      "positiveAmount": "Tutar pozitif olmalı.",
+      "primaryAssetOnly": "Yazma akışları şu anda yalnızca birincil varlığı destekler.",
+      "insufficientWalletBalance": "Tutar bağlı cüzdan bakiyesini aşıyor.",
+      "exceedsWithdrawable": "Tutar şu anda çekilebilir bakiyeyi aşıyor.",
+      "exceedsRedeemable": "Tutar şu anda geri alınabilir payları aşıyor."
+    },
     "format": {
       "assetFallback": "Varlık"
     },

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Address } from "@ssot/ssot/sdk";
 import type { AssetOption } from "@ssot/ui";
 
@@ -27,6 +27,7 @@ export function EarnPageClient() {
   const t = useTranslations();
   const { release, readOnly, readOnlyReason, chainId } = useRelease();
   const { sdk, ready } = useSSOTSDK();
+  const queryClient = useQueryClient();
   const explorerBaseUrl = React.useMemo(() => getExplorerBaseUrl(chainId), [chainId]);
 
   const assetOptions = React.useMemo<AssetOption[]>(
@@ -76,8 +77,7 @@ export function EarnPageClient() {
   const {
     data: bankData,
     isLoading,
-    error: loadError,
-    refetch
+    error: loadError
   } = useQuery({
     queryKey: ["ssot", "earn", "bank", chainId, poolId, sdk?.account ?? "anonymous"],
     enabled: Boolean(sdk && ready && assetMeta && poolId),
@@ -173,7 +173,8 @@ export function EarnPageClient() {
     queryFn: async () => {
       if (!sdk?.account || !poolId) return null;
       return sdk.bank.maxWithdraw(poolId, sdk.account);
-    }
+    },
+    refetchInterval: 5_000
   });
 
   const { data: maxRedeem = null } = useQuery({
@@ -182,7 +183,8 @@ export function EarnPageClient() {
     queryFn: async () => {
       if (!sdk?.account || !poolId) return null;
       return sdk.bank.maxRedeem(poolId, sdk.account);
-    }
+    },
+    refetchInterval: 5_000
   });
 
   const { data: walletBalance = null } = useQuery({
@@ -237,6 +239,19 @@ export function EarnPageClient() {
         return;
       }
 
+      const availableForTab =
+        tab === "deposit" ? walletBalance : tab === "withdraw" ? maxWithdraw : maxRedeem;
+      if (availableForTab != null && parsed > availableForTab) {
+        toast.error(
+          tab === "deposit"
+            ? t("earn.errors.insufficientWalletBalance")
+            : tab === "withdraw"
+              ? t("earn.errors.exceedsWithdrawable")
+              : t("earn.errors.exceedsRedeemable")
+        );
+        return;
+      }
+
       const toastId = toast.loading(t("earn.toast.processing"));
       const account = sdk.account;
       const result =
@@ -262,7 +277,7 @@ export function EarnPageClient() {
         { id: toastId }
       );
       setAmount("");
-      await refetch();
+      await queryClient.invalidateQueries({ queryKey: ["ssot", "earn"] });
     } catch (error) {
       toast.error((error as Error)?.message ?? t("earn.toast.failed"));
     }
@@ -270,13 +285,16 @@ export function EarnPageClient() {
     amount,
     decimals,
     depositFlow,
+    maxRedeem,
+    maxWithdraw,
+    queryClient,
     readOnly,
     redeemFlow,
-    refetch,
     sdk,
     symbol,
     tab,
     withdrawFlow,
+    walletBalance,
     poolId,
     t,
     writesSupportedForSelectedAsset

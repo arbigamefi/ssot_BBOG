@@ -2597,7 +2597,10 @@
       "poolUnavailable": "资金池不可用",
       "unsupportedWriteAsset": "写入流程需要所选资产存在 active casino pool。",
       "positiveAmount": "金额必须大于 0。",
-      "primaryAssetOnly": "当前写入流程仅支持主资产。"
+      "primaryAssetOnly": "当前写入流程仅支持主资产。",
+      "insufficientWalletBalance": "金额超过当前钱包余额。",
+      "exceedsWithdrawable": "金额超过当前可取金额。",
+      "exceedsRedeemable": "金额超过当前可赎回份额。"
     },
     "format": {
       "assetFallback": "资产"

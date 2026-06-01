@@ -2597,7 +2597,10 @@
       "poolUnavailable": "Pool unavailable",
       "unsupportedWriteAsset": "Write flows require an active casino pool for the selected asset.",
       "positiveAmount": "Amount must be positive.",
-      "primaryAssetOnly": "Write flows currently support only the primary asset."
+      "primaryAssetOnly": "Write flows currently support only the primary asset.",
+      "insufficientWalletBalance": "Amount exceeds the connected wallet balance.",
+      "exceedsWithdrawable": "Amount exceeds the currently withdrawable balance.",
+      "exceedsRedeemable": "Amount exceeds the currently redeemable shares."
     },
     "format": {
       "assetFallback": "Asset"
