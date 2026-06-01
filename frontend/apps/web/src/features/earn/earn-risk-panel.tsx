@@ -15,12 +15,14 @@ export function EarnRiskPanel({
   data,
   decimals,
   symbol,
-  releaseDigest
+  releaseDigest,
+  embedded = false
 }: {
   data?: EarnBankData;
   decimals: number;
   symbol: string;
   releaseDigest?: string;
+  embedded?: boolean;
 }) {
   const t = useTranslations();
   const snapshot = data?.snapshot;
@@ -34,6 +36,50 @@ export function EarnRiskPanel({
       ? (snapshot.totalAssets * BigInt(snapshot.minLiquidityBps)) / 10_000n
       : undefined;
 
+  const rows = (
+    <div className="divide-y divide-border-soft">
+      <RiskRow
+        icon={<LockClosedIcon className="h-5 w-5" />}
+        label={t("earn.risk.custody.label")}
+        title={t("earn.risk.custody.title")}
+        detail={t("earn.risk.custody.detail")}
+      />
+      <RiskRow
+        icon={<CircleStackIcon className="h-5 w-5" />}
+        label={t("earn.risk.buffer.label")}
+        title={formatTokenAmount(freeReserve, decimals, symbol, 2)}
+        detail={t("earn.risk.buffer.detail", {
+          reserved: formatTokenAmount(snapshot?.totalReserved, decimals, symbol, 2)
+        })}
+      />
+      <RiskRow
+        icon={<ScaleIcon className="h-5 w-5" />}
+        label={t("earn.risk.liquidityFloor.label")}
+        title={formatPctFromBps(snapshot?.minLiquidityBps)}
+        detail={t("earn.risk.liquidityFloor.detail", {
+          bps: formatBps(snapshot?.minLiquidityBps),
+          amount: formatTokenAmount(minLiquidity, decimals, symbol, 2)
+        })}
+      />
+      <RiskRow
+        label={t("earn.risk.payables.label")}
+        title={formatTokenAmount(snapshot?.protocolFeesPayable, decimals, symbol, 2)}
+        detail={t("earn.risk.payables.detail", {
+          externalPayables: formatTokenAmount(snapshot?.externalPayablesTotal, decimals, symbol, 2),
+          assets: formatTokenAmount(snapshot?.totalAssets, decimals, symbol, 2)
+        })}
+      />
+      <RiskRow
+        icon={<ClipboardDocumentCheckIcon className="h-5 w-5" />}
+        label={t("earn.risk.release.label")}
+        title={shortHex(releaseDigest)}
+        detail={t("earn.risk.release.detail")}
+      />
+    </div>
+  );
+
+  if (embedded) return rows;
+
   return (
     <section className="rounded-md border border-border bg-surface-1 shadow-e2">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
@@ -45,50 +91,7 @@ export function EarnRiskPanel({
           {t("earn.risk.readModel")}
         </span>
       </div>
-      <div className="divide-y divide-border-soft">
-        <RiskRow
-          icon={<LockClosedIcon className="h-5 w-5" />}
-          label={t("earn.risk.custody.label")}
-          title={t("earn.risk.custody.title")}
-          detail={t("earn.risk.custody.detail")}
-        />
-        <RiskRow
-          icon={<CircleStackIcon className="h-5 w-5" />}
-          label={t("earn.risk.buffer.label")}
-          title={formatTokenAmount(freeReserve, decimals, symbol, 2)}
-          detail={t("earn.risk.buffer.detail", {
-            reserved: formatTokenAmount(snapshot?.totalReserved, decimals, symbol, 2)
-          })}
-        />
-        <RiskRow
-          icon={<ScaleIcon className="h-5 w-5" />}
-          label={t("earn.risk.liquidityFloor.label")}
-          title={formatPctFromBps(snapshot?.minLiquidityBps)}
-          detail={t("earn.risk.liquidityFloor.detail", {
-            bps: formatBps(snapshot?.minLiquidityBps),
-            amount: formatTokenAmount(minLiquidity, decimals, symbol, 2)
-          })}
-        />
-        <RiskRow
-          label={t("earn.risk.payables.label")}
-          title={formatTokenAmount(snapshot?.protocolFeesPayable, decimals, symbol, 2)}
-          detail={t("earn.risk.payables.detail", {
-            externalPayables: formatTokenAmount(
-              snapshot?.externalPayablesTotal,
-              decimals,
-              symbol,
-              2
-            ),
-            assets: formatTokenAmount(snapshot?.totalAssets, decimals, symbol, 2)
-          })}
-        />
-        <RiskRow
-          icon={<ClipboardDocumentCheckIcon className="h-5 w-5" />}
-          label={t("earn.risk.release.label")}
-          title={shortHex(releaseDigest)}
-          detail={t("earn.risk.release.detail")}
-        />
-      </div>
+      {rows}
     </section>
   );
 }

@@ -47,8 +47,9 @@ export function EarnActionPanel({
   disabled,
   readOnly,
   unsupportedAsset,
-  formError,
-  maxLabel,
+  availableLabel,
+  availableValue,
+  canUseMax,
   onUseMax,
   flow,
   explorerBaseUrl,
@@ -66,8 +67,9 @@ export function EarnActionPanel({
   disabled: boolean;
   readOnly: boolean;
   unsupportedAsset: boolean;
-  formError?: string;
-  maxLabel: string;
+  availableLabel: string;
+  availableValue: string;
+  canUseMax: boolean;
   onUseMax: () => void;
   flow: EarnFlowState;
   explorerBaseUrl?: string;
@@ -76,6 +78,11 @@ export function EarnActionPanel({
 }) {
   const t = useTranslations();
   const activeTab = TABS.find((item) => item.key === tab);
+  const [traceOpen, setTraceOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    if (flow.hasActivity || flow.error) setTraceOpen(true);
+  }, [flow.error, flow.hasActivity]);
 
   return (
     <section className="rounded-md border border-border bg-surface-1 shadow-e2">
@@ -119,21 +126,29 @@ export function EarnActionPanel({
         />
 
         <div className="rounded-md border border-border bg-surface-0 p-4">
-          <div className="mb-2 flex items-center justify-between gap-3">
+          <div className="mb-2 flex items-start justify-between gap-3">
             <label
               htmlFor="earn-amount"
               className="text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle"
             >
               {t("earn.actions.amount")}
             </label>
-            <button
-              type="button"
-              onClick={onUseMax}
-              disabled={tab === "deposit" || flow.busy}
-              className="text-[10px] font-bold uppercase tracking-[0.12em] text-brand disabled:text-fg-subtle"
-            >
-              {maxLabel}
-            </button>
+            <div className="min-w-0 text-right text-[10px] font-bold uppercase tracking-[0.12em]">
+              <span className="block truncate text-fg-subtle" title={availableLabel}>
+                {availableLabel}
+              </span>
+              <span className="mt-1 block truncate font-mono text-fg-muted" title={availableValue}>
+                {availableValue}
+              </span>
+              <button
+                type="button"
+                onClick={onUseMax}
+                disabled={!canUseMax}
+                className="mt-1 text-brand disabled:text-fg-subtle"
+              >
+                {t("earn.actions.balance.useMax")}
+              </button>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <input
@@ -149,12 +164,6 @@ export function EarnActionPanel({
             </span>
           </div>
         </div>
-
-        {formError ? (
-          <div className="rounded-md border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
-            {formError}
-          </div>
-        ) : null}
 
         {!connected ? (
           <div className="rounded-md border border-dashed border-border bg-surface-0 p-5 text-sm text-fg-muted">
@@ -183,24 +192,66 @@ export function EarnActionPanel({
                 : t("earn.actions.submit.redeem")}
         </button>
 
-        <EarnActionTrace
-          title={
-            tab === "deposit"
-              ? t("earn.actions.trace.deposit")
-              : tab === "withdraw"
-                ? t("earn.actions.trace.withdraw")
-                : t("earn.actions.trace.redeem")
-          }
-          status={flow.status}
-          steps={flow.steps}
-          hasActivity={flow.hasActivity}
-          error={flow.error}
-          txHash={flow.txHash}
-          blockNumber={flow.blockNumber}
-          explorerBaseUrl={explorerBaseUrl}
-          onReset={flow.reset}
-        />
+        {flow.hasActivity || flow.error ? (
+          <button
+            type="button"
+            onClick={() => setTraceOpen(true)}
+            className="text-left text-xs font-bold uppercase tracking-[0.12em] text-brand hover:text-brand-hover"
+          >
+            {t("earn.actions.trace.view")}
+          </button>
+        ) : null}
       </div>
+
+      {traceOpen && (flow.hasActivity || flow.error) ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t("earn.actions.trace.statusDialog")}
+        >
+          <div className="max-h-[85vh] w-full max-w-xl overflow-y-auto rounded-md border border-border bg-surface-1 shadow-e3">
+            <div className="flex items-center justify-between gap-4 border-b border-border px-5 py-4">
+              <h2 className="text-sm font-bold uppercase tracking-[0.16em] text-fg">
+                {tab === "deposit"
+                  ? t("earn.actions.trace.deposit")
+                  : tab === "withdraw"
+                    ? t("earn.actions.trace.withdraw")
+                    : t("earn.actions.trace.redeem")}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setTraceOpen(false)}
+                className="rounded-md border border-border-soft px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] text-fg-muted hover:text-fg"
+              >
+                {t("earn.actions.trace.close")}
+              </button>
+            </div>
+            <div className="p-5">
+              <EarnActionTrace
+                title={
+                  tab === "deposit"
+                    ? t("earn.actions.trace.deposit")
+                    : tab === "withdraw"
+                      ? t("earn.actions.trace.withdraw")
+                      : t("earn.actions.trace.redeem")
+                }
+                status={flow.status}
+                steps={flow.steps}
+                hasActivity={flow.hasActivity}
+                error={flow.error}
+                txHash={flow.txHash}
+                blockNumber={flow.blockNumber}
+                explorerBaseUrl={explorerBaseUrl}
+                onReset={() => {
+                  flow.reset();
+                  setTraceOpen(false);
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

@@ -2690,6 +2690,13 @@
         "pending": "最大值读取中",
         "value": "最大 {amount}"
       },
+      "balance": {
+        "wallet": "钱包余额",
+        "withdrawable": "可取金额",
+        "redeemable": "可赎回份额",
+        "pending": "读取中",
+        "useMax": "最大"
+      },
       "submit": {
         "executing": "执行中",
         "deposit": "存入资产",
@@ -2699,7 +2706,10 @@
       "trace": {
         "deposit": "存入追踪",
         "withdraw": "取出追踪",
-        "redeem": "赎回追踪"
+        "redeem": "赎回追踪",
+        "view": "查看交易状态",
+        "close": "关闭",
+        "statusDialog": "Bank 交易状态"
       }
     },
     "flows": {

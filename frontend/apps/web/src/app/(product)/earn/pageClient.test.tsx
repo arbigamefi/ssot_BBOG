@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as React from "react";
 
@@ -188,6 +188,7 @@ describe("EarnPageClient", () => {
     expect(screen.getByTestId("bankroll-performance")).toBeDefined();
     expect(screen.getByText("Deposit or exit")).toBeDefined();
     expect(screen.getByText("Verifiable reserve ledger")).toBeDefined();
+    fireEvent.click(screen.getByRole("button", { name: "Risk checks" }));
     expect(screen.getByText("Custody boundary")).toBeDefined();
     expect(screen.getByText("Connect a wallet to run bank actions.")).toBeDefined();
   });

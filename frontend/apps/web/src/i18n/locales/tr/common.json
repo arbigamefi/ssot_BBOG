@@ -678,6 +678,21 @@
         "deposit": "Varlık yatır",
         "withdraw": "Varlık çek",
         "redeem": "Payları geri al"
+      },
+      "balance": {
+        "wallet": "Cüzdan bakiyesi",
+        "withdrawable": "Çekilebilir",
+        "redeemable": "Geri alınabilir pay",
+        "pending": "Yükleniyor",
+        "useMax": "Maks."
+      },
+      "trace": {
+        "deposit": "Yatırma izi",
+        "withdraw": "Çekme izi",
+        "redeem": "Geri alma izi",
+        "view": "İşlem durumunu görüntüle",
+        "close": "Kapat",
+        "statusDialog": "Bank işlem durumu"
       }
     },
     "risk": {

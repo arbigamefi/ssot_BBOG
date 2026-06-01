@@ -14,13 +14,15 @@ export function EarnBankSummary({
   decimals,
   symbol,
   loading,
-  error
+  error,
+  embedded = false
 }: {
   data?: EarnBankData;
   decimals: number;
   symbol: string;
   loading: boolean;
   error?: string;
+  embedded?: boolean;
 }) {
   const t = useTranslations();
   const snapshot = data?.snapshot;
@@ -35,6 +37,63 @@ export function EarnBankSummary({
       : 0n
     : undefined;
 
+  const rows = (
+    <div className="divide-y divide-border-soft">
+      <LedgerRow
+        label={t("earn.summary.sharePrice.label")}
+        value={formatTokenAmount(snapshot?.assetsPerShare, decimals, symbol, 4)}
+        detail={t("earn.summary.sharePrice.detail")}
+      />
+      <LedgerRow
+        label={t("earn.summary.totalShares.label")}
+        value={formatTokenAmount(snapshot?.totalSupply, decimals, undefined, 2)}
+        detail={t("earn.summary.totalShares.detail")}
+      />
+      <LedgerRow
+        icon={<ChartBarIcon className="h-5 w-5" />}
+        label={t("earn.summary.capitalPosture.totalAssets")}
+        value={formatTokenAmount(snapshot?.totalAssets, decimals, symbol, 2)}
+        detail={
+          loading
+            ? t("earn.summary.capitalPosture.loading")
+            : error
+              ? error
+              : t("earn.summary.capitalPosture.detail")
+        }
+      />
+      <LedgerRow
+        label={t("earn.summary.freeReserve.label")}
+        value={formatTokenAmount(freeReserve, decimals, symbol, 2)}
+        detail={t("earn.summary.freeReserve.detail")}
+      />
+      <LedgerRow
+        label={t("earn.summary.reserved.label")}
+        value={formatTokenAmount(snapshot?.totalReserved, decimals, symbol, 2)}
+        detail={t("earn.summary.reserved.detail", {
+          freeReserve: formatTokenAmount(freeReserve, decimals, symbol, 2),
+          minLiquidity: formatTokenAmount(minLiquidity, decimals, symbol, 2)
+        })}
+      />
+      <LedgerRow
+        icon={<ArrowTrendingUpIcon className="h-5 w-5" />}
+        label={t("earn.summary.position.label")}
+        value={formatTokenAmount(position?.assetsEquivalent, decimals, symbol, 4)}
+        detail={t("earn.summary.position.detail")}
+      />
+      <LedgerRow
+        icon={<InformationCircleIcon className="h-5 w-5" />}
+        label={t("earn.summary.liquidity.label")}
+        value={formatPctFromBps(snapshot?.minLiquidityBps)}
+        detail={t("earn.summary.liquidity.detail", {
+          floor: formatBps(snapshot?.minLiquidityBps),
+          bank: shortHex(snapshot?.bank)
+        })}
+      />
+    </div>
+  );
+
+  if (embedded) return rows;
+
   return (
     <section className="rounded-md border border-border bg-surface-1 shadow-e2">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
@@ -46,59 +105,7 @@ export function EarnBankSummary({
           {t("earn.summary.capitalPosture.readModel")}
         </span>
       </div>
-
-      <div className="divide-y divide-border-soft">
-        <LedgerRow
-          label={t("earn.summary.sharePrice.label")}
-          value={formatTokenAmount(snapshot?.assetsPerShare, decimals, symbol, 4)}
-          detail={t("earn.summary.sharePrice.detail")}
-        />
-        <LedgerRow
-          label={t("earn.summary.totalShares.label")}
-          value={formatTokenAmount(snapshot?.totalSupply, decimals, undefined, 2)}
-          detail={t("earn.summary.totalShares.detail")}
-        />
-        <LedgerRow
-          icon={<ChartBarIcon className="h-5 w-5" />}
-          label={t("earn.summary.capitalPosture.totalAssets")}
-          value={formatTokenAmount(snapshot?.totalAssets, decimals, symbol, 2)}
-          detail={
-            loading
-              ? t("earn.summary.capitalPosture.loading")
-              : error
-                ? error
-                : t("earn.summary.capitalPosture.detail")
-          }
-        />
-        <LedgerRow
-          label={t("earn.summary.freeReserve.label")}
-          value={formatTokenAmount(freeReserve, decimals, symbol, 2)}
-          detail={t("earn.summary.freeReserve.detail")}
-        />
-        <LedgerRow
-          label={t("earn.summary.reserved.label")}
-          value={formatTokenAmount(snapshot?.totalReserved, decimals, symbol, 2)}
-          detail={t("earn.summary.reserved.detail", {
-            freeReserve: formatTokenAmount(freeReserve, decimals, symbol, 2),
-            minLiquidity: formatTokenAmount(minLiquidity, decimals, symbol, 2)
-          })}
-        />
-        <LedgerRow
-          icon={<ArrowTrendingUpIcon className="h-5 w-5" />}
-          label={t("earn.summary.position.label")}
-          value={formatTokenAmount(position?.assetsEquivalent, decimals, symbol, 4)}
-          detail={t("earn.summary.position.detail")}
-        />
-        <LedgerRow
-          icon={<InformationCircleIcon className="h-5 w-5" />}
-          label={t("earn.summary.liquidity.label")}
-          value={formatPctFromBps(snapshot?.minLiquidityBps)}
-          detail={t("earn.summary.liquidity.detail", {
-            floor: formatBps(snapshot?.minLiquidityBps),
-            bank: shortHex(snapshot?.bank)
-          })}
-        />
-      </div>
+      {rows}
     </section>
   );
 }

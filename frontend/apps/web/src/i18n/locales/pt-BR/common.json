@@ -678,6 +678,21 @@
         "deposit": "Depositar ativos",
         "withdraw": "Sacar ativos",
         "redeem": "Resgatar cotas"
+      },
+      "balance": {
+        "wallet": "Saldo da carteira",
+        "withdrawable": "Disponível para sacar",
+        "redeemable": "Cotas resgatáveis",
+        "pending": "Carregando",
+        "useMax": "Máx."
+      },
+      "trace": {
+        "deposit": "Rastreamento de depósito",
+        "withdraw": "Rastreamento de saque",
+        "redeem": "Rastreamento de resgate",
+        "view": "Ver status da transação",
+        "close": "Fechar",
+        "statusDialog": "Status da transação do Bank"
       }
     },
     "risk": {

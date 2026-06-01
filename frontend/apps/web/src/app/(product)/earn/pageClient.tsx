@@ -92,12 +92,11 @@ export function EarnPageClient() {
   });
 
   const [tab, setTab] = React.useState<EarnTab>("deposit");
+  const [diligenceTab, setDiligenceTab] = React.useState<"reserve" | "risk">("reserve");
   const [amount, setAmount] = React.useState("");
-  const [formError, setFormError] = React.useState<string | undefined>();
 
   React.useEffect(() => {
     setAmount("");
-    setFormError(undefined);
   }, [tab, asset]);
 
   const depositFlow = useSequencedTxAction({
@@ -186,39 +185,55 @@ export function EarnPageClient() {
     }
   });
 
-  const maxActionAmount = tab === "withdraw" ? maxWithdraw : tab === "redeem" ? maxRedeem : null;
-  const maxLabel =
+  const { data: walletBalance = null } = useQuery({
+    queryKey: ["ssot", "earn", "walletBalance", chainId, asset, sdk?.account],
+    enabled: Boolean(sdk?.account && assetMeta && ready),
+    queryFn: async () => {
+      if (!sdk?.account) return null;
+      return sdk.bank.getAssetBalance(asset, sdk.account);
+    },
+    refetchInterval: 5_000
+  });
+
+  const maxActionAmount =
+    tab === "deposit" ? walletBalance : tab === "withdraw" ? maxWithdraw : maxRedeem;
+  const availableUnit = tab === "redeem" ? t("earn.units.sharesLower") : symbol;
+  const availableLabel =
     tab === "deposit"
-      ? t("earn.actions.max.walletBalance")
-      : maxActionAmount == null
-        ? t("earn.actions.max.pending")
-        : t("earn.actions.max.value", {
-            amount: formatTokenAmount(
-              maxActionAmount,
-              decimals,
-              tab === "redeem" ? t("earn.units.sharesLower") : symbol,
-              2
-            )
-          });
+      ? t("earn.actions.balance.wallet")
+      : tab === "withdraw"
+        ? t("earn.actions.balance.withdrawable")
+        : t("earn.actions.balance.redeemable");
+  const availableValue =
+    maxActionAmount == null
+      ? t("earn.actions.balance.pending")
+      : formatTokenAmount(maxActionAmount, decimals, availableUnit, 4);
 
   const handleUseMax = React.useCallback(() => {
+    if (tab === "deposit" && walletBalance != null) setAmount(formatUnits(walletBalance, decimals));
     if (tab === "withdraw" && maxWithdraw != null) setAmount(formatUnits(maxWithdraw, decimals));
     if (tab === "redeem" && maxRedeem != null) setAmount(formatUnits(maxRedeem, decimals));
-  }, [decimals, maxRedeem, maxWithdraw, tab]);
+  }, [decimals, maxRedeem, maxWithdraw, tab, walletBalance]);
 
   const handleSubmit = React.useCallback(async () => {
-    if (!sdk?.account || readOnly) return;
-    setFormError(undefined);
+    if (!sdk?.account) {
+      toast.error(t("earn.actions.connectWallet"));
+      return;
+    }
+    if (readOnly) {
+      toast.error(t("earn.actions.readOnly"));
+      return;
+    }
 
     if (!writesSupportedForSelectedAsset || !poolId) {
-      setFormError(t("earn.errors.unsupportedWriteAsset"));
+      toast.error(t("earn.errors.unsupportedWriteAsset"));
       return;
     }
 
     try {
       const parsed = parseDecimalToUnits(amount, decimals);
       if (parsed <= 0n) {
-        setFormError(t("earn.errors.positiveAmount"));
+        toast.error(t("earn.errors.positiveAmount"));
         return;
       }
 
@@ -233,6 +248,7 @@ export function EarnPageClient() {
 
       if (!result.ok) {
         toast.dismiss(toastId);
+        toast.error(result.error?.message ?? t("earn.toast.failed"));
         return;
       }
 
@@ -310,19 +326,58 @@ export function EarnPageClient() {
         <BankrollPerformancePanel vaultAssets={snapshot?.totalAssets} />
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_400px] xl:items-start">
           <div className="space-y-6">
-            <EarnBankSummary
-              data={bankData}
-              decimals={decimals}
-              symbol={symbol}
-              loading={isLoading}
-              error={(loadError as Error | undefined)?.message}
-            />
-            <EarnRiskPanel
-              data={bankData}
-              decimals={decimals}
-              symbol={symbol}
-              releaseDigest={release.releaseDigest}
-            />
+            <section className="rounded-md border border-border bg-surface-1 shadow-e2">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
+                <div className="grid grid-cols-2 gap-1 rounded-md border border-border-soft bg-surface-0 p-1">
+                  {[
+                    {
+                      key: "reserve" as const,
+                      label: t("earn.summary.capitalPosture.title")
+                    },
+                    {
+                      key: "risk" as const,
+                      label: t("earn.risk.title")
+                    }
+                  ].map((item) => (
+                    <button
+                      key={item.key}
+                      type="button"
+                      onClick={() => setDiligenceTab(item.key)}
+                      className={`rounded-sm px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] transition ${
+                        diligenceTab === item.key
+                          ? "bg-brand text-fg-inverse"
+                          : "text-fg-muted hover:bg-surface-2 hover:text-fg"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+                <span className="rounded-full border border-success/30 bg-success-soft px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-success">
+                  {diligenceTab === "reserve"
+                    ? t("earn.summary.capitalPosture.readModel")
+                    : t("earn.risk.readModel")}
+                </span>
+              </div>
+              {diligenceTab === "reserve" ? (
+                <EarnBankSummary
+                  data={bankData}
+                  decimals={decimals}
+                  symbol={symbol}
+                  loading={isLoading}
+                  error={(loadError as Error | undefined)?.message}
+                  embedded
+                />
+              ) : (
+                <EarnRiskPanel
+                  data={bankData}
+                  decimals={decimals}
+                  symbol={symbol}
+                  releaseDigest={release.releaseDigest}
+                  embedded
+                />
+              )}
+            </section>
           </div>
           <EarnActionPanel
             tab={tab}
@@ -338,8 +393,9 @@ export function EarnPageClient() {
             }
             readOnly={readOnly}
             unsupportedAsset={!writesSupportedForSelectedAsset}
-            formError={formError}
-            maxLabel={maxLabel}
+            availableLabel={availableLabel}
+            availableValue={availableValue}
+            canUseMax={maxActionAmount != null && maxActionAmount > 0n && !flow.busy}
             onUseMax={handleUseMax}
             flow={flow}
             explorerBaseUrl={explorerBaseUrl}

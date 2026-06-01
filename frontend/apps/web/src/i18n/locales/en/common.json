@@ -2690,6 +2690,13 @@
         "pending": "Max pending",
         "value": "Max {amount}"
       },
+      "balance": {
+        "wallet": "Wallet balance",
+        "withdrawable": "Available to withdraw",
+        "redeemable": "Redeemable shares",
+        "pending": "Pending",
+        "useMax": "Max"
+      },
       "submit": {
         "executing": "Executing",
         "deposit": "Deposit assets",
@@ -2699,7 +2706,10 @@
       "trace": {
         "deposit": "Deposit trace",
         "withdraw": "Withdraw trace",
-        "redeem": "Redeem trace"
+        "redeem": "Redeem trace",
+        "view": "View transaction status",
+        "close": "Close",
+        "statusDialog": "Bank transaction status"
       }
     },
     "flows": {
