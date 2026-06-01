@@ -30,7 +30,6 @@ import {
   formatHouseEdge
 } from "../../../../features/casino/room/presentation";
 import { GameRoomBetPanel } from "../../../../features/casino/room/bet-panel";
-import { PlaceBetButton } from "../../../../features/casino/room/place-bet-button";
 import { useGameWalletBalance, useKenoStrobeSpots } from "../../../../features/casino/room/hooks";
 import {
   useGameResolutionEffect,
@@ -41,6 +40,7 @@ import {
 import { readCasinoOutcome, type CasinoOutcome } from "../../../../features/casino/room/outcome";
 import { GameRoomRightPane } from "../../../../features/casino/room/right-pane";
 import { GameRoomShell } from "../../../../features/casino/room/game-room-shell";
+import { MobileCasinoActionBar } from "../../../../features/casino/room/mobile-action-bar";
 import { useCasinoRound } from "../../../../features/casino/room/use-casino-round";
 import { normalizeReferralAddress } from "../../../../features/referral/referral-link";
 
@@ -85,48 +85,6 @@ const GameRoomAuditLedger = dynamic(
     ssr: false
   }
 );
-
-function MobileCasinoActionBar({
-  game,
-  betAmount,
-  hasAccount,
-  isPending,
-  winChance,
-  state,
-  onPlaceBet
-}: {
-  game: GameMeta;
-  betAmount: number;
-  hasAccount: boolean;
-  isPending: boolean;
-  winChance: number;
-  state: React.ComponentProps<typeof PlaceBetButton>["state"];
-  onPlaceBet: () => void;
-}) {
-  const t = useTranslations();
-
-  return (
-    <div className="grid grid-cols-[minmax(0,1fr)_minmax(9rem,44%)] items-center gap-3">
-      <div className="min-w-0">
-        <p className="truncate text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-subtle">
-          {t("casino.room.betPanel.amount.label")}
-        </p>
-        <p className="truncate font-mono text-base font-semibold text-fg">
-          {betAmount.toFixed(2)} USDC
-        </p>
-      </div>
-      <PlaceBetButton
-        gameSlug={game.slug}
-        hasAccount={hasAccount}
-        isPending={isPending}
-        winChance={winChance}
-        state={state}
-        onClick={onPlaceBet}
-        density="compact"
-      />
-    </div>
-  );
-}
 
 export function getCasinoRoomPendingStates({
   isLocalPending,
