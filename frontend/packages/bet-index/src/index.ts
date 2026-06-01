@@ -87,6 +87,26 @@ export type SportsTicketIndexEvent = {
   args: Record<string, unknown>;
 };
 
+export type BankProviderLedgerAction = "deposit" | "withdraw";
+
+export type BankProviderLedgerRow = {
+  id: string;
+  chainId: number;
+  poolId: string;
+  owner: Address;
+  bank: Address;
+  asset: Address;
+  action: BankProviderLedgerAction;
+  txHash: Hex;
+  blockNumber: number;
+  logIndex: number;
+  timestamp?: number;
+  assets?: string;
+  shares: string;
+  sharePrice?: string;
+  updatedAt: number;
+};
+
 export type BetIndexQuery = {
   chainId: number;
   limit: number;
@@ -99,6 +119,15 @@ export type SportsTicketIndexQuery = {
   chainId: number;
   limit: number;
   player?: Address;
+};
+
+export type BankProviderLedgerQuery = {
+  chainId: number;
+  limit: number;
+  owner: Address;
+  poolId: number | string;
+  beforeBlock?: number;
+  beforeLogIndex?: number;
 };
 
 export type BetIndexAffiliateStats = {
@@ -188,6 +217,9 @@ export type BetIndexStore = {
   migrate: () => Promise<void>;
   writeGameHubEvents: (events: readonly BetIndexEvent[]) => Promise<BetRow[]>;
   writeSportsHubEvents: (events: readonly SportsTicketIndexEvent[]) => Promise<SportsTicketRow[]>;
+  writeBankProviderLedgerRows: (
+    rows: readonly BankProviderLedgerRow[]
+  ) => Promise<BankProviderLedgerRow[]>;
   getRecentBets: (query: BetIndexQuery) => Promise<BetRow[]>;
   getPlayerBets: (
     query: Required<Pick<BetIndexQuery, "chainId" | "limit" | "player">>
@@ -195,6 +227,7 @@ export type BetIndexStore = {
   getPlayerSportsTickets: (
     query: Required<Pick<SportsTicketIndexQuery, "chainId" | "limit" | "player">>
   ) => Promise<SportsTicketRow[]>;
+  getBankProviderLedger: (query: BankProviderLedgerQuery) => Promise<BankProviderLedgerRow[]>;
   getHeldSportsTicketIdsByMarket: (query: {
     chainId: number;
     limit: number;
@@ -393,6 +426,42 @@ create index if not exists sport_tickets_market_idx
 create index if not exists sport_tickets_market_state_idx
   on sport_tickets (chain_id, market_id, state, updated_block desc, ticket_id desc);
 
+create table if not exists bank_provider_ledger (
+  chain_id integer not null,
+  pool_id text not null,
+  owner text not null,
+  bank text not null,
+  asset text not null,
+  action text not null,
+  tx_hash text not null,
+  block_number bigint not null,
+  log_index integer not null,
+  timestamp timestamptz,
+  asset_amount text,
+  share_amount text not null,
+  share_price text,
+  updated_at timestamptz not null default now(),
+  primary key (chain_id, tx_hash, log_index)
+);
+
+alter table bank_provider_ledger add column if not exists pool_id text;
+alter table bank_provider_ledger add column if not exists owner text;
+alter table bank_provider_ledger add column if not exists bank text;
+alter table bank_provider_ledger add column if not exists asset text;
+alter table bank_provider_ledger add column if not exists action text;
+alter table bank_provider_ledger add column if not exists block_number bigint;
+alter table bank_provider_ledger add column if not exists timestamp timestamptz;
+alter table bank_provider_ledger add column if not exists asset_amount text;
+alter table bank_provider_ledger add column if not exists share_amount text;
+alter table bank_provider_ledger add column if not exists share_price text;
+alter table bank_provider_ledger add column if not exists updated_at timestamptz;
+
+create index if not exists bank_provider_ledger_owner_idx
+  on bank_provider_ledger (chain_id, pool_id, owner, block_number desc, log_index desc);
+
+create index if not exists bank_provider_ledger_bank_idx
+  on bank_provider_ledger (chain_id, bank, block_number desc, log_index desc);
+
 create table if not exists indexer_cursors (
   chain_id integer not null,
   source text not null,
@@ -412,6 +481,7 @@ export type PostgresBetIndexConfig = {
 export function createMemoryBetIndexStore(): BetIndexStore {
   const bets = new Map<string, BetRow>();
   const sportsTickets = new Map<string, SportsTicketRow>();
+  const bankProviderLedger = new Map<string, BankProviderLedgerRow>();
   const cursors = new Map<string, bigint>();
 
   const writeGameHubEvents = async (input: readonly BetIndexEvent[]) => {
@@ -444,11 +514,25 @@ export function createMemoryBetIndexStore(): BetIndexStore {
     }
     return [...changed.values()];
   };
+  const writeBankProviderLedgerRows = async (input: readonly BankProviderLedgerRow[]) => {
+    for (const row of input) {
+      bankProviderLedger.set(bankProviderLedgerId(row.chainId, row.txHash, row.logIndex), {
+        ...row,
+        asset: row.asset.toLowerCase() as Address,
+        bank: row.bank.toLowerCase() as Address,
+        owner: row.owner.toLowerCase() as Address,
+        poolId: String(row.poolId),
+        txHash: row.txHash.toLowerCase() as Hex
+      });
+    }
+    return [...input];
+  };
 
   return {
     migrate: async () => undefined,
     writeGameHubEvents,
     writeSportsHubEvents,
+    writeBankProviderLedgerRows,
     getRecentBets: async ({ chainId, gameId, limit }) =>
       [...bets.values()]
         .filter((row) => row.chainId === chainId)
@@ -466,6 +550,14 @@ export function createMemoryBetIndexStore(): BetIndexStore {
         .filter((row) => row.chainId === chainId)
         .filter((row) => row.player?.toLowerCase() === player.toLowerCase())
         .sort(compareSportsTicketRows)
+        .slice(0, limit),
+    getBankProviderLedger: async ({ beforeBlock, beforeLogIndex, chainId, limit, owner, poolId }) =>
+      [...bankProviderLedger.values()]
+        .filter((row) => row.chainId === chainId)
+        .filter((row) => row.poolId === String(poolId))
+        .filter((row) => row.owner.toLowerCase() === owner.toLowerCase())
+        .filter((row) => isBankProviderLedgerBeforeCursor(row, beforeBlock, beforeLogIndex))
+        .sort(compareBankProviderLedgerRows)
         .slice(0, limit),
     getHeldSportsTicketIdsByMarket: async ({ chainId, limit, marketId }) =>
       [...sportsTickets.values()]
@@ -760,6 +852,47 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
       });
       return rows;
     },
+    writeBankProviderLedgerRows: async (rows: readonly BankProviderLedgerRow[]) => {
+      if (rows.length === 0) return [];
+      await sql.begin(async (tx) => {
+        for (const row of rows) {
+          await tx`
+            insert into bank_provider_ledger (
+              chain_id, pool_id, owner, bank, asset, action, tx_hash, block_number, log_index,
+              timestamp, asset_amount, share_amount, share_price, updated_at
+            ) values (
+              ${row.chainId},
+              ${String(row.poolId)},
+              ${row.owner.toLowerCase()},
+              ${row.bank.toLowerCase()},
+              ${row.asset.toLowerCase()},
+              ${row.action},
+              ${row.txHash.toLowerCase()},
+              ${row.blockNumber},
+              ${row.logIndex},
+              ${row.timestamp == null ? null : new Date(row.timestamp)},
+              ${row.assets ?? null},
+              ${row.shares},
+              ${row.sharePrice ?? null},
+              ${new Date(row.updatedAt)}
+            )
+            on conflict (chain_id, tx_hash, log_index) do update set
+              pool_id = excluded.pool_id,
+              owner = excluded.owner,
+              bank = excluded.bank,
+              asset = excluded.asset,
+              action = excluded.action,
+              block_number = excluded.block_number,
+              timestamp = excluded.timestamp,
+              asset_amount = excluded.asset_amount,
+              share_amount = excluded.share_amount,
+              share_price = excluded.share_price,
+              updated_at = excluded.updated_at
+          `;
+        }
+      });
+      return [...rows];
+    },
     getRecentBets: async ({ chainId, gameId, limit }) => {
       const rows = gameId
         ? await sql`
@@ -793,6 +926,34 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
         limit ${limit}
       `;
       return rows.map(sportsTicketRowFromDatabase).sort(compareSportsTicketRows);
+    },
+    getBankProviderLedger: async ({
+      beforeBlock,
+      beforeLogIndex,
+      chainId,
+      limit,
+      owner,
+      poolId
+    }) => {
+      const cursorFilter =
+        beforeBlock != null && beforeLogIndex != null
+          ? sql`
+              and (
+                block_number < ${beforeBlock}
+                or (block_number = ${beforeBlock} and log_index < ${beforeLogIndex})
+              )
+            `
+          : sql``;
+      const rows = await sql`
+        select * from bank_provider_ledger
+        where chain_id = ${chainId}
+          and pool_id = ${String(poolId)}
+          and owner = ${owner.toLowerCase()}
+          ${cursorFilter}
+        order by block_number desc, log_index desc
+        limit ${limit}
+      `;
+      return rows.map(bankProviderLedgerRowFromDatabase).sort(compareBankProviderLedgerRows);
     },
     getHeldSportsTicketIdsByMarket: async ({ chainId, limit, marketId }) => {
       const rows = await sql`
@@ -1102,6 +1263,21 @@ export function compareSportsTicketRows(a: SportsTicketRow, b: SportsTicketRow) 
   const bId = BigInt(b.ticketId);
   if (bId === aId) return 0;
   return bId > aId ? 1 : -1;
+}
+
+export function compareBankProviderLedgerRows(a: BankProviderLedgerRow, b: BankProviderLedgerRow) {
+  if (b.blockNumber !== a.blockNumber) return b.blockNumber - a.blockNumber;
+  return b.logIndex - a.logIndex;
+}
+
+function isBankProviderLedgerBeforeCursor(
+  row: BankProviderLedgerRow,
+  beforeBlock?: number,
+  beforeLogIndex?: number
+) {
+  if (beforeBlock == null || beforeLogIndex == null) return true;
+  if (row.blockNumber < beforeBlock) return true;
+  return row.blockNumber === beforeBlock && row.logIndex < beforeLogIndex;
 }
 
 export function foldSportsTicketIndexEvents(events: readonly SportsTicketIndexEvent[]) {
@@ -1587,6 +1763,29 @@ function sportsTicketRowFromDatabase(row: Record<string, unknown>): SportsTicket
   };
 }
 
+function bankProviderLedgerRowFromDatabase(row: Record<string, unknown>): BankProviderLedgerRow {
+  const chainId = Number(row.chainId);
+  const txHash = String(row.txHash).toLowerCase() as Hex;
+  const logIndex = Number(row.logIndex);
+  return {
+    action: normalizeBankProviderLedgerAction(row.action),
+    asset: String(row.asset).toLowerCase() as Address,
+    assets: optionalString(row.assetAmount),
+    bank: String(row.bank).toLowerCase() as Address,
+    blockNumber: Number(row.blockNumber),
+    chainId,
+    id: bankProviderLedgerId(chainId, txHash, logIndex),
+    logIndex,
+    owner: String(row.owner).toLowerCase() as Address,
+    poolId: String(row.poolId),
+    sharePrice: optionalString(row.sharePrice),
+    shares: String(row.shareAmount ?? "0"),
+    timestamp: optionalDateMs(row.timestamp),
+    txHash,
+    updatedAt: row.updatedAt instanceof Date ? row.updatedAt.getTime() : Date.now()
+  };
+}
+
 function optionalString(value: unknown) {
   return typeof value === "string" && value.length > 0 ? value : undefined;
 }
@@ -1622,6 +1821,10 @@ function normalizeSportsTicketState(value: unknown): SportsTicketLifecycleState 
   return "held";
 }
 
+function normalizeBankProviderLedgerAction(value: unknown): BankProviderLedgerAction {
+  return value === "withdraw" ? "withdraw" : "deposit";
+}
+
 function toBigintString(v: unknown): string {
   if (typeof v === "bigint") return v.toString();
   if (typeof v === "number") return BigInt(v).toString();
@@ -1640,4 +1843,8 @@ function toBigintString(v: unknown): string {
 
 function cursorId(chainId: number, source: string, cursorKey: string) {
   return `${chainId}:${source}:${cursorKey.toLowerCase()}`;
+}
+
+function bankProviderLedgerId(chainId: number, txHash: Hex, logIndex: number) {
+  return `${chainId}:bank-provider:${txHash.toLowerCase()}:${logIndex}`;
 }

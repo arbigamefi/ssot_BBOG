@@ -14,6 +14,10 @@ import {
 } from "@ssot/bet-index";
 
 import { GAME_HUB_KEEPER_ABI } from "./abi.js";
+import {
+  fetchBankProviderLedgerRows,
+  type BankProviderLedgerPool
+} from "./bank-provider-ledger.js";
 import { loadRelease } from "./env.js";
 import { logger } from "./logger.js";
 import { splitBlockRange } from "./scan.js";
@@ -30,6 +34,7 @@ type BackfillConfig = {
   confirmations: bigint;
   scanChunkBlocks: bigint;
   releasePath: string;
+  bankProviderLedgerPools: BankProviderLedgerPool[];
 };
 
 const GAME_HUB_INDEX_EVENTS = [
@@ -89,6 +94,14 @@ export function loadBackfillConfig(env: NodeJS.ProcessEnv = process.env): Backfi
 
   const releaseBlock = BigInt(release.meta?.blockNumber ?? 0);
   return {
+    bankProviderLedgerPools: (release.pools ?? [])
+      .filter((pool) => pool.active !== false)
+      .map((pool) => ({
+        asset: getAddress(pool.asset),
+        bank: getAddress(pool.bank),
+        decimals: pool.decimals ?? 6,
+        poolId: pool.poolId
+      })),
     chainId,
     databaseSsl: parseBool(env.BET_INDEX_SSL),
     databaseUrl,
@@ -164,6 +177,7 @@ export async function runBetIndexBackfill({
 
     let eventCount = 0;
     let rowCount = 0;
+    let bankProviderLedgerRowCount = 0;
     for (const chunk of splitBlockRange({
       fromBlock: range.fromBlock,
       toBlock: range.toBlock,
@@ -192,6 +206,15 @@ export async function runBetIndexBackfill({
         eventCount += events.length;
         rowCount += (await indexStore.writeGameHubEvents(events)).length;
       }
+      for (const pool of config.bankProviderLedgerPools) {
+        const rows = await fetchBankProviderLedgerRows({
+          chainId: config.chainId,
+          pool,
+          publicClient,
+          range: chunk
+        });
+        bankProviderLedgerRowCount += (await indexStore.writeBankProviderLedgerRows(rows)).length;
+      }
       await indexStore.setCursor({
         blockNumber: chunk.toBlock,
         chainId: config.chainId,
@@ -205,6 +228,7 @@ export async function runBetIndexBackfill({
       chainId: config.chainId,
       dryRun: config.dryRun,
       eventCount,
+      bankProviderLedgerRowCount,
       fromBlock: range.fromBlock.toString(),
       gameHub: config.gameHub,
       recent,

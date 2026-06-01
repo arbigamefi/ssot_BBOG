@@ -3,7 +3,7 @@ import { useTranslations } from "next-intl";
 import { AssetSelector, type AssetOption, type TxStepItem, type TxStatus } from "@ssot/ui";
 import type { DomainError } from "@ssot/ssot";
 
-import type { EarnTab } from "./types";
+import type { EarnAmountMode, EarnTab } from "./types";
 
 const TABS: Array<{ key: EarnTab; label: string; description: string }> = [
   {
@@ -15,12 +15,12 @@ const TABS: Array<{ key: EarnTab; label: string; description: string }> = [
     key: "withdraw",
     label: "earn.actions.tabs.withdraw.label",
     description: "earn.actions.tabs.withdraw.description"
-  },
-  {
-    key: "redeem",
-    label: "earn.actions.tabs.redeem.label",
-    description: "earn.actions.tabs.redeem.description"
   }
+];
+
+const AMOUNT_MODES: Array<{ key: EarnAmountMode; label: string }> = [
+  { key: "assets", label: "earn.actions.amountMode.assets" },
+  { key: "shares", label: "earn.actions.amountMode.shares" }
 ];
 
 export type EarnFlowState = {
@@ -37,6 +37,8 @@ export type EarnFlowState = {
 export function EarnActionPanel({
   tab,
   onTabChange,
+  amountMode,
+  onAmountModeChange,
   assets,
   asset,
   onAssetChange,
@@ -56,6 +58,8 @@ export function EarnActionPanel({
 }: {
   tab: EarnTab;
   onTabChange: (tab: EarnTab) => void;
+  amountMode: EarnAmountMode;
+  onAmountModeChange: (mode: EarnAmountMode) => void;
   assets: readonly AssetOption[];
   asset: `0x${string}`;
   onAssetChange: (asset: `0x${string}`) => void;
@@ -86,7 +90,7 @@ export function EarnActionPanel({
       </div>
 
       <div className="grid gap-5 p-5">
-        <div className="grid grid-cols-3 gap-2 rounded-md border border-border bg-surface-0 p-1">
+        <div className="grid grid-cols-2 gap-2 rounded-md border border-border bg-surface-0 p-1">
           {TABS.map((item) => (
             <button
               key={item.key}
@@ -106,6 +110,29 @@ export function EarnActionPanel({
         <p className="text-sm leading-6 text-fg-muted">
           {activeTab ? t(activeTab.description) : ""}
         </p>
+
+        <div className="grid gap-2">
+          <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
+            {t("earn.actions.amountMode.label")}
+          </div>
+          <div className="grid grid-cols-2 gap-2 rounded-md border border-border bg-surface-0 p-1">
+            {AMOUNT_MODES.map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => onAmountModeChange(item.key)}
+                disabled={flow.busy}
+                className={`rounded-sm px-3 py-2.5 text-xs font-bold uppercase tracking-[0.12em] transition ${
+                  amountMode === item.key
+                    ? "bg-surface-2 text-fg"
+                    : "text-fg-muted hover:bg-surface-2 hover:text-fg"
+                } disabled:cursor-not-allowed disabled:opacity-60`}
+              >
+                {t(item.label)}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <AssetSelector
           title={t("earn.actions.asset")}
@@ -152,7 +179,7 @@ export function EarnActionPanel({
               className="w-full bg-transparent font-mono text-3xl font-bold text-fg outline-none placeholder:text-fg-subtle"
             />
             <span className="text-sm font-bold uppercase tracking-[0.12em] text-fg-muted">
-              {tab === "redeem" ? t("earn.units.shares") : symbol}
+              {amountMode === "shares" ? t("earn.units.shares") : symbol}
             </span>
           </div>
         </div>
@@ -178,10 +205,12 @@ export function EarnActionPanel({
           {flow.busy
             ? t("earn.actions.submit.executing")
             : tab === "deposit"
-              ? t("earn.actions.submit.deposit")
-              : tab === "withdraw"
-                ? t("earn.actions.submit.withdraw")
-                : t("earn.actions.submit.redeem")}
+              ? amountMode === "shares"
+                ? t("earn.actions.submit.mint")
+                : t("earn.actions.submit.deposit")
+              : amountMode === "shares"
+                ? t("earn.actions.submit.redeem")
+                : t("earn.actions.submit.withdraw")}
         </button>
       </div>
     </section>

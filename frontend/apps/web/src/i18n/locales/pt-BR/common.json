@@ -594,17 +594,23 @@
       "positiveAmount": "O valor deve ser positivo.",
       "primaryAssetOnly": "Fluxos de escrita atualmente aceitam apenas o ativo principal.",
       "insufficientWalletBalance": "O valor excede o saldo da carteira conectada.",
+      "exceedsMintable": "A quantidade de cotas excede o que pode ser emitido com o saldo da carteira conectada.",
       "exceedsWithdrawable": "O valor excede o saldo atualmente sacável.",
       "exceedsRedeemable": "O valor excede as cotas atualmente resgatáveis.",
       "allowanceNotConfirmed": "A aprovação foi confirmada, mas a allowance do Bank ainda não atualizou. Tente depositar novamente em alguns segundos."
     },
     "toast": {
       "processing": "Processando transação do Bank...",
+      "minted": "Emitiu {amount} cotas",
       "redeemed": "Resgatou {amount} cotas",
       "deposited": "Depositou {amount} {symbol}",
       "withdrew": "Sacou {amount} {symbol}",
       "viewTransaction": "Ver transação",
       "failed": "Falha na transação"
+    },
+    "units": {
+      "shares": "Cotas",
+      "sharesLower": "cotas"
     },
     "format": {
       "assetFallback": "Ativo"
@@ -685,21 +691,29 @@
         },
         "withdraw": {
           "label": "Sacar",
-          "description": "Saque os ativos disponíveis."
-        },
-        "redeem": {
-          "label": "Resgatar",
-          "description": "Resgate cotas do banco por ativos."
+          "description": "Saia informando um valor em ativos ou uma quantidade de cotas."
         }
+      },
+      "amountMode": {
+        "label": "Modo de entrada",
+        "assets": "Por ativos",
+        "shares": "Por cotas"
+      },
+      "max": {
+        "walletBalance": "Saldo da carteira",
+        "pending": "Máximo carregando",
+        "value": "Máx. {amount}"
       },
       "submit": {
         "executing": "Executando",
         "deposit": "Depositar ativos",
+        "mint": "Emitir cotas",
         "withdraw": "Sacar ativos",
         "redeem": "Resgatar cotas"
       },
       "balance": {
         "wallet": "Saldo da carteira",
+        "mintable": "Cotas disponíveis para emitir",
         "withdrawable": "Disponível para sacar",
         "redeemable": "Cotas resgatáveis",
         "pending": "Carregando",
@@ -713,6 +727,44 @@
         "close": "Fechar",
         "statusDialog": "Status da transação do Bank"
       }
+    },
+    "flows": {
+      "preflight": {
+        "title": "Pré-verificação"
+      },
+      "deposit": {
+        "preflight": "Valide os dados e simule o fluxo.",
+        "approveTitle": "Aprovar Bank",
+        "approveDescription": "Define a allowance ERC20.",
+        "depositTitle": "Depositar ativos",
+        "depositDescription": "Envia Bank.deposit."
+      },
+      "mint": {
+        "preflight": "Valide a quantidade de cotas e os ativos necessários.",
+        "mintTitle": "Emitir cotas",
+        "mintDescription": "Envia Bank.mint."
+      },
+      "direct": {
+        "submit": "Enviar",
+        "confirm": "Confirmar",
+        "validate": "Validar restrições.",
+        "receipt": "Aguardar recibo."
+      },
+      "withdraw": {
+        "submit": "Envia Bank.withdraw."
+      },
+      "redeem": {
+        "submit": "Envia Bank.redeem."
+      }
+    },
+    "trace": {
+      "waiting": "Aguardando intenção de transação.",
+      "error": "Erro de transação",
+      "subtitle": "Estado de assinatura, envio e recibo.",
+      "status": "Status",
+      "viewExplorer": "Ver explorer",
+      "block": "Bloco {blockNumber}",
+      "reset": "Redefinir trace"
     },
     "risk": {
       "title": "Verificações de risco",
@@ -767,6 +819,39 @@
       "equityTitle": "Resultado acumulado do cofre",
       "peak": "Pico",
       "trough": "Vale"
+    },
+    "ledger": {
+      "eyebrow": "Livro do provedor",
+      "title": "Depósitos e saques",
+      "readModel": "reconstruído no servidor",
+      "connectWallet": "Conecte uma carteira para ver seu histórico como provedor do Bank.",
+      "loading": "Carregando livro do provedor…",
+      "loadingMore": "Carregando mais…",
+      "loadMore": "Carregar mais",
+      "loadedRows": "{count} linhas carregadas",
+      "end": "Fim do livro",
+      "empty": "Nenhum depósito ou saque encontrado para esta carteira.",
+      "note": "As linhas são reconstruídas a partir dos mints/burns de cotas do Bank e da transferência de ativo correspondente na mesma transação. O preço da cota é o valor do ativo da transação dividido pela quantidade de cotas, não o preço atual.",
+      "block": "Bloco {blockNumber}",
+      "actions": {
+        "deposit": "Depósito",
+        "withdraw": "Saque"
+      },
+      "summary": {
+        "deposited": "Depósitos carregados",
+        "withdrawn": "Saques carregados",
+        "openValue": "Valor aberto",
+        "netPnl": "P&L carregado",
+        "shares": "Cotas"
+      },
+      "columns": {
+        "type": "Tipo",
+        "time": "Hora",
+        "assets": "Ativos",
+        "shares": "Cotas",
+        "sharePrice": "Preço da cota",
+        "tx": "Tx"
+      }
     }
   },
   "casino": {

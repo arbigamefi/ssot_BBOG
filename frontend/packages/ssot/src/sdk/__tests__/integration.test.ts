@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { getAddress, type Address, type Hex } from "viem";
+import { encodeAbiParameters, encodeEventTopics, getAddress, type Address, type Hex } from "viem";
 import { createSSOTSDK, type SSOTSDK } from "../create";
 import type { SSOTRelease } from "../../release/schema";
 import type { JournalSink, TxJournalEntry } from "../txPipeline";
@@ -20,6 +20,15 @@ const SPORTS_RISK_HASH =
   "0x0707ba776912152fe0028608c2b31e2ac864f24ed79351eaa10ea012303793e6" as Hex;
 const ODDS_TICKET_HASH = "0x9999ba776912152fe0028608c2b31e2ac864f24ed79351eaa10ea0123037999" as Hex;
 const SPORTS_SIGNATURE = `0x${"11".repeat(65)}` as Hex;
+const TRANSFER_EVENT = {
+  type: "event",
+  name: "Transfer",
+  inputs: [
+    { name: "from", type: "address", indexed: true },
+    { name: "to", type: "address", indexed: true },
+    { name: "amount", type: "uint256", indexed: false }
+  ]
+} as const;
 
 const TEST_RELEASE: SSOTRelease = {
   chainId: 84532,
@@ -114,8 +123,10 @@ const RECEIPT = { blockNumber: 100n, status: "success" as const, logs: [] };
 
 function mockPublicClient(overrides?: Record<string, any>) {
   return {
+    getBlock: vi.fn().mockResolvedValue({ timestamp: 1_700_000_000n }),
     getContractEvents: vi.fn().mockResolvedValue([]),
     getBlockNumber: vi.fn().mockResolvedValue(130n),
+    getLogs: vi.fn().mockResolvedValue([]),
     getTransactionReceipt: vi.fn().mockResolvedValue(RECEIPT),
     readContract: vi.fn().mockResolvedValue(0n),
     simulateContract: vi.fn().mockResolvedValue({ request: { mock: true } }),
@@ -213,6 +224,66 @@ describe("createSSOTSDK", () => {
         args: [57_000_000n]
       })
     );
+  });
+
+  it("reconstructs provider deposits from Bank share mints and matching asset transfers", async () => {
+    const assetTransferLog = {
+      address: getAddress(ASSET),
+      data: encodeAbiParameters([{ type: "uint256" }], [5_000_000n]),
+      topics: encodeEventTopics({
+        abi: [TRANSFER_EVENT],
+        eventName: "Transfer",
+        args: { from: getAddress(ACCOUNT), to: getAddress(BANK) }
+      })
+    };
+    pub.getLogs
+      .mockResolvedValueOnce([
+        {
+          transactionHash: TX_HASH,
+          blockNumber: 120n,
+          logIndex: 7,
+          args: {
+            from: "0x0000000000000000000000000000000000000000",
+            to: ACCOUNT,
+            amount: 4_000_000n
+          }
+        }
+      ])
+      .mockResolvedValueOnce([]);
+    pub.getTransactionReceipt.mockResolvedValueOnce({
+      blockNumber: 120n,
+      status: "success",
+      logs: [assetTransferLog]
+    });
+    pub.getBlock.mockResolvedValueOnce({ timestamp: 1_700_000_123n });
+
+    const rows = await sdk.bank.getProviderLedger(1, ACCOUNT, { startBlock: 100, limit: 10 });
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toEqual(
+      expect.objectContaining({
+        action: "deposit",
+        assets: 5_000_000n,
+        shares: 4_000_000n,
+        sharePrice: 1_250_000n,
+        txHash: TX_HASH,
+        blockNumber: 120,
+        timestamp: 1_700_000_123_000
+      })
+    );
+  });
+
+  it("chunks provider ledger log scans below Base RPC range limits", async () => {
+    pub.getBlockNumber.mockResolvedValueOnce(5_000n);
+
+    await sdk.bank.getProviderLedger(1, ACCOUNT, { startBlock: 0, limit: 10 });
+
+    expect(pub.getLogs).toHaveBeenCalled();
+    for (const [params] of pub.getLogs.mock.calls) {
+      const fromBlock = BigInt(params.fromBlock);
+      const toBlock = BigInt(params.toBlock);
+      expect(toBlock - fromBlock).toBeLessThanOrEqual(1_900n);
+    }
   });
 
   it("does not read asset conversion when no shares are redeemable", async () => {

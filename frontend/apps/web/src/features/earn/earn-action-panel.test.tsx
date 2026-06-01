@@ -25,6 +25,8 @@ function renderPanel(flow: EarnFlowState) {
     <EarnActionPanel
       tab="deposit"
       onTabChange={vi.fn()}
+      amountMode="assets"
+      onAmountModeChange={vi.fn()}
       assets={[
         {
           address: "0x0000000000000000000000000000000000000001",

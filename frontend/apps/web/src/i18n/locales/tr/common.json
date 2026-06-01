@@ -594,17 +594,23 @@
       "positiveAmount": "Tutar pozitif olmalı.",
       "primaryAssetOnly": "Yazma akışları şu anda yalnızca birincil varlığı destekler.",
       "insufficientWalletBalance": "Tutar bağlı cüzdan bakiyesini aşıyor.",
+      "exceedsMintable": "Pay miktarı, bağlı cüzdan bakiyesiyle basılabilecek miktarı aşıyor.",
       "exceedsWithdrawable": "Tutar şu anda çekilebilir bakiyeyi aşıyor.",
       "exceedsRedeemable": "Tutar şu anda geri alınabilir payları aşıyor.",
       "allowanceNotConfirmed": "Onay doğrulandı, ancak Bank allowance henüz güncellenmedi. Birkaç saniye sonra yatırmayı tekrar deneyin."
     },
     "toast": {
       "processing": "Bank işlemi işleniyor...",
+      "minted": "{amount} pay basıldı",
       "redeemed": "{amount} pay itfa edildi",
       "deposited": "{amount} {symbol} yatırıldı",
       "withdrew": "{amount} {symbol} çekildi",
       "viewTransaction": "İşlemi görüntüle",
       "failed": "İşlem başarısız"
+    },
+    "units": {
+      "shares": "Paylar",
+      "sharesLower": "pay"
     },
     "format": {
       "assetFallback": "Varlık"
@@ -685,21 +691,29 @@
         },
         "withdraw": {
           "label": "Çek",
-          "description": "Mevcut varlıkları çekin."
-        },
-        "redeem": {
-          "label": "Geri al",
-          "description": "Banka paylarını varlıkla geri alın."
+          "description": "Varlık tutarı veya pay miktarı girerek çıkın."
         }
+      },
+      "amountMode": {
+        "label": "Giriş modu",
+        "assets": "Varlığa göre",
+        "shares": "Paya göre"
+      },
+      "max": {
+        "walletBalance": "Cüzdan bakiyesi",
+        "pending": "Maksimum yükleniyor",
+        "value": "Maks. {amount}"
       },
       "submit": {
         "executing": "Yürütülüyor",
         "deposit": "Varlık yatır",
+        "mint": "Pay bas",
         "withdraw": "Varlık çek",
         "redeem": "Payları geri al"
       },
       "balance": {
         "wallet": "Cüzdan bakiyesi",
+        "mintable": "Basılabilir pay",
         "withdrawable": "Çekilebilir",
         "redeemable": "Geri alınabilir pay",
         "pending": "Yükleniyor",
@@ -713,6 +727,44 @@
         "close": "Kapat",
         "statusDialog": "Bank işlem durumu"
       }
+    },
+    "flows": {
+      "preflight": {
+        "title": "Ön kontrol"
+      },
+      "deposit": {
+        "preflight": "Girdileri doğrula ve akışı simüle et.",
+        "approveTitle": "Bank onayı",
+        "approveDescription": "ERC20 allowance ayarla.",
+        "depositTitle": "Varlık yatır",
+        "depositDescription": "Bank.deposit gönder."
+      },
+      "mint": {
+        "preflight": "Pay miktarını ve gereken varlıkları doğrula.",
+        "mintTitle": "Pay bas",
+        "mintDescription": "Bank.mint gönder."
+      },
+      "direct": {
+        "submit": "Gönder",
+        "confirm": "Onayla",
+        "validate": "Kısıtları doğrula.",
+        "receipt": "Makbuzu bekle."
+      },
+      "withdraw": {
+        "submit": "Bank.withdraw gönder."
+      },
+      "redeem": {
+        "submit": "Bank.redeem gönder."
+      }
+    },
+    "trace": {
+      "waiting": "İşlem niyeti bekleniyor.",
+      "error": "İşlem hatası",
+      "subtitle": "Cüzdan imzası, yayın ve makbuz durumu.",
+      "status": "Durum",
+      "viewExplorer": "Explorer'da görüntüle",
+      "block": "Blok {blockNumber}",
+      "reset": "Trace'i sıfırla"
     },
     "risk": {
       "title": "Risk kontrolleri",
@@ -767,6 +819,39 @@
       "equityTitle": "Birikimli kasa K/Z",
       "peak": "Zirve",
       "trough": "Dip"
+    },
+    "ledger": {
+      "eyebrow": "Sağlayıcı defteri",
+      "title": "Yatırma ve çekme kayıtları",
+      "readModel": "sunucuda oluşturuldu",
+      "connectWallet": "Bank sağlayıcı defterinizi görmek için cüzdan bağlayın.",
+      "loading": "Sağlayıcı defteri yükleniyor…",
+      "loadingMore": "Daha fazlası yükleniyor…",
+      "loadMore": "Daha fazla yükle",
+      "loadedRows": "{count} satır yüklendi",
+      "end": "Defter sonu",
+      "empty": "Bu cüzdan için yatırma veya çekme kaydı bulunamadı.",
+      "note": "Satırlar Bank pay mint/burn Transfer kayıtları ve aynı işlemdeki eşleşen varlık Transfer kaydıyla yeniden oluşturulur. Pay fiyatı, işlemdeki varlık miktarı / pay miktarıdır; güncel pay fiyatı değildir.",
+      "block": "Blok {blockNumber}",
+      "actions": {
+        "deposit": "Yatırma",
+        "withdraw": "Çekme"
+      },
+      "summary": {
+        "deposited": "Yüklenen yatırmalar",
+        "withdrawn": "Yüklenen çekmeler",
+        "openValue": "Açık değer",
+        "netPnl": "Yüklenen net K/Z",
+        "shares": "Paylar"
+      },
+      "columns": {
+        "type": "Tür",
+        "time": "Zaman",
+        "assets": "Varlıklar",
+        "shares": "Paylar",
+        "sharePrice": "Pay fiyatı",
+        "tx": "Tx"
+      }
     }
   },
   "casino": {

@@ -20,6 +20,7 @@ import {
 } from "@ssot/bet-index";
 
 import { GAME_HUB_KEEPER_ABI, SPORTS_HUB_KEEPER_ABI, VRF_HUB_KEEPER_ABI } from "./abi.js";
+import { fetchBankProviderLedgerRows } from "./bank-provider-ledger.js";
 import { finalizeIfReady, retryDelayMs } from "./finalizer.js";
 import { createFileHealthSink, KeeperHealthReporter } from "./health.js";
 import { FinalizeQueue, type QueueItem } from "./queue.js";
@@ -862,6 +863,15 @@ async function writeBetIndexRange(
           .filter((event): event is SportsTicketIndexEvent => Boolean(event));
         await store.writeSportsHubEvents(events);
       }
+    }
+    for (const pool of config.bankProviderLedgerPools) {
+      const rows = await fetchBankProviderLedgerRows({
+        chainId: config.chainId,
+        pool,
+        publicClient,
+        range
+      });
+      await store.writeBankProviderLedgerRows(rows);
     }
     await store.setCursor({
       blockNumber: range.toBlock,

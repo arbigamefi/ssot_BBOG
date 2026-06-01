@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import type { Address, Hex } from "viem";
+import { getAddress } from "viem";
 import type { KeeperConfig, KeeperRole } from "./types.js";
 
 type ReleaseLike = {
@@ -9,6 +10,13 @@ type ReleaseLike = {
     sportsHub?: Address;
     vrfHub: Address;
   };
+  pools?: Array<{
+    active?: boolean;
+    asset: Address;
+    bank: Address;
+    decimals?: number;
+    poolId: number;
+  }>;
   meta?: {
     blockNumber?: number;
   };
@@ -73,6 +81,17 @@ function parseBigintList(value: string | undefined, name: string) {
     });
 }
 
+function resolveBankProviderLedgerPools(release: ReleaseLike) {
+  return (release.pools ?? [])
+    .filter((pool) => pool.active !== false)
+    .map((pool) => ({
+      asset: getAddress(pool.asset),
+      bank: getAddress(pool.bank),
+      decimals: pool.decimals ?? 6,
+      poolId: pool.poolId
+    }));
+}
+
 export function loadRelease(path: string): ReleaseLike {
   const raw = JSON.parse(readFileSync(path, "utf8")) as ReleaseLike;
   if (!raw.chainId || !raw.contracts?.gameHub || !raw.contracts?.vrfHub) {
@@ -108,6 +127,7 @@ export function loadKeeperConfig(env: NodeJS.ProcessEnv = process.env): KeeperCo
     betIndexDatabaseUrl: env.BET_INDEX_DATABASE_URL?.trim() || undefined,
     betIndexSsl: parseBool(env.BET_INDEX_SSL),
     betIndexWriteEnabled: parseBool(env.BET_INDEX_WRITE_ENABLED),
+    bankProviderLedgerPools: resolveBankProviderLedgerPools(release),
     sportsTerminalizerEnabled: parseBool(env.KEEPER_SPORTS_TERMINALIZER_ENABLED),
     sportsTerminalizerScanChunkBlocks: parseBlockCount(
       env.KEEPER_SPORTS_TERMINALIZER_SCAN_CHUNK_BLOCKS,

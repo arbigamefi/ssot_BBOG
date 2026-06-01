@@ -2599,6 +2599,7 @@
       "positiveAmount": "Amount must be positive.",
       "primaryAssetOnly": "Write flows currently support only the primary asset.",
       "insufficientWalletBalance": "Amount exceeds the connected wallet balance.",
+      "exceedsMintable": "Share amount exceeds the shares mintable from the connected wallet balance.",
       "exceedsWithdrawable": "Amount exceeds the currently withdrawable balance.",
       "exceedsRedeemable": "Amount exceeds the currently redeemable shares.",
       "allowanceNotConfirmed": "Approval is confirmed, but the Bank allowance has not updated yet. Retry deposit in a few seconds."
@@ -2682,12 +2683,13 @@
         },
         "withdraw": {
           "label": "Withdraw",
-          "description": "Withdraw available assets."
-        },
-        "redeem": {
-          "label": "Redeem",
-          "description": "Redeem bank shares for assets."
+          "description": "Exit by entering either an asset amount or a share amount."
         }
+      },
+      "amountMode": {
+        "label": "Input mode",
+        "assets": "By assets",
+        "shares": "By shares"
       },
       "max": {
         "walletBalance": "Wallet balance",
@@ -2696,6 +2698,7 @@
       },
       "balance": {
         "wallet": "Wallet balance",
+        "mintable": "Mintable shares",
         "withdrawable": "Available to withdraw",
         "redeemable": "Redeemable shares",
         "pending": "Pending",
@@ -2704,6 +2707,7 @@
       "submit": {
         "executing": "Executing",
         "deposit": "Deposit assets",
+        "mint": "Mint shares",
         "withdraw": "Withdraw assets",
         "redeem": "Redeem shares"
       },
@@ -2726,6 +2730,11 @@
         "approveDescription": "Set ERC20 allowance.",
         "depositTitle": "Deposit Assets",
         "depositDescription": "Broadcast Bank.deposit."
+      },
+      "mint": {
+        "preflight": "Validate share amount and required assets.",
+        "mintTitle": "Mint Shares",
+        "mintDescription": "Broadcast Bank.mint."
       },
       "direct": {
         "submit": "Submit",
@@ -2776,6 +2785,7 @@
     },
     "toast": {
       "processing": "Processing bank transaction...",
+      "minted": "Minted {amount} shares",
       "redeemed": "Redeemed {amount} shares",
       "deposited": "Deposited {amount} {symbol}",
       "withdrew": "Withdrew {amount} {symbol}",
@@ -2814,6 +2824,39 @@
       "equityTitle": "Cumulative house P&L",
       "peak": "Peak",
       "trough": "Trough"
+    },
+    "ledger": {
+      "eyebrow": "Provider ledger",
+      "title": "Deposits and withdrawals",
+      "readModel": "server reconstructed",
+      "connectWallet": "Connect a wallet to view your bank provider ledger.",
+      "loading": "Loading provider ledger…",
+      "loadingMore": "Loading more…",
+      "loadMore": "Load more",
+      "loadedRows": "{count} rows loaded",
+      "end": "End of ledger",
+      "empty": "No deposits or withdrawals found for this wallet.",
+      "note": "Rows are reconstructed from Bank share mint/burn transfers and the matching asset transfer in the same transaction. Share price is the transaction asset amount divided by the share amount, not the current share price.",
+      "block": "Block {blockNumber}",
+      "actions": {
+        "deposit": "Deposit",
+        "withdraw": "Withdraw"
+      },
+      "summary": {
+        "deposited": "Loaded deposits",
+        "withdrawn": "Loaded withdrawals",
+        "openValue": "Open value",
+        "netPnl": "Loaded net P&L",
+        "shares": "Shares"
+      },
+      "columns": {
+        "type": "Type",
+        "time": "Time",
+        "assets": "Assets",
+        "shares": "Shares",
+        "sharePrice": "Share price",
+        "tx": "Tx"
+      }
     }
   },
   "ops": {

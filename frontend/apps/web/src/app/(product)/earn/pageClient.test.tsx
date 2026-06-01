@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as React from "react";
@@ -54,6 +54,7 @@ vi.mock("next-intl", async () => {
   }
 
   return {
+    useLocale: () => "en",
     useTranslations: () => translate
   };
 });
@@ -120,6 +121,7 @@ vi.mock("../../../features/tx/useDirectTxAction", () => ({
 
 vi.mock("@ssot/ui", () => ({
   AssetSelector: ({ title }: any) => <div>{title}</div>,
+  cn: (...classes: unknown[]) => classes.filter(Boolean).join(" "),
   ErrorCallout: ({ title, message }: any) => (
     <div>
       <strong>{title}</strong>
@@ -155,8 +157,16 @@ function renderWithQueryClient(ui: React.ReactElement) {
 }
 
 describe("EarnPageClient", () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ rows: [] }), { status: 200 }))
+    );
+  });
+
   afterEach(() => {
     cleanup();
+    vi.unstubAllGlobals();
     state.release = {
       releaseDigest: "0x7ad0f2cb0000000000000000000000000000000000000000000000000000e1349f",
       assets: [

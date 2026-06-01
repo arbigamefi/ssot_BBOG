@@ -10,6 +10,7 @@ const AFFILIATE = "0x5555555555555555555555555555555555555555" as const;
 const GAME_HUB = "0x3333333333333333333333333333333333333333" as const;
 const ASSET = "0x4444444444444444444444444444444444444444" as const;
 const SPORTS_HUB = "0x6666666666666666666666666666666666666666" as const;
+const BANK = "0x7777777777777777777777777777777777777777" as const;
 
 describe("memory bet index store", () => {
   it("folds gamehub events and queries recent/player rows", async () => {
@@ -210,6 +211,100 @@ describe("memory bet index store", () => {
     await expect(
       store.getHeldSportsTicketIdsByMarket({ chainId: 84532, limit: 10, marketId: "6" })
     ).resolves.toEqual([12n]);
+  });
+
+  it("stores and queries bank provider ledger rows by owner and pool", async () => {
+    const store = createMemoryBetIndexStore();
+
+    await store.writeBankProviderLedgerRows([
+      {
+        action: "deposit",
+        asset: ASSET,
+        assets: "1000000",
+        bank: BANK,
+        blockNumber: 80,
+        chainId: 84532,
+        id: "custom-id-1",
+        logIndex: 1,
+        owner: PLAYER,
+        poolId: "1",
+        sharePrice: "1000000",
+        shares: "1000000",
+        timestamp: 1_700_000_000_000,
+        txHash: "0xabc",
+        updatedAt: 1_700_000_000_000
+      },
+      {
+        action: "withdraw",
+        asset: ASSET,
+        assets: "250000",
+        bank: BANK,
+        blockNumber: 82,
+        chainId: 84532,
+        id: "custom-id-2",
+        logIndex: 2,
+        owner: PLAYER,
+        poolId: "1",
+        sharePrice: "1250000",
+        shares: "200000",
+        timestamp: 1_700_000_001_000,
+        txHash: "0xdef",
+        updatedAt: 1_700_000_001_000
+      },
+      {
+        action: "deposit",
+        asset: ASSET,
+        bank: BANK,
+        blockNumber: 83,
+        chainId: 84532,
+        id: "other-pool",
+        logIndex: 1,
+        owner: PLAYER,
+        poolId: "2",
+        shares: "1",
+        txHash: "0xaaa",
+        updatedAt: 1_700_000_002_000
+      }
+    ]);
+
+    await expect(
+      store.getBankProviderLedger({ chainId: 84532, limit: 10, owner: PLAYER, poolId: 1 })
+    ).resolves.toMatchObject([
+      {
+        action: "withdraw",
+        assets: "250000",
+        blockNumber: 82,
+        poolId: "1",
+        sharePrice: "1250000",
+        shares: "200000"
+      },
+      {
+        action: "deposit",
+        assets: "1000000",
+        blockNumber: 80,
+        poolId: "1",
+        sharePrice: "1000000",
+        shares: "1000000"
+      }
+    ]);
+
+    await expect(
+      store.getBankProviderLedger({
+        beforeBlock: 82,
+        beforeLogIndex: 2,
+        chainId: 84532,
+        limit: 10,
+        owner: PLAYER,
+        poolId: 1
+      })
+    ).resolves.toMatchObject([
+      {
+        action: "deposit",
+        assets: "1000000",
+        blockNumber: 80,
+        poolId: "1"
+      }
+    ]);
   });
 
   it("preserves placed metadata when lifecycle events arrive in later writes", async () => {

@@ -2599,6 +2599,7 @@
       "positiveAmount": "金额必须大于 0。",
       "primaryAssetOnly": "当前写入流程仅支持主资产。",
       "insufficientWalletBalance": "金额超过当前钱包余额。",
+      "exceedsMintable": "Share 数量超过当前钱包余额可 mint 的份额。",
       "exceedsWithdrawable": "金额超过当前可取金额。",
       "exceedsRedeemable": "金额超过当前可赎回份额。",
       "allowanceNotConfirmed": "授权已确认，但 Bank allowance 还没有更新。请等待几秒后重试存入。"
@@ -2682,12 +2683,13 @@
         },
         "withdraw": {
           "label": "取出",
-          "description": "取出可用资产。"
-        },
-        "redeem": {
-          "label": "赎回",
-          "description": "将 Bank 份额赎回为资产。"
+          "description": "按资产数量或按 share 数量退出仓位。"
         }
+      },
+      "amountMode": {
+        "label": "输入方式",
+        "assets": "按资产",
+        "shares": "按 Share"
       },
       "max": {
         "walletBalance": "钱包余额",
@@ -2696,6 +2698,7 @@
       },
       "balance": {
         "wallet": "钱包余额",
+        "mintable": "可 mint 份额",
         "withdrawable": "可取金额",
         "redeemable": "可赎回份额",
         "pending": "读取中",
@@ -2704,6 +2707,7 @@
       "submit": {
         "executing": "执行中",
         "deposit": "存入资产",
+        "mint": "Mint 份额",
         "withdraw": "取出资产",
         "redeem": "赎回份额"
       },
@@ -2726,6 +2730,11 @@
         "approveDescription": "设置 ERC20 allowance。",
         "depositTitle": "存入资产",
         "depositDescription": "广播 Bank.deposit。"
+      },
+      "mint": {
+        "preflight": "校验 share 数量和所需资产。",
+        "mintTitle": "Mint 份额",
+        "mintDescription": "广播 Bank.mint。"
       },
       "direct": {
         "submit": "提交",
@@ -2776,6 +2785,7 @@
     },
     "toast": {
       "processing": "正在处理 Bank 交易...",
+      "minted": "已 mint {amount} 份额",
       "redeemed": "已赎回 {amount} 份额",
       "deposited": "已存入 {amount} {symbol}",
       "withdrew": "已取出 {amount} {symbol}",
@@ -2814,6 +2824,39 @@
       "equityTitle": "累计金库盈亏",
       "peak": "峰值",
       "trough": "谷值"
+    },
+    "ledger": {
+      "eyebrow": "出资人账本",
+      "title": "存款与取款记录",
+      "readModel": "服务端重建",
+      "connectWallet": "连接钱包后查看你的 Bank 出资记录。",
+      "loading": "正在加载出资人账本…",
+      "loadingMore": "正在加载更多…",
+      "loadMore": "加载更多",
+      "loadedRows": "已加载 {count} 条",
+      "end": "已到记录末尾",
+      "empty": "当前钱包还没有存款或取款记录。",
+      "note": "每一行从 Bank share 的 mint/burn Transfer 和同一笔交易里的资产 Transfer 还原。份额价格按该笔交易资产数量 / share 数量计算，不使用当前份额价格倒推。",
+      "block": "区块 {blockNumber}",
+      "actions": {
+        "deposit": "存入",
+        "withdraw": "取出"
+      },
+      "summary": {
+        "deposited": "已加载存入",
+        "withdrawn": "已加载取出",
+        "openValue": "当前价值",
+        "netPnl": "已加载净盈亏",
+        "shares": "份额"
+      },
+      "columns": {
+        "type": "类型",
+        "time": "时间",
+        "assets": "资产数量",
+        "shares": "Share 数量",
+        "sharePrice": "Share 价格",
+        "tx": "交易"
+      }
     }
   },
   "ops": {

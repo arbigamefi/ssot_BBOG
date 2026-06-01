@@ -594,17 +594,23 @@
       "positiveAmount": "Сумма должна быть положительной.",
       "primaryAssetOnly": "Операции записи сейчас поддерживают только основной актив.",
       "insufficientWalletBalance": "Сумма превышает баланс подключённого кошелька.",
+      "exceedsMintable": "Количество долей превышает то, что можно выпустить с текущим балансом кошелька.",
       "exceedsWithdrawable": "Сумма превышает текущий доступный вывод.",
       "exceedsRedeemable": "Сумма превышает текущие доступные к погашению доли.",
       "allowanceNotConfirmed": "Подтверждение получено, но allowance Bank ещё не обновился. Повторите депозит через несколько секунд."
     },
     "toast": {
       "processing": "Обработка транзакции Bank...",
+      "minted": "Выпущено {amount} долей",
       "redeemed": "Погашено {amount} долей",
       "deposited": "Внесено {amount} {symbol}",
       "withdrew": "Выведено {amount} {symbol}",
       "viewTransaction": "Посмотреть транзакцию",
       "failed": "Транзакция не удалась"
+    },
+    "units": {
+      "shares": "Доли",
+      "sharesLower": "доли"
     },
     "format": {
       "assetFallback": "Актив"
@@ -685,21 +691,29 @@
         },
         "withdraw": {
           "label": "Вывести",
-          "description": "Выведите доступные активы."
-        },
-        "redeem": {
-          "label": "Погасить",
-          "description": "Обменяйте доли банка на активы."
+          "description": "Выход по сумме активов или количеству долей."
         }
+      },
+      "amountMode": {
+        "label": "Режим ввода",
+        "assets": "По активам",
+        "shares": "По долям"
+      },
+      "max": {
+        "walletBalance": "Баланс кошелька",
+        "pending": "Максимум загружается",
+        "value": "Макс. {amount}"
       },
       "submit": {
         "executing": "Выполнение",
         "deposit": "Внести активы",
+        "mint": "Выпустить доли",
         "withdraw": "Вывести активы",
         "redeem": "Погасить доли"
       },
       "balance": {
         "wallet": "Баланс кошелька",
+        "mintable": "Доли, доступные для выпуска",
         "withdrawable": "Доступно к выводу",
         "redeemable": "Доли к погашению",
         "pending": "Загрузка",
@@ -713,6 +727,44 @@
         "close": "Закрыть",
         "statusDialog": "Статус транзакции Bank"
       }
+    },
+    "flows": {
+      "preflight": {
+        "title": "Предпроверка"
+      },
+      "deposit": {
+        "preflight": "Проверить ввод и симулировать поток.",
+        "approveTitle": "Подтвердить Bank",
+        "approveDescription": "Установить ERC20 allowance.",
+        "depositTitle": "Внести активы",
+        "depositDescription": "Отправить Bank.deposit."
+      },
+      "mint": {
+        "preflight": "Проверить количество долей и требуемые активы.",
+        "mintTitle": "Выпустить доли",
+        "mintDescription": "Отправить Bank.mint."
+      },
+      "direct": {
+        "submit": "Отправить",
+        "confirm": "Подтвердить",
+        "validate": "Проверить ограничения.",
+        "receipt": "Дождаться квитанции."
+      },
+      "withdraw": {
+        "submit": "Отправить Bank.withdraw."
+      },
+      "redeem": {
+        "submit": "Отправить Bank.redeem."
+      }
+    },
+    "trace": {
+      "waiting": "Ожидание намерения транзакции.",
+      "error": "Ошибка транзакции",
+      "subtitle": "Статус подписи, отправки и квитанции.",
+      "status": "Статус",
+      "viewExplorer": "Открыть explorer",
+      "block": "Блок {blockNumber}",
+      "reset": "Сбросить trace"
     },
     "risk": {
       "title": "Проверки риска",
@@ -767,6 +819,39 @@
       "equityTitle": "Накопленный P&L банка",
       "peak": "Пик",
       "trough": "Минимум"
+    },
+    "ledger": {
+      "eyebrow": "Реестр провайдера",
+      "title": "Депозиты и выводы",
+      "readModel": "собрано сервером",
+      "connectWallet": "Подключите кошелёк, чтобы увидеть ваш реестр провайдера Bank.",
+      "loading": "Загружаем реестр провайдера…",
+      "loadingMore": "Загружаем ещё…",
+      "loadMore": "Загрузить ещё",
+      "loadedRows": "Загружено строк: {count}",
+      "end": "Конец реестра",
+      "empty": "Для этого кошелька нет депозитов или выводов.",
+      "note": "Строки восстановлены из mint/burn Transfer долей Bank и соответствующего Transfer актива в той же транзакции. Цена доли считается как активы транзакции / количество долей, а не как текущая цена.",
+      "block": "Блок {blockNumber}",
+      "actions": {
+        "deposit": "Депозит",
+        "withdraw": "Вывод"
+      },
+      "summary": {
+        "deposited": "Загруженные депозиты",
+        "withdrawn": "Загруженные выводы",
+        "openValue": "Текущая стоимость",
+        "netPnl": "Загруженный P&L",
+        "shares": "Доли"
+      },
+      "columns": {
+        "type": "Тип",
+        "time": "Время",
+        "assets": "Активы",
+        "shares": "Доли",
+        "sharePrice": "Цена доли",
+        "tx": "Tx"
+      }
     }
   },
   "casino": {
