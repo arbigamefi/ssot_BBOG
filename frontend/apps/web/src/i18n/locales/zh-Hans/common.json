@@ -2797,7 +2797,11 @@
       "payout": "总派彩",
       "bets": "笔数",
       "players": "玩家数",
+      "activityTrend": "每日金库活动",
       "pnlTrend": "每日金库盈亏",
+      "volumeTrend": "每日成交量",
+      "sharePriceReference": "份额价格",
+      "currentSharePrice": "当前份额价格",
       "empty": "当前链上还没有金库活动。",
       "windowLabel": "时间范围",
       "windows": {

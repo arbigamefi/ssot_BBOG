@@ -64,7 +64,14 @@ function formatAnnualizedEstimate(
  * chain-read vault balance when available to estimate turnover velocity. Every
  * indexed figure is labeled best-effort so it is never mistaken for on-chain truth.
  */
-export function BankrollPerformancePanel({ vaultAssets }: { vaultAssets?: bigint }) {
+export function BankrollPerformancePanel({
+  sharePrice,
+  vaultAssets
+}: {
+  /** Latest chain-read assets redeemable per full LP share. Historical share-price points are not indexed yet. */
+  sharePrice?: bigint;
+  vaultAssets?: bigint;
+}) {
   const t = useTranslations();
   const locale = useLocale();
   const [windowDays, setWindowDays] = React.useState<number | undefined>(DEFAULT_WINDOW_DAYS);
@@ -228,7 +235,14 @@ export function BankrollPerformancePanel({ vaultAssets }: { vaultAssets?: bigint
         </div>
       </div>
 
-      <DailyPnlChart points={points} decimals={decimals} locale={locale} symbol={symbol} t={t} />
+      <VaultActivityChart
+        decimals={decimals}
+        locale={locale}
+        points={points}
+        sharePrice={sharePrice}
+        symbol={symbol}
+        t={t}
+      />
 
       {/* Honesty note — what this number is and is not. Keeps providers from
           mistaking gross gaming revenue for net yield. */}
@@ -251,20 +265,24 @@ function PerformanceHeader({ t, windowToggle }: { t: Translate; windowToggle: Re
 }
 
 /**
- * Daily house P&L bars — the variance visualization. Green days the vault won,
- * red days players won. Tells the provider story directly: mostly green, the
- * occasional red, net positive over time (law of large numbers).
+ * Daily vault activity — volume is the business engine, P&L is the variance,
+ * and share price is the chain-read provider value reference. We only have the
+ * latest share price today; historical share-price lines require Bank snapshot
+ * indexing, so this chart deliberately renders a current reference line rather
+ * than inventing a false history.
  */
-function DailyPnlChart({
+function VaultActivityChart({
   points,
   decimals,
   locale,
+  sharePrice,
   symbol,
   t
 }: {
   points: Array<{ date: string; turnover: string; payout: string }>;
   decimals: number;
   locale: string;
+  sharePrice?: bigint;
   symbol: string;
   t: Translate;
 }) {
@@ -272,68 +290,117 @@ function DailyPnlChart({
 
   const daily = points.map((point) => ({
     date: point.date,
+    turnover: BigInt(point.turnover || "0"),
     pnl: BigInt(point.turnover || "0") - BigInt(point.payout || "0")
   }));
   const maxAbs = daily.reduce((max, day) => {
     const abs = day.pnl < 0n ? -day.pnl : day.pnl;
     return abs > max ? abs : max;
   }, 0n);
+  const maxTurnover = daily.reduce((max, day) => (day.turnover > max ? day.turnover : max), 0n);
+  const sharePriceLabel =
+    sharePrice != null ? formatSharePrice(sharePrice, decimals, symbol, locale) : null;
 
   return (
     <div className="border-t border-border-soft px-5 py-4">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
-          {t("earn.performance.pnlTrend")}
+          {t("earn.performance.activityTrend")}
         </div>
-        <span className="rounded-full border border-border-soft bg-surface-0 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-fg-muted">
-          {t("earn.performance.bestEffort")}
-        </span>
+        <div className="flex flex-wrap items-center justify-end gap-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-fg-muted">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-sm bg-brand/35" />
+            {t("earn.performance.volumeTrend")}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-sm bg-success" />
+            {t("earn.performance.pnlTrend")}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-px w-4 border-t border-dashed border-brand" />
+            {t("earn.performance.sharePriceReference")}
+          </span>
+          <span className="rounded-full border border-border-soft bg-surface-0 px-3 py-1 font-mono">
+            {t("earn.performance.bestEffort")}
+          </span>
+        </div>
       </div>
-      {/* Zero baseline in the middle; positive bars grow up (success), negative
-          grow down (danger). */}
-      <div className="mt-4 flex h-28 items-stretch gap-2">
-        {daily.map((day) => {
-          const abs = day.pnl < 0n ? -day.pnl : day.pnl;
-          const pct = maxAbs > 0n ? Math.max(4, Number((abs * 10_000n) / maxAbs) / 100) : 4;
-          const positive = day.pnl >= 0n;
-          const date = new Date(`${day.date}T00:00:00.000Z`);
-          const label = new Intl.DateTimeFormat(locale, {
-            day: "2-digit",
-            month: "short",
-            timeZone: "UTC"
-          }).format(date);
-          const valueLabel = formatSignedToken(day.pnl, decimals, symbol, locale);
-          return (
-            <div key={day.date} className="flex min-w-0 flex-1 flex-col items-center">
-              <div className="flex h-full w-full flex-col justify-center">
-                {/* top half (positive) */}
-                <div className="flex h-1/2 items-end">
-                  {positive && (
-                    <div
-                      className="w-full rounded-t-sm bg-success"
-                      style={{ height: `${pct}%` }}
-                      title={`${label}: ${valueLabel}`}
-                    />
-                  )}
-                </div>
-                {/* bottom half (negative) */}
-                <div className="flex h-1/2 items-start">
-                  {!positive && (
-                    <div
-                      className="w-full rounded-b-sm bg-danger"
-                      style={{ height: `${pct}%` }}
-                      title={`${label}: ${valueLabel}`}
-                    />
-                  )}
-                </div>
-              </div>
-              <span className="mt-1 w-full truncate text-center text-[9px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
-                {label}
-              </span>
+      <div className="relative mt-4 overflow-hidden rounded-md border border-border-soft bg-surface-0/70 px-3 py-4">
+        {sharePriceLabel ? (
+          <div className="pointer-events-none absolute inset-x-3 top-7 z-20">
+            <div className="border-t border-dashed border-brand/80" />
+            <div className="mt-1 inline-flex rounded-full border border-brand/35 bg-surface-1/95 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.1em] text-brand">
+              {t("earn.performance.currentSharePrice")}: {sharePriceLabel}
             </div>
-          );
-        })}
+          </div>
+        ) : null}
+        {/* Zero baseline in the middle; positive P&L grows up, negative P&L grows down.
+            Daily volume is a muted background bar because it is scale-incompatible
+            with P&L but still important for provider diligence. */}
+        <div className="relative flex h-40 items-stretch gap-2 overflow-x-auto pb-1">
+          <div className="pointer-events-none absolute left-0 right-0 top-1/2 z-10 border-t border-border" />
+          {daily.map((day) => {
+            const abs = day.pnl < 0n ? -day.pnl : day.pnl;
+            const pnlPct = maxAbs > 0n ? Math.max(4, Number((abs * 4_500n) / maxAbs) / 100) : 4;
+            const turnoverPct =
+              maxTurnover > 0n
+                ? Math.max(6, Number((day.turnover * 10_000n) / maxTurnover) / 100)
+                : 6;
+            const positive = day.pnl >= 0n;
+            const date = new Date(`${day.date}T00:00:00.000Z`);
+            const label = new Intl.DateTimeFormat(locale, {
+              day: "2-digit",
+              month: "short",
+              timeZone: "UTC"
+            }).format(date);
+            const valueLabel = formatSignedToken(day.pnl, decimals, symbol, locale);
+            const turnoverLabel = formatTokenAmount(day.turnover, decimals, symbol, locale);
+            return (
+              <div
+                key={day.date}
+                className="relative flex min-w-8 flex-1 flex-col items-center sm:min-w-10"
+              >
+                <div
+                  className="absolute bottom-5 z-0 w-full rounded-t-sm bg-brand/25"
+                  style={{ height: `${turnoverPct}%` }}
+                  title={`${label} ${t("earn.performance.volumeTrend")}: ${turnoverLabel}`}
+                />
+                <div className="relative z-10 flex h-full w-full flex-col justify-center px-1">
+                  <div className="flex h-1/2 items-end justify-center">
+                    <div
+                      className={cn("w-3 rounded-t-sm", positive ? "bg-success" : "bg-transparent")}
+                      style={{ height: positive ? `${pnlPct}%` : 0 }}
+                      title={`${label} ${t("earn.performance.pnlTrend")}: ${valueLabel}`}
+                    />
+                  </div>
+                  <div className="flex h-1/2 items-start justify-center">
+                    <div
+                      className={cn("w-3 rounded-b-sm", positive ? "bg-transparent" : "bg-danger")}
+                      style={{ height: positive ? 0 : `${pnlPct}%` }}
+                      title={`${label} ${t("earn.performance.pnlTrend")}: ${valueLabel}`}
+                    />
+                  </div>
+                </div>
+                <span className="mt-1 w-full truncate text-center text-[9px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
+                  {label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
+}
+
+function formatSharePrice(value: bigint, decimals: number, symbol: string, locale: string) {
+  const scale = 10n ** BigInt(decimals);
+  const whole = value / scale;
+  const fraction = value % scale;
+  const precision = 4;
+  const divisor = 10n ** BigInt(Math.max(decimals - precision, 0));
+  const roundedFraction = decimals > precision ? fraction / divisor : fraction;
+  const fractionText = roundedFraction.toString().padStart(Math.min(decimals, precision), "0");
+  const trimmed = fractionText.replace(/0+$/, "");
+  return `${whole.toLocaleString(locale)}${trimmed ? `.${trimmed}` : ""} ${symbol}`;
 }

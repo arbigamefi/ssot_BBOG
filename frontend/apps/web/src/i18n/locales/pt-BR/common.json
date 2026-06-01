@@ -750,7 +750,11 @@
       "payout": "Total pago",
       "bets": "Apostas",
       "players": "Jogadores",
+      "activityTrend": "Atividade diária do cofre",
       "pnlTrend": "Resultado diário do cofre",
+      "volumeTrend": "Volume diário",
+      "sharePriceReference": "Preço da cota",
+      "currentSharePrice": "Preço atual da cota",
       "empty": "Nenhuma atividade do cofre nesta rede ainda.",
       "windowLabel": "Período",
       "windows": {

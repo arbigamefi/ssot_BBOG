@@ -2797,7 +2797,11 @@
       "payout": "Total payout",
       "bets": "Bets",
       "players": "Players",
+      "activityTrend": "Daily vault activity",
       "pnlTrend": "Daily house P&L",
+      "volumeTrend": "Daily volume",
+      "sharePriceReference": "Share price",
+      "currentSharePrice": "Current share price",
       "empty": "No vault activity yet on this chain.",
       "windowLabel": "Time range",
       "windows": {

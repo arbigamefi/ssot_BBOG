@@ -360,7 +360,10 @@ export function EarnPageClient() {
         {/* Provider diligence: how the house bankroll has actually performed
             (indexed, best-effort) — shown before the deposit console so a
             provider sees the evidence before they act. */}
-        <BankrollPerformancePanel vaultAssets={snapshot?.totalAssets} />
+        <BankrollPerformancePanel
+          sharePrice={snapshot?.assetsPerShare}
+          vaultAssets={snapshot?.totalAssets}
+        />
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_400px] xl:items-start">
           <div className="space-y-6">
             <section className="rounded-md border border-border bg-surface-1 shadow-e2">

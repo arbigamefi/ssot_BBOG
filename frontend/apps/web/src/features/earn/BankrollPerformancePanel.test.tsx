@@ -69,7 +69,11 @@ const TRANSLATIONS: Record<string, string> = {
   "earn.performance.payout": "Total payout",
   "earn.performance.bets": "Bets",
   "earn.performance.players": "Players",
+  "earn.performance.activityTrend": "Daily vault activity",
   "earn.performance.pnlTrend": "Daily house P&L",
+  "earn.performance.volumeTrend": "Daily volume",
+  "earn.performance.sharePriceReference": "Share price",
+  "earn.performance.currentSharePrice": "Current share price",
   "earn.performance.empty": "No vault activity yet on this chain.",
   "earn.performance.windowLabel": "Time range",
   "earn.performance.windows.all": "All",
@@ -93,7 +97,7 @@ describe("BankrollPerformancePanel", () => {
   afterEach(() => cleanup());
 
   it("derives house P&L and realized hold from the indexed aggregate", () => {
-    render(<BankrollPerformancePanel vaultAssets={1000000000n} />);
+    render(<BankrollPerformancePanel sharePrice={1_012_300n} vaultAssets={1000000000n} />);
     // turnover 100 − payout 99 = 1 USDC house revenue; hold = 1/100 = 1.00%.
     expect(screen.getByText("1 USDC")).toBeDefined(); // House P&L headline
     expect(screen.getByText("1.00%")).toBeDefined(); // realized hold
@@ -102,6 +106,7 @@ describe("BankrollPerformancePanel", () => {
     expect(screen.getByText("100 USDC")).toBeDefined(); // total wagered
     expect(screen.getByText("99 USDC")).toBeDefined(); // total payout
     expect(screen.getByText("180")).toBeDefined(); // players
+    expect(screen.getByText(/Current share price:/)).toBeDefined();
     // Best-effort honesty label is present (never claims "verifiable").
     expect(screen.getAllByText("Indexed · best-effort").length).toBeGreaterThan(0);
   });

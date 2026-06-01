@@ -750,7 +750,11 @@
       "payout": "Toplam ödeme",
       "bets": "Bahisler",
       "players": "Oyuncular",
+      "activityTrend": "Günlük kasa etkinliği",
       "pnlTrend": "Günlük kasa K/Z",
+      "volumeTrend": "Günlük hacim",
+      "sharePriceReference": "Pay fiyatı",
+      "currentSharePrice": "Güncel pay fiyatı",
       "empty": "Bu ağda henüz kasa etkinliği yok.",
       "windowLabel": "Zaman aralığı",
       "windows": {

@@ -750,7 +750,11 @@
       "payout": "Всего выплат",
       "bets": "Ставки",
       "players": "Игроки",
+      "activityTrend": "Дневная активность банка",
       "pnlTrend": "Дневной P&L банка",
+      "volumeTrend": "Дневной оборот",
+      "sharePriceReference": "Цена доли",
+      "currentSharePrice": "Текущая цена доли",
       "empty": "В этой сети пока нет активности банка.",
       "windowLabel": "Период",
       "windows": {
