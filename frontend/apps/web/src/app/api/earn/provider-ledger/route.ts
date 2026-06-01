@@ -1,15 +1,18 @@
 import { NextResponse } from "next/server";
-import { createPublicClient, getAddress, http, type Address } from "viem";
 import {
   createPostgresBetIndexStore,
   type BankProviderLedgerRow,
   type BetIndexStore
 } from "@ssot/bet-index";
-import { createSSOTSDK } from "@ssot/ssot/sdk";
+import { createSSOTSDK, type Address } from "@ssot/ssot/sdk";
 import type { BankProviderLedgerEntry } from "@ssot/ssot/sdk";
 import { loadEmbeddedRelease } from "@ssot/ssot/release";
 
 import { parseRequestChainId } from "../../../../server/chain";
+import {
+  createProviderLedgerPublicClient,
+  normalizeProviderLedgerAddress
+} from "../../../../server/earn/provider-ledger-chain";
 import { resolveServerRpcUrl } from "../../../../server/rpc";
 import {
   mergeHeaders,
@@ -26,15 +29,6 @@ const MAX_LIMIT = 100;
 let durableBetIndexStore: BetIndexStore | null | undefined;
 let durableBetIndexMigration: Promise<void> | null = null;
 
-function createChain(chainId: number, rpcUrl: string) {
-  return {
-    id: chainId,
-    name: `chain-${chainId}`,
-    nativeCurrency: { name: "Native", symbol: "ETH", decimals: 18 },
-    rpcUrls: { default: { http: [rpcUrl] } }
-  } as const;
-}
-
 function clampLimit(value: string | null) {
   const parsed = Number(value ?? "");
   if (!Number.isFinite(parsed) || parsed <= 0) return DEFAULT_LIMIT;
@@ -50,11 +44,7 @@ function parsePoolId(value: string | null) {
 
 function parseOwner(value: string | null) {
   if (!value) throw new Error("owner is required.");
-  try {
-    return getAddress(value) as Address;
-  } catch {
-    throw new Error("owner must be a valid address.");
-  }
+  return normalizeProviderLedgerAddress(value, "owner");
 }
 
 function parseStartBlock(value: string | null) {
@@ -229,10 +219,7 @@ export async function GET(request: Request) {
     const rpcUrl = resolveServerRpcUrl(chainId);
     if (!rpcUrl) throw new Error(`No RPC URL configured for chainId=${chainId}.`);
 
-    const publicClient = createPublicClient({
-      chain: createChain(chainId, rpcUrl),
-      transport: http(rpcUrl)
-    });
+    const publicClient = createProviderLedgerPublicClient(chainId, rpcUrl);
     const sdk = createSSOTSDK({ release: releaseResult.release, publicClient });
     let store: BetIndexStore | null = null;
     let durableRows: BankProviderLedgerRow[] = [];
@@ -263,8 +250,8 @@ export async function GET(request: Request) {
       : [];
     const scannedRows = scannedEntries.map((entry) =>
       toBankProviderLedgerRow({
-        asset: getAddress(pool.asset) as Address,
-        bank: getAddress(pool.bank) as Address,
+        asset: normalizeProviderLedgerAddress(pool.asset, "pool asset"),
+        bank: normalizeProviderLedgerAddress(pool.bank, "pool bank"),
         chainId,
         entry,
         owner,
