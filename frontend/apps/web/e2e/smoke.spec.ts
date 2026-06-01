@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import type { Page } from "@playwright/test";
 
 /**
  * Browser smoke tests for the current clean-room route surface.
@@ -7,17 +8,35 @@ import { expect, test } from "@playwright/test";
  * production routes while also asserting that deleted legacy aliases stay gone.
  */
 
+async function clearComplianceGate(page: Page) {
+  await page.addInitScript(() => {
+    window.localStorage.setItem("arbigamefi.compliance.age.v1", JSON.stringify(true));
+    window.localStorage.setItem(
+      "arbigamefi.compliance.terms.v1",
+      JSON.stringify({ version: "2026-05-28", acceptedAt: Date.now() })
+    );
+    window.localStorage.setItem("arbigamefi.compliance.cookies.v1", JSON.stringify("rejected"));
+  });
+}
+
 test.describe("current route smoke", () => {
+  test.beforeEach(async ({ page }) => {
+    await clearComplianceGate(page);
+  });
+
   test("marketing homepage exposes canonical product entrypoints", async ({ page }) => {
     await page.goto("/");
 
     await expect(page.getByRole("link", { name: "ArbiGameFi" }).first()).toBeVisible();
-    await expect(page.getByRole("link", { name: "Open Rooms" })).toHaveAttribute("href", "/casino");
-    await expect(page.getByRole("link", { name: "Liquidity" }).first()).toHaveAttribute(
+    await expect(page.getByRole("link", { name: /Start Playing/i }).first()).toHaveAttribute(
+      "href",
+      "/casino"
+    );
+    await expect(page.getByRole("link", { name: /How It Works/i }).first()).toHaveAttribute(
       "href",
       "/earn"
     );
-    await expect(page.getByText("Casino rooms")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Eight games. One wallet." })).toBeVisible();
   });
 
   test("product header points only at current product routes", async ({ page }) => {
@@ -43,7 +62,7 @@ test.describe("current route smoke", () => {
   test("casino directory filters and navigates to a room", async ({ page }) => {
     await page.goto("/casino");
 
-    await expect(page.getByRole("heading", { name: "Enter the Floor" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Pick a game." })).toBeVisible();
     await expect(page.getByTestId("room-entry-card")).toHaveCount(8);
 
     await page.getByLabel("Search games").fill("roulette");
