@@ -6,6 +6,7 @@ import { cn } from "@ssot/ui";
 
 import { useCasinoStats, useCasinoTimeseries } from "../casino/useCasinoStats";
 import { formatTokenAmount } from "../marketing/format";
+import { TrendChart, formatDayLabel, type TrendChartPoint } from "../charts/TrendChart";
 
 type Translate = ReturnType<typeof useTranslations>;
 
@@ -235,7 +236,7 @@ export function BankrollPerformancePanel({
         </div>
       </div>
 
-      <VaultActivityChart
+      <VaultEquityChart
         decimals={decimals}
         locale={locale}
         points={points}
@@ -265,13 +266,15 @@ function PerformanceHeader({ t, windowToggle }: { t: Translate; windowToggle: Re
 }
 
 /**
- * Daily vault activity — volume is the business engine, P&L is the variance,
- * and share price is the chain-read provider value reference. We only have the
- * latest share price today; historical share-price lines require Bank snapshot
- * indexing, so this chart deliberately renders a current reference line rather
- * than inventing a false history.
+ * Vault equity chart — the figure a fund tearsheet leads with: the *cumulative*
+ * house P&L trajectory over a dashed zero waterline, so a provider reads "is the
+ * bankroll trending up, and when did it dip underwater?" at a glance. Daily
+ * volume sits underneath as a quiet secondary strip (the business engine), and
+ * share price / peak / trough are honest stats rather than decals overlapping
+ * the data. The shared <TrendChart> owns the SVG; this wrapper only derives the
+ * cumulative series and the surrounding header + summary stats.
  */
-function VaultActivityChart({
+function VaultEquityChart({
   points,
   decimals,
   locale,
@@ -288,16 +291,26 @@ function VaultActivityChart({
 }) {
   if (points.length === 0) return null;
 
-  const daily = points.map((point) => ({
-    date: point.date,
-    turnover: BigInt(point.turnover || "0"),
-    pnl: BigInt(point.turnover || "0") - BigInt(point.payout || "0")
+  // Build the cumulative equity series in integer units (no float drift). Each
+  // day's P&L is stake minus payout; the running sum is the equity curve.
+  let cumulative = 0n;
+  const series = points.map((point) => {
+    const turnover = BigInt(point.turnover || "0");
+    const pnl = turnover - BigInt(point.payout || "0");
+    cumulative += pnl;
+    return { date: point.date, turnover, pnl, cumulative };
+  });
+
+  const chartPoints: TrendChartPoint[] = series.map((s) => ({
+    date: s.date,
+    value: s.cumulative,
+    volume: s.turnover
   }));
-  const maxAbs = daily.reduce((max, day) => {
-    const abs = day.pnl < 0n ? -day.pnl : day.pnl;
-    return abs > max ? abs : max;
-  }, 0n);
-  const maxTurnover = daily.reduce((max, day) => (day.turnover > max ? day.turnover : max), 0n);
+
+  const cumulativeValues = series.map((s) => s.cumulative);
+  const peakValue = cumulativeValues.reduce((m, v) => (v > m ? v : m), cumulativeValues[0]!);
+  const troughValue = cumulativeValues.reduce((m, v) => (v < m ? v : m), cumulativeValues[0]!);
+
   const sharePriceLabel =
     sharePrice != null ? formatSharePrice(sharePrice, decimals, symbol, locale) : null;
 
@@ -305,90 +318,87 @@ function VaultActivityChart({
     <div className="border-t border-border-soft px-5 py-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
-          {t("earn.performance.activityTrend")}
+          {t("earn.performance.equityTitle")}
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-fg-muted">
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-sm bg-brand/35" />
-            {t("earn.performance.volumeTrend")}
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-sm bg-success" />
-            {t("earn.performance.pnlTrend")}
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-px w-4 border-t border-dashed border-brand" />
-            {t("earn.performance.sharePriceReference")}
-          </span>
-          <span className="rounded-full border border-border-soft bg-surface-0 px-3 py-1 font-mono">
-            {t("earn.performance.bestEffort")}
-          </span>
-        </div>
+        <span className="rounded-full border border-border-soft bg-surface-0 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-fg-muted">
+          {t("earn.performance.bestEffort")}
+        </span>
       </div>
-      <div className="relative mt-4 overflow-hidden rounded-md border border-border-soft bg-surface-0/70 px-3 py-4">
-        {sharePriceLabel ? (
-          <div className="pointer-events-none absolute inset-x-3 top-7 z-20">
-            <div className="border-t border-dashed border-brand/80" />
-            <div className="mt-1 inline-flex rounded-full border border-brand/35 bg-surface-1/95 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.1em] text-brand">
-              {t("earn.performance.currentSharePrice")}: {sharePriceLabel}
-            </div>
-          </div>
-        ) : null}
-        {/* Zero baseline in the middle; positive P&L grows up, negative P&L grows down.
-            Daily volume is a muted background bar because it is scale-incompatible
-            with P&L but still important for provider diligence. */}
-        <div className="relative flex h-40 items-stretch gap-2 overflow-x-auto pb-1">
-          <div className="pointer-events-none absolute left-0 right-0 top-1/2 z-10 border-t border-border" />
-          {daily.map((day) => {
-            const abs = day.pnl < 0n ? -day.pnl : day.pnl;
-            const pnlPct = maxAbs > 0n ? Math.max(4, Number((abs * 4_500n) / maxAbs) / 100) : 4;
-            const turnoverPct =
-              maxTurnover > 0n
-                ? Math.max(6, Number((day.turnover * 10_000n) / maxTurnover) / 100)
-                : 6;
-            const positive = day.pnl >= 0n;
-            const date = new Date(`${day.date}T00:00:00.000Z`);
-            const label = new Intl.DateTimeFormat(locale, {
-              day: "2-digit",
-              month: "short",
-              timeZone: "UTC"
-            }).format(date);
-            const valueLabel = formatSignedToken(day.pnl, decimals, symbol, locale);
-            const turnoverLabel = formatTokenAmount(day.turnover, decimals, symbol, locale);
-            return (
-              <div
-                key={day.date}
-                className="relative flex min-w-8 flex-1 flex-col items-center sm:min-w-10"
-              >
-                <div
-                  className="absolute bottom-5 z-0 w-full rounded-t-sm bg-brand/25"
-                  style={{ height: `${turnoverPct}%` }}
-                  title={`${label} ${t("earn.performance.volumeTrend")}: ${turnoverLabel}`}
-                />
-                <div className="relative z-10 flex h-full w-full flex-col justify-center px-1">
-                  <div className="flex h-1/2 items-end justify-center">
-                    <div
-                      className={cn("w-3 rounded-t-sm", positive ? "bg-success" : "bg-transparent")}
-                      style={{ height: positive ? `${pnlPct}%` : 0 }}
-                      title={`${label} ${t("earn.performance.pnlTrend")}: ${valueLabel}`}
-                    />
-                  </div>
-                  <div className="flex h-1/2 items-start justify-center">
-                    <div
-                      className={cn("w-3 rounded-b-sm", positive ? "bg-transparent" : "bg-danger")}
-                      style={{ height: positive ? 0 : `${pnlPct}%` }}
-                      title={`${label} ${t("earn.performance.pnlTrend")}: ${valueLabel}`}
-                    />
-                  </div>
-                </div>
-                <span className="mt-1 w-full truncate text-center text-[9px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
-                  {label}
-                </span>
-              </div>
-            );
-          })}
-        </div>
+
+      <TrendChart
+        className="mt-3"
+        points={chartPoints}
+        signed
+        ariaLabel={t("earn.performance.equityTitle")}
+        formatValue={(value) => formatSignedToken(value, decimals, symbol, locale)}
+        formatDate={(date) => formatDayLabel(date, locale)}
+        lastValueTag={
+          sharePriceLabel
+            ? { label: t("earn.performance.sharePriceReference"), value: sharePriceLabel }
+            : undefined
+        }
+        tooltipRows={(_, index) => {
+          const s = series[index]!;
+          return [
+            {
+              label: t("earn.performance.equityTitle"),
+              value: formatSignedToken(s.cumulative, decimals, symbol, locale),
+              tone: s.cumulative >= 0n ? "win" : "loss"
+            },
+            {
+              label: t("earn.performance.pnlTrend"),
+              value: formatSignedToken(s.pnl, decimals, symbol, locale),
+              tone: s.pnl >= 0n ? "win" : "loss"
+            },
+            {
+              label: t("earn.performance.volumeTrend"),
+              value: formatTokenAmount(s.turnover, decimals, symbol, locale)
+            }
+          ];
+        }}
+      />
+
+      {/* Peak / trough only — share price now lives on the chart as a last-value
+          tag, so it is not duplicated here. */}
+      <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2">
+        <EquityStat
+          label={t("earn.performance.peak")}
+          value={formatSignedToken(peakValue, decimals, symbol, locale)}
+          tone="win"
+        />
+        <EquityStat
+          label={t("earn.performance.trough")}
+          value={formatSignedToken(troughValue, decimals, symbol, locale)}
+          tone={troughValue < 0n ? "loss" : "win"}
+        />
       </div>
+    </div>
+  );
+}
+
+function EquityStat({
+  label,
+  value,
+  tone
+}: {
+  label: string;
+  value: string;
+  tone?: "win" | "loss";
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2 sm:flex-col sm:items-start">
+      <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-fg-subtle">
+        {label}
+      </span>
+      <span
+        className={cn(
+          "truncate font-mono text-xs font-bold",
+          tone === "win" ? "text-success" : tone === "loss" ? "text-danger" : "text-fg"
+        )}
+        title={value}
+      >
+        {value}
+      </span>
     </div>
   );
 }

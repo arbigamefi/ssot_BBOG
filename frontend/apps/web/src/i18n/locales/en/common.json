@@ -2810,7 +2810,10 @@
         "d7": "7d",
         "d30": "30d"
       },
-      "note": "Gross gaming revenue from indexed bets (turnover minus payouts). Velocity and annualized estimates combine indexed activity with chain-read vault assets. Excludes deposits, fees, redemptions, idle capital, and unsettled variance. Not promised yield."
+      "note": "Gross gaming revenue from indexed bets (turnover minus payouts). Velocity and annualized estimates combine indexed activity with chain-read vault assets. Excludes deposits, fees, redemptions, idle capital, and unsettled variance. Not promised yield.",
+      "equityTitle": "Cumulative house P&L",
+      "peak": "Peak",
+      "trough": "Trough"
     }
   },
   "ops": {

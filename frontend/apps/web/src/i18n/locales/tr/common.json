@@ -763,7 +763,10 @@
         "d7": "7g",
         "d30": "30g"
       },
-      "note": "İndekslenmiş bahislerden brüt oyun geliri (hacim eksi ödemeler). Devir hızı ve yıllık tahminler, indekslenmiş etkinliği zincir üstü okunan kasa varlıklarıyla birleştirir. Para yatırma, ücretler, geri alımlar, atıl sermaye ve sonuçlanmamış varyans hariçtir. Getiri vaadi değildir."
+      "note": "İndekslenmiş bahislerden brüt oyun geliri (hacim eksi ödemeler). Devir hızı ve yıllık tahminler, indekslenmiş etkinliği zincir üstü okunan kasa varlıklarıyla birleştirir. Para yatırma, ücretler, geri alımlar, atıl sermaye ve sonuçlanmamış varyans hariçtir. Getiri vaadi değildir.",
+      "equityTitle": "Birikimli kasa K/Z",
+      "peak": "Zirve",
+      "trough": "Dip"
     }
   },
   "casino": {

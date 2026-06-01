@@ -9,6 +9,7 @@ import { mapBetState, shortHex, type GameMeta } from "./model";
 import { usePlayerBets } from "../../betting/usePlayerBets";
 import { useCasinoLeaderboard, useCasinoStats, useCasinoTimeseries } from "../useCasinoStats";
 import { formatTokenAmount } from "../../marketing/format";
+import { TrendChart, formatDayLabel, type TrendChartPoint } from "../../charts/TrendChart";
 import {
   getAppChain,
   getExplorerAddressUrl,
@@ -1175,10 +1176,11 @@ function VolumeTrend({
   t: Translate;
 }) {
   if (points.length === 0) return null;
-  const maxTurnover = points.reduce((max, point) => {
-    const turnover = BigInt(point.turnover || "0");
-    return turnover > max ? turnover : max;
-  }, 0n);
+
+  const chartPoints: TrendChartPoint[] = points.map((point) => ({
+    date: point.date,
+    value: BigInt(point.turnover || "0")
+  }));
 
   return (
     <div className="rounded-xl border border-border-soft bg-surface-0 p-4 shadow-e1">
@@ -1195,37 +1197,19 @@ function VolumeTrend({
           {t("casino.room.audit.analytics.bestEffort")}
         </span>
       </div>
-      <div
-        className="mt-4 flex h-28 items-end gap-2"
-        aria-label={t("casino.room.audit.analytics.trend")}
-      >
-        {points.map((point) => {
-          const turnover = BigInt(point.turnover || "0");
-          const bps = maxTurnover > 0n ? Number((turnover * 10_000n) / maxTurnover) : 0;
-          const height = maxTurnover > 0n ? Math.max(8, bps / 100) : 8;
-          const date = new Date(`${point.date}T00:00:00.000Z`);
-          const label = new Intl.DateTimeFormat(locale, {
-            day: "2-digit",
-            month: "short",
-            timeZone: "UTC"
-          }).format(date);
-          const valueLabel = formatTokenAmount(turnover, decimals, symbol, locale);
-          return (
-            <div key={point.date} className="flex min-w-0 flex-1 flex-col items-center gap-2">
-              <div className="flex h-20 w-full items-end rounded-md bg-surface-1 px-1">
-                <div
-                  className="w-full rounded-t-md bg-brand"
-                  style={{ height: `${height}%` }}
-                  title={`${label}: ${valueLabel}`}
-                />
-              </div>
-              <span className="w-full truncate text-center text-[9px] font-semibold uppercase tracking-[0.08em] text-fg-subtle">
-                {label}
-              </span>
-            </div>
-          );
-        })}
-      </div>
+      <TrendChart
+        className="mt-4"
+        points={chartPoints}
+        ariaLabel={t("casino.room.audit.analytics.trend")}
+        formatValue={(value) => formatTokenAmount(value, decimals, symbol, locale)}
+        formatDate={(date) => formatDayLabel(date, locale)}
+        tooltipRows={(point) => [
+          {
+            label: t("casino.room.audit.analytics.volume"),
+            value: formatTokenAmount(point.value, decimals, symbol, locale)
+          }
+        ]}
+      />
     </div>
   );
 }
