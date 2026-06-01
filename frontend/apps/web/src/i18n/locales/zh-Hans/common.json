@@ -2736,6 +2736,8 @@
       "reset": "重置追踪"
     },
     "risk": {
+      "title": "风险检查",
+      "readModel": "混合数据源",
       "custody": {
         "label": "托管边界",
         "title": "非托管 Bank。",

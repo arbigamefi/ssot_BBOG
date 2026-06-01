@@ -111,9 +111,9 @@ export function BankrollPerformancePanel({ vaultAssets }: { vaultAssets?: bigint
 
   if (unavailable || !aggregate) {
     return (
-      <section className="flex flex-col gap-4">
+      <section className="rounded-md border border-border bg-surface-1 shadow-e2">
         <PerformanceHeader t={t} windowToggle={windowToggle} />
-        <div className="rounded-xl border-2 border-dashed border-border-soft py-16 text-center">
+        <div className="border-t border-border-soft px-5 py-6">
           <p className="text-xs font-bold uppercase tracking-[0.18em] text-fg-subtle">
             {t("earn.performance.empty")}
           </p>
@@ -131,7 +131,7 @@ export function BankrollPerformancePanel({ vaultAssets }: { vaultAssets?: bigint
   const velocity = formatMultiple(turnover, vaultAssets);
   const grossAnnualized = formatAnnualizedEstimate(houseRevenue, vaultAssets, windowDays);
 
-  const cards: Array<{ key: string; label: string; value: string; tone?: "win" | "loss" }> = [
+  const statRows: Array<{ key: string; label: string; value: string; tone?: "win" | "loss" }> = [
     {
       key: "hold",
       label: t("earn.performance.hold"),
@@ -172,78 +172,76 @@ export function BankrollPerformancePanel({ vaultAssets }: { vaultAssets?: bigint
   ];
 
   return (
-    <section className="flex flex-col gap-4">
+    <section className="rounded-md border border-border bg-surface-1 shadow-e2">
       <PerformanceHeader t={t} windowToggle={windowToggle} />
 
-      {/* Headline — House P&L, the number a provider cares about most. Framed in
-          success/danger tone so "the vault is up/down" reads at a glance. */}
-      <div
-        className={cn(
-          "rounded-xl border p-5 shadow-e1",
-          houseRevenue >= 0n
-            ? "border-success/30 bg-success-soft"
-            : "border-danger/30 bg-danger-soft"
-        )}
-      >
-        <div
-          className={cn(
-            "text-[10px] font-bold uppercase tracking-[0.18em]",
-            houseRevenue >= 0n ? "text-success" : "text-danger"
-          )}
-        >
-          {t("earn.performance.housePnl")}
+      <div className="grid border-t border-border-soft lg:grid-cols-[minmax(0,0.42fr)_minmax(0,0.58fr)]">
+        {/* Headline — House P&L, the number a provider cares about most. It is
+            handled as a report figure, not a promotional APY tile. */}
+        <div className="border-b border-border-soft p-5 lg:border-b-0 lg:border-r">
+          <div
+            className={cn(
+              "text-[10px] font-bold uppercase tracking-[0.18em]",
+              houseRevenue >= 0n ? "text-success" : "text-danger"
+            )}
+          >
+            {t("earn.performance.housePnl")}
+          </div>
+          <div
+            className={cn(
+              "mt-2 truncate font-mono text-4xl font-bold",
+              houseRevenue >= 0n ? "text-success" : "text-danger"
+            )}
+            title={formatSignedToken(houseRevenue, decimals, symbol, locale)}
+          >
+            {formatSignedToken(houseRevenue, decimals, symbol, locale)}
+          </div>
+          <div className="mt-2 text-[10px] uppercase tracking-[0.14em] text-fg-subtle">
+            {t("earn.performance.bestEffort")}
+          </div>
         </div>
-        <div
-          className={cn(
-            "mt-1 font-mono text-4xl font-bold",
-            houseRevenue >= 0n ? "text-success" : "text-danger"
-          )}
-        >
-          {formatSignedToken(houseRevenue, decimals, symbol, locale)}
-        </div>
-        <div className="mt-1 text-[10px] uppercase tracking-[0.14em] text-fg-subtle">
-          {t("earn.performance.bestEffort")}
+
+        <div className="divide-y divide-border-soft">
+          {statRows.map((row) => (
+            <div
+              key={row.key}
+              className="grid gap-3 px-5 py-3 sm:grid-cols-[minmax(0,1fr)_minmax(120px,auto)] sm:items-center"
+            >
+              <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
+                {row.label}
+              </div>
+              <div
+                className={cn(
+                  "truncate font-mono text-base font-bold sm:text-right",
+                  row.tone === "win"
+                    ? "text-success"
+                    : row.tone === "loss"
+                      ? "text-danger"
+                      : "text-fg"
+                )}
+                title={row.value}
+              >
+                {row.value}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
       <DailyPnlChart points={points} decimals={decimals} locale={locale} symbol={symbol} t={t} />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {cards.map((card) => (
-          <div
-            key={card.key}
-            className="rounded-xl border border-border-soft bg-surface-0 p-4 shadow-e1"
-          >
-            <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
-              {card.label}
-            </div>
-            <div
-              className={cn(
-                "mt-2 truncate font-mono text-xl font-bold",
-                card.tone === "win"
-                  ? "text-success"
-                  : card.tone === "loss"
-                    ? "text-danger"
-                    : "text-fg"
-              )}
-              title={card.value}
-            >
-              {card.value}
-            </div>
-          </div>
-        ))}
-      </div>
-
       {/* Honesty note — what this number is and is not. Keeps providers from
           mistaking gross gaming revenue for net yield. */}
-      <p className="text-[10px] leading-4 text-fg-subtle">{t("earn.performance.note")}</p>
+      <p className="border-t border-border-soft px-5 py-4 text-[10px] leading-4 text-fg-subtle">
+        {t("earn.performance.note")}
+      </p>
     </section>
   );
 }
 
 function PerformanceHeader({ t, windowToggle }: { t: Translate; windowToggle: React.ReactNode }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
       <h2 className="text-sm font-bold uppercase tracking-[0.16em] text-fg">
         {t("earn.performance.title")}
       </h2>
@@ -282,12 +280,12 @@ function DailyPnlChart({
   }, 0n);
 
   return (
-    <div className="rounded-xl border border-border-soft bg-surface-0 p-4 shadow-e1">
+    <div className="border-t border-border-soft px-5 py-4">
       <div className="flex items-center justify-between gap-3">
         <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
           {t("earn.performance.pnlTrend")}
         </div>
-        <span className="rounded-full border border-border-soft bg-surface-1 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-fg-muted">
+        <span className="rounded-full border border-border-soft bg-surface-0 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-fg-muted">
           {t("earn.performance.bestEffort")}
         </span>
       </div>

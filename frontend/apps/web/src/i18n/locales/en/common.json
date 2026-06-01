@@ -2736,6 +2736,8 @@
       "reset": "Reset trace"
     },
     "risk": {
+      "title": "Risk checks",
+      "readModel": "mixed source",
       "custody": {
         "label": "Custody boundary",
         "title": "Non-custodial Bank.",

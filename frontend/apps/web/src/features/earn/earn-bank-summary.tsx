@@ -47,18 +47,18 @@ export function EarnBankSummary({
         </span>
       </div>
 
-      <div className="grid gap-4 p-5 md:grid-cols-2 xl:grid-cols-3">
-        <SummaryCard
+      <div className="divide-y divide-border-soft">
+        <LedgerRow
           label={t("earn.summary.sharePrice.label")}
           value={formatTokenAmount(snapshot?.assetsPerShare, decimals, symbol, 4)}
           detail={t("earn.summary.sharePrice.detail")}
         />
-        <SummaryCard
+        <LedgerRow
           label={t("earn.summary.totalShares.label")}
           value={formatTokenAmount(snapshot?.totalSupply, decimals, undefined, 2)}
           detail={t("earn.summary.totalShares.detail")}
         />
-        <SummaryCard
+        <LedgerRow
           icon={<ChartBarIcon className="h-5 w-5" />}
           label={t("earn.summary.capitalPosture.totalAssets")}
           value={formatTokenAmount(snapshot?.totalAssets, decimals, symbol, 2)}
@@ -70,12 +70,12 @@ export function EarnBankSummary({
                 : t("earn.summary.capitalPosture.detail")
           }
         />
-        <SummaryCard
+        <LedgerRow
           label={t("earn.summary.freeReserve.label")}
           value={formatTokenAmount(freeReserve, decimals, symbol, 2)}
           detail={t("earn.summary.freeReserve.detail")}
         />
-        <SummaryCard
+        <LedgerRow
           label={t("earn.summary.reserved.label")}
           value={formatTokenAmount(snapshot?.totalReserved, decimals, symbol, 2)}
           detail={t("earn.summary.reserved.detail", {
@@ -83,13 +83,13 @@ export function EarnBankSummary({
             minLiquidity: formatTokenAmount(minLiquidity, decimals, symbol, 2)
           })}
         />
-        <SummaryCard
+        <LedgerRow
           icon={<ArrowTrendingUpIcon className="h-5 w-5" />}
           label={t("earn.summary.position.label")}
           value={formatTokenAmount(position?.assetsEquivalent, decimals, symbol, 4)}
           detail={t("earn.summary.position.detail")}
         />
-        <SummaryCard
+        <LedgerRow
           icon={<InformationCircleIcon className="h-5 w-5" />}
           label={t("earn.summary.liquidity.label")}
           value={formatPctFromBps(snapshot?.minLiquidityBps)}
@@ -103,7 +103,7 @@ export function EarnBankSummary({
   );
 }
 
-function SummaryCard({
+function LedgerRow({
   icon,
   label,
   value,
@@ -115,15 +115,17 @@ function SummaryCard({
   detail: string;
 }) {
   return (
-    <div className="rounded-md border border-border bg-surface-1 p-5 shadow-e1">
-      <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
-        {icon}
-        {label}
+    <div className="grid gap-3 px-5 py-4 sm:grid-cols-[minmax(0,0.85fr)_minmax(180px,0.55fr)] sm:items-center">
+      <div className="min-w-0">
+        <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
+          {icon}
+          {label}
+        </div>
+        <div className="mt-1 text-sm leading-5 text-fg-muted">{detail}</div>
       </div>
-      <div className="mt-3 truncate font-mono text-2xl font-bold text-fg" title={value}>
+      <div className="truncate font-mono text-xl font-bold text-fg sm:text-right" title={value}>
         {value}
       </div>
-      <div className="mt-2 text-sm leading-6 text-fg-muted">{detail}</div>
     </div>
   );
 }

@@ -681,6 +681,8 @@
       }
     },
     "risk": {
+      "title": "Verificações de risco",
+      "readModel": "fonte mista",
       "custody": {
         "label": "Limite de custódia",
         "title": "Bank não custodial.",

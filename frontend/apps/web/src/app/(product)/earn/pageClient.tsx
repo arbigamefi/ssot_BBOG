@@ -13,12 +13,7 @@ import { EarnActionPanel, type EarnFlowState } from "../../../features/earn/earn
 import { EarnBankSummary } from "../../../features/earn/earn-bank-summary";
 import { EarnHero } from "../../../features/earn/earn-hero";
 import { EarnRiskPanel } from "../../../features/earn/earn-risk-panel";
-import {
-  formatBps,
-  formatTokenAmount,
-  getExplorerBaseUrl,
-  shortHex
-} from "../../../features/earn/format";
+import { formatTokenAmount, getExplorerBaseUrl, shortHex } from "../../../features/earn/format";
 import type { EarnBankData, EarnMetric, EarnTab } from "../../../features/earn/types";
 import { formatUnits, parseDecimalToUnits } from "../../../features/betting/model/units";
 import { useDirectTxAction, useSequencedTxAction } from "../../../features/tx/useDirectTxAction";
@@ -313,7 +308,7 @@ export function EarnPageClient() {
             (indexed, best-effort) — shown before the deposit console so a
             provider sees the evidence before they act. */}
         <BankrollPerformancePanel vaultAssets={snapshot?.totalAssets} />
-        <div className="grid gap-6 xl:grid-cols-[1fr_420px]">
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_400px] xl:items-start">
           <div className="space-y-6">
             <EarnBankSummary
               data={bankData}

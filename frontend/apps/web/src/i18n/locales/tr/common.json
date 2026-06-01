@@ -681,6 +681,8 @@
       }
     },
     "risk": {
+      "title": "Risk kontrolleri",
+      "readModel": "karma kaynak",
       "custody": {
         "label": "Saklama sınırı",
         "title": "Saklamasız Bank.",
