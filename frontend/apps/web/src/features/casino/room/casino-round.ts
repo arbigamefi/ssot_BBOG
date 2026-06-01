@@ -198,12 +198,22 @@ export function useCasinoRoundWatcher({
     }
 
     let cancelled = false;
+    let terminalReached = false;
+    let interval: number | undefined;
     const startedAt = Date.now();
+    const stopPolling = () => {
+      terminalReached = true;
+      if (interval) {
+        window.clearInterval(interval);
+        interval = undefined;
+      }
+    };
 
     const poll = async () => {
+      if (terminalReached) return;
       try {
         const bet = await sdk.gameHub.getBet(betId);
-        if (cancelled) return;
+        if (cancelled || terminalReached) return;
 
         setSnapshot((current) => {
           const randomReadyAt =
@@ -233,9 +243,10 @@ export function useCasinoRoundWatcher({
         ) {
           terminalBetIdRef.current = bet.betId;
           onTerminal?.(bet);
+          stopPolling();
         }
       } catch (error) {
-        if (!cancelled) {
+        if (!cancelled && !terminalReached) {
           const now = Date.now();
           const deferReadError = shouldDeferCasinoRoundReadError({ error, startedAt, now });
           setSnapshot((current) => {
@@ -262,10 +273,10 @@ export function useCasinoRoundWatcher({
     };
 
     void poll();
-    const interval = window.setInterval(() => void poll(), pollIntervalMs);
+    interval = window.setInterval(() => void poll(), pollIntervalMs);
     return () => {
       cancelled = true;
-      window.clearInterval(interval);
+      if (interval) window.clearInterval(interval);
     };
   }, [
     sdk,

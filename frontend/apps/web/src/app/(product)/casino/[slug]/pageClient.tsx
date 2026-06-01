@@ -185,7 +185,15 @@ export function GamePageClient({ slug }: { slug: string }) {
     phase: "revealing" | "revealed";
   } | null>(null);
   const revealedBetIdRef = React.useRef<bigint | null>(null);
+  const outcomeReadKeyRef = React.useRef<string | null>(null);
   const revealTimerRef = React.useRef<ReturnType<typeof setTimeout> | undefined>();
+
+  React.useEffect(
+    () => () => {
+      outcomeReadKeyRef.current = null;
+    },
+    []
+  );
 
   // Game-specific params
   const [diceTarget, setDiceTarget] = React.useState<number>(50);
@@ -281,6 +289,7 @@ export function GamePageClient({ slug }: { slug: string }) {
   const handleRoundStart = React.useCallback(() => {
     clearStageRevealTimer();
     revealedBetIdRef.current = null;
+    outcomeReadKeyRef.current = null;
     setTerminalBet(null);
     setResultProof(null);
     setCasinoOutcome(null);
@@ -291,6 +300,7 @@ export function GamePageClient({ slug }: { slug: string }) {
   const handleRoundReset = React.useCallback(() => {
     clearStageRevealTimer();
     revealedBetIdRef.current = null;
+    outcomeReadKeyRef.current = null;
     setShowResult(false);
     setTerminalBet(null);
     setResultProof(null);
@@ -384,7 +394,6 @@ export function GamePageClient({ slug }: { slug: string }) {
   });
 
   React.useEffect(() => {
-    let cancelled = false;
     const activeBet = casinoRound.activeBet;
     const bet =
       terminalBet ??
@@ -395,13 +404,20 @@ export function GamePageClient({ slug }: { slug: string }) {
       return;
     }
 
+    const outcomeReadKey = `${game.slug}:${bet.betId.toString()}`;
+    if (outcomeReadKeyRef.current === outcomeReadKey) return;
+    outcomeReadKeyRef.current = outcomeReadKey;
+
     void readCasinoOutcome({
       gameHub: sdk?.gameHub,
       bet,
       gameSlug: game.slug
     }).then((outcome) => {
-      if (cancelled) return;
-      if (!outcome) return;
+      if (outcomeReadKeyRef.current !== outcomeReadKey) return;
+      if (!outcome) {
+        outcomeReadKeyRef.current = null;
+        return;
+      }
       setCasinoOutcome(outcome);
 
       if (outcome?.kind === "dice") setResultNum(outcome.rolls.at(-1)?.value ?? null);
@@ -428,10 +444,6 @@ export function GamePageClient({ slug }: { slug: string }) {
         startStageReveal(bet.betId, game.slug);
       }
     });
-
-    return () => {
-      cancelled = true;
-    };
   }, [casinoRound.activeBet, game, sdk?.gameHub, startStageReveal, terminalBet]);
 
   if (!release || !game)
