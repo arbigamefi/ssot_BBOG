@@ -22,6 +22,7 @@ import { useSSOTSDK } from "../../../ssot/sdk";
 import { toast } from "@ssot/ui";
 
 const ZERO_ADDRESS = `0x${"0".repeat(40)}` as Address;
+const ALLOWANCE_NOT_CONFIRMED = "ALLOWANCE_NOT_CONFIRMED";
 
 export function EarnPageClient() {
   const t = useTranslations();
@@ -263,7 +264,11 @@ export function EarnPageClient() {
 
       if (!result.ok) {
         toast.dismiss(toastId);
-        toast.error(result.error?.message ?? t("earn.toast.failed"));
+        toast.error(
+          result.error?.code === ALLOWANCE_NOT_CONFIRMED
+            ? t("earn.errors.allowanceNotConfirmed")
+            : (result.error?.message ?? t("earn.toast.failed"))
+        );
         return;
       }
 

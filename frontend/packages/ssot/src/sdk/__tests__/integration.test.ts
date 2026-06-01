@@ -158,6 +158,34 @@ describe("createSSOTSDK", () => {
     expect(sdk).toHaveProperty("sportsHub");
   });
 
+  it("confirms Bank allowance after approval before depositing", async () => {
+    const allowanceReads = [0n, 1_000_000n];
+    pub.readContract.mockImplementation(async ({ functionName }: any) => {
+      if (functionName === "allowance") return allowanceReads.shift() ?? 1_000_000n;
+      return 0n;
+    });
+
+    const result = await sdk.bank.deposit(1, 1_000_000n, ACCOUNT);
+
+    expect(result.ok).toBe(true);
+    expect(pub.simulateContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        address: getAddress(ASSET),
+        functionName: "approve",
+        args: [getAddress(BANK), 1_000_000n]
+      })
+    );
+    expect(pub.simulateContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        address: getAddress(BANK),
+        functionName: "deposit",
+        args: [1_000_000n, ACCOUNT]
+      })
+    );
+    expect(journal.map((entry) => entry.action)).toContain("APPROVE_DEPOSIT");
+    expect(journal.map((entry) => entry.action)).toContain("DEPOSIT");
+  });
+
   it("reads GameHub terminal proof directly from BetFinalized logs", async () => {
     const settlementTx =
       "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Hex;

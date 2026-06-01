@@ -2600,7 +2600,8 @@
       "primaryAssetOnly": "Write flows currently support only the primary asset.",
       "insufficientWalletBalance": "Amount exceeds the connected wallet balance.",
       "exceedsWithdrawable": "Amount exceeds the currently withdrawable balance.",
-      "exceedsRedeemable": "Amount exceeds the currently redeemable shares."
+      "exceedsRedeemable": "Amount exceeds the currently redeemable shares.",
+      "allowanceNotConfirmed": "Approval is confirmed, but the Bank allowance has not updated yet. Retry deposit in a few seconds."
     },
     "format": {
       "assetFallback": "Asset"

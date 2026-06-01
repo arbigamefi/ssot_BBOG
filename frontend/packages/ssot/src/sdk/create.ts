@@ -81,6 +81,12 @@ const GAME_HUB_OUTCOME_READ_ABI = [
 
 const GAME_HUB_TERMINAL_PROOF_LOOKBACK_BLOCKS = 250n;
 const GAME_HUB_TERMINAL_PROOF_CHUNK_BLOCKS = 10n;
+const ALLOWANCE_CONFIRMATION_ATTEMPTS = 6;
+const ALLOWANCE_CONFIRMATION_DELAY_MS = 500;
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 export interface CreateSSOTSDKParams {
   release: SSOTRelease;
@@ -171,6 +177,32 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
     VRFHubAbi: VRFHUB_ABI,
     SportsHubAbi: SPORTS_HUB_ABI
   } = getReleaseAbis(release.chainId);
+
+  async function readTokenAllowance(token: Address, owner: Address, spender: Address) {
+    return (await publicClient.readContract({
+      address: token,
+      abi: ERC20_ABI,
+      functionName: "allowance",
+      args: [owner, spender]
+    })) as bigint;
+  }
+
+  async function waitForTokenAllowance(params: {
+    token: Address;
+    owner: Address;
+    spender: Address;
+    required: bigint;
+  }) {
+    let observed = 0n;
+    for (let attempt = 0; attempt < ALLOWANCE_CONFIRMATION_ATTEMPTS; attempt += 1) {
+      observed = await readTokenAllowance(params.token, params.owner, params.spender);
+      if (observed >= params.required) return { ok: true as const, observed };
+      if (attempt < ALLOWANCE_CONFIRMATION_ATTEMPTS - 1) {
+        await sleep(ALLOWANCE_CONFIRMATION_DELAY_MS);
+      }
+    }
+    return { ok: false as const, observed };
+  }
 
   function terminalProofRanges(latestBlock: bigint) {
     const releaseBlock = BigInt(release.meta?.blockNumber ?? 0);
@@ -951,6 +983,30 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
           args: [pool.bank, approveAmount!]
         });
         if (!approveTx.ok) return approveTx;
+        const allowanceReady = await waitForTokenAllowance({
+          token: pool.asset,
+          owner: walletReq.account,
+          spender: pool.bank,
+          required: assets
+        });
+        if (!allowanceReady.ok) {
+          return {
+            txHash: approveTx.txHash,
+            ok: false,
+            error: {
+              code: "ALLOWANCE_NOT_CONFIRMED",
+              message:
+                "Token approval was mined, but the allowance is not visible to the Bank yet. Retry the deposit in a few seconds.",
+              severity: "warning",
+              retryable: true,
+              details: {
+                required: assets.toString(),
+                observed: allowanceReady.observed.toString(),
+                spender: pool.bank
+              }
+            }
+          };
+        }
       }
 
       return tx.simulateAndWrite({

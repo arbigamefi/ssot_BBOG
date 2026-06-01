@@ -595,7 +595,8 @@
       "primaryAssetOnly": "Fluxos de escrita atualmente aceitam apenas o ativo principal.",
       "insufficientWalletBalance": "O valor excede o saldo da carteira conectada.",
       "exceedsWithdrawable": "O valor excede o saldo atualmente sacável.",
-      "exceedsRedeemable": "O valor excede as cotas atualmente resgatáveis."
+      "exceedsRedeemable": "O valor excede as cotas atualmente resgatáveis.",
+      "allowanceNotConfirmed": "A aprovação foi confirmada, mas a allowance do Bank ainda não atualizou. Tente depositar novamente em alguns segundos."
     },
     "format": {
       "assetFallback": "Ativo"

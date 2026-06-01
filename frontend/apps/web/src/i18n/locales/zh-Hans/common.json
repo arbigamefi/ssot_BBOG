@@ -2600,7 +2600,8 @@
       "primaryAssetOnly": "当前写入流程仅支持主资产。",
       "insufficientWalletBalance": "金额超过当前钱包余额。",
       "exceedsWithdrawable": "金额超过当前可取金额。",
-      "exceedsRedeemable": "金额超过当前可赎回份额。"
+      "exceedsRedeemable": "金额超过当前可赎回份额。",
+      "allowanceNotConfirmed": "授权已确认，但 Bank allowance 还没有更新。请等待几秒后重试存入。"
     },
     "format": {
       "assetFallback": "资产"

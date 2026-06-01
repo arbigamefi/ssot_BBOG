@@ -595,7 +595,8 @@
       "primaryAssetOnly": "Yazma akışları şu anda yalnızca birincil varlığı destekler.",
       "insufficientWalletBalance": "Tutar bağlı cüzdan bakiyesini aşıyor.",
       "exceedsWithdrawable": "Tutar şu anda çekilebilir bakiyeyi aşıyor.",
-      "exceedsRedeemable": "Tutar şu anda geri alınabilir payları aşıyor."
+      "exceedsRedeemable": "Tutar şu anda geri alınabilir payları aşıyor.",
+      "allowanceNotConfirmed": "Onay doğrulandı, ancak Bank allowance henüz güncellenmedi. Birkaç saniye sonra yatırmayı tekrar deneyin."
     },
     "format": {
       "assetFallback": "Varlık"
