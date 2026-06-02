@@ -21,8 +21,10 @@ RUN --mount=type=cache,id=arbigamefi-pnpm-store,target=/pnpm/store \
 FROM deps AS builder
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV NODE_OPTIONS=--max-old-space-size=1024
-ENV LOW_MEMORY_BUILD=1
+ARG WEB_BUILD_NODE_OPTIONS=--max-old-space-size=1024
+ARG WEB_LOW_MEMORY_BUILD=1
+ENV NODE_OPTIONS=${WEB_BUILD_NODE_OPTIONS}
+ENV LOW_MEMORY_BUILD=${WEB_LOW_MEMORY_BUILD}
 RUN pnpm -C apps/web build
 
 FROM node:24.15.0-slim AS runner

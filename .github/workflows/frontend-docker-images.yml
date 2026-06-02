@@ -42,9 +42,13 @@ jobs:
           - service: web
             image: ghcr.io/arbigamefi/ssot-bbog-web
             dockerfile: frontend/deploy/docker/Dockerfile.web
+            build_args: |
+              WEB_BUILD_NODE_OPTIONS=--max-old-space-size=4096
+              WEB_LOW_MEMORY_BUILD=1
           - service: keeper
             image: ghcr.io/arbigamefi/ssot-bbog-keeper
             dockerfile: frontend/deploy/docker/Dockerfile.keeper
+            build_args: ""
 
     steps:
       - name: Checkout
@@ -84,5 +88,6 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: ${{ matrix.build_args }}
           cache-from: type=gha,scope=frontend-${{ matrix.service }}
           cache-to: type=gha,mode=max,scope=frontend-${{ matrix.service }}
