@@ -21,15 +21,24 @@ function repoRoot() {
   return path.resolve(process.cwd(), "../../..");
 }
 
-function defaultHealthPath() {
-  return path.resolve(process.cwd(), "../../.runtime/casino-keeper-health.json");
+function defaultHealthPath(chainId: number) {
+  return path.resolve(process.cwd(), `../../.runtime/casino-keeper-health-${chainId}.json`);
 }
 
-function healthPathCandidates() {
+function resolveHealthPathCandidate(candidate: string) {
+  if (path.isAbsolute(candidate)) return [candidate];
+  return [path.resolve(repoRoot(), candidate), path.resolve(process.cwd(), candidate)];
+}
+
+function healthPathCandidates(chainId: number) {
+  const defaultChainId = Number(process.env.NEXT_PUBLIC_CHAIN_ID ?? "84532");
+  const chainSpecific = process.env[`KEEPER_HEALTH_PATH_${chainId}`]?.trim();
+  if (chainSpecific) return resolveHealthPathCandidate(chainSpecific);
+
   const configured = process.env.KEEPER_HEALTH_PATH?.trim();
-  if (!configured) return [defaultHealthPath()];
-  if (path.isAbsolute(configured)) return [configured];
-  return [path.resolve(repoRoot(), configured), path.resolve(process.cwd(), configured)];
+  if (configured && chainId === defaultChainId) return resolveHealthPathCandidate(configured);
+
+  return [defaultHealthPath(chainId)];
 }
 
 async function readJsonFile(filePath: string) {
@@ -52,7 +61,7 @@ export async function readKeeperHealthSnapshot({
 }: {
   chainId?: number;
 } = {}): Promise<KeeperHealthSnapshot> {
-  for (const candidate of healthPathCandidates()) {
+  for (const candidate of healthPathCandidates(chainId)) {
     const snapshot = await readJsonFile(candidate);
     if (snapshot) {
       return snapshot as KeeperHealthSnapshot;

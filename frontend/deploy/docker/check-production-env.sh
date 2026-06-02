@@ -8,6 +8,7 @@ required_files=(
   "deploy/docker/env/postgres.env"
   "deploy/docker/env/web.production.env"
   "deploy/docker/env/keeper.primary.env"
+  "deploy/docker/env/keeper.testnet.primary.env"
   "deploy/docker/env/proxy.env"
 )
 

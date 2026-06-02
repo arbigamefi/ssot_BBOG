@@ -14,8 +14,8 @@ vi.mock("../../../server/ops/keeper-health", () => ({
 
 const originalEnv = process.env;
 
-function request() {
-  return new Request("http://localhost/api/healthz");
+function request(url = "http://localhost/api/healthz") {
+  return new Request(url);
 }
 
 describe("GET /api/healthz", () => {
@@ -75,6 +75,41 @@ describe("GET /api/healthz", () => {
       }
     });
     expect(queryRecentBetsMock).toHaveBeenCalledWith({ chainId: 84532, limit: 1 });
+    expect(readKeeperHealthSnapshotMock).toHaveBeenCalledWith({ chainId: 84532 });
+  });
+
+  it("honors the chainId query parameter", async () => {
+    queryRecentBetsMock.mockResolvedValueOnce({
+      schemaVersion: 1,
+      cached: false,
+      chainId: 8453,
+      fromBlock: 1,
+      generatedAt: 1,
+      rows: [],
+      source: "postgres",
+      toBlock: 2
+    });
+    readKeeperHealthSnapshotMock.mockResolvedValueOnce({
+      schemaVersion: 1,
+      status: "running",
+      role: "primary",
+      chainId: 8453,
+      gameHub: `0x${"11".repeat(20)}`,
+      vrfHub: `0x${"22".repeat(20)}`,
+      keeper: `0x${"33".repeat(20)}`,
+      startedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      queueDepth: 0
+    });
+
+    const { GET } = await import("./route");
+    const response = await GET(request("http://localhost/api/healthz?chainId=8453"));
+    const body = (await response.json()) as any;
+
+    expect(response.status).toBe(200);
+    expect(body.chainId).toBe(8453);
+    expect(queryRecentBetsMock).toHaveBeenCalledWith({ chainId: 8453, limit: 1 });
+    expect(readKeeperHealthSnapshotMock).toHaveBeenCalledWith({ chainId: 8453 });
   });
 
   it("degrades Base mainnet when keeper and durable index are not ready", async () => {

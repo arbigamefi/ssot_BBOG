@@ -20,6 +20,7 @@ From `frontend/`:
 cp deploy/docker/env/postgres.env.example deploy/docker/env/postgres.env
 cp deploy/docker/env/web.production.env.example deploy/docker/env/web.production.env
 cp deploy/docker/env/keeper.primary.env.example deploy/docker/env/keeper.primary.env
+cp deploy/docker/env/keeper.testnet.primary.env.example deploy/docker/env/keeper.testnet.primary.env
 cp deploy/docker/env/proxy.env.example deploy/docker/env/proxy.env
 ```
 
@@ -35,9 +36,24 @@ must be reflected in:
 - `deploy/docker/env/postgres.env`
 - `BET_INDEX_DATABASE_URL` in `web.production.env`
 - `BET_INDEX_DATABASE_URL` in `keeper.primary.env`
+- `BET_INDEX_DATABASE_URL` in `keeper.testnet.primary.env`
 - `BET_INDEX_DATABASE_URL` in `keeper.backup.env`, if used
 
 Never commit the real `.env` files.
+
+The default Docker stack runs two primary keepers:
+
+- `keeper-primary`: Base mainnet (`8453`)
+- `keeper-testnet-primary`: Base Sepolia (`84532`)
+
+They write separate health snapshots into the shared `keeper_health` volume:
+
+- `/var/lib/arbigamefi/casino-keeper/base-mainnet-primary-health.json`
+- `/var/lib/arbigamefi/casino-keeper/base-sepolia-primary-health.json`
+
+The web service reads both paths through `KEEPER_HEALTH_PATH_8453` and
+`KEEPER_HEALTH_PATH_84532`. Use `?chainId=84532` on `/api/healthz` or
+`/ops/casino-keeper-health.json` to inspect the testnet keeper.
 
 ## 2. Preflight
 
@@ -124,6 +140,15 @@ Expected posture:
 - `keeper.status = ok`
 - `betIndex.status = ok`
 - `betIndex.source = postgres`
+
+Check both keeper chains explicitly:
+
+```bash
+curl -fsS "https://$ARBGAMEFI_DOMAIN/api/healthz?chainId=8453" | jq .
+curl -fsS "https://$ARBGAMEFI_DOMAIN/api/healthz?chainId=84532" | jq .
+curl -fsS "https://$ARBGAMEFI_DOMAIN/ops/casino-keeper-health.json?chainId=8453" | jq .
+curl -fsS "https://$ARBGAMEFI_DOMAIN/ops/casino-keeper-health.json?chainId=84532" | jq .
+```
 
 ## 6. Cloudflare
 
