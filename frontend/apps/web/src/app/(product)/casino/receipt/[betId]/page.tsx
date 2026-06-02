@@ -15,6 +15,7 @@ import {
   getExplorerBaseUrl,
   shortHex
 } from "../../../../../features/portfolio/activity/detail/format";
+import { ReceiptSharePanel } from "../../../../../features/share/ReceiptSharePanel";
 
 export async function generateMetadata({
   params,
@@ -57,6 +58,7 @@ export default async function CasinoReceiptPage({
   const { chainId: chainIdParam } = await searchParams;
   const { messages } = await getRequestI18n();
   const labels = messages.casino.room.receipt;
+  const shareLabels = messages.casino.room.result.actions;
   const betId = safeNormalizeBetId(rawBetId);
   if (!betId) notFound();
 
@@ -97,6 +99,7 @@ export default async function CasinoReceiptPage({
   const explorerBaseUrl = getExplorerBaseUrl(chainId);
   const txHref = explorerBaseUrl ? `${explorerBaseUrl}/tx/${row.lastTxHash}` : undefined;
   const gameHref = game?.slug ? `/casino/${game.slug}` : "/casino";
+  const receiptHref = `/casino/receipt/${betId}?chainId=${chainId}`;
   const net = getNetResult(row);
 
   return (
@@ -170,6 +173,21 @@ export default async function CasinoReceiptPage({
             {labels.actions.explorer}
           </a>
         ) : null}
+        <ReceiptSharePanel
+          fallbackUrl={receiptHref}
+          labels={{
+            copyLink: shareLabels.copyResultLink,
+            linkCopied: shareLabels.linkCopied,
+            nativeShare: shareLabels.nativeShare,
+            share: shareLabels.share,
+            telegram: shareLabels.shareToTelegram,
+            whatsapp: shareLabels.shareToWhatsApp,
+            x: shareLabels.shareToX
+          }}
+          text={`${game?.label ?? "Casino"} bet #${betId}`}
+          title={`ArbiGameFi bet #${betId}`}
+          triggerClassName="h-full"
+        />
       </div>
     </main>
   );
