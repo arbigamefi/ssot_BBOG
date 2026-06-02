@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { Metadata } from "next";
 
+import { getSupportedAppChains, type AppChain } from "../../../app-shell/chain-registry";
 import { getHealthzSnapshot, type HealthzSnapshot } from "../../../server/healthz";
 
 export const dynamic = "force-dynamic";
@@ -106,9 +107,80 @@ function buildCards(snapshot: HealthzSnapshot) {
   ];
 }
 
-export default async function StatusPage() {
-  const snapshot = await getHealthzSnapshot();
+function ChainStatusSummary({ chain, snapshot }: { chain: AppChain; snapshot: HealthzSnapshot }) {
   const cards = buildCards(snapshot);
+  return (
+    <section className="rounded-lg border border-border-soft bg-surface-1 p-5">
+      <div className="flex flex-col gap-4 border-b border-border-soft pb-5 md:flex-row md:items-start md:justify-between">
+        <div>
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="text-2xl font-semibold text-fg">{chain.name}</h2>
+            <span className="rounded-full border border-border-soft bg-surface-2 px-3 py-1 text-xs font-semibold uppercase tracking-[0.14em] text-fg-muted">
+              {chain.environment}
+            </span>
+          </div>
+          <p className="mt-2 font-mono text-sm text-fg-muted">chainId {snapshot.chainId}</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <StatusBadge status={snapshot.status} />
+          <a
+            className="rounded-full border border-border-soft bg-surface-2 px-4 py-2 text-sm font-semibold text-fg-muted transition-colors hover:border-border-strong hover:text-fg"
+            href={`/api/healthz?chainId=${chain.id}`}
+          >
+            JSON
+          </a>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-4 md:grid-cols-3">
+        <div className="rounded-lg border border-border-soft bg-surface-0 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-fg-muted">
+            Generated
+          </p>
+          <p className="mt-3 truncate font-mono text-sm font-semibold text-fg">
+            {snapshot.generatedAt}
+          </p>
+        </div>
+        <div className="rounded-lg border border-border-soft bg-surface-0 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-fg-muted">
+            Keeper age
+          </p>
+          <p className="mt-3 font-mono text-xl font-semibold text-fg">
+            {formatAge(snapshot.checks.keeper.ageMs)}
+          </p>
+        </div>
+        <div className="rounded-lg border border-border-soft bg-surface-0 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-fg-muted">
+            Index source
+          </p>
+          <p className="mt-3 truncate font-mono text-xl font-semibold text-fg">
+            {snapshot.checks.betIndex.source}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-4 lg:grid-cols-3">
+        {cards.map((card) => (
+          <CheckCard key={`${chain.id}-${card.label}`} {...card} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+export default async function StatusPage() {
+  const chains = getSupportedAppChains();
+  const snapshots = await Promise.all(
+    chains.map(async (chain) => ({
+      chain,
+      snapshot: await getHealthzSnapshot({ chainId: chain.id })
+    }))
+  );
+  const overallStatus: HealthzSnapshot["status"] = snapshots.every(
+    ({ snapshot }) => snapshot.status === "ok"
+  )
+    ? "ok"
+    : "degraded";
 
   return (
     <main className="min-h-screen bg-surface-0 px-6 py-10 text-fg">
@@ -118,51 +190,51 @@ export default async function StatusPage() {
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-fg-muted">
               ArbiGameFi Status
             </p>
-            <h1 className="mt-3 text-4xl font-semibold text-fg">System status</h1>
+            <h1 className="mt-3 text-4xl font-semibold text-fg">System status by chain</h1>
             <p className="mt-3 max-w-2xl text-base text-fg-muted">
               Live readiness checks for release metadata, casino keeper finalization, and the
-              durable bet index.
+              durable bet index across every deployed chain.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <StatusBadge status={snapshot.status} />
+            <StatusBadge status={overallStatus} />
             <a
               className="rounded-full border border-border-soft bg-surface-1 px-4 py-2 text-sm font-semibold text-fg-muted transition-colors hover:border-border-strong hover:text-fg"
               href="/api/healthz"
             >
-              JSON
+              Default JSON
             </a>
           </div>
         </header>
 
         <section className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-lg border border-border-soft bg-surface-1 p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-fg-muted">Chain</p>
-            <p className="mt-3 font-mono text-xl font-semibold text-fg">{snapshot.chainId}</p>
-          </div>
-          <div className="rounded-lg border border-border-soft bg-surface-1 p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-fg-muted">
-              Generated
-            </p>
-            <p className="mt-3 truncate font-mono text-lg font-semibold text-fg">
-              {snapshot.generatedAt}
-            </p>
-          </div>
-          <div className="rounded-lg border border-border-soft bg-surface-1 p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-fg-muted">
-              Schema
-            </p>
-            <p className="mt-3 font-mono text-xl font-semibold text-fg">
-              v{snapshot.schemaVersion}
-            </p>
-          </div>
-        </section>
-
-        <section className="grid gap-4 lg:grid-cols-3">
-          {cards.map((card) => (
-            <CheckCard key={card.label} {...card} />
+          {snapshots.map(({ chain, snapshot }) => (
+            <a
+              key={chain.id}
+              className="rounded-lg border border-border-soft bg-surface-1 p-5 transition-colors hover:border-border-strong"
+              href={`#chain-${chain.id}`}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-fg-muted">
+                    {chain.environment}
+                  </p>
+                  <p className="mt-3 text-lg font-semibold text-fg">{chain.name}</p>
+                  <p className="mt-1 font-mono text-sm text-fg-muted">chainId {chain.id}</p>
+                </div>
+                <StatusBadge status={snapshot.status} />
+              </div>
+            </a>
           ))}
         </section>
+
+        <div className="flex flex-col gap-6">
+          {snapshots.map(({ chain, snapshot }) => (
+            <div key={chain.id} id={`chain-${chain.id}`} className="scroll-mt-8">
+              <ChainStatusSummary chain={chain} snapshot={snapshot} />
+            </div>
+          ))}
+        </div>
       </div>
     </main>
   );
