@@ -14,6 +14,7 @@ import { loadEmbeddedRelease, type SSOTRelease } from "@ssot/ssot/release";
 
 import type {
   AffiliateBetsResponse,
+  BetReceiptResponse,
   PlayerBetsResponse,
   RecentBetsResponse
 } from "../../features/betting/recent-bets";
@@ -172,6 +173,18 @@ export function normalizeAffiliateAddress(affiliate: string | undefined) {
     return getAddress(value);
   } catch {
     throw new Error("affiliate must be a valid address.");
+  }
+}
+
+export function normalizeBetId(value: string | undefined) {
+  const normalized = cleanEnvValue(value);
+  if (!normalized) throw new Error("betId is required.");
+  try {
+    const parsed = BigInt(normalized);
+    if (parsed < 0n) throw new Error("negative");
+    return parsed.toString();
+  } catch {
+    throw new Error("betId must be a non-negative integer.");
   }
 }
 
@@ -479,6 +492,30 @@ export async function queryRecentBets({
     recentBetsCache.set(cacheKey, { expiresAt: now() + cacheTtlMs, response });
     return response;
   }
+}
+
+export async function queryBetReceipt({
+  betId,
+  chainId,
+  now = () => Date.now()
+}: {
+  betId: string;
+  chainId: number;
+  now?: () => number;
+}): Promise<BetReceiptResponse> {
+  const normalizedBetId = normalizeBetId(betId);
+  const store = getDurableBetIndexStore();
+  const row = store ? await store.getBet({ betId: normalizedBetId, chainId }) : null;
+
+  return {
+    schemaVersion: 1,
+    betId: normalizedBetId,
+    cached: false,
+    chainId,
+    generatedAt: now(),
+    row,
+    source: store ? "postgres" : "rpc-window"
+  };
 }
 
 export async function queryPlayerBets({

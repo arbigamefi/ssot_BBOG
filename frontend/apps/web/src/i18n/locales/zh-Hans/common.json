@@ -648,6 +648,8 @@
           "nativeShare": "系统分享",
           "copyResultLink": "复制结果链接",
           "shareToX": "分享到 X",
+          "shareToTelegram": "分享到 Telegram",
+          "shareToWhatsApp": "分享到 WhatsApp",
           "linkCopied": "链接已复制"
         }
       },

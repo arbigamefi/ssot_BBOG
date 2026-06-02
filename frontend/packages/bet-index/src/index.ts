@@ -115,6 +115,11 @@ export type BetIndexQuery = {
   affiliate?: Address;
 };
 
+export type BetIndexReceiptQuery = {
+  betId: string | number | bigint;
+  chainId: number;
+};
+
 export type SportsTicketIndexQuery = {
   chainId: number;
   limit: number;
@@ -221,6 +226,7 @@ export type BetIndexStore = {
     rows: readonly BankProviderLedgerRow[]
   ) => Promise<BankProviderLedgerRow[]>;
   getRecentBets: (query: BetIndexQuery) => Promise<BetRow[]>;
+  getBet: (query: BetIndexReceiptQuery) => Promise<BetRow | null>;
   getPlayerBets: (
     query: Required<Pick<BetIndexQuery, "chainId" | "limit" | "player">>
   ) => Promise<BetRow[]>;
@@ -539,6 +545,7 @@ export function createMemoryBetIndexStore(): BetIndexStore {
         .filter((row) => !gameId || row.gameId?.toLowerCase() === gameId.toLowerCase())
         .sort(compareBetRows)
         .slice(0, limit),
+    getBet: async ({ betId, chainId }) => bets.get(`${chainId}:${String(betId)}`) ?? null,
     getPlayerBets: async ({ chainId, player, limit }) =>
       [...bets.values()]
         .filter((row) => row.chainId === chainId)
@@ -908,6 +915,14 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
             limit ${limit}
           `;
       return rows.map(rowFromDatabase).sort(compareBetRows);
+    },
+    getBet: async ({ betId, chainId }) => {
+      const rows = await sql`
+        select * from bets
+        where chain_id = ${chainId} and bet_id = ${String(betId)}
+        limit 1
+      `;
+      return rows[0] ? rowFromDatabase(rows[0]) : null;
     },
     getPlayerBets: async ({ chainId, player, limit }) => {
       const rows = await sql`

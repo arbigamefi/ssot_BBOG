@@ -42,7 +42,7 @@ import { GameRoomRightPane } from "../../../../features/casino/room/right-pane";
 import { GameRoomShell } from "../../../../features/casino/room/game-room-shell";
 import { MobileCasinoActionBar } from "../../../../features/casino/room/mobile-action-bar";
 import { useCasinoRound } from "../../../../features/casino/room/use-casino-round";
-import { normalizeReferralAddress } from "../../../../features/referral/referral-link";
+import { useReferralAffiliate } from "../../../../features/referral/useReferralAffiliate";
 
 function AuditLedgerLoading() {
   const t = useTranslations();
@@ -180,10 +180,10 @@ export function GamePageClient({ slug }: { slug: string }) {
 
   const walletBalance = useGameWalletBalance({ sdk, assets: release?.assets });
   const referrerParam = searchParams.get("ref");
-  const referralAffiliate = React.useMemo(
-    () => normalizeReferralAddress(referrerParam, sdk?.account),
-    [referrerParam, sdk?.account]
-  );
+  const referralAffiliate = useReferralAffiliate({
+    referrer: referrerParam,
+    account: sdk?.account
+  });
 
   const openConnectModal = React.useCallback(() => requestWalletConnect(), []);
   const { db } = useSSOTRuntime();

@@ -65,6 +65,10 @@
         "title": "{game}",
         "description": "Play {game} with verifiable randomness, visible VRF status, and a chain-derived result receipt."
       },
+      "casinoReceipt": {
+        "title": "Casino receipt #{betId}",
+        "description": "Public settlement receipt for casino bet #{betId}, including indexed payout, randomness, player, and explorer proof."
+      },
       "sportsbook": {
         "title": "Sportsbook",
         "description": "Browse fixed-odds sports markets with on-chain settlement and signed odds snapshots."
@@ -648,7 +652,49 @@
           "nativeShare": "Share sheet",
           "copyResultLink": "Copy result link",
           "shareToX": "Share to X",
+          "shareToTelegram": "Share to Telegram",
+          "shareToWhatsApp": "Share to WhatsApp",
           "linkCopied": "Link copied"
+        }
+      },
+      "receipt": {
+        "eyebrow": "Public receipt",
+        "title": "Casino receipt #{betId}",
+        "description": "A shareable, indexed view of this round. Single-bet proof remains on-chain; indexed figures may lag while the keeper and database catch up.",
+        "indexed": "Indexed",
+        "missing": {
+          "title": "Receipt not indexed yet",
+          "description": "This bet is not available in the durable index yet. Try again after the keeper catches up, or verify the transaction directly on the explorer."
+        },
+        "status": {
+          "placed": "Placed",
+          "randomReady": "Random ready",
+          "finalized": "Finalized",
+          "refunded": "Refunded"
+        },
+        "metrics": {
+          "stake": "Stake",
+          "payout": "Payout",
+          "net": "Net",
+          "state": "State"
+        },
+        "facts": {
+          "game": "Game",
+          "player": "Player",
+          "affiliate": "Referrer",
+          "asset": "Asset",
+          "betId": "Bet ID",
+          "requestId": "VRF request",
+          "randomHash": "Random hash",
+          "placedBlock": "Placed block",
+          "updatedAt": "Indexed at",
+          "lastEvent": "Last event",
+          "lastTx": "Last tx"
+        },
+        "actions": {
+          "play": "Play this game",
+          "explorer": "View transaction",
+          "casino": "Browse casino"
         }
       },
       "gameInfo": {

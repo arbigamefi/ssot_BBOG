@@ -1335,6 +1335,8 @@
           "nativeShare": "Системное меню",
           "copyResultLink": "Скопировать ссылку",
           "shareToX": "Поделиться в X",
+          "shareToTelegram": "Поделиться в Telegram",
+          "shareToWhatsApp": "Поделиться в WhatsApp",
           "linkCopied": "Ссылка скопирована"
         }
       },

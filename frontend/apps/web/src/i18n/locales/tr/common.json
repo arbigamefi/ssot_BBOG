@@ -1335,6 +1335,8 @@
           "nativeShare": "Sistem paylaşımı",
           "copyResultLink": "Sonuç bağlantısını kopyala",
           "shareToX": "X'te paylaş",
+          "shareToTelegram": "Telegram'da paylaş",
+          "shareToWhatsApp": "WhatsApp'ta paylaş",
           "linkCopied": "Bağlantı kopyalandı"
         }
       },

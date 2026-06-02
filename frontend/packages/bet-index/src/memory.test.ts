@@ -50,6 +50,7 @@ describe("memory bet index store", () => {
     ]);
 
     const recent = await store.getRecentBets({ chainId: 84532, limit: 10 });
+    const single = await store.getBet({ betId: "7", chainId: 84532 });
     const player = await store.getPlayerBets({ chainId: 84532, limit: 10, player: PLAYER });
     const affiliate = await store.getAffiliateBets({
       affiliate: AFFILIATE,
@@ -62,6 +63,10 @@ describe("memory bet index store", () => {
     });
 
     expect(recent).toHaveLength(1);
+    expect(single).toMatchObject({
+      betId: "7",
+      state: "finalized"
+    });
     expect(player).toHaveLength(1);
     expect(affiliate).toHaveLength(1);
     expect(player[0]).toMatchObject({

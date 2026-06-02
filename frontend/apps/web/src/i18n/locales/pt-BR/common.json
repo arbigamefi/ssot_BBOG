@@ -1335,6 +1335,8 @@
           "nativeShare": "Compartilhar no sistema",
           "copyResultLink": "Copiar link do resultado",
           "shareToX": "Compartilhar no X",
+          "shareToTelegram": "Compartilhar no Telegram",
+          "shareToWhatsApp": "Compartilhar no WhatsApp",
           "linkCopied": "Link copiado"
         }
       },

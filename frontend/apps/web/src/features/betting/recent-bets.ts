@@ -29,6 +29,11 @@ export type AffiliateBetsResponse = RecentBetsResponse & {
   };
 };
 
+export type BetReceiptResponse = Omit<RecentBetsResponse, "fromBlock" | "rows" | "toBlock"> & {
+  betId: string;
+  row: RecentBetRow | null;
+};
+
 export type RecentBetsQuery = {
   chainId: number;
   gameId?: string;

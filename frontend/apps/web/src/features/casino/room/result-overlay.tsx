@@ -6,13 +6,14 @@ import {
   CheckIcon,
   ChevronDownIcon,
   ClipboardDocumentCheckIcon,
-  ShareIcon,
   XMarkIcon
 } from "@heroicons/react/24/outline";
 import { cn } from "@ssot/ui";
 
 import { useFocusTrap } from "../../../app-shell/a11y/useFocusTrap";
 import { formatUnits } from "../../betting/model/units";
+import { SharePanel } from "../../share/SharePanel";
+import { buildShareUrl } from "../../share/share-link";
 import { formatNativeFee } from "./casino-round";
 import type { CasinoOutcome } from "./outcome";
 import type { BaccaratSide, CoinSide, DiceDirection, SicBoKind } from "./params";
@@ -149,165 +150,6 @@ function CopyProofButton({
         </>
       )}
     </button>
-  );
-}
-
-/**
- * Share the result. Prefers the native share sheet (mobile), falling back to
- * copying a short summary + the room URL to the clipboard. No backend share
- * endpoint is involved, so nothing is published anywhere on the player's behalf.
- */
-function ShareResultButton({
-  shareTitle,
-  shareText,
-  proof,
-  label,
-  nativeLabel,
-  copyLinkLabel,
-  copyProofLabel,
-  proofCopiedLabel,
-  copiedLabel,
-  shareToXLabel
-}: {
-  shareTitle: string;
-  shareText: string;
-  proof: string;
-  label: string;
-  nativeLabel: string;
-  copyLinkLabel: string;
-  copyProofLabel: string;
-  proofCopiedLabel: string;
-  copiedLabel: string;
-  shareToXLabel: string;
-}) {
-  const [open, setOpen] = React.useState(false);
-  const [copied, setCopied] = React.useState<"link" | "proof" | null>(null);
-  const containerRef = React.useRef<HTMLDivElement | null>(null);
-  const canNativeShare =
-    typeof navigator !== "undefined" &&
-    typeof (navigator as Navigator & { share?: unknown }).share === "function";
-
-  React.useEffect(() => {
-    if (!open) return;
-    const onClick = (event: MouseEvent) => {
-      if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
-  }, [open]);
-
-  const url = () => (typeof window !== "undefined" ? window.location.href : "");
-  const summary = () => `${shareText} · ${url()}`.trim();
-  const markCopied = (kind: "link" | "proof") => {
-    setCopied(kind);
-    setTimeout(() => setCopied(null), 1500);
-  };
-
-  const shareNative = async () => {
-    const nav = typeof navigator !== "undefined" ? navigator : undefined;
-    if (!canNativeShare || !nav?.share) return;
-    try {
-      await nav.share({ title: shareTitle, text: shareText, url: url() });
-      setOpen(false);
-    } catch {
-      // native share sheet dismissed — nothing to do
-    }
-  };
-
-  const copyResultLink = async () => {
-    try {
-      await navigator.clipboard.writeText(summary());
-      markCopied("link");
-      setOpen(false);
-    } catch {
-      // clipboard denied — no-op
-    }
-  };
-
-  const copyProof = async () => {
-    try {
-      await navigator.clipboard.writeText(proof);
-      markCopied("proof");
-      setOpen(false);
-    } catch {
-      // clipboard denied — no-op
-    }
-  };
-
-  const shareToX = () => {
-    const intent = new URL("https://twitter.com/intent/tweet");
-    intent.searchParams.set("text", summary());
-    window.open(intent.toString(), "_blank", "noopener,noreferrer");
-    setOpen(false);
-  };
-
-  return (
-    <div ref={containerRef} className="relative">
-      <button
-        type="button"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
-        className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-border-soft bg-surface-2 px-4 py-2.5 text-xs font-bold uppercase tracking-[0.12em] text-fg transition-colors hover:border-brand/40 hover:bg-surface-3"
-      >
-        {copied ? (
-          <>
-            <CheckIcon className="h-4 w-4 text-success" />
-            {copied === "proof" ? proofCopiedLabel : copiedLabel}
-          </>
-        ) : (
-          <>
-            <ShareIcon className="h-4 w-4" />
-            {label}
-          </>
-        )}
-      </button>
-      {open ? (
-        <div
-          role="menu"
-          className="absolute bottom-full left-0 z-10 mb-2 w-56 overflow-hidden rounded-lg border border-border-soft bg-surface-1 p-1 text-left shadow-e3"
-        >
-          {canNativeShare ? (
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => void shareNative()}
-              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs font-semibold text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
-            >
-              <ShareIcon className="h-4 w-4" />
-              {nativeLabel}
-            </button>
-          ) : null}
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => void copyResultLink()}
-            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs font-semibold text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
-          >
-            <ClipboardDocumentCheckIcon className="h-4 w-4" />
-            {copyLinkLabel}
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => void copyProof()}
-            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs font-semibold text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
-          >
-            <ClipboardDocumentCheckIcon className="h-4 w-4" />
-            {copyProofLabel}
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            onClick={shareToX}
-            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs font-semibold text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
-          >
-            <ShareIcon className="h-4 w-4" />
-            {shareToXLabel}
-          </button>
-        </div>
-      ) : null}
-    </div>
   );
 }
 
@@ -833,6 +675,15 @@ export function GameRoomResultOverlay({
     assetDecimals,
     assetSymbol
   )} · ${gameSlug}`;
+  const shareUrl = buildShareUrl({
+    href:
+      typeof window !== "undefined"
+        ? `${window.location.origin}/casino/receipt/${result.betId.toString()}${
+            chainId ? `?chainId=${chainId}` : ""
+          }`
+        : `/casino/receipt/${result.betId.toString()}${chainId ? `?chainId=${chainId}` : ""}`,
+    referrer: result.player
+  });
 
   React.useEffect(() => setMounted(true), []);
   useBodyScrollLock(mounted);
@@ -1006,17 +857,22 @@ export function GameRoomResultOverlay({
             {t("casino.room.result.actions.playAgain")}
           </button>
           <div className="grid grid-cols-2 gap-2">
-            <ShareResultButton
-              shareTitle={t("casino.room.result.title")}
-              shareText={shareText}
+            <SharePanel
+              title={t("casino.room.result.title")}
+              text={shareText}
+              url={shareUrl}
               proof={fairnessProof}
-              label={t("casino.room.result.actions.share")}
-              nativeLabel={t("casino.room.result.actions.nativeShare")}
-              copyLinkLabel={t("casino.room.result.actions.copyResultLink")}
-              copyProofLabel={t("casino.room.result.actions.copyProof")}
-              proofCopiedLabel={t("casino.room.result.actions.proofCopied")}
-              copiedLabel={t("casino.room.result.actions.linkCopied")}
-              shareToXLabel={t("casino.room.result.actions.shareToX")}
+              labels={{
+                copyLink: t("casino.room.result.actions.copyResultLink"),
+                copyProof: t("casino.room.result.actions.copyProof"),
+                linkCopied: t("casino.room.result.actions.linkCopied"),
+                nativeShare: t("casino.room.result.actions.nativeShare"),
+                proofCopied: t("casino.room.result.actions.proofCopied"),
+                share: t("casino.room.result.actions.share"),
+                telegram: t("casino.room.result.actions.shareToTelegram"),
+                whatsapp: t("casino.room.result.actions.shareToWhatsApp"),
+                x: t("casino.room.result.actions.shareToX")
+              }}
             />
             <button
               type="button"
