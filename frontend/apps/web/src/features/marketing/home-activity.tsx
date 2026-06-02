@@ -24,9 +24,9 @@ export function HomeActivity({
 }) {
   return (
     <section className="border-b border-border-soft bg-surface-1 py-16">
-      <div className="mx-auto max-w-[1100px] px-6 lg:px-10">
+      <div className="mx-auto max-w-[1100px] px-3 sm:px-6 lg:px-10">
         <div
-          className="relative overflow-hidden rounded-xl border border-border-soft p-6 shadow-e3"
+          className="relative overflow-hidden rounded-xl border border-border-soft p-4 shadow-e3 sm:p-6"
           style={{
             background: "linear-gradient(180deg, hsl(var(--surface-2)), hsl(var(--surface-1)))"
           }}
@@ -39,7 +39,7 @@ export function HomeActivity({
             }}
           />
           <div className="mb-5 flex items-center justify-between gap-4">
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-fg-subtle">
                 {copy.eyebrow}
                 <span className="inline-flex items-center gap-1 rounded-full border border-success/30 bg-success-soft px-2 py-0.5 text-success">
@@ -51,7 +51,7 @@ export function HomeActivity({
             </div>
             <Link
               href="/portfolio/activity"
-              className="text-sm font-bold text-brand transition-colors hover:text-brand-hover"
+              className="shrink-0 whitespace-nowrap text-sm font-bold text-brand transition-colors hover:text-brand-hover"
             >
               {copy.viewAll}
             </Link>
@@ -62,8 +62,12 @@ export function HomeActivity({
             style={{ boxShadow: "inset 0 2px 12px hsl(var(--surface-0) / 0.4)" }}
           >
             {activity.length > 0 ? (
-              <div data-testid="home-activity-scroll" className="overflow-x-auto">
-                <div className="min-w-[34rem]">
+              <div
+                data-testid="home-activity-scroll"
+                className="overflow-x-auto"
+                aria-label={copy.title}
+              >
+                <div className="min-w-[36rem]">
                   <div className="grid grid-cols-[minmax(9rem,1fr)_minmax(6.5rem,0.85fr)_minmax(8rem,1fr)_4.5rem] border-b border-border-soft px-4 py-3 text-[10px] font-bold uppercase tracking-[0.14em] text-fg-subtle">
                     <div>{copy.headers.player}</div>
                     <div>{copy.headers.room}</div>
