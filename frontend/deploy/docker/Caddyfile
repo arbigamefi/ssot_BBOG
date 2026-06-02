@@ -1,8 +1,14 @@
 {
 	email {$ACME_EMAIL}
+	auto_https disable_redirects
+}
+
+http://{$ARBGAMEFI_DOMAIN} {
+	redir https://{host}{uri} permanent
 }
 
 {$ARBGAMEFI_DOMAIN} {
+	tls {$CLOUDFLARE_ORIGIN_CERT_PATH} {$CLOUDFLARE_ORIGIN_KEY_PATH}
 	encode zstd gzip
 
 	reverse_proxy web:3000 {

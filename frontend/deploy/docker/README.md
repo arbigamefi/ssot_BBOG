@@ -127,13 +127,64 @@ Expected posture:
 
 ## 6. Cloudflare
 
-Use Cloudflare for DNS, CDN, and WAF:
+Use Cloudflare for DNS, CDN, WAF, and edge TLS. The Docker host should use a
+Cloudflare Origin Certificate with Cloudflare SSL/TLS mode set to **Full
+(strict)**.
+
+Create the origin certificate in Cloudflare:
+
+1. Open Cloudflare dashboard → SSL/TLS → Origin Server → Create Certificate.
+2. Include `arbigamefi.com` as the hostname. Add `*.arbigamefi.com` only if
+   this host will serve subdomains too.
+3. Save the certificate to:
+
+   ```text
+   deploy/docker/certs/cloudflare-origin.pem
+   ```
+
+4. Save the private key to:
+
+   ```text
+   deploy/docker/certs/cloudflare-origin-key.pem
+   ```
+
+5. Keep the key private and restrict it on the host:
+
+   ```bash
+   chmod 600 deploy/docker/certs/cloudflare-origin-key.pem
+   ```
+
+The committed Caddyfile loads these files directly:
+
+```text
+tls {$CLOUDFLARE_ORIGIN_CERT_PATH} {$CLOUDFLARE_ORIGIN_KEY_PATH}
+```
+
+That means Caddy does not request a Let's Encrypt certificate for the production
+site. This is intentional for orange-cloud deployments because Cloudflare
+terminates public TLS at the edge and validates the private origin certificate
+between Cloudflare and Caddy.
+
+Cloudflare settings:
 
 - DNS `A` record points at the Docker host.
 - Proxy status enabled.
 - SSL/TLS mode: Full (strict).
 - Cache HTML bypassed or left default; Next static assets can be cached.
 - WAF/rate-limit rules can sit in front of `/api/*`.
+
+After copying the cert files to the VPS, restart only the proxy:
+
+```bash
+docker compose -f compose.production.yml up -d caddy
+```
+
+Verify through Cloudflare:
+
+```bash
+curl -fsS https://$ARBGAMEFI_DOMAIN/api/healthz | jq .
+curl -fsS https://$ARBGAMEFI_DOMAIN/ops/casino-keeper-health.json | jq .
+```
 
 ## 7. Rollback
 
