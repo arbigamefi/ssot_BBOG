@@ -29,4 +29,29 @@ describe("server RPC resolution", () => {
       })
     ).toBe("https://base-mainnet.g.alchemy.com/v2/alchemy-key");
   });
+
+  it("ignores generic RPC_URL unless explicitly allowed", () => {
+    expect(resolveServerRpcUrl(8453, { RPC_URL: "https://generic.example" })).toBeUndefined();
+    expect(
+      resolveServerRpcUrl(
+        8453,
+        { RPC_URL: "https://generic.example" },
+        { allowGenericFallback: true }
+      )
+    ).toBe("https://generic.example");
+  });
+
+  it("resolves Arbitrum scoped RPC URLs", () => {
+    expect(
+      resolveServerRpcUrl(42161, {
+        ARBITRUM_RPC_URL: "https://arbitrum.example",
+        RPC_URL: "https://generic.example"
+      })
+    ).toBe("https://arbitrum.example");
+    expect(
+      resolveServerRpcUrl(421614, {
+        ARBITRUM_SEPOLIA_RPC_URL: "https://arbitrum-sepolia.example"
+      })
+    ).toBe("https://arbitrum-sepolia.example");
+  });
 });

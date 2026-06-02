@@ -24,11 +24,25 @@ function firstConfigured(env: ServerRpcEnv, names: readonly string[]) {
   return undefined;
 }
 
-export function resolveServerRpcUrl(chainId: number, env: ServerRpcEnv = process.env) {
+export type ResolveServerRpcOptions = {
+  /**
+   * Allow RPC_URL / NEXT_PUBLIC_RPC_URL to serve this chain. A generic URL can
+   * only point to one network, so it is unsafe for multi-chain deployments and
+   * remains opt-in for legacy single-chain scripts.
+   */
+  allowGenericFallback?: boolean;
+};
+
+export function resolveServerRpcUrl(
+  chainId: number,
+  env: ServerRpcEnv = process.env,
+  options: ResolveServerRpcOptions = {}
+) {
   return (
     firstConfigured(env, SERVER_RPC_ENV_BY_CHAIN_ID[chainId] ?? []) ??
-    cleanEnvValue(env.RPC_URL) ??
-    cleanEnvValue(env.NEXT_PUBLIC_RPC_URL) ??
-    resolvePublicRpcUrl(chainId, env)
+    resolvePublicRpcUrl(chainId, env) ??
+    (options.allowGenericFallback
+      ? (cleanEnvValue(env.RPC_URL) ?? cleanEnvValue(env.NEXT_PUBLIC_RPC_URL))
+      : undefined)
   );
 }
