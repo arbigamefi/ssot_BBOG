@@ -3,6 +3,7 @@ import path from "node:path";
 import { buildSecurityHeaders } from "./src/server/security-headers.mjs";
 
 const isDev = process.env.NODE_ENV === "development";
+const isLowMemoryBuild = process.env.LOW_MEMORY_BUILD === "1";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -13,20 +14,22 @@ const nextConfig = {
   output: "standalone",
   outputFileTracingRoot: path.resolve(import.meta.dirname, "../.."),
 
-  experimental: {
-    // Per-import tree-shaking for large barrel packages — Next rewrites
-    // `import { X } from "pkg"` into deep imports so unused exports don't
-    // ship. Pure bundle hygiene, no behavioural change.
-    optimizePackageImports: [
-      "@heroicons/react/24/outline",
-      "@heroicons/react/24/solid",
-      "@ssot/ui",
-      "framer-motion",
-      "wagmi",
-      "viem",
-      "@rainbow-me/rainbowkit"
-    ]
-  },
+  experimental: isLowMemoryBuild
+    ? {}
+    : {
+        // Per-import tree-shaking for large barrel packages — Next rewrites
+        // `import { X } from "pkg"` into deep imports so unused exports don't
+        // ship. Pure bundle hygiene, no behavioural change.
+        optimizePackageImports: [
+          "@heroicons/react/24/outline",
+          "@heroicons/react/24/solid",
+          "@ssot/ui",
+          "framer-motion",
+          "wagmi",
+          "viem",
+          "@rainbow-me/rainbowkit"
+        ]
+      },
 
   async headers() {
     return [

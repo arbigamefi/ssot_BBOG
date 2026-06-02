@@ -1,0 +1,88 @@
+name: Frontend Docker Images
+
+on:
+  pull_request:
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend-docker-images.yml"
+  push:
+    branches: ["master"]
+    tags: ["v*"]
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend-docker-images.yml"
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Optional extra image tag, for example base-mainnet-2026-06-02"
+        required: false
+        type: string
+
+concurrency:
+  group: frontend-docker-images-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  WEB_IMAGE: ghcr.io/arbigamefi/ssot-bbog-web
+  KEEPER_IMAGE: ghcr.io/arbigamefi/ssot-bbog-keeper
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: web
+            image: ghcr.io/arbigamefi/ssot-bbog-web
+            dockerfile: frontend/deploy/docker/Dockerfile.web
+          - service: keeper
+            image: ghcr.io/arbigamefi/ssot-bbog-keeper
+            dockerfile: frontend/deploy/docker/Dockerfile.keeper
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ matrix.image }}
+          tags: |
+            type=sha,prefix=sha-
+            type=ref,event=tag
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/master' }}
+            type=raw,value=${{ github.event.inputs.image_tag }},enable=${{ github.event_name == 'workflow_dispatch' && github.event.inputs.image_tag != '' }}
+          labels: |
+            org.opencontainers.image.title=ArbiGameFi ${{ matrix.service }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+
+      - name: Build and optionally push
+        uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=frontend-${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=frontend-${{ matrix.service }}

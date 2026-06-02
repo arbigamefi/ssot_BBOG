@@ -17,6 +17,7 @@ services:
       - internal
 
   web:
+    image: ${WEB_IMAGE:-ghcr.io/arbigamefi/ssot-bbog-web:latest}
     build:
       context: .
       dockerfile: deploy/docker/Dockerfile.web
@@ -47,6 +48,7 @@ services:
       - internal
 
   keeper-primary:
+    image: ${KEEPER_IMAGE:-ghcr.io/arbigamefi/ssot-bbog-keeper:latest}
     build:
       context: .
       dockerfile: deploy/docker/Dockerfile.keeper
@@ -67,6 +69,7 @@ services:
   # profile exists for staging drills only.
   keeper-backup:
     profiles: ["backup-local"]
+    image: ${KEEPER_IMAGE:-ghcr.io/arbigamefi/ssot-bbog-keeper:latest}
     build:
       context: .
       dockerfile: deploy/docker/Dockerfile.keeper

@@ -49,7 +49,41 @@ bash deploy/docker/check-production-env.sh
 This checks that required env files exist, no placeholder values remain, the
 Compose graph is valid, and the embedded Base mainnet release is present.
 
-## 3. Build
+## 3. Build or Pull Images
+
+Preferred production path: build images in GitHub Actions and run only pulled
+images on the VPS. This keeps low-memory hosts from running `next build`.
+
+The workflow publishes:
+
+- `ghcr.io/arbigamefi/ssot-bbog-web`
+- `ghcr.io/arbigamefi/ssot-bbog-keeper`
+
+Tags:
+
+- `latest` on `master`
+- `sha-<git-sha>` on pushed builds
+- `v*` git tags
+- optional manual `image_tag` from the workflow dispatch form
+
+On the VPS, from `frontend/`:
+
+```bash
+bash deploy/docker/deploy-images.sh
+```
+
+For a pinned rollout, export exact image tags before running the script:
+
+```bash
+export WEB_IMAGE=ghcr.io/arbigamefi/ssot-bbog-web:sha-<git-sha>
+export KEEPER_IMAGE=ghcr.io/arbigamefi/ssot-bbog-keeper:sha-<git-sha>
+bash deploy/docker/deploy-images.sh
+```
+
+The script uses `docker compose up --no-build`, so the VPS does not compile the
+Next.js app.
+
+Fallback local build path:
 
 ```bash
 docker compose -f compose.production.yml build web keeper-primary
