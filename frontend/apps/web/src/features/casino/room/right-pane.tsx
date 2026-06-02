@@ -109,6 +109,7 @@ export function GameRoomRightPane({
   assetSymbol,
   assetDecimals,
   onResultClose,
+  onResultPlayAgain,
   onDiceRevealComplete,
   onCoinRevealComplete,
   onRouletteRevealComplete,
@@ -156,6 +157,7 @@ export function GameRoomRightPane({
   assetSymbol?: string;
   assetDecimals?: number;
   onResultClose?: () => void;
+  onResultPlayAgain?: () => void;
   onDiceRevealComplete?: () => void;
   onCoinRevealComplete?: () => void;
   onRouletteRevealComplete?: () => void;
@@ -332,6 +334,7 @@ export function GameRoomRightPane({
           kenoResultDrawn={kenoResultDrawn}
           casinoOutcome={casinoOutcome}
           onClose={onResultClose}
+          onPlayAgain={onResultPlayAgain}
         />
       )}
     </div>

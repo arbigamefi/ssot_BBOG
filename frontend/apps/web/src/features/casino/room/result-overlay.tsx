@@ -1,18 +1,22 @@
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import {
   ArrowTopRightOnSquareIcon,
   CheckIcon,
+  ChevronDownIcon,
   ClipboardDocumentCheckIcon,
+  ShareIcon,
   XMarkIcon
 } from "@heroicons/react/24/outline";
 import { cn } from "@ssot/ui";
 
+import { useFocusTrap } from "../../../app-shell/a11y/useFocusTrap";
 import { formatUnits } from "../../betting/model/units";
 import { formatNativeFee } from "./casino-round";
 import type { CasinoOutcome } from "./outcome";
 import type { BaccaratSide, CoinSide, DiceDirection, SicBoKind } from "./params";
-import type { CasinoRoundResult } from "./resolution";
+import type { CasinoRoundResult, CasinoTerminalRoundResult } from "./resolution";
 
 function formatTokenAmount(value: bigint, decimals: number, symbol: string) {
   const raw = formatUnits(value, decimals);
@@ -48,6 +52,28 @@ function formatMultiplier(payout: bigint, stake: bigint) {
 function formatResolvedAt(value: number | undefined) {
   if (!value) return "—";
   return new Date(value * 1000).toLocaleString();
+}
+
+function useBodyScrollLock(active: boolean) {
+  React.useEffect(() => {
+    if (!active) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [active]);
+}
+
+function useEscapeToClose(active: boolean, onClose: (() => void) | undefined) {
+  React.useEffect(() => {
+    if (!active || !onClose) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [active, onClose]);
 }
 
 function explorerTxUrl(chainId: number | undefined, txHash: string | undefined) {
@@ -126,48 +152,173 @@ function CopyProofButton({
   );
 }
 
+/**
+ * Share the result. Prefers the native share sheet (mobile), falling back to
+ * copying a short summary + the room URL to the clipboard. No backend share
+ * endpoint is involved, so nothing is published anywhere on the player's behalf.
+ */
+function ShareResultButton({
+  shareTitle,
+  shareText,
+  proof,
+  label,
+  nativeLabel,
+  copyLinkLabel,
+  copyProofLabel,
+  proofCopiedLabel,
+  copiedLabel,
+  shareToXLabel
+}: {
+  shareTitle: string;
+  shareText: string;
+  proof: string;
+  label: string;
+  nativeLabel: string;
+  copyLinkLabel: string;
+  copyProofLabel: string;
+  proofCopiedLabel: string;
+  copiedLabel: string;
+  shareToXLabel: string;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const [copied, setCopied] = React.useState<"link" | "proof" | null>(null);
+  const containerRef = React.useRef<HTMLDivElement | null>(null);
+  const canNativeShare =
+    typeof navigator !== "undefined" &&
+    typeof (navigator as Navigator & { share?: unknown }).share === "function";
+
+  React.useEffect(() => {
+    if (!open) return;
+    const onClick = (event: MouseEvent) => {
+      if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [open]);
+
+  const url = () => (typeof window !== "undefined" ? window.location.href : "");
+  const summary = () => `${shareText} · ${url()}`.trim();
+  const markCopied = (kind: "link" | "proof") => {
+    setCopied(kind);
+    setTimeout(() => setCopied(null), 1500);
+  };
+
+  const shareNative = async () => {
+    const nav = typeof navigator !== "undefined" ? navigator : undefined;
+    if (!canNativeShare || !nav?.share) return;
+    try {
+      await nav.share({ title: shareTitle, text: shareText, url: url() });
+      setOpen(false);
+    } catch {
+      // native share sheet dismissed — nothing to do
+    }
+  };
+
+  const copyResultLink = async () => {
+    try {
+      await navigator.clipboard.writeText(summary());
+      markCopied("link");
+      setOpen(false);
+    } catch {
+      // clipboard denied — no-op
+    }
+  };
+
+  const copyProof = async () => {
+    try {
+      await navigator.clipboard.writeText(proof);
+      markCopied("proof");
+      setOpen(false);
+    } catch {
+      // clipboard denied — no-op
+    }
+  };
+
+  const shareToX = () => {
+    const intent = new URL("https://twitter.com/intent/tweet");
+    intent.searchParams.set("text", summary());
+    window.open(intent.toString(), "_blank", "noopener,noreferrer");
+    setOpen(false);
+  };
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+        className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-border-soft bg-surface-2 px-4 py-2.5 text-xs font-bold uppercase tracking-[0.12em] text-fg transition-colors hover:border-brand/40 hover:bg-surface-3"
+      >
+        {copied ? (
+          <>
+            <CheckIcon className="h-4 w-4 text-success" />
+            {copied === "proof" ? proofCopiedLabel : copiedLabel}
+          </>
+        ) : (
+          <>
+            <ShareIcon className="h-4 w-4" />
+            {label}
+          </>
+        )}
+      </button>
+      {open ? (
+        <div
+          role="menu"
+          className="absolute bottom-full left-0 z-10 mb-2 w-56 overflow-hidden rounded-lg border border-border-soft bg-surface-1 p-1 text-left shadow-e3"
+        >
+          {canNativeShare ? (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => void shareNative()}
+              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs font-semibold text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
+            >
+              <ShareIcon className="h-4 w-4" />
+              {nativeLabel}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => void copyResultLink()}
+            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs font-semibold text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
+          >
+            <ClipboardDocumentCheckIcon className="h-4 w-4" />
+            {copyLinkLabel}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => void copyProof()}
+            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs font-semibold text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
+          >
+            <ClipboardDocumentCheckIcon className="h-4 w-4" />
+            {copyProofLabel}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={shareToX}
+            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs font-semibold text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
+          >
+            <ShareIcon className="h-4 w-4" />
+            {shareToXLabel}
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 type Translate = ReturnType<typeof useTranslations>;
 
-function getOutcome(
-  result: CasinoRoundResult,
-  casinoOutcome: CasinoOutcome | null | undefined,
-  t: Translate
-) {
+function getOutcome(result: CasinoTerminalRoundResult, t: Translate) {
   if (result.kind === "refunded") {
     return {
       label: t("casino.room.result.outcomes.refunded.label"),
       tone: "neutral" as const,
       detail: t("casino.room.result.outcomes.refunded.detail")
-    };
-  }
-
-  if (result.kind === "indexing") {
-    const net = casinoOutcome?.netResult;
-    if (net == null) {
-      return {
-        label: t("casino.room.result.outcomes.revealed.label"),
-        tone: "neutral" as const,
-        detail: t("casino.room.result.outcomes.revealed.detail")
-      };
-    }
-    if (net > 0n) {
-      return {
-        label: t("casino.room.result.outcomes.winPending.label"),
-        tone: "win" as const,
-        detail: t("casino.room.result.outcomes.winPending.detail")
-      };
-    }
-    if (net === 0n) {
-      return {
-        label: t("casino.room.result.outcomes.returnedPending.label"),
-        tone: "neutral" as const,
-        detail: t("casino.room.result.outcomes.returnedPending.detail")
-      };
-    }
-    return {
-      label: t("casino.room.result.outcomes.lossPending.label"),
-      tone: "loss" as const,
-      detail: t("casino.room.result.outcomes.lossPending.detail")
     };
   }
 
@@ -531,7 +682,31 @@ function getGameResultRows(context: GameResultContext, t: Translate) {
   return [];
 }
 
-function DetailRow({
+/** Compact figure tile used in the settled-payoff stat strip. */
+function Stat({ label, value, tone }: { label: string; value: string; tone?: DetailTone }) {
+  return (
+    <div className="px-4 py-3">
+      <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-fg-subtle">
+        {label}
+      </div>
+      <div
+        className={cn(
+          "mt-1 truncate font-mono text-sm font-bold",
+          tone === "win" && "text-success",
+          tone === "loss" && "text-danger",
+          tone === "accent" && "text-accent",
+          (tone == null || tone === "neutral") && "text-fg"
+        )}
+        title={value}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
+/** Dense label/value row for the game-result and fairness panels. */
+function FactRow({
   label,
   value,
   href,
@@ -542,17 +717,18 @@ function DetailRow({
   href?: string;
   tone?: DetailTone;
 }) {
+  // flex-1 + min-w-0 lets the value claim the row's remaining width and
+  // truncate (e.g. the long request-id decimal) instead of overflowing.
   const valueClass = cn(
-    "font-mono text-sm font-bold text-fg",
+    "min-w-0 flex-1 truncate font-mono text-xs font-bold text-fg",
     tone === "win" && "text-success",
     tone === "loss" && "text-danger",
     tone === "accent" && "text-accent",
     tone === "neutral" && "text-fg-muted"
   );
-
   return (
-    <div className="grid grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] items-start gap-4 py-2.5">
-      <p className="text-sm font-semibold text-fg-muted">{label}</p>
+    <div className="flex items-center justify-between gap-3">
+      <span className="shrink-0 text-xs text-fg-muted">{label}</span>
       {href ? (
         <a
           href={href}
@@ -560,25 +736,28 @@ function DetailRow({
           rel="noreferrer"
           className={cn(
             valueClass,
-            "inline-flex min-w-0 items-center gap-1 truncate text-brand hover:text-brand/80"
+            "inline-flex items-center justify-end gap-1 text-brand hover:text-brand/80"
           )}
         >
-          {value}
+          <span className="truncate">{value}</span>
           <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5 shrink-0" />
         </a>
       ) : (
-        <p className={cn(valueClass, "truncate")}>{value}</p>
+        <span className={cn(valueClass, "text-right")}>{value}</span>
       )}
     </div>
   );
 }
 
-function DetailSection({ title, children }: { title?: string; children: React.ReactNode }) {
+/** A titled, hairline-separated block in the result body. */
+function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-lg border border-border bg-surface-2 p-5 text-left">
-      {title && <h4 className="mb-3 text-sm font-semibold text-fg">{title}</h4>}
-      <div className="divide-y divide-border-soft">{children}</div>
-    </section>
+    <div className="border-b border-border-soft px-4 py-3">
+      <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
+        {title}
+      </div>
+      <div className="space-y-1.5">{children}</div>
+    </div>
   );
 }
 
@@ -596,9 +775,10 @@ export function GameRoomResultOverlay({
   kenoSpots,
   kenoResultDrawn,
   casinoOutcome,
-  onClose
+  onClose,
+  onPlayAgain
 }: {
-  result: CasinoRoundResult;
+  result: CasinoTerminalRoundResult;
   chainId?: number;
   assetSymbol?: string;
   assetDecimals?: number;
@@ -612,23 +792,27 @@ export function GameRoomResultOverlay({
   kenoResultDrawn: readonly number[];
   casinoOutcome?: CasinoOutcome | null;
   onClose?: () => void;
+  /** Restart the round (resets the stepper and places the next bet). */
+  onPlayAgain?: () => void;
 }) {
   const t = useTranslations();
-  const outcome = getOutcome(result, casinoOutcome, t);
-  const txHash =
-    result.kind === "refunded"
-      ? result.refund.txHash
-      : result.kind === "settled"
-        ? result.settlement.txHash
-        : undefined;
+  const [fairnessOpen, setFairnessOpen] = React.useState(false);
+  const [mounted, setMounted] = React.useState(false);
+  const trapRef = useFocusTrap<HTMLDivElement>(mounted);
+  const primaryActionRef = React.useRef<HTMLButtonElement | null>(null);
+  const outcome = getOutcome(result, t);
+  // The overlay only ever mounts for a fully settled or refunded round (the
+  // caller gates it behind isCasinoTerminalRoundResult), so every figure here is
+  // final — no pending / random-only states are represented.
+  const txHash = result.kind === "refunded" ? result.refund.txHash : result.settlement.txHash;
   const txHref = explorerTxUrl(chainId, txHash);
   const payout =
+    result.kind === "refunded" ? result.refund.refundAmount : result.settlement.payoutNet;
+  const net = payout - result.stake;
+  const payoutLabel =
     result.kind === "refunded"
-      ? result.refund.refundAmount
-      : result.kind === "settled"
-        ? result.settlement.payoutNet
-        : casinoOutcome?.playerOwed;
-  const net = payout == null ? undefined : payout - result.stake;
+      ? t("casino.room.result.facts.refund")
+      : t("casino.room.result.facts.payout");
   const gameRows = getGameResultRows(
     {
       gameSlug,
@@ -643,176 +827,208 @@ export function GameRoomResultOverlay({
     },
     t
   );
-  const payoutLabel =
-    result.kind === "refunded"
-      ? t("casino.room.result.facts.refund")
-      : result.kind === "indexing"
-        ? t("casino.room.result.facts.expectedPayout")
-        : t("casino.room.result.facts.payout");
+  const fairnessProof = buildFairnessProof({ result, chainId, txHash });
+  const shareText = `${outcome.label} · ${formatSignedTokenAmount(
+    net,
+    assetDecimals,
+    assetSymbol
+  )} · ${gameSlug}`;
 
-  return (
+  React.useEffect(() => setMounted(true), []);
+  useBodyScrollLock(mounted);
+  useEscapeToClose(mounted, onClose);
+  React.useEffect(() => {
+    if (!mounted) return;
+    primaryActionRef.current?.focus();
+  }, [mounted]);
+
+  if (!mounted) return null;
+
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
       aria-label={t("casino.room.result.title")}
-      className="pointer-events-auto absolute inset-0 z-[60] flex flex-col items-center justify-center bg-surface-0/82 p-4 backdrop-blur-md animate-in fade-in zoom-in"
+      className="fixed inset-0 z-[90] flex flex-col items-center justify-center bg-surface-0/76 p-4 backdrop-blur-md animate-in fade-in zoom-in"
     >
-      <div className="relative flex max-h-[calc(100vh-3rem)] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-border bg-surface-1 p-6 text-center shadow-e3 transition-transform md:p-8">
-        <div
-          className={cn(
-            "pointer-events-none absolute inset-x-8 top-0 h-24 blur-[90px]",
-            outcome.tone === "win" && "bg-success/30",
-            outcome.tone === "loss" && "bg-danger/25",
-            outcome.tone === "neutral" && "bg-brand/20"
-          )}
-        />
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label={t("casino.room.result.actions.close")}
-          className="absolute right-5 top-5 z-10 rounded-md border border-border bg-surface-2 p-2 text-fg-muted transition-colors hover:border-brand/40 hover:text-fg"
-        >
-          <XMarkIcon className="h-5 w-5" />
-        </button>
-
-        <div className="relative min-h-0 overflow-y-auto pr-1">
-          <p className="text-left text-2xl font-semibold text-fg">
+      <div
+        ref={trapRef}
+        className="relative flex max-h-[calc(100vh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-md border border-border bg-surface-1 shadow-e3"
+      >
+        {/* Header — quiet eyebrow + close, matching the room's panel chrome. */}
+        <div className="flex items-center justify-between gap-3 border-b border-border-soft px-4 py-3">
+          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-fg-subtle">
             {t("casino.room.result.title")}
-          </p>
-          <h3
-            role="status"
-            aria-live="assertive"
-            className={cn(
-              "mt-5 text-left text-4xl font-semibold tracking-normal",
-              outcome.tone === "win" && "text-success",
-              outcome.tone === "loss" && "text-danger",
-              outcome.tone === "neutral" && "text-fg"
-            )}
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t("casino.room.result.actions.close")}
+            className="rounded-md border border-border-soft bg-surface-2 p-1.5 text-fg-muted transition-colors hover:border-brand/40 hover:text-fg"
           >
-            {outcome.label}
-          </h3>
-          <p className="mt-2 text-left text-sm leading-6 text-fg-muted">{outcome.detail}</p>
+            <XMarkIcon className="h-4 w-4" />
+          </button>
+        </div>
 
-          <div className="mt-6 grid gap-4">
-            <DetailSection>
-              <DetailRow
-                label={t("casino.room.result.facts.status")}
-                value={outcome.label}
-                tone={outcome.tone === "win" ? "win" : outcome.tone === "loss" ? "loss" : "neutral"}
-              />
-              <DetailRow
-                label={t("casino.room.result.facts.player")}
-                value={formatAddress(result.player)}
-              />
-              <DetailRow
-                label={t("casino.room.result.facts.multiplier")}
-                value={
-                  payout == null
-                    ? t("casino.room.result.facts.pending")
-                    : formatMultiplier(payout, result.stake)
-                }
-              />
-              <DetailRow
-                label={t("casino.room.result.facts.betAmount")}
-                value={formatTokenAmount(result.stake, assetDecimals, assetSymbol)}
-              />
-              <DetailRow
-                label={payoutLabel}
-                value={
-                  payout == null
-                    ? t("casino.room.result.facts.pending")
-                    : formatTokenAmount(payout, assetDecimals, assetSymbol)
-                }
-              />
-              <DetailRow
-                label={t("casino.room.result.facts.netResult")}
-                value={
-                  net == null
-                    ? t("casino.room.result.facts.pending")
-                    : formatSignedTokenAmount(net, assetDecimals, assetSymbol)
-                }
-                tone={net == null ? "neutral" : net > 0n ? "win" : net < 0n ? "loss" : "neutral"}
-              />
-            </DetailSection>
-
-            {gameRows.length > 0 && (
-              <DetailSection title={t("casino.room.result.sections.gameResult")}>
-                {gameRows.map((row) => (
-                  <DetailRow key={row.label} label={row.label} value={row.value} tone={row.tone} />
-                ))}
-              </DetailSection>
-            )}
-
-            <DetailSection title={t("casino.room.result.sections.fairnessData")}>
-              <DetailRow
-                label={t("casino.room.result.facts.betId")}
-                value={result.betId.toString()}
-              />
-              <DetailRow
-                label={t("casino.room.result.facts.resolvedTime")}
-                value={formatResolvedAt(result.resolvedAt)}
-              />
-              <DetailRow
-                label={t("casino.room.result.facts.vrfFee")}
-                value={formatNativeFee(result.vrfFeeCharged)}
-              />
-              <DetailRow
-                label={t("casino.room.result.facts.requestId")}
-                value={result.requestId.toString()}
-              />
-              <DetailRow
-                label={t("casino.room.result.facts.randomHash")}
-                value={shortHash(result.randomHash)}
-              />
-              <DetailRow
-                label={t("casino.room.result.facts.settlementTx")}
-                value={
-                  shortHash(txHash) === "—"
-                    ? t("casino.room.result.facts.pending")
-                    : shortHash(txHash)
-                }
-                href={txHref}
-              />
-              <div className="pt-2">
-                <CopyProofButton
-                  proof={buildFairnessProof({ result, chainId, txHash })}
-                  label={t("casino.room.result.actions.copyProof")}
-                  copiedLabel={t("casino.room.result.actions.proofCopied")}
-                />
+        <div className="min-h-0 overflow-y-auto">
+          {/* Hero — the settled payoff, led by net result. */}
+          <div className="relative overflow-hidden border-b border-border-soft px-4 py-5">
+            <div
+              aria-hidden
+              className={cn(
+                "pointer-events-none absolute inset-x-6 -top-6 h-24 blur-[70px]",
+                outcome.tone === "win" && "bg-success/30",
+                outcome.tone === "loss" && "bg-danger/25",
+                outcome.tone === "neutral" && "bg-brand/20"
+              )}
+            />
+            <div className="relative">
+              <span
+                role="status"
+                aria-live="assertive"
+                className={cn(
+                  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em]",
+                  outcome.tone === "win" && "border-success/40 bg-success-soft text-success",
+                  outcome.tone === "loss" && "border-danger/40 bg-danger-soft text-danger",
+                  outcome.tone === "neutral" && "border-border-soft bg-surface-2 text-fg-muted"
+                )}
+              >
+                {outcome.label}
+              </span>
+              <div
+                className={cn(
+                  "mt-2 truncate font-mono text-3xl font-bold",
+                  outcome.tone === "win" && "text-success",
+                  outcome.tone === "loss" && "text-danger",
+                  outcome.tone === "neutral" && "text-fg"
+                )}
+                title={formatSignedTokenAmount(net, assetDecimals, assetSymbol)}
+              >
+                {formatSignedTokenAmount(net, assetDecimals, assetSymbol)}
               </div>
-            </DetailSection>
+              <p className="mt-1.5 text-xs leading-5 text-fg-muted">{outcome.detail}</p>
+            </div>
           </div>
 
-          <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {/* Stat strip — stake / payout / multiplier. */}
+          <div className="grid grid-cols-3 divide-x divide-border-soft border-b border-border-soft">
+            <Stat
+              label={t("casino.room.result.facts.betAmount")}
+              value={formatTokenAmount(result.stake, assetDecimals, assetSymbol)}
+            />
+            <Stat
+              label={payoutLabel}
+              value={formatTokenAmount(payout, assetDecimals, assetSymbol)}
+              tone={outcome.tone === "win" ? "win" : "neutral"}
+            />
+            <Stat
+              label={t("casino.room.result.facts.multiplier")}
+              value={formatMultiplier(payout, result.stake)}
+            />
+          </div>
+
+          {gameRows.length > 0 && (
+            <Panel title={t("casino.room.result.sections.gameResult")}>
+              {gameRows.map((row) => (
+                <FactRow key={row.label} label={row.label} value={row.value} tone={row.tone} />
+              ))}
+            </Panel>
+          )}
+
+          {/* Verifiable fairness facts — collapsed by default so the result
+              reads clean; expandable to inspect and copy the chain receipt. */}
+          <div className="border-b border-border-soft px-4 py-3">
+            <button
+              type="button"
+              onClick={() => setFairnessOpen((open) => !open)}
+              aria-expanded={fairnessOpen}
+              className="flex w-full items-center justify-between gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle transition-colors hover:text-fg"
+            >
+              <span>{t("casino.room.result.sections.fairnessData")}</span>
+              <ChevronDownIcon
+                className={cn("h-4 w-4 transition-transform", fairnessOpen && "rotate-180")}
+              />
+            </button>
+            {fairnessOpen ? (
+              <div className="mt-2 space-y-1.5">
+                <FactRow
+                  label={t("casino.room.result.facts.player")}
+                  value={formatAddress(result.player)}
+                />
+                <FactRow
+                  label={t("casino.room.result.facts.betId")}
+                  value={result.betId.toString()}
+                />
+                <FactRow
+                  label={t("casino.room.result.facts.settlementTx")}
+                  value={shortHash(txHash)}
+                  href={txHref}
+                />
+                <FactRow
+                  label={t("casino.room.result.facts.randomHash")}
+                  value={shortHash(result.randomHash)}
+                />
+                <FactRow
+                  label={t("casino.room.result.facts.requestId")}
+                  value={result.requestId.toString()}
+                />
+                <FactRow
+                  label={t("casino.room.result.facts.resolvedTime")}
+                  value={formatResolvedAt(result.resolvedAt)}
+                />
+                <FactRow
+                  label={t("casino.room.result.facts.vrfFee")}
+                  value={formatNativeFee(result.vrfFeeCharged)}
+                />
+                <div className="pt-2.5">
+                  <CopyProofButton
+                    proof={fairnessProof}
+                    label={t("casino.room.result.actions.copyProof")}
+                    copiedLabel={t("casino.room.result.actions.proofCopied")}
+                  />
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        {/* Actions — play again restarts the round; share offers the result;
+            close dismisses. There is no settlement-status button: the modal only
+            opens once settlement is final, and the settlement tx now lives in
+            the fairness panel. */}
+        <div className="space-y-2 border-t border-border-soft p-3">
+          <button
+            type="button"
+            ref={primaryActionRef}
+            onClick={onPlayAgain ?? onClose}
+            className="w-full rounded-md border border-brand/40 bg-brand px-4 py-2.5 text-xs font-bold uppercase tracking-[0.12em] text-fg-inverse shadow-e1 transition-colors hover:bg-brand-hover"
+          >
+            {t("casino.room.result.actions.playAgain")}
+          </button>
+          <div className="grid grid-cols-2 gap-2">
+            <ShareResultButton
+              shareTitle={t("casino.room.result.title")}
+              shareText={shareText}
+              proof={fairnessProof}
+              label={t("casino.room.result.actions.share")}
+              nativeLabel={t("casino.room.result.actions.nativeShare")}
+              copyLinkLabel={t("casino.room.result.actions.copyResultLink")}
+              copyProofLabel={t("casino.room.result.actions.copyProof")}
+              proofCopiedLabel={t("casino.room.result.actions.proofCopied")}
+              copiedLabel={t("casino.room.result.actions.linkCopied")}
+              shareToXLabel={t("casino.room.result.actions.shareToX")}
+            />
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-border bg-surface-2 px-5 py-3 text-sm font-semibold text-fg transition-colors hover:border-brand/40 hover:bg-surface-3"
+              className="rounded-md border border-border-soft bg-surface-2 px-4 py-2.5 text-xs font-bold uppercase tracking-[0.12em] text-fg transition-colors hover:border-brand/40 hover:bg-surface-3"
             >
-              {t("casino.room.result.actions.playAgain")}
+              {t("casino.room.result.actions.close")}
             </button>
-            {txHref ? (
-              <a
-                href={txHref}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center justify-center gap-2 rounded-lg border border-brand/40 bg-brand px-5 py-3 text-sm font-semibold text-fg-inverse shadow-e1 transition-colors hover:bg-brand-hover"
-              >
-                {t("casino.room.result.actions.viewSettlement")}
-                <ArrowTopRightOnSquareIcon className="h-4 w-4" />
-              </a>
-            ) : (
-              <button
-                type="button"
-                disabled
-                className="rounded-lg border border-border bg-surface-2 px-5 py-3 text-sm font-semibold text-fg-subtle"
-              >
-                {t("casino.room.result.actions.settlementPending")}
-              </button>
-            )}
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

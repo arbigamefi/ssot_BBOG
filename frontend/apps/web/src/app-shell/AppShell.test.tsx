@@ -79,13 +79,19 @@ vi.mock("next-intl", () => ({
       "nav.games": "Games",
       "nav.keno": "Keno",
       "nav.liquidity": "Liquidity",
+      "nav.menu": "Menu",
+      "nav.openMenu": "Open menu",
+      "nav.closeMenu": "Close menu",
       "nav.openRooms": "Open Rooms",
       "nav.ops": "Ops",
       "nav.plinko": "Plinko",
+      "nav.product": "Product",
       "nav.rooms": "Rooms",
       "nav.roulette": "Roulette",
       "nav.sicBo": "Sic Bo",
       "nav.slots": "Slots",
+      "nav.status": "Status",
+      "nav.support": "Support",
       "nav.sportsbook": "Sportsbook"
     })[key] ?? key
 }));

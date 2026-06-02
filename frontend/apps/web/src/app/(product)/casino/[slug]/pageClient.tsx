@@ -321,7 +321,7 @@ export function GamePageClient({ slug }: { slug: string }) {
     onRoundTerminal: handleRoundTerminal,
     onRoundReset: handleRoundReset
   });
-  const { state, reset } = casinoRound;
+  const { state, reset, placeBet } = casinoRound;
 
   const { isBetPanelPending, isStagePending } = getCasinoRoomPendingStates({
     isLocalPending: isPending,
@@ -347,9 +347,20 @@ export function GamePageClient({ slug }: { slug: string }) {
     setIsPending,
     setShowResult,
     setResultProof,
-    reset,
-    onResultHidden: handleResultClose
+    reset
   });
+
+  // "Play again": by the time the result modal is shown the stepper has already
+  // been reset to idle (useGameResolutionEffect resets it when the terminal bet
+  // arrives), so we fully re-initialise the round UI (clears terminalBet, the
+  // reveal/outcome refs, stage state) and place one fresh bet. This is a single
+  // synchronous action with no pending flag, so it cannot re-fire on the next
+  // settlement. If the stepper were somehow still settled, placeBet() would
+  // instead just reset to a ready round — never an unintended auto-bet.
+  const handleResultPlayAgain = React.useCallback(() => {
+    handleRoundReset();
+    void placeBet();
+  }, [handleRoundReset, placeBet]);
 
   React.useEffect(() => {
     const activeBet = casinoRound.activeBet;
@@ -513,6 +524,7 @@ export function GamePageClient({ slug }: { slug: string }) {
       assetSymbol="USDC"
       assetDecimals={usdcDecimals}
       onResultClose={handleResultClose}
+      onResultPlayAgain={handleResultPlayAgain}
       onDiceRevealComplete={handleStageRevealComplete}
       onCoinRevealComplete={handleStageRevealComplete}
       onRouletteRevealComplete={handleStageRevealComplete}

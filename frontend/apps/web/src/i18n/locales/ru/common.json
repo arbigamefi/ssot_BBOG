@@ -66,13 +66,19 @@
     "games": "Игры",
     "keno": "Кено",
     "liquidity": "Ликвидность",
+    "menu": "Меню",
+    "openMenu": "Открыть меню",
+    "closeMenu": "Закрыть меню",
     "openRooms": "Открыть залы",
     "ops": "Операции",
     "plinko": "Плинко",
+    "product": "Продукт",
     "rooms": "Залы",
     "roulette": "Рулетка",
     "sicBo": "Сик Бо",
     "slots": "Слоты",
+    "status": "Статус",
+    "support": "Поддержка",
     "sportsbook": "Ставки на спорт"
   },
   "footer": {
@@ -1324,7 +1330,12 @@
           "viewSettlement": "Посмотреть расчёт",
           "settlementPending": "Расчёт в ожидании",
           "copyProof": "Скопировать доказательство честности",
-          "proofCopied": "Доказательство скопировано"
+          "proofCopied": "Доказательство скопировано",
+          "share": "Поделиться",
+          "nativeShare": "Системное меню",
+          "copyResultLink": "Скопировать ссылку",
+          "shareToX": "Поделиться в X",
+          "linkCopied": "Ссылка скопирована"
         }
       },
       "audit": {

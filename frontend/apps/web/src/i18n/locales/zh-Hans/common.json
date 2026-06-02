@@ -643,7 +643,12 @@
           "viewSettlement": "查看结算",
           "settlementPending": "结算确认中",
           "copyProof": "复制公平性证明",
-          "proofCopied": "已复制证明"
+          "proofCopied": "已复制证明",
+          "share": "分享",
+          "nativeShare": "系统分享",
+          "copyResultLink": "复制结果链接",
+          "shareToX": "分享到 X",
+          "linkCopied": "链接已复制"
         }
       },
       "gameInfo": {
@@ -3405,13 +3410,19 @@
     "games": "游戏",
     "keno": "Keno",
     "liquidity": "流动性",
+    "menu": "菜单",
+    "openMenu": "打开菜单",
+    "closeMenu": "关闭菜单",
     "openRooms": "进入游戏",
     "ops": "运维",
     "plinko": "Plinko 弹珠盘",
+    "product": "产品",
     "rooms": "游戏",
     "roulette": "轮盘",
     "sicBo": "骰宝",
     "slots": "Slots 拉霸",
+    "status": "状态",
+    "support": "支持",
     "sportsbook": "体育投注"
   },
   "compliance": {

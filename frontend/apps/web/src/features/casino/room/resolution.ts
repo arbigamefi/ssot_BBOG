@@ -214,8 +214,7 @@ export function useGameResolutionEffect({
   setIsPending,
   setShowResult,
   setResultProof,
-  reset,
-  onResultHidden
+  reset
 }: {
   terminalBet: DomainBet | null;
   recentBets: readonly IndexedBetSummary[];
@@ -225,11 +224,9 @@ export function useGameResolutionEffect({
   setShowResult: React.Dispatch<React.SetStateAction<boolean>>;
   setResultProof: React.Dispatch<React.SetStateAction<CasinoRoundResult | null>>;
   reset: () => void;
-  onResultHidden?: () => void;
 }) {
   const latestBetIdRef = React.useRef<bigint | undefined>();
   const displayedBetIdRef = React.useRef<bigint | undefined>();
-  const hideTimerRef = React.useRef<ReturnType<typeof setTimeout> | undefined>();
   const proofTimerRef = React.useRef<ReturnType<typeof setTimeout> | undefined>();
 
   React.useEffect(() => {
@@ -240,7 +237,6 @@ export function useGameResolutionEffect({
       displayedBetIdRef.current = undefined;
       setIsPending(true);
 
-      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
       if (proofTimerRef.current) clearTimeout(proofTimerRef.current);
       reset();
     }
@@ -271,17 +267,12 @@ export function useGameResolutionEffect({
         return;
       }
 
+      // No auto-close: the modal stays open until the player acts (play again,
+      // share, or close). It only ever opens for a fully settled round.
       displayedBetIdRef.current = terminalBet.betId;
       setIsPending(false);
       setResultProof(result);
       setShowResult(true);
-
-      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
-      hideTimerRef.current = setTimeout(() => {
-        setShowResult(false);
-        setResultProof(null);
-        onResultHidden?.();
-      }, 8_000);
     };
 
     void resolveProof();
@@ -289,21 +280,10 @@ export function useGameResolutionEffect({
       cancelled = true;
       if (proofTimerRef.current) clearTimeout(proofTimerRef.current);
     };
-  }, [
-    terminalBet,
-    recentBets,
-    db,
-    gameHub,
-    setIsPending,
-    setShowResult,
-    setResultProof,
-    reset,
-    onResultHidden
-  ]);
+  }, [terminalBet, recentBets, db, gameHub, setIsPending, setShowResult, setResultProof, reset]);
 
   React.useEffect(
     () => () => {
-      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
       if (proofTimerRef.current) clearTimeout(proofTimerRef.current);
     },
     []

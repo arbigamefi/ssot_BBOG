@@ -66,13 +66,19 @@
     "games": "Oyunlar",
     "keno": "Keno",
     "liquidity": "Likidite",
+    "menu": "Menü",
+    "openMenu": "Menüyü aç",
+    "closeMenu": "Menüyü kapat",
     "openRooms": "Odaları aç",
     "ops": "Operasyon",
     "plinko": "Plinko",
+    "product": "Ürün",
     "rooms": "Odalar",
     "roulette": "Rulet",
     "sicBo": "Sic Bo",
     "slots": "Slot",
+    "status": "Durum",
+    "support": "Destek",
     "sportsbook": "Spor bahisleri"
   },
   "footer": {
@@ -1324,7 +1330,12 @@
           "viewSettlement": "Ödemeyi gör",
           "settlementPending": "Ödeme beklemede",
           "copyProof": "Adalet kanıtını kopyala",
-          "proofCopied": "Kanıt kopyalandı"
+          "proofCopied": "Kanıt kopyalandı",
+          "share": "Paylaş",
+          "nativeShare": "Sistem paylaşımı",
+          "copyResultLink": "Sonuç bağlantısını kopyala",
+          "shareToX": "X'te paylaş",
+          "linkCopied": "Bağlantı kopyalandı"
         }
       },
       "audit": {

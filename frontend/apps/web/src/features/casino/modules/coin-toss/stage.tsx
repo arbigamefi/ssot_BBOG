@@ -295,7 +295,14 @@ function CoinDisc({
   React.useEffect(() => {
     const forward = (target: number) => {
       const current = rotateX.get();
-      return current + ((((target - current) % 360) + 360) % 360);
+      let delta = (((target - current) % 360) + 360) % 360;
+      // When we are already on `target` (mod 360) the delta should be 0, but
+      // float rounding on large accumulated angles can yield ~360 — which would
+      // spin a phantom full turn (e.g. the resolved phase right after a reveal).
+      // Snap that wrap back to 0. A genuine forward rotation is never a full
+      // 360°, so this only ever catches the rounding artifact.
+      if (delta > 360 - 1e-6) delta = 0;
+      return current + delta;
     };
 
     if (reduced) {
@@ -312,8 +319,16 @@ function CoinDisc({
         animate(liftY, [0, -24, 0], { duration: 0.62, ease: "easeInOut", repeat: Infinity })
       );
     } else if (phase === "reveal" && resultNum != null) {
+      // `forward()` already returns an ABSOLUTE angle that is ≡ resultRotateX
+      // (mod 360) and ahead of the current value, so the reveal must land on
+      // exactly `forward(resultRotateX) + 1080` (three extra dramatic turns).
+      // Adding `rotateX.get()` again made the arc end on an arbitrary face,
+      // which forced the following "resolved" phase to perform a second
+      // corrective flip — the discontinuous extra spin that looked like the
+      // result was being changed after the toss. Landing precisely here makes
+      // the resolved phase a no-op, so the coin settles in one continuous arc.
       running.push(
-        animate(rotateX, rotateX.get() + 1_080 + forward(resultRotateX), {
+        animate(rotateX, forward(resultRotateX) + 1_080, {
           duration: 1.05,
           ease: [0.16, 0.84, 0.3, 1]
         }),

@@ -643,7 +643,12 @@
           "viewSettlement": "View settlement",
           "settlementPending": "Settlement pending",
           "copyProof": "Copy proof of fairness",
-          "proofCopied": "Proof copied"
+          "proofCopied": "Proof copied",
+          "share": "Share",
+          "nativeShare": "Share sheet",
+          "copyResultLink": "Copy result link",
+          "shareToX": "Share to X",
+          "linkCopied": "Link copied"
         }
       },
       "gameInfo": {
@@ -3405,13 +3410,19 @@
     "games": "Games",
     "keno": "Keno",
     "liquidity": "Liquidity",
+    "menu": "Menu",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
     "openRooms": "Open Rooms",
     "ops": "Ops",
     "plinko": "Plinko",
+    "product": "Product",
     "rooms": "Rooms",
     "roulette": "Roulette",
     "sicBo": "Sic Bo",
     "slots": "Slots",
+    "status": "Status",
+    "support": "Support",
     "sportsbook": "Sportsbook"
   },
   "compliance": {

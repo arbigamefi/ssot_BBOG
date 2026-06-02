@@ -66,13 +66,19 @@
     "games": "Jogos",
     "keno": "Keno",
     "liquidity": "Liquidez",
+    "menu": "Menu",
+    "openMenu": "Abrir menu",
+    "closeMenu": "Fechar menu",
     "openRooms": "Abrir salas",
     "ops": "Operações",
     "plinko": "Plinko",
+    "product": "Produto",
     "rooms": "Salas",
     "roulette": "Roleta",
     "sicBo": "Sic Bo",
     "slots": "Caça-níqueis",
+    "status": "Status",
+    "support": "Suporte",
     "sportsbook": "Apostas esportivas"
   },
   "footer": {
@@ -1324,7 +1330,12 @@
           "viewSettlement": "Ver liquidação",
           "settlementPending": "Liquidação pendente",
           "copyProof": "Copiar prova de imparcialidade",
-          "proofCopied": "Prova copiada"
+          "proofCopied": "Prova copiada",
+          "share": "Compartilhar",
+          "nativeShare": "Compartilhar no sistema",
+          "copyResultLink": "Copiar link do resultado",
+          "shareToX": "Compartilhar no X",
+          "linkCopied": "Link copiado"
         }
       },
       "audit": {

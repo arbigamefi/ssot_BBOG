@@ -119,7 +119,10 @@ function tumbleTransition(mode: DiceDieMode, reduced: boolean): Transition {
   }
 }
 
-export function DiceDie({
+// Memoized: the round watcher polls every 2s, re-rendering the whole stage
+// subtree. All props here are primitives, so memo lets the die skip those
+// re-renders and keep its framer-motion tumble running undisturbed.
+export const DiceDie = React.memo(function DiceDie({
   mode,
   faceValue,
   faceLabel,
@@ -221,4 +224,4 @@ export function DiceDie({
       </motion.div>
     </div>
   );
-}
+});
