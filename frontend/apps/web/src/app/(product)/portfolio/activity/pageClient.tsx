@@ -24,6 +24,7 @@ import type {
   BetStatusFilter,
   EnrichedBetRow
 } from "../../../../features/portfolio/activity/types";
+import { getPoolAssetContext } from "../../../../features/assets/pool-asset";
 import { usePlayerBets } from "../../../../features/betting/usePlayerBets";
 import { usePlayerSportsTickets } from "../../../../features/sportsbook/usePlayerSportsTickets";
 import { useRelease } from "../../../../ssot/release/ReleaseProvider";
@@ -68,6 +69,21 @@ export function PortfolioActivityPageClient() {
     return { symbols, decimals };
   }, [release?.assets]);
 
+  const sportsAssetByPoolId = React.useMemo(() => {
+    const assets = new Map<string, { symbol: string; decimals: number }>();
+    if (!release) return assets;
+    for (const pool of release?.pools ?? []) {
+      const context = getPoolAssetContext(release, pool);
+      if (context) {
+        assets.set(String(pool.poolId), {
+          decimals: context.asset.decimals,
+          symbol: context.asset.symbol
+        });
+      }
+    }
+    return assets;
+  }, [release]);
+
   const enrichedBets = React.useMemo<EnrichedBetRow[]>(
     () =>
       bets.map((row) =>
@@ -103,10 +119,10 @@ export function PortfolioActivityPageClient() {
             hoursAgo: (hours) => t("portfolio.activity.time.hoursAgo", { hours }),
             daysAgo: (days) => t("portfolio.activity.time.daysAgo", { days })
           },
-          primaryAsset: release?.assets[0]
+          assetByPoolId: sportsAssetByPoolId
         })
       ),
-    [release?.assets, sportsTickets, t]
+    [sportsAssetByPoolId, sportsTickets, t]
   );
 
   const activityRows = React.useMemo<EnrichedActivityRow[]>(
@@ -227,7 +243,7 @@ function enrichBetRow({
 function enrichSportsTicketRow({
   row,
   labels,
-  primaryAsset
+  assetByPoolId
 }: {
   row: SportsTicketRow;
   labels: {
@@ -238,13 +254,14 @@ function enrichSportsTicketRow({
     hoursAgo: (hours: number) => string;
     daysAgo: (days: number) => string;
   };
-  primaryAsset?: { symbol: string; decimals: number };
+  assetByPoolId: ReadonlyMap<string, { symbol: string; decimals: number }>;
 }): EnrichedActivityRow {
   const stake = row.stake ? BigInt(row.stake) : 0n;
   const payout = row.payout ? BigInt(row.payout) : undefined;
   const status = mapSportsTicketState(row.state, payout, stake);
-  const symbol = primaryAsset?.symbol ?? "USDC";
-  const decimals = primaryAsset?.decimals ?? 6;
+  const poolAsset = row.poolId ? assetByPoolId.get(String(row.poolId)) : undefined;
+  const symbol = poolAsset?.symbol ?? labels.pending;
+  const decimals = poolAsset?.decimals ?? 18;
 
   return {
     kind: "sports",

@@ -4,7 +4,6 @@ import * as React from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
-import type { Address } from "@ssot/ssot/sdk";
 import { ErrorCallout, toast, type TxStatus } from "@ssot/ui";
 
 import { PageTransition } from "../../../components/PageTransition";
@@ -26,6 +25,7 @@ import type {
   PortfolioJournalRow,
   PortfolioMetric
 } from "../../../features/portfolio/overview/types";
+import { getPoolAssetContext } from "../../../features/assets/pool-asset";
 import { useTxJournal } from "../../../features/portfolio/overview/useTxJournal";
 import { useDirectTxAction } from "../../../features/tx/useDirectTxAction";
 import { useRelease } from "../../../ssot/release/ReleaseProvider";
@@ -51,12 +51,11 @@ export function PortfolioPageClient() {
     enabled: Boolean(release && ready && sdk && account),
     queryFn: async (): Promise<PortfolioAssetRow[]> => {
       if (!release || !sdk || !account) return [];
-      return Promise.all(
+      const rows = await Promise.all(
         release.pools.map(async (pool) => {
-          const assetMeta = release.assets.find(
-            (asset) => asset.address.toLowerCase() === pool.asset.toLowerCase()
-          );
-          const assetAddress = pool.asset as Address;
+          const poolAsset = getPoolAssetContext(release, pool);
+          if (!poolAsset?.bank) return null;
+          const assetAddress = poolAsset.asset.address;
           const [walletBalance, allowance, position] = await Promise.all([
             sdk.bank.getAssetBalance(assetAddress, account),
             sdk.bank.getAllowance(pool.poolId, account),
@@ -64,10 +63,10 @@ export function PortfolioPageClient() {
           ]);
           return {
             id: String(pool.poolId),
-            symbol: pool.symbol || assetMeta?.symbol || t("portfolio.overview.common.asset"),
-            decimals: pool.decimals ?? assetMeta?.decimals ?? 18,
-            asset: pool.asset as `0x${string}`,
-            bank: pool.bank as `0x${string}`,
+            symbol: poolAsset.asset.symbol,
+            decimals: poolAsset.asset.decimals,
+            asset: poolAsset.asset.address,
+            bank: poolAsset.bank,
             walletBalance,
             shares: position.shares,
             assetsEquivalent: position.assetsEquivalent,
@@ -75,6 +74,7 @@ export function PortfolioPageClient() {
           };
         })
       );
+      return rows.filter((row): row is PortfolioAssetRow => Boolean(row));
     },
     refetchInterval: 5_000
   });
@@ -169,44 +169,22 @@ export function PortfolioPageClient() {
 
   const pendingLabel = t("portfolio.overview.common.pending");
   const walletRequiredLabel = t("portfolio.overview.common.walletRequired");
-  const primaryAsset = release.assets[0];
-  const totalAssetsEquivalent = assetRows.reduce((sum, row) => sum + row.assetsEquivalent, 0n);
-  const totalWalletBalance = assetRows.reduce((sum, row) => sum + row.walletBalance, 0n);
-  const refundAmount =
-    account && primaryAsset
-      ? formatAmount(refundCredit, primaryAsset.decimals, primaryAsset.symbol, pendingLabel)
-      : account
-        ? pendingLabel
-        : walletRequiredLabel;
+  const refundAmount = account
+    ? formatAmount(refundCredit, 18, "ETH", pendingLabel)
+    : walletRequiredLabel;
   const metrics: PortfolioMetric[] = [
     {
       label: t("portfolio.overview.metrics.walletBalance.label"),
-      value:
-        account && primaryAsset
-          ? formatAmount(
-              totalWalletBalance,
-              primaryAsset.decimals,
-              primaryAsset.symbol,
-              pendingLabel
-            )
-          : account
-            ? pendingLabel
-            : walletRequiredLabel,
+      value: account
+        ? formatPortfolioAssetAmounts(assetRows, "walletBalance", pendingLabel)
+        : walletRequiredLabel,
       detail: t("portfolio.overview.metrics.walletBalance.detail")
     },
     {
       label: t("portfolio.overview.metrics.bankPosition.label"),
-      value:
-        account && primaryAsset
-          ? formatAmount(
-              totalAssetsEquivalent,
-              primaryAsset.decimals,
-              primaryAsset.symbol,
-              pendingLabel
-            )
-          : account
-            ? pendingLabel
-            : walletRequiredLabel,
+      value: account
+        ? formatPortfolioAssetAmounts(assetRows, "assetsEquivalent", pendingLabel)
+        : walletRequiredLabel,
       detail: t("portfolio.overview.metrics.bankPosition.detail")
     },
     {
@@ -290,6 +268,17 @@ export function PortfolioPageClient() {
       </div>
     </PageTransition>
   );
+}
+
+function formatPortfolioAssetAmounts(
+  rows: readonly PortfolioAssetRow[],
+  key: "walletBalance" | "assetsEquivalent",
+  pendingLabel: string
+) {
+  if (rows.length === 0) return pendingLabel;
+  return rows
+    .map((row) => formatAmount(row[key], row.decimals, row.symbol, pendingLabel))
+    .join(" / ");
 }
 
 function toFlowState(flow: {

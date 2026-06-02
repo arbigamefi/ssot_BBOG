@@ -12,6 +12,7 @@ import {
 } from "@heroicons/react/24/outline";
 
 import { ProductStateCard } from "../../../components/ProductStateCard";
+import { getDefaultCasinoPoolAssetContext } from "../../../features/assets/pool-asset";
 import { getCatalogRooms } from "../../../features/casino/catalog";
 import { CasinoGameMark } from "../../../features/casino/CasinoMiniIcons";
 import { useCasinoStats } from "../../../features/casino/useCasinoStats";
@@ -114,7 +115,12 @@ export function GamesListClient() {
   const t = useTranslations();
   const locale = useLocale();
   const { release, readOnlyReason } = useRelease();
-  const { data: casinoStats } = useCasinoStats();
+  const casinoPoolAsset = React.useMemo(
+    () => (release ? getDefaultCasinoPoolAssetContext(release) : null),
+    [release]
+  );
+  const casinoAsset = casinoPoolAsset?.asset;
+  const { data: casinoStats } = useCasinoStats({ asset: casinoAsset?.address });
   const [query, setQuery] = React.useState("");
   const [filter, setFilter] = React.useState<FilterKey>("all");
 
@@ -169,15 +175,8 @@ export function GamesListClient() {
     if (idxB !== -1) return 1;
     return a.label.localeCompare(b.label);
   });
-  const casinoPool =
-    release.pools?.find((pool) => pool.domain === "Casino" || pool.domainId === 1) ??
-    release.pools?.[0];
-  const casinoAsset =
-    release.assets?.find(
-      (asset) => asset.address.toLowerCase() === casinoPool?.asset?.toLowerCase()
-    ) ?? release.assets?.[0];
-  const bankAddress = casinoPool?.bank ?? casinoAsset?.bank;
-  const assetSymbol = casinoPool?.symbol ?? casinoAsset?.symbol ?? "—";
+  const bankAddress = casinoPoolAsset?.bank;
+  const assetSymbol = casinoAsset?.symbol ?? "—";
 
   // Real betting analytics from the durable bet index. When the Postgres
   // source is unavailable (e.g. dev without DB) we show "—" rather than a

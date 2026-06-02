@@ -8,7 +8,9 @@ import { useQuery } from "@tanstack/react-query";
 import type { DomainSportsMarket, DomainSportsResult, DomainSportsTicket } from "@ssot/ssot";
 import { ErrorCallout, toast, TxStatusChip, TxStepper } from "@ssot/ui";
 
+import { getAppChain, getExplorerTxUrl } from "../../../../../app-shell/chain-registry";
 import { PageTransition } from "../../../../../components/PageTransition";
+import { getPoolAssetContext } from "../../../../../features/assets/pool-asset";
 import { MarketStateBadge } from "../../../../../features/sportsbook/MarketStateBadge";
 import { ResultPanel } from "../../../../../features/sportsbook/ResultPanel";
 import {
@@ -42,10 +44,8 @@ function getPoolAsset(
   poolId: number
 ): { symbol: string; decimals: number } {
   const pool = release?.pools?.find((p) => Number(p.poolId) === poolId);
-  return {
-    symbol: pool?.symbol || "UNIT",
-    decimals: pool?.decimals ?? 18
-  };
+  const context = release ? getPoolAssetContext(release, pool) : null;
+  return context?.asset ?? { symbol: "UNIT", decimals: 18 };
 }
 
 export function SportsTicketDetailPageClient({ ticketId }: { ticketId: string }) {
@@ -213,7 +213,7 @@ export function SportsTicketDetailPageClient({ ticketId }: { ticketId: string })
       ? t("fallbackMarket", { tag: marketShortTag(market.marketKey) })
       : t("fallbackTicket", { ticketId });
   const clock = market ? describeMarketWallClock(market, Date.now(), locale) : undefined;
-  const explorerTx = txHash ? explorerTxUrl(chainId, txHash) : undefined;
+  const explorerTx = txHash ? (getExplorerTxUrl(chainId, txHash) ?? undefined) : undefined;
   const lifecycle = describeTicketLifecycle(ticket, market, result, locale, t);
   const hasWritableAccount = !readOnly && Boolean(sdk?.account);
   const canSettle = lifecycle.kind === "settle-ready" && hasWritableAccount;
@@ -223,7 +223,7 @@ export function SportsTicketDetailPageClient({ ticketId }: { ticketId: string })
     : refundFlow.hasActivity
       ? refundFlow
       : null;
-  const explorerBaseUrl = explorerBaseUrlForChain(chainId);
+  const explorerBaseUrl = getAppChain(chainId)?.explorerUrl;
 
   return (
     <PageTransition pageKey={`sports-ticket-${ticketId}`}>
@@ -805,15 +805,4 @@ function formatTimestamp(value: number, locale: string): string {
 function shortHex(value: string | undefined): string {
   if (!value || value.length <= 12) return value ?? "—";
   return `${value.slice(0, 6)}…${value.slice(-4)}`;
-}
-
-function explorerTxUrl(chainId: number, txHash: string): string | undefined {
-  const base = explorerBaseUrlForChain(chainId);
-  return base ? `${base}/tx/${txHash}` : undefined;
-}
-
-function explorerBaseUrlForChain(chainId: number): string | undefined {
-  if (chainId === 84532) return "https://sepolia.basescan.org";
-  if (chainId === 8453) return "https://basescan.org";
-  return undefined;
 }

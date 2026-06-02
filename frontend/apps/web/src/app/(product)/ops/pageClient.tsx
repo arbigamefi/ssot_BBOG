@@ -4,6 +4,7 @@ import * as React from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 import { PageTransition } from "../../../components/PageTransition";
+import { getDefaultCasinoPoolAssetContext } from "../../../features/assets/pool-asset";
 import { shortHex } from "../../../features/ops/format";
 import { OpsEventTrail } from "../../../features/ops/ops-event-trail";
 import { OpsHero } from "../../../features/ops/ops-hero";
@@ -23,6 +24,10 @@ export function OpsPageClient() {
   const t = useTranslations("ops");
   const locale = useLocale();
   const { release } = useRelease();
+  const primaryCasinoPool = React.useMemo(
+    () => (release ? getDefaultCasinoPoolAssetContext(release) : null),
+    [release]
+  );
   const { indexerStatus, syncNow, refreshIndexerStatus } = useIndexer();
   const keeperLabels = React.useMemo(
     () => ({
@@ -124,10 +129,10 @@ export function OpsPageClient() {
       { label: t("releaseRows.gameHub"), value: shortHex(release?.contracts.gameHub) },
       { label: t("releaseRows.vrfHub"), value: shortHex(release?.contracts.vrfHub) },
       { label: t("releaseRows.poolRegistry"), value: shortHex(release?.contracts.poolRegistry) },
-      { label: t("releaseRows.primaryBank"), value: shortHex(release?.assets?.[0]?.bank) },
+      { label: t("releaseRows.primaryBank"), value: shortHex(primaryCasinoPool?.bank) },
       { label: t("releaseRows.manifest"), value: "release-latest.json" }
     ],
-    [release, t]
+    [primaryCasinoPool?.bank, release, t]
   );
 
   const workerRows = React.useMemo<OpsKeyValueRow[]>(

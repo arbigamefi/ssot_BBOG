@@ -151,7 +151,10 @@ describe("HomePage", () => {
       releaseDigest: "0xdeadbeefcafefeeddeadbeefcafefeed",
       contracts: { gameHub: "0x1234567890abcdef1234567890abcdef12345678" },
       games: {},
-      assets: [{ address: "0x01", bank: "0x02", symbol: "USDC", decimals: 6 }],
+      assets: [
+        { address: "0x01", bank: "0x02", symbol: "USDC", decimals: 6 },
+        { address: "0x03", bank: "0x04", symbol: "WETH", decimals: 18 }
+      ],
       pools: [
         {
           poolId: 1,
@@ -162,6 +165,16 @@ describe("HomePage", () => {
           bank: "0x02",
           symbol: "USDC",
           decimals: 6
+        },
+        {
+          poolId: 2,
+          domainId: 1,
+          domain: "Casino",
+          active: true,
+          asset: "0x03",
+          bank: "0x04",
+          symbol: "WETH",
+          decimals: 18
         }
       ],
       gamesMeta: [
@@ -180,7 +193,10 @@ describe("HomePage", () => {
         id: "bet-1",
         betId: "1",
         gameId: "0x01",
-        state: "Placed",
+        asset: "0x03",
+        stake: "1000000000000000000",
+        payout: "1230000000000000000",
+        state: "finalized",
         updatedAt: Date.now() - 60_000,
         updatedBlock: 123
       }
@@ -195,6 +211,16 @@ describe("HomePage", () => {
         totalReserved: 250_000n,
         freeLiquidity: 750_000n,
         updatedAtBlock: 123n
+      },
+      {
+        address: "0x03",
+        bank: "0x04",
+        symbol: "WETH",
+        decimals: 18,
+        totalAssets: 3_000_000_000_000_000_000n,
+        totalReserved: 1_000_000_000_000_000_000n,
+        freeLiquidity: 2_000_000_000_000_000_000n,
+        updatedAtBlock: 123n
       }
     ];
 
@@ -202,6 +228,9 @@ describe("HomePage", () => {
 
     expect(screen.getAllByText("Free to pay out").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Total in the bank").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("0.75 USDC / 2 WETH").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("1 USDC / 3 WETH").length).toBeGreaterThan(0);
+    expect(screen.getByText("1.23 WETH")).toBeDefined();
     expect(screen.getAllByText("Dice").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Keno").length).toBeGreaterThan(0);
     expect(screen.getByText("Last few bets")).toBeDefined();

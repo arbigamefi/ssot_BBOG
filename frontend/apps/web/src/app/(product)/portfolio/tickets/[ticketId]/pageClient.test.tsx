@@ -4,6 +4,8 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import * as React from "react";
 
 const zeroAddress = `0x${"0".repeat(40)}`;
+const usdcAddress = "0x0000000000000000000000000000000000000001";
+const usdtAddress = "0x0000000000000000000000000000000000000002";
 
 function createSportsHubMock() {
   return {
@@ -83,7 +85,7 @@ const state = {
         decimals: 6
       }
     ]
-  },
+  } as any,
   chainId: 84532,
   sdk: { account: undefined as string | undefined, sportsHub: createSportsHubMock() },
   readOnly: false
@@ -226,6 +228,22 @@ describe("SportsTicketDetailPageClient", () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+    state.release = {
+      chainId: 84532,
+      releaseDigest: "0x7ad0f2cb1a996251325c00441b125ca5276c5bf70f011577222ce588cae1349f",
+      pools: [
+        {
+          poolId: 2,
+          domainId: 2,
+          domain: "Sports",
+          active: true,
+          asset: zeroAddress,
+          bank: zeroAddress,
+          symbol: "USDC",
+          decimals: 6
+        }
+      ]
+    };
     state.sdk = { account: undefined, sportsHub: createSportsHubMock() };
     state.readOnly = false;
   });
@@ -245,6 +263,32 @@ describe("SportsTicketDetailPageClient", () => {
     expect(screen.getByText("0xabc123")).toBeDefined();
     expect(state.sdk.sportsHub.getTicket).toHaveBeenCalledWith(12n);
     expect(state.sdk.sportsHub.getMarket).toHaveBeenCalledWith(7n);
+  });
+
+  it("resolves receipt amounts from the ticket pool asset address", async () => {
+    state.release = {
+      ...state.release,
+      assets: [
+        { address: usdcAddress, symbol: "USDC", decimals: 6 },
+        { address: usdtAddress, symbol: "USDT", decimals: 6 }
+      ],
+      pools: [
+        {
+          poolId: 2,
+          domainId: 2,
+          domain: "Sports",
+          active: true,
+          asset: usdtAddress,
+          bank: zeroAddress
+        }
+      ]
+    };
+
+    renderWithQueryClient(<SportsTicketDetailPageClient ticketId="12" />);
+
+    await screen.findByRole("heading", { level: 1 });
+    expect(screen.getByText("10 USDT")).toBeDefined();
+    expect(screen.getByText("55 USDT")).toBeDefined();
   });
 
   it("offers player settlement only when a held ticket belongs to a resolved market", async () => {

@@ -83,28 +83,19 @@ export function HomePageClient() {
     [release?.gamesMeta]
   );
 
-  const primaryAsset = assetOverviews[0];
-  const totalAssets = assetOverviews.reduce((sum, asset) => sum + asset.totalAssets, 0n);
-  const totalReserved = assetOverviews.reduce((sum, asset) => sum + asset.totalReserved, 0n);
-  const freeReserve = totalAssets > totalReserved ? totalAssets - totalReserved : 0n;
-  const reserveFloor = primaryAsset
-    ? formatTokenAmount(
-        freeReserve,
-        primaryAsset.decimals,
-        primaryAsset.symbol,
-        locale,
-        t("format.syncing")
-      )
-    : t("format.awaitingReserveSync");
-  const totalAssetsLabel = primaryAsset
-    ? formatTokenAmount(
-        totalAssets,
-        primaryAsset.decimals,
-        primaryAsset.symbol,
-        locale,
-        t("format.syncing")
-      )
-    : t("format.awaitingReserveSync");
+  const reserveFloor = formatAssetOverviewList(
+    assetOverviews,
+    locale,
+    t("format.awaitingReserveSync"),
+    (asset) =>
+      asset.totalAssets > asset.totalReserved ? asset.totalAssets - asset.totalReserved : 0n
+  );
+  const totalAssetsLabel = formatAssetOverviewList(
+    assetOverviews,
+    locale,
+    t("format.awaitingReserveSync"),
+    (asset) => asset.totalAssets
+  );
 
   const gameLabelById = React.useMemo(() => {
     const map = new Map<string, string>();
@@ -115,11 +106,33 @@ export function HomePageClient() {
     return map;
   }, [release?.gamesMeta]);
 
-  const activityDecimals = primaryAsset?.decimals ?? 6;
-  const activitySymbol = primaryAsset?.symbol ?? "USDC";
+  const activityAssetFallback = assetOverviews[0];
+  const activityAssetByAddress = React.useMemo(() => {
+    const map = new Map<string, { decimals: number; symbol: string }>();
+    for (const asset of release?.assets ?? []) {
+      if (!asset?.address) continue;
+      map.set(String(asset.address).toLowerCase(), {
+        decimals: asset.decimals,
+        symbol: asset.symbol || t("format.assetFallback")
+      });
+    }
+    for (const asset of assetOverviews) {
+      map.set(String(asset.address).toLowerCase(), {
+        decimals: asset.decimals,
+        symbol: asset.symbol || t("format.assetFallback")
+      });
+    }
+    return map;
+  }, [assetOverviews, release?.assets, t]);
   const activity = latestBets.slice(0, 5).map<LandingActivity>((bet: BetRow, index: number) => {
     const stake = toBigOrNull(bet.stake);
     const payout = toBigOrNull(bet.payout);
+    const betAsset = bet.asset
+      ? activityAssetByAddress.get(String(bet.asset).toLowerCase())
+      : undefined;
+    const activityDecimals = betAsset?.decimals ?? activityAssetFallback?.decimals ?? 6;
+    const activitySymbol =
+      betAsset?.symbol ?? activityAssetFallback?.symbol ?? t("format.assetFallback");
     const settled = bet.state === "finalized";
     const isWin = settled && stake != null && payout != null && payout > stake;
     const multiplier =
@@ -264,6 +277,20 @@ export function HomePageClient() {
       />
     </main>
   );
+}
+
+function formatAssetOverviewList(
+  rows: readonly AssetOverview[],
+  locale: string,
+  emptyLabel: string,
+  selectValue: (asset: AssetOverview) => bigint
+) {
+  if (rows.length === 0) return emptyLabel;
+  return rows
+    .map((asset) =>
+      formatTokenAmount(selectValue(asset), asset.decimals, asset.symbol, locale, emptyLabel)
+    )
+    .join(" / ");
 }
 
 function localizeLandingRoom(

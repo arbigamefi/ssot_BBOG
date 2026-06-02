@@ -3,18 +3,19 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as React from "react";
 
+const usdcAddress = "0x0000000000000000000000000000000000000001";
+const usdtAddress = "0x0000000000000000000000000000000000000003";
+
 const state = {
   release: {
-    assets: [
-      { address: "0x0000000000000000000000000000000000000001", symbol: "USDC", decimals: 6 }
-    ],
+    assets: [{ address: usdcAddress, symbol: "USDC", decimals: 6 }],
     pools: [
       {
         poolId: 1,
         domainId: 1,
         domain: "Casino",
         active: true,
-        asset: "0x0000000000000000000000000000000000000001",
+        asset: usdcAddress,
         bank: "0x0000000000000000000000000000000000000002",
         symbol: "USDC",
         decimals: 6
@@ -136,16 +137,14 @@ describe("ClaimsPageClient", () => {
   afterEach(() => {
     cleanup();
     state.release = {
-      assets: [
-        { address: "0x0000000000000000000000000000000000000001", symbol: "USDC", decimals: 6 }
-      ],
+      assets: [{ address: usdcAddress, symbol: "USDC", decimals: 6 }],
       pools: [
         {
           poolId: 1,
           domainId: 1,
           domain: "Casino",
           active: true,
-          asset: "0x0000000000000000000000000000000000000001",
+          asset: usdcAddress,
           bank: "0x0000000000000000000000000000000000000002",
           symbol: "USDC",
           decimals: 6
@@ -167,5 +166,48 @@ describe("ClaimsPageClient", () => {
     expect(screen.getByText("Claims transaction console")).toBeDefined();
     expect(screen.getByText("Connect a wallet to run claim actions.")).toBeDefined();
     expect(screen.getByText("Session claim activity")).toBeDefined();
+  });
+
+  it("uses the claims pool asset metadata instead of the first release asset", async () => {
+    state.release = {
+      assets: [
+        { address: usdcAddress, symbol: "USDC", decimals: 6 },
+        { address: usdtAddress, symbol: "USDT", decimals: 6 }
+      ],
+      pools: [
+        {
+          poolId: 1,
+          domainId: 1,
+          domain: "Casino",
+          active: true,
+          asset: usdtAddress,
+          bank: "0x0000000000000000000000000000000000000002"
+        }
+      ]
+    };
+    state.sdk = {
+      account: "0x1111111111111111111111111111111111111111",
+      bank: {
+        getXPBuckets: vi.fn().mockResolvedValue({
+          accrued: 5_000_000n,
+          locked: 2_000_000n,
+          holdback: 1_500_000n,
+          holdbackReleasable: 750_000n
+        }),
+        getSnapshot: vi.fn().mockResolvedValue({
+          bank: "0x0000000000000000000000000000000000000002",
+          externalPayablesTotal: 4_000_000n,
+          protocolFeesPayable: 1_250_000n,
+          totalAssets: 100_000_000n,
+          totalReserved: 10_000_000n
+        })
+      }
+    };
+    state.ready = true;
+
+    renderWithQueryClient(<ClaimsPageClient />);
+
+    expect((await screen.findAllByText("5 USDT")).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("1.25 USDT").length).toBeGreaterThan(0);
   });
 });
