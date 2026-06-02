@@ -48,6 +48,7 @@ describe("GET /api/casino/leaderboard", () => {
     expect(response.status).toBe(200);
     expect((await json(response)).schemaVersion).toBe(1);
     expect(queryCasinoLeaderboardMock).toHaveBeenCalledWith({
+      asset: undefined,
       by: "turnover",
       chainId: 8453,
       limit: 3,
@@ -66,6 +67,7 @@ describe("GET /api/casino/leaderboard", () => {
 
     expect(response.status).toBe(200);
     expect(queryCasinoLeaderboardMock).toHaveBeenCalledWith({
+      asset: undefined,
       by: "turnover",
       chainId: 8453,
       limit: 5,
@@ -81,11 +83,31 @@ describe("GET /api/casino/leaderboard", () => {
 
     expect(response.status).toBe(200);
     expect(queryCasinoLeaderboardMock).toHaveBeenCalledWith({
+      asset: undefined,
       by: "turnover",
       chainId: 8453,
       limit: 5,
       gameId: undefined,
       windowDays: 30,
+      player: undefined
+    });
+  });
+
+  it("forwards an asset scope to the leaderboard service", async () => {
+    const asset = `0x${"12".repeat(20)}`;
+    const { GET } = await import("./route");
+    const response = await GET(
+      request(`/api/casino/leaderboard?chainId=8453&limit=5&asset=${asset}`)
+    );
+
+    expect(response.status).toBe(200);
+    expect(queryCasinoLeaderboardMock).toHaveBeenCalledWith({
+      asset,
+      by: "turnover",
+      chainId: 8453,
+      limit: 5,
+      gameId: undefined,
+      windowDays: undefined,
       player: undefined
     });
   });
@@ -99,6 +121,7 @@ describe("GET /api/casino/leaderboard", () => {
 
     expect(response.status).toBe(200);
     expect(queryCasinoLeaderboardMock).toHaveBeenCalledWith({
+      asset: undefined,
       by: "turnover",
       chainId: 8453,
       limit: 5,
@@ -124,6 +147,7 @@ describe("GET /api/casino/leaderboard", () => {
 
     expect(response.status).toBe(200);
     expect(queryCasinoLeaderboardMock).toHaveBeenCalledWith({
+      asset: undefined,
       by: "topWin",
       chainId: 8453,
       limit: 7,
@@ -143,6 +167,16 @@ describe("GET /api/casino/leaderboard", () => {
     expect(queryCasinoLeaderboardMock).not.toHaveBeenCalled();
   });
 
+  it("rejects a malformed asset before hitting the service", async () => {
+    const { GET } = await import("./route");
+    const response = await GET(request("/api/casino/leaderboard?chainId=8453&asset=0xnotvalid"));
+    const body = await json(response);
+
+    expect(response.status).toBe(400);
+    expect(body.error.code).toBe("INVALID_ASSET");
+    expect(queryCasinoLeaderboardMock).not.toHaveBeenCalled();
+  });
+
   it("rejects unsupported ranking dimensions", async () => {
     const { GET } = await import("./route");
     const response = await GET(request("/api/casino/leaderboard?chainId=8453&by=netPnl"));
@@ -151,6 +185,21 @@ describe("GET /api/casino/leaderboard", () => {
     expect(response.status).toBe(400);
     expect(body.error.code).toBe("UNSUPPORTED_SORT");
     expect(queryCasinoLeaderboardMock).not.toHaveBeenCalled();
+  });
+
+  it("maps unsupported release assets to a 400", async () => {
+    const asset = `0x${"34".repeat(20)}` as `0x${string}`;
+    const { UnsupportedCasinoAnalyticsAssetError } =
+      await import("../../../../server/betting/casino-analytics");
+    queryCasinoLeaderboardMock.mockRejectedValueOnce(
+      new UnsupportedCasinoAnalyticsAssetError(8453, asset)
+    );
+    const { GET } = await import("./route");
+    const response = await GET(request(`/api/casino/leaderboard?chainId=8453&asset=${asset}`));
+    const body = await json(response);
+
+    expect(response.status).toBe(400);
+    expect(body.error.code).toBe("UNSUPPORTED_ASSET");
   });
 
   it("rate limits public leaderboard reads", async () => {

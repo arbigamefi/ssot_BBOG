@@ -3,9 +3,9 @@ import { describe, expect, it, vi } from "vitest";
 import { formatTokenBalance, pickKenoStrobeSpots } from "./hooks";
 
 describe("game room hooks helpers", () => {
-  it("formats bigint token balances with fixed USDC precision", () => {
-    expect(formatTokenBalance(123456789n, 6)).toBe("123.46 USDC");
-    expect(formatTokenBalance(1000000n, 6)).toBe("1.00 USDC");
+  it("formats bigint token balances with the selected asset symbol", () => {
+    expect(formatTokenBalance(123456789n, 6, "USDC")).toBe("123.45 USDC");
+    expect(formatTokenBalance(1000000000000000000n, 18, "WETH")).toBe("1 WETH");
   });
 
   it("picks unique keno strobe spots in the contract range", () => {

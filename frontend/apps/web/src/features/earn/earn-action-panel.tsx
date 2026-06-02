@@ -141,7 +141,7 @@ export function EarnActionPanel({
           onValueChange={onAssetChange}
           showAddress
           disabled={flow.busy}
-          error={unsupportedAsset ? t("earn.errors.primaryAssetOnly") : undefined}
+          error={unsupportedAsset ? t("earn.errors.unsupportedWriteAsset") : undefined}
         />
 
         <div className="rounded-md border border-border bg-surface-0 p-4">

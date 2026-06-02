@@ -598,7 +598,6 @@
       "poolUnavailable": "Pool indisponível",
       "unsupportedWriteAsset": "Fluxos de escrita exigem um pool de cassino ativo para o ativo selecionado.",
       "positiveAmount": "O valor deve ser positivo.",
-      "primaryAssetOnly": "Fluxos de escrita atualmente aceitam apenas o ativo principal.",
       "insufficientWalletBalance": "O valor excede o saldo da carteira conectada.",
       "exceedsMintable": "A quantidade de cotas excede o que pode ser emitido com o saldo da carteira conectada.",
       "exceedsWithdrawable": "O valor excede o saldo atualmente sacável.",
@@ -1037,6 +1036,7 @@
       },
       "betPanel": {
         "walletBalance": "Saldo da carteira",
+        "asset": "Ativo da aposta",
         "syncing": "Sincronizando...",
         "notConnected": "Não conectado",
         "walletGate": {
@@ -1051,19 +1051,19 @@
         },
         "rolls": {
           "label": "Rolagens",
-          "total": "Total: {amount} USDC",
+          "total": "Total: {amount} {symbol}",
           "aria": "Número de rolagens"
         },
         "advanced": {
           "label": "Avançado",
-          "stopGain": "Parar no lucro (USDC)",
-          "stopLoss": "Parar na perda (USDC)",
+          "stopGain": "Parar no lucro ({symbol})",
+          "stopLoss": "Parar na perda ({symbol})",
           "offPlaceholder": "0 = desligado",
           "help": "Regras opcionais de parada automática para rodadas múltiplas. Defina 0 para desativar.",
           "stopGainHelp": "Para após o lucro total atingir este valor.",
           "stopLossHelp": "Para após a perda total atingir este valor.",
-          "gainStop": "Parar no lucro de +{amount} USDC",
-          "lossStop": "Parar na perda de {amount} USDC"
+          "gainStop": "Parar no lucro de +{amount} {symbol}",
+          "lossStop": "Parar na perda de {amount} {symbol}"
         },
         "summary": {
           "multiplier": "Multiplicador",

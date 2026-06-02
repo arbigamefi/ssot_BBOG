@@ -66,9 +66,15 @@ function formatAnnualizedEstimate(
  * indexed figure is labeled best-effort so it is never mistaken for on-chain truth.
  */
 export function BankrollPerformancePanel({
+  assetAddress,
+  assetDecimals = 6,
+  assetSymbol = "UNIT",
   sharePrice,
   vaultAssets
 }: {
+  assetAddress?: string;
+  assetDecimals?: number;
+  assetSymbol?: string;
   /** Latest chain-read assets redeemable per full LP share. Historical share-price points are not indexed yet. */
   sharePrice?: bigint;
   vaultAssets?: bigint;
@@ -77,15 +83,15 @@ export function BankrollPerformancePanel({
   const locale = useLocale();
   const [windowDays, setWindowDays] = React.useState<number | undefined>(DEFAULT_WINDOW_DAYS);
 
-  const stats = useCasinoStats({ windowDays });
+  const stats = useCasinoStats({ asset: assetAddress, windowDays });
   // The chart wants daily granularity; cap to the largest supported window when
   // showing all-time (the timeseries service clamps to 90 days regardless).
-  const timeseries = useCasinoTimeseries({ days: windowDays ?? 90 });
+  const timeseries = useCasinoTimeseries({ asset: assetAddress, days: windowDays ?? 90 });
 
   const unavailable = stats.data?.source === "unavailable";
   const aggregate = stats.data?.stats;
-  const decimals = stats.data?.asset.decimals ?? 6;
-  const symbol = stats.data?.asset.symbol ?? "USDC";
+  const decimals = stats.data?.asset.decimals ?? assetDecimals;
+  const symbol = stats.data?.asset.symbol ?? assetSymbol;
   const points = timeseries.data?.source === "postgres" ? timeseries.data.points : [];
 
   const windowToggle = (

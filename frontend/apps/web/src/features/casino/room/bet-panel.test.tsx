@@ -7,7 +7,6 @@ import {
   isPlaceBetButtonDisabled,
   type GameRoomBetPanelState
 } from "./bet-panel";
-import { parseWalletBalanceAmount } from "./bet-panel-sections";
 import type { GameMeta } from "./model";
 
 vi.mock("@ssot/ui", async () => {
@@ -137,7 +136,9 @@ const baseState: GameRoomBetPanelState = { status: "idle" };
 function renderPanel(overrides: Partial<React.ComponentProps<typeof GameRoomBetPanel>> = {}) {
   const props: React.ComponentProps<typeof GameRoomBetPanel> = {
     game: diceGame,
-    walletBalance: "1,450.00 USDC",
+    walletBalance: { label: "1,450.00 USDC", raw: 1_450_000_000n },
+    assetDecimals: 6,
+    assetSymbol: "USDC",
     betAmount: 10,
     onBetAmountChange: vi.fn(),
     betCount: 1,
@@ -240,11 +241,6 @@ describe("GameRoomBetPanel", () => {
         state: baseState
       })
     ).toBe(true);
-  });
-
-  it("parses wallet balances for max amount shortcuts", () => {
-    expect(parseWalletBalanceAmount("1,450.00 USDC")).toBe(1450);
-    expect(parseWalletBalanceAmount(null)).toBe(1450);
   });
 
   it("uses text inputs for casino amounts and sanitizes amount changes", () => {

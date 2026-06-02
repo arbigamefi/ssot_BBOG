@@ -12,20 +12,22 @@ export function formatHouseEdge(gameMeta: ReleaseGamePresentationMeta | undefine
 export function formatGameMaxPayout({
   gameMeta,
   slug,
-  usdcDecimals
+  assetDecimals,
+  assetSymbol
 }: {
   gameMeta: ReleaseGamePresentationMeta | undefined;
   slug: string;
-  usdcDecimals: number;
+  assetDecimals: number;
+  assetSymbol: string;
 }) {
   const maxPayoutRaw = gameMeta?.maxPayout ? BigInt(String(gameMeta.maxPayout)) : undefined;
   if (maxPayoutRaw !== undefined) {
-    return `${(Number(maxPayoutRaw) / Math.pow(10, usdcDecimals)).toLocaleString("en-US", {
+    return `${(Number(maxPayoutRaw) / Math.pow(10, assetDecimals)).toLocaleString("en-US", {
       maximumFractionDigits: 0
-    })} USDC`;
+    })} ${assetSymbol}`;
   }
 
-  if (slug === "roulette") return "100,000 USDC";
-  if (slug === "keno") return "500,000 USDC";
-  return "25,000 USDC";
+  if (slug === "roulette") return `100,000 ${assetSymbol}`;
+  if (slug === "keno") return `500,000 ${assetSymbol}`;
+  return `25,000 ${assetSymbol}`;
 }

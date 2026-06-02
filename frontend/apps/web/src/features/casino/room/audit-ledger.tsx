@@ -15,6 +15,7 @@ import {
   getExplorerAddressUrl,
   getExplorerTxUrl
 } from "../../../app-shell/chain-registry";
+import type { PoolAssetContext } from "../../assets/pool-asset";
 
 /** Loose row shape that covers both the indexer `BetRow` and any test stub. */
 export type GameAuditBet = {
@@ -26,6 +27,9 @@ export type GameAuditBet = {
   payout?: string | bigint | number;
   updatedAt?: number;
   gameId?: string;
+  /** Per-row pool/asset metadata from durable index rows. Needed for mixed-asset rooms. */
+  poolId?: string | number;
+  asset?: string;
   /** Indexer-supplied tx hashes — used for explorer links. */
   finalizedTxHash?: string;
   terminalTxHash?: string;
@@ -118,8 +122,10 @@ export function GameRoomAuditLedger({
   betAmount: _betAmount,
   recentBets,
   playerAddress,
-  assetSymbol = "USDC",
+  assetAddress,
+  assetSymbol = "UNIT",
   assetDecimals = 6,
+  assetContexts = [],
   chainId
 }: {
   game: GameMeta;
@@ -127,8 +133,11 @@ export function GameRoomAuditLedger({
   betAmount?: number;
   recentBets: readonly GameAuditBet[];
   playerAddress?: string;
+  assetAddress?: string;
   assetSymbol?: string;
   assetDecimals?: number;
+  /** Active casino pool assets on this release; used to format mixed-asset row feeds. */
+  assetContexts?: readonly PoolAssetContext[];
   /** Active chain — drives explorer links and the chain badge in the header. */
   chainId?: number;
 }) {
@@ -265,6 +274,7 @@ export function GameRoomAuditLedger({
             t={t}
             assetSymbol={assetSymbol}
             assetDecimals={assetDecimals}
+            assetContexts={assetContexts}
             emptyKey="live"
             chainId={chainId}
           />
@@ -277,6 +287,7 @@ export function GameRoomAuditLedger({
             t={t}
             assetSymbol={assetSymbol}
             assetDecimals={assetDecimals}
+            assetContexts={assetContexts}
             chainId={chainId}
             stateFilter={stateFilter}
             onStateFilterChange={setStateFilter}
@@ -289,11 +300,21 @@ export function GameRoomAuditLedger({
             locale={locale}
             assetSymbol={assetSymbol}
             assetDecimals={assetDecimals}
+            assetAddress={assetAddress}
             chainId={chainId}
             playerAddress={playerAddress}
           />
         )}
-        {activeTab === "analytics" && <AnalyticsPanel gameId={game.gameId} t={t} locale={locale} />}
+        {activeTab === "analytics" && (
+          <AnalyticsPanel
+            assetAddress={assetAddress}
+            assetSymbol={assetSymbol}
+            assetDecimals={assetDecimals}
+            gameId={game.gameId}
+            t={t}
+            locale={locale}
+          />
+        )}
         {activeTab === "info" && <GameInfoPanel slug={game.slug} t={t} />}
       </div>
     </div>
@@ -310,6 +331,7 @@ function BetTable({
   t,
   assetSymbol,
   assetDecimals,
+  assetContexts,
   emptyKey,
   multipliers,
   chainId
@@ -319,6 +341,7 @@ function BetTable({
   t: Translate;
   assetSymbol: string;
   assetDecimals: number;
+  assetContexts?: readonly PoolAssetContext[];
   emptyKey: "live" | "mine" | "top";
   multipliers?: number[];
   chainId?: number;
@@ -353,6 +376,11 @@ function BetTable({
             const betId = String(row.betId);
             const stake = toBigOrNull(row.stake);
             const payout = toBigOrNull(row.payout);
+            const rowAsset = resolveRowAsset(row, {
+              assetContexts,
+              fallbackDecimals: assetDecimals,
+              fallbackSymbol: assetSymbol
+            });
             const multiplier = multipliers?.[index] ?? computeMultiplier(stake, payout);
             const isWin = stake != null && payout != null && payout > stake;
             const isLoss =
@@ -388,7 +416,7 @@ function BetTable({
                   </span>
                 )}
                 <span className="font-mono text-xs font-semibold text-fg">
-                  {formatAmount(stake, assetDecimals, assetSymbol)}
+                  {formatAmount(stake, rowAsset.decimals, rowAsset.symbol)}
                 </span>
                 <span
                   className={cn(
@@ -408,7 +436,7 @@ function BetTable({
                     isWin ? "text-success" : isLoss ? "text-fg-subtle opacity-70" : "text-fg-muted"
                   )}
                 >
-                  {formatAmount(payout, assetDecimals, assetSymbol)}
+                  {formatAmount(payout, rowAsset.decimals, rowAsset.symbol)}
                 </span>
                 {showState && (
                   <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-fg-muted">
@@ -479,6 +507,7 @@ function MyBetsPanel({
   t,
   assetSymbol,
   assetDecimals,
+  assetContexts,
   chainId,
   stateFilter,
   onStateFilterChange
@@ -489,6 +518,7 @@ function MyBetsPanel({
   t: Translate;
   assetSymbol: string;
   assetDecimals: number;
+  assetContexts?: readonly PoolAssetContext[];
   chainId?: number;
   stateFilter: StateFilter;
   onStateFilterChange: (next: StateFilter) => void;
@@ -508,6 +538,7 @@ function MyBetsPanel({
           t={t}
           assetSymbol={assetSymbol}
           assetDecimals={assetDecimals}
+          assetContexts={assetContexts}
           emptyKey="mine"
           chainId={chainId}
         />
@@ -621,6 +652,7 @@ function LeaderboardPanel({
   gameId,
   t,
   locale,
+  assetAddress,
   assetSymbol,
   assetDecimals,
   chainId,
@@ -629,6 +661,7 @@ function LeaderboardPanel({
   gameId?: string;
   t: Translate;
   locale: string;
+  assetAddress?: string;
   assetSymbol: string;
   assetDecimals: number;
   chainId?: number;
@@ -639,6 +672,7 @@ function LeaderboardPanel({
   const [windowDays, setWindowDays] = React.useState<number | undefined>(undefined);
   const me = playerAddress?.toLowerCase();
   const board = useCasinoLeaderboard({
+    asset: assetAddress,
     by: view,
     gameId,
     limit: 10,
@@ -1015,12 +1049,27 @@ function WindowToggle({
   );
 }
 
-function AnalyticsPanel({ gameId, t, locale }: { gameId?: string; t: Translate; locale: string }) {
+function AnalyticsPanel({
+  assetAddress,
+  assetSymbol,
+  assetDecimals,
+  gameId,
+  t,
+  locale
+}: {
+  assetAddress?: string;
+  assetSymbol: string;
+  assetDecimals: number;
+  gameId?: string;
+  t: Translate;
+  locale: string;
+}) {
   const [scope, setScope] = React.useState<AnalyticsScope>("game");
   const [windowDays, setWindowDays] = React.useState<number | undefined>(undefined);
-  const stats = useCasinoStats({ windowDays });
+  const stats = useCasinoStats({ asset: assetAddress, windowDays });
   // "All games" drops the per-game filter on both the metrics and the trend.
   const timeseries = useCasinoTimeseries({
+    asset: assetAddress,
     days: 7,
     gameId: scope === "all" ? undefined : gameId
   });
@@ -1029,8 +1078,8 @@ function AnalyticsPanel({ gameId, t, locale }: { gameId?: string; t: Translate; 
   );
   const metrics = scope === "all" ? stats.data?.stats : game;
   const unavailable = stats.data?.source === "unavailable";
-  const decimals = stats.data?.asset.decimals ?? 6;
-  const symbol = stats.data?.asset.symbol ?? "USDC";
+  const decimals = stats.data?.asset.decimals ?? assetDecimals;
+  const symbol = stats.data?.asset.symbol ?? assetSymbol;
   const trendPoints = timeseries.data?.source === "postgres" ? timeseries.data.points : [];
 
   // This game ↔ all games. Stays mounted even on the empty state so the player
@@ -1261,6 +1310,43 @@ function toBigOrNull(value?: string | bigint | number): bigint | null {
   } catch {
     return null;
   }
+}
+
+type RowAssetFormat = {
+  decimals: number;
+  symbol: string;
+};
+
+function resolveRowAsset(
+  row: GameAuditBet,
+  {
+    assetContexts,
+    fallbackDecimals,
+    fallbackSymbol
+  }: {
+    assetContexts?: readonly PoolAssetContext[];
+    fallbackDecimals: number;
+    fallbackSymbol: string;
+  }
+): RowAssetFormat {
+  const rowAsset = row.asset?.toLowerCase();
+  if (rowAsset) {
+    const byAsset = assetContexts?.find(
+      (context) => context.asset.address.toLowerCase() === rowAsset
+    );
+    if (byAsset) {
+      return { decimals: byAsset.asset.decimals, symbol: byAsset.asset.symbol };
+    }
+  }
+
+  if (row.poolId != null) {
+    const byPool = assetContexts?.find((context) => String(context.poolId) === String(row.poolId));
+    if (byPool) {
+      return { decimals: byPool.asset.decimals, symbol: byPool.asset.symbol };
+    }
+  }
+
+  return { decimals: fallbackDecimals, symbol: fallbackSymbol };
 }
 
 function formatAmount(value: bigint | null, decimals: number, asset: string) {

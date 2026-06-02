@@ -1,10 +1,6 @@
 import * as React from "react";
-
-type BalanceAsset = {
-  symbol?: string;
-  address?: string;
-  decimals?: number;
-};
+import type { PoolAssetContext } from "../../assets/pool-asset";
+import { formatAssetAmount } from "../../assets/pool-asset";
 
 type BalanceSdk = {
   account?: `0x${string}`;
@@ -13,11 +9,13 @@ type BalanceSdk = {
   };
 };
 
-export function formatTokenBalance(raw: bigint, decimals: number) {
-  return `${(Number(raw) / Math.pow(10, decimals)).toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  })} USDC`;
+export type GameWalletBalance = {
+  label: string;
+  raw: bigint;
+};
+
+export function formatTokenBalance(raw: bigint, decimals: number, symbol: string) {
+  return formatAssetAmount(raw, { decimals, symbol }, { fractionDigits: 2 });
 }
 
 export function pickKenoStrobeSpots(count = 5) {
@@ -31,31 +29,33 @@ export function pickKenoStrobeSpots(count = 5) {
 
 export function useGameWalletBalance({
   sdk,
-  assets
+  asset
 }: {
   sdk: BalanceSdk | null | undefined;
-  assets: readonly BalanceAsset[] | undefined;
-}) {
-  const [walletBalance, setWalletBalance] = React.useState<string | null>(null);
+  asset: PoolAssetContext["asset"] | null | undefined;
+}): GameWalletBalance | null {
+  const [walletBalance, setWalletBalance] = React.useState<GameWalletBalance | null>(null);
 
   React.useEffect(() => {
-    if (!sdk?.account || !assets) {
+    if (!sdk?.account || !asset) {
       setWalletBalance(null);
       return;
     }
-    const usdcAsset = assets.find((asset) => asset.symbol === "USDC");
-    if (!usdcAsset?.address || !sdk.bank) {
+    if (!asset.address || !sdk.bank) {
       setWalletBalance(null);
       return;
     }
 
     sdk.bank
-      .getAssetBalance(usdcAsset.address as `0x${string}`, sdk.account)
+      .getAssetBalance(asset.address as `0x${string}`, sdk.account)
       .then((raw) => {
-        setWalletBalance(formatTokenBalance(raw, usdcAsset.decimals ?? 6));
+        setWalletBalance({
+          label: formatTokenBalance(raw, asset.decimals, asset.symbol),
+          raw
+        });
       })
       .catch(() => setWalletBalance(null));
-  }, [sdk?.account, sdk?.bank, assets]);
+  }, [sdk?.account, sdk?.bank, asset]);
 
   return walletBalance;
 }

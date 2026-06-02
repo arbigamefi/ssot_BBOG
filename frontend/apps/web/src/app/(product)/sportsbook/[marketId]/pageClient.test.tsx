@@ -5,6 +5,8 @@ import * as React from "react";
 import type { SportsTicketRow } from "@ssot/bet-index";
 
 const zeroAddress = `0x${"0".repeat(40)}`;
+const usdcAddress = "0x0000000000000000000000000000000000000001";
+const usdtAddress = "0x0000000000000000000000000000000000000002";
 
 function createSportsHubMock() {
   return {
@@ -213,6 +215,25 @@ function renderWithQueryClient(ui: React.ReactElement) {
 }
 
 function resetState() {
+  state.release = {
+    chainId: 84532,
+    name: "Base Sepolia",
+    releaseDigest: "0x7ad0f2cb1a996251325c00441b125ca5276c5bf70f011577222ce588cae1349f",
+    contracts: { sportsHub: "0x2db4ba326c2c3e5830b0da10f0c52b4097f9fa4b" },
+    sports: { enabled: true },
+    pools: [
+      {
+        poolId: 2,
+        domainId: 2,
+        domain: "Sports",
+        active: true,
+        asset: zeroAddress,
+        bank: zeroAddress,
+        symbol: "USDC",
+        decimals: 6
+      }
+    ]
+  };
   state.sportsbook = {
     enabled: false,
     frontendEnabled: false,
@@ -287,6 +308,41 @@ describe("SportsbookMarketDetailPageClient (player-facing)", () => {
       .find((b) => b.textContent === "Place bet") as HTMLButtonElement;
     expect(placeButton).toBeDefined();
     expect(placeButton.disabled).toBe(true);
+  });
+
+  it("resolves the sportsbook stake asset from the pool asset address", async () => {
+    state.release = {
+      ...(state.release as Record<string, unknown>),
+      assets: [
+        { address: usdcAddress, symbol: "USDC", decimals: 6 },
+        { address: usdtAddress, symbol: "USDT", decimals: 6 }
+      ],
+      pools: [
+        {
+          poolId: 2,
+          domainId: 2,
+          domain: "Sports",
+          active: true,
+          asset: usdtAddress,
+          bank: zeroAddress
+        }
+      ]
+    };
+    state.sportsbook = {
+      ...state.sportsbook,
+      enabled: true,
+      frontendEnabled: true,
+      disabledReason: undefined
+    };
+    state.sdk = {
+      sportsHub: createSportsHubMock(),
+      account: "0x1111111111111111111111111111111111111111"
+    };
+
+    renderWithQueryClient(<SportsbookMarketDetailPageClient marketId="7" />);
+
+    await screen.findByRole("heading", { level: 1 });
+    expect(screen.getByLabelText("Stake (USDT)")).toBeDefined();
   });
 
   it("shows connected player tickets for the current market", async () => {

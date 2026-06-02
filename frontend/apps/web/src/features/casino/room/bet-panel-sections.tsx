@@ -33,20 +33,14 @@ function parseBetAmountInput(input: string, { min, max }: { min: number; max?: n
   return Math.max(min, Math.min(max ?? value, toCents(value)));
 }
 
-export function parseWalletBalanceAmount(walletBalance: string | null) {
-  const raw = walletBalance?.replace(/,/g, "").replace(" USDC", "").trim();
-  if (!raw) return 1450;
-  return parseBetAmountInput(raw, { min: MIN_BET_AMOUNT });
-}
-
 export function BetAmountSection({
   betAmount,
-  walletBalance,
+  walletBalanceAmount,
   isPending,
   onBetAmountChange
 }: {
   betAmount: number;
-  walletBalance: string | null;
+  walletBalanceAmount: number | null;
   isPending: boolean;
   onBetAmountChange: (amount: number) => void;
 }) {
@@ -110,7 +104,7 @@ export function BetAmountSection({
           </button>
           <button
             type="button"
-            onClick={() => setBetAmount(parseWalletBalanceAmount(walletBalance))}
+            onClick={() => setBetAmount(walletBalanceAmount ?? betAmount)}
             disabled={isPending}
             className="flex-1 rounded-md bg-surface-0 py-1 text-[10px] font-bold uppercase text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg disabled:cursor-default disabled:opacity-50 disabled:hover:bg-surface-0 disabled:hover:text-fg-subtle"
           >
@@ -125,11 +119,13 @@ export function BetAmountSection({
 export function BetRollsSection({
   betAmount,
   betCount,
+  assetSymbol,
   isPending,
   onBetCountChange
 }: {
   betAmount: number;
   betCount: number;
+  assetSymbol: string;
   isPending: boolean;
   onBetCountChange: (count: number) => void;
 }) {
@@ -144,7 +140,8 @@ export function BetRollsSection({
         {betCount > 1 && (
           <span className="font-mono text-[10px] text-fg-subtle">
             {t("casino.room.betPanel.rolls.total", {
-              amount: (betAmount * betCount).toLocaleString()
+              amount: (betAmount * betCount).toLocaleString(),
+              symbol: assetSymbol
             })}
           </span>
         )}
@@ -187,6 +184,7 @@ export function BetRollsSection({
 
 export function BetAdvancedSection({
   advancedOpen,
+  assetSymbol,
   isPending,
   stopGain,
   stopLoss,
@@ -195,6 +193,7 @@ export function BetAdvancedSection({
   onStopLossChange
 }: {
   advancedOpen: boolean;
+  assetSymbol: string;
   isPending?: boolean;
   stopGain: number;
   stopLoss: number;
@@ -230,14 +229,14 @@ export function BetAdvancedSection({
         <div ref={advancedContentRef} className="mt-2 grid grid-cols-2 gap-2">
           <div className="flex flex-col gap-1">
             <label className="text-[9px] font-bold uppercase tracking-widest text-fg-subtle">
-              {t("casino.room.betPanel.advanced.stopGain")}
+              {t("casino.room.betPanel.advanced.stopGain", { symbol: assetSymbol })}
             </label>
             <input
               type="text"
               inputMode="numeric"
               pattern={WHOLE_UNIT_PATTERN}
               autoComplete="off"
-              aria-label={t("casino.room.betPanel.advanced.stopGain")}
+              aria-label={t("casino.room.betPanel.advanced.stopGain", { symbol: assetSymbol })}
               value={String(stopGain)}
               disabled={isPending}
               onChange={(event) => {
@@ -250,14 +249,14 @@ export function BetAdvancedSection({
           </div>
           <div className="flex flex-col gap-1">
             <label className="text-[9px] font-bold uppercase tracking-widest text-fg-subtle">
-              {t("casino.room.betPanel.advanced.stopLoss")}
+              {t("casino.room.betPanel.advanced.stopLoss", { symbol: assetSymbol })}
             </label>
             <input
               type="text"
               inputMode="numeric"
               pattern={WHOLE_UNIT_PATTERN}
               autoComplete="off"
-              aria-label={t("casino.room.betPanel.advanced.stopLoss")}
+              aria-label={t("casino.room.betPanel.advanced.stopLoss", { symbol: assetSymbol })}
               value={String(stopLoss)}
               disabled={isPending}
               onChange={(event) => {
@@ -272,13 +271,19 @@ export function BetAdvancedSection({
             <div className="col-span-2 font-mono text-[9px] text-fg-subtle">
               {stopGain > 0 && (
                 <span className="text-success">
-                  {t("casino.room.betPanel.advanced.gainStop", { amount: stopGain })}
+                  {t("casino.room.betPanel.advanced.gainStop", {
+                    amount: stopGain,
+                    symbol: assetSymbol
+                  })}
                 </span>
               )}
               {stopGain > 0 && stopLoss > 0 && <span className="mx-2">|</span>}
               {stopLoss > 0 && (
                 <span className="text-danger">
-                  {t("casino.room.betPanel.advanced.lossStop", { amount: stopLoss })}
+                  {t("casino.room.betPanel.advanced.lossStop", {
+                    amount: stopLoss,
+                    symbol: assetSymbol
+                  })}
                 </span>
               )}
             </div>
@@ -292,11 +297,13 @@ export function BetAdvancedSection({
 export function BetPayoutSummary({
   multiplier,
   winChance,
-  expectedPayout
+  expectedPayout,
+  assetSymbol
 }: {
   multiplier: number;
   winChance: number;
   expectedPayout: number;
+  assetSymbol: string;
 }) {
   const t = useTranslations();
 
@@ -322,7 +329,8 @@ export function BetPayoutSummary({
           {t("casino.room.betPanel.summary.expectedPayout")}
         </span>
         <span className="flex shrink-0 items-baseline gap-1 whitespace-nowrap font-mono text-lg font-bold text-brand">
-          {expectedPayout.toFixed(2)} <span className="text-xs font-bold text-fg-subtle">USDC</span>
+          {expectedPayout.toFixed(2)}{" "}
+          <span className="text-xs font-bold text-fg-subtle">{assetSymbol}</span>
         </span>
       </div>
     </div>

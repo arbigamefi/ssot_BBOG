@@ -320,6 +320,18 @@ const MOCK_RELEASE = {
       bank: "0x49b9dc94d98c3d78224ca37abf05ec09af7c50ff"
     }
   ],
+  pools: [
+    {
+      active: true,
+      asset: "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
+      bank: "0x49b9dc94d98c3d78224ca37abf05ec09af7c50ff",
+      decimals: 6,
+      domain: "Casino",
+      domainId: 1,
+      poolId: 1,
+      symbol: "USDC"
+    }
+  ],
   gamesMeta: [
     {
       gameId: "0x8d8e6987fb3617c00abdd68d6c1f7eac28b7f9f96b25367e9b65dacaa0914a8b",

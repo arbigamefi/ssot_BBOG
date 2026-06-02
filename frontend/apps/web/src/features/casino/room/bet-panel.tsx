@@ -1,8 +1,9 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { InformationCircleIcon, WalletIcon } from "@heroicons/react/24/outline";
-import { cn } from "@ssot/ui";
+import { AssetSelector, cn, type AssetOption } from "@ssot/ui";
 
+import { formatUnits } from "../../betting/model/units";
 import {
   BetAdvancedSection,
   BetAmountSection,
@@ -15,6 +16,7 @@ import { PlaceBetButton } from "./place-bet-button";
 import { CasinoRoundStatusPanel } from "./round-status-panel";
 import type { CasinoRoundPhase } from "./casino-round";
 import { getStepperErrorMessage } from "./feedback";
+import type { GameWalletBalance } from "./hooks";
 
 export type { GameRoomBetPanelState } from "./place-bet-button";
 export { isPlaceBetButtonDisabled } from "./place-bet-button";
@@ -22,6 +24,11 @@ export { isPlaceBetButtonDisabled } from "./place-bet-button";
 export function GameRoomBetPanel({
   game,
   walletBalance,
+  assetDecimals,
+  assetSymbol,
+  assetOptions,
+  selectedAsset,
+  onAssetChange,
   betAmount,
   onBetAmountChange,
   betCount,
@@ -52,7 +59,13 @@ export function GameRoomBetPanel({
   onPlaceBet
 }: {
   game: GameMeta;
-  walletBalance: string | null;
+  walletBalance: GameWalletBalance | null;
+  assetDecimals: number;
+  assetSymbol: string;
+  /** Casino pool assets on this chain. A selector renders only when there are 2+. */
+  assetOptions?: AssetOption[];
+  selectedAsset?: `0x${string}`;
+  onAssetChange?: (asset: `0x${string}`) => void;
   betAmount: number;
   onBetAmountChange: (amount: number) => void;
   betCount: number;
@@ -85,11 +98,24 @@ export function GameRoomBetPanel({
   const t = useTranslations();
   const balanceLabel = !hasAccount
     ? t("casino.room.betPanel.notConnected")
-    : (walletBalance ?? "—");
+    : (walletBalance?.label ?? "—");
+  const walletBalanceAmount =
+    walletBalance?.raw == null ? null : Number(formatUnits(walletBalance.raw, assetDecimals));
 
   return (
     <div className="grid min-h-0 grid-rows-[minmax(0,1fr)_auto] overflow-hidden lg:h-full">
       <div className="min-h-0 pb-2 lg:overflow-y-auto lg:pr-1">
+        {assetOptions && assetOptions.length > 1 && onAssetChange ? (
+          <div className="mb-2">
+            <AssetSelector
+              title={t("casino.room.betPanel.asset")}
+              assets={assetOptions}
+              value={selectedAsset}
+              onValueChange={onAssetChange}
+            />
+          </div>
+        ) : null}
+
         <div className="mb-2 flex items-center justify-between">
           <span className="flex items-center gap-2 text-sm font-bold text-fg-muted">
             <WalletIcon className="h-4 w-4" /> {t("casino.room.betPanel.walletBalance")}
@@ -115,7 +141,7 @@ export function GameRoomBetPanel({
         <div data-tour="bet-amount">
           <BetAmountSection
             betAmount={betAmount}
-            walletBalance={walletBalance}
+            walletBalanceAmount={walletBalanceAmount}
             isPending={isPending}
             onBetAmountChange={onBetAmountChange}
           />
@@ -124,12 +150,14 @@ export function GameRoomBetPanel({
         <BetRollsSection
           betAmount={betAmount}
           betCount={betCount}
+          assetSymbol={assetSymbol}
           isPending={isPending}
           onBetCountChange={onBetCountChange}
         />
 
         <BetAdvancedSection
           advancedOpen={advancedOpen}
+          assetSymbol={assetSymbol}
           isPending={isPending}
           stopGain={stopGain}
           stopLoss={stopLoss}
@@ -142,6 +170,7 @@ export function GameRoomBetPanel({
           multiplier={multiplier}
           winChance={winChance}
           expectedPayout={expectedPayout}
+          assetSymbol={assetSymbol}
         />
 
         {state.status === "failed" && state.error?.message && (

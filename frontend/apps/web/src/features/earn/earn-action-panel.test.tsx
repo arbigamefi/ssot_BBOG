@@ -9,7 +9,12 @@ vi.mock("next-intl", () => ({
 }));
 
 vi.mock("@ssot/ui", () => ({
-  AssetSelector: ({ title }: { title: string }) => <div>{title}</div>
+  AssetSelector: ({ error, title }: { error?: string; title: string }) => (
+    <div>
+      <div>{title}</div>
+      {error ? <div>{error}</div> : null}
+    </div>
+  )
 }));
 
 const baseFlow: EarnFlowState = {
@@ -20,7 +25,10 @@ const baseFlow: EarnFlowState = {
   reset: vi.fn()
 };
 
-function renderPanel(flow: EarnFlowState) {
+function renderPanel(
+  flow: EarnFlowState,
+  overrides: Partial<React.ComponentProps<typeof EarnActionPanel>> = {}
+) {
   return render(
     <EarnActionPanel
       tab="deposit"
@@ -50,6 +58,7 @@ function renderPanel(flow: EarnFlowState) {
       flow={flow}
       onSubmit={vi.fn()}
       connected
+      {...overrides}
     />
   );
 }
@@ -80,5 +89,11 @@ describe("EarnActionPanel", () => {
 
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(screen.queryByRole("button", { name: "earn.actions.trace.view" })).toBeNull();
+  });
+
+  it("uses the active-pool message when the selected asset cannot be written", () => {
+    renderPanel(baseFlow, { unsupportedAsset: true });
+
+    expect(screen.getByText("earn.errors.unsupportedWriteAsset")).toBeDefined();
   });
 });

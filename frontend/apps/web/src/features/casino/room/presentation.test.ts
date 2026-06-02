@@ -10,10 +10,20 @@ describe("game room presentation helpers", () => {
 
   it("formats release max payout or catalog fallback", () => {
     expect(
-      formatGameMaxPayout({ gameMeta: { maxPayout: "2500000000" }, slug: "dice", usdcDecimals: 6 })
+      formatGameMaxPayout({
+        assetDecimals: 6,
+        assetSymbol: "USDC",
+        gameMeta: { maxPayout: "2500000000" },
+        slug: "dice"
+      })
     ).toBe("2,500 USDC");
-    expect(formatGameMaxPayout({ gameMeta: undefined, slug: "keno", usdcDecimals: 6 })).toBe(
-      "500,000 USDC"
-    );
+    expect(
+      formatGameMaxPayout({
+        assetDecimals: 18,
+        assetSymbol: "WETH",
+        gameMeta: undefined,
+        slug: "keno"
+      })
+    ).toBe("500,000 WETH");
   });
 });

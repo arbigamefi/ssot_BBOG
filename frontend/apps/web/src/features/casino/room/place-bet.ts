@@ -2,6 +2,12 @@ import type { PlaceBetInput } from "@ssot/ssot";
 import type { Address } from "@ssot/ssot/sdk";
 import { encodeStakeSpec } from "@ssot/ssot/encoding";
 import { parseDecimalToUnits } from "../../betting/model/units";
+import {
+  getCasinoPoolAssetContexts,
+  getDefaultCasinoPoolAssetContext,
+  type ReleaseAssetLike,
+  type ReleasePoolLike
+} from "../../assets/pool-asset";
 
 import type { GameMeta } from "./model";
 import {
@@ -15,27 +21,10 @@ import {
   type SicBoKind
 } from "./params";
 
-type ReleaseAsset = {
-  symbol?: string;
-  address?: string;
-  decimals?: number;
-};
-
-type ReleasePool = {
-  poolId: number;
-  domain?: string;
-  domainId?: number;
-  active?: boolean;
-  asset?: string;
-  bank?: string;
-  symbol?: string;
-  decimals?: number;
-};
-
 export type GameRoomRelease = {
   chainId: number;
-  assets: readonly ReleaseAsset[];
-  pools: readonly ReleasePool[];
+  assets: readonly ReleaseAssetLike[];
+  pools: readonly ReleasePoolLike[];
 };
 
 export type BuildGamePlaceBetInputArgs = {
@@ -55,6 +44,8 @@ export type BuildGamePlaceBetInputArgs = {
   sicBoKind?: SicBoKind;
   sicBoValue?: number;
   affiliate?: Address;
+  /** Selected casino pool. Falls back to the default casino pool when omitted. */
+  poolId?: number;
   maxHouseEdgeBps?: number;
   messages?: GamePlaceBetMessages;
 };
@@ -77,11 +68,7 @@ function toUnits(amount: number, decimals: number) {
   return parseDecimalToUnits(value, decimals);
 }
 
-export function findUSDCAsset(assets: readonly ReleaseAsset[]) {
-  return assets.find((asset) => asset.symbol === "USDC");
-}
-
-export function findCasinoPool(pools: readonly ReleasePool[]) {
+export function findCasinoPool(pools: readonly ReleasePoolLike[]) {
   return (
     pools.find((pool) => pool.active !== false && String(pool.domain).toLowerCase() === "casino") ??
     pools.find((pool) => pool.active !== false && pool.domainId === 1) ??
@@ -106,6 +93,7 @@ export function buildGamePlaceBetInput({
   sicBoKind,
   sicBoValue,
   affiliate,
+  poolId,
   maxHouseEdgeBps = 10000,
   messages
 }: BuildGamePlaceBetInputArgs): BuildGamePlaceBetInputResult {
@@ -127,19 +115,21 @@ export function buildGamePlaceBetInput({
     return { ok: false, message: gameParams.message };
   }
 
-  const casinoPool = findCasinoPool(release.pools);
-  if (!casinoPool?.asset) {
+  // Use the explicitly selected pool when provided; otherwise the default
+  // casino pool. A stale/unknown poolId falls back rather than failing.
+  const casinoPool =
+    poolId != null
+      ? (getCasinoPoolAssetContexts(release).find((context) => context.poolId === poolId) ??
+        getDefaultCasinoPoolAssetContext(release))
+      : getDefaultCasinoPoolAssetContext(release);
+  if (!casinoPool) {
     return {
       ok: false,
       message: messages?.noActiveCasinoPool ?? "—"
     };
   }
 
-  const assetMeta =
-    release.assets.find(
-      (asset) => asset.address?.toLowerCase() === casinoPool.asset?.toLowerCase()
-    ) ?? findUSDCAsset(release.assets);
-  const decimals = casinoPool.decimals ?? assetMeta?.decimals ?? 6;
+  const decimals = casinoPool.asset.decimals;
   const amountPerRoll = toUnits(betAmount, decimals);
   const normalizedBetCount = Math.max(1, Math.floor(betCount));
   const totalStake = amountPerRoll * BigInt(normalizedBetCount);

@@ -369,6 +369,7 @@
       },
       "betPanel": {
         "walletBalance": "Wallet Balance",
+        "asset": "Bet asset",
         "syncing": "Syncing...",
         "notConnected": "Not connected",
         "walletGate": {
@@ -383,19 +384,19 @@
         },
         "rolls": {
           "label": "Rolls",
-          "total": "Total: {amount} USDC",
+          "total": "Total: {amount} {symbol}",
           "aria": "Roll count"
         },
         "advanced": {
           "label": "Advanced",
-          "stopGain": "Stop Gain (USDC)",
-          "stopLoss": "Stop Loss (USDC)",
+          "stopGain": "Stop Gain ({symbol})",
+          "stopLoss": "Stop Loss ({symbol})",
           "offPlaceholder": "0 = off",
           "help": "Optional auto-stop rules for multi-roll rounds. Set 0 to disable a rule.",
           "stopGainHelp": "Stops after total profit reaches this amount.",
           "stopLossHelp": "Stops after total loss reaches this amount.",
-          "gainStop": "Gain stop at +{amount} USDC",
-          "lossStop": "Loss stop at {amount} USDC"
+          "gainStop": "Gain stop at +{amount} {symbol}",
+          "lossStop": "Loss stop at {amount} {symbol}"
         },
         "summary": {
           "multiplier": "Multiplier",
@@ -2648,7 +2649,6 @@
       "poolUnavailable": "Pool unavailable",
       "unsupportedWriteAsset": "Write flows require an active casino pool for the selected asset.",
       "positiveAmount": "Amount must be positive.",
-      "primaryAssetOnly": "Write flows currently support only the primary asset.",
       "insufficientWalletBalance": "Amount exceeds the connected wallet balance.",
       "exceedsMintable": "Share amount exceeds the shares mintable from the connected wallet balance.",
       "exceedsWithdrawable": "Amount exceeds the currently withdrawable balance.",

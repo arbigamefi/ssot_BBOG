@@ -300,6 +300,7 @@ describe("GameRoomAuditLedger", () => {
       <GameRoomAuditLedger
         game={game}
         betAmount={10}
+        assetSymbol="USDC"
         recentBets={[
           {
             id: "84532:1",
@@ -316,6 +317,52 @@ describe("GameRoomAuditLedger", () => {
     expect(screen.getByText("10.00 USDC")).toBeDefined();
     expect(screen.getByText("25.00 USDC")).toBeDefined();
     expect(screen.getByText("2.50×")).toBeDefined();
+  });
+
+  it("formats mixed-asset recent rows with each row's own asset metadata", () => {
+    render(
+      <GameRoomAuditLedger
+        game={game}
+        betAmount={10}
+        assetSymbol="USDC"
+        assetDecimals={6}
+        assetContexts={[
+          {
+            asset: {
+              address: "0x0000000000000000000000000000000000000001",
+              decimals: 6,
+              symbol: "USDC"
+            },
+            pool: { poolId: 1, asset: "0x0000000000000000000000000000000000000001" },
+            poolId: 1
+          },
+          {
+            asset: {
+              address: "0x0000000000000000000000000000000000000002",
+              decimals: 18,
+              symbol: "WETH"
+            },
+            pool: { poolId: 2, asset: "0x0000000000000000000000000000000000000002" },
+            poolId: 2
+          }
+        ]}
+        recentBets={[
+          {
+            id: "84532:2",
+            betId: "2",
+            asset: "0x0000000000000000000000000000000000000002",
+            poolId: "2",
+            player: "0xabcdef1234567890abcdef1234567890abcdef12",
+            state: "finalized",
+            stake: "1000000000000000000",
+            payout: "2000000000000000000",
+            updatedAt: Date.now()
+          }
+        ]}
+      />
+    );
+    expect(screen.getByText("1.00 WETH")).toBeDefined();
+    expect(screen.getByText("2.00 WETH")).toBeDefined();
   });
 
   it("writes the active tab to the URL when a tab is clicked", () => {
@@ -385,7 +432,15 @@ describe("GameRoomAuditLedger", () => {
   });
 
   it("shows the chain badge in the header when chainId resolves", () => {
-    render(<GameRoomAuditLedger game={game} betAmount={10} chainId={84532} recentBets={[]} />);
+    render(
+      <GameRoomAuditLedger
+        game={game}
+        betAmount={10}
+        assetSymbol="USDC"
+        chainId={84532}
+        recentBets={[]}
+      />
+    );
     expect(screen.getByText("On Base Sepolia")).toBeDefined();
   });
 
@@ -395,6 +450,7 @@ describe("GameRoomAuditLedger", () => {
       <GameRoomAuditLedger
         game={game}
         betAmount={10}
+        assetSymbol="USDC"
         chainId={84532}
         recentBets={[]}
         playerAddress="0x1234567890abcdef1234567890abcdef12345678"
@@ -407,7 +463,15 @@ describe("GameRoomAuditLedger", () => {
 
   it("shows the per-game turnover leaderboard on the Leaderboard tab", () => {
     setTab("leaderboard");
-    render(<GameRoomAuditLedger game={game} betAmount={10} chainId={84532} recentBets={[]} />);
+    render(
+      <GameRoomAuditLedger
+        game={game}
+        betAmount={10}
+        assetSymbol="USDC"
+        chainId={84532}
+        recentBets={[]}
+      />
+    );
     // Ranked player + formatted turnover (30 USDC from "30000000" @ 6 decimals, trailing zeros trimmed).
     expect(screen.getByText("30 USDC")).toBeDefined();
     expect(screen.getByRole("tab", { name: "By volume", selected: true })).toBeDefined();
@@ -450,6 +514,7 @@ describe("GameRoomAuditLedger", () => {
       <GameRoomAuditLedger
         game={game}
         betAmount={10}
+        assetSymbol="USDC"
         chainId={84532}
         recentBets={[]}
         // Off-list ranked wallet (rank 7) — not present in the rendered rows.

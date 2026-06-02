@@ -33,6 +33,8 @@ export type UseCasinoRoundArgs = {
   sicBoKind: SicBoKind;
   sicBoValue: number;
   affiliate?: Address;
+  /** Selected casino pool id (multi-asset). Defaults to the default pool when omitted. */
+  poolId?: number;
   onRoundStart: () => void;
   onRoundTerminal: (bet: DomainBet) => void;
   onRoundReset: () => void;
@@ -58,6 +60,7 @@ export function useCasinoRound({
   sicBoKind,
   sicBoValue,
   affiliate,
+  poolId,
   onRoundStart,
   onRoundTerminal,
   onRoundReset
@@ -134,6 +137,7 @@ export function useCasinoRound({
       sicBoKind,
       sicBoValue,
       affiliate,
+      poolId,
       messages: {
         rouletteSelectionRequired: t("casino.room.errors.rouletteSelectionRequired"),
         kenoSelectionRequired: t("casino.room.errors.kenoSelectionRequired"),
@@ -158,6 +162,7 @@ export function useCasinoRound({
     onRoundStart,
     openConnectModal,
     plinkoRisk,
+    poolId,
     sicBoKind,
     sicBoValue,
     planNow,

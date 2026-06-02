@@ -10,6 +10,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { cn } from "@ssot/ui";
 
+import { getExplorerTxUrl } from "../../../app-shell/chain-registry";
 import { useFocusTrap } from "../../../app-shell/a11y/useFocusTrap";
 import { formatUnits } from "../../betting/model/units";
 import { SharePanel } from "../../share/SharePanel";
@@ -77,15 +78,6 @@ function useEscapeToClose(active: boolean, onClose: (() => void) | undefined) {
   }, [active, onClose]);
 }
 
-function explorerTxUrl(chainId: number | undefined, txHash: string | undefined) {
-  if (!txHash) return undefined;
-  if (chainId === 84532) return `https://sepolia.basescan.org/tx/${txHash}`;
-  if (chainId === 8453) return `https://basescan.org/tx/${txHash}`;
-  if (chainId === 421614) return `https://sepolia.arbiscan.io/tx/${txHash}`;
-  if (chainId === 42161) return `https://arbiscan.io/tx/${txHash}`;
-  return undefined;
-}
-
 /**
  * Bundle every chain-verifiable fact about a settled round into a single,
  * self-describing JSON artifact the player can keep — the practical payoff of
@@ -105,7 +97,7 @@ function buildFairnessProof(args: {
       requestId: result.requestId.toString(),
       randomHash: result.randomHash,
       settlementTx: txHash ?? null,
-      explorerTx: explorerTxUrl(chainId, txHash) ?? null,
+      explorerTx: getExplorerTxUrl(chainId, txHash) ?? null,
       resolvedAt: result.resolvedAt ?? null,
       exportedAt: new Date().toISOString()
     },
@@ -606,7 +598,7 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
 export function GameRoomResultOverlay({
   result,
   chainId,
-  assetSymbol = "USDC",
+  assetSymbol = "UNIT",
   assetDecimals = 6,
   gameSlug,
   resultNum,
@@ -647,7 +639,7 @@ export function GameRoomResultOverlay({
   // caller gates it behind isCasinoTerminalRoundResult), so every figure here is
   // final — no pending / random-only states are represented.
   const txHash = result.kind === "refunded" ? result.refund.txHash : result.settlement.txHash;
-  const txHref = explorerTxUrl(chainId, txHash);
+  const txHref = getExplorerTxUrl(chainId, txHash) ?? undefined;
   const payout =
     result.kind === "refunded" ? result.refund.refundAmount : result.settlement.payoutNet;
   const net = payout - result.stake;

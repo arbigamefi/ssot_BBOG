@@ -6,6 +6,7 @@ import { PlaceBetButton } from "./place-bet-button";
 
 export function MobileCasinoActionBar({
   game,
+  assetSymbol,
   betAmount,
   hasAccount,
   isPending,
@@ -14,6 +15,7 @@ export function MobileCasinoActionBar({
   onPlaceBet
 }: {
   game: GameMeta;
+  assetSymbol: string;
   betAmount: number;
   hasAccount: boolean;
   isPending: boolean;
@@ -30,7 +32,7 @@ export function MobileCasinoActionBar({
           {t("casino.room.betPanel.amount.label")}
         </p>
         <p className="truncate font-mono text-base font-semibold text-fg">
-          {betAmount.toFixed(2)} USDC
+          {betAmount.toFixed(2)} {assetSymbol}
         </p>
       </div>
       <PlaceBetButton
