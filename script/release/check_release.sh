@@ -5,6 +5,7 @@ STRICT="${STRICT:-0}"
 PYTHON="${PYTHON:-python}"
 
 RELEASE_PATH="${RELEASE_PATH:-deployments/release-latest-v13.json}"
+SNAPSHOT_PATH_EXPLICIT="${SNAPSHOT_PATH+x}"
 SNAPSHOT_PATH="${SNAPSHOT_PATH:-deployments/latest-v13.json}"
 NOTES_PATH="${NOTES_PATH:-deployments/release-notes-latest-v13.md}"
 
@@ -16,17 +17,47 @@ FRONTEND_SCHEMA="${FRONTEND_SCHEMA:-2}"
 RELEASE_TAG_SUFFIX="${RELEASE_TAG_SUFFIX:--v13}"
 VERIFY_SCRIPT="${VERIFY_SCRIPT:-script/release/VerifyReleaseV13.s.sol:VerifyReleaseV13}"
 
+release_snapshot_path() {
+  "$PYTHON" - "$RELEASE_PATH" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+with path.open("r", encoding="utf-8") as f:
+    rel = json.load(f)
+value = rel.get("snapshotPath")
+print(value if isinstance(value, str) and value.strip() else "")
+PY
+}
+
 if [[ "$STRICT" == "1" ]]; then
-  [[ -f "$SNAPSHOT_PATH" ]] || { echo "missing snapshot: $SNAPSHOT_PATH"; exit 1; }
   [[ -f "$RELEASE_PATH" ]] || { echo "missing release artifact: $RELEASE_PATH"; exit 1; }
+  if [[ -z "$SNAPSHOT_PATH_EXPLICIT" ]]; then
+    SNAPSHOT_FROM_RELEASE="$(release_snapshot_path)"
+    if [[ -n "$SNAPSHOT_FROM_RELEASE" ]]; then
+      SNAPSHOT_PATH="$SNAPSHOT_FROM_RELEASE"
+    fi
+  fi
+  [[ -f "$SNAPSHOT_PATH" ]] || { echo "missing snapshot: $SNAPSHOT_PATH"; exit 1; }
   [[ -f "$NOTES_PATH" ]] || { echo "missing release notes: $NOTES_PATH"; exit 1; }
   [[ -f "$FRONTEND_MANIFEST_PATH" ]] || { echo "missing frontend manifest: $FRONTEND_MANIFEST_PATH"; exit 1; }
   [[ -f "$GOLDEN_VECTORS_PATH" ]] || { echo "missing golden vectors: $GOLDEN_VECTORS_PATH"; exit 1; }
   [[ -f "$ABI_INDEX_PATH" ]] || { echo "missing abis index: $ABI_INDEX_PATH (run: make release-abis)"; exit 1; }
 else
   # Non-strict mode: if artifacts are absent, don't fail CI.
-  if [[ ! -f "$SNAPSHOT_PATH" || ! -f "$RELEASE_PATH" ]]; then
+  if [[ ! -f "$RELEASE_PATH" ]]; then
     echo "release check skipped (artifacts not present)."
+    exit 0
+  fi
+  if [[ -z "$SNAPSHOT_PATH_EXPLICIT" ]]; then
+    SNAPSHOT_FROM_RELEASE="$(release_snapshot_path)"
+    if [[ -n "$SNAPSHOT_FROM_RELEASE" ]]; then
+      SNAPSHOT_PATH="$SNAPSHOT_FROM_RELEASE"
+    fi
+  fi
+  if [[ ! -f "$SNAPSHOT_PATH" ]]; then
+    echo "release check skipped (snapshot not present: $SNAPSHOT_PATH)."
     exit 0
   fi
 fi
