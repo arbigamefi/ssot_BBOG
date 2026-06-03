@@ -24,11 +24,14 @@ describe("chain registry", () => {
   it("builds explorer URLs per chain and returns null when inputs are missing", () => {
     expect(getExplorerTxUrl(8453, "0xabc")).toBe("https://basescan.org/tx/0xabc");
     expect(getExplorerTxUrl(84532, "0xdef")).toBe("https://sepolia.basescan.org/tx/0xdef");
+    expect(getExplorerTxUrl(42161, "0xarb")).toBe("https://arbiscan.io/tx/0xarb");
+    expect(getExplorerTxUrl(421614, "0xarbsep")).toBe("https://sepolia.arbiscan.io/tx/0xarbsep");
     expect(getExplorerTxUrl(8453, "")).toBeNull();
     expect(getExplorerTxUrl(undefined, "0xabc")).toBeNull();
     expect(getExplorerTxUrl(999, "0xabc")).toBeNull(); // unknown chain
 
     expect(getExplorerAddressUrl(8453, "0x1234")).toBe("https://basescan.org/address/0x1234");
+    expect(getExplorerAddressUrl(42161, "0x1234")).toBe("https://arbiscan.io/address/0x1234");
     expect(getExplorerAddressUrl(undefined, "0x1234")).toBeNull();
   });
 });

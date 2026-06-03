@@ -95,10 +95,12 @@ vi.mock("next-intl", () => ({
   useLocale: () => "en"
 }));
 
+const useCasinoStatsMock = vi.hoisted(() => vi.fn(() => ({ data: undefined })));
+
 // Casino analytics hook — stub to the unavailable state so the hero stat
 // cards render "—" without pulling in react-query / fetch.
 vi.mock("../../../features/casino/useCasinoStats", () => ({
-  useCasinoStats: () => ({ data: undefined })
+  useCasinoStats: useCasinoStatsMock
 }));
 
 import { GamesListClient } from "./pageClient";
@@ -142,6 +144,7 @@ describe("GamesListClient", () => {
     cleanup();
     state.release = null;
     state.readOnlyReason = null;
+    useCasinoStatsMock.mockClear();
   });
 
   it("shows placeholder when release is null", () => {
@@ -178,6 +181,35 @@ describe("GamesListClient", () => {
     expect(screen.getByText("Casino bankroll")).toBeDefined();
     expect(screen.queryByText("1,842")).toBeNull();
     expect(screen.queryByText("$35,000")).toBeNull();
+  });
+
+  it("scopes lobby stats to the default casino pool asset instead of the first release asset", () => {
+    state.release = {
+      name: "Base Sepolia",
+      releaseDigest: "0xdeadbeefcafefeed",
+      contracts: { gameHub: "0x1234567890abcdef1234567890abcdef12345678" },
+      assets: [
+        { address: "0x0000000000000000000000000000000000000001", symbol: "USDC", decimals: 6 },
+        { address: "0x0000000000000000000000000000000000000002", symbol: "USDT", decimals: 6 }
+      ],
+      pools: [
+        {
+          active: true,
+          asset: "0x0000000000000000000000000000000000000002",
+          bank: "0x0000000000000000000000000000000000000003",
+          domain: "Casino",
+          poolId: 2
+        }
+      ],
+      gamesMeta: MOCK_GAMES_META
+    };
+
+    render(<GamesListClient />);
+
+    expect(useCasinoStatsMock).toHaveBeenCalledWith({
+      asset: "0x0000000000000000000000000000000000000002"
+    });
+    expect(screen.getByText("USDT")).toBeDefined();
   });
 
   it("renders correct number of room entry cards", () => {

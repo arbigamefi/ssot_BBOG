@@ -19,16 +19,18 @@ import type {
  * the UI degrades gracefully and never blocks.
  */
 export function useCasinoStats({
+  asset,
   enabled = true,
   windowDays
-}: { enabled?: boolean; windowDays?: number } = {}) {
+}: { asset?: string; enabled?: boolean; windowDays?: number } = {}) {
   const { chainId } = useRelease();
 
   return useQuery<CasinoStatsResponse>({
     enabled,
-    queryKey: ["ssot", "casino", "stats", { chainId, windowDays }],
+    queryKey: ["ssot", "casino", "stats", { asset, chainId, windowDays }],
     queryFn: async () => {
       const params = new URLSearchParams({ chainId: String(chainId) });
+      if (asset) params.set("asset", asset);
       if (windowDays) params.set("window", String(windowDays));
       const response = await fetch(`/api/casino/stats?${params.toString()}`, {
         headers: { accept: "application/json" }
@@ -50,6 +52,7 @@ export function useCasinoStats({
  * best-effort / graceful-degradation contract as useCasinoStats.
  */
 export function useCasinoLeaderboard({
+  asset,
   by = "turnover",
   gameId,
   limit = 10,
@@ -57,6 +60,7 @@ export function useCasinoLeaderboard({
   player,
   enabled = true
 }: {
+  asset?: string;
   by?: CasinoLeaderboardSort;
   gameId?: string;
   limit?: number;
@@ -69,13 +73,19 @@ export function useCasinoLeaderboard({
 
   return useQuery<CasinoLeaderboardResponse>({
     enabled,
-    queryKey: ["ssot", "casino", "leaderboard", { by, chainId, gameId, limit, windowDays, player }],
+    queryKey: [
+      "ssot",
+      "casino",
+      "leaderboard",
+      { asset, by, chainId, gameId, limit, windowDays, player }
+    ],
     queryFn: async () => {
       const params = new URLSearchParams({
         by,
         chainId: String(chainId),
         limit: String(limit)
       });
+      if (asset) params.set("asset", asset);
       if (gameId) params.set("gameId", gameId);
       if (windowDays) params.set("window", String(windowDays));
       if (player) params.set("player", player);
@@ -98,10 +108,12 @@ export function useCasinoLeaderboard({
  * not distort the trend.
  */
 export function useCasinoTimeseries({
+  asset,
   days = 7,
   gameId,
   enabled = true
 }: {
+  asset?: string;
   days?: number;
   gameId?: string;
   enabled?: boolean;
@@ -110,12 +122,13 @@ export function useCasinoTimeseries({
 
   return useQuery<CasinoTimeseriesResponse>({
     enabled,
-    queryKey: ["ssot", "casino", "timeseries", { chainId, days, gameId }],
+    queryKey: ["ssot", "casino", "timeseries", { asset, chainId, days, gameId }],
     queryFn: async () => {
       const params = new URLSearchParams({
         chainId: String(chainId),
         days: String(days)
       });
+      if (asset) params.set("asset", asset);
       if (gameId) params.set("gameId", gameId);
       const response = await fetch(`/api/casino/timeseries?${params.toString()}`, {
         headers: { accept: "application/json" }

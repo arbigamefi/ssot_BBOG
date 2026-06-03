@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type { DomainBet } from "@ssot/ssot";
@@ -14,10 +13,12 @@ import { useRelease } from "../../../../ssot/release/ReleaseProvider";
 import { useSSOTSDK } from "../../../../ssot/sdk";
 import { useSSOTRuntime } from "../../../../ssot/runtime";
 import { requestWalletConnect } from "../../../../app-shell/wallet-connect-events";
+import { useCasinoPoolAssetSelection } from "../../../../features/assets/useCasinoPoolAssetSelection";
 import { toGameMeta, type GameMeta } from "../../../../features/casino/room/model";
 import {
   baccaratMultiplier,
   calculateGameWinChance,
+  kenoMaxMultiplier,
   plinkoMaxMultiplier,
   sicBoMultiplier,
   slotsMaxMultiplier,
@@ -26,11 +27,15 @@ import {
   type SicBoKind
 } from "../../../../features/casino/room/params";
 import {
-  formatGameMaxPayout,
-  formatHouseEdge
+  computePoolFreeLiquidity,
+  deriveGameRoomLimits
 } from "../../../../features/casino/room/presentation";
 import { GameRoomBetPanel } from "../../../../features/casino/room/bet-panel";
-import { useGameWalletBalance, useKenoStrobeSpots } from "../../../../features/casino/room/hooks";
+import {
+  useGameWalletBalance,
+  useKenoStrobeSpots,
+  usePoolSnapshot
+} from "../../../../features/casino/room/hooks";
 import {
   useGameResolutionEffect,
   buildCasinoRoundResult,
@@ -43,72 +48,13 @@ import { GameRoomShell } from "../../../../features/casino/room/game-room-shell"
 import { MobileCasinoActionBar } from "../../../../features/casino/room/mobile-action-bar";
 import { useCasinoRound } from "../../../../features/casino/room/use-casino-round";
 import { useReferralAffiliate } from "../../../../features/referral/useReferralAffiliate";
+import {
+  GameRoomAuditLedger,
+  getCasinoRoomPendingStates,
+  getLocalizedGameName
+} from "./pageClient-helpers";
 
-function AuditLedgerLoading() {
-  const t = useTranslations();
-
-  return (
-    <div className="rounded-lg border border-border bg-surface-1 p-6 text-sm font-bold uppercase tracking-[0.18em] text-fg-subtle">
-      {t("casino.room.audit.loading")}
-    </div>
-  );
-}
-
-function getLocalizedGameName(t: (key: string) => string, game: GameMeta) {
-  switch (game.slug) {
-    case "dice":
-      return t("casino.room.names.dice");
-    case "roulette":
-      return t("casino.room.names.roulette");
-    case "coin-toss":
-      return t("casino.room.names.coinToss");
-    case "keno":
-      return t("casino.room.names.keno");
-    case "plinko":
-      return t("casino.room.names.plinko");
-    case "slots":
-      return t("casino.room.names.slots");
-    case "baccarat":
-      return t("casino.room.names.baccarat");
-    case "sic-bo":
-      return t("casino.room.names.sicBo");
-    default:
-      return game.label;
-  }
-}
-
-const GameRoomAuditLedger = dynamic(
-  () =>
-    import("../../../../features/casino/room/audit-ledger").then((mod) => mod.GameRoomAuditLedger),
-  {
-    loading: () => <AuditLedgerLoading />,
-    ssr: false
-  }
-);
-
-export function getCasinoRoomPendingStates({
-  isLocalPending,
-  isTransactionActive,
-  isOutcomeTracking,
-  hasStageReveal,
-  hasCasinoOutcome,
-  isResultVisible = false
-}: {
-  isLocalPending: boolean;
-  isTransactionActive: boolean;
-  isOutcomeTracking: boolean;
-  hasStageReveal: boolean;
-  hasCasinoOutcome: boolean;
-  isResultVisible?: boolean;
-}) {
-  const isRoundInputLocked =
-    isLocalPending || isTransactionActive || isOutcomeTracking || hasStageReveal || isResultVisible;
-
-  return {
-    isBetPanelPending: isRoundInputLocked,
-    isStagePending: isOutcomeTracking && !hasStageReveal && !hasCasinoOutcome
-  };
-}
+export { getCasinoRoomPendingStates } from "./pageClient-helpers";
 
 /* ─── Main Logic ─── */
 
@@ -121,6 +67,10 @@ export function GamePageClient({ slug }: { slug: string }) {
     const found = release?.gamesMeta?.find((item: any) => item.slug === slug);
     return found ? toGameMeta(found) : null;
   }, [release?.gamesMeta, slug]);
+  // Shared multi-asset selection (same model as the earn console): lists the
+  // chain's casino pool assets and tracks which one the player is betting with.
+  const assetSelection = useCasinoPoolAssetSelection();
+  const casinoPoolAsset = assetSelection.selectedContext;
 
   const recentBetsQuery = useRecentBets({
     enabled: Boolean(game?.gameId),
@@ -177,8 +127,17 @@ export function GamePageClient({ slug }: { slug: string }) {
   const [stopGain, setStopGain] = React.useState<number>(0); // 0 = disabled
   const [stopLoss, setStopLoss] = React.useState<number>(0); // 0 = disabled
   const [advancedOpen, setAdvancedOpen] = React.useState(false);
+  const [walletBalanceRefreshKey, refreshWalletBalance] = React.useReducer((value) => value + 1, 0);
 
-  const walletBalance = useGameWalletBalance({ sdk, assets: release?.assets });
+  const walletBalance = useGameWalletBalance({
+    sdk,
+    asset: casinoPoolAsset?.asset,
+    refreshKey: walletBalanceRefreshKey
+  });
+  // Public read of the selected pool's bank snapshot → free liquidity, which
+  // drives the live (verifiable) max-bet / max-payout shown in the header. Works
+  // without a connected wallet and follows the selected asset's pool.
+  const poolSnapshot = usePoolSnapshot({ sdk, poolId: assetSelection.poolId });
   const referrerParam = searchParams.get("ref");
   const referralAffiliate = useReferralAffiliate({
     referrer: referrerParam,
@@ -191,9 +150,10 @@ export function GamePageClient({ slug }: { slug: string }) {
     (bet: DomainBet) => {
       setIsPending(false);
       setTerminalBet(bet);
+      refreshWalletBalance();
       void refetchRecentBets?.();
     },
-    [refetchRecentBets]
+    [refetchRecentBets, refreshWalletBalance]
   );
   const clearStageRevealTimer = React.useCallback(() => {
     if (revealTimerRef.current) {
@@ -316,12 +276,19 @@ export function GamePageClient({ slug }: { slug: string }) {
     baccaratSide,
     sicBoKind,
     sicBoValue,
+    poolId: assetSelection.poolId,
     affiliate: referralAffiliate,
     onRoundStart: handleRoundStart,
     onRoundTerminal: handleRoundTerminal,
     onRoundReset: handleRoundReset
   });
   const { state, reset, placeBet } = casinoRound;
+
+  React.useEffect(() => {
+    if (state.status === "mined" || state.status === "reconciled") {
+      refreshWalletBalance();
+    }
+  }, [refreshWalletBalance, state.status]);
 
   const { isBetPanelPending, isStagePending } = getCasinoRoomPendingStates({
     isLocalPending: isPending,
@@ -422,12 +389,17 @@ export function GamePageClient({ slug }: { slug: string }) {
         description={readOnlyReason ?? t("casino.room.empty.gameNotFound")}
       />
     );
+  if (!casinoPoolAsset)
+    return (
+      <ProductStateCard
+        title={t("casino.room.empty.moduleNotFound")}
+        description={readOnlyReason ?? t("casino.room.empty.gameNotFound")}
+      />
+    );
 
-  // A5: Live houseEdge and maxPayout from release gamesMeta
   const gameMeta = release?.gamesMeta?.find((m: any) => m.slug === game.slug);
-  const houseEdge = formatHouseEdge(gameMeta, game.slug);
-  const usdcDecimals = release?.assets?.find((a: any) => a.symbol === "USDC")?.decimals ?? 6;
-  const maxPayout = formatGameMaxPayout({ gameMeta, slug: game.slug, usdcDecimals });
+  const assetDecimals = casinoPoolAsset.asset.decimals;
+  const assetSymbol = casinoPoolAsset.asset.symbol;
 
   const multiplier =
     game.slug === "plinko"
@@ -438,16 +410,43 @@ export function GamePageClient({ slug }: { slug: string }) {
           ? baccaratMultiplier(baccaratSide)
           : game.slug === "sic-bo"
             ? sicBoMultiplier(sicBoKind, sicBoValue)
-            : winChance === 0
-              ? 0
-              : 99 / winChance;
+            : game.slug === "keno"
+              ? // Keno's max payout is hitting ALL selected spots (its top
+                // table tier), not the win-chance-derived figure — this is what
+                // bounds the bank reserve and therefore the max bet.
+                kenoMaxMultiplier(kenoSpots.length)
+              : winChance === 0
+                ? 0
+                : 99 / winChance;
   const expectedPayout = betAmount * multiplier;
+
+  // Live, asset-aware header limits derived from the selected pool's free
+  // liquidity (chain-read → verifiable), replacing the old static config tiles.
+  const freeLiquidity = computePoolFreeLiquidity(poolSnapshot);
+  const { maxBet, maxBetRaw, maxPayout } = deriveGameRoomLimits({
+    freeLiquidity,
+    multiplier,
+    assetDecimals,
+    assetSymbol
+  });
+  const maxBetAmountPerRoll =
+    maxBetRaw == null
+      ? undefined
+      : Number(maxBetRaw) / Math.pow(10, assetDecimals) / Math.max(1, Math.floor(betCount));
+  const walletBalanceAmount =
+    walletBalance?.raw == null ? null : Number(walletBalance.raw) / Math.pow(10, assetDecimals);
 
   const LeftPane = (
     <GameRoomBetPanel
       game={game}
       walletBalance={walletBalance}
+      assetDecimals={assetDecimals}
+      assetSymbol={assetSymbol}
+      assetOptions={assetSelection.assetOptions}
+      selectedAsset={assetSelection.selectedAsset}
+      onAssetChange={assetSelection.setSelectedAsset}
       betAmount={betAmount}
+      maxBetAmount={maxBetAmountPerRoll}
       onBetAmountChange={setBetAmount}
       betCount={betCount}
       onBetCountChange={setBetCount}
@@ -481,7 +480,11 @@ export function GamePageClient({ slug }: { slug: string }) {
   const MobileAction = (
     <MobileCasinoActionBar
       game={game}
+      assetSymbol={assetSymbol}
       betAmount={betAmount}
+      maxBetAmount={maxBetAmountPerRoll}
+      walletBalanceAmount={walletBalanceAmount}
+      onBetAmountChange={setBetAmount}
       hasAccount={Boolean(sdk?.account)}
       isPending={isBetPanelPending}
       winChance={winChance}
@@ -521,8 +524,8 @@ export function GamePageClient({ slug }: { slug: string }) {
       casinoOutcome={casinoOutcome}
       resultProof={resultProof}
       chainId={chainId}
-      assetSymbol="USDC"
-      assetDecimals={usdcDecimals}
+      assetSymbol={assetSymbol}
+      assetDecimals={assetDecimals}
       onResultClose={handleResultClose}
       onResultPlayAgain={handleResultPlayAgain}
       onDiceRevealComplete={handleStageRevealComplete}
@@ -551,8 +554,10 @@ export function GamePageClient({ slug }: { slug: string }) {
       betAmount={betAmount}
       recentBets={recentBets}
       playerAddress={sdk?.account}
-      assetSymbol="USDC"
-      assetDecimals={usdcDecimals}
+      assetAddress={casinoPoolAsset.asset.address}
+      assetSymbol={assetSymbol}
+      assetDecimals={assetDecimals}
+      assetContexts={assetSelection.contexts}
       chainId={chainId}
     />
   );
@@ -561,7 +566,7 @@ export function GamePageClient({ slug }: { slug: string }) {
     <PageTransition pageKey={`game-${slug}`}>
       <GameRoomShell
         gameName={getLocalizedGameName(t, game)}
-        houseEdge={houseEdge}
+        maxBet={maxBet}
         maxPayout={maxPayout}
         isInteractive={true}
         leftPaneContent={LeftPane}

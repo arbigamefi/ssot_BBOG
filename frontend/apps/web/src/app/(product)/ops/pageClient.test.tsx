@@ -19,9 +19,22 @@ const state = {
     assets: [
       {
         address: "0x4444444444444444444444444444444444444444",
-        bank: "0x5555555555555555555555555555555555555555",
         symbol: "USDC",
         decimals: 6
+      },
+      {
+        address: "0x7777777777777777777777777777777777777777",
+        symbol: "USDT",
+        decimals: 6
+      }
+    ],
+    pools: [
+      {
+        active: true,
+        asset: "0x7777777777777777777777777777777777777777",
+        bank: "0x8888888888888888888888888888888888888888",
+        domain: "Casino",
+        poolId: 2
       }
     ]
   } as any,
@@ -146,6 +159,7 @@ describe("OpsPageClient", () => {
     expect(screen.getAllByText("Casino keeper").length).toBeGreaterThan(0);
     expect(screen.getByText("Keeper queue")).toBeDefined();
     expect(screen.getByText("0 pending")).toBeDefined();
+    expect(screen.getByText("0x8888...8888")).toBeDefined();
   });
 
   it("keeps sync and refresh actions wired to the runtime", () => {

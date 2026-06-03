@@ -5,7 +5,16 @@ import * as React from "react";
 const state = {
   release: {
     assets: [
-      { address: "0x0000000000000000000000000000000000000001", symbol: "USDC", decimals: 6 }
+      { address: "0x0000000000000000000000000000000000000001", symbol: "USDC", decimals: 6 },
+      { address: "0x0000000000000000000000000000000000000002", symbol: "WETH", decimals: 18 }
+    ],
+    pools: [
+      {
+        active: true,
+        asset: "0x0000000000000000000000000000000000000002",
+        domain: "sports",
+        poolId: 2
+      }
     ],
     gamesMeta: [
       {
@@ -140,13 +149,14 @@ describe("PortfolioActivityPageClient", () => {
         ticketId: "12",
         state: "held",
         marketId: "6",
+        poolId: "2",
         player: "0x1111111111111111111111111111111111111111",
         updatedBlock: 12,
         lastTxHash: "0xabcd",
         lastEventName: "TicketPlaced",
         updatedAt: Date.now(),
-        stake: "10000000",
-        payout: "55000000"
+        stake: "1000000000000000000",
+        payout: "5500000000000000000"
       }
     ];
 
@@ -154,7 +164,7 @@ describe("PortfolioActivityPageClient", () => {
 
     expect(screen.getAllByText("S#12").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Sportsbook #6").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("10 USDC").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("1 WETH").length).toBeGreaterThan(0);
     expect(screen.getByText("View").closest("a")?.getAttribute("href")).toBe(
       "/portfolio/tickets/12"
     );

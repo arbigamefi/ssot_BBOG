@@ -11,6 +11,20 @@ export type AppChain = {
 };
 
 const CHAIN_METADATA: Record<number, AppChain> = {
+  42161: {
+    id: 42161,
+    name: "Arbitrum One",
+    shortName: "Arbitrum",
+    environment: "mainnet",
+    explorerUrl: "https://arbiscan.io"
+  },
+  421614: {
+    id: 421614,
+    name: "Arbitrum Sepolia",
+    shortName: "Arbitrum Sepolia",
+    environment: "testnet",
+    explorerUrl: "https://sepolia.arbiscan.io"
+  },
   8453: {
     id: 8453,
     name: "Base Mainnet",

@@ -598,7 +598,6 @@
       "poolUnavailable": "Havuz kullanılamıyor",
       "unsupportedWriteAsset": "Yazma akışları seçili varlık için aktif bir casino havuzu gerektirir.",
       "positiveAmount": "Tutar pozitif olmalı.",
-      "primaryAssetOnly": "Yazma akışları şu anda yalnızca birincil varlığı destekler.",
       "insufficientWalletBalance": "Tutar bağlı cüzdan bakiyesini aşıyor.",
       "exceedsMintable": "Pay miktarı, bağlı cüzdan bakiyesiyle basılabilecek miktarı aşıyor.",
       "exceedsWithdrawable": "Tutar şu anda çekilebilir bakiyeyi aşıyor.",
@@ -971,7 +970,8 @@
       "shell": {
         "liveModule": "Canlı oyun",
         "houseEdge": "Casino avantajı",
-        "maxPayout": "Maks. ödeme"
+        "maxPayout": "Maks. ödeme",
+        "maxBet": "Maks. bahis"
       },
       "empty": {
         "moduleNotFound": "Oyun bulunamadı",
@@ -1037,6 +1037,7 @@
       },
       "betPanel": {
         "walletBalance": "Cüzdan bakiyesi",
+        "asset": "Bahis varlığı",
         "syncing": "Eşitleniyor...",
         "notConnected": "Bağlı değil",
         "walletGate": {
@@ -1051,19 +1052,19 @@
         },
         "rolls": {
           "label": "Atışlar",
-          "total": "Toplam: {amount} USDC",
+          "total": "Toplam: {amount} {symbol}",
           "aria": "Atış sayısı"
         },
         "advanced": {
           "label": "Gelişmiş",
-          "stopGain": "Kâr durdur (USDC)",
-          "stopLoss": "Zarar durdur (USDC)",
+          "stopGain": "Kâr durdur ({symbol})",
+          "stopLoss": "Zarar durdur ({symbol})",
           "offPlaceholder": "0 = kapalı",
           "help": "Çoklu atış turları için isteğe bağlı otomatik durdurma kuralları. Devre dışı bırakmak için 0.",
           "stopGainHelp": "Toplam kâr bu tutara ulaşınca durur.",
           "stopLossHelp": "Toplam zarar bu tutara ulaşınca durur.",
-          "gainStop": "+{amount} USDC kârda durdur",
-          "lossStop": "{amount} USDC zararda durdur"
+          "gainStop": "+{amount} {symbol} kârda durdur",
+          "lossStop": "{amount} {symbol} zararda durdur"
         },
         "summary": {
           "multiplier": "Çarpan",

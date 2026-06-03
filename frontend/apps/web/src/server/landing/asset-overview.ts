@@ -1,6 +1,7 @@
 import { createPublicClient, getAddress, http, type Address } from "viem";
 import { loadEmbeddedRelease } from "@ssot/ssot/release";
 
+import { getPoolAssetContext } from "../../features/assets/pool-asset";
 import { resolveServerRpcUrl } from "../rpc";
 
 const BANK_SSOT_ABI = [
@@ -85,21 +86,20 @@ export async function queryLandingAssetOverview(
     });
     const rows = await Promise.all(
       release.pools.map(async (pool) => {
-        const assetMeta = release.assets.find(
-          (asset) => asset.address.toLowerCase() === pool.asset.toLowerCase()
-        );
+        const poolAsset = getPoolAssetContext(release, pool);
+        if (!poolAsset?.bank) return null;
         const ssot = await publicClient.readContract({
-          address: getAddress(pool.bank),
+          address: getAddress(poolAsset.bank),
           abi: BANK_SSOT_ABI,
           functionName: "getSSOT",
           args: []
         });
 
         return {
-          address: getAddress(pool.asset),
-          bank: getAddress(pool.bank),
-          symbol: pool.symbol || assetMeta?.symbol || "Asset",
-          decimals: pool.decimals ?? assetMeta?.decimals ?? 18,
+          address: getAddress(poolAsset.asset.address),
+          bank: getAddress(poolAsset.bank),
+          symbol: poolAsset.asset.symbol,
+          decimals: poolAsset.asset.decimals,
           totalAssets: BigInt(ssot.NAV).toString(),
           totalReserved: BigInt(ssot.R).toString()
         };
@@ -112,7 +112,7 @@ export async function queryLandingAssetOverview(
       generatedAt: Date.now(),
       releaseDigest: release.releaseDigest,
       source: "rpc",
-      rows
+      rows: rows.filter((row): row is NonNullable<(typeof rows)[number]> => Boolean(row))
     };
   } catch {
     return unavailableResponse(chainId, release.releaseDigest);

@@ -1,8 +1,10 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { InformationCircleIcon, WalletIcon } from "@heroicons/react/24/outline";
-import { cn } from "@ssot/ui";
+import { AssetSelector, cn, type AssetOption } from "@ssot/ui";
 
+import { formatUnits } from "../../betting/model/units";
+import { TokenLogo } from "../../../components/TokenLogo";
 import {
   BetAdvancedSection,
   BetAmountSection,
@@ -15,6 +17,7 @@ import { PlaceBetButton } from "./place-bet-button";
 import { CasinoRoundStatusPanel } from "./round-status-panel";
 import type { CasinoRoundPhase } from "./casino-round";
 import { getStepperErrorMessage } from "./feedback";
+import type { GameWalletBalance } from "./hooks";
 
 export type { GameRoomBetPanelState } from "./place-bet-button";
 export { isPlaceBetButtonDisabled } from "./place-bet-button";
@@ -22,7 +25,13 @@ export { isPlaceBetButtonDisabled } from "./place-bet-button";
 export function GameRoomBetPanel({
   game,
   walletBalance,
+  assetDecimals,
+  assetSymbol,
+  assetOptions,
+  selectedAsset,
+  onAssetChange,
   betAmount,
+  maxBetAmount,
   onBetAmountChange,
   betCount,
   onBetCountChange,
@@ -52,8 +61,16 @@ export function GameRoomBetPanel({
   onPlaceBet
 }: {
   game: GameMeta;
-  walletBalance: string | null;
+  walletBalance: GameWalletBalance | null;
+  assetDecimals: number;
+  assetSymbol: string;
+  /** Casino pool assets on this chain. A selector renders only when there are 2+. */
+  assetOptions?: AssetOption[];
+  selectedAsset?: `0x${string}`;
+  onAssetChange?: (asset: `0x${string}`) => void;
   betAmount: number;
+  /** Per-roll amount cap derived from wallet balance and current pool liquidity. */
+  maxBetAmount?: number;
   onBetAmountChange: (amount: number) => void;
   betCount: number;
   onBetCountChange: (count: number) => void;
@@ -85,18 +102,51 @@ export function GameRoomBetPanel({
   const t = useTranslations();
   const balanceLabel = !hasAccount
     ? t("casino.room.betPanel.notConnected")
-    : (walletBalance ?? "—");
+    : (walletBalance?.label ?? "—");
+  const walletBalanceAmount =
+    walletBalance?.raw == null ? null : Number(formatUnits(walletBalance.raw, assetDecimals));
 
   return (
     <div className="grid min-h-0 grid-rows-[minmax(0,1fr)_auto] overflow-hidden lg:h-full">
       <div className="min-h-0 pb-2 lg:overflow-y-auto lg:pr-1">
-        <div className="mb-2 flex items-center justify-between">
-          <span className="flex items-center gap-2 text-sm font-bold text-fg-muted">
-            <WalletIcon className="h-4 w-4" /> {t("casino.room.betPanel.walletBalance")}
-          </span>
-          <span className="rounded-lg border border-border bg-surface-1 px-3 py-1 font-mono text-fg shadow-inner-e1">
-            {balanceLabel}
-          </span>
+        {/* Account context: asset and balance belong together, but should stay
+            visually lighter than the actual amount input below. */}
+        <div className="mb-2 rounded-xl border border-border bg-surface-0 p-2 shadow-inner-e1">
+          <div className="grid grid-cols-[minmax(0,auto)_minmax(0,1fr)] items-center gap-2">
+            <div className="min-w-0">
+              {assetOptions && assetOptions.length > 0 ? (
+                <AssetSelector
+                  variant="inline"
+                  assets={assetOptions}
+                  value={selectedAsset}
+                  onValueChange={onAssetChange}
+                  disabled={isPending}
+                  title={t("casino.room.betPanel.asset")}
+                  renderLogo={(option) => <TokenLogo symbol={option.symbol} size={20} />}
+                  className="max-w-full bg-surface-1"
+                />
+              ) : (
+                <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-fg-subtle">
+                  {t("casino.room.betPanel.asset")}
+                </span>
+              )}
+            </div>
+            <div
+              className="min-w-0 text-right"
+              role="group"
+              aria-label={t("casino.room.betPanel.walletBalance")}
+            >
+              <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-fg-subtle">
+                {t("casino.room.betPanel.walletBalance")}
+              </div>
+              <div
+                className="mt-0.5 truncate font-mono text-sm font-bold text-fg"
+                title={balanceLabel}
+              >
+                {balanceLabel}
+              </div>
+            </div>
+          </div>
         </div>
 
         {!hasAccount && (
@@ -115,7 +165,9 @@ export function GameRoomBetPanel({
         <div data-tour="bet-amount">
           <BetAmountSection
             betAmount={betAmount}
-            walletBalance={walletBalance}
+            maxBetAmount={maxBetAmount}
+            walletBalanceAmount={walletBalanceAmount}
+            assetSymbol={assetSymbol}
             isPending={isPending}
             onBetAmountChange={onBetAmountChange}
           />
@@ -124,12 +176,14 @@ export function GameRoomBetPanel({
         <BetRollsSection
           betAmount={betAmount}
           betCount={betCount}
+          assetSymbol={assetSymbol}
           isPending={isPending}
           onBetCountChange={onBetCountChange}
         />
 
         <BetAdvancedSection
           advancedOpen={advancedOpen}
+          assetSymbol={assetSymbol}
           isPending={isPending}
           stopGain={stopGain}
           stopLoss={stopLoss}
@@ -142,6 +196,7 @@ export function GameRoomBetPanel({
           multiplier={multiplier}
           winChance={winChance}
           expectedPayout={expectedPayout}
+          assetSymbol={assetSymbol}
         />
 
         {state.status === "failed" && state.error?.message && (

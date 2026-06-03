@@ -9,6 +9,7 @@ import type { SportsTicketRow } from "@ssot/bet-index";
 import type { DomainSportsMarket, DomainSportsResult } from "@ssot/ssot";
 
 import { PageTransition } from "../../components/PageTransition";
+import { getPoolAssetContext } from "../assets/pool-asset";
 import { useRelease } from "../../ssot/release/ReleaseProvider";
 import { useSSOTSDK } from "../../ssot/sdk";
 
@@ -65,10 +66,8 @@ function getPoolAsset(
   poolId: number
 ): { symbol: string; decimals: number } {
   const pool = release?.pools?.find((p) => Number(p.poolId) === poolId);
-  return {
-    symbol: pool?.symbol || "UNIT",
-    decimals: pool?.decimals ?? 18
-  };
+  const context = release ? getPoolAssetContext(release, pool) : null;
+  return context?.asset ?? { symbol: "UNIT", decimals: 18 };
 }
 
 export function SportsbookMarketDetailPageClient({ marketId }: { marketId: string }) {

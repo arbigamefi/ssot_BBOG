@@ -4,7 +4,6 @@ import * as React from "react";
 import { useTranslations } from "next-intl";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Address } from "@ssot/ssot/sdk";
-import type { AssetOption } from "@ssot/ui";
 
 import { PageTransition } from "../../../components/PageTransition";
 import { ProductStateCard } from "../../../components/ProductStateCard";
@@ -22,6 +21,7 @@ import type {
   EarnTab
 } from "../../../features/earn/types";
 import { useBankProviderLedger } from "../../../features/earn/useBankProviderLedger";
+import { useCasinoPoolAssetSelection } from "../../../features/assets/useCasinoPoolAssetSelection";
 import { formatUnits, parseDecimalToUnits } from "../../../features/betting/model/units";
 import { useDirectTxAction, useSequencedTxAction } from "../../../features/tx/useDirectTxAction";
 import { useRelease } from "../../../ssot/release/ReleaseProvider";
@@ -38,49 +38,16 @@ export function EarnPageClient() {
   const queryClient = useQueryClient();
   const explorerBaseUrl = React.useMemo(() => getExplorerBaseUrl(chainId), [chainId]);
 
-  const assetOptions = React.useMemo<AssetOption[]>(
-    () =>
-      (release?.assets ?? []).map((asset) => ({
-        address: asset.address as Address,
-        symbol: asset.symbol,
-        decimals: asset.decimals,
-        label: `${asset.symbol} (${asset.decimals})`
-      })),
-    [release?.assets]
-  );
-
-  const [asset, setAsset] = React.useState<Address>(
-    () => (release?.assets[0]?.address as Address | undefined) ?? ZERO_ADDRESS
-  );
-
-  React.useEffect(() => {
-    const firstAsset = release?.assets[0]?.address as Address | undefined;
-    if (firstAsset && asset === ZERO_ADDRESS) setAsset(firstAsset);
-  }, [asset, release?.assets]);
-
-  const assetMeta = React.useMemo(
-    () => release?.assets.find((item) => item.address.toLowerCase() === asset.toLowerCase()),
-    [asset, release?.assets]
-  );
-  const primaryAsset = release?.assets[0]?.address?.toLowerCase();
-  const selectedPool = React.useMemo(
-    () =>
-      release?.pools.find(
-        (pool) =>
-          pool.active &&
-          pool.asset.toLowerCase() === asset.toLowerCase() &&
-          String(pool.domain).toLowerCase() === "casino"
-      ) ??
-      release?.pools.find(
-        (pool) => pool.active && pool.asset.toLowerCase() === asset.toLowerCase()
-      ),
-    [asset, release?.pools]
-  );
-  const poolId = selectedPool?.poolId;
-  const writesSupportedForSelectedAsset =
-    Boolean(poolId) && (!primaryAsset || asset.toLowerCase() === primaryAsset);
-  const decimals = assetMeta?.decimals ?? 18;
-  const symbol = assetMeta?.symbol ?? t("earn.format.assetFallback");
+  // Shared asset-selection model (also used by the casino room) — lists every
+  // active casino pool asset on the current chain and resolves the chosen one to
+  // a pool id + decimals + symbol. `selectedContext` is the "valid asset" guard.
+  const assetSelection = useCasinoPoolAssetSelection();
+  const { assetOptions, selectedContext, poolId } = assetSelection;
+  const writesSupportedForSelectedAsset = assetSelection.writesSupported;
+  const asset = assetSelection.selectedAsset ?? ZERO_ADDRESS;
+  const setAsset = assetSelection.setSelectedAsset;
+  const decimals = assetSelection.decimals ?? 18;
+  const symbol = assetSelection.symbol ?? t("earn.format.assetFallback");
 
   const {
     data: bankData,
@@ -88,7 +55,7 @@ export function EarnPageClient() {
     error: loadError
   } = useQuery({
     queryKey: ["ssot", "earn", "bank", chainId, poolId, sdk?.account ?? "anonymous"],
-    enabled: Boolean(sdk && ready && assetMeta && poolId),
+    enabled: Boolean(sdk && ready && selectedContext && poolId),
     queryFn: async (): Promise<EarnBankData> => {
       if (!sdk) throw new Error(t("earn.errors.sdkUnavailable"));
       if (!poolId) throw new Error(t("earn.errors.poolUnavailable"));
@@ -209,7 +176,7 @@ export function EarnPageClient() {
 
   const { data: walletBalance = null } = useQuery({
     queryKey: ["ssot", "earn", "walletBalance", chainId, asset, sdk?.account],
-    enabled: Boolean(sdk?.account && assetMeta && ready),
+    enabled: Boolean(sdk?.account && selectedContext && ready),
     queryFn: async () => {
       if (!sdk?.account) return null;
       return sdk.bank.getAssetBalance(asset, sdk.account);
@@ -265,7 +232,7 @@ export function EarnPageClient() {
   });
 
   const providerLedger = useBankProviderLedger({
-    enabled: Boolean(ready && poolId && assetMeta),
+    enabled: Boolean(ready && poolId && selectedContext),
     poolId,
     sdk
   });
@@ -465,63 +432,96 @@ export function EarnPageClient() {
             (indexed, best-effort) — shown before the deposit console so a
             provider sees the evidence before they act. */}
         <BankrollPerformancePanel
+          assetAddress={asset}
+          assetDecimals={decimals}
+          assetSymbol={symbol}
           sharePrice={snapshot?.assetsPerShare}
           vaultAssets={snapshot?.totalAssets}
         />
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_400px] xl:items-start">
-          <div className="space-y-6">
-            <section className="rounded-md border border-border bg-surface-1 shadow-e2">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
-                <div className="grid grid-cols-2 gap-1 rounded-md border border-border-soft bg-surface-0 p-1">
-                  {[
-                    {
-                      key: "reserve" as const,
-                      label: t("earn.summary.capitalPosture.title")
-                    },
-                    {
-                      key: "risk" as const,
-                      label: t("earn.risk.title")
-                    }
-                  ].map((item) => (
-                    <button
-                      key={item.key}
-                      type="button"
-                      onClick={() => setDiligenceTab(item.key)}
-                      className={`rounded-sm px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] transition ${
-                        diligenceTab === item.key
-                          ? "bg-brand text-fg-inverse"
-                          : "text-fg-muted hover:bg-surface-2 hover:text-fg"
-                      }`}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-                <span className="rounded-full border border-success/30 bg-success-soft px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-success">
-                  {diligenceTab === "reserve"
-                    ? t("earn.summary.capitalPosture.readModel")
-                    : t("earn.risk.readModel")}
-                </span>
+          <section className="min-w-0 rounded-md border border-border bg-surface-1 shadow-e2 xl:col-start-1 xl:row-start-1">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
+              <div className="grid min-w-0 grid-cols-2 gap-1 rounded-md border border-border-soft bg-surface-0 p-1">
+                {[
+                  {
+                    key: "reserve" as const,
+                    label: t("earn.summary.capitalPosture.title")
+                  },
+                  {
+                    key: "risk" as const,
+                    label: t("earn.risk.title")
+                  }
+                ].map((item) => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => setDiligenceTab(item.key)}
+                    className={`min-w-0 rounded-sm px-2 py-2 text-[11px] font-bold uppercase tracking-[0.08em] transition sm:px-3 sm:text-xs sm:tracking-[0.12em] ${
+                      diligenceTab === item.key
+                        ? "bg-brand text-fg-inverse"
+                        : "text-fg-muted hover:bg-surface-2 hover:text-fg"
+                    }`}
+                  >
+                    <span className="block truncate">{item.label}</span>
+                  </button>
+                ))}
               </div>
-              {diligenceTab === "reserve" ? (
-                <EarnBankSummary
-                  data={bankData}
-                  decimals={decimals}
-                  symbol={symbol}
-                  loading={isLoading}
-                  error={(loadError as Error | undefined)?.message}
-                  embedded
-                />
-              ) : (
-                <EarnRiskPanel
-                  data={bankData}
-                  decimals={decimals}
-                  symbol={symbol}
-                  releaseDigest={release.releaseDigest}
-                  embedded
-                />
-              )}
-            </section>
+              <span className="rounded-full border border-success/30 bg-success-soft px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-success">
+                {diligenceTab === "reserve"
+                  ? t("earn.summary.capitalPosture.readModel")
+                  : t("earn.risk.readModel")}
+              </span>
+            </div>
+            {diligenceTab === "reserve" ? (
+              <EarnBankSummary
+                data={bankData}
+                decimals={decimals}
+                symbol={symbol}
+                loading={isLoading}
+                error={(loadError as Error | undefined)?.message}
+                embedded
+              />
+            ) : (
+              <EarnRiskPanel
+                data={bankData}
+                decimals={decimals}
+                symbol={symbol}
+                releaseDigest={release.releaseDigest}
+                embedded
+              />
+            )}
+          </section>
+          <div className="min-w-0 xl:sticky xl:top-24 xl:col-start-2 xl:row-span-2 xl:row-start-1">
+            <EarnActionPanel
+              tab={tab}
+              onTabChange={setTab}
+              amountMode={amountMode}
+              onAmountModeChange={setAmountMode}
+              assets={assetOptions}
+              asset={asset}
+              onAssetChange={setAsset}
+              amount={amount}
+              onAmountChange={setAmount}
+              symbol={symbol}
+              disabled={
+                readOnly ||
+                flow.busy ||
+                !sdk?.account ||
+                !amount ||
+                !writesSupportedForSelectedAsset
+              }
+              readOnly={readOnly}
+              unsupportedAsset={!writesSupportedForSelectedAsset}
+              availableLabel={availableLabel}
+              availableValue={availableValue}
+              canUseMax={maxActionAmount != null && maxActionAmount > 0n && !flow.busy}
+              onUseMax={handleUseMax}
+              flow={flow}
+              onSubmit={() => void handleSubmit()}
+              connected={Boolean(sdk?.account)}
+            />
+          </div>
+          <div className="min-w-0 xl:col-start-1 xl:row-start-2">
             <BankProviderLedgerPanel
               connected={Boolean(sdk?.account)}
               decimals={decimals}
@@ -537,30 +537,6 @@ export function EarnPageClient() {
               symbol={symbol}
             />
           </div>
-          <EarnActionPanel
-            tab={tab}
-            onTabChange={setTab}
-            amountMode={amountMode}
-            onAmountModeChange={setAmountMode}
-            assets={assetOptions}
-            asset={asset}
-            onAssetChange={setAsset}
-            amount={amount}
-            onAmountChange={setAmount}
-            symbol={symbol}
-            disabled={
-              readOnly || flow.busy || !sdk?.account || !amount || !writesSupportedForSelectedAsset
-            }
-            readOnly={readOnly}
-            unsupportedAsset={!writesSupportedForSelectedAsset}
-            availableLabel={availableLabel}
-            availableValue={availableValue}
-            canUseMax={maxActionAmount != null && maxActionAmount > 0n && !flow.busy}
-            onUseMax={handleUseMax}
-            flow={flow}
-            onSubmit={() => void handleSubmit()}
-            connected={Boolean(sdk?.account)}
-          />
         </div>
       </div>
     </PageTransition>

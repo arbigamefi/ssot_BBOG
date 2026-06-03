@@ -1,20 +1,10 @@
 import type { DomainError } from "@ssot/ssot";
 
+import { getAppChain } from "../../app-shell/chain-registry";
 import { formatUnits } from "../betting/model/units";
 
 export function getExplorerBaseUrl(chainId: number) {
-  switch (chainId) {
-    case 84532:
-      return "https://sepolia.basescan.org";
-    case 8453:
-      return "https://basescan.org";
-    case 42161:
-      return "https://arbiscan.io";
-    case 421614:
-      return "https://sepolia.arbiscan.io";
-    default:
-      return undefined;
-  }
+  return getAppChain(chainId)?.explorerUrl;
 }
 
 export function formatBps(value?: number) {

@@ -17,6 +17,7 @@ import {
 
 import { PageTransition } from "../../../../components/PageTransition";
 import { ProductStateCard } from "../../../../components/ProductStateCard";
+import { getDefaultCasinoPoolAssetContext } from "../../../../features/assets/pool-asset";
 import { useAffiliateBets } from "../../../../features/betting/useAffiliateBets";
 import { useRelease } from "../../../../ssot/release/ReleaseProvider";
 import { useSSOTSDK } from "../../../../ssot/sdk";
@@ -40,13 +41,11 @@ export function ReferralPageClient() {
     setOrigin(window.location.origin);
   }, []);
 
-  const assetMeta = release?.assets[0];
-  const claimsPool =
-    release?.pools.find((pool) => pool.active && String(pool.domain).toLowerCase() === "casino") ??
-    release?.pools[0];
+  const poolAsset = release ? getDefaultCasinoPoolAssetContext(release) : null;
+  const claimsPool = poolAsset?.pool;
   const poolId = claimsPool?.poolId;
-  const decimals = assetMeta?.decimals ?? claimsPool?.decimals ?? 6;
-  const symbol = assetMeta?.symbol ?? claimsPool?.symbol ?? "XP";
+  const decimals = poolAsset?.asset.decimals ?? 6;
+  const symbol = poolAsset?.asset.symbol ?? "XP";
   const pendingLabel = t("portfolio.referral.common.pending");
   const pendingReferrer = React.useMemo(
     () => normalizeReferralAddress(searchParams.get("ref"), sdk?.account),

@@ -25,6 +25,7 @@ import type {
   ClaimsFlowState,
   ClaimsMetric
 } from "../../../../features/portfolio/claims/types";
+import { getDefaultCasinoPoolAssetContext } from "../../../../features/assets/pool-asset";
 import { formatUnits, parseDecimalToUnits } from "../../../../features/betting/model/units";
 import { useDirectTxAction } from "../../../../features/tx/useDirectTxAction";
 import { useRelease } from "../../../../ssot/release/ReleaseProvider";
@@ -35,14 +36,12 @@ export function ClaimsPageClient() {
   const { release, readOnly, readOnlyReason, chainId } = useRelease();
   const { sdk, ready } = useSSOTSDK();
   const explorerBaseUrl = React.useMemo(() => getExplorerBaseUrl(chainId), [chainId]);
-  const assetMeta = release?.assets[0];
-  const asset = assetMeta?.address as Address | undefined;
-  const claimsPool =
-    release?.pools.find((pool) => pool.active && String(pool.domain).toLowerCase() === "casino") ??
-    release?.pools[0];
+  const poolAsset = release ? getDefaultCasinoPoolAssetContext(release) : null;
+  const claimsPool = poolAsset?.pool;
+  const asset = poolAsset?.asset.address as Address | undefined;
   const poolId = claimsPool?.poolId;
-  const decimals = assetMeta?.decimals ?? 18;
-  const symbol = assetMeta?.symbol ?? "XP";
+  const decimals = poolAsset?.asset.decimals ?? 18;
+  const symbol = poolAsset?.asset.symbol ?? "XP";
 
   const xpClaimFlow = useDirectTxAction({
     action: "CLAIM_XP_ACCRUED",

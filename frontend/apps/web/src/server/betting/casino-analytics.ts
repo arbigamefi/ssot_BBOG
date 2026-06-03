@@ -1,6 +1,10 @@
 import { getAddress, type Address, type Hex } from "viem";
 import { createPostgresBetIndexStore, type BetIndexStore } from "@ssot/bet-index";
 import { loadEmbeddedRelease } from "@ssot/ssot/release";
+import {
+  getCasinoPoolAssetContexts,
+  getDefaultCasinoPoolAssetContext
+} from "../../features/assets/pool-asset";
 
 const DEFAULT_LEADERBOARD_LIMIT = 10;
 const MAX_LEADERBOARD_LIMIT = 50;
@@ -17,6 +21,13 @@ type PrimaryAsset = {
   decimals: number;
   symbol: string;
 };
+
+export class UnsupportedCasinoAnalyticsAssetError extends Error {
+  constructor(chainId: number, asset: Address) {
+    super(`Unsupported casino analytics asset ${asset} for chainId=${chainId}.`);
+    this.name = "UnsupportedCasinoAnalyticsAssetError";
+  }
+}
 
 export type CasinoStatsResponse = {
   schemaVersion: 1;
@@ -141,13 +152,24 @@ function getDurableBetIndexStore() {
   return durableBetIndexStore;
 }
 
-function resolvePrimaryAsset(chainId: number): {
+function resolveAnalyticsAsset(
+  chainId: number,
+  requestedAsset?: Address
+): {
   asset: PrimaryAsset;
   games: Array<{ gameId: Hex; label: string; slug: string }>;
 } {
   const releaseResult = loadEmbeddedRelease(chainId);
   if (!releaseResult.ok) throw new Error(releaseResult.error);
-  const asset = releaseResult.release.assets[0];
+  const normalizedRequested = requestedAsset?.toLowerCase();
+  const casinoAssets = getCasinoPoolAssetContexts(releaseResult.release);
+  const defaultPoolAsset = getDefaultCasinoPoolAssetContext(releaseResult.release);
+  const asset = normalizedRequested
+    ? casinoAssets.find((item) => item.asset.address.toLowerCase() === normalizedRequested)?.asset
+    : defaultPoolAsset?.asset;
+  if (!asset && requestedAsset) {
+    throw new UnsupportedCasinoAnalyticsAssetError(chainId, requestedAsset);
+  }
   if (!asset) throw new Error(`No release asset configured for chainId=${chainId}.`);
   return {
     asset: {
@@ -234,15 +256,17 @@ export function clampCasinoTimeseriesDays(days: number | undefined) {
 }
 
 export async function queryCasinoStats({
+  asset: requestedAsset,
   chainId,
   windowDays,
   now = Date.now
 }: {
+  asset?: Address;
   chainId: number;
   windowDays?: number;
   now?: () => number;
 }): Promise<CasinoStatsResponse> {
-  const { asset, games } = resolvePrimaryAsset(chainId);
+  const { asset, games } = resolveAnalyticsAsset(chainId, requestedAsset);
   const generatedAt = now();
   const window = clampCasinoWindowDays(windowDays);
   const since = windowSince(window, now);
@@ -307,6 +331,7 @@ export async function queryCasinoStats({
 }
 
 export async function queryCasinoLeaderboard({
+  asset: requestedAsset,
   chainId,
   limit,
   gameId,
@@ -315,6 +340,7 @@ export async function queryCasinoLeaderboard({
   player,
   now = Date.now
 }: {
+  asset?: Address;
   chainId: number;
   limit: number;
   gameId?: Hex;
@@ -324,7 +350,7 @@ export async function queryCasinoLeaderboard({
   player?: Address;
   now?: () => number;
 }): Promise<CasinoLeaderboardResponse> {
-  const { asset } = resolvePrimaryAsset(chainId);
+  const { asset } = resolveAnalyticsAsset(chainId, requestedAsset);
   const generatedAt = now();
   const normalizedGameId = (gameId?.toLowerCase() as Hex | undefined) ?? null;
   const window = clampCasinoWindowDays(windowDays);
@@ -429,17 +455,19 @@ export async function queryCasinoLeaderboard({
 }
 
 export async function queryCasinoTimeseries({
+  asset: requestedAsset,
   chainId,
   days,
   gameId,
   now = Date.now
 }: {
+  asset?: Address;
   chainId: number;
   days: number;
   gameId?: Hex;
   now?: () => number;
 }): Promise<CasinoTimeseriesResponse> {
-  const { asset } = resolvePrimaryAsset(chainId);
+  const { asset } = resolveAnalyticsAsset(chainId, requestedAsset);
   const generatedAt = now();
   const boundedDays = clampCasinoTimeseriesDays(days);
   const normalizedGameId = (gameId?.toLowerCase() as Hex | undefined) ?? null;

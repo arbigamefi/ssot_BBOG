@@ -7,7 +7,6 @@ import {
   isPlaceBetButtonDisabled,
   type GameRoomBetPanelState
 } from "./bet-panel";
-import { parseWalletBalanceAmount } from "./bet-panel-sections";
 import type { GameMeta } from "./model";
 
 vi.mock("@ssot/ui", async () => {
@@ -137,7 +136,9 @@ const baseState: GameRoomBetPanelState = { status: "idle" };
 function renderPanel(overrides: Partial<React.ComponentProps<typeof GameRoomBetPanel>> = {}) {
   const props: React.ComponentProps<typeof GameRoomBetPanel> = {
     game: diceGame,
-    walletBalance: "1,450.00 USDC",
+    walletBalance: { label: "1,450.00 USDC", raw: 1_450_000_000n },
+    assetDecimals: 6,
+    assetSymbol: "USDC",
     betAmount: 10,
     onBetAmountChange: vi.fn(),
     betCount: 1,
@@ -203,6 +204,26 @@ describe("GameRoomBetPanel", () => {
     expect(props.onPlaceBet).toHaveBeenCalledTimes(1);
   });
 
+  it("caps the Max amount shortcut by wallet balance and current pool max bet", () => {
+    const cappedByPool = renderPanel({
+      hasAccount: true,
+      maxBetAmount: 200,
+      onBetAmountChange: vi.fn()
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Max" }));
+    expect(cappedByPool.onBetAmountChange).toHaveBeenCalledWith(200);
+
+    cleanup();
+    const cappedByWallet = renderPanel({
+      hasAccount: true,
+      walletBalance: { label: "100.00 USDC", raw: 100_000_000n },
+      maxBetAmount: 200,
+      onBetAmountChange: vi.fn()
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Max" }));
+    expect(cappedByWallet.onBetAmountChange).toHaveBeenCalledWith(100);
+  });
+
   it("locks amount shortcuts and advanced inputs while a round is active", () => {
     const props = renderPanel({
       hasAccount: true,
@@ -240,11 +261,6 @@ describe("GameRoomBetPanel", () => {
         state: baseState
       })
     ).toBe(true);
-  });
-
-  it("parses wallet balances for max amount shortcuts", () => {
-    expect(parseWalletBalanceAmount("1,450.00 USDC")).toBe(1450);
-    expect(parseWalletBalanceAmount(null)).toBe(1450);
   });
 
   it("uses text inputs for casino amounts and sanitizes amount changes", () => {

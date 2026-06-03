@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as React from "react";
 
@@ -154,5 +154,68 @@ describe("PortfolioPageClient", () => {
     expect(
       screen.getAllByText("Connect a wallet to inspect account state.").length
     ).toBeGreaterThan(0);
+  });
+
+  it("shows wallet and bank position totals per asset instead of summing raw units", async () => {
+    const account = "0xc8ec9920d573893e888db5d30b2b3b3824b1b684";
+    state.release = {
+      ...state.release,
+      assets: [
+        {
+          address: "0x0000000000000000000000000000000000000001",
+          symbol: "USDC",
+          decimals: 6
+        },
+        {
+          address: "0x0000000000000000000000000000000000000002",
+          symbol: "WETH",
+          decimals: 18
+        }
+      ],
+      pools: [
+        {
+          poolId: 1,
+          asset: "0x0000000000000000000000000000000000000001",
+          bank: "0x0000000000000000000000000000000000000101",
+          symbol: "USDC",
+          decimals: 6
+        },
+        {
+          poolId: 2,
+          asset: "0x0000000000000000000000000000000000000002",
+          bank: "0x0000000000000000000000000000000000000102",
+          symbol: "WETH",
+          decimals: 18
+        }
+      ]
+    };
+    state.ready = true;
+    state.sdk = {
+      account,
+      bank: {
+        getAllowance: vi.fn().mockResolvedValue(0n),
+        getAssetBalance: vi.fn(async (asset: string) =>
+          asset.endsWith("0001") ? 37_920_000n : 2_000_000_000_000_000_000n
+        ),
+        getPosition: vi.fn(async (poolId: number) =>
+          poolId === 1
+            ? { assetsEquivalent: 10_000_000n, shares: 9_000_000n }
+            : {
+                assetsEquivalent: 500_000_000_000_000_000n,
+                shares: 450_000_000_000_000_000n
+              }
+        )
+      },
+      vrfHub: {
+        getRefundCredit: vi.fn().mockResolvedValue(73_170_000_000_000n)
+      }
+    };
+
+    renderWithQueryClient(<PortfolioPageClient />);
+
+    await waitFor(() => {
+      expect(screen.getByText("37.92 USDC / 2 WETH")).toBeDefined();
+    });
+    expect(screen.getByText("10 USDC / 0.5 WETH")).toBeDefined();
   });
 });

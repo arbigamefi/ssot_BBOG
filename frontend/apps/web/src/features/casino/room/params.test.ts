@@ -16,11 +16,21 @@ import {
   buildRouletteBitmask,
   calculateGameWinChance,
   createRouletteParamsInput,
+  kenoMaxMultiplier,
   rouletteCoveredNumbers,
   rouletteWinChance
 } from "./params";
 
 describe("game room params", () => {
+  it("returns Keno's hit-all (top-tier) multiplier per spot count", () => {
+    // From the contract-mirrored KENO_GAIN_TABLE (factors / 10000).
+    expect(kenoMaxMultiplier(1)).toBeCloseTo(1.5); // 15000
+    expect(kenoMaxMultiplier(5)).toBeCloseTo(500.5); // 5005000 → the jackpot
+    // No selection / invalid count → 0 (no bet possible).
+    expect(kenoMaxMultiplier(0)).toBe(0);
+    expect(kenoMaxMultiplier(99)).toBe(0);
+  });
+
   it("calculates per-game visible win chance", () => {
     expect(
       calculateGameWinChance({

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="32" height="32" viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Light background gradient -->
+    <linearGradient id="lightGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8F6CF9"/>
+      <stop offset="100%" stop-color="#52D4A6"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Inverse version for light backgrounds -->
+  <g transform="translate(48, 48)">
+    <!-- Hexagon with brand gradient -->
+    <polygon points="0,-28 24.2,-14 24.2,14 0,28 -24.2,14 -24.2,-14"
+             fill="url(#lightGrad)"
+             stroke="none"/>
+
+    <!-- Center dot -->
+    <circle cx="0" cy="0" r="7" fill="#FFFFFF"/>
+  </g>
+</svg>

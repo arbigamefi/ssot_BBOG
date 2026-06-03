@@ -49,6 +49,7 @@ describe("GET /api/casino/timeseries", () => {
     expect(response.status).toBe(200);
     expect((await json(response)).schemaVersion).toBe(1);
     expect(queryCasinoTimeseriesMock).toHaveBeenCalledWith({
+      asset: undefined,
       chainId: 8453,
       days: 14
     });
@@ -63,9 +64,25 @@ describe("GET /api/casino/timeseries", () => {
 
     expect(response.status).toBe(200);
     expect(queryCasinoTimeseriesMock).toHaveBeenCalledWith({
+      asset: undefined,
       chainId: 8453,
       days: 7,
       gameId
+    });
+  });
+
+  it("forwards an asset scope to the timeseries service", async () => {
+    const asset = `0x${"12".repeat(20)}`;
+    const { GET } = await import("./route");
+    const response = await GET(
+      request(`/api/casino/timeseries?chainId=8453&days=7&asset=${asset}`)
+    );
+
+    expect(response.status).toBe(200);
+    expect(queryCasinoTimeseriesMock).toHaveBeenCalledWith({
+      asset,
+      chainId: 8453,
+      days: 7
     });
   });
 
@@ -79,15 +96,41 @@ describe("GET /api/casino/timeseries", () => {
     expect(queryCasinoTimeseriesMock).not.toHaveBeenCalled();
   });
 
+  it("rejects a malformed asset before hitting the service", async () => {
+    const { GET } = await import("./route");
+    const response = await GET(request("/api/casino/timeseries?chainId=8453&asset=0xnotvalid"));
+    const body = await json(response);
+
+    expect(response.status).toBe(400);
+    expect(body.error.code).toBe("INVALID_ASSET");
+    expect(queryCasinoTimeseriesMock).not.toHaveBeenCalled();
+  });
+
   it("clamps an excessive day window before hitting the service", async () => {
     const { GET } = await import("./route");
     const response = await GET(request("/api/casino/timeseries?chainId=8453&days=999"));
 
     expect(response.status).toBe(200);
     expect(queryCasinoTimeseriesMock).toHaveBeenCalledWith({
+      asset: undefined,
       chainId: 8453,
       days: 90
     });
+  });
+
+  it("maps unsupported release assets to a 400", async () => {
+    const asset = `0x${"34".repeat(20)}` as `0x${string}`;
+    const { UnsupportedCasinoAnalyticsAssetError } =
+      await import("../../../../server/betting/casino-analytics");
+    queryCasinoTimeseriesMock.mockRejectedValueOnce(
+      new UnsupportedCasinoAnalyticsAssetError(8453, asset)
+    );
+    const { GET } = await import("./route");
+    const response = await GET(request(`/api/casino/timeseries?chainId=8453&asset=${asset}`));
+    const body = await json(response);
+
+    expect(response.status).toBe(400);
+    expect(body.error.code).toBe("UNSUPPORTED_ASSET");
   });
 
   it("rate limits public timeseries reads", async () => {

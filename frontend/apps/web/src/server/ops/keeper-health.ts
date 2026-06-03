@@ -25,20 +25,45 @@ function defaultHealthPath(chainId: number) {
   return path.resolve(process.cwd(), `../../.runtime/casino-keeper-health-${chainId}.json`);
 }
 
+function defaultGenericHealthPath() {
+  return path.resolve(process.cwd(), "../../.runtime/casino-keeper-health.json");
+}
+
 function resolveHealthPathCandidate(candidate: string) {
   if (path.isAbsolute(candidate)) return [candidate];
   return [path.resolve(repoRoot(), candidate), path.resolve(process.cwd(), candidate)];
 }
 
 function healthPathCandidates(chainId: number) {
-  const defaultChainId = Number(process.env.NEXT_PUBLIC_CHAIN_ID ?? "84532");
+  const candidates: string[] = [];
+  const seen = new Set<string>();
+  let hasConfiguredPath = false;
+  const push = (paths: string[]) => {
+    for (const filePath of paths) {
+      if (seen.has(filePath)) continue;
+      seen.add(filePath);
+      candidates.push(filePath);
+    }
+  };
+
   const chainSpecific = process.env[`KEEPER_HEALTH_PATH_${chainId}`]?.trim();
-  if (chainSpecific) return resolveHealthPathCandidate(chainSpecific);
+  if (chainSpecific) {
+    hasConfiguredPath = true;
+    push(resolveHealthPathCandidate(chainSpecific));
+  }
 
   const configured = process.env.KEEPER_HEALTH_PATH?.trim();
-  if (configured && chainId === defaultChainId) return resolveHealthPathCandidate(configured);
+  if (configured) {
+    hasConfiguredPath = true;
+    push(resolveHealthPathCandidate(configured));
+  }
 
-  return [defaultHealthPath(chainId)];
+  if (hasConfiguredPath) return candidates;
+
+  push([defaultHealthPath(chainId)]);
+  push([defaultGenericHealthPath()]);
+
+  return candidates;
 }
 
 async function readJsonFile(filePath: string) {

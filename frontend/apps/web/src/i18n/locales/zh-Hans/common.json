@@ -147,7 +147,8 @@
       "shell": {
         "liveModule": "在线游戏",
         "houseEdge": "庄家优势",
-        "maxPayout": "最高赔付"
+        "maxPayout": "最高赔付",
+        "maxBet": "最大下注"
       },
       "empty": {
         "moduleNotFound": "没找到这个游戏",
@@ -365,6 +366,7 @@
       },
       "betPanel": {
         "walletBalance": "钱包余额",
+        "asset": "下注资产",
         "syncing": "同步中...",
         "notConnected": "未连接",
         "walletGate": {
@@ -379,19 +381,19 @@
         },
         "rolls": {
           "label": "回合数",
-          "total": "合计: {amount} USDC",
+          "total": "合计: {amount} {symbol}",
           "aria": "回合数量"
         },
         "advanced": {
           "label": "高级设置",
-          "stopGain": "止盈 (USDC)",
-          "stopLoss": "止损 (USDC)",
+          "stopGain": "止盈 ({symbol})",
+          "stopLoss": "止损 ({symbol})",
           "offPlaceholder": "0 = 关闭",
           "help": "多回合下注的可选自动停止规则。填 0 表示不启用。",
           "stopGainHelp": "总盈利达到该金额后停止。",
           "stopLossHelp": "总亏损达到该金额后停止。",
-          "gainStop": "盈利达到 +{amount} USDC 时停止",
-          "lossStop": "亏损达到 {amount} USDC 时停止"
+          "gainStop": "盈利达到 +{amount} {symbol} 时停止",
+          "lossStop": "亏损达到 {amount} {symbol} 时停止"
         },
         "summary": {
           "multiplier": "倍率",
@@ -2604,7 +2606,6 @@
       "poolUnavailable": "资金池不可用",
       "unsupportedWriteAsset": "写入流程需要所选资产存在 active casino pool。",
       "positiveAmount": "金额必须大于 0。",
-      "primaryAssetOnly": "当前写入流程仅支持主资产。",
       "insufficientWalletBalance": "金额超过当前钱包余额。",
       "exceedsMintable": "Share 数量超过当前钱包余额可 mint 的份额。",
       "exceedsWithdrawable": "金额超过当前可取金额。",

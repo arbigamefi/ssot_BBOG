@@ -3,7 +3,7 @@ import { useTranslations } from "next-intl";
 
 export function GameRoomShell({
   gameName,
-  houseEdge,
+  maxBet,
   maxPayout,
   leftPaneContent,
   rightPaneContent,
@@ -12,7 +12,8 @@ export function GameRoomShell({
   isInteractive = false
 }: {
   gameName: React.ReactNode;
-  houseEdge: string;
+  /** Live, asset-aware limits for the selected pool (chain-derived). */
+  maxBet: string;
   maxPayout: string;
   leftPaneContent: React.ReactNode;
   rightPaneContent: React.ReactNode;
@@ -42,9 +43,9 @@ export function GameRoomShell({
         <dl className="grid grid-cols-2 gap-3 md:min-w-72">
           <div className="rounded-lg border border-border-soft bg-surface-1 px-4 py-3 shadow-e1">
             <dt className="text-xs font-semibold uppercase text-fg-subtle">
-              {t("casino.room.shell.houseEdge")}
+              {t("casino.room.shell.maxBet")}
             </dt>
-            <dd className="mt-1 font-mono text-lg text-accent">{houseEdge}</dd>
+            <dd className="mt-1 font-mono text-lg text-fg">{maxBet}</dd>
           </div>
           <div className="rounded-lg border border-border-soft bg-surface-1 px-4 py-3 shadow-e1">
             <dt className="text-xs font-semibold uppercase text-fg-subtle">

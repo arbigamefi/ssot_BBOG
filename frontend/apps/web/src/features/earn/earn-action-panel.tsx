@@ -3,6 +3,7 @@ import { useTranslations } from "next-intl";
 import { AssetSelector, type AssetOption, type TxStepItem, type TxStatus } from "@ssot/ui";
 import type { DomainError } from "@ssot/ssot";
 
+import { TokenLogo } from "../../components/TokenLogo";
 import type { EarnAmountMode, EarnTab } from "./types";
 
 const TABS: Array<{ key: EarnTab; label: string; description: string }> = [
@@ -81,54 +82,54 @@ export function EarnActionPanel({
   const activeTab = TABS.find((item) => item.key === tab);
 
   return (
-    <section className="rounded-md border border-border bg-surface-1 shadow-e2">
-      <div className="border-b border-border p-5">
+    <section className="min-w-0 rounded-md border border-border bg-surface-1 shadow-e2">
+      <div className="border-b border-border p-4 sm:p-5">
         <div className="text-xs font-bold uppercase tracking-[0.16em] text-fg-subtle">
           {t("earn.actions.eyebrow")}
         </div>
         <h2 className="mt-2 text-2xl font-bold text-fg">{t("earn.actions.title")}</h2>
       </div>
 
-      <div className="grid gap-5 p-5">
-        <div className="grid grid-cols-2 gap-2 rounded-md border border-border bg-surface-0 p-1">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 p-4 sm:gap-5 sm:p-5">
+        <div className="grid min-w-0 grid-cols-2 gap-2 rounded-md border border-border bg-surface-0 p-1">
           {TABS.map((item) => (
             <button
               key={item.key}
               type="button"
               onClick={() => onTabChange(item.key)}
-              className={`rounded-sm px-3 py-3 text-xs font-bold uppercase tracking-[0.12em] transition ${
+              className={`min-w-0 rounded-sm px-2 py-3 text-[11px] font-bold uppercase tracking-[0.08em] transition sm:px-3 sm:text-xs sm:tracking-[0.12em] ${
                 tab === item.key
                   ? "bg-brand text-fg-inverse"
                   : "text-fg-muted hover:bg-surface-2 hover:text-fg"
               }`}
             >
-              {t(item.label)}
+              <span className="block truncate">{t(item.label)}</span>
             </button>
           ))}
         </div>
 
-        <p className="text-sm leading-6 text-fg-muted">
+        <p className="min-w-0 text-sm leading-6 text-fg-muted">
           {activeTab ? t(activeTab.description) : ""}
         </p>
 
-        <div className="grid gap-2">
+        <div className="grid min-w-0 gap-2">
           <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
             {t("earn.actions.amountMode.label")}
           </div>
-          <div className="grid grid-cols-2 gap-2 rounded-md border border-border bg-surface-0 p-1">
+          <div className="grid min-w-0 grid-cols-2 gap-2 rounded-md border border-border bg-surface-0 p-1">
             {AMOUNT_MODES.map((item) => (
               <button
                 key={item.key}
                 type="button"
                 onClick={() => onAmountModeChange(item.key)}
                 disabled={flow.busy}
-                className={`rounded-sm px-3 py-2.5 text-xs font-bold uppercase tracking-[0.12em] transition ${
+                className={`min-w-0 rounded-sm px-2 py-2.5 text-[11px] font-bold uppercase tracking-[0.08em] transition sm:px-3 sm:text-xs sm:tracking-[0.12em] ${
                   amountMode === item.key
                     ? "bg-surface-2 text-fg"
                     : "text-fg-muted hover:bg-surface-2 hover:text-fg"
                 } disabled:cursor-not-allowed disabled:opacity-60`}
               >
-                {t(item.label)}
+                <span className="block truncate">{t(item.label)}</span>
               </button>
             ))}
           </div>
@@ -139,20 +140,21 @@ export function EarnActionPanel({
           assets={[...assets]}
           value={asset}
           onValueChange={onAssetChange}
-          showAddress
           disabled={flow.busy}
-          error={unsupportedAsset ? t("earn.errors.primaryAssetOnly") : undefined}
+          error={unsupportedAsset ? t("earn.errors.unsupportedWriteAsset") : undefined}
+          renderLogo={(option) => <TokenLogo symbol={option.symbol} size={20} />}
+          className="min-w-0"
         />
 
-        <div className="rounded-md border border-border bg-surface-0 p-4">
-          <div className="mb-2 flex items-start justify-between gap-3">
+        <div className="min-w-0 rounded-md border border-border bg-surface-0 p-3 sm:p-4">
+          <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
             <label
               htmlFor="earn-amount"
               className="text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle"
             >
               {t("earn.actions.amount")}
             </label>
-            <div className="min-w-0 text-right text-[10px] font-bold uppercase tracking-[0.12em]">
+            <div className="min-w-0 text-left text-[10px] font-bold uppercase tracking-[0.12em] sm:text-right">
               <span className="block truncate text-fg-subtle" title={availableLabel}>
                 {availableLabel}
               </span>
@@ -170,15 +172,16 @@ export function EarnActionPanel({
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {amountMode === "shares" ? null : <TokenLogo symbol={symbol} size={24} />}
             <input
               id="earn-amount"
               value={amount}
               onChange={(event) => onAmountChange(event.target.value)}
               inputMode="decimal"
               placeholder="0.00"
-              className="w-full bg-transparent font-mono text-3xl font-bold text-fg outline-none placeholder:text-fg-subtle"
+              className="min-w-0 flex-1 bg-transparent font-mono text-2xl font-bold text-fg outline-none placeholder:text-fg-subtle sm:text-3xl"
             />
-            <span className="text-sm font-bold uppercase tracking-[0.12em] text-fg-muted">
+            <span className="shrink-0 whitespace-nowrap text-sm font-bold uppercase tracking-[0.08em] text-fg-muted sm:tracking-[0.12em]">
               {amountMode === "shares" ? t("earn.units.shares") : symbol}
             </span>
           </div>

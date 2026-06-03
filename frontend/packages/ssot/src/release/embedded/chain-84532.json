@@ -1,7 +1,7 @@
 {
   "chainId": 84532,
   "name": "Base Sepolia",
-  "releaseDigest": "0x2a3db090c24089944a0f23df63eb970c89c6f3529970c85c29b8cf3de9aba176",
+  "releaseDigest": "0xfeb5e4bc067b0c978d1281551638125d56822f75f4b63dbf4b4b7d51a1573721",
   "isPlaceholder": false,
   "refundTimeoutSeconds": 3600,
   "contracts": {
@@ -21,6 +21,12 @@
       "decimals": 6,
       "address": "0x036cbd53842c5426634e7929541ec2318f3dcf7e",
       "bank": "0x14f3eeaacd690c8f421de2e3353250e9682b3087"
+    },
+    {
+      "symbol": "WETH",
+      "decimals": 18,
+      "address": "0x4200000000000000000000000000000000000006",
+      "bank": "0x4735ae54b7efe4bedecaee13420f72e05acd0f4e"
     }
   ],
   "games": {
@@ -136,10 +142,21 @@
         "maxEventReserved": "150000000",
         "riskHash": "0x50695b4589bcd21d92a3a2f25f60be2f9a0566b91019b7b015934b5024f1c645"
       }
+    },
+    {
+      "poolId": 3,
+      "domainId": 1,
+      "domain": "Casino",
+      "active": true,
+      "asset": "0x4200000000000000000000000000000000000006",
+      "bank": "0x4735ae54b7efe4bedecaee13420f72e05acd0f4e",
+      "symbol": "WETH",
+      "decimals": 18,
+      "sportsRisk": null
     }
   ],
   "meta": {
-    "blockNumber": 41760321,
+    "blockNumber": 42323839,
     "schemaVersion": 2,
     "generatedAt": 1,
     "bundle": {
@@ -149,19 +166,19 @@
       "abiIndexPath": "abis/index.json"
     },
     "releaseLock": {
-      "blockNumber": 41760321,
+      "blockNumber": 42323839,
       "chainId": 84532,
-      "digest": "0x2a3db090c24089944a0f23df63eb970c89c6f3529970c85c29b8cf3de9aba176",
-      "r": "0x29e111460224145758188c06adc0a2edf55616d4279db79d6abdea6af085a6d5",
-      "s": "0x43d97076ec29e35ec6ccd509543eb94f84809251177ff20b2faa9653a31c9b8a",
+      "digest": "0xfeb5e4bc067b0c978d1281551638125d56822f75f4b63dbf4b4b7d51a1573721",
+      "r": "0xe6212e62520b54ea4729cc69cc81d056fb65761d439cc6c696d42cbfe7cfddba",
+      "s": "0x2bf8d5f4aa10a6fe8a0a4f696b8bbc5593334bb6e4e5c5333e7fab714ccd6b6c",
       "schema": "SSOT_RELEASE_DIGEST_V13",
       "schemaHash": "0x0826906b33a459e6656bcfe343f78ad0d5b6f6adc2b3a287f410a888fc804db5",
       "signer": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684",
-      "snapshotPath": "deployments/latest-v13.json",
-      "v": 28
+      "snapshotPath": "deployments/snapshots/deploy-84532-42323839-v13.json",
+      "v": 27
     },
     "abiIndex": {
-      "blockNumber": 41760321,
+      "blockNumber": 42323839,
       "chainId": 84532,
       "contracts": [
         {
@@ -305,9 +322,17 @@
           "domain": "Sports",
           "name": "BankInstance",
           "poolId": 2
+        },
+        {
+          "abiFile": "Bank.abi.json",
+          "address": "0x4735aE54b7efe4bedeCAee13420f72E05aCd0F4e",
+          "asset": "0x4200000000000000000000000000000000000006",
+          "domain": "Casino",
+          "name": "BankInstance",
+          "poolId": 3
         }
       ],
-      "generatedAt": 1779288993,
+      "generatedAt": 1780416120,
       "gitSha": "",
       "manifestPath": "deployments/frontend-manifest-latest-v13.json",
       "schemaVersion": 2

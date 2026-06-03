@@ -137,14 +137,37 @@ describe("BankrollPerformancePanel", () => {
   it("offers a 24h/7d/30d/All time-range selector defaulting to 30d", () => {
     render(<BankrollPerformancePanel vaultAssets={1000000000n} />);
     expect(screen.getByRole("tab", { name: "30d", selected: true })).toBeDefined();
-    expect(useCasinoStatsMock).toHaveBeenLastCalledWith({ windowDays: 30 });
-    expect(useCasinoTimeseriesMock).toHaveBeenLastCalledWith({ days: 30 });
+    expect(useCasinoStatsMock).toHaveBeenLastCalledWith({
+      asset: undefined,
+      windowDays: 30
+    });
+    expect(useCasinoTimeseriesMock).toHaveBeenLastCalledWith({
+      asset: undefined,
+      days: 30
+    });
     for (const name of ["24h", "7d", "All"]) {
       expect(screen.getByRole("tab", { name })).toBeDefined();
     }
     fireEvent.click(screen.getByRole("tab", { name: "7d" }));
     expect(screen.getByRole("tab", { name: "7d", selected: true })).toBeDefined();
-    expect(useCasinoStatsMock).toHaveBeenLastCalledWith({ windowDays: 7 });
+    expect(useCasinoStatsMock).toHaveBeenLastCalledWith({
+      asset: undefined,
+      windowDays: 7
+    });
+  });
+
+  it("scopes indexed performance reads to the selected asset", () => {
+    const assetAddress = `0x${"12".repeat(20)}`;
+    render(<BankrollPerformancePanel assetAddress={assetAddress} vaultAssets={1000000000n} />);
+
+    expect(useCasinoStatsMock).toHaveBeenLastCalledWith({
+      asset: assetAddress,
+      windowDays: 30
+    });
+    expect(useCasinoTimeseriesMock).toHaveBeenLastCalledWith({
+      asset: assetAddress,
+      days: 30
+    });
   });
 
   it("reveals a per-day tooltip when the equity chart is hovered", () => {

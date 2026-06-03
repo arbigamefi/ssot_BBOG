@@ -8,11 +8,13 @@ const originalEnv = process.env;
 
 describe("GET /ops/casino-keeper-health.json", () => {
   beforeEach(() => {
-    process.env = {
+    const env: NodeJS.ProcessEnv = {
       ...originalEnv,
       NEXT_PUBLIC_CHAIN_ID: "84532",
       KEEPER_HEALTH_PATH: "/tmp/ssot-missing-casino-keeper-health.json"
     };
+    delete env.KEEPER_HEALTH_PATH_84532;
+    process.env = env;
   });
 
   afterAll(() => {

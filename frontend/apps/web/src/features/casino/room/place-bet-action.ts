@@ -2,6 +2,7 @@ import type { PlaceBetInput, PlaceBetPlan } from "@ssot/ssot";
 import type { Address } from "@ssot/ssot/sdk";
 import { toast } from "@ssot/ui";
 
+import { getAppChain } from "../../../app-shell/chain-registry";
 import type { GameMeta } from "./model";
 import { buildGamePlaceBetInput, type GameRoomRelease } from "./place-bet";
 import type { BaccaratSide, CoinSide, PlinkoRisk, SicBoKind } from "./params";
@@ -20,7 +21,10 @@ export function shouldResetGamePlaceBet(status: string) {
 }
 
 export function isCasinoRiskInEnabledForChain(chainId: number) {
-  if (chainId !== 8453) return true;
+  // Testnets (and unknown chains) always allow risk-in; any mainnet requires the
+  // explicit opt-in flag. Driven by the chain registry rather than a hardcoded
+  // Base-mainnet id, so it covers every mainnet (Base, Arbitrum, …) uniformly.
+  if (getAppChain(chainId)?.environment !== "mainnet") return true;
   return process.env.NEXT_PUBLIC_CASINO_RISK_IN_ENABLED === "true";
 }
 
@@ -50,6 +54,7 @@ export async function executeGamePlaceBetAction({
   sicBoKind,
   sicBoValue,
   affiliate,
+  poolId,
   messages
 }: {
   account: string | undefined;
@@ -77,6 +82,8 @@ export async function executeGamePlaceBetAction({
   sicBoKind?: SicBoKind;
   sicBoValue?: number;
   affiliate?: Address;
+  /** Selected casino pool id (multi-asset). Defaults to the default pool when omitted. */
+  poolId?: number;
   messages?: {
     rouletteSelectionRequired?: string;
     kenoSelectionRequired?: string;
@@ -128,6 +135,7 @@ export async function executeGamePlaceBetAction({
       sicBoKind,
       sicBoValue,
       affiliate,
+      poolId,
       messages
     });
     if (!placeBet.ok) {

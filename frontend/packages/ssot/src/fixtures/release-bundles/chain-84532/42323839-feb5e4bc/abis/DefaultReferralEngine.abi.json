@@ -1,0 +1,187 @@
+{
+  "abi": [
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "baseBudget",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint16[6]",
+              "name": "levelBps",
+              "type": "uint16[6]"
+            },
+            {
+              "internalType": "uint8",
+              "name": "levels",
+              "type": "uint8"
+            },
+            {
+              "internalType": "address[]",
+              "name": "uplines",
+              "type": "address[]"
+            },
+            {
+              "internalType": "uint16",
+              "name": "holdbackBps",
+              "type": "uint16"
+            },
+            {
+              "internalType": "uint256",
+              "name": "minTurnover",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "playerTurnover",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct IReferralEngine.BaseInput",
+          "name": "input",
+          "type": "tuple"
+        }
+      ],
+      "name": "splitBase",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "playerKick",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address[]",
+              "name": "payees",
+              "type": "address[]"
+            },
+            {
+              "internalType": "uint256[]",
+              "name": "immediate",
+              "type": "uint256[]"
+            },
+            {
+              "internalType": "uint256[]",
+              "name": "locked",
+              "type": "uint256[]"
+            },
+            {
+              "internalType": "uint256[]",
+              "name": "holdback",
+              "type": "uint256[]"
+            },
+            {
+              "internalType": "uint256",
+              "name": "sink",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct IReferralEngine.Plan",
+          "name": "plan",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes",
+          "name": "skyline",
+          "type": "bytes"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "deltaBudget",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint16",
+              "name": "holdbackBps",
+              "type": "uint16"
+            },
+            {
+              "internalType": "uint256",
+              "name": "minTurnover",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "playerTurnover",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct IReferralEngine.DeltaPolicy",
+          "name": "policy",
+          "type": "tuple"
+        }
+      ],
+      "name": "splitDelta",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "playerKick",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address[]",
+              "name": "payees",
+              "type": "address[]"
+            },
+            {
+              "internalType": "uint256[]",
+              "name": "immediate",
+              "type": "uint256[]"
+            },
+            {
+              "internalType": "uint256[]",
+              "name": "locked",
+              "type": "uint256[]"
+            },
+            {
+              "internalType": "uint256[]",
+              "name": "holdback",
+              "type": "uint256[]"
+            },
+            {
+              "internalType": "uint256",
+              "name": "sink",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct IReferralEngine.Plan",
+          "name": "plan",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "bps",
+          "type": "uint256"
+        }
+      ],
+      "name": "InvalidBps",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "InvalidConfig",
+      "type": "error"
+    }
+  ],
+  "contract": "DefaultReferralEngine"
+}

@@ -598,7 +598,6 @@
       "poolUnavailable": "Пул недоступен",
       "unsupportedWriteAsset": "Операции записи требуют активный пул казино для выбранного актива.",
       "positiveAmount": "Сумма должна быть положительной.",
-      "primaryAssetOnly": "Операции записи сейчас поддерживают только основной актив.",
       "insufficientWalletBalance": "Сумма превышает баланс подключённого кошелька.",
       "exceedsMintable": "Количество долей превышает то, что можно выпустить с текущим балансом кошелька.",
       "exceedsWithdrawable": "Сумма превышает текущий доступный вывод.",
@@ -971,7 +970,8 @@
       "shell": {
         "liveModule": "Игра в эфире",
         "houseEdge": "Преимущество казино",
-        "maxPayout": "Макс. выплата"
+        "maxPayout": "Макс. выплата",
+        "maxBet": "Макс. ставка"
       },
       "empty": {
         "moduleNotFound": "Игра не найдена",
@@ -1037,6 +1037,7 @@
       },
       "betPanel": {
         "walletBalance": "Баланс кошелька",
+        "asset": "Актив ставки",
         "syncing": "Синхронизация...",
         "notConnected": "Не подключён",
         "walletGate": {
@@ -1051,19 +1052,19 @@
         },
         "rolls": {
           "label": "Броски",
-          "total": "Всего: {amount} USDC",
+          "total": "Всего: {amount} {symbol}",
           "aria": "Число бросков"
         },
         "advanced": {
           "label": "Дополнительно",
-          "stopGain": "Стоп по прибыли (USDC)",
-          "stopLoss": "Стоп по убытку (USDC)",
+          "stopGain": "Стоп по прибыли ({symbol})",
+          "stopLoss": "Стоп по убытку ({symbol})",
           "offPlaceholder": "0 = выкл",
           "help": "Необязательные правила авто-стопа для серий бросков. 0 — отключить.",
           "stopGainHelp": "Останавливает после достижения этой суммарной прибыли.",
           "stopLossHelp": "Останавливает после достижения этого суммарного убытка.",
-          "gainStop": "Стоп по прибыли +{amount} USDC",
-          "lossStop": "Стоп по убытку {amount} USDC"
+          "gainStop": "Стоп по прибыли +{amount} {symbol}",
+          "lossStop": "Стоп по убытку {amount} {symbol}"
         },
         "summary": {
           "multiplier": "Множитель",

@@ -25,6 +25,7 @@ import {
 } from "@heroicons/react/24/outline";
 
 import { useActiveChain } from "./ActiveChainProvider";
+import { ChainOptionList, ChainSwitcher } from "./ChainSwitcher";
 import { getExplorerAddressUrl } from "./chain-registry";
 import { WALLET_CONNECT_REQUEST_EVENT } from "./wallet-connect-events";
 
@@ -45,7 +46,7 @@ export function WalletHeaderMenu() {
   const { address, isConnected, connector } = useAccount();
   const { disconnect } = useDisconnect();
   const { openConnectModal } = useConnectModal();
-  const { selectedChainId, selectedChain, supportedChains, setSelectedChainId } = useActiveChain();
+  const { selectedChainId, selectedChain } = useActiveChain();
   const walletChainId = useChainId();
   const { switchChain, isPending: isSwitchingWalletChain } = useSwitchChain();
 
@@ -95,15 +96,19 @@ export function WalletHeaderMenu() {
 
   if (!isConnected || !address) {
     return (
-      <button
-        type="button"
-        data-tour="wallet"
-        onClick={() => openConnectModal?.()}
-        disabled={!openConnectModal}
-        className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-brand px-4 py-2 text-sm font-bold text-fg-inverse shadow-glow transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {t("connectWalletButton")}
-      </button>
+      <div className="flex items-center gap-2">
+        {/* Lets a visitor browse a different chain's games before connecting. */}
+        <ChainSwitcher />
+        <button
+          type="button"
+          data-tour="wallet"
+          onClick={() => openConnectModal?.()}
+          disabled={!openConnectModal}
+          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-brand px-4 py-2 text-sm font-bold text-fg-inverse shadow-glow transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {t("connectWalletButton")}
+        </button>
+      </div>
     );
   }
 
@@ -218,44 +223,7 @@ export function WalletHeaderMenu() {
               <ArrowsRightLeftIcon className="h-3.5 w-3.5" />
               {t("walletMenu.chainSection")}
             </div>
-            <div role="radiogroup" className="flex flex-col gap-1">
-              {supportedChains.map((chain) => {
-                const active = chain.id === selectedChainId;
-                return (
-                  <button
-                    key={chain.id}
-                    type="button"
-                    role="radio"
-                    aria-checked={active}
-                    onClick={() => {
-                      setSelectedChainId(chain.id);
-                      setOpen(false);
-                    }}
-                    className={cn(
-                      "flex items-center justify-between rounded-md border px-3 py-2 text-sm transition-colors",
-                      active
-                        ? "border-brand bg-brand-soft text-fg"
-                        : "border-transparent text-fg-muted hover:border-border-soft hover:bg-surface-2 hover:text-fg"
-                    )}
-                  >
-                    <span className="flex items-center gap-2">
-                      <span
-                        aria-hidden
-                        className={cn(
-                          "h-1.5 w-1.5 rounded-full",
-                          chain.environment === "mainnet" ? "bg-brand" : "bg-accent"
-                        )}
-                      />
-                      <span className="font-semibold">{chain.name}</span>
-                      <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-fg-subtle">
-                        {chain.environment}
-                      </span>
-                    </span>
-                    {active && <CheckIcon className="h-4 w-4 text-brand" />}
-                  </button>
-                );
-              })}
-            </div>
+            <ChainOptionList onSelect={() => setOpen(false)} />
           </div>
 
           {/* Disconnect — destructive style, no double-confirm (cheap to
