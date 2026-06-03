@@ -13,7 +13,7 @@ const STRUCTURED_DATA = {
       "@id": `${SITE_URL}/#organization`,
       name: "ArbiGameFi",
       url: SITE_URL,
-      logo: `${SITE_URL}/apple-touch-icon.png`,
+      logo: `${SITE_URL}/brand/logo-icon.svg`,
       description: "Non-custodial on-chain gaming platform with verifiable settlement."
     },
     {

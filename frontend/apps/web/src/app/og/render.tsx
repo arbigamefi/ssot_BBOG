@@ -12,8 +12,9 @@ const BG = "#070a0e";
 const BG_2 = "#0c1018";
 const FG = "#f8fafc";
 const MUTED = "#98a3b4";
-const BRAND = "#8f6cf9";
-const ACCENT = "#43efd2";
+const BRAND = "#6366F1";
+const BRAND_MID = "#818CF8";
+const ACCENT = "#A855F7";
 const BORDER = "#1c2330";
 
 export function renderOgCard({
@@ -45,14 +46,40 @@ export function renderOgCard({
       {/* top row: wordmark + optional badge */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-          <div
-            style={{
-              width: "36px",
-              height: "36px",
-              borderRadius: "10px",
-              background: `linear-gradient(135deg, ${BRAND}, ${ACCENT})`
-            }}
-          />
+          <svg width="42" height="42" viewBox="0 0 96 96" fill="none">
+            <defs>
+              <linearGradient id="ag-og-brand" x1="16" y1="12" x2="80" y2="84">
+                <stop offset="0%" stopColor={BRAND} />
+                <stop offset="52%" stopColor={BRAND_MID} />
+                <stop offset="100%" stopColor={ACCENT} />
+              </linearGradient>
+              <linearGradient id="ag-og-accent" x1="28" y1="28" x2="68" y2="68">
+                <stop offset="0%" stopColor={BRAND_MID} />
+                <stop offset="100%" stopColor={ACCENT} />
+              </linearGradient>
+            </defs>
+            <polygon
+              points="48,14 77,31 77,65 48,82 19,65 19,31"
+              fill="rgba(99, 102, 241, 0.12)"
+              stroke="url(#ag-og-brand)"
+              strokeWidth="6"
+              strokeLinejoin="round"
+            />
+            <rect
+              x="32"
+              y="32"
+              width="32"
+              height="32"
+              rx="7"
+              stroke="url(#ag-og-accent)"
+              strokeWidth="5"
+            />
+            <circle cx="40" cy="40" r="3.5" fill={FG} />
+            <circle cx="56" cy="40" r="3.5" fill={FG} />
+            <circle cx="48" cy="48" r="3.5" fill={FG} />
+            <circle cx="40" cy="56" r="3.5" fill={FG} />
+            <circle cx="56" cy="56" r="3.5" fill={FG} />
+          </svg>
           <div style={{ fontSize: "30px", fontWeight: 800, letterSpacing: "-0.5px" }}>
             ArbiGameFi
           </div>
@@ -116,7 +143,7 @@ export function renderOgCard({
             width: "10px",
             height: "10px",
             borderRadius: "9999px",
-            background: ACCENT
+            background: BRAND_MID
           }}
         />
         <div style={{ display: "flex" }}>Verifiable on-chain</div>
