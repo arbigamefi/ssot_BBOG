@@ -1,4 +1,5 @@
 import { OG_CONTENT_TYPE, OG_SIZE, renderOgCard } from "../../../og/render";
+import type { OgGlyphKind, OgTone } from "../../../og/glyphs";
 
 export const alt = "ArbiGameFi casino game";
 export const size = OG_SIZE;
@@ -9,46 +10,80 @@ export const contentType = OG_CONTENT_TYPE;
  * stays fast and free of release-loading. House-edge / payout highlights mirror
  * the Game Info tab copy.
  */
-const GAME_CARDS: Record<string, { name: string; subtitle: string; badge: string }> = {
+const GAME_CARDS: Record<
+  string,
+  {
+    eyebrow: string;
+    title: string;
+    subtitle: string;
+    stat: string;
+    tone: OgTone;
+    visualKind: OgGlyphKind;
+  }
+> = {
   dice: {
-    name: "Dice",
-    subtitle: "Pick a target, pick a direction. 1% house edge.",
-    badge: "up to 99×"
+    eyebrow: "Provably fair · Dice",
+    title: "Set the target. Roll on-chain.",
+    subtitle: "Pick a direction, set your number, and verify the roll.",
+    stat: "99×",
+    tone: "cyan",
+    visualKind: "dice"
   },
   "coin-toss": {
-    name: "Coin Toss",
-    subtitle: "True 50/50, decided by one Chainlink VRF draw.",
-    badge: "1.98×"
+    eyebrow: "Provably fair · Coin toss",
+    title: "Call the side. Flip on-chain.",
+    subtitle: "A simple 50/50-style draw backed by Chainlink VRF.",
+    stat: "1.98×",
+    tone: "brand",
+    visualKind: "coin-toss"
   },
   roulette: {
-    name: "Roulette",
-    subtitle: "European single-zero table. Every spin signed on-chain.",
-    badge: "up to 36×"
+    eyebrow: "Provably fair · Roulette",
+    title: "Spin the wheel. Verify the result.",
+    subtitle: "Single-zero roulette with transparent on-chain settlement.",
+    stat: "36×",
+    tone: "brand",
+    visualKind: "roulette"
   },
   keno: {
-    name: "Keno",
-    subtitle: "Pick up to 5 from 15. Match more, win more.",
-    badge: "up to 500×"
+    eyebrow: "Provably fair · Keno",
+    title: "Pick your numbers. Reveal the draw.",
+    subtitle: "Choose from the grid and watch the draw land.",
+    stat: "500×",
+    tone: "cyan",
+    visualKind: "keno"
   },
   plinko: {
-    name: "Plinko",
-    subtitle: "Drop through a 9-row board. Risk shapes the curve.",
-    badge: "up to 24×"
+    eyebrow: "Provably fair · Plinko",
+    title: "Drop the ball. Reveal the path.",
+    subtitle: "Choose risk, follow the bounce, and verify the bucket.",
+    stat: "24×",
+    tone: "green",
+    visualKind: "plinko"
   },
   slots: {
-    name: "Slots",
-    subtitle: "Three-reel classic. Triple the top symbol for the max.",
-    badge: "up to 64×"
+    eyebrow: "Provably fair · Slots",
+    title: "Spin three reels with VRF.",
+    subtitle: "Classic reel play with public settlement proof.",
+    stat: "64×",
+    tone: "brand",
+    visualKind: "slots"
   },
   baccarat: {
-    name: "Baccarat",
-    subtitle: "Player, Banker, or Tie — commission-free payouts.",
-    badge: "up to 10×"
+    eyebrow: "Provably fair · Baccarat",
+    title: "Player. Banker. Tie.",
+    subtitle: "Pick a side and verify the hand after settlement.",
+    stat: "10×",
+    tone: "green",
+    visualKind: "baccarat"
   },
   "sic-bo": {
-    name: "Sic Bo",
-    subtitle: "Three dice. Small/Big, triples, doubles, and totals.",
-    badge: "up to 216×"
+    eyebrow: "Provably fair · Sic Bo",
+    title: "Three dice. One verified roll.",
+    subtitle: "Small, big, totals, triples, and doubles settled by VRF.",
+    stat: "216×",
+    tone: "cyan",
+    visualKind: "sic-bo"
   }
 };
 
@@ -59,19 +94,20 @@ export default async function GameOpengraphImage({
 }) {
   const { slug } = await params;
   const card = GAME_CARDS[slug] ?? {
-    name: "Casino",
+    eyebrow: "Wallet-native casino",
+    title: "Game rooms. One on-chain house.",
     subtitle: "Wallet-native games with verifiable on-chain settlement.",
-    badge: "8 games"
+    stat: "Rooms",
+    tone: "cyan" as const,
+    visualKind: "casino" as const
   };
   return renderOgCard({
-    eyebrow: "Play on-chain",
-    title: card.name,
+    eyebrow: card.eyebrow,
+    title: card.title,
     subtitle: card.subtitle,
-    badge: card.badge,
-    metrics: [
-      { label: "Randomness", value: "VRF" },
-      { label: "Settlement", value: "On-chain" },
-      { label: "Game", value: card.name }
-    ]
+    badge: card.stat,
+    stat: card.stat,
+    tone: card.tone,
+    visualKind: card.visualKind
   });
 }

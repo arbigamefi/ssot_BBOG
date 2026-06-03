@@ -8,14 +8,12 @@ export const contentType = OG_CONTENT_TYPE;
 // opengraph-image. Twitter falls back to this automatically.
 export default function OpengraphImage() {
   return renderOgCard({
-    eyebrow: "Wallet-native casino",
-    title: "Verifiable casino on-chain.",
-    subtitle: "Eight games. Every spin verifiable on-chain. Wins hit your wallet in seconds.",
-    badge: "8 games",
-    metrics: [
-      { label: "Settlement", value: "On-chain" },
-      { label: "Randomness", value: "VRF" },
-      { label: "Custody", value: "Wallet" }
-    ]
+    eyebrow: "Provably fair · On-chain",
+    title: "Play the house. Keep the proof.",
+    subtitle: "Wallet-native casino games with VRF-backed results and public receipts.",
+    badge: "Game rooms",
+    stat: "Rooms",
+    tone: "cyan",
+    visualKind: "casino"
   });
 }
