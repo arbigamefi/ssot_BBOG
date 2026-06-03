@@ -37,6 +37,7 @@ function resolveHealthPathCandidate(candidate: string) {
 function healthPathCandidates(chainId: number) {
   const candidates: string[] = [];
   const seen = new Set<string>();
+  let hasConfiguredPath = false;
   const push = (paths: string[]) => {
     for (const filePath of paths) {
       if (seen.has(filePath)) continue;
@@ -46,10 +47,18 @@ function healthPathCandidates(chainId: number) {
   };
 
   const chainSpecific = process.env[`KEEPER_HEALTH_PATH_${chainId}`]?.trim();
-  if (chainSpecific) push(resolveHealthPathCandidate(chainSpecific));
+  if (chainSpecific) {
+    hasConfiguredPath = true;
+    push(resolveHealthPathCandidate(chainSpecific));
+  }
 
   const configured = process.env.KEEPER_HEALTH_PATH?.trim();
-  if (configured) push(resolveHealthPathCandidate(configured));
+  if (configured) {
+    hasConfiguredPath = true;
+    push(resolveHealthPathCandidate(configured));
+  }
+
+  if (hasConfiguredPath) return candidates;
 
   push([defaultHealthPath(chainId)]);
   push([defaultGenericHealthPath()]);

@@ -131,7 +131,11 @@ export function GameRoomBetPanel({
                 </span>
               )}
             </div>
-            <div className="min-w-0 text-right">
+            <div
+              className="min-w-0 text-right"
+              role="group"
+              aria-label={t("casino.room.betPanel.walletBalance")}
+            >
               <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-fg-subtle">
                 {t("casino.room.betPanel.walletBalance")}
               </div>
