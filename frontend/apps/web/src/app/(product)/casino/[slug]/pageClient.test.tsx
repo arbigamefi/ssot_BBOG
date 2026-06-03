@@ -70,7 +70,7 @@ vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) =>
     ({
       "casino.room.shell.liveModule": "Live SSOT Module",
-      "casino.room.shell.houseEdge": "House edge",
+      "casino.room.shell.maxBet": "Max bet",
       "casino.room.shell.maxPayout": "Max payout",
       "casino.room.empty.moduleNotFound": "Module not found",
       "casino.room.empty.gameNotFound": "Game not found.",
@@ -243,6 +243,7 @@ vi.mock("../../../../components/PageTransition", () => ({
 }));
 
 vi.mock("@ssot/ui", () => ({
+  AssetSelector: ({ title }: any) => <div>{title}</div>,
   AuditTabs: ({ children }: any) => <div>{children}</div>,
   AuditTableHeader: ({ children }: any) => <div>{children}</div>,
   AuditTableRow: ({ children }: any) => <div>{children}</div>,
@@ -470,7 +471,7 @@ describe("GamePageClient", () => {
 
     expect(screen.getByText("Precision Dice")).toBeDefined();
     expect(screen.getByText("Live SSOT Module")).toBeDefined();
-    expect(screen.getByText("Wallet Balance")).toBeDefined();
+    expect(screen.getByLabelText("Wallet Balance")).toBeDefined();
     expect(screen.getAllByText("Bet Amount").length).toBeGreaterThanOrEqual(1);
   });
 
@@ -480,7 +481,7 @@ describe("GamePageClient", () => {
     render(<GamePageClient slug="roulette" />);
 
     expect(screen.getByText("European Roulette")).toBeDefined();
-    expect(screen.getByText("Wallet Balance")).toBeDefined();
+    expect(screen.getByLabelText("Wallet Balance")).toBeDefined();
     expect(screen.getAllByText("Bet Amount").length).toBeGreaterThanOrEqual(1);
   });
 
@@ -502,7 +503,7 @@ describe("GamePageClient", () => {
     render(<GamePageClient slug="coin-toss" />);
 
     expect(screen.getByText("Coin Toss")).toBeDefined();
-    expect(screen.getByText("Wallet Balance")).toBeDefined();
+    expect(screen.getByLabelText("Wallet Balance")).toBeDefined();
     expect(screen.getAllByText("Bet Amount").length).toBeGreaterThanOrEqual(1);
   });
 

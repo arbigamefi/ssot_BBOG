@@ -63,7 +63,7 @@ export function useCasinoPoolAssetSelection(): CasinoPoolAssetSelection {
         address: asset.address,
         symbol: asset.symbol,
         decimals: asset.decimals,
-        label: `${asset.symbol} (${asset.decimals})`
+        label: asset.symbol
       })),
     [contexts]
   );

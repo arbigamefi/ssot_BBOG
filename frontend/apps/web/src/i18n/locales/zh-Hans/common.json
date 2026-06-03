@@ -147,7 +147,8 @@
       "shell": {
         "liveModule": "在线游戏",
         "houseEdge": "庄家优势",
-        "maxPayout": "最高赔付"
+        "maxPayout": "最高赔付",
+        "maxBet": "最大下注"
       },
       "empty": {
         "moduleNotFound": "没找到这个游戏",

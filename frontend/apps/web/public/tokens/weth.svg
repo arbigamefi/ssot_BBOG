@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="WETH">
+  <circle cx="16" cy="16" r="16" fill="#627EEA"/>
+  <g fill="#FFFFFF">
+    <path fill-opacity="0.6" d="M16 4 16 12.87 23.5 16.22Z"/>
+    <path d="M16 4 8.5 16.22 16 12.87Z"/>
+    <path fill-opacity="0.6" d="M16 21.97 16 28 23.5 17.62Z"/>
+    <path d="M16 28 16 21.97 8.5 17.62Z"/>
+    <path fill-opacity="0.2" d="M16 20.57 23.5 16.22 16 12.87Z"/>
+    <path fill-opacity="0.6" d="M8.5 16.22 16 20.57 16 12.87Z"/>
+  </g>
+</svg>

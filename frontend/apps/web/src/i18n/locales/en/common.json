@@ -151,7 +151,8 @@
       "shell": {
         "liveModule": "Live game",
         "houseEdge": "House edge",
-        "maxPayout": "Max payout"
+        "maxPayout": "Max payout",
+        "maxBet": "Max bet"
       },
       "empty": {
         "moduleNotFound": "Game not found",

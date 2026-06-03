@@ -970,7 +970,8 @@
       "shell": {
         "liveModule": "Jogo ao vivo",
         "houseEdge": "Vantagem da casa",
-        "maxPayout": "Pagamento máximo"
+        "maxPayout": "Pagamento máximo",
+        "maxBet": "Aposta máxima"
       },
       "empty": {
         "moduleNotFound": "Jogo não encontrado",

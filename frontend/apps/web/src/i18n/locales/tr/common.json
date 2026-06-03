@@ -970,7 +970,8 @@
       "shell": {
         "liveModule": "Canlı oyun",
         "houseEdge": "Casino avantajı",
-        "maxPayout": "Maks. ödeme"
+        "maxPayout": "Maks. ödeme",
+        "maxBet": "Maks. bahis"
       },
       "empty": {
         "moduleNotFound": "Oyun bulunamadı",

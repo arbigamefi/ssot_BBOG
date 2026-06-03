@@ -13,6 +13,8 @@ import {
   type SicBoKind
 } from "@ssot/ssot/encoding";
 
+import { KENO_GAIN_TABLE } from "@ssot/ssot/domain";
+
 import { RED_NUMBER_SET, RED_NUMBERS, kenoWinChance } from "./model";
 
 export type CoinSide = "HEADS" | "TAILS";
@@ -216,6 +218,19 @@ export function plinkoPositiveChance(risk: PlinkoRisk): number {
 
 export function plinkoMaxMultiplier(risk: PlinkoRisk): number {
   return Math.max(...PLINKO_FACTOR_TABLE[risk]) / 10_000;
+}
+
+/**
+ * Highest payout multiplier for a Keno ticket of `spotCount` spots — i.e.
+ * matching ALL of them (e.g. 5 spots → 500.5×). Keno's payout is a table that
+ * varies by both spot count AND match count, so the *max* (hit-all) is what
+ * bounds the bank's reserve and therefore the max bet. Sourced from the
+ * contract-mirrored KENO_GAIN_TABLE. Returns 0 when no/invalid spot count.
+ */
+export function kenoMaxMultiplier(spotCount: number): number {
+  const row = KENO_GAIN_TABLE[spotCount];
+  if (!row || row.length === 0) return 0;
+  return Math.max(...row) / 10_000;
 }
 
 export function slotsPositiveChance(): number {

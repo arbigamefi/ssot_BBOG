@@ -8,7 +8,7 @@ vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) =>
     ({
       "casino.room.shell.liveModule": "Live SSOT Module",
-      "casino.room.shell.houseEdge": "House edge",
+      "casino.room.shell.maxBet": "Max bet",
       "casino.room.shell.maxPayout": "Max payout"
     })[key] ?? key
 }));
@@ -20,7 +20,7 @@ describe("GameRoomShell", () => {
     render(
       <GameRoomShell
         gameName="Precision Dice"
-        houseEdge="1.00%"
+        maxBet="200 USDC"
         maxPayout="500 USDC"
         leftPaneContent={<div>Bet controls</div>}
         rightPaneContent={<div>Stage canvas</div>}
@@ -32,7 +32,7 @@ describe("GameRoomShell", () => {
 
     expect(screen.getByRole("heading", { name: "Precision Dice" })).toBeDefined();
     expect(screen.getByText("Live SSOT Module")).toBeDefined();
-    expect(screen.getByText("House edge")).toBeDefined();
+    expect(screen.getByText("Max bet")).toBeDefined();
     expect(screen.getByText("Max payout")).toBeDefined();
     expect(screen.getByText("Bet controls")).toBeDefined();
     expect(screen.getByText("Stage canvas")).toBeDefined();

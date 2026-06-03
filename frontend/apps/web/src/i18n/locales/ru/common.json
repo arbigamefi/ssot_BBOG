@@ -970,7 +970,8 @@
       "shell": {
         "liveModule": "Игра в эфире",
         "houseEdge": "Преимущество казино",
-        "maxPayout": "Макс. выплата"
+        "maxPayout": "Макс. выплата",
+        "maxBet": "Макс. ставка"
       },
       "empty": {
         "moduleNotFound": "Игра не найдена",

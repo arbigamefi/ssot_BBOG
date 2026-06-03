@@ -204,6 +204,26 @@ describe("GameRoomBetPanel", () => {
     expect(props.onPlaceBet).toHaveBeenCalledTimes(1);
   });
 
+  it("caps the Max amount shortcut by wallet balance and current pool max bet", () => {
+    const cappedByPool = renderPanel({
+      hasAccount: true,
+      maxBetAmount: 200,
+      onBetAmountChange: vi.fn()
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Max" }));
+    expect(cappedByPool.onBetAmountChange).toHaveBeenCalledWith(200);
+
+    cleanup();
+    const cappedByWallet = renderPanel({
+      hasAccount: true,
+      walletBalance: { label: "100.00 USDC", raw: 100_000_000n },
+      maxBetAmount: 200,
+      onBetAmountChange: vi.fn()
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Max" }));
+    expect(cappedByWallet.onBetAmountChange).toHaveBeenCalledWith(100);
+  });
+
   it("locks amount shortcuts and advanced inputs while a round is active", () => {
     const props = renderPanel({
       hasAccount: true,

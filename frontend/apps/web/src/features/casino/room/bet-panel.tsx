@@ -4,6 +4,7 @@ import { InformationCircleIcon, WalletIcon } from "@heroicons/react/24/outline";
 import { AssetSelector, cn, type AssetOption } from "@ssot/ui";
 
 import { formatUnits } from "../../betting/model/units";
+import { TokenLogo } from "../../../components/TokenLogo";
 import {
   BetAdvancedSection,
   BetAmountSection,
@@ -30,6 +31,7 @@ export function GameRoomBetPanel({
   selectedAsset,
   onAssetChange,
   betAmount,
+  maxBetAmount,
   onBetAmountChange,
   betCount,
   onBetCountChange,
@@ -67,6 +69,8 @@ export function GameRoomBetPanel({
   selectedAsset?: `0x${string}`;
   onAssetChange?: (asset: `0x${string}`) => void;
   betAmount: number;
+  /** Per-roll amount cap derived from wallet balance and current pool liquidity. */
+  maxBetAmount?: number;
   onBetAmountChange: (amount: number) => void;
   betCount: number;
   onBetCountChange: (count: number) => void;
@@ -105,24 +109,40 @@ export function GameRoomBetPanel({
   return (
     <div className="grid min-h-0 grid-rows-[minmax(0,1fr)_auto] overflow-hidden lg:h-full">
       <div className="min-h-0 pb-2 lg:overflow-y-auto lg:pr-1">
-        {assetOptions && assetOptions.length > 1 && onAssetChange ? (
-          <div className="mb-2">
-            <AssetSelector
-              title={t("casino.room.betPanel.asset")}
-              assets={assetOptions}
-              value={selectedAsset}
-              onValueChange={onAssetChange}
-            />
+        {/* Account context: asset and balance belong together, but should stay
+            visually lighter than the actual amount input below. */}
+        <div className="mb-2 rounded-xl border border-border bg-surface-0 p-2 shadow-inner-e1">
+          <div className="grid grid-cols-[minmax(0,auto)_minmax(0,1fr)] items-center gap-2">
+            <div className="min-w-0">
+              {assetOptions && assetOptions.length > 0 ? (
+                <AssetSelector
+                  variant="inline"
+                  assets={assetOptions}
+                  value={selectedAsset}
+                  onValueChange={onAssetChange}
+                  disabled={isPending}
+                  title={t("casino.room.betPanel.asset")}
+                  renderLogo={(option) => <TokenLogo symbol={option.symbol} size={20} />}
+                  className="max-w-full bg-surface-1"
+                />
+              ) : (
+                <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-fg-subtle">
+                  {t("casino.room.betPanel.asset")}
+                </span>
+              )}
+            </div>
+            <div className="min-w-0 text-right">
+              <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-fg-subtle">
+                {t("casino.room.betPanel.walletBalance")}
+              </div>
+              <div
+                className="mt-0.5 truncate font-mono text-sm font-bold text-fg"
+                title={balanceLabel}
+              >
+                {balanceLabel}
+              </div>
+            </div>
           </div>
-        ) : null}
-
-        <div className="mb-2 flex items-center justify-between">
-          <span className="flex items-center gap-2 text-sm font-bold text-fg-muted">
-            <WalletIcon className="h-4 w-4" /> {t("casino.room.betPanel.walletBalance")}
-          </span>
-          <span className="rounded-lg border border-border bg-surface-1 px-3 py-1 font-mono text-fg shadow-inner-e1">
-            {balanceLabel}
-          </span>
         </div>
 
         {!hasAccount && (
@@ -141,7 +161,9 @@ export function GameRoomBetPanel({
         <div data-tour="bet-amount">
           <BetAmountSection
             betAmount={betAmount}
+            maxBetAmount={maxBetAmount}
             walletBalanceAmount={walletBalanceAmount}
+            assetSymbol={assetSymbol}
             isPending={isPending}
             onBetAmountChange={onBetAmountChange}
           />

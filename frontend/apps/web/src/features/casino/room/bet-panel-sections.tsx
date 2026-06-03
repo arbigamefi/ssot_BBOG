@@ -1,12 +1,9 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import {
-  ChartBarIcon,
-  ChevronDownIcon,
-  CurrencyDollarIcon,
-  InformationCircleIcon
-} from "@heroicons/react/24/outline";
+import { ChartBarIcon, ChevronDownIcon, InformationCircleIcon } from "@heroicons/react/24/outline";
 import { cn } from "@ssot/ui";
+
+import { TokenLogo } from "../../../components/TokenLogo";
 
 const WHOLE_UNIT_PATTERN = "[0-9]*";
 const BET_AMOUNT_PATTERN = "[0-9]*[.]?[0-9]*";
@@ -35,18 +32,27 @@ function parseBetAmountInput(input: string, { min, max }: { min: number; max?: n
 
 export function BetAmountSection({
   betAmount,
+  maxBetAmount,
   walletBalanceAmount,
+  assetSymbol,
   isPending,
   onBetAmountChange
 }: {
   betAmount: number;
+  maxBetAmount?: number;
   walletBalanceAmount: number | null;
+  assetSymbol: string;
   isPending: boolean;
   onBetAmountChange: (amount: number) => void;
 }) {
   const t = useTranslations();
+  const limitCandidates = [walletBalanceAmount, maxBetAmount].filter(
+    (value): value is number => value != null && Number.isFinite(value) && value > 0
+  );
+  const maxAmount = limitCandidates.length > 0 ? toCents(Math.min(...limitCandidates)) : undefined;
   const setBetAmount = (value: number) => {
-    onBetAmountChange(toCents(Math.max(MIN_BET_AMOUNT, value)));
+    const capped = maxAmount == null ? value : Math.min(value, maxAmount);
+    onBetAmountChange(toCents(Math.max(MIN_BET_AMOUNT, capped)));
   };
 
   return (
@@ -60,8 +66,8 @@ export function BetAmountSection({
           isPending ? "opacity-50" : "focus-within:border-brand/40"
         )}
       >
-        <div className="flex items-center px-3">
-          <CurrencyDollarIcon className="h-5 w-5 text-fg-subtle" />
+        <div className="flex items-center gap-1 px-3">
+          <TokenLogo symbol={assetSymbol} size={20} />
           <input
             type="text"
             inputMode="decimal"
@@ -71,7 +77,9 @@ export function BetAmountSection({
             value={String(betAmount)}
             onChange={(event) => {
               if (isPending) return;
-              onBetAmountChange(parseBetAmountInput(event.target.value, { min: MIN_BET_AMOUNT }));
+              onBetAmountChange(
+                parseBetAmountInput(event.target.value, { min: MIN_BET_AMOUNT, max: maxAmount })
+              );
             }}
             disabled={isPending}
             className="w-full border-none bg-transparent pr-2 text-right font-mono text-2xl text-fg outline-none"
@@ -104,7 +112,7 @@ export function BetAmountSection({
           </button>
           <button
             type="button"
-            onClick={() => setBetAmount(walletBalanceAmount ?? betAmount)}
+            onClick={() => setBetAmount(maxAmount ?? walletBalanceAmount ?? betAmount)}
             disabled={isPending}
             className="flex-1 rounded-md bg-surface-0 py-1 text-[10px] font-bold uppercase text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg disabled:cursor-default disabled:opacity-50 disabled:hover:bg-surface-0 disabled:hover:text-fg-subtle"
           >

@@ -14,7 +14,8 @@ vi.mock("@ssot/ui", () => ({
       <div>{title}</div>
       {error ? <div>{error}</div> : null}
     </div>
-  )
+  ),
+  cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" ")
 }));
 
 const baseFlow: EarnFlowState = {

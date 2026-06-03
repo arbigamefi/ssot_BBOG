@@ -19,6 +19,7 @@ import { toGameMeta, type GameMeta } from "../../../../features/casino/room/mode
 import {
   baccaratMultiplier,
   calculateGameWinChance,
+  kenoMaxMultiplier,
   plinkoMaxMultiplier,
   sicBoMultiplier,
   slotsMaxMultiplier,
@@ -27,11 +28,15 @@ import {
   type SicBoKind
 } from "../../../../features/casino/room/params";
 import {
-  formatGameMaxPayout,
-  formatHouseEdge
+  computePoolFreeLiquidity,
+  deriveGameRoomLimits
 } from "../../../../features/casino/room/presentation";
 import { GameRoomBetPanel } from "../../../../features/casino/room/bet-panel";
-import { useGameWalletBalance, useKenoStrobeSpots } from "../../../../features/casino/room/hooks";
+import {
+  useGameWalletBalance,
+  useKenoStrobeSpots,
+  usePoolSnapshot
+} from "../../../../features/casino/room/hooks";
 import {
   useGameResolutionEffect,
   buildCasinoRoundResult,
@@ -182,8 +187,17 @@ export function GamePageClient({ slug }: { slug: string }) {
   const [stopGain, setStopGain] = React.useState<number>(0); // 0 = disabled
   const [stopLoss, setStopLoss] = React.useState<number>(0); // 0 = disabled
   const [advancedOpen, setAdvancedOpen] = React.useState(false);
+  const [walletBalanceRefreshKey, refreshWalletBalance] = React.useReducer((value) => value + 1, 0);
 
-  const walletBalance = useGameWalletBalance({ sdk, asset: casinoPoolAsset?.asset });
+  const walletBalance = useGameWalletBalance({
+    sdk,
+    asset: casinoPoolAsset?.asset,
+    refreshKey: walletBalanceRefreshKey
+  });
+  // Public read of the selected pool's bank snapshot → free liquidity, which
+  // drives the live (verifiable) max-bet / max-payout shown in the header. Works
+  // without a connected wallet and follows the selected asset's pool.
+  const poolSnapshot = usePoolSnapshot({ sdk, poolId: assetSelection.poolId });
   const referrerParam = searchParams.get("ref");
   const referralAffiliate = useReferralAffiliate({
     referrer: referrerParam,
@@ -196,9 +210,10 @@ export function GamePageClient({ slug }: { slug: string }) {
     (bet: DomainBet) => {
       setIsPending(false);
       setTerminalBet(bet);
+      refreshWalletBalance();
       void refetchRecentBets?.();
     },
-    [refetchRecentBets]
+    [refetchRecentBets, refreshWalletBalance]
   );
   const clearStageRevealTimer = React.useCallback(() => {
     if (revealTimerRef.current) {
@@ -329,6 +344,12 @@ export function GamePageClient({ slug }: { slug: string }) {
   });
   const { state, reset, placeBet } = casinoRound;
 
+  React.useEffect(() => {
+    if (state.status === "mined" || state.status === "reconciled") {
+      refreshWalletBalance();
+    }
+  }, [refreshWalletBalance, state.status]);
+
   const { isBetPanelPending, isStagePending } = getCasinoRoomPendingStates({
     isLocalPending: isPending,
     isTransactionActive: casinoRound.isTransactionActive,
@@ -436,17 +457,9 @@ export function GamePageClient({ slug }: { slug: string }) {
       />
     );
 
-  // A5: Live houseEdge and maxPayout from release gamesMeta
   const gameMeta = release?.gamesMeta?.find((m: any) => m.slug === game.slug);
-  const houseEdge = formatHouseEdge(gameMeta, game.slug);
   const assetDecimals = casinoPoolAsset.asset.decimals;
   const assetSymbol = casinoPoolAsset.asset.symbol;
-  const maxPayout = formatGameMaxPayout({
-    assetDecimals,
-    assetSymbol,
-    gameMeta,
-    slug: game.slug
-  });
 
   const multiplier =
     game.slug === "plinko"
@@ -457,10 +470,29 @@ export function GamePageClient({ slug }: { slug: string }) {
           ? baccaratMultiplier(baccaratSide)
           : game.slug === "sic-bo"
             ? sicBoMultiplier(sicBoKind, sicBoValue)
-            : winChance === 0
-              ? 0
-              : 99 / winChance;
+            : game.slug === "keno"
+              ? // Keno's max payout is hitting ALL selected spots (its top
+                // table tier), not the win-chance-derived figure — this is what
+                // bounds the bank reserve and therefore the max bet.
+                kenoMaxMultiplier(kenoSpots.length)
+              : winChance === 0
+                ? 0
+                : 99 / winChance;
   const expectedPayout = betAmount * multiplier;
+
+  // Live, asset-aware header limits derived from the selected pool's free
+  // liquidity (chain-read → verifiable), replacing the old static config tiles.
+  const freeLiquidity = computePoolFreeLiquidity(poolSnapshot);
+  const { maxBet, maxBetRaw, maxPayout } = deriveGameRoomLimits({
+    freeLiquidity,
+    multiplier,
+    assetDecimals,
+    assetSymbol
+  });
+  const maxBetAmountPerRoll =
+    maxBetRaw == null
+      ? undefined
+      : Number(maxBetRaw) / Math.pow(10, assetDecimals) / Math.max(1, Math.floor(betCount));
 
   const LeftPane = (
     <GameRoomBetPanel
@@ -472,6 +504,7 @@ export function GamePageClient({ slug }: { slug: string }) {
       selectedAsset={assetSelection.selectedAsset}
       onAssetChange={assetSelection.setSelectedAsset}
       betAmount={betAmount}
+      maxBetAmount={maxBetAmountPerRoll}
       onBetAmountChange={setBetAmount}
       betCount={betCount}
       onBetCountChange={setBetCount}
@@ -588,7 +621,7 @@ export function GamePageClient({ slug }: { slug: string }) {
     <PageTransition pageKey={`game-${slug}`}>
       <GameRoomShell
         gameName={getLocalizedGameName(t, game)}
-        houseEdge={houseEdge}
+        maxBet={maxBet}
         maxPayout={maxPayout}
         isInteractive={true}
         leftPaneContent={LeftPane}
