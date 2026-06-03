@@ -8,6 +8,7 @@ const FRONTEND_ROOT = process.cwd();
 const REPO_ROOT = path.resolve(FRONTEND_ROOT, "..");
 const KEEPER_DEPLOY_ENV_DIR = path.join(FRONTEND_ROOT, "deploy/casino-keeper");
 const DEFAULT_KEEPER_ENV_FILE = "primary.env";
+const DEFAULT_ALL_KEEPER_ENV_FILES = ["primary.base-mainnet.env", "primary.env"];
 const LEGACY_PUBLIC_HEALTH_PATH = path.join(
   FRONTEND_ROOT,
   "apps/web/public/ops/casino-keeper-health.json"
@@ -44,8 +45,8 @@ function resolveRepoPath(value) {
   return path.isAbsolute(value) ? value : path.resolve(REPO_ROOT, value);
 }
 
-function resolveKeeperDeployEnvFile() {
-  const requested = process.env.KEEPER_ENV_FILE?.trim() || DEFAULT_KEEPER_ENV_FILE;
+function resolveKeeperDeployEnvFile(requestedFile = DEFAULT_KEEPER_ENV_FILE) {
+  const requested = requestedFile.trim() || DEFAULT_KEEPER_ENV_FILE;
   const resolved = path.isAbsolute(requested)
     ? requested
     : path.resolve(KEEPER_DEPLOY_ENV_DIR, requested);
@@ -60,6 +61,22 @@ function resolveKeeperDeployEnvFile() {
 
 function displayKeeperEnvFile(filePath) {
   return path.relative(FRONTEND_ROOT, filePath) || filePath;
+}
+
+function parseKeeperEnvFileList({ allKeepers }) {
+  if (process.env.KEEPER_ENV_FILES?.trim()) {
+    return process.env.KEEPER_ENV_FILES.split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+  }
+
+  if (allKeepers) return DEFAULT_ALL_KEEPER_ENV_FILES;
+
+  return [process.env.KEEPER_ENV_FILE?.trim() || DEFAULT_KEEPER_ENV_FILE];
+}
+
+function localHealthPathForChain(chainId) {
+  return path.join(FRONTEND_ROOT, `.runtime/casino-keeper-health-${chainId}.json`);
 }
 
 function readReleaseBlock(releasePath) {
@@ -111,15 +128,34 @@ function canConnectTcp({ host, port, timeoutMs = 250 }) {
 }
 
 async function applyLocalBetIndexDefaults(env) {
-  if (!env.BET_INDEX_DATABASE_URL?.trim()) {
+  const configuredDatabaseUrl = env.BET_INDEX_DATABASE_URL?.trim();
+  const needsLocalDatabase =
+    !configuredDatabaseUrl ||
+    configuredDatabaseUrl.includes("postgres.example") ||
+    configuredDatabaseUrl.includes("user:password@");
+  const localDatabaseConfigured =
+    configuredDatabaseUrl?.includes("127.0.0.1:54329") ||
+    configuredDatabaseUrl?.includes("localhost:54329");
+
+  if (needsLocalDatabase || localDatabaseConfigured) {
     const localPostgresReady = await canConnectTcp({ host: "127.0.0.1", port: 54329 });
     if (!localPostgresReady) {
       console.error(
         "[casino-keeper-dev] local bet-index Postgres is not reachable; run `pnpm bet-index:db:up` to enable durable bet feeds."
       );
+      if (configuredDatabaseUrl || localDatabaseConfigured) {
+        delete env.BET_INDEX_DATABASE_URL;
+        env.BET_INDEX_WRITE_ENABLED = "false";
+        env.BET_INDEX_READ_ENABLED = "false";
+        env.BET_INDEX_SSL = "false";
+        console.error(
+          "[casino-keeper-dev] disabled local bet-index writes for this keeper process."
+        );
+      }
       return;
     }
     env.BET_INDEX_DATABASE_URL = DEFAULT_LOCAL_BET_INDEX_DATABASE_URL;
+    env.BET_INDEX_SSL = "false";
     console.error("[casino-keeper-dev] using local bet-index Postgres on 127.0.0.1:54329");
   }
 
@@ -165,9 +201,10 @@ function cleanupLegacyPublicHealthFile() {
   }
 }
 
-async function keeperEnv() {
+async function keeperEnv({ envFile }) {
   const env = { ...process.env };
-  const keeperEnvFile = resolveKeeperDeployEnvFile();
+  const externalHealthPath = process.env.KEEPER_HEALTH_PATH?.trim();
+  const keeperEnvFile = resolveKeeperDeployEnvFile(envFile);
   parseEnvFile(keeperEnvFile, env);
 
   if (env.KEEPER_RELEASE_PATH?.trim()) {
@@ -175,7 +212,12 @@ async function keeperEnv() {
   }
   env.KEEPER_POLL_INTERVAL_SECONDS ??= "5";
   env.KEEPER_SCAN_CHUNK_BLOCKS ??= "10";
-  env.KEEPER_HEALTH_PATH ??= path.join(FRONTEND_ROOT, ".runtime/casino-keeper-health.json");
+  const chainId = Number(env.KEEPER_CHAIN_ID || 0);
+  if (chainId > 0 && !externalHealthPath) {
+    env.KEEPER_HEALTH_PATH = localHealthPathForChain(chainId);
+  } else {
+    env.KEEPER_HEALTH_PATH ??= path.join(FRONTEND_ROOT, ".runtime/casino-keeper-health.json");
+  }
   env.KEEPER_HEALTH_PATH = resolveRepoPath(env.KEEPER_HEALTH_PATH);
   await applyLocalBetIndexDefaults(env);
   await applyDevStartBlock(env);
@@ -222,14 +264,29 @@ async function main() {
   cleanupLegacyPublicHealthFile();
   const args = process.argv.slice(2);
   const withWeb = args.includes("--with-web");
-  const webArgs = args.filter((arg) => arg !== "--with-web" && arg !== "--");
-  const env = await keeperEnv();
-  requireKeeperEnv(env);
+  const allKeepers = args.includes("--all-keepers");
+  const webArgs = args.filter((arg) => !["--with-web", "--all-keepers", "--"].includes(arg));
+  const keeperEnvFiles = parseKeeperEnvFileList({ allKeepers });
+  const keeperEnvs = [];
+  const webEnv = { ...process.env };
 
-  await waitForExit(run("pnpm", ["-C", "apps/keeper", "build"], { env }));
+  for (const envFile of keeperEnvFiles) {
+    const env = await keeperEnv({ envFile });
+    requireKeeperEnv(env);
+    keeperEnvs.push(env);
 
-  const children = [run("pnpm", ["-C", "apps/keeper", "start"], { env })];
-  if (withWeb) children.push(run("pnpm", ["-C", "apps/web", "dev", ...webArgs], { env }));
+    const chainId = Number(env.KEEPER_CHAIN_ID || 0);
+    if (chainId > 0) webEnv[`KEEPER_HEALTH_PATH_${chainId}`] = env.KEEPER_HEALTH_PATH;
+  }
+
+  if (keeperEnvs[0]?.KEEPER_HEALTH_PATH) {
+    webEnv.KEEPER_HEALTH_PATH = keeperEnvs[0].KEEPER_HEALTH_PATH;
+  }
+
+  await waitForExit(run("pnpm", ["-C", "apps/keeper", "build"], { env: keeperEnvs[0] }));
+
+  const children = keeperEnvs.map((env) => run("pnpm", ["-C", "apps/keeper", "start"], { env }));
+  if (withWeb) children.push(run("pnpm", ["-C", "apps/web", "dev", ...webArgs], { env: webEnv }));
 
   const shutdown = () => {
     for (const child of children) stop(child);

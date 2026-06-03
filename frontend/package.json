@@ -21,6 +21,7 @@
   "scripts": {
     "dev": "pnpm -C apps/web dev",
     "dev:with-keeper": "node scripts/dev-casino-keeper.mjs --with-web",
+    "dev:with-keepers": "node scripts/dev-casino-keeper.mjs --all-keepers --with-web",
     "build": "pnpm -C apps/web build",
     "bet-index:backfill:local": "BET_INDEX_DATABASE_URL=postgres://arbigamefi:arbigamefi_dev_only@127.0.0.1:54329/arbigamefi pnpm keeper:backfill",
     "bet-index:db:down": "docker compose -f compose.bet-index.yml down",
@@ -31,6 +32,7 @@
     "keeper:build": "pnpm -C apps/keeper build",
     "keeper:backfill": "node scripts/bet-index-backfill.mjs",
     "keeper:dev": "node scripts/dev-casino-keeper.mjs",
+    "keeper:dev:all": "node scripts/dev-casino-keeper.mjs --all-keepers",
     "keeper:start": "pnpm -C apps/keeper start",
     "keeper:test": "pnpm -C apps/keeper test",
     "lint": "pnpm -r lint",

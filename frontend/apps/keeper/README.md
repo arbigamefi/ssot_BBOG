@@ -28,6 +28,32 @@ fulfills:
 pnpm -C frontend dev:with-keeper -- --port 3002
 ```
 
+The local wrapper writes chain-specific health snapshots under
+`frontend/.runtime/` unless `KEEPER_HEALTH_PATH` is explicitly provided in the
+shell. This keeps local status checks aligned with the production multi-chain
+layout.
+
+For local multi-chain health checks, run both the Base mainnet and Base Sepolia
+primary keepers next to the web app:
+
+```bash
+pnpm -C frontend dev:with-keepers -- --port 3002
+```
+
+This uses `primary.base-mainnet.env` for chain `8453` and `primary.env` for
+chain `84532`. Each keeper writes a chain-specific snapshot:
+
+```text
+frontend/.runtime/casino-keeper-health-8453.json
+frontend/.runtime/casino-keeper-health-84532.json
+```
+
+The web app receives matching `KEEPER_HEALTH_PATH_8453` and
+`KEEPER_HEALTH_PATH_84532` values, so `/status?chainId=8453` and
+`/status?chainId=84532` report the actual keeper for each chain. The single
+`dev:with-keeper` command remains useful when you only want the default Base
+Sepolia keeper.
+
 The dev wrapper resolves relative keeper paths from the repo root and derives
 `KEEPER_START_BLOCK` from the current chain head when it is not set, rewinding
 2,000 blocks by default. Override with `KEEPER_DEV_REWIND_BLOCKS` or an explicit
@@ -39,11 +65,24 @@ Keeper-only local run:
 pnpm -C frontend keeper:dev
 ```
 
+Keeper-only multi-chain local run:
+
+```bash
+pnpm -C frontend keeper:dev:all
+```
+
 Use another deploy env file by selecting a file inside
 `frontend/deploy/casino-keeper/`:
 
 ```bash
 KEEPER_ENV_FILE=backup.env pnpm -C frontend keeper:dev
+```
+
+Use a custom multi-keeper list by selecting comma-separated files inside
+`frontend/deploy/casino-keeper/`:
+
+```bash
+KEEPER_ENV_FILES=primary.base-mainnet.env,primary.env pnpm -C frontend keeper:dev:all
 ```
 
 Backup instance:

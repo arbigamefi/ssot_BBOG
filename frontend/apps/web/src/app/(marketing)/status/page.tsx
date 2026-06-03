@@ -1,7 +1,11 @@
 import * as React from "react";
 import type { Metadata } from "next";
 
-import { getSupportedAppChains, type AppChain } from "../../../app-shell/chain-registry";
+import {
+  getSupportedAppChains,
+  resolveDefaultAppChainId,
+  type AppChain
+} from "../../../app-shell/chain-registry";
 import { getHealthzSnapshot, type HealthzSnapshot } from "../../../server/healthz";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +36,10 @@ function formatAge(ageMs: number | null) {
   if (ageMs < 60_000) return `${Math.round(ageMs / 1000)}s`;
   if (ageMs < 3_600_000) return `${Math.round(ageMs / 60_000)}m`;
   return `${Math.round(ageMs / 3_600_000)}h`;
+}
+
+function classNames(...values: Array<string | false | null | undefined>) {
+  return values.filter(Boolean).join(" ");
 }
 
 function CheckCard({
@@ -107,6 +115,31 @@ function buildCards(snapshot: HealthzSnapshot) {
   ];
 }
 
+type StatusSearchParams = Record<string, string | string[] | undefined>;
+
+function firstParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function resolveSelectedChainId(chains: readonly AppChain[], searchParams: StatusSearchParams) {
+  const requested = Number(firstParam(searchParams.chainId));
+  if (Number.isInteger(requested) && chains.some((chain) => chain.id === requested)) {
+    return requested;
+  }
+
+  const defaultChainId = resolveDefaultAppChainId(process.env.NEXT_PUBLIC_CHAIN_ID);
+  if (chains.some((chain) => chain.id === defaultChainId)) return defaultChainId;
+  return chains[0]?.id;
+}
+
+function runtimeModeLabel() {
+  return process.env.NEXT_PUBLIC_ENV?.trim() || process.env.NODE_ENV || "development";
+}
+
+function displayRuntimeMode(runtimeMode: string, isLocalDevelopment: boolean) {
+  return isLocalDevelopment ? `${runtimeMode} / local dev` : runtimeMode;
+}
+
 function ChainStatusSummary({ chain, snapshot }: { chain: AppChain; snapshot: HealthzSnapshot }) {
   const cards = buildCards(snapshot);
   return (
@@ -168,19 +201,25 @@ function ChainStatusSummary({ chain, snapshot }: { chain: AppChain; snapshot: He
   );
 }
 
-export default async function StatusPage() {
+export default async function StatusPage({
+  searchParams
+}: {
+  searchParams?: Promise<StatusSearchParams>;
+}) {
   const chains = getSupportedAppChains();
+  const resolvedSearchParams = searchParams ? await searchParams : {};
+  const selectedChainId = resolveSelectedChainId(chains, resolvedSearchParams);
   const snapshots = await Promise.all(
     chains.map(async (chain) => ({
       chain,
       snapshot: await getHealthzSnapshot({ chainId: chain.id })
     }))
   );
-  const overallStatus: HealthzSnapshot["status"] = snapshots.every(
-    ({ snapshot }) => snapshot.status === "ok"
-  )
-    ? "ok"
-    : "degraded";
+  const selected = snapshots.find(({ chain }) => chain.id === selectedChainId) ?? snapshots[0];
+  const runtimeMode = runtimeModeLabel();
+  const isLocalDevelopment = process.env.NODE_ENV !== "production";
+  const showDevelopmentDiagnostics =
+    isLocalDevelopment || runtimeMode.toLowerCase() !== "production";
 
   return (
     <main className="min-h-screen bg-surface-0 px-6 py-10 text-fg">
@@ -190,29 +229,51 @@ export default async function StatusPage() {
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-fg-muted">
               ArbiGameFi Status
             </p>
-            <h1 className="mt-3 text-4xl font-semibold text-fg">System status by chain</h1>
+            <h1 className="mt-3 text-4xl font-semibold text-fg">System status</h1>
             <p className="mt-3 max-w-2xl text-base text-fg-muted">
-              Live readiness checks for release metadata, casino keeper finalization, and the
-              durable bet index across every deployed chain.
+              Per-chain readiness checks for release metadata, casino keeper finalization, and the
+              durable bet index.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <StatusBadge status={overallStatus} />
+            <StatusBadge status={selected?.snapshot.status ?? "degraded"} />
+            <span className="rounded-full border border-border-soft bg-surface-1 px-4 py-2 text-sm font-semibold text-fg-muted">
+              {displayRuntimeMode(runtimeMode, isLocalDevelopment)}
+            </span>
             <a
               className="rounded-full border border-border-soft bg-surface-1 px-4 py-2 text-sm font-semibold text-fg-muted transition-colors hover:border-border-strong hover:text-fg"
-              href="/api/healthz"
+              href={`/api/healthz?chainId=${selected?.chain.id ?? ""}`}
             >
-              Default JSON
+              Selected JSON
             </a>
           </div>
         </header>
 
-        <section className="grid gap-4 md:grid-cols-3">
+        {showDevelopmentDiagnostics ? (
+          <section className="rounded-lg border border-info/25 bg-info/10 px-4 py-3 text-sm text-fg-muted">
+            <span className="font-semibold text-fg">Development diagnostics.</span> Keeper and
+            bet-index checks reflect the local processes and per-chain health files. A stopped local
+            keeper is shown as degraded for that chain; it is not a production outage.
+          </section>
+        ) : null}
+
+        <nav
+          aria-label="Chain status"
+          role="tablist"
+          className="-mx-2 flex gap-2 overflow-x-auto px-2 pb-1"
+        >
           {snapshots.map(({ chain, snapshot }) => (
             <a
               key={chain.id}
-              className="rounded-lg border border-border-soft bg-surface-1 p-5 transition-colors hover:border-border-strong"
-              href={`#chain-${chain.id}`}
+              aria-selected={chain.id === selected?.chain.id}
+              className={classNames(
+                "min-w-[14rem] rounded-lg border p-4 text-left transition-colors",
+                chain.id === selected?.chain.id
+                  ? "border-brand bg-brand-soft text-fg"
+                  : "border-border-soft bg-surface-1 text-fg-muted hover:border-border-strong hover:text-fg"
+              )}
+              href={`/status?chainId=${chain.id}`}
+              role="tab"
             >
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -226,15 +287,11 @@ export default async function StatusPage() {
               </div>
             </a>
           ))}
-        </section>
+        </nav>
 
-        <div className="flex flex-col gap-6">
-          {snapshots.map(({ chain, snapshot }) => (
-            <div key={chain.id} id={`chain-${chain.id}`} className="scroll-mt-8">
-              <ChainStatusSummary chain={chain} snapshot={snapshot} />
-            </div>
-          ))}
-        </div>
+        {selected ? (
+          <ChainStatusSummary chain={selected.chain} snapshot={selected.snapshot} />
+        ) : null}
       </div>
     </main>
   );
