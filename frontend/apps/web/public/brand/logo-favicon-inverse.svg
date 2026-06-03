@@ -3,8 +3,8 @@
   <defs>
     <!-- Light background gradient -->
     <linearGradient id="lightGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#6366F1"/>
-      <stop offset="100%" stop-color="#A855F7"/>
+      <stop offset="0%" stop-color="#8F6CF9"/>
+      <stop offset="100%" stop-color="#52D4A6"/>
     </linearGradient>
   </defs>
 

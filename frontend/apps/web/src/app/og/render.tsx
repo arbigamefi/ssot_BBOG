@@ -12,9 +12,9 @@ const BG = "#070a0e";
 const BG_2 = "#0c1018";
 const FG = "#f8fafc";
 const MUTED = "#98a3b4";
-const BRAND = "#6366F1";
-const BRAND_MID = "#818CF8";
-const ACCENT = "#A855F7";
+const BRAND = "#8F6CF9";
+const BRAND_MID = "#6EE7F9";
+const ACCENT = "#52D4A6";
 const BORDER = "#1c2330";
 
 export function renderOgCard({

@@ -8,7 +8,7 @@
 
 - **Size**: 128x128px viewBox
 - **Usage**: Main logo for headers, landing pages, marketing materials
-- **Colors**: Indigo (#6366F1) to Purple (#A855F7) gradient
+- **Colors**: Product purple (`#8F6CF9`) to casino teal (`#52D4A6`) gradient
 
 ### 2. `logo-icon.svg`
 
@@ -16,7 +16,7 @@
 
 - **Size**: 96x96px viewBox
 - **Usage**: App icons, social media profile pictures, favicons (larger sizes)
-- **Colors**: Brand gradient (Indigo to Purple)
+- **Colors**: Brand gradient adapted to the current web palette
 
 ### 3. `logo-favicon.svg`
 
@@ -40,7 +40,7 @@
 
 - **Size**: 96x96px viewBox
 - **Usage**: Single-color printing, monochrome displays
-- **Color**: Indigo-500 (#6366F1)
+- **Color**: Product purple (`#8F6CF9`)
 
 ### 6. `logo-full.svg`
 
@@ -54,10 +54,11 @@
 
 ### Brand Colors
 
-- **Primary**: Indigo-500 `#6366F1`
-- **Primary Dark**: Indigo-600 `#4F46E5`
-- **Accent**: Purple-500 `#A855F7`
-- **Gradient**: `linear-gradient(120deg, #6366F1 0%, #818CF8 50%, #A855F7 100%)`
+- **Primary**: Product purple `#8F6CF9`
+- **Primary Dark**: Deep purple `#7A5CF4`
+- **Accent**: Casino teal `#52D4A6`
+- **Highlight**: Cyan `#6EE7F9`
+- **Gradient**: `linear-gradient(120deg, #8F6CF9 0%, #6EE7F9 50%, #52D4A6 100%)`
 
 ### Design Concept
 
@@ -111,13 +112,14 @@ All logos are SVG format for:
 - ✅ Small file sizes
 - ✅ Perfect quality at all resolutions
 - ✅ Easy color customization via CSS
+- ✅ No raster fallback generation step; this avoids local `rsvg-convert` hangs and keeps icon output deterministic
 
 ## Version History
 
 **v2.0** (June 2026)
 
 - Redesigned for ArbiGameFi's B2C casino/sportsbook product direction
-- Updated colors to match brand palette (Indigo/Purple)
+- Adapted the supplied brand shape to the current product palette instead of changing the app's established visual system
 - New hexagon-based design concept
 - Complete set of variants created
 

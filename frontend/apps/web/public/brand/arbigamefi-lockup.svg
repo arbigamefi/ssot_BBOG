@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg width="256" height="96" viewBox="0 0 256 96" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <!-- Brand Primary Gradient -->
+    <!-- Product Gradient -->
     <linearGradient id="brandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#6366F1"/>
-      <stop offset="50%" stop-color="#818CF8"/>
-      <stop offset="100%" stop-color="#A855F7"/>
+      <stop offset="0%" stop-color="#8F6CF9"/>
+      <stop offset="50%" stop-color="#6EE7F9"/>
+      <stop offset="100%" stop-color="#52D4A6"/>
     </linearGradient>
 
     <!-- Text gradient -->

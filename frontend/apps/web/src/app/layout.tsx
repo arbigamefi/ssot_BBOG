@@ -48,8 +48,7 @@ export async function generateMetadata(): Promise<Metadata> {
         : {}
     },
     icons: {
-      icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
-      apple: "/apple-touch-icon.png"
+      icon: [{ url: "/favicon.svg", type: "image/svg+xml" }]
     },
     manifest: "/manifest.json",
     // OG/Twitter images are provided by the file-based `opengraph-image.tsx`
