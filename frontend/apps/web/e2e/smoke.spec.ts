@@ -36,7 +36,7 @@ test.describe("current route smoke", () => {
       "href",
       "/earn"
     );
-    await expect(page.getByRole("heading", { name: "Eight games. One wallet." })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Game rooms. One wallet." })).toBeVisible();
   });
 
   test("product header points only at current product routes", async ({ page }) => {
