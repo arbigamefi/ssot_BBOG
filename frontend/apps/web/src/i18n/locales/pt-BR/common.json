@@ -263,11 +263,15 @@
     "pages": {
       "casino": {
         "title": "Cassino",
-        "description": "Cassino nativo de carteira — oito jogos, cada giro verificável on-chain. Sem cadastro, sem custódia."
+        "description": "Jogos de cassino nativos de carteira, cada giro verificável on-chain. Sem cadastro, sem custódia."
       },
       "casinoRoom": {
         "title": "{game}",
         "description": "Jogue {game} com aleatoriedade verificável, status do VRF visível e um recibo de resultado derivado da blockchain."
+      },
+      "casinoReceipt": {
+        "title": "Comprovante de aposta #{betId}",
+        "description": "Comprovante público de liquidação da aposta de cassino #{betId}, incluindo pagamento indexado, aleatoriedade, jogador e prova no explorer."
       },
       "sportsbook": {
         "title": "Apostas esportivas",
@@ -338,7 +342,7 @@
     "hero": {
       "channel": "Ao vivo na Arbitrum",
       "title": "Cassino verificável on-chain.",
-      "description": "Oito jogos. Cada giro verificável on-chain. Ganhou, o prêmio cai na sua carteira em segundos — sem cadastro, sem custódia, sem intermediário.",
+      "description": "Jogos de cassino verificáveis on-chain. Ganhou, o prêmio cai na sua carteira em segundos — sem cadastro, sem custódia, sem intermediário.",
       "enterCasino": "Começar a jogar",
       "viewBank": "Como funciona",
       "consoleLabel": "Status ao vivo",
@@ -370,12 +374,12 @@
       },
       "release": {
         "label": "Jogos ativos",
-        "detail": "Todos os oito jogos ao vivo, mais o banco."
+        "detail": "Salas de jogo ao vivo, mais o banco."
       }
     },
     "rooms": {
       "eyebrow": "Todos os jogos",
-      "title": "Oito jogos. Uma carteira.",
+      "title": "Salas de jogo. Uma carteira.",
       "detail": "Cada jogo liquida no próprio contrato. Escolha um e entre — sem cadastro.",
       "actionLabel": "Ver todos"
     },
@@ -872,7 +876,7 @@
       "hero": {
         "eyebrow": "Lobby de jogos",
         "title": "Escolha um jogo.",
-        "description": "Oito jogos. Conecte a carteira e entre direto. Cada giro fica on-chain."
+        "description": "Salas de jogo verificáveis. Conecte a carteira e entre direto. Cada giro fica on-chain."
       },
       "stats": {
         "rooms": "Jogos disponíveis",
@@ -1341,6 +1345,47 @@
           "linkCopied": "Link copiado"
         }
       },
+      "receipt": {
+        "eyebrow": "Comprovante público",
+        "title": "Comprovante de aposta #{betId}",
+        "description": "Uma visão indexada e compartilhável desta rodada. A prova da aposta permanece on-chain; os números indexados podem atrasar enquanto o keeper e o banco de dados se atualizam.",
+        "indexed": "Indexado",
+        "proof": "Prova e detalhes on-chain",
+        "missing": {
+          "title": "Comprovante ainda não indexado",
+          "description": "Esta aposta ainda não está disponível no índice durável. Tente novamente depois que o keeper se atualizar, ou verifique a transação diretamente no explorer."
+        },
+        "status": {
+          "placed": "Apostado",
+          "randomReady": "Aleatoriedade pronta",
+          "finalized": "Finalizado",
+          "refunded": "Reembolsado"
+        },
+        "metrics": {
+          "stake": "Aposta",
+          "payout": "Pagamento",
+          "net": "Líquido",
+          "state": "Estado"
+        },
+        "facts": {
+          "game": "Jogo",
+          "player": "Jogador",
+          "affiliate": "Indicador",
+          "asset": "Ativo",
+          "betId": "ID da aposta",
+          "requestId": "Pedido VRF",
+          "randomHash": "Hash aleatório",
+          "placedBlock": "Bloco da aposta",
+          "updatedAt": "Indexado em",
+          "lastEvent": "Último evento",
+          "lastTx": "Última tx"
+        },
+        "actions": {
+          "play": "Jogar este jogo",
+          "explorer": "Ver transação",
+          "casino": "Explorar cassino"
+        }
+      },
       "audit": {
         "loading": "Carregando o fluxo de auditoria",
         "headers": {
@@ -1685,6 +1730,959 @@
             }
           ]
         }
+      }
+    }
+  },
+  "sportsbook": {
+    "index": {
+      "loading": "Carregando apostas esportivas...",
+      "noRelease": {
+        "title": "Apostas esportivas indisponíveis nesta rede",
+        "description": "As apostas esportivas não estão ativas na rede à qual você está conectado. Troque de rede para explorar os mercados."
+      },
+      "header": {
+        "metadataEnabled": "Bilhetes habilitados",
+        "readOnlyPreview": "Modo de pré-visualização",
+        "sportsHubPresent": "SportsHub presente",
+        "sportsHubMissing": "SportsHub ausente",
+        "title": "Apostas esportivas",
+        "description": "Escolha um mercado de futebol, selecione Casa, Empate ou Fora e registre um bilhete de odds fixas com liquidação on-chain pela SportsHub."
+      },
+      "riskCard": {
+        "eyebrow": "Registro de bilhete",
+        "signedOddsOnly": "Apenas odds assinadas",
+        "locked": "Modo de pré-visualização",
+        "description": "Abra a página de detalhes de um mercado e forneça um snapshot de odds assinadas antes de registrar.",
+        "lockedDescription": "As leituras de mercado estão ativas, mas o registro público de bilhetes está desabilitado nesta build. Você ainda pode inspecionar o mercado mais recente e as regras de liquidação.",
+        "inspect": "Abrir mercado mais recente"
+      },
+      "details": {
+        "release": "Build",
+        "sportsHub": "SportsHub",
+        "embeddedMetadataPresent": "Metadados embutidos presentes",
+        "notAvailable": "Indisponível",
+        "riskEngine": "Motor de risco",
+        "riskEngineHelper": "Superfície de aplicação de limites compartilhados",
+        "challengeWindow": "Janela de contestação",
+        "challengeWindowHelper": "Tempo limite para disputa de resultado",
+        "nextMarket": "Próximo mercado",
+        "marketHelper": "Contador on-chain do mercado mais recente",
+        "nextTicket": "Próximo bilhete",
+        "ticketHelper": "Contador on-chain do bilhete mais recente",
+        "runtimeReadFailed": "Falha na leitura de runtime da SportsHub",
+        "sdkRead": "Lê dados on-chain em tempo real"
+      },
+      "release": {
+        "eyebrow": "Como a justiça é garantida",
+        "title": "Oráculo, liquidação e pagamento — tudo on-chain.",
+        "description": "O bundle ativo expõe a identidade das odds assinadas, o conjunto de relatores de resultado e os endereços de contrato que tornam cada bilhete auditável.",
+        "oddsSignerSet": "Conjunto de signatários de odds",
+        "resultReporterSet": "Conjunto de relatores de resultado",
+        "reporterThreshold": "Limiar de relatores",
+        "reporterThresholdHelper": "Mínimo de relatores de resultado",
+        "frontendFlag": "Flag de frontend",
+        "booleanTrue": "true",
+        "booleanFalse": "false",
+        "challenger": "Contestador",
+        "arbitrator": "Árbitro"
+      },
+      "mvp": {
+        "eyebrow": "Formato de mercado",
+        "title": "Fluxo de bilhete de futebol 1X2",
+        "description": "O caminho do MVP é intencionalmente enxuto: odds fixas pré-jogo, snapshots assinados, evidência explícita de resultado e uma janela de contestação antes da finalização da liquidação.",
+        "rows": {
+          "marketType": {
+            "label": "Tipo de mercado",
+            "value": "Futebol 1X2 pré-jogo"
+          },
+          "oddsSource": {
+            "label": "Fonte das odds",
+            "value": "Candidato The Odds API"
+          },
+          "settlement": {
+            "label": "Liquidação",
+            "value": "Resultado do relator mais janela de contestação"
+          },
+          "launchState": {
+            "label": "Estado de lançamento",
+            "enabled": "Bilhetes Canary habilitados",
+            "disabled": "Somente leitura até a emissão de bilhetes ser habilitada"
+          }
+        }
+      },
+      "caps": {
+        "eyebrow": "Limites do protocolo",
+        "title": "Limites de topo da SportsHub",
+        "description": "Limites de aposta por mercado, definidos pela configuração ativa e visíveis on-chain.",
+        "riskTitle": "Limites globais de risco da SportsHub"
+      },
+      "marketTape": {
+        "eyebrow": "Mercados",
+        "title": "Mercados de futebol disponíveis",
+        "descriptionEnabled": "Abra um mercado para revisar resultados, horários, exposição reservada e registrar um bilhete de odds assinadas enquanto o mercado estiver aberto.",
+        "descriptionDisabled": "Abra um mercado para revisar resultados, horários e exposição reservada. O registro de bilhetes permanece desabilitado nesta build."
+      },
+      "lookup": {
+        "eyebrow": "Meu bilhete",
+        "title": "Acompanhar um bilhete",
+        "description": "Insira o id de um bilhete para verificar a aposta, o resultado selecionado, o pagamento e o estado final diretamente da SportsHub.",
+        "marketId": "Id do mercado",
+        "ticketId": "Id do bilhete",
+        "marketEmpty": "Insira o id de um mercado da SportsHub para inspecionar estado, status do resultado e exposição reservada.",
+        "ticketEmpty": "Insira o id de um bilhete da SportsHub para inspecionar posição, aposta, pagamento e estado do bilhete.",
+        "marketNumericError": "Insira um id de mercado numérico.",
+        "ticketNumericError": "Insira um id de bilhete numérico."
+      },
+      "advanced": {
+        "summary": "Provas on-chain avançadas e ferramentas de operador",
+        "marketLookupEyebrow": "Consulta de mercado",
+        "marketLookupTitle": "Inspecionar um mercado da SportsHub",
+        "marketLookupDescription": "Leitura para desenvolvedores do estado do mercado, proposta de resultado e exposição reservada."
+      },
+      "operator": {
+        "eyebrow": "Escritas do operador",
+        "title": "Administração de mercado e resultado",
+        "description": "Ações de governança e de relatores são expostas como chamadas tipadas de SDK para carteiras autorizadas. O registro público de bilhetes usa um caminho separado de odds assinadas, e os papéis de contrato ainda validam cada escrita.",
+        "walletRoleRequired": "O papel da carteira precisa estar autorizado na SportsHub."
+      },
+      "bankroll": {
+        "eyebrow": "Banca",
+        "title": "Isolamento do pool esportivo",
+        "description": "A liquidez esportiva é mantida separada da liquidez dos jogos de cassino, para que a exposição das apostas esportivas possa ser limitada, pausada e monitorada de forma independente.",
+        "noPool": "A banca das apostas esportivas ainda não está ativa nesta rede."
+      },
+      "controls": {
+        "eyebrow": "Controles",
+        "title": "Os bloqueios de lançamento permanecem explícitos",
+        "description": "A página é intencionalmente operacional: mantém o deploy da SportsHub visível enquanto preserva os bloqueios de lançamento público acompanhados no pacote de ops.",
+        "links": {
+          "goNoGo": "Pacote go/no-go",
+          "frontendAccess": "Política de acesso ao frontend",
+          "providerPolicy": "Política de provedores"
+        }
+      }
+    },
+    "player": {
+      "header": {
+        "title": "Apostas esportivas",
+        "description": "Escolha um mercado, selecione um resultado e registre um bilhete de odds fixas liquidado on-chain.",
+        "descriptionPreview": "Os mercados ficam visíveis enquanto os bilhetes públicos permanecem desabilitados nesta build. Inspecione os resultados antes do lançamento.",
+        "opsLink": "Console do operador",
+        "status": {
+          "ready": "Bilhetes ativos",
+          "previewOnly": "Apenas pré-visualização",
+          "notInRelease": "Indisponível",
+          "readOnly": "Somente leitura"
+        }
+      },
+      "board": {
+        "bucket": {
+          "live": "Ao vivo agora",
+          "today": "Hoje",
+          "upcoming": "Em breve",
+          "past": "Liquidados recentemente"
+        },
+        "count": "{count, plural, one {1 mercado} other {# mercados}}"
+      },
+      "lobby": {
+        "featuredEyebrow": "Mercado em destaque",
+        "eventTitle": "{away} @ {home}",
+        "fallbackTitle": "Mercado {tag}",
+        "kickoff": "Início {time}",
+        "openMarket": "Abrir mercado",
+        "viewMarket": "Ver mercado",
+        "oddsPending": "{count} resultados · preços pendentes",
+        "snapshotEyebrow": "Snapshot do mercado",
+        "snapshotTitle": "Quadro de futebol",
+        "snapshotDescription": "Veja os mercados de odds fixas ao vivo, futuros e liquidados recentemente antes de abrir um bilhete.",
+        "live": "Ao vivo",
+        "today": "Hoje",
+        "upcoming": "Em breve",
+        "settled": "Liquidados",
+        "boardTitle": "Quadro de mercados",
+        "boardDescription": "Abra uma linha para ver odds, registro de bilhete, prova de resultado e o estado de liquidação do mercado.",
+        "side": {
+          "home": "Casa",
+          "draw": "Empate",
+          "away": "Fora"
+        },
+        "filters": {
+          "ariaLabel": "Filtrar mercados de apostas esportivas",
+          "all": "Todos",
+          "live": "Ao vivo",
+          "today": "Hoje",
+          "upcoming": "Em breve",
+          "past": "Liquidados",
+          "empty": {
+            "all": "Nenhum mercado de apostas esportivas publicado no momento.",
+            "live": "Nenhum mercado ao vivo disponível no momento.",
+            "today": "Nenhum mercado agendado para hoje.",
+            "upcoming": "Nenhum mercado futuro publicado ainda.",
+            "past": "Nenhum mercado liquidado para exibir ainda."
+          }
+        }
+      },
+      "event": {
+        "fallbackTitle": "Mercado {tag}",
+        "kickoffAt": "Início {time}",
+        "outcomesPending": "{count} resultados · preços pendentes",
+        "outcomeShort": {
+          "home": "Casa",
+          "draw": "Empate",
+          "away": "Fora"
+        }
+      },
+      "marketState": {
+        "none": "Desconhecido",
+        "draft": "Rascunho",
+        "open": "Aberto",
+        "locked": "Bloqueado",
+        "suspended": "Suspenso",
+        "resultProposed": "Resultado proposto",
+        "challenged": "Contestado",
+        "resolved": "Liquidado",
+        "voided": "Anulado",
+        "live": "Ao vivo"
+      },
+      "empty": {
+        "ctaCasino": "Explorar cassino",
+        "ctaOps": "Console do operador",
+        "preview": {
+          "title": "As apostas esportivas estão em pré-visualização",
+          "description": "Os bilhetes públicos abrem após a conclusão do checklist de lançamento. Você ainda pode inspecionar os mercados futuros e o modelo de liquidação on-chain."
+        },
+        "quiet": {
+          "title": "Nenhum mercado agendado",
+          "description": "Não há mercados ao vivo ou futuros no momento. Volte mais perto do início para a próxima rodada."
+        }
+      },
+      "error": {
+        "title": "Não foi possível carregar os mercados de apostas esportivas. Atualize em instantes."
+      },
+      "detail": {
+        "noRelease": {
+          "title": "Apostas esportivas indisponíveis",
+          "description": "As apostas esportivas não estão ativas nesta rede."
+        },
+        "invalid": {
+          "title": "Id de mercado inválido",
+          "description": "O link está malformado. Escolha um mercado na lista de apostas esportivas.",
+          "back": "Voltar às apostas esportivas"
+        },
+        "readFailed": {
+          "title": "Não foi possível carregar este mercado",
+          "description": "A leitura do contrato falhou. Atualize a página ou escolha outro mercado.",
+          "return": "Voltar às apostas esportivas"
+        },
+        "refreshing": "Atualizando o estado do mercado…",
+        "header": {
+          "back": "Voltar às apostas esportivas",
+          "fallback": "Mercado {tag}",
+          "bookmaker": "via {name}",
+          "kickoff": "Início {time}",
+          "locks": "Fecha {time}"
+        },
+        "board": {
+          "title": "Escolha um resultado",
+          "titleResolved": "Resultado liquidado",
+          "snapshotTime": "Preços em {time}",
+          "winner": "Vencedor",
+          "outcomeShort": "Resultado {outcomeId}",
+          "outcomeSide": {
+            "home": "Casa",
+            "draw": "Empate",
+            "away": "Fora"
+          },
+          "fallback": {
+            "binaryYes": "Sim",
+            "binaryNo": "Não",
+            "threeWayHome": "Casa",
+            "threeWayDraw": "Empate",
+            "threeWayAway": "Fora",
+            "generic": "Resultado {outcomeId}"
+          },
+          "oddsPending": "Os preços ainda não foram publicados para este mercado.",
+          "providerUnavailable": "Não foi possível obter as odds assinadas. A seleção de resultado fica desabilitada até as odds retornarem."
+        },
+        "result": {
+          "voidedTitle": "Mercado anulado",
+          "voidedDescription": "Todos os bilhetes deste mercado são reembolsados. Nenhuma ação adicional é necessária.",
+          "challengedTitle": "Resultado contestado",
+          "challengedDescription": "Um resultado de relator está em arbitragem. A liquidação fica suspensa até a disputa ser resolvida.",
+          "settledTitle": "Liquidado · {outcome} vence",
+          "settledDescription": "O mercado foi finalizado on-chain. Os bilhetes vencedores já podem ser liquidados.",
+          "proposedTitle": "Resultado proposto · {outcome}",
+          "proposedDescription": "A janela de contestação está aberta. A liquidação é finalizada em {finalizes}, a menos que a proposta seja contestada.",
+          "outcomeIdFallback": "Resultado {outcomeId}",
+          "rows": {
+            "proposer": "Proponente",
+            "reporterCount": "Relatores",
+            "proposedAt": "Proposto em",
+            "finalizesAt": "Finaliza em"
+          }
+        },
+        "slip": {
+          "marketMustBeOpen": "O mercado não está aceitando bilhetes no momento.",
+          "outcomeFallback": "Resultado {outcomeId}"
+        },
+        "myTickets": {
+          "title": "Seus bilhetes",
+          "description": "Acompanhe os bilhetes que você registrou neste mercado sem sair da página.",
+          "refreshing": "Atualizando",
+          "connect": "Conecte a carteira para ver seus bilhetes deste mercado.",
+          "loading": "Carregando seus bilhetes…",
+          "empty": "Ainda não há bilhetes neste mercado.",
+          "error": "Não foi possível carregar seus bilhetes esportivos agora.",
+          "pending": "Pendente",
+          "ticketNumber": "S#{ticketId}",
+          "unknownOutcome": "Resultado pendente",
+          "binaryYes": "Sim",
+          "binaryNo": "Não",
+          "home": "Casa",
+          "draw": "Empate",
+          "away": "Fora",
+          "outcomeFallback": "Resultado {outcomeId}",
+          "columns": {
+            "ticket": "Bilhete",
+            "pick": "Palpite",
+            "stake": "Aposta",
+            "payout": "Pagamento",
+            "status": "Status"
+          },
+          "status": {
+            "open": "Em aberto",
+            "won": "Ganho",
+            "lost": "Perdido",
+            "refunded": "Reembolsado"
+          }
+        },
+        "latestTicket": {
+          "eyebrow": "Bilhete aceito",
+          "title": "O bilhete S#{ticketId} está ativo",
+          "description": "Seu bilhete está on-chain. Mantenha esta página aberta ou veja o comprovante para acompanhar a proposta de resultado, a finalização e a liquidação.",
+          "viewTicket": "Acompanhar bilhete",
+          "pick": "Palpite",
+          "price": "Preço aceito",
+          "potentialPayout": "Pagamento potencial",
+          "stage": {
+            "idle": "Defina uma aposta e escolha um resultado.",
+            "ready": "Pronto para registrar este bilhete.",
+            "quoting": "Buscando um preço assinado.",
+            "planning": "Preparando o bilhete on-chain.",
+            "signing": "Aguardando a assinatura da carteira.",
+            "mining": "Transmitindo o bilhete.",
+            "tracking": "O bilhete está on-chain. Acompanhando a proposta de resultado, a finalização e a liquidação.",
+            "settled": "Bilhete liquidado. Abra o comprovante para os detalhes do pagamento.",
+            "refunded": "Bilhete reembolsado. Abra o comprovante para os detalhes do reembolso.",
+            "voided": "Bilhete anulado. Abra o comprovante para os detalhes do reembolso.",
+            "failed": "O registro do bilhete precisa de atenção. Revise o boletim de aposta e tente novamente."
+          }
+        },
+        "meta": {
+          "title": "Detalhes do mercado",
+          "outcomes": "Resultados",
+          "reserved": "Reservado",
+          "version": "Versão",
+          "state": "Estado"
+        },
+        "proof": {
+          "summary": "Prova on-chain",
+          "rows": {
+            "marketId": "ID do mercado",
+            "marketKey": "marketKey"
+          }
+        }
+      },
+      "slip": {
+        "ariaLabel": "Boletim de aposta",
+        "title": "Boletim de aposta",
+        "selection": "Resultado selecionado",
+        "emptySelection": "Escolha um resultado para começar.",
+        "priceUnknown": "—",
+        "stakeLabel": "Aposta ({symbol})",
+        "stakeRow": "Aposta",
+        "payoutRow": "Pagamento potencial",
+        "stageLabel": "Status",
+        "stage": {
+          "idle": "Escolha um resultado e insira sua aposta.",
+          "ready": "Pronto para registrar.",
+          "fetchingOdds": "Buscando odds assinadas…",
+          "planning": "Montando o plano do bilhete…",
+          "signing": "Confirme na sua carteira…",
+          "mining": "Enviando o bilhete on-chain…",
+          "placed": "Bilhete registrado.",
+          "error": "Falha ao registrar o bilhete."
+        },
+        "action": {
+          "idle": "Fazer aposta",
+          "ready": "Fazer aposta",
+          "busy": "Registrando…",
+          "placed": "Bilhete registrado",
+          "retry": "Tentar novamente"
+        },
+        "receipt": {
+          "title": "Bilhete registrado",
+          "payout": "Pagamento potencial",
+          "ticketId": "Bilhete",
+          "viewTicket": "Ver bilhete",
+          "placeAnother": "Fazer outra aposta"
+        }
+      },
+      "ticket": {
+        "back": "Voltar à atividade",
+        "bookmaker": "via {name}",
+        "subtitle": "Bilhete SportsHub #{ticketId}",
+        "eventTitle": "{away} @ {home}",
+        "fallbackMarket": "Mercado {tag}",
+        "fallbackTicket": "Bilhete {ticketId}",
+        "fallbackOutcome": "Resultado {outcomeId}",
+        "refreshing": "Atualizando…",
+        "noRelease": {
+          "title": "Bilhete indisponível",
+          "description": "As apostas esportivas não estão ativas nesta rede."
+        },
+        "invalid": {
+          "title": "Id de bilhete inválido",
+          "description": "O link está malformado. Volte à atividade e escolha um bilhete da SportsHub.",
+          "back": "Voltar à atividade"
+        },
+        "readFailed": {
+          "title": "Não foi possível carregar este bilhete",
+          "description": "A SportsHub não retornou um bilhete para este id, ou a leitura de RPC falhou."
+        },
+        "status": {
+          "held": "Bilhete aceito",
+          "resultReady": "Resultado disponível",
+          "settled": "Liquidado",
+          "won": "Bilhete ganho",
+          "lost": "Bilhete perdido",
+          "refunded": "Reembolsado",
+          "voided": "Anulado"
+        },
+        "metrics": {
+          "selection": "Seu palpite",
+          "price": "Preço aceito {price}",
+          "stake": "Aposta",
+          "pool": "Pool {poolId}",
+          "payout": "Pagamento potencial",
+          "winner": "Vencedor: {outcome}",
+          "pendingResult": "Aguardando o resultado oficial"
+        },
+        "receipt": {
+          "eyebrow": "Comprovante do bilhete",
+          "wonTitle": "Bilhete vencedor",
+          "wonDescription": "Seu palpite coincidiu com o resultado final do mercado. O retorno mostrado abaixo é o pagamento on-chain do bilhete.",
+          "lostTitle": "Bilhete perdido",
+          "lostDescription": "Seu palpite não coincidiu com o resultado final do mercado. O resultado líquido reflete o valor apostado.",
+          "refundedTitle": "Bilhete reembolsado",
+          "refundedDescription": "Este bilhete foi encerrado por reembolso ou anulação. O valor devolvido é mostrado abaixo.",
+          "openTitle": "Bilhete aceito",
+          "openDescription": "O bilhete está ativo na SportsHub. Os valores de retorno e lucro permanecem potenciais até o mercado ser finalizado.",
+          "pick": "Seu palpite",
+          "winner": "Vencedor final",
+          "winnerValue": "Vencedor: {outcome}",
+          "pendingWinner": "Aguardando o resultado oficial",
+          "stake": "Aposta",
+          "return": "Retorno",
+          "potentialReturn": "Retorno potencial",
+          "netResult": "Resultado líquido",
+          "potentialProfit": "Lucro potencial",
+          "pool": "Pool"
+        },
+        "facts": {
+          "title": "Prova do bilhete",
+          "summaryHint": "Avançado",
+          "description": "Esses hashes vinculam o bilhete, o snapshot de odds, o regulamento e a transação de registro. Ficam ocultos por padrão porque o comprovante acima é a visão principal do jogador.",
+          "ticketId": "Id do bilhete",
+          "marketId": "Id do mercado",
+          "positionId": "Id da posição",
+          "acceptedAt": "Aceito em",
+          "player": "Jogador",
+          "ticketState": "Estado do bilhete",
+          "oddsSnapshotHash": "Snapshot de odds",
+          "rulebookHash": "Regulamento",
+          "placeTx": "Tx de registro"
+        },
+        "lifecycle": {
+          "eyebrow": "Ciclo de vida do bilhete",
+          "held": {
+            "title": "Aguardando o resultado oficial",
+            "description": "O bilhete está aceito on-chain. Ele poderá ser liquidado após o resultado do mercado ser finalizado."
+          },
+          "finalityPending": {
+            "title": "Resultado proposto",
+            "description": "O resultado oficial foi proposto. A liquidação abre após o fechamento da janela de contestação.",
+            "detail": "Alvo de finalização: {time}"
+          },
+          "resultReady": {
+            "title": "Finalização do resultado alcançada",
+            "description": "A prova do resultado existe, mas o mercado ainda não foi finalizado no estado resolvido."
+          },
+          "settleReady": {
+            "title": "Pronto para liquidar",
+            "description": "O mercado está resolvido. Qualquer pessoa pode liquidar este bilhete e liberar o pagamento."
+          },
+          "refundReady": {
+            "title": "Reembolso disponível",
+            "description": "O mercado foi anulado. Este bilhete pode devolver a aposta original."
+          },
+          "settled": {
+            "title": "Bilhete liquidado",
+            "description": "O bilhete está liquidado. Seu pagamento está pronto para ser resgatado."
+          },
+          "refunded": {
+            "title": "Aposta reembolsada",
+            "description": "O caminho de anulação/reembolso devolveu a aposta original."
+          },
+          "voided": {
+            "title": "Bilhete anulado",
+            "description": "O mercado foi anulado e este bilhete foi encerrado pelo caminho de anulação."
+          }
+        },
+        "actions": {
+          "openMarket": "Abrir mercado",
+          "ops": "Inspecionar no ops",
+          "settle": "Liquidar bilhete",
+          "settling": "Liquidando…",
+          "refund": "Reembolsar aposta",
+          "refunding": "Reembolsando…",
+          "settleTrace": "Rastreamento da liquidação",
+          "refundTrace": "Rastreamento do reembolso",
+          "traceSubtitle": "Status da transação da carteira",
+          "status": "Status",
+          "viewExplorer": "Ver no explorador",
+          "resetTrace": "Redefinir rastreamento",
+          "transactionError": "Transação falhou"
+        },
+        "flows": {
+          "preflight": "Verificação prévia",
+          "confirm": "Confirmar comprovante",
+          "receipt": "Aguarde o comprovante da transação.",
+          "settle": {
+            "submit": "Liquidar bilhete",
+            "preflight": "Confirme que o bilhete ainda está retido e que o mercado está resolvido.",
+            "broadcast": "Transmitir SportsHub.settleTicket."
+          },
+          "refund": {
+            "submit": "Reembolsar aposta",
+            "preflight": "Confirme que o bilhete ainda está retido e que o mercado está anulado.",
+            "broadcast": "Transmitir SportsHub.refundTicket."
+          }
+        },
+        "toast": {
+          "settled": "Liquidação do bilhete confirmada.",
+          "settleFailed": "Falha na liquidação do bilhete.",
+          "refunded": "Reembolso do bilhete confirmado.",
+          "refundFailed": "Falha no reembolso do bilhete."
+        }
+      },
+      "loading": "Carregando mercado…"
+    },
+    "components": {
+      "na": "N/D",
+      "lookup": {
+        "inspect": "Inspecionar"
+      },
+      "marketInspector": {
+        "title": "Mercado {marketId}",
+        "stateLine": "{state} / pool {poolId}",
+        "resultStatus": {
+          "none": "Nenhum resultado proposto",
+          "proposed": "Resultado proposto"
+        },
+        "rows": {
+          "event": "Evento",
+          "outcomeCount": "Número de resultados",
+          "startsAt": "Início em",
+          "locksAt": "Bloqueia em",
+          "version": "Versão",
+          "marketReserved": "Reservado do mercado",
+          "marketKey": "Chave do mercado",
+          "rulebook": "Regulamento",
+          "result": "Resultado",
+          "winningOutcome": "Resultado vencedor"
+        }
+      },
+      "ticketInspector": {
+        "title": "Bilhete {ticketId}",
+        "stateLine": "{state} / mercado {marketId}",
+        "rows": {
+          "position": "Posição",
+          "event": "Evento",
+          "pool": "Pool",
+          "outcome": "Resultado",
+          "player": "Jogador",
+          "stake": "Aposta",
+          "payout": "Pagamento",
+          "reserved": "Reservado",
+          "acceptedAt": "Aceito em",
+          "oddsSnapshot": "Snapshot de odds"
+        }
+      },
+      "marketTape": {
+        "loading": "Carregando mercados recentes da SportsHub...",
+        "empty": "Nenhum mercado da SportsHub foi criado nesta release ainda.",
+        "columns": {
+          "market": "Mercado",
+          "starts": "Início",
+          "reserved": "Reservado",
+          "result": "Resultado",
+          "actions": "Ações"
+        },
+        "marketTitle": "Mercado {marketId}",
+        "event": "Evento {eventId}",
+        "pool": "Pool {poolId}",
+        "outcomes": "{count} resultados",
+        "locks": "Bloqueia {time}",
+        "result": {
+          "none": "Sem resultado",
+          "challenged": "Contestado",
+          "outcome": "Resultado {outcomeId}"
+        },
+        "actions": {
+          "open": "Abrir",
+          "load": "Carregar"
+        }
+      },
+      "playerMarkets": {
+        "loading": "Carregando mercados de futebol...",
+        "empty": "Nenhum mercado de futebol aberto nesta release ainda.",
+        "title": "Futebol 1X2",
+        "matchup": "{home} vs {away}",
+        "marketId": "Mercado {marketId}",
+        "starts": "Início {time}",
+        "outcome": "Palpite",
+        "openTicket": "Abrir bilhete",
+        "viewMarket": "Ver mercado",
+        "openHelper": "Abra o mercado para obter um preço assinado ao vivo antes de registrar um bilhete.",
+        "liveOddsHelper": "Preços ao vivo de {bookmaker}. Escolha um preço para abrir o boletim de aposta.",
+        "providerUnavailable": "As odds ao vivo do provedor estão indisponíveis. Você ainda pode abrir o mercado e tentar novamente.",
+        "closedHelper": "Este mercado não está mais aceitando bilhetes.",
+        "result": "Resultado proposto: {outcome}"
+      },
+      "riskRows": {
+        "maxStake": "Aposta máxima",
+        "maxPayout": "Pagamento máximo",
+        "marketReserved": "Reservado do mercado",
+        "outcomeReserved": "Reservado do resultado",
+        "eventReserved": "Reservado do evento",
+        "riskHash": "Hash de risco"
+      },
+      "poolPanel": {
+        "title": "Pool {poolId}",
+        "domainLine": "{domain} / domínio {domainId}",
+        "defaultDomain": "Esportes",
+        "active": "Ativo",
+        "paused": "Pausado",
+        "bank": "Banca",
+        "asset": "Ativo",
+        "units": "Unidades",
+        "rawUnits": "raw / {decimals} casas decimais",
+        "riskTitle": "Limites de risco do pool"
+      }
+    },
+    "detail": {
+      "noRelease": {
+        "title": "Nenhuma release carregada",
+        "description": "O snapshot de release embutido está indisponível.",
+        "status": "Indisponível"
+      },
+      "back": "Voltar às apostas esportivas",
+      "return": "Retornar às apostas esportivas",
+      "marketDetailPill": "Detalhe do mercado",
+      "title": "Futebol 1X2",
+      "description": "Escolha Casa, Empate ou Fora e registre um bilhete de odds fixas assinadas enquanto o mercado estiver aberto.",
+      "invalid": {
+        "eyebrow": "Rota inválida",
+        "title": "Id de mercado inválido",
+        "description": "As rotas de mercado da SportsHub exigem um id de mercado numérico."
+      },
+      "readFailed": {
+        "eyebrow": "Falha na leitura",
+        "title": "Falha na leitura do mercado",
+        "description": "O SDK não conseguiu ler este mercado da SportsHub na release ativa.",
+        "marketNotFound": "Este mercado ainda não existe na SportsHub ativa. Volte às apostas esportivas e abra um mercado listado."
+      },
+      "loading": {
+        "eyebrow": "Leitura",
+        "title": "Carregando mercado",
+        "description": "Lendo registros de mercado, resultado e exposição pelo SDK v1.3.",
+        "body": "Carregando o estado do mercado da SportsHub..."
+      },
+      "market": {
+        "eyebrow": "Mercado",
+        "title": "Ciclo de vida e resultado",
+        "description": "O estado do mercado é lido diretamente da SportsHub. O estado do resultado é exibido quando existe uma proposta de relator."
+      },
+      "playerMarket": {
+        "eyebrow": "Mercado da partida",
+        "title": "Casa / Empate / Fora",
+        "matchup": "{home} vs {away}",
+        "description": "A visão pública mantém a decisão simples: escolha um lado, obtenha odds ao vivo e envie o bilhete.",
+        "providerDescription": "Preços 1X2 ao vivo de {bookmaker}. Escolha um preço para pré-selecionar o boletim de aposta.",
+        "marketId": "Mercado {marketId}",
+        "outcome": "Resultado",
+        "winner": "Resultado vencedor",
+        "startsAt": "Início",
+        "locksAt": "Bloqueio do bilhete",
+        "providerUnavailable": "As odds ao vivo do provedor estão indisponíveis para este mercado. Use o boletim de aposta para tentar novamente.",
+        "resultReady": "O resultado do relator está disponível: {outcome}. A liquidação continua regida pela janela de contestação.",
+        "resultPending": "Nenhum resultado final foi reportado ainda. Os bilhetes permanecem auditáveis on-chain."
+      },
+      "advanced": {
+        "summary": "Provas on-chain avançadas e ferramentas de liquidação"
+      },
+      "exposure": {
+        "eyebrow": "Exposição",
+        "title": "Capital reservado",
+        "description": "Esses valores são a leitura de exposição on-chain usada pelo ops para validar os limites de mercado, resultado, evento e pool-evento.",
+        "marketReserved": "Reservado do mercado",
+        "eventReserved": "Reservado do evento",
+        "poolEventReserved": "Reservado do pool-evento",
+        "outcomeCount": "Número de resultados",
+        "outcomeExposure": "Exposição do resultado",
+        "outcome": "Resultado {outcomeId}"
+      },
+      "ticketPlacement": {
+        "eyebrow": "Boletim de aposta",
+        "title": "Registrar bilhete",
+        "description": "Escolha um lado, insira a aposta, trave um preço fixo ao vivo e envie o bilhete.",
+        "marketMustBeOpen": "O mercado precisa estar aberto antes do registro do bilhete.",
+        "walletAndSnapshotRequired": "Conecte uma carteira e trave as odds ao vivo antes de registrar o bilhete."
+      },
+      "ticketTerminal": {
+        "eyebrow": "Finalização de bilhetes",
+        "title": "Liquidar, reembolsar ou anular bilhetes",
+        "description": "As chamadas de debt-out continuam restritas à carteira e usam os helpers de finalização da SportsHub. Inspecione um bilhete antes de transmitir para verificar o estado e o caminho de pagamento.",
+        "walletRequired": "É necessária uma carteira conectada para transmitir as chamadas de finalização de bilhete."
+      },
+      "noMarket": {
+        "eyebrow": "Leitura",
+        "title": "Sem dados de mercado",
+        "description": "Nenhum mercado foi retornado para este id pela SportsHub ativa."
+      }
+    },
+    "ticketPlacement": {
+      "fields": {
+        "providerEventId": "Id do evento no provedor",
+        "bookmakerKey": "Bookmaker key",
+        "sportKey": "Sport key",
+        "outcomeId": "Id do resultado",
+        "stake": "Aposta",
+        "stakeRawUnits": "Aposta em raw units",
+        "oddsWad": "Odds WAD",
+        "maxStake": "Aposta máxima",
+        "maxPayout": "Pagamento máximo",
+        "expiresAt": "Expira em",
+        "nonce": "Nonce",
+        "riskHash": "Hash de risco",
+        "signature": "Assinatura",
+        "oddsSignature": "Assinatura das odds",
+        "stakeWithSymbol": "Aposta ({symbol})"
+      },
+      "placeholders": {
+        "optional": "Opcional",
+        "unixSeconds": "Segundos Unix"
+      },
+      "validation": {
+        "positiveInteger": "{label} deve ser um número inteiro positivo.",
+        "positiveAmount": "{label} deve ser um valor positivo.",
+        "greaterThanZero": "{label} deve ser maior que zero.",
+        "decimals": "{label} aceita no máximo {decimals} casas decimais.",
+        "integer": "{label} deve ser um número inteiro.",
+        "outcomeNonNegative": "O id do resultado deve ser um inteiro não negativo.",
+        "outcomeTooLarge": "O id do resultado é grande demais.",
+        "outcomeRange": "O id do resultado deve estar entre 0 e {max}.",
+        "hex": "{label} deve ser hex com prefixo 0x.",
+        "exactBytes": "{label} deve ter {bytes} bytes."
+      },
+      "status": {
+        "noPlan": "Nenhum plano de bilhete criado.",
+        "planning": "Planejando o bilhete...",
+        "planReadyApproval": "Plano pronto: aprovação necessária.",
+        "planReady": "Plano pronto.",
+        "planningFailed": "Falha no planejamento.",
+        "ticketPlanningFailed": "Falha no planejamento do bilhete.",
+        "fetchingProviderOdds": "Buscando odds do provedor...",
+        "providerOddsRequestFailed": "Falha na requisição de odds do provedor.",
+        "providerOddsFailed": "Falha nas odds do provedor.",
+        "signedOddsReady": "Odds assinadas prontas: {outcome} @ {price}.",
+        "providerOddsReadyToast": "Snapshot de odds assinadas pronto",
+        "submittingTicket": "Enviando o bilhete...",
+        "planUnavailable": "O plano do bilhete está indisponível.",
+        "ticketPlacementFailed": "Falha ao registrar o bilhete.",
+        "ticketFailed": "Falha no bilhete.",
+        "ticketSubmittedWithId": "Bilhete {ticketId} enviado.",
+        "ticketSubmitted": "Bilhete enviado.",
+        "ticketSubmittedToast": "Bilhete enviado"
+      },
+      "summary": {
+        "gate": "Liberação",
+        "locked": "Bloqueado",
+        "enabled": "Habilitado",
+        "gateHelper": "Conecte a carteira e trave as odds ao vivo.",
+        "market": "Mercado",
+        "marketHelper": "Pool {poolId}, {outcomeCount} resultados",
+        "status": "Status",
+        "lastTx": "Última tx"
+      },
+      "actions": {
+        "fetchSignedOdds": "Obter odds ao vivo",
+        "refreshOdds": "Atualizar odds",
+        "planTicket": "Revisar plano da transação",
+        "placeTicket": "Registrar bilhete"
+      },
+      "walletRequired": "Conecte uma carteira para registrar bilhetes.",
+      "hints": {
+        "enterStake": "Insira a aposta para solicitar um preço assinado ao vivo.",
+        "getLiveOdds": "Obtenha primeiro as odds ao vivo. O bilhete só pode ser registrado após travar um preço assinado.",
+        "readyToPlace": "O preço está travado. Registre o bilhete quando estiver pronto."
+      },
+      "sections": {
+        "selection": "Escolher resultado",
+        "selectionHelper": "Escolha um resultado, insira a aposta e trave um preço assinado ao vivo.",
+        "advanced": "Prova on-chain das odds",
+        "ticketPreview": "Prévia do bilhete"
+      },
+      "outcomes": {
+        "option": "Opção {outcomeId}",
+        "home": "Casa",
+        "draw": "Empate",
+        "away": "Fora",
+        "generic": "Resultado {outcomeId}",
+        "price": "{price}x"
+      },
+      "preview": {
+        "selection": "Seleção",
+        "provider": "{sport} / {bookmaker}",
+        "needsOdds": "Obtenha odds ao vivo para travar um preço assinado.",
+        "price": "Preço",
+        "priceHelper": "Odds decimais do provedor",
+        "publicPriceHelper": "Odds indicativas do provedor. Trave o preço antes de registrar.",
+        "payout": "Pagamento potencial",
+        "payoutHelper": "Pagamento bruto se este resultado vencer",
+        "priceLocked": "Preço ao vivo travado. A assinatura será verificada novamente antes da transmissão.",
+        "priceNotLocked": "Nenhum preço ao vivo travado ainda. As odds podem mudar até você solicitar uma cotação assinada."
+      },
+      "plan": {
+        "approval": "Aprovação",
+        "required": "Necessária",
+        "notRequired": "Não necessária",
+        "approveAmount": "Aprovar {amount}",
+        "allowance": "Allowance {amount}",
+        "oddsTicketHash": "Hash do bilhete de odds",
+        "planState": "Estado do plano",
+        "advancedHelper": "Revisão opcional para usuários avançados. Jogadores comuns podem obter odds ao vivo e registrar o bilhete diretamente.",
+        "empty": "Obtenha primeiro as odds ao vivo. O snapshot assinado é verificado antes da transmissão; odds desatualizadas ou não assinadas são rejeitadas."
+      }
+    },
+    "ticketTerminal": {
+      "validation": {
+        "oneTicket": "Insira ao menos um id de bilhete.",
+        "numeric": "Os ids de bilhete devem ser numéricos.",
+        "positive": "Os ids de bilhete devem ser positivos."
+      },
+      "status": {
+        "noAction": "Nenhuma ação de bilhete enviada.",
+        "actionFailed": "{label} falhou.",
+        "actionSubmitted": "{label} enviada"
+      },
+      "actions": {
+        "settleTickets": "Liquidar bilhetes",
+        "refundTickets": "Reembolsar bilhetes",
+        "voidTickets": "Anular bilhetes",
+        "inspectTicket": "Inspecionar bilhete",
+        "settle": "Liquidar",
+        "refund": "Reembolsar",
+        "void": "Anular"
+      },
+      "summary": {
+        "wallet": "Carteira",
+        "connected": "Conectada",
+        "required": "Necessária",
+        "walletHelper": "As chamadas de finalização de bilhete são públicas, mas ainda exigem uma carteira.",
+        "lastAction": "Última ação",
+        "lastTx": "Última tx"
+      },
+      "form": {
+        "ticketIds": "Ids de bilhete"
+      },
+      "loading": "Carregando bilhete da SportsHub...",
+      "empty": "Inspecione um bilhete para verificar o id da posição, a aposta, o pagamento e o estado final antes de transmitir o debt-out."
+    },
+    "operator": {
+      "validation": {
+        "positiveInteger": "{label} deve ser um número inteiro positivo.",
+        "bytes32": "{label} deve ser um valor hex de 32 bytes."
+      },
+      "status": {
+        "noTransaction": "Nenhuma transação de operador enviada.",
+        "failed": "{label} falhou.",
+        "submitted": "{label} enviada",
+        "sdkUnavailable": "SDK indisponível."
+      },
+      "summary": {
+        "writeStatus": "Status de escrita",
+        "walletConnected": "Carteira conectada",
+        "walletRequired": "Carteira necessária",
+        "rolesHelper": "Os papéis de contrato são aplicados on-chain pela SportsHub.",
+        "lastAction": "Última ação",
+        "lastTx": "Última tx",
+        "readOnly": "Somente leitura",
+        "writable": "Gravável",
+        "noWallet": "Sem carteira"
+      },
+      "create": {
+        "title": "Criar mercado de odds fixas"
+      },
+      "lifecycle": {
+        "title": "Ciclo de vida e resultado"
+      },
+      "fields": {
+        "eventId": "Id do evento",
+        "poolId": "Id do pool",
+        "outcomeCount": "Número de resultados",
+        "outcomes": "Resultados",
+        "startsAt": "Início em",
+        "startsAtUnix": "Início em unix",
+        "lockTime": "Horário de bloqueio",
+        "lockTimeUnix": "Horário de bloqueio unix",
+        "resultFinality": "Finalização do resultado",
+        "finalitySeconds": "Segundos de finalização",
+        "marketKey": "Chave do mercado",
+        "rulebookHash": "Hash do regulamento",
+        "marketId": "Id do mercado",
+        "targetMarketId": "Id do mercado alvo",
+        "winningOutcome": "Resultado vencedor",
+        "resultSourceHash": "Hash da fonte do resultado",
+        "evidenceHash": "Hash da evidência",
+        "observedAt": "Observado em",
+        "observedAtUnix": "Observado em unix",
+        "challengeReasonHash": "Hash do motivo da contestação",
+        "decisionHash": "Hash da decisão",
+        "arbitrationDecisionHash": "Hash da decisão de arbitragem",
+        "voidReasonHash": "Hash do motivo da anulação"
+      },
+      "actions": {
+        "createMarket": "Criar mercado",
+        "openMarket": "Abrir mercado",
+        "lockMarket": "Bloquear mercado",
+        "proposeResult": "Propor resultado",
+        "finalizeResult": "Finalizar resultado",
+        "challengeResult": "Contestar resultado",
+        "resolveChallenge": "Resolver contestação",
+        "voidMarket": "Anular mercado"
+      },
+      "buttons": {
+        "open": "Abrir",
+        "lock": "Bloquear",
+        "proposeResult": "Propor resultado",
+        "finalize": "Finalizar",
+        "challenge": "Contestar",
+        "uphold": "Manter",
+        "reopen": "Reabrir",
+        "voidChallenged": "Anular contestado",
+        "void": "Anular"
       }
     }
   },

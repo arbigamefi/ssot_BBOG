@@ -59,7 +59,7 @@
     "pages": {
       "casino": {
         "title": "Casino",
-        "description": "Wallet-native casino — eight games, every spin verifiable on-chain. No signup, no custody."
+        "description": "Wallet-native casino games, every spin verifiable on-chain. No signup, no custody."
       },
       "casinoRoom": {
         "title": "{game}",
@@ -664,6 +664,7 @@
         "title": "Casino receipt #{betId}",
         "description": "A shareable, indexed view of this round. Single-bet proof remains on-chain; indexed figures may lag while the keeper and database catch up.",
         "indexed": "Indexed",
+        "proof": "Proof & on-chain details",
         "missing": {
           "title": "Receipt not indexed yet",
           "description": "This bet is not available in the durable index yet. Try again after the keeper catches up, or verify the transaction directly on the explorer."
@@ -930,7 +931,7 @@
       "hero": {
         "eyebrow": "Game lobby",
         "title": "Pick a game.",
-        "description": "Eight games. Connect your wallet, jump straight in. Every spin lands on-chain."
+        "description": "Verifiable game rooms. Connect your wallet, jump straight in. Every spin lands on-chain."
       },
       "stats": {
         "rooms": "Games available",
@@ -3103,7 +3104,7 @@
     "hero": {
       "channel": "Live on Arbitrum",
       "title": "Verifiable casino on-chain.",
-      "description": "Eight games. Every spin verifiable on-chain. Win and the payout hits your wallet in seconds — no signup, no escrow, no custody.",
+      "description": "Casino games, verified on-chain. Win and the payout hits your wallet in seconds — no signup, no escrow, no custody.",
       "enterCasino": "Start Playing",
       "viewBank": "How It Works",
       "consoleLabel": "Live status",
@@ -3135,12 +3136,12 @@
       },
       "release": {
         "label": "Live games",
-        "detail": "All eight games live, plus the bank."
+        "detail": "Casino rooms live, plus the bank."
       }
     },
     "rooms": {
       "eyebrow": "All games",
-      "title": "Eight games. One wallet.",
+      "title": "Game rooms. One wallet.",
       "detail": "Each game settles on its own contract. Pick one and jump in — no signup.",
       "actionLabel": "See all"
     },

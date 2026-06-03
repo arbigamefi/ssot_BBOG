@@ -59,11 +59,15 @@
     "pages": {
       "casino": {
         "title": "赌场",
-        "description": "原生钱包赌场 —— 八款游戏,每一局都能在链上核。不用注册、不用托管。"
+        "description": "原生钱包赌场游戏 —— 每一局都能在链上核对。不用注册、不用托管。"
       },
       "casinoRoom": {
         "title": "{game}",
         "description": "游玩 {game}，查看可验证随机数、VRF 状态和链上结果凭证。"
+      },
+      "casinoReceipt": {
+        "title": "赌场投注凭证 #{betId}",
+        "description": "赌场投注 #{betId} 的公开结算凭证,包含已索引的赔付、随机数、玩家及区块浏览器证明。"
       },
       "sportsbook": {
         "title": "体育投注",
@@ -655,6 +659,47 @@
           "linkCopied": "链接已复制"
         }
       },
+      "receipt": {
+        "eyebrow": "公开凭证",
+        "title": "赌场投注凭证 #{betId}",
+        "description": "本局可分享的索引视图。单笔投注的证明始终保留在链上;索引数据可能在 keeper 与数据库同步前略有延迟。",
+        "indexed": "已索引",
+        "proof": "证明与链上明细",
+        "missing": {
+          "title": "凭证尚未被索引",
+          "description": "该投注尚未进入持久化索引。请在 keeper 同步后重试,或直接在区块浏览器上验证交易。"
+        },
+        "status": {
+          "placed": "已下注",
+          "randomReady": "随机数就绪",
+          "finalized": "已结算",
+          "refunded": "已退款"
+        },
+        "metrics": {
+          "stake": "投注金额",
+          "payout": "赔付",
+          "net": "净额",
+          "state": "状态"
+        },
+        "facts": {
+          "game": "游戏",
+          "player": "玩家",
+          "affiliate": "推荐人",
+          "asset": "资产",
+          "betId": "投注 ID",
+          "requestId": "VRF 请求",
+          "randomHash": "随机哈希",
+          "placedBlock": "下注区块",
+          "updatedAt": "索引时间",
+          "lastEvent": "最近事件",
+          "lastTx": "最近交易"
+        },
+        "actions": {
+          "play": "进入该游戏",
+          "explorer": "查看交易",
+          "casino": "前往赌场"
+        }
+      },
       "gameInfo": {
         "roulette": {
           "tagline": "欧式轮盘 —— 37 个号码格,每一次旋转都由 Chainlink VRF 上链签名。",
@@ -886,7 +931,7 @@
       "hero": {
         "eyebrow": "游戏大厅",
         "title": "挑一款游戏。",
-        "description": "八款游戏。连上钱包直接开玩。每一局都落在链上。"
+        "description": "可验证的游戏房间。连上钱包直接开玩。每一局都落在链上。"
       },
       "stats": {
         "rooms": "在线游戏",
@@ -3059,7 +3104,7 @@
     "hero": {
       "channel": "在 Arbitrum 上线",
       "title": "链上可验证的赌场。",
-      "description": "八款游戏。每一局都能在链上核对。中了直接进你的钱包,几秒到账 —— 不用注册、不用托管。",
+      "description": "赌场游戏,每一局都能在链上核对。中了直接进你的钱包,几秒到账 —— 不用注册、不用托管。",
       "enterCasino": "开始玩",
       "viewBank": "看怎么玩",
       "consoleLabel": "实时状态",
@@ -3091,12 +3136,12 @@
       },
       "release": {
         "label": "在线游戏",
-        "detail": "八款游戏 + 金库,都在线。"
+        "detail": "游戏房间 + 金库,都在线。"
       }
     },
     "rooms": {
       "eyebrow": "全部游戏",
-      "title": "八款游戏。一个钱包。",
+      "title": "游戏房间。一个钱包。",
       "detail": "每款游戏走自己的合约结算。挑一个点进去 —— 不用注册。",
       "actionLabel": "全部查看"
     },

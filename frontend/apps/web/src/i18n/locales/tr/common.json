@@ -263,11 +263,15 @@
     "pages": {
       "casino": {
         "title": "Casino",
-        "description": "Cüzdan tabanlı casino — sekiz oyun, her dönüş zincir üstünde doğrulanabilir. Kayıt yok, saklama yok."
+        "description": "Cüzdan tabanlı casino oyunları, her dönüş zincir üstünde doğrulanabilir. Kayıt yok, saklama yok."
       },
       "casinoRoom": {
         "title": "{game}",
         "description": "{game} oyununu doğrulanabilir rastgelelik, görünür VRF durumu ve zincirden türetilen sonuç makbuzuyla oynayın."
+      },
+      "casinoReceipt": {
+        "title": "Bahis makbuzu #{betId}",
+        "description": "Kumarhane bahsi #{betId} için herkese açık ödeme makbuzu; dizinlenmiş ödeme, rastgelelik, oyuncu ve gezgin kanıtı dahil."
       },
       "sportsbook": {
         "title": "Spor bahisleri",
@@ -338,7 +342,7 @@
     "hero": {
       "channel": "Arbitrum'da canlı",
       "title": "Zincir üstünde doğrulanabilir casino.",
-      "description": "Sekiz oyun. Her dönüş zincir üstünde doğrulanabilir. Kazanın, ödeme saniyeler içinde cüzdanınıza gelsin — kayıt yok, emanet yok, saklama yok.",
+      "description": "Casino oyunları zincir üstünde doğrulanır. Kazanın, ödeme saniyeler içinde cüzdanınıza gelsin — kayıt yok, emanet yok, saklama yok.",
       "enterCasino": "Oynamaya başla",
       "viewBank": "Nasıl çalışır",
       "consoleLabel": "Canlı durum",
@@ -370,12 +374,12 @@
       },
       "release": {
         "label": "Aktif oyunlar",
-        "detail": "Sekiz oyunun hepsi canlı, ayrıca banka."
+        "detail": "Oyun odaları canlı, banka da hazır."
       }
     },
     "rooms": {
       "eyebrow": "Tüm oyunlar",
-      "title": "Sekiz oyun. Tek cüzdan.",
+      "title": "Oyun odaları. Tek cüzdan.",
       "detail": "Her oyun kendi sözleşmesinde sonuçlanır. Birini seçin ve girin — kayıt yok.",
       "actionLabel": "Tümünü gör"
     },
@@ -872,7 +876,7 @@
       "hero": {
         "eyebrow": "Oyun lobisi",
         "title": "Bir oyun seçin.",
-        "description": "Sekiz oyun. Cüzdanı bağlayın, hemen girin. Her dönüş zincir üstüne işlenir."
+        "description": "Doğrulanabilir oyun odaları. Cüzdanı bağlayın, hemen girin. Her dönüş zincir üstüne işlenir."
       },
       "stats": {
         "rooms": "Mevcut oyunlar",
@@ -1341,6 +1345,47 @@
           "linkCopied": "Bağlantı kopyalandı"
         }
       },
+      "receipt": {
+        "eyebrow": "Herkese açık makbuz",
+        "title": "Bahis makbuzu #{betId}",
+        "description": "Bu turun paylaşılabilir, dizinlenmiş görünümü. Tekil bahis kanıtı zincir üstünde kalır; dizinlenmiş veriler, keeper ve veritabanı yetişene kadar gecikebilir.",
+        "indexed": "Dizinlendi",
+        "proof": "Kanıt ve zincir üstü detaylar",
+        "missing": {
+          "title": "Makbuz henüz dizinlenmedi",
+          "description": "Bu bahis henüz kalıcı dizinde mevcut değil. Keeper yetiştikten sonra tekrar deneyin veya işlemi doğrudan gezginde doğrulayın."
+        },
+        "status": {
+          "placed": "Yapıldı",
+          "randomReady": "Rastgelelik hazır",
+          "finalized": "Finalize edildi",
+          "refunded": "İade edildi"
+        },
+        "metrics": {
+          "stake": "Bahis",
+          "payout": "Ödeme",
+          "net": "Net",
+          "state": "Durum"
+        },
+        "facts": {
+          "game": "Oyun",
+          "player": "Oyuncu",
+          "affiliate": "Yönlendiren",
+          "asset": "Varlık",
+          "betId": "Bahis kimliği",
+          "requestId": "VRF isteği",
+          "randomHash": "Rastgele hash",
+          "placedBlock": "Bahis bloğu",
+          "updatedAt": "Dizinlenme zamanı",
+          "lastEvent": "Son olay",
+          "lastTx": "Son tx"
+        },
+        "actions": {
+          "play": "Bu oyunu oyna",
+          "explorer": "İşlemi görüntüle",
+          "casino": "Kumarhaneye git"
+        }
+      },
       "audit": {
         "loading": "Denetim akışı yükleniyor",
         "headers": {
@@ -1685,6 +1730,959 @@
             }
           ]
         }
+      }
+    }
+  },
+  "sportsbook": {
+    "index": {
+      "loading": "Spor bahisleri yükleniyor...",
+      "noRelease": {
+        "title": "Spor bahisleri burada aktif değil",
+        "description": "Spor bahisleri bağlı olduğunuz zincirde aktif değil. Piyasalara göz atmak için zincir değiştirin."
+      },
+      "header": {
+        "metadataEnabled": "Biletler etkin",
+        "readOnlyPreview": "Önizleme modu",
+        "sportsHubPresent": "SportsHub mevcut",
+        "sportsHubMissing": "SportsHub eksik",
+        "title": "Spor bahisleri",
+        "description": "Bir futbol piyasası seçin, Ev sahibi, Beraberlik veya Deplasman'ı işaretleyin ve SportsHub üzerinden zincir üstü ödemeli sabit oranlı bir bilet oluşturun."
+      },
+      "riskCard": {
+        "eyebrow": "Bilet oluşturma",
+        "signedOddsOnly": "Yalnızca imzalı oranlar",
+        "locked": "Önizleme modu",
+        "description": "Bir piyasa detay sayfasını açın ve oluşturmadan önce imzalı bir oran anlık görüntüsü sağlayın.",
+        "lockedDescription": "Piyasa okumaları canlı, ancak bu yapıda herkese açık bilet oluşturma devre dışı. Yine de en son piyasayı ve ödeme kurallarını inceleyebilirsiniz.",
+        "inspect": "En son piyasayı aç"
+      },
+      "details": {
+        "release": "Build",
+        "sportsHub": "SportsHub",
+        "embeddedMetadataPresent": "Gömülü meta veri mevcut",
+        "notAvailable": "Mevcut değil",
+        "riskEngine": "Risk motoru",
+        "riskEngineHelper": "Ortak limit uygulama yüzeyi",
+        "challengeWindow": "İtiraz penceresi",
+        "challengeWindowHelper": "Sonuç anlaşmazlığı zaman aşımı",
+        "nextMarket": "Sonraki piyasa",
+        "marketHelper": "En son zincir üstü piyasa sayacı",
+        "nextTicket": "Sonraki bilet",
+        "ticketHelper": "En son zincir üstü bilet sayacı",
+        "runtimeReadFailed": "SportsHub çalışma zamanı okuması başarısız",
+        "sdkRead": "Zincir üstü verileri canlı okur"
+      },
+      "release": {
+        "eyebrow": "Adalet nasıl korunur",
+        "title": "Oracle, ödeme ve kazanç — tümü zincir üstünde.",
+        "description": "Etkin bundle, her bileti denetlenebilir kılan imzalı oran kimliğini, sonuç raportör kümesini ve sözleşme adreslerini açığa çıkarır.",
+        "oddsSignerSet": "Oran imzalayan kümesi",
+        "resultReporterSet": "Sonuç raportör kümesi",
+        "reporterThreshold": "Raportör eşiği",
+        "reporterThresholdHelper": "Minimum sonuç raportörü",
+        "frontendFlag": "Frontend bayrağı",
+        "booleanTrue": "true",
+        "booleanFalse": "false",
+        "challenger": "İtiraz eden",
+        "arbitrator": "Hakem"
+      },
+      "mvp": {
+        "eyebrow": "Piyasa formatı",
+        "title": "Futbol 1X2 bilet akışı",
+        "description": "MVP yolu bilinçli olarak dardır: maç öncesi sabit oranlar, imzalı anlık görüntüler, açık sonuç kanıtı ve ödeme kesinleşmeden önce bir itiraz penceresi.",
+        "rows": {
+          "marketType": {
+            "label": "Piyasa türü",
+            "value": "Maç öncesi futbol 1X2"
+          },
+          "oddsSource": {
+            "label": "Oran kaynağı",
+            "value": "The Odds API adayı"
+          },
+          "settlement": {
+            "label": "Ödeme",
+            "value": "Raportör sonucu artı itiraz penceresi"
+          },
+          "launchState": {
+            "label": "Lansman durumu",
+            "enabled": "Canary biletleri etkin",
+            "disabled": "Biletleme etkinleşene kadar salt okunur"
+          }
+        }
+      },
+      "caps": {
+        "eyebrow": "Protokol limitleri",
+        "title": "Üst düzey SportsHub limitleri",
+        "description": "Piyasa başına bahis limitleri, canlı yapılandırmayla belirlenir ve zincir üstünde görünür.",
+        "riskTitle": "SportsHub global risk limitleri"
+      },
+      "marketTape": {
+        "eyebrow": "Piyasalar",
+        "title": "Mevcut futbol piyasaları",
+        "descriptionEnabled": "Sonuçları, zamanlamayı, ayrılan riski incelemek ve piyasa açıkken imzalı oranlı bir bilet oluşturmak için bir piyasa açın.",
+        "descriptionDisabled": "Sonuçları, zamanlamayı ve ayrılan riski incelemek için bir piyasa açın. Bilet oluşturma bu yapıda devre dışı kalır."
+      },
+      "lookup": {
+        "eyebrow": "Biletim",
+        "title": "Bir bileti takip et",
+        "description": "Bahsi, seçilen sonucu, ödemeyi ve son durumu doğrudan SportsHub'dan kontrol etmek için bir bilet id'si girin.",
+        "marketId": "Piyasa id'si",
+        "ticketId": "Bilet id'si",
+        "marketEmpty": "Durumu, sonuç durumunu ve ayrılan riski incelemek için bir SportsHub piyasa id'si girin.",
+        "ticketEmpty": "Pozisyonu, bahsi, ödemeyi ve bilet durumunu incelemek için bir SportsHub bilet id'si girin.",
+        "marketNumericError": "Sayısal bir piyasa id'si girin.",
+        "ticketNumericError": "Sayısal bir bilet id'si girin."
+      },
+      "advanced": {
+        "summary": "Gelişmiş zincir kanıtı ve operatör araçları",
+        "marketLookupEyebrow": "Piyasa araması",
+        "marketLookupTitle": "Bir SportsHub piyasasını incele",
+        "marketLookupDescription": "Piyasa durumu, sonuç önerisi ve ayrılan risk için geliştirici okuması."
+      },
+      "operator": {
+        "eyebrow": "Operatör yazmaları",
+        "title": "Piyasa ve sonuç yönetimi",
+        "description": "Yönetişim ve raportör işlemleri, yetkili cüzdanlar için tipli SDK çağrıları olarak sunulur. Herkese açık bilet oluşturma ayrı bir imzalı oran yolu kullanır ve sözleşme rolleri yine de her yazmayı zorunlu kılar.",
+        "walletRoleRequired": "Cüzdan rolü SportsHub'da yetkilendirilmiş olmalıdır."
+      },
+      "bankroll": {
+        "eyebrow": "Kasa",
+        "title": "Spor havuzu yalıtımı",
+        "description": "Spor likiditesi casino oyun likiditesinden ayrı tutulur, böylece spor bahisleri riski bağımsız olarak sınırlandırılabilir, duraklatılabilir ve izlenebilir.",
+        "noPool": "Spor bahisleri kasası bu zincirde henüz aktif değil."
+      },
+      "controls": {
+        "eyebrow": "Kontroller",
+        "title": "Lansman engelleyicileri açık kalır",
+        "description": "Sayfa bilinçli olarak operasyoneldir: SportsHub dağıtımını görünür tutarken ops paketinde izlenen herkese açık lansman engelleyicilerini korur.",
+        "links": {
+          "goNoGo": "Go/no-go paketi",
+          "frontendAccess": "Frontend erişim politikası",
+          "providerPolicy": "Sağlayıcı politikası"
+        }
+      }
+    },
+    "player": {
+      "header": {
+        "title": "Spor bahisleri",
+        "description": "Bir piyasa seçin, bir sonuç seçin ve zincir üstünde ödemesi yapılan sabit oranlı bir bilet oluşturun.",
+        "descriptionPreview": "Herkese açık biletler bu yapıda devre dışı kalırken piyasalar görünür durumdadır. Lansmandan önce sonuçları inceleyin.",
+        "opsLink": "Operatör konsolu",
+        "status": {
+          "ready": "Biletler aktif",
+          "previewOnly": "Yalnızca önizleme",
+          "notInRelease": "Mevcut değil",
+          "readOnly": "Salt okunur"
+        }
+      },
+      "board": {
+        "bucket": {
+          "live": "Şimdi canlı",
+          "today": "Bugün",
+          "upcoming": "Yaklaşan",
+          "past": "Yakın zamanda sonuçlanan"
+        },
+        "count": "{count, plural, other {# piyasa}}"
+      },
+      "lobby": {
+        "featuredEyebrow": "Öne çıkan piyasa",
+        "eventTitle": "{away} @ {home}",
+        "fallbackTitle": "Piyasa {tag}",
+        "kickoff": "Başlangıç {time}",
+        "openMarket": "Piyasayı aç",
+        "viewMarket": "Piyasayı görüntüle",
+        "oddsPending": "{count} sonuç · fiyatlar bekleniyor",
+        "snapshotEyebrow": "Piyasa anlık görüntüsü",
+        "snapshotTitle": "Futbol panosu",
+        "snapshotDescription": "Bir bilet açmadan önce canlı, yaklaşan ve yakın zamanda sonuçlanan sabit oranlı piyasaları gözden geçirin.",
+        "live": "Canlı",
+        "today": "Bugün",
+        "upcoming": "Yaklaşan",
+        "settled": "Sonuçlandı",
+        "boardTitle": "Piyasa panosu",
+        "boardDescription": "Oranlar, bilet oluşturma, sonuç kanıtı ve piyasa düzeyinde ödeme durumu için bir satır açın.",
+        "side": {
+          "home": "Ev sahibi",
+          "draw": "Beraberlik",
+          "away": "Deplasman"
+        },
+        "filters": {
+          "ariaLabel": "Spor bahisleri piyasalarını filtrele",
+          "all": "Tümü",
+          "live": "Canlı",
+          "today": "Bugün",
+          "upcoming": "Yaklaşan",
+          "past": "Sonuçlandı",
+          "empty": {
+            "all": "Şu anda yayınlanmış bir spor bahisleri piyasası yok.",
+            "live": "Şu anda mevcut canlı piyasa yok.",
+            "today": "Bugün için planlanmış piyasa yok.",
+            "upcoming": "Henüz yayınlanmış yaklaşan piyasa yok.",
+            "past": "Henüz gösterilecek sonuçlanmış piyasa yok."
+          }
+        }
+      },
+      "event": {
+        "fallbackTitle": "Piyasa {tag}",
+        "kickoffAt": "Başlangıç {time}",
+        "outcomesPending": "{count} sonuç · fiyatlar bekleniyor",
+        "outcomeShort": {
+          "home": "Ev sahibi",
+          "draw": "Beraberlik",
+          "away": "Deplasman"
+        }
+      },
+      "marketState": {
+        "none": "Bilinmiyor",
+        "draft": "Taslak",
+        "open": "Açık",
+        "locked": "Kilitli",
+        "suspended": "Askıya alındı",
+        "resultProposed": "Sonuç önerildi",
+        "challenged": "İtiraz edildi",
+        "resolved": "Sonuçlandı",
+        "voided": "İptal edildi",
+        "live": "Canlı"
+      },
+      "empty": {
+        "ctaCasino": "Casino'ya göz at",
+        "ctaOps": "Operatör konsolu",
+        "preview": {
+          "title": "Spor bahisleri önizlemede",
+          "description": "Herkese açık biletler, lansman kontrol listesi tamamlandıktan sonra açılır. Yine de yaklaşan piyasaları ve zincir üstü ödeme modelini inceleyebilirsiniz."
+        },
+        "quiet": {
+          "title": "Planlanmış piyasa yok",
+          "description": "Şu anda canlı veya yaklaşan piyasa yok. Sonraki seri için başlangıca yakın tekrar kontrol edin."
+        }
+      },
+      "error": {
+        "title": "Spor bahisleri piyasaları yüklenemedi. Birazdan yenileyin."
+      },
+      "detail": {
+        "noRelease": {
+          "title": "Spor bahisleri kullanılamıyor",
+          "description": "Spor bahisleri bu zincirde aktif değil."
+        },
+        "invalid": {
+          "title": "Geçersiz piyasa id'si",
+          "description": "Bağlantı hatalı biçimlendirilmiş. Spor bahisleri listesinden bir piyasa seçin.",
+          "back": "Spor bahislerine dön"
+        },
+        "readFailed": {
+          "title": "Bu piyasa yüklenemedi",
+          "description": "Sözleşme okuması başarısız oldu. Sayfayı yenileyin veya başka bir piyasa seçin.",
+          "return": "Spor bahislerine dön"
+        },
+        "refreshing": "Piyasa durumu yenileniyor…",
+        "header": {
+          "back": "Spor bahislerine dön",
+          "fallback": "Piyasa {tag}",
+          "bookmaker": "{name} üzerinden",
+          "kickoff": "Başlangıç {time}",
+          "locks": "Kapanış {time}"
+        },
+        "board": {
+          "title": "Bir sonuç seçin",
+          "titleResolved": "Sonuç sonuçlandı",
+          "snapshotTime": "Fiyatlar {time} itibarıyla",
+          "winner": "Kazanan",
+          "outcomeShort": "Sonuç {outcomeId}",
+          "outcomeSide": {
+            "home": "Ev sahibi",
+            "draw": "Beraberlik",
+            "away": "Deplasman"
+          },
+          "fallback": {
+            "binaryYes": "Evet",
+            "binaryNo": "Hayır",
+            "threeWayHome": "Ev sahibi",
+            "threeWayDraw": "Beraberlik",
+            "threeWayAway": "Deplasman",
+            "generic": "Sonuç {outcomeId}"
+          },
+          "oddsPending": "Bu piyasa için fiyatlar henüz yayınlanmadı.",
+          "providerUnavailable": "İmzalı oranlar alınamadı. Oranlar geri gelene kadar sonuç seçimi devre dışı."
+        },
+        "result": {
+          "voidedTitle": "Piyasa iptal edildi",
+          "voidedDescription": "Bu piyasadaki tüm biletler iade edilir. Başka işlem gerekmez.",
+          "challengedTitle": "Sonuca itiraz edildi",
+          "challengedDescription": "Bir raportör sonucu tahkimde. Anlaşmazlık çözülene kadar ödeme beklemededir.",
+          "settledTitle": "Sonuçlandı · {outcome} kazanıyor",
+          "settledDescription": "Piyasa zincir üstünde kesinleşti. Kazanan biletler artık sonuçlandırılabilir.",
+          "proposedTitle": "Sonuç önerildi · {outcome}",
+          "proposedDescription": "İtiraz penceresi açık. Öneriye itiraz edilmedikçe ödeme {finalizes} kesinleşir.",
+          "outcomeIdFallback": "Sonuç {outcomeId}",
+          "rows": {
+            "proposer": "Öneren",
+            "reporterCount": "Raportörler",
+            "proposedAt": "Önerilme zamanı",
+            "finalizesAt": "Kesinleşme zamanı"
+          }
+        },
+        "slip": {
+          "marketMustBeOpen": "Piyasa şu anda bilet kabul etmiyor.",
+          "outcomeFallback": "Sonuç {outcomeId}"
+        },
+        "myTickets": {
+          "title": "Biletleriniz",
+          "description": "Bu piyasada oluşturduğunuz biletleri sayfadan ayrılmadan takip edin.",
+          "refreshing": "Yenileniyor",
+          "connect": "Bu piyasadaki biletlerinizi görmek için cüzdan bağlayın.",
+          "loading": "Biletleriniz yükleniyor…",
+          "empty": "Bu piyasada henüz bilet yok.",
+          "error": "Spor biletleriniz şu anda yüklenemedi.",
+          "pending": "Beklemede",
+          "ticketNumber": "S#{ticketId}",
+          "unknownOutcome": "Sonuç beklemede",
+          "binaryYes": "Evet",
+          "binaryNo": "Hayır",
+          "home": "Ev sahibi",
+          "draw": "Beraberlik",
+          "away": "Deplasman",
+          "outcomeFallback": "Sonuç {outcomeId}",
+          "columns": {
+            "ticket": "Bilet",
+            "pick": "Seçim",
+            "stake": "Bahis",
+            "payout": "Ödeme",
+            "status": "Durum"
+          },
+          "status": {
+            "open": "Açık",
+            "won": "Kazandı",
+            "lost": "Kaybetti",
+            "refunded": "İade edildi"
+          }
+        },
+        "latestTicket": {
+          "eyebrow": "Bilet kabul edildi",
+          "title": "S#{ticketId} bileti aktif",
+          "description": "Biletiniz zincir üstünde. Sonuç önerisini, kesinleşmeyi ve ödemeyi takip etmek için bu sayfayı açık tutun ya da makbuzu görüntüleyin.",
+          "viewTicket": "Bileti takip et",
+          "pick": "Seçim",
+          "price": "Kabul edilen fiyat",
+          "potentialPayout": "Potansiyel ödeme",
+          "stage": {
+            "idle": "Bir bahis belirleyin ve bir sonuç seçin.",
+            "ready": "Bu bileti oluşturmaya hazır.",
+            "quoting": "İmzalı bir fiyat alınıyor.",
+            "planning": "Zincir üstü bilet hazırlanıyor.",
+            "signing": "Cüzdan imzası bekleniyor.",
+            "mining": "Bilet yayınlanıyor.",
+            "tracking": "Bilet zincir üstünde. Sonuç önerisi, kesinleşme ve ödeme takip ediliyor.",
+            "settled": "Bilet sonuçlandı. Ödeme detayları için makbuzu açın.",
+            "refunded": "Bilet iade edildi. İade detayları için makbuzu açın.",
+            "voided": "Bilet iptal edildi. İade detayları için makbuzu açın.",
+            "failed": "Bilet oluşturma dikkat gerektiriyor. Bahis kuponunu gözden geçirip tekrar deneyin."
+          }
+        },
+        "meta": {
+          "title": "Piyasa detayları",
+          "outcomes": "Sonuçlar",
+          "reserved": "Ayrıldı",
+          "version": "Sürüm",
+          "state": "Durum"
+        },
+        "proof": {
+          "summary": "Zincir kanıtı",
+          "rows": {
+            "marketId": "Piyasa ID",
+            "marketKey": "marketKey"
+          }
+        }
+      },
+      "slip": {
+        "ariaLabel": "Bahis kuponu",
+        "title": "Bahis kuponu",
+        "selection": "Seçilen sonuç",
+        "emptySelection": "Başlamak için bir sonuç seçin.",
+        "priceUnknown": "—",
+        "stakeLabel": "Bahis ({symbol})",
+        "stakeRow": "Bahis",
+        "payoutRow": "Potansiyel ödeme",
+        "stageLabel": "Durum",
+        "stage": {
+          "idle": "Bir sonuç seçin ve bahsinizi girin.",
+          "ready": "Oluşturmaya hazır.",
+          "fetchingOdds": "İmzalı oranlar alınıyor…",
+          "planning": "Bilet planı oluşturuluyor…",
+          "signing": "Cüzdanınızda onaylayın…",
+          "mining": "Bilet zincire gönderiliyor…",
+          "placed": "Bilet oluşturuldu.",
+          "error": "Bilet oluşturma başarısız oldu."
+        },
+        "action": {
+          "idle": "Bahis yap",
+          "ready": "Bahis yap",
+          "busy": "Oluşturuluyor…",
+          "placed": "Bilet oluşturuldu",
+          "retry": "Tekrar dene"
+        },
+        "receipt": {
+          "title": "Bilet oluşturuldu",
+          "payout": "Potansiyel ödeme",
+          "ticketId": "Bilet",
+          "viewTicket": "Bileti görüntüle",
+          "placeAnother": "Başka bir bahis yap"
+        }
+      },
+      "ticket": {
+        "back": "Etkinliğe dön",
+        "bookmaker": "{name} üzerinden",
+        "subtitle": "SportsHub bileti #{ticketId}",
+        "eventTitle": "{away} @ {home}",
+        "fallbackMarket": "Piyasa {tag}",
+        "fallbackTicket": "Bilet {ticketId}",
+        "fallbackOutcome": "Sonuç {outcomeId}",
+        "refreshing": "Yenileniyor…",
+        "noRelease": {
+          "title": "Bilet kullanılamıyor",
+          "description": "Spor bahisleri bu zincirde aktif değil."
+        },
+        "invalid": {
+          "title": "Geçersiz bilet id'si",
+          "description": "Bağlantı hatalı biçimlendirilmiş. Etkinliğe dönün ve bir SportsHub bileti seçin.",
+          "back": "Etkinliğe dön"
+        },
+        "readFailed": {
+          "title": "Bu bilet yüklenemedi",
+          "description": "SportsHub bu id için bir bilet döndürmedi ya da RPC okuması başarısız oldu."
+        },
+        "status": {
+          "held": "Bilet kabul edildi",
+          "resultReady": "Sonuç hazır",
+          "settled": "Sonuçlandı",
+          "won": "Kazanan bilet",
+          "lost": "Kaybeden bilet",
+          "refunded": "İade edildi",
+          "voided": "İptal edildi"
+        },
+        "metrics": {
+          "selection": "Seçiminiz",
+          "price": "Kabul edilen fiyat {price}",
+          "stake": "Bahis",
+          "pool": "Havuz {poolId}",
+          "payout": "Potansiyel ödeme",
+          "winner": "Kazanan: {outcome}",
+          "pendingResult": "Resmi sonuç bekleniyor"
+        },
+        "receipt": {
+          "eyebrow": "Bilet makbuzu",
+          "wonTitle": "Kazanan bilet",
+          "wonDescription": "Seçiminiz kesinleşen piyasa sonucuyla eşleşti. Aşağıda gösterilen kazanç, zincir üstü bilet ödemesidir.",
+          "lostTitle": "Bilet kaybetti",
+          "lostDescription": "Seçiminiz kesinleşen piyasa sonucuyla eşleşmedi. Net sonuç, yatırılan bahis tutarını yansıtır.",
+          "refundedTitle": "Bilet iade edildi",
+          "refundedDescription": "Bu bilet bir iade veya iptal yoluyla sona erdi. İade edilen tutar aşağıda gösterilir.",
+          "openTitle": "Bilet kabul edildi",
+          "openDescription": "Bilet SportsHub'da aktif. Kazanç ve kâr değerleri, piyasa kesinleşene kadar potansiyel kalır.",
+          "pick": "Seçiminiz",
+          "winner": "Nihai kazanan",
+          "winnerValue": "Kazanan: {outcome}",
+          "pendingWinner": "Resmi sonuç bekleniyor",
+          "stake": "Bahis",
+          "return": "Kazanç",
+          "potentialReturn": "Potansiyel kazanç",
+          "netResult": "Net sonuç",
+          "potentialProfit": "Potansiyel kâr",
+          "pool": "Havuz"
+        },
+        "facts": {
+          "title": "Bilet kanıtı",
+          "summaryHint": "Gelişmiş",
+          "description": "Bu hash'ler bileti, oran anlık görüntüsünü, kural kitabını ve oluşturma işlemini birbirine bağlar. Yukarıdaki makbuz birincil oyuncu görünümü olduğundan varsayılan olarak gizlidirler.",
+          "ticketId": "Bilet id'si",
+          "marketId": "Piyasa id'si",
+          "positionId": "Pozisyon id'si",
+          "acceptedAt": "Kabul zamanı",
+          "player": "Oyuncu",
+          "ticketState": "Bilet durumu",
+          "oddsSnapshotHash": "Oran anlık görüntüsü",
+          "rulebookHash": "Kural kitabı",
+          "placeTx": "Oluşturma tx"
+        },
+        "lifecycle": {
+          "eyebrow": "Bilet yaşam döngüsü",
+          "held": {
+            "title": "Resmi sonuç bekleniyor",
+            "description": "Bilet zincir üstünde kabul edildi. Piyasa sonucu kesinleştikten sonra sonuçlandırılabilir hale gelir."
+          },
+          "finalityPending": {
+            "title": "Sonuç önerildi",
+            "description": "Resmi sonuç önerildi. Ödeme, itiraz penceresi kapandıktan sonra açılır.",
+            "detail": "Kesinleşme hedefi: {time}"
+          },
+          "resultReady": {
+            "title": "Sonuç kesinleşmesine ulaşıldı",
+            "description": "Sonuç kanıtı var, ancak piyasa henüz sonuçlanmış duruma kesinleşmedi."
+          },
+          "settleReady": {
+            "title": "Sonuçlandırmaya hazır",
+            "description": "Piyasa sonuçlandı. Herkes bu bileti sonuçlandırabilir ve ödemeyi serbest bırakabilir."
+          },
+          "refundReady": {
+            "title": "İade mevcut",
+            "description": "Piyasa iptal edildi. Bu bilet orijinal bahsi geri verebilir."
+          },
+          "settled": {
+            "title": "Bilet sonuçlandı",
+            "description": "Bilet sonuçlandı. Ödemeniz talep edilmeye hazır."
+          },
+          "refunded": {
+            "title": "Bahis iade edildi",
+            "description": "İptal/iade yolu orijinal bahsi geri verdi."
+          },
+          "voided": {
+            "title": "Bilet iptal edildi",
+            "description": "Piyasa iptal edildi ve bu bilet iptal yoluyla sonlandırıldı."
+          }
+        },
+        "actions": {
+          "openMarket": "Piyasayı aç",
+          "ops": "Ops'ta incele",
+          "settle": "Bileti sonuçlandır",
+          "settling": "Sonuçlandırılıyor…",
+          "refund": "Bahsi iade et",
+          "refunding": "İade ediliyor…",
+          "settleTrace": "Sonuçlandırma izi",
+          "refundTrace": "İade izi",
+          "traceSubtitle": "Cüzdan işlem durumu",
+          "status": "Durum",
+          "viewExplorer": "Gezginde görüntüle",
+          "resetTrace": "İzi sıfırla",
+          "transactionError": "İşlem başarısız oldu"
+        },
+        "flows": {
+          "preflight": "Ön kontrol",
+          "confirm": "Makbuzu onayla",
+          "receipt": "İşlem makbuzunu bekleyin.",
+          "settle": {
+            "submit": "Bileti sonuçlandır",
+            "preflight": "Biletin hâlâ tutulduğunu ve piyasanın sonuçlandığını onaylayın.",
+            "broadcast": "SportsHub.settleTicket yayınla."
+          },
+          "refund": {
+            "submit": "Bahsi iade et",
+            "preflight": "Biletin hâlâ tutulduğunu ve piyasanın iptal edildiğini onaylayın.",
+            "broadcast": "SportsHub.refundTicket yayınla."
+          }
+        },
+        "toast": {
+          "settled": "Bilet sonuçlandırması onaylandı.",
+          "settleFailed": "Bilet sonuçlandırması başarısız oldu.",
+          "refunded": "Bilet iadesi onaylandı.",
+          "refundFailed": "Bilet iadesi başarısız oldu."
+        }
+      },
+      "loading": "Piyasa yükleniyor…"
+    },
+    "components": {
+      "na": "Yok",
+      "lookup": {
+        "inspect": "İncele"
+      },
+      "marketInspector": {
+        "title": "Piyasa {marketId}",
+        "stateLine": "{state} / havuz {poolId}",
+        "resultStatus": {
+          "none": "Sonuç önerilmedi",
+          "proposed": "Sonuç önerildi"
+        },
+        "rows": {
+          "event": "Etkinlik",
+          "outcomeCount": "Sonuç sayısı",
+          "startsAt": "Başlangıç zamanı",
+          "locksAt": "Kilitlenme zamanı",
+          "version": "Sürüm",
+          "marketReserved": "Piyasa ayrılan",
+          "marketKey": "Piyasa anahtarı",
+          "rulebook": "Kural kitabı",
+          "result": "Sonuç",
+          "winningOutcome": "Kazanan sonuç"
+        }
+      },
+      "ticketInspector": {
+        "title": "Bilet {ticketId}",
+        "stateLine": "{state} / piyasa {marketId}",
+        "rows": {
+          "position": "Pozisyon",
+          "event": "Etkinlik",
+          "pool": "Havuz",
+          "outcome": "Sonuç",
+          "player": "Oyuncu",
+          "stake": "Bahis",
+          "payout": "Ödeme",
+          "reserved": "Ayrıldı",
+          "acceptedAt": "Kabul zamanı",
+          "oddsSnapshot": "Oran anlık görüntüsü"
+        }
+      },
+      "marketTape": {
+        "loading": "Son SportsHub piyasaları yükleniyor...",
+        "empty": "Bu sürümde henüz SportsHub piyasası oluşturulmadı.",
+        "columns": {
+          "market": "Piyasa",
+          "starts": "Başlangıç",
+          "reserved": "Ayrıldı",
+          "result": "Sonuç",
+          "actions": "İşlemler"
+        },
+        "marketTitle": "Piyasa {marketId}",
+        "event": "Etkinlik {eventId}",
+        "pool": "Havuz {poolId}",
+        "outcomes": "{count} sonuç",
+        "locks": "Kilitlenme {time}",
+        "result": {
+          "none": "Sonuç yok",
+          "challenged": "İtiraz edildi",
+          "outcome": "Sonuç {outcomeId}"
+        },
+        "actions": {
+          "open": "Aç",
+          "load": "Yükle"
+        }
+      },
+      "playerMarkets": {
+        "loading": "Futbol piyasaları yükleniyor...",
+        "empty": "Bu sürümde henüz açık futbol piyasası yok.",
+        "title": "Futbol 1X2",
+        "matchup": "{home} vs {away}",
+        "marketId": "Piyasa {marketId}",
+        "starts": "Başlangıç {time}",
+        "outcome": "Seçim",
+        "openTicket": "Bilet aç",
+        "viewMarket": "Piyasayı görüntüle",
+        "openHelper": "Bir bilet oluşturmadan önce canlı imzalı bir fiyat almak için piyasayı açın.",
+        "liveOddsHelper": "{bookmaker} canlı fiyatları. Bahis kuponunu açmak için bir fiyat seçin.",
+        "providerUnavailable": "Canlı sağlayıcı oranları kullanılamıyor. Yine de piyasayı açıp tekrar deneyebilirsiniz.",
+        "closedHelper": "Bu piyasa artık bilet kabul etmiyor.",
+        "result": "Sonuç önerildi: {outcome}"
+      },
+      "riskRows": {
+        "maxStake": "Maksimum bahis",
+        "maxPayout": "Maksimum ödeme",
+        "marketReserved": "Piyasa ayrılan",
+        "outcomeReserved": "Sonuç ayrılan",
+        "eventReserved": "Etkinlik ayrılan",
+        "riskHash": "Risk hash'i"
+      },
+      "poolPanel": {
+        "title": "Havuz {poolId}",
+        "domainLine": "{domain} / alan {domainId}",
+        "defaultDomain": "Spor",
+        "active": "Aktif",
+        "paused": "Duraklatıldı",
+        "bank": "Kasa",
+        "asset": "Varlık",
+        "units": "Birimler",
+        "rawUnits": "raw / {decimals} ondalık",
+        "riskTitle": "Havuz risk limitleri"
+      }
+    },
+    "detail": {
+      "noRelease": {
+        "title": "Yüklü sürüm yok",
+        "description": "Gömülü sürüm anlık görüntüsü kullanılamıyor.",
+        "status": "Mevcut değil"
+      },
+      "back": "Spor bahislerine dön",
+      "return": "Spor bahislerine geri dön",
+      "marketDetailPill": "Piyasa detayı",
+      "title": "Futbol 1X2",
+      "description": "Ev sahibi, Beraberlik veya Deplasman'ı seçin ve piyasa açıkken imzalı sabit oranlı bir bilet oluşturun.",
+      "invalid": {
+        "eyebrow": "Geçersiz rota",
+        "title": "Geçersiz piyasa id'si",
+        "description": "SportsHub piyasa rotaları sayısal bir piyasa id'si gerektirir."
+      },
+      "readFailed": {
+        "eyebrow": "Okuma başarısız",
+        "title": "Piyasa okuması başarısız",
+        "description": "SDK, etkin sürümden bu SportsHub piyasasını okuyamadı.",
+        "marketNotFound": "Bu piyasa etkin SportsHub'da henüz yok. Spor bahislerine dönün ve listelenen bir piyasa açın."
+      },
+      "loading": {
+        "eyebrow": "Okuma",
+        "title": "Piyasa yükleniyor",
+        "description": "Piyasa, sonuç ve risk kayıtları v1.3 SDK üzerinden okunuyor.",
+        "body": "SportsHub piyasa durumu yükleniyor..."
+      },
+      "market": {
+        "eyebrow": "Piyasa",
+        "title": "Yaşam döngüsü ve sonuç",
+        "description": "Piyasa durumu doğrudan SportsHub'dan okunur. Bir raportör önerisi olduğunda sonuç durumu gösterilir."
+      },
+      "playerMarket": {
+        "eyebrow": "Maç piyasası",
+        "title": "Ev sahibi / Beraberlik / Deplasman",
+        "matchup": "{home} vs {away}",
+        "description": "Herkese açık görünüm kararı basit tutar: bir taraf seçin, canlı oranları alın, ardından bileti gönderin.",
+        "providerDescription": "{bookmaker} canlı 1X2 fiyatları. Bahis kuponunu ön seçmek için bir fiyat seçin.",
+        "marketId": "Piyasa {marketId}",
+        "outcome": "Sonuç",
+        "winner": "Kazanan sonuç",
+        "startsAt": "Başlangıç",
+        "locksAt": "Bilet kilidi",
+        "providerUnavailable": "Bu piyasa için canlı sağlayıcı oranları kullanılamıyor. Tekrar denemek için bahis kuponunu kullanın.",
+        "resultReady": "Raportör sonucu mevcut: {outcome}. Ödeme, itiraz penceresine tabi kalmaya devam eder.",
+        "resultPending": "Henüz nihai sonuç bildirilmedi. Biletler zincir üstünde denetlenebilir kalır."
+      },
+      "advanced": {
+        "summary": "Gelişmiş zincir kanıtı ve ödeme araçları"
+      },
+      "exposure": {
+        "eyebrow": "Risk",
+        "title": "Ayrılan sermaye",
+        "description": "Bu değerler, ops'un piyasa, sonuç, etkinlik ve havuz-etkinlik limitlerini doğrulamak için kullandığı zincir üstü risk okumasıdır.",
+        "marketReserved": "Piyasa ayrılan",
+        "eventReserved": "Etkinlik ayrılan",
+        "poolEventReserved": "Havuz-etkinlik ayrılan",
+        "outcomeCount": "Sonuç sayısı",
+        "outcomeExposure": "Sonuç riski",
+        "outcome": "Sonuç {outcomeId}"
+      },
+      "ticketPlacement": {
+        "eyebrow": "Bahis kuponu",
+        "title": "Bilet oluştur",
+        "description": "Bir taraf seçin, bahis girin, canlı sabit bir fiyatı kilitleyin ve bileti gönderin.",
+        "marketMustBeOpen": "Bilet oluşturmadan önce piyasa açık olmalıdır.",
+        "walletAndSnapshotRequired": "Bir cüzdan bağlayın, ardından bileti oluşturmadan önce canlı oranları kilitleyin."
+      },
+      "ticketTerminal": {
+        "eyebrow": "Bilet sonlandırma",
+        "title": "Biletleri sonuçlandır, iade et veya iptal et",
+        "description": "Debt-out çağrıları cüzdana bağlı kalır ve SportsHub sonlandırma yardımcılarını kullanır. Durumu ve ödeme yolunu doğrulamak için yayınlamadan önce bir bileti inceleyin.",
+        "walletRequired": "Terminal bilet çağrılarını yayınlamak için bağlı bir cüzdan gerekir."
+      },
+      "noMarket": {
+        "eyebrow": "Okuma",
+        "title": "Piyasa verisi yok",
+        "description": "Etkin SportsHub bu id için bir piyasa döndürmedi."
+      }
+    },
+    "ticketPlacement": {
+      "fields": {
+        "providerEventId": "Sağlayıcı etkinlik id'si",
+        "bookmakerKey": "Bookmaker key",
+        "sportKey": "Sport key",
+        "outcomeId": "Sonuç id'si",
+        "stake": "Bahis",
+        "stakeRawUnits": "Bahis raw units",
+        "oddsWad": "Oran WAD",
+        "maxStake": "Maksimum bahis",
+        "maxPayout": "Maksimum ödeme",
+        "expiresAt": "Son geçerlilik",
+        "nonce": "Nonce",
+        "riskHash": "Risk hash'i",
+        "signature": "İmza",
+        "oddsSignature": "Oran imzası",
+        "stakeWithSymbol": "Bahis ({symbol})"
+      },
+      "placeholders": {
+        "optional": "İsteğe bağlı",
+        "unixSeconds": "Unix saniye"
+      },
+      "validation": {
+        "positiveInteger": "{label} pozitif bir tam sayı olmalıdır.",
+        "positiveAmount": "{label} pozitif bir tutar olmalıdır.",
+        "greaterThanZero": "{label} sıfırdan büyük olmalıdır.",
+        "decimals": "{label} en fazla {decimals} ondalık basamak destekler.",
+        "integer": "{label} bir tam sayı olmalıdır.",
+        "outcomeNonNegative": "Sonuç id'si negatif olmayan bir tam sayı olmalıdır.",
+        "outcomeTooLarge": "Sonuç id'si çok büyük.",
+        "outcomeRange": "Sonuç id'si 0 ile {max} arasında olmalıdır.",
+        "hex": "{label} 0x ön ekli hex olmalıdır.",
+        "exactBytes": "{label} {bytes} bayt olmalıdır."
+      },
+      "status": {
+        "noPlan": "Bilet planı oluşturulmadı.",
+        "planning": "Bilet planlanıyor...",
+        "planReadyApproval": "Plan hazır: onay gerekli.",
+        "planReady": "Plan hazır.",
+        "planningFailed": "Planlama başarısız oldu.",
+        "ticketPlanningFailed": "Bilet planlaması başarısız oldu.",
+        "fetchingProviderOdds": "Sağlayıcı oranları alınıyor...",
+        "providerOddsRequestFailed": "Sağlayıcı oran isteği başarısız oldu.",
+        "providerOddsFailed": "Sağlayıcı oranları başarısız oldu.",
+        "signedOddsReady": "İmzalı oranlar hazır: {outcome} @ {price}.",
+        "providerOddsReadyToast": "İmzalı oran anlık görüntüsü hazır",
+        "submittingTicket": "Bilet gönderiliyor...",
+        "planUnavailable": "Bilet planı kullanılamıyor.",
+        "ticketPlacementFailed": "Bilet oluşturma başarısız oldu.",
+        "ticketFailed": "Bilet başarısız oldu.",
+        "ticketSubmittedWithId": "Bilet {ticketId} gönderildi.",
+        "ticketSubmitted": "Bilet gönderildi.",
+        "ticketSubmittedToast": "Bilet gönderildi"
+      },
+      "summary": {
+        "gate": "Erişim",
+        "locked": "Kilitli",
+        "enabled": "Etkin",
+        "gateHelper": "Cüzdan bağlayın ve canlı oranları kilitleyin.",
+        "market": "Piyasa",
+        "marketHelper": "Havuz {poolId}, {outcomeCount} sonuç",
+        "status": "Durum",
+        "lastTx": "Son tx"
+      },
+      "actions": {
+        "fetchSignedOdds": "Canlı oranları al",
+        "refreshOdds": "Oranları yenile",
+        "planTicket": "İşlem planını gözden geçir",
+        "placeTicket": "Bilet oluştur"
+      },
+      "walletRequired": "Bilet oluşturmak için bir cüzdan bağlayın.",
+      "hints": {
+        "enterStake": "Canlı imzalı bir fiyat istemek için bahis girin.",
+        "getLiveOdds": "Önce canlı oranları alın. Bilet yalnızca imzalı bir fiyat kilitlendikten sonra oluşturulabilir.",
+        "readyToPlace": "Fiyat kilitlendi. Hazır olduğunuzda bileti oluşturun."
+      },
+      "sections": {
+        "selection": "Sonuç seç",
+        "selectionHelper": "Bir sonuç seçin, bahis girin, ardından canlı imzalı bir fiyat kilitleyin.",
+        "advanced": "Zincir oran kanıtı",
+        "ticketPreview": "Bilet önizlemesi"
+      },
+      "outcomes": {
+        "option": "Seçenek {outcomeId}",
+        "home": "Ev sahibi",
+        "draw": "Beraberlik",
+        "away": "Deplasman",
+        "generic": "Sonuç {outcomeId}",
+        "price": "{price}x"
+      },
+      "preview": {
+        "selection": "Seçim",
+        "provider": "{sport} / {bookmaker}",
+        "needsOdds": "İmzalı bir fiyat kilitlemek için canlı oranları alın.",
+        "price": "Fiyat",
+        "priceHelper": "Sağlayıcı ondalık oranları",
+        "publicPriceHelper": "Bilgilendirici sağlayıcı oranları. Oluşturmadan önce fiyatı kilitleyin.",
+        "payout": "Potansiyel ödeme",
+        "payoutHelper": "Bu sonuç kazanırsa brüt ödeme",
+        "priceLocked": "Canlı fiyat kilitlendi. İmza, yayından önce tekrar kontrol edilecek.",
+        "priceNotLocked": "Henüz kilitli canlı fiyat yok. İmzalı bir teklif isteyene kadar oranlar değişebilir."
+      },
+      "plan": {
+        "approval": "Onay",
+        "required": "Gerekli",
+        "notRequired": "Gerekli değil",
+        "approveAmount": "{amount} onayla",
+        "allowance": "Allowance {amount}",
+        "oddsTicketHash": "Oran bilet hash'i",
+        "planState": "Plan durumu",
+        "advancedHelper": "İleri düzey kullanıcılar için isteğe bağlı inceleme. Normal oyuncular canlı oranları alıp bileti doğrudan oluşturabilir.",
+        "empty": "Önce canlı oranları alın. İmzalı anlık görüntü yayından önce kontrol edilir; eski veya imzasız oranlar reddedilir."
+      }
+    },
+    "ticketTerminal": {
+      "validation": {
+        "oneTicket": "En az bir bilet id'si girin.",
+        "numeric": "Bilet id'leri sayısal olmalıdır.",
+        "positive": "Bilet id'leri pozitif olmalıdır."
+      },
+      "status": {
+        "noAction": "Bilet işlemi gönderilmedi.",
+        "actionFailed": "{label} başarısız oldu.",
+        "actionSubmitted": "{label} gönderildi"
+      },
+      "actions": {
+        "settleTickets": "Biletleri sonuçlandır",
+        "refundTickets": "Biletleri iade et",
+        "voidTickets": "Biletleri iptal et",
+        "inspectTicket": "Bileti incele",
+        "settle": "Sonuçlandır",
+        "refund": "İade et",
+        "void": "İptal et"
+      },
+      "summary": {
+        "wallet": "Cüzdan",
+        "connected": "Bağlandı",
+        "required": "Gerekli",
+        "walletHelper": "Terminal bilet çağrıları herkese açıktır, ancak yine de bir cüzdan gerektirir.",
+        "lastAction": "Son işlem",
+        "lastTx": "Son tx"
+      },
+      "form": {
+        "ticketIds": "Bilet id'leri"
+      },
+      "loading": "SportsHub bileti yükleniyor...",
+      "empty": "Debt-out yayınlamadan önce pozisyon id'si, bahis, ödeme ve son durumu doğrulamak için bir bileti inceleyin."
+    },
+    "operator": {
+      "validation": {
+        "positiveInteger": "{label} pozitif bir tam sayı olmalıdır.",
+        "bytes32": "{label} 32 baytlık bir hex değeri olmalıdır."
+      },
+      "status": {
+        "noTransaction": "Operatör işlemi gönderilmedi.",
+        "failed": "{label} başarısız oldu.",
+        "submitted": "{label} gönderildi",
+        "sdkUnavailable": "SDK kullanılamıyor."
+      },
+      "summary": {
+        "writeStatus": "Yazma durumu",
+        "walletConnected": "Cüzdan bağlandı",
+        "walletRequired": "Cüzdan gerekli",
+        "rolesHelper": "Sözleşme rolleri SportsHub tarafından zincir üstünde uygulanır.",
+        "lastAction": "Son işlem",
+        "lastTx": "Son tx",
+        "readOnly": "Salt okunur",
+        "writable": "Yazılabilir",
+        "noWallet": "Cüzdan yok"
+      },
+      "create": {
+        "title": "Sabit oranlı piyasa oluştur"
+      },
+      "lifecycle": {
+        "title": "Yaşam döngüsü ve sonuç"
+      },
+      "fields": {
+        "eventId": "Etkinlik id'si",
+        "poolId": "Havuz id'si",
+        "outcomeCount": "Sonuç sayısı",
+        "outcomes": "Sonuçlar",
+        "startsAt": "Başlangıç zamanı",
+        "startsAtUnix": "Başlangıç zamanı unix",
+        "lockTime": "Kilitlenme zamanı",
+        "lockTimeUnix": "Kilitlenme zamanı unix",
+        "resultFinality": "Sonuç kesinleşmesi",
+        "finalitySeconds": "Kesinleşme saniyeleri",
+        "marketKey": "Piyasa anahtarı",
+        "rulebookHash": "Kural kitabı hash'i",
+        "marketId": "Piyasa id'si",
+        "targetMarketId": "Hedef piyasa id'si",
+        "winningOutcome": "Kazanan sonuç",
+        "resultSourceHash": "Sonuç kaynağı hash'i",
+        "evidenceHash": "Kanıt hash'i",
+        "observedAt": "Gözlem zamanı",
+        "observedAtUnix": "Gözlem zamanı unix",
+        "challengeReasonHash": "İtiraz nedeni hash'i",
+        "decisionHash": "Karar hash'i",
+        "arbitrationDecisionHash": "Tahkim kararı hash'i",
+        "voidReasonHash": "İptal nedeni hash'i"
+      },
+      "actions": {
+        "createMarket": "Piyasa oluştur",
+        "openMarket": "Piyasayı aç",
+        "lockMarket": "Piyasayı kilitle",
+        "proposeResult": "Sonuç öner",
+        "finalizeResult": "Sonucu kesinleştir",
+        "challengeResult": "Sonuca itiraz et",
+        "resolveChallenge": "İtirazı çöz",
+        "voidMarket": "Piyasayı iptal et"
+      },
+      "buttons": {
+        "open": "Aç",
+        "lock": "Kilitle",
+        "proposeResult": "Sonuç öner",
+        "finalize": "Kesinleştir",
+        "challenge": "İtiraz et",
+        "uphold": "Onayla",
+        "reopen": "Yeniden aç",
+        "voidChallenged": "İtiraz edileni iptal et",
+        "void": "İptal et"
       }
     }
   },

@@ -34,6 +34,8 @@ export async function generateMetadata({
     { noindex: true, path: `/casino/receipt/${betId}` }
   );
   const chainId = parseRequestChainId(chainIdParam);
+  // Receipts use a *dynamic* per-bet card (the /og route), so the image is set
+  // explicitly here rather than via the file-based opengraph-image convention.
   const imageUrl = `${SITE_URL}/casino/receipt/${betId}/og?chainId=${chainId}`;
   meta.openGraph = {
     ...(meta.openGraph ?? {}),
@@ -41,11 +43,12 @@ export async function generateMetadata({
   };
   meta.twitter = {
     ...(meta.twitter ?? {}),
-    card: "summary_large_image",
     images: [imageUrl]
   };
   return meta;
 }
+
+type ReceiptTone = "win" | "loss" | "neutral";
 
 export default async function CasinoReceiptPage({
   params,
@@ -68,22 +71,31 @@ export default async function CasinoReceiptPage({
   const release = releaseResult.ok ? releaseResult.release : undefined;
   const row = receipt.row;
 
+  // The share landing mirrors the in-room result dialog: a single constrained,
+  // mobile-first card. Missing rows render the same card chrome so a shared link
+  // never lands on an empty full-bleed page.
   if (!row) {
     return (
-      <main className="mx-auto flex min-h-[70vh] max-w-3xl flex-col justify-center px-4 py-24">
-        <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand">{labels.eyebrow}</p>
-        <h1 className="mt-4 text-4xl font-bold tracking-tight text-fg">{labels.missing.title}</h1>
-        <p className="mt-4 max-w-2xl text-sm leading-6 text-fg-muted">
-          {labels.missing.description}
-        </p>
-        <div className="mt-8">
-          <Link
-            href="/casino"
-            className="inline-flex rounded-md border border-border-soft bg-surface-2 px-4 py-2 text-sm font-bold text-fg transition-colors hover:border-brand/50 hover:bg-surface-3"
-          >
-            {labels.actions.casino}
-          </Link>
-        </div>
+      <main className="mx-auto flex min-h-[100svh] max-w-md flex-col justify-center px-4 py-10">
+        <article className="overflow-hidden rounded-2xl border border-border-soft bg-surface-1 shadow-e2">
+          <header className="border-b border-border-soft px-4 py-3">
+            <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-fg-subtle">
+              {labels.eyebrow}
+            </span>
+          </header>
+          <div className="px-5 py-8">
+            <h1 className="text-2xl font-bold tracking-tight text-fg">{labels.missing.title}</h1>
+            <p className="mt-3 text-sm leading-6 text-fg-muted">{labels.missing.description}</p>
+          </div>
+          <div className="p-3">
+            <Link
+              href="/casino"
+              className="block w-full rounded-md border border-brand/40 bg-brand px-4 py-2.5 text-center text-xs font-bold uppercase tracking-[0.12em] text-fg-inverse shadow-e1 transition-colors hover:bg-brand-hover"
+            >
+              {labels.actions.casino}
+            </Link>
+          </div>
+        </article>
       </main>
     );
   }
@@ -100,95 +112,188 @@ export default async function CasinoReceiptPage({
   const txHref = explorerBaseUrl ? `${explorerBaseUrl}/tx/${row.lastTxHash}` : undefined;
   const gameHref = game?.slug ? `/casino/${game.slug}` : "/casino";
   const receiptHref = `/casino/receipt/${betId}?chainId=${chainId}`;
+  const gameLabel = game?.label ?? shortHex(row.gameId);
   const net = getNetResult(row);
+  const payout = getPayout(row);
+
+  const tone: ReceiptTone =
+    row.state === "finalized" && net != null
+      ? net > 0n
+        ? "win"
+        : net < 0n
+          ? "loss"
+          : "neutral"
+      : "neutral";
+
+  // Lead with the signed net for a settled bet (matches the result dialog); for
+  // a pending or refunded bet, lead with the amount in play instead of a fake net.
+  const heroValue =
+    row.state === "finalized" && net != null
+      ? formatSignedNet(net, decimals, symbol)
+      : formatTokenAmount(bigintFromString(row.stake), decimals, symbol);
+  const stakeValue = formatTokenAmount(bigintFromString(row.stake), decimals, symbol);
+  const payoutValue = formatTokenAmount(payout, decimals, symbol);
+  const netValue = formatTokenAmount(net, decimals, symbol);
+  const shareText = `${gameLabel} bet #${betId}: ${heroValue}`;
+  const proofText = buildProofText({
+    asset: asset?.symbol ?? shortHex(row.asset),
+    betId,
+    chainId,
+    game: gameLabel,
+    lastTx: txHref ?? row.lastTxHash,
+    net: netValue,
+    payout: payoutValue,
+    player: row.player ?? "—",
+    randomHash: row.randomHash,
+    requestId: row.requestId ?? "—",
+    stake: stakeValue,
+    status: labels.status[row.state]
+  });
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-24">
-      <section className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.22em] text-brand">
+    <main className="mx-auto flex min-h-[100svh] max-w-md flex-col justify-center px-4 py-10 sm:py-14">
+      <h1 className="sr-only">{interpolate(labels.title, { betId })}</h1>
+      <article className="overflow-hidden rounded-2xl border border-border-soft bg-surface-1 shadow-e2">
+        {/* Header chrome — eyebrow + bet id, mirroring the room's panel header. */}
+        <header className="flex items-center justify-between gap-3 border-b border-border-soft px-4 py-3">
+          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-fg-subtle">
             {labels.eyebrow}
-          </p>
-          <h1 className="mt-4 text-4xl font-bold tracking-tight text-fg md:text-6xl">
-            {interpolate(labels.title, { betId })}
-          </h1>
-          <p className="mt-4 max-w-2xl text-sm leading-6 text-fg-muted">{labels.description}</p>
-        </div>
-        <div className="rounded-md border border-border-soft bg-surface-1 p-4">
-          <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-fg-subtle">
-            {labels.indexed}
+          </span>
+          <span className="font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-fg-subtle">
+            #{betId}
+          </span>
+        </header>
+
+        {/* Hero — the settled payoff, tinted by outcome. */}
+        <div className="relative overflow-hidden border-b border-border-soft px-4 py-6">
+          <div
+            aria-hidden
+            className={cx(
+              "pointer-events-none absolute inset-x-6 -top-6 h-24 blur-[70px]",
+              tone === "win" && "bg-success/30",
+              tone === "loss" && "bg-danger/25",
+              tone === "neutral" && "bg-brand/20"
+            )}
+          />
+          <div className="relative">
+            <span
+              className={cx(
+                "inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em]",
+                tone === "win" && "border-success/40 bg-success-soft text-success",
+                tone === "loss" && "border-danger/40 bg-danger-soft text-danger",
+                tone === "neutral" && "border-border-soft bg-surface-2 text-fg-muted"
+              )}
+            >
+              {labels.status[row.state]}
+            </span>
+            <div
+              className={cx(
+                "mt-2 truncate font-mono text-3xl font-bold sm:text-4xl",
+                tone === "win" && "text-success",
+                tone === "loss" && "text-danger",
+                tone === "neutral" && "text-fg"
+              )}
+              title={heroValue}
+            >
+              {heroValue}
+            </div>
+            <p className="mt-1.5 truncate text-xs leading-5 text-fg-muted">{gameLabel}</p>
           </div>
-          <div className="mt-2 font-mono text-sm font-bold text-fg">
-            {receipt.source} · chain {chainId}
-          </div>
-          <div className="mt-1 text-xs text-fg-muted">{formatTimestamp(receipt.generatedAt)}</div>
         </div>
-      </section>
 
-      <section className="mt-8 grid gap-3 md:grid-cols-4">
-        <Metric label={labels.metrics.state} value={labels.status[row.state]} />
-        <Metric
-          label={labels.metrics.stake}
-          value={formatTokenAmount(bigintFromString(row.stake), decimals, symbol)}
-        />
-        <Metric
-          label={labels.metrics.payout}
-          value={formatTokenAmount(getPayout(row), decimals, symbol)}
-        />
-        <Metric
-          label={labels.metrics.net}
-          value={formatTokenAmount(net, decimals, symbol)}
-          tone={net == null ? "default" : net >= 0n ? "success" : "danger"}
-        />
-      </section>
+        {/* Stat strip — stake / payout / net, like the result dialog. */}
+        <div className="grid grid-cols-3 divide-x divide-border-soft border-b border-border-soft">
+          <Stat label={labels.metrics.stake} value={stakeValue} />
+          <Stat
+            label={labels.metrics.payout}
+            value={payoutValue}
+            tone={tone === "win" ? "success" : "default"}
+          />
+          <Stat
+            label={labels.metrics.net}
+            value={netValue}
+            tone={net == null ? "default" : net >= 0n ? "success" : "danger"}
+          />
+        </div>
 
-      <section className="mt-8 rounded-lg border border-border-soft bg-surface-1">
-        <Fact label={labels.facts.game} value={game?.label ?? shortHex(row.gameId)} />
-        <Fact label={labels.facts.player} value={shortHex(row.player)} />
-        <Fact label={labels.facts.affiliate} value={shortHex(row.pricingAffiliate)} />
-        <Fact label={labels.facts.asset} value={asset?.symbol ?? shortHex(row.asset)} />
-        <Fact label={labels.facts.betId} value={row.betId} />
-        <Fact label={labels.facts.requestId} value={row.requestId ?? "—"} />
-        <Fact label={labels.facts.randomHash} value={shortHex(row.randomHash)} />
-        <Fact label={labels.facts.placedBlock} value={String(row.placedBlock ?? "—")} />
-        <Fact label={labels.facts.updatedAt} value={formatTimestamp(row.updatedAt)} />
-        <Fact label={labels.facts.lastEvent} value={row.lastEventName} />
-        <Fact label={labels.facts.lastTx} value={shortHex(row.lastTxHash)} href={txHref} />
-      </section>
+        {/* Verifiable facts — collapsed by default so the card reads clean on a
+            phone, one tap from the full on-chain detail. */}
+        <details className="group border-b border-border-soft">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle transition-colors hover:text-fg">
+            <span>{labels.proof}</span>
+            <ChevronDownIcon className="h-4 w-4 transition-transform group-open:rotate-180" />
+          </summary>
+          <div className="pb-1">
+            <Fact label={labels.facts.game} value={gameLabel} />
+            <Fact label={labels.facts.player} value={shortHex(row.player)} />
+            <Fact label={labels.facts.affiliate} value={shortHex(row.pricingAffiliate)} />
+            <Fact label={labels.facts.asset} value={asset?.symbol ?? shortHex(row.asset)} />
+            <Fact label={labels.facts.betId} value={row.betId} />
+            <Fact label={labels.facts.requestId} value={row.requestId ?? "—"} />
+            <Fact label={labels.facts.randomHash} value={shortHex(row.randomHash)} />
+            <Fact label={labels.facts.placedBlock} value={String(row.placedBlock ?? "—")} />
+            <Fact label={labels.facts.updatedAt} value={formatTimestamp(row.updatedAt)} />
+            <Fact label={labels.facts.lastEvent} value={row.lastEventName} />
+            <Fact label={labels.facts.lastTx} value={shortHex(row.lastTxHash)} href={txHref} />
+          </div>
+        </details>
 
-      <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-        <Link
-          href={gameHref}
-          className="rounded-md bg-brand px-5 py-3 text-center text-sm font-bold uppercase tracking-[0.12em] text-fg-inverse transition-colors hover:bg-brand-hover"
-        >
-          {labels.actions.play}
-        </Link>
-        {txHref ? (
-          <a
-            href={txHref}
-            target="_blank"
-            rel="noreferrer"
-            className="rounded-md border border-border-soft bg-surface-2 px-5 py-3 text-center text-sm font-bold uppercase tracking-[0.12em] text-fg transition-colors hover:border-brand/50 hover:bg-surface-3"
+        {/* Provenance — indexed source, never confused for on-chain truth. */}
+        <div className="flex items-center gap-2 border-b border-border-soft px-4 py-2.5 text-[10px] text-fg-subtle">
+          <span aria-hidden className="inline-flex h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
+          <span className="truncate font-mono">
+            {labels.indexed} · {receipt.source} · chain {chainId} ·{" "}
+            {formatTimestamp(receipt.generatedAt)}
+          </span>
+        </div>
+
+        {/* Actions — play leads; explorer + share share a thumb-friendly row. */}
+        <div className="space-y-2 p-3">
+          <Link
+            href={gameHref}
+            className="block w-full rounded-md border border-brand/40 bg-brand px-4 py-2.5 text-center text-xs font-bold uppercase tracking-[0.12em] text-fg-inverse shadow-e1 transition-colors hover:bg-brand-hover"
           >
-            {labels.actions.explorer}
-          </a>
-        ) : null}
-        <ReceiptSharePanel
-          fallbackUrl={receiptHref}
-          labels={{
-            copyLink: shareLabels.copyResultLink,
-            linkCopied: shareLabels.linkCopied,
-            nativeShare: shareLabels.nativeShare,
-            share: shareLabels.share,
-            telegram: shareLabels.shareToTelegram,
-            whatsapp: shareLabels.shareToWhatsApp,
-            x: shareLabels.shareToX
-          }}
-          text={`${game?.label ?? "Casino"} bet #${betId}`}
-          title={`ArbiGameFi bet #${betId}`}
-          triggerClassName="h-full"
-        />
-      </div>
+            {labels.actions.play}
+          </Link>
+          <div className="grid grid-cols-2 gap-2">
+            {txHref ? (
+              <a
+                href={txHref}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-md border border-border-soft bg-surface-2 px-4 py-2.5 text-center text-xs font-bold uppercase tracking-[0.12em] text-fg transition-colors hover:border-brand/50 hover:bg-surface-3"
+              >
+                {labels.actions.explorer}
+              </a>
+            ) : (
+              <Link
+                href="/casino"
+                className="rounded-md border border-border-soft bg-surface-2 px-4 py-2.5 text-center text-xs font-bold uppercase tracking-[0.12em] text-fg transition-colors hover:border-brand/50 hover:bg-surface-3"
+              >
+                {labels.actions.casino}
+              </Link>
+            )}
+            <ReceiptSharePanel
+              fallbackUrl={receiptHref}
+              labels={{
+                copyProof: shareLabels.copyProof,
+                copyLink: shareLabels.copyResultLink,
+                linkCopied: shareLabels.linkCopied,
+                nativeShare: shareLabels.nativeShare,
+                proofCopied: shareLabels.proofCopied,
+                share: shareLabels.share,
+                telegram: shareLabels.shareToTelegram,
+                whatsapp: shareLabels.shareToWhatsApp,
+                x: shareLabels.shareToX
+              }}
+              proof={proofText}
+              text={shareText}
+              title={`ArbiGameFi bet #${betId}`}
+              triggerClassName="h-full w-full"
+            />
+          </div>
+        </div>
+      </article>
     </main>
   );
 }
@@ -221,7 +326,63 @@ function getNetResult(row: BetRow) {
   return payout - stake;
 }
 
-function Metric({
+/** Net with an explicit sign glyph (+ / −) for the hero figure. */
+function formatSignedNet(value: bigint, decimals: number, symbol: string) {
+  const body = formatTokenAmount(value < 0n ? -value : value, decimals, symbol);
+  if (value > 0n) return `+${body}`;
+  if (value < 0n) return `−${body}`;
+  return body;
+}
+
+function buildProofText({
+  asset,
+  betId,
+  chainId,
+  game,
+  lastTx,
+  net,
+  payout,
+  player,
+  randomHash,
+  requestId,
+  stake,
+  status
+}: {
+  asset: string;
+  betId: string;
+  chainId: number;
+  game: string;
+  lastTx: string;
+  net: string;
+  payout: string;
+  player: string;
+  randomHash?: string;
+  requestId: string;
+  stake: string;
+  status: string;
+}) {
+  return [
+    `ArbiGameFi casino receipt #${betId}`,
+    `Status: ${status}`,
+    `Game: ${game}`,
+    `Asset: ${asset}`,
+    `Stake: ${stake}`,
+    `Payout: ${payout}`,
+    `Net: ${net}`,
+    `Chain ID: ${chainId}`,
+    `Player: ${player}`,
+    `VRF request: ${requestId}`,
+    `Random hash: ${randomHash ?? "—"}`,
+    `Transaction: ${lastTx}`
+  ].join("\n");
+}
+
+/** Local class joiner — keeps this server component free of client-lib imports. */
+function cx(...classes: Array<string | false | undefined>) {
+  return classes.filter(Boolean).join(" ");
+}
+
+function Stat({
   label,
   tone = "default",
   value
@@ -231,17 +392,18 @@ function Metric({
   value: string;
 }) {
   return (
-    <div className="rounded-md border border-border-soft bg-surface-1 p-4">
-      <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
+    <div className="min-w-0 px-3 py-3">
+      <div className="truncate text-[9px] font-bold uppercase tracking-[0.14em] text-fg-subtle">
         {label}
       </div>
       <div
-        className={[
-          "mt-2 truncate font-mono text-xl font-bold",
-          tone === "success" ? "text-success" : "",
-          tone === "danger" ? "text-danger" : "",
-          tone === "default" ? "text-fg" : ""
-        ].join(" ")}
+        className={cx(
+          "mt-1 truncate font-mono text-sm font-bold",
+          tone === "success" && "text-success",
+          tone === "danger" && "text-danger",
+          tone === "default" && "text-fg"
+        )}
+        title={value}
       >
         {value}
       </div>
@@ -251,13 +413,16 @@ function Metric({
 
 function Fact({ href, label, value }: { href?: string; label: string; value: string }) {
   const body = (
-    <span className="min-w-0 flex-1 truncate text-right font-mono text-sm font-bold text-fg">
+    <span
+      className="min-w-0 flex-1 truncate text-right font-mono text-xs font-bold text-fg"
+      title={value}
+    >
       {value}
     </span>
   );
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-border-soft px-4 py-3 last:border-b-0">
-      <span className="shrink-0 text-xs font-bold uppercase tracking-[0.14em] text-fg-subtle">
+    <div className="flex items-center justify-between gap-3 px-4 py-2">
+      <span className="shrink-0 text-[10px] font-bold uppercase tracking-[0.12em] text-fg-subtle">
         {label}
       </span>
       {href ? (
@@ -268,5 +433,20 @@ function Fact({ href, label, value }: { href?: string; label: string; value: str
         body
       )}
     </div>
+  );
+}
+
+function ChevronDownIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden
+    >
+      <path d="M5 7.5 10 12.5 15 7.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }

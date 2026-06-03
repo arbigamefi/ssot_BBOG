@@ -35,7 +35,11 @@ export function buildPageMetadata(
     // Mirror title/description onto OG so per-page shares are accurate; the
     // image comes from the file-based opengraph-image convention.
     meta.openGraph = { title, description, url: canonical };
-    meta.twitter = { title, description };
+    // Next merges metadata shallowly per top-level field: a page-level `twitter`
+    // object REPLACES the root layout's wholesale, so the `summary_large_image`
+    // card type must be re-asserted here or per-page shares fall back to the
+    // small card.
+    meta.twitter = { card: "summary_large_image", title, description };
   }
 
   if (options.noindex) {
