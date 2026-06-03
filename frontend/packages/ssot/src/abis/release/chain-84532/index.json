@@ -1,5 +1,5 @@
 {
-  "blockNumber": 41760321,
+  "blockNumber": 42323839,
   "chainId": 84532,
   "contracts": [
     {
@@ -143,9 +143,17 @@
       "domain": "Sports",
       "name": "BankInstance",
       "poolId": 2
+    },
+    {
+      "abiFile": "Bank.abi.json",
+      "address": "0x4735aE54b7efe4bedeCAee13420f72E05aCd0F4e",
+      "asset": "0x4200000000000000000000000000000000000006",
+      "domain": "Casino",
+      "name": "BankInstance",
+      "poolId": 3
     }
   ],
-  "generatedAt": 1779288993,
+  "generatedAt": 1780416120,
   "gitSha": "",
   "manifestPath": "deployments/frontend-manifest-latest-v13.json",
   "schemaVersion": 2
