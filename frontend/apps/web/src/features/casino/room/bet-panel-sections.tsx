@@ -21,6 +21,23 @@ function toCents(value: number) {
   return Math.floor(value * 100) / 100;
 }
 
+/** Smallest of the finite, positive per-roll caps (wallet balance, pool cap). */
+export function resolveBetMaxAmount(
+  walletBalanceAmount: number | null | undefined,
+  maxBetAmount?: number
+): number | undefined {
+  const candidates = [walletBalanceAmount, maxBetAmount].filter(
+    (value): value is number => value != null && Number.isFinite(value) && value > 0
+  );
+  return candidates.length > 0 ? toCents(Math.min(...candidates)) : undefined;
+}
+
+/** Clamp a bet amount to [MIN_BET_AMOUNT, maxAmount] at cent precision. */
+export function clampBetAmount(value: number, maxAmount?: number): number {
+  const capped = maxAmount == null ? value : Math.min(value, maxAmount);
+  return toCents(Math.max(MIN_BET_AMOUNT, capped));
+}
+
 function parseBetAmountInput(input: string, { min, max }: { min: number; max?: number }) {
   const normalized = input.replace(/,/g, "").trim();
   const match = normalized.match(/\d+(?:\.\d{0,2})?/);
@@ -46,14 +63,8 @@ export function BetAmountSection({
   onBetAmountChange: (amount: number) => void;
 }) {
   const t = useTranslations();
-  const limitCandidates = [walletBalanceAmount, maxBetAmount].filter(
-    (value): value is number => value != null && Number.isFinite(value) && value > 0
-  );
-  const maxAmount = limitCandidates.length > 0 ? toCents(Math.min(...limitCandidates)) : undefined;
-  const setBetAmount = (value: number) => {
-    const capped = maxAmount == null ? value : Math.min(value, maxAmount);
-    onBetAmountChange(toCents(Math.max(MIN_BET_AMOUNT, capped)));
-  };
+  const maxAmount = resolveBetMaxAmount(walletBalanceAmount, maxBetAmount);
+  const setBetAmount = (value: number) => onBetAmountChange(clampBetAmount(value, maxAmount));
 
   return (
     <div className="mb-2">

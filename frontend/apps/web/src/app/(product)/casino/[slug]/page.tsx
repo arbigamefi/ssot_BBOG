@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { isCasinoModuleSlug } from "../../../../features/casino/modules";
+import { SITE_URL } from "../../../../config/site";
 import { buildPageMetadata } from "../../../../i18n/metadata";
 import { getRequestI18n } from "../../../../i18n/request";
 import { GamePageClient } from "./pageClient";
@@ -57,5 +58,39 @@ export default async function GameRoomPage({ params }: { params: Promise<{ slug:
     notFound();
   }
 
-  return <GamePageClient key={slug} slug={slug} />;
+  // schema.org structured data for the game room — improves crawlability and
+  // links the page into the site's knowledge graph (publisher → homepage org).
+  // Description is reused from page metadata so there is no duplicated copy.
+  const { messages } = await getRequestI18n();
+  const name = localizedGameName(messages, slug);
+  const metadata = buildPageMetadata(
+    messages,
+    "casinoRoom",
+    { game: name },
+    { path: `/casino/${slug}` }
+  );
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "Game",
+    name,
+    url: `${SITE_URL}/casino/${slug}`,
+    genre: "Casino",
+    ...(typeof metadata.description === "string" ? { description: metadata.description } : {}),
+    publisher: {
+      "@type": "Organization",
+      "@id": `${SITE_URL}/#organization`,
+      name: "ArbiGameFi",
+      url: SITE_URL
+    }
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+      <GamePageClient key={slug} slug={slug} />
+    </>
+  );
 }

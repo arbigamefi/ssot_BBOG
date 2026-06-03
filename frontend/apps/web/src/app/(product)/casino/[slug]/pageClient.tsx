@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type { DomainBet } from "@ssot/ssot";
@@ -49,72 +48,13 @@ import { GameRoomShell } from "../../../../features/casino/room/game-room-shell"
 import { MobileCasinoActionBar } from "../../../../features/casino/room/mobile-action-bar";
 import { useCasinoRound } from "../../../../features/casino/room/use-casino-round";
 import { useReferralAffiliate } from "../../../../features/referral/useReferralAffiliate";
+import {
+  GameRoomAuditLedger,
+  getCasinoRoomPendingStates,
+  getLocalizedGameName
+} from "./pageClient-helpers";
 
-function AuditLedgerLoading() {
-  const t = useTranslations();
-
-  return (
-    <div className="rounded-lg border border-border bg-surface-1 p-6 text-sm font-bold uppercase tracking-[0.18em] text-fg-subtle">
-      {t("casino.room.audit.loading")}
-    </div>
-  );
-}
-
-function getLocalizedGameName(t: (key: string) => string, game: GameMeta) {
-  switch (game.slug) {
-    case "dice":
-      return t("casino.room.names.dice");
-    case "roulette":
-      return t("casino.room.names.roulette");
-    case "coin-toss":
-      return t("casino.room.names.coinToss");
-    case "keno":
-      return t("casino.room.names.keno");
-    case "plinko":
-      return t("casino.room.names.plinko");
-    case "slots":
-      return t("casino.room.names.slots");
-    case "baccarat":
-      return t("casino.room.names.baccarat");
-    case "sic-bo":
-      return t("casino.room.names.sicBo");
-    default:
-      return game.label;
-  }
-}
-
-const GameRoomAuditLedger = dynamic(
-  () =>
-    import("../../../../features/casino/room/audit-ledger").then((mod) => mod.GameRoomAuditLedger),
-  {
-    loading: () => <AuditLedgerLoading />,
-    ssr: false
-  }
-);
-
-export function getCasinoRoomPendingStates({
-  isLocalPending,
-  isTransactionActive,
-  isOutcomeTracking,
-  hasStageReveal,
-  hasCasinoOutcome,
-  isResultVisible = false
-}: {
-  isLocalPending: boolean;
-  isTransactionActive: boolean;
-  isOutcomeTracking: boolean;
-  hasStageReveal: boolean;
-  hasCasinoOutcome: boolean;
-  isResultVisible?: boolean;
-}) {
-  const isRoundInputLocked =
-    isLocalPending || isTransactionActive || isOutcomeTracking || hasStageReveal || isResultVisible;
-
-  return {
-    isBetPanelPending: isRoundInputLocked,
-    isStagePending: isOutcomeTracking && !hasStageReveal && !hasCasinoOutcome
-  };
-}
+export { getCasinoRoomPendingStates } from "./pageClient-helpers";
 
 /* ─── Main Logic ─── */
 
@@ -493,6 +433,8 @@ export function GamePageClient({ slug }: { slug: string }) {
     maxBetRaw == null
       ? undefined
       : Number(maxBetRaw) / Math.pow(10, assetDecimals) / Math.max(1, Math.floor(betCount));
+  const walletBalanceAmount =
+    walletBalance?.raw == null ? null : Number(walletBalance.raw) / Math.pow(10, assetDecimals);
 
   const LeftPane = (
     <GameRoomBetPanel
@@ -540,6 +482,9 @@ export function GamePageClient({ slug }: { slug: string }) {
       game={game}
       assetSymbol={assetSymbol}
       betAmount={betAmount}
+      maxBetAmount={maxBetAmountPerRoll}
+      walletBalanceAmount={walletBalanceAmount}
+      onBetAmountChange={setBetAmount}
       hasAccount={Boolean(sdk?.account)}
       isPending={isBetPanelPending}
       winChance={winChance}

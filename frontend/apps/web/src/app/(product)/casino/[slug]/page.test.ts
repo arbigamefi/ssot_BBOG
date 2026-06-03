@@ -16,7 +16,44 @@ vi.mock("next/navigation", () => ({
   notFound: notFoundMock
 }));
 
+// The page reads request i18n + metadata to build game-room JSON-LD; stub both
+// so the server component can be invoked outside a Next request scope.
+vi.mock("../../../../i18n/request", () => ({
+  getRequestI18n: vi.fn(async () => ({
+    messages: {
+      casino: {
+        room: {
+          names: {
+            dice: "Dice",
+            roulette: "Roulette",
+            coinToss: "Coin Toss",
+            keno: "Keno",
+            plinko: "Plinko",
+            slots: "Slots",
+            baccarat: "Baccarat",
+            sicBo: "Sic Bo"
+          }
+        }
+      }
+    }
+  }))
+}));
+
+vi.mock("../../../../i18n/metadata", () => ({
+  buildPageMetadata: vi.fn(() => ({ description: "Test casino room description" }))
+}));
+
 import GameRoomPage from "./page";
+
+/** The page renders a fragment: [<script ld+json>, <GamePageClient>]. */
+function findGameClient(page: unknown): React.ReactElement | undefined {
+  const children = (page as React.ReactElement).props.children;
+  const list = Array.isArray(children) ? children : [children];
+  return list.find(
+    (child): child is React.ReactElement =>
+      React.isValidElement(child) && child.type === gamePageClientMock
+  );
+}
 
 describe("GameRoomPage", () => {
   beforeEach(() => {
@@ -24,34 +61,33 @@ describe("GameRoomPage", () => {
     notFoundMock.mockClear();
   });
 
-  it("renders roulette through the shared game page client", async () => {
-    const page = await GameRoomPage({ params: Promise.resolve({ slug: "roulette" }) });
-    expect((page as React.ReactElement).type).toBe(gamePageClientMock);
-    expect((page as React.ReactElement).props.slug).toBe("roulette");
-  });
+  it.each(["roulette", "coin-toss", "plinko", "slots", "baccarat"])(
+    "renders %s through the shared game page client",
+    async (slug) => {
+      const page = await GameRoomPage({ params: Promise.resolve({ slug }) });
+      const client = findGameClient(page);
+      expect(client).toBeDefined();
+      expect(client?.props.slug).toBe(slug);
+    }
+  );
 
-  it("passes the canonical coin-toss slug through unchanged", async () => {
-    const page = await GameRoomPage({ params: Promise.resolve({ slug: "coin-toss" }) });
-    expect((page as React.ReactElement).type).toBe(gamePageClientMock);
-    expect((page as React.ReactElement).props.slug).toBe("coin-toss");
-  });
-
-  it("renders plinko through the shared game page client", async () => {
-    const page = await GameRoomPage({ params: Promise.resolve({ slug: "plinko" }) });
-    expect((page as React.ReactElement).type).toBe(gamePageClientMock);
-    expect((page as React.ReactElement).props.slug).toBe("plinko");
-  });
-
-  it("renders slots through the shared game page client", async () => {
-    const page = await GameRoomPage({ params: Promise.resolve({ slug: "slots" }) });
-    expect((page as React.ReactElement).type).toBe(gamePageClientMock);
-    expect((page as React.ReactElement).props.slug).toBe("slots");
-  });
-
-  it("renders baccarat through the shared game page client", async () => {
-    const page = await GameRoomPage({ params: Promise.resolve({ slug: "baccarat" }) });
-    expect((page as React.ReactElement).type).toBe(gamePageClientMock);
-    expect((page as React.ReactElement).props.slug).toBe("baccarat");
+  it("emits game-room JSON-LD structured data", async () => {
+    const page = await GameRoomPage({ params: Promise.resolve({ slug: "dice" }) });
+    const children = (page as React.ReactElement).props.children;
+    const list = Array.isArray(children) ? children : [children];
+    const script = list.find(
+      (child): child is React.ReactElement =>
+        React.isValidElement(child) &&
+        (child.props as { type?: string }).type === "application/ld+json"
+    );
+    expect(script).toBeDefined();
+    const json = JSON.parse(
+      (script!.props as { dangerouslySetInnerHTML: { __html: string } }).dangerouslySetInnerHTML
+        .__html
+    );
+    expect(json["@type"]).toBe("Game");
+    expect(json.name).toBe("Dice");
+    expect(json.url).toMatch(/\/casino\/dice$/);
   });
 
   it("404s unknown slugs before they reach the shared client", async () => {
