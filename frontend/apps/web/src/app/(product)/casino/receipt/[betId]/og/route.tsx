@@ -17,7 +17,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ betI
       eyebrow: "Casino receipt",
       title: "Receipt unavailable",
       subtitle: "This bet ID is not valid.",
-      badge: "AGF"
+      badge: "AGF",
+      tone: "muted"
     });
   }
 
@@ -29,7 +30,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ betI
       eyebrow: "Casino receipt",
       title: `Bet #${betId}`,
       subtitle: "Receipt not indexed yet. Check back after the bet index catches up.",
-      badge: `chain ${chainId}`
+      badge: `chain ${chainId}`,
+      tone: "warning",
+      metrics: [
+        { label: "Status", value: "Indexing" },
+        { label: "Chain", value: String(chainId) },
+        { label: "Source", value: "Pending" }
+      ],
+      footerItems: ["Public receipt", "Indexed data", "Verify on explorer"]
     });
   }
 
@@ -57,12 +65,27 @@ export async function GET(request: Request, { params }: { params: Promise<{ betI
           ? "Randomness ready"
           : "Bet placed";
   const amount = formatTokenAmount(net ?? payout ?? stake, decimals, symbol, 2);
+  const tone =
+    row.state === "refunded"
+      ? "warning"
+      : row.state === "finalized" && net != null && net >= 0n
+        ? "success"
+        : row.state === "randomReady"
+          ? "brand"
+          : "muted";
 
   return renderOgCard({
     eyebrow: "Public casino receipt",
     title: `${resultLabel} ${amount}`,
     subtitle: `${game?.label ?? "Casino"} bet #${betId} · ${receipt.source} · chain ${chainId}`,
-    badge: row.state
+    badge: row.state,
+    tone,
+    metrics: [
+      { label: "Game", value: game?.label ?? "Casino" },
+      { label: "Chain", value: String(chainId) },
+      { label: "Source", value: receipt.source }
+    ],
+    footerItems: ["Public receipt", "Indexed data", "Verify on explorer"]
   });
 }
 

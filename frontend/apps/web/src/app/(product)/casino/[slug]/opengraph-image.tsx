@@ -67,6 +67,11 @@ export default async function GameOpengraphImage({
     eyebrow: "Play on-chain",
     title: card.name,
     subtitle: card.subtitle,
-    badge: card.badge
+    badge: card.badge,
+    metrics: [
+      { label: "Randomness", value: "VRF" },
+      { label: "Settlement", value: "On-chain" },
+      { label: "Game", value: card.name }
+    ]
   });
 }

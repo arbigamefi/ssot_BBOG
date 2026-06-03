@@ -11,6 +11,11 @@ export default function OpengraphImage() {
     eyebrow: "Wallet-native casino",
     title: "Verifiable casino on-chain.",
     subtitle: "Eight games. Every spin verifiable on-chain. Wins hit your wallet in seconds.",
-    badge: "8 games"
+    badge: "8 games",
+    metrics: [
+      { label: "Settlement", value: "On-chain" },
+      { label: "Randomness", value: "VRF" },
+      { label: "Custody", value: "Wallet" }
+    ]
   });
 }
