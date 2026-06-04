@@ -77,6 +77,11 @@ has_browser_rpc || {
 
 need_bool NEXT_PUBLIC_CASINO_RISK_IN_ENABLED
 need_bool NEXT_PUBLIC_SPORTSBOOK_ENABLED
+need_bool BET_RECEIPT_RPC_FALLBACK_ENABLED
+
+if [[ "$BET_RECEIPT_RPC_FALLBACK_ENABLED" != "true" ]]; then
+  fail "BET_RECEIPT_RPC_FALLBACK_ENABLED must be true so share receipts can recover while durable indexing catches up"
+fi
 
 if [[ "$NEXT_PUBLIC_SPORTSBOOK_ENABLED" == "true" ]]; then
   fail "casino-only production web env must keep NEXT_PUBLIC_SPORTSBOOK_ENABLED=false"
@@ -99,6 +104,7 @@ echo "  env: $NEXT_PUBLIC_ENV"
 echo "  sentryRelease: $NEXT_PUBLIC_SENTRY_RELEASE"
 echo "  casinoRiskInEnabled: $NEXT_PUBLIC_CASINO_RISK_IN_ENABLED"
 echo "  sportsbookEnabled: $NEXT_PUBLIC_SPORTSBOOK_ENABLED"
+echo "  receiptRpcFallbackEnabled: $BET_RECEIPT_RPC_FALLBACK_ENABLED"
 if [[ -n "${NEXT_PUBLIC_BASE_RPC_URL-}" ]]; then
   echo "  browserRpc: NEXT_PUBLIC_BASE_RPC_URL"
 elif [[ -n "${NEXT_PUBLIC_RPC_URL-}" ]]; then

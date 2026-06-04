@@ -670,7 +670,7 @@ export function GameRoomResultOverlay({
   const receiptPath = buildReceiptSharePath({
     betId: result.betId,
     chainId,
-    version: `${result.kind}:${txHash}`
+    version: buildReceiptShareVersion({ result, txHash })
   });
   const shareUrl = buildShareUrl({
     href: typeof window !== "undefined" ? `${window.location.origin}${receiptPath}` : receiptPath,
@@ -881,17 +881,39 @@ export function GameRoomResultOverlay({
   );
 }
 
-function buildReceiptSharePath({
+export function buildReceiptShareVersion({
+  result,
+  txHash
+}: {
+  result: CasinoTerminalRoundResult;
+  txHash?: string;
+}) {
+  const normalizedTxHash = normalizeReceiptVersionSegment(txHash);
+  if (normalizedTxHash) return `${result.kind}:${normalizedTxHash}`;
+  return `${result.kind}:bet:${result.betId.toString()}:request:${result.requestId.toString()}:random:${result.randomHash}`;
+}
+
+export function buildReceiptSharePath({
   betId,
   chainId,
   version
 }: {
   betId: bigint;
   chainId?: number;
-  version: string;
+  version?: string;
 }) {
   const params = new URLSearchParams();
   if (chainId) params.set("chainId", String(chainId));
-  params.set("v", version);
-  return `/casino/receipt/${betId.toString()}?${params.toString()}`;
+  const normalizedVersion = normalizeReceiptVersionSegment(version);
+  if (normalizedVersion) params.set("v", normalizedVersion);
+  const query = params.toString();
+  return `/casino/receipt/${betId.toString()}${query ? `?${query}` : ""}`;
+}
+
+function normalizeReceiptVersionSegment(value: string | undefined) {
+  const trimmed = value?.trim();
+  if (!trimmed) return undefined;
+  if (/\b(?:undefined|null)\b/i.test(trimmed)) return undefined;
+  if (/^0x0{64}$/i.test(trimmed)) return undefined;
+  return trimmed;
 }

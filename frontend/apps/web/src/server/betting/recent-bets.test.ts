@@ -35,6 +35,8 @@ const ENV_KEYS = [
   "PLAYER_BETS_WINDOW_BLOCKS",
   "BET_RECEIPT_LOG_CHUNK_BLOCKS",
   "BET_RECEIPT_WINDOW_BLOCKS",
+  "BET_RECEIPT_RPC_FALLBACK_ENABLED",
+  "BET_INDEX_RPC_FALLBACK_ENABLED",
   "RECENT_BETS_LOG_CHUNK_BLOCKS",
   "RECENT_BETS_WINDOW_BLOCKS"
 ];
@@ -152,6 +154,8 @@ describe("recent bets server aggregation", () => {
 
   it("falls back to exact receipt logs and preserves chain timestamps", async () => {
     process.env.BET_INDEX_READ_ENABLED = "0";
+    process.env.BET_INDEX_RPC_FALLBACK_ENABLED = "false";
+    process.env.BET_RECEIPT_RPC_FALLBACK_ENABLED = "true";
     process.env.BET_RECEIPT_WINDOW_BLOCKS = "9";
     process.env.BET_RECEIPT_LOG_CHUNK_BLOCKS = "10";
 
