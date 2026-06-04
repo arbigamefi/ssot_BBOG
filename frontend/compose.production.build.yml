@@ -1,0 +1,20 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.web
+
+  keeper-primary:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.keeper
+
+  keeper-testnet-primary:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.keeper
+
+  keeper-backup:
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.keeper

@@ -31,7 +31,13 @@ fi
 echo "[docker-prod] validating compose graph"
 docker compose -f compose.production.yml config >/dev/null
 
-echo "[docker-prod] validating embedded Base mainnet release"
-pnpm check:mainnet-release
+if [[ "${CHECK_EMBEDDED_RELEASE:-0}" == "1" ]]; then
+  if [[ ! -f package.json ]]; then
+    echo "error: CHECK_EMBEDDED_RELEASE=1 requires a frontend source checkout" >&2
+    exit 1
+  fi
+  echo "[docker-prod] validating embedded Base mainnet release"
+  pnpm check:mainnet-release
+fi
 
 echo "[docker-prod] OK"

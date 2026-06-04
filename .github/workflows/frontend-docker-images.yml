@@ -28,6 +28,27 @@ env:
   KEEPER_IMAGE: ghcr.io/arbigamefi/ssot-bbog-keeper
 
 jobs:
+  deploy-bundle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create deploy bundle
+        run: |
+          bash frontend/deploy/docker/create-deploy-bundle.sh
+
+      - name: Upload deploy bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: arbigamefi-docker-deploy-bundle
+          path: frontend/dist/arbigamefi-docker-deploy-bundle.tar.gz
+          if-no-files-found: error
+
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 60
