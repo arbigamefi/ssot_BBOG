@@ -10,8 +10,11 @@ import { getReceiptPreviewHint, getReceiptVersionTerminalTxHash } from "../recei
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const RECEIPT_OG_HEADERS = {
+const RECEIPT_OG_PENDING_HEADERS = {
   "Cache-Control": "no-store, max-age=0"
+} as const;
+const RECEIPT_OG_TERMINAL_HEADERS = {
+  "Cache-Control": "public, max-age=31536000, immutable"
 } as const;
 
 export async function GET(request: Request, { params }: { params: Promise<{ betId: string }> }) {
@@ -27,7 +30,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ betI
       tone: "muted",
       visualKind: "receipt",
       variant: "receipt",
-      headers: RECEIPT_OG_HEADERS
+      headers: RECEIPT_OG_PENDING_HEADERS
     });
   }
 
@@ -60,7 +63,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ betI
         { label: "Source", value: "Shared" }
       ],
       footerItems: ["Public receipt", "Indexed data", "Verify on explorer"],
-      headers: RECEIPT_OG_HEADERS
+      headers: RECEIPT_OG_TERMINAL_HEADERS
     });
   }
 
@@ -87,7 +90,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ betI
         { label: "Source", value: "Pending" }
       ],
       footerItems: ["Public receipt", "Indexed data", "Verify on explorer"],
-      headers: RECEIPT_OG_HEADERS
+      headers: RECEIPT_OG_PENDING_HEADERS
     });
   }
 
@@ -142,7 +145,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ betI
       { label: "Source", value: receipt.source }
     ],
     footerItems: ["Public receipt", "Indexed data", "Verify on explorer"],
-    headers: RECEIPT_OG_HEADERS
+    headers: terminalTxHash ? RECEIPT_OG_TERMINAL_HEADERS : RECEIPT_OG_PENDING_HEADERS
   });
 }
 

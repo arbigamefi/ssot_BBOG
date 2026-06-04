@@ -125,6 +125,7 @@ describe("casino receipt OG route", () => {
     );
     const body = await response.json();
 
+    expect(response.headers.get("cache-control")).toBe("public, max-age=31536000, immutable");
     expect(queryBetReceiptMock).not.toHaveBeenCalled();
     expect(body.title).toBe("Settled -1.25 USDC");
     expect(body.subtitle).toContain(`Dice bet ${String.fromCharCode(35)}286`);
