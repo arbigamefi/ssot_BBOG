@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { getReceiptOgVersion, normalizeReceiptOgVersion } from "./receipt-metadata";
+import {
+  getReceiptOgVersion,
+  getReceiptVersionTerminalTxHash,
+  normalizeReceiptOgVersion
+} from "./receipt-metadata";
 
 describe("receipt metadata versioning", () => {
   it("builds a terminal version from the indexed receipt row", () => {
@@ -25,5 +29,14 @@ describe("receipt metadata versioning", () => {
     expect(getReceiptOgVersion(null, "settled:bet:290:request:7057")).toBe(
       "settled:bet:290:request:7057"
     );
+  });
+
+  it("extracts a valid terminal transaction hash from a receipt version", () => {
+    expect(
+      getReceiptVersionTerminalTxHash(
+        "finalized:0xa76261431e46093f8669c400fe6bf0093ff41cf159edaefbed9d5257afca3ded:BetFinalized:1780582922000"
+      )
+    ).toBe("0xa76261431e46093f8669c400fe6bf0093ff41cf159edaefbed9d5257afca3ded");
+    expect(getReceiptVersionTerminalTxHash("settled:undefined")).toBeUndefined();
   });
 });

@@ -1,5 +1,6 @@
 import {
   createPublicClient,
+  decodeEventLog,
   getAddress,
   http,
   parseAbi,
@@ -32,6 +33,10 @@ const GAME_HUB_EVENT_ABI = parseAbi([
   "event BetRandomReady(uint256 indexed positionId, uint256 indexed requestId, bytes32 randomHash)",
   "event BetFinalized(uint256 indexed positionId, uint256 payoutGross, uint256 payoutNet, uint256 feeOnPayout, uint256 protocolFeeAccrual)",
   "event BetRefunded(uint256 indexed positionId, uint256 refundAmount)"
+]);
+
+const GAME_HUB_GET_BET_ABI = parseAbi([
+  "function getBet(uint256 betId) view returns ((uint256 betId, bytes32 gameId, address player, address asset, address bank, uint256 stake, uint256 reserved, uint256 amountPerRoll, uint32 betCount, uint256 stopGain, uint256 stopLoss, address pricingAffiliate, uint16 baseHouseEdgeBps, uint16 effectiveHouseEdgeBps, uint16 maxHouseEdgeBps, uint32 referralConfigId, bytes32 deltaSkylineHash, bytes32 snapshotHash, bytes32 paramsHash, uint256 vrfFeePaid, uint256 vrfFeeCharged, uint32 vrfCallbackGasLimit, uint256 requestId, bytes32 randomHash, uint64 placedAt, uint64 vrfRequestedAt, uint64 resolvedAt, uint8 state))"
 ]);
 
 const DEFAULT_LIMIT = 20;
@@ -515,11 +520,13 @@ export async function queryBetReceipt({
   betId,
   chainId,
   client,
+  terminalTxHash,
   now = () => Date.now()
 }: {
   betId: string;
   chainId: number;
   client?: PublicClient;
+  terminalTxHash?: Hex;
   now?: () => number;
 }): Promise<BetReceiptResponse> {
   const normalizedBetId = normalizeBetId(betId);
@@ -538,6 +545,27 @@ export async function queryBetReceipt({
   }
 
   if (shouldUseRpcFallback("BET_RECEIPT_RPC_FALLBACK_ENABLED", false)) {
+    const directFallbackRow = terminalTxHash
+      ? await queryBetReceiptTerminalTxFallback({
+          betId: normalizedBetId,
+          chainId,
+          client,
+          terminalTxHash,
+          now
+        })
+      : null;
+    if (directFallbackRow) {
+      return {
+        schemaVersion: 1,
+        betId: normalizedBetId,
+        cached: false,
+        chainId,
+        generatedAt: now(),
+        row: directFallbackRow,
+        source: "rpc-window"
+      };
+    }
+
     const fallbackRow = await queryBetReceiptRpcFallback({
       betId: normalizedBetId,
       chainId,
@@ -563,6 +591,122 @@ export async function queryBetReceipt({
     row: null,
     source: store ? "postgres" : "rpc-window"
   };
+}
+
+async function queryBetReceiptTerminalTxFallback({
+  betId,
+  chainId,
+  client,
+  now,
+  terminalTxHash
+}: {
+  betId: string;
+  chainId: number;
+  client?: PublicClient;
+  now: () => number;
+  terminalTxHash: Hex;
+}) {
+  const receiptBetId = BigInt(betId);
+  try {
+    const loaded = await loadGameHubClient({ chainId, client });
+    const [bet, txReceipt] = await Promise.all([
+      loaded.client.readContract({
+        address: loaded.gameHub,
+        abi: GAME_HUB_GET_BET_ABI,
+        functionName: "getBet",
+        args: [receiptBetId]
+      }) as Promise<any>,
+      loaded.client.getTransactionReceipt({ hash: terminalTxHash })
+    ]);
+    const terminal = decodeTerminalReceiptLog({
+      betId: receiptBetId,
+      gameHub: loaded.gameHub,
+      logs: txReceipt.logs
+    });
+    if (!terminal) return null;
+
+    const blockTimestamp = txReceipt.blockNumber
+      ? blockTimestampMs(
+          (await loaded.client.getBlock({ blockNumber: txReceipt.blockNumber })).timestamp
+        )
+      : undefined;
+    const updatedAt = blockTimestamp ?? now();
+    const updatedBlock = txReceipt.blockNumber ? Number(txReceipt.blockNumber) : 0;
+    const row: BetRow = {
+      asset: getAddress(bet.asset) as Address,
+      betId,
+      chainId,
+      gameId: bet.gameId as Hex,
+      id: `${chainId}:${betId}`,
+      lastEventName: terminal.eventName,
+      lastTxHash: terminalTxHash,
+      placedAt: numberSecondsToMs(bet.placedAt),
+      player: getAddress(bet.player) as Address,
+      pricingAffiliate: getAddress(bet.pricingAffiliate) as Address,
+      randomHash: bet.randomHash as Hex,
+      requestId: BigInt(bet.requestId).toString(),
+      stake: BigInt(bet.stake).toString(),
+      state: terminal.eventName === "BetRefunded" ? "refunded" : "finalized",
+      terminalTxHash,
+      updatedAt,
+      updatedBlock
+    };
+    if (terminal.eventName === "BetFinalized") {
+      row.finalizedTxHash = terminalTxHash;
+      row.payoutGross = bigintStringFromUnknown(terminal.args.payoutGross);
+      row.payout = bigintStringFromUnknown(terminal.args.payoutNet);
+    } else {
+      row.refundedTxHash = terminalTxHash;
+      row.refundAmount = bigintStringFromUnknown(terminal.args.refundAmount);
+      row.payout = row.refundAmount;
+    }
+    return row;
+  } catch {
+    return null;
+  }
+}
+
+function decodeTerminalReceiptLog({
+  betId,
+  gameHub,
+  logs
+}: {
+  betId: bigint;
+  gameHub: Address;
+  logs: Array<{ address?: Address; data: Hex; topics: readonly Hex[] }>;
+}) {
+  for (const log of logs) {
+    if (log.address?.toLowerCase() !== gameHub.toLowerCase()) continue;
+    for (const eventName of ["BetFinalized", "BetRefunded"] as const) {
+      try {
+        const decoded = decodeEventLog({
+          abi: GAME_HUB_EVENT_ABI,
+          data: log.data,
+          eventName,
+          topics: log.topics as [`0x${string}`, ...`0x${string}`[]]
+        });
+        const args = decoded.args as Record<string, unknown>;
+        if (BigInt(String(args.positionId ?? args.betId ?? 0)) !== betId) continue;
+        return { args, eventName };
+      } catch {
+        // Try the next terminal event ABI.
+      }
+    }
+  }
+  return null;
+}
+
+function numberSecondsToMs(value: unknown) {
+  const numeric = Number(value ?? 0);
+  return numeric > 0 ? numeric * 1000 : undefined;
+}
+
+function bigintStringFromUnknown(value: unknown) {
+  if (typeof value === "bigint") return value.toString();
+  if (typeof value === "number" || typeof value === "string" || typeof value === "boolean") {
+    return BigInt(value).toString();
+  }
+  return "0";
 }
 
 async function queryBetReceiptRpcFallback({

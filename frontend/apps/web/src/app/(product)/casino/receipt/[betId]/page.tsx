@@ -18,7 +18,7 @@ import {
 import { ReceiptSharePanel } from "../../../../../features/share/ReceiptSharePanel";
 import { getCasinoGamePresentation } from "../../../../../features/casino/game-presentation";
 import { PageTransition } from "../../../../../components/PageTransition";
-import { getReceiptOgVersion } from "./receipt-metadata";
+import { getReceiptOgVersion, getReceiptVersionTerminalTxHash } from "./receipt-metadata";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -42,7 +42,11 @@ export async function generateMetadata({
   const chainId = parseRequestChainId(chainIdParam);
   const normalizedBetId = safeNormalizeBetId(betId);
   const receipt = normalizedBetId
-    ? await queryBetReceipt({ betId: normalizedBetId, chainId }).catch(() => undefined)
+    ? await queryBetReceipt({
+        betId: normalizedBetId,
+        chainId,
+        terminalTxHash: getReceiptVersionTerminalTxHash(versionParam)
+      }).catch(() => undefined)
     : undefined;
   const version = getReceiptOgVersion(receipt?.row, versionParam);
   // Receipts use a *dynamic* per-bet card (the /og route), so the image is set

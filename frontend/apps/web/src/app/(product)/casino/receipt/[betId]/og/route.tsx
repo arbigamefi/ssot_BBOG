@@ -5,6 +5,7 @@ import { parseRequestChainId } from "../../../../../../server/chain";
 import { normalizeBetId, queryBetReceipt } from "../../../../../../server/betting/recent-bets";
 import { formatTokenAmount } from "../../../../../../features/portfolio/activity/detail/format";
 import { getCasinoGamePresentation } from "../../../../../../features/casino/game-presentation";
+import { getReceiptVersionTerminalTxHash } from "../receipt-metadata";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -31,7 +32,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ betI
   }
 
   const chainId = parseRequestChainId(url.searchParams.get("chainId"));
-  const receipt = await queryBetReceipt({ betId, chainId });
+  const receipt = await queryBetReceipt({
+    betId,
+    chainId,
+    terminalTxHash: getReceiptVersionTerminalTxHash(url.searchParams.get("v"))
+  });
   const row = receipt.row;
   if (!row) {
     return renderOgCard({

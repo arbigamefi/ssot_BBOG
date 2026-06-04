@@ -1,5 +1,7 @@
 import type { BetRow } from "@ssot/ssot/indexer";
 
+type Hex = `0x${string}`;
+
 const INVALID_VERSION_PATTERN = /\b(?:null|undefined)\b/i;
 const ZERO_HASH = /^0x0+$/i;
 
@@ -24,4 +26,13 @@ export function normalizeReceiptOgVersion(value?: string | null) {
   if (INVALID_VERSION_PATTERN.test(trimmed)) return undefined;
   if (ZERO_HASH.test(trimmed)) return undefined;
   return trimmed;
+}
+
+export function getReceiptVersionTerminalTxHash(value?: string | null): Hex | undefined {
+  const normalized = normalizeReceiptOgVersion(value);
+  if (!normalized) return undefined;
+  const match = normalized.match(/0x[a-fA-F0-9]{64}/);
+  if (!match) return undefined;
+  const hash = match[0] as Hex;
+  return ZERO_HASH.test(hash) ? undefined : hash;
 }
