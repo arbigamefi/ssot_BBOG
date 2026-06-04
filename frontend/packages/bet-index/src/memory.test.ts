@@ -104,6 +104,24 @@ describe("memory bet index store", () => {
     await expect(store.getCursor(84532, "gamehub-events", GAME_HUB)).resolves.toBe(123n);
   });
 
+  it("keeps replay cursors monotonic", async () => {
+    const store = createMemoryBetIndexStore();
+    await store.setCursor({
+      blockNumber: 42390787n,
+      chainId: 84532,
+      cursorKey: GAME_HUB,
+      source: "gamehub-events"
+    });
+    await store.setCursor({
+      blockNumber: 42128984n,
+      chainId: 84532,
+      cursorKey: GAME_HUB,
+      source: "gamehub-events"
+    });
+
+    await expect(store.getCursor(84532, "gamehub-events", GAME_HUB)).resolves.toBe(42390787n);
+  });
+
   it("folds sport ticket events and queries player rows", async () => {
     const store = createMemoryBetIndexStore();
 

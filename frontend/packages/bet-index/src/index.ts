@@ -659,7 +659,12 @@ export function createMemoryBetIndexStore(): BetIndexStore {
     getCursor: async (chainId: number, source: string, cursorKey: string) =>
       cursors.get(cursorId(chainId, source, cursorKey)) ?? null,
     setCursor: async (cursor: BetIndexCursor) => {
-      cursors.set(cursorId(cursor.chainId, cursor.source, cursor.cursorKey), cursor.blockNumber);
+      const id = cursorId(cursor.chainId, cursor.source, cursor.cursorKey);
+      const previous = cursors.get(id);
+      cursors.set(
+        id,
+        previous == null || cursor.blockNumber > previous ? cursor.blockNumber : previous
+      );
     }
   };
 }
@@ -1219,7 +1224,7 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
           ${cursor.blockNumber.toString()}
         )
         on conflict (chain_id, source, cursor_key) do update set
-          block_number = excluded.block_number,
+          block_number = greatest(indexer_cursors.block_number, excluded.block_number),
           updated_at = now()
       `;
     },

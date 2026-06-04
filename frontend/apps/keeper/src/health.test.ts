@@ -124,6 +124,25 @@ describe("KeeperHealthReporter", () => {
     });
   });
 
+  it("clears stale finalize failures when another finalizer already settled the bet", async () => {
+    const health = reporter();
+
+    await health.recordFinalizeOutcome(
+      { betId: 15n },
+      { kind: "failed", reason: "finalize transaction reverted", retryable: true },
+      1
+    );
+    await health.recordFinalizeOutcome({ betId: 15n }, { kind: "raced", state: "settled" }, 0);
+
+    expect(health.snapshot()).toMatchObject({
+      status: "running",
+      queueDepth: 0,
+      lastError: undefined,
+      lastFinalizeFailureAt: undefined,
+      lastFinalizeFailure: undefined
+    });
+  });
+
   it("writes atomically to a health file sink", async () => {
     const dir = await mkdtemp(join(tmpdir(), "keeper-health-"));
     const path = join(dir, "casino-keeper-health.json");

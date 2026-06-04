@@ -174,6 +174,17 @@ export class KeeperHealthReporter {
       return;
     }
 
+    if (outcome.kind === "raced") {
+      await this.update({
+        status: "running",
+        queueDepth,
+        lastError: undefined,
+        lastFinalizeFailureAt: undefined,
+        lastFinalizeFailure: undefined
+      });
+      return;
+    }
+
     await this.update({
       status: this.snapshotData.status === "degraded" ? "degraded" : "running",
       queueDepth
