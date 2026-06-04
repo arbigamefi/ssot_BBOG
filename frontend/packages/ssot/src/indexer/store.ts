@@ -41,6 +41,7 @@ export interface BetRow {
   finalizedTxHash?: Hex;
   refundedTxHash?: Hex;
   placedBlock?: number;
+  placedAt?: number;
   updatedBlock: number;
   lastTxHash: Hex;
   lastEventName: string;

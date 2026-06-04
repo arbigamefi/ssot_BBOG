@@ -43,15 +43,20 @@ const MAX_AFFILIATE_LIMIT = 500;
 const DEFAULT_WINDOW_BLOCKS = 200;
 const DEFAULT_PLAYER_WINDOW_BLOCKS = 500;
 const DEFAULT_AFFILIATE_WINDOW_BLOCKS = 1_000;
+const DEFAULT_RECEIPT_WINDOW_BLOCKS = 100_000;
 const DEFAULT_LOG_CHUNK_BLOCKS = 10;
+const DEFAULT_RECEIPT_LOG_CHUNK_BLOCKS = 2_000;
 const DEFAULT_LOG_CONCURRENCY = 12;
+const DEFAULT_RECEIPT_LOG_CONCURRENCY = 4;
 const DEFAULT_CONFIRMATIONS = 2;
 const DEFAULT_CACHE_TTL_MS = 8_000;
 const DEFAULT_RECENT_RPC_TIMEOUT_MS = 4_000;
 const DEFAULT_PLAYER_RPC_TIMEOUT_MS = 6_000;
+const DEFAULT_RECEIPT_RPC_TIMEOUT_MS = 8_000;
 
 type EventLogLike = {
   blockNumber?: bigint | null;
+  blockTimestamp?: bigint | number | null;
   logIndex?: number | null;
   transactionHash?: Hex | null;
   args?: Record<string, unknown>;
@@ -217,10 +222,22 @@ export function foldRecentBetLogs({
     };
     const betId = String(event.args.positionId ?? event.args.betId ?? event.args.id ?? "0");
     const key = `${chainId}:${betId}`;
-    rows.set(key, applyGameHubEventToBet(rows.get(key), event));
+    const next = applyGameHubEventToBet(rows.get(key), event);
+    const timestamp = blockTimestampMs(log.blockTimestamp);
+    if (timestamp != null) {
+      if (event.eventName === "BetPlaced") next.placedAt = timestamp;
+      next.updatedAt = timestamp;
+    }
+    rows.set(key, next);
   }
 
   return [...rows.values()].sort((a, b) => b.updatedBlock - a.updatedBlock);
+}
+
+function blockTimestampMs(value: bigint | number | null | undefined) {
+  if (typeof value === "bigint") return Number(value) * 1000;
+  if (typeof value === "number" && Number.isFinite(value)) return value * 1000;
+  return undefined;
 }
 
 async function loadGameHubClient({
@@ -497,15 +514,45 @@ export async function queryRecentBets({
 export async function queryBetReceipt({
   betId,
   chainId,
+  client,
   now = () => Date.now()
 }: {
   betId: string;
   chainId: number;
+  client?: PublicClient;
   now?: () => number;
 }): Promise<BetReceiptResponse> {
   const normalizedBetId = normalizeBetId(betId);
   const store = getDurableBetIndexStore();
   const row = store ? await store.getBet({ betId: normalizedBetId, chainId }) : null;
+  if (row) {
+    return {
+      schemaVersion: 1,
+      betId: normalizedBetId,
+      cached: false,
+      chainId,
+      generatedAt: now(),
+      row,
+      source: "postgres"
+    };
+  }
+
+  if (shouldUseRpcFallback("BET_RECEIPT_RPC_FALLBACK_ENABLED", false)) {
+    const fallbackRow = await queryBetReceiptRpcFallback({
+      betId: normalizedBetId,
+      chainId,
+      client
+    });
+    return {
+      schemaVersion: 1,
+      betId: normalizedBetId,
+      cached: false,
+      chainId,
+      generatedAt: now(),
+      row: fallbackRow,
+      source: "rpc-window"
+    };
+  }
 
   return {
     schemaVersion: 1,
@@ -513,9 +560,113 @@ export async function queryBetReceipt({
     cached: false,
     chainId,
     generatedAt: now(),
-    row,
+    row: null,
     source: store ? "postgres" : "rpc-window"
   };
+}
+
+async function queryBetReceiptRpcFallback({
+  betId,
+  chainId,
+  client
+}: {
+  betId: string;
+  chainId: number;
+  client?: PublicClient;
+}) {
+  const receiptBetId = BigInt(betId);
+  const windowBlocks = bigintEnv("BET_RECEIPT_WINDOW_BLOCKS", DEFAULT_RECEIPT_WINDOW_BLOCKS);
+  const confirmations = bigintEnv("BET_RECEIPT_CONFIRMATIONS", DEFAULT_CONFIRMATIONS);
+  const chunkBlocks = bigintEnv("BET_RECEIPT_LOG_CHUNK_BLOCKS", DEFAULT_RECEIPT_LOG_CHUNK_BLOCKS);
+  const logConcurrency = numberEnv("BET_RECEIPT_LOG_CONCURRENCY", DEFAULT_RECEIPT_LOG_CONCURRENCY);
+  const rpcTimeoutMs = numberEnv("BET_RECEIPT_RPC_TIMEOUT_MS", DEFAULT_RECEIPT_RPC_TIMEOUT_MS);
+
+  return withTimeout(
+    (async () => {
+      const loaded = await loadGameHubClient({ chainId, client });
+      const { fromBlock, toBlock } = resolveBlockWindow({
+        confirmations,
+        latestBlock: loaded.latestBlock,
+        release: loaded.release,
+        windowBlocks
+      });
+      if (fromBlock > toBlock) return null;
+
+      const placedLogs = await getGameHubLogsInChunks({
+        args: { positionId: receiptBetId },
+        chunkBlocks,
+        concurrency: logConcurrency,
+        client: loaded.client,
+        eventName: "BetPlaced",
+        fromBlock,
+        gameHub: loaded.gameHub,
+        toBlock
+      });
+      if (placedLogs.length === 0) return null;
+
+      const placedFromBlock = placedLogs.reduce((min, log) => {
+        const blockNumber = log.blockNumber ?? min;
+        return blockNumber < min ? blockNumber : min;
+      }, placedLogs[0]?.blockNumber ?? fromBlock);
+
+      const logs: Array<EventLogLike & { eventName: GameHubEventName }> = [
+        ...placedLogs.map((log) => ({ ...log, eventName: "BetPlaced" as const }))
+      ];
+      for (const eventName of ["BetRandomReady", "BetFinalized", "BetRefunded"] as const) {
+        const eventLogs = await getGameHubLogsInChunks({
+          args: { positionId: receiptBetId },
+          chunkBlocks,
+          concurrency: logConcurrency,
+          client: loaded.client,
+          eventName,
+          fromBlock: placedFromBlock,
+          gameHub: loaded.gameHub,
+          toBlock
+        });
+        logs.push(...eventLogs.map((log) => ({ ...log, eventName })));
+      }
+
+      const timestampedLogs = await attachBlockTimestamps({
+        client: loaded.client,
+        concurrency: logConcurrency,
+        logs
+      });
+      return (
+        foldRecentBetLogs({ chainId, gameHub: loaded.gameHub, logs: timestampedLogs })[0] ?? null
+      );
+    })(),
+    rpcTimeoutMs
+  ).catch(() => null);
+}
+
+async function attachBlockTimestamps<T extends EventLogLike>({
+  client,
+  concurrency,
+  logs
+}: {
+  client: PublicClient;
+  concurrency: number;
+  logs: T[];
+}) {
+  const blockNumbers = [
+    ...new Set(logs.flatMap((log) => (log.blockNumber == null ? [] : [log.blockNumber])))
+  ];
+  if (blockNumbers.length === 0) return logs;
+
+  const entries = await mapWithConcurrency(blockNumbers, concurrency, async (blockNumber) => {
+    try {
+      const block = await client.getBlock({ blockNumber });
+      return [blockNumber.toString(), block.timestamp] as const;
+    } catch {
+      return [blockNumber.toString(), undefined] as const;
+    }
+  });
+  const timestamps = new Map(entries.filter(([, timestamp]) => timestamp != null));
+  return logs.map((log) => {
+    if (log.blockNumber == null || log.blockTimestamp != null) return log;
+    const blockTimestamp = timestamps.get(log.blockNumber.toString());
+    return blockTimestamp == null ? log : { ...log, blockTimestamp };
+  });
 }
 
 export async function queryPlayerBets({

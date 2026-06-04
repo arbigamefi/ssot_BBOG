@@ -10,6 +10,7 @@ import {
   normalizeGameId,
   normalizePlayerAddress,
   queryAffiliateBets,
+  queryBetReceipt,
   queryRecentBets,
   queryPlayerBets
 } from "./recent-bets";
@@ -32,6 +33,8 @@ const ENV_KEYS = [
   "AFFILIATE_BETS_WINDOW_BLOCKS",
   "PLAYER_BETS_LOG_CHUNK_BLOCKS",
   "PLAYER_BETS_WINDOW_BLOCKS",
+  "BET_RECEIPT_LOG_CHUNK_BLOCKS",
+  "BET_RECEIPT_WINDOW_BLOCKS",
   "RECENT_BETS_LOG_CHUNK_BLOCKS",
   "RECENT_BETS_WINDOW_BLOCKS"
 ];
@@ -145,6 +148,96 @@ describe("recent bets server aggregation", () => {
       stake: "10",
       updatedBlock: 12
     });
+  });
+
+  it("falls back to exact receipt logs and preserves chain timestamps", async () => {
+    process.env.BET_INDEX_READ_ENABLED = "0";
+    process.env.BET_RECEIPT_WINDOW_BLOCKS = "9";
+    process.env.BET_RECEIPT_LOG_CHUNK_BLOCKS = "10";
+
+    const release = loadEmbeddedRelease(84532);
+    if (!release.ok) throw new Error(release.error);
+    const releaseBlock = BigInt(release.release.meta?.blockNumber ?? 0);
+    const placedBlock = releaseBlock + 1n;
+    const readyBlock = releaseBlock + 2n;
+    const finalizedBlock = releaseBlock + 3n;
+    const getLogs = vi
+      .fn()
+      .mockResolvedValueOnce([
+        {
+          args: {
+            asset: "0x4444444444444444444444444444444444444444",
+            gameId: GAME_ID,
+            player: PLAYER,
+            positionId: 8n,
+            requestId: 99n,
+            stake: 10n
+          },
+          blockNumber: placedBlock,
+          logIndex: 1,
+          transactionHash: "0xaaa"
+        }
+      ])
+      .mockResolvedValueOnce([
+        {
+          args: {
+            positionId: 8n,
+            randomHash: `0x${"55".repeat(32)}`,
+            requestId: 99n
+          },
+          blockNumber: readyBlock,
+          logIndex: 2,
+          transactionHash: "0xbbb"
+        }
+      ])
+      .mockResolvedValueOnce([
+        {
+          args: {
+            positionId: 8n,
+            payoutGross: 20n,
+            payoutNet: 19n
+          },
+          blockNumber: finalizedBlock,
+          logIndex: 3,
+          transactionHash: "0xccc"
+        }
+      ])
+      .mockResolvedValueOnce([]);
+    const getBlock = vi.fn().mockImplementation(({ blockNumber }) =>
+      Promise.resolve({
+        timestamp: blockNumber + 1_000n
+      })
+    );
+
+    const response = await queryBetReceipt({
+      betId: "8",
+      chainId: 84532,
+      client: {
+        getBlock,
+        getBlockNumber: vi.fn().mockResolvedValue(latestBlockAfterEmbeddedRelease(9n)),
+        getLogs
+      } as any,
+      now: () => 1234
+    });
+
+    expect(response).toMatchObject({
+      betId: "8",
+      chainId: 84532,
+      generatedAt: 1234,
+      source: "rpc-window"
+    });
+    expect(response.row).toMatchObject({
+      betId: "8",
+      lastEventName: "BetFinalized",
+      lastTxHash: "0xccc",
+      payout: "19",
+      placedAt: Number(placedBlock + 1_000n) * 1000,
+      player: PLAYER,
+      state: "finalized",
+      updatedAt: Number(finalizedBlock + 1_000n) * 1000
+    });
+    expect(getLogs).toHaveBeenCalledTimes(4);
+    expect(getBlock).toHaveBeenCalledTimes(3);
   });
 
   it("chunks recent fallback log scans for free-tier RPC providers", async () => {
