@@ -41,13 +41,14 @@ export async function generateMetadata({
   );
   const chainId = parseRequestChainId(chainIdParam);
   const normalizedBetId = safeNormalizeBetId(betId);
-  const receipt = normalizedBetId
-    ? await queryBetReceipt({
-        betId: normalizedBetId,
-        chainId,
-        terminalTxHash: getReceiptVersionTerminalTxHash(versionParam)
-      }).catch(() => undefined)
-    : undefined;
+  const terminalTxHash = getReceiptVersionTerminalTxHash(versionParam);
+  const receipt =
+    normalizedBetId && !terminalTxHash
+      ? await queryBetReceipt({
+          betId: normalizedBetId,
+          chainId
+        }).catch(() => undefined)
+      : undefined;
   const version = getReceiptOgVersion(receipt?.row, versionParam);
   // Receipts use a *dynamic* per-bet card (the /og route), so the image is set
   // explicitly here rather than via the file-based opengraph-image convention.
@@ -72,10 +73,10 @@ export default async function CasinoReceiptPage({
   searchParams
 }: {
   params: Promise<{ betId: string }>;
-  searchParams: Promise<{ chainId?: string }>;
+  searchParams: Promise<{ chainId?: string; v?: string }>;
 }) {
   const { betId: rawBetId } = await params;
-  const { chainId: chainIdParam } = await searchParams;
+  const { chainId: chainIdParam, v: versionParam } = await searchParams;
   const { messages } = await getRequestI18n();
   const labels = messages.casino.room.receipt;
   const shareLabels = messages.casino.room.result.actions;
@@ -83,7 +84,12 @@ export default async function CasinoReceiptPage({
   if (!betId) notFound();
 
   const chainId = parseRequestChainId(chainIdParam);
-  const receipt = await queryBetReceipt({ betId, chainId });
+  const receipt = await queryBetReceipt({
+    betId,
+    chainId,
+    terminalTimestampMode: "now",
+    terminalTxHash: getReceiptVersionTerminalTxHash(versionParam)
+  });
   const releaseResult = loadEmbeddedRelease(chainId);
   const release = releaseResult.ok ? releaseResult.release : undefined;
   const row = receipt.row;

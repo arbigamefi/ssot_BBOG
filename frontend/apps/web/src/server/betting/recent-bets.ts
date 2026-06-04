@@ -520,12 +520,14 @@ export async function queryBetReceipt({
   betId,
   chainId,
   client,
+  terminalTimestampMode = "block",
   terminalTxHash,
   now = () => Date.now()
 }: {
   betId: string;
   chainId: number;
   client?: PublicClient;
+  terminalTimestampMode?: "block" | "now";
   terminalTxHash?: Hex;
   now?: () => number;
 }): Promise<BetReceiptResponse> {
@@ -550,6 +552,7 @@ export async function queryBetReceipt({
           betId: normalizedBetId,
           chainId,
           client,
+          timestampMode: terminalTimestampMode,
           terminalTxHash,
           now
         })
@@ -598,12 +601,14 @@ async function queryBetReceiptTerminalTxFallback({
   chainId,
   client,
   now,
+  timestampMode,
   terminalTxHash
 }: {
   betId: string;
   chainId: number;
   client?: PublicClient;
   now: () => number;
+  timestampMode: "block" | "now";
   terminalTxHash: Hex;
 }) {
   const receiptBetId = BigInt(betId);
@@ -625,11 +630,12 @@ async function queryBetReceiptTerminalTxFallback({
     });
     if (!terminal) return null;
 
-    const blockTimestamp = txReceipt.blockNumber
-      ? blockTimestampMs(
-          (await loaded.client.getBlock({ blockNumber: txReceipt.blockNumber })).timestamp
-        )
-      : undefined;
+    const blockTimestamp =
+      timestampMode === "block" && txReceipt.blockNumber
+        ? blockTimestampMs(
+            (await loaded.client.getBlock({ blockNumber: txReceipt.blockNumber })).timestamp
+          )
+        : undefined;
     const updatedAt = blockTimestamp ?? now();
     const updatedBlock = txReceipt.blockNumber ? Number(txReceipt.blockNumber) : 0;
     const row: BetRow = {

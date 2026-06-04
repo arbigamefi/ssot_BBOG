@@ -35,6 +35,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ betI
   const receipt = await queryBetReceipt({
     betId,
     chainId,
+    terminalTimestampMode: "now",
     terminalTxHash: getReceiptVersionTerminalTxHash(url.searchParams.get("v"))
   });
   const row = receipt.row;
