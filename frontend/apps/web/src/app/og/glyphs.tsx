@@ -1,25 +1,14 @@
 import * as React from "react";
 
-export const OG_COLORS = {
-  bg: "#070a0e",
-  fg: "#f8fafc",
-  muted: "#98a3b4",
-  surface: "#111827",
-  surface2: "#172032",
-  border: "#263246",
-  brand: "#8F6CF9",
-  cyan: "#6EE7F9",
-  green: "#52D4A6",
-  red: "#FF5B6C",
-  amber: "#F8C76B"
-} as const;
+import { OG_COLORS, type OgTone, getOgToneColor } from "./palette";
+
+export { OG_COLORS, getOgToneColor };
+export type { OgTone };
 
 type OgGlyphProps = {
   size?: number;
   tone?: OgTone;
 };
-
-export type OgTone = "brand" | "cyan" | "green" | "red" | "amber" | "muted";
 
 export type OgGlyphKind =
   | "casino"
@@ -37,15 +26,6 @@ export type OgGlyphKind =
   | "status"
   | "support"
   | "receipt";
-
-export function getOgToneColor(tone: OgTone = "brand") {
-  if (tone === "cyan") return OG_COLORS.cyan;
-  if (tone === "green") return OG_COLORS.green;
-  if (tone === "red") return OG_COLORS.red;
-  if (tone === "amber") return OG_COLORS.amber;
-  if (tone === "muted") return OG_COLORS.muted;
-  return OG_COLORS.brand;
-}
 
 export function OgGlyph({
   kind,
@@ -69,374 +49,515 @@ export function OgGlyph({
   return <ReceiptGlyph size={size} tone={tone} />;
 }
 
-function DiceGlyph({ size, tone = "cyan" }: OgGlyphProps) {
-  const accent = getOgToneColor(tone);
+function DiceGlyph({ size = 330, tone = "cyan" }: OgGlyphProps) {
+  // Front face of the percentile die showing TARGET / 50 — mirrors the product
+  // DiceMiniIcon. Text is overlaid as HTML (Satori does not rasterize <svg><text>).
+  const edge = getOgToneColor(tone);
   return (
-    <svg width={size} height={size} viewBox="0 0 360 360" fill="none">
-      <defs>
-        <linearGradient id="og-dice-face" x1="78" y1="58" x2="284" y2="300">
-          <stop stopColor={OG_COLORS.cyan} stopOpacity="0.92" />
-          <stop offset="0.52" stopColor={OG_COLORS.brand} stopOpacity="0.9" />
-          <stop offset="1" stopColor={OG_COLORS.surface} />
-        </linearGradient>
-        <linearGradient id="og-dice-side" x1="238" y1="92" x2="314" y2="262">
-          <stop stopColor={accent} stopOpacity="0.88" />
-          <stop offset="1" stopColor={OG_COLORS.surface2} />
-        </linearGradient>
-      </defs>
-      <path d="M82 88 216 50 302 140 250 292 104 264 48 148Z" fill="#05070a" opacity="0.75" />
-      <path d="M82 88 216 50 302 140 170 184 48 148Z" fill="url(#og-dice-face)" />
-      <path d="M170 184 302 140 250 292 104 264Z" fill="url(#og-dice-side)" opacity="0.9" />
-      <path d="M48 148 170 184 104 264Z" fill={OG_COLORS.surface2} />
-      <path
-        d="M82 88 216 50 302 140 250 292 104 264 48 148Z"
-        stroke={OG_COLORS.cyan}
-        strokeOpacity="0.48"
-        strokeWidth="4"
-        strokeLinejoin="round"
-      />
-      {[116, 176, 236].map((x, index) => (
-        <circle
-          key={x}
-          cx={x}
-          cy={index === 1 ? 118 : 146}
-          r="10"
-          fill={OG_COLORS.fg}
-          opacity="0.85"
+    <div style={{ position: "relative", display: "flex", width: size, height: size }}>
+      <svg width={size} height={size} viewBox="0 0 360 360" fill="none">
+        <defs>
+          <linearGradient id="og-dice-face" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={OG_COLORS.diceFaceTop} />
+            <stop offset="100%" stopColor={OG_COLORS.surface} />
+          </linearGradient>
+        </defs>
+        {/* depth shadow + square die face */}
+        <rect x="96" y="108" width="192" height="192" rx="34" fill={OG_COLORS.deep} opacity="0.6" />
+        <rect
+          x="72"
+          y="84"
+          width="192"
+          height="192"
+          rx="34"
+          fill="url(#og-dice-face)"
+          stroke={edge}
+          strokeOpacity="0.62"
+          strokeWidth="6"
         />
-      ))}
-      <circle cx="182" cy="222" r="44" fill="#05070a" opacity="0.48" />
-      <circle
-        cx="182"
-        cy="222"
-        r="31"
-        fill="none"
-        stroke={OG_COLORS.fg}
-        strokeOpacity="0.58"
-        strokeWidth="5"
-      />
-      <circle cx="182" cy="222" r="12" fill={OG_COLORS.fg} opacity="0.86" />
-    </svg>
+        {/* top sheen hairline (echoes the product IconFrame) */}
+        <path d="M100 112 H236" stroke={OG_COLORS.fg} strokeOpacity="0.14" strokeWidth="3" />
+      </svg>
+      <div
+        style={{
+          position: "absolute",
+          left: "20%",
+          top: "23.3%",
+          width: "53.3%",
+          height: "53.3%",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: `${size * 0.01}px`
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            fontSize: `${size * 0.072}px`,
+            fontWeight: 700,
+            letterSpacing: `${size * 0.016}px`,
+            color: OG_COLORS.fg,
+            opacity: 0.5
+          }}
+        >
+          TARGET
+        </div>
+        <div
+          style={{
+            display: "flex",
+            fontSize: `${size * 0.27}px`,
+            fontWeight: 800,
+            color: OG_COLORS.fg
+          }}
+        >
+          50
+        </div>
+      </div>
+    </div>
   );
 }
 
 function RouletteGlyph({ size }: OgGlyphProps) {
+  // 12-pocket single-zero wheel with central cone + accent diamond pointer —
+  // mirrors the product RouletteMiniIcon.
   const cx = 180;
   const cy = 188;
-  const segments = 18;
-  const outer = 132;
-  const inner = 58;
+  const SEG = 12;
+  const r0 = 66;
+  const r1 = 126;
+  const half = Math.PI / SEG;
   return (
     <svg width={size} height={size} viewBox="0 0 360 360" fill="none">
-      <circle cx={cx} cy={cy} r="150" fill="#05070a" />
-      <circle cx={cx} cy={cy} r="148" stroke={OG_COLORS.border} strokeWidth="3" />
-      {Array.from({ length: segments }).map((_, i) => {
-        const a0 = (i / segments) * Math.PI * 2 - Math.PI / 2;
-        const a1 = ((i + 1) / segments) * Math.PI * 2 - Math.PI / 2;
-        const large = a1 - a0 > Math.PI ? 1 : 0;
-        const color = i === 0 ? OG_COLORS.green : i % 2 === 0 ? OG_COLORS.surface2 : OG_COLORS.red;
-        const x0 = cx + outer * Math.cos(a0);
-        const y0 = cy + outer * Math.sin(a0);
-        const x1 = cx + outer * Math.cos(a1);
-        const y1 = cy + outer * Math.sin(a1);
-        const x2 = cx + inner * Math.cos(a1);
-        const y2 = cy + inner * Math.sin(a1);
-        const x3 = cx + inner * Math.cos(a0);
-        const y3 = cy + inner * Math.sin(a0);
+      <defs>
+        <radialGradient id="og-rou-cone" cx="40%" cy="34%" r="80%">
+          <stop offset="0%" stopColor={OG_COLORS.fg} stopOpacity="0.5" />
+          <stop offset="56%" stopColor={OG_COLORS.brand} />
+          <stop offset="100%" stopColor={OG_COLORS.brandDark} />
+        </radialGradient>
+      </defs>
+      <circle cx={cx} cy={cy} r={r1 + 12} fill={OG_COLORS.surface} />
+      <circle
+        cx={cx}
+        cy={cy}
+        r={r1 + 12}
+        fill="none"
+        stroke={OG_COLORS.fg}
+        strokeOpacity="0.18"
+        strokeWidth="2"
+      />
+      {Array.from({ length: SEG }).map((_, i) => {
+        const color = i === 0 ? OG_COLORS.green : i % 2 === 1 ? OG_COLORS.red : OG_COLORS.deep;
+        const a0 = (i * Math.PI * 2) / SEG - Math.PI / 2 - half;
+        const a1 = ((i + 1) * Math.PI * 2) / SEG - Math.PI / 2 - half;
+        const x0 = cx + r1 * Math.cos(a0);
+        const y0 = cy + r1 * Math.sin(a0);
+        const x1 = cx + r1 * Math.cos(a1);
+        const y1 = cy + r1 * Math.sin(a1);
+        const x2 = cx + r0 * Math.cos(a1);
+        const y2 = cy + r0 * Math.sin(a1);
+        const x3 = cx + r0 * Math.cos(a0);
+        const y3 = cy + r0 * Math.sin(a0);
         return (
           <path
             key={i}
-            d={`M ${x0} ${y0} A ${outer} ${outer} 0 ${large} 1 ${x1} ${y1} L ${x2} ${y2} A ${inner} ${inner} 0 ${large} 0 ${x3} ${y3} Z`}
+            d={`M ${x0} ${y0} A ${r1} ${r1} 0 0 1 ${x1} ${y1} L ${x2} ${y2} A ${r0} ${r0} 0 0 0 ${x3} ${y3} Z`}
             fill={color}
-            stroke={OG_COLORS.bg}
-            strokeWidth="2"
+            stroke={OG_COLORS.fg}
+            strokeOpacity="0.18"
+            strokeWidth="1.5"
           />
         );
       })}
-      <circle cx={cx} cy={cy} r="74" fill={OG_COLORS.brand} />
-      <circle cx={cx} cy={cy} r="40" fill={OG_COLORS.bg} />
-      <circle cx={cx + 93} cy={cy - 96} r="11" fill={OG_COLORS.cyan} />
-      <path
-        d={`M ${cx - 54} ${cy} H ${cx + 54} M ${cx} ${cy - 54} V ${cy + 54}`}
+      <circle
+        cx={cx}
+        cy={cy}
+        r={r0 - 6}
+        fill="url(#og-rou-cone)"
         stroke={OG_COLORS.fg}
-        strokeOpacity="0.32"
-        strokeWidth="4"
+        strokeOpacity="0.2"
+        strokeWidth="2"
+      />
+      <circle cx={cx} cy={cy} r="11" fill={OG_COLORS.fg} opacity="0.95" />
+      <rect
+        x={cx - 15}
+        y="30"
+        width="30"
+        height="30"
+        rx="6"
+        transform={`rotate(45 ${cx} 45)`}
+        fill={OG_COLORS.cyan}
       />
     </svg>
   );
 }
 
-function CoinTossGlyph({ size }: OgGlyphProps) {
+function CoinTossGlyph({ size = 330 }: OgGlyphProps) {
+  // Two minted medallions with embossed H / T monograms — mirrors the product
+  // CoinTossMiniIcon. Monograms overlaid as HTML for crisp text.
   return (
-    <svg width={size} height={size} viewBox="0 0 360 360" fill="none">
-      <g>
-        <circle cx="146" cy="198" r="92" fill="#05070a" opacity="0.64" />
-        <circle cx="138" cy="186" r="92" fill={OG_COLORS.brand} />
+    <div style={{ position: "relative", display: "flex", width: size, height: size }}>
+      <svg width={size} height={size} viewBox="0 0 360 360" fill="none">
+        <defs>
+          <radialGradient id="og-coin-t" cx="36%" cy="28%" r="82%">
+            <stop offset="0%" stopColor={OG_COLORS.fg} stopOpacity="0.55" />
+            <stop offset="46%" stopColor={OG_COLORS.cyan} />
+            <stop offset="100%" stopColor={OG_COLORS.cyanDark} />
+          </radialGradient>
+          <radialGradient id="og-coin-h" cx="36%" cy="28%" r="82%">
+            <stop offset="0%" stopColor={OG_COLORS.fg} stopOpacity="0.55" />
+            <stop offset="46%" stopColor={OG_COLORS.brand} />
+            <stop offset="100%" stopColor={OG_COLORS.brandDark} />
+          </radialGradient>
+        </defs>
+        {/* T coin (behind, lower-right) */}
+        <circle cx="252" cy="202" r="64" fill={OG_COLORS.deep} opacity="0.5" />
+        <circle cx="246" cy="194" r="64" fill="url(#og-coin-t)" />
         <circle
-          cx="138"
-          cy="186"
-          r="78"
+          cx="246"
+          cy="194"
+          r="55"
           fill="none"
-          stroke={OG_COLORS.fg}
-          strokeOpacity="0.35"
-          strokeWidth="5"
-          strokeDasharray="2 10"
-        />
-        <circle
-          cx="138"
-          cy="186"
-          r="44"
-          fill="none"
-          stroke={OG_COLORS.fg}
-          strokeOpacity="0.6"
-          strokeWidth="8"
-        />
-        <circle cx="138" cy="186" r="18" fill={OG_COLORS.fg} opacity="0.88" />
-      </g>
-      <g>
-        <circle cx="230" cy="170" r="92" fill="#05070a" opacity="0.64" />
-        <circle cx="222" cy="158" r="92" fill={OG_COLORS.cyan} />
-        <circle
-          cx="222"
-          cy="158"
-          r="78"
-          fill="none"
-          stroke={OG_COLORS.fg}
-          strokeOpacity="0.35"
-          strokeWidth="5"
-          strokeDasharray="2 10"
-        />
-        <path
-          d="M222 108 V208 M172 158 H272"
-          stroke={OG_COLORS.fg}
-          strokeOpacity="0.62"
+          stroke={OG_COLORS.deep}
+          strokeOpacity="0.5"
           strokeWidth="9"
+          strokeDasharray="4 8"
           strokeLinecap="round"
         />
-        <path
-          d="M188 124 L256 192 M256 124 L188 192"
+        <circle
+          cx="246"
+          cy="194"
+          r="40"
+          fill="none"
           stroke={OG_COLORS.fg}
-          strokeOpacity="0.38"
-          strokeWidth="7"
+          strokeOpacity="0.28"
+          strokeWidth="2"
+        />
+        {/* H coin (front, upper-left) */}
+        <circle cx="146" cy="172" r="96" fill={OG_COLORS.deep} opacity="0.55" />
+        <circle cx="138" cy="164" r="96" fill="url(#og-coin-h)" />
+        <circle
+          cx="138"
+          cy="164"
+          r="83"
+          fill="none"
+          stroke={OG_COLORS.deep}
+          strokeOpacity="0.5"
+          strokeWidth="13"
+          strokeDasharray="5 10"
           strokeLinecap="round"
         />
-      </g>
-      <path
-        d="M96 282 C142 318 224 318 274 276"
-        stroke={OG_COLORS.green}
-        strokeWidth="8"
-        strokeLinecap="round"
-        opacity="0.8"
-      />
-    </svg>
+        <circle
+          cx="138"
+          cy="164"
+          r="62"
+          fill="none"
+          stroke={OG_COLORS.fg}
+          strokeOpacity="0.28"
+          strokeWidth="2.5"
+        />
+      </svg>
+      {/* T monogram over the back coin */}
+      <div
+        style={{
+          position: "absolute",
+          left: `${(246 - 64) / 3.6}%`,
+          top: `${(194 - 64) / 3.6}%`,
+          width: `${128 / 3.6}%`,
+          height: `${128 / 3.6}%`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: OG_COLORS.coinText,
+          fontSize: `${size * 0.155}px`,
+          fontWeight: 800
+        }}
+      >
+        T
+      </div>
+      {/* H monogram over the front coin */}
+      <div
+        style={{
+          position: "absolute",
+          left: `${(138 - 96) / 3.6}%`,
+          top: `${(164 - 96) / 3.6}%`,
+          width: `${192 / 3.6}%`,
+          height: `${192 / 3.6}%`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: OG_COLORS.fg,
+          fontSize: `${size * 0.23}px`,
+          fontWeight: 800
+        }}
+      >
+        H
+      </div>
+    </div>
   );
 }
 
 function KenoGlyph({ size }: OgGlyphProps) {
-  const draws = [3, 7, 11, 15, 24, 31, 36, 40, 5, 18];
+  // Glass globe ball machine with brand balls and a chute — mirrors the product
+  // KenoMiniIcon (was a flat number grid before).
   return (
     <svg width={size} height={size} viewBox="0 0 360 360" fill="none">
-      <rect
-        x="42"
-        y="52"
-        width="276"
-        height="252"
-        rx="34"
-        fill="#070a0e"
+      <defs>
+        <radialGradient id="og-keno-glass" cx="40%" cy="28%" r="78%">
+          <stop offset="0%" stopColor={OG_COLORS.surface2} />
+          <stop offset="100%" stopColor={OG_COLORS.deep} />
+        </radialGradient>
+        <radialGradient id="og-keno-ball" cx="32%" cy="28%" r="80%">
+          <stop offset="0%" stopColor={OG_COLORS.white} />
+          <stop offset="70%" stopColor={OG_COLORS.brand} />
+          <stop offset="100%" stopColor={OG_COLORS.brandDark} />
+        </radialGradient>
+      </defs>
+      {/* housing ring */}
+      <circle
+        cx="168"
+        cy="172"
+        r="126"
+        fill={OG_COLORS.surface}
         stroke={OG_COLORS.border}
         strokeWidth="4"
       />
-      <circle
-        cx="180"
-        cy="136"
-        r="64"
-        fill={OG_COLORS.surface2}
-        stroke={OG_COLORS.cyan}
-        strokeOpacity="0.65"
-        strokeWidth="4"
-      />
-      {draws.map((number, i) => {
-        const col = i % 5;
-        const row = Math.floor(i / 5);
-        return (
-          <circle
-            key={number}
-            cx={82 + col * 49}
-            cy={226 + row * 42}
-            r="18"
-            fill={i < 5 ? OG_COLORS.brand : OG_COLORS.green}
-          />
-        );
-      })}
+      {/* glass cavity */}
+      <circle cx="168" cy="172" r="104" fill="url(#og-keno-glass)" />
+      {/* rim highlight */}
       <path
-        d="M138 136 H222 M180 94 V178"
+        d="M84 122 A104 104 0 0 1 234 84"
+        fill="none"
         stroke={OG_COLORS.fg}
-        strokeOpacity="0.25"
-        strokeWidth="4"
+        strokeOpacity="0.34"
+        strokeWidth="7"
+        strokeLinecap="round"
+      />
+      {/* balls tumbling inside */}
+      <circle cx="138" cy="206" r="26" fill="url(#og-keno-ball)" />
+      <circle cx="188" cy="216" r="26" fill="url(#og-keno-ball)" />
+      <circle cx="166" cy="160" r="26" fill="url(#og-keno-ball)" />
+      <circle cx="210" cy="182" r="19" fill="url(#og-keno-ball)" />
+      {/* chute toward the rack */}
+      <rect
+        x="286"
+        y="156"
+        width="48"
+        height="27"
+        rx="9"
+        fill={OG_COLORS.surface}
+        stroke={OG_COLORS.border}
+        strokeWidth="3"
       />
     </svg>
   );
 }
 
 function PlinkoGlyph({ size }: OgGlyphProps) {
+  // Peg triangle, a falling ball, and edge-hot multiplier buckets — mirrors the
+  // product PlinkoMiniIcon.
   return (
     <svg width={size} height={size} viewBox="0 0 360 360" fill="none">
+      {/* drop chute */}
       <rect
-        x="50"
-        y="38"
-        width="260"
-        height="286"
-        rx="32"
-        fill="#070a0e"
-        stroke={OG_COLORS.border}
-        strokeWidth="4"
+        x="165"
+        y="30"
+        width="30"
+        height="21"
+        rx="6"
+        fill={OG_COLORS.surface2}
+        stroke={OG_COLORS.fg}
+        strokeOpacity="0.2"
+        strokeWidth="2"
       />
-      {Array.from({ length: 7 }).map((_, row) =>
-        Array.from({ length: row + 4 }).map((__, col) => (
+      {/* peg triangle (5 rows) */}
+      {Array.from({ length: 5 }).flatMap((_, row) =>
+        Array.from({ length: row + 1 }).map((__, i) => (
           <circle
-            key={`${row}-${col}`}
-            cx={92 + col * 34 - row * 16}
-            cy={84 + row * 30}
-            r="5.5"
+            key={`${row}-${i}`}
+            cx={180 + (i - row / 2) * 36}
+            cy={84 + row * 33}
+            r="7.8"
             fill={OG_COLORS.fg}
-            opacity="0.42"
+            opacity="0.78"
           />
         ))
       )}
-      <path
-        d="M180 52 C130 102 238 128 178 176 C126 218 220 230 146 286"
-        stroke={OG_COLORS.cyan}
-        strokeWidth="7"
-        strokeLinecap="round"
-        strokeDasharray="1 16"
-      />
-      <circle cx="180" cy="52" r="17" fill={OG_COLORS.green} />
-      <circle cx="146" cy="286" r="22" fill={OG_COLORS.brand} />
-      <rect x="72" y="298" width="216" height="22" rx="9" fill={OG_COLORS.surface2} />
-      <rect x="132" y="298" width="54" height="22" rx="9" fill={OG_COLORS.green} />
+      {/* ball mid-fall */}
+      <circle cx="198" cy="214" r="15" fill={OG_COLORS.fg} />
+      {/* multiplier buckets — edges hot */}
+      {[0, 1, 2, 3, 4, 5, 6].map((i) => {
+        const hot = i === 0 || i === 6;
+        const mid = i === 3;
+        return (
+          <rect
+            key={i}
+            x={42 + i * 39}
+            y="276"
+            width="33"
+            height="42"
+            rx="9"
+            fill={hot ? OG_COLORS.brand : mid ? OG_COLORS.surface2 : OG_COLORS.surface}
+            stroke={OG_COLORS.fg}
+            strokeOpacity="0.2"
+            strokeWidth="1.5"
+            opacity={hot ? 1 : 0.9}
+          />
+        );
+      })}
     </svg>
   );
 }
 
-function SlotsGlyph({ size }: OgGlyphProps) {
+function SlotsGlyph({ size = 330 }: OgGlyphProps) {
+  // Three-reel cabinet with a 7-7-7 line and an accent payline — mirrors the
+  // product SlotsMiniIcon. Reel symbols overlaid as HTML text.
+  const reelX = [72, 147, 222];
   return (
-    <svg width={size} height={size} viewBox="0 0 360 360" fill="none">
-      <rect
-        x="48"
-        y="72"
-        width="264"
-        height="214"
-        rx="34"
-        fill="#070a0e"
-        stroke={OG_COLORS.border}
-        strokeWidth="4"
-      />
-      {[0, 1, 2].map((i) => (
+    <div style={{ position: "relative", display: "flex", width: size, height: size }}>
+      <svg width={size} height={size} viewBox="0 0 360 360" fill="none">
+        {/* cabinet */}
         <rect
-          key={i}
-          x={76 + i * 76}
-          y="104"
-          width="58"
-          height="118"
-          rx="16"
-          fill={OG_COLORS.surface2}
-          stroke={OG_COLORS.brand}
-          strokeOpacity="0.35"
+          x="48"
+          y="60"
+          width="264"
+          height="240"
+          rx="30"
+          fill={OG_COLORS.deep}
+          stroke={OG_COLORS.fg}
+          strokeOpacity="0.18"
           strokeWidth="3"
         />
-      ))}
-      {[76, 152, 228].map((x, i) => (
-        <g key={x}>
-          <circle
-            cx={x + 29}
-            cy="148"
-            r={i === 1 ? "18" : "14"}
-            fill={i === 1 ? OG_COLORS.amber : OG_COLORS.green}
-          />
-          <path
-            d={`M ${x + 15} 182 H ${x + 43} M ${x + 19} 198 H ${x + 39}`}
+        {/* marquee */}
+        <rect x="60" y="72" width="240" height="30" rx="12" fill={OG_COLORS.surface2} />
+        {/* reels */}
+        {reelX.map((x) => (
+          <rect
+            key={x}
+            x={x}
+            y="120"
+            width="66"
+            height="156"
+            rx="12"
+            fill={OG_COLORS.surface}
             stroke={OG_COLORS.fg}
-            strokeOpacity="0.72"
-            strokeWidth="8"
-            strokeLinecap="round"
+            strokeOpacity="0.14"
+            strokeWidth="2.5"
           />
-        </g>
+        ))}
+        {/* payline */}
+        <path
+          d="M60 198 H300"
+          stroke={OG_COLORS.cyan}
+          strokeWidth="6"
+          strokeLinecap="round"
+          opacity="0.95"
+        />
+        <circle cx="60" cy="198" r="7.5" fill={OG_COLORS.cyan} />
+        <circle cx="300" cy="198" r="7.5" fill={OG_COLORS.cyan} />
+      </svg>
+      {reelX.map((x) => (
+        <div
+          key={x}
+          style={{
+            position: "absolute",
+            left: `${x / 3.6}%`,
+            top: `${120 / 3.6}%`,
+            width: `${66 / 3.6}%`,
+            height: `${156 / 3.6}%`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: OG_COLORS.fg,
+            fontSize: `${size * 0.155}px`,
+            fontWeight: 900
+          }}
+        >
+          7
+        </div>
       ))}
-      <path d="M82 244 H278" stroke={OG_COLORS.green} strokeWidth="8" strokeLinecap="round" />
-      <circle cx="292" cy="116" r="18" fill={OG_COLORS.red} />
-      <path d="M292 134 V210" stroke={OG_COLORS.red} strokeWidth="8" strokeLinecap="round" />
-    </svg>
+    </div>
   );
 }
 
 function BaccaratGlyph({ size }: OgGlyphProps) {
-  const cards = [
-    { x: 92, y: 82, color: OG_COLORS.bg, kind: "spade" },
-    { x: 136, y: 104, color: OG_COLORS.red, kind: "diamond" },
-    { x: 206, y: 82, color: OG_COLORS.bg, kind: "club" },
-    { x: 250, y: 104, color: OG_COLORS.red, kind: "heart" }
-  ] as const;
-  const circles = [
-    { cx: 110, cy: 244, color: OG_COLORS.cyan },
-    { cx: 180, cy: 244, color: OG_COLORS.brand },
-    { cx: 250, cy: 244, color: OG_COLORS.green }
+  // Two tilted cards (heart + spade) over a felt panel with three chips —
+  // mirrors the product BaccaratMiniIcon.
+  const chips = [
+    { cx: 104, color: OG_COLORS.brand },
+    { cx: 180, color: OG_COLORS.cyan },
+    { cx: 256, color: OG_COLORS.green }
   ];
   return (
     <svg width={size} height={size} viewBox="0 0 360 360" fill="none">
+      {/* felt panel */}
       <rect
         x="42"
-        y="70"
+        y="64"
         width="276"
-        height="220"
+        height="214"
         rx="42"
-        fill="#07110e"
+        fill={OG_COLORS.felt}
         stroke={OG_COLORS.green}
         strokeOpacity="0.5"
         strokeWidth="4"
       />
-      {cards.map(({ x, y, color, kind }) => (
-        <g key={`${x}-${kind}`}>
-          <rect x={x} y={y} width="54" height="78" rx="9" fill={OG_COLORS.fg} />
-          {kind === "diamond" ? (
-            <path
-              d={`M ${x + 27} ${y + 18} L ${x + 43} ${y + 39} L ${x + 27} ${y + 60} L ${x + 11} ${y + 39} Z`}
-              fill={color}
-            />
-          ) : null}
-          {kind === "heart" ? (
-            <path
-              d={`M ${x + 27} ${y + 58} C ${x + 6} ${y + 40} ${x + 8} ${y + 20} ${x + 24} ${y + 25} C ${x + 27} ${y + 26} ${x + 27} ${y + 26} ${x + 30} ${y + 25} C ${x + 46} ${y + 20} ${x + 48} ${y + 40} ${x + 27} ${y + 58} Z`}
-              fill={color}
-            />
-          ) : null}
-          {kind === "spade" ? (
-            <path
-              d={`M ${x + 27} ${y + 18} C ${x + 8} ${y + 36} ${x + 10} ${y + 54} ${x + 25} ${y + 48} L ${x + 20} ${y + 62} H ${x + 34} L ${x + 29} ${y + 48} C ${x + 44} ${y + 54} ${x + 46} ${y + 36} ${x + 27} ${y + 18} Z`}
-              fill={color}
-            />
-          ) : null}
-          {kind === "club" ? (
-            <g>
-              <circle cx={x + 27} cy={y + 29} r="10" fill={color} />
-              <circle cx={x + 17} cy={y + 43} r="10" fill={color} />
-              <circle cx={x + 37} cy={y + 43} r="10" fill={color} />
-              <path d={`M ${x + 27} ${y + 43} L ${x + 20} ${y + 62} H ${x + 34} Z`} fill={color} />
-            </g>
-          ) : null}
-        </g>
-      ))}
-      {circles.map(({ cx, cy, color }) => (
+      {/* back card — heart */}
+      <g transform="translate(98 92) rotate(-9)">
+        <rect
+          width="100"
+          height="142"
+          rx="14"
+          fill={OG_COLORS.fg}
+          stroke={OG_COLORS.ink}
+          strokeOpacity="0.4"
+          strokeWidth="2"
+        />
+        <path
+          d="M50 104 C14 74 20 32 50 48 C50 48 50 48 50 48 C80 32 86 74 50 104 Z"
+          fill={OG_COLORS.red}
+        />
+      </g>
+      {/* front card — spade */}
+      <g transform="translate(164 104) rotate(9)">
+        <rect
+          width="100"
+          height="142"
+          rx="14"
+          fill={OG_COLORS.fg}
+          stroke={OG_COLORS.ink}
+          strokeOpacity="0.4"
+          strokeWidth="2"
+        />
+        <path
+          d="M50 40 C14 70 20 104 50 90 L40 116 H60 L50 90 C80 104 86 70 50 40 Z"
+          fill={OG_COLORS.ink}
+        />
+      </g>
+      {/* three chips */}
+      {chips.map(({ cx, color }) => (
         <g key={cx}>
+          <ellipse cx={cx} cy="266" rx="30" ry="9" fill={OG_COLORS.deep} opacity="0.5" />
           <circle
             cx={cx}
-            cy={cy}
-            r="33"
+            cy="258"
+            r="27"
             fill={color}
-            fillOpacity="0.18"
-            stroke={color}
-            strokeWidth="3"
+            stroke={OG_COLORS.fg}
+            strokeOpacity="0.22"
+            strokeWidth="2"
           />
-          <circle cx={cx} cy={cy} r="13" fill={color} opacity="0.92" />
+          <circle
+            cx={cx}
+            cy="258"
+            r="14"
+            fill="none"
+            stroke={OG_COLORS.fg}
+            strokeOpacity="0.4"
+            strokeWidth="2"
+            strokeDasharray="5 4"
+          />
         </g>
       ))}
     </svg>
@@ -444,75 +565,79 @@ function BaccaratGlyph({ size }: OgGlyphProps) {
 }
 
 function SicBoGlyph({ size }: OgGlyphProps) {
-  const dice: Array<{ x: number; y: number; spots: Array<[number, number]> }> = [
+  // Frosted dome cup lifting off three dice (2 / 5 / 6) — mirrors the product
+  // SicBoMiniIcon.
+  const dice: Array<{ x: number; y: number; rot: number; pips: Array<[number, number]> }> = [
     {
       x: 100,
-      y: 190,
-      spots: [
-        [14, 14],
-        [28, 28],
-        [42, 42]
+      y: 196,
+      rot: -8,
+      pips: [
+        [-15, -15],
+        [15, 15]
       ]
     },
     {
-      x: 158,
-      y: 202,
-      spots: [
-        [14, 14],
-        [42, 14],
-        [28, 28],
-        [14, 42],
-        [42, 42]
+      x: 180,
+      y: 220,
+      rot: 4,
+      pips: [
+        [-15, -15],
+        [15, -15],
+        [0, 0],
+        [-15, 15],
+        [15, 15]
       ]
     },
     {
-      x: 218,
-      y: 190,
-      spots: [
-        [14, 14],
-        [42, 14],
-        [14, 28],
-        [42, 28],
-        [14, 42],
-        [42, 42]
+      x: 262,
+      y: 192,
+      rot: 10,
+      pips: [
+        [-15, -18],
+        [15, -18],
+        [-15, 0],
+        [15, 0],
+        [-15, 18],
+        [15, 18]
       ]
     }
   ];
   return (
     <svg width={size} height={size} viewBox="0 0 360 360" fill="none">
+      {/* dome (cup) arcs */}
       <path
-        d="M78 112 C92 54 268 54 282 112 L258 184 C232 216 128 216 102 184Z"
-        fill={OG_COLORS.surface2}
-        stroke={OG_COLORS.cyan}
-        strokeOpacity="0.55"
-        strokeWidth="4"
-      />
-      <path
-        d="M92 112 C110 138 250 138 268 112"
+        d="M78 140 Q180 60 282 140"
+        fill="none"
         stroke={OG_COLORS.fg}
-        strokeOpacity="0.24"
-        strokeWidth="5"
+        strokeOpacity="0.3"
+        strokeWidth="6"
+        strokeLinecap="round"
       />
-      {dice.map(({ x, y, spots }) => (
-        <g key={x}>
-          <rect x={x} y={y} width="56" height="56" rx="12" fill={OG_COLORS.fg} />
-          {spots.map(([cx, cy], i) => (
-            <circle key={i} cx={x + cx} cy={y + cy} r="4.5" fill={OG_COLORS.bg} />
+      <path
+        d="M92 140 Q180 86 268 140"
+        fill="none"
+        stroke={OG_COLORS.fg}
+        strokeOpacity="0.14"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+      {dice.map(({ x, y, rot, pips }) => (
+        <g key={x} transform={`translate(${x} ${y}) rotate(${rot})`}>
+          <rect
+            x="-42"
+            y="-42"
+            width="84"
+            height="84"
+            rx="18"
+            fill={OG_COLORS.diceFace}
+            stroke={OG_COLORS.border}
+            strokeWidth="2"
+          />
+          {pips.map(([px, py], i) => (
+            <circle key={i} cx={px} cy={py} r="6.6" fill={OG_COLORS.deep} />
           ))}
         </g>
-      ))}
-      <rect x="72" y="284" width="216" height="34" rx="14" fill={OG_COLORS.surface2} />
-      {[98, 140, 182, 224].map((x, i) => (
-        <rect
-          key={x}
-          x={x}
-          y="296"
-          width={i === 1 ? "30" : "22"}
-          height="10"
-          rx="5"
-          fill={i === 1 ? OG_COLORS.green : OG_COLORS.cyan}
-          opacity="0.85"
-        />
       ))}
     </svg>
   );
@@ -527,7 +652,7 @@ function EarnGlyph({ size }: OgGlyphProps) {
         width="220"
         height="180"
         rx="34"
-        fill="#07110e"
+        fill={OG_COLORS.felt}
         stroke={OG_COLORS.green}
         strokeOpacity="0.6"
         strokeWidth="4"

@@ -100,7 +100,9 @@ function checkForbiddenColorLiterals() {
     exclude: (file) => {
       const path = formatPath(file);
       return (
-        path.startsWith("packages/ui/src/tokens/") || path === "apps/web/src/app/og/render.tsx"
+        path.startsWith("packages/ui/src/tokens/") ||
+        path === "apps/web/src/app/og/render.tsx" ||
+        path === "apps/web/src/app/og/palette.ts"
       );
     },
     blocking: true

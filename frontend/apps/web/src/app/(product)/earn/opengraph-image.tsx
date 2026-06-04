@@ -9,10 +9,10 @@ export const contentType = OG_CONTENT_TYPE;
 export default function OpengraphImage() {
   return renderOgCard({
     eyebrow: "Back the house",
-    title: "Back the house. Track the edge.",
-    subtitle: "Provide bankroll liquidity and monitor share price, reserve, and risk.",
-    badge: "Bankroll LP",
-    stat: "LP",
+    title: "Earn the house edge.",
+    subtitle:
+      "Provide bankroll liquidity and share the casino's gross gaming revenue. Withdraw anytime.",
+    stat: "Bankroll LP",
     tone: "green",
     visualKind: "earn",
     footerItems: ["Reserve ledger", "Share price", "Non-custodial"]

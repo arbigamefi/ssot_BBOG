@@ -1,10 +1,10 @@
 import { loadEmbeddedRelease } from "@ssot/ssot/release";
 
 import { renderOgCard } from "../../../../../og/render";
-import type { OgGlyphKind } from "../../../../../og/glyphs";
 import { parseRequestChainId } from "../../../../../../server/chain";
 import { normalizeBetId, queryBetReceipt } from "../../../../../../server/betting/recent-bets";
 import { formatTokenAmount } from "../../../../../../features/portfolio/activity/detail/format";
+import { getCasinoGamePresentation } from "../../../../../../features/casino/game-presentation";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -81,7 +81,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ betI
         : row.state === "randomReady"
           ? "brand"
           : "muted";
-  const gameVisual = toGameVisualKind(game?.slug);
+  const gameVisual = getCasinoGamePresentation(game?.slug)?.visualKind;
 
   return renderOgCard({
     eyebrow: "Public casino receipt",
@@ -99,22 +99,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ betI
     ],
     footerItems: ["Public receipt", "Indexed data", "Verify on explorer"]
   });
-}
-
-function toGameVisualKind(slug?: string): OgGlyphKind | undefined {
-  if (
-    slug === "dice" ||
-    slug === "coin-toss" ||
-    slug === "roulette" ||
-    slug === "keno" ||
-    slug === "plinko" ||
-    slug === "slots" ||
-    slug === "baccarat" ||
-    slug === "sic-bo"
-  ) {
-    return slug;
-  }
-  return undefined;
 }
 
 function safeNormalizeBetId(value: string) {

@@ -10,8 +10,7 @@ export default function OpengraphImage() {
   return renderOgCard({
     eyebrow: "On-chain sportsbook",
     title: "Back your call. Settle on-chain.",
-    subtitle: "Back your call on live markets with transparent odds and verifiable settlement.",
-    badge: "Live markets",
+    subtitle: "Live fixed-odds markets with transparent prices and payouts you can verify.",
     stat: "1X2",
     tone: "cyan",
     visualKind: "sportsbook"

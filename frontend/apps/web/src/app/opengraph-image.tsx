@@ -1,4 +1,5 @@
 import { OG_CONTENT_TYPE, OG_SIZE, renderOgCard } from "./og/render";
+import { CASINO_GAME_COUNT } from "../features/casino/game-presentation";
 
 export const alt = "ArbiGameFi — verifiable casino on-chain";
 export const size = OG_SIZE;
@@ -9,10 +10,9 @@ export const contentType = OG_CONTENT_TYPE;
 export default function OpengraphImage() {
   return renderOgCard({
     eyebrow: "Provably fair · On-chain",
-    title: "Play the house. Keep the proof.",
-    subtitle: "Wallet-native casino games with VRF-backed results and public receipts.",
-    badge: "Game rooms",
-    stat: "Rooms",
+    title: "Every win, paid to your wallet.",
+    subtitle: "On-chain casino games. No signup, no custody, results you can verify.",
+    stat: `${CASINO_GAME_COUNT} games`,
     tone: "cyan",
     visualKind: "casino"
   });
