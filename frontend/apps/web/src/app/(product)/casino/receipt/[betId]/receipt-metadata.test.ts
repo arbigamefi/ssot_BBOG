@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   getReceiptOgVersion,
+  getReceiptPreviewHint,
   getReceiptVersionTerminalTxHash,
   normalizeReceiptOgVersion
 } from "./receipt-metadata";
@@ -38,5 +39,22 @@ describe("receipt metadata versioning", () => {
       )
     ).toBe("0xa76261431e46093f8669c400fe6bf0093ff41cf159edaefbed9d5257afca3ded");
     expect(getReceiptVersionTerminalTxHash("settled:undefined")).toBeUndefined();
+  });
+
+  it("normalizes compact social preview hints", () => {
+    expect(getReceiptPreviewHint({ amount: "-1.25 USDC", game: "baccarat", kind: "settled" }))
+      .toMatchInlineSnapshot(`
+        {
+          "amount": "-1.25 USDC",
+          "game": "baccarat",
+          "kind": "settled",
+        }
+      `);
+    expect(
+      getReceiptPreviewHint({ amount: "undefined", game: "dice", kind: "won" })
+    ).toBeUndefined();
+    expect(
+      getReceiptPreviewHint({ amount: "+1 USDC", game: "dice", kind: "pending" })
+    ).toBeUndefined();
   });
 });

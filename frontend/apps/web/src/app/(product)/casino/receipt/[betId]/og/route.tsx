@@ -5,7 +5,7 @@ import { parseRequestChainId } from "../../../../../../server/chain";
 import { normalizeBetId, queryBetReceipt } from "../../../../../../server/betting/recent-bets";
 import { formatTokenAmount } from "../../../../../../features/portfolio/activity/detail/format";
 import { getCasinoGamePresentation } from "../../../../../../features/casino/game-presentation";
-import { getReceiptVersionTerminalTxHash } from "../receipt-metadata";
+import { getReceiptPreviewHint, getReceiptVersionTerminalTxHash } from "../receipt-metadata";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -32,11 +32,43 @@ export async function GET(request: Request, { params }: { params: Promise<{ betI
   }
 
   const chainId = parseRequestChainId(url.searchParams.get("chainId"));
+  const terminalTxHash = getReceiptVersionTerminalTxHash(url.searchParams.get("v"));
+  const preview = getReceiptPreviewHint({
+    amount: url.searchParams.get("ra"),
+    game: url.searchParams.get("rg"),
+    kind: url.searchParams.get("rt")
+  });
+  if (terminalTxHash && preview) {
+    const gamePresentation = getCasinoGamePresentation(preview.game);
+    const gameLabel = gamePresentation ? formatGameLabel(gamePresentation.slug) : "Casino";
+    const resultLabel =
+      preview.kind === "won" ? "Won" : preview.kind === "refunded" ? "Refunded" : "Settled";
+    const tone =
+      preview.kind === "won" ? "success" : preview.kind === "refunded" ? "warning" : "red";
+    return renderOgCard({
+      eyebrow: "Public casino receipt",
+      title: `${resultLabel} ${preview.amount}`,
+      subtitle: `${gameLabel} bet #${betId} · shared receipt · chain ${chainId}`,
+      badge: preview.kind,
+      tone,
+      visualKind: gamePresentation?.visualKind ?? "receipt",
+      variant: "receipt",
+      stat: preview.amount,
+      metrics: [
+        { label: "Game", value: gameLabel },
+        { label: "Chain", value: String(chainId) },
+        { label: "Source", value: "Shared" }
+      ],
+      footerItems: ["Public receipt", "Indexed data", "Verify on explorer"],
+      headers: RECEIPT_OG_HEADERS
+    });
+  }
+
   const receipt = await queryBetReceipt({
     betId,
     chainId,
     terminalTimestampMode: "now",
-    terminalTxHash: getReceiptVersionTerminalTxHash(url.searchParams.get("v"))
+    terminalTxHash
   });
   const row = receipt.row;
   if (!row) {
@@ -129,4 +161,11 @@ function bigintFromString(value?: string) {
 function getPayout(row: { payout?: string; refundAmount?: string; state: string }) {
   if (row.state === "refunded") return bigintFromString(row.refundAmount);
   return bigintFromString(row.payout);
+}
+
+function formatGameLabel(slug: string) {
+  return slug
+    .split("-")
+    .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
+    .join(" ");
 }

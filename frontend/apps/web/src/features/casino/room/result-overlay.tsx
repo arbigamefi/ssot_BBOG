@@ -667,9 +667,18 @@ export function GameRoomResultOverlay({
     assetDecimals,
     assetSymbol
   )} · ${gameSlug}`;
+  const shareAmount = formatSignedTokenAmount(net, assetDecimals, assetSymbol).replace(
+    /^([+-])\s+/,
+    "$1"
+  );
   const receiptPath = buildReceiptSharePath({
     betId: result.betId,
     chainId,
+    preview: {
+      amount: shareAmount,
+      game: gameSlug,
+      kind: result.kind === "refunded" ? "refunded" : net > 0n ? "won" : "settled"
+    },
     version: buildReceiptShareVersion({ result, txHash })
   });
   const shareUrl = buildShareUrl({
@@ -896,16 +905,29 @@ export function buildReceiptShareVersion({
 export function buildReceiptSharePath({
   betId,
   chainId,
+  preview,
   version
 }: {
   betId: bigint;
   chainId?: number;
+  preview?: {
+    amount: string;
+    game: string;
+    kind: "refunded" | "settled" | "won";
+  };
   version?: string;
 }) {
   const params = new URLSearchParams();
   if (chainId) params.set("chainId", String(chainId));
   const normalizedVersion = normalizeReceiptVersionSegment(version);
   if (normalizedVersion) params.set("v", normalizedVersion);
+  const normalizedPreviewAmount = normalizeReceiptVersionSegment(preview?.amount);
+  const normalizedPreviewGame = normalizeReceiptVersionSegment(preview?.game);
+  if (preview?.kind && normalizedPreviewAmount && normalizedPreviewGame) {
+    params.set("rt", preview.kind);
+    params.set("ra", normalizedPreviewAmount);
+    params.set("rg", normalizedPreviewGame);
+  }
   const query = params.toString();
   return `/casino/receipt/${betId.toString()}${query ? `?${query}` : ""}`;
 }

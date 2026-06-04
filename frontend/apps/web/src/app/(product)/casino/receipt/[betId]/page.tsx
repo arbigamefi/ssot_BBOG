@@ -18,7 +18,12 @@ import {
 import { ReceiptSharePanel } from "../../../../../features/share/ReceiptSharePanel";
 import { getCasinoGamePresentation } from "../../../../../features/casino/game-presentation";
 import { PageTransition } from "../../../../../components/PageTransition";
-import { getReceiptOgVersion, getReceiptVersionTerminalTxHash } from "./receipt-metadata";
+import {
+  getReceiptOgVersion,
+  getReceiptPreviewHint,
+  getReceiptVersionTerminalTxHash,
+  setReceiptPreviewParams
+} from "./receipt-metadata";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -28,10 +33,16 @@ export async function generateMetadata({
   searchParams
 }: {
   params: Promise<{ betId: string }>;
-  searchParams: Promise<{ chainId?: string; v?: string }>;
+  searchParams: Promise<{ chainId?: string; ra?: string; rg?: string; rt?: string; v?: string }>;
 }): Promise<Metadata> {
   const { betId } = await params;
-  const { chainId: chainIdParam, v: versionParam } = await searchParams;
+  const {
+    chainId: chainIdParam,
+    ra: previewAmount,
+    rg: previewGame,
+    rt: previewKind,
+    v: versionParam
+  } = await searchParams;
   const { messages } = await getRequestI18n();
   const meta = buildPageMetadata(
     messages,
@@ -54,7 +65,12 @@ export async function generateMetadata({
   // explicitly here rather than via the file-based opengraph-image convention.
   // Include a data-derived version so early "indexing" cards do not poison
   // social preview caches after the receipt reaches a terminal state.
-  const imageUrl = `${SITE_URL}/casino/receipt/${betId}/og?chainId=${chainId}&v=${encodeURIComponent(version)}`;
+  const imageParams = new URLSearchParams({ chainId: String(chainId), v: version });
+  setReceiptPreviewParams(
+    imageParams,
+    getReceiptPreviewHint({ amount: previewAmount, game: previewGame, kind: previewKind })
+  );
+  const imageUrl = `${SITE_URL}/casino/receipt/${betId}/og?${imageParams.toString()}`;
   meta.openGraph = {
     ...(meta.openGraph ?? {}),
     images: [{ url: imageUrl, width: 1200, height: 630, alt: `ArbiGameFi bet #${betId}` }]
@@ -134,9 +150,6 @@ export default async function CasinoReceiptPage({
   const explorerBaseUrl = getExplorerBaseUrl(chainId);
   const txHref = explorerBaseUrl ? `${explorerBaseUrl}/tx/${row.lastTxHash}` : undefined;
   const gameHref = game?.slug ? `/casino/${game.slug}` : "/casino";
-  const receiptHref = `/casino/receipt/${betId}?chainId=${chainId}&v=${encodeURIComponent(
-    getReceiptOgVersion(row)
-  )}`;
   const gameLabel = game?.label ?? shortHex(row.gameId);
   const gamePresentation = getCasinoGamePresentation(game?.slug);
   const net = getNetResult(row);
@@ -157,6 +170,16 @@ export default async function CasinoReceiptPage({
     row.state === "finalized" && net != null
       ? formatSignedNet(net, decimals, symbol)
       : formatTokenAmount(bigintFromString(row.stake), decimals, symbol);
+  const receiptParams = new URLSearchParams({
+    chainId: String(chainId),
+    v: getReceiptOgVersion(row)
+  });
+  setReceiptPreviewParams(receiptParams, {
+    amount: heroValue.replace(/^([+-])\s+/, "$1"),
+    game: game?.slug ?? "casino",
+    kind: row.state === "refunded" ? "refunded" : tone === "win" ? "won" : "settled"
+  });
+  const receiptHref = `/casino/receipt/${betId}?${receiptParams.toString()}`;
   const stakeValue = formatTokenAmount(bigintFromString(row.stake), decimals, symbol);
   const payoutValue = formatTokenAmount(payout, decimals, symbol);
   const netValue = formatTokenAmount(net, decimals, symbol);

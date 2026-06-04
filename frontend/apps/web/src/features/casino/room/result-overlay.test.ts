@@ -42,6 +42,24 @@ describe("receipt share helpers", () => {
     expect(path).not.toContain("undefined");
   });
 
+  it("adds a compact preview hint for social crawlers", () => {
+    const path = buildReceiptSharePath({
+      betId: settledRound.betId,
+      chainId: 84532,
+      preview: {
+        amount: "+0.98 USDC",
+        game: "dice",
+        kind: "won"
+      },
+      version: "settled:0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    });
+    const url = new URL(path, "https://app.example");
+
+    expect(url.searchParams.get("rt")).toBe("won");
+    expect(url.searchParams.get("ra")).toBe("+0.98 USDC");
+    expect(url.searchParams.get("rg")).toBe("dice");
+  });
+
   it("omits invalid cache-buster values instead of serializing them", () => {
     expect(
       buildReceiptSharePath({

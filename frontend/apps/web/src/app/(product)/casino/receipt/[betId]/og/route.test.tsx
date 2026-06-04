@@ -110,4 +110,24 @@ describe("casino receipt OG route", () => {
     expect(body.title).toContain("Settled");
     expect(body.subtitle).toContain("postgres");
   });
+
+  it("renders a terminal share preview without waiting for receipt indexing", async () => {
+    queryBetReceiptMock.mockResolvedValue(null);
+
+    const { GET } = await import("./route");
+    const response = await GET(
+      request(
+        "/casino/receipt/286/og?chainId=84532&v=settled%3A0xa76261431e46093f8669c400fe6bf0093ff41cf159edaefbed9d5257afca3ded&rt=settled&ra=-1.25%20USDC&rg=dice"
+      ),
+      {
+        params: Promise.resolve({ betId: "286" })
+      }
+    );
+    const body = await response.json();
+
+    expect(queryBetReceiptMock).not.toHaveBeenCalled();
+    expect(body.title).toBe("Settled -1.25 USDC");
+    expect(body.subtitle).toContain("Dice bet #286");
+    expect(body.subtitle).toContain("shared receipt");
+  });
 });
