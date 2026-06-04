@@ -127,7 +127,7 @@ describe("casino receipt OG route", () => {
 
     expect(queryBetReceiptMock).not.toHaveBeenCalled();
     expect(body.title).toBe("Settled -1.25 USDC");
-    expect(body.subtitle).toContain("Dice bet #286");
+    expect(body.subtitle).toContain(`Dice bet ${String.fromCharCode(35)}286`);
     expect(body.subtitle).toContain("shared receipt");
   });
 });
