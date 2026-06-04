@@ -18,16 +18,20 @@ import {
 import { ReceiptSharePanel } from "../../../../../features/share/ReceiptSharePanel";
 import { getCasinoGamePresentation } from "../../../../../features/casino/game-presentation";
 import { PageTransition } from "../../../../../components/PageTransition";
+import { getReceiptOgVersion } from "./receipt-metadata";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function generateMetadata({
   params,
   searchParams
 }: {
   params: Promise<{ betId: string }>;
-  searchParams: Promise<{ chainId?: string }>;
+  searchParams: Promise<{ chainId?: string; v?: string }>;
 }): Promise<Metadata> {
   const { betId } = await params;
-  const { chainId: chainIdParam } = await searchParams;
+  const { chainId: chainIdParam, v: versionParam } = await searchParams;
   const { messages } = await getRequestI18n();
   const meta = buildPageMetadata(
     messages,
@@ -40,7 +44,7 @@ export async function generateMetadata({
   const receipt = normalizedBetId
     ? await queryBetReceipt({ betId: normalizedBetId, chainId }).catch(() => undefined)
     : undefined;
-  const version = getReceiptOgVersion(receipt?.row);
+  const version = getReceiptOgVersion(receipt?.row, versionParam);
   // Receipts use a *dynamic* per-bet card (the /og route), so the image is set
   // explicitly here rather than via the file-based opengraph-image convention.
   // Include a data-derived version so early "indexing" cards do not poison
@@ -339,13 +343,6 @@ function getNetResult(row: BetRow) {
   const payout = getPayout(row);
   if (stake == null || payout == null) return undefined;
   return payout - stake;
-}
-
-function getReceiptOgVersion(row?: BetRow | null) {
-  if (!row) return "pending";
-  return [row.state, row.lastTxHash ?? "", row.lastEventName ?? "", row.updatedAt ?? ""]
-    .filter(Boolean)
-    .join(":");
 }
 
 /** Net with an explicit sign glyph (+ / −) for the hero figure. */
