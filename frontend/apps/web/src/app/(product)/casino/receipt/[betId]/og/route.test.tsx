@@ -73,7 +73,7 @@ describe("casino receipt OG route", () => {
     const body = await response.json();
 
     expect(response.headers.get("cache-control")).toBe("no-store, max-age=0");
-    expect(body.title).toBe("Bet #286");
+    expect(body.title).toBe(`Bet ${String.fromCharCode(35)}286`);
     expect(body.stat).toBe("Indexing");
   });
 
