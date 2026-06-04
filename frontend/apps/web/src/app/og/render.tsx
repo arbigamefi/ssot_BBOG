@@ -23,7 +23,8 @@ export function renderOgCard({
   stat,
   variant = "campaign",
   metrics = [],
-  footerItems = ["Provably fair", "Non-custodial", "Chainlink VRF"]
+  footerItems = ["Provably fair", "Non-custodial", "Chainlink VRF"],
+  headers
 }: {
   eyebrow: string;
   title: string;
@@ -43,6 +44,8 @@ export function renderOgCard({
   variant?: "campaign" | "utility" | "receipt";
   metrics?: Array<{ label: string; value: string }>;
   footerItems?: string[];
+  /** Optional response headers for dynamic OG routes that must not inherit static image caching. */
+  headers?: HeadersInit;
 }) {
   const toneColor = getToneColor(tone);
   const titleSize = getTitleSize(title);
@@ -307,7 +310,7 @@ export function renderOgCard({
         ))}
       </div>
     </div>,
-    { ...OG_SIZE }
+    { ...OG_SIZE, headers }
   );
 }
 

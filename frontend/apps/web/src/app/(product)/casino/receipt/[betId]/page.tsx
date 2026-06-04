@@ -36,9 +36,16 @@ export async function generateMetadata({
     { noindex: true, path: `/casino/receipt/${betId}` }
   );
   const chainId = parseRequestChainId(chainIdParam);
+  const normalizedBetId = safeNormalizeBetId(betId);
+  const receipt = normalizedBetId
+    ? await queryBetReceipt({ betId: normalizedBetId, chainId }).catch(() => undefined)
+    : undefined;
+  const version = getReceiptOgVersion(receipt?.row);
   // Receipts use a *dynamic* per-bet card (the /og route), so the image is set
   // explicitly here rather than via the file-based opengraph-image convention.
-  const imageUrl = `${SITE_URL}/casino/receipt/${betId}/og?chainId=${chainId}`;
+  // Include a data-derived version so early "indexing" cards do not poison
+  // social preview caches after the receipt reaches a terminal state.
+  const imageUrl = `${SITE_URL}/casino/receipt/${betId}/og?chainId=${chainId}&v=${encodeURIComponent(version)}`;
   meta.openGraph = {
     ...(meta.openGraph ?? {}),
     images: [{ url: imageUrl, width: 1200, height: 630, alt: `ArbiGameFi bet #${betId}` }]
@@ -113,7 +120,9 @@ export default async function CasinoReceiptPage({
   const explorerBaseUrl = getExplorerBaseUrl(chainId);
   const txHref = explorerBaseUrl ? `${explorerBaseUrl}/tx/${row.lastTxHash}` : undefined;
   const gameHref = game?.slug ? `/casino/${game.slug}` : "/casino";
-  const receiptHref = `/casino/receipt/${betId}?chainId=${chainId}`;
+  const receiptHref = `/casino/receipt/${betId}?chainId=${chainId}&v=${encodeURIComponent(
+    getReceiptOgVersion(row)
+  )}`;
   const gameLabel = game?.label ?? shortHex(row.gameId);
   const gamePresentation = getCasinoGamePresentation(game?.slug);
   const net = getNetResult(row);
@@ -330,6 +339,13 @@ function getNetResult(row: BetRow) {
   const payout = getPayout(row);
   if (stake == null || payout == null) return undefined;
   return payout - stake;
+}
+
+function getReceiptOgVersion(row?: BetRow | null) {
+  if (!row) return "pending";
+  return [row.state, row.lastTxHash ?? "", row.lastEventName ?? "", row.updatedAt ?? ""]
+    .filter(Boolean)
+    .join(":");
 }
 
 /** Net with an explicit sign glyph (+ / −) for the hero figure. */

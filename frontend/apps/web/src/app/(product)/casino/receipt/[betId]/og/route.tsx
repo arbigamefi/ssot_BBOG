@@ -9,6 +9,10 @@ import { getCasinoGamePresentation } from "../../../../../../features/casino/gam
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
+const RECEIPT_OG_HEADERS = {
+  "Cache-Control": "no-store, max-age=0"
+} as const;
+
 export async function GET(request: Request, { params }: { params: Promise<{ betId: string }> }) {
   const { betId: rawBetId } = await params;
   const url = new URL(request.url);
@@ -21,7 +25,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ betI
       badge: "AGF",
       tone: "muted",
       visualKind: "receipt",
-      variant: "receipt"
+      variant: "receipt",
+      headers: RECEIPT_OG_HEADERS
     });
   }
 
@@ -43,7 +48,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ betI
         { label: "Chain", value: String(chainId) },
         { label: "Source", value: "Pending" }
       ],
-      footerItems: ["Public receipt", "Indexed data", "Verify on explorer"]
+      footerItems: ["Public receipt", "Indexed data", "Verify on explorer"],
+      headers: RECEIPT_OG_HEADERS
     });
   }
 
@@ -97,7 +103,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ betI
       { label: "Chain", value: String(chainId) },
       { label: "Source", value: receipt.source }
     ],
-    footerItems: ["Public receipt", "Indexed data", "Verify on explorer"]
+    footerItems: ["Public receipt", "Indexed data", "Verify on explorer"],
+    headers: RECEIPT_OG_HEADERS
   });
 }
 

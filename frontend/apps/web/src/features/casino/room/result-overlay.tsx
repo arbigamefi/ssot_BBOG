@@ -667,13 +667,13 @@ export function GameRoomResultOverlay({
     assetDecimals,
     assetSymbol
   )} · ${gameSlug}`;
+  const receiptPath = buildReceiptSharePath({
+    betId: result.betId,
+    chainId,
+    version: `${result.kind}:${txHash}`
+  });
   const shareUrl = buildShareUrl({
-    href:
-      typeof window !== "undefined"
-        ? `${window.location.origin}/casino/receipt/${result.betId.toString()}${
-            chainId ? `?chainId=${chainId}` : ""
-          }`
-        : `/casino/receipt/${result.betId.toString()}${chainId ? `?chainId=${chainId}` : ""}`,
+    href: typeof window !== "undefined" ? `${window.location.origin}${receiptPath}` : receiptPath,
     referrer: result.player
   });
 
@@ -879,4 +879,19 @@ export function GameRoomResultOverlay({
     </div>,
     document.body
   );
+}
+
+function buildReceiptSharePath({
+  betId,
+  chainId,
+  version
+}: {
+  betId: bigint;
+  chainId?: number;
+  version: string;
+}) {
+  const params = new URLSearchParams();
+  if (chainId) params.set("chainId", String(chainId));
+  params.set("v", version);
+  return `/casino/receipt/${betId.toString()}?${params.toString()}`;
 }
