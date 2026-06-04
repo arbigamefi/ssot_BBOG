@@ -140,7 +140,7 @@ describe("HomePage", () => {
     expect(screen.getByRole("heading", { name: "Verifiable casino on-chain." })).toBeDefined();
     expect(screen.getByText("Live on Arbitrum")).toBeDefined();
     expect(screen.getAllByText("Start Playing").length).toBeGreaterThan(0);
-    expect(screen.getByText("Eight games. One wallet.")).toBeDefined();
+    expect(screen.getByText("Game rooms. One wallet.")).toBeDefined();
     expect(screen.getByText("We can't rig the spin.")).toBeDefined();
   });
 

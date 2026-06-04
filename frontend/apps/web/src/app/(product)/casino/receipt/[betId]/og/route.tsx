@@ -4,6 +4,7 @@ import { renderOgCard } from "../../../../../og/render";
 import { parseRequestChainId } from "../../../../../../server/chain";
 import { normalizeBetId, queryBetReceipt } from "../../../../../../server/betting/recent-bets";
 import { formatTokenAmount } from "../../../../../../features/portfolio/activity/detail/format";
+import { getCasinoGamePresentation } from "../../../../../../features/casino/game-presentation";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -18,7 +19,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ betI
       title: "Receipt unavailable",
       subtitle: "This bet ID is not valid.",
       badge: "AGF",
-      tone: "muted"
+      tone: "muted",
+      visualKind: "receipt",
+      variant: "receipt"
     });
   }
 
@@ -32,6 +35,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ betI
       subtitle: "Receipt not indexed yet. Check back after the bet index catches up.",
       badge: `chain ${chainId}`,
       tone: "warning",
+      stat: "Indexing",
+      visualKind: "receipt",
+      variant: "receipt",
       metrics: [
         { label: "Status", value: "Indexing" },
         { label: "Chain", value: String(chainId) },
@@ -68,18 +74,24 @@ export async function GET(request: Request, { params }: { params: Promise<{ betI
   const tone =
     row.state === "refunded"
       ? "warning"
-      : row.state === "finalized" && net != null && net >= 0n
-        ? "success"
+      : row.state === "finalized"
+        ? net != null && net >= 0n
+          ? "success"
+          : "red"
         : row.state === "randomReady"
           ? "brand"
           : "muted";
+  const gameVisual = getCasinoGamePresentation(game?.slug)?.visualKind;
 
   return renderOgCard({
     eyebrow: "Public casino receipt",
     title: `${resultLabel} ${amount}`,
     subtitle: `${game?.label ?? "Casino"} bet #${betId} · ${receipt.source} · chain ${chainId}`,
     badge: row.state,
+    stat: row.state === "finalized" ? amount : row.state,
     tone,
+    visualKind: gameVisual ?? "receipt",
+    variant: "receipt",
     metrics: [
       { label: "Game", value: game?.label ?? "Casino" },
       { label: "Chain", value: String(chainId) },

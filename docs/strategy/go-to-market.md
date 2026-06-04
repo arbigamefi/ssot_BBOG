@@ -35,11 +35,11 @@ ArbiGameFi's go-to-market is **single-brand B2C casino/sportsbook first**. It
 also has three distinct economic sides, each with its own page, narrative, and
 metric loop.
 
-| Audience               | Where in the product                 | Economic role                                        |
-| ---------------------- | ------------------------------------ | ---------------------------------------------------- |
-| **Players**            | `/casino` (8 games) + `/sportsbook`  | Demand side — generate turnover                      |
-| **Bankroll providers** | `/earn` (house bankroll, on-chain)   | Supply side — provide liquidity, earn the house edge |
-| **Affiliates**         | `/affiliate` + `/portfolio/referral` | Distribution side — bring players, earn commission   |
+| Audience               | Where in the product                     | Economic role                                        |
+| ---------------------- | ---------------------------------------- | ---------------------------------------------------- |
+| **Players**            | `/casino` (casino rooms) + `/sportsbook` | Demand side — generate turnover                      |
+| **Bankroll providers** | `/earn` (house bankroll, on-chain)       | Supply side — provide liquidity, earn the house edge |
+| **Affiliates**         | `/affiliate` + `/portfolio/referral`     | Distribution side — bring players, earn commission   |
 
 The single most common GTM mistake in this category is treating all three as
 "users" and marketing to them with one message, one channel, one funnel. They

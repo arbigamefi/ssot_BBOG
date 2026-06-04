@@ -107,7 +107,7 @@ export function SharePanel({
       {open ? (
         <div
           role="menu"
-          className="absolute bottom-full left-0 z-10 mb-2 w-60 overflow-hidden rounded-lg border border-border-soft bg-surface-1 p-1 text-left shadow-e3"
+          className="absolute bottom-full right-0 z-10 mb-2 w-64 max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-border-soft bg-surface-1 p-1 text-left shadow-e3"
         >
           {canNativeShare ? (
             <ShareMenuButton label={labels.nativeShare} onClick={() => void shareNative()} />

@@ -9,12 +9,14 @@ import { SharePanel, type SharePanelLabels } from "./SharePanel";
 export function ReceiptSharePanel({
   fallbackUrl,
   labels,
+  proof,
   text,
   title,
   triggerClassName
 }: {
   fallbackUrl: string;
   labels: SharePanelLabels;
+  proof?: string;
   text: string;
   title: string;
   triggerClassName?: string;
@@ -34,6 +36,7 @@ export function ReceiptSharePanel({
   return (
     <SharePanel
       labels={labels}
+      proof={proof}
       text={text}
       title={title}
       triggerClassName={triggerClassName}
