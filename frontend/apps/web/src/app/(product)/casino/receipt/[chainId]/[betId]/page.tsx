@@ -2,75 +2,44 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { loadEmbeddedRelease } from "@ssot/ssot/release";
-import type { BetRow } from "@ssot/ssot/indexer";
 
-import { buildPageMetadata } from "../../../../../i18n/metadata";
-import { getRequestI18n } from "../../../../../i18n/request";
-import { parseRequestChainId } from "../../../../../server/chain";
-import { normalizeBetId, queryBetReceipt } from "../../../../../server/betting/recent-bets";
-import { SITE_URL } from "../../../../../config/site";
+import { buildPageMetadata } from "../../../../../../i18n/metadata";
+import { getRequestI18n } from "../../../../../../i18n/request";
+import { parseStrictRequestChainId } from "../../../../../../server/chain";
+import { normalizeBetId, queryBetReceipt } from "../../../../../../server/betting/recent-bets";
+import { SITE_URL } from "../../../../../../config/site";
 import {
   formatTimestamp,
-  formatTokenAmount,
-  getExplorerBaseUrl,
   shortHex
-} from "../../../../../features/portfolio/activity/detail/format";
-import { ReceiptSharePanel } from "../../../../../features/share/ReceiptSharePanel";
-import { getCasinoGamePresentation } from "../../../../../features/casino/game-presentation";
-import { PageTransition } from "../../../../../components/PageTransition";
+} from "../../../../../../features/portfolio/activity/detail/format";
+import { ReceiptSharePanel } from "../../../../../../features/share/ReceiptSharePanel";
+import { getCasinoGamePresentation } from "../../../../../../features/casino/game-presentation";
 import {
-  getReceiptOgVersion,
-  getReceiptPreviewHint,
-  getReceiptVersionTerminalTxHash,
-  setReceiptPreviewParams
-} from "./receipt-metadata";
+  buildCasinoReceiptFromBetRow,
+  buildCasinoReceiptProofText
+} from "../../../../../../features/casino/receipt/view-model";
+import { PageTransition } from "../../../../../../components/PageTransition";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export async function generateMetadata({
-  params,
-  searchParams
+  params
 }: {
-  params: Promise<{ betId: string }>;
-  searchParams: Promise<{ chainId?: string; ra?: string; rg?: string; rt?: string; v?: string }>;
+  params: Promise<{ betId: string; chainId: string }>;
 }): Promise<Metadata> {
-  const { betId } = await params;
-  const {
-    chainId: chainIdParam,
-    ra: previewAmount,
-    rg: previewGame,
-    rt: previewKind,
-    v: versionParam
-  } = await searchParams;
+  const { betId, chainId: rawChainId } = await params;
   const { messages } = await getRequestI18n();
+  const chainId = parseStrictRequestChainId(rawChainId);
   const meta = buildPageMetadata(
     messages,
     "casinoReceipt",
     { betId },
-    { noindex: true, path: `/casino/receipt/${betId}` }
+    { noindex: true, path: `/casino/receipt/${rawChainId}/${betId}` }
   );
-  const chainId = parseRequestChainId(chainIdParam);
-  const normalizedBetId = safeNormalizeBetId(betId);
-  const terminalTxHash = getReceiptVersionTerminalTxHash(versionParam);
-  const receipt =
-    normalizedBetId && !terminalTxHash
-      ? await queryBetReceipt({
-          betId: normalizedBetId,
-          chainId
-        }).catch(() => undefined)
-      : undefined;
-  const version = getReceiptOgVersion(receipt?.row, versionParam);
-  // Receipts use a *dynamic* per-bet card (the /og route), so the image is set
-  // explicitly here rather than via the file-based opengraph-image convention.
-  // Include a data-derived version so early "indexing" cards do not poison
-  // social preview caches after the receipt reaches a terminal state.
-  const imageParams = new URLSearchParams({ chainId: String(chainId), v: version });
-  setReceiptPreviewParams(
-    imageParams,
-    getReceiptPreviewHint({ amount: previewAmount, game: previewGame, kind: previewKind })
-  );
-  const imageUrl = `${SITE_URL}/casino/receipt/${betId}/og?${imageParams.toString()}`;
+  if (!chainId) return meta;
+
+  const imageUrl = `${SITE_URL}/casino/receipt/${chainId}/${betId}/og`;
   meta.openGraph = {
     ...(meta.openGraph ?? {}),
     images: [{ url: imageUrl, width: 1200, height: 630, alt: `ArbiGameFi bet #${betId}` }]
@@ -85,26 +54,23 @@ export async function generateMetadata({
 type ReceiptTone = "win" | "loss" | "neutral";
 
 export default async function CasinoReceiptPage({
-  params,
-  searchParams
+  params
 }: {
-  params: Promise<{ betId: string }>;
-  searchParams: Promise<{ chainId?: string; v?: string }>;
+  params: Promise<{ betId: string; chainId: string }>;
 }) {
-  const { betId: rawBetId } = await params;
-  const { chainId: chainIdParam, v: versionParam } = await searchParams;
+  const { betId: rawBetId, chainId: rawChainId } = await params;
   const { messages } = await getRequestI18n();
   const labels = messages.casino.room.receipt;
   const shareLabels = messages.casino.room.result.actions;
   const betId = safeNormalizeBetId(rawBetId);
   if (!betId) notFound();
 
-  const chainId = parseRequestChainId(chainIdParam);
+  const chainId = parseStrictRequestChainId(rawChainId);
+  if (!chainId) notFound();
+
   const receipt = await queryBetReceipt({
     betId,
-    chainId,
-    terminalTimestampMode: "now",
-    terminalTxHash: getReceiptVersionTerminalTxHash(versionParam)
+    chainId
   });
   const releaseResult = loadEmbeddedRelease(chainId);
   const release = releaseResult.ok ? releaseResult.release : undefined;
@@ -147,55 +113,27 @@ export default async function CasinoReceiptPage({
   );
   const decimals = asset?.decimals ?? 18;
   const symbol = asset?.symbol ?? "";
-  const explorerBaseUrl = getExplorerBaseUrl(chainId);
-  const txHref = explorerBaseUrl ? `${explorerBaseUrl}/tx/${row.lastTxHash}` : undefined;
   const gameHref = game?.slug ? `/casino/${game.slug}` : "/casino";
   const gameLabel = game?.label ?? shortHex(row.gameId);
   const gamePresentation = getCasinoGamePresentation(game?.slug);
-  const net = getNetResult(row);
-  const payout = getPayout(row);
-
-  const tone: ReceiptTone =
-    row.state === "finalized" && net != null
-      ? net > 0n
-        ? "win"
-        : net < 0n
-          ? "loss"
-          : "neutral"
-      : "neutral";
-
-  // Lead with the signed net for a settled bet (matches the result dialog); for
-  // a pending or refunded bet, lead with the amount in play instead of a fake net.
-  const heroValue =
-    row.state === "finalized" && net != null
-      ? formatSignedNet(net, decimals, symbol)
-      : formatTokenAmount(bigintFromString(row.stake), decimals, symbol);
-  const receiptParams = new URLSearchParams({
-    chainId: String(chainId),
-    v: getReceiptOgVersion(row)
-  });
-  setReceiptPreviewParams(receiptParams, {
-    amount: heroValue.replace(/^([+-])\s+/, "$1"),
-    game: game?.slug ?? "casino",
-    kind: row.state === "refunded" ? "refunded" : tone === "win" ? "won" : "settled"
-  });
-  const receiptHref = `/casino/receipt/${betId}?${receiptParams.toString()}`;
-  const stakeValue = formatTokenAmount(bigintFromString(row.stake), decimals, symbol);
-  const payoutValue = formatTokenAmount(payout, decimals, symbol);
-  const netValue = formatTokenAmount(net, decimals, symbol);
-  const shareText = `${gameLabel} bet #${betId}: ${heroValue}`;
-  const proofText = buildProofText({
-    asset: asset?.symbol ?? shortHex(row.asset),
-    betId,
+  const receiptModel = buildCasinoReceiptFromBetRow({
+    assetDecimals: decimals,
+    assetSymbol: symbol,
     chainId,
-    game: gameLabel,
-    lastTx: txHref ?? row.lastTxHash,
-    net: netValue,
-    payout: payoutValue,
-    player: row.player ?? "—",
-    randomHash: row.randomHash,
-    requestId: row.requestId ?? "—",
-    stake: stakeValue,
+    gameLabel,
+    gameSlug: game?.slug,
+    row
+  });
+  const tone = receiptModel.tone;
+
+  // Lead with the same signed net shown in the in-room result dialog.
+  const heroValue = receiptModel.signedNetValue;
+  const receiptHref = `/casino/receipt/${chainId}/${betId}`;
+  const shareText = receiptModel.shareText;
+  const proofText = buildCasinoReceiptProofText({
+    assetLabel: asset?.symbol ?? shortHex(row.asset),
+    lastTx: receiptModel.txHref ?? receiptModel.terminalTxHash ?? row.lastTxHash,
+    model: receiptModel,
     status: labels.status[row.state]
   });
 
@@ -255,16 +193,16 @@ export default async function CasinoReceiptPage({
 
         {/* Stat strip — stake / payout / net, like the result dialog. */}
         <div className="grid min-w-0 grid-cols-3 divide-x divide-border-soft border-b border-border-soft">
-          <Stat label={labels.metrics.stake} value={stakeValue} />
+          <Stat label={labels.metrics.stake} value={receiptModel.stakeValue} />
           <Stat
             label={labels.metrics.payout}
-            value={payoutValue}
+            value={receiptModel.payoutValue}
             tone={tone === "win" ? "success" : "default"}
           />
           <Stat
             label={labels.metrics.net}
-            value={netValue}
-            tone={net == null ? "default" : net >= 0n ? "success" : "danger"}
+            value={receiptModel.netValue}
+            tone={receiptModel.net >= 0n ? "success" : "danger"}
           />
         </div>
 
@@ -277,16 +215,23 @@ export default async function CasinoReceiptPage({
           </summary>
           <div className="max-h-[32svh] min-h-0 min-w-0 overflow-y-auto overscroll-contain pb-1 sm:max-h-72">
             <Fact label={labels.facts.game} value={gameLabel} />
-            <Fact label={labels.facts.player} value={shortHex(row.player)} />
-            <Fact label={labels.facts.affiliate} value={shortHex(row.pricingAffiliate)} />
+            <Fact label={labels.facts.player} value={shortHex(receiptModel.player)} />
+            <Fact label={labels.facts.affiliate} value={shortHex(receiptModel.pricingAffiliate)} />
             <Fact label={labels.facts.asset} value={asset?.symbol ?? shortHex(row.asset)} />
-            <Fact label={labels.facts.betId} value={row.betId} />
-            <Fact label={labels.facts.requestId} value={row.requestId ?? "—"} />
-            <Fact label={labels.facts.randomHash} value={shortHex(row.randomHash)} />
-            <Fact label={labels.facts.placedBlock} value={String(row.placedBlock ?? "—")} />
-            <Fact label={labels.facts.updatedAt} value={formatTimestamp(row.updatedAt)} />
-            <Fact label={labels.facts.lastEvent} value={row.lastEventName} />
-            <Fact label={labels.facts.lastTx} value={shortHex(row.lastTxHash)} href={txHref} />
+            <Fact label={labels.facts.betId} value={receiptModel.betId} />
+            <Fact label={labels.facts.requestId} value={receiptModel.requestId ?? "—"} />
+            <Fact label={labels.facts.randomHash} value={shortHex(receiptModel.randomHash)} />
+            <Fact
+              label={labels.facts.placedBlock}
+              value={String(receiptModel.placedBlock ?? "—")}
+            />
+            <Fact label={labels.facts.updatedAt} value={formatTimestamp(receiptModel.updatedAt)} />
+            <Fact label={labels.facts.lastEvent} value={receiptModel.lastEventName ?? "—"} />
+            <Fact
+              label={labels.facts.lastTx}
+              value={shortHex(receiptModel.terminalTxHash)}
+              href={receiptModel.txHref}
+            />
           </div>
         </details>
 
@@ -308,9 +253,9 @@ export default async function CasinoReceiptPage({
             {labels.actions.play}
           </Link>
           <div className="grid min-w-0 grid-cols-2 gap-2">
-            {txHref ? (
+            {receiptModel.txHref ? (
               <a
-                href={txHref}
+                href={receiptModel.txHref}
                 target="_blank"
                 rel="noreferrer"
                 className="rounded-md border border-border-soft bg-surface-2 px-4 py-2.5 text-center text-xs font-bold uppercase tracking-[0.12em] text-fg transition-colors hover:border-brand/50 hover:bg-surface-3"
@@ -360,73 +305,6 @@ function safeNormalizeBetId(value: string) {
 
 function interpolate(template: string, values: Record<string, string>) {
   return template.replace(/\{([a-zA-Z0-9_]+)\}/g, (match, key) => values[key] ?? match);
-}
-
-function bigintFromString(value?: string) {
-  return value == null || value === "" ? undefined : BigInt(value);
-}
-
-function getPayout(row: BetRow) {
-  if (row.state === "refunded") return bigintFromString(row.refundAmount);
-  return bigintFromString(row.payout);
-}
-
-function getNetResult(row: BetRow) {
-  const stake = bigintFromString(row.stake);
-  const payout = getPayout(row);
-  if (stake == null || payout == null) return undefined;
-  return payout - stake;
-}
-
-/** Net with an explicit sign glyph (+ / −) for the hero figure. */
-function formatSignedNet(value: bigint, decimals: number, symbol: string) {
-  const body = formatTokenAmount(value < 0n ? -value : value, decimals, symbol);
-  if (value > 0n) return `+${body}`;
-  if (value < 0n) return `−${body}`;
-  return body;
-}
-
-function buildProofText({
-  asset,
-  betId,
-  chainId,
-  game,
-  lastTx,
-  net,
-  payout,
-  player,
-  randomHash,
-  requestId,
-  stake,
-  status
-}: {
-  asset: string;
-  betId: string;
-  chainId: number;
-  game: string;
-  lastTx: string;
-  net: string;
-  payout: string;
-  player: string;
-  randomHash?: string;
-  requestId: string;
-  stake: string;
-  status: string;
-}) {
-  return [
-    `ArbiGameFi casino receipt #${betId}`,
-    `Status: ${status}`,
-    `Game: ${game}`,
-    `Asset: ${asset}`,
-    `Stake: ${stake}`,
-    `Payout: ${payout}`,
-    `Net: ${net}`,
-    `Chain ID: ${chainId}`,
-    `Player: ${player}`,
-    `VRF request: ${requestId}`,
-    `Random hash: ${randomHash ?? "—"}`,
-    `Transaction: ${lastTx}`
-  ].join("\n");
 }
 
 /** Local class joiner — keeps this server component free of client-lib imports. */

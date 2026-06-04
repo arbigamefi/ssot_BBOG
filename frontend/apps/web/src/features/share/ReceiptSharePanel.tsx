@@ -25,8 +25,8 @@ export function ReceiptSharePanel({
   const [currentHref, setCurrentHref] = React.useState(fallbackUrl);
 
   React.useEffect(() => {
-    setCurrentHref(window.location.href);
-  }, []);
+    setCurrentHref(new URL(fallbackUrl, window.location.origin).toString());
+  }, [fallbackUrl]);
 
   const shareUrl = React.useMemo(
     () => buildShareUrl({ href: currentHref, referrer: sdk?.account }),

@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { __resetRateLimitBucketsForTests } from "../../../../../server/http/rate-limit";
+import { __resetRateLimitBucketsForTests } from "../../../../../../server/http/rate-limit";
 
 const queryBetReceiptMock = vi.hoisted(() => vi.fn());
 
-vi.mock("../../../../../server/betting/recent-bets", async () => {
-  const actual = await vi.importActual<typeof import("../../../../../server/betting/recent-bets")>(
-    "../../../../../server/betting/recent-bets"
-  );
+vi.mock("../../../../../../server/betting/recent-bets", async () => {
+  const actual = await vi.importActual<
+    typeof import("../../../../../../server/betting/recent-bets")
+  >("../../../../../../server/betting/recent-bets");
   return {
     ...actual,
     queryBetReceipt: queryBetReceiptMock
@@ -21,7 +21,7 @@ async function json(response: Response) {
   return (await response.json()) as any;
 }
 
-describe("GET /api/bets/receipt/[betId]", () => {
+describe("GET /api/bets/receipt/[chainId]/[betId]", () => {
   beforeEach(() => {
     __resetRateLimitBucketsForTests();
     delete process.env.BETS_RECEIPT_RATE_LIMIT_PER_MINUTE;
@@ -39,8 +39,8 @@ describe("GET /api/bets/receipt/[betId]", () => {
 
   it("delegates chain id and bet id to the receipt service", async () => {
     const { GET } = await import("./route");
-    const response = await GET(request("/api/bets/receipt/42?chainId=84532"), {
-      params: Promise.resolve({ betId: "42" })
+    const response = await GET(request("/api/bets/receipt/84532/42"), {
+      params: Promise.resolve({ betId: "42", chainId: "84532" })
     });
 
     expect(response.status).toBe(200);
@@ -50,8 +50,8 @@ describe("GET /api/bets/receipt/[betId]", () => {
 
   it("rejects malformed bet ids before querying", async () => {
     const { GET } = await import("./route");
-    const response = await GET(request("/api/bets/receipt/nope?chainId=84532"), {
-      params: Promise.resolve({ betId: "nope" })
+    const response = await GET(request("/api/bets/receipt/84532/nope"), {
+      params: Promise.resolve({ betId: "nope", chainId: "84532" })
     });
 
     expect(response.status).toBe(400);
@@ -65,13 +65,13 @@ describe("GET /api/bets/receipt/[betId]", () => {
 
     expect(
       (
-        await GET(request("/api/bets/receipt/42?chainId=84532"), {
-          params: Promise.resolve({ betId: "42" })
+        await GET(request("/api/bets/receipt/84532/42"), {
+          params: Promise.resolve({ betId: "42", chainId: "84532" })
         })
       ).status
     ).toBe(200);
-    const response = await GET(request("/api/bets/receipt/42?chainId=84532"), {
-      params: Promise.resolve({ betId: "42" })
+    const response = await GET(request("/api/bets/receipt/84532/42"), {
+      params: Promise.resolve({ betId: "42", chainId: "84532" })
     });
     const body = await json(response);
 

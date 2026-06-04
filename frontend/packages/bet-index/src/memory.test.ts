@@ -104,6 +104,43 @@ describe("memory bet index store", () => {
     await expect(store.getCursor(84532, "gamehub-events", GAME_HUB)).resolves.toBe(123n);
   });
 
+  it("writes verified receipt rows directly", async () => {
+    const store = createMemoryBetIndexStore();
+    await store.writeBetRows([
+      {
+        asset: ASSET,
+        betId: "42",
+        chainId: 84532,
+        finalizedTxHash: "0xABC",
+        gameId: GAME_ID,
+        id: "84532:42",
+        lastEventName: "BetFinalized",
+        lastTxHash: "0xABC",
+        payout: "1980000",
+        payoutGross: "1980000",
+        placedAt: 1_700_000_000_000,
+        placedBlock: 100,
+        player: PLAYER,
+        pricingAffiliate: AFFILIATE,
+        randomHash: `0x${"99".repeat(32)}`,
+        requestId: "123",
+        stake: "1000000",
+        state: "finalized",
+        terminalTxHash: "0xABC",
+        updatedAt: 1_700_000_010_000,
+        updatedBlock: 110
+      }
+    ]);
+
+    await expect(store.getBet({ betId: "42", chainId: 84532 })).resolves.toMatchObject({
+      betId: "42",
+      finalizedTxHash: "0xabc",
+      lastTxHash: "0xabc",
+      state: "finalized",
+      terminalTxHash: "0xabc"
+    });
+  });
+
   it("keeps replay cursors monotonic", async () => {
     const store = createMemoryBetIndexStore();
     await store.setCursor({

@@ -12,20 +12,13 @@ import { cn } from "@ssot/ui";
 
 import { getExplorerTxUrl } from "../../../app-shell/chain-registry";
 import { useFocusTrap } from "../../../app-shell/a11y/useFocusTrap";
-import { formatUnits } from "../../betting/model/units";
+import { buildCasinoReceiptFromTerminalResult } from "../receipt/view-model";
 import { SharePanel } from "../../share/SharePanel";
 import { buildShareUrl } from "../../share/share-link";
 import { formatNativeFee } from "./casino-round";
 import type { CasinoOutcome } from "./outcome";
 import type { BaccaratSide, CoinSide, DiceDirection, SicBoKind } from "./params";
 import type { CasinoRoundResult, CasinoTerminalRoundResult } from "./resolution";
-
-function formatTokenAmount(value: bigint, decimals: number, symbol: string) {
-  const raw = formatUnits(value, decimals);
-  const [intPart = "0", fracPart = ""] = raw.split(".");
-  const fraction = fracPart.slice(0, 4).replace(/0+$/, "");
-  return `${intPart}${fraction ? `.${fraction}` : ""} ${symbol}`;
-}
 
 function shortHash(value: string | undefined) {
   if (!value) return "—";
@@ -37,23 +30,15 @@ function formatAddress(value: string | undefined) {
   return value.length > 14 ? `${value.slice(0, 8)}…${value.slice(-6)}` : value;
 }
 
-function formatSignedTokenAmount(value: bigint, decimals: number, symbol: string) {
-  if (value === 0n) return formatTokenAmount(0n, decimals, symbol);
-  const sign = value > 0n ? "+ " : "- ";
-  return `${sign}${formatTokenAmount(value > 0n ? value : -value, decimals, symbol)}`;
-}
-
-function formatMultiplier(payout: bigint, stake: bigint) {
-  if (stake <= 0n) return "—";
-  const scaled = (payout * 100n) / stake;
-  const whole = scaled / 100n;
-  const fraction = String(scaled % 100n).padStart(2, "0");
-  return `${whole}.${fraction}x`;
-}
-
 function formatResolvedAt(value: number | undefined) {
   if (!value) return "—";
   return new Date(value * 1000).toLocaleString();
+}
+
+function gameNameKeyFromSlug(slug: string) {
+  if (slug === "coin-toss") return "coinToss";
+  if (slug === "sic-bo") return "sicBo";
+  return slug;
 }
 
 function useBodyScrollLock(active: boolean) {
@@ -76,6 +61,58 @@ function useEscapeToClose(active: boolean, onClose: (() => void) | undefined) {
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [active, onClose]);
+}
+
+function useReceiptMaterialization({
+  betId,
+  chainId,
+  terminalTxHash
+}: {
+  betId: bigint;
+  chainId?: number;
+  terminalTxHash?: string;
+}) {
+  const [ready, setReady] = React.useState(false);
+
+  React.useEffect(() => {
+    setReady(false);
+    if (!chainId || !terminalTxHash) return;
+
+    let cancelled = false;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
+    let attempts = 0;
+    const hydrate = async () => {
+      attempts += 1;
+      try {
+        const response = await fetch(`/api/bets/receipt/${chainId}/${betId.toString()}/hydrate`, {
+          body: JSON.stringify({ terminalTxHash }),
+          headers: { "content-type": "application/json" },
+          method: "POST"
+        });
+        if (cancelled) return;
+        if (!response.ok) {
+          if (attempts < 5) retryTimer = setTimeout(() => void hydrate(), 1500);
+          return;
+        }
+        const payload = (await response.json()) as { row?: unknown; source?: string };
+        if (payload.row && payload.source === "postgres") {
+          setReady(true);
+        } else if (attempts < 5) {
+          retryTimer = setTimeout(() => void hydrate(), 1500);
+        }
+      } catch {
+        if (!cancelled && attempts < 5) retryTimer = setTimeout(() => void hydrate(), 1500);
+      }
+    };
+
+    void hydrate();
+    return () => {
+      cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
+    };
+  }, [betId, chainId, terminalTxHash]);
+
+  return ready;
 }
 
 /**
@@ -635,14 +672,20 @@ export function GameRoomResultOverlay({
   const trapRef = useFocusTrap<HTMLDivElement>(mounted);
   const primaryActionRef = React.useRef<HTMLButtonElement | null>(null);
   const outcome = getOutcome(result, t);
+  const gameLabel = t(`casino.room.names.${gameNameKeyFromSlug(gameSlug)}`);
+  const receiptModel = buildCasinoReceiptFromTerminalResult({
+    assetDecimals,
+    assetSymbol,
+    chainId,
+    gameLabel,
+    gameSlug,
+    result
+  });
   // The overlay only ever mounts for a fully settled or refunded round (the
   // caller gates it behind isCasinoTerminalRoundResult), so every figure here is
   // final — no pending / random-only states are represented.
-  const txHash = result.kind === "refunded" ? result.refund.txHash : result.settlement.txHash;
-  const txHref = getExplorerTxUrl(chainId, txHash) ?? undefined;
-  const payout =
-    result.kind === "refunded" ? result.refund.refundAmount : result.settlement.payoutNet;
-  const net = payout - result.stake;
+  const txHash = receiptModel.terminalTxHash;
+  const txHref = receiptModel.txHref;
   const payoutLabel =
     result.kind === "refunded"
       ? t("casino.room.result.facts.refund")
@@ -662,28 +705,24 @@ export function GameRoomResultOverlay({
     t
   );
   const fairnessProof = buildFairnessProof({ result, chainId, txHash });
-  const shareText = `${outcome.label} · ${formatSignedTokenAmount(
-    net,
-    assetDecimals,
-    assetSymbol
-  )} · ${gameSlug}`;
-  const shareAmount = formatSignedTokenAmount(net, assetDecimals, assetSymbol).replace(
-    /^([+-])\s+/,
-    "$1"
-  );
-  const receiptPath = buildReceiptSharePath({
+  const shareText = `${outcome.label} · ${receiptModel.signedNetValue} · ${receiptModel.gameLabel}`;
+  const receiptPath = chainId
+    ? buildReceiptSharePath({
+        betId: result.betId,
+        chainId
+      })
+    : undefined;
+  const shareUrl = receiptPath
+    ? buildShareUrl({
+        href:
+          typeof window !== "undefined" ? `${window.location.origin}${receiptPath}` : receiptPath,
+        referrer: result.player
+      })
+    : "";
+  const receiptReady = useReceiptMaterialization({
     betId: result.betId,
     chainId,
-    preview: {
-      amount: shareAmount,
-      game: gameSlug,
-      kind: result.kind === "refunded" ? "refunded" : net > 0n ? "won" : "settled"
-    },
-    version: buildReceiptShareVersion({ result, txHash })
-  });
-  const shareUrl = buildShareUrl({
-    href: typeof window !== "undefined" ? `${window.location.origin}${receiptPath}` : receiptPath,
-    referrer: result.player
+    terminalTxHash: receiptModel.terminalTxHash
   });
 
   React.useEffect(() => setMounted(true), []);
@@ -754,9 +793,9 @@ export function GameRoomResultOverlay({
                   outcome.tone === "loss" && "text-danger",
                   outcome.tone === "neutral" && "text-fg"
                 )}
-                title={formatSignedTokenAmount(net, assetDecimals, assetSymbol)}
+                title={receiptModel.signedNetValue}
               >
-                {formatSignedTokenAmount(net, assetDecimals, assetSymbol)}
+                {receiptModel.signedNetValue}
               </div>
               <p className="mt-1.5 text-xs leading-5 text-fg-muted">{outcome.detail}</p>
             </div>
@@ -764,18 +803,15 @@ export function GameRoomResultOverlay({
 
           {/* Stat strip — stake / payout / multiplier. */}
           <div className="grid grid-cols-3 divide-x divide-border-soft border-b border-border-soft">
-            <Stat
-              label={t("casino.room.result.facts.betAmount")}
-              value={formatTokenAmount(result.stake, assetDecimals, assetSymbol)}
-            />
+            <Stat label={t("casino.room.result.facts.betAmount")} value={receiptModel.stakeValue} />
             <Stat
               label={payoutLabel}
-              value={formatTokenAmount(payout, assetDecimals, assetSymbol)}
+              value={receiptModel.payoutValue}
               tone={outcome.tone === "win" ? "win" : "neutral"}
             />
             <Stat
               label={t("casino.room.result.facts.multiplier")}
-              value={formatMultiplier(payout, result.stake)}
+              value={receiptModel.multiplierValue}
             />
           </div>
 
@@ -805,28 +841,25 @@ export function GameRoomResultOverlay({
               <div className="mt-2 space-y-1.5">
                 <FactRow
                   label={t("casino.room.result.facts.player")}
-                  value={formatAddress(result.player)}
+                  value={formatAddress(receiptModel.player)}
                 />
-                <FactRow
-                  label={t("casino.room.result.facts.betId")}
-                  value={result.betId.toString()}
-                />
+                <FactRow label={t("casino.room.result.facts.betId")} value={receiptModel.betId} />
                 <FactRow
                   label={t("casino.room.result.facts.settlementTx")}
-                  value={shortHash(txHash)}
+                  value={shortHash(receiptModel.terminalTxHash)}
                   href={txHref}
                 />
                 <FactRow
                   label={t("casino.room.result.facts.randomHash")}
-                  value={shortHash(result.randomHash)}
+                  value={shortHash(receiptModel.randomHash)}
                 />
                 <FactRow
                   label={t("casino.room.result.facts.requestId")}
-                  value={result.requestId.toString()}
+                  value={receiptModel.requestId ?? "—"}
                 />
                 <FactRow
                   label={t("casino.room.result.facts.resolvedTime")}
-                  value={formatResolvedAt(result.resolvedAt)}
+                  value={formatResolvedAt(receiptModel.resolvedAt)}
                 />
                 <FactRow
                   label={t("casino.room.result.facts.vrfFee")}
@@ -859,6 +892,7 @@ export function GameRoomResultOverlay({
           </button>
           <div className="grid grid-cols-2 gap-2">
             <SharePanel
+              disabled={!receiptReady || !receiptPath}
               title={t("casino.room.result.title")}
               text={shareText}
               url={shareUrl}
@@ -890,52 +924,6 @@ export function GameRoomResultOverlay({
   );
 }
 
-export function buildReceiptShareVersion({
-  result,
-  txHash
-}: {
-  result: CasinoTerminalRoundResult;
-  txHash?: string;
-}) {
-  const normalizedTxHash = normalizeReceiptVersionSegment(txHash);
-  if (normalizedTxHash) return `${result.kind}:${normalizedTxHash}`;
-  return `${result.kind}:bet:${result.betId.toString()}:request:${result.requestId.toString()}:random:${result.randomHash}`;
-}
-
-export function buildReceiptSharePath({
-  betId,
-  chainId,
-  preview,
-  version
-}: {
-  betId: bigint;
-  chainId?: number;
-  preview?: {
-    amount: string;
-    game: string;
-    kind: "refunded" | "settled" | "won";
-  };
-  version?: string;
-}) {
-  const params = new URLSearchParams();
-  if (chainId) params.set("chainId", String(chainId));
-  const normalizedVersion = normalizeReceiptVersionSegment(version);
-  if (normalizedVersion) params.set("v", normalizedVersion);
-  const normalizedPreviewAmount = normalizeReceiptVersionSegment(preview?.amount);
-  const normalizedPreviewGame = normalizeReceiptVersionSegment(preview?.game);
-  if (preview?.kind && normalizedPreviewAmount && normalizedPreviewGame) {
-    params.set("rt", preview.kind);
-    params.set("ra", normalizedPreviewAmount);
-    params.set("rg", normalizedPreviewGame);
-  }
-  const query = params.toString();
-  return `/casino/receipt/${betId.toString()}${query ? `?${query}` : ""}`;
-}
-
-function normalizeReceiptVersionSegment(value: string | undefined) {
-  const trimmed = value?.trim();
-  if (!trimmed) return undefined;
-  if (/\b(?:undefined|null)\b/i.test(trimmed)) return undefined;
-  if (/^0x0{64}$/i.test(trimmed)) return undefined;
-  return trimmed;
+export function buildReceiptSharePath({ betId, chainId }: { betId: bigint; chainId: number }) {
+  return `/casino/receipt/${chainId}/${betId.toString()}`;
 }

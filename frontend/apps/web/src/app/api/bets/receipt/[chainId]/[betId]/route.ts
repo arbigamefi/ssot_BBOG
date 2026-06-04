@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 
-import { parseRequestChainId } from "../../../../../server/chain";
-import { normalizeBetId, queryBetReceipt } from "../../../../../server/betting/recent-bets";
+import { parseStrictRequestChainId } from "../../../../../../server/chain";
+import { normalizeBetId, queryBetReceipt } from "../../../../../../server/betting/recent-bets";
 import {
   mergeHeaders,
   noStoreHeaders,
   publicReadRateLimit,
   rateLimitedJson
-} from "../../../../../server/http/public-read-limit";
+} from "../../../../../../server/http/public-read-limit";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -16,9 +16,10 @@ function jsonError(message: string, status = 400, code = "BAD_REQUEST") {
   return NextResponse.json({ error: { code, message } }, { status });
 }
 
-export async function GET(request: Request, { params }: { params: Promise<{ betId: string }> }) {
-  const url = new URL(request.url);
-  const chainId = parseRequestChainId(url.searchParams.get("chainId"));
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ betId: string; chainId: string }> }
+) {
   const quota = publicReadRateLimit({
     envName: "BETS_RECEIPT_RATE_LIMIT_PER_MINUTE",
     fallback: 120,
@@ -30,7 +31,11 @@ export async function GET(request: Request, { params }: { params: Promise<{ betI
   }
 
   try {
-    const betId = normalizeBetId((await params).betId);
+    const { betId: rawBetId, chainId: rawChainId } = await params;
+    const chainId = parseStrictRequestChainId(rawChainId);
+    if (!chainId) return jsonError("Unsupported receipt chain.", 400, "UNSUPPORTED_CHAIN");
+
+    const betId = normalizeBetId(rawBetId);
     const response = await queryBetReceipt({ betId, chainId });
 
     return NextResponse.json(response, {

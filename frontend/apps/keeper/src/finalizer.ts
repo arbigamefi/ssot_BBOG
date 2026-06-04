@@ -7,6 +7,7 @@ export type FinalizerDeps = {
   simulateFinalize: (betId: bigint) => Promise<void>;
   writeFinalize: (betId: bigint) => Promise<Hex>;
   waitFinalizeReceipt: (txHash: Hex) => Promise<{ status: "success" | "reverted" }>;
+  materializeReceipt?: (event: KeeperEvent, txHash: Hex) => Promise<void>;
   now?: () => number;
   sleep?: (ms: number) => Promise<void>;
   verifyAttempts?: number;
@@ -64,6 +65,17 @@ export async function finalizeIfReady(
 
     const after = await readTerminalAfterReceipt(event, deps);
     if (isTerminalState(after.state)) {
+      if (deps.materializeReceipt) {
+        try {
+          await deps.materializeReceipt(event, txHash);
+        } catch (error) {
+          logger.warn("casino.finalize.receipt_materialize_failed", {
+            betId: event.betId.toString(),
+            message: (error as Error)?.message ?? "receipt materialization failed",
+            txHash
+          });
+        }
+      }
       logger.info("casino.finalize.mined", {
         betId: event.betId.toString(),
         requestId: before.requestId.toString(),

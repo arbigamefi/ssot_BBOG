@@ -221,6 +221,7 @@ export type BetIndexCursor = {
 export type BetIndexStore = {
   migrate: () => Promise<void>;
   writeGameHubEvents: (events: readonly BetIndexEvent[]) => Promise<BetRow[]>;
+  writeBetRows: (rows: readonly BetRow[]) => Promise<BetRow[]>;
   writeSportsHubEvents: (events: readonly SportsTicketIndexEvent[]) => Promise<SportsTicketRow[]>;
   writeBankProviderLedgerRows: (
     rows: readonly BankProviderLedgerRow[]
@@ -537,6 +538,13 @@ export function createMemoryBetIndexStore(): BetIndexStore {
   return {
     migrate: async () => undefined,
     writeGameHubEvents,
+    writeBetRows: async (input) => {
+      for (const row of input) {
+        const normalized = normalizeBetRow(row);
+        bets.set(`${normalized.chainId}:${normalized.betId}`, normalized);
+      }
+      return input.map(normalizeBetRow);
+    },
     writeSportsHubEvents,
     writeBankProviderLedgerRows,
     getRecentBets: async ({ chainId, gameId, limit }) =>
@@ -681,6 +689,76 @@ export function createPostgresBetIndexStore(config: PostgresBetIndexConfig): Bet
   return createPostgresBetIndexStoreFromSql(sql);
 }
 
+type SqlTag = (strings: TemplateStringsArray, ...parameters: unknown[]) => unknown;
+
+async function upsertBetRow(sql: SqlTag, row: BetRow) {
+  const normalized = normalizeBetRow(row);
+  await sql`
+    insert into bets (
+      chain_id, bet_id, state, game_id, asset, player, pricing_affiliate, stake, payout,
+      payout_gross, refund_amount, request_id, random_hash, terminal_tx_hash,
+      finalized_tx_hash, refunded_tx_hash, placed_block, placed_at,
+      updated_block, last_tx_hash, last_event_name, updated_at
+    ) values (
+      ${normalized.chainId},
+      ${normalized.betId},
+      ${normalized.state},
+      ${normalized.gameId ?? null},
+      ${normalized.asset ?? null},
+      ${normalized.player ?? null},
+      ${normalized.pricingAffiliate ?? null},
+      ${normalized.stake ?? null},
+      ${normalized.payout ?? null},
+      ${normalized.payoutGross ?? null},
+      ${normalized.refundAmount ?? null},
+      ${normalized.requestId ?? null},
+      ${normalized.randomHash ?? null},
+      ${normalized.terminalTxHash ?? null},
+      ${normalized.finalizedTxHash ?? null},
+      ${normalized.refundedTxHash ?? null},
+      ${normalized.placedBlock ?? null},
+      ${normalized.placedAt == null ? null : new Date(normalized.placedAt)},
+      ${normalized.updatedBlock},
+      ${normalized.lastTxHash},
+      ${normalized.lastEventName},
+      ${new Date(normalized.updatedAt)}
+    )
+    on conflict (chain_id, bet_id) do update set
+      state = case
+        when excluded.updated_block >= bets.updated_block then excluded.state
+        else bets.state
+      end,
+      game_id = coalesce(excluded.game_id, bets.game_id),
+      asset = coalesce(excluded.asset, bets.asset),
+      player = coalesce(excluded.player, bets.player),
+      pricing_affiliate = coalesce(excluded.pricing_affiliate, bets.pricing_affiliate),
+      stake = coalesce(excluded.stake, bets.stake),
+      payout = coalesce(excluded.payout, bets.payout),
+      payout_gross = coalesce(excluded.payout_gross, bets.payout_gross),
+      refund_amount = coalesce(excluded.refund_amount, bets.refund_amount),
+      request_id = coalesce(excluded.request_id, bets.request_id),
+      random_hash = coalesce(excluded.random_hash, bets.random_hash),
+      terminal_tx_hash = coalesce(excluded.terminal_tx_hash, bets.terminal_tx_hash),
+      finalized_tx_hash = coalesce(excluded.finalized_tx_hash, bets.finalized_tx_hash),
+      refunded_tx_hash = coalesce(excluded.refunded_tx_hash, bets.refunded_tx_hash),
+      placed_block = coalesce(bets.placed_block, excluded.placed_block),
+      placed_at = coalesce(bets.placed_at, excluded.placed_at),
+      updated_block = greatest(bets.updated_block, excluded.updated_block),
+      last_tx_hash = case
+        when excluded.updated_block >= bets.updated_block then excluded.last_tx_hash
+        else bets.last_tx_hash
+      end,
+      last_event_name = case
+        when excluded.updated_block >= bets.updated_block then excluded.last_event_name
+        else bets.last_event_name
+      end,
+      updated_at = case
+        when excluded.updated_block >= bets.updated_block then excluded.updated_at
+        else bets.updated_at
+      end
+  `;
+}
+
 export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
   return {
     migrate: async () => {
@@ -710,73 +788,19 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
         }
 
         for (const row of rows) {
-          await tx`
-            insert into bets (
-              chain_id, bet_id, state, game_id, asset, player, pricing_affiliate, stake, payout,
-              payout_gross, refund_amount, request_id, random_hash, terminal_tx_hash,
-              finalized_tx_hash, refunded_tx_hash, placed_block, placed_at,
-              updated_block, last_tx_hash, last_event_name, updated_at
-            ) values (
-              ${row.chainId},
-              ${row.betId},
-              ${row.state},
-              ${row.gameId?.toLowerCase() ?? null},
-              ${row.asset?.toLowerCase() ?? null},
-              ${row.player?.toLowerCase() ?? null},
-              ${row.pricingAffiliate?.toLowerCase() ?? null},
-              ${row.stake ?? null},
-              ${row.payout ?? null},
-              ${row.payoutGross ?? null},
-              ${row.refundAmount ?? null},
-              ${row.requestId ?? null},
-              ${row.randomHash?.toLowerCase() ?? null},
-              ${row.terminalTxHash?.toLowerCase() ?? null},
-              ${row.finalizedTxHash?.toLowerCase() ?? null},
-              ${row.refundedTxHash?.toLowerCase() ?? null},
-              ${row.placedBlock ?? null},
-              ${row.placedAt == null ? null : new Date(row.placedAt)},
-              ${row.updatedBlock},
-              ${row.lastTxHash.toLowerCase()},
-              ${row.lastEventName},
-              ${new Date(row.updatedAt)}
-            )
-            on conflict (chain_id, bet_id) do update set
-              state = case
-                when excluded.updated_block >= bets.updated_block then excluded.state
-                else bets.state
-              end,
-              game_id = coalesce(excluded.game_id, bets.game_id),
-              asset = coalesce(excluded.asset, bets.asset),
-              player = coalesce(excluded.player, bets.player),
-              pricing_affiliate = coalesce(excluded.pricing_affiliate, bets.pricing_affiliate),
-              stake = coalesce(excluded.stake, bets.stake),
-              payout = coalesce(excluded.payout, bets.payout),
-              payout_gross = coalesce(excluded.payout_gross, bets.payout_gross),
-              refund_amount = coalesce(excluded.refund_amount, bets.refund_amount),
-              request_id = coalesce(excluded.request_id, bets.request_id),
-              random_hash = coalesce(excluded.random_hash, bets.random_hash),
-              terminal_tx_hash = coalesce(excluded.terminal_tx_hash, bets.terminal_tx_hash),
-              finalized_tx_hash = coalesce(excluded.finalized_tx_hash, bets.finalized_tx_hash),
-              refunded_tx_hash = coalesce(excluded.refunded_tx_hash, bets.refunded_tx_hash),
-              placed_block = coalesce(bets.placed_block, excluded.placed_block),
-              placed_at = coalesce(bets.placed_at, excluded.placed_at),
-              updated_block = greatest(bets.updated_block, excluded.updated_block),
-              last_tx_hash = case
-                when excluded.updated_block >= bets.updated_block then excluded.last_tx_hash
-                else bets.last_tx_hash
-              end,
-              last_event_name = case
-                when excluded.updated_block >= bets.updated_block then excluded.last_event_name
-                else bets.last_event_name
-              end,
-              updated_at = case
-                when excluded.updated_block >= bets.updated_block then excluded.updated_at
-                else bets.updated_at
-              end
-          `;
+          await upsertBetRow(tx, row);
         }
       });
       return rows;
+    },
+    writeBetRows: async (rows: readonly BetRow[]) => {
+      if (rows.length === 0) return [];
+      await sql.begin(async (tx) => {
+        for (const row of rows) {
+          await upsertBetRow(tx, row);
+        }
+      });
+      return rows.map(normalizeBetRow);
     },
     writeSportsHubEvents: async (events: readonly SportsTicketIndexEvent[]) => {
       if (events.length === 0) return [];
@@ -1275,6 +1299,24 @@ export function compareBetRows(a: BetRow, b: BetRow) {
   const bId = BigInt(b.betId);
   if (bId === aId) return 0;
   return bId > aId ? 1 : -1;
+}
+
+function normalizeBetRow(row: BetRow): BetRow {
+  return {
+    ...row,
+    asset: row.asset?.toLowerCase() as Address | undefined,
+    betId: String(row.betId),
+    chainId: Number(row.chainId),
+    finalizedTxHash: row.finalizedTxHash?.toLowerCase() as Hex | undefined,
+    gameId: row.gameId?.toLowerCase() as Hex | undefined,
+    id: `${Number(row.chainId)}:${String(row.betId)}`,
+    lastTxHash: row.lastTxHash.toLowerCase() as Hex,
+    player: row.player?.toLowerCase() as Address | undefined,
+    pricingAffiliate: row.pricingAffiliate?.toLowerCase() as Address | undefined,
+    randomHash: row.randomHash?.toLowerCase() as Hex | undefined,
+    refundedTxHash: row.refundedTxHash?.toLowerCase() as Hex | undefined,
+    terminalTxHash: row.terminalTxHash?.toLowerCase() as Hex | undefined
+  };
 }
 
 export function compareSportsTicketRows(a: SportsTicketRow, b: SportsTicketRow) {

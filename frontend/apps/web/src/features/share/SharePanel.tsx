@@ -19,6 +19,7 @@ export type SharePanelLabels = {
 };
 
 export function SharePanel({
+  disabled = false,
   labels,
   proof,
   text,
@@ -26,6 +27,7 @@ export function SharePanel({
   triggerClassName,
   url
 }: {
+  disabled?: boolean;
   labels: SharePanelLabels;
   proof?: string;
   text: string;
@@ -86,9 +88,11 @@ export function SharePanel({
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
+        disabled={disabled}
         onClick={() => setOpen((value) => !value)}
         className={cn(
           "inline-flex w-full items-center justify-center gap-2 rounded-md border border-border-soft bg-surface-2 px-4 py-2.5 text-xs font-bold uppercase tracking-[0.12em] text-fg transition-colors hover:border-brand/40 hover:bg-surface-3",
+          disabled && "cursor-not-allowed opacity-50 hover:border-border-soft hover:bg-surface-2",
           triggerClassName
         )}
       >
@@ -104,7 +108,7 @@ export function SharePanel({
           </>
         )}
       </button>
-      {open ? (
+      {open && !disabled ? (
         <div
           role="menu"
           className="absolute bottom-full right-0 z-10 mb-2 w-64 max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-border-soft bg-surface-1 p-1 text-left shadow-e3"

@@ -5,14 +5,14 @@ const { queryBetReceiptMock, renderOgCardMock } = vi.hoisted(() => ({
   renderOgCardMock: vi.fn((args: any) => Response.json(args, { headers: args.headers }))
 }));
 
-vi.mock("../../../../../og/render", () => ({
+vi.mock("../../../../../../og/render", () => ({
   renderOgCard: renderOgCardMock
 }));
 
-vi.mock("../../../../../../server/betting/recent-bets", async () => {
+vi.mock("../../../../../../../server/betting/recent-bets", async () => {
   const actual = await vi.importActual<
-    typeof import("../../../../../../server/betting/recent-bets")
-  >("../../../../../../server/betting/recent-bets");
+    typeof import("../../../../../../../server/betting/recent-bets")
+  >("../../../../../../../server/betting/recent-bets");
   return {
     ...actual,
     queryBetReceipt: queryBetReceiptMock
@@ -55,7 +55,7 @@ describe("casino receipt OG route", () => {
     renderOgCardMock.mockClear();
   });
 
-  it("does not cache a pending indexing card", async () => {
+  it("returns a no-store 503 while the receipt is not durable yet", async () => {
     queryBetReceiptMock.mockResolvedValue({
       betId: "286",
       cached: false,
@@ -67,17 +67,19 @@ describe("casino receipt OG route", () => {
     });
 
     const { GET } = await import("./route");
-    const response = await GET(request("/casino/receipt/286/og?chainId=84532"), {
-      params: Promise.resolve({ betId: "286" })
+    const response = await GET(request("/casino/receipt/84532/286/og"), {
+      params: Promise.resolve({ betId: "286", chainId: "84532" })
     });
-    const body = await response.json();
+    const body = await response.text();
 
+    expect(response.status).toBe(503);
     expect(response.headers.get("cache-control")).toBe("no-store, max-age=0");
-    expect(body.title).toBe(`Bet ${String.fromCharCode(35)}286`);
-    expect(body.stat).toBe("Indexing");
+    expect(response.headers.get("retry-after")).toBe("5");
+    expect(body).toBe("Receipt not ready");
+    expect(renderOgCardMock).not.toHaveBeenCalled();
   });
 
-  it("does not cache a terminal receipt image under the stable route", async () => {
+  it("caches a terminal receipt image under the stable route", async () => {
     queryBetReceiptMock.mockResolvedValue({
       betId: "286",
       cached: false,
@@ -101,34 +103,13 @@ describe("casino receipt OG route", () => {
     });
 
     const { GET } = await import("./route");
-    const response = await GET(request("/casino/receipt/286/og?chainId=84532&v=terminal"), {
-      params: Promise.resolve({ betId: "286" })
+    const response = await GET(request("/casino/receipt/84532/286/og"), {
+      params: Promise.resolve({ betId: "286", chainId: "84532" })
     });
     const body = await response.json();
 
-    expect(response.headers.get("cache-control")).toBe("no-store, max-age=0");
+    expect(response.headers.get("cache-control")).toBe("public, max-age=31536000, immutable");
     expect(body.title).toContain("Settled");
     expect(body.subtitle).toContain("postgres");
-  });
-
-  it("renders a terminal share preview without waiting for receipt indexing", async () => {
-    queryBetReceiptMock.mockResolvedValue(null);
-
-    const { GET } = await import("./route");
-    const response = await GET(
-      request(
-        "/casino/receipt/286/og?chainId=84532&v=settled%3A0xa76261431e46093f8669c400fe6bf0093ff41cf159edaefbed9d5257afca3ded&rt=settled&ra=-1.25%20USDC&rg=dice"
-      ),
-      {
-        params: Promise.resolve({ betId: "286" })
-      }
-    );
-    const body = await response.json();
-
-    expect(response.headers.get("cache-control")).toBe("public, max-age=31536000, immutable");
-    expect(queryBetReceiptMock).not.toHaveBeenCalled();
-    expect(body.title).toBe("Settled -1.25 USDC");
-    expect(body.subtitle).toContain(`Dice bet ${String.fromCharCode(35)}286`);
-    expect(body.subtitle).toContain("shared receipt");
   });
 });

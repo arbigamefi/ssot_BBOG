@@ -520,15 +520,11 @@ export async function queryBetReceipt({
   betId,
   chainId,
   client,
-  terminalTimestampMode = "block",
-  terminalTxHash,
   now = () => Date.now()
 }: {
   betId: string;
   chainId: number;
   client?: PublicClient;
-  terminalTimestampMode?: "block" | "now";
-  terminalTxHash?: Hex;
   now?: () => number;
 }): Promise<BetReceiptResponse> {
   const normalizedBetId = normalizeBetId(betId);
@@ -547,28 +543,6 @@ export async function queryBetReceipt({
   }
 
   if (shouldUseRpcFallback("BET_RECEIPT_RPC_FALLBACK_ENABLED", false)) {
-    const directFallbackRow = terminalTxHash
-      ? await queryBetReceiptTerminalTxFallback({
-          betId: normalizedBetId,
-          chainId,
-          client,
-          timestampMode: terminalTimestampMode,
-          terminalTxHash,
-          now
-        })
-      : null;
-    if (directFallbackRow) {
-      return {
-        schemaVersion: 1,
-        betId: normalizedBetId,
-        cached: false,
-        chainId,
-        generatedAt: now(),
-        row: directFallbackRow,
-        source: "rpc-window"
-      };
-    }
-
     const fallbackRow = await queryBetReceiptRpcFallback({
       betId: normalizedBetId,
       chainId,
@@ -593,6 +567,79 @@ export async function queryBetReceipt({
     generatedAt: now(),
     row: null,
     source: store ? "postgres" : "rpc-window"
+  };
+}
+
+export async function materializeBetReceipt({
+  betId,
+  chainId,
+  client,
+  terminalTxHash,
+  now = () => Date.now()
+}: {
+  betId: string;
+  chainId: number;
+  client?: PublicClient;
+  terminalTxHash: Hex;
+  now?: () => number;
+}): Promise<BetReceiptResponse> {
+  const normalizedBetId = normalizeBetId(betId);
+  const store = getDurableBetIndexStore();
+  const existing = store ? await store.getBet({ betId: normalizedBetId, chainId }) : null;
+  if (existing?.state === "finalized" || existing?.state === "refunded") {
+    return {
+      schemaVersion: 1,
+      betId: normalizedBetId,
+      cached: false,
+      chainId,
+      generatedAt: now(),
+      row: existing,
+      source: "postgres"
+    };
+  }
+
+  const row = await queryBetReceiptTerminalTxFallback({
+    betId: normalizedBetId,
+    chainId,
+    client,
+    now,
+    timestampMode: "block",
+    terminalTxHash
+  });
+
+  if (!row) {
+    return {
+      schemaVersion: 1,
+      betId: normalizedBetId,
+      cached: false,
+      chainId,
+      generatedAt: now(),
+      row: null,
+      source: store ? "postgres" : "rpc-window"
+    };
+  }
+
+  if (!store) {
+    return {
+      schemaVersion: 1,
+      betId: normalizedBetId,
+      cached: false,
+      chainId,
+      generatedAt: now(),
+      row,
+      source: "rpc-window"
+    };
+  }
+
+  await store.writeBetRows([row]);
+  return {
+    schemaVersion: 1,
+    betId: normalizedBetId,
+    cached: false,
+    chainId,
+    generatedAt: now(),
+    row: (await store.getBet({ betId: normalizedBetId, chainId })) ?? row,
+    source: "postgres"
   };
 }
 

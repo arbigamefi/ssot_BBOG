@@ -2,6 +2,7 @@ import {
   createPublicClient,
   createWalletClient,
   defineChain,
+  decodeEventLog,
   getAddress,
   http,
   webSocket,
@@ -14,6 +15,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import {
   createPostgresBetIndexStore,
   type BetIndexEvent,
+  type BetRow,
   type BetIndexStore,
   type SportsHubEventName,
   type SportsTicketIndexEvent
@@ -181,6 +183,23 @@ export function createKeeperRuntime({
   const waitFinalizeReceipt = async (txHash: Hex) => {
     const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
     return { status: receipt.status };
+  };
+
+  const materializeCasinoReceipt = async (event: KeeperEvent, txHash: Hex) => {
+    if (!betIndexStore) return;
+    const row = await buildTerminalBetRow({
+      betId: event.betId,
+      chainId: config.chainId,
+      gameHub: config.gameHub,
+      publicClient,
+      txHash
+    });
+    await betIndexStore.writeBetRows([row]);
+    logger.info("casino.keeper.receipt_materialized", {
+      betId: event.betId.toString(),
+      eventName: row.lastEventName,
+      txHash
+    });
   };
 
   const waitSportsReceipt = async (txHash: Hex) => {
@@ -376,6 +395,7 @@ export function createKeeperRuntime({
         simulateFinalize,
         writeFinalize,
         waitFinalizeReceipt,
+        materializeReceipt: materializeCasinoReceipt,
         logger
       });
 
@@ -995,6 +1015,130 @@ function toSportsTicketIndexEvent(
     sportsHub,
     txHash: log.transactionHash
   };
+}
+
+type TerminalBetRead = {
+  asset: Address;
+  betId: bigint;
+  gameId: Hex;
+  placedAt: bigint | number;
+  player: Address;
+  pricingAffiliate: Address;
+  randomHash: Hex;
+  requestId: bigint | number;
+  stake: bigint | number;
+};
+
+async function buildTerminalBetRow({
+  betId,
+  chainId,
+  gameHub,
+  publicClient,
+  txHash
+}: {
+  betId: bigint;
+  chainId: number;
+  gameHub: Address;
+  publicClient: PublicClient;
+  txHash: Hex;
+}): Promise<BetRow> {
+  const [bet, receipt] = await Promise.all([
+    publicClient.readContract({
+      address: gameHub,
+      abi: GAME_HUB_KEEPER_ABI,
+      functionName: "getBet",
+      args: [betId]
+    }) as Promise<TerminalBetRead>,
+    publicClient.getTransactionReceipt({ hash: txHash })
+  ]);
+  const terminal = decodeTerminalLog({
+    betId,
+    gameHub,
+    logs: receipt.logs
+  });
+  if (!terminal) {
+    throw new Error(`terminal receipt log not found for bet ${betId.toString()}`);
+  }
+
+  const block = receipt.blockNumber
+    ? await publicClient.getBlock({ blockNumber: receipt.blockNumber })
+    : null;
+  const updatedAt = block?.timestamp == null ? Date.now() : Number(block.timestamp) * 1000;
+  const normalizedBetId = betId.toString();
+  const row: BetRow = {
+    asset: getAddress(bet.asset) as Address,
+    betId: normalizedBetId,
+    chainId,
+    gameId: bet.gameId,
+    id: `${chainId}:${normalizedBetId}`,
+    lastEventName: terminal.eventName,
+    lastTxHash: txHash,
+    placedAt: secondsToMs(bet.placedAt),
+    player: getAddress(bet.player) as Address,
+    pricingAffiliate: getAddress(bet.pricingAffiliate) as Address,
+    randomHash: bet.randomHash,
+    requestId: BigInt(bet.requestId).toString(),
+    stake: BigInt(bet.stake).toString(),
+    state: terminal.eventName === "BetRefunded" ? "refunded" : "finalized",
+    terminalTxHash: txHash,
+    updatedAt,
+    updatedBlock: Number(receipt.blockNumber ?? 0n)
+  };
+
+  if (terminal.eventName === "BetFinalized") {
+    row.finalizedTxHash = txHash;
+    row.payoutGross = bigintString(terminal.args.payoutGross);
+    row.payout = bigintString(terminal.args.payoutNet);
+  } else {
+    row.refundedTxHash = txHash;
+    row.refundAmount = bigintString(terminal.args.refundAmount);
+    row.payout = row.refundAmount;
+  }
+
+  return row;
+}
+
+function decodeTerminalLog({
+  betId,
+  gameHub,
+  logs
+}: {
+  betId: bigint;
+  gameHub: Address;
+  logs: Array<{ address?: Address; data: Hex; topics: readonly Hex[] }>;
+}) {
+  for (const log of logs) {
+    if (log.address == null || getAddress(log.address) !== getAddress(gameHub)) continue;
+    for (const eventName of ["BetFinalized", "BetRefunded"] as const) {
+      try {
+        const decoded = decodeEventLog({
+          abi: GAME_HUB_KEEPER_ABI,
+          data: log.data,
+          eventName,
+          topics: log.topics as [`0x${string}`, ...`0x${string}`[]]
+        });
+        const args = decoded.args as Record<string, unknown>;
+        if (BigInt(String(args.positionId ?? args.betId ?? 0)) !== betId) continue;
+        return { args, eventName };
+      } catch {
+        // Try the next terminal event ABI.
+      }
+    }
+  }
+  return null;
+}
+
+function secondsToMs(value: bigint | number | undefined) {
+  const numeric = Number(value ?? 0);
+  return numeric > 0 ? numeric * 1000 : undefined;
+}
+
+function bigintString(value: unknown) {
+  if (typeof value === "bigint") return value.toString();
+  if (typeof value === "number" || typeof value === "string" || typeof value === "boolean") {
+    return BigInt(value).toString();
+  }
+  return "0";
 }
 
 export function resolveBetIndexResumeBlock(currentStartBlock: bigint, cursorBlock: bigint | null) {

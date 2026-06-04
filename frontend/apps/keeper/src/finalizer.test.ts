@@ -44,16 +44,50 @@ describe("finalizeIfReady", () => {
       .fn()
       .mockResolvedValueOnce(bet("randomReady"))
       .mockResolvedValueOnce(bet("settled"));
+    const materializeReceipt = vi.fn(async () => undefined);
 
     const outcome = await finalizeIfReady(baseEvent, {
       readBet,
       simulateFinalize: vi.fn(async () => undefined),
       writeFinalize: vi.fn(async () => "0xabc" as `0x${string}`),
       waitFinalizeReceipt: vi.fn(async () => ({ status: "success" as const })),
+      materializeReceipt,
       now: vi.fn().mockReturnValueOnce(1_000).mockReturnValue(1_250)
     });
 
     expect(outcome).toEqual({ kind: "settled", txHash: "0xabc", latencyMs: 250 });
+    expect(materializeReceipt).toHaveBeenCalledWith(baseEvent, "0xabc");
+  });
+
+  it("does not fail settlement when receipt materialization fails", async () => {
+    const logger = {
+      error: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn()
+    };
+    const outcome = await finalizeIfReady(baseEvent, {
+      readBet: vi
+        .fn()
+        .mockResolvedValueOnce(bet("randomReady"))
+        .mockResolvedValueOnce(bet("settled")),
+      simulateFinalize: vi.fn(async () => undefined),
+      writeFinalize: vi.fn(async () => "0xabc" as `0x${string}`),
+      waitFinalizeReceipt: vi.fn(async () => ({ status: "success" as const })),
+      materializeReceipt: vi.fn(async () => {
+        throw new Error("postgres unavailable");
+      }),
+      logger
+    });
+
+    expect(outcome).toEqual(expect.objectContaining({ kind: "settled", txHash: "0xabc" }));
+    expect(logger.warn).toHaveBeenCalledWith(
+      "casino.finalize.receipt_materialize_failed",
+      expect.objectContaining({
+        betId: "12",
+        message: "postgres unavailable",
+        txHash: "0xabc"
+      })
+    );
   });
 
   it("waits through a stale post-receipt read before declaring failure", async () => {
