@@ -480,7 +480,9 @@ describe("createSSOTSDK", () => {
     });
   });
 
-  it("reads GameHub terminal results from getBetTerminal before scanning event logs", async () => {
+  it("merges getBetTerminal payout data with terminal event transaction hashes", async () => {
+    const settlementTx =
+      "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd" as Hex;
     pub.readContract.mockResolvedValueOnce({
       state: 4,
       payoutGross: 2_000_000n,
@@ -489,6 +491,22 @@ describe("createSSOTSDK", () => {
       protocolFeeAccrual: 20_000n,
       refundAmount: 0n
     });
+    pub.getContractEvents
+      .mockResolvedValueOnce([
+        {
+          args: {
+            positionId: 7n,
+            payoutGross: 0n,
+            payoutNet: 0n,
+            feeOnPayout: 0n,
+            protocolFeeAccrual: 0n
+          },
+          transactionHash: settlementTx,
+          blockNumber: 123n,
+          logIndex: 4
+        }
+      ])
+      .mockResolvedValueOnce([]);
 
     const proof = await sdk.gameHub.getTerminalProof(7n);
 
@@ -499,10 +517,17 @@ describe("createSSOTSDK", () => {
         args: [7n]
       })
     );
-    expect(pub.getContractEvents).not.toHaveBeenCalled();
+    expect(pub.getContractEvents).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventName: "BetFinalized",
+        args: { positionId: 7n }
+      })
+    );
     expect(proof).toEqual({
       kind: "settled",
       settlement: {
+        txHash: settlementTx,
+        blockNumber: 123n,
         payoutGross: 2_000_000n,
         payoutNet: 1_960_000n,
         feeOnPayout: 40_000n,

@@ -965,43 +965,51 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
 
     async getTerminalProof(betId: bigint): Promise<GameHubTerminalProof | null> {
       const terminalReceipt = await readTerminalReceipt(betId);
-      if (terminalReceipt) return terminalReceipt;
 
-      const latestBlock = await publicClient.getBlockNumber();
       let latest: Awaited<ReturnType<typeof readTerminalEventsInRange>>[number] | undefined;
 
-      for (const range of terminalProofRanges(latestBlock)) {
-        const events = await readTerminalEventsInRange({ betId, ...range });
-        latest = events[0];
-        if (latest) break;
+      try {
+        const latestBlock = await publicClient.getBlockNumber();
+        for (const range of terminalProofRanges(latestBlock)) {
+          const events = await readTerminalEventsInRange({ betId, ...range });
+          latest = events[0];
+          if (latest) break;
+        }
+      } catch {
+        return terminalReceipt;
       }
 
-      if (!latest) return null;
+      if (!latest) return terminalReceipt;
 
       const args = latest.event.args ?? {};
       const txHash = latest.event.transactionHash as Hex | undefined;
       const blockNumber = latest.event.blockNumber as bigint | undefined;
 
       if (latest.kind === "settled") {
+        const receiptSettlement =
+          terminalReceipt?.kind === "settled" ? terminalReceipt.settlement : undefined;
         return {
           kind: "settled",
           settlement: {
             txHash,
             blockNumber,
-            payoutGross: BigInt(args.payoutGross ?? 0n),
-            payoutNet: BigInt(args.payoutNet ?? 0n),
-            feeOnPayout: BigInt(args.feeOnPayout ?? 0n),
-            protocolFeeAccrual: BigInt(args.protocolFeeAccrual ?? 0n)
+            payoutGross: receiptSettlement?.payoutGross ?? BigInt(args.payoutGross ?? 0n),
+            payoutNet: receiptSettlement?.payoutNet ?? BigInt(args.payoutNet ?? 0n),
+            feeOnPayout: receiptSettlement?.feeOnPayout ?? BigInt(args.feeOnPayout ?? 0n),
+            protocolFeeAccrual:
+              receiptSettlement?.protocolFeeAccrual ?? BigInt(args.protocolFeeAccrual ?? 0n)
           }
         };
       }
 
+      const receiptRefund =
+        terminalReceipt?.kind === "refunded" ? terminalReceipt.refund : undefined;
       return {
         kind: "refunded",
         refund: {
           txHash,
           blockNumber,
-          refundAmount: BigInt(args.refundAmount ?? 0n)
+          refundAmount: receiptRefund?.refundAmount ?? BigInt(args.refundAmount ?? 0n)
         }
       };
     }
