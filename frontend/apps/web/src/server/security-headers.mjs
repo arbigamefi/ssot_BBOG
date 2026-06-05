@@ -22,7 +22,7 @@ function configuredRpcOrigins(env) {
 export function buildContentSecurityPolicy({ env = process.env, isDev = false } = {}) {
   const scriptSrc = isDev
     ? ["script-src 'self' 'unsafe-eval' 'unsafe-inline' https://mcp.figma.com"]
-    : ["script-src 'self' 'unsafe-inline'"];
+    : ["script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com"];
   const connectSrc = [
     "connect-src 'self'",
     ...(isDev ? ["https://mcp.figma.com"] : []),
@@ -46,7 +46,9 @@ export function buildContentSecurityPolicy({ env = process.env, isDev = false } 
     "https://eth-mainnet.g.alchemy.com",
     ...configuredRpcOrigins(env),
     "https://*.sentry.io",
-    "https://*.ingest.sentry.io"
+    "https://*.ingest.sentry.io",
+    "https://cloudflareinsights.com",
+    "https://static.cloudflareinsights.com"
   ].join(" ");
 
   return [

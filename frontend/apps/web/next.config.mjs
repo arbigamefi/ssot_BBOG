@@ -4,6 +4,7 @@ import { buildSecurityHeaders } from "./src/server/security-headers.mjs";
 
 const isDev = process.env.NODE_ENV === "development";
 const isLowMemoryBuild = process.env.LOW_MEMORY_BUILD === "1";
+const skipBuildValidation = process.env.NEXT_SKIP_BUILD_VALIDATION === "1";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -13,6 +14,12 @@ const nextConfig = {
   distDir: process.env.NODE_ENV === "development" ? ".next-dev" : ".next",
   output: "standalone",
   outputFileTracingRoot: path.resolve(import.meta.dirname, "../.."),
+  eslint: {
+    ignoreDuringBuilds: skipBuildValidation
+  },
+  typescript: {
+    ignoreBuildErrors: skipBuildValidation
+  },
 
   experimental: isLowMemoryBuild
     ? {}

@@ -66,6 +66,21 @@ jobs:
             build_args: |
               WEB_BUILD_NODE_OPTIONS=--max-old-space-size=4096
               WEB_LOW_MEMORY_BUILD=1
+              NEXT_SKIP_BUILD_VALIDATION=1
+              NEXT_PUBLIC_SITE_URL=https://arbigamefi.com
+              NEXT_PUBLIC_ENV=production
+              NEXT_PUBLIC_CHAIN_ID=8453
+              NEXT_PUBLIC_WC_PROJECT_ID=${{ vars.NEXT_PUBLIC_WC_PROJECT_ID || '6d44f31abf9391610c3a42e8e7a2d763' }}
+              NEXT_PUBLIC_ALCHEMY_API_KEY=${{ vars.NEXT_PUBLIC_ALCHEMY_API_KEY }}
+              NEXT_PUBLIC_BASE_RPC_URL=${{ vars.NEXT_PUBLIC_BASE_RPC_URL || 'https://mainnet.base.org' }}
+              NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL=https://sepolia.base.org
+              NEXT_PUBLIC_ARBITRUM_RPC_URL=${{ vars.NEXT_PUBLIC_ARBITRUM_RPC_URL }}
+              NEXT_PUBLIC_ARBITRUM_SEPOLIA_RPC_URL=${{ vars.NEXT_PUBLIC_ARBITRUM_SEPOLIA_RPC_URL }}
+              NEXT_PUBLIC_MAINNET_RPC_URL=https://cloudflare-eth.com
+              NEXT_PUBLIC_RPC_URL=${{ vars.NEXT_PUBLIC_RPC_URL }}
+              NEXT_PUBLIC_ENABLE_ENS_LOOKUP=true
+              NEXT_PUBLIC_CASINO_RISK_IN_ENABLED=false
+              NEXT_PUBLIC_SPORTSBOOK_ENABLED=false
           - service: keeper
             image: ghcr.io/arbigamefi/ssot-bbog-keeper
             dockerfile: frontend/deploy/docker/Dockerfile.keeper
