@@ -292,6 +292,7 @@
         "kenoSelectionRequired": "Please select at least 1 number on the Keno grid.",
         "kenoSelectionInvalid": "Select 1 to 5 Keno numbers between 1 and 15.",
         "mainnetRiskInDisabled": "Casino mainnet betting is disabled until frontend access approval is complete.",
+        "invalidCasinoPool": "Selected asset pool is not available. Choose another asset.",
         "noActiveCasinoPool": "No casino games are live on this chain right now.",
         "unexpected": "An unexpected error occurred."
       },

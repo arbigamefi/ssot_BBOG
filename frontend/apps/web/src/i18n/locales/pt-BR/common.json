@@ -1510,6 +1510,7 @@
         "kenoSelectionRequired": "Selecione pelo menos 1 número na grade do Keno.",
         "kenoSelectionInvalid": "Selecione de 1 a 5 números do Keno entre 1 e 15.",
         "mainnetRiskInDisabled": "As apostas do cassino na mainnet estão desativadas até a aprovação de acesso do frontend.",
+        "invalidCasinoPool": "O pool do ativo selecionado não está disponível. Escolha outro ativo.",
         "noActiveCasinoPool": "Nenhum jogo de cassino está ativo nesta rede agora.",
         "unexpected": "Ocorreu um erro inesperado."
       },

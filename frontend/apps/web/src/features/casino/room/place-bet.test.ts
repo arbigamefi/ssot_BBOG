@@ -216,7 +216,7 @@ describe("game room place bet builder", () => {
     expect(result.input.stake).toBe(10_000_000_000_000_000n);
   });
 
-  it("falls back to the default casino pool for an unknown poolId", () => {
+  it("fails closed for an unknown explicit poolId", () => {
     const result = buildGamePlaceBetInput({
       release: multiPoolRelease,
       game,
@@ -233,9 +233,36 @@ describe("game room place bet builder", () => {
       poolId: 999
     });
 
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.input.poolId).toBe(1); // default (first) casino pool
+    expect(result).toEqual({
+      ok: false,
+      message: "—"
+    });
+  });
+
+  it("allows UI layers to provide localized invalid pool errors", () => {
+    const result = buildGamePlaceBetInput({
+      release: multiPoolRelease,
+      game,
+      betAmount: 1,
+      betCount: 1,
+      stopGain: 0,
+      stopLoss: 0,
+      diceTarget: 50,
+      diceDirection: "under",
+      coinSide: "HEADS",
+      rouletteSpots: [],
+      kenoSpots: [],
+      plinkoRisk: "medium",
+      poolId: 999,
+      messages: {
+        invalidCasinoPool: "所选资产资金池不可用。"
+      }
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      message: "所选资产资金池不可用。"
+    });
   });
 
   it("returns neutral selection validation when UI copy is not provided", () => {

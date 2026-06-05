@@ -56,6 +56,7 @@ export type BuildGamePlaceBetInputResult =
 
 export type GamePlaceBetMessages = GameParamsMessages & {
   noActiveCasinoPool?: string;
+  invalidCasinoPool?: string;
 };
 
 function toUnits(amount: number, decimals: number) {
@@ -115,13 +116,20 @@ export function buildGamePlaceBetInput({
     return { ok: false, message: gameParams.message };
   }
 
+  const casinoPools = getCasinoPoolAssetContexts(release);
   // Use the explicitly selected pool when provided; otherwise the default
-  // casino pool. A stale/unknown poolId falls back rather than failing.
+  // casino pool. A stale/unknown explicit pool must fail closed: silently
+  // falling back can wager the wrong asset in a multi-asset room.
   const casinoPool =
     poolId != null
-      ? (getCasinoPoolAssetContexts(release).find((context) => context.poolId === poolId) ??
-        getDefaultCasinoPoolAssetContext(release))
+      ? casinoPools.find((context) => context.poolId === poolId)
       : getDefaultCasinoPoolAssetContext(release);
+  if (poolId != null && !casinoPool) {
+    return {
+      ok: false,
+      message: messages?.invalidCasinoPool ?? messages?.noActiveCasinoPool ?? "—"
+    };
+  }
   if (!casinoPool) {
     return {
       ok: false,

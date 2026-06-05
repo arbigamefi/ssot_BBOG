@@ -90,6 +90,7 @@ export async function executeGamePlaceBetAction({
     kenoSelectionInvalid?: string;
     mainnetRiskInDisabled?: string;
     noActiveCasinoPool?: string;
+    invalidCasinoPool?: string;
     unexpectedError?: string;
   };
 }) {

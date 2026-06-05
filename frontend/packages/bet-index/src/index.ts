@@ -110,6 +110,7 @@ export type BankProviderLedgerRow = {
 export type BetIndexQuery = {
   chainId: number;
   limit: number;
+  asset?: Address;
   gameId?: Hex;
   player?: Address;
   affiliate?: Address;
@@ -241,10 +242,11 @@ export type BetIndexStore = {
     marketId: string;
   }) => Promise<bigint[]>;
   getAffiliateBets: (
-    query: Required<Pick<BetIndexQuery, "chainId" | "limit" | "affiliate">>
+    query: Required<Pick<BetIndexQuery, "chainId" | "limit" | "affiliate">> &
+      Pick<BetIndexQuery, "asset">
   ) => Promise<BetRow[]>;
   getAffiliateStats: (
-    query: Required<Pick<BetIndexQuery, "chainId" | "affiliate">>
+    query: Required<Pick<BetIndexQuery, "chainId" | "affiliate">> & Pick<BetIndexQuery, "asset">
   ) => Promise<BetIndexAffiliateStats>;
   getCasinoStats: (query: {
     asset: Address;
@@ -582,19 +584,21 @@ export function createMemoryBetIndexStore(): BetIndexStore {
         .sort(compareSportsTicketRows)
         .slice(0, limit)
         .map((row) => BigInt(row.ticketId)),
-    getAffiliateBets: async ({ affiliate, chainId, limit }) =>
+    getAffiliateBets: async ({ affiliate, asset, chainId, limit }) =>
       [...bets.values()]
         .filter((row) => row.chainId === chainId)
         .filter((row) => row.pricingAffiliate?.toLowerCase() === affiliate.toLowerCase())
+        .filter((row) => !asset || row.asset?.toLowerCase() === asset.toLowerCase())
         .sort(compareBetRows)
         .slice(0, limit),
-    getAffiliateStats: async ({ affiliate, chainId }) =>
+    getAffiliateStats: async ({ affiliate, asset, chainId }) =>
       affiliateStatsFromRows({
         affiliate,
         rows: [...bets.values()].filter(
           (row) =>
             row.chainId === chainId &&
-            row.pricingAffiliate?.toLowerCase() === affiliate.toLowerCase()
+            row.pricingAffiliate?.toLowerCase() === affiliate.toLowerCase() &&
+            (!asset || row.asset?.toLowerCase() === asset.toLowerCase())
         )
       }),
     getCasinoStats: async ({ asset, chainId, since }) =>
@@ -1008,16 +1012,19 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
       `;
       return rows.map((row) => BigInt(String(row.ticketId)));
     },
-    getAffiliateBets: async ({ affiliate, chainId, limit }) => {
+    getAffiliateBets: async ({ affiliate, asset, chainId, limit }) => {
+      const assetFilter = asset ? sql`and asset = ${asset.toLowerCase()}` : sql``;
       const rows = await sql`
         select * from bets
         where chain_id = ${chainId} and pricing_affiliate = ${affiliate.toLowerCase()}
+        ${assetFilter}
         order by updated_block desc, bet_id desc
         limit ${limit}
       `;
       return rows.map(rowFromDatabase).sort(compareBetRows);
     },
-    getAffiliateStats: async ({ affiliate, chainId }) => {
+    getAffiliateStats: async ({ affiliate, asset, chainId }) => {
+      const assetFilter = asset ? sql`and asset = ${asset.toLowerCase()}` : sql``;
       const rows = await sql`
         select
           count(*)::text as bet_count,
@@ -1027,6 +1034,7 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
           coalesce(sum(nullif(payout_gross, '')::numeric), 0)::text as payout_gross
         from bets
         where chain_id = ${chainId} and pricing_affiliate = ${affiliate.toLowerCase()}
+        ${assetFilter}
       `;
       const row = rows[0] ?? {};
       return {

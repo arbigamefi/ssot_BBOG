@@ -143,6 +143,7 @@ export function useCasinoRound({
         kenoSelectionRequired: t("casino.room.errors.kenoSelectionRequired"),
         kenoSelectionInvalid: t("casino.room.errors.kenoSelectionInvalid"),
         mainnetRiskInDisabled: t("casino.room.errors.mainnetRiskInDisabled"),
+        invalidCasinoPool: t("casino.room.errors.invalidCasinoPool"),
         noActiveCasinoPool: t("casino.room.errors.noActiveCasinoPool"),
         unexpectedError: t("casino.room.errors.unexpected")
       }

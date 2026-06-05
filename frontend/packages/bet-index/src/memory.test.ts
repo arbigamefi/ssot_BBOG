@@ -9,6 +9,7 @@ const PLAYER_TWO = "0x8888888888888888888888888888888888888888" as const;
 const AFFILIATE = "0x5555555555555555555555555555555555555555" as const;
 const GAME_HUB = "0x3333333333333333333333333333333333333333" as const;
 const ASSET = "0x4444444444444444444444444444444444444444" as const;
+const ASSET_TWO = "0x9999999999999999999999999999999999999999" as const;
 const SPORTS_HUB = "0x6666666666666666666666666666666666666666" as const;
 const BANK = "0x7777777777777777777777777777777777777777" as const;
 
@@ -88,6 +89,64 @@ describe("memory bet index store", () => {
       payout: "19",
       payoutGross: "20",
       settledCount: 1,
+      turnover: "10"
+    });
+  });
+
+  it("scopes affiliate rows and stats by asset when requested", async () => {
+    const store = createMemoryBetIndexStore();
+
+    await store.writeGameHubEvents([
+      {
+        args: {
+          asset: ASSET,
+          gameId: GAME_ID,
+          player: PLAYER,
+          pricingAffiliate: AFFILIATE,
+          positionId: 7n,
+          stake: 10n
+        },
+        blockNumber: 10n,
+        chainId: 84532,
+        eventName: "BetPlaced",
+        gameHub: GAME_HUB,
+        logIndex: 1,
+        txHash: "0xaaa"
+      },
+      {
+        args: {
+          asset: ASSET_TWO,
+          gameId: GAME_ID_TWO,
+          player: PLAYER_TWO,
+          pricingAffiliate: AFFILIATE,
+          positionId: 8n,
+          stake: 99n
+        },
+        blockNumber: 11n,
+        chainId: 84532,
+        eventName: "BetPlaced",
+        gameHub: GAME_HUB,
+        logIndex: 2,
+        txHash: "0xbbb"
+      }
+    ]);
+
+    const rows = await store.getAffiliateBets({
+      affiliate: AFFILIATE,
+      asset: ASSET,
+      chainId: 84532,
+      limit: 10
+    });
+    const stats = await store.getAffiliateStats({
+      affiliate: AFFILIATE,
+      asset: ASSET,
+      chainId: 84532
+    });
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ asset: ASSET, betId: "7", stake: "10" });
+    expect(stats).toMatchObject({
+      betCount: 1,
       turnover: "10"
     });
   });

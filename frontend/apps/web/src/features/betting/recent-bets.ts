@@ -19,6 +19,7 @@ export type PlayerBetsResponse = RecentBetsResponse & {
 
 export type AffiliateBetsResponse = RecentBetsResponse & {
   affiliate: string;
+  asset?: string;
   stats: {
     affiliate: string;
     betCount: number;

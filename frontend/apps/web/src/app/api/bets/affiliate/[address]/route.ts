@@ -22,14 +22,17 @@ function jsonError(message: string, status = 400, code = "BAD_REQUEST") {
 
 function emptyAffiliateBetsResponse({
   affiliate,
+  asset,
   chainId
 }: {
   affiliate: string;
+  asset?: string;
   chainId: number;
 }) {
   return {
     schemaVersion: 1 as const,
     affiliate,
+    asset,
     cached: false,
     chainId,
     fromBlock: 0,
@@ -68,20 +71,28 @@ export async function GET(request: Request, context: { params: Promise<{ address
     const params = await context.params;
     const affiliate = normalizeAffiliateAddress(params.address);
     const limit = clampAffiliateBetsLimit(Number(url.searchParams.get("limit") ?? ""));
-    const response = await queryAffiliateBets({ affiliate, chainId, limit });
+    const asset = url.searchParams.get("asset") ?? undefined;
+    const response = await queryAffiliateBets({ affiliate, asset, chainId, limit });
 
     return NextResponse.json(response, {
       headers: mergeHeaders(noStoreHeaders(), quota.headers)
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to query affiliate bets.";
-    if (message.includes("affiliate")) {
+    if (message.includes("affiliate") || message.includes("asset")) {
       return jsonError(message, 400, "AFFILIATE_BETS_FAILED");
     }
 
     const params = await context.params;
-    return NextResponse.json(emptyAffiliateBetsResponse({ affiliate: params.address, chainId }), {
-      headers: mergeHeaders(noStoreHeaders(), quota.headers)
-    });
+    return NextResponse.json(
+      emptyAffiliateBetsResponse({
+        affiliate: params.address,
+        asset: url.searchParams.get("asset") ?? undefined,
+        chainId
+      }),
+      {
+        headers: mergeHeaders(noStoreHeaders(), quota.headers)
+      }
+    );
   }
 }

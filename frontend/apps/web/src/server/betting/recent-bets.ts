@@ -186,6 +186,16 @@ export function normalizeAffiliateAddress(affiliate: string | undefined) {
   }
 }
 
+export function normalizeOptionalAssetAddress(asset: string | undefined) {
+  const value = cleanEnvValue(asset);
+  if (!value) return undefined;
+  try {
+    return getAddress(value);
+  } catch {
+    throw new Error("asset must be a valid address.");
+  }
+}
+
 export function normalizeBetId(value: string | undefined) {
   const normalized = cleanEnvValue(value);
   if (!normalized) throw new Error("betId is required.");
@@ -1039,12 +1049,14 @@ export async function queryPlayerBets({
 
 export async function queryAffiliateBets({
   affiliate,
+  asset,
   chainId,
   limit,
   client,
   now = () => Date.now()
 }: {
   affiliate: string;
+  asset?: string;
   chainId: number;
   limit?: number;
   client?: PublicClient;
@@ -1052,6 +1064,7 @@ export async function queryAffiliateBets({
 }): Promise<AffiliateBetsResponse> {
   const normalizedLimit = clampAffiliateBetsLimit(limit);
   const normalizedAffiliate = normalizeAffiliateAddress(affiliate);
+  const normalizedAsset = normalizeOptionalAssetAddress(asset);
   const cacheTtlMs = numberEnv("AFFILIATE_BETS_CACHE_TTL_MS", DEFAULT_CACHE_TTL_MS);
   const windowBlocks = bigintEnv("AFFILIATE_BETS_WINDOW_BLOCKS", DEFAULT_AFFILIATE_WINDOW_BLOCKS);
   const confirmations = bigintEnv("AFFILIATE_BETS_CONFIRMATIONS", DEFAULT_CONFIRMATIONS);
@@ -1062,6 +1075,7 @@ export async function queryAffiliateBets({
     "affiliate",
     chainId,
     normalizedAffiliate.toLowerCase(),
+    normalizedAsset?.toLowerCase() ?? "all-assets",
     normalizedLimit,
     windowBlocks,
     confirmations,
@@ -1078,10 +1092,11 @@ export async function queryAffiliateBets({
   const [durableRows, durableStats] = await Promise.all([
     queryDurableAffiliateBets({
       affiliate: normalizedAffiliate,
+      asset: normalizedAsset,
       chainId,
       limit: normalizedLimit
     }),
-    queryDurableAffiliateStats({ affiliate: normalizedAffiliate, chainId })
+    queryDurableAffiliateStats({ affiliate: normalizedAffiliate, asset: normalizedAsset, chainId })
   ]);
   if (durableRows.length > 0 || (durableStoreEnabled && durableStats.betCount > 0)) {
     const generatedAt = now();
@@ -1094,6 +1109,7 @@ export async function queryAffiliateBets({
         source: "postgres"
       }),
       affiliate: normalizedAffiliate,
+      asset: normalizedAsset,
       stats: durableStats
     };
     recentBetsCache.set(cacheKey, { expiresAt: now() + cacheTtlMs, response });
@@ -1107,6 +1123,7 @@ export async function queryAffiliateBets({
         source: "postgres"
       }),
       affiliate: normalizedAffiliate,
+      asset: normalizedAsset,
       stats: emptyAffiliateStats(normalizedAffiliate)
     };
     recentBetsCache.set(cacheKey, { expiresAt: now() + cacheTtlMs, response });
@@ -1131,6 +1148,7 @@ export async function queryAffiliateBets({
               source: "rpc-window"
             }),
             affiliate: normalizedAffiliate,
+            asset: normalizedAsset,
             stats: emptyAffiliateStats(normalizedAffiliate)
           };
         }
@@ -1151,7 +1169,9 @@ export async function queryAffiliateBets({
         }
 
         const rows = foldRecentBetLogs({ chainId, gameHub, logs }).filter(
-          (row) => row.pricingAffiliate?.toLowerCase() === normalizedAffiliate.toLowerCase()
+          (row) =>
+            row.pricingAffiliate?.toLowerCase() === normalizedAffiliate.toLowerCase() &&
+            (!normalizedAsset || row.asset?.toLowerCase() === normalizedAsset.toLowerCase())
         );
         const generatedAt = now();
         const response: AffiliateBetsResponse = {
@@ -1159,6 +1179,7 @@ export async function queryAffiliateBets({
           cached: false,
           chainId,
           affiliate: normalizedAffiliate,
+          asset: normalizedAsset,
           fromBlock: Number(fromBlock),
           generatedAt,
           rows: rows.slice(0, normalizedLimit),
@@ -1180,6 +1201,7 @@ export async function queryAffiliateBets({
         source: "rpc-window"
       }),
       affiliate: normalizedAffiliate,
+      asset: normalizedAsset,
       stats: emptyAffiliateStats(normalizedAffiliate)
     };
     recentBetsCache.set(cacheKey, { expiresAt: now() + cacheTtlMs, response });
@@ -1225,17 +1247,19 @@ async function queryDurablePlayerBets({
 
 async function queryDurableAffiliateBets({
   affiliate,
+  asset,
   chainId,
   limit
 }: {
   affiliate: Address;
+  asset?: Address;
   chainId: number;
   limit: number;
 }) {
   const store = getDurableBetIndexStore();
   if (!store) return [];
   try {
-    return await store.getAffiliateBets({ affiliate, chainId, limit });
+    return await store.getAffiliateBets({ affiliate, asset, chainId, limit });
   } catch {
     return [];
   }
@@ -1243,15 +1267,17 @@ async function queryDurableAffiliateBets({
 
 async function queryDurableAffiliateStats({
   affiliate,
+  asset,
   chainId
 }: {
   affiliate: Address;
+  asset?: Address;
   chainId: number;
 }) {
   const store = getDurableBetIndexStore();
   if (!store) return emptyAffiliateStats(affiliate);
   try {
-    return await store.getAffiliateStats({ affiliate, chainId });
+    return await store.getAffiliateStats({ affiliate, asset, chainId });
   } catch {
     return emptyAffiliateStats(affiliate);
   }

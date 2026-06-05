@@ -1510,6 +1510,7 @@
         "kenoSelectionRequired": "Keno ızgarasında en az 1 sayı seçin.",
         "kenoSelectionInvalid": "1 ile 15 arasında 1 ila 5 Keno sayısı seçin.",
         "mainnetRiskInDisabled": "Casino ana ağ bahisleri, frontend erişim onayı tamamlanana kadar devre dışı.",
+        "invalidCasinoPool": "Seçili varlık havuzu kullanılamıyor. Başka bir varlık seçin.",
         "noActiveCasinoPool": "Şu anda bu ağda aktif casino oyunu yok.",
         "unexpected": "Beklenmeyen bir hata oluştu."
       },

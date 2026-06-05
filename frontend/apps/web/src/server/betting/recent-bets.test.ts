@@ -20,6 +20,8 @@ const GAME_ID = `0x${"11".repeat(32)}` as const;
 const PLAYER = "0x2222222222222222222222222222222222222222" as const;
 const AFFILIATE = "0x5555555555555555555555555555555555555555" as const;
 const GAME_HUB = "0x3333333333333333333333333333333333333333" as const;
+const ASSET = "0x4444444444444444444444444444444444444444" as const;
+const ASSET_TWO = "0x9999999999999999999999999999999999999999" as const;
 
 function latestBlockAfterEmbeddedRelease(windowBlocks: bigint) {
   const release = loadEmbeddedRelease(84532);
@@ -376,7 +378,7 @@ describe("recent bets server aggregation", () => {
       .mockResolvedValueOnce([
         {
           args: {
-            asset: "0x4444444444444444444444444444444444444444",
+            asset: ASSET,
             gameId: GAME_ID,
             player: PLAYER,
             pricingAffiliate: AFFILIATE,
@@ -389,6 +391,19 @@ describe("recent bets server aggregation", () => {
         },
         {
           args: {
+            asset: ASSET_TWO,
+            gameId: GAME_ID,
+            player: PLAYER,
+            pricingAffiliate: AFFILIATE,
+            positionId: 10n,
+            stake: 99n
+          },
+          blockNumber: 20n,
+          logIndex: 3,
+          transactionHash: "0xeee"
+        },
+        {
+          args: {
             gameId: GAME_ID,
             player: "0x6666666666666666666666666666666666666666",
             pricingAffiliate: "0x7777777777777777777777777777777777777777",
@@ -396,7 +411,7 @@ describe("recent bets server aggregation", () => {
             stake: 33n
           },
           blockNumber: 20n,
-          logIndex: 2,
+          logIndex: 4,
           transactionHash: "0xddd"
         }
       ])
@@ -428,6 +443,7 @@ describe("recent bets server aggregation", () => {
 
     const response = await queryAffiliateBets({
       affiliate: AFFILIATE,
+      asset: ASSET,
       chainId: 84532,
       client: {
         getBlockNumber: vi.fn().mockResolvedValue(latestBlockAfterEmbeddedRelease(9n)),

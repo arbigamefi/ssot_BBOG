@@ -22,6 +22,7 @@ async function json(response: Response) {
 
 describe("GET /api/bets/affiliate/[address]", () => {
   const affiliate = "0x1111111111111111111111111111111111111111";
+  const asset = "0x2222222222222222222222222222222222222222";
 
   beforeEach(() => {
     queryAffiliateBetsMock.mockReset();
@@ -48,14 +49,18 @@ describe("GET /api/bets/affiliate/[address]", () => {
 
   it("delegates query params to the affiliate bets service", async () => {
     const { GET } = await import("./route");
-    const response = await GET(request(`/api/bets/affiliate/${affiliate}?chainId=84532&limit=7`), {
-      params: Promise.resolve({ address: affiliate })
-    });
+    const response = await GET(
+      request(`/api/bets/affiliate/${affiliate}?chainId=84532&limit=7&asset=${asset}`),
+      {
+        params: Promise.resolve({ address: affiliate })
+      }
+    );
 
     expect(response.status).toBe(200);
     expect((await json(response)).schemaVersion).toBe(1);
     expect(queryAffiliateBetsMock).toHaveBeenCalledWith({
       affiliate,
+      asset,
       chainId: 84532,
       limit: 7
     });

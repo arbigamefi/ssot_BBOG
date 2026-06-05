@@ -4,7 +4,7 @@ import * as React from "react";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import type { Address } from "@ssot/ssot/sdk";
-import { toast, type TxStatus } from "@ssot/ui";
+import { AssetSelector, toast, type TxStatus } from "@ssot/ui";
 
 import { PageTransition } from "../../../../components/PageTransition";
 import { ProductStateCard } from "../../../../components/ProductStateCard";
@@ -25,7 +25,8 @@ import type {
   ClaimsFlowState,
   ClaimsMetric
 } from "../../../../features/portfolio/claims/types";
-import { getDefaultCasinoPoolAssetContext } from "../../../../features/assets/pool-asset";
+import { TokenLogo } from "../../../../components/TokenLogo";
+import { useCasinoPoolAssetSelection } from "../../../../features/assets/useCasinoPoolAssetSelection";
 import { formatUnits, parseDecimalToUnits } from "../../../../features/betting/model/units";
 import { useDirectTxAction } from "../../../../features/tx/useDirectTxAction";
 import { useRelease } from "../../../../ssot/release/ReleaseProvider";
@@ -36,12 +37,12 @@ export function ClaimsPageClient() {
   const { release, readOnly, readOnlyReason, chainId } = useRelease();
   const { sdk, ready } = useSSOTSDK();
   const explorerBaseUrl = React.useMemo(() => getExplorerBaseUrl(chainId), [chainId]);
-  const poolAsset = release ? getDefaultCasinoPoolAssetContext(release) : null;
-  const claimsPool = poolAsset?.pool;
-  const asset = poolAsset?.asset.address as Address | undefined;
-  const poolId = claimsPool?.poolId;
-  const decimals = poolAsset?.asset.decimals ?? 18;
-  const symbol = poolAsset?.asset.symbol ?? "XP";
+  const assetSelection = useCasinoPoolAssetSelection();
+  const { assetOptions, selectedAsset, selectedContext, setSelectedAsset } = assetSelection;
+  const asset = selectedContext?.asset.address as Address | undefined;
+  const poolId = selectedContext?.poolId;
+  const decimals = selectedContext?.asset.decimals ?? 18;
+  const symbol = selectedContext?.asset.symbol ?? "XP";
 
   const xpClaimFlow = useDirectTxAction({
     action: "CLAIM_XP_ACCRUED",
@@ -243,6 +244,32 @@ export function ClaimsPageClient() {
           wallet={sdk?.account ? shortHex(sdk.account, pendingLabel) : undefined}
           metrics={metrics}
         />
+        {assetOptions.length > 0 ? (
+          <section className="grid gap-3 rounded-lg border border-border-soft bg-surface-1 p-4 shadow-e1 md:grid-cols-[minmax(0,22rem)_1fr] md:items-center">
+            <div className="min-w-0">
+              <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-fg-subtle">
+                {t("earn.actions.asset")}
+              </div>
+              <AssetSelector
+                variant="inline"
+                assets={assetOptions}
+                value={selectedAsset}
+                onValueChange={setSelectedAsset}
+                title={t("earn.actions.asset")}
+                renderLogo={(option) => <TokenLogo symbol={option.symbol} size={20} />}
+                className="max-w-full"
+              />
+            </div>
+            <div className="min-w-0 rounded-md border border-border-soft bg-surface-0 px-4 py-3">
+              <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-fg-subtle">
+                {t("earn.actions.asset")}
+              </div>
+              <div className="mt-1 truncate font-mono text-sm font-bold text-fg">
+                #{poolId ?? "—"} · {symbol}
+              </div>
+            </div>
+          </section>
+        ) : null}
         <div className="grid gap-6 xl:grid-cols-[1fr_420px]">
           <div className="space-y-6">
             <ClaimsBuckets

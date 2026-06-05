@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import type { Address } from "@ssot/ssot/sdk";
-import { toast } from "@ssot/ui";
+import { AssetSelector, toast } from "@ssot/ui";
 import {
   ClipboardDocumentIcon,
   LinkIcon,
@@ -17,7 +17,8 @@ import {
 
 import { PageTransition } from "../../../../components/PageTransition";
 import { ProductStateCard } from "../../../../components/ProductStateCard";
-import { getDefaultCasinoPoolAssetContext } from "../../../../features/assets/pool-asset";
+import { TokenLogo } from "../../../../components/TokenLogo";
+import { useCasinoPoolAssetSelection } from "../../../../features/assets/useCasinoPoolAssetSelection";
 import { useAffiliateBets } from "../../../../features/betting/useAffiliateBets";
 import { useRelease } from "../../../../ssot/release/ReleaseProvider";
 import { useSSOTSDK } from "../../../../ssot/sdk";
@@ -41,11 +42,11 @@ export function ReferralPageClient() {
     setOrigin(window.location.origin);
   }, []);
 
-  const poolAsset = release ? getDefaultCasinoPoolAssetContext(release) : null;
-  const claimsPool = poolAsset?.pool;
-  const poolId = claimsPool?.poolId;
-  const decimals = poolAsset?.asset.decimals ?? 6;
-  const symbol = poolAsset?.asset.symbol ?? "XP";
+  const assetSelection = useCasinoPoolAssetSelection();
+  const { assetOptions, selectedAsset, selectedContext, setSelectedAsset } = assetSelection;
+  const poolId = selectedContext?.poolId;
+  const decimals = selectedContext?.asset.decimals ?? 6;
+  const symbol = selectedContext?.asset.symbol ?? "XP";
   const pendingLabel = t("portfolio.referral.common.pending");
   const pendingReferrer = React.useMemo(
     () => normalizeReferralAddress(searchParams.get("ref"), sdk?.account),
@@ -78,8 +79,9 @@ export function ReferralPageClient() {
   });
   const affiliateBetsQuery = useAffiliateBets({
     affiliate: sdk?.account,
+    asset: selectedAsset,
     chainId,
-    enabled: Boolean(sdk?.account && ready),
+    enabled: Boolean(sdk?.account && ready && selectedAsset),
     limit: 8
   });
 
@@ -154,6 +156,33 @@ export function ReferralPageClient() {
             </div>
           </div>
         </section>
+
+        {assetOptions.length > 0 ? (
+          <section className="grid gap-3 rounded-lg border border-border-soft bg-surface-1 p-4 shadow-e1 md:grid-cols-[minmax(0,22rem)_1fr] md:items-center">
+            <div className="min-w-0">
+              <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-fg-subtle">
+                {t("earn.actions.asset")}
+              </div>
+              <AssetSelector
+                variant="inline"
+                assets={assetOptions}
+                value={selectedAsset}
+                onValueChange={setSelectedAsset}
+                title={t("earn.actions.asset")}
+                renderLogo={(option) => <TokenLogo symbol={option.symbol} size={20} />}
+                className="max-w-full"
+              />
+            </div>
+            <div className="min-w-0 rounded-md border border-border-soft bg-surface-0 px-4 py-3">
+              <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-fg-subtle">
+                {t("earn.actions.asset")}
+              </div>
+              <div className="mt-1 truncate font-mono text-sm font-bold text-fg">
+                #{poolId ?? "—"} · {symbol}
+              </div>
+            </div>
+          </section>
+        ) : null}
 
         <section className="grid gap-6 xl:grid-cols-[1fr_420px]">
           <div className="space-y-6">

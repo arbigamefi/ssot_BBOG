@@ -102,12 +102,14 @@ vi.mock("../../../../features/tx/useDirectTxAction", () => ({
 }));
 
 vi.mock("@ssot/ui", () => ({
+  AssetSelector: ({ title }: any) => <div>{title}</div>,
   ErrorCallout: ({ title, message }: any) => (
     <div>
       <strong>{title}</strong>
       <span>{message}</span>
     </div>
   ),
+  cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" "),
   TxStatusChip: ({ status }: any) => <span>{status}</span>,
   TxStepper: ({ title, subtitle }: any) => (
     <div>
