@@ -6,6 +6,16 @@ const { queryBetReceiptMock, renderOgCardMock } = vi.hoisted(() => ({
 }));
 
 vi.mock("../../../../../../og/render", () => ({
+  OG_IMMUTABLE_CACHE_HEADERS: {
+    "Cache-Control": "public, max-age=31536000, immutable",
+    "CDN-Cache-Control": "public, max-age=31536000, immutable",
+    "Cloudflare-CDN-Cache-Control": "public, max-age=31536000, immutable"
+  },
+  OG_NO_STORE_HEADERS: {
+    "Cache-Control": "no-store, max-age=0",
+    "CDN-Cache-Control": "no-store",
+    "Cloudflare-CDN-Cache-Control": "no-store"
+  },
   renderOgCard: renderOgCardMock
 }));
 
@@ -74,6 +84,8 @@ describe("casino receipt OG route", () => {
 
     expect(response.status).toBe(503);
     expect(response.headers.get("cache-control")).toBe("no-store, max-age=0");
+    expect(response.headers.get("cdn-cache-control")).toBe("no-store");
+    expect(response.headers.get("cloudflare-cdn-cache-control")).toBe("no-store");
     expect(response.headers.get("retry-after")).toBe("5");
     expect(body).toBe("Receipt not ready");
     expect(renderOgCardMock).not.toHaveBeenCalled();
@@ -109,6 +121,10 @@ describe("casino receipt OG route", () => {
     const body = await response.json();
 
     expect(response.headers.get("cache-control")).toBe("public, max-age=31536000, immutable");
+    expect(response.headers.get("cdn-cache-control")).toBe("public, max-age=31536000, immutable");
+    expect(response.headers.get("cloudflare-cdn-cache-control")).toBe(
+      "public, max-age=31536000, immutable"
+    );
     expect(body.title).toContain("Settled");
     expect(body.subtitle).toContain("postgres");
   });

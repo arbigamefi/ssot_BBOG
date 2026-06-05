@@ -10,6 +10,16 @@ import { OG_COLORS, OgGlyph, type OgGlyphKind, type OgTone, getOgToneColor } fro
  */
 export const OG_SIZE = { width: 1200, height: 630 } as const;
 export const OG_CONTENT_TYPE = "image/png";
+export const OG_IMMUTABLE_CACHE_HEADERS = {
+  "Cache-Control": "public, max-age=31536000, immutable",
+  "CDN-Cache-Control": "public, max-age=31536000, immutable",
+  "Cloudflare-CDN-Cache-Control": "public, max-age=31536000, immutable"
+} as const;
+export const OG_NO_STORE_HEADERS = {
+  "Cache-Control": "no-store, max-age=0",
+  "CDN-Cache-Control": "no-store",
+  "Cloudflare-CDN-Cache-Control": "no-store"
+} as const;
 
 export function renderOgCard({
   eyebrow,
@@ -310,7 +320,7 @@ export function renderOgCard({
         ))}
       </div>
     </div>,
-    { ...OG_SIZE, headers }
+    { ...OG_SIZE, headers: headers ?? OG_IMMUTABLE_CACHE_HEADERS }
   );
 }
 

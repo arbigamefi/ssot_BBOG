@@ -1,6 +1,10 @@
 import { loadEmbeddedRelease } from "@ssot/ssot/release";
 
-import { renderOgCard } from "../../../../../../og/render";
+import {
+  OG_IMMUTABLE_CACHE_HEADERS,
+  OG_NO_STORE_HEADERS,
+  renderOgCard
+} from "../../../../../../og/render";
 import { parseStrictRequestChainId } from "../../../../../../../server/chain";
 import { normalizeBetId, queryBetReceipt } from "../../../../../../../server/betting/recent-bets";
 import { formatTokenAmount } from "../../../../../../../features/portfolio/activity/detail/format";
@@ -9,14 +13,10 @@ import { getCasinoGamePresentation } from "../../../../../../../features/casino/
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const RECEIPT_OG_PENDING_HEADERS = {
-  "Cache-Control": "no-store, max-age=0"
-} as const;
-const RECEIPT_OG_TERMINAL_HEADERS = {
-  "Cache-Control": "public, max-age=31536000, immutable"
-} as const;
+const RECEIPT_OG_PENDING_HEADERS = OG_NO_STORE_HEADERS;
+const RECEIPT_OG_TERMINAL_HEADERS = OG_IMMUTABLE_CACHE_HEADERS;
 const RECEIPT_OG_NOT_READY_HEADERS = {
-  "Cache-Control": "no-store, max-age=0",
+  ...OG_NO_STORE_HEADERS,
   "Retry-After": "5"
 } as const;
 
