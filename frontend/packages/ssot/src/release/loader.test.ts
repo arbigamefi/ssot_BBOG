@@ -21,6 +21,7 @@ const HASH_C = "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 const LEGACY_GAME_AGGREGATOR_KEY = `hu${"b"}`;
 const LEGACY_BANK_DIRECTORY_KEY = `bank${"Registry"}`;
 const BASE_SEPOLIA_USDC = "0x036cbd53842c5426634e7929541ec2318f3dcf7e";
+const BASE_SEPOLIA_WETH = "0x4200000000000000000000000000000000000006";
 
 function v13ReleaseFixture() {
   return {
@@ -159,7 +160,7 @@ describe("loadEmbeddedRelease", () => {
     expect(result.warnings).toEqual([]);
   });
 
-  it("anchors the Base Sepolia embedded release to 6-decimal USDC pools", () => {
+  it("anchors the Base Sepolia embedded release to V14 casino USDC/WETH pools", () => {
     const result = loadEmbeddedRelease(84532);
     if (!result.ok) throw new Error("Expected ok");
 
@@ -169,6 +170,11 @@ describe("loadEmbeddedRelease", () => {
           address: BASE_SEPOLIA_USDC,
           decimals: 6,
           symbol: "USDC"
+        }),
+        expect.objectContaining({
+          address: BASE_SEPOLIA_WETH,
+          decimals: 18,
+          symbol: "WETH"
         })
       ])
     );
@@ -183,11 +189,11 @@ describe("loadEmbeddedRelease", () => {
           symbol: "USDC"
         }),
         expect.objectContaining({
-          asset: BASE_SEPOLIA_USDC,
-          decimals: 6,
-          domain: "Sports",
-          poolId: 2,
-          symbol: "USDC"
+          asset: BASE_SEPOLIA_WETH,
+          decimals: 18,
+          domain: "Casino",
+          poolId: 3,
+          symbol: "WETH"
         })
       ])
     );

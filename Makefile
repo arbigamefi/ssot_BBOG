@@ -111,8 +111,9 @@ verify-v14:
 	# Verification can be sensitive to stale build artifacts across Foundry versions.
 	# Preserve broadcast traces but recompile from scratch.
 	CLEAN_BROADCAST=0 bash script/ci/clean_foundry.sh
-	# Precompile once to populate Foundry compiler caches (reduces noisy cache warnings).
-	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge build > /dev/null
+	# Precompile contract artifacts only. Full builds pull in legacy scripts/tests
+	# and are unnecessary for source verification helpers.
+	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge build src
 	FOUNDRY_PROFILE=$(VERIFY_PROFILE) bash deployments/verify-latest-v14.sh
 
 verify-v13:
@@ -324,8 +325,9 @@ release-abis: release-abis-v14
 
 release-abis-v14:
 	@$(MAKE) check-deps
-	# ABIs are derived from Foundry artifacts; build once to ensure out/ exists.
-	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge build > /dev/null
+	# ABIs are derived from contract artifacts only. Building all scripts/tests can
+	# pull in legacy release surfaces and is unnecessary for frontend ABI export.
+	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge build src
 	$(PYTHON) script/release/export_frontend_abis.py --manifest deployments/frontend-manifest-latest-v14.json --dest deployments/abis-v14 --tag-suffix=-v14
 
 release-abis-v13:

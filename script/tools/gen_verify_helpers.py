@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Generate Etherscan-family verification helper scripts from deployments/latest-v13.json.
+"""Generate Etherscan-family verification helper scripts from deployment snapshots.
 
 Why this exists
 - Etherscan API V1 endpoints have been deprecated across the Etherscan family.
 - Contract verification should use the unified Etherscan API V2 endpoint.
 
-This tool regenerates:
-- deployments/verify-latest-v13.sh
-- deployments/verify/verify-<chainid>-<block>.sh
+This tool regenerates versioned helpers such as:
+- deployments/verify-latest-v14.sh
+- deployments/verify/verify-<chainid>-<block>-v14.sh
 
 The scripts default to:
   https://api.etherscan.io/v2/api?chainid=<CHAIN_ID>
@@ -62,7 +62,7 @@ def _verify_line(addr: str, contract_id: str, ctor_args: str) -> str:
 
 
 def main() -> int:
-    in_path = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("deployments/latest-v13.json")
+    in_path = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("deployments/latest-v14.json")
     if not in_path.exists():
         print(f"error: {in_path} not found", file=sys.stderr)
         return 2
@@ -71,10 +71,14 @@ def main() -> int:
     chain_id = int(_must(data, "chainId"))
     block_number = int(_must(data, "blockNumber"))
     architecture_version = str(data.get("architectureVersion", ""))
-    if not architecture_version.startswith("v1.3"):
-        print(f"error: expected v1.3 snapshot, got architectureVersion={architecture_version!r}", file=sys.stderr)
+    if architecture_version.startswith("v1.3"):
+        release_version = "v13"
+    elif architecture_version.startswith("v1.4"):
+        release_version = "v14"
+    else:
+        print(f"error: expected v1.3/v1.4 snapshot, got architectureVersion={architecture_version!r}", file=sys.stderr)
         return 2
-    tag = f"{chain_id}-{block_number}-v13"
+    tag = f"{chain_id}-{block_number}-{release_version}"
 
     out_dir = Path("deployments")
     (out_dir / "verify").mkdir(parents=True, exist_ok=True)
@@ -110,10 +114,11 @@ def main() -> int:
         ("sportsHub", "src/core/SportsHub.sol:SportsHub", "ctorArgs_sportsHub"),
     ]
 
-    # Banks: per-pool
+    # Banks: per-pool. V13/V14 snapshots store bank addresses under
+    # poolBank_<i> because banks are pool-owned deployment artifacts.
     n_banks = int(data.get("numPools", 0))
     for i in range(n_banks):
-        contracts.append((f"bank_{i}", "src/core/Bank.sol:Bank", f"ctorArgs_bank_{i}"))
+        contracts.append((f"poolBank_{i}", "src/core/Bank.sol:Bank", f"ctorArgs_bank_{i}"))
 
     # Modules: no-arg constructors
     contracts.extend(
@@ -141,7 +146,7 @@ def main() -> int:
         script += _verify_line(addr, contract_id, ctor_args)
 
     # Outputs
-    out_latest = out_dir / "verify-latest-v13.sh"
+    out_latest = out_dir / f"verify-latest-{release_version}.sh"
     out_convention = out_dir / "verify" / f"verify-{tag}.sh"
 
     for p in (out_latest, out_convention):
