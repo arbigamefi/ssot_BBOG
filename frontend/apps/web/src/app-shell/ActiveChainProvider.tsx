@@ -22,6 +22,13 @@ function readStoredChainId(supportedChains: AppChain[]) {
   return supportedChains.some((chain) => chain.id === parsed) ? parsed : undefined;
 }
 
+function readUrlChainId(supportedChains: AppChain[]) {
+  if (typeof window === "undefined") return undefined;
+  const parsed = Number(new URLSearchParams(window.location.search).get("chainId"));
+  if (!Number.isInteger(parsed)) return undefined;
+  return supportedChains.some((chain) => chain.id === parsed) ? parsed : undefined;
+}
+
 export function ActiveChainProvider({
   children,
   initialChainId
@@ -37,8 +44,21 @@ export function ActiveChainProvider({
   const [selectedChainId, setSelectedChainIdState] = React.useState(defaultChainId);
 
   React.useEffect(() => {
-    const storedChainId = readStoredChainId(supportedChains);
-    if (storedChainId) setSelectedChainIdState(storedChainId);
+    const applyLocationOrStoredChain = () => {
+      const urlChainId = readUrlChainId(supportedChains);
+      if (urlChainId) {
+        setSelectedChainIdState(urlChainId);
+        window.localStorage.setItem(STORAGE_KEY, String(urlChainId));
+        return;
+      }
+
+      const storedChainId = readStoredChainId(supportedChains);
+      if (storedChainId) setSelectedChainIdState(storedChainId);
+    };
+
+    applyLocationOrStoredChain();
+    window.addEventListener("popstate", applyLocationOrStoredChain);
+    return () => window.removeEventListener("popstate", applyLocationOrStoredChain);
   }, [supportedChains]);
 
   const setSelectedChainId = React.useCallback(
