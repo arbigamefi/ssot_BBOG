@@ -2853,6 +2853,7 @@
     "performance": {
       "title": "Vault performance",
       "bestEffort": "Indexed · best-effort",
+      "onChain": "On-chain verified",
       "housePnl": "House P&L",
       "hold": "Realized hold",
       "velocity": "Velocity",
@@ -2874,7 +2875,7 @@
         "d7": "7d",
         "d30": "30d"
       },
-      "note": "Gross gaming revenue from indexed bets (turnover minus payouts). Velocity and annualized estimates combine indexed activity with chain-read vault assets. Excludes deposits, fees, redemptions, idle capital, and unsettled variance. Not promised yield.",
+      "note": "Lifetime gross gaming revenue comes from Bank.getPerformance() on-chain (turnover minus gross payouts). Capital velocity is lifetime turnover divided by current chain-read vault assets. The daily chart below is indexed and may lag. Not promised yield.",
       "equityTitle": "Cumulative house P&L",
       "peak": "Peak",
       "trough": "Trough"
@@ -2882,7 +2883,7 @@
     "ledger": {
       "eyebrow": "Provider ledger",
       "title": "Deposits and withdrawals",
-      "readModel": "server reconstructed",
+      "readModel": "ERC4626 events",
       "connectWallet": "Connect a wallet to view your bank provider ledger.",
       "loading": "Loading provider ledger…",
       "loadingMore": "Loading more…",
@@ -3131,16 +3132,17 @@
         "label": "House bankroll",
         "detail": "What's backing every payout — read from the chain."
       },
-      "totalBets": {
-        "label": "Total bets",
-        "detail": "Every bet ever placed — counted on the chain."
+      "turnover": {
+        "label": "Total turnover",
+        "detail": "Lifetime stake flow through the Bank — read from the chain."
       },
       "protocolFee": {
         "label": "Protocol fees",
         "detail": "Accrued protocol fees — read from the chain."
       },
       "verifiable": "On-chain",
-      "indexed": "Indexed · may lag"
+      "indexed": "Indexed · may lag",
+      "assetContext": "Asset context"
     },
     "rooms": {
       "eyebrow": "All games",

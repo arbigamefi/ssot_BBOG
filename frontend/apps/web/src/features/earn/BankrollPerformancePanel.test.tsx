@@ -22,31 +22,9 @@ vi.mock("@ssot/ui", () => ({
 
 // Toggle the durable index between "has data" and "unavailable" per test.
 let statsUnavailable = false;
-const useCasinoStatsMock = vi.fn();
 const useCasinoTimeseriesMock = vi.fn();
 
 vi.mock("../casino/useCasinoStats", () => ({
-  useCasinoStats: (args: unknown) => {
-    useCasinoStatsMock(args);
-    return {
-      data: statsUnavailable
-        ? { source: "unavailable", asset: { address: "0xasset", decimals: 6, symbol: "USDC" } }
-        : {
-            source: "postgres",
-            asset: { address: "0xasset", decimals: 6, symbol: "USDC" },
-            stats: {
-              betCount: 1200,
-              settledCount: 1000,
-              wonCount: 480,
-              uniquePlayers: 180,
-              // turnover 100, payout 99 → house revenue 1 USDC, hold 1.00%.
-              turnover: "100000000",
-              payout: "99000000",
-              payoutGross: "0"
-            }
-          }
-    };
-  },
   useCasinoTimeseries: (args: unknown) => {
     useCasinoTimeseriesMock(args);
     return {
@@ -73,6 +51,7 @@ vi.mock("../casino/useCasinoStats", () => ({
 const TRANSLATIONS: Record<string, string> = {
   "earn.performance.title": "Vault performance",
   "earn.performance.bestEffort": "Indexed · best-effort",
+  "earn.performance.onChain": "On-chain verified",
   "earn.performance.housePnl": "House P&L",
   "earn.performance.hold": "Realized hold",
   "earn.performance.velocity": "Velocity",
@@ -103,24 +82,36 @@ vi.mock("next-intl", () => ({
 }));
 
 describe("BankrollPerformancePanel", () => {
+  const chainPerformance = {
+    totalTurnover: 100_000_000n,
+    totalPayoutGross: 99_000_000n,
+    totalBetsHeld: 1_200n
+  } as any;
+
   beforeEach(() => {
     statsUnavailable = false;
-    useCasinoStatsMock.mockClear();
     useCasinoTimeseriesMock.mockClear();
   });
   afterEach(() => cleanup());
 
-  it("derives house P&L and realized hold from the indexed aggregate", () => {
-    render(<BankrollPerformancePanel sharePrice={1_012_300n} vaultAssets={1000000000n} />);
+  it("derives lifetime house P&L and realized hold from on-chain Bank performance", () => {
+    render(
+      <BankrollPerformancePanel
+        assetDecimals={6}
+        assetSymbol="USDC"
+        chainPerformance={chainPerformance}
+        sharePrice={1_012_300n}
+        vaultAssets={1000000000n}
+      />
+    );
     // turnover 100 − payout 99 = 1 USDC house revenue; the same figure is also
     // the equity-curve peak, so it legitimately appears more than once.
     expect(screen.getAllByText("1 USDC").length).toBeGreaterThan(0); // House P&L headline + peak
     expect(screen.getByText("1.00%")).toBeDefined(); // realized hold
     expect(screen.getByText("0.10x")).toBeDefined(); // turnover / vault assets
-    expect(screen.getByText("1.21%")).toBeDefined(); // gross annualized estimate over 30d
     expect(screen.getByText("100 USDC")).toBeDefined(); // total wagered
     expect(screen.getByText("99 USDC")).toBeDefined(); // total payout
-    expect(screen.getByText("180")).toBeDefined(); // players
+    expect(screen.getByText("1,200")).toBeDefined(); // total held bets
     // Equity chart: cumulative trajectory with peak/trough + the chain-read
     // share price surfaced as an honest stat (not an overlay on the data).
     expect(screen.getByText("Cumulative house P&L")).toBeDefined();
@@ -130,17 +121,21 @@ describe("BankrollPerformancePanel", () => {
     // not a duplicated bottom stat. 1_012_300 @ 6dp → 1.0123 USDC.
     expect(screen.getByText("Share price")).toBeDefined();
     expect(screen.getByText("1.0123 USDC")).toBeDefined();
-    // Best-effort honesty label is present (never claims "verifiable").
+    // On-chain headline and indexed chart labels are distinct.
+    expect(screen.getByText("On-chain verified")).toBeDefined();
     expect(screen.getAllByText("Indexed · best-effort").length).toBeGreaterThan(0);
   });
 
   it("offers a 24h/7d/30d/All time-range selector defaulting to 30d", () => {
-    render(<BankrollPerformancePanel vaultAssets={1000000000n} />);
+    render(
+      <BankrollPerformancePanel
+        assetDecimals={6}
+        assetSymbol="USDC"
+        chainPerformance={chainPerformance}
+        vaultAssets={1000000000n}
+      />
+    );
     expect(screen.getByRole("tab", { name: "30d", selected: true })).toBeDefined();
-    expect(useCasinoStatsMock).toHaveBeenLastCalledWith({
-      asset: undefined,
-      windowDays: 30
-    });
     expect(useCasinoTimeseriesMock).toHaveBeenLastCalledWith({
       asset: undefined,
       days: 30
@@ -150,20 +145,21 @@ describe("BankrollPerformancePanel", () => {
     }
     fireEvent.click(screen.getByRole("tab", { name: "7d" }));
     expect(screen.getByRole("tab", { name: "7d", selected: true })).toBeDefined();
-    expect(useCasinoStatsMock).toHaveBeenLastCalledWith({
-      asset: undefined,
-      windowDays: 7
-    });
+    expect(useCasinoTimeseriesMock).toHaveBeenLastCalledWith({ asset: undefined, days: 7 });
   });
 
   it("scopes indexed performance reads to the selected asset", () => {
     const assetAddress = `0x${"12".repeat(20)}`;
-    render(<BankrollPerformancePanel assetAddress={assetAddress} vaultAssets={1000000000n} />);
+    render(
+      <BankrollPerformancePanel
+        assetAddress={assetAddress}
+        assetDecimals={6}
+        assetSymbol="USDC"
+        chainPerformance={chainPerformance}
+        vaultAssets={1000000000n}
+      />
+    );
 
-    expect(useCasinoStatsMock).toHaveBeenLastCalledWith({
-      asset: assetAddress,
-      windowDays: 30
-    });
     expect(useCasinoTimeseriesMock).toHaveBeenLastCalledWith({
       asset: assetAddress,
       days: 30
@@ -171,7 +167,14 @@ describe("BankrollPerformancePanel", () => {
   });
 
   it("reveals a per-day tooltip when the equity chart is hovered", () => {
-    render(<BankrollPerformancePanel vaultAssets={1000000000n} />);
+    render(
+      <BankrollPerformancePanel
+        assetDecimals={6}
+        assetSymbol="USDC"
+        chainPerformance={chainPerformance}
+        vaultAssets={1000000000n}
+      />
+    );
     // The crosshair-capture layer is the last child of the chart frame; moving
     // the pointer over it should surface the hovered day's breakdown rows.
     const captureLayer = screen.getByTestId("trend-chart-capture") as HTMLElement;
@@ -187,10 +190,18 @@ describe("BankrollPerformancePanel", () => {
     expect(screen.getByText("11 USDC")).toBeDefined(); // hovered day's P&L
   });
 
-  it("shows an empty state but keeps the toggle when the index is unavailable", () => {
+  it("keeps the on-chain performance shell when the index is unavailable", () => {
     statsUnavailable = true;
-    render(<BankrollPerformancePanel vaultAssets={1000000000n} />);
-    expect(screen.getByText("No vault activity yet on this chain.")).toBeDefined();
+    render(
+      <BankrollPerformancePanel
+        assetDecimals={6}
+        assetSymbol="USDC"
+        chainPerformance={chainPerformance}
+        vaultAssets={1000000000n}
+      />
+    );
+    expect(screen.getByText("On-chain verified")).toBeDefined();
+    expect(screen.queryByText("Cumulative house P&L")).toBeNull();
     // Toggle stays mounted so a provider can switch back to a populated scope.
     expect(screen.getByRole("tab", { name: "30d" })).toBeDefined();
   });

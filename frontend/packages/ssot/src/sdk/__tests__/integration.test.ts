@@ -979,7 +979,18 @@ describe("createSSOTSDK", () => {
         XP: 20_000n
       })
       .mockResolvedValueOnce(1_000_000n)
-      .mockResolvedValueOnce(1_250_000n);
+      .mockResolvedValueOnce(1_250_000n)
+      .mockResolvedValueOnce([
+        5_000_000n,
+        4_950_000n,
+        4_900_000n,
+        25_000n,
+        50_000n,
+        10_000n,
+        10n,
+        8n,
+        2n
+      ]);
 
     const result = await sdk.bank.getSnapshot(1);
 
@@ -993,6 +1004,15 @@ describe("createSSOTSDK", () => {
     expect(result.withdrawalBufferBps).toBe(500);
     expect(result.withdrawalBuffer).toBe(62_500n);
     expect(result.withdrawable).toBe(937_500n);
+    expect(result.totalTurnover).toBe(5_000_000n);
+    expect(result.totalPayoutGross).toBe(4_950_000n);
+    expect(result.totalPayoutNet).toBe(4_900_000n);
+    expect(result.totalRefunded).toBe(25_000n);
+    expect(result.totalFeeOnPayout).toBe(50_000n);
+    expect(result.totalProtocolFeeAccrued).toBe(10_000n);
+    expect(result.totalBetsHeld).toBe(10n);
+    expect(result.totalBetsSettled).toBe(8n);
+    expect(result.totalBetsRefunded).toBe(2n);
     expect(pub.readContract).toHaveBeenCalledWith(
       expect.objectContaining({
         address: getAddress(BANK),
@@ -1005,6 +1025,13 @@ describe("createSSOTSDK", () => {
         address: getAddress(BANK),
         functionName: "convertToAssets",
         args: [1_000_000n]
+      })
+    );
+    expect(pub.readContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        address: getAddress(BANK),
+        functionName: "getPerformance",
+        args: []
       })
     );
   });

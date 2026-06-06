@@ -2853,6 +2853,7 @@
     "performance": {
       "title": "金库表现",
       "bestEffort": "已索引 · 尽力而为",
+      "onChain": "链上可验证",
       "housePnl": "金库盈亏",
       "hold": "实际抽水",
       "velocity": "周转速度",
@@ -2874,7 +2875,7 @@
         "d7": "7天",
         "d30": "30天"
       },
-      "note": "毛博彩收入来自已索引投注(投注额减派彩)。周转速度和年化估算将索引活动与链上读取的金库资产组合计算。不含出入金、手续费、赎回、闲置资本及未结算方差；不是收益承诺。",
+      "note": "Lifetime 毛博彩收入来自 Bank.getPerformance() 链上直读(投注流水减 gross 派彩)。资金周转率用 lifetime 投注流水除以当前链上金库资产。下方每日曲线来自索引，可能延迟；这不是收益承诺。",
       "equityTitle": "累计金库盈亏",
       "peak": "峰值",
       "trough": "谷值"
@@ -2882,7 +2883,7 @@
     "ledger": {
       "eyebrow": "出资人账本",
       "title": "存款与取款记录",
-      "readModel": "服务端重建",
+      "readModel": "ERC4626 事件",
       "connectWallet": "连接钱包后查看你的 Bank 出资记录。",
       "loading": "正在加载出资人账本…",
       "loadingMore": "正在加载更多…",
@@ -3131,16 +3132,17 @@
         "label": "金库金额",
         "detail": "支撑每一笔赔付的资金 —— 链上直读。"
       },
-      "totalBets": {
-        "label": "总下注数",
-        "detail": "历史下注总笔数 —— 链上计数。"
+      "turnover": {
+        "label": "总周转额",
+        "detail": "Bank 历史承接的投注流水 —— 链上直读。"
       },
       "protocolFee": {
         "label": "协议费",
         "detail": "已累计的协议费 —— 链上直读。"
       },
       "verifiable": "链上可验证",
-      "indexed": "索引·可能延迟"
+      "indexed": "索引·可能延迟",
+      "assetContext": "资产上下文"
     },
     "rooms": {
       "eyebrow": "全部游戏",

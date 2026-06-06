@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import * as React from "react";
 
 const state = {
@@ -14,7 +14,6 @@ const state = {
   betsLoading: false,
   betCount: 0,
   assetOverviews: [] as any[],
-  totalBets: undefined as string | undefined,
   overviewLoading: false,
   overviewError: null as Error | null
 };
@@ -26,7 +25,7 @@ vi.mock("@tanstack/react-query", () => ({
     }
     if (Array.isArray(queryKey) && queryKey.includes("asset-overview")) {
       return {
-        data: { assets: state.assetOverviews, totalBets: state.totalBets },
+        data: { assets: state.assetOverviews },
         isLoading: state.overviewLoading,
         error: state.overviewError
       };
@@ -210,6 +209,8 @@ describe("HomePage", () => {
         decimals: 6,
         totalAssets: 1_000_000n,
         totalReserved: 250_000n,
+        turnover: 12_500_000n,
+        protocolFee: 25_000n,
         freeLiquidity: 750_000n,
         updatedAtBlock: 123n
       },
@@ -220,6 +221,8 @@ describe("HomePage", () => {
         decimals: 18,
         totalAssets: 3_000_000_000_000_000_000n,
         totalReserved: 1_000_000_000_000_000_000n,
+        turnover: 6_000_000_000_000_000_000n,
+        protocolFee: 50_000_000_000_000_000n,
         freeLiquidity: 2_000_000_000_000_000_000n,
         updatedAtBlock: 123n
       }
@@ -229,8 +232,12 @@ describe("HomePage", () => {
 
     expect(screen.getAllByText("Free to pay out").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Total in the bank").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("0.75 USDC / 2 WETH").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("1 USDC / 3 WETH").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("0.75 USDC").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("1 USDC").length).toBeGreaterThan(0);
+    expect(screen.queryByText("0.75 USDC / 2 WETH")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "WETH" }));
+    expect(screen.getAllByText("2 WETH").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("3 WETH").length).toBeGreaterThan(0);
     expect(screen.getByText("1.23 WETH")).toBeDefined();
     expect(screen.getAllByText("Dice").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Keno").length).toBeGreaterThan(0);

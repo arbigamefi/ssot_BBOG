@@ -20,6 +20,24 @@ export interface DomainBankSnapshot {
   withdrawable?: bigint;
   protocolFeesPayable?: bigint;
   externalPayablesTotal?: bigint;
+  /** Lifetime asset turnover recorded by the Bank, net of refunded stake. */
+  totalTurnover?: bigint;
+  /** Lifetime gross payout before protocol-fee deduction. */
+  totalPayoutGross?: bigint;
+  /** Lifetime net payout actually transferred to players. */
+  totalPayoutNet?: bigint;
+  /** Lifetime refunded stake. */
+  totalRefunded?: bigint;
+  /** Lifetime protocol fee retained from gross payouts. */
+  totalFeeOnPayout?: bigint;
+  /** Lifetime protocol fee accrued by settlement. */
+  totalProtocolFeeAccrued?: bigint;
+  /** Lifetime count of bet holds opened against this Bank. */
+  totalBetsHeld?: bigint;
+  /** Lifetime count of terminal settled bets. */
+  totalBetsSettled?: bigint;
+  /** Lifetime count of refunded bets. */
+  totalBetsRefunded?: bigint;
   updatedAtBlock?: bigint;
 }
 

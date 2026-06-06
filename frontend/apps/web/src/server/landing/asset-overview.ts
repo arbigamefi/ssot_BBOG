@@ -26,18 +26,18 @@ const BANK_SSOT_ABI = [
   },
   {
     inputs: [],
-    name: "protocolFeesPayable",
-    outputs: [{ name: "", type: "uint256" }],
-    stateMutability: "view",
-    type: "function"
-  }
-] as const;
-
-const SETTLEMENT_ROUTER_ABI = [
-  {
-    inputs: [],
-    name: "nextPositionId",
-    outputs: [{ name: "", type: "uint256" }],
+    name: "getPerformance",
+    outputs: [
+      { name: "turnover", type: "uint256" },
+      { name: "payoutGross", type: "uint256" },
+      { name: "payoutNet", type: "uint256" },
+      { name: "refunded", type: "uint256" },
+      { name: "feeOnPayout", type: "uint256" },
+      { name: "protocolFeeAccrued", type: "uint256" },
+      { name: "betsHeld", type: "uint256" },
+      { name: "betsSettled", type: "uint256" },
+      { name: "betsRefunded", type: "uint256" }
+    ],
     stateMutability: "view",
     type: "function"
   }
@@ -49,8 +49,6 @@ export type LandingAssetOverviewResponse = {
   generatedAt: number;
   releaseDigest?: string;
   source: "rpc" | "unavailable";
-  /** Total bets ever placed — chain-read (SettlementRouter.nextPositionId − 1). */
-  totalBets?: string;
   rows: Array<{
     address: Address;
     bank: Address;
@@ -58,7 +56,9 @@ export type LandingAssetOverviewResponse = {
     decimals: number;
     totalAssets: string;
     totalReserved: string;
-    /** Accrued protocol fee payable (Bank getSSOT.PF) — chain-read, verifiable. */
+    /** Lifetime turnover (Bank.getPerformance) — chain-read, verifiable. */
+    turnover: string;
+    /** Lifetime protocol fee accrued (Bank.getPerformance) — chain-read, verifiable. */
     protocolFee: string;
   }>;
 };
@@ -110,7 +110,7 @@ export async function queryLandingAssetOverview(
         const poolAsset = getPoolAssetContext(release, pool);
         if (!poolAsset?.bank) return null;
         const bank = getAddress(poolAsset.bank);
-        const [ssot, protocolFee] = await Promise.all([
+        const [ssot, perf] = await Promise.all([
           publicClient.readContract({
             address: bank,
             abi: BANK_SSOT_ABI,
@@ -120,7 +120,7 @@ export async function queryLandingAssetOverview(
           publicClient.readContract({
             address: bank,
             abi: BANK_SSOT_ABI,
-            functionName: "protocolFeesPayable",
+            functionName: "getPerformance",
             args: []
           })
         ]);
@@ -132,29 +132,11 @@ export async function queryLandingAssetOverview(
           decimals: poolAsset.asset.decimals,
           totalAssets: BigInt(ssot.NAV).toString(),
           totalReserved: BigInt(ssot.R).toString(),
-          protocolFee: BigInt(protocolFee).toString()
+          turnover: BigInt(perf[0]).toString(),
+          protocolFee: BigInt(perf[5]).toString()
         };
       })
     );
-
-    // Total bets ever — the global position counter (chain-read, verifiable).
-    // Conservative: nextPositionId − 1 never overstates activity.
-    const routerAddress = (release as { contracts?: { settlementRouter?: string } }).contracts
-      ?.settlementRouter;
-    let totalBets: string | undefined;
-    if (routerAddress) {
-      try {
-        const nextId = await publicClient.readContract({
-          address: getAddress(routerAddress),
-          abi: SETTLEMENT_ROUTER_ABI,
-          functionName: "nextPositionId",
-          args: []
-        });
-        totalBets = BigInt(nextId) > 0n ? (BigInt(nextId) - 1n).toString() : "0";
-      } catch {
-        totalBets = undefined;
-      }
-    }
 
     return {
       schemaVersion: 1,
@@ -162,7 +144,6 @@ export async function queryLandingAssetOverview(
       generatedAt: Date.now(),
       releaseDigest: release.releaseDigest,
       source: "rpc",
-      totalBets,
       rows: rows.filter((row): row is NonNullable<(typeof rows)[number]> => Boolean(row))
     };
   } catch {

@@ -3,8 +3,9 @@
 import * as React from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { cn } from "@ssot/ui";
+import type { DomainBankSnapshot } from "@ssot/ssot";
 
-import { useCasinoStats, useCasinoTimeseries } from "../casino/useCasinoStats";
+import { useCasinoTimeseries } from "../casino/useCasinoStats";
 import { formatTokenAmount } from "../marketing/format";
 import { TrendChart, formatDayLabel, type TrendChartPoint } from "../charts/TrendChart";
 
@@ -47,34 +48,23 @@ function formatMultiple(numerator: bigint, denominator?: bigint): string | null 
   return `${hundredths.toFixed(2)}x`;
 }
 
-function formatAnnualizedEstimate(
-  houseRevenue: bigint,
-  vaultAssets: bigint | undefined,
-  windowDays: number | undefined
-): string | null {
-  if (!vaultAssets || vaultAssets <= 0n || !windowDays) return null;
-  const sign = houseRevenue < 0n ? "−" : "";
-  const absRevenue = houseRevenue < 0n ? -houseRevenue : houseRevenue;
-  const bps = Number((absRevenue * 365n * 10_000n) / (vaultAssets * BigInt(windowDays))) / 100;
-  return `${sign}${bps.toFixed(2)}%`;
-}
-
 /**
- * Vault performance — the provider-facing diligence view. Derives "is the house
- * bankroll making money?" from indexed bet activity, then combines it with the
- * chain-read vault balance when available to estimate turnover velocity. Every
- * indexed figure is labeled best-effort so it is never mistaken for on-chain truth.
+ * Vault performance — the provider-facing diligence view. Lifetime performance
+ * comes directly from Bank.getPerformance(), while the daily chart remains an
+ * indexed trend because the chain does not store historical daily buckets.
  */
 export function BankrollPerformancePanel({
   assetAddress,
   assetDecimals = 6,
   assetSymbol = "UNIT",
+  chainPerformance,
   sharePrice,
   vaultAssets
 }: {
   assetAddress?: string;
   assetDecimals?: number;
   assetSymbol?: string;
+  chainPerformance?: DomainBankSnapshot;
   /** Latest chain-read assets redeemable per full LP share. Historical share-price points are not indexed yet. */
   sharePrice?: bigint;
   vaultAssets?: bigint;
@@ -83,16 +73,14 @@ export function BankrollPerformancePanel({
   const locale = useLocale();
   const [windowDays, setWindowDays] = React.useState<number | undefined>(DEFAULT_WINDOW_DAYS);
 
-  const stats = useCasinoStats({ asset: assetAddress, windowDays });
   // The chart wants daily granularity; cap to the largest supported window when
   // showing all-time (the timeseries service clamps to 90 days regardless).
   const timeseries = useCasinoTimeseries({ asset: assetAddress, days: windowDays ?? 90 });
 
-  const unavailable = stats.data?.source === "unavailable";
-  const aggregate = stats.data?.stats;
-  const decimals = stats.data?.asset.decimals ?? assetDecimals;
-  const symbol = stats.data?.asset.symbol ?? assetSymbol;
+  const decimals = assetDecimals;
+  const symbol = assetSymbol;
   const points = timeseries.data?.source === "postgres" ? timeseries.data.points : [];
+  const hasChainPerformance = Boolean(chainPerformance);
 
   const windowToggle = (
     <div
@@ -123,65 +111,41 @@ export function BankrollPerformancePanel({
     </div>
   );
 
-  if (unavailable || !aggregate) {
-    return (
-      <section className="rounded-md border border-border bg-surface-1 shadow-e2">
-        <PerformanceHeader t={t} windowToggle={windowToggle} />
-        <div className="border-t border-border-soft px-5 py-6">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-fg-subtle">
-            {t("earn.performance.empty")}
-          </p>
-        </div>
-      </section>
-    );
-  }
-
-  const turnover = BigInt(aggregate.turnover || "0");
-  const payout = BigInt(aggregate.payout || "0");
+  const turnover = chainPerformance?.totalTurnover ?? 0n;
+  const payout = chainPerformance?.totalPayoutGross ?? 0n;
   // Gross gaming revenue = what players staked minus what the vault paid back.
   // Positive = the house (and therefore providers) is ahead.
   const houseRevenue = turnover - payout;
   const hold = holdPercent(houseRevenue, turnover);
   const velocity = formatMultiple(turnover, vaultAssets);
-  const grossAnnualized = formatAnnualizedEstimate(houseRevenue, vaultAssets, windowDays);
+  const betCount = chainPerformance?.totalBetsHeld ?? 0n;
 
   const statRows: Array<{ key: string; label: string; value: string; tone?: "win" | "loss" }> = [
     {
       key: "hold",
       label: t("earn.performance.hold"),
-      value: hold ?? "—",
+      value: hasChainPerformance ? (hold ?? "—") : "—",
       tone: houseRevenue >= 0n ? "win" : "loss"
     },
     {
       key: "velocity",
       label: t("earn.performance.velocity"),
-      value: velocity ?? "—"
-    },
-    {
-      key: "grossAnnualized",
-      label: t("earn.performance.grossAnnualized"),
-      value: grossAnnualized ?? "—",
-      tone: houseRevenue >= 0n ? "win" : "loss"
+      value: hasChainPerformance ? (velocity ?? "—") : "—"
     },
     {
       key: "wagered",
       label: t("earn.performance.wagered"),
-      value: formatTokenAmount(turnover, decimals, symbol, locale)
+      value: hasChainPerformance ? formatTokenAmount(turnover, decimals, symbol, locale) : "—"
     },
     {
       key: "payout",
       label: t("earn.performance.payout"),
-      value: formatTokenAmount(payout, decimals, symbol, locale)
+      value: hasChainPerformance ? formatTokenAmount(payout, decimals, symbol, locale) : "—"
     },
     {
       key: "bets",
       label: t("earn.performance.bets"),
-      value: aggregate.betCount.toLocaleString(locale)
-    },
-    {
-      key: "players",
-      label: t("earn.performance.players"),
-      value: aggregate.uniquePlayers.toLocaleString(locale)
+      value: hasChainPerformance ? betCount.toLocaleString(locale) : "—"
     }
   ];
 
@@ -208,10 +172,10 @@ export function BankrollPerformancePanel({
             )}
             title={formatSignedToken(houseRevenue, decimals, symbol, locale)}
           >
-            {formatSignedToken(houseRevenue, decimals, symbol, locale)}
+            {hasChainPerformance ? formatSignedToken(houseRevenue, decimals, symbol, locale) : "—"}
           </div>
           <div className="mt-2 text-[10px] uppercase tracking-[0.14em] text-fg-subtle">
-            {t("earn.performance.bestEffort")}
+            {t("earn.performance.onChain")}
           </div>
         </div>
 

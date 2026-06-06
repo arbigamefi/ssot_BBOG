@@ -435,6 +435,7 @@ export function EarnPageClient() {
           assetAddress={asset}
           assetDecimals={decimals}
           assetSymbol={symbol}
+          chainPerformance={snapshot}
           sharePrice={snapshot?.assetsPerShare}
           vaultAssets={snapshot?.totalAssets}
         />

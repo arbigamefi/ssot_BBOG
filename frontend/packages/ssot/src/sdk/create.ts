@@ -1019,7 +1019,7 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
     async getSnapshot(poolId: number): Promise<DomainBankSnapshot> {
       const pool = resolvePool(poolId);
       const shareUnit = 10n ** BigInt(pool.decimals);
-      const [ssot, totalSupply, assetsPerShare] = (await Promise.all([
+      const [ssot, totalSupply, assetsPerShare, performance] = (await Promise.all([
         publicClient.readContract({
           address: pool.bank,
           abi: BANK_ABI,
@@ -1037,8 +1037,14 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
           abi: BANK_ABI,
           functionName: "convertToAssets",
           args: [shareUnit]
+        }),
+        publicClient.readContract({
+          address: pool.bank,
+          abi: BANK_ABI,
+          functionName: "getPerformance",
+          args: []
         })
-      ])) as [any, bigint, bigint];
+      ])) as [any, bigint, bigint, readonly bigint[]];
 
       const minLiquidityBps = Number(ssot.minLiquidityBps);
       const riskReserveBps = Number(ssot.riskReserveBps ?? ssot.minLiquidityBps);
@@ -1061,7 +1067,16 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         withdrawalBuffer: BigInt(ssot.withdrawalBuffer ?? ssot.minLiq),
         withdrawable: BigInt(ssot.withdrawable ?? ssot.free),
         protocolFeesPayable: BigInt(ssot.PF),
-        externalPayablesTotal: BigInt(ssot.XP)
+        externalPayablesTotal: BigInt(ssot.XP),
+        totalTurnover: BigInt(performance[0] ?? 0n),
+        totalPayoutGross: BigInt(performance[1] ?? 0n),
+        totalPayoutNet: BigInt(performance[2] ?? 0n),
+        totalRefunded: BigInt(performance[3] ?? 0n),
+        totalFeeOnPayout: BigInt(performance[4] ?? 0n),
+        totalProtocolFeeAccrued: BigInt(performance[5] ?? 0n),
+        totalBetsHeld: BigInt(performance[6] ?? 0n),
+        totalBetsSettled: BigInt(performance[7] ?? 0n),
+        totalBetsRefunded: BigInt(performance[8] ?? 0n)
       };
     },
 

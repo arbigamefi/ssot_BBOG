@@ -368,16 +368,17 @@
         "label": "Kasa bankroll",
         "detail": "Her ödemeyi neyin desteklediği — doğrudan zincirden."
       },
-      "totalBets": {
-        "label": "Toplam bahis",
-        "detail": "Yapılmış tüm bahisler — zincirde sayılır."
+      "turnover": {
+        "label": "Toplam devir",
+        "detail": "Bank üzerinden geçen ömür boyu bahis akışı — zincirden okunur."
       },
       "protocolFee": {
         "label": "Protokol ücreti",
         "detail": "Birikmiş protokol ücretleri — zincirden okunur."
       },
       "verifiable": "Zincir üstü",
-      "indexed": "İndeksli · gecikebilir"
+      "indexed": "İndeksli · gecikebilir",
+      "assetContext": "Varlık bağlamı"
     },
     "rooms": {
       "eyebrow": "Tüm oyunlar",
@@ -805,6 +806,7 @@
     "performance": {
       "title": "Kasa performansı",
       "bestEffort": "İndekslendi · en iyi çaba",
+      "onChain": "Zincir üstü doğrulandı",
       "housePnl": "Kasa K/Z",
       "hold": "Gerçekleşen pay",
       "velocity": "Devir hızı",
@@ -826,7 +828,7 @@
         "d7": "7g",
         "d30": "30g"
       },
-      "note": "İndekslenmiş bahislerden brüt oyun geliri (hacim eksi ödemeler). Devir hızı ve yıllık tahminler, indekslenmiş etkinliği zincir üstü okunan kasa varlıklarıyla birleştirir. Para yatırma, ücretler, geri alımlar, atıl sermaye ve sonuçlanmamış varyans hariçtir. Getiri vaadi değildir.",
+      "note": "Ömür boyu brüt oyun geliri Bank.getPerformance() üzerinden zincirden okunur (turnover eksi brüt ödemeler). Sermaye devir hızı, ömür boyu turnover'ın mevcut zincir üstü kasa varlıklarına bölünmesidir. Aşağıdaki günlük grafik indekslenir ve gecikebilir. Getiri vaadi değildir.",
       "equityTitle": "Birikimli kasa K/Z",
       "peak": "Zirve",
       "trough": "Dip"
@@ -834,7 +836,7 @@
     "ledger": {
       "eyebrow": "Sağlayıcı defteri",
       "title": "Yatırma ve çekme kayıtları",
-      "readModel": "sunucuda oluşturuldu",
+      "readModel": "ERC4626 olayları",
       "connectWallet": "Bank sağlayıcı defterinizi görmek için cüzdan bağlayın.",
       "loading": "Sağlayıcı defteri yükleniyor…",
       "loadingMore": "Daha fazlası yükleniyor…",

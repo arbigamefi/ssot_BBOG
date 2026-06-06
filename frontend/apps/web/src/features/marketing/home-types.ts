@@ -7,6 +7,8 @@ export type AssetOverview = {
   decimals: number;
   totalAssets: bigint;
   totalReserved: bigint;
+  /** Lifetime asset turnover — chain-read (Bank.getPerformance.turnover), verifiable. */
+  turnover: bigint;
   /** Accrued protocol fee payable — chain-read (Bank getSSOT.PF), verifiable. */
   protocolFee: bigint;
 };
@@ -35,6 +37,12 @@ export type LandingStat = {
    * visually distinct badge so the two are never conflated.
    */
   integrity?: "verifiable" | "indexed";
+};
+
+export type LandingAssetTab = {
+  label: string;
+  selected: boolean;
+  onSelect: () => void;
 };
 
 export type LandingRoom = CatalogRoom;

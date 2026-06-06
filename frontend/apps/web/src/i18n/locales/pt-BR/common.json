@@ -368,16 +368,17 @@
         "label": "Banca da casa",
         "detail": "O que cobre cada pagamento — lido direto da chain."
       },
-      "totalBets": {
-        "label": "Total de apostas",
-        "detail": "Todas as apostas já feitas — contadas na chain."
+      "turnover": {
+        "label": "Turnover total",
+        "detail": "Fluxo vitalício de apostas pelo Bank — lido direto da chain."
       },
       "protocolFee": {
         "label": "Taxas do protocolo",
         "detail": "Taxas de protocolo acumuladas — lidas da chain."
       },
       "verifiable": "On-chain",
-      "indexed": "Indexado · pode atrasar"
+      "indexed": "Indexado · pode atrasar",
+      "assetContext": "Contexto do ativo"
     },
     "rooms": {
       "eyebrow": "Todos os jogos",
@@ -805,6 +806,7 @@
     "performance": {
       "title": "Desempenho do cofre",
       "bestEffort": "Indexado · melhor esforço",
+      "onChain": "Verificado on-chain",
       "housePnl": "Resultado do cofre",
       "hold": "Margem realizada",
       "velocity": "Velocidade",
@@ -826,7 +828,7 @@
         "d7": "7d",
         "d30": "30d"
       },
-      "note": "Receita bruta de jogo das apostas indexadas (movimentação menos pagamentos). Velocidade e estimativas anualizadas combinam atividade indexada com ativos do cofre lidos on-chain. Exclui depósitos, taxas, resgates, capital ocioso e variância não liquidada. Não é rendimento prometido.",
+      "note": "A receita bruta vitalícia vem de Bank.getPerformance() on-chain (turnover menos pagamentos brutos). A velocidade do capital é o turnover vitalício dividido pelos ativos atuais do cofre lidos on-chain. O gráfico diário abaixo é indexado e pode atrasar. Não é rendimento prometido.",
       "equityTitle": "Resultado acumulado do cofre",
       "peak": "Pico",
       "trough": "Vale"
@@ -834,7 +836,7 @@
     "ledger": {
       "eyebrow": "Livro do provedor",
       "title": "Depósitos e saques",
-      "readModel": "reconstruído no servidor",
+      "readModel": "eventos ERC4626",
       "connectWallet": "Conecte uma carteira para ver seu histórico como provedor do Bank.",
       "loading": "Carregando livro do provedor…",
       "loadingMore": "Carregando mais…",

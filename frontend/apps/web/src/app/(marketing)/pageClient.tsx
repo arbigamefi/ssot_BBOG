@@ -20,24 +20,25 @@ import { HomeWhyUs } from "../../features/marketing/home-why-us";
 import type {
   AssetOverview,
   LandingActivity,
+  LandingAssetTab,
   LandingRoom,
   LandingStat
 } from "../../features/marketing/home-types";
 import { useRelease } from "../../ssot/release/ReleaseProvider";
 
 type LandingAssetOverviewResponse = {
-  totalBets?: string;
   rows: Array<{
     address: string;
     symbol: string;
     decimals: number;
     totalAssets: string;
     totalReserved: string;
+    turnover: string;
     protocolFee: string;
   }>;
 };
 
-type LandingOverview = { assets: AssetOverview[]; totalBets?: string };
+type LandingOverview = { assets: AssetOverview[] };
 
 function toBigOrNull(value?: string | bigint | number): bigint | null {
   if (value == null || value === "") return null;
@@ -68,20 +69,19 @@ export function HomePageClient() {
       if (!response.ok) return { assets: [] };
       const body = (await response.json()) as LandingAssetOverviewResponse;
       return {
-        totalBets: body.totalBets,
         assets: body.rows.map((row) => ({
           address: row.address as Address,
           symbol: row.symbol || t("format.assetFallback"),
           decimals: row.decimals,
           totalAssets: BigInt(row.totalAssets),
           totalReserved: BigInt(row.totalReserved),
+          turnover: BigInt(row.turnover),
           protocolFee: BigInt(row.protocolFee)
         }))
       };
     }
   });
   const assetOverviews = landingOverview?.assets ?? [];
-  const totalBetsRaw = landingOverview?.totalBets;
 
   const rooms = React.useMemo(
     () => getCatalogRooms(release?.gamesMeta as Array<{ slug: string; label: string }> | undefined),
@@ -90,18 +90,23 @@ export function HomePageClient() {
 
   // Reserve banks can hold the same asset across multiple pools, so the raw
   // rows look like "188 USDC / 24 USDC / 0 WETH". Aggregate by asset for one
-  // clean figure per token and drop zero-balance tokens. An empty result means
-  // the bank is unfunded (pre-launch) — show the sync state, never "0 USDC".
+  // clean figure per token and drop zero-balance tokens. Landing KPIs should
+  // show one asset context at a time; slash-joined multi-asset headlines read
+  // like a data dump, not a premium public proof point.
   const aggregatedAssets = aggregateAssetOverviews(assetOverviews);
   const bankFunded = aggregatedAssets.length > 0;
+  const [selectedAssetAddress, setSelectedAssetAddress] = React.useState<string | null>(null);
+  const selectedAsset =
+    aggregatedAssets.find((asset) => asset.address.toLowerCase() === selectedAssetAddress) ??
+    aggregatedAssets[0];
   const reserveFloor = bankFunded
-    ? formatAssetOverviewList(aggregatedAssets, locale, t("format.awaitingReserveSync"), (asset) =>
+    ? formatAssetOverviewValue(selectedAsset, locale, t("format.awaitingReserveSync"), (asset) =>
         asset.totalAssets > asset.totalReserved ? asset.totalAssets - asset.totalReserved : 0n
       )
     : t("format.awaitingReserveSync");
   const totalAssetsLabel = bankFunded
-    ? formatAssetOverviewList(
-        aggregatedAssets,
+    ? formatAssetOverviewValue(
+        selectedAsset,
         locale,
         t("format.awaitingReserveSync"),
         (asset) => asset.totalAssets
@@ -173,14 +178,21 @@ export function HomePageClient() {
     };
   });
 
-  // Total bets ever — verifiable on-chain counter (SettlementRouter.nextPositionId).
-  const totalBetsLabel =
-    bankFunded && totalBetsRaw != null ? BigInt(totalBetsRaw).toLocaleString(locale) : "—";
+  // Lifetime turnover — verifiable per Bank and shown per asset. Do not sum
+  // USDC and WETH into a fake single number.
+  const totalTurnoverLabel = bankFunded
+    ? formatAssetOverviewValue(
+        selectedAsset,
+        locale,
+        t("format.awaitingReserveSync"),
+        (asset) => asset.turnover
+      )
+    : t("format.awaitingReserveSync");
   // Protocol fee is read straight off the Bank (protocolFeesPayable) — chain-read,
   // verifiable, no index dependency.
   const protocolFeeLabel = bankFunded
-    ? formatAssetOverviewList(
-        aggregatedAssets,
+    ? formatAssetOverviewValue(
+        selectedAsset,
         locale,
         t("format.awaitingReserveSync"),
         (asset) => asset.protocolFee
@@ -188,8 +200,8 @@ export function HomePageClient() {
     : t("format.awaitingReserveSync");
 
   // Three cards = the three flywheel sides, all read straight from the chain:
-  // vault (NAV), total bets (position counter), protocol fee. All verifiable —
-  // the integrity marker still labels them so the data-honesty posture is explicit.
+  // vault (NAV), lifetime turnover, protocol fee. All verifiable — the
+  // integrity marker still labels them so the data-honesty posture is explicit.
   const stats: LandingStat[] = [
     {
       label: t("stats.vault.label"),
@@ -198,9 +210,9 @@ export function HomePageClient() {
       integrity: "verifiable"
     },
     {
-      label: t("stats.totalBets.label"),
-      value: totalBetsLabel,
-      detail: t("stats.totalBets.detail"),
+      label: t("stats.turnover.label"),
+      value: totalTurnoverLabel,
+      detail: t("stats.turnover.detail"),
       integrity: "verifiable"
     },
     {
@@ -210,6 +222,11 @@ export function HomePageClient() {
       integrity: "verifiable"
     }
   ];
+  const assetTabs: LandingAssetTab[] = aggregatedAssets.map((asset) => ({
+    label: asset.symbol,
+    selected: selectedAsset?.address.toLowerCase() === asset.address.toLowerCase(),
+    onSelect: () => setSelectedAssetAddress(asset.address.toLowerCase())
+  }));
 
   const localizedRooms = React.useMemo(
     () => rooms.map((room) => localizeLandingRoom(room, t)),
@@ -264,7 +281,12 @@ export function HomePageClient() {
       {bankFunded ? (
         <HomeStatsStrip
           stats={stats}
-          copy={{ verifiable: t("stats.verifiable"), indexed: t("stats.indexed") }}
+          copy={{
+            verifiable: t("stats.verifiable"),
+            indexed: t("stats.indexed"),
+            assetContext: t("stats.assetContext")
+          }}
+          assetTabs={assetTabs}
         />
       ) : null}
 
@@ -335,6 +357,7 @@ function aggregateAssetOverviews(rows: readonly AssetOverview[]): AssetOverview[
     if (existing) {
       existing.totalAssets += row.totalAssets;
       existing.totalReserved += row.totalReserved;
+      existing.turnover += row.turnover;
       existing.protocolFee += row.protocolFee;
     } else {
       byAsset.set(key, { ...row });
@@ -343,18 +366,14 @@ function aggregateAssetOverviews(rows: readonly AssetOverview[]): AssetOverview[
   return Array.from(byAsset.values()).filter((asset) => asset.totalAssets > 0n);
 }
 
-function formatAssetOverviewList(
-  rows: readonly AssetOverview[],
+function formatAssetOverviewValue(
+  asset: AssetOverview | undefined,
   locale: string,
   emptyLabel: string,
   selectValue: (asset: AssetOverview) => bigint
 ) {
-  if (rows.length === 0) return emptyLabel;
-  return rows
-    .map((asset) =>
-      formatTokenAmount(selectValue(asset), asset.decimals, asset.symbol, locale, emptyLabel)
-    )
-    .join(" / ");
+  if (!asset) return emptyLabel;
+  return formatTokenAmount(selectValue(asset), asset.decimals, asset.symbol, locale, emptyLabel);
 }
 
 function localizeLandingRoom(
