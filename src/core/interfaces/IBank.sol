@@ -20,6 +20,11 @@ interface IERC4626Minimal {
     function mint(uint256 shares, address receiver) external returns (uint256 assets);
     function withdraw(uint256 assets, address receiver, address owner) external returns (uint256 shares);
     function redeem(uint256 shares, address receiver, address owner) external returns (uint256 assets);
+
+    event Deposit(address indexed sender, address indexed owner, uint256 assets, uint256 shares);
+    event Withdraw(
+        address indexed sender, address indexed receiver, address indexed owner, uint256 assets, uint256 shares
+    );
 }
 
 /// @notice Bank = funds + accounting SSOT.
@@ -40,6 +45,32 @@ interface IBank is IERC4626Minimal {
     function protocolFeesPayable() external view returns (uint256);
     function externalPayablesTotal() external view returns (uint256);
     function minLiquidityBps() external view returns (uint256);
+
+    // Bank performance counters: lifetime, single-asset, chain-verifiable.
+    function totalTurnover() external view returns (uint256);
+    function totalPayoutGross() external view returns (uint256);
+    function totalPayoutNet() external view returns (uint256);
+    function totalRefunded() external view returns (uint256);
+    function totalFeeOnPayout() external view returns (uint256);
+    function totalProtocolFeeAccrued() external view returns (uint256);
+    function totalBetsHeld() external view returns (uint256);
+    function totalBetsSettled() external view returns (uint256);
+    function totalBetsRefunded() external view returns (uint256);
+
+    function getPerformance()
+        external
+        view
+        returns (
+            uint256 turnover,
+            uint256 payoutGross,
+            uint256 payoutNet,
+            uint256 refunded,
+            uint256 feeOnPayout,
+            uint256 protocolFeeAccrued,
+            uint256 betsHeld,
+            uint256 betsSettled,
+            uint256 betsRefunded
+        );
 
     // XP bucket breakdown
     function xpAccruedTotal() external view returns (uint256);

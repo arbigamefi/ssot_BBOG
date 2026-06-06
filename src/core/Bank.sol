@@ -26,6 +26,17 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     uint256 public override protocolFeesPayable; // PF
     uint256 public override totalReserved; // R
 
+    // Lifetime performance counters. These are single-asset counters scoped to this Bank.
+    uint256 public override totalTurnover;
+    uint256 public override totalPayoutGross;
+    uint256 public override totalPayoutNet;
+    uint256 public override totalRefunded;
+    uint256 public override totalFeeOnPayout;
+    uint256 public override totalProtocolFeeAccrued;
+    uint256 public override totalBetsHeld;
+    uint256 public override totalBetsSettled;
+    uint256 public override totalBetsRefunded;
+
     /// @dev Virtual reserves keep the initial share price 1:1 while making direct
     ///      asset donations economically captured by the vault instead of letting
     ///      a dust first-depositor dilute later LPs to zero shares.
@@ -233,6 +244,35 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         });
     }
 
+    function getPerformance()
+        external
+        view
+        override
+        returns (
+            uint256 turnover,
+            uint256 payoutGross,
+            uint256 payoutNet,
+            uint256 refunded,
+            uint256 feeOnPayout,
+            uint256 protocolFeeAccrued,
+            uint256 betsHeld,
+            uint256 betsSettled,
+            uint256 betsRefunded
+        )
+    {
+        return (
+            totalTurnover,
+            totalPayoutGross,
+            totalPayoutNet,
+            totalRefunded,
+            totalFeeOnPayout,
+            totalProtocolFeeAccrued,
+            totalBetsHeld,
+            totalBetsSettled,
+            totalBetsRefunded
+        );
+    }
+
     // -------- ERC20 shares --------
 
     function approve(address spender, uint256 amount) external returns (bool) {
@@ -298,9 +338,11 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         return Math.mulDiv(shares_, totalAssets() + _virtualOffset, totalSupply + _virtualOffset, rounding);
     }
 
-    function maxWithdraw(address) external view override returns (uint256) {
+    function maxWithdraw(address owner) external view override returns (uint256) {
         if (paused()) return 0;
-        return _optionalOutflowCap();
+        uint256 capAssets = _optionalOutflowCap();
+        uint256 ownerAssets = _convertToAssets(balanceOf[owner], Math.Rounding.Floor);
+        return capAssets < ownerAssets ? capAssets : ownerAssets;
     }
 
     function maxRedeem(address owner) external view override returns (uint256) {
@@ -318,6 +360,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         if (shares == 0) revert Errors.InsufficientBalance();
         _assetToken.safeTransferFrom(msg.sender, address(this), assets_);
         _mint(receiver, shares);
+        emit Deposit(msg.sender, receiver, assets_, shares);
     }
 
     function mint(uint256 shares_, address receiver) external override nonReentrant returns (uint256 assets_) {
@@ -326,6 +369,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         assets_ = _convertToAssets(shares_, Math.Rounding.Ceil);
         _assetToken.safeTransferFrom(msg.sender, address(this), assets_);
         _mint(receiver, shares_);
+        emit Deposit(msg.sender, receiver, assets_, shares_);
     }
 
     function withdraw(uint256 assets_, address receiver, address owner)
@@ -341,6 +385,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         _checkOptionalOutflowDomain(assets_, 0, 0);
         _burn(owner, shares);
         _assetToken.safeTransfer(receiver, assets_);
+        emit Withdraw(msg.sender, receiver, owner, assets_, shares);
     }
 
     function redeem(uint256 shares_, address receiver, address owner)
@@ -356,6 +401,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         _checkOptionalOutflowDomain(assets_, 0, 0);
         _burn(owner, shares_);
         _assetToken.safeTransfer(receiver, assets_);
+        emit Withdraw(msg.sender, receiver, owner, assets_, shares_);
     }
 
     function _spendAllowanceIfNeeded(address owner, uint256 shares) internal {
@@ -514,6 +560,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         if (NAV < Rafter || NAV - Rafter < ml) revert SolvencyViolation();
 
         totalReserved = Rafter;
+        totalBetsHeld += 1;
 
         holds[betId] = Hold({player: player, stake: stake, reserved: reserved, snapshotHash: snapshotHash, open: true});
 
@@ -551,8 +598,17 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
             _assetToken.safeTransfer(h.player, playerOwed);
         }
 
-        // Update turnover (for permissionless locked unlock gating)
-        _playerTurnover[h.player] += (stake - refundAmount);
+        // Update turnover (for permissionless locked unlock gating and Bank-level provider analytics).
+        uint256 usedTurnover = stake - refundAmount;
+        uint256 feeOnPayout = payoutGross - payoutNet;
+        _playerTurnover[h.player] += usedTurnover;
+        totalTurnover += usedTurnover;
+        totalPayoutGross += payoutGross;
+        totalPayoutNet += payoutNet;
+        totalRefunded += refundAmount;
+        totalFeeOnPayout += feeOnPayout;
+        totalProtocolFeeAccrued += protocolFeeAccrual;
+        totalBetsSettled += 1;
 
         // B-class accruals (no transfers)
         if (protocolFeeAccrual > 0) protocolFeesPayable += protocolFeeAccrual;
@@ -606,7 +662,6 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
             emit XPAwarded(betId, a.payee, a.sourcePlayer, accrued, locked, holdback, a.reason);
         }
 
-        uint256 feeOnPayout = payoutGross - payoutNet;
         emit BetSettled(
             betId,
             h.player,
@@ -637,6 +692,9 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         if (refundAmount > 0) {
             _assetToken.safeTransfer(h.player, refundAmount);
         }
+
+        totalRefunded += refundAmount;
+        totalBetsRefunded += 1;
 
         emit BetRefunded(betId, h.player, refundAmount);
     }
