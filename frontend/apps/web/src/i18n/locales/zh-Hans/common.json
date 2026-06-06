@@ -931,7 +931,7 @@
       },
       "hero": {
         "eyebrow": "游戏大厅",
-        "title": "挑一款游戏。",
+        "title": "挑一款游戏",
         "description": "可验证的游戏房间。连上钱包直接开玩。每一局都落在链上。"
       },
       "stats": {
@@ -2068,7 +2068,7 @@
       },
       "hero": {
         "eyebrow": "账户注册表",
-        "title": "钱包档案。",
+        "title": "钱包档案",
         "description": "你的钱包余额、未结算下注、退款、本地历史 —— 一处看全。",
         "connectedAccount": "已连接账户"
       },
@@ -2186,7 +2186,7 @@
       },
       "hero": {
         "eyebrow": "活动账本",
-        "title": "投注活动。",
+        "title": "投注活动",
         "description": "查看已索引票据、结算状态和资金结果，同时把详情操作留在详情页处理。",
         "summary": "账本摘要",
         "session": "浏览器会话索引"
@@ -2425,7 +2425,7 @@
       },
       "hero": {
         "eyebrow": "领取金库",
-        "title": "奖励与协议领取。",
+        "title": "奖励与协议领取",
         "description": "检查 XP 桶、同步 holdback 状态，并执行领取交易，不用营销化余额遮住待处理负债。",
         "connectedPayee": "已连接收款方"
       },
@@ -2583,7 +2583,7 @@
       },
       "hero": {
         "eyebrow": "推广账户",
-        "title": "推广奖励。",
+        "title": "推广奖励",
         "description": "生成赌场推广链接，查看不可变的 first-touch 绑定，并检查由 Bank 账本结算的 XP 奖励桶。",
         "connected": "钱包"
       },
@@ -2663,7 +2663,7 @@
     },
     "hero": {
       "eyebrow": "金库出资人",
-      "title": "用 {symbol} 当庄。",
+      "title": "用 {symbol} 当庄",
       "description": "向赌场金库提供承险资本。收益来自真实玩家流水，回撤是这门生意的一部分。",
       "disclosure": "储备数值直接读取 Bank 合约；表现指标来自索引估算，可能存在延迟。",
       "bankAddress": "Bank 地址"
@@ -3103,9 +3103,9 @@
       "days": "{count}d 前"
     },
     "hero": {
-      "channel": "在 Arbitrum 上线",
-      "title": "链上可验证的赌场。",
-      "description": "赌场游戏,每一局都能在链上核对。中了直接进你的钱包,几秒到账 —— 不用注册、不用托管。",
+      "channel": "在 Base 上线",
+      "title": "链上可验证的赌场",
+      "description": "赌场游戏，每一局都能在链上核对。中了直接进你的钱包，几秒到账 —— 不用注册、不用托管。",
       "enterCasino": "开始玩",
       "viewBank": "看怎么玩",
       "consoleLabel": "实时状态",
@@ -3118,27 +3118,29 @@
       "proofRows": {
         "vrf": {
           "title": "随机数可验证",
-          "detail": "每一局都对应一次 Chainlink VRF 抽号请求,可在链上核。"
+          "detail": "每一局都对应一次 Chainlink VRF 抽号请求，可在链上核。"
         },
         "bytecode": {
           "title": "合约可阅读",
-          "detail": "游戏逻辑、金库、结算 —— 全部开源,读它、fork 它、验证它。"
+          "detail": "游戏逻辑、金库、结算 —— 全部开源，读它、fork 它、验证它。"
         }
       }
     },
     "stats": {
-      "freeReserve": {
-        "label": "可赔付额",
-        "detail": "庄家此刻能赔出多少 —— 链上可查。"
+      "vault": {
+        "label": "金库金额",
+        "detail": "支撑每一笔赔付的资金 —— 链上直读。"
       },
-      "bankAssets": {
-        "label": "庄家资金",
-        "detail": "赌场金库现在有多少,链上可看。"
+      "totalBets": {
+        "label": "总下注数",
+        "detail": "历史下注总笔数 —— 链上计数。"
       },
-      "release": {
-        "label": "在线游戏",
-        "detail": "游戏房间 + 金库,都在线。"
-      }
+      "protocolFee": {
+        "label": "协议费",
+        "detail": "已累计的协议费 —— 链上直读。"
+      },
+      "verifiable": "链上可验证",
+      "indexed": "索引·可能延迟"
     },
     "rooms": {
       "eyebrow": "全部游戏",
@@ -3256,7 +3258,7 @@
       "proofSurface": "链上实时",
       "eyebrow": "为什么公平",
       "title": "每一笔下注都能在链上回放。",
-      "description": "你的钱包、游戏、随机数,各走各的合约。任何人都能从链上拿同一笔下注重放,结果一致。",
+      "description": "你的钱包、游戏、随机数，各走各的合约。任何人都能从链上拿同一笔下注重放，结果一致。",
       "actionLabel": "查看凭证"
     },
     "whyUs": {
@@ -3269,11 +3271,11 @@
         },
         "1": {
           "title": "中奖直接到钱包",
-          "detail": "VRF 返回那一刻,中奖款就到你钱包。没有提款排队、没有最低金额、不延迟。"
+          "detail": "VRF 返回那一刻，中奖款就到你钱包。没有提款排队、没有最低金额、不延迟。"
         },
         "2": {
           "title": "庄家不会跑路",
-          "detail": "庄家此刻能赔多少,链上看得见。下注前可以先核。"
+          "detail": "庄家此刻能赔多少，链上看得见。下注前可以先核。"
         },
         "3": {
           "title": "合约全部公开",
@@ -3289,14 +3291,14 @@
     },
     "featured": {
       "eyebrow": "本周主推",
-      "title": "Keno —— 选 5 个号,搏 500×。",
+      "title": "Keno —— 选 5 个号，搏 500×。",
       "detail": "盘面 15 个号。选 5 个。全中赔 500.5×;中 1 个也能赔。",
       "cta": "玩 Keno"
     },
     "footerCta": {
       "eyebrow": "你说开始就开始",
       "title": "连钱包。挑游戏。开始。",
-      "description": "下注前,钱一直在你自己钱包里。中奖原路返回。",
+      "description": "下注前，钱一直在你自己钱包里。中奖原路返回。",
       "primary": "开始玩",
       "secondary": "浏览游戏"
     }
@@ -3399,7 +3401,7 @@
   "affiliate": {
     "hero": {
       "eyebrow": "推广增长",
-      "title": "分享赌场，证明留在链上。",
+      "title": "分享赌场，证明留在链上",
       "description": "ArbiGameFi 使用 first-touch 推广绑定和 Bank 侧 XP 桶，让推广奖励绑定真实的钱包原生投注，而不是表格对账。",
       "primary": "打开骰子",
       "secondary": "推广控制台"

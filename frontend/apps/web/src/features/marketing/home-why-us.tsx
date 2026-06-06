@@ -16,7 +16,7 @@ const ICONS = [ShieldCheckIcon, BoltIcon, CheckBadgeIcon, CodeBracketSquareIcon]
 
 export function HomeWhyUs({ copy }: { copy: WhyUsCopy }) {
   return (
-    <section className="relative border-b border-border-soft bg-surface-0 py-20">
+    <section className="relative border-b border-border-soft bg-surface-1 py-20">
       <div
         aria-hidden
         className="pointer-events-none absolute left-1/2 top-0 h-[420px] w-[820px] max-w-full -translate-x-1/2 rounded-full"

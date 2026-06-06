@@ -20,6 +20,7 @@ export function HomeActivity({
       age: string;
     };
     empty: string;
+    emptyCta: string;
   };
 }) {
   return (
@@ -117,7 +118,18 @@ export function HomeActivity({
                 </div>
               </div>
             ) : (
-              <div className="px-4 py-12 text-center text-sm text-fg-muted">{copy.empty}</div>
+              <div className="flex flex-col items-center gap-4 px-4 py-14 text-center">
+                <span className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-success/30 bg-success-soft">
+                  <span className="h-2.5 w-2.5 rounded-full bg-success motion-safe:animate-pulse" />
+                </span>
+                <div className="text-base font-bold text-fg">{copy.empty}</div>
+                <Link
+                  href="/casino"
+                  className="inline-flex items-center justify-center gap-2 rounded-md bg-brand px-5 py-2.5 text-xs font-bold uppercase tracking-[0.12em] text-fg-inverse shadow-e1 transition-colors hover:bg-brand-hover"
+                >
+                  {copy.emptyCta}
+                </Link>
+              </div>
             )}
           </div>
         </div>

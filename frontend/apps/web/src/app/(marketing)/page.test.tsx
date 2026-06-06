@@ -14,6 +14,7 @@ const state = {
   betsLoading: false,
   betCount: 0,
   assetOverviews: [] as any[],
+  totalBets: undefined as string | undefined,
   overviewLoading: false,
   overviewError: null as Error | null
 };
@@ -25,7 +26,7 @@ vi.mock("@tanstack/react-query", () => ({
     }
     if (Array.isArray(queryKey) && queryKey.includes("asset-overview")) {
       return {
-        data: state.assetOverviews,
+        data: { assets: state.assetOverviews, totalBets: state.totalBets },
         isLoading: state.overviewLoading,
         error: state.overviewError
       };
@@ -138,7 +139,7 @@ describe("HomePage", () => {
     render(<HomePage />);
 
     expect(screen.getByRole("heading", { name: "Verifiable casino on-chain." })).toBeDefined();
-    expect(screen.getByText("Live on Arbitrum")).toBeDefined();
+    expect(screen.getByText("Live on Base")).toBeDefined();
     expect(screen.getAllByText("Start Playing").length).toBeGreaterThan(0);
     expect(screen.getByText("Game rooms. One wallet.")).toBeDefined();
     expect(screen.getByText("We can't rig the spin.")).toBeDefined();

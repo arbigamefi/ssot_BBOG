@@ -7,6 +7,8 @@ export type AssetOverview = {
   decimals: number;
   totalAssets: bigint;
   totalReserved: bigint;
+  /** Accrued protocol fee payable — chain-read (Bank getSSOT.PF), verifiable. */
+  protocolFee: bigint;
 };
 
 export type LandingActivity = {
@@ -27,6 +29,12 @@ export type LandingStat = {
   label: string;
   value: string;
   detail: string;
+  /**
+   * Data-honesty marker (GTM integrity red line): chain-read values are
+   * "verifiable", index-derived values are "indexed · may lag". Drives a
+   * visually distinct badge so the two are never conflated.
+   */
+  integrity?: "verifiable" | "indexed";
 };
 
 export type LandingRoom = CatalogRoom;

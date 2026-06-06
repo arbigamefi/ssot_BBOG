@@ -2,7 +2,13 @@ import * as React from "react";
 
 import type { LandingStat } from "./home-types";
 
-export function HomeStatsStrip({ stats }: { stats: readonly LandingStat[] }) {
+export function HomeStatsStrip({
+  stats,
+  copy
+}: {
+  stats: readonly LandingStat[];
+  copy: { verifiable: string; indexed: string };
+}) {
   return (
     <section className="border-b border-border-soft bg-surface-0 py-10">
       <div className="mx-auto grid max-w-[1440px] grid-cols-1 gap-4 px-6 md:grid-cols-3 lg:px-10">
@@ -22,8 +28,11 @@ export function HomeStatsStrip({ stats }: { stats: readonly LandingStat[] }) {
                   "linear-gradient(90deg, transparent, hsl(var(--fg) / 0.16), transparent)"
               }}
             />
-            <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-fg-subtle">
-              {stat.label}
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-fg-subtle">
+                {stat.label}
+              </div>
+              {stat.integrity ? <IntegrityBadge integrity={stat.integrity} copy={copy} /> : null}
             </div>
             <div className="mt-2 font-mono text-3xl font-bold text-fg">{stat.value}</div>
             <div className="mt-2 text-sm text-fg-muted">{stat.detail}</div>
@@ -31,5 +40,33 @@ export function HomeStatsStrip({ stats }: { stats: readonly LandingStat[] }) {
         ))}
       </div>
     </section>
+  );
+}
+
+/**
+ * Data-honesty marker (GTM integrity red line). Chain-read values get a solid
+ * accent "verifiable" badge; index-derived values get a muted "indexed · may
+ * lag" badge. The visual distinction is itself a trust signal — verifiable and
+ * best-effort data must never look the same.
+ */
+function IntegrityBadge({
+  integrity,
+  copy
+}: {
+  integrity: "verifiable" | "indexed";
+  copy: { verifiable: string; indexed: string };
+}) {
+  if (integrity === "verifiable") {
+    return (
+      <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-accent/40 bg-accent-soft px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-accent">
+        <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+        {copy.verifiable}
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center whitespace-nowrap rounded-full border border-border-soft bg-surface-0/60 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-fg-subtle">
+      {copy.indexed}
+    </span>
   );
 }

@@ -3103,7 +3103,7 @@
       "days": "{count}d ago"
     },
     "hero": {
-      "channel": "Live on Arbitrum",
+      "channel": "Live on Base",
       "title": "Verifiable casino on-chain.",
       "description": "Casino games, verified on-chain. Win and the payout hits your wallet in seconds — no signup, no escrow, no custody.",
       "enterCasino": "Start Playing",
@@ -3127,18 +3127,20 @@
       }
     },
     "stats": {
-      "freeReserve": {
-        "label": "Free to pay out",
-        "detail": "What the house can pay out right now — verifiable on-chain."
-      },
-      "bankAssets": {
+      "vault": {
         "label": "House bankroll",
-        "detail": "What's parked in the casino's bank, on-chain."
+        "detail": "What's backing every payout — read from the chain."
       },
-      "release": {
-        "label": "Live games",
-        "detail": "Casino rooms live, plus the bank."
-      }
+      "totalBets": {
+        "label": "Total bets",
+        "detail": "Every bet ever placed — counted on the chain."
+      },
+      "protocolFee": {
+        "label": "Protocol fees",
+        "detail": "Accrued protocol fees — read from the chain."
+      },
+      "verifiable": "On-chain",
+      "indexed": "Indexed · may lag"
     },
     "rooms": {
       "eyebrow": "All games",

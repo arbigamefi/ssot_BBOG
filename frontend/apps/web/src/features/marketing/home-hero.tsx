@@ -1,6 +1,6 @@
 import * as React from "react";
 import Link from "next/link";
-import { ArrowRightIcon } from "@heroicons/react/24/outline";
+import { ArrowRightIcon, CodeBracketIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
 
 export function HomeHero({
   copy
@@ -11,8 +11,16 @@ export function HomeHero({
     description: string;
     enterCasino: string;
     viewBank: string;
+    proofRows: {
+      vrf: { title: string; detail: string };
+      bytecode: { title: string; detail: string };
+    };
   };
 }) {
+  const proofPoints = [
+    { icon: ShieldCheckIcon, ...copy.proofRows.vrf },
+    { icon: CodeBracketIcon, ...copy.proofRows.bytecode }
+  ];
   return (
     <section className="relative overflow-hidden border-b border-border-soft bg-surface-0">
       {/* Hero atmosphere — matches the rebuilt game consoles. */}
@@ -26,10 +34,15 @@ export function HomeHero({
       <div
         aria-hidden
         className="pointer-events-none absolute left-1/2 top-12 h-[560px] w-[920px] max-w-full -translate-x-1/2 rounded-full"
-        style={{ background: "radial-gradient(circle, hsl(var(--brand) / 0.14), transparent 68%)" }}
+        style={{ background: "radial-gradient(circle, hsl(var(--brand) / 0.18), transparent 68%)" }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -left-24 top-1/3 h-[420px] w-[420px] rounded-full"
+        style={{ background: "radial-gradient(circle, hsl(var(--accent) / 0.1), transparent 70%)" }}
       />
 
-      <div className="relative mx-auto grid min-h-[calc(100vh-88px)] max-w-[1440px] grid-cols-1 gap-10 px-6 py-20 lg:grid-cols-[minmax(0,0.95fr)_minmax(440px,0.85fr)] lg:items-center lg:px-10">
+      <div className="relative mx-auto grid min-h-[560px] max-w-[1440px] grid-cols-1 gap-10 px-6 py-16 md:py-20 lg:min-h-[660px] lg:grid-cols-[minmax(0,0.95fr)_minmax(440px,0.85fr)] lg:items-center lg:px-10">
         <div className="max-w-3xl">
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand/30 bg-brand-soft px-3 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-brand shadow-e1">
             <span className="h-2 w-2 rounded-full bg-accent" />
@@ -57,6 +70,25 @@ export function HomeHero({
               {copy.viewBank}
             </Link>
           </div>
+
+          {/* Trust row — turns the empty lower hero into credibility, and
+              fills the column so the composition reads intentional. */}
+          <div className="mt-12 grid max-w-xl grid-cols-1 gap-3 sm:grid-cols-2">
+            {proofPoints.map((point) => (
+              <div
+                key={point.title}
+                className="flex gap-3 rounded-lg border border-border-soft bg-surface-1/60 p-4"
+              >
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-brand/20 bg-brand-soft text-brand">
+                  <point.icon className="h-5 w-5" />
+                </span>
+                <div className="min-w-0">
+                  <div className="text-sm font-bold text-fg">{point.title}</div>
+                  <div className="mt-1 text-xs leading-5 text-fg-muted">{point.detail}</div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Hero visual — page-local SVG keeps the roulette presence without
@@ -66,7 +98,7 @@ export function HomeHero({
             aria-hidden
             className="pointer-events-none absolute left-1/2 top-1/2 h-[440px] w-[440px] max-w-full -translate-x-1/2 -translate-y-1/2 rounded-full"
             style={{
-              background: "radial-gradient(circle, hsl(var(--brand) / 0.22), transparent 65%)"
+              background: "radial-gradient(circle, hsl(var(--brand) / 0.26), transparent 65%)"
             }}
           />
           <div className="relative">

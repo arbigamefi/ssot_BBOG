@@ -8,12 +8,7 @@ import { useLocale, useTranslations } from "next-intl";
 
 import { useRecentBets } from "../../features/betting/useRecentBets";
 import { getCatalogRooms } from "../../features/casino/catalog";
-import {
-  formatTokenAmount,
-  shortAddress,
-  shortDigest,
-  timeAgo
-} from "../../features/marketing/format";
+import { formatTokenAmount, shortAddress, timeAgo } from "../../features/marketing/format";
 import { HomeActivity } from "../../features/marketing/home-activity";
 import { HomeFeatured } from "../../features/marketing/home-featured";
 import { HomeFooterCta } from "../../features/marketing/home-footer-cta";
@@ -31,14 +26,18 @@ import type {
 import { useRelease } from "../../ssot/release/ReleaseProvider";
 
 type LandingAssetOverviewResponse = {
+  totalBets?: string;
   rows: Array<{
     address: string;
     symbol: string;
     decimals: number;
     totalAssets: string;
     totalReserved: string;
+    protocolFee: string;
   }>;
 };
+
+type LandingOverview = { assets: AssetOverview[]; totalBets?: string };
 
 function toBigOrNull(value?: string | bigint | number): bigint | null {
   if (value == null || value === "") return null;
@@ -58,44 +57,56 @@ export function HomePageClient() {
     limit: 5
   });
 
-  const { data: assetOverviews = [] } = useQuery({
+  const { data: landingOverview } = useQuery({
     queryKey: ["ssot", "landing", "asset-overview", chainId, release?.releaseDigest],
     enabled: Boolean(release),
-    queryFn: async (): Promise<AssetOverview[]> => {
+    queryFn: async (): Promise<LandingOverview> => {
       const params = new URLSearchParams({ chainId: String(chainId) });
       const response = await fetch(`/api/landing/asset-overview?${params.toString()}`, {
         headers: { accept: "application/json" }
       });
-      if (!response.ok) return [];
+      if (!response.ok) return { assets: [] };
       const body = (await response.json()) as LandingAssetOverviewResponse;
-      return body.rows.map((row) => ({
-        address: row.address as Address,
-        symbol: row.symbol || t("format.assetFallback"),
-        decimals: row.decimals,
-        totalAssets: BigInt(row.totalAssets),
-        totalReserved: BigInt(row.totalReserved)
-      }));
+      return {
+        totalBets: body.totalBets,
+        assets: body.rows.map((row) => ({
+          address: row.address as Address,
+          symbol: row.symbol || t("format.assetFallback"),
+          decimals: row.decimals,
+          totalAssets: BigInt(row.totalAssets),
+          totalReserved: BigInt(row.totalReserved),
+          protocolFee: BigInt(row.protocolFee)
+        }))
+      };
     }
   });
+  const assetOverviews = landingOverview?.assets ?? [];
+  const totalBetsRaw = landingOverview?.totalBets;
 
   const rooms = React.useMemo(
     () => getCatalogRooms(release?.gamesMeta as Array<{ slug: string; label: string }> | undefined),
     [release?.gamesMeta]
   );
 
-  const reserveFloor = formatAssetOverviewList(
-    assetOverviews,
-    locale,
-    t("format.awaitingReserveSync"),
-    (asset) =>
-      asset.totalAssets > asset.totalReserved ? asset.totalAssets - asset.totalReserved : 0n
-  );
-  const totalAssetsLabel = formatAssetOverviewList(
-    assetOverviews,
-    locale,
-    t("format.awaitingReserveSync"),
-    (asset) => asset.totalAssets
-  );
+  // Reserve banks can hold the same asset across multiple pools, so the raw
+  // rows look like "188 USDC / 24 USDC / 0 WETH". Aggregate by asset for one
+  // clean figure per token and drop zero-balance tokens. An empty result means
+  // the bank is unfunded (pre-launch) — show the sync state, never "0 USDC".
+  const aggregatedAssets = aggregateAssetOverviews(assetOverviews);
+  const bankFunded = aggregatedAssets.length > 0;
+  const reserveFloor = bankFunded
+    ? formatAssetOverviewList(aggregatedAssets, locale, t("format.awaitingReserveSync"), (asset) =>
+        asset.totalAssets > asset.totalReserved ? asset.totalAssets - asset.totalReserved : 0n
+      )
+    : t("format.awaitingReserveSync");
+  const totalAssetsLabel = bankFunded
+    ? formatAssetOverviewList(
+        aggregatedAssets,
+        locale,
+        t("format.awaitingReserveSync"),
+        (asset) => asset.totalAssets
+      )
+    : t("format.awaitingReserveSync");
 
   const gameLabelById = React.useMemo(() => {
     const map = new Map<string, string>();
@@ -162,21 +173,41 @@ export function HomePageClient() {
     };
   });
 
+  // Total bets ever — verifiable on-chain counter (SettlementRouter.nextPositionId).
+  const totalBetsLabel =
+    bankFunded && totalBetsRaw != null ? BigInt(totalBetsRaw).toLocaleString(locale) : "—";
+  // Protocol fee is read straight off the Bank (protocolFeesPayable) — chain-read,
+  // verifiable, no index dependency.
+  const protocolFeeLabel = bankFunded
+    ? formatAssetOverviewList(
+        aggregatedAssets,
+        locale,
+        t("format.awaitingReserveSync"),
+        (asset) => asset.protocolFee
+      )
+    : t("format.awaitingReserveSync");
+
+  // Three cards = the three flywheel sides, all read straight from the chain:
+  // vault (NAV), total bets (position counter), protocol fee. All verifiable —
+  // the integrity marker still labels them so the data-honesty posture is explicit.
   const stats: LandingStat[] = [
     {
-      label: t("stats.freeReserve.label"),
-      value: reserveFloor,
-      detail: t("stats.freeReserve.detail")
-    },
-    {
-      label: t("stats.bankAssets.label"),
+      label: t("stats.vault.label"),
       value: totalAssetsLabel,
-      detail: t("stats.bankAssets.detail")
+      detail: t("stats.vault.detail"),
+      integrity: "verifiable"
     },
     {
-      label: t("stats.release.label"),
-      value: shortDigest(release?.releaseDigest, t("format.pending")),
-      detail: t("stats.release.detail")
+      label: t("stats.totalBets.label"),
+      value: totalBetsLabel,
+      detail: t("stats.totalBets.detail"),
+      integrity: "verifiable"
+    },
+    {
+      label: t("stats.protocolFee.label"),
+      value: protocolFeeLabel,
+      detail: t("stats.protocolFee.detail"),
+      integrity: "verifiable"
     }
   ];
 
@@ -195,7 +226,17 @@ export function HomePageClient() {
           title: t("hero.title"),
           description: t("hero.description"),
           enterCasino: t("hero.enterCasino"),
-          viewBank: t("hero.viewBank")
+          viewBank: t("hero.viewBank"),
+          proofRows: {
+            vrf: {
+              title: t("hero.proofRows.vrf.title"),
+              detail: t("hero.proofRows.vrf.detail")
+            },
+            bytecode: {
+              title: t("hero.proofRows.bytecode.title"),
+              detail: t("hero.proofRows.bytecode.detail")
+            }
+          }
         }}
       />
 
@@ -215,11 +256,17 @@ export function HomePageClient() {
             payout: t("activity.headers.payout"),
             age: t("activity.headers.age")
           },
-          empty: t("activity.empty")
+          empty: t("activity.empty"),
+          emptyCta: t("hero.enterCasino")
         }}
       />
 
-      <HomeStatsStrip stats={stats} />
+      {bankFunded ? (
+        <HomeStatsStrip
+          stats={stats}
+          copy={{ verifiable: t("stats.verifiable"), indexed: t("stats.indexed") }}
+        />
+      ) : null}
 
       {featuredRoom ? (
         <HomeFeatured
@@ -277,6 +324,23 @@ export function HomePageClient() {
       />
     </main>
   );
+}
+
+/** Sum reserve banks that hold the same asset, and drop zero-balance tokens. */
+function aggregateAssetOverviews(rows: readonly AssetOverview[]): AssetOverview[] {
+  const byAsset = new Map<string, AssetOverview>();
+  for (const row of rows) {
+    const key = String(row.address).toLowerCase();
+    const existing = byAsset.get(key);
+    if (existing) {
+      existing.totalAssets += row.totalAssets;
+      existing.totalReserved += row.totalReserved;
+      existing.protocolFee += row.protocolFee;
+    } else {
+      byAsset.set(key, { ...row });
+    }
+  }
+  return Array.from(byAsset.values()).filter((asset) => asset.totalAssets > 0n);
 }
 
 function formatAssetOverviewList(

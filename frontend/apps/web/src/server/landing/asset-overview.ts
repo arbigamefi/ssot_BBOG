@@ -23,6 +23,23 @@ const BANK_SSOT_ABI = [
     ],
     stateMutability: "view",
     type: "function"
+  },
+  {
+    inputs: [],
+    name: "protocolFeesPayable",
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function"
+  }
+] as const;
+
+const SETTLEMENT_ROUTER_ABI = [
+  {
+    inputs: [],
+    name: "nextPositionId",
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+    type: "function"
   }
 ] as const;
 
@@ -32,6 +49,8 @@ export type LandingAssetOverviewResponse = {
   generatedAt: number;
   releaseDigest?: string;
   source: "rpc" | "unavailable";
+  /** Total bets ever placed — chain-read (SettlementRouter.nextPositionId − 1). */
+  totalBets?: string;
   rows: Array<{
     address: Address;
     bank: Address;
@@ -39,6 +58,8 @@ export type LandingAssetOverviewResponse = {
     decimals: number;
     totalAssets: string;
     totalReserved: string;
+    /** Accrued protocol fee payable (Bank getSSOT.PF) — chain-read, verifiable. */
+    protocolFee: string;
   }>;
 };
 
@@ -88,23 +109,52 @@ export async function queryLandingAssetOverview(
       release.pools.map(async (pool) => {
         const poolAsset = getPoolAssetContext(release, pool);
         if (!poolAsset?.bank) return null;
-        const ssot = await publicClient.readContract({
-          address: getAddress(poolAsset.bank),
-          abi: BANK_SSOT_ABI,
-          functionName: "getSSOT",
-          args: []
-        });
+        const bank = getAddress(poolAsset.bank);
+        const [ssot, protocolFee] = await Promise.all([
+          publicClient.readContract({
+            address: bank,
+            abi: BANK_SSOT_ABI,
+            functionName: "getSSOT",
+            args: []
+          }),
+          publicClient.readContract({
+            address: bank,
+            abi: BANK_SSOT_ABI,
+            functionName: "protocolFeesPayable",
+            args: []
+          })
+        ]);
 
         return {
           address: getAddress(poolAsset.asset.address),
-          bank: getAddress(poolAsset.bank),
+          bank,
           symbol: poolAsset.asset.symbol,
           decimals: poolAsset.asset.decimals,
           totalAssets: BigInt(ssot.NAV).toString(),
-          totalReserved: BigInt(ssot.R).toString()
+          totalReserved: BigInt(ssot.R).toString(),
+          protocolFee: BigInt(protocolFee).toString()
         };
       })
     );
+
+    // Total bets ever — the global position counter (chain-read, verifiable).
+    // Conservative: nextPositionId − 1 never overstates activity.
+    const routerAddress = (release as { contracts?: { settlementRouter?: string } }).contracts
+      ?.settlementRouter;
+    let totalBets: string | undefined;
+    if (routerAddress) {
+      try {
+        const nextId = await publicClient.readContract({
+          address: getAddress(routerAddress),
+          abi: SETTLEMENT_ROUTER_ABI,
+          functionName: "nextPositionId",
+          args: []
+        });
+        totalBets = BigInt(nextId) > 0n ? (BigInt(nextId) - 1n).toString() : "0";
+      } catch {
+        totalBets = undefined;
+      }
+    }
 
     return {
       schemaVersion: 1,
@@ -112,6 +162,7 @@ export async function queryLandingAssetOverview(
       generatedAt: Date.now(),
       releaseDigest: release.releaseDigest,
       source: "rpc",
+      totalBets,
       rows: rows.filter((row): row is NonNullable<(typeof rows)[number]> => Boolean(row))
     };
   } catch {

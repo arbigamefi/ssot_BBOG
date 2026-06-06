@@ -340,7 +340,7 @@
       "days": "há {count}d"
     },
     "hero": {
-      "channel": "Ao vivo na Arbitrum",
+      "channel": "Ao vivo na Base",
       "title": "Cassino verificável on-chain.",
       "description": "Jogos de cassino verificáveis on-chain. Ganhou, o prêmio cai na sua carteira em segundos — sem cadastro, sem custódia, sem intermediário.",
       "enterCasino": "Começar a jogar",
@@ -364,18 +364,20 @@
       }
     },
     "stats": {
-      "freeReserve": {
-        "label": "Livre para pagar",
-        "detail": "O que a casa pode pagar agora — verificável on-chain."
+      "vault": {
+        "label": "Banca da casa",
+        "detail": "O que cobre cada pagamento — lido direto da chain."
       },
-      "bankAssets": {
-        "label": "Bankroll da casa",
-        "detail": "O que está guardado no banco do cassino, on-chain."
+      "totalBets": {
+        "label": "Total de apostas",
+        "detail": "Todas as apostas já feitas — contadas na chain."
       },
-      "release": {
-        "label": "Jogos ativos",
-        "detail": "Salas de jogo ao vivo, mais o banco."
-      }
+      "protocolFee": {
+        "label": "Taxas do protocolo",
+        "detail": "Taxas de protocolo acumuladas — lidas da chain."
+      },
+      "verifiable": "On-chain",
+      "indexed": "Indexado · pode atrasar"
     },
     "rooms": {
       "eyebrow": "Todos os jogos",

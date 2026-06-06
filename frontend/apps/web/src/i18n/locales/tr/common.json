@@ -340,7 +340,7 @@
       "days": "{count}g önce"
     },
     "hero": {
-      "channel": "Arbitrum'da canlı",
+      "channel": "Base'de canlı",
       "title": "Zincir üstünde doğrulanabilir casino.",
       "description": "Casino oyunları zincir üstünde doğrulanır. Kazanın, ödeme saniyeler içinde cüzdanınıza gelsin — kayıt yok, emanet yok, saklama yok.",
       "enterCasino": "Oynamaya başla",
@@ -364,18 +364,20 @@
       }
     },
     "stats": {
-      "freeReserve": {
-        "label": "Ödenebilir",
-        "detail": "Kasanın şu anda ödeyebileceği tutar — zincir üstünde doğrulanabilir."
+      "vault": {
+        "label": "Kasa bankroll",
+        "detail": "Her ödemeyi neyin desteklediği — doğrudan zincirden."
       },
-      "bankAssets": {
-        "label": "Kasa bankroll'u",
-        "detail": "Casino bankasında tutulan, zincir üstünde."
+      "totalBets": {
+        "label": "Toplam bahis",
+        "detail": "Yapılmış tüm bahisler — zincirde sayılır."
       },
-      "release": {
-        "label": "Aktif oyunlar",
-        "detail": "Oyun odaları canlı, banka da hazır."
-      }
+      "protocolFee": {
+        "label": "Protokol ücreti",
+        "detail": "Birikmiş protokol ücretleri — zincirden okunur."
+      },
+      "verifiable": "Zincir üstü",
+      "indexed": "İndeksli · gecikebilir"
     },
     "rooms": {
       "eyebrow": "Tüm oyunlar",
