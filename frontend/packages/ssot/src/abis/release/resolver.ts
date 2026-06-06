@@ -36,7 +36,7 @@ export function getReleaseAbis(chainId: number): ReleaseAbis {
     !mod.SportsRiskEngineAbi
   ) {
     throw new Error(
-      `Release ABI module for chainId=${chainId} is missing required v1.3 contracts (GameHub/Bank/VRFHub/PoolRegistry/SettlementRouter/SportsHub/SportsRiskEngine).`
+      `Release ABI module for chainId=${chainId} is missing required release contracts (GameHub/Bank/VRFHub/PoolRegistry/SettlementRouter/SportsHub/SportsRiskEngine).`
     );
   }
   return {

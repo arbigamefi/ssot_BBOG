@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Export *frontend-only* ABIs into deployments/abis-v13/.
+"""Export *frontend-only* ABIs into a versioned deployments/abis-* directory.
 
 This is intentionally a "trimmed ABI" export:
   - We DO NOT ship full Foundry artifacts (bytecode/metadata).
   - We only export the `abi` array needed by frontend tooling.
 
-Outputs:
+Default outputs:
   - deployments/abis-v13/index.json
   - deployments/abis-v13/<Contract>.abi.json (one per contract type)
 
@@ -13,7 +13,7 @@ The index is tied to the release identity (chainId + blockNumber) so that
 frontend can be zero-inference: copy+consume.
 
 Requires:
-  - `deployments/frontend-manifest-latest-v13.json` (for addresses)
+  - a frontend manifest (for addresses)
   - `out/` artifacts present (run `forge build` first)
 """
 
@@ -27,7 +27,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import hashlib
 import time
 
-REQUIRED_CONTRACTS_V13 = [
+REQUIRED_CONTRACTS = [
     # core
     ("GameHub", "src/core/GameHub.sol:GameHub", "gameHub"),
     ("VRFHub", "src/core/VRFHub.sol:VRFHub", "vrfHub"),
@@ -131,8 +131,8 @@ def main() -> None:
     exported: List[Dict[str, Any]] = []
 
     if args.schema != 2:
-        raise SystemExit("only schemaVersion=2 v1.3 manifests are supported")
-    required_contracts = REQUIRED_CONTRACTS_V13
+        raise SystemExit("only schemaVersion=2 frontend manifests are supported")
+    required_contracts = REQUIRED_CONTRACTS
 
     # Export each required ABI
     for file_name, _fq, addr_key in required_contracts:
