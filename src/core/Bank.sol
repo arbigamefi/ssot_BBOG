@@ -62,7 +62,8 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     uint256 public override holdbackVestingSeconds;
     uint256 public override minPlayerTurnoverForUnlock;
 
-    uint256 public override minLiquidityBps; // [0..10000]
+    uint256 public override riskReserveBps; // [0..10000], gates new risk-in.
+    uint256 public override withdrawalBufferBps; // [0..10000], gates optional outflows.
     // pause state comes from OZ Pausable (maps to SSOT "riskInPaused")
 
     // ERC4626-like shares (ERC20)
@@ -101,7 +102,8 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         if (minLiquidityBps_ > 10_000) revert Errors.InvalidBps(minLiquidityBps_);
         asset = asset_;
         _assetToken = IERC20(asset_);
-        minLiquidityBps = minLiquidityBps_;
+        riskReserveBps = minLiquidityBps_;
+        withdrawalBufferBps = minLiquidityBps_;
         name = name_;
         symbol = symbol_;
         decimals = decimals_;
@@ -133,9 +135,29 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         settlementRouter = router_;
     }
 
+    /// @notice Legacy setter alias for the new-risk reserve buffer.
     function setMinLiquidityBps(uint256 bps) external onlyGov {
+        _setRiskReserveBps(bps);
+    }
+
+    function setRiskReserveBps(uint256 bps) external onlyGov {
+        _setRiskReserveBps(bps);
+    }
+
+    function setWithdrawalBufferBps(uint256 bps) external onlyGov {
         if (bps > 10_000) revert Errors.InvalidBps(bps);
-        minLiquidityBps = bps;
+        withdrawalBufferBps = bps;
+        emit WithdrawalBufferBpsSet(bps);
+    }
+
+    function minLiquidityBps() external view override returns (uint256) {
+        return riskReserveBps;
+    }
+
+    function _setRiskReserveBps(uint256 bps) internal {
+        if (bps > 10_000) revert Errors.InvalidBps(bps);
+        riskReserveBps = bps;
+        emit RiskReserveBpsSet(bps);
     }
 
     function setHoldbackVestingSeconds(uint256 seconds_) external onlyGov {
@@ -224,17 +246,25 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         uint256 XP = externalPayablesTotal();
         uint256 NAV = AccountingLib.nav(B, PF, XP);
         uint256 R = totalReserved;
-        uint256 ml = AccountingLib.minLiq(NAV, minLiquidityBps);
-        uint256 fr = (NAV >= R + ml) ? (NAV - R - ml) : 0;
+        uint256 rr = AccountingLib.minLiq(NAV, riskReserveBps);
+        uint256 rf = (NAV >= R + rr) ? (NAV - R - rr) : 0;
+        uint256 wb = AccountingLib.minLiq(NAV, withdrawalBufferBps);
+        uint256 wo = (NAV >= R + wb) ? (NAV - R - wb) : 0;
         s = SSOTTypes.SSOT({
             B: B,
             PF: PF,
             XP: XP,
             NAV: NAV,
             R: R,
-            minLiquidityBps: minLiquidityBps,
-            minLiq: ml,
-            free: fr,
+            minLiquidityBps: riskReserveBps,
+            minLiq: rr,
+            free: rf,
+            riskReserveBps: riskReserveBps,
+            riskReserve: rr,
+            riskFree: rf,
+            withdrawalBufferBps: withdrawalBufferBps,
+            withdrawalBuffer: wb,
+            withdrawable: wo,
             riskInPaused: paused(),
             xpAccruedTotal: xpAccruedTotal,
             xpLockedTotal: xpLockedTotal,
@@ -510,9 +540,9 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         uint256 B = _assetToken.balanceOf(address(this));
         uint256 NAV = AccountingLib.nav(B, protocolFeesPayable, externalPayablesTotal());
         uint256 R = totalReserved;
-        uint256 ml = AccountingLib.minLiq(NAV, minLiquidityBps);
-        if (NAV <= R + ml) return 0;
-        return NAV - R - ml;
+        uint256 buffer = AccountingLib.minLiq(NAV, withdrawalBufferBps);
+        if (NAV <= R + buffer) return 0;
+        return NAV - R - buffer;
     }
 
     function _checkOptionalOutflowDomain(uint256 assetsOut, uint256 pfDecrease, uint256 xpDecrease) internal view {
@@ -523,14 +553,15 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         uint256 XP = externalPayablesTotal();
         if (pfDecrease > PF || xpDecrease > XP) revert OptionalOutflowDomainViolation();
 
+        uint256 NAVBefore = AccountingLib.nav(B, PF, XP);
+        uint256 buffer = AccountingLib.minLiq(NAVBefore, withdrawalBufferBps);
         uint256 Bafter = B - assetsOut;
         uint256 PFafter = PF - pfDecrease;
         uint256 XPafter = XP - xpDecrease;
 
         uint256 NAV = AccountingLib.nav(Bafter, PFafter, XPafter);
         uint256 R = totalReserved;
-        uint256 ml = AccountingLib.minLiq(NAV, minLiquidityBps);
-        if (NAV < R || NAV - R < ml) revert OptionalOutflowDomainViolation();
+        if (NAV < R || NAV - R < buffer) revert OptionalOutflowDomainViolation();
     }
 
     // -------- bet funds interface (only SettlementRouter) --------
@@ -556,7 +587,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         uint256 B = _assetToken.balanceOf(address(this));
         uint256 NAV = AccountingLib.nav(B, protocolFeesPayable, externalPayablesTotal());
         uint256 Rafter = totalReserved + reserved;
-        uint256 ml = AccountingLib.minLiq(NAV, minLiquidityBps);
+        uint256 ml = AccountingLib.minLiq(NAV, riskReserveBps);
         if (NAV < Rafter || NAV - Rafter < ml) revert SolvencyViolation();
 
         totalReserved = Rafter;

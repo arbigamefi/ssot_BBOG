@@ -31,10 +31,12 @@ export function EarnRiskPanel({
       ? snapshot.totalAssets - snapshot.totalReserved
       : 0n
     : undefined;
-  const minLiquidity =
-    snapshot?.minLiquidityBps != null && snapshot.totalAssets != null
-      ? (snapshot.totalAssets * BigInt(snapshot.minLiquidityBps)) / 10_000n
-      : undefined;
+  const withdrawalBufferBps = snapshot?.withdrawalBufferBps ?? snapshot?.minLiquidityBps;
+  const withdrawalBuffer =
+    snapshot?.withdrawalBuffer ??
+    (snapshot && withdrawalBufferBps != null
+      ? (snapshot.totalAssets * BigInt(withdrawalBufferBps)) / 10_000n
+      : undefined);
 
   const rows = (
     <div className="divide-y divide-border-soft">
@@ -55,10 +57,10 @@ export function EarnRiskPanel({
       <RiskRow
         icon={<ScaleIcon className="h-5 w-5" />}
         label={t("earn.risk.liquidityFloor.label")}
-        title={formatPctFromBps(snapshot?.minLiquidityBps)}
+        title={formatPctFromBps(withdrawalBufferBps)}
         detail={t("earn.risk.liquidityFloor.detail", {
-          bps: formatBps(snapshot?.minLiquidityBps),
-          amount: formatTokenAmount(minLiquidity, decimals, symbol, 2)
+          bps: formatBps(withdrawalBufferBps),
+          amount: formatTokenAmount(withdrawalBuffer, decimals, symbol, 2)
         })}
       />
       <RiskRow

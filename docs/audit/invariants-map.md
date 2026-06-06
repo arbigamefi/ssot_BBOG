@@ -30,13 +30,22 @@ that enforce them.
   - `test/invariants/SettlementRouterInvariants.t.sol::invariant_router_reserved_matches_bank_reserved_by_pool`
   - `test/diff/StatefulSystemDiff.t.sol`
 
-### A4[a]: Optional outflow domain `NAV - R >= MinLiq(NAV)`
+### A4[a]: Optional outflow domain `NAV_after - R >= WithdrawalBuffer(NAV_before)`
 - Code:
   - `src/core/Bank.sol::_checkOptionalOutflowDomain`
   - used by `withdraw/redeem/claimXPAcrued` (optional outflows)
 - Tests:
+  - `test/unit/BankObservability.t.sol::test_withdrawalBufferIsSeparateFromRiskReserve`
+  - `test/unit/BankObservability.t.sol::test_withdrawalBufferAccountsForReservedRisk`
   - `test/diff/StatefulSystemDiff.t.sol` keeps routed risk-in/debt-out accounting inside the Bank mirror.
   - Standalone v1.2 named invariant was retired during the v1.3 router proof split.
+
+### A4R[a]: Risk-in reserve domain `NAV - R_after >= RiskReserve(NAV)`
+- Code:
+  - `src/core/Bank.sol::holdBet`
+- Tests:
+  - `test/diff/StatefulSystemDiff.t.sol`
+  - `test/invariants/SettlementRouterInvariants.t.sol`
 
 ## B — Bets (reserve safety)
 

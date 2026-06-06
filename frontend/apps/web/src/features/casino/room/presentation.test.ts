@@ -32,7 +32,7 @@ describe("game room presentation helpers", () => {
     ).toBe("500,000 WETH");
   });
 
-  it("derives free liquidity net of the minimum-liquidity reserve", () => {
+  it("derives free liquidity net of the risk reserve", () => {
     // totalAssets 1,000,000 (6dp) − reserved 100,000 − 10% reserve (100,000) = 800,000.
     expect(
       computePoolFreeLiquidity({
@@ -44,6 +44,17 @@ describe("game room presentation helpers", () => {
     expect(computePoolFreeLiquidity(undefined)).toBeUndefined();
     // Never returns negative.
     expect(computePoolFreeLiquidity({ totalAssets: 100n, totalReserved: 1_000n })).toBe(0n);
+  });
+
+  it("prefers riskReserveBps over the legacy minLiquidity alias for new-risk capacity", () => {
+    expect(
+      computePoolFreeLiquidity({
+        totalAssets: 1_000_000_000_000n,
+        totalReserved: 100_000_000_000n,
+        minLiquidityBps: 1000,
+        riskReserveBps: 2000
+      })
+    ).toBe(700_000_000_000n);
   });
 
   it("derives live max payout from full free liquidity and max bet for the odds", () => {

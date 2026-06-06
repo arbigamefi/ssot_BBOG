@@ -36,6 +36,7 @@ export function formatGameMaxPayout({
 export type BankLiquidityLike = {
   totalAssets: bigint;
   totalReserved: bigint;
+  riskReserveBps?: number;
   minLiquidityBps?: number;
 };
 
@@ -46,9 +47,11 @@ export type BankLiquidityLike = {
  */
 export function computePoolFreeLiquidity(snapshot: BankLiquidityLike | null | undefined) {
   if (!snapshot) return undefined;
-  const bps = BigInt(Math.max(0, Math.round(snapshot.minLiquidityBps ?? 0)));
-  const minReserve = (snapshot.totalAssets * bps) / 10000n;
-  const free = snapshot.totalAssets - snapshot.totalReserved - minReserve;
+  const bps = BigInt(
+    Math.max(0, Math.round(snapshot.riskReserveBps ?? snapshot.minLiquidityBps ?? 0))
+  );
+  const riskReserve = (snapshot.totalAssets * bps) / 10000n;
+  const free = snapshot.totalAssets - snapshot.totalReserved - riskReserve;
   return free > 0n ? free : 0n;
 }
 

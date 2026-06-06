@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "forge-std/Test.sol";
 
 import {Bank} from "../../src/core/Bank.sol";
+import {IBank} from "../../src/core/interfaces/IBank.sol";
 import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
 import {MockERC20} from "../../src/mocks/MockERC20.sol";
 
@@ -60,6 +61,63 @@ contract BankObservabilityTest is Test {
         emit Withdraw(bob, bob, bob, 10e6, 10e6);
         uint256 assetsOut = bank.redeem(10e6, bob, bob);
         assertEq(assetsOut, 10e6, "redeem should emit and return expected assets");
+    }
+
+    function test_withdrawalBufferIsSeparateFromRiskReserve() external {
+        Bank bufferedBank = new Bank(address(asset), gov, 9000, "LP USDC Buffered", "lpUSDC-B", 6);
+        vm.prank(gov);
+        bufferedBank.setSettlementRouterOnce(address(this));
+
+        assertEq(bufferedBank.minLiquidityBps(), 9000, "legacy minLiquidityBps aliases risk reserve");
+        assertEq(bufferedBank.riskReserveBps(), 9000, "risk reserve should initialize from legacy ctor arg");
+        assertEq(bufferedBank.withdrawalBufferBps(), 9000, "withdrawal buffer defaults to legacy ctor arg");
+
+        vm.prank(gov);
+        bufferedBank.setWithdrawalBufferBps(1000);
+
+        asset.mint(alice, 1_000e6);
+        vm.startPrank(alice);
+        asset.approve(address(bufferedBank), type(uint256).max);
+        bufferedBank.deposit(1_000e6, alice);
+
+        assertEq(bufferedBank.maxWithdraw(alice), 900e6, "withdraw max should use withdrawal buffer, not risk reserve");
+        bufferedBank.withdraw(900e6, alice, alice);
+        assertEq(bufferedBank.totalAssets(), 100e6, "withdraw should preserve the configured buffer");
+        vm.stopPrank();
+    }
+
+    function test_withdrawalBufferAccountsForReservedRisk() external {
+        Bank bufferedBank = new Bank(address(asset), gov, 0, "LP USDC Buffered", "lpUSDC-B", 6);
+        vm.prank(gov);
+        bufferedBank.setSettlementRouterOnce(address(this));
+        vm.prank(gov);
+        bufferedBank.setWithdrawalBufferBps(1000);
+
+        asset.mint(alice, 1_000e6);
+        asset.mint(player, 10e6);
+
+        vm.startPrank(alice);
+        asset.approve(address(bufferedBank), type(uint256).max);
+        bufferedBank.deposit(1_000e6, alice);
+        vm.stopPrank();
+
+        vm.prank(player);
+        asset.approve(address(bufferedBank), type(uint256).max);
+
+        bufferedBank.holdBet(1, player, 10e6, 50e6, bytes32(uint256(1)));
+
+        uint256 nav = bufferedBank.totalAssets();
+        uint256 expectedBuffer = (nav * 1000) / 10_000;
+        uint256 expectedMax = nav - bufferedBank.totalReserved() - expectedBuffer;
+        assertEq(nav, 1_010e6, "player stake should enter NAV while the bet is open");
+        assertEq(expectedMax, 859e6, "test vector");
+        assertEq(bufferedBank.maxWithdraw(alice), expectedMax, "maxWithdraw should preserve R plus withdrawal buffer");
+
+        vm.startPrank(alice);
+        vm.expectRevert(IBank.OptionalOutflowDomainViolation.selector);
+        bufferedBank.withdraw(expectedMax + 1, alice, alice);
+        bufferedBank.withdraw(expectedMax, alice, alice);
+        vm.stopPrank();
     }
 
     function test_performanceCountersTrackSettledTurnoverPayoutFeesAndRefunds() external {

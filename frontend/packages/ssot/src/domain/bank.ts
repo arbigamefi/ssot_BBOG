@@ -7,7 +7,17 @@ export interface DomainBankSnapshot {
   totalSupply: bigint; // LP share supply
   assetsPerShare: bigint; // assets represented by one whole share unit
   totalReserved: bigint;
+  /**
+   * Legacy compatibility alias. In v1.4+ this maps to riskReserveBps.
+   * New-risk solvency should prefer riskReserveBps when present.
+   */
   minLiquidityBps?: number;
+  riskReserveBps?: number;
+  riskReserve?: bigint;
+  riskFree?: bigint;
+  withdrawalBufferBps?: number;
+  withdrawalBuffer?: bigint;
+  withdrawable?: bigint;
   protocolFeesPayable?: bigint;
   externalPayablesTotal?: bigint;
   updatedAtBlock?: bigint;

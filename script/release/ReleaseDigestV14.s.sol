@@ -190,6 +190,8 @@ contract ReleaseDigestV14 is Script {
                 abi.encode(
                     digest,
                     snap.readUint(string.concat(".poolBankMinLiqBps_", suffix)),
+                    snap.readUint(string.concat(".poolBankRiskReserveBps_", suffix)),
+                    snap.readUint(string.concat(".poolBankWithdrawalBufferBps_", suffix)),
                     snap.readUint(string.concat(".poolBankMinTurnoverForUnlock_", suffix)),
                     snap.readUint(string.concat(".poolBankHoldbackVestingSeconds_", suffix)),
                     keccak256(bytes(snap.readString(string.concat(".poolLpName_", suffix)))),

@@ -967,6 +967,14 @@ describe("createSSOTSDK", () => {
         NAV: 1_250_000n,
         R: 250_000n,
         minLiquidityBps: 1000n,
+        minLiq: 125_000n,
+        free: 875_000n,
+        riskReserveBps: 2000n,
+        riskReserve: 250_000n,
+        riskFree: 750_000n,
+        withdrawalBufferBps: 500n,
+        withdrawalBuffer: 62_500n,
+        withdrawable: 937_500n,
         PF: 10_000n,
         XP: 20_000n
       })
@@ -978,6 +986,13 @@ describe("createSSOTSDK", () => {
     expect(result.totalAssets).toBe(1_250_000n);
     expect(result.totalSupply).toBe(1_000_000n);
     expect(result.assetsPerShare).toBe(1_250_000n);
+    expect(result.minLiquidityBps).toBe(1000);
+    expect(result.riskReserveBps).toBe(2000);
+    expect(result.riskReserve).toBe(250_000n);
+    expect(result.riskFree).toBe(750_000n);
+    expect(result.withdrawalBufferBps).toBe(500);
+    expect(result.withdrawalBuffer).toBe(62_500n);
+    expect(result.withdrawable).toBe(937_500n);
     expect(pub.readContract).toHaveBeenCalledWith(
       expect.objectContaining({
         address: getAddress(BANK),

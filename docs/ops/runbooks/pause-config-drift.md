@@ -40,7 +40,8 @@ Use `deployments/release/release-*-v13.json` (preferred) or `deployments/latest-
 - Pause risk-in per pool/domain using the relevant vertical hub controls.
 - Update refund timeout: `GameHub.setRefundTimeout(seconds)` where applicable.
 - Update module registry: `GameHub.registerGame(gameId, module)`
-- Update bank minLiquidity: `Bank.setMinLiquidityBps(bps)`
+- Update bank risk reserve: `Bank.setRiskReserveBps(bps)`
+- Update bank withdrawal buffer: `Bank.setWithdrawalBufferBps(bps)`
 - Transfer governance (two-step): `GovernanceTransferStarted/Transferred`
 
 **Guardrail**

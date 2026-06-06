@@ -61,6 +61,12 @@ library SSOTTypes {
         uint256 minLiquidityBps; // [0..10_000]
         uint256 minLiq; // NAV * bps / 10_000
         uint256 free; // NAV - R - minLiq (clamped at 0)
+        uint256 riskReserveBps; // [0..10_000], new-risk reserve buffer
+        uint256 riskReserve; // NAV * riskReserveBps / 10_000
+        uint256 riskFree; // NAV - R - riskReserve (clamped at 0)
+        uint256 withdrawalBufferBps; // [0..10_000], optional-outflow buffer
+        uint256 withdrawalBuffer; // NAV * withdrawalBufferBps / 10_000
+        uint256 withdrawable; // NAV - R - withdrawalBuffer (clamped at 0)
         bool riskInPaused; // Risk-In + Optional outflow freeze
 
         // XP bucket breakdown (E-class invariants)

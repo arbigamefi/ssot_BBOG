@@ -97,6 +97,7 @@ export function useGameWalletBalance({
 export type PoolSnapshot = {
   totalAssets: bigint;
   totalReserved: bigint;
+  riskReserveBps?: number;
   minLiquidityBps?: number;
 };
 

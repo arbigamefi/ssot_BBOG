@@ -42,7 +42,8 @@ interface IERC20MetadataLikeV14 {
 ///   POOL_ID_i                         default i + 1
 ///   POOL_ASSET_i                      required
 ///   POOL_DOMAIN_i                     default 1; 1=Casino, 2=Sports, 3=Future
-///   BANK_MIN_LIQ_BPS_i                default 1000
+///   BANK_MIN_LIQ_BPS_i                default 1000; legacy alias for risk reserve
+///   BANK_WITHDRAWAL_BUFFER_BPS_i      default BANK_MIN_LIQ_BPS_i
 ///   BANK_MIN_TURNOVER_FOR_UNLOCK_i    default 20 ether
 ///   BANK_HOLDBACK_VESTING_SECONDS_i   default 86400
 ///   LP_NAME_i / LP_SYMBOL_i / LP_DECIMALS_i
@@ -122,6 +123,7 @@ contract DeployV14 is Script {
         address bank;
         SSOTTypes.PoolDomain domain;
         uint16 minLiqBps;
+        uint16 withdrawalBufferBps;
         uint256 minTurnoverForUnlock;
         uint256 holdbackVestingSeconds;
         string lpName;
@@ -162,6 +164,8 @@ contract DeployV14 is Script {
         PoolConfig[] memory pools = new PoolConfig[](cfg.poolCount);
         for (uint256 i = 0; i < cfg.poolCount; ++i) {
             pools[i] = _readPoolConfig(i);
+            require(pools[i].minLiqBps <= 10_000, "BANK_MIN_LIQ_BPS_i out of range");
+            require(pools[i].withdrawalBufferBps <= 10_000, "BANK_WITHDRAWAL_BUFFER_BPS_i out of range");
         }
         bool hasSports = _hasSportsPool(pools);
         require(_hasCasinoPool(pools) || hasSports, "at least one Casino or Sports pool required");
@@ -275,6 +279,9 @@ contract DeployV14 is Script {
             bank.setSettlementRouterOnce(address(d.router));
             bank.setMinPlayerTurnoverForUnlock(pools[i].minTurnoverForUnlock);
             bank.setHoldbackVestingSeconds(pools[i].holdbackVestingSeconds);
+            if (pools[i].withdrawalBufferBps != pools[i].minLiqBps) {
+                bank.setWithdrawalBufferBps(pools[i].withdrawalBufferBps);
+            }
 
             if (pools[i].domain == SSOTTypes.PoolDomain.Casino) {
                 d.poolRegistry.setHubAllowedForPool(pools[i].poolId, address(d.gameHub), true);
@@ -404,6 +411,8 @@ contract DeployV14 is Script {
         cfg.domain = _domainFromRaw(domainRaw);
 
         cfg.minLiqBps = uint16(vm.envOr(string.concat("BANK_MIN_LIQ_BPS_", suffix), uint256(1000)));
+        cfg.withdrawalBufferBps =
+            uint16(vm.envOr(string.concat("BANK_WITHDRAWAL_BUFFER_BPS_", suffix), uint256(cfg.minLiqBps)));
         cfg.minTurnoverForUnlock = vm.envOr(string.concat("BANK_MIN_TURNOVER_FOR_UNLOCK_", suffix), uint256(20 ether));
         cfg.holdbackVestingSeconds = vm.envOr(string.concat("BANK_HOLDBACK_VESTING_SECONDS_", suffix), uint256(86400));
         cfg.lpName = vm.envOr(string.concat("LP_NAME_", suffix), string.concat("LP Share Pool #", suffix));
@@ -580,6 +589,10 @@ contract DeployV14 is Script {
             json = vm.serializeUint(obj, string.concat("poolAssetDecimals_", suffix), uint256(assetDecimals));
             json = vm.serializeAddress(obj, string.concat("poolBank_", suffix), pools[i].bank);
             json = vm.serializeUint(obj, string.concat("poolBankMinLiqBps_", suffix), pools[i].minLiqBps);
+            json = vm.serializeUint(obj, string.concat("poolBankRiskReserveBps_", suffix), pools[i].minLiqBps);
+            json = vm.serializeUint(
+                obj, string.concat("poolBankWithdrawalBufferBps_", suffix), pools[i].withdrawalBufferBps
+            );
             json = vm.serializeUint(
                 obj, string.concat("poolBankMinTurnoverForUnlock_", suffix), pools[i].minTurnoverForUnlock
             );

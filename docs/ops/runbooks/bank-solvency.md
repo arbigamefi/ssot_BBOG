@@ -1,7 +1,7 @@
 # Runbook: Bank solvency / reserve anomalies
 
 This runbook covers incidents where a **Bank(asset)** may be approaching its solvency boundary, or operators observe
-abnormal behavior in reserve accounting (NAV / reserved / minLiquidity).
+abnormal behavior in reserve accounting (NAV / reserved / risk reserve / withdrawal buffer).
 
 It maps to the metrics in `docs/ops/metrics.md` section **D** (and partially **A**).
 
@@ -42,8 +42,11 @@ cast call $POOL_REGISTRY "bankFor(uint64)(address)" $POOL_ID --rpc-url $RPC
 
 ### Governance actions available
 - Pause risk-in for affected pool(s): use the relevant vertical hub pool pause controls.
-- Tighten optional outflows (withdrawals/XP claims) by raising minLiquidity:
-  - `Bank.setMinLiquidityBps(bps)` (per bank)
+- Tighten new-risk intake by raising the risk reserve:
+  - `Bank.setRiskReserveBps(bps)` (per bank)
+  - `Bank.setMinLiquidityBps(bps)` remains a legacy alias for risk reserve.
+- Tighten optional outflows (withdrawals/XP/protocol-fee claims) by raising the withdrawal buffer:
+  - `Bank.setWithdrawalBufferBps(bps)` (per bank)
 
 **Guardrail**
 - Pausing a bank blocks: deposit/mint/withdraw/redeem and XP claims.
@@ -53,18 +56,21 @@ cast call $POOL_REGISTRY "bankFor(uint64)(address)" $POOL_ID --rpc-url $RPC
 
 ## Quick triage checklist (5 minutes)
 
-### 1) Is this an accounting boundary (R + minLiq ≈ NAV) or a deeper anomaly?
+### 1) Is this an accounting boundary (R + risk reserve / withdrawal buffer ≈ NAV) or a deeper anomaly?
 Fetch the SSOT state from the bank:
 ```bash
-cast call $BANK "getSSOT()((uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,bool,uint256,uint256,uint256,uint256,uint256))" --rpc-url $RPC
+cast call $BANK "getSSOT()((uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,bool,uint256,uint256,uint256,uint256,uint256))" --rpc-url $RPC
 ```
 Interpretation (from the returned struct):
 - `NAV` = `B - PF - XP`
 - `R` = totalReserved
-- `minLiq` = `NAV * minLiquidityBps`
-- `free` = `NAV - R - minLiq` (floored)
+- `riskReserve` = `NAV * riskReserveBps`
+- `riskFree` = `NAV - R - riskReserve` (floored)
+- `withdrawalBuffer` = `NAV * withdrawalBufferBps`
+- `withdrawable` = `NAV - R - withdrawalBuffer` (floored)
 
-If `free` is near 0 and `R` is rising quickly, you are likely in a **liquidity crunch** regime.
+If `riskFree` is near 0 and `R` is rising quickly, you are likely in a **new-risk liquidity crunch** regime.
+If `withdrawable` is near 0, LP exits and claim outflows are intentionally constrained by the withdrawal buffer.
 
 ### 2) Are new bets failing with `SolvencyViolation()`?
 Check the last 5–20 minutes of failed `placeBet` transactions and extract the revert reason.
@@ -99,16 +105,16 @@ If `totalAssets` drops without corresponding expected outflows, proceed to **Pla
      - `GameHub or SportsHub pool pause`
    - If multi-asset stress, use `setRiskInPausedAll(true)`.
 2) **Confirm the solvency boundary**
-   - Re-read `Bank.getSSOT()` and record `NAV/R/minLiq/free`.
+   - Re-read `Bank.getSSOT()` and record `NAV/R/riskReserve/riskFree/withdrawalBuffer/withdrawable`.
 3) **If withdrawals/XP claims are draining liquidity, tighten optional outflows**
-   - Raise `Bank.minLiquidityBps` for the affected bank (governance):
-     - This reduces `_optionalOutflowCap()` and limits withdrawals.
+   - Raise `Bank.withdrawalBufferBps` for the affected bank (governance):
+     - This reduces `_optionalOutflowCap()` and limits withdrawals/claims.
    - Do not oscillate values; apply a conservative step, then reassess.
 4) **Let the system clear outstanding bets**
    - Finalize/refund remain permissionless.
    - Monitor `A5 (bets_in_flight)` and `D2 (reserved)` until it decays.
 5) **Recovery**
-   - Once `free` is comfortably positive and reserved stabilizes, unpause risk-in.
+   - Once `riskFree` is comfortably positive and reserved stabilizes, unpause risk-in.
    - Postmortem: record parameter changes and timelines.
 
 ---
@@ -145,14 +151,14 @@ If `totalAssets` drops without corresponding expected outflows, proceed to **Pla
 - `maxWithdraw/maxRedeem` are near 0 for many users
 
 **Key fact**
-Withdrawals are gated by `_optionalOutflowCap()` which depends on `NAV - R - minLiq`.
+Withdrawals are gated by `_optionalOutflowCap()` which depends on `NAV - R - withdrawalBuffer`.
 This can be expected during high reserved regimes.
 
 **Steps**
 1) Confirm whether the bank is paused (`riskInPaused == true`).
-2) If not paused, read `free` from `getSSOT()`.
-   - If `free == 0`: this is expected; communicate that withdrawals are temporarily constrained.
-3) If `free` is healthy but withdrawals still fail:
+2) If not paused, read `withdrawable` from `getSSOT()`.
+   - If `withdrawable == 0`: this is expected; communicate that withdrawals are temporarily constrained.
+3) If `withdrawable` is healthy but withdrawals still fail:
    - treat as anomaly; pause risk-in and investigate transaction revert reasons.
 
 ---
@@ -162,10 +168,10 @@ This can be expected during high reserved regimes.
 Capture:
 - chainId, release tag, `deployments/release-*.json` digest
 - affected `asset`, `bank` address
-- SSOT snapshot: `B/PF/XP/NAV/R/minLiq/free/riskInPaused`
+- SSOT snapshot: `B/PF/XP/NAV/R/riskReserve/riskFree/withdrawalBuffer/withdrawable/riskInPaused`
 - time window and block range
 - derived `reserved` and large outflow events in the window
-- all governance actions taken (pause, minLiquidity changes)
+- all governance actions taken (pause, risk reserve / withdrawal buffer changes)
 
 ---
 
@@ -184,6 +190,9 @@ cast call $BANK "totalAssets()(uint256)" --rpc-url $RPC
 # Pause risk-in for an asset (gov)
 cast send $GAME_HUB "setRiskInPaused(address,bool)" $ASSET true --rpc-url $RPC --private-key $GOV_PK
 
-# Tighten optional outflow (gov)
-cast send $BANK "setMinLiquidityBps(uint256)" 2000 --rpc-url $RPC --private-key $GOV_PK
+# Tighten new-risk intake (gov)
+cast send $BANK "setRiskReserveBps(uint256)" 2000 --rpc-url $RPC --private-key $GOV_PK
+
+# Tighten optional outflows (gov)
+cast send $BANK "setWithdrawalBufferBps(uint256)" 2000 --rpc-url $RPC --private-key $GOV_PK
 ```

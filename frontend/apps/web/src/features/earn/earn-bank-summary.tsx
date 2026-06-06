@@ -27,10 +27,12 @@ export function EarnBankSummary({
   const t = useTranslations();
   const snapshot = data?.snapshot;
   const position = data?.position;
-  const minLiquidity =
-    snapshot?.minLiquidityBps != null
-      ? (snapshot.totalAssets * BigInt(snapshot.minLiquidityBps)) / 10_000n
-      : undefined;
+  const riskReserveBps = snapshot?.riskReserveBps ?? snapshot?.minLiquidityBps;
+  const riskReserve =
+    snapshot?.riskReserve ??
+    (snapshot && riskReserveBps != null
+      ? (snapshot.totalAssets * BigInt(riskReserveBps)) / 10_000n
+      : undefined);
   const freeReserve = snapshot
     ? snapshot.totalAssets > snapshot.totalReserved
       ? snapshot.totalAssets - snapshot.totalReserved
@@ -71,7 +73,7 @@ export function EarnBankSummary({
         value={formatTokenAmount(snapshot?.totalReserved, decimals, symbol, 2)}
         detail={t("earn.summary.reserved.detail", {
           freeReserve: formatTokenAmount(freeReserve, decimals, symbol, 2),
-          minLiquidity: formatTokenAmount(minLiquidity, decimals, symbol, 2)
+          minLiquidity: formatTokenAmount(riskReserve, decimals, symbol, 2)
         })}
       />
       <LedgerRow
@@ -83,9 +85,9 @@ export function EarnBankSummary({
       <LedgerRow
         icon={<InformationCircleIcon className="h-5 w-5" />}
         label={t("earn.summary.liquidity.label")}
-        value={formatPctFromBps(snapshot?.minLiquidityBps)}
+        value={formatPctFromBps(riskReserveBps)}
         detail={t("earn.summary.liquidity.detail", {
-          floor: formatBps(snapshot?.minLiquidityBps),
+          floor: formatBps(riskReserveBps),
           bank: shortHex(snapshot?.bank)
         })}
       />

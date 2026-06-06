@@ -1040,6 +1040,10 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         })
       ])) as [any, bigint, bigint];
 
+      const minLiquidityBps = Number(ssot.minLiquidityBps);
+      const riskReserveBps = Number(ssot.riskReserveBps ?? ssot.minLiquidityBps);
+      const withdrawalBufferBps = Number(ssot.withdrawalBufferBps ?? ssot.minLiquidityBps);
+
       return {
         chainId: release.chainId,
         poolId,
@@ -1049,7 +1053,13 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         totalSupply,
         assetsPerShare,
         totalReserved: BigInt(ssot.R),
-        minLiquidityBps: Number(ssot.minLiquidityBps),
+        minLiquidityBps,
+        riskReserveBps,
+        riskReserve: BigInt(ssot.riskReserve ?? ssot.minLiq),
+        riskFree: BigInt(ssot.riskFree ?? ssot.free),
+        withdrawalBufferBps,
+        withdrawalBuffer: BigInt(ssot.withdrawalBuffer ?? ssot.minLiq),
+        withdrawable: BigInt(ssot.withdrawable ?? ssot.free),
         protocolFeesPayable: BigInt(ssot.PF),
         externalPayablesTotal: BigInt(ssot.XP)
       };

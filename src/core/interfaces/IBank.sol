@@ -44,7 +44,13 @@ interface IBank is IERC4626Minimal {
     function totalReserved() external view returns (uint256);
     function protocolFeesPayable() external view returns (uint256);
     function externalPayablesTotal() external view returns (uint256);
+    /// @notice Legacy alias for riskReserveBps; kept for existing dashboards and scripts.
     function minLiquidityBps() external view returns (uint256);
+    function riskReserveBps() external view returns (uint256);
+    function withdrawalBufferBps() external view returns (uint256);
+
+    event RiskReserveBpsSet(uint256 bps);
+    event WithdrawalBufferBpsSet(uint256 bps);
 
     // Bank performance counters: lifetime, single-asset, chain-verifiable.
     function totalTurnover() external view returns (uint256);

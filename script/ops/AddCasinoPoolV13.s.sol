@@ -28,7 +28,8 @@ interface IERC20MetadataAddPoolV13 {
 /// Optional env:
 ///   SNAPSHOT_PATH defaults to deployments/latest-v13.json
 ///   GOV / POOL_REGISTRY / SETTLEMENT_ROUTER / GAME_HUB override snapshot addresses
-///   ADD_BANK_MIN_LIQ_BPS default 1000
+///   ADD_BANK_MIN_LIQ_BPS default 1000; legacy alias for risk reserve
+///   ADD_BANK_WITHDRAWAL_BUFFER_BPS default ADD_BANK_MIN_LIQ_BPS
 ///   ADD_BANK_MIN_TURNOVER_FOR_UNLOCK default 20 ether
 ///   ADD_BANK_HOLDBACK_VESTING_SECONDS default 86400
 ///   ADD_LP_NAME / ADD_LP_SYMBOL / ADD_LP_DECIMALS
@@ -57,6 +58,7 @@ contract AddCasinoPoolV13 is Script {
         uint64 poolId;
         address asset;
         uint16 minLiqBps;
+        uint16 withdrawalBufferBps;
         uint256 minTurnoverForUnlock;
         uint256 holdbackVestingSeconds;
         string lpName;
@@ -87,6 +89,9 @@ contract AddCasinoPoolV13 is Script {
         bank.setSettlementRouterOnce(address(cfg.router));
         bank.setMinPlayerTurnoverForUnlock(cfg.minTurnoverForUnlock);
         bank.setHoldbackVestingSeconds(cfg.holdbackVestingSeconds);
+        if (cfg.withdrawalBufferBps != cfg.minLiqBps) {
+            bank.setWithdrawalBufferBps(cfg.withdrawalBufferBps);
+        }
         cfg.poolRegistry.setHubAllowedForPool(cfg.poolId, address(cfg.gameHub), true);
         vm.stopBroadcast();
 
@@ -130,6 +135,7 @@ contract AddCasinoPoolV13 is Script {
         cfg.poolId = uint64(vm.envUint("ADD_POOL_ID"));
         cfg.asset = vm.envAddress("ADD_POOL_ASSET");
         cfg.minLiqBps = uint16(vm.envOr("ADD_BANK_MIN_LIQ_BPS", uint256(1000)));
+        cfg.withdrawalBufferBps = uint16(vm.envOr("ADD_BANK_WITHDRAWAL_BUFFER_BPS", uint256(cfg.minLiqBps)));
         cfg.minTurnoverForUnlock = vm.envOr("ADD_BANK_MIN_TURNOVER_FOR_UNLOCK", uint256(20 ether));
         cfg.holdbackVestingSeconds = vm.envOr("ADD_BANK_HOLDBACK_VESTING_SECONDS", uint256(86400));
 
@@ -147,6 +153,7 @@ contract AddCasinoPoolV13 is Script {
         require(address(cfg.router) != address(0), "SettlementRouter required");
         require(address(cfg.gameHub) != address(0), "GameHub required");
         require(cfg.minLiqBps <= 10_000, "bad minLiqBps");
+        require(cfg.withdrawalBufferBps <= 10_000, "bad withdrawalBufferBps");
 
         require(address(cfg.router.poolRegistry()) == address(cfg.poolRegistry), "router registry mismatch");
         require(cfg.poolRegistry.isRegisteredHub(address(cfg.gameHub)), "GameHub not registered");
@@ -196,6 +203,8 @@ contract AddCasinoPoolV13 is Script {
         json = vm.serializeUint(obj, "poolAssetDecimals", uint256(assetDecimals));
         json = vm.serializeAddress(obj, "poolBank", address(bank));
         json = vm.serializeUint(obj, "poolBankMinLiqBps", cfg.minLiqBps);
+        json = vm.serializeUint(obj, "poolBankRiskReserveBps", cfg.minLiqBps);
+        json = vm.serializeUint(obj, "poolBankWithdrawalBufferBps", cfg.withdrawalBufferBps);
         json = vm.serializeUint(obj, "poolBankMinTurnoverForUnlock", cfg.minTurnoverForUnlock);
         json = vm.serializeUint(obj, "poolBankHoldbackVestingSeconds", cfg.holdbackVestingSeconds);
         json = vm.serializeString(obj, "poolLpName", cfg.lpName);

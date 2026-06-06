@@ -42,3 +42,4 @@ Each ADR:
 - [ADR-0028: Protocol Fee Withdrawal (`claimProtocolFees`)](0028-claim-protocol-fees.md)
 - [ADR-0029: Settlement Router + Vertical Hubs](0029-settlement-router-vertical-hubs.md)
 - [ADR-0030: Bank observability counters and ERC4626 events](0030-bank-observability-and-erc4626-events.md)
+- [ADR-0031: Split Bank risk reserve from withdrawal buffer](0031-bank-risk-reserve-and-withdrawal-buffer.md)
