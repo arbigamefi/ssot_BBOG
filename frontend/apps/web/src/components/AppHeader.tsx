@@ -249,6 +249,22 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const openMobileMenu = React.useCallback(() => setMobileMenuOpen(true), []);
   const closeMobileMenu = React.useCallback(() => setMobileMenuOpen(false), []);
+  const mobileGameNavRef = React.useRef<HTMLElement | null>(null);
+  const activeMobileGameLinkRef = React.useRef<HTMLAnchorElement | null>(null);
+
+  React.useEffect(() => {
+    if (variant !== "game") return;
+    const nav = mobileGameNavRef.current;
+    const activeLink = activeMobileGameLinkRef.current;
+    if (!nav || !activeLink) return;
+
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    activeLink.scrollIntoView({
+      behavior: reducedMotion ? "auto" : "smooth",
+      block: "nearest",
+      inline: "center"
+    });
+  }, [activeRoute, variant]);
 
   if (isTransparent) {
     return (
@@ -322,6 +338,7 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
     variant === "game" ? (
       <div className="border-b border-border bg-surface-0/95 px-4 py-1.5 backdrop-blur md:hidden">
         <nav
+          ref={mobileGameNavRef}
           aria-label={t("nav.casino")}
           className="flex gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
@@ -334,6 +351,7 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
           {GAME_NAV_LINKS.map((link) => (
             <Link
               key={link.id}
+              ref={activeRoute === link.id ? activeMobileGameLinkRef : undefined}
               href={link.href}
               className={cn(
                 "shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
