@@ -916,7 +916,7 @@
         "dice": {
           "title": "Dados de Precisão",
           "promise": "Ajuste de 1 a 99 em segundos.",
-          "badge": "1% de vantagem"
+          "badge": "Rodadas rápidas"
         },
         "roulette": {
           "title": "Roleta Europeia",
@@ -926,7 +926,7 @@
         "coinToss": {
           "title": "Cara ou Coroa",
           "promise": "Resolução 50/50 ultrarrápida.",
-          "badge": "1% de vantagem"
+          "badge": "Cara ou coroa"
         },
         "keno": {
           "title": "Keno Draft",

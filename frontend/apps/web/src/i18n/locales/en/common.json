@@ -968,7 +968,7 @@
         "dice": {
           "title": "Precision Dice",
           "promise": "1-99 sizing in seconds.",
-          "badge": "1% House Edge"
+          "badge": "Fast rolls"
         },
         "roulette": {
           "title": "European Roulette",
@@ -978,7 +978,7 @@
         "coinToss": {
           "title": "Coin Toss",
           "promise": "High-speed 50/50 resolution.",
-          "badge": "1% House Edge"
+          "badge": "50/50 play"
         },
         "keno": {
           "title": "Keno Draft",

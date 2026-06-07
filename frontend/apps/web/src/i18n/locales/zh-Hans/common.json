@@ -968,7 +968,7 @@
         "dice": {
           "title": "精准骰子",
           "promise": "1 到 99 的范围选择，数秒内完成。",
-          "badge": "1% 庄家优势"
+          "badge": "快速开局"
         },
         "roulette": {
           "title": "欧式轮盘",
@@ -978,7 +978,7 @@
         "coinToss": {
           "title": "抛硬币",
           "promise": "高速 50/50 结算。",
-          "badge": "1% 庄家优势"
+          "badge": "50/50 玩法"
         },
         "keno": {
           "title": "Keno 选号",

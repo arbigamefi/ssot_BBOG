@@ -916,7 +916,7 @@
         "dice": {
           "title": "Hassas Zar",
           "promise": "Saniyeler içinde 1-99 ayarı.",
-          "badge": "%1 avantaj"
+          "badge": "Hızlı turlar"
         },
         "roulette": {
           "title": "Avrupa Ruleti",
@@ -926,7 +926,7 @@
         "coinToss": {
           "title": "Yazı Tura",
           "promise": "Çok hızlı 50/50 sonuç.",
-          "badge": "%1 avantaj"
+          "badge": "50/50 oyun"
         },
         "keno": {
           "title": "Keno Draft",

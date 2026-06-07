@@ -217,56 +217,23 @@ export function GamesListClient() {
         style={{ background: "radial-gradient(circle, hsl(var(--brand) / 0.12), transparent 68%)" }}
       />
 
-      <section className="relative border-b border-border-soft py-10 md:py-12">
-        <header className="flex flex-col gap-10 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-2xl">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand/30 bg-brand-soft px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-brand">
+      <section className="relative border-b border-border-soft py-6 md:py-8">
+        <header className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-brand/30 bg-brand-soft px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand">
               <SparklesIcon className="h-4 w-4" />
               {t("casino.directory.hero.eyebrow")}
             </div>
-            <h1 className="text-4xl font-bold leading-tight tracking-tight text-fg md:text-5xl">
+            <h1 className="text-3xl font-bold leading-tight tracking-tight text-fg md:text-5xl">
               {t("casino.directory.hero.title")}
             </h1>
-            <p className="mt-5 max-w-2xl text-lg leading-relaxed text-fg-muted md:text-xl">
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-fg-muted md:text-lg md:leading-8">
               {t("casino.directory.hero.description")}
             </p>
           </div>
-
-          {shouldShowStats ? (
-            <dl className="grid gap-4 sm:grid-cols-2 lg:min-w-[27rem]">
-              <div className="rounded-xl border border-border-soft bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-1)))] p-5 shadow-e2 sm:col-span-2">
-                <dt className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-accent">
-                  <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-                  {t("casino.directory.stats.volume")}
-                </dt>
-                <dd
-                  className="mt-3 truncate font-mono text-3xl font-semibold text-fg"
-                  title={volumeLabel}
-                >
-                  {volumeLabel}
-                </dd>
-              </div>
-              <div className="rounded-xl border border-border-soft bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-1)))] p-5 shadow-e2">
-                <dt className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-brand">
-                  <TrophyIcon className="h-3.5 w-3.5" />
-                  {t("casino.directory.stats.bets")}
-                </dt>
-                <dd className="mt-3 font-mono text-3xl font-semibold text-fg">{betCountLabel}</dd>
-              </div>
-              <div className="rounded-xl border border-border-soft bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-1)))] p-5 shadow-e2">
-                <dt className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-fg-subtle">
-                  <span className="h-1.5 w-1.5 rounded-full bg-success" />
-                  {t("casino.directory.stats.players")}
-                </dt>
-                <dd className="mt-3 font-mono text-3xl font-semibold text-fg">{playersLabel}</dd>
-              </div>
-            </dl>
-          ) : null}
         </header>
-      </section>
 
-      <section className="relative py-8 md:py-10">
-        <div className="mb-10 flex flex-col gap-5 border-b border-border-soft pb-6 md:flex-row md:items-center md:justify-between">
+        <div className="mt-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="flex w-full items-center gap-1 overflow-x-auto md:w-auto">
             {FILTERS.map((item) => {
               const isActive = item.key === filter;
@@ -276,7 +243,7 @@ export function GamesListClient() {
                   type="button"
                   onClick={() => setFilter(item.key)}
                   className={cn(
-                    "relative shrink-0 rounded-md px-5 py-3 text-sm font-bold transition-colors",
+                    "relative shrink-0 rounded-full px-4 py-2 text-xs font-bold transition-colors md:px-5 md:py-2.5 md:text-sm",
                     isActive
                       ? "bg-brand-soft text-brand ring-1 ring-inset ring-brand/30"
                       : "text-fg-subtle hover:bg-surface-2 hover:text-fg"
@@ -296,11 +263,13 @@ export function GamesListClient() {
               onChange={(event) => setQuery(event.target.value)}
               placeholder={t("casino.directory.search.placeholder")}
               aria-label={t("casino.directory.search.aria")}
-              className="relative z-0 w-full rounded-full border border-border bg-surface-1 py-3 pl-12 pr-4 text-sm text-fg shadow-inner-e1 transition-colors placeholder:text-fg-subtle hover:border-brand/30 focus:border-brand focus:bg-surface-2 focus:outline-none focus:ring-2 focus:ring-brand-ring"
+              className="relative z-0 w-full rounded-full border border-border bg-surface-1 py-2.5 pl-12 pr-4 text-sm text-fg shadow-inner-e1 transition-colors placeholder:text-fg-subtle hover:border-brand/30 focus:border-brand focus:bg-surface-2 focus:outline-none focus:ring-2 focus:ring-brand-ring"
             />
           </div>
         </div>
+      </section>
 
+      <section className="relative py-5 md:py-8">
         {roomsToRender.length === 0 ? (
           <div className="rounded-xl border border-border-soft bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-1)))] p-8 text-center shadow-e2">
             <p className="text-lg font-semibold text-fg">{t("casino.directory.empty.noResults")}</p>
@@ -319,7 +288,7 @@ export function GamesListClient() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
             {roomsToRender.map((room) => {
               const copyKeys = ROOM_COPY_KEYS[room.slug];
               const copy = copyKeys
@@ -342,7 +311,7 @@ export function GamesListClient() {
                   href={room.href}
                   data-testid="room-entry-card"
                   data-slug={room.slug}
-                  className="group relative flex min-h-[21rem] flex-col overflow-hidden rounded-xl border border-border-soft bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-1)))] shadow-e2 transition-colors duration-200 hover:border-brand/40 hover:bg-surface-2"
+                  className="group relative flex min-h-[18rem] flex-col overflow-hidden rounded-xl border border-border-soft bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-1)))] shadow-e2 transition-colors duration-200 hover:border-brand/40 hover:bg-surface-2 md:min-h-[20rem]"
                 >
                   {/* top edge sheen */}
                   <div
@@ -354,18 +323,18 @@ export function GamesListClient() {
                     }}
                   />
 
-                  <div className="absolute left-4 top-4 z-20 rounded-full border border-border-soft bg-surface-0/80 px-3 py-1.5 backdrop-blur">
+                  <div className="absolute left-3 top-3 z-20 rounded-full border border-border-soft bg-surface-0/80 px-2.5 py-1 backdrop-blur md:left-4 md:top-4 md:px-3 md:py-1.5">
                     <span className="flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-widest text-fg-muted">
                       <span className="h-1.5 w-1.5 rounded-full bg-accent" />
                       {t("casino.directory.card.releaseAnchored")}
                     </span>
                   </div>
 
-                  <div className="absolute right-4 top-4 z-20 rounded-full border border-brand/30 bg-brand-soft px-3 py-1 text-[10px] font-bold uppercase text-brand backdrop-blur">
+                  <div className="absolute right-3 top-3 z-20 rounded-full border border-brand/30 bg-brand-soft px-2.5 py-1 text-[10px] font-bold uppercase text-brand backdrop-blur md:right-4 md:top-4 md:px-3">
                     {copy.badge}
                   </div>
 
-                  <div className="relative z-10 mt-8 flex flex-1 items-center justify-center p-5">
+                  <div className="relative z-10 mt-7 flex min-h-[11rem] flex-1 items-center justify-center p-4 md:min-h-[12rem] md:p-5">
                     {/* Shared game mark system: the lobby should feel like the
                         same product as the individual room stages. */}
                     <div
@@ -377,20 +346,20 @@ export function GamesListClient() {
                       }}
                     />
                     <div className="relative">
-                      <CasinoGameMark slug={room.slug} className="h-36 w-36" />
+                      <CasinoGameMark slug={room.slug} className="h-28 w-28 md:h-36 md:w-36" />
                     </div>
                   </div>
 
-                  <div className="relative z-20 border-t border-border-soft bg-surface-2/85 p-5 backdrop-blur">
-                    <div className="mb-3 text-[10px] font-bold uppercase tracking-widest text-accent">
+                  <div className="relative z-20 border-t border-border-soft bg-surface-2/85 p-4 backdrop-blur md:p-5">
+                    <div className="mb-2 text-[10px] font-bold uppercase tracking-widest text-accent">
                       {copy.tag}
                     </div>
-                    <h3 className="text-2xl font-bold text-fg">{copy.title}</h3>
-                    <p className="mt-2 min-h-10 text-sm leading-relaxed text-fg-muted">
+                    <h3 className="text-xl font-bold text-fg md:text-2xl">{copy.title}</h3>
+                    <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-fg-muted">
                       {copy.promise}
                     </p>
 
-                    <span className="mt-6 flex w-full items-center justify-center gap-2 rounded-lg border border-border-soft bg-surface-2 py-4 text-sm font-bold text-fg-muted transition-colors group-hover:border-brand/40 group-hover:bg-brand-soft group-hover:text-brand">
+                    <span className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-border-soft bg-surface-2 py-3 text-sm font-bold text-fg-muted transition-colors group-hover:border-brand/40 group-hover:bg-brand-soft group-hover:text-brand md:mt-6 md:py-4">
                       {t("casino.directory.card.playNow")}{" "}
                       <PlayCircleIcon className="h-5 w-5 shrink-0" />
                     </span>
@@ -400,6 +369,34 @@ export function GamesListClient() {
             })}
           </div>
         )}
+
+        {shouldShowStats ? (
+          <dl className="mt-6 grid gap-2 border-y border-border-soft py-4 text-sm md:grid-cols-3">
+            <div className="flex items-center justify-between gap-3 md:block">
+              <dt className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-accent">
+                <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+                {t("casino.directory.stats.volume")}
+              </dt>
+              <dd className="truncate font-mono font-semibold text-fg md:mt-2" title={volumeLabel}>
+                {volumeLabel}
+              </dd>
+            </div>
+            <div className="flex items-center justify-between gap-3 md:block">
+              <dt className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-brand">
+                <TrophyIcon className="h-3.5 w-3.5" />
+                {t("casino.directory.stats.bets")}
+              </dt>
+              <dd className="font-mono font-semibold text-fg md:mt-2">{betCountLabel}</dd>
+            </div>
+            <div className="flex items-center justify-between gap-3 md:block">
+              <dt className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-fg-subtle">
+                <span className="h-1.5 w-1.5 rounded-full bg-success" />
+                {t("casino.directory.stats.players")}
+              </dt>
+              <dd className="font-mono font-semibold text-fg md:mt-2">{playersLabel}</dd>
+            </div>
+          </dl>
+        ) : null}
 
         <aside className="mt-10 overflow-hidden rounded-xl border border-border-soft bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-1)))] p-1 shadow-e3">
           <div className="relative overflow-hidden rounded-lg border border-border-soft bg-surface-2 px-6 py-8 md:px-8 md:py-10">
