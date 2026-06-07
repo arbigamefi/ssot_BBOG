@@ -3423,6 +3423,8 @@
       "connect": "连接钱包以生成你的推广链接。",
       "copy": "复制链接",
       "copied": "已复制",
+      "share": "分享链接",
+      "shareText": "通过我的推广链接加入 ArbiGameFi，体验链上赌场回合、钱包原生赔付和公开收据。",
       "wallet": "钱包 {wallet}",
       "walletPending": "钱包未连接"
     },

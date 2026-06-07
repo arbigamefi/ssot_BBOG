@@ -564,6 +564,8 @@
       "connect": "Conecte uma carteira para gerar seu link de indicação.",
       "copy": "Copiar link",
       "copied": "Copiado",
+      "share": "Compartilhar link",
+      "shareText": "Entre no ArbiGameFi pelo meu link de indicação para rodadas de cassino on-chain, pagamentos nativos de carteira e recibos públicos.",
       "wallet": "Carteira {wallet}",
       "walletPending": "Carteira não conectada"
     },

@@ -14,13 +14,13 @@ import {
 
 import { useSSOTSDK } from "../../../ssot/sdk";
 import { buildCasinoReferralLink } from "../../../features/referral/referral-link";
+import { SharePanel } from "../../../features/share/SharePanel";
 import { shortHex } from "../../../features/portfolio/claims/format";
 
 export function AffiliatePageClient() {
   const t = useTranslations();
   const { sdk } = useSSOTSDK();
   const [origin, setOrigin] = React.useState("");
-  const [copied, setCopied] = React.useState(false);
   const [copiedCampaign, setCopiedCampaign] = React.useState<string | undefined>();
 
   React.useEffect(() => {
@@ -35,13 +35,6 @@ export function AffiliatePageClient() {
     () => formatReferralLinkPreview(referralLink),
     [referralLink]
   );
-
-  const handleCopy = React.useCallback(async () => {
-    if (!referralLink) return;
-    await navigator.clipboard.writeText(referralLink);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1600);
-  }, [referralLink]);
 
   const campaignChannels = ["x", "telegram", "whatsapp"] as const;
   const handleCampaignCopy = React.useCallback(
@@ -110,15 +103,25 @@ export function AffiliatePageClient() {
             </span>
           </div>
           <div className="mt-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-            <button
-              type="button"
-              disabled={!referralLink}
-              onClick={() => void handleCopy()}
-              className="inline-flex items-center gap-2 rounded-md border border-border bg-surface-2 px-4 py-2 text-sm font-bold text-fg transition-colors hover:border-brand/60 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <ClipboardDocumentIcon className="h-4 w-4" />
-              {copied ? t("affiliate.linkCard.copied") : t("affiliate.linkCard.copy")}
-            </button>
+            <div className="w-full sm:w-auto">
+              <SharePanel
+                disabled={!referralLink}
+                labels={{
+                  close: t("casino.room.result.actions.close"),
+                  copyLink: t("affiliate.linkCard.copy"),
+                  linkCopied: t("affiliate.linkCard.copied"),
+                  nativeShare: t("casino.room.result.actions.nativeShare"),
+                  share: t("affiliate.linkCard.share"),
+                  telegram: t("casino.room.result.actions.shareToTelegram"),
+                  whatsapp: t("casino.room.result.actions.shareToWhatsApp"),
+                  x: t("casino.room.result.actions.shareToX")
+                }}
+                text={t("affiliate.linkCard.shareText")}
+                title={t("affiliate.linkCard.title")}
+                triggerClassName="py-2 text-sm normal-case tracking-normal"
+                url={referralLink ?? ""}
+              />
+            </div>
             <span className="min-w-0 truncate text-xs text-fg-subtle">
               {sdk?.account
                 ? t("affiliate.linkCard.wallet", { wallet: shortHex(sdk.account) })

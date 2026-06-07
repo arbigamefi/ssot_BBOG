@@ -3423,6 +3423,8 @@
       "connect": "Connect a wallet to generate your referral link.",
       "copy": "Copy link",
       "copied": "Copied",
+      "share": "Share link",
+      "shareText": "Join ArbiGameFi through my referral link for on-chain casino rounds, wallet-native payouts, and public receipts.",
       "wallet": "Wallet {wallet}",
       "walletPending": "Wallet not connected"
     },

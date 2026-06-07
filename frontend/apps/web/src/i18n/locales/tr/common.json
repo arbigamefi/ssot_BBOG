@@ -564,6 +564,8 @@
       "connect": "Referans bağlantınızı oluşturmak için bir cüzdan bağlayın.",
       "copy": "Bağlantıyı kopyala",
       "copied": "Kopyalandı",
+      "share": "Bağlantıyı paylaş",
+      "shareText": "Zincir üstü casino turları, cüzdan tabanlı ödemeler ve herkese açık makbuzlar için ArbiGameFi'ye referans bağlantımla katılın.",
       "wallet": "Cüzdan {wallet}",
       "walletPending": "Cüzdan bağlı değil"
     },
