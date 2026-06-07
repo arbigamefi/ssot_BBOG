@@ -11,6 +11,7 @@ import { MobileWalletDeepLinkBanner } from "../app-shell/MobileWalletDeepLinkBan
 import { useFocusTrap } from "../app-shell/a11y/useFocusTrap";
 import { ArbiGameFiMark } from "./ArbiGameFiBrand";
 import { LocaleSheetSwitcher, LocaleSwitcher } from "./LocaleSwitcher";
+import { overlayZ } from "./overlay";
 
 export type AppRoute =
   | "directory"
@@ -166,7 +167,7 @@ function MobileNavDrawer({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[90] md:hidden" role="dialog" aria-modal="true">
+    <div className={cn("fixed inset-0 md:hidden", overlayZ.drawer)} role="dialog" aria-modal="true">
       <button
         type="button"
         aria-label={t("nav.closeMenu")}
