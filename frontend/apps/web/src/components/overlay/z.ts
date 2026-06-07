@@ -1,4 +1,5 @@
 export const overlayZ = {
+  stickyAction: "z-[50]",
   popover: "z-[60]",
   drawer: "z-[70]",
   sheet: "z-[80]",

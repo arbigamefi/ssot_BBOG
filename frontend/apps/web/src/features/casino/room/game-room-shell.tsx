@@ -1,6 +1,8 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 
+import { StickyActionBar } from "../../../components/overlay";
+
 export function GameRoomShell({
   gameName,
   maxBet,
@@ -102,11 +104,7 @@ export function GameRoomShell({
         {auditLedgerContent}
       </section>
 
-      {mobileActionContent && (
-        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-surface-2/95 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 shadow-e3 backdrop-blur lg:hidden">
-          <div className="mx-auto max-w-md">{mobileActionContent}</div>
-        </div>
-      )}
+      {mobileActionContent && <StickyActionBar>{mobileActionContent}</StickyActionBar>}
     </section>
   );
 }
