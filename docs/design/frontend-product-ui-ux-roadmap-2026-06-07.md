@@ -80,16 +80,16 @@ it.
 
 ## 3. Roadmap Overview
 
-| Phase | Slice                        | Audience           | Goal                                                     | Status                |
-| ----- | ---------------------------- | ------------------ | -------------------------------------------------------- | --------------------- |
-| 0     | Planning + spec alignment    | Team               | Make the roadmap and shell spec current                  | In progress           |
-| 1     | Mobile shell foundation      | All                | One header/drawer/sheet/modal/sticky CTA system          | Partially implemented |
-| 2     | Player first screen          | Players            | Homepage and casino lobby sell trust + play quickly      | Pending               |
-| 3     | Game room conversion         | Players            | Stage-first gameplay and one mobile bet path             | Pending               |
-| 4     | Receipt/share/OG acquisition | Players + viewers  | One receipt model, shareable proof, referral-aware links | Partially implemented |
-| 5     | Earn provider console        | Bankroll providers | Professional underwriting dashboard, not card clutter    | Pending               |
-| 6     | Affiliate growth console     | Affiliates         | Link generation, earning mechanics, campaign assets      | Pending               |
-| 7     | Launch hardening             | All                | i18n, a11y, performance, wallet-browser screenshots      | Ongoing               |
+| Phase | Slice                        | Audience           | Goal                                                     | Status                             |
+| ----- | ---------------------------- | ------------------ | -------------------------------------------------------- | ---------------------------------- |
+| 0     | Planning + spec alignment    | Team               | Make the roadmap and shell spec current                  | Current                            |
+| 1     | Mobile shell foundation      | All                | One header/drawer/sheet/modal/sticky CTA system          | Mostly implemented                 |
+| 2     | Player first screen          | Players            | Homepage and casino lobby sell trust + play quickly      | Implemented with local screenshots |
+| 3     | Game room conversion         | Players            | Stage-first gameplay and one mobile bet path             | Partially implemented              |
+| 4     | Receipt/share/OG acquisition | Players + viewers  | One receipt model, shareable proof, referral-aware links | Mostly implemented                 |
+| 5     | Earn provider console        | Bankroll providers | Professional underwriting dashboard, not card clutter    | Partially implemented              |
+| 6     | Affiliate growth console     | Affiliates         | Link generation, earning mechanics, campaign assets      | Partially implemented              |
+| 7     | Launch hardening             | All                | i18n, a11y, performance, wallet-browser screenshots      | Ongoing                            |
 
 ## 4. Phase 0 — Planning + Spec Alignment
 
@@ -129,6 +129,9 @@ like one app; bottom actions respect thumb zones and wallet browser toolbars.
 - Share panel uses a mobile sheet-style pattern with copy/social intents.
 - Game nav chip rail is compressed compared with earlier versions.
 - Dev switches can disable onboarding and age gate during local review.
+- Mobile game-room sticky bet path has been de-duplicated: the sticky action
+  bar is the primary mobile CTA, while the full panel no longer exposes a
+  second mobile action path.
 
 ### 1B. Overlay primitive consolidation
 
@@ -197,6 +200,10 @@ artifact, two proof points, one CTA. No stat-strip clutter.
 - A disconnected user sees meaningful chain/proof information without needing
   to connect first.
 
+**Current state.** Implemented. Local screenshot gates at 390px and 1440px show
+the promise, CTA, and product visual in the first viewport without horizontal
+overflow.
+
 ### 2B. Casino lobby `/casino`
 
 **Target user.** Player choosing a game.
@@ -219,6 +226,10 @@ matches game-room stage/share/OG primitives.
 
 - At 390px at least one full game card and part of a second card are visible.
 - Game visuals look like one system, not eight unrelated icons.
+
+**Current state.** Implemented enough for launch polish. Local screenshots show
+one full mobile game card in the first viewport and four full desktop cards.
+The remaining work is asset-system consolidation, not a layout blocker.
 
 ## 7. Phase 3 — Game Room Conversion
 
@@ -245,6 +256,11 @@ are available but not first-screen dominant.
 - No placeholder room metrics disappear merely because no bet is selected; empty
   means "not selected" when that is the actual state.
 
+**Current state.** Partially implemented. The 390px game-room screenshot shows
+the stage and sticky CTA in the first viewport with no horizontal overflow.
+Remaining verification is wallet-connected gameplay in an in-wallet browser and
+the full signing-to-settlement path.
+
 ## 8. Phase 4 — Receipt, Share, and OG Acquisition
 
 **Target user.** A viewer arriving from Telegram, X, WhatsApp, or a player
@@ -261,6 +277,9 @@ proof plus an invitation, not an internal app panel.
 - Share links carry referral attribution.
 - Receipt and OG work from a shared view model.
 - OG copy has moved away from hardcoded game-count claims.
+- Share panel uses bottom-sheet behavior on mobile and anchored popover
+  behavior on desktop; local screenshots confirm it no longer clips the receipt
+  or result surfaces.
 
 **Remaining tasks.**
 
@@ -334,6 +353,10 @@ assets. The page must not route the affiliate as if they are just a player.
 - Link generation and copy are available without hunting.
 - Referral attribution is visible and testable from landing through bet.
 
+**Current state.** Partially implemented. Mobile screenshots show the first
+viewport no longer overflows on long referral links. Remaining work is campaign
+asset packaging and stronger affiliate-native proof/earning presentation.
+
 ## 11. Phase 7 — Launch Hardening
 
 **Runs after every visual slice.**
@@ -389,16 +412,17 @@ Investigate results; do not blindly delete legitimate test or parser code.
 
 Execute in this order:
 
-1. Finish Phase 0 doc alignment.
-2. Phase 1B: introduce app-local overlay primitives and migrate share panel
-   first, because it is already a visible mobile defect and reusable by receipt
-   and result modal.
-3. Phase 1C: resolve mobile game-room bet duplication.
-4. Phase 2A: homepage first viewport redesign with screenshot acceptance.
-5. Phase 2B: casino lobby visual system and grid-first mobile layout.
-6. Phase 3: game room stage-first pass.
-7. Phase 5: earn provider console pass.
-8. Phase 6: affiliate console pass.
+1. Keep Phase 0 docs current after each slice.
+2. Finish Phase 1B by migrating the remaining private overlays
+   (wallet/nav/result modal) to the shared z-scale and sheet/modal anatomy.
+3. Complete Phase 3 with a wallet-connected game-room QA pass in a wallet
+   browser or equivalent mobile browser session.
+4. Phase 5: earn provider console pass, focused on share price, turnover
+   velocity, drawdown/risk, and the deposit/withdraw control.
+5. Phase 6: affiliate console pass, focused on campaign assets and proof of
+   earning mechanics.
+6. Phase 4 production loop: validate deployed OG URLs and Cloudflare cache
+   behavior after deployment.
 
 Do not start a broad page redesign while a P0 runtime regression exists in
 place-bet, VRF, settlement, receipt, keeper, env, or release metadata.

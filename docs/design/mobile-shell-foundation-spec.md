@@ -18,18 +18,18 @@ the mobile shell foundation, not as a historical proposal.
 
 ## 0. Implementation Status
 
-| Item                                           | Status      | Notes                                                                                                                |
-| ---------------------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------- |
-| Mobile header CTA hierarchy                    | Done        | The disconnected mobile header no longer uses a large purple CTA that competes with the hero.                        |
-| Mobile nav drawer owns chain/language controls | Done        | Drawer chain and language controls now use shared sheet/popover/listbox anatomy.                                      |
-| Share panel mobile sheet                       | Partial     | Share now uses shared sheet/popover; still needs screenshot gate and wallet-browser QA.                              |
-| Game nav chip rail compression                 | Done        | Product/game route nav is shorter than the earlier full chrome row.                                                  |
-| Dev review flags for onboarding/age gate       | Done        | Local review can disable those gates without changing product code.                                                  |
-| Shared overlay primitives                      | Partial     | `Sheet`, `Popover`, z tokens, and `useOverlayController` exist; Drawer/Modal/StickyActionBar remain.                 |
-| Unified z-index scale                          | Partial     | Share and chain surfaces now use `overlayZ`; wallet/nav/result still need migration.                                 |
-| Focus trap and focus return                    | Partial     | Shared `Sheet` covers focus trap/return for migrated sheets; remaining private overlays still need migration.         |
-| Sticky bet CTA de-duplication                  | Not started | Game room mobile can still expose duplicated bet controls depending on state.                                        |
-| Wallet-browser safe-area QA                    | Not started | Needs explicit MetaMask/Coinbase/Trust-style verification.                                                           |
+| Item                                           | Status       | Notes                                                                                                                |
+| ---------------------------------------------- | ------------ | -------------------------------------------------------------------------------------------------------------------- |
+| Mobile header CTA hierarchy                    | Done         | The disconnected mobile header is compact and no longer competes with the hero.                                      |
+| Mobile nav drawer owns chain/language controls | Done         | Drawer chain and language controls now use shared sheet/popover/listbox anatomy.                                     |
+| Share panel mobile sheet                       | Done locally | Share uses shared sheet/popover; local 390px and desktop screenshots confirm no clipping. Wallet-browser QA remains. |
+| Game nav chip rail compression                 | Done         | Product/game route nav is shorter and centers the active mobile game chip.                                           |
+| Dev review flags for onboarding/age gate       | Done         | Local review can disable those gates without changing product code.                                                  |
+| Shared overlay primitives                      | Partial      | `Sheet`, `Popover`, z tokens, and `useOverlayController` exist; Drawer/Modal/StickyActionBar remain.                 |
+| Unified z-index scale                          | Partial      | Share and chain surfaces now use `overlayZ`; wallet/nav/result still need migration.                                 |
+| Focus trap and focus return                    | Partial      | Shared `Sheet` covers focus trap/return for migrated sheets; remaining private overlays still need migration.        |
+| Sticky bet CTA de-duplication                  | Done locally | Mobile now has one primary sticky bet CTA path; full panel no longer exposes a duplicate mobile action path.         |
+| Wallet-browser safe-area QA                    | Not started  | Needs explicit MetaMask/Coinbase/Trust-style verification.                                                           |
 
 ---
 
@@ -43,16 +43,16 @@ feels the seams.
 
 ### 1.1 Overlay fragmentation (measured in source)
 
-| Surface                          | File                   | z-index   | mobile↔desktop switch | backdrop token            | drag handle | close affordance |
-| -------------------------------- | ---------------------- | --------- | --------------------- | ------------------------- | ----------- | ---------------- |
-| Wallet menu — desktop popover    | `WalletHeaderMenu.tsx` | `z-50`    | —                     | none                      | —           | outside-click    |
-| Wallet menu — mobile sheet       | `WalletHeaderMenu.tsx` | `z-[95]`  | `md` (768)            | `bg-surface-0/70` blur-sm | ?           | X + backdrop     |
+| Surface                          | File                   | z-index            | mobile↔desktop switch | backdrop token            | drag handle | close affordance |
+| -------------------------------- | ---------------------- | ------------------ | --------------------- | ------------------------- | ----------- | ---------------- |
+| Wallet menu — desktop popover    | `WalletHeaderMenu.tsx` | `z-50`             | —                     | none                      | —           | outside-click    |
+| Wallet menu — mobile sheet       | `WalletHeaderMenu.tsx` | `z-[95]`           | `md` (768)            | `bg-surface-0/70` blur-sm | ?           | X + backdrop     |
 | Chain switcher — desktop popover | `ChainSwitcher.tsx`    | `overlayZ.popover` | —                     | none                      | —           | outside-click    |
-| Chain switcher — mobile sheet    | `ChainSwitcher.tsx`    | `overlayZ.sheet` | `md` (768)            | shared sheet backdrop     | ✅          | X + backdrop     |
-| Nav drawer                       | `AppHeader.tsx`        | (own)     | `md` (768)            | (own)                     | —           | X + backdrop     |
+| Chain switcher — mobile sheet    | `ChainSwitcher.tsx`    | `overlayZ.sheet`   | `md` (768)            | shared sheet backdrop     | ✅          | X + backdrop     |
+| Nav drawer                       | `AppHeader.tsx`        | (own)              | `md` (768)            | (own)                     | —           | X + backdrop     |
 | Share — desktop popover          | `SharePanel.tsx`       | `overlayZ.popover` | `md` (768)            | none                      | —           | outside-click    |
-| Share — mobile sheet             | `SharePanel.tsx`       | `overlayZ.sheet` | `md` (768)            | shared sheet backdrop     | ✅          | X + backdrop     |
-| Result overlay (modal)           | `result-overlay.tsx`   | `z-[90]`  | all                   | `bg-surface-0/76` blur-md | —           | (in-content)     |
+| Share — mobile sheet             | `SharePanel.tsx`       | `overlayZ.sheet`   | `md` (768)            | shared sheet backdrop     | ✅          | X + backdrop     |
+| Result overlay (modal)           | `result-overlay.tsx`   | `z-[90]`           | all                   | `bg-surface-0/76` blur-md | —           | (in-content)     |
 
 Concrete defects this table proves:
 
@@ -86,13 +86,12 @@ browsing. The chain name ("Base", "Base Sepolia") is short and should always sho
 
 ### 1.3 Game room — duplicate bet controls on mobile
 
-`game-room-shell.tsx` renders the full bet panel (`aside`, `order-2`) **and** a
-`fixed bottom-0 lg:hidden` sticky action bar at the same time. The panel's
-`hideMobileAction` prop hides its _place-bet button_ on mobile, but the panel's
-**amount editor still coexists** with the sticky bar's amount readout + quick
-adjust + place CTA. Result on a phone: two "BET AMOUNT" labels, two place/connect
-affordances. It reads like two designs stacked, which is the single biggest
-"not a mature product" tell in the room.
+This was the largest mobile-room defect and has been addressed locally. The
+sticky bar is now the primary mobile action path; the full panel no longer
+shows a second mobile place/connect CTA. The remaining risk is not the static
+layout but the connected-wallet flow: after signing, during VRF wait, and after
+terminal settlement, the sticky bar and round state must stay readable in a
+wallet browser.
 
 ### 1.4 Wallet-browser blind spot
 
