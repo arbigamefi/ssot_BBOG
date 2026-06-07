@@ -21,7 +21,7 @@ the mobile shell foundation, not as a historical proposal.
 | Item                                           | Status      | Notes                                                                                                                |
 | ---------------------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------- |
 | Mobile header CTA hierarchy                    | Done        | The disconnected mobile header no longer uses a large purple CTA that competes with the hero.                        |
-| Mobile nav drawer owns chain/language controls | Partial     | Controls are in the drawer; chain switcher now uses shared sheet/popover; language still needs final listbox anatomy. |
+| Mobile nav drawer owns chain/language controls | Done        | Drawer chain and language controls now use shared sheet/popover/listbox anatomy.                                      |
 | Share panel mobile sheet                       | Partial     | Share now uses shared sheet/popover; still needs screenshot gate and wallet-browser QA.                              |
 | Game nav chip rail compression                 | Done        | Product/game route nav is shorter than the earlier full chrome row.                                                  |
 | Dev review flags for onboarding/age gate       | Done        | Local review can disable those gates without changing product code.                                                  |

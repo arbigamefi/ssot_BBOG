@@ -1,12 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { createPortal } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { CheckIcon, ChevronDownIcon, GlobeAltIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { CheckIcon, ChevronDownIcon, GlobeAltIcon } from "@heroicons/react/24/outline";
 
 import { cn } from "@ssot/ui";
+import { Popover, Sheet } from "./overlay";
 import {
   ARBI_LOCALE_COOKIE,
   appLocales,
@@ -113,17 +113,6 @@ function LocaleFlagIcon({ locale, className }: { locale: AppLocale; className?: 
   }
 }
 
-function useBodyScrollLock(active: boolean) {
-  React.useEffect(() => {
-    if (!active) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [active]);
-}
-
 /**
  * Language picker as a compact globe-icon dropdown — the conventional web
  * pattern. Scales cleanly to N languages without eating header width.
@@ -174,20 +163,22 @@ export function LocaleSwitcher({
         onClick={() => setOpen((v) => !v)}
         className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-border-soft bg-surface-2 px-3 py-1.5 text-xs font-bold text-fg-muted transition-colors hover:text-fg"
       >
-        <GlobeAltIcon className="h-4 w-4" />
+        {compact ? (
+          <LocaleFlagIcon locale={locale} className="h-4 w-4 shrink-0" />
+        ) : (
+          <GlobeAltIcon className="h-4 w-4" />
+        )}
         <span>{compact ? localeShortLabels[locale] : localeLabels[locale]}</span>
         <ChevronDownIcon className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")} />
       </button>
 
-      {open && (
-        <div
-          role="menu"
-          aria-label={t("label")}
-          className={cn(
-            "absolute right-0 z-50 w-44 overflow-hidden rounded-xl border border-border-soft bg-surface-1 p-1 shadow-e3",
-            menuPlacement === "top" ? "bottom-full mb-2" : "top-full mt-2"
-          )}
-        >
+      <Popover
+        ariaLabel={t("label")}
+        open={open}
+        placement={menuPlacement === "top" ? "above" : "below"}
+        className="w-52 rounded-xl p-1"
+      >
+        <div>
           {appLocales.map((item) => {
             const active = item === locale;
             return (
@@ -204,18 +195,19 @@ export function LocaleSwitcher({
                     : "text-fg-muted hover:bg-surface-2 hover:text-fg"
                 )}
               >
-                <span className="flex items-center gap-2">
+                <span className="flex min-w-0 items-center gap-2">
+                  <LocaleFlagIcon locale={item} className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{localeLabels[item]}</span>
                   <span className="font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-fg-subtle">
                     {localeShortLabels[item]}
                   </span>
-                  {localeLabels[item]}
                 </span>
-                {active && <CheckIcon className="h-4 w-4 text-brand" />}
+                {active && <CheckIcon className="h-4 w-4 shrink-0 text-brand" />}
               </button>
             );
           })}
         </div>
-      )}
+      </Popover>
     </div>
   );
 }
@@ -270,16 +262,6 @@ export function LocaleSheetSwitcher({ className }: { className?: string }) {
   const t = useTranslations("locale");
   const rootT = useTranslations();
   const [open, setOpen] = React.useState(false);
-  useBodyScrollLock(open);
-
-  React.useEffect(() => {
-    if (!open) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [open]);
 
   return (
     <div className={className}>
@@ -308,40 +290,20 @@ export function LocaleSheetSwitcher({ className }: { className?: string }) {
         <ChevronDownIcon className="h-4 w-4 shrink-0 text-fg-subtle" />
       </button>
 
-      {open
-        ? createPortal(
-            <div className="fixed inset-0 z-[95] md:hidden" role="dialog" aria-modal="true">
-              <button
-                type="button"
-                aria-label={rootT("nav.closeMenu")}
-                className="absolute inset-0 bg-surface-0/70 backdrop-blur-sm"
-                onClick={() => setOpen(false)}
-              />
-              <div className="absolute inset-x-0 bottom-0 max-h-[82svh] overflow-y-auto rounded-t-2xl border border-border-soft bg-surface-1 p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-e3 animate-in slide-in-from-bottom">
-                <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-border" aria-hidden />
-                <div className="mb-4 flex items-center justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
-                      <GlobeAltIcon className="h-3.5 w-3.5" />
-                      {t("label")}
-                    </div>
-                    <p className="mt-1 text-sm font-semibold text-fg">{localeLabels[locale]}</p>
-                  </div>
-                  <button
-                    type="button"
-                    aria-label={rootT("nav.closeMenu")}
-                    onClick={() => setOpen(false)}
-                    className="grid h-10 w-10 place-items-center rounded-md border border-border-soft bg-surface-2 text-fg-muted transition-colors hover:text-fg"
-                  >
-                    <XMarkIcon className="h-5 w-5" />
-                  </button>
-                </div>
-                <LocaleOptionList onSelect={() => setOpen(false)} />
-              </div>
-            </div>,
-            document.body
-          )
-        : null}
+      <Sheet
+        closeLabel={rootT("nav.closeMenu")}
+        onClose={() => setOpen(false)}
+        open={open}
+        subtitle={localeLabels[locale]}
+        title={
+          <span className="inline-flex items-center gap-2">
+            <GlobeAltIcon className="h-4 w-4" />
+            {t("label")}
+          </span>
+        }
+      >
+        <LocaleOptionList className="grid-cols-2 gap-2" onSelect={() => setOpen(false)} />
+      </Sheet>
     </div>
   );
 }
