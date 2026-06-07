@@ -343,11 +343,17 @@
       "days": "há {count}d"
     },
     "hero": {
-      "channel": "Ao vivo na Base",
-      "title": "Cassino verificável on-chain.",
-      "description": "Jogos de cassino verificáveis on-chain. Ganhou, o prêmio cai na sua carteira em segundos — sem cadastro, sem custódia, sem intermediário.",
-      "enterCasino": "Começar a jogar",
-      "viewBank": "Como funciona",
+      "channel": "Cassino on-chain",
+      "title": "Jogue on-chain. Receba direto na carteira.",
+      "description": "Salas de cassino com aleatoriedade Chainlink VRF, recibos públicos e pagamentos que liquidam direto na sua carteira.",
+      "enterCasino": "Entrar no cassino",
+      "viewBank": "Ver bankroll",
+      "visual": {
+        "status": "Pago",
+        "wallet": "para carteira",
+        "receipt": "Recibo público",
+        "proof": "Prova"
+      },
       "consoleLabel": "Status ao vivo",
       "live": "Ao vivo",
       "metrics": {
@@ -357,12 +363,12 @@
       },
       "proofRows": {
         "vrf": {
-          "title": "Aleatoriedade que você pode verificar",
-          "detail": "Cada giro liga-se à solicitação do Chainlink VRF que sorteou os números."
+          "title": "Cada resultado tem recibo",
+          "detail": "ID da aposta, solicitação VRF, hash aleatório e transação de liquidação ficam públicos."
         },
         "bytecode": {
-          "title": "Contratos que você pode ler",
-          "detail": "A lógica do jogo, o banco e a liquidação são open source — leia, faça fork, verifique."
+          "title": "O bankroll da casa fica visível",
+          "detail": "Capacidade de pagamento e taxas do protocolo vêm dos contratos ativos."
         }
       }
     },

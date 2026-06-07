@@ -3107,11 +3107,17 @@
       "days": "{count}d ago"
     },
     "hero": {
-      "channel": "Live on Base",
-      "title": "Verifiable casino on-chain.",
-      "description": "Casino games, verified on-chain. Win and the payout hits your wallet in seconds — no signup, no escrow, no custody.",
-      "enterCasino": "Start Playing",
-      "viewBank": "How It Works",
+      "channel": "On-chain casino",
+      "title": "Play on-chain. Get paid to your wallet.",
+      "description": "Casino rooms with Chainlink VRF randomness, public receipts, and payouts that settle straight to your wallet.",
+      "enterCasino": "Enter Casino",
+      "viewBank": "See Bankroll",
+      "visual": {
+        "status": "Paid",
+        "wallet": "to wallet",
+        "receipt": "Public receipt",
+        "proof": "Proof"
+      },
       "consoleLabel": "Live status",
       "live": "Live",
       "metrics": {
@@ -3121,12 +3127,12 @@
       },
       "proofRows": {
         "vrf": {
-          "title": "Randomness you can verify",
-          "detail": "Each spin links to the Chainlink VRF request that picked the numbers."
+          "title": "Every result has a receipt",
+          "detail": "Bet ID, VRF request, random hash, and settlement transaction stay public."
         },
         "bytecode": {
-          "title": "Contracts you can read",
-          "detail": "Game logic, bank and settlement are open source — read them, fork them, verify them."
+          "title": "The house bankroll is visible",
+          "detail": "Payout capacity and protocol fees are read from the live contracts."
         }
       }
     },

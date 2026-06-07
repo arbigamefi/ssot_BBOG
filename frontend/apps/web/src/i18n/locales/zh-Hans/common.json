@@ -3107,11 +3107,17 @@
       "days": "{count}d 前"
     },
     "hero": {
-      "channel": "在 Base 上线",
-      "title": "链上可验证的赌场",
-      "description": "赌场游戏，每一局都能在链上核对。中了直接进你的钱包，几秒到账 —— 不用注册、不用托管。",
-      "enterCasino": "开始玩",
-      "viewBank": "看怎么玩",
+      "channel": "链上赌场",
+      "title": "链上开奖，奖金直接进钱包",
+      "description": "每一局都用 Chainlink VRF 抽号，结算后生成公开凭证；中了直接从 Bank 支付到你的钱包。",
+      "enterCasino": "进入赌场",
+      "viewBank": "查看金库",
+      "visual": {
+        "status": "已派彩",
+        "wallet": "到钱包",
+        "receipt": "公开凭证",
+        "proof": "证明"
+      },
       "consoleLabel": "实时状态",
       "live": "实时",
       "metrics": {
@@ -3121,12 +3127,12 @@
       },
       "proofRows": {
         "vrf": {
-          "title": "随机数可验证",
-          "detail": "每一局都对应一次 Chainlink VRF 抽号请求，可在链上核。"
+          "title": "每一局都有收据",
+          "detail": "投注 ID、VRF 请求、随机哈希、结算交易全部公开。"
         },
         "bytecode": {
-          "title": "合约可阅读",
-          "detail": "游戏逻辑、金库、结算 —— 全部开源，读它、fork 它、验证它。"
+          "title": "庄家金库看得见",
+          "detail": "最大赔付能力和协议费都从实时合约读取。"
         }
       }
     },

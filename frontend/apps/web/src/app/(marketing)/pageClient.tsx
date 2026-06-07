@@ -244,6 +244,12 @@ export function HomePageClient() {
           description: t("hero.description"),
           enterCasino: t("hero.enterCasino"),
           viewBank: t("hero.viewBank"),
+          visual: {
+            status: t("hero.visual.status"),
+            wallet: t("hero.visual.wallet"),
+            receipt: t("hero.visual.receipt"),
+            proof: t("hero.visual.proof")
+          },
           proofRows: {
             vrf: {
               title: t("hero.proofRows.vrf.title"),

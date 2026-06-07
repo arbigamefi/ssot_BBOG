@@ -343,11 +343,17 @@
       "days": "{count}g önce"
     },
     "hero": {
-      "channel": "Base'de canlı",
-      "title": "Zincir üstünde doğrulanabilir casino.",
-      "description": "Casino oyunları zincir üstünde doğrulanır. Kazanın, ödeme saniyeler içinde cüzdanınıza gelsin — kayıt yok, emanet yok, saklama yok.",
-      "enterCasino": "Oynamaya başla",
-      "viewBank": "Nasıl çalışır",
+      "channel": "Zincir üstü casino",
+      "title": "Zincirde oynayın. Ödeme cüzdanınıza gelsin.",
+      "description": "Chainlink VRF rastgeleliği, herkese açık makbuzlar ve doğrudan cüzdanınıza yerleşen ödemelerle casino odaları.",
+      "enterCasino": "Casinoya gir",
+      "viewBank": "Bankroll'u gör",
+      "visual": {
+        "status": "Ödendi",
+        "wallet": "cüzdana",
+        "receipt": "Herkese açık makbuz",
+        "proof": "Kanıt"
+      },
       "consoleLabel": "Canlı durum",
       "live": "Canlı",
       "metrics": {
@@ -357,12 +363,12 @@
       },
       "proofRows": {
         "vrf": {
-          "title": "Doğrulayabileceğiniz rastgelelik",
-          "detail": "Her dönüş, sayıları seçen Chainlink VRF isteğine bağlanır."
+          "title": "Her sonucun makbuzu var",
+          "detail": "Bahis ID'si, VRF isteği, rastgele hash ve ödeme işlemi herkese açık kalır."
         },
         "bytecode": {
-          "title": "Okuyabileceğiniz sözleşmeler",
-          "detail": "Oyun mantığı, banka ve ödeme açık kaynak — okuyun, çatallayın, doğrulayın."
+          "title": "House bankroll görünür",
+          "detail": "Ödeme kapasitesi ve protokol ücretleri canlı sözleşmelerden okunur."
         }
       }
     },

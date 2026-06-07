@@ -137,9 +137,11 @@ describe("HomePage", () => {
   it("renders the product-first landing surface", () => {
     render(<HomePage />);
 
-    expect(screen.getByRole("heading", { name: "Verifiable casino on-chain." })).toBeDefined();
-    expect(screen.getByText("Live on Base")).toBeDefined();
-    expect(screen.getAllByText("Start Playing").length).toBeGreaterThan(0);
+    expect(
+      screen.getByRole("heading", { name: "Play on-chain. Get paid to your wallet." })
+    ).toBeDefined();
+    expect(screen.getByText("On-chain casino")).toBeDefined();
+    expect(screen.getAllByText("Enter Casino").length).toBeGreaterThan(0);
     expect(screen.getByText("Game rooms. One wallet.")).toBeDefined();
     expect(screen.getByText("We can't rig the spin.")).toBeDefined();
   });
