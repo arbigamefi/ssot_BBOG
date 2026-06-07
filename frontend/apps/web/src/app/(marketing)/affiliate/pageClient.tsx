@@ -53,13 +53,13 @@ export function AffiliatePageClient() {
   );
 
   return (
-    <div className="space-y-8 pb-20 pt-28 md:space-y-10 md:pt-32">
-      <section className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
-        <div className="max-w-4xl">
+    <div className="min-w-0 space-y-8 overflow-x-hidden pb-20 pt-28 md:space-y-10 md:pt-32">
+      <section className="grid min-w-0 gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
+        <div className="min-w-0 max-w-4xl">
           <p className="text-xs font-black uppercase tracking-[0.24em] text-brand">
             {t("affiliate.hero.eyebrow")}
           </p>
-          <h1 className="mt-5 max-w-4xl text-4xl font-black leading-[1.05] tracking-tight text-fg sm:text-5xl md:text-7xl">
+          <h1 className="mt-5 max-w-full text-4xl font-black leading-[1.08] tracking-tight text-fg sm:text-5xl md:max-w-4xl md:text-7xl">
             {t("affiliate.hero.title")}
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-7 text-fg-muted md:text-lg md:leading-8">
@@ -68,13 +68,13 @@ export function AffiliatePageClient() {
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <a
               href="#referral-link"
-              className="rounded-md bg-brand px-5 py-3 text-center text-sm font-black uppercase tracking-[0.14em] text-fg-inverse shadow-e2 transition-colors hover:bg-brand/90"
+              className="w-full rounded-md bg-brand px-5 py-3 text-center text-sm font-black uppercase tracking-[0.14em] text-fg-inverse shadow-e2 transition-colors hover:bg-brand/90 sm:w-auto"
             >
               {t("affiliate.hero.primary")}
             </a>
             <Link
               href="/portfolio/referral"
-              className="rounded-md border border-border bg-surface-1 px-5 py-3 text-center text-sm font-black uppercase tracking-[0.14em] text-fg transition-colors hover:border-brand/60"
+              className="w-full rounded-md border border-border bg-surface-1 px-5 py-3 text-center text-sm font-black uppercase tracking-[0.14em] text-fg transition-colors hover:border-brand/60 sm:w-auto"
             >
               {t("affiliate.hero.secondary")}
             </Link>
@@ -83,7 +83,7 @@ export function AffiliatePageClient() {
 
         <div
           id="referral-link"
-          className="scroll-mt-28 rounded-lg border border-border bg-surface-1 p-6 shadow-e2"
+          className="min-w-0 scroll-mt-28 rounded-lg border border-border bg-surface-1 p-6 shadow-e2"
         >
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-md border border-brand/40 bg-brand/10 text-brand">
@@ -97,10 +97,10 @@ export function AffiliatePageClient() {
             </div>
           </div>
 
-          <div className="mt-5 rounded-md border border-border bg-surface-0 p-4 font-mono text-sm text-fg-muted">
+          <div className="mt-5 min-w-0 overflow-hidden break-all rounded-md border border-border bg-surface-0 p-4 font-mono text-sm text-fg-muted">
             {referralLink ?? t("affiliate.linkCard.connect")}
           </div>
-          <div className="mt-4 flex items-center gap-3">
+          <div className="mt-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
             <button
               type="button"
               disabled={!referralLink}
@@ -110,7 +110,7 @@ export function AffiliatePageClient() {
               <ClipboardDocumentIcon className="h-4 w-4" />
               {copied ? t("affiliate.linkCard.copied") : t("affiliate.linkCard.copy")}
             </button>
-            <span className="text-xs text-fg-subtle">
+            <span className="min-w-0 break-all text-xs text-fg-subtle">
               {sdk?.account
                 ? t("affiliate.linkCard.wallet", { wallet: shortHex(sdk.account) })
                 : t("affiliate.linkCard.walletPending")}
@@ -119,8 +119,8 @@ export function AffiliatePageClient() {
         </div>
       </section>
 
-      <section className="grid gap-6 rounded-lg border border-border bg-surface-1 p-5 shadow-e2 lg:grid-cols-[0.75fr_1.25fr] lg:p-6">
-        <div>
+      <section className="grid min-w-0 gap-6 rounded-lg border border-border bg-surface-1 p-5 shadow-e2 lg:grid-cols-[0.75fr_1.25fr] lg:p-6">
+        <div className="min-w-0">
           <div className="flex h-11 w-11 items-center justify-center rounded-md border border-brand/40 bg-brand/10 text-brand">
             <MegaphoneIcon className="h-5 w-5" />
           </div>
@@ -133,7 +133,7 @@ export function AffiliatePageClient() {
           <p className="mt-3 text-sm leading-6 text-fg-muted">{t("affiliate.kit.body")}</p>
         </div>
 
-        <div className="grid gap-3">
+        <div className="grid min-w-0 gap-3">
           {campaignChannels.map((channel) => {
             const preview = referralLink
               ? t(`affiliate.kit.channels.${channel}.text`, { link: referralLink })
@@ -143,7 +143,7 @@ export function AffiliatePageClient() {
             return (
               <div
                 key={channel}
-                className="grid gap-3 rounded-md border border-border-soft bg-surface-0 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+                className="grid min-w-0 gap-3 rounded-md border border-border-soft bg-surface-0 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
               >
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 text-sm font-black text-fg">
