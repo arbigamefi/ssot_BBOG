@@ -42,7 +42,7 @@ export function HomeHero({
         style={{ background: "radial-gradient(circle, hsl(var(--accent) / 0.1), transparent 70%)" }}
       />
 
-      <div className="relative mx-auto grid min-h-[560px] max-w-[1440px] grid-cols-1 gap-10 px-6 py-16 md:py-20 lg:min-h-[660px] lg:grid-cols-[minmax(0,0.95fr)_minmax(440px,0.85fr)] lg:items-center lg:px-10">
+      <div className="relative mx-auto grid min-h-[560px] max-w-[1440px] grid-cols-1 gap-10 px-6 pb-16 pt-28 md:pb-20 md:pt-32 lg:min-h-[660px] lg:grid-cols-[minmax(0,0.95fr)_minmax(440px,0.85fr)] lg:items-center lg:px-10">
         <div className="max-w-3xl">
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand/30 bg-brand-soft px-3 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-brand shadow-e1">
             <span className="h-2 w-2 rounded-full bg-accent" />

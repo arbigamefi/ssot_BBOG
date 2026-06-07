@@ -1,8 +1,5 @@
 import { OG_CONTENT_TYPE, OG_SIZE, renderOgCard } from "../../../og/render";
-import {
-  CASINO_GAME_COUNT,
-  getCasinoGamePresentation
-} from "../../../../features/casino/game-presentation";
+import { getCasinoGamePresentation } from "../../../../features/casino/game-presentation";
 
 export const alt = "ArbiGameFi casino game";
 export const size = OG_SIZE;
@@ -21,8 +18,8 @@ export default async function GameOpengraphImage({
   const card = getCasinoGamePresentation(slug) ?? {
     ogEyebrow: "Wallet-native casino",
     ogTitle: "Pick a game. One on-chain house.",
-    ogSubtitle: "Dice, roulette, plinko, keno and more — paid out the instant you win.",
-    ogStat: `${CASINO_GAME_COUNT} games`,
+    ogSubtitle: "Casino games settled on-chain — paid to your wallet when you win.",
+    ogStat: "live rooms",
     ogTone: "cyan" as const,
     visualKind: "casino" as const
   };

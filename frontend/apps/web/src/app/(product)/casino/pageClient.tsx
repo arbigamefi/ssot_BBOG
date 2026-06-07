@@ -192,6 +192,13 @@ export function GamesListClient() {
     statsAvailable && casinoStats ? casinoStats.stats.betCount.toLocaleString(locale) : "—";
   const playersLabel =
     statsAvailable && casinoStats ? casinoStats.stats.uniquePlayers.toLocaleString(locale) : "—";
+  const hasCasinoActivity =
+    statsAvailable &&
+    Boolean(casinoStats) &&
+    (casinoStats.stats.betCount > 0 ||
+      casinoStats.stats.uniquePlayers > 0 ||
+      BigInt(casinoStats.stats.turnover) > 0n);
+  const shouldShowStats = hasCasinoActivity;
 
   return (
     <div className="relative overflow-hidden pb-16 text-fg selection:bg-brand/20">
@@ -225,34 +232,36 @@ export function GamesListClient() {
             </p>
           </div>
 
-          <dl className="grid gap-4 sm:grid-cols-2 lg:min-w-[27rem]">
-            <div className="rounded-xl border border-border-soft bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-1)))] p-5 shadow-e2 sm:col-span-2">
-              <dt className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-accent">
-                <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-                {t("casino.directory.stats.volume")}
-              </dt>
-              <dd
-                className="mt-3 truncate font-mono text-3xl font-semibold text-fg"
-                title={volumeLabel}
-              >
-                {volumeLabel}
-              </dd>
-            </div>
-            <div className="rounded-xl border border-border-soft bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-1)))] p-5 shadow-e2">
-              <dt className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-brand">
-                <TrophyIcon className="h-3.5 w-3.5" />
-                {t("casino.directory.stats.bets")}
-              </dt>
-              <dd className="mt-3 font-mono text-3xl font-semibold text-fg">{betCountLabel}</dd>
-            </div>
-            <div className="rounded-xl border border-border-soft bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-1)))] p-5 shadow-e2">
-              <dt className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-fg-subtle">
-                <span className="h-1.5 w-1.5 rounded-full bg-success" />
-                {t("casino.directory.stats.players")}
-              </dt>
-              <dd className="mt-3 font-mono text-3xl font-semibold text-fg">{playersLabel}</dd>
-            </div>
-          </dl>
+          {shouldShowStats ? (
+            <dl className="grid gap-4 sm:grid-cols-2 lg:min-w-[27rem]">
+              <div className="rounded-xl border border-border-soft bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-1)))] p-5 shadow-e2 sm:col-span-2">
+                <dt className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-accent">
+                  <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+                  {t("casino.directory.stats.volume")}
+                </dt>
+                <dd
+                  className="mt-3 truncate font-mono text-3xl font-semibold text-fg"
+                  title={volumeLabel}
+                >
+                  {volumeLabel}
+                </dd>
+              </div>
+              <div className="rounded-xl border border-border-soft bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-1)))] p-5 shadow-e2">
+                <dt className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-brand">
+                  <TrophyIcon className="h-3.5 w-3.5" />
+                  {t("casino.directory.stats.bets")}
+                </dt>
+                <dd className="mt-3 font-mono text-3xl font-semibold text-fg">{betCountLabel}</dd>
+              </div>
+              <div className="rounded-xl border border-border-soft bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-1)))] p-5 shadow-e2">
+                <dt className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-fg-subtle">
+                  <span className="h-1.5 w-1.5 rounded-full bg-success" />
+                  {t("casino.directory.stats.players")}
+                </dt>
+                <dd className="mt-3 font-mono text-3xl font-semibold text-fg">{playersLabel}</dd>
+              </div>
+            </dl>
+          ) : null}
         </header>
       </section>
 
