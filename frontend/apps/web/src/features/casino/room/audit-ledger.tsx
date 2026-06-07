@@ -216,7 +216,7 @@ export function GameRoomAuditLedger({
       <div className="flex flex-col gap-3 border-b border-border-soft md:flex-row md:items-center md:justify-between">
         <nav
           aria-label={t("casino.room.audit.tabs.live")}
-          className="scrollbar-hide flex items-stretch gap-1 overflow-x-auto px-4 md:px-6"
+          className="flex items-stretch gap-1 overflow-x-auto px-4 [scrollbar-width:none] md:px-6 [&::-webkit-scrollbar]:hidden"
         >
           {tabs.map((tab) => {
             const active = tab.id === activeTab;
