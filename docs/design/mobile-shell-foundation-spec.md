@@ -2,7 +2,7 @@
 
 | Owner    | Product + Frontend                                                                                                                                                                |
 | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Status   | Draft — design spec, no code yet                                                                                                                                                  |
+| Status   | Partially implemented — foundation spec + remaining work                                                                                                                          |
 | Date     | 2026-06-07                                                                                                                                                                        |
 | Priority | Slice #1 (foundation layer reused by every later slice)                                                                                                                           |
 | Extends  | `docs/design/frontend-product-ui-ux-audit-2026-06-07.md` → "Shared Interaction System"; `16-mobile.md`                                                                            |
@@ -11,8 +11,25 @@
 This document turns the audit's _Shared Interaction System_ prose into a
 **build-ready pattern contract**. The rule for this slice: no page gets polished
 until every overlay on mobile shares one anatomy, one breakpoint, one z-scale,
-and one set of backdrop/safe-area tokens. Code only starts after this spec is
-approved.
+and one set of backdrop/safe-area tokens.
+
+Implementation has started. Treat this document as the remaining contract for
+the mobile shell foundation, not as a historical proposal.
+
+## 0. Implementation Status
+
+| Item                                           | Status      | Notes                                                                                                                |
+| ---------------------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------- |
+| Mobile header CTA hierarchy                    | Done        | The disconnected mobile header no longer uses a large purple CTA that competes with the hero.                        |
+| Mobile nav drawer owns chain/language controls | Partial     | Controls are in the drawer; chain/language still need the final shared sheet/listbox anatomy.                        |
+| Share panel mobile sheet                       | Partial     | Mobile sheet behavior exists, but it still needs the shared overlay primitive, unified z-scale, and screenshot gate. |
+| Game nav chip rail compression                 | Done        | Product/game route nav is shorter than the earlier full chrome row.                                                  |
+| Dev review flags for onboarding/age gate       | Done        | Local review can disable those gates without changing product code.                                                  |
+| Shared overlay primitives                      | Not started | `Sheet`, `Drawer`, `Popover`, `Modal`, `StickyActionBar`, and `useOverlayController` still need to be introduced.    |
+| Unified z-index scale                          | Not started | Current overlays still carry ad hoc values.                                                                          |
+| Focus trap and focus return                    | Not started | Required for modal/sheet polish and accessibility.                                                                   |
+| Sticky bet CTA de-duplication                  | Not started | Game room mobile can still expose duplicated bet controls depending on state.                                        |
+| Wallet-browser safe-area QA                    | Not started | Needs explicit MetaMask/Coinbase/Trust-style verification.                                                           |
 
 ---
 

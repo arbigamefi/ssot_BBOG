@@ -11,6 +11,11 @@ previous version had become a long audit ledger. Historical detail remains in
 git history; this file now keeps only the decisions and next actions needed to
 finish the branch without reintroducing process overhead.
 
+For page-level product UI/UX work after the 2026-06-07 audit, use
+`frontend-product-ui-ux-roadmap-2026-06-07.md`. This file remains authoritative
+for runtime correctness, i18n/security/testing/release hygiene, and runtime
+boundary decisions.
+
 ## 1. Operating Principle
 
 The frontend should be simpler, not merely more documented. The fullstack
