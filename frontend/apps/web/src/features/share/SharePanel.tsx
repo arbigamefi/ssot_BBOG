@@ -1,15 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { createPortal } from "react-dom";
-import {
-  CheckIcon,
-  ClipboardDocumentCheckIcon,
-  ShareIcon,
-  XMarkIcon
-} from "@heroicons/react/24/outline";
+import { CheckIcon, ClipboardDocumentCheckIcon, ShareIcon } from "@heroicons/react/24/outline";
 import { cn } from "@ssot/ui";
 
+import { Popover, Sheet } from "../../components/overlay";
 import { buildShareIntentUrl } from "./share-link";
 
 export type SharePanelLabels = {
@@ -44,27 +39,23 @@ export function SharePanel({
 }) {
   const [open, setOpen] = React.useState(false);
   const [copied, setCopied] = React.useState<"link" | "proof" | null>(null);
-  const [mounted, setMounted] = React.useState(false);
   const useMobileSheet = useMobileShareSheet();
   const containerRef = React.useRef<HTMLDivElement | null>(null);
-  const mobileSheetRef = React.useRef<HTMLDivElement | null>(null);
   const canNativeShare =
     typeof navigator !== "undefined" &&
     typeof (navigator as Navigator & { share?: unknown }).share === "function";
 
-  React.useEffect(() => setMounted(true), []);
-
   React.useEffect(() => {
-    if (!open) return;
+    if (!open || useMobileSheet) return;
     const onClick = (event: MouseEvent) => {
       const target = event.target as Node;
-      if (!containerRef.current?.contains(target) && !mobileSheetRef.current?.contains(target)) {
+      if (!containerRef.current?.contains(target)) {
         setOpen(false);
       }
     };
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
-  }, [open]);
+  }, [open, useMobileSheet]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -74,15 +65,6 @@ export function SharePanel({
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [open]);
-
-  React.useEffect(() => {
-    if (!open || !useMobileSheet) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [open, useMobileSheet]);
 
   const markCopied = (kind: "link" | "proof") => {
     setCopied(kind);
@@ -166,52 +148,20 @@ export function SharePanel({
       </button>
       {open && !disabled ? (
         <>
-          <div
-            role="menu"
-            className="absolute bottom-full right-0 z-10 mb-2 hidden w-72 max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-border-soft bg-surface-1 p-1 text-left shadow-e3 sm:block"
-          >
-            {menuItems}
-          </div>
-          {mounted && useMobileSheet
-            ? createPortal(
-                <div
-                  className="fixed inset-0 z-[150] flex items-end bg-bg/65 backdrop-blur-sm sm:hidden"
-                  role="presentation"
-                  onMouseDown={(event) => {
-                    if (event.target === event.currentTarget) setOpen(false);
-                  }}
-                >
-                  <div
-                    ref={mobileSheetRef}
-                    role="dialog"
-                    aria-modal="true"
-                    aria-label={labels.share}
-                    className="w-full rounded-t-xl border border-border-soft bg-surface-1 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-e3"
-                  >
-                    <div className="mb-3 flex items-center justify-between gap-4">
-                      <div>
-                        <div className="text-sm font-semibold text-fg">{labels.share}</div>
-                        <div className="mt-1 max-w-[18rem] truncate text-xs text-fg-muted">
-                          {url}
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        aria-label={labels.close ?? labels.share}
-                        onClick={() => setOpen(false)}
-                        className="grid h-10 w-10 shrink-0 place-items-center rounded-md border border-border-soft bg-surface-2 text-fg-muted transition-colors hover:bg-surface-3 hover:text-fg"
-                      >
-                        <XMarkIcon className="h-5 w-5" />
-                      </button>
-                    </div>
-                    <div role="menu" className="space-y-1">
-                      {menuItems}
-                    </div>
-                  </div>
-                </div>,
-                document.body
-              )
-            : null}
+          <Popover open={open}>{menuItems}</Popover>
+          {useMobileSheet ? (
+            <Sheet
+              closeLabel={labels.close ?? labels.share}
+              onClose={() => setOpen(false)}
+              open={open}
+              subtitle={url}
+              title={labels.share}
+            >
+              <div role="menu" className="space-y-1">
+                {menuItems}
+              </div>
+            </Sheet>
+          ) : null}
         </>
       ) : null}
     </div>
@@ -223,7 +173,7 @@ function useMobileShareSheet() {
 
   React.useEffect(() => {
     if (typeof window.matchMedia !== "function") return;
-    const query = window.matchMedia("(max-width: 639px)");
+    const query = window.matchMedia("(max-width: 767px)");
     const sync = () => setIsMobile(query.matches);
     sync();
     query.addEventListener("change", sync);
