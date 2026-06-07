@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { mainnet } from "wagmi/chains";
@@ -22,10 +21,10 @@ import {
   ChevronDownIcon,
   ClipboardIcon,
   ExclamationTriangleIcon,
-  PowerIcon,
-  XMarkIcon
+  PowerIcon
 } from "@heroicons/react/24/outline";
 
+import { Popover, Sheet } from "../components/overlay";
 import { useActiveChain } from "./ActiveChainProvider";
 import { ChainOptionList, ChainSwitcher } from "./ChainSwitcher";
 import { getExplorerAddressUrl } from "./chain-registry";
@@ -35,17 +34,6 @@ const ENS_LOOKUP_ENABLED = process.env.NEXT_PUBLIC_ENABLE_ENS_LOOKUP === "true";
 
 function shortAddress(address: string) {
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
-}
-
-function useBodyScrollLock(active: boolean) {
-  React.useEffect(() => {
-    if (!active) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [active]);
 }
 
 /**
@@ -93,7 +81,6 @@ export function WalletHeaderMenu({
   const [open, setOpen] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const isSheet = mode === "sheet";
-  useBodyScrollLock(isSheet && open);
 
   // Close on outside click / Escape — no Radix dep, just light handlers.
   React.useEffect(() => {
@@ -110,15 +97,6 @@ export function WalletHeaderMenu({
       document.removeEventListener("mousedown", onClick);
       document.removeEventListener("keydown", onKey);
     };
-  }, [isSheet, open]);
-
-  React.useEffect(() => {
-    if (!open || !isSheet) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
   }, [isSheet, open]);
 
   React.useEffect(() => {
@@ -155,43 +133,47 @@ export function WalletHeaderMenu({
   }
 
   const explorerUrl = getExplorerAddressUrl(selectedChainId, address);
-  const menuContent = (
-    <>
-      {/* Identity block — address + copy + explorer + ENS placeholder. */}
-      <div className="border-b border-border-soft px-4 py-3">
-        <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0">
-            {ensName && <span className="block truncate text-sm font-bold text-fg">{ensName}</span>}
-            <span
-              className={cn(
-                "block truncate font-mono text-fg",
-                ensName ? "text-[11px] text-fg-muted" : "text-sm font-bold"
-              )}
-            >
-              {shortAddress(address)}
-            </span>
-          </div>
-          <div className="flex items-center gap-1">
-            <CopyButton value={address} t={t} />
-            {explorerUrl && (
-              <a
-                href={explorerUrl}
-                target="_blank"
-                rel="noreferrer noopener"
-                aria-label={t("walletMenu.viewOnExplorer")}
-                className="flex h-7 w-7 items-center justify-center rounded-md border border-border-soft text-fg-muted transition-colors hover:border-brand/40 hover:text-fg"
-              >
-                <ArrowTopRightOnSquareIcon className="h-4 w-4" />
-              </a>
+  const identityBlock = (
+    <div className="border-b border-border-soft px-4 py-3">
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          {ensName && <span className="block truncate text-sm font-bold text-fg">{ensName}</span>}
+          <span
+            className={cn(
+              "block truncate font-mono text-fg",
+              ensName ? "text-[11px] text-fg-muted" : "text-sm font-bold"
             )}
-          </div>
+          >
+            {shortAddress(address)}
+          </span>
         </div>
-        {connector?.name && (
-          <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-fg-subtle">
-            {t("walletMenu.connectedVia", { wallet: connector.name })}
-          </p>
-        )}
+        <div className="flex items-center gap-1">
+          <CopyButton value={address} t={t} />
+          {explorerUrl && (
+            <a
+              href={explorerUrl}
+              target="_blank"
+              rel="noreferrer noopener"
+              aria-label={t("walletMenu.viewOnExplorer")}
+              className="flex h-7 w-7 items-center justify-center rounded-md border border-border-soft text-fg-muted transition-colors hover:border-brand/40 hover:text-fg"
+            >
+              <ArrowTopRightOnSquareIcon className="h-4 w-4" />
+            </a>
+          )}
+        </div>
       </div>
+      {connector?.name && (
+        <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-fg-subtle">
+          {t("walletMenu.connectedVia", { wallet: connector.name })}
+        </p>
+      )}
+    </div>
+  );
+  const actionContent = (
+    <>
+      {/* Mobile sheet already uses the identity as its title; desktop popover
+          keeps the full identity block above the actions. */}
+      {!isSheet ? identityBlock : null}
 
       {/* Wallet-chain mismatch banner — shown ONLY when wallet differs
           from the app's selected chain. Single-click fix. */}
@@ -245,6 +227,7 @@ export function WalletHeaderMenu({
       </button>
     </>
   );
+  const sheetTitle = <span className={cn("font-mono", ensName && "font-sans")}>{displayName}</span>;
 
   return (
     <div ref={containerRef} className="relative" data-tour="wallet">
@@ -280,53 +263,23 @@ export function WalletHeaderMenu({
       </button>
 
       {open && !isSheet && (
-        <div
-          role="menu"
-          className="absolute right-0 z-50 mt-2 w-[20rem] overflow-hidden rounded-xl border border-border-soft bg-surface-1 shadow-e3"
-        >
-          {menuContent}
-        </div>
+        <Popover open={open} placement="below" className="w-[20rem] rounded-xl p-0">
+          {actionContent}
+        </Popover>
       )}
 
-      {open && isSheet
-        ? createPortal(
-            <div className="fixed inset-0 z-[95] md:hidden" role="dialog" aria-modal="true">
-              <button
-                type="button"
-                aria-label={rootT("nav.closeMenu")}
-                className="absolute inset-0 bg-surface-0/70 backdrop-blur-sm"
-                onClick={() => setOpen(false)}
-              />
-              <div className="absolute inset-x-0 bottom-0 max-h-[86svh] overflow-hidden rounded-t-2xl border border-border-soft bg-surface-1 shadow-e3 animate-in slide-in-from-bottom">
-                <div className="border-b border-border-soft p-4">
-                  <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-border" aria-hidden />
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
-                        {t("walletMenu.connectedVia", { wallet: connector?.name ?? "wallet" })}
-                      </p>
-                      <p className="mt-1 truncate font-mono text-sm font-bold text-fg">
-                        {displayName}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      aria-label={rootT("nav.closeMenu")}
-                      onClick={() => setOpen(false)}
-                      className="grid h-10 w-10 shrink-0 place-items-center rounded-md border border-border-soft bg-surface-2 text-fg-muted transition-colors hover:text-fg"
-                    >
-                      <XMarkIcon className="h-5 w-5" />
-                    </button>
-                  </div>
-                </div>
-                <div className="max-h-[calc(86svh-6rem)] overflow-y-auto pb-[env(safe-area-inset-bottom)]">
-                  {menuContent}
-                </div>
-              </div>
-            </div>,
-            document.body
-          )
-        : null}
+      {isSheet ? (
+        <Sheet
+          closeLabel={rootT("nav.closeMenu")}
+          contentClassName="px-0"
+          onClose={() => setOpen(false)}
+          open={open}
+          subtitle={t("walletMenu.connectedVia", { wallet: connector?.name ?? "wallet" })}
+          title={sheetTitle}
+        >
+          {actionContent}
+        </Sheet>
+      ) : null}
     </div>
   );
 }

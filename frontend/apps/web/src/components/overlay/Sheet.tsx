@@ -12,6 +12,7 @@ export function Sheet({
   children,
   className,
   closeLabel,
+  contentClassName,
   onClose,
   open,
   subtitle,
@@ -20,6 +21,7 @@ export function Sheet({
   children: React.ReactNode;
   className?: string;
   closeLabel: string;
+  contentClassName?: string;
   onClose: () => void;
   open: boolean;
   subtitle?: React.ReactNode;
@@ -78,7 +80,12 @@ export function Sheet({
             <XMarkIcon className="h-5 w-5" />
           </button>
         </div>
-        <div className="max-h-[calc(82svh-5.75rem)] overflow-y-auto px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+        <div
+          className={cn(
+            "max-h-[calc(82svh-5.75rem)] overflow-y-auto px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]",
+            contentClassName
+          )}
+        >
           {children}
         </div>
       </section>
