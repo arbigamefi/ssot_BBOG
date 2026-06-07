@@ -190,22 +190,9 @@ function MobileNavDrawer({
           </button>
         </div>
         <div className="border-b border-border-soft px-4 py-4">
-          <div className="flex items-center gap-2">
-            <div className="min-w-0 flex-1 [&>button]:w-full [&>div]:w-full [&>div>button]:w-full">
-              <WalletHeaderMenu hideDisconnectedChainSwitcher mode="sheet" />
-            </div>
-            <button
-              type="button"
-              aria-label={t("nav.refresh")}
-              title={t("nav.refresh")}
-              onClick={refreshPage}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-border-soft bg-surface-2 text-fg-muted transition-colors hover:text-fg"
-            >
-              <ArrowPathIcon className="h-5 w-5" />
-            </button>
+          <div className="min-w-0 [&>button]:w-full [&>div]:w-full [&>div>button]:w-full">
+            <WalletHeaderMenu hideDisconnectedChainSwitcher mode="sheet" />
           </div>
-          <DisconnectedChainSwitcher className="mt-3" mode="sheet" />
-          <LocaleSheetSwitcher className="mt-3" />
         </div>
         <nav className="min-h-0 flex-1 overflow-y-auto px-4 py-5" aria-label={t("nav.menu")}>
           <MobileNavSection
@@ -234,6 +221,23 @@ function MobileNavDrawer({
             onNavigate={onClose}
           />
         </nav>
+        <div className="border-t border-border-soft px-4 py-4">
+          <DisconnectedChainSwitcher mode="sheet" />
+          <LocaleSheetSwitcher className="mt-3" />
+          <button
+            type="button"
+            aria-label={t("nav.refresh")}
+            onClick={refreshPage}
+            className="mt-3 flex min-h-12 w-full items-center justify-between gap-3 rounded-lg border border-border-soft bg-surface-2 px-3 py-2 text-left text-sm font-semibold text-fg-muted transition-colors hover:border-border hover:text-fg"
+          >
+            <span className="flex min-w-0 items-center gap-3">
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border-soft bg-surface-1 text-fg-muted">
+                <ArrowPathIcon className="h-4 w-4" />
+              </span>
+              <span className="truncate">{t("nav.refresh")}</span>
+            </span>
+          </button>
+        </div>
       </aside>
     </div>
   );
