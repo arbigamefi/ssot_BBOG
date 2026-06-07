@@ -35,25 +35,27 @@ export function GameRoomShell({
           : "flex min-h-[calc(100vh-8rem)] flex-col gap-4"
       }
     >
-      <header className="flex flex-col gap-3 border-b border-border-soft pb-3 md:flex-row md:items-end md:justify-between md:pb-4">
-        <div>
-          <div className="flex items-center gap-3 text-xs font-semibold uppercase text-accent">
+      <header className="flex flex-col gap-2 border-b border-border-soft pb-2 md:flex-row md:items-end md:justify-between md:gap-4 md:pb-4">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-accent md:gap-3 md:text-xs">
             <span className="h-2.5 w-2.5 rounded-full bg-accent" />
             {t("casino.room.shell.liveModule")}
           </div>
-          <h1 className="mt-1 text-3xl font-semibold text-fg md:text-5xl">{gameName}</h1>
+          <h1 className="mt-1 truncate text-2xl font-semibold leading-tight text-fg md:text-5xl">
+            {gameName}
+          </h1>
         </div>
 
-        <dl className="grid grid-cols-2 gap-4 border-t border-border-soft pt-3 md:min-w-[22rem] md:border-t-0 md:pt-0">
+        <dl className="grid grid-cols-2 gap-3 border-t border-border-soft pt-2 md:min-w-[22rem] md:gap-4 md:border-t-0 md:pt-0">
           <div className="min-w-0 md:text-right">
-            <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-fg-subtle">
+            <dt className="text-[9px] font-semibold uppercase tracking-[0.1em] text-fg-subtle md:text-[10px] md:tracking-[0.12em]">
               {t("casino.room.shell.maxBet")}
             </dt>
             <dd
               className={
                 maxBetIsHint
-                  ? "mt-1 truncate text-sm font-semibold text-fg-muted"
-                  : "mt-1 truncate font-mono text-base text-fg md:text-lg"
+                  ? "mt-0.5 truncate text-xs font-semibold text-fg-muted md:mt-1 md:text-sm"
+                  : "mt-0.5 truncate font-mono text-sm text-fg md:mt-1 md:text-lg"
               }
               title={typeof maxBet === "string" ? maxBet : undefined}
             >
@@ -61,14 +63,14 @@ export function GameRoomShell({
             </dd>
           </div>
           <div className="min-w-0 md:text-right">
-            <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-fg-subtle">
+            <dt className="text-[9px] font-semibold uppercase tracking-[0.1em] text-fg-subtle md:text-[10px] md:tracking-[0.12em]">
               {t("casino.room.shell.maxPayout")}
             </dt>
             <dd
               className={
                 maxPayoutIsHint
-                  ? "mt-1 truncate text-sm font-semibold text-fg-muted"
-                  : "mt-1 truncate font-mono text-base text-fg md:text-lg"
+                  ? "mt-0.5 truncate text-xs font-semibold text-fg-muted md:mt-1 md:text-sm"
+                  : "mt-0.5 truncate font-mono text-sm text-fg md:mt-1 md:text-lg"
               }
               title={typeof maxPayout === "string" ? maxPayout : undefined}
             >
