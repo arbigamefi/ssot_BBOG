@@ -37,10 +37,11 @@ function mockMatchMedia(matches: boolean) {
   });
 }
 
-function renderSharePanel() {
+function renderSharePanel(options: { desktopLayer?: "popover" | "modal" } = {}) {
   return render(
     <div data-testid="clipping-parent" className="overflow-hidden">
       <SharePanel
+        desktopLayer={options.desktopLayer}
         labels={labels}
         proof="proof-data"
         text="Won bet"
@@ -67,6 +68,16 @@ describe("SharePanel", () => {
     expect(menu.parentElement).toBe(document.body);
     expect(screen.getByRole("menuitem", { name: "Copy result link" })).toBeDefined();
     expect(screen.getByRole("menuitem", { name: "Share to Telegram" })).toBeDefined();
+  });
+
+  it("can render above a modal overlay when used inside result dialogs", async () => {
+    mockMatchMedia(false);
+    renderSharePanel({ desktopLayer: "modal" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Share" }));
+
+    const menu = await screen.findByRole("menu");
+    expect(menu.className).toContain("z-[95]");
   });
 
   it("uses the shared mobile bottom sheet below the md breakpoint", async () => {

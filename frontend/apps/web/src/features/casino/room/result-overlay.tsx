@@ -893,6 +893,7 @@ export function GameRoomResultOverlay({
           <div className="grid grid-cols-2 gap-2">
             <SharePanel
               disabled={!receiptReady || !receiptPath}
+              desktopLayer="modal"
               title={t("casino.room.result.title")}
               text={shareText}
               url={shareUrl}

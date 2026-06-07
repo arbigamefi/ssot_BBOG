@@ -3,5 +3,6 @@ export const overlayZ = {
   drawer: "z-[70]",
   sheet: "z-[80]",
   modal: "z-[90]",
+  modalPopover: "z-[95]",
   toast: "z-[100]"
 } as const;

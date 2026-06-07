@@ -24,6 +24,7 @@ export type SharePanelLabels = {
 
 export function SharePanel({
   disabled = false,
+  desktopLayer = "popover",
   labels,
   proof,
   text,
@@ -32,6 +33,7 @@ export function SharePanel({
   url
 }: {
   disabled?: boolean;
+  desktopLayer?: "popover" | "modal";
   labels: SharePanelLabels;
   proof?: string;
   text: string;
@@ -175,6 +177,7 @@ export function SharePanel({
             <DesktopSharePopover
               align={popoverAlign}
               anchorRect={triggerRect}
+              layer={desktopLayer}
               panelRef={desktopPanelRef}
             >
               {menuItems}
@@ -190,11 +193,13 @@ function DesktopSharePopover({
   align,
   anchorRect,
   children,
+  layer,
   panelRef
 }: {
   align: "end" | "start";
   anchorRect: DOMRect | null;
   children: React.ReactNode;
+  layer: "popover" | "modal";
   panelRef: React.RefObject<HTMLDivElement>;
 }) {
   const [mounted, setMounted] = React.useState(false);
@@ -223,7 +228,7 @@ function DesktopSharePopover({
       role="menu"
       className={cn(
         "fixed hidden overflow-hidden rounded-lg border border-border-soft bg-surface-1 p-1 text-left shadow-e3 md:block",
-        overlayZ.popover
+        layer === "modal" ? overlayZ.modalPopover : overlayZ.popover
       )}
       style={{
         left,
