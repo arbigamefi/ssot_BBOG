@@ -31,6 +31,10 @@ export function AffiliatePageClient() {
     origin && sdk?.account
       ? buildCasinoReferralLink({ origin, referrer: sdk.account, gameSlug: "dice" })
       : undefined;
+  const referralLinkPreview = React.useMemo(
+    () => formatReferralLinkPreview(referralLink),
+    [referralLink]
+  );
 
   const handleCopy = React.useCallback(async () => {
     if (!referralLink) return;
@@ -54,12 +58,12 @@ export function AffiliatePageClient() {
 
   return (
     <div className="min-w-0 space-y-8 overflow-x-hidden pb-20 pt-28 md:space-y-10 md:pt-32">
-      <section className="grid min-w-0 gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
+      <section className="grid min-w-0 gap-8 overflow-hidden lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
         <div className="min-w-0 max-w-4xl">
-          <p className="text-xs font-black uppercase tracking-[0.24em] text-brand">
+          <p className="text-xs font-bold uppercase tracking-[0.24em] text-brand">
             {t("affiliate.hero.eyebrow")}
           </p>
-          <h1 className="mt-5 max-w-full text-4xl font-black leading-[1.08] tracking-tight text-fg sm:text-5xl md:max-w-4xl md:text-7xl">
+          <h1 className="mt-5 max-w-full text-balance break-words text-3xl font-bold leading-[1.08] tracking-normal text-fg sm:text-5xl md:max-w-4xl md:text-6xl">
             {t("affiliate.hero.title")}
           </h1>
           <p className="mt-5 max-w-2xl text-base leading-7 text-fg-muted md:text-lg md:leading-8">
@@ -68,13 +72,13 @@ export function AffiliatePageClient() {
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <a
               href="#referral-link"
-              className="w-full rounded-md bg-brand px-5 py-3 text-center text-sm font-black uppercase tracking-[0.14em] text-fg-inverse shadow-e2 transition-colors hover:bg-brand/90 sm:w-auto"
+              className="w-full rounded-md bg-brand px-5 py-3 text-center text-sm font-bold uppercase tracking-[0.14em] text-fg-inverse shadow-e2 transition-colors hover:bg-brand/90 sm:w-auto"
             >
               {t("affiliate.hero.primary")}
             </a>
             <Link
               href="/portfolio/referral"
-              className="w-full rounded-md border border-border bg-surface-1 px-5 py-3 text-center text-sm font-black uppercase tracking-[0.14em] text-fg transition-colors hover:border-brand/60 sm:w-auto"
+              className="w-full rounded-md border border-border bg-surface-1 px-5 py-3 text-center text-sm font-bold uppercase tracking-[0.14em] text-fg transition-colors hover:border-brand/60 sm:w-auto"
             >
               {t("affiliate.hero.secondary")}
             </Link>
@@ -97,8 +101,13 @@ export function AffiliatePageClient() {
             </div>
           </div>
 
-          <div className="mt-5 min-w-0 overflow-hidden break-all rounded-md border border-border bg-surface-0 p-4 font-mono text-sm text-fg-muted">
-            {referralLink ?? t("affiliate.linkCard.connect")}
+          <div
+            className="mt-5 min-w-0 overflow-hidden rounded-md border border-border bg-surface-0 p-4 font-mono text-sm text-fg-muted"
+            title={referralLink}
+          >
+            <span className="block max-w-full truncate">
+              {referralLinkPreview ?? t("affiliate.linkCard.connect")}
+            </span>
           </div>
           <div className="mt-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
             <button
@@ -110,7 +119,7 @@ export function AffiliatePageClient() {
               <ClipboardDocumentIcon className="h-4 w-4" />
               {copied ? t("affiliate.linkCard.copied") : t("affiliate.linkCard.copy")}
             </button>
-            <span className="min-w-0 break-all text-xs text-fg-subtle">
+            <span className="min-w-0 truncate text-xs text-fg-subtle">
               {sdk?.account
                 ? t("affiliate.linkCard.wallet", { wallet: shortHex(sdk.account) })
                 : t("affiliate.linkCard.walletPending")}
@@ -124,10 +133,10 @@ export function AffiliatePageClient() {
           <div className="flex h-11 w-11 items-center justify-center rounded-md border border-brand/40 bg-brand/10 text-brand">
             <MegaphoneIcon className="h-5 w-5" />
           </div>
-          <p className="mt-5 text-xs font-black uppercase tracking-[0.18em] text-brand">
+          <p className="mt-5 text-xs font-bold uppercase tracking-[0.18em] text-brand">
             {t("affiliate.kit.eyebrow")}
           </p>
-          <h2 className="mt-3 text-2xl font-black tracking-tight text-fg md:text-3xl">
+          <h2 className="mt-3 text-2xl font-bold tracking-normal text-fg md:text-3xl">
             {t("affiliate.kit.title")}
           </h2>
           <p className="mt-3 text-sm leading-6 text-fg-muted">{t("affiliate.kit.body")}</p>
@@ -146,7 +155,7 @@ export function AffiliatePageClient() {
                 className="grid min-w-0 gap-3 rounded-md border border-border-soft bg-surface-0 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
               >
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2 text-sm font-black text-fg">
+                  <div className="flex items-center gap-2 text-sm font-bold text-fg">
                     {t(`affiliate.kit.channels.${channel}.title`)}
                   </div>
                   <p className="mt-2 line-clamp-2 text-sm leading-6 text-fg-muted">{preview}</p>
@@ -228,8 +237,20 @@ function AffiliatePillar({
       <div className="flex h-12 w-12 items-center justify-center rounded-md border border-border bg-surface-0 text-brand">
         {icon}
       </div>
-      <h2 className="mt-5 text-xl font-black text-fg">{title}</h2>
+      <h2 className="mt-5 text-xl font-bold text-fg">{title}</h2>
       <p className="mt-3 text-sm leading-6 text-fg-muted">{body}</p>
     </div>
   );
+}
+
+function formatReferralLinkPreview(link?: string) {
+  if (!link) return undefined;
+  try {
+    const url = new URL(link);
+    const referrer = url.searchParams.get("ref");
+    const ref = referrer ? shortHex(referrer) : undefined;
+    return `${url.origin}${url.pathname}${ref ? `?ref=${ref}` : ""}`;
+  } catch {
+    return link;
+  }
 }
