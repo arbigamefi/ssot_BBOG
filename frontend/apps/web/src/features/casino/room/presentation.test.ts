@@ -68,6 +68,8 @@ describe("game room presentation helpers", () => {
     });
     expect(limits.maxPayout).toBe("1,000 USDC");
     expect(limits.maxBet).toBe("500 USDC");
+    expect(limits.maxBetState).toBe("value");
+    expect(limits.maxPayoutState).toBe("value");
   });
 
   it("does not cap live room limits by asset-agnostic static game metadata", () => {
@@ -89,7 +91,12 @@ describe("game room presentation helpers", () => {
         assetDecimals: 6,
         assetSymbol: "USDC"
       })
-    ).toEqual({ maxBet: "—", maxPayout: "—" });
+    ).toEqual({
+      maxBet: "—",
+      maxBetState: "pending-liquidity",
+      maxPayout: "—",
+      maxPayoutState: "pending-liquidity"
+    });
 
     const noOdds = deriveGameRoomLimits({
       freeLiquidity: 1_000_000_000n,
@@ -99,5 +106,21 @@ describe("game room presentation helpers", () => {
     });
     expect(noOdds.maxPayout).toBe("1,000 USDC");
     expect(noOdds.maxBet).toBe("—");
+    expect(noOdds.maxBetState).toBe("pending-selection");
+    expect(noOdds.maxPayoutState).toBe("value");
+  });
+
+  it("keeps zero pool capacity as a distinct state for product copy", () => {
+    const limits = deriveGameRoomLimits({
+      freeLiquidity: 0n,
+      multiplier: 2,
+      assetDecimals: 6,
+      assetSymbol: "USDC"
+    });
+
+    expect(limits.maxBet).toBe("0 USDC");
+    expect(limits.maxBetState).toBe("no-capacity");
+    expect(limits.maxPayout).toBe("0 USDC");
+    expect(limits.maxPayoutState).toBe("no-capacity");
   });
 });

@@ -79,18 +79,36 @@ export function deriveGameRoomLimits({
   multiplier: number;
   assetDecimals: number;
   assetSymbol: string;
-}): { maxBet: string; maxBetRaw?: bigint; maxPayout: string } {
+}): {
+  maxBet: string;
+  maxBetRaw?: bigint;
+  maxBetState: "value" | "pending-selection" | "pending-liquidity" | "no-capacity";
+  maxPayout: string;
+  maxPayoutState: "value" | "pending-liquidity" | "no-capacity";
+} {
   const dash = "—";
-  if (freeLiquidity == null) return { maxBet: dash, maxPayout: dash };
+  if (freeLiquidity == null)
+    return {
+      maxBet: dash,
+      maxBetState: "pending-liquidity",
+      maxPayout: dash,
+      maxPayoutState: "pending-liquidity"
+    };
 
   const maxPayout = formatPoolTokenAmount(freeLiquidity, assetDecimals, assetSymbol);
-  if (!(multiplier > 0)) return { maxBet: dash, maxPayout };
+  const maxPayoutState = freeLiquidity === 0n ? "no-capacity" : "value";
+  if (!(multiplier > 0))
+    return { maxBet: dash, maxBetState: "pending-selection", maxPayout, maxPayoutState };
+  if (freeLiquidity === 0n)
+    return { maxBet: maxPayout, maxBetState: "no-capacity", maxPayout, maxPayoutState };
 
   // maxBet = freeLiquidity / multiplier, bigint-safe via 1e6 scaling.
   const maxBetRaw = (freeLiquidity * 1_000_000n) / BigInt(Math.round(multiplier * 1_000_000));
   return {
     maxBet: formatPoolTokenAmount(maxBetRaw, assetDecimals, assetSymbol),
     maxBetRaw,
-    maxPayout
+    maxBetState: "value",
+    maxPayout,
+    maxPayoutState
   };
 }

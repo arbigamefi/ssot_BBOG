@@ -4,7 +4,9 @@ import { useTranslations } from "next-intl";
 export function GameRoomShell({
   gameName,
   maxBet,
+  maxBetIsHint = false,
   maxPayout,
+  maxPayoutIsHint = false,
   leftPaneContent,
   rightPaneContent,
   auditLedgerContent,
@@ -14,7 +16,9 @@ export function GameRoomShell({
   gameName: React.ReactNode;
   /** Live, asset-aware limits for the selected pool (chain-derived). */
   maxBet: string;
+  maxBetIsHint?: boolean;
   maxPayout: string;
+  maxPayoutIsHint?: boolean;
   leftPaneContent: React.ReactNode;
   rightPaneContent: React.ReactNode;
   auditLedgerContent: React.ReactNode;
@@ -45,13 +49,29 @@ export function GameRoomShell({
             <dt className="text-xs font-semibold uppercase text-fg-subtle">
               {t("casino.room.shell.maxBet")}
             </dt>
-            <dd className="mt-1 font-mono text-lg text-fg">{maxBet}</dd>
+            <dd
+              className={
+                maxBetIsHint
+                  ? "mt-1 text-sm font-semibold text-fg-muted"
+                  : "mt-1 font-mono text-lg text-fg"
+              }
+            >
+              {maxBet}
+            </dd>
           </div>
           <div className="rounded-lg border border-border-soft bg-surface-1 px-4 py-3 shadow-e1">
             <dt className="text-xs font-semibold uppercase text-fg-subtle">
               {t("casino.room.shell.maxPayout")}
             </dt>
-            <dd className="mt-1 font-mono text-lg text-fg">{maxPayout}</dd>
+            <dd
+              className={
+                maxPayoutIsHint
+                  ? "mt-1 text-sm font-semibold text-fg-muted"
+                  : "mt-1 font-mono text-lg text-fg"
+              }
+            >
+              {maxPayout}
+            </dd>
           </div>
         </dl>
       </header>

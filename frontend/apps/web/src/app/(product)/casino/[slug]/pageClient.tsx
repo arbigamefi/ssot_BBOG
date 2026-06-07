@@ -423,12 +423,20 @@ export function GamePageClient({ slug }: { slug: string }) {
   // Live, asset-aware header limits derived from the selected pool's free
   // liquidity (chain-read → verifiable), replacing the old static config tiles.
   const freeLiquidity = computePoolFreeLiquidity(poolSnapshot);
-  const { maxBet, maxBetRaw, maxPayout } = deriveGameRoomLimits({
+  const { maxBet, maxBetRaw, maxBetState, maxPayout, maxPayoutState } = deriveGameRoomLimits({
     freeLiquidity,
     multiplier,
     assetDecimals,
     assetSymbol
   });
+  const maxBetLabel =
+    maxBetState === "pending-selection"
+      ? t("casino.room.shell.selectBetFirst")
+      : maxBetState === "no-capacity"
+        ? t("casino.room.shell.noCapacity")
+        : maxBet;
+  const maxPayoutLabel =
+    maxPayoutState === "no-capacity" ? t("casino.room.shell.noCapacity") : maxPayout;
   const maxBetAmountPerRoll =
     maxBetRaw == null
       ? undefined
@@ -566,8 +574,10 @@ export function GamePageClient({ slug }: { slug: string }) {
     <PageTransition pageKey={`game-${slug}`}>
       <GameRoomShell
         gameName={getLocalizedGameName(t, game)}
-        maxBet={maxBet}
-        maxPayout={maxPayout}
+        maxBet={maxBetLabel}
+        maxBetIsHint={maxBetState !== "value"}
+        maxPayout={maxPayoutLabel}
+        maxPayoutIsHint={maxPayoutState !== "value"}
         isInteractive={true}
         leftPaneContent={LeftPane}
         rightPaneContent={RightPane}
