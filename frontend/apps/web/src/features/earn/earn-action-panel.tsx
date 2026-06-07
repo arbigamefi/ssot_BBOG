@@ -147,25 +147,25 @@ export function EarnActionPanel({
         />
 
         <div className="min-w-0 rounded-md border border-border bg-surface-0 p-3 sm:p-4">
-          <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+          <div className="mb-3 flex items-center justify-between gap-3">
             <label
               htmlFor="earn-amount"
               className="text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle"
             >
               {t("earn.actions.amount")}
             </label>
-            <div className="min-w-0 text-left text-[10px] font-bold uppercase tracking-[0.12em] sm:text-right">
-              <span className="block truncate text-fg-subtle" title={availableLabel}>
-                {availableLabel}
-              </span>
-              <span className="mt-1 block truncate font-mono text-fg-muted" title={availableValue}>
-                {availableValue}
+            <div className="flex min-w-0 items-center justify-end gap-2 text-[10px] font-bold uppercase tracking-[0.1em]">
+              <span
+                className="min-w-0 truncate text-fg-subtle"
+                title={`${availableLabel}: ${availableValue}`}
+              >
+                {availableLabel}: <span className="font-mono text-fg-muted">{availableValue}</span>
               </span>
               <button
                 type="button"
                 onClick={onUseMax}
                 disabled={!canUseMax}
-                className="mt-1 text-brand disabled:text-fg-subtle"
+                className="shrink-0 text-brand disabled:text-fg-subtle"
               >
                 {t("earn.actions.balance.useMax")}
               </button>
