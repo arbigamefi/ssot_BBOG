@@ -1,17 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { useAccount } from "wagmi";
-import {
-  ArrowsRightLeftIcon,
-  CheckIcon,
-  ChevronDownIcon,
-  XMarkIcon
-} from "@heroicons/react/24/outline";
+import { ArrowsRightLeftIcon, CheckIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
 import { cn } from "@ssot/ui";
 
+import { Popover, Sheet } from "../components/overlay";
 import { useActiveChain } from "./ActiveChainProvider";
 
 /**
@@ -63,17 +58,6 @@ export function ChainOptionList({ onSelect }: { onSelect?: () => void }) {
   );
 }
 
-function useBodyScrollLock(active: boolean) {
-  React.useEffect(() => {
-    if (!active) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [active]);
-}
-
 /**
  * Standalone chain switcher (pill trigger + popover) for surfaces without the
  * wallet menu — notably the disconnected header, so a visitor can browse a
@@ -96,7 +80,6 @@ export function ChainSwitcher({
   const [open, setOpen] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const isSheet = mode === "sheet";
-  useBodyScrollLock(isSheet && open);
 
   React.useEffect(() => {
     if (!open || isSheet) return;
@@ -108,13 +91,13 @@ export function ChainSwitcher({
   }, [isSheet, open]);
 
   React.useEffect(() => {
-    if (!open) return;
+    if (!open || isSheet) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [open]);
+  }, [isSheet, open]);
 
   if (supportedChains.length <= 1) return null;
 
@@ -161,9 +144,7 @@ export function ChainSwitcher({
               selectedChain?.environment === "mainnet" ? "bg-brand" : "bg-accent"
             )}
           />
-          <span className="hidden truncate sm:inline">
-            {selectedChain?.shortName ?? t("network.label")}
-          </span>
+          <span className="truncate">{selectedChain?.shortName ?? t("network.label")}</span>
         </span>
       )}
       <ChevronDownIcon
@@ -176,55 +157,32 @@ export function ChainSwitcher({
     <div ref={containerRef} className={cn("relative", className)}>
       {trigger}
 
-      {open && !isSheet && (
-        <div
-          role="menu"
-          className="absolute right-0 z-50 mt-2 w-[16rem] overflow-hidden rounded-xl border border-border-soft bg-surface-1 p-3 shadow-e3"
-        >
+      {!isSheet && (
+        <Popover open={open} placement="below" className="w-[16rem] rounded-xl p-3">
           <div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
             <ArrowsRightLeftIcon className="h-3.5 w-3.5" />
             {t("walletMenu.chainSection")}
           </div>
           <ChainOptionList onSelect={() => setOpen(false)} />
-        </div>
+        </Popover>
       )}
 
-      {open && isSheet
-        ? createPortal(
-            <div className="fixed inset-0 z-[95] md:hidden" role="dialog" aria-modal="true">
-              <button
-                type="button"
-                aria-label={rootT("nav.closeMenu")}
-                className="absolute inset-0 bg-surface-0/70 backdrop-blur-sm"
-                onClick={() => setOpen(false)}
-              />
-              <div className="absolute inset-x-0 bottom-0 max-h-[82svh] overflow-y-auto rounded-t-2xl border border-border-soft bg-surface-1 p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-e3 animate-in slide-in-from-bottom">
-                <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-border" aria-hidden />
-                <div className="mb-4 flex items-center justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
-                      <ArrowsRightLeftIcon className="h-3.5 w-3.5" />
-                      {t("walletMenu.chainSection")}
-                    </div>
-                    <p className="mt-1 text-sm font-semibold text-fg">
-                      {selectedChain?.name ?? t("network.label")}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    aria-label={rootT("nav.closeMenu")}
-                    onClick={() => setOpen(false)}
-                    className="grid h-10 w-10 place-items-center rounded-md border border-border-soft bg-surface-2 text-fg-muted transition-colors hover:text-fg"
-                  >
-                    <XMarkIcon className="h-5 w-5" />
-                  </button>
-                </div>
-                <ChainOptionList onSelect={() => setOpen(false)} />
-              </div>
-            </div>,
-            document.body
-          )
-        : null}
+      {isSheet ? (
+        <Sheet
+          closeLabel={rootT("nav.closeMenu")}
+          onClose={() => setOpen(false)}
+          open={open}
+          subtitle={selectedChain?.name ?? t("network.label")}
+          title={
+            <span className="inline-flex items-center gap-2">
+              <ArrowsRightLeftIcon className="h-4 w-4" />
+              {t("walletMenu.chainSection")}
+            </span>
+          }
+        >
+          <ChainOptionList onSelect={() => setOpen(false)} />
+        </Sheet>
+      ) : null}
     </div>
   );
 }

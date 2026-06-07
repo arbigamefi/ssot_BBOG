@@ -9,11 +9,13 @@ export function Popover({
   children,
   className,
   open,
+  placement = "above",
   role = "menu"
 }: {
   children: React.ReactNode;
   className?: string;
   open: boolean;
+  placement?: "above" | "below";
   role?: "dialog" | "menu";
 }) {
   if (!open) return null;
@@ -22,7 +24,8 @@ export function Popover({
     <div
       role={role}
       className={cn(
-        "absolute bottom-full right-0 mb-2 hidden w-72 max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-border-soft bg-surface-1 p-1 text-left shadow-e3 md:block",
+        "absolute right-0 hidden w-72 max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-border-soft bg-surface-1 p-1 text-left shadow-e3 md:block",
+        placement === "above" ? "bottom-full mb-2" : "top-full mt-2",
         overlayZ.popover,
         className
       )}

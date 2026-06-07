@@ -26,6 +26,7 @@ export function Sheet({
   title: React.ReactNode;
 }) {
   const [mounted, setMounted] = React.useState(false);
+  const titleId = React.useId();
   const { onBackdropMouseDown, panelRef } = useOverlayController<HTMLDivElement>({
     lockScroll: true,
     onClose,
@@ -50,7 +51,7 @@ export function Sheet({
         ref={panelRef}
         role="dialog"
         aria-modal="true"
-        aria-label={typeof title === "string" ? title : undefined}
+        aria-labelledby={titleId}
         className={cn(
           "max-h-[82svh] w-full overflow-hidden rounded-t-2xl border border-border-soft bg-surface-1 shadow-e3 animate-in slide-in-from-bottom",
           className
@@ -61,7 +62,9 @@ export function Sheet({
         </div>
         <div className="flex items-start justify-between gap-4 px-4 py-4">
           <div className="min-w-0">
-            <div className="text-sm font-semibold text-fg">{title}</div>
+            <div id={titleId} className="text-sm font-semibold text-fg">
+              {title}
+            </div>
             {subtitle ? (
               <div className="mt-1 max-w-[20rem] truncate text-xs text-fg-muted">{subtitle}</div>
             ) : null}

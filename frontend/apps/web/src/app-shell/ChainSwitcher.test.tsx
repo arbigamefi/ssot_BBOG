@@ -18,6 +18,9 @@ vi.mock("@heroicons/react/24/outline", () => ({
   ),
   ChevronDownIcon: ({ className }: { className?: string }) => (
     <svg aria-hidden="true" className={className} />
+  ),
+  XMarkIcon: ({ className }: { className?: string }) => (
+    <svg aria-hidden="true" className={className} />
   )
 }));
 
@@ -25,6 +28,7 @@ vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) =>
     ({
       "network.label": "Network",
+      "nav.closeMenu": "Close",
       "walletMenu.chainSection": "Network"
     })[key] ?? key
 }));
@@ -38,6 +42,15 @@ function renderSwitcher(initialChainId = "8453") {
   return render(
     <ActiveChainProvider initialChainId={initialChainId}>
       <ChainSwitcher />
+      <Probe />
+    </ActiveChainProvider>
+  );
+}
+
+function renderSheetSwitcher(initialChainId = "8453") {
+  return render(
+    <ActiveChainProvider initialChainId={initialChainId}>
+      <ChainSwitcher mode="sheet" />
       <Probe />
     </ActiveChainProvider>
   );
@@ -69,5 +82,32 @@ describe("ChainSwitcher", () => {
     expect(screen.getByRole("radio", { name: /Base Sepolia/i }).getAttribute("aria-checked")).toBe(
       "true"
     );
+  });
+
+  it("uses the shared sheet interaction in sheet mode", () => {
+    renderSheetSwitcher("8453");
+
+    fireEvent.click(screen.getByRole("button", { name: "Network" }));
+
+    expect(screen.getByRole("dialog", { name: "Network" })).toBeDefined();
+    expect(document.body.style.overflow).toBe("hidden");
+
+    fireEvent.click(screen.getByRole("radio", { name: /Base Sepolia/i }));
+
+    expect(screen.getByTestId("selected-chain").textContent).toBe("84532");
+    expect(screen.queryByRole("dialog", { name: "Network" })).toBeNull();
+    expect(document.body.style.overflow).toBe("");
+  });
+
+  it("closes the shared sheet on Escape", () => {
+    renderSheetSwitcher("8453");
+
+    fireEvent.click(screen.getByRole("button", { name: "Network" }));
+    expect(screen.getByRole("dialog", { name: "Network" })).toBeDefined();
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    expect(screen.queryByRole("dialog", { name: "Network" })).toBeNull();
+    expect(document.body.style.overflow).toBe("");
   });
 });
