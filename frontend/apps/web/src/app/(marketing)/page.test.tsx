@@ -144,6 +144,8 @@ describe("HomePage", () => {
     expect(screen.getAllByText("Enter Casino").length).toBeGreaterThan(0);
     expect(screen.getByText("Game rooms. One wallet.")).toBeDefined();
     expect(screen.getByText("We can't rig the spin.")).toBeDefined();
+    expect(screen.queryByText("Last few bets")).toBeNull();
+    expect(screen.queryByText("Be the first.")).toBeNull();
   });
 
   it("renders live activity, reserve proof, and canonical room cards when release data exists", () => {

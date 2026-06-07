@@ -263,26 +263,28 @@ export function HomePageClient() {
         }}
       />
 
-      {/* Activity is the strongest social-proof signal a casino landing page
-          has — surface it right under the hero so visitors see live play
-          before they see trust copy. */}
-      <HomeActivity
-        activity={activity}
-        copy={{
-          eyebrow: t("activity.eyebrow"),
-          title: t("activity.title"),
-          viewAll: t("activity.viewAll"),
-          live: t("activity.live"),
-          headers: {
-            player: t("activity.headers.player"),
-            room: t("activity.headers.room"),
-            payout: t("activity.headers.payout"),
-            age: t("activity.headers.age")
-          },
-          empty: t("activity.empty"),
-          emptyCta: t("hero.enterCasino")
-        }}
-      />
+      {/* Activity is powerful social proof only when it is real. Empty activity
+          on a public landing page reads like a cold casino, so the section
+          stays hidden until there are indexed bets to show. */}
+      {activity.length > 0 ? (
+        <HomeActivity
+          activity={activity}
+          copy={{
+            eyebrow: t("activity.eyebrow"),
+            title: t("activity.title"),
+            viewAll: t("activity.viewAll"),
+            live: t("activity.live"),
+            headers: {
+              player: t("activity.headers.player"),
+              room: t("activity.headers.room"),
+              payout: t("activity.headers.payout"),
+              age: t("activity.headers.age")
+            },
+            empty: t("activity.empty"),
+            emptyCta: t("hero.enterCasino")
+          }}
+        />
+      ) : null}
 
       {bankFunded ? (
         <HomeStatsStrip
