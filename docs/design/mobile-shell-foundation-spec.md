@@ -25,9 +25,9 @@ the mobile shell foundation, not as a historical proposal.
 | Share panel mobile sheet                       | Done locally | Share uses shared sheet/popover; local 390px and desktop screenshots confirm no clipping. Wallet-browser QA remains. |
 | Game nav chip rail compression                 | Done         | Product/game route nav is shorter and centers the active mobile game chip.                                           |
 | Dev review flags for onboarding/age gate       | Done         | Local review can disable those gates without changing product code.                                                  |
-| Shared overlay primitives                      | Partial      | `Sheet`, `Drawer`, `Popover`, z tokens, and `useOverlayController` exist; Modal/StickyActionBar remain.              |
-| Unified z-index scale                          | Partial      | Share, chain, wallet, and nav surfaces now use `overlayZ`; result modal and toast layering still need final audit.   |
-| Focus trap and focus return                    | Partial      | Shared `Sheet` and `Drawer` cover focus trap/return for migrated surfaces; result modal still needs migration.       |
+| Shared overlay primitives                      | Partial      | `Sheet`, `Drawer`, `Popover`, `Modal`, z tokens, and `useOverlayController` exist; StickyActionBar remains.          |
+| Unified z-index scale                          | Partial      | Share, chain, wallet, nav, and result modal now use `overlayZ`; toast layering still needs final audit.              |
+| Focus trap and focus return                    | Partial      | Shared `Sheet`, `Drawer`, and `Modal` cover focus trap/return for migrated surfaces; StickyActionBar remains.        |
 | Sticky bet CTA de-duplication                  | Done locally | Mobile now has one primary sticky bet CTA path; full panel no longer exposes a duplicate mobile action path.         |
 | Wallet-browser safe-area QA                    | Not started  | Needs explicit MetaMask/Coinbase/Trust-style verification.                                                           |
 
@@ -52,24 +52,23 @@ feels the seams.
 | Nav drawer                       | `AppHeader.tsx`        | `overlayZ.drawer`  | `md` (768)            | shared drawer backdrop    | —           | X + backdrop     |
 | Share — desktop popover          | `SharePanel.tsx`       | `overlayZ.popover` | `md` (768)            | none                      | —           | outside-click    |
 | Share — mobile sheet             | `SharePanel.tsx`       | `overlayZ.sheet`   | `md` (768)            | shared sheet backdrop     | ✅          | X + backdrop     |
-| Result overlay (modal)           | `result-overlay.tsx`   | `z-[90]`           | all                   | `bg-surface-0/76` blur-md | —           | (in-content)     |
+| Result overlay (modal)           | `result-overlay.tsx`   | `overlayZ.modal`   | all                   | shared modal backdrop     | —           | (in-content)     |
 
 Concrete defects this table proves:
 
-1. **The z-index scale is only partially adopted.** Share, chain, wallet, and
-   nav now use `overlayZ`, but result modal and toasts still need a final
-   stacking audit.
+1. **The z-index scale is mostly adopted.** Share, chain, wallet, nav, and the
+   result modal now use `overlayZ`; toasts still need a final stacking audit.
 2. **The breakpoint disagreement has been fixed for share/chain/wallet**, all
    now use the header's **`md` (768px)** sheet↔popover boundary where relevant.
-3. **Backdrop drift remains mainly in result surfaces.** Share, chain, wallet,
-   and nav now use the shared sheet/drawer backdrop; result modal still carries
-   its own visual language.
-4. **Anatomy drift is reduced, not eliminated.** Migrated sheets/drawers now
+3. **Backdrop drift has been reduced to final audit work.** Share, chain, wallet,
+   nav, and result modal now use shared overlay backdrops; toast and future
+   confirmation surfaces still need review.
+4. **Anatomy drift is reduced, not eliminated.** Migrated sheets/drawers/modal now
    share close handling, internal scroll, safe-area padding, and backdrop
-   behavior. Result modal still needs migration.
+   behavior. StickyActionBar still needs migration.
 5. **Effect duplication is mostly removed from shell surfaces.** Share, chain,
-   wallet, and nav no longer hand-roll portal, scroll-lock, Escape, and focus
-   handling. Result modal remains to be consolidated.
+   wallet, nav, and result modal no longer hand-roll portal, scroll-lock, Escape,
+   and focus handling. StickyActionBar remains to be consolidated.
 
 ### 1.2 Header — chain pill is cryptic on mobile
 
@@ -294,8 +293,8 @@ opener without inflating global z-values.
    - Keep `navigator.share` → copy/intents fallback; verify in wallet browser.
 
 6. **`features/casino/room/result-overlay.tsx`**
-   - Adopt `<Modal>` (z=modal=90, standard backdrop). Share-from-result uses the
-     in-modal nesting rule (§7.3).
+   - Done: adopted `<Modal>` (z=modal=90, standard backdrop, focus trap, body
+     scroll lock, Escape). Share-from-result uses the in-modal nesting rule (§7.3).
 
 7. **`features/casino/room/game-room-shell.tsx` + `bet-panel.tsx` + `mobile-action-bar.tsx`**
    - Wrap the sticky region in `<StickyActionBar>`.
