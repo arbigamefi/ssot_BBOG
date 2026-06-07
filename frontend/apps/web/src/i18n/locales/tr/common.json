@@ -547,8 +547,8 @@
   "affiliate": {
     "hero": {
       "eyebrow": "Ortak büyümesi",
-      "title": "Casino'yu paylaşın. Kanıt zincir üstünde kalsın.",
-      "description": "ArbiGameFi, ilk dokunuş referans bağlama ve Bank tarafı XP kovaları kullanır; böylece ortak ödülleri tablo mutabakatı yerine gerçek cüzdan tabanlı oyuna bağlanır.",
+      "title": "Oyuncu gönderin. Her bahsi takip edin.",
+      "description": "Cüzdan tabanlı bir referans bağlantısı oluşturun, kitlenizle paylaşın ve bağlı oyunu ve ödül kovalarını referans konsolundan izleyin.",
       "primary": "Bağlantı oluştur",
       "secondary": "Referans konsolu"
     },
@@ -560,6 +560,31 @@
       "copied": "Kopyalandı",
       "wallet": "Cüzdan {wallet}",
       "walletPending": "Cüzdan bağlı değil"
+    },
+    "kit": {
+      "eyebrow": "Kampanya kiti",
+      "title": "Önemli kanallar için kopyalanabilir gönderiler.",
+      "body": "Bir oda bağlantısıyla başlayın, sonra metni topluluğunuza göre ayarlayın. Paylaşılan her URL ref parametresini taşır.",
+      "copy": "Gönderiyi kopyala",
+      "copied": "Kopyalandı",
+      "pendingLink": "referans bağlantınız",
+      "channels": {
+        "x": {
+          "title": "X / Twitter",
+          "text": "Zincir üstü casino turları, cüzdan tabanlı ödemeler ve herkese açık makbuzlar. Buradan oynayın: {link}",
+          "pending": "Zincir üstü casino turları, cüzdan tabanlı ödemeler ve herkese açık makbuzlar. Buradan oynayın: {link}"
+        },
+        "telegram": {
+          "title": "Telegram",
+          "text": "Doğrulanabilir casino odaları için ArbiGameFi'yi paylaşıyorum: saklama gerektirmeyen bahisler, Chainlink VRF rastgeleliği ve inceleyebileceğiniz makbuzlar. {link}",
+          "pending": "Doğrulanabilir casino odaları için ArbiGameFi'yi paylaşıyorum: saklama gerektirmeyen bahisler, Chainlink VRF rastgeleliği ve inceleyebileceğiniz makbuzlar. {link}"
+        },
+        "whatsapp": {
+          "title": "WhatsApp",
+          "text": "ArbiGameFi'yi bağlantımla deneyin. Her turun herkese açık makbuzu vardır ve ödemeler cüzdanınıza döner: {link}",
+          "pending": "ArbiGameFi'yi bağlantımla deneyin. Her turun herkese açık makbuzu vardır ve ödemeler cüzdanınıza döner: {link}"
+        }
+      }
     },
     "pillars": {
       "firstTouch": {

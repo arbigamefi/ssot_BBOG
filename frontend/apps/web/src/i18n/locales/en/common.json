@@ -3406,8 +3406,8 @@
   "affiliate": {
     "hero": {
       "eyebrow": "Affiliate growth",
-      "title": "Share the casino. Keep the proof on-chain.",
-      "description": "ArbiGameFi uses first-touch referral binding and Bank-side XP buckets, so affiliate rewards are tied to actual wallet-native play instead of spreadsheet reconciliation.",
+      "title": "Send players. Track every bet.",
+      "description": "Create a wallet-native referral link, share it with your audience, then review bound play and reward buckets from the referral console.",
       "primary": "Generate link",
       "secondary": "Referral console"
     },
@@ -3419,6 +3419,31 @@
       "copied": "Copied",
       "wallet": "Wallet {wallet}",
       "walletPending": "Wallet not connected"
+    },
+    "kit": {
+      "eyebrow": "Campaign kit",
+      "title": "Copy-ready posts for the channels that matter.",
+      "body": "Start with a room link, then tune the copy for your community. Every shared URL carries the ref parameter.",
+      "copy": "Copy post",
+      "copied": "Copied",
+      "pendingLink": "your referral link",
+      "channels": {
+        "x": {
+          "title": "X / Twitter",
+          "text": "On-chain casino rounds, wallet-native payouts, and public receipts. Play here: {link}",
+          "pending": "On-chain casino rounds, wallet-native payouts, and public receipts. Play here: {link}"
+        },
+        "telegram": {
+          "title": "Telegram",
+          "text": "I am sharing ArbiGameFi for verified casino rooms: non-custodial bets, Chainlink VRF randomness, and receipts you can inspect. {link}",
+          "pending": "I am sharing ArbiGameFi for verified casino rooms: non-custodial bets, Chainlink VRF randomness, and receipts you can inspect. {link}"
+        },
+        "whatsapp": {
+          "title": "WhatsApp",
+          "text": "Try ArbiGameFi through my link. Every round has a public receipt and payouts go back to your wallet: {link}",
+          "pending": "Try ArbiGameFi through my link. Every round has a public receipt and payouts go back to your wallet: {link}"
+        }
+      }
     },
     "pillars": {
       "firstTouch": {

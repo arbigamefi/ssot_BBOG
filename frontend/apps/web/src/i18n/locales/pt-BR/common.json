@@ -547,8 +547,8 @@
   "affiliate": {
     "hero": {
       "eyebrow": "Crescimento de afiliados",
-      "title": "Compartilhe o cassino. Mantenha a prova on-chain.",
-      "description": "O ArbiGameFi usa vínculo de indicação por primeiro toque e baldes de XP no lado do Bank, então as recompensas de afiliado ficam atreladas ao jogo real nativo de carteira, não a planilhas de conciliação.",
+      "title": "Envie jogadores. Acompanhe cada aposta.",
+      "description": "Crie um link de indicação nativo de carteira, compartilhe com sua audiência e acompanhe jogadores vinculados e baldes de recompensa no console.",
       "primary": "Gerar link",
       "secondary": "Console de indicações"
     },
@@ -560,6 +560,31 @@
       "copied": "Copiado",
       "wallet": "Carteira {wallet}",
       "walletPending": "Carteira não conectada"
+    },
+    "kit": {
+      "eyebrow": "Kit de campanha",
+      "title": "Posts prontos para copiar nos canais certos.",
+      "body": "Comece com um link de sala e ajuste o texto para sua comunidade. Cada URL compartilhada leva o parâmetro ref.",
+      "copy": "Copiar post",
+      "copied": "Copiado",
+      "pendingLink": "seu link de indicação",
+      "channels": {
+        "x": {
+          "title": "X / Twitter",
+          "text": "Rodadas de cassino on-chain, pagamentos nativos de carteira e recibos públicos. Jogue aqui: {link}",
+          "pending": "Rodadas de cassino on-chain, pagamentos nativos de carteira e recibos públicos. Jogue aqui: {link}"
+        },
+        "telegram": {
+          "title": "Telegram",
+          "text": "Estou compartilhando o ArbiGameFi para salas de cassino verificáveis: apostas sem custódia, aleatoriedade Chainlink VRF e recibos que você pode inspecionar. {link}",
+          "pending": "Estou compartilhando o ArbiGameFi para salas de cassino verificáveis: apostas sem custódia, aleatoriedade Chainlink VRF e recibos que você pode inspecionar. {link}"
+        },
+        "whatsapp": {
+          "title": "WhatsApp",
+          "text": "Experimente o ArbiGameFi pelo meu link. Cada rodada tem recibo público e os pagamentos voltam para sua carteira: {link}",
+          "pending": "Experimente o ArbiGameFi pelo meu link. Cada rodada tem recibo público e os pagamentos voltam para sua carteira: {link}"
+        }
+      }
     },
     "pillars": {
       "firstTouch": {

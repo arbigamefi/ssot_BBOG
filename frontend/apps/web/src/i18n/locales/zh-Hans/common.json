@@ -3406,8 +3406,8 @@
   "affiliate": {
     "hero": {
       "eyebrow": "推广增长",
-      "title": "分享赌场，证明留在链上",
-      "description": "ArbiGameFi 使用 first-touch 推广绑定和 Bank 侧 XP 桶，让推广奖励绑定真实的钱包原生投注，而不是表格对账。",
+      "title": "带来玩家，追踪每一笔下注",
+      "description": "生成钱包原生推广链接，发给你的受众，再到推广控制台查看绑定玩家和奖励桶。",
       "primary": "生成推广链接",
       "secondary": "推广控制台"
     },
@@ -3419,6 +3419,31 @@
       "copied": "已复制",
       "wallet": "钱包 {wallet}",
       "walletPending": "钱包未连接"
+    },
+    "kit": {
+      "eyebrow": "推广素材",
+      "title": "主流渠道可直接复制的话术",
+      "body": "先生成房间链接，再按你的社群语气调整。每条分享链接都会带上 ref 参数。",
+      "copy": "复制文案",
+      "copied": "已复制",
+      "pendingLink": "你的推广链接",
+      "channels": {
+        "x": {
+          "title": "X / Twitter",
+          "text": "链上赌场回合、钱包原生赔付、公开收据。通过这里开始玩：{link}",
+          "pending": "链上赌场回合、钱包原生赔付、公开收据。通过这里开始玩：{link}"
+        },
+        "telegram": {
+          "title": "Telegram",
+          "text": "我在分享 ArbiGameFi 的可验证赌场房间：非托管投注、Chainlink VRF 随机数、可检查的公开收据。{link}",
+          "pending": "我在分享 ArbiGameFi 的可验证赌场房间：非托管投注、Chainlink VRF 随机数、可检查的公开收据。{link}"
+        },
+        "whatsapp": {
+          "title": "WhatsApp",
+          "text": "用我的链接试试 ArbiGameFi。每一局都有公开收据，赔付直接回到你的钱包：{link}",
+          "pending": "用我的链接试试 ArbiGameFi。每一局都有公开收据，赔付直接回到你的钱包：{link}"
+        }
+      }
     },
     "pillars": {
       "firstTouch": {
