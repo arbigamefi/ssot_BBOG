@@ -82,12 +82,17 @@ export function EarnActionPanel({
   const activeTab = TABS.find((item) => item.key === tab);
 
   return (
-    <section className="min-w-0 rounded-md border border-border bg-surface-1 shadow-e2">
+    <section
+      aria-labelledby="earn-actions-title"
+      className="min-w-0 rounded-md border border-border bg-surface-1 shadow-e2"
+    >
       <div className="border-b border-border p-4 sm:p-5">
         <div className="text-xs font-bold uppercase tracking-[0.16em] text-fg-subtle">
           {t("earn.actions.eyebrow")}
         </div>
-        <h2 className="mt-2 text-2xl font-bold text-fg">{t("earn.actions.title")}</h2>
+        <h2 id="earn-actions-title" className="mt-2 text-2xl font-bold text-fg">
+          {t("earn.actions.title")}
+        </h2>
       </div>
 
       <div className="grid grid-cols-[minmax(0,1fr)] gap-4 p-4 sm:gap-5 sm:p-5">

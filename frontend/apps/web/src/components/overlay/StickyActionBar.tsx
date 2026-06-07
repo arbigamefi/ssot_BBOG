@@ -8,11 +8,13 @@ import { overlayZ, stickyActionHeightVar } from "./z";
 export function StickyActionBar({
   children,
   className,
-  innerClassName
+  innerClassName,
+  ariaLabel
 }: {
   children: React.ReactNode;
   className?: string;
   innerClassName?: string;
+  ariaLabel?: string;
 }) {
   const ref = React.useRef<HTMLDivElement | null>(null);
 
@@ -38,6 +40,8 @@ export function StickyActionBar({
   return (
     <div
       ref={ref}
+      aria-label={ariaLabel}
+      role={ariaLabel ? "region" : undefined}
       className={cn(
         "fixed inset-x-0 bottom-0 border-t border-border bg-surface-2/95 px-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 shadow-e3 backdrop-blur lg:hidden",
         overlayZ.stickyAction,

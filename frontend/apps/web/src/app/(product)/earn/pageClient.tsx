@@ -7,6 +7,7 @@ import type { Address } from "@ssot/ssot/sdk";
 
 import { PageTransition } from "../../../components/PageTransition";
 import { ProductStateCard } from "../../../components/ProductStateCard";
+import { StickyActionBar } from "../../../components/overlay/StickyActionBar";
 import { BankProviderLedgerPanel } from "../../../features/earn/BankProviderLedgerPanel";
 import { BankrollPerformancePanel } from "../../../features/earn/BankrollPerformancePanel";
 import { EarnActionPanel, type EarnFlowState } from "../../../features/earn/earn-action-panel";
@@ -76,10 +77,19 @@ export function EarnPageClient() {
   const [amountMode, setAmountMode] = React.useState<EarnAmountMode>("assets");
   const [diligenceTab, setDiligenceTab] = React.useState<"reserve" | "risk">("reserve");
   const [amount, setAmount] = React.useState("");
+  const actionPanelRef = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
     setAmount("");
   }, [tab, amountMode, asset]);
+
+  const focusActionPanel = React.useCallback((nextTab: EarnTab) => {
+    setTab(nextTab);
+    window.requestAnimationFrame(() => {
+      actionPanelRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+      actionPanelRef.current?.focus({ preventScroll: true });
+    });
+  }, []);
 
   const depositFlow = useSequencedTxAction({
     finalAction: "DEPOSIT",
@@ -444,7 +454,7 @@ export function EarnPageClient() {
 
   return (
     <PageTransition pageKey="earn">
-      <div className="space-y-8">
+      <div className="space-y-8 pb-28 lg:pb-0">
         <EarnHero symbol={symbol} bankAddress={shortHex(snapshot?.bank)} metrics={metrics} />
         {/* Provider diligence: how the house bankroll has actually performed
             (indexed, best-effort) — shown before the deposit console so a
@@ -510,7 +520,12 @@ export function EarnPageClient() {
               />
             )}
           </section>
-          <div className="min-w-0 xl:sticky xl:top-24 xl:col-start-2 xl:row-span-2 xl:row-start-1">
+          <div
+            id="earn-actions"
+            ref={actionPanelRef}
+            tabIndex={-1}
+            className="min-w-0 scroll-mt-24 outline-none xl:sticky xl:top-24 xl:col-start-2 xl:row-span-2 xl:row-start-1"
+          >
             <EarnActionPanel
               tab={tab}
               onTabChange={setTab}
@@ -558,6 +573,23 @@ export function EarnPageClient() {
           </div>
         </div>
       </div>
+      <StickyActionBar innerClassName="grid grid-cols-2 gap-2">
+        {(["deposit", "withdraw"] as const).map((item) => (
+          <button
+            key={item}
+            type="button"
+            aria-controls="earn-actions"
+            onClick={() => focusActionPanel(item)}
+            className={`min-h-12 rounded-xl border px-4 text-sm font-bold transition-colors ${
+              tab === item
+                ? "border-brand bg-brand text-fg-inverse"
+                : "border-border-soft bg-surface-1 text-fg hover:border-brand/40 hover:bg-brand-soft"
+            }`}
+          >
+            {t(`earn.actions.tabs.${item}.label`)}
+          </button>
+        ))}
+      </StickyActionBar>
     </PageTransition>
   );
 }

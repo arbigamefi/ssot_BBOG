@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as React from "react";
 
@@ -261,7 +261,8 @@ describe("EarnPageClient", () => {
 
     renderWithQueryClient(<EarnPageClient />);
 
-    fireEvent.click(screen.getByRole("button", { name: "Withdraw" }));
+    const actions = screen.getByRole("region", { name: "Deposit or exit" });
+    fireEvent.click(within(actions).getByRole("button", { name: "Withdraw" }));
 
     await waitFor(() => {
       expect(state.sdk.bank.maxWithdraw).toHaveBeenCalled();
