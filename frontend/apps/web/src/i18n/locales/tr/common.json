@@ -667,7 +667,7 @@
       "eyebrow": "Bankroll sağlayıcısı",
       "title": "{symbol} ile ev olun.",
       "description": "Casino bankroll'una varyans taşıyan sermaye sağlayın. Getiri gerçek oyuncu hacminden gelir; düşüşler riskin bir parçasıdır.",
-      "disclosure": "Rezerv değerleri Bank sözleşmesinden okunur. Performans metrikleri indekslenmiş tahminlerdir ve gecikebilir.",
+      "disclosure": "Rezerv, pay fiyatı ve ömür boyu performans (kasa K/Z, hold, devir hızı) Bank sözleşmesinden zincir üstü okunur ve doğrulanabilir. Yalnızca günlük trend grafiği ve maksimum düşüş indekslenir ve gecikebilir.",
       "bankAddress": "Banka adresi"
     },
     "metrics": {
@@ -843,6 +843,7 @@
       "title": "Kasa performansı",
       "bestEffort": "İndekslendi · en iyi çaba",
       "onChain": "Zincir üstü doğrulandı",
+      "lifetimeOnChain": "Ömür boyu · zincir üstü doğrulandı",
       "housePnl": "Kasa K/Z",
       "hold": "Gerçekleşen pay",
       "velocity": "Devir hızı",
@@ -867,7 +868,8 @@
       "note": "Ömür boyu brüt oyun geliri Bank.getPerformance() üzerinden zincirden okunur (turnover eksi brüt ödemeler). Sermaye devir hızı, ömür boyu turnover'ın mevcut zincir üstü kasa varlıklarına bölünmesidir. Aşağıdaki günlük grafik indekslenir ve gecikebilir. Getiri vaadi değildir.",
       "equityTitle": "Birikimli kasa K/Z",
       "peak": "Zirve",
-      "trough": "Dip"
+      "trough": "Dip",
+      "maxDrawdown": "Maksimum düşüş"
     },
     "ledger": {
       "eyebrow": "Sağlayıcı defteri",

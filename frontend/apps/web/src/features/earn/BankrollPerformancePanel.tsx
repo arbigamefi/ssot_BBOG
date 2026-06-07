@@ -36,9 +36,11 @@ function formatSignedToken(
 }
 
 /**
- * Vault performance — the provider-facing diligence view. Lifetime performance
- * comes directly from Bank.getPerformance(), while the daily chart remains an
- * indexed trend because the chain does not store historical daily buckets.
+ * Vault performance — the provider-facing diligence view. The headline figures
+ * (House P&L, hold, velocity, turnover, payout, bets) are lifetime totals read
+ * directly from Bank.getSnapshot() on-chain. The daily chart below it is an
+ * indexed trend — the chain does not store historical daily buckets — and the
+ * time-window toggle scopes only that chart, never the lifetime headline.
  */
 export function BankrollPerformancePanel({
   assetAddress,
@@ -69,6 +71,8 @@ export function BankrollPerformancePanel({
   const points = timeseries.data?.source === "postgres" ? timeseries.data.points : [];
   const hasChainPerformance = Boolean(chainPerformance);
 
+  // The window toggle governs the daily indexed chart only — so it lives in the
+  // chart header, not the panel header, and disappears when there is no chart.
   const windowToggle = (
     <div
       role="tablist"
@@ -106,48 +110,55 @@ export function BankrollPerformancePanel({
   const hold = formatHoldPercent(houseRevenue, turnover);
   const velocity = formatMultiple(turnover, vaultAssets);
   const betCount = chainPerformance?.totalBetsHeld ?? 0n;
+  // No lifetime data to report until there is real turnover. Render a deliberate
+  // empty state instead of a column of "—" that reads as broken.
+  const hasLifetimeActivity = hasChainPerformance && turnover > 0n;
 
   const statRows: Array<{ key: string; label: string; value: string; tone?: "win" | "loss" }> = [
     {
       key: "hold",
       label: t("earn.performance.hold"),
-      value: hasChainPerformance ? (hold ?? "—") : "—",
+      value: hold ?? "—",
       tone: houseRevenue >= 0n ? "win" : "loss"
     },
     {
       key: "velocity",
       label: t("earn.performance.velocity"),
-      value: hasChainPerformance ? (velocity ?? "—") : "—"
+      value: velocity ?? "—"
     },
     {
       key: "wagered",
       label: t("earn.performance.wagered"),
-      value: hasChainPerformance ? formatTokenAmount(turnover, decimals, symbol, locale) : "—"
+      value: formatTokenAmount(turnover, decimals, symbol, locale)
     },
     {
       key: "payout",
       label: t("earn.performance.payout"),
-      value: hasChainPerformance ? formatTokenAmount(payout, decimals, symbol, locale) : "—"
+      value: formatTokenAmount(payout, decimals, symbol, locale)
     },
     {
       key: "bets",
       label: t("earn.performance.bets"),
-      value: hasChainPerformance ? betCount.toLocaleString(locale) : "—"
+      value: betCount.toLocaleString(locale)
     }
   ];
 
   return (
     <section className="rounded-md border border-border bg-surface-1 shadow-e2">
-      <PerformanceHeader t={t} windowToggle={windowToggle} />
+      <PerformanceHeader t={t} />
 
       <div className="grid border-t border-border-soft lg:grid-cols-[minmax(0,0.42fr)_minmax(0,0.58fr)]">
-        {/* Headline — House P&L, the number a provider cares about most. It is
-            handled as a report figure, not a promotional APY tile. */}
+        {/* Headline — lifetime House P&L, the number a provider cares about
+            most. Handled as a report figure, not a promotional APY tile. */}
         <div className="border-b border-border-soft p-5 lg:border-b-0 lg:border-r">
           <div
             className={cn(
               "text-[10px] font-bold uppercase tracking-[0.18em]",
-              houseRevenue >= 0n ? "text-success" : "text-danger"
+              !hasLifetimeActivity
+                ? "text-fg-subtle"
+                : houseRevenue >= 0n
+                  ? "text-success"
+                  : "text-danger"
             )}
           >
             {t("earn.performance.housePnl")}
@@ -155,42 +166,51 @@ export function BankrollPerformancePanel({
           <div
             className={cn(
               "mt-2 truncate font-mono text-4xl font-bold",
-              houseRevenue >= 0n ? "text-success" : "text-danger"
+              !hasLifetimeActivity
+                ? "text-fg-muted"
+                : houseRevenue >= 0n
+                  ? "text-success"
+                  : "text-danger"
             )}
             title={formatSignedToken(houseRevenue, decimals, symbol, locale)}
           >
-            {hasChainPerformance ? formatSignedToken(houseRevenue, decimals, symbol, locale) : "—"}
-          </div>
-          <div className="mt-2 text-[10px] uppercase tracking-[0.14em] text-fg-subtle">
-            {t("earn.performance.onChain")}
+            {hasLifetimeActivity ? formatSignedToken(houseRevenue, decimals, symbol, locale) : "—"}
           </div>
         </div>
 
-        <div className="divide-y divide-border-soft">
-          {statRows.map((row) => (
-            <div
-              key={row.key}
-              className="grid gap-3 px-5 py-3 sm:grid-cols-[minmax(0,1fr)_minmax(120px,auto)] sm:items-center"
-            >
-              <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
-                {row.label}
-              </div>
+        {hasLifetimeActivity ? (
+          <div className="divide-y divide-border-soft">
+            {statRows.map((row) => (
               <div
-                className={cn(
-                  "truncate font-mono text-base font-bold sm:text-right",
-                  row.tone === "win"
-                    ? "text-success"
-                    : row.tone === "loss"
-                      ? "text-danger"
-                      : "text-fg"
-                )}
-                title={row.value}
+                key={row.key}
+                className="grid gap-3 px-5 py-3 sm:grid-cols-[minmax(0,1fr)_minmax(120px,auto)] sm:items-center"
               >
-                {row.value}
+                <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
+                  {row.label}
+                </div>
+                <div
+                  className={cn(
+                    "truncate font-mono text-base font-bold sm:text-right",
+                    row.tone === "win"
+                      ? "text-success"
+                      : row.tone === "loss"
+                        ? "text-danger"
+                        : "text-fg"
+                  )}
+                  title={row.value}
+                >
+                  {row.value}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex items-center justify-center p-6 text-center">
+            <p className="max-w-xs text-xs leading-5 text-fg-subtle">
+              {t("earn.performance.empty")}
+            </p>
+          </div>
+        )}
       </div>
 
       <VaultEquityChart
@@ -200,6 +220,7 @@ export function BankrollPerformancePanel({
         sharePrice={sharePrice}
         symbol={symbol}
         t={t}
+        windowToggle={windowToggle}
       />
 
       {/* Honesty note — what this number is and is not. Keeps providers from
@@ -211,13 +232,17 @@ export function BankrollPerformancePanel({
   );
 }
 
-function PerformanceHeader({ t, windowToggle }: { t: Translate; windowToggle: React.ReactNode }) {
+function PerformanceHeader({ t }: { t: Translate }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
       <h2 className="text-sm font-bold uppercase tracking-[0.16em] text-fg">
         {t("earn.performance.title")}
       </h2>
-      {windowToggle}
+      {/* One provenance tag scoping the whole lifetime headline block. The daily
+          chart below carries its own "indexed" tag — the two are never mixed. */}
+      <span className="rounded-full border border-success/30 bg-success-soft px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-success">
+        {t("earn.performance.lifetimeOnChain")}
+      </span>
     </div>
   );
 }
@@ -225,11 +250,9 @@ function PerformanceHeader({ t, windowToggle }: { t: Translate; windowToggle: Re
 /**
  * Vault equity chart — the figure a fund tearsheet leads with: the *cumulative*
  * house P&L trajectory over a dashed zero waterline, so a provider reads "is the
- * bankroll trending up, and when did it dip underwater?" at a glance. Daily
- * volume sits underneath as a quiet secondary strip (the business engine), and
- * share price / peak / trough are honest stats rather than decals overlapping
- * the data. The shared <TrendChart> owns the SVG; this wrapper only derives the
- * cumulative series and the surrounding header + summary stats.
+ * bankroll trending up, and how deep did it dip?" at a glance. Peak, trough, and
+ * max drawdown sit underneath as honest indexed stats. The shared <TrendChart>
+ * owns the SVG; this wrapper derives the cumulative series and surrounding stats.
  */
 function VaultEquityChart({
   points,
@@ -237,7 +260,8 @@ function VaultEquityChart({
   locale,
   sharePrice,
   symbol,
-  t
+  t,
+  windowToggle
 }: {
   points: Array<{ date: string; turnover: string; payout: string }>;
   decimals: number;
@@ -245,6 +269,7 @@ function VaultEquityChart({
   sharePrice?: bigint;
   symbol: string;
   t: Translate;
+  windowToggle: React.ReactNode;
 }) {
   if (points.length === 0) return null;
 
@@ -268,6 +293,17 @@ function VaultEquityChart({
   const peakValue = cumulativeValues.reduce((m, v) => (v > m ? v : m), cumulativeValues[0]!);
   const troughValue = cumulativeValues.reduce((m, v) => (v < m ? v : m), cumulativeValues[0]!);
 
+  // Max drawdown — the deepest peak-to-valley decline of the equity curve, the
+  // single risk number a provider underwrites against. Derived from the indexed
+  // series, so it is labelled best-effort alongside the chart.
+  let runningPeak = cumulativeValues[0]!;
+  let maxDrawdown = 0n;
+  for (const value of cumulativeValues) {
+    if (value > runningPeak) runningPeak = value;
+    const decline = runningPeak - value;
+    if (decline > maxDrawdown) maxDrawdown = decline;
+  }
+
   const sharePriceLabel =
     sharePrice != null ? formatSharePrice(sharePrice, decimals, symbol, locale) : null;
 
@@ -277,9 +313,12 @@ function VaultEquityChart({
         <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
           {t("earn.performance.equityTitle")}
         </div>
-        <span className="rounded-full border border-border-soft bg-surface-0 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-fg-muted">
-          {t("earn.performance.bestEffort")}
-        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          {windowToggle}
+          <span className="rounded-full border border-border-soft bg-surface-0 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-fg-muted">
+            {t("earn.performance.bestEffort")}
+          </span>
+        </div>
       </div>
 
       <TrendChart
@@ -315,9 +354,9 @@ function VaultEquityChart({
         }}
       />
 
-      {/* Peak / trough only — share price now lives on the chart as a last-value
-          tag, so it is not duplicated here. */}
-      <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2">
+      {/* Peak / trough / max drawdown — share price now lives on the chart as a
+          last-value tag, so it is not duplicated here. */}
+      <div className="mt-3 grid grid-cols-3 gap-x-4 gap-y-2">
         <EquityStat
           label={t("earn.performance.peak")}
           value={formatSignedToken(peakValue, decimals, symbol, locale)}
@@ -327,6 +366,11 @@ function VaultEquityChart({
           label={t("earn.performance.trough")}
           value={formatSignedToken(troughValue, decimals, symbol, locale)}
           tone={troughValue < 0n ? "loss" : "win"}
+        />
+        <EquityStat
+          label={t("earn.performance.maxDrawdown")}
+          value={formatSignedToken(-maxDrawdown, decimals, symbol, locale)}
+          tone={maxDrawdown > 0n ? "loss" : "win"}
         />
       </div>
     </div>

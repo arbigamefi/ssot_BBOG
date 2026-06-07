@@ -2668,7 +2668,7 @@
       "eyebrow": "Bankroll provider",
       "title": "Be the house in {symbol}.",
       "description": "Supply variance-bearing capital to the casino bankroll. Returns come from real player turnover; drawdowns are part of the risk.",
-      "disclosure": "Reserve values are read from the Bank contract. Performance metrics are indexed estimates and may lag.",
+      "disclosure": "Reserve, share price, and lifetime performance (House P&L, hold, velocity) are read on-chain from the Bank contract and are verifiable. Only the daily trend chart and max drawdown are indexed and may lag.",
       "bankAddress": "Bank address"
     },
     "metrics": {
@@ -2857,6 +2857,7 @@
       "title": "Vault performance",
       "bestEffort": "Indexed · best-effort",
       "onChain": "On-chain verified",
+      "lifetimeOnChain": "Lifetime · on-chain verified",
       "housePnl": "House P&L",
       "hold": "Realized hold",
       "velocity": "Velocity",
@@ -2881,7 +2882,8 @@
       "note": "Lifetime gross gaming revenue comes from Bank.getPerformance() on-chain (turnover minus gross payouts). Capital velocity is lifetime turnover divided by current chain-read vault assets. The daily chart below is indexed and may lag. Not promised yield.",
       "equityTitle": "Cumulative house P&L",
       "peak": "Peak",
-      "trough": "Trough"
+      "trough": "Trough",
+      "maxDrawdown": "Max drawdown"
     },
     "ledger": {
       "eyebrow": "Provider ledger",

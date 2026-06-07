@@ -2668,7 +2668,7 @@
       "eyebrow": "金库出资人",
       "title": "用 {symbol} 当庄",
       "description": "向赌场金库提供承险资本。收益来自真实玩家流水，回撤是这门生意的一部分。",
-      "disclosure": "储备数值直接读取 Bank 合约；表现指标来自索引估算，可能存在延迟。",
+      "disclosure": "储备、份额价格与 lifetime 表现（金库盈亏、抽水率、周转率）直接读取 Bank 合约，链上可验证；仅每日趋势图与最大回撤来自索引，可能存在延迟。",
       "bankAddress": "Bank 地址"
     },
     "metrics": {
@@ -2857,6 +2857,7 @@
       "title": "金库表现",
       "bestEffort": "已索引 · 尽力而为",
       "onChain": "链上可验证",
+      "lifetimeOnChain": "Lifetime · 链上可验证",
       "housePnl": "金库盈亏",
       "hold": "实际抽水",
       "velocity": "周转速度",
@@ -2881,7 +2882,8 @@
       "note": "Lifetime 毛博彩收入来自 Bank.getPerformance() 链上直读(投注流水减 gross 派彩)。资金周转率用 lifetime 投注流水除以当前链上金库资产。下方每日曲线来自索引，可能延迟；这不是收益承诺。",
       "equityTitle": "累计金库盈亏",
       "peak": "峰值",
-      "trough": "谷值"
+      "trough": "谷值",
+      "maxDrawdown": "最大回撤"
     },
     "ledger": {
       "eyebrow": "出资人账本",

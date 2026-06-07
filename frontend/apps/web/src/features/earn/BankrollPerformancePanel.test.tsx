@@ -52,6 +52,7 @@ const TRANSLATIONS: Record<string, string> = {
   "earn.performance.title": "Vault performance",
   "earn.performance.bestEffort": "Indexed · best-effort",
   "earn.performance.onChain": "On-chain verified",
+  "earn.performance.lifetimeOnChain": "Lifetime · on-chain verified",
   "earn.performance.housePnl": "House P&L",
   "earn.performance.hold": "Realized hold",
   "earn.performance.velocity": "Velocity",
@@ -64,6 +65,7 @@ const TRANSLATIONS: Record<string, string> = {
   "earn.performance.equityTitle": "Cumulative house P&L",
   "earn.performance.peak": "Peak",
   "earn.performance.trough": "Trough",
+  "earn.performance.maxDrawdown": "Max drawdown",
   "earn.performance.pnlTrend": "Daily house P&L",
   "earn.performance.volumeTrend": "Daily volume",
   "earn.performance.sharePriceReference": "Share price",
@@ -121,8 +123,8 @@ describe("BankrollPerformancePanel", () => {
     // not a duplicated bottom stat. 1_012_300 @ 6dp → 1.0123 USDC.
     expect(screen.getByText("Share price")).toBeDefined();
     expect(screen.getByText("1.0123 USDC")).toBeDefined();
-    // On-chain headline and indexed chart labels are distinct.
-    expect(screen.getByText("On-chain verified")).toBeDefined();
+    // Lifetime on-chain headline and indexed chart labels are distinct.
+    expect(screen.getByText("Lifetime · on-chain verified")).toBeDefined();
     expect(screen.getAllByText("Indexed · best-effort").length).toBeGreaterThan(0);
   });
 
@@ -200,9 +202,11 @@ describe("BankrollPerformancePanel", () => {
         vaultAssets={1000000000n}
       />
     );
-    expect(screen.getByText("On-chain verified")).toBeDefined();
+    expect(screen.getByText("Lifetime · on-chain verified")).toBeDefined();
     expect(screen.queryByText("Cumulative house P&L")).toBeNull();
-    // Toggle stays mounted so a provider can switch back to a populated scope.
-    expect(screen.getByRole("tab", { name: "30d" })).toBeDefined();
+    // The window toggle scopes only the daily chart, so it is absent when the
+    // index is unavailable; the lifetime on-chain headline still stands.
+    expect(screen.queryByRole("tab", { name: "30d" })).toBeNull();
+    expect(screen.getByText("House P&L")).toBeDefined();
   });
 });

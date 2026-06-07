@@ -667,7 +667,7 @@
       "eyebrow": "Fornecedor de bankroll",
       "title": "Seja a casa em {symbol}.",
       "description": "Forneça capital que assume variância ao bankroll do cassino. O retorno vem do giro real dos jogadores; drawdowns fazem parte do risco.",
-      "disclosure": "Reservas vêm direto do contrato Bank. Métricas de desempenho são estimativas indexadas e podem atrasar.",
+      "disclosure": "Reserva, preço da cota e desempenho vitalício (resultado do cofre, hold, velocidade) são lidos on-chain do contrato Bank e são verificáveis. Apenas o gráfico de tendência diária e o drawdown máximo são indexados e podem atrasar.",
       "bankAddress": "Endereço do banco"
     },
     "metrics": {
@@ -843,6 +843,7 @@
       "title": "Desempenho do cofre",
       "bestEffort": "Indexado · melhor esforço",
       "onChain": "Verificado on-chain",
+      "lifetimeOnChain": "Vitalício · verificado on-chain",
       "housePnl": "Resultado do cofre",
       "hold": "Margem realizada",
       "velocity": "Velocidade",
@@ -867,7 +868,8 @@
       "note": "A receita bruta vitalícia vem de Bank.getPerformance() on-chain (turnover menos pagamentos brutos). A velocidade do capital é o turnover vitalício dividido pelos ativos atuais do cofre lidos on-chain. O gráfico diário abaixo é indexado e pode atrasar. Não é rendimento prometido.",
       "equityTitle": "Resultado acumulado do cofre",
       "peak": "Pico",
-      "trough": "Vale"
+      "trough": "Vale",
+      "maxDrawdown": "Drawdown máximo"
     },
     "ledger": {
       "eyebrow": "Livro do provedor",
