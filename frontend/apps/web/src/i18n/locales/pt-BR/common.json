@@ -549,7 +549,7 @@
       "eyebrow": "Crescimento de afiliados",
       "title": "Compartilhe o cassino. Mantenha a prova on-chain.",
       "description": "O ArbiGameFi usa vínculo de indicação por primeiro toque e baldes de XP no lado do Bank, então as recompensas de afiliado ficam atreladas ao jogo real nativo de carteira, não a planilhas de conciliação.",
-      "primary": "Abrir Dados",
+      "primary": "Gerar link",
       "secondary": "Console de indicações"
     },
     "linkCard": {

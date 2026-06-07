@@ -51,12 +51,12 @@ export function AffiliatePageClient() {
             {t("affiliate.hero.description")}
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Link
-              href="/casino/dice"
+            <a
+              href="#referral-link"
               className="rounded-md bg-brand px-5 py-3 text-center text-sm font-black uppercase tracking-[0.14em] text-fg-inverse shadow-e2 transition-colors hover:bg-brand/90"
             >
               {t("affiliate.hero.primary")}
-            </Link>
+            </a>
             <Link
               href="/portfolio/referral"
               className="rounded-md border border-border bg-surface-1 px-5 py-3 text-center text-sm font-black uppercase tracking-[0.14em] text-fg transition-colors hover:border-brand/60"
@@ -66,7 +66,10 @@ export function AffiliatePageClient() {
           </div>
         </div>
 
-        <div className="rounded-lg border border-border bg-surface-1 p-6 shadow-e2">
+        <div
+          id="referral-link"
+          className="scroll-mt-28 rounded-lg border border-border bg-surface-1 p-6 shadow-e2"
+        >
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-md border border-brand/40 bg-brand/10 text-brand">
               <LinkIcon className="h-5 w-5" />
