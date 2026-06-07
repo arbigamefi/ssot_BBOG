@@ -162,7 +162,7 @@ export function GameRoomBetPanel({
           </div>
         )}
 
-        <div data-tour="bet-amount">
+        <div data-tour="bet-amount" className={cn(hideMobileAction && "hidden lg:block")}>
           <BetAmountSection
             betAmount={betAmount}
             maxBetAmount={maxBetAmount}

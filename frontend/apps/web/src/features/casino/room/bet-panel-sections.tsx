@@ -38,7 +38,7 @@ export function clampBetAmount(value: number, maxAmount?: number): number {
   return toCents(Math.max(MIN_BET_AMOUNT, capped));
 }
 
-function parseBetAmountInput(input: string, { min, max }: { min: number; max?: number }) {
+export function parseBetAmountInput(input: string, { min, max }: { min: number; max?: number }) {
   const normalized = input.replace(/,/g, "").trim();
   const match = normalized.match(/\d+(?:\.\d{0,2})?/);
   if (!match) return min;
