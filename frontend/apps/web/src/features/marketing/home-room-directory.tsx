@@ -29,7 +29,7 @@ export function HomeRoomDirectory({
         />
 
         <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {rooms.slice(0, 8).map((room) => (
+          {rooms.map((room) => (
             <Link
               key={room.slug}
               href={room.href}
