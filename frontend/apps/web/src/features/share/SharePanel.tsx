@@ -1,10 +1,12 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { CheckIcon, ClipboardDocumentCheckIcon, ShareIcon } from "@heroicons/react/24/outline";
 import { cn } from "@ssot/ui";
 
-import { Popover, Sheet } from "../../components/overlay";
+import { Sheet } from "../../components/overlay";
+import { overlayZ } from "../../components/overlay/z";
 import { buildShareIntentUrl } from "./share-link";
 
 export type SharePanelLabels = {
@@ -42,6 +44,8 @@ export function SharePanel({
   const [popoverAlign, setPopoverAlign] = React.useState<"end" | "start">("end");
   const useMobileSheet = useMobileShareSheet();
   const containerRef = React.useRef<HTMLDivElement | null>(null);
+  const desktopPanelRef = React.useRef<HTMLDivElement | null>(null);
+  const [triggerRect, setTriggerRect] = React.useState<DOMRect | null>(null);
   const canNativeShare =
     typeof navigator !== "undefined" &&
     typeof (navigator as Navigator & { share?: unknown }).share === "function";
@@ -52,10 +56,11 @@ export function SharePanel({
     if (rect) {
       const menuWidth = Math.min(288, window.innerWidth - 32);
       setPopoverAlign(rect.left + menuWidth <= window.innerWidth - 16 ? "start" : "end");
+      setTriggerRect(rect);
     }
     const onClick = (event: MouseEvent) => {
       const target = event.target as Node;
-      if (!containerRef.current?.contains(target)) {
+      if (!containerRef.current?.contains(target) && !desktopPanelRef.current?.contains(target)) {
         setOpen(false);
       }
     };
@@ -154,9 +159,6 @@ export function SharePanel({
       </button>
       {open && !disabled ? (
         <>
-          <Popover align={popoverAlign} open={open}>
-            {menuItems}
-          </Popover>
           {useMobileSheet ? (
             <Sheet
               closeLabel={labels.close ?? labels.share}
@@ -169,10 +171,70 @@ export function SharePanel({
                 {menuItems}
               </div>
             </Sheet>
-          ) : null}
+          ) : (
+            <DesktopSharePopover
+              align={popoverAlign}
+              anchorRect={triggerRect}
+              panelRef={desktopPanelRef}
+            >
+              {menuItems}
+            </DesktopSharePopover>
+          )}
         </>
       ) : null}
     </div>
+  );
+}
+
+function DesktopSharePopover({
+  align,
+  anchorRect,
+  children,
+  panelRef
+}: {
+  align: "end" | "start";
+  anchorRect: DOMRect | null;
+  children: React.ReactNode;
+  panelRef: React.RefObject<HTMLDivElement>;
+}) {
+  const [mounted, setMounted] = React.useState(false);
+  const [panelHeight, setPanelHeight] = React.useState(0);
+
+  React.useEffect(() => setMounted(true), []);
+  React.useLayoutEffect(() => {
+    if (!mounted) return;
+    const rect = panelRef.current?.getBoundingClientRect();
+    if (rect) setPanelHeight(rect.height);
+  }, [mounted, panelRef]);
+
+  if (!mounted || !anchorRect) return null;
+
+  const width = Math.min(288, window.innerWidth - 32);
+  const left =
+    align === "start"
+      ? Math.min(Math.max(16, anchorRect.left), window.innerWidth - width - 16)
+      : Math.min(Math.max(16, anchorRect.right - width), window.innerWidth - width - 16);
+  const canRenderAbove = anchorRect.top > panelHeight + 16;
+  const top = canRenderAbove ? anchorRect.top - 8 : anchorRect.bottom + 8;
+
+  return createPortal(
+    <div
+      ref={panelRef}
+      role="menu"
+      className={cn(
+        "fixed hidden overflow-hidden rounded-lg border border-border-soft bg-surface-1 p-1 text-left shadow-e3 md:block",
+        overlayZ.popover
+      )}
+      style={{
+        left,
+        top,
+        width,
+        transform: canRenderAbove ? "translateY(-100%)" : undefined
+      }}
+    >
+      {children}
+    </div>,
+    document.body
   );
 }
 
