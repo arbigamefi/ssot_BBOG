@@ -142,8 +142,10 @@ export function WalletHeaderMenu({
           onClick={() => openConnectModal?.()}
           disabled={!openConnectModal}
           className={cn(
-            "inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-brand py-2 text-sm font-bold text-fg-inverse shadow-glow transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60",
-            compactDisconnectedLabel ? "px-3.5" : "px-4"
+            "inline-flex min-h-10 items-center justify-center gap-2 rounded-md py-2 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-60",
+            compactDisconnectedLabel
+              ? "border border-brand/45 bg-surface-2 px-3.5 text-fg shadow-e1 hover:border-brand hover:bg-surface-3"
+              : "bg-brand px-4 text-fg-inverse shadow-glow hover:bg-brand-hover"
           )}
         >
           {connectLabel}

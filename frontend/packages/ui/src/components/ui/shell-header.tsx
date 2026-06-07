@@ -29,7 +29,7 @@ export function ShellHeader({
         className
       )}
     >
-      <div className="mx-auto flex h-16 max-w-screen-2xl items-center justify-between px-4 sm:px-6 md:h-20">
+      <div className="mx-auto flex h-14 max-w-screen-2xl items-center justify-between px-4 sm:h-16 sm:px-6 md:h-20">
         {children}
       </div>
     </header>
