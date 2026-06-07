@@ -2,16 +2,15 @@ import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ArrowPathIcon, Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
+import { ArrowPathIcon, Bars3Icon } from "@heroicons/react/24/outline";
 import { ShellHeader, ShellHeaderNav, ShellHeaderActions } from "@ssot/ui";
 import { cn } from "@ssot/ui";
 import { WalletHeaderMenu } from "../app-shell/WalletHeaderMenu";
 import { DisconnectedChainSwitcher } from "../app-shell/ChainSwitcher";
 import { MobileWalletDeepLinkBanner } from "../app-shell/MobileWalletDeepLinkBanner";
-import { useFocusTrap } from "../app-shell/a11y/useFocusTrap";
 import { ArbiGameFiMark } from "./ArbiGameFiBrand";
 import { LocaleSheetSwitcher, LocaleSwitcher } from "./LocaleSwitcher";
-import { overlayZ } from "./overlay";
+import { Drawer } from "./overlay";
 
 export type AppRoute =
   | "directory"
@@ -65,17 +64,6 @@ const SUPPORT_NAV_LINKS = [
   { id: "support", labelKey: "nav.support", href: "/support" },
   { id: "status", labelKey: "nav.status", href: "/status" }
 ] as const;
-
-function useBodyScrollLock(active: boolean) {
-  React.useEffect(() => {
-    if (!active) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [active]);
-}
 
 function MobileHeaderBrand() {
   return (
@@ -148,98 +136,69 @@ function MobileNavDrawer({
 }) {
   const t = useTranslations();
   const router = useRouter();
-  const trapRef = useFocusTrap<HTMLDivElement>(open);
-  useBodyScrollLock(open);
 
   const refreshPage = React.useCallback(() => {
     router.refresh();
   }, [router]);
 
-  React.useEffect(() => {
-    if (!open) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
-
-  if (!open) return null;
-
   return (
-    <div className={cn("fixed inset-0 md:hidden", overlayZ.drawer)} role="dialog" aria-modal="true">
-      <button
-        type="button"
-        aria-label={t("nav.closeMenu")}
-        className="absolute inset-0 bg-surface-0/70 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      <aside
-        ref={trapRef}
-        className="absolute right-0 top-0 flex h-full w-[min(22rem,88vw)] flex-col border-l border-border-soft bg-surface-1 shadow-e3 animate-in slide-in-from-right"
-      >
-        <div className="flex h-16 items-center justify-between border-b border-border-soft px-4">
-          <MobileHeaderBrand />
-          <button
-            type="button"
-            aria-label={t("nav.closeMenu")}
-            onClick={onClose}
-            className="flex h-10 w-10 items-center justify-center rounded-md border border-border-soft text-fg-muted transition-colors hover:text-fg"
-          >
-            <XMarkIcon className="h-5 w-5" />
-          </button>
+    <Drawer
+      closeLabel={t("nav.closeMenu")}
+      contentClassName="flex flex-col overflow-hidden"
+      onClose={onClose}
+      open={open}
+      title={<MobileHeaderBrand />}
+    >
+      <div className="border-b border-border-soft px-4 py-4">
+        <div className="min-w-0 [&>button]:w-full [&>div]:w-full [&>div>button]:w-full">
+          <WalletHeaderMenu hideDisconnectedChainSwitcher mode="sheet" />
         </div>
-        <div className="border-b border-border-soft px-4 py-4">
-          <div className="min-w-0 [&>button]:w-full [&>div]:w-full [&>div>button]:w-full">
-            <WalletHeaderMenu hideDisconnectedChainSwitcher mode="sheet" />
-          </div>
-        </div>
-        <nav className="min-h-0 flex-1 overflow-y-auto px-4 py-5" aria-label={t("nav.menu")}>
-          <MobileNavSection
-            title={t("nav.casino")}
-            links={[{ id: "directory", labelKey: "nav.games", href: "/casino" }, ...GAME_NAV_LINKS]}
-            activeRoute={activeRoute}
-            onNavigate={onClose}
-            variant="grid"
-          />
-          <MobileNavSection
-            title={t("nav.product")}
-            links={PRODUCT_NAV_LINKS}
-            activeRoute={activeRoute}
-            onNavigate={onClose}
-          />
-          <MobileNavSection
-            title={t("nav.account")}
-            links={ACCOUNT_NAV_LINKS}
-            activeRoute={activeRoute}
-            onNavigate={onClose}
-          />
-          <MobileNavSection
-            title={t("nav.support")}
-            links={SUPPORT_NAV_LINKS}
-            activeRoute={activeRoute}
-            onNavigate={onClose}
-          />
-        </nav>
-        <div className="border-t border-border-soft px-4 py-4">
-          <DisconnectedChainSwitcher mode="sheet" />
-          <LocaleSheetSwitcher className="mt-3" />
-          <button
-            type="button"
-            aria-label={t("nav.refresh")}
-            onClick={refreshPage}
-            className="mt-3 flex min-h-12 w-full items-center justify-between gap-3 rounded-lg border border-border-soft bg-surface-2 px-3 py-2 text-left text-sm font-semibold text-fg-muted transition-colors hover:border-border hover:text-fg"
-          >
-            <span className="flex min-w-0 items-center gap-3">
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border-soft bg-surface-1 text-fg-muted">
-                <ArrowPathIcon className="h-4 w-4" />
-              </span>
-              <span className="truncate">{t("nav.refresh")}</span>
+      </div>
+      <nav className="min-h-0 flex-1 overflow-y-auto px-4 py-5" aria-label={t("nav.menu")}>
+        <MobileNavSection
+          title={t("nav.casino")}
+          links={[{ id: "directory", labelKey: "nav.games", href: "/casino" }, ...GAME_NAV_LINKS]}
+          activeRoute={activeRoute}
+          onNavigate={onClose}
+          variant="grid"
+        />
+        <MobileNavSection
+          title={t("nav.product")}
+          links={PRODUCT_NAV_LINKS}
+          activeRoute={activeRoute}
+          onNavigate={onClose}
+        />
+        <MobileNavSection
+          title={t("nav.account")}
+          links={ACCOUNT_NAV_LINKS}
+          activeRoute={activeRoute}
+          onNavigate={onClose}
+        />
+        <MobileNavSection
+          title={t("nav.support")}
+          links={SUPPORT_NAV_LINKS}
+          activeRoute={activeRoute}
+          onNavigate={onClose}
+        />
+      </nav>
+      <div className="border-t border-border-soft px-4 py-4">
+        <DisconnectedChainSwitcher mode="sheet" />
+        <LocaleSheetSwitcher className="mt-3" />
+        <button
+          type="button"
+          aria-label={t("nav.refresh")}
+          onClick={refreshPage}
+          className="mt-3 flex min-h-12 w-full items-center justify-between gap-3 rounded-lg border border-border-soft bg-surface-2 px-3 py-2 text-left text-sm font-semibold text-fg-muted transition-colors hover:border-border hover:text-fg"
+        >
+          <span className="flex min-w-0 items-center gap-3">
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border-soft bg-surface-1 text-fg-muted">
+              <ArrowPathIcon className="h-4 w-4" />
             </span>
-          </button>
-        </div>
-      </aside>
-    </div>
+            <span className="truncate">{t("nav.refresh")}</span>
+          </span>
+        </button>
+      </div>
+    </Drawer>
   );
 }
 
