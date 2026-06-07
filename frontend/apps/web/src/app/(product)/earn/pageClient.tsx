@@ -13,7 +13,13 @@ import { EarnActionPanel, type EarnFlowState } from "../../../features/earn/earn
 import { EarnBankSummary } from "../../../features/earn/earn-bank-summary";
 import { EarnHero } from "../../../features/earn/earn-hero";
 import { EarnRiskPanel } from "../../../features/earn/earn-risk-panel";
-import { formatTokenAmount, getExplorerBaseUrl, shortHex } from "../../../features/earn/format";
+import {
+  formatHoldPercent,
+  formatMultiple,
+  formatTokenAmount,
+  getExplorerBaseUrl,
+  shortHex
+} from "../../../features/earn/format";
 import type {
   EarnAmountMode,
   EarnBankData,
@@ -400,11 +406,18 @@ export function EarnPageClient() {
   }
 
   const snapshot = bankData?.snapshot;
-  const freeReserve = snapshot
-    ? snapshot.totalAssets > snapshot.totalReserved
-      ? snapshot.totalAssets - snapshot.totalReserved
-      : 0n
-    : undefined;
+  const houseRevenue =
+    snapshot?.totalTurnover != null && snapshot.totalPayoutGross != null
+      ? snapshot.totalTurnover - snapshot.totalPayoutGross
+      : undefined;
+  const realizedHold =
+    houseRevenue != null && snapshot?.totalTurnover != null
+      ? formatHoldPercent(houseRevenue, snapshot.totalTurnover)
+      : null;
+  const capitalVelocity =
+    snapshot?.totalTurnover != null
+      ? formatMultiple(snapshot.totalTurnover, snapshot.totalAssets)
+      : null;
 
   const metrics: EarnMetric[] = [
     {
@@ -418,9 +431,14 @@ export function EarnPageClient() {
       detail: t("earn.metrics.totalShares.detail")
     },
     {
-      label: t("earn.metrics.freeReserve.label"),
-      value: formatTokenAmount(freeReserve, decimals, symbol, 2),
-      detail: t("earn.metrics.freeReserve.detail")
+      label: t("earn.performance.velocity"),
+      value: capitalVelocity ?? "—",
+      detail: t("earn.performance.onChain")
+    },
+    {
+      label: t("earn.performance.hold"),
+      value: realizedHold ?? "—",
+      detail: t("earn.performance.onChain")
     }
   ];
 

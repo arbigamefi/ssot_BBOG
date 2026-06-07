@@ -8,6 +8,7 @@ import type { DomainBankSnapshot } from "@ssot/ssot";
 import { useCasinoTimeseries } from "../casino/useCasinoStats";
 import { formatTokenAmount } from "../marketing/format";
 import { TrendChart, formatDayLabel, type TrendChartPoint } from "../charts/TrendChart";
+import { formatHoldPercent, formatMultiple } from "./format";
 
 type Translate = ReturnType<typeof useTranslations>;
 
@@ -21,14 +22,6 @@ const WINDOW_OPTIONS: Array<{ days?: number; key: "all" | "d1" | "d7" | "d30" }>
   { key: "all" }
 ];
 
-/** Ratio of two bigint strings as a percentage string, e.g. "1.02%". */
-function holdPercent(grossRevenue: bigint, turnover: bigint): string | null {
-  if (turnover === 0n) return null;
-  // basis points for 2-decimal precision; revenue can be negative when players win.
-  const bps = Number((grossRevenue * 10000n) / turnover) / 100;
-  return `${bps.toFixed(2)}%`;
-}
-
 /** Format a signed token amount, prefixing a minus glyph for negatives. */
 function formatSignedToken(
   value: bigint,
@@ -40,12 +33,6 @@ function formatSignedToken(
     return `−${formatTokenAmount(-value, decimals, symbol, locale)}`;
   }
   return formatTokenAmount(value, decimals, symbol, locale);
-}
-
-function formatMultiple(numerator: bigint, denominator?: bigint): string | null {
-  if (!denominator || denominator <= 0n) return null;
-  const hundredths = Number((numerator * 100n) / denominator) / 100;
-  return `${hundredths.toFixed(2)}x`;
 }
 
 /**
@@ -116,7 +103,7 @@ export function BankrollPerformancePanel({
   // Gross gaming revenue = what players staked minus what the vault paid back.
   // Positive = the house (and therefore providers) is ahead.
   const houseRevenue = turnover - payout;
-  const hold = holdPercent(houseRevenue, turnover);
+  const hold = formatHoldPercent(houseRevenue, turnover);
   const velocity = formatMultiple(turnover, vaultAssets);
   const betCount = chainPerformance?.totalBetsHeld ?? 0n;
 

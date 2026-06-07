@@ -37,6 +37,18 @@ export function formatTokenAmount(
   return symbol ? `${body} ${symbol}` : body;
 }
 
+export function formatHoldPercent(grossRevenue: bigint, turnover: bigint): string | null {
+  if (turnover === 0n) return null;
+  const bps = Number((grossRevenue * 10000n) / turnover) / 100;
+  return `${bps.toFixed(2)}%`;
+}
+
+export function formatMultiple(numerator: bigint | undefined, denominator?: bigint): string | null {
+  if (numerator == null || !denominator || denominator <= 0n) return null;
+  const hundredths = Number((numerator * 100n) / denominator) / 100;
+  return `${hundredths.toFixed(2)}x`;
+}
+
 export function serializeErrorDetails(error?: DomainError) {
   if (!error?.details) return undefined;
   return JSON.stringify(
