@@ -11,8 +11,10 @@ import {
   SparklesIcon,
   UserGroupIcon
 } from "@heroicons/react/24/outline";
+import { cn } from "@ssot/ui";
 
 import { useSSOTSDK } from "../../../ssot/sdk";
+import { useConnectModal } from "../../../app-shell/WalletButton";
 import { buildCasinoReferralLink } from "../../../features/referral/referral-link";
 import { SharePanel } from "../../../features/share/SharePanel";
 import { shortHex } from "../../../features/portfolio/claims/format";
@@ -20,6 +22,7 @@ import { shortHex } from "../../../features/portfolio/claims/format";
 export function AffiliatePageClient() {
   const t = useTranslations();
   const { sdk } = useSSOTSDK();
+  const { openConnectModal } = useConnectModal();
   const [origin, setOrigin] = React.useState("");
   const [copiedCampaign, setCopiedCampaign] = React.useState<string | undefined>();
 
@@ -27,12 +30,11 @@ export function AffiliatePageClient() {
     setOrigin(window.location.origin);
   }, []);
 
-  const roomLink = origin ? `${origin}/casino/dice` : undefined;
   const referralLink =
     origin && sdk?.account
       ? buildCasinoReferralLink({ origin, referrer: sdk.account, gameSlug: "dice" })
       : undefined;
-  const shareLink = referralLink ?? roomLink;
+  const shareLink = referralLink;
   const referralLinkPreview = React.useMemo(
     () => formatReferralLinkPreview(shareLink),
     [shareLink]
@@ -97,7 +99,12 @@ export function AffiliatePageClient() {
           </div>
 
           <div
-            className="mt-5 min-w-0 overflow-hidden rounded-md border border-border bg-surface-0 p-4 font-mono text-sm text-fg-muted"
+            className={cn(
+              "mt-5 min-w-0 overflow-hidden rounded-md border bg-surface-0 p-4 font-mono text-sm",
+              referralLink
+                ? "border-border text-fg-muted"
+                : "border-border-soft border-dashed text-fg-subtle"
+            )}
             title={referralLink}
           >
             <span className="block max-w-full truncate">
@@ -105,25 +112,34 @@ export function AffiliatePageClient() {
             </span>
           </div>
           <div className="mt-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-            <div className="w-full sm:w-auto">
-              <SharePanel
-                disabled={!shareLink}
-                labels={{
-                  close: t("casino.room.result.actions.close"),
-                  copyLink: t("affiliate.linkCard.copy"),
-                  linkCopied: t("affiliate.linkCard.copied"),
-                  nativeShare: t("casino.room.result.actions.nativeShare"),
-                  share: t("affiliate.linkCard.share"),
-                  telegram: t("casino.room.result.actions.shareToTelegram"),
-                  whatsapp: t("casino.room.result.actions.shareToWhatsApp"),
-                  x: t("casino.room.result.actions.shareToX")
-                }}
-                text={t("affiliate.linkCard.shareText")}
-                title={t("affiliate.linkCard.title")}
-                triggerClassName="py-2 text-sm normal-case tracking-normal"
-                url={shareLink ?? ""}
-              />
-            </div>
+            {referralLink ? (
+              <div className="w-full sm:w-auto">
+                <SharePanel
+                  labels={{
+                    close: t("casino.room.result.actions.close"),
+                    copyLink: t("affiliate.linkCard.copy"),
+                    linkCopied: t("affiliate.linkCard.copied"),
+                    nativeShare: t("casino.room.result.actions.nativeShare"),
+                    share: t("affiliate.linkCard.share"),
+                    telegram: t("casino.room.result.actions.shareToTelegram"),
+                    whatsapp: t("casino.room.result.actions.shareToWhatsApp"),
+                    x: t("casino.room.result.actions.shareToX")
+                  }}
+                  text={t("affiliate.linkCard.shareText")}
+                  title={t("affiliate.linkCard.title")}
+                  triggerClassName="py-2 text-sm normal-case tracking-normal"
+                  url={referralLink}
+                />
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={openConnectModal}
+                className="inline-flex w-full items-center justify-center rounded-md bg-brand px-4 py-2.5 text-sm font-bold text-fg-inverse transition-colors hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:w-auto"
+              >
+                {t("app.connectWalletButton")}
+              </button>
+            )}
             <span className="min-w-0 truncate text-xs text-fg-subtle">
               {sdk?.account
                 ? t("affiliate.linkCard.wallet", { wallet: shortHex(sdk.account) })
@@ -163,11 +179,13 @@ export function AffiliatePageClient() {
                   <div className="flex items-center gap-2 text-sm font-bold text-fg">
                     {t(`affiliate.kit.channels.${channel}.title`)}
                   </div>
-                  <p className="mt-2 line-clamp-2 text-sm leading-6 text-fg-muted">{preview}</p>
+                  <p className="mt-2 line-clamp-2 text-sm leading-6 text-fg-muted [overflow-wrap:anywhere]">
+                    {preview}
+                  </p>
                 </div>
                 <button
                   type="button"
-                  disabled={!shareLink}
+                  disabled={!referralLink}
                   onClick={() => void handleCampaignCopy(channel)}
                   className="inline-flex items-center justify-center gap-2 rounded-md border border-border bg-surface-2 px-4 py-2 text-sm font-bold text-fg transition-colors hover:border-brand/60 disabled:cursor-not-allowed disabled:opacity-50"
                 >
