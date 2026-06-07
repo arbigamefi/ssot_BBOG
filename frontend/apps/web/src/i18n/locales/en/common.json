@@ -2,6 +2,7 @@
   "app": {
     "connectWalletActionDescription": "Connect a wallet to {action}.",
     "connectWalletButton": "Connect Wallet",
+    "connectWalletShort": "Connect",
     "connectWalletDescription": "Connect a wallet to use this feature.",
     "connectingWallet": "Connecting...",
     "indexerWorkerFailed": "Indexer worker failed to start",
@@ -152,7 +153,9 @@
         "liveModule": "Live game",
         "houseEdge": "House edge",
         "maxPayout": "Max payout",
-        "maxBet": "Max bet"
+        "maxBet": "Max bet",
+        "selectBetFirst": "Select first",
+        "noCapacity": "No capacity"
       },
       "empty": {
         "moduleNotFound": "Game not found",
@@ -3466,6 +3469,8 @@
     "menu": "Menu",
     "openMenu": "Open menu",
     "closeMenu": "Close menu",
+    "language": "Language",
+    "refresh": "Refresh",
     "openRooms": "Open Rooms",
     "ops": "Ops",
     "plinko": "Plinko",

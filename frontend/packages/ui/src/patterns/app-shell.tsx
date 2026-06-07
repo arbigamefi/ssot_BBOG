@@ -26,7 +26,7 @@ export function AppShell({
     <div
       className={cn(
         "min-h-screen bg-surface-0 text-fg theme-dark",
-        isGame ? "overflow-x-hidden selection:bg-brand/30" : "selection:bg-brand/20"
+        isGame ? "overflow-x-clip selection:bg-brand/30" : "selection:bg-brand/20"
       )}
     >
       {header}

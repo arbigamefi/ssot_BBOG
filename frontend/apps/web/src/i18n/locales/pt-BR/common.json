@@ -2,6 +2,7 @@
   "app": {
     "connectWalletActionDescription": "Conecte uma carteira para {action}.",
     "connectWalletButton": "Conectar carteira",
+    "connectWalletShort": "Conectar",
     "connectWalletDescription": "Conecte uma carteira para usar este recurso.",
     "connectingWallet": "Conectando...",
     "unknownNetwork": "Rede desconhecida",
@@ -69,6 +70,8 @@
     "menu": "Menu",
     "openMenu": "Abrir menu",
     "closeMenu": "Fechar menu",
+    "language": "Idioma",
+    "refresh": "Atualizar",
     "openRooms": "Abrir salas",
     "ops": "Operações",
     "plinko": "Plinko",
@@ -979,7 +982,9 @@
         "liveModule": "Jogo ao vivo",
         "houseEdge": "Vantagem da casa",
         "maxPayout": "Pagamento máximo",
-        "maxBet": "Aposta máxima"
+        "maxBet": "Aposta máxima",
+        "selectBetFirst": "Escolha primeiro",
+        "noCapacity": "Sem capacidade"
       },
       "empty": {
         "moduleNotFound": "Jogo não encontrado",

@@ -1,6 +1,13 @@
 @import "@rainbow-me/rainbowkit/styles.css";
 @import "@ssot/ui/styles/globals.css";
 
+@media (max-width: 767px) {
+  html,
+  body {
+    overscroll-behavior-y: none;
+  }
+}
+
 @keyframes dice-roll-3d {
   0% {
     transform: rotateX(0deg) rotateY(0deg) scale(0.8);

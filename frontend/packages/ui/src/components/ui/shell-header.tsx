@@ -4,6 +4,7 @@ import { cn } from "../../lib/utils";
 interface ShellHeaderProps {
   className?: string;
   children?: React.ReactNode;
+  sticky?: boolean;
   /**
    * If true, uses a completely transparent background (good for Hero sections).
    * If false, defaults to the standard tokenized top bar.
@@ -11,11 +12,17 @@ interface ShellHeaderProps {
   variant?: "solid" | "transparent";
 }
 
-export function ShellHeader({ className, children, variant = "solid" }: ShellHeaderProps) {
+export function ShellHeader({
+  className,
+  children,
+  sticky = true,
+  variant = "solid"
+}: ShellHeaderProps) {
   return (
     <header
       className={cn(
-        "sticky top-0 z-50 shrink-0 transition-colors duration-base",
+        "z-50 shrink-0 transition-colors duration-base",
+        sticky ? "sticky top-0" : "relative",
         variant === "solid"
           ? "border-b border-border bg-surface-0/95 supports-[backdrop-filter]:bg-surface-0/80 supports-[backdrop-filter]:backdrop-blur-md"
           : "border-transparent bg-transparent",

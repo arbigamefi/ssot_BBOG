@@ -2,6 +2,7 @@
   "app": {
     "connectWalletActionDescription": "连接钱包以{action}。",
     "connectWalletButton": "连接钱包",
+    "connectWalletShort": "连接",
     "connectWalletDescription": "连接钱包以使用此功能。",
     "connectingWallet": "连接中...",
     "indexerWorkerFailed": "索引器 worker 启动失败",
@@ -152,7 +153,9 @@
         "liveModule": "在线游戏",
         "houseEdge": "庄家优势",
         "maxPayout": "最高赔付",
-        "maxBet": "最大下注"
+        "maxBet": "最大下注",
+        "selectBetFirst": "选择后计算",
+        "noCapacity": "暂无额度"
       },
       "empty": {
         "moduleNotFound": "没找到这个游戏",
@@ -3466,6 +3469,8 @@
     "menu": "菜单",
     "openMenu": "打开菜单",
     "closeMenu": "关闭菜单",
+    "language": "语言",
+    "refresh": "刷新",
     "openRooms": "进入游戏",
     "ops": "运维",
     "plinko": "Plinko 弹珠盘",

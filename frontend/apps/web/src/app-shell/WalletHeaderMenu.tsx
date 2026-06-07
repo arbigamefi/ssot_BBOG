@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { mainnet } from "wagmi/chains";
@@ -21,7 +22,8 @@ import {
   ChevronDownIcon,
   ClipboardIcon,
   ExclamationTriangleIcon,
-  PowerIcon
+  PowerIcon,
+  XMarkIcon
 } from "@heroicons/react/24/outline";
 
 import { useActiveChain } from "./ActiveChainProvider";
@@ -35,14 +37,34 @@ function shortAddress(address: string) {
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
 }
 
+function useBodyScrollLock(active: boolean) {
+  React.useEffect(() => {
+    if (!active) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [active]);
+}
+
 /**
  * Unified header control: replaces the old WalletButton + NetworkSwitcher
  * pair. One trigger button summarises the current state; the popover
  * exposes the full surface area (identity, chain switching, explorer link,
  * wallet-chain mismatch warning, disconnect).
  */
-export function WalletHeaderMenu() {
+export function WalletHeaderMenu({
+  hideDisconnectedChainSwitcher = false,
+  mode = "popover",
+  compactDisconnectedLabel = false
+}: {
+  hideDisconnectedChainSwitcher?: boolean;
+  mode?: "popover" | "sheet";
+  compactDisconnectedLabel?: boolean;
+}) {
   const t = useTranslations("app");
+  const rootT = useTranslations();
   const { address, isConnected, connector } = useAccount();
   const { disconnect } = useDisconnect();
   const { openConnectModal } = useConnectModal();
@@ -70,10 +92,12 @@ export function WalletHeaderMenu() {
 
   const [open, setOpen] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement | null>(null);
+  const isSheet = mode === "sheet";
+  useBodyScrollLock(isSheet && open);
 
   // Close on outside click / Escape — no Radix dep, just light handlers.
   React.useEffect(() => {
-    if (!open) return;
+    if (!open || isSheet) return;
     const onClick = (event: MouseEvent) => {
       if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
     };
@@ -86,7 +110,16 @@ export function WalletHeaderMenu() {
       document.removeEventListener("mousedown", onClick);
       document.removeEventListener("keydown", onKey);
     };
-  }, [open]);
+  }, [isSheet, open]);
+
+  React.useEffect(() => {
+    if (!open || !isSheet) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [isSheet, open]);
 
   React.useEffect(() => {
     const onWalletConnectRequest = () => openConnectModal?.();
@@ -95,24 +128,121 @@ export function WalletHeaderMenu() {
   }, [openConnectModal]);
 
   if (!isConnected || !address) {
+    const connectLabel = compactDisconnectedLabel
+      ? t("connectWalletShort")
+      : t("connectWalletButton");
+
     return (
       <div className="flex items-center gap-2">
         {/* Lets a visitor browse a different chain's games before connecting. */}
-        <ChainSwitcher />
+        {!hideDisconnectedChainSwitcher && <ChainSwitcher />}
         <button
           type="button"
           data-tour="wallet"
           onClick={() => openConnectModal?.()}
           disabled={!openConnectModal}
-          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-brand px-4 py-2 text-sm font-bold text-fg-inverse shadow-glow transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60"
+          className={cn(
+            "inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-brand py-2 text-sm font-bold text-fg-inverse shadow-glow transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-60",
+            compactDisconnectedLabel ? "px-3.5" : "px-4"
+          )}
         >
-          {t("connectWalletButton")}
+          {connectLabel}
         </button>
       </div>
     );
   }
 
   const explorerUrl = getExplorerAddressUrl(selectedChainId, address);
+  const menuContent = (
+    <>
+      {/* Identity block — address + copy + explorer + ENS placeholder. */}
+      <div className="border-b border-border-soft px-4 py-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            {ensName && <span className="block truncate text-sm font-bold text-fg">{ensName}</span>}
+            <span
+              className={cn(
+                "block truncate font-mono text-fg",
+                ensName ? "text-[11px] text-fg-muted" : "text-sm font-bold"
+              )}
+            >
+              {shortAddress(address)}
+            </span>
+          </div>
+          <div className="flex items-center gap-1">
+            <CopyButton value={address} t={t} />
+            {explorerUrl && (
+              <a
+                href={explorerUrl}
+                target="_blank"
+                rel="noreferrer noopener"
+                aria-label={t("walletMenu.viewOnExplorer")}
+                className="flex h-7 w-7 items-center justify-center rounded-md border border-border-soft text-fg-muted transition-colors hover:border-brand/40 hover:text-fg"
+              >
+                <ArrowTopRightOnSquareIcon className="h-4 w-4" />
+              </a>
+            )}
+          </div>
+        </div>
+        {connector?.name && (
+          <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-fg-subtle">
+            {t("walletMenu.connectedVia", { wallet: connector.name })}
+          </p>
+        )}
+      </div>
+
+      {/* Wallet-chain mismatch banner — shown ONLY when wallet differs
+          from the app's selected chain. Single-click fix. */}
+      {walletMismatch && (
+        <div className="flex items-center gap-3 border-b border-border-soft bg-warn/8 px-4 py-3">
+          <ExclamationTriangleIcon className="h-5 w-5 shrink-0 text-warn" />
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-fg">{t("walletMenu.mismatch.title")}</p>
+            <p className="mt-0.5 text-[11px] text-fg-muted">
+              {t("walletMenu.mismatch.description", {
+                target: selectedChain?.name ?? `chainId=${selectedChainId}`
+              })}
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={isSwitchingWalletChain}
+            onClick={() => switchChain({ chainId: selectedChainId })}
+            className="shrink-0 rounded-md border border-warn/60 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-warn transition-colors hover:bg-warn/10 disabled:opacity-60"
+          >
+            {isSwitchingWalletChain ? t("network.switching") : t("walletMenu.mismatch.switch")}
+          </button>
+        </div>
+      )}
+
+      {/* Chain switcher — mainnet first, testnets after.
+          Selecting changes the app's active chain (which triggers
+          ReleaseProvider to reload). If the wallet is also on a
+          different chain, the mismatch banner above appears next. */}
+      <div className="border-b border-border-soft px-4 py-3">
+        <div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
+          <ArrowsRightLeftIcon className="h-3.5 w-3.5" />
+          {t("walletMenu.chainSection")}
+        </div>
+        <ChainOptionList onSelect={() => setOpen(false)} />
+      </div>
+
+      {/* Disconnect — destructive style, no double-confirm (cheap to
+          re-connect, expensive to nag). */}
+      <button
+        type="button"
+        role="menuitem"
+        onClick={() => {
+          disconnect();
+          setOpen(false);
+        }}
+        className="flex w-full items-center gap-2 px-4 py-3 text-sm font-semibold text-fg-muted transition-colors hover:bg-surface-2 hover:text-danger"
+      >
+        <PowerIcon className="h-4 w-4" />
+        {t("walletMenu.disconnect")}
+      </button>
+    </>
+  );
 
   return (
     <div ref={containerRef} className="relative" data-tour="wallet">
@@ -147,101 +277,54 @@ export function WalletHeaderMenu() {
         <ChevronDownIcon className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
       </button>
 
-      {open && (
+      {open && !isSheet && (
         <div
           role="menu"
           className="absolute right-0 z-50 mt-2 w-[20rem] overflow-hidden rounded-xl border border-border-soft bg-surface-1 shadow-e3"
         >
-          {/* Identity block — address + copy + explorer + ENS placeholder. */}
-          <div className="border-b border-border-soft px-4 py-3">
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                {ensName && (
-                  <span className="block truncate text-sm font-bold text-fg">{ensName}</span>
-                )}
-                <span
-                  className={cn(
-                    "block truncate font-mono text-fg",
-                    ensName ? "text-[11px] text-fg-muted" : "text-sm font-bold"
-                  )}
-                >
-                  {shortAddress(address)}
-                </span>
-              </div>
-              <div className="flex items-center gap-1">
-                <CopyButton value={address} t={t} />
-                {explorerUrl && (
-                  <a
-                    href={explorerUrl}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    aria-label={t("walletMenu.viewOnExplorer")}
-                    className="flex h-7 w-7 items-center justify-center rounded-md border border-border-soft text-fg-muted transition-colors hover:border-brand/40 hover:text-fg"
-                  >
-                    <ArrowTopRightOnSquareIcon className="h-4 w-4" />
-                  </a>
-                )}
-              </div>
-            </div>
-            {connector?.name && (
-              <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-fg-subtle">
-                {t("walletMenu.connectedVia", { wallet: connector.name })}
-              </p>
-            )}
-          </div>
-
-          {/* Wallet-chain mismatch banner — shown ONLY when wallet differs
-              from the app's selected chain. Single-click fix. */}
-          {walletMismatch && (
-            <div className="flex items-center gap-3 border-b border-border-soft bg-warn/8 px-4 py-3">
-              <ExclamationTriangleIcon className="h-5 w-5 shrink-0 text-warn" />
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold text-fg">{t("walletMenu.mismatch.title")}</p>
-                <p className="mt-0.5 text-[11px] text-fg-muted">
-                  {t("walletMenu.mismatch.description", {
-                    target: selectedChain?.name ?? `chainId=${selectedChainId}`
-                  })}
-                </p>
-              </div>
-              <button
-                type="button"
-                disabled={isSwitchingWalletChain}
-                onClick={() => switchChain({ chainId: selectedChainId })}
-                className="shrink-0 rounded-md border border-warn/60 px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-warn transition-colors hover:bg-warn/10 disabled:opacity-60"
-              >
-                {isSwitchingWalletChain ? t("network.switching") : t("walletMenu.mismatch.switch")}
-              </button>
-            </div>
-          )}
-
-          {/* Chain switcher — mainnet first, testnets after.
-              Selecting changes the app's active chain (which triggers
-              ReleaseProvider to reload). If the wallet is also on a
-              different chain, the mismatch banner above appears next. */}
-          <div className="border-b border-border-soft px-4 py-3">
-            <div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
-              <ArrowsRightLeftIcon className="h-3.5 w-3.5" />
-              {t("walletMenu.chainSection")}
-            </div>
-            <ChainOptionList onSelect={() => setOpen(false)} />
-          </div>
-
-          {/* Disconnect — destructive style, no double-confirm (cheap to
-              re-connect, expensive to nag). */}
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => {
-              disconnect();
-              setOpen(false);
-            }}
-            className="flex w-full items-center gap-2 px-4 py-3 text-sm font-semibold text-fg-muted transition-colors hover:bg-surface-2 hover:text-danger"
-          >
-            <PowerIcon className="h-4 w-4" />
-            {t("walletMenu.disconnect")}
-          </button>
+          {menuContent}
         </div>
       )}
+
+      {open && isSheet
+        ? createPortal(
+            <div className="fixed inset-0 z-[95] md:hidden" role="dialog" aria-modal="true">
+              <button
+                type="button"
+                aria-label={rootT("nav.closeMenu")}
+                className="absolute inset-0 bg-surface-0/70 backdrop-blur-sm"
+                onClick={() => setOpen(false)}
+              />
+              <div className="absolute inset-x-0 bottom-0 max-h-[86svh] overflow-hidden rounded-t-2xl border border-border-soft bg-surface-1 shadow-e3 animate-in slide-in-from-bottom">
+                <div className="border-b border-border-soft p-4">
+                  <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-border" aria-hidden />
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
+                        {t("walletMenu.connectedVia", { wallet: connector?.name ?? "wallet" })}
+                      </p>
+                      <p className="mt-1 truncate font-mono text-sm font-bold text-fg">
+                        {displayName}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      aria-label={rootT("nav.closeMenu")}
+                      onClick={() => setOpen(false)}
+                      className="grid h-10 w-10 shrink-0 place-items-center rounded-md border border-border-soft bg-surface-2 text-fg-muted transition-colors hover:text-fg"
+                    >
+                      <XMarkIcon className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+                <div className="max-h-[calc(86svh-6rem)] overflow-y-auto pb-[env(safe-area-inset-bottom)]">
+                  {menuContent}
+                </div>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
     </div>
   );
 }

@@ -2,6 +2,7 @@
   "app": {
     "connectWalletActionDescription": "{action} için bir cüzdan bağlayın.",
     "connectWalletButton": "Cüzdan bağla",
+    "connectWalletShort": "Bağlan",
     "connectWalletDescription": "Bu özelliği kullanmak için bir cüzdan bağlayın.",
     "connectingWallet": "Bağlanıyor...",
     "unknownNetwork": "Bilinmeyen ağ",
@@ -69,6 +70,8 @@
     "menu": "Menü",
     "openMenu": "Menüyü aç",
     "closeMenu": "Menüyü kapat",
+    "language": "Dil",
+    "refresh": "Yenile",
     "openRooms": "Odaları aç",
     "ops": "Operasyon",
     "plinko": "Plinko",
@@ -979,7 +982,9 @@
         "liveModule": "Canlı oyun",
         "houseEdge": "Casino avantajı",
         "maxPayout": "Maks. ödeme",
-        "maxBet": "Maks. bahis"
+        "maxBet": "Maks. bahis",
+        "selectBetFirst": "Önce seçim",
+        "noCapacity": "Kapasite yok"
       },
       "empty": {
         "moduleNotFound": "Oyun bulunamadı",

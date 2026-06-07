@@ -1,14 +1,16 @@
 import React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
+import { ArrowPathIcon, Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
 import { ShellHeader, ShellHeaderNav, ShellHeaderActions } from "@ssot/ui";
 import { cn } from "@ssot/ui";
 import { WalletHeaderMenu } from "../app-shell/WalletHeaderMenu";
+import { DisconnectedChainSwitcher } from "../app-shell/ChainSwitcher";
 import { MobileWalletDeepLinkBanner } from "../app-shell/MobileWalletDeepLinkBanner";
 import { useFocusTrap } from "../app-shell/a11y/useFocusTrap";
 import { ArbiGameFiMark } from "./ArbiGameFiBrand";
-import { LocaleSwitcher } from "./LocaleSwitcher";
+import { LocaleSheetSwitcher, LocaleSwitcher } from "./LocaleSwitcher";
 
 export type AppRoute =
   | "directory"
@@ -91,33 +93,42 @@ function MobileNavSection({
   title,
   links,
   activeRoute,
-  onNavigate
+  onNavigate,
+  variant = "list"
 }: {
   title: string;
   links: readonly { id: string; labelKey: string; href: string }[];
   activeRoute: AppRoute;
   onNavigate: () => void;
+  variant?: "list" | "grid";
 }) {
   const t = useTranslations();
+  const isGrid = variant === "grid";
   return (
-    <section className="border-t border-border-soft py-4 first:border-t-0 first:pt-0">
+    <section
+      className={cn(
+        "border-t border-border-soft first:border-t-0 first:pt-0",
+        isGrid ? "py-3" : "py-4"
+      )}
+    >
       <h3 className="px-1 text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
         {title}
       </h3>
-      <div className="mt-2 grid gap-1">
+      <div className={cn("mt-2 grid gap-1", isGrid && "grid-cols-2 gap-1.5")}>
         {links.map((link) => (
           <Link
             key={link.id}
             href={link.href}
             onClick={onNavigate}
             className={cn(
-              "flex min-h-11 items-center justify-between rounded-md px-3 text-sm font-semibold transition-colors",
+              "flex items-center justify-between rounded-md border font-semibold transition-colors",
+              isGrid ? "min-h-9 px-2.5 text-xs" : "min-h-11 px-3 text-sm",
               activeRoute === link.id
-                ? "bg-brand text-fg-inverse"
-                : "text-fg-muted hover:bg-surface-2 hover:text-fg"
+                ? "border-brand/55 bg-brand-soft text-fg shadow-[inset_0_0_0_1px_hsl(var(--brand)/0.16)]"
+                : "border-transparent text-fg-muted hover:border-border-soft hover:bg-surface-2 hover:text-fg"
             )}
           >
-            {t(link.labelKey)}
+            <span className="min-w-0 truncate">{t(link.labelKey)}</span>
           </Link>
         ))}
       </div>
@@ -135,8 +146,13 @@ function MobileNavDrawer({
   onClose: () => void;
 }) {
   const t = useTranslations();
+  const router = useRouter();
   const trapRef = useFocusTrap<HTMLDivElement>(open);
   useBodyScrollLock(open);
+
+  const refreshPage = React.useCallback(() => {
+    router.refresh();
+  }, [router]);
 
   React.useEffect(() => {
     if (!open) return;
@@ -173,12 +189,22 @@ function MobileNavDrawer({
           </button>
         </div>
         <div className="border-b border-border-soft px-4 py-4">
-          <div className="[&>button]:w-full">
-            <WalletHeaderMenu />
+          <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1 [&>button]:w-full [&>div]:w-full [&>div>button]:w-full">
+              <WalletHeaderMenu hideDisconnectedChainSwitcher mode="sheet" />
+            </div>
+            <button
+              type="button"
+              aria-label={t("nav.refresh")}
+              title={t("nav.refresh")}
+              onClick={refreshPage}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-border-soft bg-surface-2 text-fg-muted transition-colors hover:text-fg"
+            >
+              <ArrowPathIcon className="h-5 w-5" />
+            </button>
           </div>
-          <div className="mt-3">
-            <LocaleSwitcher compact />
-          </div>
+          <DisconnectedChainSwitcher className="mt-3" mode="sheet" />
+          <LocaleSheetSwitcher className="mt-3" />
         </div>
         <nav className="min-h-0 flex-1 overflow-y-auto px-4 py-5" aria-label={t("nav.menu")}>
           <MobileNavSection
@@ -186,6 +212,7 @@ function MobileNavDrawer({
             links={[{ id: "directory", labelKey: "nav.games", href: "/casino" }, ...GAME_NAV_LINKS]}
             activeRoute={activeRoute}
             onNavigate={onClose}
+            variant="grid"
           />
           <MobileNavSection
             title={t("nav.product")}
@@ -241,8 +268,15 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
               <div className="hidden sm:block">
                 <LocaleSwitcher compact />
               </div>
-              <div>
+              <div className="hidden md:block">
                 <WalletHeaderMenu />
+              </div>
+              <div className="md:hidden">
+                <WalletHeaderMenu
+                  hideDisconnectedChainSwitcher
+                  mode="sheet"
+                  compactDisconnectedLabel
+                />
               </div>
               <Link
                 href="/casino"
@@ -281,7 +315,7 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
   ] as const;
   const mobileGameNav =
     variant === "game" ? (
-      <div className="sticky top-16 z-40 border-b border-border bg-surface-0/95 px-4 py-2 backdrop-blur md:hidden">
+      <div className="border-b border-border bg-surface-0/95 px-4 py-2 backdrop-blur md:hidden">
         <nav
           aria-label={t("nav.casino")}
           className="flex gap-2 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
@@ -310,74 +344,90 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
       </div>
     ) : null;
 
+  const headerBar = (
+    <ShellHeader variant="solid" sticky={variant !== "game"}>
+      <div className="flex min-w-0 flex-1 items-center gap-3 md:gap-8">
+        <MobileHeaderBrand />
+
+        {variant === "game" ? (
+          <ShellHeaderNav className="flex-1 basis-0 gap-5 overscroll-x-contain pr-4">
+            <Link
+              href="/casino"
+              className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap [word-break:keep-all] text-fg-subtle transition-colors hover:text-fg"
+            >
+              <span>←</span>
+              <span>{t("nav.casino")}</span>
+            </Link>
+
+            {GAME_NAV_LINKS.map((link) => (
+              <Link
+                key={link.id}
+                href={link.href}
+                className={cn(
+                  "inline-flex shrink-0 items-center whitespace-nowrap [word-break:keep-all] transition-colors",
+                  activeRoute === link.id
+                    ? "border-b-2 border-brand pb-1 text-brand"
+                    : "text-fg-subtle hover:text-fg"
+                )}
+              >
+                {t(link.labelKey)}
+              </Link>
+            ))}
+          </ShellHeaderNav>
+        ) : (
+          <ShellHeaderNav className="flex-1">
+            {navLinks.map((link) => (
+              <Link
+                key={link.id}
+                href={link.href}
+                className={cn(
+                  "inline-flex shrink-0 items-center whitespace-nowrap [word-break:keep-all] transition-colors",
+                  activeRoute === link.id
+                    ? "border-b-2 border-fg pb-1 text-fg"
+                    : "text-fg-subtle hover:text-fg"
+                )}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </ShellHeaderNav>
+        )}
+      </div>
+
+      <ShellHeaderActions>
+        <div className="hidden sm:block">
+          <LocaleSwitcher compact />
+        </div>
+        <div className="hidden md:block">
+          <WalletHeaderMenu />
+        </div>
+        <div className="md:hidden">
+          <WalletHeaderMenu hideDisconnectedChainSwitcher mode="sheet" compactDisconnectedLabel />
+        </div>
+        <button
+          type="button"
+          aria-label={t("nav.openMenu")}
+          onClick={openMobileMenu}
+          className="flex h-10 w-10 items-center justify-center rounded-md border border-border-soft bg-surface-1 text-fg md:hidden"
+        >
+          <Bars3Icon className="h-5 w-5" />
+        </button>
+      </ShellHeaderActions>
+    </ShellHeader>
+  );
+
   return (
     <>
-      <ShellHeader variant="solid">
-        <div className="flex min-w-0 flex-1 items-center gap-3 md:gap-8">
-          <MobileHeaderBrand />
-
-          {variant === "game" ? (
-            <ShellHeaderNav className="flex-1 basis-0 gap-5 overscroll-x-contain pr-4">
-              <Link
-                href="/casino"
-                className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap [word-break:keep-all] text-fg-subtle transition-colors hover:text-fg"
-              >
-                <span>←</span>
-                <span>{t("nav.casino")}</span>
-              </Link>
-
-              {GAME_NAV_LINKS.map((link) => (
-                <Link
-                  key={link.id}
-                  href={link.href}
-                  className={cn(
-                    "inline-flex shrink-0 items-center whitespace-nowrap [word-break:keep-all] transition-colors",
-                    activeRoute === link.id
-                      ? "border-b-2 border-brand pb-1 text-brand"
-                      : "text-fg-subtle hover:text-fg"
-                  )}
-                >
-                  {t(link.labelKey)}
-                </Link>
-              ))}
-            </ShellHeaderNav>
-          ) : (
-            <ShellHeaderNav className="flex-1">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.id}
-                  href={link.href}
-                  className={cn(
-                    "inline-flex shrink-0 items-center whitespace-nowrap [word-break:keep-all] transition-colors",
-                    activeRoute === link.id
-                      ? "border-b-2 border-fg pb-1 text-fg"
-                      : "text-fg-subtle hover:text-fg"
-                  )}
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </ShellHeaderNav>
-          )}
+      {variant === "game" ? (
+        <div className="sticky top-0 z-50">
+          {headerBar}
+          {mobileGameNav}
         </div>
-
-        <ShellHeaderActions>
-          <div className="hidden sm:block">
-            <LocaleSwitcher compact />
-          </div>
-          <WalletHeaderMenu />
-          <button
-            type="button"
-            aria-label={t("nav.openMenu")}
-            onClick={openMobileMenu}
-            className="flex h-10 w-10 items-center justify-center rounded-md border border-border-soft bg-surface-1 text-fg md:hidden"
-          >
-            <Bars3Icon className="h-5 w-5" />
-          </button>
-        </ShellHeaderActions>
-      </ShellHeader>
+      ) : (
+        headerBar
+      )}
       <MobileWalletDeepLinkBanner />
-      {mobileGameNav}
+      {variant === "game" ? null : mobileGameNav}
       <MobileNavDrawer open={mobileMenuOpen} activeRoute={activeRoute} onClose={closeMobileMenu} />
     </>
   );

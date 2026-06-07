@@ -898,6 +898,7 @@ export function GameRoomResultOverlay({
               url={shareUrl}
               proof={fairnessProof}
               labels={{
+                close: t("casino.room.result.actions.close"),
                 copyLink: t("casino.room.result.actions.copyResultLink"),
                 copyProof: t("casino.room.result.actions.copyProof"),
                 linkCopied: t("casino.room.result.actions.linkCopied"),

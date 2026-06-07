@@ -2,6 +2,7 @@
   "app": {
     "connectWalletActionDescription": "Подключите кошелёк, чтобы {action}.",
     "connectWalletButton": "Подключить кошелёк",
+    "connectWalletShort": "Подключить",
     "connectWalletDescription": "Подключите кошелёк, чтобы использовать эту функцию.",
     "connectingWallet": "Подключение...",
     "unknownNetwork": "Неизвестная сеть",
@@ -69,6 +70,8 @@
     "menu": "Меню",
     "openMenu": "Открыть меню",
     "closeMenu": "Закрыть меню",
+    "language": "Язык",
+    "refresh": "Обновить",
     "openRooms": "Открыть залы",
     "ops": "Операции",
     "plinko": "Плинко",
@@ -979,7 +982,9 @@
         "liveModule": "Игра в эфире",
         "houseEdge": "Преимущество казино",
         "maxPayout": "Макс. выплата",
-        "maxBet": "Макс. ставка"
+        "maxBet": "Макс. ставка",
+        "selectBetFirst": "Сначала выбор",
+        "noCapacity": "Нет лимита"
       },
       "empty": {
         "moduleNotFound": "Игра не найдена",

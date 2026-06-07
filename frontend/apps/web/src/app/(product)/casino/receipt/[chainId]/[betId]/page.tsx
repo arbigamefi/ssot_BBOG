@@ -273,6 +273,7 @@ export default async function CasinoReceiptPage({
             <ReceiptSharePanel
               fallbackUrl={receiptHref}
               labels={{
+                close: shareLabels.close,
                 copyProof: shareLabels.copyProof,
                 copyLink: shareLabels.copyResultLink,
                 linkCopied: shareLabels.linkCopied,
