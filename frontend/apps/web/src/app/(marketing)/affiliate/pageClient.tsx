@@ -27,26 +27,28 @@ export function AffiliatePageClient() {
     setOrigin(window.location.origin);
   }, []);
 
+  const roomLink = origin ? `${origin}/casino/dice` : undefined;
   const referralLink =
     origin && sdk?.account
       ? buildCasinoReferralLink({ origin, referrer: sdk.account, gameSlug: "dice" })
       : undefined;
+  const shareLink = referralLink ?? roomLink;
   const referralLinkPreview = React.useMemo(
-    () => formatReferralLinkPreview(referralLink),
-    [referralLink]
+    () => formatReferralLinkPreview(shareLink),
+    [shareLink]
   );
 
   const campaignChannels = ["x", "telegram", "whatsapp"] as const;
   const handleCampaignCopy = React.useCallback(
     async (channel: (typeof campaignChannels)[number]) => {
-      if (!referralLink) return;
+      if (!shareLink) return;
       await navigator.clipboard.writeText(
-        t(`affiliate.kit.channels.${channel}.text`, { link: referralLink })
+        t(`affiliate.kit.channels.${channel}.text`, { link: shareLink })
       );
       setCopiedCampaign(channel);
       window.setTimeout(() => setCopiedCampaign(undefined), 1600);
     },
-    [referralLink, t]
+    [shareLink, t]
   );
 
   return (
@@ -105,7 +107,7 @@ export function AffiliatePageClient() {
           <div className="mt-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
             <div className="w-full sm:w-auto">
               <SharePanel
-                disabled={!referralLink}
+                disabled={!shareLink}
                 labels={{
                   close: t("casino.room.result.actions.close"),
                   copyLink: t("affiliate.linkCard.copy"),
@@ -119,7 +121,7 @@ export function AffiliatePageClient() {
                 text={t("affiliate.linkCard.shareText")}
                 title={t("affiliate.linkCard.title")}
                 triggerClassName="py-2 text-sm normal-case tracking-normal"
-                url={referralLink ?? ""}
+                url={shareLink ?? ""}
               />
             </div>
             <span className="min-w-0 truncate text-xs text-fg-subtle">
@@ -147,8 +149,8 @@ export function AffiliatePageClient() {
 
         <div className="grid min-w-0 gap-3">
           {campaignChannels.map((channel) => {
-            const preview = referralLink
-              ? t(`affiliate.kit.channels.${channel}.text`, { link: referralLink })
+            const preview = shareLink
+              ? t(`affiliate.kit.channels.${channel}.text`, { link: shareLink })
               : t(`affiliate.kit.channels.${channel}.pending`, {
                   link: t("affiliate.kit.pendingLink")
                 });
@@ -165,7 +167,7 @@ export function AffiliatePageClient() {
                 </div>
                 <button
                   type="button"
-                  disabled={!referralLink}
+                  disabled={!shareLink}
                   onClick={() => void handleCampaignCopy(channel)}
                   className="inline-flex items-center justify-center gap-2 rounded-md border border-border bg-surface-2 px-4 py-2 text-sm font-bold text-fg transition-colors hover:border-brand/60 disabled:cursor-not-allowed disabled:opacity-50"
                 >
