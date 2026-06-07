@@ -130,59 +130,55 @@ export function ReferralPageClient() {
 
   return (
     <PageTransition pageKey="referral">
-      <div className="space-y-8">
-        <section className="rounded-lg border border-border bg-surface-1 p-6 shadow-e2">
-          <div className="grid gap-6 lg:grid-cols-[1fr_0.9fr] lg:items-end">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-brand">
-                {t("portfolio.referral.hero.eyebrow")}
-              </p>
-              <h1 className="mt-3 text-4xl font-black tracking-tight text-fg md:text-5xl">
-                {t("portfolio.referral.hero.title")}
-              </h1>
-              <p className="mt-4 max-w-2xl text-sm leading-6 text-fg-muted">
-                {t("portfolio.referral.hero.description")}
-              </p>
-            </div>
-            <div className="rounded-md border border-border bg-surface-0 p-5">
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-fg-subtle">
+      <div className="space-y-6 md:space-y-8">
+        <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(28rem,0.72fr)] lg:items-end">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-brand">
+              {t("portfolio.referral.hero.eyebrow")}
+            </p>
+            <h1 className="mt-3 text-3xl font-black tracking-tight text-fg md:text-5xl">
+              {t("portfolio.referral.hero.title")}
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-fg-muted">
+              {t("portfolio.referral.hero.description")}
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="min-w-0 rounded-md border border-border-soft bg-surface-1 px-4 py-3 shadow-e1">
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-fg-subtle">
                 {t("portfolio.referral.hero.connected")}
               </p>
-              <div className="mt-2 font-mono text-2xl font-black text-fg">
+              <div className="mt-1 truncate font-mono text-base font-black text-fg">
                 {sdk?.account
                   ? shortHex(sdk.account, pendingLabel)
                   : t("portfolio.referral.common.notConnected")}
               </div>
             </div>
+
+            {assetOptions.length > 0 ? (
+              <div className="min-w-0 rounded-md border border-border-soft bg-surface-1 px-4 py-3 shadow-e1">
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-fg-subtle">
+                  {t("earn.actions.asset")}
+                </p>
+                <div className="mt-2 flex items-center gap-2">
+                  <AssetSelector
+                    variant="inline"
+                    assets={assetOptions}
+                    value={selectedAsset}
+                    onValueChange={setSelectedAsset}
+                    title={t("earn.actions.asset")}
+                    renderLogo={(option) => <TokenLogo symbol={option.symbol} size={20} />}
+                    className="min-w-0 flex-1"
+                  />
+                  <span className="shrink-0 rounded-full border border-border-soft bg-surface-0 px-2 py-1 font-mono text-[10px] font-bold text-fg-subtle">
+                    #{poolId ?? "—"}
+                  </span>
+                </div>
+              </div>
+            ) : null}
           </div>
         </section>
-
-        {assetOptions.length > 0 ? (
-          <section className="grid gap-3 rounded-lg border border-border-soft bg-surface-1 p-4 shadow-e1 md:grid-cols-[minmax(0,22rem)_1fr] md:items-center">
-            <div className="min-w-0">
-              <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.14em] text-fg-subtle">
-                {t("earn.actions.asset")}
-              </div>
-              <AssetSelector
-                variant="inline"
-                assets={assetOptions}
-                value={selectedAsset}
-                onValueChange={setSelectedAsset}
-                title={t("earn.actions.asset")}
-                renderLogo={(option) => <TokenLogo symbol={option.symbol} size={20} />}
-                className="max-w-full"
-              />
-            </div>
-            <div className="min-w-0 rounded-md border border-border-soft bg-surface-0 px-4 py-3">
-              <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-fg-subtle">
-                {t("earn.actions.asset")}
-              </div>
-              <div className="mt-1 truncate font-mono text-sm font-bold text-fg">
-                #{poolId ?? "—"} · {symbol}
-              </div>
-            </div>
-          </section>
-        ) : null}
 
         <section className="grid gap-6 xl:grid-cols-[1fr_420px]">
           <div className="space-y-6">
