@@ -60,7 +60,12 @@ vi.mock("./pwa/InstallPrompt", () => ({
 }));
 
 vi.mock("../components/LocaleSwitcher", () => ({
+  LocaleSheetSwitcher: () => <div data-testid="locale-sheet-switcher">English</div>,
   LocaleSwitcher: () => <div data-testid="locale-switcher">English</div>
+}));
+
+vi.mock("wagmi", () => ({
+  useAccount: () => ({ isConnected: false })
 }));
 
 vi.mock("next-intl", () => ({
@@ -82,6 +87,8 @@ vi.mock("next-intl", () => ({
       "nav.menu": "Menu",
       "nav.openMenu": "Open menu",
       "nav.closeMenu": "Close menu",
+      "nav.language": "Language",
+      "nav.refresh": "Refresh",
       "nav.openRooms": "Open Rooms",
       "nav.ops": "Ops",
       "nav.plinko": "Plinko",

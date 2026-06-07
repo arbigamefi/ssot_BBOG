@@ -9,6 +9,7 @@ import { useTranslations } from "next-intl";
 import { useRelease } from "../ssot/release/ReleaseProvider";
 import { AppHeader, type AppRoute } from "../components/AppHeader";
 import { SiteFooter } from "../components/SiteFooter";
+import { DISABLE_AGE_GATE_IN_DEV, DISABLE_ONBOARDING_IN_DEV } from "../config/dev-flags";
 import {
   AgeTermsGate,
   CookieConsentBanner,
@@ -80,11 +81,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Compliance surfaces — render above the shell, ordered by priority:
           age/terms gate blocks everything; cookie banner + RG dialog sit on
           top; the reality-check timer is invisible bookkeeping. */}
-      <AgeTermsGate />
+      {DISABLE_AGE_GATE_IN_DEV ? null : <AgeTermsGate />}
       <CookieConsentBanner />
       <ResponsibleGamblingDialog />
       <RealityCheckTimer />
-      <OnboardingTour />
+      {DISABLE_ONBOARDING_IN_DEV ? null : <OnboardingTour />}
       <InstallPrompt />
     </>
   );
