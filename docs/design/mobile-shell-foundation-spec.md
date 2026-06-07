@@ -25,10 +25,10 @@ the mobile shell foundation, not as a historical proposal.
 | Share panel mobile sheet                       | Done locally | Share uses shared sheet/popover; local 390px and desktop screenshots confirm no clipping. Wallet-browser QA remains. |
 | Game nav chip rail compression                 | Done         | Product/game route nav is shorter and centers the active mobile game chip.                                           |
 | Dev review flags for onboarding/age gate       | Done         | Local review can disable those gates without changing product code.                                                  |
-| Shared overlay primitives                      | Partial      | `Sheet`, `Drawer`, `Popover`, `Modal`, z tokens, and `useOverlayController` exist; StickyActionBar remains.          |
+| Shared overlay primitives                      | Done         | `Sheet`, `Drawer`, `Popover`, `Modal`, `StickyActionBar`, z tokens, and `useOverlayController` exist.               |
 | Unified z-index scale                          | Partial      | Share, chain, wallet, nav, and result modal now use `overlayZ`; toast layering still needs final audit.              |
-| Focus trap and focus return                    | Partial      | Shared `Sheet`, `Drawer`, and `Modal` cover focus trap/return for migrated surfaces; StickyActionBar remains.        |
-| Sticky bet CTA de-duplication                  | Done locally | Mobile now has one primary sticky bet CTA path; full panel no longer exposes a duplicate mobile action path.         |
+| Focus trap and focus return                    | Done         | Shared `Sheet`, `Drawer`, and `Modal` cover focus trap/return for migrated surfaces; StickyActionBar is non-modal.   |
+| Sticky bet CTA de-duplication                  | Done         | Mobile now has one primary sticky bet CTA path wrapped by `StickyActionBar`; the full panel no longer duplicates it. |
 | Wallet-browser safe-area QA                    | Not started  | Needs explicit MetaMask/Coinbase/Trust-style verification.                                                           |
 
 ---
@@ -63,12 +63,12 @@ Concrete defects this table proves:
 3. **Backdrop drift has been reduced to final audit work.** Share, chain, wallet,
    nav, and result modal now use shared overlay backdrops; toast and future
    confirmation surfaces still need review.
-4. **Anatomy drift is reduced, not eliminated.** Migrated sheets/drawers/modal now
+4. **Anatomy drift is reduced to follow-up QA.** Migrated sheets/drawers/modal now
    share close handling, internal scroll, safe-area padding, and backdrop
-   behavior. StickyActionBar still needs migration.
+   behavior. StickyActionBar owns the mobile thumb-zone container.
 5. **Effect duplication is mostly removed from shell surfaces.** Share, chain,
    wallet, nav, and result modal no longer hand-roll portal, scroll-lock, Escape,
-   and focus handling. StickyActionBar remains to be consolidated.
+   and focus handling.
 
 ### 1.2 Header — chain pill is cryptic on mobile
 
@@ -240,6 +240,7 @@ gated by the single `md` breakpoint (today's approach — just unified).
 ### 7.3 Z-index scale (single source, e.g. `overlay/z.ts`)
 
 ```
+sticky  50
 popover  60
 drawer   70
 sheet    80
@@ -297,13 +298,10 @@ opener without inflating global z-values.
      scroll lock, Escape). Share-from-result uses the in-modal nesting rule (§7.3).
 
 7. **`features/casino/room/game-room-shell.tsx` + `bet-panel.tsx` + `mobile-action-bar.tsx`**
-   - Wrap the sticky region in `<StickyActionBar>`.
-   - **Resolve bet duplication (§1.3).** _Recommended:_ on mobile the sticky bar is
-     the **primary** bet control (amount + ½/2×/Max + place); the in-panel amount
-     editor and place button collapse on mobile (extend `hideMobileAction` to also
-     hide the amount stepper at `< lg`), leaving the panel for game-specific
-     selection/advanced options only. Net: one amount control, one place button on
-     mobile. **(Open decision — needs sign-off before building, see §10.)**
+   - Done: sticky region is wrapped in `<StickyActionBar>`.
+   - Done: mobile sticky bar is the **primary** bet control (amount + ½/2×/Max +
+     place); the in-panel amount editor and place button collapse on mobile via
+     `hideMobileAction`. Net: one amount control, one place button on mobile.
 
 8. **`@ssot/ui/toast`** — confirm toasts render at z=100 above all overlays
    (read-only check; no change expected).
@@ -338,11 +336,9 @@ pairs per surface, linked back here on completion.
 
 ---
 
-## 10. Open Decision (needs sign-off before code)
+## 10. Resolved Decision
 
-**Game-room mobile bet control (§1.3 / change #7):** is the sticky bar the
-**primary** control (recommended — in-panel amount/CTA collapse on mobile, one of
-each), or a **secondary** "jump to bet" affordance (panel stays the editor, bar
-just scrolls/triggers)? This is the one structural choice that changes the room
-build. Everything else in this spec is non-controversial consolidation and can
-start on approval.
+**Game-room mobile bet control (§1.3 / change #7):** the sticky bar is the
+**primary** mobile control. The in-panel amount editor and place CTA collapse on
+mobile, leaving one visible amount control and one visible place/connect button.
+Future room work should preserve that invariant.
