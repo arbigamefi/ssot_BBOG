@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { NextIntlClientProvider } from "next-intl";
 import { Inter } from "next/font/google";
 import "./globals.css";
@@ -24,6 +24,16 @@ const OG_LOCALE_BY_APP_LOCALE: Record<string, string> = {
   "pt-BR": "pt_BR",
   ru: "ru_RU",
   tr: "tr_TR"
+};
+
+// `viewport-fit=cover` lets the page extend into the device safe areas so the
+// `env(safe-area-inset-*)` padding on the sticky bet bar, bottom sheets, and
+// consent/PWA banners actually resolves (it is a no-op without cover). Required
+// for correct rendering in wallet in-app browsers and installed PWAs.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover"
 };
 
 export async function generateMetadata(): Promise<Metadata> {

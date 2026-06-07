@@ -5,10 +5,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ShieldCheckIcon } from "@heroicons/react/24/outline";
+import { cn } from "@ssot/ui";
 
 import { useCompliance } from "./ComplianceProvider";
 import { isWagerRoute } from "./wager-routes";
 import { useFocusTrap } from "../a11y/useFocusTrap";
+import { overlayZ } from "../../components/overlay/z";
 
 /**
  * Entry gate for wager routes. Renders a non-dismissable overlay until the
@@ -44,7 +46,10 @@ export function AgeTermsGate() {
       role="dialog"
       aria-modal="true"
       aria-labelledby="age-gate-title"
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-surface-0/95 px-4 backdrop-blur-md"
+      className={cn(
+        "fixed inset-0 flex items-center justify-center bg-surface-0/95 px-4 backdrop-blur-md",
+        overlayZ.gate
+      )}
     >
       <div
         ref={trapRef}

@@ -3,9 +3,11 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { XMarkIcon } from "@heroicons/react/24/outline";
+import { cn } from "@ssot/ui";
 
 import { useCompliance } from "./ComplianceProvider";
 import { useFocusTrap } from "../a11y/useFocusTrap";
+import { overlayZ } from "../../components/overlay/z";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -57,7 +59,10 @@ export function ResponsibleGamblingDialog() {
       role="dialog"
       aria-modal="true"
       aria-labelledby="rg-title"
-      className="fixed inset-0 z-[95] flex items-center justify-center bg-surface-0/90 px-4 backdrop-blur"
+      className={cn(
+        "fixed inset-0 flex items-center justify-center bg-surface-0/90 px-4 backdrop-blur",
+        overlayZ.gate
+      )}
     >
       <div
         ref={trapRef}

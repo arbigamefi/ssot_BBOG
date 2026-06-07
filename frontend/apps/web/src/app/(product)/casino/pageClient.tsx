@@ -305,14 +305,14 @@ export function GamesListClient() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-4 lg:gap-4">
             {roomCards.map(({ room, copy }) => (
               <Link
                 key={room.slug}
                 href={room.href}
                 data-testid="room-entry-card"
                 data-slug={room.slug}
-                className="group relative grid grid-cols-[4.25rem_minmax(0,1fr)_auto] items-center gap-3 overflow-hidden rounded-xl border border-border-soft bg-surface-1/88 px-3 py-3 shadow-e1 transition-colors duration-200 hover:border-brand/40 hover:bg-surface-2 md:flex md:min-h-[20rem] md:flex-col md:items-stretch md:gap-0 md:bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-1)))] md:p-0 md:shadow-e2"
+                className="group relative flex items-center gap-3 overflow-hidden rounded-xl border border-border-soft bg-surface-1/88 px-3 py-3 shadow-e1 transition-colors duration-200 hover:border-brand/40 hover:bg-surface-2 sm:gap-4 sm:px-4 sm:py-3.5 lg:min-h-[20rem] lg:flex-col lg:items-stretch lg:gap-0 lg:bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-1)))] lg:p-0 lg:shadow-e2"
               >
                 {/* top edge sheen */}
                 <div
@@ -324,55 +324,54 @@ export function GamesListClient() {
                   }}
                 />
 
-                <div className="absolute left-4 top-4 z-20 hidden rounded-full border border-border-soft bg-surface-0/80 px-3 py-1.5 backdrop-blur md:block">
+                <div className="absolute left-4 top-4 z-20 hidden rounded-full border border-border-soft bg-surface-0/80 px-3 py-1.5 backdrop-blur lg:block">
                   <span className="flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-widest text-fg-muted">
                     <span className="h-1.5 w-1.5 rounded-full bg-accent" />
                     {t("casino.directory.card.releaseAnchored")}
                   </span>
                 </div>
 
-                <div className="absolute right-4 top-4 z-20 hidden rounded-full border border-brand/30 bg-brand-soft px-3 py-1 text-[10px] font-bold uppercase text-brand backdrop-blur md:block">
+                <div className="absolute right-4 top-4 z-20 hidden rounded-full border border-brand/30 bg-brand-soft px-3 py-1 text-[10px] font-bold uppercase text-brand backdrop-blur lg:block">
                   {copy.badge}
                 </div>
 
-                <div className="relative z-10 flex items-center justify-center md:mt-7 md:min-h-[12rem] md:flex-1 md:p-5">
+                <div className="relative z-10 flex h-[5.75rem] w-[5.75rem] shrink-0 items-center justify-center overflow-hidden rounded-lg lg:mt-7 lg:h-auto lg:w-auto lg:flex-1 lg:overflow-visible lg:p-5">
                   {/* Shared game mark system: the lobby should feel like the
                       same product as the individual room stages. */}
                   <div
                     aria-hidden
-                    className="pointer-events-none absolute left-1/2 top-1/2 hidden h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-50 transition-opacity duration-200 group-hover:opacity-80 md:block"
+                    className="pointer-events-none absolute left-1/2 top-1/2 hidden h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-50 transition-opacity duration-200 group-hover:opacity-80 lg:block"
                     style={{
                       background:
                         "radial-gradient(circle, hsl(var(--brand) / 0.1), transparent 70%)"
                     }}
                   />
-                  <div className="relative">
+                  <div className="relative flex h-full w-full items-center justify-center lg:h-auto lg:w-auto">
                     <CasinoGameMark
                       slug={room.slug}
-                      className="h-16 w-16 rounded-md md:h-36 md:w-36"
+                      className="h-full w-full rounded-md lg:h-36 lg:w-36"
                     />
                   </div>
                 </div>
 
-                <div className="relative z-20 min-w-0 md:border-t md:border-border-soft md:bg-surface-2/85 md:p-5 md:backdrop-blur">
-                  <div className="mb-1 text-[10px] font-bold uppercase tracking-widest text-accent md:mb-2">
+                <div className="relative z-20 min-w-0 flex-1 lg:flex-none lg:border-t lg:border-border-soft lg:bg-surface-2/85 lg:p-5 lg:backdrop-blur">
+                  <div className="mb-1 text-[10px] font-bold uppercase tracking-widest text-accent lg:mb-2">
                     {copy.tag}
                   </div>
-                  <h3 className="truncate text-base font-bold text-fg md:text-2xl">{copy.title}</h3>
-                  <p className="mt-1 truncate text-xs leading-5 text-fg-muted md:mt-2 md:line-clamp-2 md:text-sm md:leading-relaxed">
+                  <h3 className="truncate text-base font-bold text-fg sm:text-lg lg:text-2xl">
+                    {copy.title}
+                  </h3>
+                  <p className="mt-1 line-clamp-1 text-xs leading-5 text-fg-muted sm:text-sm lg:mt-2 lg:line-clamp-2 lg:leading-relaxed">
                     {copy.promise}
                   </p>
 
-                  <span className="mt-6 hidden w-full items-center justify-center gap-2 rounded-lg border border-border-soft bg-surface-2 py-4 text-sm font-bold text-fg-muted transition-colors group-hover:border-brand/40 group-hover:bg-brand-soft group-hover:text-brand md:flex">
+                  <span className="mt-6 hidden w-full items-center justify-center gap-2 rounded-lg border border-border-soft bg-surface-2 py-4 text-sm font-bold text-fg-muted transition-colors group-hover:border-brand/40 group-hover:bg-brand-soft group-hover:text-brand lg:flex">
                     {t("casino.directory.card.playNow")}{" "}
                     <PlayCircleIcon className="h-5 w-5 shrink-0" />
                   </span>
                 </div>
 
-                <div className="flex shrink-0 flex-col items-end gap-2 md:hidden">
-                  <span className="max-w-24 truncate rounded-full border border-brand/30 bg-brand-soft px-2 py-1 text-[9px] font-bold uppercase text-brand">
-                    {copy.badge}
-                  </span>
+                <div className="flex w-8 shrink-0 items-center justify-end lg:hidden">
                   <PlayCircleIcon className="h-5 w-5 text-fg-subtle transition-colors group-hover:text-brand" />
                 </div>
               </Link>

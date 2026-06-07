@@ -3,8 +3,10 @@
 import * as React from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { cn } from "@ssot/ui";
 
 import { useCompliance } from "./ComplianceProvider";
+import { overlayZ, stickyActionHeightVar } from "../../components/overlay/z";
 
 /**
  * GDPR / CCPA cookie consent. Shown only after the age/terms gate clears,
@@ -21,7 +23,13 @@ export function CookieConsentBanner() {
     <div
       role="region"
       aria-label={t("title")}
-      className="fixed inset-x-0 bottom-0 z-[90] border-t border-border-soft bg-surface-1/95 px-4 py-4 shadow-e3 backdrop-blur"
+      className={cn(
+        "fixed inset-x-0 border-t border-border-soft bg-surface-1/95 px-4 py-4 shadow-e3 backdrop-blur",
+        overlayZ.bottomBanner
+      )}
+      // Sit above the mobile sticky bet/connect CTA when one is mounted; clear
+      // the home-indicator safe area otherwise.
+      style={{ bottom: `var(${stickyActionHeightVar}, env(safe-area-inset-bottom, 0px))` }}
     >
       <div className="mx-auto flex max-w-[1280px] flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <p className="text-xs leading-5 text-fg-muted md:max-w-2xl">

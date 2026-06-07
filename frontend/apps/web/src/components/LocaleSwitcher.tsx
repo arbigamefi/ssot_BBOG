@@ -37,80 +37,23 @@ function useLocaleSelection() {
   return { locale, selectLocale };
 }
 
-function LocaleFlagIcon({ locale, className }: { locale: AppLocale; className?: string }) {
-  const classes = cn("h-5 w-5 overflow-hidden rounded-full", className);
+const localeFlagSrc: Record<AppLocale, string> = {
+  en: "/flags/us.svg",
+  "zh-Hans": "/flags/cn.svg",
+  "pt-BR": "/flags/br.svg",
+  ru: "/flags/ru.svg",
+  tr: "/flags/tr.svg"
+};
 
-  switch (locale) {
-    case "zh-Hans":
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden className={classes}>
-          <rect width="24" height="24" className="fill-red-600" />
-          <path
-            d="M6 4.2 6.7 6.1h2L7.1 7.3l.6 1.9L6 8.1 4.3 9.2l.6-1.9L3.3 6.1h2L6 4.2Z"
-            className="fill-yellow-300"
-          />
-          <circle cx="12.5" cy="5.2" r="0.9" className="fill-yellow-300" />
-          <circle cx="14.5" cy="8" r="0.8" className="fill-yellow-300" />
-          <circle cx="14.3" cy="11.6" r="0.8" className="fill-yellow-300" />
-          <circle cx="11.8" cy="14.1" r="0.8" className="fill-yellow-300" />
-        </svg>
-      );
-    case "pt-BR":
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden className={classes}>
-          <rect width="24" height="24" className="fill-green-600" />
-          <path d="M12 4 21 12 12 20 3 12 12 4Z" className="fill-yellow-300" />
-          <circle cx="12" cy="12" r="4.2" className="fill-blue-700" />
-          <path
-            d="M7.9 10.6c3 .8 5.7 1 8.2.3"
-            className="stroke-white"
-            strokeWidth="1.1"
-            fill="none"
-            strokeLinecap="round"
-          />
-        </svg>
-      );
-    case "ru":
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden className={classes}>
-          <rect width="24" height="8" className="fill-white" />
-          <rect y="8" width="24" height="8" className="fill-blue-600" />
-          <rect y="16" width="24" height="8" className="fill-red-600" />
-        </svg>
-      );
-    case "tr":
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden className={classes}>
-          <rect width="24" height="24" className="fill-red-600" />
-          <circle cx="10" cy="12" r="5" className="fill-white" />
-          <circle cx="11.4" cy="12" r="4" className="fill-red-600" />
-          <path
-            d="m16.2 9.2.7 1.7 1.8.1-1.4 1.1.5 1.8-1.6-1-1.5 1 .4-1.8-1.4-1.1 1.8-.1.7-1.7Z"
-            className="fill-white"
-          />
-        </svg>
-      );
-    case "en":
-    default:
-      return (
-        <svg viewBox="0 0 24 24" aria-hidden className={classes}>
-          <rect width="24" height="24" className="fill-white" />
-          {Array.from({ length: 4 }).map((_, index) => (
-            <rect key={index} y={index * 6} width="24" height="3" className="fill-red-600" />
-          ))}
-          <rect width="10.4" height="10.5" className="fill-blue-700" />
-          <circle cx="2.5" cy="2.5" r="0.6" className="fill-white" />
-          <circle cx="5.2" cy="2.5" r="0.6" className="fill-white" />
-          <circle cx="7.9" cy="2.5" r="0.6" className="fill-white" />
-          <circle cx="2.5" cy="5.2" r="0.6" className="fill-white" />
-          <circle cx="5.2" cy="5.2" r="0.6" className="fill-white" />
-          <circle cx="7.9" cy="5.2" r="0.6" className="fill-white" />
-          <circle cx="2.5" cy="7.9" r="0.6" className="fill-white" />
-          <circle cx="5.2" cy="7.9" r="0.6" className="fill-white" />
-          <circle cx="7.9" cy="7.9" r="0.6" className="fill-white" />
-        </svg>
-      );
-  }
+function LocaleFlagIcon({ locale, className }: { locale: AppLocale; className?: string }) {
+  return (
+    <img
+      alt=""
+      aria-hidden="true"
+      className={cn("h-5 w-5 overflow-hidden rounded-full object-cover", className)}
+      src={localeFlagSrc[locale]}
+    />
+  );
 }
 
 /**

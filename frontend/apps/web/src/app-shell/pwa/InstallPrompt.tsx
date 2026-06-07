@@ -3,6 +3,10 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { ArrowDownTrayIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { cn } from "@ssot/ui";
+
+import { useCompliance } from "../compliance";
+import { overlayZ, stickyActionHeightVar } from "../../components/overlay/z";
 
 const DISMISS_KEY = "arbigamefi.pwaInstall.dismissedV1";
 
@@ -20,6 +24,7 @@ type BeforeInstallPromptEvent = Event & {
 
 export function InstallPrompt() {
   const t = useTranslations("app.install");
+  const { hydrated, entryCleared, cookieConsent } = useCompliance();
   const [deferred, setDeferred] = React.useState<BeforeInstallPromptEvent | null>(null);
   const [visible, setVisible] = React.useState(false);
 
@@ -54,13 +59,23 @@ export function InstallPrompt() {
     }
   };
 
+  // One nag at a time: hold the install card until the entry gate has cleared
+  // and the cookie choice is resolved, so it never stacks on the cookie banner.
+  if (!hydrated || !entryCleared || cookieConsent === null) return null;
   if (!visible || !deferred) return null;
 
   return (
     <div
       role="region"
       aria-label={t("title")}
-      className="fixed bottom-4 right-4 z-[70] w-[20rem] max-w-[calc(100vw-2rem)] rounded-xl border border-border-soft bg-surface-1 p-4 shadow-e3"
+      className={cn(
+        "fixed right-4 w-[20rem] max-w-[calc(100vw-2rem)] rounded-xl border border-border-soft bg-surface-1 p-4 shadow-e3",
+        overlayZ.bottomBanner
+      )}
+      // Sit above the mobile sticky bet/connect CTA when one is mounted.
+      style={{
+        bottom: `calc(1rem + var(${stickyActionHeightVar}, env(safe-area-inset-bottom, 0px)))`
+      }}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2">

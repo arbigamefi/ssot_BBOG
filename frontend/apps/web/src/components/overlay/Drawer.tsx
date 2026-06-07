@@ -70,7 +70,14 @@ export function Drawer({
             <XMarkIcon className="h-5 w-5" />
           </button>
         </div>
-        <div className={cn("min-h-0 flex-1 overflow-y-auto", contentClassName)}>{children}</div>
+        <div
+          className={cn(
+            "min-h-0 flex-1 overflow-y-auto pb-[env(safe-area-inset-bottom)]",
+            contentClassName
+          )}
+        >
+          {children}
+        </div>
       </aside>
     </div>,
     document.body

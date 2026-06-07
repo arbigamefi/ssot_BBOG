@@ -38,7 +38,7 @@ export function HomeHero({
         className="pointer-events-none absolute inset-y-0 right-0 hidden w-1/2 bg-[radial-gradient(circle_at_55%_42%,hsl(var(--brand)/0.18),transparent_58%)] lg:block"
       />
 
-      <div className="relative mx-auto grid max-w-[1440px] grid-cols-1 gap-8 px-6 pb-12 pt-16 md:gap-10 md:pb-16 md:pt-28 lg:min-h-[640px] lg:grid-cols-[minmax(0,0.92fr)_minmax(440px,0.88fr)] lg:items-center lg:px-10 lg:pt-28">
+      <div className="relative mx-auto grid max-w-[1440px] grid-cols-1 gap-8 px-6 pb-12 pt-16 md:gap-10 md:pb-16 md:pt-28 lg:min-h-[640px] lg:grid-cols-[minmax(0,0.88fr)_minmax(440px,0.92fr)] lg:items-center lg:px-10 lg:pt-28">
         <div className="max-w-3xl lg:pb-8">
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand/30 bg-brand-soft px-3 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-brand shadow-e1">
             <span className="h-2 w-2 rounded-full bg-accent" />
@@ -83,7 +83,7 @@ export function HomeHero({
         </div>
 
         <div className="relative flex min-h-[270px] items-center justify-center pb-2 md:min-h-[360px] lg:min-h-[520px] lg:justify-end lg:pb-0">
-          <div className="relative">
+          <div className="relative ml-auto">
             <HeroPayoutVisual copy={copy.visual} />
           </div>
         </div>
@@ -119,14 +119,14 @@ function HeroPayoutVisual({
   const pockets = Array.from({ length: 37 }, (_, index) => index);
   return (
     <div
-      className="relative h-[270px] w-[min(86vw,390px)] md:h-[360px] md:w-[480px] lg:h-[460px] lg:w-[560px]"
+      className="relative h-[270px] w-[min(86vw,390px)] md:h-[360px] md:w-[520px] lg:h-[460px] lg:w-[600px]"
       aria-hidden
     >
-      <div className="absolute right-4 top-0 h-[210px] w-[210px] opacity-70 md:right-10 md:h-[300px] md:w-[300px] lg:right-12 lg:top-2 lg:h-[360px] lg:w-[360px]">
+      <div className="absolute right-0 top-0 h-[210px] w-[210px] opacity-70 md:right-0 md:h-[300px] md:w-[300px] lg:right-4 lg:top-2 lg:h-[360px] lg:w-[360px]">
         <HeroRouletteWheel pockets={pockets} />
       </div>
 
-      <div className="absolute bottom-0 left-0 w-full max-w-[430px] rounded-2xl border border-border-soft bg-surface-1/90 shadow-e3 backdrop-blur md:left-2 lg:left-0">
+      <div className="absolute bottom-0 right-0 w-full max-w-[430px] rounded-2xl border border-border-soft bg-surface-1/90 shadow-e3 backdrop-blur">
         <div className="flex items-center justify-between border-b border-border-soft px-5 py-4">
           <span className="text-xs font-bold uppercase tracking-[0.2em] text-fg-muted">
             {copy.receipt}

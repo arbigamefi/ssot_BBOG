@@ -7,6 +7,7 @@ import { cn } from "@ssot/ui";
 
 import { useCompliance } from "../compliance";
 import { useFocusTrap } from "../a11y/useFocusTrap";
+import { overlayZ } from "../../components/overlay/z";
 
 const STORAGE_KEY = "arbigamefi.onboarding.v1";
 
@@ -118,7 +119,12 @@ export function OnboardingTour() {
     : { position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)" };
 
   return (
-    <div className="fixed inset-0 z-[80]" role="dialog" aria-modal="true" aria-label={t("aria")}>
+    <div
+      className={cn("fixed inset-0", overlayZ.onboarding)}
+      role="dialog"
+      aria-modal="true"
+      aria-label={t("aria")}
+    >
       {/* Dimmed backdrop with a spotlight cutout (via box-shadow) when anchored. */}
       {spotlight ? (
         <div
