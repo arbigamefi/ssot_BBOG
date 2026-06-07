@@ -256,7 +256,7 @@ export function KenoStage({
       />
 
       {/* One cohesive console rather than a stack of detached cards. */}
-      <div className="relative flex min-h-full items-center justify-center px-4 py-3">
+      <div className="relative flex min-h-full items-start justify-center px-4 py-3 sm:items-center">
         <div
           className="relative w-full max-w-[480px] overflow-hidden rounded-xl border border-border-soft shadow-e3"
           style={{

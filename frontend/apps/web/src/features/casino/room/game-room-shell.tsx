@@ -35,40 +35,42 @@ export function GameRoomShell({
           : "flex min-h-[calc(100vh-8rem)] flex-col gap-4"
       }
     >
-      <header className="flex flex-col gap-3 border-b border-border-soft pb-4 md:flex-row md:items-end md:justify-between">
+      <header className="flex flex-col gap-3 border-b border-border-soft pb-3 md:flex-row md:items-end md:justify-between md:pb-4">
         <div>
           <div className="flex items-center gap-3 text-xs font-semibold uppercase text-accent">
             <span className="h-2.5 w-2.5 rounded-full bg-accent" />
             {t("casino.room.shell.liveModule")}
           </div>
-          <h1 className="mt-1 text-4xl font-semibold text-fg md:text-5xl">{gameName}</h1>
+          <h1 className="mt-1 text-3xl font-semibold text-fg md:text-5xl">{gameName}</h1>
         </div>
 
-        <dl className="grid grid-cols-2 gap-3 md:min-w-72">
-          <div className="rounded-lg border border-border-soft bg-surface-1 px-4 py-3 shadow-e1">
-            <dt className="text-xs font-semibold uppercase text-fg-subtle">
+        <dl className="grid grid-cols-2 gap-4 border-t border-border-soft pt-3 md:min-w-[22rem] md:border-t-0 md:pt-0">
+          <div className="min-w-0 md:text-right">
+            <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-fg-subtle">
               {t("casino.room.shell.maxBet")}
             </dt>
             <dd
               className={
                 maxBetIsHint
-                  ? "mt-1 text-sm font-semibold text-fg-muted"
-                  : "mt-1 font-mono text-lg text-fg"
+                  ? "mt-1 truncate text-sm font-semibold text-fg-muted"
+                  : "mt-1 truncate font-mono text-base text-fg md:text-lg"
               }
+              title={typeof maxBet === "string" ? maxBet : undefined}
             >
               {maxBet}
             </dd>
           </div>
-          <div className="rounded-lg border border-border-soft bg-surface-1 px-4 py-3 shadow-e1">
-            <dt className="text-xs font-semibold uppercase text-fg-subtle">
+          <div className="min-w-0 md:text-right">
+            <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-fg-subtle">
               {t("casino.room.shell.maxPayout")}
             </dt>
             <dd
               className={
                 maxPayoutIsHint
-                  ? "mt-1 text-sm font-semibold text-fg-muted"
-                  : "mt-1 font-mono text-lg text-fg"
+                  ? "mt-1 truncate text-sm font-semibold text-fg-muted"
+                  : "mt-1 truncate font-mono text-base text-fg md:text-lg"
               }
+              title={typeof maxPayout === "string" ? maxPayout : undefined}
             >
               {maxPayout}
             </dd>
