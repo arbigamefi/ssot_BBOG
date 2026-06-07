@@ -6,6 +6,7 @@ import { cn } from "@ssot/ui";
 import { overlayZ } from "./z";
 
 export function Popover({
+  align = "end",
   ariaLabel,
   children,
   className,
@@ -13,6 +14,7 @@ export function Popover({
   placement = "above",
   role = "menu"
 }: {
+  align?: "end" | "start";
   ariaLabel?: string;
   children: React.ReactNode;
   className?: string;
@@ -27,7 +29,8 @@ export function Popover({
       role={role}
       aria-label={ariaLabel}
       className={cn(
-        "absolute right-0 hidden w-72 max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-border-soft bg-surface-1 p-1 text-left shadow-e3 md:block",
+        "absolute hidden w-72 max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-border-soft bg-surface-1 p-1 text-left shadow-e3 md:block",
+        align === "start" ? "left-0" : "right-0",
         placement === "above" ? "bottom-full mb-2" : "top-full mt-2",
         overlayZ.popover,
         className

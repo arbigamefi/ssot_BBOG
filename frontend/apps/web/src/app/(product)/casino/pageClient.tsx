@@ -234,7 +234,7 @@ export function GamesListClient() {
         </header>
 
         <div className="mt-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="flex w-full items-center gap-1 overflow-x-auto md:w-auto">
+          <div className="flex w-full items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:w-auto">
             {FILTERS.map((item) => {
               const isActive = item.key === filter;
               return (

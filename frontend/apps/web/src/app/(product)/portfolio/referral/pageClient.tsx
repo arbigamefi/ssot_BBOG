@@ -181,8 +181,8 @@ export function ReferralPageClient() {
         </section>
 
         <section className="grid gap-6 xl:grid-cols-[1fr_420px]">
-          <div className="space-y-6">
-            <div className="rounded-md border border-border bg-surface-1 p-5 shadow-e1">
+          <div className="min-w-0 space-y-6">
+            <div className="min-w-0 rounded-md border border-border bg-surface-1 p-5 shadow-e1">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2 text-sm font-black text-fg">
@@ -200,7 +200,7 @@ export function ReferralPageClient() {
                   {t("portfolio.referral.link.learn")}
                 </Link>
               </div>
-              <div className="mt-5 rounded-md border border-border bg-surface-0 p-4 font-mono text-sm text-fg-muted">
+              <div className="mt-5 min-w-0 overflow-hidden break-all rounded-md border border-border bg-surface-0 p-4 font-mono text-sm text-fg-muted">
                 {referralLink ?? t("portfolio.referral.link.connect")}
               </div>
               <button

@@ -39,6 +39,7 @@ export function SharePanel({
 }) {
   const [open, setOpen] = React.useState(false);
   const [copied, setCopied] = React.useState<"link" | "proof" | null>(null);
+  const [popoverAlign, setPopoverAlign] = React.useState<"end" | "start">("end");
   const useMobileSheet = useMobileShareSheet();
   const containerRef = React.useRef<HTMLDivElement | null>(null);
   const canNativeShare =
@@ -47,6 +48,11 @@ export function SharePanel({
 
   React.useEffect(() => {
     if (!open || useMobileSheet) return;
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (rect) {
+      const menuWidth = Math.min(288, window.innerWidth - 32);
+      setPopoverAlign(rect.left + menuWidth <= window.innerWidth - 16 ? "start" : "end");
+    }
     const onClick = (event: MouseEvent) => {
       const target = event.target as Node;
       if (!containerRef.current?.contains(target)) {
@@ -148,7 +154,9 @@ export function SharePanel({
       </button>
       {open && !disabled ? (
         <>
-          <Popover open={open}>{menuItems}</Popover>
+          <Popover align={popoverAlign} open={open}>
+            {menuItems}
+          </Popover>
           {useMobileSheet ? (
             <Sheet
               closeLabel={labels.close ?? labels.share}
