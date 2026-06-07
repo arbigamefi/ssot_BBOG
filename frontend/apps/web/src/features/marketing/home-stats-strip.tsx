@@ -54,7 +54,7 @@ function AssetContextTabs({ tabs, label }: { tabs: readonly LandingAssetTab[]; l
   return (
     <div className="mb-4 flex justify-start md:justify-end">
       <div
-        className="inline-flex max-w-full gap-1 overflow-x-auto rounded-full border border-border-soft bg-surface-1 p-1"
+        className="inline-flex max-w-full gap-1 overflow-x-auto rounded-full border border-border-soft bg-surface-1 p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         role="group"
         aria-label={label}
       >

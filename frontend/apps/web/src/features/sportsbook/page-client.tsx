@@ -281,7 +281,7 @@ function MarketFilterTabs({
 
   return (
     <div
-      className="sticky top-20 z-20 flex gap-2 overflow-x-auto rounded-lg border border-border bg-surface-1/95 p-1 backdrop-blur"
+      className="sticky top-20 z-20 flex gap-2 overflow-x-auto rounded-lg border border-border bg-surface-1/95 p-1 backdrop-blur [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       role="tablist"
       aria-label={t("ariaLabel")}
     >

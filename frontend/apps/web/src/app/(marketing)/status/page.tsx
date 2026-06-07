@@ -260,7 +260,7 @@ export default async function StatusPage({
         <nav
           aria-label="Chain status"
           role="tablist"
-          className="-mx-2 flex gap-2 overflow-x-auto px-2 pb-1"
+          className="-mx-2 flex gap-2 overflow-x-auto px-2 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {snapshots.map(({ chain, snapshot }) => (
             <a
