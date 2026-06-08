@@ -39,7 +39,7 @@ const coreRoutes = [
   { path: "/portfolio/activity", text: "Casino ledger" },
   { path: "/earn", text: "Liquidity" },
   { path: "/sportsbook", text: "Sportsbook" },
-  { path: "/ops", text: "Casino keeper" },
+  { path: "/ops", text: "Operational proof" },
   { path: "/legal/privacy", text: "Privacy" }
 ] as const;
 
@@ -85,7 +85,12 @@ test.describe("current route smoke", () => {
       page.locator('[data-testid="room-entry-card"][data-slug="roulette"]')
     ).toBeVisible();
 
-    await page.locator('[data-testid="room-entry-card"][data-slug="roulette"]').click();
+    await Promise.all([
+      page.waitForURL(/\/casino\/roulette$/),
+      page
+        .locator('[data-testid="room-entry-card"][data-slug="roulette"]')
+        .click({ noWaitAfter: true })
+    ]);
     await expect(page).toHaveURL(/\/casino\/roulette$/);
     await expect(page.getByRole("heading", { name: /Roulette/i })).toBeVisible();
   });
