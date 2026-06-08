@@ -247,7 +247,7 @@ export function RouletteStage({
         style={{ background: "radial-gradient(circle, hsl(var(--brand) / 0.12), transparent 68%)" }}
       />
 
-      <div className="relative flex min-h-full items-start justify-center px-4 py-2 pb-28 sm:items-center sm:py-3 sm:pb-3">
+      <div className="relative flex min-h-full items-start justify-center px-4 py-2 sm:items-center sm:py-3">
         <div
           data-roulette-stage-card
           className="relative w-full max-w-[680px] overflow-hidden rounded-xl border border-border-soft shadow-e3"
