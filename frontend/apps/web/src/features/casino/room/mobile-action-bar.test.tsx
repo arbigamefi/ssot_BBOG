@@ -23,9 +23,15 @@ vi.mock("next-intl", () => ({
       "casino.room.betPanel.placeBet.roundInProgress": "ROUND IN PROGRESS",
       "casino.room.betPanel.placeBet.betMined": "BET MINED...",
       "casino.room.betPanel.placeBet.signing": "SIGNING / PLACING...",
+      "casino.room.betPanel.placeBet.revealing": "REVEALING...",
       "casino.room.betPanel.placeBet.approveThenPlace": "APPROVE, THEN PLACE BET",
       "casino.room.betPanel.placeBet.preparing": "PREPARING ROUND...",
-      "casino.room.betPanel.placeBet.placeBet": "PLACE BET"
+      "casino.room.betPanel.placeBet.placeBet": "PLACE BET",
+      "casino.room.roundStatus.phases.loadingQuote.status": "Estimating",
+      "casino.room.roundStatus.phases.waitingVrf.status": "Waiting for draw",
+      "casino.room.roundStatus.phases.settling.status": "Settling",
+      "casino.room.roundStatus.actions.settleResult": "Settle result",
+      "casino.room.roundStatus.actions.refundStake": "Refund stake"
     })[key] ?? key
 }));
 
@@ -50,6 +56,7 @@ function renderActionBar(
     isPending: false,
     winChance: 50,
     state: { status: "idle" },
+    roundPhase: "ready",
     onPlaceBet: vi.fn(),
     ...overrides
   };
@@ -108,5 +115,24 @@ describe("MobileCasinoActionBar", () => {
 
     expect(props.onBetAmountChange).not.toHaveBeenCalled();
     expect(screen.queryByRole("button", { name: "Max" })).toBeNull();
+  });
+
+  it("shows player-facing round progress on the compact CTA", () => {
+    renderActionBar({
+      isPending: true,
+      state: { status: "mined" },
+      roundPhase: "revealing"
+    });
+
+    expect(screen.getByRole("button", { name: "REVEALING..." })).toBeDefined();
+
+    cleanup();
+    renderActionBar({
+      isPending: true,
+      state: { status: "mined" },
+      roundPhase: "waiting_vrf"
+    });
+
+    expect(screen.getByRole("button", { name: "Waiting for draw" })).toBeDefined();
   });
 });

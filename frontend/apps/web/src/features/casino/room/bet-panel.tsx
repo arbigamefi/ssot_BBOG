@@ -12,10 +12,10 @@ import {
   BetRollsSection
 } from "./bet-panel-sections";
 import type { GameMeta } from "./model";
-import type { GameRoomBetPanelState } from "./place-bet-button";
+import type { GameRoomBetPanelState, PlaceBetButtonPhase } from "./place-bet-button";
 import { PlaceBetButton } from "./place-bet-button";
-import { CasinoRoundStatusPanel } from "./round-status-panel";
 import type { CasinoRoundPhase } from "./casino-round";
+import { CasinoRoundStatusPanel } from "./round-status-panel";
 import { getStepperErrorMessage } from "./feedback";
 import type { GameWalletBalance } from "./hooks";
 
@@ -30,6 +30,10 @@ export function GameRoomBetPanel({
   assetOptions,
   selectedAsset,
   onAssetChange,
+  maxBetLabel,
+  maxBetIsHint = false,
+  maxPayoutLabel,
+  maxPayoutIsHint = false,
   betAmount,
   maxBetAmount,
   onBetAmountChange,
@@ -47,12 +51,11 @@ export function GameRoomBetPanel({
   winChance,
   multiplier,
   expectedPayout,
-  roundPhase,
   vrfQuote,
-  vrfQuoteError,
   activeBetId,
   activeRequestId,
-  roundError,
+  roundPhase,
+  ctaPhase,
   manualSettleAvailable,
   onManualSettle,
   manualRefundAvailable,
@@ -68,6 +71,12 @@ export function GameRoomBetPanel({
   assetOptions?: AssetOption[];
   selectedAsset?: `0x${string}`;
   onAssetChange?: (asset: `0x${string}`) => void;
+  /** Display limit for the selected asset/pool. Shown in compact mobile panel context. */
+  maxBetLabel: string;
+  maxBetIsHint?: boolean;
+  /** Maximum payout supported by the selected pool. */
+  maxPayoutLabel: string;
+  maxPayoutIsHint?: boolean;
   betAmount: number;
   /** Per-roll amount cap derived from wallet balance and current pool liquidity. */
   maxBetAmount?: number;
@@ -86,12 +95,15 @@ export function GameRoomBetPanel({
   winChance: number;
   multiplier: number;
   expectedPayout: number;
-  roundPhase: CasinoRoundPhase;
+  /** Latest VRF fee quote shown as chain/protocol context, not as a workflow step. */
   vrfQuote?: bigint;
-  vrfQuoteError?: string;
+  /** Active bet id when the round has been broadcast/mined. */
   activeBetId?: bigint;
+  /** Chainlink VRF request id once emitted by the contract. */
   activeRequestId?: bigint;
-  roundError?: string;
+  roundPhase: CasinoRoundPhase;
+  /** Player-facing button phase. May include frontend-only reveal animation. */
+  ctaPhase?: PlaceBetButtonPhase;
   manualSettleAvailable?: boolean;
   onManualSettle?: () => void;
   manualRefundAvailable?: boolean;
@@ -100,11 +112,19 @@ export function GameRoomBetPanel({
   onPlaceBet: () => void;
 }) {
   const t = useTranslations();
+  const primaryAction =
+    manualRefundAvailable && onManualRefund
+      ? onManualRefund
+      : manualSettleAvailable && onManualSettle
+        ? onManualSettle
+        : onPlaceBet;
   const balanceLabel = !hasAccount
     ? t("casino.room.betPanel.notConnected")
     : (walletBalance?.label ?? "—");
   const walletBalanceAmount =
     walletBalance?.raw == null ? null : Number(formatUnits(walletBalance.raw, assetDecimals));
+  const limitValueClass = (isHint: boolean) =>
+    cn("mt-0.5 truncate text-xs font-bold", isHint ? "text-fg-muted" : "font-mono text-fg");
 
   return (
     <div className="grid min-h-0 grid-rows-[minmax(0,1fr)_auto] overflow-hidden lg:h-full">
@@ -144,6 +164,31 @@ export function GameRoomBetPanel({
                 title={balanceLabel}
               >
                 {balanceLabel}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-2 grid grid-cols-2 gap-2 border-t border-border-soft pt-2 lg:hidden">
+            <div className="min-w-0">
+              <div className="text-[9px] font-bold uppercase tracking-[0.12em] text-fg-subtle">
+                {t("casino.room.betPanel.limits.maxBet")}
+              </div>
+              <div
+                className={limitValueClass(maxBetIsHint)}
+                title={typeof maxBetLabel === "string" ? maxBetLabel : undefined}
+              >
+                {maxBetLabel}
+              </div>
+            </div>
+            <div className="min-w-0 text-right">
+              <div className="text-[9px] font-bold uppercase tracking-[0.12em] text-fg-subtle">
+                {t("casino.room.betPanel.limits.poolPayout")}
+              </div>
+              <div
+                className={limitValueClass(maxPayoutIsHint)}
+                title={typeof maxPayoutLabel === "string" ? maxPayoutLabel : undefined}
+              >
+                {maxPayoutLabel}
               </div>
             </div>
           </div>
@@ -216,14 +261,8 @@ export function GameRoomBetPanel({
         <CasinoRoundStatusPanel
           phase={roundPhase}
           quote={vrfQuote}
-          quoteError={vrfQuoteError}
           betId={activeBetId}
           requestId={activeRequestId}
-          error={roundError}
-          manualSettleAvailable={manualSettleAvailable}
-          onManualSettle={onManualSettle}
-          manualRefundAvailable={manualRefundAvailable}
-          onManualRefund={onManualRefund}
         />
       </div>
 
@@ -240,7 +279,10 @@ export function GameRoomBetPanel({
           isPending={isPending}
           winChance={winChance}
           state={state}
-          onClick={onPlaceBet}
+          roundPhase={ctaPhase ?? roundPhase}
+          manualSettleAvailable={manualSettleAvailable}
+          manualRefundAvailable={manualRefundAvailable}
+          onClick={primaryAction}
         />
       </div>
     </div>

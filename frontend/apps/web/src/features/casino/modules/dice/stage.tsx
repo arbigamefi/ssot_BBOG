@@ -104,7 +104,7 @@ export function DiceStage({
         style={{ background: "radial-gradient(circle, hsl(var(--brand) / 0.13), transparent 68%)" }}
       />
 
-      <div className="relative flex min-h-full items-center justify-center px-4 py-4">
+      <div className="relative flex min-h-full items-start justify-center px-4 py-3 sm:items-center sm:py-4">
         <div
           className="relative w-full max-w-[480px] overflow-hidden rounded-xl border border-border-soft shadow-e3"
           style={{

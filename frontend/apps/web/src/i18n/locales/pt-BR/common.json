@@ -1033,38 +1033,38 @@
         "gameNotFound": "Jogo não encontrado."
       },
       "warnings": {
-        "vrfTimeout": "Aguardando o oráculo... a resolução do VRF pode levar 30-120s em testnets."
+        "vrfTimeout": "Aguardando o sorteio... a aleatoriedade pode levar 30-120s em testnets."
       },
       "stage": {
         "loading": "Carregando mesa",
         "coin": {
           "awaitingSelection": "Aguardando escolha do lado",
           "selected": "{side} selecionado",
-          "waitingVrf": "Aguardando o oráculo VRF..."
+          "waitingVrf": "Aguardando sorteio..."
         },
         "plinko": {
           "board": "Tabuleiro Plinko",
           "dropZone": "Defina o risco e solte",
-          "waitingVrf": "Aguardando o oráculo VRF...",
+          "waitingVrf": "Aguardando sorteio...",
           "revealing": "Caindo pelo tabuleiro...",
           "slot": "Casa {slot}",
           "risk": "Risco: {risk}"
         },
         "slots": {
           "ready": "Combine 3 símbolos para ganhar",
-          "spinning": "Aguardando o oráculo VRF...",
+          "spinning": "Aguardando sorteio...",
           "result": "{symbols}",
           "classic": "Perfil clássico"
         },
         "baccarat": {
           "ready": "Aposte no jogador, banca ou empate",
-          "dealing": "Aguardando o oráculo VRF...",
+          "dealing": "Aguardando sorteio...",
           "result": "{side} vence",
           "selected": "Selecionado: {side}"
         },
         "sicBo": {
           "ready": "Escolha uma aposta de mesa do Sic Bo",
-          "rolling": "Aguardando o oráculo VRF...",
+          "rolling": "Aguardando sorteio...",
           "opened": "Dados abertos: {dice}",
           "total": "Total",
           "triple": "Trinca",
@@ -1093,6 +1093,10 @@
       "betPanel": {
         "walletBalance": "Saldo da carteira",
         "asset": "Ativo da aposta",
+        "limits": {
+          "maxBet": "Aposta máx.",
+          "poolPayout": "Pool paga"
+        },
         "syncing": "Sincronizando...",
         "notConnected": "Não conectado",
         "walletGate": {
@@ -1134,7 +1138,8 @@
           "signing": "ASSINANDO / APOSTANDO...",
           "approveThenPlace": "APROVAR E DEPOIS APOSTAR",
           "preparing": "PREPARANDO RODADA...",
-          "placeBet": "APOSTAR"
+          "placeBet": "APOSTAR",
+          "revealing": "Revelando..."
         }
       },
       "roundStatus": {
@@ -1146,12 +1151,12 @@
             "status": "Estimando"
           },
           "waitingVrf": {
-            "label": "Rolando",
-            "detail": "A aposta foi minerada. Aguardando aleatoriedade verificável.",
-            "status": "Aguardando VRF"
+            "label": "Aguardando sorteio",
+            "detail": "Sua aposta está on-chain. Aguardando aleatoriedade verificável para abrir o resultado.",
+            "status": "Aguardando sorteio"
           },
           "timeoutSoft": {
-            "label": "O VRF está demorando mais que o normal",
+            "label": "O sorteio está demorando mais que o normal",
             "detail": "A rodada continua segura. Mantenha esta página aberta enquanto o Chainlink atende o pedido.",
             "status": "Aguardando"
           },

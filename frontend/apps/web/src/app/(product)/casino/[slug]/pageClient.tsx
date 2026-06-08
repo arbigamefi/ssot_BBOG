@@ -46,6 +46,7 @@ import { readCasinoOutcome, type CasinoOutcome } from "../../../../features/casi
 import { GameRoomRightPane } from "../../../../features/casino/room/right-pane";
 import { GameRoomShell } from "../../../../features/casino/room/game-room-shell";
 import { MobileCasinoActionBar } from "../../../../features/casino/room/mobile-action-bar";
+import { derivePlaceBetButtonPhase } from "../../../../features/casino/room/place-bet-button";
 import { useCasinoRound } from "../../../../features/casino/room/use-casino-round";
 import { useReferralAffiliate } from "../../../../features/referral/useReferralAffiliate";
 import {
@@ -443,6 +444,13 @@ export function GamePageClient({ slug }: { slug: string }) {
       : Number(maxBetRaw) / Math.pow(10, assetDecimals) / Math.max(1, Math.floor(betCount));
   const walletBalanceAmount =
     walletBalance?.raw == null ? null : Number(walletBalance.raw) / Math.pow(10, assetDecimals);
+  const placeBetButtonPhase = derivePlaceBetButtonPhase({
+    roundPhase: casinoRound.roundPhase,
+    activeBetState: casinoRound.activeBet?.state,
+    activeBetId: casinoRound.activeBet?.betId,
+    stageReveal,
+    revealedBetId: revealedBetIdRef.current
+  });
 
   const LeftPane = (
     <GameRoomBetPanel
@@ -453,6 +461,10 @@ export function GamePageClient({ slug }: { slug: string }) {
       assetOptions={assetSelection.assetOptions}
       selectedAsset={assetSelection.selectedAsset}
       onAssetChange={assetSelection.setSelectedAsset}
+      maxBetLabel={maxBetLabel}
+      maxBetIsHint={maxBetState !== "value"}
+      maxPayoutLabel={maxPayoutLabel}
+      maxPayoutIsHint={maxPayoutState !== "value"}
       betAmount={betAmount}
       maxBetAmount={maxBetAmountPerRoll}
       onBetAmountChange={setBetAmount}
@@ -470,12 +482,11 @@ export function GamePageClient({ slug }: { slug: string }) {
       winChance={winChance}
       multiplier={multiplier}
       expectedPayout={expectedPayout}
-      roundPhase={casinoRound.roundPhase}
       vrfQuote={casinoRound.vrfQuote}
-      vrfQuoteError={casinoRound.vrfQuoteError}
       activeBetId={casinoRound.activeBetId}
       activeRequestId={casinoRound.activeRequestId}
-      roundError={casinoRound.roundError}
+      roundPhase={casinoRound.roundPhase}
+      ctaPhase={placeBetButtonPhase}
       manualSettleAvailable={casinoRound.manualSettleAvailable}
       onManualSettle={casinoRound.manualSettle}
       manualRefundAvailable={casinoRound.manualRefundAvailable}
@@ -497,6 +508,11 @@ export function GamePageClient({ slug }: { slug: string }) {
       isPending={isBetPanelPending}
       winChance={winChance}
       state={state}
+      roundPhase={placeBetButtonPhase}
+      manualSettleAvailable={casinoRound.manualSettleAvailable}
+      onManualSettle={casinoRound.manualSettle}
+      manualRefundAvailable={casinoRound.manualRefundAvailable}
+      onManualRefund={casinoRound.manualRefund}
       onPlaceBet={casinoRound.placeBet}
     />
   );

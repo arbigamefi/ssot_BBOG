@@ -218,7 +218,7 @@ export function GamesListClient() {
   });
 
   return (
-    <div className="relative overflow-hidden pb-16 text-fg selection:bg-brand/20">
+    <div className="relative -mt-10 overflow-hidden pb-16 text-fg selection:bg-brand/20">
       {/* Atmosphere — matches the rebuilt game consoles: a top-down surface
           lift and a soft brand bloom instead of the old noise texture. */}
       <div
@@ -234,7 +234,7 @@ export function GamesListClient() {
         style={{ background: "radial-gradient(circle, hsl(var(--brand) / 0.12), transparent 68%)" }}
       />
 
-      <section className="relative border-b border-border-soft py-6 md:py-8">
+      <section className="relative border-b border-border-soft pb-6 pt-3 md:pb-8 md:pt-5">
         <header className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl">
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-brand/30 bg-brand-soft px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand">

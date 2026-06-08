@@ -2,23 +2,55 @@ import * as React from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "@ssot/ui";
 
+import type { CasinoRoundPhase } from "./casino-round";
+
 export type GameRoomBetPanelState = {
   status: string;
   error?: { message?: string };
   plan?: { preview?: { needsApproval?: boolean } };
 };
 
+export type PlaceBetButtonPhase = CasinoRoundPhase | "revealing";
+export type StageRevealState = { betId: bigint; phase: "revealing" | "revealed" } | null;
+
+export function derivePlaceBetButtonPhase({
+  roundPhase,
+  activeBetState,
+  activeBetId,
+  stageReveal,
+  revealedBetId
+}: {
+  roundPhase: CasinoRoundPhase;
+  activeBetState?: string;
+  activeBetId?: bigint;
+  stageReveal?: StageRevealState;
+  revealedBetId?: bigint | null;
+}): PlaceBetButtonPhase {
+  const activeBetAwaitingReveal =
+    activeBetState === "randomReady" &&
+    activeBetId != null &&
+    stageReveal?.phase !== "revealed" &&
+    revealedBetId !== activeBetId;
+
+  return stageReveal?.phase === "revealing" || activeBetAwaitingReveal ? "revealing" : roundPhase;
+}
+
 export function isPlaceBetButtonDisabled({
   gameSlug,
   isPending,
   winChance,
-  state
+  state,
+  manualSettleAvailable = false,
+  manualRefundAvailable = false
 }: {
   gameSlug: string;
   isPending: boolean;
   winChance: number;
   state: GameRoomBetPanelState;
+  manualSettleAvailable?: boolean;
+  manualRefundAvailable?: boolean;
 }) {
+  if (manualSettleAvailable || manualRefundAvailable) return false;
   return (
     isPending ||
     state.status === "planning" ||
@@ -31,23 +63,39 @@ export function isPlaceBetButtonDisabled({
 function getPlaceBetButtonLabelKey({
   hasAccount,
   state,
-  isPending
+  isPending,
+  roundPhase,
+  manualSettleAvailable,
+  manualRefundAvailable
 }: {
   hasAccount: boolean;
   state: GameRoomBetPanelState;
   isPending: boolean;
+  roundPhase?: PlaceBetButtonPhase;
+  manualSettleAvailable?: boolean;
+  manualRefundAvailable?: boolean;
 }) {
   if (!hasAccount) return "casino.room.betPanel.placeBet.connectWallet";
   if (state.status === "failed") return "casino.room.betPanel.placeBet.failedRetry";
+  if (manualRefundAvailable) return "casino.room.roundStatus.actions.refundStake";
+  if (manualSettleAvailable) return "casino.room.roundStatus.actions.settleResult";
+  if (state.status === "planning") return "casino.room.betPanel.placeBet.preparing";
+  if (state.status === "submitting") return "casino.room.betPanel.placeBet.signing";
+  if (roundPhase === "revealing") return "casino.room.betPanel.placeBet.revealing";
+  if (roundPhase === "waiting_vrf" || roundPhase === "timeout_soft")
+    return "casino.room.roundStatus.phases.waitingVrf.status";
+  if (roundPhase === "settling") return "casino.room.roundStatus.phases.settling.status";
+  if (roundPhase === "manual_settle_offered") return "casino.room.roundStatus.actions.settleResult";
+  if (roundPhase === "refundable") return "casino.room.roundStatus.actions.refundStake";
+  if (roundPhase === "loading_quote") return "casino.room.roundStatus.phases.loadingQuote.status";
+  if (roundPhase === "failed") return "casino.room.betPanel.placeBet.failedRetry";
+  if (state.status === "mined") return "casino.room.betPanel.placeBet.betMined";
   if (isPending || state.status === "reconciled")
     return "casino.room.betPanel.placeBet.roundInProgress";
-  if (state.status === "mined") return "casino.room.betPanel.placeBet.betMined";
-  if (state.status === "submitting") return "casino.room.betPanel.placeBet.signing";
   if (state.plan)
     return state.plan.preview?.needsApproval
       ? "casino.room.betPanel.placeBet.approveThenPlace"
       : "casino.room.betPanel.placeBet.placeBet";
-  if (state.status === "planning") return "casino.room.betPanel.placeBet.preparing";
   return "casino.room.betPanel.placeBet.placeBet";
 }
 
@@ -57,6 +105,9 @@ export function PlaceBetButton({
   isPending,
   winChance,
   state,
+  roundPhase,
+  manualSettleAvailable = false,
+  manualRefundAvailable = false,
   onClick,
   density = "normal"
 }: {
@@ -65,11 +116,22 @@ export function PlaceBetButton({
   isPending: boolean;
   winChance: number;
   state: GameRoomBetPanelState;
+  roundPhase?: PlaceBetButtonPhase;
+  manualSettleAvailable?: boolean;
+  manualRefundAvailable?: boolean;
   onClick: () => void;
   density?: "normal" | "compact";
 }) {
   const t = useTranslations();
-  const disabled = isPlaceBetButtonDisabled({ gameSlug, isPending, winChance, state });
+  const disabled = isPlaceBetButtonDisabled({
+    gameSlug,
+    isPending,
+    winChance,
+    state,
+    manualSettleAvailable,
+    manualRefundAvailable
+  });
+  const activeManualAction = manualSettleAvailable || manualRefundAvailable;
 
   return (
     <button
@@ -79,18 +141,28 @@ export function PlaceBetButton({
       className={cn(
         "w-full rounded-lg border-b-[4px] font-extrabold transition-colors",
         density === "compact" ? "py-3 text-sm" : "py-4 text-lg",
-        isPending ||
-          state.status === "reconciled" ||
-          state.status === "submitting" ||
-          state.status === "mined" ||
-          state.status === "planning"
+        !activeManualAction &&
+          (isPending ||
+            state.status === "reconciled" ||
+            state.status === "submitting" ||
+            state.status === "mined" ||
+            state.status === "planning")
           ? "cursor-not-allowed border-border bg-surface-3 text-fg-subtle opacity-50 shadow-none"
           : state.status === "failed"
             ? "border-danger bg-danger text-fg-inverse hover:bg-danger/90"
             : "border-brand-active bg-brand text-fg-inverse shadow-glow hover:bg-brand-hover"
       )}
     >
-      {t(getPlaceBetButtonLabelKey({ hasAccount, state, isPending }))}
+      {t(
+        getPlaceBetButtonLabelKey({
+          hasAccount,
+          state,
+          isPending,
+          roundPhase,
+          manualSettleAvailable,
+          manualRefundAvailable
+        })
+      )}
     </button>
   );
 }

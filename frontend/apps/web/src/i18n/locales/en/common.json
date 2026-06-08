@@ -300,7 +300,7 @@
         "unexpected": "An unexpected error occurred."
       },
       "warnings": {
-        "vrfTimeout": "Waiting for oracle... VRF resolution can take 30-120s on testnets."
+        "vrfTimeout": "Waiting for draw... randomness can take 30-120s on testnets."
       },
       "roundStatus": {
         "title": "Round status",
@@ -311,12 +311,12 @@
             "status": "Estimating"
           },
           "waitingVrf": {
-            "label": "Rolling",
-            "detail": "PlaceBet is mined. Waiting for verifiable randomness.",
-            "status": "Waiting VRF"
+            "label": "Waiting for draw",
+            "detail": "Your bet is on-chain. Waiting for verifiable randomness to open the result.",
+            "status": "Waiting for draw"
           },
           "timeoutSoft": {
-            "label": "VRF is taking longer than usual",
+            "label": "Draw is taking longer than usual",
             "detail": "The round is still safe. Keep this page open while Chainlink fulfills the request.",
             "status": "Waiting"
           },
@@ -375,6 +375,10 @@
       "betPanel": {
         "walletBalance": "Wallet Balance",
         "asset": "Bet asset",
+        "limits": {
+          "maxBet": "Max bet",
+          "poolPayout": "Pool pays"
+        },
         "syncing": "Syncing...",
         "notConnected": "Not connected",
         "walletGate": {
@@ -416,7 +420,8 @@
           "signing": "SIGNING / PLACING...",
           "approveThenPlace": "APPROVE, THEN PLACE BET",
           "preparing": "PREPARING ROUND...",
-          "placeBet": "PLACE BET"
+          "placeBet": "PLACE BET",
+          "revealing": "Revealing..."
         }
       },
       "selection": {
@@ -512,31 +517,31 @@
         "coin": {
           "awaitingSelection": "Awaiting toss selection",
           "selected": "{side} selected",
-          "waitingVrf": "Waiting for VRF oracle..."
+          "waitingVrf": "Waiting for draw..."
         },
         "plinko": {
           "board": "Plinko board",
           "dropZone": "Set risk and drop",
-          "waitingVrf": "Waiting for VRF oracle...",
+          "waitingVrf": "Waiting for draw...",
           "revealing": "Dropping through the board...",
           "slot": "Slot {slot}",
           "risk": "Risk: {risk}"
         },
         "slots": {
           "ready": "Match 3 symbols to win",
-          "spinning": "Waiting for VRF oracle...",
+          "spinning": "Waiting for draw...",
           "result": "{symbols}",
           "classic": "Classic profile"
         },
         "baccarat": {
           "ready": "Bet player, banker, or tie",
-          "dealing": "Waiting for VRF oracle...",
+          "dealing": "Waiting for draw...",
           "result": "{side} wins",
           "selected": "Selected: {side}"
         },
         "sicBo": {
           "ready": "Choose a Sic Bo table bet",
-          "rolling": "Waiting for VRF oracle...",
+          "rolling": "Waiting for draw...",
           "opened": "Dice opened: {dice}",
           "total": "Total",
           "triple": "Triple",

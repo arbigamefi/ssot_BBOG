@@ -37,7 +37,7 @@ export function GameRoomShell({
           : "flex min-h-[calc(100vh-8rem)] flex-col gap-4"
       }
     >
-      <header className="flex flex-col gap-2 border-b border-border-soft pb-2 md:flex-row md:items-end md:justify-between md:gap-4 md:pb-4">
+      <header className="hidden flex-col gap-2 border-b border-border-soft pb-2 md:flex md:flex-row md:items-end md:justify-between md:gap-4 md:pb-4">
         <div className="min-w-0">
           <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-accent md:gap-3 md:text-xs">
             <span className="h-2.5 w-2.5 rounded-full bg-accent" />

@@ -1033,38 +1033,38 @@
         "gameNotFound": "Oyun bulunamadı."
       },
       "warnings": {
-        "vrfTimeout": "Oracle bekleniyor... VRF çözümü test ağlarında 30-120s sürebilir."
+        "vrfTimeout": "Çekiliş bekleniyor... rastgelelik test ağlarında 30-120s sürebilir."
       },
       "stage": {
         "loading": "Masa yükleniyor",
         "coin": {
           "awaitingSelection": "Taraf seçimi bekleniyor",
           "selected": "{side} seçildi",
-          "waitingVrf": "VRF oracle bekleniyor..."
+          "waitingVrf": "Çekiliş bekleniyor..."
         },
         "plinko": {
           "board": "Plinko tahtası",
           "dropZone": "Riski ayarla ve bırak",
-          "waitingVrf": "VRF oracle bekleniyor...",
+          "waitingVrf": "Çekiliş bekleniyor...",
           "revealing": "Tahtadan düşüyor...",
           "slot": "Kova {slot}",
           "risk": "Risk: {risk}"
         },
         "slots": {
           "ready": "Kazanmak için 3 sembol eşle",
-          "spinning": "VRF oracle bekleniyor...",
+          "spinning": "Çekiliş bekleniyor...",
           "result": "{symbols}",
           "classic": "Klasik profil"
         },
         "baccarat": {
           "ready": "Oyuncu, banko veya beraberliğe bahis yap",
-          "dealing": "VRF oracle bekleniyor...",
+          "dealing": "Çekiliş bekleniyor...",
           "result": "{side} kazanır",
           "selected": "Seçilen: {side}"
         },
         "sicBo": {
           "ready": "Bir Sic Bo masa bahsi seç",
-          "rolling": "VRF oracle bekleniyor...",
+          "rolling": "Çekiliş bekleniyor...",
           "opened": "Zarlar açıldı: {dice}",
           "total": "Toplam",
           "triple": "Üçlü",
@@ -1093,6 +1093,10 @@
       "betPanel": {
         "walletBalance": "Cüzdan bakiyesi",
         "asset": "Bahis varlığı",
+        "limits": {
+          "maxBet": "Maks. bahis",
+          "poolPayout": "Havuz öder"
+        },
         "syncing": "Eşitleniyor...",
         "notConnected": "Bağlı değil",
         "walletGate": {
@@ -1134,7 +1138,8 @@
           "signing": "İMZALANIYOR / BAHİS...",
           "approveThenPlace": "ONAYLA, SONRA BAHİS YAP",
           "preparing": "TUR HAZIRLANIYOR...",
-          "placeBet": "BAHİS YAP"
+          "placeBet": "BAHİS YAP",
+          "revealing": "Açılıyor..."
         }
       },
       "roundStatus": {
@@ -1146,12 +1151,12 @@
             "status": "Tahmin ediliyor"
           },
           "waitingVrf": {
-            "label": "Atılıyor",
-            "detail": "Bahis bloğa girdi. Doğrulanabilir rastgelelik bekleniyor.",
-            "status": "VRF bekleniyor"
+            "label": "Çekiliş bekleniyor",
+            "detail": "Bahis zincire yazıldı. Sonucu açmak için doğrulanabilir rastgelelik bekleniyor.",
+            "status": "Çekiliş bekleniyor"
           },
           "timeoutSoft": {
-            "label": "VRF normalden uzun sürüyor",
+            "label": "Çekiliş normalden uzun sürüyor",
             "detail": "Tur hâlâ güvende. Chainlink isteği yerine getirirken bu sayfayı açık tutun.",
             "status": "Bekleniyor"
           },

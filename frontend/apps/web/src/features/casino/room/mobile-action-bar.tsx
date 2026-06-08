@@ -10,6 +10,7 @@ import {
   resolveBetMaxAmount
 } from "./bet-panel-sections";
 import type { GameMeta } from "./model";
+import type { PlaceBetButtonPhase } from "./place-bet-button";
 import { PlaceBetButton } from "./place-bet-button";
 
 const BET_AMOUNT_PATTERN = "[0-9]*[.]?[0-9]*";
@@ -25,6 +26,11 @@ export function MobileCasinoActionBar({
   isPending,
   winChance,
   state,
+  roundPhase,
+  manualSettleAvailable = false,
+  onManualSettle,
+  manualRefundAvailable = false,
+  onManualRefund,
   onPlaceBet
 }: {
   game: GameMeta;
@@ -38,9 +44,20 @@ export function MobileCasinoActionBar({
   isPending: boolean;
   winChance: number;
   state: React.ComponentProps<typeof PlaceBetButton>["state"];
+  roundPhase: PlaceBetButtonPhase;
+  manualSettleAvailable?: boolean;
+  onManualSettle?: () => void;
+  manualRefundAvailable?: boolean;
+  onManualRefund?: () => void;
   onPlaceBet: () => void;
 }) {
   const t = useTranslations();
+  const primaryAction =
+    manualRefundAvailable && onManualRefund
+      ? onManualRefund
+      : manualSettleAvailable && onManualSettle
+        ? onManualSettle
+        : onPlaceBet;
   const maxAmount = resolveBetMaxAmount(walletBalanceAmount, maxBetAmount);
   const adjust = (next: number) => onBetAmountChange?.(clampBetAmount(next, maxAmount));
 
@@ -112,7 +129,10 @@ export function MobileCasinoActionBar({
         isPending={isPending}
         winChance={winChance}
         state={state}
-        onClick={onPlaceBet}
+        roundPhase={roundPhase}
+        manualSettleAvailable={manualSettleAvailable}
+        manualRefundAvailable={manualRefundAvailable}
+        onClick={primaryAction}
         density="compact"
       />
     </div>

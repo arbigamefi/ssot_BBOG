@@ -194,7 +194,6 @@ export function GameRoomRightPane({
                   : gameSlug === "slots"
                     ? "lg:min-h-[34rem]"
                     : "lg:min-h-[34rem]";
-
   return (
     <div
       className={cn(

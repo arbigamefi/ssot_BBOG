@@ -7,6 +7,7 @@ import {
   isPlaceBetButtonDisabled,
   type GameRoomBetPanelState
 } from "./bet-panel";
+import { derivePlaceBetButtonPhase } from "./place-bet-button";
 import type { GameMeta } from "./model";
 
 vi.mock("@ssot/ui", async () => {
@@ -25,11 +26,11 @@ vi.mock("next-intl", () => ({
       "casino.room.roundStatus.phases.loadingQuote.detail":
         "Reading the current randomness fee before you place a round.",
       "casino.room.roundStatus.phases.loadingQuote.status": "Estimating",
-      "casino.room.roundStatus.phases.waitingVrf.label": "Rolling",
+      "casino.room.roundStatus.phases.waitingVrf.label": "Waiting for draw",
       "casino.room.roundStatus.phases.waitingVrf.detail":
-        "PlaceBet is mined. Waiting for verifiable randomness.",
-      "casino.room.roundStatus.phases.waitingVrf.status": "Waiting VRF",
-      "casino.room.roundStatus.phases.timeoutSoft.label": "VRF is taking longer than usual",
+        "Your bet is on-chain. Waiting for verifiable randomness to open the result.",
+      "casino.room.roundStatus.phases.waitingVrf.status": "Waiting for draw",
+      "casino.room.roundStatus.phases.timeoutSoft.label": "Draw is taking longer than usual",
       "casino.room.roundStatus.phases.timeoutSoft.detail":
         "The round is still safe. Keep this page open while Chainlink fulfills the request.",
       "casino.room.roundStatus.phases.timeoutSoft.status": "Waiting",
@@ -67,6 +68,8 @@ vi.mock("next-intl", () => ({
       "casino.room.roundStatus.actions.settleResult": "Settle result",
       "casino.room.roundStatus.actions.refundStake": "Refund stake",
       "casino.room.betPanel.walletBalance": "Wallet Balance",
+      "casino.room.betPanel.limits.maxBet": "Max bet",
+      "casino.room.betPanel.limits.poolPayout": "Pool pays",
       "casino.room.betPanel.syncing": "Syncing...",
       "casino.room.betPanel.notConnected": "Not connected",
       "casino.room.betPanel.walletGate.title": "Connect wallet to place a round",
@@ -97,6 +100,7 @@ vi.mock("next-intl", () => ({
       "casino.room.betPanel.placeBet.roundInProgress": "ROUND IN PROGRESS",
       "casino.room.betPanel.placeBet.betMined": "BET MINED...",
       "casino.room.betPanel.placeBet.signing": "SIGNING / PLACING...",
+      "casino.room.betPanel.placeBet.revealing": "REVEALING...",
       "casino.room.betPanel.placeBet.approveThenPlace": "APPROVE, THEN PLACE BET",
       "casino.room.betPanel.placeBet.preparing": "PREPARING ROUND...",
       "casino.room.betPanel.placeBet.placeBet": "PLACE BET",
@@ -139,6 +143,8 @@ function renderPanel(overrides: Partial<React.ComponentProps<typeof GameRoomBetP
     walletBalance: { label: "1,450.00 USDC", raw: 1_450_000_000n },
     assetDecimals: 6,
     assetSymbol: "USDC",
+    maxBetLabel: "200 USDC",
+    maxPayoutLabel: "500 USDC",
     betAmount: 10,
     onBetAmountChange: vi.fn(),
     betCount: 1,
@@ -156,11 +162,6 @@ function renderPanel(overrides: Partial<React.ComponentProps<typeof GameRoomBetP
     multiplier: 1.98,
     expectedPayout: 19.8,
     roundPhase: "ready",
-    vrfQuote: 73_169_600_001_705n,
-    vrfQuoteError: undefined,
-    activeBetId: undefined,
-    activeRequestId: undefined,
-    roundError: undefined,
     manualSettleAvailable: false,
     onManualSettle: vi.fn(),
     manualRefundAvailable: false,
@@ -179,9 +180,12 @@ describe("GameRoomBetPanel", () => {
     renderPanel();
 
     expect(screen.getByText("Wallet Balance")).toBeDefined();
+    expect(screen.getByText("Max bet")).toBeDefined();
+    expect(screen.getByText("200 USDC")).toBeDefined();
+    expect(screen.getByText("Pool pays")).toBeDefined();
+    expect(screen.getByText("500 USDC")).toBeDefined();
     expect(screen.getByText("Not connected")).toBeDefined();
     expect(screen.getByText("Connect wallet to place a round")).toBeDefined();
-    expect(screen.getByText("VRF estimate")).toBeDefined();
     expect(screen.getByText("1.98x")).toBeDefined();
     expect(screen.getByText("50.00%")).toBeDefined();
     expect(screen.getByRole("button", { name: "CONNECT WALLET" })).toBeDefined();
@@ -192,6 +196,27 @@ describe("GameRoomBetPanel", () => {
 
     expect(screen.getByText("Wallet Balance")).toBeDefined();
     expect(screen.getByText("1,450.00 USDC")).toBeDefined();
+  });
+
+  it("keeps compact round proof data in the panel while status lives on the CTA", () => {
+    renderPanel({
+      hasAccount: true,
+      isPending: true,
+      state: { status: "mined" },
+      roundPhase: "waiting_vrf",
+      vrfQuote: 7_410_000_000_0000n,
+      activeBetId: 28n,
+      activeRequestId:
+        104964872007376604112859092387372891991342602865639700265695114041332312851084n
+    });
+
+    expect(screen.getByText("Round status")).toBeDefined();
+    expect(screen.getByText("VRF estimate")).toBeDefined();
+    expect(screen.getByText("0.0000741 ETH")).toBeDefined();
+    expect(screen.getByText("Bet ID")).toBeDefined();
+    expect(screen.getByText("28")).toBeDefined();
+    expect(screen.getByText("VRF request")).toBeDefined();
+    expect(screen.getByRole("button", { name: "Waiting for draw" })).toBeDefined();
   });
 
   it("routes amount shortcuts and place action through callbacks", () => {
@@ -263,6 +288,54 @@ describe("GameRoomBetPanel", () => {
     ).toBe(true);
   });
 
+  it("uses one signing label for wallet submission and a separate reveal label", () => {
+    renderPanel({
+      hasAccount: true,
+      isPending: true,
+      state: { status: "submitting", plan: { preview: { needsApproval: true } } }
+    });
+    expect(screen.getByRole("button", { name: "SIGNING / PLACING..." })).toBeDefined();
+
+    cleanup();
+    renderPanel({
+      hasAccount: true,
+      isPending: true,
+      state: { status: "submitting", plan: { preview: { needsApproval: false } } }
+    });
+    expect(screen.getByRole("button", { name: "SIGNING / PLACING..." })).toBeDefined();
+
+    cleanup();
+    renderPanel({
+      hasAccount: true,
+      isPending: true,
+      state: { status: "mined" },
+      ctaPhase: "revealing"
+    });
+    expect(screen.getByRole("button", { name: "REVEALING..." })).toBeDefined();
+  });
+
+  it("keeps the CTA in reveal state as soon as randomness is ready", () => {
+    expect(
+      derivePlaceBetButtonPhase({
+        roundPhase: "settling",
+        activeBetState: "randomReady",
+        activeBetId: 42n,
+        stageReveal: null,
+        revealedBetId: null
+      })
+    ).toBe("revealing");
+
+    expect(
+      derivePlaceBetButtonPhase({
+        roundPhase: "settling",
+        activeBetState: "randomReady",
+        activeBetId: 42n,
+        stageReveal: { betId: 42n, phase: "revealed" },
+        revealedBetId: 42n
+      })
+    ).toBe("settling");
+  });
+
   it("uses text inputs for casino amounts and sanitizes amount changes", () => {
     const props = renderPanel({
       advancedOpen: true,
@@ -293,22 +366,32 @@ describe("GameRoomBetPanel", () => {
     expect(props.onStopLossChange).toHaveBeenCalledWith(0);
   });
 
-  it("shows explicit manual settlement and refund fallback controls only when provided", () => {
+  it("routes manual settlement through the primary button", () => {
     const onManualSettle = vi.fn();
+    renderPanel({
+      hasAccount: true,
+      isPending: true,
+      roundPhase: "manual_settle_offered",
+      manualSettleAvailable: true,
+      onManualSettle
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Settle result" }));
+
+    expect(onManualSettle).toHaveBeenCalledTimes(1);
+  });
+
+  it("routes refund fallback through the primary button", () => {
     const onManualRefund = vi.fn();
     renderPanel({
       hasAccount: true,
       roundPhase: "refundable",
-      manualSettleAvailable: true,
-      onManualSettle,
       manualRefundAvailable: true,
       onManualRefund
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Settle result" }));
     fireEvent.click(screen.getByRole("button", { name: "Refund stake" }));
 
-    expect(onManualSettle).toHaveBeenCalledTimes(1);
     expect(onManualRefund).toHaveBeenCalledTimes(1);
   });
 });

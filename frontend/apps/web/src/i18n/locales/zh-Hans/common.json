@@ -300,7 +300,7 @@
         "unexpected": "发生了非预期错误。"
       },
       "warnings": {
-        "vrfTimeout": "正在等待 oracle。测试网 VRF 可能需要 30-120 秒完成。"
+        "vrfTimeout": "正在等待开奖。测试网随机数可能需要 30-120 秒完成。"
       },
       "roundStatus": {
         "title": "回合状态",
@@ -312,11 +312,11 @@
           },
           "waitingVrf": {
             "label": "等待开奖",
-            "detail": "PlaceBet 已上链，正在等待可验证随机数。",
-            "status": "等待 VRF"
+            "detail": "下注已上链，正在等待可验证随机数开出结果。",
+            "status": "等待开奖"
           },
           "timeoutSoft": {
-            "label": "VRF 等待时间较长",
+            "label": "开奖等待时间较长",
             "detail": "本回合仍然安全。请保持页面打开，等待 Chainlink 完成请求。",
             "status": "等待中"
           },
@@ -375,6 +375,10 @@
       "betPanel": {
         "walletBalance": "钱包余额",
         "asset": "下注资产",
+        "limits": {
+          "maxBet": "最大下注",
+          "poolPayout": "池子赔付"
+        },
         "syncing": "同步中...",
         "notConnected": "未连接",
         "walletGate": {
@@ -416,7 +420,8 @@
           "signing": "签名 / 下注中...",
           "approveThenPlace": "先授权，再下注",
           "preparing": "准备回合...",
-          "placeBet": "下注"
+          "placeBet": "下注",
+          "revealing": "开奖中..."
         }
       },
       "selection": {
@@ -512,31 +517,31 @@
         "coin": {
           "awaitingSelection": "等待选择正反面",
           "selected": "已选择{side}",
-          "waitingVrf": "等待 VRF oracle..."
+          "waitingVrf": "等待开奖..."
         },
         "plinko": {
           "board": "Plinko 弹珠盘",
           "dropZone": "设置风险后落球",
-          "waitingVrf": "等待 VRF oracle...",
+          "waitingVrf": "等待开奖...",
           "revealing": "弹珠正在穿过钉板...",
           "slot": "落入 {slot} 槽",
           "risk": "风险: {risk}"
         },
         "slots": {
           "ready": "匹配 3 个符号赢取赔付",
-          "spinning": "等待 VRF oracle...",
+          "spinning": "等待开奖...",
           "result": "{symbols}",
           "classic": "经典档位"
         },
         "baccarat": {
           "ready": "选择闲、庄或和",
-          "dealing": "等待 VRF oracle...",
+          "dealing": "等待开奖...",
           "result": "{side} 胜出",
           "selected": "已选择: {side}"
         },
         "sicBo": {
           "ready": "选择一个骰宝投注项",
-          "rolling": "等待 VRF oracle...",
+          "rolling": "等待开奖...",
           "opened": "开出骰子: {dice}",
           "total": "总点",
           "triple": "围骰",
@@ -2216,7 +2221,7 @@
         },
         "open": {
           "label": "未关闭",
-          "detail": "已下注或等待 VRF。"
+          "detail": "已下注或等待开奖。"
         },
         "won": {
           "label": "获胜",

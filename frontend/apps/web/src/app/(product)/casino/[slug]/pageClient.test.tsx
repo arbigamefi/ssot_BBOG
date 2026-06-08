@@ -86,11 +86,11 @@ vi.mock("next-intl", () => ({
       "casino.room.roundStatus.phases.loadingQuote.detail":
         "Reading the current randomness fee before you place a round.",
       "casino.room.roundStatus.phases.loadingQuote.status": "Estimating",
-      "casino.room.roundStatus.phases.waitingVrf.label": "Rolling",
+      "casino.room.roundStatus.phases.waitingVrf.label": "Waiting for draw",
       "casino.room.roundStatus.phases.waitingVrf.detail":
-        "PlaceBet is mined. Waiting for verifiable randomness.",
-      "casino.room.roundStatus.phases.waitingVrf.status": "Waiting VRF",
-      "casino.room.roundStatus.phases.timeoutSoft.label": "VRF is taking longer than usual",
+        "Your bet is on-chain. Waiting for verifiable randomness to open the result.",
+      "casino.room.roundStatus.phases.waitingVrf.status": "Waiting for draw",
+      "casino.room.roundStatus.phases.timeoutSoft.label": "Draw is taking longer than usual",
       "casino.room.roundStatus.phases.timeoutSoft.detail":
         "The round is still safe. Keep this page open while Chainlink fulfills the request.",
       "casino.room.roundStatus.phases.timeoutSoft.status": "Waiting",
@@ -150,6 +150,7 @@ vi.mock("next-intl", () => ({
       "casino.room.betPanel.placeBet.roundInProgress": "ROUND IN PROGRESS",
       "casino.room.betPanel.placeBet.betMined": "BET MINED...",
       "casino.room.betPanel.placeBet.signing": "SIGNING / PLACING...",
+      "casino.room.betPanel.placeBet.revealing": "REVEALING...",
       "casino.room.betPanel.placeBet.approveThenPlace": "APPROVE, THEN PLACE BET",
       "casino.room.betPanel.placeBet.preparing": "PREPARING ROUND...",
       "casino.room.betPanel.placeBet.placeBet": "PLACE BET",
@@ -190,7 +191,7 @@ vi.mock("next-intl", () => ({
       "casino.room.selection.slots.no": "No",
       "casino.room.stage.loading": "Loading stage",
       "casino.room.stage.slots.ready": "Match 3 symbols to win",
-      "casino.room.stage.slots.spinning": "Waiting for VRF oracle...",
+      "casino.room.stage.slots.spinning": "Waiting for draw...",
       "casino.room.stage.slots.result": "Slots result",
       "casino.room.stage.slots.classic": "Classic profile",
       "casino.room.history.recent.rolls": "RECENT ROLLS",
