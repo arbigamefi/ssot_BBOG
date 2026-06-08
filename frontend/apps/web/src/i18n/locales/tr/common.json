@@ -530,6 +530,13 @@
         }
       }
     },
+    "verify": {
+      "eyebrow": "Açık kaynak",
+      "title": "Bize güvenmeyin. Doğrulayın.",
+      "description": "Her oyunun kuralları saf bir zincir üstü fonksiyondur — deterministik, gizli kasa düğmesi yok. Tam bytecode'u okuyun ve kendiniz çalıştırın.",
+      "sourceNote": "Temsili bir alıntı. Doğruluğun kaynağı dağıtılmış sözleşmedir — tam kaynağı zincir üstünde doğrulayın.",
+      "verifyCta": "Explorer'da doğrula"
+    },
     "reserveBar": {
       "eyebrow": "Kasa bankroll'u",
       "free": "Ödenebilir",

@@ -530,6 +530,13 @@
         }
       }
     },
+    "verify": {
+      "eyebrow": "Código aberto",
+      "title": "Não confie. Verifique.",
+      "description": "As regras de cada jogo são uma função on-chain pura — determinística, sem botões ocultos da casa. Leia o bytecode exato e rode você mesmo.",
+      "sourceNote": "Trecho representativo. O contrato implantado é a fonte da verdade — verifique o código completo on-chain.",
+      "verifyCta": "Verificar no explorer"
+    },
     "reserveBar": {
       "eyebrow": "Bankroll da casa",
       "free": "Livre para pagar",

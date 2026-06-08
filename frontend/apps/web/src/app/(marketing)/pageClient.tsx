@@ -8,6 +8,7 @@ import { useLocale, useTranslations } from "next-intl";
 
 import { useRecentBets } from "../../features/betting/useRecentBets";
 import { getCatalogRooms } from "../../features/casino/catalog";
+import { getExplorerBaseUrl } from "../../features/earn/format";
 import { formatTokenAmount, shortAddress, timeAgo } from "../../features/marketing/format";
 import { HomeActivity } from "../../features/marketing/home-activity";
 import { HomeFeatured } from "../../features/marketing/home-featured";
@@ -16,6 +17,7 @@ import { HomeHero } from "../../features/marketing/home-hero";
 import { HomeReserveBar } from "../../features/marketing/home-reserve-bar";
 import { HomeRoomDirectory } from "../../features/marketing/home-room-directory";
 import { HomeStatsStrip } from "../../features/marketing/home-stats-strip";
+import { HomeVerify } from "../../features/marketing/home-verify";
 import { HomeWhyUs } from "../../features/marketing/home-why-us";
 import type {
   AssetOverview,
@@ -233,6 +235,16 @@ export function HomePageClient() {
     [rooms, t]
   );
 
+  // Verify-the-bytecode proof links to the actual deployed dice module so the
+  // displayed source excerpt is never treated as the source of truth.
+  const explorerBaseUrl = getExplorerBaseUrl(chainId);
+  const verifyContractAddress =
+    release?.gamesMeta?.find((meta) => meta.slug === "dice")?.module ?? release?.contracts.gameHub;
+  const verifyHref =
+    explorerBaseUrl && verifyContractAddress
+      ? `${explorerBaseUrl}/address/${verifyContractAddress}`
+      : undefined;
+
   const featuredRoom = rooms.find((room) => room.slug === "keno");
 
   return (
@@ -332,16 +344,30 @@ export function HomePageClient() {
         }}
       />
 
-      <HomeReserveBar
-        freeReserve={reserveFloor}
-        totalAssets={totalAssetsLabel}
+      <HomeVerify
+        verifyHref={verifyHref}
         copy={{
-          eyebrow: t("reserveBar.eyebrow"),
-          free: t("reserveBar.free"),
-          total: t("reserveBar.total"),
-          verify: t("reserveBar.verify")
+          eyebrow: t("verify.eyebrow"),
+          title: t("verify.title"),
+          description: t("verify.description"),
+          sourceNote: t("verify.sourceNote"),
+          verifyCta: t("verify.verifyCta"),
+          cta: t("hero.enterCasino")
         }}
       />
+
+      {bankFunded ? (
+        <HomeReserveBar
+          freeReserve={reserveFloor}
+          totalAssets={totalAssetsLabel}
+          copy={{
+            eyebrow: t("reserveBar.eyebrow"),
+            free: t("reserveBar.free"),
+            total: t("reserveBar.total"),
+            verify: t("reserveBar.verify")
+          }}
+        />
+      ) : null}
 
       <HomeFooterCta
         copy={{

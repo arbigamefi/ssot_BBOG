@@ -35,17 +35,17 @@ export function HomeHero({
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-y-0 right-0 hidden w-1/2 bg-[radial-gradient(circle_at_55%_42%,hsl(var(--brand)/0.18),transparent_58%)] lg:block"
+        className="pointer-events-none absolute inset-y-0 right-0 hidden w-1/2 bg-[radial-gradient(circle_at_55%_42%,hsl(var(--brand)/0.1),transparent_58%)] lg:block"
       />
 
-      <div className="relative mx-auto grid max-w-[1440px] grid-cols-1 gap-8 px-6 pb-12 pt-16 md:gap-10 md:pb-16 md:pt-28 lg:min-h-[640px] lg:grid-cols-[minmax(0,0.88fr)_minmax(440px,0.92fr)] lg:items-center lg:px-10 lg:pt-28">
+      <div className="relative mx-auto grid max-w-[1440px] grid-cols-1 gap-8 px-6 pb-12 pt-16 md:gap-10 md:pb-16 md:pt-28 lg:min-h-[640px] lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:items-center lg:gap-6 lg:px-10 lg:pt-28 xl:grid-cols-[minmax(0,0.88fr)_minmax(440px,0.92fr)] xl:gap-8">
         <div className="max-w-3xl lg:pb-8">
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand/30 bg-brand-soft px-3 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-brand shadow-e1">
             <span className="h-2 w-2 rounded-full bg-accent" />
             {copy.channel}
           </div>
 
-          <h1 className="max-w-4xl text-4xl font-bold leading-[1.04] tracking-normal text-fg sm:text-5xl md:text-7xl">
+          <h1 className="max-w-4xl text-4xl font-bold leading-[1.04] tracking-normal text-fg sm:text-5xl md:text-7xl lg:text-6xl xl:text-[5rem]">
             {copy.title}
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-fg-muted md:text-xl">
@@ -119,44 +119,84 @@ function HeroPayoutVisual({
   const pockets = Array.from({ length: 37 }, (_, index) => index);
   return (
     <div
-      className="relative h-[270px] w-[min(86vw,390px)] md:h-[360px] md:w-[520px] lg:h-[460px] lg:w-[600px]"
+      className="relative h-[300px] w-[min(88vw,400px)] md:h-[380px] md:w-[540px] lg:h-[440px] lg:w-[500px] xl:h-[480px] xl:w-[620px]"
       aria-hidden
+      style={{ perspective: "1600px" }}
     >
-      <div className="absolute right-0 top-0 h-[210px] w-[210px] opacity-70 md:right-0 md:h-[300px] md:w-[300px] lg:right-4 lg:top-2 lg:h-[360px] lg:w-[360px]">
+      {/* Layer 1 — background atmosphere: one brand light source + a soft floor shadow. */}
+      <div
+        className="pointer-events-none absolute right-[2%] top-[2%] h-[76%] w-[76%] rounded-full blur-xl"
+        style={{
+          background:
+            "radial-gradient(circle at 52% 42%, hsl(var(--brand) / 0.2), hsl(var(--accent) / 0.08) 38%, transparent 68%)"
+        }}
+      />
+      <div
+        className="pointer-events-none absolute inset-x-[10%] bottom-[3%] h-12 rounded-[50%] blur-2xl"
+        style={{
+          background: "radial-gradient(ellipse, hsl(var(--surface-0) / 0.85), transparent 72%)"
+        }}
+      />
+
+      {/* Layer 2 — roulette mechanical: enlarged, set back, laid onto the table on desktop. */}
+      <div className="absolute right-[-2rem] top-[-2rem] h-[260px] w-[260px] opacity-65 md:right-0 md:top-1 md:h-[310px] md:w-[310px] md:opacity-85 lg:right-1 lg:top-3 lg:h-[340px] lg:w-[340px] lg:[transform:rotateX(20deg)] xl:right-2 xl:top-1 xl:h-[392px] xl:w-[392px]">
         <HeroRouletteWheel pockets={pockets} />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2"
+          style={{
+            background: "linear-gradient(to top, hsl(var(--surface-0) / 0.5), transparent)"
+          }}
+        />
       </div>
 
-      <div className="absolute bottom-0 right-0 w-full max-w-[430px] rounded-2xl border border-border-soft bg-surface-1/90 shadow-e3 backdrop-blur">
-        <div className="flex items-center justify-between border-b border-border-soft px-5 py-4">
-          <span className="text-xs font-bold uppercase tracking-[0.2em] text-fg-muted">
-            {copy.receipt}
-          </span>
-          <span className="rounded-full border border-success/35 bg-success/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-success">
-            {copy.status}
-          </span>
-        </div>
-        <div className="px-5 py-5">
-          <div className="font-mono text-5xl font-bold tracking-normal text-success md:text-6xl">
-            + 9.6
-            <span className="ml-3 text-2xl text-success/80 md:text-3xl">USDC</span>
-          </div>
-          <div className="mt-4 flex flex-wrap items-center gap-2 text-sm font-semibold text-fg-muted">
-            <span className="rounded-full border border-border-soft bg-surface-0 px-3 py-1.5">
-              0xd662...BFB9
+      {/* Layer 3 — foreground receipt glass: brought forward, slightly angled, casting a shadow. */}
+      <div className="absolute bottom-0 right-0 w-full max-w-[400px] origin-center md:max-w-[430px] md:[transform:rotateY(-7deg)_rotateX(4deg)] lg:max-w-[390px] xl:max-w-[430px]">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -inset-x-2 -bottom-5 top-8 -z-10 rounded-3xl blur-2xl"
+          style={{ background: "hsl(var(--surface-0) / 0.75)" }}
+        />
+        <div className="relative overflow-hidden rounded-2xl border border-border-soft bg-surface-1/88 shadow-e3 backdrop-blur-xl">
+          {/* top edge highlight — the single light catching the glass rim */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 h-px"
+            style={{
+              background: "linear-gradient(90deg, transparent, hsl(var(--fg) / 0.24), transparent)"
+            }}
+          />
+          <div className="flex items-center justify-between border-b border-border-soft px-5 py-4">
+            <span className="text-xs font-bold uppercase tracking-[0.2em] text-fg-muted">
+              {copy.receipt}
             </span>
-            <span>{copy.wallet}</span>
+            <span className="rounded-full border border-success/35 bg-success/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-success">
+              {copy.status}
+            </span>
           </div>
-        </div>
-        <div className="grid grid-cols-2 border-t border-border-soft">
-          <div className="px-5 py-4">
-            <div className="text-xs font-bold uppercase tracking-[0.18em] text-fg-muted">VRF</div>
-            <div className="mt-1 font-mono text-sm font-semibold text-fg">0x44a3...a39</div>
-          </div>
-          <div className="border-l border-border-soft px-5 py-4">
-            <div className="text-xs font-bold uppercase tracking-[0.18em] text-fg-muted">
-              {copy.proof}
+          <div className="px-5 py-5">
+            <div className="font-mono text-5xl font-bold tracking-normal text-success md:text-6xl">
+              + 9.6
+              <span className="ml-3 text-2xl text-success/80 md:text-3xl">USDC</span>
             </div>
-            <div className="mt-1 font-mono text-sm font-semibold text-fg">#294</div>
+            <div className="mt-4 flex flex-wrap items-center gap-2 text-sm font-semibold text-fg-muted">
+              <span className="rounded-full border border-border-soft bg-surface-0 px-3 py-1.5">
+                0xd662...BFB9
+              </span>
+              <span>{copy.wallet}</span>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 border-t border-border-soft">
+            <div className="px-5 py-4">
+              <div className="text-xs font-bold uppercase tracking-[0.18em] text-fg-muted">VRF</div>
+              <div className="mt-1 font-mono text-sm font-semibold text-fg">0x44a3...a39</div>
+            </div>
+            <div className="border-l border-border-soft px-5 py-4">
+              <div className="text-xs font-bold uppercase tracking-[0.18em] text-fg-muted">
+                {copy.proof}
+              </div>
+              <div className="mt-1 font-mono text-sm font-semibold text-fg">#294</div>
+            </div>
           </div>
         </div>
       </div>
