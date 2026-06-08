@@ -33,7 +33,7 @@ export function GameRoomShell({
     <section
       className={
         mobileActionContent
-          ? "flex min-h-[calc(100vh-8rem)] flex-col gap-4 pb-24 lg:pb-0"
+          ? "flex min-h-[calc(100vh-8rem)] flex-col gap-4 pb-[calc(var(--agf-sticky-action-height,6rem)+1.5rem)] lg:pb-0"
           : "flex min-h-[calc(100vh-8rem)] flex-col gap-4"
       }
     >
