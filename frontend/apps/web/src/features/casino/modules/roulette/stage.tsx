@@ -231,7 +231,7 @@ export function RouletteStage({
   }, [isRevealing, onRevealComplete, resultNum]);
 
   return (
-    <div className="absolute inset-0 z-10 overflow-y-auto custom-scrollbar">
+    <div className="relative z-10 w-full min-w-0 overflow-visible lg:absolute lg:inset-0 lg:overflow-y-auto lg:custom-scrollbar">
       {/* Stage atmosphere. */}
       <div
         aria-hidden
@@ -308,7 +308,7 @@ export function RouletteStage({
           <div className="px-3 py-2.5 sm:px-5 sm:py-3">
             <div
               data-roulette-table
-              className="overflow-x-auto custom-scrollbar rounded-lg p-2 sm:p-3"
+              className="overflow-x-auto rounded-lg p-2 [scrollbar-width:none] sm:p-3 [&::-webkit-scrollbar]:hidden"
               style={{
                 background:
                   "linear-gradient(180deg, hsl(var(--success) / 0.05), transparent 60%), hsl(var(--surface-0))",

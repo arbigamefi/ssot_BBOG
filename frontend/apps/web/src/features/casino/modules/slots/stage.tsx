@@ -111,7 +111,7 @@ export function SlotsStage({
         : t("casino.room.stage.slots.ready");
 
   return (
-    <div className="absolute inset-0 z-10 overflow-y-auto custom-scrollbar">
+    <div className="relative z-10 w-full min-w-0 overflow-visible lg:absolute lg:inset-0 lg:overflow-y-auto lg:custom-scrollbar">
       {/* Stage atmosphere. */}
       <div
         aria-hidden

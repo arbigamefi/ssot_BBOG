@@ -91,8 +91,8 @@ export function GameRoomShell({
           data-tour="game-stage"
           className={
             isInteractive
-              ? "order-1 relative min-h-[34rem] overflow-hidden bg-surface-0 lg:order-2 lg:min-h-0"
-              : "pointer-events-none order-1 relative min-h-[34rem] overflow-hidden bg-surface-0 lg:order-2 lg:min-h-0"
+              ? "order-1 relative min-h-0 overflow-hidden bg-surface-0 lg:order-2"
+              : "pointer-events-none order-1 relative min-h-0 overflow-hidden bg-surface-0 lg:order-2"
           }
         >
           <div className="pointer-events-none absolute inset-0 bg-[url('/textures/noise.svg')] opacity-10 mix-blend-overlay" />
