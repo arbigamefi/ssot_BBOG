@@ -418,10 +418,16 @@ describe("game room stages", () => {
       );
 
       expect(screen.getByText("Waiting for VRF Oracle...")).toBeDefined();
+      expect(
+        document.querySelector('[data-baccarat-hand="player"]')?.getAttribute("data-winner")
+      ).toBe("false");
 
       act(() => {
         vi.advanceTimersByTime(3_000);
       });
+      expect(
+        document.querySelector('[data-baccarat-hand="player"]')?.getAttribute("data-winner")
+      ).toBe("true");
       expect(onRevealComplete).toHaveBeenCalledTimes(1);
     } finally {
       vi.useRealTimers();

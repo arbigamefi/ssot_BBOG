@@ -52,7 +52,7 @@ export function EmptyCardSlot() {
   return (
     <div
       aria-hidden
-      className="h-28 w-20 rounded-lg border border-dashed border-border-soft bg-surface-0/40"
+      className="h-14 w-10 rounded-md border border-dashed border-border-soft bg-surface-0/40 sm:h-28 sm:w-20 sm:rounded-lg"
     />
   );
 }
@@ -78,7 +78,7 @@ export function BaccaratCard({
 
   return (
     <motion.div
-      className="h-28 w-20 [perspective:900px]"
+      className="h-14 w-10 [perspective:900px] sm:h-28 sm:w-20"
       initial={instant ? false : { x: 34, y: -40, opacity: 0, rotate: 9 }}
       animate={{ x: 0, y: 0, opacity: 1, rotate: 0 }}
       transition={
@@ -96,23 +96,23 @@ export function BaccaratCard({
         transition={instant ? { duration: 0 } : { duration: 0.46, ease: [0.2, 0.7, 0.2, 1] }}
       >
         {/* Back face */}
-        <div className="absolute inset-0 flex items-center justify-center rounded-lg border border-brand/30 bg-surface-2 shadow-e1 [backface-visibility:hidden]">
-          <span className="absolute inset-2 rounded-md border border-brand/25 bg-brand-soft" />
-          <span className="absolute left-2.5 top-2.5 h-1.5 w-1.5 rounded-full bg-brand/60" />
-          <span className="absolute bottom-2.5 right-2.5 h-1.5 w-1.5 rounded-full bg-brand/60" />
-          <span className="relative h-9 w-6 rounded border border-brand/35 bg-surface-0/50" />
+        <div className="absolute inset-0 flex items-center justify-center rounded-md border border-brand/30 bg-surface-2 shadow-e1 [backface-visibility:hidden] sm:rounded-lg">
+          <span className="absolute inset-1.5 rounded border border-brand/25 bg-brand-soft sm:inset-2 sm:rounded-md" />
+          <span className="absolute left-1.5 top-1.5 h-1 w-1 rounded-full bg-brand/60 sm:left-2.5 sm:top-2.5 sm:h-1.5 sm:w-1.5" />
+          <span className="absolute bottom-1.5 right-1.5 h-1 w-1 rounded-full bg-brand/60 sm:bottom-2.5 sm:right-2.5 sm:h-1.5 sm:w-1.5" />
+          <span className="relative h-5 w-3.5 rounded border border-brand/35 bg-surface-0/50 sm:h-9 sm:w-6" />
         </div>
 
         {/* Front face */}
-        <div className="absolute inset-0 flex items-center justify-center rounded-lg border border-border bg-fg shadow-e2 [backface-visibility:hidden] [transform:rotateY(180deg)]">
-          <span className="absolute left-2 top-1.5 font-mono text-sm font-semibold text-surface-0">
+        <div className="absolute inset-0 flex items-center justify-center rounded-md border border-border bg-fg shadow-e2 [backface-visibility:hidden] [transform:rotateY(180deg)] sm:rounded-lg">
+          <span className="absolute left-1 top-0.5 font-mono text-[9px] font-semibold text-surface-0 sm:left-2 sm:top-1.5 sm:text-sm">
             {label}
           </span>
-          <span className="absolute bottom-1.5 right-2 rotate-180 font-mono text-sm font-semibold text-surface-0">
+          <span className="absolute bottom-0.5 right-1 rotate-180 font-mono text-[9px] font-semibold text-surface-0 sm:bottom-1.5 sm:right-2 sm:text-sm">
             {label}
           </span>
-          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-surface-0/10">
-            <CardSuitIcon suitIndex={suitIndex} className="h-7 w-7" />
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-0/10 sm:h-11 sm:w-11">
+            <CardSuitIcon suitIndex={suitIndex} className="h-4 w-4 sm:h-7 sm:w-7" />
           </span>
         </div>
       </motion.div>

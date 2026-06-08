@@ -48,6 +48,7 @@ function formatSide(side: BaccaratSide, t: ReturnType<typeof useTranslations>) {
 type HandSlot = { state: SlotState; value: number | undefined; dealDelayMs: number };
 
 function HandZone({
+  hand,
   title,
   suitOffset,
   slots,
@@ -55,6 +56,7 @@ function HandZone({
   winner,
   instant
 }: {
+  hand: "player" | "banker";
   title: string;
   suitOffset: number;
   slots: readonly HandSlot[];
@@ -65,6 +67,8 @@ function HandZone({
   const faceCount = slots.filter((slot) => slot.state === "face").length;
   return (
     <div
+      data-baccarat-hand={hand}
+      data-winner={winner ? "true" : "false"}
       style={
         winner
           ? {
@@ -74,16 +78,16 @@ function HandZone({
           : undefined
       }
       className={cn(
-        "relative flex flex-col items-center gap-3 rounded-xl p-3 transition-[box-shadow,background-color]",
+        "relative flex flex-col items-center gap-2 rounded-lg p-2 transition-[box-shadow,background-color] sm:gap-3 sm:rounded-xl sm:p-3",
         winner
           ? "bg-accent-soft ring-1 ring-inset ring-accent/60"
           : "bg-surface-0/50 ring-1 ring-inset ring-border-soft"
       )}
     >
-      <span className="text-[11px] font-semibold uppercase tracking-[0.32em] text-fg-subtle">
+      <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-fg-subtle sm:text-[11px] sm:tracking-[0.32em]">
         {title}
       </span>
-      <div className="flex gap-1.5">
+      <div className="flex gap-1 sm:gap-1.5">
         {slots.map((slot, index) =>
           slot.state === "empty" ? (
             <EmptyCardSlot key={index} />
@@ -101,7 +105,7 @@ function HandZone({
       </div>
       <span
         className={cn(
-          "font-mono text-3xl font-bold tabular-nums",
+          "font-mono text-xl font-bold tabular-nums sm:text-3xl",
           winner ? "text-accent" : "text-fg"
         )}
       >
@@ -304,7 +308,7 @@ export function BaccaratStage({
         style={{ background: "radial-gradient(circle, hsl(var(--brand) / 0.12), transparent 68%)" }}
       />
 
-      <div className="relative flex min-h-full items-center justify-center px-4 py-4">
+      <div className="relative flex min-h-full items-center justify-center px-3 py-3 sm:px-4 sm:py-4">
         <div
           className="relative w-full max-w-[640px] overflow-hidden rounded-xl border border-border-soft shadow-e3"
           style={{
@@ -320,9 +324,9 @@ export function BaccaratStage({
           />
 
           {/* Felt — recessed table with hands and betting boxes. */}
-          <div className="px-5 py-5">
+          <div className="px-3 py-3 sm:px-5 sm:py-5">
             <div
-              className="relative overflow-hidden rounded-lg border border-border-soft bg-surface-0 p-3"
+              className="relative overflow-hidden rounded-lg border border-border-soft bg-surface-0 p-2.5 sm:p-3"
               style={{ boxShadow: "inset 0 2px 14px hsl(var(--surface-0) / 0.55)" }}
             >
               <div
@@ -336,26 +340,28 @@ export function BaccaratStage({
 
               <DealingShoe active={dealingActive} reduced={prefersReducedMotion} />
 
-              <div className="relative grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="relative grid grid-cols-2 gap-2 sm:gap-3">
                 <HandZone
+                  hand="player"
                   title={formatSide("player", t)}
                   suitOffset={0}
                   slots={playerSlots}
                   total={hasResult ? roll?.playerTotal : undefined}
-                  winner={winner === "player"}
+                  winner={hasResult && winner === "player"}
                   instant={instantCards}
                 />
                 <HandZone
+                  hand="banker"
                   title={formatSide("banker", t)}
                   suitOffset={2}
                   slots={bankerSlots}
                   total={hasResult ? roll?.bankerTotal : undefined}
-                  winner={winner === "banker"}
+                  winner={hasResult && winner === "banker"}
                   instant={instantCards}
                 />
               </div>
 
-              <div className="relative mt-4 grid grid-cols-3 gap-2.5">
+              <div className="relative mt-3 grid grid-cols-3 gap-2 sm:mt-4 sm:gap-2.5">
                 {BACCARAT_SIDES.map((side) => (
                   <BetBox
                     key={side}

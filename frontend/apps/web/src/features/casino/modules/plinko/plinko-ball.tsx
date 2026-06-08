@@ -20,8 +20,6 @@ import { cn } from "@ssot/ui";
  * `prefers-reduced-motion` collapses all of it to a direct position set.
  */
 
-const BALL = 32;
-
 export type PlinkoBallMode = "idle" | "pending" | "dropping" | "landed";
 
 export function PlinkoBall({
@@ -82,8 +80,7 @@ export function PlinkoBall({
 
   return (
     <motion.div
-      className="absolute z-20"
-      style={{ width: BALL, height: BALL, marginLeft: -BALL / 2, marginTop: -BALL / 2 }}
+      className="absolute z-20 h-6 w-6 -translate-x-1/2 -translate-y-1/2 sm:h-8 sm:w-8"
       animate={{ left: `${point.x}%`, top: `${point.y}%` }}
       transition={positionTransition}
     >
@@ -105,7 +102,9 @@ export function PlinkoBall({
               "0 6px 14px hsl(var(--surface-0) / 0.7), inset 0 2px 4px hsl(var(--fg) / 0.35)"
           }}
         >
-          <span className="font-mono text-sm font-semibold text-fg-inverse">{label}</span>
+          <span className="font-mono text-[10px] font-semibold text-fg-inverse sm:text-sm">
+            {label}
+          </span>
         </div>
       </motion.div>
     </motion.div>

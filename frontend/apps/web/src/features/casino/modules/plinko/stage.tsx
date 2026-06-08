@@ -261,7 +261,7 @@ export function PlinkoStage({
           />
 
           {/* Risk zone. */}
-          <div className="flex items-center justify-between gap-3 px-5 py-3">
+          <div className="flex flex-col items-stretch gap-2.5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-5">
             <div className="min-w-0">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-fg-subtle">
                 {t("casino.room.selection.plinko.riskProfile")}
@@ -272,7 +272,7 @@ export function PlinkoStage({
                 })}
               </p>
             </div>
-            <div className="grid shrink-0 grid-cols-3 gap-1 rounded-lg bg-surface-0 p-1 shadow-inner-e1">
+            <div className="grid w-full shrink-0 grid-cols-3 gap-1 rounded-lg bg-surface-0 p-1 shadow-inner-e1 sm:w-auto">
               {PLINKO_RISKS.map((item) => {
                 const active = item === risk;
                 return (
@@ -282,7 +282,7 @@ export function PlinkoStage({
                     disabled={controlsDisabled}
                     onClick={() => onRiskChange(item)}
                     className={cn(
-                      "rounded-md px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] transition-colors",
+                      "min-w-0 rounded-md px-2 py-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] transition-colors sm:px-2.5 sm:tracking-[0.16em]",
                       active
                         ? "bg-brand text-fg-inverse shadow-glow"
                         : "text-fg-subtle hover:bg-surface-2 hover:text-fg",
@@ -302,7 +302,7 @@ export function PlinkoStage({
           <div className="flex justify-center px-5 py-3">
             <div
               aria-label={t("casino.room.stage.plinko.board")}
-              className="relative h-[490px] w-[480px] max-w-full overflow-hidden rounded-xl border border-border-soft bg-surface-0"
+              className="relative h-[min(490px,42vh)] w-[480px] max-w-full overflow-hidden rounded-xl border border-border-soft bg-surface-0 sm:h-[490px]"
               style={{ boxShadow: "inset 0 2px 14px hsl(var(--surface-0) / 0.6)" }}
             >
               <div
@@ -372,7 +372,7 @@ export function PlinkoStage({
                       transform: "translate(-50%, -50%)"
                     }}
                   >
-                    <span className="font-mono text-[11px] font-semibold tabular-nums sm:text-xs">
+                    <span className="font-mono text-[9px] font-semibold tabular-nums sm:text-xs">
                       {formatFactor(factor)}
                     </span>
                   </div>
@@ -380,7 +380,7 @@ export function PlinkoStage({
               })}
 
               {/* status line */}
-              <div className="absolute inset-x-3 top-2 z-10 flex items-center justify-between gap-3">
+              <div className="absolute inset-x-3 top-2 z-10 hidden items-center justify-between gap-3 sm:flex">
                 <p className="truncate text-[10px] font-semibold uppercase tracking-[0.18em] text-fg-subtle">
                   {isPending
                     ? t("casino.room.stage.plinko.waitingVrf")
