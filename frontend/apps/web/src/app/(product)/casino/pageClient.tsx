@@ -312,7 +312,7 @@ export function GamesListClient() {
                 href={room.href}
                 data-testid="room-entry-card"
                 data-slug={room.slug}
-                className="group relative grid grid-cols-[5.5rem_minmax(0,1fr)_2rem] items-center gap-3 overflow-hidden rounded-xl border border-border-soft bg-surface-1/88 px-3 py-3 shadow-e1 transition-colors duration-200 hover:border-brand/40 hover:bg-surface-2 sm:grid-cols-[6rem_minmax(0,1fr)_2rem] sm:gap-4 sm:px-4 sm:py-3.5 lg:flex lg:min-h-[20rem] lg:flex-col lg:items-stretch lg:gap-0 lg:bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-1)))] lg:p-0 lg:shadow-e2"
+                className="group relative grid grid-cols-[4.75rem_minmax(0,1fr)_1.75rem] items-center gap-3 overflow-hidden rounded-xl border border-border-soft bg-surface-1/88 px-3 py-3 shadow-e1 transition-colors duration-200 hover:border-brand/40 hover:bg-surface-2 sm:grid-cols-[5rem_minmax(0,1fr)_2rem] sm:gap-4 sm:px-4 sm:py-3.5 lg:flex lg:min-h-[20rem] lg:flex-col lg:items-stretch lg:gap-0 lg:bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-1)))] lg:p-0 lg:shadow-e2"
               >
                 {/* top edge sheen */}
                 <div
@@ -335,7 +335,7 @@ export function GamesListClient() {
                   {copy.badge}
                 </div>
 
-                <div className="relative z-10 flex h-[5.5rem] w-[5.5rem] shrink-0 items-center justify-center overflow-hidden rounded-lg sm:h-24 sm:w-24 lg:mt-7 lg:h-auto lg:w-auto lg:flex-1 lg:overflow-visible lg:p-5">
+                <div className="relative z-10 flex h-[4.75rem] w-[4.75rem] shrink-0 items-center justify-center overflow-hidden rounded-lg sm:h-20 sm:w-20 lg:mt-7 lg:h-auto lg:w-auto lg:flex-1 lg:overflow-visible lg:p-5">
                   {/* Shared game mark system: the lobby should feel like the
                       same product as the individual room stages. */}
                   <div
@@ -349,7 +349,7 @@ export function GamesListClient() {
                   <div className="relative flex h-full w-full items-center justify-center lg:h-auto lg:w-auto">
                     <CasinoGameMark
                       slug={room.slug}
-                      className="h-full w-full rounded-md lg:h-36 lg:w-36"
+                      className="h-[4.25rem] w-[4.25rem] rounded-md sm:h-[4.5rem] sm:w-[4.5rem] lg:h-36 lg:w-36"
                     />
                   </div>
                 </div>
