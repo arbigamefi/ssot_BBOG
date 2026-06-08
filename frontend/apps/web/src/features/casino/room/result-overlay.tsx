@@ -694,7 +694,7 @@ export function GameRoomResultOverlay({
         referrer: result.player
       })
     : "";
-  const receiptReady = useReceiptMaterialization({
+  useReceiptMaterialization({
     betId: result.betId,
     chainId,
     terminalTxHash: receiptModel.terminalTxHash
@@ -855,7 +855,7 @@ export function GameRoomResultOverlay({
         </button>
         <div className="grid grid-cols-2 gap-2">
           <SharePanel
-            disabled={!receiptReady || !receiptPath}
+            disabled={!receiptPath}
             desktopLayer="modal"
             title={t("casino.room.result.title")}
             text={shareText}
