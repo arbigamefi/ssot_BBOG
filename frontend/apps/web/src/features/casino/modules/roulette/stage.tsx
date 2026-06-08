@@ -247,8 +247,9 @@ export function RouletteStage({
         style={{ background: "radial-gradient(circle, hsl(var(--brand) / 0.12), transparent 68%)" }}
       />
 
-      <div className="relative flex min-h-full items-center justify-center px-4 py-3">
+      <div className="relative flex min-h-full items-start justify-center px-4 py-2 pb-28 sm:items-center sm:py-3 sm:pb-3">
         <div
+          data-roulette-stage-card
           className="relative w-full max-w-[680px] overflow-hidden rounded-xl border border-border-soft shadow-e3"
           style={{
             background: "linear-gradient(180deg, hsl(var(--surface-2)), hsl(var(--surface-1)))"
@@ -263,7 +264,7 @@ export function RouletteStage({
           />
 
           {/* Header — bet count caption and clear action. */}
-          <div className="flex items-center justify-between gap-3 px-5 py-2.5">
+          <div className="flex items-center justify-between gap-3 px-4 py-2 sm:px-5 sm:py-2.5">
             <p className="truncate text-xs text-fg-muted">
               {spots.length === 0
                 ? t("casino.room.selection.roulette.empty")
@@ -282,10 +283,10 @@ export function RouletteStage({
           <Divider />
 
           {/* Wheel — lights up while spinning. */}
-          <div className="relative flex justify-center px-5 py-3">
+          <div className="relative flex justify-center px-4 py-2 sm:px-5 sm:py-3">
             <div
               aria-hidden
-              className="pointer-events-none absolute left-1/2 top-1/2 h-[300px] w-[340px] -translate-x-1/2 -translate-y-1/2 rounded-full transition-opacity duration-500"
+              className="pointer-events-none absolute left-1/2 top-1/2 h-[220px] w-[260px] -translate-x-1/2 -translate-y-1/2 rounded-full transition-opacity duration-500 sm:h-[300px] sm:w-[340px]"
               style={{
                 opacity: spinning ? 1 : 0,
                 background: "radial-gradient(circle, hsl(var(--brand) / 0.28), transparent 68%)"
@@ -294,8 +295,8 @@ export function RouletteStage({
             {/* The 320px wheel is uniformly scaled to fit — smaller on phones,
                 full on >=sm. Its coordinate system and ball physics are
                 untouched (scale is a uniform transform). */}
-            <div className="relative h-[230px] w-[230px] sm:h-[272px] sm:w-[272px]">
-              <div className="absolute left-0 top-0 origin-top-left scale-[0.72] sm:scale-[0.85]">
+            <div className="relative h-[184px] w-[184px] sm:h-[272px] sm:w-[272px]">
+              <div className="absolute left-0 top-0 origin-top-left scale-[0.575] sm:scale-[0.85]">
                 <RouletteWheel mode={wheelMode} resultNum={resultNum} reduced={reduced} />
               </div>
             </div>
@@ -304,36 +305,37 @@ export function RouletteStage({
           <Divider />
 
           {/* Betting table — recessed felt, fully responsive (no scale hack). */}
-          <div className="px-5 py-3">
+          <div className="px-3 py-2.5 sm:px-5 sm:py-3">
             <div
-              className="overflow-x-auto custom-scrollbar rounded-lg p-3"
+              data-roulette-table
+              className="overflow-x-auto custom-scrollbar rounded-lg p-2 sm:p-3"
               style={{
                 background:
                   "linear-gradient(180deg, hsl(var(--success) / 0.05), transparent 60%), hsl(var(--surface-0))",
                 boxShadow: "inset 0 2px 12px hsl(var(--surface-0) / 0.55)"
               }}
             >
-              <div className="mx-auto flex w-max flex-col gap-1.5">
+              <div className="mx-auto flex w-max flex-col gap-1 sm:gap-1.5">
                 {/* Zero + number grid — the zero spans exactly the three rows. */}
-                <div className="flex gap-1.5">
+                <div className="flex gap-1 sm:gap-1.5">
                   <BetCell
                     tone="zero"
                     status={spotStatus("0")}
                     disabled={locked}
                     onClick={() => toggleSpot("0")}
-                    className="w-10 shrink-0 self-stretch text-base"
+                    className="w-9 shrink-0 self-stretch text-base sm:w-10"
                   >
                     0
                   </BetCell>
 
-                  <div className="flex flex-1 flex-col gap-1.5">
+                  <div className="flex flex-1 flex-col gap-1 sm:gap-1.5">
                     {[3, 2, 1].map((rN) => {
                       // Each row sits next to its column bet (rN=3 → col3,
                       // rN=2 → col2, rN=1 → col1). The column chip pays 2:1
                       // and covers the 12 numbers in that row.
                       const columnSpot = `col${rN}` as "col1" | "col2" | "col3";
                       return (
-                        <div key={rN} className="flex gap-1.5">
+                        <div key={rN} className="flex gap-1 sm:gap-1.5">
                           {Array.from({ length: 12 }).map((_, cI) => {
                             const num = cI * 3 + rN;
                             return (
@@ -343,7 +345,7 @@ export function RouletteStage({
                                 status={spotStatus(String(num))}
                                 disabled={locked}
                                 onClick={() => toggleSpot(String(num))}
-                                className="aspect-square w-9 shrink-0 text-xs"
+                                className="aspect-square w-8 shrink-0 text-xs sm:w-9"
                               >
                                 {num}
                               </BetCell>
@@ -355,7 +357,7 @@ export function RouletteStage({
                             disabled={locked}
                             onClick={() => toggleSpot(columnSpot)}
                             ariaLabel={getRouletteBetLabel(t, columnSpot)}
-                            className="w-10 shrink-0 self-stretch text-[10px] font-semibold tracking-tight"
+                            className="w-9 shrink-0 self-stretch text-[10px] font-semibold tracking-tight sm:w-10"
                           >
                             2:1
                           </BetCell>
@@ -366,7 +368,7 @@ export function RouletteStage({
                 </div>
 
                 {/* Dozens — aligned under the twelve number columns. */}
-                <div className="flex gap-1.5 pl-[46px] pr-[46px]">
+                <div className="flex gap-1 pl-[40px] pr-[40px] sm:gap-1.5 sm:pl-[46px] sm:pr-[46px]">
                   {["1st 12", "2nd 12", "3rd 12"].map((dozen) => (
                     <BetCell
                       key={dozen}
@@ -374,7 +376,7 @@ export function RouletteStage({
                       status={spotStatus(dozen)}
                       disabled={locked}
                       onClick={() => toggleSpot(dozen)}
-                      className="h-7 flex-1 text-[9px] uppercase tracking-wide sm:text-[10px]"
+                      className="h-6 flex-1 text-[9px] uppercase tracking-wide sm:h-7 sm:text-[10px]"
                     >
                       {getRouletteBetLabel(t, dozen)}
                     </BetCell>
@@ -384,7 +386,7 @@ export function RouletteStage({
                 {/* Outside bets. Right-side column 2:1 chips line up with
                     the column buttons, so we pad to the same total width
                     (40 + 6 = 46px gap each side). */}
-                <div className="flex gap-1.5 pl-[46px] pr-[46px]">
+                <div className="flex gap-1 pl-[40px] pr-[40px] sm:gap-1.5 sm:pl-[46px] sm:pr-[46px]">
                   {["1-18", "EVEN", "RED", "BLACK", "ODD", "19-36"].map((bet) => (
                     <BetCell
                       key={bet}
@@ -393,7 +395,7 @@ export function RouletteStage({
                       disabled={locked}
                       onClick={() => toggleSpot(bet)}
                       ariaLabel={getRouletteBetLabel(t, bet)}
-                      className="h-7 flex-1 text-[8px] uppercase tracking-wide sm:text-[10px]"
+                      className="h-6 flex-1 text-[8px] uppercase tracking-wide sm:h-7 sm:text-[10px]"
                     >
                       {bet === "RED" ? (
                         // Swatch + label for clarity — aria-label still wins
