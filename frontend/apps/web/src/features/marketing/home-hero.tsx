@@ -38,7 +38,7 @@ export function HomeHero({
         className="pointer-events-none absolute inset-y-0 right-0 hidden w-1/2 bg-[radial-gradient(circle_at_55%_42%,hsl(var(--brand)/0.1),transparent_58%)] lg:block"
       />
 
-      <div className="relative mx-auto grid max-w-[1440px] grid-cols-1 gap-8 px-6 pb-12 pt-16 md:gap-10 md:pb-16 md:pt-28 lg:min-h-[640px] lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:items-center lg:gap-6 lg:px-10 lg:pt-28 xl:grid-cols-[minmax(0,0.88fr)_minmax(440px,0.92fr)] xl:gap-8">
+      <div className="relative mx-auto grid max-w-[1440px] grid-cols-1 gap-8 px-6 pb-12 pt-24 md:gap-10 md:pb-16 md:pt-32 lg:min-h-[640px] lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:items-center lg:gap-6 lg:px-10 lg:pt-28 xl:grid-cols-[minmax(0,0.88fr)_minmax(440px,0.92fr)] xl:gap-8">
         <div className="max-w-3xl lg:pb-8">
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand/30 bg-brand-soft px-3 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-brand shadow-e1">
             <span className="h-2 w-2 rounded-full bg-accent" />
