@@ -150,7 +150,12 @@ export function GameRoomBetPanel({
         </div>
 
         {!hasAccount && (
-          <div className="mb-2 rounded-lg border border-brand/30 bg-brand-soft p-3">
+          <div
+            className={cn(
+              "mb-2 rounded-lg border border-brand/30 bg-brand-soft p-3",
+              hideMobileAction && "hidden lg:block"
+            )}
+          >
             <div className="flex items-start gap-3">
               <WalletIcon className="mt-0.5 h-5 w-5 shrink-0 text-brand" />
               <div>
