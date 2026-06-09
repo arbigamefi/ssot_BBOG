@@ -132,7 +132,7 @@ function HeroPayoutVisual({
         }}
       />
       <div
-        className="pointer-events-none absolute inset-x-[10%] bottom-[3%] h-12 rounded-[50%] blur-2xl"
+        className="pointer-events-none absolute inset-x-[10%] bottom-[3%] h-12 rounded-full blur-2xl"
         style={{
           background: "radial-gradient(ellipse, hsl(var(--surface-0) / 0.85), transparent 72%)"
         }}
@@ -154,10 +154,10 @@ function HeroPayoutVisual({
       <div className="absolute bottom-0 right-0 w-full max-w-[400px] origin-center md:max-w-[430px] md:[transform:rotateY(-7deg)_rotateX(4deg)] lg:max-w-[390px] xl:max-w-[430px]">
         <div
           aria-hidden
-          className="pointer-events-none absolute -inset-x-2 -bottom-5 top-8 -z-10 rounded-3xl blur-2xl"
+          className="pointer-events-none absolute -inset-x-2 -bottom-5 top-8 -z-10 rounded-lg blur-2xl"
           style={{ background: "hsl(var(--surface-0) / 0.75)" }}
         />
-        <div className="relative overflow-hidden rounded-2xl border border-border-soft bg-surface-1/88 shadow-e3 backdrop-blur-xl">
+        <div className="relative overflow-hidden rounded-lg border border-border-soft bg-surface-1/88 shadow-e3">
           {/* top edge highlight — the single light catching the glass rim */}
           <div
             aria-hidden
@@ -195,7 +195,7 @@ function HeroPayoutVisual({
               <div className="text-xs font-bold uppercase tracking-[0.18em] text-fg-muted">
                 {copy.proof}
               </div>
-              <div className="mt-1 font-mono text-sm font-semibold text-fg">#294</div>
+              <div className="mt-1 font-mono text-sm font-semibold text-fg">{"#"}294</div>
             </div>
           </div>
         </div>

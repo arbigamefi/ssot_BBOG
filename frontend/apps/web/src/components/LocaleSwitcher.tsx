@@ -177,12 +177,12 @@ function LocaleOptionList({ onSelect, className }: { onSelect?: () => void; clas
             className={cn(
               "flex min-h-12 items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left transition-colors",
               active
-                ? "border-brand bg-brand-soft text-fg shadow-[inset_0_0_0_1px_hsl(var(--brand)/0.22)]"
+                ? "border-brand bg-brand-soft text-fg ring-1 ring-brand/25"
                 : "border-border-soft bg-surface-2 text-fg-muted hover:border-border hover:text-fg"
             )}
           >
             <span className="flex min-w-0 items-center gap-3">
-              <span className="shrink-0 rounded-full ring-1 ring-white/15">
+              <span className="shrink-0 rounded-full ring-1 ring-border-soft">
                 <LocaleFlagIcon locale={item} />
               </span>
               <span className="min-w-0">

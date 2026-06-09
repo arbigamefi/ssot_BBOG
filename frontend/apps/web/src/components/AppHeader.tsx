@@ -113,7 +113,7 @@ function MobileNavSection({
               "flex items-center justify-between rounded-md border font-semibold transition-colors",
               isGrid ? "min-h-9 px-2.5 text-xs" : "min-h-11 px-3 text-sm",
               activeRoute === link.id
-                ? "border-brand/55 bg-brand-soft text-fg shadow-[inset_0_0_0_1px_hsl(var(--brand)/0.16)]"
+                ? "border-brand/55 bg-brand-soft text-fg ring-1 ring-brand/20"
                 : "border-transparent text-fg-muted hover:border-border-soft hover:bg-surface-2 hover:text-fg"
             )}
           >
