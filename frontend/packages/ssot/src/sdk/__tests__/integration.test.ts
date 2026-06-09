@@ -1072,6 +1072,46 @@ describe("createSSOTSDK", () => {
     expect(placeBetStep?.call.contract).toBe("GameHub");
   });
 
+  it("preflights casino liquidity against the Bank post-stake solvency rule", async () => {
+    pub.readContract
+      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce([1000n, 200000])
+      .mockResolvedValueOnce(999999999n)
+      // The required reserve is larger than current free liquidity
+      // (1_000_000 - 10% risk reserve = 900_000), but the player's stake is
+      // transferred before Bank.holdBet checks solvency. The post-stake state
+      // can still cover this reserve, so the SDK must not reject it early.
+      .mockResolvedValueOnce(1_636_000n)
+      .mockResolvedValueOnce(1_000_000n)
+      .mockResolvedValueOnce(0n)
+      .mockResolvedValueOnce(1000n);
+
+    const input: PlaceBetInput = {
+      chainId: 84532,
+      gameId: GAME_ID,
+      poolId: 1,
+      betCount: 1,
+      stake: 818_000n,
+      params: "0x0000000000000000000000000000000000000000000000000000000000000032",
+      stakeSpec: encodeStakeSpec({
+        amountPerRoll: 818_000n,
+        betCount: 1,
+        stopGain: 0n,
+        stopLoss: 0n
+      }),
+      maxHouseEdgeBps: 3000
+    };
+
+    const result = await sdk.gameHub.planPlaceBet(input);
+
+    if ("error" in result) throw new Error(`${result.error.code}: ${result.error.message}`);
+    expect(result.preview.freeLiquidity).toBe(900_000n);
+    expect(result.preview.requiredReserve).toBe(1_636_000n);
+    expect(result.warnings).toContain(
+      "Bank liquidity is tight — your bet may revert if another bet is placed first."
+    );
+  });
+
   it("returns WALLET_NOT_CONNECTED for writes without a wallet", async () => {
     const readOnlySDK = createSSOTSDK({ release: TEST_RELEASE, publicClient: pub });
 

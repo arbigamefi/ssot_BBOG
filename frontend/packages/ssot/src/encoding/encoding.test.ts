@@ -33,9 +33,16 @@ describe("encoding", () => {
     expect(decodeRouletteParams(hex)).toEqual({ kind: "straight", number: 17 });
   });
 
-  it("roulette raw bitmask roundtrip", () => {
+  it("roulette typed bitmask roundtrip", () => {
     const hex = encodeRouletteParams({ kind: "bitmask", mask: 0x12345n });
+    expect((hex.length - 2) / 2).toBe(64);
     expect(decodeRouletteParams(hex)).toEqual({ kind: "bitmask", mask: 0x12345n });
+  });
+
+  it("roulette legacy raw bitmask decode remains supported for old payloads", () => {
+    expect(
+      decodeRouletteParams("0x0000000000000000000000000000000000000000000000000000000000012345")
+    ).toEqual({ kind: "bitmask", mask: 0x12345n });
   });
 
   it("keno roundtrip", () => {

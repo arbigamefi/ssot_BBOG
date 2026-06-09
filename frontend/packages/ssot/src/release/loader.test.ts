@@ -29,6 +29,7 @@ function v13ReleaseFixture() {
     name: "Base Sepolia",
     releaseDigest: "0xdeadbeefcafefeed",
     refundTimeoutSeconds: 3600,
+    defaultHouseEdgeBps: 200,
     contracts: {
       gameHub: ADDRESS_1,
       settlementRouter: ADDRESS_2,
@@ -127,6 +128,7 @@ describe("loadEmbeddedRelease", () => {
     expect(result.release.contracts.poolRegistry).toMatch(/^0x[a-f0-9]{40}$/);
     expect(result.release.contracts.sportsHub).toMatch(/^0x[a-f0-9]{40}$/);
     expect(result.release.refundTimeoutSeconds).toBe(3600);
+    expect(result.release.defaultHouseEdgeBps).toBe(200);
     expect(result.release.assets.length).toBeGreaterThan(0);
     expect(result.release.gamesMeta.length).toBeGreaterThan(0);
     expect(result.release.pools.length).toBeGreaterThan(0);
@@ -163,6 +165,7 @@ describe("loadEmbeddedRelease", () => {
   it("anchors the Base Sepolia embedded release to V14 casino USDC/WETH pools", () => {
     const result = loadEmbeddedRelease(84532);
     if (!result.ok) throw new Error("Expected ok");
+    expect(result.release.defaultHouseEdgeBps).toBe(200);
 
     expect(result.release.assets).toEqual(
       expect.arrayContaining([
@@ -204,6 +207,7 @@ describe("loadEmbeddedRelease", () => {
 
     expect(parsed.success).toBe(true);
     if (!parsed.success) throw new Error(parsed.error.message);
+    expect(parsed.data.defaultHouseEdgeBps).toBe(200);
     expect(parsed.data.sports.enabled).toBe(true);
     expect(parsed.data.contracts.sportsHub).toBe(ADDRESS_4);
     expect(parsed.data.pools[1]?.sportsRisk?.riskHash).toBe(HASH_C);

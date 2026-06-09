@@ -111,6 +111,40 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function computeRiskFreeLiquidity({
+  totalAssets,
+  totalReserved,
+  riskReserveBps
+}: {
+  totalAssets: bigint;
+  totalReserved: bigint;
+  riskReserveBps: bigint;
+}) {
+  const riskReserve = (totalAssets * riskReserveBps) / 10000n;
+  const free = totalAssets - totalReserved - riskReserve;
+  return free > 0n ? free : 0n;
+}
+
+function canBankHoldBet({
+  totalAssets,
+  totalReserved,
+  riskReserveBps,
+  stake,
+  requiredReserve
+}: {
+  totalAssets: bigint;
+  totalReserved: bigint;
+  riskReserveBps: bigint;
+  stake: bigint;
+  requiredReserve: bigint;
+}) {
+  const navAfterStake = totalAssets + stake;
+  const reservedAfterStake = totalReserved + requiredReserve;
+  if (navAfterStake < reservedAfterStake) return false;
+  const riskReserveAfterStake = (navAfterStake * riskReserveBps) / 10000n;
+  return navAfterStake - reservedAfterStake >= riskReserveAfterStake;
+}
+
 function sameAddress(a?: string | null, b?: string | null) {
   return Boolean(a && b && a.toLowerCase() === b.toLowerCase());
 }
@@ -523,7 +557,7 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         const stakeSpecForSolvency = decodeStakeSpec(input.stakeSpec);
 
         // Parallel reads: game module maxPayout + bank solvency state
-        const [requiredReserve, totalAssets, totalReserved, minLiquidityBps] = await Promise.all([
+        const [requiredReserve, totalAssets, totalReserved, riskReserveBps] = await Promise.all([
           publicClient.readContract({
             address: getAddress(moduleAddress) as Address,
             abi: GAME_MODULE_ABI,
@@ -551,27 +585,53 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
           publicClient.readContract({
             address: bank as Address,
             abi: BANK_ABI,
-            functionName: "minLiquidityBps"
+            functionName: "riskReserveBps"
           }) as Promise<bigint>
         ]);
 
-        // freeLiquidity = totalAssets - totalReserved - (totalAssets × minLiquidityBps / 10000)
-        const minLiqReserve = (totalAssets * BigInt(minLiquidityBps)) / 10000n;
-        const freeLiquidity = totalAssets - totalReserved - minLiqReserve;
+        const freeLiquidity = computeRiskFreeLiquidity({
+          totalAssets,
+          totalReserved,
+          riskReserveBps
+        });
 
-        if (requiredReserve > freeLiquidity) {
+        if (
+          !canBankHoldBet({
+            totalAssets,
+            totalReserved,
+            riskReserveBps,
+            stake: input.stake,
+            requiredReserve
+          })
+        ) {
+          const navAfterStake = totalAssets + input.stake;
+          const riskReserveAfterStake = (navAfterStake * riskReserveBps) / 10000n;
+          const availableAfterStake =
+            navAfterStake > totalReserved + riskReserveAfterStake
+              ? navAfterStake - totalReserved - riskReserveAfterStake
+              : 0n;
           return {
             error: {
               code: "INSUFFICIENT_LIQUIDITY",
-              message: `Bank liquidity insufficient. Required reserve: ${requiredReserve}, available: ${freeLiquidity}. Reduce your stake or wait for more deposits.`,
+              message: `Bank liquidity insufficient. Required reserve: ${requiredReserve}, available after stake: ${availableAfterStake}. Reduce your stake or wait for more deposits.`,
               severity: "warning",
-              details: { required: requiredReserve.toString(), available: freeLiquidity.toString() }
+              details: {
+                required: requiredReserve.toString(),
+                available: availableAfterStake.toString()
+              }
             }
           };
         }
 
-        // Warn if liquidity is tight (reserved > 90% of free liquidity)
-        if (requiredReserve * 10n > freeLiquidity * 9n) {
+        const navAfterStake = totalAssets + input.stake;
+        const riskReserveAfterStake = (navAfterStake * riskReserveBps) / 10000n;
+        const availableAfterStake =
+          navAfterStake > totalReserved + riskReserveAfterStake
+            ? navAfterStake - totalReserved - riskReserveAfterStake
+            : 0n;
+
+        // Warn if liquidity is tight (reserved > 90% of post-stake capacity).
+        if (availableAfterStake > 0n && requiredReserve * 10n > availableAfterStake * 9n) {
           warnings.push(
             "Bank liquidity is tight — your bet may revert if another bet is placed first."
           );

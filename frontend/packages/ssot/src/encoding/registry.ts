@@ -66,7 +66,7 @@ const REGISTRY: ReadonlyMap<string, GameEncoder> = new Map<string, GameEncoder>(
       encode: (p: any) => encodeRouletteParams(p),
       decode: (hex: Hex) => decodeRouletteParams(hex),
       defaultParams: { kind: "straight", number: 0 },
-      paramsDescription: "uint40 mask OR (uint8 kind, uint40 payload)"
+      paramsDescription: "(uint8 kind, uint40 payload)"
     }
   ],
   [

@@ -60,6 +60,7 @@ export const ReleaseSchema = z.object({
   releaseDigest: z.string().min(8),
   isPlaceholder: z.boolean().optional().default(false),
   refundTimeoutSeconds: z.number().int().positive().optional(),
+  defaultHouseEdgeBps: z.number().int().min(0).max(10_000).optional(),
   contracts: z.object({
     gameHub: Address,
     settlementRouter: Address,

@@ -3,7 +3,7 @@ import { decodeAbiParameters, encodeAbiParameters, type Hex } from "viem";
 const RouletteRawAbi = [{ name: "mask", type: "uint40" }] as const;
 const RouletteTypedAbi = [
   { name: "kind", type: "uint8" },
-  { name: "payload", type: "uint40" },
+  { name: "payload", type: "uint40" }
 ] as const;
 
 const MAX_UINT40 = (1n << 40n) - 1n;
@@ -23,7 +23,7 @@ export const ROULETTE_KIND = {
   odd: 10,
   even: 11,
   low: 12,
-  high: 13,
+  high: 13
 } as const;
 
 export type RouletteOutsideSelection =
@@ -63,13 +63,13 @@ function encodeTyped(kind: number, payload: bigint): Hex {
 export function encodeRouletteParams(input: RouletteParamsInput | bigint): Hex {
   if (typeof input === "bigint") {
     assertUint40(input, "mask");
-    return encodeAbiParameters(RouletteRawAbi, [input as unknown as number]);
+    return encodeTyped(ROULETTE_KIND.bitmask, input);
   }
 
   switch (input.kind) {
     case "bitmask":
       assertUint40(input.mask, "mask");
-      return encodeAbiParameters(RouletteRawAbi, [input.mask as unknown as number]);
+      return encodeTyped(ROULETTE_KIND.bitmask, input.mask);
     case "straight":
       assertNumber(input.number, "straight number");
       return encodeTyped(ROULETTE_KIND.straight, BigInt(input.number));
@@ -79,17 +79,32 @@ export function encodeRouletteParams(input: RouletteParamsInput | bigint): Hex {
       if (input.first === input.second) throw new Error("split numbers must be different");
       return encodeTyped(ROULETTE_KIND.split, BigInt(input.first) | (BigInt(input.second) << 6n));
     case "street":
-      if (!Number.isInteger(input.start) || input.start < 1 || input.start > 34 || (input.start - 1) % 3 !== 0) {
+      if (
+        !Number.isInteger(input.start) ||
+        input.start < 1 ||
+        input.start > 34 ||
+        (input.start - 1) % 3 !== 0
+      ) {
         throw new Error("street start must be 1,4,7,...,34");
       }
       return encodeTyped(ROULETTE_KIND.street, BigInt(input.start));
     case "corner":
-      if (!Number.isInteger(input.start) || input.start < 1 || input.start > 32 || input.start % 3 === 0) {
+      if (
+        !Number.isInteger(input.start) ||
+        input.start < 1 ||
+        input.start > 32 ||
+        input.start % 3 === 0
+      ) {
         throw new Error("corner start must be a valid top-left table number");
       }
       return encodeTyped(ROULETTE_KIND.corner, BigInt(input.start));
     case "sixLine":
-      if (!Number.isInteger(input.start) || input.start < 1 || input.start > 31 || (input.start - 1) % 3 !== 0) {
+      if (
+        !Number.isInteger(input.start) ||
+        input.start < 1 ||
+        input.start > 31 ||
+        (input.start - 1) % 3 !== 0
+      ) {
         throw new Error("six-line start must be 1,4,7,...,31");
       }
       return encodeTyped(ROULETTE_KIND.sixLine, BigInt(input.start));
@@ -116,11 +131,16 @@ export function encodeRouletteParams(input: RouletteParamsInput | bigint): Hex {
 export function decodeRouletteParams(encoded: Hex): RouletteParamsInput {
   const byteLength = (encoded.length - 2) / 2;
   if (byteLength === 32) {
+    // Decode legacy raw-bitmask fixtures and historical payloads, but new
+    // roulette params are always emitted as typed (kind, payload) tuples.
     const [maskRaw] = decodeAbiParameters(RouletteRawAbi, encoded) as [bigint | number];
     return { kind: "bitmask", mask: BigInt(maskRaw) };
   }
 
-  const [kindRaw, payloadRaw] = decodeAbiParameters(RouletteTypedAbi, encoded) as [number | bigint, number | bigint];
+  const [kindRaw, payloadRaw] = decodeAbiParameters(RouletteTypedAbi, encoded) as [
+    number | bigint,
+    number | bigint
+  ];
   const kind = Number(kindRaw);
   const payload = BigInt(payloadRaw);
 
@@ -133,7 +153,7 @@ export function decodeRouletteParams(encoded: Hex): RouletteParamsInput {
       return {
         kind: "split",
         first: Number(payload & 0x3fn),
-        second: Number((payload >> 6n) & 0x3fn),
+        second: Number((payload >> 6n) & 0x3fn)
       };
     case ROULETTE_KIND.street:
       return { kind: "street", start: Number(payload) };

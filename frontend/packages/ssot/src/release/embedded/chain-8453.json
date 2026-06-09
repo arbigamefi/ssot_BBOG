@@ -4,6 +4,7 @@
   "releaseDigest": "0x8ae5f98a984f25a9f2589808caf80ebbf4c6c05b1d19627aa350783c97bed708",
   "isPlaceholder": false,
   "refundTimeoutSeconds": 3600,
+  "defaultHouseEdgeBps": 200,
   "contracts": {
     "gameHub": "0x3f57e7d73d17bbe5b77dcb1a7bd9a0c190eb77f3",
     "settlementRouter": "0x7ddf1bddc313459c560e24ca8758a2aa7c772974",

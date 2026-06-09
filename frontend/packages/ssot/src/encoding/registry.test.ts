@@ -76,6 +76,7 @@ describe("GameEncoderRegistry", () => {
     it("encodes and decodes a bitmask bet", () => {
       const enc = requireGameEncoder("roulette");
       const hex = enc.encode({ kind: "bitmask", mask: 0x12345n });
+      expect((hex.length - 2) / 2).toBe(64);
       const decoded = enc.decode(hex);
       expect(decoded.kind).toBe("bitmask");
       expect(decoded.mask).toBe(0x12345n);

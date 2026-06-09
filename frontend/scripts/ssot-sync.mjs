@@ -383,6 +383,7 @@ async function main() {
   const manifest = await readJson(manifestPath);
   const vectors = await readJson(vectorsPath);
   const releaseLock = await readJson(releaseLockPath);
+  const latestSnapshot = await readJson(latestSnapshotPath);
   const abiIndex = await readJson(abiIndexPath);
 
   const chainId = Number(manifest.chainId);
@@ -426,6 +427,11 @@ async function main() {
       Number.isFinite(Number(manifest.refundTimeoutSeconds)) &&
       Number(manifest.refundTimeoutSeconds) > 0
         ? Number(manifest.refundTimeoutSeconds)
+        : undefined,
+    defaultHouseEdgeBps:
+      Number.isFinite(Number(latestSnapshot.defaultHouseEdgeBps)) &&
+      Number(latestSnapshot.defaultHouseEdgeBps) >= 0
+        ? Number(latestSnapshot.defaultHouseEdgeBps)
         : undefined,
     contracts: {
       gameHub: normalizeAddress(addresses.gameHub),

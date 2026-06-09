@@ -1,32 +1,32 @@
 {
-  "blockNumber": 42478832,
+  "blockNumber": 42600719,
   "chainId": 84532,
   "contracts": [
     {
       "abiFile": "GameHub.abi.json",
       "abiSha256": "a740d0c2b226f6c8895c5f738760268d10456ff1013ae9cb977ffd1ce99322eb",
-      "address": "0xbBEAb865DBc467AD46f92Cfec642d0Ba92c0e96D",
+      "address": "0x7Bba34F0ac9476b856026273ef66dfC4Da33B102",
       "addressKey": "gameHub",
       "name": "GameHub"
     },
     {
       "abiFile": "VRFHub.abi.json",
       "abiSha256": "89e8d7a520d4a7f7e72113d1af01c97a96182349d9f012eb35832958a518283a",
-      "address": "0xc904f2B6ae561FB454A8743cF3AbEA550E0E65EF",
+      "address": "0x3e80e96B8f6F9C5b1d48037Ba1c020642E22A5A9",
       "addressKey": "vrfHub",
       "name": "VRFHub"
     },
     {
       "abiFile": "PoolRegistry.abi.json",
       "abiSha256": "a63721691df619e568921cbbfc1d5634f48e12fe7ad10110918eb3dbf3b25449",
-      "address": "0x33FC265754b5eAcc1e1dE84C28A3046A0f8a43f0",
+      "address": "0x7658219104a3b7d1966Fe1bACc305aa869387146",
       "addressKey": "poolRegistry",
       "name": "PoolRegistry"
     },
     {
       "abiFile": "SettlementRouter.abi.json",
       "abiSha256": "3e7ad9709eaa5d81ae68a051e750d96f9e7ab1d44ab4cef406c7be6d6b6bf1de",
-      "address": "0x3AcA2c08F92c744e486b82E1C942A84dF4fCF965",
+      "address": "0x1C8560a4f2584d9A6Bbbe6647a91F0221092C179",
       "addressKey": "settlementRouter",
       "name": "SettlementRouter"
     },
@@ -47,77 +47,77 @@
     {
       "abiFile": "ReferralRegistry.abi.json",
       "abiSha256": "71546e063fe44772416f62343913054adbdbc9ce2d53bbf0ca79b3010dd07e49",
-      "address": "0x5bEEB8893Cfbe42D8D719173a094b55fC9FB8b05",
+      "address": "0x072078aB8b73Ff1dcb10Fe37775be733FC2af499",
       "addressKey": "refRegistry",
       "name": "ReferralRegistry"
     },
     {
       "abiFile": "DefaultReferralEngine.abi.json",
       "abiSha256": "e204ff307924f5d0396ee4376e83987c49fdca1f0b7ed4fc746f18b98415e17a",
-      "address": "0x5c1290a823cB166295F019619596cf8e0F48D213",
+      "address": "0x19c0C646c6ca01075657c35382BF20185FCcE568",
       "addressKey": "refEngine",
       "name": "DefaultReferralEngine"
     },
     {
       "abiFile": "ChainlinkV2PlusWrapperAdapter.abi.json",
       "abiSha256": "95e2fa5e552786226351c258c1687fb35b3819b3614c0a72242a6ae72f296629",
-      "address": "0x5e9b53C3BC2fEe7088308E06d24092C4B40E05d0",
+      "address": "0xE0d106dB20363D9aB39FE1DC547A7d5052020120",
       "addressKey": "adapter",
       "name": "ChainlinkV2PlusWrapperAdapter"
     },
     {
       "abiFile": "DiceModule.abi.json",
       "abiSha256": "07222d0fcfdfa9fbbdad85b3d1b54aa6f8e529f188d4a1ad8e5d00be2e0d6834",
-      "address": "0x1afF50cECFE4B0c4A1DE7Db961031fc8b57217e1",
+      "address": "0xCE46a976eEA806982Ea8b70D7706DEFbDc69a07E",
       "addressKey": "moduleDice",
       "name": "DiceModule"
     },
     {
       "abiFile": "CoinTossModule.abi.json",
       "abiSha256": "2da3e5e40642da8d22e92cd8226ab20480d103d0b897f04b32db8ee8b5a59f51",
-      "address": "0x53e915F73b0a7BEA2C453538E272a2f16Dbf0D71",
+      "address": "0xaac9d2478E178bC5d936b69624482d91BA07B463",
       "addressKey": "moduleCoinToss",
       "name": "CoinTossModule"
     },
     {
       "abiFile": "RouletteModule.abi.json",
       "abiSha256": "4f292eee875c73a3fd491feeabc2baed1354aadbeb30bf51d23c204382997e48",
-      "address": "0x06b4b2cE86D7e3B20382Bbc7a35ccaEa3952ffCF",
+      "address": "0x858Acea7229298b48286f2b3B17C9F5589375D70",
       "addressKey": "moduleRoulette",
       "name": "RouletteModule"
     },
     {
       "abiFile": "KenoModule.abi.json",
       "abiSha256": "134fed8be94da4080ac9a8f1e1fba39df1c10b71c02655f8a0cb34b5faba1868",
-      "address": "0xE93D7694890c889443F6770AC9faF092a24A5A3e",
+      "address": "0xebE5A01890b36869B8137e50Fc5a68f88e176Bd6",
       "addressKey": "moduleKeno",
       "name": "KenoModule"
     },
     {
       "abiFile": "PlinkoModule.abi.json",
       "abiSha256": "0a64e593b3836745e8c45c41550dd546adb4b7c28c373f198251696ed434e3c9",
-      "address": "0x7E085535861f18eAc18519aF8Ae171Db81Dbb786",
+      "address": "0xC8AC93105085228cf933Eb9136A0ef4AD3325c1E",
       "addressKey": "modulePlinko",
       "name": "PlinkoModule"
     },
     {
       "abiFile": "SicBoModule.abi.json",
       "abiSha256": "9e9c2f7aece412d0cb1db9b004b3d96eb4345a84a7149a79dc0d140c245dc235",
-      "address": "0xf575Baf851c53803d1b6DC3fFbf668507C4c4769",
+      "address": "0xfC7Ab37Af06eDE7d0a4F56d2d75acCb534739e2D",
       "addressKey": "moduleSicBo",
       "name": "SicBoModule"
     },
     {
       "abiFile": "SlotsModule.abi.json",
       "abiSha256": "d258f846181cae348e5c15833f7e3cd0b57ba6534bc06faeded1d7d902695816",
-      "address": "0xC2Fedd2FF14495fACF5c810352Fb237F43AE47A5",
+      "address": "0xC153Cab8A0899497524449e22bD85CD368884284",
       "addressKey": "moduleSlots",
       "name": "SlotsModule"
     },
     {
       "abiFile": "BaccaratModule.abi.json",
       "abiSha256": "8561ea7e373a2adf5bad84b2978880cc016848813b2e533bba291f1cb336a393",
-      "address": "0xad377784ee5CF6474F9f3479793c7D5b040F2003",
+      "address": "0xC5B33221016a12c6b61D9d8BBdB07c2E70c1b4Dd",
       "addressKey": "moduleBaccarat",
       "name": "BaccaratModule"
     },
@@ -130,7 +130,7 @@
     },
     {
       "abiFile": "Bank.abi.json",
-      "address": "0x16f5BBc7d62Aa8d1828b807F57d3796712C7E3e9",
+      "address": "0x9a6B13b7C3b54aDbEE57A37293978dFBFF7237c9",
       "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
       "domain": "Casino",
       "name": "BankInstance",
@@ -138,14 +138,14 @@
     },
     {
       "abiFile": "Bank.abi.json",
-      "address": "0x71D9E131D5F92c3c18a44fAE058ED789085DD095",
+      "address": "0x0ec066C81Eb3866b32Aa59724dd49fa263d7CB17",
       "asset": "0x4200000000000000000000000000000000000006",
       "domain": "Casino",
       "name": "BankInstance",
       "poolId": 3
     }
   ],
-  "generatedAt": 1780726029,
+  "generatedAt": 1780969921,
   "gitSha": "",
   "manifestPath": "deployments/frontend-manifest-latest-v14.json",
   "schemaVersion": 2
