@@ -528,9 +528,7 @@ export function GamePageClient({ slug }: { slug: string }) {
       resultNum={resultNum}
       diceDirection={diceDirection}
       diceTarget={diceTarget}
-      multiplier={multiplier}
       houseEdgeBps={houseEdgeBps}
-      winChance={winChance}
       rouletteSpots={rouletteSpots}
       kenoSpots={kenoSpots}
       plinkoRisk={plinkoRisk}

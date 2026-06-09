@@ -103,8 +103,6 @@ describe("game room stages", () => {
         resultNum={null}
         diceDirection="under"
         diceTarget={50}
-        multiplier={1.98}
-        winChance={50}
         onDirectionChange={onDirectionChange}
         onTargetChange={onTargetChange}
       />
@@ -129,8 +127,6 @@ describe("game room stages", () => {
           resultNum={42}
           diceDirection="under"
           diceTarget={50}
-          multiplier={1.98}
-          winChance={50}
           onDirectionChange={vi.fn()}
           onTargetChange={vi.fn()}
           onRevealComplete={onRevealComplete}
@@ -158,7 +154,7 @@ describe("game room stages", () => {
       />
     );
     expect(screen.getByText("HEADS SELECTED")).toBeDefined();
-    fireEvent.click(screen.getByRole("button", { name: /TAILS/i }));
+    fireEvent.click(screen.getByRole("button", { name: /HEADS SELECTED/i }));
     expect(onSideChange).toHaveBeenCalledWith("TAILS");
 
     rerender(
@@ -287,7 +283,8 @@ describe("game room stages", () => {
       />
     );
 
-    expect(screen.getAllByText("Risk: High").length).toBeGreaterThan(0);
+    expect(screen.getByRole("group", { name: /Risk Profile/i })).toBeDefined();
+    expect(screen.queryByText("Risk: High")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Low" }));
     expect(onRiskChange).toHaveBeenCalledWith("low");
 
@@ -322,6 +319,7 @@ describe("game room stages", () => {
       (PLINKO_FACTOR_TABLE.high[0] ?? 0) / 10_000,
       houseEdgeBps
     );
+    expect(screen.getAllByLabelText(`${edgeMultiplier.toFixed(2)}x`).length).toBeGreaterThan(0);
     expect(screen.getAllByText(`${edgeMultiplier.toFixed(2)}x`).length).toBeGreaterThan(0);
   });
 

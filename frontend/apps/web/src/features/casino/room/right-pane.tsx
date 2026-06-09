@@ -91,9 +91,7 @@ export function GameRoomRightPane({
   resultNum,
   diceDirection,
   diceTarget,
-  multiplier,
   houseEdgeBps,
-  winChance,
   rouletteSpots,
   kenoSpots,
   plinkoRisk,
@@ -140,9 +138,7 @@ export function GameRoomRightPane({
   resultNum: number | null;
   diceDirection: DiceDirection;
   diceTarget: number;
-  multiplier: number;
   houseEdgeBps: number;
-  winChance: number;
   rouletteSpots: readonly string[];
   kenoSpots: readonly number[];
   plinkoRisk: PlinkoRisk;
@@ -218,8 +214,6 @@ export function GameRoomRightPane({
           resultNum={resultNum}
           diceDirection={diceDirection}
           diceTarget={diceTarget}
-          multiplier={multiplier}
-          winChance={winChance}
           onDirectionChange={onDiceDirectionChange}
           onTargetChange={onDiceTargetChange}
           onRevealComplete={onDiceRevealComplete}

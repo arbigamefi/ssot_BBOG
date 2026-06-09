@@ -32,8 +32,6 @@ export function DiceStage({
   resultNum,
   diceDirection,
   diceTarget,
-  multiplier,
-  winChance,
   onDirectionChange,
   onTargetChange,
   onRevealComplete
@@ -45,8 +43,6 @@ export function DiceStage({
   resultNum: number | null;
   diceDirection: DiceDirection;
   diceTarget: number;
-  multiplier: number;
-  winChance: number;
   onDirectionChange: (direction: DiceDirection) => void;
   onTargetChange: (target: number) => void;
   onRevealComplete?: () => void;
@@ -167,7 +163,7 @@ export function DiceStage({
 
           <Divider />
 
-          {/* Controls zone — direction toggle and odds. */}
+          {/* Controls zone — direction toggle. Odds live in the bet panel. */}
           <div className="flex flex-col gap-3 px-5 py-4">
             <div
               role="group"
@@ -204,25 +200,6 @@ export function DiceStage({
                 {t("casino.room.selection.dice.rollOver")}
               </button>
             </div>
-
-            <dl className="grid grid-cols-2 gap-3">
-              <div className="flex flex-col gap-0.5 rounded-lg bg-surface-2 px-3 py-2 ring-1 ring-inset ring-border-soft">
-                <dt className="text-[10px] font-medium uppercase tracking-[0.14em] text-fg-subtle">
-                  {t("casino.room.selection.dice.multiplier")}
-                </dt>
-                <dd className="font-mono text-lg font-bold tabular-nums text-fg">
-                  {multiplier.toFixed(2)}x
-                </dd>
-              </div>
-              <div className="flex flex-col gap-0.5 rounded-lg bg-surface-2 px-3 py-2 ring-1 ring-inset ring-border-soft">
-                <dt className="text-[10px] font-medium uppercase tracking-[0.14em] text-fg-subtle">
-                  {t("casino.room.selection.dice.winChance")}
-                </dt>
-                <dd className="font-mono text-lg font-bold tabular-nums text-fg">
-                  {winChance.toFixed(2)}%
-                </dd>
-              </div>
-            </dl>
           </div>
         </div>
       </div>

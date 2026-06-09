@@ -271,18 +271,12 @@ export function PlinkoStage({
           />
 
           {/* Risk zone. */}
-          <div className="flex flex-col items-stretch gap-2.5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-5">
-            <div className="min-w-0">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-fg-subtle">
-                {t("casino.room.selection.plinko.riskProfile")}
-              </p>
-              <p className="truncate font-mono text-xs font-semibold uppercase tracking-[0.14em] text-fg">
-                {t("casino.room.stage.plinko.risk", {
-                  risk: t(`casino.room.selection.plinko.${risk}`)
-                })}
-              </p>
-            </div>
-            <div className="grid w-full shrink-0 grid-cols-3 gap-1 rounded-lg bg-surface-0 p-1 shadow-inner-e1 sm:w-auto">
+          <div className="px-4 py-3 sm:px-5">
+            <div
+              role="group"
+              aria-label={t("casino.room.selection.plinko.riskProfile")}
+              className="grid w-full grid-cols-3 gap-1 rounded-lg bg-surface-0 p-1 shadow-inner-e1"
+            >
               {PLINKO_RISKS.map((item) => {
                 const active = item === risk;
                 return (
@@ -366,24 +360,30 @@ export function PlinkoStage({
               />
               {factors.map((factor, bucket) => {
                 const active = landed && lastBucket === bucket;
+                const multiplierLabel = formatFactor(factor, houseEdgeBps);
                 return (
                   <div
                     key={bucket}
+                    aria-label={multiplierLabel}
+                    title={multiplierLabel}
                     className={cn(
-                      "absolute flex items-center justify-center overflow-hidden rounded-md border shadow-e1 transition-[border-color,background-color,color,transform]",
+                      "absolute flex items-center justify-center overflow-hidden rounded-full border shadow-e1 transition-[border-color,background-color,color,transform]",
                       bucketTone(factor, houseEdgeBps, active),
                       active && "animate-[plinko-bucket-land_360ms_ease-out]"
                     )}
                     style={{
                       left: `${bucketX(bucket)}%`,
                       top: `${BUCKET_Y}%`,
-                      width: `${COL * 0.96}%`,
-                      height: "8%",
+                      width: "8%",
+                      height: "12.5%",
                       transform: "translate(-50%, -50%)"
                     }}
                   >
-                    <span className="font-mono text-[9px] font-semibold tabular-nums sm:text-xs">
-                      {formatFactor(factor, houseEdgeBps)}
+                    <span
+                      aria-hidden
+                      className="block -rotate-90 whitespace-nowrap font-mono text-[9px] font-semibold leading-none tabular-nums sm:text-[11px]"
+                    >
+                      {multiplierLabel}
                     </span>
                   </div>
                 );

@@ -122,6 +122,8 @@ export function CoinTossStage({
     coinSide === "HEADS"
       ? t("casino.room.selection.coin.heads")
       : t("casino.room.selection.coin.tails");
+  const nextSide = coinSide === "HEADS" ? "TAILS" : "HEADS";
+  const choiceLabel = t("casino.room.stage.coin.selected", { side: selectedSideLabel });
 
   React.useEffect(() => {
     if (!isRevealing || resultNum == null) return;
@@ -174,10 +176,17 @@ export function CoinTossStage({
               }}
             />
 
-            <div
-              className="relative mx-auto h-[168px] w-[168px]"
+            <button
+              type="button"
+              disabled={controlsDisabled}
+              aria-label={choiceLabel}
+              aria-pressed
+              onClick={() => onSideChange(nextSide)}
+              className={cn(
+                "relative mx-auto block h-[168px] w-[168px] rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-4 focus-visible:ring-offset-surface-1",
+                controlsDisabled ? "cursor-default" : "cursor-pointer"
+              )}
               style={{ perspective: "1200px" }}
-              aria-hidden
             >
               {/* Felt landing pad */}
               <div className="pointer-events-none absolute bottom-[-38px] left-1/2 h-[64px] w-[132%] -translate-x-1/2">
@@ -216,42 +225,23 @@ export function CoinTossStage({
                 coinSide={coinSide}
                 reduced={reduced}
               />
-            </div>
+            </button>
           </div>
 
           <Divider />
 
-          {/* Choice zone — status line then the HEADS / TAILS selector. */}
+          {/* Choice status — the coin itself is the selector. */}
           <div className="px-5 py-4">
-            <div className="mb-3 flex items-center justify-center gap-2">
+            <div className="flex min-w-0 items-center justify-center gap-2">
               <span
-                className="h-1.5 w-1.5 rounded-full"
+                className="h-1.5 w-1.5 shrink-0 rounded-full"
                 style={{
                   background: coinSide === "HEADS" ? "hsl(var(--brand))" : "hsl(var(--accent))"
                 }}
               />
-              <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-fg-muted">
-                {spinning
-                  ? t("casino.room.stage.coin.waitingVrf")
-                  : t("casino.room.stage.coin.selected", { side: selectedSideLabel })}
+              <span className="min-w-0 truncate text-[11px] font-semibold uppercase tracking-[0.18em] text-fg-muted">
+                {spinning ? t("casino.room.stage.coin.waitingVrf") : choiceLabel}
               </span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <CoinChoiceTile
-                side="HEADS"
-                label={t("casino.room.selection.coin.heads")}
-                active={coinSide === "HEADS"}
-                disabled={controlsDisabled}
-                onClick={() => onSideChange("HEADS")}
-              />
-              <CoinChoiceTile
-                side="TAILS"
-                label={t("casino.room.selection.coin.tails")}
-                active={coinSide === "TAILS"}
-                disabled={controlsDisabled}
-                onClick={() => onSideChange("TAILS")}
-              />
             </div>
           </div>
         </div>
@@ -382,64 +372,5 @@ function CoinDisc({
         <CoinFace side="TAILS" />
       </div>
     </motion.div>
-  );
-}
-
-function CoinChoiceTile({
-  side,
-  label,
-  active,
-  disabled,
-  onClick
-}: {
-  side: CoinSide;
-  label: string;
-  active: boolean;
-  disabled: boolean;
-  onClick: () => void;
-}) {
-  const heads = side === "HEADS";
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      aria-pressed={active}
-      onClick={onClick}
-      style={
-        active && !heads
-          ? {
-              boxShadow:
-                "0 0 0 1px hsl(var(--accent) / 0.5), 0 10px 26px -6px hsl(var(--accent) / 0.45)"
-            }
-          : undefined
-      }
-      className={cn(
-        "flex items-center gap-3 rounded-lg p-3 text-left transition-[transform,box-shadow,background-color]",
-        active
-          ? heads
-            ? "bg-brand-soft shadow-glow ring-1 ring-inset ring-brand"
-            : "bg-accent/15 ring-1 ring-inset ring-accent"
-          : "bg-surface-3 shadow-e1 ring-1 ring-inset ring-border-soft",
-        !active && !disabled && "hover:-translate-y-0.5 hover:shadow-e2 hover:ring-brand/40",
-        disabled && "cursor-default opacity-60"
-      )}
-    >
-      <span className="h-12 w-12 shrink-0">
-        <CoinFace side={side} />
-      </span>
-      <span className="flex min-w-0 flex-col">
-        <span
-          className={cn(
-            "text-base font-bold uppercase tracking-wide",
-            active ? "text-fg" : "text-fg-muted"
-          )}
-        >
-          {label}
-        </span>
-        <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-fg-subtle">
-          {side}
-        </span>
-      </span>
-    </button>
   );
 }
