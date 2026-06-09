@@ -13,6 +13,7 @@ export function Sheet({
   className,
   closeLabel,
   contentClassName,
+  layerClassName,
   onClose,
   open,
   subtitle,
@@ -22,6 +23,7 @@ export function Sheet({
   className?: string;
   closeLabel: string;
   contentClassName?: string;
+  layerClassName?: string;
   onClose: () => void;
   open: boolean;
   subtitle?: React.ReactNode;
@@ -44,7 +46,7 @@ export function Sheet({
     <div
       className={cn(
         "fixed inset-0 flex items-end bg-surface-0/70 backdrop-blur-sm md:hidden",
-        overlayZ.sheet
+        layerClassName ?? overlayZ.sheet
       )}
       role="presentation"
       onMouseDown={onBackdropMouseDown}

@@ -197,7 +197,7 @@ export function EarnPageClient() {
       if (!sdk?.account) return null;
       return sdk.bank.getAssetBalance(asset, sdk.account);
     },
-    refetchInterval: 5_000
+    refetchInterval: currentFlow.busy ? false : 5_000
   });
 
   const { data: maxWithdraw = null } = useQuery({
@@ -212,7 +212,7 @@ export function EarnPageClient() {
       if (!sdk?.account || !poolId) return null;
       return sdk.bank.maxWithdraw(poolId, sdk.account);
     },
-    refetchInterval: 5_000
+    refetchInterval: currentFlow.busy ? false : 5_000
   });
 
   const { data: maxRedeem = null } = useQuery({
@@ -227,7 +227,7 @@ export function EarnPageClient() {
       if (!sdk?.account || !poolId) return null;
       return sdk.bank.maxRedeem(poolId, sdk.account);
     },
-    refetchInterval: 5_000
+    refetchInterval: currentFlow.busy ? false : 5_000
   });
 
   const { data: maxMintShares = null } = useQuery({
@@ -244,7 +244,7 @@ export function EarnPageClient() {
       if (!poolId || walletBalance == null) return null;
       return sdk!.bank.convertToShares(poolId, walletBalance);
     },
-    refetchInterval: 5_000
+    refetchInterval: currentFlow.busy ? false : 5_000
   });
 
   const providerLedger = useBankProviderLedger({
@@ -312,15 +312,18 @@ export function EarnPageClient() {
         return;
       }
 
-      const availableForTab =
+      const account = sdk.account;
+      const freshWalletBalance =
+        tab === "deposit" ? await sdk.bank.getAssetBalance(asset, account) : null;
+      const freshAvailableForTab =
         tab === "deposit"
           ? amountMode === "shares"
-            ? maxMintShares
-            : walletBalance
+            ? await sdk.bank.convertToShares(poolId, freshWalletBalance ?? 0n)
+            : (freshWalletBalance ?? 0n)
           : amountMode === "shares"
-            ? maxRedeem
-            : maxWithdraw;
-      if (availableForTab != null && parsed > availableForTab) {
+            ? await sdk.bank.maxRedeem(poolId, account)
+            : await sdk.bank.maxWithdraw(poolId, account);
+      if (parsed > freshAvailableForTab) {
         toast.error(
           tab === "deposit"
             ? amountMode === "shares"
@@ -334,7 +337,6 @@ export function EarnPageClient() {
       }
 
       const toastId = toast.loading(t("earn.toast.processing"));
-      const account = sdk.account;
       const result =
         tab === "deposit"
           ? amountMode === "shares"
@@ -386,6 +388,7 @@ export function EarnPageClient() {
   }, [
     amount,
     amountMode,
+    asset,
     decimals,
     depositFlow,
     explorerBaseUrl,
