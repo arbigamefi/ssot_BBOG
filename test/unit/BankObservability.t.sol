@@ -6,6 +6,7 @@ import "forge-std/Test.sol";
 import {Bank} from "../../src/core/Bank.sol";
 import {IBank} from "../../src/core/interfaces/IBank.sol";
 import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
+import {Errors} from "../../src/libs/Errors.sol";
 import {MockERC20} from "../../src/mocks/MockERC20.sol";
 
 contract BankObservabilityTest is Test {
@@ -28,6 +29,11 @@ contract BankObservabilityTest is Test {
 
         vm.prank(gov);
         bank.setSettlementRouterOnce(address(this));
+    }
+
+    function test_constructorRejectsShareDecimalsThatDoNotMatchAsset() external {
+        vm.expectRevert(Errors.InvalidConfig.selector);
+        new Bank(address(asset), gov, 0, "LP USDC Bad Decimals", "lpUSDC-BAD", 18);
     }
 
     function test_erc4626EventsAndOwnerScopedMaxWithdraw() external {

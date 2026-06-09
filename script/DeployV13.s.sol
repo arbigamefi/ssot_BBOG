@@ -43,7 +43,7 @@ interface IERC20MetadataLikeV13 {
 ///   POOL_ASSET_i                      required
 ///   POOL_DOMAIN_i                     default 1; 1=Casino, 2=Sports, 3=Future
 ///   BANK_MIN_LIQ_BPS_i                default 1000
-///   BANK_MIN_TURNOVER_FOR_UNLOCK_i    default 20 ether
+///   BANK_MIN_TURNOVER_FOR_UNLOCK_i    default 20 asset units
 ///   BANK_HOLDBACK_VESTING_SECONDS_i   default 86400
 ///   LP_NAME_i / LP_SYMBOL_i / LP_DECIMALS_i
 ///
@@ -399,16 +399,20 @@ contract DeployV13 is Script {
         cfg.poolId = uint64(vm.envOr(string.concat("POOL_ID_", suffix), i + 1));
         cfg.asset = vm.envAddress(string.concat("POOL_ASSET_", suffix));
         require(cfg.asset != address(0), "POOL_ASSET_i required");
+        (, uint8 assetDecimals) = _tryAssetMetadata(cfg.asset);
+        uint256 oneAssetUnit = 10 ** uint256(assetDecimals);
 
         uint256 domainRaw = vm.envOr(string.concat("POOL_DOMAIN_", suffix), uint256(1));
         cfg.domain = _domainFromRaw(domainRaw);
 
         cfg.minLiqBps = uint16(vm.envOr(string.concat("BANK_MIN_LIQ_BPS_", suffix), uint256(1000)));
-        cfg.minTurnoverForUnlock = vm.envOr(string.concat("BANK_MIN_TURNOVER_FOR_UNLOCK_", suffix), uint256(20 ether));
+        cfg.minTurnoverForUnlock =
+            vm.envOr(string.concat("BANK_MIN_TURNOVER_FOR_UNLOCK_", suffix), uint256(20 * oneAssetUnit));
         cfg.holdbackVestingSeconds = vm.envOr(string.concat("BANK_HOLDBACK_VESTING_SECONDS_", suffix), uint256(86400));
         cfg.lpName = vm.envOr(string.concat("LP_NAME_", suffix), string.concat("LP Share Pool #", suffix));
         cfg.lpSymbol = vm.envOr(string.concat("LP_SYMBOL_", suffix), string.concat("LP", suffix));
-        cfg.lpDecimals = uint8(vm.envOr(string.concat("LP_DECIMALS_", suffix), uint256(18)));
+        cfg.lpDecimals = uint8(vm.envOr(string.concat("LP_DECIMALS_", suffix), uint256(assetDecimals)));
+        require(cfg.lpDecimals == assetDecimals, "LP_DECIMALS_i must match asset decimals");
     }
 
     function _domainFromRaw(uint256 raw) internal pure returns (SSOTTypes.PoolDomain) {
@@ -579,6 +583,9 @@ contract DeployV13 is Script {
             json = vm.serializeString(obj, string.concat("poolAssetSymbol_", suffix), assetSymbol);
             json = vm.serializeUint(obj, string.concat("poolAssetDecimals_", suffix), uint256(assetDecimals));
             json = vm.serializeAddress(obj, string.concat("poolBank_", suffix), pools[i].bank);
+            json = vm.serializeUint(
+                obj, string.concat("poolBankDecimals_", suffix), uint256(Bank(pools[i].bank).decimals())
+            );
             json = vm.serializeUint(obj, string.concat("poolBankMinLiqBps_", suffix), pools[i].minLiqBps);
             json = vm.serializeUint(
                 obj, string.concat("poolBankMinTurnoverForUnlock_", suffix), pools[i].minTurnoverForUnlock

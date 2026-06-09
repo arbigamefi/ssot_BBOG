@@ -30,7 +30,7 @@ interface IERC20MetadataAddPoolV13 {
 ///   GOV / POOL_REGISTRY / SETTLEMENT_ROUTER / GAME_HUB override snapshot addresses
 ///   ADD_BANK_MIN_LIQ_BPS default 1000; legacy alias for risk reserve
 ///   ADD_BANK_WITHDRAWAL_BUFFER_BPS default ADD_BANK_MIN_LIQ_BPS
-///   ADD_BANK_MIN_TURNOVER_FOR_UNLOCK default 20 ether
+///   ADD_BANK_MIN_TURNOVER_FOR_UNLOCK default 20 asset units
 ///   ADD_BANK_HOLDBACK_VESTING_SECONDS default 86400
 ///   ADD_LP_NAME / ADD_LP_SYMBOL / ADD_LP_DECIMALS
 ///   VERIFIER_URL overrides chain default in generated verify script
@@ -136,13 +136,14 @@ contract AddCasinoPoolV13 is Script {
         cfg.asset = vm.envAddress("ADD_POOL_ASSET");
         cfg.minLiqBps = uint16(vm.envOr("ADD_BANK_MIN_LIQ_BPS", uint256(1000)));
         cfg.withdrawalBufferBps = uint16(vm.envOr("ADD_BANK_WITHDRAWAL_BUFFER_BPS", uint256(cfg.minLiqBps)));
-        cfg.minTurnoverForUnlock = vm.envOr("ADD_BANK_MIN_TURNOVER_FOR_UNLOCK", uint256(20 ether));
-        cfg.holdbackVestingSeconds = vm.envOr("ADD_BANK_HOLDBACK_VESTING_SECONDS", uint256(86400));
-
         (string memory assetSymbol, uint8 assetDecimals) = _tryAssetMetadata(cfg.asset);
+        uint256 oneAssetUnit = 10 ** uint256(assetDecimals);
+        cfg.minTurnoverForUnlock = vm.envOr("ADD_BANK_MIN_TURNOVER_FOR_UNLOCK", uint256(20 * oneAssetUnit));
+        cfg.holdbackVestingSeconds = vm.envOr("ADD_BANK_HOLDBACK_VESTING_SECONDS", uint256(86400));
         cfg.lpName = vm.envOr("ADD_LP_NAME", string.concat("LP ", assetSymbol, " Casino"));
         cfg.lpSymbol = vm.envOr("ADD_LP_SYMBOL", string.concat("lp", assetSymbol, "-C"));
         cfg.lpDecimals = uint8(vm.envOr("ADD_LP_DECIMALS", uint256(assetDecimals)));
+        require(cfg.lpDecimals == assetDecimals, "ADD_LP_DECIMALS must match asset decimals");
     }
 
     function _preflight(AddPoolConfig memory cfg) internal view {

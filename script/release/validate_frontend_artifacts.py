@@ -85,6 +85,18 @@ def _validate_v13_pools(manifest: Dict[str, Any], snapshot: Dict[str, Any], *, m
         )
         if expected_decimals < 0 or expected_decimals > 36:
             raise SystemExit(f"{snapshot_path}: poolAssetDecimals_{suffix} out of range: {expected_decimals}")
+        bank_decimals = snapshot.get(f"poolBankDecimals_{suffix}")
+        if bank_decimals is not None:
+            expected_bank_decimals = _as_int(
+                bank_decimals,
+                field=f"poolBankDecimals_{suffix}",
+                path=snapshot_path,
+            )
+            if expected_bank_decimals != expected_decimals:
+                raise SystemExit(
+                    f"{snapshot_path}: poolBankDecimals_{suffix}={expected_bank_decimals} "
+                    f"does not match poolAssetDecimals_{suffix}={expected_decimals}"
+                )
 
         checks = (
             ("poolId", _as_int(snapshot.get(f"poolId_{suffix}"), field=f"poolId_{suffix}", path=snapshot_path)),

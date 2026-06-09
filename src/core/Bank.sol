@@ -5,6 +5,7 @@ import {IBank} from "./interfaces/IBank.sol";
 import {SSOTTypes} from "./interfaces/SSOTTypes.sol";
 import {AccountingLib} from "../libs/AccountingLib.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
@@ -99,6 +100,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     ) Governable(gov_) {
         if (asset_ == address(0)) revert Errors.ZeroAddress();
         if (decimals_ > 77) revert Errors.InvalidConfig();
+        if (decimals_ != IERC20Metadata(asset_).decimals()) revert Errors.InvalidConfig();
         if (minLiquidityBps_ > 10_000) revert Errors.InvalidBps(minLiquidityBps_);
         asset = asset_;
         _assetToken = IERC20(asset_);
