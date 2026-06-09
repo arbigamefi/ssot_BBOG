@@ -16,6 +16,7 @@ import { SharePanel } from "../../share/SharePanel";
 import { buildShareUrl } from "../../share/share-link";
 import { formatNativeFee } from "./casino-round";
 import type { CasinoOutcome } from "./outcome";
+import { applyHouseEdgeToMultiplier } from "./params";
 import type { BaccaratSide, CoinSide, DiceDirection, SicBoKind } from "./params";
 import type { CasinoRoundResult, CasinoTerminalRoundResult } from "./resolution";
 
@@ -194,6 +195,7 @@ function getOutcome(result: CasinoTerminalRoundResult, t: Translate) {
 
 type GameResultContext = {
   gameSlug: string;
+  houseEdgeBps: number;
   resultNum: number | null;
   diceDirection: DiceDirection;
   diceTarget: number;
@@ -246,8 +248,14 @@ function formatSicBoBet(kind: SicBoKind, value: number, t: Translate) {
   return label;
 }
 
-function formatSlotsMultiplier(multiplier: number) {
-  return `${multiplier.toFixed(2)}x`;
+function formatNetMultiplier(multiplier: number, houseEdgeBps: number) {
+  const netMultiplier = applyHouseEdgeToMultiplier(multiplier, houseEdgeBps);
+  const truncated = Math.floor((netMultiplier + Number.EPSILON) * 100) / 100;
+  return `${truncated.toFixed(2)}x`;
+}
+
+function formatFactorBpsMultiplier(factorBps: number, houseEdgeBps: number) {
+  return formatNetMultiplier(factorBps / 10_000, houseEdgeBps);
 }
 
 function formatSlotsSymbols(symbols: readonly number[], t: Translate) {
@@ -338,7 +346,7 @@ function getGameResultRows(context: GameResultContext, t: Translate) {
       {
         label: t("casino.room.result.facts.plinkoMultiplier"),
         value: context.casinoOutcome.rolls
-          .map((roll) => `${(roll.factorBps / 10_000).toFixed(roll.factorBps >= 100_000 ? 1 : 2)}x`)
+          .map((roll) => formatFactorBpsMultiplier(roll.factorBps, context.houseEdgeBps))
           .join(", ")
       }
     ] satisfies GameResultRow[];
@@ -402,7 +410,7 @@ function getGameResultRows(context: GameResultContext, t: Translate) {
       {
         label: t("casino.room.result.facts.slotsMultiplier"),
         value: context.casinoOutcome.rolls
-          .map((roll) => formatSlotsMultiplier(roll.multiplier))
+          .map((roll) => formatNetMultiplier(roll.multiplier, context.houseEdgeBps))
           .join(", ")
       },
       {
@@ -446,7 +454,7 @@ function getGameResultRows(context: GameResultContext, t: Translate) {
       {
         label: t("casino.room.result.facts.sicBoMultiplier"),
         value: context.casinoOutcome.rolls
-          .map((roll) => `${(roll.factorBps / 10_000).toFixed(roll.factorBps >= 100_000 ? 1 : 2)}x`)
+          .map((roll) => formatFactorBpsMultiplier(roll.factorBps, context.houseEdgeBps))
           .join(", ")
       }
     ] satisfies GameResultRow[];
@@ -615,6 +623,7 @@ export function GameRoomResultOverlay({
   assetSymbol = "UNIT",
   assetDecimals = 6,
   gameSlug,
+  houseEdgeBps,
   resultNum,
   diceDirection,
   diceTarget,
@@ -631,6 +640,7 @@ export function GameRoomResultOverlay({
   assetSymbol?: string;
   assetDecimals?: number;
   gameSlug: string;
+  houseEdgeBps: number;
   resultNum: number | null;
   diceDirection: DiceDirection;
   diceTarget: number;
@@ -668,6 +678,7 @@ export function GameRoomResultOverlay({
   const gameRows = getGameResultRows(
     {
       gameSlug,
+      houseEdgeBps,
       resultNum,
       diceDirection,
       diceTarget,

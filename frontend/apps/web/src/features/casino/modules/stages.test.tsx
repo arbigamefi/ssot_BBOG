@@ -1,6 +1,7 @@
 import * as React from "react";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { kenoMultiplier } from "@ssot/ssot/domain";
 
 import { CoinTossStage } from "./coin-toss/stage";
 import { DiceStage } from "./dice/stage";
@@ -9,6 +10,12 @@ import { PlinkoStage } from "./plinko/stage";
 import { SlotsStage } from "./slots/stage";
 import { BaccaratStage } from "./baccarat/stage";
 import { SicBoStage } from "./sic-bo/stage";
+import {
+  applyHouseEdgeToMultiplier,
+  baccaratMultiplier,
+  PLINKO_FACTOR_TABLE,
+  sicBoMultiplier
+} from "../room/params";
 
 vi.mock("@ssot/ui", () => ({
   cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" ")
@@ -222,6 +229,25 @@ describe("game room stages", () => {
     expect(screen.getByText("2 Hits")).toBeDefined();
   });
 
+  it("renders Keno payout chips after house edge", () => {
+    const houseEdgeBps = 200;
+    render(
+      <KenoStage
+        isPending={false}
+        showResult={false}
+        spots={[1, 2]}
+        houseEdgeBps={houseEdgeBps}
+        animatingSpots={[]}
+        resultDrawn={[]}
+        onChange={vi.fn()}
+        onResetResult={vi.fn()}
+      />
+    );
+
+    const allHitMultiplier = applyHouseEdgeToMultiplier(kenoMultiplier(2, 2), houseEdgeBps);
+    expect(screen.getByText(`${allHitMultiplier.toFixed(2)}x`)).toBeDefined();
+  });
+
   it("reveals Keno draw numbers before completing the stage", () => {
     const onRevealComplete = vi.fn();
     vi.useFakeTimers();
@@ -277,6 +303,26 @@ describe("game room stages", () => {
 
     expect(screen.getAllByText("Slot 8").length).toBeGreaterThan(0);
     expect(screen.getAllByText("8").length).toBeGreaterThan(0);
+  });
+
+  it("renders Plinko bucket multipliers after house edge", () => {
+    const houseEdgeBps = 200;
+    render(
+      <PlinkoStage
+        isPending={false}
+        showResult={false}
+        risk="high"
+        houseEdgeBps={houseEdgeBps}
+        buckets={[]}
+        onRiskChange={vi.fn()}
+      />
+    );
+
+    const edgeMultiplier = applyHouseEdgeToMultiplier(
+      (PLINKO_FACTOR_TABLE.high[0] ?? 0) / 10_000,
+      houseEdgeBps
+    );
+    expect(screen.getAllByText(`${edgeMultiplier.toFixed(2)}x`).length).toBeGreaterThan(0);
   });
 
   it("renders Plinko reveal state while the ball travels the board", () => {
@@ -347,6 +393,7 @@ describe("game room stages", () => {
         isPending={false}
         showResult
         selectedSide="player"
+        houseEdgeBps={200}
         onSideChange={onSideChange}
         outcome={{
           kind: "baccarat",
@@ -374,6 +421,11 @@ describe("game room stages", () => {
 
     expect(screen.getByText("Player wins")).toBeDefined();
     expect(screen.getByText("Selected: Player")).toBeDefined();
+    expect(
+      screen.getByText(
+        `${applyHouseEdgeToMultiplier(baccaratMultiplier("player"), 200).toFixed(3)}x`
+      )
+    ).toBeDefined();
     expect(screen.getByText("9")).toBeDefined();
     expect(screen.getAllByText("8").length).toBeGreaterThan(0);
 
@@ -385,7 +437,28 @@ describe("game room stages", () => {
     const onRevealComplete = vi.fn();
     vi.useFakeTimers();
     try {
-      render(
+      const baccaratOutcome = {
+        kind: "baccarat" as const,
+        side: "player" as const,
+        payoutGross: 2_241_400n,
+        payoutNet: 2_196_572n,
+        refundAmount: 0n,
+        feeOnPayout: 44_828n,
+        playerOwed: 2_196_572n,
+        netResult: 1_196_572n,
+        rolls: [
+          {
+            playerCards: [5, 4],
+            bankerCards: [8, 0],
+            playerTotal: 9,
+            bankerTotal: 8,
+            outcome: "player" as const,
+            factorBps: 22414,
+            won: true
+          }
+        ]
+      };
+      const { rerender } = render(
         <BaccaratStage
           isPending={false}
           isRevealing
@@ -393,31 +466,12 @@ describe("game room stages", () => {
           selectedSide="player"
           onSideChange={vi.fn()}
           onRevealComplete={onRevealComplete}
-          outcome={{
-            kind: "baccarat",
-            side: "player",
-            payoutGross: 2_241_400n,
-            payoutNet: 2_196_572n,
-            refundAmount: 0n,
-            feeOnPayout: 44_828n,
-            playerOwed: 2_196_572n,
-            netResult: 1_196_572n,
-            rolls: [
-              {
-                playerCards: [5, 4],
-                bankerCards: [8, 0],
-                playerTotal: 9,
-                bankerTotal: 8,
-                outcome: "player",
-                factorBps: 22414,
-                won: true
-              }
-            ]
-          }}
+          outcome={baccaratOutcome}
         />
       );
 
       expect(screen.getByText("Waiting for VRF Oracle...")).toBeDefined();
+      expect(screen.queryByText("Player wins")).toBeNull();
       expect(
         document.querySelector('[data-baccarat-hand="player"]')?.getAttribute("data-winner")
       ).toBe("false");
@@ -425,10 +479,27 @@ describe("game room stages", () => {
       act(() => {
         vi.advanceTimersByTime(3_000);
       });
+      expect(onRevealComplete).toHaveBeenCalledTimes(1);
+      expect(screen.queryByText("Player wins")).toBeNull();
+      expect(
+        document.querySelector('[data-baccarat-hand="player"]')?.getAttribute("data-winner")
+      ).toBe("false");
+
+      rerender(
+        <BaccaratStage
+          isPending={false}
+          isRevealing={false}
+          showResult
+          selectedSide="player"
+          onSideChange={vi.fn()}
+          onRevealComplete={onRevealComplete}
+          outcome={baccaratOutcome}
+        />
+      );
       expect(
         document.querySelector('[data-baccarat-hand="player"]')?.getAttribute("data-winner")
       ).toBe("true");
-      expect(onRevealComplete).toHaveBeenCalledTimes(1);
+      expect(screen.getByText("Player wins")).toBeDefined();
     } finally {
       vi.useRealTimers();
     }
@@ -442,6 +513,7 @@ describe("game room stages", () => {
         showResult
         betKind="total"
         betValue={9}
+        houseEdgeBps={200}
         onBetChange={onBetChange}
         outcome={{
           kind: "sic-bo",
@@ -469,6 +541,11 @@ describe("game room stages", () => {
 
     expect(screen.getByText("Dice opened: 2 / 3 / 4")).toBeDefined();
     expect(screen.getByText("Exact total 9")).toBeDefined();
+    expect(
+      screen.getAllByText(
+        `${applyHouseEdgeToMultiplier(sicBoMultiplier("small", 0), 200).toFixed(2)}x`
+      ).length
+    ).toBeGreaterThan(0);
     expect(screen.getByText("Won bet")).toBeDefined();
 
     fireEvent.click(screen.getByRole("button", { name: "12" }));
@@ -479,7 +556,28 @@ describe("game room stages", () => {
     const onRevealComplete = vi.fn();
     vi.useFakeTimers();
     try {
-      render(
+      const sicBoOutcome = {
+        kind: "sic-bo" as const,
+        betKind: "small" as const,
+        betValue: 0,
+        payoutGross: 2_060_000n,
+        payoutNet: 2_018_800n,
+        refundAmount: 0n,
+        feeOnPayout: 41_200n,
+        playerOwed: 2_018_800n,
+        netResult: 1_018_800n,
+        rolls: [
+          {
+            dice: [1, 2, 3] as [number, number, number],
+            total: 6,
+            triple: false,
+            faceCount: 0,
+            factorBps: 20_600,
+            won: true
+          }
+        ]
+      };
+      const { rerender } = render(
         <SicBoStage
           isPending={false}
           isRevealing
@@ -488,36 +586,50 @@ describe("game room stages", () => {
           betValue={0}
           onBetChange={vi.fn()}
           onRevealComplete={onRevealComplete}
-          outcome={{
-            kind: "sic-bo",
-            betKind: "small",
-            betValue: 0,
-            payoutGross: 2_060_000n,
-            payoutNet: 2_018_800n,
-            refundAmount: 0n,
-            feeOnPayout: 41_200n,
-            playerOwed: 2_018_800n,
-            netResult: 1_018_800n,
-            rolls: [
-              {
-                dice: [1, 2, 3],
-                total: 6,
-                triple: false,
-                faceCount: 0,
-                factorBps: 20_600,
-                won: true
-              }
-            ]
-          }}
+          outcome={sicBoOutcome}
         />
       );
 
       expect(screen.getByText("Waiting for VRF Oracle...")).toBeDefined();
+      expect(screen.queryByText("Dice opened: 1 / 2 / 3")).toBeNull();
+      expect(screen.queryByText("Won bet")).toBeNull();
+      expect(
+        Array.from(document.querySelectorAll("[data-won]")).every(
+          (node) => node.getAttribute("data-won") === "false"
+        )
+      ).toBe(true);
 
       act(() => {
         vi.advanceTimersByTime(1_600);
       });
       expect(onRevealComplete).toHaveBeenCalledTimes(1);
+      expect(screen.queryByText("Dice opened: 1 / 2 / 3")).toBeNull();
+      expect(screen.queryByText("Won bet")).toBeNull();
+      expect(
+        Array.from(document.querySelectorAll("[data-won]")).every(
+          (node) => node.getAttribute("data-won") === "false"
+        )
+      ).toBe(true);
+
+      rerender(
+        <SicBoStage
+          isPending={false}
+          isRevealing={false}
+          showResult
+          betKind="small"
+          betValue={0}
+          onBetChange={vi.fn()}
+          onRevealComplete={onRevealComplete}
+          outcome={sicBoOutcome}
+        />
+      );
+      expect(screen.getByText("Dice opened: 1 / 2 / 3")).toBeDefined();
+      expect(screen.getByText("Won bet")).toBeDefined();
+      expect(
+        Array.from(document.querySelectorAll("[data-won]")).some(
+          (node) => node.getAttribute("data-won") === "true"
+        )
+      ).toBe(true);
     } finally {
       vi.useRealTimers();
     }

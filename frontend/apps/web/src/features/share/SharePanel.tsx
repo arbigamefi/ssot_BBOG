@@ -164,6 +164,7 @@ export function SharePanel({
           {useMobileSheet ? (
             <Sheet
               closeLabel={labels.close ?? labels.share}
+              layerClassName={desktopLayer === "modal" ? overlayZ.modalPopover : undefined}
               onClose={() => setOpen(false)}
               open={open}
               subtitle={url}
@@ -249,10 +250,11 @@ function useMobileShareSheet() {
   React.useEffect(() => {
     if (typeof window.matchMedia !== "function") return;
     const query = window.matchMedia("(max-width: 767px)");
-    const sync = () => setIsMobile(query.matches);
+    if (!query) return;
+    const sync = () => setIsMobile(Boolean(query.matches));
     sync();
-    query.addEventListener("change", sync);
-    return () => query.removeEventListener("change", sync);
+    query.addEventListener?.("change", sync);
+    return () => query.removeEventListener?.("change", sync);
   }, []);
 
   return isMobile;

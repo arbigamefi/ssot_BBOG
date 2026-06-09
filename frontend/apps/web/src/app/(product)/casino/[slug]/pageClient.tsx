@@ -16,19 +16,17 @@ import { requestWalletConnect } from "../../../../app-shell/wallet-connect-event
 import { useCasinoPoolAssetSelection } from "../../../../features/assets/useCasinoPoolAssetSelection";
 import { toGameMeta, type GameMeta } from "../../../../features/casino/room/model";
 import {
-  baccaratMultiplier,
+  applyHouseEdgeToMultiplier,
   calculateGameWinChance,
-  kenoMaxMultiplier,
-  plinkoMaxMultiplier,
-  sicBoMultiplier,
-  slotsMaxMultiplier,
+  calculateGameReserveMultiplier,
   type BaccaratSide,
   type PlinkoRisk,
   type SicBoKind
 } from "../../../../features/casino/room/params";
 import {
   computePoolFreeLiquidity,
-  deriveGameRoomLimits
+  deriveGameRoomLimits,
+  resolveHouseEdgeBps
 } from "../../../../features/casino/room/presentation";
 import { GameRoomBetPanel } from "../../../../features/casino/room/bet-panel";
 import {
@@ -402,23 +400,19 @@ export function GamePageClient({ slug }: { slug: string }) {
   const assetDecimals = casinoPoolAsset.asset.decimals;
   const assetSymbol = casinoPoolAsset.asset.symbol;
 
-  const multiplier =
-    game.slug === "plinko"
-      ? plinkoMaxMultiplier(plinkoRisk)
-      : game.slug === "slots"
-        ? slotsMaxMultiplier()
-        : game.slug === "baccarat"
-          ? baccaratMultiplier(baccaratSide)
-          : game.slug === "sic-bo"
-            ? sicBoMultiplier(sicBoKind, sicBoValue)
-            : game.slug === "keno"
-              ? // Keno's max payout is hitting ALL selected spots (its top
-                // table tier), not the win-chance-derived figure — this is what
-                // bounds the bank reserve and therefore the max bet.
-                kenoMaxMultiplier(kenoSpots.length)
-              : winChance === 0
-                ? 0
-                : 99 / winChance;
+  const reserveMultiplier = calculateGameReserveMultiplier({
+    slug: game.slug,
+    diceTarget,
+    diceDirection,
+    rouletteSpots,
+    kenoSpots,
+    plinkoRisk,
+    baccaratSide,
+    sicBoKind,
+    sicBoValue
+  });
+  const houseEdgeBps = resolveHouseEdgeBps(gameMeta, game.slug, release);
+  const multiplier = applyHouseEdgeToMultiplier(reserveMultiplier, houseEdgeBps);
   const expectedPayout = betAmount * multiplier;
 
   // Live, asset-aware header limits derived from the selected pool's free
@@ -426,7 +420,8 @@ export function GamePageClient({ slug }: { slug: string }) {
   const freeLiquidity = computePoolFreeLiquidity(poolSnapshot);
   const { maxBet, maxBetRaw, maxBetState, maxPayout, maxPayoutState } = deriveGameRoomLimits({
     freeLiquidity,
-    multiplier,
+    poolSnapshot,
+    reserveMultiplier,
     assetDecimals,
     assetSymbol
   });
@@ -438,10 +433,10 @@ export function GamePageClient({ slug }: { slug: string }) {
         : maxBet;
   const maxPayoutLabel =
     maxPayoutState === "no-capacity" ? t("casino.room.shell.noCapacity") : maxPayout;
+  const maxBetRawPerRoll =
+    maxBetRaw == null ? undefined : maxBetRaw / BigInt(Math.max(1, Math.floor(betCount)));
   const maxBetAmountPerRoll =
-    maxBetRaw == null
-      ? undefined
-      : Number(maxBetRaw) / Math.pow(10, assetDecimals) / Math.max(1, Math.floor(betCount));
+    maxBetRawPerRoll == null ? undefined : Number(maxBetRawPerRoll) / Math.pow(10, assetDecimals);
   const walletBalanceAmount =
     walletBalance?.raw == null ? null : Number(walletBalance.raw) / Math.pow(10, assetDecimals);
   const placeBetButtonPhase = derivePlaceBetButtonPhase({
@@ -534,6 +529,7 @@ export function GamePageClient({ slug }: { slug: string }) {
       diceDirection={diceDirection}
       diceTarget={diceTarget}
       multiplier={multiplier}
+      houseEdgeBps={houseEdgeBps}
       winChance={winChance}
       rouletteSpots={rouletteSpots}
       kenoSpots={kenoSpots}

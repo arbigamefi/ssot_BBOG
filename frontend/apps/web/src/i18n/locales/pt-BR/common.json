@@ -1136,6 +1136,7 @@
           "roundInProgress": "RODADA EM ANDAMENTO",
           "betMined": "APOSTA MINERADA...",
           "signing": "ASSINANDO / APOSTANDO...",
+          "reduceAmount": "REDUZIR VALOR",
           "approveThenPlace": "APROVAR E DEPOIS APOSTAR",
           "preparing": "PREPARANDO RODADA...",
           "placeBet": "APOSTAR",
@@ -1615,7 +1616,7 @@
         },
         "dice": {
           "tagline": "Role um número de 0 a 99. Escolha um alvo e uma direção.",
-          "houseEdge": "1.00%",
+          "houseEdge": "2.00%",
           "bets": [
             {
               "key": "under",
@@ -1633,19 +1634,19 @@
         },
         "coin-toss": {
           "tagline": "50/50 puro. Escolha um lado; um sorteio do Chainlink VRF decide.",
-          "houseEdge": "1.00%",
+          "houseEdge": "2.00%",
           "bets": [
             {
               "key": "heads",
               "label": "Cara",
               "coverage": "1 de 2 resultados",
-              "multiplier": "1,98×"
+              "multiplier": "1,96×"
             },
             {
               "key": "tails",
               "label": "Coroa",
               "coverage": "1 de 2 resultados",
-              "multiplier": "1,98×"
+              "multiplier": "1,96×"
             }
           ]
         },

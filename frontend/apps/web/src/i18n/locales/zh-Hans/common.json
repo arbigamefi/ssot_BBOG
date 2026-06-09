@@ -418,6 +418,7 @@
           "roundInProgress": "回合进行中",
           "betMined": "投注已上链...",
           "signing": "签名 / 下注中...",
+          "reduceAmount": "降低金额",
           "approveThenPlace": "先授权，再下注",
           "preparing": "准备回合...",
           "placeBet": "下注",
@@ -754,7 +755,7 @@
         },
         "dice": {
           "tagline": "掷出 0–99 的数字,选一个目标值并选小/大。",
-          "houseEdge": "1.00%",
+          "houseEdge": "2.00%",
           "bets": [
             {
               "key": "under",
@@ -772,19 +773,19 @@
         },
         "coin-toss": {
           "tagline": "纯粹的 50/50。选一面,Chainlink VRF 抽一次定输赢。",
-          "houseEdge": "1.00%",
+          "houseEdge": "2.00%",
           "bets": [
             {
               "key": "heads",
               "label": "正面",
               "coverage": "2 个结果之一",
-              "multiplier": "1.98×"
+              "multiplier": "1.96×"
             },
             {
               "key": "tails",
               "label": "反面",
               "coverage": "2 个结果之一",
-              "multiplier": "1.98×"
+              "multiplier": "1.96×"
             }
           ]
         },

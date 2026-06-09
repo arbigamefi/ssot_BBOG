@@ -18,27 +18,39 @@ function parseWholeUnitInput(input: string, { min, max }: { min: number; max?: n
 }
 
 function toCents(value: number) {
-  return Math.floor(value * 100) / 100;
+  return Math.floor((value + Number.EPSILON) * 100) / 100;
 }
 
-/** Smallest of the finite, positive per-roll caps (wallet balance, pool cap). */
+/** Smallest of the finite per-roll caps (wallet balance, pool cap). */
 export function resolveBetMaxAmount(
   walletBalanceAmount: number | null | undefined,
   maxBetAmount?: number
 ): number | undefined {
   const candidates = [walletBalanceAmount, maxBetAmount].filter(
-    (value): value is number => value != null && Number.isFinite(value) && value > 0
+    (value): value is number => value != null && Number.isFinite(value) && value >= 0
   );
   return candidates.length > 0 ? toCents(Math.min(...candidates)) : undefined;
 }
 
+export function isBetAmountUnavailable(maxAmount?: number): boolean {
+  return maxAmount != null && maxAmount < MIN_BET_AMOUNT;
+}
+
+export function isBetAmountAboveMax(value: number, maxAmount?: number): boolean {
+  return (
+    maxAmount != null && maxAmount >= MIN_BET_AMOUNT && Number.isFinite(value) && value > maxAmount
+  );
+}
+
 /** Clamp a bet amount to [MIN_BET_AMOUNT, maxAmount] at cent precision. */
 export function clampBetAmount(value: number, maxAmount?: number): number {
+  if (isBetAmountUnavailable(maxAmount)) return maxAmount ?? 0;
   const capped = maxAmount == null ? value : Math.min(value, maxAmount);
   return toCents(Math.max(MIN_BET_AMOUNT, capped));
 }
 
 export function parseBetAmountInput(input: string, { min, max }: { min: number; max?: number }) {
+  if (max != null && max < min) return max ?? 0;
   const normalized = input.replace(/,/g, "").trim();
   const match = normalized.match(/\d+(?:\.\d{0,2})?/);
   if (!match) return min;
@@ -64,7 +76,9 @@ export function BetAmountSection({
 }) {
   const t = useTranslations();
   const maxAmount = resolveBetMaxAmount(walletBalanceAmount, maxBetAmount);
+  const amountUnavailable = isBetAmountUnavailable(maxAmount);
   const setBetAmount = (value: number) => onBetAmountChange(clampBetAmount(value, maxAmount));
+  const controlsDisabled = isPending || amountUnavailable;
 
   return (
     <div className="mb-2">
@@ -87,12 +101,12 @@ export function BetAmountSection({
             aria-label={t("casino.room.betPanel.amount.aria")}
             value={String(betAmount)}
             onChange={(event) => {
-              if (isPending) return;
+              if (controlsDisabled) return;
               onBetAmountChange(
                 parseBetAmountInput(event.target.value, { min: MIN_BET_AMOUNT, max: maxAmount })
               );
             }}
-            disabled={isPending}
+            disabled={controlsDisabled}
             className="w-full border-none bg-transparent pr-2 text-right font-mono text-2xl text-fg outline-none"
           />
         </div>
@@ -100,7 +114,7 @@ export function BetAmountSection({
           <button
             type="button"
             onClick={() => setBetAmount(MIN_BET_AMOUNT)}
-            disabled={isPending}
+            disabled={controlsDisabled}
             className="flex-1 rounded-md bg-surface-0 py-1 text-[10px] font-bold uppercase text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg disabled:cursor-default disabled:opacity-50 disabled:hover:bg-surface-0 disabled:hover:text-fg-subtle"
           >
             {t("casino.room.betPanel.amount.min")}
@@ -108,7 +122,7 @@ export function BetAmountSection({
           <button
             type="button"
             onClick={() => setBetAmount(betAmount / 2)}
-            disabled={isPending}
+            disabled={controlsDisabled}
             className="flex-1 rounded-md bg-surface-0 py-1 text-[10px] font-bold uppercase text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg disabled:cursor-default disabled:opacity-50 disabled:hover:bg-surface-0 disabled:hover:text-fg-subtle"
           >
             1/2
@@ -116,7 +130,7 @@ export function BetAmountSection({
           <button
             type="button"
             onClick={() => setBetAmount(betAmount * 2)}
-            disabled={isPending}
+            disabled={controlsDisabled}
             className="flex-1 rounded-md bg-surface-0 py-1 text-[10px] font-bold uppercase text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg disabled:cursor-default disabled:opacity-50 disabled:hover:bg-surface-0 disabled:hover:text-fg-subtle"
           >
             2x
@@ -124,7 +138,7 @@ export function BetAmountSection({
           <button
             type="button"
             onClick={() => setBetAmount(maxAmount ?? walletBalanceAmount ?? betAmount)}
-            disabled={isPending}
+            disabled={controlsDisabled}
             className="flex-1 rounded-md bg-surface-0 py-1 text-[10px] font-bold uppercase text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg disabled:cursor-default disabled:opacity-50 disabled:hover:bg-surface-0 disabled:hover:text-fg-subtle"
           >
             {t("casino.room.betPanel.amount.max")}

@@ -23,6 +23,7 @@ vi.mock("next-intl", () => ({
       "casino.room.betPanel.placeBet.roundInProgress": "ROUND IN PROGRESS",
       "casino.room.betPanel.placeBet.betMined": "BET MINED...",
       "casino.room.betPanel.placeBet.signing": "SIGNING / PLACING...",
+      "casino.room.betPanel.placeBet.reduceAmount": "REDUCE AMOUNT",
       "casino.room.betPanel.placeBet.revealing": "REVEALING...",
       "casino.room.betPanel.placeBet.approveThenPlace": "APPROVE, THEN PLACE BET",
       "casino.room.betPanel.placeBet.preparing": "PREPARING ROUND...",
@@ -31,7 +32,8 @@ vi.mock("next-intl", () => ({
       "casino.room.roundStatus.phases.waitingVrf.status": "Waiting for draw",
       "casino.room.roundStatus.phases.settling.status": "Settling",
       "casino.room.roundStatus.actions.settleResult": "Settle result",
-      "casino.room.roundStatus.actions.refundStake": "Refund stake"
+      "casino.room.roundStatus.actions.refundStake": "Refund stake",
+      "casino.room.shell.noCapacity": "No capacity"
     })[key] ?? key
 }));
 
@@ -104,6 +106,47 @@ describe("MobileCasinoActionBar", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Max" }));
     expect(cappedByPool.onBetAmountChange).toHaveBeenCalledWith(200);
+  });
+
+  it("does not expose quick max when the effective max is below the minimum bet", () => {
+    renderActionBar({
+      walletBalanceAmount: 0,
+      maxBetAmount: 200
+    });
+
+    expect(screen.queryByRole("button", { name: "Max" })).toBeNull();
+    expect((screen.getByRole("textbox", { name: "Bet amount" }) as HTMLInputElement).disabled).toBe(
+      true
+    );
+    expect(
+      (screen.getByRole("button", { name: "No capacity" }) as HTMLButtonElement).disabled
+    ).toBe(true);
+
+    cleanup();
+    renderActionBar({
+      walletBalanceAmount: 100,
+      maxBetAmount: 0.009
+    });
+
+    expect(screen.queryByRole("button", { name: "Max" })).toBeNull();
+    expect((screen.getByRole("textbox", { name: "Bet amount" }) as HTMLInputElement).disabled).toBe(
+      true
+    );
+    expect(
+      (screen.getByRole("button", { name: "No capacity" }) as HTMLButtonElement).disabled
+    ).toBe(true);
+  });
+
+  it("blocks the compact CTA when the current amount exceeds the effective max", () => {
+    renderActionBar({
+      betAmount: 10,
+      walletBalanceAmount: 100,
+      maxBetAmount: 5
+    });
+
+    expect(
+      (screen.getByRole("button", { name: "REDUCE AMOUNT" }) as HTMLButtonElement).disabled
+    ).toBe(true);
   });
 
   it("locks amount edits and quick actions while a round is pending", () => {

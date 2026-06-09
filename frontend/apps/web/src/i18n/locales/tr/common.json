@@ -1136,6 +1136,7 @@
           "roundInProgress": "TUR DEVAM EDİYOR",
           "betMined": "BAHİS BLOKTA...",
           "signing": "İMZALANIYOR / BAHİS...",
+          "reduceAmount": "TUTARI AZALT",
           "approveThenPlace": "ONAYLA, SONRA BAHİS YAP",
           "preparing": "TUR HAZIRLANIYOR...",
           "placeBet": "BAHİS YAP",
@@ -1615,7 +1616,7 @@
         },
         "dice": {
           "tagline": "0 ile 99 arası bir sayı atın. Bir hedef ve yön seçin.",
-          "houseEdge": "1.00%",
+          "houseEdge": "2.00%",
           "bets": [
             {
               "key": "under",
@@ -1633,19 +1634,19 @@
         },
         "coin-toss": {
           "tagline": "Saf 50/50. Bir taraf seçin; tek bir Chainlink VRF çekilişi karar verir.",
-          "houseEdge": "1.00%",
+          "houseEdge": "2.00%",
           "bets": [
             {
               "key": "heads",
               "label": "Yazı",
               "coverage": "2 sonuçtan 1'i",
-              "multiplier": "1,98×"
+              "multiplier": "1,96×"
             },
             {
               "key": "tails",
               "label": "Tura",
               "coverage": "2 sonuçtan 1'i",
-              "multiplier": "1,98×"
+              "multiplier": "1,96×"
             }
           ]
         },

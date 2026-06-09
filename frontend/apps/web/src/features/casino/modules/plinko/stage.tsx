@@ -3,7 +3,11 @@ import { useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { cn } from "@ssot/ui";
 
-import { PLINKO_FACTOR_TABLE, type PlinkoRisk } from "../../room/params";
+import {
+  applyHouseEdgeToMultiplier,
+  PLINKO_FACTOR_TABLE,
+  type PlinkoRisk
+} from "../../room/params";
 import { PlinkoBall, type PlinkoBallMode } from "./plinko-ball";
 
 /**
@@ -43,10 +47,14 @@ function stepDuration(step: number) {
   return Math.round(480 - (Math.min(step, PLINKO_ROWS) / PLINKO_ROWS) * 260);
 }
 
-function formatFactor(factorBps: number) {
-  const multiplier = factorBps / 10_000;
+function factorMultiplier(factorBps: number, houseEdgeBps: number) {
+  return applyHouseEdgeToMultiplier(factorBps / 10_000, houseEdgeBps);
+}
+
+function formatFactor(factorBps: number, houseEdgeBps: number) {
+  const multiplier = factorMultiplier(factorBps, houseEdgeBps);
   if (multiplier === 0) return "0x";
-  return `${multiplier.toFixed(1)}x`;
+  return `${multiplier.toFixed(2)}x`;
 }
 
 function clampBucket(bucket: number | undefined) {
@@ -95,9 +103,9 @@ function bucketX(bucket: number) {
 }
 
 /** Multiplier-tile tone, graded by payout — hot at the edges, cool in the middle. */
-function bucketTone(factorBps: number, active: boolean) {
+function bucketTone(factorBps: number, houseEdgeBps: number, active: boolean) {
   if (active) return "border-accent bg-accent-soft text-accent shadow-e2";
-  const multiplier = factorBps / 10_000;
+  const multiplier = factorMultiplier(factorBps, houseEdgeBps);
   if (multiplier >= 5) return "border-accent/45 bg-accent-soft/55 text-accent";
   if (multiplier > 1) return "border-brand/40 bg-brand-soft text-brand";
   return "border-border bg-surface-1 text-fg-muted";
@@ -144,6 +152,7 @@ export function PlinkoStage({
   isRevealing = false,
   showResult,
   risk,
+  houseEdgeBps = 0,
   buckets,
   onRiskChange,
   randomHash,
@@ -154,6 +163,7 @@ export function PlinkoStage({
   isRevealing?: boolean;
   showResult: boolean;
   risk: PlinkoRisk;
+  houseEdgeBps?: number;
   buckets: readonly number[];
   onRiskChange: (risk: PlinkoRisk) => void;
   randomHash?: string | null;
@@ -361,7 +371,7 @@ export function PlinkoStage({
                     key={bucket}
                     className={cn(
                       "absolute flex items-center justify-center overflow-hidden rounded-md border shadow-e1 transition-[border-color,background-color,color,transform]",
-                      bucketTone(factor, active),
+                      bucketTone(factor, houseEdgeBps, active),
                       active && "animate-[plinko-bucket-land_360ms_ease-out]"
                     )}
                     style={{
@@ -373,7 +383,7 @@ export function PlinkoStage({
                     }}
                   >
                     <span className="font-mono text-[9px] font-semibold tabular-nums sm:text-xs">
-                      {formatFactor(factor)}
+                      {formatFactor(factor, houseEdgeBps)}
                     </span>
                   </div>
                 );

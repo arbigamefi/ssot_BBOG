@@ -1,16 +1,25 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  canPoolHoldBet,
+  computePoolMaxStakeForReserve,
   computePoolFreeLiquidity,
   deriveGameRoomLimits,
   formatGameMaxPayout,
-  formatHouseEdge
+  formatHouseEdge,
+  resolveHouseEdgeBps
 } from "./presentation";
 
 describe("game room presentation helpers", () => {
   it("formats house edge fallbacks", () => {
     expect(formatHouseEdge(undefined, "roulette")).toBe("2.70%");
     expect(formatHouseEdge({ houseEdgeBps: 150 }, "dice")).toBe("1.50%");
+    expect(resolveHouseEdgeBps({ houseEdgeBps: 200 }, "dice")).toBe(200);
+    expect(resolveHouseEdgeBps(undefined, "dice", { defaultHouseEdgeBps: 200 })).toBe(200);
+    expect(formatHouseEdge(undefined, "coin-toss", { defaultHouseEdgeBps: 200 })).toBe("2.00%");
+    expect(resolveHouseEdgeBps({ houseEdgeBps: 150 }, "dice", { defaultHouseEdgeBps: 200 })).toBe(
+      150
+    );
   });
 
   it("formats release max payout or catalog fallback", () => {
@@ -62,7 +71,7 @@ describe("game room presentation helpers", () => {
     // The 90% threshold is only an SDK warning, not the Bank.holdBet solvency cap.
     const limits = deriveGameRoomLimits({
       freeLiquidity: 1_000_000_000n,
-      multiplier: 2,
+      reserveMultiplier: 2,
       assetDecimals: 6,
       assetSymbol: "USDC"
     });
@@ -72,10 +81,64 @@ describe("game room presentation helpers", () => {
     expect(limits.maxPayoutState).toBe("value");
   });
 
+  it("uses gross reserve multiplier rather than player-facing net multiplier for max bet", () => {
+    const limits = deriveGameRoomLimits({
+      freeLiquidity: 10_000_000n,
+      reserveMultiplier: 2,
+      assetDecimals: 6,
+      assetSymbol: "USDC"
+    });
+
+    expect(limits.maxPayout).toBe("10 USDC");
+    expect(limits.maxBet).toBe("5 USDC");
+    expect(limits.maxBetRaw).toBe(5_000_000n);
+  });
+
+  it("derives max bet from the actual post-stake Bank solvency condition", () => {
+    const snapshot = {
+      totalAssets: 1_000_000_000n,
+      totalReserved: 0n,
+      riskReserveBps: 1000
+    };
+
+    const maxStake = computePoolMaxStakeForReserve({
+      snapshot,
+      reserveMultiplier: 2
+    });
+
+    expect(maxStake).toBe(818_181_819n);
+    expect(
+      canPoolHoldBet({
+        snapshot,
+        stake: maxStake!,
+        requiredReserve: maxStake! * 2n
+      })
+    ).toBe(true);
+    expect(
+      canPoolHoldBet({
+        snapshot,
+        stake: maxStake! + 1n,
+        requiredReserve: (maxStake! + 1n) * 2n
+      })
+    ).toBe(false);
+
+    const limits = deriveGameRoomLimits({
+      freeLiquidity: computePoolFreeLiquidity(snapshot),
+      poolSnapshot: snapshot,
+      reserveMultiplier: 2,
+      assetDecimals: 6,
+      assetSymbol: "USDC"
+    });
+
+    expect(limits.maxBetRaw).toBe(818_181_819n);
+    expect(limits.maxBet).toBe("818.18 USDC");
+    expect(limits.maxPayout).toBe("1,636 USDC");
+  });
+
   it("does not cap live room limits by asset-agnostic static game metadata", () => {
     const limits = deriveGameRoomLimits({
       freeLiquidity: 1_000_000_000n,
-      multiplier: 10,
+      reserveMultiplier: 10,
       assetDecimals: 6,
       assetSymbol: "USDC"
     });
@@ -87,7 +150,7 @@ describe("game room presentation helpers", () => {
     expect(
       deriveGameRoomLimits({
         freeLiquidity: undefined,
-        multiplier: 2,
+        reserveMultiplier: 2,
         assetDecimals: 6,
         assetSymbol: "USDC"
       })
@@ -100,7 +163,7 @@ describe("game room presentation helpers", () => {
 
     const noOdds = deriveGameRoomLimits({
       freeLiquidity: 1_000_000_000n,
-      multiplier: 0,
+      reserveMultiplier: 0,
       assetDecimals: 6,
       assetSymbol: "USDC"
     });
@@ -113,7 +176,7 @@ describe("game room presentation helpers", () => {
   it("keeps zero pool capacity as a distinct state for product copy", () => {
     const limits = deriveGameRoomLimits({
       freeLiquidity: 0n,
-      multiplier: 2,
+      reserveMultiplier: 2,
       assetDecimals: 6,
       assetSymbol: "USDC"
     });

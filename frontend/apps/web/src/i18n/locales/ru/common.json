@@ -1136,6 +1136,7 @@
           "roundInProgress": "РАУНД ИДЁТ",
           "betMined": "СТАВКА В БЛОКЕ...",
           "signing": "ПОДПИСЬ / СТАВКА...",
+          "reduceAmount": "УМЕНЬШИТЕ СУММУ",
           "approveThenPlace": "ОДОБРИТЬ, ЗАТЕМ СТАВКА",
           "preparing": "ПОДГОТОВКА РАУНДА...",
           "placeBet": "СДЕЛАТЬ СТАВКУ",
@@ -1615,7 +1616,7 @@
         },
         "dice": {
           "tagline": "Бросьте число от 0 до 99. Выберите цель и направление.",
-          "houseEdge": "1.00%",
+          "houseEdge": "2.00%",
           "bets": [
             {
               "key": "under",
@@ -1633,19 +1634,19 @@
         },
         "coin-toss": {
           "tagline": "Чистые 50/50. Выберите сторону; один розыгрыш Chainlink VRF решает исход.",
-          "houseEdge": "1.00%",
+          "houseEdge": "2.00%",
           "bets": [
             {
               "key": "heads",
               "label": "Орёл",
               "coverage": "1 из 2 исходов",
-              "multiplier": "1,98×"
+              "multiplier": "1,96×"
             },
             {
               "key": "tails",
               "label": "Решка",
               "coverage": "1 из 2 исходов",
-              "multiplier": "1,98×"
+              "multiplier": "1,96×"
             }
           ]
         },

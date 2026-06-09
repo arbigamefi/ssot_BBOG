@@ -173,6 +173,11 @@ export function rouletteWinChance(spots: readonly string[]): number {
   return rouletteCoveredNumbers(spots).length * (100 / 37);
 }
 
+export function rouletteReserveMultiplier(spots: readonly string[]): number {
+  const covered = rouletteCoveredNumbers(spots).length;
+  return covered > 0 ? 37 / covered : 0;
+}
+
 export function buildRouletteBitmask(spots: readonly string[]): bigint {
   let bitmask = 0n;
   for (const number of rouletteCoveredNumbers(spots)) {
@@ -308,6 +313,40 @@ export function calculateGameWinChance(input: {
     return sicBoWinChance(kind, normalizeSicBoValue(kind, input.sicBoValue));
   }
   return 100;
+}
+
+export function calculateGameReserveMultiplier(input: {
+  slug: string;
+  diceTarget: number;
+  diceDirection: DiceDirection;
+  rouletteSpots: readonly string[];
+  kenoSpots: readonly number[];
+  plinkoRisk: PlinkoRisk;
+  baccaratSide?: BaccaratSide;
+  sicBoKind?: SicBoKind;
+  sicBoValue?: number;
+}): number {
+  if (input.slug === "dice") {
+    const winCount = input.diceDirection === "under" ? input.diceTarget : 100 - input.diceTarget;
+    return winCount > 0 ? 100 / winCount : 0;
+  }
+  if (input.slug === "coin-toss") return 2;
+  if (input.slug === "roulette") return rouletteReserveMultiplier(input.rouletteSpots);
+  if (input.slug === "keno") return kenoMaxMultiplier(input.kenoSpots.length);
+  if (input.slug === "plinko") return plinkoMaxMultiplier(input.plinkoRisk);
+  if (input.slug === "slots") return slotsMaxMultiplier();
+  if (input.slug === "baccarat") return baccaratMultiplier(input.baccaratSide ?? "player");
+  if (input.slug === "sic-bo") {
+    const kind = input.sicBoKind ?? "small";
+    return sicBoMultiplier(kind, normalizeSicBoValue(kind, input.sicBoValue));
+  }
+  return 0;
+}
+
+export function applyHouseEdgeToMultiplier(multiplier: number, houseEdgeBps: number): number {
+  if (!(multiplier > 0)) return 0;
+  const clampedBps = Math.min(10_000, Math.max(0, Math.round(houseEdgeBps)));
+  return multiplier * ((10_000 - clampedBps) / 10_000);
 }
 
 export function buildGameParams(input: BuildGameParamsInput): BuildGameParamsResult {

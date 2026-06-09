@@ -92,6 +92,7 @@ export function GameRoomRightPane({
   diceDirection,
   diceTarget,
   multiplier,
+  houseEdgeBps,
   winChance,
   rouletteSpots,
   kenoSpots,
@@ -140,6 +141,7 @@ export function GameRoomRightPane({
   diceDirection: DiceDirection;
   diceTarget: number;
   multiplier: number;
+  houseEdgeBps: number;
   winChance: number;
   rouletteSpots: readonly string[];
   kenoSpots: readonly number[];
@@ -257,6 +259,7 @@ export function GameRoomRightPane({
           isRevealing={Boolean(isRevealing)}
           showResult={showResult}
           spots={kenoSpots}
+          houseEdgeBps={houseEdgeBps}
           animatingSpots={animatingKenoSpots}
           resultDrawn={kenoResultDrawn}
           onChange={onKenoChange}
@@ -272,6 +275,7 @@ export function GameRoomRightPane({
           isRevealing={Boolean(isRevealing)}
           showResult={showResult}
           risk={plinkoRisk}
+          houseEdgeBps={houseEdgeBps}
           buckets={plinkoBuckets}
           onRiskChange={onPlinkoRiskChange}
           randomHash={resultProof?.randomHash}
@@ -297,6 +301,7 @@ export function GameRoomRightPane({
           isRevealing={Boolean(isRevealing)}
           showResult={showResult}
           selectedSide={baccaratSide}
+          houseEdgeBps={houseEdgeBps}
           onSideChange={onBaccaratSideChange}
           outcome={casinoOutcome?.kind === "baccarat" ? casinoOutcome : null}
           onRevealComplete={onBaccaratRevealComplete}
@@ -311,6 +316,7 @@ export function GameRoomRightPane({
           showResult={showResult}
           betKind={sicBoKind}
           betValue={sicBoValue}
+          houseEdgeBps={houseEdgeBps}
           onBetChange={onSicBoChange}
           outcome={casinoOutcome?.kind === "sic-bo" ? casinoOutcome : null}
           onRevealComplete={onSicBoRevealComplete}
@@ -324,6 +330,7 @@ export function GameRoomRightPane({
           assetSymbol={assetSymbol}
           assetDecimals={assetDecimals}
           gameSlug={gameSlug}
+          houseEdgeBps={houseEdgeBps}
           resultNum={resultNum}
           diceDirection={diceDirection}
           diceTarget={diceTarget}

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { GameRoomRightPane } from "./right-pane";
@@ -143,7 +143,16 @@ vi.mock("next-intl", () => ({
       "casino.room.stage.sicBo.triple": "Triple",
       "casino.room.stage.sicBo.result": "Result",
       "casino.room.result.actions.close": "Close",
+      "casino.room.result.actions.copyProof": "Copy proof of fairness",
+      "casino.room.result.actions.copyResultLink": "Copy result link",
+      "casino.room.result.actions.linkCopied": "Link copied",
+      "casino.room.result.actions.nativeShare": "Share sheet",
       "casino.room.result.actions.playAgain": "Play again",
+      "casino.room.result.actions.proofCopied": "Proof copied",
+      "casino.room.result.actions.share": "Share",
+      "casino.room.result.actions.shareToTelegram": "Share to Telegram",
+      "casino.room.result.actions.shareToWhatsApp": "Share to WhatsApp",
+      "casino.room.result.actions.shareToX": "Share to X",
       "casino.room.result.actions.viewSettlement": "View settlement",
       "casino.room.result.actions.settlementPending": "Settlement pending"
     })[key] ?? key
@@ -159,6 +168,7 @@ const baseProps = {
   diceDirection: "under" as const,
   diceTarget: 50,
   multiplier: 1.98,
+  houseEdgeBps: 200,
   winChance: 50,
   rouletteSpots: [],
   kenoSpots: [],
@@ -186,8 +196,23 @@ const baseProps = {
   onSicBoChange: vi.fn()
 };
 
+function mockMatchMedia(matches: boolean) {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    writable: true,
+    value: vi.fn().mockImplementation(() => ({
+      addEventListener: vi.fn(),
+      matches,
+      removeEventListener: vi.fn()
+    }))
+  });
+}
+
 describe("GameRoomRightPane", () => {
-  afterEach(() => cleanup());
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
 
   it("renders the empty live tracker and dice stage", async () => {
     render(<GameRoomRightPane {...baseProps} gameSlug="dice" />);
@@ -236,6 +261,43 @@ describe("GameRoomRightPane", () => {
     expect(screen.getByText("+ 9.6 USDC")).toBeDefined();
     expect(screen.getAllByText("17").length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: "Play again" })).toBeDefined();
+  });
+
+  it("opens the mobile share sheet from the settled result overlay", async () => {
+    mockMatchMedia(true);
+    render(
+      <GameRoomRightPane
+        {...baseProps}
+        gameSlug="roulette"
+        showResult
+        resultNum={17}
+        resultProof={{
+          kind: "settled",
+          betId: 123456n,
+          requestId: 88n,
+          randomHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          player: "0xc8ec9920d573893e888db5d30b2b3b3824b1b684",
+          stake: 10_000_000n,
+          vrfFeeCharged: 100_000_000_000_000n,
+          resolvedAt: 1_778_888_888,
+          settlement: {
+            txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            payoutGross: 20_000_000n,
+            payoutNet: 19_600_000n,
+            feeOnPayout: 400_000n,
+            protocolFeeAccrual: 200_000n
+          }
+        }}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Share" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("dialog", { name: "Share" })).toBeDefined();
+    });
+    expect(screen.getByRole("menuitem", { name: "Copy result link" })).toBeDefined();
+    expect(screen.getByRole("menuitem", { name: "Copy proof of fairness" })).toBeDefined();
   });
 
   it("does not open the result overlay until terminal proof is available", () => {
@@ -338,9 +400,60 @@ describe("GameRoomRightPane", () => {
 
     expect(screen.getByText("Symbols drawn")).toBeDefined();
     expect(screen.getByText("Seven / Seven / Seven")).toBeDefined();
-    expect(screen.getByText("64.00x")).toBeDefined();
+    expect(screen.getAllByText("62.72x").length).toBeGreaterThan(0);
+    expect(screen.queryByText("64.00x")).toBeNull();
     expect(screen.getByText("Jackpot")).toBeDefined();
     expect(screen.getByText("Yes")).toBeDefined();
+  });
+
+  it("shows plinko slot multiplier after house edge in the result overlay", () => {
+    render(
+      <GameRoomRightPane
+        {...baseProps}
+        gameSlug="plinko"
+        showResult
+        plinkoRisk="medium"
+        resultProof={{
+          kind: "settled",
+          betId: 76n,
+          requestId: 87n,
+          randomHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          player: "0xc8ec9920d573893e888db5d30b2b3b3824b1b684",
+          stake: 10_000_000n,
+          vrfFeeCharged: 100_000_000_000_000n,
+          resolvedAt: 1_778_888_888,
+          settlement: {
+            txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            payoutGross: 6_892_000n,
+            payoutNet: 6_754_160n,
+            feeOnPayout: 137_840n,
+            protocolFeeAccrual: 68_920n
+          }
+        }}
+        casinoOutcome={{
+          kind: "plinko",
+          risk: "medium",
+          rolls: [
+            {
+              bucket: 5,
+              path: ["L", "R", "R", "L", "R", "L", "R", "R"],
+              factorBps: 6_892,
+              won: false
+            }
+          ],
+          payoutGross: 6_892_000n,
+          payoutNet: 6_754_160n,
+          refundAmount: 0n,
+          feeOnPayout: 137_840n,
+          playerOwed: 6_754_160n,
+          netResult: -3_245_840n
+        }}
+      />
+    );
+
+    expect(screen.getByText("Slot multiplier")).toBeDefined();
+    expect(screen.getAllByText("0.67x").length).toBeGreaterThan(0);
+    expect(screen.queryByText("0.69x")).toBeNull();
   });
 
   it("shows baccarat opened cards, totals, and winning side in the result overlay", () => {
@@ -454,5 +567,8 @@ describe("GameRoomRightPane", () => {
     expect(screen.getByText("Dice opened")).toBeDefined();
     expect(screen.getByText("2 / 3 / 4")).toBeDefined();
     expect(screen.getByText("Total")).toBeDefined();
+    expect(screen.getByText("Roll multiplier")).toBeDefined();
+    expect(screen.getAllByText("8.46x").length).toBeGreaterThan(0);
+    expect(screen.queryByText("8.64x")).toBeNull();
   });
 });

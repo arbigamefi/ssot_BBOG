@@ -5,6 +5,7 @@ import { kenoMultiplier } from "@ssot/ssot/domain";
 import { useTranslations } from "next-intl";
 
 import { KenoDrawMachine } from "./keno-machine";
+import { applyHouseEdgeToMultiplier } from "../../room/params";
 
 function pickKenoSpots(count: number): number[] {
   const spots: number[] = [];
@@ -101,11 +102,13 @@ function KenoPayoutTable({
   spots,
   settledHits,
   hitLabel,
+  houseEdgeBps,
   className
 }: {
   spots: readonly number[];
   settledHits: number | null;
   hitLabel: (hits: number) => string;
+  houseEdgeBps: number;
   className?: string;
 }) {
   return (
@@ -113,7 +116,7 @@ function KenoPayoutTable({
       className={cn("flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1", className)}
     >
       {Array.from({ length: spots.length + 1 }).map((_, hits) => {
-        const pay = kenoMultiplier(spots.length, hits);
+        const pay = applyHouseEdgeToMultiplier(kenoMultiplier(spots.length, hits), houseEdgeBps);
         const isSettled = settledHits === hits;
         const isTarget = settledHits == null && hits === spots.length;
         return (
@@ -165,6 +168,7 @@ export function KenoStage({
   isRevealing,
   showResult,
   spots,
+  houseEdgeBps = 0,
   animatingSpots,
   resultDrawn,
   onChange,
@@ -176,6 +180,7 @@ export function KenoStage({
   isRevealing?: boolean;
   showResult: boolean;
   spots: readonly number[];
+  houseEdgeBps?: number;
   animatingSpots: readonly number[];
   resultDrawn: readonly number[];
   onChange: (spots: number[]) => void;
@@ -396,6 +401,7 @@ export function KenoStage({
                   spots={spots}
                   settledHits={settledHits}
                   hitLabel={hitLabel}
+                  houseEdgeBps={houseEdgeBps}
                   className="justify-center"
                 />
               </div>

@@ -67,6 +67,7 @@ vi.mock("next-intl", () => ({
       "casino.room.roundStatus.metrics.vrfRequest": "VRF request",
       "casino.room.roundStatus.actions.settleResult": "Settle result",
       "casino.room.roundStatus.actions.refundStake": "Refund stake",
+      "casino.room.shell.noCapacity": "No capacity",
       "casino.room.betPanel.walletBalance": "Wallet Balance",
       "casino.room.betPanel.limits.maxBet": "Max bet",
       "casino.room.betPanel.limits.poolPayout": "Pool pays",
@@ -100,6 +101,7 @@ vi.mock("next-intl", () => ({
       "casino.room.betPanel.placeBet.roundInProgress": "ROUND IN PROGRESS",
       "casino.room.betPanel.placeBet.betMined": "BET MINED...",
       "casino.room.betPanel.placeBet.signing": "SIGNING / PLACING...",
+      "casino.room.betPanel.placeBet.reduceAmount": "REDUCE AMOUNT",
       "casino.room.betPanel.placeBet.revealing": "REVEALING...",
       "casino.room.betPanel.placeBet.approveThenPlace": "APPROVE, THEN PLACE BET",
       "casino.room.betPanel.placeBet.preparing": "PREPARING ROUND...",
@@ -249,6 +251,76 @@ describe("GameRoomBetPanel", () => {
     expect(cappedByWallet.onBetAmountChange).toHaveBeenCalledWith(100);
   });
 
+  it("does not lift a zero wallet balance or tiny pool cap back to the minimum bet", () => {
+    const zeroWallet = renderPanel({
+      hasAccount: true,
+      walletBalance: { label: "0 USDC", raw: 0n },
+      maxBetAmount: 200,
+      onBetAmountChange: vi.fn()
+    });
+
+    expect(
+      (screen.getByRole("button", { name: "No capacity" }) as HTMLButtonElement).disabled
+    ).toBe(true);
+    expect((screen.getByRole("textbox", { name: "Bet amount" }) as HTMLInputElement).disabled).toBe(
+      true
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Max" }));
+    expect(zeroWallet.onBetAmountChange).not.toHaveBeenCalled();
+
+    cleanup();
+    renderPanel({
+      hasAccount: true,
+      maxBetAmount: 0.009
+    });
+
+    expect(
+      (screen.getByRole("button", { name: "No capacity" }) as HTMLButtonElement).disabled
+    ).toBe(true);
+    expect((screen.getByRole("textbox", { name: "Bet amount" }) as HTMLInputElement).disabled).toBe(
+      true
+    );
+  });
+
+  it("disables placement when the typed amount exceeds the current effective max", () => {
+    renderPanel({
+      hasAccount: true,
+      betAmount: 10,
+      maxBetAmount: 5
+    });
+
+    expect(
+      (screen.getByRole("button", { name: "REDUCE AMOUNT" }) as HTMLButtonElement).disabled
+    ).toBe(true);
+  });
+
+  it("keeps active round status on the CTA even when the configured amount now exceeds max", () => {
+    renderPanel({
+      hasAccount: true,
+      betAmount: 10,
+      maxBetAmount: 5,
+      isPending: true,
+      state: { status: "mined" },
+      ctaPhase: "revealing"
+    });
+
+    expect(screen.getByRole("button", { name: "REVEALING..." })).toBeDefined();
+    expect(screen.queryByRole("button", { name: "REDUCE AMOUNT" })).toBeNull();
+
+    cleanup();
+    renderPanel({
+      hasAccount: true,
+      betAmount: 10,
+      maxBetAmount: 5,
+      isPending: true,
+      state: { status: "mined" },
+      ctaPhase: "settling"
+    });
+
+    expect(screen.getByRole("button", { name: "Settling" })).toBeDefined();
+    expect(screen.queryByRole("button", { name: "REDUCE AMOUNT" })).toBeNull();
+  });
+
   it("locks amount shortcuts and advanced inputs while a round is active", () => {
     const props = renderPanel({
       hasAccount: true,
@@ -286,6 +358,25 @@ describe("GameRoomBetPanel", () => {
         state: baseState
       })
     ).toBe(true);
+    expect(
+      isPlaceBetButtonDisabled({
+        gameSlug: "dice",
+        isPending: false,
+        winChance: 50,
+        state: baseState,
+        amountExceedsMax: true
+      })
+    ).toBe(true);
+    expect(
+      isPlaceBetButtonDisabled({
+        gameSlug: "dice",
+        isPending: true,
+        winChance: 50,
+        state: baseState,
+        amountUnavailable: true,
+        manualSettleAvailable: true
+      })
+    ).toBe(false);
   });
 
   it("uses one signing label for wallet submission and a separate reveal label", () => {

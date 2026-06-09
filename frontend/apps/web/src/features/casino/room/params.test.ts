@@ -11,9 +11,11 @@ import {
 import { describe, expect, it } from "vitest";
 
 import {
+  applyHouseEdgeToMultiplier,
   buildGameParams,
   buildKenoMask,
   buildRouletteBitmask,
+  calculateGameReserveMultiplier,
   calculateGameWinChance,
   createRouletteParamsInput,
   kenoMaxMultiplier,
@@ -29,6 +31,55 @@ describe("game room params", () => {
     // No selection / invalid count → 0 (no bet possible).
     expect(kenoMaxMultiplier(0)).toBe(0);
     expect(kenoMaxMultiplier(99)).toBe(0);
+  });
+
+  it("derives gross reserve multipliers for Bank capacity, not player-facing net odds", () => {
+    expect(
+      calculateGameReserveMultiplier({
+        slug: "dice",
+        diceTarget: 50,
+        diceDirection: "under",
+        rouletteSpots: [],
+        kenoSpots: [],
+        plinkoRisk: "medium"
+      })
+    ).toBe(2);
+    expect(
+      calculateGameReserveMultiplier({
+        slug: "coin-toss",
+        diceTarget: 50,
+        diceDirection: "under",
+        rouletteSpots: [],
+        kenoSpots: [],
+        plinkoRisk: "medium"
+      })
+    ).toBe(2);
+    expect(
+      calculateGameReserveMultiplier({
+        slug: "roulette",
+        diceTarget: 50,
+        diceDirection: "under",
+        rouletteSpots: ["RED"],
+        kenoSpots: [],
+        plinkoRisk: "medium"
+      })
+    ).toBeCloseTo(37 / 18);
+    expect(
+      calculateGameReserveMultiplier({
+        slug: "roulette",
+        diceTarget: 50,
+        diceDirection: "under",
+        rouletteSpots: ["3", "6", "9", "12", "15"],
+        kenoSpots: [],
+        plinkoRisk: "medium"
+      })
+    ).toBeCloseTo(37 / 5);
+  });
+
+  it("applies house edge only to player-facing multipliers", () => {
+    expect(applyHouseEdgeToMultiplier(2, 200)).toBeCloseTo(1.96);
+    expect(applyHouseEdgeToMultiplier(37 / 18, 270)).toBeCloseTo((37 / 18) * 0.973);
+    expect(applyHouseEdgeToMultiplier(0, 200)).toBe(0);
   });
 
   it("calculates per-game visible win chance", () => {
@@ -72,6 +123,16 @@ describe("game room params", () => {
         plinkoRisk: "medium"
       })
     ).toBeCloseTo(18 * (100 / 37));
+    expect(
+      calculateGameWinChance({
+        slug: "roulette",
+        diceTarget: 50,
+        diceDirection: "under",
+        rouletteSpots: ["3", "6", "9", "12", "15"],
+        kenoSpots: [],
+        plinkoRisk: "medium"
+      })
+    ).toBeCloseTo(5 * (100 / 37));
     expect(
       calculateGameWinChance({
         slug: "keno",
@@ -188,6 +249,32 @@ describe("game room params", () => {
     expect(mask & 1n).toBe(1n);
     expect(mask & (1n << 1n)).toBe(1n << 1n);
     expect(createRouletteParamsInput(["0", "RED"])).toEqual({ kind: "bitmask", mask });
+
+    const straightMask = buildRouletteBitmask(["3", "6", "9", "12", "15"]);
+    expect(createRouletteParamsInput(["3", "6", "9", "12", "15"])).toEqual({
+      kind: "bitmask",
+      mask: straightMask
+    });
+  });
+
+  it("encodes mixed Roulette selections as the V14 typed bitmask tuple", () => {
+    const roulette = buildGameParams({
+      slug: "roulette",
+      diceTarget: 50,
+      diceDirection: "under",
+      coinSide: "HEADS",
+      rouletteSpots: ["0", "RED"],
+      kenoSpots: [],
+      plinkoRisk: "medium"
+    });
+
+    expect(roulette.ok).toBe(true);
+    if (!roulette.ok) return;
+    expect((roulette.params.length - 2) / 2).toBe(64);
+    expect(decodeRouletteParams(roulette.params)).toEqual({
+      kind: "bitmask",
+      mask: buildRouletteBitmask(["0", "RED"])
+    });
   });
 
   it("builds encoded params through the SSOT encoding package", () => {

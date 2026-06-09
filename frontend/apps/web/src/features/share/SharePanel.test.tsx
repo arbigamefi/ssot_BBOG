@@ -94,4 +94,14 @@ describe("SharePanel", () => {
     ).toBeDefined();
     expect(screen.getByRole("menuitem", { name: "Copy proof of fairness" })).toBeDefined();
   });
+
+  it("raises the mobile sheet above a result modal when rendered from a modal action", async () => {
+    mockMatchMedia(true);
+    renderSharePanel({ desktopLayer: "modal" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Share" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Share" });
+    expect(dialog.parentElement?.className).toContain("z-[95]");
+  });
 });

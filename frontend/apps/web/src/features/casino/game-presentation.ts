@@ -36,7 +36,7 @@ export const CASINO_GAME_PRESENTATION: Record<CasinoModuleSlug, CasinoGamePresen
     ogEyebrow: "Provably fair · Coin toss",
     ogTitle: "Call the side. Flip on-chain.",
     ogSubtitle: "A true 50/50 decided by a single Chainlink VRF draw.",
-    ogStat: "1.98×",
+    ogStat: "1.96×",
     ogTone: "brand"
   },
   roulette: {

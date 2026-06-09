@@ -4,7 +4,11 @@ import { useTranslations } from "next-intl";
 import { cn } from "@ssot/ui";
 
 import type { CasinoOutcome } from "../../room/outcome";
-import { baccaratMultiplier, type BaccaratSide } from "../../room/params";
+import {
+  applyHouseEdgeToMultiplier,
+  baccaratMultiplier,
+  type BaccaratSide
+} from "../../room/params";
 import { BaccaratCard, EmptyCardSlot } from "./baccarat-card";
 
 /**
@@ -151,14 +155,18 @@ function BetBox({
   active,
   disabled,
   onClick,
+  houseEdgeBps,
   t
 }: {
   side: BaccaratSide;
   active: boolean;
   disabled: boolean;
   onClick: () => void;
+  houseEdgeBps: number;
   t: ReturnType<typeof useTranslations>;
 }) {
+  const displayMultiplier = applyHouseEdgeToMultiplier(baccaratMultiplier(side), houseEdgeBps);
+
   return (
     <button
       type="button"
@@ -181,7 +189,7 @@ function BetBox({
         {formatSide(side, t)}
       </span>
       <span className="font-mono text-xs text-accent">
-        {baccaratMultiplier(side).toFixed(side === "tie" ? 2 : 3)}x
+        {displayMultiplier.toFixed(side === "tie" ? 2 : 3)}x
       </span>
     </button>
   );
@@ -193,6 +201,7 @@ export function BaccaratStage({
   isRevealing,
   showResult,
   selectedSide,
+  houseEdgeBps = 0,
   onSideChange,
   outcome,
   onRevealComplete
@@ -202,6 +211,7 @@ export function BaccaratStage({
   isRevealing?: boolean;
   showResult: boolean;
   selectedSide: BaccaratSide;
+  houseEdgeBps?: number;
   onSideChange: (side: BaccaratSide) => void;
   outcome?: Extract<CasinoOutcome, { kind: "baccarat" }> | null;
   onRevealComplete?: () => void;
@@ -225,8 +235,7 @@ export function BaccaratStage({
   const [revealedCards, setRevealedCards] = React.useState(() =>
     showResult && roll ? dealOrder.length : 0
   );
-  const dealComplete = Boolean(roll && revealedCards >= dealOrder.length);
-  const hasResult = Boolean(showResult && roll && (dealComplete || !isRevealing));
+  const displayResult = Boolean(showResult && roll && !isRevealing);
   const winner = roll?.outcome;
   const instantCards = Boolean(showResult && roll && !isRevealing);
   const dealingActive = isPending || Boolean(isRevealing);
@@ -287,7 +296,7 @@ export function BaccaratStage({
   const statusText =
     isPending || isRevealing
       ? t("casino.room.stage.baccarat.dealing")
-      : hasResult
+      : displayResult
         ? t("casino.room.stage.baccarat.result", { side: formatSide(winner ?? "tie", t) })
         : t("casino.room.stage.baccarat.ready");
 
@@ -346,8 +355,8 @@ export function BaccaratStage({
                   title={formatSide("player", t)}
                   suitOffset={0}
                   slots={playerSlots}
-                  total={hasResult ? roll?.playerTotal : undefined}
-                  winner={hasResult && winner === "player"}
+                  total={displayResult ? roll?.playerTotal : undefined}
+                  winner={displayResult && winner === "player"}
                   instant={instantCards}
                 />
                 <HandZone
@@ -355,8 +364,8 @@ export function BaccaratStage({
                   title={formatSide("banker", t)}
                   suitOffset={2}
                   slots={bankerSlots}
-                  total={hasResult ? roll?.bankerTotal : undefined}
-                  winner={hasResult && winner === "banker"}
+                  total={displayResult ? roll?.bankerTotal : undefined}
+                  winner={displayResult && winner === "banker"}
                   instant={instantCards}
                 />
               </div>
@@ -369,6 +378,7 @@ export function BaccaratStage({
                     active={side === selectedSide}
                     disabled={selectionDisabled}
                     onClick={() => onSideChange(side)}
+                    houseEdgeBps={houseEdgeBps}
                     t={t}
                   />
                 ))}
@@ -383,7 +393,9 @@ export function BaccaratStage({
             <p
               className={cn(
                 "text-[10px] font-semibold uppercase tracking-[0.22em]",
-                hasResult && winner && winner === selectedSide ? "text-accent" : "text-fg-subtle"
+                displayResult && winner && winner === selectedSide
+                  ? "text-accent"
+                  : "text-fg-subtle"
               )}
             >
               {statusText}

@@ -9,7 +9,10 @@ import {
   BetAdvancedSection,
   BetAmountSection,
   BetPayoutSummary,
-  BetRollsSection
+  BetRollsSection,
+  isBetAmountAboveMax,
+  isBetAmountUnavailable,
+  resolveBetMaxAmount
 } from "./bet-panel-sections";
 import type { GameMeta } from "./model";
 import type { GameRoomBetPanelState, PlaceBetButtonPhase } from "./place-bet-button";
@@ -123,6 +126,9 @@ export function GameRoomBetPanel({
     : (walletBalance?.label ?? "—");
   const walletBalanceAmount =
     walletBalance?.raw == null ? null : Number(formatUnits(walletBalance.raw, assetDecimals));
+  const effectiveMaxAmount = resolveBetMaxAmount(walletBalanceAmount, maxBetAmount);
+  const amountUnavailable = isBetAmountUnavailable(effectiveMaxAmount);
+  const amountExceedsMax = isBetAmountAboveMax(betAmount, effectiveMaxAmount);
   const limitValueClass = (isHint: boolean) =>
     cn("mt-0.5 truncate text-xs font-bold", isHint ? "text-fg-muted" : "font-mono text-fg");
 
@@ -282,6 +288,8 @@ export function GameRoomBetPanel({
           roundPhase={ctaPhase ?? roundPhase}
           manualSettleAvailable={manualSettleAvailable}
           manualRefundAvailable={manualRefundAvailable}
+          amountUnavailable={amountUnavailable}
+          amountExceedsMax={amountExceedsMax}
           onClick={primaryAction}
         />
       </div>

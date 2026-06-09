@@ -72,19 +72,22 @@ const FACE_ROTATION: Record<number, { rx: number; ry: number }> = {
   6: { rx: 0, ry: 180 }
 };
 
-function PipFace({ value, won }: { value: number; won: boolean }) {
+function PipFace({ value, won, visible }: { value: number; won: boolean; visible: boolean }) {
   const lit = DIE_PIPS[value] ?? [];
   return (
     <div className="grid h-full w-full grid-cols-3 grid-rows-3 p-2.5">
       {Array.from({ length: 9 }).map((_, i) => {
         const r = Math.floor(i / 3);
         const c = i % 3;
-        const on = lit.some(([pr, pc]) => pr === r && pc === c);
+        const on = visible && lit.some(([pr, pc]) => pr === r && pc === c);
         return (
           <span key={i} className="flex items-center justify-center">
             {on ? (
               <span
-                className={cn("h-2.5 w-2.5 rounded-full shadow-e1", won ? "bg-accent" : "bg-fg")}
+                className={cn(
+                  "h-2.5 w-2.5 rounded-full bg-fg shadow-e1",
+                  won && "ring-1 ring-inset ring-accent/45"
+                )}
               />
             ) : null}
           </span>
@@ -144,6 +147,7 @@ export function SicBoDie({
         animate={animate}
         transition={transition}
         aria-label={`Die showing ${value}`}
+        data-won={won && mode === "settled" ? "true" : "false"}
       >
         {FACES.map((f) => (
           <div
@@ -156,7 +160,11 @@ export function SicBoDie({
             )}
             style={{ width: SIZE, height: SIZE, transform: f.transform }}
           >
-            <PipFace value={f.value} won={won && mode === "settled"} />
+            <PipFace
+              value={f.value}
+              won={won && mode === "settled"}
+              visible={mode !== "settled" || f.value === value}
+            />
           </div>
         ))}
       </motion.div>

@@ -4,7 +4,12 @@ import { useTranslations } from "next-intl";
 import { cn } from "@ssot/ui";
 
 import type { CasinoOutcome } from "../../room/outcome";
-import { normalizeSicBoValue, sicBoMultiplier, type SicBoKind } from "../../room/params";
+import {
+  applyHouseEdgeToMultiplier,
+  normalizeSicBoValue,
+  sicBoMultiplier,
+  type SicBoKind
+} from "../../room/params";
 import { SicBoDie, type SicBoDieMode } from "./sic-bo-die";
 
 /**
@@ -39,6 +44,10 @@ function formatSicBoBet(kind: SicBoKind, value: number, t: ReturnType<typeof use
     return `${label} ${value}`;
   }
   return label;
+}
+
+function formatSicBoMultiplier(kind: SicBoKind, value: number, houseEdgeBps: number) {
+  return `${applyHouseEdgeToMultiplier(sicBoMultiplier(kind, value), houseEdgeBps).toFixed(2)}x`;
 }
 
 function isSicBoActive(
@@ -166,6 +175,7 @@ export function SicBoStage({
   showResult,
   betKind,
   betValue,
+  houseEdgeBps = 0,
   onBetChange,
   outcome,
   onRevealComplete
@@ -176,6 +186,7 @@ export function SicBoStage({
   showResult: boolean;
   betKind: SicBoKind;
   betValue: number;
+  houseEdgeBps?: number;
   onBetChange: (kind: SicBoKind, value: number) => void;
   outcome?: Extract<CasinoOutcome, { kind: "sic-bo" }> | null;
   onRevealComplete?: () => void;
@@ -184,7 +195,8 @@ export function SicBoStage({
   const prefersReducedMotion = useReducedMotion() ?? false;
   const roll: SicBoRoll | undefined = outcome?.rolls.at(-1);
   const [diceOpened, setDiceOpened] = React.useState(() => Boolean(showResult && roll));
-  const hasResult = Boolean(showResult && roll && (diceOpened || !isRevealing));
+  const diceRevealed = Boolean(showResult && roll && (diceOpened || !isRevealing));
+  const displayResult = Boolean(showResult && roll && !isRevealing);
   const isRollingReveal = Boolean(isRevealing && roll && !diceOpened);
   const covered = isPending || isRollingReveal;
   const selectionDisabled = controlsLocked || isPending || Boolean(isRevealing);
@@ -214,7 +226,7 @@ export function SicBoStage({
     return () => timeouts.forEach((timeout) => window.clearTimeout(timeout));
   }, [isRevealing, onRevealComplete, prefersReducedMotion, roll, showResult]);
 
-  const dieMode: SicBoDieMode = covered ? "rolling" : hasResult ? "settled" : "idle";
+  const dieMode: SicBoDieMode = covered ? "rolling" : diceRevealed ? "settled" : "idle";
 
   return (
     <div className="relative z-10 w-full min-w-0 overflow-visible lg:absolute lg:inset-0 lg:overflow-y-auto lg:custom-scrollbar">
@@ -273,7 +285,7 @@ export function SicBoStage({
                       value={roll?.dice[index] ?? FACE_VALUES[index] ?? 1}
                       mode={dieMode}
                       seed={index}
-                      won={Boolean(hasResult && roll?.won)}
+                      won={Boolean(displayResult && roll?.won)}
                       reduced={prefersReducedMotion}
                     />
                   ))}
@@ -318,21 +330,21 @@ export function SicBoStage({
               <div className="grid grid-cols-2 gap-2">
                 <TableBetButton
                   label={t("casino.room.selection.sicBo.kinds.small")}
-                  detail={`${sicBoMultiplier("small", 0).toFixed(2)}x`}
+                  detail={formatSicBoMultiplier("small", 0, houseEdgeBps)}
                   active={betKind === "small"}
                   disabled={selectionDisabled}
                   onClick={() => onBetChange("small", 0)}
                 />
                 <TableBetButton
                   label={t("casino.room.selection.sicBo.kinds.big")}
-                  detail={`${sicBoMultiplier("big", 0).toFixed(2)}x`}
+                  detail={formatSicBoMultiplier("big", 0, houseEdgeBps)}
                   active={betKind === "big"}
                   disabled={selectionDisabled}
                   onClick={() => onBetChange("big", 0)}
                 />
                 <TableBetButton
                   label={t("casino.room.selection.sicBo.kinds.anyTriple")}
-                  detail={`${sicBoMultiplier("anyTriple", 0).toFixed(2)}x`}
+                  detail={formatSicBoMultiplier("anyTriple", 0, houseEdgeBps)}
                   active={betKind === "anyTriple"}
                   disabled={selectionDisabled}
                   onClick={() => onBetChange("anyTriple", 0)}
@@ -421,14 +433,16 @@ export function SicBoStage({
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-fg-subtle">
                   {t("casino.room.stage.sicBo.total")}
                 </p>
-                <p className="mt-1 font-mono text-2xl font-bold text-fg">{roll?.total ?? "—"}</p>
+                <p className="mt-1 font-mono text-2xl font-bold text-fg">
+                  {displayResult ? (roll?.total ?? "—") : "—"}
+                </p>
               </div>
               <div className="rounded-lg bg-surface-2 px-3 py-2.5 text-center ring-1 ring-inset ring-border-soft">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-fg-subtle">
                   {t("casino.room.stage.sicBo.triple")}
                 </p>
                 <p className="mt-1 font-mono text-2xl font-bold text-fg">
-                  {roll == null
+                  {!displayResult || roll == null
                     ? "—"
                     : roll.triple
                       ? t("casino.room.selection.slots.yes")
@@ -442,10 +456,14 @@ export function SicBoStage({
                 <p
                   className={cn(
                     "mt-1 font-mono text-2xl font-bold",
-                    roll?.won ? "text-success" : hasResult ? "text-danger" : "text-fg"
+                    displayResult && roll?.won
+                      ? "text-success"
+                      : displayResult
+                        ? "text-danger"
+                        : "text-fg"
                   )}
                 >
-                  {roll == null
+                  {!displayResult || roll == null
                     ? "—"
                     : roll.won
                       ? t("casino.room.result.outcomes.win.label")
@@ -458,7 +476,7 @@ export function SicBoStage({
               <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-fg-subtle">
                 {isPending || isRevealing
                   ? t("casino.room.stage.sicBo.rolling")
-                  : hasResult
+                  : displayResult
                     ? t("casino.room.stage.sicBo.opened", { dice: roll?.dice.join(" / ") ?? "—" })
                     : t("casino.room.stage.sicBo.ready")}
               </p>

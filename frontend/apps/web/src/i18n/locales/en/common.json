@@ -418,6 +418,7 @@
           "roundInProgress": "ROUND IN PROGRESS",
           "betMined": "BET MINED...",
           "signing": "SIGNING / PLACING...",
+          "reduceAmount": "REDUCE AMOUNT",
           "approveThenPlace": "APPROVE, THEN PLACE BET",
           "preparing": "PREPARING ROUND...",
           "placeBet": "PLACE BET",
@@ -754,7 +755,7 @@
         },
         "dice": {
           "tagline": "Roll a number from 0 to 99. Pick a target and a direction.",
-          "houseEdge": "1.00%",
+          "houseEdge": "2.00%",
           "bets": [
             {
               "key": "under",
@@ -772,19 +773,19 @@
         },
         "coin-toss": {
           "tagline": "True 50/50. Pick a side; one Chainlink VRF draw decides it.",
-          "houseEdge": "1.00%",
+          "houseEdge": "2.00%",
           "bets": [
             {
               "key": "heads",
               "label": "Heads",
               "coverage": "1 of 2 outcomes",
-              "multiplier": "1.98×"
+              "multiplier": "1.96×"
             },
             {
               "key": "tails",
               "label": "Tails",
               "coverage": "1 of 2 outcomes",
-              "multiplier": "1.98×"
+              "multiplier": "1.96×"
             }
           ]
         },

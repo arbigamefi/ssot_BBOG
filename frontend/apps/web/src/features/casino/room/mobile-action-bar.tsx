@@ -5,6 +5,8 @@ import { cn } from "@ssot/ui";
 import { TokenLogo } from "../../../components/TokenLogo";
 import {
   clampBetAmount,
+  isBetAmountAboveMax,
+  isBetAmountUnavailable,
   MIN_BET_AMOUNT,
   parseBetAmountInput,
   resolveBetMaxAmount
@@ -59,6 +61,8 @@ export function MobileCasinoActionBar({
         ? onManualSettle
         : onPlaceBet;
   const maxAmount = resolveBetMaxAmount(walletBalanceAmount, maxBetAmount);
+  const amountUnavailable = isBetAmountUnavailable(maxAmount);
+  const amountExceedsMax = isBetAmountAboveMax(betAmount, maxAmount);
   const adjust = (next: number) => onBetAmountChange?.(clampBetAmount(next, maxAmount));
 
   // Thumb-zone quick amounts so a bet can be sized without scrolling up to the
@@ -72,7 +76,8 @@ export function MobileCasinoActionBar({
       onClick: () => adjust(maxAmount ?? betAmount)
     }
   ];
-  const showQuick = Boolean(onBetAmountChange) && !isPending;
+  const showQuick = Boolean(onBetAmountChange) && !isPending && !amountUnavailable;
+  const controlsDisabled = isPending || amountUnavailable;
 
   return (
     <div className="space-y-2" data-mobile-bet-action>
@@ -92,9 +97,9 @@ export function MobileCasinoActionBar({
             autoComplete="off"
             aria-label={t("casino.room.betPanel.amount.aria")}
             value={String(betAmount)}
-            disabled={isPending}
+            disabled={controlsDisabled}
             onChange={(event) => {
-              if (isPending) return;
+              if (controlsDisabled) return;
               onBetAmountChange?.(
                 parseBetAmountInput(event.target.value, {
                   min: MIN_BET_AMOUNT,
@@ -132,6 +137,8 @@ export function MobileCasinoActionBar({
         roundPhase={roundPhase}
         manualSettleAvailable={manualSettleAvailable}
         manualRefundAvailable={manualRefundAvailable}
+        amountUnavailable={amountUnavailable}
+        amountExceedsMax={amountExceedsMax}
         onClick={primaryAction}
         density="compact"
       />
