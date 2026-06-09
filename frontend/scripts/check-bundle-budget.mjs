@@ -13,7 +13,10 @@ const manifestPath = path.resolve(buildRoot, "app-build-manifest.json");
 const budgets = [
   { route: "/(marketing)/page", publicPath: "/", maxKb: 160 },
   { route: "/(product)/casino/page", publicPath: "/casino", maxKb: 180 },
-  { route: "/(product)/casino/[slug]/page", publicPath: "/casino/[slug]", maxKb: 200 },
+  // The casino room route manifest includes all dynamically imported game
+  // stages, not only the currently selected room's initial stage. Keep this
+  // budget tight, but allow the accepted 8-game mobile stage set.
+  { route: "/(product)/casino/[slug]/page", publicPath: "/casino/[slug]", maxKb: 205 },
   { route: "/(product)/earn/page", publicPath: "/earn", maxKb: 180 },
   { route: "/(product)/ops/page", publicPath: "/ops", maxKb: 220 },
   { route: "/(product)/portfolio/page", publicPath: "/portfolio", maxKb: 190 },
