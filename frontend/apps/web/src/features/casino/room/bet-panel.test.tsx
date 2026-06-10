@@ -147,7 +147,7 @@ function renderPanel(overrides: Partial<React.ComponentProps<typeof GameRoomBetP
     assetSymbol: "USDC",
     maxBetLabel: "200 USDC",
     maxPayoutLabel: "500 USDC",
-    betAmount: 10,
+    betAmount: "10",
     onBetAmountChange: vi.fn(),
     betCount: 1,
     onBetCountChange: vi.fn(),
@@ -225,7 +225,7 @@ describe("GameRoomBetPanel", () => {
     const props = renderPanel({ hasAccount: true });
 
     fireEvent.click(screen.getByRole("button", { name: "Min" }));
-    expect(props.onBetAmountChange).toHaveBeenCalledWith(0.01);
+    expect(props.onBetAmountChange).toHaveBeenCalledWith("0.01");
 
     fireEvent.click(screen.getByRole("button", { name: "PLACE BET" }));
     expect(props.onPlaceBet).toHaveBeenCalledTimes(1);
@@ -234,28 +234,28 @@ describe("GameRoomBetPanel", () => {
   it("caps the Max amount shortcut by wallet balance and current pool max bet", () => {
     const cappedByPool = renderPanel({
       hasAccount: true,
-      maxBetAmount: 200,
+      maxBetRaw: 200_000_000n,
       onBetAmountChange: vi.fn()
     });
     fireEvent.click(screen.getByRole("button", { name: "Max" }));
-    expect(cappedByPool.onBetAmountChange).toHaveBeenCalledWith(200);
+    expect(cappedByPool.onBetAmountChange).toHaveBeenCalledWith("200");
 
     cleanup();
     const cappedByWallet = renderPanel({
       hasAccount: true,
       walletBalance: { label: "100.00 USDC", raw: 100_000_000n },
-      maxBetAmount: 200,
+      maxBetRaw: 200_000_000n,
       onBetAmountChange: vi.fn()
     });
     fireEvent.click(screen.getByRole("button", { name: "Max" }));
-    expect(cappedByWallet.onBetAmountChange).toHaveBeenCalledWith(100);
+    expect(cappedByWallet.onBetAmountChange).toHaveBeenCalledWith("100");
   });
 
   it("does not lift a zero wallet balance or tiny pool cap back to the minimum bet", () => {
     const zeroWallet = renderPanel({
       hasAccount: true,
       walletBalance: { label: "0 USDC", raw: 0n },
-      maxBetAmount: 200,
+      maxBetRaw: 200_000_000n,
       onBetAmountChange: vi.fn()
     });
 
@@ -271,7 +271,7 @@ describe("GameRoomBetPanel", () => {
     cleanup();
     renderPanel({
       hasAccount: true,
-      maxBetAmount: 0.009
+      maxBetRaw: 9_000n
     });
 
     expect(
@@ -285,8 +285,8 @@ describe("GameRoomBetPanel", () => {
   it("disables placement when the typed amount exceeds the current effective max", () => {
     renderPanel({
       hasAccount: true,
-      betAmount: 10,
-      maxBetAmount: 5
+      betAmount: "10",
+      maxBetRaw: 5_000_000n
     });
 
     expect(
@@ -297,8 +297,8 @@ describe("GameRoomBetPanel", () => {
   it("keeps active round status on the CTA even when the configured amount now exceeds max", () => {
     renderPanel({
       hasAccount: true,
-      betAmount: 10,
-      maxBetAmount: 5,
+      betAmount: "10",
+      maxBetRaw: 5_000_000n,
       isPending: true,
       state: { status: "mined" },
       ctaPhase: "revealing"
@@ -310,8 +310,8 @@ describe("GameRoomBetPanel", () => {
     cleanup();
     renderPanel({
       hasAccount: true,
-      betAmount: 10,
-      maxBetAmount: 5,
+      betAmount: "10",
+      maxBetRaw: 5_000_000n,
       isPending: true,
       state: { status: "mined" },
       ctaPhase: "settling"
@@ -451,7 +451,7 @@ describe("GameRoomBetPanel", () => {
       target: { value: "" }
     });
 
-    expect(props.onBetAmountChange).toHaveBeenCalledWith(25.5);
+    expect(props.onBetAmountChange).toHaveBeenCalledWith("25.5");
     expect(props.onBetCountChange).toHaveBeenCalledWith(100);
     expect(props.onStopGainChange).toHaveBeenCalledWith(30);
     expect(props.onStopLossChange).toHaveBeenCalledWith(0);

@@ -3,17 +3,14 @@ import { useTranslations } from "next-intl";
 import { InformationCircleIcon, WalletIcon } from "@heroicons/react/24/outline";
 import { AssetSelector, cn, type AssetOption } from "@ssot/ui";
 
-import { formatUnits } from "../../betting/model/units";
 import { TokenLogo } from "../../../components/TokenLogo";
 import {
   BetAdvancedSection,
   BetAmountSection,
   BetPayoutSummary,
-  BetRollsSection,
-  isBetAmountAboveMax,
-  isBetAmountUnavailable,
-  resolveBetMaxAmount
+  BetRollsSection
 } from "./bet-panel-sections";
+import { isBetAmountAboveMax, isBetAmountUnavailable, resolveBetMaxRaw } from "./bet-amount";
 import type { GameMeta } from "./model";
 import type { GameRoomBetPanelState, PlaceBetButtonPhase } from "./place-bet-button";
 import { PlaceBetButton } from "./place-bet-button";
@@ -38,7 +35,7 @@ export function GameRoomBetPanel({
   maxPayoutLabel,
   maxPayoutIsHint = false,
   betAmount,
-  maxBetAmount,
+  maxBetRaw,
   onBetAmountChange,
   betCount,
   onBetCountChange,
@@ -80,10 +77,10 @@ export function GameRoomBetPanel({
   /** Maximum payout supported by the selected pool. */
   maxPayoutLabel: string;
   maxPayoutIsHint?: boolean;
-  betAmount: number;
+  betAmount: string;
   /** Per-roll amount cap derived from wallet balance and current pool liquidity. */
-  maxBetAmount?: number;
-  onBetAmountChange: (amount: number) => void;
+  maxBetRaw?: bigint;
+  onBetAmountChange: (amount: string) => void;
   betCount: number;
   onBetCountChange: (count: number) => void;
   stopGain: number;
@@ -124,11 +121,10 @@ export function GameRoomBetPanel({
   const balanceLabel = !hasAccount
     ? t("casino.room.betPanel.notConnected")
     : (walletBalance?.label ?? "—");
-  const walletBalanceAmount =
-    walletBalance?.raw == null ? null : Number(formatUnits(walletBalance.raw, assetDecimals));
-  const effectiveMaxAmount = resolveBetMaxAmount(walletBalanceAmount, maxBetAmount);
-  const amountUnavailable = isBetAmountUnavailable(effectiveMaxAmount);
-  const amountExceedsMax = isBetAmountAboveMax(betAmount, effectiveMaxAmount);
+  const walletBalanceRaw = walletBalance?.raw ?? null;
+  const effectiveMaxRaw = resolveBetMaxRaw(walletBalanceRaw, maxBetRaw);
+  const amountUnavailable = isBetAmountUnavailable(assetDecimals, effectiveMaxRaw);
+  const amountExceedsMax = isBetAmountAboveMax(betAmount, assetDecimals, effectiveMaxRaw);
   const limitValueClass = (isHint: boolean) =>
     cn("mt-0.5 truncate text-xs font-bold", isHint ? "text-fg-muted" : "font-mono text-fg");
 
@@ -221,8 +217,9 @@ export function GameRoomBetPanel({
         <div data-tour="bet-amount" className={cn(hideMobileAction && "hidden lg:block")}>
           <BetAmountSection
             betAmount={betAmount}
-            maxBetAmount={maxBetAmount}
-            walletBalanceAmount={walletBalanceAmount}
+            maxBetRaw={maxBetRaw}
+            walletBalanceRaw={walletBalanceRaw}
+            assetDecimals={assetDecimals}
             assetSymbol={assetSymbol}
             isPending={isPending}
             onBetAmountChange={onBetAmountChange}
@@ -232,6 +229,7 @@ export function GameRoomBetPanel({
         <BetRollsSection
           betAmount={betAmount}
           betCount={betCount}
+          assetDecimals={assetDecimals}
           assetSymbol={assetSymbol}
           isPending={isPending}
           onBetCountChange={onBetCountChange}

@@ -30,7 +30,7 @@ export type GameRoomRelease = {
 export type BuildGamePlaceBetInputArgs = {
   release: GameRoomRelease;
   game: GameMeta;
-  betAmount: number;
+  betAmount: string;
   betCount: number;
   stopGain: number;
   stopLoss: number;
@@ -59,14 +59,9 @@ export type GamePlaceBetMessages = GameParamsMessages & {
   invalidCasinoPool?: string;
 };
 
-function toUnits(amount: number, decimals: number) {
-  const normalized = Math.max(0, amount);
-  const precision = Math.max(0, Math.min(18, decimals));
-  const value = normalized.toLocaleString("en-US", {
-    useGrouping: false,
-    maximumFractionDigits: precision
-  });
-  return parseDecimalToUnits(value, decimals);
+function toUnits(amount: string | number, decimals: number) {
+  const value = String(amount).trim().replace(/\.$/, "");
+  return parseDecimalToUnits(value || "0", decimals);
 }
 
 export function findCasinoPool(pools: readonly ReleasePoolLike[]) {

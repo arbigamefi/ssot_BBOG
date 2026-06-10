@@ -44,7 +44,7 @@ describe("game room place bet builder", () => {
     const result = buildGamePlaceBetInput({
       release,
       game,
-      betAmount: 25,
+      betAmount: "25",
       betCount: 3,
       stopGain: 50,
       stopLoss: 10,
@@ -82,7 +82,7 @@ describe("game room place bet builder", () => {
     const result = buildGamePlaceBetInput({
       release,
       game,
-      betAmount: 0.01,
+      betAmount: "0.01",
       betCount: 2,
       stopGain: 0.02,
       stopLoss: 0.01,
@@ -104,6 +104,27 @@ describe("game room place bet builder", () => {
       stopGain: 20_000n,
       stopLoss: 10_000n
     });
+  });
+
+  it("accepts transient decimal input before blur normalization", () => {
+    const result = buildGamePlaceBetInput({
+      release,
+      game,
+      betAmount: "10.",
+      betCount: 1,
+      stopGain: 0,
+      stopLoss: 0,
+      diceTarget: 55,
+      diceDirection: "under",
+      coinSide: "HEADS",
+      rouletteSpots: [],
+      kenoSpots: [],
+      plinkoRisk: "medium"
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.input.stake).toBe(10_000_000n);
   });
 
   it("uses the selected casino pool decimals instead of assuming USDC", () => {
@@ -137,7 +158,7 @@ describe("game room place bet builder", () => {
     const result = buildGamePlaceBetInput({
       release: wethRelease,
       game,
-      betAmount: 0.01,
+      betAmount: "0.01",
       betCount: 2,
       stopGain: 0.02,
       stopLoss: 0.01,
@@ -196,7 +217,7 @@ describe("game room place bet builder", () => {
     const result = buildGamePlaceBetInput({
       release: multiPoolRelease,
       game,
-      betAmount: 0.01,
+      betAmount: "0.01",
       betCount: 1,
       stopGain: 0,
       stopLoss: 0,
@@ -220,7 +241,7 @@ describe("game room place bet builder", () => {
     const result = buildGamePlaceBetInput({
       release: multiPoolRelease,
       game,
-      betAmount: 1,
+      betAmount: "1",
       betCount: 1,
       stopGain: 0,
       stopLoss: 0,
@@ -243,7 +264,7 @@ describe("game room place bet builder", () => {
     const result = buildGamePlaceBetInput({
       release: multiPoolRelease,
       game,
-      betAmount: 1,
+      betAmount: "1",
       betCount: 1,
       stopGain: 0,
       stopLoss: 0,
@@ -269,7 +290,7 @@ describe("game room place bet builder", () => {
     const result = buildGamePlaceBetInput({
       release,
       game: { ...game, slug: "roulette", label: "Roulette" },
-      betAmount: 10,
+      betAmount: "10",
       betCount: 1,
       stopGain: 0,
       stopLoss: 0,
@@ -291,7 +312,7 @@ describe("game room place bet builder", () => {
     const result = buildGamePlaceBetInput({
       release: { chainId: 84532, assets: [], pools: [] },
       game,
-      betAmount: 10,
+      betAmount: "10",
       betCount: 1,
       stopGain: 0,
       stopLoss: 0,
@@ -313,7 +334,7 @@ describe("game room place bet builder", () => {
     const result = buildGamePlaceBetInput({
       release: { chainId: 84532, assets: [], pools: [] },
       game,
-      betAmount: 10,
+      betAmount: "10",
       betCount: 1,
       stopGain: 0,
       stopLoss: 0,

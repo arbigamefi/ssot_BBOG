@@ -4,10 +4,19 @@ import { ChartBarIcon, ChevronDownIcon, InformationCircleIcon } from "@heroicons
 import { cn } from "@ssot/ui";
 
 import { TokenLogo } from "../../../components/TokenLogo";
+import {
+  clampBetAmountInput,
+  formatBetAmountRaw,
+  isBetAmountUnavailable,
+  getMinBetAmountInput,
+  multiplyBetAmountInput,
+  normalizeBetAmountInput,
+  resolveBetMaxRaw,
+  scaleBetAmountInput
+} from "./bet-amount";
 
 const WHOLE_UNIT_PATTERN = "[0-9]*";
 const BET_AMOUNT_PATTERN = "[0-9]*[.]?[0-9]*";
-export const MIN_BET_AMOUNT = 0.01;
 
 function parseWholeUnitInput(input: string, { min, max }: { min: number; max?: number }) {
   const digits = input.match(/\d+/)?.[0] ?? "";
@@ -17,67 +26,29 @@ function parseWholeUnitInput(input: string, { min, max }: { min: number; max?: n
   return Math.max(min, Math.min(max ?? value, value));
 }
 
-function toCents(value: number) {
-  return Math.floor((value + Number.EPSILON) * 100) / 100;
-}
-
-/** Smallest of the finite per-roll caps (wallet balance, pool cap). */
-export function resolveBetMaxAmount(
-  walletBalanceAmount: number | null | undefined,
-  maxBetAmount?: number
-): number | undefined {
-  const candidates = [walletBalanceAmount, maxBetAmount].filter(
-    (value): value is number => value != null && Number.isFinite(value) && value >= 0
-  );
-  return candidates.length > 0 ? toCents(Math.min(...candidates)) : undefined;
-}
-
-export function isBetAmountUnavailable(maxAmount?: number): boolean {
-  return maxAmount != null && maxAmount < MIN_BET_AMOUNT;
-}
-
-export function isBetAmountAboveMax(value: number, maxAmount?: number): boolean {
-  return (
-    maxAmount != null && maxAmount >= MIN_BET_AMOUNT && Number.isFinite(value) && value > maxAmount
-  );
-}
-
-/** Clamp a bet amount to [MIN_BET_AMOUNT, maxAmount] at cent precision. */
-export function clampBetAmount(value: number, maxAmount?: number): number {
-  if (isBetAmountUnavailable(maxAmount)) return maxAmount ?? 0;
-  const capped = maxAmount == null ? value : Math.min(value, maxAmount);
-  return toCents(Math.max(MIN_BET_AMOUNT, capped));
-}
-
-export function parseBetAmountInput(input: string, { min, max }: { min: number; max?: number }) {
-  if (max != null && max < min) return max ?? 0;
-  const normalized = input.replace(/,/g, "").trim();
-  const match = normalized.match(/\d+(?:\.\d{0,2})?/);
-  if (!match) return min;
-  const value = Number(match[0]);
-  if (!Number.isFinite(value)) return max ?? min;
-  return Math.max(min, Math.min(max ?? value, toCents(value)));
-}
-
 export function BetAmountSection({
   betAmount,
-  maxBetAmount,
-  walletBalanceAmount,
+  maxBetRaw,
+  walletBalanceRaw,
+  assetDecimals,
   assetSymbol,
   isPending,
   onBetAmountChange
 }: {
-  betAmount: number;
-  maxBetAmount?: number;
-  walletBalanceAmount: number | null;
+  betAmount: string;
+  maxBetRaw?: bigint;
+  walletBalanceRaw: bigint | null;
+  assetDecimals: number;
   assetSymbol: string;
   isPending: boolean;
-  onBetAmountChange: (amount: number) => void;
+  onBetAmountChange: (amount: string) => void;
 }) {
   const t = useTranslations();
-  const maxAmount = resolveBetMaxAmount(walletBalanceAmount, maxBetAmount);
-  const amountUnavailable = isBetAmountUnavailable(maxAmount);
-  const setBetAmount = (value: number) => onBetAmountChange(clampBetAmount(value, maxAmount));
+  const maxRaw = resolveBetMaxRaw(walletBalanceRaw, maxBetRaw);
+  const amountUnavailable = isBetAmountUnavailable(assetDecimals, maxRaw);
+  const maxShortcutUnavailable = maxRaw == null;
+  const setBetAmount = (value: string) =>
+    onBetAmountChange(clampBetAmountInput(value, assetDecimals, maxRaw));
   const controlsDisabled = isPending || amountUnavailable;
 
   return (
@@ -99,13 +70,12 @@ export function BetAmountSection({
             pattern={BET_AMOUNT_PATTERN}
             autoComplete="off"
             aria-label={t("casino.room.betPanel.amount.aria")}
-            value={String(betAmount)}
+            value={betAmount}
             onChange={(event) => {
               if (controlsDisabled) return;
-              onBetAmountChange(
-                parseBetAmountInput(event.target.value, { min: MIN_BET_AMOUNT, max: maxAmount })
-              );
+              onBetAmountChange(normalizeBetAmountInput(event.target.value, assetDecimals));
             }}
+            onBlur={() => setBetAmount(betAmount)}
             disabled={controlsDisabled}
             className="w-full border-none bg-transparent pr-2 text-right font-mono text-2xl text-fg outline-none"
           />
@@ -113,7 +83,7 @@ export function BetAmountSection({
         <div className="flex gap-1 rounded-lg border border-border-soft bg-surface-1 p-1">
           <button
             type="button"
-            onClick={() => setBetAmount(MIN_BET_AMOUNT)}
+            onClick={() => setBetAmount(getMinBetAmountInput(assetDecimals))}
             disabled={controlsDisabled}
             className="flex-1 rounded-md bg-surface-0 py-1 text-[10px] font-bold uppercase text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg disabled:cursor-default disabled:opacity-50 disabled:hover:bg-surface-0 disabled:hover:text-fg-subtle"
           >
@@ -121,7 +91,17 @@ export function BetAmountSection({
           </button>
           <button
             type="button"
-            onClick={() => setBetAmount(betAmount / 2)}
+            onClick={() =>
+              onBetAmountChange(
+                scaleBetAmountInput({
+                  input: betAmount,
+                  decimals: assetDecimals,
+                  numerator: 1n,
+                  denominator: 2n,
+                  maxRaw
+                })
+              )
+            }
             disabled={controlsDisabled}
             className="flex-1 rounded-md bg-surface-0 py-1 text-[10px] font-bold uppercase text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg disabled:cursor-default disabled:opacity-50 disabled:hover:bg-surface-0 disabled:hover:text-fg-subtle"
           >
@@ -129,7 +109,16 @@ export function BetAmountSection({
           </button>
           <button
             type="button"
-            onClick={() => setBetAmount(betAmount * 2)}
+            onClick={() =>
+              onBetAmountChange(
+                scaleBetAmountInput({
+                  input: betAmount,
+                  decimals: assetDecimals,
+                  numerator: 2n,
+                  maxRaw
+                })
+              )
+            }
             disabled={controlsDisabled}
             className="flex-1 rounded-md bg-surface-0 py-1 text-[10px] font-bold uppercase text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg disabled:cursor-default disabled:opacity-50 disabled:hover:bg-surface-0 disabled:hover:text-fg-subtle"
           >
@@ -137,8 +126,8 @@ export function BetAmountSection({
           </button>
           <button
             type="button"
-            onClick={() => setBetAmount(maxAmount ?? walletBalanceAmount ?? betAmount)}
-            disabled={controlsDisabled}
+            onClick={() => onBetAmountChange(formatBetAmountRaw(maxRaw ?? 0n, assetDecimals))}
+            disabled={controlsDisabled || maxShortcutUnavailable}
             className="flex-1 rounded-md bg-surface-0 py-1 text-[10px] font-bold uppercase text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg disabled:cursor-default disabled:opacity-50 disabled:hover:bg-surface-0 disabled:hover:text-fg-subtle"
           >
             {t("casino.room.betPanel.amount.max")}
@@ -152,12 +141,14 @@ export function BetAmountSection({
 export function BetRollsSection({
   betAmount,
   betCount,
+  assetDecimals,
   assetSymbol,
   isPending,
   onBetCountChange
 }: {
-  betAmount: number;
+  betAmount: string;
   betCount: number;
+  assetDecimals: number;
   assetSymbol: string;
   isPending: boolean;
   onBetCountChange: (count: number) => void;
@@ -173,7 +164,7 @@ export function BetRollsSection({
         {betCount > 1 && (
           <span className="font-mono text-[10px] text-fg-subtle">
             {t("casino.room.betPanel.rolls.total", {
-              amount: (betAmount * betCount).toLocaleString(),
+              amount: multiplyBetAmountInput(betAmount, betCount, assetDecimals),
               symbol: assetSymbol
             })}
           </span>

@@ -19,7 +19,7 @@ export type UseCasinoRoundArgs = {
   game: GameMeta | null;
   winChance: number;
   openConnectModal: (() => void) | undefined;
-  betAmount: number;
+  betAmount: string;
   betCount: number;
   stopGain: number;
   stopLoss: number;

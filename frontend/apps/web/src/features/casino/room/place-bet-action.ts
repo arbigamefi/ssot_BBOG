@@ -68,7 +68,7 @@ export async function executeGamePlaceBetAction({
   executeNow: (planOverride?: PlaceBetPlan) => Promise<void>;
   planNow: (input: PlaceBetInput) => Promise<PlaceBetPlan | undefined>;
   onBeforeExecute?: () => void;
-  betAmount: number;
+  betAmount: string;
   betCount: number;
   stopGain: number;
   stopLoss: number;

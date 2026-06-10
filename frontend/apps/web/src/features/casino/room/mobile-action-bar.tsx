@@ -4,13 +4,15 @@ import { cn } from "@ssot/ui";
 
 import { TokenLogo } from "../../../components/TokenLogo";
 import {
-  clampBetAmount,
+  clampBetAmountInput,
+  formatBetAmountRaw,
+  getMinBetAmountInput,
   isBetAmountAboveMax,
   isBetAmountUnavailable,
-  MIN_BET_AMOUNT,
-  parseBetAmountInput,
-  resolveBetMaxAmount
-} from "./bet-panel-sections";
+  normalizeBetAmountInput,
+  resolveBetMaxRaw,
+  scaleBetAmountInput
+} from "./bet-amount";
 import type { GameMeta } from "./model";
 import type { PlaceBetButtonPhase } from "./place-bet-button";
 import { PlaceBetButton } from "./place-bet-button";
@@ -20,9 +22,10 @@ const BET_AMOUNT_PATTERN = "[0-9]*[.]?[0-9]*";
 export function MobileCasinoActionBar({
   game,
   assetSymbol,
+  assetDecimals,
   betAmount,
-  maxBetAmount,
-  walletBalanceAmount,
+  maxBetRaw,
+  walletBalanceRaw,
   onBetAmountChange,
   hasAccount,
   isPending,
@@ -37,11 +40,12 @@ export function MobileCasinoActionBar({
 }: {
   game: GameMeta;
   assetSymbol: string;
-  betAmount: number;
+  assetDecimals: number;
+  betAmount: string;
   /** Per-roll pool cap; combined with wallet balance for the Max quick action. */
-  maxBetAmount?: number;
-  walletBalanceAmount?: number | null;
-  onBetAmountChange?: (amount: number) => void;
+  maxBetRaw?: bigint;
+  walletBalanceRaw?: bigint | null;
+  onBetAmountChange?: (amount: string) => void;
   hasAccount: boolean;
   isPending: boolean;
   winChance: number;
@@ -60,20 +64,46 @@ export function MobileCasinoActionBar({
       : manualSettleAvailable && onManualSettle
         ? onManualSettle
         : onPlaceBet;
-  const maxAmount = resolveBetMaxAmount(walletBalanceAmount, maxBetAmount);
-  const amountUnavailable = isBetAmountUnavailable(maxAmount);
-  const amountExceedsMax = isBetAmountAboveMax(betAmount, maxAmount);
-  const adjust = (next: number) => onBetAmountChange?.(clampBetAmount(next, maxAmount));
+  const maxRaw = resolveBetMaxRaw(walletBalanceRaw, maxBetRaw);
+  const amountUnavailable = isBetAmountUnavailable(assetDecimals, maxRaw);
+  const amountExceedsMax = isBetAmountAboveMax(betAmount, assetDecimals, maxRaw);
+  const adjust = (next: string) =>
+    onBetAmountChange?.(clampBetAmountInput(next, assetDecimals, maxRaw));
 
   // Thumb-zone quick amounts so a bet can be sized without scrolling up to the
   // full panel. Only shown when amount control is wired and not mid-round.
   const quickButtons: Array<{ key: string; label: string; onClick: () => void }> = [
-    { key: "half", label: "½", onClick: () => adjust(betAmount / 2) },
-    { key: "double", label: "2×", onClick: () => adjust(betAmount * 2) },
+    {
+      key: "half",
+      label: "½",
+      onClick: () =>
+        onBetAmountChange?.(
+          scaleBetAmountInput({
+            input: betAmount,
+            decimals: assetDecimals,
+            numerator: 1n,
+            denominator: 2n,
+            maxRaw
+          })
+        )
+    },
+    {
+      key: "double",
+      label: "2×",
+      onClick: () =>
+        onBetAmountChange?.(
+          scaleBetAmountInput({
+            input: betAmount,
+            decimals: assetDecimals,
+            numerator: 2n,
+            maxRaw
+          })
+        )
+    },
     {
       key: "max",
       label: t("casino.room.betPanel.amount.max"),
-      onClick: () => adjust(maxAmount ?? betAmount)
+      onClick: () => onBetAmountChange?.(formatBetAmountRaw(maxRaw ?? 0n, assetDecimals))
     }
   ];
   const showQuick = Boolean(onBetAmountChange) && !isPending && !amountUnavailable;
@@ -96,17 +126,13 @@ export function MobileCasinoActionBar({
             pattern={BET_AMOUNT_PATTERN}
             autoComplete="off"
             aria-label={t("casino.room.betPanel.amount.aria")}
-            value={String(betAmount)}
+            value={betAmount}
             disabled={controlsDisabled}
             onChange={(event) => {
               if (controlsDisabled) return;
-              onBetAmountChange?.(
-                parseBetAmountInput(event.target.value, {
-                  min: MIN_BET_AMOUNT,
-                  max: maxAmount
-                })
-              );
+              onBetAmountChange?.(normalizeBetAmountInput(event.target.value, assetDecimals));
             }}
+            onBlur={() => adjust(betAmount || getMinBetAmountInput(assetDecimals))}
             className="min-w-0 border-none bg-transparent text-right font-mono text-lg font-semibold text-fg outline-none"
           />
           <span className="shrink-0 text-[10px] font-bold uppercase tracking-[0.1em] text-fg-subtle">

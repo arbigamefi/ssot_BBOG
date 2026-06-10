@@ -46,6 +46,7 @@ import { GameRoomShell } from "../../../../features/casino/room/game-room-shell"
 import { MobileCasinoActionBar } from "../../../../features/casino/room/mobile-action-bar";
 import { derivePlaceBetButtonPhase } from "../../../../features/casino/room/place-bet-button";
 import { useCasinoRound } from "../../../../features/casino/room/use-casino-round";
+import { betAmountInputToNumber } from "../../../../features/casino/room/bet-amount";
 import { useReferralAffiliate } from "../../../../features/referral/useReferralAffiliate";
 import {
   GameRoomAuditLedger,
@@ -81,7 +82,7 @@ export function GamePageClient({ slug }: { slug: string }) {
   const recentBets = recentBetsQuery.data ?? [];
 
   // Local State
-  const [betAmount, setBetAmount] = React.useState<number>(10);
+  const [betAmount, setBetAmount] = React.useState("10");
   const [isPending, setIsPending] = React.useState(false);
   const [showResult, setShowResult] = React.useState(false);
   const [terminalBet, setTerminalBet] = React.useState<DomainBet | null>(null);
@@ -413,7 +414,8 @@ export function GamePageClient({ slug }: { slug: string }) {
   });
   const houseEdgeBps = resolveHouseEdgeBps(gameMeta, game.slug, release);
   const multiplier = applyHouseEdgeToMultiplier(reserveMultiplier, houseEdgeBps);
-  const expectedPayout = betAmount * multiplier;
+  const betAmountNumber = betAmountInputToNumber(betAmount);
+  const expectedPayout = betAmountNumber * multiplier;
 
   // Live, asset-aware header limits derived from the selected pool's free
   // liquidity (chain-read → verifiable), replacing the old static config tiles.
@@ -435,10 +437,6 @@ export function GamePageClient({ slug }: { slug: string }) {
     maxPayoutState === "no-capacity" ? t("casino.room.shell.noCapacity") : maxPayout;
   const maxBetRawPerRoll =
     maxBetRaw == null ? undefined : maxBetRaw / BigInt(Math.max(1, Math.floor(betCount)));
-  const maxBetAmountPerRoll =
-    maxBetRawPerRoll == null ? undefined : Number(maxBetRawPerRoll) / Math.pow(10, assetDecimals);
-  const walletBalanceAmount =
-    walletBalance?.raw == null ? null : Number(walletBalance.raw) / Math.pow(10, assetDecimals);
   const placeBetButtonPhase = derivePlaceBetButtonPhase({
     roundPhase: casinoRound.roundPhase,
     activeBetState: casinoRound.activeBet?.state,
@@ -461,7 +459,7 @@ export function GamePageClient({ slug }: { slug: string }) {
       maxPayoutLabel={maxPayoutLabel}
       maxPayoutIsHint={maxPayoutState !== "value"}
       betAmount={betAmount}
-      maxBetAmount={maxBetAmountPerRoll}
+      maxBetRaw={maxBetRawPerRoll}
       onBetAmountChange={setBetAmount}
       betCount={betCount}
       onBetCountChange={setBetCount}
@@ -495,9 +493,10 @@ export function GamePageClient({ slug }: { slug: string }) {
     <MobileCasinoActionBar
       game={game}
       assetSymbol={assetSymbol}
+      assetDecimals={assetDecimals}
       betAmount={betAmount}
-      maxBetAmount={maxBetAmountPerRoll}
-      walletBalanceAmount={walletBalanceAmount}
+      maxBetRaw={maxBetRawPerRoll}
+      walletBalanceRaw={walletBalance?.raw ?? null}
       onBetAmountChange={setBetAmount}
       hasAccount={Boolean(sdk?.account)}
       isPending={isBetPanelPending}
@@ -569,7 +568,7 @@ export function GamePageClient({ slug }: { slug: string }) {
   const AuditLedger = (
     <GameRoomAuditLedger
       game={game}
-      betAmount={betAmount}
+      betAmount={betAmountNumber}
       recentBets={recentBets}
       playerAddress={sdk?.account}
       assetAddress={casinoPoolAsset.asset.address}

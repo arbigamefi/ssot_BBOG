@@ -75,7 +75,7 @@ function baseArgs(overrides: Partial<Parameters<typeof executeGamePlaceBetAction
     executeNow: vi.fn(async () => undefined),
     planNow: vi.fn(async () => plannedBet as any),
     onBeforeExecute: vi.fn(),
-    betAmount: 10,
+    betAmount: "10",
     betCount: 1,
     stopGain: 0,
     stopLoss: 0,

@@ -50,9 +50,10 @@ function renderActionBar(
   const props: React.ComponentProps<typeof MobileCasinoActionBar> = {
     game: diceGame,
     assetSymbol: "USDC",
-    betAmount: 10,
-    walletBalanceAmount: 100,
-    maxBetAmount: 200,
+    assetDecimals: 6,
+    betAmount: "10",
+    walletBalanceRaw: 100_000_000n,
+    maxBetRaw: 200_000_000n,
     onBetAmountChange: vi.fn(),
     hasAccount: true,
     isPending: false,
@@ -86,32 +87,32 @@ describe("MobileCasinoActionBar", () => {
       target: { value: "abc25.55xyz" }
     });
 
-    expect(props.onBetAmountChange).toHaveBeenCalledWith(25.55);
+    expect(props.onBetAmountChange).toHaveBeenCalledWith("25.55");
   });
 
   it("caps the Max quick action by the lower of wallet balance and pool max bet", () => {
     const cappedByWallet = renderActionBar({
-      walletBalanceAmount: 100,
-      maxBetAmount: 200
+      walletBalanceRaw: 100_000_000n,
+      maxBetRaw: 200_000_000n
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Max" }));
-    expect(cappedByWallet.onBetAmountChange).toHaveBeenCalledWith(100);
+    expect(cappedByWallet.onBetAmountChange).toHaveBeenCalledWith("100");
 
     cleanup();
     const cappedByPool = renderActionBar({
-      walletBalanceAmount: 1000,
-      maxBetAmount: 200
+      walletBalanceRaw: 1_000_000_000n,
+      maxBetRaw: 200_000_000n
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Max" }));
-    expect(cappedByPool.onBetAmountChange).toHaveBeenCalledWith(200);
+    expect(cappedByPool.onBetAmountChange).toHaveBeenCalledWith("200");
   });
 
   it("does not expose quick max when the effective max is below the minimum bet", () => {
     renderActionBar({
-      walletBalanceAmount: 0,
-      maxBetAmount: 200
+      walletBalanceRaw: 0n,
+      maxBetRaw: 200_000_000n
     });
 
     expect(screen.queryByRole("button", { name: "Max" })).toBeNull();
@@ -124,8 +125,8 @@ describe("MobileCasinoActionBar", () => {
 
     cleanup();
     renderActionBar({
-      walletBalanceAmount: 100,
-      maxBetAmount: 0.009
+      walletBalanceRaw: 100_000_000n,
+      maxBetRaw: 9_000n
     });
 
     expect(screen.queryByRole("button", { name: "Max" })).toBeNull();
@@ -139,9 +140,9 @@ describe("MobileCasinoActionBar", () => {
 
   it("blocks the compact CTA when the current amount exceeds the effective max", () => {
     renderActionBar({
-      betAmount: 10,
-      walletBalanceAmount: 100,
-      maxBetAmount: 5
+      betAmount: "10",
+      walletBalanceRaw: 100_000_000n,
+      maxBetRaw: 5_000_000n
     });
 
     expect(
