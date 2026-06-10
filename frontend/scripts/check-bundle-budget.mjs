@@ -11,7 +11,9 @@ const buildRoot = path.resolve(appRoot, ".next");
 const manifestPath = path.resolve(buildRoot, "app-build-manifest.json");
 
 const budgets = [
-  { route: "/(marketing)/page", publicPath: "/", maxKb: 160 },
+  // Accepted flagship hero baseline. Keep enough headroom for gzip variance
+  // across local and CI builders without loosening product-route budgets.
+  { route: "/(marketing)/page", publicPath: "/", maxKb: 162 },
   { route: "/(product)/casino/page", publicPath: "/casino", maxKb: 180 },
   // The casino room route manifest includes all dynamically imported game
   // stages, not only the currently selected room's initial stage. Keep this

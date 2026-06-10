@@ -125,6 +125,7 @@ export function GameRoomBetPanel({
   const effectiveMaxRaw = resolveBetMaxRaw(walletBalanceRaw, maxBetRaw);
   const amountUnavailable = isBetAmountUnavailable(assetDecimals, effectiveMaxRaw);
   const amountExceedsMax = isBetAmountAboveMax(betAmount, assetDecimals, effectiveMaxRaw);
+  const controlsLocked = isPending && state.status !== "failed";
   const limitValueClass = (isHint: boolean) =>
     cn("mt-0.5 truncate text-xs font-bold", isHint ? "text-fg-muted" : "font-mono text-fg");
 
@@ -142,7 +143,7 @@ export function GameRoomBetPanel({
                   assets={assetOptions}
                   value={selectedAsset}
                   onValueChange={onAssetChange}
-                  disabled={isPending}
+                  disabled={controlsLocked}
                   title={t("casino.room.betPanel.asset")}
                   renderLogo={(option) => <TokenLogo symbol={option.symbol} size={20} />}
                   className="max-w-full bg-surface-1"
@@ -221,7 +222,7 @@ export function GameRoomBetPanel({
             walletBalanceRaw={walletBalanceRaw}
             assetDecimals={assetDecimals}
             assetSymbol={assetSymbol}
-            isPending={isPending}
+            isPending={controlsLocked}
             onBetAmountChange={onBetAmountChange}
           />
         </div>
@@ -231,14 +232,14 @@ export function GameRoomBetPanel({
           betCount={betCount}
           assetDecimals={assetDecimals}
           assetSymbol={assetSymbol}
-          isPending={isPending}
+          isPending={controlsLocked}
           onBetCountChange={onBetCountChange}
         />
 
         <BetAdvancedSection
           advancedOpen={advancedOpen}
           assetSymbol={assetSymbol}
-          isPending={isPending}
+          isPending={controlsLocked}
           stopGain={stopGain}
           stopLoss={stopLoss}
           onAdvancedOpenChange={onAdvancedOpenChange}

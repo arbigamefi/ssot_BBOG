@@ -26,8 +26,8 @@ export const CASINO_GAME_PRESENTATION: Record<CasinoModuleSlug, CasinoGamePresen
     visualKind: "dice",
     ogEyebrow: "Provably fair · Dice",
     ogTitle: "Set the target. Roll on-chain.",
-    ogSubtitle: "Pick a number and a direction — 1% house edge, every roll verifiable.",
-    ogStat: "up to 99×",
+    ogSubtitle: "Pick a number and a direction — net odds are shown before every verified roll.",
+    ogStat: "net odds",
     ogTone: "cyan"
   },
   "coin-toss": {
@@ -36,7 +36,7 @@ export const CASINO_GAME_PRESENTATION: Record<CasinoModuleSlug, CasinoGamePresen
     ogEyebrow: "Provably fair · Coin toss",
     ogTitle: "Call the side. Flip on-chain.",
     ogSubtitle: "A true 50/50 decided by a single Chainlink VRF draw.",
-    ogStat: "1.96×",
+    ogStat: "50/50",
     ogTone: "brand"
   },
   roulette: {
@@ -45,7 +45,7 @@ export const CASINO_GAME_PRESENTATION: Record<CasinoModuleSlug, CasinoGamePresen
     ogEyebrow: "Provably fair · Roulette",
     ogTitle: "Spin the single-zero wheel.",
     ogSubtitle: "European table — straight numbers, splits, and outside bets.",
-    ogStat: "up to 36×",
+    ogStat: "single zero",
     ogTone: "brand"
   },
   keno: {
@@ -54,7 +54,7 @@ export const CASINO_GAME_PRESENTATION: Record<CasinoModuleSlug, CasinoGamePresen
     ogEyebrow: "Provably fair · Keno",
     ogTitle: "Pick your numbers. Watch them drop.",
     ogSubtitle: "Choose up to 5 from 15 — match more to win more.",
-    ogStat: "up to 500×",
+    ogStat: "pay table",
     ogTone: "cyan"
   },
   plinko: {
@@ -63,7 +63,7 @@ export const CASINO_GAME_PRESENTATION: Record<CasinoModuleSlug, CasinoGamePresen
     ogEyebrow: "Provably fair · Plinko",
     ogTitle: "Drop the ball. Let the board pay.",
     ogSubtitle: "Nine rows, three risk tiers — the edge buckets pay the most.",
-    ogStat: "up to 24×",
+    ogStat: "risk tiers",
     ogTone: "green"
   },
   slots: {
@@ -72,7 +72,7 @@ export const CASINO_GAME_PRESENTATION: Record<CasinoModuleSlug, CasinoGamePresen
     ogEyebrow: "Provably fair · Slots",
     ogTitle: "Spin three reels.",
     ogSubtitle: "Line up the top symbol across the payline for the max.",
-    ogStat: "up to 64×",
+    ogStat: "payline",
     ogTone: "brand"
   },
   baccarat: {
@@ -81,7 +81,7 @@ export const CASINO_GAME_PRESENTATION: Record<CasinoModuleSlug, CasinoGamePresen
     ogEyebrow: "Provably fair · Baccarat",
     ogTitle: "Player. Banker. Tie.",
     ogSubtitle: "Commission-free payouts on every settled hand.",
-    ogStat: "up to 10×",
+    ogStat: "table bets",
     ogTone: "green"
   },
   "sic-bo": {
@@ -90,7 +90,7 @@ export const CASINO_GAME_PRESENTATION: Record<CasinoModuleSlug, CasinoGamePresen
     ogEyebrow: "Provably fair · Sic Bo",
     ogTitle: "Three dice. One verified roll.",
     ogSubtitle: "Bet small, big, totals, doubles, or triples.",
-    ogStat: "up to 216×",
+    ogStat: "triple dice",
     ogTone: "cyan"
   }
 };

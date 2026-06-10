@@ -56,8 +56,6 @@ import {
 
 export { getCasinoRoomPendingStates } from "./pageClient-helpers";
 
-/* ─── Main Logic ─── */
-
 export function GamePageClient({ slug }: { slug: string }) {
   const t = useTranslations();
   const searchParams = useSearchParams();
@@ -67,8 +65,6 @@ export function GamePageClient({ slug }: { slug: string }) {
     const found = release?.gamesMeta?.find((item: any) => item.slug === slug);
     return found ? toGameMeta(found) : null;
   }, [release?.gamesMeta, slug]);
-  // Shared multi-asset selection (same model as the earn console): lists the
-  // chain's casino pool assets and tracks which one the player is betting with.
   const assetSelection = useCasinoPoolAssetSelection();
   const casinoPoolAsset = assetSelection.selectedContext;
 
@@ -81,7 +77,6 @@ export function GamePageClient({ slug }: { slug: string }) {
   const refetchRecentBets = recentBetsQuery.refetch;
   const recentBets = recentBetsQuery.data ?? [];
 
-  // Local State
   const [betAmount, setBetAmount] = React.useState("10");
   const [isPending, setIsPending] = React.useState(false);
   const [showResult, setShowResult] = React.useState(false);
@@ -103,7 +98,6 @@ export function GamePageClient({ slug }: { slug: string }) {
     []
   );
 
-  // Game-specific params
   const [diceTarget, setDiceTarget] = React.useState<number>(50);
   const [diceDirection, setDiceDirection] = React.useState<"under" | "over">("under");
   const [coinSide, setCoinSide] = React.useState<"HEADS" | "TAILS">("HEADS");
@@ -114,18 +108,15 @@ export function GamePageClient({ slug }: { slug: string }) {
   const [sicBoKind, setSicBoKind] = React.useState<SicBoKind>("small");
   const [sicBoValue, setSicBoValue] = React.useState<number>(0);
 
-  // Simulation state
   const [resultNum, setResultNum] = React.useState<number | null>(null);
   const [kenoResultDrawn, setKenoResultDrawn] = React.useState<number[]>([]);
   const [plinkoBuckets, setPlinkoBuckets] = React.useState<number[]>([]);
   const [slotsSymbols, setSlotsSymbols] = React.useState<number[]>([]);
 
-  // History state for widgets
   const [gameHistory, setGameHistory] = React.useState<GameHistoryEntry[]>([]);
-  // C1: Multi-roll controls
   const [betCount, setBetCount] = React.useState<number>(1);
-  const [stopGain, setStopGain] = React.useState<number>(0); // 0 = disabled
-  const [stopLoss, setStopLoss] = React.useState<number>(0); // 0 = disabled
+  const [stopGain, setStopGain] = React.useState<number>(0);
+  const [stopLoss, setStopLoss] = React.useState<number>(0);
   const [advancedOpen, setAdvancedOpen] = React.useState(false);
   const [walletBalanceRefreshKey, refreshWalletBalance] = React.useReducer((value) => value + 1, 0);
 
@@ -134,9 +125,6 @@ export function GamePageClient({ slug }: { slug: string }) {
     asset: casinoPoolAsset?.asset,
     refreshKey: walletBalanceRefreshKey
   });
-  // Public read of the selected pool's bank snapshot → free liquidity, which
-  // drives the live (verifiable) max-bet / max-payout shown in the header. Works
-  // without a connected wallet and follows the selected asset's pool.
   const poolSnapshot = usePoolSnapshot({ sdk, poolId: assetSelection.poolId });
   const referrerParam = searchParams.get("ref");
   const referralAffiliate = useReferralAffiliate({
@@ -576,6 +564,8 @@ export function GamePageClient({ slug }: { slug: string }) {
       assetDecimals={assetDecimals}
       assetContexts={assetSelection.contexts}
       chainId={chainId}
+      gameMeta={gameMeta}
+      releaseMeta={release}
     />
   );
 

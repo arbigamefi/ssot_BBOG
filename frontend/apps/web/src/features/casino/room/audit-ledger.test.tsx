@@ -190,6 +190,13 @@ const GAME_INFO_BETS = [
   { key: "redBlack", label: "Red / Black", coverage: "18 numbers", multiplier: "2×" }
 ];
 
+const SIC_BO_INFO_BETS = [
+  { key: "smallBig", label: "Small / Big", coverage: "48.6%", multiplier: "2.06×" },
+  { key: "anyTriple", label: "Any triple", coverage: "2.78%", multiplier: "36×" },
+  { key: "specificTriple", label: "Specific triple", coverage: "0.46%", multiplier: "216×" },
+  { key: "singleFace", label: "Single face", coverage: "≈ 42%", multiplier: "up to 6×" }
+];
+
 const TRANSLATIONS: Record<string, string> = {
   "casino.room.audit.tabs.live": "Live bets",
   "casino.room.audit.tabs.mine": "My bets",
@@ -203,7 +210,7 @@ const TRANSLATIONS: Record<string, string> = {
   "casino.room.audit.columns.payout": "Payout",
   "casino.room.audit.columns.state": "State",
   "casino.room.audit.columns.bet": "Bet",
-  "casino.room.audit.columns.coverage": "Coverage",
+  "casino.room.audit.columns.coverage": "Win chance / condition",
   "casino.room.audit.columns.bets": "Bets",
   "casino.room.audit.columns.volume": "Volume",
   "casino.room.audit.emptyStates.live": "No bets yet",
@@ -211,6 +218,9 @@ const TRANSLATIONS: Record<string, string> = {
   "casino.room.audit.emptyStates.top": "No wins yet",
   "casino.room.audit.emptyStates.connectWallet": "Connect your wallet to see your history.",
   "casino.room.audit.houseEdgeLabel": "House edge",
+  "casino.room.audit.infoFormulaNote":
+    "Win chance is the event probability. Multipliers shown are player-facing payouts after the current house edge.",
+  "casino.room.audit.maxMultiplier": "{multiplier} max",
   "casino.room.audit.howToPlayLabel": "How it works",
   "casino.room.audit.betTypesLabel": "Bet types",
   "casino.room.audit.justNow": "just now",
@@ -256,7 +266,7 @@ const TRANSLATIONS: Record<string, string> = {
   "casino.room.audit.analytics.trend": "7-day volume",
   "casino.room.audit.analytics.trendWindow": "Daily turnover by chain placement time",
   "casino.room.gameInfo.roulette.tagline": "European roulette tagline.",
-  "casino.room.gameInfo.roulette.houseEdge": "2.70%"
+  "casino.room.gameInfo.sic-bo.tagline": "Three dice."
 };
 
 vi.mock("next-intl", () => ({
@@ -270,6 +280,7 @@ vi.mock("next-intl", () => ({
     };
     (t as unknown as { raw: (key: string) => unknown }).raw = (key: string) => {
       if (key === "casino.room.gameInfo.roulette.bets") return GAME_INFO_BETS;
+      if (key === "casino.room.gameInfo.sic-bo.bets") return SIC_BO_INFO_BETS;
       return key;
     };
     return t;
@@ -288,6 +299,31 @@ describe("GameRoomAuditLedger", () => {
     for (const name of ["Live bets", "My bets", "Leaderboard", "Analytics", "Game info"]) {
       expect(screen.getByRole("button", { name })).toBeDefined();
     }
+  });
+
+  it("uses fixed release house edge and edge-adjusted multipliers on the info tab", () => {
+    setTab("info");
+    render(
+      <GameRoomAuditLedger
+        game={{ ...game, slug: "sic-bo", label: "Sic Bo" }}
+        betAmount={10}
+        gameMeta={{ slug: "sic-bo", houseEdgeBps: 100 }}
+        recentBets={[]}
+      />
+    );
+
+    expect(screen.getByText("1.00%")).toBeDefined();
+    expect(screen.queryByText("2.78% – 30.6%")).toBeNull();
+    expect(screen.getByText("Win chance / condition")).toBeDefined();
+    expect(screen.getByText("2.04×")).toBeDefined();
+    expect(screen.getByText("35.64×")).toBeDefined();
+    expect(screen.getByText("213.84×")).toBeDefined();
+    expect(screen.getByText("5.94× max")).toBeDefined();
+    expect(
+      screen.getByText(
+        "Win chance is the event probability. Multipliers shown are player-facing payouts after the current house edge."
+      )
+    ).toBeDefined();
   });
 
   it("shows the live-bets empty state when recentBets is empty", () => {
@@ -383,7 +419,7 @@ describe("GameRoomAuditLedger", () => {
     expect(screen.getByText("European roulette tagline.")).toBeDefined();
     expect(screen.getByText("2.70%")).toBeDefined();
     expect(screen.getByText("Straight up")).toBeDefined();
-    expect(screen.getByText("36×")).toBeDefined();
+    expect(screen.getByText("36.00×")).toBeDefined();
   });
 
   it("renders an external explorer link when chainId + tx hash are present", () => {

@@ -68,7 +68,7 @@ function BankSnapshot({
         <ShieldCheckIcon className="h-6 w-6 shrink-0 text-brand" />
       </div>
 
-      <dl className="grid grid-cols-2 gap-px bg-border-soft sm:grid-cols-4">
+      <dl className="grid grid-cols-2 gap-px bg-border-soft">
         {metrics.map((metric) => (
           <div key={metric.label} className="min-w-0 bg-surface-1/80 px-3 py-3 sm:px-4">
             <dt

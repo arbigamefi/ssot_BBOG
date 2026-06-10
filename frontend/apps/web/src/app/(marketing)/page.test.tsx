@@ -235,7 +235,7 @@ describe("HomePage", () => {
     render(<HomePage />);
 
     expect(screen.getAllByText("Free to pay out").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Total in the bank").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Total across Banks").length).toBeGreaterThan(0);
     expect(screen.getAllByText("0.75 USDC").length).toBeGreaterThan(0);
     expect(screen.getAllByText("1 USDC").length).toBeGreaterThan(0);
     expect(screen.queryByText("0.75 USDC / 2 WETH")).toBeNull();
@@ -247,7 +247,7 @@ describe("HomePage", () => {
     expect(screen.getAllByText("Keno").length).toBeGreaterThan(0);
     expect(screen.getByText("Last few bets")).toBeDefined();
     expect(screen.getByText("Check on-chain")).toBeDefined();
-    expect(screen.getByText("Keno — pick 5, chase 500×.")).toBeDefined();
+    expect(screen.getByText("Keno — pick 5, match all for 500.5×.")).toBeDefined();
     expect(screen.getByText("Play Keno")).toBeDefined();
 
     const kenoLinks = screen

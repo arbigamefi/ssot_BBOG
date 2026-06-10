@@ -256,6 +256,7 @@ export function HomePageClient() {
           description: t("hero.description"),
           enterCasino: t("hero.enterCasino"),
           viewBank: t("hero.viewBank"),
+          scrollHint: t("hero.scrollHint"),
           visual: {
             status: t("hero.visual.status"),
             wallet: t("hero.visual.wallet"),
@@ -274,6 +275,7 @@ export function HomePageClient() {
           }
         }}
       />
+      <div id="home-after-hero" className="scroll-mt-24" />
 
       {/* Activity is powerful social proof only when it is real. Empty activity
           on a public landing page reads like a cold casino, so the section

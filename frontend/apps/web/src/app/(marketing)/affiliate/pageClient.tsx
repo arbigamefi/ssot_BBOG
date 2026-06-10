@@ -14,7 +14,9 @@ import {
 import { cn } from "@ssot/ui";
 
 import { useSSOTSDK } from "../../../ssot/sdk";
+import { useRelease } from "../../../ssot/release/ReleaseProvider";
 import { useConnectModal } from "../../../app-shell/WalletButton";
+import { useAffiliateBets } from "../../../features/betting/useAffiliateBets";
 import { buildCasinoReferralLink } from "../../../features/referral/referral-link";
 import { SharePanel } from "../../../features/share/SharePanel";
 import { shortHex } from "../../../features/portfolio/claims/format";
@@ -22,6 +24,7 @@ import { shortHex } from "../../../features/portfolio/claims/format";
 export function AffiliatePageClient() {
   const t = useTranslations();
   const { sdk } = useSSOTSDK();
+  const { chainId } = useRelease();
   const { openConnectModal } = useConnectModal();
   const [origin, setOrigin] = React.useState("");
   const [copiedCampaign, setCopiedCampaign] = React.useState<string | undefined>();
@@ -39,6 +42,12 @@ export function AffiliatePageClient() {
     () => formatReferralLinkPreview(shareLink),
     [shareLink]
   );
+  const affiliateBetsQuery = useAffiliateBets({
+    affiliate: sdk?.account,
+    chainId,
+    enabled: Boolean(sdk?.account),
+    limit: 3
+  });
 
   const campaignChannels = ["x", "telegram", "whatsapp"] as const;
   const handleCampaignCopy = React.useCallback(
@@ -149,6 +158,15 @@ export function AffiliatePageClient() {
         </div>
       </section>
 
+      <AffiliateProofPanel
+        chainId={chainId}
+        connected={Boolean(sdk?.account)}
+        loading={affiliateBetsQuery.isLoading}
+        source={affiliateBetsQuery.data?.source}
+        stats={affiliateBetsQuery.data?.stats}
+        unavailable={affiliateBetsQuery.isError}
+      />
+
       <section className="grid min-w-0 gap-6 rounded-lg border border-border bg-surface-1 p-5 shadow-e2 lg:grid-cols-[0.75fr_1.25fr] lg:p-6">
         <div className="min-w-0">
           <div className="flex h-11 w-11 items-center justify-center rounded-md border border-brand/40 bg-brand/10 text-brand">
@@ -242,6 +260,99 @@ export function AffiliatePageClient() {
           </div>
         </div>
       </section>
+    </div>
+  );
+}
+
+function AffiliateProofPanel({
+  chainId,
+  connected,
+  loading,
+  source,
+  stats,
+  unavailable
+}: {
+  chainId: number;
+  connected: boolean;
+  loading: boolean;
+  source?: string;
+  stats?: { betCount: number; settledCount: number };
+  unavailable: boolean;
+}) {
+  const t = useTranslations();
+  const status = !connected
+    ? t("affiliate.proof.status.connect")
+    : loading
+      ? t("affiliate.proof.status.loading")
+      : unavailable
+        ? t("affiliate.proof.status.unavailable")
+        : stats?.betCount
+          ? t("affiliate.proof.status.active")
+          : t("affiliate.proof.status.ready");
+
+  return (
+    <section className="grid min-w-0 gap-5 rounded-lg border border-border bg-surface-1 p-5 shadow-e2 lg:grid-cols-[0.78fr_1.22fr] lg:p-6">
+      <div className="min-w-0">
+        <div className="flex h-11 w-11 items-center justify-center rounded-md border border-success/40 bg-success/10 text-success">
+          <ShieldCheckIcon className="h-5 w-5" />
+        </div>
+        <p className="mt-5 text-xs font-bold uppercase tracking-[0.18em] text-success">
+          {t("affiliate.proof.eyebrow")}
+        </p>
+        <h2 className="mt-3 text-2xl font-bold tracking-normal text-fg md:text-3xl">
+          {t("affiliate.proof.title")}
+        </h2>
+        <p className="mt-3 text-sm leading-6 text-fg-muted">{t("affiliate.proof.body")}</p>
+      </div>
+
+      <div className="grid min-w-0 gap-3 sm:grid-cols-3">
+        <ProofMetric
+          label={t("affiliate.proof.metrics.status")}
+          tone={connected && !unavailable ? "success" : "muted"}
+          value={status}
+        />
+        <ProofMetric
+          label={t("affiliate.proof.metrics.bets")}
+          value={connected && !unavailable ? String(stats?.betCount ?? 0) : "—"}
+        />
+        <ProofMetric
+          label={t("affiliate.proof.metrics.ledger")}
+          value={
+            connected && !unavailable
+              ? t("affiliate.proof.ledgerValue", {
+                  source: source ?? t("affiliate.proof.pendingSource"),
+                  chainId
+                })
+              : t("affiliate.proof.pendingSource")
+          }
+        />
+      </div>
+    </section>
+  );
+}
+
+function ProofMetric({
+  label,
+  value,
+  tone = "default"
+}: {
+  label: string;
+  value: string;
+  tone?: "default" | "muted" | "success";
+}) {
+  return (
+    <div className="min-w-0 rounded-md border border-border-soft bg-surface-0 p-4">
+      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-fg-subtle">{label}</p>
+      <div
+        className={cn(
+          "mt-3 truncate font-mono text-xl font-black text-fg",
+          tone === "muted" && "text-fg-muted",
+          tone === "success" && "text-success"
+        )}
+        title={value}
+      >
+        {value}
+      </div>
     </div>
   );
 }

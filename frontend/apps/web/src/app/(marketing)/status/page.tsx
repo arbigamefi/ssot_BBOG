@@ -6,17 +6,23 @@ import {
   resolveDefaultAppChainId,
   type AppChain
 } from "../../../app-shell/chain-registry";
+import { getRequestI18n } from "../../../i18n/request";
 import { getHealthzSnapshot, type HealthzSnapshot } from "../../../server/healthz";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export const metadata: Metadata = {
-  title: "System Status | ArbiGameFi",
-  description: "Live readiness checks for the ArbiGameFi release, keeper, and durable bet index."
-};
+type StatusPageCopy = Awaited<ReturnType<typeof getRequestI18n>>["messages"]["statusPage"];
 
-function StatusBadge({ status }: { status: "ok" | "degraded" }) {
+export async function generateMetadata(): Promise<Metadata> {
+  const { messages } = await getRequestI18n();
+  return {
+    title: messages.statusPage.metadata.title,
+    description: messages.statusPage.metadata.description
+  };
+}
+
+function StatusBadge({ status, copy }: { status: "ok" | "degraded"; copy: StatusPageCopy }) {
   return (
     <span
       className={
@@ -25,13 +31,13 @@ function StatusBadge({ status }: { status: "ok" | "degraded" }) {
           : "rounded-full border border-warn/35 bg-warn/10 px-3 py-1 text-xs font-semibold text-warn"
       }
     >
-      {status === "ok" ? "Operational" : "Degraded"}
+      {status === "ok" ? copy.state.operational : copy.state.degraded}
     </span>
   );
 }
 
-function formatAge(ageMs: number | null) {
-  if (ageMs == null) return "Unknown";
+function formatAge(ageMs: number | null, copy: StatusPageCopy) {
+  if (ageMs == null) return copy.unknown;
   if (ageMs < 1000) return "<1s";
   if (ageMs < 60_000) return `${Math.round(ageMs / 1000)}s`;
   if (ageMs < 3_600_000) return `${Math.round(ageMs / 60_000)}m`;
@@ -46,18 +52,20 @@ function CheckCard({
   label,
   status,
   rows,
-  message
+  message,
+  copy
 }: {
   label: string;
   status: "ok" | "degraded";
   rows: Array<[string, React.ReactNode]>;
   message?: string;
+  copy: StatusPageCopy;
 }) {
   return (
     <section className="rounded-lg border border-border-soft bg-surface-1 p-5">
       <div className="flex items-start justify-between gap-4">
         <h2 className="text-lg font-semibold text-fg">{label}</h2>
-        <StatusBadge status={status} />
+        <StatusBadge status={status} copy={copy} />
       </div>
       <dl className="mt-5 space-y-3">
         {rows.map(([key, value]) => (
@@ -79,36 +87,39 @@ function CheckCard({
   );
 }
 
-function buildCards(snapshot: HealthzSnapshot) {
+function buildCards(snapshot: HealthzSnapshot, copy: StatusPageCopy) {
   return [
     {
-      label: "Release",
+      label: copy.cards.release,
       status: snapshot.checks.release.status,
       rows: [
-        ["Name", snapshot.checks.release.name ?? "Unavailable"],
-        ["Warnings", snapshot.checks.release.warnings.length]
+        [copy.rows.name, snapshot.checks.release.name ?? copy.unavailable],
+        [copy.rows.warnings, snapshot.checks.release.warnings.length]
       ] as Array<[string, React.ReactNode]>,
       message: snapshot.checks.release.message
     },
     {
-      label: "Keeper",
+      label: copy.cards.keeper,
       status: snapshot.checks.keeper.status,
       rows: [
-        ["Role", snapshot.checks.keeper.role],
-        ["Status", snapshot.checks.keeper.keeperStatus],
-        ["Snapshot age", formatAge(snapshot.checks.keeper.ageMs)],
-        ["Queue depth", snapshot.checks.keeper.queueDepth]
+        [copy.rows.role, snapshot.checks.keeper.role],
+        [copy.rows.status, snapshot.checks.keeper.keeperStatus],
+        [copy.rows.snapshotAge, formatAge(snapshot.checks.keeper.ageMs, copy)],
+        [copy.rows.queueDepth, snapshot.checks.keeper.queueDepth]
       ] as Array<[string, React.ReactNode]>,
       message: snapshot.checks.keeper.message
     },
     {
-      label: "Bet index",
+      label: copy.cards.betIndex,
       status: snapshot.checks.betIndex.status,
       rows: [
-        ["Source", snapshot.checks.betIndex.source],
-        ["Rows sampled", snapshot.checks.betIndex.rows],
-        ["Durable required", snapshot.checks.betIndex.durableRequired ? "Yes" : "No"],
-        ["Durable configured", snapshot.checks.betIndex.durableConfigured ? "Yes" : "No"]
+        [copy.rows.source, snapshot.checks.betIndex.source],
+        [copy.rows.rowsSampled, snapshot.checks.betIndex.rows],
+        [copy.rows.durableRequired, snapshot.checks.betIndex.durableRequired ? copy.yes : copy.no],
+        [
+          copy.rows.durableConfigured,
+          snapshot.checks.betIndex.durableConfigured ? copy.yes : copy.no
+        ]
       ] as Array<[string, React.ReactNode]>,
       message: snapshot.checks.betIndex.message
     }
@@ -140,8 +151,16 @@ function displayRuntimeMode(runtimeMode: string, isLocalDevelopment: boolean) {
   return isLocalDevelopment ? `${runtimeMode} / local dev` : runtimeMode;
 }
 
-function ChainStatusSummary({ chain, snapshot }: { chain: AppChain; snapshot: HealthzSnapshot }) {
-  const cards = buildCards(snapshot);
+function ChainStatusSummary({
+  chain,
+  snapshot,
+  copy
+}: {
+  chain: AppChain;
+  snapshot: HealthzSnapshot;
+  copy: StatusPageCopy;
+}) {
+  const cards = buildCards(snapshot, copy);
   return (
     <section className="rounded-lg border border-border-soft bg-surface-1 p-5">
       <div className="flex flex-col gap-4 border-b border-border-soft pb-5 md:flex-row md:items-start md:justify-between">
@@ -155,12 +174,12 @@ function ChainStatusSummary({ chain, snapshot }: { chain: AppChain; snapshot: He
           <p className="mt-2 font-mono text-sm text-fg-muted">chainId {snapshot.chainId}</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <StatusBadge status={snapshot.status} />
+          <StatusBadge status={snapshot.status} copy={copy} />
           <a
             className="rounded-full border border-border-soft bg-surface-2 px-4 py-2 text-sm font-semibold text-fg-muted transition-colors hover:border-border-strong hover:text-fg"
             href={`/api/healthz?chainId=${chain.id}`}
           >
-            JSON
+            {copy.json}
           </a>
         </div>
       </div>
@@ -168,7 +187,7 @@ function ChainStatusSummary({ chain, snapshot }: { chain: AppChain; snapshot: He
       <div className="mt-5 grid gap-4 md:grid-cols-3">
         <div className="rounded-lg border border-border-soft bg-surface-0 p-4">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-fg-muted">
-            Generated
+            {copy.summary.generated}
           </p>
           <p className="mt-3 truncate font-mono text-sm font-semibold text-fg">
             {snapshot.generatedAt}
@@ -176,15 +195,15 @@ function ChainStatusSummary({ chain, snapshot }: { chain: AppChain; snapshot: He
         </div>
         <div className="rounded-lg border border-border-soft bg-surface-0 p-4">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-fg-muted">
-            Keeper age
+            {copy.summary.keeperAge}
           </p>
           <p className="mt-3 font-mono text-xl font-semibold text-fg">
-            {formatAge(snapshot.checks.keeper.ageMs)}
+            {formatAge(snapshot.checks.keeper.ageMs, copy)}
           </p>
         </div>
         <div className="rounded-lg border border-border-soft bg-surface-0 p-4">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-fg-muted">
-            Index source
+            {copy.summary.indexSource}
           </p>
           <p className="mt-3 truncate font-mono text-xl font-semibold text-fg">
             {snapshot.checks.betIndex.source}
@@ -194,7 +213,7 @@ function ChainStatusSummary({ chain, snapshot }: { chain: AppChain; snapshot: He
 
       <div className="mt-5 grid gap-4 lg:grid-cols-3">
         {cards.map((card) => (
-          <CheckCard key={`${chain.id}-${card.label}`} {...card} />
+          <CheckCard key={`${chain.id}-${card.label}`} {...card} copy={copy} />
         ))}
       </div>
     </section>
@@ -207,6 +226,8 @@ export default async function StatusPage({
   searchParams?: Promise<StatusSearchParams>;
 }) {
   const chains = getSupportedAppChains();
+  const { messages } = await getRequestI18n();
+  const copy = messages.statusPage;
   const resolvedSearchParams = searchParams ? await searchParams : {};
   const selectedChainId = resolveSelectedChainId(chains, resolvedSearchParams);
   const snapshots = await Promise.all(
@@ -227,16 +248,13 @@ export default async function StatusPage({
         <header className="flex flex-col gap-5 border-b border-border-soft pb-8 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-fg-muted">
-              ArbiGameFi Status
+              {copy.eyebrow}
             </p>
-            <h1 className="mt-3 text-4xl font-semibold text-fg">System status</h1>
-            <p className="mt-3 max-w-2xl text-base text-fg-muted">
-              Per-chain readiness checks for release metadata, casino keeper finalization, and the
-              durable bet index.
-            </p>
+            <h1 className="mt-3 text-4xl font-semibold text-fg">{copy.title}</h1>
+            <p className="mt-3 max-w-2xl text-base text-fg-muted">{copy.description}</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <StatusBadge status={selected?.snapshot.status ?? "degraded"} />
+            <StatusBadge status={selected?.snapshot.status ?? "degraded"} copy={copy} />
             <span className="rounded-full border border-border-soft bg-surface-1 px-4 py-2 text-sm font-semibold text-fg-muted">
               {displayRuntimeMode(runtimeMode, isLocalDevelopment)}
             </span>
@@ -244,21 +262,20 @@ export default async function StatusPage({
               className="rounded-full border border-border-soft bg-surface-1 px-4 py-2 text-sm font-semibold text-fg-muted transition-colors hover:border-border-strong hover:text-fg"
               href={`/api/healthz?chainId=${selected?.chain.id ?? ""}`}
             >
-              Selected JSON
+              {copy.selectedJson}
             </a>
           </div>
         </header>
 
         {showDevelopmentDiagnostics ? (
           <section className="rounded-lg border border-info/25 bg-info/10 px-4 py-3 text-sm text-fg-muted">
-            <span className="font-semibold text-fg">Development diagnostics.</span> Keeper and
-            bet-index checks reflect the local processes and per-chain health files. A stopped local
-            keeper is shown as degraded for that chain; it is not a production outage.
+            <span className="font-semibold text-fg">{copy.development.title}</span>{" "}
+            {copy.development.body}
           </section>
         ) : null}
 
         <nav
-          aria-label="Chain status"
+          aria-label={copy.chainNav}
           role="tablist"
           className="-mx-2 flex gap-2 overflow-x-auto px-2 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
@@ -283,14 +300,14 @@ export default async function StatusPage({
                   <p className="mt-3 text-lg font-semibold text-fg">{chain.name}</p>
                   <p className="mt-1 font-mono text-sm text-fg-muted">chainId {chain.id}</p>
                 </div>
-                <StatusBadge status={snapshot.status} />
+                <StatusBadge status={snapshot.status} copy={copy} />
               </div>
             </a>
           ))}
         </nav>
 
         {selected ? (
-          <ChainStatusSummary chain={selected.chain} snapshot={selected.snapshot} />
+          <ChainStatusSummary chain={selected.chain} snapshot={selected.snapshot} copy={copy} />
         ) : null}
       </div>
     </main>

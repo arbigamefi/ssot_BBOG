@@ -234,23 +234,23 @@ export function GamesListClient() {
         style={{ background: "radial-gradient(circle, hsl(var(--brand) / 0.12), transparent 68%)" }}
       />
 
-      <section className="relative border-b border-border-soft pb-6 pt-3 md:pb-8 md:pt-5">
+      <section className="relative border-b border-border-soft pb-4 pt-2 md:pb-8 md:pt-5">
         <header className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-3xl">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-brand/30 bg-brand-soft px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-brand/30 bg-brand-soft px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-brand md:mb-4">
               <SparklesIcon className="h-4 w-4" />
               {t("casino.directory.hero.eyebrow")}
             </div>
-            <h1 className="text-3xl font-bold leading-tight tracking-tight text-fg md:text-5xl">
+            <h1 className="text-[2rem] font-bold leading-[1.05] tracking-tight text-fg md:text-5xl md:leading-tight">
               {t("casino.directory.hero.title")}
             </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-fg-muted md:text-lg md:leading-8">
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-fg-muted md:mt-3 md:text-lg md:leading-8">
               {t("casino.directory.hero.description")}
             </p>
           </div>
         </header>
 
-        <div className="mt-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="mt-4 flex flex-col gap-3 md:mt-5 md:flex-row md:items-center md:justify-between">
           <div className="flex w-full items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:w-auto">
             {FILTERS.map((item) => {
               const isActive = item.key === filter;
@@ -286,7 +286,7 @@ export function GamesListClient() {
         </div>
       </section>
 
-      <section className="relative py-5 md:py-8">
+      <section className="relative py-4 md:py-8">
         {roomsToRender.length === 0 ? (
           <div className="rounded-xl border border-border-soft bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-1)))] p-8 text-center shadow-e2">
             <p className="text-lg font-semibold text-fg">{t("casino.directory.empty.noResults")}</p>
@@ -312,7 +312,7 @@ export function GamesListClient() {
                 href={room.href}
                 data-testid="room-entry-card"
                 data-slug={room.slug}
-                className="group relative grid grid-cols-[4.75rem_minmax(0,1fr)_1.75rem] items-center gap-3 overflow-hidden rounded-xl border border-border-soft bg-surface-1/88 px-3 py-3 shadow-e1 transition-colors duration-200 hover:border-brand/40 hover:bg-surface-2 sm:grid-cols-[5rem_minmax(0,1fr)_2rem] sm:gap-4 sm:px-4 sm:py-3.5 lg:flex lg:min-h-[20rem] lg:flex-col lg:items-stretch lg:gap-0 lg:bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-1)))] lg:p-0 lg:shadow-e2"
+                className="group relative grid grid-cols-[4.25rem_minmax(0,1fr)_1.75rem] items-center gap-3 overflow-hidden rounded-xl border border-border-soft bg-surface-1/88 px-3 py-3 shadow-e1 transition-colors duration-200 hover:border-brand/40 hover:bg-surface-2 sm:grid-cols-[5rem_minmax(0,1fr)_2rem] sm:gap-4 sm:px-4 sm:py-3.5 lg:flex lg:min-h-[20rem] lg:flex-col lg:items-stretch lg:gap-0 lg:bg-[linear-gradient(180deg,hsl(var(--surface-2)),hsl(var(--surface-1)))] lg:p-0 lg:shadow-e2"
               >
                 {/* top edge sheen */}
                 <div
@@ -335,7 +335,7 @@ export function GamesListClient() {
                   {copy.badge}
                 </div>
 
-                <div className="relative z-10 flex h-[4.75rem] w-[4.75rem] shrink-0 items-center justify-center overflow-hidden rounded-lg sm:h-20 sm:w-20 lg:mt-7 lg:h-auto lg:w-auto lg:flex-1 lg:overflow-visible lg:p-5">
+                <div className="relative z-10 flex h-[4.25rem] w-[4.25rem] shrink-0 items-center justify-center overflow-hidden rounded-lg sm:h-20 sm:w-20 lg:mt-7 lg:h-auto lg:w-auto lg:flex-1 lg:overflow-visible lg:p-5">
                   {/* Shared game mark system: the lobby should feel like the
                       same product as the individual room stages. */}
                   <div
@@ -349,14 +349,19 @@ export function GamesListClient() {
                   <div className="relative flex h-full w-full items-center justify-center lg:h-auto lg:w-auto">
                     <CasinoGameMark
                       slug={room.slug}
-                      className="h-[4.25rem] w-[4.25rem] rounded-md sm:h-[4.5rem] sm:w-[4.5rem] lg:h-36 lg:w-36"
+                      className="h-16 w-16 rounded-md sm:h-[4.5rem] sm:w-[4.5rem] lg:h-36 lg:w-36"
                     />
                   </div>
                 </div>
 
                 <div className="relative z-20 min-w-0 lg:flex-none lg:border-t lg:border-border-soft lg:bg-surface-2/85 lg:p-5 lg:backdrop-blur">
-                  <div className="mb-1 text-[10px] font-bold uppercase tracking-widest text-accent lg:mb-2">
-                    {copy.tag}
+                  <div className="mb-1 flex min-w-0 items-center gap-2 lg:mb-2">
+                    <span className="min-w-0 truncate text-[10px] font-bold uppercase tracking-widest text-accent">
+                      {copy.tag}
+                    </span>
+                    <span className="min-w-0 truncate rounded-full border border-brand/25 bg-brand-soft px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-brand lg:hidden">
+                      {copy.badge}
+                    </span>
                   </div>
                   <h3 className="truncate text-base font-bold text-fg sm:text-lg lg:text-2xl">
                     {copy.title}

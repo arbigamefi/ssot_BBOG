@@ -146,11 +146,11 @@ describe("PortfolioPageClient", () => {
     renderWithQueryClient(<PortfolioPageClient />);
 
     expect(screen.getByRole("heading", { name: /Wallet profile/i })).toBeDefined();
-    expect(screen.getByText("Player identity")).toBeDefined();
-    expect(screen.getByText("Execution context")).toBeDefined();
-    expect(screen.getByText("VRF refund credit")).toBeDefined();
-    expect(screen.getByText("Asset positions")).toBeDefined();
-    expect(screen.getByText("Transaction journal")).toBeDefined();
+    expect(screen.getByText("Wallet identity")).toBeDefined();
+    expect(screen.getByText("Wallet access")).toBeDefined();
+    expect(screen.getAllByText("Refund balance").length).toBeGreaterThan(0);
+    expect(screen.getByText("Wallet assets")).toBeDefined();
+    expect(screen.getByText("Recent activity")).toBeDefined();
     expect(
       screen.getAllByText("Connect a wallet to inspect account state.").length
     ).toBeGreaterThan(0);

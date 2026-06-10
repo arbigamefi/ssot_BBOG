@@ -6,6 +6,21 @@ import { useLocale, useTranslations } from "next-intl";
 import { cn } from "@ssot/ui";
 
 import { mapBetState, shortHex, type GameMeta } from "./model";
+import {
+  applyHouseEdgeToMultiplier,
+  baccaratMultiplier,
+  kenoMaxMultiplier,
+  plinkoMaxMultiplier,
+  rouletteReserveMultiplier,
+  sicBoMultiplier,
+  slotsMaxMultiplier
+} from "./params";
+import {
+  formatHouseEdge,
+  resolveHouseEdgeBps,
+  type ReleaseGamePresentationMeta,
+  type ReleasePresentationMeta
+} from "./presentation";
 import { usePlayerBets } from "../../betting/usePlayerBets";
 import { useCasinoLeaderboard, useCasinoStats, useCasinoTimeseries } from "../useCasinoStats";
 import { formatTokenAmount } from "../../marketing/format";
@@ -126,7 +141,9 @@ export function GameRoomAuditLedger({
   assetSymbol = "UNIT",
   assetDecimals = 6,
   assetContexts = [],
-  chainId
+  chainId,
+  gameMeta,
+  releaseMeta
 }: {
   game: GameMeta;
   /** Currently unused — kept for backward compat with existing callers. */
@@ -140,6 +157,10 @@ export function GameRoomAuditLedger({
   assetContexts?: readonly PoolAssetContext[];
   /** Active chain — drives explorer links and the chain badge in the header. */
   chainId?: number;
+  /** Release metadata for fixed, chain-configured game presentation values. */
+  gameMeta?: ReleaseGamePresentationMeta;
+  /** Release defaults, including the chain's default house edge. */
+  releaseMeta?: ReleasePresentationMeta;
 }) {
   const t = useTranslations();
   const locale = useLocale();
@@ -315,7 +336,9 @@ export function GameRoomAuditLedger({
             locale={locale}
           />
         )}
-        {activeTab === "info" && <GameInfoPanel slug={game.slug} t={t} />}
+        {activeTab === "info" && (
+          <GameInfoPanel slug={game.slug} t={t} gameMeta={gameMeta} releaseMeta={releaseMeta} />
+        )}
       </div>
     </div>
   );
@@ -587,10 +610,21 @@ function StateFilterStrip({
  *  Game info tab
  * ──────────────────────────────────────────────────────────────────────── */
 
-function GameInfoPanel({ slug, t }: { slug: string; t: Translate }) {
+function GameInfoPanel({
+  slug,
+  t,
+  gameMeta,
+  releaseMeta
+}: {
+  slug: string;
+  t: Translate;
+  gameMeta?: ReleaseGamePresentationMeta;
+  releaseMeta?: ReleasePresentationMeta;
+}) {
   const tagline = safeT(t, `casino.room.gameInfo.${slug}.tagline`);
-  const houseEdge = safeT(t, `casino.room.gameInfo.${slug}.houseEdge`);
-  const bets = readBets(t, slug);
+  const houseEdge = formatHouseEdge(gameMeta, slug, releaseMeta);
+  const houseEdgeBps = resolveHouseEdgeBps(gameMeta, slug, releaseMeta);
+  const bets = readBets(t, slug).map((bet) => applyGameInfoMultiplier(bet, slug, houseEdgeBps, t));
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
@@ -637,6 +671,9 @@ function GameInfoPanel({ slug, t }: { slug: string; t: Translate }) {
             </tbody>
           </table>
         </div>
+        <p className="mt-3 text-[11px] leading-5 text-fg-muted">
+          {t("casino.room.audit.infoFormulaNote")}
+        </p>
       </section>
     </div>
   );
@@ -1398,4 +1435,65 @@ function readBets(t: Translate, slug: string): GameInfoBet[] {
     // fall through
   }
   return [];
+}
+
+function formatInfoMultiplier(multiplier: number, houseEdgeBps: number) {
+  const adjusted = applyHouseEdgeToMultiplier(multiplier, houseEdgeBps);
+  if (!Number.isFinite(adjusted) || adjusted <= 0) return "0×";
+  return `${adjusted.toFixed(2)}×`;
+}
+
+function formatMaxInfoMultiplier(multiplier: number, houseEdgeBps: number, t: Translate) {
+  return t("casino.room.audit.maxMultiplier", {
+    multiplier: formatInfoMultiplier(multiplier, houseEdgeBps)
+  });
+}
+
+function applyGameInfoMultiplier(
+  bet: GameInfoBet,
+  slug: string,
+  houseEdgeBps: number,
+  t: Translate
+): GameInfoBet {
+  const multiplier = resolveGameInfoGrossMultiplier(slug, bet.key);
+  if (multiplier == null) return bet;
+  const adjusted =
+    isMaxStyleInfoBet(slug, bet.key) || slug === "plinko" || slug === "slots"
+      ? formatMaxInfoMultiplier(multiplier, houseEdgeBps, t)
+      : formatInfoMultiplier(multiplier, houseEdgeBps);
+  return { ...bet, multiplier: adjusted };
+}
+
+function isMaxStyleInfoBet(slug: string, key: string) {
+  return (slug === "keno" && key !== "p1") || (slug === "sic-bo" && key === "singleFace");
+}
+
+function resolveGameInfoGrossMultiplier(slug: string, key: string): number | undefined {
+  if (slug === "roulette") {
+    if (key === "straight") return rouletteReserveMultiplier(["0"]);
+    if (key === "redBlack" || key === "evenOdd" || key === "lowHigh")
+      return rouletteReserveMultiplier(["RED"]);
+    if (key === "dozen") return rouletteReserveMultiplier(["1st 12"]);
+    if (key === "column") return rouletteReserveMultiplier(["col1"]);
+  }
+  if (slug === "coin-toss") return 2;
+  if (slug === "keno") {
+    const spotCount = Number(key.replace(/^p/, ""));
+    return Number.isInteger(spotCount) ? kenoMaxMultiplier(spotCount) : undefined;
+  }
+  if (slug === "plinko") {
+    if (key === "low" || key === "medium" || key === "high") return plinkoMaxMultiplier(key);
+  }
+  if (slug === "slots") return slotsMaxMultiplier();
+  if (slug === "baccarat") {
+    if (key === "player" || key === "banker" || key === "tie") return baccaratMultiplier(key);
+  }
+  if (slug === "sic-bo") {
+    if (key === "smallBig") return sicBoMultiplier("small", 0);
+    if (key === "anyTriple") return sicBoMultiplier("anyTriple", 0);
+    if (key === "specificTriple") return sicBoMultiplier("specificTriple", 1);
+    if (key === "specificDouble") return sicBoMultiplier("specificDouble", 1);
+    if (key === "singleFace") return sicBoMultiplier("singleFace", 1);
+  }
+  return undefined;
 }

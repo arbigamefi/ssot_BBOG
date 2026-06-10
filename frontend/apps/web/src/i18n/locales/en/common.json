@@ -104,11 +104,11 @@
       },
       "portfolioReferral": {
         "title": "Referral",
-        "description": "Create a referral link, inspect first-touch binding, and review affiliate reward buckets."
+        "description": "Create a referral link, track referred play, and inspect claimable affiliate rewards."
       },
       "affiliate": {
         "title": "Affiliates",
-        "description": "Share wallet-native casino rooms and route referral rewards through the on-chain XP ledger."
+        "description": "Share casino rooms with your referral link and track rewards from referred play."
       },
       "earn": {
         "title": "Earn",
@@ -162,7 +162,7 @@
         "gameNotFound": "Game not found."
       },
       "names": {
-        "dice": "Precision Dice",
+        "dice": "Dice",
         "roulette": "European Roulette",
         "coinToss": "Coin Toss",
         "keno": "Keno Draft",
@@ -203,7 +203,7 @@
           "payout": "Payout",
           "state": "State",
           "bet": "Bet",
-          "coverage": "Coverage",
+          "coverage": "Win chance / condition",
           "winChance": "Win chance",
           "bets": "Bets",
           "volume": "Volume"
@@ -216,6 +216,7 @@
         },
         "viewBet": "View bet {betId}",
         "houseEdgeLabel": "House edge",
+        "maxMultiplier": "{multiplier} max",
         "howToPlayLabel": "How it works",
         "betTypesLabel": "Bet types",
         "justNow": "just now",
@@ -278,7 +279,8 @@
             "d7": "7d",
             "d30": "30d"
           }
-        }
+        },
+        "infoFormulaNote": "Win chance is the event probability. Multipliers shown are player-facing payouts after the current house edge."
       },
       "errors": {
         "quoteFailed": "Unable to estimate VRF fee.",
@@ -377,7 +379,7 @@
         "asset": "Bet asset",
         "limits": {
           "maxBet": "Max bet",
-          "poolPayout": "Pool pays"
+          "poolPayout": "Max payout"
         },
         "syncing": "Syncing...",
         "notConnected": "Not connected",
@@ -419,6 +421,7 @@
           "betMined": "BET MINED...",
           "signing": "SIGNING / PLACING...",
           "reduceAmount": "REDUCE AMOUNT",
+          "selectToBet": "SELECT A BET",
           "approveThenPlace": "APPROVE, THEN PLACE BET",
           "preparing": "PREPARING ROUND...",
           "placeBet": "PLACE BET",
@@ -713,7 +716,6 @@
       "gameInfo": {
         "roulette": {
           "tagline": "European roulette — 37 pockets, every spin signed on-chain by Chainlink VRF.",
-          "houseEdge": "2.70%",
           "bets": [
             {
               "key": "straight",
@@ -755,7 +757,6 @@
         },
         "dice": {
           "tagline": "Roll a number from 0 to 99. Pick a target and a direction.",
-          "houseEdge": "2.00%",
           "bets": [
             {
               "key": "under",
@@ -773,7 +774,6 @@
         },
         "coin-toss": {
           "tagline": "True 50/50. Pick a side; one Chainlink VRF draw decides it.",
-          "houseEdge": "2.00%",
           "bets": [
             {
               "key": "heads",
@@ -791,7 +791,6 @@
         },
         "keno": {
           "tagline": "Pick 1–5 spots from a 15-number board. The contract draws 5 winners; match more, win more.",
-          "houseEdge": "≈ 3.00%",
           "bets": [
             {
               "key": "p1",
@@ -827,7 +826,6 @@
         },
         "plinko": {
           "tagline": "Drop a ball through a 9-row peg field. Outer buckets pay more; risk profile shapes the curve.",
-          "houseEdge": "≈ 1.50%",
           "bets": [
             {
               "key": "low",
@@ -851,7 +849,6 @@
         },
         "slots": {
           "tagline": "3-reel classic. Triple-match the top symbol for 64×.",
-          "houseEdge": "≈ 4.00%",
           "bets": [
             {
               "key": "classic",
@@ -863,7 +860,6 @@
         },
         "baccarat": {
           "tagline": "Bet on Player, Banker, or Tie. Standard commission-free payout structure.",
-          "houseEdge": "1.06% – 14.4%",
           "bets": [
             {
               "key": "player",
@@ -887,7 +883,6 @@
         },
         "sic-bo": {
           "tagline": "Three dice. Pick small/big, a triple, a double, a single face, or a total.",
-          "houseEdge": "2.78% – 30.6%",
           "bets": [
             {
               "key": "smallBig",
@@ -972,7 +967,7 @@
       },
       "rooms": {
         "dice": {
-          "title": "Precision Dice",
+          "title": "Dice",
           "promise": "1-99 sizing in seconds.",
           "badge": "Fast rolls"
         },
@@ -2076,9 +2071,9 @@
         }
       },
       "hero": {
-        "eyebrow": "Account registry",
+        "eyebrow": "Account overview",
         "title": "Wallet profile.",
-        "description": "Your wallet balance, your open bets, refunds, and your local round history — all in one view.",
+        "description": "Your balances, open bets, refunds, and recent play history — all in one view.",
         "connectedAccount": "Connected account"
       },
       "metrics": {
@@ -2087,95 +2082,95 @@
           "detail": "Your free balance across active game assets."
         },
         "bankPosition": {
-          "label": "Bank position",
-          "detail": "Assets equivalent for connected Bank shares."
+          "label": "Vault value",
+          "detail": "Current value of your bankroll shares."
         },
         "refundCredit": {
-          "label": "Refund credit",
-          "detail": "Recoverable VRF balance credited to the wallet."
+          "label": "Refund balance",
+          "detail": "Funds available to claim back to your wallet."
         }
       },
       "alerts": {
         "readOnly": {
-          "title": "Read-only session",
-          "message": "Writes are disabled."
+          "title": "Wallet action unavailable",
+          "message": "Switch to the active network to submit transactions."
         },
         "assetQueryFailed": "Asset query failed",
         "refundQueryFailed": "Refund query failed"
       },
       "links": {
-        "openBankConsole": "Open bank console"
+        "openBankConsole": "Manage liquidity"
       },
       "context": {
-        "title": "Execution context",
-        "session": "Session",
+        "title": "Wallet access",
+        "session": "Wallet",
         "readOnly": "Read-only",
-        "writable": "Writable",
-        "network": "Network",
+        "writable": "Connected",
+        "network": "Active network",
         "digest": "Digest"
       },
       "identity": {
-        "eyebrow": "Profile",
-        "title": "Player identity",
-        "playerLabel": "Player label",
-        "placeholder": "Enter label",
+        "eyebrow": "Wallet",
+        "title": "Wallet identity",
+        "playerLabel": "Display label",
+        "placeholder": "Add a label",
         "saved": "Saved locally",
         "saving": "Saving locally",
         "walletAddress": "Wallet address",
         "copyWalletAddress": "Copy wallet address"
       },
       "positions": {
-        "eyebrow": "Ledger",
-        "title": "Asset positions",
+        "eyebrow": "Assets",
+        "title": "Wallet assets",
         "loading": "Loading balances.",
         "shares": "{amount} shares",
         "columns": {
           "asset": "Asset",
           "wallet": "Wallet",
-          "bankPosition": "Bank position",
-          "allowance": "Allowance"
+          "bankPosition": "Vault value",
+          "allowance": "Approved"
         }
       },
       "refund": {
-        "title": "VRF refund credit",
-        "connectWallet": "Connect a wallet to inspect and claim recoverable VRF credit.",
+        "title": "Refund balance",
+        "connectWallet": "Connect a wallet to inspect and claim recoverable refund balances.",
         "readOnly": "Read-only mode — switch chains to take actions.",
         "claiming": "Claiming",
-        "claim": "Claim credit",
+        "claim": "Claim refund",
         "flow": {
-          "preflight": "Preflight",
+          "preflight": "Check balance",
           "submit": "Submit claim",
           "confirm": "Confirm on-chain",
-          "preflightDetail": "Validate refund credit.",
-          "submitDetail": "Broadcast claimRefundCredit.",
-          "confirmDetail": "Wait for receipt."
+          "preflightDetail": "Validate recoverable refund balance.",
+          "submitDetail": "Broadcast the refund claim.",
+          "confirmDetail": "Wait for confirmation."
         }
       },
       "trace": {
         "waiting": "Waiting for refund claim intent.",
         "error": "Transaction error",
-        "title": "Refund claim trace",
-        "subtitle": "Wallet signature, broadcast, and receipt state.",
+        "title": "Refund claim status",
+        "subtitle": "Wallet signature, broadcast, and confirmation.",
         "status": "Status",
         "viewExplorer": "View explorer",
         "block": "Block {blockNumber}",
-        "reset": "Reset trace"
+        "reset": "Clear status"
       },
       "journal": {
-        "eyebrow": "Journal",
-        "title": "Transaction journal",
+        "eyebrow": "Activity",
+        "title": "Recent activity",
         "columns": {
           "action": "Action",
           "status": "Status"
         },
-        "empty": "No account transactions in this browser session."
+        "empty": "No account activity in this browser session."
       },
       "toast": {
         "labelSaved": "Player label saved locally.",
         "clipboardUnavailable": "Clipboard is unavailable in this browser.",
         "walletCopied": "Wallet address copied",
         "walletCopyFailed": "Failed to copy wallet address",
-        "refundClaimed": "Refund credit claimed",
+        "refundClaimed": "Refund claimed",
         "refundClaimFailed": "Refund claim failed"
       },
       "loading": "Loading portfolio…"
@@ -2196,29 +2191,29 @@
       "hero": {
         "eyebrow": "Activity ledger",
         "title": "Betting activity.",
-        "description": "Review indexed tickets, settlement state, and capital outcomes without mixing detail actions into the activity surface.",
+        "description": "Review indexed bets, settlement state, and capital outcomes without mixing detail actions into the activity surface.",
         "summary": "Ledger summary",
         "session": "Indexed browser session"
       },
       "metrics": {
         "indexed": {
-          "label": "Indexed tickets",
+          "label": "Indexed bets",
           "connected": "Rows merged from shared cache ({serverRows}) and local replay ({localRows}).",
-          "disconnected": "Connect a wallet to load account-scoped tickets."
+          "disconnected": "Connect a wallet to load account-scoped bets."
         },
         "open": {
-          "label": "Open tickets",
-          "detail": "Placed or VRF-ready tickets that still need closure."
+          "label": "Open bets",
+          "detail": "Placed or VRF-ready bets that still need closure."
         },
         "settled": {
           "label": "Settled outcomes",
-          "detail": "Tickets with final win, loss, refund, or failure state."
+          "detail": "Bets with final win, loss, refund, or failure state."
         }
       },
       "filters": {
         "all": {
           "label": "All",
-          "detail": "Every indexed ticket."
+          "detail": "Every indexed bet."
         },
         "open": {
           "label": "Open",
@@ -2226,7 +2221,7 @@
         },
         "won": {
           "label": "Won",
-          "detail": "Positive settled tickets."
+          "detail": "Positive settled bets."
         },
         "lost": {
           "label": "Lost",
@@ -2234,13 +2229,13 @@
         }
       },
       "ledger": {
-        "eyebrow": "Tickets",
+        "eyebrow": "Bets",
         "title": "Casino ledger",
         "loading": "Synchronizing ledger.",
-        "empty": "No tickets align with the current filter.",
+        "empty": "No bets align with the current filter.",
         "view": "View",
         "columns": {
-          "ticket": "Ticket",
+          "ticket": "Bet",
           "module": "Game",
           "stake": "Stake",
           "settlement": "Settlement",
@@ -2262,7 +2257,7 @@
       "detail": {
         "common": {
           "empty": "—",
-          "ticketDetail": "Ticket detail"
+          "ticketDetail": "Bet detail"
         },
         "state": {
           "won": "Won",
@@ -2277,8 +2272,8 @@
           "back": "Back to ledger",
           "eyebrow": "Receipt dossier",
           "title": "{gameLabel} receipt.",
-          "description": "Stake, lifecycle proof, settlement facts, and eligible protocol actions stay attached to one auditable ticket surface.",
-          "ticketContext": "Ticket context",
+          "description": "Stake, lifecycle proof, settlement facts, and eligible protocol actions stay attached to one auditable bet receipt.",
+          "ticketContext": "Bet context",
           "settlementState": "Settlement state"
         },
         "flows": {
@@ -2314,7 +2309,7 @@
           },
           "capitalAtRisk": {
             "label": "Capital at risk",
-            "detail": "Original stake committed when the ticket was placed."
+            "detail": "Original stake committed when the bet was placed."
           },
           "settlement": {
             "label": "Settlement",
@@ -2328,7 +2323,7 @@
         },
         "facts": {
           "room": "Room",
-          "ticketId": "Ticket id",
+          "ticketId": "Bet id",
           "stake": "Stake",
           "vrfFeePaid": "VRF fee paid",
           "vrfFeeCharged": "VRF fee charged",
@@ -2356,7 +2351,7 @@
         "lifecycle": {
           "eyebrow": "Lifecycle proof",
           "title": "GameHub state",
-          "stepperTitle": "Ticket lifecycle",
+          "stepperTitle": "Bet lifecycle",
           "stepperSubtitle": "Placement, randomness, and settlement remain independently inspectable.",
           "releaseDigest": "Build",
           "asset": "Asset",
@@ -2364,7 +2359,7 @@
           "steps": {
             "placed": {
               "title": "Placed",
-              "description": "GameHub accepted the ticket and locked stake."
+              "description": "GameHub accepted the bet and locked stake."
             },
             "randomReady": {
               "title": "Random ready",
@@ -2386,7 +2381,7 @@
           "finalizeSurface": "Finalize surface",
           "description": "Actions only appear when GameHub state allows them. The execution trace remains attached to this receipt.",
           "finalizing": "Finalizing...",
-          "finalizeTicket": "Finalize ticket",
+          "finalizeTicket": "Finalize bet",
           "refunding": "Refunding...",
           "refundStake": "Refund stake",
           "transactionError": "Transaction error",
@@ -2435,7 +2430,7 @@
       "hero": {
         "eyebrow": "Claims vault",
         "title": "Rewards and protocol claims.",
-        "description": "Inspect XP buckets, synchronize holdback state, and execute claim transactions without hiding pending liabilities behind promotional balances.",
+        "description": "Inspect claimable rewards, synchronize holdback state, and execute claim transactions without hiding pending liabilities behind promotional balances.",
         "connectedPayee": "Connected payee"
       },
       "metrics": {
@@ -2453,7 +2448,7 @@
         }
       },
       "buckets": {
-        "title": "XP bucket ledger",
+        "title": "Reward ledger",
         "syncing": "syncing",
         "readModel": "read model",
         "cards": {
@@ -2593,12 +2588,12 @@
       "hero": {
         "eyebrow": "Affiliate account",
         "title": "Referral rewards.",
-        "description": "Create a casino link, inspect your immutable first-touch referrer, and review XP buckets that are paid by the active Bank ledger.",
+        "description": "Create a casino link, review your immutable first-touch attribution, and inspect rewards paid by the active vault ledger.",
         "connected": "Wallet"
       },
       "link": {
         "title": "Your referral link",
-        "description": "Share this link with players. When they place a casino bet, GameHub forwards the affiliate hint for first-touch binding and skyline pricing.",
+        "description": "Share this link with players. When they place a casino bet, the contract records the referral relationship for attribution and rewards.",
         "learn": "Model",
         "connect": "Connect a wallet to generate a referral link.",
         "copy": "Copy link",
@@ -2607,7 +2602,7 @@
       "metrics": {
         "accrued": {
           "label": "Accrued",
-          "detail": "XP currently claimable from the Bank ledger."
+          "detail": "Referral rewards currently claimable from the vault ledger."
         },
         "locked": {
           "label": "Locked",
@@ -2679,8 +2674,8 @@
     },
     "metrics": {
       "sharePrice": {
-        "label": "Share price",
-        "detail": "Assets redeemable per full LP share."
+        "label": "Value / 1k shares",
+        "detail": "Redeemable assets per 1,000 LP shares. The one-share price remains in the reserve ledger."
       },
       "totalShares": {
         "label": "Total shares",
@@ -2691,8 +2686,8 @@
         "detail": "Unreserved bankroll available above open liabilities."
       },
       "totalAssets": {
-        "label": "Total assets",
-        "detail": "Verifiable Bank NAV from the active release."
+        "label": "Current vault NAV",
+        "detail": "Verifiable NAV for the selected Bank vault."
       },
       "minLiquidity": {
         "label": "Min liquidity",
@@ -2703,9 +2698,10 @@
       "capitalPosture": {
         "title": "Verifiable reserve ledger",
         "readModel": "on-chain read",
-        "totalAssets": "Total assets",
+        "totalAssets": "Current vault NAV",
         "loading": "Reading the latest bank snapshot…",
-        "detail": "Bank NAV read from the active contract."
+        "detail": "Selected Bank vault NAV read from the active contract.",
+        "totalAssetsDetail": "Selected vault NAV read from the active contract."
       },
       "freeReserve": {
         "label": "Free reserve",
@@ -2717,7 +2713,7 @@
       },
       "totalShares": {
         "label": "Total shares",
-        "detail": "Outstanding LP shares. Share price moves as Bank NAV changes."
+        "detail": "LP shares currently issued. Pool NAV changes are reflected in share value."
       },
       "position": {
         "label": "Your position",
@@ -2866,7 +2862,7 @@
       "lifetimeOnChain": "Lifetime · on-chain verified",
       "housePnl": "House P&L",
       "hold": "Realized hold",
-      "velocity": "Velocity",
+      "velocity": "Capital velocity",
       "grossAnnualized": "Gross annualized estimate",
       "wagered": "Total wagered",
       "payout": "Total payout",
@@ -2922,6 +2918,12 @@
         "shares": "Shares",
         "sharePrice": "Share price",
         "tx": "Tx"
+      }
+    },
+    "overview": {
+      "totalAssets": {
+        "label": "Current vault NAV",
+        "detail": "Verifiable NAV for the selected Bank vault from the active release."
       }
     }
   },
@@ -3120,6 +3122,7 @@
       "description": "Casino rooms with Chainlink VRF randomness, public receipts, and payouts that settle straight to your wallet.",
       "enterCasino": "Enter Casino",
       "viewBank": "See Bankroll",
+      "scrollHint": "Scroll to live proof",
       "visual": {
         "status": "Paid",
         "wallet": "to wallet",
@@ -3130,7 +3133,7 @@
       "live": "Live",
       "metrics": {
         "freeReserve": "Free reserve",
-        "bankAssets": "Bank assets",
+        "bankAssets": "Bankroll",
         "rooms": "Rooms"
       },
       "proofRows": {
@@ -3146,16 +3149,16 @@
     },
     "stats": {
       "vault": {
-        "label": "House bankroll",
-        "detail": "What's backing every payout — read from the chain."
+        "label": "Network bankroll",
+        "detail": "Total capital for the selected asset across active Banks — read from the chain."
       },
       "turnover": {
-        "label": "Total turnover",
-        "detail": "Lifetime stake flow through the Bank — read from the chain."
+        "label": "Network turnover",
+        "detail": "Lifetime selected-asset stake flow across active Banks — read from the chain."
       },
       "protocolFee": {
-        "label": "Protocol fees",
-        "detail": "Accrued protocol fees — read from the chain."
+        "label": "Network fees",
+        "detail": "Accrued selected-asset protocol fees across active Banks — read from the chain."
       },
       "verifiable": "On-chain",
       "indexed": "Indexed · may lag",
@@ -3171,9 +3174,9 @@
       "dice": {
         "title": "Dice",
         "badge": "Precision room",
-        "summary": "Set the cap, size the ticket, and step into a fast dice room.",
+        "summary": "Set the target, choose the stake, and step into a fast dice room.",
         "facts": {
-          "0": "Fast ticket",
+          "0": "Fast bet",
           "1": "Live settlement",
           "2": "Single asset"
         }
@@ -3191,7 +3194,7 @@
       "roulette": {
         "title": "Roulette",
         "badge": "European table",
-        "summary": "Step into a standard European roulette table with a real board, a clear slip, and readable ticket review.",
+        "summary": "Step into a standard European roulette table with a real board, clear bet slip, and readable receipt review.",
         "facts": {
           "0": "0-36 table",
           "1": "Clear slip",
@@ -3201,7 +3204,7 @@
       "keno": {
         "title": "Keno",
         "badge": "Matrix room",
-        "summary": "Pick the board, size the ticket, and keep the draw centered on the room.",
+        "summary": "Pick the board, choose the stake, and keep the draw centered on the room.",
         "facts": {
           "0": "Board-first",
           "1": "Live draw",
@@ -3250,13 +3253,13 @@
       }
     },
     "bank": {
-      "eyebrow": "Bank reserve",
+      "eyebrow": "Bankroll reserve",
       "title": "Reserve ledger before marketing yield.",
       "description": "Bank balances and reserved liabilities are displayed from protocol reads. The page does not invent APY or hide pending obligations behind a promotional number.",
       "freeReserve": "Free reserve",
-      "totalBankAssets": "Total bank assets",
+      "totalBankAssets": "Total bankroll",
       "releaseDigest": "Build",
-      "inspectBank": "Inspect bank"
+      "inspectBank": "Inspect bankroll"
     },
     "activity": {
       "eyebrow": "Live",
@@ -3310,14 +3313,14 @@
       "verifyCta": "Verify on explorer"
     },
     "reserveBar": {
-      "eyebrow": "House bankroll",
+      "eyebrow": "Network bankroll",
       "free": "Free to pay out",
-      "total": "Total in the bank",
+      "total": "Total across Banks",
       "verify": "Check on-chain"
     },
     "featured": {
       "eyebrow": "Featured",
-      "title": "Keno — pick 5, chase 500×.",
+      "title": "Keno — pick 5, match all for 500.5×.",
       "detail": "Fifteen numbers on the board. Pick five. Match all five and the payout is 500.5×. Hit one and you still cash out.",
       "cta": "Play Keno"
     },
@@ -3327,6 +3330,37 @@
       "description": "Your money stays in your wallet until you place a bet. Wins come back the same way.",
       "primary": "Start Playing",
       "secondary": "Browse Games"
+    },
+    "home": {
+      "stats": {
+        "vault": {
+          "label": "Selected-asset bankroll",
+          "detail": "Capital backing payouts for the selected asset — read from the chain."
+        },
+        "turnover": {
+          "label": "Selected-asset turnover",
+          "detail": "Lifetime stake flow for the selected asset — read from the chain."
+        },
+        "protocolFee": {
+          "label": "Selected-asset fees",
+          "detail": "Accrued protocol fees for the selected asset — read from the chain."
+        },
+        "assetContext": "Selected asset"
+      },
+      "roomCards": {
+        "dice": {
+          "summary": "Set the target and stake, then step into a fast dice room."
+        },
+        "coinToss": {
+          "summary": "Pick heads or tails and resolve a round in seconds."
+        },
+        "roulette": {
+          "summary": "Step into a standard European roulette table with a real board, a clear slip, and readable review."
+        },
+        "keno": {
+          "summary": "Pick numbers, set the stake, and keep the draw centered in the room."
+        }
+      }
     }
   },
   "legal": {
@@ -3428,7 +3462,7 @@
     "hero": {
       "eyebrow": "Affiliate growth",
       "title": "Send players. Track every bet.",
-      "description": "Create a wallet-native referral link, share it with your audience, then review bound play and reward buckets from the referral console.",
+      "description": "Create a wallet-native referral link, share it with your audience, then track referred players and rewards from the referral console.",
       "primary": "Generate link",
       "secondary": "Referral console"
     },
@@ -3442,6 +3476,25 @@
       "shareText": "Join ArbiGameFi through my referral link for on-chain casino rounds, wallet-native payouts, and public receipts.",
       "wallet": "Wallet {wallet}",
       "walletPending": "Wallet not connected"
+    },
+    "proof": {
+      "eyebrow": "Tracking proof",
+      "title": "The link is measurable.",
+      "body": "When referred players place casino bets, the indexed ledger starts showing activity for your wallet. No off-platform spreadsheet is required.",
+      "pendingSource": "pending",
+      "ledgerValue": "{source} · chain {chainId}",
+      "status": {
+        "connect": "Connect",
+        "loading": "Syncing",
+        "unavailable": "Unavailable",
+        "ready": "Ready",
+        "active": "Active"
+      },
+      "metrics": {
+        "status": "Tracking",
+        "bets": "Referred bets",
+        "ledger": "Ledger source"
+      }
     },
     "kit": {
       "eyebrow": "Campaign kit",
@@ -3470,12 +3523,12 @@
     },
     "pillars": {
       "firstTouch": {
-        "title": "First-touch binding",
-        "body": "A valid referral hint is forwarded with casino bets. Once bound, the relationship is immutable."
+        "title": "One-link tracking",
+        "body": "A valid referral link travels with casino bets. Once a player is connected to your link, future referred play stays trackable."
       },
       "xp": {
-        "title": "XP buckets",
-        "body": "Rewards surface as accrued, locked, and holdback balances on the active Bank ledger."
+        "title": "Reward status",
+        "body": "Track claimable, pending, and held rewards from the referral console."
       },
       "chain": {
         "title": "Auditable settlement",
@@ -3484,20 +3537,20 @@
     },
     "flow": {
       "eyebrow": "How it works",
-      "title": "Built for B2C distribution.",
-      "body": "The MVP path keeps the growth loop simple: share a room, bind the player, then let the Bank ledger expose claimable rewards.",
+      "title": "Built for affiliate growth.",
+      "body": "The growth loop stays simple: share a room, track referred play, then claim available rewards.",
       "steps": {
         "0": {
           "title": "Share",
           "body": "Generate a casino link from your wallet and send players directly to a room."
         },
         "1": {
-          "title": "Bind",
-          "body": "GameHub uses the ref hint for best-effort first-touch binding when a player bets."
+          "title": "Track",
+          "body": "When a player opens your link and places a bet, the referral is attached automatically."
         },
         "2": {
           "title": "Claim",
-          "body": "Review XP buckets and claim available rewards from the portfolio surface."
+          "body": "Review referral rewards and claim available balances from the portfolio surface."
         }
       }
     }
@@ -3593,7 +3646,12 @@
     "faq": {
       "eyebrow": "Help center",
       "title": "Help & FAQ",
-      "description": "Everything you need to start playing, verify a result, and stay in control."
+      "description": "Everything you need to start playing, verify a result, and stay in control.",
+      "items": {
+        "0": {
+          "question": "Why is my bet still waiting?"
+        }
+      }
     },
     "contact": {
       "title": "Still need help?",
@@ -3618,7 +3676,7 @@
       },
       {
         "q": "What is house edge?",
-        "a": "House edge is the built-in margin that keeps the Bank sustainable. Each game shows its exact edge in the Game Info tab — e.g. roulette is 2.70%, dice is 1%."
+        "a": "House edge is the built-in margin that keeps the Bank sustainable. Each game shows its exact current value in the Game Info tab, using the live release configuration rather than a marketing estimate."
       },
       {
         "q": "Why is my bet pending?",
@@ -3682,6 +3740,52 @@
         "title": "Verify every result",
         "body": "After each round you can copy a proof-of-fairness receipt and check it on-chain. That's the whole point."
       }
+    }
+  },
+  "statusPage": {
+    "metadata": {
+      "title": "System Status | ArbiGameFi",
+      "description": "Per-chain readiness checks for the active release, keeper, and durable bet index."
+    },
+    "eyebrow": "ArbiGameFi Status",
+    "title": "System status",
+    "description": "Per-chain readiness checks for release metadata, casino keeper finalization, and the durable bet index.",
+    "selectedJson": "Selected JSON",
+    "json": "JSON",
+    "chainNav": "Chain status",
+    "development": {
+      "title": "Development diagnostics.",
+      "body": "Keeper and bet-index checks reflect local processes and per-chain health files. A stopped local keeper is shown as degraded for that chain; it is not a production outage."
+    },
+    "state": {
+      "operational": "Operational",
+      "degraded": "Degraded"
+    },
+    "unknown": "Unknown",
+    "unavailable": "Unavailable",
+    "yes": "Yes",
+    "no": "No",
+    "summary": {
+      "generated": "Generated",
+      "keeperAge": "Keeper age",
+      "indexSource": "Index source"
+    },
+    "cards": {
+      "release": "Release",
+      "keeper": "Keeper",
+      "betIndex": "Bet index"
+    },
+    "rows": {
+      "name": "Name",
+      "warnings": "Warnings",
+      "role": "Role",
+      "status": "Status",
+      "snapshotAge": "Snapshot age",
+      "queueDepth": "Queue depth",
+      "source": "Source",
+      "rowsSampled": "Rows sampled",
+      "durableRequired": "Durable required",
+      "durableConfigured": "Durable configured"
     }
   }
 }

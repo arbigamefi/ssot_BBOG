@@ -8,6 +8,13 @@ vi.mock("../../../server/healthz", () => ({
   getHealthzSnapshot: getHealthzSnapshotMock
 }));
 
+vi.mock("../../../i18n/request", async () => {
+  const messages = (await import("../../../i18n/locales/en/common.json")).default;
+  return {
+    getRequestI18n: async () => ({ locale: "en", messages })
+  };
+});
+
 import StatusPage from "./page";
 
 describe("StatusPage", () => {

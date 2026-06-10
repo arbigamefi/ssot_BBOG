@@ -1,16 +1,12 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
 
-import { shortHex } from "./format";
-
 export function PortfolioContextCard({
   readOnly,
-  releaseName,
-  releaseDigest
+  releaseName
 }: {
   readOnly: boolean;
   releaseName?: string;
-  releaseDigest?: string;
 }) {
   const t = useTranslations();
   const rows = [
@@ -23,10 +19,6 @@ export function PortfolioContextCard({
     {
       label: t("portfolio.overview.context.network"),
       value: releaseName ?? t("portfolio.overview.common.unknown")
-    },
-    {
-      label: t("portfolio.overview.context.digest"),
-      value: shortHex(releaseDigest, t("portfolio.overview.common.pending"))
     }
   ];
 

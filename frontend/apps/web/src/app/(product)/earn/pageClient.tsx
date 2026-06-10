@@ -45,9 +45,6 @@ export function EarnPageClient() {
   const queryClient = useQueryClient();
   const explorerBaseUrl = React.useMemo(() => getExplorerBaseUrl(chainId), [chainId]);
 
-  // Shared asset-selection model (also used by the casino room) — lists every
-  // active casino pool asset on the current chain and resolves the chosen one to
-  // a pool id + decimals + symbol. `selectedContext` is the "valid asset" guard.
   const assetSelection = useCasinoPoolAssetSelection();
   const { assetOptions, selectedContext, poolId } = assetSelection;
   const writesSupportedForSelectedAsset = assetSelection.writesSupported;
@@ -435,7 +432,12 @@ export function EarnPageClient() {
   const metrics: EarnMetric[] = [
     {
       label: t("earn.metrics.sharePrice.label"),
-      value: formatTokenAmount(snapshot?.assetsPerShare, decimals, symbol, 4),
+      value: formatTokenAmount(
+        snapshot?.assetsPerShare != null ? snapshot.assetsPerShare * 1000n : undefined,
+        decimals,
+        symbol,
+        4
+      ),
       detail: t("earn.metrics.sharePrice.detail")
     },
     {
@@ -459,9 +461,6 @@ export function EarnPageClient() {
     <PageTransition pageKey="earn">
       <div className="space-y-8 pb-28 lg:pb-0">
         <EarnHero symbol={symbol} bankAddress={shortHex(snapshot?.bank)} metrics={metrics} />
-        {/* Provider diligence: how the house bankroll has actually performed
-            (indexed, best-effort) — shown before the deposit console so a
-            provider sees the evidence before they act. */}
         <BankrollPerformancePanel
           assetAddress={asset}
           assetDecimals={decimals}

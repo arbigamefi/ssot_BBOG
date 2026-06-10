@@ -8,6 +8,7 @@ import { cn } from "@ssot/ui";
 import { useCompliance } from "../compliance";
 import { useFocusTrap } from "../a11y/useFocusTrap";
 import { overlayZ } from "../../components/overlay/z";
+import { isCasinoModuleSlug } from "../../features/casino/modules";
 
 const STORAGE_KEY = "arbigamefi.onboarding.v1";
 
@@ -37,7 +38,8 @@ const STEPS: TourStep[] = [
 type Rect = { top: number; left: number; width: number; height: number };
 
 function isGameRoom(pathname: string) {
-  return pathname.startsWith("/casino/") && pathname !== "/casino";
+  const match = /^\/casino\/([^/?#]+)$/.exec(pathname);
+  return match ? isCasinoModuleSlug(match[1] ?? "") : false;
 }
 
 export function OnboardingTour() {
