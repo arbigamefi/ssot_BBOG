@@ -66,6 +66,40 @@ const SportsRiskEngineAbi = await loadAbi("SportsRiskEngine");
 const ERC20Abi = parseAbi(["function decimals() view returns (uint8)"]);
 const LEGACY_GAME_AGGREGATOR_KEY = `hu${"b"}`;
 const LEGACY_BANK_DIRECTORY_KEY = `bank${"Registry"}`;
+const MAX_BPS = 10_000n;
+const SSOT_FIELDS = [
+  "B",
+  "PF",
+  "XP",
+  "NAV",
+  "R",
+  "minLiquidityBps",
+  "minLiq",
+  "free",
+  "riskReserveBps",
+  "riskReserve",
+  "riskFree",
+  "withdrawalBufferBps",
+  "withdrawalBuffer",
+  "withdrawable",
+  "riskInPaused",
+  "xpAccruedTotal",
+  "xpLockedTotal",
+  "xpHoldbackTotal",
+  "holdbackVestingSeconds",
+  "minPlayerTurnoverForUnlock"
+];
+const PERFORMANCE_FIELDS = [
+  "turnover",
+  "payoutGross",
+  "payoutNet",
+  "refunded",
+  "feeOnPayout",
+  "protocolFeeAccrued",
+  "betsHeld",
+  "betsSettled",
+  "betsRefunded"
+];
 
 let ok = true;
 const releaseAssetsByAddress = new Map();
@@ -241,7 +275,17 @@ for (const pool of release.pools ?? []) {
       functionName: "getSSOT",
       args: []
     });
-    return `NAV=${bigintValue(ssot, "NAV")} R=${bigintValue(ssot, "R")} PF=${bigintValue(ssot, "PF")}`;
+    return validateBankSSOT(ssot);
+  });
+
+  await check(`Bank pool ${pool.poolId} getPerformance`, async () => {
+    const performance = await rpcReadContract({
+      address: getAddress(pool.bank),
+      abi: BankAbi,
+      functionName: "getPerformance",
+      args: []
+    });
+    return validateBankPerformance(performance);
   });
 
   if (String(pool.domain).toLowerCase() === "casino") {
@@ -486,9 +530,183 @@ function safeHost(url) {
   }
 }
 
-function bigintValue(value, key) {
-  const raw = value?.[key];
-  return raw === undefined ? "n/a" : BigInt(raw).toString();
+function validateBankSSOT(ssot) {
+  assertTupleShape("Bank.getSSOT", ssot, SSOT_FIELDS);
+
+  const B = requiredBigintField("Bank.getSSOT", ssot, "B", SSOT_FIELDS);
+  const PF = requiredBigintField("Bank.getSSOT", ssot, "PF", SSOT_FIELDS);
+  const XP = requiredBigintField("Bank.getSSOT", ssot, "XP", SSOT_FIELDS);
+  const NAV = requiredBigintField("Bank.getSSOT", ssot, "NAV", SSOT_FIELDS);
+  const R = requiredBigintField("Bank.getSSOT", ssot, "R", SSOT_FIELDS);
+  const minLiquidityBps = requiredBigintField("Bank.getSSOT", ssot, "minLiquidityBps", SSOT_FIELDS);
+  const minLiq = requiredBigintField("Bank.getSSOT", ssot, "minLiq", SSOT_FIELDS);
+  const free = requiredBigintField("Bank.getSSOT", ssot, "free", SSOT_FIELDS);
+  const riskReserveBps = requiredBigintField("Bank.getSSOT", ssot, "riskReserveBps", SSOT_FIELDS);
+  const riskReserve = requiredBigintField("Bank.getSSOT", ssot, "riskReserve", SSOT_FIELDS);
+  const riskFree = requiredBigintField("Bank.getSSOT", ssot, "riskFree", SSOT_FIELDS);
+  const withdrawalBufferBps = requiredBigintField(
+    "Bank.getSSOT",
+    ssot,
+    "withdrawalBufferBps",
+    SSOT_FIELDS
+  );
+  const withdrawalBuffer = requiredBigintField(
+    "Bank.getSSOT",
+    ssot,
+    "withdrawalBuffer",
+    SSOT_FIELDS
+  );
+  const withdrawable = requiredBigintField("Bank.getSSOT", ssot, "withdrawable", SSOT_FIELDS);
+  const riskInPaused = requiredBoolField("Bank.getSSOT", ssot, "riskInPaused", SSOT_FIELDS);
+  const xpAccruedTotal = requiredBigintField("Bank.getSSOT", ssot, "xpAccruedTotal", SSOT_FIELDS);
+  const xpLockedTotal = requiredBigintField("Bank.getSSOT", ssot, "xpLockedTotal", SSOT_FIELDS);
+  const xpHoldbackTotal = requiredBigintField("Bank.getSSOT", ssot, "xpHoldbackTotal", SSOT_FIELDS);
+
+  assertBps("Bank.getSSOT.minLiquidityBps", minLiquidityBps);
+  assertBps("Bank.getSSOT.riskReserveBps", riskReserveBps);
+  assertBps("Bank.getSSOT.withdrawalBufferBps", withdrawalBufferBps);
+
+  if (riskReserveBps !== minLiquidityBps) {
+    throw new Error(
+      `riskReserveBps ${riskReserveBps} must match legacy minLiquidityBps ${minLiquidityBps}`
+    );
+  }
+  if (B !== NAV + PF + XP) {
+    throw new Error(`NAV identity failed: B=${B} NAV=${NAV} PF=${PF} XP=${XP}`);
+  }
+  if (XP !== xpAccruedTotal + xpLockedTotal + xpHoldbackTotal) {
+    throw new Error(
+      `XP bucket identity failed: XP=${XP} accrued=${xpAccruedTotal} locked=${xpLockedTotal} holdback=${xpHoldbackTotal}`
+    );
+  }
+  const expectedRiskReserve = (NAV * riskReserveBps) / MAX_BPS;
+  const expectedRiskFree = NAV >= R + expectedRiskReserve ? NAV - R - expectedRiskReserve : 0n;
+  if (riskReserve !== expectedRiskReserve || minLiq !== expectedRiskReserve) {
+    throw new Error(
+      `risk reserve mismatch: riskReserve=${riskReserve} minLiq=${minLiq} expected=${expectedRiskReserve}`
+    );
+  }
+  if (riskFree !== expectedRiskFree || free !== expectedRiskFree) {
+    throw new Error(
+      `risk free mismatch: riskFree=${riskFree} free=${free} expected=${expectedRiskFree}`
+    );
+  }
+  const expectedWithdrawalBuffer = (NAV * withdrawalBufferBps) / MAX_BPS;
+  const expectedWithdrawable =
+    NAV >= R + expectedWithdrawalBuffer ? NAV - R - expectedWithdrawalBuffer : 0n;
+  if (withdrawalBuffer !== expectedWithdrawalBuffer) {
+    throw new Error(
+      `withdrawal buffer mismatch: withdrawalBuffer=${withdrawalBuffer} expected=${expectedWithdrawalBuffer}`
+    );
+  }
+  if (withdrawable !== expectedWithdrawable) {
+    throw new Error(
+      `withdrawable mismatch: withdrawable=${withdrawable} expected=${expectedWithdrawable}`
+    );
+  }
+
+  return `NAV=${NAV} R=${R} PF=${PF} rrBps=${riskReserveBps} wbBps=${withdrawalBufferBps} paused=${riskInPaused}`;
+}
+
+function validateBankPerformance(performance) {
+  assertTupleShape("Bank.getPerformance", performance, PERFORMANCE_FIELDS);
+
+  const turnover = requiredBigintField(
+    "Bank.getPerformance",
+    performance,
+    "turnover",
+    PERFORMANCE_FIELDS
+  );
+  const payoutGross = requiredBigintField(
+    "Bank.getPerformance",
+    performance,
+    "payoutGross",
+    PERFORMANCE_FIELDS
+  );
+  const payoutNet = requiredBigintField(
+    "Bank.getPerformance",
+    performance,
+    "payoutNet",
+    PERFORMANCE_FIELDS
+  );
+  const feeOnPayout = requiredBigintField(
+    "Bank.getPerformance",
+    performance,
+    "feeOnPayout",
+    PERFORMANCE_FIELDS
+  );
+  const protocolFeeAccrued = requiredBigintField(
+    "Bank.getPerformance",
+    performance,
+    "protocolFeeAccrued",
+    PERFORMANCE_FIELDS
+  );
+  const betsHeld = requiredBigintField(
+    "Bank.getPerformance",
+    performance,
+    "betsHeld",
+    PERFORMANCE_FIELDS
+  );
+  const betsSettled = requiredBigintField(
+    "Bank.getPerformance",
+    performance,
+    "betsSettled",
+    PERFORMANCE_FIELDS
+  );
+  const betsRefunded = requiredBigintField(
+    "Bank.getPerformance",
+    performance,
+    "betsRefunded",
+    PERFORMANCE_FIELDS
+  );
+
+  if (payoutGross !== payoutNet + feeOnPayout) {
+    throw new Error(
+      `payout identity failed: payoutGross=${payoutGross} payoutNet=${payoutNet} feeOnPayout=${feeOnPayout}`
+    );
+  }
+  if (betsSettled + betsRefunded > betsHeld) {
+    throw new Error(
+      `terminal bet counters exceed held: held=${betsHeld} settled=${betsSettled} refunded=${betsRefunded}`
+    );
+  }
+
+  return `turnover=${turnover} payoutGross=${payoutGross} protocolFee=${protocolFeeAccrued} bets=${betsHeld}/${betsSettled}/${betsRefunded}`;
+}
+
+function assertTupleShape(label, tuple, fields) {
+  if (Array.isArray(tuple) && tuple.length !== fields.length) {
+    throw new Error(`${label} returned ${tuple.length} values, expected ${fields.length}`);
+  }
+  for (const field of fields) {
+    tupleField(tuple, field, fields);
+  }
+}
+
+function tupleField(tuple, field, fields) {
+  if (tuple && Object.hasOwn(tuple, field)) return tuple[field];
+  const index = fields.indexOf(field);
+  if (Array.isArray(tuple) && index >= 0 && index < tuple.length) return tuple[index];
+  throw new Error(`missing ${field}`);
+}
+
+function requiredBigintField(label, tuple, field, fields) {
+  const raw = tupleField(tuple, field, fields);
+  try {
+    return BigInt(raw);
+  } catch {
+    throw new Error(`${label}.${field} must be bigint-compatible`);
+  }
+}
+
+function requiredBoolField(label, tuple, field, fields) {
+  const raw = tupleField(tuple, field, fields);
+  if (typeof raw !== "boolean") throw new Error(`${label}.${field} must be boolean`);
+  return raw;
+}
+
+function assertBps(label, value) {
+  if (value > MAX_BPS) throw new Error(`${label} exceeds ${MAX_BPS}: ${value}`);
 }
 
 function assertAddressEq(label, actual, expected) {
