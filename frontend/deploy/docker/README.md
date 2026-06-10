@@ -107,7 +107,9 @@ The workflow publishes:
 Tags:
 
 - `latest` on `master`
-- `sha-<git-sha>` on pushed builds
+- `sha-<short-git-sha>` on pushed builds. The Docker workflow uses
+  `docker/metadata-action`'s default 7-character SHA tag, for example
+  `sha-16e76a9`.
 - `v*` git tags
 - optional manual `image_tag` from the workflow dispatch form
 
@@ -120,15 +122,17 @@ bash deploy/docker/deploy-images.sh
 For a pinned rollout, export exact image tags before running the script:
 
 ```bash
-export WEB_IMAGE=ghcr.io/arbigamefi/ssot-bbog-web:sha-<git-sha>
-export KEEPER_IMAGE=ghcr.io/arbigamefi/ssot-bbog-keeper:sha-<git-sha>
+export WEB_IMAGE=ghcr.io/arbigamefi/ssot-bbog-web:sha-<short-git-sha>
+export KEEPER_IMAGE=ghcr.io/arbigamefi/ssot-bbog-keeper:sha-<short-git-sha>
 bash deploy/docker/deploy-images.sh
 ```
 
-Or use the shared image tag helper:
+Or use the shared image tag helper. `deploy-images.sh` accepts a full 40-character
+commit SHA, a bare short SHA, or a `sha-<short-git-sha>` tag and normalizes it to
+the pushed GHCR tag:
 
 ```bash
-IMAGE_TAG=sha-<git-sha> bash deploy/docker/deploy-images.sh
+IMAGE_TAG=<git-sha> bash deploy/docker/deploy-images.sh
 ```
 
 The script uses `docker compose up --no-build`, so the VPS does not compile the
