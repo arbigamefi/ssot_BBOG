@@ -80,7 +80,7 @@ export function SiteFooter() {
     }));
 
   return (
-    <footer className="mt-16 border-t border-border bg-surface-0">
+    <footer className="border-t border-border bg-surface-0">
       <div className="mx-auto max-w-[1480px] px-4 py-16 sm:px-6 lg:px-8">
         <div className="grid gap-10 md:grid-cols-[1.5fr_1fr_1fr_1fr_1fr]">
           <div className="space-y-5">

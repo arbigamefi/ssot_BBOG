@@ -241,6 +241,18 @@ describe("AppShell", () => {
     );
   });
 
+  it("does not render the game-room rail on casino receipt routes", () => {
+    state.pathname = "/casino/receipt/84532/2";
+    render(
+      <AppShell>
+        <div>receipt content</div>
+      </AppShell>
+    );
+
+    expect(screen.getByText("receipt content")).toBeDefined();
+    expect(screen.queryByText("← Casino")).toBeNull();
+  });
+
   it("uses the dark theme on the games directory route", () => {
     state.pathname = "/casino";
     const { container } = render(

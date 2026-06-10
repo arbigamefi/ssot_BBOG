@@ -230,11 +230,7 @@ export function PortfolioPageClient() {
               onAliasChange={setAlias}
               onCopyAccount={handleCopyAccount}
             />
-            <PortfolioContextCard
-              readOnly={readOnly}
-              releaseName={release.name}
-              releaseDigest={release.releaseDigest}
-            />
+            <PortfolioContextCard readOnly={readOnly} releaseName={release.name} />
             <Link
               href="/earn"
               className="block rounded-md border border-border bg-surface-1 p-5 text-sm font-black uppercase tracking-[0.12em] text-brand shadow-e2 transition hover:bg-surface-2 hover:text-brand-hover"

@@ -67,6 +67,7 @@ export function MobileCasinoActionBar({
   const maxRaw = resolveBetMaxRaw(walletBalanceRaw, maxBetRaw);
   const amountUnavailable = isBetAmountUnavailable(assetDecimals, maxRaw);
   const amountExceedsMax = isBetAmountAboveMax(betAmount, assetDecimals, maxRaw);
+  const controlsLocked = isPending && state.status !== "failed";
   const adjust = (next: string) =>
     onBetAmountChange?.(clampBetAmountInput(next, assetDecimals, maxRaw));
 
@@ -106,8 +107,8 @@ export function MobileCasinoActionBar({
       onClick: () => onBetAmountChange?.(formatBetAmountRaw(maxRaw ?? 0n, assetDecimals))
     }
   ];
-  const showQuick = Boolean(onBetAmountChange) && !isPending && !amountUnavailable;
-  const controlsDisabled = isPending || amountUnavailable;
+  const showQuick = Boolean(onBetAmountChange) && !controlsLocked && !amountUnavailable;
+  const controlsDisabled = controlsLocked || amountUnavailable;
 
   return (
     <div className="space-y-2" data-mobile-bet-action>
@@ -115,7 +116,7 @@ export function MobileCasinoActionBar({
         <label
           className={cn(
             "grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-xl border border-border-soft bg-surface-0 px-3 py-2 shadow-inner-e1",
-            isPending && "opacity-55"
+            controlsLocked && "opacity-55"
           )}
         >
           <TokenLogo symbol={assetSymbol} size={20} />

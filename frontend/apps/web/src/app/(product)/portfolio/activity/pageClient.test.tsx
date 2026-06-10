@@ -109,9 +109,7 @@ describe("PortfolioActivityPageClient", () => {
     expect(screen.getByRole("heading", { name: /Betting activity/i })).toBeDefined();
     expect(screen.getByText("Ledger summary")).toBeDefined();
     expect(screen.getByText("Casino ledger")).toBeDefined();
-    expect(screen.getAllByText("No tickets align with the current filter.").length).toBeGreaterThan(
-      0
-    );
+    expect(screen.getAllByText("No bets align with the current filter.").length).toBeGreaterThan(0);
   });
 
   it("renders indexed tickets with a detail link", () => {

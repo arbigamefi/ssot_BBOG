@@ -435,7 +435,12 @@ export function EarnPageClient() {
   const metrics: EarnMetric[] = [
     {
       label: t("earn.metrics.sharePrice.label"),
-      value: formatTokenAmount(snapshot?.assetsPerShare, decimals, symbol, 4),
+      value: formatTokenAmount(
+        snapshot?.assetsPerShare != null ? snapshot.assetsPerShare * 1000n : undefined,
+        decimals,
+        symbol,
+        4
+      ),
       detail: t("earn.metrics.sharePrice.detail")
     },
     {

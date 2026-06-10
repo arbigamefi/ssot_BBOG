@@ -66,13 +66,13 @@ vi.mock("next-intl", () => ({
       "casino.directory.tags.module": "Module",
       "casino.directory.rooms.dice.title": "Precision Dice",
       "casino.directory.rooms.dice.promise": "1-99 sizing in seconds.",
-      "casino.directory.rooms.dice.badge": "1% House Edge",
+      "casino.directory.rooms.dice.badge": "Fast rolls",
       "casino.directory.rooms.roulette.title": "European Roulette",
       "casino.directory.rooms.roulette.promise": "Classic 37-slot physical mechanics.",
       "casino.directory.rooms.roulette.badge": "Max Payout 36x",
       "casino.directory.rooms.coinToss.title": "Coin Toss",
       "casino.directory.rooms.coinToss.promise": "High-speed 50/50 resolution.",
-      "casino.directory.rooms.coinToss.badge": "1% House Edge",
+      "casino.directory.rooms.coinToss.badge": "50/50 play",
       "casino.directory.rooms.keno.title": "Keno Draft",
       "casino.directory.rooms.keno.promise": "Pick multi-spots for massive multipliers.",
       "casino.directory.rooms.keno.badge": "Up to 500.5x",
@@ -90,7 +90,7 @@ vi.mock("next-intl", () => ({
       "casino.directory.reserve.title": "Casino bankroll",
       "casino.directory.reserve.subtitle": `Bank ${values?.bank ?? "{bank}"}`,
       "casino.directory.reserve.status": "Release anchored",
-      "casino.directory.reserve.cta": "Inspect bank"
+      "casino.directory.reserve.cta": "Inspect bankroll"
     })[key] ?? key,
   useLocale: () => "en"
 }));

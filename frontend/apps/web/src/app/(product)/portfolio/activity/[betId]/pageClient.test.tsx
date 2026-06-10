@@ -304,7 +304,7 @@ describe("BetDetailPageClient", () => {
 
     renderWithQueryClient(<BetDetailPageClient betId="42" />);
 
-    expect(await screen.findByRole("button", { name: /Finalize ticket/i })).toBeDefined();
+    expect(await screen.findByRole("button", { name: /Finalize bet/i })).toBeDefined();
     expect(screen.queryByRole("button", { name: /Refund stake/i })).toBeNull();
   });
 });

@@ -24,6 +24,7 @@ vi.mock("next-intl", () => ({
       "casino.room.betPanel.placeBet.betMined": "BET MINED...",
       "casino.room.betPanel.placeBet.signing": "SIGNING / PLACING...",
       "casino.room.betPanel.placeBet.reduceAmount": "REDUCE AMOUNT",
+      "casino.room.betPanel.placeBet.selectToBet": "SELECT A BET",
       "casino.room.betPanel.placeBet.revealing": "REVEALING...",
       "casino.room.betPanel.placeBet.approveThenPlace": "APPROVE, THEN PLACE BET",
       "casino.room.betPanel.placeBet.preparing": "PREPARING ROUND...",
@@ -150,6 +151,17 @@ describe("MobileCasinoActionBar", () => {
     ).toBe(true);
   });
 
+  it("prompts for a selection before enabling non-dice compact rooms", () => {
+    renderActionBar({
+      game: { ...diceGame, slug: "roulette", label: "Roulette" },
+      winChance: 0
+    });
+
+    expect(
+      (screen.getByRole("button", { name: "SELECT A BET" }) as HTMLButtonElement).disabled
+    ).toBe(true);
+  });
+
   it("locks amount edits and quick actions while a round is pending", () => {
     const props = renderActionBar({ isPending: true });
 
@@ -159,6 +171,28 @@ describe("MobileCasinoActionBar", () => {
 
     expect(props.onBetAmountChange).not.toHaveBeenCalled();
     expect(screen.queryByRole("button", { name: "Max" })).toBeNull();
+  });
+
+  it("keeps failed compact CTA actionable and amount editable", () => {
+    const props = renderActionBar({
+      isPending: true,
+      state: { status: "failed", error: { message: "reverted" } },
+      betAmount: "10",
+      maxBetRaw: 5_000_000n
+    });
+
+    const button = screen.getByRole("button", {
+      name: "TRANSACTION FAILED - RETRY"
+    }) as HTMLButtonElement;
+    expect(button.disabled).toBe(false);
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Bet amount" }), {
+      target: { value: "4" }
+    });
+    expect(props.onBetAmountChange).toHaveBeenCalledWith("4");
+
+    fireEvent.click(button);
+    expect(props.onPlaceBet).toHaveBeenCalledTimes(1);
   });
 
   it("shows player-facing round progress on the compact CTA", () => {

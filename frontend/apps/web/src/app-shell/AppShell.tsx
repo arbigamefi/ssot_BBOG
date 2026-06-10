@@ -10,6 +10,7 @@ import { useRelease } from "../ssot/release/ReleaseProvider";
 import { AppHeader, type AppRoute } from "../components/AppHeader";
 import { SiteFooter } from "../components/SiteFooter";
 import { DISABLE_AGE_GATE_IN_DEV, DISABLE_ONBOARDING_IN_DEV } from "../config/dev-flags";
+import { isCasinoModuleSlug } from "../features/casino/modules";
 import {
   AgeTermsGate,
   CookieConsentBanner,
@@ -42,6 +43,11 @@ function getActiveRoute(pathname: string): AppRoute {
   return "none";
 }
 
+function isCasinoGameRoom(pathname: string) {
+  const match = /^\/casino\/([^/?#]+)$/.exec(pathname);
+  return match ? isCasinoModuleSlug(match[1] ?? "") : false;
+}
+
 function getShellVariant(pathname: string) {
   if (pathname === "/" || pathname === "/affiliate") return "marketing";
   if (
@@ -51,7 +57,7 @@ function getShellVariant(pathname: string) {
   ) {
     return "legal";
   }
-  if (pathname.startsWith("/casino/")) return "game";
+  if (isCasinoGameRoom(pathname)) return "game";
   return "product";
 }
 

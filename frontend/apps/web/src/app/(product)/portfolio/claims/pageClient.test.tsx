@@ -164,7 +164,7 @@ describe("ClaimsPageClient", () => {
     renderWithQueryClient(<ClaimsPageClient />);
 
     expect(screen.getByRole("heading", { name: /Rewards and protocol claims/i })).toBeDefined();
-    expect(screen.getByText("XP bucket ledger")).toBeDefined();
+    expect(screen.getByText("Reward ledger")).toBeDefined();
     expect(screen.getByText("Claims transaction console")).toBeDefined();
     expect(screen.getByText("Connect a wallet to run claim actions.")).toBeDefined();
     expect(screen.getByText("Session claim activity")).toBeDefined();

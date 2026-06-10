@@ -70,7 +70,7 @@ vi.mock("next-intl", () => ({
       "casino.room.shell.noCapacity": "No capacity",
       "casino.room.betPanel.walletBalance": "Wallet Balance",
       "casino.room.betPanel.limits.maxBet": "Max bet",
-      "casino.room.betPanel.limits.poolPayout": "Pool pays",
+      "casino.room.betPanel.limits.poolPayout": "Max payout",
       "casino.room.betPanel.syncing": "Syncing...",
       "casino.room.betPanel.notConnected": "Not connected",
       "casino.room.betPanel.walletGate.title": "Connect wallet to place a round",
@@ -102,6 +102,7 @@ vi.mock("next-intl", () => ({
       "casino.room.betPanel.placeBet.betMined": "BET MINED...",
       "casino.room.betPanel.placeBet.signing": "SIGNING / PLACING...",
       "casino.room.betPanel.placeBet.reduceAmount": "REDUCE AMOUNT",
+      "casino.room.betPanel.placeBet.selectToBet": "SELECT A BET",
       "casino.room.betPanel.placeBet.revealing": "REVEALING...",
       "casino.room.betPanel.placeBet.approveThenPlace": "APPROVE, THEN PLACE BET",
       "casino.room.betPanel.placeBet.preparing": "PREPARING ROUND...",
@@ -184,7 +185,7 @@ describe("GameRoomBetPanel", () => {
     expect(screen.getByText("Wallet Balance")).toBeDefined();
     expect(screen.getByText("Max bet")).toBeDefined();
     expect(screen.getByText("200 USDC")).toBeDefined();
-    expect(screen.getByText("Pool pays")).toBeDefined();
+    expect(screen.getByText("Max payout")).toBeDefined();
     expect(screen.getByText("500 USDC")).toBeDefined();
     expect(screen.getByText("Not connected")).toBeDefined();
     expect(screen.getByText("Connect wallet to place a round")).toBeDefined();
@@ -294,6 +295,18 @@ describe("GameRoomBetPanel", () => {
     ).toBe(true);
   });
 
+  it("prompts for a selection before enabling non-dice rooms", () => {
+    renderPanel({
+      game: { ...diceGame, slug: "roulette", label: "Roulette" },
+      hasAccount: true,
+      winChance: 0
+    });
+
+    expect(
+      (screen.getByRole("button", { name: "SELECT A BET" }) as HTMLButtonElement).disabled
+    ).toBe(true);
+  });
+
   it("keeps active round status on the CTA even when the configured amount now exceeds max", () => {
     renderPanel({
       hasAccount: true,
@@ -342,6 +355,28 @@ describe("GameRoomBetPanel", () => {
     expect(props.onStopGainChange).not.toHaveBeenCalled();
   });
 
+  it("keeps failed placement actionable so users can clear stale max-bet failures", () => {
+    const props = renderPanel({
+      hasAccount: true,
+      isPending: true,
+      state: { status: "failed", error: { message: "reverted" } },
+      betAmount: "10",
+      maxBetRaw: 5_000_000n,
+      onBetAmountChange: vi.fn()
+    });
+
+    const button = screen.getByRole("button", {
+      name: "TRANSACTION FAILED - RETRY"
+    }) as HTMLButtonElement;
+    expect(button.disabled).toBe(false);
+
+    fireEvent.click(screen.getByRole("button", { name: "Min" }));
+    expect(props.onBetAmountChange).toHaveBeenCalledWith("0.01");
+
+    fireEvent.click(button);
+    expect(props.onPlaceBet).toHaveBeenCalledTimes(1);
+  });
+
   it("renders deterministic CTA labels and exposes disabled helpers", () => {
     cleanup();
     renderPanel({
@@ -375,6 +410,15 @@ describe("GameRoomBetPanel", () => {
         state: baseState,
         amountUnavailable: true,
         manualSettleAvailable: true
+      })
+    ).toBe(false);
+    expect(
+      isPlaceBetButtonDisabled({
+        gameSlug: "dice",
+        isPending: true,
+        winChance: 50,
+        state: { status: "failed" },
+        amountExceedsMax: true
       })
     ).toBe(false);
   });

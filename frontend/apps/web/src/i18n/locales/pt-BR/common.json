@@ -227,7 +227,7 @@
       },
       {
         "q": "O que é a vantagem da casa?",
-        "a": "A vantagem da casa é a margem embutida que mantém o Bank sustentável. Cada jogo mostra o valor exato na aba Info do jogo — por exemplo, a roleta é 2,70% e os dados 1%."
+        "a": "A vantagem da casa é a margem embutida que mantém o Bank sustentável. Cada jogo mostra o valor atual exato na aba Info do jogo, usando a configuração da release ativa em vez de uma estimativa de marketing."
       },
       {
         "q": "Por que minha aposta está pendente?",
@@ -306,11 +306,11 @@
       },
       "portfolioReferral": {
         "title": "Indicação",
-        "description": "Crie um link de indicação, inspecione o vínculo de primeiro toque e veja os baldes de recompensa de afiliado."
+        "description": "Crie um link de indicação, acompanhe apostas indicadas e veja recompensas resgatáveis."
       },
       "affiliate": {
         "title": "Afiliados",
-        "description": "Compartilhe salas de cassino nativas de carteira e direcione recompensas de indicação pelo livro de XP on-chain."
+        "description": "Compartilhe salas de cassino com seu link de indicação e acompanhe recompensas de jogadores indicados."
       },
       "earn": {
         "title": "Render",
@@ -348,6 +348,7 @@
       "description": "Salas de cassino com aleatoriedade Chainlink VRF, recibos públicos e pagamentos que liquidam direto na sua carteira.",
       "enterCasino": "Entrar no cassino",
       "viewBank": "Ver bankroll",
+      "scrollHint": "Rolar para a prova ao vivo",
       "visual": {
         "status": "Pago",
         "wallet": "para carteira",
@@ -358,7 +359,7 @@
       "live": "Ao vivo",
       "metrics": {
         "freeReserve": "Reserva livre",
-        "bankAssets": "Ativos do banco",
+        "bankAssets": "Bankroll",
         "rooms": "Salas"
       },
       "proofRows": {
@@ -374,16 +375,16 @@
     },
     "stats": {
       "vault": {
-        "label": "Banca da casa",
-        "detail": "O que cobre cada pagamento — lido direto da chain."
+        "label": "Banca da rede",
+        "detail": "Capital total do ativo selecionado em Banks ativos — lido direto da chain."
       },
       "turnover": {
-        "label": "Turnover total",
-        "detail": "Fluxo vitalício de apostas pelo Bank — lido direto da chain."
+        "label": "Turnover da rede",
+        "detail": "Fluxo vitalício do ativo selecionado em Banks ativos — lido direto da chain."
       },
       "protocolFee": {
-        "label": "Taxas do protocolo",
-        "detail": "Taxas de protocolo acumuladas — lidas da chain."
+        "label": "Taxas da rede",
+        "detail": "Taxas acumuladas do ativo selecionado em Banks ativos — lidas da chain."
       },
       "verifiable": "On-chain",
       "indexed": "Indexado · pode atrasar",
@@ -399,9 +400,9 @@
       "dice": {
         "title": "Dados",
         "badge": "Sala de precisão",
-        "summary": "Defina o teto, dimensione o bilhete e entre numa sala de dados rápida.",
+        "summary": "Defina o alvo, escolha a aposta e entre numa sala de dados rápida.",
         "facts": {
-          "0": "Bilhete rápido",
+          "0": "Aposta rápida",
           "1": "Liquidação ao vivo",
           "2": "Ativo único"
         }
@@ -419,7 +420,7 @@
       "roulette": {
         "title": "Roleta",
         "badge": "Mesa europeia",
-        "summary": "Entre numa mesa de roleta europeia padrão com tabuleiro real, slip claro e revisão de bilhete legível.",
+        "summary": "Entre numa mesa de roleta europeia padrão com tabuleiro real, slip de aposta claro e revisão de recibo legível.",
         "facts": {
           "0": "Mesa 0-36",
           "1": "Slip claro",
@@ -429,7 +430,7 @@
       "keno": {
         "title": "Keno",
         "badge": "Sala matriz",
-        "summary": "Escolha o tabuleiro, dimensione o bilhete e mantenha o sorteio no centro da sala.",
+        "summary": "Escolha o tabuleiro, defina a aposta e mantenha o sorteio no centro da sala.",
         "facts": {
           "0": "Tabuleiro primeiro",
           "1": "Sorteio ao vivo",
@@ -478,13 +479,13 @@
       }
     },
     "bank": {
-      "eyebrow": "Bankroll da casa",
+      "eyebrow": "Reserva de bankroll",
       "title": "Livro de reserva antes do rendimento de marketing.",
       "description": "Os saldos do banco e os passivos reservados vêm de leituras do protocolo. A página não inventa APY nem esconde obrigações pendentes atrás de um número promocional.",
       "freeReserve": "Reserva livre",
-      "totalBankAssets": "Total de ativos do banco",
+      "totalBankAssets": "Bankroll total",
       "releaseDigest": "Build",
-      "inspectBank": "Inspecionar banco"
+      "inspectBank": "Inspecionar bankroll"
     },
     "activity": {
       "eyebrow": "Ao vivo",
@@ -538,14 +539,14 @@
       "verifyCta": "Verificar no explorer"
     },
     "reserveBar": {
-      "eyebrow": "Bankroll da casa",
+      "eyebrow": "Bankroll da rede",
       "free": "Livre para pagar",
-      "total": "Total no banco",
+      "total": "Total nos Banks",
       "verify": "Conferir on-chain"
     },
     "featured": {
       "eyebrow": "Destaque",
-      "title": "Keno — escolha 5, busque 500×.",
+      "title": "Keno — escolha 5, acerte todos por 500,5×.",
       "detail": "Quinze números no tabuleiro. Escolha cinco. Acerte os cinco e o pagamento é 500,5×. Acerte um e você ainda saca.",
       "cta": "Jogar Keno"
     },
@@ -561,7 +562,7 @@
     "hero": {
       "eyebrow": "Crescimento de afiliados",
       "title": "Envie jogadores. Acompanhe cada aposta.",
-      "description": "Crie um link de indicação nativo de carteira, compartilhe com sua audiência e acompanhe jogadores vinculados e baldes de recompensa no console.",
+      "description": "Crie um link de indicação nativo de carteira, compartilhe com sua audiência e acompanhe jogadores indicados e recompensas no console.",
       "primary": "Gerar link",
       "secondary": "Console de indicações"
     },
@@ -575,6 +576,25 @@
       "shareText": "Entre no ArbiGameFi pelo meu link de indicação para rodadas de cassino on-chain, pagamentos nativos de carteira e recibos públicos.",
       "wallet": "Carteira {wallet}",
       "walletPending": "Carteira não conectada"
+    },
+    "proof": {
+      "eyebrow": "Prova de rastreamento",
+      "title": "O link é mensurável.",
+      "body": "Quando jogadores indicados apostam no cassino, o ledger indexado começa a mostrar atividade para sua carteira. Não precisa de planilha fora da plataforma.",
+      "pendingSource": "pendente",
+      "ledgerValue": "{source} · chain {chainId}",
+      "status": {
+        "connect": "Conectar",
+        "loading": "Sincronizando",
+        "unavailable": "Indisponível",
+        "ready": "Pronto",
+        "active": "Ativo"
+      },
+      "metrics": {
+        "status": "Rastreamento",
+        "bets": "Apostas indicadas",
+        "ledger": "Fonte do ledger"
+      }
     },
     "kit": {
       "eyebrow": "Kit de campanha",
@@ -603,12 +623,12 @@
     },
     "pillars": {
       "firstTouch": {
-        "title": "Vínculo de primeiro toque",
-        "body": "Uma dica de indicação válida é enviada com as apostas do cassino. Uma vez vinculado, o relacionamento é imutável."
+        "title": "Rastreamento por link",
+        "body": "Um link de indicação válido acompanha as apostas do cassino. Quando um jogador entra pelo seu link, as apostas indicadas continuam rastreáveis."
       },
       "xp": {
-        "title": "Baldes de XP",
-        "body": "As recompensas aparecem como saldos acumulados, bloqueados e de retenção no livro do Bank ativo."
+        "title": "Status das recompensas",
+        "body": "Acompanhe recompensas resgatáveis, pendentes e retidas no console de indicações."
       },
       "chain": {
         "title": "Liquidação auditável",
@@ -617,20 +637,20 @@
     },
     "flow": {
       "eyebrow": "Como funciona",
-      "title": "Feito para distribuição B2C.",
-      "body": "O caminho MVP mantém o ciclo de crescimento simples: compartilhe uma sala, vincule o jogador e deixe o livro do Bank expor as recompensas resgatáveis.",
+      "title": "Criado para crescimento com afiliados.",
+      "body": "O ciclo de crescimento fica simples: compartilhe uma sala, acompanhe apostas indicadas e resgate recompensas disponíveis.",
       "steps": {
         "0": {
           "title": "Compartilhar",
           "body": "Gere um link de cassino a partir da sua carteira e envie os jogadores direto para uma sala."
         },
         "1": {
-          "title": "Vincular",
-          "body": "O GameHub usa a dica de indicação para o vínculo de primeiro toque quando um jogador aposta."
+          "title": "Acompanhar",
+          "body": "Quando um jogador abre seu link e aposta, a indicação é anexada automaticamente."
         },
         "2": {
           "title": "Resgatar",
-          "body": "Revise os baldes de XP e resgate as recompensas disponíveis na área do portfólio."
+          "body": "Revise recompensas de afiliado e resgate saldos disponíveis na área de portfólio."
         }
       }
     }
@@ -679,8 +699,8 @@
     },
     "metrics": {
       "sharePrice": {
-        "label": "Preço por cota",
-        "detail": "Ativos resgatáveis por uma cota LP completa."
+        "label": "Valor / 1k cotas",
+        "detail": "Ativos resgatáveis por 1.000 cotas LP. O preço de uma cota permanece no livro de reservas."
       },
       "totalShares": {
         "label": "Total de cotas",
@@ -691,8 +711,8 @@
         "detail": "Bankroll não reservado acima dos passivos em aberto."
       },
       "totalAssets": {
-        "label": "Total de ativos",
-        "detail": "NAV verificável do Bank no release ativo."
+        "label": "NAV do cofre atual",
+        "detail": "NAV verificável do cofre Bank selecionado."
       },
       "minLiquidity": {
         "label": "Liquidez mínima",
@@ -703,9 +723,10 @@
       "capitalPosture": {
         "title": "Livro de reservas verificável",
         "readModel": "leitura on-chain",
-        "totalAssets": "Total de ativos",
+        "totalAssets": "NAV do cofre atual",
         "loading": "Lendo o snapshot mais recente do Bank…",
-        "detail": "NAV do Bank lido do contrato ativo."
+        "detail": "NAV do cofre Bank selecionado lido do contrato ativo.",
+        "totalAssetsDetail": "NAV do cofre selecionado lido do contrato ativo."
       },
       "freeReserve": {
         "label": "Reserva livre",
@@ -717,7 +738,7 @@
       },
       "totalShares": {
         "label": "Total de cotas",
-        "detail": "Cotas LP em circulação. O preço por cota muda conforme o NAV do Bank muda."
+        "detail": "LP shares emitidas atualmente. Mudanças no NAV do pool refletem no valor por share."
       },
       "position": {
         "label": "Sua posição",
@@ -853,7 +874,7 @@
       "lifetimeOnChain": "Vitalício · verificado on-chain",
       "housePnl": "Resultado do cofre",
       "hold": "Margem realizada",
-      "velocity": "Velocidade",
+      "velocity": "Velocidade de capital",
       "grossAnnualized": "Estimativa bruta anualizada",
       "wagered": "Total apostado",
       "payout": "Total pago",
@@ -909,6 +930,12 @@
         "shares": "Cotas",
         "sharePrice": "Preço da cota",
         "tx": "Tx"
+      }
+    },
+    "overview": {
+      "totalAssets": {
+        "label": "NAV do cofre atual",
+        "detail": "NAV verificável do cofre Bank selecionado a partir da release ativa."
       }
     }
   },
@@ -1137,6 +1164,7 @@
           "betMined": "APOSTA MINERADA...",
           "signing": "ASSINANDO / APOSTANDO...",
           "reduceAmount": "REDUZIR VALOR",
+          "selectToBet": "ESCOLHA UMA APOSTA",
           "approveThenPlace": "APROVAR E DEPOIS APOSTAR",
           "preparing": "PREPARANDO RODADA...",
           "placeBet": "APOSTAR",
@@ -1475,7 +1503,7 @@
           "payout": "Pagamento",
           "state": "Estado",
           "bet": "Aposta",
-          "coverage": "Cobertura",
+          "coverage": "Chance / condição",
           "winChance": "Chance de ganhar",
           "bets": "Apostas",
           "volume": "Volume"
@@ -1488,6 +1516,7 @@
         },
         "viewBet": "Ver aposta {betId}",
         "houseEdgeLabel": "Vantagem da casa",
+        "maxMultiplier": "{multiplier} máx.",
         "howToPlayLabel": "Como funciona",
         "betTypesLabel": "Tipos de aposta",
         "justNow": "agora mesmo",
@@ -1550,7 +1579,8 @@
             "d7": "7d",
             "d30": "30d"
           }
-        }
+        },
+        "infoFormulaNote": "A chance de vitória é a probabilidade do evento. Os multiplicadores exibidos são os pagamentos ao jogador após a vantagem atual da casa."
       },
       "errors": {
         "quoteFailed": "Não foi possível estimar a taxa do VRF.",
@@ -1574,7 +1604,6 @@
       "gameInfo": {
         "roulette": {
           "tagline": "Roleta europeia — 37 casas, cada giro assinado on-chain pelo Chainlink VRF.",
-          "houseEdge": "2.70%",
           "bets": [
             {
               "key": "straight",
@@ -1616,7 +1645,6 @@
         },
         "dice": {
           "tagline": "Role um número de 0 a 99. Escolha um alvo e uma direção.",
-          "houseEdge": "2.00%",
           "bets": [
             {
               "key": "under",
@@ -1634,7 +1662,6 @@
         },
         "coin-toss": {
           "tagline": "50/50 puro. Escolha um lado; um sorteio do Chainlink VRF decide.",
-          "houseEdge": "2.00%",
           "bets": [
             {
               "key": "heads",
@@ -1652,7 +1679,6 @@
         },
         "keno": {
           "tagline": "Escolha de 1 a 5 números num quadro de 15. O contrato sorteia 5; acerte mais, ganhe mais.",
-          "houseEdge": "≈ 3.00%",
           "bets": [
             {
               "key": "p1",
@@ -1688,7 +1714,6 @@
         },
         "plinko": {
           "tagline": "Solte uma bola por um campo de 9 linhas de pinos. Baldes externos pagam mais; o perfil de risco molda a curva.",
-          "houseEdge": "≈ 1.50%",
           "bets": [
             {
               "key": "low",
@@ -1712,7 +1737,6 @@
         },
         "slots": {
           "tagline": "Clássico de 3 rolos. Combine o símbolo do topo em três para 64x.",
-          "houseEdge": "≈ 4.00%",
           "bets": [
             {
               "key": "classic",
@@ -1724,7 +1748,6 @@
         },
         "baccarat": {
           "tagline": "Aposte no Jogador, na Banca ou no Empate. Estrutura de pagamento padrão sem comissão.",
-          "houseEdge": "1.06% – 14.4%",
           "bets": [
             {
               "key": "player",
@@ -1748,7 +1771,6 @@
         },
         "sic-bo": {
           "tagline": "Três dados. Escolha pequeno/grande, uma trinca, um par, uma face única ou um total.",
-          "houseEdge": "2.78% – 30.6%",
           "bets": [
             {
               "key": "smallBig",
@@ -2762,9 +2784,9 @@
         }
       },
       "hero": {
-        "eyebrow": "Registro da conta",
+        "eyebrow": "Visão da conta",
         "title": "Perfil da carteira.",
-        "description": "Seu saldo, suas apostas em aberto, reembolsos e seu histórico local de rodadas — tudo em uma visão.",
+        "description": "Saldos, apostas em aberto, reembolsos e histórico recente — tudo em uma visão.",
         "connectedAccount": "Conta conectada"
       },
       "metrics": {
@@ -2773,95 +2795,95 @@
           "detail": "Seu saldo livre nos ativos de jogo ativos."
         },
         "bankPosition": {
-          "label": "Posição no banco",
-          "detail": "Ativos equivalentes às cotas conectadas do Banco."
+          "label": "Valor no cofre",
+          "detail": "Valor atual das suas cotas de bankroll."
         },
         "refundCredit": {
-          "label": "Crédito de reembolso",
-          "detail": "Saldo de VRF recuperável creditado à carteira."
+          "label": "Saldo de reembolso",
+          "detail": "Fundos disponíveis para voltar à sua carteira."
         }
       },
       "alerts": {
         "readOnly": {
-          "title": "Sessão somente leitura",
-          "message": "Operações desativadas."
+          "title": "Ação indisponível",
+          "message": "Troque para a rede ativa para enviar transações."
         },
         "assetQueryFailed": "Falha na consulta de ativos",
         "refundQueryFailed": "Falha na consulta de reembolso"
       },
       "links": {
-        "openBankConsole": "Abrir console do banco"
+        "openBankConsole": "Gerenciar liquidez"
       },
       "context": {
-        "title": "Contexto de execução",
-        "session": "Sessão",
+        "title": "Acesso da carteira",
+        "session": "Carteira",
         "readOnly": "Somente leitura",
-        "writable": "Editável",
-        "network": "Rede",
+        "writable": "Conectada",
+        "network": "Rede ativa",
         "digest": "Digest"
       },
       "identity": {
-        "eyebrow": "Perfil",
-        "title": "Identidade do jogador",
-        "playerLabel": "Rótulo do jogador",
-        "placeholder": "Digite o rótulo",
+        "eyebrow": "Carteira",
+        "title": "Identidade da carteira",
+        "playerLabel": "Nome exibido",
+        "placeholder": "Adicionar nome",
         "saved": "Salvo localmente",
         "saving": "Salvando localmente",
         "walletAddress": "Endereço da carteira",
         "copyWalletAddress": "Copiar endereço da carteira"
       },
       "positions": {
-        "eyebrow": "Livro",
-        "title": "Posições de ativos",
+        "eyebrow": "Ativos",
+        "title": "Ativos da carteira",
         "loading": "Carregando saldos.",
         "shares": "{amount} cotas",
         "columns": {
           "asset": "Ativo",
           "wallet": "Carteira",
-          "bankPosition": "Posição no banco",
-          "allowance": "Permissão"
+          "bankPosition": "Valor no cofre",
+          "allowance": "Aprovado"
         }
       },
       "refund": {
-        "title": "Crédito de reembolso VRF",
-        "connectWallet": "Conecte uma carteira para inspecionar e resgatar o crédito VRF recuperável.",
+        "title": "Saldo de reembolso",
+        "connectWallet": "Conecte uma carteira para ver e resgatar saldos reembolsáveis.",
         "readOnly": "Modo somente leitura — troque de rede para executar ações.",
         "claiming": "Resgatando",
-        "claim": "Resgatar crédito",
+        "claim": "Resgatar reembolso",
         "flow": {
-          "preflight": "Pré-verificação",
+          "preflight": "Verificar saldo",
           "submit": "Enviar resgate",
           "confirm": "Confirmar on-chain",
-          "preflightDetail": "Validar crédito de reembolso.",
-          "submitDetail": "Transmitir claimRefundCredit.",
-          "confirmDetail": "Aguardar o recibo."
+          "preflightDetail": "Validar saldo reembolsável.",
+          "submitDetail": "Enviar a transação de reembolso.",
+          "confirmDetail": "Aguardar confirmação."
         }
       },
       "trace": {
         "waiting": "Aguardando intenção de resgate de reembolso.",
         "error": "Erro na transação",
-        "title": "Rastro do resgate de reembolso",
-        "subtitle": "Assinatura da carteira, transmissão e estado do recibo.",
+        "title": "Status do resgate de reembolso",
+        "subtitle": "Assinatura da carteira, transmissão e confirmação.",
         "status": "Status",
         "viewExplorer": "Ver explorador",
         "block": "Bloco {blockNumber}",
-        "reset": "Limpar rastro"
+        "reset": "Limpar status"
       },
       "journal": {
-        "eyebrow": "Diário",
-        "title": "Diário de transações",
+        "eyebrow": "Atividade",
+        "title": "Atividade recente",
         "columns": {
           "action": "Ação",
           "status": "Status"
         },
-        "empty": "Nenhuma transação de conta nesta sessão do navegador."
+        "empty": "Nenhuma atividade da conta nesta sessão do navegador."
       },
       "toast": {
         "labelSaved": "Rótulo do jogador salvo localmente.",
         "clipboardUnavailable": "A área de transferência não está disponível neste navegador.",
         "walletCopied": "Endereço da carteira copiado",
         "walletCopyFailed": "Falha ao copiar o endereço da carteira",
-        "refundClaimed": "Crédito de reembolso resgatado",
+        "refundClaimed": "Reembolso resgatado",
         "refundClaimFailed": "Falha no resgate do reembolso"
       },
       "loading": "Carregando portfólio…"
@@ -2884,12 +2906,12 @@
       "hero": {
         "eyebrow": "Conta de afiliado",
         "title": "Recompensas de indicação.",
-        "description": "Crie um link de cassino, inspecione seu indicador de primeiro toque imutável e revise os baldes de XP pagos pelo livro do Banco ativo.",
+        "description": "Crie um link de cassino, revise sua atribuição inicial imutável e veja recompensas pagas pelo livro do cofre ativo.",
         "connected": "Carteira"
       },
       "link": {
         "title": "Seu link de indicação",
-        "description": "Compartilhe este link com jogadores. Quando apostarem no cassino, o GameHub encaminha a dica de afiliado para o vínculo de primeiro toque e o preço skyline.",
+        "description": "Compartilhe este link com jogadores. Quando apostarem no cassino, o contrato registra a relação de indicação para atribuição e recompensas.",
         "learn": "Modelo",
         "connect": "Conecte uma carteira para gerar um link de indicação.",
         "copy": "Copiar link",
@@ -2898,7 +2920,7 @@
       "metrics": {
         "accrued": {
           "label": "Acumulado",
-          "detail": "XP atualmente resgatável do livro do Banco."
+          "detail": "Recompensas de afiliado atualmente resgatáveis do livro do cofre."
         },
         "locked": {
           "label": "Bloqueado",
@@ -2958,7 +2980,7 @@
       "hero": {
         "eyebrow": "Cofre de resgates",
         "title": "Recompensas e resgates do protocolo.",
-        "description": "Inspecione os baldes de XP, sincronize o estado de retenção e execute transações de resgate sem esconder passivos pendentes atrás de saldos promocionais.",
+        "description": "Veja recompensas resgatáveis, sincronize o estado de retenção e execute transações de resgate sem esconder passivos pendentes atrás de saldos promocionais.",
         "connectedPayee": "Beneficiário conectado"
       },
       "metrics": {
@@ -2976,7 +2998,7 @@
         }
       },
       "buckets": {
-        "title": "Livro de baldes de XP",
+        "title": "Livro de recompensas",
         "syncing": "sincronizando",
         "readModel": "modelo de leitura",
         "cards": {
@@ -3114,29 +3136,29 @@
       "hero": {
         "eyebrow": "Livro de atividade",
         "title": "Atividade de apostas.",
-        "description": "Revise os bilhetes indexados, o estado de liquidação e os resultados de capital sem misturar ações de detalhe na superfície de atividade.",
+        "description": "Revise as apostas indexadas, o estado de liquidação e os resultados de capital sem misturar ações de detalhe na superfície de atividade.",
         "summary": "Resumo do livro",
         "session": "Sessão de navegador indexada"
       },
       "metrics": {
         "indexed": {
-          "label": "Bilhetes indexados",
+          "label": "Apostas indexadas",
           "connected": "Linhas mescladas do cache compartilhado ({serverRows}) e do replay local ({localRows}).",
-          "disconnected": "Conecte uma carteira para carregar os bilhetes da conta."
+          "disconnected": "Conecte uma carteira para carregar as apostas da conta."
         },
         "open": {
-          "label": "Bilhetes em aberto",
-          "detail": "Bilhetes apostados ou prontos para VRF que ainda precisam de fechamento."
+          "label": "Apostas em aberto",
+          "detail": "Apostas feitas ou prontas para VRF que ainda precisam de fechamento."
         },
         "settled": {
           "label": "Resultados liquidados",
-          "detail": "Bilhetes com estado final de vitória, perda, reembolso ou falha."
+          "detail": "Apostas com estado final de vitória, perda, reembolso ou falha."
         }
       },
       "filters": {
         "all": {
           "label": "Todos",
-          "detail": "Todos os bilhetes indexados."
+          "detail": "Todas as apostas indexadas."
         },
         "open": {
           "label": "Em aberto",
@@ -3144,7 +3166,7 @@
         },
         "won": {
           "label": "Ganhos",
-          "detail": "Bilhetes liquidados positivos."
+          "detail": "Apostas liquidadas positivas."
         },
         "lost": {
           "label": "Perdidos",
@@ -3152,13 +3174,13 @@
         }
       },
       "ledger": {
-        "eyebrow": "Bilhetes",
+        "eyebrow": "Apostas",
         "title": "Livro do cassino",
         "loading": "Sincronizando o livro.",
-        "empty": "Nenhum bilhete corresponde ao filtro atual.",
+        "empty": "Nenhuma aposta corresponde ao filtro atual.",
         "view": "Ver",
         "columns": {
-          "ticket": "Bilhete",
+          "ticket": "Aposta",
           "module": "Jogo",
           "stake": "Aposta",
           "settlement": "Liquidação",
@@ -3180,7 +3202,7 @@
       "detail": {
         "common": {
           "empty": "—",
-          "ticketDetail": "Detalhe do bilhete"
+          "ticketDetail": "Detalhe da aposta"
         },
         "state": {
           "won": "Ganho",
@@ -3195,8 +3217,8 @@
           "back": "Voltar ao livro",
           "eyebrow": "Dossiê do recibo",
           "title": "Recibo de {gameLabel}.",
-          "description": "Aposta, prova do ciclo de vida, fatos de liquidação e ações de protocolo elegíveis permanecem anexados a uma superfície auditável de bilhete.",
-          "ticketContext": "Contexto do bilhete",
+          "description": "Aposta, prova do ciclo de vida, fatos de liquidação e ações de protocolo elegíveis permanecem anexados a um recibo de aposta auditável.",
+          "ticketContext": "Contexto da aposta",
           "settlementState": "Estado da liquidação"
         },
         "flows": {
@@ -3232,7 +3254,7 @@
           },
           "capitalAtRisk": {
             "label": "Capital em risco",
-            "detail": "Aposta original comprometida quando o bilhete foi feito."
+            "detail": "Aposta original comprometida quando a aposta foi feita."
           },
           "settlement": {
             "label": "Liquidação",
@@ -3246,7 +3268,7 @@
         },
         "facts": {
           "room": "Sala",
-          "ticketId": "ID do bilhete",
+          "ticketId": "ID da aposta",
           "stake": "Aposta",
           "vrfFeePaid": "Taxa VRF paga",
           "vrfFeeCharged": "Taxa VRF cobrada",
@@ -3274,7 +3296,7 @@
         "lifecycle": {
           "eyebrow": "Prova do ciclo de vida",
           "title": "Estado do GameHub",
-          "stepperTitle": "Ciclo de vida do bilhete",
+          "stepperTitle": "Ciclo de vida da aposta",
           "stepperSubtitle": "Colocação, aleatoriedade e liquidação permanecem inspecionáveis de forma independente.",
           "releaseDigest": "Build",
           "asset": "Ativo",
@@ -3282,7 +3304,7 @@
           "steps": {
             "placed": {
               "title": "Apostado",
-              "description": "O GameHub aceitou o bilhete e travou a aposta."
+              "description": "O GameHub aceitou a aposta e travou a aposta."
             },
             "randomReady": {
               "title": "Aleatório pronto",
@@ -3304,7 +3326,7 @@
           "finalizeSurface": "Superfície de finalização",
           "description": "As ações só aparecem quando o estado do GameHub as permite. O rastro de execução permanece anexado a este recibo.",
           "finalizing": "Finalizando...",
-          "finalizeTicket": "Finalizar bilhete",
+          "finalizeTicket": "Finalizar aposta",
           "refunding": "Reembolsando...",
           "refundStake": "Reembolsar aposta",
           "transactionError": "Erro na transação",
@@ -3332,6 +3354,52 @@
         }
       },
       "loading": "Carregando atividade…"
+    }
+  },
+  "statusPage": {
+    "metadata": {
+      "title": "Status do sistema | ArbiGameFi",
+      "description": "Verificações por cadeia para release ativo, keeper e índice durável de apostas."
+    },
+    "eyebrow": "Status ArbiGameFi",
+    "title": "Status do sistema",
+    "description": "Verificações por cadeia para metadados de release, finalização do keeper do cassino e índice durável de apostas.",
+    "selectedJson": "JSON selecionado",
+    "json": "JSON",
+    "chainNav": "Status da cadeia",
+    "development": {
+      "title": "Diagnóstico de desenvolvimento.",
+      "body": "As verificações de keeper e bet-index refletem processos locais e arquivos de saúde por cadeia. Um keeper local parado aparece como degradado nessa cadeia; isso não é uma indisponibilidade de produção."
+    },
+    "state": {
+      "operational": "Operacional",
+      "degraded": "Degradado"
+    },
+    "unknown": "Desconhecido",
+    "unavailable": "Indisponível",
+    "yes": "Sim",
+    "no": "Não",
+    "summary": {
+      "generated": "Gerado",
+      "keeperAge": "Idade do keeper",
+      "indexSource": "Fonte do índice"
+    },
+    "cards": {
+      "release": "Release",
+      "keeper": "Keeper",
+      "betIndex": "Índice de apostas"
+    },
+    "rows": {
+      "name": "Nome",
+      "warnings": "Avisos",
+      "role": "Função",
+      "status": "Status",
+      "snapshotAge": "Idade do snapshot",
+      "queueDepth": "Fila",
+      "source": "Fonte",
+      "rowsSampled": "Linhas amostradas",
+      "durableRequired": "Durável exigido",
+      "durableConfigured": "Durável configurado"
     }
   }
 }

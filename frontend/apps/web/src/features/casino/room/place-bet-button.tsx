@@ -55,6 +55,7 @@ export function isPlaceBetButtonDisabled({
   amountExceedsMax?: boolean;
 }) {
   if (manualSettleAvailable || manualRefundAvailable) return false;
+  if (state.status === "failed") return false;
   return (
     amountUnavailable ||
     amountExceedsMax ||
@@ -66,20 +67,28 @@ export function isPlaceBetButtonDisabled({
   );
 }
 
+function isSelectionMissing(gameSlug: string, winChance: number) {
+  return gameSlug !== "dice" && winChance === 0;
+}
+
 function getPlaceBetButtonLabelKey({
+  gameSlug,
   hasAccount,
   state,
   isPending,
   roundPhase,
+  winChance,
   manualSettleAvailable,
   manualRefundAvailable,
   amountUnavailable,
   amountExceedsMax
 }: {
+  gameSlug: string;
   hasAccount: boolean;
   state: GameRoomBetPanelState;
   isPending: boolean;
   roundPhase?: PlaceBetButtonPhase;
+  winChance: number;
   manualSettleAvailable?: boolean;
   manualRefundAvailable?: boolean;
   amountUnavailable?: boolean;
@@ -104,6 +113,7 @@ function getPlaceBetButtonLabelKey({
     return "casino.room.betPanel.placeBet.roundInProgress";
   if (amountUnavailable) return "casino.room.shell.noCapacity";
   if (amountExceedsMax) return "casino.room.betPanel.placeBet.reduceAmount";
+  if (isSelectionMissing(gameSlug, winChance)) return "casino.room.betPanel.placeBet.selectToBet";
   if (state.plan)
     return state.plan.preview?.needsApproval
       ? "casino.room.betPanel.placeBet.approveThenPlace"
@@ -150,6 +160,19 @@ export function PlaceBetButton({
     amountExceedsMax
   });
   const activeManualAction = manualSettleAvailable || manualRefundAvailable;
+  const isFailed = state.status === "failed";
+  const selectionMissing = isSelectionMissing(gameSlug, winChance);
+  const appearsLocked =
+    !isFailed &&
+    !activeManualAction &&
+    (isPending ||
+      state.status === "reconciled" ||
+      state.status === "submitting" ||
+      state.status === "mined" ||
+      state.status === "planning" ||
+      amountUnavailable ||
+      amountExceedsMax ||
+      selectionMissing);
 
   return (
     <button
@@ -159,26 +182,21 @@ export function PlaceBetButton({
       className={cn(
         "w-full rounded-lg border-b-[4px] font-extrabold transition-colors",
         density === "compact" ? "py-3 text-sm" : "py-4 text-lg",
-        !activeManualAction &&
-          (isPending ||
-            state.status === "reconciled" ||
-            state.status === "submitting" ||
-            state.status === "mined" ||
-            state.status === "planning" ||
-            amountUnavailable ||
-            amountExceedsMax)
+        appearsLocked
           ? "cursor-not-allowed border-border bg-surface-3 text-fg-subtle opacity-50 shadow-none"
-          : state.status === "failed"
+          : isFailed
             ? "border-danger bg-danger text-fg-inverse hover:bg-danger/90"
             : "border-brand-active bg-brand text-fg-inverse shadow-glow hover:bg-brand-hover"
       )}
     >
       {t(
         getPlaceBetButtonLabelKey({
+          gameSlug,
           hasAccount,
           state,
           isPending,
           roundPhase,
+          winChance,
           manualSettleAvailable,
           manualRefundAvailable,
           amountUnavailable,

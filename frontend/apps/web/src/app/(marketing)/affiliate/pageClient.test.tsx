@@ -3,7 +3,17 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import * as React from "react";
 
 const state = {
-  account: null as string | null
+  account: null as string | null,
+  affiliateStats: {
+    data: undefined as
+      | {
+          source: "postgres" | "rpc-window";
+          stats: { betCount: number; settledCount: number };
+        }
+      | undefined,
+    isError: false,
+    isLoading: false
+  }
 };
 const openConnectModal = vi.fn();
 
@@ -54,12 +64,25 @@ vi.mock("../../../app-shell/WalletButton", () => ({
   useConnectModal: () => ({ openConnectModal })
 }));
 
+vi.mock("../../../ssot/release/ReleaseProvider", () => ({
+  useRelease: () => ({ chainId: 84532 })
+}));
+
+vi.mock("../../../features/betting/useAffiliateBets", () => ({
+  useAffiliateBets: () => state.affiliateStats
+}));
+
 import { AffiliatePageClient } from "./pageClient";
 
 describe("AffiliatePageClient", () => {
   afterEach(() => {
     cleanup();
     state.account = null;
+    state.affiliateStats = {
+      data: undefined,
+      isError: false,
+      isLoading: false
+    };
     openConnectModal.mockClear();
   });
 
@@ -72,10 +95,20 @@ describe("AffiliatePageClient", () => {
     fireEvent.click(screen.getByRole("button", { name: "Connect Wallet" }));
 
     expect(openConnectModal).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("The link is measurable.")).toBeDefined();
+    expect(screen.getByText("Connect")).toBeDefined();
   });
 
   it("generates and shares a wallet-native referral link", () => {
     state.account = "0x1111111111111111111111111111111111111111";
+    state.affiliateStats = {
+      data: {
+        source: "postgres",
+        stats: { betCount: 12, settledCount: 10 }
+      },
+      isError: false,
+      isLoading: false
+    };
 
     render(<AffiliatePageClient />);
 
@@ -85,5 +118,8 @@ describe("AffiliatePageClient", () => {
     expect((screen.getByRole("button", { name: "Share link" }) as HTMLButtonElement).disabled).toBe(
       false
     );
+    expect(screen.getByText("Active")).toBeDefined();
+    expect(screen.getByText("12")).toBeDefined();
+    expect(screen.getByTitle("postgres · chain 84532")).toBeDefined();
   });
 });

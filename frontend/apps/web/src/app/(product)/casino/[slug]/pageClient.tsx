@@ -576,6 +576,8 @@ export function GamePageClient({ slug }: { slug: string }) {
       assetDecimals={assetDecimals}
       assetContexts={assetSelection.contexts}
       chainId={chainId}
+      gameMeta={gameMeta}
+      releaseMeta={release}
     />
   );
 
