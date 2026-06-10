@@ -44,6 +44,10 @@ jobs:
         run: |
           FOUNDRY_PROFILE=pr forge test --match-path "test/fork/*" -vvv
 
+      - name: Check Bank ABI drift
+        run: |
+          PYTHON=python3 make bank-abi-drift-check
+
       - name: Release artifacts check (non-strict)
         run: |
           make release-check

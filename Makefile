@@ -6,13 +6,20 @@ VERIFY_PROFILE ?= default
 FRONTEND_DIR ?= frontend
 PYTHON ?= python
 
-.PHONY: deps check-deps check test pr nightly fork deploy deploy-v14 casino-seed-bank-v14 casino-add-pool-v13 casino-add-pool-apply-v13 casino-add-pool-verify-v13 keno-upgrade-v13 keno-upgrade-apply-v13 verify verify-v14 verify-v13 verify-helpers verify-helpers-v14 verify-helpers-v13 sports-dry-run-v13 sports-lifecycle-dry-run sports-phase0-readiness sports-testnet-preflight-v13 sports-mainnet-preflight-v13 casino-mainnet-preflight-v13 casino-mainnet-gonogo-v13 sports-roles-v13 sports-canary-v13 sports-football-canary-v13 sports-provider-evidence-v13 sports-provider-odds-v13 sports-provider-e2e-v13 sports-provider-policy-check-v13 sports-frontend-access-check-v13 casino-frontend-access-check-v13 casino-web-env-check-v13 casino-mainnet-frontend-readiness-v13 casino-bank-decimals-check-v14 gamehub-canary-v13 sports-phase1-closeout-v13 sports-phase2-gonogo-v13 sports-bankroll-caps-check-v13 sports-role-custody-check-v13 sports-ops-coverage-check-v13 release release-v14 release-v13 release-digest release-digest-v14 release-digest-v13 release-verify release-verify-v14 release-verify-v13 release-check release-check-v14 release-check-v13 release-notes release-notes-v14 release-notes-v13 release-package release-package-v14 release-package-v13 release-artifacts-tracked-v13 audit-package lint release-frontend-manifest release-frontend-manifest-v14 release-frontend-manifest-v13 release-golden-vectors release-golden-vectors-v14 release-golden-vectors-v13 release-abis release-abis-v14 release-abis-v13 frontend-install frontend-dev frontend-build frontend-lint frontend-typecheck frontend-test frontend-test-strict frontend-storybook frontend-storybook-build frontend-release-check frontend-check
+.PHONY: deps check-deps check test pr nightly fork deploy deploy-v14 casino-seed-bank-v14 casino-add-pool-v13 casino-add-pool-apply-v13 casino-add-pool-verify-v13 keno-upgrade-v13 keno-upgrade-apply-v13 verify verify-v14 verify-v13 verify-helpers verify-helpers-v14 verify-helpers-v13 sports-dry-run-v13 sports-lifecycle-dry-run sports-phase0-readiness sports-testnet-preflight-v13 sports-mainnet-preflight-v13 casino-mainnet-preflight-v13 casino-mainnet-gonogo-v13 sports-roles-v13 sports-canary-v13 sports-football-canary-v13 sports-provider-evidence-v13 sports-provider-odds-v13 sports-provider-e2e-v13 sports-provider-policy-check-v13 sports-frontend-access-check-v13 casino-frontend-access-check-v13 casino-web-env-check-v13 casino-mainnet-frontend-readiness-v13 casino-bank-decimals-check-v14 bank-live-shape-smoke-v14 gamehub-canary-v13 sports-phase1-closeout-v13 sports-phase2-gonogo-v13 sports-bankroll-caps-check-v13 sports-role-custody-check-v13 sports-ops-coverage-check-v13 release release-v14 release-v13 release-digest release-digest-v14 release-digest-v13 release-verify release-verify-v14 release-verify-v13 release-check release-check-v14 release-check-v13 release-notes release-notes-v14 release-notes-v13 release-package release-package-v14 release-package-v13 release-artifacts-tracked-v13 audit-package lint release-frontend-manifest release-frontend-manifest-v14 release-frontend-manifest-v13 release-golden-vectors release-golden-vectors-v14 release-golden-vectors-v13 release-abis release-abis-v14 release-abis-v13 frontend-install frontend-dev frontend-build frontend-lint frontend-typecheck frontend-test frontend-test-strict frontend-storybook frontend-storybook-build frontend-release-check frontend-check
 
 deps:
 	bash script/ci/install_deps.sh
 
 check-deps:
 	bash script/ci/check_deps.sh
+
+.PHONY: bank-abi-drift-check
+bank-abi-drift-check:
+	$(PYTHON) script/ci/check_bank_abi_drift.py
+
+bank-live-shape-smoke-v14:
+	$(PYTHON) script/ci/v14_bank_live_shape_smoke.py
 
 check: test frontend-check
 
@@ -284,6 +291,7 @@ release-check-v14:
 	RELEASE_TAG_SUFFIX=-v14 \
 	VERIFY_SCRIPT=script/release/VerifyReleaseV14.s.sol:VerifyReleaseV14 \
 	bash script/release/check_release.sh
+	$(PYTHON) script/ci/v14_bank_live_shape_smoke.py
 
 release-check-v13:
 	@$(MAKE) check-deps

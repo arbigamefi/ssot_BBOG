@@ -9,6 +9,10 @@ import { parseStrictRequestChainId } from "../../../../../../../server/chain";
 import { normalizeBetId, queryBetReceipt } from "../../../../../../../server/betting/recent-bets";
 import { formatTokenAmount } from "../../../../../../../features/portfolio/activity/detail/format";
 import { getCasinoGamePresentation } from "../../../../../../../features/casino/game-presentation";
+import {
+  mergeHeaders,
+  publicReadRateLimit
+} from "../../../../../../../server/http/public-read-limit";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -16,14 +20,29 @@ export const runtime = "nodejs";
 const RECEIPT_OG_PENDING_HEADERS = OG_NO_STORE_HEADERS;
 const RECEIPT_OG_TERMINAL_HEADERS = OG_IMMUTABLE_CACHE_HEADERS;
 const RECEIPT_OG_NOT_READY_HEADERS = {
-  ...OG_NO_STORE_HEADERS,
+  "Cache-Control": "public, max-age=0, s-maxage=5, stale-while-revalidate=30",
+  "CDN-Cache-Control": "public, s-maxage=5, stale-while-revalidate=30",
+  "Cloudflare-CDN-Cache-Control": "public, s-maxage=5, stale-while-revalidate=30",
   "Retry-After": "5"
 } as const;
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ betId: string; chainId: string }> }
 ) {
+  const quota = publicReadRateLimit({
+    envName: "BETS_RECEIPT_OG_RATE_LIMIT_PER_MINUTE",
+    fallback: 120,
+    keyPrefix: "bets:receipt:og",
+    request
+  });
+  if (!quota.allowed) {
+    return new Response("Too many receipt OG requests. Please retry shortly.", {
+      headers: mergeHeaders(OG_NO_STORE_HEADERS, quota.headers),
+      status: 429
+    });
+  }
+
   const { betId: rawBetId, chainId: rawChainId } = await params;
   const betId = safeNormalizeBetId(rawBetId);
   const chainId = parseStrictRequestChainId(rawChainId);
@@ -36,7 +55,7 @@ export async function GET(
       tone: "muted",
       visualKind: "receipt",
       variant: "receipt",
-      headers: RECEIPT_OG_PENDING_HEADERS
+      headers: mergeHeaders(RECEIPT_OG_PENDING_HEADERS, quota.headers)
     });
   }
 
@@ -47,7 +66,7 @@ export async function GET(
   const row = receipt.row;
   if (!row) {
     return new Response("Receipt not ready", {
-      headers: RECEIPT_OG_NOT_READY_HEADERS,
+      headers: mergeHeaders(RECEIPT_OG_NOT_READY_HEADERS, quota.headers),
       status: 503
     });
   }
@@ -103,7 +122,7 @@ export async function GET(
       { label: "Source", value: receipt.source }
     ],
     footerItems: ["Public receipt", "Indexed data", "Verify on explorer"],
-    headers: RECEIPT_OG_TERMINAL_HEADERS
+    headers: mergeHeaders(RECEIPT_OG_TERMINAL_HEADERS, quota.headers)
   });
 }
 

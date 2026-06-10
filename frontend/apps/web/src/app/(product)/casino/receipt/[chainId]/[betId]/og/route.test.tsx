@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { __resetRateLimitBucketsForTests } from "../../../../../../../server/http/rate-limit";
 
 const { queryBetReceiptMock, renderOgCardMock } = vi.hoisted(() => ({
   queryBetReceiptMock: vi.fn(),
@@ -61,11 +62,13 @@ function request(path: string) {
 
 describe("casino receipt OG route", () => {
   beforeEach(() => {
+    __resetRateLimitBucketsForTests();
+    delete process.env.BETS_RECEIPT_OG_RATE_LIMIT_PER_MINUTE;
     queryBetReceiptMock.mockReset();
     renderOgCardMock.mockClear();
   });
 
-  it("returns a no-store 503 while the receipt is not durable yet", async () => {
+  it("returns a short-lived cached 503 while the receipt is not durable yet", async () => {
     queryBetReceiptMock.mockResolvedValue({
       betId: "286",
       cached: false,
@@ -83,12 +86,48 @@ describe("casino receipt OG route", () => {
     const body = await response.text();
 
     expect(response.status).toBe(503);
-    expect(response.headers.get("cache-control")).toBe("no-store, max-age=0");
-    expect(response.headers.get("cdn-cache-control")).toBe("no-store");
-    expect(response.headers.get("cloudflare-cdn-cache-control")).toBe("no-store");
+    expect(response.headers.get("cache-control")).toBe(
+      "public, max-age=0, s-maxage=5, stale-while-revalidate=30"
+    );
+    expect(response.headers.get("cdn-cache-control")).toBe(
+      "public, s-maxage=5, stale-while-revalidate=30"
+    );
+    expect(response.headers.get("cloudflare-cdn-cache-control")).toBe(
+      "public, s-maxage=5, stale-while-revalidate=30"
+    );
     expect(response.headers.get("retry-after")).toBe("5");
+    expect(response.headers.get("x-ratelimit-limit")).toBe("120");
     expect(body).toBe("Receipt not ready");
     expect(renderOgCardMock).not.toHaveBeenCalled();
+  });
+
+  it("rate-limits receipt OG probes before querying receipt data", async () => {
+    process.env.BETS_RECEIPT_OG_RATE_LIMIT_PER_MINUTE = "1";
+    queryBetReceiptMock.mockResolvedValue({
+      betId: "286",
+      cached: false,
+      chainId: 84532,
+      generatedAt: Date.now(),
+      row: null,
+      schemaVersion: 1,
+      source: "postgres"
+    });
+
+    const { GET } = await import("./route");
+    await GET(request("/casino/receipt/84532/286/og"), {
+      params: Promise.resolve({ betId: "286", chainId: "84532" })
+    });
+    const response = await GET(request("/casino/receipt/84532/286/og"), {
+      params: Promise.resolve({ betId: "286", chainId: "84532" })
+    });
+    const body = await response.text();
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get("cache-control")).toBe("no-store, max-age=0");
+    expect(response.headers.get("x-ratelimit-limit")).toBe("1");
+    expect(response.headers.get("retry-after")).toBeTruthy();
+    expect(body).toBe("Too many receipt OG requests. Please retry shortly.");
+    expect(queryBetReceiptMock).toHaveBeenCalledTimes(1);
   });
 
   it("caches a terminal receipt image under the stable route", async () => {

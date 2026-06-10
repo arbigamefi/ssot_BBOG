@@ -17,6 +17,7 @@ Substreams, The Graph, custom indexers, or centralized log pipelines.
 ### Primary events
 
 From `IGameHub`:
+
 - `BetPlaced`
 - `BetRandomReady`
 - `BetFinalized`
@@ -26,6 +27,7 @@ From `IGameHub`:
 - `RefundTimeoutSet`
 
 From `IVRFHub` / `VRFHub`:
+
 - `Requested`
 - `Detached`
 - `VRFFeeCharged`
@@ -35,11 +37,13 @@ From `IVRFHub` / `VRFHub`:
 - `HubCallbackFailed`
 
 From `IBank`:
+
 - `BetHeld`
 - `BetSettled`
 - `BetRefunded` (bank-side)
 
 From `ISportsHub`:
+
 - `MarketCreated`
 - `MarketStateSet`
 - `OddsSignerSetHashSet`
@@ -57,14 +61,17 @@ From `ISportsHub`:
 - `TicketVoided`
 
 From `SportsRiskEngine`:
+
 - `RiskLimitsSet`
 - `PoolRiskLimitsSet`
 
 From `Governable`:
+
 - `GovernanceTransferStarted`
 - `GovernanceTransferred`
 
 From `ChainlinkV2PlusWrapperAdapter`:
+
 - `VRFHubSet`
 
 ### Low-frequency view calls
@@ -78,6 +85,46 @@ From `ChainlinkV2PlusWrapperAdapter`:
   `resultChallengeTimeoutSeconds()`
 - `SportsRiskEngine.limits()`, `limitsForPool(poolId)`, `currentRiskHashForPool(poolId)`
 - `address(GameHub).balance`, `address(VRFHub).balance`, `address(Adapter).balance` (should be ~0 by design)
+
+---
+
+## Bank V14 performance counter canon
+
+Bank V14 exposes lifetime, single-asset performance counters through
+`getPerformance()` / individual views. These are chain-readable and should be
+the canonical source for provider-facing lifetime metrics.
+
+**Counter semantics:**
+
+- `totalTurnover`: accepted stake after settle-path partial refunds. On
+  settlement it increases by `stake - refundAmount`; `refundBet` full refunds do
+  not add turnover.
+- `totalPayoutGross`: gross winning payout before fee-on-payout is retained.
+- `totalPayoutNet`: actual player cash payout after fee-on-payout.
+- `totalFeeOnPayout`: fee retained from gross payouts before net player payout.
+- `totalRefunded`: refunded stake across both terminal paths, including
+  settle-path partial refunds and `refundBet` full refunds.
+- `totalBetsRefunded`: count of `refundBet` full-refund terminal calls only.
+  It is intentionally not directly reconcilable with `totalRefunded`.
+- `totalProtocolFeeAccrued`: protocol accounting; it is not the same as house
+  P&L.
+
+**Canonical identities:**
+
+```text
+GGR_gross = totalTurnover - totalPayoutGross + totalFeeOnPayout
+realizedHoldBps = totalTurnover == 0 ? 0 : GGR_gross * 10_000 / totalTurnover
+capitalVelocity = totalAssets() == 0 ? 0 : totalTurnover / totalAssets()
+```
+
+Use `GGR_gross` for house-performance / hold calculations. Do **not** compute
+GGR as `totalTurnover - totalPayoutNet`: `payoutNet` already excludes the
+fee-on-payout retained by the Bank, so that formula silently double-counts the
+retained fee as house P&L.
+
+Daily charts, game splits, player counts, and leaderboards still come from the
+durable index and may lag. Label those as indexed / best-effort. Lifetime Bank
+counters above are chain-readable.
 
 ---
 
@@ -107,6 +154,7 @@ Notes: includes refund-timeout and any other refund path.
 **A5. bets_in_flight** (gauge; derived)
 Compute: `placed - finalized - refunded` over a moving window (or track bet states in the indexer).
 Alert suggestion:
+
 - warn if rising steadily for > 15 min
 - page if exceeds an absolute threshold (set per chain capacity)
 
@@ -133,6 +181,7 @@ Alert suggestion: **page immediately** if non-zero (should be near-impossible in
 **B5. vrf_request_latency_seconds** (histogram; derived)
 Compute: time delta between `Requested(requestId)` and `Fulfilled(requestId)` (or between `BetPlaced` and `BetRandomReady`).
 Alert suggestion:
+
 - warn at p95 > X seconds (chain-dependent)
 - page if p99 exceeds SLA for sustained interval
 
@@ -156,6 +205,7 @@ Source: `IVRFHub.VRFFeeCharged.refundDue`
 **C4. vrf_fee_refund_failed_total** (counter)
 Source: `IVRFHub.VRFFeeCharged` where `refundSucceeded == false`
 Alert suggestion:
+
 - warn if > 0 (often indicates payers are smart contracts rejecting ETH)
 
 **C5. vrf_refund_claimed_total** (counter; sum)
@@ -166,6 +216,7 @@ Compute: `sum(refundDue where refundSucceeded=false) - sum(refundClaimed)` from 
 Notes: this is an indexer-side estimate; storage reads (`refundCreditOf`) can be used for spot verification.
 
 Alert suggestion:
+
 - warn if outstanding grows monotonically without corresponding claims (UX issue)
 - page if outstanding spikes after a release (regression indicator)
 
@@ -179,12 +230,14 @@ These metrics do **not** replace the on-chain invariants, but they help operator
 Source: `Bank.totalAssets()` per bank (poll at low frequency, e.g., 1–5 min)
 Labels: `asset`, `bank`
 Alert suggestion:
+
 - page if drops sharply without corresponding expected withdrawals / payouts
 
 **D2. bet_reserved_total** (gauge; derived)
 Compute: sum of `BetHeld.reserved` minus released amounts inferred from `BetSettled` / refunds.
 Labels: `asset`, `bank`
 Alert suggestion:
+
 - page if reserved approaches total assets (liquidity crunch)
 
 **D3. payout_gross_total / payout_net_total** (counter; sum)
@@ -295,10 +348,9 @@ Alert on spikes by market/event.
   - `randomReady` at `BetRandomReady`
   - finalized at `BetFinalized`
   - refunded at `BetRefunded`
-  This enables robust liveness and reconciliation metrics.
+    This enables robust liveness and reconciliation metrics.
 
 ---
-
 
 ## Next: alerts & runbooks
 

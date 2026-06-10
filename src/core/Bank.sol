@@ -28,6 +28,8 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     uint256 public override totalReserved; // R
 
     // Lifetime performance counters. These are single-asset counters scoped to this Bank.
+    // totalRefunded spans settle-path partial refunds and refundBet full refunds; totalBetsRefunded
+    // counts only refundBet calls, so the two values are intentionally not directly reconcilable.
     uint256 public override totalTurnover;
     uint256 public override totalPayoutGross;
     uint256 public override totalPayoutNet;
@@ -138,6 +140,8 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     }
 
     /// @notice Legacy setter alias for the new-risk reserve buffer.
+    /// @dev Deprecated alias for setRiskReserveBps. It does not update withdrawalBufferBps after the
+    ///      V14 risk-reserve / withdrawal-buffer split.
     function setMinLiquidityBps(uint256 bps) external onlyGov {
         _setRiskReserveBps(bps);
     }

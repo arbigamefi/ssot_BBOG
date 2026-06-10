@@ -25,7 +25,8 @@ It maps to the metrics in `docs/ops/metrics.md` section **D** (and partially **A
 ## Prerequisites
 
 ### Addresses
-Use `deployments/latest-v13.json` (or the release snapshot under `deployments/release/`) as the source of truth.
+Use `deployments/latest-v14.json` (or the release snapshot under `deployments/release/`) as the source of truth.
+V13 snapshots are legacy-only for historical incident reconstruction.
 You will need:
 - `gameHub` / `sportsHub`
 - `poolRegistry`
@@ -168,7 +169,12 @@ This can be expected during high reserved regimes.
 Capture:
 - chainId, release tag, `deployments/release-*.json` digest
 - affected `asset`, `bank` address
-- SSOT snapshot: `B/PF/XP/NAV/R/riskReserve/riskFree/withdrawalBuffer/withdrawable/riskInPaused`
+- SSOT snapshot:
+  - core accounting: `B/PF/XP/NAV/R`
+  - legacy/new-risk reserve: `minLiquidityBps/minLiq/free/riskReserveBps/riskReserve/riskFree`
+  - optional outflows: `withdrawalBufferBps/withdrawalBuffer/withdrawable`
+  - status: `riskInPaused`
+  - XP/referral buckets: `xpAccruedTotal/xpLockedTotal/xpHoldbackTotal/holdbackVestingSeconds/minPlayerTurnoverForUnlock`
 - time window and block range
 - derived `reserved` and large outflow events in the window
 - all governance actions taken (pause, risk reserve / withdrawal buffer changes)
@@ -178,11 +184,11 @@ Capture:
 ## Appendix: commonly used calls
 
 ```bash
-# Bank for an asset
-cast call $GAME_HUB "bankFor(address)(address)" $ASSET --rpc-url $RPC
+# Bank for a pool
+cast call $POOL_REGISTRY "bankFor(uint64)(address)" $POOL_ID --rpc-url $RPC
 
 # Bank SSOT snapshot
-cast call $BANK "getSSOT()((uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,bool,uint256,uint256,uint256,uint256,uint256))" --rpc-url $RPC
+cast call $BANK "getSSOT()((uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256,bool,uint256,uint256,uint256,uint256,uint256))" --rpc-url $RPC
 
 # Bank total assets (NAV proxy)
 cast call $BANK "totalAssets()(uint256)" --rpc-url $RPC

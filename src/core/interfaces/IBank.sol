@@ -45,6 +45,7 @@ interface IBank is IERC4626Minimal {
     function protocolFeesPayable() external view returns (uint256);
     function externalPayablesTotal() external view returns (uint256);
     /// @notice Legacy alias for riskReserveBps; kept for existing dashboards and scripts.
+    /// @dev Does not report withdrawalBufferBps after the V14 risk-reserve / withdrawal-buffer split.
     function minLiquidityBps() external view returns (uint256);
     function riskReserveBps() external view returns (uint256);
     function withdrawalBufferBps() external view returns (uint256);
@@ -53,16 +54,33 @@ interface IBank is IERC4626Minimal {
     event WithdrawalBufferBpsSet(uint256 bps);
 
     // Bank performance counters: lifetime, single-asset, chain-verifiable.
+    /// @notice Lifetime accepted stake after settle-path partial refunds.
+    /// @dev On settlement, this increases by `stake - refundAmount`; full refundBet calls do not add turnover.
     function totalTurnover() external view returns (uint256);
+    /// @notice Lifetime gross winning payout before fee-on-payout is retained.
     function totalPayoutGross() external view returns (uint256);
+    /// @notice Lifetime player cash payout after fee-on-payout.
     function totalPayoutNet() external view returns (uint256);
+    /// @notice Lifetime refunded stake across both terminal paths.
+    /// @dev Includes settle-path partial refunds and refundBet full refunds. Do not reconcile directly against
+    ///      totalBetsRefunded, which counts only refundBet calls.
     function totalRefunded() external view returns (uint256);
+    /// @notice Lifetime fee retained from gross winning payouts before net player payout.
     function totalFeeOnPayout() external view returns (uint256);
+    /// @notice Lifetime protocol fee accrued by the Bank accounting surface.
     function totalProtocolFeeAccrued() external view returns (uint256);
+    /// @notice Lifetime bets accepted into Bank hold accounting.
     function totalBetsHeld() external view returns (uint256);
+    /// @notice Lifetime bets settled through settleBet.
     function totalBetsSettled() external view returns (uint256);
+    /// @notice Lifetime full-refund terminal calls through refundBet.
+    /// @dev This is a count of refundBet calls only; settle-path partial refunds are reflected in totalRefunded
+    ///      and netted out of totalTurnover.
     function totalBetsRefunded() external view returns (uint256);
 
+    /// @notice Return lifetime, single-asset Bank performance counters.
+    /// @dev Canonical gross GGR is `turnover - payoutGross + feeOnPayout`.
+    ///      Do not use `turnover - payoutNet` for GGR because payoutNet already excludes fee-on-payout.
     function getPerformance()
         external
         view
