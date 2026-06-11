@@ -5,9 +5,9 @@
  * Synchronize a **contract release bundle** into this repo.
  *
  * The bundle is the single source of truth and MUST contain:
- *   - deployments/frontend-manifest-latest-v14.json (or latest/generation equivalent)
- *   - deployments/golden-vectors-latest-v14.json (or latest/generation equivalent)
- *   - deployments/release-latest-v14.json (or latest/generation equivalent)
+ *   - deployments/frontend-manifest-latest-v14.json
+ *   - deployments/golden-vectors-latest-v14.json
+ *   - deployments/release-latest-v14.json
  *   - deployments/latest-v14.json (optional, for audit)
  *   - abis/index.json + abis/*.abi.json
  *   - (optional) MANIFEST.sha256
@@ -343,23 +343,19 @@ async function main() {
 
   const manifestPath = await firstExistingPath(deploymentsDir, [
     "frontend-manifest-latest-v14.json",
-    "frontend-manifest-latest-v13.json",
-    "frontend-manifest-latest.json"
+    "frontend-manifest-latest-v13.json"
   ]);
   const vectorsPath = await firstExistingPath(deploymentsDir, [
     "golden-vectors-latest-v14.json",
-    "golden-vectors-latest-v13.json",
-    "golden-vectors-latest.json"
+    "golden-vectors-latest-v13.json"
   ]);
   const releaseLockPath = await firstExistingPath(deploymentsDir, [
     "release-latest-v14.json",
-    "release-latest-v13.json",
-    "release-latest.json"
+    "release-latest-v13.json"
   ]);
   const latestSnapshotPath = await firstExistingPath(deploymentsDir, [
     "latest-v14.json",
-    "latest-v13.json",
-    "latest.json"
+    "latest-v13.json"
   ]);
   const abiIndexPath = path.join(abisDir, "index.json");
 

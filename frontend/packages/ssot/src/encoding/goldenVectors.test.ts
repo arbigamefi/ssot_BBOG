@@ -41,7 +41,7 @@ async function listGoldenVectorFiles(): Promise<string[]> {
     const releases = await fs.readdir(chainDir);
     for (const r of releases) {
       const relDir = path.join(chainDir, r);
-      for (const name of ["golden-vectors-latest-v13.json"]) {
+      for (const name of ["golden-vectors-latest-v14.json", "golden-vectors-latest-v13.json"]) {
         const gv = path.join(relDir, name);
         if (await pathExists(gv)) files.push(gv);
       }
@@ -51,7 +51,7 @@ async function listGoldenVectorFiles(): Promise<string[]> {
 }
 
 async function readReleaseLock(dir: string): Promise<any | null> {
-  for (const name of ["release-latest.json", "release-latest-v13.json"]) {
+  for (const name of ["release-latest-v14.json", "release-latest-v13.json"]) {
     const lockPath = path.join(dir, name);
     if (await pathExists(lockPath)) return JSON.parse(await fs.readFile(lockPath, "utf8"));
   }
@@ -75,7 +75,7 @@ describe("golden vectors (exact-hex)", () => {
     if (files.length === 0) {
       if (STRICT_VECTORS) {
         throw new Error(
-          "No golden-vectors-latest.json found under src/fixtures/release-bundles. Run `pnpm ssot:sync ...` and commit outputs."
+          "No versioned golden-vectors-latest-v*.json found under src/fixtures/release-bundles. Run `pnpm ssot:sync ...` and commit outputs."
         );
       }
       // Dev convenience: allow running tests before syncing a release bundle.

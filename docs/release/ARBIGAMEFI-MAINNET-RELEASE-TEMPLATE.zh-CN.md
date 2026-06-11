@@ -8,6 +8,7 @@
 > 语言：`zh-CN`
 > 目标读者：`operators / release managers / auditors / partners`
 > 关联文档：
+>
 > - [`README.md`](README.md)
 > - [`checklist.md`](checklist.md)
 > - [`ARBIGAMEFI-RELEASE-PACK.zh-CN.md`](ARBIGAMEFI-RELEASE-PACK.zh-CN.md)
@@ -70,7 +71,7 @@ This is the mainnet-facing release template for ArbiGameFi. Use it only after ge
 
 - `deployments/latest-v13.json`
 - `deployments/release-latest-v13.json`
-- `deployments/release-notes-latest.md`
+- `deployments/release-notes-latest-v13.md`
 - `deployments/frontend-manifest-latest-v13.json`
 - `deployments/golden-vectors-latest-v13.json`
 - `deployments/verify-latest-v13.sh`
@@ -95,6 +96,7 @@ This is the mainnet-facing release template for ArbiGameFi. Use it only after ge
 > 快照时间：`<LOCAL TIME>` / `<UTC TIME>`
 > 目标读者：`LPs / partners / auditors / technical integrators`
 > 关联文档：
+>
 > - [`../WHITEPAPER.zh-CN.md`](../WHITEPAPER.zh-CN.md)
 > - [`README.md`](README.md)
 > - [`checklist.md`](checklist.md)
@@ -115,62 +117,62 @@ This document is the outward-facing release pack for the current ArbiGameFi main
 
 ### 2.1 Canonical release identity
 
-| 字段 | 当前值 |
-|---|---|
-| Network | `<NETWORK NAME>` |
-| Chain ID | `<CHAIN_ID>` |
-| Deployment block | `<BLOCK_NUMBER>` |
-| Deployment timestamp | `<LOCAL TIME>` / `<UTC TIME>` |
-| Release digest | `<DIGEST>` |
-| Digest schema | `SSOT_RELEASE_DIGEST_V1` |
-| Schema hash | `<SCHEMA_HASH>` |
-| Signer / GOV | `<GOV_ADDRESS>` |
+| 字段                  | 当前值                                                                                   |
+| --------------------- | ---------------------------------------------------------------------------------------- |
+| Network               | `<NETWORK NAME>`                                                                         |
+| Chain ID              | `<CHAIN_ID>`                                                                             |
+| Deployment block      | `<BLOCK_NUMBER>`                                                                         |
+| Deployment timestamp  | `<LOCAL TIME>` / `<UTC TIME>`                                                            |
+| Release digest        | `<DIGEST>`                                                                               |
+| Digest schema         | `SSOT_RELEASE_DIGEST_V1`                                                                 |
+| Schema hash           | `<SCHEMA_HASH>`                                                                          |
+| Signer / GOV          | `<GOV_ADDRESS>`                                                                          |
 | Release lock artifact | [`../../deployments/release-latest-v13.json`](../../deployments/release-latest-v13.json) |
-| Deployment snapshot | [`../../deployments/latest-v13.json`](../../deployments/latest-v13.json) |
+| Deployment snapshot   | [`../../deployments/latest-v13.json`](../../deployments/latest-v13.json)                 |
 
 ### 2.2 Release lock signature
 
 | 字段 | 当前值 |
-|---|---|
-| `v` | `<V>` |
-| `r` | `<R>` |
-| `s` | `<S>` |
+| ---- | ------ |
+| `v`  | `<V>`  |
+| `r`  | `<R>`  |
+| `s`  | `<S>`  |
 
 ## 3. 核心合约地址
 
 ### 3.1 Protocol core
 
-| 模块 | 地址 | 角色 |
-|---|---|---|
-| GOV | `<GOV_ADDRESS>` | 当前治理与发布签名主体 |
-| GameHub | `<GAMEHUB_ADDRESS>` | 全局 bet registry、生命周期与结算中枢 |
-| VRFHub | `<VRFGAMEHUB_ADDRESS>` | 随机数请求映射、transport 与 refundCredit |
-| Adapter | `<ADAPTER_ADDRESS>` | 外部 VRF provider 适配层 |
-| PoolRegistry | `<POOLREGISTRY_ADDRESS>` | 资产到 Bank 的注册表 |
-| ReferralRegistry | `<REFREGISTRY_ADDRESS>` | 推荐关系注册表 |
-| ReferralEngine | `<REFENGINE_ADDRESS>` | 推荐预算与 XP 负债计算引擎 |
+| 模块             | 地址                     | 角色                                      |
+| ---------------- | ------------------------ | ----------------------------------------- |
+| GOV              | `<GOV_ADDRESS>`          | 当前治理与发布签名主体                    |
+| GameHub          | `<GAMEHUB_ADDRESS>`      | 全局 bet registry、生命周期与结算中枢     |
+| VRFHub           | `<VRFGAMEHUB_ADDRESS>`   | 随机数请求映射、transport 与 refundCredit |
+| Adapter          | `<ADAPTER_ADDRESS>`      | 外部 VRF provider 适配层                  |
+| PoolRegistry     | `<POOLREGISTRY_ADDRESS>` | 资产到 Bank 的注册表                      |
+| ReferralRegistry | `<REFREGISTRY_ADDRESS>`  | 推荐关系注册表                            |
+| ReferralEngine   | `<REFENGINE_ADDRESS>`    | 推荐预算与 XP 负债计算引擎                |
 
 ### 3.2 VRF dependency
 
-| 组件 | 地址 | 说明 |
-|---|---|---|
+| 组件        | 地址                    | 说明                                  |
+| ----------- | ----------------------- | ------------------------------------- |
 | VRF Wrapper | `<VRF_WRAPPER_ADDRESS>` | 当前 release 绑定的外部随机数 wrapper |
-| Treasury | `<TREASURY_ADDRESS>` | 当前 release treasury |
+| Treasury    | `<TREASURY_ADDRESS>`    | 当前 release treasury                 |
 
 ## 4. 当前支持的资产与游戏
 
 ### 4.1 Assets and banks
 
-| Asset | Symbol | Decimals | Bank | LP token |
-|---|---|---|---|---|
+| Asset       | Symbol       | Decimals       | Bank       | LP token                        |
+| ----------- | ------------ | -------------- | ---------- | ------------------------------- |
 | `<ASSET_0>` | `<SYMBOL_0>` | `<DECIMALS_0>` | `<BANK_0>` | `<LP_NAME_0>` / `<LP_SYMBOL_0>` |
 
 如有多个资产域，按同一结构继续补齐。
 
 ### 4.2 Games and modules
 
-| Game | Slug | Game ID | Module | 参数编码 |
-|---|---|---|---|---|
+| Game       | Slug       | Game ID       | Module       | 参数编码     |
+| ---------- | ---------- | ------------- | ------------ | ------------ |
 | `<GAME_1>` | `<SLUG_1>` | `<GAME_ID_1>` | `<MODULE_1>` | `<PARAMS_1>` |
 
 按实际 manifest 全量列出，不要只列“最常用”的几个。
@@ -179,19 +181,19 @@ This document is the outward-facing release pack for the current ArbiGameFi main
 
 ### 5.1 GameHub-level parameters
 
-| 参数 | 当前值 | 含义 |
-|---|---|---|
-| `refundTimeoutSeconds` | `<REFUND_TIMEOUT>` | 超时退款窗口基准 |
-| `defaultHouseEdgeBps` | `<HOUSE_EDGE_BPS>` | 默认 house edge |
+| 参数                   | 当前值                      | 含义                     |
+| ---------------------- | --------------------------- | ------------------------ |
+| `refundTimeoutSeconds` | `<REFUND_TIMEOUT>`          | 超时退款窗口基准         |
+| `defaultHouseEdgeBps`  | `<HOUSE_EDGE_BPS>`          | 默认 house edge          |
 | `maxAffiliateDeltaBps` | `<MAX_AFFILIATE_DELTA_BPS>` | affiliate delta 允许范围 |
 
 ### 5.2 Bank-level parameters
 
-| 参数 | 当前值 | 含义 |
-|---|---|---|
-| `bankMinLiqBps_<i>` | `<MIN_LIQ_BPS_i>` | 最小流动性缓冲占比 |
-| `bankHoldbackVestingSeconds_<i>` | `<HOLDBACK_SECONDS_i>` | holdback 线性释放时长 |
-| `bankMinTurnoverForUnlock_<i>` | `<TURNOVER_THRESHOLD_i>` | unlock turnover 阈值 |
+| 参数                             | 当前值                   | 含义                  |
+| -------------------------------- | ------------------------ | --------------------- |
+| `bankMinLiqBps_<i>`              | `<MIN_LIQ_BPS_i>`        | 最小流动性缓冲占比    |
+| `bankHoldbackVestingSeconds_<i>` | `<HOLDBACK_SECONDS_i>`   | holdback 线性释放时长 |
+| `bankMinTurnoverForUnlock_<i>`   | `<TURNOVER_THRESHOLD_i>` | unlock turnover 阈值  |
 
 ## 6. 外部验证怎么做
 
@@ -217,7 +219,7 @@ This document is the outward-facing release pack for the current ArbiGameFi main
 
 - `deployments/latest-v13.json`
 - `deployments/release-latest-v13.json`
-- `deployments/release-notes-latest.md`
+- `deployments/release-notes-latest-v13.md`
 - `deployments/frontend-manifest-latest-v13.json`
 - `deployments/golden-vectors-latest-v13.json`
 - `deployments/verify-latest-v13.sh`

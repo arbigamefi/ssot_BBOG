@@ -61,8 +61,8 @@ integration, while preserving SSOT liveness and a minimal trust surface.
 - `frontend/apps/web` — Next.js frontend application
 - `frontend/packages/ssot` — protocol SDK, encoding, release loader, indexer
 - `frontend/packages/ui` — shared UI components, Tailwind preset, Storybook
-- `deployments/frontend-manifest-latest.json` — contract-generated manifest the frontend consumes directly
-- `deployments/golden-vectors-latest.json` — exact-hex vectors used to verify frontend encoders
+- `deployments/frontend-manifest-latest-v14.json` — contract-generated manifest the frontend consumes directly
+- `deployments/golden-vectors-latest-v14.json` — exact-hex vectors used to verify frontend encoders
 
 ## Documentation
 
@@ -146,7 +146,7 @@ forge test --match-path "test/invariants/InvariantsAdapter.t.sol" -vvv
 
 Release artifacts (production discipline):
 
-- Release lock (digest + signature): `make release-digest` (writes `deployments/release-latest.json`)
+- Release lock (digest + signature): `make release-digest` (writes `deployments/release-latest-v14.json`)
 - Release notes (must include digest): `TAG_NAME=vX.Y.Z make release-notes`
 - Strict gate (enforced on `v*` tags in CI): `STRICT=1 make release-check`
 

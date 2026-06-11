@@ -266,8 +266,7 @@ buffer.
 - **Location**: `deployments/abis/Bank.abi.json` (14-field `getSSOT`);
   `deployments/release-latest.json` (digest `e0e8bdc3…`, behind the embedded
   frontend digest `eb08b585…` for chain 84532)
-- **Status**: Open — **required release-hygiene task before the next release
-  tag**
+- **Status**: **Resolved in working tree** — retired instead of regenerated.
 
 **Description.** The unversioned "latest" artifacts in `deployments/` were not
 regenerated after the V14 release. A repo-wide reference search found no code
@@ -279,18 +278,14 @@ humans and scripts, and the new ABI drift guard (§8.3) currently covers **only
 the frontend release ABIs**, so these artifacts sit outside every automated
 check.
 
-**Required action** (one of the two, decided and executed before the next
-release tag):
-
-1. **Retire**: delete the unversioned `deployments/abis/` directory and the
-   unversioned `*-latest.json` aliases, leaving only versioned artifacts
-   (`abis-v13/`, `abis-v14/`, `*-latest-v14.json`); or
-2. **Regenerate and guard**: regenerate the unversioned pointers from the V14
-   release target through the existing release pipeline (per repo policy,
-   generated artifacts must not be hand-edited), **and** extend
-   `check_bank_abi_drift.py` to compare `deployments/abis/Bank.abi.json` (and
-   `abis-v14/`) against the compiled artifact so they can never silently lag
-   again.
+**Resolution.** The stale unversioned `deployments/abis/` directory and
+unversioned latest aliases (`latest.json`, `release-latest.json`,
+`frontend-manifest-latest.json`, `golden-vectors-latest.json`,
+`release-notes-latest.md`, `verify-latest.sh`) were retired. Current release
+workflows must use versioned artifacts only (`abis-v13/`, `abis-v14/`,
+`*-latest-v13.*`, `*-latest-v14.*`). Because the unversioned ABI surface no
+longer exists, the ABI drift guard intentionally remains scoped to the frontend
+release ABIs consumed at runtime.
 
 ---
 
@@ -494,9 +489,8 @@ found every stale copy in the repository deterministically.
 `frontend/packages/ssot/src/abis/release/chain-*/Bank.abi.json` against
 `out/Bank.sol/Bank.json`, failing with a labeled field-path diff. Review
 result: **sound and recommended to land**. Suggested extensions (non-blocking):
-include `deployments/abis*/Bank.abi.json` if retained (AGF-03), and consider
-covering `getPerformance` outputs and the `GameHub`/`SettlementRouter` structs
-consumed by the SDK.
+consider covering `getPerformance` outputs and the `GameHub`/`SettlementRouter`
+structs consumed by the SDK.
 
 ---
 
@@ -512,10 +506,8 @@ passing. The full proof suite is green at HEAD.
 Remaining work is operational hygiene, not contract risk. The working tree now
 contains the runbook fix, ABI drift guard, live per-snapshot/per-active-bank
 `getSSOT`/`getPerformance` shape smoke, and counter-semantics documentation
-(AGF-01, AGF-04, AGF-06, §8.3). The only release-hygiene item still requiring a
-decision before the next release tag is AGF-03: either retire the stale
-unversioned deployment artifacts or regenerate-and-guard them. AGF-02/05/07/08
-are documented design choices and next-ABI-break candidates.
+(AGF-01, AGF-03, AGF-04, AGF-06, §8.3). AGF-02/05/07/08 are documented design
+choices and next-ABI-break candidates.
 
 ---
 
@@ -539,7 +531,7 @@ are documented design choices and next-ABI-break candidates.
 | `frontend/.../abis/release/chain-84532/Bank.abi.json` | 20     | **match**                      |
 | `deployments/abis-v14/Bank.abi.json`                  | 20     | match                          |
 | `deployments/abis-v13/Bank.abi.json`                  | 14     | historical (expected)          |
-| `deployments/abis/Bank.abi.json` (unversioned)        | 14     | **stale** → AGF-03             |
+| unversioned `deployments/abis/Bank.abi.json`          | n/a    | retired (AGF-03)               |
 | frontend fixture bundles (7 of 11)                    | 14     | historical fixtures (expected) |
 
 ## Appendix C — Prior-audit reliance

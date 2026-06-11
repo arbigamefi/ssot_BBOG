@@ -82,7 +82,7 @@ export default function OpsPrototype() {
                 ["Hub", "0x8494...3c21"],
                 ["VRF Hub", "0x31ab...dd02"],
                 ["Bank", "0x10fe...92a0"],
-                ["Frontend manifest", "release-latest.json"]
+                ["Frontend manifest", "release-latest-v14.json"]
               ].map(([label, value]) => (
                 <div key={label} className="rounded-2xl border border-white/8 bg-[#050505] p-4">
                   <div className="text-[10px] font-bold uppercase tracking-widest text-white/40">
