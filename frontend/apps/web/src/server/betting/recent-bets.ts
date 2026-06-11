@@ -127,6 +127,18 @@ function getDurableBetIndexStore() {
   return durableBetIndexStore;
 }
 
+async function tryGetBetFromDurableStore(
+  store: BetIndexStore | null,
+  query: { betId: string; chainId: number }
+) {
+  if (!store) return null;
+  try {
+    return await store.getBet(query);
+  } catch {
+    return null;
+  }
+}
+
 function getEventAbi(eventName: GameHubEventName) {
   const event = GAME_HUB_EVENT_ABI.find((item) => item.type === "event" && item.name === eventName);
   if (!event) throw new Error(`GameHub event ABI missing ${eventName}`);
@@ -539,7 +551,7 @@ export async function queryBetReceipt({
 }): Promise<BetReceiptResponse> {
   const normalizedBetId = normalizeBetId(betId);
   const store = getDurableBetIndexStore();
-  const row = store ? await store.getBet({ betId: normalizedBetId, chainId }) : null;
+  const row = await tryGetBetFromDurableStore(store, { betId: normalizedBetId, chainId });
   if (row) {
     return {
       schemaVersion: 1,
@@ -595,7 +607,7 @@ export async function materializeBetReceipt({
 }): Promise<BetReceiptResponse> {
   const normalizedBetId = normalizeBetId(betId);
   const store = getDurableBetIndexStore();
-  const existing = store ? await store.getBet({ betId: normalizedBetId, chainId }) : null;
+  const existing = await tryGetBetFromDurableStore(store, { betId: normalizedBetId, chainId });
   if (existing?.state === "finalized" || existing?.state === "refunded") {
     return {
       schemaVersion: 1,
@@ -641,14 +653,27 @@ export async function materializeBetReceipt({
     };
   }
 
-  await store.writeBetRows([row]);
+  try {
+    await store.writeBetRows([row]);
+  } catch {
+    return {
+      schemaVersion: 1,
+      betId: normalizedBetId,
+      cached: false,
+      chainId,
+      generatedAt: now(),
+      row,
+      source: "rpc-window"
+    };
+  }
+
   return {
     schemaVersion: 1,
     betId: normalizedBetId,
     cached: false,
     chainId,
     generatedAt: now(),
-    row: (await store.getBet({ betId: normalizedBetId, chainId })) ?? row,
+    row: (await tryGetBetFromDurableStore(store, { betId: normalizedBetId, chainId })) ?? row,
     source: "postgres"
   };
 }
@@ -1365,4 +1390,5 @@ export function recentBetsCacheSize() {
 
 export function clearRecentBetsCache() {
   recentBetsCache.clear();
+  durableBetIndexStore = undefined;
 }

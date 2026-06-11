@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+const mockCreatePostgresBetIndexStore = vi.hoisted(() => vi.fn());
+
+vi.mock("@ssot/bet-index", () => ({
+  createPostgresBetIndexStore: mockCreatePostgresBetIndexStore
+}));
+
 import {
   clearRecentBetsCache,
   clampAffiliateBetsLimit,
@@ -62,6 +68,7 @@ describe("recent bets server aggregation", () => {
       }
     }
     envSnapshot.clear();
+    mockCreatePostgresBetIndexStore.mockReset();
     clearRecentBetsCache();
     vi.restoreAllMocks();
   });
@@ -244,6 +251,33 @@ describe("recent bets server aggregation", () => {
     });
     expect(getLogs).toHaveBeenCalledTimes(4);
     expect(getBlock).toHaveBeenCalledTimes(3);
+  });
+
+  it("degrades receipt queries when the durable receipt index is unreachable", async () => {
+    process.env.BET_INDEX_DATABASE_URL = "postgres://user:pass@127.0.0.1:1/db";
+    process.env.BET_INDEX_READ_ENABLED = "1";
+    process.env.BET_RECEIPT_RPC_FALLBACK_ENABLED = "false";
+    clearRecentBetsCache();
+
+    const getBet = vi.fn().mockRejectedValue(new Error("ECONNREFUSED"));
+    mockCreatePostgresBetIndexStore.mockReturnValue({
+      getBet
+    });
+
+    const response = await queryBetReceipt({
+      betId: "9",
+      chainId: 84532,
+      now: () => 1234
+    });
+
+    expect(getBet).toHaveBeenCalledWith({ betId: "9", chainId: 84532 });
+    expect(response).toMatchObject({
+      betId: "9",
+      chainId: 84532,
+      generatedAt: 1234,
+      row: null,
+      source: "postgres"
+    });
   });
 
   it("chunks recent fallback log scans for free-tier RPC providers", async () => {
