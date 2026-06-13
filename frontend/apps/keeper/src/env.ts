@@ -107,7 +107,7 @@ export function loadKeeperConfig(env: NodeJS.ProcessEnv = process.env): KeeperCo
   if (chainId !== release.chainId) {
     throw new Error(`KEEPER_CHAIN_ID=${chainId} does not match release chainId=${release.chainId}`);
   }
-  const scanChunkBlocks = parseBlockCount(env.KEEPER_SCAN_CHUNK_BLOCKS, 10n);
+  const scanChunkBlocks = parseBlockCount(env.KEEPER_SCAN_CHUNK_BLOCKS, 2000n);
 
   return {
     chainId,
