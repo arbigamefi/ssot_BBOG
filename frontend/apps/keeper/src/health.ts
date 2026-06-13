@@ -40,6 +40,14 @@ export type KeeperHealthSnapshot = {
     retryable: boolean;
   };
   lastError?: string;
+  rpc?: {
+    errorsLastMinute: Record<string, number>;
+    lastMinute: Record<string, number>;
+    total: Record<string, number>;
+    totalErrors: Record<string, number>;
+    windowStartedAt: string;
+    updatedAt: string;
+  };
 };
 
 export type KeeperHealthSink = {
@@ -112,8 +120,8 @@ export class KeeperHealthReporter {
     });
   }
 
-  async recordHeartbeat(queueDepth: number) {
-    await this.update({ queueDepth });
+  async recordHeartbeat(queueDepth: number, rpc?: KeeperHealthSnapshot["rpc"]) {
+    await this.update({ queueDepth, rpc });
   }
 
   async recordEnqueued(event: KeeperEvent, queueDepth: number) {

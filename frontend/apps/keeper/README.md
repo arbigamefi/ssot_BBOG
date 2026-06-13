@@ -126,6 +126,9 @@ Sportsbook automatic terminalization is opt-in:
 
 Set `KEEPER_SPORTS_TERMINALIZER_ENABLED=true` and the sports scan limits in the
 selected deploy env file only after the sportsbook Phase 2 packet records GO.
+Sports ticket indexing is also opt-in via `KEEPER_SPORTS_TICKET_INDEX_ENABLED`;
+leave it `false` while the public sportsbook is disabled so the casino keeper
+does not spend RPC budget scanning unused `SportsHub` ticket events.
 
 When enabled and the active release exposes `SportsHub`, the keeper listens for
 `ResultProposed`, `ResultFinalized`, `MarketVoided`, and challenge resolution
@@ -152,6 +155,12 @@ When enabled, the keeper runs the Postgres migration, writes `GameHub` lifecycle
 events, and resumes scan windows from the persisted `gamehub-events` cursor when
 that cursor is ahead of `KEEPER_START_BLOCK`. Index writes are best-effort:
 failures are logged and do not block `finalize`.
+
+LP provider ledger indexing is intentionally decoupled from the high-priority
+GameHub scan. `KEEPER_BANK_PROVIDER_LEDGER_SCAN_INTERVAL_SECONDS` defaults to
+`60`, so Bank `Deposit`/`Withdraw` rows remain durable without forcing every
+casino settlement poll to also scan every Bank pool. Set it to `0` only when the
+provider ledger is intentionally disabled.
 
 ## Local Postgres
 
@@ -216,7 +225,8 @@ with tight `eth_getLogs` range limits can still catch delayed events. Increase i
 only for providers with a documented larger logs range.
 
 When `KEEPER_HEALTH_PATH` is set, the keeper writes an atomic JSON health
-snapshot with queue depth, last scan, and last finalize success/failure. The
-local web app reads that file through the route
+snapshot with queue depth, last scan, last finalize success/failure, and RPC
+usage counters for the current one-minute window plus process lifetime totals.
+The local web app reads that file through the route
 `/ops/casino-keeper-health.json`, so the health file must stay outside
 `apps/web/public` to avoid a public-file / route conflict.

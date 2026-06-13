@@ -54,6 +54,101 @@ const SPORTS_TERMINALIZER_EVENTS: SportsTerminalizerEventName[] = [
   "ResultChallengeResolved"
 ];
 const BET_INDEX_CURSOR_SOURCE = "gamehub-events";
+const BANK_PROVIDER_LEDGER_CURSOR_SOURCE = "bank-provider-ledger";
+const RPC_USAGE_WINDOW_MS = 60_000;
+const TRACKED_RPC_METHODS = new Set([
+  "getBlock",
+  "getBlockNumber",
+  "getContractEvents",
+  "getTransactionReceipt",
+  "readContract",
+  "simulateContract",
+  "waitForTransactionReceipt",
+  "writeContract"
+]);
+
+function incrementCounter(counter: Record<string, number>, key: string) {
+  counter[key] = (counter[key] ?? 0) + 1;
+}
+
+function createRpcUsageMeter(now = () => Date.now()) {
+  let windowStartedAt = now();
+  const total: Record<string, number> = {};
+  const totalErrors: Record<string, number> = {};
+  let lastMinute: Record<string, number> = {};
+  let errorsLastMinute: Record<string, number> = {};
+
+  const rollWindow = () => {
+    const current = now();
+    if (current - windowStartedAt < RPC_USAGE_WINDOW_MS) return current;
+    windowStartedAt = current;
+    lastMinute = {};
+    errorsLastMinute = {};
+    return current;
+  };
+
+  return {
+    record(method: string, failed = false) {
+      rollWindow();
+      incrementCounter(total, method);
+      incrementCounter(lastMinute, method);
+      if (!failed) return;
+      incrementCounter(totalErrors, method);
+      incrementCounter(errorsLastMinute, method);
+    },
+    snapshot() {
+      const updatedAt = rollWindow();
+      return {
+        errorsLastMinute: { ...errorsLastMinute },
+        lastMinute: { ...lastMinute },
+        total: { ...total },
+        totalErrors: { ...totalErrors },
+        windowStartedAt: new Date(windowStartedAt).toISOString(),
+        updatedAt: new Date(updatedAt).toISOString()
+      };
+    }
+  };
+}
+
+function instrumentRpcClient<T extends object>(
+  client: T,
+  meter: ReturnType<typeof createRpcUsageMeter>
+): T {
+  return new Proxy(client, {
+    get(target, prop, receiver) {
+      const value = Reflect.get(target, prop, receiver);
+      if (
+        typeof prop !== "string" ||
+        typeof value !== "function" ||
+        !TRACKED_RPC_METHODS.has(prop)
+      ) {
+        return value;
+      }
+      return (...args: unknown[]) => {
+        try {
+          const result = value.apply(target, args) as unknown;
+          if (result && typeof (result as Promise<unknown>).then === "function") {
+            return (result as Promise<unknown>).then(
+              (resolved) => {
+                meter.record(prop);
+                return resolved;
+              },
+              (error) => {
+                meter.record(prop, true);
+                throw error;
+              }
+            );
+          }
+          meter.record(prop);
+          return result;
+        } catch (error) {
+          meter.record(prop, true);
+          throw error;
+        }
+      };
+    }
+  }) as T;
+}
 
 export function createKeeperChain(config: KeeperConfig) {
   return defineChain({
@@ -86,15 +181,22 @@ export function createKeeperRuntime({
 }): KeeperRuntime {
   const chain = createKeeperChain(config);
   const account = privateKeyToAccount(config.privateKey);
-  const publicClient = createPublicClient({
-    chain,
-    transport: http(config.httpRpcUrl)
-  });
-  const walletClient = createWalletClient({
-    account,
-    chain,
-    transport: http(config.httpRpcUrl)
-  });
+  const rpcUsage = createRpcUsageMeter();
+  const publicClient = instrumentRpcClient(
+    createPublicClient({
+      chain,
+      transport: http(config.httpRpcUrl)
+    }),
+    rpcUsage
+  );
+  const walletClient = instrumentRpcClient(
+    createWalletClient({
+      account,
+      chain,
+      transport: http(config.httpRpcUrl)
+    }),
+    rpcUsage
+  );
   const wsClient =
     config.wsRpcUrl == null
       ? undefined
@@ -117,7 +219,9 @@ export function createKeeperRuntime({
   const unwatchers: Array<() => void> = [];
   let stopped = false;
   let scanning = false;
+  let bankProviderLedgerScanning = false;
   let lastScannedBlock = config.startBlock ?? 0n;
+  let bankProviderLedgerLastScannedBlock = config.startBlock ?? 0n;
   let sportsTerminalizerLastScannedBlock = config.startBlock ?? 0n;
   const betIndexStore =
     config.betIndexWriteEnabled && config.betIndexDatabaseUrl
@@ -611,6 +715,16 @@ export function createKeeperRuntime({
         config.gameHub
       );
       const resumeBlock = resolveBetIndexResumeBlock(lastScannedBlock, cursor);
+      const bankProviderCursor =
+        (await betIndexStore.getCursor(
+          config.chainId,
+          BANK_PROVIDER_LEDGER_CURSOR_SOURCE,
+          config.gameHub
+        )) ?? cursor;
+      const bankProviderResumeBlock = resolveBetIndexResumeBlock(
+        bankProviderLedgerLastScannedBlock,
+        bankProviderCursor
+      );
       if (resumeBlock > lastScannedBlock) {
         const configuredStartBlock = lastScannedBlock;
         lastScannedBlock = resumeBlock;
@@ -619,6 +733,14 @@ export function createKeeperRuntime({
           cursorBlock: resumeBlock.toString()
         });
         writeHealth(health.recordStarted(lastScannedBlock, queue.size));
+      }
+      if (bankProviderResumeBlock > bankProviderLedgerLastScannedBlock) {
+        const configuredStartBlock = bankProviderLedgerLastScannedBlock;
+        bankProviderLedgerLastScannedBlock = bankProviderResumeBlock;
+        logger.info("casino.keeper.bank_provider_ledger_cursor_resumed", {
+          configuredStartBlock: configuredStartBlock.toString(),
+          cursorBlock: bankProviderResumeBlock.toString()
+        });
       }
     } catch (error) {
       logger.error("casino.keeper.bet_index_migrate_failed", {
@@ -681,6 +803,29 @@ export function createKeeperRuntime({
     }
   };
 
+  const scanBankProviderLedgerEvents = async () => {
+    if (
+      !betIndexStore ||
+      config.bankProviderLedgerPools.length === 0 ||
+      config.bankProviderLedgerScanIntervalMs <= 0
+    ) {
+      return;
+    }
+    const latest = await publicClient.getBlockNumber();
+    if (latest <= bankProviderLedgerLastScannedBlock) return;
+
+    const fromBlock =
+      bankProviderLedgerLastScannedBlock === 0n ? latest : bankProviderLedgerLastScannedBlock + 1n;
+    for (const range of splitBlockRange({
+      fromBlock,
+      toBlock: latest,
+      chunkSize: config.scanChunkBlocks
+    })) {
+      await writeBankProviderLedgerRange(betIndexStore, publicClient, config, range, logger);
+      bankProviderLedgerLastScannedBlock = range.toBlock;
+    }
+  };
+
   const scanMissedSportsTerminalizerEvents = async () => {
     if (!config.sportsTerminalizerEnabled || !config.sportsHub) return;
     const latest = await publicClient.getBlockNumber();
@@ -718,6 +863,20 @@ export function createKeeperRuntime({
     }
   };
 
+  const runBankProviderLedgerScan = async () => {
+    if (stopped || bankProviderLedgerScanning) return;
+    bankProviderLedgerScanning = true;
+    try {
+      await scanBankProviderLedgerEvents();
+    } catch (error) {
+      const message = (error as Error)?.message ?? "bank provider ledger scan failed";
+      logger.error("casino.keeper.bank_provider_ledger_scan_failed", { message });
+      writeHealth(health.recordError(message, queue.size));
+    } finally {
+      bankProviderLedgerScanning = false;
+    }
+  };
+
   const start = async () => {
     logger.info("casino.keeper.starting", {
       chainId: config.chainId,
@@ -728,6 +887,9 @@ export function createKeeperRuntime({
       keeper: account.address,
       startBlock: lastScannedBlock.toString(),
       scanChunkBlocks: config.scanChunkBlocks.toString(),
+      bankProviderLedgerPoolCount: config.bankProviderLedgerPools.length,
+      bankProviderLedgerScanIntervalMs: config.bankProviderLedgerScanIntervalMs,
+      sportsTicketIndexEnabled: config.sportsTicketIndexEnabled,
       sportsTerminalizerScanChunkBlocks: config.sportsTerminalizerScanChunkBlocks.toString(),
       sportsTerminalizerMarketIds: config.sportsTerminalizerMarketIds.map((id) => id.toString()),
       sportsTicketScanChunkBlocks: config.sportsTicketScanChunkBlocks.toString(),
@@ -770,7 +932,7 @@ export function createKeeperRuntime({
             })
           );
         }
-        if (config.sportsHub) {
+        if (config.sportsTicketIndexEnabled && config.sportsHub) {
           for (const eventName of SPORTS_TICKET_EVENTS) {
             unwatchers.push(
               wsClient.watchContractEvent({
@@ -819,8 +981,19 @@ export function createKeeperRuntime({
 
     timers.push(setInterval(() => void drainQueue(), 500));
     timers.push(setInterval(() => void runScan(), config.pollIntervalMs));
-    timers.push(setInterval(() => writeHealth(health.recordHeartbeat(queue.size)), 10_000));
+    if (config.bankProviderLedgerPools.length > 0 && config.bankProviderLedgerScanIntervalMs > 0) {
+      timers.push(
+        setInterval(() => void runBankProviderLedgerScan(), config.bankProviderLedgerScanIntervalMs)
+      );
+    }
+    timers.push(
+      setInterval(
+        () => writeHealth(health.recordHeartbeat(queue.size, rpcUsage.snapshot())),
+        10_000
+      )
+    );
     void runScan();
+    void runBankProviderLedgerScan();
     for (const marketId of config.sportsTerminalizerMarketIds) {
       scheduleSportsMarket(marketId, "ResultFinalized");
     }
@@ -869,7 +1042,7 @@ async function writeBetIndexRange(
         .filter((event): event is BetIndexEvent => Boolean(event));
       await store.writeGameHubEvents(events);
     }
-    if (config.sportsHub) {
+    if (config.sportsTicketIndexEnabled && config.sportsHub) {
       for (const eventName of SPORTS_TICKET_EVENTS) {
         const logs = await publicClient.getContractEvents({
           address: config.sportsHub,
@@ -884,6 +1057,29 @@ async function writeBetIndexRange(
         await store.writeSportsHubEvents(events);
       }
     }
+    await store.setCursor({
+      blockNumber: range.toBlock,
+      chainId: config.chainId,
+      cursorKey: config.gameHub,
+      source: BET_INDEX_CURSOR_SOURCE
+    });
+  } catch (error) {
+    logger.error("casino.keeper.bet_index_scan_failed", {
+      fromBlock: range.fromBlock.toString(),
+      message: (error as Error)?.message ?? "index scan failed",
+      toBlock: range.toBlock.toString()
+    });
+  }
+}
+
+async function writeBankProviderLedgerRange(
+  store: BetIndexStore,
+  publicClient: PublicClient,
+  config: KeeperConfig,
+  range: { fromBlock: bigint; toBlock: bigint },
+  logger: KeeperLogger
+) {
+  try {
     for (const pool of config.bankProviderLedgerPools) {
       const rows = await fetchBankProviderLedgerRows({
         chainId: config.chainId,
@@ -897,14 +1093,15 @@ async function writeBetIndexRange(
       blockNumber: range.toBlock,
       chainId: config.chainId,
       cursorKey: config.gameHub,
-      source: BET_INDEX_CURSOR_SOURCE
+      source: BANK_PROVIDER_LEDGER_CURSOR_SOURCE
     });
   } catch (error) {
-    logger.error("casino.keeper.bet_index_scan_failed", {
+    logger.error("casino.keeper.bank_provider_ledger_scan_failed", {
       fromBlock: range.fromBlock.toString(),
-      message: (error as Error)?.message ?? "index scan failed",
+      message: (error as Error)?.message ?? "bank provider ledger scan failed",
       toBlock: range.toBlock.toString()
     });
+    throw error;
   }
 }
 

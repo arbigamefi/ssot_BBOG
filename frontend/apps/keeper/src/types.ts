@@ -35,6 +35,8 @@ export type KeeperConfig = {
   betIndexSsl: boolean;
   betIndexWriteEnabled: boolean;
   bankProviderLedgerPools: BankProviderLedgerPool[];
+  bankProviderLedgerScanIntervalMs: number;
+  sportsTicketIndexEnabled: boolean;
   sportsTerminalizerEnabled: boolean;
   sportsTerminalizerScanChunkBlocks: bigint;
   sportsTerminalizerMarketIds: bigint[];

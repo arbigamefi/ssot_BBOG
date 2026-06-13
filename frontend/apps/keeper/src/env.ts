@@ -128,6 +128,11 @@ export function loadKeeperConfig(env: NodeJS.ProcessEnv = process.env): KeeperCo
     betIndexSsl: parseBool(env.BET_INDEX_SSL),
     betIndexWriteEnabled: parseBool(env.BET_INDEX_WRITE_ENABLED),
     bankProviderLedgerPools: resolveBankProviderLedgerPools(release),
+    bankProviderLedgerScanIntervalMs: parseMs(
+      env.KEEPER_BANK_PROVIDER_LEDGER_SCAN_INTERVAL_SECONDS,
+      60_000
+    ),
+    sportsTicketIndexEnabled: parseBool(env.KEEPER_SPORTS_TICKET_INDEX_ENABLED),
     sportsTerminalizerEnabled: parseBool(env.KEEPER_SPORTS_TERMINALIZER_ENABLED),
     sportsTerminalizerScanChunkBlocks: parseBlockCount(
       env.KEEPER_SPORTS_TERMINALIZER_SCAN_CHUNK_BLOCKS,

@@ -20,6 +20,8 @@ const baseConfig: KeeperConfig = {
   betIndexSsl: false,
   betIndexWriteEnabled: false,
   bankProviderLedgerPools: [],
+  bankProviderLedgerScanIntervalMs: 60_000,
+  sportsTicketIndexEnabled: false,
   sportsTerminalizerEnabled: false,
   sportsTerminalizerScanChunkBlocks: 2_000n,
   sportsTerminalizerMarketIds: [],
@@ -190,5 +192,30 @@ describe("KeeperHealthReporter", () => {
     expect(saved.schemaVersion).toBe(1);
     expect(saved.status).toBe("running");
     expect(saved.queueDepth).toBeGreaterThanOrEqual(0);
+  });
+
+  it("includes RPC usage counters in heartbeat snapshots", async () => {
+    const health = reporter();
+
+    await health.recordHeartbeat(3, {
+      errorsLastMinute: { getContractEvents: 1 },
+      lastMinute: { getBlockNumber: 2, getContractEvents: 4 },
+      total: { getBlockNumber: 12, getContractEvents: 20 },
+      totalErrors: { getContractEvents: 1 },
+      windowStartedAt: "2026-05-17T00:00:00.000Z",
+      updatedAt: "2026-05-17T00:00:01.000Z"
+    });
+
+    expect(health.snapshot()).toMatchObject({
+      queueDepth: 3,
+      rpc: {
+        errorsLastMinute: { getContractEvents: 1 },
+        lastMinute: { getBlockNumber: 2, getContractEvents: 4 },
+        total: { getBlockNumber: 12, getContractEvents: 20 },
+        totalErrors: { getContractEvents: 1 },
+        windowStartedAt: "2026-05-17T00:00:00.000Z",
+        updatedAt: "2026-05-17T00:00:01.000Z"
+      }
+    });
   });
 });
