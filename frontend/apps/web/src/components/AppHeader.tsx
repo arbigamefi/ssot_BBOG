@@ -217,8 +217,10 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
     const activeLink = activeMobileGameLinkRef.current;
     if (!nav || !activeLink) return;
 
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    activeLink.scrollIntoView({
+    const reducedMotion =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    activeLink.scrollIntoView?.({
       behavior: reducedMotion ? "auto" : "smooth",
       block: "nearest",
       inline: "center"

@@ -11,12 +11,14 @@ import {
 describe("casino module registry", () => {
   it("registers one canonical entry for every supported casino module", () => {
     expect(CASINO_MODULES).toHaveLength(CASINO_MODULE_SLUGS.length);
-    expect(new Set(CASINO_MODULES.map((module) => module.slug)).size).toBe(CASINO_MODULES.length);
+    expect(new Set(CASINO_MODULES.map((casinoModule) => casinoModule.slug)).size).toBe(
+      CASINO_MODULES.length
+    );
 
-    for (const module of CASINO_MODULES) {
-      expect(module.canonicalHref).toBe(`/casino/${module.slug}`);
-      expect(module.label).toBeTruthy();
-      expect(module.roomLabel).toBeTruthy();
+    for (const casinoModule of CASINO_MODULES) {
+      expect(casinoModule.canonicalHref).toBe(`/casino/${casinoModule.slug}`);
+      expect(casinoModule.label).toBeTruthy();
+      expect(casinoModule.roomLabel).toBeTruthy();
     }
   });
 

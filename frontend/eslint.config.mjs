@@ -1,4 +1,5 @@
 import js from "@eslint/js";
+import nextPlugin from "@next/eslint-plugin-next";
 import tsParser from "@typescript-eslint/parser";
 
 /**
@@ -9,6 +10,22 @@ import tsParser from "@typescript-eslint/parser";
  */
 export default [
   js.configs.recommended,
+  {
+    ...nextPlugin.flatConfig.coreWebVitals,
+    files: ["apps/web/**/*.{js,jsx,ts,tsx}"],
+    rules: {
+      ...nextPlugin.flatConfig.coreWebVitals.rules,
+      "@next/next/no-html-link-for-pages": "off",
+      // The web app uses local SVGs for brand marks, token marks, and locale
+      // flags. These are small UI glyphs, not LCP/content images.
+      "@next/next/no-img-element": "off"
+    },
+    settings: {
+      next: {
+        rootDir: "apps/web/"
+      }
+    }
+  },
   {
     ignores: ["**/node_modules/**", "**/.next/**", "**/dist/**", "**/storybook-static/**"]
   },

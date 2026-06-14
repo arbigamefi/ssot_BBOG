@@ -103,13 +103,19 @@ vi.mock("next-intl", () => ({
     })[key] ?? key
 }));
 
-vi.mock("next/link", () => ({
-  default: ({ href, children, ...props }: any) => (
-    <a href={href} {...props}>
-      {children}
-    </a>
-  )
-}));
+vi.mock("next/link", async () => {
+  const React = await import("react");
+  const MockNextLink = React.forwardRef<HTMLAnchorElement, any>(
+    ({ href, children, ...props }, ref) => (
+      <a ref={ref} href={href} {...props}>
+        {children}
+      </a>
+    )
+  );
+  MockNextLink.displayName = "MockNextLink";
+
+  return { default: MockNextLink };
+});
 
 vi.mock("next/navigation", () => ({
   usePathname: () => state.pathname,
