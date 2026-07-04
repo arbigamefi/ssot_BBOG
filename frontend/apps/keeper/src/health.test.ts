@@ -15,6 +15,7 @@ const baseConfig: KeeperConfig = {
   role: "primary",
   backupDelayMs: 0,
   pollIntervalMs: 15_000,
+  rpcMinIntervalMs: 0,
   scanChunkBlocks: 10n,
   startBlock: 100n,
   betIndexSsl: false,

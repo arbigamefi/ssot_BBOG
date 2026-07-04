@@ -28,6 +28,7 @@ export type KeeperConfig = {
   role: KeeperRole;
   backupDelayMs: number;
   pollIntervalMs: number;
+  rpcMinIntervalMs: number;
   scanChunkBlocks: bigint;
   startBlock?: bigint;
   healthPath?: string;

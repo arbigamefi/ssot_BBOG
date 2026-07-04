@@ -38,6 +38,15 @@ function parseMs(seconds: string | undefined, fallback: number) {
   return Math.floor(parsed * 1000);
 }
 
+function parseMilliseconds(value: string | undefined, fallback: number, name: string) {
+  if (!value) return fallback;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    throw new Error(`${name} must be a non-negative number`);
+  }
+  return Math.floor(parsed);
+}
+
 function parseOptionalBlock(value: string | undefined) {
   if (!value) return undefined;
   return BigInt(value);
@@ -107,7 +116,7 @@ export function loadKeeperConfig(env: NodeJS.ProcessEnv = process.env): KeeperCo
   if (chainId !== release.chainId) {
     throw new Error(`KEEPER_CHAIN_ID=${chainId} does not match release chainId=${release.chainId}`);
   }
-  const scanChunkBlocks = parseBlockCount(env.KEEPER_SCAN_CHUNK_BLOCKS, 2000n);
+  const scanChunkBlocks = parseBlockCount(env.KEEPER_SCAN_CHUNK_BLOCKS, 10n);
 
   return {
     chainId,
@@ -120,6 +129,11 @@ export function loadKeeperConfig(env: NodeJS.ProcessEnv = process.env): KeeperCo
     role: parseRole(env.KEEPER_ROLE),
     backupDelayMs: parseMs(env.KEEPER_BACKUP_DELAY_SECONDS, 0),
     pollIntervalMs: parseMs(env.KEEPER_POLL_INTERVAL_SECONDS, 15_000),
+    rpcMinIntervalMs: parseMilliseconds(
+      env.KEEPER_RPC_MIN_INTERVAL_MS,
+      0,
+      "KEEPER_RPC_MIN_INTERVAL_MS"
+    ),
     scanChunkBlocks,
     startBlock:
       parseOptionalBlock(env.KEEPER_START_BLOCK) ?? BigInt(release.meta?.blockNumber ?? 0),

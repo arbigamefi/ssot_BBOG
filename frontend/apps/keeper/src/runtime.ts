@@ -110,9 +110,33 @@ function createRpcUsageMeter(now = () => Date.now()) {
   };
 }
 
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function createRpcThrottle(minIntervalMs: number, now = () => Date.now()) {
+  let lastStartedAt = 0;
+  let tail: Promise<void> = Promise.resolve();
+
+  return async function throttle<T>(operation: () => Promise<T>): Promise<T> {
+    const run = tail.then(async () => {
+      const waitMs = Math.max(0, lastStartedAt + minIntervalMs - now());
+      if (waitMs > 0) await delay(waitMs);
+      lastStartedAt = now();
+      return operation();
+    });
+    tail = run.then(
+      () => undefined,
+      () => undefined
+    );
+    return run;
+  };
+}
+
 function instrumentRpcClient<T extends object>(
   client: T,
-  meter: ReturnType<typeof createRpcUsageMeter>
+  meter: ReturnType<typeof createRpcUsageMeter>,
+  throttle?: ReturnType<typeof createRpcThrottle>
 ): T {
   return new Proxy(client, {
     get(target, prop, receiver) {
@@ -125,26 +149,17 @@ function instrumentRpcClient<T extends object>(
         return value;
       }
       return (...args: unknown[]) => {
-        try {
-          const result = value.apply(target, args) as unknown;
-          if (result && typeof (result as Promise<unknown>).then === "function") {
-            return (result as Promise<unknown>).then(
-              (resolved) => {
-                meter.record(prop);
-                return resolved;
-              },
-              (error) => {
-                meter.record(prop, true);
-                throw error;
-              }
-            );
+        const invoke = async () => {
+          try {
+            const result = await Promise.resolve(value.apply(target, args) as unknown);
+            meter.record(prop);
+            return result;
+          } catch (error) {
+            meter.record(prop, true);
+            throw error;
           }
-          meter.record(prop);
-          return result;
-        } catch (error) {
-          meter.record(prop, true);
-          throw error;
-        }
+        };
+        return throttle ? throttle(invoke) : invoke();
       };
     }
   }) as T;
@@ -182,12 +197,15 @@ export function createKeeperRuntime({
   const chain = createKeeperChain(config);
   const account = privateKeyToAccount(config.privateKey);
   const rpcUsage = createRpcUsageMeter();
+  const rpcThrottle =
+    config.rpcMinIntervalMs > 0 ? createRpcThrottle(config.rpcMinIntervalMs) : undefined;
   const publicClient = instrumentRpcClient(
     createPublicClient({
       chain,
       transport: http(config.httpRpcUrl)
     }),
-    rpcUsage
+    rpcUsage,
+    rpcThrottle
   );
   const walletClient = instrumentRpcClient(
     createWalletClient({
@@ -195,7 +213,8 @@ export function createKeeperRuntime({
       chain,
       transport: http(config.httpRpcUrl)
     }),
-    rpcUsage
+    rpcUsage,
+    rpcThrottle
   );
   const wsClient =
     config.wsRpcUrl == null
