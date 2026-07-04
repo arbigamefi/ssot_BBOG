@@ -9,7 +9,7 @@
     "prebuild": "pnpm -C ../../packages/bet-index build",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint src --max-warnings=0",
     "pretypecheck": "pnpm -C ../../packages/bet-index build",
     "typecheck": "tsc --noEmit",
     "pretest": "pnpm -C ../../packages/bet-index build",

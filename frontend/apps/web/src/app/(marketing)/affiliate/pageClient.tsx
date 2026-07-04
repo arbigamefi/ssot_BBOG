@@ -15,7 +15,7 @@ import { cn } from "@ssot/ui";
 
 import { useSSOTSDK } from "../../../ssot/sdk";
 import { useRelease } from "../../../ssot/release/ReleaseProvider";
-import { useConnectModal } from "../../../app-shell/WalletButton";
+import { requestWalletConnect } from "../../../app-shell/wallet-connect-events";
 import { useAffiliateBets } from "../../../features/betting/useAffiliateBets";
 import { buildCasinoReferralLink } from "../../../features/referral/referral-link";
 import { SharePanel } from "../../../features/share/SharePanel";
@@ -25,7 +25,6 @@ export function AffiliatePageClient() {
   const t = useTranslations();
   const { sdk } = useSSOTSDK();
   const { chainId } = useRelease();
-  const { openConnectModal } = useConnectModal();
   const [origin, setOrigin] = React.useState("");
   const [copiedCampaign, setCopiedCampaign] = React.useState<string | undefined>();
 
@@ -143,7 +142,7 @@ export function AffiliatePageClient() {
             ) : (
               <button
                 type="button"
-                onClick={openConnectModal}
+                onClick={requestWalletConnect}
                 className="inline-flex w-full items-center justify-center rounded-md bg-brand px-4 py-2.5 text-sm font-bold text-fg-inverse transition-colors hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:w-auto"
               >
                 {t("app.connectWalletButton")}

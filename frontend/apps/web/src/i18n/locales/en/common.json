@@ -820,7 +820,7 @@
               "key": "p5",
               "label": "Pick 5 spots",
               "coverage": "Match all 5",
-              "multiplier": "770× max"
+              "multiplier": "500.5× max"
             }
           ]
         },

@@ -197,6 +197,11 @@ const SIC_BO_INFO_BETS = [
   { key: "singleFace", label: "Single face", coverage: "≈ 42%", multiplier: "up to 6×" }
 ];
 
+const KENO_INFO_BETS = [
+  { key: "p1", label: "Pick 1 spot", coverage: "Match 1 of 5", multiplier: "2.97×" },
+  { key: "p5", label: "Pick 5 spots", coverage: "Match all 5", multiplier: "770× max" }
+];
+
 const TRANSLATIONS: Record<string, string> = {
   "casino.room.audit.tabs.live": "Live bets",
   "casino.room.audit.tabs.mine": "My bets",
@@ -266,6 +271,7 @@ const TRANSLATIONS: Record<string, string> = {
   "casino.room.audit.analytics.trend": "7-day volume",
   "casino.room.audit.analytics.trendWindow": "Daily turnover by chain placement time",
   "casino.room.gameInfo.roulette.tagline": "European roulette tagline.",
+  "casino.room.gameInfo.keno.tagline": "Pick spots.",
   "casino.room.gameInfo.sic-bo.tagline": "Three dice."
 };
 
@@ -280,6 +286,7 @@ vi.mock("next-intl", () => ({
     };
     (t as unknown as { raw: (key: string) => unknown }).raw = (key: string) => {
       if (key === "casino.room.gameInfo.roulette.bets") return GAME_INFO_BETS;
+      if (key === "casino.room.gameInfo.keno.bets") return KENO_INFO_BETS;
       if (key === "casino.room.gameInfo.sic-bo.bets") return SIC_BO_INFO_BETS;
       return key;
     };
@@ -324,6 +331,22 @@ describe("GameRoomAuditLedger", () => {
         "Win chance is the event probability. Multipliers shown are player-facing payouts after the current house edge."
       )
     ).toBeDefined();
+  });
+
+  it("uses the current Keno payout table instead of stale localized multipliers", () => {
+    setTab("info");
+    render(
+      <GameRoomAuditLedger
+        game={{ ...game, slug: "keno", label: "Keno" }}
+        betAmount={10}
+        gameMeta={{ slug: "keno", houseEdgeBps: 200 }}
+        recentBets={[]}
+      />
+    );
+
+    expect(screen.getByText("2.00%")).toBeDefined();
+    expect(screen.queryByText("770× max")).toBeNull();
+    expect(screen.getByText("490.49× max")).toBeDefined();
   });
 
   it("shows the live-bets empty state when recentBets is empty", () => {

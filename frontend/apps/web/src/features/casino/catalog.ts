@@ -31,9 +31,9 @@ export function getCatalogRooms(rawGamesMeta?: Array<ReleaseGameMetaLike | null 
       return isCasinoModuleSlug(game.slug);
     }) ?? [];
 
-  const fallback: CatalogSeed[] = CASINO_MODULES.map((module) => ({
-    slug: module.slug,
-    label: module.label
+  const fallback: CatalogSeed[] = CASINO_MODULES.map((casinoModule) => ({
+    slug: casinoModule.slug,
+    label: casinoModule.label
   }));
 
   const ordered: CatalogSeed[] = (source.length ? source : fallback)
@@ -41,12 +41,12 @@ export function getCatalogRooms(rawGamesMeta?: Array<ReleaseGameMetaLike | null 
     .sort(compareCasinoModules);
 
   return ordered.map<CatalogRoom>((game) => {
-    const module = getCasinoModule(game.slug);
+    const casinoModule = getCasinoModule(game.slug);
     return {
       slug: game.slug,
       label: game.label,
-      href: module?.canonicalHref ?? `/casino/${game.slug}`,
-      badge: module?.roomLabel ?? game.label,
+      href: casinoModule?.canonicalHref ?? `/casino/${game.slug}`,
+      badge: casinoModule?.roomLabel ?? game.label,
       summary: "",
       facts: []
     };

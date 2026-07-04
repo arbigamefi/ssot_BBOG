@@ -15,7 +15,7 @@ const state = {
     isLoading: false
   }
 };
-const openConnectModal = vi.fn();
+const openConnectModal = vi.hoisted(() => vi.fn());
 
 vi.mock("../../../ssot/sdk", () => ({
   useSSOTSDK: () => ({
@@ -60,8 +60,8 @@ vi.mock("next-intl", async () => {
   };
 });
 
-vi.mock("../../../app-shell/WalletButton", () => ({
-  useConnectModal: () => ({ openConnectModal })
+vi.mock("../../../app-shell/wallet-connect-events", () => ({
+  requestWalletConnect: openConnectModal
 }));
 
 vi.mock("../../../ssot/release/ReleaseProvider", () => ({
