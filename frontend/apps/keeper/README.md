@@ -224,6 +224,13 @@ range and recent rows. Use
 with tight `eth_getLogs` range limits can still catch delayed events. Increase it
 only for providers with a documented larger logs range.
 
+For free-tier RPC providers, set `KEEPER_RPC_MIN_INTERVAL_MS=1000` in each
+keeper env file. The keeper then serializes tracked in-process RPC calls so a
+scan/finalize burst does not exceed a low per-second compute-unit budget. This
+does not coordinate across separate keeper processes or the web app, so
+production should still use separate provider apps/keys for the browser API,
+mainnet keeper, and testnet keeper where possible.
+
 When `KEEPER_HEALTH_PATH` is set, the keeper writes an atomic JSON health
 snapshot with queue depth, last scan, last finalize success/failure, and RPC
 usage counters for the current one-minute window plus process lifetime totals.
