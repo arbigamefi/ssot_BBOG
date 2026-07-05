@@ -26,13 +26,26 @@ const PUBLIC_RPC_ENV_BY_CHAIN_ID: Record<number, string> = {
   84532: "NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL"
 };
 
+const PUBLIC_WS_RPC_ENV_BY_CHAIN_ID: Record<number, string> = {
+  1: "NEXT_PUBLIC_MAINNET_WS_RPC_URL",
+  42161: "NEXT_PUBLIC_ARBITRUM_WS_RPC_URL",
+  421614: "NEXT_PUBLIC_ARBITRUM_SEPOLIA_WS_RPC_URL",
+  8453: "NEXT_PUBLIC_BASE_WS_RPC_URL",
+  84532: "NEXT_PUBLIC_BASE_SEPOLIA_WS_RPC_URL"
+};
+
 const DEFAULT_PUBLIC_RPC_ENV: PublicRpcEnv = {
   NEXT_PUBLIC_ALCHEMY_API_KEY: process.env.NEXT_PUBLIC_ALCHEMY_API_KEY,
   NEXT_PUBLIC_ARBITRUM_RPC_URL: process.env.NEXT_PUBLIC_ARBITRUM_RPC_URL,
+  NEXT_PUBLIC_ARBITRUM_WS_RPC_URL: process.env.NEXT_PUBLIC_ARBITRUM_WS_RPC_URL,
   NEXT_PUBLIC_ARBITRUM_SEPOLIA_RPC_URL: process.env.NEXT_PUBLIC_ARBITRUM_SEPOLIA_RPC_URL,
+  NEXT_PUBLIC_ARBITRUM_SEPOLIA_WS_RPC_URL: process.env.NEXT_PUBLIC_ARBITRUM_SEPOLIA_WS_RPC_URL,
   NEXT_PUBLIC_BASE_RPC_URL: process.env.NEXT_PUBLIC_BASE_RPC_URL,
+  NEXT_PUBLIC_BASE_WS_RPC_URL: process.env.NEXT_PUBLIC_BASE_WS_RPC_URL,
   NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL: process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL,
+  NEXT_PUBLIC_BASE_SEPOLIA_WS_RPC_URL: process.env.NEXT_PUBLIC_BASE_SEPOLIA_WS_RPC_URL,
   NEXT_PUBLIC_MAINNET_RPC_URL: process.env.NEXT_PUBLIC_MAINNET_RPC_URL,
+  NEXT_PUBLIC_MAINNET_WS_RPC_URL: process.env.NEXT_PUBLIC_MAINNET_WS_RPC_URL,
   NEXT_PUBLIC_RPC_URL: process.env.NEXT_PUBLIC_RPC_URL
 };
 
@@ -84,6 +97,33 @@ export function resolvePublicRpcUrl(
   }
 
   return undefined;
+}
+
+function deriveAlchemyWebSocketUrl(httpUrl: string | undefined) {
+  const cleaned = cleanEnvValue(httpUrl);
+  if (!cleaned) return undefined;
+  try {
+    const url = new URL(cleaned);
+    if (!url.hostname.endsWith(".g.alchemy.com")) return undefined;
+    if (url.protocol === "https:") url.protocol = "wss:";
+    else if (url.protocol === "http:") url.protocol = "ws:";
+    else if (url.protocol !== "wss:" && url.protocol !== "ws:") return undefined;
+    return url.toString();
+  } catch {
+    return undefined;
+  }
+}
+
+export function resolvePublicWsRpcUrl(
+  chainId: number,
+  env: PublicRpcEnv = DEFAULT_PUBLIC_RPC_ENV,
+  options: ResolveRpcOptions = {}
+) {
+  const chainSpecificKey = PUBLIC_WS_RPC_ENV_BY_CHAIN_ID[chainId];
+  const chainSpecific = cleanEnvValue(chainSpecificKey ? env[chainSpecificKey] : undefined);
+  if (chainSpecific) return chainSpecific;
+
+  return deriveAlchemyWebSocketUrl(resolvePublicRpcUrl(chainId, env, options));
 }
 
 export function withConfiguredRpc<TChain extends RpcChain>(
