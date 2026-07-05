@@ -3,9 +3,14 @@
 function configuredRpcOrigins(env) {
   return [
     env.NEXT_PUBLIC_ARBITRUM_RPC_URL,
+    env.NEXT_PUBLIC_ARBITRUM_WS_RPC_URL,
     env.NEXT_PUBLIC_ARBITRUM_SEPOLIA_RPC_URL,
+    env.NEXT_PUBLIC_ARBITRUM_SEPOLIA_WS_RPC_URL,
     env.NEXT_PUBLIC_BASE_RPC_URL,
+    env.NEXT_PUBLIC_BASE_WS_RPC_URL,
     env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL,
+    env.NEXT_PUBLIC_BASE_SEPOLIA_WS_RPC_URL,
+    env.NEXT_PUBLIC_MAINNET_WS_RPC_URL,
     env.NEXT_PUBLIC_RPC_URL
   ]
     .map((value) => {
@@ -37,13 +42,18 @@ export function buildContentSecurityPolicy({ env = process.env, isDev = false } 
     "https://mainnet.base.org",
     "https://arb1.arbitrum.io",
     "https://base-sepolia.g.alchemy.com",
+    "wss://base-sepolia.g.alchemy.com",
     "https://base-mainnet.g.alchemy.com",
+    "wss://base-mainnet.g.alchemy.com",
     "https://arb-sepolia.g.alchemy.com",
+    "wss://arb-sepolia.g.alchemy.com",
     "https://arb-mainnet.g.alchemy.com",
+    "wss://arb-mainnet.g.alchemy.com",
     // Ethereum mainnet — ENS reverse resolution only (cloudflare keyless
     // fallback + Alchemy when NEXT_PUBLIC_ALCHEMY_API_KEY is set).
     "https://cloudflare-eth.com",
     "https://eth-mainnet.g.alchemy.com",
+    "wss://eth-mainnet.g.alchemy.com",
     ...configuredRpcOrigins(env),
     "https://*.sentry.io",
     "https://*.ingest.sentry.io",

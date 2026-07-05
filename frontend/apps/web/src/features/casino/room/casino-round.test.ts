@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { gameHubRoundEventMatchesBet } from "@ssot/ssot/sdk";
 
 import {
   deriveCasinoRoundPhase,
@@ -111,5 +112,13 @@ describe("casino round helpers", () => {
         graceMs: 15_000
       })
     ).toBe(false);
+  });
+
+  it("matches decoded casino round events by indexed position id", () => {
+    expect(gameHubRoundEventMatchesBet({ args: { positionId: 7n } }, 7n)).toBe(true);
+    expect(gameHubRoundEventMatchesBet({ args: { positionId: "7" } }, 7n)).toBe(true);
+    expect(gameHubRoundEventMatchesBet({ args: { positionId: 8n } }, 7n)).toBe(false);
+    expect(gameHubRoundEventMatchesBet({ args: {} }, 7n)).toBe(false);
+    expect(gameHubRoundEventMatchesBet({ args: { positionId: "not-a-number" } }, 7n)).toBe(false);
   });
 });

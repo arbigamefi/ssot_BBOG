@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { baseSepolia } from "wagmi/chains";
 
-import { resolvePublicRpcUrl, withConfiguredRpc } from "./rpc";
+import { resolvePublicRpcUrl, resolvePublicWsRpcUrl, withConfiguredRpc } from "./rpc";
 
 describe("public RPC configuration", () => {
   it("uses a chain-specific public RPC URL before generic fallbacks", () => {
@@ -71,5 +71,30 @@ describe("public RPC configuration", () => {
 
     expect(chain.rpcUrls.default.http[0]).toBe("https://base-sepolia.example");
     expect((chain.rpcUrls as any).public.http[0]).toBe("https://base-sepolia.example");
+  });
+
+  it("uses a chain-specific public websocket RPC URL before derived Alchemy fallbacks", () => {
+    expect(
+      resolvePublicWsRpcUrl(84532, {
+        NEXT_PUBLIC_BASE_SEPOLIA_WS_RPC_URL: "wss://base-sepolia-ws.example",
+        NEXT_PUBLIC_ALCHEMY_API_KEY: "alchemy-key"
+      })
+    ).toBe("wss://base-sepolia-ws.example");
+  });
+
+  it("derives the Base Sepolia Alchemy websocket URL from the public Alchemy key", () => {
+    expect(
+      resolvePublicWsRpcUrl(84532, {
+        NEXT_PUBLIC_ALCHEMY_API_KEY: "alchemy-key"
+      })
+    ).toBe("wss://base-sepolia.g.alchemy.com/v2/alchemy-key");
+  });
+
+  it("does not derive websockets from non-Alchemy HTTP RPC URLs", () => {
+    expect(
+      resolvePublicWsRpcUrl(84532, {
+        NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL: "https://base-sepolia.example"
+      })
+    ).toBeUndefined();
   });
 });

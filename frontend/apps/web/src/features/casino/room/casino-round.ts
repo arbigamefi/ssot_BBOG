@@ -4,11 +4,20 @@ import * as React from "react";
 import type { DomainBet } from "@ssot/ssot";
 import type { SSOTSDK, TxResult } from "@ssot/ssot/sdk";
 
+import { resolvePublicWsRpcUrl } from "../../../app-shell/rpc";
 import { formatUnits } from "../../betting/model/units";
 
 export const CASINO_ROUND_MANUAL_SETTLE_DELAY_MS = 30_000;
 export const CASINO_ROUND_SOFT_VRF_TIMEOUT_MS = 60_000;
 export const CASINO_ROUND_READ_RETRY_GRACE_MS = 15_000;
+export const CASINO_ROUND_EVENT_FALLBACK_POLL_INTERVAL_MS = 10_000;
+
+type RoundEventWatcher = typeof import("@ssot/ssot/sdk")["watchGameHubRoundEvents"];
+
+async function loadRoundEventWatcher(): Promise<RoundEventWatcher> {
+  const sdk = await import("@ssot/ssot/sdk");
+  return sdk.watchGameHubRoundEvents;
+}
 
 export type CasinoRoundPhase =
   | "idle"
@@ -200,6 +209,9 @@ export function useCasinoRoundWatcher({
     let cancelled = false;
     let terminalReached = false;
     let interval: number | undefined;
+    let unwatchEvents: (() => void) | undefined;
+    let pollInFlight = false;
+    let pollQueued = false;
     const startedAt = Date.now();
     const stopPolling = () => {
       terminalReached = true;
@@ -207,10 +219,17 @@ export function useCasinoRoundWatcher({
         window.clearInterval(interval);
         interval = undefined;
       }
+      unwatchEvents?.();
+      unwatchEvents = undefined;
     };
 
     const poll = async () => {
       if (terminalReached) return;
+      if (pollInFlight) {
+        pollQueued = true;
+        return;
+      }
+      pollInFlight = true;
       try {
         const bet = await sdk.gameHub.getBet(betId);
         if (cancelled || terminalReached) return;
@@ -269,14 +288,48 @@ export function useCasinoRoundWatcher({
             };
           });
         }
+      } finally {
+        pollInFlight = false;
+        if (pollQueued && !cancelled && !terminalReached) {
+          pollQueued = false;
+          void poll();
+        }
       }
     };
 
+    const wsRpcUrl = resolvePublicWsRpcUrl(sdk.release.chainId);
+    if (wsRpcUrl) {
+      void loadRoundEventWatcher()
+        .then((watchGameHubRoundEvents) => {
+          if (cancelled || terminalReached) return;
+          try {
+            unwatchEvents = watchGameHubRoundEvents({
+              release: sdk.release,
+              wsUrl: wsRpcUrl,
+              betId,
+              onRoundEvent: () => void poll(),
+              onError: () => {
+                // WebSocket events are a latency optimization; HTTP polling remains the fallback.
+              }
+            });
+          } catch {
+            unwatchEvents = undefined;
+          }
+        })
+        .catch(() => {
+          unwatchEvents = undefined;
+        });
+    }
+
     void poll();
-    interval = window.setInterval(() => void poll(), pollIntervalMs);
+    const fallbackPollIntervalMs = wsRpcUrl
+      ? Math.max(pollIntervalMs, CASINO_ROUND_EVENT_FALLBACK_POLL_INTERVAL_MS)
+      : pollIntervalMs;
+    interval = window.setInterval(() => void poll(), fallbackPollIntervalMs);
     return () => {
       cancelled = true;
       if (interval) window.clearInterval(interval);
+      unwatchEvents?.();
     };
   }, [
     sdk,

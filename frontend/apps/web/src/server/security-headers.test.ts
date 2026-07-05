@@ -6,7 +6,8 @@ describe("security headers", () => {
   it("keeps Figma bridge and unsafe eval out of production CSP", () => {
     const csp = buildContentSecurityPolicy({
       env: {
-        NEXT_PUBLIC_BASE_RPC_URL: "https://example-rpc.invalid/path"
+        NEXT_PUBLIC_BASE_RPC_URL: "https://example-rpc.invalid/path",
+        NEXT_PUBLIC_BASE_WS_RPC_URL: "wss://example-ws.invalid/path"
       } as unknown as NodeJS.ProcessEnv,
       isDev: false
     });
@@ -14,6 +15,9 @@ describe("security headers", () => {
     expect(csp).not.toContain("unsafe-eval");
     expect(csp).not.toContain("mcp.figma.com");
     expect(csp).toContain("https://example-rpc.invalid");
+    expect(csp).toContain("wss://example-ws.invalid");
+    expect(csp).toContain("wss://base-mainnet.g.alchemy.com");
+    expect(csp).toContain("wss://base-sepolia.g.alchemy.com");
     expect(csp).toContain("https://api.web3modal.org");
     expect(csp).toContain(
       "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com"
