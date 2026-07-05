@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import type { DomainBet } from "@ssot/ssot";
-import { watchGameHubRoundEvents, type SSOTSDK, type TxResult } from "@ssot/ssot/sdk";
+import type { SSOTSDK, TxResult } from "@ssot/ssot/sdk";
 
 import { resolvePublicWsRpcUrl } from "../../../app-shell/rpc";
 import { formatUnits } from "../../betting/model/units";
@@ -11,6 +11,13 @@ export const CASINO_ROUND_MANUAL_SETTLE_DELAY_MS = 30_000;
 export const CASINO_ROUND_SOFT_VRF_TIMEOUT_MS = 60_000;
 export const CASINO_ROUND_READ_RETRY_GRACE_MS = 15_000;
 export const CASINO_ROUND_EVENT_FALLBACK_POLL_INTERVAL_MS = 10_000;
+
+type RoundEventWatcher = typeof import("@ssot/ssot/sdk")["watchGameHubRoundEvents"];
+
+async function loadRoundEventWatcher(): Promise<RoundEventWatcher> {
+  const sdk = await import("@ssot/ssot/sdk");
+  return sdk.watchGameHubRoundEvents;
+}
 
 export type CasinoRoundPhase =
   | "idle"
@@ -292,19 +299,26 @@ export function useCasinoRoundWatcher({
 
     const wsRpcUrl = resolvePublicWsRpcUrl(sdk.release.chainId);
     if (wsRpcUrl) {
-      try {
-        unwatchEvents = watchGameHubRoundEvents({
-          release: sdk.release,
-          wsUrl: wsRpcUrl,
-          betId,
-          onRoundEvent: () => void poll(),
-          onError: () => {
-            // WebSocket events are a latency optimization; HTTP polling remains the fallback.
+      void loadRoundEventWatcher()
+        .then((watchGameHubRoundEvents) => {
+          if (cancelled || terminalReached) return;
+          try {
+            unwatchEvents = watchGameHubRoundEvents({
+              release: sdk.release,
+              wsUrl: wsRpcUrl,
+              betId,
+              onRoundEvent: () => void poll(),
+              onError: () => {
+                // WebSocket events are a latency optimization; HTTP polling remains the fallback.
+              }
+            });
+          } catch {
+            unwatchEvents = undefined;
           }
+        })
+        .catch(() => {
+          unwatchEvents = undefined;
         });
-      } catch {
-        unwatchEvents = undefined;
-      }
     }
 
     void poll();
