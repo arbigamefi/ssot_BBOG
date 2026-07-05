@@ -64,7 +64,9 @@ KEEPER_RPC_WS=
 KEEPER_RELEASE_PATH=frontend/packages/ssot/src/release/embedded/chain-84532.json
 KEEPER_START_BLOCK=
 KEEPER_BACKUP_DELAY_SECONDS=0
-KEEPER_POLL_INTERVAL_SECONDS=15
+KEEPER_POLL_INTERVAL_SECONDS=300
+KEEPER_STARTUP_SCAN_ENABLED=false
+KEEPER_SCAN_INDEX_EVENTS_ENABLED=false
 KEEPER_HEALTH_PATH=
 ```
 
@@ -112,6 +114,12 @@ record outcome
 Every `KEEPER_POLL_INTERVAL_SECONDS`, scan the event window from
 `lastScannedBlock` to `latestBlock` for `BetRandomReady` and enqueue any missed
 bet. This protects against WebSocket disconnects.
+
+In WSS-first production mode, keep `KEEPER_SCAN_INDEX_EVENTS_ENABLED=false` so
+the fallback scan does not also query every GameHub index event on each polling
+window. WSS subscriptions write normal bet-index events; the fallback scan is
+only a finalization safety net. Set `KEEPER_STARTUP_SCAN_ENABLED=false` after
+the active cursors are current to avoid restart-time `eth_getLogs` bursts.
 
 The scan loop must not block queue draining. A long catch-up window can contain
 thousands of small `eth_getLogs` chunks on Base Sepolia, so the worker starts the

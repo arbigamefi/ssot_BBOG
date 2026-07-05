@@ -30,6 +30,8 @@ export type KeeperConfig = {
   pollIntervalMs: number;
   rpcMinIntervalMs: number;
   scanChunkBlocks: bigint;
+  scanIndexEventsEnabled: boolean;
+  startupScanEnabled: boolean;
   startBlock?: bigint;
   healthPath?: string;
   betIndexDatabaseUrl?: string;

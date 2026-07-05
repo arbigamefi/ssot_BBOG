@@ -804,7 +804,19 @@ export function createKeeperRuntime({
         fromBlock: range.fromBlock,
         toBlock: range.toBlock
       });
-      await writeBetIndexRange(betIndexStore, publicClient, config, range, logger);
+      if (config.scanIndexEventsEnabled) {
+        await writeBetIndexRange(betIndexStore, publicClient, config, range, logger);
+      } else {
+        await writeBetIndexLogs("BetRandomReady", logs);
+        if (betIndexStore) {
+          await betIndexStore.setCursor({
+            blockNumber: range.toBlock,
+            chainId: config.chainId,
+            cursorKey: config.gameHub,
+            source: BET_INDEX_CURSOR_SOURCE
+          });
+        }
+      }
       for (const log of logs) {
         if (log.args.betId == null) continue;
         enqueue({
@@ -904,8 +916,11 @@ export function createKeeperRuntime({
       sportsHub: config.sportsHub,
       vrfHub: config.vrfHub,
       keeper: account.address,
+      scanIndexEventsEnabled: config.scanIndexEventsEnabled,
       startBlock: lastScannedBlock.toString(),
       scanChunkBlocks: config.scanChunkBlocks.toString(),
+      startupScanEnabled: config.startupScanEnabled,
+      wsEnabled: Boolean(wsClient),
       bankProviderLedgerPoolCount: config.bankProviderLedgerPools.length,
       bankProviderLedgerScanIntervalMs: config.bankProviderLedgerScanIntervalMs,
       sportsTicketIndexEnabled: config.sportsTicketIndexEnabled,
@@ -999,7 +1014,9 @@ export function createKeeperRuntime({
     }
 
     timers.push(setInterval(() => void drainQueue(), 500));
-    timers.push(setInterval(() => void runScan(), config.pollIntervalMs));
+    if (config.pollIntervalMs > 0) {
+      timers.push(setInterval(() => void runScan(), config.pollIntervalMs));
+    }
     if (config.bankProviderLedgerPools.length > 0 && config.bankProviderLedgerScanIntervalMs > 0) {
       timers.push(
         setInterval(() => void runBankProviderLedgerScan(), config.bankProviderLedgerScanIntervalMs)
@@ -1011,8 +1028,15 @@ export function createKeeperRuntime({
         10_000
       )
     );
-    void runScan();
-    void runBankProviderLedgerScan();
+    if (config.startupScanEnabled) {
+      void runScan();
+      void runBankProviderLedgerScan();
+    } else {
+      logger.info("casino.keeper.startup_scan_skipped", {
+        scanIndexEventsEnabled: config.scanIndexEventsEnabled,
+        wsEnabled: Boolean(wsClient)
+      });
+    }
     for (const marketId of config.sportsTerminalizerMarketIds) {
       scheduleSportsMarket(marketId, "ResultFinalized");
     }

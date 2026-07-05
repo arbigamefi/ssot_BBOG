@@ -48,6 +48,25 @@ describe("loadKeeperConfig", () => {
     expect(config.rpcMinIntervalMs).toBe(1250);
   });
 
+  it("enables startup scans and fallback index scans by default", () => {
+    const config = loadKeeperConfig(baseEnv());
+
+    expect(config.startupScanEnabled).toBe(true);
+    expect(config.scanIndexEventsEnabled).toBe(true);
+  });
+
+  it("parses production websocket scan mode toggles", () => {
+    const config = loadKeeperConfig(
+      baseEnv({
+        KEEPER_SCAN_INDEX_EVENTS_ENABLED: "false",
+        KEEPER_STARTUP_SCAN_ENABLED: "false"
+      })
+    );
+
+    expect(config.scanIndexEventsEnabled).toBe(false);
+    expect(config.startupScanEnabled).toBe(false);
+  });
+
   it("rejects a negative RPC throttle interval", () => {
     expect(() => loadKeeperConfig(baseEnv({ KEEPER_RPC_MIN_INTERVAL_MS: "-1" }))).toThrow(
       /KEEPER_RPC_MIN_INTERVAL_MS must be a non-negative number/

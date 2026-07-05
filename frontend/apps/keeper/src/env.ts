@@ -60,6 +60,11 @@ function parseBool(value: string | undefined) {
   );
 }
 
+function parseBoolWithDefault(value: string | undefined, fallback: boolean) {
+  if (value == null || value.trim() === "") return fallback;
+  return parseBool(value);
+}
+
 function parseBlockCount(value: string | undefined, fallback: bigint) {
   if (!value) return fallback;
   const parsed = BigInt(value);
@@ -135,6 +140,8 @@ export function loadKeeperConfig(env: NodeJS.ProcessEnv = process.env): KeeperCo
       "KEEPER_RPC_MIN_INTERVAL_MS"
     ),
     scanChunkBlocks,
+    scanIndexEventsEnabled: parseBoolWithDefault(env.KEEPER_SCAN_INDEX_EVENTS_ENABLED, true),
+    startupScanEnabled: parseBoolWithDefault(env.KEEPER_STARTUP_SCAN_ENABLED, true),
     startBlock:
       parseOptionalBlock(env.KEEPER_START_BLOCK) ?? BigInt(release.meta?.blockNumber ?? 0),
     healthPath: env.KEEPER_HEALTH_PATH?.trim() || undefined,
