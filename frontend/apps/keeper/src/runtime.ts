@@ -304,7 +304,11 @@ export function createKeeperRuntime({
     });
 
   const waitFinalizeReceipt = async (txHash: Hex) => {
-    const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+    const receipt = await publicClient.waitForTransactionReceipt({
+      checkReplacement: false,
+      hash: txHash,
+      pollingInterval: 1_000
+    });
     return { status: receipt.status };
   };
 
@@ -326,7 +330,11 @@ export function createKeeperRuntime({
   };
 
   const waitSportsReceipt = async (txHash: Hex) => {
-    const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+    const receipt = await publicClient.waitForTransactionReceipt({
+      checkReplacement: false,
+      hash: txHash,
+      pollingInterval: 1_000
+    });
     return { status: receipt.status };
   };
 
