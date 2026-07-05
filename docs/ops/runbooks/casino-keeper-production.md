@@ -69,10 +69,15 @@ Edit the real files and set:
 | Variable | Production rule |
 | --- | --- |
 | `KEEPER_PRIVATE_KEY` | Dedicated bounded-balance keeper EOA. Never reuse deployer or governance keys. |
-| `KEEPER_RPC_HTTP` / `KEEPER_RPC_WS` | Use provider-specific endpoints; primary and backup should differ. |
+| `KEEPER_RPC_HTTP` / `KEEPER_RPC_WS` | Use provider-specific endpoints; primary and backup should differ. Production should set both. WebSocket subscriptions are the realtime path; HTTP is still required for reads, simulation, transactions, and conservative fallback scans. |
 | `KEEPER_START_BLOCK` | Use the active release block or a recent canary block after backfill is complete. |
 | `KEEPER_ROLE` | `primary` or `backup`. |
 | `KEEPER_BACKUP_DELAY_SECONDS` | `0` for primary, `5` for backup. |
+| `KEEPER_STARTUP_SCAN_ENABLED` | Set to `false` for WSS-first production keepers after cursors are current. This prevents restart storms from immediately replaying `eth_getLogs`. |
+| `KEEPER_SCAN_INDEX_EVENTS_ENABLED` | Set to `false` for WSS-first production keepers. Fallback scans then only look for missed `BetRandomReady` events needed for finalization; WSS writes normal bet-index events. Run historical index backfills as a separate job. |
+| `KEEPER_POLL_INTERVAL_SECONDS` | With WSS enabled, use a conservative fallback interval such as `300`. Do not use short intervals on Alchemy Free tier. |
+| `KEEPER_RPC_MIN_INTERVAL_MS` | Use at least `2000` on Alchemy Free tier to avoid bursty HTTP fallback calls. |
+| `KEEPER_SCAN_CHUNK_BLOCKS` | Keep at `10` on Alchemy Free tier; wider `eth_getLogs` ranges are rejected. |
 | `KEEPER_HEALTH_PATH` | Role-specific file under `/var/lib/arbigamefi/casino-keeper`. |
 | `KEEPER_SPORTS_TERMINALIZER_ENABLED` | `true` only when the keeper should auto-finalize sportsbook results and settle/refund held tickets. |
 | `KEEPER_SPORTS_TERMINALIZER_SCAN_CHUNK_BLOCKS` | Sports result/void event scan chunk size. Defaults to `KEEPER_SCAN_CHUNK_BLOCKS`; raise it only after the RPC provider allows wider filtered ranges. |
@@ -87,6 +92,22 @@ Edit the real files and set:
 For Base mainnet, start from the `*.base-mainnet.env.example` files and replace
 `KEEPER_START_BLOCK` with the accepted release block. Do not reuse the Base
 Sepolia chain id, release path, start block, or RPC endpoints.
+
+### WSS-first production mode
+
+The production keeper should prioritize WebSocket event delivery:
+
+1. `BetRandomReady` over WSS schedules `finalize(betId)` immediately.
+2. WSS index subscriptions write `BetPlaced`, `BetRandomReady`, `BetFinalized`,
+   and `BetRefunded` into Postgres.
+3. HTTP fallback scans remain enabled at a low frequency only to catch missed
+   `BetRandomReady` events after a WebSocket disconnect.
+
+This is intentionally different from historical backfill. A realtime keeper on
+Alchemy Free tier should not replay large historical ranges on startup. Before
+enabling `KEEPER_STARTUP_SCAN_ENABLED=false`, ensure the active GameHub cursor
+rows in `indexer_cursors` are current for both `gamehub-events` and
+`bank-provider-ledger`. Use the dedicated backfill process for historical data.
 
 ## 4. Install systemd Unit
 
