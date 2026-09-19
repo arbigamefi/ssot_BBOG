@@ -76,7 +76,11 @@ export function PortfolioPageClient() {
       );
       return rows.filter((row): row is PortfolioAssetRow => Boolean(row));
     },
-    refetchInterval: 5_000
+    // Balances, allowances and LP positions only move when the viewer acts or a
+    // round settles, and every action on this page refetches explicitly, so a
+    // slow idle poll costs nothing perceptible and a fast one burns provider
+    // quota for every open tab.
+    refetchInterval: 15_000
   });
 
   const {
@@ -90,7 +94,8 @@ export function PortfolioPageClient() {
       if (!sdk || !account) return 0n;
       return sdk.vrfHub.getRefundCredit(account);
     },
-    refetchInterval: 5_000
+    // Claiming refetches this immediately (refetchRefundCredit below).
+    refetchInterval: 15_000
   });
 
   const claimRefundFlow = useDirectTxAction({

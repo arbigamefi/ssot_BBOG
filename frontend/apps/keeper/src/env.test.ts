@@ -42,6 +42,27 @@ describe("loadKeeperConfig", () => {
     expect(config.sportsTicketScanChunkBlocks).toBe(10n);
   });
 
+  it("bounds a catch-up pass, with headroom over Base's block rate", () => {
+    const config = loadKeeperConfig(baseEnv());
+
+    // A 300s pass must cover at least ~15 chunks to keep pace with 2s blocks at
+    // the 10-block free-tier chunk size; anything lower falls behind forever.
+    expect(config.scanMaxChunksPerPass).toBe(50);
+    expect(config.scanMaxChunksPerPass).toBeGreaterThan(15);
+  });
+
+  it("allows the catch-up bound to be raised for providers with wider log ranges", () => {
+    const config = loadKeeperConfig(baseEnv({ KEEPER_SCAN_MAX_CHUNKS_PER_PASS: "400" }));
+
+    expect(config.scanMaxChunksPerPass).toBe(400);
+  });
+
+  it("rejects a catch-up bound that would stall the scanner", () => {
+    expect(() => loadKeeperConfig(baseEnv({ KEEPER_SCAN_MAX_CHUNKS_PER_PASS: "0" }))).toThrow(
+      /KEEPER_SCAN_MAX_CHUNKS_PER_PASS/
+    );
+  });
+
   it("parses the optional in-process RPC throttle interval", () => {
     const config = loadKeeperConfig(baseEnv({ KEEPER_RPC_MIN_INTERVAL_MS: "1250" }));
 

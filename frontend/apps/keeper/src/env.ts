@@ -140,6 +140,23 @@ export function loadKeeperConfig(env: NodeJS.ProcessEnv = process.env): KeeperCo
       "KEEPER_RPC_MIN_INTERVAL_MS"
     ),
     scanChunkBlocks,
+    // Left unbounded, a cursor that has fallen months behind turns one pass into
+    // hundreds of thousands of `eth_getLogs` calls and drains a provider quota
+    // outright. Note a chunk is not one request: with scanIndexEventsEnabled a
+    // gamehub chunk costs five (`BetRandomReady`, then the four index events),
+    // and a bank-ledger chunk costs one per configured pool.
+    //
+    // The default keeps a healthy keeper comfortable while refusing to grind: at
+    // the free-tier 10-block chunk size a 300s pass only needs ~15 chunks to keep
+    // pace with Base, so 50 leaves 3x headroom and still drains short outages
+    // quickly. A backlog large enough to stay capped for days is an operator
+    // decision (fast-forward the cursor), not something to burn quota on — which
+    // is what `casino.keeper.scan_capped` is there to surface.
+    scanMaxChunksPerPass: parsePositiveInteger(
+      env.KEEPER_SCAN_MAX_CHUNKS_PER_PASS,
+      50,
+      "KEEPER_SCAN_MAX_CHUNKS_PER_PASS"
+    ),
     scanIndexEventsEnabled: parseBoolWithDefault(env.KEEPER_SCAN_INDEX_EVENTS_ENABLED, true),
     startupScanEnabled: parseBoolWithDefault(env.KEEPER_STARTUP_SCAN_ENABLED, true),
     startBlock:

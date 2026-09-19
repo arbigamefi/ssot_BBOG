@@ -29,6 +29,7 @@ import type {
   BetDetailFact,
   BetDetailMetric
 } from "../../../../../features/portfolio/activity/detail/types";
+import { isTerminalDomainBet } from "../../../../../features/casino/room/resolution";
 import { useDirectTxAction } from "../../../../../features/tx/useDirectTxAction";
 import { useRelease } from "../../../../../ssot/release/ReleaseProvider";
 import { useSSOTRuntime } from "../../../../../ssot/runtime";
@@ -67,7 +68,11 @@ export function BetDetailPageClient({ betId }: { betId: string }) {
         return null;
       }
     },
-    refetchInterval: 5_000
+    // A finalized or refunded bet is immutable, so polling it forever is a
+    // provider request every few seconds that can never return anything new.
+    // This is the only RPC-backed query on the page; the two Dexie queries
+    // below read local IndexedDB and cost nothing.
+    refetchInterval: (query) => (isTerminalDomainBet(query.state.data) ? false : 5_000)
   });
 
   const { data: timeline = [] } = useQuery({

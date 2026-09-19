@@ -17,6 +17,7 @@ const baseConfig: KeeperConfig = {
   pollIntervalMs: 15_000,
   rpcMinIntervalMs: 0,
   scanChunkBlocks: 10n,
+  scanMaxChunksPerPass: 200,
   scanIndexEventsEnabled: true,
   startBlock: 100n,
   startupScanEnabled: true,

@@ -97,6 +97,16 @@ casino-seed-bank-v14:
 	@$(MAKE) check-deps
 	FOUNDRY_PROFILE=$(DEPLOY_PROFILE) forge script script/ops/SeedCasinoBankV14.s.sol:SeedCasinoBankV14 --rpc-url $$RPC_URL --broadcast -vvv
 
+# Dry run first (no --broadcast); SNAPSHOT_PATH must name the target chain's
+# snapshot, since deployments/latest-v14.json points at Base Sepolia.
+casino-set-min-turnover-dryrun-v14:
+	@$(MAKE) check-deps
+	FOUNDRY_PROFILE=$(DEPLOY_PROFILE) forge script script/ops/SetBankMinTurnoverV14.s.sol:SetBankMinTurnoverV14 --rpc-url $$RPC_URL -vvv
+
+casino-set-min-turnover-v14:
+	@$(MAKE) check-deps
+	FOUNDRY_PROFILE=$(DEPLOY_PROFILE) forge script script/ops/SetBankMinTurnoverV14.s.sol:SetBankMinTurnoverV14 --rpc-url $$RPC_URL --broadcast -vvv
+
 casino-add-pool-v13:
 	@$(MAKE) check-deps
 	FOUNDRY_PROFILE=$(DEPLOY_PROFILE) forge script script/ops/AddCasinoPoolV13.s.sol:AddCasinoPoolV13 --rpc-url $$RPC_URL --broadcast -vvv
