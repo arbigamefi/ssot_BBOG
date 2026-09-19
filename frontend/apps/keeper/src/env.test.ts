@@ -63,6 +63,25 @@ describe("loadKeeperConfig", () => {
     );
   });
 
+  it("bounds the sports ticket log fallback well under a full-history rescan", () => {
+    const config = loadKeeperConfig(baseEnv());
+
+    // That fallback rescans from a fixed start block on every call, so without
+    // a bound its range grows with the age of the deployment.
+    expect(config.sportsTicketScanMaxBlocks).toBe(50_000n);
+  });
+
+  it("names the offending variable when a block count is invalid", () => {
+    // The shared parser used to report KEEPER_SCAN_CHUNK_BLOCKS whichever
+    // variable actually failed, which sends operators to the wrong line.
+    expect(() => loadKeeperConfig(baseEnv({ KEEPER_SPORTS_TICKET_SCAN_MAX_BLOCKS: "0" }))).toThrow(
+      /KEEPER_SPORTS_TICKET_SCAN_MAX_BLOCKS/
+    );
+    expect(() =>
+      loadKeeperConfig(baseEnv({ KEEPER_SPORTS_TICKET_SCAN_CHUNK_BLOCKS: "0" }))
+    ).toThrow(/KEEPER_SPORTS_TICKET_SCAN_CHUNK_BLOCKS/);
+  });
+
   it("parses the optional in-process RPC throttle interval", () => {
     const config = loadKeeperConfig(baseEnv({ KEEPER_RPC_MIN_INTERVAL_MS: "1250" }));
 

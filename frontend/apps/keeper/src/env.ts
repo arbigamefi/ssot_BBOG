@@ -65,10 +65,10 @@ function parseBoolWithDefault(value: string | undefined, fallback: boolean) {
   return parseBool(value);
 }
 
-function parseBlockCount(value: string | undefined, fallback: bigint) {
+function parseBlockCount(value: string | undefined, fallback: bigint, name: string) {
   if (!value) return fallback;
   const parsed = BigInt(value);
-  if (parsed <= 0n) throw new Error("KEEPER_SCAN_CHUNK_BLOCKS must be greater than zero");
+  if (parsed <= 0n) throw new Error(`${name} must be greater than zero`);
   return parsed;
 }
 
@@ -121,7 +121,11 @@ export function loadKeeperConfig(env: NodeJS.ProcessEnv = process.env): KeeperCo
   if (chainId !== release.chainId) {
     throw new Error(`KEEPER_CHAIN_ID=${chainId} does not match release chainId=${release.chainId}`);
   }
-  const scanChunkBlocks = parseBlockCount(env.KEEPER_SCAN_CHUNK_BLOCKS, 10n);
+  const scanChunkBlocks = parseBlockCount(
+    env.KEEPER_SCAN_CHUNK_BLOCKS,
+    10n,
+    "KEEPER_SCAN_CHUNK_BLOCKS"
+  );
 
   return {
     chainId,
@@ -174,7 +178,8 @@ export function loadKeeperConfig(env: NodeJS.ProcessEnv = process.env): KeeperCo
     sportsTerminalizerEnabled: parseBool(env.KEEPER_SPORTS_TERMINALIZER_ENABLED),
     sportsTerminalizerScanChunkBlocks: parseBlockCount(
       env.KEEPER_SPORTS_TERMINALIZER_SCAN_CHUNK_BLOCKS,
-      scanChunkBlocks
+      scanChunkBlocks,
+      "KEEPER_SPORTS_TERMINALIZER_SCAN_CHUNK_BLOCKS"
     ),
     sportsTerminalizerMarketIds: parseBigintList(
       env.KEEPER_SPORTS_TERMINALIZER_MARKET_IDS,
@@ -192,7 +197,25 @@ export function loadKeeperConfig(env: NodeJS.ProcessEnv = process.env): KeeperCo
     ),
     sportsTicketScanChunkBlocks: parseBlockCount(
       env.KEEPER_SPORTS_TICKET_SCAN_CHUNK_BLOCKS,
-      scanChunkBlocks
+      scanChunkBlocks,
+      "KEEPER_SPORTS_TICKET_SCAN_CHUNK_BLOCKS"
+    ),
+    // The ticket log fallback rescans from a fixed start block on every call,
+    // so its range grows without limit as the deployment ages: on Base mainnet
+    // the default start is the release block, already ~4.5M blocks back, which
+    // at a 10-block chunk size is ~450k eth_getLogs per call — and it runs per
+    // market terminalization attempt, retried up to 8 times.
+    //
+    // This bounds the range the fallback may attempt. It is deliberately a
+    // refusal, not a narrower window: silently scanning only recent blocks
+    // would miss older tickets and hand the terminalizer a short list, which
+    // it would settle as if complete. ~1.2 days of Base blocks is enough for a
+    // market that terminalizes near its last ticket; anything wider means the
+    // ticket index should be doing this instead.
+    sportsTicketScanMaxBlocks: parseBlockCount(
+      env.KEEPER_SPORTS_TICKET_SCAN_MAX_BLOCKS,
+      50_000n,
+      "KEEPER_SPORTS_TICKET_SCAN_MAX_BLOCKS"
     ),
     sportsTicketScanStartBlock:
       parseOptionalBlock(env.KEEPER_SPORTS_TICKET_SCAN_START_BLOCK) ??

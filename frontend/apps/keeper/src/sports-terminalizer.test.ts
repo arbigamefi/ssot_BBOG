@@ -104,4 +104,33 @@ describe("sports terminalizer", () => {
     expect(d.writeRefundTicket).toHaveBeenCalledWith(1n);
     expect(d.writeRefundTicket).toHaveBeenCalledTimes(1);
   });
+
+  it("retries rather than settling when ticket discovery fails", async () => {
+    // Discovery that cannot prove it found every ticket must not hand back a
+    // partial list: the market would be settled as complete and the tickets it
+    // missed would stay held with no second attempt. A throw has to surface as
+    // a retryable failure, and nothing may be written in the meantime.
+    const d = deps({
+      findTicketIds: vi.fn(async () => {
+        throw new Error("sports ticket log discovery failed for market 7: range too wide");
+      })
+    });
+
+    const outcome = await terminalizeSportsMarket(7n, d);
+
+    expect(outcome).toMatchObject({ kind: "failed", retryable: true });
+    expect(outcome).toHaveProperty("reason", expect.stringContaining("discovery failed"));
+    expect(d.writeSettleTicket).not.toHaveBeenCalled();
+    expect(d.writeRefundTicket).not.toHaveBeenCalled();
+  });
+
+  it("does not treat an empty ticket list as a failure", async () => {
+    // The counterpart: a market that genuinely has no tickets is skipped, not
+    // retried forever.
+    const d = deps({ findTicketIds: vi.fn(async () => []) });
+
+    const outcome = await terminalizeSportsMarket(7n, d);
+
+    expect(outcome).toMatchObject({ kind: "skipped", reason: "no-tickets" });
+  });
 });

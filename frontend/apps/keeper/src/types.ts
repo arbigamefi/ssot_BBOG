@@ -48,6 +48,8 @@ export type KeeperConfig = {
   sportsTerminalizerMaxTicketsPerMarket: number;
   sportsTicketEnumerationMax: number;
   sportsTicketScanChunkBlocks: bigint;
+  /** Widest block range the ticket log fallback may scan before refusing outright. */
+  sportsTicketScanMaxBlocks: bigint;
   sportsTicketScanStartBlock: bigint;
 };
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isScanTruncated, splitBlockRange } from "./scan.js";
+import { isScanRangeOverBudget, isScanTruncated, splitBlockRange } from "./scan.js";
 
 describe("splitBlockRange", () => {
   it("returns no ranges when the cursor has already caught up", () => {
@@ -95,5 +95,46 @@ describe("isScanTruncated", () => {
 
     expect(ranges[ranges.length - 1]).toEqual({ fromBlock: 20n, toBlock: 29n });
     expect(isScanTruncated(ranges, 29n)).toBe(false);
+  });
+});
+
+describe("isScanRangeOverBudget", () => {
+  it("allows a range at the budget", () => {
+    expect(isScanRangeOverBudget({ fromBlock: 100n, toBlock: 1_100n, maxBlocks: 1_000n })).toBe(
+      false
+    );
+  });
+
+  it("refuses a range one block past the budget", () => {
+    expect(isScanRangeOverBudget({ fromBlock: 100n, toBlock: 1_101n, maxBlocks: 1_000n })).toBe(
+      true
+    );
+  });
+
+  it("refuses the Base mainnet full-history rescan this guards against", () => {
+    // Sports ticket discovery defaults its start to the release block. On Base
+    // mainnet that is ~4.5M blocks back, and at a 10-block chunk size it would
+    // be ~450k eth_getLogs per call, per market, retried up to 8 times.
+    expect(
+      isScanRangeOverBudget({
+        fromBlock: 46_970_755n,
+        toBlock: 51_526_000n,
+        maxBlocks: 50_000n
+      })
+    ).toBe(true);
+  });
+
+  it("allows a freshly deployed release where the start is near the head", () => {
+    expect(
+      isScanRangeOverBudget({
+        fromBlock: 51_500_000n,
+        toBlock: 51_526_000n,
+        maxBlocks: 50_000n
+      })
+    ).toBe(false);
+  });
+
+  it("treats a head behind the start as nothing to scan", () => {
+    expect(isScanRangeOverBudget({ fromBlock: 200n, toBlock: 100n, maxBlocks: 10n })).toBe(false);
   });
 });

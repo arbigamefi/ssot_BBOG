@@ -49,3 +49,22 @@ export function isScanTruncated(ranges: BlockRange[], toBlock: bigint): boolean 
   const last = ranges[ranges.length - 1];
   return last != null && last.toBlock < toBlock;
 }
+
+/**
+ * Whether a cursorless scan is being asked to cover more ground than it is
+ * allowed to. Callers that rescan a fixed range every time must refuse here
+ * rather than scan a narrower window: a short result from a discovery scan is
+ * indistinguishable from a complete one, and gets acted on as if complete.
+ */
+export function isScanRangeOverBudget({
+  fromBlock,
+  toBlock,
+  maxBlocks
+}: {
+  fromBlock: bigint;
+  toBlock: bigint;
+  maxBlocks: bigint;
+}): boolean {
+  if (toBlock < fromBlock) return false;
+  return toBlock - fromBlock > maxBlocks;
+}
