@@ -67,7 +67,8 @@ export function EarnPageClient() {
       const position = sdk.account ? await sdk.bank.getPosition(poolId, sdk.account) : null;
       return { snapshot, position };
     },
-    refetchInterval: 8_000
+    // Deposits/withdrawals invalidate ["ssot", "earn"], so this only catches others' activity.
+    refetchInterval: 15_000
   });
 
   const [tab, setTab] = React.useState<EarnTab>("deposit");
@@ -194,7 +195,7 @@ export function EarnPageClient() {
       if (!sdk?.account) return null;
       return sdk.bank.getAssetBalance(asset, sdk.account);
     },
-    refetchInterval: currentFlow.busy ? false : 5_000
+    refetchInterval: currentFlow.busy ? false : 15_000
   });
 
   const { data: maxWithdraw = null } = useQuery({
@@ -209,7 +210,7 @@ export function EarnPageClient() {
       if (!sdk?.account || !poolId) return null;
       return sdk.bank.maxWithdraw(poolId, sdk.account);
     },
-    refetchInterval: currentFlow.busy ? false : 5_000
+    refetchInterval: currentFlow.busy ? false : 15_000
   });
 
   const { data: maxRedeem = null } = useQuery({
@@ -224,7 +225,7 @@ export function EarnPageClient() {
       if (!sdk?.account || !poolId) return null;
       return sdk.bank.maxRedeem(poolId, sdk.account);
     },
-    refetchInterval: currentFlow.busy ? false : 5_000
+    refetchInterval: currentFlow.busy ? false : 15_000
   });
 
   const { data: maxMintShares = null } = useQuery({
@@ -241,7 +242,7 @@ export function EarnPageClient() {
       if (!poolId || walletBalance == null) return null;
       return sdk!.bank.convertToShares(poolId, walletBalance);
     },
-    refetchInterval: currentFlow.busy ? false : 5_000
+    refetchInterval: currentFlow.busy ? false : 15_000
   });
 
   const providerLedger = useBankProviderLedger({

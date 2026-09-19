@@ -102,7 +102,9 @@ export function ClaimsPageClient() {
       if (!poolId) throw new Error(t("portfolio.claims.errors.poolUnavailable"));
       return sdk.bank.getXPBuckets(poolId, sdk.account);
     },
-    refetchInterval: 8_000
+    // Four reads per poll. Claiming and holdback sync both call refetchXP, so
+    // the interval only has to cover awards arriving from other players' bets.
+    refetchInterval: 20_000
   });
 
   const { data: snapshot, refetch: refetchSnapshot } = useQuery({
@@ -113,7 +115,8 @@ export function ClaimsPageClient() {
       if (!poolId) throw new Error(t("portfolio.claims.errors.poolUnavailable"));
       return sdk.bank.getSnapshot(poolId);
     },
-    refetchInterval: 8_000
+    // Claiming protocol fees calls refetchSnapshot directly.
+    refetchInterval: 20_000
   });
 
   const [activeAction, setActiveAction] = React.useState<ClaimsAction>("claim");

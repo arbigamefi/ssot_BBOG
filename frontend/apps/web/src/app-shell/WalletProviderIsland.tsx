@@ -108,7 +108,19 @@ const wagmiConfig = createConfig({
   chains,
   ssr: true,
   transports,
-  connectors
+  connectors,
+  // Aggregate concurrent `eth_call` reads through Multicall3 instead of sending
+  // one HTTP request per read. The SDK issues reads in batches already — a bank
+  // snapshot is four reads, XP buckets four, bet pre-flight solvency four — so
+  // without this each of those costs four provider requests instead of one.
+  // Every embedded chain has Multicall3 at the canonical address, and viem
+  // falls back to individual calls for any chain that does not.
+  //
+  // Note: viem's `http({ batch: true })` is a different thing (JSON-RPC request
+  // coalescing). It saves HTTP round-trips but not provider quota, because
+  // providers meter per RPC method call. Multicall aggregation is what actually
+  // reduces the billed call count.
+  batch: { multicall: true }
 });
 
 export function WalletProviderIsland({ children }: { children: React.ReactNode }) {
