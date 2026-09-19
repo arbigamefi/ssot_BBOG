@@ -30,6 +30,8 @@ export type KeeperConfig = {
   pollIntervalMs: number;
   rpcMinIntervalMs: number;
   scanChunkBlocks: bigint;
+  /** Upper bound on chunks per catch-up pass; bounds provider cost when a cursor falls behind. */
+  scanMaxChunksPerPass: number;
   scanIndexEventsEnabled: boolean;
   startupScanEnabled: boolean;
   startBlock?: bigint;

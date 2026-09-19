@@ -222,7 +222,26 @@ range and recent rows. Use
 
 `KEEPER_SCAN_CHUNK_BLOCKS` defaults to `10` so Base Sepolia free RPC providers
 with tight `eth_getLogs` range limits can still catch delayed events. Increase it
-only for providers with a documented larger logs range.
+only for providers with a documented larger logs range. Alchemy's free tier
+rejects anything above 10 with `-32600`; public Base endpoints accept ~900.
+
+`KEEPER_SCAN_MAX_CHUNKS_PER_PASS` defaults to `50` and bounds how much ground one
+catch-up pass covers. Without it a cursor that has fallen far behind expands into
+one provider request per chunk with no ceiling — a two-month gap at a 10-block
+chunk size is ~750k `eth_getLogs` calls, which exhausts a monthly quota in days
+and then keeps doing it after every quota reset.
+
+A chunk is not one request. With `KEEPER_SCAN_INDEX_EVENTS_ENABLED=true` a
+gamehub chunk costs five (`BetRandomReady`, then the four index events), and a
+bank-ledger chunk costs one per configured pool, so budget accordingly.
+
+At the 10-block chunk size a 300s pass needs only ~15 chunks to keep pace with
+Base's 2s blocks, so the default leaves roughly 3x headroom and still drains a
+short outage quickly. When a pass is capped the keeper logs
+`casino.keeper.scan_capped` with the remaining block count. Occasional entries
+after a restart are normal; sustained capping means the backlog is too large to
+grind through affordably, and the cheap fix is to fast-forward the cursor in
+`indexer_cursors` rather than raise the cap.
 
 For dedicated keeper RPC provider apps, set `KEEPER_RPC_MIN_INTERVAL_MS=250` in
 each keeper env file. The keeper then serializes tracked in-process RPC calls

@@ -26,7 +26,7 @@ import { fetchBankProviderLedgerRows } from "./bank-provider-ledger.js";
 import { finalizeIfReady, retryDelayMs } from "./finalizer.js";
 import { createFileHealthSink, KeeperHealthReporter } from "./health.js";
 import { FinalizeQueue, type QueueItem } from "./queue.js";
-import { splitBlockRange } from "./scan.js";
+import { isScanTruncated, splitBlockRange, type BlockRange } from "./scan.js";
 import { mapBetState } from "./state.js";
 import {
   mapSportsMarketState,
@@ -795,16 +795,36 @@ export function createKeeperRuntime({
     });
   };
 
+  /**
+   * A capped pass leaves the cursor short of the head and resumes next tick.
+   * Without this line an operator watching a quiet log has no way to tell a
+   * caught-up keeper from one still grinding through a months-old backlog.
+   */
+  const reportScanCap = (scanner: string, ranges: BlockRange[], latest: bigint) => {
+    if (!isScanTruncated(ranges, latest)) return;
+    const last = ranges[ranges.length - 1]!;
+    logger.info("casino.keeper.scan_capped", {
+      scanner,
+      chunks: ranges.length,
+      scannedThrough: last.toBlock.toString(),
+      headBlock: latest.toString(),
+      remainingBlocks: (latest - last.toBlock).toString()
+    });
+  };
+
   const scanMissedEvents = async () => {
     const latest = await publicClient.getBlockNumber();
     if (latest <= lastScannedBlock) return;
 
     const fromBlock = lastScannedBlock === 0n ? latest : lastScannedBlock + 1n;
-    for (const range of splitBlockRange({
+    const ranges = splitBlockRange({
       fromBlock,
       toBlock: latest,
-      chunkSize: config.scanChunkBlocks
-    })) {
+      chunkSize: config.scanChunkBlocks,
+      maxChunks: config.scanMaxChunksPerPass
+    });
+    reportScanCap("gamehub-events", ranges, latest);
+    for (const range of ranges) {
       const logs = await publicClient.getContractEvents({
         address: config.gameHub,
         abi: GAME_HUB_KEEPER_ABI,
@@ -855,11 +875,14 @@ export function createKeeperRuntime({
 
     const fromBlock =
       bankProviderLedgerLastScannedBlock === 0n ? latest : bankProviderLedgerLastScannedBlock + 1n;
-    for (const range of splitBlockRange({
+    const ranges = splitBlockRange({
       fromBlock,
       toBlock: latest,
-      chunkSize: config.scanChunkBlocks
-    })) {
+      chunkSize: config.scanChunkBlocks,
+      maxChunks: config.scanMaxChunksPerPass
+    });
+    reportScanCap("bank-provider-ledger", ranges, latest);
+    for (const range of ranges) {
       await writeBankProviderLedgerRange(betIndexStore, publicClient, config, range, logger);
       bankProviderLedgerLastScannedBlock = range.toBlock;
     }
@@ -872,11 +895,14 @@ export function createKeeperRuntime({
 
     const fromBlock =
       sportsTerminalizerLastScannedBlock === 0n ? latest : sportsTerminalizerLastScannedBlock + 1n;
-    for (const range of splitBlockRange({
+    const ranges = splitBlockRange({
       fromBlock,
       toBlock: latest,
-      chunkSize: config.sportsTerminalizerScanChunkBlocks
-    })) {
+      chunkSize: config.sportsTerminalizerScanChunkBlocks,
+      maxChunks: config.scanMaxChunksPerPass
+    });
+    reportScanCap("sports-terminalizer", ranges, latest);
+    for (const range of ranges) {
       await scanSportsTerminalizerRange(
         publicClient,
         config,
