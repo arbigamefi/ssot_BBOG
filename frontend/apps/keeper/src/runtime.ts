@@ -997,6 +997,7 @@ export function createKeeperRuntime({
       scanIndexEventsEnabled: config.scanIndexEventsEnabled,
       startBlock: lastScannedBlock.toString(),
       scanChunkBlocks: config.scanChunkBlocks.toString(),
+      scanMaxChunksPerPass: config.scanMaxChunksPerPass,
       startupScanEnabled: config.startupScanEnabled,
       wsEnabled: Boolean(wsClient),
       bankProviderLedgerPoolCount: config.bankProviderLedgerPools.length,
@@ -1006,7 +1007,8 @@ export function createKeeperRuntime({
       sportsTerminalizerMarketIds: config.sportsTerminalizerMarketIds.map((id) => id.toString()),
       sportsTicketScanChunkBlocks: config.sportsTicketScanChunkBlocks.toString(),
       sportsTicketEnumerationMax: config.sportsTicketEnumerationMax,
-      sportsTicketScanStartBlock: config.sportsTicketScanStartBlock.toString()
+      sportsTicketScanStartBlock: config.sportsTicketScanStartBlock.toString(),
+      sportsTicketScanMaxBlocks: config.sportsTicketScanMaxBlocks.toString()
     });
     if (config.sportsTerminalizerEnabled && !config.sportsHub) {
       logger.warn("sports.terminalizer.disabled_missing_sports_hub");
