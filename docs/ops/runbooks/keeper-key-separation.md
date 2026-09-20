@@ -50,13 +50,13 @@ so the swap is a configuration change with no on-chain counterpart.
 
 ### Facts confirmed before writing this
 
-| Check | Result |
-| --- | --- |
-| Anything pinning the keeper address (`KEEPER_ADDRESS`/`_ACCOUNT`/`_SIGNER`) | none, in any of the three containers |
-| `0xc8eC…b684` in repo config | only as `gov` / `deployer` / `signer` in release artifacts — records of who deployed and signed, unaffected by this swap |
-| `KEEPER_PRIVATE_KEY` lines to edit | exactly 1 in each of the two env files |
-| Mainnet settlement history | **zero** — 0 bets on chain 8453; all 182 indexed bets are 84532 |
-| `cast` on the server | not installed — verify the new address from the keeper's own startup log |
+| Check                                                                       | Result                                                                                                                   |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Anything pinning the keeper address (`KEEPER_ADDRESS`/`_ACCOUNT`/`_SIGNER`) | none, in any of the three containers                                                                                     |
+| `0xc8eC…b684` in repo config                                                | only as `gov` / `deployer` / `signer` in release artifacts — records of who deployed and signed, unaffected by this swap |
+| `KEEPER_PRIVATE_KEY` lines to edit                                          | exactly 1 in each of the two env files                                                                                   |
+| Mainnet settlement history                                                  | **zero** — 0 bets on chain 8453; all 182 indexed bets are 84532                                                          |
+| `cast` on the server                                                        | not installed — verify the new address from the keeper's own startup log                                                 |
 
 Because mainnet has never settled a bet, the mainnet swap carries no risk to
 in-flight work. Do mainnet first anyway: it is the account that matters.
@@ -67,11 +67,11 @@ Measured from three real finalize receipts on 84532: **271,007 / 271,331 /
 462,056 gas**. At Base mainnet's 0.005 gwei basefee plus L1 data fee for a
 36-byte calldata, that is roughly **0.000005 ETH per settlement**.
 
-| | |
-| --- | --- |
-| Fund the new mainnet EOA with | **0.01 ETH** (~2,000 settlements; 0.005 is also defensible) |
-| Fund the new testnet EOA with | any faucet amount; the current EOA holds 0.28 Sepolia ETH |
-| Leave on the old EOA | mainnet balance is 0.0014 ETH — sweep it later or leave it, it is noise |
+|                               |                                                                         |
+| ----------------------------- | ----------------------------------------------------------------------- |
+| Fund the new mainnet EOA with | **0.01 ETH** (~2,000 settlements; 0.005 is also defensible)             |
+| Fund the new testnet EOA with | any faucet amount; the current EOA holds 0.28 Sepolia ETH               |
+| Leave on the old EOA          | mainnet balance is 0.0014 ETH — sweep it later or leave it, it is noise |
 
 Use **two separate keys**, one per chain. A testnet key lives in the same kind
 of file with the same exposure; there is no reason for a testnet compromise to
@@ -208,22 +208,74 @@ select count(*) from bets where chain_id=84532 and state in ('randomReady','pend
 ```
 
 If that is zero there is nothing pending to observe — place one bet on 84532
-through the UI and watch it finalize. Do not record the swap as fully verified
-until a settlement has landed under the new key.
+and watch it finalize. Do not record the swap as fully verified until a
+settlement has landed under the new key.
+
+Production web is pinned to `NEXT_PUBLIC_CHAIN_ID=8453`, so it cannot place a
+testnet bet. Run the app locally against 84532 instead, without editing
+`.env.local` — Next.js ranks `.env.development.local` above it, and
+`frontend/.gitignore` already ignores `.env.*.local`:
+
+```bash
+echo 'NEXT_PUBLIC_CHAIN_ID=84532' > frontend/apps/web/.env.development.local
+pnpm -C frontend/apps/web dev
+```
+
+Delete that file when finished. Two things that cost time on the first run:
+
+- **Switch the wallet to Base Sepolia before betting.** The page renders
+  testnet content regardless of what the wallet is connected to, so it looks
+  ready while the transaction never leaves. The symptom is silence everywhere —
+  no new bet row, keeper nonce unchanged, and zero GameHub events on chain.
+- Local `/api/healthz` reporting `degraded` is expected. It reads a stale local
+  keeper snapshot, not production. Judge the keeper from production healthz.
+
+The decisive evidence is the **sender of the finalize transaction**, and a
+fresh key makes it unambiguous — it has never sent anything, so its nonce
+starts at 0:
+
+```bash
+cast nonce --rpc-url https://sepolia.base.org <NEW_KEEPER_ADDRESS>   # 0 -> 1
+cast tx --rpc-url https://sepolia.base.org <FINALIZED_TX_HASH> from  # must equal it
+```
+
+Do not use `max(bet_id)` to baseline the index — `bet_id` is a text column, so
+`max()` compares lexicographically and `'99'` sorts above `'184'`. Use
+`count(*)` and `order by placed_at desc`.
 
 ## Execution record
 
 Run 2026-09-20. Both gates passed; `healthz` ok, zero errors, zero 429s.
 
-| | |
-| --- | --- |
-| mainnet 8453 | `0x440558699040d28975D218caB497338B65960A92`, funded 0.001683 ETH |
+|               |                                                                                |
+| ------------- | ------------------------------------------------------------------------------ |
+| mainnet 8453  | `0x440558699040d28975D218caB497338B65960A92`, funded 0.001683 ETH              |
 | testnet 84532 | `0xc04d22F83d7494440Dd07ab42BeD01E45E88EC59`, funded 0.05 ETH from the old EOA |
-| previously | `0xc8eC9920…24B1b684` on both — now absent from both keepers |
+| previously    | `0xc8eC9920…24B1b684` on both — now absent from both keepers                   |
 
-Outstanding from that run: no settlement has occurred under either new key (all
-182 testnet bets were already finalized, mainnet has never had one), and the
-governance key's prior residency on the host is unaddressed — see R-03.
+**Verified end to end on 84532** the same day. Bet 185 was placed and settled
+by the new keeper:
+
+```
+finalize tx  0x654134a19001d82be3aac7d9c38322f8ab91823b1541316622b982637368c8a5
+  from       0xc04d22F83d7494440Dd07ab42BeD01E45E88EC59   (new keeper EOA)
+  to         0x7Bba34F0ac9476b856026273ef66dfC4Da33B102   (GameHub)
+  nonce      0                                            (that key's first tx)
+  status     1 (success)
+  gasUsed    268,020                                      (~0.0000016 ETH)
+```
+
+268,020 gas matches the 271k–462k range measured from historical receipts, so
+the mainnet funding estimate of ~0.000005 ETH per settlement holds.
+
+Outstanding:
+
+- **Mainnet is unexercised.** Its keeper is proven to start and connect, not to
+  settle — chain 8453 has never had a bet, so there is nothing to finalize. The
+  first real mainnet bet is the outstanding check.
+- **The governance key's prior residency on the host is unaddressed.** The swap
+  removed the key; it did not remove the fact that it lived on an
+  internet-facing server from deployment until 2026-09-20. See R-03.
 
 ## Rollback
 
