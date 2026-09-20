@@ -26,7 +26,12 @@ import { fetchBankProviderLedgerRows } from "./bank-provider-ledger.js";
 import { finalizeIfReady, retryDelayMs } from "./finalizer.js";
 import { createFileHealthSink, KeeperHealthReporter } from "./health.js";
 import { FinalizeQueue, type QueueItem } from "./queue.js";
-import { isScanTruncated, splitBlockRange, type BlockRange } from "./scan.js";
+import {
+  isScanRangeOverBudget,
+  isScanTruncated,
+  splitBlockRange,
+  type BlockRange
+} from "./scan.js";
 import { mapBetState } from "./state.js";
 import {
   mapSportsMarketState,
@@ -412,6 +417,29 @@ export function createKeeperRuntime({
 
     const latest = await publicClient.getBlockNumber();
     if (latest < config.sportsTicketScanStartBlock) return [];
+
+    // This fallback rescans from a fixed start block every time it runs, so its
+    // range only grows. Refuse rather than narrow the window: scanning just the
+    // recent tail would miss older tickets and hand back a short list, and the
+    // terminalizer settles whatever it is given as if it were complete, leaving
+    // the missing tickets held forever. Throwing surfaces as a retryable
+    // failure instead, which is recoverable; a silent short list is not.
+    const span = latest - config.sportsTicketScanStartBlock;
+    if (
+      isScanRangeOverBudget({
+        fromBlock: config.sportsTicketScanStartBlock,
+        toBlock: latest,
+        maxBlocks: config.sportsTicketScanMaxBlocks
+      })
+    ) {
+      throw new Error(
+        `sports ticket log discovery needs ${span} blocks, over the ` +
+          `${config.sportsTicketScanMaxBlocks} limit. Enable the ticket index ` +
+          `(KEEPER_SPORTS_TICKET_INDEX_ENABLED) or move ` +
+          `KEEPER_SPORTS_TICKET_SCAN_START_BLOCK forward.`
+      );
+    }
+
     const ticketIds = new Set<bigint>();
     try {
       for (const range of splitBlockRange({
@@ -430,17 +458,33 @@ export function createKeeperRuntime({
         for (const log of logs) {
           if (log.args.ticketId != null) ticketIds.add(BigInt(log.args.ticketId));
           if (ticketIds.size >= config.sportsTerminalizerMaxTicketsPerMarket) {
+            // A configured cap, not a failure — but the caller settles this
+            // list as if it were the whole market, and the log scan has no
+            // held-state filter, so the next pass rediscovers the same prefix
+            // and makes no progress. Say so rather than truncating in silence.
+            logger.warn("sports.terminalizer.ticket_discovery_truncated", {
+              limit: config.sportsTerminalizerMaxTicketsPerMarket,
+              marketId: marketId.toString(),
+              source: "logs"
+            });
             return [...ticketIds];
           }
         }
       }
     } catch (error) {
-      logger.warn("sports.terminalizer.ticket_log_lookup_failed", {
+      const message = (error as Error)?.message ?? "ticket log lookup failed";
+      logger.error("sports.terminalizer.ticket_log_lookup_failed", {
+        discovered: ticketIds.size,
         fromBlock: config.sportsTicketScanStartBlock.toString(),
         marketId: marketId.toString(),
-        message: (error as Error)?.message ?? "ticket log lookup failed",
+        message,
         toBlock: latest.toString()
       });
+      // Whatever was collected before the failure is a prefix of the market's
+      // tickets, not all of them. Returning it would settle that prefix and
+      // leave the rest held with the market already marked terminal, so fail
+      // the whole discovery and let the terminalizer retry.
+      throw new Error(`sports ticket log discovery failed for market ${marketId}: ${message}`);
     }
     logger.info("sports.terminalizer.ticket_discovery", {
       fromBlock: config.sportsTicketScanStartBlock.toString(),

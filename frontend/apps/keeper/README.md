@@ -243,6 +243,25 @@ after a restart are normal; sustained capping means the backlog is too large to
 grind through affordably, and the cheap fix is to fast-forward the cursor in
 `indexer_cursors` rather than raise the cap.
 
+`KEEPER_SPORTS_TICKET_SCAN_MAX_BLOCKS` defaults to `50000` and bounds the ticket
+log fallback used when neither the bet index nor contract enumeration can find a
+market's tickets. That fallback has no cursor — it rescans from
+`KEEPER_SPORTS_TICKET_SCAN_START_BLOCK` (default: the release block) to the head
+on every call, per market, retried up to 8 times — so its cost grows with the age
+of the deployment. On Base mainnet the default start is already ~4.5M blocks back,
+which is ~450k `eth_getLogs` per call at a 10-block chunk size.
+
+Over the limit, discovery **refuses and throws** rather than scanning a narrower
+window. That is deliberate: the terminalizer settles and refunds exactly the
+tickets it is handed, and cannot tell a short list from a complete one, so a
+partial result would mark the market terminal while leaving the tickets it missed
+held forever. Throwing surfaces as a retryable failure instead, which recovers.
+For the same reason a failed scan no longer returns what it collected before the
+error.
+
+If you hit the limit, the fix is `KEEPER_SPORTS_TICKET_INDEX_ENABLED=true` (the
+index keeps a cursor) or moving the start block forward — not raising the bound.
+
 For dedicated keeper RPC provider apps, set `KEEPER_RPC_MIN_INTERVAL_MS=250` in
 each keeper env file. The keeper then serializes tracked in-process RPC calls
 without adding seconds of avoidable settlement latency after a VRF callback. Use
