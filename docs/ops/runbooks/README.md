@@ -10,6 +10,7 @@ Runbooks are **operational procedures** mapped to the metric names defined in `d
 - [Referral unlock threshold retune + locked-XP sweep](bank-min-turnover-retune.md)
 - [Game finalization stalls / diff anomalies](game-finalization-diffs.md)
 - [Casino keeper production deployment](casino-keeper-production.md)
+- [Move the keeper off the governance EOA](keeper-key-separation.md)
 - [SportsHub odds, result finality, and exposure caps](sportsbook-ops.md)
 
 ## Related
