@@ -79,67 +79,97 @@ reach mainnet, and a second key costs nothing.
 
 ## Step 0 — Generate the keys (operator only)
 
-Run locally. The private keys must never be pasted into a chat, a ticket, or a
-shell history file.
+Run locally. **Redirect to a file — never let the key reach the terminal.**
 
 ```bash
-cast wallet new
+umask 077 && cast wallet new > ~/keeper-mainnet.key && grep Address ~/keeper-mainnet.key
 ```
 
-Record each address. You will need them in Step 3 to confirm the swap took.
+That prints only the address. The private key lands in a `600` file and is
+never displayed.
+
+> Plain `cast wallet new` prints the private key to stdout. If it is run in a
+> terminal that is recorded — a pasted session, a screen share, an AI coding
+> assistant, a CI log — that key is burned and must be discarded. This happened
+> on the first attempt during the 2026-09-20 execution.
+
+Repeat for `~/keeper-testnet.key`. Use **two separate keys**, one per chain.
+Confirm they really are distinct before going further:
+
+```bash
+cmp -s ~/keeper-mainnet.key ~/keeper-testnet.key && echo 'SAME FILE - regenerate' || echo distinct
+awk '/Private key:/{print ($3 ~ /^0x[0-9a-fA-F]{64}$/) ? "well-formed" : "MALFORMED"}' ~/keeper-mainnet.key
+```
+
+Record each address. Step 3 gates on them.
 
 ## Step 1 — Fund the new mainnet EOA
 
-Send 0.01 ETH on Base mainnet to the new mainnet address. Confirm:
+Send 0.01 ETH **on Base mainnet, chain id 8453** to the new mainnet address.
+
+**Verify it landed before restarting anything.** During the 2026-09-20
+execution the first transfer went to Ethereum mainnet instead of Base, and two
+further "already sent" reports had not arrived at all. The address is valid on
+every EVM chain, so a wrong-chain send succeeds and simply funds the wrong
+place.
 
 ```bash
-cast balance --rpc-url https://base-rpc.publicnode.com <NEW_MAINNET_ADDRESS> --ether
+cast balance --rpc-url https://base-rpc.publicnode.com <NEW_ADDRESS> --ether
 ```
+
+If that reads zero, check whether the funds went elsewhere before assuming the
+transaction is merely slow:
+
+```bash
+for rpc in https://ethereum-rpc.publicnode.com https://arbitrum-one-rpc.publicnode.com \
+           https://optimism-rpc.publicnode.com https://sepolia.base.org; do
+  echo "$rpc $(cast balance --rpc-url $rpc <NEW_ADDRESS> --ether)"
+done
+```
+
+Funds on the wrong chain are recoverable — the same key controls the address
+everywhere — but they are also a liability once the key is on the server, since
+a keeper EOA is supposed to hold a bounded balance only on the chain it works
+on. Sweep them.
 
 ## Step 2 — Swap the mainnet key
 
-On the server. The `sed` edits one line in place; the backup is the rollback.
+`/opt/arbigamefi/ops/swap-keeper-key.sh` (mode 700) does the edit. It reads the
+key from **stdin**, so pipe it straight from the file — the key never renders in
+a terminal, a transcript, `argv`, or shell history.
 
 ```bash
-cd /opt/arbigamefi/frontend/deploy/docker/env
-cp -a keeper.primary.env keeper.primary.env.bak-$(date +%Y%m%d-%H%M%S)
-read -rs -p 'new mainnet keeper private key: ' KEEPER_NEW_KEY; echo
-export KEEPER_NEW_KEY
-python3 - keeper.primary.env <<'PY'
-import os, re, sys
-k = os.environ.get('KEEPER_NEW_KEY', '').strip()
-if not re.fullmatch(r'0x[0-9a-fA-F]{64}', k):
-    raise SystemExit('refusing: key must be 0x + 64 hex chars')
-p = sys.argv[1]
-src = open(p).read()
-new, n = re.subn(r'(?m)^KEEPER_PRIVATE_KEY=.*$', 'KEEPER_PRIVATE_KEY=' + k, src)
-if n != 1:
-    raise SystemExit(f'refusing: expected exactly 1 KEEPER_PRIVATE_KEY line, found {n}')
-open(p, 'w').write(new)
-print('ok: 1 line replaced')
-PY
-unset KEEPER_NEW_KEY
-chmod 600 keeper.primary.env
-wc -l keeper.primary.env    # expect 36
+awk '/Private key:/{print $3}' ~/keeper-mainnet.key \
+  | ssh root@45.77.243.138 '/opt/arbigamefi/ops/swap-keeper-key.sh keeper.primary.env'
 ```
 
-Three deliberate choices in that block:
+Expect `ok: 1 line replaced`, `lines: 36`, and a `backup:` path — that backup is
+the rollback.
 
-- The key arrives through `read -rs` (not echoed, not written to shell history)
-  and is handed to Python through the **environment**, not `argv`.
-  `/proc/<pid>/cmdline` is world-readable on Linux and this host has a non-root
-  account; `/proc/<pid>/environ` is readable only by the process owner.
-- The key is rejected unless it is exactly `0x` + 64 hex characters, so a
-  truncated or wrapped paste stops here rather than being written.
-- The file is rewritten only when exactly one `KEEPER_PRIVATE_KEY=` line
-  matched. Zero matches or two both abort untouched, so the edit cannot land on
-  the wrong variable or silently do nothing.
+Why it is built this way:
 
-The anchored `(?m)^KEEPER_PRIVATE_KEY=` also leaves `#KEEPER_PRIVATE_KEY=…`
-comments and any `KEEPER_PRIVATE_KEY_BACKUP=` style variable alone. All of the
-above is covered by the edge cases exercised before this runbook was written:
-happy path, short key, no match, double match, and a file with no trailing
-newline.
+- **stdin, not `argv`.** `/proc/<pid>/cmdline` is world-readable on Linux and
+  this host has a non-root account; `/proc/<pid>/environ` is not. A key passed
+  as an argument is readable by any local user for the life of the process.
+- **Rejects anything that is not `0x` + 64 hex**, so a truncated or line-wrapped
+  paste stops before it is written. Surrounding whitespace is stripped.
+- **Writes only when exactly one `KEEPER_PRIVATE_KEY=` line matched.** Zero or
+  two both abort with the file untouched, and the abort path removes its own
+  backup rather than leaving debris.
+- The anchored `(?m)^KEEPER_PRIVATE_KEY=` leaves `#KEEPER_PRIVATE_KEY=…`
+  comments and `KEEPER_PRIVATE_KEY_BACKUP=` style variables alone.
+
+Exercised before first use against: happy path, short key, empty stdin, missing
+file, double match, no trailing newline, and pasted whitespace.
+
+The script is small enough to audit in one sitting; read it before trusting it
+with a key. It is version-controlled at `script/ops/swap-keeper-key.sh` — the
+server copy is a deployment of that file, so reinstall it after any host rebuild:
+
+```bash
+scp script/ops/swap-keeper-key.sh root@45.77.243.138:/opt/arbigamefi/ops/ \
+  && ssh root@45.77.243.138 'chmod 700 /opt/arbigamefi/ops/swap-keeper-key.sh'
+```
 
 ## Step 3 — Restart mainnet and confirm the address
 
@@ -167,9 +197,33 @@ curl -s https://arbigamefi.com/api/healthz | python3 -m json.tool | head -20
 docker logs --since 10m arbigamefi-production-keeper-primary-1 2>&1 | grep -cE '"level":"error"|429'
 ```
 
-Expect `status: ok`, keeper `running`, a fresh `ageMs`, and zero errors. On
-84532 confirm a real settlement lands — that chain has live volume, so a new
-`finalized_tx_hash` appearing after the swap is the end-to-end proof.
+Expect `status: ok`, keeper `running`, a fresh `ageMs`, and zero errors.
+
+That proves the keepers **start, connect and run** under the new keys. It does
+not prove they **settle** under them. The end-to-end check is a real
+`finalized_tx_hash` signed by the new address, and it needs a bet to exist:
+
+```sql
+select count(*) from bets where chain_id=84532 and state in ('randomReady','pendingVrf','held');
+```
+
+If that is zero there is nothing pending to observe — place one bet on 84532
+through the UI and watch it finalize. Do not record the swap as fully verified
+until a settlement has landed under the new key.
+
+## Execution record
+
+Run 2026-09-20. Both gates passed; `healthz` ok, zero errors, zero 429s.
+
+| | |
+| --- | --- |
+| mainnet 8453 | `0x440558699040d28975D218caB497338B65960A92`, funded 0.001683 ETH |
+| testnet 84532 | `0xc04d22F83d7494440Dd07ab42BeD01E45E88EC59`, funded 0.05 ETH from the old EOA |
+| previously | `0xc8eC9920…24B1b684` on both — now absent from both keepers |
+
+Outstanding from that run: no settlement has occurred under either new key (all
+182 testnet bets were already finalized, mainnet has never had one), and the
+governance key's prior residency on the host is unaddressed — see R-03.
 
 ## Rollback
 
