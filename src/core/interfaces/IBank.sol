@@ -39,6 +39,11 @@ interface IBank is IERC4626Minimal {
     function riskInPaused() external view returns (bool);
     event RiskInPausedSet(bool paused);
 
+    /// @notice Address allowed to pause Risk-In but not to unpause it.
+    /// @dev Zero means the role is disabled and only governance can pause.
+    function guardian() external view returns (address);
+    event GuardianSet(address indexed guardian);
+
     // -------- SSOT accounting views --------
     function getSSOT() external view returns (SSOTTypes.SSOT memory);
     function totalReserved() external view returns (uint256);

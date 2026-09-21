@@ -69,6 +69,23 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     uint256 public override withdrawalBufferBps; // [0..10000], gates optional outflows.
     // pause state comes from OZ Pausable (maps to SSOT "riskInPaused")
 
+    /// @notice Address allowed to pause Risk-In, but never to unpause it.
+    /// @dev Exists so pausing does not require assembling a multisig quorum.
+    ///      Pausing is the safe direction -- its worst case is declining new
+    ///      bets, and Debt-Out (settle/refund) is unaffected -- while unpausing
+    ///      re-opens risk and stays governance-only. Zero disables the role.
+    address public override guardian;
+
+    /// @dev Ceiling on `minPlayerTurnoverForUnlock`, in whole asset units.
+    ///      Without it governance can set the threshold to `type(uint256).max`
+    ///      and gate `unlockXPLocked` forever for every payee (audit AGF-07),
+    ///      which is a stronger unilateral power than the bound on
+    ///      `holdbackVestingSeconds` implies. It also rejects the
+    ///      decimals-mismatch class of mistake on chain: `20e18` on a 6-decimal
+    ///      asset means 20 trillion units and is refused here, rather than
+    ///      silently locking every referral award as it did on mainnet USDC.
+    uint256 public constant MAX_MIN_TURNOVER_UNITS = 10_000_000;
+
     // ERC4626-like shares (ERC20)
     string public name;
     string public symbol;
@@ -121,12 +138,20 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     // -------- governance controls --------
 
     /// @notice Freeze Risk-In + Optional outflows, while keeping Debt-Out (settle/refund) live.
-    /// @dev Governance may call directly. SettlementRouter MAY forward governance intent.
+    /// @dev Asymmetric by design: governance or the guardian may pause, only
+    ///      governance may unpause. Pausing declines new risk and is safe to
+    ///      make fast; unpausing re-admits risk and must stay behind the full
+    ///      governance quorum. The previous `settlementRouter` allowance is
+    ///      gone -- the deployed router never had a call path for it, so it was
+    ///      an authority granted and never exercised (audit AGF-08).
     function setRiskInPaused(bool paused_) external {
-        if (msg.sender != governance && msg.sender != settlementRouter) revert Errors.Unauthorized();
+        // One branch per direction, so the authority check and the state change
+        // for that direction cannot drift apart.
         if (paused_) {
+            if (msg.sender != governance && msg.sender != guardian) revert Errors.Unauthorized();
             if (!paused()) _pause();
         } else {
+            if (msg.sender != governance) revert Errors.Unauthorized();
             if (paused()) _unpause();
         }
         emit RiskInPausedSet(paused_);
@@ -173,7 +198,20 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     }
 
     function setMinPlayerTurnoverForUnlock(uint256 turnover_) external onlyGov {
+        // Divide rather than multiply: `MAX_MIN_TURNOVER_UNITS * _virtualOffset`
+        // overflows for high-decimals assets (decimals may be up to 77, and
+        // 10**77 is already near the uint256 ceiling), which would make the
+        // parameter permanently unsettable on such a pool.
+        if (turnover_ / _virtualOffset > MAX_MIN_TURNOVER_UNITS) revert Errors.InvalidConfig();
         minPlayerTurnoverForUnlock = turnover_;
+    }
+
+    /// @notice Set the address allowed to pause Risk-In (zero disables the role).
+    /// @dev The guardian cannot unpause, cannot move funds, and cannot change
+    ///      any other parameter. Its only power is to decline new risk.
+    function setGuardian(address guardian_) external onlyGov {
+        guardian = guardian_;
+        emit GuardianSet(guardian_);
     }
 
     /// @notice Rescue non-asset tokens only (no ASSET backdoor).
