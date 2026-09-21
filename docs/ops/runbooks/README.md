@@ -11,6 +11,7 @@ Runbooks are **operational procedures** mapped to the metric names defined in `d
 - [Game finalization stalls / diff anomalies](game-finalization-diffs.md)
 - [Casino keeper production deployment](casino-keeper-production.md)
 - [Move the keeper off the governance EOA](keeper-key-separation.md)
+- [Stand up the governance Safe (2-of-3, single operator)](governance-safe-setup.md)
 - [SportsHub odds, result finality, and exposure caps](sportsbook-ops.md)
 
 ## Related
