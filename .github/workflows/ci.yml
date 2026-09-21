@@ -4,9 +4,9 @@ on:
   pull_request:
   push:
     # Run CI on all branches so feature pushes get feedback immediately.
-    branches: [ "**" ]
+    branches: ["**"]
     # Also run on version tags to ensure the tag itself is green.
-    tags: [ "v*" ]
+    tags: ["v*"]
   workflow_dispatch:
 
 jobs:
@@ -23,6 +23,11 @@ jobs:
 
       - name: Show Forge version
         run: forge --version
+
+      - name: Validate keeper key replacement safety
+        run: |
+          bash -n script/ops/swap-keeper-key.sh
+          python3 -m unittest discover -s test/ops -v
 
       - name: Install pinned dependencies
         run: |
