@@ -7,6 +7,8 @@ import "forge-std/StdInvariant.sol";
 import {Bank} from "../../src/core/Bank.sol";
 import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
 import {MockERC20} from "../../src/mocks/MockERC20.sol";
+import {DefaultReferralEngine} from "../../src/engines/referral/DefaultReferralEngine.sol";
+import {IReferralEngine} from "../../src/engines/referral/IReferralEngine.sol";
 
 /// @dev Drives the Bank through the six classes of operation that move its
 ///      accounting: deposit, withdraw, hold, settle, refund, and the optional
@@ -14,21 +16,21 @@ import {MockERC20} from "../../src/mocks/MockERC20.sol";
 ///
 ///      `settleBet` performs no solvency check of its own -- it releases the
 ///      reserve, pays the player, and accrues PF/XP without consulting `nav()`.
-///      Audit AGF-05 records that as accepted design: the Bank trusts the hub to
-///      hand it a conserving settlement. So this handler settles the way a
-///      correct hub does, honouring
+///      The handler models GameHub's two independent calculations: the fee is
+///      charged on payoutGross, while PF/XP accrue on stake minus refund. A
+///      losing bet therefore accrues liabilities even when its payout fee is
+///      zero. The real referral engine splits a valid two-level configuration
+///      into accrued, locked, holdback and protocol sink buckets.
 ///
-///          protocolFeeAccrual + sum(XP awards) <= feeOnPayout
-///
-///      which is exactly the condition that keeps `B >= PF + XP`. Since
-///      `payoutGross + refund <= reserved <= R <= NAV` is enforced by the Bank,
-///      substituting `feeOnPayout = payoutGross - payoutNet` gives
-///      `payoutNet + refund + pfAccrual + xpTotal <= NAV`. The invariants below
-///      turn that argument into something machine-checked.
+///      This Bank-focused model bounds reserves as the casino modules do
+///      (reserved >= stake), and checks NAV >= all remaining reserves after
+///      interleaved settlements. GameHubE2E separately exercises the real hub,
+///      module, VRF and router path for the losing-bet case.
 contract BankHandler is Test {
     Bank public bank;
     MockERC20 public asset;
     address public gov;
+    DefaultReferralEngine public referralEngine;
 
     address[3] public lps;
     address[3] public players;
@@ -51,11 +53,13 @@ contract BankHandler is Test {
     uint256 public settleCount;
     uint256 public refundCount;
     uint256 public solvencyReverts;
+    uint256 public unexpectedDebtOutReverts;
 
     constructor(Bank bank_, MockERC20 asset_, address gov_) {
         bank = bank_;
         asset = asset_;
         gov = gov_;
+        referralEngine = new DefaultReferralEngine();
 
         lps = [address(0x1111), address(0x2222), address(0x3333)];
         players = [address(0xAAA1), address(0xAAA2), address(0xAAA3)];
@@ -131,45 +135,20 @@ contract BankHandler is Test {
         uint256 maxGross = b.reserved - refundAmount;
         uint256 payoutGross = maxGross == 0 ? 0 : grossRaw % (maxGross + 1);
 
-        // House edge on the payout, which is the only source of PF and XP.
-        uint256 feeBps = feeBpsRaw % 1_001; // <= 10%
-        uint256 feeOnPayout = (payoutGross * feeBps) / 10_000;
+        // A 2% base edge plus a permitted affiliate delta, up to 10% total.
+        uint16 deltaBps = uint16(feeBpsRaw % 801);
+        uint256 effectiveHouseEdgeBps = 200 + uint256(deltaBps);
+        uint256 feeOnPayout = (payoutGross * effectiveHouseEdgeBps) / 10_000;
         uint256 payoutNet = payoutGross - feeOnPayout;
-
-        // Split the fee between protocol fees and referral XP. Never exceed it:
-        // that is the conservation condition the Bank itself does not enforce.
-        uint256 pfAccrual = feeOnPayout / 2;
-        uint256 xpBudget = feeOnPayout - pfAccrual;
-
-        SSOTTypes.XPAward[] memory awards;
-        if (xpBudget > 0) {
-            awards = new SSOTTypes.XPAward[](2);
-            uint256 half = xpBudget / 2;
-            awards[0] = SSOTTypes.XPAward({
-                payee: payees[0],
-                sourcePlayer: b.player,
-                accrued: half,
-                locked: 0,
-                holdback: 0,
-                reason: bytes32("accrued")
-            });
-            awards[1] = SSOTTypes.XPAward({
-                payee: payees[1],
-                sourcePlayer: b.player,
-                accrued: 0,
-                locked: xpBudget - half,
-                holdback: 0,
-                reason: bytes32("locked")
-            });
-        } else {
-            awards = new SSOTTypes.XPAward[](0);
-        }
+        (uint256 pfAccrual, SSOTTypes.XPAward[] memory awards) = _turnoverAwards(b, refundAmount, deltaBps);
 
         try bank.settleBet(betId, payoutGross, payoutNet, refundAmount, pfAccrual, awards) {
             mirrorReserved -= b.reserved;
             _removeOpenBet(idx);
             settleCount += 1;
-        } catch {}
+        } catch {
+            unexpectedDebtOutReverts += 1;
+        }
     }
 
     function action_refund(uint256 seed, uint256 refundRaw) external {
@@ -183,7 +162,9 @@ contract BankHandler is Test {
             mirrorReserved -= b.reserved;
             _removeOpenBet(idx);
             refundCount += 1;
-        } catch {}
+        } catch {
+            unexpectedDebtOutReverts += 1;
+        }
     }
 
     // -------------------------------------------------------- optional outflows
@@ -213,6 +194,11 @@ contract BankHandler is Test {
         try bank.unlockXPLocked(payee, player) {} catch {}
     }
 
+    function action_syncXPHoldback(uint256 seed, uint256 elapsedRaw) external {
+        vm.warp(block.timestamp + (elapsedRaw % 7 days) + 1);
+        bank.syncXPHoldback(payees[seed % payees.length]);
+    }
+
     function action_setBps(uint256 riskRaw, uint256 bufferRaw) external {
         vm.startPrank(gov);
         try bank.setRiskReserveBps(riskRaw % 5_001) {} catch {}
@@ -230,6 +216,61 @@ contract BankHandler is Test {
     }
 
     // ------------------------------------------------------------------ helpers
+
+    function _turnoverAwards(HeldBet memory b, uint256 refundAmount, uint16 deltaBps)
+        internal
+        view
+        returns (uint256 pfAccrual, SSOTTypes.XPAward[] memory awards)
+    {
+        uint256 usedTurnover = b.stake - refundAmount;
+        uint256 baseHEAmount = (usedTurnover * 200) / 10_000;
+        uint256 deltaHEAmount = (usedTurnover * uint256(deltaBps)) / 10_000;
+        uint256 baseBudget = (baseHEAmount * 5_000) / 10_000;
+        uint256 deltaBudget = (deltaHEAmount * 7_500) / 10_000;
+        uint256 turnoverAfter = bank.playerTurnover(b.player) + usedTurnover;
+        uint256 minTurnover = bank.minPlayerTurnoverForUnlock();
+
+        uint16[6] memory levelBps;
+        levelBps[1] = 10_000;
+        address[] memory uplines = new address[](1);
+        uplines[0] = payees[0];
+        IReferralEngine.Plan memory basePlan = referralEngine.splitBase(
+            IReferralEngine.BaseInput({
+                baseBudget: baseBudget,
+                levelBps: levelBps,
+                levels: 2,
+                uplines: uplines,
+                holdbackBps: 3_000,
+                minTurnover: minTurnover,
+                playerTurnover: turnoverAfter
+            })
+        );
+        IReferralEngine.Plan memory deltaPlan = referralEngine.splitDelta(
+            abi.encodePacked(payees[1], deltaBps),
+            IReferralEngine.DeltaPolicy({
+                deltaBudget: deltaBudget, holdbackBps: 3_000, minTurnover: minTurnover, playerTurnover: turnoverAfter
+            })
+        );
+        pfAccrual = baseHEAmount - baseBudget + deltaHEAmount - deltaBudget + basePlan.sink + deltaPlan.sink;
+
+        // L0 is zero in this configuration, matching GameHub's absence of a
+        // player-kick award. The base upline and one skyline segment each get
+        // the exact bucket amounts returned by DefaultReferralEngine.
+        uint256 baseCount = basePlan.payees.length;
+        awards = new SSOTTypes.XPAward[](baseCount + deltaPlan.payees.length);
+        for (uint256 i = 0; i < awards.length; ++i) {
+            IReferralEngine.Plan memory plan = i < baseCount ? basePlan : deltaPlan;
+            uint256 index = i < baseCount ? i : i - baseCount;
+            awards[i] = SSOTTypes.XPAward({
+                payee: plan.payees[index],
+                sourcePlayer: b.player,
+                accrued: plan.immediate[index],
+                locked: plan.locked[index],
+                holdback: plan.holdback[index],
+                reason: i < baseCount ? bytes32("base") : bytes32("delta")
+            });
+        }
+    }
 
     function _removeOpenBet(uint256 idx) internal {
         openBetIds[idx] = openBetIds[openBetIds.length - 1];
@@ -258,12 +299,14 @@ contract BankInvariants is StdInvariant, Test {
 
         // The handler stands in for the SettlementRouter, which is the only
         // caller allowed to hold, settle and refund.
-        vm.prank(gov);
+        vm.startPrank(gov);
         bank.setSettlementRouterOnce(address(handler));
+        bank.setMinPlayerTurnoverForUnlock(20e6);
+        vm.stopPrank();
 
         targetContract(address(handler));
 
-        bytes4[] memory selectors = new bytes4[](10);
+        bytes4[] memory selectors = new bytes4[](11);
         selectors[0] = handler.action_deposit.selector;
         selectors[1] = handler.action_withdraw.selector;
         selectors[2] = handler.action_hold.selector;
@@ -274,16 +317,21 @@ contract BankInvariants is StdInvariant, Test {
         selectors[7] = handler.action_unlockXPLocked.selector;
         selectors[8] = handler.action_setBps.selector;
         selectors[9] = handler.action_togglePause.selector;
+        selectors[10] = handler.action_syncXPHoldback.selector;
         targetSelector(FuzzSelector({addr: address(handler), selectors: selectors}));
     }
 
-    /// The identity the whole vault rests on. `nav()` reverts when B < PF + XP,
-    /// so a violation freezes Risk-In rather than silently paying LPs with
-    /// money that is owed to someone else. Asserted directly, not via nav().
+    /// Cash must cover both accrued liabilities and every outstanding reserve.
+    /// Checking only B >= PF + XP would miss the insolvent state 0 <= NAV < R.
     function invariant_bank_is_solvent() external view {
         uint256 B = asset.balanceOf(address(bank));
         uint256 liabilities = bank.protocolFeesPayable() + bank.externalPayablesTotal();
         assertGe(B, liabilities, "B must cover PF + XP");
+        assertGe(B - liabilities, bank.totalReserved(), "NAV must cover all open reserves");
+    }
+
+    function invariant_valid_debt_out_never_reverts() external view {
+        assertEq(handler.unexpectedDebtOutReverts(), 0, "valid settle/refund must stay live");
     }
 
     /// getSSOT() computes NAV through AccountingLib.nav(), so it must not revert
@@ -365,5 +413,45 @@ contract BankInvariants is StdInvariant, Test {
         handler.action_claimXPAccrued(0, type(uint256).max);
 
         assertEq(bank.totalReserved(), handler.mirrorReserved(), "mirror drifted");
+    }
+
+    function test_turnoverAccrualPreservesInterleavedReserves() external {
+        handler.action_deposit(0, 40_000e6);
+        handler.action_hold(0, 9e6, 1); // stake 10, reserve 20
+        handler.action_hold(1, 100e6, 2); // stake 101, reserve 303
+        handler.action_hold(2, 200e6, 3); // stake 201, reserve 804
+        assertEq(handler.openBetCount(), 3);
+
+        // No payout, a partial refund, and 5% of used turnover still accrues.
+        // The old payout-fee model would incorrectly accrue nothing here.
+        handler.action_settle(0, 0, 300, 2e6);
+        assertEq(handler.settleCount(), 1);
+        assertEq(bank.totalFeeOnPayout(), 0);
+        assertEq(bank.totalTurnover(), 8e6);
+        assertEq(bank.protocolFeesPayable() + bank.externalPayablesTotal(), 400_000);
+        assertGt(bank.xpLockedTotal(), 0, "below-threshold referral amount must lock");
+        assertGt(bank.xpHoldbackTotal(), 0, "holdback must be exercised");
+        _assertOpenReserveSolvency(303e6 + 804e6);
+
+        // The first removal swaps bet 3 into index 0; bet 2 remains at index 1.
+        // Settle bet 2 at its maximum gross payout while bet 3 stays reserved.
+        handler.action_settle(1, 303e6, 800, 0);
+        assertEq(handler.settleCount(), 2);
+        _assertOpenReserveSolvency(804e6);
+        handler.action_claimProtocolFees(type(uint256).max);
+        handler.action_claimXPAccrued(0, type(uint256).max);
+        _assertOpenReserveSolvency(804e6);
+
+        handler.action_refund(0, 201e6);
+        assertEq(handler.refundCount(), 1);
+        assertEq(handler.unexpectedDebtOutReverts(), 0);
+        _assertOpenReserveSolvency(0);
+    }
+
+    function _assertOpenReserveSolvency(uint256 expectedReserved) internal view {
+        SSOTTypes.SSOT memory s = bank.getSSOT();
+        assertEq(s.R, expectedReserved);
+        assertEq(s.R, handler.mirrorReserved());
+        assertGe(s.NAV, s.R, "settlement must preserve every other open reserve");
     }
 }
