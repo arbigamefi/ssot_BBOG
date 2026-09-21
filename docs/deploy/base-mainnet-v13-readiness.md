@@ -1,6 +1,31 @@
 # Base mainnet v1.3 readiness packet
 
-Status: **NO-GO until every approval row below is linked and every command is green**
+> ## ⚠️ SUPERSEDED — do not read the gate table below as current state
+>
+> This packet describes a **v1.3** review that has been overtaken by events.
+> Every "Pending" in it is a historical record of that review, **not** a
+> description of mainnet today.
+>
+> What is actually true on Base mainnet 8453, verified on chain 2026-09-20:
+>
+> - **v1.4 is deployed** at block 46970755 and embedded in the frontend
+>   snapshot (`chain-8453.json`, `isPlaceholder: false`). The deploy gate this
+>   document marks "Pending" was passed long ago.
+> - The two Banks are **empty** — `totalAssets`, `totalSupply`,
+>   `protocolFeesPayable`, `xpLockedTotal` and `totalReserved` all read `0` —
+>   and chain 8453 has **never had a bet**. Deployed is not the same as live.
+> - `sportsHub` and `sportsRiskEngine` are `0x0`. Sports is not deployed at
+>   all, which is a stronger guarantee than any frontend switch.
+> - The project is moving to a **v1.5 redeploy** rather than continuing this
+>   line, so no v1.4 readiness packet will be written. The v1.5 packet
+>   supersedes this one.
+>
+> This warning exists because the stale "Pending" rows have already caused a
+> real misreading: they were taken as evidence that mainnet was undeployed.
+> A readiness document that outlives its release line is not harmless
+> paperwork — it is a trap for whoever reads it next during an incident.
+
+Status (as of the v1.3 review, historical): **NO-GO until every approval row below is linked and every command is green**
 
 This packet prepares a Base mainnet v1.3 deployment review. It is not broadcast authorization. It
 exists to keep the B2C casino launch path explicit while preventing SportsHub public risk-in from
@@ -25,14 +50,14 @@ Out of scope:
 
 ## Decision gates
 
-| Area | Required state | Decision |
-| --- | --- | --- |
-| Casino contracts | Fresh Base mainnet v1.3 deploy, release lock, frontend sync, keeper primary+backup ready | Pending |
-| Casino public play | Small-stake canary passes from wallet approve/placeBet through VRF, keeper finalize, terminal receipt | Pending |
-| Sports contracts | May be deployed as part of the v1.3 topology only if env/risk/role values are approved | Pending |
-| Sports public risk-in | `make sports-phase2-gonogo-v13` records GO and every linked approval is current | **NO-GO** |
-| Frontend | Post-deploy embedded `chain-8453.json` passes release check and read-only smoke | Pending |
-| Operations | Keeper, Postgres bet index, alerts, and rollback owners are assigned | Pending |
+| Area                  | Required state                                                                                        | Decision  |
+| --------------------- | ----------------------------------------------------------------------------------------------------- | --------- |
+| Casino contracts      | Fresh Base mainnet v1.3 deploy, release lock, frontend sync, keeper primary+backup ready              | Pending   |
+| Casino public play    | Small-stake canary passes from wallet approve/placeBet through VRF, keeper finalize, terminal receipt | Pending   |
+| Sports contracts      | May be deployed as part of the v1.3 topology only if env/risk/role values are approved                | Pending   |
+| Sports public risk-in | `make sports-phase2-gonogo-v13` records GO and every linked approval is current                       | **NO-GO** |
+| Frontend              | Post-deploy embedded `chain-8453.json` passes release check and read-only smoke                       | Pending   |
+| Operations            | Keeper, Postgres bet index, alerts, and rollback owners are assigned                                  | Pending   |
 
 ## Environment template
 
