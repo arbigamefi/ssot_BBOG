@@ -46,9 +46,10 @@ export type KeeperConfig = {
   sportsTerminalizerScanChunkBlocks: bigint;
   sportsTerminalizerMarketIds: bigint[];
   sportsTerminalizerMaxTicketsPerMarket: number;
+  /** Legacy setting retained for env compatibility; recovery no longer trusts a recent-ID sample. */
   sportsTicketEnumerationMax: number;
   sportsTicketScanChunkBlocks: bigint;
-  /** Widest block range the ticket log fallback may scan before refusing outright. */
+  /** Maximum history blocks per pass; completed chunks resume from a durable cursor. */
   sportsTicketScanMaxBlocks: bigint;
   sportsTicketScanStartBlock: bigint;
 };

@@ -13,6 +13,7 @@ import {PoolRegistry} from "../../src/core/PoolRegistry.sol";
 import {SettlementRouter} from "../../src/core/SettlementRouter.sol";
 import {VRFHub} from "../../src/core/VRFHub.sol";
 import {IVRFHub} from "../../src/core/interfaces/IVRFHub.sol";
+import {IBank} from "../../src/core/interfaces/IBank.sol";
 import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
 import {MockERC20} from "../../src/mocks/MockERC20.sol";
 import {ReferralRegistry} from "../../src/engines/referral/ReferralRegistry.sol";
@@ -136,6 +137,70 @@ contract GameHubE2E is Test {
         assetA.approve(address(bankA), type(uint256).max);
         assetB.approve(address(bankB), type(uint256).max);
         vm.stopPrank();
+    }
+
+    function test_guardianPauseDoesNotBlockWinningFinalize() external {
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
+        uint256 positionId = _place(alice, GAME_DICE, POOL_A, abi.encode(true, uint8(50)), spec, bob);
+
+        vm.prank(gov);
+        bankA.setGuardian(bob);
+        vm.prank(bob);
+        bankA.setRiskInPaused(true);
+
+        // Both the VRF callback and the player's payout must stay live while paused.
+        _fulfill(positionId, _findSeedDiceWin(positionId, 50));
+        uint256 balanceBefore = assetA.balanceOf(alice);
+        gameHub.finalize(positionId);
+
+        assertEq(assetA.balanceOf(alice) - balanceBefore, 19.6 ether);
+        assertEq(bankA.totalReserved(), 0);
+        assertEq(uint256(router.getPosition(positionId).state), uint256(SSOTTypes.PositionState.Settled));
+        assertTrue(bankA.riskInPaused());
+        assertEq(bankA.maxWithdraw(gov), 0);
+        vm.prank(gov);
+        vm.expectRevert(IBank.RiskInPaused.selector);
+        bankA.withdraw(1 ether, gov, gov);
+    }
+
+    function test_guardianPauseDoesNotBlockTimedOutRefund() external {
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
+        uint256 positionId = _place(alice, GAME_DICE, POOL_A, abi.encode(true, uint8(50)), spec, bob);
+
+        vm.prank(gov);
+        bankA.setGuardian(bob);
+        vm.prank(bob);
+        bankA.setRiskInPaused(true);
+
+        SSOTTypes.Bet memory bet = gameHub.getBet(positionId);
+        uint256 balanceBefore = assetA.balanceOf(alice);
+        vm.warp(uint256(bet.placedAt) + gameHub.refundTimeoutSeconds());
+        gameHub.refund(positionId);
+
+        assertEq(assetA.balanceOf(alice) - balanceBefore, bet.stake);
+        assertEq(bankA.totalReserved(), 0);
+        assertEq(uint256(router.getPosition(positionId).state), uint256(SSOTTypes.PositionState.Refunded));
+        assertEq(vrf.getRequest(bet.requestId).hub, address(0));
+        assertTrue(bankA.riskInPaused());
+    }
+
+    function test_losingBetAccruesTurnoverLiabilitiesWithAnotherBetStillHeld() external {
+        SSOTTypes.StakeSpec memory spec =
+            SSOTTypes.StakeSpec({amountPerRoll: 10 ether, betCount: 1, stopGain: 0, stopLoss: 0});
+        uint256 settledId = _place(alice, GAME_DICE, POOL_A, abi.encode(true, uint8(50)), spec, bob);
+        uint256 heldId = _place(alice, GAME_DICE, POOL_A, abi.encode(true, uint8(50)), spec, bob);
+        _fulfill(settledId, _findSeedDiceLose(settledId, 50));
+        gameHub.finalize(settledId);
+
+        SSOTTypes.BetTerminal memory terminal = gameHub.getBetTerminal(settledId);
+        SSOTTypes.SSOT memory s = bankA.getSSOT();
+        assertEq(terminal.feeOnPayout, 0);
+        assertEq(s.PF + s.XP, 0.2 ether, "liabilities follow used turnover, not payout fees");
+        assertEq(s.R, gameHub.getBet(heldId).reserved);
+        assertGt(s.R, 0);
+        assertGe(s.NAV, s.R);
     }
 
     function test_diceWinSettlesThroughRouterPoolA() external {

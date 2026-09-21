@@ -20,7 +20,7 @@ transaction.
 > `KEEPER_PRIVATE_KEY` — Dedicated bounded-balance keeper EOA. Never reuse
 > deployer or governance keys.
 
-Production does not follow it. Verified 2026-09-20:
+Historical state before the 2026-09-20 rotation:
 
 ```
 Bank (USDC) 0x597266…2c77  governance() = 0xc8eC9920…24B1b684
@@ -101,7 +101,9 @@ cmp -s ~/keeper-mainnet.key ~/keeper-testnet.key && echo 'SAME FILE - regenerate
 awk '/Private key:/{print ($3 ~ /^0x[0-9a-fA-F]{64}$/) ? "well-formed" : "MALFORMED"}' ~/keeper-mainnet.key
 ```
 
-Record each address. Step 3 gates on them.
+Record each address. Set `NEW_KEEPER_ADDRESS` to the approved address for the
+chain being processed. Step 3 gates on it; `FINALIZED_TX_HASH` below is an
+observed transaction hash, not an instruction to create a transaction.
 
 ## Step 1 — Fund the new mainnet EOA
 
@@ -114,7 +116,7 @@ every EVM chain, so a wrong-chain send succeeds and simply funds the wrong
 place.
 
 ```bash
-cast balance --rpc-url https://base-rpc.publicnode.com <NEW_ADDRESS> --ether
+cast balance --rpc-url https://base-rpc.publicnode.com "$NEW_KEEPER_ADDRESS" --ether
 ```
 
 If that reads zero, check whether the funds went elsewhere before assuming the
@@ -123,7 +125,7 @@ transaction is merely slow:
 ```bash
 for rpc in https://ethereum-rpc.publicnode.com https://arbitrum-one-rpc.publicnode.com \
            https://optimism-rpc.publicnode.com https://sepolia.base.org; do
-  echo "$rpc $(cast balance --rpc-url $rpc <NEW_ADDRESS> --ether)"
+  echo "$rpc $(cast balance --rpc-url $rpc "$NEW_KEEPER_ADDRESS" --ether)"
 done
 ```
 
@@ -143,24 +145,32 @@ awk '/Private key:/{print $3}' ~/keeper-mainnet.key \
   | ssh root@45.77.243.138 '/opt/arbigamefi/ops/swap-keeper-key.sh keeper.primary.env'
 ```
 
-Expect `ok: 1 line replaced`, `lines: 36`, and a `backup:` path — that backup is
-the rollback.
+Expect `ok: 1 line replaced atomically; no old-key backup created`. Keep an
+approved dedicated keeper key in operator custody for rollback. Do not restore
+the historical governance key or store a rollback secret on this host.
 
 Why it is built this way:
 
-- **stdin, not `argv`.** `/proc/<pid>/cmdline` is world-readable on Linux and
-  this host has a non-root account; `/proc/<pid>/environ` is not. A key passed
-  as an argument is readable by any local user for the life of the process.
-- **Rejects anything that is not `0x` + 64 hex**, so a truncated or line-wrapped
-  paste stops before it is written. Surrounding whitespace is stripped.
-- **Writes only when exactly one `KEEPER_PRIVATE_KEY=` line matched.** Zero or
-  two both abort with the file untouched, and the abort path removes its own
-  backup rather than leaving debris.
-- The anchored `(?m)^KEEPER_PRIVATE_KEY=` leaves `#KEEPER_PRIVATE_KEY=…`
-  comments and `KEEPER_PRIVATE_KEY_BACKUP=` style variables alone.
+- The entire key is read from stdin through an inherited descriptor, never argv
+  or an exported environment variable. Only a valid secp256k1 scalar is accepted.
+- Exactly one canonical `KEEPER_PRIVATE_KEY=` declaration is required. Compose
+  aliases (`export`, whitespace, `:`), duplicate declarations, multiline quoted
+  values and extra stdin records are rejected before replacement. Normalize
+  unusual env syntax deliberately before retrying; never print the file.
+- The filename must be a basename. Symlinks and hard-linked targets are refused.
+- A same-directory `0600` temporary file is explicitly written, flushed,
+  fsynced and closed before atomic replacement; owner/group are preserved.
+  Cooperating invocations serialize using an empty persistent `.lock` file.
+- Before replacement, an error leaves the original bytes intact. If the final
+  directory fsync fails, the helper reports **replacement installed; durability
+  unconfirmed**. Inspect the installed account before deciding whether to retry.
+- No copy of the old environment is created. Existing historical backups are
+  unaffected and require the separate retirement procedure below.
 
-Exercised before first use against: happy path, short key, empty stdin, missing
-file, double match, no trailing newline, and pasted whitespace.
+Run `python3 -m unittest discover -s test/ops -v` locally before installing.
+Coverage includes real file-size-limit failures, fsync/rename failures, Compose
+aliases, quoted fake declarations, key/path validation, and successful byte and
+permission preservation. The helper supports Linux and macOS with Python 3.
 
 The script is small enough to audit in one sitting; read it before trusting it
 with a key. It is version-controlled at `script/ops/swap-keeper-key.sh` — the
@@ -181,7 +191,8 @@ docker logs --tail 20 arbigamefi-production-keeper-primary-1 2>&1 \
 ```
 
 **Gate:** the printed address must equal the new mainnet address from Step 0.
-If it does not, restore the backup from Step 2 and restart before going further.
+If it does not, stop this rollout. Reapply the approved dedicated keeper key
+from operator custody using Step 2, then restart and repeat the address check.
 
 ## Step 4 — Repeat for testnet
 
@@ -235,8 +246,8 @@ fresh key makes it unambiguous — it has never sent anything, so its nonce
 starts at 0:
 
 ```bash
-cast nonce --rpc-url https://sepolia.base.org <NEW_KEEPER_ADDRESS>   # 0 -> 1
-cast tx --rpc-url https://sepolia.base.org <FINALIZED_TX_HASH> from  # must equal it
+cast nonce --rpc-url https://sepolia.base.org "$NEW_KEEPER_ADDRESS"   # 0 -> 1
+cast tx --rpc-url https://sepolia.base.org "$FINALIZED_TX_HASH" from  # must equal it
 ```
 
 Do not use `max(bet_id)` to baseline the index — `bet_id` is a text column, so
@@ -273,19 +284,27 @@ Outstanding:
 - **Mainnet is unexercised.** Its keeper is proven to start and connect, not to
   settle — chain 8453 has never had a bet, so there is nothing to finalize. The
   first real mainnet bet is the outstanding check.
-- **The governance key's prior residency on the host is unaddressed.** The swap
-  removed the key; it did not remove the fact that it lived on an
-  internet-facing server from deployment until 2026-09-20. See R-03.
+- **Governance-key residency remains unresolved.** Read-only inspection on
+  2026-09-21 found 24 historical keeper env backups with the old governance
+  credential; 9 mainnet copies were mode `0644` under traversable directories.
+  At 08:17 UTC, an approved containment change made the env directory `0700`
+  and those nine files `0600`; all 26 keeper secret files are now `0600`. The
+  24 historical copies remain. The new running keeper accounts do not establish
+  removal from the host. See the retirement procedure and rework plan before
+  declaring closure.
 
 ## Rollback
 
-Restore the `.bak-*` file and restart that keeper. Nothing on-chain changed, so
-there is no state to unwind.
+Supply an approved **dedicated keeper** key from operator custody through
+Step 2, then restart one keeper and verify its address, gas balance, fresh health
+and transaction behavior. Keep non-secret configuration separately versioned.
+Never revert to a governance credential. Atomic replacement protects against
+partial writes; it does not replace this operational rollback procedure.
 
 ## After
 
-- The old EOA reverts to being governance-only. It no longer belongs on this
-  host in any form.
+- The intended end state is no governance credential on this host. Merely
+  changing `KEEPER_PRIVATE_KEY` does not establish it; retire all copies below.
 - Treat it as having been resident on an internet-facing server since deployment
   when deciding whether to rotate governance — that decision is independent of
   this runbook.
@@ -294,3 +313,31 @@ there is no state to unwind.
   degrades silently.
 - Migrating governance to a Safe multisig (R-03) is the change that makes the
   old key's history stop mattering.
+
+## Retire historical credential copies
+
+This is a separate production change, after the live dedicated addresses and
+operator-held recovery keys have been verified. Do not let a rotation helper
+silently delete recovery material.
+
+1. Inventory filenames, modes and secret identity **without printing values**.
+   Include `.bak*`, `.throttle-*.bak`, other exports, old container environments,
+   host snapshots and operator copies. A filename-only search is not proof that
+   no other credential copy exists.
+2. Contain unintended local access: restrict the env directory to `0700` and
+   secret-bearing files to `0600`, recording original modes in a secret-free
+   rollback manifest. Existing compose containers need no restart for chmod.
+3. Verify both current keeper public addresses and an off-host recovery method.
+   Check that the old governance credential is held by its authorized operator;
+   do not create another host archive of the compromised copies.
+4. Obtain the operator's explicit retirement approval for the reviewed file
+   list, then unlink exactly those obsolete backups. Verify absence and live
+   keeper health. Unlinking is not secure erasure of filesystem/cloud snapshots.
+5. Treat prior world-readable residency as possible disclosure. Rotation or
+   transfer of all live governance authority is a separate signed operation,
+   with target addresses, chain IDs, Safe quorum and readbacks reviewed first.
+   Removing files does not invalidate previously copied keys.
+
+Close the residency item only with recorded containment, retirement and
+credential-authority decisions. Host filesystem evidence alone cannot prove a
+credential was never copied. See [the rework plan](../pr39-rework-plan.zh-CN.md).

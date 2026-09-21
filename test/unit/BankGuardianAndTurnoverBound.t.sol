@@ -118,20 +118,6 @@ contract BankGuardianAndTurnoverBoundTest is Test {
         bank6.setRiskInPaused(true);
     }
 
-    /// Pausing must not touch the payout path, which is the reason it is safe
-    /// to hand the guardian a fast trigger at all.
-    function test_guardianPauseDoesNotBlockDebtOut() external {
-        vm.prank(gov);
-        bank6.setGuardian(guardian);
-        vm.prank(guardian);
-        bank6.setRiskInPaused(true);
-
-        // Debt-Out never consults nav(), so a paused bank still reports SSOT and
-        // keeps settle/refund callable by the router.
-        assertTrue(bank6.riskInPaused());
-        bank6.getSSOT();
-    }
-
     // ------------------------------------------------- turnover bound (AGF-07)
 
     function test_rejectsThresholdAboveBound_6Decimals() external {
@@ -177,16 +163,13 @@ contract BankGuardianAndTurnoverBoundTest is Test {
         bank6.setMinPlayerTurnoverForUnlock(atLimit);
         assertEq(bank6.minPlayerTurnoverForUnlock(), atLimit);
 
-        // One whole unit past the ceiling is refused.
+        // Even one smallest asset unit past the ceiling must be refused.
         vm.prank(gov);
         vm.expectRevert(Errors.InvalidConfig.selector);
-        bank6.setMinPlayerTurnoverForUnlock(atLimit + 1e6);
+        bank6.setMinPlayerTurnoverForUnlock(atLimit + 1);
     }
 
-    /// The bound is computed by division precisely so it cannot overflow on a
-    /// high-decimals asset; multiplying would revert here and leave the
-    /// parameter permanently unsettable.
-    function test_boundDoesNotOverflowOnExtremeDecimals() external {
+    function test_rejectsMaxUintWhenHighDecimalsCeilingIsRepresentable() external {
         MockERC20 asset38 = new MockERC20("Extreme", "EXT", 38);
         Bank bank38 = new Bank(address(asset38), gov, 0, "LP EXT", "lpEXT", 38);
 
@@ -197,6 +180,17 @@ contract BankGuardianAndTurnoverBoundTest is Test {
         vm.prank(gov);
         vm.expectRevert(Errors.InvalidConfig.selector);
         bank38.setMinPlayerTurnoverForUnlock(type(uint256).max);
+    }
+
+    /// At 77 decimals the mathematical ceiling is above uint256.max, so all
+    /// representable thresholds are valid and computing the ceiling must not revert.
+    function test_boundDoesNotOverflowOnExtremeDecimals() external {
+        MockERC20 asset77 = new MockERC20("Extreme", "EXT", 77);
+        Bank bank77 = new Bank(address(asset77), gov, 0, "LP EXT", "lpEXT", 77);
+
+        vm.prank(gov);
+        bank77.setMinPlayerTurnoverForUnlock(type(uint256).max);
+        assertEq(bank77.minPlayerTurnoverForUnlock(), type(uint256).max);
     }
 
     function test_onlyGovCanSetThreshold() external {

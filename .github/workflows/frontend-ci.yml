@@ -25,6 +25,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 35
 
+    services:
+      recovery-postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: keeper_test
+          POSTGRES_PASSWORD: local_ci_only
+          POSTGRES_DB: keeper_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U keeper_test -d keeper_test"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+
     defaults:
       run:
         working-directory: frontend
@@ -68,6 +81,8 @@ jobs:
         run: pnpm typecheck
 
       - name: Unit tests
+        env:
+          KEEPER_TEST_POSTGRES_URL: postgres://keeper_test:local_ci_only@127.0.0.1:5432/keeper_test
         run: pnpm test:strict
 
       - name: Build

@@ -198,11 +198,12 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     }
 
     function setMinPlayerTurnoverForUnlock(uint256 turnover_) external onlyGov {
-        // Divide rather than multiply: `MAX_MIN_TURNOVER_UNITS * _virtualOffset`
-        // overflows for high-decimals assets (decimals may be up to 77, and
-        // 10**77 is already near the uint256 ceiling), which would make the
-        // parameter permanently unsettable on such a pool.
-        if (turnover_ / _virtualOffset > MAX_MIN_TURNOVER_UNITS) revert Errors.InvalidConfig();
+        // Compare the exact asset-unit ceiling when it fits uint256. If it
+        // exceeds uint256, every representable threshold is already below it.
+        if (
+            _virtualOffset <= type(uint256).max / MAX_MIN_TURNOVER_UNITS
+                && turnover_ > MAX_MIN_TURNOVER_UNITS * _virtualOffset
+        ) revert Errors.InvalidConfig();
         minPlayerTurnoverForUnlock = turnover_;
     }
 

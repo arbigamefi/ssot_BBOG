@@ -126,6 +126,32 @@ export function loadKeeperConfig(env: NodeJS.ProcessEnv = process.env): KeeperCo
     10n,
     "KEEPER_SCAN_CHUNK_BLOCKS"
   );
+  const sportsEnabled =
+    parseBool(env.KEEPER_SPORTS_TERMINALIZER_ENABLED) ||
+    parseBool(env.KEEPER_SPORTS_TICKET_INDEX_ENABLED);
+  const sportsTicketScanStartBlock =
+    parseOptionalBlock(env.KEEPER_SPORTS_TICKET_SCAN_START_BLOCK) ??
+    BigInt(release.meta?.blockNumber ?? 0);
+  if (sportsEnabled) {
+    if (
+      !parseBool(env.BET_INDEX_WRITE_ENABLED) ||
+      !env.BET_INDEX_DATABASE_URL?.trim() ||
+      !release.contracts.sportsHub ||
+      release.contracts.sportsHub.toLowerCase() === "0x0000000000000000000000000000000000000000"
+    ) {
+      throw new Error(
+        "Sports recovery requires BET_INDEX_WRITE_ENABLED=true, BET_INDEX_DATABASE_URL and a sportsHub release address"
+      );
+    }
+    if (
+      sportsTicketScanStartBlock < 0n ||
+      sportsTicketScanStartBlock > BigInt(release.meta?.blockNumber ?? 0)
+    ) {
+      throw new Error(
+        "KEEPER_SPORTS_TICKET_SCAN_START_BLOCK must include the release block; advancing past it can omit outstanding tickets"
+      );
+    }
+  }
 
   return {
     chainId,
@@ -148,14 +174,13 @@ export function loadKeeperConfig(env: NodeJS.ProcessEnv = process.env): KeeperCo
     // hundreds of thousands of `eth_getLogs` calls and drains a provider quota
     // outright. Note a chunk is not one request: with scanIndexEventsEnabled a
     // gamehub chunk costs five (`BetRandomReady`, then the four index events),
-    // and a bank-ledger chunk costs one per configured pool.
+    // and a bank-ledger chunk costs two per configured pool, plus timestamps.
     //
     // The default keeps a healthy keeper comfortable while refusing to grind: at
     // the free-tier 10-block chunk size a 300s pass only needs ~15 chunks to keep
     // pace with Base, so 50 leaves 3x headroom and still drains short outages
-    // quickly. A backlog large enough to stay capped for days is an operator
-    // decision (fast-forward the cursor), not something to burn quota on — which
-    // is what `casino.keeper.scan_capped` is there to surface.
+    // quickly. Persistent backlog needs an audited recovery plan: the casino
+    // cursor also recovers unsettled bets and must not be blindly advanced.
     scanMaxChunksPerPass: parsePositiveInteger(
       env.KEEPER_SCAN_MAX_CHUNKS_PER_PASS,
       50,
@@ -200,25 +225,14 @@ export function loadKeeperConfig(env: NodeJS.ProcessEnv = process.env): KeeperCo
       scanChunkBlocks,
       "KEEPER_SPORTS_TICKET_SCAN_CHUNK_BLOCKS"
     ),
-    // The ticket log fallback rescans from a fixed start block on every call,
-    // so its range grows without limit as the deployment ages: on Base mainnet
-    // the default start is the release block, already ~4.5M blocks back, which
-    // at a 10-block chunk size is ~450k eth_getLogs per call — and it runs per
-    // market terminalization attempt, retried up to 8 times.
-    //
-    // This bounds the range the fallback may attempt. It is deliberately a
-    // refusal, not a narrower window: silently scanning only recent blocks
-    // would miss older tickets and hand the terminalizer a short list, which
-    // it would settle as if complete. ~1.2 days of Base blocks is enough for a
-    // market that terminalizes near its last ticket; anything wider means the
-    // ticket index should be doing this instead.
+    // This is a per-pass history budget. Successful chunks persist an independent
+    // checkpoint; deployment age never disables ticket recovery. Markets remain
+    // pending until complete history coverage reaches their settlement read.
     sportsTicketScanMaxBlocks: parseBlockCount(
       env.KEEPER_SPORTS_TICKET_SCAN_MAX_BLOCKS,
       50_000n,
       "KEEPER_SPORTS_TICKET_SCAN_MAX_BLOCKS"
     ),
-    sportsTicketScanStartBlock:
-      parseOptionalBlock(env.KEEPER_SPORTS_TICKET_SCAN_START_BLOCK) ??
-      BigInt(release.meta?.blockNumber ?? 0)
+    sportsTicketScanStartBlock
   };
 }

@@ -1,5 +1,12 @@
 import postgres, { type Sql } from "postgres";
 import type { Address, Hex } from "viem";
+import {
+  createMemorySportsRecoveryStore,
+  createPostgresSportsRecoveryStore,
+  SPORTS_RECOVERY_SCHEMA_SQL,
+  type SportsRecoveryStore
+} from "./sports-recovery.js";
+export type { SportsMarketWork, SportsRecoveryStore } from "./sports-recovery.js";
 
 export type BetLifecycleState = "placed" | "randomReady" | "finalized" | "refunded";
 export type SportsTicketLifecycleState = "held" | "settled" | "refunded" | "voided";
@@ -220,6 +227,13 @@ export type BetIndexCursor = {
 };
 
 export type BetIndexStore = {
+  sportsRecovery: SportsRecoveryStore;
+  getRandomReadyBetIds: (query: {
+    chainId: number;
+    gameHub: Address;
+    afterBetId: bigint;
+    limit: number;
+  }) => Promise<bigint[]>;
   migrate: () => Promise<void>;
   writeGameHubEvents: (events: readonly BetIndexEvent[]) => Promise<BetRow[]>;
   writeBetRows: (rows: readonly BetRow[]) => Promise<BetRow[]>;
@@ -304,7 +318,9 @@ export type BetIndexStore = {
   close?: () => Promise<void>;
 };
 
-export const BET_INDEX_SCHEMA_SQL = `
+export const BET_INDEX_SCHEMA_SQL =
+  SPORTS_RECOVERY_SCHEMA_SQL +
+  `
 create table if not exists gamehub_events (
   chain_id integer not null,
   game_hub text not null,
@@ -377,6 +393,10 @@ create index if not exists bets_asset_placed_at_idx
 
 create index if not exists bets_state_idx
   on bets (chain_id, state, updated_block desc);
+
+create index if not exists gamehub_events_recovery_idx
+  on gamehub_events (chain_id, game_hub, event_name,
+    (coalesce(args_json->>'positionId', args_json->>'betId', args_json->>'id', '0')::numeric));
 
 create table if not exists sport_tickets (
   chain_id integer not null,
@@ -492,11 +512,13 @@ export function createMemoryBetIndexStore(): BetIndexStore {
   const sportsTickets = new Map<string, SportsTicketRow>();
   const bankProviderLedger = new Map<string, BankProviderLedgerRow>();
   const cursors = new Map<string, bigint>();
+  const gameHubEvents = new Map<string, BetIndexEvent>();
 
   const writeGameHubEvents = async (input: readonly BetIndexEvent[]) => {
     const changed = new Map<string, BetRow>();
     const sorted = [...input].sort(compareEvents);
     for (const event of sorted) {
+      gameHubEvents.set(`${event.chainId}:${event.txHash}:${event.logIndex}`, event);
       const betId = String(event.args.positionId ?? event.args.betId ?? event.args.id ?? "0");
       const key = `${event.chainId}:${betId}`;
       const existing = bets.get(key);
@@ -539,6 +561,25 @@ export function createMemoryBetIndexStore(): BetIndexStore {
 
   return {
     migrate: async () => undefined,
+    sportsRecovery: createMemorySportsRecoveryStore(),
+    getRandomReadyBetIds: async ({ chainId, gameHub, afterBetId, limit }) => {
+      const ready = new Set<bigint>();
+      const terminal = new Set<bigint>();
+      for (const event of gameHubEvents.values()) {
+        if (event.chainId !== chainId || event.gameHub.toLowerCase() !== gameHub.toLowerCase())
+          continue;
+        const id = BigInt(
+          String(event.args.positionId ?? event.args.betId ?? event.args.id ?? "0")
+        );
+        if (event.eventName === "BetRandomReady") ready.add(id);
+        if (event.eventName === "BetFinalized" || event.eventName === "BetRefunded")
+          terminal.add(id);
+      }
+      return [...ready]
+        .filter((id) => id > afterBetId && !terminal.has(id))
+        .sort((a, b) => (a < b ? -1 : 1))
+        .slice(0, limit);
+    },
     writeGameHubEvents,
     writeBetRows: async (input) => {
       for (const row of input) {
@@ -765,8 +806,32 @@ async function upsertBetRow(sql: SqlTag, row: BetRow) {
 
 export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
   return {
+    sportsRecovery: createPostgresSportsRecoveryStore(sql),
+    getRandomReadyBetIds: async ({ chainId, gameHub, afterBetId, limit }) => {
+      const rows = await sql`
+        select distinct coalesce(e.args_json->>'positionId', e.args_json->>'betId', e.args_json->>'id', '0')::numeric as bet_id
+        from gamehub_events e
+        where e.chain_id = ${chainId} and e.game_hub = ${gameHub.toLowerCase()}
+          and e.event_name = 'BetRandomReady'
+          and coalesce(e.args_json->>'positionId', e.args_json->>'betId', e.args_json->>'id', '0')::numeric > ${String(afterBetId)}
+          and not exists (
+            select 1 from gamehub_events terminal
+            where terminal.chain_id = e.chain_id and terminal.game_hub = e.game_hub
+              and terminal.event_name in ('BetFinalized', 'BetRefunded')
+              and coalesce(terminal.args_json->>'positionId', terminal.args_json->>'betId', terminal.args_json->>'id', '0')::numeric
+                = coalesce(e.args_json->>'positionId', e.args_json->>'betId', e.args_json->>'id', '0')::numeric
+          )
+        order by bet_id limit ${limit}
+      `;
+      return rows.map((row) => BigInt(row.betId));
+    },
     migrate: async () => {
-      await sql.unsafe(BET_INDEX_SCHEMA_SQL);
+      // Primary/backup and web workers can start together. Serialize DDL in a
+      // transaction so their CREATE/ALTER/index locks cannot invert each other.
+      await sql.begin(async (tx) => {
+        await tx`select pg_advisory_xact_lock(1936945012, 1)`;
+        await tx.unsafe(BET_INDEX_SCHEMA_SQL);
+      });
     },
     writeGameHubEvents: async (events: readonly BetIndexEvent[]) => {
       if (events.length === 0) return [];

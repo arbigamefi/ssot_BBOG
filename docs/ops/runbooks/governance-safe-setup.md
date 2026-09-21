@@ -1,14 +1,25 @@
 # Runbook: Stand up the governance Safe (2-of-3, single operator)
 
-Build the 2-of-3 Safe that becomes `gov` for every v1.5 contract at
-construction, and make its recovery path real rather than assumed.
+Prepare a 2-of-3 Safe and rehearse its recovery path for the planned v1.5
+governance design. This document is a readiness plan, not evidence that a
+Safe has been deployed, installed as governance, or exercised successfully.
 
 ## Scope
 
 - **Applies to:** Base mainnet 8453 and Base Sepolia 84532. Safe supports both.
-- **Produces:** one Safe address, which is an input to `DeployV15`. Nothing is
-  migrated — v1.5 contracts take it in their constructor, so the two-step
-  `transferGovernance` / `acceptGovernance` dance never runs.
+- **Produces:** a proposed Safe address and rehearsal evidence. A versioned
+  v1.5 deployment/bootstrap workflow is still required before it can become
+  protocol governance. Do not treat `DeployV15` as an available command.
+- **Current deployment limit:** `script/DeployV14.s.sol` requires
+  `cfg.deployer == cfg.gov` and performs governance-only wiring from the
+  broadcast EOA. It cannot bootstrap contracts with a Safe as governance;
+  merely substituting the Safe address into `GOV` fails its preflight.
+- **Migration status:** neither new deployment nor transfer of existing
+  governance is proven by this plan. Existing-contract migration would need
+  reviewed `transferGovernance` actions by current governance, then
+  `acceptGovernance` executed by the Safe for each contract, with readback.
+  A constructor-based Safe design instead needs a working bootstrap path that
+  performs all privileged wiring through the correct authority.
 - **Does not cover:** the guardian. That is a separate plain EOA set afterwards
   with `Bank.setGuardian`, and it is not a Safe signer. See
   `keeper-key-separation.md` for how its key is generated and handled.
@@ -35,11 +46,12 @@ three independent people.
 - Every backup sitting in one place. A single fire or burglary can take out
   the whole quorum — which is what the storage rule below exists to prevent.
 
-Against the alternative that actually exists today — a single EOA whose key has
-lived on an internet-facing host since deployment — this is a real improvement:
-taking the protocol now requires compromising two devices of different kinds.
-It is not the improvement a three-person quorum would be, and the documentation
-should not imply otherwise.
+Historical operations records describe governance under a single EOA whose
+key resided on an internet-facing host. Replacing that authority with a
+verified 2-of-3 Safe would require two device signatures for normal governance
+actions. This remains a planned improvement until contract governance, Safe
+owners/threshold, execution and recovery are verified; it does not establish
+a three-person quorum or erase prior credential exposure.
 
 ## Signer design
 
@@ -106,10 +118,12 @@ Repeat the rehearsal after any signer change.
 Collecting two signatures means physically reaching two devices. That is fine
 for a parameter change and bad for an emergency.
 
-The guardian exists so that pausing does not wait for quorum: it is one
-transaction from one key, and it can only ever _decline new risk_ — it cannot
-unpause, move funds, or change any parameter. Unpausing stays behind the Safe,
-because re-admitting risk is the direction that deserves the delay.
+The guardian in the planned v1.5 Bank source permits a pause without quorum.
+That pause blocks new holds, deposit/mint, LP withdraw/redeem, protocol-fee
+claims and accrued XP claims. Held-bet settlement/refund remains available
+subject to hub conditions. The guardian cannot unpause, transfer funds or
+change parameters. If governance is the Safe, unpausing and guardian
+assignment/revocation require Safe execution with its owner quorum.
 
 For a one-person 2-of-3, this asymmetry is what keeps the multisig from making
 incident response slower than the single EOA it replaced.
@@ -120,23 +134,38 @@ incident response slower than the single EOA it replaced.
 2. **Mainnet Safe.** Same three signers, threshold 2-of-3, on Base mainnet via
    app.safe.global. Creation is a normal Base transaction — cheap, but it needs
    gas in whichever signer account deploys it.
-3. **Record the address.** It is a constructor argument to `DeployV15`, not
-   something configured afterwards, so the deploy is blocked until it exists.
-4. **After deployment**, set the guardian on each Bank with
-   `Bank.setGuardian(address)` from the Safe, then verify:
+3. **Record the Safe address, owners and threshold.** Complete the versioned
+   deployment/bootstrap or migration design before using this address as
+   protocol governance. Keep the v1.5 deployment blocked until that workflow
+   can initialize all privileged wiring and verify every target's authority;
+   the existing `DeployV14` script is not that workflow.
+4. **Rehearse protocol governance on Sepolia.** Use the implemented deployment
+   or migration path, then execute a harmless reviewed governance action via
+   the Safe. Verify the target contract sees the Safe as its immediate caller,
+   the Safe execution succeeds, and the changed state is read back. A relayer's
+   outer transaction sender is not the governance identity.
+5. **After a verified guardian-capable Bank deployment**, prepare its guardian
+   assignment and execute it through the Safe using the
+   [EOA/Safe action procedure](pause-config-drift.md#execute-a-governance-action-eoa-or-safe):
 
    ```bash
-   cast call $BANK "governance()(address)" --rpc-url $RPC   # the Safe
-   cast call $BANK "guardian()(address)"   --rpc-url $RPC   # the guardian EOA
+   # Transaction Builder target: this Bank; value: 0; data: this output.
+   cast calldata "setGuardian(address)" "$GUARDIAN"
+   # Read back after the required Safe owner quorum executes successfully.
+   cast call "$BANK" "governance()(address)" --rpc-url "$RPC"
+   cast call "$BANK" "guardian()(address)" --rpc-url "$RPC"
    ```
 
-   These must differ. A guardian equal to governance is not a fast path, it is
-   a second copy of the same authority.
+   Verify governance is the approved Safe and guardian is the separate approved
+   EOA. On Sepolia, rehearse guardian pause, Safe revocation, and Safe unpause in
+   that order; confirm the revoked guardian cannot pause again. Record receipt,
+   Safe transaction and readback evidence before declaring readiness.
 
 ## What this does not settle
 
-The old single EOA `0xc8eC9920…24B1b684` remains the signer of historical
-release locks, and it lived on an internet-facing host from deployment until
-2026-09-20. Moving governance to a Safe makes that irrelevant going forward; it
-does not rewrite the past. Whether to retire that key for release signing is a
-separate decision from this runbook.
+Historical release locks identify the old EOA `0xc8eC9920…24B1b684`, and the
+2026-09-20 operations record describes its prior host residency. This plan
+does not verify its current roles or credential copies. A verified governance
+transfer would remove only the transferred on-chain authority; release signing,
+other retained roles and old-key copies require separate inventory and
+retirement decisions. Safe creation alone does not complete that migration.
