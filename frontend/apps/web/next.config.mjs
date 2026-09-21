@@ -49,6 +49,12 @@ const nextConfig = {
   },
 
   webpack(config) {
+    // Workspace paths consume TypeScript sources, while their emitted Node ESM
+    // imports use .js. Preserve real .js files and resolve source .ts as fallback.
+    config.resolve.extensionAlias = {
+      ...(config.resolve.extensionAlias ?? {}),
+      ".js": [".js", ".ts"]
+    };
     config.resolve.alias = {
       ...(config.resolve.alias ?? {}),
       "@react-native-async-storage/async-storage": false,

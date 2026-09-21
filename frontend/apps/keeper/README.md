@@ -137,11 +137,42 @@ settles held tickets for resolved markets or refunds held tickets for voided
 markets. Every write is simulated first; player-side ticket actions remain a
 fallback path.
 
-Held ticket discovery is Postgres-first. If the durable bet index has not
-backfilled a market yet, the keeper falls back to a bounded `nextTicketId` /
-`getTicket` enumeration, then to a last-resort `TicketPlaced` log scan. Use
-`KEEPER_SPORTS_TERMINALIZER_MARKET_IDS=1,2` only for recovery or canary replay
-when an already-terminal market must be processed at startup.
+Sports recovery requires `BET_INDEX_WRITE_ENABLED=true`, a reachable
+`BET_INDEX_DATABASE_URL`, and a `sportsHub` address in the release. Missing
+configuration or a failed database migration aborts startup before event watchers,
+workers, or transactions start. Casino-only mode still supports running without
+a database. This is an intentional change from the old database-free sports fallback.
+
+The keeper adds `keeper_sports_work` and `keeper_sports_tickets` through the normal
+idempotent migration. Both isolate data by chain and SportsHub. A bounded
+`TicketPlaced` history scan builds the recovery ticket IDs independently of the
+public `sport_tickets` feed. Each sports scanner keeps its own durable checkpoint
+in `indexer_cursors`, keyed by SportsHub with sources
+`sports-markets-v1:<start-block>` and `sports-tickets-v1:<start-block>`.
+Changing the casino `KEEPER_START_BLOCK` or its cursor does not advance sports
+coverage. Pending page checkpoints bind to the coverage origin and reset when it
+is widened. Configure the same origin on primary and backup; a worker with a
+narrower origin leaves wider-history work for the matching worker. Sports history starts at the release block by default; a configured
+sports start must include that block. Widening the range starts a new coverage
+checkpoint.
+
+Market events are saved as pending work before advancing the event cursor.
+Pending work survives restarts, RPC errors and more than eight failed attempts.
+Settlement reads require complete ticket coverage through the durable market
+event block (after ticket placement closes), rather than a moving chain head, and process at most `KEEPER_SPORTS_TERMINALIZER_MAX_TICKETS_PER_MARKET` IDs per page.
+This setting is a page size, not a market total. The next page is retained as
+work; already terminal tickets are skipped using their on-chain state. A crash
+after a transaction but before its checkpoint therefore safely rereads the page.
+Work is removed only after the last covered page completes. A stale worker cannot
+acknowledge a newer job revision.
+
+`KEEPER_SPORTS_TICKET_INDEX_ENABLED` separately enables the public sportsbook
+feed's four event types on the independent history scanner. It is not required
+for terminalization's recovery ID index. The old
+`KEEPER_SPORTS_TICKET_ENUMERATION_MAX` is accepted for environment compatibility
+but no longer supplies a recent-ID sample as a complete market list.
+Use `KEEPER_SPORTS_TERMINALIZER_MARKET_IDS=1,2` for recovery when an already
+terminal market must be queued at startup. It does not bypass coverage checks.
 
 Durable bet-feed indexing can be enabled with:
 
@@ -153,8 +184,22 @@ pnpm -C frontend keeper:start
 
 When enabled, the keeper runs the Postgres migration, writes `GameHub` lifecycle
 events, and resumes scan windows from the persisted `gamehub-events` cursor when
-that cursor is ahead of `KEEPER_START_BLOCK`. Index writes are best-effort:
-failures are logged and do not block `finalize`.
+that cursor is ahead of `KEEPER_START_BLOCK`. Index failures stop that scan before
+its cursor advances, and the next pass retries the failed range. Ready casino bets
+are queued before index writes, so an index outage does not suppress their
+settlement. Websocket index errors are recovered by the historical scanner when
+`KEEPER_SCAN_INDEX_EVENTS_ENABLED=true`. Existing gaps created by an older binary
+still need an audited backfill; upgrading does not prove an old cursor's history.
+Concurrent migrations take one transaction-scoped PostgreSQL advisory lock.
+
+At startup and each scan, the keeper requeues up to 50 indexed `BetRandomReady`
+IDs by chain and GameHub. A numeric keyset advances past stale or repeatedly
+failing IDs and wraps at the end. This closes the crash window between persisting
+a scan cursor and draining the in-memory settlement queue. If RPC scanning is
+disabled, a database-only recovery pass runs every 300 seconds. Recorded terminal
+events are excluded; any stale rows are checked against on-chain `getBet` before
+writing. Durable recovery cannot recover events that were never indexed and were
+already skipped by an older cursor.
 
 LP provider ledger indexing is intentionally decoupled from the high-priority
 GameHub scan. `KEEPER_BANK_PROVIDER_LEDGER_SCAN_INTERVAL_SECONDS` defaults to
@@ -233,34 +278,34 @@ and then keeps doing it after every quota reset.
 
 A chunk is not one request. With `KEEPER_SCAN_INDEX_EVENTS_ENABLED=true` a
 gamehub chunk costs five (`BetRandomReady`, then the four index events), and a
-bank-ledger chunk costs one per configured pool, so budget accordingly.
+bank-ledger chunk costs two per configured pool (`Deposit` and `Withdraw`),
+plus block timestamp reads when needed. Sports recovery costs one ticket event
+request per chunk, or four when the public ticket feed is enabled, plus four
+market event requests. Budget each independent scanner accordingly.
 
 At the 10-block chunk size a 300s pass needs only ~15 chunks to keep pace with
 Base's 2s blocks, so the default leaves roughly 3x headroom and still drains a
 short outage quickly. When a pass is capped the keeper logs
 `casino.keeper.scan_capped` with the remaining block count. Occasional entries
-after a restart are normal; sustained capping means the backlog is too large to
-grind through affordably, and the cheap fix is to fast-forward the cursor in
-`indexer_cursors` rather than raise the cap.
+after a restart are normal. Sustained capping requires a bounded recovery plan
+with a provider budget and an audit of outstanding bets. **Do not fast-forward
+`gamehub-events` to suppress this log**: it also finds missed `BetRandomReady`
+events, so advancing it can skip unsettled bets. Repair and verify the skipped
+range before changing a settlement cursor.
 
-`KEEPER_SPORTS_TICKET_SCAN_MAX_BLOCKS` defaults to `50000` and bounds the ticket
-log fallback used when neither the bet index nor contract enumeration can find a
-market's tickets. That fallback has no cursor — it rescans from
-`KEEPER_SPORTS_TICKET_SCAN_START_BLOCK` (default: the release block) to the head
-on every call, per market, retried up to 8 times — so its cost grows with the age
-of the deployment. On Base mainnet the default start is already ~4.5M blocks back,
-which is ~450k `eth_getLogs` per call at a 10-block chunk size.
+`KEEPER_SPORTS_TICKET_SCAN_MAX_BLOCKS` defaults to `50000` and now limits the
+number of history blocks in a single pass, in addition to the chunk-count cap.
+Every successful chunk persists progress; a months-old release resumes over
+bounded passes instead of failing forever because of its age. A failed RPC or
+index write cannot advance coverage over its range. Do not move the sports start
+forward to exclude unresolved history. No casino cursor or partial public index
+is accepted as proof that recovery has all tickets.
 
-Over the limit, discovery **refuses and throws** rather than scanning a narrower
-window. That is deliberate: the terminalizer settles and refunds exactly the
-tickets it is handed, and cannot tell a short list from a complete one, so a
-partial result would mark the market terminal while leaving the tickets it missed
-held forever. Throwing surfaces as a retryable failure instead, which recovers.
-For the same reason a failed scan no longer returns what it collected before the
-error.
-
-If you hit the limit, the fix is `KEEPER_SPORTS_TICKET_INDEX_ENABLED=true` (the
-index keeps a cursor) or moving the start block forward — not raising the bound.
+The periodic sports scan uses `KEEPER_POLL_INTERVAL_SECONDS` (300 seconds if that
+interval is disabled); durable due work is checked once per second, one bounded
+market page at a time. Websocket market events can trigger a bounded catch-up
+scan immediately. Finality-pending jobs retain their due time; transient failures
+back off to 30 seconds and remain recoverable until they succeed.
 
 For dedicated keeper RPC provider apps, set `KEEPER_RPC_MIN_INTERVAL_MS=250` in
 each keeper env file. The keeper then serializes tracked in-process RPC calls
@@ -276,3 +321,18 @@ usage counters for the current one-minute window plus process lifetime totals.
 The local web app reads that file through the route
 `/ops/casino-keeper-health.json`, so the health file must stay outside
 `apps/web/public` to avoid a public-file / route conflict.
+
+## Recovery regression checks
+
+Run `pnpm -C frontend/apps/keeper test` and `pnpm -C frontend/packages/bet-index test`.
+The PostgreSQL integration suite additionally needs a disposable local database:
+
+```bash
+KEEPER_TEST_POSTGRES_URL=postgres://user:password@127.0.0.1:5432/test_db \
+  pnpm -C frontend/packages/bet-index test
+```
+
+The SQL suite refuses remote hosts, creates and removes its own schema, and checks
+concurrent fresh migrations, rollback/replay, scope isolation, numeric pages,
+stale acknowledgements and casino recovery queries. Without this explicit local
+URL it is skipped; memory tests still run.

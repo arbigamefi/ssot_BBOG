@@ -7,7 +7,7 @@ import { loadKeeperConfig } from "./env.js";
 
 const PRIVATE_KEY = `0x${"1".repeat(64)}` as const;
 
-function writeRelease() {
+function writeRelease(sportsHub = "0x0000000000000000000000000000000000000003") {
   const dir = mkdtempSync(join(tmpdir(), "keeper-env-"));
   const path = join(dir, "chain-84532.json");
   writeFileSync(
@@ -16,6 +16,7 @@ function writeRelease() {
       chainId: 84532,
       contracts: {
         gameHub: "0x0000000000000000000000000000000000000001",
+        sportsHub,
         vrfHub: "0x0000000000000000000000000000000000000002"
       },
       meta: { blockNumber: 123 }
@@ -63,12 +64,58 @@ describe("loadKeeperConfig", () => {
     );
   });
 
-  it("bounds the sports ticket log fallback well under a full-history rescan", () => {
+  it("bounds each durable sports history pass", () => {
     const config = loadKeeperConfig(baseEnv());
 
-    // That fallback rescans from a fixed start block on every call, so without
-    // a bound its range grows with the age of the deployment.
+    // Completed chunks persist; this is a per-pass budget, not a deployment age limit.
     expect(config.sportsTicketScanMaxBlocks).toBe(50_000n);
+  });
+
+  it("requires durable storage for sports but keeps database-free casino configuration valid", () => {
+    expect(() => loadKeeperConfig(baseEnv())).not.toThrow();
+    expect(() => loadKeeperConfig(baseEnv({ KEEPER_SPORTS_TERMINALIZER_ENABLED: "true" }))).toThrow(
+      /BET_INDEX_DATABASE_URL/
+    );
+    expect(() => loadKeeperConfig(baseEnv({ KEEPER_SPORTS_TICKET_INDEX_ENABLED: "true" }))).toThrow(
+      /BET_INDEX_DATABASE_URL/
+    );
+    expect(() =>
+      loadKeeperConfig(
+        baseEnv({
+          KEEPER_SPORTS_TERMINALIZER_ENABLED: "true",
+          BET_INDEX_WRITE_ENABLED: "true",
+          BET_INDEX_DATABASE_URL: "postgres://local/test"
+        })
+      )
+    ).not.toThrow();
+  });
+
+  it("rejects moving sports history past the release block", () => {
+    expect(() =>
+      loadKeeperConfig(
+        baseEnv({
+          KEEPER_SPORTS_TERMINALIZER_ENABLED: "true",
+          BET_INDEX_WRITE_ENABLED: "true",
+          BET_INDEX_DATABASE_URL: "postgres://local/test",
+          KEEPER_SPORTS_TICKET_SCAN_START_BLOCK: "124"
+        })
+      )
+    ).toThrow(/must include the release block/);
+  });
+
+  it("rejects enabling sports against an undeployed zero-address release", () => {
+    const releasePath = writeRelease("0x0000000000000000000000000000000000000000");
+    expect(() => loadKeeperConfig(baseEnv({ KEEPER_RELEASE_PATH: releasePath }))).not.toThrow();
+    expect(() =>
+      loadKeeperConfig(
+        baseEnv({
+          KEEPER_RELEASE_PATH: releasePath,
+          KEEPER_SPORTS_TERMINALIZER_ENABLED: "true",
+          BET_INDEX_WRITE_ENABLED: "true",
+          BET_INDEX_DATABASE_URL: "postgres://local/test"
+        })
+      )
+    ).toThrow(/sportsHub/);
   });
 
   it("names the offending variable when a block count is invalid", () => {
