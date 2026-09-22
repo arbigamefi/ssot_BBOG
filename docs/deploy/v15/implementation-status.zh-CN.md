@@ -1,6 +1,6 @@
 # v1.5 全新部署实施记录
 
-更新于 2026-09-22。本记录区分已完成的部署与维护工作、仍待完成的治理和业务验收。生产 Web/keeper 仍指向旧合约。Sepolia v1.5 已部署，Bank 保持暂停，等待真实 Safe 接收治理；主网 v1.5 尚未部署。
+更新于 2026-09-22。本记录区分已完成的部署与维护工作、仍待完成的治理和业务验收。生产 Web/keeper 仍指向旧合约。Sepolia v1.5 已部署且 7 个合约均已由真实 2/3 Safe 接收治理，Bank 保持暂停；业务验收和主网 v1.5 部署仍待完成。
 
 ## 已确认参数
 
@@ -20,14 +20,14 @@
 | 1. 保全与清理旧未结算单     | 已完成本次明确范围              | Git 完整 bundle；数据库 dump 哈希及独立恢复；142/143 的交易、链上终态和数据库收据一致                                          |
 | 2. 单一 v1.5 部署与发布工具 | 已合并并完成双链模拟            | 新建 Bank 初始暂停；Safe 提名、真实接收、发布校验分开；旧发布入口拒绝；CI 校验通过后冻结代码                                   |
 | 3. Sepolia 全新部署         | 已部署，51 笔成功回执已交叉核对 | 对最终代码重新模拟，核验签名地址、余额、nonce 和费用；广播一次并逐笔确认；异常时保留原交易记录，禁止盲目重跑                   |
-| 4. Sepolia 治理与业务验收   | 接收包就绪，等待 2/3 owner 执行 | 两名真实 owner 执行 Safe 接收包；旧 bootstrap 无治理权限；guardian 只能暂停；新投注、VRF、结算/退款、DB、UI 和重启恢复全部验收 |
+| 4. Sepolia 治理与业务验收   | 治理接收已核验，业务验收待完成  | 两名真实 owner 执行 Safe 接收包；旧 bootstrap 无治理权限；guardian 只能暂停；新投注、VRF、结算/退款、DB、UI 和重启恢复全部验收 |
 | 5. Base 主网部署            | 未开始                          | 复用通过验收的源代码和主网参数；核验成本与 nonce；部署、Safe 接收、链上状态及签名发布包验证完成                                |
 | 6. 新应用切换               | 未开始                          | CI 构建不可变镜像；Web/keeper 双链 manifest 和 Git revision 一致；全新 `arbigamefi_v15` 数据库；内部验证后交接 keeper 和 Caddy |
 | 7. 旧系统退役               | 未开始                          | 剩余 LP、协议费用、XP 等资产义务逐项处置；新系统稳定验收；列出旧容器、卷、脚本、密钥的准确退役清单后执行                       |
 
 步骤 3—6 的具体命令与检查在 [v1.5 发布流程](../v15-release.md)。首次模拟前部署账户两条链均为 nonce=0、balance=0；该状态已被后续到账和 Sepolia 部署改变。新地址的只读部署模拟均通过：每条链估算 gas 为 33,962,624；Sepolia 约 0.000373588864 ETH，Base 约 0.000341341352512 ETH。这些是当时估算，广播前需要刷新。
 
-## Sepolia 实际部署与待签名步骤
+## Sepolia 实际部署与治理接收
 
 #50、#51 已按顺序合并，本次部署使用主线提交 `d17a6a8db1598b9d6dce1114a0154708396514cf`。51 笔交易均成功，最后一笔位于区块 47140563，使用另一 RPC 逐笔核对了回执及区块哈希。实际费用含 L1 为 **0.000159166635682337 ETH**；账户剩余 **0.049840833364317663 ETH**，nonce=51。之前零余额及模拟费用的记录均是历史观测。
 
@@ -35,9 +35,11 @@
 - USDC Bank：`0xEa3845f08a273257c3d3458D26e7bd4234330Dd4`。
 - WETH Bank：`0x9d61C6230ef0bF2d853e17a0368CBC384ef1843B`。
 
-全部 7 个治理目标的字节码、提名、已发布参数以及 Bank guardian/暂停状态，均在部署完成区块上验证通过。完整地址和交易哈希见 [部署记录](base-sepolia-deployment.json)。当前为 `pending-safe-acceptance`，不能视为治理交接完成或正式上线。
+全部 7 个治理目标的字节码、提名、已发布参数以及 Bank guardian/暂停状态，均在部署完成区块上验证通过。完整地址和交易哈希见 [部署记录](base-sepolia-deployment.json)。原始 snapshot 的 `pending-safe-acceptance` 保留为部署时历史事实；最新治理状态以独立接收记录为准。
 
-由 Safe 的两名真实 owner 在 **Base Sepolia** 的 Transaction Builder 导入 [治理接收包](safe-acceptance-84532.json)，核对 7 笔 `acceptGovernance()` 后签名执行。每笔 native value 为 0；此包不会解除 Bank 暂停。执行后继续检查全部目标 `governance=Safe`、`pendingGovernance=0`，再进行发布和业务验收。导入方式见 [Safe 官方说明](https://help.safe.global/articles/4180673514-transaction-builder)。
+真实 Safe 已在区块 **47141051** 执行 [治理接收交易](https://sepolia.basescan.org/tx/0x34892d2e97f2f40959355fb05303a8119d26d9053faf57650b70ffdfb4f54a2c)。已核对成功回执、Safe `ExecutionSuccess` 以及同一交易的 7 个 `GovernanceTransferred` 事件，并使用第二 RPC 核对回执与区块哈希。在固定区块 **47141280** 回读，所有目标均为 `governance=Safe`、`pendingGovernance=0`；`VerifyGovernanceV15` 完整代码/参数/Safe 控制/Bank 暂停状态校验通过。详见 [治理接收证据](base-sepolia-governance-accepted.json)。
+
+[原始治理接收包](safe-acceptance-84532.json) 保留为历史证据，不应再次执行。此交易没有解除 Bank 暂停，也没有完成业务验收或生产切换。已使用已批准的发布账号签署元数据，完成发布包生成、严格制品一致性校验、签名验证及打包前实时治理校验，并通过 `ssot:sync` 导入 Sepolia v1.5 manifest、ABI 和可复核的原始发布包副本。见 [发布记录](base-sepolia-release.json)。下一步使用独立数据库准备测试网业务验收。
 
 独立核验曾遇到官方 RPC 限流、公共 RPC 的批量/传输读取失败；改用另一 RPC 的单项读取后完成全部 51 笔核验。失败记录保留，未重发部署交易。
 
@@ -61,6 +63,10 @@
 - 新增部署测试覆盖提名与接受的区别、部分接受、Safe 配置变化、字节码不一致、Bank 风险参数/退款时间/池状态变化，以及 Sports 目标完整性。
 - 发布工具测试覆盖旧 schema、混用 chain/block、缺少信任锚、镜像 revision/digest 不一致、治理校验失败时禁止打包，并保留原活跃文件。
 - 本地 Safe mock 仅验证程序边界，不能替代真实 2/3 签名和钱包恢复演练。
-- 当前嵌入式 manifest 仍对应旧合约；没有把模拟地址写成已部署地址。新部署镜像校验会拒绝这些旧 manifest。
+- Sepolia 嵌入式 manifest 已对应真实 v1.5 合约；Base 主网仍为旧版。双链 v1.5 镜像门禁会继续拒绝当前混合版本的生产切换，直到主网部署与治理验收完成。
 - 旧版历史 fixture、地址证据和部分维护脚本暂时保留，直到其资产义务和依赖逐项退役；不能声称已删除全部历史版本。
 - 新合约一旦接受投注，应用回滚也必须继续指向 v1.5 地址和兼容数据库，不能切回旧合约。
+
+19 项固定区块只读权限检查通过，覆盖两个 Bank 的旧部署者、guardian、keeper、三名 Safe owner 无权直接解除暂停，guardian 有权暂停但无权改任 guardian，及旧部署者无权修改 GameHub 退款超时。`eth_call` 的 caller 模拟不构成真实签名或状态变更演练，详见 [权限只读证据](base-sepolia-permissions-readonly.json)。
+
+Sepolia 发布包导入后的应用验证：类型检查、Web 构建、778 项测试通过；另用本机独立 PostgreSQL 补验 6 项恢复集成测试通过。实时 release smoke 通过。本机 Web 对新 release 和新 PostgreSQL 的健康检查通过，keeper 尚未交接，因此整体 `degraded`；未宣称完整业务验收完成。后续安排见 [测试网验收计划](sepolia-acceptance-plan.zh-CN.md)。

@@ -1,5 +1,5 @@
 {
-  "status": "sepolia-deployed-awaiting-safe-acceptance",
+  "status": "sepolia-safe-accepted-pending-functional-acceptance",
   "authorizedBy": "Owner messages in this task",
   "chainSafes": {
     "8453": "0x7F0c244e1701B069727670745FD047179Ef8691d",
@@ -12,7 +12,6 @@
   "releaseSigner": "0x93ac87413E17d01CBa37B6317f64890bF7f99aC3",
   "releaseSignerPolicy": "use the approved deployer for release metadata only; Safe retains protocol governance",
   "remainingInputs": [
-    "two Safe owners execute the Base Sepolia acceptance package",
     "complete fresh-chain functional and recovery acceptance",
     "fund Base mainnet deployer before mainnet deployment"
   ],
@@ -76,5 +75,16 @@
     "chainId": 8453,
     "balanceWei": "0",
     "nonce": 0
+  },
+  "latestSepoliaGovernanceAcceptance": "base-sepolia-governance-accepted.json",
+  "sepoliaAcceptanceWallet": {
+    "address": "0x93ac87413E17d01CBa37B6317f64890bF7f99aC3",
+    "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+    "availableTestUsdc": "50",
+    "signingMethod": "approved deployer Foundry keystore; owner explicitly authorized use of 50 test USDC",
+    "useExistingDeployerEthForWeth": false,
+    "liquidityBudgetUsdc": "40",
+    "maximumBettingBudgetUsdc": "10",
+    "supersedesAcceptanceWallet": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684"
   }
 }

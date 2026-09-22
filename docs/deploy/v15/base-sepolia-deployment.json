@@ -1,5 +1,5 @@
 {
-  "status": "deployed-pending-safe-acceptance",
+  "status": "deployed-safe-accepted-pending-functional-acceptance",
   "chainId": 84532,
   "sourceCommit": "d17a6a8db1598b9d6dce1114a0154708396514cf",
   "sourceTree": "96be27c1129aec7599e9b102292450750eecb02d",
@@ -15,7 +15,7 @@
   "deployerNonce": 51,
   "observedAtUtc": "2026-09-22T04:03:04.182206+00:00",
   "allBanksPaused": true,
-  "governanceAccepted": false,
+  "governanceAccepted": true,
   "applicationCutover": false,
   "contracts": {
     "adapter": "0xf121a7B8C5327Ff8E093C7c3b94Ea4D240C895F4",
@@ -286,5 +286,6 @@
       "blockNumber": 47140563,
       "status": "success"
     }
-  ]
+  ],
+  "governanceAcceptance": "base-sepolia-governance-accepted.json"
 }
