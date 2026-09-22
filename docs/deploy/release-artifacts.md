@@ -1,22 +1,28 @@
 # Release artifacts (digest + signature)
 
+> Fresh deployments use the [v1.5 workflow](v15-release.md). Versioned v1.3/v1.4 artifacts below are historical records and must not be imported as active releases.
+
 This repo produces two kinds of deployment artifacts:
 
-1) **Snapshot JSON** (human/audit)
+1. **Snapshot JSON** (human/audit)
+
 - `deployments/snapshots/deploy-<chainid>-<block>-v13.json` (immutable)
 - `deployments/latest-v13.json` (overwritten; points to latest snapshot)
 
-2) **Release lock** (machine-checkable)
+2. **Release lock** (machine-checkable)
+
 - `deployments/release/release-<chainid>-<block>-v13.json` (immutable)
 - `deployments/release-latest-v13.json` (overwritten)
 
-3) **Release notes** (human-readable, must include the digest)
+3. **Release notes** (human-readable, must include the digest)
+
 - `deployments/release/release-notes-<chainid>-<block>-v13.md`
 - `deployments/release-notes-latest-v13.md`
 
 The release lock is a deterministic digest computed from parsed snapshot fields (schema `SSOT_RELEASE_DIGEST_V13`) plus an ECDSA signature. This makes the deployment configuration **tamper-evident** without depending on JSON key ordering or whitespace.
 
 ## Generate
+
 After deployment:
 
 ```bash
@@ -30,6 +36,7 @@ TAG_NAME=vX.Y.Z make release-notes
 ```
 
 By default the signer key is:
+
 - `SIGNER_PRIVATE_KEY` (if set), otherwise
 - `PRIVATE_KEY`
 
@@ -42,6 +49,7 @@ make release-verify
 ```
 
 ## Release gating
+
 For tag/release pipelines enforce presence:
 
 ```bash
@@ -49,6 +57,7 @@ STRICT=1 make release-check
 ```
 
 In strict mode the check enforces:
+
 - snapshot exists
 - release lock exists and signature validates
 - release notes exist and reference the digest
@@ -79,6 +88,7 @@ make release-artifacts-tracked-v13
 ```
 
 ## Files
+
 - Generator: `script/release/ReleaseDigestV13.s.sol`
 - Verifier: `script/release/VerifyReleaseV13.s.sol`
 - Wrapper: `script/release/check_release.sh`

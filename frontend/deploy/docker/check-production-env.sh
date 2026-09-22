@@ -28,6 +28,32 @@ if [[ -f "deploy/docker/env/keeper.backup.env" ]] && grep -Eq "REPLACE_|change-m
   exit 1
 fi
 
+# Do not connect the new contracts to the old projection database.
+python3 - <<'PYDB'
+from pathlib import Path
+from urllib.parse import urlsplit
+
+def read(name):
+    result = {}
+    for line in (Path("deploy/docker/env") / name).read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        result[key] = value.strip().strip("\"'")
+    return result
+
+if read("postgres.env").get("POSTGRES_DB") != "arbigamefi_v15":
+    raise SystemExit("Use the dedicated arbigamefi_v15 database")
+for name in ("web.production.env", "keeper.primary.env", "keeper.testnet.primary.env"):
+    try:
+        database = urlsplit(read(name).get("BET_INDEX_DATABASE_URL", "")).path
+    except ValueError:
+        database = ""
+    if database != "/arbigamefi_v15":
+        raise SystemExit(name + ": v1.5 database identity mismatch")
+PYDB
+
 echo "[docker-prod] validating compose graph"
 docker compose -f compose.production.yml config >/dev/null
 

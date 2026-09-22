@@ -4,21 +4,21 @@ set -euo pipefail
 # Build an audit handoff bundle that is (1) self-contained for reviewers and (2) tied to a release digest.
 #
 # Inputs (defaults match release tooling):
-#   RELEASE_PATH   deployments/release-latest-v13.json
-#   SNAPSHOT_PATH  deployments/latest-v13.json
-#   NOTES_PATH     deployments/release-notes-latest-v13.md
+#   RELEASE_PATH   deployments/release-latest-v15.json
+#   SNAPSHOT_PATH  deployments/latest-v15.json
+#   NOTES_PATH     deployments/release-notes-latest-v15.md
 #   TAG_NAME       optional; defaults to chain-<chainId>-<blockNumber>
 #
 # Output:
 #   dist/ssot-audit-<TAG>-<digestPrefix>.tar.gz
 
-RELEASE_PATH="${RELEASE_PATH:-deployments/release-latest-v13.json}"
-SNAPSHOT_PATH="${SNAPSHOT_PATH:-deployments/latest-v13.json}"
-NOTES_PATH="${NOTES_PATH:-deployments/release-notes-latest-v13.md}"
-FRONTEND_MANIFEST_PATH="${FRONTEND_MANIFEST_PATH:-deployments/frontend-manifest-latest-v13.json}"
-GOLDEN_VECTORS_PATH="${GOLDEN_VECTORS_PATH:-deployments/golden-vectors-latest-v13.json}"
-ABIS_DIR="${ABIS_DIR:-deployments/abis-v13}"
-ABIS_INDEX_PATH="${ABIS_INDEX_PATH:-deployments/abis-v13/index.json}"
+RELEASE_PATH="${RELEASE_PATH:-deployments/release-latest-v15.json}"
+SNAPSHOT_PATH="${SNAPSHOT_PATH:-deployments/latest-v15.json}"
+NOTES_PATH="${NOTES_PATH:-deployments/release-notes-latest-v15.md}"
+FRONTEND_MANIFEST_PATH="${FRONTEND_MANIFEST_PATH:-deployments/frontend-manifest-latest-v15.json}"
+GOLDEN_VECTORS_PATH="${GOLDEN_VECTORS_PATH:-deployments/golden-vectors-latest-v15.json}"
+ABIS_DIR="${ABIS_DIR:-deployments/abis-v15}"
+ABIS_INDEX_PATH="${ABIS_INDEX_PATH:-deployments/abis-v15/index.json}"
 TAG_NAME="${TAG_NAME:-}"
 
 [[ -f "$RELEASE_PATH" ]] || { echo "missing $RELEASE_PATH (run: make release-digest)"; exit 1; }
@@ -51,31 +51,31 @@ mkdir -p "$BUNDLE_ROOT"
 # --- Copy release artifacts (canonical + conventional paths) ---
 mkdir -p "$BUNDLE_ROOT/deployments" "$BUNDLE_ROOT/deployments/snapshots" "$BUNDLE_ROOT/deployments/release" "$BUNDLE_ROOT/deployments/verify"
 
-cp -f "$SNAPSHOT_PATH" "$BUNDLE_ROOT/deployments/latest-v13.json"
-cp -f "$RELEASE_PATH" "$BUNDLE_ROOT/deployments/release-latest-v13.json"
-cp -f "$NOTES_PATH" "$BUNDLE_ROOT/deployments/release-notes-latest-v13.md"
-cp -f "$FRONTEND_MANIFEST_PATH" "$BUNDLE_ROOT/deployments/frontend-manifest-latest-v13.json"
-cp -f "$GOLDEN_VECTORS_PATH" "$BUNDLE_ROOT/deployments/golden-vectors-latest-v13.json"
+cp -f "$SNAPSHOT_PATH" "$BUNDLE_ROOT/deployments/latest-v15.json"
+cp -f "$RELEASE_PATH" "$BUNDLE_ROOT/deployments/release-latest-v15.json"
+cp -f "$NOTES_PATH" "$BUNDLE_ROOT/deployments/release-notes-latest-v15.md"
+cp -f "$FRONTEND_MANIFEST_PATH" "$BUNDLE_ROOT/deployments/frontend-manifest-latest-v15.json"
+cp -f "$GOLDEN_VECTORS_PATH" "$BUNDLE_ROOT/deployments/golden-vectors-latest-v15.json"
 
-SNAPSHOT_CONV="deployments/snapshots/deploy-${CHAIN_ID}-${BLOCK_NUMBER}-v13.json"
+SNAPSHOT_CONV="deployments/snapshots/deploy-${CHAIN_ID}-${BLOCK_NUMBER}-v15.json"
 [[ -f "$SNAPSHOT_CONV" ]] && cp -f "$SNAPSHOT_CONV" "$BUNDLE_ROOT/$SNAPSHOT_CONV"
 
-RELEASE_CONV="deployments/release/release-${CHAIN_ID}-${BLOCK_NUMBER}-v13.json"
+RELEASE_CONV="deployments/release/release-${CHAIN_ID}-${BLOCK_NUMBER}-v15.json"
 [[ -f "$RELEASE_CONV" ]] && cp -f "$RELEASE_CONV" "$BUNDLE_ROOT/$RELEASE_CONV"
 
-NOTES_CONV="deployments/release/release-notes-${CHAIN_ID}-${BLOCK_NUMBER}-v13.md"
+NOTES_CONV="deployments/release/release-notes-${CHAIN_ID}-${BLOCK_NUMBER}-v15.md"
 [[ -f "$NOTES_CONV" ]] && cp -f "$NOTES_CONV" "$BUNDLE_ROOT/$NOTES_CONV"
 
-FRONTEND_CONV="deployments/release/frontend-manifest-${CHAIN_ID}-${BLOCK_NUMBER}-v13.json"
+FRONTEND_CONV="deployments/release/frontend-manifest-${CHAIN_ID}-${BLOCK_NUMBER}-v15.json"
 [[ -f "$FRONTEND_CONV" ]] && cp -f "$FRONTEND_CONV" "$BUNDLE_ROOT/$FRONTEND_CONV"
 
-VECTORS_CONV="deployments/release/golden-vectors-${CHAIN_ID}-${BLOCK_NUMBER}-v13.json"
+VECTORS_CONV="deployments/release/golden-vectors-${CHAIN_ID}-${BLOCK_NUMBER}-v15.json"
 [[ -f "$VECTORS_CONV" ]] && cp -f "$VECTORS_CONV" "$BUNDLE_ROOT/$VECTORS_CONV"
 
-VERIFY_LATEST="deployments/verify-latest-v13.sh"
+VERIFY_LATEST="deployments/verify-latest-v15.sh"
 [[ -f "$VERIFY_LATEST" ]] && cp -f "$VERIFY_LATEST" "$BUNDLE_ROOT/$VERIFY_LATEST"
 
-VERIFY_CONV="deployments/verify/verify-${CHAIN_ID}-${BLOCK_NUMBER}-v13.sh"
+VERIFY_CONV="deployments/verify/verify-${CHAIN_ID}-${BLOCK_NUMBER}-v15.sh"
 [[ -f "$VERIFY_CONV" ]] && cp -f "$VERIFY_CONV" "$BUNDLE_ROOT/$VERIFY_CONV"
 
 # --- Copy source code and tooling (excluding vendored deps) ---
@@ -116,8 +116,8 @@ make deps
 2) Verify the release digest + signature deterministically (no RPC needed):
 
 \`\`\`bash
-RELEASE_PATH=deployments/release-latest-v13.json SNAPSHOT_PATH=deployments/latest-v13.json \
-  forge script script/release/VerifyReleaseV13.s.sol:VerifyReleaseV13 -vvv
+RELEASE_SIGNER=<approved-public-signer> RELEASE_PATH=deployments/release-latest-v15.json SNAPSHOT_PATH=deployments/latest-v15.json \
+  forge script script/release/VerifyReleaseV15.s.sol:VerifyReleaseV15 -vvv
 \`\`\`
 
 3) (Optional) Run proof gates:
@@ -130,7 +130,7 @@ make pr
 
 \`\`\`bash
 export ETHERSCAN_API_KEY=...   # BaseScan/Arbiscan compatible
-bash deployments/verify-latest-v13.sh
+bash deployments/verify-latest-v15.sh
 \`\`\`
 
 ## Deployment identity

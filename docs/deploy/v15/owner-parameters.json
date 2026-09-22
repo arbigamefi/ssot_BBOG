@@ -1,0 +1,65 @@
+{
+  "status": "implementation-in-progress-not-broadcast",
+  "authorizedBy": "Owner messages in this task",
+  "chainSafes": {
+    "8453": "0x7F0c244e1701B069727670745FD047179Ef8691d",
+    "84532": "0x7F0c244e1701B069727670745FD047179Ef8691d"
+  },
+  "deployer": "0x93ac87413E17d01CBa37B6317f64890bF7f99aC3",
+  "guardian": "0x20634D341ca56bc3E2C8BDe9310dAA88D23c02a2",
+  "guardianSource": "public address derived from Owner-designated ~/guardian.key; key not copied",
+  "releaseSigner": "0x93ac87413E17d01CBa37B6317f64890bF7f99aC3",
+  "releaseSignerPolicy": "use the approved deployer for release metadata only; Safe retains protocol governance",
+  "remainingInputs": [
+    "fund the approved deployer on each chain before broadcast",
+    "unlock the approved keystore locally when signing; do not send the passphrase in chat"
+  ],
+  "productionChangesCompleted": [
+    "finalized Sepolia positions 142 and 143",
+    "restored original testnet keeper container",
+    "hydrated both terminal receipts through Web API"
+  ],
+  "secretMaterialIncluded": false,
+  "deployerKeystoreAccount": "5e33d0f9-f7e1-4a8c-aff1-b14a684783a0",
+  "keystoreVerification": "encrypted file exists, public address absent from JSON; verify derived address on local unlock before signing",
+  "supersedesDeployer": "0xd6622cBaA82995bD62b3316b696c23314263BFB9",
+  "deployerReadback": {
+    "observedAtUtc": "2026-09-22T02:07:04.508051+00:00",
+    "8453": {
+      "nonce": 0,
+      "balanceWei": "0"
+    },
+    "84532": {
+      "nonce": 0,
+      "balanceWei": "0"
+    },
+    "keystoreMode": "0600",
+    "publicAddressDerivation": "pending local keystore unlock"
+  },
+  "priorDeployerSepoliaDryRun": {
+    "broadcast": false,
+    "estimatedGas": 33954634,
+    "estimatedEth": "0.000373500974",
+    "qualification": "previous rehearsal used superseded deployer; repeat with newly approved deployer"
+  },
+  "deploymentDryRuns": [
+    {
+      "chainId": 84532,
+      "deployer": "0x93ac87413E17d01CBa37B6317f64890bF7f99aC3",
+      "broadcast": false,
+      "exitCode": 0,
+      "observedAtUtc": "2026-09-22T02:12:49.524253+00:00",
+      "estimatedGas": "33962624",
+      "estimatedEth": "0.000373588864"
+    },
+    {
+      "chainId": 8453,
+      "deployer": "0x93ac87413E17d01CBa37B6317f64890bF7f99aC3",
+      "broadcast": false,
+      "exitCode": 0,
+      "observedAtUtc": "2026-09-22T02:13:22.817102+00:00",
+      "estimatedGas": "33962624",
+      "estimatedEth": "0.000341341352512"
+    }
+  ]
+}

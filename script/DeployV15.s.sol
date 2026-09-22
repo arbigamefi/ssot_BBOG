@@ -3,6 +3,8 @@ pragma solidity ^0.8.20;
 
 import "forge-std/Script.sol";
 import "forge-std/console2.sol";
+import {Governable} from "../src/access/Governable.sol";
+import {SafeGovernance} from "./common/SafeGovernance.sol";
 import {VmSafe} from "forge-std/Vm.sol";
 
 import {Bank} from "../src/core/Bank.sol";
@@ -28,21 +30,24 @@ import {SlotsModule} from "../src/modules/slots/SlotsModule.sol";
 
 import {ChainlinkV2PlusWrapperAdapter} from "../src/adapters/chainlink/ChainlinkV2PlusWrapperAdapter.sol";
 
-interface IERC20MetadataLikeV13 {
+interface IERC20MetadataLikeV15 {
     function symbol() external view returns (string memory);
     function decimals() external view returns (uint8);
 }
 
-/// @notice Deployment script for SSOT v1.3 router/pool topology.
+/// @notice Deployment script for SSOT v1.5 Safe-governed router/pool topology.
 ///
 /// Required env:
-///   PRIVATE_KEY, GOV, VRF_WRAPPER, NUM_POOLS, POOL_ASSET_0...
+///   DEPLOYER (bootstrap public address), GOV (final 2/3 Safe), CHAIN_ID, GUARDIAN, KEEPER_ADDRESS,
+///   RELEASE_SIGNER, SAFE_CODE_HASH, SAFE_OWNERS_HASH, SAFE_CONTROL_HASH,
+///   VRF_WRAPPER, NUM_POOLS, POOL_ASSET_0...
 ///
 /// Per-pool env:
 ///   POOL_ID_i                         default i + 1
 ///   POOL_ASSET_i                      required
 ///   POOL_DOMAIN_i                     default 1; 1=Casino, 2=Sports, 3=Future
-///   BANK_MIN_LIQ_BPS_i                default 1000
+///   BANK_MIN_LIQ_BPS_i                default 1000; legacy alias for risk reserve
+///   BANK_WITHDRAWAL_BUFFER_BPS_i      default BANK_MIN_LIQ_BPS_i
 ///   BANK_MIN_TURNOVER_FOR_UNLOCK_i    default 20 asset units
 ///   BANK_HOLDBACK_VESTING_SECONDS_i   default 86400
 ///   LP_NAME_i / LP_SYMBOL_i / LP_DECIMALS_i
@@ -62,8 +67,8 @@ interface IERC20MetadataLikeV13 {
 ///   SPORTS_DERIVE_ROLE_SET_HASHES=true derives final hashes from deployed SportsHub + bootstrap roles
 ///
 /// Example:
-///   forge script script/DeployV13.s.sol:DeployV13 --rpc-url $RPC_URL --broadcast -vvv
-contract DeployV13 is Script {
+///   forge script script/DeployV15.s.sol:DeployV15 --rpc-url $RPC_URL --broadcast -vvv
+contract DeployV15 is Script {
     bytes32 internal constant GAME_DICE = keccak256("DICE");
     bytes32 internal constant GAME_COIN = keccak256("COIN_TOSS");
     bytes32 internal constant GAME_ROULETTE = keccak256("ROULETTE");
@@ -91,7 +96,9 @@ contract DeployV13 is Script {
         uint256 maxOutcomeReserved;
         uint256 maxEventReserved;
         bytes32 oddsSignerSetHash;
+        bytes32 initialOddsSignerSetHash;
         bytes32 resultReporterSetHash;
+        bytes32 initialResultReporterSetHash;
         uint8 resultReporterThreshold;
         uint64 resultChallengeTimeoutSeconds;
         bool deriveRoleSetHashes;
@@ -102,9 +109,15 @@ contract DeployV13 is Script {
     }
 
     struct DeployConfig {
-        uint256 privateKey;
         address deployer;
-        address gov;
+        address gov; // temporary bootstrap signer, preserved in constructor arguments
+        address finalGovernance;
+        address guardian;
+        address keeper;
+        address releaseSigner;
+        bytes32 safeOwnersHash;
+        bytes32 safeCodeHash;
+        bytes32 safeControlHash;
         address treasury;
         address vrfWrapper;
         uint256 requestGasPriceWei;
@@ -122,6 +135,7 @@ contract DeployV13 is Script {
         address bank;
         SSOTTypes.PoolDomain domain;
         uint16 minLiqBps;
+        uint16 withdrawalBufferBps;
         uint256 minTurnoverForUnlock;
         uint256 holdbackVestingSeconds;
         string lpName;
@@ -156,19 +170,23 @@ contract DeployV13 is Script {
 
     function run() external {
         DeployConfig memory cfg = _readDeployConfig();
-        require(cfg.deployer == cfg.gov, "PRIVATE_KEY must correspond to GOV");
+        require(block.chainid == vm.envUint("CHAIN_ID"), "CHAIN_ID mismatch");
+        SafeGovernance.validate(cfg.finalGovernance, cfg.safeOwnersHash, cfg.safeCodeHash, cfg.safeControlHash);
+        require(cfg.vrfWrapper.code.length != 0, "VRF wrapper has no code");
         require(cfg.poolCount >= 1 && cfg.poolCount <= 32, "NUM_POOLS out of range");
 
         PoolConfig[] memory pools = new PoolConfig[](cfg.poolCount);
         for (uint256 i = 0; i < cfg.poolCount; ++i) {
             pools[i] = _readPoolConfig(i);
+            require(pools[i].minLiqBps <= 10_000, "BANK_MIN_LIQ_BPS_i out of range");
+            require(pools[i].withdrawalBufferBps <= 10_000, "BANK_WITHDRAWAL_BUFFER_BPS_i out of range");
         }
         bool hasSports = _hasSportsPool(pools);
         require(_hasCasinoPool(pools) || hasSports, "at least one Casino or Sports pool required");
         cfg.sportsConfig = _readSportsConfig(hasSports);
         _readSportsPoolLimits(cfg.sportsConfig, pools);
 
-        vm.startBroadcast(cfg.privateKey);
+        vm.startBroadcast(cfg.deployer);
 
         Deployed memory d;
 
@@ -270,11 +288,16 @@ contract DeployV13 is Script {
                 pools[i].asset, cfg.gov, pools[i].minLiqBps, pools[i].lpName, pools[i].lpSymbol, pools[i].lpDecimals
             );
             pools[i].bank = address(bank);
+            bank.setRiskInPaused(true);
+            bank.setGuardian(cfg.guardian);
 
             d.poolRegistry.registerPool(pools[i].poolId, pools[i].asset, pools[i].bank, pools[i].domain);
             bank.setSettlementRouterOnce(address(d.router));
             bank.setMinPlayerTurnoverForUnlock(pools[i].minTurnoverForUnlock);
             bank.setHoldbackVestingSeconds(pools[i].holdbackVestingSeconds);
+            if (pools[i].withdrawalBufferBps != pools[i].minLiqBps) {
+                bank.setWithdrawalBufferBps(pools[i].withdrawalBufferBps);
+            }
 
             if (pools[i].domain == SSOTTypes.PoolDomain.Casino) {
                 d.poolRegistry.setHubAllowedForPool(pools[i].poolId, address(d.gameHub), true);
@@ -301,25 +324,39 @@ contract DeployV13 is Script {
         d.gameHub.registerGame(GAME_SLOTS, address(d.slots));
         d.gameHub.registerGame(GAME_BACCARAT, address(d.baccarat));
 
+        _nominateGovernance(cfg, pools, d);
         vm.stopBroadcast();
 
         _logDeployment(cfg, pools, d);
         if (_shouldWriteArtifacts()) {
             _writeArtifacts(cfg, pools, d);
         } else {
-            console2.log("Skipping v1.3 deployment artifact writes during dry run.");
+            console2.log("Skipping v1.5 deployment artifact writes during dry run.");
             console2.log("Set WRITE_DRY_RUN_ARTIFACTS=true to write simulated artifacts intentionally.");
         }
     }
 
-    function _shouldWriteArtifacts() internal view returns (bool) {
+    function _shouldWriteArtifacts() internal view virtual returns (bool) {
         return vm.isContext(VmSafe.ForgeContext.ScriptBroadcast) || vm.envOr("WRITE_DRY_RUN_ARTIFACTS", false);
     }
 
     function _readDeployConfig() internal view returns (DeployConfig memory cfg) {
-        cfg.privateKey = vm.envUint("PRIVATE_KEY");
-        cfg.gov = vm.envAddress("GOV");
-        cfg.deployer = vm.addr(cfg.privateKey);
+        cfg.deployer = vm.envAddress("DEPLOYER");
+        require(cfg.deployer != address(0), "deployer required");
+        cfg.gov = cfg.deployer;
+        cfg.finalGovernance = vm.envAddress("GOV");
+        cfg.guardian = vm.envAddress("GUARDIAN"); // explicit zero disables the role
+        cfg.keeper = vm.envAddress("KEEPER_ADDRESS");
+        cfg.releaseSigner = vm.envAddress("RELEASE_SIGNER");
+        cfg.safeOwnersHash = vm.envBytes32("SAFE_OWNERS_HASH");
+        cfg.safeCodeHash = vm.envBytes32("SAFE_CODE_HASH");
+        cfg.safeControlHash = vm.envBytes32("SAFE_CONTROL_HASH");
+        require(cfg.finalGovernance != cfg.deployer, "Safe must differ from deployer");
+        require(
+            cfg.keeper != address(0) && cfg.keeper != cfg.deployer && cfg.keeper != cfg.finalGovernance,
+            "independent keeper required"
+        );
+        require(cfg.releaseSigner != address(0), "release signer required");
         cfg.treasury = vm.envOr("TREASURY", address(0));
         cfg.vrfWrapper = vm.envAddress("VRF_WRAPPER");
         cfg.requestGasPriceWei = vm.envOr("REQUEST_GAS_PRICE_WEI", uint256(0));
@@ -327,20 +364,22 @@ contract DeployV13 is Script {
             revert("REQUEST_GAS_PRICE_WEI required off local chain");
         }
         cfg.refundTimeoutSeconds = vm.envOr("REFUND_TIMEOUT_SECONDS", uint256(3600));
-        cfg.defaultHouseEdgeBps = uint16(vm.envOr("DEFAULT_HOUSE_EDGE_BPS", uint256(200)));
-        cfg.maxAffiliateDeltaBps = uint16(vm.envOr("MAX_AFFILIATE_DELTA_BPS", uint256(0)));
+        cfg.defaultHouseEdgeBps = _bps("DEFAULT_HOUSE_EDGE_BPS", 200);
+        cfg.maxAffiliateDeltaBps = _bps("MAX_AFFILIATE_DELTA_BPS", 0);
         cfg.poolCount = vm.envOr("NUM_POOLS", uint256(1));
 
-        cfg.refConfig.baseBudgetBps = uint16(vm.envOr("REF_BASE_BUDGET_BPS", uint256(10_000)));
-        cfg.refConfig.deltaBudgetBps = uint16(vm.envOr("REF_DELTA_BUDGET_BPS", uint256(10_000)));
-        cfg.refConfig.holdbackBps = uint16(vm.envOr("REF_HOLDBACK_BPS", uint256(3000)));
-        cfg.refConfig.levels = uint8(vm.envOr("REF_LEVELS", uint256(2)));
-        cfg.refConfig.levelBps[0] = uint16(vm.envOr("REF_LEVEL0_BPS", uint256(0)));
-        cfg.refConfig.levelBps[1] = uint16(vm.envOr("REF_LEVEL1_BPS", uint256(10_000)));
-        cfg.refConfig.levelBps[2] = uint16(vm.envOr("REF_LEVEL2_BPS", uint256(0)));
-        cfg.refConfig.levelBps[3] = uint16(vm.envOr("REF_LEVEL3_BPS", uint256(0)));
-        cfg.refConfig.levelBps[4] = uint16(vm.envOr("REF_LEVEL4_BPS", uint256(0)));
-        cfg.refConfig.levelBps[5] = uint16(vm.envOr("REF_LEVEL5_BPS", uint256(0)));
+        cfg.refConfig.baseBudgetBps = _bps("REF_BASE_BUDGET_BPS", 10_000);
+        cfg.refConfig.deltaBudgetBps = _bps("REF_DELTA_BUDGET_BPS", 10_000);
+        cfg.refConfig.holdbackBps = _bps("REF_HOLDBACK_BPS", 3000);
+        uint256 levels = vm.envOr("REF_LEVELS", uint256(2));
+        require(levels > 0 && levels <= 6, "REF_LEVELS out of range");
+        cfg.refConfig.levels = uint8(levels);
+        cfg.refConfig.levelBps[0] = _bps("REF_LEVEL0_BPS", 0);
+        cfg.refConfig.levelBps[1] = _bps("REF_LEVEL1_BPS", 10_000);
+        cfg.refConfig.levelBps[2] = _bps("REF_LEVEL2_BPS", 0);
+        cfg.refConfig.levelBps[3] = _bps("REF_LEVEL3_BPS", 0);
+        cfg.refConfig.levelBps[4] = _bps("REF_LEVEL4_BPS", 0);
+        cfg.refConfig.levelBps[5] = _bps("REF_LEVEL5_BPS", 0);
     }
 
     function _readSportsConfig(bool enabled) internal view returns (SportsConfig memory cfg) {
@@ -354,6 +393,8 @@ contract DeployV13 is Script {
         cfg.maxEventReserved = vm.envUint("SPORTS_MAX_EVENT_RESERVED");
         cfg.oddsSignerSetHash = vm.envBytes32("SPORTS_ODDS_SIGNER_SET_HASH");
         cfg.resultReporterSetHash = vm.envBytes32("SPORTS_RESULT_REPORTER_SET_HASH");
+        cfg.initialOddsSignerSetHash = cfg.oddsSignerSetHash;
+        cfg.initialResultReporterSetHash = cfg.resultReporterSetHash;
         uint256 resultReporterThreshold = vm.envOr("SPORTS_RESULT_REPORTER_THRESHOLD", uint256(1));
         require(
             resultReporterThreshold > 0 && resultReporterThreshold <= type(uint8).max,
@@ -396,23 +437,34 @@ contract DeployV13 is Script {
 
     function _readPoolConfig(uint256 i) internal view returns (PoolConfig memory cfg) {
         string memory suffix = vm.toString(i);
-        cfg.poolId = uint64(vm.envOr(string.concat("POOL_ID_", suffix), i + 1));
+        uint256 poolId = vm.envOr(string.concat("POOL_ID_", suffix), i + 1);
+        require(poolId > 0 && poolId <= type(uint64).max, "POOL_ID out of range");
+        cfg.poolId = uint64(poolId);
         cfg.asset = vm.envAddress(string.concat("POOL_ASSET_", suffix));
-        require(cfg.asset != address(0), "POOL_ASSET_i required");
+        require(cfg.asset.code.length != 0, "POOL_ASSET_i has no code");
         (, uint8 assetDecimals) = _tryAssetMetadata(cfg.asset);
         uint256 oneAssetUnit = 10 ** uint256(assetDecimals);
 
         uint256 domainRaw = vm.envOr(string.concat("POOL_DOMAIN_", suffix), uint256(1));
         cfg.domain = _domainFromRaw(domainRaw);
 
-        cfg.minLiqBps = uint16(vm.envOr(string.concat("BANK_MIN_LIQ_BPS_", suffix), uint256(1000)));
+        cfg.minLiqBps = _bps(string.concat("BANK_MIN_LIQ_BPS_", suffix), 1000);
+        cfg.withdrawalBufferBps = _bps(string.concat("BANK_WITHDRAWAL_BUFFER_BPS_", suffix), cfg.minLiqBps);
         cfg.minTurnoverForUnlock =
             vm.envOr(string.concat("BANK_MIN_TURNOVER_FOR_UNLOCK_", suffix), uint256(20 * oneAssetUnit));
         cfg.holdbackVestingSeconds = vm.envOr(string.concat("BANK_HOLDBACK_VESTING_SECONDS_", suffix), uint256(86400));
         cfg.lpName = vm.envOr(string.concat("LP_NAME_", suffix), string.concat("LP Share Pool #", suffix));
         cfg.lpSymbol = vm.envOr(string.concat("LP_SYMBOL_", suffix), string.concat("LP", suffix));
-        cfg.lpDecimals = uint8(vm.envOr(string.concat("LP_DECIMALS_", suffix), uint256(assetDecimals)));
+        uint256 lpDecimals = vm.envOr(string.concat("LP_DECIMALS_", suffix), uint256(assetDecimals));
+        require(lpDecimals == assetDecimals, "LP_DECIMALS_i must match asset decimals");
+        cfg.lpDecimals = uint8(lpDecimals);
         require(cfg.lpDecimals == assetDecimals, "LP_DECIMALS_i must match asset decimals");
+    }
+
+    function _bps(string memory key, uint256 fallbackValue) internal view returns (uint16) {
+        uint256 value = vm.envOr(key, fallbackValue);
+        require(value <= 10_000, string.concat(key, " out of range"));
+        return uint16(value);
     }
 
     function _domainFromRaw(uint256 raw) internal pure returns (SSOTTypes.PoolDomain) {
@@ -422,8 +474,13 @@ contract DeployV13 is Script {
         return SSOTTypes.PoolDomain(raw);
     }
 
-    function _logDeployment(DeployConfig memory cfg, PoolConfig[] memory pools, Deployed memory d) internal pure {
-        console2.log("GOV", cfg.gov);
+    function _logDeployment(DeployConfig memory cfg, PoolConfig[] memory pools, Deployed memory d)
+        internal
+        pure
+        virtual
+    {
+        console2.log("BOOTSTRAP_GOV", cfg.gov);
+        console2.log("GOV", cfg.finalGovernance);
         console2.log("VRF_WRAPPER", cfg.vrfWrapper);
         console2.log("adapter", address(d.adapter));
         console2.log("vrfHub", address(d.vrf));
@@ -444,19 +501,28 @@ contract DeployV13 is Script {
         }
     }
 
-    function _writeArtifacts(DeployConfig memory cfg, PoolConfig[] memory pools, Deployed memory d) internal {
-        _safeCreateDir("deployments/snapshots");
-        _safeCreateDir("deployments/verify");
-
+    function _snapshotJson(DeployConfig memory cfg, PoolConfig[] memory pools, Deployed memory d)
+        internal
+        returns (string memory)
+    {
         string memory obj = "ssot";
         string memory json;
 
-        json = vm.serializeString(obj, "architectureVersion", "v1.3-router-pools");
+        json = vm.serializeString(obj, "architectureVersion", "v1.5-safe-governance");
         json = vm.serializeUint(obj, "chainId", block.chainid);
         json = vm.serializeUint(obj, "blockNumber", block.number);
         json = vm.serializeUint(obj, "timestamp", block.timestamp);
         json = vm.serializeAddress(obj, "deployer", cfg.deployer);
-        json = vm.serializeAddress(obj, "gov", cfg.gov);
+        json = vm.serializeAddress(obj, "gov", cfg.finalGovernance);
+        json = vm.serializeAddress(obj, "bootstrapGovernance", cfg.gov);
+        json = vm.serializeAddress(obj, "guardian", cfg.guardian);
+        json = vm.serializeAddress(obj, "keeper", cfg.keeper);
+        json = vm.serializeAddress(obj, "releaseSigner", cfg.releaseSigner);
+        json = vm.serializeBytes32(obj, "safeOwnersHash", cfg.safeOwnersHash);
+        json = vm.serializeBytes32(obj, "safeCodeHash", cfg.safeCodeHash);
+        json = vm.serializeBytes32(obj, "safeControlHash", cfg.safeControlHash);
+        json = vm.serializeString(obj, "bootstrapStatus", "pending-safe-acceptance");
+        json = vm.serializeBool(obj, "initialRiskInPaused", true);
         json = vm.serializeAddress(obj, "treasury", cfg.treasury);
 
         json = vm.serializeAddress(obj, "vrfWrapper", cfg.vrfWrapper);
@@ -481,25 +547,52 @@ contract DeployV13 is Script {
         json = vm.serializeAddress(obj, "moduleSlots", address(d.slots));
         json = vm.serializeAddress(obj, "moduleBaccarat", address(d.baccarat));
 
+        json = vm.serializeBytes32(obj, "codeHash_adapter", address(d.adapter).codehash);
+        json = vm.serializeBytes32(obj, "codeHash_vrfHub", address(d.vrf).codehash);
+        json = vm.serializeBytes32(obj, "codeHash_poolRegistry", address(d.poolRegistry).codehash);
+        json = vm.serializeBytes32(obj, "codeHash_settlementRouter", address(d.router).codehash);
+        json = vm.serializeBytes32(obj, "codeHash_refRegistry", address(d.refRegistry).codehash);
+        json = vm.serializeBytes32(obj, "codeHash_refEngine", address(d.refEngine).codehash);
+        json = vm.serializeBytes32(obj, "codeHash_gameHub", address(d.gameHub).codehash);
+        json = vm.serializeBytes32(obj, "codeHash_sportsRiskEngine", address(d.sportsRiskEngine).codehash);
+        json = vm.serializeBytes32(obj, "codeHash_sportsHub", address(d.sportsHub).codehash);
+        json = vm.serializeBytes32(obj, "codeHash_moduleDice", address(d.dice).codehash);
+        json = vm.serializeBytes32(obj, "codeHash_moduleCoinToss", address(d.coin).codehash);
+        json = vm.serializeBytes32(obj, "codeHash_moduleRoulette", address(d.roulette).codehash);
+        json = vm.serializeBytes32(obj, "codeHash_moduleKeno", address(d.keno).codehash);
+        json = vm.serializeBytes32(obj, "codeHash_modulePlinko", address(d.plinko).codehash);
+        json = vm.serializeBytes32(obj, "codeHash_moduleSicBo", address(d.sicBo).codehash);
+        json = vm.serializeBytes32(obj, "codeHash_moduleSlots", address(d.slots).codehash);
+        json = vm.serializeBytes32(obj, "codeHash_moduleBaccarat", address(d.baccarat).codehash);
+        for (uint256 i; i < pools.length; ++i) {
+            json = vm.serializeBytes32(obj, string.concat("codeHash_poolBank_", vm.toString(i)), pools[i].bank.codehash);
+        }
         json = _writeConfigJson(obj, json, cfg);
         json = _writeCtorJson(obj, json, cfg, d);
         json = _writePoolJson(obj, json, cfg, pools, d);
 
-        string memory tag = string.concat(vm.toString(block.chainid), "-", vm.toString(block.number), "-v13");
+        return json;
+    }
+
+    function _writeArtifacts(DeployConfig memory cfg, PoolConfig[] memory pools, Deployed memory d) internal virtual {
+        _safeCreateDir("deployments/snapshots");
+        _safeCreateDir("deployments/verify");
+        string memory json = _snapshotJson(cfg, pools, d);
+        string memory tag = string.concat(vm.toString(block.chainid), "-", vm.toString(block.number), "-v15");
         string memory snapPath = string.concat("deployments/snapshots/deploy-", tag, ".json");
 
         _safeWriteJson(json, snapPath);
-        _safeWriteJson(json, "deployments/latest-v13.json");
-        console2.log("Wrote v1.3 deployment snapshot:", snapPath);
-        console2.log("Wrote v1.3 deployment snapshot:", "deployments/latest-v13.json");
+        _safeWriteJson(json, "deployments/latest-v15.json");
+        console2.log("Wrote v1.5 deployment snapshot:", snapPath);
+        console2.log("Wrote v1.5 deployment snapshot:", "deployments/latest-v15.json");
 
         string memory sh = _verifyScript(cfg, pools, d);
         string memory verifyPath = string.concat("deployments/verify/verify-", tag, ".sh");
 
         _safeWriteFile(verifyPath, sh);
-        _safeWriteFile("deployments/verify-latest-v13.sh", sh);
-        console2.log("Wrote v1.3 verify helper:", verifyPath);
-        console2.log("Wrote v1.3 verify helper:", "deployments/verify-latest-v13.sh");
+        _safeWriteFile("deployments/verify-latest-v15.sh", sh);
+        console2.log("Wrote v1.5 verify helper:", verifyPath);
+        console2.log("Wrote v1.5 verify helper:", "deployments/verify-latest-v15.sh");
     }
 
     function _writeConfigJson(string memory obj, string memory json, DeployConfig memory cfg)
@@ -587,6 +680,10 @@ contract DeployV13 is Script {
                 obj, string.concat("poolBankDecimals_", suffix), uint256(Bank(pools[i].bank).decimals())
             );
             json = vm.serializeUint(obj, string.concat("poolBankMinLiqBps_", suffix), pools[i].minLiqBps);
+            json = vm.serializeUint(obj, string.concat("poolBankRiskReserveBps_", suffix), pools[i].minLiqBps);
+            json = vm.serializeUint(
+                obj, string.concat("poolBankWithdrawalBufferBps_", suffix), pools[i].withdrawalBufferBps
+            );
             json = vm.serializeUint(
                 obj, string.concat("poolBankMinTurnoverForUnlock_", suffix), pools[i].minTurnoverForUnlock
             );
@@ -799,8 +896,8 @@ contract DeployV13 is Script {
                 address(d.router),
                 address(d.sportsRiskEngine),
                 cfg.gov,
-                cfg.sportsConfig.oddsSignerSetHash,
-                cfg.sportsConfig.resultReporterSetHash
+                cfg.sportsConfig.initialOddsSignerSetHash,
+                cfg.sportsConfig.initialResultReporterSetHash
             )
         );
     }
@@ -846,25 +943,31 @@ contract DeployV13 is Script {
         return false;
     }
 
-    function _safeCreateDir(string memory path) internal {
-        try vm.createDir(path, true) {}
-        catch {
-            console2.log(string.concat("WARN: cannot create dir (check fs_permissions): ", path));
+    function _nominateGovernance(DeployConfig memory cfg, PoolConfig[] memory pools, Deployed memory d) internal {
+        d.adapter.transferGovernance(cfg.finalGovernance);
+        d.vrf.transferGovernance(cfg.finalGovernance);
+        d.poolRegistry.transferGovernance(cfg.finalGovernance);
+        d.refRegistry.transferGovernance(cfg.finalGovernance);
+        d.gameHub.transferGovernance(cfg.finalGovernance);
+        if (cfg.sportsConfig.enabled) {
+            d.sportsRiskEngine.transferGovernance(cfg.finalGovernance);
+            d.sportsHub.transferGovernance(cfg.finalGovernance);
         }
+        for (uint256 i; i < pools.length; ++i) {
+            Bank(pools[i].bank).transferGovernance(cfg.finalGovernance);
+        }
+    }
+
+    function _safeCreateDir(string memory path) internal {
+        vm.createDir(path, true);
     }
 
     function _safeWriteJson(string memory json, string memory path) internal {
-        try vm.writeJson(json, path) {}
-        catch {
-            console2.log(string.concat("WARN: cannot write json (check fs_permissions): ", path));
-        }
+        vm.writeJson(json, path);
     }
 
     function _safeWriteFile(string memory path, string memory data) internal {
-        try vm.writeFile(path, data) {}
-        catch {
-            console2.log(string.concat("WARN: cannot write file (check fs_permissions): ", path));
-        }
+        vm.writeFile(path, data);
     }
 
     function _defaultVerifierUrl(uint256 chainId) internal pure returns (string memory) {
@@ -905,12 +1008,11 @@ contract DeployV13 is Script {
         if (token.code.length == 0) {
             return (sym, dec);
         }
-        try IERC20MetadataLikeV13(token).symbol() returns (string memory s) {
+        try IERC20MetadataLikeV15(token).symbol() returns (string memory s) {
             sym = s;
         } catch {}
-        try IERC20MetadataLikeV13(token).decimals() returns (uint8 d) {
-            dec = d;
-        } catch {}
+        dec = IERC20MetadataLikeV15(token).decimals();
+        require(dec <= 77, "asset decimals out of range");
     }
 
     function _domainLabel(SSOTTypes.PoolDomain domain) internal pure returns (string memory) {

@@ -1,4 +1,6 @@
-# ArbiGameFi Docker Production Deploy
+# ArbiGameFi v1.5 Docker Production Deploy
+
+Use the [v1.5 release and cutover workflow](../../../docs/deploy/v15-release.md) first. The new Compose project and database are `arbigamefi-v15` and `arbigamefi_v15`; do not reuse the old bet-index projection.
 
 This path runs the production app as normal long-lived processes:
 
@@ -85,15 +87,16 @@ The bundle contains:
 - `deploy/docker/Caddyfile`
 - `deploy/docker/check-production-env.sh`
 - `deploy/docker/deploy-images.sh`
+- `deploy/docker/check-release-images.py`
 - `deploy/docker/env/*.env.example`
 
 Download the `arbigamefi-docker-deploy-bundle` artifact from the
 `Frontend Docker Images` workflow and unpack it on the VPS, for example:
 
 ```bash
-mkdir -p /opt/arbigamefi/frontend
-tar -xzf arbigamefi-docker-deploy-bundle.tar.gz -C /opt/arbigamefi/frontend
-cd /opt/arbigamefi/frontend
+mkdir -p /opt/arbigamefi-v15/frontend
+tar -xzf arbigamefi-docker-deploy-bundle.tar.gz -C /opt/arbigamefi-v15/frontend
+cd /opt/arbigamefi-v15/frontend
 ```
 
 Keep the real `.env` files and Cloudflare cert files on the host. Updating the
@@ -113,47 +116,33 @@ Tags:
 - `v*` git tags
 - optional manual `image_tag` from the workflow dispatch form
 
-On the VPS, from `frontend/`:
+CI tags are lookup conveniences. Resolve the reviewed build to immutable digest references before production deployment:
+
+```bash
+export WEB_IMAGE=ghcr.io/arbigamefi/ssot-bbog-web@sha256:<reviewed-web-digest>
+export KEEPER_IMAGE=ghcr.io/arbigamefi/ssot-bbog-keeper@sha256:<reviewed-keeper-digest>
+export EXPECTED_REVISION=<full-reviewed-40-character-commit>
+```
+
+Pre-stage images while the old stack remains available:
+
+```bash
+bash deploy/docker/check-production-env.sh
+docker compose -p arbigamefi-v15 -f compose.production.yml pull postgres caddy web keeper-primary keeper-testnet-primary
+python3 deploy/docker/check-release-images.py
+```
+
+The image guard requires matching v1.5 releases on both chains and matching OCI source revisions. It rejects the previous embedded manifests. `IMAGE_TAG`, mutable application image tags and implicit `latest` are no longer deployment inputs.
+
+## 4. Cut over
+
+Follow the reviewed handover record: validate the new Postgres and Web internally, drain and stop old keepers, then hand over the old Caddy listener. The wrapper refuses to proceed while old production keepers or Caddy remain running. Avoid two processes using the same keeper key.
 
 ```bash
 bash deploy/docker/deploy-images.sh
 ```
 
-For a pinned rollout, export exact image tags before running the script:
-
-```bash
-export WEB_IMAGE=ghcr.io/arbigamefi/ssot-bbog-web:sha-<short-git-sha>
-export KEEPER_IMAGE=ghcr.io/arbigamefi/ssot-bbog-keeper:sha-<short-git-sha>
-bash deploy/docker/deploy-images.sh
-```
-
-Or use the shared image tag helper. `deploy-images.sh` accepts a full 40-character
-commit SHA, a bare short SHA, or a `sha-<short-git-sha>` tag and normalizes it to
-the pushed GHCR tag:
-
-```bash
-IMAGE_TAG=<git-sha> bash deploy/docker/deploy-images.sh
-```
-
-The script uses `docker compose up --no-build`, so the VPS does not compile the
-Next.js app.
-
-Fallback local build path:
-
-```bash
-docker compose -f compose.production.yml -f compose.production.build.yml build web keeper-primary keeper-testnet-primary
-```
-
-The web image uses `next build` with `output: "standalone"` and runs
-`node apps/web/server.js`. The keeper image builds TypeScript and runs
-`node apps/keeper/dist/cli.js`.
-
-## 4. Start
-
-```bash
-docker compose -f compose.production.yml up -d
-docker compose -f compose.production.yml ps
-```
+This entrypoint runs all checks before `up --no-build --pull never`. CI builds the application images; the VPS does not compile them. Retain the old database backup and source archive until acceptance and asset disposition are complete.
 
 For a local backup keeper drill on the same host:
 

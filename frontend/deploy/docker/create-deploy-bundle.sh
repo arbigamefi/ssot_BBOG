@@ -11,6 +11,7 @@ tar -czf "$OUT" -C "$ROOT_DIR" \
   deploy/docker/README.md \
   deploy/docker/Caddyfile \
   deploy/docker/check-production-env.sh \
+  deploy/docker/check-release-images.py \
   deploy/docker/deploy-images.sh \
   deploy/docker/env/postgres.env.example \
   deploy/docker/env/web.production.env.example \

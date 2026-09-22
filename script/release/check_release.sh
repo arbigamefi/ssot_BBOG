@@ -4,18 +4,18 @@ set -euo pipefail
 STRICT="${STRICT:-0}"
 PYTHON="${PYTHON:-python}"
 
-RELEASE_PATH="${RELEASE_PATH:-deployments/release-latest-v13.json}"
+RELEASE_PATH="${RELEASE_PATH:-deployments/release-latest-v15.json}"
 SNAPSHOT_PATH_EXPLICIT="${SNAPSHOT_PATH+x}"
-SNAPSHOT_PATH="${SNAPSHOT_PATH:-deployments/latest-v13.json}"
-NOTES_PATH="${NOTES_PATH:-deployments/release-notes-latest-v13.md}"
+SNAPSHOT_PATH="${SNAPSHOT_PATH:-deployments/latest-v15.json}"
+NOTES_PATH="${NOTES_PATH:-deployments/release-notes-latest-v15.md}"
 
 # "Latest" pointers (frontend consumes these)
-FRONTEND_MANIFEST_PATH="${FRONTEND_MANIFEST_PATH:-deployments/frontend-manifest-latest-v13.json}"
-GOLDEN_VECTORS_PATH="${GOLDEN_VECTORS_PATH:-deployments/golden-vectors-latest-v13.json}"
-ABI_INDEX_PATH="${ABI_INDEX_PATH:-deployments/abis-v13/index.json}"
+FRONTEND_MANIFEST_PATH="${FRONTEND_MANIFEST_PATH:-deployments/frontend-manifest-latest-v15.json}"
+GOLDEN_VECTORS_PATH="${GOLDEN_VECTORS_PATH:-deployments/golden-vectors-latest-v15.json}"
+ABI_INDEX_PATH="${ABI_INDEX_PATH:-deployments/abis-v15/index.json}"
 FRONTEND_SCHEMA="${FRONTEND_SCHEMA:-2}"
-RELEASE_TAG_SUFFIX="${RELEASE_TAG_SUFFIX:--v13}"
-VERIFY_SCRIPT="${VERIFY_SCRIPT:-script/release/VerifyReleaseV13.s.sol:VerifyReleaseV13}"
+RELEASE_TAG_SUFFIX="${RELEASE_TAG_SUFFIX:--v15}"
+VERIFY_SCRIPT="${VERIFY_SCRIPT:-script/release/VerifyReleaseV15.s.sol:VerifyReleaseV15}"
 
 release_snapshot_path() {
   "$PYTHON" - "$RELEASE_PATH" <<'PY'

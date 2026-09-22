@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SNAPSHOT_PATH="${SNAPSHOT_PATH:-deployments/latest-v13.json}"
+SNAPSHOT_PATH="${SNAPSHOT_PATH:-deployments/latest-v15.json}"
 
 if [[ ! -f "$SNAPSHOT_PATH" ]]; then
   echo "missing snapshot: $SNAPSHOT_PATH"
-  echo "hint: run a deploy (writes deployments/latest-v13.json) and include the artifacts in the release commit/tag."
+  echo "hint: run a deploy (writes deployments/latest-v15.json) and include the artifacts in the release commit/tag."
   exit 1
 fi
 
-# Snapshot JSON is written under the root key "ssot" by DeployV13.s.sol.
+# Snapshot fields are top-level; retain wrapped historical read compatibility.
 CHAIN_ID=$(jq -r '.ssot.chainId // .chainId // empty' "$SNAPSHOT_PATH")
 VRF_WRAPPER_FROM_SNAPSHOT=$(jq -r '.ssot.vrfWrapper // .vrfWrapper // empty' "$SNAPSHOT_PATH")
 
@@ -72,4 +72,5 @@ if [[ -n "${FORK_BLOCK_NUMBER:-}" ]]; then
   echo "[fork gate] blockNumber=$FORK_BLOCK_NUMBER"
 fi
 
+SNAPSHOT_PATH="$SNAPSHOT_PATH" forge script script/release/VerifyGovernanceV15.s.sol:VerifyGovernanceV15 --rpc-url "$RPC_URL"
 forge test --match-path "test/fork/*" -vvv

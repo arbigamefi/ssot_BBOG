@@ -17,13 +17,13 @@ import {RouletteParams} from "src/modules/roulette/RouletteParams.sol";
 import {SicBoParams} from "src/modules/sicbo/SicBoParams.sol";
 import {SlotsParams} from "src/modules/slots/SlotsParams.sol";
 
-contract GenerateGoldenVectorsV13 is Script {
+contract GenerateGoldenVectorsV15 is Script {
     using stdJson for string;
 
     JsonReader private jsonReader = new JsonReader();
 
-    string internal constant DEFAULT_SNAPSHOT_PATH = "deployments/latest-v13.json";
-    string internal constant OUT_LATEST = "deployments/golden-vectors-latest-v13.json";
+    string internal constant DEFAULT_SNAPSHOT_PATH = "deployments/latest-v15.json";
+    string internal constant OUT_LATEST = "deployments/golden-vectors-latest-v15.json";
 
     bytes32 internal constant GAME_DICE = keccak256("DICE");
     bytes32 internal constant GAME_COIN_TOSS = keccak256("COIN_TOSS");
@@ -158,13 +158,13 @@ contract GenerateGoldenVectorsV13 is Script {
             "\"generatedAt\":",
             vm.toString(block.timestamp),
             ",",
-            "\"notes\":\"Vectors are for v1.3 IGameHub bytes-encoding correctness tests only. They are not intended as production defaults.\",",
+            "\"notes\":\"Vectors are for v1.5 IGameHub bytes-encoding correctness tests only. They are not intended as production defaults.\",",
             "\"vectors\":",
             vectors,
             "}\n"
         );
 
-        string memory tag = string.concat(vm.toString(chainId), "-", vm.toString(blockNumber), "-v13");
+        string memory tag = string.concat(vm.toString(chainId), "-", vm.toString(blockNumber), "-v15");
         string memory outTagged = string.concat("deployments/release/golden-vectors-", tag, ".json");
 
         vm.writeFile(OUT_LATEST, json);

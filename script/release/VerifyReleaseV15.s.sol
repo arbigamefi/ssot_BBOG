@@ -5,14 +5,14 @@ import "forge-std/Script.sol";
 import "forge-std/StdJson.sol";
 import "forge-std/console2.sol";
 
-/// @notice Verifies a v1.4 release digest + signature against a router/pool snapshot.
-contract VerifyReleaseV14 is Script {
+/// @notice Verifies a v1.5 release digest + signature against a router/pool snapshot.
+contract VerifyReleaseV15 is Script {
     using stdJson for string;
 
-    bytes32 internal constant SCHEMA = keccak256("SSOT_RELEASE_DIGEST_V14");
+    bytes32 internal constant SCHEMA = keccak256("SSOT_RELEASE_DIGEST_V15");
 
     function run() external view {
-        string memory releasePath = vm.envOr("RELEASE_PATH", string("deployments/release-latest-v14.json"));
+        string memory releasePath = vm.envOr("RELEASE_PATH", string("deployments/release-latest-v15.json"));
         string memory rel = _readFileOrDie(releasePath);
 
         string memory snapshotPathFromRel = rel.readString(".snapshotPath");
@@ -36,9 +36,14 @@ contract VerifyReleaseV14 is Script {
         require(digestActual == digestExpected, "digest mismatch");
 
         address recovered = ecrecover(digestActual, v, r, s);
+        require(signerExpected != address(0), "zero signer");
         require(recovered == signerExpected, "signature mismatch");
+        require(signerExpected == snap.readAddress(".releaseSigner"), "snapshot signer mismatch");
+        require(signerExpected == vm.envAddress("RELEASE_SIGNER"), "release signer not trusted");
+        require(rel.readUint(".chainId") == snap.readUint(".chainId"), "release chain mismatch");
+        require(rel.readUint(".blockNumber") == snap.readUint(".blockNumber"), "release block mismatch");
 
-        console2.log("OK v1.4 release artifact verified");
+        console2.log("OK v1.5 release artifact verified");
         console2.log("release:", releasePath);
         console2.log("snapshot:", snapshotPath);
         console2.log("signer:", signerExpected);
@@ -46,8 +51,48 @@ contract VerifyReleaseV14 is Script {
     }
 
     function _digestStatic(string memory snap) internal pure returns (bytes32 digest) {
+        require(
+            keccak256(bytes(snap.readString(".architectureVersion"))) == keccak256("v1.5-safe-governance"),
+            "not a v1.5 snapshot"
+        );
         digest = keccak256(abi.encode(SCHEMA, keccak256(bytes(snap.readString(".architectureVersion")))));
+        digest = keccak256(
+            abi.encode(
+                digest,
+                snap.readAddress(".bootstrapGovernance"),
+                snap.readAddress(".guardian"),
+                snap.readAddress(".keeper"),
+                snap.readAddress(".releaseSigner"),
+                snap.readBytes32(".safeOwnersHash"),
+                snap.readBytes32(".safeCodeHash"),
+                snap.readBytes32(".safeControlHash"),
+                snap.readBool(".initialRiskInPaused"),
+                keccak256(bytes(snap.readString(".bootstrapStatus")))
+            )
+        );
 
+        string[17] memory codeKeys = [
+            string("adapter"),
+            "vrfHub",
+            "poolRegistry",
+            "settlementRouter",
+            "refRegistry",
+            "refEngine",
+            "gameHub",
+            "sportsRiskEngine",
+            "sportsHub",
+            "moduleDice",
+            "moduleCoinToss",
+            "moduleRoulette",
+            "moduleKeno",
+            "modulePlinko",
+            "moduleSicBo",
+            "moduleSlots",
+            "moduleBaccarat"
+        ];
+        for (uint256 i; i < codeKeys.length; ++i) {
+            digest = keccak256(abi.encode(digest, snap.readBytes32(string.concat(".codeHash_", codeKeys[i]))));
+        }
         digest = keccak256(
             abi.encode(
                 digest,
@@ -154,6 +199,7 @@ contract VerifyReleaseV14 is Script {
                     snap.readUint(string.concat(".poolDomain_", suffix)),
                     snap.readAddress(string.concat(".poolAsset_", suffix)),
                     snap.readAddress(string.concat(".poolBank_", suffix)),
+                    snap.readBytes32(string.concat(".codeHash_poolBank_", suffix)),
                     snap.readUint(string.concat(".poolActive_", suffix))
                 )
             );
