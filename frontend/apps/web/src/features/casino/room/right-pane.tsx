@@ -12,10 +12,14 @@ import {
 } from "./history-widget";
 import type { CasinoOutcome } from "./outcome";
 import type { BaccaratSide, CoinSide, DiceDirection, PlinkoRisk, SicBoKind } from "./params";
-import { GameRoomResultOverlay } from "./result-overlay";
 import { isCasinoTerminalRoundResult, type CasinoRoundResult } from "./resolution";
 
 export type { GameHistoryEntry, RecentBetSummary } from "./history-widget";
+
+const GameRoomResultOverlay = dynamic(
+  () => import("./result-overlay").then((mod) => mod.GameRoomResultOverlay),
+  { ssr: false }
+);
 
 function StageLoading() {
   const t = useTranslations();

@@ -222,7 +222,7 @@ describe("GameRoomRightPane", () => {
     expect(await screen.findByText("Roll Under")).toBeDefined();
   });
 
-  it("renders chain bet status and result overlay", () => {
+  it("renders chain bet status and result overlay", async () => {
     render(
       <GameRoomRightPane
         {...baseProps}
@@ -253,7 +253,7 @@ describe("GameRoomRightPane", () => {
 
     expect(screen.getByText("RECENT NUMBERS")).toBeDefined();
     expect(screen.getByText("SETTLED")).toBeDefined();
-    expect(screen.getAllByText("Won bet").length).toBeGreaterThan(0);
+    expect((await screen.findAllByText("Won bet")).length).toBeGreaterThan(0);
     expect(screen.getByText("Bet details")).toBeDefined();
     expect(screen.getByText("Game result")).toBeDefined();
     expect(screen.getByText("Fairness data")).toBeDefined();
@@ -291,7 +291,7 @@ describe("GameRoomRightPane", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Share" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Share" }));
 
     await waitFor(() => {
       expect(screen.getByRole("dialog", { name: "Share" })).toBeDefined();
@@ -360,7 +360,7 @@ describe("GameRoomRightPane", () => {
     expect(screen.getAllByText("17").length).toBeGreaterThan(0);
   });
 
-  it("shows slots symbols, multiplier, and jackpot detail in the result overlay", () => {
+  it("shows slots symbols, multiplier, and jackpot detail in the result overlay", async () => {
     render(
       <GameRoomRightPane
         {...baseProps}
@@ -398,7 +398,7 @@ describe("GameRoomRightPane", () => {
       />
     );
 
-    expect(screen.getByText("Symbols drawn")).toBeDefined();
+    expect(await screen.findByText("Symbols drawn")).toBeDefined();
     expect(screen.getByText("Seven / Seven / Seven")).toBeDefined();
     expect(screen.getAllByText("62.72x").length).toBeGreaterThan(0);
     expect(screen.queryByText("64.00x")).toBeNull();
@@ -406,7 +406,7 @@ describe("GameRoomRightPane", () => {
     expect(screen.getByText("Yes")).toBeDefined();
   });
 
-  it("shows plinko slot multiplier after house edge in the result overlay", () => {
+  it("shows plinko slot multiplier after house edge in the result overlay", async () => {
     render(
       <GameRoomRightPane
         {...baseProps}
@@ -451,12 +451,12 @@ describe("GameRoomRightPane", () => {
       />
     );
 
-    expect(screen.getByText("Slot multiplier")).toBeDefined();
+    expect(await screen.findByText("Slot multiplier")).toBeDefined();
     expect(screen.getAllByText("0.67x").length).toBeGreaterThan(0);
     expect(screen.queryByText("0.69x")).toBeNull();
   });
 
-  it("shows baccarat opened cards, totals, and winning side in the result overlay", () => {
+  it("shows baccarat opened cards, totals, and winning side in the result overlay", async () => {
     render(
       <GameRoomRightPane
         {...baseProps}
@@ -504,7 +504,7 @@ describe("GameRoomRightPane", () => {
     );
 
     expect(screen.getByText("RECENT HANDS")).toBeDefined();
-    expect(screen.getByText("Winning side")).toBeDefined();
+    expect(await screen.findByText("Winning side")).toBeDefined();
     expect(screen.getAllByText("Player").length).toBeGreaterThan(0);
     expect(screen.getByText("Player cards")).toBeDefined();
     expect(screen.getByText("5, 4")).toBeDefined();
@@ -512,7 +512,7 @@ describe("GameRoomRightPane", () => {
     expect(screen.getByText("8, 0")).toBeDefined();
   });
 
-  it("shows sic bo dice, total, and bet detail in the result overlay", () => {
+  it("shows sic bo dice, total, and bet detail in the result overlay", async () => {
     render(
       <GameRoomRightPane
         {...baseProps}
@@ -562,7 +562,7 @@ describe("GameRoomRightPane", () => {
     );
 
     expect(screen.getByText("RECENT DICE")).toBeDefined();
-    expect(screen.getByText("Sic Bo bet")).toBeDefined();
+    expect(await screen.findByText("Sic Bo bet")).toBeDefined();
     expect(screen.getByText("Exact total 9")).toBeDefined();
     expect(screen.getByText("Dice opened")).toBeDefined();
     expect(screen.getByText("2 / 3 / 4")).toBeDefined();
