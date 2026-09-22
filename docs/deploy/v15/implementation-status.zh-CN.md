@@ -7,7 +7,8 @@
 - Base 主网、Base Sepolia 的 2/3 Safe：`0x7F0c244e1701B069727670745FD047179Ef8691d`。
 - 最新部署者及发布元数据签名者：`0x93ac87413E17d01CBa37B6317f64890bF7f99aC3`。此前指定的 `0xd662…BFB9` 已被替换。
 - Foundry 账号：`5e33d0f9-f7e1-4a8c-aff1-b14a684783a0`。文件已收紧为 0600；该加密文件没有公开地址字段，须在本机解锁时核验派生地址。
-- guardian：`0x20634D341ca56bc3E2C8BDe9310dAA88D23c02a2`，由用户指定的本机文件核对取得。仓库不含私钥或密码。
+- guardian：`0x9d239D9e0EE179Bd442497a034002aAf75865ea0`，由 `cast wallet new ~/.foundry/keystores guardian` 生成并加密存盘，私钥从未输出到终端。
+  此前指定的 `0x20634D34…c02a2` 已作废：它由 `cast wallet new` 生成时重定向未生效，私钥被明文打印到终端并进入会话记录。该地址两条链 nonce=0、余额 0，且从未被任何合约任命为 guardian，因此作废无代价；但不得再在任何模板或部署中出现。
 - 两条链的 Safe 均已读取代码、三名 owner、threshold=2、无 module、无 guard，并绑定 singleton/fallback 的代码哈希。
 
 完整公开参数及两条链的环境模板见同目录 `owner-parameters.json` 和 `chain-*.env.example`。
