@@ -7,6 +7,7 @@ import { encodeFunctionData, type Hex } from "viem";
 
 import { encodeStakeSpec } from "./stakeSpec";
 import { getReleaseAbis } from "../abis/release/resolver";
+import { requireGameEncoder } from "./registry";
 
 const STRICT_VECTORS = process.env.STRICT_VECTORS === "1";
 
@@ -41,7 +42,11 @@ async function listGoldenVectorFiles(): Promise<string[]> {
     const releases = await fs.readdir(chainDir);
     for (const r of releases) {
       const relDir = path.join(chainDir, r);
-      for (const name of ["golden-vectors-latest-v14.json", "golden-vectors-latest-v13.json"]) {
+      for (const name of [
+        "golden-vectors-latest-v15.json",
+        "golden-vectors-latest-v14.json",
+        "golden-vectors-latest-v13.json"
+      ]) {
         const gv = path.join(relDir, name);
         if (await pathExists(gv)) files.push(gv);
       }
@@ -51,7 +56,11 @@ async function listGoldenVectorFiles(): Promise<string[]> {
 }
 
 async function readReleaseLock(dir: string): Promise<any | null> {
-  for (const name of ["release-latest-v14.json", "release-latest-v13.json"]) {
+  for (const name of [
+    "release-latest-v15.json",
+    "release-latest-v14.json",
+    "release-latest-v13.json"
+  ]) {
     const lockPath = path.join(dir, name);
     if (await pathExists(lockPath)) return JSON.parse(await fs.readFile(lockPath, "utf8"));
   }
@@ -72,8 +81,19 @@ function getPlaceBetInputTypes(abi: any[]): string[] {
 describe("golden vectors (exact-hex)", () => {
   it("stakeSpec + placeBet calldata matches contract-generated vectors", async () => {
     const files = await listGoldenVectorFiles();
+    const embeddedFiles = (await fs.readdir(EMBEDDED_ROOT)).filter((name) =>
+      name.endsWith(".json")
+    );
+    const expectedV15 = (
+      await Promise.all(
+        embeddedFiles.map(async (name) =>
+          JSON.parse(await fs.readFile(path.join(EMBEDDED_ROOT, name), "utf8"))
+        )
+      )
+    ).filter((release) => release.meta?.releaseLock?.schema === "SSOT_RELEASE_DIGEST_V15");
+    const checkedV15 = new Set<number>();
     if (files.length === 0) {
-      if (STRICT_VECTORS) {
+      if (STRICT_VECTORS || expectedV15.length > 0) {
         throw new Error(
           "No versioned golden-vectors-latest-v*.json found under src/fixtures/release-bundles. Run `pnpm ssot:sync ...` and commit outputs."
         );
@@ -134,9 +154,20 @@ describe("golden vectors (exact-hex)", () => {
 
         expect(normalizeHex(encodedStakeSpec)).toBe(normalizeHex(v.stakeSpecEncoded));
 
-        // Current ABI exports only support exact calldata checks for the current
-        // v1.3 embedded release.
+        // Current ABI exports support exact calldata checks for the current release.
         if (!isCurrentRelease) continue;
+
+        if (raw.architectureVersion === "v1.5-safe-governance") {
+          checkedV15.add(chainId);
+          const game = embedded.gamesMeta.find(
+            (entry: any) => normalizeHex(entry.gameId) === normalizeHex(v.gameId)
+          );
+          expect(game).toBeDefined();
+          const encoder = requireGameEncoder(game.slug);
+          expect(normalizeHex(encoder.encode(encoder.decode(v.params)))).toBe(
+            normalizeHex(v.params)
+          );
+        }
 
         const placeBetArgs = [
           normalizeHex(v.gameId) as Hex,
@@ -161,6 +192,12 @@ describe("golden vectors (exact-hex)", () => {
         expect(normalizeHex(calldata).slice(0, 10)).toBe(normalizeHex(v.selector));
         expect(normalizeHex(calldata)).toBe(normalizeHex(v.placeBetCalldata));
       }
+    }
+    for (const release of expectedV15) {
+      expect(
+        checkedV15.has(release.chainId),
+        `missing current v1.5 vectors for ${release.chainId}`
+      ).toBe(true);
     }
   });
 });

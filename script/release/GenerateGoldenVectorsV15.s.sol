@@ -55,7 +55,7 @@ contract GenerateGoldenVectorsV15 is Script {
         address affiliate = address(0);
         uint16 maxHouseEdgeBps = 3000;
 
-        bytes memory paramsDice = abi.encode(uint8(97));
+        bytes memory paramsDice = abi.encode(true, uint8(97));
         bytes memory paramsCoinToss = abi.encode(true);
         bytes memory paramsRoulette = RouletteParams.encode(RouletteParams.Kind.Bitmask, uint40(1));
         bytes memory paramsKeno = KenoParams.encode(uint40(0x0000000001));

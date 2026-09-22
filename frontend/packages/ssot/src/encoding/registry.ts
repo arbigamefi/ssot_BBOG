@@ -55,7 +55,7 @@ const REGISTRY: ReadonlyMap<string, GameEncoder> = new Map<string, GameEncoder>(
       encode: (p: { face: boolean }) => encodeCoinTossParams(p.face),
       decode: (hex: Hex) => decodeCoinTossParams(hex),
       defaultParams: { face: true },
-      paramsDescription: "bool face (true=heads)"
+      paramsDescription: "bool face (true=tails, false=heads)"
     }
   ],
   [

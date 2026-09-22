@@ -228,9 +228,9 @@ contract GenerateFrontendManifestV15 is Script {
 
         return string.concat(
             "[",
-            _gameJson(GAME_DICE, "dice", "Dice", moduleDice, "abi.encode(uint8 cap)"),
+            _gameJson(GAME_DICE, "dice", "Dice", moduleDice, "abi.encode(bool isOver, uint8 target)"),
             ",",
-            _gameJson(GAME_COIN_TOSS, "coin-toss", "Coin Toss", moduleCoinToss, "abi.encode(bool isHeads)"),
+            _gameJson(GAME_COIN_TOSS, "coin-toss", "Coin Toss", moduleCoinToss, "abi.encode(bool isTails)"),
             ",",
             _gameJson(GAME_ROULETTE, "roulette", "Roulette", moduleRoulette, "abi.encode(uint8 kind, uint40 payload)"),
             ",",

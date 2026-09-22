@@ -70,3 +70,9 @@
 19 项固定区块只读权限检查通过，覆盖两个 Bank 的旧部署者、guardian、keeper、三名 Safe owner 无权直接解除暂停，guardian 有权暂停但无权改任 guardian，及旧部署者无权修改 GameHub 退款超时。`eth_call` 的 caller 模拟不构成真实签名或状态变更演练，详见 [权限只读证据](base-sepolia-permissions-readonly.json)。
 
 Sepolia 发布包导入后的应用验证：类型检查、Web 构建、778 项测试通过；另用本机独立 PostgreSQL 补验 6 项恢复集成测试通过。实时 release smoke 通过。本机 Web 对新 release 和新 PostgreSQL 的健康检查通过，keeper 尚未交接，因此整体 `degraded`；未宣称完整业务验收完成。后续安排见 [测试网验收计划](sepolia-acceptance-plan.zh-CN.md)。
+
+## 业务模拟发现并修正的发布工具缺陷
+
+第一次使用发布向量进行真实模块模拟时，Dice `maxPayout` 拒绝旧的单字段 `uint8` 参数；当前合约实际需要 `(bool isOver, uint8 target)`。同时发现前端黄金向量测试只枚举 v1.3/v1.4，漏掉了 v1.5。修正生成器及参数描述、补入 v1.5 向量枚举和 SDK 编解码校验，并新增生成器输出必须通过全部 8 个真实模块 `validate/maxPayout` 的回归；17 项部署/发布测试通过。原始错误包哈希保留在发布记录的 `supersededArtifacts`，新包重新严格验签、治理核验、打包并通过 `ssot:sync` 导入。已部署合约与 snapshot 摘要均无需改变。
+
+独立验收辅助脚本也曾把投注授权目标误设为 GameHub；本协议由 Bank 拉取 stake，已改为仅向 Bank 授予合计 50 USDC 的有限授权（40 LP + 最多 10 投注）。该错误仅发生于本机 fork 模拟，未广播交易，与发布工具缺陷分别记录。

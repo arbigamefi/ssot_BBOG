@@ -46,14 +46,14 @@
       "slug": "dice",
       "label": "Dice",
       "module": "0x8856d6f92f33e5fd2890d6887f96ff63e006b97f",
-      "paramsEncoding": "abi.encode(uint8 cap)"
+      "paramsEncoding": "abi.encode(bool isOver, uint8 target)"
     },
     {
       "gameId": "0x6e800792927dde77598bf8cf4e8d9832799fbff08d7fbb3989225097ac6fa4e7",
       "slug": "coin-toss",
       "label": "Coin Toss",
       "module": "0x85cc307eee455ea80bcec29f9ab696840bbedef2",
-      "paramsEncoding": "abi.encode(bool isHeads)"
+      "paramsEncoding": "abi.encode(bool isTails)"
     },
     {
       "gameId": "0x41541f350c1da9780d719f9ebc2dd9d5883bf8c8df895243a1696bede4a708c0",

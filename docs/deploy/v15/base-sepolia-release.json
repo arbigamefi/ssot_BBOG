@@ -15,12 +15,29 @@
     "v": 28
   },
   "archiveName": "ssot-release-chain-84532-47140467-0xae662a55.tar.gz",
-  "archiveSha256": "938c0c1951d7664b9f0bbb953595c073790db85541eca6377f23c71ccd595ff2",
+  "archiveSha256": "9329bd6163a93133ff81756515a59274bfa999a7eb417ef0deb8d927e268d37c",
   "governanceAcceptance": "base-sepolia-governance-accepted.json",
   "strictArtifactValidation": true,
   "trustedSignatureVerified": true,
   "liveGovernanceVerifiedBeforePackaging": true,
   "banksPausedAtRelease": true,
   "applicationCutover": false,
-  "functionalAcceptance": "pending"
+  "functionalAcceptance": "pending",
+  "supersededArtifacts": [
+    {
+      "archiveSha256": "938c0c1951d7664b9f0bbb953595c073790db85541eca6377f23c71ccd595ff2",
+      "reason": "Dice golden vector encoded only uint8 target; actual DiceParams requires bool isOver and uint8 target. Found by live-fork module maxPayout simulation; no funds sent."
+    }
+  ],
+  "generatorCorrections": {
+    "diceParamsEncoding": "abi.encode(bool isOver, uint8 target)",
+    "coinTossParamsDescription": "true=tails, false=heads",
+    "allEightModuleVectorValidation": true,
+    "frontendV15VectorDiscoveryAndSdkRoundTrip": true,
+    "deploymentRegressionTestsPassed": 17,
+    "artifactHashes": {
+      "frontend-manifest-latest-v15.json": "aa25f2c291c383426bde1478b706772bb4a3ba93776ef9b1c53dc3d571dcc1f7",
+      "golden-vectors-latest-v15.json": "62dd75d58ffe2fe1ae61191834a4a1dd096f2d0beecfb2fb1d83618d2f783882"
+    }
+  }
 }
