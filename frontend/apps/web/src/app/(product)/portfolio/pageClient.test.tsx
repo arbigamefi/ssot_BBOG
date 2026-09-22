@@ -156,6 +156,20 @@ describe("PortfolioPageClient", () => {
     ).toBeGreaterThan(0);
   });
 
+  it("states the wallet requirement once instead of stamping it into every value slot", () => {
+    renderWithQueryClient(<PortfolioPageClient />);
+
+    // Disconnected, this page used to print "Wallet required" five times: once
+    // in the hero and once in each of the four figure slots, in the monospace
+    // face reserved for numbers. It read as five separate faults rather than
+    // one thing to do. The hero states it, next to the button that fixes it.
+    expect(screen.getAllByText("Wallet required")).toHaveLength(1);
+
+    // Wallet balance, bank position, refund credit and the refund card all
+    // stand empty instead of repeating the sentence.
+    expect(screen.getAllByText("\u2014")).toHaveLength(4);
+  });
+
   it("shows wallet and bank position totals per asset instead of summing raw units", async () => {
     const account = "0xc8ec9920d573893e888db5d30b2b3b3824b1b684";
     state.release = {

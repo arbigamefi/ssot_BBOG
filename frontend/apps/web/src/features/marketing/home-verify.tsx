@@ -5,6 +5,7 @@ import {
   ArrowTopRightOnSquareIcon,
   CodeBracketIcon
 } from "@heroicons/react/24/outline";
+import { SectionEyebrow } from "./section-eyebrow";
 
 /**
  * "Don't trust us. Verify." — the GTM proof beat made tangible. The panel shows
@@ -135,10 +136,10 @@ export function HomeVerify({
 
           {/* Copy — the "verify" beat. */}
           <div className="order-1 lg:order-2">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-brand/30 bg-brand-soft px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-brand">
+            <SectionEyebrow className="mb-5">
               <CodeBracketIcon className="h-4 w-4" />
               {copy.eyebrow}
-            </div>
+            </SectionEyebrow>
             <h2 className="text-4xl font-bold tracking-tight text-fg md:text-5xl">{copy.title}</h2>
             <p className="mt-5 max-w-xl text-base leading-7 text-fg-muted md:text-lg">
               {copy.description}

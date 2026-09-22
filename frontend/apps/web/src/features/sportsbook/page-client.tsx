@@ -202,10 +202,12 @@ export function SportsbookPageClient() {
         {!enabled ? (
           <EmptyMarketsState
             variant="preview"
-            reason={
-              sportsbook.disabledReason ??
-              (readOnly ? readOnlyReason : t("sportsbook.player.empty.preview.description"))
-            }
+            // `sportsbook.disabledReason` is developer diagnostics: it renders the
+            // raw env flag name ("NEXT_PUBLIC_SPORTSBOOK_ENABLED is not true."),
+            // untranslated, to whoever opens the page. The localized copy below
+            // already says the same thing in product language; the diagnostic
+            // stays available to the ops surfaces that want it.
+            reason={readOnly ? readOnlyReason : t("sportsbook.player.empty.preview.description")}
           />
         ) : null}
 

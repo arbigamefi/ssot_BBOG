@@ -423,6 +423,80 @@ describe("GameRoomBetPanel", () => {
     ).toBe(false);
   });
 
+  it("keeps the CTA live with no wallet so the connect path stays reachable", () => {
+    // The click handler already opens the connect modal when there is no
+    // account (`place-bet-action.ts`). Disabling the button for a missing
+    // selection made that branch unreachable for a first-time visitor, who saw
+    // a greyed-out "connect wallet" and could reasonably read it as broken.
+    // Picking a bet is not a prerequisite for connecting a wallet.
+    expect(
+      isPlaceBetButtonDisabled({
+        gameSlug: "roulette",
+        hasAccount: false,
+        isPending: false,
+        winChance: 0,
+        state: baseState
+      })
+    ).toBe(false);
+
+    // Still live even when the other blockers are set: none of them is a reason
+    // to refuse a connection.
+    expect(
+      isPlaceBetButtonDisabled({
+        gameSlug: "roulette",
+        hasAccount: false,
+        isPending: true,
+        winChance: 0,
+        state: baseState,
+        amountUnavailable: true,
+        amountExceedsMax: true
+      })
+    ).toBe(false);
+
+    // Once connected the selection requirement applies again, so the same call
+    // with a wallet must stay disabled -- this is the pair that pins the change.
+    expect(
+      isPlaceBetButtonDisabled({
+        gameSlug: "roulette",
+        hasAccount: true,
+        isPending: false,
+        winChance: 0,
+        state: baseState
+      })
+    ).toBe(true);
+
+    // Omitting `hasAccount` must behave as connected, so existing call sites
+    // that never passed it keep their old semantics.
+    expect(
+      isPlaceBetButtonDisabled({
+        gameSlug: "roulette",
+        isPending: false,
+        winChance: 0,
+        state: baseState
+      })
+    ).toBe(true);
+  });
+
+  it("renders the no-wallet CTA as actionable rather than locked", () => {
+    cleanup();
+    // Must be a game where a missing selection actually locks the button.
+    // `isSelectionMissing` always returns false for dice, so rendering the
+    // default fixture here would assert nothing at all.
+    renderPanel({
+      game: { ...diceGame, slug: "roulette", label: "Roulette" },
+      hasAccount: false,
+      winChance: 0,
+      state: baseState
+    });
+
+    const cta = screen.getByRole("button", { name: "CONNECT WALLET" });
+    expect((cta as HTMLButtonElement).disabled).toBe(false);
+    // The locked styling must track the disabled state; a clickable button
+    // rendered greyed out is a worse signal than either state alone.
+    expect(cta.className).not.toContain("cursor-not-allowed");
+    expect(cta.className).toContain("bg-brand");
+  });
+
   it("uses one signing label for wallet submission and a separate reveal label", () => {
     renderPanel({
       hasAccount: true,

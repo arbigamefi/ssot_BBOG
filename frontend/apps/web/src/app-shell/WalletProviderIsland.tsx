@@ -4,7 +4,7 @@ import * as React from "react";
 import { embeddedChainIds } from "@ssot/ssot/release";
 import { WagmiProvider, createConfig, http } from "wagmi";
 import { arbitrum, arbitrumSepolia, base, baseSepolia, mainnet } from "wagmi/chains";
-import { RainbowKitProvider, connectorsForWallets } from "@rainbow-me/rainbowkit";
+import { RainbowKitProvider, connectorsForWallets, darkTheme } from "@rainbow-me/rainbowkit";
 import {
   coinbaseWallet,
   injectedWallet,
@@ -123,6 +123,27 @@ const wagmiConfig = createConfig({
   batch: { multicall: true }
 });
 
+// The connect modal is the one surface a first-time player sees before anything
+// else works, and RainbowKit defaults to its light theme. Left unset it renders
+// a white dialog over a dark product, which reads as leaving the site at the
+// exact moment trust matters most.
+//
+// Colors come from the shipped design tokens rather than literals, so the modal
+// follows the app's palette instead of drifting from it.
+// Radius matches for the same reason. Measured on the running modal, the
+// "large" scale gives a 24px dialog, 12px wallet rows and a fully round
+// "get a wallet" button -- a 24px surface appears nowhere in this product, and
+// `rounded-full` here is for dots, avatars and badges, never a text button.
+// "medium" lands on radii the site already uses: 8px rows are `rounded-lg`,
+// and its 16px dialog is exactly the corner of our own mobile Sheet
+// (`rounded-t-2xl`). Only the 28px circular close button stays round.
+const walletModalTheme = darkTheme({
+  accentColor: "hsl(var(--brand))",
+  accentColorForeground: "hsl(var(--fg-inverse))",
+  borderRadius: "medium",
+  overlayBlur: "small"
+});
+
 export function WalletProviderIsland({ children }: { children: React.ReactNode }) {
   return (
     <WagmiProvider config={wagmiConfig}>
@@ -131,6 +152,7 @@ export function WalletProviderIsland({ children }: { children: React.ReactNode }
           appInfo={{ appName: "ArbiGameFi" }}
           modalSize="wide"
           showRecentTransactions={false}
+          theme={walletModalTheme}
         >
           {children}
         </RainbowKitProvider>

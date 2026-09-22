@@ -2059,6 +2059,7 @@
         "asset": "资产",
         "pending": "待读取",
         "walletRequired": "需要连接钱包",
+        "valueUnavailable": "—",
         "unknown": "未知",
         "unconnected": "未连接",
         "unlimited": "无限额度",
@@ -3162,7 +3163,24 @@
       },
       "verifiable": "链上可验证",
       "indexed": "索引·可能延迟",
-      "assetContext": "资产上下文"
+      "assetContext": "资产上下文",
+      "preLaunch": {
+        "rtp": {
+          "label": "玩家回报率",
+          "value": "98%",
+          "detail": "房屋优势只有协议层一道 2% 的赔付抽成。八款游戏一视同仁，高于欧式轮盘的 97.3%。"
+        },
+        "randomness": {
+          "label": "随机数来源",
+          "value": "Chainlink VRF",
+          "detail": "开奖由 Chainlink 可验证随机函数产生。结果落地之前，我们看不到，也改不了。"
+        },
+        "settlement": {
+          "label": "结算方式",
+          "value": "无需许可",
+          "detail": "finalize() 和 refund() 对任何人开放。就算我们的 keeper 停了，你也能自己结算。"
+        }
+      }
     },
     "rooms": {
       "eyebrow": "全部游戏",

@@ -1,6 +1,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { ArrowRightIcon } from "@heroicons/react/24/outline";
+import { SectionEyebrow } from "./section-eyebrow";
 
 export function SectionHeader({
   eyebrow,
@@ -18,9 +19,7 @@ export function SectionHeader({
   return (
     <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
       <div className="max-w-3xl">
-        <div className="mb-3 text-xs font-bold uppercase tracking-[0.16em] text-brand">
-          {eyebrow}
-        </div>
+        <SectionEyebrow className="mb-5">{eyebrow}</SectionEyebrow>
         <h2 className="text-4xl font-bold tracking-normal text-fg md:text-5xl">{title}</h2>
         <p className="mt-4 text-base leading-7 text-fg-muted">{detail}</p>
       </div>

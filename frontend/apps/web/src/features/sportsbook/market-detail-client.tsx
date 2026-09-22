@@ -168,7 +168,7 @@ export function SportsbookMarketDetailPageClient({ marketId }: { marketId: strin
     disabledReason: readOnly
       ? readOnlyReason
       : !sportsbook.enabled
-        ? sportsbook.disabledReason
+        ? t("sportsbook.player.empty.preview.description")
         : readback?.market && readback.market.state !== "open"
           ? t("slip.marketMustBeOpen")
           : undefined,

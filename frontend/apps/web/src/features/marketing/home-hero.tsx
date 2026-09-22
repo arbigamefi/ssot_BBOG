@@ -6,6 +6,7 @@ import {
   CodeBracketIcon,
   ShieldCheckIcon
 } from "@heroicons/react/24/outline";
+import { SectionEyebrow } from "./section-eyebrow";
 
 export function HomeHero({
   copy
@@ -46,10 +47,10 @@ export function HomeHero({
 
       <div className="relative mx-auto grid max-w-[1440px] grid-cols-1 gap-8 px-6 pb-12 pt-24 md:gap-10 md:pb-16 md:pt-32 lg:min-h-[calc(100svh-5.5rem)] lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:items-center lg:gap-6 lg:px-10 lg:pb-20 lg:pt-28 xl:grid-cols-[minmax(0,0.88fr)_minmax(440px,0.92fr)] xl:gap-8">
         <div className="max-w-3xl lg:pb-8">
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand/30 bg-brand-soft px-3 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-brand shadow-e1">
+          <SectionEyebrow size="hero" className="mb-6">
             <span className="h-2 w-2 rounded-full bg-accent" />
             {copy.channel}
-          </div>
+          </SectionEyebrow>
 
           <h1 className="max-w-4xl text-4xl font-bold leading-[1.04] tracking-normal text-fg sm:text-5xl md:text-7xl lg:text-6xl xl:text-[5rem]">
             {copy.title}
@@ -152,20 +153,27 @@ function HeroPayoutVisual({
         }}
       />
 
-      {/* Layer 2 — roulette mechanical: enlarged, set back, laid onto the table on desktop. */}
-      <div className="absolute left-1/2 top-[-1.25rem] h-[270px] w-[270px] -translate-x-1/2 opacity-70 sm:h-[296px] sm:w-[296px] md:top-[-0.75rem] md:h-[330px] md:w-[330px] md:opacity-80 lg:left-auto lg:right-1 lg:top-3 lg:h-[340px] lg:w-[340px] lg:translate-x-0 lg:opacity-85 lg:[transform:rotateX(20deg)] xl:right-2 xl:top-1 xl:h-[392px] xl:w-[392px]">
+      {/* Layer 2 — roulette mechanical: set back, laid onto the table on desktop.
+          Sized *under* the receipt card on purpose: perspective, the table fade
+          and a shortened shadow push it back, so its footprint has to agree with
+          them instead of pulling it forward again. Right-set and dissolving into
+          the table are the point — that is the table's vanishing direction. */}
+      <div className="absolute left-1/2 top-[-1.25rem] h-[244px] w-[244px] -translate-x-1/2 opacity-70 sm:h-[266px] sm:w-[266px] md:top-[-0.75rem] md:h-[292px] md:w-[292px] md:opacity-80 lg:left-auto lg:right-1 lg:top-[-2rem] lg:h-[300px] lg:w-[300px] lg:translate-x-0 lg:opacity-[0.78] lg:[transform:rotateX(20deg)] xl:right-2 xl:top-[-0.75rem] xl:h-[338px] xl:w-[338px]">
         <HeroRouletteWheel pockets={pockets} />
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-[58%]"
           style={{
-            background: "linear-gradient(to top, hsl(var(--surface-0) / 0.5), transparent)"
+            background: "linear-gradient(to top, hsl(var(--surface-0) / 0.62), transparent)"
           }}
         />
       </div>
 
-      {/* Layer 3 — foreground receipt glass: brought forward, slightly angled, casting a shadow. */}
-      <div className="absolute inset-x-0 bottom-1 w-full origin-center md:bottom-0 lg:left-auto lg:right-0 lg:w-full lg:max-w-[390px] lg:[transform:rotateY(-7deg)_rotateX(4deg)] xl:max-w-[430px]">
+      {/* Layer 3 — foreground receipt glass: brought forward, slightly angled, casting a shadow.
+          Widest object in the frame, and right-flush with the wheel, so the two
+          share one edge instead of drifting apart. The extra width also reaches
+          back toward the headline and closes the dead band between the columns. */}
+      <div className="absolute inset-x-0 bottom-1 w-full origin-center md:bottom-0 lg:left-auto lg:right-0 lg:w-full lg:max-w-[440px] lg:[transform:rotateY(-7deg)_rotateX(4deg)] xl:max-w-[500px]">
         <div
           aria-hidden
           className="pointer-events-none absolute -inset-x-2 -bottom-5 top-8 -z-10 rounded-lg blur-2xl"
@@ -220,7 +228,7 @@ function HeroPayoutVisual({
 
 function HeroRouletteWheel({ pockets }: { pockets: number[] }) {
   return (
-    <svg viewBox="0 0 380 380" className="relative h-full w-full drop-shadow-2xl">
+    <svg viewBox="0 0 380 380" className="relative h-full w-full drop-shadow-lg">
       <defs>
         <radialGradient id="home-roulette-apron" cx="45%" cy="32%" r="74%">
           <stop offset="0%" stopColor="hsl(var(--surface-3))" />
@@ -233,7 +241,9 @@ function HeroRouletteWheel({ pockets }: { pockets: number[] }) {
           <stop offset="100%" stopColor="hsl(var(--surface-2))" />
         </radialGradient>
         <filter id="home-roulette-shadow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="16" stdDeviation="14" floodColor="black" floodOpacity="0.55" />
+          {/* Short, soft cast: an object set back on the table throws less
+              shadow than one held in front of it. */}
+          <feDropShadow dx="0" dy="10" stdDeviation="12" floodColor="black" floodOpacity="0.38" />
         </filter>
       </defs>
 

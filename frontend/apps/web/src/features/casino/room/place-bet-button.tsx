@@ -37,6 +37,7 @@ export function derivePlaceBetButtonPhase({
 
 export function isPlaceBetButtonDisabled({
   gameSlug,
+  hasAccount = true,
   isPending,
   winChance,
   state,
@@ -46,6 +47,7 @@ export function isPlaceBetButtonDisabled({
   amountExceedsMax = false
 }: {
   gameSlug: string;
+  hasAccount?: boolean;
   isPending: boolean;
   winChance: number;
   state: GameRoomBetPanelState;
@@ -54,6 +56,14 @@ export function isPlaceBetButtonDisabled({
   amountUnavailable?: boolean;
   amountExceedsMax?: boolean;
 }) {
+  // With no wallet the button reads "connect wallet" and its click handler
+  // already opens the connect modal (`place-bet-action.ts`: `if (!account)
+  // openConnectModal()`). Disabling it for a missing selection made that
+  // branch unreachable for exactly the visitor it exists for: a first-timer
+  // who has not picked a bet yet sees a greyed-out "connect wallet" and
+  // reasonably concludes connecting is broken. Choosing a bet is not a
+  // prerequisite for connecting.
+  if (!hasAccount) return false;
   if (manualSettleAvailable || manualRefundAvailable) return false;
   if (state.status === "failed") return false;
   return (
@@ -150,6 +160,7 @@ export function PlaceBetButton({
 }) {
   const t = useTranslations();
   const disabled = isPlaceBetButtonDisabled({
+    hasAccount,
     gameSlug,
     isPending,
     winChance,
@@ -162,7 +173,11 @@ export function PlaceBetButton({
   const activeManualAction = manualSettleAvailable || manualRefundAvailable;
   const isFailed = state.status === "failed";
   const selectionMissing = isSelectionMissing(gameSlug, winChance);
+  // Keep the locked look in step with the disabled state above. Without the
+  // `hasAccount` guard the button would be clickable but rendered greyed out --
+  // a worse signal than either state alone.
   const appearsLocked =
+    hasAccount &&
     !isFailed &&
     !activeManualAction &&
     (isPending ||
