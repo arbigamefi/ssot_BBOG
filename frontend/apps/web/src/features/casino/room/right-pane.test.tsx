@@ -1,6 +1,6 @@
 import * as React from "react";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { GameRoomRightPane } from "./right-pane";
 
@@ -209,6 +209,12 @@ function mockMatchMedia(matches: boolean) {
 }
 
 describe("GameRoomRightPane", () => {
+  beforeAll(async () => {
+    // Keep Vitest's cold module transformation outside DOM query timeouts.
+    // The component still loads through next/dynamic and must render its receipt.
+    await import("./result-overlay");
+  }, 10_000);
+
   afterEach(() => {
     cleanup();
     vi.restoreAllMocks();
