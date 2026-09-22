@@ -43,8 +43,7 @@ export function HomeActivity({
             <div className="min-w-0">
               <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-fg-subtle">
                 {copy.eyebrow}
-                <span className="inline-flex items-center gap-1 rounded-full border border-success/30 bg-success-soft px-2 py-0.5 text-success">
-                  <span className="h-1.5 w-1.5 rounded-full bg-success motion-safe:animate-pulse" />
+                <span className="inline-flex items-center gap-1 rounded-full border border-border-soft bg-surface-2 px-2 py-0.5 text-fg-muted">
                   {copy.live}
                 </span>
               </div>

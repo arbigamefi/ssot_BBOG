@@ -3119,7 +3119,7 @@
     },
     "hero": {
       "channel": "On-chain casino",
-      "title": "Play on-chain. Get paid to your wallet.",
+      "title": "On-chain games. Verifiable results.",
       "description": "Casino rooms with Chainlink VRF randomness, public receipts, and payouts that settle straight to your wallet.",
       "enterCasino": "Enter Casino",
       "viewBank": "See Bankroll",
@@ -3163,24 +3163,7 @@
       },
       "verifiable": "On-chain",
       "indexed": "Indexed · may lag",
-      "assetContext": "Asset context",
-      "preLaunch": {
-        "rtp": {
-          "label": "Return to player",
-          "value": "98%",
-          "detail": "A single protocol-level 2% fee on payouts. Every game carries the same edge — better than European roulette's 97.3%."
-        },
-        "randomness": {
-          "label": "Randomness",
-          "value": "Chainlink VRF",
-          "detail": "Draws come from Chainlink's verifiable random function. We cannot see or influence a result before it lands."
-        },
-        "settlement": {
-          "label": "Settlement",
-          "value": "Permissionless",
-          "detail": "finalize() and refund() are open to anyone. If our keeper stops, you can settle your own bet."
-        }
-      }
+      "assetContext": "Asset context"
     },
     "rooms": {
       "eyebrow": "All games",
@@ -3195,14 +3178,14 @@
         "summary": "Set the target, choose the stake, and step into a fast dice room.",
         "facts": {
           "0": "Fast bet",
-          "1": "Live settlement",
+          "1": "Public receipt",
           "2": "Single asset"
         }
       },
       "coinToss": {
         "title": "Coin Toss",
         "badge": "Binary room",
-        "summary": "Heads or tails with the cleanest room entry on the floor.",
+        "summary": "Choose heads or tails and follow the on-chain result.",
         "facts": {
           "0": "Quick entry",
           "1": "Binary play",
@@ -3301,46 +3284,12 @@
       "description": "Your wallet, the game, and the randomness are separate contracts. Anyone can replay the same bet from the chain and get the same answer.",
       "actionLabel": "See receipts"
     },
-    "whyUs": {
-      "eyebrow": "Why play here",
-      "title": "We can't rig the spin.",
-      "items": {
-        "0": {
-          "title": "We can't pick the numbers",
-          "detail": "Every spin's random number is drawn by Chainlink VRF. We just settle whatever it returns."
-        },
-        "1": {
-          "title": "Your win hits your wallet",
-          "detail": "Once VRF returns, the win lands in your wallet on-chain — no withdrawal queue, no minimum, no delay."
-        },
-        "2": {
-          "title": "The house can't run out",
-          "detail": "How much the casino can pay out is visible on-chain. Check it before you bet."
-        },
-        "3": {
-          "title": "Every contract is public",
-          "detail": "Game logic, bank, settlement — all of it is open source. Read it, fork it, verify it."
-        }
-      }
-    },
     "verify": {
       "eyebrow": "Open source",
       "title": "Don't trust us. Verify.",
       "description": "Every game's rules are a pure on-chain function — deterministic, with no hidden house knobs. Read the exact bytecode and run it yourself.",
       "sourceNote": "Representative excerpt. The deployed contract is the source of truth — verify the full source on-chain.",
       "verifyCta": "Verify on explorer"
-    },
-    "reserveBar": {
-      "eyebrow": "Network bankroll",
-      "free": "Free to pay out",
-      "total": "Total across Banks",
-      "verify": "Check on-chain"
-    },
-    "featured": {
-      "eyebrow": "Featured",
-      "title": "Keno — pick 5, match all for 500.5×.",
-      "detail": "Fifteen numbers on the board. Pick five. Match all five and the payout is 500.5×. Hit one and you still cash out.",
-      "cta": "Play Keno"
     },
     "footerCta": {
       "eyebrow": "Ready when you are",
@@ -3378,6 +3327,68 @@
         "keno": {
           "summary": "Pick numbers, set the stake, and keep the draw centered in the room."
         }
+      }
+    },
+    "landing": {
+      "scrollHint": "Explore the games",
+      "bankHint": "Inspect bank balances and reserved funds for the selected network.",
+      "visual": {
+        "status": "Illustration",
+        "wallet": "Your wallet · your transaction history",
+        "receipt": "Receipt preview",
+        "proof": "Settlement",
+        "title": "Every result, traceable.",
+        "request": "Randomness request",
+        "transaction": "Transaction receipt"
+      },
+      "mechanisms": {
+        "rules": {
+          "label": "Game rules",
+          "value": "Open source",
+          "detail": "Review each game’s rules and current fees before placing a bet."
+        },
+        "randomness": {
+          "label": "Randomness",
+          "value": "Chainlink VRF",
+          "detail": "Follow the randomness request and proof recorded for each bet."
+        },
+        "receipts": {
+          "label": "Transaction history",
+          "value": "Public receipts",
+          "detail": "Track a bet from placement to its on-chain settlement."
+        }
+      },
+      "steps": {
+        "eyebrow": "How it works",
+        "title": "From your first choice to the final receipt.",
+        "items": {
+          "0": {
+            "title": "Choose a game",
+            "detail": "Explore the games, read the rules, and check the selected network and supported asset."
+          },
+          "1": {
+            "title": "Review, then sign",
+            "detail": "Connect your wallet. Check your stake, payout quote and fees before confirming the transaction."
+          },
+          "2": {
+            "title": "Follow the result",
+            "detail": "Wait for randomness and settlement confirmations, then open the receipt to check the result and payout."
+          }
+        }
+      },
+      "verifyDescription": "Read the game logic and inspect the deployed contract. Payouts also depend on the bet parameters and the protocol’s configured fees.",
+      "activityEyebrow": "Recent activity",
+      "receiptCta": "View receipts",
+      "bank": {
+        "title": "Check the bankroll before you play.",
+        "description": "Balances are read from contracts on the selected network and shown separately for each asset. Unreserved funds are NAV minus amounts reserved for open bets; they are not a payout guarantee.",
+        "freeLabel": "Unreserved funds",
+        "freeDetail": "Selected-asset NAV less reserved obligations, floored at zero.",
+        "loading": "Reading bank balances…",
+        "error": "Bank balances could not be read. Try again or inspect the bankroll directly.",
+        "empty": "No bank balances are available in this release.",
+        "unavailable": "No deployment is available for the selected network.",
+        "retry": "Retry bank balances"
       }
     }
   },

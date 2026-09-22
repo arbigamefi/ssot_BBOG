@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import * as React from "react";
 
+const refetchOverview = vi.fn();
 const state = {
   release: null as any,
   readOnly: false,
@@ -26,7 +27,9 @@ vi.mock("@tanstack/react-query", () => ({
     if (Array.isArray(queryKey) && queryKey.includes("asset-overview")) {
       return {
         data: { assets: state.assetOverviews },
-        isLoading: state.overviewLoading,
+        isPending: state.overviewLoading,
+        isFetching: false,
+        refetch: refetchOverview,
         error: state.overviewError
       };
     }
@@ -37,6 +40,7 @@ vi.mock("@tanstack/react-query", () => ({
 vi.mock("../../ssot/release/ReleaseProvider", () => ({
   useRelease: () => ({
     release: state.release,
+    chainId: state.release?.chainId ?? 8453,
     readOnly: state.readOnly,
     readOnlyReason: state.readOnlyReason
   })
@@ -119,6 +123,7 @@ import HomePage from "./page";
 describe("HomePage", () => {
   afterEach(() => {
     cleanup();
+    vi.clearAllMocks();
     state.release = null;
     state.readOnly = false;
     state.readOnlyReason = null;
@@ -138,12 +143,12 @@ describe("HomePage", () => {
     render(<HomePage />);
 
     expect(
-      screen.getByRole("heading", { name: "Play on-chain. Get paid to your wallet." })
+      screen.getByRole("heading", { name: "On-chain games. Verifiable results." })
     ).toBeDefined();
     expect(screen.getByText("On-chain casino")).toBeDefined();
     expect(screen.getAllByText("Enter Casino").length).toBeGreaterThan(0);
     expect(screen.getByText("Game rooms. One wallet.")).toBeDefined();
-    expect(screen.getByText("We can't rig the spin.")).toBeDefined();
+    expect(screen.getByText("From your first choice to the final receipt.")).toBeDefined();
     expect(screen.queryByText("Last few bets")).toBeNull();
     expect(screen.queryByText("Be the first.")).toBeNull();
   });
@@ -234,8 +239,8 @@ describe("HomePage", () => {
 
     render(<HomePage />);
 
-    expect(screen.getAllByText("Free to pay out").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Total across Banks").length).toBeGreaterThan(0);
+    expect(screen.getByText("Unreserved funds")).toBeDefined();
+    expect(screen.getByText("Network bankroll")).toBeDefined();
     expect(screen.getAllByText("0.75 USDC").length).toBeGreaterThan(0);
     expect(screen.getAllByText("1 USDC").length).toBeGreaterThan(0);
     expect(screen.queryByText("0.75 USDC / 2 WETH")).toBeNull();
@@ -246,13 +251,61 @@ describe("HomePage", () => {
     expect(screen.getAllByText("Dice").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Keno").length).toBeGreaterThan(0);
     expect(screen.getByText("Last few bets")).toBeDefined();
-    expect(screen.getByText("Check on-chain")).toBeDefined();
-    expect(screen.getByText("Keno — pick 5, match all for 500.5×.")).toBeDefined();
-    expect(screen.getByText("Play Keno")).toBeDefined();
+    expect(screen.getByRole("link", { name: "Inspect bankroll" }).getAttribute("href")).toBe(
+      "/earn"
+    );
 
     const kenoLinks = screen
       .getAllByText("Keno")
       .map((node) => node.closest("a")?.getAttribute("href"));
     expect(kenoLinks).toContain("/casino/keno");
+  });
+  it("keeps illustrative content separate from live bank evidence", () => {
+    render(<HomePage />);
+    expect(screen.queryByText("98%")).toBeNull();
+    expect(screen.queryByText("On-chain", { exact: true })).toBeNull();
+    expect(screen.getByText("Illustration")).toBeDefined();
+    expect(screen.queryByText(/0xd662|0x44a3|9.6/)).toBeNull();
+    expect(screen.getByRole("link", { name: "View receipts" }).getAttribute("href")).toBe(
+      "/portfolio/activity"
+    );
+    expect(screen.getByRole("link", { name: "Explore the games" }).getAttribute("href")).toBe(
+      "#home-games"
+    );
+    expect(screen.getByRole("status").textContent).toContain("No deployment");
+  });
+
+  it("distinguishes loading, failed refresh, and a successfully read empty response", () => {
+    state.release = { name: "Base", chainId: 8453, releaseDigest: "test", contracts: {} };
+    state.overviewLoading = true;
+    const { rerender } = render(<HomePage />);
+    expect(screen.getByRole("status").textContent).toContain("Reading bank balances");
+    state.overviewLoading = false;
+    state.overviewError = new Error("RPC unavailable");
+    // A cached balance must not remain labelled current after a failed refresh.
+    state.assetOverviews = [
+      {
+        address: "0x01",
+        symbol: "USDC",
+        decimals: 6,
+        totalAssets: 1000000n,
+        totalReserved: 0n,
+        turnover: 0n,
+        protocolFee: 0n
+      }
+    ];
+    rerender(<HomePage />);
+    expect(screen.getByRole("status").textContent).toContain("could not be read");
+    expect(screen.queryByText("1 USDC")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Retry bank balances" }));
+    expect(refetchOverview).toHaveBeenCalledOnce();
+    state.overviewError = null;
+    state.assetOverviews[0].totalAssets = 0n;
+    rerender(<HomePage />);
+    expect(screen.getAllByText("0 USDC")).toHaveLength(3);
+    expect(screen.queryByRole("status")).toBeNull();
+    state.assetOverviews = [];
+    rerender(<HomePage />);
+    expect(screen.getByRole("status").textContent).toContain("No bank balances");
   });
 });

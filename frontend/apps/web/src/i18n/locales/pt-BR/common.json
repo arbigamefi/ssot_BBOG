@@ -344,7 +344,7 @@
     },
     "hero": {
       "channel": "Cassino on-chain",
-      "title": "Jogue on-chain. Receba direto na carteira.",
+      "title": "Jogos on-chain. Resultados verificáveis.",
       "description": "Salas de cassino com aleatoriedade Chainlink VRF, recibos públicos e pagamentos que liquidam direto na sua carteira.",
       "enterCasino": "Entrar no cassino",
       "viewBank": "Ver bankroll",
@@ -403,14 +403,14 @@
         "summary": "Defina o alvo, escolha a aposta e entre numa sala de dados rápida.",
         "facts": {
           "0": "Aposta rápida",
-          "1": "Liquidação ao vivo",
+          "1": "Recibo público",
           "2": "Ativo único"
         }
       },
       "coinToss": {
         "title": "Cara ou Coroa",
         "badge": "Sala binária",
-        "summary": "Cara ou coroa com a entrada de sala mais limpa do salão.",
+        "summary": "Escolha cara ou coroa e acompanhe o resultado on-chain.",
         "facts": {
           "0": "Entrada rápida",
           "1": "Jogo binário",
@@ -509,28 +509,6 @@
       "description": "Sua carteira, o jogo e a aleatoriedade são contratos separados. Qualquer um pode reproduzir a mesma aposta a partir da blockchain e obter a mesma resposta.",
       "actionLabel": "Ver recibos"
     },
-    "whyUs": {
-      "eyebrow": "Por que jogar aqui",
-      "title": "Não dá pra fraudar o giro.",
-      "items": {
-        "0": {
-          "title": "Não escolhemos os números",
-          "detail": "O número aleatório de cada giro é sorteado pelo Chainlink VRF. Nós apenas liquidamos o que ele retorna."
-        },
-        "1": {
-          "title": "Seu prêmio cai na sua carteira",
-          "detail": "Quando o VRF responde, o prêmio chega à sua carteira on-chain — sem fila de saque, sem mínimo, sem atraso."
-        },
-        "2": {
-          "title": "A casa não pode quebrar",
-          "detail": "Quanto o cassino pode pagar é visível on-chain. Confira antes de apostar."
-        },
-        "3": {
-          "title": "Todo contrato é público",
-          "detail": "Lógica do jogo, banco, liquidação — tudo open source. Leia, faça fork, verifique."
-        }
-      }
-    },
     "verify": {
       "eyebrow": "Código aberto",
       "title": "Não confie. Verifique.",
@@ -538,24 +516,74 @@
       "sourceNote": "Trecho representativo. O contrato implantado é a fonte da verdade — verifique o código completo on-chain.",
       "verifyCta": "Verificar no explorer"
     },
-    "reserveBar": {
-      "eyebrow": "Bankroll da rede",
-      "free": "Livre para pagar",
-      "total": "Total nos Banks",
-      "verify": "Conferir on-chain"
-    },
-    "featured": {
-      "eyebrow": "Destaque",
-      "title": "Keno — escolha 5, acerte todos por 500,5×.",
-      "detail": "Quinze números no tabuleiro. Escolha cinco. Acerte os cinco e o pagamento é 500,5×. Acerte um e você ainda saca.",
-      "cta": "Jogar Keno"
-    },
     "footerCta": {
       "eyebrow": "Quando você quiser",
       "title": "Conecte uma carteira. Escolha um jogo. Gire.",
       "description": "Seu dinheiro fica na sua carteira até você apostar. Os prêmios voltam do mesmo jeito.",
       "primary": "Começar a jogar",
       "secondary": "Ver jogos"
+    },
+    "landing": {
+      "scrollHint": "Explorar os jogos",
+      "bankHint": "Consulte saldos e fundos reservados na rede selecionada.",
+      "visual": {
+        "status": "Ilustração",
+        "wallet": "Sua carteira · seu histórico",
+        "receipt": "Prévia do recibo",
+        "proof": "Liquidação",
+        "title": "Cada resultado, rastreável.",
+        "request": "Pedido de aleatoriedade",
+        "transaction": "Recibo da transação"
+      },
+      "mechanisms": {
+        "rules": {
+          "label": "Regras do jogo",
+          "value": "Código aberto",
+          "detail": "Confira as regras e as taxas atuais de cada jogo antes de apostar."
+        },
+        "randomness": {
+          "label": "Aleatoriedade",
+          "value": "Chainlink VRF",
+          "detail": "Acompanhe o pedido de aleatoriedade e a prova de cada aposta."
+        },
+        "receipts": {
+          "label": "Histórico de transações",
+          "value": "Recibos públicos",
+          "detail": "Acompanhe a aposta desde o envio até a liquidação on-chain."
+        }
+      },
+      "steps": {
+        "eyebrow": "Como funciona",
+        "title": "Da escolha ao recibo final.",
+        "items": {
+          "0": {
+            "title": "Escolha um jogo",
+            "detail": "Explore os jogos, leia as regras e confira a rede e o ativo aceito."
+          },
+          "1": {
+            "title": "Revise e assine",
+            "detail": "Conecte a carteira. Confira o valor, a cotação do pagamento e as taxas antes de confirmar."
+          },
+          "2": {
+            "title": "Acompanhe o resultado",
+            "detail": "Aguarde a aleatoriedade e a confirmação da liquidação. Abra o recibo para conferir o resultado e o pagamento."
+          }
+        }
+      },
+      "verifyDescription": "Leia a lógica do jogo e confira o contrato implantado. O pagamento também depende dos parâmetros da aposta e das taxas configuradas no protocolo.",
+      "activityEyebrow": "Atividade recente",
+      "receiptCta": "Ver recibos",
+      "bank": {
+        "title": "Confira a banca antes de jogar.",
+        "description": "Os saldos são lidos dos contratos da rede selecionada, separados por ativo. Os fundos não reservados equivalem ao patrimônio líquido menos as reservas para apostas abertas; não são garantia de pagamento.",
+        "freeLabel": "Fundos não reservados",
+        "freeDetail": "Patrimônio líquido do ativo menos obrigações reservadas, com mínimo de zero.",
+        "loading": "Lendo os saldos…",
+        "error": "Não foi possível ler os saldos. Tente novamente ou consulte a banca.",
+        "empty": "Esta versão não tem saldos de banca disponíveis.",
+        "unavailable": "Não há implantação disponível para a rede selecionada.",
+        "retry": "Tentar novamente"
+      }
     }
   },
   "affiliate": {

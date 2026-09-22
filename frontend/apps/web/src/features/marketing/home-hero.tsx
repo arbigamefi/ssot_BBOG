@@ -23,6 +23,9 @@ export function HomeHero({
       wallet: string;
       receipt: string;
       proof: string;
+      title: string;
+      request: string;
+      transaction: string;
     };
     proofRows: {
       vrf: { title: string; detail: string };
@@ -52,7 +55,7 @@ export function HomeHero({
             {copy.channel}
           </SectionEyebrow>
 
-          <h1 className="max-w-4xl text-4xl font-bold leading-[1.04] tracking-normal text-fg sm:text-5xl md:text-7xl lg:text-6xl xl:text-[5rem]">
+          <h1 className="max-w-4xl text-balance text-4xl font-bold leading-[1.04] tracking-normal text-fg sm:text-5xl md:text-7xl lg:text-6xl xl:text-[5rem]">
             {copy.title}
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-fg-muted md:text-xl">
@@ -111,7 +114,7 @@ export function HomeHero({
       </div>
 
       <a
-        href="#home-after-hero"
+        href="#home-games"
         aria-label={copy.scrollHint}
         className="absolute left-1/2 top-[calc(100svh-7.25rem)] hidden h-11 w-11 -translate-x-1/2 items-center justify-center rounded-full border border-border-soft bg-surface-1/80 text-fg-muted shadow-e2 backdrop-blur transition-colors hover:border-brand/40 hover:text-fg motion-safe:animate-bounce lg:flex"
       >
@@ -129,12 +132,15 @@ function HeroPayoutVisual({
     wallet: string;
     receipt: string;
     proof: string;
+    title: string;
+    request: string;
+    transaction: string;
   };
 }) {
   const pockets = Array.from({ length: 37 }, (_, index) => index);
   return (
     <div
-      className="relative mx-auto h-[324px] w-full max-w-[380px] sm:h-[346px] sm:max-w-[408px] md:h-[384px] md:max-w-[456px] lg:mx-0 lg:h-[440px] lg:w-[500px] lg:max-w-none xl:h-[480px] xl:w-[620px]"
+      className="relative mx-auto h-[324px] w-full max-w-[380px] sm:h-[346px] sm:max-w-[408px] md:h-[384px] md:max-w-[456px] lg:mx-0 lg:h-[440px] lg:w-full lg:max-w-none xl:h-[480px] xl:max-w-[620px]"
       aria-hidden
       style={{ perspective: "1600px" }}
     >
@@ -192,32 +198,24 @@ function HeroPayoutVisual({
             <span className="text-xs font-bold uppercase tracking-[0.2em] text-fg-muted">
               {copy.receipt}
             </span>
-            <span className="rounded-full border border-success/35 bg-success/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-success">
+            <span className="rounded-full border border-brand/35 bg-brand-soft px-3 py-1 text-xs font-bold uppercase tracking-[0.16em] text-brand">
               {copy.status}
             </span>
           </div>
           <div className="px-4 py-4 md:px-5 md:py-5">
-            <div className="font-mono text-[2.85rem] font-bold leading-none tracking-normal text-success md:text-6xl">
-              + 9.6
-              <span className="ml-2 text-xl text-success/80 md:ml-3 md:text-3xl">USDC</span>
-            </div>
-            <div className="mt-4 flex flex-wrap items-center gap-2 text-sm font-semibold text-fg-muted">
-              <span className="rounded-full border border-border-soft bg-surface-0 px-3 py-1.5">
-                0xd662...BFB9
-              </span>
-              <span>{copy.wallet}</span>
-            </div>
+            <div className="text-3xl font-bold leading-tight text-fg md:text-4xl">{copy.title}</div>
+            <div className="mt-4 text-sm font-semibold text-fg-muted">{copy.wallet}</div>
           </div>
           <div className="grid grid-cols-2 border-t border-border-soft">
             <div className="px-4 py-3 md:px-5 md:py-4">
               <div className="text-xs font-bold uppercase tracking-[0.18em] text-fg-muted">VRF</div>
-              <div className="mt-1 font-mono text-sm font-semibold text-fg">0x44a3...a39</div>
+              <div className="mt-1 font-mono text-sm font-semibold text-fg">{copy.request}</div>
             </div>
             <div className="border-l border-border-soft px-4 py-3 md:px-5 md:py-4">
               <div className="text-xs font-bold uppercase tracking-[0.18em] text-fg-muted">
                 {copy.proof}
               </div>
-              <div className="mt-1 font-mono text-sm font-semibold text-fg">{"#"}294</div>
+              <div className="mt-1 font-mono text-sm font-semibold text-fg">{copy.transaction}</div>
             </div>
           </div>
         </div>

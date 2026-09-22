@@ -40,7 +40,9 @@ export function HomeStatsStrip({
                 </div>
                 {stat.integrity ? <IntegrityBadge integrity={stat.integrity} copy={copy} /> : null}
               </div>
-              <div className="mt-2 truncate font-mono text-3xl font-bold text-fg">{stat.value}</div>
+              <div className="mt-2 break-words font-mono text-2xl lg:text-3xl font-bold text-fg">
+                {stat.value}
+              </div>
               <div className="mt-2 text-sm text-fg-muted">{stat.detail}</div>
             </div>
           ))}
@@ -66,8 +68,8 @@ function AssetContextTabs({ tabs, label }: { tabs: readonly LandingAssetTab[]; l
             onClick={tab.onSelect}
             className={
               tab.selected
-                ? "whitespace-nowrap rounded-full bg-fg px-3 py-1.5 text-xs font-bold text-surface-0"
-                : "whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-bold text-fg-muted transition-colors hover:text-fg"
+                ? "whitespace-nowrap min-h-11 rounded-full bg-fg px-4 py-2 text-xs font-bold text-surface-0"
+                : "whitespace-nowrap min-h-11 rounded-full px-4 py-2 text-xs font-bold text-fg-muted transition-colors hover:text-fg"
             }
           >
             {tab.label}

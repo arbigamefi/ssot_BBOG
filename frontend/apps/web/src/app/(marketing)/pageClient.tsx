@@ -1,9 +1,9 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import type { BetRow } from "@ssot/ssot/indexer";
-import type { Address } from "@ssot/ssot/sdk";
 import { useLocale, useTranslations } from "next-intl";
 
 import { useRecentBets } from "../../features/betting/useRecentBets";
@@ -11,14 +11,12 @@ import { getCatalogRooms } from "../../features/casino/catalog";
 import { getExplorerBaseUrl } from "../../features/earn/format";
 import { formatTokenAmount, shortAddress, timeAgo } from "../../features/marketing/format";
 import { HomeActivity } from "../../features/marketing/home-activity";
-import { HomeFeatured } from "../../features/marketing/home-featured";
 import { HomeFooterCta } from "../../features/marketing/home-footer-cta";
 import { HomeHero } from "../../features/marketing/home-hero";
-import { HomeReserveBar } from "../../features/marketing/home-reserve-bar";
 import { HomeRoomDirectory } from "../../features/marketing/home-room-directory";
 import { HomeStatsStrip } from "../../features/marketing/home-stats-strip";
 import { HomeVerify } from "../../features/marketing/home-verify";
-import { HomeWhyUs } from "../../features/marketing/home-why-us";
+import { HomeHowItWorks } from "../../features/marketing/home-how-it-works";
 import type {
   AssetOverview,
   LandingActivity,
@@ -28,19 +26,7 @@ import type {
 } from "../../features/marketing/home-types";
 import { useRelease } from "../../ssot/release/ReleaseProvider";
 
-type LandingAssetOverviewResponse = {
-  rows: Array<{
-    address: string;
-    symbol: string;
-    decimals: number;
-    totalAssets: string;
-    totalReserved: string;
-    turnover: string;
-    protocolFee: string;
-  }>;
-};
-
-type LandingOverview = { assets: AssetOverview[] };
+import { fetchLandingOverview } from "../../features/marketing/landing-overview";
 
 function toBigOrNull(value?: string | bigint | number): bigint | null {
   if (value == null || value === "") return null;
@@ -60,28 +46,17 @@ export function HomePageClient() {
     limit: 5
   });
 
-  const { data: landingOverview } = useQuery({
+  const {
+    data: landingOverview,
+    isPending,
+    error: overviewError,
+    refetch,
+    isFetching
+  } = useQuery({
     queryKey: ["ssot", "landing", "asset-overview", chainId, release?.releaseDigest],
     enabled: Boolean(release),
-    queryFn: async (): Promise<LandingOverview> => {
-      const params = new URLSearchParams({ chainId: String(chainId) });
-      const response = await fetch(`/api/landing/asset-overview?${params.toString()}`, {
-        headers: { accept: "application/json" }
-      });
-      if (!response.ok) return { assets: [] };
-      const body = (await response.json()) as LandingAssetOverviewResponse;
-      return {
-        assets: body.rows.map((row) => ({
-          address: row.address as Address,
-          symbol: row.symbol || t("format.assetFallback"),
-          decimals: row.decimals,
-          totalAssets: BigInt(row.totalAssets),
-          totalReserved: BigInt(row.totalReserved),
-          turnover: BigInt(row.turnover),
-          protocolFee: BigInt(row.protocolFee)
-        }))
-      };
-    }
+    queryFn: () => fetchLandingOverview(chainId, release!.releaseDigest),
+    retry: 1
   });
   const assetOverviews = landingOverview?.assets ?? [];
 
@@ -90,23 +65,19 @@ export function HomePageClient() {
     [release?.gamesMeta]
   );
 
-  // Reserve banks can hold the same asset across multiple pools, so the raw
-  // rows look like "188 USDC / 24 USDC / 0 WETH". Aggregate by asset for one
-  // clean figure per token and drop zero-balance tokens. Landing KPIs should
-  // show one asset context at a time; slash-joined multi-asset headlines read
-  // like a data dump, not a premium public proof point.
+  // Keep each asset separate, including a successfully read zero balance.
   const aggregatedAssets = aggregateAssetOverviews(assetOverviews);
-  const bankFunded = aggregatedAssets.length > 0;
+  const hasBankRows = aggregatedAssets.length > 0;
   const [selectedAssetAddress, setSelectedAssetAddress] = React.useState<string | null>(null);
   const selectedAsset =
     aggregatedAssets.find((asset) => asset.address.toLowerCase() === selectedAssetAddress) ??
     aggregatedAssets[0];
-  const reserveFloor = bankFunded
+  const reserveFloor = hasBankRows
     ? formatAssetOverviewValue(selectedAsset, locale, t("format.awaitingReserveSync"), (asset) =>
         asset.totalAssets > asset.totalReserved ? asset.totalAssets - asset.totalReserved : 0n
       )
     : t("format.awaitingReserveSync");
-  const totalAssetsLabel = bankFunded
+  const totalAssetsLabel = hasBankRows
     ? formatAssetOverviewValue(
         selectedAsset,
         locale,
@@ -182,7 +153,7 @@ export function HomePageClient() {
 
   // Lifetime turnover — verifiable per Bank and shown per asset. Do not sum
   // USDC and WETH into a fake single number.
-  const totalTurnoverLabel = bankFunded
+  const totalTurnoverLabel = hasBankRows
     ? formatAssetOverviewValue(
         selectedAsset,
         locale,
@@ -190,20 +161,6 @@ export function HomePageClient() {
         (asset) => asset.turnover
       )
     : t("format.awaitingReserveSync");
-  // Protocol fee is read straight off the Bank (protocolFeesPayable) — chain-read,
-  // verifiable, no index dependency.
-  const protocolFeeLabel = bankFunded
-    ? formatAssetOverviewValue(
-        selectedAsset,
-        locale,
-        t("format.awaitingReserveSync"),
-        (asset) => asset.protocolFee
-      )
-    : t("format.awaitingReserveSync");
-
-  // Three cards = the three flywheel sides, all read straight from the chain:
-  // vault (NAV), lifetime turnover, protocol fee. All verifiable — the
-  // integrity marker still labels them so the data-honesty posture is explicit.
   const stats: LandingStat[] = [
     {
       label: t("stats.vault.label"),
@@ -218,23 +175,19 @@ export function HomePageClient() {
       integrity: "verifiable"
     },
     {
-      label: t("stats.protocolFee.label"),
-      value: protocolFeeLabel,
-      detail: t("stats.protocolFee.detail"),
+      label: t("landing.bank.freeLabel"),
+      value: reserveFloor,
+      detail: t("landing.bank.freeDetail"),
       integrity: "verifiable"
     }
   ];
 
-  // Three, not four: `HomeStatsStrip` lays out `md:grid-cols-3`, so a fourth
-  // card wraps alone onto its own row. Three also reads tighter -- they answer
-  // the three things a player actually distrusts a casino about, in order: are
-  // the odds rigged, is the draw rigged, will you actually pay me.
-  const preLaunchStats: LandingStat[] = (["rtp", "randomness", "settlement"] as const).map(
+  // Mechanism descriptions are not live chain measurements.
+  const mechanismStats: LandingStat[] = (["rules", "randomness", "receipts"] as const).map(
     (key) => ({
-      label: t(`stats.preLaunch.${key}.label`),
-      value: t(`stats.preLaunch.${key}.value`),
-      detail: t(`stats.preLaunch.${key}.detail`),
-      integrity: "verifiable" as const
+      label: t(`landing.mechanisms.${key}.label`),
+      value: t(`landing.mechanisms.${key}.value`),
+      detail: t(`landing.mechanisms.${key}.detail`)
     })
   );
   const assetTabs: LandingAssetTab[] = aggregatedAssets.map((asset) => ({
@@ -258,10 +211,8 @@ export function HomePageClient() {
       ? `${explorerBaseUrl}/address/${verifyContractAddress}`
       : undefined;
 
-  const featuredRoom = rooms.find((room) => room.slug === "keno");
-
   return (
-    <main className="min-h-screen bg-surface-0 text-fg">
+    <div className="min-h-screen bg-surface-0 text-fg">
       <HomeHero
         copy={{
           channel: t("hero.channel"),
@@ -269,12 +220,15 @@ export function HomePageClient() {
           description: t("hero.description"),
           enterCasino: t("hero.enterCasino"),
           viewBank: t("hero.viewBank"),
-          scrollHint: t("hero.scrollHint"),
+          scrollHint: t("landing.scrollHint"),
           visual: {
-            status: t("hero.visual.status"),
-            wallet: t("hero.visual.wallet"),
-            receipt: t("hero.visual.receipt"),
-            proof: t("hero.visual.proof")
+            status: t("landing.visual.status"),
+            wallet: t("landing.visual.wallet"),
+            receipt: t("landing.visual.receipt"),
+            proof: t("landing.visual.proof"),
+            title: t("landing.visual.title"),
+            request: t("landing.visual.request"),
+            transaction: t("landing.visual.transaction")
           },
           proofRows: {
             vrf: {
@@ -283,24 +237,63 @@ export function HomePageClient() {
             },
             bytecode: {
               title: t("hero.proofRows.bytecode.title"),
-              detail: t("hero.proofRows.bytecode.detail")
+              detail: t("landing.bankHint")
             }
           }
         }}
       />
       <div id="home-after-hero" className="scroll-mt-24" />
 
-      {/* Activity is powerful social proof only when it is real. Empty activity
-          on a public landing page reads like a cold casino, so the section
-          stays hidden until there are indexed bets to show. */}
+      <HomeStatsStrip
+        stats={mechanismStats}
+        copy={{
+          verifiable: t("stats.verifiable"),
+          indexed: t("stats.indexed"),
+          assetContext: t("stats.assetContext")
+        }}
+      />
+
+      <HomeRoomDirectory
+        rooms={localizedRooms}
+        copy={{
+          eyebrow: t("rooms.eyebrow"),
+          title: t("rooms.title"),
+          detail: t("rooms.detail"),
+          actionLabel: t("rooms.actionLabel")
+        }}
+      />
+
+      <HomeHowItWorks
+        copy={{
+          eyebrow: t("landing.steps.eyebrow"),
+          title: t("landing.steps.title"),
+          items: [0, 1, 2].map((index) => ({
+            title: t(`landing.steps.items.${index}.title`),
+            detail: t(`landing.steps.items.${index}.detail`)
+          }))
+        }}
+      />
+
+      <HomeVerify
+        verifyHref={verifyHref}
+        copy={{
+          eyebrow: t("verify.eyebrow"),
+          title: t("verify.title"),
+          description: t("landing.verifyDescription"),
+          sourceNote: t("verify.sourceNote"),
+          verifyCta: t("verify.verifyCta"),
+          cta: t("hero.enterCasino")
+        }}
+      />
+
       {activity.length > 0 ? (
         <HomeActivity
           activity={activity}
           copy={{
-            eyebrow: t("activity.eyebrow"),
+            eyebrow: t("landing.activityEyebrow"),
             title: t("activity.title"),
             viewAll: t("activity.viewAll"),
-            live: t("activity.live"),
+            live: t("stats.indexed"),
             headers: {
               player: t("activity.headers.player"),
               room: t("activity.headers.room"),
@@ -313,92 +306,63 @@ export function HomePageClient() {
         />
       ) : null}
 
-      {bankFunded ? (
-        <HomeStatsStrip
-          stats={stats}
-          copy={{
-            verifiable: t("stats.verifiable"),
-            indexed: t("stats.indexed"),
-            assetContext: t("stats.assetContext")
-          }}
-          assetTabs={assetTabs}
-        />
-      ) : (
-        /* Before any Bank holds capital there are no chain figures to show, and
-           the strip simply vanished -- taking the page's only row of numbers
-           with it on exactly the visit where a newcomer is deciding whether to
-           trust a casino. These four are protocol constants rather than live
-           readings: true on day one, still true afterwards, and all of them
-           checkable against the contracts. They are marked `verifiable` for the
-           same reason the live figures are. */
-        <HomeStatsStrip
-          stats={preLaunchStats}
-          copy={{
-            verifiable: t("stats.verifiable"),
-            indexed: t("stats.indexed"),
-            assetContext: t("stats.assetContext")
-          }}
-        />
-      )}
-
-      {featuredRoom ? (
-        <HomeFeatured
-          slug={featuredRoom.slug}
-          href={featuredRoom.href}
-          copy={{
-            eyebrow: t("featured.eyebrow"),
-            title: t("featured.title"),
-            detail: t("featured.detail"),
-            cta: t("featured.cta")
-          }}
-        />
-      ) : null}
-
-      <HomeRoomDirectory
-        rooms={localizedRooms}
-        copy={{
-          eyebrow: t("rooms.eyebrow"),
-          title: t("rooms.title"),
-          detail: t("rooms.detail"),
-          actionLabel: t("rooms.actionLabel")
-        }}
-      />
-
-      <HomeWhyUs
-        copy={{
-          eyebrow: t("whyUs.eyebrow"),
-          title: t("whyUs.title"),
-          items: [0, 1, 2, 3].map((index) => ({
-            title: t(`whyUs.items.${index}.title`),
-            detail: t(`whyUs.items.${index}.detail`)
-          }))
-        }}
-      />
-
-      <HomeVerify
-        verifyHref={verifyHref}
-        copy={{
-          eyebrow: t("verify.eyebrow"),
-          title: t("verify.title"),
-          description: t("verify.description"),
-          sourceNote: t("verify.sourceNote"),
-          verifyCta: t("verify.verifyCta"),
-          cta: t("hero.enterCasino")
-        }}
-      />
-
-      {bankFunded ? (
-        <HomeReserveBar
-          freeReserve={reserveFloor}
-          totalAssets={totalAssetsLabel}
-          copy={{
-            eyebrow: t("reserveBar.eyebrow"),
-            free: t("reserveBar.free"),
-            total: t("reserveBar.total"),
-            verify: t("reserveBar.verify")
-          }}
-        />
-      ) : null}
+      <section
+        aria-labelledby="home-bank-title"
+        className="border-b border-border-soft bg-surface-1 py-16"
+      >
+        <div className="mx-auto max-w-[1440px] px-6 lg:px-10">
+          <p className="text-sm font-semibold text-brand">
+            {t("bank.eyebrow")} · {release?.name ?? String(chainId)}
+          </p>
+          <h2 id="home-bank-title" className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">
+            {t("landing.bank.title")}
+          </h2>
+          <p className="mt-4 max-w-2xl text-base leading-7 text-fg-muted">
+            {t("landing.bank.description")}
+          </p>
+          <Link
+            href="/earn"
+            className="mt-4 inline-flex min-h-11 items-center font-semibold text-brand underline underline-offset-4"
+          >
+            {t("bank.inspectBank")}
+          </Link>
+          {!release || isPending || overviewError || !hasBankRows ? (
+            <div
+              role="status"
+              className="mt-6 rounded-xl border border-border-soft bg-surface-2 p-6 text-fg-muted"
+            >
+              {!release
+                ? t("landing.bank.unavailable")
+                : isPending
+                  ? t("landing.bank.loading")
+                  : overviewError
+                    ? t("landing.bank.error")
+                    : t("landing.bank.empty")}
+              {release && overviewError ? (
+                <button
+                  type="button"
+                  disabled={isFetching}
+                  onClick={() => void refetch()}
+                  className="mt-4 flex min-h-11 items-center rounded-md border border-border-soft px-5 font-semibold text-fg disabled:opacity-50"
+                >
+                  {isFetching ? t("landing.bank.loading") : t("landing.bank.retry")}
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+        {release && !isPending && !overviewError && hasBankRows ? (
+          <HomeStatsStrip
+            stats={stats}
+            assetTabs={assetTabs}
+            copy={{
+              verifiable: t("stats.verifiable"),
+              indexed: t("stats.indexed"),
+              assetContext: t("stats.assetContext")
+            }}
+          />
+        ) : null}
+      </section>
 
       <HomeFooterCta
         copy={{
@@ -406,14 +370,14 @@ export function HomePageClient() {
           title: t("footerCta.title"),
           description: t("footerCta.description"),
           primary: t("footerCta.primary"),
-          secondary: t("footerCta.secondary")
+          secondary: t("landing.receiptCta")
         }}
       />
-    </main>
+    </div>
   );
 }
 
-/** Sum reserve banks that hold the same asset, and drop zero-balance tokens. */
+/** Sum reserve banks that hold the same asset without inventing a fiat total. */
 function aggregateAssetOverviews(rows: readonly AssetOverview[]): AssetOverview[] {
   const byAsset = new Map<string, AssetOverview>();
   for (const row of rows) {
@@ -428,7 +392,7 @@ function aggregateAssetOverviews(rows: readonly AssetOverview[]): AssetOverview[
       byAsset.set(key, { ...row });
     }
   }
-  return Array.from(byAsset.values()).filter((asset) => asset.totalAssets > 0n);
+  return Array.from(byAsset.values());
 }
 
 function formatAssetOverviewValue(

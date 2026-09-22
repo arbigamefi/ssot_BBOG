@@ -344,7 +344,7 @@
     },
     "hero": {
       "channel": "Zincir üstü casino",
-      "title": "Zincirde oynayın. Ödeme cüzdanınıza gelsin.",
+      "title": "Zincir üstü oyunlar. Doğrulanabilir sonuçlar.",
       "description": "Chainlink VRF rastgeleliği, herkese açık makbuzlar ve doğrudan cüzdanınıza yerleşen ödemelerle casino odaları.",
       "enterCasino": "Casinoya gir",
       "viewBank": "Bankroll'u gör",
@@ -403,14 +403,14 @@
         "summary": "Hedefi belirleyin, bahsi seçin ve hızlı bir zar odasına girin.",
         "facts": {
           "0": "Hızlı bahis",
-          "1": "Canlı ödeme",
+          "1": "Herkese açık makbuz",
           "2": "Tek varlık"
         }
       },
       "coinToss": {
         "title": "Yazı Tura",
         "badge": "İkili oda",
-        "summary": "Salonun en temiz oda girişiyle yazı ya da tura.",
+        "summary": "Yazı veya tura seçin ve zincir üstü sonucu takip edin.",
         "facts": {
           "0": "Hızlı giriş",
           "1": "İkili oyun",
@@ -509,28 +509,6 @@
       "description": "Cüzdanınız, oyun ve rastgelelik ayrı sözleşmelerdir. Herkes aynı bahsi zincirden yeniden oynatıp aynı yanıtı alabilir.",
       "actionLabel": "Makbuzları gör"
     },
-    "whyUs": {
-      "eyebrow": "Neden burada",
-      "title": "Dönüşü hileli yapamayız.",
-      "items": {
-        "0": {
-          "title": "Sayıları biz seçmiyoruz",
-          "detail": "Her dönüşün rastgele sayısı Chainlink VRF tarafından çekilir. Biz yalnızca dönenleri sonuçlandırırız."
-        },
-        "1": {
-          "title": "Kazancınız cüzdanınıza gelir",
-          "detail": "VRF yanıt verir vermez kazanç zincir üstünde cüzdanınıza düşer — çekim kuyruğu yok, minimum yok, gecikme yok."
-        },
-        "2": {
-          "title": "Kasa tükenmez",
-          "detail": "Casino'nun ne kadar ödeyebileceği zincir üstünde görünür. Bahis yapmadan önce kontrol edin."
-        },
-        "3": {
-          "title": "Her sözleşme herkese açık",
-          "detail": "Oyun mantığı, banka, ödeme — hepsi açık kaynak. Okuyun, çatallayın, doğrulayın."
-        }
-      }
-    },
     "verify": {
       "eyebrow": "Açık kaynak",
       "title": "Bize güvenmeyin. Doğrulayın.",
@@ -538,24 +516,74 @@
       "sourceNote": "Temsili bir alıntı. Doğruluğun kaynağı dağıtılmış sözleşmedir — tam kaynağı zincir üstünde doğrulayın.",
       "verifyCta": "Explorer'da doğrula"
     },
-    "reserveBar": {
-      "eyebrow": "Ağ bankroll'u",
-      "free": "Ödenebilir",
-      "total": "Bank'lerde toplam",
-      "verify": "Zincir üstünde kontrol et"
-    },
-    "featured": {
-      "eyebrow": "Öne çıkan",
-      "title": "Keno — 5 seç, hepsi tutarsa 500,5×.",
-      "detail": "Tahtada on beş sayı. Beş tane seçin. Beşini de tutturursanız ödeme 500,5×. Birini tutturun, yine kâra geçersiniz.",
-      "cta": "Keno oyna"
-    },
     "footerCta": {
       "eyebrow": "Hazır olduğunuzda",
       "title": "Cüzdan bağlayın. Oyun seçin. Çevirin.",
       "description": "Paranız siz bahis yapana kadar cüzdanınızda kalır. Kazançlar aynı yoldan geri gelir.",
       "primary": "Oynamaya başla",
       "secondary": "Oyunlara göz at"
+    },
+    "landing": {
+      "scrollHint": "Oyunları keşfet",
+      "bankHint": "Seçili ağdaki banka bakiyelerini ve ayrılmış fonları inceleyin.",
+      "visual": {
+        "status": "Temsili",
+        "wallet": "Cüzdanınız · işlem geçmişiniz",
+        "receipt": "Makbuz önizlemesi",
+        "proof": "Uzlaşma",
+        "title": "Her sonuç izlenebilir.",
+        "request": "Rastgelelik isteği",
+        "transaction": "İşlem makbuzu"
+      },
+      "mechanisms": {
+        "rules": {
+          "label": "Oyun kuralları",
+          "value": "Açık kaynak",
+          "detail": "Bahis yapmadan önce her oyunun kurallarını ve güncel ücretlerini inceleyin."
+        },
+        "randomness": {
+          "label": "Rastgelelik",
+          "value": "Chainlink VRF",
+          "detail": "Her bahsin rastgelelik isteğini ve kayıtlı kanıtını takip edin."
+        },
+        "receipts": {
+          "label": "İşlem geçmişi",
+          "value": "Herkese açık makbuzlar",
+          "detail": "Bahsi gönderimden zincir üstü uzlaşmaya kadar takip edin."
+        }
+      },
+      "steps": {
+        "eyebrow": "Nasıl çalışır",
+        "title": "İlk seçimden son makbuza.",
+        "items": {
+          "0": {
+            "title": "Bir oyun seçin",
+            "detail": "Oyunları keşfedin, kuralları okuyun, ağı ve desteklenen varlığı kontrol edin."
+          },
+          "1": {
+            "title": "İnceleyin ve imzalayın",
+            "detail": "Cüzdanı bağlayın. İşlemi onaylamadan önce bahis tutarını, ödeme teklifini ve ücretleri kontrol edin."
+          },
+          "2": {
+            "title": "Sonucu takip edin",
+            "detail": "Rastgelelik ve uzlaşma onaylarını bekleyin. Sonucu ve ödemeyi kontrol etmek için makbuzu açın."
+          }
+        }
+      },
+      "verifyDescription": "Oyun mantığını okuyun ve dağıtılmış sözleşmeyi inceleyin. Ödemeler ayrıca bahis parametrelerine ve protokolde yapılandırılmış ücretlere bağlıdır.",
+      "activityEyebrow": "Son etkinlik",
+      "receiptCta": "Makbuzları gör",
+      "bank": {
+        "title": "Oynamadan önce bankayı inceleyin.",
+        "description": "Bakiyeler seçili ağın sözleşmelerinden okunur ve her varlık ayrı gösterilir. Ayrılmamış fonlar, net varlıklardan açık bahis rezervlerinin çıkarılmasıyla hesaplanır; ödeme garantisi değildir.",
+        "freeLabel": "Ayrılmamış fonlar",
+        "freeDetail": "Seçili varlığın net değerinden ayrılmış yükümlülükler çıkarılır; en az sıfır gösterilir.",
+        "loading": "Banka bakiyeleri okunuyor…",
+        "error": "Bakiyeler okunamadı. Tekrar deneyin veya bankayı inceleyin.",
+        "empty": "Bu sürümde gösterilecek banka bakiyesi yok.",
+        "unavailable": "Seçili ağda kullanılabilir bir dağıtım yok.",
+        "retry": "Yeniden dene"
+      }
     }
   },
   "affiliate": {
