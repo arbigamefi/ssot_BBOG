@@ -31,8 +31,8 @@ describe("SectionEyebrow", () => {
     expect(screen.getByText("Hero").className).toContain("text-xs");
     expect(screen.getByText("Section").className).toContain("text-[10px]");
 
-    // The two font sizes must not survive together on one element, or which
-    // one wins would come down to stylesheet order.
+    // Only one font size may reach the element. If both did, which one wins
+    // would come down to stylesheet order.
     expect(screen.getByText("Hero").className).not.toContain("text-[10px]");
   });
 });
