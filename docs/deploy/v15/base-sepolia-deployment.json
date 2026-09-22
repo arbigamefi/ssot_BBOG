@@ -1,0 +1,290 @@
+{
+  "status": "deployed-pending-safe-acceptance",
+  "chainId": 84532,
+  "sourceCommit": "d17a6a8db1598b9d6dce1114a0154708396514cf",
+  "sourceTree": "96be27c1129aec7599e9b102292450750eecb02d",
+  "deployer": "0x93ac87413E17d01CBa37B6317f64890bF7f99aC3",
+  "safe": "0x7F0c244e1701B069727670745FD047179Ef8691d",
+  "guardian": "0x9d239D9e0EE179Bd442497a034002aAf75865ea0",
+  "snapshotBlock": 47140467,
+  "lastReceiptBlock": 47140563,
+  "verifiedTransactionCount": 51,
+  "independentReceiptRpc": "https://base-sepolia.gateway.tenderly.co",
+  "actualFeesIncludingL1Wei": "159166635682337",
+  "remainingDeployerBalanceWei": "49840833364317663",
+  "deployerNonce": 51,
+  "observedAtUtc": "2026-09-22T04:03:04.182206+00:00",
+  "allBanksPaused": true,
+  "governanceAccepted": false,
+  "applicationCutover": false,
+  "contracts": {
+    "adapter": "0xf121a7B8C5327Ff8E093C7c3b94Ea4D240C895F4",
+    "vrfHub": "0x2f4fd0998D557259D1A8936B9BE039991fe81c7a",
+    "poolRegistry": "0xE92459c5C2c9F0bfA0e44FBa097d335fF7CE8Eba",
+    "refRegistry": "0xd03985f40401F547dBf43a5DEe53640F6bD740D8",
+    "gameHub": "0xB4056D12aD04B01629b3A022fee385D2a1ae4b48",
+    "poolBank_0": "0xEa3845f08a273257c3d3458D26e7bd4234330Dd4",
+    "poolBank_1": "0x9d61C6230ef0bF2d853e17a0368CBC384ef1843B"
+  },
+  "settlementRouter": "0x8802A33cb9911745d91F9f6551f116F2eCe0aB0A",
+  "snapshotSha256": "8a9f0bb239cfedba0f672f20b6f2a2c7545f8beac73cd07dd7d7c4f7da476fa7",
+  "safeBatchSha256": "71a02e41d5227724fbc396f1d7ccf157210239504fd645900f9a1663ebe04cc2",
+  "safeBatch": "safe-acceptance-84532.json",
+  "transactions": [
+    {
+      "hash": "0x3e9c3aea11a686bdffe0be359400755951635f740136a644bad8f5a9fd1f4878",
+      "blockNumber": 47140491,
+      "status": "success"
+    },
+    {
+      "hash": "0x42adf483368cad5b1fa3e889934ad82b6880b26aa49406b56ff8397439ec39c6",
+      "blockNumber": 47140493,
+      "status": "success"
+    },
+    {
+      "hash": "0xe15256c7421083b3f71e0b86411b64f5135bcf0fe6963dc7a19444f950eee5d8",
+      "blockNumber": 47140494,
+      "status": "success"
+    },
+    {
+      "hash": "0xc7cf173195f714f10f591e9db6d1bfb764e6e803e1fcaec745d0374fa0e5e43c",
+      "blockNumber": 47140496,
+      "status": "success"
+    },
+    {
+      "hash": "0x860c7b56cd4a9e1b6c3b999b876b2b605fdd76c8ae99474035db258a863be0ee",
+      "blockNumber": 47140497,
+      "status": "success"
+    },
+    {
+      "hash": "0xa9ff7eb49b1abb14bab6928cd2b3010f414497dee453d554470979cde3c2f368",
+      "blockNumber": 47140498,
+      "status": "success"
+    },
+    {
+      "hash": "0x1b40319d7885e65654340d3dd900c257a14fbdfe8fe4827df6d70e6d8524d0d9",
+      "blockNumber": 47140499,
+      "status": "success"
+    },
+    {
+      "hash": "0xf40bd47eb8b7c9bb1c374752d7e991e75d71cad8e7a1274464333f48355e74ce",
+      "blockNumber": 47140500,
+      "status": "success"
+    },
+    {
+      "hash": "0xbb4c253cbbe6a2d2b47b8f412acddaea6de11f840963ed16bee7deccae48e242",
+      "blockNumber": 47140502,
+      "status": "success"
+    },
+    {
+      "hash": "0xdc3b9cd561eb41424033cb043d443049cad9603f9bb1a3d6139d9ec2d959f1cf",
+      "blockNumber": 47140503,
+      "status": "success"
+    },
+    {
+      "hash": "0xf8a2081733f48940f55e6d76316e6faa4eb60102c5a1b7261e141f947b4184e2",
+      "blockNumber": 47140505,
+      "status": "success"
+    },
+    {
+      "hash": "0x763013930bce8901d7504c792a9a5bbab4af3df35924fac29bacf01aca79617c",
+      "blockNumber": 47140506,
+      "status": "success"
+    },
+    {
+      "hash": "0xcd396fb5c32cf8f98f4694240558e44ff740c2238deb723598b869b354df3d57",
+      "blockNumber": 47140508,
+      "status": "success"
+    },
+    {
+      "hash": "0x6a6c50bcc9521e11f32c6a9d6a18d929388c7fa25d53516cf83828a935db1e63",
+      "blockNumber": 47140510,
+      "status": "success"
+    },
+    {
+      "hash": "0x4a151f1c9c36bd7fe0bf5a25ed868e95babf6e6680d5780abe5a3750fa813ddb",
+      "blockNumber": 47140511,
+      "status": "success"
+    },
+    {
+      "hash": "0xf6b395e75724b5bd1ddebd05be4dcb76d418904060d09a06656c7a889f162dd9",
+      "blockNumber": 47140513,
+      "status": "success"
+    },
+    {
+      "hash": "0x370ee605581b895f37f4a332296263c434104a6684b681de7eddea8b85236223",
+      "blockNumber": 47140514,
+      "status": "success"
+    },
+    {
+      "hash": "0x31c62174fbfc7c01f3cb6dbb72b364126a3987a20fb4b613df2780e633077490",
+      "blockNumber": 47140516,
+      "status": "success"
+    },
+    {
+      "hash": "0x60f65ed18634d9026a94bc75b79d5e57638c609ffd975e8e4f791621415d03a1",
+      "blockNumber": 47140517,
+      "status": "success"
+    },
+    {
+      "hash": "0x30592fdb9b8b2ce21a9e35c75de565cbbcaa6b0b3f936cde0067062d5506a6df",
+      "blockNumber": 47140519,
+      "status": "success"
+    },
+    {
+      "hash": "0xe4233710e84e7d90fe4645928880f3a56bf89c93cc99bbd768961d12bda79c6f",
+      "blockNumber": 47140520,
+      "status": "success"
+    },
+    {
+      "hash": "0x4e407692f00b07883d451540f72a6f8cb2f817b08bff33f36ff7e292d8dcb795",
+      "blockNumber": 47140522,
+      "status": "success"
+    },
+    {
+      "hash": "0x77085810c9c1d5574caa4c6ec8bb34e71fbf76a23368440a66963db695d4655f",
+      "blockNumber": 47140524,
+      "status": "success"
+    },
+    {
+      "hash": "0xab62eebe2d9866b87f0b8f5790665dc3bd2b7e6f8fecb9dc5c0f749ec7edd8c7",
+      "blockNumber": 47140526,
+      "status": "success"
+    },
+    {
+      "hash": "0xde5927c2d1345b60bfb811d37121ec40b211591b1c6d815eb6866ec7f45f634a",
+      "blockNumber": 47140527,
+      "status": "success"
+    },
+    {
+      "hash": "0x95b74f70606d6a15ed2552a1aa4bbc6b88d16d8b1145fe8d69ced81073670100",
+      "blockNumber": 47140528,
+      "status": "success"
+    },
+    {
+      "hash": "0x8538992aaa65b5fde91173910b03be5b471d1d42e4b41bc89e7427a16d37a02e",
+      "blockNumber": 47140529,
+      "status": "success"
+    },
+    {
+      "hash": "0xf3aaf760a9bc2719658f4d5a74902965ba7647ae4816bac6fdd3dfa35143aaf2",
+      "blockNumber": 47140530,
+      "status": "success"
+    },
+    {
+      "hash": "0xeb83e563f67d5b684a67f33198b8e0924e5f2167e3da469c159c17d8d0cdf5e6",
+      "blockNumber": 47140532,
+      "status": "success"
+    },
+    {
+      "hash": "0x0292dd5ae7e3fea7eba467ff5dc22dbe7a5154a35b407a5e11828a715055cd0a",
+      "blockNumber": 47140533,
+      "status": "success"
+    },
+    {
+      "hash": "0x120d950c3141b85155eeaae1455fd972174389b708dcb21a384dccd24b62abcc",
+      "blockNumber": 47140535,
+      "status": "success"
+    },
+    {
+      "hash": "0xfd826d4b5d2161a3845991e27f47fe7be17a027ae7f99a964869a35f851b0998",
+      "blockNumber": 47140536,
+      "status": "success"
+    },
+    {
+      "hash": "0x606e2133564f2fe5aa11257cee711cf442fcef62c139277e4264103bd2a72d36",
+      "blockNumber": 47140538,
+      "status": "success"
+    },
+    {
+      "hash": "0x5cfabcfdba99f4b46bf0166a7bc51a851edc743023ba05c8ca5aad02234f8c35",
+      "blockNumber": 47140539,
+      "status": "success"
+    },
+    {
+      "hash": "0x84637f90a852dd725ac1e1c3d7d4e9c5ee3d40861aa09b5dcf57e8220cebc093",
+      "blockNumber": 47140540,
+      "status": "success"
+    },
+    {
+      "hash": "0x02659bdf8e4a75b651822bcab2a02c92d22335e6924b8ad5391a413dfc68901b",
+      "blockNumber": 47140541,
+      "status": "success"
+    },
+    {
+      "hash": "0xbcbf607ca2ab8876c401be11e6d587d0b0970ed98a50311dbe8278eb2fc5ebbc",
+      "blockNumber": 47140543,
+      "status": "success"
+    },
+    {
+      "hash": "0xa14713e66b8358fcd5b87efcd1bac67f9269a1c51f100a5901752fc0e7602a3a",
+      "blockNumber": 47140544,
+      "status": "success"
+    },
+    {
+      "hash": "0x1db5351309230812a86d4a9f9f4b197d4d7203f6108ffdb79823c6b360a65fee",
+      "blockNumber": 47140545,
+      "status": "success"
+    },
+    {
+      "hash": "0x64e4334a243274cb3480083f1f56a654c4351b8712a27b56dc68f79768caed3d",
+      "blockNumber": 47140546,
+      "status": "success"
+    },
+    {
+      "hash": "0x19cac86beda46f8211708a36e2e345886b47353b5de1187d39418cc8666f753c",
+      "blockNumber": 47140548,
+      "status": "success"
+    },
+    {
+      "hash": "0x016558800e369eae22073734246d7d90a10e681293420b2ef4ffb3e3105784dc",
+      "blockNumber": 47140549,
+      "status": "success"
+    },
+    {
+      "hash": "0xe123cc39c1a2acce9e50426852434d6553a49e8e1f86312cecaad9c723ca5b42",
+      "blockNumber": 47140551,
+      "status": "success"
+    },
+    {
+      "hash": "0x36f558b1da88d6255ba502eb7fccfbf0c7204b40c961adbd6266960e9a8fcc64",
+      "blockNumber": 47140552,
+      "status": "success"
+    },
+    {
+      "hash": "0x53c3a478ec425168d0a3927e0d26bdd4fdeb3ba7be99fec3bf45eb2d7812d487",
+      "blockNumber": 47140554,
+      "status": "success"
+    },
+    {
+      "hash": "0x53a0b42c856e548538a45a83bccafc07a7f9e7bf460782ebbf7967c794508e85",
+      "blockNumber": 47140556,
+      "status": "success"
+    },
+    {
+      "hash": "0xbc71ae04a4fbf1b858e1c86f573f2e78074bf9ed52180ed3c674f016f61499fe",
+      "blockNumber": 47140557,
+      "status": "success"
+    },
+    {
+      "hash": "0x5e762f61ce05c05388be7a4d153ccb74b84736fcf991288a319b6322b461db9a",
+      "blockNumber": 47140559,
+      "status": "success"
+    },
+    {
+      "hash": "0xaf6f961665fc55591f790ede9fbe89f611c1088a8acc267da955e1452ab87e26",
+      "blockNumber": 47140560,
+      "status": "success"
+    },
+    {
+      "hash": "0x734d5e0cd3c0c69f98b4cb3f0b454d608ae61b38d6a3f701f0be56ab5c6fc359",
+      "blockNumber": 47140562,
+      "status": "success"
+    },
+    {
+      "hash": "0x4a9a0c1c2103e30437168fde54ca7d9e8e4881a4c807c23abb6e03f137e677b0",
+      "blockNumber": 47140563,
+      "status": "success"
+    }
+  ]
+}
