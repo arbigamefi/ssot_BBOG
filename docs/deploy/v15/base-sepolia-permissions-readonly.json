@@ -1,0 +1,160 @@
+{
+  "chainId": 84532,
+  "block": 47141280,
+  "kind": "read-only eth_call simulation; does not prove signing or state transition custody",
+  "broadcast": false,
+  "cases": [
+    {
+      "target": "0xEa3845f08a273257c3d3458D26e7bd4234330Dd4",
+      "caller": "0x93ac87413E17d01CBa37B6317f64890bF7f99aC3",
+      "function": "setRiskInPaused(bool)",
+      "arguments": ["false"],
+      "ethCallAllowed": false,
+      "expectedUnauthorized": true
+    },
+    {
+      "target": "0xEa3845f08a273257c3d3458D26e7bd4234330Dd4",
+      "caller": "0x9d239D9e0EE179Bd442497a034002aAf75865ea0",
+      "function": "setRiskInPaused(bool)",
+      "arguments": ["false"],
+      "ethCallAllowed": false,
+      "expectedUnauthorized": true
+    },
+    {
+      "target": "0xEa3845f08a273257c3d3458D26e7bd4234330Dd4",
+      "caller": "0xc04d22F83d7494440Dd07ab42BeD01E45E88EC59",
+      "function": "setRiskInPaused(bool)",
+      "arguments": ["false"],
+      "ethCallAllowed": false,
+      "expectedUnauthorized": true
+    },
+    {
+      "target": "0xEa3845f08a273257c3d3458D26e7bd4234330Dd4",
+      "caller": "0xf5740675b59F4e2B0af73ee29C2d82932E8aD1a1",
+      "function": "setRiskInPaused(bool)",
+      "arguments": ["false"],
+      "ethCallAllowed": false,
+      "expectedUnauthorized": true
+    },
+    {
+      "target": "0xEa3845f08a273257c3d3458D26e7bd4234330Dd4",
+      "caller": "0x2dE12101D2A3C0BC033F2e8594dcda7231211797",
+      "function": "setRiskInPaused(bool)",
+      "arguments": ["false"],
+      "ethCallAllowed": false,
+      "expectedUnauthorized": true
+    },
+    {
+      "target": "0xEa3845f08a273257c3d3458D26e7bd4234330Dd4",
+      "caller": "0xc683900c8A5eF53AadAEA6Ebe5ef7609417F24f7",
+      "function": "setRiskInPaused(bool)",
+      "arguments": ["false"],
+      "ethCallAllowed": false,
+      "expectedUnauthorized": true
+    },
+    {
+      "target": "0xEa3845f08a273257c3d3458D26e7bd4234330Dd4",
+      "caller": "0x9d239D9e0EE179Bd442497a034002aAf75865ea0",
+      "function": "setRiskInPaused(bool)",
+      "arguments": ["true"],
+      "ethCallAllowed": true,
+      "expectedUnauthorized": false
+    },
+    {
+      "target": "0xEa3845f08a273257c3d3458D26e7bd4234330Dd4",
+      "caller": "0x7F0c244e1701B069727670745FD047179Ef8691d",
+      "function": "setRiskInPaused(bool)",
+      "arguments": ["false"],
+      "ethCallAllowed": true,
+      "expectedUnauthorized": false
+    },
+    {
+      "target": "0xEa3845f08a273257c3d3458D26e7bd4234330Dd4",
+      "caller": "0x9d239D9e0EE179Bd442497a034002aAf75865ea0",
+      "function": "setGuardian(address)",
+      "arguments": ["0x9d239D9e0EE179Bd442497a034002aAf75865ea0"],
+      "ethCallAllowed": false,
+      "expectedUnauthorized": true
+    },
+    {
+      "target": "0x9d61C6230ef0bF2d853e17a0368CBC384ef1843B",
+      "caller": "0x93ac87413E17d01CBa37B6317f64890bF7f99aC3",
+      "function": "setRiskInPaused(bool)",
+      "arguments": ["false"],
+      "ethCallAllowed": false,
+      "expectedUnauthorized": true
+    },
+    {
+      "target": "0x9d61C6230ef0bF2d853e17a0368CBC384ef1843B",
+      "caller": "0x9d239D9e0EE179Bd442497a034002aAf75865ea0",
+      "function": "setRiskInPaused(bool)",
+      "arguments": ["false"],
+      "ethCallAllowed": false,
+      "expectedUnauthorized": true
+    },
+    {
+      "target": "0x9d61C6230ef0bF2d853e17a0368CBC384ef1843B",
+      "caller": "0xc04d22F83d7494440Dd07ab42BeD01E45E88EC59",
+      "function": "setRiskInPaused(bool)",
+      "arguments": ["false"],
+      "ethCallAllowed": false,
+      "expectedUnauthorized": true
+    },
+    {
+      "target": "0x9d61C6230ef0bF2d853e17a0368CBC384ef1843B",
+      "caller": "0xf5740675b59F4e2B0af73ee29C2d82932E8aD1a1",
+      "function": "setRiskInPaused(bool)",
+      "arguments": ["false"],
+      "ethCallAllowed": false,
+      "expectedUnauthorized": true
+    },
+    {
+      "target": "0x9d61C6230ef0bF2d853e17a0368CBC384ef1843B",
+      "caller": "0x2dE12101D2A3C0BC033F2e8594dcda7231211797",
+      "function": "setRiskInPaused(bool)",
+      "arguments": ["false"],
+      "ethCallAllowed": false,
+      "expectedUnauthorized": true
+    },
+    {
+      "target": "0x9d61C6230ef0bF2d853e17a0368CBC384ef1843B",
+      "caller": "0xc683900c8A5eF53AadAEA6Ebe5ef7609417F24f7",
+      "function": "setRiskInPaused(bool)",
+      "arguments": ["false"],
+      "ethCallAllowed": false,
+      "expectedUnauthorized": true
+    },
+    {
+      "target": "0x9d61C6230ef0bF2d853e17a0368CBC384ef1843B",
+      "caller": "0x9d239D9e0EE179Bd442497a034002aAf75865ea0",
+      "function": "setRiskInPaused(bool)",
+      "arguments": ["true"],
+      "ethCallAllowed": true,
+      "expectedUnauthorized": false
+    },
+    {
+      "target": "0x9d61C6230ef0bF2d853e17a0368CBC384ef1843B",
+      "caller": "0x7F0c244e1701B069727670745FD047179Ef8691d",
+      "function": "setRiskInPaused(bool)",
+      "arguments": ["false"],
+      "ethCallAllowed": true,
+      "expectedUnauthorized": false
+    },
+    {
+      "target": "0x9d61C6230ef0bF2d853e17a0368CBC384ef1843B",
+      "caller": "0x9d239D9e0EE179Bd442497a034002aAf75865ea0",
+      "function": "setGuardian(address)",
+      "arguments": ["0x9d239D9e0EE179Bd442497a034002aAf75865ea0"],
+      "ethCallAllowed": false,
+      "expectedUnauthorized": true
+    },
+    {
+      "target": "0xB4056D12aD04B01629b3A022fee385D2a1ae4b48",
+      "caller": "0x93ac87413E17d01CBa37B6317f64890bF7f99aC3",
+      "function": "setRefundTimeout(uint256)",
+      "arguments": ["3600"],
+      "ethCallAllowed": false,
+      "expectedUnauthorized": true
+    }
+  ]
+}

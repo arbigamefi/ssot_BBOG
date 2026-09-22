@@ -88,11 +88,11 @@ def _contract_key_to_address(addresses: Dict[str, str], key: str) -> Optional[st
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--manifest", default="deployments/frontend-manifest-latest-v13.json")
+    ap.add_argument("--manifest", default="deployments/frontend-manifest-latest-v15.json")
     ap.add_argument("--out", default="out")
-    ap.add_argument("--dest", default="deployments/abis-v13")
+    ap.add_argument("--dest", default="deployments/abis-v15")
     ap.add_argument("--schema", type=int, default=2)
-    ap.add_argument("--tag-suffix", default="-v13")
+    ap.add_argument("--tag-suffix", default="-v15")
     ap.add_argument("--git-sha", default=os.environ.get("GIT_SHA", ""))
     args = ap.parse_args()
 

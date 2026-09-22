@@ -3,3 +3,6 @@ node_modules
 dist
 storybook-static
 pnpm-lock.yaml
+
+# Raw signed release inputs: preserve the imported bytes and evidence hashes.
+packages/ssot/src/fixtures/release-bundles/

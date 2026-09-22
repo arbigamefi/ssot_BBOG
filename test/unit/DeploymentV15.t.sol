@@ -8,6 +8,9 @@ import {DeployV15} from "../../script/DeployV15.s.sol";
 import {V15Snapshot} from "../../script/release/V15Snapshot.sol";
 import {ReleaseDigestV15} from "../../script/release/ReleaseDigestV15.s.sol";
 import {VerifyReleaseV15} from "../../script/release/VerifyReleaseV15.s.sol";
+import {GenerateGoldenVectorsV15} from "../../script/release/GenerateGoldenVectorsV15.s.sol";
+import {IGameModule} from "../../src/core/interfaces/IGameModule.sol";
+import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
 import {Governable} from "../../src/access/Governable.sol";
 import {Bank} from "../../src/core/Bank.sol";
 import {GameHub} from "../../src/core/GameHub.sol";
@@ -146,6 +149,52 @@ contract DeploymentV15Test is Test {
         deployer.run();
         snap = deployer.snapshot();
         targets = V15Snapshot.targets(snap);
+    }
+
+    function testGeneratedGoldenVectorsAreAcceptedByAllEightModules() public isolatedEnv {
+        (string memory snap,) = _deploy();
+        string memory input = "deployments/test-golden-v15-snapshot.json";
+        string memory latest = "deployments/golden-vectors-latest-v15.json";
+        string memory tagged = string.concat(
+            "deployments/release/golden-vectors-",
+            vm.toString(block.chainid),
+            "-",
+            vm.toString(block.number),
+            "-v15.json"
+        );
+        bool hadLatest = vm.exists(latest);
+        bool hadTagged = vm.exists(tagged);
+        string memory oldLatest = hadLatest ? vm.readFile(latest) : "";
+        string memory oldTagged = hadTagged ? vm.readFile(tagged) : "";
+        string memory oldInput = vm.envOr("SNAPSHOT_PATH", string("deployments/latest-v15.json"));
+        vm.createDir("deployments/release", true);
+        vm.writeFile(input, snap);
+        vm.setEnv("SNAPSHOT_PATH", input);
+        new GenerateGoldenVectorsV15().run();
+        string memory vectors = vm.readFile(latest);
+        // Restore local release evidence before semantic checks can fail.
+        vm.setEnv("SNAPSHOT_PATH", oldInput);
+        if (hadLatest) vm.writeFile(latest, oldLatest);
+        else vm.removeFile(latest);
+        if (hadTagged) vm.writeFile(tagged, oldTagged);
+        else vm.removeFile(tagged);
+        vm.removeFile(input);
+
+        GameHub hub = GameHub(snap.readAddress(".gameHub"));
+        for (uint256 i; i < 8; ++i) {
+            string memory key = string.concat(".vectors[", vm.toString(i), "]");
+            bytes32 gameId = vectors.readBytes32(string.concat(key, ".gameId"));
+            bytes memory params = vectors.readBytes(string.concat(key, ".params"));
+            SSOTTypes.StakeSpec memory stake = SSOTTypes.StakeSpec({
+                amountPerRoll: vectors.readUint(string.concat(key, ".stakeSpec.amountPerRoll")),
+                betCount: uint32(vectors.readUint(string.concat(key, ".stakeSpec.betCount"))),
+                stopGain: vectors.readUint(string.concat(key, ".stakeSpec.stopGain")),
+                stopLoss: vectors.readUint(string.concat(key, ".stakeSpec.stopLoss"))
+            });
+            IGameModule module = IGameModule(hub.gameModule(gameId));
+            module.validate(params, stake);
+            assertGt(module.maxPayout(params, stake), 0);
+        }
     }
 
     function testNominationIsNotAcceptanceAndOldSignerLosesAuthority() public isolatedEnv {

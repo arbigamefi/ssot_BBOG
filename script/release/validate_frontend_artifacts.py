@@ -367,15 +367,15 @@ def main() -> None:
         vl_block = _as_int(vl.get("blockNumber"), field="blockNumber", path=vectors_latest)
         if (ml_chain, ml_block) != (chain_id, block_number):
             raise SystemExit(
-                f"frontend-manifest-latest-v13.json does not match release identity. "
+                f"{manifest_latest} does not match release identity. "
                 f"expected chainId={chain_id}, blockNumber={block_number} but got chainId={ml_chain}, blockNumber={ml_block}. "
-                f"Run: make release-frontend-manifest{tag_suffix}"
+                "Run: make release-frontend-manifest"
             )
         if (vl_chain, vl_block) != (chain_id, block_number):
             raise SystemExit(
-                f"golden-vectors-latest-v13.json does not match release identity. "
+                f"{vectors_latest} does not match release identity. "
                 f"expected chainId={chain_id}, blockNumber={block_number} but got chainId={vl_chain}, blockNumber={vl_block}. "
-                f"Run: make release-golden-vectors{tag_suffix}"
+                "Run: make release-golden-vectors"
             )
 
     # Notes must reference digest in strict mode.

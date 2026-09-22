@@ -1,0 +1,43 @@
+{
+  "chainId": 84532,
+  "snapshotBlock": 47140467,
+  "snapshotSha256": "8a9f0bb239cfedba0f672f20b6f2a2c7545f8beac73cd07dd7d7c4f7da476fa7",
+  "release": {
+    "blockNumber": 47140467,
+    "chainId": 84532,
+    "digest": "0xae662a55eef716a97f1a2d2bfad389507b86d0aff72b32a162b90fcb59920c6b",
+    "r": "0x2f1b854974aba83c271c76f8fbbac09cd583977a75cef985fba81ec8701df96e",
+    "s": "0x0aa9aedf250fd8535730f88e4641505f607e10a70a6abae1d69027d10b7b3e24",
+    "schema": "SSOT_RELEASE_DIGEST_V15",
+    "schemaHash": "0xd1d67ad18059a3adf18fcb40f402285ae60ab9cd06b6143d8a58bd54d7793b66",
+    "signer": "0x93ac87413E17d01CBa37B6317f64890bF7f99aC3",
+    "snapshotPath": "deployments/latest-v15.json",
+    "v": 28
+  },
+  "archiveName": "ssot-release-chain-84532-47140467-0xae662a55.tar.gz",
+  "archiveSha256": "9329bd6163a93133ff81756515a59274bfa999a7eb417ef0deb8d927e268d37c",
+  "governanceAcceptance": "base-sepolia-governance-accepted.json",
+  "strictArtifactValidation": true,
+  "trustedSignatureVerified": true,
+  "liveGovernanceVerifiedBeforePackaging": true,
+  "banksPausedAtRelease": true,
+  "applicationCutover": false,
+  "functionalAcceptance": "pending",
+  "supersededArtifacts": [
+    {
+      "archiveSha256": "938c0c1951d7664b9f0bbb953595c073790db85541eca6377f23c71ccd595ff2",
+      "reason": "Dice golden vector encoded only uint8 target; actual DiceParams requires bool isOver and uint8 target. Found by live-fork module maxPayout simulation; no funds sent."
+    }
+  ],
+  "generatorCorrections": {
+    "diceParamsEncoding": "abi.encode(bool isOver, uint8 target)",
+    "coinTossParamsDescription": "true=tails, false=heads",
+    "allEightModuleVectorValidation": true,
+    "frontendV15VectorDiscoveryAndSdkRoundTrip": true,
+    "deploymentRegressionTestsPassed": 17,
+    "artifactHashes": {
+      "frontend-manifest-latest-v15.json": "aa25f2c291c383426bde1478b706772bb4a3ba93776ef9b1c53dc3d571dcc1f7",
+      "golden-vectors-latest-v15.json": "62dd75d58ffe2fe1ae61191834a4a1dd096f2d0beecfb2fb1d83618d2f783882"
+    }
+  }
+}
