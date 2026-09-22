@@ -42,6 +42,14 @@ These are dated observations, not permanent owner approval. Re-read before broad
 7. Import the resulting bundle with `pnpm -C frontend ssot:sync -- --from <bundle>`, retaining `RPC_URL` and `RELEASE_SIGNER`. Import validates artifact consistency, trusted signature and live governance before replacing active embedded files. v1.3/v1.4 bundles are rejected as active imports.
 8. Set the GitHub `V15_RELEASE_SIGNER` repository variable to the approved public metadata signer before a release tag; the Release Gate also requires the target chain RPC secret and checks live governance. Build immutable Web and keeper images in CI. Both contain `/app/release-manifests`; the deployment script checks equal v1.5 chain/digest/address manifests and the same reviewed OCI revision before changing services.
 
+### Explorer source verification
+
+After all deployment receipts succeed, run `SNAPSHOT_PATH=<exact-chain-snapshot> make verify-v15` with the Etherscan API key supplied privately in the environment. This submits source and original constructor arguments for existing addresses; it does not deploy contracts or require a transaction signature. The helper uses Etherscan API V2 and the deployment compilation profile.
+
+Re-read `getsourcecode` for every deployed core contract, Bank and game module after submission. Record the chain, address, compiler, optimization settings, constructor-argument match and status (`exact`, `similar`, or `unverified`). Do not count a generated helper, a submitted GUID, or a successful governance/code-hash gate as completed explorer verification. Resolve every `unverified` entry before declaring the deployment ready for acceptance.
+
+Etherscan may return `Already Verified` for existing Similar Match entries even when source is explicitly submitted with `--skip-is-verified-check`. Preserve this distinction in the report; do not relabel it Full Match. Upgrading those entries requires the explorer's [ownership and whitelist procedure](https://info.etherscan.com/update-on-similar-match-contract-verification/). The Sepolia result is recorded in [the per-address verification report](v15/base-sepolia-explorer-verification.json).
+
 The pre-launch gate intentionally expects paused Banks. Opening risk requires a separate Safe transaction after release checks and the approved canary. Subsequent application-only releases must preserve the accepted contract identity; do not use a contract pre-launch deployment command as the routine application restart command.
 
 ## Fresh application state

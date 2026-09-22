@@ -1,0 +1,17 @@
+{
+  "chainId": 84532,
+  "transactionHash": "0xf9d9ed0ef1b80716959edefcded767bc554e6305c275e5ce660bcdd2aa7bf1b6",
+  "blockNumber": 47143601,
+  "blockHash": "0xfcbd1bfe60f4781863482f19f733d65b235026963727e0016d0ffab6f42c7e2d",
+  "status": 1,
+  "safe": "0x7F0c244e1701B069727670745FD047179Ef8691d",
+  "bank": "0xEa3845f08a273257c3d3458D26e7bd4234330Dd4",
+  "outerTransactionTo": "0xdb9b1e94b5b69df7e401ddbede43491141047db3",
+  "executionViaRelay": true,
+  "safeInnerCallMatchedPacket": true,
+  "onlyOneBankPauseEvent": true,
+  "paused": false,
+  "independentReceiptMatched": true,
+  "independentProvider": "base-sepolia.g.alchemy.com",
+  "verificationNote": "SafeMultiSigTransaction target/value/operation/calldata and ExecutionSuccess checked; outer recipient is relay. Publicnode and official public RPC returned HTTP403; independent Alchemy receipt matched."
+}
