@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { ArrowTopRightOnSquareIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { ArrowTopRightOnSquareIcon, ChevronDownIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { cn } from "@ssot/ui";
 
 const DISMISS_STORAGE_KEY = "arbigamefi.mobileDeepLink.dismissedV1";
@@ -18,10 +18,17 @@ const DISMISS_STORAGE_KEY = "arbigamefi.mobileDeepLink.dismissedV1";
  *      Showing "open in wallet" to someone already inside a wallet is
  *      confusing and breaks trust.
  *   3. Don't render if the user dismissed it this session.
+ *
+ * It renders collapsed to a single row. Expanded it occupied 250-400px at the
+ * top of every mobile page -- half a phone screen spent, before the product is
+ * visible, asking a first-time visitor to leave for another app. The advice is
+ * good; taking the top of the funnel to deliver it was not. The wallet links
+ * are one tap away for anyone who wants them.
  */
 export function MobileWalletDeepLinkBanner() {
   const t = useTranslations("app");
   const [show, setShow] = React.useState(false);
+  const [expanded, setExpanded] = React.useState(false);
 
   React.useEffect(() => {
     if (typeof window === "undefined") return;
@@ -76,16 +83,23 @@ export function MobileWalletDeepLinkBanner() {
     <div
       role="region"
       aria-label={t("mobileDeepLink.title")}
-      className="sticky top-0 z-40 border-b border-border-soft bg-surface-2 px-4 py-3 lg:hidden"
+      className="sticky top-0 z-40 border-b border-border-soft bg-surface-2 px-4 py-2 lg:hidden"
     >
       <div className="mx-auto flex max-w-[1280px] flex-col gap-2">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-xs font-bold text-fg">{t("mobileDeepLink.title")}</p>
-            <p className="mt-0.5 text-[11px] leading-4 text-fg-muted">
-              {t("mobileDeepLink.description")}
-            </p>
-          </div>
+        <div className="flex items-center justify-between gap-2">
+          <button
+            type="button"
+            aria-expanded={expanded}
+            aria-controls="mobile-deep-link-options"
+            onClick={() => setExpanded((open) => !open)}
+            className="flex min-w-0 flex-1 items-center gap-2 rounded-md py-1 text-left text-xs font-bold text-fg"
+          >
+            <span className="min-w-0 truncate">{t("mobileDeepLink.title")}</span>
+            <ChevronDownIcon
+              aria-hidden="true"
+              className={cn("h-4 w-4 shrink-0 text-fg-muted", expanded && "rotate-180")}
+            />
+          </button>
           <button
             type="button"
             aria-label={t("mobileDeepLink.dismiss")}
@@ -95,19 +109,22 @@ export function MobileWalletDeepLinkBanner() {
             <XMarkIcon className="h-4 w-4" />
           </button>
         </div>
-        <div className="grid grid-cols-1 gap-2">
-          {links.map((link) => (
-            <a
-              key={link.id}
-              href={link.href}
-              className={cn(
-                "flex min-w-0 items-center justify-between gap-2 rounded-md border border-border-soft bg-surface-1 px-3 py-2.5 text-[11px] font-bold uppercase tracking-[0.1em] text-fg transition-colors hover:border-brand/40 hover:text-brand"
-              )}
-            >
-              <span className="min-w-0 truncate">{link.label}</span>
-              <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5 shrink-0" />
-            </a>
-          ))}
+        <div id="mobile-deep-link-options" hidden={!expanded} className="flex flex-col gap-2 pb-1">
+          <p className="text-[11px] leading-4 text-fg-muted">{t("mobileDeepLink.description")}</p>
+          <div className="grid grid-cols-1 gap-2">
+            {links.map((link) => (
+              <a
+                key={link.id}
+                href={link.href}
+                className={cn(
+                  "flex min-w-0 items-center justify-between gap-2 rounded-md border border-border-soft bg-surface-1 px-3 py-2.5 text-[11px] font-bold uppercase tracking-[0.1em] text-fg transition-colors hover:border-brand/40 hover:text-brand"
+                )}
+              >
+                <span className="min-w-0 truncate">{link.label}</span>
+                <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5 shrink-0" />
+              </a>
+            ))}
+          </div>
         </div>
       </div>
     </div>

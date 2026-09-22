@@ -2059,6 +2059,7 @@
         "asset": "Asset",
         "pending": "Pending",
         "walletRequired": "Wallet required",
+        "valueUnavailable": "—",
         "unknown": "Unknown",
         "unconnected": "Unconnected",
         "unlimited": "Unlimited",
@@ -3162,7 +3163,24 @@
       },
       "verifiable": "On-chain",
       "indexed": "Indexed · may lag",
-      "assetContext": "Asset context"
+      "assetContext": "Asset context",
+      "preLaunch": {
+        "rtp": {
+          "label": "Return to player",
+          "value": "98%",
+          "detail": "A single protocol-level 2% fee on payouts. Every game carries the same edge — better than European roulette's 97.3%."
+        },
+        "randomness": {
+          "label": "Randomness",
+          "value": "Chainlink VRF",
+          "detail": "Draws come from Chainlink's verifiable random function. We cannot see or influence a result before it lands."
+        },
+        "settlement": {
+          "label": "Settlement",
+          "value": "Permissionless",
+          "detail": "finalize() and refund() are open to anyone. If our keeper stops, you can settle your own bet."
+        }
+      }
     },
     "rooms": {
       "eyebrow": "All games",

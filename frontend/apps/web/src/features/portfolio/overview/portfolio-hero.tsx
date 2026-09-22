@@ -2,13 +2,16 @@ import * as React from "react";
 import { useTranslations } from "next-intl";
 import { IdentificationIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
 
+import { requestWalletConnect } from "../../../app-shell/wallet-connect-events";
 import type { PortfolioMetric } from "./types";
 
 export function PortfolioHero({
   account,
+  connected,
   metrics
 }: {
   account: string;
+  connected: boolean;
   metrics: readonly PortfolioMetric[];
 }) {
   const t = useTranslations();
@@ -30,11 +33,28 @@ export function PortfolioHero({
 
       <div className="rounded-md border border-border bg-surface-1 p-5 shadow-e2">
         <div className="flex items-center justify-between gap-4">
-          <div>
+          {/* With no wallet this card used to read "connected account: pending",
+              which states the opposite of the truth and looks like a loading
+              state rather than something the visitor has to act on. The page
+              also offered no way to connect -- the only entry point was the
+              small header button. */}
+          <div className="min-w-0">
             <div className="text-xs font-black uppercase tracking-[0.16em] text-fg-subtle">
-              {t("portfolio.overview.hero.connectedAccount")}
+              {connected
+                ? t("portfolio.overview.hero.connectedAccount")
+                : t("portfolio.overview.common.walletRequired")}
             </div>
-            <div className="mt-2 font-mono text-sm text-fg-muted">{account}</div>
+            {connected ? (
+              <div className="mt-2 font-mono text-sm text-fg-muted">{account}</div>
+            ) : (
+              <button
+                type="button"
+                onClick={requestWalletConnect}
+                className="mt-2 inline-flex items-center justify-center rounded-md bg-brand px-4 py-2 text-sm font-bold text-fg-inverse transition-colors hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+              >
+                {t("app.connectWalletButton")}
+              </button>
+            )}
           </div>
           <div className="rounded-md border border-border bg-surface-2 p-3 text-accent">
             <ShieldCheckIcon className="h-6 w-6" />

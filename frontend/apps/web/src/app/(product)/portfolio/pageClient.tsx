@@ -173,23 +173,29 @@ export function PortfolioPageClient() {
   }
 
   const pendingLabel = t("portfolio.overview.common.pending");
-  const walletRequiredLabel = t("portfolio.overview.common.walletRequired");
+  // Disconnected, every one of these slots used to spell out "wallet required".
+  // Together with the hero label that put the same sentence on screen five
+  // times, and it read as five separate faults rather than one thing to do --
+  // in a monospace numeric slot, no less, where the eye expects a figure. The
+  // hero states it once, next to the button that fixes it; the value slots just
+  // stay empty.
+  const valueUnavailable = t("portfolio.overview.common.valueUnavailable");
   const refundAmount = account
     ? formatAmount(refundCredit, 18, "ETH", pendingLabel)
-    : walletRequiredLabel;
+    : valueUnavailable;
   const metrics: PortfolioMetric[] = [
     {
       label: t("portfolio.overview.metrics.walletBalance.label"),
       value: account
         ? formatPortfolioAssetAmounts(assetRows, "walletBalance", pendingLabel)
-        : walletRequiredLabel,
+        : valueUnavailable,
       detail: t("portfolio.overview.metrics.walletBalance.detail")
     },
     {
       label: t("portfolio.overview.metrics.bankPosition.label"),
       value: account
         ? formatPortfolioAssetAmounts(assetRows, "assetsEquivalent", pendingLabel)
-        : walletRequiredLabel,
+        : valueUnavailable,
       detail: t("portfolio.overview.metrics.bankPosition.detail")
     },
     {
@@ -205,7 +211,11 @@ export function PortfolioPageClient() {
   return (
     <PageTransition pageKey="portfolio">
       <div className="space-y-8">
-        <PortfolioHero account={shortHex(account, pendingLabel)} metrics={metrics} />
+        <PortfolioHero
+          account={shortHex(account, pendingLabel)}
+          connected={Boolean(account)}
+          metrics={metrics}
+        />
 
         {readOnly ? (
           <ErrorCallout

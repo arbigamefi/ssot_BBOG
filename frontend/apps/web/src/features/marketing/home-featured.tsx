@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRightIcon } from "@heroicons/react/24/outline";
 
 import { CasinoGameMark } from "../casino/CasinoMiniIcons";
+import { SectionEyebrow } from "./section-eyebrow";
 
 export function HomeFeatured({
   slug,
@@ -44,9 +45,7 @@ export function HomeFeatured({
           />
           <div className="relative grid grid-cols-1 items-center gap-10 px-8 py-12 md:grid-cols-[1.1fr_0.9fr] md:px-12 md:py-14">
             <div>
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-brand/30 bg-brand-soft px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-brand">
-                {copy.eyebrow}
-              </div>
+              <SectionEyebrow className="mb-5">{copy.eyebrow}</SectionEyebrow>
               <h2 className="text-4xl font-bold leading-tight tracking-tight text-fg md:text-5xl">
                 {copy.title}
               </h2>

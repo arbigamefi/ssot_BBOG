@@ -224,6 +224,19 @@ export function HomePageClient() {
       integrity: "verifiable"
     }
   ];
+
+  // Three, not four: `HomeStatsStrip` lays out `md:grid-cols-3`, so a fourth
+  // card wraps alone onto its own row. Three also reads tighter -- they answer
+  // the three things a player actually distrusts a casino about, in order: are
+  // the odds rigged, is the draw rigged, will you actually pay me.
+  const preLaunchStats: LandingStat[] = (["rtp", "randomness", "settlement"] as const).map(
+    (key) => ({
+      label: t(`stats.preLaunch.${key}.label`),
+      value: t(`stats.preLaunch.${key}.value`),
+      detail: t(`stats.preLaunch.${key}.detail`),
+      integrity: "verifiable" as const
+    })
+  );
   const assetTabs: LandingAssetTab[] = aggregatedAssets.map((asset) => ({
     label: asset.symbol,
     selected: selectedAsset?.address.toLowerCase() === asset.address.toLowerCase(),
@@ -310,7 +323,23 @@ export function HomePageClient() {
           }}
           assetTabs={assetTabs}
         />
-      ) : null}
+      ) : (
+        /* Before any Bank holds capital there are no chain figures to show, and
+           the strip simply vanished -- taking the page's only row of numbers
+           with it on exactly the visit where a newcomer is deciding whether to
+           trust a casino. These four are protocol constants rather than live
+           readings: true on day one, still true afterwards, and all of them
+           checkable against the contracts. They are marked `verifiable` for the
+           same reason the live figures are. */
+        <HomeStatsStrip
+          stats={preLaunchStats}
+          copy={{
+            verifiable: t("stats.verifiable"),
+            indexed: t("stats.indexed"),
+            assetContext: t("stats.assetContext")
+          }}
+        />
+      )}
 
       {featuredRoom ? (
         <HomeFeatured

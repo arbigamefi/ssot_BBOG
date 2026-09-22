@@ -1,6 +1,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { ArrowRightIcon } from "@heroicons/react/24/outline";
+import { SectionEyebrow } from "./section-eyebrow";
 
 export function HomeFooterCta({
   copy
@@ -31,9 +32,7 @@ export function HomeFooterCta({
         }}
       />
       <div className="relative mx-auto max-w-[1100px] px-6 text-center lg:px-10">
-        <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-brand/30 bg-brand-soft px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-brand">
-          {copy.eyebrow}
-        </div>
+        <SectionEyebrow className="mb-5">{copy.eyebrow}</SectionEyebrow>
         <h2 className="mx-auto max-w-3xl text-5xl font-bold leading-[1.05] tracking-tight text-fg md:text-6xl">
           {copy.title}
         </h2>
