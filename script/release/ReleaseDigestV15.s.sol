@@ -5,25 +5,25 @@ import "forge-std/Script.sol";
 import "forge-std/StdJson.sol";
 import "forge-std/console2.sol";
 
-/// @notice Computes and signs a deterministic v1.4 release digest for router/pool snapshots.
+/// @notice Computes and signs a deterministic v1.5 release digest for router/pool snapshots.
 ///
 /// Inputs:
-/// - SNAPSHOT_PATH (default: deployments/latest-v14.json)
-/// - SIGNER_PRIVATE_KEY (optional; fallback to PRIVATE_KEY)
-/// - GOV (optional; if set, require signer == GOV)
+/// - SNAPSHOT_PATH (default: deployments/latest-v15.json)
+/// - Foundry unlocked keystore or hardware signer supplied with --account/--ledger
+/// - RELEASE_SIGNER (required independent metadata trust anchor; governance is the Safe)
 ///
 /// Outputs:
-/// - deployments/release-latest-v14.json
-/// - deployments/release/release-<chain>-<block>-v14.json
-contract ReleaseDigestV14 is Script {
+/// - deployments/release-latest-v15.json
+/// - deployments/release/release-<chain>-<block>-v15.json
+contract ReleaseDigestV15 is Script {
     using stdJson for string;
 
-    bytes32 internal constant SCHEMA = keccak256("SSOT_RELEASE_DIGEST_V14");
+    bytes32 internal constant SCHEMA = keccak256("SSOT_RELEASE_DIGEST_V15");
 
     function run() external {
         vm.createDir("deployments/release", true);
 
-        string memory snapshotPath = vm.envOr("SNAPSHOT_PATH", string("deployments/latest-v14.json"));
+        string memory snapshotPath = vm.envOr("SNAPSHOT_PATH", string("deployments/latest-v15.json"));
         string memory snap = _readFileOrDie(snapshotPath);
 
         uint256 chainId = snap.readUint(".chainId");
@@ -34,22 +34,17 @@ contract ReleaseDigestV14 is Script {
         bytes32 digest = _digestStatic(snap);
         digest = _digestPools(digest, snap, numPools);
 
-        uint256 pk = vm.envOr("SIGNER_PRIVATE_KEY", uint256(0));
-        if (pk == 0) pk = vm.envUint("PRIVATE_KEY");
-        address signer = vm.addr(pk);
-
-        address govEnv = vm.envOr("GOV", address(0));
-        if (govEnv != address(0)) {
-            require(signer == govEnv, "SIGNER_PRIVATE_KEY must correspond to GOV");
-        }
-
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, digest);
+        address signer = vm.envAddress("RELEASE_SIGNER");
+        require(signer == snap.readAddress(".releaseSigner"), "release signer mismatch");
+        // Foundry resolves this address only from explicitly supplied unlocked wallets.
+        // No raw key is read into the script environment or embedded into traces.
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signer, digest);
         require(ecrecover(digest, v, r, s) == signer, "bad signature");
 
         string memory obj = "release";
         string memory json;
 
-        json = vm.serializeString(obj, "schema", "SSOT_RELEASE_DIGEST_V14");
+        json = vm.serializeString(obj, "schema", "SSOT_RELEASE_DIGEST_V15");
         json = vm.serializeBytes32(obj, "schemaHash", SCHEMA);
         json = vm.serializeString(obj, "snapshotPath", snapshotPath);
         json = vm.serializeUint(obj, "chainId", chainId);
@@ -60,22 +55,62 @@ contract ReleaseDigestV14 is Script {
         json = vm.serializeBytes32(obj, "r", r);
         json = vm.serializeBytes32(obj, "s", s);
 
-        string memory tag = string.concat(vm.toString(chainId), "-", vm.toString(blockNumber), "-v14");
+        string memory tag = string.concat(vm.toString(chainId), "-", vm.toString(blockNumber), "-v15");
         string memory outPath = string.concat("deployments/release/release-", tag, ".json");
 
         vm.writeJson(json, outPath);
-        vm.writeJson(json, "deployments/release-latest-v14.json");
+        vm.writeJson(json, "deployments/release-latest-v15.json");
 
         console2.log("snapshot:", snapshotPath);
         console2.log("digest:", vm.toString(digest));
         console2.log("signer:", signer);
         console2.log("wrote:", outPath);
-        console2.log("wrote:", "deployments/release-latest-v14.json");
+        console2.log("wrote:", "deployments/release-latest-v15.json");
     }
 
     function _digestStatic(string memory snap) internal pure returns (bytes32 digest) {
+        require(
+            keccak256(bytes(snap.readString(".architectureVersion"))) == keccak256("v1.5-safe-governance"),
+            "not a v1.5 snapshot"
+        );
         digest = keccak256(abi.encode(SCHEMA, keccak256(bytes(snap.readString(".architectureVersion")))));
+        digest = keccak256(
+            abi.encode(
+                digest,
+                snap.readAddress(".bootstrapGovernance"),
+                snap.readAddress(".guardian"),
+                snap.readAddress(".keeper"),
+                snap.readAddress(".releaseSigner"),
+                snap.readBytes32(".safeOwnersHash"),
+                snap.readBytes32(".safeCodeHash"),
+                snap.readBytes32(".safeControlHash"),
+                snap.readBool(".initialRiskInPaused"),
+                keccak256(bytes(snap.readString(".bootstrapStatus")))
+            )
+        );
 
+        string[17] memory codeKeys = [
+            string("adapter"),
+            "vrfHub",
+            "poolRegistry",
+            "settlementRouter",
+            "refRegistry",
+            "refEngine",
+            "gameHub",
+            "sportsRiskEngine",
+            "sportsHub",
+            "moduleDice",
+            "moduleCoinToss",
+            "moduleRoulette",
+            "moduleKeno",
+            "modulePlinko",
+            "moduleSicBo",
+            "moduleSlots",
+            "moduleBaccarat"
+        ];
+        for (uint256 i; i < codeKeys.length; ++i) {
+            digest = keccak256(abi.encode(digest, snap.readBytes32(string.concat(".codeHash_", codeKeys[i]))));
+        }
         digest = keccak256(
             abi.encode(
                 digest,
@@ -182,6 +217,7 @@ contract ReleaseDigestV14 is Script {
                     snap.readUint(string.concat(".poolDomain_", suffix)),
                     snap.readAddress(string.concat(".poolAsset_", suffix)),
                     snap.readAddress(string.concat(".poolBank_", suffix)),
+                    snap.readBytes32(string.concat(".codeHash_poolBank_", suffix)),
                     snap.readUint(string.concat(".poolActive_", suffix))
                 )
             );

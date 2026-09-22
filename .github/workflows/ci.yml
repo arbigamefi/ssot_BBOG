@@ -24,7 +24,7 @@ jobs:
       - name: Show Forge version
         run: forge --version
 
-      - name: Validate keeper key replacement safety
+      - name: Validate keeper key and v1.5 release safety
         run: |
           bash -n script/ops/swap-keeper-key.sh
           python3 -m unittest discover -s test/ops -v
@@ -35,7 +35,10 @@ jobs:
 
       - name: Run unit tests (PR profile)
         run: |
-          FOUNDRY_PROFILE=pr forge test --match-path "test/unit/*" -vvv
+          FOUNDRY_PROFILE=pr forge test --no-match-path "test/unit/DeploymentV15.t.sol" --match-path "test/unit/*" -vvv
+
+      - name: Verify v1.5 deployment and governance boundary
+        run: FOUNDRY_PROFILE=pr forge test --threads 1 --match-path "test/unit/DeploymentV15.t.sol" -vvv
 
       - name: Run diff tests (PR profile)
         run: |

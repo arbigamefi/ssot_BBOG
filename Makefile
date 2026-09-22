@@ -6,7 +6,7 @@ VERIFY_PROFILE ?= default
 FRONTEND_DIR ?= frontend
 PYTHON ?= python
 
-.PHONY: deps check-deps check test pr nightly fork deploy deploy-v14 casino-seed-bank-v14 casino-add-pool-v13 casino-add-pool-apply-v13 casino-add-pool-verify-v13 keno-upgrade-v13 keno-upgrade-apply-v13 verify verify-v14 verify-v13 verify-helpers verify-helpers-v14 verify-helpers-v13 sports-dry-run-v13 sports-lifecycle-dry-run sports-phase0-readiness sports-testnet-preflight-v13 sports-mainnet-preflight-v13 casino-mainnet-preflight-v13 casino-mainnet-gonogo-v13 sports-roles-v13 sports-canary-v13 sports-football-canary-v13 sports-provider-evidence-v13 sports-provider-odds-v13 sports-provider-e2e-v13 sports-provider-policy-check-v13 sports-frontend-access-check-v13 casino-frontend-access-check-v13 casino-web-env-check-v13 casino-mainnet-frontend-readiness-v13 casino-bank-decimals-check-v14 bank-live-shape-smoke-v14 gamehub-canary-v13 sports-phase1-closeout-v13 sports-phase2-gonogo-v13 sports-bankroll-caps-check-v13 sports-role-custody-check-v13 sports-ops-coverage-check-v13 release release-v14 release-v13 release-digest release-digest-v14 release-digest-v13 release-verify release-verify-v14 release-verify-v13 release-check release-check-v14 release-check-v13 release-notes release-notes-v14 release-notes-v13 release-package release-package-v14 release-package-v13 release-artifacts-tracked-v13 audit-package lint release-frontend-manifest release-frontend-manifest-v14 release-frontend-manifest-v13 release-golden-vectors release-golden-vectors-v14 release-golden-vectors-v13 release-abis release-abis-v14 release-abis-v13 frontend-install frontend-dev frontend-build frontend-lint frontend-typecheck frontend-test frontend-test-strict frontend-storybook frontend-storybook-build frontend-release-check frontend-check
+.PHONY: deps check-deps check test pr nightly fork deploy verify verify-helpers release release-digest release-verify release-check release-notes release-frontend-manifest release-golden-vectors release-abis release-package audit-package frontend-check
 
 deps:
 	bash script/ci/install_deps.sh
@@ -65,18 +65,18 @@ frontend-check:
 
 test:
 	@$(MAKE) check-deps
-	FOUNDRY_PROFILE=$(FOUNDRY_PROFILE) forge test -vvv
+	FOUNDRY_PROFILE=$(FOUNDRY_PROFILE) forge test --threads 1 -vvv
 
 pr:
 	@$(MAKE) check-deps
-	FOUNDRY_PROFILE=pr forge test --match-path "test/unit/*" -vvv
+	FOUNDRY_PROFILE=pr forge test --threads 1 --match-path "test/unit/*" -vvv
 	FOUNDRY_PROFILE=pr forge test --match-path "test/diff/*" -vvv
 	FOUNDRY_PROFILE=pr forge test --match-path "test/invariants/*" -vvv
 	FOUNDRY_PROFILE=pr forge test --match-path "test/fork/*" -vvv
 
 nightly:
 	@$(MAKE) check-deps
-	FOUNDRY_PROFILE=nightly forge test --match-path "test/unit/*" -vvv
+	FOUNDRY_PROFILE=nightly forge test --threads 1 --match-path "test/unit/*" -vvv
 	FOUNDRY_PROFILE=nightly forge test --match-path "test/diff/*" -vvv
 	FOUNDRY_PROFILE=nightly forge test --match-path "test/invariants/*" -vvv
 	FOUNDRY_PROFILE=nightly forge test --match-path "test/fork/*" -vvv
@@ -85,13 +85,12 @@ fork:
 	@$(MAKE) check-deps
 	FOUNDRY_PROFILE=$(FOUNDRY_PROFILE) forge test --match-path "test/fork/*" -vvv
 
-deploy: deploy-v14
+deploy: deploy-v15
 
-deploy-v14:
+deploy-v15:
 	@$(MAKE) check-deps
-	# Fresh deployments must not reuse stale broadcaster nonce/address state.
-	CLEAN_BROADCAST=1 bash script/ci/clean_foundry.sh
-	FOUNDRY_PROFILE=$(DEPLOY_PROFILE) forge script script/DeployV14.s.sol:DeployV14 --rpc-url $$RPC_URL --broadcast -vvv
+	# Retain broadcast traces; a failed broadcast must be inspected and resumed, not erased.
+	FOUNDRY_PROFILE=$(DEPLOY_PROFILE) forge script script/DeployV15.s.sol:DeployV15 --rpc-url "$$RPC_URL" --account "$${DEPLOY_ACCOUNT:?Set the approved Foundry keystore account}" --broadcast --slow -vvv
 
 casino-seed-bank-v14:
 	@$(MAKE) check-deps
@@ -114,73 +113,29 @@ casino-add-pool-v13:
 casino-add-pool-apply-v13:
 	$(PYTHON) script/release/apply_pool_add_v13.py
 
-casino-add-pool-verify-v13:
-	FOUNDRY_PROFILE=$(VERIFY_PROFILE) bash deployments/verify-pool-add-latest-v13.sh
-
-keno-upgrade-v13:
+verify: verify-v15
+verify-helpers: verify-helpers-v15
+verify-v15:
 	@$(MAKE) check-deps
-	FOUNDRY_PROFILE=$(DEPLOY_PROFILE) forge script script/ops/KenoModuleUpgradeV13.s.sol:KenoModuleUpgradeV13 --rpc-url $$RPC_URL --broadcast -vvv
-
-keno-upgrade-apply-v13:
-	$(PYTHON) script/release/apply_keno_upgrade_v13.py
-
-verify: verify-v14
-
-verify-v14:
-	@$(MAKE) check-deps
-	@$(MAKE) verify-helpers-v14
-	# Verification can be sensitive to stale build artifacts across Foundry versions.
-	# Preserve broadcast traces but recompile from scratch.
-	CLEAN_BROADCAST=0 bash script/ci/clean_foundry.sh
-	# Precompile contract artifacts only. Full builds pull in legacy scripts/tests
-	# and are unnecessary for source verification helpers.
+	@$(MAKE) verify-helpers-v15
 	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge build src
-	FOUNDRY_PROFILE=$(VERIFY_PROFILE) bash deployments/verify-latest-v14.sh
+	bash deployments/verify-latest-v15.sh
 
-verify-v13:
+casino-add-pool-verify-helpers: verify-helpers-v15
+verify-helpers-v15:
+	@test -n "$$SNAPSHOT_PATH" || { echo "Set SNAPSHOT_PATH to the chain-specific v1.5 snapshot"; exit 1; }
+	$(PYTHON) script/tools/gen_verify_helpers.py "$$SNAPSHOT_PATH"
+
+sports-dry-run-v15:
 	@$(MAKE) check-deps
-	bash script/ci/v13_release_source_guard.sh
-	@$(MAKE) verify-helpers-v13
-	# Verification can be sensitive to stale build artifacts across Foundry versions.
-	# Preserve broadcast traces but recompile from scratch.
-	CLEAN_BROADCAST=0 bash script/ci/clean_foundry.sh
-	# Precompile once to populate Foundry compiler caches (reduces noisy cache warnings).
-	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge build > /dev/null
-	FOUNDRY_PROFILE=$(VERIFY_PROFILE) bash deployments/verify-latest-v13.sh
-
-# Regenerate verify helper scripts from an existing deployments/latest-v13.json.
-# Useful when you deployed with an older helper, or after upgrading Foundry/Etherscan endpoints.
-
-lint:
-	@$(MAKE) check-deps
-	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge lint
-
-verify-helpers: verify-helpers-v14
-
-verify-helpers-v14:
-	@if [ ! -f deployments/latest-v14.json ]; then \
-		echo "deployments/latest-v14.json not found; skipping verify helper regeneration"; \
-		exit 0; \
-	fi
-	$(PYTHON) script/tools/gen_verify_helpers.py deployments/latest-v14.json
-
-verify-helpers-v13:
-	@bash script/ci/v13_release_source_guard.sh
-	@if [ ! -f deployments/latest-v13.json ]; then \
-		echo "deployments/latest-v13.json not found; skipping verify helper regeneration"; \
-		exit 0; \
-	fi
-	$(PYTHON) script/tools/gen_verify_helpers.py deployments/latest-v13.json
-
-sports-dry-run-v13:
-	bash script/ci/v13_sports_dry_run.sh
+	FOUNDRY_PROFILE=pr forge test --threads 1 --match-path test/unit/DeploymentV15.t.sol --match-test testSports -vv
 
 sports-lifecycle-dry-run:
 	@$(MAKE) check-deps
 	FOUNDRY_PROFILE=pr forge test --match-path test/unit/SportsHubLifecycle.t.sol -vv
 
 sports-phase0-readiness:
-	@$(MAKE) sports-dry-run-v13
+	@$(MAKE) sports-dry-run-v15
 	@$(MAKE) sports-lifecycle-dry-run
 
 sports-testnet-preflight-v13:
@@ -258,132 +213,60 @@ sports-ops-coverage-check-v13:
 #      STRICT=1 make release-check
 
 
-# Full release workflow (digest + notes + frontend artifacts + verify + package).
-# Current source is V14. Keep V13 targets explicit and guarded so V14 Bank
-# bytecode/ABI cannot be published under V13 artifact names.
-release: release-v14
-release-v14: release-digest-v14 release-notes-v14 release-frontend-manifest-v14 release-golden-vectors-v14 release-abis-v14 release-verify-v14 release-package-v14
-release-v13: release-digest-v13 release-notes-v13 release-frontend-manifest-v13 release-golden-vectors-v13 release-abis-v13 release-verify-v13 release-package-v13
+# The only fresh deployment/release line. Historical artifacts stay read-only until retirement.
+.PHONY: deploy-v15 deploy-dryrun verify-v15 verify-helpers-v15 sports-dry-run-v15 release-v15 release-governance-check safe-acceptance-v15
 
-release-digest: release-digest-v14
+deploy-dryrun:
+	FOUNDRY_PROFILE=$(DEPLOY_PROFILE) forge script script/DeployV15.s.sol:DeployV15 --rpc-url "$$RPC_URL" -vvv
 
-release-digest-v14:
-	@$(MAKE) check-deps
-	FOUNDRY_PROFILE=$(FOUNDRY_PROFILE) forge script script/release/ReleaseDigestV14.s.sol:ReleaseDigestV14 -vvv
+safe-acceptance-v15:
+	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge script script/release/PrepareSafeAcceptanceV15.s.sol:PrepareSafeAcceptanceV15 --rpc-url "$$RPC_URL" -vvv
 
-release-digest-v13:
-	@$(MAKE) check-deps
-	bash script/ci/v13_release_source_guard.sh
-	FOUNDRY_PROFILE=$(FOUNDRY_PROFILE) forge script script/release/ReleaseDigestV13.s.sol:ReleaseDigestV13 -vvv
+release-governance-check:
+	@test -n "$$SNAPSHOT_PATH" -a -n "$$RPC_URL" || { echo "Set chain-specific SNAPSHOT_PATH and RPC_URL"; exit 1; }
+	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge script script/release/VerifyGovernanceV15.s.sol:VerifyGovernanceV15 --rpc-url "$$RPC_URL" -vvv
 
-release-verify: release-verify-v14
+release: release-v15
+release-v15:
+	@$(MAKE) release-governance-check
+	@$(MAKE) release-digest
+	@$(MAKE) release-notes
+	@$(MAKE) release-frontend-manifest
+	@$(MAKE) release-golden-vectors
+	@$(MAKE) release-abis
+	@$(MAKE) release-verify
+	@$(MAKE) release-package
 
-release-verify-v14:
-	@$(MAKE) check-deps
-	FOUNDRY_PROFILE=$(FOUNDRY_PROFILE) forge script script/release/VerifyReleaseV14.s.sol:VerifyReleaseV14 -vvv
+release-digest:
+	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge script script/release/ReleaseDigestV15.s.sol:ReleaseDigestV15 --account "$${RELEASE_ACCOUNT:?Set the approved release signer keystore account}" -vvv
 
-release-verify-v13:
-	@$(MAKE) check-deps
-	bash script/ci/v13_release_source_guard.sh
-	FOUNDRY_PROFILE=$(FOUNDRY_PROFILE) forge script script/release/VerifyReleaseV13.s.sol:VerifyReleaseV13 -vvv
+release-verify:
+	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge script script/release/VerifyReleaseV15.s.sol:VerifyReleaseV15 -vvv
 
-release-check: release-check-v14
-
-release-check-v14:
-	@$(MAKE) check-deps
-	PYTHON="$(PYTHON)" \
-	RELEASE_PATH=deployments/release-latest-v14.json \
-	SNAPSHOT_PATH=deployments/latest-v14.json \
-	NOTES_PATH=deployments/release-notes-latest-v14.md \
-	FRONTEND_MANIFEST_PATH=deployments/frontend-manifest-latest-v14.json \
-	GOLDEN_VECTORS_PATH=deployments/golden-vectors-latest-v14.json \
-	ABI_INDEX_PATH=deployments/abis-v14/index.json \
-	RELEASE_TAG_SUFFIX=-v14 \
-	VERIFY_SCRIPT=script/release/VerifyReleaseV14.s.sol:VerifyReleaseV14 \
-	bash script/release/check_release.sh
-	$(PYTHON) script/ci/v14_bank_live_shape_smoke.py
-
-release-check-v13:
-	@$(MAKE) check-deps
-	bash script/ci/v13_release_source_guard.sh
+release-check:
 	PYTHON="$(PYTHON)" bash script/release/check_release.sh
 
-release-artifacts-tracked-v13:
-	bash script/ci/v13_release_source_guard.sh
-	bash script/ci/v13_release_artifacts_tracked_check.sh
+release-notes:
+	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge script script/release/GenerateReleaseNotesV15.s.sol:GenerateReleaseNotesV15 -vvv
 
-# Generate human-friendly release notes that include the release digest.
-release-notes: release-notes-v14
+release-frontend-manifest:
+	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge script script/release/GenerateFrontendManifestV15.s.sol:GenerateFrontendManifestV15 -vvv
 
-release-notes-v14:
-	@$(MAKE) check-deps
-	FOUNDRY_PROFILE=$(FOUNDRY_PROFILE) forge script script/release/GenerateReleaseNotesV14.s.sol:GenerateReleaseNotesV14 -vvv
+release-golden-vectors:
+	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge script script/release/GenerateGoldenVectorsV15.s.sol:GenerateGoldenVectorsV15 -vvv
 
-release-notes-v13:
-	@$(MAKE) check-deps
-	bash script/ci/v13_release_source_guard.sh
-	FOUNDRY_PROFILE=$(FOUNDRY_PROFILE) forge script script/release/GenerateReleaseNotesV13.s.sol:GenerateReleaseNotesV13 -vvv
-
-# Create a distributable archive containing the snapshot + release lock + notes (+ verify helper if present).
-
-# Generate a frontend-ready manifest that requires zero inference from the UI.
-release-frontend-manifest: release-frontend-manifest-v14
-
-release-frontend-manifest-v14:
-	FOUNDRY_PROFILE=default forge script script/release/GenerateFrontendManifestV14.s.sol:GenerateFrontendManifestV14 -vvv
-
-release-frontend-manifest-v13:
-	bash script/ci/v13_release_source_guard.sh
-	FOUNDRY_PROFILE=default forge script script/release/GenerateFrontendManifestV13.s.sol:GenerateFrontendManifestV13 -vvv
-
-# Generate golden (exact-hex) vectors for frontend encoding tests.
-release-golden-vectors: release-golden-vectors-v14
-
-release-golden-vectors-v14:
-	FOUNDRY_PROFILE=default forge script script/release/GenerateGoldenVectorsV14.s.sol:GenerateGoldenVectorsV14 -vvv
-
-release-golden-vectors-v13:
-	bash script/ci/v13_release_source_guard.sh
-	FOUNDRY_PROFILE=default forge script script/release/GenerateGoldenVectorsV13.s.sol:GenerateGoldenVectorsV13 -vvv
-
-release-abis: release-abis-v14
-
-release-abis-v14:
-	@$(MAKE) check-deps
-	# ABIs are derived from contract artifacts only. Building all scripts/tests can
-	# pull in legacy release surfaces and is unnecessary for frontend ABI export.
+release-abis:
 	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge build src
-	$(PYTHON) script/release/export_frontend_abis.py --manifest deployments/frontend-manifest-latest-v14.json --dest deployments/abis-v14 --tag-suffix=-v14
+	$(PYTHON) script/release/export_frontend_abis.py --manifest deployments/frontend-manifest-latest-v15.json --dest deployments/abis-v15 --tag-suffix=-v15
 
-release-abis-v13:
-	@$(MAKE) check-deps
-	bash script/ci/v13_release_source_guard.sh
-	# ABIs are derived from Foundry artifacts; build once to ensure out/ exists.
-	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge build > /dev/null
-	$(PYTHON) script/release/export_frontend_abis.py
-
-release-package: release-package-v14
-
-release-package-v14:
-	PYTHON="$(PYTHON)" \
-	RELEASE_PATH=deployments/release-latest-v14.json \
-	SNAPSHOT_PATH=deployments/latest-v14.json \
-	NOTES_PATH=deployments/release-notes-latest-v14.md \
-	FRONTEND_MANIFEST_PATH=deployments/frontend-manifest-latest-v14.json \
-	GOLDEN_VECTORS_PATH=deployments/golden-vectors-latest-v14.json \
-	ABIS_DIR=deployments/abis-v14 \
-	ABIS_INDEX_PATH=deployments/abis-v14/index.json \
-	RELEASE_TAG_SUFFIX=-v14 \
-	SNAPSHOT_LATEST_NAME=latest-v14.json \
-	RELEASE_LATEST_NAME=release-latest-v14.json \
-	NOTES_LATEST_NAME=release-notes-latest-v14.md \
-	FRONTEND_MANIFEST_LATEST_NAME=frontend-manifest-latest-v14.json \
-	GOLDEN_VECTORS_LATEST_NAME=golden-vectors-latest-v14.json \
-	bash script/release/package_release.sh
-
-release-package-v13:
-	bash script/ci/v13_release_source_guard.sh
+release-package:
 	PYTHON="$(PYTHON)" bash script/release/package_release.sh
+
+# Old release aliases fail explicitly, including callers copied from historical runbooks.
+.PHONY: deploy-v13 deploy-v14 release-v13 release-v14 verify-v13 verify-v14
+deploy-v13 deploy-v14 release-v13 release-v14 verify-v13 verify-v14 sports-dry-run-v13:
+	@echo "Retired release entrypoint. Use v1.5 targets and a chain-specific deployment packet."
+	@exit 1
 
 # Create an "audit handoff" bundle: code + docs + pinned deps metadata + release artifacts + verify helpers.
 # The output is placed under dist/ as a .tar.gz.

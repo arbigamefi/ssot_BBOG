@@ -10,6 +10,8 @@ jobs:
   release-gate:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    env:
+      RELEASE_SIGNER: ${{ vars.V15_RELEASE_SIGNER }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -28,7 +30,7 @@ jobs:
 
       - name: Proof gates (nightly profile)
         run: |
-          FOUNDRY_PROFILE=nightly forge test --match-path "test/unit/*" -vvv
+          FOUNDRY_PROFILE=nightly forge test --threads 1 --match-path "test/unit/*" -vvv
           FOUNDRY_PROFILE=nightly forge test --match-path "test/diff/*" -vvv
           FOUNDRY_PROFILE=nightly forge test --match-path "test/invariants/*" -vvv
 
@@ -39,7 +41,7 @@ jobs:
       - name: Fork tests (release gate)
         env:
           # Provide per-network fork RPCs via repository secrets.
-          # Only the RPC for the deployed chainId (from deployments/latest-v13.json) is required.
+          # Only the RPC for the deployed chainId (from deployments/latest-v15.json) is required.
           FORK_RPC_URL_BASE: ${{ secrets.FORK_RPC_URL_BASE }}
           FORK_RPC_URL_BASE_SEPOLIA: ${{ secrets.FORK_RPC_URL_BASE_SEPOLIA }}
           FORK_RPC_URL_ARBITRUM_ONE: ${{ secrets.FORK_RPC_URL_ARBITRUM_ONE }}

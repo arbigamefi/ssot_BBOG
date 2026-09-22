@@ -5,10 +5,10 @@
  * Synchronize a **contract release bundle** into this repo.
  *
  * The bundle is the single source of truth and MUST contain:
- *   - deployments/frontend-manifest-latest-v14.json
- *   - deployments/golden-vectors-latest-v14.json
- *   - deployments/release-latest-v14.json
- *   - deployments/latest-v14.json (optional, for audit)
+ *   - deployments/frontend-manifest-latest-v15.json
+ *   - deployments/golden-vectors-latest-v15.json
+ *   - deployments/release-latest-v15.json
+ *   - deployments/latest-v15.json (required for verification)
  *   - abis/index.json + abis/*.abi.json
  *   - (optional) MANIFEST.sha256
  *
@@ -342,21 +342,11 @@ async function main() {
   const abisDir = path.join(bundleRoot, "abis");
 
   const manifestPath = await firstExistingPath(deploymentsDir, [
-    "frontend-manifest-latest-v14.json",
-    "frontend-manifest-latest-v13.json"
+    "frontend-manifest-latest-v15.json"
   ]);
-  const vectorsPath = await firstExistingPath(deploymentsDir, [
-    "golden-vectors-latest-v14.json",
-    "golden-vectors-latest-v13.json"
-  ]);
-  const releaseLockPath = await firstExistingPath(deploymentsDir, [
-    "release-latest-v14.json",
-    "release-latest-v13.json"
-  ]);
-  const latestSnapshotPath = await firstExistingPath(deploymentsDir, [
-    "latest-v14.json",
-    "latest-v13.json"
-  ]);
+  const vectorsPath = await firstExistingPath(deploymentsDir, ["golden-vectors-latest-v15.json"]);
+  const releaseLockPath = await firstExistingPath(deploymentsDir, ["release-latest-v15.json"]);
+  const latestSnapshotPath = await firstExistingPath(deploymentsDir, ["latest-v15.json"]);
   const abiIndexPath = path.join(abisDir, "index.json");
 
   for (const p of [
@@ -365,6 +355,7 @@ async function main() {
     manifestPath,
     vectorsPath,
     releaseLockPath,
+    latestSnapshotPath,
     abiIndexPath
   ]) {
     if (!(await pathExists(p))) {
@@ -381,6 +372,81 @@ async function main() {
   const releaseLock = await readJson(releaseLockPath);
   const latestSnapshot = await readJson(latestSnapshotPath);
   const abiIndex = await readJson(abiIndexPath);
+
+  // Verify the supplied bundle before changing embedded addresses or deleting a fixture directory.
+  if (
+    manifest.architectureVersion !== "v1.5-safe-governance" ||
+    latestSnapshot.architectureVersion !== "v1.5-safe-governance" ||
+    releaseLock.schema !== "SSOT_RELEASE_DIGEST_V15"
+  ) {
+    throw new Error("Only a v1.5 release bundle can become the active deployment.");
+  }
+  for (const item of [vectors, releaseLock, latestSnapshot, abiIndex]) {
+    if (item.chainId !== manifest.chainId || item.blockNumber !== manifest.blockNumber) {
+      throw new Error("Mixed chain or deployment block in release bundle.");
+    }
+  }
+  if (!process.env.RELEASE_SIGNER || !process.env.RPC_URL) {
+    throw new Error(
+      "Set the trusted RELEASE_SIGNER and chain-specific RPC_URL before importing v1.5."
+    );
+  }
+  const repoRoot = path.resolve(ROOT, "..");
+  const verificationDir = await fs.mkdtemp(path.join(repoRoot, "deployments", ".verify-v15-"));
+  await fs.copyFile(latestSnapshotPath, path.join(verificationDir, "snapshot.json"));
+  await fs.copyFile(releaseLockPath, path.join(verificationDir, "release.json"));
+  const verificationEnv = {
+    ...process.env,
+    SNAPSHOT_PATH: path.join(verificationDir, "snapshot.json"),
+    RELEASE_PATH: path.join(verificationDir, "release.json")
+  };
+  try {
+    await execFileAsync(
+      process.env.PYTHON ?? "python3",
+      [
+        "script/release/validate_frontend_artifacts.py",
+        "--strict",
+        "1",
+        "--release",
+        releaseLockPath,
+        "--snapshot",
+        latestSnapshotPath,
+        "--notes",
+        path.join(deploymentsDir, "release-notes-latest-v15.md"),
+        "--manifest",
+        manifestPath,
+        "--vectors",
+        vectorsPath,
+        "--schema",
+        "2",
+        "--tag-suffix=-v15",
+        "--abis-index",
+        abiIndexPath
+      ],
+      { cwd: repoRoot, env: verificationEnv }
+    );
+    await execFileAsync(
+      "forge",
+      ["script", "script/release/VerifyReleaseV15.s.sol:VerifyReleaseV15"],
+      { cwd: repoRoot, env: verificationEnv }
+    );
+    await execFileAsync(
+      "forge",
+      [
+        "script",
+        "script/release/VerifyGovernanceV15.s.sol:VerifyGovernanceV15",
+        "--rpc-url",
+        process.env.RPC_URL
+      ],
+      { cwd: repoRoot, env: verificationEnv }
+    );
+  } catch {
+    throw new Error(
+      "v1.5 bundle or live governance verification failed; active release was not changed."
+    );
+  } finally {
+    await fs.rm(verificationDir, { recursive: true, force: true });
+  }
 
   const chainId = Number(manifest.chainId);
   const blockNumber = Number(manifest.blockNumber);

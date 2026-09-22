@@ -7,13 +7,13 @@ import "forge-std/console2.sol";
 
 import "./JsonReader.sol";
 
-contract GenerateFrontendManifestV14 is Script {
+contract GenerateFrontendManifestV15 is Script {
     using stdJson for string;
 
     JsonReader private jsonReader = new JsonReader();
 
-    string internal constant DEFAULT_SNAPSHOT_PATH = "deployments/latest-v14.json";
-    string internal constant OUT_LATEST = "deployments/frontend-manifest-latest-v14.json";
+    string internal constant DEFAULT_SNAPSHOT_PATH = "deployments/latest-v15.json";
+    string internal constant OUT_LATEST = "deployments/frontend-manifest-latest-v15.json";
 
     bytes32 internal constant GAME_DICE = keccak256("DICE");
     bytes32 internal constant GAME_COIN_TOSS = keccak256("COIN_TOSS");
@@ -74,7 +74,7 @@ contract GenerateFrontendManifestV14 is Script {
             "}\n"
         );
 
-        string memory tag = string.concat(vm.toString(chainId), "-", vm.toString(blockNumber), "-v14");
+        string memory tag = string.concat(vm.toString(chainId), "-", vm.toString(blockNumber), "-v15");
         string memory outTagged = string.concat("deployments/release/frontend-manifest-", tag, ".json");
 
         vm.writeFile(OUT_LATEST, json);

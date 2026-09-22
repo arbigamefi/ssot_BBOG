@@ -37,5 +37,7 @@ COPY --from=builder --chown=keeper:keeper /app/frontend/apps/keeper ./apps/keepe
 COPY --from=builder --chown=keeper:keeper /app/frontend/packages/bet-index ./packages/bet-index
 COPY --from=builder --chown=keeper:keeper /app/frontend/packages/ssot ./packages/ssot
 
+COPY --from=builder /app/frontend/packages/ssot/src/release/embedded /app/release-manifests
+
 USER keeper
 CMD ["node", "apps/keeper/dist/cli.js"]

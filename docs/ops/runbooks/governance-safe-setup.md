@@ -1,6 +1,6 @@
 # Runbook: Stand up the governance Safe (2-of-3, single operator)
 
-Prepare a 2-of-3 Safe and rehearse its recovery path for the planned v1.5
+Prepare a 2-of-3 Safe and rehearse its recovery path for the v1.5
 governance design. This document is a readiness plan, not evidence that a
 Safe has been deployed, installed as governance, or exercised successfully.
 
@@ -8,8 +8,9 @@ Safe has been deployed, installed as governance, or exercised successfully.
 
 - **Applies to:** Base mainnet 8453 and Base Sepolia 84532. Safe supports both.
 - **Produces:** a proposed Safe address and rehearsal evidence. A versioned
-  v1.5 deployment/bootstrap workflow is still required before it can become
-  protocol governance. Do not treat `DeployV15` as an available command.
+  v1.5 deployment/bootstrap workflow is implemented in `script/DeployV15.s.sol`;
+  use [the active release workflow](../../deploy/v15-release.md). Script availability
+  does not prove that the Safe has accepted governance on any live target.
 - **Current deployment limit:** `script/DeployV14.s.sol` requires
   `cfg.deployer == cfg.gov` and performs governance-only wiring from the
   broadcast EOA. It cannot bootstrap contracts with a Safe as governance;

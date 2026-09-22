@@ -1,5 +1,7 @@
 # ArbiGameFi Monorepo
 
+Fresh deployments use the [v1.5 Safe release workflow](docs/deploy/v15-release.md). Existing embedded manifests still identify the previous deployment until both new chains pass acceptance; historical versioned examples below are not fresh-deployment instructions.
+
 This repository is a single Git project that contains both the **ArbiGameFi smart contracts** and the
 **ArbiGameFi frontend workspace**.
 

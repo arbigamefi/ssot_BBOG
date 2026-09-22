@@ -27,7 +27,7 @@ jobs:
 
       - name: Run unit tests (nightly profile)
         run: |
-          FOUNDRY_PROFILE=nightly forge test --match-path "test/unit/*" -vvv
+          FOUNDRY_PROFILE=nightly forge test --threads 1 --match-path "test/unit/*" -vvv
 
       - name: Run diff tests (nightly profile)
         run: |
