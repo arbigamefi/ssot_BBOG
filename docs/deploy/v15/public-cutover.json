@@ -1,0 +1,215 @@
+{
+  "schemaVersion": 1,
+  "publicUrl": "https://arbigamefi.com",
+  "cutoverAt": "2026-09-23T15:39:01.927391+00:00",
+  "source": {
+    "pullRequest": 62,
+    "mergeCommit": "b85b0072f2f23ba900fb3462448607eea3acfee4",
+    "imageRevision": "fcda9e52c2a363e1c35df7e975ea4f0299651ef1",
+    "matchingTree": "c8f3d26aad9208ad52d35850e3e1b84c0dec4317",
+    "imageWorkflowRun": 35879654354
+  },
+  "images": {
+    "arbigamefi-v15-web-1": "ghcr.io/arbigamefi/ssot-bbog-web@sha256:b1dd69c14363150b336f711068e9bee57eaaab4d61f0848073d7583af0f9c23b",
+    "arbigamefi-v15-keeper-primary-1": "ghcr.io/arbigamefi/ssot-bbog-keeper@sha256:31de0317d5acf7c47d380499f05f97eb62c3402f38f831a4c57b2d688d3bcdc7",
+    "arbigamefi-v15-keeper-testnet-primary-1": "ghcr.io/arbigamefi/ssot-bbog-keeper@sha256:31de0317d5acf7c47d380499f05f97eb62c3402f38f831a4c57b2d688d3bcdc7",
+    "arbigamefi-v15-caddy-1": "caddy:2-alpine",
+    "arbigamefi-v15-postgres-1": "postgres:16-alpine"
+  },
+  "releaseDigests": {
+    "8453": "0xcf3f3550d8532fc656ad8e646b015b972f88631f5e38125b47d0f1ed249e0055",
+    "84532": "0xae662a55eef716a97f1a2d2bfad389507b86d0aff72b32a162b90fcb59920c6b"
+  },
+  "database": {
+    "name": "arbigamefi_v15",
+    "freshVolume": "arbigamefi-v15_bet_index_postgres_data",
+    "legacyDatabaseRestored": false,
+    "reconciliation": {
+      "at": "2026-09-23T15:38:17.276111+00:00",
+      "comparison": {
+        "bets": {
+          "baselineCount": 14,
+          "newCount": 14,
+          "exactMatch": true
+        },
+        "events": {
+          "baselineCount": 42,
+          "newCount": 42,
+          "exactMatch": false
+        },
+        "ledger": {
+          "baselineCount": 1,
+          "newCount": 1,
+          "exactMatch": true
+        }
+      },
+      "mainnetBets": 0,
+      "eventsMatchWithVerifiedRefundEnrichment": true,
+      "historicalEventsEnrichedWithRefundAmount": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10"
+      ]
+    }
+  },
+  "publicVerification": {
+    "at": "2026-09-23T15:40:32.460859+00:00",
+    "health": {
+      "8453": {
+        "status": 200,
+        "cache": "DYNAMIC",
+        "contentType": "application/json",
+        "body": {
+          "schemaVersion": 1,
+          "status": "ok",
+          "chainId": 8453,
+          "generatedAt": "2026-09-23T15:40:33.282Z",
+          "checks": {
+            "release": {
+              "status": "ok",
+              "name": "Base",
+              "warnings": []
+            },
+            "keeper": {
+              "status": "ok",
+              "role": "primary",
+              "keeperStatus": "running",
+              "updatedAt": "2026-09-23T15:40:24.062Z",
+              "ageMs": 9220,
+              "queueDepth": 0
+            },
+            "betIndex": {
+              "status": "ok",
+              "source": "postgres",
+              "rows": 0,
+              "durableRequired": true,
+              "durableConfigured": true
+            }
+          }
+        }
+      },
+      "84532": {
+        "status": 200,
+        "cache": "DYNAMIC",
+        "contentType": "application/json",
+        "body": {
+          "schemaVersion": 1,
+          "status": "ok",
+          "chainId": 84532,
+          "generatedAt": "2026-09-23T15:40:34.945Z",
+          "checks": {
+            "release": {
+              "status": "ok",
+              "name": "Base Sepolia",
+              "warnings": []
+            },
+            "keeper": {
+              "status": "ok",
+              "role": "primary",
+              "keeperStatus": "running",
+              "updatedAt": "2026-09-23T15:40:34.085Z",
+              "ageMs": 858,
+              "queueDepth": 0
+            },
+            "betIndex": {
+              "status": "ok",
+              "source": "postgres",
+              "rows": 1,
+              "durableRequired": true,
+              "durableConfigured": true
+            }
+          }
+        }
+      }
+    },
+    "receipts": [
+      {
+        "betId": 11,
+        "status": 200,
+        "cache": "DYNAMIC",
+        "contentType": "application/json",
+        "payout": "196000",
+        "refundAmount": "100000",
+        "terminalTxHash": "0xd0a842cb6b324df5cb3750f2b471d41da338f74bb794387457ba125df2c20ed1"
+      },
+      {
+        "betId": 12,
+        "status": 200,
+        "cache": "DYNAMIC",
+        "contentType": "application/json",
+        "payout": "0",
+        "refundAmount": "100000",
+        "terminalTxHash": "0x6cd45019cbaa8cbb79e645a06fd6454412e61c95a9c1d5eabee22249a1480893"
+      },
+      {
+        "betId": 13,
+        "status": 200,
+        "cache": "DYNAMIC",
+        "contentType": "application/json",
+        "payout": "196000",
+        "refundAmount": "100000",
+        "terminalTxHash": "0x1d0554351ab45c4fc7379b4b5326d1e028e9950146ee91f6bd682f90053b2a47"
+      },
+      {
+        "betId": 14,
+        "status": 200,
+        "cache": "DYNAMIC",
+        "contentType": "application/json",
+        "payout": "0",
+        "refundAmount": "100000",
+        "terminalTxHash": "0xe84b9c0f61c6e7019c1135a7b700a21f18a73f02a1cc89781ad7203a7c487d2d"
+      }
+    ],
+    "homepage": {
+      "status": 200,
+      "cache": "DYNAMIC",
+      "contentType": "text/html; charset=utf-8",
+      "fixed98PercentAbsent": true
+    },
+    "receiptHtml": {
+      "status": 200,
+      "cache": "DYNAMIC",
+      "contentType": "text/html; charset=utf-8",
+      "totalReturn": "0.296",
+      "netReturn": "0.096",
+      "chainLinkPreserved": true
+    }
+  },
+  "legacyServices": {
+    "restartPolicy": "no",
+    "retainedStoppedContainers": [
+      "arbigamefi-production-web-1",
+      "arbigamefi-production-keeper-primary-1",
+      "arbigamefi-production-keeper-testnet-primary-1",
+      "arbigamefi-production-caddy-1",
+      "arbigamefi-production-postgres-1",
+      "arbigamefi-v15-sepolia-acceptance-web-1",
+      "arbigamefi-v15-sepolia-acceptance-keeper-1",
+      "arbigamefi-v15-sepolia-acceptance-postgres-1"
+    ],
+    "volumesDeleted": false,
+    "imagesDeleted": false
+  },
+  "launchBoundary": {
+    "newBanksPaused": true,
+    "casinoRiskInEnabled": false,
+    "mainnetFundedCanaryCompleted": false,
+    "mainnetLiquidityBudgetApproved": false
+  },
+  "backupHashes": {
+    "legacyProduction": "a664bd1169742b92f4587c55b13da62d0ca03ac02f09b6090eea25f873f54571",
+    "sepoliaAcceptance": "87cd8721c77a5a2810effe16189d3349575d09ae4f5708c240dd7fe747d82e2f"
+  },
+  "operationalExceptions": [
+    "USDC legacy pause used a wallet mediator; success was verified by canonical Bank event and independent state reads, not a direct outer transaction target.",
+    "Initial 2000-block mainnet replay queries were rejected; 1000-block queries succeeded. Sepolia used 2000. Both keepers were restored to their prior RPC and 10-block settings after replay.",
+    "The VPS Compose version rejected run --pull; Caddy validation succeeded after checking the local image and omitting that unsupported run option."
+  ]
+}

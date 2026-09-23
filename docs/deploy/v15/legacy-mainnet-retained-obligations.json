@@ -1,0 +1,22 @@
+{
+  "chainId": 8453,
+  "blockNumber": "51694246",
+  "banks": [
+    {
+      "address": "0x597266ba243455f1a9145ba0cdc0408aae532c77",
+      "totalAssets": "0",
+      "totalSupply": "0",
+      "protocolFeesPayable": "0",
+      "totalReserved": "0",
+      "riskInPaused": true
+    },
+    {
+      "address": "0xf63c7c3304469f524ad3433dace31401e8472955",
+      "totalAssets": "0",
+      "totalSupply": "0",
+      "protocolFeesPayable": "0",
+      "totalReserved": "0",
+      "riskInPaused": true
+    }
+  ]
+}
