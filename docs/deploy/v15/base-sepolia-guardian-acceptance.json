@@ -1,0 +1,123 @@
+{
+  "chainId": 84532,
+  "guardianPauseAndDebtExitComplete": true,
+  "safeRecoveryExecuted": false,
+  "guardian": "0x9d239D9e0EE179Bd442497a034002aAf75865ea0",
+  "safe": "0x7F0c244e1701B069727670745FD047179Ef8691d",
+  "usdcBank": "0xEa3845f08a273257c3d3458D26e7bd4234330Dd4",
+  "debt": {
+    "complete": true,
+    "chainId": 84532,
+    "betId": "14",
+    "player": "0x93ac87413E17d01CBa37B6317f64890bF7f99aC3",
+    "stake": "200000",
+    "returned": "100000",
+    "net": "-100000",
+    "terminal": {
+      "state": 4,
+      "payoutGross": "0",
+      "payoutNet": "0",
+      "feeOnPayout": "0",
+      "protocolFeeAccrual": "2000",
+      "refundAmount": "100000"
+    },
+    "before": {
+      "wallet": "9936888",
+      "bank": "47314315",
+      "nav": "47112639",
+      "protocolFees": "201676",
+      "reserved": "0"
+    },
+    "after": {
+      "wallet": "9836888",
+      "bank": "47414315",
+      "nav": "47210639",
+      "protocolFees": "203676",
+      "reserved": "0"
+    },
+    "placement": {
+      "hash": "0x4882a68895347b568ec23a3fac7af283c845002960a9af2d73492dcf15a49b5b",
+      "block": "47201672",
+      "blockHash": "0xad41e8a738a00ff869655bc616736f7cf141c7a8655c9188351c848e29af0e46"
+    },
+    "settlement": {
+      "hash": "0xe84b9c0f61c6e7019c1135a7b700a21f18a73f02a1cc89781ad7203a7c487d2d",
+      "block": "47201694",
+      "blockHash": "0xc213232f9ab38c134a8f0e69f1099f6b65f6f1c5dc4295528ac793fc812b9f6b"
+    },
+    "independentRpcMatched": true,
+    "generatedAt": "2026-09-23T13:55:27.218Z"
+  },
+  "pausedDebtProof": {
+    "complete": true,
+    "bankPausedAtSettlement": true,
+    "independentBankPausedAtSettlement": true,
+    "pauseBlock": 47201684,
+    "settlementBlock": 47201694,
+    "fundingAndPauseReceiptsCrosschecked": true
+  },
+  "transactionAndFeeProof": {
+    "fundingHash": "0xfe92a533dabfa96faca56da35008e9df3091bc3cce8f48cbc6a6e3bf0d1cc430",
+    "pauseHash": "0xbc5750aca6db751b6fade8c09f7d03ce643bdd919b68048d71067873f75efe83",
+    "pauseBlock": "47201684",
+    "fundingValueWei": "50000000000000",
+    "fundingGasIncludingL1Wei": "111241095289",
+    "guardianPauseGasIncludingL1Wei": "262423086628",
+    "guardianRemainingBalanceWei": "49737576913372",
+    "deployerAfterWei": "49618104269132288",
+    "betNativeCostWei": "14330245306670",
+    "totalDrillFeesWei": "14703909488587",
+    "fundingIsTransferNotFee": true,
+    "actualSendersAndCalldataMatched": true,
+    "uniquePauseEvent": true
+  },
+  "newRiskRejected": {
+    "reverted": true,
+    "expectedSelector": "0x51f19a2f"
+  },
+  "safeControls": {
+    "chainId": 84532,
+    "blockNumber": "47201529",
+    "owners": [
+      "0xf5740675b59F4e2B0af73ee29C2d82932E8aD1a1",
+      "0x2dE12101D2A3C0BC033F2e8594dcda7231211797",
+      "0xc683900c8A5eF53AadAEA6Ebe5ef7609417F24f7"
+    ],
+    "threshold": "2",
+    "nonce": "7",
+    "modules": [],
+    "guard": "0x0000000000000000000000000000000000000000",
+    "singleton": "0x29fcb43b46531bca003ddc8fcb67ffe91900c762",
+    "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
+    "ownersHash": "0xd5bf35b7ae948fcce133bdd94ac14595373f7df73cb7710793c10867f83f3888",
+    "controlHash": "0x4e0c8cd9e1809b45688e53e24083d406ec8883bd124c1ba2dfec21a223555057",
+    "previouslyPinnedControlsMatched": true
+  },
+  "usdcBankPaused": true,
+  "wethBankPaused": true,
+  "cumulativeDeployerStake": 1372652,
+  "remainingStakeBudget": 8627348,
+  "safeRecoveryPacket": "safe-guardian-recovery-84532.json",
+  "priorSenderFailure": {
+    "verifiedAt": "2026-09-23T13:50:33.704537+00:00",
+    "originalCommandRejectedBeforeNetwork": true,
+    "reproducedExitCode": 2,
+    "error": "unexpected argument '--data' found",
+    "publicNodeLatestNonce": 65,
+    "publicNodePendingNonce": 65,
+    "publicNodeGuardianBalanceWei": "0",
+    "officialPendingNonce": 65,
+    "officialGuardianBalanceWei": "0",
+    "originalAttemptMarkerPreserved": true,
+    "repeatOfOnchainTransaction": false
+  },
+  "evidenceSha256": {
+    "guardian-debt-drill-v2.py": "925bbfb8a795e73e2e6f259601b867232659e33c7189b9ca12e0dc5ba0f1400b",
+    "guardian-drill-v2-result.json": "4daf59b6e0999a51b9a54f0a67cd64e77388d745132b8ad0a17fe4b183f17db0",
+    "guardian-drill-v2-existing-debt-reconciled.json": "628256308cf0dc2c49094b97d191c56ed3bc89bdb1a0267e6214faa9b41e135b",
+    "guardian-drill-v2-paused-debt-proof.json": "24880fc524389ac51ed3cc66663109acfb11d23e3a7d9271b0daf5bdb21a7ed3",
+    "guardian-drill-v2-transaction-and-fee-proof.json": "3512c02a35abddf77ba4df3536471031943800204dca4297c643154a5d7123a3",
+    "guardian-drill-cli-parser-proof.json": "1111183bbab07e2bfdbfd269c46ba8640dbf3347c7ecfe36c34addbcd99b0ee6",
+    "safe-guardian-recovery-84532.json": "51979d2328212d39eb82bb0d5014536f21d46548abd3ebfc96d2e9832a0d1539"
+  }
+}

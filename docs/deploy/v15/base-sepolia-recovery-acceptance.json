@@ -1,0 +1,168 @@
+{
+  "complete": true,
+  "restart": {
+    "complete": true,
+    "chainId": 84532,
+    "betId": "12",
+    "player": "0x93ac87413E17d01CBa37B6317f64890bF7f99aC3",
+    "stake": "200000",
+    "returned": "100000",
+    "net": "-100000",
+    "terminal": {
+      "state": 4,
+      "payoutGross": "0",
+      "payoutNet": "0",
+      "feeOnPayout": "0",
+      "protocolFeeAccrual": "2000",
+      "refundAmount": "100000"
+    },
+    "before": {
+      "wallet": "9940888",
+      "bank": "47310315",
+      "nav": "47112639",
+      "protocolFees": "197676",
+      "reserved": "0"
+    },
+    "after": {
+      "wallet": "9840888",
+      "bank": "47410315",
+      "nav": "47210639",
+      "protocolFees": "199676",
+      "reserved": "0"
+    },
+    "placement": {
+      "hash": "0x0b55b22673b8c394383208fdc109deb489a968f4d8984c94e9bedb0a5fba8df9",
+      "block": "47201170",
+      "blockHash": "0xfd8d6b1f7a59516407adab066953f4c3f2959d7517674ee6e24b418c18dc1659"
+    },
+    "settlement": {
+      "hash": "0x6cd45019cbaa8cbb79e645a06fd6454412e61c95a9c1d5eabee22249a1480893",
+      "block": "47201192",
+      "blockHash": "0x367bdd8e2a462fd63320dad408008267cd903ad2302a6232089d1b574d40fa4f"
+    },
+    "independentRpcMatched": true,
+    "generatedAt": "2026-09-23T13:38:49.106Z",
+    "nativeCost": {
+      "beforeWei": "49711209227455863",
+      "afterWei": "49696871124847778",
+      "placementGasIncludingL1Wei": "6636302172535",
+      "vrfChargedWei": "7701800435550",
+      "totalNativeSpentWei": "14338102608085",
+      "withinApprovedBudget": true,
+      "nonce": 65
+    },
+    "stateWhenStopped": 2,
+    "stateWhileStopped": 3
+  },
+  "writeFailure": {
+    "complete": true,
+    "chainId": 84532,
+    "betId": "13",
+    "player": "0x93ac87413E17d01CBa37B6317f64890bF7f99aC3",
+    "stake": "200000",
+    "returned": "296000",
+    "net": "96000",
+    "terminal": {
+      "state": 4,
+      "payoutGross": "200000",
+      "payoutNet": "196000",
+      "feeOnPayout": "4000",
+      "protocolFeeAccrual": "2000",
+      "refundAmount": "100000"
+    },
+    "before": {
+      "wallet": "9840888",
+      "bank": "47410315",
+      "nav": "47210639",
+      "protocolFees": "199676",
+      "reserved": "0"
+    },
+    "after": {
+      "wallet": "9936888",
+      "bank": "47314315",
+      "nav": "47112639",
+      "protocolFees": "201676",
+      "reserved": "0"
+    },
+    "placement": {
+      "hash": "0x7f0f76382c2e41cb2fc9cdb72f916274aaa02698348d92be5cc2b89528951d91",
+      "block": "47201226",
+      "blockHash": "0xb6c49e25c136c8588b1f7a49c074872382cfdce29538f55574131cdc0eeee420"
+    },
+    "settlement": {
+      "hash": "0x1d0554351ab45c4fc7379b4b5326d1e028e9950146ee91f6bd682f90053b2a47",
+      "block": "47201231",
+      "blockHash": "0xfc59edd9faeb104d42505330b84c46cb17ec94ecce59290f6aa256f13e1be539"
+    },
+    "independentRpcMatched": true,
+    "generatedAt": "2026-09-23T13:41:45.990Z",
+    "nativeCost": {
+      "beforeWei": "49696871124847778",
+      "afterWei": "49682545755534247",
+      "placementGasIncludingL1Wei": "6634742287423",
+      "vrfChargedWei": "7690627026108",
+      "totalNativeSpentWei": "14325369313531",
+      "withinApprovedBudget": true,
+      "nonce": 65
+    }
+  },
+  "originalRunnerExitCode": 1,
+  "originalAssertionReview": {
+    "journalFailureAndCursorRecoveryPassed": true,
+    "receiptMaterializationWasIndependent": true,
+    "originalAssertion": "Terminal projection unexpectedly committed",
+    "explanation": "Injected trigger covered gamehub_events inserts only. materializeCasinoReceipt writes bets directly after authoritative terminal validation. A correct terminal receipt during journal failure is expected; scan checkpoint still must not advance.",
+    "source": "frontend/apps/keeper/src/runtime.ts:344-354",
+    "failureObservations": 3,
+    "maximumInjectedFailureLogCount": 9,
+    "terminalBlock": 47201231,
+    "recoveryCursor": 47201293,
+    "temporaryTriggerCount": 0,
+    "transactionResent": false
+  },
+  "totalNewStake": 400000,
+  "cumulativeDeployerStake": 1172652,
+  "remainingStakeBudget": 8827348,
+  "finalWalletUsdc": 9936888,
+  "unrelatedContainersUnchanged": true,
+  "temporaryTriggerCount": 0,
+  "scope": "In-flight restart and targeted terminal event journal write failure. Direct receipt materialization remained available.",
+  "failureObservations": [
+    {
+      "time": "2026-09-23T13:39:29.251850+00:00",
+      "keeperStatus": "running",
+      "injectedFailureLogCount": 3,
+      "gameHubCursor": 47201226,
+      "terminalJournalEvents": 0,
+      "receiptState": "finalized"
+    },
+    {
+      "time": "2026-09-23T13:39:48.893980+00:00",
+      "keeperStatus": "running",
+      "injectedFailureLogCount": 7,
+      "gameHubCursor": 47201226,
+      "terminalJournalEvents": 0,
+      "receiptState": "finalized"
+    },
+    {
+      "time": "2026-09-23T13:40:09.549241+00:00",
+      "keeperStatus": "degraded",
+      "injectedFailureLogCount": 9,
+      "gameHubCursor": 47201226,
+      "terminalJournalEvents": 0,
+      "receiptState": "finalized"
+    }
+  ],
+  "sourceRevision": "ba2bebb8b9e35b182221043cc861ca06407dd917",
+  "releaseDigest": "0xae662a55eef716a97f1a2d2bfad389507b86d0aff72b32a162b90fcb59920c6b",
+  "evidenceSha256": {
+    "recovery-drills.py": "4b49bfa523b9d9f1ab6583e5c88ca70e221470a9cb4bed7efd1976fa9c9d2457",
+    "recovery-drills-durable-write-failure-failure-observations.json": "2f5389b4b43343b5b11f7d01b89d5976e0d0b1a2539b64c3d8fd22e1994e7dde",
+    "recovery-drills-write-failure-assertion-review.json": "145b3a2143366cfa67b91937509e38032d2f949b0e3f168ea0cbf99523a94a58",
+    "recovery-drills-inflight-restart-reconciled.json": "0e852ea2a544d6453c09192b742b7bab70cf99a8182b108b2704df414909d83c",
+    "recovery-drills-durable-write-failure-reconciled.json": "3ca7c2819c645c774b7e1a8fbe172050d59574e0817c8b2d8e8208f9c5a40110",
+    "recovery-drills-api.json": "d9259d9698c21c6694fd48df8930d1c51a1f14960e659d94bc01b92902e3ed8a",
+    "recovery-drills-final.json": "1d62159e189ba2908c689aae87c714fcb103785023478bad2fe23c2ad32c27e9"
+  },
+  "qualification": "Exact chain and internal acceptance instance; terminal journal write failure only, independent receipt materialization continued. No full database outage or real full refund claimed."
+}
