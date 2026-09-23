@@ -1,4 +1,5 @@
 import "fake-indexeddb/auto";
+import Dexie from "dexie";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { Address, Hex } from "viem";
 import { SSOTDb } from "./store";
@@ -139,6 +140,89 @@ describe("createGameHubIndexer", () => {
 });
 
 describe("gameHubIndexer.syncOnce()", () => {
+  it.each([0n, 100_000n])(
+    "persists a proven terminal refund %s outside the IndexedDB transaction",
+    async (refundAmount) => {
+      const amounts = {
+        payoutGross: 200_000n,
+        payoutNet: 196_000n,
+        feeOnPayout: 4_000n,
+        protocolFeeAccrual: 2_000n
+      };
+      const client = createMockPublicClient({ blockNumber: 200n });
+      client.getLogs.mockImplementation(async ({ event }: any) =>
+        event.name === "BetFinalized"
+          ? [
+              {
+                blockNumber: 150n,
+                logIndex: 1,
+                transactionHash: "0xabc1",
+                args: { positionId: 9n, ...amounts }
+              }
+            ]
+          : []
+      );
+      client.readContract = vi.fn(async () => {
+        expect(Dexie.currentTransaction).toBeNull();
+        return { state: 4, ...amounts, refundAmount };
+      });
+      indexer = createGameHubIndexer({
+        release: MOCK_RELEASE,
+        publicClient: client,
+        db,
+        config: { confirmations: 0 }
+      });
+      await indexer.syncOnce();
+      expect(indexer.getStatus().lastError).toBeUndefined();
+      expect(await db.bets.get("84532:9")).toMatchObject({
+        payout: "196000",
+        refundAmount: refundAmount.toString()
+      });
+      const [event] = await db.gameHubEvents.toArray();
+      expect(JSON.parse(event!.argsJson).refundAmount).toBe(refundAmount.toString());
+    }
+  );
+
+  it("keeps the cursor and financial rows unchanged until terminal refund recovery succeeds", async () => {
+    const amounts = {
+      payoutGross: 200_000n,
+      payoutNet: 196_000n,
+      feeOnPayout: 4_000n,
+      protocolFeeAccrual: 2_000n
+    };
+    const client = createMockPublicClient({ blockNumber: 200n });
+    client.getLogs.mockImplementation(async ({ event }: any) =>
+      event.name === "BetFinalized"
+        ? [
+            {
+              blockNumber: 150n,
+              logIndex: 1,
+              transactionHash: "0xabc1",
+              args: { positionId: 9n, ...amounts }
+            }
+          ]
+        : []
+    );
+    client.readContract = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("terminal RPC unavailable"))
+      .mockResolvedValue({ state: 4, ...amounts, refundAmount: 100_000n });
+    indexer = createGameHubIndexer({
+      release: MOCK_RELEASE,
+      publicClient: client,
+      db,
+      config: { confirmations: 0 }
+    });
+    await indexer.syncOnce();
+    expect(indexer.getStatus().lastError).toBe("terminal RPC unavailable");
+    expect(await db.cursors.count()).toBe(0);
+    expect(await db.bets.count()).toBe(0);
+    await indexer.syncOnce();
+    expect(indexer.getStatus().lastError).toBeUndefined();
+    expect(await db.bets.get("84532:9")).toMatchObject({ refundAmount: "100000" });
+    expect((await db.cursors.toArray())[0]?.lastProcessedBlock).toBe(200);
+  });
+
   it("fetches block number and getLogs for each event type", async () => {
     const client = createMockPublicClient({ blockNumber: 200n });
     indexer = createGameHubIndexer({

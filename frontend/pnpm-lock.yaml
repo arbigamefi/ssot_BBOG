@@ -192,6 +192,9 @@ importers:
 
   packages/ssot:
     dependencies:
+      '@ssot/bet-index':
+        specifier: workspace:*
+        version: link:../bet-index
       dexie:
         specifier: ^4.0.10
         version: 4.3.0

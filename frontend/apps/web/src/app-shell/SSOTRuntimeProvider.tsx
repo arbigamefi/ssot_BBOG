@@ -4,7 +4,7 @@ import * as React from "react";
 import { useTranslations } from "next-intl";
 import {
   createDexieJournalSink,
-  getSSOTDb,
+  getReleaseScopedSSOTDb,
   type GameHubIndexerConfig,
   type SSOTDb
 } from "@ssot/ssot/indexer";
@@ -26,7 +26,9 @@ export function SSOTRuntimeProvider({ children }: { children: React.ReactNode })
 
   const db: SSOTDb | undefined = React.useMemo(() => {
     if (!rel.release) return undefined;
-    return getSSOTDb(`ssot_frontend_v2_${rel.release.chainId}`);
+    // Rebuild financial facts for this release with terminal refunds. Retain the
+    // old database and its transaction journal for historical recovery.
+    return getReleaseScopedSSOTDb(rel.release);
   }, [rel.release]);
 
   const journal = React.useMemo(() => {
@@ -77,7 +79,7 @@ export function SSOTRuntimeProvider({ children }: { children: React.ReactNode })
         init: {
           chainId: rel.release.chainId,
           config: indexerConfig,
-          dbName: `ssot_frontend_v2_${rel.release.chainId}`,
+          dbName: db.name,
           release: rel.release,
           rpcUrl
         },

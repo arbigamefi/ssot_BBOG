@@ -60,6 +60,7 @@ export function applyGameHubEventToBet(
   if (ev.eventName === "BetFinalized") {
     if (ev.args.payoutGross != null) next.payoutGross = toBigintString(ev.args.payoutGross);
     if (ev.args.payoutNet != null) next.payout = toBigintString(ev.args.payoutNet);
+    if (ev.args.refundAmount != null) next.refundAmount = toBigintString(ev.args.refundAmount);
     next.terminalTxHash = ev.txHash;
     next.finalizedTxHash = ev.txHash;
   }

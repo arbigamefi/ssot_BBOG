@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./terminal-refund": {
+      "types": "./dist/terminal-refund.d.ts",
+      "import": "./dist/terminal-refund.js"
     }
   },
   "dependencies": {
