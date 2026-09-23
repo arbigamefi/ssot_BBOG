@@ -65,7 +65,7 @@ const SUPPORT_NAV_LINKS = [
   { id: "status", labelKey: "nav.status", href: "/status" }
 ] as const;
 
-function MobileHeaderBrand() {
+function MobileHeaderBrand({ compactUntilLg = false }: { compactUntilLg?: boolean }) {
   return (
     <Link
       href="/"
@@ -73,7 +73,7 @@ function MobileHeaderBrand() {
       className="inline-flex shrink-0 items-center gap-2 text-xl font-bold tracking-tight text-fg"
     >
       <ArbiGameFiMark className="h-9 w-9 rounded-xl" />
-      <span className="hidden sm:inline">ArbiGameFi</span>
+      <span className={compactUntilLg ? "hidden lg:inline" : "hidden sm:inline"}>ArbiGameFi</span>
     </Link>
   );
 }
@@ -232,9 +232,9 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
       <>
         <header className="fixed inset-x-0 top-0 z-50 border-b border-border-soft bg-surface-0/80 backdrop-blur-md">
           <div className="mx-auto flex h-16 max-w-[1280px] items-center justify-between px-4 sm:px-6 md:h-20">
-            <div className="flex items-center gap-12">
-              <MobileHeaderBrand />
-              <nav className="hidden items-center gap-6 text-sm font-medium text-fg-muted md:flex">
+            <div className="flex items-center gap-4 lg:gap-12">
+              <MobileHeaderBrand compactUntilLg />
+              <nav className="hidden shrink-0 items-center gap-4 whitespace-nowrap text-sm font-medium text-fg-muted md:flex lg:gap-6">
                 <Link href="/casino" className="transition-colors hover:text-fg">
                   {t("nav.rooms")}
                 </Link>
@@ -246,7 +246,7 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
                 </Link>
               </nav>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex shrink-0 items-center gap-2 whitespace-nowrap lg:gap-4">
               <div className="hidden sm:block">
                 <LocaleSwitcher compact />
               </div>
@@ -262,7 +262,7 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
               </div>
               <Link
                 href="/casino"
-                className="hidden rounded-full bg-fg px-5 py-2.5 text-sm font-semibold text-fg-inverse transition-colors hover:bg-fg/90 sm:inline-flex"
+                className="hidden rounded-full bg-fg px-5 py-2.5 text-sm font-semibold text-fg-inverse transition-colors hover:bg-fg/90 lg:inline-flex"
               >
                 {t("nav.openRooms")}
               </Link>
