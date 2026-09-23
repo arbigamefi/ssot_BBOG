@@ -466,7 +466,9 @@ describe("recent bets server aggregation", () => {
           args: {
             positionId: 8n,
             payoutGross: 20n,
-            payoutNet: 19n
+            payoutNet: 19n,
+            feeOnPayout: 1n,
+            protocolFeeAccrual: 0n
           },
           blockNumber: 22n,
           logIndex: 4,
@@ -481,7 +483,15 @@ describe("recent bets server aggregation", () => {
       chainId: 84532,
       client: {
         getBlockNumber: vi.fn().mockResolvedValue(latestBlockAfterEmbeddedRelease(9n)),
-        getLogs
+        getLogs,
+        readContract: vi.fn().mockResolvedValue({
+          state: 4,
+          payoutGross: 20n,
+          payoutNet: 19n,
+          feeOnPayout: 1n,
+          protocolFeeAccrual: 0n,
+          refundAmount: 0n
+        })
       } as any,
       limit: 10,
       now: () => 1234

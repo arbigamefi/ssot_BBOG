@@ -27,7 +27,7 @@ export type AffiliateBetsResponse = RecentBetsResponse & {
     turnover: string;
     payout: string;
     payoutGross: string;
-  };
+  } | null;
 };
 
 export type BetReceiptResponse = Omit<RecentBetsResponse, "fromBlock" | "rows" | "toBlock"> & {

@@ -1,3 +1,4 @@
+import { getCasinoCashReturned } from "@ssot/bet-index/financials";
 import * as React from "react";
 import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
@@ -40,6 +41,7 @@ export type GameAuditBet = {
   state?: string;
   stake?: string | bigint | number;
   payout?: string | bigint | number;
+  refundAmount?: string | bigint | number;
   updatedAt?: number;
   gameId?: string;
   /** Per-row pool/asset metadata from durable index rows. Needed for mixed-asset rooms. */
@@ -398,7 +400,7 @@ function BetTable({
           {rows.map((row, index) => {
             const betId = String(row.betId);
             const stake = toBigOrNull(row.stake);
-            const payout = toBigOrNull(row.payout);
+            const payout = getCasinoCashReturned(row) ?? null;
             const rowAsset = resolveRowAsset(row, {
               assetContexts,
               fallbackDecimals: assetDecimals,
@@ -407,7 +409,7 @@ function BetTable({
             const multiplier = multipliers?.[index] ?? computeMultiplier(stake, payout);
             const isWin = stake != null && payout != null && payout > stake;
             const isLoss =
-              stake != null && payout != null && payout <= stake && (row.state ?? "").length > 0;
+              stake != null && payout != null && payout < stake && row.state === "finalized";
             const txHash = row.finalizedTxHash ?? row.terminalTxHash ?? row.lastTxHash;
             const explorerUrl = getExplorerTxUrl(chainId, txHash);
             const playerExplorerUrl = getExplorerAddressUrl(chainId, row.player);
@@ -739,6 +741,7 @@ function LeaderboardPanel({
         gameId: row.gameId,
         id: `top-win:${row.betId}`,
         payout: row.payout,
+        refundAmount: "0",
         player: row.player,
         stake: row.stake,
         state: "finalized"
@@ -1307,14 +1310,14 @@ function VolumeTrend({
 function matchesStateFilter(row: GameAuditBet, filter: StateFilter): boolean {
   if (filter === "all") return true;
   const stake = toBigOrNull(row.stake);
-  const payout = toBigOrNull(row.payout);
+  const payout = getCasinoCashReturned(row) ?? null;
   const mapped = mapBetState(row.state);
   if (filter === "pending") return mapped === "pending";
   if (filter === "refunded") return mapped === "cancelled";
   // win/loss only meaningful once the bet has a terminal payout.
-  if (mapped === "pending") return false;
+  if (mapped === "pending" || row.state !== "finalized") return false;
   if (filter === "won") return stake != null && payout != null && payout > stake;
-  if (filter === "lost") return stake != null && payout != null && payout <= stake;
+  if (filter === "lost") return stake != null && payout != null && payout < stake;
   return true;
 }
 

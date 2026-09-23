@@ -1,3 +1,4 @@
+import { getCasinoCashReturned } from "@ssot/bet-index/financials";
 import { loadEmbeddedRelease } from "@ssot/ssot/release";
 
 import {
@@ -64,7 +65,7 @@ export async function GET(
     chainId
   });
   const row = receipt.row;
-  if (!row) {
+  if (!row || getCasinoCashReturned(row) == null) {
     return new Response("Receipt not ready", {
       headers: mergeHeaders(RECEIPT_OG_NOT_READY_HEADERS, quota.headers),
       status: 503
@@ -81,7 +82,7 @@ export async function GET(
   );
   const decimals = asset?.decimals ?? 18;
   const symbol = asset?.symbol ?? "";
-  const payout = getPayout(row);
+  const payout = getCasinoCashReturned(row);
   const stake = bigintFromString(row.stake);
   const net = stake != null && payout != null ? payout - stake : undefined;
   const resultLabel =
@@ -136,9 +137,4 @@ function safeNormalizeBetId(value: string) {
 
 function bigintFromString(value?: string) {
   return value == null || value === "" ? undefined : BigInt(value);
-}
-
-function getPayout(row: { payout?: string; refundAmount?: string; state: string }) {
-  if (row.state === "refunded") return bigintFromString(row.refundAmount);
-  return bigintFromString(row.payout);
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import { getCasinoCashReturned } from "@ssot/bet-index/financials";
+
 import * as React from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
@@ -115,7 +117,7 @@ export function HomePageClient() {
   }, [assetOverviews, release?.assets, t]);
   const activity = latestBets.slice(0, 5).map<LandingActivity>((bet: BetRow, index: number) => {
     const stake = toBigOrNull(bet.stake);
-    const payout = toBigOrNull(bet.payout);
+    const payout = getCasinoCashReturned(bet);
     const betAsset = bet.asset
       ? activityAssetByAddress.get(String(bet.asset).toLowerCase())
       : undefined;

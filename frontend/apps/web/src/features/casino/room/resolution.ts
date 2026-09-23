@@ -28,7 +28,7 @@ type CasinoRoundResultBase = {
   resolvedAt?: number;
 };
 
-type CompleteSettlementProof = SettlementProof & { payoutNet: bigint };
+type CompleteSettlementProof = SettlementProof & { payoutNet: bigint; refundAmount: bigint };
 type CompleteRefundProof = RefundProof & { refundAmount: bigint };
 
 export type CasinoRoundIndexingResult = CasinoRoundResultBase & {
@@ -57,7 +57,7 @@ export type CasinoRoundResult =
 function hasCompleteSettlement(
   settlement: SettlementProof | undefined
 ): settlement is CompleteSettlementProof {
-  return settlement?.payoutNet != null;
+  return settlement?.payoutNet != null && settlement.refundAmount != null;
 }
 
 function hasCompleteRefund(refund: RefundProof | undefined): refund is CompleteRefundProof {
@@ -173,7 +173,7 @@ export function isCompleteTerminalProof(
   proof: TerminalProof | GameHubTerminalProof | null | undefined
 ) {
   if (!proof) return false;
-  if (proof.kind === "settled") return proof.settlement.payoutNet != null;
+  if (proof.kind === "settled") return hasCompleteSettlement(proof.settlement);
   return proof.refund.refundAmount != null;
 }
 

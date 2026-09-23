@@ -1,5 +1,7 @@
 "use client";
 
+import { getCasinoCashReturned } from "@ssot/bet-index/financials";
+
 import * as React from "react";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
@@ -91,10 +93,20 @@ export function BetDetailPageClient({ betId }: { betId: string }) {
   const settlementProof = React.useMemo(() => extractSettlementProof(timeline), [timeline]);
   const refundProof = React.useMemo(() => extractRefundProof(timeline), [timeline]);
   const betState = onChainBet?.state ?? localBet?.state ?? null;
+  const cashReturned = getCasinoCashReturned({
+    state: betState ?? undefined,
+    stake: onChainBet?.stake ?? localBet?.stake,
+    payout: settlementProof?.payoutNet ?? onChainBet?.payout,
+    refundAmount:
+      betState === "refunded"
+        ? (refundProof?.refundAmount ?? onChainBet?.refund)
+        : (settlementProof?.refundAmount ?? onChainBet?.refund)
+  });
   const stateLabels = React.useMemo(
     () => ({
       won: t("portfolio.activity.detail.state.won"),
       lost: t("portfolio.activity.detail.state.lost"),
+      settled: t("casino.room.receipt.status.finalized"),
       randomReady: t("portfolio.activity.detail.state.randomReady"),
       placed: t("portfolio.activity.detail.state.placed"),
       refunded: t("portfolio.activity.detail.state.refunded"),
@@ -103,10 +115,12 @@ export function BetDetailPageClient({ betId }: { betId: string }) {
     [t]
   );
   const stateLabel =
-    betState === "finalized" && settlementProof?.payoutNet != null
-      ? settlementProof.payoutNet >= (onChainBet?.stake ?? 0n)
+    betState === "finalized" && cashReturned != null && onChainBet
+      ? cashReturned > onChainBet.stake
         ? stateLabels.won
-        : stateLabels.lost
+        : cashReturned < onChainBet.stake
+          ? stateLabels.lost
+          : stateLabels.settled
       : getStateLabel(betState, onChainBet, stateLabels);
   const gameId = onChainBet?.gameId ?? localBet?.gameId;
   const assetAddress = onChainBet?.asset ?? localBet?.asset;
@@ -271,13 +285,7 @@ export function BetDetailPageClient({ betId }: { betId: string }) {
       },
       {
         label: t("portfolio.activity.detail.facts.payout"),
-        value: formatTokenAmount(
-          settlementProof?.payoutNet ?? onChainBet?.payout,
-          decimals,
-          symbol,
-          4,
-          emptyLabel
-        )
+        value: formatTokenAmount(cashReturned, decimals, symbol, 4, emptyLabel)
       },
       {
         label: t("portfolio.activity.detail.facts.protocolFee"),
@@ -338,7 +346,7 @@ export function BetDetailPageClient({ betId }: { betId: string }) {
       onChainBet,
       primaryTxHash,
       refundProof?.refundAmount,
-      settlementProof?.payoutNet,
+      cashReturned,
       settlementProof?.protocolFeeAccrual,
       symbol,
       t
@@ -402,6 +410,7 @@ function parseBetId(value: string) {
 interface SettlementProof {
   payoutGross?: bigint;
   payoutNet?: bigint;
+  refundAmount?: bigint;
   feeOnPayout?: bigint;
   protocolFeeAccrual?: bigint;
 }
@@ -427,8 +436,10 @@ function deriveOutcome(
 ) {
   if (!bet || !state) return null;
   if (state === "refunded")
-    return { label: labels.refunded, value: refundProof?.refundAmount ?? bet.refund ?? bet.stake };
-  const payout = settlementProof?.payoutNet ?? bet.payout;
+    return { label: labels.refunded, value: refundProof?.refundAmount ?? bet.refund };
+  const award = settlementProof?.payoutNet ?? bet.payout;
+  const refund = settlementProof?.refundAmount ?? bet.refund;
+  const payout = award != null && refund != null ? award + refund : undefined;
   if (state === "finalized" && payout != null) {
     return {
       label: payout >= bet.stake ? labels.netResult : labels.loss,
@@ -446,6 +457,7 @@ function extractSettlementProof(timeline: GameHubEventRow[]): SettlementProof | 
   return {
     payoutGross: readBigintArg(args.payoutGross),
     payoutNet: readBigintArg(args.payoutNet),
+    refundAmount: readBigintArg(args.refundAmount),
     feeOnPayout: readBigintArg(args.feeOnPayout),
     protocolFeeAccrual: readBigintArg(args.protocolFeeAccrual)
   };

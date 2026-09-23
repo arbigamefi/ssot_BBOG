@@ -79,6 +79,7 @@ vi.mock("../useCasinoStats", () => ({
         uniquePlayers: 7,
         turnover: "100000000",
         payout: "60000000",
+        refundAmount: "0",
         payoutGross: "0"
       },
       games: [
@@ -92,6 +93,7 @@ vi.mock("../useCasinoStats", () => ({
           uniquePlayers: 3,
           turnover: "50000000",
           payout: "25000000",
+          refundAmount: "0",
           payoutGross: "0"
         }
       ]
@@ -116,6 +118,7 @@ vi.mock("../useCasinoStats", () => ({
                 player: "0xbbbb000000000000000000000000000000000002",
                 stake: "10000000",
                 payout: "300000000",
+                refundAmount: "0",
                 payoutGross: "300000000",
                 multiplierPpm: "30000000"
               },
@@ -125,6 +128,7 @@ vi.mock("../useCasinoStats", () => ({
                 player: "0xaaaa000000000000000000000000000000000001",
                 stake: "10000000",
                 payout: "15000000",
+                refundAmount: "0",
                 payoutGross: "15000000",
                 multiplierPpm: "1500000"
               }
@@ -149,6 +153,7 @@ vi.mock("../useCasinoStats", () => ({
                 settledCount: 4,
                 turnover: "30000000",
                 payout: "0",
+                refundAmount: "0",
                 payoutGross: "0"
               }
             ]
@@ -168,6 +173,7 @@ vi.mock("../useCasinoStats", () => ({
           uniquePlayers: 1,
           turnover: "10000000",
           payout: "15000000",
+          refundAmount: "0",
           payoutGross: "15000000"
         },
         {
@@ -178,6 +184,7 @@ vi.mock("../useCasinoStats", () => ({
           uniquePlayers: 2,
           turnover: "40000000",
           payout: "10000000",
+          refundAmount: "0",
           payoutGross: "10000000"
         }
       ]
@@ -368,6 +375,7 @@ describe("GameRoomAuditLedger", () => {
             state: "finalized",
             stake: "10000000",
             payout: "25000000",
+            refundAmount: "0",
             updatedAt: Date.now()
           }
         ]}
@@ -415,6 +423,7 @@ describe("GameRoomAuditLedger", () => {
             state: "finalized",
             stake: "1000000000000000000",
             payout: "2000000000000000000",
+            refundAmount: "0",
             updatedAt: Date.now()
           }
         ]}
@@ -459,6 +468,7 @@ describe("GameRoomAuditLedger", () => {
             state: "finalized",
             stake: "10000000",
             payout: "12000000",
+            refundAmount: "0",
             finalizedTxHash: "0xdeadbeef"
           }
         ]}

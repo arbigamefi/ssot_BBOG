@@ -1,3 +1,4 @@
+import { getCasinoFinancials } from "@ssot/bet-index/financials";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -39,7 +40,8 @@ export async function generateMetadata({
   );
   if (!chainId) return meta;
 
-  const imageUrl = `${SITE_URL}/casino/receipt/${chainId}/${betId}/og`;
+  // Old receipt images were cached as immutable before refunds were included.
+  const imageUrl = `${SITE_URL}/casino/receipt/${chainId}/${betId}/og?v=refund-v1`;
   meta.openGraph = {
     ...(meta.openGraph ?? {}),
     images: [{ url: imageUrl, width: 1200, height: 630, alt: `ArbiGameFi bet #${betId}` }]
@@ -79,7 +81,7 @@ export default async function CasinoReceiptPage({
   // The share landing mirrors the in-room result dialog: a single constrained,
   // mobile-first card. Missing rows render the same card chrome so a shared link
   // never lands on an empty full-bleed page.
-  if (!row) {
+  if (!row || !getCasinoFinancials(row)) {
     return (
       <PageTransition className="mx-auto w-full max-w-md py-4 sm:py-8">
         <article className="overflow-hidden rounded-lg border border-border-soft bg-surface-1 shadow-e2">

@@ -1,4 +1,5 @@
 import postgres, { type Sql } from "postgres";
+import { getCasinoFinancials } from "./financials.js";
 import type { Address, Hex } from "viem";
 import {
   createMemorySportsRecoveryStore,
@@ -806,6 +807,32 @@ async function upsertBetRow(sql: SqlTag, row: BetRow) {
 }
 
 export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
+  // Only consumed stake and game awards enter monetary aggregates. Returned
+  // principal is neither turnover nor winnings.
+  // Validate in the aggregation statement too: a newly indexed terminal row
+  // arriving after the coverage check must not be silently skipped by SUM.
+  const turnover = sql`case when state in ('finalized', 'refunded') then
+    case when nullif(stake, '')::numeric >= 0
+      and nullif(refund_amount, '')::numeric between 0 and nullif(stake, '')::numeric
+      and (state = 'refunded' or nullif(payout, '')::numeric >= 0)
+    then case when state = 'finalized' then stake::numeric - refund_amount::numeric else 0 end
+    else ('Incomplete casino financials for bet ' || bet_id)::numeric end
+    else 0 end`;
+  const award = sql`case when state = 'finalized' then nullif(payout, '')::numeric else 0 end`;
+  const gross = sql`case when state = 'finalized' then nullif(payout_gross, '')::numeric else 0 end`;
+  async function requireFinancialCoverage(chainId: number, asset?: Address) {
+    const missing = await sql`
+      select bet_id from bets where chain_id = ${chainId}
+      ${asset ? sql`and asset = ${asset.toLowerCase()}` : sql``}
+      and state in ('finalized', 'refunded') and (
+        nullif(stake, '') is null or nullif(refund_amount, '') is null
+        or stake::numeric < 0 or refund_amount::numeric < 0
+        or refund_amount::numeric > stake::numeric
+        or (state = 'finalized' and (nullif(payout, '') is null or payout::numeric < 0))
+      ) limit 1
+    `;
+    if (missing.length) throw new Error("Casino financials are not ready");
+  }
   return {
     sportsRecovery: createPostgresSportsRecoveryStore(sql),
     getRandomReadyBetIds: async ({ chainId, gameHub, afterBetId, limit }) => {
@@ -1090,14 +1117,15 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
       return rows.map(rowFromDatabase).sort(compareBetRows);
     },
     getAffiliateStats: async ({ affiliate, asset, chainId }) => {
+      await requireFinancialCoverage(chainId, asset);
       const assetFilter = asset ? sql`and asset = ${asset.toLowerCase()}` : sql``;
       const rows = await sql`
         select
           count(*)::text as bet_count,
           count(*) filter (where state in ('finalized', 'refunded'))::text as settled_count,
-          coalesce(sum(nullif(stake, '')::numeric), 0)::text as turnover,
-          coalesce(sum(nullif(payout, '')::numeric), 0)::text as payout,
-          coalesce(sum(nullif(payout_gross, '')::numeric), 0)::text as payout_gross
+          coalesce(sum(${turnover}), 0)::text as turnover,
+          coalesce(sum(${award}), 0)::text as payout,
+          coalesce(sum(${gross}), 0)::text as payout_gross
         from bets
         where chain_id = ${chainId} and pricing_affiliate = ${affiliate.toLowerCase()}
         ${assetFilter}
@@ -1113,18 +1141,19 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
       };
     },
     getCasinoStats: async ({ asset, chainId, since }) => {
+      await requireFinancialCoverage(chainId, asset);
       const rows = await sql`
         select
           count(*)::text as bet_count,
           count(*) filter (where state in ('finalized', 'refunded'))::text as settled_count,
           count(*) filter (
             where state = 'finalized'
-              and nullif(payout, '')::numeric > coalesce(nullif(stake, '')::numeric, 0)
+              and ${award} > coalesce(${turnover}, 0)
           )::text as won_count,
           count(distinct player) filter (where player is not null)::text as unique_players,
-          coalesce(sum(nullif(stake, '')::numeric), 0)::text as turnover,
-          coalesce(sum(nullif(payout, '')::numeric), 0)::text as payout,
-          coalesce(sum(nullif(payout_gross, '')::numeric), 0)::text as payout_gross
+          coalesce(sum(${turnover}), 0)::text as turnover,
+          coalesce(sum(${award}), 0)::text as payout,
+          coalesce(sum(${gross}), 0)::text as payout_gross
         from bets
         where chain_id = ${chainId} and asset = ${asset.toLowerCase()}
           ${since != null ? sql`and coalesce(placed_at, updated_at) >= to_timestamp(${since})` : sql``}
@@ -1142,20 +1171,21 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
       };
     },
     getCasinoLeaderboard: async ({ asset, chainId, limit, gameId, since }) => {
+      await requireFinancialCoverage(chainId, asset);
       const rows = await sql`
         select
           player,
           count(*)::text as bet_count,
           count(*) filter (where state in ('finalized', 'refunded'))::text as settled_count,
-          coalesce(sum(nullif(stake, '')::numeric), 0)::text as turnover,
-          coalesce(sum(nullif(payout, '')::numeric), 0)::text as payout,
-          coalesce(sum(nullif(payout_gross, '')::numeric), 0)::text as payout_gross
+          coalesce(sum(${turnover}), 0)::text as turnover,
+          coalesce(sum(${award}), 0)::text as payout,
+          coalesce(sum(${gross}), 0)::text as payout_gross
         from bets
         where chain_id = ${chainId} and asset = ${asset.toLowerCase()} and player is not null
         ${gameId ? sql`and game_id = ${gameId.toLowerCase()}` : sql``}
         ${since != null ? sql`and coalesce(placed_at, updated_at) >= to_timestamp(${since})` : sql``}
         group by player
-        order by coalesce(sum(nullif(stake, '')::numeric), 0) desc, count(*) desc, player asc
+        order by coalesce(sum(${turnover}), 0) desc, count(*) desc, player asc
         limit ${limit}
       `;
       return rows.map((row) => ({
@@ -1169,27 +1199,28 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
       }));
     },
     getCasinoTopWins: async ({ asset, chainId, limit, gameId, since }) => {
+      await requireFinancialCoverage(chainId, asset);
       const rows = await sql`
         select
           bet_id,
           game_id,
           player,
-          stake,
-          payout,
+          (${turnover})::text as stake,
+          (${award})::text as payout,
           payout_gross,
-          floor((coalesce(nullif(payout, '')::numeric, 0) * 1000000) / nullif(stake, '')::numeric)::text as multiplier_ppm
+          floor((coalesce(${award}, 0) * 1000000) / ${turnover})::text as multiplier_ppm
         from bets
         where chain_id = ${chainId}
           and asset = ${asset.toLowerCase()}
           and player is not null
           and state = 'finalized'
-          and coalesce(nullif(stake, '')::numeric, 0) > 0
-          and coalesce(nullif(payout, '')::numeric, 0) > coalesce(nullif(stake, '')::numeric, 0)
+          and coalesce(${turnover}, 0) > 0
+          and coalesce(${award}, 0) > coalesce(${turnover}, 0)
           ${gameId ? sql`and game_id = ${gameId.toLowerCase()}` : sql``}
           ${since != null ? sql`and coalesce(placed_at, updated_at) >= to_timestamp(${since})` : sql``}
         order by
-          (coalesce(nullif(payout, '')::numeric, 0) / nullif(stake, '')::numeric) desc,
-          coalesce(nullif(payout, '')::numeric, 0) desc,
+          (coalesce(${award}, 0) / ${turnover}) desc,
+          coalesce(${award}, 0) desc,
           bet_id desc
         limit ${limit}
       `;
@@ -1205,6 +1236,7 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
       }));
     },
     getCasinoPlayerRank: async ({ asset, chainId, player, gameId, since }) => {
+      await requireFinancialCoverage(chainId, asset);
       // Rank every player by turnover (matching the leaderboard ordering), then
       // pluck the requested player's row. The window ordering tuple is unique
       // per player, so rank() yields a precise 1-based position with no ties.
@@ -1213,9 +1245,9 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
           select
             player,
             count(*)::text as bet_count,
-            coalesce(sum(nullif(stake, '')::numeric), 0)::text as turnover,
+            coalesce(sum(${turnover}), 0)::text as turnover,
             rank() over (
-              order by coalesce(sum(nullif(stake, '')::numeric), 0) desc, count(*) desc, player asc
+              order by coalesce(sum(${turnover}), 0) desc, count(*) desc, player asc
             )::text as rnk
           from bets
           where chain_id = ${chainId} and asset = ${asset.toLowerCase()} and player is not null
@@ -1237,6 +1269,7 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
       };
     },
     getGameVolumes: async ({ asset, chainId, since }) => {
+      await requireFinancialCoverage(chainId, asset);
       const rows = await sql`
         select
           game_id,
@@ -1244,17 +1277,17 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
           count(*) filter (where state in ('finalized', 'refunded'))::text as settled_count,
           count(*) filter (
             where state = 'finalized'
-              and nullif(payout, '')::numeric > coalesce(nullif(stake, '')::numeric, 0)
+              and ${award} > coalesce(${turnover}, 0)
           )::text as won_count,
           count(distinct player) filter (where player is not null)::text as unique_players,
-          coalesce(sum(nullif(stake, '')::numeric), 0)::text as turnover,
-          coalesce(sum(nullif(payout, '')::numeric), 0)::text as payout,
-          coalesce(sum(nullif(payout_gross, '')::numeric), 0)::text as payout_gross
+          coalesce(sum(${turnover}), 0)::text as turnover,
+          coalesce(sum(${award}), 0)::text as payout,
+          coalesce(sum(${gross}), 0)::text as payout_gross
         from bets
         where chain_id = ${chainId} and asset = ${asset.toLowerCase()} and game_id is not null
           ${since != null ? sql`and coalesce(placed_at, updated_at) >= to_timestamp(${since})` : sql``}
         group by game_id
-        order by coalesce(sum(nullif(stake, '')::numeric), 0) desc, game_id asc
+        order by coalesce(sum(${turnover}), 0) desc, game_id asc
       `;
       return rows.map((row) => ({
         asset: asset.toLowerCase() as Address,
@@ -1269,6 +1302,7 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
       }));
     },
     getCasinoTimeseries: async ({ asset, chainId, days, gameId }) => {
+      await requireFinancialCoverage(chainId, asset);
       const boundedDays = Math.max(1, Math.min(366, Math.trunc(days)));
       const rows = await sql`
         select
@@ -1277,12 +1311,12 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
           count(*) filter (where state in ('finalized', 'refunded'))::text as settled_count,
           count(*) filter (
             where state = 'finalized'
-              and nullif(payout, '')::numeric > coalesce(nullif(stake, '')::numeric, 0)
+              and ${award} > coalesce(${turnover}, 0)
           )::text as won_count,
           count(distinct player) filter (where player is not null)::text as unique_players,
-          coalesce(sum(nullif(stake, '')::numeric), 0)::text as turnover,
-          coalesce(sum(nullif(payout, '')::numeric), 0)::text as payout,
-          coalesce(sum(nullif(payout_gross, '')::numeric), 0)::text as payout_gross
+          coalesce(sum(${turnover}), 0)::text as turnover,
+          coalesce(sum(${award}), 0)::text as payout,
+          coalesce(sum(${gross}), 0)::text as payout_gross
         from bets
         where chain_id = ${chainId}
           and asset = ${asset.toLowerCase()}
@@ -1429,6 +1463,13 @@ export function foldSportsTicketIndexEvents(events: readonly SportsTicketIndexEv
   return [...rows.values()];
 }
 
+function requireRowFinancials(row: BetRow) {
+  if (row.state !== "finalized" && row.state !== "refunded") return undefined;
+  const financials = getCasinoFinancials(row);
+  if (!financials) throw new Error("Casino financials are not ready");
+  return financials;
+}
+
 function affiliateStatsFromRows({
   affiliate,
   rows
@@ -1440,9 +1481,13 @@ function affiliateStatsFromRows({
     (stats, row) => {
       stats.betCount += 1;
       if (row.state === "finalized" || row.state === "refunded") stats.settledCount += 1;
-      stats.turnover = addStringBigints(stats.turnover, row.stake);
-      stats.payout = addStringBigints(stats.payout, row.payout);
-      stats.payoutGross = addStringBigints(stats.payoutGross, row.payoutGross);
+      const financials = requireRowFinancials(row);
+      stats.turnover = addStringBigints(stats.turnover, financials?.turnover.toString());
+      stats.payout = addStringBigints(stats.payout, financials?.award.toString());
+      stats.payoutGross = addStringBigints(
+        stats.payoutGross,
+        row.state === "finalized" ? row.payoutGross : undefined
+      );
       return stats;
     },
     {
@@ -1468,15 +1513,15 @@ function casinoStatsFromRows({
     (next, row) => {
       next.betCount += 1;
       if (row.state === "finalized" || row.state === "refunded") next.settledCount += 1;
-      if (row.state === "finalized") {
-        const stake = BigInt(row.stake || "0");
-        const payout = BigInt(row.payout || "0");
-        if (payout > stake) next.wonCount += 1;
-      }
+      const financials = requireRowFinancials(row);
+      if (row.state === "finalized" && financials && financials.net > 0n) next.wonCount += 1;
       if (row.player) players.add(row.player.toLowerCase());
-      next.turnover = addStringBigints(next.turnover, row.stake);
-      next.payout = addStringBigints(next.payout, row.payout);
-      next.payoutGross = addStringBigints(next.payoutGross, row.payoutGross);
+      next.turnover = addStringBigints(next.turnover, financials?.turnover.toString());
+      next.payout = addStringBigints(next.payout, financials?.award.toString());
+      next.payoutGross = addStringBigints(
+        next.payoutGross,
+        row.state === "finalized" ? row.payoutGross : undefined
+      );
       return next;
     },
     {
@@ -1568,9 +1613,10 @@ function casinoTopWinsFromRows({
 }): BetIndexCasinoTopWinEntry[] {
   return rows
     .flatMap((row) => {
-      if (!row.player || row.state !== "finalized") return [];
-      const stake = BigInt(row.stake || "0");
-      const payout = BigInt(row.payout || "0");
+      const financials = requireRowFinancials(row);
+      if (!row.player || row.state !== "finalized" || !financials) return [];
+      const stake = financials.turnover;
+      const payout = financials.award;
       if (stake <= 0n || payout <= stake) return [];
       return [
         {
@@ -1578,10 +1624,10 @@ function casinoTopWinsFromRows({
           betId: row.betId,
           gameId: row.gameId?.toLowerCase() as Hex | undefined,
           multiplierPpm: ((payout * 1_000_000n) / stake).toString(),
-          payout: row.payout ?? "0",
+          payout: payout.toString(),
           payoutGross: row.payoutGross ?? "0",
           player: row.player.toLowerCase() as Address,
-          stake: row.stake ?? "0"
+          stake: stake.toString()
         }
       ];
     })

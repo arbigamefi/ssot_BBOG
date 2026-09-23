@@ -6,6 +6,7 @@ export type SettlementProof = {
   txHash?: string;
   payoutGross?: bigint;
   payoutNet?: bigint;
+  refundAmount?: bigint;
   feeOnPayout?: bigint;
   protocolFeeAccrual?: bigint;
 };
@@ -38,6 +39,7 @@ export function parseFinalizedPayout(argsJson: string | undefined): SettlementPr
   return {
     payoutGross: readBigintArg(args.payoutGross),
     payoutNet: readBigintArg(args.payoutNet),
+    refundAmount: readBigintArg(args.refundAmount),
     feeOnPayout: readBigintArg(args.feeOnPayout),
     protocolFeeAccrual: readBigintArg(args.protocolFeeAccrual)
   };

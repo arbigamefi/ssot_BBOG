@@ -39,6 +39,7 @@ describe("memory bet index store", () => {
         args: {
           payoutGross: 20n,
           payoutNet: 19n,
+          refundAmount: 0n,
           positionId: 7n
         },
         blockNumber: 12n,
@@ -147,7 +148,7 @@ describe("memory bet index store", () => {
     expect(rows[0]).toMatchObject({ asset: ASSET, betId: "7", stake: "10" });
     expect(stats).toMatchObject({
       betCount: 1,
-      turnover: "10"
+      turnover: "0"
     });
   });
 
@@ -452,6 +453,7 @@ describe("memory bet index store", () => {
         args: {
           payoutGross: 0n,
           payoutNet: 0n,
+          refundAmount: 0n,
           positionId: 9n
         },
         blockNumber: 25n,
@@ -498,6 +500,7 @@ describe("memory bet index store", () => {
         args: {
           payoutGross: 20n,
           payoutNet: 19n,
+          refundAmount: 0n,
           positionId: 1n
         },
         blockNumber: 11n,
@@ -546,7 +549,7 @@ describe("memory bet index store", () => {
       payoutGross: "20",
       settledCount: 1,
       wonCount: 1,
-      turnover: "40",
+      turnover: "10",
       uniquePlayers: 2
     });
 
@@ -555,15 +558,15 @@ describe("memory bet index store", () => {
     ).resolves.toMatchObject([
       {
         asset: ASSET,
-        player: PLAYER_TWO,
-        betCount: 1,
-        turnover: "30"
-      },
-      {
-        asset: ASSET,
         player: PLAYER,
         betCount: 1,
         turnover: "10"
+      },
+      {
+        asset: ASSET,
+        player: PLAYER_TWO,
+        betCount: 1,
+        turnover: "0"
       }
     ]);
 
@@ -572,7 +575,7 @@ describe("memory bet index store", () => {
         asset: ASSET,
         gameId: GAME_ID,
         betCount: 2,
-        turnover: "40",
+        turnover: "10",
         uniquePlayers: 2
       }
     ]);
@@ -610,7 +613,7 @@ describe("memory bet index store", () => {
       gameId: GAME_ID
     });
     expect(gameOne).toHaveLength(1);
-    expect(gameOne[0]).toMatchObject({ player: PLAYER, turnover: "10" });
+    expect(gameOne[0]).toMatchObject({ player: PLAYER, turnover: "0" });
 
     const gameTwo = await store.getCasinoLeaderboard({
       asset: ASSET,
@@ -619,7 +622,7 @@ describe("memory bet index store", () => {
       gameId: GAME_ID_TWO
     });
     expect(gameTwo).toHaveLength(1);
-    expect(gameTwo[0]).toMatchObject({ player: PLAYER_TWO, turnover: "30" });
+    expect(gameTwo[0]).toMatchObject({ player: PLAYER_TWO, turnover: "0" });
 
     // Without a gameId the leaderboard spans every game.
     const allGames = await store.getCasinoLeaderboard({ asset: ASSET, chainId: 84532, limit: 10 });
@@ -667,10 +670,10 @@ describe("memory bet index store", () => {
     // Windowed stats only see the recent bet; all-time sees both.
     await expect(
       store.getCasinoStats({ asset: ASSET, chainId: 84532, since })
-    ).resolves.toMatchObject({ betCount: 1, turnover: "30", uniquePlayers: 1 });
+    ).resolves.toMatchObject({ betCount: 1, turnover: "0", uniquePlayers: 1 });
     await expect(store.getCasinoStats({ asset: ASSET, chainId: 84532 })).resolves.toMatchObject({
       betCount: 2,
-      turnover: "40"
+      turnover: "0"
     });
 
     // Windowed leaderboard only ranks the recent player.
@@ -681,12 +684,12 @@ describe("memory bet index store", () => {
       since
     });
     expect(windowedBoard).toHaveLength(1);
-    expect(windowedBoard[0]).toMatchObject({ player: PLAYER_TWO, turnover: "30" });
+    expect(windowedBoard[0]).toMatchObject({ player: PLAYER_TWO, turnover: "0" });
 
     // Windowed game volumes only include the recent game.
     const windowedVolumes = await store.getGameVolumes({ asset: ASSET, chainId: 84532, since });
     expect(windowedVolumes).toHaveLength(1);
-    expect(windowedVolumes[0]).toMatchObject({ gameId: GAME_ID_TWO, turnover: "30" });
+    expect(windowedVolumes[0]).toMatchObject({ gameId: GAME_ID_TWO, turnover: "0" });
   });
 
   it("resolves a single player's turnover rank, or null when unranked", async () => {
@@ -712,6 +715,11 @@ describe("memory bet index store", () => {
         txHash: "0xf02"
       }
     ]);
+
+    const placed = await store.getRecentBets({ chainId: 84532, limit: 10 });
+    await store.writeBetRows(
+      placed.map((row) => ({ ...row, state: "finalized", payout: "0", refundAmount: "0" }))
+    );
 
     // PLAYER_TWO leads by turnover (30 > 10) → rank 1; PLAYER is rank 2.
     await expect(
@@ -764,7 +772,7 @@ describe("memory bet index store", () => {
         txHash: "0xc01"
       },
       {
-        args: { payoutGross: 30n, payoutNet: 30n, positionId: 1n },
+        args: { payoutGross: 30n, payoutNet: 30n, refundAmount: 0n, positionId: 1n },
         blockNumber: 11n,
         chainId: 84532,
         eventName: "BetFinalized",
@@ -782,7 +790,7 @@ describe("memory bet index store", () => {
         txHash: "0xc03"
       },
       {
-        args: { payoutGross: 25n, payoutNet: 25n, positionId: 2n },
+        args: { payoutGross: 25n, payoutNet: 25n, refundAmount: 0n, positionId: 2n },
         blockNumber: 13n,
         chainId: 84532,
         eventName: "BetFinalized",
@@ -800,7 +808,7 @@ describe("memory bet index store", () => {
         txHash: "0xc05"
       },
       {
-        args: { payoutGross: 0n, payoutNet: 0n, positionId: 3n },
+        args: { payoutGross: 0n, payoutNet: 0n, refundAmount: 0n, positionId: 3n },
         blockNumber: 15n,
         chainId: 84532,
         eventName: "BetFinalized",
@@ -850,7 +858,7 @@ describe("memory bet index store", () => {
         txHash: "0xd01"
       },
       {
-        args: { payoutGross: 20n, payoutNet: 19n, positionId: 1n },
+        args: { payoutGross: 20n, payoutNet: 19n, refundAmount: 0n, positionId: 1n },
         blockNumber: 11n,
         blockTimestamp: today,
         chainId: 84532,
@@ -907,7 +915,7 @@ describe("memory bet index store", () => {
       asset: ASSET,
       betCount: 2,
       date: todayDate,
-      turnover: "70",
+      turnover: "0",
       uniquePlayers: 1
     });
 
@@ -917,6 +925,6 @@ describe("memory bet index store", () => {
       days: 7,
       gameId: GAME_ID
     });
-    expect(gameOnePoints.map((point) => point.turnover)).toEqual(["10", "30"]);
+    expect(gameOnePoints.map((point) => point.turnover)).toEqual(["10", "0"]);
   });
 });

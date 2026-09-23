@@ -9,6 +9,8 @@ import {
   type Hex,
   type PublicClient
 } from "viem";
+import { getCasinoFinancials } from "@ssot/bet-index/financials";
+import { readSettledBetRefund } from "@ssot/bet-index/terminal-refund";
 import { createPostgresBetIndexStore, type BetIndexStore } from "@ssot/bet-index";
 import { applyGameHubEventToBet, type BetRow, type GameHubEventName } from "@ssot/ssot/indexer";
 import { loadEmbeddedRelease, type SSOTRelease } from "@ssot/ssot/release";
@@ -372,7 +374,24 @@ async function getGameHubLogsInChunks({
     } as Parameters<PublicClient["getLogs"]>[0])) as EventLogLike[];
     return eventLogs;
   });
-  return logsByChunk.flat();
+  const logs = logsByChunk.flat();
+  if (eventName !== "BetFinalized") return logs;
+  // Share one concurrency bound across the terminal reads, independent of chunks.
+  return mapWithConcurrency(logs, concurrency, async (log) => {
+    try {
+      const logArgs = log.args ?? {};
+      const refundAmount = await readSettledBetRefund({
+        client,
+        gameHub,
+        betId: BigInt(String(logArgs.positionId ?? logArgs.betId)),
+        args: logArgs
+      });
+      return { ...log, args: { ...logArgs, refundAmount } };
+    } catch {
+      // Preserve lifecycle facts; missing refund remains unknown to financial views.
+      return log;
+    }
+  });
 }
 
 async function mapWithConcurrency<T, R>(
@@ -551,7 +570,30 @@ export async function queryBetReceipt({
 }): Promise<BetReceiptResponse> {
   const normalizedBetId = normalizeBetId(betId);
   const store = getDurableBetIndexStore();
-  const row = await tryGetBetFromDurableStore(store, { betId: normalizedBetId, chainId });
+  let row = await tryGetBetFromDurableStore(store, { betId: normalizedBetId, chainId });
+  let enriched = false;
+  if (
+    row?.state === "finalized" &&
+    !getCasinoFinancials(row) &&
+    shouldUseRpcFallback("BET_RECEIPT_RPC_FALLBACK_ENABLED", false)
+  ) {
+    const terminalTxHash = row.terminalTxHash ?? row.finalizedTxHash ?? row.lastTxHash;
+    const proven = await withTimeout(
+      queryBetReceiptTerminalTxFallback({
+        betId: normalizedBetId,
+        chainId,
+        client,
+        now,
+        timestampMode: "block",
+        terminalTxHash
+      }),
+      numberEnv("BET_RECEIPT_RPC_TIMEOUT_MS", DEFAULT_RECEIPT_RPC_TIMEOUT_MS)
+    ).catch(() => null);
+    if (proven) {
+      row = { ...row, ...proven };
+      enriched = true;
+    }
+  }
   if (row) {
     return {
       schemaVersion: 1,
@@ -560,7 +602,7 @@ export async function queryBetReceipt({
       chainId,
       generatedAt: now(),
       row,
-      source: "postgres"
+      source: enriched ? "rpc-window" : "postgres"
     };
   }
 
@@ -608,7 +650,7 @@ export async function materializeBetReceipt({
   const normalizedBetId = normalizeBetId(betId);
   const store = getDurableBetIndexStore();
   const existing = await tryGetBetFromDurableStore(store, { betId: normalizedBetId, chainId });
-  if (existing?.state === "finalized" || existing?.state === "refunded") {
+  if (existing && getCasinoFinancials(existing)) {
     return {
       schemaVersion: 1,
       betId: normalizedBetId,
@@ -743,6 +785,14 @@ async function queryBetReceiptTerminalTxFallback({
       row.finalizedTxHash = terminalTxHash;
       row.payoutGross = bigintStringFromUnknown(terminal.args.payoutGross);
       row.payout = bigintStringFromUnknown(terminal.args.payoutNet);
+      row.refundAmount = (
+        await readSettledBetRefund({
+          client: loaded.client,
+          gameHub: loaded.gameHub,
+          betId: receiptBetId,
+          args: terminal.args
+        })
+      ).toString();
     } else {
       row.refundedTxHash = terminalTxHash;
       row.refundAmount = bigintStringFromUnknown(terminal.args.refundAmount);
@@ -1123,7 +1173,7 @@ export async function queryAffiliateBets({
     }),
     queryDurableAffiliateStats({ affiliate: normalizedAffiliate, asset: normalizedAsset, chainId })
   ]);
-  if (durableRows.length > 0 || (durableStoreEnabled && durableStats.betCount > 0)) {
+  if (durableRows.length > 0 || (durableStoreEnabled && (durableStats?.betCount ?? 0) > 0)) {
     const generatedAt = now();
     const response = {
       ...responseFromRows({
@@ -1149,7 +1199,7 @@ export async function queryAffiliateBets({
       }),
       affiliate: normalizedAffiliate,
       asset: normalizedAsset,
-      stats: emptyAffiliateStats(normalizedAffiliate)
+      stats: durableStats
     };
     recentBetsCache.set(cacheKey, { expiresAt: now() + cacheTtlMs, response });
     return response;
@@ -1227,7 +1277,7 @@ export async function queryAffiliateBets({
       }),
       affiliate: normalizedAffiliate,
       asset: normalizedAsset,
-      stats: emptyAffiliateStats(normalizedAffiliate)
+      stats: null
     };
     recentBetsCache.set(cacheKey, { expiresAt: now() + cacheTtlMs, response });
     return response;
@@ -1300,15 +1350,15 @@ async function queryDurableAffiliateStats({
   chainId: number;
 }) {
   const store = getDurableBetIndexStore();
-  if (!store) return emptyAffiliateStats(affiliate);
+  if (!store) return null;
   try {
     return await store.getAffiliateStats({ affiliate, asset, chainId });
   } catch {
-    return emptyAffiliateStats(affiliate);
+    return null;
   }
 }
 
-function emptyAffiliateStats(affiliate: Address): AffiliateBetsResponse["stats"] {
+function emptyAffiliateStats(affiliate: Address): NonNullable<AffiliateBetsResponse["stats"]> {
   return {
     affiliate,
     betCount: 0,
@@ -1323,12 +1373,22 @@ function affiliateStatsFromRows(
   affiliate: Address,
   rows: readonly BetRow[]
 ): AffiliateBetsResponse["stats"] {
-  return rows.reduce<AffiliateBetsResponse["stats"]>((stats, row) => {
+  if (
+    rows.some(
+      (row) => (row.state === "finalized" || row.state === "refunded") && !getCasinoFinancials(row)
+    )
+  )
+    return null;
+  return rows.reduce<NonNullable<AffiliateBetsResponse["stats"]>>((stats, row) => {
     stats.betCount += 1;
     if (row.state === "finalized" || row.state === "refunded") stats.settledCount += 1;
-    stats.turnover = addStringBigints(stats.turnover, row.stake);
-    stats.payout = addStringBigints(stats.payout, row.payout);
-    stats.payoutGross = addStringBigints(stats.payoutGross, row.payoutGross);
+    const financials = getCasinoFinancials(row);
+    stats.turnover = addStringBigints(stats.turnover, financials?.turnover.toString());
+    stats.payout = addStringBigints(stats.payout, financials?.award.toString());
+    stats.payoutGross = addStringBigints(
+      stats.payoutGross,
+      row.state === "finalized" ? row.payoutGross : undefined
+    );
     return stats;
   }, emptyAffiliateStats(affiliate));
 }

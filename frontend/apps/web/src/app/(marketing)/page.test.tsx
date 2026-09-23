@@ -205,6 +205,7 @@ describe("HomePage", () => {
         asset: "0x03",
         stake: "1000000000000000000",
         payout: "1230000000000000000",
+        refundAmount: "0",
         state: "finalized",
         updatedAt: Date.now() - 60_000,
         updatedBlock: 123

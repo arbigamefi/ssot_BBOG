@@ -1,3 +1,4 @@
+import { getCasinoCashReturned } from "@ssot/bet-index/financials";
 import type { BetRow } from "@ssot/ssot/indexer";
 
 import { formatUnits } from "../../betting/model/units";
@@ -34,6 +35,7 @@ export function shortHex(value?: string | null, pendingLabel = "—") {
 }
 
 export function getBigIntField(row: BetRow, key: "stake" | "payout") {
+  if (key === "payout") return getCasinoCashReturned(row);
   const value = (row as unknown as Record<string, unknown>)[key];
   if (typeof value === "bigint") return value;
   if (typeof value === "number") return BigInt(value);
@@ -56,7 +58,7 @@ export function mapBetState(state?: string, payout?: bigint, stake?: bigint): Be
     normalized.includes("resolved")
   ) {
     if (payout !== undefined && stake !== undefined) {
-      return payout > stake ? "won" : "lost";
+      return payout > stake ? "won" : payout < stake ? "lost" : "settled";
     }
     return "settled";
   }
@@ -74,7 +76,7 @@ export function isOpenStatus(status: BetStatusGroup) {
 }
 
 export function isLossStatus(status: BetStatusGroup) {
-  return status === "lost" || status === "refunded" || status === "failed";
+  return status === "lost";
 }
 
 export function formatRelativeTime(
@@ -136,14 +138,10 @@ export function formatOutcome({
   symbol: string;
   pendingLabel?: string;
 }) {
-  if (status === "won" && payout != null) {
-    return `+${formatTokenAmount(payout, decimals, symbol, pendingLabel)}`;
-  }
-  if (isLossStatus(status)) {
-    return `-${formatTokenAmount(stake, decimals, symbol, pendingLabel)}`;
-  }
-  if (status === "settled" && payout != null) {
-    return formatTokenAmount(payout, decimals, symbol, pendingLabel);
+  if (["won", "lost", "settled", "refunded"].includes(status) && payout != null) {
+    const net = payout - stake;
+    const sign = net > 0n ? "+" : net < 0n ? "-" : "";
+    return `${sign}${formatTokenAmount(net < 0n ? -net : net, decimals, symbol, pendingLabel)}`;
   }
   return pendingLabel ?? "—";
 }

@@ -148,7 +148,9 @@ export function PortfolioActivityPageClient() {
   const metrics = React.useMemo<BetMetric[]>(() => {
     const open = activityRows.filter((item) => isOpenStatus(item.status)).length;
     const won = activityRows.filter((item) => item.status === "won").length;
-    const closed = activityRows.filter((item) => isLossStatus(item.status)).length;
+    const closed = activityRows.filter((item) =>
+      ["lost", "refunded", "settled"].includes(item.status)
+    ).length;
     return [
       {
         label: t("portfolio.activity.metrics.indexed.label"),
