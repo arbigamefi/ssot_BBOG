@@ -1,6 +1,11 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import * as React from "react";
+
+vi.mock("next/navigation", () => ({
+  usePathname: () => window.location.pathname,
+  useSearchParams: () => new URLSearchParams(window.location.search)
+}));
 
 import { ActiveChainProvider, useActiveChain } from "./ActiveChainProvider";
 
@@ -81,5 +86,34 @@ describe("ActiveChainProvider", () => {
     );
 
     await waitFor(() => expect(screen.getByTestId("selected-chain").textContent).toBe("84532"));
+  });
+  it("uses the public receipt path chain over stored state and conflicting query", async () => {
+    window.localStorage.setItem("arbigamefi.activeChainId.v1", "8453");
+    window.history.replaceState(null, "", "/casino/receipt/84532/9?chainId=8453");
+    render(
+      <ActiveChainProvider initialChainId="8453">
+        <Probe />
+      </ActiveChainProvider>
+    );
+    await waitFor(() => expect(screen.getByTestId("selected-chain").textContent).toBe("84532"));
+  });
+
+  it("follows client route changes and browser back navigation", async () => {
+    const content = (
+      <ActiveChainProvider initialChainId="8453">
+        <Probe />
+      </ActiveChainProvider>
+    );
+    const { rerender } = render(content);
+    window.history.pushState(null, "", "/casino/receipt/84532/9");
+    rerender(
+      <ActiveChainProvider initialChainId="8453">
+        <Probe />
+      </ActiveChainProvider>
+    );
+    await waitFor(() => expect(screen.getByTestId("selected-chain").textContent).toBe("84532"));
+    window.history.replaceState(null, "", "/casino/dice?chainId=8453");
+    fireEvent.popState(window);
+    await waitFor(() => expect(screen.getByTestId("selected-chain").textContent).toBe("8453"));
   });
 });

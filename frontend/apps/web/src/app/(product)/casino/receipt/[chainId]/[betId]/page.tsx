@@ -94,7 +94,7 @@ export default async function CasinoReceiptPage({
           </div>
           <div className="p-3">
             <Link
-              href="/casino"
+              href={`/casino?chainId=${chainId}`}
               className="block w-full rounded-md border border-brand/40 bg-brand px-4 py-2.5 text-center text-xs font-bold uppercase tracking-[0.12em] text-fg-inverse shadow-e1 transition-colors hover:bg-brand-hover"
             >
               {labels.actions.casino}
@@ -113,7 +113,7 @@ export default async function CasinoReceiptPage({
   );
   const decimals = asset?.decimals ?? 18;
   const symbol = asset?.symbol ?? "";
-  const gameHref = game?.slug ? `/casino/${game.slug}` : "/casino";
+  const gameHref = `${game?.slug ? `/casino/${game.slug}` : "/casino"}?chainId=${chainId}`;
   const gameLabel = game?.label ?? shortHex(row.gameId);
   const gamePresentation = getCasinoGamePresentation(game?.slug);
   const receiptModel = buildCasinoReceiptFromBetRow({
@@ -264,7 +264,7 @@ export default async function CasinoReceiptPage({
               </a>
             ) : (
               <Link
-                href="/casino"
+                href={`/casino?chainId=${chainId}`}
                 className="rounded-md border border-border-soft bg-surface-2 px-4 py-2.5 text-center text-xs font-bold uppercase tracking-[0.12em] text-fg transition-colors hover:border-brand/50 hover:bg-surface-3"
               >
                 {labels.actions.casino}

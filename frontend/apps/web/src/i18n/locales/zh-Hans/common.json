@@ -2108,7 +2108,8 @@
         "readOnly": "只读",
         "writable": "已连接",
         "network": "当前网络",
-        "digest": "摘要"
+        "digest": "摘要",
+        "disconnected": "未连接"
       },
       "identity": {
         "eyebrow": "钱包",

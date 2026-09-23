@@ -2,6 +2,11 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as React from "react";
 
+vi.mock("next/navigation", () => ({
+  usePathname: () => window.location.pathname,
+  useSearchParams: () => new URLSearchParams(window.location.search)
+}));
+
 import { ActiveChainProvider, useActiveChain } from "./ActiveChainProvider";
 import { ChainSwitcher } from "./ChainSwitcher";
 

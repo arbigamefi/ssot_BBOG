@@ -2848,7 +2848,8 @@
         "readOnly": "Somente leitura",
         "writable": "Conectada",
         "network": "Rede ativa",
-        "digest": "Digest"
+        "digest": "Digest",
+        "disconnected": "Não conectada"
       },
       "identity": {
         "eyebrow": "Carteira",
