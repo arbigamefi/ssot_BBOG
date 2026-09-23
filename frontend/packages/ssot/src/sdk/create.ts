@@ -442,6 +442,7 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         settlement: {
           payoutGross: BigInt(receipt.payoutGross ?? 0n),
           payoutNet: BigInt(receipt.payoutNet ?? 0n),
+          refundAmount: receipt.refundAmount == null ? undefined : BigInt(receipt.refundAmount),
           feeOnPayout: BigInt(receipt.feeOnPayout ?? 0n),
           protocolFeeAccrual: BigInt(receipt.protocolFeeAccrual ?? 0n)
         }
@@ -1055,6 +1056,9 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
             blockNumber,
             payoutGross: receiptSettlement?.payoutGross ?? BigInt(args.payoutGross ?? 0n),
             payoutNet: receiptSettlement?.payoutNet ?? BigInt(args.payoutNet ?? 0n),
+            // BetFinalized does not emit the unused stake refund. Only the
+            // terminal receipt proves this amount, including a confirmed zero.
+            refundAmount: receiptSettlement?.refundAmount,
             feeOnPayout: receiptSettlement?.feeOnPayout ?? BigInt(args.feeOnPayout ?? 0n),
             protocolFeeAccrual:
               receiptSettlement?.protocolFeeAccrual ?? BigInt(args.protocolFeeAccrual ?? 0n)

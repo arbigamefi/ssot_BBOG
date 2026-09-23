@@ -436,7 +436,8 @@ describe("createSSOTSDK", () => {
     );
   });
 
-  it("reads GameHub terminal proof directly from BetFinalized logs", async () => {
+  it("keeps the settled refund unknown when only BetFinalized logs are available", async () => {
+    pub.readContract.mockRejectedValueOnce(new Error("getBetTerminal unavailable"));
     const settlementTx =
       "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Hex;
     pub.getContractEvents
@@ -467,6 +468,7 @@ describe("createSSOTSDK", () => {
         toBlock: 130n
       })
     );
+    expect(proof?.kind === "settled" && proof.settlement.refundAmount).toBeUndefined();
     expect(proof).toEqual({
       kind: "settled",
       settlement: {
@@ -480,58 +482,85 @@ describe("createSSOTSDK", () => {
     });
   });
 
-  it("merges getBetTerminal payout data with terminal event transaction hashes", async () => {
-    const settlementTx =
-      "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd" as Hex;
-    pub.readContract.mockResolvedValueOnce({
-      state: 4,
-      payoutGross: 2_000_000n,
-      payoutNet: 1_960_000n,
-      feeOnPayout: 40_000n,
-      protocolFeeAccrual: 20_000n,
-      refundAmount: 0n
-    });
-    pub.getContractEvents
-      .mockResolvedValueOnce([
-        {
-          args: {
-            positionId: 7n,
-            payoutGross: 0n,
-            payoutNet: 0n,
-            feeOnPayout: 0n,
-            protocolFeeAccrual: 0n
-          },
-          transactionHash: settlementTx,
-          blockNumber: 123n,
-          logIndex: 4
-        }
-      ])
-      .mockResolvedValueOnce([]);
-
-    const proof = await sdk.gameHub.getTerminalProof(7n);
-
-    expect(pub.readContract).toHaveBeenCalledWith(
-      expect.objectContaining({
-        address: getAddress(TEST_RELEASE.contracts.gameHub),
-        functionName: "getBetTerminal",
-        args: [7n]
-      })
-    );
-    expect(pub.getContractEvents).toHaveBeenCalledWith(
-      expect.objectContaining({
-        eventName: "BetFinalized",
-        args: { positionId: 7n }
-      })
-    );
-    expect(proof).toEqual({
-      kind: "settled",
-      settlement: {
-        txHash: settlementTx,
-        blockNumber: 123n,
+  it.each([0n, 100_000n, undefined])(
+    "preserves a settled terminal refund of %s with the transaction hash",
+    async (refundAmount) => {
+      const settlementTx =
+        "0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd" as Hex;
+      pub.readContract.mockResolvedValueOnce({
+        state: 4,
         payoutGross: 2_000_000n,
         payoutNet: 1_960_000n,
         feeOnPayout: 40_000n,
-        protocolFeeAccrual: 20_000n
+        protocolFeeAccrual: 20_000n,
+        refundAmount
+      });
+      pub.getContractEvents
+        .mockResolvedValueOnce([
+          {
+            args: {
+              positionId: 7n,
+              payoutGross: 0n,
+              payoutNet: 0n,
+              feeOnPayout: 0n,
+              protocolFeeAccrual: 0n
+            },
+            transactionHash: settlementTx,
+            blockNumber: 123n,
+            logIndex: 4
+          }
+        ])
+        .mockResolvedValueOnce([]);
+
+      const proof = await sdk.gameHub.getTerminalProof(7n);
+
+      expect(pub.readContract).toHaveBeenCalledWith(
+        expect.objectContaining({
+          address: getAddress(TEST_RELEASE.contracts.gameHub),
+          functionName: "getBetTerminal",
+          args: [7n]
+        })
+      );
+      expect(pub.getContractEvents).toHaveBeenCalledWith(
+        expect.objectContaining({
+          eventName: "BetFinalized",
+          args: { positionId: 7n }
+        })
+      );
+      expect(proof).toEqual({
+        kind: "settled",
+        settlement: {
+          txHash: settlementTx,
+          blockNumber: 123n,
+          payoutGross: 2_000_000n,
+          payoutNet: 1_960_000n,
+          feeOnPayout: 40_000n,
+          protocolFeeAccrual: 20_000n,
+          refundAmount
+        }
+      });
+    }
+  );
+
+  it("retains partial refunds when terminal log lookup fails", async () => {
+    pub.readContract.mockResolvedValueOnce({
+      state: 4,
+      payoutGross: 200_000n,
+      payoutNet: 196_000n,
+      feeOnPayout: 4_000n,
+      protocolFeeAccrual: 2_000n,
+      refundAmount: 100_000n
+    });
+    pub.getBlockNumber.mockRejectedValueOnce(new Error("RPC unavailable"));
+
+    expect(await sdk.gameHub.getTerminalProof(9n)).toEqual({
+      kind: "settled",
+      settlement: {
+        payoutGross: 200_000n,
+        payoutNet: 196_000n,
+        feeOnPayout: 4_000n,
+        protocolFeeAccrual: 2_000n,
+        refundAmount: 100_000n
       }
     });
   });
