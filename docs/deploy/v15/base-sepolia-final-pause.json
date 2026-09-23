@@ -1,0 +1,32 @@
+{
+  "complete": true,
+  "chainId": 84532,
+  "transactionHash": "0x4dadfee011c2326af5ec7dd4b2e88915a952ba7119c09278b347a14a40c3ef3e",
+  "blockNumber": "47202234",
+  "blockHash": "0x57b36963923c5fa1dbdc81cdd92a4d1df71821e643701de7eb1e18a648a3ec07",
+  "guardian": "0x9d239D9e0EE179Bd442497a034002aAf75865ea0",
+  "guardianNonce": 1,
+  "bank": "0xEa3845f08a273257c3d3458D26e7bd4234330Dd4",
+  "states": [
+    {
+      "usdcPaused": true,
+      "wethPaused": true,
+      "reserved": "0"
+    },
+    {
+      "usdcPaused": true,
+      "wethPaused": true,
+      "reserved": "0"
+    }
+  ],
+  "independentReceiptsMatched": true,
+  "gasIncludingL1Wei": "262479128438",
+  "retainedAssets": {
+    "wallet": 9836888,
+    "bank": 47414315,
+    "nav": 47210639,
+    "fees": 203676,
+    "reserved": 0
+  },
+  "retainedLpShares": "40000000"
+}

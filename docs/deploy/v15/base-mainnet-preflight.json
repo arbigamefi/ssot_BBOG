@@ -1,0 +1,27 @@
+{
+  "observedAtUtc": "2026-09-23T14:15:06.330902+00:00",
+  "chainId": 8453,
+  "broadcast": false,
+  "sourceRevision": "cc9cd42cd4f47d539e354255988aafaf9292d99e",
+  "deployer": "0x93ac87413E17d01CBa37B6317f64890bF7f99aC3",
+  "observedNonceBeforeRun": 0,
+  "observedBalanceWeiBeforeRun": "0",
+  "balanceAndNonceMatchedAcrossTwoRpcs": true,
+  "exitCode": 0,
+  "estimatedGas": ["33970350"],
+  "estimatedEth": ["0.00091465225124595"],
+  "snapshotWritesEnabled": false,
+  "priorReadFailure": "Official mainnet RPC TLS handshake EOF; no transaction sent.",
+  "simulatedTransactionCount": 51,
+  "simulatedCreateCount": 17,
+  "transactionNonces": [
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+    21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39,
+    40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50
+  ],
+  "unsignedSimulationSha256": "1e409a19c2ce6e1d6d1be6278c98fdbbfa8d19804589c38e78f7e4478d25ad31",
+  "solidityUnchangedSinceSepoliaDeploymentRevision": "d17a6a8db1598b9d6dce1114a0154708396514cf",
+  "simulationLogSha256": "1aa8a4202f54a32505f84fb135cae3a0e379746a0d1ddc3b65621803cc9f88e9",
+  "pendingInput": "Fund the approved deployer on Base mainnet; recheck live nonce, balance, fee and exact source before signing.",
+  "suggestedGasBalanceEth": "0.003"
+}

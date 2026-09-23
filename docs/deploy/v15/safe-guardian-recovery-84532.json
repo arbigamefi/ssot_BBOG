@@ -1,0 +1,21 @@
+{
+  "version": "1.0",
+  "chainId": "84532",
+  "createdAt": 1790171605206,
+  "meta": {
+    "name": "v1.5 USDC recovery after guardian drill",
+    "description": "Only unpause the Sepolia v1.5 USDC Bank after verifying the completed guardian debt-exit evidence. Requires actual 2/3 Safe owners. WETH remains paused.",
+    "txBuilderVersion": "1.18.0",
+    "createdFromSafeAddress": "0x7F0c244e1701B069727670745FD047179Ef8691d",
+    "createdFromOwnerAddress": ""
+  },
+  "transactions": [
+    {
+      "to": "0xEa3845f08a273257c3d3458D26e7bd4234330Dd4",
+      "value": "0",
+      "data": "0xcbc903870000000000000000000000000000000000000000000000000000000000000000",
+      "contractMethod": null,
+      "contractInputsValues": null
+    }
+  ]
+}
