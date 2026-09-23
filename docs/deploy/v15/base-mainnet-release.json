@@ -1,0 +1,25 @@
+{
+  "chainId": 8453,
+  "snapshotBlock": 51692502,
+  "snapshotSha256": "5d2c9397899b446d1a102cef544137f0860c10d883d5c04f6703d1b0657429cd",
+  "release": {
+    "blockNumber": 51692502,
+    "chainId": 8453,
+    "digest": "0xcf3f3550d8532fc656ad8e646b015b972f88631f5e38125b47d0f1ed249e0055",
+    "r": "0x0746fad4bb41a259044c319e4be99ee987ae6c162dac232cecaaf6cd4f7af026",
+    "s": "0x73235e6d92461c0c210234c6740295c742bab7809536d1c27930cbadbcfa50f9",
+    "schema": "SSOT_RELEASE_DIGEST_V15",
+    "schemaHash": "0xd1d67ad18059a3adf18fcb40f402285ae60ab9cd06b6143d8a58bd54d7793b66",
+    "signer": "0x93ac87413E17d01CBa37B6317f64890bF7f99aC3",
+    "snapshotPath": "deployments/mainnet-v15-deployment-snapshot.json",
+    "v": 27
+  },
+  "archiveName": "ssot-release-chain-8453-51692502-0xcf3f3550.tar.gz",
+  "archiveSha256": "41873716ab0412ab216a7a5730b9f188124e2b2edecc261602324021e4cde0d3",
+  "governanceAcceptance": "base-mainnet-governance-accepted.json",
+  "strictArtifactValidation": true,
+  "trustedSignatureVerified": true,
+  "liveGovernanceVerifiedBeforePackaging": true,
+  "banksPausedAtRelease": true,
+  "applicationCutover": false
+}

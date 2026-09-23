@@ -1,0 +1,12 @@
+{
+  "blockNumber": 51692502,
+  "chainId": 8453,
+  "digest": "0xcf3f3550d8532fc656ad8e646b015b972f88631f5e38125b47d0f1ed249e0055",
+  "r": "0x0746fad4bb41a259044c319e4be99ee987ae6c162dac232cecaaf6cd4f7af026",
+  "s": "0x73235e6d92461c0c210234c6740295c742bab7809536d1c27930cbadbcfa50f9",
+  "schema": "SSOT_RELEASE_DIGEST_V15",
+  "schemaHash": "0xd1d67ad18059a3adf18fcb40f402285ae60ab9cd06b6143d8a58bd54d7793b66",
+  "signer": "0x93ac87413E17d01CBa37B6317f64890bF7f99aC3",
+  "snapshotPath": "deployments/mainnet-v15-deployment-snapshot.json",
+  "v": 27
+}
