@@ -108,6 +108,8 @@ export type GameHubSettlementProof = {
   blockNumber?: bigint;
   payoutGross?: bigint;
   payoutNet?: bigint;
+  /** Unused stake returned in addition to payoutNet. Undefined means not yet proven. */
+  refundAmount?: bigint;
   feeOnPayout?: bigint;
   protocolFeeAccrual?: bigint;
 };
