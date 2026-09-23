@@ -1,0 +1,57 @@
+{
+  "complete": true,
+  "chainId": 8453,
+  "executionTransaction": "0xdb9fec0887ff318a6938d85d6c63469f2fd8b9c62dec73387a94201702b1a531",
+  "executionBlock": "51693133",
+  "blockHash": "0x4f251afa18c5d3174e28c3c83865ca8a7fa575ed6148eec74498c8fc6f254756",
+  "targets": [
+    {
+      "address": "0xf121a7b8c5327ff8e093c7c3b94ea4d240c895f4",
+      "governance": "0x7F0c244e1701B069727670745FD047179Ef8691d",
+      "pendingGovernance": "0x0000000000000000000000000000000000000000"
+    },
+    {
+      "address": "0x2f4fd0998d557259d1a8936b9be039991fe81c7a",
+      "governance": "0x7F0c244e1701B069727670745FD047179Ef8691d",
+      "pendingGovernance": "0x0000000000000000000000000000000000000000"
+    },
+    {
+      "address": "0xe92459c5c2c9f0bfa0e44fba097d335ff7ce8eba",
+      "governance": "0x7F0c244e1701B069727670745FD047179Ef8691d",
+      "pendingGovernance": "0x0000000000000000000000000000000000000000"
+    },
+    {
+      "address": "0xd03985f40401f547dbf43a5dee53640f6bd740d8",
+      "governance": "0x7F0c244e1701B069727670745FD047179Ef8691d",
+      "pendingGovernance": "0x0000000000000000000000000000000000000000"
+    },
+    {
+      "address": "0xb4056d12ad04b01629b3a022fee385d2a1ae4b48",
+      "governance": "0x7F0c244e1701B069727670745FD047179Ef8691d",
+      "pendingGovernance": "0x0000000000000000000000000000000000000000"
+    },
+    {
+      "address": "0xea3845f08a273257c3d3458d26e7bd4234330dd4",
+      "governance": "0x7F0c244e1701B069727670745FD047179Ef8691d",
+      "pendingGovernance": "0x0000000000000000000000000000000000000000"
+    },
+    {
+      "address": "0x9d61c6230ef0bf2d853e17a0368cbc384ef1843b",
+      "governance": "0x7F0c244e1701B069727670745FD047179Ef8691d",
+      "pendingGovernance": "0x0000000000000000000000000000000000000000"
+    }
+  ],
+  "safe": "0x7F0c244e1701B069727670745FD047179Ef8691d",
+  "safeNonce": "0",
+  "threshold": "2",
+  "safeTxHash": "0x911f245aad80a3d52341e375613c94bc53c680321891160dedf78eaf0cbb6cd6",
+  "outerRecipient": "0x7f0c244e1701b069727670745fd047179ef8691d",
+  "multisendTarget": "0x9641d764fc13c8B624c04430C7356C1C7C8102e2",
+  "innerCallMatchesPacket": true,
+  "allBanksPaused": true,
+  "independentReceiptMatched": true,
+  "readOnly": true,
+  "observedAtUtc": "2026-09-23T15:02:04.743Z",
+  "fullConfigurationVerificationPassed": true,
+  "verificationBlock": 51693133
+}

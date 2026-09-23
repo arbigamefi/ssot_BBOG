@@ -1,5 +1,5 @@
 {
-  "status": "deployed-pending-safe-acceptance",
+  "status": "deployed-safe-accepted-release-imported-pending-application-cutover",
   "chainId": 8453,
   "sourceCommit": "7fb390d5b42346722a225e497dee6fcd3a67ed55",
   "sourceTree": "f14961831476373c6b2ecd3057da1487a579e31c",
@@ -21,7 +21,7 @@
   "balanceReconciled": true,
   "deployerNonce": 51,
   "observedAtUtc": "2026-09-23T14:48:42.745723+00:00",
-  "governanceAccepted": false,
+  "governanceAccepted": true,
   "applicationCutover": false,
   "contracts": {
     "ChainlinkV2PlusWrapperAdapter": "0xf121a7b8c5327ff8e093c7c3b94ea4d240c895f4",
@@ -595,5 +595,8 @@
     "0xEa3845f08a273257c3d3458D26e7bd4234330Dd4",
     "0x9d61C6230ef0bF2d853e17a0368CBC384ef1843B"
   ],
-  "generatedSafeBatchSha256": "419270af95953a740a580186a66d4bc1cc2334601db6339c02926c3b627bc12d"
+  "generatedSafeBatchSha256": "419270af95953a740a580186a66d4bc1cc2334601db6339c02926c3b627bc12d",
+  "governanceEvidence": "base-mainnet-governance-accepted.json",
+  "safeBatchStatus": "historical-executed-do-not-reexecute",
+  "releaseEvidence": "base-mainnet-release.json"
 }
