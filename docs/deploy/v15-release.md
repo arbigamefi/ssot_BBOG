@@ -60,6 +60,10 @@ Set `WEB_IMAGE`, `KEEPER_IMAGE` to reviewed `ghcr.io/arbigamefi/ssot-bbog-{web,k
 
 Stage the new stack in its own directory. The old Caddy still owns ports 80/443: validate the new services internally and perform the listener handover only in the cutover window. Do not start two Caddy listeners on the same ports or stop the old listener before the new Web is ready. Old and new keepers must not share signing nonce custody during the overlap.
 
+Before switching the listener, reconcile the fresh database against accepted chain evidence: bet identities, terminal hashes, payout and refund fields, event journal, LP ledger and durable scan cursors. HTTP 200 or a running keeper alone does not establish completed replay. Use provider-supported scan ranges; never skip old blocks or import legacy projections to accelerate a backlog. Restore routine RPC and scan settings after a temporary replay configuration, then recheck both chains.
+
+The completed 2026-09-23 public handover and retained retirement boundaries are recorded in [the cutover evidence](v15/public-cutover.json) and [implementation status](v15/implementation-status.zh-CN.md).
+
 New Sepolia acceptance must cover fresh bets, VRF, settlement/refund, DB and UI, plus restart/index-write-failure recovery and Safe/guardian pause/recovery. Local tests use a Safe configuration mock; they do not prove actual owner signature custody or recovery rehearsal.
 
 ## Historical retirement
