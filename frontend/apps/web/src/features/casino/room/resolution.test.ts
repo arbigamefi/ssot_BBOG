@@ -82,7 +82,8 @@ describe("game room resolution helpers", () => {
         settlement: {
           txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
           payoutGross: 20_000n,
-          payoutNet: 19_600n
+          payoutNet: 19_600n,
+          refundAmount: 0n
         }
       })
     ).toMatchObject({
@@ -98,6 +99,7 @@ describe("game room resolution helpers", () => {
         txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
         payoutGross: 20_000n,
         payoutNet: 19_600n,
+        refundAmount: 0n,
         feeOnPayout: 400n,
         protocolFeeAccrual: 200n
       }
@@ -114,7 +116,8 @@ describe("game room resolution helpers", () => {
     expect(proof).toMatchObject({
       kind: "settled",
       settlement: {
-        payoutNet: 19_600n
+        payoutNet: 19_600n,
+        refundAmount: 0n
       }
     });
   });
@@ -164,7 +167,8 @@ describe("game room resolution helpers", () => {
           bet: baseBet,
           settlement: {
             txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-            payoutNet: 19_600n
+            payoutNet: 19_600n,
+            refundAmount: 0n
           }
         })
       )
@@ -191,7 +195,8 @@ describe("game room resolution helpers", () => {
       settlement: {
         txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as const,
         payoutGross: 20_000n,
-        payoutNet: 19_600n
+        payoutNet: 19_600n,
+        refundAmount: 0n
       }
     };
     const getTerminalProof = vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce(proof);
@@ -269,5 +274,17 @@ describe("game room resolution helpers", () => {
 
     expect(setShowResult).not.toHaveBeenCalledWith(true);
     expect(setResultProof).not.toHaveBeenCalledWith(expect.objectContaining({ kind: "settled" }));
+  });
+  it("keeps a payout-only terminal proof in indexing until the refund is proven", async () => {
+    const settlement = { payoutNet: 196000n, txHash: "0xabc" as const };
+    expect(buildCasinoRoundResult({ bet: baseBet, settlement }).kind).toBe("indexing");
+    await expect(
+      resolveCasinoTerminalProof({
+        terminalBet: baseBet,
+        recentBets: [],
+        db: undefined,
+        gameHub: { getTerminalProof: vi.fn().mockResolvedValue({ kind: "settled", settlement }) }
+      })
+    ).resolves.toBeNull();
   });
 });

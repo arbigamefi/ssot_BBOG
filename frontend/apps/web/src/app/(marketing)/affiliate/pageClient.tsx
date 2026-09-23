@@ -162,8 +162,8 @@ export function AffiliatePageClient() {
         connected={Boolean(sdk?.account)}
         loading={affiliateBetsQuery.isLoading}
         source={affiliateBetsQuery.data?.source}
-        stats={affiliateBetsQuery.data?.stats}
-        unavailable={affiliateBetsQuery.isError}
+        stats={affiliateBetsQuery.data?.stats ?? undefined}
+        unavailable={affiliateBetsQuery.isError || affiliateBetsQuery.data?.stats === null}
       />
 
       <section className="grid min-w-0 gap-6 rounded-lg border border-border bg-surface-1 p-5 shadow-e2 lg:grid-cols-[0.75fr_1.25fr] lg:p-6">

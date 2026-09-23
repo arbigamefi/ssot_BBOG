@@ -144,7 +144,7 @@ describe("casino receipt OG route", () => {
         lastEventName: "BetFinalized",
         lastTxHash: "0xtx",
         payout: "0",
-        refundAmount: "",
+        refundAmount: "0",
         stake: "2500000",
         state: "finalized",
         updatedAt: Date.now()
@@ -167,4 +167,38 @@ describe("casino receipt OG route", () => {
     expect(body.title).toContain("Settled");
     expect(body.subtitle).toContain("postgres");
   });
+  it.each([undefined, "", "100000"])(
+    "does not cache an incorrect OG amount for refund %s",
+    async (refundAmount) => {
+      queryBetReceiptMock.mockResolvedValue({
+        betId: "286",
+        chainId: 84532,
+        source: "postgres",
+        row: {
+          asset: "0x0000000000000000000000000000000000000001",
+          betId: "286",
+          chainId: 84532,
+          state: "finalized",
+          stake: "200000",
+          payout: "196000",
+          refundAmount
+        }
+      });
+      const { GET } = await import("./route");
+      const response = await GET(request("/casino/receipt/84532/286/og"), {
+        params: Promise.resolve({ betId: "286", chainId: "84532" })
+      });
+      if (refundAmount === "100000") {
+        expect(response.status).toBe(200);
+        expect(renderOgCardMock.mock.calls[0]?.[0]).toMatchObject({
+          title: "Won 0.09 USDC",
+          stat: "0.09 USDC",
+          tone: "success"
+        });
+      } else {
+        expect(response.status).toBe(503);
+        expect(renderOgCardMock).not.toHaveBeenCalled();
+      }
+    }
+  );
 });

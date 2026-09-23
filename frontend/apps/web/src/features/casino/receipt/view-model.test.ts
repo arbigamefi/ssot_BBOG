@@ -26,6 +26,7 @@ describe("casino receipt view model", () => {
       settlement: {
         payoutGross: 3_000_000n,
         payoutNet: 2_500_000n,
+        refundAmount: 0n,
         txHash: TX
       },
       stake: 1_000_000n
@@ -66,6 +67,7 @@ describe("casino receipt view model", () => {
       lastEventName: "BetFinalized",
       lastTxHash: TX,
       payout: "2500000",
+      refundAmount: "0",
       payoutGross: "3000000",
       placedAt: 1_717_171_000_000,
       placedBlock: 123,
@@ -104,5 +106,80 @@ describe("casino receipt view model", () => {
     expect(buildCasinoReceiptProofText({ lastTx: TX, model, status: "Settled" })).toContain(
       "ArbiGameFi casino receipt #42"
     );
+  });
+  it.each([
+    ["196000", "100000", 296000n, 96000n, "win"],
+    ["0", "100000", 100000n, -100000n, "loss"],
+    ["196000", "0", 196000n, -4000n, "loss"]
+  ] as const)(
+    "agrees between terminal and indexed receipts for award %s refund %s",
+    (payout, refundAmount, cash, net, tone) => {
+      const common = {
+        assetDecimals: 6,
+        assetSymbol: "USDC",
+        chainId: 84532,
+        gameLabel: "Coin Toss"
+      };
+      const row = {
+        id: "84532:42",
+        betId: "42",
+        chainId: 84532,
+        state: "finalized",
+        stake: "200000",
+        payout,
+        refundAmount
+      } as BetRow;
+      const indexed = buildCasinoReceiptFromBetRow({ ...common, row });
+      const terminal = buildCasinoReceiptFromTerminalResult({
+        ...common,
+        result: {
+          kind: "settled",
+          betId: 42n,
+          player: PLAYER,
+          randomHash: RANDOM,
+          requestId: 77n,
+          stake: 200000n,
+          resolvedAt: 1,
+          settlement: { txHash: TX, payoutNet: BigInt(payout), refundAmount: BigInt(refundAmount) }
+        }
+      });
+      expect(indexed).toMatchObject({ payout: cash, net, tone });
+      expect(terminal).toMatchObject({
+        payout: cash,
+        net,
+        tone,
+        payoutValue: indexed.payoutValue,
+        signedNetValue: indexed.signedNetValue
+      });
+    }
+  );
+
+  it("counts a full refund once and refuses missing refund proof", () => {
+    const common = {
+      assetDecimals: 6,
+      assetSymbol: "USDC",
+      chainId: 84532,
+      gameLabel: "Coin Toss"
+    };
+    const row = {
+      id: "84532:42",
+      betId: "42",
+      chainId: 84532,
+      state: "refunded",
+      stake: "200000",
+      payout: "200000",
+      refundAmount: "200000"
+    } as BetRow;
+    expect(buildCasinoReceiptFromBetRow({ ...common, row })).toMatchObject({
+      payout: 200000n,
+      net: 0n,
+      tone: "neutral"
+    });
+    expect(() =>
+      buildCasinoReceiptFromBetRow({
+        ...common,
+        row: { ...row, state: "finalized", refundAmount: undefined }
+      })
+    ).toThrow("not ready");
   });
 });

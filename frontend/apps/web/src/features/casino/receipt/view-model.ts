@@ -1,3 +1,4 @@
+import { getCasinoCashReturned } from "@ssot/bet-index/financials";
 import type { BetRow } from "@ssot/ssot/indexer";
 
 import { getExplorerTxUrl } from "../../../app-shell/chain-registry";
@@ -56,7 +57,9 @@ export function buildCasinoReceiptFromTerminalResult({
 }): CasinoReceiptViewModel {
   const state: CasinoReceiptState = result.kind === "refunded" ? "refunded" : "finalized";
   const payout =
-    result.kind === "refunded" ? result.refund.refundAmount : result.settlement.payoutNet;
+    result.kind === "refunded"
+      ? result.refund.refundAmount
+      : result.settlement.payoutNet + result.settlement.refundAmount;
   const terminalTxHash =
     result.kind === "refunded" ? result.refund.txHash : result.settlement.txHash;
   return buildCasinoReceiptViewModel({
@@ -259,8 +262,9 @@ function buildCasinoReceiptViewModel({
 }
 
 function getRowPayout(row: BetRow) {
-  if (row.state === "refunded") return bigintFromString(row.refundAmount) ?? 0n;
-  return bigintFromString(row.payout) ?? 0n;
+  const returned = getCasinoCashReturned(row);
+  if (returned == null) throw new Error("Casino receipt financials are not ready");
+  return returned;
 }
 
 function bigintFromString(value?: string) {

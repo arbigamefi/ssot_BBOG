@@ -171,7 +171,7 @@ function getOutcome(result: CasinoTerminalRoundResult, t: Translate) {
     };
   }
 
-  const net = result.settlement.payoutNet - result.stake;
+  const net = result.settlement.payoutNet + result.settlement.refundAmount - result.stake;
   if (net > 0n) {
     return {
       label: t("casino.room.result.outcomes.win.label"),

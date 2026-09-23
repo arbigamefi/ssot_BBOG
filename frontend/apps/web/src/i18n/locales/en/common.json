@@ -616,7 +616,7 @@
           "player": "Player",
           "multiplier": "Multiplier",
           "betAmount": "Bet amount",
-          "payout": "Payout",
+          "payout": "Total returned",
           "expectedPayout": "Potential payout",
           "pending": "Pending",
           "betId": "Bet ID",
@@ -679,8 +679,8 @@
         "indexed": "Indexed",
         "proof": "Proof & on-chain details",
         "missing": {
-          "title": "Receipt not indexed yet",
-          "description": "This bet is not available in the durable index yet. Try again after the keeper catches up, or verify the transaction directly on the explorer."
+          "title": "Receipt not ready yet",
+          "description": "The indexed receipt is missing settlement or refund proof. Try again after the index catches up, or verify the transaction on the explorer."
         },
         "status": {
           "placed": "Placed",
@@ -690,7 +690,7 @@
         },
         "metrics": {
           "stake": "Stake",
-          "payout": "Payout",
+          "payout": "Total returned",
           "net": "Net",
           "state": "State"
         },
@@ -2331,7 +2331,7 @@
           "vrfFeeCharged": "VRF fee charged",
           "vrfRequestId": "VRF request id",
           "randomHash": "Random hash",
-          "payout": "Payout",
+          "payout": "Total returned",
           "protocolFee": "Protocol fee",
           "refund": "Refund",
           "placedAt": "Placed at",

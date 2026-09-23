@@ -260,6 +260,7 @@ describe("BetDetailPageClient", () => {
         positionId: "42",
         payoutGross: "1800000",
         payoutNet: "1780000",
+        refundAmount: "0",
         feeOnPayout: "20000",
         protocolFeeAccrual: "20000"
       }),

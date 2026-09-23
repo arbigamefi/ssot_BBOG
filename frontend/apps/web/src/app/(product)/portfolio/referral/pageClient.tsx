@@ -256,12 +256,12 @@ export function ReferralPageClient() {
               <div className="mt-5 grid gap-3 md:grid-cols-3">
                 <AffiliateStat
                   label={t("portfolio.referral.activity.stats.bets")}
-                  value={String(affiliateBetsQuery.data?.stats.betCount ?? 0)}
+                  value={String(affiliateBetsQuery.data?.stats?.betCount ?? "—")}
                 />
                 <AffiliateStat
                   label={t("portfolio.referral.activity.stats.turnover")}
                   value={formatIndexedAmount(
-                    affiliateBetsQuery.data?.stats.turnover,
+                    affiliateBetsQuery.data?.stats?.turnover,
                     decimals,
                     symbol,
                     pendingLabel
@@ -269,7 +269,7 @@ export function ReferralPageClient() {
                 />
                 <AffiliateStat
                   label={t("portfolio.referral.activity.stats.settled")}
-                  value={String(affiliateBetsQuery.data?.stats.settledCount ?? 0)}
+                  value={String(affiliateBetsQuery.data?.stats?.settledCount ?? "—")}
                 />
               </div>
 

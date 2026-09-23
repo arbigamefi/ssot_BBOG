@@ -28,6 +28,7 @@ export function getStateLabel(
   labels: {
     won: string;
     lost: string;
+    settled?: string;
     randomReady: string;
     placed: string;
     refunded: string;
@@ -41,8 +42,13 @@ export function getStateLabel(
     pending: "—"
   }
 ) {
-  if (state === "finalized" && bet?.payout != null) {
-    return bet.payout > bet.stake ? labels.won : labels.lost;
+  if (state === "finalized" && bet?.payout != null && bet.refund != null) {
+    const cash = bet.payout + bet.refund;
+    return cash > bet.stake
+      ? labels.won
+      : cash < bet.stake
+        ? labels.lost
+        : (labels.settled ?? labels.pending);
   }
   if (state === "randomReady") return labels.randomReady;
   if (state === "placed") return labels.placed;

@@ -1402,7 +1402,7 @@
           "player": "Jogador",
           "multiplier": "Multiplicador",
           "betAmount": "Valor da aposta",
-          "payout": "Pagamento",
+          "payout": "Total devolvido",
           "expectedPayout": "Pagamento potencial",
           "pending": "Pendente",
           "betId": "ID da aposta",
@@ -1465,8 +1465,8 @@
         "indexed": "Indexado",
         "proof": "Prova e detalhes on-chain",
         "missing": {
-          "title": "Comprovante ainda não indexado",
-          "description": "Esta aposta ainda não está disponível no índice durável. Tente novamente depois que o keeper se atualizar, ou verifique a transação diretamente no explorer."
+          "title": "Comprovante ainda indisponível",
+          "description": "Falta a confirmação da liquidação ou do reembolso no índice. Tente novamente após a sincronização ou confira a transação no explorador."
         },
         "status": {
           "placed": "Apostado",
@@ -1476,7 +1476,7 @@
         },
         "metrics": {
           "stake": "Aposta",
-          "payout": "Pagamento",
+          "payout": "Total devolvido",
           "net": "Líquido",
           "state": "Estado"
         },
@@ -3303,7 +3303,7 @@
           "vrfFeeCharged": "Taxa VRF cobrada",
           "vrfRequestId": "ID do pedido VRF",
           "randomHash": "Hash aleatório",
-          "payout": "Pagamento",
+          "payout": "Total devolvido",
           "protocolFee": "Taxa do protocolo",
           "refund": "Reembolso",
           "placedAt": "Apostado em",

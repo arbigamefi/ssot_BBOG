@@ -248,6 +248,7 @@ describe("GameRoomRightPane", () => {
             txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
             payoutGross: 20_000_000n,
             payoutNet: 19_600_000n,
+            refundAmount: 0n,
             feeOnPayout: 400_000n,
             protocolFeeAccrual: 200_000n
           }
@@ -290,6 +291,7 @@ describe("GameRoomRightPane", () => {
             txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
             payoutGross: 20_000_000n,
             payoutNet: 19_600_000n,
+            refundAmount: 0n,
             feeOnPayout: 400_000n,
             protocolFeeAccrual: 200_000n
           }
@@ -386,6 +388,7 @@ describe("GameRoomRightPane", () => {
             txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
             payoutGross: 640_000_000n,
             payoutNet: 627_200_000n,
+            refundAmount: 0n,
             feeOnPayout: 12_800_000n,
             protocolFeeAccrual: 6_400_000n
           }
@@ -432,6 +435,7 @@ describe("GameRoomRightPane", () => {
             txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
             payoutGross: 6_892_000n,
             payoutNet: 6_754_160n,
+            refundAmount: 0n,
             feeOnPayout: 137_840n,
             protocolFeeAccrual: 68_920n
           }
@@ -481,6 +485,7 @@ describe("GameRoomRightPane", () => {
             txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
             payoutGross: 22_414_000n,
             payoutNet: 21_965_720n,
+            refundAmount: 0n,
             feeOnPayout: 448_280n,
             protocolFeeAccrual: 224_140n
           }
@@ -539,6 +544,7 @@ describe("GameRoomRightPane", () => {
             txHash: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
             payoutGross: 86_400_000n,
             payoutNet: 84_672_000n,
+            refundAmount: 0n,
             feeOnPayout: 1_728_000n,
             protocolFeeAccrual: 864_000n
           }
@@ -576,5 +582,29 @@ describe("GameRoomRightPane", () => {
     expect(screen.getByText("Roll multiplier")).toBeDefined();
     expect(screen.getAllByText("8.46x").length).toBeGreaterThan(0);
     expect(screen.queryByText("8.64x")).toBeNull();
+  });
+  it("shows a winning settlement when unused stake makes total returned exceed committed stake", async () => {
+    render(
+      <GameRoomRightPane
+        {...baseProps}
+        gameSlug="dice"
+        showResult
+        resultNum={17}
+        resultProof={{
+          kind: "settled",
+          betId: 42n,
+          requestId: 88n,
+          randomHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          player: "0xc8ec9920d573893e888db5d30b2b3b3824b1b684",
+          stake: 200000n,
+          resolvedAt: 1,
+          settlement: { payoutNet: 196000n, refundAmount: 100000n }
+        }}
+      />
+    );
+    expect((await screen.findAllByText("Won bet")).length).toBeGreaterThan(0);
+    expect(screen.queryByText("Lost bet")).toBeNull();
+    expect(screen.getByText("0.296 USDC")).toBeDefined();
+    expect(screen.getByText("+ 0.096 USDC")).toBeDefined();
   });
 });

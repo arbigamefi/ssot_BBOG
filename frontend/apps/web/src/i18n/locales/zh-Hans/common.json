@@ -616,7 +616,7 @@
           "player": "玩家",
           "multiplier": "倍率",
           "betAmount": "投注金额",
-          "payout": "赔付",
+          "payout": "总到账金额",
           "expectedPayout": "潜在赔付",
           "pending": "等待中",
           "betId": "投注 ID",
@@ -679,8 +679,8 @@
         "indexed": "已索引",
         "proof": "证明与链上明细",
         "missing": {
-          "title": "凭证尚未被索引",
-          "description": "该投注尚未进入持久化索引。请在 keeper 同步后重试,或直接在区块浏览器上验证交易。"
+          "title": "回执尚未就绪",
+          "description": "索引回执缺少结算或退款证明。请在索引同步后重试，或前往区块浏览器核验交易。"
         },
         "status": {
           "placed": "已下注",
@@ -690,7 +690,7 @@
         },
         "metrics": {
           "stake": "投注金额",
-          "payout": "赔付",
+          "payout": "总到账金额",
           "net": "净额",
           "state": "状态"
         },
@@ -2331,7 +2331,7 @@
           "vrfFeeCharged": "已计费 VRF 费用",
           "vrfRequestId": "VRF 请求 ID",
           "randomHash": "随机哈希",
-          "payout": "赔付",
+          "payout": "总到账金额",
           "protocolFee": "协议费用",
           "refund": "退款",
           "placedAt": "下注时间",

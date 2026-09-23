@@ -13,6 +13,10 @@
     "./terminal-refund": {
       "types": "./dist/terminal-refund.d.ts",
       "import": "./dist/terminal-refund.js"
+    },
+    "./financials": {
+      "types": "./dist/financials.d.ts",
+      "import": "./dist/financials.js"
     }
   },
   "dependencies": {
