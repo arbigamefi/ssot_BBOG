@@ -1,9 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { createMemoryBetIndexStore } from "@ssot/bet-index";
+import type { PublicClient } from "viem";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { loadBackfillConfig, resolveBackfillRange } from "./backfill.js";
+import { loadBackfillConfig, resolveBackfillRange, runBetIndexBackfill } from "./backfill.js";
 
 function writeRelease() {
   const dir = mkdtempSync(join(tmpdir(), "keeper-backfill-"));
@@ -76,4 +78,59 @@ describe("resolveBackfillRange", () => {
       })
     ).toThrow(/before BET_INDEX_FROM_BLOCK/);
   });
+});
+
+describe("terminal refund backfill", () => {
+  it.each([false, true])(
+    "only checkpoints an authoritative refund (RPC failure=%s)",
+    async (fails) => {
+      const config = loadBackfillConfig({
+        BET_INDEX_DRY_RUN: "true",
+        KEEPER_RELEASE_PATH: writeRelease(),
+        KEEPER_RPC_HTTP: "http://unused.invalid",
+        BET_INDEX_FROM_BLOCK: "123",
+        BET_INDEX_TO_BLOCK: "123",
+        BET_INDEX_CONFIRMATIONS: "0"
+      });
+      const amounts = {
+        payoutGross: 200_000n,
+        payoutNet: 196_000n,
+        feeOnPayout: 4_000n,
+        protocolFeeAccrual: 2_000n
+      };
+      const client = {
+        getBlockNumber: vi.fn(async () => 123n),
+        getBlock: vi.fn(async () => ({ timestamp: 1000n })),
+        getContractEvents: vi.fn(async ({ eventName }) =>
+          eventName === "BetFinalized"
+            ? [
+                {
+                  args: { positionId: 9n, ...amounts },
+                  blockNumber: 123n,
+                  logIndex: 1,
+                  transactionHash: `0x${"ab".repeat(32)}`
+                }
+              ]
+            : []
+        ),
+        readContract: fails
+          ? vi.fn().mockRejectedValue(new Error("terminal RPC unavailable"))
+          : vi.fn().mockResolvedValue({ state: 4, ...amounts, refundAmount: 100_000n })
+      } as unknown as PublicClient;
+      const store = createMemoryBetIndexStore();
+      const run = runBetIndexBackfill({ client, config, store });
+      if (fails) {
+        await expect(run).rejects.toThrow("terminal RPC unavailable");
+        expect(await store.getCursor(config.chainId, "gamehub-events", config.gameHub)).toBeNull();
+        expect(await store.getBet({ chainId: config.chainId, betId: 9 })).toBeNull();
+      } else {
+        await run;
+        expect(await store.getCursor(config.chainId, "gamehub-events", config.gameHub)).toBe(123n);
+        expect(await store.getBet({ chainId: config.chainId, betId: 9 })).toMatchObject({
+          payout: "196000",
+          refundAmount: "100000"
+        });
+      }
+    }
+  );
 });

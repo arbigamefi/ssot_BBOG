@@ -9,6 +9,7 @@ import {
 import {
   createMemoryBetIndexStore,
   createPostgresBetIndexStore,
+  enrichFinalizedBetEvents,
   type BetIndexEvent,
   type BetIndexStore
 } from "@ssot/bet-index";
@@ -204,7 +205,9 @@ export async function runBetIndexBackfill({
           )
           .filter((event): event is BetIndexEvent => Boolean(event));
         eventCount += events.length;
-        rowCount += (await indexStore.writeGameHubEvents(events)).length;
+        rowCount += (
+          await indexStore.writeGameHubEvents(await enrichFinalizedBetEvents(publicClient, events))
+        ).length;
       }
       for (const pool of config.bankProviderLedgerPools) {
         const rows = await fetchBankProviderLedgerRows({

@@ -144,3 +144,11 @@ export function getSSOTDb(name?: string): SSOTDb {
   _dbs.set(key, db);
   return db;
 }
+
+/** Rebuild refundable financial facts per release without deleting old journals. */
+export function getReleaseScopedSSOTDb(release: {
+  chainId: number;
+  releaseDigest: string;
+}): SSOTDb {
+  return getSSOTDb(`ssot_frontend_v3_${release.chainId}_${release.releaseDigest.toLowerCase()}`);
+}

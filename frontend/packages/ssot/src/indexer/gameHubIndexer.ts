@@ -1,5 +1,6 @@
 import type { PublicClient, Address, Abi, AbiEvent } from "viem";
 import { getAddress } from "viem";
+import { readSettledBetRefund } from "@ssot/bet-index/terminal-refund";
 import type { SSOTRelease } from "../release/schema";
 import { getReleaseAbis } from "../abis/release/resolver";
 import type { SSOTDb } from "./store";
@@ -125,6 +126,17 @@ export function createGameHubIndexer(params: {
 
       for (const log of logs as any[]) {
         const logIndex = Number(log.logIndex ?? 0);
+        const args = { ...(log.args ?? {}) };
+        if (eventName === "BetFinalized") {
+          const betId = args.positionId ?? args.betId;
+          if (betId == null) throw new Error("finalized event missing bet ID");
+          args.refundAmount = await readSettledBetRefund({
+            client: publicClient,
+            gameHub,
+            betId: BigInt(betId),
+            args
+          });
+        }
         logsAll.push({
           chainId: release.chainId,
           gameHub,
@@ -132,7 +144,7 @@ export function createGameHubIndexer(params: {
           logIndex,
           txHash: log.transactionHash,
           eventName,
-          args: log.args ?? {}
+          args
         });
       }
     }

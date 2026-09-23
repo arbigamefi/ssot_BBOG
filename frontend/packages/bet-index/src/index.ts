@@ -7,6 +7,7 @@ import {
   type SportsRecoveryStore
 } from "./sports-recovery.js";
 export type { SportsMarketWork, SportsRecoveryStore } from "./sports-recovery.js";
+export { enrichFinalizedBetEvents, readSettledBetRefund } from "./terminal-refund.js";
 
 export type BetLifecycleState = "placed" | "randomReady" | "finalized" | "refunded";
 export type SportsTicketLifecycleState = "held" | "settled" | "refunded" | "voided";
@@ -1726,6 +1727,8 @@ function applyEventToBet(prev: BetRow | undefined, event: BetIndexEvent): BetRow
   if (event.eventName === "BetFinalized") {
     if (event.args.payoutGross != null) next.payoutGross = toBigintString(event.args.payoutGross);
     if (event.args.payoutNet != null) next.payout = toBigintString(event.args.payoutNet);
+    if (event.args.refundAmount != null)
+      next.refundAmount = toBigintString(event.args.refundAmount);
     next.terminalTxHash = event.txHash;
     next.finalizedTxHash = event.txHash;
   }
