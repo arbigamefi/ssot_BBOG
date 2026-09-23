@@ -1,0 +1,183 @@
+{
+  "chainId": 8453,
+  "checkedAtUtc": "2026-09-23T14:53:30.394853+00:00",
+  "deployedSourceCommit": "7fb390d5b42346722a225e497dee6fcd3a67ed55",
+  "total": 17,
+  "exact": 6,
+  "similar": 11,
+  "unverified": 0,
+  "similarMatchLimitation": "Etherscan returned Already Verified to explicit source submissions. Full Match upgrades require explorer ownership verification and whitelist; no such access is claimed.",
+  "platformDocumentation": "https://info.etherscan.com/update-on-similar-match-contract-verification/",
+  "contracts": [
+    {
+      "address": "0xf121a7B8C5327Ff8E093C7c3b94Ea4D240C895F4",
+      "contract": "src/adapters/chainlink/ChainlinkV2PlusWrapperAdapter.sol:ChainlinkV2PlusWrapperAdapter",
+      "status": "exact",
+      "compiler": "v0.8.24+commit.e11b9ed9",
+      "optimizerRuns": "20000",
+      "similarMatch": null,
+      "constructorArgumentsMatched": true,
+      "explorerUrl": "https://basescan.org/address/0xf121a7B8C5327Ff8E093C7c3b94Ea4D240C895F4#code"
+    },
+    {
+      "address": "0x2f4fd0998D557259D1A8936B9BE039991fe81c7a",
+      "contract": "src/core/VRFHub.sol:VRFHub",
+      "status": "similar",
+      "compiler": "v0.8.24+commit.e11b9ed9",
+      "optimizerRuns": "20000",
+      "similarMatch": "0xe441df37b6c3717a4126d201d9130ffa65ec866d",
+      "constructorArgumentsMatched": null,
+      "explorerUrl": "https://basescan.org/address/0x2f4fd0998D557259D1A8936B9BE039991fe81c7a#code"
+    },
+    {
+      "address": "0xE92459c5C2c9F0bfA0e44FBa097d335fF7CE8Eba",
+      "contract": "src/core/PoolRegistry.sol:PoolRegistry",
+      "status": "exact",
+      "compiler": "v0.8.24+commit.e11b9ed9",
+      "optimizerRuns": "20000",
+      "similarMatch": null,
+      "constructorArgumentsMatched": true,
+      "explorerUrl": "https://basescan.org/address/0xE92459c5C2c9F0bfA0e44FBa097d335fF7CE8Eba#code"
+    },
+    {
+      "address": "0x8802A33cb9911745d91F9f6551f116F2eCe0aB0A",
+      "contract": "src/core/SettlementRouter.sol:SettlementRouter",
+      "status": "exact",
+      "compiler": "v0.8.24+commit.e11b9ed9",
+      "optimizerRuns": "20000",
+      "similarMatch": null,
+      "constructorArgumentsMatched": true,
+      "explorerUrl": "https://basescan.org/address/0x8802A33cb9911745d91F9f6551f116F2eCe0aB0A#code"
+    },
+    {
+      "address": "0xd03985f40401F547dBf43a5DEe53640F6bD740D8",
+      "contract": "src/engines/referral/ReferralRegistry.sol:ReferralRegistry",
+      "status": "similar",
+      "compiler": "v0.8.24+commit.e11b9ed9",
+      "optimizerRuns": "20000",
+      "similarMatch": "0x139f850d11f0fa6fbdbfa6c7024806bb822c336f",
+      "constructorArgumentsMatched": null,
+      "explorerUrl": "https://basescan.org/address/0xd03985f40401F547dBf43a5DEe53640F6bD740D8#code"
+    },
+    {
+      "address": "0x9C3735B892E251acF20149Ff4C62ECA4493F6e23",
+      "contract": "src/engines/referral/DefaultReferralEngine.sol:DefaultReferralEngine",
+      "status": "similar",
+      "compiler": "v0.8.24+commit.e11b9ed9",
+      "optimizerRuns": "20000",
+      "similarMatch": "0x1c7f605d39c66f64fe6576d54e27a87825397a20",
+      "constructorArgumentsMatched": null,
+      "explorerUrl": "https://basescan.org/address/0x9C3735B892E251acF20149Ff4C62ECA4493F6e23#code"
+    },
+    {
+      "address": "0xB4056D12aD04B01629b3A022fee385D2a1ae4b48",
+      "contract": "src/core/GameHub.sol:GameHub",
+      "status": "exact",
+      "compiler": "v0.8.24+commit.e11b9ed9",
+      "optimizerRuns": "20000",
+      "similarMatch": null,
+      "constructorArgumentsMatched": true,
+      "explorerUrl": "https://basescan.org/address/0xB4056D12aD04B01629b3A022fee385D2a1ae4b48#code"
+    },
+    {
+      "address": "0xEa3845f08a273257c3d3458D26e7bd4234330Dd4",
+      "contract": "src/core/Bank.sol:Bank",
+      "status": "exact",
+      "compiler": "v0.8.24+commit.e11b9ed9",
+      "optimizerRuns": "20000",
+      "similarMatch": null,
+      "constructorArgumentsMatched": true,
+      "explorerUrl": "https://basescan.org/address/0xEa3845f08a273257c3d3458D26e7bd4234330Dd4#code"
+    },
+    {
+      "address": "0x9d61C6230ef0bF2d853e17a0368CBC384ef1843B",
+      "contract": "src/core/Bank.sol:Bank",
+      "status": "exact",
+      "compiler": "v0.8.24+commit.e11b9ed9",
+      "optimizerRuns": "20000",
+      "similarMatch": null,
+      "constructorArgumentsMatched": true,
+      "explorerUrl": "https://basescan.org/address/0x9d61C6230ef0bF2d853e17a0368CBC384ef1843B#code"
+    },
+    {
+      "address": "0x8856d6F92F33e5fD2890d6887f96ff63e006B97f",
+      "contract": "src/modules/dice/DiceModule.sol:DiceModule",
+      "status": "similar",
+      "compiler": "v0.8.24+commit.e11b9ed9",
+      "optimizerRuns": "20000",
+      "similarMatch": "0xde044cc4dfce570c5519c81f175f88ab8d8e8ff4",
+      "constructorArgumentsMatched": null,
+      "explorerUrl": "https://basescan.org/address/0x8856d6F92F33e5fD2890d6887f96ff63e006B97f#code"
+    },
+    {
+      "address": "0x85CC307Eee455EA80bceC29f9ab696840bBeDef2",
+      "contract": "src/modules/cointoss/CoinTossModule.sol:CoinTossModule",
+      "status": "similar",
+      "compiler": "v0.8.24+commit.e11b9ed9",
+      "optimizerRuns": "20000",
+      "similarMatch": "0xd6d864269b1e65b72e27351afe310bd4a8a640d9",
+      "constructorArgumentsMatched": null,
+      "explorerUrl": "https://basescan.org/address/0x85CC307Eee455EA80bceC29f9ab696840bBeDef2#code"
+    },
+    {
+      "address": "0xAfA77932182C65c1255F5b47A2A847E3aEb30454",
+      "contract": "src/modules/roulette/RouletteModule.sol:RouletteModule",
+      "status": "similar",
+      "compiler": "v0.8.24+commit.e11b9ed9",
+      "optimizerRuns": "20000",
+      "similarMatch": "0x3c09f74bbbb05322fa14477d89059cd2be562d00",
+      "constructorArgumentsMatched": null,
+      "explorerUrl": "https://basescan.org/address/0xAfA77932182C65c1255F5b47A2A847E3aEb30454#code"
+    },
+    {
+      "address": "0x5f762FFc692EbDC2aB41b39c186A22D9d82E7255",
+      "contract": "src/modules/keno/KenoModule.sol:KenoModule",
+      "status": "similar",
+      "compiler": "v0.8.24+commit.e11b9ed9",
+      "optimizerRuns": "20000",
+      "similarMatch": "0xd279167a1d431889bd0b343ab389f75094bb50ce",
+      "constructorArgumentsMatched": null,
+      "explorerUrl": "https://basescan.org/address/0x5f762FFc692EbDC2aB41b39c186A22D9d82E7255#code"
+    },
+    {
+      "address": "0xBf56FaFC2D55b730Ee2D7aaa0AbefdEF34fff52D",
+      "contract": "src/modules/plinko/PlinkoModule.sol:PlinkoModule",
+      "status": "similar",
+      "compiler": "v0.8.24+commit.e11b9ed9",
+      "optimizerRuns": "20000",
+      "similarMatch": "0x88da1931a112ef11dd0c1df4ade7581dac7bed56",
+      "constructorArgumentsMatched": null,
+      "explorerUrl": "https://basescan.org/address/0xBf56FaFC2D55b730Ee2D7aaa0AbefdEF34fff52D#code"
+    },
+    {
+      "address": "0x78314a9c2740d05596ED67b2591b3A18f53542E0",
+      "contract": "src/modules/sicbo/SicBoModule.sol:SicBoModule",
+      "status": "similar",
+      "compiler": "v0.8.24+commit.e11b9ed9",
+      "optimizerRuns": "20000",
+      "similarMatch": "0xd9eba528eeef3e3698245e348ce5fa7d16da7401",
+      "constructorArgumentsMatched": null,
+      "explorerUrl": "https://basescan.org/address/0x78314a9c2740d05596ED67b2591b3A18f53542E0#code"
+    },
+    {
+      "address": "0xfC460FD50D2849e6e3e380EECa592d4f38C0B472",
+      "contract": "src/modules/slots/SlotsModule.sol:SlotsModule",
+      "status": "similar",
+      "compiler": "v0.8.24+commit.e11b9ed9",
+      "optimizerRuns": "20000",
+      "similarMatch": "0x25f239332bbd3d2b3c627307d448797424389c86",
+      "constructorArgumentsMatched": null,
+      "explorerUrl": "https://basescan.org/address/0xfC460FD50D2849e6e3e380EECa592d4f38C0B472#code"
+    },
+    {
+      "address": "0xE8ba8b5EFE72Cc9BF3488beaAb1Ded364cB7A0d2",
+      "contract": "src/modules/baccarat/BaccaratModule.sol:BaccaratModule",
+      "status": "similar",
+      "compiler": "v0.8.24+commit.e11b9ed9",
+      "optimizerRuns": "20000",
+      "similarMatch": "0x24b9abbaeee51edf39942e0a2fa42b925c461b5d",
+      "constructorArgumentsMatched": null,
+      "explorerUrl": "https://basescan.org/address/0xE8ba8b5EFE72Cc9BF3488beaAb1Ded364cB7A0d2#code"
+    }
+  ]
+}

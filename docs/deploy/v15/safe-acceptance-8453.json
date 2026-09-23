@@ -1,0 +1,46 @@
+{
+  "version": "1.0",
+  "chainId": "8453",
+  "createdAt": 1790174811000,
+  "meta": {
+    "name": "v1.5 governance acceptance",
+    "createdFromSafeAddress": "0x7F0c244e1701B069727670745FD047179Ef8691d"
+  },
+  "transactions": [
+    {
+      "to": "0xf121a7B8C5327Ff8E093C7c3b94Ea4D240C895F4",
+      "value": "0",
+      "data": "0x238efcbc"
+    },
+    {
+      "to": "0x2f4fd0998D557259D1A8936B9BE039991fe81c7a",
+      "value": "0",
+      "data": "0x238efcbc"
+    },
+    {
+      "to": "0xE92459c5C2c9F0bfA0e44FBa097d335fF7CE8Eba",
+      "value": "0",
+      "data": "0x238efcbc"
+    },
+    {
+      "to": "0xd03985f40401F547dBf43a5DEe53640F6bD740D8",
+      "value": "0",
+      "data": "0x238efcbc"
+    },
+    {
+      "to": "0xB4056D12aD04B01629b3A022fee385D2a1ae4b48",
+      "value": "0",
+      "data": "0x238efcbc"
+    },
+    {
+      "to": "0xEa3845f08a273257c3d3458D26e7bd4234330Dd4",
+      "value": "0",
+      "data": "0x238efcbc"
+    },
+    {
+      "to": "0x9d61C6230ef0bF2d853e17a0368CBC384ef1843B",
+      "value": "0",
+      "data": "0x238efcbc"
+    }
+  ]
+}
