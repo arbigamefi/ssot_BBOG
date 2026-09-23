@@ -18,7 +18,10 @@ export function HomeRoomDirectory({
   };
 }) {
   return (
-    <section className="border-b border-border-soft bg-surface-0 py-20">
+    <section
+      id="home-games"
+      className="scroll-mt-24 border-b border-border-soft bg-surface-0 py-20"
+    >
       <div className="mx-auto max-w-[1440px] px-6 lg:px-10">
         <SectionHeader
           eyebrow={copy.eyebrow}
