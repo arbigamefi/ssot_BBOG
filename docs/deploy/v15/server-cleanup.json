@@ -1,0 +1,229 @@
+{
+  "at": "2026-09-23T16:15:47.581445+00:00",
+  "beforeDisk": {
+    "totalBytes": 24602533888,
+    "availableBytes": 2206605312
+  },
+  "healthBefore": {
+    "8453": {
+      "schemaVersion": 1,
+      "status": "ok",
+      "chainId": 8453,
+      "generatedAt": "2026-09-23T16:15:47.612Z",
+      "checks": {
+        "release": {
+          "status": "ok",
+          "name": "Base",
+          "warnings": []
+        },
+        "keeper": {
+          "status": "ok",
+          "role": "primary",
+          "keeperStatus": "running",
+          "updatedAt": "2026-09-23T16:15:44.365Z",
+          "ageMs": 3247,
+          "queueDepth": 0
+        },
+        "betIndex": {
+          "status": "ok",
+          "source": "postgres",
+          "rows": 0,
+          "durableRequired": true,
+          "durableConfigured": true
+        }
+      }
+    },
+    "84532": {
+      "schemaVersion": 1,
+      "status": "ok",
+      "chainId": 84532,
+      "generatedAt": "2026-09-23T16:15:47.622Z",
+      "checks": {
+        "release": {
+          "status": "ok",
+          "name": "Base Sepolia",
+          "warnings": []
+        },
+        "keeper": {
+          "status": "ok",
+          "role": "primary",
+          "keeperStatus": "running",
+          "updatedAt": "2026-09-23T16:15:44.263Z",
+          "ageMs": 3358,
+          "queueDepth": 0
+        },
+        "betIndex": {
+          "status": "ok",
+          "source": "postgres",
+          "rows": 1,
+          "durableRequired": true,
+          "durableConfigured": true
+        }
+      }
+    }
+  },
+  "deleteContainers": [
+    "arbigamefi-production-web-1",
+    "arbigamefi-production-keeper-primary-1",
+    "arbigamefi-production-keeper-testnet-primary-1",
+    "arbigamefi-production-caddy-1",
+    "arbigamefi-production-postgres-1",
+    "arbigamefi-v15-sepolia-acceptance-web-1",
+    "arbigamefi-v15-sepolia-acceptance-keeper-1",
+    "arbigamefi-v15-sepolia-acceptance-postgres-1"
+  ],
+  "deleteVolumes": [
+    "arbigamefi-production_bet_index_postgres_data",
+    "arbigamefi-production_caddy_config",
+    "arbigamefi-production_caddy_data",
+    "arbigamefi-production_keeper_health",
+    "arbigamefi-v15-sepolia-acceptance_db",
+    "arbigamefi-v15-sepolia-acceptance_health"
+  ],
+  "deleteDirectories": [
+    "/opt/arbigamefi",
+    "/opt/arbigamefi-v15-sepolia-acceptance"
+  ],
+  "deleteFiles": [
+    "/opt/arbigamefi-v15/handover-20260923/arbigamefi-production-postgres-1.dump",
+    "/opt/arbigamefi-v15/handover-20260923/arbigamefi-v15-sepolia-acceptance-postgres-1.dump",
+    "/opt/arbigamefi-v15/handover-20260923/v15-after-cutover.dump",
+    "/opt/arbigamefi-v15/frontend/deploy-bundle-fcda9e5.tar.gz"
+  ],
+  "activeImages": {
+    "/arbigamefi-v15-caddy-1": "sha256:af555904a0961945f16bb323a501457b13a4f7e9bde969b145b97da80b38ecbe",
+    "/arbigamefi-v15-keeper-primary-1": "sha256:2b6638c141c9f03182ca0e3b072957c1e17075e05c0386ce39520e277ddf8712",
+    "/arbigamefi-v15-keeper-testnet-primary-1": "sha256:2b6638c141c9f03182ca0e3b072957c1e17075e05c0386ce39520e277ddf8712",
+    "/arbigamefi-v15-web-1": "sha256:bc63947338f2de10631835ea48696a1bae50acbe031fa421438df9f90f25e39f",
+    "/arbigamefi-v15-postgres-1": "sha256:e684c11a6c7c127c1b7602063cc6a13db0a12b62dfd770d83936c089751d498d"
+  },
+  "dryRun": false,
+  "complete": true,
+  "afterDisk": {
+    "totalBytes": 24602533888,
+    "availableBytes": 15665487872
+  },
+  "healthAfter": {
+    "8453": {
+      "schemaVersion": 1,
+      "status": "ok",
+      "chainId": 8453,
+      "generatedAt": "2026-09-23T16:17:19.881Z",
+      "checks": {
+        "release": {
+          "status": "ok",
+          "name": "Base",
+          "warnings": []
+        },
+        "keeper": {
+          "status": "ok",
+          "role": "primary",
+          "keeperStatus": "running",
+          "updatedAt": "2026-09-23T16:17:14.367Z",
+          "ageMs": 5514,
+          "queueDepth": 0
+        },
+        "betIndex": {
+          "status": "ok",
+          "source": "postgres",
+          "rows": 0,
+          "durableRequired": true,
+          "durableConfigured": true
+        }
+      }
+    },
+    "84532": {
+      "schemaVersion": 1,
+      "status": "ok",
+      "chainId": 84532,
+      "generatedAt": "2026-09-23T16:17:19.907Z",
+      "checks": {
+        "release": {
+          "status": "ok",
+          "name": "Base Sepolia",
+          "warnings": []
+        },
+        "keeper": {
+          "status": "ok",
+          "role": "primary",
+          "keeperStatus": "running",
+          "updatedAt": "2026-09-23T16:17:14.267Z",
+          "ageMs": 5636,
+          "queueDepth": 0
+        },
+        "betIndex": {
+          "status": "ok",
+          "source": "postgres",
+          "rows": 1,
+          "durableRequired": true,
+          "durableConfigured": true
+        }
+      }
+    }
+  },
+  "remainingVolumes": [
+    "arbigamefi-v15_bet_index_postgres_data",
+    "arbigamefi-v15_caddy_config",
+    "arbigamefi-v15_caddy_data",
+    "arbigamefi-v15_keeper_health"
+  ],
+  "dockerDiskUsage": "TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE\nImages          4         4         951.8MB   224.4MB (23%)\nContainers      5         5         63B       0B (0%)\nLocal Volumes   4         4         48.71MB   0B (0%)\nBuild Cache     0         0         0B        0B\n",
+  "journalDiskUsage": "Archived and active journals take up 234.8M in the file system.\n",
+  "reclaimedBytes": 13458882560,
+  "runtimeUnitMigration": {
+    "at": "2026-09-23T16:15:39.134837+00:00",
+    "retiredKeeperUnitRemoved": true,
+    "healthScript": "/opt/arbigamefi-v15/ops/healthz-alert.sh",
+    "healthAlertConfigurationPreserved": true,
+    "healthTimer": "active",
+    "dockerEnabled": true
+  },
+  "publicHealth": {
+    "observations": [
+      {
+        "source": "local curl browser User-Agent",
+        "chainId": 8453,
+        "generatedAt": "2026-09-23T16:19:48.429Z",
+        "httpStatus": 200,
+        "healthStatus": "ok",
+        "seconds": 1.713597
+      },
+      {
+        "source": "VPS curl browser User-Agent",
+        "chainId": 84532,
+        "generatedAt": "2026-09-23T16:19:51.124Z",
+        "httpStatus": 200,
+        "healthStatus": "ok",
+        "seconds": 0.166959
+      }
+    ],
+    "priorFailures": [
+      "Two Cloudflare 522 responses after public cutover",
+      "Default Python User-Agent returned 403/1010",
+      "Post-cleanup Python browser User-Agent request timed out after 20 seconds"
+    ],
+    "rootCauseEstablished": false,
+    "continuousPublicAvailabilityProven": false
+  },
+  "filesystemUsage": {
+    "rootBeforePercent": 91,
+    "rootAfterPercent": 34,
+    "varBeforeHuman": "15G",
+    "varAfterHuman": "1.8G",
+    "measurement": "du and df human-readable rounded values"
+  },
+  "auditCopies": {
+    "location": "off-server owner-local protected evidence directory",
+    "serverCopiesDeleted": true,
+    "count": 2,
+    "note": "Legacy production and Sepolia acceptance database audit dumps retained off-server; current production volume preserved."
+  },
+  "journalRetention": {
+    "SystemMaxUse": "256M",
+    "RuntimeMaxUse": "64M",
+    "SystemKeepFree": "1G",
+    "MaxRetentionSec": "14day"
+  },
+  "noApplicationRestart": true,
+  "chainObligationsRetired": false
+}

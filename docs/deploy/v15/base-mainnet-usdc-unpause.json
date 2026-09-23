@@ -1,0 +1,28 @@
+{
+  "complete": true,
+  "chainId": 8453,
+  "transactionHash": "0xed60a2d8cbb5821c82f23bf894cd2aab1d55d24db0d29cda9341feb7c1c9618f",
+  "blockNumber": "51695054",
+  "blockHash": "0x8883c2665b0014470a678b388988e4761a9439735744cf08038eef066d86a903",
+  "safe": "0x7F0c244e1701B069727670745FD047179Ef8691d",
+  "bank": "0xEa3845f08a273257c3d3458D26e7bd4234330Dd4",
+  "safeNonce": "1",
+  "safeTxHash": "0xcd2a14e78f484e51e4e532af4e9e53869fbb89d6e4a7cc1af2e7140328b58244",
+  "threshold": "2",
+  "outerRecipient": "0x7f0c244e1701b069727670745fd047179ef8691d",
+  "innerCallMatchesPacket": true,
+  "executionSuccess": true,
+  "independentReceiptMatched": true,
+  "postExecutionStates": [
+    {
+      "usdcPaused": false,
+      "wethPaused": true,
+      "reserved": "0"
+    },
+    {
+      "usdcPaused": false,
+      "wethPaused": true,
+      "reserved": "0"
+    }
+  ]
+}
