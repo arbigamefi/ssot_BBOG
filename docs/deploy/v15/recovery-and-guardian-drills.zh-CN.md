@@ -51,9 +51,9 @@
 
 原始辅助脚本退出码为 1，原因是它错误地要求事件拒写时 bets 收据也不能存在。`materializeCasinoReceipt` 另行读取权威终态并直接写 bets，因此正确收据先于事件日志落库是预期路径。本次保留该失败与原始观测，随后按实际注入范围单独复核事件缺失、游标停住、故障撤销和自动补齐，未重发交易。故障期间健康状态曾显示 running，后来观测到 degraded；不能单靠健康标志判断持久索引完整性。该结果覆盖指定事件的事务失败，不宣称全数据库不可写演练通过。
 
-真实部分退款现已覆盖中奖与未中奖两种结果；仍不等于 PendingVRF 超时后的全额退款实链样本。guardian 暂停、Safe 恢复及 LP/协议费最终处置仍须分别关闭，主网 v1.5 尚未部署。
+真实部分退款现已覆盖中奖与未中奖两种结果；仍不等于 PendingVRF 超时后的全额退款实链样本。此处为 #13 阶段边界；后续 guardian 与 Safe 结果见下一节。资产保留及最终暂停决定见文末，主网 v1.5 尚未部署。
 
-## guardian 已完成、Safe 恢复待执行（2026-09-23）
+## guardian 与 Safe 恢复已完成（2026-09-23）
 
 guardian 已真实签署 USDC Bank 暂停，交易 `0xbc5750aca6db751b6fade8c09f7d03ce643bdd919b68048d71067873f75efe83`，区块 47201684。新投注模拟返回 `RiskInPaused(uint64)` 的准确错误 selector `0x51f19a2f`；guardian 解除暂停返回 `Unauthorized()` 的 `0x82b42900`。此前已经存在的 #14 在区块 47201694 完成结算，实际返还未使用投注 0.1 USDC。两家 RPC 均核验该结算区块的 Bank 暂停状态，Bank reserved 归零，keeper 恢复运行、队列为零，其他容器未变。
 
@@ -61,4 +61,12 @@ guardian 已真实签署 USDC Bank 暂停，交易 `0xbc5750aca6db751b6fade8c09f
 
 原始发送辅助脚本使用本机 Cast 不支持的 `--data`，在 CLI 解析阶段退出；两家 RPC 确认 nonce 与余额未变，没有网络发送。保留原尝试标记和退出记录，修正为原生转账/显式函数参数后先在关闭的本机端口校验解析，再重新解锁签署；没有重发任何已广播交易。首次未入金 guardian 的权限模拟还受 gas 余额检查影响，改为零 gasPrice 的只读权限模拟后验证准确错误 selector，未发生链上写入。
 
-当前 USDC 与 WETH Bank 均暂停。下一步由真实 2/3 Safe owners 执行 [USDC 恢复包](safe-guardian-recovery-84532.json)，只调用 USDC Bank 的 `setRiskInPaused(false)`、value 为 0。Safe 控制哈希与原先固定记录一致，无 module/guard；nonce 7 仅为生成时观测，执行前需要重新核验。签名完成不等于执行成功，必须核对实际 Safe 内层调用、ExecutionSuccess、Bank 事件与回读后才能把本步骤标为完成。
+真实 2/3 Safe 已在区块 47201903 执行 [USDC 恢复包](safe-guardian-recovery-84532.json)，交易 `0x467aaa2dce8f96244a4e70a2e65732d64af319cd3735bb4770bdb67dde5abb9e`。已核对内部目标/金额/操作/calldata、nonce 7、threshold 2、Safe 交易哈希、ExecutionSuccess、唯一 USDC 解除暂停事件，以及第二家 RPC 的回执和区块状态。恢复交易完成时 USDC 未暂停、WETH 仍暂停、reserved 为零，Safe nonce 已进入 8；验收最终暂停状态见下文。详见 [Safe 恢复证据](base-sepolia-safe-recovery.json)。恢复包已执行，仅保留为历史证据，禁止再次执行。Safe 的事件解码依据 [v1.4.1 SafeL2](https://github.com/safe-global/safe-smart-account/blob/v1.4.1/contracts/SafeL2.sol) 与 [Safe](https://github.com/safe-global/safe-smart-account/blob/v1.4.1/contracts/Safe.sol) 的版本化定义，并以此前中继执行回执校验；不以外层交易目标是否为 Safe 代替内层调用核验。
+
+## 测试资产保留与最终暂停
+
+验收完成后，guardian 再以 nonce 1 执行暂停，交易 `0x4dadfee011c2326af5ec7dd4b2e88915a952ba7119c09278b347a14a40c3ef3e`，区块 47202234；两家 RPC 验证调用者、calldata、唯一暂停事件、两个 Bank 暂停且 reserved 为零。此举发生在 Safe 实际解除暂停已被验证之后，不改变该恢复测试通过的历史证据。[最终暂停证据](base-sepolia-final-pause.json)保留了完整身份和状态。
+
+明确保留新 v1.5 Sepolia 的测试资产用于后续回归：部署钱包 LP 份额 40,000,000，Bank USDC 47.414315、NAV 47.210639、应付协议费 0.203676，reserved 为零。未赎回 LP、未转出协议费、未核销义务；记录保留金额和控制权，不把留存余额描述为已清空。guardian 这次暂停仅消耗 0.000000262479128438 测试 ETH gas（含 L1），USDC 与 LP 账本未变，keeper 持续运行、队列为零。
+
+本阶段关闭在途重启、指定事件持久写失败恢复、guardian 暂停/旧债务退出、Safe 实际恢复以及测试资产保留/最终暂停。公开站点和主网仍未切换，主网部署须另行完成链与资金检查、完整模拟、真实广播、治理接收及发布验收。

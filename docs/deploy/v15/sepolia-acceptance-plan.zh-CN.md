@@ -36,6 +36,6 @@
 
 ## 恢复演练推进（2026-09-23）
 
-#12 在途 keeper 重启与 #13 定向结算事件拒写恢复已完成，金额、两家 RPC、Bank、索引游标及 API 收据已核对。详见 [实际恢复结果及失败记录](recovery-and-guardian-drills.zh-CN.md)。#13 后累计部署钱包 stake 为 1.172652 USDC，剩余投注额度 8.827348 USDC；上面的 #11 余额为历史快照。接下来执行 guardian 暂停及已有债务退出，再由真实 2/3 Safe 恢复，最后处理 LP/费用和最终暂停状态。
+#12 在途 keeper 重启与 #13 定向结算事件拒写恢复已完成，金额、两家 RPC、Bank、索引游标及 API 收据已核对。详见 [实际恢复结果及失败记录](recovery-and-guardian-drills.zh-CN.md)。#13 后累计部署钱包 stake 为 1.172652 USDC，剩余投注额度 8.827348 USDC；上面的 #11 余额为历史快照。guardian 及真实 2/3 Safe 恢复随后已完成，结果如下；资产保留和最终暂停也已完成，详见最新记录。
 
-#14 已在 guardian 暂停后完成债务退出与对账；#14 后部署钱包累计 stake 为 1.372652 USDC，剩余额度为 8.627348 USDC。USDC Bank 当前暂停，等待 Safe 实际执行恢复包。此后仍需明确 LP、协议费与最终暂停状态，主网部署继续等待完整退出条件。
+#14 已在 guardian 暂停后完成债务退出与对账；#14 后部署钱包累计 stake 为 1.372652 USDC，剩余额度为 8.627348 USDC。Safe 已在区块 47201903 实际执行恢复，USDC 当时解除暂停，WETH 保持暂停；[执行证据](base-sepolia-safe-recovery.json)已通过双 RPC 和内层调用核验。随后明确保留 LP/协议费作后续回归，并由 guardian 恢复两个 Bank 的最终暂停状态；[最终状态](base-sepolia-final-pause.json)已双 RPC 核验。下一阶段是 Base 主网部署前检查、资金到位、模拟与广播。

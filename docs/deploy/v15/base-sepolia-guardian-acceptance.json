@@ -1,7 +1,7 @@
 {
   "chainId": 84532,
   "guardianPauseAndDebtExitComplete": true,
-  "safeRecoveryExecuted": false,
+  "safeRecoveryExecuted": true,
   "guardian": "0x9d239D9e0EE179Bd442497a034002aAf75865ea0",
   "safe": "0x7F0c244e1701B069727670745FD047179Ef8691d",
   "usdcBank": "0xEa3845f08a273257c3d3458D26e7bd4234330Dd4",
@@ -118,6 +118,24 @@
     "guardian-drill-v2-paused-debt-proof.json": "24880fc524389ac51ed3cc66663109acfb11d23e3a7d9271b0daf5bdb21a7ed3",
     "guardian-drill-v2-transaction-and-fee-proof.json": "3512c02a35abddf77ba4df3536471031943800204dca4297c643154a5d7123a3",
     "guardian-drill-cli-parser-proof.json": "1111183bbab07e2bfdbfd269c46ba8640dbf3347c7ecfe36c34addbcd99b0ee6",
-    "safe-guardian-recovery-84532.json": "51979d2328212d39eb82bb0d5014536f21d46548abd3ebfc96d2e9832a0d1539"
+    "safe-guardian-recovery-84532.json": "51979d2328212d39eb82bb0d5014536f21d46548abd3ebfc96d2e9832a0d1539",
+    "safe-guardian-recovery-accepted.json": "b9cb23604c5a56be2ffdbd34d54fb077b672f9b2d96c0560d9cfd94562fe823f",
+    "sepolia-final-pause-verified.json": "a24c274ef6183d645f9bac19e573e492d9972a6a8d356a76c20f3ef446be18e7"
+  },
+  "safeRecoveryEvidence": "base-sepolia-safe-recovery.json",
+  "postGuardianPauseState": {
+    "usdcBankPaused": true,
+    "wethBankPaused": true
+  },
+  "currentStateBlock": "47202234",
+  "finalPauseEvidence": "base-sepolia-final-pause.json",
+  "testAssetDisposition": {
+    "decision": "Retain v1.5 Sepolia LP and protocol fee liability for regression; no asset transfer or write-off.",
+    "deployerLpShares": "40000000",
+    "bankAssetBalance": "47414315",
+    "bankNetAssetValue": "47210639",
+    "protocolFeesPayable": "203676",
+    "reserved": "0",
+    "bothBanksPaused": true
   }
 }
