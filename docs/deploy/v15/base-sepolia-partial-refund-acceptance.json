@@ -1,0 +1,85 @@
+{
+  "complete": true,
+  "chainId": 84532,
+  "betId": "11",
+  "player": "0x93ac87413E17d01CBa37B6317f64890bF7f99aC3",
+  "stake": "200000",
+  "returned": "296000",
+  "net": "96000",
+  "terminal": {
+    "state": 4,
+    "payoutGross": "200000",
+    "payoutNet": "196000",
+    "feeOnPayout": "4000",
+    "protocolFeeAccrual": "2000",
+    "refundAmount": "100000"
+  },
+  "before": {
+    "wallet": "9844888",
+    "bank": "47406315",
+    "nav": "47210639",
+    "protocolFees": "195676",
+    "reserved": "0"
+  },
+  "after": {
+    "wallet": "9940888",
+    "bank": "47310315",
+    "nav": "47112639",
+    "protocolFees": "197676",
+    "reserved": "0"
+  },
+  "placement": {
+    "hash": "0xcd618b07f0f2e1f21121afd9a6603cd4a7c6fc6e3a973565499a81c1d6ddcf34",
+    "block": "47199133",
+    "blockHash": "0xc8d99e8fa1c79945e44e2b23a4684fb0859f163c139029920dfaa6450707c813"
+  },
+  "settlement": {
+    "hash": "0xd0a842cb6b324df5cb3750f2b471d41da338f74bb794387457ba125df2c20ed1",
+    "block": "47199140",
+    "blockHash": "0x3b0f0a2047c3d1b53e7459f9321eaf3664d09b50ac13aa1d8b71ddb3613c8d6a"
+  },
+  "independentRpcMatched": true,
+  "generatedAt": "2026-09-23T12:30:37.520Z",
+  "nativeCost": {
+    "beforeWei": "49725537165142497",
+    "afterWei": "49711209227455863",
+    "placementGasIncludingL1Wei": "6635056924530",
+    "vrfChargedWei": "7692880762104",
+    "totalNativeSpentWei": "14327937686634",
+    "withinApprovedBudget": true,
+    "nonce": 63
+  },
+  "sourceRevision": "ba2bebb8b9e35b182221043cc861ca06407dd917",
+  "mergedRevision": "083ef0c416047f5839c0cb011588e31cd1ae2871",
+  "scope": "Internal Base Sepolia acceptance only; public mainnet application unchanged",
+  "historicalBackfill": {
+    "rows": 10,
+    "oldValue": null,
+    "newValue": "0",
+    "rawEventsModified": false,
+    "cursorsModified": false,
+    "timestampsModified": false,
+    "crosscheckedWithTwoRpcs": true
+  },
+  "budget": {
+    "maximumDeployerStake": "10000000",
+    "cumulativeDeployerStake": "772652",
+    "remainingStakeBudget": "9227348",
+    "liquidityShares": "40000000",
+    "asOfBetId": "11"
+  },
+  "validation": {
+    "databaseReceiptSource": "postgres",
+    "sdkGetTerminalProof": true,
+    "serverRenderedReceipt": true,
+    "ogShareImage": true,
+    "fullRefundRealChainSample": false
+  },
+  "artifacts": {
+    "partial-refund-canary-reconciled.json": "738672e30a9a9bdc01b3d75a88d2fdd933becca0aee6b00351444ce0b3505f8e",
+    "partial-refund-native-cost.json": "2a1abc3d70af174930429ee8aad40dce718359dda59227eca5b042025acfb56f",
+    "partial-refund-receipt-rendered.json": "ef58ef094e07e2507aa29f2e723e7761bbb9b0349516cfc6a8f9205f537ff2df",
+    "refund-live-sdk.log": "0d5c8be70cc94b22561efe63906ccc69aedc105c3d575e7e227e7bed52cc33f9",
+    "refund-acceptance-upgrade.log": "1fbd544355bbd0e6cb23875ed53fe646b42a52105daff2637761d7fc272f5b35"
+  }
+}
