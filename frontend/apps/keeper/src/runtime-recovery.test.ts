@@ -85,6 +85,47 @@ describe("runtime recovery composition", () => {
   const make = (config: KeeperConfig = base) =>
     createKeeperRuntime({ config, logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } });
 
+  it("retries missing terminal refunds without checkpointing an incomplete range", async () => {
+    const amounts = {
+      payoutGross: 200_000n,
+      payoutNet: 196_000n,
+      feeOnPayout: 4_000n,
+      protocolFeeAccrual: 2_000n
+    };
+    vi.mocked(mock.client.getContractEvents as ReturnType<typeof vi.fn>).mockImplementation(
+      async ({ eventName, fromBlock }) =>
+        eventName === "BetFinalized" && fromBlock === 101n
+          ? [
+              {
+                args: { positionId: 9n, ...amounts },
+                blockNumber: 105n,
+                transactionHash: hash,
+                logIndex: 1
+              }
+            ]
+          : []
+    );
+    const terminalRead = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("terminal RPC unavailable"))
+      .mockResolvedValue({ state: 4, ...amounts, refundAmount: 100_000n });
+    mock.client.readContract = terminalRead;
+    runtime = make();
+    await runtime.start();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(await mock.store!.getCursor(8453, "gamehub-events", hub)).toBeNull();
+    expect(await mock.store!.getBet({ chainId: 8453, betId: 9 })).toBeNull();
+    expect(runtime.health.snapshot().status).toBe("degraded");
+    await vi.advanceTimersByTimeAsync(300_000);
+    expect(await mock.store!.getCursor(8453, "gamehub-events", hub)).toBe(120n);
+    expect(await mock.store!.getBet({ chainId: 8453, betId: 9 })).toMatchObject({
+      payout: "196000",
+      refundAmount: "100000",
+      state: "finalized"
+    });
+    expect(mock.client.writeContract).not.toHaveBeenCalled();
+  });
+
   it.each([true, false])(
     "retries a failed index range without advancing the cursor (full scan=%s)",
     async (fullScan) => {

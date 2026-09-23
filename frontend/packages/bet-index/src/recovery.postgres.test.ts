@@ -56,6 +56,31 @@ describe.skipIf(!url)("PostgreSQL recovery integration", () => {
     expect((await second.sportsRecovery.due(scope, 0, 10))[0]?.requiredBlock).toBe(150n);
   });
 
+  it.each([0n, 100_000n])(
+    "backfills terminal refund %s and retains it across connections and raw replay",
+    async (refundAmount) => {
+      const betId = refundAmount === 0n ? 901n : 902n;
+      const event: BetIndexEvent = {
+        chainId: 84532,
+        gameHub: scope.sportsHub,
+        eventName: "BetFinalized",
+        blockNumber: 900n,
+        txHash: `0x${betId.toString(16).padStart(64, "0")}`,
+        logIndex: 1,
+        args: { positionId: betId, payoutNet: 196_000n, payoutGross: 200_000n }
+      };
+      await first.writeGameHubEvents([event]);
+      expect((await second.getBet({ chainId: 84532, betId }))?.refundAmount).toBeUndefined();
+      await second.writeGameHubEvents([{ ...event, args: { ...event.args, refundAmount } }]);
+      await first.writeGameHubEvents([event]);
+      expect(await second.getBet({ chainId: 84532, betId })).toMatchObject({
+        payout: "196000",
+        payoutGross: "200000",
+        refundAmount: refundAmount.toString()
+      });
+    }
+  );
+
   it("persists bounded cursors, work and numeric pages across connections without cross-talk", async () => {
     const input = [2n, 10n, 1n, 2n ** 255n].map((ticketId) => ({ marketId: 2n, ticketId }));
     await Promise.all([

@@ -14,6 +14,8 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import {
   createPostgresBetIndexStore,
+  enrichFinalizedBetEvents,
+  readSettledBetRefund,
   type BetIndexEvent,
   type BetRow,
   type BetIndexStore,
@@ -545,7 +547,7 @@ export function createKeeperRuntime({
       .filter((event): event is BetIndexEvent => Boolean(event));
     if (events.length === 0) return;
     try {
-      await betIndexStore.writeGameHubEvents(events);
+      await betIndexStore.writeGameHubEvents(await enrichFinalizedBetEvents(publicClient, events));
     } catch (error) {
       logger.error("casino.keeper.bet_index_write_failed", {
         eventName,
@@ -982,7 +984,7 @@ async function writeBetIndexRange(
       const events = stampedLogs
         .map((log) => toBetIndexEvent(config.chainId, config.gameHub, eventName, log))
         .filter((event): event is BetIndexEvent => Boolean(event));
-      await store.writeGameHubEvents(events);
+      await store.writeGameHubEvents(await enrichFinalizedBetEvents(publicClient, events));
     }
     await store.setCursor({
       blockNumber: range.toBlock,
@@ -1192,6 +1194,14 @@ async function buildTerminalBetRow({
     row.finalizedTxHash = txHash;
     row.payoutGross = bigintString(terminal.args.payoutGross);
     row.payout = bigintString(terminal.args.payoutNet);
+    row.refundAmount = (
+      await readSettledBetRefund({
+        client: publicClient,
+        gameHub,
+        betId,
+        args: terminal.args
+      })
+    ).toString();
   } else {
     row.refundedTxHash = txHash;
     row.refundAmount = bigintString(terminal.args.refundAmount);
