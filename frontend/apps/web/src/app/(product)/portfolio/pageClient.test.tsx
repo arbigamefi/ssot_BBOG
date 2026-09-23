@@ -148,6 +148,7 @@ describe("PortfolioPageClient", () => {
     expect(screen.getByRole("heading", { name: /Wallet profile/i })).toBeDefined();
     expect(screen.getByText("Wallet identity")).toBeDefined();
     expect(screen.getByText("Wallet access")).toBeDefined();
+    expect(screen.queryByText("Connected", { exact: true })).toBeNull();
     expect(screen.getAllByText("Refund balance").length).toBeGreaterThan(0);
     expect(screen.getByText("Wallet assets")).toBeDefined();
     expect(screen.getByText("Recent activity")).toBeDefined();

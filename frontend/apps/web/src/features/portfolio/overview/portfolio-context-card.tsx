@@ -3,18 +3,22 @@ import { useTranslations } from "next-intl";
 
 export function PortfolioContextCard({
   readOnly,
+  connected,
   releaseName
 }: {
   readOnly: boolean;
+  connected: boolean;
   releaseName?: string;
 }) {
   const t = useTranslations();
   const rows = [
     {
       label: t("portfolio.overview.context.session"),
-      value: readOnly
-        ? t("portfolio.overview.context.readOnly")
-        : t("portfolio.overview.context.writable")
+      value: !connected
+        ? t("portfolio.overview.context.disconnected")
+        : readOnly
+          ? t("portfolio.overview.context.readOnly")
+          : t("portfolio.overview.context.writable")
     },
     {
       label: t("portfolio.overview.context.network"),

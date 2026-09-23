@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 
 import { getSupportedAppChains, resolveDefaultAppChainId, type AppChain } from "./chain-registry";
 
@@ -24,7 +25,8 @@ function readStoredChainId(supportedChains: AppChain[]) {
 
 function readUrlChainId(supportedChains: AppChain[]) {
   if (typeof window === "undefined") return undefined;
-  const parsed = Number(new URLSearchParams(window.location.search).get("chainId"));
+  const receiptChain = /^\/casino\/receipt\/([0-9]+)\//.exec(window.location.pathname)?.[1];
+  const parsed = Number(receiptChain ?? new URLSearchParams(window.location.search).get("chainId"));
   if (!Number.isInteger(parsed)) return undefined;
   return supportedChains.some((chain) => chain.id === parsed) ? parsed : undefined;
 }
@@ -36,6 +38,9 @@ export function ActiveChainProvider({
   children: React.ReactNode;
   initialChainId?: string;
 }) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const query = searchParams?.toString();
   const supportedChains = React.useMemo(() => getSupportedAppChains(), []);
   const defaultChainId = React.useMemo(
     () => resolveDefaultAppChainId(initialChainId ?? process.env.NEXT_PUBLIC_CHAIN_ID),
@@ -59,7 +64,7 @@ export function ActiveChainProvider({
     applyLocationOrStoredChain();
     window.addEventListener("popstate", applyLocationOrStoredChain);
     return () => window.removeEventListener("popstate", applyLocationOrStoredChain);
-  }, [supportedChains]);
+  }, [supportedChains, pathname, query]);
 
   const setSelectedChainId = React.useCallback(
     (chainId: number) => {

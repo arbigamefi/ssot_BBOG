@@ -2108,7 +2108,8 @@
         "readOnly": "Read-only",
         "writable": "Connected",
         "network": "Active network",
-        "digest": "Digest"
+        "digest": "Digest",
+        "disconnected": "Not connected"
       },
       "identity": {
         "eyebrow": "Wallet",

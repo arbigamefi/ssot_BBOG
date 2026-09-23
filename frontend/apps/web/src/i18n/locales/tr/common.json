@@ -2848,7 +2848,8 @@
         "readOnly": "Salt okunur",
         "writable": "Bağlı",
         "network": "Aktif ağ",
-        "digest": "Özet"
+        "digest": "Özet",
+        "disconnected": "Bağlı değil"
       },
       "identity": {
         "eyebrow": "Cüzdan",

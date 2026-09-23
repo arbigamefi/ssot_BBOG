@@ -2848,7 +2848,8 @@
         "readOnly": "Только чтение",
         "writable": "Подключён",
         "network": "Активная сеть",
-        "digest": "Дайджест"
+        "digest": "Дайджест",
+        "disconnected": "Не подключён"
       },
       "identity": {
         "eyebrow": "Кошелек",
