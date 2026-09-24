@@ -1,8 +1,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import * as React from "react";
 
 import { EarnActionPanel, type EarnFlowState } from "./earn-action-panel";
+import { requestWalletConnect } from "../../app-shell/wallet-connect-events";
+
+vi.mock("../../app-shell/wallet-connect-events", () => ({ requestWalletConnect: vi.fn() }));
 
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => key
@@ -65,7 +68,33 @@ function renderPanel(
 }
 
 describe("EarnActionPanel", () => {
-  afterEach(() => cleanup());
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
+
+  it("offers wallet connection instead of a disabled deposit and never submits while disconnected", () => {
+    const onSubmit = vi.fn();
+    renderPanel(baseFlow, { connected: false, disabled: true, onSubmit });
+    fireEvent.click(screen.getByRole("button", { name: "app.connectWalletButton" }));
+    expect(requestWalletConnect).toHaveBeenCalledTimes(1);
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("preserves the connected transaction gate and freezes intent while busy", () => {
+    const onSubmit = vi.fn();
+    renderPanel({ ...baseFlow, busy: true }, { onSubmit });
+    expect(
+      screen.getByRole("textbox", { name: "earn.actions.amount" }).hasAttribute("disabled")
+    ).toBe(true);
+    expect(
+      screen
+        .getByRole("button", { name: "earn.actions.tabs.withdraw.label" })
+        .hasAttribute("disabled")
+    ).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "earn.actions.submit.executing" }));
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
 
   it("does not render transaction chrome during wallet preflight", () => {
     renderPanel({

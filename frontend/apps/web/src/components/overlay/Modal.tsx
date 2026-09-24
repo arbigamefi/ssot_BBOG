@@ -30,7 +30,7 @@ export function Modal({
   const { onBackdropMouseDown, panelRef } = useOverlayController<HTMLDivElement>({
     lockScroll: true,
     onClose,
-    open,
+    open: mounted && open,
     trapFocus: true
   });
 

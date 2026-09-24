@@ -24,14 +24,20 @@ import { InstallPrompt } from "./pwa/InstallPrompt";
 function getActiveRoute(pathname: string): AppRoute {
   if (pathname === "/casino") return "directory";
   if (pathname === "/sportsbook" || pathname.startsWith("/sportsbook/")) return "sportsbook";
-  if (pathname === "/portfolio/activity" || pathname.startsWith("/portfolio/activity/")) {
+  if (
+    pathname === "/portfolio/activity" ||
+    pathname.startsWith("/portfolio/activity/") ||
+    pathname.startsWith("/portfolio/tickets/")
+  ) {
     return "bets";
   }
   if (pathname === "/earn") return "liquidity";
   if (pathname === "/portfolio/claims") return "claims";
   if (pathname === "/affiliate" || pathname === "/portfolio/referral") return "referral";
   if (pathname === "/portfolio") return "account";
-  if (pathname === "/ops") return "ops";
+  if (pathname === "/support") return "support";
+  if (pathname === "/status") return "status";
+  if (pathname === "/ops" || pathname.startsWith("/ops/")) return "ops";
   if (pathname === "/casino/roulette") return "roulette";
   if (pathname === "/casino/baccarat") return "baccarat";
   if (pathname === "/casino/sic-bo") return "sicbo";
@@ -72,6 +78,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <>
       <AppShellFrame
+        skipLinkLabel={t("app.skipToContent")}
+        fullBleed={pathname === "/"}
         footer={<SiteFooter />}
         header={<AppHeader activeRoute={getActiveRoute(pathname)} variant={headerVariant} />}
         readOnlyBanner={

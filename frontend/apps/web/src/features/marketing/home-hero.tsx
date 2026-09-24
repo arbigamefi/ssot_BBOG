@@ -38,7 +38,7 @@ export function HomeHero({
     { icon: CodeBracketIcon, ...copy.proofRows.bytecode }
   ];
   return (
-    <section className="relative overflow-hidden border-b border-border-soft bg-surface-0 lg:min-h-[calc(100svh-5.5rem)]">
+    <section className="relative overflow-hidden border-b border-border-soft bg-surface-0 lg:min-h-svh">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-[linear-gradient(120deg,hsl(var(--surface-0))_0%,hsl(var(--surface-1))_58%,hsl(var(--surface-0))_100%)]"
@@ -48,21 +48,21 @@ export function HomeHero({
         className="pointer-events-none absolute inset-y-0 right-0 hidden w-1/2 bg-[radial-gradient(circle_at_55%_42%,hsl(var(--brand)/0.1),transparent_58%)] lg:block"
       />
 
-      <div className="relative mx-auto grid max-w-[1440px] grid-cols-1 gap-8 px-6 pb-12 pt-24 md:gap-10 md:pb-16 md:pt-32 lg:min-h-[calc(100svh-5.5rem)] lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:items-center lg:gap-6 lg:px-10 lg:pb-20 lg:pt-28 xl:grid-cols-[minmax(0,0.88fr)_minmax(440px,0.92fr)] xl:gap-8">
+      <div className="relative mx-auto grid max-w-[1440px] grid-cols-1 gap-8 px-5 pb-12 pt-24 sm:px-6 md:gap-10 md:pb-16 md:pt-28 lg:min-h-svh lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:items-center lg:gap-6 lg:px-10 lg:pb-14 lg:pt-28 xl:grid-cols-[minmax(0,0.88fr)_minmax(440px,0.92fr)] xl:gap-8">
         <div className="max-w-3xl lg:pb-8">
           <SectionEyebrow size="hero" className="mb-6">
             <span className="h-2 w-2 rounded-full bg-accent" />
             {copy.channel}
           </SectionEyebrow>
 
-          <h1 className="max-w-4xl text-balance text-4xl font-bold leading-[1.04] tracking-normal text-fg sm:text-5xl md:text-7xl lg:text-6xl xl:text-[5rem]">
+          <h1 className="max-w-4xl text-balance break-words text-4xl font-bold leading-[1.08] tracking-tight text-fg sm:text-5xl md:text-6xl lg:text-[clamp(2.75rem,4vw,4rem)]">
             {copy.title}
           </h1>
-          <p className="mt-6 max-w-2xl text-lg leading-8 text-fg-muted md:text-xl">
+          <p className="mt-5 max-w-xl text-base leading-7 text-fg-muted md:text-lg">
             {copy.description}
           </p>
 
-          <div className="mt-10 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-7 flex flex-col gap-3 sm:flex-row">
             <Link
               href="/casino"
               className="inline-flex items-center justify-center gap-3 rounded-md bg-brand px-6 py-4 text-sm font-bold uppercase tracking-[0.12em] text-fg-inverse shadow-e2 transition-[transform,box-shadow,background-color] hover:bg-brand-hover"
@@ -116,7 +116,7 @@ export function HomeHero({
       <a
         href="#home-games"
         aria-label={copy.scrollHint}
-        className="absolute left-1/2 top-[calc(100svh-7.25rem)] hidden h-11 w-11 -translate-x-1/2 items-center justify-center rounded-full border border-border-soft bg-surface-1/80 text-fg-muted shadow-e2 backdrop-blur transition-colors hover:border-brand/40 hover:text-fg motion-safe:animate-bounce lg:flex"
+        className="absolute bottom-4 left-1/2 hidden h-11 w-11 -translate-x-1/2 items-center justify-center rounded-full border border-border-soft bg-surface-1/80 text-fg-muted shadow-e2 backdrop-blur transition-colors hover:border-brand/40 hover:text-fg motion-safe:animate-bounce lg:flex"
       >
         <ChevronDownIcon className="h-5 w-5" />
       </a>
@@ -140,7 +140,7 @@ function HeroPayoutVisual({
   const pockets = Array.from({ length: 37 }, (_, index) => index);
   return (
     <div
-      className="relative mx-auto h-[324px] w-full max-w-[380px] sm:h-[346px] sm:max-w-[408px] md:h-[384px] md:max-w-[456px] lg:mx-0 lg:h-[440px] lg:w-full lg:max-w-none xl:h-[480px] xl:max-w-[620px]"
+      className="relative mx-auto w-full max-w-[380px] pt-24 sm:max-w-[408px] md:max-w-[456px] md:pt-28 lg:mx-0 lg:h-[440px] lg:pt-0 lg:w-full lg:max-w-none xl:h-[480px] xl:max-w-[620px]"
       aria-hidden
       style={{ perspective: "1600px" }}
     >
@@ -179,7 +179,7 @@ function HeroPayoutVisual({
           Widest object in the frame, and right-flush with the wheel, so the two
           share one edge instead of drifting apart. The extra width also reaches
           back toward the headline and closes the dead band between the columns. */}
-      <div className="absolute inset-x-0 bottom-1 w-full origin-center md:bottom-0 lg:left-auto lg:right-0 lg:w-full lg:max-w-[440px] lg:[transform:rotateY(-7deg)_rotateX(4deg)] xl:max-w-[500px]">
+      <div className="relative z-10 w-full origin-center lg:absolute lg:bottom-0 lg:left-auto lg:right-0 lg:w-full lg:max-w-[440px] lg:[transform:rotateY(-7deg)_rotateX(4deg)] xl:max-w-[500px]">
         <div
           aria-hidden
           className="pointer-events-none absolute -inset-x-2 -bottom-5 top-8 -z-10 rounded-lg blur-2xl"
@@ -194,7 +194,7 @@ function HeroPayoutVisual({
               background: "linear-gradient(90deg, transparent, hsl(var(--fg) / 0.24), transparent)"
             }}
           />
-          <div className="flex items-center justify-between border-b border-border-soft px-4 py-3 md:px-5 md:py-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-soft px-4 py-3 md:px-5 md:py-4">
             <span className="text-xs font-bold uppercase tracking-[0.2em] text-fg-muted">
               {copy.receipt}
             </span>
@@ -203,7 +203,9 @@ function HeroPayoutVisual({
             </span>
           </div>
           <div className="px-4 py-4 md:px-5 md:py-5">
-            <div className="text-3xl font-bold leading-tight text-fg md:text-4xl">{copy.title}</div>
+            <div className="break-words text-2xl font-bold leading-tight text-fg md:text-3xl">
+              {copy.title}
+            </div>
             <div className="mt-4 text-sm font-semibold text-fg-muted">{copy.wallet}</div>
           </div>
           <div className="grid grid-cols-2 border-t border-border-soft">

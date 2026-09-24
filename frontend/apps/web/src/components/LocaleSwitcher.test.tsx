@@ -82,4 +82,19 @@ describe("LocaleSwitcher", () => {
     expect(screen.queryByRole("dialog", { name: "Language" })).toBeNull();
     expect(document.body.style.overflow).toBe("");
   });
+
+  it("supports arrow navigation and returns keyboard focus to the trigger on Escape", () => {
+    render(<LocaleSwitcher compact />);
+    const trigger = screen.getByRole("button", { name: "Language" });
+    trigger.focus();
+    fireEvent.click(trigger);
+    expect(document.activeElement).toBe(screen.getByRole("menuitemradio", { name: /English/ }));
+    fireEvent.keyDown(document, { key: "ArrowDown" });
+    expect(document.activeElement).toBe(screen.getByRole("menuitemradio", { name: /简体中文/ }));
+    fireEvent.keyDown(document, { key: "End" });
+    expect(document.activeElement).toBe(screen.getByRole("menuitemradio", { name: /Türkçe/ }));
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(document.activeElement).toBe(trigger);
+  });
 });

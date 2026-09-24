@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 
 import { ArbiGameFiBrand } from "./ArbiGameFiBrand";
-import { LocaleSwitcher } from "./LocaleSwitcher";
+import { LocaleSheetSwitcher, LocaleSwitcher } from "./LocaleSwitcher";
 import { useCompliance } from "../app-shell/compliance";
 
 const GAME_LINKS = [
@@ -52,14 +52,14 @@ function FooterColumn({
   links: ReadonlyArray<{ href: string; label: string }>;
 }) {
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-2">
       <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-fg-subtle">{title}</h3>
-      <ul className="space-y-3">
+      <ul className="space-y-1">
         {links.map((link) => (
           <li key={link.href}>
             <Link
               href={link.href}
-              className="text-sm text-fg-muted transition-colors hover:text-fg"
+              className="inline-flex min-h-11 items-center py-2 text-sm text-fg-muted transition-colors hover:text-fg"
             >
               {link.label}
             </Link>
@@ -82,8 +82,8 @@ export function SiteFooter() {
   return (
     <footer className="border-t border-border bg-surface-0">
       <div className="mx-auto max-w-[1480px] px-4 py-16 sm:px-6 lg:px-8">
-        <div className="grid gap-10 md:grid-cols-[1.5fr_1fr_1fr_1fr_1fr]">
-          <div className="space-y-5">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-8 lg:grid-cols-[1.5fr_1fr_1fr_1fr_1fr]">
+          <div className="col-span-2 space-y-5 lg:col-span-1">
             <ArbiGameFiBrand accent="cyan" subtitle={t("footer.brandSubtitle")} />
             <p className="max-w-sm text-sm leading-7 text-fg-muted">{t("footer.description")}</p>
             <div className="inline-flex items-center gap-2 rounded-full border border-border bg-surface-1 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-fg-muted">
@@ -130,7 +130,12 @@ export function SiteFooter() {
                 {link.label}
               </a>
             ))}
-            <LocaleSwitcher menuPlacement="top" />
+            <div className="w-full md:hidden">
+              <LocaleSheetSwitcher />
+            </div>
+            <div className="hidden md:block">
+              <LocaleSwitcher menuPlacement="top" />
+            </div>
           </div>
         </div>
       </div>

@@ -10,6 +10,8 @@ export type AppShellProps = {
   header?: React.ReactNode;
   readOnlyBanner?: React.ReactNode;
   variant?: AppShellVariant;
+  fullBleed?: boolean;
+  skipLinkLabel?: string;
 };
 
 export function AppShell({
@@ -17,6 +19,8 @@ export function AppShell({
   footer,
   header,
   readOnlyBanner,
+  fullBleed = false,
+  skipLinkLabel = "Skip to content",
   variant = "product"
 }: AppShellProps) {
   const isGame = variant === "game";
@@ -29,6 +33,12 @@ export function AppShell({
         isGame ? "overflow-x-clip selection:bg-brand/30" : "selection:bg-brand/20"
       )}
     >
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[120] focus:rounded-md focus:bg-fg focus:px-5 focus:py-3 focus:font-semibold focus:text-fg-inverse"
+      >
+        {skipLinkLabel}
+      </a>
       {header}
 
       {isGame ? (
@@ -42,7 +52,8 @@ export function AppShell({
       {readOnlyBanner ? (
         <div
           className={cn(
-            "relative z-20 mx-auto px-6 pt-[5.5rem]",
+            "relative z-20 mx-auto px-4 sm:px-6",
+            isMarketing ? "pt-24" : "pt-5",
             isGame ? "max-w-[1600px] md:px-8" : "max-w-[1440px]"
           )}
         >
@@ -51,9 +62,15 @@ export function AppShell({
       ) : null}
 
       <main
+        id="main-content"
+        tabIndex={-1}
         className={cn(
-          "relative z-10 mx-auto w-full pb-16",
-          isGame ? "flex max-w-[1600px] flex-col gap-6 px-4 pb-12 md:px-8" : "max-w-[1440px] px-6",
+          "relative z-10 mx-auto w-full scroll-mt-28 pb-16 focus:outline-none",
+          fullBleed
+            ? "max-w-none px-0 pb-0"
+            : isGame
+              ? "flex max-w-[1600px] flex-col gap-6 px-4 pb-12 md:px-8"
+              : "max-w-[1440px] px-4 sm:px-6",
           readOnlyBanner ? "pt-5" : isMarketing ? "pt-0" : isGame ? "pt-5" : "pt-10"
         )}
       >

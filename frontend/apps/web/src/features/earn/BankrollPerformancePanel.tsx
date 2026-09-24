@@ -172,7 +172,11 @@ export function BankrollPerformancePanel({
                   ? "text-success"
                   : "text-danger"
             )}
-            title={formatSignedToken(houseRevenue, decimals, symbol, locale)}
+            title={
+              hasChainPerformance
+                ? formatSignedToken(houseRevenue, decimals, symbol, locale)
+                : undefined
+            }
           >
             {hasLifetimeActivity ? formatSignedToken(houseRevenue, decimals, symbol, locale) : "—"}
           </div>
@@ -207,7 +211,7 @@ export function BankrollPerformancePanel({
         ) : (
           <div className="flex items-center justify-center p-6 text-center">
             <p className="max-w-xs text-xs leading-5 text-fg-subtle">
-              {t("earn.performance.empty")}
+              {t(hasChainPerformance ? "earn.performance.empty" : "earn.performance.pending")}
             </p>
           </div>
         )}

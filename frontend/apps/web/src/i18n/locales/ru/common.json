@@ -1,5 +1,6 @@
 {
   "app": {
+    "skipToContent": "Перейти к содержимому",
     "connectWalletActionDescription": "Подключите кошелёк, чтобы {action}.",
     "connectWalletButton": "Подключить кошелёк",
     "connectWalletShort": "Подключить",
@@ -914,6 +915,7 @@
       "sharePriceReference": "Цена доли",
       "currentSharePrice": "Текущая цена доли",
       "empty": "В этой сети пока нет активности банка.",
+      "pending": "Данные о результатах в блокчейне пока недоступны.",
       "windowLabel": "Период",
       "windows": {
         "all": "Всё",

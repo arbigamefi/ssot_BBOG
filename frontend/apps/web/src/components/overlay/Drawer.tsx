@@ -29,8 +29,9 @@ export function Drawer({
   const titleId = React.useId();
   const { onBackdropMouseDown, panelRef } = useOverlayController<HTMLElement>({
     lockScroll: true,
+    mobileOnly: true,
     onClose,
-    open,
+    open: mounted && open,
     trapFocus: true
   });
 
@@ -65,7 +66,7 @@ export function Drawer({
             type="button"
             aria-label={closeLabel}
             onClick={onClose}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border-soft text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-border-soft text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
           >
             <XMarkIcon className="h-5 w-5" />
           </button>

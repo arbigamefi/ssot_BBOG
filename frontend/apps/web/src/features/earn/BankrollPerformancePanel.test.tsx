@@ -69,6 +69,7 @@ const TRANSLATIONS: Record<string, string> = {
   "earn.performance.pnlTrend": "Daily house P&L",
   "earn.performance.volumeTrend": "Daily volume",
   "earn.performance.sharePriceReference": "Share price",
+  "earn.performance.pending": "On-chain performance is not available yet.",
   "earn.performance.empty": "No vault activity yet on this chain.",
   "earn.performance.windowLabel": "Time range",
   "earn.performance.windows.all": "All",
@@ -190,6 +191,14 @@ describe("BankrollPerformancePanel", () => {
     expect(screen.getByText("Daily house P&L")).toBeDefined();
     expect(screen.getByText("Daily volume")).toBeDefined();
     expect(screen.getByText("11 USDC")).toBeDefined(); // hovered day's P&L
+  });
+
+  it("does not report missing chain data as zero activity", () => {
+    statsUnavailable = true;
+    render(<BankrollPerformancePanel assetDecimals={6} assetSymbol="USDC" />);
+    expect(screen.getByText("On-chain performance is not available yet.")).toBeDefined();
+    expect(screen.queryByText("No vault activity yet on this chain.")).toBeNull();
+    expect(screen.queryByTitle("0 USDC")).toBeNull();
   });
 
   it("keeps the on-chain performance shell when the index is unavailable", () => {

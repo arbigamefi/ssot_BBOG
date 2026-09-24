@@ -33,8 +33,9 @@ export function Sheet({
   const titleId = React.useId();
   const { onBackdropMouseDown, panelRef } = useOverlayController<HTMLDivElement>({
     lockScroll: true,
+    mobileOnly: true,
     onClose,
-    open,
+    open: mounted && open,
     trapFocus: true
   });
 
@@ -77,7 +78,7 @@ export function Sheet({
             type="button"
             aria-label={closeLabel}
             onClick={onClose}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-md border border-border-soft bg-surface-2 text-fg-muted transition-colors hover:bg-surface-3 hover:text-fg"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-md border border-border-soft bg-surface-2 text-fg-muted transition-colors hover:bg-surface-3 hover:text-fg"
           >
             <XMarkIcon className="h-5 w-5" />
           </button>
