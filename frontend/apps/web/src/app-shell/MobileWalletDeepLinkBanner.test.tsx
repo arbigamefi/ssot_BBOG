@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import * as React from "react";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MobileWalletDeepLinkBanner } from "./MobileWalletDeepLinkBanner";
 import { MobileWalletEntryProvider } from "./MobileWalletEntryProvider";
@@ -157,7 +157,9 @@ describe("mobile wallet entry", () => {
   });
   it("connects directly from the prominent home action", () => {
     render(<View />);
-    fireEvent.click(screen.getAllByRole("button", { name: "title" })[0]);
+    fireEvent.click(
+      within(screen.getByRole("complementary")).getByRole("button", { name: "title" })
+    );
     expect(state.connect).toHaveBeenCalledOnce();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
