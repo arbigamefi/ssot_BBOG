@@ -1,5 +1,5 @@
 {
-  "status": "sepolia-safe-accepted-pending-functional-acceptance",
+  "status": "v15-dual-chain-deployed-mainnet-business-acceptance-pending-user-execution",
   "authorizedBy": "Owner messages in this task",
   "chainSafes": {
     "8453": "0x7F0c244e1701B069727670745FD047179Ef8691d",
@@ -12,8 +12,8 @@
   "releaseSigner": "0x93ac87413E17d01CBa37B6317f64890bF7f99aC3",
   "releaseSignerPolicy": "use the approved deployer for release metadata only; Safe retains protocol governance",
   "remainingInputs": [
-    "complete fresh-chain functional and recovery acceptance",
-    "fund Base mainnet deployer before mainnet deployment"
+    "user execution of prepared mainnet liquidity and business acceptance transactions",
+    "old governance wallet signatures for remaining 14 historical Bank pauses"
   ],
   "productionChangesCompleted": [
     "finalized Sepolia positions 142 and 143",
@@ -71,10 +71,15 @@
     "lastReceiptBlock": 47140563
   },
   "latestMainnetReadback": {
-    "observedAtUtc": "2026-09-22T04:05:58.980334+00:00",
+    "observedAtUtc": "2026-09-24T07:28:53.377Z",
     "chainId": 8453,
-    "balanceWei": "0",
-    "nonce": 0
+    "blockNumber": "51722792",
+    "balanceWei": "1349426377158414",
+    "nonce": 53,
+    "usdcBaseUnits": "5100000",
+    "lpShareBaseUnits": "2000000",
+    "allowanceBaseUnits": "0",
+    "reservedBaseUnits": "0"
   },
   "latestSepoliaGovernanceAcceptance": "base-sepolia-governance-accepted.json",
   "sepoliaAcceptanceWallet": {
@@ -86,5 +91,15 @@
     "liquidityBudgetUsdc": "40",
     "maximumBettingBudgetUsdc": "10",
     "supersedesAcceptanceWallet": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684"
+  },
+  "mainnetAcceptanceAuthorization": {
+    "source": "Owner message on 2026-09-24 authorizes allocation of existing deployer USDC between additional LP and small acceptance bets; no additional funding required",
+    "scope": "existing deployment wallet USDC; no loss-budget clarification pending",
+    "additionalLpUsdc": "4",
+    "plannedTotalLpSharesBaseUnits": "6000000",
+    "plannedEightGameTotalStakeUsdc": "0.057264",
+    "nativeFeeEnvelopeEth": "0.0004",
+    "executionStatus": "simulated only; user signs and broadcasts financial transactions in own wallet",
+    "preparationEvidence": "base-mainnet-acceptance-prepared.json"
   }
 }

@@ -1,0 +1,350 @@
+{
+  "preparedAt": "2026-09-24T07:18:06.919Z",
+  "status": "SIMULATED_NOT_SIGNED_NOT_BROADCAST",
+  "liveBroadcast": false,
+  "chainId": 8453,
+  "forkBlock": "51722403",
+  "independentRpcUrls": [
+    "https://base.gateway.tenderly.co",
+    "https://base-rpc.publicnode.com"
+  ],
+  "player": "0x93ac87413E17d01CBa37B6317f64890bF7f99aC3",
+  "bank": "0xEa3845f08a273257c3d3458D26e7bd4234330Dd4",
+  "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+  "hub": "0xB4056D12aD04B01629b3A022fee385D2a1ae4b48",
+  "before": {
+    "chainId": 8453,
+    "blockNumber": "51722403",
+    "nonce": 53,
+    "nativeWei": "1349426377158414",
+    "usdc": "5100000",
+    "lpShares": "2000000",
+    "assets": "2000000",
+    "supply": "2000000",
+    "reserved": "0",
+    "allowance": "0",
+    "paused": false,
+    "governance": "0x7F0c244e1701B069727670745FD047179Ef8691d"
+  },
+  "additionalLpUsdcBaseUnits": "4000000",
+  "totalLpSharesAfterDeposit": "6000000",
+  "totalStakeUsdcBaseUnits": "57264",
+  "walletUsdcAfterAllRequests": "1042736",
+  "nativeEnvelopeCapWei": "400000000000000",
+  "simulatedNativeEnvelopeWei": "244540634964520",
+  "configuredVrfGasPriceWei": "10000000",
+  "feeQuotePolicy": "Transaction gas price must not exceed adapter configured requestGasPriceWei. Extra msg.value cannot compensate because VRFHub refunds the surplus before the adapter forwards the configured quote. Refresh each quote immediately before user signing, use 50% value buffer, stop if aggregate native envelope exceeds cap. Includes gasLimit * gasPrice and sent value; Base L1 data fees require additional live wallet estimation.",
+  "executionPolicy": "USER_EXECUTES_IN_OWN_WALLET. EOA transactions only; never import this into the governance Safe. Check current nonce, allowance, pool balances and receipts before every step. Execute games one at a time and reconcile real VRF settlement before proceeding.",
+  "simulationLimit": "Fork tests LP and all eight request paths with real production bytecode and maximum aggregate reservation. It does not demonstrate live Chainlink callbacks or keeper settlement. All transaction receipts exist only on the disposable local fork.",
+  "afterLp": {
+    "chainId": 8453,
+    "nonce": 55,
+    "nativeWei": "1348080277158414",
+    "usdc": "1100000",
+    "lpShares": "6000000",
+    "assets": "6000000",
+    "supply": "6000000",
+    "reserved": "0",
+    "allowance": "0",
+    "paused": false,
+    "governance": "0x7F0c244e1701B069727670745FD047179Ef8691d"
+  },
+  "after": {
+    "chainId": 8453,
+    "nonce": 64,
+    "nativeWei": "1187175163848734",
+    "usdc": "1042736",
+    "lpShares": "6000000",
+    "assets": "6057264",
+    "supply": "6000000",
+    "reserved": "460641",
+    "allowance": "0",
+    "paused": false,
+    "governance": "0x7F0c244e1701B069727670745FD047179Ef8691d"
+  },
+  "transactions": [
+    {
+      "sequence": 1,
+      "label": "Approve exactly 4 USDC for additional LP",
+      "to": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "valueWei": "0",
+      "decoded": {
+        "functionName": "approve",
+        "args": [
+          "0xEa3845f08a273257c3d3458D26e7bd4234330Dd4",
+          "4000000"
+        ]
+      },
+      "gasEstimate": "55807",
+      "gasLimit": "83710",
+      "gasPriceWei": "10000000",
+      "forkOnlyGasUsed": "55425"
+    },
+    {
+      "sequence": 2,
+      "label": "Deposit additional 4 USDC; LP shares remain owned by deployment wallet",
+      "to": "0xEa3845f08a273257c3d3458D26e7bd4234330Dd4",
+      "valueWei": "0",
+      "decoded": {
+        "functionName": "deposit",
+        "args": [
+          "4000000",
+          "0x93ac87413E17d01CBa37B6317f64890bF7f99aC3"
+        ]
+      },
+      "gasEstimate": "88971",
+      "gasLimit": "133456",
+      "gasPriceWei": "10000000",
+      "forkOnlyGasUsed": "79185"
+    },
+    {
+      "sequence": 3,
+      "label": "Approve only the eight planned stakes",
+      "to": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "valueWei": "0",
+      "decoded": {
+        "functionName": "approve",
+        "args": [
+          "0xEa3845f08a273257c3d3458D26e7bd4234330Dd4",
+          "57264"
+        ]
+      },
+      "gasEstimate": "55807",
+      "gasLimit": "83710",
+      "gasPriceWei": "10000000",
+      "forkOnlyGasUsed": "55425"
+    },
+    {
+      "sequence": 4,
+      "label": "dice.placeBet(poolId)",
+      "to": "0xB4056D12aD04B01629b3A022fee385D2a1ae4b48",
+      "valueWei": "11000006870565",
+      "decoded": {
+        "functionName": "placeBet",
+        "args": [
+          "0x8d8e6987fb3617c00abdd68d6c1f7eac28b7f9f96b25367e9b65dacaa0914a8b",
+          "1",
+          "0x00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000061",
+          {
+            "amountPerRoll": "3000",
+            "betCount": 1,
+            "stopGain": "0",
+            "stopLoss": "0"
+          },
+          "0x0000000000000000000000000000000000000000",
+          200
+        ]
+      },
+      "gasEstimate": "1333371",
+      "gasLimit": "2000056",
+      "gasPriceWei": "10000000",
+      "forkOnlyGasUsed": "1325591",
+      "stakeUsdcBaseUnits": "3000",
+      "maxPayoutUsdcBaseUnits": "100000",
+      "quotedFeeWei": "7333337913710"
+    },
+    {
+      "sequence": 5,
+      "label": "coin-toss.placeBet(poolId)",
+      "to": "0xB4056D12aD04B01629b3A022fee385D2a1ae4b48",
+      "valueWei": "11000006870565",
+      "decoded": {
+        "functionName": "placeBet",
+        "args": [
+          "0x6e800792927dde77598bf8cf4e8d9832799fbff08d7fbb3989225097ac6fa4e7",
+          "1",
+          "0x0000000000000000000000000000000000000000000000000000000000000001",
+          {
+            "amountPerRoll": "10000",
+            "betCount": 1,
+            "stopGain": "0",
+            "stopLoss": "0"
+          },
+          "0x0000000000000000000000000000000000000000",
+          200
+        ]
+      },
+      "gasEstimate": "1276294",
+      "gasLimit": "1914441",
+      "gasPriceWei": "10000000",
+      "forkOnlyGasUsed": "1268514",
+      "stakeUsdcBaseUnits": "10000",
+      "maxPayoutUsdcBaseUnits": "20000",
+      "quotedFeeWei": "7333337913710"
+    },
+    {
+      "sequence": 6,
+      "label": "roulette.placeBet(poolId,bitmask=1)",
+      "to": "0xB4056D12aD04B01629b3A022fee385D2a1ae4b48",
+      "valueWei": "11000006870565",
+      "decoded": {
+        "functionName": "placeBet",
+        "args": [
+          "0x41541f350c1da9780d719f9ebc2dd9d5883bf8c8df895243a1696bede4a708c0",
+          "1",
+          "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001",
+          {
+            "amountPerRoll": "2702",
+            "betCount": 1,
+            "stopGain": "0",
+            "stopLoss": "0"
+          },
+          "0x0000000000000000000000000000000000000000",
+          200
+        ]
+      },
+      "gasEstimate": "1279527",
+      "gasLimit": "1919290",
+      "gasPriceWei": "10000000",
+      "forkOnlyGasUsed": "1271747",
+      "stakeUsdcBaseUnits": "2702",
+      "maxPayoutUsdcBaseUnits": "99974",
+      "quotedFeeWei": "7333337913710"
+    },
+    {
+      "sequence": 7,
+      "label": "keno.placeBet(poolId)",
+      "to": "0xB4056D12aD04B01629b3A022fee385D2a1ae4b48",
+      "valueWei": "11000006870565",
+      "decoded": {
+        "functionName": "placeBet",
+        "args": [
+          "0xb4aacd27778fcc813ac1737807c34d5d4193c514f0d91a0caeeada2d6752baf0",
+          "1",
+          "0x0000000000000000000000000000000000000000000000000000000000000001",
+          {
+            "amountPerRoll": "10000",
+            "betCount": 1,
+            "stopGain": "0",
+            "stopLoss": "0"
+          },
+          "0x0000000000000000000000000000000000000000",
+          200
+        ]
+      },
+      "gasEstimate": "1277090",
+      "gasLimit": "1915635",
+      "gasPriceWei": "10000000",
+      "forkOnlyGasUsed": "1269310",
+      "stakeUsdcBaseUnits": "10000",
+      "maxPayoutUsdcBaseUnits": "15000",
+      "quotedFeeWei": "7333337913710"
+    },
+    {
+      "sequence": 8,
+      "label": "plinko.placeBet(poolId)",
+      "to": "0xB4056D12aD04B01629b3A022fee385D2a1ae4b48",
+      "valueWei": "11000006870565",
+      "decoded": {
+        "functionName": "placeBet",
+        "args": [
+          "0xf079b0c3d932c294ee3983751f8789be874f0ceef4ce93c84fc7e6be1e9f3bd2",
+          "1",
+          "0x0000000000000000000000000000000000000000000000000000000000000001",
+          {
+            "amountPerRoll": "10000",
+            "betCount": 1,
+            "stopGain": "0",
+            "stopLoss": "0"
+          },
+          "0x0000000000000000000000000000000000000000",
+          200
+        ]
+      },
+      "gasEstimate": "1276594",
+      "gasLimit": "1914891",
+      "gasPriceWei": "10000000",
+      "forkOnlyGasUsed": "1268814",
+      "stakeUsdcBaseUnits": "10000",
+      "maxPayoutUsdcBaseUnits": "82714",
+      "quotedFeeWei": "7333337913710"
+    },
+    {
+      "sequence": 9,
+      "label": "sic-bo.placeBet(poolId)",
+      "to": "0xB4056D12aD04B01629b3A022fee385D2a1ae4b48",
+      "valueWei": "11000006870565",
+      "decoded": {
+        "functionName": "placeBet",
+        "args": [
+          "0x3f8a7d05df6b7136e6cb9eb13e763fb722015b2357a0378af58fea0efcabce1d",
+          "1",
+          "0x00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000",
+          {
+            "amountPerRoll": "10000",
+            "betCount": 1,
+            "stopGain": "0",
+            "stopLoss": "0"
+          },
+          "0x0000000000000000000000000000000000000000",
+          200
+        ]
+      },
+      "gasEstimate": "1279457",
+      "gasLimit": "1919185",
+      "gasPriceWei": "10000000",
+      "forkOnlyGasUsed": "1271677",
+      "stakeUsdcBaseUnits": "10000",
+      "maxPayoutUsdcBaseUnits": "20571",
+      "quotedFeeWei": "7333337913710"
+    },
+    {
+      "sequence": 10,
+      "label": "slots.placeBet(poolId)",
+      "to": "0xB4056D12aD04B01629b3A022fee385D2a1ae4b48",
+      "valueWei": "11000006870565",
+      "decoded": {
+        "functionName": "placeBet",
+        "args": [
+          "0x3b985d08128ef7b25e693a611fb5ae6f2d2b2974adbec7deb83c4f95c2562e6b",
+          "1",
+          "0x0000000000000000000000000000000000000000000000000000000000000000",
+          {
+            "amountPerRoll": "1562",
+            "betCount": 1,
+            "stopGain": "0",
+            "stopLoss": "0"
+          },
+          "0x0000000000000000000000000000000000000000",
+          200
+        ]
+      },
+      "gasEstimate": "1256495",
+      "gasLimit": "1884742",
+      "gasPriceWei": "10000000",
+      "forkOnlyGasUsed": "1248715",
+      "stakeUsdcBaseUnits": "1562",
+      "maxPayoutUsdcBaseUnits": "99968",
+      "quotedFeeWei": "7333337913710"
+    },
+    {
+      "sequence": 11,
+      "label": "baccarat.placeBet(poolId)",
+      "to": "0xB4056D12aD04B01629b3A022fee385D2a1ae4b48",
+      "valueWei": "11000006870565",
+      "decoded": {
+        "functionName": "placeBet",
+        "args": [
+          "0xf03cfb57946606f01bd40b08522709153b0e3d73dd054769c5ecdfdbfe72f681",
+          "1",
+          "0x0000000000000000000000000000000000000000000000000000000000000000",
+          {
+            "amountPerRoll": "10000",
+            "betCount": 1,
+            "stopGain": "0",
+            "stopLoss": "0"
+          },
+          "0x0000000000000000000000000000000000000000",
+          200
+        ]
+      },
+      "gasEstimate": "1256628",
+      "gasLimit": "1884942",
+      "gasPriceWei": "10000000",
+      "forkOnlyGasUsed": "1244048",
+      "stakeUsdcBaseUnits": "10000",
+      "maxPayoutUsdcBaseUnits": "22414",
+      "quotedFeeWei": "7333337913710"
+    }
+  ]
+}
