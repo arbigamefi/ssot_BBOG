@@ -1,6 +1,6 @@
 # Casino Keeper
 
-Permissionless casino settlement worker for v1.3 `GameHub.finalize(betId)`.
+Permissionless casino settlement worker for v1.5 `GameHub.finalize(betId)`.
 
 Normal player UX signs only approval and `placeBet`. This worker listens for
 `RandomReady` bets and settles them automatically.

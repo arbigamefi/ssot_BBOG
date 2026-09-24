@@ -1,3 +1,5 @@
+> Current governance and signer requirements: [v1.5 workflow](v15-release.md).
+
 # Deployment parameters
 
 This repo intentionally makes the **parameter policy explicit**.
@@ -11,11 +13,11 @@ This repo intentionally makes the **parameter policy explicit**.
 
 ## Explorer verification (optional)
 - `ETHERSCAN_API_KEY`: Etherscan-family API key. BaseScan/Arbiscan use the same Etherscan v2 unified key model.
-- `VERIFIER_URL` (optional): override explorer API endpoint (e.g. `https://api.basescan.org/api`). If not set, the deploy script chooses a default for Base/Base Sepolia/Arbitrum/Arbitrum Sepolia.
+- `VERIFIER_URL` (optional): override explorer API endpoint (e.g. `https://api.etherscan.io/v2/api?chainid=8453`). If not set, the deploy script chooses a default for Base/Base Sepolia/Arbitrum/Arbitrum Sepolia.
 
 After deploy, the script writes:
-- `deployments/latest-v13.json` (+ `deployments/snapshots/deploy-<chainid>-<block>-v13.json`)
-- `deployments/verify-latest-v13.sh` (+ `deployments/verify/verify-<chainid>-<block>-v13.sh`)
+- `deployments/latest-v15.json` (+ `deployments/snapshots/deploy-<chainid>-<block>-v15.json`)
+- `deployments/verify-latest-v15.sh` (+ `deployments/verify/verify-<chainid>-<block>-v15.sh`)
 
 ## GameHub pricing + referral policy
 - `REFUND_TIMEOUT_SECONDS` (default `3600`): when a player can claim a timeout refund.
@@ -30,7 +32,7 @@ Referral config (defaults match the cleanroom E2E tests):
 - `REF_LEVEL{0..5}_BPS` (default L0=0, L1=10000, others=0)
 
 ## Pool banks
-`script/DeployV13.s.sol:DeployV13` uses pools, not assets, as the deployment unit.
+`script/DeployV15.s.sol:DeployV15` uses pools, not assets, as the deployment unit.
 
 For each `i in [0..NUM_POOLS-1]`:
 - `POOL_ID_i` (default `i + 1`): protocol risk/accounting domain id.
@@ -43,7 +45,7 @@ For public-network preflight, `LP_DECIMALS_i` is required and must match `POOL_A
 on chain. This prevents release metadata from treating 6-decimal assets such as USDC as 18-decimal
 assets.
 
-The deploy script writes `deployments/latest-v13.json` and `deployments/verify-latest-v13.sh`.
+The deploy script writes `deployments/latest-v15.json` and `deployments/verify-latest-v15.sh`.
 Casino pools are allowlisted for `GameHub`; Sports pools are allowlisted for `SportsHub`; Future pools
 are registered and wired to `SettlementRouter` but still need their own vertical hub before risk-in can
 open positions.
@@ -84,7 +86,7 @@ Optional one-address bootstrap allowlists:
 Risk caps are intentionally raw token units because pools can use different ERC20 decimals. The deploy
 script writes the default Sports caps, challenge timeout, and each Sports pool's effective caps/risk hash
 into the v1.3 snapshot. For production deployments, pick caps per target pool asset and lock the resulting
-snapshot with `make release-digest-v13`.
+snapshot with `make release-digest-v15`.
 
 ## Callback gas policy (fixed in code)
 `GameHub.quoteVRFFee(betCount)` sets `callbackGasLimit = 300k + 20k * betCount`, capped at 2,000,000.
@@ -92,7 +94,7 @@ snapshot with `make release-digest-v13`.
 ## Release artifact lock (digest + signature)
 These are only needed when you want a tamper-evident release lock for a deployment snapshot.
 
-- `SNAPSHOT_PATH` (optional, default `deployments/latest-v13.json`): snapshot input file.
+- `SNAPSHOT_PATH` (optional, default `deployments/latest-v15.json`): snapshot input file.
 - `SIGNER_PRIVATE_KEY` (optional): if set, used to sign the release digest. If unset, falls back to `PRIVATE_KEY`.
 - `GOV` (recommended): if set, the release digest generator enforces that the signer address equals `GOV`.
 

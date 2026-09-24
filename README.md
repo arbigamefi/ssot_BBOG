@@ -1,6 +1,6 @@
 # ArbiGameFi Monorepo
 
-Fresh deployments use the [v1.5 Safe release workflow](docs/deploy/v15-release.md). Existing embedded manifests still identify the previous deployment until both new chains pass acceptance; historical versioned examples below are not fresh-deployment instructions.
+Fresh deployments use the [v1.5 Safe release workflow](docs/deploy/v15-release.md). Both embedded chains now use v1.5. See the [implementation status](docs/deploy/v15/implementation-status.zh-CN.md) for deployment evidence and remaining mainnet acceptance work.
 
 This repository is a single Git project that contains both the **ArbiGameFi smart contracts** and the
 **ArbiGameFi frontend workspace**.
@@ -63,14 +63,14 @@ integration, while preserving SSOT liveness and a minimal trust surface.
 - `frontend/apps/web` — Next.js frontend application
 - `frontend/packages/ssot` — protocol SDK, encoding, release loader, indexer
 - `frontend/packages/ui` — shared UI components, Tailwind preset, Storybook
-- `deployments/frontend-manifest-latest-v14.json` — contract-generated manifest the frontend consumes directly
-- `deployments/golden-vectors-latest-v14.json` — exact-hex vectors used to verify frontend encoders
+- `deployments/frontend-manifest-latest-v15.json` — contract-generated manifest the frontend consumes directly
+- `deployments/golden-vectors-latest-v15.json` — exact-hex vectors used to verify frontend encoders
 
 ## Documentation
 
 Start here:
 
-- **Release pack (partners / LPs / auditors):** `docs/release/ARBIGAMEFI-RELEASE-PACK.zh-CN.md`
+- **Current release process and evidence:** `docs/release/README.md`
 - **Closeout handoff (Milestone 4):** `docs/closeout/README.md`
 - **Constitution (SSOT):** `docs/constitution/SSOT.v1.3.md`
 - **Executable SSOT:** `docs/constitution/ExecutableSSOT.v1.3.md`
@@ -95,7 +95,7 @@ Start here:
 Prerequisites:
 
 - Foundry
-- Node.js 20
+- Node.js 24
 - pnpm 9
 
 ### Contracts
@@ -148,7 +148,7 @@ forge test --match-path "test/invariants/InvariantsAdapter.t.sol" -vvv
 
 Release artifacts (production discipline):
 
-- Release lock (digest + signature): `make release-digest` (writes `deployments/release-latest-v14.json`)
+- Release lock (digest + signature): `make release-digest` (writes `deployments/release-latest-v15.json`)
 - Release notes (must include digest): `TAG_NAME=vX.Y.Z make release-notes`
 - Strict gate (enforced on `v*` tags in CI): `STRICT=1 make release-check`
 

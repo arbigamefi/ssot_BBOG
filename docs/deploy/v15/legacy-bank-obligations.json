@@ -1,0 +1,370 @@
+{
+  "at": "2026-09-24T06:50:35.679Z",
+  "scope": "Unique Banks in committed pre-v1.5 release fixtures; read-only, no transactions, not proof of completeness outside this fixture set",
+  "report": [
+    {
+      "chainId": 8453,
+      "blockNumber": "51721642",
+      "rows": [
+        {
+          "chainId": 8453,
+          "bank": "0x597266Ba243455f1A9145bA0Cdc0408AaE532c77",
+          "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+          "symbol": "USDC",
+          "decimals": 6,
+          "fixtures": [
+            "frontend/packages/ssot/src/fixtures/release-bundles/chain-8453/46970755-8ae5f98a/frontend-manifest-latest-v14.json"
+          ],
+          "state": {
+            "totalAssets": "0",
+            "totalSupply": "0",
+            "protocolFeesPayable": "0",
+            "totalReserved": "0",
+            "riskInPaused": true,
+            "externalPayablesTotal": "0",
+            "governance": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684"
+          }
+        },
+        {
+          "chainId": 8453,
+          "bank": "0xf63c7c3304469F524Ad3433DacE31401E8472955",
+          "asset": "0x4200000000000000000000000000000000000006",
+          "symbol": "WETH",
+          "decimals": 18,
+          "fixtures": [
+            "frontend/packages/ssot/src/fixtures/release-bundles/chain-8453/46970755-8ae5f98a/frontend-manifest-latest-v14.json"
+          ],
+          "state": {
+            "totalAssets": "0",
+            "totalSupply": "0",
+            "protocolFeesPayable": "0",
+            "totalReserved": "0",
+            "riskInPaused": true,
+            "externalPayablesTotal": "0",
+            "governance": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684"
+          }
+        },
+        {
+          "chainId": 8453,
+          "bank": "0x3ed89faE1708DD24df1c95B61edeDdCDe9E2D07f",
+          "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+          "symbol": "USDC",
+          "decimals": 6,
+          "fixtures": [
+            "frontend/packages/ssot/src/fixtures/release-bundles/chain-8453/46404343-06ca8fe7/frontend-manifest-latest-v13.json"
+          ],
+          "state": {
+            "totalAssets": "0",
+            "totalSupply": "0",
+            "protocolFeesPayable": "0",
+            "totalReserved": "0",
+            "riskInPaused": false,
+            "externalPayablesTotal": "0",
+            "governance": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684"
+          }
+        }
+      ]
+    },
+    {
+      "chainId": 84532,
+      "blockNumber": "47232173",
+      "rows": [
+        {
+          "chainId": 84532,
+          "bank": "0x3aADa481F979E5DFabd2Cd252A76feA2aD05e346",
+          "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+          "symbol": "USDC",
+          "decimals": 6,
+          "fixtures": [
+            "frontend/packages/ssot/src/fixtures/release-bundles/chain-84532/41462034-7ad0f2cb/frontend-manifest-latest-v13.json"
+          ],
+          "state": {
+            "totalAssets": "1102980",
+            "totalSupply": "131603",
+            "protocolFeesPayable": "20200",
+            "totalReserved": "0",
+            "riskInPaused": false,
+            "externalPayablesTotal": "0",
+            "governance": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684"
+          }
+        },
+        {
+          "chainId": 84532,
+          "bank": "0x3686664d8D92FEAb8C4c9Ac0baaEb07c8BDDbc85",
+          "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+          "symbol": "USDC",
+          "decimals": 6,
+          "fixtures": [
+            "frontend/packages/ssot/src/fixtures/release-bundles/chain-84532/41462034-7ad0f2cb/frontend-manifest-latest-v13.json"
+          ],
+          "state": {
+            "totalAssets": "930000",
+            "totalSupply": "0",
+            "protocolFeesPayable": "0",
+            "totalReserved": "0",
+            "riskInPaused": false,
+            "externalPayablesTotal": "0",
+            "governance": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684"
+          }
+        },
+        {
+          "chainId": 84532,
+          "bank": "0x14F3eeaacD690C8f421dE2E3353250e9682B3087",
+          "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+          "symbol": "USDC",
+          "decimals": 6,
+          "fixtures": [
+            "frontend/packages/ssot/src/fixtures/release-bundles/chain-84532/42323839-feb5e4bc/frontend-manifest-latest-v13.json",
+            "frontend/packages/ssot/src/fixtures/release-bundles/chain-84532/41760321-2a3db090/frontend-manifest-latest-v13.json",
+            "frontend/packages/ssot/src/fixtures/release-bundles/chain-84532/41650184-c61adcdf/frontend-manifest-latest-v13.json"
+          ],
+          "state": {
+            "totalAssets": "11231266",
+            "totalSupply": "4675378",
+            "protocolFeesPayable": "14835000",
+            "totalReserved": "0",
+            "riskInPaused": false,
+            "externalPayablesTotal": "0",
+            "governance": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684"
+          }
+        },
+        {
+          "chainId": 84532,
+          "bank": "0x3B1dcC35344739a58EC907958233D2E30939988b",
+          "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+          "symbol": "USDC",
+          "decimals": 6,
+          "fixtures": [
+            "frontend/packages/ssot/src/fixtures/release-bundles/chain-84532/42323839-feb5e4bc/frontend-manifest-latest-v13.json",
+            "frontend/packages/ssot/src/fixtures/release-bundles/chain-84532/41760321-2a3db090/frontend-manifest-latest-v13.json",
+            "frontend/packages/ssot/src/fixtures/release-bundles/chain-84532/41650184-c61adcdf/frontend-manifest-latest-v13.json"
+          ],
+          "state": {
+            "totalAssets": "24252000",
+            "totalSupply": "25000000",
+            "protocolFeesPayable": "0",
+            "totalReserved": "0",
+            "riskInPaused": false,
+            "externalPayablesTotal": "0",
+            "governance": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684"
+          }
+        },
+        {
+          "chainId": 84532,
+          "bank": "0x4735aE54b7efe4bedeCAee13420f72E05aCd0F4e",
+          "asset": "0x4200000000000000000000000000000000000006",
+          "symbol": "WETH",
+          "decimals": 18,
+          "fixtures": [
+            "frontend/packages/ssot/src/fixtures/release-bundles/chain-84532/42323839-feb5e4bc/frontend-manifest-latest-v13.json"
+          ],
+          "state": {
+            "totalAssets": "0",
+            "totalSupply": "0",
+            "protocolFeesPayable": "0",
+            "totalReserved": "0",
+            "riskInPaused": false,
+            "externalPayablesTotal": "0",
+            "governance": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684"
+          }
+        },
+        {
+          "chainId": 84532,
+          "bank": "0x7585145B702e8009F4eac60Be4195cE8449Be571",
+          "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+          "symbol": "USDC",
+          "decimals": 6,
+          "fixtures": [
+            "frontend/packages/ssot/src/fixtures/release-bundles/chain-84532/42474070-b4bf78b3/frontend-manifest-latest-v14.json"
+          ],
+          "state": {
+            "totalAssets": "0",
+            "totalSupply": "0",
+            "protocolFeesPayable": "0",
+            "totalReserved": "0",
+            "riskInPaused": false,
+            "externalPayablesTotal": "0",
+            "governance": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684"
+          }
+        },
+        {
+          "chainId": 84532,
+          "bank": "0xa4442DA635a575a57d5E98f27161cF0Fea8AA622",
+          "asset": "0x4200000000000000000000000000000000000006",
+          "symbol": "WETH",
+          "decimals": 18,
+          "fixtures": [
+            "frontend/packages/ssot/src/fixtures/release-bundles/chain-84532/42474070-b4bf78b3/frontend-manifest-latest-v14.json"
+          ],
+          "state": {
+            "totalAssets": "0",
+            "totalSupply": "0",
+            "protocolFeesPayable": "0",
+            "totalReserved": "0",
+            "riskInPaused": false,
+            "externalPayablesTotal": "0",
+            "governance": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684"
+          }
+        },
+        {
+          "chainId": 84532,
+          "bank": "0x16f5BBc7d62Aa8d1828b807F57d3796712C7E3e9",
+          "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+          "symbol": "USDC",
+          "decimals": 6,
+          "fixtures": [
+            "frontend/packages/ssot/src/fixtures/release-bundles/chain-84532/42478832-2a6144a4/frontend-manifest-latest-v14.json"
+          ],
+          "state": {
+            "totalAssets": "36038864",
+            "totalSupply": "50000000",
+            "protocolFeesPayable": "7658400",
+            "totalReserved": "0",
+            "riskInPaused": false,
+            "externalPayablesTotal": "0",
+            "governance": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684"
+          }
+        },
+        {
+          "chainId": 84532,
+          "bank": "0x71D9E131D5F92c3c18a44fAE058ED789085DD095",
+          "asset": "0x4200000000000000000000000000000000000006",
+          "symbol": "WETH",
+          "decimals": 18,
+          "fixtures": [
+            "frontend/packages/ssot/src/fixtures/release-bundles/chain-84532/42478832-2a6144a4/frontend-manifest-latest-v14.json"
+          ],
+          "state": {
+            "totalAssets": "10000000000000000",
+            "totalSupply": "10000000000000000",
+            "protocolFeesPayable": "0",
+            "totalReserved": "0",
+            "riskInPaused": false,
+            "externalPayablesTotal": "0",
+            "governance": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684"
+          }
+        },
+        {
+          "chainId": 84532,
+          "bank": "0xbc9A8f34A416B6Da463c634D63996C362e2C5f0A",
+          "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+          "symbol": "USDC",
+          "decimals": 6,
+          "fixtures": [
+            "frontend/packages/ssot/src/fixtures/release-bundles/chain-84532/41562978-97025bf8/frontend-manifest-latest-v13.json"
+          ],
+          "state": {
+            "totalAssets": "17391352",
+            "totalSupply": "22000000",
+            "protocolFeesPayable": "520400",
+            "totalReserved": "0",
+            "riskInPaused": false,
+            "externalPayablesTotal": "0",
+            "governance": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684"
+          }
+        },
+        {
+          "chainId": 84532,
+          "bank": "0x732d8fdCe925f73d0b8573A8E8638a748069E661",
+          "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+          "symbol": "USDC",
+          "decimals": 6,
+          "fixtures": [
+            "frontend/packages/ssot/src/fixtures/release-bundles/chain-84532/41562978-97025bf8/frontend-manifest-latest-v13.json"
+          ],
+          "state": {
+            "totalAssets": "1000000",
+            "totalSupply": "1000000",
+            "protocolFeesPayable": "0",
+            "totalReserved": "0",
+            "riskInPaused": false,
+            "externalPayablesTotal": "0",
+            "governance": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684"
+          }
+        },
+        {
+          "chainId": 84532,
+          "bank": "0x9a6B13b7C3b54aDbEE57A37293978dFBFF7237c9",
+          "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+          "symbol": "USDC",
+          "decimals": 6,
+          "fixtures": [
+            "frontend/packages/ssot/src/fixtures/release-bundles/chain-84532/42600719-eb08b585/frontend-manifest-latest-v14.json"
+          ],
+          "state": {
+            "totalAssets": "20814505",
+            "totalSupply": "46500288685",
+            "protocolFeesPayable": "26323745",
+            "totalReserved": "0",
+            "riskInPaused": true,
+            "externalPayablesTotal": "0",
+            "governance": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684"
+          }
+        },
+        {
+          "chainId": 84532,
+          "bank": "0x0ec066C81Eb3866b32Aa59724dd49fa263d7CB17",
+          "asset": "0x4200000000000000000000000000000000000006",
+          "symbol": "WETH",
+          "decimals": 18,
+          "fixtures": [
+            "frontend/packages/ssot/src/fixtures/release-bundles/chain-84532/42600719-eb08b585/frontend-manifest-latest-v14.json"
+          ],
+          "state": {
+            "totalAssets": "10000000000000000",
+            "totalSupply": "10000000000000000",
+            "protocolFeesPayable": "0",
+            "totalReserved": "0",
+            "riskInPaused": true,
+            "externalPayablesTotal": "0",
+            "governance": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684"
+          }
+        },
+        {
+          "chainId": 84532,
+          "bank": "0x552063BA55ac0A4AEf3fb764957912056FB3A7f0",
+          "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+          "symbol": "USDC",
+          "decimals": 6,
+          "fixtures": [
+            "frontend/packages/ssot/src/fixtures/release-bundles/chain-84532/41615646-b0cdf93f/frontend-manifest-latest-v13.json"
+          ],
+          "state": {
+            "totalAssets": "1589202",
+            "totalSupply": "2242125",
+            "protocolFeesPayable": "340600",
+            "totalReserved": "0",
+            "riskInPaused": false,
+            "externalPayablesTotal": "0",
+            "governance": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684"
+          }
+        },
+        {
+          "chainId": 84532,
+          "bank": "0xf97C13205038C1Ecf088bcc5A591E62966172Af8",
+          "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+          "symbol": "USDC",
+          "decimals": 6,
+          "fixtures": [
+            "frontend/packages/ssot/src/fixtures/release-bundles/chain-84532/41615646-b0cdf93f/frontend-manifest-latest-v13.json"
+          ],
+          "state": {
+            "totalAssets": "0",
+            "totalSupply": "0",
+            "protocolFeesPayable": "0",
+            "totalReserved": "0",
+            "riskInPaused": false,
+            "externalPayablesTotal": "0",
+            "governance": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684"
+          }
+        }
+      ]
+    }
+  ],
+  "sourceCommit": "a5d7d3fa50d4457f1476de0ac7fc3bd83ca49273",
+  "sourcePathInterpretation": "fixtures refer to the pre-cleanup Git tree, not current filesystem paths",
+  "readProviders": {
+    "8453": "https://base.gateway.tenderly.co",
+    "84532": "https://base-sepolia.gateway.tenderly.co"
+  }
+}

@@ -1,3 +1,5 @@
+> Historical reference: this document includes pre-v1.5 deployment observations or commands. Those tools/artifacts were retired from the working tree. Use the [current deployment workflow](../deploy/v15-release.md) for operations; retrieve historical files from Git at `a5d7d3fa50d4457f1476de0ac7fc3bd83ca49273`.
+
 # Release artifacts (digest + signature)
 
 > Fresh deployments use the [v1.5 workflow](v15-release.md). Versioned v1.3/v1.4 artifacts below are historical records and must not be imported as active releases.
