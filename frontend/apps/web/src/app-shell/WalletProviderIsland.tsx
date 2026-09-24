@@ -5,15 +5,14 @@ import { embeddedChainIds } from "@ssot/ssot/release";
 import { WagmiProvider, createConfig, http } from "wagmi";
 import { arbitrum, arbitrumSepolia, base, baseSepolia, mainnet } from "wagmi/chains";
 import { RainbowKitProvider, connectorsForWallets, darkTheme } from "@rainbow-me/rainbowkit";
+import { coinbaseWallet, walletConnectWallet } from "@rainbow-me/rainbowkit/wallets";
 import {
-  coinbaseWallet,
-  injectedWallet,
-  metaMaskWallet,
-  okxWallet,
-  rainbowWallet,
-  trustWallet,
-  walletConnectWallet
-} from "@rainbow-me/rainbowkit/wallets";
+  browserWalletWhenAvailable,
+  metaMaskWalletWithFallback,
+  okxWalletWithFallback,
+  rainbowWalletWithFallback,
+  trustWalletWithFallback
+} from "./wallet-connectors";
 
 import { QueryProvider } from "./QueryProvider";
 import { resolveMainnetEnsRpcUrl, resolvePublicRpcUrl, withConfiguredRpc } from "./rpc";
@@ -91,11 +90,17 @@ const connectors = connectorsForWallets(
   [
     {
       groupName: "Popular",
-      wallets: [metaMaskWallet, coinbaseWallet, walletConnectWallet, trustWallet, rainbowWallet]
+      wallets: [
+        metaMaskWalletWithFallback,
+        coinbaseWallet,
+        walletConnectWallet,
+        trustWalletWithFallback,
+        rainbowWalletWithFallback
+      ]
     },
     {
       groupName: "Other",
-      wallets: [okxWallet, injectedWallet]
+      wallets: [okxWalletWithFallback, browserWalletWhenAvailable]
     }
   ],
   {

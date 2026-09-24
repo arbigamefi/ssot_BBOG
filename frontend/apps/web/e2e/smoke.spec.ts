@@ -59,6 +59,32 @@ test.describe("current route smoke", () => {
     await expect(page.locator("h1").first()).toBeVisible();
   });
 
+  test("wallet selector reaches the real MetaMask download QR without crashing", async ({
+    page
+  }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    await gotoReady(page, "/");
+    await page.getByRole("button", { name: "Connect Wallet", exact: true }).click();
+    const dialog = page.getByRole("dialog");
+    // Use the built-in download flow: it exercises the same real QR renderer
+    // as live pairing, without depending on a relay or requesting accounts.
+    await dialog.getByRole("button", { name: "Get a Wallet", exact: true }).click();
+    await dialog.getByRole("button", { name: "GET", exact: true }).first().click();
+    await expect(dialog.getByRole("link", { name: "Add to Chrome" })).toHaveAttribute(
+      "href",
+      /chrome\.google\.com\/webstore\/detail\/metamask\//
+    );
+    await dialog.getByRole("button", { name: "Get the app", exact: true }).click();
+    await expect(
+      dialog.getByText("Scan with your phone to download on iOS or Android", { exact: true })
+    ).toBeVisible();
+    await expect(dialog.getByRole("img", { name: "QR Code", exact: true })).toBeVisible();
+    expect(errors).toEqual([]);
+    await dialog.getByRole("button", { name: "Close", exact: true }).click();
+    await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+  });
+
   test("product header points only at current product routes", async ({ page }) => {
     await gotoReady(page, "/casino");
     const header = page.locator("header").first();
