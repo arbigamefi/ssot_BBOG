@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { useConnectModal } from "@rainbow-me/rainbowkit";
+import { useConnectModal } from "./WalletButton";
 import { mainnet } from "wagmi/chains";
 import {
   useAccount,
@@ -28,7 +28,6 @@ import { Popover, Sheet } from "../components/overlay";
 import { useActiveChain } from "./ActiveChainProvider";
 import { ChainOptionList, ChainSwitcher } from "./ChainSwitcher";
 import { getExplorerAddressUrl } from "./chain-registry";
-import { WALLET_CONNECT_REQUEST_EVENT } from "./wallet-connect-events";
 
 const ENS_LOOKUP_ENABLED = process.env.NEXT_PUBLIC_ENABLE_ENS_LOOKUP === "true";
 
@@ -45,11 +44,13 @@ function shortAddress(address: string) {
 export function WalletHeaderMenu({
   hideDisconnectedChainSwitcher = false,
   mode = "popover",
-  compactDisconnectedLabel = false
+  compactDisconnectedLabel = false,
+  onConnectRequested
 }: {
   hideDisconnectedChainSwitcher?: boolean;
   mode?: "popover" | "sheet";
   compactDisconnectedLabel?: boolean;
+  onConnectRequested?: () => void;
 }) {
   const t = useTranslations("app");
   const rootT = useTranslations();
@@ -99,12 +100,6 @@ export function WalletHeaderMenu({
     };
   }, [isSheet, open]);
 
-  React.useEffect(() => {
-    const onWalletConnectRequest = () => openConnectModal?.();
-    window.addEventListener(WALLET_CONNECT_REQUEST_EVENT, onWalletConnectRequest);
-    return () => window.removeEventListener(WALLET_CONNECT_REQUEST_EVENT, onWalletConnectRequest);
-  }, [openConnectModal]);
-
   if (!isConnected || !address) {
     const connectLabel = compactDisconnectedLabel
       ? t("connectWalletShort")
@@ -117,7 +112,10 @@ export function WalletHeaderMenu({
         <button
           type="button"
           data-tour="wallet"
-          onClick={() => openConnectModal?.()}
+          onClick={() => {
+            onConnectRequested?.();
+            openConnectModal?.();
+          }}
           disabled={!openConnectModal}
           className={cn(
             "inline-flex min-h-10 items-center justify-center gap-2 rounded-md py-2 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-60",

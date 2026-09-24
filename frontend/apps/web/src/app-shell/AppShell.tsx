@@ -19,6 +19,8 @@ import {
   SelfExclusionGate
 } from "./compliance";
 import { OnboardingTour } from "./onboarding/OnboardingTour";
+import { MobileWalletEntryProvider } from "./MobileWalletEntryProvider";
+import { CasinoAvailabilityNotice } from "./CasinoAvailabilityNotice";
 import { InstallPrompt } from "./pwa/InstallPrompt";
 
 function getActiveRoute(pathname: string): AppRoute {
@@ -70,13 +72,13 @@ function getShellVariant(pathname: string) {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const t = useTranslations();
-  const { readOnly, readOnlyReason, warnings } = useRelease();
+  const { readOnly, readOnlyReason, warnings, chainId } = useRelease();
   const variant = getShellVariant(pathname);
   const headerVariant =
     variant === "marketing" ? "transparent" : variant === "game" ? "game" : "default";
 
   return (
-    <>
+    <MobileWalletEntryProvider>
       <AppShellFrame
         skipLinkLabel={t("app.skipToContent")}
         fullBleed={pathname === "/"}
@@ -89,7 +91,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         }
         variant={variant}
       >
-        <SelfExclusionGate>{children}</SelfExclusionGate>
+        <SelfExclusionGate>
+          <CasinoAvailabilityNotice chainId={chainId} />
+          {children}
+        </SelfExclusionGate>
       </AppShellFrame>
 
       {/* Compliance surfaces — render above the shell, ordered by priority:
@@ -101,6 +106,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <RealityCheckTimer />
       {DISABLE_ONBOARDING_IN_DEV ? null : <OnboardingTour />}
       <InstallPrompt />
-    </>
+    </MobileWalletEntryProvider>
   );
 }

@@ -1,118 +1,170 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import "@testing-library/jest-dom/vitest";
 import * as React from "react";
-
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MobileWalletDeepLinkBanner } from "./MobileWalletDeepLinkBanner";
+import { MobileWalletEntryProvider } from "./MobileWalletEntryProvider";
+import { requestWalletConnect } from "./wallet-connect-events";
+import { walletDeepLink, walletDestination } from "./mobile-wallet-links";
 
-vi.mock("@ssot/ui", () => ({
-  cn: (...values: Array<string | false | null | undefined>) => values.filter(Boolean).join(" ")
+const state = vi.hoisted(() => ({
+  connected: false,
+  pathname: "/",
+  cookie: "rejected" as string | null,
+  connect: vi.fn(),
+  chainId: 8453
+}));
+vi.mock("wagmi", () => ({ useAccount: () => ({ isConnected: state.connected }) }));
+vi.mock("@rainbow-me/rainbowkit", () => ({
+  useConnectModal: () => ({ openConnectModal: state.connect, connectModalOpen: false })
+}));
+vi.mock("next/navigation", () => ({ usePathname: () => state.pathname }));
+vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
+vi.mock("./ActiveChainProvider", () => ({
+  useActiveChain: () => ({ selectedChainId: state.chainId })
+}));
+vi.mock("./compliance", () => ({
+  useCompliance: () => ({
+    hydrated: true,
+    entryCleared: true,
+    cookieConsent: state.cookie,
+    rgDialogOpen: false
+  })
 }));
 
-vi.mock("@heroicons/react/24/outline", () => ({
-  ArrowTopRightOnSquareIcon: ({ className }: { className?: string }) => (
-    <svg aria-hidden="true" className={className} />
-  ),
-  ChevronDownIcon: ({ className }: { className?: string }) => (
-    <svg aria-hidden="true" className={className} />
-  ),
-  XMarkIcon: ({ className }: { className?: string }) => (
-    <svg aria-hidden="true" className={className} />
-  )
-}));
-
-vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string) =>
-    ({
-      "mobileDeepLink.title": "Open in wallet",
-      "mobileDeepLink.description": "Smoothest on mobile inside a wallet browser.",
-      "mobileDeepLink.dismiss": "Dismiss",
-      "mobileDeepLink.openIn.metamask": "Open in MetaMask",
-      "mobileDeepLink.openIn.coinbase": "Open in Coinbase Wallet",
-      "mobileDeepLink.openIn.trust": "Open in Trust"
-    })[key] ?? key
-}));
-
-const MOBILE_UA =
-  "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1";
-
-function setUserAgent(ua: string) {
-  Object.defineProperty(window.navigator, "userAgent", { value: ua, configurable: true });
+function View() {
+  return (
+    <MobileWalletEntryProvider>
+      <MobileWalletDeepLinkBanner />
+      <MobileWalletDeepLinkBanner menu />
+    </MobileWalletEntryProvider>
+  );
 }
 
-describe("MobileWalletDeepLinkBanner", () => {
-  beforeEach(() => {
-    window.sessionStorage.clear();
-    setUserAgent(MOBILE_UA);
-    // A wallet in-app browser injects this; its absence is what makes the
-    // banner relevant at all.
-    delete (window as { ethereum?: unknown }).ethereum;
+beforeEach(() => {
+  state.connected = false;
+  state.pathname = "/";
+  state.chainId = 8453;
+  state.cookie = "rejected";
+  state.connect.mockClear();
+  sessionStorage.clear();
+  Object.defineProperty(navigator, "userAgent", {
+    configurable: true,
+    value: "Mozilla/5.0 iPhone Mobile Safari"
   });
+  Object.defineProperty(window, "ethereum", { configurable: true, value: undefined });
+  vi.stubGlobal("matchMedia", (query: string) => ({
+    matches: query.includes("max-width"),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn()
+  }));
+});
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
-  afterEach(() => {
-    cleanup();
-    window.sessionStorage.clear();
-  });
-
-  it("starts collapsed, hiding the wallet links until asked", () => {
-    // Expanded by default it occupied 250-400px at the top of every mobile
-    // page -- half a phone screen spent before the product is visible. The
-    // advice is worth keeping; taking the top of the funnel to deliver it is
-    // not. So the links must not render until the visitor opts in.
-    render(<MobileWalletDeepLinkBanner />);
-
-    const toggle = screen.getByRole("button", { name: "Open in wallet" });
-    expect(toggle.getAttribute("aria-expanded")).toBe("false");
-
-    const panel = document.getElementById("mobile-deep-link-options");
-    expect(panel).not.toBeNull();
-    expect((panel as HTMLElement).hidden).toBe(true);
-    expect(screen.queryByText("Smoothest on mobile inside a wallet browser.")).not.toBeNull();
-  });
-
-  it("reveals all three wallet links when expanded", () => {
-    render(<MobileWalletDeepLinkBanner />);
-    const toggle = screen.getByRole("button", { name: "Open in wallet" });
-
-    fireEvent.click(toggle);
-
-    expect(toggle.getAttribute("aria-expanded")).toBe("true");
-    const panel = document.getElementById("mobile-deep-link-options") as HTMLElement;
-    expect(panel.hidden).toBe(false);
-    expect(panel.querySelectorAll("a").length).toBe(3);
-  });
-
-  it("collapses again on a second click", () => {
-    render(<MobileWalletDeepLinkBanner />);
-    const toggle = screen.getByRole("button", { name: "Open in wallet" });
-
-    fireEvent.click(toggle);
-    fireEvent.click(toggle);
-
-    expect(toggle.getAttribute("aria-expanded")).toBe("false");
-    expect((document.getElementById("mobile-deep-link-options") as HTMLElement).hidden).toBe(true);
-  });
-
-  it("stays dismissible, and a dismissal survives within the session", () => {
-    const { unmount } = render(<MobileWalletDeepLinkBanner />);
-    fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
-    expect(screen.queryByRole("button", { name: "Open in wallet" })).toBeNull();
-
-    unmount();
-    render(<MobileWalletDeepLinkBanner />);
-    expect(screen.queryByRole("button", { name: "Open in wallet" })).toBeNull();
-  });
-
-  it("does not render on desktop", () => {
-    setUserAgent(
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120 Safari/537.36"
+describe("mobile wallet entry", () => {
+  it("shows an inline home hint and opens one shared sheet from the connection event", async () => {
+    render(<View />);
+    expect(screen.getByText("inlineTitle")).toBeVisible();
+    expect(screen.getByText("unavailableHint")).toBeVisible();
+    act(() => requestWalletConnect());
+    await screen.findByRole("dialog");
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    expect(screen.getByRole("link", { name: /MetaMask/ })).toHaveAttribute(
+      "href",
+      expect.stringContaining("chainId=8453")
     );
-    render(<MobileWalletDeepLinkBanner />);
-    expect(screen.queryByRole("button", { name: "Open in wallet" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "stay" }));
+    expect(state.connect).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
+  it("does not nudge or redirect an already connected browser", () => {
+    state.connected = true;
+    render(<View />);
+    expect(screen.queryByText("inlineTitle")).not.toBeInTheDocument();
+    act(() => requestWalletConnect());
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+  it("closes its sheet on connection and suppresses late injected providers", () => {
+    const view = render(<View />);
+    act(() => requestWalletConnect());
+    state.connected = true;
+    view.rerender(<View />);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    state.connected = false;
+    view.rerender(<View />);
+    act(() => {
+      window.dispatchEvent(new Event("eip6963:announceProvider"));
+      window.dispatchEvent(new Event("focus"));
+    });
+    expect(screen.queryByText("inlineTitle")).not.toBeInTheDocument();
+  });
+  it("does not show mobile advice in desktop or injected-wallet browsers", () => {
+    Object.defineProperty(window, "ethereum", { configurable: true, value: { isMetaMask: true } });
+    const view = render(<View />);
+    expect(screen.queryByText("inlineTitle")).not.toBeInTheDocument();
+    view.unmount();
+    Object.defineProperty(window, "ethereum", { configurable: true, value: undefined });
+    Object.defineProperty(navigator, "userAgent", { configurable: true, value: "Desktop Chrome" });
+    render(<View />);
+    expect(screen.queryByText("inlineTitle")).not.toBeInTheDocument();
+  });
+  it("honors session dismissal but keeps the menu entry available", async () => {
+    sessionStorage.setItem("arbigamefi.mobileDeepLink.dismissedV1", "1");
+    render(<View />);
+    expect(screen.queryByText("inlineTitle")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "title" }));
+    expect(await screen.findByRole("dialog")).toBeVisible();
+  });
+  it("holds the floating prompt until cookies are resolved, and hides it under another modal", async () => {
+    state.pathname = "/casino";
+    state.cookie = null;
+    const view = render(
+      <MobileWalletEntryProvider>
+        <span>Directory</span>
+      </MobileWalletEntryProvider>
+    );
+    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
+    state.cookie = "rejected";
+    view.rerender(
+      <MobileWalletEntryProvider>
+        <span>Directory</span>
+      </MobileWalletEntryProvider>
+    );
+    expect(screen.getByRole("complementary")).toBeVisible();
+    view.rerender(
+      <MobileWalletEntryProvider>
+        <div role="dialog" aria-modal="true">
+          Other modal
+        </div>
+      </MobileWalletEntryProvider>
+    );
+    await waitFor(() => expect(screen.queryByRole("complementary")).not.toBeInTheDocument());
+  });
+  it("never mounts the floating list over a game action bar", () => {
+    state.pathname = "/casino/dice";
+    render(
+      <MobileWalletEntryProvider>
+        <span>Game</span>
+      </MobileWalletEntryProvider>
+    );
+    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
+  });
+});
 
-  it("does not render inside a wallet browser", () => {
-    (window as { ethereum?: unknown }).ethereum = { isMetaMask: true };
-    render(<MobileWalletDeepLinkBanner />);
-    expect(screen.queryByRole("button", { name: "Open in wallet" })).toBeNull();
+describe("wallet handoff", () => {
+  it("preserves the current route, selected network and public referral, dropping arbitrary data", () => {
+    const ref = "0x93ac87413E17d01CBa37B6317f64890bF7f99aC3";
+    const target = walletDestination(
+      `https://arbigamefi.com/casino/dice?chainId=8453&ref=${ref}&token=secret#signature`,
+      84532
+    );
+    expect(target).toBe(`https://arbigamefi.com/casino/dice?chainId=84532&ref=${ref}`);
+    expect(new URL(walletDeepLink("trust", target)).searchParams.get("url")).toBe(target);
+    expect(walletDeepLink("metamask", target)).toContain(
+      "metamask.app.link/dapp/arbigamefi.com/casino/dice?chainId=84532"
+    );
   });
 });

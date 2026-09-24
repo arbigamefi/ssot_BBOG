@@ -1,3 +1,4 @@
+import "@testing-library/jest-dom/vitest";
 import * as React from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -7,7 +8,7 @@ import {
   isPlaceBetButtonDisabled,
   type GameRoomBetPanelState
 } from "./bet-panel";
-import { derivePlaceBetButtonPhase } from "./place-bet-button";
+import { PlaceBetButton, derivePlaceBetButtonPhase } from "./place-bet-button";
 import type { GameMeta } from "./model";
 
 vi.mock("@ssot/ui", async () => {
@@ -603,4 +604,50 @@ describe("GameRoomBetPanel", () => {
 
     expect(onManualRefund).toHaveBeenCalledTimes(1);
   });
+});
+
+describe("mainnet availability CTA", () => {
+  it("does not advertise wallet connection for a closed mainnet", () => {
+    const onClick = vi.fn();
+    render(
+      <PlaceBetButton
+        gameSlug="dice"
+        hasAccount={false}
+        isPending={false}
+        winChance={50}
+        state={{ status: "idle" }}
+        riskInDisabled
+        onClick={onClick}
+      />
+    );
+    const button = screen.getByRole("button", { name: "casino.availability.title" });
+    expect(button).toBeDisabled();
+    fireEvent.click(button);
+    expect(onClick).not.toHaveBeenCalled();
+  });
+  it.each(["settle", "refund"])(
+    "keeps existing position %s available when new bets are closed",
+    (action) => {
+      const onClick = vi.fn();
+      render(
+        <PlaceBetButton
+          gameSlug="dice"
+          hasAccount
+          isPending
+          winChance={50}
+          state={{ status: "reconciled" }}
+          riskInDisabled
+          manualSettleAvailable={action === "settle"}
+          manualRefundAvailable={action === "refund"}
+          onClick={onClick}
+        />
+      );
+      const button = screen.getByRole("button", {
+        name: action === "settle" ? "Settle result" : "Refund stake"
+      });
+      expect(button).not.toBeDisabled();
+      fireEvent.click(button);
+      expect(onClick).toHaveBeenCalledOnce();
+    }
+  );
 });

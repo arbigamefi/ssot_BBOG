@@ -2,7 +2,8 @@ import type { PlaceBetInput, PlaceBetPlan } from "@ssot/ssot";
 import type { Address } from "@ssot/ssot/sdk";
 import { toast } from "@ssot/ui";
 
-import { getAppChain } from "../../../app-shell/chain-registry";
+import { isCasinoRiskInEnabledForChain } from "../../../app-shell/casino-access";
+export { isCasinoRiskInEnabledForChain } from "../../../app-shell/casino-access";
 import type { GameMeta } from "./model";
 import { buildGamePlaceBetInput, type GameRoomRelease } from "./place-bet";
 import type { BaccaratSide, CoinSide, PlinkoRisk, SicBoKind } from "./params";
@@ -18,14 +19,6 @@ export function shouldBlockGamePlaceBet(gameSlug: string, winChance: number) {
 
 export function shouldResetGamePlaceBet(status: string) {
   return status === "reconciled" || status === "failed";
-}
-
-export function isCasinoRiskInEnabledForChain(chainId: number) {
-  // Testnets (and unknown chains) always allow risk-in; any mainnet requires the
-  // explicit opt-in flag. Driven by the chain registry rather than a hardcoded
-  // Base-mainnet id, so it covers every mainnet (Base, Arbitrum, …) uniformly.
-  if (getAppChain(chainId)?.environment !== "mainnet") return true;
-  return process.env.NEXT_PUBLIC_CASINO_RISK_IN_ENABLED === "true";
 }
 
 export async function executeGamePlaceBetAction({
@@ -94,6 +87,11 @@ export async function executeGamePlaceBetAction({
     unexpectedError?: string;
   };
 }) {
+  // Explain availability before asking the visitor to connect or sign.
+  if (!isCasinoRiskInEnabledForChain(release.chainId)) {
+    toast.error(messages?.mainnetRiskInDisabled ?? "Casino mainnet betting is not yet available.");
+    return;
+  }
   if (!account) {
     openConnectModal?.();
     return;
@@ -104,11 +102,6 @@ export async function executeGamePlaceBetAction({
   if (shouldResetGamePlaceBet(state.status)) {
     reset();
     setShowResult(false);
-    return;
-  }
-
-  if (!isCasinoRiskInEnabledForChain(release.chainId)) {
-    toast.error(messages?.mainnetRiskInDisabled ?? "Casino mainnet risk-in is disabled.");
     return;
   }
 

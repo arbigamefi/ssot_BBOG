@@ -39,6 +39,10 @@ vi.mock("./MobileWalletDeepLinkBanner", () => ({
   MobileWalletDeepLinkBanner: () => null
 }));
 
+vi.mock("./MobileWalletEntryProvider", () => ({
+  MobileWalletEntryProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>
+}));
+
 // Compliance surfaces (age gate, cookie banner, RG dialog, reality check,
 // self-exclusion route gate) need a provider; stub them so the AppShell
 // layout test stays focused. SelfExclusionGate must pass children through.

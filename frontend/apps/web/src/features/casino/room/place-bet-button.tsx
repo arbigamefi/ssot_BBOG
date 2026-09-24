@@ -44,6 +44,7 @@ export function isPlaceBetButtonDisabled({
   manualSettleAvailable = false,
   manualRefundAvailable = false,
   amountUnavailable = false,
+  riskInDisabled = false,
   amountExceedsMax = false
 }: {
   gameSlug: string;
@@ -54,6 +55,7 @@ export function isPlaceBetButtonDisabled({
   manualSettleAvailable?: boolean;
   manualRefundAvailable?: boolean;
   amountUnavailable?: boolean;
+  riskInDisabled?: boolean;
   amountExceedsMax?: boolean;
 }) {
   // With no wallet the button reads "connect wallet" and its click handler
@@ -63,8 +65,9 @@ export function isPlaceBetButtonDisabled({
   // who has not picked a bet yet sees a greyed-out "connect wallet" and
   // reasonably concludes connecting is broken. Choosing a bet is not a
   // prerequisite for connecting.
-  if (!hasAccount) return false;
   if (manualSettleAvailable || manualRefundAvailable) return false;
+  if (riskInDisabled) return true;
+  if (!hasAccount) return false;
   if (state.status === "failed") return false;
   return (
     amountUnavailable ||
@@ -91,7 +94,8 @@ function getPlaceBetButtonLabelKey({
   manualSettleAvailable,
   manualRefundAvailable,
   amountUnavailable,
-  amountExceedsMax
+  amountExceedsMax,
+  riskInDisabled
 }: {
   gameSlug: string;
   hasAccount: boolean;
@@ -102,8 +106,11 @@ function getPlaceBetButtonLabelKey({
   manualSettleAvailable?: boolean;
   manualRefundAvailable?: boolean;
   amountUnavailable?: boolean;
+  riskInDisabled?: boolean;
   amountExceedsMax?: boolean;
 }) {
+  if (riskInDisabled && !manualSettleAvailable && !manualRefundAvailable)
+    return "casino.availability.title";
   if (!hasAccount) return "casino.room.betPanel.placeBet.connectWallet";
   if (state.status === "failed") return "casino.room.betPanel.placeBet.failedRetry";
   if (manualRefundAvailable) return "casino.room.roundStatus.actions.refundStake";
@@ -141,6 +148,7 @@ export function PlaceBetButton({
   manualSettleAvailable = false,
   manualRefundAvailable = false,
   amountUnavailable = false,
+  riskInDisabled = false,
   amountExceedsMax = false,
   onClick,
   density = "normal"
@@ -154,6 +162,7 @@ export function PlaceBetButton({
   manualSettleAvailable?: boolean;
   manualRefundAvailable?: boolean;
   amountUnavailable?: boolean;
+  riskInDisabled?: boolean;
   amountExceedsMax?: boolean;
   onClick: () => void;
   density?: "normal" | "compact";
@@ -168,7 +177,8 @@ export function PlaceBetButton({
     manualSettleAvailable,
     manualRefundAvailable,
     amountUnavailable,
-    amountExceedsMax
+    amountExceedsMax,
+    riskInDisabled
   });
   const activeManualAction = manualSettleAvailable || manualRefundAvailable;
   const isFailed = state.status === "failed";
@@ -177,17 +187,18 @@ export function PlaceBetButton({
   // `hasAccount` guard the button would be clickable but rendered greyed out --
   // a worse signal than either state alone.
   const appearsLocked =
-    hasAccount &&
-    !isFailed &&
-    !activeManualAction &&
-    (isPending ||
-      state.status === "reconciled" ||
-      state.status === "submitting" ||
-      state.status === "mined" ||
-      state.status === "planning" ||
-      amountUnavailable ||
-      amountExceedsMax ||
-      selectionMissing);
+    (riskInDisabled && !activeManualAction) ||
+    (hasAccount &&
+      !isFailed &&
+      !activeManualAction &&
+      (isPending ||
+        state.status === "reconciled" ||
+        state.status === "submitting" ||
+        state.status === "mined" ||
+        state.status === "planning" ||
+        amountUnavailable ||
+        amountExceedsMax ||
+        selectionMissing));
 
   return (
     <button
@@ -215,9 +226,23 @@ export function PlaceBetButton({
           manualSettleAvailable,
           manualRefundAvailable,
           amountUnavailable,
-          amountExceedsMax
+          amountExceedsMax,
+          riskInDisabled
         })
       )}
     </button>
+  );
+}
+
+/** A full navigation resets transient game state when leaving the unavailable chain. */
+export function CasinoTestnetLink() {
+  const t = useTranslations("casino.availability");
+  return (
+    <a
+      href="?chainId=84532"
+      className="mt-2 flex min-h-11 items-center justify-center rounded-lg border border-brand/30 px-3 text-sm font-semibold text-brand hover:bg-brand-soft"
+    >
+      {t("tryTestnet")}
+    </a>
   );
 }
