@@ -104,7 +104,6 @@ services:
       - "443:443"
     volumes:
       - ./deploy/docker/Caddyfile:/etc/caddy/Caddyfile:ro
-      - ./deploy/docker/certs:/etc/caddy/certs:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:

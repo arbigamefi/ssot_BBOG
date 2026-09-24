@@ -195,3 +195,5 @@ Owner 此后授权从部署钱包现有 USDC 安排额外 LP 与小额业务验�
 服务器在 07:01:07 UTC 再次记录无响应，07:02:58 恢复。旧监控没有保留 HTTP 状态、Ray ID 或连接阶段，无法由该日志断言是 522。新诊断实现保留这些字段，公网失败时补充五秒内的 loopback 应用对照；仍使用已有 timer 和通知节奏。详见 [排查与部署说明](../../ops/runbooks/public-healthz-timeouts.zh-CN.md)。公网根因仍未确定，诊断能力补齐不能写成故障已修复。
 
 本次刷新历史 18 个 Bank 的链上状态，剩余 14 个仍未暂停，所有 reserved 与 XP 仍为零。它们需要旧治理钱包签名，新 Safe 和部署钱包不能代签。
+
+进一步逐域名排查稳定复现：apex 公网 200，www/dapp 公网 525；VPS loopback 对两个别名握手失败。现有证书只有 clientAuth、无域名 SAN，属于错误证书用途；Owner 已确认未配置 Origin Rules、Load Balancing 或 Workers。修复候选改用 Caddy HTTP-01 自动服务器证书并补齐别名到 apex 的重定向，待 CI 与生产实际证书核验完成；不能将此候选配置或偶发超时写成已修复。

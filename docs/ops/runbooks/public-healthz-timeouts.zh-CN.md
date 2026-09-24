@@ -36,3 +36,13 @@ python3 /opt/arbigamefi-v15/ops/healthz-probe.py https://arbigamefi.com/api/heal
 ```
 
 用于对照的 `HEALTHZ_LOCAL_URL` 只允许 HTTP loopback 地址。`ALERT_CONFIG_FILE` 可用于隔离测试；生产使用默认配置位置。
+
+## 别名 525 与源站证书（另一个已复现问题）
+
+2026-09-24 公网 apex 为 200，www/dapp 为 525；VPS loopback 同样只有 apex 可握手，两个别名因缺少配置返回 TLS alert。旧配置引用的证书只有 clientAuth 用途，没有 DNS SAN，不能作为有效的服务器域名证书。诊断时查看的是公开证书，未读取或导出私钥。
+
+修复配置为 Caddy ACME HTTP-01 管理 apex/www/dapp 三个服务器证书，别名统一重定向至 apex 并保留路径和查询；关闭 TLS-ALPN challenge，以免 Cloudflare 边缘终止 TLS 阻断验证。既有 Caddy 数据卷保存证书与自动续期状态，不新增证书脚本或外部定时任务。
+
+迁移分两步：先在保留 apex 旧证书选择的临时 Caddy 配置中启用三个域名的自动签发，确认真实证书均已生成后再切换最终配置；只使用 graceful reload。最后从 VPS loopback 用系统 CA 和实际 SNI 做严格验证，并核对公开 alias 重定向及双链 health。不能用本机可能经过网络代理的“直连源站”替代 VPS loopback 核验。
+
+这修复可复现的 alias 525 和错误证书配置，不足以证明偶发二十秒无响应的根因也已消失；后者继续使用有界诊断记录定位。

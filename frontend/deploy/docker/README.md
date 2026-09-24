@@ -180,43 +180,37 @@ curl -fsS "https://$ARBGAMEFI_DOMAIN/ops/casino-keeper-health.json?chainId=84532
 
 ## 6. Cloudflare
 
-Use Cloudflare for DNS, CDN, WAF, and edge TLS. The Docker host should use a
-Cloudflare Origin Certificate with Cloudflare SSL/TLS mode set to **Full
-(strict)**.
+Use Cloudflare for DNS, CDN, WAF, and edge TLS. Caddy obtains and renews
+publicly trusted **server certificates** with ACME HTTP-01 for the canonical
+`ARBGAMEFI_DOMAIN` and its `www`/`dapp` aliases. Configure Cloudflare SSL/TLS mode
+as **Full (strict)**. The aliases redirect to the canonical HTTPS hostname while
+preserving the request path and query.
 
-Create the origin certificate in Cloudflare:
+Keep port 80 reachable through Cloudflare so HTTP-01 validation can reach
+Caddy, and persist `caddy_data` for certificate/account storage. TLS-ALPN
+validation is explicitly disabled because Cloudflare terminates public TLS;
+no Cloudflare API token, manually copied certificate, or additional service is
+needed for this deployment. Do not cache or block `/.well-known/acme-challenge/*`.
 
-1. Open Cloudflare dashboard → SSL/TLS → Origin Server → Create Certificate.
-2. Include `arbigamefi.com` as the hostname. Add `*.arbigamefi.com` only if
-   this host will serve subdomains too.
-3. Save the certificate to:
+A Cloudflare **client-authentication** certificate is not an origin server
+certificate. The previous manually loaded file had clientAuth EKU and no DNS
+SAN; the apex happened to respond, while unconfigured alias SNI failed with 525.
+Do not restore that file or its environment variables. See
+[`docs/ops/runbooks/public-healthz-timeouts.zh-CN.md`](../../../docs/ops/runbooks/public-healthz-timeouts.zh-CN.md)
+for the distinct TLS and intermittent-timeout investigations.
 
-   ```text
-   deploy/docker/certs/cloudflare-origin.pem
-   ```
+Validate before reload:
 
-4. Save the private key to:
-
-   ```text
-   deploy/docker/certs/cloudflare-origin-key.pem
-   ```
-
-5. Keep the key private and restrict it on the host:
-
-   ```bash
-   chmod 600 deploy/docker/certs/cloudflare-origin-key.pem
-   ```
-
-The committed Caddyfile loads these files directly:
-
-```text
-tls {$CLOUDFLARE_ORIGIN_CERT_PATH} {$CLOUDFLARE_ORIGIN_KEY_PATH}
+```bash
+docker compose --env-file images.env -p arbigamefi-v15 -f compose.production.yml -f compose.staging.yml exec -T caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
 ```
 
-That means Caddy does not request a Let's Encrypt certificate for the production
-site. This is intentional for orange-cloud deployments because Cloudflare
-terminates public TLS at the edge and validates the private origin certificate
-between Cloudflare and Caddy.
+For migration from the old configuration, keep its apex certificate selection
+active while Caddy prepares the three ACME certificates, then reload the final
+Caddyfile only after all three server certificates have been issued. Verify TLS
+from the VPS loopback with normal CA and hostname checks as well as through the
+public domains; testing only Cloudflare's edge certificate does not validate the
+origin. Application, keeper and database containers need no restart.
 
 Cloudflare settings:
 
