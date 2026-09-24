@@ -11,6 +11,8 @@ const FOCUSABLE = [
   '[tabindex]:not([tabindex="-1"])'
 ].join(",");
 
+const activeTraps: HTMLElement[] = [];
+
 /**
  * Trap keyboard focus inside `ref` while `active`. On activate, focus moves
  * into the container; Tab / Shift+Tab cycle within it; on deactivate, focus
@@ -25,6 +27,7 @@ export function useFocusTrap<T extends HTMLElement>(active: boolean) {
     if (!active) return;
     const container = ref.current;
     if (!container) return;
+    activeTraps.push(container);
 
     const previouslyFocused = document.activeElement as HTMLElement | null;
 
@@ -47,7 +50,7 @@ export function useFocusTrap<T extends HTMLElement>(active: boolean) {
     }
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Tab") return;
+      if (event.key !== "Tab" || activeTraps.at(-1) !== container) return;
       const items = focusables();
       if (items.length === 0) {
         event.preventDefault();
@@ -71,8 +74,11 @@ export function useFocusTrap<T extends HTMLElement>(active: boolean) {
     document.addEventListener("keydown", onKeyDown);
     return () => {
       document.removeEventListener("keydown", onKeyDown);
+      const wasTopmost = activeTraps.at(-1) === container;
+      const index = activeTraps.indexOf(container);
+      if (index !== -1) activeTraps.splice(index, 1);
       // Restore focus to the trigger on close.
-      if (previouslyFocused && typeof previouslyFocused.focus === "function") {
+      if (wasTopmost && previouslyFocused?.isConnected) {
         previouslyFocused.focus();
       }
     };

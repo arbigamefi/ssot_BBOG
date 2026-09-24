@@ -1,5 +1,6 @@
 {
   "app": {
+    "skipToContent": "Skip to content",
     "connectWalletActionDescription": "Connect a wallet to {action}.",
     "connectWalletButton": "Connect Wallet",
     "connectWalletShort": "Connect",
@@ -2876,6 +2877,7 @@
       "sharePriceReference": "Share price",
       "currentSharePrice": "Current share price",
       "empty": "No vault activity yet on this chain.",
+      "pending": "On-chain performance is not available yet.",
       "windowLabel": "Time range",
       "windows": {
         "all": "All",

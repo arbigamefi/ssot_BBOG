@@ -1,5 +1,6 @@
 {
   "app": {
+    "skipToContent": "İçeriğe geç",
     "connectWalletActionDescription": "{action} için bir cüzdan bağlayın.",
     "connectWalletButton": "Cüzdan bağla",
     "connectWalletShort": "Bağlan",
@@ -914,6 +915,7 @@
       "sharePriceReference": "Pay fiyatı",
       "currentSharePrice": "Güncel pay fiyatı",
       "empty": "Bu ağda henüz kasa etkinliği yok.",
+      "pending": "Zincir üstü performans verileri henüz mevcut değil.",
       "windowLabel": "Zaman aralığı",
       "windows": {
         "all": "Tümü",

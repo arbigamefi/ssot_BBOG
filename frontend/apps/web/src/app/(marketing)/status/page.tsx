@@ -243,7 +243,7 @@ export default async function StatusPage({
     isLocalDevelopment || runtimeMode.toLowerCase() !== "production";
 
   return (
-    <main className="min-h-screen bg-surface-0 px-6 py-10 text-fg">
+    <div className="min-h-screen bg-surface-0 py-2 text-fg">
       <div className="mx-auto flex max-w-6xl flex-col gap-8">
         <header className="flex flex-col gap-5 border-b border-border-soft pb-8 md:flex-row md:items-end md:justify-between">
           <div>
@@ -310,6 +310,6 @@ export default async function StatusPage({
           <ChainStatusSummary chain={selected.chain} snapshot={selected.snapshot} copy={copy} />
         ) : null}
       </div>
-    </main>
+    </div>
   );
 }

@@ -33,7 +33,7 @@ export function HomeFooterCta({
       />
       <div className="relative mx-auto max-w-[1100px] px-6 text-center lg:px-10">
         <SectionEyebrow className="mb-5">{copy.eyebrow}</SectionEyebrow>
-        <h2 className="mx-auto max-w-3xl text-5xl font-bold leading-[1.05] tracking-tight text-fg md:text-6xl">
+        <h2 className="mx-auto max-w-3xl text-balance break-words text-3xl font-bold leading-[1.05] tracking-tight text-fg sm:text-5xl md:text-6xl">
           {copy.title}
         </h2>
         <p className="mx-auto mt-6 max-w-2xl text-lg leading-7 text-fg-muted">{copy.description}</p>

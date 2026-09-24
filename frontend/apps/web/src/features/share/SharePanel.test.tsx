@@ -29,9 +29,10 @@ function mockMatchMedia(matches: boolean) {
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
     writable: true,
-    value: vi.fn().mockImplementation(() => ({
+    value: vi.fn().mockImplementation((query: string) => ({
       addEventListener: vi.fn(),
-      matches,
+      media: query,
+      matches: query === "(min-width: 768px)" ? !matches : matches,
       removeEventListener: vi.fn()
     }))
   });

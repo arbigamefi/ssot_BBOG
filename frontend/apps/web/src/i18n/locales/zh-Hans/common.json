@@ -1,5 +1,6 @@
 {
   "app": {
+    "skipToContent": "跳至主要内容",
     "connectWalletActionDescription": "连接钱包以{action}。",
     "connectWalletButton": "连接钱包",
     "connectWalletShort": "连接",
@@ -2876,6 +2877,7 @@
       "sharePriceReference": "份额价格",
       "currentSharePrice": "当前份额价格",
       "empty": "当前链上还没有金库活动。",
+      "pending": "链上表现数据尚未读取到。",
       "windowLabel": "时间范围",
       "windows": {
         "all": "全部",

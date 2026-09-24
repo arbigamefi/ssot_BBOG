@@ -63,6 +63,7 @@ export function BankProviderLedgerPanel({
   const netPnl = withdrawn + openValue - deposited;
   const hasCompleteAssetRows = entries.every((entry) => entry.assets != null);
 
+  const summaryVisible = connected && !loading && !error;
   const summary = [
     {
       key: "deposited",
@@ -77,12 +78,15 @@ export function BankProviderLedgerPanel({
     {
       key: "openValue",
       label: t("earn.ledger.summary.openValue"),
-      value: formatTokenAmount(openValue, decimals, symbol, 2)
+      value: formatTokenAmount(positionAssets, decimals, symbol, 2)
     },
     {
       key: "netPnl",
       label: t("earn.ledger.summary.netPnl"),
-      value: hasCompleteAssetRows ? formatSignedToken(netPnl, decimals, symbol) : "—",
+      value:
+        hasCompleteAssetRows && positionAssets != null
+          ? formatSignedToken(netPnl, decimals, symbol)
+          : "—",
       tone: netPnl >= 0n ? "win" : "loss"
     },
     {
@@ -115,12 +119,12 @@ export function BankProviderLedgerPanel({
             <div
               className={cn(
                 "mt-1 truncate font-mono text-sm font-bold text-fg",
-                item.tone === "win" && "text-success",
-                item.tone === "loss" && "text-danger"
+                summaryVisible && item.tone === "win" && "text-success",
+                summaryVisible && item.tone === "loss" && "text-danger"
               )}
-              title={item.value}
+              title={summaryVisible ? item.value : undefined}
             >
-              {item.value}
+              {summaryVisible ? item.value : "—"}
             </div>
           </div>
         ))}

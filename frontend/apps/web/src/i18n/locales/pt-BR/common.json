@@ -1,5 +1,6 @@
 {
   "app": {
+    "skipToContent": "Pular para o conteúdo",
     "connectWalletActionDescription": "Conecte uma carteira para {action}.",
     "connectWalletButton": "Conectar carteira",
     "connectWalletShort": "Conectar",
@@ -914,6 +915,7 @@
       "sharePriceReference": "Preço da cota",
       "currentSharePrice": "Preço atual da cota",
       "empty": "Nenhuma atividade do cofre nesta rede ainda.",
+      "pending": "Os dados de desempenho on-chain ainda não estão disponíveis.",
       "windowLabel": "Período",
       "windows": {
         "all": "Tudo",

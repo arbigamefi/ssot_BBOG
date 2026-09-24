@@ -21,6 +21,8 @@ export type AppRoute =
   | "referral"
   | "account"
   | "ops"
+  | "support"
+  | "status"
   | "none"
   | "dice"
   | "plinko"
@@ -108,10 +110,11 @@ function MobileNavSection({
           <Link
             key={link.id}
             href={link.href}
+            aria-current={activeRoute === link.id ? "page" : undefined}
             onClick={onNavigate}
             className={cn(
               "flex items-center justify-between rounded-md border font-semibold transition-colors",
-              isGrid ? "min-h-9 px-2.5 text-xs" : "min-h-11 px-3 text-sm",
+              isGrid ? "min-h-11 px-2.5 text-xs" : "min-h-11 px-3 text-sm",
               activeRoute === link.id
                 ? "border-brand/55 bg-brand-soft text-fg ring-1 ring-brand/20"
                 : "border-transparent text-fg-muted hover:border-border-soft hover:bg-surface-2 hover:text-fg"
@@ -247,7 +250,7 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
               </nav>
             </div>
             <div className="flex shrink-0 items-center gap-2 whitespace-nowrap lg:gap-4">
-              <div className="hidden sm:block">
+              <div className="hidden md:block">
                 <LocaleSwitcher compact />
               </div>
               <div className="hidden md:block">
@@ -270,7 +273,8 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
                 type="button"
                 aria-label={t("nav.openMenu")}
                 onClick={openMobileMenu}
-                className="flex h-10 w-10 items-center justify-center rounded-md border border-border-soft bg-surface-1 text-fg md:hidden"
+                aria-expanded={mobileMenuOpen}
+                className="flex h-11 w-11 items-center justify-center rounded-md border border-border-soft bg-surface-1 text-fg md:hidden"
               >
                 <Bars3Icon className="h-5 w-5" />
               </button>
@@ -305,7 +309,7 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
         >
           <Link
             href="/casino"
-            className="shrink-0 rounded-full border border-border-soft bg-surface-2 px-3 py-1.5 text-xs font-semibold text-fg-subtle"
+            className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-border-soft bg-surface-2 px-3 py-1.5 text-xs font-semibold text-fg-subtle"
           >
             ← {t("nav.casino")}
           </Link>
@@ -314,8 +318,9 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
               key={link.id}
               ref={activeRoute === link.id ? activeMobileGameLinkRef : undefined}
               href={link.href}
+              aria-current={activeRoute === link.id ? "page" : undefined}
               className={cn(
-                "shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
+                "inline-flex min-h-11 shrink-0 items-center rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
                 activeRoute === link.id
                   ? "border-brand bg-brand text-fg-inverse"
                   : "border-border-soft bg-surface-2 text-fg-subtle hover:text-fg"
@@ -347,8 +352,9 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
               <Link
                 key={link.id}
                 href={link.href}
+                aria-current={activeRoute === link.id ? "page" : undefined}
                 className={cn(
-                  "inline-flex shrink-0 items-center whitespace-nowrap [word-break:keep-all] transition-colors",
+                  "inline-flex min-h-11 shrink-0 items-center whitespace-nowrap [word-break:keep-all] transition-colors",
                   activeRoute === link.id
                     ? "border-b-2 border-brand pb-1 text-brand"
                     : "text-fg-subtle hover:text-fg"
@@ -364,8 +370,9 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
               <Link
                 key={link.id}
                 href={link.href}
+                aria-current={activeRoute === link.id ? "page" : undefined}
                 className={cn(
-                  "inline-flex shrink-0 items-center whitespace-nowrap [word-break:keep-all] transition-colors",
+                  "inline-flex min-h-11 shrink-0 items-center whitespace-nowrap [word-break:keep-all] transition-colors",
                   activeRoute === link.id
                     ? "border-b-2 border-fg pb-1 text-fg"
                     : "text-fg-subtle hover:text-fg"
@@ -379,7 +386,7 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
       </div>
 
       <ShellHeaderActions>
-        <div className="hidden sm:block">
+        <div className="hidden md:block">
           <LocaleSwitcher compact />
         </div>
         <div className="hidden md:block">
@@ -392,7 +399,8 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
           type="button"
           aria-label={t("nav.openMenu")}
           onClick={openMobileMenu}
-          className="flex h-10 w-10 items-center justify-center rounded-md border border-border-soft bg-surface-1 text-fg md:hidden"
+          aria-expanded={mobileMenuOpen}
+          className="flex h-11 w-11 items-center justify-center rounded-md border border-border-soft bg-surface-1 text-fg md:hidden"
         >
           <Bars3Icon className="h-5 w-5" />
         </button>

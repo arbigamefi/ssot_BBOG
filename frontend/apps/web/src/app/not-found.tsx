@@ -11,7 +11,7 @@ export default async function NotFound() {
   const copy = (messages as Record<string, any>).notFound ?? {};
 
   return (
-    <main className="mx-auto flex min-h-[60vh] max-w-xl flex-col items-center justify-center gap-6 px-4 text-center">
+    <div className="mx-auto flex min-h-[60vh] max-w-xl flex-col items-center justify-center gap-6 px-4 text-center">
       <p className="font-mono text-6xl font-bold text-brand">404</p>
       <h1 className="text-2xl font-bold text-fg">{copy.title ?? "Page not found"}</h1>
       <p className="max-w-md text-sm leading-6 text-fg-muted">
@@ -31,6 +31,6 @@ export default async function NotFound() {
           {copy.casino ?? "Browse games"}
         </Link>
       </div>
-    </main>
+    </div>
   );
 }

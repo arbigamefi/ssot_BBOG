@@ -73,14 +73,41 @@ export function LocaleSwitcher({
   const t = useTranslations("locale");
   const [open, setOpen] = React.useState(false);
   const containerRef = React.useRef<HTMLDivElement | null>(null);
+  const triggerRef = React.useRef<HTMLButtonElement | null>(null);
+  const closeMenu = React.useCallback(() => {
+    setOpen(false);
+    triggerRef.current?.focus();
+  }, []);
 
   React.useEffect(() => {
     if (!open) return;
+    const options = () =>
+      Array.from(
+        containerRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]') ?? []
+      );
+    const items = options();
+    (items.find((item) => item.getAttribute("aria-checked") === "true") ?? items[0])?.focus();
     const onClick = (event: MouseEvent) => {
       if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
     };
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (!containerRef.current?.contains(document.activeElement)) return;
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeMenu();
+        return;
+      }
+      if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+      event.preventDefault();
+      const items = options();
+      const index = items.indexOf(document.activeElement as HTMLButtonElement);
+      const next =
+        event.key === "Home"
+          ? 0
+          : event.key === "End"
+            ? items.length - 1
+            : (index + (event.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
+      items[next]?.focus();
     };
     document.addEventListener("mousedown", onClick);
     document.addEventListener("keydown", onKey);
@@ -88,16 +115,23 @@ export function LocaleSwitcher({
       document.removeEventListener("mousedown", onClick);
       document.removeEventListener("keydown", onKey);
     };
-  }, [open]);
+  }, [closeMenu, open]);
 
   const select = (next: AppLocale) => {
-    setOpen(false);
+    closeMenu();
     selectLocale(next);
   };
 
   return (
-    <div ref={containerRef} className="relative">
+    <div
+      ref={containerRef}
+      className="relative"
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+      }}
+    >
       <button
+        ref={triggerRef}
         type="button"
         aria-label={t("label")}
         aria-haspopup="menu"
@@ -129,6 +163,7 @@ export function LocaleSwitcher({
                 key={item}
                 type="button"
                 role="menuitemradio"
+                tabIndex={-1}
                 aria-checked={active}
                 onClick={() => select(item)}
                 className={cn(

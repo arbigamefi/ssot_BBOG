@@ -4,6 +4,7 @@ import { AssetSelector, type AssetOption, type TxStepItem, type TxStatus } from 
 import type { DomainError } from "@ssot/ssot";
 
 import { TokenLogo } from "../../components/TokenLogo";
+import { requestWalletConnect } from "../../app-shell/wallet-connect-events";
 import type { EarnAmountMode, EarnTab } from "./types";
 
 const TABS: Array<{ key: EarnTab; label: string; description: string }> = [
@@ -79,6 +80,7 @@ export function EarnActionPanel({
   connected: boolean;
 }) {
   const t = useTranslations();
+  const displayedAvailableValue = connected ? availableValue : "—";
   const activeTab = TABS.find((item) => item.key === tab);
 
   return (
@@ -101,6 +103,8 @@ export function EarnActionPanel({
             <button
               key={item.key}
               type="button"
+              aria-pressed={tab === item.key}
+              disabled={flow.busy}
               onClick={() => onTabChange(item.key)}
               className={`min-w-0 rounded-sm px-2 py-3 text-[11px] font-bold uppercase tracking-[0.08em] transition sm:px-3 sm:text-xs sm:tracking-[0.12em] ${
                 tab === item.key
@@ -126,6 +130,7 @@ export function EarnActionPanel({
               <button
                 key={item.key}
                 type="button"
+                aria-pressed={amountMode === item.key}
                 onClick={() => onAmountModeChange(item.key)}
                 disabled={flow.busy}
                 className={`min-w-0 rounded-sm px-2 py-2.5 text-[11px] font-bold uppercase tracking-[0.08em] transition sm:px-3 sm:text-xs sm:tracking-[0.12em] ${
@@ -162,9 +167,10 @@ export function EarnActionPanel({
             <div className="flex min-w-0 items-center justify-end gap-2 text-[10px] font-bold uppercase tracking-[0.1em]">
               <span
                 className="min-w-0 truncate text-fg-subtle"
-                title={`${availableLabel}: ${availableValue}`}
+                title={`${availableLabel}: ${displayedAvailableValue}`}
               >
-                {availableLabel}: <span className="font-mono text-fg-muted">{availableValue}</span>
+                {availableLabel}:{" "}
+                <span className="font-mono text-fg-muted">{displayedAvailableValue}</span>
               </span>
               <button
                 type="button"
@@ -180,6 +186,7 @@ export function EarnActionPanel({
             {amountMode === "shares" ? null : <TokenLogo symbol={symbol} size={24} />}
             <input
               id="earn-amount"
+              disabled={flow.busy}
               value={amount}
               onChange={(event) => onAmountChange(event.target.value)}
               inputMode="decimal"
@@ -206,19 +213,21 @@ export function EarnActionPanel({
 
         <button
           type="button"
-          onClick={onSubmit}
-          disabled={disabled}
+          onClick={connected ? onSubmit : requestWalletConnect}
+          disabled={flow.busy || (connected && disabled)}
           className="rounded-md bg-brand px-5 py-4 text-sm font-bold uppercase tracking-[0.12em] text-fg-inverse shadow-glow transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {flow.busy
-            ? t("earn.actions.submit.executing")
-            : tab === "deposit"
-              ? amountMode === "shares"
-                ? t("earn.actions.submit.mint")
-                : t("earn.actions.submit.deposit")
-              : amountMode === "shares"
-                ? t("earn.actions.submit.redeem")
-                : t("earn.actions.submit.withdraw")}
+          {!connected && !flow.busy
+            ? t("app.connectWalletButton")
+            : flow.busy
+              ? t("earn.actions.submit.executing")
+              : tab === "deposit"
+                ? amountMode === "shares"
+                  ? t("earn.actions.submit.mint")
+                  : t("earn.actions.submit.deposit")
+                : amountMode === "shares"
+                  ? t("earn.actions.submit.redeem")
+                  : t("earn.actions.submit.withdraw")}
         </button>
       </div>
     </section>

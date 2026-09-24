@@ -258,9 +258,10 @@ export function GamesListClient() {
                 <button
                   key={item.key}
                   type="button"
+                  aria-pressed={isActive}
                   onClick={() => setFilter(item.key)}
                   className={cn(
-                    "relative shrink-0 rounded-full px-4 py-2 text-xs font-bold transition-colors md:px-5 md:py-2.5 md:text-sm",
+                    "relative min-h-11 shrink-0 rounded-full px-4 py-2 text-xs font-bold transition-colors md:px-5 md:py-2.5 md:text-sm",
                     isActive
                       ? "bg-brand-soft text-brand ring-1 ring-inset ring-brand/30"
                       : "text-fg-subtle hover:bg-surface-2 hover:text-fg"
