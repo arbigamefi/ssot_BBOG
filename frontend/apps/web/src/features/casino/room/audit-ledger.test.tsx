@@ -386,6 +386,28 @@ describe("GameRoomAuditLedger", () => {
     expect(screen.getByText("2.50×")).toBeDefined();
   });
 
+  it.each([
+    [6, "USDC", "3000", "6755", "0.003 USDC", "0.006755 USDC"],
+    [18, "WETH", "1", "2", "0.000000000000000001 WETH", "0.000000000000000002 WETH"],
+    [6, "USDC", "9007199254740993123456", "0", "9007199254740993.123456 USDC", "0.00 USDC"],
+    [0, "TOKEN", "1", "2", "1 TOKEN", "2 TOKEN"]
+  ])(
+    "preserves settled base units for %i-decimal %s rows",
+    (decimals, symbol, stake, payout, stakeLabel, payoutLabel) => {
+      render(
+        <GameRoomAuditLedger
+          game={game}
+          betAmount={10}
+          assetSymbol={symbol}
+          assetDecimals={decimals}
+          recentBets={[{ betId: "1", state: "finalized", stake, payout, refundAmount: "0" }]}
+        />
+      );
+      expect(screen.getByText(stakeLabel)).toBeDefined();
+      expect(screen.getByText(payoutLabel)).toBeDefined();
+    }
+  );
+
   it("formats mixed-asset recent rows with each row's own asset metadata", () => {
     render(
       <GameRoomAuditLedger

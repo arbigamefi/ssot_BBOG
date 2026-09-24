@@ -27,4 +27,4 @@
 
 主域名 ACME 验证期间曾收到 Cloudflare 520，自动重试后签发成功。这次验收证明错误证书和别名 TLS 配置已修复，**不能证明此前偶发二十秒无响应或历史 522 的根因已修复**。后续故障由既有监控保存 Ray ID、分阶段耗时和本机对照，按[故障定位 runbook](../../ops/runbooks/public-healthz-timeouts.zh-CN.md)继续分析。
 
-在本记录的 07:59 UTC 窗口，主网新增 LP 与业务验收只有[分叉模拟证据](base-mainnet-acceptance-prepared.json)。13:13 UTC 更新：用户已完成新增 4 USDC LP 和第一笔 Dice，真实 VRF、keeper 自动结算与网页凭证一致，见[实时业务验收记录](base-mainnet-live-acceptance.json)；其余游戏仍待验收。[14 个历史 Bank](legacy-bank-closeout.zh-CN.md)仍等待旧治理钱包暂停。因此这份记录不是整个项目已全部完工或所有历史链上义务清零的声明。
+在本记录的 07:59 UTC 窗口，主网新增 LP 与业务验收只有[分叉模拟证据](base-mainnet-acceptance-prepared.json)。后续更新：用户已完成新增 4 USDC LP 及八款游戏单轮主网验收，真实 VRF、keeper 自动结算与网页凭证一致，见[实时业务验收记录](base-mainnet-live-acceptance.json)。公开下注开关仍关闭，真实手机钱包应用跳转仍待验收。[14 个历史 Bank](legacy-bank-closeout.zh-CN.md)仍等待旧治理钱包暂停。因此这份记录不是整个项目已全部完工或所有历史链上义务清零的声明。

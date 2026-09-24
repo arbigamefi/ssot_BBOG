@@ -23,6 +23,7 @@ import {
   type ReleasePresentationMeta
 } from "./presentation";
 import { usePlayerBets } from "../../betting/usePlayerBets";
+import { formatUnits } from "../../betting/model/units";
 import { useCasinoLeaderboard, useCasinoStats, useCasinoTimeseries } from "../useCasinoStats";
 import { formatTokenAmount } from "../../marketing/format";
 import { TrendChart, formatDayLabel, type TrendChartPoint } from "../../charts/TrendChart";
@@ -440,7 +441,7 @@ function BetTable({
                     )}
                   </span>
                 )}
-                <span className="font-mono text-xs font-semibold text-fg">
+                <span className="break-all font-mono text-xs font-semibold text-fg">
                   {formatAmount(stake, rowAsset.decimals, rowAsset.symbol)}
                 </span>
                 <span
@@ -457,7 +458,7 @@ function BetTable({
                 </span>
                 <span
                   className={cn(
-                    "font-mono text-xs font-bold",
+                    "break-all font-mono text-xs font-bold",
                     isWin ? "text-success" : isLoss ? "text-fg-subtle opacity-70" : "text-fg-muted"
                   )}
                 >
@@ -1391,11 +1392,10 @@ function resolveRowAsset(
 
 function formatAmount(value: bigint | null, decimals: number, asset: string) {
   if (value == null) return "—";
-  const base = 10n ** BigInt(decimals);
-  const whole = value / base;
-  const frac = value % base;
-  const fracStr = String(frac).padStart(decimals, "0").slice(0, 2);
-  return `${whole}.${fracStr} ${asset}`;
+  const [whole, fraction = ""] = formatUnits(value, decimals).split(".");
+  // Keep every nonzero base unit: settled financial amounts must not appear as zero.
+  const paddedFraction = fraction.padEnd(Math.min(2, decimals), "0");
+  return `${whole}${paddedFraction ? `.${paddedFraction}` : ""} ${asset}`;
 }
 
 function computeMultiplier(stake: bigint | null, payout: bigint | null): number | null {

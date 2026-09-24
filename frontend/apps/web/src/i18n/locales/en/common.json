@@ -68,7 +68,10 @@
       "attempted": "Opening {wallet} was requested. If it did not open, tap the wallet again or copy this link into its browser.",
       "copy": "Copy current link",
       "copied": "Link copied",
-      "currentLink": "Current page link"
+      "currentLink": "Current page link",
+      "lastSelected": "Last selected",
+      "otherWallets": "Other wallets / WalletConnect",
+      "walletChoiceHint": "Choose a wallet you have installed. Your browser cannot list all wallet apps on your phone. Other wallets can connect to this browser."
     }
   },
   "metadata": {
