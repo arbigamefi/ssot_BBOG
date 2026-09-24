@@ -11,12 +11,9 @@ import { useActiveChain } from "./ActiveChainProvider";
 import { useCompliance } from "./compliance";
 import { isCasinoRiskInEnabledForChain } from "./casino-access";
 import { WALLET_CONNECT_REQUEST_EVENT } from "./wallet-connect-events";
-import { isMobileBrowser, isWalletBrowser, walletDestination } from "./mobile-wallet-links";
+import { isMobileBrowser, isWalletBrowser } from "./mobile-wallet-browser";
 
 const DISMISS_KEY = "arbigamefi.mobileDeepLink.dismissedV1";
-const MobileWalletSheet = React.lazy(() =>
-  import("./MobileWalletSheet").then((module) => ({ default: module.MobileWalletSheet }))
-);
 
 function readSession(key: string) {
   try {
@@ -42,8 +39,6 @@ export function MobileWalletEntryProvider({ children }: { children: React.ReactN
   const { hydrated, entryCleared, cookieConsent, rgDialogOpen } = useCompliance();
   const [eligibleBrowser, setEligibleBrowser] = React.useState(false);
   const [dismissed, setDismissed] = React.useState(false);
-  const [open, setOpen] = React.useState(false);
-  const [destination, setDestination] = React.useState("");
   const [otherOverlay, setOtherOverlay] = React.useState(false);
   const eligible = eligibleBrowser && !isConnected && !isConnecting && !isReconnecting;
   const mainnetUnavailable = !isCasinoRiskInEnabledForChain(selectedChainId);
@@ -99,24 +94,13 @@ export function MobileWalletEntryProvider({ children }: { children: React.ReactN
   }, [pathname]);
 
   const connect = React.useCallback(() => {
-    if (!eligible) {
-      openConnectModal?.();
-      return;
-    }
-    setDestination(walletDestination(window.location.href, selectedChainId));
-    setOpen(true);
-  }, [eligible, openConnectModal, selectedChainId]);
+    openConnectModal?.();
+  }, [openConnectModal]);
 
   React.useEffect(() => {
     window.addEventListener(WALLET_CONNECT_REQUEST_EVENT, connect);
     return () => window.removeEventListener(WALLET_CONNECT_REQUEST_EVENT, connect);
   }, [connect]);
-  React.useEffect(() => {
-    setOpen(false);
-  }, [pathname, selectedChainId]);
-  React.useEffect(() => {
-    if (!eligible) setOpen(false);
-  }, [eligible]);
 
   const value = React.useMemo(
     () => ({ eligible, dismissed, mainnetUnavailable, open: connect }),
@@ -125,7 +109,6 @@ export function MobileWalletEntryProvider({ children }: { children: React.ReactN
   const showFloating =
     eligible &&
     !dismissed &&
-    !open &&
     !connectModalOpen &&
     !otherOverlay &&
     hydrated &&
@@ -168,20 +151,6 @@ export function MobileWalletEntryProvider({ children }: { children: React.ReactN
             {t("choose")}
           </button>
         </aside>
-      ) : null}
-      {open ? (
-        <React.Suspense fallback={null}>
-          <MobileWalletSheet
-            destination={destination}
-            pathname={pathname}
-            mainnetUnavailable={mainnetUnavailable}
-            onClose={() => setOpen(false)}
-            onStay={() => {
-              setOpen(false);
-              openConnectModal?.();
-            }}
-          />
-        </React.Suspense>
       ) : null}
     </WalletEntryContext.Provider>
   );

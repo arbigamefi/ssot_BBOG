@@ -54,24 +54,12 @@
       "dismiss": "关闭"
     },
     "mobileWallet": {
-      "title": "在钱包中打开",
-      "inlineTitle": "在钱包内体验更顺畅",
-      "hint": "浏览页面与钱包确认操作在同一处。",
+      "title": "连接钱包",
+      "inlineTitle": "连接你的钱包",
+      "hint": "选择常用钱包，连接与交易都由你确认。",
       "unavailableHint": "主网投注暂未开放。",
       "choose": "选择钱包",
-      "dismiss": "关闭钱包提示",
-      "sheetTitle": "在钱包中继续",
-      "description": "在钱包浏览器中打开当前页面。连接与交易仍需你确认；未保存的输入可能需要重新填写。",
-      "openBrowser": "在钱包浏览器中打开",
-      "stay": "继续使用当前浏览器",
-      "tryTestnet": "体验测试网",
-      "attempted": "已尝试打开 {wallet}。若未跳转，请再次点击钱包，或复制链接到钱包浏览器。",
-      "copy": "复制当前链接",
-      "copied": "链接已复制",
-      "currentLink": "当前页面链接",
-      "lastSelected": "上次选择",
-      "otherWallets": "其他钱包 / WalletConnect",
-      "walletChoiceHint": "请选择你已安装的钱包。浏览器无法列出手机里的全部钱包应用；其他钱包可连接到当前浏览器。"
+      "dismiss": "关闭钱包提示"
     }
   },
   "metadata": {
