@@ -1,16 +1,13 @@
 {
-  "checkedAt": "2026-09-24T13:13:33.797Z",
-  "status": "PARTIAL_REAL_MAINNET_ACCEPTANCE",
+  "checkedAt": "2026-09-24T13:42:00.425Z",
+  "status": "EIGHT_GAME_SINGLE_ROUND_MAINNET_ACCEPTANCE_VERIFIED",
   "chainId": 8453,
   "publicCasinoRiskInEnabled": false,
   "player": "0x93ac87413e17d01cba37b6317f64890bf7f99ac3",
   "gameHub": "0xb4056d12ad04b01629b3a022fee385d2a1ae4b48",
   "bank": "0xEa3845f08a273257c3d3458D26e7bd4234330Dd4",
   "keeper": "0x440558699040d28975d218cab497338b65960a92",
-  "rpcUrls": [
-    "https://base.gateway.tenderly.co",
-    "https://mainnet.base.org"
-  ],
+  "rpcUrls": ["https://base.gateway.tenderly.co", "https://mainnet.base.org"],
   "additionalLpUsdcBaseUnits": "4000000",
   "lpShareBaseUnits": "6000000",
   "approvedStakeTotalBaseUnits": "57264",
@@ -106,20 +103,346 @@
       "webReceiptSource": "postgres",
       "webReceiptState": "finalized",
       "publicReceiptUrl": "https://arbigamefi.com/casino/receipt/8453/1"
+    },
+    {
+      "game": "coin-toss",
+      "positionId": "2",
+      "stake": "10000",
+      "state": "Settled",
+      "events": [
+        {
+          "name": "BetPlaced",
+          "txHash": "0x76a49b6c9d5788455e728aeeaa6667a49ac67b8bb89208a972f846e72ef10b4e",
+          "blockNumber": "51733354",
+          "blockHash": "0x4eaa3f1ca40a8d6dea40826a7d9429912b7723addb3f13187ec650a1964f3161"
+        },
+        {
+          "name": "BetRandomReady",
+          "txHash": "0x360703952540cf44a7158be2f71a9ff26e4fb1b16e77acd31cc5716bb28215b4",
+          "blockNumber": "51733358",
+          "blockHash": "0x4ecbb44fa386663622f401a024e8ecf857627028503f25654646670fb82e341f"
+        },
+        {
+          "name": "BetFinalized",
+          "txHash": "0x16ba4a4a6af68a07d3ce791740e1b552610d9c647095f27b1b50f4a07091dfbd",
+          "blockNumber": "51733359",
+          "blockHash": "0xfa110aff3d0a19c57bc1b9b23c88e47285802e3129cba7d1513832a81de31ddc"
+        }
+      ],
+      "terminal": {
+        "state": 4,
+        "payoutGross": "20000",
+        "payoutNet": "19600",
+        "feeOnPayout": "400",
+        "protocolFeeAccrual": "200",
+        "refundAmount": "0"
+      },
+      "after": {
+        "head": "51733405",
+        "assets": "5993140",
+        "reserved": "0",
+        "walletUsdc": "1106600",
+        "allowance": "44264"
+      },
+      "keeperLatencyMs": 4103,
+      "webReceiptSource": "postgres",
+      "webReceiptState": "finalized",
+      "publicReceiptUrl": "https://arbigamefi.com/casino/receipt/8453/2"
+    },
+    {
+      "game": "roulette",
+      "positionId": "3",
+      "stake": "2702",
+      "state": "Settled",
+      "events": [
+        {
+          "name": "BetPlaced",
+          "txHash": "0xdfc2a9fd38ffeaa915a75cf5b77ed4297ce31ef9f233e0b1d229e68cdc0bcb8e",
+          "blockNumber": "51733473",
+          "blockHash": "0x2d91f8aaec3ab371d5b1f1e1a24af4053fed909b569f590bd619cf04a63f5ab2"
+        },
+        {
+          "name": "BetRandomReady",
+          "txHash": "0x56c3c8089cdbd18e8fcf4858da809f90a468db93f8e025e6ee78d0d855410796",
+          "blockNumber": "51733478",
+          "blockHash": "0xe5fa570528689da84a5b3b42800877619bb412874edc21ded520400c4b1e158b"
+        },
+        {
+          "name": "BetFinalized",
+          "txHash": "0x245a3459abaf9119f310aa3840bc70ee425f13ca98f670948bc0ce28225d6c47",
+          "blockNumber": "51733479",
+          "blockHash": "0x9b2c4bf2e44fecbc48057a23b499b506c27edc6ce79e05d1f7cc70f7cbd3a036"
+        }
+      ],
+      "terminal": {
+        "state": 4,
+        "payoutGross": "0",
+        "payoutNet": "0",
+        "feeOnPayout": "0",
+        "protocolFeeAccrual": "54",
+        "refundAmount": "0"
+      },
+      "after": {
+        "head": "51733492",
+        "assets": "5995788",
+        "reserved": "0",
+        "walletUsdc": "1103898",
+        "allowance": "41562"
+      },
+      "keeperLatencyMs": 3111,
+      "webReceiptSource": "postgres",
+      "webReceiptState": "finalized",
+      "publicReceiptUrl": "https://arbigamefi.com/casino/receipt/8453/3"
+    },
+    {
+      "game": "keno",
+      "positionId": "4",
+      "stake": "10000",
+      "state": "Settled",
+      "events": [
+        {
+          "name": "BetPlaced",
+          "txHash": "0x4675051589efa86cdae2ced738ac45b130fdace484e16c2bc4061b494af14270",
+          "blockNumber": "51733551",
+          "blockHash": "0x4a1906fdb48c44e41ea56a7578fba339a86696c4874d4eab4708cd8c37a317d3"
+        },
+        {
+          "name": "BetRandomReady",
+          "txHash": "0xc80397a79de6a9c052453d1c6c24a2edc694a7c64651ecc1c08ad76a0af209b5",
+          "blockNumber": "51733556",
+          "blockHash": "0x0b73c53085014ac59adf6db08c6522415b9950ec34397f2d4fc414d38524d28e"
+        },
+        {
+          "name": "BetFinalized",
+          "txHash": "0x2ac171994166871954b515e3435d7af05cc82530af0a33d695304175eb2d16a3",
+          "blockNumber": "51733557",
+          "blockHash": "0x56d668a11a6c0d5a6b4e01813ded9ad5d3c5cf39189076e6cff398996c6d945f"
+        }
+      ],
+      "terminal": {
+        "state": 4,
+        "payoutGross": "7500",
+        "payoutNet": "7350",
+        "feeOnPayout": "150",
+        "protocolFeeAccrual": "200",
+        "refundAmount": "0"
+      },
+      "after": {
+        "head": "51733574",
+        "assets": "5998238",
+        "reserved": "0",
+        "walletUsdc": "1101248",
+        "allowance": "31562"
+      },
+      "keeperLatencyMs": 4087,
+      "webReceiptSource": "postgres",
+      "webReceiptState": "finalized",
+      "publicReceiptUrl": "https://arbigamefi.com/casino/receipt/8453/4"
+    },
+    {
+      "game": "plinko",
+      "positionId": "5",
+      "stake": "10000",
+      "state": "Settled",
+      "events": [
+        {
+          "name": "BetPlaced",
+          "txHash": "0x79352fefd88860d618819d7ad236f392888283733d829fd33d45f1682e47eb4a",
+          "blockNumber": "51733635",
+          "blockHash": "0xc27ed0dcb916b7f8f75ae602fa0a4ecb641cccf084a2c5d25f226ae4d63486f8"
+        },
+        {
+          "name": "BetRandomReady",
+          "txHash": "0xad9d926c9d871493ccc28eb2bb7fc4f8419f0a6f4a3d82bcda44becc6305cb61",
+          "blockNumber": "51733639",
+          "blockHash": "0x4e3421a3add72c3b8e816200b30664f2f283d80daf8fb9e9a1341523a50dbb90"
+        },
+        {
+          "name": "BetFinalized",
+          "txHash": "0x50de4e2925c9d4c1fcb732e6ce14c30bc1405b96dda92b1bf5f05bcc9d806bfe",
+          "blockNumber": "51733640",
+          "blockHash": "0xef55c19351745531a7c58e8b3ce5cbc316b4a0d82bc15db75da91353b0334351"
+        }
+      ],
+      "terminal": {
+        "state": 4,
+        "payoutGross": "6892",
+        "payoutNet": "6755",
+        "feeOnPayout": "137",
+        "protocolFeeAccrual": "200",
+        "refundAmount": "0"
+      },
+      "after": {
+        "head": "51733661",
+        "assets": "6001283",
+        "reserved": "0",
+        "walletUsdc": "1098003",
+        "allowance": "21562"
+      },
+      "keeperLatencyMs": 3108,
+      "webReceiptSource": "postgres",
+      "webReceiptState": "finalized",
+      "publicReceiptUrl": "https://arbigamefi.com/casino/receipt/8453/5"
+    },
+    {
+      "game": "sic-bo",
+      "positionId": "6",
+      "stake": "10000",
+      "state": "Settled",
+      "events": [
+        {
+          "name": "BetPlaced",
+          "txHash": "0x73aafac699dfc47ddd33b1c1fbbf11253408153f766451317548b85598d39991",
+          "blockNumber": "51733709",
+          "blockHash": "0xb6bcbf6a254df935091c98e0c092f3633c986d8c7513712dbeb78bbe1749ee50"
+        },
+        {
+          "name": "BetRandomReady",
+          "txHash": "0x3acca1ff6b464084bbfb12204a8ae9928923e54dba39482343ce0469d3e2a3b7",
+          "blockNumber": "51733714",
+          "blockHash": "0xc25683a920532fd3057591f700a547eb76f9ad72cf4e517256a0c517af80d3ec"
+        },
+        {
+          "name": "BetFinalized",
+          "txHash": "0xfad653e84176904f53ee1f7c8740268043f05897126e01415dc6c421aa1b4351",
+          "blockNumber": "51733715",
+          "blockHash": "0x8eb513b38b41a7453ad60632c9fc36dc8a9ae1b135ff2657801ea33c21377925"
+        }
+      ],
+      "terminal": {
+        "state": 4,
+        "payoutGross": "0",
+        "payoutNet": "0",
+        "feeOnPayout": "0",
+        "protocolFeeAccrual": "200",
+        "refundAmount": "0"
+      },
+      "after": {
+        "head": "51733732",
+        "assets": "6011083",
+        "reserved": "0",
+        "walletUsdc": "1088003",
+        "allowance": "11562"
+      },
+      "keeperLatencyMs": 4124,
+      "webReceiptSource": "postgres",
+      "webReceiptState": "finalized",
+      "publicReceiptUrl": "https://arbigamefi.com/casino/receipt/8453/6"
+    },
+    {
+      "game": "slots",
+      "positionId": "7",
+      "stake": "1562",
+      "state": "Settled",
+      "events": [
+        {
+          "name": "BetPlaced",
+          "txHash": "0xde8e1d728bc4f2678c3d68992044ac6f2e420744ace0cd68b5e2eebe42479806",
+          "blockNumber": "51733778",
+          "blockHash": "0x7d897523af0f31ddc6bb6df6a3e0973111ed059e6f3206d90f5a9612dfec29ac"
+        },
+        {
+          "name": "BetRandomReady",
+          "txHash": "0x3a0c7f3bb03c9eb756b8b08c8d89a33a3f924b2f97b908e5bf5760dd1c467660",
+          "blockNumber": "51733782",
+          "blockHash": "0x8241b0e71e4678ffac0e7897dcd5edad6ab4dbb413e590bd8df8d434b83b8df0"
+        },
+        {
+          "name": "BetFinalized",
+          "txHash": "0x3afbb560152609ff1d5c126f4b9f1444beaad648806e6c94a74a957399980d5c",
+          "blockNumber": "51733783",
+          "blockHash": "0x1d55a49dd6c30fe8ca2dfd7d4de32101f79a7995701b7c6cf93a4d70e875c487"
+        }
+      ],
+      "terminal": {
+        "state": 4,
+        "payoutGross": "0",
+        "payoutNet": "0",
+        "feeOnPayout": "0",
+        "protocolFeeAccrual": "31",
+        "refundAmount": "0"
+      },
+      "after": {
+        "head": "51733793",
+        "assets": "6012614",
+        "reserved": "0",
+        "walletUsdc": "1086441",
+        "allowance": "10000"
+      },
+      "keeperLatencyMs": 3091,
+      "webReceiptSource": "postgres",
+      "webReceiptState": "finalized",
+      "publicReceiptUrl": "https://arbigamefi.com/casino/receipt/8453/7"
+    },
+    {
+      "game": "baccarat",
+      "positionId": "8",
+      "stake": "10000",
+      "state": "Settled",
+      "events": [
+        {
+          "name": "BetPlaced",
+          "txHash": "0x66dec2f91f72d9e78202bd94e4ba4c6b56378a6fa30e12e514d3336c6735be0c",
+          "blockNumber": "51733852",
+          "blockHash": "0x824090a747c0700386d76d238b5a0086f3bd64232768db4cf05a1489e35fdf9c"
+        },
+        {
+          "name": "BetRandomReady",
+          "txHash": "0x9601984bea9fa0c5e506deb6da78452886f3ca91d1b2591e44338a7ca9be3f38",
+          "blockNumber": "51733857",
+          "blockHash": "0x15f4709f0952f3f290565cc2c58f64f8134e133d822d252ba824815fc64b65aa"
+        },
+        {
+          "name": "BetFinalized",
+          "txHash": "0xc5dfc22c0c8023c662c1cd6fb243c9aa81e8b96156dcd3ff476ccf0541f2d9b2",
+          "blockNumber": "51733858",
+          "blockHash": "0x0bb0d18ce61aa3c10791a16967eb20a02928dec5782cee2156a049769b907344"
+        }
+      ],
+      "terminal": {
+        "state": 4,
+        "payoutGross": "0",
+        "payoutNet": "0",
+        "feeOnPayout": "0",
+        "protocolFeeAccrual": "200",
+        "refundAmount": "0"
+      },
+      "after": {
+        "head": "51733905",
+        "assets": "6022414",
+        "reserved": "0",
+        "walletUsdc": "1076441",
+        "allowance": "0"
+      },
+      "keeperLatencyMs": 3125,
+      "webReceiptSource": "postgres",
+      "webReceiptState": "finalized",
+      "publicReceiptUrl": "https://arbigamefi.com/casino/receipt/8453/8"
     }
   ],
-  "remaining": [
-    "coin-toss",
-    "roulette",
-    "baccarat",
-    "sic-bo",
-    "plinko",
-    "slots",
-    "keno"
-  ],
+  "remaining": [],
   "limitations": [
-    "One actual Dice loss and its automatic settlement are verified. Remaining games and winning payout paths are not accepted yet.",
+    "8/8 planned single-round real mainnet game paths verified, including a Coin Toss winning payout and production keeper settlement. Other paths and mobile wallet handoff are not covered by this evidence.",
     "Frontend public betting remains disabled. This flag does not pause unpaused contracts.",
     "Users execute wallet transactions locally; no signing secrets are collected."
-  ]
+  ],
+  "finalReconciliation": {
+    "block": "51733984",
+    "totalStake": "57264",
+    "totalPayoutNet": "33705",
+    "playerNetUsdc": "-23559",
+    "walletUsdc": "1076441",
+    "bankCash": "6023559",
+    "bankAssets": "6022414",
+    "protocolFees": "1145",
+    "lpShares": "6000000",
+    "lpSupply": "6000000",
+    "reserved": "0",
+    "remainingAllowance": "0",
+    "nextPositionId": "9",
+    "deployerNonce": 65,
+    "nativeWalletWei": "1184828531860800",
+    "nativeBalanceDecreaseWei": "164597845297614",
+    "nativeEnvelopeCapWei": "400000000000000"
+  }
 }

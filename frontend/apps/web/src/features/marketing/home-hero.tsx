@@ -63,6 +63,8 @@ export function HomeHero({
             {copy.description}
           </p>
 
+          <MobileWalletDeepLinkBanner />
+
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
             <Link
               href="/casino"
@@ -77,8 +79,6 @@ export function HomeHero({
               {copy.viewBank}
             </Link>
           </div>
-
-          <MobileWalletDeepLinkBanner />
 
           <div className="mt-10 hidden max-w-xl grid-cols-1 gap-3 sm:grid-cols-2 lg:grid">
             {proofPoints.map((point) => (

@@ -6,16 +6,16 @@ import { ArrowTopRightOnSquareIcon, WalletIcon } from "@heroicons/react/24/outli
 import { Sheet } from "../components/overlay";
 import { WALLET_OPTIONS, walletDeepLink } from "./mobile-wallet-links";
 const LAST_WALLET_KEY = "arbigamefi.mobileDeepLink.lastWallet";
-function readSession(key: string) {
+function readPreference(key: string) {
   try {
-    return sessionStorage.getItem(key);
+    return localStorage.getItem(key) ?? sessionStorage.getItem(key);
   } catch {
     return null;
   }
 }
-function writeSession(key: string, value: string) {
+function writePreference(key: string, value: string) {
   try {
-    sessionStorage.setItem(key, value);
+    localStorage.setItem(key, value);
   } catch {
     /* Optional preference. */
   }
@@ -38,7 +38,7 @@ export function MobileWalletSheet({
   const [attempted, setAttempted] = React.useState<string | null>(null);
   const [copied, setCopied] = React.useState(false);
   React.useEffect(() => {
-    setLastWallet(readSession(LAST_WALLET_KEY));
+    setLastWallet(readPreference(LAST_WALLET_KEY));
   }, []);
   const wallets = [...WALLET_OPTIONS].sort(
     (a, b) => Number(b.id === lastWallet) - Number(a.id === lastWallet)
@@ -75,13 +75,20 @@ export function MobileWalletSheet({
             onClick={() => {
               setAttempted(wallet.name);
               setLastWallet(wallet.id);
-              writeSession(LAST_WALLET_KEY, wallet.id);
+              writePreference(LAST_WALLET_KEY, wallet.id);
             }}
             className="flex min-h-16 items-center gap-3 rounded-xl border border-border-soft bg-surface-2 px-4 py-3 text-fg hover:border-brand/40"
           >
             <WalletIcon aria-hidden className="h-6 w-6 shrink-0 text-brand" />
             <span className="flex-1">
-              <span className="block text-sm font-semibold">{wallet.name}</span>
+              <span className="block text-base font-semibold">
+                {wallet.name}
+                {wallet.id === lastWallet ? (
+                  <span className="ml-2 rounded bg-brand-soft px-2 py-1 text-xs font-medium text-brand">
+                    {t("lastSelected")}
+                  </span>
+                ) : null}
+              </span>
               <span className="text-xs text-fg-muted">{t("openBrowser")}</span>
             </span>
             <ArrowTopRightOnSquareIcon aria-hidden className="h-4 w-4" />
@@ -93,10 +100,11 @@ export function MobileWalletSheet({
         onClick={() => {
           onStay();
         }}
-        className="mt-3 min-h-12 w-full rounded-lg text-sm font-semibold text-fg-muted hover:bg-surface-2"
+        className="mt-3 min-h-12 w-full rounded-lg border border-brand/30 text-base font-semibold text-brand hover:bg-brand-soft"
       >
-        {t("stay")}
+        {t("otherWallets")}
       </button>
+      <p className="mt-2 text-xs leading-5 text-fg-muted">{t("walletChoiceHint")}</p>
       {attempted ? (
         <div className="mt-3 rounded-lg border border-border-soft p-3">
           <p role="status" className="text-xs leading-5 text-fg-muted">

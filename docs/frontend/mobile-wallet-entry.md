@@ -1,8 +1,10 @@
 # Mobile wallet entry and casino availability
 
-The homepage offers an inline wallet-browser entry below the primary actions. The casino directory offers a dismissible bottom card after compliance and cookie choices are resolved. Game rooms retain their betting controls without a competing floating card. The mobile menu keeps a manual entry after the card has been dismissed for the session.
+The homepage offers a prominent wallet-browser card before the browsing actions, with a full-width 56px filled button. The casino directory offers a dismissible bottom card with a filled action after compliance and cookie choices are resolved. Game rooms retain their betting controls without a competing floating card. The mobile menu keeps a manual entry after the card has been dismissed for the session.
 
 All connect requests pass through one `MobileWalletEntryProvider`. An unconnected mobile browser opens a single lazy-loaded sheet with explicit MetaMask and Trust Wallet links, a normal browser connection option, and a copyable URL fallback. Desktop, connected/reconnecting accounts, and browsers with an injected wallet use the existing connection path. Late provider announcements suppress the prompt. No automatic redirects, installed-wallet claims, or successful-connection claims are made.
+
+Ordinary iOS/Android browsers do not provide a general installed-wallet inventory. Chrome's `getInstalledRelatedApps` requires a verified relationship between this origin and each app; it is not an arbitrary app scanner. A detected injected wallet goes directly to the existing RainbowKit connection selector. Without one, a locally remembered wallet is labelled only "Last selected" and sorted first, with MetaMask/Trust defaults and a visible "Other wallets / WalletConnect" action. This is a cross-platform fallback, not a device-specific allowlist. See [Chrome's API requirements](https://developer.chrome.com/docs/capabilities/get-installed-related-apps) and [RainbowKit's wallet discovery fallback](https://rainbowkit.com/docs/custom-wallet-list).
 
 The wallet destination retains the current page, selected chain and valid public referral address. Other query parameters and fragments are discarded. Unsaved betting inputs and session storage do not move between browser applications. PWA installation prompts yield to the wallet entry.
 

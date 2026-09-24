@@ -1,0 +1,141 @@
+{
+  "deployedRevision": "cb74e098a3d40368871e56e0bcafd4373861dd6c",
+  "pullRequest": "https://github.com/arbigamefi/ssot_BBOG/pull/69",
+  "imageBuildRun": "https://github.com/arbigamefi/ssot_BBOG/actions/runs/36006036980",
+  "masterContractCi": "https://github.com/arbigamefi/ssot_BBOG/actions/runs/36006036438",
+  "masterFrontendCi": "https://github.com/arbigamefi/ssot_BBOG/actions/runs/36006036486",
+  "webImage": "ghcr.io/arbigamefi/ssot-bbog-web@sha256:1cdfe5dce8ce657e88519c62d745c2a6822869c3f9c5ef82535316f08bd5c110",
+  "keeperImage": "ghcr.io/arbigamefi/ssot-bbog-keeper@sha256:c45c0d6967b33f563b633073a99a5f4a9c66aaae2244dfe3c03e7419926b0260",
+  "previousRevision": "055a9f5f5a1bc85508d69d32b05e475c408251e0",
+  "previousWebImage": "ghcr.io/arbigamefi/ssot-bbog-web@sha256:d26885b7c44943ef7472054e7b48f8283f66f5d187066bdb1b37d8b0d8614d03",
+  "previousKeeperImage": "ghcr.io/arbigamefi/ssot-bbog-keeper@sha256:a004f0dd78a6c2a8a21b9360dc5f7ecea93e09943cde4a53b31e01e3744ee974",
+  "imageVerification": {
+    "revision": "cb74e098a3d40368871e56e0bcafd4373861dd6c",
+    "releases": [
+      {
+        "chainId": 8453,
+        "digest": "0xcf3f3550d8532fc656ad8e646b015b972f88631f5e38125b47d0f1ed249e0055",
+        "gameHub": "0xb4056d12ad04b01629b3a022fee385d2a1ae4b48",
+        "banks": [
+          "0xea3845f08a273257c3d3458d26e7bd4234330dd4",
+          "0x9d61c6230ef0bf2d853e17a0368cbc384ef1843b"
+        ]
+      },
+      {
+        "chainId": 84532,
+        "digest": "0xae662a55eef716a97f1a2d2bfad389507b86d0aff72b32a162b90fcb59920c6b",
+        "gameHub": "0xb4056d12ad04b01629b3a022fee385d2a1ae4b48",
+        "banks": [
+          "0xea3845f08a273257c3d3458d26e7bd4234330dd4",
+          "0x9d61c6230ef0bf2d853e17a0368cbc384ef1843b"
+        ]
+      }
+    ],
+    "status": "verified"
+  },
+  "containersBefore": [
+    "/arbigamefi-v15-web-1 6979a6c6a5f3fd8b877a26ee4eec6ea07d43ea5d420aa09343dc1587bb4a37a7 2026-09-24T09:18:11.726387323Z running ghcr.io/arbigamefi/ssot-bbog-web@sha256:d26885b7c44943ef7472054e7b48f8283f66f5d187066bdb1b37d8b0d8614d03",
+    "/arbigamefi-v15-keeper-primary-1 2ef0a8008ed5db51a3e8a94687616da3a219c49daaa780f47eb738946b5e0ceb 2026-09-24T09:18:11.777400303Z running ghcr.io/arbigamefi/ssot-bbog-keeper@sha256:a004f0dd78a6c2a8a21b9360dc5f7ecea93e09943cde4a53b31e01e3744ee974",
+    "/arbigamefi-v15-keeper-testnet-primary-1 405fae4033ed37b9fab49b4bb6d2b7dfaef0659f6729f99a2dbea56a1c75baac 2026-09-24T09:18:11.753835298Z running ghcr.io/arbigamefi/ssot-bbog-keeper@sha256:a004f0dd78a6c2a8a21b9360dc5f7ecea93e09943cde4a53b31e01e3744ee974",
+    "/arbigamefi-v15-caddy-1 7d3f88a58bcaea5fb16d477af27dce4a8c8a30a11f38a526ee2c405885249f9e 2026-09-23T15:39:01.83253592Z running caddy:2-alpine",
+    "/arbigamefi-v15-postgres-1 165df8991a508bbfa475ec7d0f83ff3234360262bf9127def05615edf69312a3 2026-09-23T15:23:35.626837758Z running postgres:16-alpine"
+  ],
+  "containersAfter": [
+    "/arbigamefi-v15-web-1 9589cf4afdac7ed224311ef46f02445f5e3df22017390b547c1f20bf2e92fd0c 2026-09-24T13:42:57.486359348Z running ghcr.io/arbigamefi/ssot-bbog-web@sha256:1cdfe5dce8ce657e88519c62d745c2a6822869c3f9c5ef82535316f08bd5c110",
+    "/arbigamefi-v15-keeper-primary-1 192b46c6f36dbcfd0077cf48bdc85b303b83eaec7368e495f719b535a441151d 2026-09-24T13:42:57.534628522Z running ghcr.io/arbigamefi/ssot-bbog-keeper@sha256:c45c0d6967b33f563b633073a99a5f4a9c66aaae2244dfe3c03e7419926b0260",
+    "/arbigamefi-v15-keeper-testnet-primary-1 ec95b7ffa9ff4c2317b03a842385702c694483e9e43c27efded6327710683694 2026-09-24T13:42:57.613935789Z running ghcr.io/arbigamefi/ssot-bbog-keeper@sha256:c45c0d6967b33f563b633073a99a5f4a9c66aaae2244dfe3c03e7419926b0260",
+    "/arbigamefi-v15-caddy-1 7d3f88a58bcaea5fb16d477af27dce4a8c8a30a11f38a526ee2c405885249f9e 2026-09-23T15:39:01.83253592Z running caddy:2-alpine",
+    "/arbigamefi-v15-postgres-1 165df8991a508bbfa475ec7d0f83ff3234360262bf9127def05615edf69312a3 2026-09-23T15:23:35.626837758Z running postgres:16-alpine"
+  ],
+  "databaseAndProxyUnchanged": true,
+  "persistentReceiptsVerified": 8,
+  "receiptVerificationAt": "2026-09-24T13:44:48.449Z",
+  "health": {
+    "pr69-mainnet-after.json": {
+      "schemaVersion": 1,
+      "status": "ok",
+      "chainId": 8453,
+      "generatedAt": "2026-09-24T13:44:21.867Z",
+      "checks": {
+        "release": {
+          "status": "ok",
+          "name": "Base",
+          "warnings": []
+        },
+        "keeper": {
+          "status": "ok",
+          "role": "primary",
+          "keeperStatus": "running",
+          "updatedAt": "2026-09-24T13:44:21.602Z",
+          "ageMs": 261,
+          "queueDepth": 0
+        },
+        "betIndex": {
+          "status": "ok",
+          "source": "postgres",
+          "rows": 1,
+          "durableRequired": true,
+          "durableConfigured": true
+        }
+      }
+    },
+    "pr69-testnet-after.json": {
+      "schemaVersion": 1,
+      "status": "ok",
+      "chainId": 84532,
+      "generatedAt": "2026-09-24T13:44:25.957Z",
+      "checks": {
+        "release": {
+          "status": "ok",
+          "name": "Base Sepolia",
+          "warnings": []
+        },
+        "keeper": {
+          "status": "ok",
+          "role": "primary",
+          "keeperStatus": "running",
+          "updatedAt": "2026-09-24T13:44:21.609Z",
+          "ageMs": 4346,
+          "queueDepth": 0
+        },
+        "betIndex": {
+          "status": "ok",
+          "source": "postgres",
+          "rows": 1,
+          "durableRequired": true,
+          "durableConfigured": true
+        }
+      }
+    },
+    "pr69-public-health.json": {
+      "schemaVersion": 1,
+      "status": "ok",
+      "chainId": 8453,
+      "generatedAt": "2026-09-24T13:44:15.074Z",
+      "checks": {
+        "release": {
+          "status": "ok",
+          "name": "Base",
+          "warnings": []
+        },
+        "keeper": {
+          "status": "ok",
+          "role": "primary",
+          "keeperStatus": "running",
+          "updatedAt": "2026-09-24T13:44:11.600Z",
+          "ageMs": 3474,
+          "queueDepth": 0
+        },
+        "betIndex": {
+          "status": "ok",
+          "source": "postgres",
+          "rows": 1,
+          "durableRequired": true,
+          "durableConfigured": true
+        }
+      }
+    }
+  },
+  "publicCasinoRiskInEnabled": false,
+  "mobileDeviceHandoff": "PENDING_USER_DEVICE_CHECK"
+}

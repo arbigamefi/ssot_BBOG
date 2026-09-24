@@ -140,22 +140,15 @@ export function MobileWalletEntryProvider({ children }: { children: React.ReactN
       {showFloating ? (
         <aside
           aria-label={t("title")}
-          className="fixed inset-x-3 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-[50] flex items-center gap-3 rounded-xl border border-border-soft bg-surface-1 p-3 shadow-e3 md:hidden"
+          className="fixed inset-x-3 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-[50] grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-xl border border-brand/50 bg-surface-1 p-4 shadow-e3 md:hidden"
         >
           <WalletIcon className="h-6 w-6 shrink-0 text-brand" aria-hidden />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-fg">{t("title")}</p>
+            <p className="text-base font-bold text-fg">{t("title")}</p>
             <p className="text-xs text-fg-muted">
               {t(mainnetUnavailable ? "unavailableHint" : "hint")}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={connect}
-            className="min-h-11 rounded-lg border border-brand/30 px-3 text-xs font-semibold text-brand"
-          >
-            {t("choose")}
-          </button>
           <button
             type="button"
             aria-label={t("dismiss")}
@@ -166,6 +159,13 @@ export function MobileWalletEntryProvider({ children }: { children: React.ReactN
             className="grid h-11 w-11 shrink-0 place-items-center rounded-lg text-fg-muted"
           >
             <XMarkIcon className="h-5 w-5" />
+          </button>
+          <button
+            type="button"
+            onClick={connect}
+            className="col-span-3 min-h-12 rounded-lg bg-brand px-4 text-base font-bold text-fg-inverse hover:bg-brand-hover"
+          >
+            {t("choose")}
           </button>
         </aside>
       ) : null}

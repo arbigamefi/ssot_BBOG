@@ -48,6 +48,7 @@ beforeEach(() => {
   state.cookie = "rejected";
   state.connect.mockClear();
   sessionStorage.clear();
+  localStorage.clear();
   Object.defineProperty(navigator, "userAgent", {
     configurable: true,
     value: "Mozilla/5.0 iPhone Mobile Safari"
@@ -65,21 +66,25 @@ afterEach(() => {
 });
 
 describe("mobile wallet entry", () => {
-  it("shows an inline home hint and opens one shared sheet from the connection event", async () => {
-    render(<View />);
-    expect(screen.getByText("inlineTitle")).toBeVisible();
-    expect(screen.getByText("unavailableHint")).toBeVisible();
-    act(() => requestWalletConnect());
-    await screen.findByRole("dialog");
-    expect(screen.getAllByRole("dialog")).toHaveLength(1);
-    expect(screen.getByRole("link", { name: /MetaMask/ })).toHaveAttribute(
-      "href",
-      expect.stringContaining("chainId=8453")
-    );
-    fireEvent.click(screen.getByRole("button", { name: "stay" }));
-    expect(state.connect).toHaveBeenCalledOnce();
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-  });
+  it.each(["Mozilla/5.0 iPhone Mobile Safari", "Mozilla/5.0 Android Mobile Chrome"])(
+    "opens one shared wallet sheet in %s",
+    async (userAgent) => {
+      Object.defineProperty(navigator, "userAgent", { configurable: true, value: userAgent });
+      render(<View />);
+      expect(screen.getByText("inlineTitle")).toBeVisible();
+      expect(screen.getByText("unavailableHint")).toBeVisible();
+      act(() => requestWalletConnect());
+      await screen.findByRole("dialog");
+      expect(screen.getAllByRole("dialog")).toHaveLength(1);
+      expect(screen.getByRole("link", { name: /MetaMask/ })).toHaveAttribute(
+        "href",
+        expect.stringContaining("chainId=8453")
+      );
+      fireEvent.click(screen.getByRole("button", { name: "otherWallets" }));
+      expect(state.connect).toHaveBeenCalledOnce();
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    }
+  );
   it("does not nudge or redirect an already connected browser", () => {
     state.connected = true;
     render(<View />);
@@ -105,6 +110,9 @@ describe("mobile wallet entry", () => {
     Object.defineProperty(window, "ethereum", { configurable: true, value: { isMetaMask: true } });
     const view = render(<View />);
     expect(screen.queryByText("inlineTitle")).not.toBeInTheDocument();
+    act(() => requestWalletConnect());
+    expect(state.connect).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     view.unmount();
     Object.defineProperty(window, "ethereum", { configurable: true, value: undefined });
     Object.defineProperty(navigator, "userAgent", { configurable: true, value: "Desktop Chrome" });
@@ -151,6 +159,31 @@ describe("mobile wallet entry", () => {
       </MobileWalletEntryProvider>
     );
     expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
+  });
+  it("prioritizes the previously selected wallet without claiming it is installed", async () => {
+    localStorage.setItem("arbigamefi.mobileDeepLink.lastWallet", "trust");
+    render(<View />);
+    act(() => requestWalletConnect());
+    await screen.findByRole("dialog");
+    await waitFor(() => expect(screen.getByText("lastSelected")).toBeVisible());
+    const walletLinks = screen
+      .getAllByRole("link")
+      .filter((link) => /MetaMask|Trust Wallet/.test(link.textContent ?? ""));
+    expect(walletLinks[0]).toHaveTextContent("Trust Wallet");
+    expect(screen.getByText("walletChoiceHint")).toBeVisible();
+    expect(screen.queryByText("installed")).not.toBeInTheDocument();
+    expect(state.connect).not.toHaveBeenCalled();
+  });
+  it("offers default and other-wallet choices when the saved wallet is unsupported", async () => {
+    localStorage.setItem("arbigamefi.mobileDeepLink.lastWallet", "unknown-wallet");
+    render(<View />);
+    act(() => requestWalletConnect());
+    await screen.findByRole("dialog");
+    expect(screen.getByRole("link", { name: /MetaMask/ })).toBeVisible();
+    expect(screen.getByRole("link", { name: /Trust Wallet/ })).toBeVisible();
+    expect(screen.queryByText("lastSelected")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "otherWallets" }));
+    expect(state.connect).toHaveBeenCalledOnce();
   });
 });
 

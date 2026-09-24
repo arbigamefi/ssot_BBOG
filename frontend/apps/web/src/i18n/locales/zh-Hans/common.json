@@ -68,7 +68,10 @@
       "attempted": "已尝试打开 {wallet}。若未跳转，请再次点击钱包，或复制链接到钱包浏览器。",
       "copy": "复制当前链接",
       "copied": "链接已复制",
-      "currentLink": "当前页面链接"
+      "currentLink": "当前页面链接",
+      "lastSelected": "上次选择",
+      "otherWallets": "其他钱包 / WalletConnect",
+      "walletChoiceHint": "请选择你已安装的钱包。浏览器无法列出手机里的全部钱包应用；其他钱包可连接到当前浏览器。"
     }
   },
   "metadata": {
