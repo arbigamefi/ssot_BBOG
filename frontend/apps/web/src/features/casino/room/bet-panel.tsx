@@ -13,7 +13,7 @@ import {
 import { isBetAmountAboveMax, isBetAmountUnavailable, resolveBetMaxRaw } from "./bet-amount";
 import type { GameMeta } from "./model";
 import type { GameRoomBetPanelState, PlaceBetButtonPhase } from "./place-bet-button";
-import { PlaceBetButton } from "./place-bet-button";
+import { CasinoTestnetLink, PlaceBetButton } from "./place-bet-button";
 import type { CasinoRoundPhase } from "./casino-round";
 import { CasinoRoundStatusPanel } from "./round-status-panel";
 import { getStepperErrorMessage } from "./feedback";
@@ -61,7 +61,8 @@ export function GameRoomBetPanel({
   manualRefundAvailable,
   onManualRefund,
   hideMobileAction = false,
-  onPlaceBet
+  onPlaceBet,
+  riskInDisabled = false
 }: {
   game: GameMeta;
   walletBalance: GameWalletBalance | null;
@@ -110,6 +111,7 @@ export function GameRoomBetPanel({
   onManualRefund?: () => void;
   hideMobileAction?: boolean;
   onPlaceBet: () => void;
+  riskInDisabled?: boolean;
 }) {
   const t = useTranslations();
   const primaryAction =
@@ -197,7 +199,7 @@ export function GameRoomBetPanel({
           </div>
         </div>
 
-        {!hasAccount && (
+        {!hasAccount && !riskInDisabled && (
           <div
             className={cn(
               "mb-2 rounded-lg border border-brand/30 bg-brand-soft p-3",
@@ -279,6 +281,7 @@ export function GameRoomBetPanel({
         )}
       >
         <PlaceBetButton
+          riskInDisabled={riskInDisabled}
           gameSlug={game.slug}
           hasAccount={hasAccount}
           isPending={isPending}
@@ -291,6 +294,9 @@ export function GameRoomBetPanel({
           amountExceedsMax={amountExceedsMax}
           onClick={primaryAction}
         />
+        {riskInDisabled && !isPending && !manualSettleAvailable && !manualRefundAvailable ? (
+          <CasinoTestnetLink />
+        ) : null}
       </div>
     </div>
   );

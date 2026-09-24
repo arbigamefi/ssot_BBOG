@@ -154,7 +154,12 @@ function MobileNavDrawer({
     >
       <div className="border-b border-border-soft px-4 py-4">
         <div className="min-w-0 [&>button]:w-full [&>div]:w-full [&>div>button]:w-full">
-          <WalletHeaderMenu hideDisconnectedChainSwitcher mode="sheet" />
+          <WalletHeaderMenu
+            hideDisconnectedChainSwitcher
+            mode="sheet"
+            onConnectRequested={onClose}
+          />
+          <MobileWalletDeepLinkBanner menu onOpen={onClose} />
         </div>
       </div>
       <nav className="min-h-0 flex-1 overflow-y-auto px-4 py-5" aria-label={t("nav.menu")}>
@@ -418,7 +423,7 @@ export function AppHeader({ activeRoute = "none", variant = "default" }: AppHead
       ) : (
         headerBar
       )}
-      <MobileWalletDeepLinkBanner />
+
       {variant === "game" ? null : mobileGameNav}
       <MobileNavDrawer open={mobileMenuOpen} activeRoute={activeRoute} onClose={closeMobileMenu} />
     </>

@@ -1,0 +1,125 @@
+{
+  "checkedAt": "2026-09-24T13:13:33.797Z",
+  "status": "PARTIAL_REAL_MAINNET_ACCEPTANCE",
+  "chainId": 8453,
+  "publicCasinoRiskInEnabled": false,
+  "player": "0x93ac87413e17d01cba37b6317f64890bf7f99ac3",
+  "gameHub": "0xb4056d12ad04b01629b3a022fee385d2a1ae4b48",
+  "bank": "0xEa3845f08a273257c3d3458D26e7bd4234330Dd4",
+  "keeper": "0x440558699040d28975d218cab497338b65960a92",
+  "rpcUrls": [
+    "https://base.gateway.tenderly.co",
+    "https://mainnet.base.org"
+  ],
+  "additionalLpUsdcBaseUnits": "4000000",
+  "lpShareBaseUnits": "6000000",
+  "approvedStakeTotalBaseUnits": "57264",
+  "steps": [
+    {
+      "kind": "lpApproval",
+      "txHash": "0xecc6d9ecd18794d8f723fc19d8b27329ed21cb542a8f7921fed4ac57b19b16bb",
+      "blockNumber": "51732602",
+      "blockHash": "0x7deb5598547ba09375937904c9c2ffed67429ff088309cbe08540349d1d499b8",
+      "nonce": 54,
+      "state": {
+        "allowance": "4000000",
+        "walletUsdc": "5100000",
+        "lpShares": "2000000",
+        "assets": "2000000",
+        "reserved": "0",
+        "paused": false
+      }
+    },
+    {
+      "kind": "lpDeposit",
+      "txHash": "0xd34191e123a072e54578a676eeae4bbf533d36e393c6a15251d8d7fcee9d26df",
+      "blockNumber": "51732781",
+      "blockHash": "0x8d76dd31e29f74dee7682a6be784c66b86ec4ee1514addccf5095af17fcdaf3a",
+      "nonce": 55,
+      "state": {
+        "allowance": "0",
+        "walletUsdc": "1100000",
+        "lpShares": "6000000",
+        "assets": "6000000",
+        "reserved": "0",
+        "paused": false
+      }
+    },
+    {
+      "kind": "betApproval",
+      "txHash": "0x55ee88486585d50d5ce46e906d6a328a17c07dc07c3d238e506681f899662065",
+      "blockNumber": "51732838",
+      "blockHash": "0x102d7a5a35d6edb6c224c89939072db9cea837a6e268dbf9c7d785ac7027dd13",
+      "nonce": 56,
+      "state": {
+        "allowance": "57264",
+        "walletUsdc": "1100000",
+        "lpShares": "6000000",
+        "assets": "6000000",
+        "reserved": "0",
+        "paused": false
+      }
+    }
+  ],
+  "games": [
+    {
+      "game": "dice",
+      "positionId": "1",
+      "stake": "3000",
+      "state": "Settled",
+      "events": [
+        {
+          "name": "BetPlaced",
+          "txHash": "0x15bc0f94676a2b22bb8ac96c1f76ffaa523d720e0ff6831fc997ceaa2e061b6e",
+          "blockNumber": "51733077",
+          "blockHash": "0xf504750bbc2dc45ee5fdb2a81f66a626e46f40d8bb9d72d0a101863208f3f27a"
+        },
+        {
+          "name": "BetRandomReady",
+          "txHash": "0x23dfbd319d573f89db654e3793ea9984d58e71b0d90a9db949a57ab9f5927aaa",
+          "blockNumber": "51733081",
+          "blockHash": "0xb503a377464bf1341e4f6344c9493c6d2cf18b71d877dc8850fdf586db9f8b63"
+        },
+        {
+          "name": "BetFinalized",
+          "txHash": "0x722720f4ce5df5b90f19d03ebf09fc2d363200e2b200db2929e536b12f29a029",
+          "blockNumber": "51733082",
+          "blockHash": "0x67cb549929685879c931288edf678187426d34f9b88f5fdf5b75f4425a1a2053"
+        }
+      ],
+      "terminal": {
+        "state": 4,
+        "payoutGross": "0",
+        "payoutNet": "0",
+        "feeOnPayout": "0",
+        "protocolFeeAccrual": "60",
+        "refundAmount": "0"
+      },
+      "after": {
+        "head": "51733124",
+        "assets": "6002940",
+        "reserved": "0",
+        "walletUsdc": "1097000",
+        "allowance": "54264"
+      },
+      "keeperLatencyMs": 3141,
+      "webReceiptSource": "postgres",
+      "webReceiptState": "finalized",
+      "publicReceiptUrl": "https://arbigamefi.com/casino/receipt/8453/1"
+    }
+  ],
+  "remaining": [
+    "coin-toss",
+    "roulette",
+    "baccarat",
+    "sic-bo",
+    "plinko",
+    "slots",
+    "keno"
+  ],
+  "limitations": [
+    "One actual Dice loss and its automatic settlement are verified. Remaining games and winning payout paths are not accepted yet.",
+    "Frontend public betting remains disabled. This flag does not pause unpaused contracts.",
+    "Users execute wallet transactions locally; no signing secrets are collected."
+  ]
+}

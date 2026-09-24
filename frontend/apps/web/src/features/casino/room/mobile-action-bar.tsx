@@ -15,7 +15,7 @@ import {
 } from "./bet-amount";
 import type { GameMeta } from "./model";
 import type { PlaceBetButtonPhase } from "./place-bet-button";
-import { PlaceBetButton } from "./place-bet-button";
+import { CasinoTestnetLink, PlaceBetButton } from "./place-bet-button";
 
 const BET_AMOUNT_PATTERN = "[0-9]*[.]?[0-9]*";
 
@@ -36,7 +36,8 @@ export function MobileCasinoActionBar({
   onManualSettle,
   manualRefundAvailable = false,
   onManualRefund,
-  onPlaceBet
+  onPlaceBet,
+  riskInDisabled = false
 }: {
   game: GameMeta;
   assetSymbol: string;
@@ -56,6 +57,7 @@ export function MobileCasinoActionBar({
   manualRefundAvailable?: boolean;
   onManualRefund?: () => void;
   onPlaceBet: () => void;
+  riskInDisabled?: boolean;
 }) {
   const t = useTranslations();
   const primaryAction =
@@ -156,6 +158,7 @@ export function MobileCasinoActionBar({
         ) : null}
       </div>
       <PlaceBetButton
+        riskInDisabled={riskInDisabled}
         gameSlug={game.slug}
         hasAccount={hasAccount}
         isPending={isPending}
@@ -169,6 +172,9 @@ export function MobileCasinoActionBar({
         onClick={primaryAction}
         density="compact"
       />
+      {riskInDisabled && !isPending && !manualSettleAvailable && !manualRefundAvailable ? (
+        <CasinoTestnetLink />
+      ) : null}
     </div>
   );
 }

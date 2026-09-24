@@ -104,6 +104,21 @@ describe("game room place bet action", () => {
     expect(isCasinoRiskInEnabledForChain(8453)).toBe(false);
   });
 
+  it("blocks unavailable mainnet before opening a wallet or executing a cached plan", async () => {
+    for (const account of [undefined, "0x4444444444444444444444444444444444444444"]) {
+      const args = baseArgs({
+        account,
+        release: mainnetRelease,
+        state: { status: "ready", plan: plannedBet }
+      });
+      await executeGamePlaceBetAction(args);
+      expect(args.openConnectModal).not.toHaveBeenCalled();
+      expect(args.executeNow).not.toHaveBeenCalled();
+      expect(args.planNow).not.toHaveBeenCalled();
+    }
+    expect(isCasinoRiskInEnabledForChain(999999)).toBe(false);
+  });
+
   it("opens wallet connect when there is no account", async () => {
     const args = baseArgs({ account: undefined });
     await executeGamePlaceBetAction(args);

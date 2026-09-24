@@ -52,6 +52,23 @@
       "description": "Add to your home screen for a faster, app-like experience.",
       "action": "Install",
       "dismiss": "Dismiss"
+    },
+    "mobileWallet": {
+      "title": "Open in a wallet",
+      "inlineTitle": "A smoother experience inside your wallet",
+      "hint": "Keep the page and wallet confirmations together.",
+      "unavailableHint": "Mainnet betting is not yet available.",
+      "choose": "Choose wallet",
+      "dismiss": "Close wallet prompt",
+      "sheetTitle": "Continue in your wallet",
+      "description": "Open this page in your wallet browser. Connections and transactions still need your confirmation. Unsaved inputs may need to be entered again.",
+      "openBrowser": "Open in wallet browser",
+      "stay": "Continue in this browser",
+      "tryTestnet": "Explore the testnet",
+      "attempted": "Opening {wallet} was requested. If it did not open, tap the wallet again or copy this link into its browser.",
+      "copy": "Copy current link",
+      "copied": "Link copied",
+      "currentLink": "Current page link"
     }
   },
   "metadata": {
@@ -297,7 +314,7 @@
         "rouletteSelectionRequired": "Please select at least one number or bet type on the Roulette board.",
         "kenoSelectionRequired": "Please select at least 1 number on the Keno grid.",
         "kenoSelectionInvalid": "Select 1 to 5 Keno numbers between 1 and 15.",
-        "mainnetRiskInDisabled": "Casino mainnet betting is disabled until frontend access approval is complete.",
+        "mainnetRiskInDisabled": "Mainnet betting is not yet available",
         "invalidCasinoPool": "Selected asset pool is not available. Choose another asset.",
         "noActiveCasinoPool": "No casino games are live on this chain right now.",
         "unexpected": "An unexpected error occurred."
@@ -1020,6 +1037,11 @@
       },
       "bets": "Bets",
       "clearAll": "Clear all"
+    },
+    "availability": {
+      "title": "Mainnet betting is not yet available",
+      "description": "You can explore games and rules. Try Base Sepolia with test assets; connecting a wallet does not enable mainnet betting.",
+      "tryTestnet": "Try on Base Sepolia"
     }
   },
   "sportsbook": {

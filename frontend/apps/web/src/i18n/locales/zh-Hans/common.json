@@ -52,6 +52,23 @@
       "description": "添加到主屏幕,获得更快、类原生 app 的体验。",
       "action": "安装",
       "dismiss": "关闭"
+    },
+    "mobileWallet": {
+      "title": "在钱包中打开",
+      "inlineTitle": "在钱包内体验更顺畅",
+      "hint": "浏览页面与钱包确认操作在同一处。",
+      "unavailableHint": "主网投注暂未开放。",
+      "choose": "选择钱包",
+      "dismiss": "关闭钱包提示",
+      "sheetTitle": "在钱包中继续",
+      "description": "在钱包浏览器中打开当前页面。连接与交易仍需你确认；未保存的输入可能需要重新填写。",
+      "openBrowser": "在钱包浏览器中打开",
+      "stay": "继续使用当前浏览器",
+      "tryTestnet": "体验测试网",
+      "attempted": "已尝试打开 {wallet}。若未跳转，请再次点击钱包，或复制链接到钱包浏览器。",
+      "copy": "复制当前链接",
+      "copied": "链接已复制",
+      "currentLink": "当前页面链接"
     }
   },
   "metadata": {
@@ -297,7 +314,7 @@
         "rouletteSelectionRequired": "请先在轮盘桌面选择至少一个号码或投注类型。",
         "kenoSelectionRequired": "请在 Keno 网格中至少选择 1 个号码。",
         "kenoSelectionInvalid": "Keno 只能选择 1 到 5 个号码，号码范围为 1 到 15。",
-        "mainnetRiskInDisabled": "赌场主网下注已关闭，需完成前端准入审批后才能开启。",
+        "mainnetRiskInDisabled": "主网投注暂未开放",
         "invalidCasinoPool": "所选资产资金池不可用，请切换资产。",
         "noActiveCasinoPool": "当前链上没有可玩的游戏。",
         "unexpected": "发生了非预期错误。"
@@ -1020,6 +1037,11 @@
       },
       "bets": "下注",
       "clearAll": "清空"
+    },
+    "availability": {
+      "title": "主网投注暂未开放",
+      "description": "你可以浏览游戏与规则，或使用测试资产体验 Base Sepolia。连接钱包不会开启主网投注。",
+      "tryTestnet": "前往 Base Sepolia 体验"
     }
   },
   "sportsbook": {

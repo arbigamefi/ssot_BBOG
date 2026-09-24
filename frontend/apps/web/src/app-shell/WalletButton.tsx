@@ -13,10 +13,13 @@
  * to the never-undefined contract consumers were written against.
  */
 import * as React from "react";
+import { useWalletEntry } from "./wallet-entry-context";
 import { useConnectModal as useRainbowConnectModal } from "@rainbow-me/rainbowkit";
 
 export function useConnectModal() {
-  const { openConnectModal } = useRainbowConnectModal();
+  const rainbow = useRainbowConnectModal();
+  const entry = useWalletEntry();
+  const openConnectModal = entry?.open ?? rainbow.openConnectModal;
   return React.useMemo(
     () => ({
       openConnectModal: openConnectModal ?? (() => {}),

@@ -2,173 +2,52 @@
 
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { ArrowTopRightOnSquareIcon, ChevronDownIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import { cn } from "@ssot/ui";
+import { WalletIcon } from "@heroicons/react/24/outline";
+import { useWalletEntry } from "./wallet-entry-context";
 
-const DISMISS_STORAGE_KEY = "arbigamefi.mobileDeepLink.dismissedV1";
-
-/**
- * Helps mobile-browser users get into a wallet's in-app browser, where
- * `window.ethereum` is auto-injected and the connection flow is one-tap.
- *
- * The detection layers are intentional:
- *   1. Don't render on desktop — desktop has browser extensions.
- *   2. Don't render if we're already inside a wallet's WebView
- *      (`window.ethereum` exists, or known UA fingerprints match).
- *      Showing "open in wallet" to someone already inside a wallet is
- *      confusing and breaks trust.
- *   3. Don't render if the user dismissed it this session.
- *
- * It renders collapsed to a single row. Expanded it occupied 250-400px at the
- * top of every mobile page -- half a phone screen spent, before the product is
- * visible, asking a first-time visitor to leave for another app. The advice is
- * good; taking the top of the funnel to deliver it was not. The wallet links
- * are one tap away for anyone who wants them.
- */
-export function MobileWalletDeepLinkBanner() {
-  const t = useTranslations("app");
-  const [show, setShow] = React.useState(false);
-  const [expanded, setExpanded] = React.useState(false);
-
-  React.useEffect(() => {
-    if (typeof window === "undefined") return;
-    const dismissed = window.sessionStorage.getItem(DISMISS_STORAGE_KEY) === "1";
-    if (dismissed) return;
-    if (!isMobileUA(window.navigator.userAgent)) return;
-    if (isInsideWalletBrowser(window)) return;
-    setShow(true);
-  }, []);
-
-  if (!show) return null;
-
-  const currentUrl =
-    typeof window !== "undefined" ? window.location.href : "https://arbigamefi.app";
-  const host = (() => {
-    try {
-      return new URL(currentUrl).host;
-    } catch {
-      return "arbigamefi.app";
-    }
-  })();
-
-  // Universal deep links — these all open the dapp inside the wallet's
-  // in-app browser when the app is installed, and fall through to the app
-  // store / web fallback when it isn't.
-  const links: Array<{ id: string; label: string; href: string }> = [
-    {
-      id: "metamask",
-      label: t("mobileDeepLink.openIn.metamask"),
-      href: `https://metamask.app.link/dapp/${host}${normalizePath(currentUrl)}`
-    },
-    {
-      id: "coinbase",
-      label: t("mobileDeepLink.openIn.coinbase"),
-      href: `https://go.cb-w.com/dapp?cb_url=${encodeURIComponent(currentUrl)}`
-    },
-    {
-      id: "trust",
-      label: t("mobileDeepLink.openIn.trust"),
-      href: `https://link.trustwallet.com/open_url?coin_id=60&url=${encodeURIComponent(currentUrl)}`
-    }
-  ];
-
-  const dismiss = () => {
-    if (typeof window !== "undefined") {
-      window.sessionStorage.setItem(DISMISS_STORAGE_KEY, "1");
-    }
-    setShow(false);
+export function MobileWalletDeepLinkBanner({
+  menu = false,
+  onOpen
+}: {
+  menu?: boolean;
+  onOpen?: () => void;
+}) {
+  const entry = useWalletEntry();
+  const t = useTranslations("app.mobileWallet");
+  if (!entry?.eligible || (!menu && entry.dismissed)) return null;
+  const launch = () => {
+    onOpen?.();
+    entry.open();
   };
-
+  if (menu)
+    return (
+      <button
+        type="button"
+        onClick={launch}
+        className="mt-3 min-h-11 w-full rounded-lg border border-border-soft px-3 text-sm font-semibold text-fg"
+      >
+        {t("title")}
+      </button>
+    );
   return (
-    <div
-      role="region"
-      aria-label={t("mobileDeepLink.title")}
-      className="sticky top-0 z-40 border-b border-border-soft bg-surface-2 px-4 py-2 lg:hidden"
+    <aside
+      aria-label={t("title")}
+      className="mt-4 flex items-center gap-3 rounded-xl border border-border-soft bg-surface-1 p-3 md:hidden"
     >
-      <div className="mx-auto flex max-w-[1280px] flex-col gap-2">
-        <div className="flex items-center justify-between gap-2">
-          <button
-            type="button"
-            aria-expanded={expanded}
-            aria-controls="mobile-deep-link-options"
-            onClick={() => setExpanded((open) => !open)}
-            className="flex min-w-0 flex-1 items-center gap-2 rounded-md py-1 text-left text-xs font-bold text-fg"
-          >
-            <span className="min-w-0 truncate">{t("mobileDeepLink.title")}</span>
-            <ChevronDownIcon
-              aria-hidden="true"
-              className={cn("h-4 w-4 shrink-0 text-fg-muted", expanded && "rotate-180")}
-            />
-          </button>
-          <button
-            type="button"
-            aria-label={t("mobileDeepLink.dismiss")}
-            onClick={dismiss}
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border-soft text-fg-muted hover:text-fg"
-          >
-            <XMarkIcon className="h-4 w-4" />
-          </button>
-        </div>
-        <div id="mobile-deep-link-options" hidden={!expanded} className="flex flex-col gap-2 pb-1">
-          <p className="text-[11px] leading-4 text-fg-muted">{t("mobileDeepLink.description")}</p>
-          <div className="grid grid-cols-1 gap-2">
-            {links.map((link) => (
-              <a
-                key={link.id}
-                href={link.href}
-                className={cn(
-                  "flex min-w-0 items-center justify-between gap-2 rounded-md border border-border-soft bg-surface-1 px-3 py-2.5 text-[11px] font-bold uppercase tracking-[0.1em] text-fg transition-colors hover:border-brand/40 hover:text-brand"
-                )}
-              >
-                <span className="min-w-0 truncate">{link.label}</span>
-                <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5 shrink-0" />
-              </a>
-            ))}
-          </div>
-        </div>
+      <WalletIcon aria-hidden className="h-6 w-6 shrink-0 text-brand" />
+      <div className="flex-1">
+        <p className="text-sm font-semibold text-fg">{t("inlineTitle")}</p>
+        <p className="mt-1 text-xs leading-5 text-fg-muted">
+          {t(entry.mainnetUnavailable ? "unavailableHint" : "hint")}
+        </p>
       </div>
-    </div>
+      <button
+        type="button"
+        onClick={launch}
+        className="min-h-11 shrink-0 rounded-lg border border-brand/30 px-3 text-xs font-semibold text-brand"
+      >
+        {t("choose")}
+      </button>
+    </aside>
   );
-}
-
-/** Heuristic UA-based mobile detection — good enough for the banner gate. */
-function isMobileUA(ua: string): boolean {
-  if (!ua) return false;
-  return /Android|iPhone|iPad|iPod/i.test(ua);
-}
-
-/**
- * Detect whether the page is already running inside a known wallet's
- * in-app WebView. We check the EIP-1193 provider's identity flags *and*
- * the user-agent string — the UA is the more reliable signal because the
- * provider can be missing during the brief moment before injection.
- */
-function isInsideWalletBrowser(win: Window): boolean {
-  const eth = (
-    win as unknown as {
-      ethereum?: {
-        isMetaMask?: boolean;
-        isCoinbaseWallet?: boolean;
-        isTrust?: boolean;
-        isTrustWallet?: boolean;
-      };
-    }
-  ).ethereum;
-  if (eth && (eth.isMetaMask || eth.isCoinbaseWallet || eth.isTrust || eth.isTrustWallet)) {
-    return true;
-  }
-  const ua = win.navigator.userAgent;
-  if (/MetaMaskMobile|CoinbaseWallet|Trust\/|imToken|OKApp|TokenPocket/i.test(ua)) {
-    return true;
-  }
-  return false;
-}
-
-function normalizePath(url: string): string {
-  try {
-    const u = new URL(url);
-    return u.pathname + u.search + u.hash;
-  } catch {
-    return "/";
-  }
 }

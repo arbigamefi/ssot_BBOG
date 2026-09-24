@@ -6,6 +6,7 @@ import {
   CodeBracketIcon,
   ShieldCheckIcon
 } from "@heroicons/react/24/outline";
+import { MobileWalletDeepLinkBanner } from "../../app-shell/MobileWalletDeepLinkBanner";
 import { SectionEyebrow } from "./section-eyebrow";
 
 export function HomeHero({
@@ -76,6 +77,8 @@ export function HomeHero({
               {copy.viewBank}
             </Link>
           </div>
+
+          <MobileWalletDeepLinkBanner />
 
           <div className="mt-10 hidden max-w-xl grid-cols-1 gap-3 sm:grid-cols-2 lg:grid">
             {proofPoints.map((point) => (

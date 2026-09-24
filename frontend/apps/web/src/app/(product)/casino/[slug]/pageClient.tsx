@@ -12,6 +12,7 @@ import { useRecentBets } from "../../../../features/betting/useRecentBets";
 import { useRelease } from "../../../../ssot/release/ReleaseProvider";
 import { useSSOTSDK } from "../../../../ssot/sdk";
 import { useSSOTRuntime } from "../../../../ssot/runtime";
+import { isCasinoRiskInEnabledForChain } from "../../../../app-shell/casino-access";
 import { requestWalletConnect } from "../../../../app-shell/wallet-connect-events";
 import { useCasinoPoolAssetSelection } from "../../../../features/assets/useCasinoPoolAssetSelection";
 import { toGameMeta, type GameMeta } from "../../../../features/casino/room/model";
@@ -435,6 +436,7 @@ export function GamePageClient({ slug }: { slug: string }) {
 
   const LeftPane = (
     <GameRoomBetPanel
+      riskInDisabled={!isCasinoRiskInEnabledForChain(chainId)}
       game={game}
       walletBalance={walletBalance}
       assetDecimals={assetDecimals}
@@ -479,6 +481,7 @@ export function GamePageClient({ slug }: { slug: string }) {
 
   const MobileAction = (
     <MobileCasinoActionBar
+      riskInDisabled={!isCasinoRiskInEnabledForChain(chainId)}
       game={game}
       assetSymbol={assetSymbol}
       assetDecimals={assetDecimals}

@@ -20,6 +20,8 @@ and adjacent runtimes. It is no longer a process-gate directory.
   preview, rollback, and environment handling.
 - [`casino-keeper-v1.md`](./casino-keeper-v1.md) — casino keeper operation and
   automatic settlement contract.
+- [`mobile-wallet-entry.md`](./mobile-wallet-entry.md) — mobile wallet handoff,
+  connection prompts, and frontend mainnet availability boundaries.
 
 ## Keep As Reference
 
