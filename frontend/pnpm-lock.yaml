@@ -13,6 +13,11 @@ overrides:
   '@storybook/addon-interactions': 8.6.15
   '@storybook/addon-links': 8.6.15
 
+patchedDependencies:
+  cuer@0.0.3:
+    hash: esdru6i4dptnw2rzcq67sildzu
+    path: patches/cuer@0.0.3.patch
+
 importers:
 
   .:
@@ -7774,7 +7779,7 @@ snapshots:
       '@vanilla-extract/dynamic': 2.1.5
       '@vanilla-extract/sprinkles': 1.6.5(@vanilla-extract/css@1.20.1)
       clsx: 2.1.1
-      cuer: 0.0.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.9.3)
+      cuer: 0.0.3(patch_hash=esdru6i4dptnw2rzcq67sildzu)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.9.3)
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
       react-remove-scroll: 2.7.2(@types/react@18.3.28)(react@18.3.1)
@@ -10806,7 +10811,7 @@ snapshots:
 
   csstype@3.2.3: {}
 
-  cuer@0.0.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.9.3):
+  cuer@0.0.3(patch_hash=esdru6i4dptnw2rzcq67sildzu)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.9.3):
     dependencies:
       qr: 0.6.0
       react: 18.3.1

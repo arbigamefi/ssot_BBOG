@@ -38,6 +38,10 @@ export function buildContentSecurityPolicy({ env = process.env, isDev = false } 
     "https://*.walletconnect.org",
     "wss://*.walletconnect.com",
     "wss://*.walletconnect.org",
+    // RainbowKit uses MetaMask SDK (not WalletConnect) on mobile. Its
+    // pairing channel needs HTTPS and a WebSocket before opening the app.
+    "https://metamask-sdk.api.cx.metamask.io",
+    "wss://metamask-sdk.api.cx.metamask.io",
     "https://sepolia.base.org",
     "https://mainnet.base.org",
     "https://arb1.arbitrum.io",

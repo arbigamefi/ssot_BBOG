@@ -3,6 +3,21 @@ import { describe, expect, it } from "vitest";
 import { buildContentSecurityPolicy } from "./security-headers.mjs";
 
 describe("security headers", () => {
+  it("allows the mobile MetaMask pairing endpoint without opening arbitrary connections", () => {
+    const csp = buildContentSecurityPolicy({ env: { NODE_ENV: "production" }, isDev: false });
+    const connect = csp
+      .split("; ")
+      .find((directive: string) => directive.startsWith("connect-src "));
+    const sources = connect?.split(" ");
+
+    expect(sources).toContain("https://metamask-sdk.api.cx.metamask.io");
+    expect(sources).toContain("wss://metamask-sdk.api.cx.metamask.io");
+    expect(sources).toContain("wss://*.walletconnect.com");
+    expect(sources).not.toContain("*");
+    expect(sources).not.toContain("https:");
+    expect(sources).not.toContain("wss:");
+  });
+
   it("keeps Figma bridge and unsafe eval out of production CSP", () => {
     const csp = buildContentSecurityPolicy({
       env: {

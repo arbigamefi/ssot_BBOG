@@ -16,6 +16,9 @@
       "@storybook/addon-essentials": "8.6.15",
       "@storybook/addon-interactions": "8.6.15",
       "@storybook/addon-links": "8.6.15"
+    },
+    "patchedDependencies": {
+      "cuer@0.0.3": "patches/cuer@0.0.3.patch"
     }
   },
   "scripts": {

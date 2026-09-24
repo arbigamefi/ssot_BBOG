@@ -1,0 +1,40 @@
+diff --git a/QrCode.ts b/QrCode.ts
+index 9d29de4c7e0d6e1088af98f45417a7ed0e0ef1e7..45eb5c8a8d47b8ac911cd7ea2946b2e718aa2b1f 100644
+--- a/QrCode.ts
++++ b/QrCode.ts
+@@ -11,11 +11,13 @@ export function create(value: string, options: QrCode.Options = {}): QrCode {
+   const { errorCorrection, version } = options
+ 
+   const grid = encodeQR(value, 'raw', {
+-    border: 0,
++    // qr >= 0.6 requires a positive quiet zone. Cuer draws its own padding;
++    // strip the added ring to keep finder positions on the symbol's corners.
++    border: 1,
+     ecc: errorCorrection,
+     scale: 1,
+     version: version,
+-  })
++  }).slice(1, -1).map((row) => row.slice(1, -1))
+ 
+   const finderLength = 7
+   const edgeLength = grid.length
+diff --git a/_dist/QrCode.js b/_dist/QrCode.js
+index b1806526c3d100ca6f1e9259b4dfbcd416a33927..ef2ef37d04860afec9c820005e2b4e5e6655c8cd 100644
+--- a/_dist/QrCode.js
++++ b/_dist/QrCode.js
+@@ -2,11 +2,13 @@ import { encodeQR } from 'qr';
+ export function create(value, options = {}) {
+     const { errorCorrection, version } = options;
+     const grid = encodeQR(value, 'raw', {
+-        border: 0,
++        // qr >= 0.6 requires a positive quiet zone. Cuer draws its own padding;
++        // strip the added ring to keep finder positions on the symbol's corners.
++        border: 1,
+         ecc: errorCorrection,
+         scale: 1,
+         version: version,
+-    });
++    }).slice(1, -1).map((row) => row.slice(1, -1));
+     const finderLength = 7;
+     const edgeLength = grid.length;
+     return {
