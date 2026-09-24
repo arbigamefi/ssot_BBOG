@@ -10,6 +10,7 @@ import type { GameMeta } from "./model";
 import { executeGamePlaceBetAction } from "./place-bet-action";
 import type { GameRoomRelease } from "./place-bet";
 import type { BaccaratSide, CoinSide, DiceDirection, PlinkoRisk, SicBoKind } from "./params";
+import type { PoolAvailability } from "./hooks";
 import { useBetStepperFailureToast, useVrfTimeoutToast } from "./feedback";
 import { useCasinoRoundWatcher, useCasinoVrfQuote, type CasinoRoundPhase } from "./casino-round";
 
@@ -35,6 +36,7 @@ export type UseCasinoRoundArgs = {
   affiliate?: Address;
   /** Selected casino pool id (multi-asset). Defaults to the default pool when omitted. */
   poolId?: number;
+  poolAvailability?: PoolAvailability;
   onRoundStart: () => void;
   onRoundTerminal: (bet: DomainBet) => void;
   onRoundReset: () => void;
@@ -61,12 +63,43 @@ export function useCasinoRound({
   sicBoValue,
   affiliate,
   poolId,
+  poolAvailability = "ready",
   onRoundStart,
   onRoundTerminal,
   onRoundReset
 }: UseCasinoRoundArgs) {
   const t = useTranslations();
-  const { planNow, executeNow, state, reset } = usePlaceBetStepper({
+  const intentKey = JSON.stringify([
+    release?.chainId,
+    poolId,
+    sdk?.account,
+    game?.gameId,
+    betAmount,
+    betCount,
+    stopGain,
+    stopLoss,
+    diceTarget,
+    diceDirection,
+    coinSide,
+    rouletteSpots,
+    kenoSpots,
+    plinkoRisk,
+    baccaratSide,
+    sicBoKind,
+    sicBoValue,
+    affiliate
+  ]);
+  const latestIntent = React.useRef({ sdk, intentKey });
+  latestIntent.current = { sdk, intentKey };
+  const mounted = React.useRef(true);
+  React.useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  const submissionInFlight = React.useRef(false);
+  const { planNow, executeNow, state, reset, reconcileNow, reconciling } = usePlaceBetStepper({
     sdkNotReady: t("casino.room.errors.sdkNotReady"),
     transactionFailed: t("casino.room.errors.transactionFailedShort"),
     reconcileFailed: t("casino.room.errors.reconcileFailed"),
@@ -103,52 +136,78 @@ export function useCasinoRound({
   useBetStepperFailureToast({
     status: state.status,
     error: state.error,
-    fallbackMessage: t("casino.room.errors.transactionFailed")
+    fallbackMessage: t("casino.room.errors.transactionFailed"),
+    translate: t
   });
   useVrfTimeoutToast(roundPhase === "timeout_soft", t("casino.room.warnings.vrfTimeout"));
 
-  const placeBet = React.useCallback(() => {
-    if (!release || !game) return;
-    return executeGamePlaceBetAction({
-      account: sdk?.account,
-      openConnectModal,
-      release,
-      game,
-      winChance,
-      state,
-      reset,
-      setShowResult: (visible) => {
-        if (!visible) onRoundReset();
-      },
-      executeNow,
-      planNow,
-      onBeforeExecute: onRoundStart,
-      betAmount,
-      betCount,
-      stopGain,
-      stopLoss,
-      diceTarget,
-      diceDirection,
-      coinSide,
-      rouletteSpots,
-      kenoSpots,
-      plinkoRisk,
-      baccaratSide,
-      sicBoKind,
-      sicBoValue,
-      affiliate,
-      poolId,
-      messages: {
-        rouletteSelectionRequired: t("casino.room.errors.rouletteSelectionRequired"),
-        kenoSelectionRequired: t("casino.room.errors.kenoSelectionRequired"),
-        kenoSelectionInvalid: t("casino.room.errors.kenoSelectionInvalid"),
-        mainnetRiskInDisabled: t("casino.room.errors.mainnetRiskInDisabled"),
-        invalidCasinoPool: t("casino.room.errors.invalidCasinoPool"),
-        noActiveCasinoPool: t("casino.room.errors.noActiveCasinoPool"),
-        unexpectedError: t("casino.room.errors.unexpected")
-      }
-    });
+  const placeBet = React.useCallback(async () => {
+    if (!release || !game || submissionInFlight.current) return;
+    submissionInFlight.current = true;
+    try {
+      await executeGamePlaceBetAction({
+        poolAvailability,
+        account: sdk?.account,
+        openConnectModal,
+        release,
+        game,
+        winChance,
+        state,
+        reset,
+        setShowResult: (visible) => {
+          if (!visible) onRoundReset();
+        },
+        executeNow: (plan) =>
+          executeNow(
+            plan,
+            () =>
+              mounted.current &&
+              latestIntent.current.sdk === sdk &&
+              latestIntent.current.intentKey === intentKey
+          ),
+        isCurrent: () =>
+          mounted.current &&
+          latestIntent.current.sdk === sdk &&
+          latestIntent.current.intentKey === intentKey,
+        planNow,
+        onBeforeExecute: onRoundStart,
+        betAmount,
+        betCount,
+        stopGain,
+        stopLoss,
+        diceTarget,
+        diceDirection,
+        coinSide,
+        rouletteSpots,
+        kenoSpots,
+        plinkoRisk,
+        baccaratSide,
+        sicBoKind,
+        sicBoValue,
+        affiliate,
+        poolId,
+        messages: {
+          rouletteSelectionRequired: t("casino.room.errors.rouletteSelectionRequired"),
+          kenoSelectionRequired: t("casino.room.errors.kenoSelectionRequired"),
+          kenoSelectionInvalid: t("casino.room.errors.kenoSelectionInvalid"),
+          mainnetRiskInDisabled: t("casino.room.errors.mainnetRiskInDisabled"),
+          invalidCasinoPool: t("casino.room.errors.invalidCasinoPool"),
+          noActiveCasinoPool: t("casino.room.errors.noActiveCasinoPool"),
+          unexpectedError: t("casino.room.feedback.unknown"),
+          contextChanged: t("casino.room.feedback.contextChanged"),
+          poolUnavailable: t(
+            `casino.room.poolStatus.${poolAvailability === "ready" ? "unavailable" : poolAvailability}`,
+            { symbol: release.pools?.find((pool) => pool.poolId === poolId)?.symbol ?? "" }
+          )
+        }
+      });
+    } finally {
+      submissionInFlight.current = false;
+    }
   }, [
+    intentKey,
+    sdk,
+    poolAvailability,
     betAmount,
     betCount,
     coinSide,
@@ -181,6 +240,13 @@ export function useCasinoRound({
   return {
     state,
     reset,
+    checkTransaction:
+      state.result?.placeBetTx.txHash &&
+      state.result.placeBetTx.txHash !== "0x0" &&
+      (state.error?.details?.action === "PLACE_BET" || state.status === "mined")
+        ? reconcileNow
+        : undefined,
+    checkingTransaction: reconciling,
     placeBet,
     roundPhase,
     isTransactionActive,

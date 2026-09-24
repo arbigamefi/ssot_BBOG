@@ -173,7 +173,7 @@ describe("MobileCasinoActionBar", () => {
     expect(screen.queryByRole("button", { name: "Max" })).toBeNull();
   });
 
-  it("keeps failed compact CTA actionable and amount editable", () => {
+  it("keeps amount editable after failure but blocks an oversized retry", () => {
     const props = renderActionBar({
       isPending: true,
       state: { status: "failed", error: { message: "reverted" } },
@@ -182,9 +182,9 @@ describe("MobileCasinoActionBar", () => {
     });
 
     const button = screen.getByRole("button", {
-      name: "TRANSACTION FAILED - RETRY"
+      name: "REDUCE AMOUNT"
     }) as HTMLButtonElement;
-    expect(button.disabled).toBe(false);
+    expect(button.disabled).toBe(true);
 
     fireEvent.change(screen.getByRole("textbox", { name: "Bet amount" }), {
       target: { value: "4" }
@@ -192,7 +192,7 @@ describe("MobileCasinoActionBar", () => {
     expect(props.onBetAmountChange).toHaveBeenCalledWith("4");
 
     fireEvent.click(button);
-    expect(props.onPlaceBet).toHaveBeenCalledTimes(1);
+    expect(props.onPlaceBet).not.toHaveBeenCalled();
   });
 
   it("shows player-facing round progress on the compact CTA", () => {
@@ -212,5 +212,47 @@ describe("MobileCasinoActionBar", () => {
     });
 
     expect(screen.getByRole("button", { name: "Waiting for draw" })).toBeDefined();
+  });
+  it("divides the wallet budget across all rolls for Max", () => {
+    const props = renderActionBar({ betCount: 4, walletBalanceRaw: 100_000_003n });
+    fireEvent.click(screen.getByRole("button", { name: "Max" }));
+    expect(props.onBetAmountChange).toHaveBeenCalledWith("25");
+  });
+
+  it("explains a paused pool beside a disabled CTA without opening a wallet", () => {
+    const props = renderActionBar({ poolAvailability: "paused", onRefreshPool: vi.fn() });
+    expect(screen.getByRole("status").textContent).toContain("paused");
+    const button = screen.getByRole("button", { name: "casino.room.poolStatus.pausedLabel" });
+    expect(button).toBeDisabled();
+    fireEvent.click(button);
+    expect(props.onPlaceBet).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "refresh" }));
+    expect(props.onRefreshPool).toHaveBeenCalledOnce();
+  });
+
+  it("offers a read-only check and explorer link for an unconfirmed transaction", () => {
+    const hash = `0x${"ab".repeat(32)}`;
+    const props = renderActionBar({
+      state: {
+        status: "failed",
+        error: { code: "TX_TIMEOUT", details: { txHash: hash, chainId: 84532 } }
+      },
+      onCheckTransaction: vi.fn()
+    });
+    expect(screen.getByRole("alert").textContent).toContain("casino.room.feedback.unconfirmed");
+    expect(
+      screen.getByRole("button", { name: "casino.room.feedback.pendingLabel" })
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("link", { name: "casino.room.feedback.viewTransaction" })
+    ).toHaveAttribute("href", `https://sepolia.basescan.org/tx/${hash}`);
+    fireEvent.click(screen.getByRole("button", { name: "casino.room.feedback.checkTransaction" }));
+    expect(props.onCheckTransaction).toHaveBeenCalledOnce();
+    expect(props.onPlaceBet).not.toHaveBeenCalled();
+  });
+
+  it("keeps existing-bet settlement available when new bets are paused", () => {
+    renderActionBar({ poolAvailability: "paused", manualSettleAvailable: true });
+    expect(screen.getByRole("button", { name: "Settle result" })).not.toBeDisabled();
   });
 });

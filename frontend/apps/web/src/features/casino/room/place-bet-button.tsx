@@ -2,11 +2,15 @@ import * as React from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "@ssot/ui";
 
+import { getBetErrorKind, isBetSubmissionUnconfirmed, type StepperDisplayError } from "./feedback";
+import type { PoolAvailability } from "./hooks";
+
 import type { CasinoRoundPhase } from "./casino-round";
 
 export type GameRoomBetPanelState = {
   status: string;
-  error?: { message?: string };
+  error?: StepperDisplayError;
+  executionStage?: "approve" | "placeBet";
   plan?: { preview?: { needsApproval?: boolean } };
 };
 
@@ -45,6 +49,7 @@ export function isPlaceBetButtonDisabled({
   manualRefundAvailable = false,
   amountUnavailable = false,
   riskInDisabled = false,
+  poolAvailability = "ready",
   amountExceedsMax = false
 }: {
   gameSlug: string;
@@ -56,6 +61,7 @@ export function isPlaceBetButtonDisabled({
   manualRefundAvailable?: boolean;
   amountUnavailable?: boolean;
   riskInDisabled?: boolean;
+  poolAvailability?: PoolAvailability;
   amountExceedsMax?: boolean;
 }) {
   // With no wallet the button reads "connect wallet" and its click handler
@@ -66,9 +72,11 @@ export function isPlaceBetButtonDisabled({
   // reasonably concludes connecting is broken. Choosing a bet is not a
   // prerequisite for connecting.
   if (manualSettleAvailable || manualRefundAvailable) return false;
-  if (riskInDisabled) return true;
+  if (riskInDisabled || poolAvailability !== "ready") return true;
+  if (isBetSubmissionUnconfirmed(state.error)) return true;
   if (!hasAccount) return false;
-  if (state.status === "failed") return false;
+  if (state.status === "failed")
+    return amountUnavailable || amountExceedsMax || isSelectionMissing(gameSlug, winChance);
   return (
     amountUnavailable ||
     amountExceedsMax ||
@@ -95,7 +103,8 @@ function getPlaceBetButtonLabelKey({
   manualRefundAvailable,
   amountUnavailable,
   amountExceedsMax,
-  riskInDisabled
+  riskInDisabled,
+  poolAvailability
 }: {
   gameSlug: string;
   hasAccount: boolean;
@@ -107,16 +116,37 @@ function getPlaceBetButtonLabelKey({
   manualRefundAvailable?: boolean;
   amountUnavailable?: boolean;
   riskInDisabled?: boolean;
+  poolAvailability?: PoolAvailability;
   amountExceedsMax?: boolean;
 }) {
   if (riskInDisabled && !manualSettleAvailable && !manualRefundAvailable)
     return "casino.availability.title";
-  if (!hasAccount) return "casino.room.betPanel.placeBet.connectWallet";
-  if (state.status === "failed") return "casino.room.betPanel.placeBet.failedRetry";
   if (manualRefundAvailable) return "casino.room.roundStatus.actions.refundStake";
   if (manualSettleAvailable) return "casino.room.roundStatus.actions.settleResult";
+  if (isBetSubmissionUnconfirmed(state.error)) return "casino.room.feedback.pendingLabel";
+  if (
+    poolAvailability &&
+    poolAvailability !== "ready" &&
+    !isPending &&
+    !["planning", "submitting", "mined", "reconciled"].includes(state.status)
+  )
+    return `casino.room.poolStatus.${poolAvailability}Label`;
+  if (!hasAccount) return "casino.room.betPanel.placeBet.connectWallet";
+  if (state.status === "failed") {
+    if (amountExceedsMax) return "casino.room.betPanel.placeBet.reduceAmount";
+    if (amountUnavailable) return "casino.room.shell.noCapacity";
+    if (isSelectionMissing(gameSlug, winChance)) return "casino.room.betPanel.placeBet.selectToBet";
+    return getBetErrorKind(state.error) === "canceled"
+      ? "casino.room.feedback.tryAgain"
+      : "casino.room.feedback.reviewAgain";
+  }
   if (state.status === "planning") return "casino.room.betPanel.placeBet.preparing";
-  if (state.status === "submitting") return "casino.room.betPanel.placeBet.signing";
+  if (state.status === "submitting")
+    return state.executionStage === "approve"
+      ? "casino.room.feedback.approving"
+      : state.executionStage === "placeBet"
+        ? "casino.room.feedback.placing"
+        : "casino.room.betPanel.placeBet.signing";
   if (roundPhase === "revealing") return "casino.room.betPanel.placeBet.revealing";
   if (roundPhase === "waiting_vrf" || roundPhase === "timeout_soft")
     return "casino.room.roundStatus.phases.waitingVrf.status";
@@ -149,6 +179,7 @@ export function PlaceBetButton({
   manualRefundAvailable = false,
   amountUnavailable = false,
   riskInDisabled = false,
+  poolAvailability = "ready",
   amountExceedsMax = false,
   onClick,
   density = "normal"
@@ -163,6 +194,7 @@ export function PlaceBetButton({
   manualRefundAvailable?: boolean;
   amountUnavailable?: boolean;
   riskInDisabled?: boolean;
+  poolAvailability?: PoolAvailability;
   amountExceedsMax?: boolean;
   onClick: () => void;
   density?: "normal" | "compact";
@@ -178,7 +210,8 @@ export function PlaceBetButton({
     manualRefundAvailable,
     amountUnavailable,
     amountExceedsMax,
-    riskInDisabled
+    riskInDisabled,
+    poolAvailability
   });
   const activeManualAction = manualSettleAvailable || manualRefundAvailable;
   const isFailed = state.status === "failed";
@@ -187,7 +220,7 @@ export function PlaceBetButton({
   // `hasAccount` guard the button would be clickable but rendered greyed out --
   // a worse signal than either state alone.
   const appearsLocked =
-    (riskInDisabled && !activeManualAction) ||
+    (disabled && !activeManualAction) ||
     (hasAccount &&
       !isFailed &&
       !activeManualAction &&
@@ -210,7 +243,7 @@ export function PlaceBetButton({
         density === "compact" ? "py-3 text-sm" : "py-4 text-lg",
         appearsLocked
           ? "cursor-not-allowed border-border bg-surface-3 text-fg-subtle opacity-50 shadow-none"
-          : isFailed
+          : isFailed && getBetErrorKind(state.error) !== "canceled"
             ? "border-danger bg-danger text-fg-inverse hover:bg-danger/90"
             : "border-brand-active bg-brand text-fg-inverse shadow-glow hover:bg-brand-hover"
       )}
@@ -227,7 +260,8 @@ export function PlaceBetButton({
           manualRefundAvailable,
           amountUnavailable,
           amountExceedsMax,
-          riskInDisabled
+          riskInDisabled,
+          poolAvailability
         })
       )}
     </button>

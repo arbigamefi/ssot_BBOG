@@ -141,7 +141,10 @@ export type BindPlaceBetTxResult =
 export interface SSOTGameHubAPI {
   quoteVRFFee(betCount: number): Promise<bigint>;
   planPlaceBet(input: PlaceBetInput): Promise<PlaceBetPlan | { error: DomainError }>;
-  executePlan(plan: PlaceBetPlan): Promise<ExecutePlanResult>;
+  executePlan(
+    plan: PlaceBetPlan,
+    onStage?: (stage: "approve" | "placeBet") => void
+  ): Promise<ExecutePlanResult>;
 
   /**
    * Best-effort reconciliation of a placeBet transaction into a betId.

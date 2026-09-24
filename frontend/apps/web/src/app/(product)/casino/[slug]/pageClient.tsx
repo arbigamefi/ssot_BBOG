@@ -126,7 +126,8 @@ export function GamePageClient({ slug }: { slug: string }) {
     asset: casinoPoolAsset?.asset,
     refreshKey: walletBalanceRefreshKey
   });
-  const poolSnapshot = usePoolSnapshot({ sdk, poolId: assetSelection.poolId });
+  const poolRead = usePoolSnapshot({ sdk, poolId: assetSelection.poolId });
+  const poolSnapshot = poolRead.snapshot;
   const referrerParam = searchParams.get("ref");
   const referralAffiliate = useReferralAffiliate({
     referrer: referrerParam,
@@ -247,6 +248,7 @@ export function GamePageClient({ slug }: { slug: string }) {
   }, []);
 
   const casinoRound = useCasinoRound({
+    poolAvailability: poolRead.status,
     sdk,
     release,
     game,
@@ -434,9 +436,22 @@ export function GamePageClient({ slug }: { slug: string }) {
     revealedBetId: revealedBetIdRef.current
   });
 
+  const actionProps = {
+    riskInDisabled: !isCasinoRiskInEnabledForChain(chainId),
+    poolAvailability: poolRead.status,
+    onRefreshPool: poolRead.refresh,
+    onCheckTransaction: casinoRound.checkTransaction,
+    checkingTransaction: casinoRound.checkingTransaction,
+    manualSettleAvailable: casinoRound.manualSettleAvailable,
+    onManualSettle: casinoRound.manualSettle,
+    manualRefundAvailable: casinoRound.manualRefundAvailable,
+    onManualRefund: casinoRound.manualRefund,
+    onPlaceBet: casinoRound.placeBet
+  };
+
   const LeftPane = (
     <GameRoomBetPanel
-      riskInDisabled={!isCasinoRiskInEnabledForChain(chainId)}
+      {...actionProps}
       game={game}
       walletBalance={walletBalance}
       assetDecimals={assetDecimals}
@@ -470,18 +485,16 @@ export function GamePageClient({ slug }: { slug: string }) {
       activeRequestId={casinoRound.activeRequestId}
       roundPhase={casinoRound.roundPhase}
       ctaPhase={placeBetButtonPhase}
-      manualSettleAvailable={casinoRound.manualSettleAvailable}
-      onManualSettle={casinoRound.manualSettle}
-      manualRefundAvailable={casinoRound.manualRefundAvailable}
-      onManualRefund={casinoRound.manualRefund}
       hideMobileAction
-      onPlaceBet={casinoRound.placeBet}
     />
   );
 
   const MobileAction = (
     <MobileCasinoActionBar
-      riskInDisabled={!isCasinoRiskInEnabledForChain(chainId)}
+      {...actionProps}
+      chainId={chainId}
+      betCount={betCount}
+      vrfQuote={casinoRound.vrfQuote}
       game={game}
       assetSymbol={assetSymbol}
       assetDecimals={assetDecimals}
@@ -494,11 +507,6 @@ export function GamePageClient({ slug }: { slug: string }) {
       winChance={winChance}
       state={state}
       roundPhase={placeBetButtonPhase}
-      manualSettleAvailable={casinoRound.manualSettleAvailable}
-      onManualSettle={casinoRound.manualSettle}
-      manualRefundAvailable={casinoRound.manualRefundAvailable}
-      onManualRefund={casinoRound.manualRefund}
-      onPlaceBet={casinoRound.placeBet}
     />
   );
 

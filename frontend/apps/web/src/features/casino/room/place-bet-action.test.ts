@@ -128,22 +128,46 @@ describe("game room place bet action", () => {
     expect(args.onBeforeExecute).not.toHaveBeenCalled();
   });
 
-  it("resets after a terminal stepper state", async () => {
+  it("replans after a failed attempt on the same click", async () => {
     const args = baseArgs({ state: { status: "failed" } });
     await executeGamePlaceBetAction(args);
-
-    expect(args.reset).toHaveBeenCalledTimes(1);
-    expect(args.setShowResult).toHaveBeenCalledWith(false);
-    expect(args.onBeforeExecute).not.toHaveBeenCalled();
+    expect(args.reset).toHaveBeenCalledOnce();
+    expect(args.planNow).toHaveBeenCalledOnce();
+    expect(args.executeNow).toHaveBeenCalledWith(plannedBet);
   });
-
-  it("executes an existing plan before planning a new one", async () => {
-    const args = baseArgs({ state: { status: "ready", plan: { preview: {} } } });
+  it("replaces a cached plan with a fresh plan from current inputs", async () => {
+    const args = baseArgs({ state: { status: "ready", plan: { stale: true } }, betAmount: "0.25" });
     await executeGamePlaceBetAction(args);
-
-    expect(args.onBeforeExecute).toHaveBeenCalledTimes(1);
-    expect(args.executeNow).toHaveBeenCalledTimes(1);
+    expect(args.planNow).toHaveBeenCalledOnce();
+    expect(args.planNow).toHaveBeenCalledWith(expect.objectContaining({ stake: 250000n }));
+    expect(args.executeNow).toHaveBeenCalledWith(plannedBet);
+  });
+  it.each(["loading", "unavailable", "paused"] as const)(
+    "blocks %s pools before connecting or using cached plans",
+    async (poolAvailability) => {
+      const args = baseArgs({
+        account: undefined,
+        poolAvailability,
+        state: { status: "ready", plan: plannedBet }
+      });
+      await executeGamePlaceBetAction(args);
+      expect(args.openConnectModal).not.toHaveBeenCalled();
+      expect(args.executeNow).not.toHaveBeenCalled();
+      expect(args.planNow).not.toHaveBeenCalled();
+    }
+  );
+  it("never turns an unconfirmed transaction into a new bet", async () => {
+    const args = baseArgs({ state: { status: "failed", error: { code: "TX_TIMEOUT" } } });
+    await executeGamePlaceBetAction(args);
+    expect(args.reset).not.toHaveBeenCalled();
     expect(args.planNow).not.toHaveBeenCalled();
+    expect(args.executeNow).not.toHaveBeenCalled();
+  });
+  it("discards a quote if the wallet or intent changed while planning", async () => {
+    const args = baseArgs({ isCurrent: () => false });
+    await executeGamePlaceBetAction(args);
+    expect(args.planNow).toHaveBeenCalledOnce();
+    expect(args.executeNow).not.toHaveBeenCalled();
   });
 
   it("surfaces game parameter validation errors", async () => {

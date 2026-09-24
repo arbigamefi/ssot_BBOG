@@ -935,6 +935,43 @@
             }
           ]
         }
+      },
+      "feedback": {
+        "paused": "金库已暂停新投注，请等待恢复；已有投注仍可查询或结算。",
+        "canceled": "你已取消这次钱包请求，核对金额后可重新发起。",
+        "approvalPending": "授权交易已确认，但节点暂未读到新额度。请稍后重新检查。",
+        "allowance": "代币授权额度不足，请核对并授权本次投注所需额度。",
+        "balance": "钱包代币余额不足以支付本轮总投注，请减少金额或轮数。",
+        "gas": "当前网络的 ETH 不足以支付随机数费用和交易 Gas，请先补充 ETH。",
+        "quoteChanged": "随机数服务费已变化，请获取最新报价后再确认。",
+        "liquidity": "金库暂时无法覆盖这笔投注的赔付，请降低金额或轮数，或等待流动性增加。",
+        "network": "钱包网络与当前页面不一致，请在钱包中切换到相同网络。",
+        "wallet": "请先连接或解锁钱包，再继续操作。",
+        "connection": "暂时无法读取链上信息，请检查网络连接。若钱包已经提交交易，请先查记录，勿重复下注。",
+        "unconfirmed": "交易结果尚未确认，请查询已有交易或钱包记录，不要重复提交投注。",
+        "reverted": "这笔交易已在链上回滚，操作未生效，但已消耗 Gas。请先查看记录并核对原因。",
+        "input": "请检查玩法选择、金额、轮数和当前费用设置。",
+        "unknown": "暂时无法完成此步骤。请先检查钱包记录；确认没有已提交交易后，再核对设置。",
+        "checkTransaction": "检查交易状态",
+        "checking": "正在检查交易…",
+        "viewTransaction": "查看这笔交易",
+        "viewActivity": "查看交易记录",
+        "pendingLabel": "交易结果待确认",
+        "tryAgain": "核对后重新发起",
+        "reviewAgain": "检查设置后继续",
+        "approving": "正在授权代币 · 等待确认",
+        "placing": "正在提交投注 · 等待确认",
+        "cost": "总投注 {total} {symbol} · 随机数费预算约 {fee}，Gas 另计。",
+        "contextChanged": "钱包、网络或投注设置已变化，已停止后续提交。请核对当前设置后继续。"
+      },
+      "poolStatus": {
+        "loading": "正在检查 {symbol} 金库状态…",
+        "unavailable": "暂时无法确认 {symbol} 金库状态，检查成功后才能发起新投注。",
+        "paused": "{symbol} 金库已暂停新投注，已有投注仍可查询和结算。",
+        "loadingLabel": "正在检查金库…",
+        "unavailableLabel": "金库状态暂不可用",
+        "pausedLabel": "金库已暂停",
+        "refresh": "检查金库状态"
       }
     },
     "directory": {

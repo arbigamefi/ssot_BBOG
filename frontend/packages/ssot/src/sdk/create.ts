@@ -718,7 +718,10 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
       }
     },
 
-    async executePlan(plan: PlaceBetPlan): Promise<ExecutePlanResult> {
+    async executePlan(
+      plan: PlaceBetPlan,
+      onStage?: (stage: "approve" | "placeBet") => void
+    ): Promise<ExecutePlanResult> {
       const walletReq = requireWallet();
       if ("error" in walletReq) {
         return {
@@ -740,7 +743,8 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
             address: getAddress(step.token) as Address,
             abi: ERC20_ABI,
             functionName: "approve",
-            args: [getAddress(step.spender) as Address, step.amount]
+            args: [getAddress(step.spender) as Address, step.amount],
+            beforeWrite: () => onStage?.("approve")
           });
           if (!approveTx.ok) {
             return {
@@ -816,7 +820,8 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         abi: GAME_HUB_ABI,
         functionName: "placeBet",
         args,
-        value: placeStep.value
+        value: placeStep.value,
+        beforeWrite: () => onStage?.("placeBet")
       });
 
       if (!placeBetTx.ok) {
@@ -856,6 +861,16 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
           };
         }
         const receipt = await publicClient.getTransactionReceipt({ hash: txHash });
+        if (receipt.status === "reverted")
+          return {
+            ok: false,
+            error: {
+              code: "TX_REVERTED",
+              message: "Transaction reverted on chain.",
+              severity: "error",
+              details: { chainId: release.chainId, action: "PLACE_BET", txHash }
+            }
+          };
         const ev = tx.extractEventArgs({
           abi: GAME_HUB_ABI,
           receiptLogs: receipt.logs as any,
@@ -1123,6 +1138,7 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         totalSupply,
         assetsPerShare,
         totalReserved: BigInt(ssot.R),
+        riskInPaused: ssot.riskInPaused,
         minLiquidityBps,
         riskReserveBps,
         riskReserve: BigInt(ssot.riskReserve ?? ssot.minLiq),

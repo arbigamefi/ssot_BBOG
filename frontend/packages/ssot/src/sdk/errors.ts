@@ -2,6 +2,64 @@ import { BaseError } from "viem";
 import type { DomainError } from "../domain";
 
 export function toDomainError(err: unknown): DomainError {
+  // Wallet and transport errors are often wrapped by ContractFunctionExecutionError.
+  const causes: Array<{ name?: string; code?: number }> = [];
+  let current: unknown = err;
+  for (let depth = 0; depth < 8 && current && typeof current === "object"; depth++) {
+    causes.push(current);
+    current = (current as { cause?: unknown }).cause;
+  }
+  if (causes.some((cause) => cause.name === "UserRejectedRequestError" || cause.code === 4001)) {
+    return {
+      code: "USER_REJECTED",
+      message: "Wallet request canceled.",
+      severity: "info",
+      retryable: true
+    };
+  }
+  if (causes.some((cause) => cause.name === "BetContextChangedError")) {
+    return {
+      code: "BET_CONTEXT_CHANGED",
+      message: "The wallet, network or bet settings changed. Review the current settings.",
+      severity: "warning"
+    };
+  }
+  if (causes.some((cause) => cause.name === "InsufficientFundsError")) {
+    return {
+      code: "INSUFFICIENT_NATIVE_BALANCE",
+      message: "Insufficient native token for the transaction and gas.",
+      severity: "warning"
+    };
+  }
+  if (
+    causes.some(
+      (cause) =>
+        ["ChainMismatchError", "SwitchChainError", "ChainNotConfiguredError"].includes(
+          cause.name ?? ""
+        ) || cause.code === 4902
+    )
+  ) {
+    return {
+      code: "CHAIN_MISMATCH",
+      message: "Select the network used by this page in your wallet.",
+      severity: "warning"
+    };
+  }
+  if (
+    causes.some(
+      (cause) =>
+        ["HttpRequestError", "WebSocketRequestError", "TimeoutError"].includes(cause.name ?? "") ||
+        cause.code === 4900 ||
+        cause.code === 4901
+    )
+  ) {
+    return {
+      code: "RPC_ERROR",
+      message: (err as { shortMessage?: string })?.shortMessage ?? "Unable to reach the network.",
+      severity: "warning",
+      retryable: true
+    };
+  }
   // viem errors are typically BaseError instances.
   if (err instanceof BaseError) {
     // User rejected in wallet
@@ -35,7 +93,7 @@ export function toDomainError(err: unknown): DomainError {
       return {
         code: "CONTRACT_REVERT",
         message: reason,
-        severity: "error",
+        severity: "error"
       };
     }
 
@@ -148,6 +206,7 @@ function mapRevert(errorName: string, args?: unknown[]): DomainError {
         message: "Only the VRF Hub contract can call this function.",
         severity: "error"
       };
+    case "ERC20InsufficientBalance":
     case "InsufficientBalance":
       return {
         code: "INSUFFICIENT_BALANCE",
@@ -240,6 +299,7 @@ function mapRevert(errorName: string, args?: unknown[]): DomainError {
         message: "Contract is paused. This operation is temporarily unavailable.",
         severity: "warning"
       };
+    case "ERC20InsufficientAllowance":
     case "InsufficientAllowance":
       return {
         code: "INSUFFICIENT_ALLOWANCE",

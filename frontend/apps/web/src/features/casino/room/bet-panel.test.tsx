@@ -367,15 +367,15 @@ describe("GameRoomBetPanel", () => {
     });
 
     const button = screen.getByRole("button", {
-      name: "TRANSACTION FAILED - RETRY"
+      name: "REDUCE AMOUNT"
     }) as HTMLButtonElement;
-    expect(button.disabled).toBe(false);
+    expect(button.disabled).toBe(true);
 
     fireEvent.click(screen.getByRole("button", { name: "Min" }));
     expect(props.onBetAmountChange).toHaveBeenCalledWith("0.01");
 
     fireEvent.click(button);
-    expect(props.onPlaceBet).toHaveBeenCalledTimes(1);
+    expect(props.onPlaceBet).not.toHaveBeenCalled();
   });
 
   it("renders deterministic CTA labels and exposes disabled helpers", () => {
@@ -421,7 +421,7 @@ describe("GameRoomBetPanel", () => {
         state: { status: "failed" },
         amountExceedsMax: true
       })
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it("keeps the CTA live with no wallet so the connect path stays reachable", () => {
