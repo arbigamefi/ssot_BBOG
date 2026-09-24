@@ -1,14 +1,14 @@
 import "@testing-library/jest-dom/vitest";
 import * as React from "react";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MobileWalletDeepLinkBanner } from "./MobileWalletDeepLinkBanner";
 import { MobileWalletEntryProvider } from "./MobileWalletEntryProvider";
 import { requestWalletConnect } from "./wallet-connect-events";
-import { walletDeepLink, walletDestination } from "./mobile-wallet-links";
 
 const state = vi.hoisted(() => ({
   connected: false,
+  modalOpen: false,
   pathname: "/",
   cookie: "rejected" as string | null,
   connect: vi.fn(),
@@ -16,7 +16,7 @@ const state = vi.hoisted(() => ({
 }));
 vi.mock("wagmi", () => ({ useAccount: () => ({ isConnected: state.connected }) }));
 vi.mock("@rainbow-me/rainbowkit", () => ({
-  useConnectModal: () => ({ openConnectModal: state.connect, connectModalOpen: false })
+  useConnectModal: () => ({ openConnectModal: state.connect, connectModalOpen: state.modalOpen })
 }));
 vi.mock("next/navigation", () => ({ usePathname: () => state.pathname }));
 vi.mock("next-intl", () => ({ useTranslations: () => (key: string) => key }));
@@ -43,6 +43,7 @@ function View() {
 
 beforeEach(() => {
   state.connected = false;
+  state.modalOpen = false;
   state.pathname = "/";
   state.chainId = 8453;
   state.cookie = "rejected";
@@ -67,20 +68,13 @@ afterEach(() => {
 
 describe("mobile wallet entry", () => {
   it.each(["Mozilla/5.0 iPhone Mobile Safari", "Mozilla/5.0 Android Mobile Chrome"])(
-    "opens one shared wallet sheet in %s",
-    async (userAgent) => {
+    "opens the existing wallet selector directly in %s",
+    (userAgent) => {
       Object.defineProperty(navigator, "userAgent", { configurable: true, value: userAgent });
       render(<View />);
       expect(screen.getByText("inlineTitle")).toBeVisible();
       expect(screen.getByText("unavailableHint")).toBeVisible();
       act(() => requestWalletConnect());
-      await screen.findByRole("dialog");
-      expect(screen.getAllByRole("dialog")).toHaveLength(1);
-      expect(screen.getByRole("link", { name: /MetaMask/ })).toHaveAttribute(
-        "href",
-        expect.stringContaining("chainId=8453")
-      );
-      fireEvent.click(screen.getByRole("button", { name: "otherWallets" }));
       expect(state.connect).toHaveBeenCalledOnce();
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     }
@@ -92,7 +86,7 @@ describe("mobile wallet entry", () => {
     act(() => requestWalletConnect());
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
-  it("closes its sheet on connection and suppresses late injected providers", () => {
+  it("hides prompts on connection and suppresses late injected providers", () => {
     const view = render(<View />);
     act(() => requestWalletConnect());
     state.connected = true;
@@ -119,12 +113,13 @@ describe("mobile wallet entry", () => {
     render(<View />);
     expect(screen.queryByText("inlineTitle")).not.toBeInTheDocument();
   });
-  it("honors session dismissal but keeps the menu entry available", async () => {
+  it("honors session dismissal but keeps the menu connection entry available", () => {
     sessionStorage.setItem("arbigamefi.mobileDeepLink.dismissedV1", "1");
     render(<View />);
     expect(screen.queryByText("inlineTitle")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "title" }));
-    expect(await screen.findByRole("dialog")).toBeVisible();
+    expect(state.connect).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
   it("holds the floating prompt until cookies are resolved, and hides it under another modal", async () => {
     state.pathname = "/casino";
@@ -160,44 +155,30 @@ describe("mobile wallet entry", () => {
     );
     expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
   });
-  it("prioritizes the previously selected wallet without claiming it is installed", async () => {
-    localStorage.setItem("arbigamefi.mobileDeepLink.lastWallet", "trust");
+  it("connects directly from the prominent home action", () => {
     render(<View />);
-    act(() => requestWalletConnect());
-    await screen.findByRole("dialog");
-    await waitFor(() => expect(screen.getByText("lastSelected")).toBeVisible());
-    const walletLinks = screen
-      .getAllByRole("link")
-      .filter((link) => /MetaMask|Trust Wallet/.test(link.textContent ?? ""));
-    expect(walletLinks[0]).toHaveTextContent("Trust Wallet");
-    expect(screen.getByText("walletChoiceHint")).toBeVisible();
-    expect(screen.queryByText("installed")).not.toBeInTheDocument();
-    expect(state.connect).not.toHaveBeenCalled();
-  });
-  it("offers default and other-wallet choices when the saved wallet is unsupported", async () => {
-    localStorage.setItem("arbigamefi.mobileDeepLink.lastWallet", "unknown-wallet");
-    render(<View />);
-    act(() => requestWalletConnect());
-    await screen.findByRole("dialog");
-    expect(screen.getByRole("link", { name: /MetaMask/ })).toBeVisible();
-    expect(screen.getByRole("link", { name: /Trust Wallet/ })).toBeVisible();
-    expect(screen.queryByText("lastSelected")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "otherWallets" }));
+    fireEvent.click(
+      within(screen.getByRole("complementary")).getByRole("button", { name: "title" })
+    );
     expect(state.connect).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
-});
-
-describe("wallet handoff", () => {
-  it("preserves the current route, selected network and public referral, dropping arbitrary data", () => {
-    const ref = "0x93ac87413E17d01CBa37B6317f64890bF7f99aC3";
-    const target = walletDestination(
-      `https://arbigamefi.com/casino/dice?chainId=8453&ref=${ref}&token=secret#signature`,
-      84532
+  it("connects directly from the floating action and yields to the existing selector", () => {
+    state.pathname = "/casino";
+    const view = render(
+      <MobileWalletEntryProvider>
+        <span>Directory</span>
+      </MobileWalletEntryProvider>
     );
-    expect(target).toBe(`https://arbigamefi.com/casino/dice?chainId=84532&ref=${ref}`);
-    expect(new URL(walletDeepLink("trust", target)).searchParams.get("url")).toBe(target);
-    expect(walletDeepLink("metamask", target)).toContain(
-      "metamask.app.link/dapp/arbigamefi.com/casino/dice?chainId=84532"
+    fireEvent.click(screen.getByRole("button", { name: "choose" }));
+    expect(state.connect).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    state.modalOpen = true;
+    view.rerender(
+      <MobileWalletEntryProvider>
+        <span>Directory</span>
+      </MobileWalletEntryProvider>
     );
+    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
   });
 });

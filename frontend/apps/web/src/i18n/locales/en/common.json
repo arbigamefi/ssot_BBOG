@@ -54,24 +54,12 @@
       "dismiss": "Dismiss"
     },
     "mobileWallet": {
-      "title": "Open in a wallet",
-      "inlineTitle": "A smoother experience inside your wallet",
-      "hint": "Keep the page and wallet confirmations together.",
+      "title": "Connect wallet",
+      "inlineTitle": "Connect your wallet",
+      "hint": "Choose your wallet. You confirm every connection and transaction.",
       "unavailableHint": "Mainnet betting is not yet available.",
       "choose": "Choose wallet",
-      "dismiss": "Close wallet prompt",
-      "sheetTitle": "Continue in your wallet",
-      "description": "Open this page in your wallet browser. Connections and transactions still need your confirmation. Unsaved inputs may need to be entered again.",
-      "openBrowser": "Open in wallet browser",
-      "stay": "Continue in this browser",
-      "tryTestnet": "Explore the testnet",
-      "attempted": "Opening {wallet} was requested. If it did not open, tap the wallet again or copy this link into its browser.",
-      "copy": "Copy current link",
-      "copied": "Link copied",
-      "currentLink": "Current page link",
-      "lastSelected": "Last selected",
-      "otherWallets": "Other wallets / WalletConnect",
-      "walletChoiceHint": "Choose a wallet you have installed. Your browser cannot list all wallet apps on your phone. Other wallets can connect to this browser."
+      "dismiss": "Close wallet prompt"
     }
   },
   "metadata": {
