@@ -1,0 +1,69 @@
+{
+  "complete": true,
+  "at": "2026-09-23T16:14:11.742Z",
+  "chainId": 8453,
+  "deployer": "0x93ac87413E17d01CBa37B6317f64890bF7f99aC3",
+  "bank": "0xEa3845f08a273257c3d3458D26e7bd4234330Dd4",
+  "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+  "lpUsdc": "2",
+  "initialUsdc": "5100000",
+  "remainingUsdc": "3100000",
+  "lpShares": "2000000",
+  "remainingAllowance": "0",
+  "nativeSpentWei": "6544989393587",
+  "noBetsSent": true,
+  "reports": [
+    {
+      "url": "https://base.gateway.tenderly.co",
+      "transactions": [
+        {
+          "name": "approve",
+          "hash": "0xc205de363d5124cd70c3f6300e66e57c734c25c592f96584d8c9b10c579460c9",
+          "blockNumber": "51695274",
+          "blockHash": "0x098c74883e75bddad1bc05c856e0fe838f13ecd0bcf230124e5f45fbc60e3e96"
+        },
+        {
+          "name": "deposit",
+          "hash": "0xd3c2faf74eb6ec553b198d36a4b0c5c595ab926b03b6e4149d44295f3c34c084",
+          "blockNumber": "51695282",
+          "blockHash": "0x43740e9073f65661ff1e83d38f0647915c64fd6d0cb3ad8bf487b3c9b8162128"
+        }
+      ],
+      "blockNumber": "51695282",
+      "state": [
+        "3100000",
+        "2000000",
+        "2000000",
+        "2000000",
+        "0",
+        "0"
+      ]
+    },
+    {
+      "url": "https://mainnet.base.org",
+      "transactions": [
+        {
+          "name": "approve",
+          "hash": "0xc205de363d5124cd70c3f6300e66e57c734c25c592f96584d8c9b10c579460c9",
+          "blockNumber": "51695274",
+          "blockHash": "0x098c74883e75bddad1bc05c856e0fe838f13ecd0bcf230124e5f45fbc60e3e96"
+        },
+        {
+          "name": "deposit",
+          "hash": "0xd3c2faf74eb6ec553b198d36a4b0c5c595ab926b03b6e4149d44295f3c34c084",
+          "blockNumber": "51695282",
+          "blockHash": "0x43740e9073f65661ff1e83d38f0647915c64fd6d0cb3ad8bf487b3c9b8162128"
+        }
+      ],
+      "blockNumber": "51695282",
+      "state": [
+        "3100000",
+        "2000000",
+        "2000000",
+        "2000000",
+        "0",
+        "0"
+      ]
+    }
+  ]
+}
