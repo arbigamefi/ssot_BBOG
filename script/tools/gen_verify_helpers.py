@@ -71,15 +71,10 @@ def main() -> int:
     chain_id = int(_must(data, "chainId"))
     block_number = int(_must(data, "blockNumber"))
     architecture_version = str(data.get("architectureVersion", ""))
-    if architecture_version.startswith("v1.3"):
-        release_version = "v13"
-    elif architecture_version.startswith("v1.5"):
-        release_version = "v15"
-    elif architecture_version.startswith("v1.4"):
-        release_version = "v14"
-    else:
-        print(f"error: expected a versioned router snapshot, got architectureVersion={architecture_version!r}", file=sys.stderr)
+    if architecture_version != "v1.5-safe-governance":
+        print(f"error: expected a v1.5 Safe-governance snapshot, got architectureVersion={architecture_version!r}", file=sys.stderr)
         return 2
+    release_version = "v15"
     tag = f"{chain_id}-{block_number}-{release_version}"
 
     out_dir = Path("deployments")

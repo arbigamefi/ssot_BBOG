@@ -1,3 +1,5 @@
+> Historical reference: this document includes pre-v1.5 deployment observations or commands. Those tools/artifacts were retired from the working tree. Use the [current deployment workflow](../deploy/v15-release.md) for operations; retrieve historical files from Git at `a5d7d3fa50d4457f1476de0ac7fc3bd83ca49273`.
+
 # Base Mainnet Casino Canary Template
 
 Status: **Template — copy for each mainnet release canary**

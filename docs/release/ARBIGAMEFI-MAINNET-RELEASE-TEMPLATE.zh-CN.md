@@ -1,3 +1,5 @@
+> Historical reference: this document includes pre-v1.5 deployment observations or commands. Those tools/artifacts were retired from the working tree. Use the [current deployment workflow](../deploy/v15-release.md) for operations; retrieve historical files from Git at `a5d7d3fa50d4457f1476de0ac7fc3bd83ca49273`.
+
 # ArbiGameFi Mainnet Release Template
 
 > 项目：`ArbiGameFi`
@@ -102,8 +104,8 @@ This is the mainnet-facing release template for ArbiGameFi. Use it only after ge
 > - [`checklist.md`](checklist.md)
 > - [`ARBIGAMEFI-EXPLORER-LINKS.zh-CN.md`](ARBIGAMEFI-EXPLORER-LINKS.zh-CN.md)
 > - [`ARBIGAMEFI-LP-ONBOARDING.zh-CN.md`](ARBIGAMEFI-LP-ONBOARDING.zh-CN.md)
-> - [`../../deployments/release-latest-v13.json`](../../deployments/release-latest-v13.json)
-> - [`../../deployments/frontend-manifest-latest-v13.json`](../../deployments/frontend-manifest-latest-v13.json)
+> - [`../../deployments/release-latest-v13.json`](https://github.com/arbigamefi/ssot_BBOG/blob/a5d7d3fa50d4457f1476de0ac7fc3bd83ca49273/deployments/release-latest-v13.json)
+> - [`../../deployments/frontend-manifest-latest-v13.json`](https://github.com/arbigamefi/ssot_BBOG/blob/a5d7d3fa50d4457f1476de0ac7fc3bd83ca49273/deployments/frontend-manifest-latest-v13.json)
 
 ## Abstract (EN)
 
@@ -127,8 +129,8 @@ This document is the outward-facing release pack for the current ArbiGameFi main
 | Digest schema         | `SSOT_RELEASE_DIGEST_V1`                                                                 |
 | Schema hash           | `<SCHEMA_HASH>`                                                                          |
 | Signer / GOV          | `<GOV_ADDRESS>`                                                                          |
-| Release lock artifact | [`../../deployments/release-latest-v13.json`](../../deployments/release-latest-v13.json) |
-| Deployment snapshot   | [`../../deployments/latest-v13.json`](../../deployments/latest-v13.json)                 |
+| Release lock artifact | [`../../deployments/release-latest-v13.json`](https://github.com/arbigamefi/ssot_BBOG/blob/a5d7d3fa50d4457f1476de0ac7fc3bd83ca49273/deployments/release-latest-v13.json) |
+| Deployment snapshot   | [`../../deployments/latest-v13.json`](https://github.com/arbigamefi/ssot_BBOG/blob/a5d7d3fa50d4457f1476de0ac7fc3bd83ca49273/deployments/latest-v13.json)                 |
 
 ### 2.2 Release lock signature
 

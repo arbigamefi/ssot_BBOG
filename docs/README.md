@@ -1,5 +1,11 @@
 # Documentation Index
 
+## Current v1.5 deployment
+
+- [Implementation status](deploy/v15/implementation-status.zh-CN.md)
+- [Supported deployment workflow](deploy/v15-release.md)
+- [Release process](release/README.md)
+
 ## Closeout
 
 - `docs/closeout/README.md` — one-page institutional handoff (proof + release + ops)

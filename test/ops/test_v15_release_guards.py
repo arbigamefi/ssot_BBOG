@@ -119,5 +119,20 @@ class PackageGuardTests(unittest.TestCase):
             self.assertFalse((root / "dist").exists())
 
 
+class VerifyHelperGuardTests(unittest.TestCase):
+    def test_retired_snapshots_cannot_generate_executable_helpers(self):
+        for version in ("v1.3-router", "v1.4-bank"):
+            with self.subTest(version=version), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                snapshot = root / "snapshot.json"
+                snapshot.write_text(json.dumps({"chainId": 8453, "blockNumber": 1,
+                                                "architectureVersion": version}))
+                result = subprocess.run(["python3", str(ROOT / "script/tools/gen_verify_helpers.py"),
+                                         str(snapshot)], cwd=root, capture_output=True, timeout=10)
+                self.assertEqual(result.returncode, 2)
+                self.assertIn(b"expected a v1.5 Safe-governance snapshot", result.stderr)
+                self.assertFalse((root / "deployments").exists())
+
+
 if __name__ == "__main__":
     unittest.main()

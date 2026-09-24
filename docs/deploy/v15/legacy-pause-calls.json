@@ -1,0 +1,230 @@
+{
+  "at": "2026-09-24T06:50:42.214Z",
+  "status": "prepared-only-not-signed-or-broadcast",
+  "transactions": [
+    {
+      "chainId": 8453,
+      "from": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684",
+      "to": "0x3ed89faE1708DD24df1c95B61edeDdCDe9E2D07f",
+      "value": "0",
+      "function": "setRiskInPaused(bool)",
+      "args": [
+        true
+      ],
+      "data": "0xcbc903870000000000000000000000000000000000000000000000000000000000000001",
+      "simulation": {
+        "passed": true,
+        "blockNumber": "51721644"
+      },
+      "symbol": "USDC"
+    },
+    {
+      "chainId": 84532,
+      "from": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684",
+      "to": "0x3aADa481F979E5DFabd2Cd252A76feA2aD05e346",
+      "value": "0",
+      "function": "setRiskInPaused(bool)",
+      "args": [
+        true
+      ],
+      "data": "0xcbc903870000000000000000000000000000000000000000000000000000000000000001",
+      "simulation": {
+        "passed": true,
+        "blockNumber": "47232175"
+      },
+      "symbol": "USDC"
+    },
+    {
+      "chainId": 84532,
+      "from": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684",
+      "to": "0x3686664d8D92FEAb8C4c9Ac0baaEb07c8BDDbc85",
+      "value": "0",
+      "function": "setRiskInPaused(bool)",
+      "args": [
+        true
+      ],
+      "data": "0xcbc903870000000000000000000000000000000000000000000000000000000000000001",
+      "simulation": {
+        "passed": true,
+        "blockNumber": "47232175"
+      },
+      "symbol": "USDC"
+    },
+    {
+      "chainId": 84532,
+      "from": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684",
+      "to": "0x14F3eeaacD690C8f421dE2E3353250e9682B3087",
+      "value": "0",
+      "function": "setRiskInPaused(bool)",
+      "args": [
+        true
+      ],
+      "data": "0xcbc903870000000000000000000000000000000000000000000000000000000000000001",
+      "simulation": {
+        "passed": true,
+        "blockNumber": "47232175"
+      },
+      "symbol": "USDC"
+    },
+    {
+      "chainId": 84532,
+      "from": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684",
+      "to": "0x3B1dcC35344739a58EC907958233D2E30939988b",
+      "value": "0",
+      "function": "setRiskInPaused(bool)",
+      "args": [
+        true
+      ],
+      "data": "0xcbc903870000000000000000000000000000000000000000000000000000000000000001",
+      "simulation": {
+        "passed": true,
+        "blockNumber": "47232175"
+      },
+      "symbol": "USDC"
+    },
+    {
+      "chainId": 84532,
+      "from": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684",
+      "to": "0x4735aE54b7efe4bedeCAee13420f72E05aCd0F4e",
+      "value": "0",
+      "function": "setRiskInPaused(bool)",
+      "args": [
+        true
+      ],
+      "data": "0xcbc903870000000000000000000000000000000000000000000000000000000000000001",
+      "simulation": {
+        "passed": true,
+        "blockNumber": "47232175"
+      },
+      "symbol": "WETH"
+    },
+    {
+      "chainId": 84532,
+      "from": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684",
+      "to": "0x7585145B702e8009F4eac60Be4195cE8449Be571",
+      "value": "0",
+      "function": "setRiskInPaused(bool)",
+      "args": [
+        true
+      ],
+      "data": "0xcbc903870000000000000000000000000000000000000000000000000000000000000001",
+      "simulation": {
+        "passed": true,
+        "blockNumber": "47232175"
+      },
+      "symbol": "USDC"
+    },
+    {
+      "chainId": 84532,
+      "from": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684",
+      "to": "0xa4442DA635a575a57d5E98f27161cF0Fea8AA622",
+      "value": "0",
+      "function": "setRiskInPaused(bool)",
+      "args": [
+        true
+      ],
+      "data": "0xcbc903870000000000000000000000000000000000000000000000000000000000000001",
+      "simulation": {
+        "passed": true,
+        "blockNumber": "47232175"
+      },
+      "symbol": "WETH"
+    },
+    {
+      "chainId": 84532,
+      "from": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684",
+      "to": "0x16f5BBc7d62Aa8d1828b807F57d3796712C7E3e9",
+      "value": "0",
+      "function": "setRiskInPaused(bool)",
+      "args": [
+        true
+      ],
+      "data": "0xcbc903870000000000000000000000000000000000000000000000000000000000000001",
+      "simulation": {
+        "passed": true,
+        "blockNumber": "47232175"
+      },
+      "symbol": "USDC"
+    },
+    {
+      "chainId": 84532,
+      "from": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684",
+      "to": "0x71D9E131D5F92c3c18a44fAE058ED789085DD095",
+      "value": "0",
+      "function": "setRiskInPaused(bool)",
+      "args": [
+        true
+      ],
+      "data": "0xcbc903870000000000000000000000000000000000000000000000000000000000000001",
+      "simulation": {
+        "passed": true,
+        "blockNumber": "47232175"
+      },
+      "symbol": "WETH"
+    },
+    {
+      "chainId": 84532,
+      "from": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684",
+      "to": "0xbc9A8f34A416B6Da463c634D63996C362e2C5f0A",
+      "value": "0",
+      "function": "setRiskInPaused(bool)",
+      "args": [
+        true
+      ],
+      "data": "0xcbc903870000000000000000000000000000000000000000000000000000000000000001",
+      "simulation": {
+        "passed": true,
+        "blockNumber": "47232175"
+      },
+      "symbol": "USDC"
+    },
+    {
+      "chainId": 84532,
+      "from": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684",
+      "to": "0x732d8fdCe925f73d0b8573A8E8638a748069E661",
+      "value": "0",
+      "function": "setRiskInPaused(bool)",
+      "args": [
+        true
+      ],
+      "data": "0xcbc903870000000000000000000000000000000000000000000000000000000000000001",
+      "simulation": {
+        "passed": true,
+        "blockNumber": "47232175"
+      },
+      "symbol": "USDC"
+    },
+    {
+      "chainId": 84532,
+      "from": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684",
+      "to": "0x552063BA55ac0A4AEf3fb764957912056FB3A7f0",
+      "value": "0",
+      "function": "setRiskInPaused(bool)",
+      "args": [
+        true
+      ],
+      "data": "0xcbc903870000000000000000000000000000000000000000000000000000000000000001",
+      "simulation": {
+        "passed": true,
+        "blockNumber": "47232175"
+      },
+      "symbol": "USDC"
+    },
+    {
+      "chainId": 84532,
+      "from": "0xc8eC9920d573893E888db5D30b2B3B3824B1b684",
+      "to": "0xf97C13205038C1Ecf088bcc5A591E62966172Af8",
+      "value": "0",
+      "function": "setRiskInPaused(bool)",
+      "args": [
+        true
+      ],
+      "data": "0xcbc903870000000000000000000000000000000000000000000000000000000000000001",
+      "simulation": {
+        "passed": true,
+        "blockNumber": "47232175"
+      },
+      "symbol": "USDC"
+    }
+  ]
+}

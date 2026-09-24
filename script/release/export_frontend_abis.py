@@ -6,8 +6,8 @@ This is intentionally a "trimmed ABI" export:
   - We only export the `abi` array needed by frontend tooling.
 
 Default outputs:
-  - deployments/abis-v13/index.json
-  - deployments/abis-v13/<Contract>.abi.json (one per contract type)
+  - deployments/abis-v15/index.json
+  - deployments/abis-v15/<Contract>.abi.json (one per contract type)
 
 The index is tied to the release identity (chainId + blockNumber) so that
 frontend can be zero-inference: copy+consume.

@@ -1,0 +1,631 @@
+{
+  "date": "2026-09-24",
+  "sourceCommit": "a5d7d3fa50d4457f1476de0ac7fc3bd83ca49273",
+  "removedTrackedCount": 415,
+  "trackedCategories": {
+    "SSOT_v1.2_Audit_Report.docx": 1,
+    "deployments": 74,
+    "dist": 2,
+    "docs": 22,
+    "frontend": 265,
+    "progress.md": 1,
+    "script": 36,
+    "tmp": 14
+  },
+  "ignoredPathsRemoved": [
+    {
+      "path": ".base-mainnet-v13-casino.env",
+      "bytes": 2326
+    },
+    {
+      "path": ".base-mainnet-v14-casino.env",
+      "bytes": 2707
+    },
+    {
+      "path": ".env.sports-roles.local",
+      "bytes": 752
+    },
+    {
+      "path": ".env.v13-sports.local",
+      "bytes": 1200
+    },
+    {
+      "path": "broadcast/DeployV14.s.sol",
+      "bytes": 658126
+    },
+    {
+      "path": "broadcast/SeedCasinoBankV14.s.sol",
+      "bytes": 29713
+    },
+    {
+      "path": "broadcast/SetBankMinTurnoverV14.s.sol",
+      "bytes": 10636
+    },
+    {
+      "path": "deployments/deploy-84532-37393796.json",
+      "bytes": 4237
+    },
+    {
+      "path": "deployments/deploy-84532-41444048-v13.json",
+      "bytes": 9350
+    },
+    {
+      "path": "deployments/deploy-84532-41444125-v13.json",
+      "bytes": 9350
+    },
+    {
+      "path": "deployments/keno-upgrade-84532-41760321-v13.json",
+      "bytes": 505
+    },
+    {
+      "path": "deployments/keno-upgrade-latest-v13.json",
+      "bytes": 505
+    },
+    {
+      "path": "deployments/pool-add-84532-42323839-v13.json",
+      "bytes": 1624
+    },
+    {
+      "path": "deployments/pool-add-latest-v13.json",
+      "bytes": 1624
+    },
+    {
+      "path": "deployments/release/abi-index-84532-37393796.json",
+      "bytes": 3322
+    },
+    {
+      "path": "deployments/release/abi-index-84532-41444125-v13.json",
+      "bytes": 4453
+    },
+    {
+      "path": "deployments/release/abi-index-84532-41458108-v13.json",
+      "bytes": 5533
+    },
+    {
+      "path": "deployments/release/abi-index-84532-41461344-v13.json",
+      "bytes": 5533
+    },
+    {
+      "path": "deployments/release/abi-index-84532-41462034-v13.json",
+      "bytes": 5533
+    },
+    {
+      "path": "deployments/release/abi-index-84532-41562978-v13.json",
+      "bytes": 5533
+    },
+    {
+      "path": "deployments/release/abi-index-84532-41615646-v13.json",
+      "bytes": 5533
+    },
+    {
+      "path": "deployments/release/abi-index-84532-41648331-v13.json",
+      "bytes": 5533
+    },
+    {
+      "path": "deployments/release/abi-index-84532-41650184-v13.json",
+      "bytes": 5533
+    },
+    {
+      "path": "deployments/release/abi-index-84532-41760321-v13.json",
+      "bytes": 5533
+    },
+    {
+      "path": "deployments/release/abi-index-84532-42323839-v13.json",
+      "bytes": 5778
+    },
+    {
+      "path": "deployments/release/abi-index-84532-42474070-v14.json",
+      "bytes": 5542
+    },
+    {
+      "path": "deployments/release/abi-index-84532-42600719-v14.json",
+      "bytes": 5533
+    },
+    {
+      "path": "deployments/release/frontend-manifest-84532-37393796.json",
+      "bytes": 1783
+    },
+    {
+      "path": "deployments/release/frontend-manifest-84532-41444125-v13.json",
+      "bytes": 3129
+    },
+    {
+      "path": "deployments/release/frontend-manifest-84532-41458108-v13.json",
+      "bytes": 4184
+    },
+    {
+      "path": "deployments/release/frontend-manifest-84532-41461344-v13.json",
+      "bytes": 4225
+    },
+    {
+      "path": "deployments/release/frontend-manifest-84532-41462034-v13.json",
+      "bytes": 4237
+    },
+    {
+      "path": "deployments/release/frontend-manifest-84532-41562978-v13.json",
+      "bytes": 4237
+    },
+    {
+      "path": "deployments/release/frontend-manifest-84532-41615646-v13.json",
+      "bytes": 4265
+    },
+    {
+      "path": "deployments/release/frontend-manifest-84532-41648331-v13.json",
+      "bytes": 4265
+    },
+    {
+      "path": "deployments/release/frontend-manifest-84532-41650184-v13.json",
+      "bytes": 4265
+    },
+    {
+      "path": "deployments/release/frontend-manifest-84532-41760321-v13.json",
+      "bytes": 4265
+    },
+    {
+      "path": "deployments/release/frontend-manifest-84532-42323839-v13.json",
+      "bytes": 4476
+    },
+    {
+      "path": "deployments/release/frontend-manifest-84532-42474070-v14.json",
+      "bytes": 4023
+    },
+    {
+      "path": "deployments/release/frontend-manifest-84532-42600719-v14.json",
+      "bytes": 4014
+    },
+    {
+      "path": "deployments/release/golden-vectors-84532-37393796.json",
+      "bytes": 6336
+    },
+    {
+      "path": "deployments/release/golden-vectors-84532-41444125-v13.json",
+      "bytes": 6213
+    },
+    {
+      "path": "deployments/release/golden-vectors-84532-41458108-v13.json",
+      "bytes": 12258
+    },
+    {
+      "path": "deployments/release/golden-vectors-84532-41461344-v13.json",
+      "bytes": 12258
+    },
+    {
+      "path": "deployments/release/golden-vectors-84532-41462034-v13.json",
+      "bytes": 12162
+    },
+    {
+      "path": "deployments/release/golden-vectors-84532-41562978-v13.json",
+      "bytes": 12162
+    },
+    {
+      "path": "deployments/release/golden-vectors-84532-41615646-v13.json",
+      "bytes": 12162
+    },
+    {
+      "path": "deployments/release/golden-vectors-84532-41648331-v13.json",
+      "bytes": 12162
+    },
+    {
+      "path": "deployments/release/golden-vectors-84532-41650184-v13.json",
+      "bytes": 12162
+    },
+    {
+      "path": "deployments/release/golden-vectors-84532-41760321-v13.json",
+      "bytes": 12162
+    },
+    {
+      "path": "deployments/release/golden-vectors-84532-42323839-v13.json",
+      "bytes": 12162
+    },
+    {
+      "path": "deployments/release/golden-vectors-84532-42474070-v14.json",
+      "bytes": 12168
+    },
+    {
+      "path": "deployments/release/golden-vectors-84532-42600719-v14.json",
+      "bytes": 12168
+    },
+    {
+      "path": "deployments/release/release-84532-37393796.json",
+      "bytes": 523
+    },
+    {
+      "path": "deployments/release/release-84532-41444125-v13.json",
+      "bytes": 528
+    },
+    {
+      "path": "deployments/release/release-84532-41458108-v13.json",
+      "bytes": 528
+    },
+    {
+      "path": "deployments/release/release-84532-41461344-v13.json",
+      "bytes": 528
+    },
+    {
+      "path": "deployments/release/release-84532-41462034-v13.json",
+      "bytes": 528
+    },
+    {
+      "path": "deployments/release/release-84532-41562978-v13.json",
+      "bytes": 528
+    },
+    {
+      "path": "deployments/release/release-84532-41615646-v13.json",
+      "bytes": 528
+    },
+    {
+      "path": "deployments/release/release-84532-41648331-v13.json",
+      "bytes": 528
+    },
+    {
+      "path": "deployments/release/release-84532-41650184-v13.json",
+      "bytes": 528
+    },
+    {
+      "path": "deployments/release/release-84532-41760321-v13.json",
+      "bytes": 528
+    },
+    {
+      "path": "deployments/release/release-84532-42323839-v13.json",
+      "bytes": 553
+    },
+    {
+      "path": "deployments/release/release-84532-42474070-v14.json",
+      "bytes": 528
+    },
+    {
+      "path": "deployments/release/release-84532-42600719-v14.json",
+      "bytes": 528
+    },
+    {
+      "path": "deployments/release/release-notes-84532-37393796.md",
+      "bytes": 1694
+    },
+    {
+      "path": "deployments/release/release-notes-84532-41444125-v13.md",
+      "bytes": 2990
+    },
+    {
+      "path": "deployments/release/release-notes-84532-41458108-v13.md",
+      "bytes": 3210
+    },
+    {
+      "path": "deployments/release/release-notes-84532-41461344-v13.md",
+      "bytes": 3258
+    },
+    {
+      "path": "deployments/release/release-notes-84532-41462034-v13.md",
+      "bytes": 3258
+    },
+    {
+      "path": "deployments/release/release-notes-84532-41562978-v13.md",
+      "bytes": 3258
+    },
+    {
+      "path": "deployments/release/release-notes-84532-41615646-v13.md",
+      "bytes": 3258
+    },
+    {
+      "path": "deployments/release/release-notes-84532-41648331-v13.md",
+      "bytes": 3258
+    },
+    {
+      "path": "deployments/release/release-notes-84532-41650184-v13.md",
+      "bytes": 3258
+    },
+    {
+      "path": "deployments/release/release-notes-84532-41760321-v13.md",
+      "bytes": 3258
+    },
+    {
+      "path": "deployments/release/release-notes-84532-42323839-v13.md",
+      "bytes": 3429
+    },
+    {
+      "path": "deployments/release/release-notes-84532-42474070-v14.md",
+      "bytes": 3042
+    },
+    {
+      "path": "deployments/release/release-notes-84532-42600719-v14.md",
+      "bytes": 3042
+    },
+    {
+      "path": "deployments/release-84532-37393796.json",
+      "bytes": 523
+    },
+    {
+      "path": "deployments/release-84532-41444125-v13.json",
+      "bytes": 528
+    },
+    {
+      "path": "deployments/snapshots/deploy-8453-46970560-v14.json",
+      "bytes": 8442
+    },
+    {
+      "path": "deployments/snapshots/deploy-84532-37393796.json",
+      "bytes": 4237
+    },
+    {
+      "path": "deployments/snapshots/deploy-84532-41444048-v13.json",
+      "bytes": 9350
+    },
+    {
+      "path": "deployments/snapshots/deploy-84532-41444125-v13.json",
+      "bytes": 9350
+    },
+    {
+      "path": "deployments/snapshots/deploy-84532-41458108-v13.json",
+      "bytes": 8319
+    },
+    {
+      "path": "deployments/snapshots/deploy-84532-41461344-v13.json",
+      "bytes": 8368
+    },
+    {
+      "path": "deployments/snapshots/deploy-84532-41461705-v13.json",
+      "bytes": 8368
+    },
+    {
+      "path": "deployments/snapshots/deploy-84532-41462034-v13.json",
+      "bytes": 8368
+    },
+    {
+      "path": "deployments/snapshots/deploy-84532-41562978-v13.json",
+      "bytes": 8378
+    },
+    {
+      "path": "deployments/snapshots/deploy-84532-41615608-v13.json",
+      "bytes": 8376
+    },
+    {
+      "path": "deployments/snapshots/deploy-84532-41615646-v13.json",
+      "bytes": 8376
+    },
+    {
+      "path": "deployments/snapshots/deploy-84532-41648331-v13.json",
+      "bytes": 8376
+    },
+    {
+      "path": "deployments/snapshots/deploy-84532-41648930-v13.json",
+      "bytes": 8376
+    },
+    {
+      "path": "deployments/snapshots/deploy-84532-41649203-v13.json",
+      "bytes": 8376
+    },
+    {
+      "path": "deployments/snapshots/deploy-84532-41649467-v13.json",
+      "bytes": 8376
+    },
+    {
+      "path": "deployments/snapshots/deploy-84532-41649670-v13.json",
+      "bytes": 8376
+    },
+    {
+      "path": "deployments/snapshots/deploy-84532-41649847-v13.json",
+      "bytes": 8376
+    },
+    {
+      "path": "deployments/snapshots/deploy-84532-41650184-v13.json",
+      "bytes": 8377
+    },
+    {
+      "path": "deployments/snapshots/deploy-84532-42323839-v13.before-pool-add-84532-42323839.json",
+      "bytes": 8377
+    },
+    {
+      "path": "deployments/snapshots/deploy-84532-42323839-v13.json",
+      "bytes": 9820
+    },
+    {
+      "path": "deployments/snapshots/deploy-84532-42474070-v14.json",
+      "bytes": 8290
+    },
+    {
+      "path": "deployments/snapshots/deploy-84532-42600719-v14.json",
+      "bytes": 8473
+    },
+    {
+      "path": "deployments/verify/verify-8453-46970560-v14.sh",
+      "bytes": 7851
+    },
+    {
+      "path": "deployments/verify/verify-84532-37393796.sh",
+      "bytes": 5893
+    },
+    {
+      "path": "deployments/verify/verify-84532-41444048-v13.sh",
+      "bytes": 8089
+    },
+    {
+      "path": "deployments/verify/verify-84532-41444125-v13.sh",
+      "bytes": 8089
+    },
+    {
+      "path": "deployments/verify/verify-84532-41458108-v13.sh",
+      "bytes": 9077
+    },
+    {
+      "path": "deployments/verify/verify-84532-41461344-v13.sh",
+      "bytes": 9077
+    },
+    {
+      "path": "deployments/verify/verify-84532-41461705-v13.sh",
+      "bytes": 9077
+    },
+    {
+      "path": "deployments/verify/verify-84532-41462034-v13.sh",
+      "bytes": 9077
+    },
+    {
+      "path": "deployments/verify/verify-84532-41562978-v13.sh",
+      "bytes": 9077
+    },
+    {
+      "path": "deployments/verify/verify-84532-41615608-v13.sh",
+      "bytes": 9077
+    },
+    {
+      "path": "deployments/verify/verify-84532-41615646-v13.sh",
+      "bytes": 9077
+    },
+    {
+      "path": "deployments/verify/verify-84532-41648331-v13.sh",
+      "bytes": 9077
+    },
+    {
+      "path": "deployments/verify/verify-84532-41648930-v13.sh",
+      "bytes": 9077
+    },
+    {
+      "path": "deployments/verify/verify-84532-41649203-v13.sh",
+      "bytes": 9077
+    },
+    {
+      "path": "deployments/verify/verify-84532-41649467-v13.sh",
+      "bytes": 9077
+    },
+    {
+      "path": "deployments/verify/verify-84532-41649670-v13.sh",
+      "bytes": 9077
+    },
+    {
+      "path": "deployments/verify/verify-84532-41649847-v13.sh",
+      "bytes": 9077
+    },
+    {
+      "path": "deployments/verify/verify-84532-42474070-v14.sh",
+      "bytes": 8063
+    },
+    {
+      "path": "deployments/verify/verify-84532-42600719-v14.sh",
+      "bytes": 8063
+    },
+    {
+      "path": "deployments/verify-84532-37393796.sh",
+      "bytes": 5893
+    },
+    {
+      "path": "deployments/verify-84532-41444048-v13.sh",
+      "bytes": 8089
+    },
+    {
+      "path": "deployments/verify-84532-41444125-v13.sh",
+      "bytes": 8089
+    },
+    {
+      "path": "deployments/verify-pool-add-84532-42323839-v13.sh",
+      "bytes": 973
+    },
+    {
+      "path": "deployments/verify-pool-add-latest-v13.sh",
+      "bytes": 973
+    },
+    {
+      "path": "dist/.gitkeep",
+      "bytes": 0
+    },
+    {
+      "path": "dist/ssot-release-chain-8453-46970755-0x8ae5f98a.tar.gz",
+      "bytes": 29512
+    },
+    {
+      "path": "dist/ssot-release-chain-84532-37393796-0xe0e8bdc3.tar.gz",
+      "bytes": 17578
+    },
+    {
+      "path": "dist/ssot-release-chain-84532-41444125-0x057acee9.tar.gz",
+      "bytes": 26388
+    },
+    {
+      "path": "dist/ssot-release-chain-84532-41458108-0x6ccc8363.tar.gz",
+      "bytes": 30134
+    },
+    {
+      "path": "dist/ssot-release-chain-84532-41461344-0xcabc4706.tar.gz",
+      "bytes": 30449
+    },
+    {
+      "path": "dist/ssot-release-chain-84532-41462034-0x7ad0f2cb.tar.gz",
+      "bytes": 29998
+    },
+    {
+      "path": "dist/ssot-release-chain-84532-41562978-0x97025bf8.tar.gz",
+      "bytes": 30541
+    },
+    {
+      "path": "dist/ssot-release-chain-84532-41615646-0xb0cdf93f.tar.gz",
+      "bytes": 29643
+    },
+    {
+      "path": "dist/ssot-release-chain-84532-41648331-0x61869348.tar.gz",
+      "bytes": 30901
+    },
+    {
+      "path": "dist/ssot-release-chain-84532-41650184-0xc61adcdf.tar.gz",
+      "bytes": 28576
+    },
+    {
+      "path": "dist/ssot-release-chain-84532-41760321-0x2a3db090.tar.gz",
+      "bytes": 28466
+    },
+    {
+      "path": "dist/ssot-release-chain-84532-42323839-0xfeb5e4bc.tar.gz",
+      "bytes": 29936
+    },
+    {
+      "path": "dist/ssot-release-chain-84532-42474070-0xb4bf78b3.tar.gz",
+      "bytes": 29970
+    },
+    {
+      "path": "dist/ssot-release-chain-84532-42600719-0xeb08b585.tar.gz",
+      "bytes": 28992
+    },
+    {
+      "path": "frontend/deploy/casino-keeper/backup.base-mainnet.env",
+      "bytes": 1525
+    },
+    {
+      "path": "frontend/deploy/casino-keeper/primary.base-mainnet.env",
+      "bytes": 1703
+    },
+    {
+      "path": "tmp/sports-provider-evidence-check",
+      "bytes": 4056
+    },
+    {
+      "path": "tmp/sports-provider-e2e-evidence",
+      "bytes": 5082
+    },
+    {
+      "path": "tmp/sports-provider-evidence-live-smoke",
+      "bytes": 3976
+    },
+    {
+      "path": "tmp/sports-provider-odds-check",
+      "bytes": 5721
+    },
+    {
+      "path": "tmp/sports-provider-odds-live-smoke",
+      "bytes": 614971
+    },
+    {
+      "path": "tmp/sports-provider-e2e-odds",
+      "bytes": 5721
+    }
+  ],
+  "ignoredBytesRemoved": 2463028,
+  "preserved": [
+    "Git history",
+    "Current v1.5 signed bundles and both chain broadcasts",
+    "Current runtime code, contract specifications and tests",
+    "Current credentials and Foundry keystores"
+  ],
+  "historicalObligations": "legacy-bank-obligations.json",
+  "validation": [
+    "20 Python operation tests passed",
+    "Both embedded release checks passed",
+    "Exact-hex vectors for both current v1.5 releases passed"
+  ],
+  "note": "Deletion of local files does not retire on-chain assets. Standby keeper backup templates are active role templates, not old backup archives."
+}

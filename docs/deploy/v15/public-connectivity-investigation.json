@@ -1,0 +1,228 @@
+{
+  "samples": [
+    {
+      "at": "2026-09-24T06:51:06.002015+00:00",
+      "route": "cloudflare",
+      "chainId": 8453,
+      "exitCode": 0,
+      "error": "",
+      "status": "ok",
+      "timing": {
+        "http_code": 200,
+        "remote_ip": "104.21.31.55",
+        "time_connect": 0.226389,
+        "time_appconnect": 0.819719,
+        "time_starttransfer": 1.788223,
+        "time_total": 1.788296
+      }
+    },
+    {
+      "at": "2026-09-24T06:51:06.011458+00:00",
+      "route": "direct-origin-diagnostic-TLS-verification-disabled",
+      "chainId": 8453,
+      "exitCode": 0,
+      "error": "",
+      "status": "ok",
+      "timing": {
+        "http_code": 200,
+        "remote_ip": "45.77.243.138",
+        "time_connect": 0.00567,
+        "time_appconnect": 0.614619,
+        "time_starttransfer": 1.510415,
+        "time_total": 1.512358
+      }
+    },
+    {
+      "at": "2026-09-24T06:51:07.544916+00:00",
+      "route": "cloudflare",
+      "chainId": 84532,
+      "exitCode": 0,
+      "error": "",
+      "status": "ok",
+      "timing": {
+        "http_code": 200,
+        "remote_ip": "104.21.31.55",
+        "time_connect": 0.008569,
+        "time_appconnect": 0.551853,
+        "time_starttransfer": 1.449156,
+        "time_total": 1.449304
+      }
+    },
+    {
+      "at": "2026-09-24T06:51:07.821465+00:00",
+      "route": "direct-origin-diagnostic-TLS-verification-disabled",
+      "chainId": 84532,
+      "exitCode": 0,
+      "error": "",
+      "status": "ok",
+      "timing": {
+        "http_code": 200,
+        "remote_ip": "45.77.243.138",
+        "time_connect": 0.005676,
+        "time_appconnect": 0.534608,
+        "time_starttransfer": 1.394103,
+        "time_total": 1.394248
+      }
+    },
+    {
+      "at": "2026-09-24T06:51:09.226538+00:00",
+      "route": "cloudflare",
+      "chainId": 8453,
+      "exitCode": 0,
+      "error": "",
+      "status": "ok",
+      "timing": {
+        "http_code": 200,
+        "remote_ip": "104.21.31.55",
+        "time_connect": 0.009159,
+        "time_appconnect": 0.555919,
+        "time_starttransfer": 0.940725,
+        "time_total": 0.944688
+      }
+    },
+    {
+      "at": "2026-09-24T06:51:09.226724+00:00",
+      "route": "direct-origin-diagnostic-TLS-verification-disabled",
+      "chainId": 8453,
+      "exitCode": 0,
+      "error": "",
+      "status": "ok",
+      "timing": {
+        "http_code": 200,
+        "remote_ip": "45.77.243.138",
+        "time_connect": 0.005616,
+        "time_appconnect": 0.539708,
+        "time_starttransfer": 0.900601,
+        "time_total": 0.903877
+      }
+    },
+    {
+      "at": "2026-09-24T06:51:10.152450+00:00",
+      "route": "cloudflare",
+      "chainId": 84532,
+      "exitCode": 0,
+      "error": "",
+      "status": "ok",
+      "timing": {
+        "http_code": 200,
+        "remote_ip": "104.21.31.55",
+        "time_connect": 0.01095,
+        "time_appconnect": 0.547024,
+        "time_starttransfer": 1.427953,
+        "time_total": 1.428116
+      }
+    },
+    {
+      "at": "2026-09-24T06:51:10.192304+00:00",
+      "route": "direct-origin-diagnostic-TLS-verification-disabled",
+      "chainId": 84532,
+      "exitCode": 0,
+      "error": "",
+      "status": "ok",
+      "timing": {
+        "http_code": 200,
+        "remote_ip": "45.77.243.138",
+        "time_connect": 0.00474,
+        "time_appconnect": 0.566965,
+        "time_starttransfer": 1.508848,
+        "time_total": 1.509061
+      }
+    },
+    {
+      "at": "2026-09-24T06:51:11.720300+00:00",
+      "route": "cloudflare",
+      "chainId": 8453,
+      "exitCode": 0,
+      "error": "",
+      "status": "ok",
+      "timing": {
+        "http_code": 200,
+        "remote_ip": "104.21.31.55",
+        "time_connect": 0.010184,
+        "time_appconnect": 0.617667,
+        "time_starttransfer": 1.029261,
+        "time_total": 1.036225
+      }
+    },
+    {
+      "at": "2026-09-24T06:51:11.720466+00:00",
+      "route": "direct-origin-diagnostic-TLS-verification-disabled",
+      "chainId": 8453,
+      "exitCode": 0,
+      "error": "",
+      "status": "ok",
+      "timing": {
+        "http_code": 200,
+        "remote_ip": "45.77.243.138",
+        "time_connect": 0.005769,
+        "time_appconnect": 0.608779,
+        "time_starttransfer": 1.032895,
+        "time_total": 1.068859
+      }
+    },
+    {
+      "at": "2026-09-24T06:51:12.778797+00:00",
+      "route": "cloudflare",
+      "chainId": 84532,
+      "exitCode": 0,
+      "error": "",
+      "status": "ok",
+      "timing": {
+        "http_code": 200,
+        "remote_ip": "104.21.31.55",
+        "time_connect": 0.00939,
+        "time_appconnect": 0.60482,
+        "time_starttransfer": 0.991593,
+        "time_total": 0.991732
+      }
+    },
+    {
+      "at": "2026-09-24T06:51:12.810223+00:00",
+      "route": "direct-origin-diagnostic-TLS-verification-disabled",
+      "chainId": 84532,
+      "exitCode": 0,
+      "error": "",
+      "status": "ok",
+      "timing": {
+        "http_code": 200,
+        "remote_ip": "45.77.243.138",
+        "time_connect": 0.004423,
+        "time_appconnect": 0.553855,
+        "time_starttransfer": 0.931534,
+        "time_total": 0.934167
+      }
+    }
+  ],
+  "rootCauseEstablished": false,
+  "ownerProvidedDNS": {
+    "dapp.arbigamefi.com": {
+      "type": "A",
+      "target": "45.77.243.138",
+      "proxied": true
+    },
+    "arbigamefi.com": {
+      "type": "CNAME",
+      "target": "dapp.arbigamefi.com",
+      "proxied": true
+    },
+    "www.arbigamefi.com": {
+      "type": "CNAME",
+      "target": "arbigamefi.com",
+      "proxied": true
+    }
+  },
+  "incident": {
+    "unreachableAtUTC": "2026-09-24T06:31:32Z",
+    "recoveredAtUTC": "2026-09-24T06:33:22Z",
+    "monitorTimeoutSeconds": 20
+  },
+  "originObservations": {
+    "containersRunningHours": 15,
+    "conntrackCount": 62,
+    "conntrackMax": 8192,
+    "globalIPv6AddressConfigured": false,
+    "sampledKernelDropsOn80Or443": false
+  },
+  "limitation": "Twelve fresh probes passed; this does not establish the cause of the earlier failures. Direct-origin probes disabled TLS verification only because the origin uses a Cloudflare origin certificate. No production TLS policy changed.",
+  "nextEvidence": "Cloudflare Ray ID and request/origin timing for a failing request; verify Origin Rules and source route if failure recurs."
+}
