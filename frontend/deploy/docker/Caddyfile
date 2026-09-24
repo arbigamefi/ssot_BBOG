@@ -1,14 +1,20 @@
 {
 	email {$ACME_EMAIL}
 	auto_https disable_redirects
+	cert_issuer acme {
+		disable_tlsalpn_challenge
+	}
 }
 
-http://{$ARBGAMEFI_DOMAIN} {
-	redir https://{host}{uri} permanent
+http://{$ARBGAMEFI_DOMAIN}, http://www.{$ARBGAMEFI_DOMAIN}, http://dapp.{$ARBGAMEFI_DOMAIN} {
+	redir https://{$ARBGAMEFI_DOMAIN}{uri} permanent
+}
+
+www.{$ARBGAMEFI_DOMAIN}, dapp.{$ARBGAMEFI_DOMAIN} {
+	redir https://{$ARBGAMEFI_DOMAIN}{uri} permanent
 }
 
 {$ARBGAMEFI_DOMAIN} {
-	tls {$CLOUDFLARE_ORIGIN_CERT_PATH} {$CLOUDFLARE_ORIGIN_KEY_PATH}
 	encode zstd gzip
 
 	reverse_proxy web:3000 {

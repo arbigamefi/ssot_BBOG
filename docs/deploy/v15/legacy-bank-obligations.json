@@ -1,10 +1,10 @@
 {
-  "at": "2026-09-24T06:50:35.679Z",
+  "at": "2026-09-24T07:24:41.214Z",
   "scope": "Unique Banks in committed pre-v1.5 release fixtures; read-only, no transactions, not proof of completeness outside this fixture set",
   "report": [
     {
       "chainId": 8453,
-      "blockNumber": "51721642",
+      "blockNumber": "51722665",
       "rows": [
         {
           "chainId": 8453,
@@ -67,7 +67,7 @@
     },
     {
       "chainId": 84532,
-      "blockNumber": "47232173",
+      "blockNumber": "47233196",
       "rows": [
         {
           "chainId": 84532,
