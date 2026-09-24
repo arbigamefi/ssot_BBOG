@@ -13,6 +13,21 @@ function makeBaseError(name: string, extra?: Record<string, unknown>): BaseError
 }
 
 describe("toDomainError", () => {
+  it.each([
+    [{ code: 4001 }, "USER_REJECTED"],
+    [{ name: "InsufficientFundsError" }, "INSUFFICIENT_NATIVE_BALANCE"],
+    [{ name: "ChainMismatchError" }, "CHAIN_MISMATCH"],
+    [{ code: 4900 }, "RPC_ERROR"],
+    [{ name: "BetContextChangedError" }, "BET_CONTEXT_CHANGED"]
+  ])("unwraps wallet/provider causes without relying on message text", (cause, code) => {
+    expect(toDomainError({ name: "TransactionExecutionError", cause: { cause } }).code).toBe(code);
+  });
+  it("bounds malformed cyclic cause chains", () => {
+    const cyclic: any = { message: "bad provider" };
+    cyclic.cause = cyclic;
+    expect(toDomainError(cyclic).code).toBe("UNKNOWN");
+  });
+
   // ——— User rejected ———
   it("maps UserRejectedRequestError → USER_REJECTED", () => {
     const err = makeBaseError("UserRejectedRequestError");
@@ -244,7 +259,8 @@ describe("toDomainError", () => {
     (innerErr as any).shortMessage = "ERC20: transfer amount exceeds allowance";
     const outerErr = makeBaseError("ContractFunctionExecutionError");
     (outerErr as any).cause = innerErr;
-    (outerErr as any).shortMessage = 'The contract function "placeBet" reverted with the following reason:\nERC20: transfer amount exceeds allowance';
+    (outerErr as any).shortMessage =
+      'The contract function "placeBet" reverted with the following reason:\nERC20: transfer amount exceeds allowance';
 
     const d = toDomainError(outerErr);
     expect(d.code).toBe("CONTRACT_REVERT");

@@ -2,9 +2,11 @@ import * as React from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "@ssot/ui";
 
+import { getAppChain } from "../../../app-shell/chain-registry";
 import { TokenLogo } from "../../../components/TokenLogo";
 import {
   clampBetAmountInput,
+  multiplyBetAmountInput,
   formatBetAmountRaw,
   getMinBetAmountInput,
   isBetAmountAboveMax,
@@ -13,6 +15,9 @@ import {
   resolveBetMaxRaw,
   scaleBetAmountInput
 } from "./bet-amount";
+import { PoolStatusNotice, BetSubmissionFeedback } from "./submission-feedback";
+import type { PoolAvailability } from "./hooks";
+import { formatNativeFee } from "./casino-round";
 import type { GameMeta } from "./model";
 import type { PlaceBetButtonPhase } from "./place-bet-button";
 import { CasinoTestnetLink, PlaceBetButton } from "./place-bet-button";
@@ -21,6 +26,7 @@ const BET_AMOUNT_PATTERN = "[0-9]*[.]?[0-9]*";
 
 export function MobileCasinoActionBar({
   game,
+  chainId,
   assetSymbol,
   assetDecimals,
   betAmount,
@@ -37,9 +43,16 @@ export function MobileCasinoActionBar({
   manualRefundAvailable = false,
   onManualRefund,
   onPlaceBet,
-  riskInDisabled = false
+  riskInDisabled = false,
+  poolAvailability = "ready",
+  onRefreshPool,
+  onCheckTransaction,
+  checkingTransaction,
+  betCount = 1,
+  vrfQuote
 }: {
   game: GameMeta;
+  chainId?: number;
   assetSymbol: string;
   assetDecimals: number;
   betAmount: string;
@@ -58,6 +71,12 @@ export function MobileCasinoActionBar({
   onManualRefund?: () => void;
   onPlaceBet: () => void;
   riskInDisabled?: boolean;
+  poolAvailability?: PoolAvailability;
+  onRefreshPool?: () => void;
+  onCheckTransaction?: () => void;
+  checkingTransaction?: boolean;
+  betCount?: number;
+  vrfQuote?: bigint;
 }) {
   const t = useTranslations();
   const primaryAction =
@@ -66,7 +85,9 @@ export function MobileCasinoActionBar({
       : manualSettleAvailable && onManualSettle
         ? onManualSettle
         : onPlaceBet;
-  const maxRaw = resolveBetMaxRaw(walletBalanceRaw, maxBetRaw);
+  const perRollBalance =
+    walletBalanceRaw == null ? null : walletBalanceRaw / BigInt(Math.max(1, Math.floor(betCount)));
+  const maxRaw = resolveBetMaxRaw(perRollBalance, maxBetRaw);
   const amountUnavailable = isBetAmountUnavailable(assetDecimals, maxRaw);
   const amountExceedsMax = isBetAmountAboveMax(betAmount, assetDecimals, maxRaw);
   const controlsLocked = isPending && state.status !== "failed";
@@ -157,7 +178,28 @@ export function MobileCasinoActionBar({
           </div>
         ) : null}
       </div>
+      {!riskInDisabled && !isPending && !manualSettleAvailable && !manualRefundAvailable ? (
+        <PoolStatusNotice
+          status={poolAvailability}
+          symbol={assetSymbol}
+          onRefresh={onRefreshPool}
+        />
+      ) : null}
+      <BetSubmissionFeedback
+        error={state.error}
+        onCheckTransaction={onCheckTransaction}
+        checking={checkingTransaction}
+      />
+      <p className="text-xs leading-5 text-fg-muted">
+        {chainId ? `${getAppChain(chainId)?.name ?? chainId} · ` : ""}
+        {t("casino.room.feedback.cost", {
+          total: multiplyBetAmountInput(betAmount, betCount, assetDecimals),
+          symbol: assetSymbol,
+          fee: formatNativeFee(vrfQuote == null ? undefined : vrfQuote + vrfQuote / 2n)
+        })}
+      </p>
       <PlaceBetButton
+        poolAvailability={poolAvailability}
         riskInDisabled={riskInDisabled}
         gameSlug={game.slug}
         hasAccount={hasAccount}

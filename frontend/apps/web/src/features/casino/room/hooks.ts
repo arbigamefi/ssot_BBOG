@@ -97,6 +97,7 @@ export function useGameWalletBalance({
 export type PoolSnapshot = {
   totalAssets: bigint;
   totalReserved: bigint;
+  riskInPaused?: boolean;
   riskReserveBps?: number;
   minLiquidityBps?: number;
 };
@@ -110,6 +111,8 @@ type SnapshotSdk = {
  * so the header's live max-bet / max-payout stay roughly current. Mirrors the
  * effect-based pattern of useGameWalletBalance (no React Query dependency).
  */
+export type PoolAvailability = "loading" | "unavailable" | "paused" | "ready";
+
 export function usePoolSnapshot({
   sdk,
   poolId,
@@ -118,34 +121,64 @@ export function usePoolSnapshot({
   sdk: SnapshotSdk | null | undefined;
   poolId: number | undefined;
   refreshMs?: number;
-}): PoolSnapshot | null {
-  const [snapshot, setSnapshot] = React.useState<PoolSnapshot | null>(null);
+}) {
+  const bank = sdk?.bank;
+  const [revision, refresh] = React.useReducer((value: number) => value + 1, 0);
+  const [readState, setReadState] = React.useState<{
+    bank: SnapshotSdk["bank"];
+    poolId?: number;
+    revision: number;
+    snapshot: PoolSnapshot | null;
+    status: PoolAvailability;
+  }>();
 
   React.useEffect(() => {
-    if (!sdk?.bank || poolId == null) {
-      setSnapshot(null);
-      return;
-    }
+    if (!bank || poolId == null) return;
     let cancelled = false;
-    const read = () => {
-      sdk
-        .bank!.getSnapshot(poolId)
-        .then((snap) => {
-          if (!cancelled) setSnapshot(snap);
-        })
-        .catch(() => {
-          if (!cancelled) setSnapshot(null);
-        });
+    let reading = false;
+    const read = async () => {
+      if (reading) return;
+      reading = true;
+      try {
+        const snapshot = await bank.getSnapshot(poolId);
+        if (!cancelled)
+          setReadState({
+            bank,
+            poolId,
+            revision,
+            snapshot,
+            status:
+              typeof snapshot.riskInPaused !== "boolean"
+                ? "unavailable"
+                : snapshot.riskInPaused
+                  ? "paused"
+                  : "ready"
+          });
+      } catch {
+        if (!cancelled)
+          setReadState({ bank, poolId, revision, snapshot: null, status: "unavailable" });
+      } finally {
+        reading = false;
+      }
     };
-    read();
-    const interval = setInterval(read, refreshMs);
+    void read();
+    const interval = setInterval(read, Math.max(1_000, refreshMs));
     return () => {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [sdk?.bank, poolId, refreshMs]);
+  }, [bank, poolId, refreshMs, revision]);
 
-  return snapshot;
+  // Never reuse the previous chain/pool's ready state during a React render.
+  const current =
+    readState?.bank === bank && readState?.poolId === poolId && readState?.revision === revision
+      ? readState
+      : undefined;
+  return {
+    snapshot: current?.snapshot ?? null,
+    status: current?.status ?? ("loading" as PoolAvailability),
+    refresh
+  };
 }
 
 export function useKenoStrobeSpots({

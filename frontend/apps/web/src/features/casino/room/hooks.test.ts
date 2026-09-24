@@ -1,7 +1,12 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { formatTokenBalance, pickKenoStrobeSpots, useGameWalletBalance } from "./hooks";
+import {
+  formatTokenBalance,
+  pickKenoStrobeSpots,
+  useGameWalletBalance,
+  usePoolSnapshot
+} from "./hooks";
 
 describe("game room hooks helpers", () => {
   it("formats bigint token balances with the selected asset symbol", () => {
@@ -52,5 +57,55 @@ describe("game room hooks helpers", () => {
 
     await waitFor(() => expect(result.current?.label).toBe("90 USDC"));
     expect(getAssetBalance).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("live pool availability", () => {
+  const snapshot = { totalAssets: 100n, totalReserved: 0n, riskInPaused: false };
+  it("blocks until a read completes, shows pause, and refreshes after governance resumes", async () => {
+    const getSnapshot = vi
+      .fn()
+      .mockResolvedValueOnce({ ...snapshot, riskInPaused: true })
+      .mockResolvedValue(snapshot);
+    const sdk = { bank: { getSnapshot } };
+    const { result } = renderHook(() => usePoolSnapshot({ sdk, poolId: 1 }));
+    expect(result.current.status).toBe("loading");
+    await waitFor(() => expect(result.current.status).toBe("paused"));
+    act(() => result.current.refresh());
+    expect(result.current.status).toBe("loading");
+    await waitFor(() => expect(result.current.status).toBe("ready"));
+  });
+  it("does not interpret failed or incomplete reads as an open pool", async () => {
+    const getSnapshot = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValue({ totalAssets: 100n, totalReserved: 0n });
+    const sdk = { bank: { getSnapshot } };
+    const { result } = renderHook(() => usePoolSnapshot({ sdk, poolId: 1 }));
+    await waitFor(() => expect(result.current.status).toBe("unavailable"));
+    act(() => result.current.refresh());
+    await waitFor(() => expect(getSnapshot).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(result.current.status).toBe("unavailable"));
+  });
+  it("discards an old pool response arriving after an asset switch", async () => {
+    let finishOld!: (value: typeof snapshot) => void;
+    const getSnapshot = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finishOld = resolve;
+          })
+      )
+      .mockResolvedValue({ ...snapshot, riskInPaused: true });
+    const sdk = { bank: { getSnapshot } };
+    const { result, rerender } = renderHook(({ poolId }) => usePoolSnapshot({ sdk, poolId }), {
+      initialProps: { poolId: 1 }
+    });
+    rerender({ poolId: 2 });
+    expect(result.current.status).toBe("loading");
+    await waitFor(() => expect(result.current.status).toBe("paused"));
+    await act(async () => finishOld(snapshot));
+    expect(result.current.status).toBe("paused");
   });
 });

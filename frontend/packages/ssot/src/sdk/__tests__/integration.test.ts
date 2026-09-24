@@ -166,6 +166,16 @@ describe("createSSOTSDK", () => {
     });
   });
 
+  it("recognizes a confirmed revert during read-only reconciliation", async () => {
+    pub.getTransactionReceipt.mockResolvedValue({ ...RECEIPT, status: "reverted" });
+    const result = await sdk.gameHub.reconcilePlaceBetTx(TX_HASH);
+    expect(result).toMatchObject({
+      ok: false,
+      error: { code: "TX_REVERTED", details: { txHash: TX_HASH, chainId: 84532 } }
+    });
+    expect(wal.writeContract).not.toHaveBeenCalled();
+  });
+
   it("returns v1.3 namespaces without the old hub namespace", () => {
     expect(sdk).toHaveProperty("gameHub");
     expect(sdk).not.toHaveProperty("hub");
@@ -999,6 +1009,7 @@ describe("createSSOTSDK", () => {
         minLiq: 125_000n,
         free: 875_000n,
         riskReserveBps: 2000n,
+        riskInPaused: true,
         riskReserve: 250_000n,
         riskFree: 750_000n,
         withdrawalBufferBps: 500n,
@@ -1028,6 +1039,7 @@ describe("createSSOTSDK", () => {
     expect(result.assetsPerShare).toBe(1_250_000n);
     expect(result.minLiquidityBps).toBe(1000);
     expect(result.riskReserveBps).toBe(2000);
+    expect(result.riskInPaused).toBe(true);
     expect(result.riskReserve).toBe(250_000n);
     expect(result.riskFree).toBe(750_000n);
     expect(result.withdrawalBufferBps).toBe(500);

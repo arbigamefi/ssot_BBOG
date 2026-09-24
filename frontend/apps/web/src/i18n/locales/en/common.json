@@ -935,6 +935,43 @@
             }
           ]
         }
+      },
+      "feedback": {
+        "paused": "This pool has paused new bets. Wait for it to reopen; existing bets can still be checked or settled.",
+        "canceled": "You canceled this wallet request. Review the amount before starting again.",
+        "approvalPending": "Approval was confirmed, but the node has not returned the new allowance yet. Wait briefly, then check again.",
+        "allowance": "Token allowance is too low. Review and approve only the amount needed for this bet.",
+        "balance": "Your token balance does not cover the total stake. Reduce the amount or number of rounds.",
+        "gas": "You need more ETH on this network for the randomness fee and transaction gas.",
+        "quoteChanged": "The randomness fee changed. Check a fresh quote before confirming again.",
+        "liquidity": "The pool cannot cover this payout. Reduce the stake or number of rounds, or wait for more liquidity.",
+        "network": "Your wallet network does not match this page. Select the same network in your wallet.",
+        "wallet": "Connect or unlock your wallet before continuing.",
+        "connection": "Unable to read the network. Check your connection; if your wallet submitted a transaction, check its record before betting again.",
+        "unconfirmed": "The transaction result is not confirmed. Check the existing transaction or wallet activity; do not submit the bet again.",
+        "reverted": "This transaction reverted on-chain. Its operation did not take effect, but gas was spent. Check the record before trying again.",
+        "input": "Check your selection, amount, round count and current fee settings.",
+        "unknown": "Unable to complete this step. Check wallet activity first; if there is no transaction, review the settings before trying again.",
+        "checkTransaction": "Check transaction status",
+        "checking": "Checking transaction…",
+        "viewTransaction": "View transaction",
+        "viewActivity": "View activity",
+        "pendingLabel": "Transaction not yet confirmed",
+        "tryAgain": "Review and try again",
+        "reviewAgain": "Check settings and continue",
+        "approving": "Approving tokens · waiting for confirmation",
+        "placing": "Placing bet · waiting for confirmation",
+        "cost": "Total {total} {symbol} · Randomness fee budget ≈ {fee}; gas extra.",
+        "contextChanged": "Your wallet, network or bet settings changed. The next step was stopped; review the current settings before continuing."
+      },
+      "poolStatus": {
+        "loading": "Checking the {symbol} pool before new bets…",
+        "unavailable": "Cannot verify the {symbol} pool status. New bets are disabled until the check succeeds.",
+        "paused": "The {symbol} pool has paused new bets. Existing bets can still be checked and settled.",
+        "loadingLabel": "Checking pool…",
+        "unavailableLabel": "Pool status unavailable",
+        "pausedLabel": "Pool paused",
+        "refresh": "Check pool status"
       }
     },
     "directory": {

@@ -1,3 +1,5 @@
+import { isBetSubmissionUnconfirmed, type StepperDisplayError } from "./feedback";
+import type { PoolAvailability } from "./hooks";
 import type { PlaceBetInput, PlaceBetPlan } from "@ssot/ssot";
 import type { Address } from "@ssot/ssot/sdk";
 import { toast } from "@ssot/ui";
@@ -11,6 +13,7 @@ import type { BaccaratSide, CoinSide, PlinkoRisk, SicBoKind } from "./params";
 export type GamePlaceBetStepperState = {
   status: string;
   plan?: unknown;
+  error?: StepperDisplayError;
 };
 
 export function shouldBlockGamePlaceBet(gameSlug: string, winChance: number) {
@@ -48,7 +51,9 @@ export async function executeGamePlaceBetAction({
   sicBoValue,
   affiliate,
   poolId,
-  messages
+  messages,
+  poolAvailability = "ready",
+  isCurrent
 }: {
   account: string | undefined;
   openConnectModal: (() => void) | undefined;
@@ -77,6 +82,8 @@ export async function executeGamePlaceBetAction({
   affiliate?: Address;
   /** Selected casino pool id (multi-asset). Defaults to the default pool when omitted. */
   poolId?: number;
+  poolAvailability?: PoolAvailability;
+  isCurrent?: () => boolean;
   messages?: {
     rouletteSelectionRequired?: string;
     kenoSelectionRequired?: string;
@@ -85,6 +92,8 @@ export async function executeGamePlaceBetAction({
     noActiveCasinoPool?: string;
     invalidCasinoPool?: string;
     unexpectedError?: string;
+    poolUnavailable?: string;
+    contextChanged?: string;
   };
 }) {
   // Explain availability before asking the visitor to connect or sign.
@@ -92,6 +101,17 @@ export async function executeGamePlaceBetAction({
     toast.error(messages?.mainnetRiskInDisabled ?? "Casino mainnet betting is not yet available.");
     return;
   }
+  if (poolAvailability !== "ready") {
+    toast.error(
+      messages?.poolUnavailable ?? "Pool status is unavailable. Check it before placing a bet."
+    );
+    return;
+  }
+  if (
+    ["planning", "submitting", "mined"].includes(state.status) ||
+    isBetSubmissionUnconfirmed(state.error)
+  )
+    return;
   if (!account) {
     openConnectModal?.();
     return;
@@ -102,14 +122,12 @@ export async function executeGamePlaceBetAction({
   if (shouldResetGamePlaceBet(state.status)) {
     reset();
     setShowResult(false);
-    return;
+    // A completed round is only reset here; the result action owns "play again".
+    if (state.status === "reconciled") return;
   }
 
-  if (state.plan) {
-    onBeforeExecute?.();
-    await executeNow();
-    return;
-  }
+  // Always re-plan from the current asset, amount and selection; never reuse a
+  // quote captured before an error or an input/network change.
 
   try {
     const placeBet = buildGamePlaceBetInput({
@@ -138,6 +156,11 @@ export async function executeGamePlaceBetAction({
     }
 
     const plan = await planNow(placeBet.input);
+    if (plan && isCurrent && !isCurrent()) {
+      reset();
+      toast.error(messages?.contextChanged ?? "Bet settings changed. Review the current settings.");
+      return;
+    }
     if (plan) {
       onBeforeExecute?.();
       await executeNow(plan);

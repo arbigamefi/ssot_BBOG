@@ -1,55 +1,38 @@
 import { describe, expect, it } from "vitest";
-
-import { getStepperErrorMessage } from "./feedback";
-
-describe("game room feedback helpers", () => {
-  it("uses localized fallback copy instead of raw domain error text", () => {
-    expect(
-      getStepperErrorMessage(
-        {
-          code: "TX_FAILED",
-          message: 'The contract function "placeBet" reverted.',
-          severity: "error"
-        },
-        "交易失败，请重试。"
-      )
-    ).toBe("交易失败，请重试。");
-  });
-
-  it("keeps wallet rejection copy when the SDK classified it as user-facing", () => {
-    expect(
-      getStepperErrorMessage(
-        {
-          code: "USER_REJECTED",
-          message: "User rejected transaction.",
-          severity: "warning"
-        },
-        "交易失败，请重试。"
-      )
-    ).toBe("User rejected transaction.");
-  });
-
-  it("keeps delayed allowance copy when approval has not propagated yet", () => {
-    expect(
-      getStepperErrorMessage(
-        {
-          code: "ALLOWANCE_NOT_CONFIRMED",
-          message:
-            "Token approval was mined, but the allowance is not visible to place the bet yet. Retry in a few seconds.",
-          severity: "warning"
-        },
-        "交易失败，请重试。"
-      )
-    ).toBe(
-      "Token approval was mined, but the allowance is not visible to place the bet yet. Retry in a few seconds."
+import { getStepperErrorMessage, isBetSubmissionUnconfirmed } from "./feedback";
+import zh from "../../../i18n/locales/zh-Hans/common.json";
+const t = (key: string) => key.split(".").reduce((value: any, part) => value[part], zh) as string;
+describe("game room feedback", () => {
+  it.each([
+    "RISK_IN_PAUSED",
+    "USER_REJECTED",
+    "ALLOWANCE_NOT_CONFIRMED",
+    "INSUFFICIENT_BALANCE",
+    "INSUFFICIENT_NATIVE_BALANCE",
+    "INSUFFICIENT_LIQUIDITY",
+    "CHAIN_MISMATCH",
+    "RPC_ERROR",
+    "TX_TIMEOUT",
+    "TX_REVERTED"
+  ])("localizes %s without leaking provider data", (code) => {
+    const message = getStepperErrorMessage(
+      { code, message: "secret RPC URL calldata" },
+      "fallback",
+      t
     );
+    expect(message).not.toBe("fallback");
+    expect(message).not.toContain("secret");
   });
-
-  it("falls back to a neutral placeholder when no localized fallback is provided", () => {
+  it("distinguishes rejection from an unconfirmed transaction", () => {
+    expect(isBetSubmissionUnconfirmed({ code: "USER_REJECTED" })).toBe(false);
+    expect(isBetSubmissionUnconfirmed({ code: "TX_TIMEOUT" })).toBe(true);
+    expect(isBetSubmissionUnconfirmed({ code: "TX_STATUS_UNKNOWN" })).toBe(true);
+    expect(getStepperErrorMessage({ code: "RISK_IN_PAUSED" }, undefined, t)).toContain("暂停");
+  });
+  it("uses a safe fallback without a translator or error", () => {
+    expect(getStepperErrorMessage({ code: "USER_REJECTED", message: "raw" }, "fallback")).toBe(
+      "fallback"
+    );
     expect(getStepperErrorMessage(undefined)).toBe("—");
-  });
-
-  it("accepts a localized fallback message", () => {
-    expect(getStepperErrorMessage(undefined, "交易失败，请重试。")).toBe("交易失败，请重试。");
   });
 });

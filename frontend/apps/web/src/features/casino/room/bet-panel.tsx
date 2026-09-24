@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useTranslations } from "next-intl";
-import { InformationCircleIcon, WalletIcon } from "@heroicons/react/24/outline";
+import { WalletIcon } from "@heroicons/react/24/outline";
 import { AssetSelector, cn, type AssetOption } from "@ssot/ui";
 
 import { TokenLogo } from "../../../components/TokenLogo";
@@ -10,13 +10,20 @@ import {
   BetPayoutSummary,
   BetRollsSection
 } from "./bet-panel-sections";
-import { isBetAmountAboveMax, isBetAmountUnavailable, resolveBetMaxRaw } from "./bet-amount";
+import {
+  multiplyBetAmountInput,
+  isBetAmountAboveMax,
+  isBetAmountUnavailable,
+  resolveBetMaxRaw
+} from "./bet-amount";
 import type { GameMeta } from "./model";
 import type { GameRoomBetPanelState, PlaceBetButtonPhase } from "./place-bet-button";
 import { CasinoTestnetLink, PlaceBetButton } from "./place-bet-button";
 import type { CasinoRoundPhase } from "./casino-round";
+import { formatNativeFee } from "./casino-round";
 import { CasinoRoundStatusPanel } from "./round-status-panel";
-import { getStepperErrorMessage } from "./feedback";
+import { PoolStatusNotice, BetSubmissionFeedback } from "./submission-feedback";
+import type { PoolAvailability } from "./hooks";
 import type { GameWalletBalance } from "./hooks";
 
 export type { GameRoomBetPanelState } from "./place-bet-button";
@@ -62,7 +69,11 @@ export function GameRoomBetPanel({
   onManualRefund,
   hideMobileAction = false,
   onPlaceBet,
-  riskInDisabled = false
+  riskInDisabled = false,
+  poolAvailability = "ready",
+  onRefreshPool,
+  onCheckTransaction,
+  checkingTransaction
 }: {
   game: GameMeta;
   walletBalance: GameWalletBalance | null;
@@ -112,6 +123,10 @@ export function GameRoomBetPanel({
   hideMobileAction?: boolean;
   onPlaceBet: () => void;
   riskInDisabled?: boolean;
+  poolAvailability?: PoolAvailability;
+  onRefreshPool?: () => void;
+  onCheckTransaction?: () => void;
+  checkingTransaction?: boolean;
 }) {
   const t = useTranslations();
   const primaryAction =
@@ -123,7 +138,8 @@ export function GameRoomBetPanel({
   const balanceLabel = !hasAccount
     ? t("casino.room.betPanel.notConnected")
     : (walletBalance?.label ?? "—");
-  const walletBalanceRaw = walletBalance?.raw ?? null;
+  const walletBalanceRaw =
+    walletBalance == null ? null : walletBalance.raw / BigInt(Math.max(1, Math.floor(betCount)));
   const effectiveMaxRaw = resolveBetMaxRaw(walletBalanceRaw, maxBetRaw);
   const amountUnavailable = isBetAmountUnavailable(assetDecimals, effectiveMaxRaw);
   const amountExceedsMax = isBetAmountAboveMax(betAmount, assetDecimals, effectiveMaxRaw);
@@ -256,21 +272,36 @@ export function GameRoomBetPanel({
           assetSymbol={assetSymbol}
         />
 
-        {state.status === "failed" && state.error?.message && (
-          <div className="mb-4 flex items-start gap-3 rounded-lg border border-danger/30 bg-danger-soft p-4 text-danger">
-            <InformationCircleIcon className="h-5 w-5 shrink-0" />
-            <div className="font-mono text-xs font-bold">
-              {getStepperErrorMessage(state.error, t("casino.room.errors.transactionFailed"))}
-            </div>
+        {state.error ? (
+          <div className={cn("mb-3", hideMobileAction && "hidden lg:block")}>
+            <BetSubmissionFeedback
+              error={state.error}
+              onCheckTransaction={onCheckTransaction}
+              checking={checkingTransaction}
+            />
           </div>
-        )}
+        ) : null}
 
-        <CasinoRoundStatusPanel
-          phase={roundPhase}
-          quote={vrfQuote}
-          betId={activeBetId}
-          requestId={activeRequestId}
-        />
+        <p
+          className={cn(
+            "mb-2 text-xs leading-5 text-fg-muted",
+            hideMobileAction && "hidden lg:block"
+          )}
+        >
+          {t("casino.room.feedback.cost", {
+            total: multiplyBetAmountInput(betAmount, betCount, assetDecimals),
+            symbol: assetSymbol,
+            fee: formatNativeFee(vrfQuote == null ? undefined : vrfQuote + vrfQuote / 2n)
+          })}
+        </p>
+        {isPending || activeBetId != null ? (
+          <CasinoRoundStatusPanel
+            phase={roundPhase}
+            quote={vrfQuote}
+            betId={activeBetId}
+            requestId={activeRequestId}
+          />
+        ) : null}
       </div>
 
       <div
@@ -280,7 +311,15 @@ export function GameRoomBetPanel({
           hideMobileAction && "hidden lg:block"
         )}
       >
+        {!riskInDisabled && !isPending && !manualSettleAvailable && !manualRefundAvailable ? (
+          <PoolStatusNotice
+            status={poolAvailability}
+            symbol={assetSymbol}
+            onRefresh={onRefreshPool}
+          />
+        ) : null}
         <PlaceBetButton
+          poolAvailability={poolAvailability}
           riskInDisabled={riskInDisabled}
           gameSlug={game.slug}
           hasAccount={hasAccount}

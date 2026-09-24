@@ -60,6 +60,8 @@ export interface TxPipeline {
     functionName: string;
     args: readonly unknown[];
     value?: bigint;
+    /** Final synchronous intent check immediately before the wallet request. */
+    beforeWrite?: () => void;
   }): Promise<TxResult>;
   writeNoSimulate(params: {
     chainId: number;
@@ -159,7 +161,7 @@ export function createTxPipeline(opts?: {
       code: "TX_TIMEOUT",
       message: `Transaction was not confirmed within ${Math.round(cfg.receiptTimeoutMs / 1000)}s. It may still confirm later.`,
       severity: "warning",
-      retryable: true
+      retryable: false
     };
   }
 
@@ -175,6 +177,7 @@ export function createTxPipeline(opts?: {
     functionName: string;
     args: readonly unknown[];
     value?: bigint;
+    beforeWrite?: () => void;
   }): Promise<TxResult> {
     // Simulate with retry on transient errors
     let sim: any;
@@ -220,9 +223,11 @@ export function createTxPipeline(opts?: {
       return { txHash: "0x0" as Hex, ok: false, error };
     }
 
+    let txHash = "0x0" as Hex;
     try {
       await throttle();
-      const txHash = await params.walletClient.writeContract(sim.request);
+      params.beforeWrite?.();
+      txHash = await params.walletClient.writeContract(sim.request);
 
       journal?.({
         chainId: params.chainId,
@@ -243,7 +248,8 @@ export function createTxPipeline(opts?: {
           code: "TX_REVERTED",
           message:
             "Transaction was mined but reverted on-chain. Gas was consumed but the operation had no effect.",
-          severity: "error"
+          severity: "error",
+          details: { chainId: params.chainId, action: params.action, txHash }
         };
         journal?.({
           chainId: params.chainId,
@@ -275,14 +281,31 @@ export function createTxPipeline(opts?: {
       return res;
     } catch (e) {
       const isTimeout = (e as any)?.name === "TxTimeoutError";
-      const error = isTimeout ? makeTxTimeoutError() : toDomainError(e);
-      const txHash = "0x0" as Hex;
+      const cause = toDomainError(e);
+      const uncertain = txHash !== "0x0" || ["RPC_ERROR", "UNKNOWN"].includes(cause.code);
+      const error: DomainError = isTimeout
+        ? makeTxTimeoutError()
+        : uncertain
+          ? {
+              code: "TX_STATUS_UNKNOWN",
+              message: "Check the wallet transaction before submitting again.",
+              severity: "warning",
+              retryable: false
+            }
+          : cause;
+      error.details = {
+        ...error.details,
+        chainId: params.chainId,
+        action: params.action,
+        txHash,
+        causeCode: cause.code
+      };
       journal?.({
         chainId: params.chainId,
         releaseDigest: params.releaseDigest,
         action: params.action,
         txHash,
-        status: isTimeout ? "timeout" : "failed",
+        status: isTimeout || uncertain ? "timeout" : "failed",
         ok: false,
         createdAt: Date.now(),
         errorCode: error.code
@@ -303,9 +326,10 @@ export function createTxPipeline(opts?: {
     args: readonly unknown[];
     value?: bigint;
   }): Promise<TxResult> {
+    let txHash = "0x0" as Hex;
     try {
       await throttle();
-      const txHash = await params.walletClient.writeContract({
+      txHash = await params.walletClient.writeContract({
         chain: params.walletClient.chain,
         account: params.walletClient.account!,
         address: params.address,
@@ -332,7 +356,8 @@ export function createTxPipeline(opts?: {
           code: "TX_REVERTED",
           message:
             "Transaction was mined but reverted on-chain. Gas was consumed but the operation had no effect.",
-          severity: "error"
+          severity: "error",
+          details: { chainId: params.chainId, action: params.action, txHash }
         };
         journal?.({
           chainId: params.chainId,
@@ -363,14 +388,31 @@ export function createTxPipeline(opts?: {
       return { txHash, ok: true };
     } catch (e) {
       const isTimeout = (e as any)?.name === "TxTimeoutError";
-      const error = isTimeout ? makeTxTimeoutError() : toDomainError(e);
-      const txHash = "0x0" as Hex;
+      const cause = toDomainError(e);
+      const uncertain = txHash !== "0x0" || ["RPC_ERROR", "UNKNOWN"].includes(cause.code);
+      const error: DomainError = isTimeout
+        ? makeTxTimeoutError()
+        : uncertain
+          ? {
+              code: "TX_STATUS_UNKNOWN",
+              message: "Check the wallet transaction before submitting again.",
+              severity: "warning",
+              retryable: false
+            }
+          : cause;
+      error.details = {
+        ...error.details,
+        chainId: params.chainId,
+        action: params.action,
+        txHash,
+        causeCode: cause.code
+      };
       journal?.({
         chainId: params.chainId,
         releaseDigest: params.releaseDigest,
         action: params.action,
         txHash,
-        status: isTimeout ? "timeout" : "failed",
+        status: isTimeout || uncertain ? "timeout" : "failed",
         ok: false,
         createdAt: Date.now(),
         errorCode: error.code

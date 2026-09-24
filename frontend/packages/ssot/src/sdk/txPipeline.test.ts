@@ -217,6 +217,53 @@ describe("createTxPipeline", () => {
     });
   });
 
+  it("checks current bet context after simulation and before invoking the wallet", async () => {
+    const pipeline = createTxPipeline({ config: { minIntervalMs: 0 } });
+    const wal = mockWalletClient();
+    const result = await pipeline.simulateAndWrite({
+      ...BASE_PARAMS,
+      publicClient: mockPublicClient(),
+      walletClient: wal,
+      account: ACCOUNT,
+      beforeWrite: () => {
+        throw Object.assign(new Error("changed"), { name: "BetContextChangedError" });
+      }
+    });
+    expect(result.error?.code).toBe("BET_CONTEXT_CHANGED");
+    expect(wal.writeContract).not.toHaveBeenCalled();
+  });
+
+  it.each(["simulateAndWrite", "writeNoSimulate"] as const)(
+    "%s retains the broadcast hash when receipt lookup disconnects",
+    async (method) => {
+      const pipeline = createTxPipeline({
+        journal: journalSink,
+        config: { minIntervalMs: 0, maxRetries: 0 }
+      });
+      const pub = mockPublicClient({
+        waitForTransactionReceipt: vi.fn().mockRejectedValue(new Error("lost response"))
+      });
+      const wal = mockWalletClient();
+      const result = await pipeline[method]({
+        ...BASE_PARAMS,
+        publicClient: pub,
+        walletClient: wal,
+        account: ACCOUNT
+      });
+      expect(result).toMatchObject({
+        ok: false,
+        txHash: TX_HASH,
+        error: {
+          code: "TX_STATUS_UNKNOWN",
+          retryable: false,
+          details: { txHash: TX_HASH, chainId: 84532 }
+        }
+      });
+      expect(wal.writeContract).toHaveBeenCalledOnce();
+      expect(journal.at(-1)).toMatchObject({ txHash: TX_HASH, status: "timeout" });
+    }
+  );
+
   // ——— On-chain revert detection ———
   describe("on-chain revert detection", () => {
     it("simulateAndWrite returns ok:false with TX_REVERTED when receipt.status is reverted", async () => {
@@ -383,12 +430,16 @@ describe("createTxPipeline", () => {
       expect(result.ok).toBe(false);
       expect(result.error).toBeDefined();
       expect(result.error!.code).toBe("TX_TIMEOUT");
-      expect(result.error!.retryable).toBe(true);
+      expect(result.error!.retryable).toBe(false);
+      expect(result.txHash).toBe(journal[0]!.txHash);
+      expect(result.txHash).not.toBe("0x0");
+      expect(result.error!.details?.txHash).toBe(result.txHash);
 
       // Journal: submitted → timeout
       expect(journal).toHaveLength(2);
       expect(journal[0]!.status).toBe("submitted");
       expect(journal[1]!.status).toBe("timeout");
+      expect(journal[1]!.txHash).toBe(journal[0]!.txHash);
       expect(journal[1]!.ok).toBe(false);
     });
 
@@ -415,6 +466,7 @@ describe("createTxPipeline", () => {
       expect(journal).toHaveLength(2);
       expect(journal[0]!.status).toBe("submitted");
       expect(journal[1]!.status).toBe("timeout");
+      expect(journal[1]!.txHash).toBe(journal[0]!.txHash);
     });
   });
 

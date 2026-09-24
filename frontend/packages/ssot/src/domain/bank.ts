@@ -7,6 +7,8 @@ export interface DomainBankSnapshot {
   totalSupply: bigint; // LP share supply
   assetsPerShare: bigint; // assets represented by one whole share unit
   totalReserved: bigint;
+  /** Live Bank pause state; absence must not be interpreted as open. */
+  riskInPaused?: boolean;
   /**
    * Legacy compatibility alias. In v1.4+ this maps to riskReserveBps.
    * New-risk solvency should prefer riskReserveBps when present.

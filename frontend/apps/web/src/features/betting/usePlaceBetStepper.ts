@@ -9,11 +9,18 @@ import {
   type BetStepperState
 } from "./model/stepperMachine";
 
+// Keep SDK runtime code out of the room's initial bundle; providers already
+// load it on demand, and classification is only needed on an exceptional path.
+async function classifyError(error: unknown) {
+  const { toDomainError } = await import("@ssot/ssot/sdk");
+  return toDomainError(error);
+}
+
 export type UsePlaceBetStepperReturn = {
   state: BetStepperState;
   plan: PlaceBetPlan | undefined;
   planNow: (input: PlaceBetInput) => Promise<PlaceBetPlan | undefined>;
-  executeNow: (planOverride?: PlaceBetPlan) => Promise<void>;
+  executeNow: (planOverride?: PlaceBetPlan, shouldContinue?: () => boolean) => Promise<void>;
 
   /** Retry reconcile for mined-but-unreconciled placeBet tx. */
   reconcileNow: () => Promise<void>;
@@ -73,7 +80,13 @@ export function usePlaceBetStepper(
         return undefined;
       }
       dispatch({ type: "PLAN_START" });
-      const res = await sdk.gameHub.planPlaceBet(input);
+      let res;
+      try {
+        res = await sdk.gameHub.planPlaceBet(input);
+      } catch (error) {
+        dispatch({ type: "PLAN_ERROR", error: await classifyError(error) });
+        return undefined;
+      }
       if ("error" in res) {
         dispatch({ type: "PLAN_ERROR", error: res.error as DomainError });
         return undefined;
@@ -85,7 +98,7 @@ export function usePlaceBetStepper(
   );
 
   const executeNow = useCallback(
-    async (planOverride?: PlaceBetPlan) => {
+    async (planOverride?: PlaceBetPlan, shouldContinue?: () => boolean) => {
       if (!sdk) {
         dispatch({ type: "EXECUTE_ERROR", error: noopError });
         return;
@@ -94,18 +107,25 @@ export function usePlaceBetStepper(
       if (!plan) return;
       dispatch({ type: "EXECUTE_START" });
       try {
-        const result = await sdk.gameHub.executePlan(plan);
+        const result = await sdk.gameHub.executePlan(plan, (stage) => {
+          if (shouldContinue && !shouldContinue())
+            throw Object.assign(new Error("Bet context changed"), {
+              name: "BetContextChangedError"
+            });
+          dispatch({ type: "EXECUTE_STAGE", stage });
+        });
         if (!result.placeBetTx.ok) {
           const error: DomainError =
             result.placeBetTx.error ?? unknownTxError(transactionFailedMessage);
-          dispatch({ type: "EXECUTE_ERROR", error });
+          dispatch({ type: "EXECUTE_ERROR", error, result });
           return;
         }
         dispatch({ type: "EXECUTE_SUCCESS", result });
       } catch (e) {
-        const error: DomainError = unknownTxError(
-          (e as Error)?.message ?? transactionFailedMessage
-        );
+        const classified = await classifyError(e);
+        const error: DomainError = ["RPC_ERROR", "UNKNOWN"].includes(classified.code)
+          ? { ...classified, code: "TX_STATUS_UNKNOWN", retryable: false }
+          : classified;
         dispatch({ type: "EXECUTE_ERROR", error });
       }
     },
@@ -124,17 +144,34 @@ export function usePlaceBetStepper(
       if (res.ok) {
         dispatch({ type: "RECONCILE_SUCCESS", betId: res.betId });
       } else {
-        dispatch({ type: "RECONCILE_ERROR", error: res.error });
+        dispatch({
+          type: "RECONCILE_ERROR",
+          error: {
+            ...res.error,
+            details: { ...res.error.details, ...state.error?.details, txHash }
+          }
+        });
       }
     } catch (e) {
       dispatch({
         type: "RECONCILE_ERROR",
-        error: unknownTxError((e as Error)?.message ?? reconcileFailedMessage)
+        error: {
+          code: "TX_STATUS_UNKNOWN",
+          message: reconcileFailedMessage,
+          severity: "warning",
+          retryable: false,
+          details: {
+            ...state.error?.details,
+            chainId: state.plan?.chainId,
+            action: "PLACE_BET",
+            txHash
+          }
+        }
       });
     } finally {
       setReconciling(false);
     }
-  }, [sdk, state.result, unknownTxError, reconcileFailedMessage]);
+  }, [sdk, state.result, state.error, state.plan?.chainId, reconcileFailedMessage]);
 
   const bindNow = useCallback(
     async (betId: bigint) => {
