@@ -1,6 +1,7 @@
 export function isMobileBrowser(win: Window) {
   return (
-    /Android|iPhone|iPad|iPod/i.test(win.navigator.userAgent) || win.navigator.maxTouchPoints > 0
+    /Android|iPhone|iPad|iPod/i.test(win.navigator.userAgent) ||
+    (/Macintosh/i.test(win.navigator.userAgent) && win.navigator.maxTouchPoints > 0)
   );
 }
 
