@@ -56,7 +56,11 @@
     "mobileWallet": {
       "title": "连接钱包",
       "inlineTitle": "连接你的钱包",
-      "hint": "选择常用钱包，连接与交易都由你确认。",
+      "hint": "在钱包内打开当前页面，连接与交易都在钱包中确认。",
+      "browserHint": "选择钱包，在其内置浏览器打开当前页面。WalletConnect 可留在此浏览器连接。",
+      "notOpened": "没有打开 {wallet}？可重试，或在尚未安装时下载。",
+      "retryOpen": "再次打开钱包",
+      "downloadWallet": "下载钱包",
       "unavailableHint": "主网投注暂未开放。",
       "choose": "选择钱包",
       "dismiss": "关闭钱包提示"

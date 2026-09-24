@@ -23,8 +23,8 @@ export function ProductProviders({
   return (
     // ComplianceProvider sits above analytics so consent can gate tracking.
     <ComplianceProvider>
-      <WalletProviderIsland>
-        <ActiveChainProvider initialChainId={defaultChainId}>
+      <ActiveChainProvider initialChainId={defaultChainId}>
+        <WalletProviderIsland>
           <AnalyticsProvider>
             <ReleaseProviderWagmi sportsbookEnabledFlag={sportsbookEnabledFlag}>
               <SSOTRuntimeProvider>
@@ -35,8 +35,8 @@ export function ProductProviders({
               </SSOTRuntimeProvider>
             </ReleaseProviderWagmi>
           </AnalyticsProvider>
-        </ActiveChainProvider>
-      </WalletProviderIsland>
+        </WalletProviderIsland>
+      </ActiveChainProvider>
     </ComplianceProvider>
   );
 }

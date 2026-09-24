@@ -5,14 +5,16 @@ import { embeddedChainIds } from "@ssot/ssot/release";
 import { WagmiProvider, createConfig, http } from "wagmi";
 import { arbitrum, arbitrumSepolia, base, baseSepolia, mainnet } from "wagmi/chains";
 import { RainbowKitProvider, connectorsForWallets, darkTheme } from "@rainbow-me/rainbowkit";
-import { coinbaseWallet, walletConnectWallet } from "@rainbow-me/rainbowkit/wallets";
 import {
-  browserWalletWhenAvailable,
-  metaMaskWalletWithFallback,
-  okxWalletWithFallback,
-  rainbowWalletWithFallback,
-  trustWalletWithFallback
-} from "./wallet-connectors";
+  coinbaseWallet,
+  metaMaskWallet,
+  okxWallet,
+  rainbowWallet,
+  trustWallet,
+  walletConnectWallet
+} from "@rainbow-me/rainbowkit/wallets";
+import { browserWalletWhenAvailable } from "./wallet-connectors";
+import { WalletDappHandoff } from "./WalletDappHandoff";
 
 import { QueryProvider } from "./QueryProvider";
 import { resolveMainnetEnsRpcUrl, resolvePublicRpcUrl, withConfiguredRpc } from "./rpc";
@@ -58,13 +60,12 @@ const transports = Object.fromEntries(
 );
 
 /**
- * WalletConnect project ID — required for ANY mobile-deep-link wallet flow.
+ * WalletConnect project ID — required for WalletConnect-backed pairing.
  * Grab a free ID at https://cloud.walletconnect.com and set
  * NEXT_PUBLIC_WC_PROJECT_ID in your .env.local.
  *
- * Without a real ID the WalletConnect modal will still render but every
- * connection attempt fails with `Origin not allowed`. We log a clear warning
- * so this fails loudly in dev rather than silently in prod.
+ * DApp-browser handoff does not use a pairing relay. WalletConnect still needs
+ * a valid project and allowed origin; warn when the project is missing.
  */
 const WC_PROJECT_ID =
   process.env.NEXT_PUBLIC_WC_PROJECT_ID && process.env.NEXT_PUBLIC_WC_PROJECT_ID.length > 0
@@ -90,17 +91,11 @@ const connectors = connectorsForWallets(
   [
     {
       groupName: "Popular",
-      wallets: [
-        metaMaskWalletWithFallback,
-        coinbaseWallet,
-        walletConnectWallet,
-        trustWalletWithFallback,
-        rainbowWalletWithFallback
-      ]
+      wallets: [metaMaskWallet, coinbaseWallet, walletConnectWallet, trustWallet, rainbowWallet]
     },
     {
       groupName: "Other",
-      wallets: [okxWalletWithFallback, browserWalletWhenAvailable]
+      wallets: [okxWallet, browserWalletWhenAvailable]
     }
   ],
   {
@@ -154,7 +149,7 @@ export function WalletProviderIsland({ children }: { children: React.ReactNode }
     <WagmiProvider config={wagmiConfig}>
       <QueryProvider>
         <RainbowKitProvider
-          appInfo={{ appName: "ArbiGameFi" }}
+          appInfo={{ appName: "ArbiGameFi", disclaimer: WalletDappHandoff }}
           modalSize="wide"
           showRecentTransactions={false}
           theme={walletModalTheme}

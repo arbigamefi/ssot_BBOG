@@ -56,7 +56,11 @@
     "mobileWallet": {
       "title": "Connect wallet",
       "inlineTitle": "Connect your wallet",
-      "hint": "Choose your wallet. You confirm every connection and transaction.",
+      "hint": "Open this page in your wallet to connect and confirm transactions there.",
+      "browserHint": "Choose a wallet to open this page in its browser. WalletConnect keeps you in this browser.",
+      "notOpened": "Didn't open {wallet}? Retry, or download it if you don't have it.",
+      "retryOpen": "Open wallet again",
+      "downloadWallet": "Download wallet",
       "unavailableHint": "Mainnet betting is not yet available.",
       "choose": "Choose wallet",
       "dismiss": "Close wallet prompt"
