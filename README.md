@@ -70,7 +70,7 @@ integration, while preserving SSOT liveness and a minimal trust surface.
 
 Start here:
 
-- **Release pack (partners / LPs / auditors):** `docs/release/ARBIGAMEFI-RELEASE-PACK.zh-CN.md`
+- **Current release process and evidence:** `docs/release/README.md`
 - **Closeout handoff (Milestone 4):** `docs/closeout/README.md`
 - **Constitution (SSOT):** `docs/constitution/SSOT.v1.3.md`
 - **Executable SSOT:** `docs/constitution/ExecutableSSOT.v1.3.md`

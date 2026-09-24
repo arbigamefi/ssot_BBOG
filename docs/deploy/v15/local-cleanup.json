@@ -1,12 +1,12 @@
 {
   "date": "2026-09-24",
   "sourceCommit": "a5d7d3fa50d4457f1476de0ac7fc3bd83ca49273",
-  "removedTrackedCount": 415,
+  "removedTrackedCount": 416,
   "trackedCategories": {
     "SSOT_v1.2_Audit_Report.docx": 1,
     "deployments": 74,
     "dist": 2,
-    "docs": 22,
+    "docs": 23,
     "frontend": 265,
     "progress.md": 1,
     "script": 36,
