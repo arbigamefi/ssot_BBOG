@@ -1,5 +1,12 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { encodeAbiParameters, encodeEventTopics, getAddress, type Address, type Hex } from "viem";
+import {
+  BaseError,
+  encodeAbiParameters,
+  encodeEventTopics,
+  getAddress,
+  type Address,
+  type Hex
+} from "viem";
 import { createSSOTSDK, type SSOTSDK } from "../create";
 import type { SSOTRelease } from "../../release/schema";
 import type { JournalSink, TxJournalEntry } from "../txPipeline";
@@ -312,8 +319,32 @@ describe("createSSOTSDK", () => {
     );
   });
 
-  it("confirms Bank allowance after approval before placing casino bets", async () => {
+  it.each([
+    "ready",
+    "readFailure",
+    "laggingSimulation",
+    "persistentLag",
+    "noApproval",
+    "walletFailure"
+  ])("continues safely from mined approval (%s)", async (scenario) => {
+    const readFailure = scenario === "readFailure";
+    if (scenario === "laggingSimulation" || scenario === "persistentLag") {
+      const staleAllowance = new BaseError("wrapped", {
+        cause: Object.assign(new Error("reverted"), {
+          name: "ContractFunctionRevertedError",
+          data: { errorName: "Error", args: ["ERC20: transfer amount exceeds allowance"] }
+        })
+      });
+      pub.simulateContract
+        .mockResolvedValueOnce({ request: { functionName: "approve" } })
+        .mockRejectedValueOnce(staleAllowance);
+      if (scenario === "persistentLag") pub.simulateContract.mockRejectedValue(staleAllowance);
+    }
     pub.readContract.mockResolvedValue(1_000_000n);
+    if (readFailure)
+      pub.readContract.mockRejectedValueOnce(
+        new BaseError("offline", { name: "HttpRequestError" })
+      );
     const plan: PlaceBetPlan = {
       chainId: 84532,
       releaseDigest: TEST_RELEASE.releaseDigest,
@@ -360,9 +391,43 @@ describe("createSSOTSDK", () => {
       }
     };
 
+    if (scenario === "noApproval") {
+      plan.steps = plan.steps.filter((step) => step.type !== "approve");
+      pub.simulateContract.mockRejectedValue(
+        new BaseError("wrapped", {
+          cause: Object.assign(new Error("reverted"), {
+            name: "ContractFunctionRevertedError",
+            data: { errorName: "ERC20InsufficientAllowance", args: [] }
+          })
+        })
+      );
+    }
+    if (scenario === "walletFailure") {
+      wal.writeContract
+        .mockResolvedValueOnce(TX_HASH)
+        .mockRejectedValueOnce(
+          new BaseError("wallet response lost", { name: "TransactionExecutionError" })
+        );
+    }
     const result = await sdk.gameHub.executePlan(plan);
 
-    expect(result.placeBetTx.ok).toBe(true);
+    expect(result.placeBetTx.ok).toBe(
+      !["persistentLag", "noApproval", "walletFailure"].includes(scenario)
+    );
+    expect(wal.writeContract).toHaveBeenCalledTimes(
+      scenario === "noApproval" ? 0 : scenario === "persistentLag" ? 1 : 2
+    );
+    if (scenario === "walletFailure")
+      expect(result.placeBetTx.error?.code).toBe("TX_STATUS_UNKNOWN");
+    if (scenario === "persistentLag")
+      expect(result.placeBetTx.error?.code).toBe("ALLOWANCE_NOT_CONFIRMED");
+    if (scenario === "noApproval") {
+      expect(pub.simulateContract).toHaveBeenCalledOnce();
+      expect(result.placeBetTx.error?.code).toBe("INSUFFICIENT_ALLOWANCE");
+      return;
+    }
+    if (scenario === "laggingSimulation" || scenario === "persistentLag")
+      expect(pub.simulateContract).toHaveBeenCalledTimes(3);
     expect(pub.readContract).toHaveBeenCalledWith(
       expect.objectContaining({
         address: getAddress(ASSET),
@@ -385,66 +450,77 @@ describe("createSSOTSDK", () => {
     );
   });
 
-  it("stops casino bet execution when approval allowance is not yet visible", async () => {
-    pub.readContract.mockResolvedValue(0n);
-    const plan: PlaceBetPlan = {
-      chainId: 84532,
-      releaseDigest: TEST_RELEASE.releaseDigest,
-      warnings: [],
-      steps: [
-        { type: "approve", token: ASSET, spender: BANK, amount: 1_000_000n },
-        {
-          type: "placeBet",
-          to: getAddress(TEST_RELEASE.contracts.gameHub),
-          value: 100_000n,
-          call: {
-            contract: "GameHub",
-            fn: "placeBet",
-            argsSummary: {
-              gameId: GAME_ID,
-              poolId: 1,
-              betCount: 1,
-              stake: 1_000_000n
+  it.each([false, true])(
+    "stops before betting when allowance stays unavailable (read failure=%s)",
+    async (readFailure) => {
+      pub.readContract.mockResolvedValue(0n);
+      if (readFailure)
+        pub.readContract.mockRejectedValue(new BaseError("offline", { name: "HttpRequestError" }));
+      const plan: PlaceBetPlan = {
+        chainId: 84532,
+        releaseDigest: TEST_RELEASE.releaseDigest,
+        warnings: [],
+        steps: [
+          { type: "approve", token: ASSET, spender: BANK, amount: 1_000_000n },
+          {
+            type: "placeBet",
+            to: getAddress(TEST_RELEASE.contracts.gameHub),
+            value: 100_000n,
+            call: {
+              contract: "GameHub",
+              fn: "placeBet",
+              argsSummary: {
+                gameId: GAME_ID,
+                poolId: 1,
+                betCount: 1,
+                stake: 1_000_000n
+              }
             }
           }
-        }
-      ],
-      payload: {
-        gameId: GAME_ID,
-        poolId: 1,
-        params: "0x0000000000000000000000000000000000000000000000000000000000000032",
-        stakeSpec: {
-          amountPerRoll: 1_000_000n,
-          betCount: 1,
-          stopGain: 0n,
-          stopLoss: 0n
+        ],
+        payload: {
+          gameId: GAME_ID,
+          poolId: 1,
+          params: "0x0000000000000000000000000000000000000000000000000000000000000032",
+          stakeSpec: {
+            amountPerRoll: 1_000_000n,
+            betCount: 1,
+            stopGain: 0n,
+            stopLoss: 0n
+          },
+          affiliate: "0x0000000000000000000000000000000000000000",
+          maxHouseEdgeBps: 3000
         },
-        affiliate: "0x0000000000000000000000000000000000000000",
-        maxHouseEdgeBps: 3000
-      },
-      preview: {
-        vrfFee: 100_000n,
-        stake: 1_000_000n,
-        allowance: 0n,
-        needsApproval: true,
-        approveAmount: 1_000_000n,
-        asset: ASSET,
-        bank: BANK
-      }
-    };
+        preview: {
+          vrfFee: 100_000n,
+          stake: 1_000_000n,
+          allowance: 0n,
+          needsApproval: true,
+          approveAmount: 1_000_000n,
+          asset: ASSET,
+          bank: BANK
+        }
+      };
 
-    const result = await sdk.gameHub.executePlan(plan);
+      const result = await sdk.gameHub.executePlan(plan);
 
-    expect(result.approveTx?.ok).toBe(true);
-    expect(result.placeBetTx.ok).toBe(false);
-    expect(result.placeBetTx.error?.code).toBe("ALLOWANCE_NOT_CONFIRMED");
-    expect(pub.simulateContract).not.toHaveBeenCalledWith(
-      expect.objectContaining({
-        address: getAddress(TEST_RELEASE.contracts.gameHub),
-        functionName: "placeBet"
-      })
-    );
-  });
+      expect(result.approveTx?.ok).toBe(true);
+      expect(result.placeBetTx.ok).toBe(false);
+      expect(result.placeBetTx.error?.code).toBe("ALLOWANCE_NOT_CONFIRMED");
+      expect(result.placeBetTx.txHash).toBe("0x0");
+      expect(result.placeBetTx.error?.details).toMatchObject({
+        approvalTxHash: TX_HASH,
+        transactionSubmitted: false
+      });
+      expect(wal.writeContract).toHaveBeenCalledOnce();
+      expect(pub.simulateContract).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          address: getAddress(TEST_RELEASE.contracts.gameHub),
+          functionName: "placeBet"
+        })
+      );
+    }
+  );
 
   it("keeps the settled refund unknown when only BetFinalized logs are available", async () => {
     pub.readContract.mockRejectedValueOnce(new Error("getBetTerminal unavailable"));

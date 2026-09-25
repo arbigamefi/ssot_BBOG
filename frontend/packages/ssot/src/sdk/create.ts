@@ -324,8 +324,13 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
   }) {
     let observed = 0n;
     for (let attempt = 0; attempt < ALLOWANCE_CONFIRMATION_ATTEMPTS; attempt += 1) {
-      observed = await readTokenAllowance(params.token, params.owner, params.spender);
-      if (observed >= params.required) return { ok: true as const, observed };
+      try {
+        observed = await readTokenAllowance(params.token, params.owner, params.spender);
+        if (observed >= params.required) return { ok: true as const, observed };
+      } catch (error) {
+        // Approval is already mined. Retry reads only; never resend the approval.
+        if (toDomainError(error).code !== "RPC_ERROR") return { ok: false as const, observed };
+      }
       if (attempt < ALLOWANCE_CONFIRMATION_ATTEMPTS - 1) {
         await sleep(ALLOWANCE_CONFIRMATION_DELAY_MS);
       }
@@ -762,14 +767,23 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
             return {
               approveTx,
               placeBetTx: {
-                txHash: approveTx.txHash,
+                txHash: "0x0" as Hex,
                 ok: false,
-                error: createAllowanceNotConfirmedError({
-                  action: "place the bet",
-                  required: step.amount,
-                  observed: allowanceReady.observed,
-                  spender: getAddress(step.spender) as Address
-                })
+                error: {
+                  ...createAllowanceNotConfirmedError({
+                    action: "place the bet",
+                    required: step.amount,
+                    observed: allowanceReady.observed,
+                    spender: getAddress(step.spender) as Address
+                  }),
+                  details: {
+                    chainId: plan.chainId,
+                    action: "PLACE_BET",
+                    phase: "allowance",
+                    transactionSubmitted: false,
+                    approvalTxHash: approveTx.txHash
+                  }
+                }
               }
             };
           }
@@ -809,22 +823,47 @@ export function createSSOTSDK(params: CreateSSOTSDKParams): SSOTSDK {
         payload.maxHouseEdgeBps
       ] as const;
 
-      const placeBetTx = await tx.simulateAndWrite({
-        chainId: plan.chainId,
-        releaseDigest: plan.releaseDigest,
-        action: "PLACE_BET",
-        publicClient,
-        walletClient: walletReq.walletClient,
-        account: walletReq.account,
-        address: gameHubAddress,
-        abi: GAME_HUB_ABI,
-        functionName: "placeBet",
-        args,
-        value: placeStep.value,
-        beforeWrite: () => onStage?.("placeBet")
-      });
+      const submitBet = () =>
+        tx.simulateAndWrite({
+          chainId: plan.chainId,
+          releaseDigest: plan.releaseDigest,
+          action: "PLACE_BET",
+          publicClient,
+          walletClient: walletReq.walletClient,
+          account: walletReq.account,
+          address: gameHubAddress,
+          abi: GAME_HUB_ABI,
+          functionName: "placeBet",
+          args,
+          value: placeStep.value,
+          beforeWrite: () => onStage?.("placeBet")
+        });
 
+      let placeBetTx = await submitBet();
+      // A load-balanced RPC can simulate against a node lagging the allowance read.
+      // Retry only this read-only failure after a mined approval, never a wallet request.
+      if (
+        approveTx?.ok &&
+        placeBetTx.error?.code === "INSUFFICIENT_ALLOWANCE" &&
+        placeBetTx.error.details?.phase === "simulation"
+      ) {
+        await sleep(ALLOWANCE_CONFIRMATION_DELAY_MS);
+        placeBetTx = await submitBet();
+      }
       if (!placeBetTx.ok) {
+        if (approveTx?.ok && placeBetTx.error?.details?.transactionSubmitted === false) {
+          placeBetTx.error.details.approvalTxHash = approveTx.txHash;
+          if (placeBetTx.error.code === "INSUFFICIENT_ALLOWANCE") {
+            placeBetTx.error = {
+              ...placeBetTx.error,
+              code: "ALLOWANCE_NOT_CONFIRMED",
+              message:
+                "Approval is mined, but the simulation node has not observed the allowance yet.",
+              severity: "warning",
+              retryable: true
+            };
+          }
+        }
         return { approveTx, placeBetTx };
       }
 

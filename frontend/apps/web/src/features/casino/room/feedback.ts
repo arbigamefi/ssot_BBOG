@@ -44,7 +44,7 @@ export function getBetErrorKind(error?: StepperDisplayError) {
     case "HOUSE_EDGE_TOO_HIGH":
       return "input";
     default:
-      return "unknown";
+      return error?.details?.transactionSubmitted === false ? "notSubmitted" : "unknown";
   }
 }
 

@@ -1,5 +1,4 @@
 import {
-  BaseError,
   parseEventLogs,
   type Abi,
   type Address,
@@ -85,13 +84,13 @@ export interface TxPipeline {
 
 /** Returns true if the error is a transient RPC error that should be retried. */
 export function isTransientError(err: unknown): boolean {
-  if (err instanceof BaseError) {
-    if (err.name === "HttpRequestError") return true;
-    if (err.name === "RpcRequestError") {
-      const code = (err as any)?.code;
-      // -32005 = rate limit, -32603 = internal error
-      if (code === -32005 || code === -32603) return true;
-    }
+  let cause = err as { name?: string; code?: number; cause?: unknown } | undefined;
+  for (let depth = 0; depth < 8 && cause && typeof cause === "object"; depth++) {
+    if (["HttpRequestError", "WebSocketRequestError", "TimeoutError"].includes(cause.name ?? ""))
+      return true;
+    if (cause.name === "RpcRequestError" && (cause.code === -32005 || cause.code === -32603))
+      return true;
+    cause = cause.cause as typeof cause;
   }
   return false;
 }
@@ -202,6 +201,13 @@ export function createTxPipeline(opts?: {
         }
         // Non-transient or last attempt — fail
         const error = toDomainError(e);
+        error.details = {
+          ...error.details,
+          chainId: params.chainId,
+          action: params.action,
+          phase: "simulation",
+          transactionSubmitted: false
+        };
         const txHash = "0x0" as Hex;
         journal?.({
           chainId: params.chainId,
@@ -224,9 +230,11 @@ export function createTxPipeline(opts?: {
     }
 
     let txHash = "0x0" as Hex;
+    let walletRequested = false;
     try {
       await throttle();
       params.beforeWrite?.();
+      walletRequested = true;
       txHash = await params.walletClient.writeContract(sim.request);
 
       journal?.({
@@ -282,7 +290,10 @@ export function createTxPipeline(opts?: {
     } catch (e) {
       const isTimeout = (e as any)?.name === "TxTimeoutError";
       const cause = toDomainError(e);
-      const uncertain = txHash !== "0x0" || ["RPC_ERROR", "UNKNOWN"].includes(cause.code);
+      const uncertain =
+        txHash !== "0x0" ||
+        (walletRequested &&
+          !["USER_REJECTED", "CHAIN_MISMATCH", "INSUFFICIENT_NATIVE_BALANCE"].includes(cause.code));
       const error: DomainError = isTimeout
         ? makeTxTimeoutError()
         : uncertain
@@ -298,7 +309,9 @@ export function createTxPipeline(opts?: {
         chainId: params.chainId,
         action: params.action,
         txHash,
-        causeCode: cause.code
+        causeCode: cause.code,
+        phase: walletRequested ? "wallet" : "beforeWrite",
+        ...(walletRequested ? {} : { transactionSubmitted: false })
       };
       journal?.({
         chainId: params.chainId,

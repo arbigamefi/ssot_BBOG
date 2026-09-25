@@ -264,6 +264,65 @@ describe("createTxPipeline", () => {
     }
   );
 
+  it("marks simulation failures as not submitted and retries nested transport failures only", async () => {
+    const pipeline = createTxPipeline({ config: { minIntervalMs: 0, retryDelayMs: 0 } });
+    const pub = mockPublicClient({
+      simulateContract: vi
+        .fn()
+        .mockRejectedValueOnce(new BaseError("wrapped", { cause: makeHttpRequestError() }))
+        .mockRejectedValueOnce(new Error("unrecognized simulation failure"))
+    });
+    const wal = mockWalletClient();
+    const result = await pipeline.simulateAndWrite({
+      ...BASE_PARAMS,
+      publicClient: pub,
+      walletClient: wal,
+      account: ACCOUNT
+    });
+    expect(pub.simulateContract).toHaveBeenCalledTimes(2);
+    expect(wal.writeContract).not.toHaveBeenCalled();
+    expect(result.error).toMatchObject({
+      code: "UNKNOWN",
+      details: { phase: "simulation", transactionSubmitted: false }
+    });
+  });
+
+  it("does not label a local pre-wallet guard failure as an uncertain broadcast", async () => {
+    const pipeline = createTxPipeline({ config: { minIntervalMs: 0 } });
+    const wal = mockWalletClient();
+    const result = await pipeline.simulateAndWrite({
+      ...BASE_PARAMS,
+      publicClient: mockPublicClient(),
+      walletClient: wal,
+      account: ACCOUNT,
+      beforeWrite: () => {
+        throw new Error("local failure");
+      }
+    });
+    expect(result.error).toMatchObject({
+      code: "UNKNOWN",
+      details: { transactionSubmitted: false }
+    });
+    expect(wal.writeContract).not.toHaveBeenCalled();
+  });
+
+  it("blocks retry of an unrecognized viem wallet failure even without a returned hash", async () => {
+    const pipeline = createTxPipeline({ config: { minIntervalMs: 0 } });
+    const wal = mockWalletClient({
+      writeContract: vi
+        .fn()
+        .mockRejectedValue(new BaseError("unexpected", { name: "TransactionExecutionError" }))
+    });
+    const result = await pipeline.simulateAndWrite({
+      ...BASE_PARAMS,
+      publicClient: mockPublicClient(),
+      walletClient: wal,
+      account: ACCOUNT
+    });
+    expect(result.error).toMatchObject({ code: "TX_STATUS_UNKNOWN", retryable: false });
+    expect(wal.writeContract).toHaveBeenCalledOnce();
+  });
+
   // ——— On-chain revert detection ———
   describe("on-chain revert detection", () => {
     it("simulateAndWrite returns ok:false with TX_REVERTED when receipt.status is reverted", async () => {
