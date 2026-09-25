@@ -1,16 +1,37 @@
 # Documentation Index
 
-## Current v1.5 facts and whitepaper entrypoints
+## Start with your question
 
-- [Release facts and evidence](release/STATUS-v1.5.zh-CN.md) — current dated scope, not a runtime guarantee
-- [Project brief](ARBIGAMEFI-EXECUTIVE-BRIEF.zh-CN.md) — first-time readers
-- [Product whitepaper](WHITEPAPER.product.zh-CN.md) — players, LPs and partners
-- [Technical whitepaper](WHITEPAPER.zh-CN.md) — mechanisms, governance and limits
-- [Independent repository review](audit/RepositoryReview-2026-09-25.zh-CN.md) — findings, checks and outstanding work
+ArbiGameFi is building a single-brand wallet-native casino and sportsbook.
+External materials are organized by the decision a reader needs to make.
 
-## Current v1.5 deployment
+| Document                                                               | Main reader and purpose                                                                                                 |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| [Project brief](ARBIGAMEFI-EXECUTIVE-BRIEF.zh-CN.md)                   | First-time readers: understand the project and choose a relevant next step. Complete Chinese and English introductions. |
+| [Project and business whitepaper](WHITEPAPER.product.zh-CN.md)         | Strategic, channel and professional capital partners: assess the market, operating and cooperation case.                |
+| [Technical whitepaper](WHITEPAPER.zh-CN.md)                            | Researchers, technical diligence and integration teams: assess mechanisms and trust assumptions, then inspect evidence. |
+| [Product roadmap](roadmap.md)                                          | Users and partners following intended capability and product direction.                                                 |
+| [Release facts](release/STATUS-v1.5.zh-CN.md)                          | Readers checking dated implementation, deployment, availability and acceptance.                                         |
+| [Repository retrospective](audit/RepositoryReview-2026-09-25.zh-CN.md) | Readers investigating findings, impact and rework in a bounded review.                                                  |
 
-- [Implementation status](deploy/v15/implementation-status.zh-CN.md)
+A next-version mechanism is not a current participation term. Players need
+product rules and help; LPs need specific pool terms and risk disclosures;
+channel partners need attribution and compensation terms. They do not all need
+the same whitepaper, and LP participation is not project equity investment.
+
+## Internal project direction
+
+- [Project master plan](strategy/project-master-plan.zh-CN.md): audience, product thesis, decisions, resource focus and hypotheses to validate.
+- [Economic design](strategy/economic-design.md): selected next-version allocation, alternatives, calibration and migration boundaries.
+- [GTM execution plan](strategy/go-to-market.md): work packages, demand research and operating decisions.
+- [Writing and publishing standard](WHITEPAPER-PUBLISHING-STANDARD.zh-CN.md): reader-specific scope, claims, evidence and editorial review.
+
+These internal planning documents guide execution. They are distinct from the
+external cooperation case, mechanism explanation and release evidence.
+
+## v1.5 implementation and deployment evidence
+
+- [Implementation record](deploy/v15/implementation-status.zh-CN.md) — execution history and evidence
 - [Supported deployment workflow](deploy/v15-release.md)
 - [Release process](release/README.md)
 
@@ -20,7 +41,7 @@
 
 ## Strategy
 
-- `docs/strategy/fullstack-product-architecture.md` — fullstack commitment: protocol-grade settlement kernel, lean B2C casino/sportsbook product, optional future infrastructure
+- [Fullstack product architecture commitment](strategy/fullstack-product-architecture.md) — product positioning and complexity boundaries that guide the whitepapers and implementation: protocol-grade settlement kernel, lean B2C casino/sportsbook product, optional future infrastructure
 
 ## Release materials
 
@@ -28,14 +49,10 @@
 - [Release acceptance checklist](release/checklist.md)
 - [Current deployment evidence and pending closeout](deploy/v15/implementation-status.zh-CN.md)
 
-## Whitepaper
-
-- `docs/WHITEPAPER.zh-CN.md` — v1.5 Chinese technical Review Copy with English abstract and pinned source baseline
-- `docs/WHITEPAPER.product.zh-CN.md` — product and business whitepaper grounded in the current protocol capabilities
-- `docs/ARBIGAMEFI-EXECUTIVE-BRIEF.zh-CN.md` — short project Review Copy for players, LPs, referrers, investors, and contributors
-- `docs/WHITEPAPER-PUBLISHING-STANDARD.zh-CN.md` — publishing standard for naming, versioning, and scope separation across the whitepaper set
-
-This repository is designed to be **auditable by construction**. The documentation is part of the SSOT.
+The master plan sets project choices; constitutions and ADRs record technical
+constraints and decisions. Code, tests, release artifacts and reviews provide
+implementation evidence. External documents explain the relevant project logic
+to their intended readers. Keep these roles distinct.
 
 ## Constitution & invariants
 
@@ -74,7 +91,6 @@ This repository is designed to be **auditable by construction**. The documentati
 
 ## Project management
 
-- `docs/roadmap.md` — roadmap, milestones, acceptance criteria
 - `docs/plan/README.md` — implementation-grade action plans (PR-sized work breakdowns)
 - `docs/plan/Milestone-3.1-SportsHub-MVP.md` — sportsbook MVP implementation plan on top of SettlementRouter
 - `docs/migration/refactored-mapping.md` — mapping of refactored features to the current frontend design

@@ -1,62 +1,85 @@
 # ArbiGameFi 项目简介
 
-> 文档编号：AGF-BRIEF-2026.09-r1 · 状态：Review Copy
+> AGF-BRIEF-2026.09-r3 · 2026-09-26 · 外部审阅稿
 >
-> 项目：ArbiGameFi · 架构：SSOT · 发布基线：v1.5
->
-> 代码基线：`aaa5c807d09f72e972bfad286901c3bb3e88b9ee`
->
-> 日期：2026-09-25 · 语言：zh-CN，附英文摘要
->
-> 读者：首次了解项目的玩家、LP、推广伙伴与技术合作方
+> 读者：首次接触项目的潜在用户、合作方、媒体与研究者 · 中文／English
 
-## 一句话说明
+## 用自己的钱包参与游戏，看清每一次投入与结算
 
-**ArbiGameFi 是一个通过钱包访问、游戏规则和结算凭证可在链上核对的 casino 项目。**
+ArbiGameFi 正在建设一个通过钱包参与的链上赌场游戏（casino）与体育竞猜（sportsbook）产品。它把熟悉的游戏体验与可核对的规则、费用和支付结合起来，让用户在自己的钱包中确认交易，并能查看结果对应的凭证。
 
-当前 v1.5 包含 Dice、Coin Toss、Roulette、Keno、Plinko、Sic Bo、Slots、Baccarat 八款游戏，部署于 Base 与 Base Sepolia。测试网面向体验与反馈；主网已完成八款各一笔真实单轮验收，网站主网投注仍未开放。Sportsbook 代码保留，但未包含在当前部署中。
+项目首先面向已有以太坊兼容（EVM）钱包和稳定币使用经验、重视支出与结果透明度的用户。首期聚焦 Base 与 USDC，把资源集中在可反复使用的产品和可靠服务上。这是产品切入选择，用户需求与留存仍需实际验证。
 
-这一开放状态是 2026-09-25 的快照，后续以[发布事实表](release/STATUS-v1.5.zh-CN.md)、实际网络和池状态为准。
+## 一个品牌，两类娱乐体验
 
-## 玩家怎样使用
+**赌场游戏**围绕骰子、轮盘、老虎机等熟悉玩法展开。建设重点是清楚的报价、顺畅的钱包操作、直观的反馈与自动结算，使一局从开始到结果都容易理解。
 
-选择网络和游戏，准备该网络的游戏资产及 ETH，核对金额、赔率与费用，再连接钱包签署交易。授权不足时先授权 Bank，然后另行签署投注。授权成功不等于已经下注。
+**体育竞猜**面向赛事选择与固定赔率，首版规划从赛前足球胜／平／负单关起步。体育采用独立资金池、赔率和结果规则；它与 casino 共享品牌及钱包入口，按独立的产品和运行条件发布。
 
-下注资金进入 Bank 智能合约；随机数到达并完成结算后支付净派彩，满足条件的部分退款可随结算返还。仍在等待随机数且已满足超时条件时，可走本金退款路径。款项支付到记录的玩家钱包。用户无需向平台账户预充值，平台不保管私钥，但智能合约持有资金期间仍有代码、治理与资产风险。
+娱乐体验是核心，可验证性提供信任基础。我们要验证的选择理由，是钱包使用、费用透明、规则与支付核验以及稳定服务的组合，而不是宣称“链上”本身就代表更好玩、更安全或更便宜。
 
-可在 `/portfolio/activity` 查看回合凭证，结合 VRF 请求、结果和结算交易核对。网络、随机数和 keeper 状态会影响等待时间；不承诺即时结算或无条件退款。
+## 玩家、资本与伙伴怎样参与
 
-## 三类参与者
+玩家控制钱包私钥，授权与投注分别确认。下注资金进入 Bank 智能合约，按接受的规则结算；无需向平台托管账户预充值。投注仍可能损失，链上交易与相关服务费用也属于使用成本。
 
-| 参与者   | 可以做什么                           | 需要理解什么                                           |
-| -------- | ------------------------------------ | ------------------------------------------------------ |
-| 玩家     | 选择八款游戏、检查报价与结果         | 投注可能损失；gas 和 VRF 请求费独立于投注金额          |
-| LP       | 向单一资产 Bank 提供流动性并持有份额 | 收益不保证；提现受准备金、缓冲和暂停约束               |
-| 推广伙伴 | 分享链接、核对绑定和奖励             | 本地归因不等于链上绑定；奖励可能尚未解锁、成熟或可领取 |
+流动性提供者（LP）为指定资金池提供赔付资本并持有份额，份额价值随池内经营结果变化。参与前需要了解具体池的经济权益、可能损失与退出条件；LP 份额不等于项目股权。
 
-**庄家优势不能直接当作 LP 回报。** 协议费与推荐负债从 NAV 中扣除，LP 净值取决于实际派彩和负债计提。技术白皮书中的公平二选一示例在理想条件下 LP 期望为零，仍承担波动。LP 补偿与商业可持续性需要继续评估，当前不承诺固定 APY 或稳定正收益。
+渠道与生态伙伴可围绕用户触达、产品体验和服务能力合作。合作成立需要明确用户价值、归因方式、报酬来源与交付责任；不以尚未定义的代币或未来升值作为合作基础。
 
-## 怎样核对可信度
+## 建设路线
 
-- 查看公开源码、部署地址、release 身份和合约源码匹配类别。
-- 查看单个 Bank 的净资产、预留和负债，避免用全站总额替代某个池的能力。
-- 查看真实投注、VRF 和最终支付凭证；区分链上事实与可能延迟的索引统计。
-- 查看治理与退出条件：关键 casino 治理由 2/3 Safe 控制，guardian 仅能暂停。该门槛不证明三个独立组织共同治理。
+先完成可持续使用的 casino 体验和真实资本计量，再建立经济分配与渠道合作，经过有限范围运行后逐步扩展。Sportsbook 的规则和产品准备并行推进，独立验收。新资产、新网络和新的商业形态由用户需求、资本和服务能力决定。
 
-现有测试和小额验收不是无漏洞证明，也不是第三方审计认证。已完成什么、未覆盖什么均列入[系统复盘](audit/RepositoryReview-2026-09-25.zh-CN.md)。
+本文介绍目标产品。截至 [2026-09-25 发布事实表](release/STATUS-v1.5.zh-CN.md)，已有八类赌场游戏的双链部署基础，网站主网投注尚未公开启用，体育产品和下一版本 LP 费用分配均未包含在该发布。后续使用前请查看更新的发布资料与实际页面。
 
-## 接下来做什么
+## 选择与你相关的下一步
 
-先统一首页和资料的事实，再完善新用户与真实手机钱包流程、推广网络归因和 LP 指标；主网公开前继续处理经济评估、流动性及运行条件。当前可围绕测试网体验和可验证机制招募反馈，不宣传尚未开放的功能或未来代币权益。
+| 你想了解什么               | 阅读或参与入口                                                                                               |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| 看游戏与当前可使用的产品   | [官网](https://arbigamefi.com/)；玩法、费用和帮助应在实际使用路径中查阅                                      |
+| 判断商业或渠道合作是否合适 | [项目与商业白皮书](WHITEPAPER.product.zh-CN.md)；正式合作条件由具体方案说明                                  |
+| 了解资金池                 | [LP 页面](https://arbigamefi.com/earn)与[发布资料](release/STATUS-v1.5.zh-CN.md)；以具体池现行机制和风险为准 |
+| 进行技术评估或研究         | [技术白皮书](WHITEPAPER.zh-CN.md)，再按其中入口查源码与验证证据                                              |
+| 跟踪产品演进               | [项目路线图](roadmap.md)                                                                                     |
 
-## English overview
+## English — ArbiGameFi at a glance
 
-ArbiGameFi is a wallet-accessible casino project with on-chain rules and inspectable settlement receipts. The v1.5 release includes eight casino games on Base and Base Sepolia. Testnet experience and feedback are the current public focus. Mainnet acceptance covers one real single-round bet per game, while public mainnet betting remains disabled in the website. Sportsbook code is not deployed in the current release.
+**Play from your wallet. Understand each stake and settlement.**
 
-Users control their wallets, but betting and LP deposits transfer assets into Bank smart contracts. Gas, randomness fees, governance, asset behavior and conditional exits remain relevant. House-edge deductions are not equivalent to LP yield: protocol and referral liabilities reduce NAV. No fixed return, token entitlement, unconditional refund or security certification is promised.
+ArbiGameFi is building a wallet-native casino and sportsbook that combines
+familiar entertainment with inspectable rules, costs and payments. Its initial
+focus is users who already understand Ethereum-compatible (EVM) wallets and stablecoins and value
+clarity about what they spend and receive. Base and USDC concentrate the first
+product and operating effort; demand and retention still require validation.
 
-## 继续阅读
+The casino offers familiar games such as Dice, Roulette and Slots. The emphasis is on understandable
+quotes, usable wallet interactions, clear feedback and automatic settlement.
+The planned sportsbook begins with pre-match football 1X2 singles and uses a
+separate bankroll, fixed odds and event-result rules. The two products share a
+brand and wallet entry, while sports launches against its own requirements.
 
-- [产品与商业白皮书](WHITEPAPER.product.zh-CN.md)：参与路径、费用、LP 与推荐、阶段计划。
-- [技术白皮书](WHITEPAPER.zh-CN.md)：资金、状态机、权限、经济公式与限制。
-- [发布事实表](release/STATUS-v1.5.zh-CN.md)：当前版本、网络、配置与证据。
+Players control their signing keys, but stakes transfer into Bank smart
+contracts when bets are accepted. Users can lose their stakes and pay separate
+transaction and applicable service fees. Wallet access does not eliminate
+contract, asset or governance risk.
+
+Liquidity providers (LPs) supply payout capital to a specific pool and hold
+shares whose value changes with the pool's results. Participation requires
+understanding that pool's economic rights, loss risks and withdrawal conditions.
+LP shares do not represent equity in the project.
+
+The roadmap starts with repeatable casino usage, accurate capital information
+and a sustainable operating model, followed by bounded growth. Sportsbook work
+proceeds in parallel with independent acceptance. New games, assets and networks
+follow demonstrated demand and operating capacity.
+
+The [dated release facts](release/STATUS-v1.5.zh-CN.md) distinguish this direction
+from available features. The September 25, 2026 snapshot records eight casino
+games deployed on two chains, public mainnet betting disabled in the website and
+neither the sportsbook nor the next-version LP fee allocation in that release.
+
+Start at the [website](https://arbigamefi.com/) for the available product,
+read the [business whitepaper](WHITEPAPER.product.zh-CN.md) to assess a cooperation
+case, or use the [technical whitepaper](WHITEPAPER.zh-CN.md) to examine the
+mechanisms and their trust assumptions. Consult current pool information before
+providing liquidity.

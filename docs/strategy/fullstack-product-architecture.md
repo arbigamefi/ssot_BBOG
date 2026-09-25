@@ -2,7 +2,7 @@
 
 | Owner | Product + Protocol Lead |
 | Status | Active |
-| Last Updated | 2026-05-18 |
+| Last Updated | 2026-09-26 |
 | Depends on | `docs/constitution/SSOT.v1.3.md`, `docs/architecture/overview.md`, `docs/adr/0029-settlement-router-vertical-hubs.md`, `docs/design/frontend-implementation-roadmap.md` |
 | Supersedes | Chat-only frontend-vs-contract architecture debate |
 
@@ -68,18 +68,22 @@ launch requirements, or support operations is suspect.
 
 ## 4. Product Priority
 
-The next product priority order is:
+The [project master plan](project-master-plan.zh-CN.md) now owns audience,
+commercial focus and resource sequencing. This document continues to define
+product/architecture boundaries; it does not create a second operating plan.
 
-1. Casino `placeBet -> VRF -> keeper finalize -> result receipt` must feel
-   obvious and fast on the normal path.
-2. Sportsbook MVP must keep the fixed-odds/result-oracle flow understandable:
-   open market, place ticket, propose result, finalize or void.
-3. LP and portfolio surfaces must explain bankroll, reserves, liabilities, and
-   user history without leaking contract jargon into the primary flow.
-4. Referral and affiliate surfaces should become growth tools only after the
-   core betting loop is stable.
-5. White-label/operator onboarding is a future option, not a current product
-   requirement.
+Two principal implementation streams run together: the complete casino player
+and settlement experience, and economics/capital accounting. Misleading current
+LP metrics are corrected before new economic rights are promoted. The selected
+next-version casino design allocates actual payout deductions with explicit LP
+retention; calibration and migration belong in the
+[economic design](economic-design.md).
+
+Sportsbook remains a committed product direction. Its research, fixed-odds
+rulebook and independent risk design can proceed in parallel; public operation
+requires its own evidence and capital. Growth materials and demand validation
+support these streams, and broad acquisition follows a working usage and
+operating loop. White-label/operator products require demonstrated demand.
 
 ## 5. Frontend Architecture Consequences
 
@@ -127,13 +131,19 @@ Docs should have different density by layer:
 | Frontend design/process docs                                 | Low-medium   | Keep only what enforces launch quality.                   |
 | Growth/campaign docs                                         | Low          | Experiments should be measured by funnel data.            |
 
-## 8. Next Implementation Order
+## 8. Planning And External Materials
 
-1. Align product whitepaper and executive narrative with this commitment.
-2. Slim frontend docs into launch-relevant references.
-3. Continue P0 runtime correctness before structure cleanup.
-4. Collapse only obvious one-consumer frontend files.
-5. Add product/growth surfaces after the betting loop is stable.
+The [master plan](project-master-plan.zh-CN.md) records product choices and the
+[GTM plan](go-to-market.md) assigns work packages. The public
+[roadmap](../roadmap.md) explains capability and user value without exposing
+engineering work queues as the product narrative.
+
+External materials have distinct readers: the business whitepaper supports
+resource/cooperation decisions, the technical whitepaper supports mechanism and
+trust assessment, and the brief introduces the project and routes readers.
+Detailed UX, candidate models, calibration inputs and PR-sized tasks remain in
+the relevant internal design files. The architecture still guides implementation;
+whitepapers do not become release audits or universal instruction manuals.
 
 ## 9. Non-Goals For The Next Phase
 

@@ -1,270 +1,333 @@
 # ArbiGameFi 技术白皮书
 
-> 项目：ArbiGameFi · 架构：Single Source of Truth（SSOT）
+> 文档编号：AGF-WP-TECH-2026.09-r3 · 文档状态：External Review Draft（外部审阅稿）
 >
-> 文档编号：AGF-WP-TECH-2026.09-r1 · 状态：Review Copy
+> 设计方向日期：2026-09-26 · 语言：zh-CN，附英文摘要 · 架构：Single Source of Truth（SSOT）
 >
-> 发布基线：v1.5 · 代码基线：`aaa5c807d09f72e972bfad286901c3bb3e88b9ee`
+> 读者：协议研究者、技术尽调与审计人员、集成开发者、专业 LP 的技术顾问
 >
-> 日期：2026-09-25 · 语言：zh-CN，附英文摘要
->
-> 读者：技术集成者、审查者、LP 与运营人员
+> 版本口径：本文选定下一经济版本的技术设计方向；部署事实以独立的 v1.5 发布事实表为准。本稿不表示该设计已经批准发布或上线。
 
-本文说明指定代码基线的机制与限制，不构成安全认证、收益预测或公开上线许可。网站开放范围、链上暂停和参数快照见[发布事实表](release/STATUS-v1.5.zh-CN.md)；完整复盘与待办见[独立系统复盘](audit/RepositoryReview-2026-09-25.zh-CN.md)。产品说明与短版入口分别见[产品白皮书](WHITEPAPER.product.zh-CN.md)和[项目简介](ARBIGAMEFI-EXECUTIVE-BRIEF.zh-CN.md)。
+本文解释 ArbiGameFi 的资金机制、经济约束、结算协议和信任假设，供外部读者判断设计是否自洽、实现应满足哪些条件、哪些风险无法仅由合约消除。商业定位见[项目与商业白皮书](WHITEPAPER.product.zh-CN.md)，简要介绍见[项目简介](ARBIGAMEFI-EXECUTIVE-BRIEF.zh-CN.md)。[产品架构](strategy/fullstack-product-architecture.md)保留整体设计背景；实施状态、历史问题和演进顺序分别由[发布事实表](release/STATUS-v1.5.zh-CN.md)、[系统复盘](audit/RepositoryReview-2026-09-25.zh-CN.md)和[路线图](roadmap.md)承载。
 
 ## 摘要
 
-ArbiGameFi 将链上游戏分成资金账本、池路由、头寸生命周期、随机数传输和纯游戏规则。Bank 持有单一资产，SettlementRouter 统一管理头寸与结算权限，GameHub 管理 casino 回合，VRFHub 对接随机数。网页、SDK、keeper 和数据库提供访问、自动执行与查询服务；最终资金状态由合约决定。
+ArbiGameFi 采用按资产与业务域划分的资金池。每个 Bank 是相应资产、LP 份额、应付款和未结算预留的唯一资金账本；SettlementRouter 将每个头寸绑定到固定的资金池及结算主体；GameHub 与 SportsHub 分别处理随机游戏和现实体育事件的业务规则。统一结算内核约束资金如何移动，业务 hub 负责证明某次结算为什么成立。两者缺一不可。
 
-当前 v1.5 在 Base 与 Base Sepolia 部署八款 casino 游戏。主网已完成八款游戏各一笔真实单轮验收，但网站主网投注仍未开放；SportsHub/SportsRiskEngine 是保留的代码能力，未部署进当前双链发布。合约可调用、网站可使用、业务已验收是三个不同事实。
+本稿选定的下一经济版本，将 casino 的协议收入与推广奖励限制在实际派彩扣减的费用之内，并将剩余费用留在 LP 净值中。该约束使一笔投注在支付玩家并增加外部应付款之后，对 LP 净值的最大消耗仍可由接受投注时的最大毛赔付预留覆盖。比例需要校准，预算来源与偿付关系已经选定。
+
+Casino 的结果依赖规则模块、随机数提供方和链上执行；sportsbook 的结果依赖赔率授权、赛事证据、结果报告与争议裁决。两类业务默认使用独立资本，不将随机数可验证性当作现实赛事真实性的证明，也不将账面偿付能力等同于随时退出或长期盈利。
 
 ## Abstract (EN)
 
-ArbiGameFi separates asset custody and accounting, pool routing, position ownership, casino lifecycle, and randomness transport. The v1.5 release contains eight casino modules on Base and Base Sepolia. Mainnet single-round acceptance covers one bet per game; public mainnet betting remains disabled in the website. Sportsbook code is not deployed in the current releases. Funds enter Bank smart contracts when users bet or provide liquidity. Permissionless settlement and conditional refunds reduce dependence on the operator, but do not eliminate governance, token, network, randomness-provider, or software risks. House-edge deductions, protocol/referral liabilities, and LP returns are distinct quantities.
+ArbiGameFi separates asset accounting, settlement authorization and business-specific outcome determination. Each Bank accounts for one pool's assets, LP shares, external payables and open-position reserves. A settlement router binds positions to their originating hubs, while casino and sportsbook use distinct evidence and capital domains.
 
-## 1. 系统边界与事实源
+The selected design direction for the next economic version allocates protocol and referral payables only from actual casino payout deductions. The remainder stays in LP net asset value. This paper derives the resulting reserve bound, describes share accounting and settlement finality, and identifies the governance, oracle and asset assumptions on which those properties depend. Sports uses independently signed odds and an evidence-based result process. This is an external review draft of the target design; deployed v1.5 behavior and implementation gaps are identified separately.
 
-```mermaid
-flowchart TD
-  Wallet[用户钱包] -->|ERC20 approve| Bank
-  Wallet -->|placeBet 与原生币费用| GameHub
-  Wallet -->|LP 入金与赎回| Bank
-  Web[Web 与 SDK] -->|读状态及构造交易| Wallet
-  GameHub --> SettlementRouter
-  SportsHub[SportsHub：当前发布未部署] -.-> SettlementRouter
-  SettlementRouter --> PoolRegistry
-  SettlementRouter -->|唯一投注资金接口调用方| Bank
-  GameHub -->|请求随机数| VRFHub
-  VRFHub --> Adapter[Chainlink Wrapper Adapter]
-  Adapter --> Wrapper[Chainlink VRF Wrapper]
-  Wrapper -->|回调| Adapter
-  Adapter -->|随机数| VRFHub
-  VRFHub -->|记录随机数| GameHub
-  Keeper[Keeper] -->|permissionless finalize| GameHub
-  Chain[链上日志与状态] --> Index[可回放数据库投影]
-  Index --> Web
-```
+## 1. 设计问题与架构选择
 
-| 组件                       | 职责                                                | 不承担的职责                 |
-| -------------------------- | --------------------------------------------------- | ---------------------------- |
-| Bank                       | 持有一种资产；维护 LP 份额、PF、XP、准备金 R；转账  | 不解析游戏规则、不生成随机数 |
-| PoolRegistry               | 注册 poolId 与 asset/Bank/domain；控制池和 hub 准入 | 不持有投注资金               |
-| SettlementRouter           | 分配全局 positionId，绑定 owner hub 与池快照        | 不自行决定开奖结果           |
-| GameHub                    | 参数与费用校验、回合快照、VRF、结算或退款           | 不直接调用 Bank 投注结算接口 |
-| VRFHub / Adapter           | 请求映射、原生币费用、回调与 detach                 | 不计算玩家派彩               |
-| 游戏模块                   | `validate / maxPayout / resolve` 纯规则             | 不托管资产、不维持玩家账户   |
-| ReferralRegistry / Engine  | 推荐绑定与奖励计划计算                              | 不直接向推荐者转账           |
-| Web / SDK / keeper / index | 人机交互、交易编排、自动结算、查询                  | 不取代链上账本               |
+投注协议需要同时回答三个问题：接受投注时，池子是否承担得起最坏结果；结算时，谁有权声明结果以及如何验证；资金支付与奖励记账完成后，剩余 LP 权益是否仍能覆盖其他头寸。只展示资产余额不能回答这些问题。余额中可能已经包含待领取费用和奖励，也包含为未结算投注承担风险的资金。
 
-pool 的 asset、Bank、domain 在注册后不可重映射；Bank 不可被另一个 pool 重用。同一种资产可以有不同池，不能把“单资产 Bank”解释为全网每个资产只有一个 Bank。路由头寸快照防止结算时错误重选池；池被关闭会阻止新头寸，不应被当作删除已有债务。
+因此，ArbiGameFi 选择将资金账本与业务判断分离，但不把它们割裂：
 
-依据：[Bank](../src/core/Bank.sol)、[PoolRegistry](../src/core/PoolRegistry.sol)、[SettlementRouter](../src/core/SettlementRouter.sol)。
-
-## 2. 资产托管与账本
-
-### 2.1 钱包与合约之间的资金边界
-
-平台不持有玩家私钥，也不要求先充值平台账户。下注时，Bank 使用 ERC20 授权从玩家钱包拉取 stake；LP 入金同样进入 Bank。结算与退款按合约规则支付给已记录的玩家。因此，“钱包直连”不等于“资金始终留在钱包”，智能合约持有期间仍有代码和权限风险。
-
-资产假设是正常转账语义的 ERC20。Bank 按参数额记账，不能据此宣称支持所有扣费转账、重基准或黑名单资产的任意行为；发行方冻结或异常转账可以影响债务支付。
-
-### 2.2 单个 Bank 的会计恒等式
-
-以该资产最小单位计算：
-
-```text
-B   = asset.balanceOf(Bank)
-PF  = protocolFeesPayable
-XP  = xpAccruedTotal + xpLockedTotal + xpHoldbackTotal
-NAV = B - PF - XP
-R   = totalReserved
-Bank.totalAssets() = NAV
-```
-
-PF 与 XP 是对外负债，不是 LP 资产；R 是尚未解除的最坏派彩预留。`B >= PF + XP` 是 NAV 可计算的条件。核心结算控制维护 `NAV >= R`，但这依赖授权组件、正确参数和资产行为，不是面对任意外部损害的偿付保证。
-
-### 2.3 入金、份额与缓冲
-
-份额采用 ERC4626-like 接口，不能等同完整标准认证。令 `V = 10 ** asset.decimals()`，虚拟资产与份额偏移的兑换关系为：
-
-```text
-shares = assets × (totalSupply + V) / (NAV + V)
-assets = shares × (NAV + V) / (totalSupply + V)
-```
-
-deposit/convert 向下取整，mint/withdraw 所需输入按相应方向向上取整；零份额入金被拒绝。虚拟偏移降低初始捐赠稀释攻击的经济收益，不代表 LP 永不亏损。
-
-新投注在接收 stake 后以当时 NAV 检查：
-
-```text
-R_after = R_before + reserved
-NAV - R_after >= floor(NAV × riskReserveBps / 10000)
-```
-
-可选出金使用独立的 `withdrawalBufferBps`，缓冲基于出金前 NAV：
-
-```text
-buffer = floor(NAV_before × withdrawalBufferBps / 10000)
-NAV_after >= R + buffer
-```
-
-LP 赎回减少 NAV；PF/XP 支付同时减少 B 与对应负债，不能把三者都当成相同的 NAV 扣减。具体可支出上限还受资产余额及相应负债余额限制。暂停时 deposit/mint、LP 提现、PF/XP 领取和新投注被阻止。旧 `minLiquidityBps` getter/setter 保留为 `riskReserveBps` 的兼容别名，不再同时控制出金缓冲。
-
-依据：[Bank 份额、缓冲与资金接口](../src/core/Bank.sol)、[AccountingLib](../src/libs/AccountingLib.sol)、[相关单元测试](../test/unit/SecurityFixes.t.sol)。
-
-## 3. 一笔 casino 投注的生命周期
+| 层                   | 主要职责                                                             | 不承担的证明                           |
+| -------------------- | -------------------------------------------------------------------- | -------------------------------------- |
+| Bank                 | 托管单一资产；维护 LP 份额、协议与奖励应付款、头寸预留；执行资金收付 | 不独立判断随机结果或赛事事实是否正确   |
+| SettlementRouter     | 固定头寸的 hub、Bank、资产和玩家；限制结算身份、次数及金额           | 不替代游戏规则、赔率授权和结果裁决     |
+| PoolRegistry         | 定义资金池及业务域；授予 hub 使用指定池的权限                        | 注册本身不证明被授权代码与经济规则安全 |
+| GameHub 与规则模块   | 接受 casino 投注、固定规则输入、请求随机数、计算赔付与费用           | 不将随机数服务的可用性视为必然         |
+| SportsHub 与风险引擎 | 接受固定赔率票据、限制赛事敞口、处理结果和争议                       | 不将签名等同于现实事件的真实性         |
 
 ```mermaid
-stateDiagram-v2
-  [*] --> PendingVRF: placeBet / 原子创建头寸及随机数请求
-  PendingVRF --> RandomReady: 合法随机数回调
-  PendingVRF --> Refunded: 满足超时条件后 refund
-  RandomReady --> Settled: finalize / 模块输出有效
-  RandomReady --> Refunded: finalize / 模块异常或输出越界
-  Settled --> [*]
-  Refunded --> [*]
+flowchart LR
+  Player[玩家] --> Game[GameHub 与游戏规则]
+  Player --> Sports[SportsHub 与赔率及结果证据]
+  Game --> VRF[VRFHub / 随机数提供方]
+  Game --> Router[SettlementRouter]
+  Sports --> Router
+  Router --> CasinoBank[Casino Bank]
+  Router --> SportsBank[Sports Bank]
+  CasinoLP[Casino LP] --> CasinoBank
+  SportsLP[Sports LP] --> SportsBank
 ```
 
-1. SDK 读取指定网络与 release、资产和池状态，校验游戏参数，计算 stake、最大派彩与 VRF 报价。
-2. ERC20 allowance 不足时授权 **Bank**。该步骤不下注；已有足够授权可以跳过。
-3. 玩家向 GameHub 提交 `placeBet` 和原生币费用。GameHub 校验模块与价格边界，经 Router 创建头寸，由 Bank 拉取 stake 并预留最坏派彩。
-4. VRF 请求与上述操作同属一笔原子交易；调用回滚时不会保留半笔已接受投注，但失败交易仍可能消耗 gas。
-5. Wrapper 回调通过 Adapter 与 VRFHub 到达 GameHub；结果进入 `RandomReady`。随机数准备完成不等于已支付。
-6. 任何地址可调用 `finalize`；keeper 通常代为自动执行。有效输出得到 `Settled` 终态；部分未使用 stake 可作为 refundAmount 随净派彩一起返还。
-7. 若模块 `resolve` 抛错、退款超过 stake，或 gross payout 加退款超过 reserved，GameHub 的异常路径退回整笔 stake，记录 `Refunded`。
+统一内核允许复用授权、记账和结算约束，纵向 hub 则保留不同业务的接受条件和证据。默认部署边界是 casino 与 sports 使用不同 Bank 和风险预算；不同资产也分别记账。不存在由该架构自动产生的跨池赔付承诺。共享治理、代码或基础设施仍可能造成相关故障，资本隔离不代表所有风险相互独立。
 
-`betId` 对应 Router 的全局 positionId；收据应联合核对 chainId、GameHub、betId、请求号与正式交易回执，不能只使用一个数字 ID。
+参考实现：[Bank](../src/core/Bank.sol)、[SettlementRouter](../src/core/SettlementRouter.sol)、[PoolRegistry](../src/core/PoolRegistry.sol)、[GameHub](../src/core/GameHub.sol)、[SportsHub](../src/core/SportsHub.sol)。
 
-### 超时与退款限制
+## 2. 资金模型与 LP 份额
 
-`refund` 只对 `PendingVRF` 且 `block.timestamp >= placedAt + refundTimeoutSeconds` 的回合开放。它返还 stake，不退还已经支付的链上 gas 或保证收回已经发生的 VRF 服务费用。
+### 2.1 余额、负债和预留
 
-`refundTimeoutSeconds` 是治理可修改的全局参数，当前未逐单快照，也没有专门上界检查。治理变更会影响已有等待回合的可退款时点。因此 permissionless 指满足条件后无需管理员代签，不意味着任何时候无条件退出。
+对某个 Bank，在同一链上状态下定义：
 
-异常模块退款是在 `finalize` 中处理已获随机数的坏输出，不应向普通输局提供任意取消。Bank 暂停不直接阻止 settle/refund，但 token 转账失败、合约缺陷或链不可用仍可能使调用失败。
+| 符号  | 含义                                                             |
+| ----- | ---------------------------------------------------------------- |
+| `B`   | Bank 持有的该资产实际余额                                        |
+| `PF`  | 已计提、尚未领取的协议费用                                       |
+| `XP`  | 已计提、尚未支付的全部推广与奖励应付款，包括锁定和 holdback 部分 |
+| `NAV` | LP 净资产：`B − PF − XP`                                         |
+| `R`   | 所有未结束头寸的赔付预留之和                                     |
+| `T`   | 已发行 LP 份额总量                                               |
 
-依据：[GameHub](../src/core/GameHub.sol)、[GameHubE2E](../test/unit/GameHubE2E.t.sol)、[SecurityFixes](../test/unit/SecurityFixes.t.sol)。
-
-## 4. 随机数与原生币费用
-
-当前部署使用 Chainlink VRF Wrapper Adapter。GameHub 报价包含 callback gas 等请求参数；报价可能随上游成本改变，SDK 会重新读取并提供费用缓冲。钱包交易 gas 与 VRF 请求费是不同支出。
-
-VRFHub 的 fulfill 入口对非 coordinator 调用记录 Ignored 后返回；Adapter 对非法 wrapper 调用也返回。GameHub 的随机数接收入口则对非 VRFHub 调用 revert。对未知、已 detach、重复或不适用的请求，传输路径会忽略或记录事件；下游 hub 回调采用 try/catch，避免其业务 revert 直接扩散到传输层。合法首次回调会使请求失活；若 hub 回调失败，不会因重复回调自动重试，仍在 PendingVRF 的投注可在满足超时条件后退款。此设计不应写为“任何调用、任何资源条件下永不 revert”：入口语义不同，gas 等外部条件也有边界。
-
-多付原生币采用尽力退款；退款接收失败时形成 `refundCredit`，由有权领取者后续申请。已经服务的请求不能因投注本金退款而自动撤销其成本。
-
-VRF 证明约束随机数来源；它不证明游戏赔率、资产偿付、治理决策或前端显示都正确。需要分别核对模块、报价和结算凭证。
-
-依据：[VRFHub](../src/core/VRFHub.sol)、[Wrapper Adapter](../src/adapters/chainlink/ChainlinkV2PlusWrapperAdapter.sol)。
-
-## 5. 八款游戏与报价
-
-| 模块      | 参数及玩法概要                             |
-| --------- | ------------------------------------------ |
-| Dice      | over/under、目标值，按可中奖点数计算毛派彩 |
-| Coin Toss | 正反面二选一                               |
-| Roulette  | 欧式 0–36 与支持的下注项                   |
-| Keno      | 号码组合与赔付表                           |
-| Plinko    | 固定 8 行、9 个桶位，选择风险档位          |
-| Sic Bo    | 三骰结果与支持的投注项                     |
-| Slots     | 符号组合与赔付表                           |
-| Baccarat  | 闲、庄、和及模块定义的规则                 |
-
-模块通过 `validate` 校验参数，`maxPayout` 为预留提供上界，`resolve` 根据随机数计算毛派彩及退款。GameHub 的 betCount 范围为 1–100；批量回合和 stopGain/stopLoss 受具体模块与 StakeSpec 约束。StopLogic 用毛派彩与已使用 stake 的差值判断停止，发生在 fee-on-payout 之前，不能按钱包最终净收入理解。它是该笔批量投注的停止条件，不是跨会话账户级风控。
-
-不要给全部游戏套用固定 RTP、胜率或倍率。实际净派彩取决于所选玩法、整数取整、投注快照中的费用及已执行回合；单局胜率也不等于长期回报率。
-
-规则源码见 [modules](../src/modules)，前端规则与参数编码应与签名发布中的 ABI、manifest 和 golden vectors 对齐。
-
-## 6. 费用、协议收入与 LP 经济
-
-这一节是对旧文档的重要澄清：**玩家派彩扣减、按流水计提的 PF/XP，以及 LP 净值变化并非同一指标。**
-
-对一次正常结算，定义：
+基础偿付条件为：
 
 ```text
-S = stake                 U = S - refundAmount
-G = payoutGross           h = effectiveHouseEdgeBps
-F = floor(G × h / 10000)   N = G - F = payoutNet
-P = 本次 protocolFeeAccrual
-X = 本次新增 XP 总额
+B ≥ PF + XP
+NAV = B − PF − XP
+NAV ≥ R
 ```
 
-基础与增量推荐预算以 U 和相应 edge 计算。未纳入预算的部分、无人可分配的 sink 进入 P，奖励分配进入 X。它们不是简单从本局 F 中再次分出的一笔现金；输局 G=0 时，仍可能产生按 U 计算的 P/X。
+`R` 是对 LP 资产用途的约束，不是再次从 `NAV` 扣除的外部应付款。玩家押注进入 Bank 后成为池内余额的一部分，同时建立对应预留；资金并非逐笔物理隔离的托管账户。不能先将预留从净值中扣除，再在结算时重复确认同一笔损失。
 
-排除其他同期 LP 流入流出、捐赠与资产外部变化，从接受投注前到结算后的净变化为：
+协议费用和奖励在计提时就减少 LP 权益，不能等到领取时才作为成本处理。向 Bank 外部领取 `c` 单位已计提费用时，`B` 与对应应付款均减少 `c`，因此 `NAV` 不变。如果资金被转回 Bank 或领取接收方就是 Bank，则需要按实际余额变化区分费用返还与普通外部支付；返还可能增加 LP 净值。
+
+同样，直接转入 Bank 的资产增加余额和净值，但不是博彩业务收入。净值变动分析必须区分投注损益、外部资金流和费用返还。[AccountingLib](../src/libs/AccountingLib.sol)与 Bank 的 `totalAssets()`、`externalPayablesTotal()`、`getSSOT()`提供核对入口。
+
+### 2.2 Virtual shares 与转换方向
+
+LP 份额表示对剩余净资产的比例性权益。转换采用虚拟资产与虚拟份额偏移 `V`，避免空池或极低流动性时直接使用 `NAV / T` 的不稳定分母：
 
 ```text
-本文毛派彩口径 GGR = U - G
-ΔNAV = U - N - P - X
-     = GGR + F - P - X
+assets → shares: assets × (T + V) / (NAV + V)
+shares → assets: shares × (NAV + V) / (T + V)
+V = 10^assetDecimals
 ```
 
-因此 GGR 不能标成 LP 净收益，`流水 × edge` 也不能直接当作 LP 收入。PF/XP 已从 NAV 扣除，后续领取不能再算一次 LP 亏损。
+| 操作                         | 取整方向     |
+| ---------------------------- | ------------ |
+| deposit：按投入资产获得份额  | 份额向下取整 |
+| mint：按目标份额支付资产     | 资产向上取整 |
+| withdraw：按取出资产销毁份额 | 份额向上取整 |
+| redeem：按销毁份额取出资产   | 资产向下取整 |
 
-**可复算示例（机制解释，不是回报预测）：**Coin Toss 单轮下注 1 USDC，公平二选一，毛中奖派彩 2 USDC，edge=2%，总 PF+XP 计提 0.02 USDC。赢时 N=1.96，LP 净变化 `1-1.96-0.02=-0.98`；输时 N=0，LP 净变化 `1-0-0.02=+0.98`。在该理想等概率、无其他流动与费用的模型下，LP 期望变化为零，仍承担结果方差。不同模块、取整和配置需独立计算；这不是对所有策略或全部运营成本的完整分析。
+该取整方向避免转换误差持续由现有 LP 承担；零份额存入应拒绝。虚拟偏移降低低流动性下通过捐赠和取整操纵份额价格的空间，但不意味着任意资产、任意规模下的捐赠行为都没有经济影响。LP 估值应使用实际转换函数，并将流动性规模和取整误差纳入分析。
 
-这说明现有机制不能直接支持“LP 获得庄家优势，因此稳定正收益”的宣传。是否及如何为 LP 提供可持续补偿，需要单独评估和决策，本文不通过更换文案改变合约经济。
+模型假设资产按请求数量精确转移，且余额不会因 rebase 或转账税自行变化。校验代币 decimals 只保证单位配置一致，不能替代对代币转账语义、冻结权限和发行方风险的判断。
 
-依据：[GameHub.finalize](../src/core/GameHub.sol)、[Bank.settleBet](../src/core/Bank.sol)、[输局仍计提负债的测试](../test/unit/GameHubE2E.t.sol)。
+## 3. 下一经济版本：从实际派彩费用分配
 
-## 7. 推荐与 XP
+### 3.1 选定的预算来源
 
-ReferralRegistry 为首触绑定，拒绝自指，并对向上链路做最多 64 hops 的有界环检查；这不是任意规模推荐图绝对无环的证明。网页的 ref 缓存、链上绑定和奖励实际入账是不同步骤。
+本稿采用 **Design direction 2026-09-26：casino 的 PF 与 XP 仅从实际 fee-on-payout `F` 分配，余款留在 LP NAV**。这是目标经济版本的机制选择；比例和各玩法参数仍需校准。体育业务不继承这项 casino 费用规则。
 
-GameHub 支持基础预算、逐层比例与增量 skyline；base/effective house edge、referralConfigId 与 delta skyline 在投注时记录快照；但基础 uplines 与 Bank 流水资格在 finalize 时读取，不能称全部推荐关系和资格逐单冻结。直接 first-touch 绑定不能改写，但祖先后续绑定、资格参数变化可能影响未结算回合的基础奖励分配和可领取状态。可扩展的级数不是已运行的渠道政策，实际配置见[事实表](release/STATUS-v1.5.zh-CN.md)。
+对一个完整回合，观察区间从接收押注之前到该回合结算之后，定义：
 
-XP 以资产计价，属于真实负债：
+| 符号               | 单位与含义                                             |
+| ------------------ | ------------------------------------------------------ |
+| `S`                | 资产最小单位；玩家提交的总押注                         |
+| `Q`                | 资产最小单位；停止条件等原因产生的未使用押注退款       |
+| `U = S − Q`        | 资产最小单位；实际参与游戏的押注                       |
+| `G`                | 资产最小单位；规则计算的毛派彩，不包含 `Q`             |
+| `h`                | 无量纲费率；数学定义域 `0 ≤ h ≤ 1`，可发布范围另行约束 |
+| `F = floor(G × h)` | 资产最小单位；实际从毛派彩扣留的费用                   |
+| `N = G − F`        | 资产最小单位；玩家净派彩，不包含 `Q`                   |
+| `P`、`X`           | 资产最小单位；本回合新增的协议与奖励应付款             |
+| `L = F − P − X`    | 资产最小单位；费用中留在 LP 净值的部分                 |
 
-| 桶       | 含义                               | 出口                                 |
-| -------- | ---------------------------------- | ------------------------------------ |
-| accrued  | 已可申请领取                       | 本人调用领取，受暂停与可选出金约束   |
-| locked   | 对应 sourcePlayer 的流水条件未满足 | 条件满足后任何人可触发解锁至 accrued |
-| holdback | 尚未成熟的保留部分                 | 按计划同步成熟部分至 accrued         |
+金额以对应代币的整数最小单位计算。`h` 若以 basis points 存储，合约换算为 `floor(G × hBps / 10000)`；比例与资产金额不能直接相加。单回合和批量回合的取整次序也必须固定，不能假设先求和再取整与逐项取整始终相同。
 
-解锁和成熟同步是桶间移动，不直接转币。新 holdback 先同步已成熟金额；已有未结束的释放计划不会因新奖励延长终点。它不是每份奖励独立锁满一天，也不是旧版“每次新增重新计时”。治理可设后续释放周期（1 秒至 365 天）与流水阈值（最高一千万整资产单位），界限不代表默认值永远不变。
+分配参数满足：
 
-依据：[ReferralRegistry](../src/engines/referral/ReferralRegistry.sol)、[DefaultReferralEngine](../src/engines/referral/DefaultReferralEngine.sol)、[Bank](../src/core/Bank.sol)。
+```text
+αL + αP + αX = 1
+0 < αL < 1,  αP ≥ 0,  αX ≥ 0
+λ = αL
+P ≤ floor(αP × F)
+X ≤ floor(αX × F)
+L = F − P − X
+```
 
-## 8. 治理与暂停
+`λ` 是产品经济描述中的 LP 费用保留比例，与这里的 `αL` 为同一参数。未使用的奖励预算、没有合格接收人的预算和取整余数留在 NAV，不额外形成应付款。因此实际留存 `L` 可以高于名义份额 `αL × F`。奖励在即时、锁定和 holdback 账户之间分配只改变领取条件，不能使其总额超过 `X`；延迟支付不能隐藏新增负债。
 
-当前关键 casino 治理已转给 2/3 Safe；guardian 只有暂停权限，不能解除暂停、换 guardian 或转走资金。keeper 不拥有正常治理权限。Safe 的签名门槛不证明签名者是三个独立组织，也不自动构成时间锁或去中心化治理。
+选择实际派彩费用作为预算源，是为了将外部应付款绑定到该笔结算确实扣留的资产。若按 turnover 另行计提费用，相关负债可能在 `F = 0` 的回合仍产生，需要额外的资本和预留分析；若按周期净利润分配，还需要周期结账、亏损结转和分配先后规则。本设计选择逐回合费用预算，保持资金约束可以在一笔结算中检查，但不保证协议或推广方每个回合都有收入。
 
-| 操作                                        | 权限与限制                             |
-| ------------------------------------------- | -------------------------------------- |
-| Bank 暂停                                   | governance 或 guardian                 |
-| Bank 解除暂停／更换 guardian                | governance                             |
-| 调整缓冲、解锁与释放参数                    | governance，受各自代码上界限制         |
-| 领取 PF                                     | governance，受暂停和可选出金约束       |
-| rescueToken                                 | governance；不能救援本 Bank 的 ASSET   |
-| 登记新游戏、池/hub 准入、费用和退款时间配置 | 对应合约 governance，受具体接口限制    |
-| Casino finalize / 条件退款                  | permissionless；仍受状态与转账条件约束 |
+### 3.2 LP 损益与预留覆盖
 
-部署为非代理合约，固定代码不等于固定参数或无治理风险。游戏 ID 注册后不能覆盖已注册模块；PoolRegistry、VRFHub 配置等仍有明确授权能力。治理对新 hub 的注册与 pool 准入属于强信任权限：Router 信任获准 hub 的结算输入，Bank 不重算游戏规则和 PF/XP 预算。禁止 rescue 本 Bank 资产并不能推出恶意治理无法损害资金。Safe 结构检查属于发布时校验，不是这些合约永久强制三名 owner 或两份签名。权限边界以[部署验证](../script/release/VerifyGovernanceV15.s.sol)及对应源码为准。
+在没有其他外部资金流的完整回合内：
 
-## 9. Sportsbook 的范围
+```text
+ΔNAV = S − N − Q − P − X
+     = U − G + F − P − X
+     = U − G + L
+```
 
-仓库保留 SportsHub、SportsRiskEngine 与前端/SDK 实现，当前 v1.5 双链发布不包含其部署。它使用赔率签名、授权结果报告者、quorum、挑战与裁决流程，不能复用“每局由 VRF 开奖”的 casino 说明。
+`U − G` 是未扣派彩费用的游戏毛损益，`L` 是 LP 获得的费用留存。不能将全部 `F` 同时列为 LP 收入，又将 `P`、`X` 当作不影响 LP 的额外奖励。
 
-票据退款需市场达到 Voided 等允许状态，没有与 casino 相同的普通用户自助 PendingVRF 超时退款。未来启用需要单独的赔率提供、结果治理、资金与业务验收。代码中的 EIP-712 版本 `1.3` 是签名域语义，不应为文档标注 v1.5 而机械修改。
+由 `P + X ≤ F` 可直接得到：
 
-依据：[SportsHub](../src/core/SportsHub.sol)、[SportsRiskEngine](../src/core/SportsRiskEngine.sol)。
+```text
+N + Q + P + X ≤ G + Q
+```
 
-## 10. 应用、结算服务与索引
+若接受投注时的预留 `r` 覆盖该规则全部有效路径的 `G + Q`，则：
 
-SDK 会校验 release、链和参数，再编排授权及投注；授权回执成功但读节点暂未同步时允许有限只读重试。未知的钱包提交结果不能被当成明确未提交而自动重发，否则可能产生重复投注。
+```text
+N + Q + P + X ≤ G + Q ≤ r
+```
 
-keeper 监听并扫描回合，维护结算队列、重试与持久游标。自动执行降低手工操作负担，但没有固定结算时延保证。链、RPC、VRF、gas 余额或服务故障均会影响时延。
+左侧既包含现金付出，也包含新增外部应付款，正是从押注已经入账的状态到结算结束时的 NAV 消耗。可允许的异常退款也必须被 `r` 覆盖；例如允许全额退回 `S` 时，规则的最大预留不能低于 `S`。
 
-PostgreSQL 保存可回放投影与收据，不替代链上事实。余额/累计值的链读、日曲线/榜单的索引，以及网页示意图必须区分来源。当前索引链重组处理、部署健康判定、数据库灾备与完整告警覆盖仍有待办，详见[复盘报告](audit/RepositoryReview-2026-09-25.zh-CN.md)。
+这项关系给出偿付条件的归纳证明。设开仓后净值为 `NAVhold`，其他头寸预留为 `Rold`，且开仓检查已保证 `NAVhold ≥ Rold + r`。该笔结算最多消耗 `r` 的 NAV，并释放相同预留，故：
 
-## 11. 证据等级与剩余限制
+```text
+NAVafter ≥ NAVhold − r ≥ Rold = Rafter
+```
 
-- 本地单元、差分和不变量测试检查选定输入与约束；绿色结果不是全输入的数学证明。
-- 签名 release 绑定 manifest、ABI、向量和摘要；不能替代发布人身份与私钥保管要求。
-- 浏览器源码验证说明编译源与部署代码的匹配类别；Similar Match、Exact Match 与第三方审计不能混称。
-- 主网八款各一笔单轮验收覆盖真实 VRF、自动结算与账本核对，不覆盖所有参数、多轮退出、全部故障或所有手机钱包。
-- Sepolia 恢复与部分退款演练有各自限定范围；未执行的全量数据库故障或真实超时全额退款不能写为已通过。
-- 实际历史 Bank 义务不会因旧脚本、卷或服务器目录删除而消失。
+证明依赖三个前提：最大预留计算覆盖有效结算与退款路径；实际转账与负债记账符合定义；每笔头寸只结算一次。目标经济版本要求 Router／Bank 结算边界由本次 `G − N` 推导 F，核对其与开仓时冻结的扣减率一致，并汇总全部新增奖励负债。该边界独立校验 `P + X ≤ F`、`P ≤ floor(αP × F)` 与 `X ≤ floor(αX × F)`，由不可改写的回合配置保证最低 LP 留存。只有总预算校验会允许 `F=100、P=100、X=0` 而让 LP 留存归零，因此不足以执行已定义的分配条款。不能只依赖前端或费用展示。保留一个配置完善的费用公式，却允许被授权 hub 绕过该预算，不能建立上述全系统性质。
 
-本文件替代旧白皮书中的单 Hub 路径、单一流动性缓冲、四游戏、holdback 重置和无条件退出等表述。历史版本通过 Git 保留；历史规范与报告仍可作为证据阅读，但必须带其版本和范围。
+### 3.3 期望收益不是盈利保证
+
+以固定实际押注 `U` 的玩法为例，设未扣费用的毛回报率 `rj = E[G] / U`。忽略整数取整，并假设费用比例固定且预算全部使用，则：
+
+```text
+E[玩家净派彩] / U = (1 − h) × rj
+E[LP 回合损益] / U = 1 − rj + αL × h × rj
+E[协议计提] / U = αP × h × rj
+E[奖励计提] / U = αX × h × rj
+```
+
+一个仅用于说明单位的例子：押注 1 USDC，等概率毛派彩为 2 USDC 或 0，`h = 2%`，费用按 LP 50%、协议 25%、奖励 25% 使用。中奖回合的 `F = 0.04`、`N = 1.96`、`P = X = 0.01` USDC，LP 损益为 `−0.98` USDC；未中奖回合 LP 损益为 `+1` USDC。LP 的单回合期望为 `+0.01` USDC，协议与奖励各为 `0.005` USDC。这不是对现有某个玩法或实际费率的承诺。
+
+当提前停止使 `U` 与结果相关时，应计算联合期望 `E[U − G + L]`，不能直接套用固定押注公式。正期望也不保证有限样本盈利：方差、连续高赔付、资本集中、合约缺陷、资产风险和运营成本都会影响实际结果。随机数费用与交易 gas 若由玩家另付，应计入玩家总成本；若由协议补贴，应计入相应经营成本，不能因为它们不在 Bank 的本轮损益式中就忽略。
+
+## 4. 预留、可选出金与退出边界
+
+Casino 接受投注时，先计算规则最大赔付，再将押注转入 Bank 并建立预留。除 `NAV ≥ R` 外，可配置风险缓冲进一步限制新增敞口：
+
+```text
+NAVhold − Rafter ≥ floor(NAVhold × riskReserveBps / 10000)
+```
+
+风险缓冲是接受条件，不是为 LP 保证的最低利润。它减少可用于承接新投注的资本，也不能修复错误的最大赔付函数。
+
+LP 提款需要在出金后继续覆盖未结束头寸，并保留按出金前净值计算的提款缓冲。对普通 LP 资产提款，可理解的上界为：
+
+```text
+withdrawalBuffer = floor(NAVbefore × withdrawalBufferBps / 10000)
+LP 资产提款上界 = max(NAVbefore − R − withdrawalBuffer, 0)
+```
+
+实际操作仍受 LP 份额、授权和可用余额限制。协议或 XP 领取会同时减少余额与相应应付款，其 NAV 影响不同，不能机械套用同一个 LP 提款金额上界；Bank 对此检查出金后的余额、负债与预留关系。
+
+暂停进一步说明了偿付与可用性的区别。Bank 的风险暂停阻止新投注占用资金，也阻止存入、铸造份额、LP 提款、协议费用领取和 XP 领取；已经接受的头寸仍可通过授权结算或退款完成 Debt-Out。这样的权限分离保护已承担的义务，但暂停期间 LP 并没有无条件即时退出权。
+
+未结束头寸、提款缓冲和治理暂停都可能限制退出。评估 LP 权益时，必须同时分析资产是否足够，以及谁能在什么条件下延迟其取回。资金充足本身不保证服务持续可用、结果及时到达或治理及时解除暂停。
+
+## 5. Casino：从固定输入到一次性结算
+
+### 5.1 规则身份与参数
+
+游戏模块提供参数校验、最大赔付计算和确定性结果计算。接受投注时，GameHub 记录玩家、押注规格、参数、资产和 Bank，并绑定游戏及费用配置。模块的 `maxPayout` 与 `resolve` 必须对同一输入使用一致单位和边界；只检查单个常见结果不足以证明最大赔付成立。
+
+现有 `registerGame` 拒绝为已经存在的 `gameId` 再注册模块，模块地址也参与快照哈希。因此治理不能通过覆盖同一映射，直接将旧投注改为另一个模块。新的规则身份应单独注册。地址绑定仍需要结合实际字节码及其可变性检查：如果被注册模块本身具有可升级或外部可变依赖，单纯固定地址并不自动固定全部行为。
+
+快照的意义是建立接受条款与结算输入之间的可核对关系。它覆盖了什么，只能由编码字段、持久化参数以及结算时的读取路径决定，不能由“有一个 snapshotHash”推导为所有治理参数都已冻结。
+
+参考：[IGameModule](../src/core/interfaces/IGameModule.sol)与 [GameHub](../src/core/GameHub.sol) 的 `registerGame`、`placeBet` 和 `finalize`。
+
+### 5.2 随机数与状态转换
+
+Casino 的主要状态路径是：
+
+```text
+接受投注并建立预留 → PendingVRF → RandomReady → Settled
+                              └─ 满足超时条件 → Refunded
+```
+
+规则计算在随机数已经记录后执行。VRFHub 只接受配置的协调器回调，并将请求绑定到发起的业务 hub；GameHub 校验回调来源及请求对应关系。随机数记录与资金结算分开，使回调不必完成整笔复杂支付，也让有有效随机数的投注可由任何调用者推进 `finalize`，无需信任某个 keeper 选择结果。
+
+可验证随机数证明解决的是指定请求与输出之间的来源和生成约束。它不保证提供方、适配器、链或调用预算始终可用。请求、回调、detach 与退款必须共同避免同一投注既退款又支付；晚到或重复回调不应重新打开终态。合约调用失败、gas 不足和资产转账失败也需要按实际状态判断，不能把“有退款函数”解释为任何状态下都可立即退款。
+
+当前状态机只允许仍在等待随机数的投注进入超时退款；进入 `RandomReady` 后走规则计算与结算路径。规则计算抛错或返回特定越界结果时存在异常退款处理，但这不等于所有资源耗尽或外部执行故障都能自动恢复。退款期限的现有治理边界见第 8 节。
+
+随机数请求使用的原生币费用，与 Bank 中的投注资产分开核算。VRFHub 的 `refundCredit` 是调用者名下的原生币退款信用，不等同于投注本金或 LP 份额；合约调用者还须具备接收原生币的能力。
+
+参考：[VRFHub](../src/core/VRFHub.sol)及 GameHub 的 `onRandomWords`、`finalize`、`refund`。
+
+### 5.3 Router 与 Bank 的防线
+
+Router 在开仓时固定 `ownerHub`、池、资产、Bank、玩家、押注和预留。只有该头寸的原始 hub 可以对处于 Held 状态的头寸结算或退款；注册权限后来发生变化，不会将旧头寸的结算主体变成另一 hub。
+
+结算检查包括 `N ≤ G`、`Q ≤ S` 和 `G + Q ≤ r`。终态与 Bank 转账位于同一原子调用中，失败应整体回滚；成功后不能重复支付。目标费用预算校验进一步限制新增 `P`、`X`，从而把第 3 节的经济关系落实为资金边界。
+
+这些限制减少错误金额和重复支付的风险，却不能证明结果本身公平。一个被授权但恶意的 hub 仍可能在合法预留内声称错误结果。因此 hub 准入、模块审阅、随机数适配器选择和治理控制属于安全模型本身，而不是账本之外可以忽略的运营细节。
+
+## 6. Sportsbook：独立资本与现实事件证据
+
+### 6.1 范围与固定赔率票据
+
+体育模型采用赛前固定赔率单关，以足球 1X2、单链、单个批准资产及独立 Sports Bank 为首个边界。滚球、串关、更多衍生盘口和跨 casino 共享资本不属于该模型的默认外推。范围依据[体育业务设计](strategy/sportsbook-production-roadmap.md)。
+
+票据接受时固定玩家、押注、赛事与市场标识、结果选项、市场版本、规则书哈希、赔率、下注与赔付上限、到期时间、nonce 和风险参数。赔率授权使用 EIP-712 域与签名绑定，池标识进一步关联资产和 Bank，防止报价被搬到另一个调用域或改变其适用对象。签名验证只证明获得相应密钥授权，还需要防重放、时间窗口、版本及敞口检查。
+
+若赔率 `o` 使用 WAD 单位，则毛赔付为：
+
+```text
+payout = floor(stake × o / 10^18)
+```
+
+SportsRiskEngine 在接受时检查单票据、市场、结果选项与赛事的限额。累计预留采用保守口径，不默认将看似相反的票据互相抵销。相关事件、市场规则差异和作废条件都可能使简单净额化低估风险。
+
+体育收入取决于接受的赔率组合、真实结果和资产成本。本稿没有在体育票据上增加 casino 的 `h`、`F`、PF/XP 分配，也不能用 casino 的随机分布公式证明体育池盈利。未来任何体育费用或分配规则，都必须进入自己的报价、负债和预留模型。
+
+参考：[SportsHub](../src/core/SportsHub.sol)与 [SportsRiskEngine](../src/core/SportsRiskEngine.sol)。
+
+### 6.2 结果报告、争议与终态
+
+体育事实通过结果报告者的授权与签名门槛进入协议，再经历挑战窗口和必要的裁决。结果记录应关联规则书、证据或理由哈希；同一市场的正常结束、改判、取消和作废应由已声明的规则解释，而不是由资金池自行猜测。
+
+现有实现采用有权限的挑战角色与裁决角色，不能将其描述为所有玩家都能自由发起链上挑战。未被挑战的提案在窗口结束后可被推进为最终结果；受挑战提案依裁决维持、重新提案或作废。已确认结果用于结算原票据，作废市场用于退回押注，原始赔率不会因最终结果而重新报价。
+
+这条证据链的信任假设明显强于“签名有效”：报告者可能共享同一错误数据源，足够多密钥可能被同一主体控制，裁决可能延迟或失当，链外证据也可能不可访问。证据哈希保证内容一致性，不保证证据真实或持续可获得。专业审阅应将签名人、门槛、数据来源、规则书和裁决权作为一个整体，而非将签名数量直接等同于独立性。
+
+长期没有结果或争议长期未决会锁定对应资本。该风险不能借用 casino 的 VRF 超时语义消除；具体赛事终止和异常退款权利需要以体育规则与发布配置为依据，不能假定存在适用于所有未结束市场的自动超时退款。
+
+## 7. 治理权限与信任假设
+
+资金安全由代码约束与授权边界共同构成。Governance 可以配置关键参数和业务授权；Bank guardian 可以启用暂停，但不能解除暂停。只有治理可以解除。治理权限不因使用 Safe 就消失，Safe 主要改变授权签署方式与单密钥风险。
+
+当治理地址是 Safe 时，Bank 的有效调用者应是 Safe 合约；外层交易的 `tx.from` 可能只是执行者，不能据此认定其拥有治理权或独立完成授权。尽调需要核对 Safe owners、threshold、可能的模块及实际内部调用。多个签名设备如果仍由同一人控制，也不代表独立治理主体。
+
+| 依赖或权限          | 设计所依赖的条件                                     | 条件失效的主要后果                             |
+| ------------------- | ---------------------------------------------------- | ---------------------------------------------- |
+| Bank 资产           | 精确转账；可用余额可观测；代币权限风险已识别         | 余额与公式失配，转账或退出受阻                 |
+| 规则模块与 hub 准入 | 最大预留正确；确定性计算符合已接受规则；授权代码可信 | 错误结果可在金额上界内消耗池资产，或无法结算   |
+| 随机数链路          | 协调器、适配器与请求绑定正确；服务具备必要可用性     | 输出来源不成立或等待退款，服务停止             |
+| 体育赔率与结果授权  | 密钥权限和门槛有效；证据与裁决符合规则               | 错价、错误结果或资本长期锁定                   |
+| 治理与 guardian     | 授权主体、变更范围和应急权限可核查                   | 准入或参数被滥用，暂停和退出限制长期持续       |
+| 链、RPC 与自动化    | 链能够推进；读取可信状态；有人提交可执行交易         | 观察延迟和结算延迟，即使合约状态仍满足偿付条件 |
+
+Keeper 是推进工具，不是结果真值或资金授权来源。公开可执行的终态函数降低单个 keeper 的持续可用性要求，但仍需要有人支付 gas、获得状态并提交交易。前端和索引也不能修改链上负债；它们若展示错误链、合约或余额，仍可能误导用户形成错误授权。因此集成方需要验证部署身份，并将事件索引与合约读取相互核对。
+
+参数治理应区分新投注的未来条款与已经接受的债务。新费率和新玩法不应被解释为可以重写旧头寸结果；是否已经固定某项参数，应沿其存储和读取路径判断。时间锁与退出保护可以约束治理变化的速度，但不能在不存在相关机制时依靠治理流程文字提供同等保证。
+
+## 8. 目标设计与已部署版本的边界
+
+上述资金架构沿用现有 SSOT 方向，实际派彩费用预算是本稿对下一经济版本作出的选择。以下差异集中列示，以免将源码、目标模型和某次部署混为一谈：
+
+| 项目               | 版本边界                                                                                                                                   |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Casino PF/XP 预算  | v1.5 的既有路径包含按 used turnover 与 base house edge 计算的预算；本稿选定的 `P + X ≤ F` 和 LP 费用留存规则不能反向当作 v1.5 已具有的性质 |
+| 分配比例与玩法参数 | `λ = αL`、预算来源和范围已经定义；具体比例、各玩法毛回报、费率及资本限额仍需量化校准和独立审阅，本稿没有公布已生效参数                     |
+| 退款期限           | 现有 casino 超时判断读取全局 `refundTimeoutSeconds`，并非为每笔投注快照固定退款截止时间；治理变化可能影响等待中的投注                      |
+| 治理约束           | 不能由 Safe 地址或设计原则推断已有通用 timelock、参数变更宽限期或不受暂停影响的 LP 退出机制                                                |
+| 体育业务           | 存在独立合约与设计材料，不代表生产体育赔率、报告者、裁决与市场生命周期已经运行；v1.5 发布事实表将体育列为未部署                            |
+
+为让费用预算与 LP 下限在资金边界独立执行，目标经济版本采用新的 Bank／Router／Hub 发布单元。旧头寸及旧 PF/XP 仍由原版本处理；LP 在清楚新条款后选择是否进入新池。辅助组件复用须保持旧请求和回调的正确归属。仅更换 Hub 而沿用缺少独立校验的旧资金组合，不具备本稿定义的完整性质。
+
+源码中的机制、历史测试和历史交易各自证明不同范围。本文引用源码用于解释实现接口与差异；只有将部署地址、字节码、配置和相应链上状态连接起来，才能判断某个具体实例具有哪些性质。当前实例的资产、网络和开放状态见[发布事实表](release/STATUS-v1.5.zh-CN.md)，实现风险及历史证据见[系统复盘](audit/RepositoryReview-2026-09-25.zh-CN.md)。
+
+## 9. 外部可验证路径
+
+外部审阅可以沿一笔头寸与一个资金池建立完整证据链，而不必信任网站上的完成状态。
+
+首先确定部署身份：固定网络、区块高度、Bank 与 hub 地址，核对代码版本、Router 绑定、池资产、业务域及治理主体。源码仓库的当前版本并不自动等于该地址的运行代码；如存在代理或可变依赖，还需要一并解析。
+
+随后重建资金池账本：在相同区块读取实际资产余额、协议应付款、全部 XP 应付款、LP 总份额和未结束预留，复算 `NAV` 与可选出金条件。事件用于解释变化，状态读取用于确定该区块的实际余额与负债；汇总全部资金流时，还应识别直接转入、费用返还和 LP 存取。
+
+对 casino，沿投注输入、模块身份、已存参数、费用配置、随机数请求及输出复算 `G`、`Q`、`F`、`N` 和新增 `P`、`X`。目标经济版本需要同时满足预算上界和完整回合的 `ΔNAV` 等式；终态只能出现一次，并应与 Router、Bank 和实际转账一致。对一组投注做抽样可以发现不一致，却不能代替对 `maxPayout` 全部参数域的证明。
+
+对 sports，沿原始赔率签名和域、票据接受时的版本与风险参数、结果提案、挑战或裁决记录，复算最终赔付或退款。应取得哈希对应的规则和证据内容，并核查签名权属于哪些主体。仅看到已结算交易不足以证明赛事结论正确。
+
+LP 技术评估最后应将三个问题分别回答：账本当前是否偿付充足；在极端结果和故障条件下是否仍能履约；持有人何时可以退出。前两个问题需要机制、资本和信任假设成立，第三个还受未结束头寸、暂停及治理控制影响。对这三者分别提供可复算的证据，才足以支持对协议实例的技术判断。
