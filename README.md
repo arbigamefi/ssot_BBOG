@@ -1,6 +1,6 @@
 # ArbiGameFi Monorepo
 
-Fresh deployments use the [v1.5 Safe release workflow](docs/deploy/v15-release.md). Both embedded chains now use v1.5. See the [implementation status](docs/deploy/v15/implementation-status.zh-CN.md) for deployment evidence and remaining mainnet acceptance work.
+Fresh deployments use the [v1.5 Safe release workflow](docs/deploy/v15-release.md). Both embedded chains now use v1.5. See the [current release facts](docs/release/STATUS-v1.5.zh-CN.md) for website availability, deployed capabilities and bounded acceptance evidence. Historical execution details remain in the [implementation log](docs/deploy/v15/implementation-status.zh-CN.md).
 
 This repository is a single Git project that contains both the **ArbiGameFi smart contracts** and the
 **ArbiGameFi frontend workspace**.
@@ -8,17 +8,18 @@ This repository is a single Git project that contains both the **ArbiGameFi smar
 - **Contracts**: Foundry project at the repository root
 - **Frontend**: pnpm workspace under `frontend/`
 
-ArbiGameFi is a **clean-room rewrite** of a bankroll-backed on-chain gaming system, designed
-for **institution-grade, provably correct** behavior.
+ArbiGameFi is a bankroll-backed on-chain gaming system with explicit accounting and settlement boundaries. Tests and deployment evidence support specific properties; they do not establish the absence of defects.
+
+Start with the [project brief](docs/ARBIGAMEFI-EXECUTIVE-BRIEF.zh-CN.md), [product whitepaper](docs/WHITEPAPER.product.zh-CN.md), [technical whitepaper](docs/WHITEPAPER.zh-CN.md), or [independent repository review](docs/audit/RepositoryReview-2026-09-25.zh-CN.md). The whitepaper set is a Review Copy based on v1.5. Public mainnet betting remains disabled in the website; sportsbook is not deployed in the current releases.
 
 Its core design follows a **Single Source of Truth (SSOT)** architecture:
 
-- **Per-asset Bank SSOT (Accounting Truth):** for each supported asset, `NAV = B - PF - XP` and `totalAssets() == NAV`
+- **Per-pool Bank SSOT (Accounting Truth):** for each single-asset Bank, `NAV = B - PF - XP` and `totalAssets() == NAV`
 - **PoolRegistry SSOT (Routing Truth):** pool -> asset/bank/domain/hub permissions
 - **SettlementRouter SSOT (Position Truth):** cross-vertical position lifecycle and Bank authority
 - **GameHub SSOT (Casino Lifecycle Truth):** casino `betId` registry + permissionless `finalize()` / `refund()`
 - **SportsHub SSOT (Sports Lifecycle Truth):** fixed-odds market/ticket lifecycle
-- **VRFHub SSOT (Casino RNG Transport Truth):** request mapping + `detach` + **fulfill never reverts**
+- **VRFHub SSOT (Casino RNG Transport Truth):** request mapping + `detach` + best-effort downstream callback handling
 - **Modules (Game Semantics):** pure, deterministic payout logic (`IGameModule`)
 
 The current implementation additionally specifies **charged VRF fees in native token** ("多退少补") and a **Chainlink VRF v2.5+ Wrapper adapter**
@@ -50,7 +51,7 @@ integration, while preserving SSOT liveness and a minimal trust surface.
 - `src/core/GameHub.sol` — casino bet registry SSOT + VRF orchestration + permissionless `finalize/refund`
 - `src/core/SportsHub.sol` — fixed-odds sports market/ticket lifecycle
 - `src/core/SportsRiskEngine.sol` — sports exposure and risk hash controls
-- `src/core/VRFHub.sol` — VRF transport + request mapping + `detach` + **fulfill never reverts**
+- `src/core/VRFHub.sol` — VRF transport + request mapping + `detach` + best-effort downstream callback handling
 - `src/adapters/*` — optional VRF provider adapters (e.g., Chainlink Wrapper)
 - `src/modules/*` — pure game modules (`IGameModule`)
 - `src/engines/referral/*` — referral registry + deterministic referral engine (pure math)
@@ -71,7 +72,7 @@ integration, while preserving SSOT liveness and a minimal trust surface.
 Start here:
 
 - **Current release process and evidence:** `docs/release/README.md`
-- **Closeout handoff (Milestone 4):** `docs/closeout/README.md`
+- **Historical closeout (Milestone 4; not current deployment instructions):** `docs/closeout/README.md`
 - **Constitution (SSOT):** `docs/constitution/SSOT.v1.3.md`
 - **Executable SSOT:** `docs/constitution/ExecutableSSOT.v1.3.md`
 - **Architecture overview:** `docs/architecture/overview.md`
@@ -166,9 +167,9 @@ forge test --match-path "test/fork/*" -vvv
 
 ## Design highlights
 
-### Accounting SSOT (per asset)
+### Accounting SSOT (per Bank)
 
-For each supported asset `a`:
+For each Bank and its supported asset `a` (multiple pools may use the same asset):
 
 - `B[a]` = `asset.balanceOf(Bank(a))`
 - `PF[a]` = protocol fees payable (not LP backing)
@@ -193,7 +194,7 @@ Referral liabilities are modeled as XP buckets:
 
 - `xpAccrued` (claimable)
 - `xpLocked` (turnover-gated unlock; permissionless)
-- `xpHoldback` (rolling linear vesting; permissionless)
+- `xpHoldback` (aggregate linear vesting; new awards do not extend an active schedule)
 
 Unlock/release are **bucket moves only** (no transfers), so they never block player settlement.
 

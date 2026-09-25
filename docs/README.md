@@ -1,5 +1,13 @@
 # Documentation Index
 
+## Current v1.5 facts and whitepaper entrypoints
+
+- [Release facts and evidence](release/STATUS-v1.5.zh-CN.md) — current dated scope, not a runtime guarantee
+- [Project brief](ARBIGAMEFI-EXECUTIVE-BRIEF.zh-CN.md) — first-time readers
+- [Product whitepaper](WHITEPAPER.product.zh-CN.md) — players, LPs and partners
+- [Technical whitepaper](WHITEPAPER.zh-CN.md) — mechanisms, governance and limits
+- [Independent repository review](audit/RepositoryReview-2026-09-25.zh-CN.md) — findings, checks and outstanding work
+
 ## Current v1.5 deployment
 
 - [Implementation status](deploy/v15/implementation-status.zh-CN.md)
@@ -8,7 +16,7 @@
 
 ## Closeout
 
-- `docs/closeout/README.md` — one-page institutional handoff (proof + release + ops)
+- `docs/closeout/README.md` — historical Milestone 4 handoff; not current deployment instructions
 
 ## Strategy
 
@@ -22,9 +30,9 @@
 
 ## Whitepaper
 
-- `docs/WHITEPAPER.zh-CN.md` — formal Chinese technical whitepaper derived from the current contract implementation
+- `docs/WHITEPAPER.zh-CN.md` — v1.5 Chinese technical Review Copy with English abstract and pinned source baseline
 - `docs/WHITEPAPER.product.zh-CN.md` — product and business whitepaper grounded in the current protocol capabilities
-- `docs/ARBIGAMEFI-EXECUTIVE-BRIEF.zh-CN.md` — short outward-facing executive brief for players, LPs, referrers, investors, and contributors
+- `docs/ARBIGAMEFI-EXECUTIVE-BRIEF.zh-CN.md` — short project Review Copy for players, LPs, referrers, investors, and contributors
 - `docs/WHITEPAPER-PUBLISHING-STANDARD.zh-CN.md` — publishing standard for naming, versioning, and scope separation across the whitepaper set
 
 This repository is designed to be **auditable by construction**. The documentation is part of the SSOT.

@@ -1,6 +1,6 @@
 # v1.5 release process
 
-Follow the [v1.5 release workflow](../deploy/v15-release.md), including its live governance, signer and artifact-consistency gates. See [current deployment evidence](../deploy/v15/implementation-status.zh-CN.md) for what has actually been executed.
+Follow the [v1.5 release workflow](../deploy/v15-release.md), including its live governance, signer and artifact-consistency gates. See [current release facts](STATUS-v1.5.zh-CN.md) for scope and dated verification; the [implementation log](../deploy/v15/implementation-status.zh-CN.md) preserves historical execution evidence.
 
 A release binds a deployment snapshot, signed release digest, frontend manifest, ABI index, golden vectors and release notes. The current public bundles are committed under:
 

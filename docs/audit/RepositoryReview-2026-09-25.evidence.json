@@ -1,0 +1,272 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Read-only repository and publication baseline; not a security certification or launch approval",
+  "observedAtUtc": "2026-09-25T09:00:03.127780+00:00",
+  "sourceCommit": "aaa5c807d09f72e972bfad286901c3bb3e88b9ee",
+  "sourceTree": "0d4fdc906e95a30dbe5493560a7dbb14c3cf2da1",
+  "trackedFiles": 1163,
+  "topLevelCounts": {
+    ".editorconfig": 1,
+    ".github": 11,
+    ".gitignore": 1,
+    ".node-version": 1,
+    "CHANGELOG.md": 1,
+    "CONTRIBUTING.md": 1,
+    "LICENSE": 1,
+    "Makefile": 1,
+    "README.md": 1,
+    "SECURITY.md": 1,
+    "deployments": 1,
+    "deps.lock": 1,
+    "docs": 219,
+    "foundry.toml": 1,
+    "frontend": 809,
+    "lib": 1,
+    "package.json": 1,
+    "script": 25,
+    "src": 49,
+    "test": 36
+  },
+  "ci": [
+    {
+      "conclusion": "",
+      "databaseId": 36115002913,
+      "name": "Nightly Proof Gates",
+      "status": "in_progress",
+      "url": "https://github.com/arbigamefi/ssot_BBOG/actions/runs/36115002913"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 36083011792,
+      "name": "Frontend Docker Images",
+      "status": "completed",
+      "url": "https://github.com/arbigamefi/ssot_BBOG/actions/runs/36083011792"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 36083011763,
+      "name": "Frontend CI",
+      "status": "completed",
+      "url": "https://github.com/arbigamefi/ssot_BBOG/actions/runs/36083011763"
+    },
+    {
+      "conclusion": "success",
+      "databaseId": 36083011754,
+      "name": "CI",
+      "status": "completed",
+      "url": "https://github.com/arbigamefi/ssot_BBOG/actions/runs/36083011754"
+    }
+  ],
+  "publicHealth": [
+    {
+      "url": "https://arbigamefi.com/api/healthz?chainId=8453",
+      "snapshot": {
+        "schemaVersion": 1,
+        "status": "ok",
+        "chainId": 8453,
+        "generatedAt": "2026-09-25T09:00:08.836Z",
+        "checks": {
+          "release": {
+            "status": "ok",
+            "name": "Base",
+            "warnings": []
+          },
+          "keeper": {
+            "status": "ok",
+            "role": "primary",
+            "keeperStatus": "running",
+            "updatedAt": "2026-09-25T09:00:01.309Z",
+            "ageMs": 7527,
+            "queueDepth": 0
+          },
+          "betIndex": {
+            "status": "ok",
+            "source": "postgres",
+            "rows": 1,
+            "durableRequired": true,
+            "durableConfigured": true
+          }
+        }
+      }
+    },
+    {
+      "url": "https://arbigamefi.com/api/healthz?chainId=84532",
+      "snapshot": {
+        "schemaVersion": 1,
+        "status": "ok",
+        "chainId": 84532,
+        "generatedAt": "2026-09-25T09:00:09.746Z",
+        "checks": {
+          "release": {
+            "status": "ok",
+            "name": "Base Sepolia",
+            "warnings": []
+          },
+          "keeper": {
+            "status": "ok",
+            "role": "primary",
+            "keeperStatus": "running",
+            "updatedAt": "2026-09-25T09:00:01.195Z",
+            "ageMs": 8550,
+            "queueDepth": 0
+          },
+          "betIndex": {
+            "status": "ok",
+            "source": "postgres",
+            "rows": 1,
+            "durableRequired": true,
+            "durableConfigured": true
+          }
+        }
+      }
+    }
+  ],
+  "chainRead": {
+    "observedAtUtc": "2026-09-25T09:00:48.120241+00:00",
+    "readOnly": true,
+    "chains": [
+      {
+        "chainId": 8453,
+        "rpc": "https://base.gateway.tenderly.co",
+        "blockNumber": "51768751",
+        "blockHash": "0x0db11960fb9ca1ed77a30befc50d59a8edbecff46a8c1b917de4be2607221d64",
+        "reads": {
+          "usdcPaused": "false",
+          "wethPaused": "true",
+          "usdcNav": "6022414 [6.022e6]",
+          "usdcReserved": "0",
+          "usdcTurnover": "57264 [5.726e4]",
+          "usdcHeld": "8",
+          "usdcSettled": "8",
+          "usdcGovernance": "0x7F0c244e1701B069727670745FD047179Ef8691d",
+          "usdcGuardian": "0x9d239D9e0EE179Bd442497a034002aAf75865ea0",
+          "gameHubGovernance": "0x7F0c244e1701B069727670745FD047179Ef8691d",
+          "safeThreshold": "2",
+          "safeOwners": "[0xf5740675b59F4e2B0af73ee29C2d82932E8aD1a1, 0x2dE12101D2A3C0BC033F2e8594dcda7231211797, 0xc683900c8A5eF53AadAEA6Ebe5ef7609417F24f7]",
+          "defaultHouseEdgeBps": "200",
+          "maxAffiliateDeltaBps": "0",
+          "activeReferralConfigId": "1",
+          "refundTimeoutSeconds": "3600",
+          "riskReserveBps": "1000",
+          "withdrawalBufferBps": "1000",
+          "holdbackVestingSeconds": "86400 [8.64e4]",
+          "minPlayerTurnoverForUnlock": "20000000 [2e7]",
+          "referralConfig": "10000 [1e4]\n10000 [1e4]\n3000\n[0, 10000 [1e4], 0, 0, 0, 0]\n2"
+        },
+        "errors": {}
+      },
+      {
+        "chainId": 84532,
+        "rpc": "https://base-sepolia-rpc.publicnode.com",
+        "blockNumber": "47279284",
+        "blockHash": "0x4d3b63684d3da8d70e6284c87fce7fe90e22f4f1c21191bb9fd142002d56c042",
+        "reads": {
+          "usdcPaused": "false",
+          "wethPaused": "true",
+          "usdcNav": "47230239 [4.723e7]",
+          "usdcReserved": "0",
+          "usdcTurnover": "10223855 [1.022e7]",
+          "usdcHeld": "18",
+          "usdcSettled": "18",
+          "usdcGovernance": "0x7F0c244e1701B069727670745FD047179Ef8691d",
+          "usdcGuardian": "0x9d239D9e0EE179Bd442497a034002aAf75865ea0",
+          "gameHubGovernance": "0x7F0c244e1701B069727670745FD047179Ef8691d",
+          "safeThreshold": "2",
+          "safeOwners": "[0xf5740675b59F4e2B0af73ee29C2d82932E8aD1a1, 0x2dE12101D2A3C0BC033F2e8594dcda7231211797, 0xc683900c8A5eF53AadAEA6Ebe5ef7609417F24f7]",
+          "defaultHouseEdgeBps": "200",
+          "maxAffiliateDeltaBps": "0",
+          "activeReferralConfigId": "1",
+          "refundTimeoutSeconds": "3600",
+          "riskReserveBps": "1000",
+          "withdrawalBufferBps": "1000",
+          "holdbackVestingSeconds": "86400 [8.64e4]",
+          "minPlayerTurnoverForUnlock": "20000000 [2e7]",
+          "referralConfig": "10000 [1e4]\n10000 [1e4]\n3000\n[0, 10000 [1e4], 0, 0, 0, 0]\n2"
+        },
+        "errors": {}
+      }
+    ]
+  },
+  "productionWeb": {
+    "readMethod": "SSH docker inspect, read-only",
+    "revision": "aaa5c807d09f72e972bfad286901c3bb3e88b9ee",
+    "image": "ghcr.io/arbigamefi/ssot-bbog-web@sha256:0d03cf9d64fa7d97a796df9a097b3bdd1701b7cdba3c31b14f51539aabb20eb9"
+  },
+  "freshTests": [
+    {
+      "scope": "contract unit",
+      "command": "FOUNDRY_PROFILE=pr forge test --threads 1 --match-path 'test/unit/*' --summary",
+      "passed": 145,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "scope": "contract diff/invariants",
+      "command": "FOUNDRY_PROFILE=pr forge test --threads 1 --match-path 'test/{diff,invariants}/*' --summary",
+      "passed": 28,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "scope": "web focused",
+      "files": 10,
+      "passed": 63,
+      "failed": 0,
+      "skipped": 0,
+      "cwd": "frontend/apps/web",
+      "command": "pnpm exec vitest run src/features/casino/room/place-bet-action.test.ts src/features/casino/room/feedback.test.ts src/features/casino/room/submission-feedback.test.tsx src/features/referral/referral-attribution.test.ts src/features/referral/referral-link.test.ts src/app-shell/WalletDappHandoff.test.tsx src/app-shell/wallet-dapp-links.test.ts 'src/app/(product)/earn/pageClient.test.tsx' src/app-shell/chain-registry.test.ts src/features/casino/modules/index.test.ts",
+      "testFiles": [
+        "src/features/casino/room/place-bet-action.test.ts",
+        "src/features/casino/room/feedback.test.ts",
+        "src/features/casino/room/submission-feedback.test.tsx",
+        "src/features/referral/referral-attribution.test.ts",
+        "src/features/referral/referral-link.test.ts",
+        "src/app-shell/WalletDappHandoff.test.tsx",
+        "src/app-shell/wallet-dapp-links.test.ts",
+        "src/app/(product)/earn/pageClient.test.tsx",
+        "src/app-shell/chain-registry.test.ts",
+        "src/features/casino/modules/index.test.ts"
+      ]
+    },
+    {
+      "scope": "SDK focused",
+      "files": 4,
+      "passed": 112,
+      "failed": 0,
+      "skipped": 0,
+      "cwd": "frontend/packages/ssot",
+      "command": "pnpm exec vitest run -c vitest.config.ts src/sdk/approval.test.ts src/sdk/txPipeline.test.ts src/sdk/errors.test.ts src/sdk/__tests__/integration.test.ts",
+      "testFiles": [
+        "src/sdk/approval.test.ts",
+        "src/sdk/txPipeline.test.ts",
+        "src/sdk/errors.test.ts",
+        "src/sdk/__tests__/integration.test.ts"
+      ]
+    },
+    {
+      "scope": "ops/release tools",
+      "command": "python3 -m unittest discover -s test/ops -v",
+      "passed": 28,
+      "failed": 0,
+      "skipped": 0
+    }
+  ],
+  "limits": [
+    "No live fork test in this review",
+    "No real wallet signature or new bet",
+    "No production or chain mutation",
+    "No full line-by-line game payout-table audit",
+    "No new formal verification or third-party security certification",
+    "Historical acceptance receipts referenced, not reverified individually in this review",
+    "Health checks are point-in-time observations",
+    "One public RPC per chain pinned to a block; no dual-RPC verification in this review"
+  ],
+  "reviewRoles": {
+    "writer": "root Codex agent",
+    "contractReviewer": "protocol_retro",
+    "productReviewer": "product_retro",
+    "operationsReviewer": "operations_retro",
+    "independenceScope": "Separate task contexts and non-writing content reviewers; not a third-party audit organization",
+    "finalContentReviews": "All three recommend acceptance within their assigned scope after factual corrections; no product remediation or launch approval implied"
+  }
+}
