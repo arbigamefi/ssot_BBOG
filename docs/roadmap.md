@@ -1,200 +1,293 @@
-# Roadmap
+# ArbiGameFi Product and Protocol Roadmap
 
-This roadmap defines **milestones** with measurable acceptance criteria.
+> Revision: 2026.09-r2 · Design status: Design Draft · Editorial status: Review Copy
+>
+> Updated: 2026-09-26 · Language: en, with Chinese orientation · Readers: product, protocol and operations teams
+>
+> 本路线图定义目标产品与实施顺序。P0–P5 是产品阶段，不是合约版本，也不是已完成工作的编号。
 
-## Milestone 0 — SSOT v1.0 baseline (delivered)
+ArbiGameFi is a single-brand B2C casino and sportsbook built on a settlement
+foundation that can support multiple isolated risk domains. This roadmap turns
+that [product commitment](strategy/fullstack-product-architecture.md) into
+user outcomes, design decisions and exit criteria. It complements the
+[product whitepaper](WHITEPAPER.product.zh-CN.md) and
+[technical whitepaper](WHITEPAPER.zh-CN.md).
 
-**Delivered**
-- Bank SSOT accounting (`NAV = B - PF - XP`, `NAV >= R`)
-- Hub SSOT bet lifecycle (global betId; permissionless finalize/refund)
-- VRFHub fulfill never reverts
-- Referral liabilities as XP buckets (accrued/locked/holdback)
-- Permissionless unlock (turnover-gated) + rolling linear vesting for holdback
-- Skyline pricing + delta budgets (per-bet pricing snapshots)
-- Unit tests + invariant baseline (A/B4/C1/C2/D1/E1/P1)
+Existing code is an implementation starting point. A stage may already have
+evidence for some requirements; it is not complete merely because a contract,
+screen or script exists. Release facts belong in the
+[version status](release/STATUS-v1.5.zh-CN.md), and findings belong in the
+[repository review](audit/RepositoryReview-2026-09-25.zh-CN.md).
 
-**Acceptance**
-- `forge test` passes
-- `forge test --match-path test/invariants/*` passes consistently at the PR profile
+## Direction and sequencing
 
-## Milestone 1.5 — Proof hardening (institution-grade)
+The product must work for four participants together: players who understand
+what they sign, LPs who receive a defined allocation for underwriting risk,
+referrers whose rewards have a sustainable source, and operators who can fund
+reliable service. Financial correctness and usable journeys are both necessary.
 
-This milestone converts the SSOT baseline into an institution-grade proof gate.
+```mermaid
+flowchart LR
+  P0[P0 Product and economic decisions] --> P1[P1 Complete casino journey]
+  P0 --> P2[P2 LP and referral economy]
+  P1 --> P3[P3 Bounded operation and growth]
+  P2 --> P3
+  P0 -. parallel design .-> P4[P4 Independent sportsbook release]
+  P3 --> P5[P5 Validated expansion]
+  P4 --> P5
+```
 
-**Plan:** see `docs/plan/Milestone-1.5-Proof-Hardening.md`.
+P1 usability work that does not depend on economic decisions can proceed while
+P0 is being resolved. Sportsbook research, provider and rulebook work can run in
+parallel with P1–P3; its launch has its own funding, risk and operations criteria.
+The phase numbers express product priorities, not a requirement that every task
+wait for all lower-numbered work.
 
-**Goals**
-- Add reference model differential testing (ADR-0009)
-- Complete missing audit-critical invariants + run policy (ADR-0010)
-- Add two additional pure game modules without new trust surface (ADR-0011)
-- Wire PR vs nightly CI proof gates
+This is a proposed staging of the existing product direction. Economics and LP
+rights precede broad capital acquisition and channel growth because risk
+compensation and service funding need a defined source. The original sportsbook
+MVP priority continues in parallel; P4 is its independent release decision,
+not an instruction to postpone all sports work until P3 is complete.
 
-**Acceptance**
-- PR gate: unit + invariants (~256 runs) + diff (small profile) all pass
-- Nightly gate: invariants (≥ 1024 runs) + diff (stateful, multi-seed) are stable
+Keep the first product focused. Additional games, chains, live sports betting,
+white-label portals and a protocol token are not prerequisites for a successful
+casino and initial fixed-odds sportsbook.
 
-## Milestone 2.0 — Multi-Asset Foundation (base substrate)
+## P0 — Product and economic decisions
 
-This milestone makes multi-asset support a **base property**, per SSOT v1.1 and ADR-0012.
+**Outcome:** all participants can understand how the product creates and
+distributes value, and implementers have a coherent target to build.
 
-**Plan:** see `docs/plan/Milestone-2.0-MultiAsset-Foundation.md`.
+**Design work**
 
-**Goals**
-- Support multiple ERC20 assets concurrently
-- One immutable `Bank(asset)` per asset (custody + SSOT accounting per asset)
-- Single global Hub (global betId namespace) routing to per-asset banks
-- Upgrade invariants to run per asset + cross-asset isolation checks
+- Confirm the casino scope and the sportsbook scope: pre-match fixed-odds
+  singles, football 1X2 first, one chain, one approved asset and a separate
+  Sports Bank for its first public version.
+- Give LP risk compensation an explicit allocation. Compare candidate B
+  (distribute only part of actual payout deductions) with candidate A
+  (retain an LP allocation before distributing a turnover-based budget).
+  Candidate C (periodic net-revenue sharing) remains a later option because it
+  introduces loss carryforward, timing and share-entry fairness questions.
+- Specify the chosen fee basis, LP allocation, protocol/referral split,
+  rounding, unassigned rewards and treatment of refunds. These are proposed
+  changes, not an assertion that existing referral parameters implement them.
+- Model each casino payout distribution, net payouts, external liabilities,
+  capital utilisation, tail losses and service costs. Sports uses a separate
+  model for pricing quality, correlated event exposure and result disputes.
+- Define rights at bet acceptance: which terms are snapshotted, how changes
+  affect pending obligations, and the notice or delay needed for high-impact
+  governance changes. Separate emergency pause from ordinary policy changes.
 
-**Acceptance**
-- Place/settle/refund bets in at least 2 assets in E2E tests
-- A1–A4 and B4 invariants pass **per asset**
-- Cross-asset isolation tests pass (no wrong-asset transfers)
+**Exit criteria**
 
-## Milestone 2.1 — Multi-Roll Framework (parity substrate)
+- The selected economic model and unresolved alternatives have a decision
+  record; rates are selected from analysis rather than inferred from old code.
+- Expected returns, variance, liquidity constraints and operating costs are
+  presented separately. No LP allocation is described as a guaranteed APY.
+- Reserve and liability bounds are derived for the proposed distribution,
+  including losing bets, partial refunds, rounding and concurrent obligations.
+- The product, technical paper and implementation plan agree on the model and
+  on what remains proposed. Necessary contract changes and migrations are
+  identified before money is accepted under the new terms.
 
-This milestone upgrades the bet lifecycle to support multi-roll + refund + stopGain/stopLoss, per
-SSOT v1.1 and ADR-0013.
+## P1 — Complete casino journey
 
-**Plan:** see `docs/plan/Milestone-2.1-MultiRoll-Framework.md`.
+**Outcome:** a new or returning player can finish a round, understand its result
+and recover progress after interruption.
 
-**Goals**
-- StakeSpec (`amountPerRoll`, `betCount`, `stopGain`, `stopLoss`) becomes first-class
-- Module resolve returns `usedTurnover` enabling `refundAmount = stake - usedTurnover`
-- Canonical RNG expansion is implemented and shared across modules + reference model
-- Diff tests upgraded to multi-roll semantics
+**Product work**
 
-**Acceptance**
-- Unit + E2E tests cover refund and early-stop cases
-- Invariants and diff tests remain stable (PR + nightly profiles)
+- Let visitors inspect rules, stake limits, fees and example receipts before
+  connecting a wallet. Keep eight existing game families consistent in their
+  transaction and result experience.
+- Make wallet entry prominent on mobile and support wallet-browser and
+  external-wallet paths. Preserve the intended page and network across the
+  connection flow.
+- Distinguish approval, bet signature, chain confirmation, randomness,
+  settlement and eligible refund. Reuse sufficient allowance and explain the
+  next signature after approval.
+- Preview net payout, total stake, per-round/batch semantics, request fees and
+  wallet gas without conflating them. Require confirmation of material quote
+  changes.
+- Recover an uncertain submitted transaction before permitting a duplicate;
+  restore pending rounds on reload. Provide useful responses to rejection,
+  wrong network, insufficient funds, pauses and delayed reads.
+- Make automatic settlement the normal path and a verifiable receipt the end
+  of every completed round. Keep manual debt-out as a recovery path.
 
-## Milestone 2.2 — Keno module (refactored default parity)
+**Exit criteria**
 
-This milestone adds Keno (refactored default N=40, M=10) as a pure SSOT module.
+- First-use and returning-user scenarios pass on desktop and actual iOS and
+  Android wallet paths within a documented supported set; installation and
+  rejection fallbacks are also understood.
+- A successful approval followed by slow reads does not mislabel the bet as
+  failed, and an unknown submission does not trigger an automatic second bet.
+- Single rounds, multi-round stops and unused-stake refunds show the correct
+  used stake, payout, refund and costs; UI calculations reconcile to receipts.
+- Normal automatic settlement and defined recovery scenarios are exercised
+  against the release being evaluated. Each evidence claim names its scope.
+- Primary flows, important errors and help content are localized and usable
+  with keyboard, screen reader and small-screen layouts.
 
-**Plan:** see `docs/plan/Milestone-2.2-Keno-Module.md`.
+## P2 — LP and referral economic loop
 
-**Goals**
-- Add deterministic Keno module with precomputed gain factors (ADR-0017)
-- Add E2E tests and game documentation
+**Outcome:** capital providers and growth partners can understand their returns,
+rights and costs using the same reconciled economy.
 
-**Acceptance**
-- `forge test` includes at least one Keno E2E case (hit + fee-on-payout)
-- Keno parameters and reserve semantics are documented
+**Product and protocol work**
 
-## Milestone 2.3 — Charged VRF fee (native) (refactored parity)
+- Implement the P0 economic decision with accounting and worst-case exposure
+  checks, an explicit deployment/migration plan and independent review.
+- Explain each pool's asset, domain, exposure, fee allocation and governance
+  before LP entry. Show deposit/redeem previews and the reason for withdrawal
+  limits.
+- Report pool NAV, reserved exposure, external liabilities and current
+  withdrawal capacity separately. Calculate investor performance only with
+  sufficient cash-flow and share-transfer history; label incomplete data.
+- Keep game GGR, LP net-value changes, protocol revenue and referral accruals
+  as distinct metrics. Do not chart cumulative game activity as pool equity.
+- Make attribution, accrual, qualification, vesting and claims understandable.
+  Define the source of each reward and its treatment when no referrer exists.
+- Evaluate protocol cost coverage, referral contribution and LP compensation
+  under volume and outcome scenarios; identify any subsidy separately.
 
-This milestone introduces a native-token VRF fee model to match refactored v0.7.8
-"多退少补" behavior while preserving SSOT liveness.
+**Exit criteria**
 
-**Plan:** see `docs/plan/Milestone-2.3-VRF-Fee-Adapter.md`.
+- The implemented fee and liability flows match the chosen model, including
+  loss outcomes and integer rounding. Financial changes receive relevant
+  invariant/differential coverage and independent review.
+- LP entry, holding, transfer, exit and temporary withdrawal restrictions have
+  reconciled examples. A limited history cannot produce an asserted full-life
+  investor return.
+- Referral examples reconcile from eligible activity through liabilities to
+  payment, without spending the LP allocation twice.
+- The launch budget names the initial capital, risk limits, operating costs
+  and channel allocation. Broad LP acquisition and paid incentives wait for
+  a functioning economic loop.
 
-**Goals**
-- `Hub.placeBet` becomes payable and requires quoted VRF fee
-- Deterministic fee quote endpoint for UIs/SDKs
-- Best-effort overpayment refunds with claimable refund credit
-- No privileged oracle-fee withdrawal backdoor
+## P3 — Bounded operation and public growth
 
-**Acceptance**
-- All tests updated to pay VRF fees and remain green
+**Outcome:** the product serves real users within a capacity that the team can
+fund, observe and support, then grows on measured results.
 
+**Product and operations work**
 
-## Milestone 2.4 — Chainlink VRF Adapter (Wrapper v2.5+)
+- Select initial assets, pools, limits and audience from liquidity and service
+  capacity. Align frontend availability with intended contract access; a web
+  switch is not a contract permission boundary.
+- Instrument the journey from discovery through wallet connection, approval,
+  bet acceptance and settlement, respecting the user's consent choices.
+- Define service targets and observation windows before the bounded run:
+  transaction completion, settlement delay, recovery time, index freshness
+  and incident response. Record results, not promises without measurements.
+- Validate release identity, dependency health, fallback RPCs, keeper funding,
+  recoverable indexing and backups. An HTTP response alone is not proof of a
+  healthy settlement service.
+- Publish concise onboarding, fees, rules, risks, status and proof guides.
+  Make marketing calls to action match what a user can currently do.
+- Implement responsible-use controls with an explicit enforcement scope;
+  browser-only preferences must not imply an account-wide or on-chain block.
 
-This milestone connects SSOT v1.2 charged VRF fee semantics to a real Chainlink VRF request path
-(v2.5+ Wrapper), while preserving SSOT axioms (fulfill never reverts; debt-out liveness; no backdoor).
+**Exit criteria for expanding the audience or limits**
 
-**Plan:** see `docs/plan/Milestone-2.4-Chainlink-Adapter.md`.
+- P1 and P2 requirements needed for the chosen scope are met; any narrower
+  pilot boundary is explicit, with no broad-launch claims.
+- The approved run stays within its funding and exposure limits, with observed
+  completion and recovery performance evaluated against the chosen targets.
+- Incident ownership and recovery procedures have relevant exercises, and
+  unresolved failures have a disposition before scale increases.
+- User feedback and funnel data identify actionable friction. Contribution,
+  LP outcomes and service costs are measured alongside conversion; higher
+  turnover alone is not success.
 
-**Goals**
-- Introduce `IVRFAdapter` + Chainlink wrapper adapter callback-forwarding flow
-- Add adapter-mode proof gates:
-  - system-level adapter diff (`StatefulSystemDiffAdapter`)
-  - adapter ETH/credit accounting inside `StatefulSystemDiffAdapter`
+## P4 — Independent sportsbook product release
 
-**Acceptance**
-- Unit tests for adapter path pass
-- Adapter-mode diff is stable under PR and nightly profiles
+**Outcome:** users can place a pre-match fixed-odds ticket and follow it to a
+well-defined event result, payment or permitted void/refund.
 
-## Milestone 2.5 — Real-network readiness (fork + deploy)
+The scope and specialized controls continue in the
+[sportsbook roadmap](strategy/sportsbook-production-roadmap.md). This phase
+does not inherit casino randomness, economics or acceptance evidence.
 
-**Goals**
-- Prefer official Chainlink libraries where possible (reduce encoding drift)
-- Add `test/fork/*` (optional, auto-skip without RPC env) to validate against real wrapper/coordinator addresses
-- Add `script/*` deployment + configuration scripts and runbooks (addresses, gas policy, confirmations, callbackGas)
-- Generate a release artifact lock (digest + signature) for deployment snapshots
-- Document operational parameters and safety checks
+**Product and protocol work**
 
-**Acceptance**
-- `forge test` remains green in local mode
-- Fork tests pass when RPC env vars are provided (and are skipped otherwise)
-- Deployment runbook produces a reproducible configuration for at least one target network
-- Release lock (digest + signature) can be generated and verified offline; tag builds enforce strict presence
+- Complete market discovery, valid signed-odds preview, ticket placement,
+  immediate ticket tracking and a readable final receipt.
+- Finalize the initial football 1X2 rulebook, cancellation/postponement rules,
+  odds provider, result evidence and challenge/arbitration responsibilities.
+- Use the dedicated Sports Bank with approved exposure limits by market,
+  outcome and event; model correlated tickets and delayed settlement.
+- Establish the sportsbook's own revenue allocation and LP compensation;
+  casino fee-on-payout assumptions cannot be silently reused for fixed odds.
+- Operate automatic result and ticket terminalization with fallback operators,
+  monitoring, key custody and retained result evidence.
 
-## Milestone 2.6 — Additional module expansion (optional)
+**Exit criteria**
 
-**Goals**
-- Add additional modules beyond the refactored parity set, without new trust surface
-- Document reserve upper bounds and deterministic parameter encoding for all modules
-- Maintain cross-module invariant and diff-test stability
+- Signed quotes bind market identity, rule version, outcome, odds and validity
+  constraints; expired or changed quotes require the intended reconfirmation.
+- Realistic winning, losing, disputed and voided market cases reconcile
+  tickets, reserves, liabilities and payments.
+- Provider/evidence, access, custody, bankroll and risk policies satisfy the
+  existing sportsbook release requirements; no casino result substitutes for
+  them.
+- The target deployment completes an end-to-end bounded canary with its final
+  parameters and automatic terminalization evidence.
 
-**Acceptance**
-- E2E tests for each new module
-- Invariant + diff suites remain stable (PR + nightly profiles)
+Live betting, parlays, props, futures and shared casino/sports bankrolls remain
+outside this first release. Their later consideration requires new pricing,
+rulebook, risk and operational analysis.
 
-## Milestone 3.0 — SettlementRouter + Vertical Hubs (pre-mainnet architecture)
+## P5 — Validated expansion
 
-**Plan:** see `docs/plan/Milestone-3.0-SettlementRouter-VerticalHubs.md`.
+**Outcome:** new scope serves demonstrated demand without weakening the product
+already in use.
 
-**Goals**
-- Introduce `PoolRegistry` so `poolId`, not only `asset`, becomes the risk/accounting domain.
-- Introduce `SettlementRouter` as the only Bank settlement authority.
-- Evolve current `Hub` into `GameHub` for VRF casino games.
-- Preserve existing casino semantics through `GameHub -> SettlementRouter -> Bank`.
-- Create the substrate for future `SportsHub` without adding sportsbook lifecycle to casino modules.
+Potential work includes additional pre-match markets, a new asset or chain,
+additional casino modules and selected integrations. White-label services or
+new economic instruments require a separate business case rather than being
+assumed from architectural extensibility.
 
-**Acceptance**
-- Casino bets complete end-to-end through the router.
-- Same-asset pools are isolated by `poolId`.
-- Router authorization and no-double-settlement invariants pass.
-- Existing VRF, diff, adapter, and Bank accounting tests remain green.
+**Entry and exit criteria for each expansion**
 
-## Milestone 3.x — Full feature parity migration from refactored protocol
+- Name the user need and evidence that the existing product does not meet it.
+- Estimate capital, data, support and operating costs and how they are funded.
+- Specify the new trust and risk boundaries, migration impact and effects on
+  existing obligations.
+- Complete the domain-specific design, implementation review and bounded
+  acceptance before presenting the capability as available.
 
-**Goals**
-- Migrate all economic and gameplay features (multi-roll games, stopGain/stopLoss, referral v2 semantics as needed)
-- Maintain SSOT proof gates while closing the migration checklist
-- Improve observability (SSOT view + event indexing for monitoring)
+## How progress is measured
 
-**Acceptance**
-- Migration checklist in `docs/migration/refactored-mapping.md` is fully satisfied
-- Stable invariants and reproducible payout verification for all migrated features
+| Question                       | Metric or evidence                                                                      | Interpretation boundary                           |
+| ------------------------------ | --------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| Can a player complete a round? | Accepted bets reaching a paid or eligible refunded terminal state; stage-level failures | Approval success is not bet or settlement success |
+| Can the service recover?       | Pending age, settlement-delay distribution, recovery time and index freshness           | Report the chain, window and observed conditions  |
+| Is capital compensated?        | LP value changes reconciled with cash flows, liabilities and capital utilisation        | GGR and protocol fees are not investor returns    |
+| Is growth sustainable?         | Retained participants, channel cost, contribution and service cost                      | Subsidies and donations are reported separately   |
+| Is sports risk controlled?     | Event/outcome exposure, quote age, disputed-result duration and payment reconciliation  | Casino data does not establish sports readiness   |
 
-## Milestone 4 — Operational hardening
+Thresholds and observation windows are set for the intended launch scope before
+evaluation. The roadmap supplies the questions and evidence needed; it does not
+invent customer counts, return rates or launch dates.
 
-**Goals**
-- CI gating for unit + invariant tests
-- Release process (CHANGELOG, tags, reproducible builds, locked artifacts)
-- [x] Release bundle includes `frontend-manifest.json` and `golden-vectors.json` (frontend zero-inference + bytes correctness)
-- Fork validation as a release gate (real-network sanity)
-- Monitoring metrics inventory (contract-first, event + view-call based)
-- Alert rules inventory (metrics → actionability)
-- Emergency runbooks (VRF, solvency, config drift, finalization)
-- Incident + postmortem templates (digest-aware)
-- Closeout summary suitable for audit/ops handoff
+## Starting point and document roles
 
-**Acceptance**
-- CI runs on every PR and nightly
-- Documented release process and emergency runbooks
-- Tag builds enforce a strict release lock and notes consistency (`STRICT=1 make release-check`)
-- Tag builds also enforce fork validation (`test/fork/*`) for the target chain (ADR-0023)
-- Release handoff artifact can be produced as a single archive (`make release-package`)
-- Audit handoff bundle can be produced as a single archive (`make audit-package`)
-- Monitoring metrics inventory is published (`docs/ops/metrics.md`)
-- Alert rules inventory is published (`docs/ops/alerts.md`)
-- Incident + postmortem templates are published (`docs/ops/incident-templates.md`)
-- Ops runbooks are published:
-  - VRF + refundCredit (`docs/ops/runbooks/vrf-refundcredit.md`)
-  - Bank solvency (`docs/ops/runbooks/bank-solvency.md`)
-  - Pause + config drift (`docs/ops/runbooks/pause-config-drift.md`)
-  - Game finalization/diff anomalies (`docs/ops/runbooks/game-finalization-diffs.md`)
-- Closeout summary is published (`docs/closeout/README.md`)
+The [2026-09-25 release snapshot](release/STATUS-v1.5.zh-CN.md) records an
+eight-game casino deployment foundation, a closed public mainnet web betting
+entry and no sportsbook in that release. The
+[accounting review](audit/RepositoryReview-2026-09-25.zh-CN.md) identifies why
+the proposed LP compensation work cannot be reduced to a copy change. These
+are dated implementation facts, not the project's long-term product boundary.
+
+Immediate work is to settle P0 choices while continuing independent P1 fixes,
+then implement and validate the chosen economics for P2. P3 expansion depends
+on the complete loop. Sportsbook design and evidence preparation can proceed
+in parallel without claiming a release before P4 criteria are met.
+
+Earlier “Milestone 0–4” identifiers describe historical engineering plans and
+remain meaningful in their original documents and Git history. They are not
+renumbered into these product phases, and passing an old milestone does not
+declare a new phase complete. For actual deployment instructions use the
+[current release workflow](deploy/v15-release.md); this roadmap is a design and
+sequencing document.

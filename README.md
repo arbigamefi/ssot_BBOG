@@ -1,16 +1,27 @@
 # ArbiGameFi Monorepo
 
-Fresh deployments use the [v1.5 Safe release workflow](docs/deploy/v15-release.md). Both embedded chains now use v1.5. See the [current release facts](docs/release/STATUS-v1.5.zh-CN.md) for website availability, deployed capabilities and bounded acceptance evidence. Historical execution details remain in the [implementation log](docs/deploy/v15/implementation-status.zh-CN.md).
+ArbiGameFi is designed as a single-brand B2C casino/sportsbook product built on
+a protocol-grade settlement kernel. It serves players, LPs, referrers and the
+operators of this deployment. The [product architecture commitment](docs/strategy/fullstack-product-architecture.md)
+sets that direction and keeps future third-party infrastructure an option to
+validate against real demand.
 
-This repository is a single Git project that contains both the **ArbiGameFi smart contracts** and the
-**ArbiGameFi frontend workspace**.
+This repository contains the **ArbiGameFi smart contracts** and the
+**ArbiGameFi frontend workspace**:
 
 - **Contracts**: Foundry project at the repository root
 - **Frontend**: pnpm workspace under `frontend/`
 
-ArbiGameFi is a bankroll-backed on-chain gaming system with explicit accounting and settlement boundaries. Tests and deployment evidence support specific properties; they do not establish the absence of defects.
+The whitepapers are project design guides: they explain the intended product,
+mechanisms, principles and choices that should guide implementation. The
+[project roadmap](docs/roadmap.md) turns that design into phases, dependencies
+and acceptance conditions. Economic and governance proposals marked as design
+drafts remain proposals; they do not imply approval or availability.
 
-Start with the [project brief](docs/ARBIGAMEFI-EXECUTIVE-BRIEF.zh-CN.md), [product whitepaper](docs/WHITEPAPER.product.zh-CN.md), [technical whitepaper](docs/WHITEPAPER.zh-CN.md), or [independent repository review](docs/audit/RepositoryReview-2026-09-25.zh-CN.md). The whitepaper set is a Review Copy based on v1.5. Public mainnet betting remains disabled in the website; sportsbook is not deployed in the current releases.
+For implemented and deployed scope, use the dated [release facts](docs/release/STATUS-v1.5.zh-CN.md).
+The [v1.5 release workflow](docs/deploy/v15-release.md) covers deployments, and the
+[implementation record](docs/deploy/v15/implementation-status.zh-CN.md) retains
+execution evidence. The project’s design scope is broader than any one release.
 
 Its core design follows a **Single Source of Truth (SSOT)** architecture:
 
@@ -69,27 +80,31 @@ integration, while preserving SSOT liveness and a minimal trust surface.
 
 ## Documentation
 
-Start here:
+Choose the entrypoint that matches your question:
 
-- **Current release process and evidence:** `docs/release/README.md`
-- **Historical closeout (Milestone 4; not current deployment instructions):** `docs/closeout/README.md`
-- **Constitution (SSOT):** `docs/constitution/SSOT.v1.3.md`
-- **Executable SSOT:** `docs/constitution/ExecutableSSOT.v1.3.md`
-- **Architecture overview:** `docs/architecture/overview.md`
-- **Threat model:** `docs/audit/threat-model.md`
-- **Invariant-to-code map:** `docs/audit/invariants-map.md`
-- **ADR log:** `docs/adr/README.md`
-- **Roadmap:** `docs/roadmap.md`
-- **Action plans:** `docs/plan/README.md`
-- **Migration notes (from refactored):** `docs/migration/refactored-mapping.md`
-- **Runbooks:** `docs/runbooks/*`
+| Document                                                                    | Purpose                                                                                             |
+| --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| [Project brief](docs/ARBIGAMEFI-EXECUTIVE-BRIEF.zh-CN.md)                   | A short introduction to the project’s purpose, audience, value and direction.                       |
+| [Product and business whitepaper](docs/WHITEPAPER.product.zh-CN.md)         | The user experience, product principles, economic design and open choices that guide what to build. |
+| [Technical whitepaper](docs/WHITEPAPER.zh-CN.md)                            | The intended architecture, funds and authority boundaries, invariants and technical evolution.      |
+| [Project roadmap](docs/roadmap.md)                                          | Implementation phases, dependencies, decision points and acceptance conditions.                     |
+| [Release facts](docs/release/STATUS-v1.5.zh-CN.md)                          | What has been implemented, deployed, opened and accepted at a stated time.                          |
+| [Repository retrospective](docs/audit/RepositoryReview-2026-09-25.zh-CN.md) | Findings, impact, validation and rework from a bounded review.                                      |
 
-- Ops monitoring metrics: `docs/ops/metrics.md`
-- Ops alert rules: `docs/ops/alerts.md`
-- Ops incident templates: `docs/ops/incident-templates.md`
-- Ops runbooks: `docs/ops/runbooks/README.md`
-- Frontend design SSOT: `docs/design/README.md`
-- Frontend engineering SSOT: `docs/frontend/INDEX.md`
+Design guides and implementation evidence have different roles. The whitepapers
+may describe future mechanisms and unresolved choices; the facts table and
+retrospective retain dated evidence without turning the whitepapers into audit
+reports. See the [writing and publishing standard](docs/WHITEPAPER-PUBLISHING-STANDARD.zh-CN.md)
+for design-state labels and the [documentation index](docs/README.md) for the full catalog.
+
+Engineering and operations references:
+
+- [Protocol constitution](docs/constitution/SSOT.v1.3.md), [executable invariants](docs/constitution/ExecutableSSOT.v1.3.md), and [architecture overview](docs/architecture/overview.md)
+- [Architecture decisions](docs/adr/README.md) and [implementation action plans](docs/plan/README.md)
+- [Release process](docs/release/README.md), [operations runbooks](docs/ops/runbooks/README.md), and [incident templates](docs/ops/incident-templates.md)
+- [Frontend design references](docs/design/README.md) and [frontend engineering index](docs/frontend/INDEX.md)
+- [Threat model](docs/audit/threat-model.md) and [invariant-to-code map](docs/audit/invariants-map.md)
+- [Historical Milestone 4 closeout](docs/closeout/README.md) — historical handoff rather than current deployment instructions
 
 ## Quickstart
 

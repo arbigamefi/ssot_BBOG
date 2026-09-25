@@ -1,16 +1,31 @@
 # Documentation Index
 
-## Current v1.5 facts and whitepaper entrypoints
+## Project design and direction
 
-- [Release facts and evidence](release/STATUS-v1.5.zh-CN.md) — current dated scope, not a runtime guarantee
-- [Project brief](ARBIGAMEFI-EXECUTIVE-BRIEF.zh-CN.md) — first-time readers
-- [Product whitepaper](WHITEPAPER.product.zh-CN.md) — players, LPs and partners
-- [Technical whitepaper](WHITEPAPER.zh-CN.md) — mechanisms, governance and limits
-- [Independent repository review](audit/RepositoryReview-2026-09-25.zh-CN.md) — findings, checks and outstanding work
+ArbiGameFi is designed as a single-brand B2C casino/sportsbook product backed by
+a protocol-grade settlement kernel. The whitepapers define the project’s goals,
+design principles, mechanisms and choices; the roadmap turns them into phases
+of implementation. Source code and release evidence show progress against that
+design. They do not replace it.
 
-## Current v1.5 deployment
+| Document                                                                              | Use it to understand                                                                                |
+| ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| [Project brief](ARBIGAMEFI-EXECUTIVE-BRIEF.zh-CN.md)                                  | The project’s purpose, audience, value and direction in a short introduction.                       |
+| [Product and business whitepaper](WHITEPAPER.product.zh-CN.md)                        | User value, product experience, economic design and the choices that should guide implementation.   |
+| [Technical whitepaper](WHITEPAPER.zh-CN.md)                                           | Architecture, funds and authority boundaries, invariants, technical choices and intended evolution. |
+| [Project roadmap](roadmap.md)                                                         | The implementation sequence, dependencies, decisions and acceptance conditions for each phase.      |
+| [Release facts and evidence](release/STATUS-v1.5.zh-CN.md)                            | Dated implementation, deployment, availability and acceptance facts for the v1.5 release.           |
+| [Repository retrospective](audit/RepositoryReview-2026-09-25.zh-CN.md)                | Findings, impact, validation and rework within that review’s scope and date.                        |
+| [Whitepaper writing and publishing standard](WHITEPAPER-PUBLISHING-STANDARD.zh-CN.md) | The roles of these documents, design-state labels and editorial conventions.                        |
 
-- [Implementation status](deploy/v15/implementation-status.zh-CN.md)
+New economic or governance proposals may appear as **design drafts** or
+**open decisions**. Their inclusion does not establish approval, deployment or
+public availability. Read the facts table for release status and the retrospective
+for review evidence; the whitepapers do not repeat those reports.
+
+## v1.5 implementation and deployment evidence
+
+- [Implementation record](deploy/v15/implementation-status.zh-CN.md) — execution history and evidence
 - [Supported deployment workflow](deploy/v15-release.md)
 - [Release process](release/README.md)
 
@@ -20,7 +35,7 @@
 
 ## Strategy
 
-- `docs/strategy/fullstack-product-architecture.md` — fullstack commitment: protocol-grade settlement kernel, lean B2C casino/sportsbook product, optional future infrastructure
+- [Fullstack product architecture commitment](strategy/fullstack-product-architecture.md) — product positioning and complexity boundaries that guide the whitepapers and implementation: protocol-grade settlement kernel, lean B2C casino/sportsbook product, optional future infrastructure
 
 ## Release materials
 
@@ -28,14 +43,9 @@
 - [Release acceptance checklist](release/checklist.md)
 - [Current deployment evidence and pending closeout](deploy/v15/implementation-status.zh-CN.md)
 
-## Whitepaper
-
-- `docs/WHITEPAPER.zh-CN.md` — v1.5 Chinese technical Review Copy with English abstract and pinned source baseline
-- `docs/WHITEPAPER.product.zh-CN.md` — product and business whitepaper grounded in the current protocol capabilities
-- `docs/ARBIGAMEFI-EXECUTIVE-BRIEF.zh-CN.md` — short project Review Copy for players, LPs, referrers, investors, and contributors
-- `docs/WHITEPAPER-PUBLISHING-STANDARD.zh-CN.md` — publishing standard for naming, versioning, and scope separation across the whitepaper set
-
-This repository is designed to be **auditable by construction**. The documentation is part of the SSOT.
+Design documents guide what should be built. Constitutions and ADRs record
+constraints and decisions; code, tests, release artifacts and reviews provide
+implementation evidence. Keep those roles distinct when updating the documentation.
 
 ## Constitution & invariants
 
@@ -74,7 +84,6 @@ This repository is designed to be **auditable by construction**. The documentati
 
 ## Project management
 
-- `docs/roadmap.md` — roadmap, milestones, acceptance criteria
 - `docs/plan/README.md` — implementation-grade action plans (PR-sized work breakdowns)
 - `docs/plan/Milestone-3.1-SportsHub-MVP.md` — sportsbook MVP implementation plan on top of SettlementRouter
 - `docs/migration/refactored-mapping.md` — mapping of refactored features to the current frontend design
