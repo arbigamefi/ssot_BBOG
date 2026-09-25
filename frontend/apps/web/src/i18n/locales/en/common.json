@@ -937,9 +937,11 @@
         }
       },
       "feedback": {
+        "viewApproval": "View approval transaction",
+        "notSubmitted": "The bet has not been sent: the pre-submit check failed. Try again shortly; any confirmed approval will be reused.",
         "paused": "This pool has paused new bets. Wait for it to reopen; existing bets can still be checked or settled.",
         "canceled": "You canceled this wallet request. Review the amount before starting again.",
-        "approvalPending": "Approval was confirmed, but the node has not returned the new allowance yet. Wait briefly, then check again.",
+        "approvalPending": "Approval is confirmed, but the bet has not been sent: the node has not confirmed the new allowance yet. Try again shortly; the confirmed approval will be reused.",
         "allowance": "Token allowance is too low. Review and approve only the amount needed for this bet.",
         "balance": "Your token balance does not cover the total stake. Reduce the amount or number of rounds.",
         "gas": "You need more ETH on this network for the randomness fee and transaction gas.",

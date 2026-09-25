@@ -28,6 +28,17 @@ describe("toDomainError", () => {
     expect(toDomainError(cyclic).code).toBe("UNKNOWN");
   });
 
+  it.each([
+    ["ERC20: transfer amount exceeds allowance", "INSUFFICIENT_ALLOWANCE"],
+    ["ERC20: insufficient allowance", "INSUFFICIENT_ALLOWANCE"],
+    ["ERC20: transfer amount exceeds balance", "INSUFFICIENT_BALANCE"]
+  ])("recognizes decoded token revert reason %s", (reason, code) => {
+    const err = makeBaseError("ContractFunctionExecutionError", {
+      cause: { name: "ContractFunctionRevertedError", data: { errorName: "Error", args: [reason] } }
+    });
+    expect(toDomainError(err).code).toBe(code);
+  });
+
   // ——— User rejected ———
   it("maps UserRejectedRequestError → USER_REJECTED", () => {
     const err = makeBaseError("UserRejectedRequestError");

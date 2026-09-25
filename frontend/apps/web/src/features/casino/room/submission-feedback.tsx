@@ -45,7 +45,7 @@ export function BetSubmissionFeedback({
 }) {
   const t = useTranslations();
   if (!error) return null;
-  const hash = error.details?.txHash;
+  const hash = error.details?.approvalTxHash ?? error.details?.txHash;
   const chainId = error.details?.chainId;
   const href =
     typeof hash === "string" && /^0x[0-9a-fA-F]{64}$/.test(hash) && typeof chainId === "number"
@@ -77,7 +77,11 @@ export function BetSubmissionFeedback({
             target="_blank"
             rel="noopener noreferrer"
           >
-            {t("casino.room.feedback.viewTransaction")}
+            {t(
+              error.details?.approvalTxHash
+                ? "casino.room.feedback.viewApproval"
+                : "casino.room.feedback.viewTransaction"
+            )}
           </a>
         ) : ["unconfirmed", "unknown", "connection", "reverted"].includes(
             getBetErrorKind(error)

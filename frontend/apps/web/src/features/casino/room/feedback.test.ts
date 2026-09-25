@@ -29,6 +29,17 @@ describe("game room feedback", () => {
     expect(isBetSubmissionUnconfirmed({ code: "TX_STATUS_UNKNOWN" })).toBe(true);
     expect(getStepperErrorMessage({ code: "RISK_IN_PAUSED" }, undefined, t)).toContain("暂停");
   });
+  it("only promises no submission when the pipeline proves the wallet was never called", () => {
+    expect(
+      getStepperErrorMessage(
+        { code: "UNKNOWN", details: { transactionSubmitted: false } },
+        undefined,
+        t
+      )
+    ).toContain("投注尚未发送");
+    expect(getStepperErrorMessage({ code: "UNKNOWN" }, undefined, t)).not.toContain("投注尚未发送");
+    expect(isBetSubmissionUnconfirmed({ code: "TX_STATUS_UNKNOWN" })).toBe(true);
+  });
   it("uses a safe fallback without a translator or error", () => {
     expect(getStepperErrorMessage({ code: "USER_REJECTED", message: "raw" }, "fallback")).toBe(
       "fallback"

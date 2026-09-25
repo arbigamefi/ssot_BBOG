@@ -87,6 +87,18 @@ export function toDomainError(err: unknown): DomainError {
         // Custom error decoded from ABI (e.g. SolvencyViolation, BetNotFound)
         return mapRevert(errorName, errorArgs);
       }
+      // Match only decoded revert reasons, never arbitrary provider message text.
+      const decodedReason = errorName === "Error" ? errorArgs?.[0] : revertErr.reason;
+      if (
+        ["ERC20: transfer amount exceeds allowance", "ERC20: insufficient allowance"].includes(
+          decodedReason as string
+        )
+      ) {
+        return mapRevert("ERC20InsufficientAllowance");
+      }
+      if (decodedReason === "ERC20: transfer amount exceeds balance") {
+        return mapRevert("ERC20InsufficientBalance");
+      }
       // String revert (e.g. "ERC20: transfer amount exceeds allowance")
       // Use the top-level shortMessage which includes the reason string.
       const reason = anyErr?.shortMessage ?? revertErr.shortMessage ?? revertErr.message;
