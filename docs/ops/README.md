@@ -1,4 +1,4 @@
-> Historical reference: this document includes pre-v1.5 deployment observations or commands. Those tools/artifacts were retired from the working tree. Use the [current deployment workflow](../deploy/v15-release.md) for operations; retrieve historical files from Git at `a5d7d3fa50d4457f1476de0ac7fc3bd83ca49273`.
+> Start with the [current release facts](../release/STATUS-v1.5.zh-CN.md) and [v1.5 deployment workflow](../deploy/v15-release.md). Individual runbooks may describe requirements or historical exercises rather than controls already deployed.
 
 # Ops
 
@@ -28,4 +28,4 @@
 
 - [Incident + postmortem templates](incident-templates.md)
 
-> Tip: always record the **release digest** from `deployments/release-latest-v13.json` in incident notes.
+> Tip: always record the **release digest** from the chain-specific verified `release-latest-v15.json` bundle in incident notes.

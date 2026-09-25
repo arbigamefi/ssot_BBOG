@@ -7,7 +7,7 @@ This repository is **SSOT-governed**: changes are only accepted if they preserve
 ## Core rules
 
 1. **Update SSOT first.**
-   - If your change affects behavior, update `docs/constitution/SSOT.v1.0.md` and/or `docs/constitution/ExecutableSSOT.v1.0.md`.
+   - Identify the applicable clauses in the router/pool specifications (`docs/constitution/SSOT.v1.3.md` and `docs/constitution/ExecutableSSOT.v1.3.md`) and document behavioral changes with their tests/ADR. Current deployment and disclosure scope is indexed in `docs/release/STATUS-v1.5.zh-CN.md`; historical version numbers are not a claim of v1.5 implementation parity.
 2. **Add/adjust ADRs for architectural changes.**
    - Add a new file under `docs/adr/` using the ADR format in `docs/adr/README.md`.
 3. **Tests are non-negotiable.**
@@ -17,11 +17,13 @@ This repository is **SSOT-governed**: changes are only accepted if they preserve
 ## Development
 
 Install dependencies:
+
 ```bash
-forge install foundry-rs/forge-std --no-commit
+make deps
 ```
 
 Run tests:
+
 ```bash
 forge test
 forge test --match-path "test/invariants/*" -vvv

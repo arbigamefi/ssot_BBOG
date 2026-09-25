@@ -93,31 +93,18 @@ KEEPER_ENV_FILE=backup.env pnpm -C frontend keeper:dev
 
 ## Production
 
-Production deployment templates live in:
+The supported v1.5 production path uses CI-built immutable Docker images and
+`frontend/compose.production.yml`. Follow the [keeper production runbook](../../../docs/ops/runbooks/casino-keeper-production.md)
+and the [Docker release runbook](../../deploy/docker/README.md). Retired standalone
+systemd units are not supported deployment instructions.
 
-```text
-frontend/deploy/casino-keeper/
-```
-
-Use `arbigamefi-casino-keeper@.service` with separate `primary.env` and
-`backup.env` files. The full procedure is documented in:
-
-```text
-docs/ops/runbooks/casino-keeper-production.md
-```
-
-Local wrappers use the same deploy-env boundary: they read only
+Local wrappers read only
 `frontend/deploy/casino-keeper/${KEEPER_ENV_FILE:-primary.env}` and do not fall
 back to repo-root `.env` or `apps/web/.env.local`.
 
-Primary and backup should run on different hosts or regions, with different
-keeper EOAs and RPC providers. Build before starting the systemd unit:
-
-```bash
-pnpm -C frontend install --frozen-lockfile
-pnpm -C frontend keeper:build
-pnpm -C frontend/apps/keeper test
-```
+The `backup-local` profile is a rehearsal facility, not evidence of deployed
+cross-host failover. Separate hosts, keys, RPC providers, recovery and monitoring
+need their own verification before a high-availability claim.
 
 The keeper always re-reads `getBet(betId)` before broadcasting and only calls
 `finalize` when the bet state is `RandomReady`.

@@ -1,239 +1,62 @@
-# ArbiGameFi 执行摘要
+# ArbiGameFi 项目简介
 
-> 项目：`ArbiGameFi`
+> 文档编号：AGF-BRIEF-2026.09-r1 · 状态：Review Copy
 >
-> 底层架构：`SSOT`
+> 项目：ArbiGameFi · 架构：SSOT · 发布基线：v1.5
 >
-> 文档系列：`Executive Brief`
+> 代码基线：`aaa5c807d09f72e972bfad286901c3bb3e88b9ee`
 >
-> 文档编号：`AGF-BRIEF-2026.03`
+> 日期：2026-09-25 · 语言：zh-CN，附英文摘要
 >
-> 状态：`External Draft`
->
-> 语言：`zh-CN`
->
-> 日期：`2026-05-18`
->
-> 用途：`short outward-facing summary for players, LPs, referrers, investors, advisors, and contributors`
->
-> 关联文档：`docs/WHITEPAPER.zh-CN.md` · `docs/WHITEPAPER.product.zh-CN.md`
+> 读者：首次了解项目的玩家、LP、推广伙伴与技术合作方
 
-## 一句话
+## 一句话说明
 
-ArbiGameFi 是一个单品牌 B2C 的全链上 casino 与 sportsbook 产品，底层由协议级 SSOT 结算内核支撑，把玩家资金、注单生命周期、随机数费用、体育投注结果与推荐负债收敛成可验证的链上事实。
+**ArbiGameFi 是一个通过钱包访问、游戏规则和结算凭证可在链上核对的 casino 项目。**
 
-## One-line Summary (EN)
+当前 v1.5 包含 Dice、Coin Toss、Roulette、Keno、Plinko、Sic Bo、Slots、Baccarat 八款游戏，部署于 Base 与 Base Sepolia。测试网面向体验与反馈；主网已完成八款各一笔真实单轮验收，网站主网投注仍未开放。Sportsbook 代码保留，但未包含在当前部署中。
 
-ArbiGameFi is a single-brand B2C on-chain casino and sportsbook product built on a protocol-grade SSOT settlement kernel that turns player funds, bet lifecycle, randomness fees, sportsbook outcomes, and referral liabilities into verifiable on-chain facts.
+这一开放状态是 2026-09-25 的快照，后续以[发布事实表](release/STATUS-v1.5.zh-CN.md)、实际网络和池状态为准。
 
-## 我们为什么存在
+## 玩家怎样使用
 
-传统博彩平台的问题不只是“中心化”，而是：
+选择网络和游戏，准备该网络的游戏资产及 ETH，核对金额、赔率与费用，再连接钱包签署交易。授权不足时先授权 Bank，然后另行签署投注。授权成功不等于已经下注。
 
-- 钱先交给平台托管
-- 结果和返佣由平台解释
-- 资金池、活动和未开奖风险共用黑盒账本
-- 出现异常时，用户很难知道何时能退款、谁有权限退款
+下注资金进入 Bank 智能合约；随机数到达并完成结算后支付净派彩，满足条件的部分退款可随结算返还。仍在等待随机数且已满足超时条件时，可走本金退款路径。款项支付到记录的玩家钱包。用户无需向平台账户预充值，平台不保管私钥，但智能合约持有资金期间仍有代码、治理与资产风险。
 
-ArbiGameFi 的核心命题是：
+可在 `/portfolio/activity` 查看回合凭证，结合 VRF 请求、结果和结算交易核对。网络、随机数和 keeper 状态会影响等待时间；不承诺即时结算或无条件退款。
 
-> 让概率游戏的关键真相不再依赖平台解释，而依赖链上可审计的事实源。
+## 三类参与者
 
-## 我们到底做了什么
+| 参与者   | 可以做什么                           | 需要理解什么                                           |
+| -------- | ------------------------------------ | ------------------------------------------------------ |
+| 玩家     | 选择八款游戏、检查报价与结果         | 投注可能损失；gas 和 VRF 请求费独立于投注金额          |
+| LP       | 向单一资产 Bank 提供流动性并持有份额 | 收益不保证；提现受准备金、缓冲和暂停约束               |
+| 推广伙伴 | 分享链接、核对绑定和奖励             | 本地归因不等于链上绑定；奖励可能尚未解锁、成熟或可领取 |
 
-ArbiGameFi 当前首先是一个玩家可以直接使用的 B2C 产品；它之所以可信，是因为下面这套协议栈把资金和结果边界放到了链上：
+**庄家优势不能直接当作 LP 回报。** 协议费与推荐负债从 NAV 中扣除，LP 净值取决于实际派彩和负债计提。技术白皮书中的公平二选一示例在理想条件下 LP 期望为零，仍承担波动。LP 补偿与商业可持续性需要继续评估，当前不承诺固定 APY 或稳定正收益。
 
-- 每资产独立 Bank，负责托管、准备金和净值
-- SettlementRouter，负责把结算权路由到对应垂直 Hub
-- GameHub，负责 casino 注单生命周期与快照
-- SportsHub，负责 sportsbook 市场、票据、结果与风险路径
-- VRFHub，负责 casino 随机数费用、请求状态和退款信用
-- 纯函数 casino 游戏模块，负责开奖语义，不碰资金
-- 推荐与返利系统，先形成链上负债，再按规则成熟和提取
+## 怎样核对可信度
 
-当前产品主入口优先打磨的标准房间包括：
+- 查看公开源码、部署地址、release 身份和合约源码匹配类别。
+- 查看单个 Bank 的净资产、预留和负债，避免用全站总额替代某个池的能力。
+- 查看真实投注、VRF 和最终支付凭证；区分链上事实与可能延迟的索引统计。
+- 查看治理与退出条件：关键 casino 治理由 2/3 Safe 控制，guardian 仅能暂停。该门槛不证明三个独立组织共同治理。
 
-- Dice
-- Coin Toss
-- Roulette
-- Keno
+现有测试和小额验收不是无漏洞证明，也不是第三方审计认证。已完成什么、未覆盖什么均列入[系统复盘](audit/RepositoryReview-2026-09-25.zh-CN.md)。
 
-v1.3 合约层还保留了 Baccarat、Plinko、Sic Bo、Slots 等扩展模块，但这些不应削弱当前第一优先级：先把现有房间的下注、VRF、自动结算和结果回执体验做顺。
+## 接下来做什么
 
-## 为什么可信
+先统一首页和资料的事实，再完善新用户与真实手机钱包流程、推广网络归因和 LP 指标；主网公开前继续处理经济评估、流动性及运行条件。当前可围绕测试网体验和可验证机制招募反馈，不宣传尚未开放的功能或未来代币权益。
 
-ArbiGameFi 的可信度不是来自一句“provably fair”口号，而是来自它的账本结构。
+## English overview
 
-### 1. 资金不混池
+ArbiGameFi is a wallet-accessible casino project with on-chain rules and inspectable settlement receipts. The v1.5 release includes eight casino games on Base and Base Sepolia. Testnet experience and feedback are the current public focus. Mainnet acceptance covers one real single-round bet per game, while public mainnet betting remains disabled in the website. Sportsbook code is not deployed in the current release.
 
-每种资产对应一个独立 Bank。协议不把不同资产揉进一个共享池子，也不允许在 v1.x 中把已注册资产重新映射到另一家 Bank。
+Users control their wallets, but betting and LP deposits transfer assets into Bank smart contracts. Gas, randomness fees, governance, asset behavior and conditional exits remain relevant. House-edge deductions are not equivalent to LP yield: protocol and referral liabilities reduce NAV. No fixed return, token entitlement, unconditional refund or security certification is promised.
 
-### 2. 负债是显式记账的
+## 继续阅读
 
-Bank 不只记录托管余额，还显式记录：
-
-- 协议费用负债
-- 推荐/返利外部负债
-- 未开奖注单准备金
-
-因此协议能解释：
-
-- 钱在哪里
-- 欠谁多少
-- 为未开奖最坏情况预留了多少
-
-### 3. 新增风险可以停，债务流出不能停
-
-当系统异常时，ArbiGameFi 可以暂停新增下注和可选出金，但：
-
-- 已有注单仍可 `finalize`
-- 超时注单仍可 `refund`
-
-这让协议在异常情况下依然保留用户退出路径。
-
-### 4. 随机数收费和退款也可解释
-
-玩家支付的 VRF 原生币费用并不是黑盒。
-
-- 报价可重建
-- 多付可即时退回
-- 退不回会形成可领取退款信用
-
-## 用户为什么会来
-
-对玩家来说，ArbiGameFi 应该被理解为：
-
-- 钱包直连
-- 无托管
-- 房间可玩
-- 结果可查
-- 异常有退款路径
-
-玩家不会因为“底层设计很优雅”而留下来，但会因为以下组合而留下来：
-
-- 房间体验顺滑
-- 结算明确
-- 结果可信
-- 钱不需要交给平台托管
-
-## LP 为什么会关心
-
-LP 关心的不是炫酷 UI，而是风险边界。
-
-ArbiGameFi 对 LP 的价值在于：
-
-- 每资产隔离
-- 准备金显式
-- 外部负债显式
-- 可选出金受明确规则限制
-
-这使它更像一套可审计 bankroll 系统，而不是黑盒赌场池子。
-
-## 渠道和推荐方为什么会关心
-
-ArbiGameFi 的推荐系统不是“后台表格发佣金”，而是链上可解释的预算与负债路径：
-
-- 首触绑定
-- skyline 增量定价
-- 链上预算拆分
-- 可审计返利负债
-
-这能显著降低渠道归因和返佣对账争议。
-
-## 商业模式是什么
-
-在当前代码能力下，ArbiGameFi 已经具备基础商业模式：
-
-- house edge
-- 协议费用负债确认
-- 推荐预算分配
-- LP bankroll
-
-也就是说，它不需要先有代币，才能建立商业闭环。
-
-长期来看，进一步的商业延展可以包括：
-
-- 房间运营分润
-- 白标或集成分发
-- 更丰富的 LP 产品层包装
-
-但这些属于产品和 BD 层的扩展，不应被写成当前已实现事实，也不应倒逼当前前端为未验证的第三方 operator 需求承担复杂度。
-
-## 增长飞轮是什么
-
-ArbiGameFi 最自然的增长飞轮是：
-
-1. 少数几个旗舰房间做出可信又顺滑的体验
-2. 玩家留下来，形成稳定下注流水
-3. 流水推动协议费用与推荐预算
-4. 渠道与推荐方更愿意分发
-5. LP 更愿意提供资金支持更多房间
-6. 更多房间和更强流动性反过来提升玩家体验
-
-这个飞轮要成立，前提不是“多做页面”，而是同时成立四件事：
-
-- 房间真的好玩
-- 结算真的稳定
-- 推荐真的清楚
-- LP 真的信账
-
-## 当前最现实的路线
-
-从项目推进顺序上，最现实的路径不是“先讲宏大叙事”，而是：
-
-### 第一阶段：把房间体验做对
-
-重点是：
-
-- 先选结果
-- 再选金额
-- 最后确认下注
-- 明确等待、结算或退款反馈
-
-### 第二阶段：把首页做成获取层
-
-首页应负责：
-
-- 价值主张
-- Featured rooms
-- 轻量实时证明
-- 清晰 CTA
-
-而不是协议后台首页。
-
-### 第三阶段：再放大审计层与渠道层
-
-当玩家路径跑顺后，再放大：
-
-- `/bets`
-- `/liquidity`
-- `/claims`
-- `/account`
-- 推荐体系
-
-这些是信任与运营工具，不应抢第一转化动作。
-
-## 当前不该误讲的事
-
-目前不应对外写成既成事实的内容包括：
-
-- 已经存在的协议代币
-- 已经存在的 DAO 治理体系
-- 已经成熟的全球合规能力
-- 已经建立的大规模白标分发生态
-
-这些都可以讨论，但现在还不是协议已经兑现的能力。
-
-## 最准确的定位
-
-ArbiGameFi 最准确的定位不是“又一个链上赌场站点”，也不是当前阶段的白标 operator 平台，而是：
-
-> 一个以协议级 SSOT 结算内核为底层、面向玩家、LP 与推荐方的非托管链上 casino/sportsbook 产品。
-
-它最长期的价值，不在于某一个房间，而在于三层能力同时成立：
-
-- 可信资金层
-- 可扩展结算层
-- 可分发增长层
-
-如果这三层都能持续做实，ArbiGameFi 才有机会在未来开放更多外部集成；在此之前，最重要的不是讲平台故事，而是把自营 B2C 产品的真实下注、真实结算、真实 LP 信任和真实渠道转化跑通。
+- [产品与商业白皮书](WHITEPAPER.product.zh-CN.md)：参与路径、费用、LP 与推荐、阶段计划。
+- [技术白皮书](WHITEPAPER.zh-CN.md)：资金、状态机、权限、经济公式与限制。
+- [发布事实表](release/STATUS-v1.5.zh-CN.md)：当前版本、网络、配置与证据。
