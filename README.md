@@ -12,16 +12,17 @@ This repository contains the **ArbiGameFi smart contracts** and the
 - **Contracts**: Foundry project at the repository root
 - **Frontend**: pnpm workspace under `frontend/`
 
-The whitepapers are project design guides: they explain the intended product,
-mechanisms, principles and choices that should guide implementation. The
-[project roadmap](docs/roadmap.md) turns that design into phases, dependencies
-and acceptance conditions. Economic and governance proposals marked as design
-drafts remain proposals; they do not imply approval or availability.
+Read the [project brief](docs/ARBIGAMEFI-EXECUTIVE-BRIEF.zh-CN.md) for a short
+introduction. The [business whitepaper](docs/WHITEPAPER.product.zh-CN.md) supports
+cooperation and resource decisions; the
+[technical whitepaper](docs/WHITEPAPER.zh-CN.md) explains mechanisms and trust
+assumptions. The [product roadmap](docs/roadmap.md) presents intended capability.
 
-For implemented and deployed scope, use the dated [release facts](docs/release/STATUS-v1.5.zh-CN.md).
-The [v1.5 release workflow](docs/deploy/v15-release.md) covers deployments, and the
-[implementation record](docs/deploy/v15/implementation-status.zh-CN.md) retains
-execution evidence. The project’s design scope is broader than any one release.
+Internal priorities and design choices are maintained in the
+[project master plan](docs/strategy/project-master-plan.zh-CN.md). For actual
+release scope use the dated [release facts](docs/release/STATUS-v1.5.zh-CN.md)
+and [v1.5 release workflow](docs/deploy/v15-release.md). A selected next-version
+economic design is not a claim that existing pools already use those terms.
 
 Its core design follows a **Single Source of Truth (SSOT)** architecture:
 
@@ -80,22 +81,22 @@ integration, while preserving SSOT liveness and a minimal trust surface.
 
 ## Documentation
 
-Choose the entrypoint that matches your question:
+Choose the entrypoint that matches your decision:
 
-| Document                                                                    | Purpose                                                                                             |
-| --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| [Project brief](docs/ARBIGAMEFI-EXECUTIVE-BRIEF.zh-CN.md)                   | A short introduction to the project’s purpose, audience, value and direction.                       |
-| [Product and business whitepaper](docs/WHITEPAPER.product.zh-CN.md)         | The user experience, product principles, economic design and open choices that guide what to build. |
-| [Technical whitepaper](docs/WHITEPAPER.zh-CN.md)                            | The intended architecture, funds and authority boundaries, invariants and technical evolution.      |
-| [Project roadmap](docs/roadmap.md)                                          | Implementation phases, dependencies, decision points and acceptance conditions.                     |
-| [Release facts](docs/release/STATUS-v1.5.zh-CN.md)                          | What has been implemented, deployed, opened and accepted at a stated time.                          |
-| [Repository retrospective](docs/audit/RepositoryReview-2026-09-25.zh-CN.md) | Findings, impact, validation and rework from a bounded review.                                      |
+| Document                                                                    | Purpose                                                                                  |
+| --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| [Project brief](docs/ARBIGAMEFI-EXECUTIVE-BRIEF.zh-CN.md)                   | Understand the project and follow a player, capital, business or technical reading path. |
+| [Project and business whitepaper](docs/WHITEPAPER.product.zh-CN.md)         | Assess the market, user proposition, economics, operating and cooperation case.          |
+| [Technical whitepaper](docs/WHITEPAPER.zh-CN.md)                            | Assess design rationale, mechanisms, capital constraints and trust assumptions.          |
+| [Product roadmap](docs/roadmap.md)                                          | Follow intended product capabilities and their sequencing.                               |
+| [Project master plan](docs/strategy/project-master-plan.zh-CN.md)           | Internal choices, resource focus, hypotheses and work packages.                          |
+| [Release facts](docs/release/STATUS-v1.5.zh-CN.md)                          | Check implementation, deployment, availability and acceptance at a stated time.          |
+| [Repository retrospective](docs/audit/RepositoryReview-2026-09-25.zh-CN.md) | Investigate findings and rework from a bounded review.                                   |
 
-Design guides and implementation evidence have different roles. The whitepapers
-may describe future mechanisms and unresolved choices; the facts table and
-retrospective retain dated evidence without turning the whitepapers into audit
-reports. See the [writing and publishing standard](docs/WHITEPAPER-PUBLISHING-STANDARD.zh-CN.md)
-for design-state labels and the [documentation index](docs/README.md) for the full catalog.
+See the [documentation index](docs/README.md) for economic design, GTM,
+reader-specific material roles and the full engineering catalog. Players,
+LPs, partners and project investors have different information needs; providing
+pool liquidity does not itself create equity or token rights in the project.
 
 Engineering and operations references:
 

@@ -1,27 +1,33 @@
 # Documentation Index
 
-## Project design and direction
+## Start with your question
 
-ArbiGameFi is designed as a single-brand B2C casino/sportsbook product backed by
-a protocol-grade settlement kernel. The whitepapers define the project’s goals,
-design principles, mechanisms and choices; the roadmap turns them into phases
-of implementation. Source code and release evidence show progress against that
-design. They do not replace it.
+ArbiGameFi is building a single-brand wallet-native casino and sportsbook.
+External materials are organized by the decision a reader needs to make.
 
-| Document                                                                              | Use it to understand                                                                                |
-| ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| [Project brief](ARBIGAMEFI-EXECUTIVE-BRIEF.zh-CN.md)                                  | The project’s purpose, audience, value and direction in a short introduction.                       |
-| [Product and business whitepaper](WHITEPAPER.product.zh-CN.md)                        | User value, product experience, economic design and the choices that should guide implementation.   |
-| [Technical whitepaper](WHITEPAPER.zh-CN.md)                                           | Architecture, funds and authority boundaries, invariants, technical choices and intended evolution. |
-| [Project roadmap](roadmap.md)                                                         | The implementation sequence, dependencies, decisions and acceptance conditions for each phase.      |
-| [Release facts and evidence](release/STATUS-v1.5.zh-CN.md)                            | Dated implementation, deployment, availability and acceptance facts for the v1.5 release.           |
-| [Repository retrospective](audit/RepositoryReview-2026-09-25.zh-CN.md)                | Findings, impact, validation and rework within that review’s scope and date.                        |
-| [Whitepaper writing and publishing standard](WHITEPAPER-PUBLISHING-STANDARD.zh-CN.md) | The roles of these documents, design-state labels and editorial conventions.                        |
+| Document                                                               | Main reader and purpose                                                                                                 |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| [Project brief](ARBIGAMEFI-EXECUTIVE-BRIEF.zh-CN.md)                   | First-time readers: understand the project and choose a relevant next step. Complete Chinese and English introductions. |
+| [Project and business whitepaper](WHITEPAPER.product.zh-CN.md)         | Strategic, channel and professional capital partners: assess the market, operating and cooperation case.                |
+| [Technical whitepaper](WHITEPAPER.zh-CN.md)                            | Researchers, technical diligence and integration teams: assess mechanisms and trust assumptions, then inspect evidence. |
+| [Product roadmap](roadmap.md)                                          | Users and partners following intended capability and product direction.                                                 |
+| [Release facts](release/STATUS-v1.5.zh-CN.md)                          | Readers checking dated implementation, deployment, availability and acceptance.                                         |
+| [Repository retrospective](audit/RepositoryReview-2026-09-25.zh-CN.md) | Readers investigating findings, impact and rework in a bounded review.                                                  |
 
-New economic or governance proposals may appear as **design drafts** or
-**open decisions**. Their inclusion does not establish approval, deployment or
-public availability. Read the facts table for release status and the retrospective
-for review evidence; the whitepapers do not repeat those reports.
+A next-version mechanism is not a current participation term. Players need
+product rules and help; LPs need specific pool terms and risk disclosures;
+channel partners need attribution and compensation terms. They do not all need
+the same whitepaper, and LP participation is not project equity investment.
+
+## Internal project direction
+
+- [Project master plan](strategy/project-master-plan.zh-CN.md): audience, product thesis, decisions, resource focus and hypotheses to validate.
+- [Economic design](strategy/economic-design.md): selected next-version allocation, alternatives, calibration and migration boundaries.
+- [GTM execution plan](strategy/go-to-market.md): work packages, demand research and operating decisions.
+- [Writing and publishing standard](WHITEPAPER-PUBLISHING-STANDARD.zh-CN.md): reader-specific scope, claims, evidence and editorial review.
+
+These internal planning documents guide execution. They are distinct from the
+external cooperation case, mechanism explanation and release evidence.
 
 ## v1.5 implementation and deployment evidence
 
@@ -43,9 +49,10 @@ for review evidence; the whitepapers do not repeat those reports.
 - [Release acceptance checklist](release/checklist.md)
 - [Current deployment evidence and pending closeout](deploy/v15/implementation-status.zh-CN.md)
 
-Design documents guide what should be built. Constitutions and ADRs record
-constraints and decisions; code, tests, release artifacts and reviews provide
-implementation evidence. Keep those roles distinct when updating the documentation.
+The master plan sets project choices; constitutions and ADRs record technical
+constraints and decisions. Code, tests, release artifacts and reviews provide
+implementation evidence. External documents explain the relevant project logic
+to their intended readers. Keep these roles distinct.
 
 ## Constitution & invariants
 
