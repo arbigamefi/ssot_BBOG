@@ -1,4 +1,4 @@
-# Executable SSOT (Invariants) v1.6 — House-edge allocation (draft)
+# Executable SSOT (Invariants) v1.6 — House-edge allocation
 
 This document defines the machine-checkable proof obligations for [SSOT v1.6](SSOT.v1.6.md).
 
@@ -9,8 +9,10 @@ replaces the v1.0 turnover-budget obligations for casino positions in a v1.6 rel
 >
 > - [ADR-0032](../adr/0032-fixed-lp-share-operator-funded-referrals.md) (fixed LP share, operator-funded referrals)
 
-**Status: draft.** None of these obligations is implemented yet. The baseline they replace is pinned by
-`test/unit/HouseEdgeAllocationV15.t.sol`, which proves that v1.5 accrues the full turnover edge to PF and XP.
+**Status: implemented in source; not audited or deployed.** Every obligation below has tests, listed in
+[Test mapping](#test-mapping). The v1.5 baseline they replace was pinned by
+`test/unit/HouseEdgeAllocationV15.t.sol` at commit `efb83e0a4`, which proved that v1.5 accrues the full
+turnover edge to PF and XP.
 
 ## Scope & implementation
 
@@ -106,3 +108,24 @@ No referral schedule with `l0 + l1 + l2 > MAX_REFERRAL_BPS` can be created or ac
 ### G4. Guardian scope
 
 The guardian can pause and cannot change any allocation parameter.
+
+## Test mapping
+
+| Obligation | Tests |
+| --- | --- |
+| A1 Conservation | `HouseEdgeAllocationV16`: worked examples and `testFuzz_allocationConservesTheEdge`; `StatefulSystemDiff` recomputes every settlement independently |
+| A2 LP floor at the Router | `SettlementRouter.t.sol` cap tests and `testFuzz_settlementAcceptedIffWithinOperatorShare`; `SettlementRouterInvariants.invariant_allocation_never_exceeds_operator_share` |
+| A3 Referral cap | `testFuzz_allocationConservesTheEdge`; `test_scheduleCapAndVersions` |
+| A4 Payee existence | `test_workedExample_noReferrer`, `test_nothingIsPaidBeyondL2`, fuzzed chains of depth 0 to 2 |
+| A5 Unclaimed share to protocol | worked examples; `test_roundingRemaindersAccrueToProtocol` |
+| A6 Refunds allocate nothing | `test_timeoutRefundAllocatesNothing`, `test_partialRefundAllocatesOnUsedTurnoverOnly`; `SecurityFixes` invalid-result refunds |
+| A7 Non-retroactivity | `test_bindingAfterAcceptanceDoesNotAddPayees`, `test_uplineBindingAfterAcceptanceDoesNotAddL2`, `test_scheduleChangeAfterAcceptanceDoesNotApply`, `test_baseEdgeChangeWaitsForDelayAndIsNotRetroactive`; `StatefulSystemDiff` late bindings and governance changes |
+| A8 Edge bound | `test_openPosition_rejectsEdgeAboveMax` and the Router invariant; `test_markupStartsDisabled`, `test_staleAffiliateEdgeIsClampedToTheCurrentCap`, `test_staleAffiliateEdgeIsClampedToALowerCap` |
+| A9 Sports positions | `SportsHubTicket` asserts edge `0`; `test_zeroEdgePositionCannotAccrueAnything` |
+| B1 NAV identity, B2 solvency | checked after every settlement in `HouseEdgeAllocationV16`; `BankInvariants` |
+| G1 Constants | `test_constants` |
+| G2 Delayed changes | `test_baseEdgeChangeWaitsForDelayAndIsNotRetroactive`, `test_markupIncreaseWaitsForDelay_decreaseIsImmediate`, `test_cancelledBaseEdgeChangeCannotActivate` |
+| G3 Schedule validity | `test_scheduleCapAndVersions`; `SecurityFixes` referral-config tests |
+| G4 Guardian scope | `test_onlyGovernanceChangesAllocationParameters` |
+
+Unless another file is named, tests are in `test/unit/HouseEdgeAllocationV16.t.sol`.

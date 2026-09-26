@@ -20,16 +20,28 @@ After deploy, the script writes:
 - `deployments/verify-latest-v15.sh` (+ `deployments/verify/verify-<chainid>-<block>-v15.sh`)
 
 ## GameHub pricing + referral policy
-- `REFUND_TIMEOUT_SECONDS` (default `3600`): when a player can claim a timeout refund.
-- `DEFAULT_HOUSE_EDGE_BPS` (default `200` = 2%).
-- `MAX_AFFILIATE_DELTA_BPS` (default `0` = affiliate house edge is capped at `DEFAULT_HOUSE_EDGE_BPS`).
 
-Referral config (defaults match the cleanroom E2E tests):
-- `REF_BASE_BUDGET_BPS` (default `10000`)
-- `REF_DELTA_BUDGET_BPS` (default `10000`)
-- `REF_HOLDBACK_BPS` (default `3000`)
-- `REF_LEVELS` (default `2`)
-- `REF_LEVEL{0..5}_BPS` (default L0=0, L1=10000, others=0)
+The contract sources implement the v1.6 allocation ([SSOT v1.6](../constitution/SSOT.v1.6.md),
+[ADR-0032](../adr/0032-fixed-lp-share-operator-funded-referrals.md)): LPs keep a fixed 50% of the turnover
+edge and referral rewards are paid from the operator's 50%. The deploy script keeps its V15 name until the
+v1.6 release. For the parameters of the live v1.5 deployment, read this file at commit `7ee449b88`.
+
+- `REFUND_TIMEOUT_SECONDS` (default `3600`): when a player can claim a timeout refund.
+- `DEFAULT_HOUSE_EDGE_BPS` (default `200` = 2%): the initial base edge, `1..500`. Later changes are queued
+  on chain and take effect after 7 days.
+
+Referral schedule, in bps of the base edge (defaults are the ADR-0032 initial rates):
+- `REF_L0_BPS` (default `1000`): player rakeback, paid only to players with a referrer.
+- `REF_L1_BPS` (default `2000`): direct referrer.
+- `REF_L2_BPS` (default `500`): the referrer's referrer.
+- `REF_HOLDBACK_BPS` (default `3000`): share of L1, L2 and markup rewards that vests linearly.
+- `REF_L0_BPS + REF_L1_BPS + REF_L2_BPS` must not exceed `3500`.
+
+Affiliate markup always starts disabled; governance can enable it after deployment through the 7-day
+delay. The script refuses the retired v1.5 variables `MAX_AFFILIATE_DELTA_BPS`, `REF_BASE_BUDGET_BPS`,
+`REF_DELTA_BUDGET_BPS`, `REF_LEVELS` and `REF_LEVEL{0..5}_BPS` so they cannot be silently ignored. The
+`docs/deploy/v15/*.env.example` files record the live v1.5 parameters and still contain
+`MAX_AFFILIATE_DELTA_BPS`.
 
 ## Pool banks
 `script/DeployV15.s.sol:DeployV15` uses pools, not assets, as the deployment unit.

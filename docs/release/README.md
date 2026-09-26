@@ -1,5 +1,11 @@
 # v1.5 release process
 
+> **Contract sources have moved to v1.6.** The sources now implement the v1.6 house-edge allocation
+> ([ADR-0032](../adr/0032-fixed-lp-share-operator-funded-referrals.md)), which is not audited or deployed.
+> The deploy and release scripts keep their V15 names until the v1.6 release renames them, but they now
+> build and verify the v1.6 contracts and configuration. To re-verify or operate the live v1.5 deployment
+> with its own tooling, check out commit `7ee449b88`.
+
 Follow the [v1.5 release workflow](../deploy/v15-release.md), including its live governance, signer and artifact-consistency gates. See [current release facts](STATUS-v1.5.zh-CN.md) for scope and dated verification; the [implementation log](../deploy/v15/implementation-status.zh-CN.md) preserves historical execution evidence.
 
 A release binds a deployment snapshot, signed release digest, frontend manifest, ABI index, golden vectors and release notes. The current public bundles are committed under:

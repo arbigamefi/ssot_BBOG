@@ -107,7 +107,7 @@ V = 10^assetDecimals
 
 ## 3. 下一经济版本：从实际派彩费用分配
 
-> **审阅提示（2026-09-26）：本节描述的"按实际派彩费用分配"方案已被 [ADR-0032](adr/0032-fixed-lp-share-operator-funded-referrals.md) 取代，待按 [SSOT v1.6 草案](constitution/SSOT.v1.6.md) 重写。**新方案按流水计提，LP 固定保留每注理论 house edge 的 50%，推荐从运营份额中支付。在重写完成前，本节不应作为对外说明使用。
+> **审阅提示（2026-09-26）：本节描述的"按实际派彩费用分配"方案已被 [ADR-0032](adr/0032-fixed-lp-share-operator-funded-referrals.md) 取代，待按 [SSOT v1.6](constitution/SSOT.v1.6.md) 重写（已在源码中实现，尚未审计和部署）。**新方案按流水计提，LP 固定保留每注理论 house edge 的 50%，推荐从运营份额中支付。在重写完成前，本节不应作为对外说明使用。
 
 ### 3.1 选定的预算来源
 

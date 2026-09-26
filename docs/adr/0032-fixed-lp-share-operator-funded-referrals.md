@@ -1,6 +1,6 @@
 # ADR-0032: Fixed LP share of the turnover house edge; operator-funded referrals
 
-- **Status:** Proposed (draft for review; not implemented or deployed)
+- **Status:** Accepted. Implemented in source (see [Implementation](#implementation)); not audited or deployed
 - **Date:** 2026-09-26
 - **Applies to:** the next casino release unit built on [SSOT v1.6](../constitution/SSOT.v1.6.md).
   Deployed v1.5 contracts are immutable and keep their current allocation.
@@ -25,8 +25,9 @@ referral liabilities.
 
 **No configuration fixes this.** `baseBudgetBps`, `levelBps` and `levels` only move value between
 protocol fees (PF) and referral liabilities (XP). A configuration with `levels = 0` would leave the budget
-in the pool, but `setActiveReferralConfig` rejects it. All of this is pinned by
-`test/unit/HouseEdgeAllocationV15.t.sol`.
+in the pool, but `setActiveReferralConfig` rejects it. All of this was pinned against the v1.5 source by
+`test/unit/HouseEdgeAllocationV15.t.sol` at commit `efb83e0a4`. The test was removed when the source moved
+to v1.6.
 
 **The intent never reached a specification.** The owner's design intent was an explicit split in which
 LPs keep a share. The predecessor protocol (`bankroll_protocol_refactored_v0.7.x`) let LPs keep the whole
@@ -137,6 +138,32 @@ not accrue protocol or referral liabilities in a v1.6 unit until a separate ADR 
 - **Downstream changes:** the indexer, receipts, pools page, affiliate dashboard, fact table, both
   whitepapers and the economic design must describe this allocation before any public claim uses it.
 
+## Implementation
+
+The source implements this decision for the next release unit. The deployed v1.5 contracts are unchanged.
+
+| Part | Where |
+| --- | --- |
+| Constants and the shared `turnoverEdge` / `operatorShare` arithmetic | `src/libs/HouseEdgeLib.sol` |
+| Allocation, payee snapshot, schedules, delayed edge changes, `HouseEdgeAllocated` event | `src/core/GameHub.sol` |
+| Edge recorded at `openPosition`; settlement cap; `allocationCap` view | `src/core/SettlementRouter.sol` |
+| L0/L1/L2 amounts and markup split | `src/engines/referral/DefaultReferralEngine.sol` |
+| Sports positions opened with edge `0` | `src/core/SportsHub.sol` |
+| Obligations A1–A9, B1–B2, G1–G4 | [ExecutableSSOT v1.6](../constitution/ExecutableSSOT.v1.6.md#test-mapping) |
+
+Choices the decision above left open:
+
+- Activation of a queued base-edge change or markup-cap increase is permissionless once the delay has
+  passed. Only governance can queue or cancel.
+- A markup-cap decrease also discards any queued increase.
+- A stored affiliate edge is clamped to the current cap when a bet is priced, so lowering the cap or the
+  base edge takes effect for new bets without affiliates having to act.
+- Referral payees are stored per bet and included in the bet's snapshot hash. Only L1 and L2 are
+  stored; L0 eligibility is "L1 is set".
+- XP awards carry the reasons `REF_L0`, `REF_L1`, `REF_L2` and `REF_MARKUP`.
+- The Router exposes `allocationCap(positionId, refundAmount)` so indexers and auditors can check each
+  settlement against the cap.
+
 ## Alternatives considered
 
 - **Allocate the actual payout fee instead of turnover** (the economic design draft). Expectations are the
@@ -159,7 +186,8 @@ not accrue protocol or referral liabilities in a v1.6 unit until a separate ADR 
 - SSOT v1.0 section 3.3; [SSOT v1.6](../constitution/SSOT.v1.6.md) (draft);
   [Executable SSOT v1.6](../constitution/ExecutableSSOT.v1.6.md) (draft invariants)
 - `src/core/GameHub.sol` (`finalize`, `setActiveReferralConfig`), `src/engines/referral/DefaultReferralEngine.sol`
-- `test/unit/HouseEdgeAllocationV15.t.sol`, `test/unit/GameHubE2E.t.sol`
+- `test/unit/HouseEdgeAllocationV16.t.sol`, `test/unit/SettlementRouter.t.sol`, `test/unit/GameHubE2E.t.sol`,
+  `test/diff/StatefulSystemDiff.t.sol`; the v1.5 baseline `test/unit/HouseEdgeAllocationV15.t.sol` at `efb83e0a4`
 - [Stake: affiliate commission](https://help.stake.com/en/articles/9995651-how-to-get-an-affiliate-commission-with-stake),
   [Stake: rakeback](https://help.stake.com/en/articles/4821738-what-is-rakeback),
   [Azuro: reward distribution](https://dev-gem.azuro.org/knowledge-hub/how-azuro-works/reward-distribution),
