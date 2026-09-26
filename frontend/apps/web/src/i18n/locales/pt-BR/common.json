@@ -93,7 +93,6 @@
     "platform": "Plataforma",
     "resources": "Recursos",
     "legal": "Jurídico",
-    "earn": "Render",
     "portfolio": "Portfólio",
     "terms": "Termos",
     "privacy": "Privacidade",
@@ -137,7 +136,6 @@
     "responsible": {
       "title": "Jogo responsável",
       "close": "Fechar",
-      "intro": "Defina limites pessoais. Os limites ficam salvos no seu dispositivo e são aplicados na liquidação; limpe um campo para remover um limite.",
       "dailyDeposit": "Limite diário de depósito",
       "dailyLoss": "Limite diário de perda",
       "sessionReminder": "Lembrete de sessão",
@@ -147,12 +145,10 @@
       "saveLimits": "Salvar limites",
       "selfExclude": {
         "title": "Autoexclusão",
-        "description": "Bloqueie a si mesmo de apostar por um período fixo. Isto não pode ser desfeito antes de expirar.",
         "d1": "1 dia",
         "d7": "7 dias",
         "d30": "30 dias",
-        "d180": "180 dias",
-        "confirm": "Autoexcluir-se por {period}? Você não poderá apostar até expirar."
+        "d180": "180 dias"
       }
     },
     "selfExcludedGate": {
@@ -224,11 +220,11 @@
       },
       {
         "q": "O que é o bankroll / Bank?",
-        "a": "O Bank é o cofre on-chain que cobre cada pagamento. É uma reserva transparente — você pode inspecioná-la na página Render. Todo prêmio sai dele, e sua solvência é comprovável on-chain."
+        "a": "O Bank é o cofre on-chain que cobre cada pagamento. Antes de uma aposta ser aceita, o pagamento máximo dela é reservado ali; você pode conferir saldos e reservas na página Pools. Todo prêmio sai dele."
       },
       {
         "q": "O que é a vantagem da casa?",
-        "a": "A vantagem da casa é a margem embutida que mantém o Bank sustentável. Cada jogo mostra o valor atual exato na aba Info do jogo, usando a configuração da release ativa em vez de uma estimativa de marketing."
+        "a": "A vantagem da casa é a margem embutida nos pagamentos de cada jogo. Pelas regras atuais da v1.5, ela financia as taxas do protocolo e as recompensas de indicação; não é paga aos LPs. Cada jogo mostra o valor atual exato na aba Info do jogo, usando a configuração da release ativa em vez de uma estimativa de marketing."
       },
       {
         "q": "Por que minha aposta está pendente?",
@@ -256,7 +252,7 @@
       },
       {
         "q": "Como mantenho o controle do meu jogo?",
-        "a": "Abra Jogo Responsável no rodapé para definir limites diários de depósito e perda, um lembrete de sessão ou se autoexcluir por um período fixo. Você precisa ter a idade legal na sua jurisdição para jogar."
+        "a": "Abra Jogo Responsável no rodapé para definir um lembrete de sessão, registrar limites diários de depósito e perda ou se autoexcluir por um período fixo. Essas configurações ficam salvas apenas neste navegador: os limites diários ainda não são verificados quando você aposta ou deposita, e a autoexclusão não vale para outros navegadores, dispositivos ou apps. Você precisa ter a idade legal na sua jurisdição para jogar."
       }
     ]
   },
@@ -314,7 +310,6 @@
         "description": "Compartilhe salas de cassino com seu link de indicação e acompanhe recompensas de jogadores indicados."
       },
       "earn": {
-        "title": "Render",
         "description": "Deposite, saque e inspecione o banco que cobre o cassino."
       },
       "ops": {
@@ -687,7 +682,6 @@
   "earn": {
     "state": {
       "noRelease": {
-        "title": "Render",
         "description": "Indisponível nesta rede."
       },
       "loading": "Carregando banco…"
@@ -721,9 +715,6 @@
     },
     "hero": {
       "eyebrow": "Fornecedor de bankroll",
-      "title": "Seja a casa em {symbol}.",
-      "description": "Forneça capital que assume variância ao bankroll do cassino. O retorno vem do giro real dos jogadores; drawdowns fazem parte do risco.",
-      "disclosure": "Reserva, preço da cota e desempenho vitalício (resultado do cofre, hold, velocidade) são lidos on-chain do contrato Bank e são verificáveis. Apenas o gráfico de tendência diária e o drawdown máximo são indexados e podem atrasar.",
       "bankAddress": "Endereço do banco"
     },
     "metrics": {
@@ -901,7 +892,6 @@
       "bestEffort": "Indexado · melhor esforço",
       "onChain": "Verificado on-chain",
       "lifetimeOnChain": "Vitalício · verificado on-chain",
-      "housePnl": "Resultado do cofre",
       "hold": "Margem realizada",
       "velocity": "Velocidade de capital",
       "grossAnnualized": "Estimativa bruta anualizada",
@@ -910,7 +900,6 @@
       "bets": "Apostas",
       "players": "Jogadores",
       "activityTrend": "Atividade diária do cofre",
-      "pnlTrend": "Resultado diário do cofre",
       "volumeTrend": "Volume diário",
       "sharePriceReference": "Preço da cota",
       "currentSharePrice": "Preço atual da cota",
@@ -923,8 +912,6 @@
         "d7": "7d",
         "d30": "30d"
       },
-      "note": "A receita bruta vitalícia vem de Bank.getPerformance() on-chain (turnover menos pagamentos brutos). A velocidade do capital é o turnover vitalício dividido pelos ativos atuais do cofre lidos on-chain. O gráfico diário abaixo é indexado e pode atrasar. Não é rendimento prometido.",
-      "equityTitle": "Resultado acumulado do cofre",
       "peak": "Pico",
       "trough": "Vale",
       "maxDrawdown": "Drawdown máximo"

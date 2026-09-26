@@ -39,6 +39,8 @@ The approved memo must record:
 - responsible-gaming controls, self-exclusion policy, and stake-limit policy;
 - frontend enablement behavior for unknown or restricted jurisdictions;
 - the runtime enablement flag `NEXT_PUBLIC_CASINO_RISK_IN_ENABLED`;
+- the separate LP deposit flag `NEXT_PUBLIC_LP_DEPOSITS_ENABLED`, which opening
+  bets does not change;
 - links to terms, privacy policy, risk disclaimer, responsible-gaming page, and
   support channel;
 - legal, compliance, frontend, and operations approvals with evidence URI.
@@ -56,6 +58,9 @@ For the first Base mainnet casino launch, the default position is:
 - restricted jurisdiction blocks risk-in;
 - public casino launch is not coupled to contract deployment;
 - Base mainnet risk-in remains disabled unless `NEXT_PUBLIC_CASINO_RISK_IN_ENABLED=true`;
+- Base mainnet LP deposits remain closed unless `NEXT_PUBLIC_LP_DEPOSITS_ENABLED=true`.
+  Under v1.5 the house edge is not an LP share, so this stays closed until the
+  pool terms change; withdrawals are not gated by it;
 - any public canary starts with minimal stake, named support owner, and live
   keeper/bet-index monitoring.
 

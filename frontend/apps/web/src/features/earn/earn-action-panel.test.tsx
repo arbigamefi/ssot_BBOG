@@ -121,6 +121,24 @@ describe("EarnActionPanel", () => {
     expect(screen.queryByRole("button", { name: "earn.actions.trace.view" })).toBeNull();
   });
 
+  it("replaces the deposit form with the closed notice and never submits", () => {
+    const onSubmit = vi.fn();
+    renderPanel(baseFlow, { depositsClosed: true, onSubmit });
+
+    expect(screen.getByRole("status").textContent).toContain("earn.actions.depositsClosed.title");
+    expect(screen.queryByRole("textbox", { name: "earn.actions.amount" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "earn.actions.submit.deposit" })).toBeNull();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("keeps the withdraw form available while deposits are closed", () => {
+    renderPanel(baseFlow, { depositsClosed: true, tab: "withdraw" });
+
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.getByRole("textbox", { name: "earn.actions.amount" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "earn.actions.submit.withdraw" })).toBeDefined();
+  });
+
   it("uses the active-pool message when the selected asset cannot be written", () => {
     renderPanel(baseFlow, { unsupportedAsset: true });
 

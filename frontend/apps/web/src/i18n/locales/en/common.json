@@ -124,7 +124,7 @@
         "description": "Share casino rooms with your referral link and track rewards from referred play."
       },
       "earn": {
-        "title": "Earn",
+        "title": "Pools",
         "description": "Deposit, withdraw, and inspect the bank that backs the casino."
       },
       "ops": {
@@ -146,7 +146,7 @@
     "platform": "Platform",
     "resources": "Resources",
     "legal": "Legal",
-    "earn": "Earn",
+    "earn": "Pools",
     "portfolio": "Portfolio",
     "terms": "Terms",
     "privacy": "Privacy",
@@ -2705,7 +2705,7 @@
   "earn": {
     "state": {
       "noRelease": {
-        "title": "Earn",
+        "title": "Pools",
         "description": "Not available on this chain."
       },
       "loading": "Loading bank…"
@@ -2726,9 +2726,9 @@
     },
     "hero": {
       "eyebrow": "Bankroll provider",
-      "title": "Be the house in {symbol}.",
-      "description": "Supply variance-bearing capital to the casino bankroll. Returns come from real player turnover; drawdowns are part of the risk.",
-      "disclosure": "Reserve, share price, and lifetime performance (House P&L, hold, velocity) are read on-chain from the Bank contract and are verifiable. Only the daily trend chart and max drawdown are indexed and may lag.",
+      "title": "Provide payout capital to the {symbol} pool.",
+      "description": "LPs back casino payouts and carry the variance of game results. Under the current v1.5 rules, the house edge accrues to protocol fees and referral rewards, not to LP shares.",
+      "disclosure": "Reserve, share price, and lifetime performance (gross gaming revenue, hold, velocity) are read on-chain from the Bank contract and are verifiable. Only the daily trend chart and max drawdown are indexed and may lag.",
       "bankAddress": "Bank address"
     },
     "metrics": {
@@ -2836,6 +2836,10 @@
         "view": "View transaction status",
         "close": "Close",
         "statusDialog": "Bank transaction status"
+      },
+      "depositsClosed": {
+        "title": "Mainnet deposits are closed",
+        "body": "Under the current v1.5 rules, LPs carry the variance of game results, while the house edge accrues to protocol fees and referral rewards rather than LP shares. New deposits stay closed on mainnet until the pool terms change. Existing shares can still be withdrawn under the pool's rules."
       }
     },
     "flows": {
@@ -2919,7 +2923,7 @@
       "bestEffort": "Indexed · best-effort",
       "onChain": "On-chain verified",
       "lifetimeOnChain": "Lifetime · on-chain verified",
-      "housePnl": "House P&L",
+      "housePnl": "Gross gaming revenue",
       "hold": "Realized hold",
       "velocity": "Capital velocity",
       "grossAnnualized": "Gross annualized estimate",
@@ -2928,7 +2932,7 @@
       "bets": "Bets",
       "players": "Players",
       "activityTrend": "Daily vault activity",
-      "pnlTrend": "Daily house P&L",
+      "pnlTrend": "Daily gross gaming revenue",
       "volumeTrend": "Daily volume",
       "sharePriceReference": "Share price",
       "currentSharePrice": "Current share price",
@@ -2941,8 +2945,8 @@
         "d7": "7d",
         "d30": "30d"
       },
-      "note": "Lifetime gross gaming revenue comes from Bank.getPerformance() on-chain (turnover minus gross payouts). Capital velocity is lifetime turnover divided by current chain-read vault assets. The daily chart below is indexed and may lag. Not promised yield.",
-      "equityTitle": "Cumulative house P&L",
+      "note": "Lifetime gross gaming revenue comes from Bank.getPerformance() on-chain (turnover minus gross payouts). It is not LP profit: the LP share price also reflects the payout fees the pool keeps and the protocol fees and referral rewards accrued against it. Capital velocity is lifetime turnover divided by current chain-read vault assets. The daily chart below is indexed and may lag. Not promised yield.",
+      "equityTitle": "Cumulative gross gaming revenue",
       "peak": "Peak",
       "trough": "Trough",
       "maxDrawdown": "Max drawdown"
@@ -3696,7 +3700,7 @@
     "responsible": {
       "title": "Responsible gambling",
       "close": "Close",
-      "intro": "Set personal limits. Limits are recorded on your device and enforced at settlement; clear a field to remove a limit.",
+      "intro": "Set a session reminder and record personal limits. These settings are saved in this browser only, and daily limits are not yet checked when you bet or deposit. Clear a field to remove a limit.",
       "dailyDeposit": "Daily deposit limit",
       "dailyLoss": "Daily loss limit",
       "sessionReminder": "Session reminder",
@@ -3706,12 +3710,12 @@
       "saveLimits": "Save limits",
       "selfExclude": {
         "title": "Self-exclude",
-        "description": "Block yourself from placing bets for a fixed period. This cannot be undone before it expires.",
+        "description": "Block bets in this browser for a fixed period. It cannot be undone here before it expires, and it does not apply to other browsers or devices.",
         "d1": "1 day",
         "d7": "7 days",
         "d30": "30 days",
         "d180": "180 days",
-        "confirm": "Self-exclude for {period}? You will not be able to place bets until it expires."
+        "confirm": "Self-exclude for {period}? You will not be able to place bets in this browser until it expires."
       }
     },
     "selfExcludedGate": {
@@ -3760,11 +3764,11 @@
       },
       {
         "q": "What is the bankroll / Bank?",
-        "a": "The Bank is the on-chain vault that backs every payout. It's a transparent reserve — you can inspect it on the Earn page. Every win is paid from it, and it's provably solvent on-chain."
+        "a": "The Bank is the on-chain vault that backs every payout. Before a bet is accepted, its maximum payout is reserved there, and you can inspect balances and reserves on the Pools page. Every win is paid from it."
       },
       {
         "q": "What is house edge?",
-        "a": "House edge is the built-in margin that keeps the Bank sustainable. Each game shows its exact current value in the Game Info tab, using the live release configuration rather than a marketing estimate."
+        "a": "House edge is the margin built into each game's payouts. Under the current v1.5 rules it funds protocol fees and referral rewards; it is not paid to LPs. Each game shows its exact current value in the Game Info tab, using the live release configuration rather than a marketing estimate."
       },
       {
         "q": "Why is my bet pending?",
@@ -3792,7 +3796,7 @@
       },
       {
         "q": "How do I stay in control of my play?",
-        "a": "Open Responsible Gambling from the footer to set daily deposit and loss limits, a session reminder, or to self-exclude for a fixed period. You must be of legal age in your jurisdiction to play."
+        "a": "Open Responsible Gambling from the footer to set a session reminder, record daily deposit and loss limits, or self-exclude for a fixed period. These settings are saved in this browser only. Daily limits are not yet checked when you bet or deposit, and self-exclusion does not apply to other browsers, devices or apps. You must be of legal age in your jurisdiction to play."
       }
     ]
   },
