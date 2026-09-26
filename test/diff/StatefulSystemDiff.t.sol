@@ -538,15 +538,16 @@ contract StatefulSystemDiff is Test {
                 assertEq(router.getPosition(betId).edgeBps, b.effectiveHouseEdgeBps, "router edge");
             }
 
-            // bindings made after acceptance must not change this bet's payees
+            // bindings and governance changes made after acceptance must not change this bet's allocation
             _maybeBindLate(state, player, pricing);
+            _maybeGovern(uint256(keccak256(abi.encode(state, "after-acceptance"))));
 
             // settle path: finalize ~80%, refund ~20%
             bool doRefund = ((state >> 188) % 5 == 0);
             if (doRefund) {
                 // warp beyond refund timeout
-                uint256 timeout = _hubRefundTimeoutSeconds();
-                vm.warp(block.timestamp + timeout + 1);
+                uint256 refundAt = uint256(_hubGetBet(betId).placedAt) + _hubRefundTimeoutSeconds() + 1;
+                if (refundAt > vm.getBlockTimestamp()) vm.warp(refundAt);
                 _modelRefund(betId, asset);
                 vm.prank(anyone);
                 _hubRefund(betId);
@@ -686,8 +687,9 @@ contract StatefulSystemDiff is Test {
         }
     }
 
-    /// @dev Governance changes between bets: a new referral schedule, or a base-edge change pushed through the
-    ///      delay. Accepted bets keep their snapshot; the model reads the schedule by the bet's own id.
+    /// @dev Governance changes: a new referral schedule, or a base-edge change pushed through the delay. Runs
+    ///      both before a bet (new pricing) and between acceptance and settlement (which must not reach the bet:
+    ///      the model settles from the bet's own snapshot).
     function _maybeGovern(uint256 state) internal {
         if ((state >> 200) % 10 == 0) {
             uint16 l0 = uint16(bound(uint256(state >> 64), 0, 1_500));
