@@ -1,5 +1,23 @@
 /* global URL, process */
 
+const ALCHEMY_NETWORKS = [
+  "base-mainnet",
+  "base-sepolia",
+  "arb-mainnet",
+  "arb-sepolia",
+  "eth-mainnet"
+];
+
+// Only allow Alchemy when the build is configured to use it. With NEXT_PUBLIC_ALCHEMY_API_KEY the app builds
+// Alchemy URLs itself (app-shell/rpc.ts), so there is no configured URL to derive the origin from.
+function alchemyOrigins(env) {
+  if (!env.NEXT_PUBLIC_ALCHEMY_API_KEY?.trim()) return [];
+  return ALCHEMY_NETWORKS.flatMap((network) => [
+    `https://${network}.g.alchemy.com`,
+    `wss://${network}.g.alchemy.com`
+  ]);
+}
+
 function configuredRpcOrigins(env) {
   return [
     env.NEXT_PUBLIC_ARBITRUM_RPC_URL,
@@ -10,18 +28,22 @@ function configuredRpcOrigins(env) {
     env.NEXT_PUBLIC_BASE_WS_RPC_URL,
     env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL,
     env.NEXT_PUBLIC_BASE_SEPOLIA_WS_RPC_URL,
+    env.NEXT_PUBLIC_MAINNET_RPC_URL,
     env.NEXT_PUBLIC_MAINNET_WS_RPC_URL,
     env.NEXT_PUBLIC_RPC_URL
-  ]
-    .map((value) => {
-      if (!value) return undefined;
-      try {
-        return new URL(value).origin;
-      } catch {
-        return undefined;
+  ].flatMap((value) => {
+    if (!value) return [];
+    try {
+      const url = new URL(value);
+      // The app derives the WebSocket URL from an Alchemy HTTP URL, so allow both.
+      if (url.protocol === "https:" && url.hostname.endsWith(".g.alchemy.com")) {
+        return [url.origin, `wss://${url.host}`];
       }
-    })
-    .filter(Boolean);
+      return [url.origin];
+    } catch {
+      return [];
+    }
+  });
 }
 
 export function buildContentSecurityPolicy({ env = process.env, isDev = false } = {}) {
@@ -29,40 +51,32 @@ export function buildContentSecurityPolicy({ env = process.env, isDev = false } 
     ? ["script-src 'self' 'unsafe-eval' 'unsafe-inline' https://mcp.figma.com"]
     : ["script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com"];
   const connectSrc = [
-    "connect-src 'self'",
-    ...(isDev ? ["https://mcp.figma.com"] : []),
-    // Reown / Web3Modal fetches a small remote project configuration at app
-    // bootstrap. WalletConnect websocket + relay hosts stay covered below.
-    "https://api.web3modal.org",
-    "https://*.walletconnect.com",
-    "https://*.walletconnect.org",
-    "wss://*.walletconnect.com",
-    "wss://*.walletconnect.org",
-    // RainbowKit uses MetaMask SDK (not WalletConnect) on mobile. Its
-    // pairing channel needs HTTPS and a WebSocket before opening the app.
-    "https://metamask-sdk.api.cx.metamask.io",
-    "wss://metamask-sdk.api.cx.metamask.io",
-    "https://sepolia.base.org",
-    "https://mainnet.base.org",
-    "https://arb1.arbitrum.io",
-    "https://base-sepolia.g.alchemy.com",
-    "wss://base-sepolia.g.alchemy.com",
-    "https://base-mainnet.g.alchemy.com",
-    "wss://base-mainnet.g.alchemy.com",
-    "https://arb-sepolia.g.alchemy.com",
-    "wss://arb-sepolia.g.alchemy.com",
-    "https://arb-mainnet.g.alchemy.com",
-    "wss://arb-mainnet.g.alchemy.com",
-    // Ethereum mainnet — ENS reverse resolution only (cloudflare keyless
-    // fallback + Alchemy when NEXT_PUBLIC_ALCHEMY_API_KEY is set).
-    "https://cloudflare-eth.com",
-    "https://eth-mainnet.g.alchemy.com",
-    "wss://eth-mainnet.g.alchemy.com",
-    ...configuredRpcOrigins(env),
-    "https://*.sentry.io",
-    "https://*.ingest.sentry.io",
-    "https://cloudflareinsights.com",
-    "https://static.cloudflareinsights.com"
+    ...new Set([
+      "connect-src 'self'",
+      ...(isDev ? ["https://mcp.figma.com"] : []),
+      // Reown / Web3Modal fetches a small remote project configuration at app
+      // bootstrap. WalletConnect websocket + relay hosts stay covered below.
+      "https://api.web3modal.org",
+      "https://*.walletconnect.com",
+      "https://*.walletconnect.org",
+      "wss://*.walletconnect.com",
+      "wss://*.walletconnect.org",
+      // RainbowKit uses MetaMask SDK (not WalletConnect) on mobile. Its
+      // pairing channel needs HTTPS and a WebSocket before opening the app.
+      "https://metamask-sdk.api.cx.metamask.io",
+      "wss://metamask-sdk.api.cx.metamask.io",
+      "https://sepolia.base.org",
+      "https://mainnet.base.org",
+      "https://arb1.arbitrum.io",
+      // Ethereum mainnet — ENS reverse resolution only (keyless fallback).
+      "https://cloudflare-eth.com",
+      ...alchemyOrigins(env),
+      ...configuredRpcOrigins(env),
+      "https://*.sentry.io",
+      "https://*.ingest.sentry.io",
+      "https://cloudflareinsights.com",
+      "https://static.cloudflareinsights.com"
+    ])
   ].join(" ");
 
   return [
