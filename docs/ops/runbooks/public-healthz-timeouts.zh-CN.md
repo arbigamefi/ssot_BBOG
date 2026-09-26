@@ -31,10 +31,10 @@
 
 1. 在 BotFather 创建 bot 或重新签发 token。token 一旦出现在聊天记录、工单或截图中，就吊销并重新签发。
 2. 用接收告警的账号给 bot 发一条消息；群组则先把 bot 拉进群再在群里发言。bot 只能向发过消息的对象推送。
-3. 在服务器上从标准输入写入 token，不经过命令行参数或 shell 历史：
+3. 以 root 登录服务器（`ssh root@<服务器>`），在这个交互式会话里运行下面的命令并按提示输入 token。输入不回显，token 不经过命令行参数、shell 变量或历史。命令需要终端来隐藏输入，所以不能从本机或非交互的远程命令里执行；它不依赖 bash 或 zsh 的 `read` 语法。
 
    ```sh
-   read -rsp "Telegram bot token: " T && echo && printf '%s' "$T" | python3 -c 'import pathlib,re,sys; t=sys.stdin.read().strip(); assert re.fullmatch(r"\d{5,}:[A-Za-z0-9_-]{30,}", t), "unexpected token format"; p=pathlib.Path("/opt/arbigamefi-v15/ops/alert.env"); lines=[l for l in p.read_text().splitlines() if not l.startswith("TELEGRAM_BOT_TOKEN=")]; p.write_text("\n".join(lines + ["TELEGRAM_BOT_TOKEN=" + repr(t)]) + "\n"); print("token written")'; unset T
+   python3 -c 'import getpass,pathlib,re; t=getpass.getpass("Telegram bot token: ").strip(); assert re.fullmatch(r"\d{5,}:[A-Za-z0-9_-]{30,}", t), "unexpected token format"; p=pathlib.Path("/opt/arbigamefi-v15/ops/alert.env"); lines=[l for l in p.read_text().splitlines() if not l.startswith("TELEGRAM_BOT_TOKEN=")]; p.write_text("\n".join(lines + ["TELEGRAM_BOT_TOKEN=" + repr(t)]) + "\n"); print("token written")'
    ```
 
 4. 查出 chat id 并写入 `TELEGRAM_CHAT_ID=<id>`（chat id 不是机密）：
