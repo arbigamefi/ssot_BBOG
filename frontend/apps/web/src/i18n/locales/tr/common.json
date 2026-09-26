@@ -93,7 +93,6 @@
     "platform": "Platform",
     "resources": "Kaynaklar",
     "legal": "Hukuki",
-    "earn": "Kazan",
     "portfolio": "Portföy",
     "terms": "Koşullar",
     "privacy": "Gizlilik",
@@ -137,7 +136,6 @@
     "responsible": {
       "title": "Sorumlu oyun",
       "close": "Kapat",
-      "intro": "Kişisel limitler belirleyin. Limitler cihazınızda saklanır ve ödeme sırasında uygulanır; bir limiti kaldırmak için alanı temizleyin.",
       "dailyDeposit": "Günlük yatırma limiti",
       "dailyLoss": "Günlük kayıp limiti",
       "sessionReminder": "Oturum hatırlatıcısı",
@@ -147,12 +145,10 @@
       "saveLimits": "Limitleri kaydet",
       "selfExclude": {
         "title": "Kendini hariç tut",
-        "description": "Belirli bir süre boyunca kendinizi bahis yapmaktan engelleyin. Süre dolmadan geri alınamaz.",
         "d1": "1 gün",
         "d7": "7 gün",
         "d30": "30 gün",
-        "d180": "180 gün",
-        "confirm": "{period} boyunca kendinizi hariç tutmak istiyor musunuz? Süre dolana kadar bahis yapamazsınız."
+        "d180": "180 gün"
       }
     },
     "selfExcludedGate": {
@@ -224,11 +220,11 @@
       },
       {
         "q": "Bankroll / Bank nedir?",
-        "a": "Bank, her ödemeyi karşılayan zincir üstü kasadır. Şeffaf bir rezervdir — Kazan sayfasında inceleyebilirsiniz. Her kazanç oradan ödenir ve ödeme gücü zincir üstünde kanıtlanabilir."
+        "a": "Bank, her ödemeyi karşılayan zincir üstü kasadır. Bir bahis kabul edilmeden önce en yüksek ödemesi burada ayrılır; bakiyeleri ve rezervleri Pools sayfasında inceleyebilirsiniz. Her kazanç oradan ödenir."
       },
       {
         "q": "Casino avantajı (house edge) nedir?",
-        "a": "Casino avantajı, Bank'ı sürdürülebilir kılan yerleşik marjdır. Her oyun kesin güncel değeri Oyun Bilgisi sekmesinde gösterir; pazarlama tahmini yerine aktif release yapılandırması kullanılır."
+        "a": "Casino avantajı, her oyunun ödemelerine yerleştirilmiş marjdır. Mevcut v1.5 kurallarına göre protokol ücretlerini ve yönlendirme ödüllerini finanse eder; LP'lere ödenmez. Her oyun kesin güncel değeri Oyun Bilgisi sekmesinde gösterir; pazarlama tahmini yerine aktif release yapılandırması kullanılır."
       },
       {
         "q": "Bahsim neden beklemede?",
@@ -256,7 +252,7 @@
       },
       {
         "q": "Oyunumun kontrolünü nasıl elimde tutarım?",
-        "a": "Günlük yatırma ve kayıp limitleri, oturum hatırlatıcısı belirlemek veya belirli bir süre kendinizi hariç tutmak için alt bilgiden Sorumlu Oyun'u açın. Oynamak için yargı bölgenizde yasal yaşta olmalısınız."
+        "a": "Oturum hatırlatıcısı belirlemek, günlük yatırma ve kayıp limitlerini kaydetmek veya belirli bir süre kendinizi hariç tutmak için alt bilgiden Sorumlu Oyun'u açın. Bu ayarlar yalnızca bu tarayıcıda saklanır: günlük limitler bahis veya yatırma sırasında henüz kontrol edilmez ve kendini hariç tutma diğer tarayıcılar, cihazlar veya uygulamalar için geçerli değildir. Oynamak için yargı bölgenizde yasal yaşta olmalısınız."
       }
     ]
   },
@@ -314,7 +310,6 @@
         "description": "Casino odalarını referans bağlantınızla paylaşın ve yönlendirdiğiniz oyunculardan gelen ödülleri takip edin."
       },
       "earn": {
-        "title": "Kazan",
         "description": "Casino'yu karşılayan bankaya yatırın, çekin ve inceleyin."
       },
       "ops": {
@@ -687,7 +682,6 @@
   "earn": {
     "state": {
       "noRelease": {
-        "title": "Kazan",
         "description": "Bu ağda kullanılamıyor."
       },
       "loading": "Banka yükleniyor…"
@@ -721,9 +715,6 @@
     },
     "hero": {
       "eyebrow": "Bankroll sağlayıcısı",
-      "title": "{symbol} ile ev olun.",
-      "description": "Casino bankroll'una varyans taşıyan sermaye sağlayın. Getiri gerçek oyuncu hacminden gelir; düşüşler riskin bir parçasıdır.",
-      "disclosure": "Rezerv, pay fiyatı ve ömür boyu performans (kasa K/Z, hold, devir hızı) Bank sözleşmesinden zincir üstü okunur ve doğrulanabilir. Yalnızca günlük trend grafiği ve maksimum düşüş indekslenir ve gecikebilir.",
       "bankAddress": "Banka adresi"
     },
     "metrics": {
@@ -901,7 +892,6 @@
       "bestEffort": "İndekslendi · en iyi çaba",
       "onChain": "Zincir üstü doğrulandı",
       "lifetimeOnChain": "Ömür boyu · zincir üstü doğrulandı",
-      "housePnl": "Kasa K/Z",
       "hold": "Gerçekleşen pay",
       "velocity": "Sermaye hızı",
       "grossAnnualized": "Brüt yıllık tahmin",
@@ -910,7 +900,6 @@
       "bets": "Bahisler",
       "players": "Oyuncular",
       "activityTrend": "Günlük kasa etkinliği",
-      "pnlTrend": "Günlük kasa K/Z",
       "volumeTrend": "Günlük hacim",
       "sharePriceReference": "Pay fiyatı",
       "currentSharePrice": "Güncel pay fiyatı",
@@ -923,8 +912,6 @@
         "d7": "7g",
         "d30": "30g"
       },
-      "note": "Ömür boyu brüt oyun geliri Bank.getPerformance() üzerinden zincirden okunur (turnover eksi brüt ödemeler). Sermaye devir hızı, ömür boyu turnover'ın mevcut zincir üstü kasa varlıklarına bölünmesidir. Aşağıdaki günlük grafik indekslenir ve gecikebilir. Getiri vaadi değildir.",
-      "equityTitle": "Birikimli kasa K/Z",
       "peak": "Zirve",
       "trough": "Dip",
       "maxDrawdown": "Maksimum düşüş"

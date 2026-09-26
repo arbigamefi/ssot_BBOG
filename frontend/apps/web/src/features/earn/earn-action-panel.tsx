@@ -56,7 +56,8 @@ export function EarnActionPanel({
   onUseMax,
   flow,
   onSubmit,
-  connected
+  connected,
+  depositsClosed = false
 }: {
   tab: EarnTab;
   onTabChange: (tab: EarnTab) => void;
@@ -78,10 +79,13 @@ export function EarnActionPanel({
   flow: EarnFlowState;
   onSubmit: () => void;
   connected: boolean;
+  /** Website switch for new LP capital; withdrawals are unaffected. */
+  depositsClosed?: boolean;
 }) {
   const t = useTranslations();
   const displayedAvailableValue = connected ? availableValue : "—";
   const activeTab = TABS.find((item) => item.key === tab);
+  const showDepositsClosed = tab === "deposit" && depositsClosed;
 
   return (
     <section
@@ -121,29 +125,33 @@ export function EarnActionPanel({
           {activeTab ? t(activeTab.description) : ""}
         </p>
 
-        <div className="grid min-w-0 gap-2">
-          <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
-            {t("earn.actions.amountMode.label")}
-          </div>
-          <div className="grid min-w-0 grid-cols-2 gap-2 rounded-md border border-border bg-surface-0 p-1">
-            {AMOUNT_MODES.map((item) => (
-              <button
-                key={item.key}
-                type="button"
-                aria-pressed={amountMode === item.key}
-                onClick={() => onAmountModeChange(item.key)}
-                disabled={flow.busy}
-                className={`min-w-0 rounded-sm px-2 py-2.5 text-[11px] font-bold uppercase tracking-[0.08em] transition sm:px-3 sm:text-xs sm:tracking-[0.12em] ${
-                  amountMode === item.key
-                    ? "bg-surface-2 text-fg"
-                    : "text-fg-muted hover:bg-surface-2 hover:text-fg"
-                } disabled:cursor-not-allowed disabled:opacity-60`}
-              >
-                <span className="block truncate">{t(item.label)}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+        {showDepositsClosed ? null : (
+          <>
+            <div className="grid min-w-0 gap-2">
+              <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
+                {t("earn.actions.amountMode.label")}
+              </div>
+              <div className="grid min-w-0 grid-cols-2 gap-2 rounded-md border border-border bg-surface-0 p-1">
+                {AMOUNT_MODES.map((item) => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    aria-pressed={amountMode === item.key}
+                    onClick={() => onAmountModeChange(item.key)}
+                    disabled={flow.busy}
+                    className={`min-w-0 rounded-sm px-2 py-2.5 text-[11px] font-bold uppercase tracking-[0.08em] transition sm:px-3 sm:text-xs sm:tracking-[0.12em] ${
+                      amountMode === item.key
+                        ? "bg-surface-2 text-fg"
+                        : "text-fg-muted hover:bg-surface-2 hover:text-fg"
+                    } disabled:cursor-not-allowed disabled:opacity-60`}
+                  >
+                    <span className="block truncate">{t(item.label)}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
 
         <AssetSelector
           title={t("earn.actions.asset")}
@@ -156,79 +164,91 @@ export function EarnActionPanel({
           className="min-w-0"
         />
 
-        <div className="min-w-0 rounded-md border border-border bg-surface-0 p-3 sm:p-4">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <label
-              htmlFor="earn-amount"
-              className="text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle"
-            >
-              {t("earn.actions.amount")}
-            </label>
-            <div className="flex min-w-0 items-center justify-end gap-2 text-[10px] font-bold uppercase tracking-[0.1em]">
-              <span
-                className="min-w-0 truncate text-fg-subtle"
-                title={`${availableLabel}: ${displayedAvailableValue}`}
-              >
-                {availableLabel}:{" "}
-                <span className="font-mono text-fg-muted">{displayedAvailableValue}</span>
-              </span>
-              <button
-                type="button"
-                onClick={onUseMax}
-                disabled={!canUseMax}
-                className="shrink-0 text-brand disabled:text-fg-subtle"
-              >
-                {t("earn.actions.balance.useMax")}
-              </button>
+        {showDepositsClosed ? (
+          <div
+            role="status"
+            className="rounded-md border border-warn/30 bg-warn/10 p-4 text-sm leading-6"
+          >
+            <div className="font-bold text-fg">{t("earn.actions.depositsClosed.title")}</div>
+            <p className="mt-1 text-fg-muted">{t("earn.actions.depositsClosed.body")}</p>
+          </div>
+        ) : (
+          <>
+            <div className="min-w-0 rounded-md border border-border bg-surface-0 p-3 sm:p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <label
+                  htmlFor="earn-amount"
+                  className="text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle"
+                >
+                  {t("earn.actions.amount")}
+                </label>
+                <div className="flex min-w-0 items-center justify-end gap-2 text-[10px] font-bold uppercase tracking-[0.1em]">
+                  <span
+                    className="min-w-0 truncate text-fg-subtle"
+                    title={`${availableLabel}: ${displayedAvailableValue}`}
+                  >
+                    {availableLabel}:{" "}
+                    <span className="font-mono text-fg-muted">{displayedAvailableValue}</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={onUseMax}
+                    disabled={!canUseMax}
+                    className="shrink-0 text-brand disabled:text-fg-subtle"
+                  >
+                    {t("earn.actions.balance.useMax")}
+                  </button>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                {amountMode === "shares" ? null : <TokenLogo symbol={symbol} size={24} />}
+                <input
+                  id="earn-amount"
+                  disabled={flow.busy}
+                  value={amount}
+                  onChange={(event) => onAmountChange(event.target.value)}
+                  inputMode="decimal"
+                  placeholder="0.00"
+                  className="min-w-0 flex-1 bg-transparent font-mono text-2xl font-bold text-fg outline-none placeholder:text-fg-subtle sm:text-3xl"
+                />
+                <span className="shrink-0 whitespace-nowrap text-sm font-bold uppercase tracking-[0.08em] text-fg-muted sm:tracking-[0.12em]">
+                  {amountMode === "shares" ? t("earn.units.shares") : symbol}
+                </span>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-3">
-            {amountMode === "shares" ? null : <TokenLogo symbol={symbol} size={24} />}
-            <input
-              id="earn-amount"
-              disabled={flow.busy}
-              value={amount}
-              onChange={(event) => onAmountChange(event.target.value)}
-              inputMode="decimal"
-              placeholder="0.00"
-              className="min-w-0 flex-1 bg-transparent font-mono text-2xl font-bold text-fg outline-none placeholder:text-fg-subtle sm:text-3xl"
-            />
-            <span className="shrink-0 whitespace-nowrap text-sm font-bold uppercase tracking-[0.08em] text-fg-muted sm:tracking-[0.12em]">
-              {amountMode === "shares" ? t("earn.units.shares") : symbol}
-            </span>
-          </div>
-        </div>
 
-        {!connected ? (
-          <div className="rounded-md border border-dashed border-border bg-surface-0 p-5 text-sm text-fg-muted">
-            {t("earn.actions.connectWallet")}
-          </div>
-        ) : null}
+            {!connected ? (
+              <div className="rounded-md border border-dashed border-border bg-surface-0 p-5 text-sm text-fg-muted">
+                {t("earn.actions.connectWallet")}
+              </div>
+            ) : null}
 
-        {readOnly ? (
-          <div className="rounded-md border border-warn/30 bg-warn/10 p-3 text-sm text-warn">
-            {t("earn.actions.readOnly")}
-          </div>
-        ) : null}
+            {readOnly ? (
+              <div className="rounded-md border border-warn/30 bg-warn/10 p-3 text-sm text-warn">
+                {t("earn.actions.readOnly")}
+              </div>
+            ) : null}
 
-        <button
-          type="button"
-          onClick={connected ? onSubmit : requestWalletConnect}
-          disabled={flow.busy || (connected && disabled)}
-          className="rounded-md bg-brand px-5 py-4 text-sm font-bold uppercase tracking-[0.12em] text-fg-inverse shadow-glow transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {!connected && !flow.busy
-            ? t("app.connectWalletButton")
-            : flow.busy
-              ? t("earn.actions.submit.executing")
-              : tab === "deposit"
-                ? amountMode === "shares"
-                  ? t("earn.actions.submit.mint")
-                  : t("earn.actions.submit.deposit")
-                : amountMode === "shares"
-                  ? t("earn.actions.submit.redeem")
-                  : t("earn.actions.submit.withdraw")}
-        </button>
+            <button
+              type="button"
+              onClick={connected ? onSubmit : requestWalletConnect}
+              disabled={flow.busy || (connected && disabled)}
+              className="rounded-md bg-brand px-5 py-4 text-sm font-bold uppercase tracking-[0.12em] text-fg-inverse shadow-glow transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {!connected && !flow.busy
+                ? t("app.connectWalletButton")
+                : flow.busy
+                  ? t("earn.actions.submit.executing")
+                  : tab === "deposit"
+                    ? amountMode === "shares"
+                      ? t("earn.actions.submit.mint")
+                      : t("earn.actions.submit.deposit")
+                    : amountMode === "shares"
+                      ? t("earn.actions.submit.redeem")
+                      : t("earn.actions.submit.withdraw")}
+            </button>
+          </>
+        )}
       </div>
     </section>
   );

@@ -195,13 +195,29 @@ describe("EarnPageClient", () => {
   it("frames earn as a bank reserve console", () => {
     renderWithQueryClient(<EarnPageClient />);
 
-    expect(screen.getByRole("heading", { name: /Be the house in USDC/i })).toBeDefined();
+    expect(
+      screen.getByRole("heading", { name: /Provide payout capital to the USDC pool/i })
+    ).toBeDefined();
     expect(screen.getByTestId("bankroll-performance")).toBeDefined();
     expect(screen.getByText("Deposit or exit")).toBeDefined();
     expect(screen.getByText("Verifiable reserve ledger")).toBeDefined();
     fireEvent.click(screen.getByRole("button", { name: "Risk checks" }));
     expect(screen.getByText("Custody boundary")).toBeDefined();
     expect(screen.getByText("Connect a wallet to run bank actions.")).toBeDefined();
+  });
+
+  it("closes mainnet deposits and lands on the withdraw side", () => {
+    state.chainId = 8453;
+    renderWithQueryClient(<EarnPageClient />);
+
+    const actions = screen.getByRole("region", { name: "Deposit or exit" });
+    expect(
+      within(actions).getByRole("button", { name: "Withdraw" }).getAttribute("aria-pressed")
+    ).toBe("true");
+
+    fireEvent.click(within(actions).getByRole("button", { name: "Deposit" }));
+    expect(within(actions).getByText("Mainnet deposits are closed")).toBeDefined();
+    expect(within(actions).queryByLabelText("Amount")).toBeNull();
   });
 
   it("blocks deposits above the connected wallet balance before opening wallet flow", async () => {

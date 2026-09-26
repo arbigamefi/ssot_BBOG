@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Address } from "@ssot/ssot/sdk";
 
+import { isLpDepositEnabledForChain } from "../../../app-shell/casino-access";
 import { PageTransition } from "../../../components/PageTransition";
 import { ProductStateCard } from "../../../components/ProductStateCard";
 import { StickyActionBar } from "../../../components/overlay/StickyActionBar";
@@ -14,19 +15,9 @@ import { EarnActionPanel, type EarnFlowState } from "../../../features/earn/earn
 import { EarnBankSummary } from "../../../features/earn/earn-bank-summary";
 import { EarnHero } from "../../../features/earn/earn-hero";
 import { EarnRiskPanel } from "../../../features/earn/earn-risk-panel";
-import {
-  formatHoldPercent,
-  formatMultiple,
-  formatTokenAmount,
-  getExplorerBaseUrl,
-  shortHex
-} from "../../../features/earn/format";
-import type {
-  EarnAmountMode,
-  EarnBankData,
-  EarnMetric,
-  EarnTab
-} from "../../../features/earn/types";
+import { buildEarnHeroMetrics } from "../../../features/earn/earn-hero-metrics";
+import { formatTokenAmount, getExplorerBaseUrl, shortHex } from "../../../features/earn/format";
+import type { EarnAmountMode, EarnBankData, EarnTab } from "../../../features/earn/types";
 import { useBankProviderLedger } from "../../../features/earn/useBankProviderLedger";
 import { useCasinoPoolAssetSelection } from "../../../features/assets/useCasinoPoolAssetSelection";
 import { formatUnits, parseDecimalToUnits } from "../../../features/betting/model/units";
@@ -41,6 +32,7 @@ const ALLOWANCE_NOT_CONFIRMED = "ALLOWANCE_NOT_CONFIRMED";
 export function EarnPageClient() {
   const t = useTranslations();
   const { release, readOnly, readOnlyReason, chainId } = useRelease();
+  const depositsEnabled = isLpDepositEnabledForChain(chainId);
   const { sdk, ready } = useSSOTSDK();
   const queryClient = useQueryClient();
   const explorerBaseUrl = React.useMemo(() => getExplorerBaseUrl(chainId), [chainId]);
@@ -71,7 +63,7 @@ export function EarnPageClient() {
     refetchInterval: 15_000
   });
 
-  const [tab, setTab] = React.useState<EarnTab>("deposit");
+  const [tab, setTab] = React.useState<EarnTab>(() => (depositsEnabled ? "deposit" : "withdraw"));
   const [amountMode, setAmountMode] = React.useState<EarnAmountMode>("assets");
   const [diligenceTab, setDiligenceTab] = React.useState<"reserve" | "risk">("reserve");
   const [amount, setAmount] = React.useState("");
@@ -80,6 +72,12 @@ export function EarnPageClient() {
   React.useEffect(() => {
     setAmount("");
   }, [tab, amountMode, asset]);
+
+  // Arriving on a network where deposits are closed lands on the exit side of the
+  // panel. The deposit tab stays reachable so the reason is visible.
+  React.useEffect(() => {
+    if (!depositsEnabled) setTab("withdraw");
+  }, [depositsEnabled]);
 
   const focusActionPanel = React.useCallback((nextTab: EarnTab) => {
     setTab(nextTab);
@@ -289,6 +287,10 @@ export function EarnPageClient() {
   }, [amountMode, decimals, maxMintShares, maxRedeem, maxWithdraw, tab, walletBalance]);
 
   const handleSubmit = React.useCallback(async () => {
+    if (tab === "deposit" && !depositsEnabled) {
+      toast.error(t("earn.actions.depositsClosed.title"));
+      return;
+    }
     if (!sdk?.account) {
       toast.error(t("earn.actions.connectWallet"));
       return;
@@ -389,6 +391,7 @@ export function EarnPageClient() {
     asset,
     decimals,
     depositFlow,
+    depositsEnabled,
     explorerBaseUrl,
     maxMintShares,
     maxRedeem,
@@ -417,46 +420,7 @@ export function EarnPageClient() {
   }
 
   const snapshot = bankData?.snapshot;
-  const houseRevenue =
-    snapshot?.totalTurnover != null && snapshot.totalPayoutGross != null
-      ? snapshot.totalTurnover - snapshot.totalPayoutGross
-      : undefined;
-  const realizedHold =
-    houseRevenue != null && snapshot?.totalTurnover != null
-      ? formatHoldPercent(houseRevenue, snapshot.totalTurnover)
-      : null;
-  const capitalVelocity =
-    snapshot?.totalTurnover != null
-      ? formatMultiple(snapshot.totalTurnover, snapshot.totalAssets)
-      : null;
-
-  const metrics: EarnMetric[] = [
-    {
-      label: t("earn.metrics.sharePrice.label"),
-      value: formatTokenAmount(
-        snapshot?.assetsPerShare != null ? snapshot.assetsPerShare * 1000n : undefined,
-        decimals,
-        symbol,
-        4
-      ),
-      detail: t("earn.metrics.sharePrice.detail")
-    },
-    {
-      label: t("earn.metrics.totalShares.label"),
-      value: formatTokenAmount(snapshot?.totalSupply, decimals, undefined, 2),
-      detail: t("earn.metrics.totalShares.detail")
-    },
-    {
-      label: t("earn.performance.velocity"),
-      value: capitalVelocity ?? "—",
-      detail: t("earn.performance.onChain")
-    },
-    {
-      label: t("earn.performance.hold"),
-      value: realizedHold ?? "—",
-      detail: t("earn.performance.onChain")
-    }
-  ];
+  const metrics = buildEarnHeroMetrics({ snapshot, decimals, symbol, t });
 
   return (
     <PageTransition pageKey="earn">
@@ -541,6 +505,7 @@ export function EarnPageClient() {
               onAmountChange={setAmount}
               symbol={symbol}
               disabled={
+                (tab === "deposit" && !depositsEnabled) ||
                 readOnly ||
                 flow.busy ||
                 !sdk?.account ||
@@ -556,6 +521,7 @@ export function EarnPageClient() {
               flow={flow}
               onSubmit={() => void handleSubmit()}
               connected={Boolean(sdk?.account)}
+              depositsClosed={!depositsEnabled}
             />
           </div>
           <div className="min-w-0 xl:col-start-1 xl:row-start-2">
