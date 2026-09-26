@@ -20,6 +20,7 @@ import {
   type BankProviderLedgerPool
 } from "./bank-provider-ledger.js";
 import { loadRelease } from "./env.js";
+import { describeError } from "./errors.js";
 import { logger } from "./logger.js";
 import { splitBlockRange } from "./scan.js";
 
@@ -324,9 +325,7 @@ async function main() {
 
 if (process.argv[1]?.endsWith("backfill.js")) {
   main().catch((error) => {
-    logger.error("casino.keeper.bet_index_backfill_failed", {
-      message: (error as Error)?.message ?? "unknown error"
-    });
+    logger.error("casino.keeper.bet_index_backfill_failed", { error: describeError(error) });
     process.exit(1);
   });
 }
