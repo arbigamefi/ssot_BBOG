@@ -309,6 +309,22 @@ The local web app reads that file through the route
 `/ops/casino-keeper-health.json`, so the health file must stay outside
 `apps/web/public` to avoid a public-file / route conflict.
 
+The snapshot reports `degraded`, and `/api/healthz` with it, while any of these
+is open (`degradedBy` names them):
+
+- `scan`: the last event scan failed. The next successful scan clears it.
+- `ledger`: the last bank-provider ledger pass failed. The next successful pass
+  clears it.
+- `finalize`: a finalize attempt failed. The next bet that settles, or is found
+  already settled, clears it.
+- `stalled`: polling is on and the event scan has not advanced for three poll
+  intervals, and at least five minutes (15 minutes at the production 300-second
+  interval). The heartbeat keeps checking this when the scan loop itself hangs.
+
+Each failure clears only on its own path's next success, so a settled bet does
+not hide a failing scan. A single RPC error no longer keeps the keeper degraded
+until the next bet settles.
+
 ## Recovery regression checks
 
 Run `pnpm -C frontend/apps/keeper test` and `pnpm -C frontend/packages/bet-index test`.
