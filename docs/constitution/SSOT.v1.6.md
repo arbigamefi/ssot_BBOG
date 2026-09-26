@@ -1,9 +1,9 @@
-# Protocol Constitution (SSOT) v1.6 — House-edge allocation (draft)
+# Protocol Constitution (SSOT) v1.6 — House-edge allocation
 
-> **Status: draft for review.** Nothing in this document is implemented or deployed. It governs the next
-> casino release unit only. Deployed v1.5 contracts are immutable and keep their current allocation.
+> **Status: implemented in source; not audited or deployed.** It governs the next casino release unit
+> only. Deployed v1.5 contracts are immutable and keep their current allocation.
 > Decision record: [ADR-0032](../adr/0032-fixed-lp-share-operator-funded-referrals.md). Executable
-> invariants: [ExecutableSSOT v1.6](ExecutableSSOT.v1.6.md).
+> invariants and the tests that check them: [ExecutableSSOT v1.6](ExecutableSSOT.v1.6.md).
 
 This document is **normative**. Keywords **MUST / MUST NOT / SHOULD / MAY** are used as defined in RFC 2119.
 
@@ -60,7 +60,8 @@ Constants of the release unit:
 
 ## 2. Allocation at settlement
 
-When a casino position settles through `finalize`, the hub MUST compute, in this order:
+When a casino position settles through `finalize`, the hub (in the reference implementation, through its
+referral engine) MUST compute, in this order:
 
 1. `E`, `E_b`, `E_Δ` from `U` and the snapshotted `h_b`, `h_e`.
 2. `O = floor(E × (10000 − LP_SHARE_BPS) / 10000)`.
@@ -105,6 +106,8 @@ A position that ends in a pure refund, including a VRF timeout refund, MUST allo
   forces `h_e = h_b` and `M = 0`.
 - If markup is enabled, the player's `maxHouseEdgeBps` check at placement continues to apply, and `h_e` MUST
   NOT exceed `MAX_HOUSE_EDGE_BPS`.
+- An affiliate's stored edge MUST be clamped to the current cap `min(h_b + maxAffiliateDeltaBps,
+  MAX_HOUSE_EDGE_BPS)` when a bet is priced, so a lower cap or base edge applies to new bets at once.
 - The markup operator share is `M_total = floor(E_Δ × (10000 − LP_SHARE_BPS) / 10000)`. It MUST be paid to the
   snapshotted skyline payees in proportion to their increments, each share rounded down. Any unallocated
   remainder accrues to `PF_new`.
@@ -121,6 +124,8 @@ The SettlementRouter interface changes as follows for the v1.6 release unit:
   unless `protocolFeeAccrual + Σ(accrued + locked + holdback over xpAwards) ≤ cap`.
 - A hub MAY accrue less than `cap`. Any difference remains with LPs.
 - The existing reserve, refund and net-payout checks remain in force.
+- The Router SHOULD expose the cap as a view, `allocationCap(positionId, refundAmount)`, and SHOULD include
+  `edgeBps` in its position-opened event.
 
 This bounds what any authorized hub can take from a pool. It does not let the Router verify the game
 result or the correctness of `payoutGross`; module review, randomness and hub authorization still do that.
@@ -135,6 +140,8 @@ result or the correctness of `payoutGross`; module review, randomness and hub au
 | Referral schedule `(l0, l1, l2)`                                              | governance (Safe) | Created as a new immutable version; activation MAY be immediate; applies to bets accepted after activation    |
 
 - Every bet MUST snapshot `h_b`, `h_e`, the referral schedule version and its payees.
+- Only governance MAY queue or cancel a delayed change. Once the delay has passed, anyone MAY activate it.
+  A decrease of `maxAffiliateDeltaBps` also discards any queued increase.
 - Governance actions MUST emit events carrying the old value, the new value and, for queued changes, the
   activation time.
 - The guardian keeps pause-only authority. It MUST NOT change any allocation parameter.
@@ -142,7 +149,8 @@ result or the correctness of `payoutGross`; module review, randomness and hub au
 ## 7. Events and auditability
 
 - The hub MUST emit, per settled casino position, an allocation event carrying at least:
-  `positionId, U, h_e, E, O, lpRetained, PF_new, R0, R1, R2, M`.
+  `positionId, U, h_e, E, O, lpRetained, PF_new, R0, R1, R2, M`. The reference hub emits
+  `HouseEdgeAllocated` with these fields in this order.
 - `lpRetained + PF_new + XP_new = E` MUST be recomputable from events alone.
 - Receipts and pool pages SHOULD display the allocation of each position from this event.
 

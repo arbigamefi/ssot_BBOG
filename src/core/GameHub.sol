@@ -10,6 +10,7 @@ import {IGameModule} from "./interfaces/IGameModule.sol";
 import {SSOTTypes} from "./interfaces/SSOTTypes.sol";
 import {Governable} from "../access/Governable.sol";
 import {Errors} from "../libs/Errors.sol";
+import {HouseEdgeLib} from "../libs/HouseEdgeLib.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {IReferralRegistry} from "../engines/referral/IReferralRegistry.sol";
@@ -20,11 +21,20 @@ import {IReferralEngine} from "../engines/referral/IReferralEngine.sol";
 /// Option 1 (institutional):
 /// - player = msg.sender (no relayer / no delegated betting)
 /// - affiliate hint is used for best-effort first-touch binding + skyline pricing
-/// - bet snapshots pricing/referral config to prevent retroactive changes
+/// - bet snapshots pricing, referral schedule and referral payees to prevent retroactive changes
+///
+/// House-edge allocation (SSOT v1.6, ADR-0032): of the turnover edge E, LPs retain E - O where
+/// O = floor(E * (10000 - LP_SHARE_BPS) / 10000). Referral rewards and markup are paid from O, and whatever
+/// they do not use accrues as protocol fees. The referral engine computes the allocation from the bet's
+/// acceptance snapshot; the SettlementRouter enforces the same bound independently.
 contract GameHub is IGameHub, Governable, ReentrancyGuard {
     uint16 internal constant BPS = 10_000;
     uint8 internal constant MAX_SKYLINE_SEGMENTS = 6;
-    uint16 internal constant MAX_HOUSE_EDGE = 10_000;
+
+    uint16 public constant override LP_SHARE_BPS = HouseEdgeLib.LP_SHARE_BPS;
+    uint16 public constant override MAX_REFERRAL_BPS = HouseEdgeLib.MAX_REFERRAL_BPS;
+    uint16 public constant override MAX_HOUSE_EDGE_BPS = HouseEdgeLib.MAX_HOUSE_EDGE_BPS;
+    uint256 public constant override EDGE_CHANGE_DELAY = HouseEdgeLib.EDGE_CHANGE_DELAY;
 
     address public immutable override settlementRouter;
     address public immutable override vrfHub;
@@ -35,22 +45,35 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
     uint256 public override refundTimeoutSeconds;
 
     // pricing
-    uint16 public override defaultHouseEdgeBps;
-    uint16 public override maxAffiliateDeltaBps;
+    uint16 public override defaultHouseEdgeBps; // active base edge h_b
+    uint16 public override maxAffiliateDeltaBps; // active markup cap; 0 disables markup
     mapping(address => uint16) public override affiliateHouseEdgeBps; // 0 => unset
 
-    // referral config snapshot
-    struct ReferralConfig {
-        uint16 baseBudgetBps;
-        uint16 deltaBudgetBps;
-        uint16 holdbackBps;
-        uint16[6] levelBps; // L0..L5
-        uint8 levels; // includes L0
+    /// @dev activatesAt == 0 means nothing is queued.
+    struct PendingEdgeChange {
+        uint16 bps;
+        uint64 activatesAt;
     }
 
-    mapping(uint32 => ReferralConfig) internal _refCfg;
+    mapping(EdgeParam => PendingEdgeChange) internal _pendingEdgeChange;
+
+    /// @dev Immutable once created. Rates are bps of the base turnover edge; l0 + l1 + l2 <= MAX_REFERRAL_BPS.
+    struct ReferralSchedule {
+        uint16 l0Bps; // player rakeback, paid only if the player had a referrer at acceptance
+        uint16 l1Bps; // direct referrer
+        uint16 l2Bps; // referrer's referrer
+        uint16 holdbackBps; // share of L1/L2 and markup amounts that vests linearly
+        bool exists;
+    }
+
+    mapping(uint32 => ReferralSchedule) internal _refCfg;
     uint32 internal _nextRefCfgId = 1;
     uint32 public override activeReferralConfigId;
+
+    struct ReferralPayees {
+        address l1;
+        address l2;
+    }
 
     mapping(bytes32 => address) public override gameModule;
 
@@ -59,12 +82,9 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
     mapping(uint256 => bytes) internal betParams;
     mapping(uint256 => bytes) internal betRandomData;
     mapping(uint256 => bytes) internal betDeltaSkyline;
+    mapping(uint256 => ReferralPayees) internal betReferralPayees;
 
     mapping(uint256 => uint256) public requestToBetId;
-
-    bytes32 internal constant REASON_PLAYER_KICK = keccak256("PLAYER_KICK");
-    bytes32 internal constant REASON_REF_BASE = keccak256("REF_BASE");
-    bytes32 internal constant REASON_REF_DELTA = keccak256("REF_DELTA");
 
     constructor(
         address settlementRouter_,
@@ -74,13 +94,11 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         address gov_,
         uint256 refundTimeoutSeconds_,
         uint16 defaultHouseEdgeBps_,
-        uint16 maxAffiliateDeltaBps_,
-        // initial referral config
-        uint16 baseBudgetBps_,
-        uint16 deltaBudgetBps_,
-        uint16 holdbackBps_,
-        uint16[6] memory levelBps_,
-        uint8 levels_
+        // initial referral schedule
+        uint16 l0Bps_,
+        uint16 l1Bps_,
+        uint16 l2Bps_,
+        uint16 holdbackBps_
     ) Governable(gov_) {
         if (
             settlementRouter_ == address(0) || vrfHub_ == address(0) || referralRegistry_ == address(0)
@@ -89,10 +107,7 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
             revert Errors.ZeroAddress();
         }
 
-        if (defaultHouseEdgeBps_ == 0 || defaultHouseEdgeBps_ > MAX_HOUSE_EDGE) {
-            revert Errors.InvalidConfig();
-        }
-        _validateReferralConfig(baseBudgetBps_, deltaBudgetBps_, holdbackBps_, levelBps_, levels_);
+        _validateBaseHouseEdge(defaultHouseEdgeBps_);
 
         settlementRouter = settlementRouter_;
         vrfHub = vrfHub_;
@@ -102,19 +117,14 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         refundTimeoutSeconds = refundTimeoutSeconds_;
         emit RefundTimeoutSet(refundTimeoutSeconds_);
 
+        // Affiliate markup starts disabled (SSOT v1.6 section 4); enabling it goes through the delay.
         defaultHouseEdgeBps = defaultHouseEdgeBps_;
-        maxAffiliateDeltaBps = maxAffiliateDeltaBps_;
+        emit EdgeChangeApplied(EdgeParam.BaseHouseEdge, 0, defaultHouseEdgeBps_);
 
-        // config id 1 is created at deployment
-        uint32 id = _nextRefCfgId++;
-        _refCfg[id] = ReferralConfig({
-            baseBudgetBps: baseBudgetBps_,
-            deltaBudgetBps: deltaBudgetBps_,
-            holdbackBps: holdbackBps_,
-            levelBps: levelBps_,
-            levels: levels_
-        });
+        // schedule id 1 is created and activated at deployment
+        uint32 id = _createReferralConfig(l0Bps_, l1Bps_, l2Bps_, holdbackBps_);
         activeReferralConfigId = id;
+        emit ActiveReferralConfigSet(0, id);
     }
 
     function riskInPaused(uint64 poolId) public view override returns (bool) {
@@ -129,58 +139,72 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         emit RefundTimeoutSet(seconds_);
     }
 
-    function setDefaultHouseEdgeBps(uint16 bps) external onlyGov {
-        if (bps == 0 || bps > MAX_HOUSE_EDGE) revert Errors.InvalidConfig();
-        defaultHouseEdgeBps = bps;
+    // Base edge and markup cap: governance queues a change, and anyone applies it once EDGE_CHANGE_DELAY has
+    // passed. Bets snapshot the edge at acceptance, so a change never reaches a bet that was already accepted.
+    // A markup-cap decrease protects players and applies at once, discarding any queued increase.
+
+    function pendingEdgeChange(EdgeParam param) external view override returns (uint16 bps, uint64 activatesAt) {
+        PendingEdgeChange memory pending = _pendingEdgeChange[param];
+        return (pending.bps, pending.activatesAt);
     }
 
-    function setMaxAffiliateDeltaBps(uint16 bps) external onlyGov {
-        if (bps > MAX_HOUSE_EDGE) revert Errors.InvalidBps(bps);
-        maxAffiliateDeltaBps = bps;
+    function queueEdgeChange(EdgeParam param, uint16 bps) external override onlyGov {
+        if (bps > HouseEdgeLib.MAX_HOUSE_EDGE_BPS || (bps == 0 && param == EdgeParam.BaseHouseEdge)) {
+            revert Errors.InvalidBps(bps);
+        }
+        if (param == EdgeParam.MaxAffiliateDelta && bps <= maxAffiliateDeltaBps) {
+            delete _pendingEdgeChange[param];
+            _applyEdgeChange(param, bps);
+            return;
+        }
+        uint64 activatesAt = uint64(block.timestamp + HouseEdgeLib.EDGE_CHANGE_DELAY);
+        _pendingEdgeChange[param] = PendingEdgeChange({bps: bps, activatesAt: activatesAt});
+        emit EdgeChangeQueued(param, _edgeParamValue(param), bps, activatesAt);
     }
 
-    function createReferralConfig(
-        uint16 baseBudgetBps_,
-        uint16 deltaBudgetBps_,
-        uint16 holdbackBps_,
-        uint16[6] calldata levelBps_,
-        uint8 levels_
-    ) external override onlyGov returns (uint32 id) {
-        _validateReferralConfig(baseBudgetBps_, deltaBudgetBps_, holdbackBps_, levelBps_, levels_);
-        id = _nextRefCfgId++;
-        _refCfg[id] = ReferralConfig({
-            baseBudgetBps: baseBudgetBps_,
-            deltaBudgetBps: deltaBudgetBps_,
-            holdbackBps: holdbackBps_,
-            levelBps: levelBps_,
-            levels: levels_
-        });
+    function activateEdgeChange(EdgeParam param) external override {
+        PendingEdgeChange memory pending = _pendingEdgeChange[param];
+        if (pending.activatesAt == 0) revert NoPendingEdgeChange();
+        if (block.timestamp < pending.activatesAt) revert EdgeChangeNotReady(pending.activatesAt);
+        delete _pendingEdgeChange[param];
+        _applyEdgeChange(param, pending.bps);
+    }
+
+    function cancelEdgeChange(EdgeParam param) external override onlyGov {
+        PendingEdgeChange memory pending = _pendingEdgeChange[param];
+        if (pending.activatesAt == 0) revert NoPendingEdgeChange();
+        delete _pendingEdgeChange[param];
+        emit EdgeChangeCancelled(param, _edgeParamValue(param), pending.bps);
+    }
+
+    // Referral schedules are versioned: a new schedule is a new id, and activation applies to bets accepted
+    // afterwards.
+
+    function createReferralConfig(uint16 l0Bps, uint16 l1Bps, uint16 l2Bps, uint16 holdbackBps)
+        external
+        override
+        onlyGov
+        returns (uint32 id)
+    {
+        id = _createReferralConfig(l0Bps, l1Bps, l2Bps, holdbackBps);
     }
 
     function setActiveReferralConfig(uint32 id) external override onlyGov {
-        ReferralConfig storage cfg = _refCfg[id];
-        if (id == 0 || cfg.levels == 0) revert Errors.InvalidConfig();
+        if (!_refCfg[id].exists) revert UnknownReferralConfig(id);
+        uint32 old = activeReferralConfigId;
         activeReferralConfigId = id;
+        emit ActiveReferralConfigSet(old, id);
     }
 
     function getReferralConfig(uint32 id)
         external
         view
         override
-        returns (
-            uint16 baseBudgetBps,
-            uint16 deltaBudgetBps,
-            uint16 holdbackBps,
-            uint16[6] memory levelBps,
-            uint8 levels
-        )
+        returns (uint16 l0Bps, uint16 l1Bps, uint16 l2Bps, uint16 holdbackBps)
     {
-        ReferralConfig storage c = _refCfg[id];
-        baseBudgetBps = c.baseBudgetBps;
-        deltaBudgetBps = c.deltaBudgetBps;
-        holdbackBps = c.holdbackBps;
-        levelBps = c.levelBps;
-        levels = c.levels;
+        ReferralSchedule storage c = _refCfg[id];
+        if (!c.exists) revert UnknownReferralConfig(id);
+        return (c.l0Bps, c.l1Bps, c.l2Bps, c.holdbackBps);
     }
 
     // --- pricing ---
@@ -254,6 +278,12 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         return betDeltaSkyline[betId];
     }
 
+    function getBetReferralPayees(uint256 betId) external view override returns (address l1, address l2) {
+        if (bets[betId].state == SSOTTypes.BetState.None) revert BetNotFound(betId);
+        ReferralPayees memory payees = betReferralPayees[betId];
+        return (payees.l1, payees.l2);
+    }
+
     function nextPositionIdHint() external view override returns (uint256) {
         return ISettlementRouter(settlementRouter).nextPositionId();
     }
@@ -305,14 +335,16 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         );
 
         // Normalize player-specified maxHouseEdgeBps for auditability.
-        // (0 => defaultHouseEdgeBps; >MAX => MAX)
+        // (0 => defaultHouseEdgeBps; >MAX_HOUSE_EDGE_BPS => MAX_HOUSE_EDGE_BPS)
         uint16 usedMaxHE = maxHouseEdgeBps;
         if (usedMaxHE == 0) usedMaxHE = defaultHouseEdgeBps;
-        if (usedMaxHE > MAX_HOUSE_EDGE) usedMaxHE = MAX_HOUSE_EDGE;
+        if (usedMaxHE > HouseEdgeLib.MAX_HOUSE_EDGE_BPS) usedMaxHE = HouseEdgeLib.MAX_HOUSE_EDGE_BPS;
 
-        // Compute pricing snapshot + skyline
-        (address pricingAff, uint16 baseHE, uint16 effectiveHE, bytes memory skyline) =
-            _computeSkylineAndHE(player, affiliate, usedMaxHE);
+        // Referral payees (after best-effort first-touch binding) + pricing snapshot + skyline
+        (address pricingAff, address l1, address l2) = _snapshotReferral(player, affiliate);
+        uint16 baseHE = defaultHouseEdgeBps;
+        (uint16 effectiveHE, bytes memory skyline) = _computeSkyline(pricingAff, baseHE);
+        if (effectiveHE > usedMaxHE) revert HouseEdgeTooHigh(effectiveHE, usedMaxHE);
         bytes32 skylineHash = keccak256(skyline);
 
         uint32 cfgId = activeReferralConfigId;
@@ -330,12 +362,16 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
                 baseHE,
                 effectiveHE,
                 usedMaxHE,
-                skylineHash
+                skylineHash,
+                l1,
+                l2
             )
         );
 
-        positionId = ISettlementRouter(settlementRouter).openPosition(poolId, player, stake, reserved, snapshotHash);
+        positionId = ISettlementRouter(settlementRouter)
+            .openPosition(poolId, player, stake, reserved, snapshotHash, effectiveHE);
         betDeltaSkyline[positionId] = skyline;
+        if (l1 != address(0)) betReferralPayees[positionId] = ReferralPayees({l1: l1, l2: l2});
 
         SSOTTypes.Bet storage b = bets[positionId];
         b.betId = positionId;
@@ -481,63 +517,10 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
 
         uint256 usedTurnover = b.stake - refundAmount;
 
-        // eligibility uses turnover AFTER this bet
-        uint256 turnoverAfter = IBank(b.bank).playerTurnover(b.player) + usedTurnover;
-        uint256 minTurnover = IBank(b.bank).minPlayerTurnoverForUnlock();
-
-        ReferralConfig storage cfg = _refCfg[b.referralConfigId];
-
-        // ---- budgets (turnover-based) ----
-        uint256 baseHEAmt = Math.mulDiv(usedTurnover, uint256(b.baseHouseEdgeBps), BPS);
-        uint256 baseBudget = Math.mulDiv(baseHEAmt, uint256(cfg.baseBudgetBps), BPS);
-        if (baseBudget > baseHEAmt) baseBudget = baseHEAmt;
-        uint256 nonBudgetBase = baseHEAmt - baseBudget;
-
-        uint256 deltaBudget = 0;
-        uint256 nonBudgetDelta = 0;
-        if (b.effectiveHouseEdgeBps > b.baseHouseEdgeBps) {
-            uint256 deltaHE = uint256(b.effectiveHouseEdgeBps) - uint256(b.baseHouseEdgeBps);
-            uint256 deltaHEAmt = Math.mulDiv(usedTurnover, deltaHE, BPS);
-            deltaBudget = Math.mulDiv(deltaHEAmt, uint256(cfg.deltaBudgetBps), BPS);
-            if (deltaBudget > deltaHEAmt) deltaBudget = deltaHEAmt;
-            nonBudgetDelta = deltaHEAmt - deltaBudget;
-        }
-
-        // ---- referral plans ----
-        IReferralEngine.Plan memory planB;
-        IReferralEngine.Plan memory planD;
-
-        if (baseBudget > 0 && cfg.levels > 0) {
-            uint8 maxUplines = cfg.levels > 0 ? (cfg.levels - 1) : 0;
-            address[] memory uplines = _buildUplines(b.player, maxUplines);
-
-            IReferralEngine.BaseInput memory bi = IReferralEngine.BaseInput({
-                baseBudget: baseBudget,
-                levelBps: cfg.levelBps,
-                levels: cfg.levels,
-                uplines: uplines,
-                holdbackBps: cfg.holdbackBps,
-                minTurnover: minTurnover,
-                playerTurnover: turnoverAfter
-            });
-            planB = IReferralEngine(referralEngine).splitBase(bi);
-        }
-
-        if (deltaBudget > 0) {
-            IReferralEngine.DeltaPolicy memory pol = IReferralEngine.DeltaPolicy({
-                deltaBudget: deltaBudget,
-                holdbackBps: cfg.holdbackBps,
-                minTurnover: minTurnover,
-                playerTurnover: turnoverAfter
-            });
-            bytes memory skyline = betDeltaSkyline[betId];
-            planD = IReferralEngine(referralEngine).splitDelta(skyline, pol);
-        }
-
-        uint256 protocolFeeAccrual = nonBudgetBase + nonBudgetDelta + planB.sink + planD.sink;
-
-        // ---- convert plans to XP awards ----
-        SSOTTypes.XPAward[] memory awards = _plansToAwards(b.player, planB, planD);
+        // ---- house-edge allocation (turnover-based, SSOT v1.6) and the XP awards that pay it ----
+        (IReferralEngine.Allocation memory alloc, SSOTTypes.XPAward[] memory awards) =
+            _allocate(betId, b, usedTurnover);
+        uint256 protocolFeeAccrual = alloc.protocolFee;
 
         b.resolvedAt = uint64(block.timestamp);
         b.state = SSOTTypes.BetState.Settled;
@@ -556,6 +539,19 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         ISettlementRouter(settlementRouter)
             .settlePosition(betId, payoutGross, payoutNet, refundAmount, protocolFeeAccrual, awards);
 
+        emit HouseEdgeAllocated(
+            betId,
+            usedTurnover,
+            b.effectiveHouseEdgeBps,
+            alloc.edge,
+            alloc.operatorShare,
+            alloc.edge - alloc.operatorShare,
+            alloc.protocolFee,
+            alloc.r0,
+            alloc.r1,
+            alloc.r2,
+            alloc.markup
+        );
         emit BetFinalized(betId, payoutGross, payoutNet, feeOnPayout, protocolFeeAccrual);
     }
 
@@ -597,31 +593,38 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
     // Internals
     // ---------------------------------------------------------------------
 
-    function _validateReferralConfig(
-        uint16 baseBudgetBps_,
-        uint16 deltaBudgetBps_,
-        uint16 holdbackBps_,
-        uint16[6] memory levelBps_,
-        uint8 levels_
-    ) internal pure {
-        if (holdbackBps_ > BPS) revert Errors.InvalidBps(holdbackBps_);
-        if (baseBudgetBps_ > BPS || deltaBudgetBps_ > BPS) {
-            revert Errors.InvalidBps(uint256(baseBudgetBps_) + uint256(deltaBudgetBps_));
-        }
-        if (levels_ > 6) revert Errors.InvalidConfig();
+    function _validateBaseHouseEdge(uint16 bps) internal pure {
+        if (bps == 0 || bps > HouseEdgeLib.MAX_HOUSE_EDGE_BPS) revert Errors.InvalidBps(bps);
+    }
 
-        uint256 sumLevels;
-        for (uint8 i = 0; i < levels_; ++i) {
-            sumLevels += uint256(levelBps_[i]);
-        }
-        if (sumLevels > BPS) revert Errors.InvalidBps(sumLevels);
+    function _edgeParamValue(EdgeParam param) internal view returns (uint16) {
+        return param == EdgeParam.BaseHouseEdge ? defaultHouseEdgeBps : maxAffiliateDeltaBps;
+    }
+
+    function _applyEdgeChange(EdgeParam param, uint16 bps) internal {
+        uint16 old = _edgeParamValue(param);
+        if (param == EdgeParam.BaseHouseEdge) defaultHouseEdgeBps = bps;
+        else maxAffiliateDeltaBps = bps;
+        emit EdgeChangeApplied(param, old, bps);
+    }
+
+    function _createReferralConfig(uint16 l0Bps, uint16 l1Bps, uint16 l2Bps, uint16 holdbackBps)
+        internal
+        returns (uint32 id)
+    {
+        if (holdbackBps > BPS) revert Errors.InvalidBps(holdbackBps);
+        uint256 rates = uint256(l0Bps) + uint256(l1Bps) + uint256(l2Bps);
+        if (rates > HouseEdgeLib.MAX_REFERRAL_BPS) revert Errors.InvalidBps(rates);
+
+        id = _nextRefCfgId++;
+        _refCfg[id] =
+            ReferralSchedule({l0Bps: l0Bps, l1Bps: l1Bps, l2Bps: l2Bps, holdbackBps: holdbackBps, exists: true});
+        emit ReferralConfigCreated(id, l0Bps, l1Bps, l2Bps, holdbackBps);
     }
 
     function _maxAffiliateHouseEdge(uint16 def) internal view returns (uint16) {
-        uint16 delta = maxAffiliateDeltaBps;
-        if (delta == 0) return def;
-        uint256 maxAllowed = uint256(def) + uint256(delta);
-        return maxAllowed > MAX_HOUSE_EDGE ? MAX_HOUSE_EDGE : uint16(maxAllowed);
+        uint256 maxAllowed = uint256(def) + uint256(maxAffiliateDeltaBps);
+        return maxAllowed > HouseEdgeLib.MAX_HOUSE_EDGE_BPS ? HouseEdgeLib.MAX_HOUSE_EDGE_BPS : uint16(maxAllowed);
     }
 
     function _poolRegistry() internal view returns (IPoolRegistry) {
@@ -680,148 +683,78 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         } catch {}
     }
 
-    function _computeSkylineAndHE(address player, address affiliate, uint16 maxHouseEdgeBps)
+    /// @dev Resolves the referral payees a bet is accepted under. If the player has no referrer, the affiliate
+    ///      hint is bound first-touch on a best-effort basis. A hint that cannot be bound still prices the bet
+    ///      (skyline), but pays no referral reward.
+    function _snapshotReferral(address player, address affiliate)
         internal
-        returns (address pricingAff, uint16 baseHE, uint16 effectiveHE, bytes memory skyline)
+        returns (address pricingAff, address l1, address l2)
     {
-        if (maxHouseEdgeBps == 0) maxHouseEdgeBps = defaultHouseEdgeBps;
-        if (maxHouseEdgeBps > MAX_HOUSE_EDGE) maxHouseEdgeBps = MAX_HOUSE_EDGE;
-
-        // First-touch: if player has no referrer and affiliate is provided, try binding.
-        pricingAff = IReferralRegistry(referralRegistry).referrerOf(player);
-        if (pricingAff == address(0)) {
-            if (affiliate != address(0) && affiliate != player) {
-                try IReferralRegistry(referralRegistry).bindFor(player, affiliate) {} catch {}
-            }
-            pricingAff = IReferralRegistry(referralRegistry).referrerOf(player);
-            if (pricingAff == address(0)) pricingAff = affiliate;
+        IReferralRegistry registry = IReferralRegistry(referralRegistry);
+        l1 = registry.referrerOf(player);
+        if (l1 == address(0) && affiliate != address(0) && affiliate != player) {
+            try registry.bindFor(player, affiliate) {} catch {}
+            l1 = registry.referrerOf(player);
         }
+        if (l1 != address(0)) {
+            l2 = registry.referrerOf(l1);
+            // The registry's anti-cycle check rules this out; stay safe against a registry that does not.
+            if (l2 == player || l2 == l1) l2 = address(0);
+        }
+        pricingAff = l1 != address(0) ? l1 : affiliate;
+    }
 
-        baseHE = defaultHouseEdgeBps;
-        uint16 curMax = baseHE;
-
-        address[6] memory payeesTmp;
-        uint16[6] memory incBpsTmp;
-        uint8 k = 0;
+    /// @dev Skyline segments are packed as address(20) || uint16 incBps(2): each affiliate up the chain that prices
+    ///      above everyone below it earns the increment.
+    function _computeSkyline(address pricingAff, uint16 baseHE)
+        internal
+        view
+        returns (uint16 effectiveHE, bytes memory skyline)
+    {
+        effectiveHE = baseHE;
+        uint16 maxAllowed = _maxAffiliateHouseEdge(baseHE);
+        if (maxAllowed <= baseHE) return (effectiveHE, skyline); // markup disabled
 
         address cur = pricingAff;
         for (uint8 i = 0; i < MAX_SKYLINE_SEGMENTS && cur != address(0); ++i) {
             uint16 heCur = affiliateHouseEdgeBps[cur];
-            if (heCur > curMax) {
-                uint16 inc = heCur - curMax;
-                payeesTmp[k] = cur;
-                incBpsTmp[k] = inc;
-                curMax = heCur;
-                unchecked {
-                    ++k;
-                }
+            // A stored edge may predate a lower cap or base edge; it never prices above the current cap.
+            if (heCur > maxAllowed) heCur = maxAllowed;
+            if (heCur > effectiveHE) {
+                skyline = abi.encodePacked(skyline, cur, heCur - effectiveHE);
+                effectiveHE = heCur;
             }
             cur = IReferralRegistry(referralRegistry).referrerOf(cur);
         }
-
-        effectiveHE = curMax;
-        if (effectiveHE > maxHouseEdgeBps) revert HouseEdgeTooHigh(effectiveHE, maxHouseEdgeBps);
-
-        if (k > 0) {
-            skyline = new bytes(uint256(k) * 22);
-            for (uint8 j = 0; j < k; ++j) {
-                uint256 o = uint256(j) * 22;
-                bytes20 p = bytes20(payeesTmp[j]);
-                uint16 inc = incBpsTmp[j];
-                for (uint8 b = 0; b < 20; ++b) {
-                    skyline[o + b] = p[b];
-                }
-                skyline[o + 20] = bytes1(uint8(inc >> 8));
-                skyline[o + 21] = bytes1(uint8(inc));
-            }
-        }
     }
 
-    function _buildUplines(address player, uint8 maxUplines) internal view returns (address[] memory uplines) {
-        if (maxUplines == 0) return new address[](0);
-        uplines = new address[](maxUplines);
-        uint8 filled = 0;
-
-        address cur = IReferralRegistry(referralRegistry).referrerOf(player);
-        for (uint8 i = 0; i < maxUplines; ++i) {
-            if (cur == address(0)) break;
-            bool dup = false;
-            for (uint8 j = 0; j < filled; ++j) {
-                if (uplines[j] == cur) {
-                    dup = true;
-                    break;
-                }
-            }
-            if (!dup) {
-                uplines[filled] = cur;
-                unchecked {
-                    ++filled;
-                }
-            }
-            cur = IReferralRegistry(referralRegistry).referrerOf(cur);
-        }
-
-        assembly ("memory-safe") {
-            mstore(uplines, filled)
-        }
-    }
-
-    function _plansToAwards(address player, IReferralEngine.Plan memory basePlan, IReferralEngine.Plan memory deltaPlan)
+    /// @dev SSOT v1.6 section 2. The allocation depends only on usedTurnover and the acceptance snapshot (edges,
+    ///      schedule id, payees, skyline); the Bank's turnover state only decides the XP buckets.
+    function _allocate(uint256 betId, SSOTTypes.Bet storage b, uint256 usedTurnover)
         internal
-        pure
-        returns (SSOTTypes.XPAward[] memory awards)
+        view
+        returns (IReferralEngine.Allocation memory, SSOTTypes.XPAward[] memory)
     {
-        // Upper bound: 1 (playerKick) + 5 (base uplines) + 6 (skyline) = 12
-        SSOTTypes.XPAward[] memory tmp = new SSOTTypes.XPAward[](12);
-        uint256 n = 0;
-
-        // player kickback (accrued to player)
-        if (basePlan.playerKick > 0) {
-            tmp[n++] = SSOTTypes.XPAward({
-                payee: player,
-                sourcePlayer: player,
-                accrued: basePlan.playerKick,
-                locked: 0,
-                holdback: 0,
-                reason: REASON_PLAYER_KICK
-            });
-        }
-
-        n = _appendPlanAwards(tmp, n, player, basePlan, REASON_REF_BASE);
-        n = _appendPlanAwards(tmp, n, player, deltaPlan, REASON_REF_DELTA);
-
-        awards = new SSOTTypes.XPAward[](n);
-        for (uint256 i = 0; i < n; ++i) {
-            awards[i] = tmp[i];
-        }
-    }
-
-    function _appendPlanAwards(
-        SSOTTypes.XPAward[] memory tmp,
-        uint256 n,
-        address sourcePlayer,
-        IReferralEngine.Plan memory plan,
-        bytes32 reason
-    ) internal pure returns (uint256) {
-        uint256 len = plan.payees.length;
-        for (uint256 i = 0; i < len; ++i) {
-            address payee = plan.payees[i];
-            if (payee == address(0)) continue;
-
-            uint256 accrued = plan.immediate[i];
-            uint256 locked = plan.locked[i];
-            uint256 holdback = plan.holdback[i];
-            if (accrued == 0 && locked == 0 && holdback == 0) continue;
-
-            tmp[n++] = SSOTTypes.XPAward({
-                payee: payee,
-                sourcePlayer: sourcePlayer,
-                accrued: accrued,
-                locked: locked,
-                holdback: holdback,
-                reason: reason
-            });
-        }
-        return n;
+        ReferralSchedule storage cfg = _refCfg[b.referralConfigId];
+        ReferralPayees storage payees = betReferralPayees[betId];
+        return IReferralEngine(referralEngine)
+            .allocate(
+                IReferralEngine.AllocationInput({
+                    usedTurnover: usedTurnover,
+                    baseEdgeBps: b.baseHouseEdgeBps,
+                    effectiveEdgeBps: b.effectiveHouseEdgeBps,
+                    player: b.player,
+                    l1: payees.l1,
+                    l2: payees.l2,
+                    l0Bps: cfg.l0Bps,
+                    l1Bps: cfg.l1Bps,
+                    l2Bps: cfg.l2Bps,
+                    holdbackBps: cfg.holdbackBps,
+                    minTurnover: IBank(b.bank).minPlayerTurnoverForUnlock(),
+                    // eligibility uses turnover AFTER this bet
+                    playerTurnover: IBank(b.bank).playerTurnover(b.player) + usedTurnover
+                }),
+                betDeltaSkyline[betId]
+            );
     }
 }

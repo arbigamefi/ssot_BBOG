@@ -166,22 +166,17 @@ contract ReleaseDigestV15 is Script {
                 snap.readUint(".refundTimeoutSeconds"),
                 snap.readUint(".defaultHouseEdgeBps"),
                 snap.readUint(".maxAffiliateDeltaBps"),
-                snap.readUint(".refBaseBudgetBps"),
-                snap.readUint(".refDeltaBudgetBps"),
-                snap.readUint(".refHoldbackBps"),
-                snap.readUint(".refLevels")
+                snap.readUint(".lpShareBps"),
+                snap.readUint(".refL0Bps"),
+                snap.readUint(".refL1Bps"),
+                snap.readUint(".refL2Bps")
             )
         );
 
         digest = keccak256(
             abi.encode(
                 digest,
-                snap.readUint(".refLevel0Bps"),
-                snap.readUint(".refLevel1Bps"),
-                snap.readUint(".refLevel2Bps"),
-                snap.readUint(".refLevel3Bps"),
-                snap.readUint(".refLevel4Bps"),
-                snap.readUint(".refLevel5Bps"),
+                snap.readUint(".refHoldbackBps"),
                 snap.readUint(".sportsEnabled"),
                 snap.readUint(".sportsMaxStake"),
                 snap.readUint(".sportsMaxPayout"),

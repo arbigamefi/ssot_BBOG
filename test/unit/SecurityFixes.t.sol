@@ -134,16 +134,12 @@ contract SecurityFixes is Test {
     }
 
     function test_referralConfigRejectsOverBudgetLevels() external {
-        uint16[6] memory initialLevels;
-        (,, GameHub hub,) = _deploy(initialLevels, 0, 0, 200, 0);
+        (,, GameHub hub,) = _deploy(200);
 
-        uint16[6] memory badLevels;
-        badLevels[0] = 5_000;
-        badLevels[1] = 5_001;
-
+        // L0 + L1 + L2 is capped at MAX_REFERRAL_BPS (35% of the base edge), not 100%.
         vm.prank(gov);
-        vm.expectRevert(abi.encodeWithSelector(Errors.InvalidBps.selector, 10_001));
-        hub.createReferralConfig(10_000, 0, 0, badLevels, 2);
+        vm.expectRevert(abi.encodeWithSelector(Errors.InvalidBps.selector, 3_501));
+        hub.createReferralConfig(1_000, 2_000, 501, 0);
     }
 
     function test_initialReferralConfigRejectsOverBudgetLevels() external {
@@ -153,30 +149,12 @@ contract SecurityFixes is Test {
         ReferralRegistry refReg = new ReferralRegistry(gov);
         DefaultReferralEngine refEng = new DefaultReferralEngine();
 
-        uint16[6] memory badLevels;
-        badLevels[1] = 30_000;
-
-        vm.expectRevert(abi.encodeWithSelector(Errors.InvalidBps.selector, 30_000));
-        new GameHub(
-            address(router),
-            address(vrf),
-            address(refReg),
-            address(refEng),
-            gov,
-            3600,
-            200,
-            0,
-            10_000,
-            0,
-            0,
-            badLevels,
-            2
-        );
+        vm.expectRevert(abi.encodeWithSelector(Errors.InvalidBps.selector, 3_501));
+        new GameHub(address(router), address(vrf), address(refReg), address(refEng), gov, 3600, 200, 0, 3_501, 0, 0);
     }
 
     function test_zeroMaxAffiliateDeltaMeansDefaultOnly() external {
-        uint16[6] memory levels;
-        (MockERC20 asset, Bank bank, GameHub hub, VRFHub vrf) = _deploy(levels, 0, 0, 200, 0);
+        (MockERC20 asset, Bank bank, GameHub hub, VRFHub vrf) = _deploy(200);
 
         vm.prank(affiliate);
         vm.expectRevert(abi.encodeWithSelector(IGameHub.HouseEdgeTooHigh.selector, 201, 200));
@@ -214,8 +192,7 @@ contract SecurityFixes is Test {
     }
 
     function test_badModuleRefundTooLargeFallsBackToFullRefund() external {
-        uint16[6] memory levels;
-        (MockERC20 asset, Bank bank, GameHub hub, VRFHub vrf) = _deploy(levels, 0, 0, 200, 0);
+        (MockERC20 asset, Bank bank, GameHub hub, VRFHub vrf) = _deploy(200);
 
         SecurityRefundTooLargeModule module = new SecurityRefundTooLargeModule();
         vm.prank(gov);
@@ -251,8 +228,7 @@ contract SecurityFixes is Test {
     }
 
     function test_registerGameRejectsOverwrite() external {
-        uint16[6] memory levels;
-        (,, GameHub hub,) = _deploy(levels, 0, 0, 200, 0);
+        (,, GameHub hub,) = _deploy(200);
         SecurityStakePayoutModule module = new SecurityStakePayoutModule();
         SecurityRefundTooLargeModule replacement = new SecurityRefundTooLargeModule();
 
@@ -264,8 +240,7 @@ contract SecurityFixes is Test {
     }
 
     function test_revertingModuleResolveFallsBackToFullRefund() external {
-        uint16[6] memory levels;
-        (MockERC20 asset, Bank bank, GameHub hub, VRFHub vrf) = _deploy(levels, 0, 0, 200, 0);
+        (MockERC20 asset, Bank bank, GameHub hub, VRFHub vrf) = _deploy(200);
         SecurityRevertingResolveModule module = new SecurityRevertingResolveModule();
 
         vm.prank(gov);
@@ -284,8 +259,7 @@ contract SecurityFixes is Test {
     }
 
     function test_overPayoutModuleFallsBackToFullRefund() external {
-        uint16[6] memory levels;
-        (MockERC20 asset, Bank bank, GameHub hub, VRFHub vrf) = _deploy(levels, 0, 0, 200, 0);
+        (MockERC20 asset, Bank bank, GameHub hub, VRFHub vrf) = _deploy(200);
         SecurityOverPayoutModule module = new SecurityOverPayoutModule();
 
         vm.prank(gov);
@@ -333,8 +307,7 @@ contract SecurityFixes is Test {
     }
 
     function test_duplicateBindReferrerReverts() external {
-        uint16[6] memory levels;
-        (,, GameHub hub,) = _deploy(levels, 0, 0, 200, 0);
+        (,, GameHub hub,) = _deploy(200);
 
         vm.prank(player);
         hub.bindReferrer(affiliate);
@@ -389,13 +362,7 @@ contract SecurityFixes is Test {
         assertEq(asset.balanceOf(player), 10 ether, "stake should be refunded");
     }
 
-    function _deploy(
-        uint16[6] memory levels,
-        uint16 baseBudgetBps,
-        uint16 deltaBudgetBps,
-        uint16 defaultHE,
-        uint16 maxAffiliateDelta
-    ) internal returns (MockERC20 asset, Bank bank, GameHub hub, VRFHub vrf) {
+    function _deploy(uint16 defaultHE) internal returns (MockERC20 asset, Bank bank, GameHub hub, VRFHub vrf) {
         asset = new MockERC20("Asset", "AST", 18);
         bank = new Bank(address(asset), gov, 0, "LP", "LP", 18);
         PoolRegistry poolRegistry = new PoolRegistry(gov);
@@ -404,21 +371,7 @@ contract SecurityFixes is Test {
         ReferralRegistry refReg = new ReferralRegistry(gov);
         DefaultReferralEngine refEng = new DefaultReferralEngine();
 
-        hub = new GameHub(
-            address(router),
-            address(vrf),
-            address(refReg),
-            address(refEng),
-            gov,
-            3600,
-            defaultHE,
-            maxAffiliateDelta,
-            baseBudgetBps,
-            deltaBudgetBps,
-            0,
-            levels,
-            2
-        );
+        hub = new GameHub(address(router), address(vrf), address(refReg), address(refEng), gov, 3600, defaultHE, 0, 0, 0, 0);
 
         vm.startPrank(gov);
         poolRegistry.registerPool(1, address(asset), address(bank), SSOTTypes.PoolDomain.Casino);

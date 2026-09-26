@@ -310,8 +310,9 @@ contract SportsHub is ISportsHub, Governable, EIP712, ReentrancyGuard {
             revert BadOddsSnapshot(marketId, outcomeId);
         }
 
+        // Sports tickets carry no house-edge allocation (SSOT v1.6 section 8): edge 0 caps PF + XP at zero.
         uint256 positionId = ISettlementRouter(settlementRouter)
-            .openPosition(market.poolId, msg.sender, stake, decision.reserved, oddsTicketHash);
+            .openPosition(market.poolId, msg.sender, stake, decision.reserved, oddsTicketHash, 0);
 
         ticketId = nextTicketId;
         nextTicketId = ticketId + 1;

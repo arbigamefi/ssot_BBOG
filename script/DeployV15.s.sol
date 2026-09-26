@@ -15,6 +15,7 @@ import {SportsHub} from "../src/core/SportsHub.sol";
 import {SportsRiskEngine} from "../src/core/SportsRiskEngine.sol";
 import {VRFHub} from "../src/core/VRFHub.sol";
 import {SSOTTypes} from "../src/core/interfaces/SSOTTypes.sol";
+import {HouseEdgeLib} from "../src/libs/HouseEdgeLib.sol";
 
 import {ReferralRegistry} from "../src/engines/referral/ReferralRegistry.sol";
 import {DefaultReferralEngine} from "../src/engines/referral/DefaultReferralEngine.sol";
@@ -80,12 +81,12 @@ contract DeployV15 is Script {
     uint64 internal constant MIN_RESULT_CHALLENGE_TIMEOUT_SECONDS = 10 minutes;
     uint64 internal constant DEFAULT_RESULT_CHALLENGE_TIMEOUT_SECONDS = 7 days;
 
+    /// @dev SSOT v1.6 referral schedule: rates are bps of the base turnover edge, l0 + l1 + l2 <= 3500.
     struct RefConfig {
-        uint16 baseBudgetBps;
-        uint16 deltaBudgetBps;
+        uint16 l0Bps;
+        uint16 l1Bps;
+        uint16 l2Bps;
         uint16 holdbackBps;
-        uint16[6] levelBps;
-        uint8 levels;
     }
 
     struct SportsConfig {
@@ -123,7 +124,6 @@ contract DeployV15 is Script {
         uint256 requestGasPriceWei;
         uint256 refundTimeoutSeconds;
         uint16 defaultHouseEdgeBps;
-        uint16 maxAffiliateDeltaBps;
         uint256 poolCount;
         RefConfig refConfig;
         SportsConfig sportsConfig;
@@ -209,12 +209,10 @@ contract DeployV15 is Script {
             cfg.gov,
             cfg.refundTimeoutSeconds,
             cfg.defaultHouseEdgeBps,
-            cfg.maxAffiliateDeltaBps,
-            cfg.refConfig.baseBudgetBps,
-            cfg.refConfig.deltaBudgetBps,
-            cfg.refConfig.holdbackBps,
-            cfg.refConfig.levelBps,
-            cfg.refConfig.levels
+            cfg.refConfig.l0Bps,
+            cfg.refConfig.l1Bps,
+            cfg.refConfig.l2Bps,
+            cfg.refConfig.holdbackBps
         );
 
         d.refRegistry.setBinderOnce(address(d.gameHub));
@@ -365,21 +363,33 @@ contract DeployV15 is Script {
         }
         cfg.refundTimeoutSeconds = vm.envOr("REFUND_TIMEOUT_SECONDS", uint256(3600));
         cfg.defaultHouseEdgeBps = _bps("DEFAULT_HOUSE_EDGE_BPS", 200);
-        cfg.maxAffiliateDeltaBps = _bps("MAX_AFFILIATE_DELTA_BPS", 0);
+        require(
+            cfg.defaultHouseEdgeBps > 0 && cfg.defaultHouseEdgeBps <= HouseEdgeLib.MAX_HOUSE_EDGE_BPS,
+            "DEFAULT_HOUSE_EDGE_BPS out of range"
+        );
         cfg.poolCount = vm.envOr("NUM_POOLS", uint256(1));
 
-        cfg.refConfig.baseBudgetBps = _bps("REF_BASE_BUDGET_BPS", 10_000);
-        cfg.refConfig.deltaBudgetBps = _bps("REF_DELTA_BUDGET_BPS", 10_000);
+        // SSOT v1.6 allocation. The v1.5 budget/level variables no longer mean anything; refuse them rather than
+        // deploy a schedule the operator did not intend. Markup always starts disabled.
+        _rejectRetiredEnv("MAX_AFFILIATE_DELTA_BPS");
+        _rejectRetiredEnv("REF_BASE_BUDGET_BPS");
+        _rejectRetiredEnv("REF_DELTA_BUDGET_BPS");
+        _rejectRetiredEnv("REF_LEVELS");
+        for (uint256 i; i < 6; ++i) {
+            _rejectRetiredEnv(string.concat("REF_LEVEL", vm.toString(i), "_BPS"));
+        }
+        cfg.refConfig.l0Bps = _bps("REF_L0_BPS", 1000);
+        cfg.refConfig.l1Bps = _bps("REF_L1_BPS", 2000);
+        cfg.refConfig.l2Bps = _bps("REF_L2_BPS", 500);
         cfg.refConfig.holdbackBps = _bps("REF_HOLDBACK_BPS", 3000);
-        uint256 levels = vm.envOr("REF_LEVELS", uint256(2));
-        require(levels > 0 && levels <= 6, "REF_LEVELS out of range");
-        cfg.refConfig.levels = uint8(levels);
-        cfg.refConfig.levelBps[0] = _bps("REF_LEVEL0_BPS", 0);
-        cfg.refConfig.levelBps[1] = _bps("REF_LEVEL1_BPS", 10_000);
-        cfg.refConfig.levelBps[2] = _bps("REF_LEVEL2_BPS", 0);
-        cfg.refConfig.levelBps[3] = _bps("REF_LEVEL3_BPS", 0);
-        cfg.refConfig.levelBps[4] = _bps("REF_LEVEL4_BPS", 0);
-        cfg.refConfig.levelBps[5] = _bps("REF_LEVEL5_BPS", 0);
+        require(
+            uint256(cfg.refConfig.l0Bps) + cfg.refConfig.l1Bps + cfg.refConfig.l2Bps <= HouseEdgeLib.MAX_REFERRAL_BPS,
+            "REF_L0_BPS + REF_L1_BPS + REF_L2_BPS exceeds 3500"
+        );
+    }
+
+    function _rejectRetiredEnv(string memory key) internal view {
+        require(!vm.envExists(key), string.concat(key, " is retired by the v1.6 allocation; remove it"));
     }
 
     function _readSportsConfig(bool enabled) internal view returns (SportsConfig memory cfg) {
@@ -601,17 +611,12 @@ contract DeployV15 is Script {
     {
         json = vm.serializeUint(obj, "refundTimeoutSeconds", cfg.refundTimeoutSeconds);
         json = vm.serializeUint(obj, "defaultHouseEdgeBps", cfg.defaultHouseEdgeBps);
-        json = vm.serializeUint(obj, "maxAffiliateDeltaBps", cfg.maxAffiliateDeltaBps);
-        json = vm.serializeUint(obj, "refBaseBudgetBps", cfg.refConfig.baseBudgetBps);
-        json = vm.serializeUint(obj, "refDeltaBudgetBps", cfg.refConfig.deltaBudgetBps);
+        json = vm.serializeUint(obj, "maxAffiliateDeltaBps", 0);
+        json = vm.serializeUint(obj, "lpShareBps", HouseEdgeLib.LP_SHARE_BPS);
+        json = vm.serializeUint(obj, "refL0Bps", cfg.refConfig.l0Bps);
+        json = vm.serializeUint(obj, "refL1Bps", cfg.refConfig.l1Bps);
+        json = vm.serializeUint(obj, "refL2Bps", cfg.refConfig.l2Bps);
         json = vm.serializeUint(obj, "refHoldbackBps", cfg.refConfig.holdbackBps);
-        json = vm.serializeUint(obj, "refLevels", cfg.refConfig.levels);
-        json = vm.serializeUint(obj, "refLevel0Bps", cfg.refConfig.levelBps[0]);
-        json = vm.serializeUint(obj, "refLevel1Bps", cfg.refConfig.levelBps[1]);
-        json = vm.serializeUint(obj, "refLevel2Bps", cfg.refConfig.levelBps[2]);
-        json = vm.serializeUint(obj, "refLevel3Bps", cfg.refConfig.levelBps[3]);
-        json = vm.serializeUint(obj, "refLevel4Bps", cfg.refConfig.levelBps[4]);
-        json = vm.serializeUint(obj, "refLevel5Bps", cfg.refConfig.levelBps[5]);
         json = vm.serializeUint(obj, "sportsEnabled", cfg.sportsConfig.enabled ? 1 : 0);
         json = vm.serializeUint(obj, "sportsMaxStake", cfg.sportsConfig.maxStake);
         json = vm.serializeUint(obj, "sportsMaxPayout", cfg.sportsConfig.maxPayout);
@@ -867,12 +872,10 @@ contract DeployV15 is Script {
                 cfg.gov,
                 cfg.refundTimeoutSeconds,
                 cfg.defaultHouseEdgeBps,
-                cfg.maxAffiliateDeltaBps,
-                cfg.refConfig.baseBudgetBps,
-                cfg.refConfig.deltaBudgetBps,
-                cfg.refConfig.holdbackBps,
-                cfg.refConfig.levelBps,
-                cfg.refConfig.levels
+                cfg.refConfig.l0Bps,
+                cfg.refConfig.l1Bps,
+                cfg.refConfig.l2Bps,
+                cfg.refConfig.holdbackBps
             )
         );
     }

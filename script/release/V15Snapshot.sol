@@ -150,18 +150,13 @@ library V15Snapshot {
                 && hub.refundTimeoutSeconds() == snap.readUint(".refundTimeoutSeconds"),
             "game configuration mismatch"
         );
-        (uint16 base, uint16 delta, uint16 holdback, uint16[6] memory bps, uint8 levels) =
-            hub.getReferralConfig(hub.activeReferralConfigId());
+        require(hub.LP_SHARE_BPS() == snap.readUint(".lpShareBps"), "LP share mismatch");
+        (uint16 l0, uint16 l1, uint16 l2, uint16 holdback) = hub.getReferralConfig(hub.activeReferralConfigId());
         require(
-            base == snap.readUint(".refBaseBudgetBps") && delta == snap.readUint(".refDeltaBudgetBps")
-                && holdback == snap.readUint(".refHoldbackBps") && levels == snap.readUint(".refLevels"),
+            l0 == snap.readUint(".refL0Bps") && l1 == snap.readUint(".refL1Bps") && l2 == snap.readUint(".refL2Bps")
+                && holdback == snap.readUint(".refHoldbackBps"),
             "referral configuration mismatch"
         );
-        for (uint256 i; i < 6; ++i) {
-            require(
-                bps[i] == snap.readUint(string.concat(".refLevel", vm.toString(i), "Bps")), "referral levels mismatch"
-            );
-        }
         string[8] memory games =
             [string("DICE"), "COIN_TOSS", "ROULETTE", "KENO", "PLINKO", "SIC_BO", "SLOTS", "BACCARAT"];
         string[8] memory modules = [

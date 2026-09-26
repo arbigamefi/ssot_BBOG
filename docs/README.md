@@ -56,8 +56,8 @@ to their intended readers. Keep these roles distinct.
 
 ## Constitution & invariants
 
-- `docs/constitution/SSOT.v1.6.md` — draft: house-edge allocation for the next casino release unit (fixed 50% LP share, operator-funded L0–L2 referrals); see [ADR-0032](adr/0032-fixed-lp-share-operator-funded-referrals.md)
-- `docs/constitution/ExecutableSSOT.v1.6.md` — draft invariants for the v1.6 allocation
+- `docs/constitution/SSOT.v1.6.md` — house-edge allocation for the next casino release unit (fixed 50% LP share, operator-funded L0–L2 referrals); implemented in source, not deployed; see [ADR-0032](adr/0032-fixed-lp-share-operator-funded-referrals.md)
+- `docs/constitution/ExecutableSSOT.v1.6.md` — invariants for the v1.6 allocation, with the tests that check each one
 - `docs/constitution/SSOT.v1.3.md` — draft normative protocol constitution for SettlementRouter + vertical hubs
 - `docs/constitution/ExecutableSSOT.v1.3.md` — draft executable invariant spec for router/pool isolation
 - `docs/constitution/SSOT.v1.2.md` — normative protocol constitution (MUST / MUST NOT)
