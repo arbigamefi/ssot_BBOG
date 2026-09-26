@@ -498,7 +498,11 @@ export function createKeeperRuntime({
         message: (error as Error)?.message ?? "unknown error"
       });
       writeHealth(
-        health.recordError((error as Error)?.message ?? "unknown process failure", queue.size)
+        health.recordError(
+          (error as Error)?.message ?? "unknown process failure",
+          queue.size,
+          "finalize"
+        )
       );
     }
   };
@@ -776,7 +780,7 @@ export function createKeeperRuntime({
     } catch (error) {
       const message = (error as Error)?.message ?? "scan failed";
       logger.error("casino.keeper.scan_failed", { message });
-      writeHealth(health.recordError(message, queue.size));
+      writeHealth(health.recordError(message, queue.size, "scan"));
     } finally {
       scanning = false;
     }
@@ -787,10 +791,11 @@ export function createKeeperRuntime({
     bankProviderLedgerScanning = true;
     try {
       await scanBankProviderLedgerEvents();
+      writeHealth(health.recordLedgerScan(queue.size));
     } catch (error) {
       const message = (error as Error)?.message ?? "bank provider ledger scan failed";
       logger.error("casino.keeper.bank_provider_ledger_scan_failed", { message });
-      writeHealth(health.recordError(message, queue.size));
+      writeHealth(health.recordError(message, queue.size, "ledger"));
     } finally {
       bankProviderLedgerScanning = false;
     }

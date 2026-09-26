@@ -3,7 +3,12 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { describe, expect, it } from "vitest";
 
-import { createFileHealthSink, KeeperHealthReporter, type KeeperHealthSnapshot } from "./health.js";
+import {
+  createFileHealthSink,
+  KeeperHealthReporter,
+  scanStaleAfterMs,
+  type KeeperHealthSnapshot
+} from "./health.js";
 import type { KeeperConfig, KeeperEvent } from "./types.js";
 
 const baseConfig: KeeperConfig = {
@@ -222,5 +227,145 @@ describe("KeeperHealthReporter", () => {
         updatedAt: "2026-05-17T00:00:01.000Z"
       }
     });
+  });
+});
+
+function clockedReporter(pollIntervalMs = baseConfig.pollIntervalMs) {
+  let nowMs = Date.parse("2026-09-26T00:00:00.000Z");
+  const health = new KeeperHealthReporter({
+    config: { ...baseConfig, pollIntervalMs },
+    keeper,
+    now: () => new Date(nowMs)
+  });
+  return {
+    health,
+    advance: (ms: number) => {
+      nowMs += ms;
+    }
+  };
+}
+
+const settled = {
+  kind: "settled",
+  txHash: "0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  latencyMs: 4200
+} as const;
+
+describe("KeeperHealthReporter failure recovery", () => {
+  it("clears a scan error on the next successful scan", async () => {
+    const { health } = clockedReporter();
+    await health.recordRunning(100n, 0);
+    await health.recordError("HTTP request failed. Status: 429", 0, "scan");
+    expect(health.snapshot()).toMatchObject({
+      status: "degraded",
+      degradedBy: ["scan"],
+      lastError: "HTTP request failed. Status: 429"
+    });
+
+    await health.recordScan(200n, 0);
+
+    expect(health.snapshot()).toMatchObject({
+      status: "running",
+      degradedBy: undefined,
+      lastError: undefined,
+      lastScannedBlock: "200",
+      lastScanAt: "2026-09-26T00:00:00.000Z"
+    });
+  });
+
+  it("keeps each failure open until its own path succeeds", async () => {
+    const { health } = clockedReporter();
+    await health.recordRunning(100n, 0);
+    await health.recordFinalizeOutcome(
+      { betId: 15n },
+      { kind: "failed", reason: "simulate reverted", retryable: false },
+      1
+    );
+    await health.recordError("getLogs timed out", 1, "scan");
+    await health.recordError("ledger read failed", 1, "ledger");
+    expect(health.snapshot()).toMatchObject({
+      status: "degraded",
+      degradedBy: ["finalize", "scan", "ledger"],
+      lastError: "ledger read failed"
+    });
+
+    await health.recordScan(200n, 1);
+    expect(health.snapshot()).toMatchObject({
+      status: "degraded",
+      degradedBy: ["finalize", "ledger"],
+      lastError: "ledger read failed"
+    });
+
+    await health.recordLedgerScan(1);
+    expect(health.snapshot()).toMatchObject({
+      status: "degraded",
+      degradedBy: ["finalize"],
+      lastError: "simulate reverted"
+    });
+
+    await health.recordFinalizeOutcome({ betId: 16n }, settled, 0);
+    expect(health.snapshot()).toMatchObject({ status: "running", degradedBy: undefined });
+  });
+
+  it("does not let a settled bet hide a failing scan", async () => {
+    const { health } = clockedReporter();
+    await health.recordRunning(100n, 0);
+    await health.recordError("getLogs timed out", 1, "scan");
+
+    await health.recordFinalizeOutcome({ betId: 16n }, settled, 0);
+
+    expect(health.snapshot()).toMatchObject({ status: "degraded", degradedBy: ["scan"] });
+  });
+
+  it("reports a scan that stops advancing while the heartbeat continues", async () => {
+    const { health, advance } = clockedReporter();
+    await health.recordRunning(100n, 0);
+
+    advance(300_000);
+    await health.recordHeartbeat(0);
+    expect(health.snapshot().status).toBe("running");
+
+    advance(1);
+    await health.recordHeartbeat(0);
+    expect(health.snapshot()).toMatchObject({
+      status: "degraded",
+      degradedBy: ["stalled"],
+      lastError: "event scan has not advanced since 2026-09-26T00:00:00.000Z"
+    });
+
+    await health.recordScan(150n, 0);
+    advance(10_000);
+    await health.recordHeartbeat(0);
+    expect(health.snapshot()).toMatchObject({ status: "running", degradedBy: undefined });
+  });
+
+  it("does not report a stall while starting or with polling disabled", async () => {
+    const starting = clockedReporter();
+    await starting.health.recordStarted(100n, 0);
+    starting.advance(3_600_000);
+    await starting.health.recordHeartbeat(0);
+    expect(starting.health.snapshot().status).toBe("starting");
+
+    const unpolled = clockedReporter(0);
+    await unpolled.health.recordRunning(100n, 0);
+    unpolled.advance(3_600_000);
+    await unpolled.health.recordHeartbeat(0);
+    expect(unpolled.health.snapshot().status).toBe("running");
+  });
+
+  it("allows three poll intervals, and at least five minutes, before a scan counts as stalled", () => {
+    expect(scanStaleAfterMs(300_000)).toBe(900_000);
+    expect(scanStaleAfterMs(15_000)).toBe(300_000);
+    expect(scanStaleAfterMs(0)).toBe(0);
+  });
+
+  it("reports stopped over open failures", async () => {
+    const { health } = clockedReporter();
+    await health.recordRunning(100n, 0);
+    await health.recordError("getLogs timed out", 0, "scan");
+
+    await health.recordStopped(0);
+
+    expect(health.snapshot().status).toBe("stopped");
   });
 });
