@@ -25,7 +25,8 @@ import {IReferralEngine} from "../engines/referral/IReferralEngine.sol";
 ///
 /// House-edge allocation (SSOT v1.6, ADR-0032): of the turnover edge E, LPs retain E - O where
 /// O = floor(E * (10000 - LP_SHARE_BPS) / 10000). Referral rewards and markup are paid from O, and whatever
-/// they do not use accrues as protocol fees. The SettlementRouter enforces the same bound independently.
+/// they do not use accrues as protocol fees. The referral engine computes the allocation from the bet's
+/// acceptance snapshot; the SettlementRouter enforces the same bound independently.
 contract GameHub is IGameHub, Governable, ReentrancyGuard {
     uint16 internal constant BPS = 10_000;
     uint8 internal constant MAX_SKYLINE_SEGMENTS = 6;
@@ -54,8 +55,7 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         uint64 activatesAt;
     }
 
-    PendingEdgeChange public override pendingBaseHouseEdge;
-    PendingEdgeChange public override pendingMaxAffiliateDelta;
+    mapping(EdgeParam => PendingEdgeChange) internal _pendingEdgeChange;
 
     /// @dev Immutable once created. Rates are bps of the base turnover edge; l0 + l1 + l2 <= MAX_REFERRAL_BPS.
     struct ReferralSchedule {
@@ -85,22 +85,6 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
     mapping(uint256 => ReferralPayees) internal betReferralPayees;
 
     mapping(uint256 => uint256) public requestToBetId;
-
-    bytes32 internal constant REASON_REF_L0 = keccak256("REF_L0");
-    bytes32 internal constant REASON_REF_L1 = keccak256("REF_L1");
-    bytes32 internal constant REASON_REF_L2 = keccak256("REF_L2");
-    bytes32 internal constant REASON_REF_MARKUP = keccak256("REF_MARKUP");
-
-    /// @dev Per-bet allocation of the turnover edge, computed at finalize.
-    struct Allocation {
-        uint256 edge; // E
-        uint256 operatorShare; // O
-        uint256 r0;
-        uint256 r1;
-        uint256 r2;
-        uint256 markup; // M
-        uint256 protocolFee; // O - r0 - r1 - r2 - M
-    }
 
     constructor(
         address settlementRouter_,
@@ -135,7 +119,7 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
 
         // Affiliate markup starts disabled (SSOT v1.6 section 4); enabling it goes through the delay.
         defaultHouseEdgeBps = defaultHouseEdgeBps_;
-        emit BaseHouseEdgeActivated(0, defaultHouseEdgeBps_);
+        emit EdgeChangeApplied(EdgeParam.BaseHouseEdge, 0, defaultHouseEdgeBps_);
 
         // schedule id 1 is created and activated at deployment
         uint32 id = _createReferralConfig(l0Bps_, l1Bps_, l2Bps_, holdbackBps_);
@@ -155,61 +139,42 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         emit RefundTimeoutSet(seconds_);
     }
 
-    // Base edge: queued, then activated by anyone once EDGE_CHANGE_DELAY has passed. Bets snapshot the edge at
-    // acceptance, so a change never reaches a bet that was already accepted.
+    // Base edge and markup cap: governance queues a change, and anyone applies it once EDGE_CHANGE_DELAY has
+    // passed. Bets snapshot the edge at acceptance, so a change never reaches a bet that was already accepted.
+    // A markup-cap decrease protects players and applies at once, discarding any queued increase.
 
-    function queueBaseHouseEdge(uint16 bps) external override onlyGov {
-        _validateBaseHouseEdge(bps);
-        uint64 activatesAt = uint64(block.timestamp + HouseEdgeLib.EDGE_CHANGE_DELAY);
-        pendingBaseHouseEdge = PendingEdgeChange({bps: bps, activatesAt: activatesAt});
-        emit BaseHouseEdgeQueued(defaultHouseEdgeBps, bps, activatesAt);
+    function pendingEdgeChange(EdgeParam param) external view override returns (uint16 bps, uint64 activatesAt) {
+        PendingEdgeChange memory pending = _pendingEdgeChange[param];
+        return (pending.bps, pending.activatesAt);
     }
 
-    function activateBaseHouseEdge() external override {
-        PendingEdgeChange memory pending = _readyChange(pendingBaseHouseEdge);
-        uint16 old = defaultHouseEdgeBps;
-        defaultHouseEdgeBps = pending.bps;
-        delete pendingBaseHouseEdge;
-        emit BaseHouseEdgeActivated(old, pending.bps);
-    }
-
-    function cancelBaseHouseEdge() external override onlyGov {
-        PendingEdgeChange memory pending = pendingBaseHouseEdge;
-        if (pending.activatesAt == 0) revert NoPendingEdgeChange();
-        delete pendingBaseHouseEdge;
-        emit BaseHouseEdgeChangeCancelled(defaultHouseEdgeBps, pending.bps);
-    }
-
-    // Markup cap: a decrease protects players and applies at once (superseding any queued increase);
-    // an increase is queued like a base-edge change.
-
-    function setMaxAffiliateDeltaBps(uint16 bps) external override onlyGov {
-        if (bps > HouseEdgeLib.MAX_HOUSE_EDGE_BPS) revert Errors.InvalidBps(bps);
-        uint16 old = maxAffiliateDeltaBps;
-        if (bps <= old) {
-            maxAffiliateDeltaBps = bps;
-            delete pendingMaxAffiliateDelta;
-            emit MaxAffiliateDeltaSet(old, bps);
+    function queueEdgeChange(EdgeParam param, uint16 bps) external override onlyGov {
+        if (bps > HouseEdgeLib.MAX_HOUSE_EDGE_BPS || (bps == 0 && param == EdgeParam.BaseHouseEdge)) {
+            revert Errors.InvalidBps(bps);
+        }
+        if (param == EdgeParam.MaxAffiliateDelta && bps <= maxAffiliateDeltaBps) {
+            delete _pendingEdgeChange[param];
+            _applyEdgeChange(param, bps);
             return;
         }
         uint64 activatesAt = uint64(block.timestamp + HouseEdgeLib.EDGE_CHANGE_DELAY);
-        pendingMaxAffiliateDelta = PendingEdgeChange({bps: bps, activatesAt: activatesAt});
-        emit MaxAffiliateDeltaQueued(old, bps, activatesAt);
+        _pendingEdgeChange[param] = PendingEdgeChange({bps: bps, activatesAt: activatesAt});
+        emit EdgeChangeQueued(param, _edgeParamValue(param), bps, activatesAt);
     }
 
-    function activateMaxAffiliateDelta() external override {
-        PendingEdgeChange memory pending = _readyChange(pendingMaxAffiliateDelta);
-        uint16 old = maxAffiliateDeltaBps;
-        maxAffiliateDeltaBps = pending.bps;
-        delete pendingMaxAffiliateDelta;
-        emit MaxAffiliateDeltaSet(old, pending.bps);
-    }
-
-    function cancelMaxAffiliateDelta() external override onlyGov {
-        PendingEdgeChange memory pending = pendingMaxAffiliateDelta;
+    function activateEdgeChange(EdgeParam param) external override {
+        PendingEdgeChange memory pending = _pendingEdgeChange[param];
         if (pending.activatesAt == 0) revert NoPendingEdgeChange();
-        delete pendingMaxAffiliateDelta;
-        emit MaxAffiliateDeltaChangeCancelled(maxAffiliateDeltaBps, pending.bps);
+        if (block.timestamp < pending.activatesAt) revert EdgeChangeNotReady(pending.activatesAt);
+        delete _pendingEdgeChange[param];
+        _applyEdgeChange(param, pending.bps);
+    }
+
+    function cancelEdgeChange(EdgeParam param) external override onlyGov {
+        PendingEdgeChange memory pending = _pendingEdgeChange[param];
+        if (pending.activatesAt == 0) revert NoPendingEdgeChange();
+        delete _pendingEdgeChange[param];
+        emit EdgeChangeCancelled(param, _edgeParamValue(param), pending.bps);
     }
 
     // Referral schedules are versioned: a new schedule is a new id, and activation applies to bets accepted
@@ -552,13 +517,10 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
 
         uint256 usedTurnover = b.stake - refundAmount;
 
-        // ---- house-edge allocation (turnover-based, SSOT v1.6) ----
-        (Allocation memory alloc, IReferralEngine.Plan memory planB, IReferralEngine.Plan memory planD) =
+        // ---- house-edge allocation (turnover-based, SSOT v1.6) and the XP awards that pay it ----
+        (IReferralEngine.Allocation memory alloc, SSOTTypes.XPAward[] memory awards) =
             _allocate(betId, b, usedTurnover);
         uint256 protocolFeeAccrual = alloc.protocolFee;
-
-        // ---- convert plans to XP awards ----
-        SSOTTypes.XPAward[] memory awards = _plansToAwards(b.player, planB, planD);
 
         b.resolvedAt = uint64(block.timestamp);
         b.state = SSOTTypes.BetState.Settled;
@@ -635,10 +597,15 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         if (bps == 0 || bps > HouseEdgeLib.MAX_HOUSE_EDGE_BPS) revert Errors.InvalidBps(bps);
     }
 
-    function _readyChange(PendingEdgeChange storage change) internal view returns (PendingEdgeChange memory pending) {
-        pending = change;
-        if (pending.activatesAt == 0) revert NoPendingEdgeChange();
-        if (block.timestamp < pending.activatesAt) revert EdgeChangeNotReady(pending.activatesAt);
+    function _edgeParamValue(EdgeParam param) internal view returns (uint16) {
+        return param == EdgeParam.BaseHouseEdge ? defaultHouseEdgeBps : maxAffiliateDeltaBps;
+    }
+
+    function _applyEdgeChange(EdgeParam param, uint16 bps) internal {
+        uint16 old = _edgeParamValue(param);
+        if (param == EdgeParam.BaseHouseEdge) defaultHouseEdgeBps = bps;
+        else maxAffiliateDeltaBps = bps;
+        emit EdgeChangeApplied(param, old, bps);
     }
 
     function _createReferralConfig(uint16 l0Bps, uint16 l1Bps, uint16 l2Bps, uint16 holdbackBps)
@@ -737,6 +704,8 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         pricingAff = l1 != address(0) ? l1 : affiliate;
     }
 
+    /// @dev Skyline segments are packed as address(20) || uint16 incBps(2): each affiliate up the chain that prices
+    ///      above everyone below it earns the increment.
     function _computeSkyline(address pricingAff, uint16 baseHE)
         internal
         view
@@ -746,171 +715,46 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         uint16 maxAllowed = _maxAffiliateHouseEdge(baseHE);
         if (maxAllowed <= baseHE) return (effectiveHE, skyline); // markup disabled
 
-        address[6] memory payeesTmp;
-        uint16[6] memory incBpsTmp;
-        uint8 k = 0;
-
         address cur = pricingAff;
         for (uint8 i = 0; i < MAX_SKYLINE_SEGMENTS && cur != address(0); ++i) {
             uint16 heCur = affiliateHouseEdgeBps[cur];
             // A stored edge may predate a lower cap or base edge; it never prices above the current cap.
             if (heCur > maxAllowed) heCur = maxAllowed;
             if (heCur > effectiveHE) {
-                payeesTmp[k] = cur;
-                incBpsTmp[k] = heCur - effectiveHE;
+                skyline = abi.encodePacked(skyline, cur, heCur - effectiveHE);
                 effectiveHE = heCur;
-                unchecked {
-                    ++k;
-                }
             }
             cur = IReferralRegistry(referralRegistry).referrerOf(cur);
         }
-
-        if (k > 0) {
-            skyline = new bytes(uint256(k) * 22);
-            for (uint8 j = 0; j < k; ++j) {
-                uint256 o = uint256(j) * 22;
-                bytes20 p = bytes20(payeesTmp[j]);
-                uint16 inc = incBpsTmp[j];
-                for (uint8 b = 0; b < 20; ++b) {
-                    skyline[o + b] = p[b];
-                }
-                skyline[o + 20] = bytes1(uint8(inc >> 8));
-                skyline[o + 21] = bytes1(uint8(inc));
-            }
-        }
     }
 
-    /// @dev SSOT v1.6 section 2. Everything here depends only on usedTurnover and the acceptance snapshot
-    ///      (edges, schedule id, payees, skyline); the Bank's turnover state only decides the XP buckets.
+    /// @dev SSOT v1.6 section 2. The allocation depends only on usedTurnover and the acceptance snapshot (edges,
+    ///      schedule id, payees, skyline); the Bank's turnover state only decides the XP buckets.
     function _allocate(uint256 betId, SSOTTypes.Bet storage b, uint256 usedTurnover)
         internal
         view
-        returns (Allocation memory alloc, IReferralEngine.Plan memory planB, IReferralEngine.Plan memory planD)
+        returns (IReferralEngine.Allocation memory, SSOTTypes.XPAward[] memory)
     {
-        alloc.edge = HouseEdgeLib.turnoverEdge(usedTurnover, b.effectiveHouseEdgeBps);
-        alloc.operatorShare = HouseEdgeLib.operatorShare(alloc.edge);
-        uint256 baseEdge = HouseEdgeLib.turnoverEdge(usedTurnover, b.baseHouseEdgeBps);
-        uint256 markupEdge = alloc.edge - baseEdge;
-
-        ReferralPayees memory payees = betReferralPayees[betId];
-        bool refer = baseEdge > 0 && payees.l1 != address(0);
-        if (!refer && markupEdge == 0) {
-            alloc.protocolFee = alloc.operatorShare;
-            return (alloc, planB, planD);
-        }
-
         ReferralSchedule storage cfg = _refCfg[b.referralConfigId];
-        // eligibility uses turnover AFTER this bet
-        uint256 turnoverAfter = IBank(b.bank).playerTurnover(b.player) + usedTurnover;
-        uint256 minTurnover = IBank(b.bank).minPlayerTurnoverForUnlock();
-
-        if (refer) {
-            planB = IReferralEngine(referralEngine)
-                .splitBase(
-                    IReferralEngine.BaseInput({
-                        baseEdge: baseEdge,
-                        l0Bps: cfg.l0Bps,
-                        l1Bps: cfg.l1Bps,
-                        l2Bps: cfg.l2Bps,
-                        l1: payees.l1,
-                        l2: payees.l2,
-                        holdbackBps: cfg.holdbackBps,
-                        minTurnover: minTurnover,
-                        playerTurnover: turnoverAfter
-                    })
-                );
-            alloc.r0 = planB.playerRakeback;
-            alloc.r1 = _planAmount(planB, 0);
-            alloc.r2 = _planAmount(planB, 1);
-        }
-
-        if (markupEdge > 0) {
-            planD = IReferralEngine(referralEngine)
-                .splitDelta(
-                    betDeltaSkyline[betId],
-                    IReferralEngine.DeltaPolicy({
-                        markupBudget: HouseEdgeLib.operatorShare(markupEdge),
-                        holdbackBps: cfg.holdbackBps,
-                        minTurnover: minTurnover,
-                        playerTurnover: turnoverAfter
-                    })
-                );
-            uint256 k = planD.payees.length;
-            for (uint256 i = 0; i < k; ++i) {
-                alloc.markup += _planAmount(planD, i);
-            }
-        }
-
-        // Cannot underflow: r0 + r1 + r2 <= floor(E_b / 2) and markup <= floor((E - E_b) / 2), so their sum is
-        // at most floor(E / 2) = operatorShare.
-        alloc.protocolFee = alloc.operatorShare - alloc.r0 - alloc.r1 - alloc.r2 - alloc.markup;
-    }
-
-    function _planAmount(IReferralEngine.Plan memory plan, uint256 i) internal pure returns (uint256) {
-        if (i >= plan.payees.length || plan.payees[i] == address(0)) return 0;
-        return plan.immediate[i] + plan.locked[i] + plan.holdback[i];
-    }
-
-    function _plansToAwards(address player, IReferralEngine.Plan memory basePlan, IReferralEngine.Plan memory deltaPlan)
-        internal
-        pure
-        returns (SSOTTypes.XPAward[] memory awards)
-    {
-        // Upper bound: 1 (L0) + 2 (L1, L2) + 6 (skyline) = 9
-        SSOTTypes.XPAward[] memory tmp = new SSOTTypes.XPAward[](9);
-        uint256 n = 0;
-
-        // L0 rakeback: immediately claimable by the player
-        if (basePlan.playerRakeback > 0) {
-            tmp[n++] = SSOTTypes.XPAward({
-                payee: player,
-                sourcePlayer: player,
-                accrued: basePlan.playerRakeback,
-                locked: 0,
-                holdback: 0,
-                reason: REASON_REF_L0
-            });
-        }
-
-        n = _appendPlanAward(tmp, n, player, basePlan, 0, REASON_REF_L1);
-        n = _appendPlanAward(tmp, n, player, basePlan, 1, REASON_REF_L2);
-        uint256 k = deltaPlan.payees.length;
-        for (uint256 i = 0; i < k; ++i) {
-            n = _appendPlanAward(tmp, n, player, deltaPlan, i, REASON_REF_MARKUP);
-        }
-
-        awards = new SSOTTypes.XPAward[](n);
-        for (uint256 i = 0; i < n; ++i) {
-            awards[i] = tmp[i];
-        }
-    }
-
-    function _appendPlanAward(
-        SSOTTypes.XPAward[] memory tmp,
-        uint256 n,
-        address sourcePlayer,
-        IReferralEngine.Plan memory plan,
-        uint256 i,
-        bytes32 reason
-    ) internal pure returns (uint256) {
-        if (i >= plan.payees.length) return n;
-        address payee = plan.payees[i];
-        if (payee == address(0)) return n;
-
-        uint256 accrued = plan.immediate[i];
-        uint256 locked = plan.locked[i];
-        uint256 holdback = plan.holdback[i];
-        if (accrued == 0 && locked == 0 && holdback == 0) return n;
-
-        tmp[n++] = SSOTTypes.XPAward({
-            payee: payee,
-            sourcePlayer: sourcePlayer,
-            accrued: accrued,
-            locked: locked,
-            holdback: holdback,
-            reason: reason
-        });
-        return n;
+        ReferralPayees storage payees = betReferralPayees[betId];
+        return IReferralEngine(referralEngine)
+            .allocate(
+                IReferralEngine.AllocationInput({
+                    usedTurnover: usedTurnover,
+                    baseEdgeBps: b.baseHouseEdgeBps,
+                    effectiveEdgeBps: b.effectiveHouseEdgeBps,
+                    player: b.player,
+                    l1: payees.l1,
+                    l2: payees.l2,
+                    l0Bps: cfg.l0Bps,
+                    l1Bps: cfg.l1Bps,
+                    l2Bps: cfg.l2Bps,
+                    holdbackBps: cfg.holdbackBps,
+                    minTurnover: IBank(b.bank).minPlayerTurnoverForUnlock(),
+                    // eligibility uses turnover AFTER this bet
+                    playerTurnover: IBank(b.bank).playerTurnover(b.player) + usedTurnover
+                }),
+                betDeltaSkyline[betId]
+            );
     }
 }

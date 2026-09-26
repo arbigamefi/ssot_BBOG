@@ -26,6 +26,7 @@ import {SlotsParams} from "../../src/modules/slots/SlotsParams.sol";
 
 import {ReferralRegistry} from "../../src/engines/referral/ReferralRegistry.sol";
 import {DefaultReferralEngine} from "../../src/engines/referral/DefaultReferralEngine.sol";
+import {IGameHub} from "../../src/core/interfaces/IGameHub.sol";
 import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
 import {IGameModule} from "../../src/core/interfaces/IGameModule.sol";
 
@@ -199,11 +200,11 @@ contract StatefulSystemDiff is Test {
         bankB.setMinPlayerTurnoverForUnlock(20 ether);
 
         // Enable affiliate markup (up to +3%) so skyline pricing and markup awards are exercised.
-        hub.setMaxAffiliateDeltaBps(300);
+        hub.queueEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta, 300);
         vm.stopPrank();
-        (, uint64 markupActivatesAt) = hub.pendingMaxAffiliateDelta();
+        (, uint64 markupActivatesAt) = hub.pendingEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta);
         vm.warp(markupActivatesAt);
-        hub.activateMaxAffiliateDelta();
+        hub.activateEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta);
 
         dice = new DiceModule();
         coin = new CoinTossModule();
@@ -704,10 +705,10 @@ contract StatefulSystemDiff is Test {
         if ((state >> 208) % 12 == 0) {
             uint16 newBase = uint16(bound(uint256(state >> 128), 100, 300));
             vm.prank(gov);
-            hub.queueBaseHouseEdge(newBase);
-            (, uint64 activatesAt) = hub.pendingBaseHouseEdge();
+            hub.queueEdgeChange(IGameHub.EdgeParam.BaseHouseEdge, newBase);
+            (, uint64 activatesAt) = hub.pendingEdgeChange(IGameHub.EdgeParam.BaseHouseEdge);
             vm.warp(activatesAt);
-            hub.activateBaseHouseEdge();
+            hub.activateEdgeChange(IGameHub.EdgeParam.BaseHouseEdge);
         }
     }
 

@@ -9,7 +9,6 @@ import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
 import {MockERC20} from "../../src/mocks/MockERC20.sol";
 import {DefaultReferralEngine} from "../../src/engines/referral/DefaultReferralEngine.sol";
 import {IReferralEngine} from "../../src/engines/referral/IReferralEngine.sol";
-import {HouseEdgeLib} from "../../src/libs/HouseEdgeLib.sol";
 
 /// @dev Drives the Bank through the six classes of operation that move its
 ///      accounting: deposit, withdraw, hold, settle, refund, and the optional
@@ -227,79 +226,25 @@ contract BankHandler is Test {
         returns (uint256 pfAccrual, SSOTTypes.XPAward[] memory awards)
     {
         uint256 usedTurnover = b.stake - refundAmount;
-        uint256 baseEdge = HouseEdgeLib.turnoverEdge(usedTurnover, 200);
-        uint256 edge = HouseEdgeLib.turnoverEdge(usedTurnover, 200 + uint256(deltaBps));
-        uint256 turnoverAfter = bank.playerTurnover(b.player) + usedTurnover;
-        uint256 minTurnover = bank.minPlayerTurnoverForUnlock();
-
-        IReferralEngine.Plan memory basePlan = referralEngine.splitBase(
-            IReferralEngine.BaseInput({
-                baseEdge: baseEdge,
+        IReferralEngine.Allocation memory alloc;
+        (alloc, awards) = referralEngine.allocate(
+            IReferralEngine.AllocationInput({
+                usedTurnover: usedTurnover,
+                baseEdgeBps: 200,
+                effectiveEdgeBps: 200 + deltaBps,
+                player: b.player,
+                l1: payees[0],
+                l2: address(0),
                 l0Bps: 1_000,
                 l1Bps: 2_000,
                 l2Bps: 500,
-                l1: payees[0],
-                l2: address(0),
                 holdbackBps: 3_000,
-                minTurnover: minTurnover,
-                playerTurnover: turnoverAfter
-            })
+                minTurnover: bank.minPlayerTurnoverForUnlock(),
+                playerTurnover: bank.playerTurnover(b.player) + usedTurnover
+            }),
+            abi.encodePacked(payees[1], deltaBps)
         );
-        IReferralEngine.Plan memory deltaPlan = referralEngine.splitDelta(
-            abi.encodePacked(payees[1], deltaBps),
-            IReferralEngine.DeltaPolicy({
-                markupBudget: HouseEdgeLib.operatorShare(edge - baseEdge),
-                holdbackBps: 3_000,
-                minTurnover: minTurnover,
-                playerTurnover: turnoverAfter
-            })
-        );
-
-        SSOTTypes.XPAward[] memory tmp = new SSOTTypes.XPAward[](3);
-        uint256 n;
-        uint256 allocated;
-        if (basePlan.playerRakeback > 0) {
-            tmp[n++] = SSOTTypes.XPAward({
-                payee: b.player,
-                sourcePlayer: b.player,
-                accrued: basePlan.playerRakeback,
-                locked: 0,
-                holdback: 0,
-                reason: bytes32("l0")
-            });
-            allocated += basePlan.playerRakeback;
-        }
-        (n, allocated) = _appendAward(tmp, n, allocated, basePlan, 0, b.player, bytes32("l1"));
-        (n, allocated) = _appendAward(tmp, n, allocated, deltaPlan, 0, b.player, bytes32("markup"));
-
-        pfAccrual = HouseEdgeLib.operatorShare(edge) - allocated;
-        awards = new SSOTTypes.XPAward[](n);
-        for (uint256 i = 0; i < n; ++i) {
-            awards[i] = tmp[i];
-        }
-    }
-
-    function _appendAward(
-        SSOTTypes.XPAward[] memory tmp,
-        uint256 n,
-        uint256 allocated,
-        IReferralEngine.Plan memory plan,
-        uint256 i,
-        address sourcePlayer,
-        bytes32 reason
-    ) internal pure returns (uint256, uint256) {
-        if (i >= plan.payees.length || plan.payees[i] == address(0)) return (n, allocated);
-        uint256 total = plan.immediate[i] + plan.locked[i] + plan.holdback[i];
-        if (total == 0) return (n, allocated);
-        tmp[n++] = SSOTTypes.XPAward({
-            payee: plan.payees[i],
-            sourcePlayer: sourcePlayer,
-            accrued: plan.immediate[i],
-            locked: plan.locked[i],
-            holdback: plan.holdback[i],
-            reason: reason
-        });
-        return (n, allocated + total);
+        pfAccrual = alloc.protocolFee;
     }
 
     function _removeOpenBet(uint256 idx) internal {

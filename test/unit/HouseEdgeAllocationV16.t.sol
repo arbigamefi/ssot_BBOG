@@ -261,21 +261,21 @@ contract HouseEdgeAllocationV16Test is Test {
 
         uint256 queuedAt = block.timestamp;
         vm.prank(gov);
-        hub.queueBaseHouseEdge(300);
-        (uint16 pendingBps, uint64 activatesAt) = hub.pendingBaseHouseEdge();
+        hub.queueEdgeChange(IGameHub.EdgeParam.BaseHouseEdge, 300);
+        (uint16 pendingBps, uint64 activatesAt) = hub.pendingEdgeChange(IGameHub.EdgeParam.BaseHouseEdge);
         assertEq(pendingBps, 300);
         assertEq(activatesAt, queuedAt + 7 days);
 
         vm.warp(activatesAt - 1);
         vm.expectRevert(abi.encodeWithSelector(IGameHub.EdgeChangeNotReady.selector, activatesAt));
-        hub.activateBaseHouseEdge();
+        hub.activateEdgeChange(IGameHub.EdgeParam.BaseHouseEdge);
         assertEq(hub.defaultHouseEdgeBps(), 200);
 
         vm.warp(activatesAt);
         vm.prank(dave); // activation is permissionless once the delay has passed
-        hub.activateBaseHouseEdge();
+        hub.activateEdgeChange(IGameHub.EdgeParam.BaseHouseEdge);
         assertEq(hub.defaultHouseEdgeBps(), 300);
-        (, activatesAt) = hub.pendingBaseHouseEdge();
+        (, activatesAt) = hub.pendingEdgeChange(IGameHub.EdgeParam.BaseHouseEdge);
         assertEq(activatesAt, 0);
 
         // The bet accepted at 2% settles at 2% even though it is finalized after the change.
@@ -290,14 +290,14 @@ contract HouseEdgeAllocationV16Test is Test {
 
     function test_cancelledBaseEdgeChangeCannotActivate() external {
         vm.startPrank(gov);
-        hub.queueBaseHouseEdge(300);
-        (, uint64 activatesAt) = hub.pendingBaseHouseEdge();
-        hub.cancelBaseHouseEdge();
+        hub.queueEdgeChange(IGameHub.EdgeParam.BaseHouseEdge, 300);
+        (, uint64 activatesAt) = hub.pendingEdgeChange(IGameHub.EdgeParam.BaseHouseEdge);
+        hub.cancelEdgeChange(IGameHub.EdgeParam.BaseHouseEdge);
         vm.stopPrank();
 
         vm.warp(activatesAt);
         vm.expectRevert(IGameHub.NoPendingEdgeChange.selector);
-        hub.activateBaseHouseEdge();
+        hub.activateEdgeChange(IGameHub.EdgeParam.BaseHouseEdge);
         assertEq(hub.defaultHouseEdgeBps(), 200);
     }
 
@@ -314,25 +314,25 @@ contract HouseEdgeAllocationV16Test is Test {
 
     function test_markupIncreaseWaitsForDelay_decreaseIsImmediate() external {
         vm.prank(gov);
-        hub.setMaxAffiliateDeltaBps(100);
+        hub.queueEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta, 100);
         assertEq(hub.maxAffiliateDeltaBps(), 0, "an increase is only queued");
-        (uint16 pendingBps, uint64 activatesAt) = hub.pendingMaxAffiliateDelta();
+        (uint16 pendingBps, uint64 activatesAt) = hub.pendingEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta);
         assertEq(pendingBps, 100);
 
         vm.expectRevert(abi.encodeWithSelector(IGameHub.EdgeChangeNotReady.selector, activatesAt));
-        hub.activateMaxAffiliateDelta();
+        hub.activateEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta);
 
         vm.warp(activatesAt);
-        hub.activateMaxAffiliateDelta();
+        hub.activateEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta);
         assertEq(hub.maxAffiliateDeltaBps(), 100);
 
         // A queued increase is superseded by a decrease, which applies at once.
         vm.startPrank(gov);
-        hub.setMaxAffiliateDeltaBps(300);
-        hub.setMaxAffiliateDeltaBps(50);
+        hub.queueEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta, 300);
+        hub.queueEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta, 50);
         vm.stopPrank();
         assertEq(hub.maxAffiliateDeltaBps(), 50);
-        (, activatesAt) = hub.pendingMaxAffiliateDelta();
+        (, activatesAt) = hub.pendingEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta);
         assertEq(activatesAt, 0);
     }
 
@@ -378,7 +378,7 @@ contract HouseEdgeAllocationV16Test is Test {
         hub.setAffiliateHouseEdge(300);
 
         vm.prank(gov);
-        hub.setMaxAffiliateDeltaBps(0);
+        hub.queueEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta, 0);
 
         Outcome memory o = _play(STAKE, false);
         assertEq(o.a.edgeBps, 200, "markup disabled: effective edge is the base edge");
@@ -394,7 +394,7 @@ contract HouseEdgeAllocationV16Test is Test {
         hub.setAffiliateHouseEdge(300);
 
         vm.prank(gov);
-        hub.setMaxAffiliateDeltaBps(50);
+        hub.queueEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta, 50);
 
         Outcome memory o = _play(STAKE, false);
         assertEq(o.a.edgeBps, 250, "a 300 bps setting prices at the 250 bps cap");
@@ -464,11 +464,11 @@ contract HouseEdgeAllocationV16Test is Test {
     function test_edgeBoundsAreEnforced() external {
         vm.startPrank(gov);
         vm.expectRevert(abi.encodeWithSelector(Errors.InvalidBps.selector, uint256(0)));
-        hub.queueBaseHouseEdge(0);
+        hub.queueEdgeChange(IGameHub.EdgeParam.BaseHouseEdge, 0);
         vm.expectRevert(abi.encodeWithSelector(Errors.InvalidBps.selector, uint256(501)));
-        hub.queueBaseHouseEdge(501);
+        hub.queueEdgeChange(IGameHub.EdgeParam.BaseHouseEdge, 501);
         vm.expectRevert(abi.encodeWithSelector(Errors.InvalidBps.selector, uint256(501)));
-        hub.setMaxAffiliateDeltaBps(501);
+        hub.queueEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta, 501);
         vm.stopPrank();
     }
 
@@ -500,13 +500,13 @@ contract HouseEdgeAllocationV16Test is Test {
 
         vm.startPrank(dave);
         vm.expectRevert(Errors.Unauthorized.selector);
-        hub.queueBaseHouseEdge(300);
+        hub.queueEdgeChange(IGameHub.EdgeParam.BaseHouseEdge, 300);
         vm.expectRevert(Errors.Unauthorized.selector);
-        hub.cancelBaseHouseEdge();
+        hub.cancelEdgeChange(IGameHub.EdgeParam.BaseHouseEdge);
         vm.expectRevert(Errors.Unauthorized.selector);
-        hub.setMaxAffiliateDeltaBps(0);
+        hub.queueEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta, 0);
         vm.expectRevert(Errors.Unauthorized.selector);
-        hub.cancelMaxAffiliateDelta();
+        hub.cancelEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta);
         vm.expectRevert(Errors.Unauthorized.selector);
         hub.createReferralConfig(0, 3500, 0, 0);
         vm.expectRevert(Errors.Unauthorized.selector);
@@ -514,9 +514,9 @@ contract HouseEdgeAllocationV16Test is Test {
 
         // Activation is permissionless, but only applies what governance queued.
         vm.expectRevert(IGameHub.NoPendingEdgeChange.selector);
-        hub.activateBaseHouseEdge();
+        hub.activateEdgeChange(IGameHub.EdgeParam.BaseHouseEdge);
         vm.expectRevert(IGameHub.NoPendingEdgeChange.selector);
-        hub.activateMaxAffiliateDelta();
+        hub.activateEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta);
         vm.stopPrank();
     }
 
@@ -605,10 +605,10 @@ contract HouseEdgeAllocationV16Test is Test {
 
     function _enableMarkup(uint16 bps) internal {
         vm.prank(gov);
-        hub.setMaxAffiliateDeltaBps(bps);
-        (, uint64 activatesAt) = hub.pendingMaxAffiliateDelta();
+        hub.queueEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta, bps);
+        (, uint64 activatesAt) = hub.pendingEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta);
         vm.warp(activatesAt);
-        hub.activateMaxAffiliateDelta();
+        hub.activateEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta);
     }
 
     function _play(uint256 stake, bool win) internal returns (Outcome memory o) {

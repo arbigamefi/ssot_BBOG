@@ -5,6 +5,12 @@ import {SSOTTypes} from "./SSOTTypes.sol";
 
 /// @notice Casino-game vertical hub interface for the SettlementRouter architecture.
 interface IGameHub {
+    /// @notice Allocation parameters whose changes go through EDGE_CHANGE_DELAY.
+    enum EdgeParam {
+        BaseHouseEdge, // h_b; every change is delayed
+        MaxAffiliateDelta // markup cap above h_b; increases are delayed, decreases apply at once
+    }
+
     function settlementRouter() external view returns (address);
     function vrfHub() external view returns (address);
     function referralRegistry() external view returns (address);
@@ -27,18 +33,15 @@ interface IGameHub {
     function getAffiliateHouseEdge(address affiliate) external view returns (uint16);
     function setAffiliateHouseEdge(uint16 houseEdgeBps) external;
 
-    /// @notice Queued base-edge change; `activatesAt == 0` means none.
-    function pendingBaseHouseEdge() external view returns (uint16 bps, uint64 activatesAt);
-    function queueBaseHouseEdge(uint16 bps) external;
-    function activateBaseHouseEdge() external;
-    function cancelBaseHouseEdge() external;
-
-    /// @notice Decreases apply immediately; increases are queued for EDGE_CHANGE_DELAY.
-    function setMaxAffiliateDeltaBps(uint16 bps) external;
-    /// @notice Queued markup-cap increase; `activatesAt == 0` means none.
-    function pendingMaxAffiliateDelta() external view returns (uint16 bps, uint64 activatesAt);
-    function activateMaxAffiliateDelta() external;
-    function cancelMaxAffiliateDelta() external;
+    /// @notice Queued change of `param`; `activatesAt == 0` means none.
+    function pendingEdgeChange(EdgeParam param) external view returns (uint16 bps, uint64 activatesAt);
+    /// @notice Governance: queue a change for EDGE_CHANGE_DELAY. A MaxAffiliateDelta decrease applies at once and
+    ///         discards any queued increase.
+    function queueEdgeChange(EdgeParam param, uint16 bps) external;
+    /// @notice Anyone: apply a queued change once its delay has passed.
+    function activateEdgeChange(EdgeParam param) external;
+    /// @notice Governance: discard a queued change.
+    function cancelEdgeChange(EdgeParam param) external;
 
     /// @notice Referral schedules are immutable once created; bets snapshot the active id at acceptance.
     function activeReferralConfigId() external view returns (uint32);
@@ -90,12 +93,9 @@ interface IGameHub {
     event RiskInPausedSet(uint64 indexed poolId, bool paused);
     event RefundTimeoutSet(uint256 seconds_);
 
-    event BaseHouseEdgeQueued(uint16 oldBps, uint16 newBps, uint64 activatesAt);
-    event BaseHouseEdgeActivated(uint16 oldBps, uint16 newBps);
-    event BaseHouseEdgeChangeCancelled(uint16 activeBps, uint16 cancelledBps);
-    event MaxAffiliateDeltaQueued(uint16 oldBps, uint16 newBps, uint64 activatesAt);
-    event MaxAffiliateDeltaSet(uint16 oldBps, uint16 newBps);
-    event MaxAffiliateDeltaChangeCancelled(uint16 activeBps, uint16 cancelledBps);
+    event EdgeChangeQueued(EdgeParam indexed param, uint16 oldBps, uint16 newBps, uint64 activatesAt);
+    event EdgeChangeApplied(EdgeParam indexed param, uint16 oldBps, uint16 newBps);
+    event EdgeChangeCancelled(EdgeParam indexed param, uint16 activeBps, uint16 cancelledBps);
     event ReferralConfigCreated(uint32 indexed id, uint16 l0Bps, uint16 l1Bps, uint16 l2Bps, uint16 holdbackBps);
     event ActiveReferralConfigSet(uint32 oldId, uint32 newId);
 

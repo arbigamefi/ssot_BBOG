@@ -14,6 +14,7 @@ import {SettlementRouter} from "../../src/core/SettlementRouter.sol";
 import {VRFHub} from "../../src/core/VRFHub.sol";
 import {IVRFHub} from "../../src/core/interfaces/IVRFHub.sol";
 import {IBank} from "../../src/core/interfaces/IBank.sol";
+import {IGameHub} from "../../src/core/interfaces/IGameHub.sol";
 import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
 import {MockERC20} from "../../src/mocks/MockERC20.sol";
 import {ReferralRegistry} from "../../src/engines/referral/ReferralRegistry.sol";
@@ -402,10 +403,10 @@ contract GameHubE2E is Test {
         gameHub.bindReferrer(bob);
 
         vm.prank(gov);
-        gameHub.setMaxAffiliateDeltaBps(100);
-        (, uint64 activatesAt) = gameHub.pendingMaxAffiliateDelta();
+        gameHub.queueEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta, 100);
+        (, uint64 activatesAt) = gameHub.pendingEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta);
         vm.warp(activatesAt);
-        gameHub.activateMaxAffiliateDelta();
+        gameHub.activateEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta);
         vm.prank(bob);
         gameHub.setAffiliateHouseEdge(300);
 
