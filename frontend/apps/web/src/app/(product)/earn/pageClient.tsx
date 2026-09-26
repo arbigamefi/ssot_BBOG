@@ -15,19 +15,9 @@ import { EarnActionPanel, type EarnFlowState } from "../../../features/earn/earn
 import { EarnBankSummary } from "../../../features/earn/earn-bank-summary";
 import { EarnHero } from "../../../features/earn/earn-hero";
 import { EarnRiskPanel } from "../../../features/earn/earn-risk-panel";
-import {
-  formatHoldPercent,
-  formatMultiple,
-  formatTokenAmount,
-  getExplorerBaseUrl,
-  shortHex
-} from "../../../features/earn/format";
-import type {
-  EarnAmountMode,
-  EarnBankData,
-  EarnMetric,
-  EarnTab
-} from "../../../features/earn/types";
+import { buildEarnHeroMetrics } from "../../../features/earn/earn-hero-metrics";
+import { formatTokenAmount, getExplorerBaseUrl, shortHex } from "../../../features/earn/format";
+import type { EarnAmountMode, EarnBankData, EarnTab } from "../../../features/earn/types";
 import { useBankProviderLedger } from "../../../features/earn/useBankProviderLedger";
 import { useCasinoPoolAssetSelection } from "../../../features/assets/useCasinoPoolAssetSelection";
 import { formatUnits, parseDecimalToUnits } from "../../../features/betting/model/units";
@@ -430,46 +420,7 @@ export function EarnPageClient() {
   }
 
   const snapshot = bankData?.snapshot;
-  const houseRevenue =
-    snapshot?.totalTurnover != null && snapshot.totalPayoutGross != null
-      ? snapshot.totalTurnover - snapshot.totalPayoutGross
-      : undefined;
-  const realizedHold =
-    houseRevenue != null && snapshot?.totalTurnover != null
-      ? formatHoldPercent(houseRevenue, snapshot.totalTurnover)
-      : null;
-  const capitalVelocity =
-    snapshot?.totalTurnover != null
-      ? formatMultiple(snapshot.totalTurnover, snapshot.totalAssets)
-      : null;
-
-  const metrics: EarnMetric[] = [
-    {
-      label: t("earn.metrics.sharePrice.label"),
-      value: formatTokenAmount(
-        snapshot?.assetsPerShare != null ? snapshot.assetsPerShare * 1000n : undefined,
-        decimals,
-        symbol,
-        4
-      ),
-      detail: t("earn.metrics.sharePrice.detail")
-    },
-    {
-      label: t("earn.metrics.totalShares.label"),
-      value: formatTokenAmount(snapshot?.totalSupply, decimals, undefined, 2),
-      detail: t("earn.metrics.totalShares.detail")
-    },
-    {
-      label: t("earn.performance.velocity"),
-      value: capitalVelocity ?? "—",
-      detail: t("earn.performance.onChain")
-    },
-    {
-      label: t("earn.performance.hold"),
-      value: realizedHold ?? "—",
-      detail: t("earn.performance.onChain")
-    }
-  ];
+  const metrics = buildEarnHeroMetrics({ snapshot, decimals, symbol, t });
 
   return (
     <PageTransition pageKey="earn">
