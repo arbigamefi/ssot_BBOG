@@ -135,6 +135,7 @@ contract SportsHubTicketTest is Test {
         assertEq(position.stake, stake);
         assertEq(position.reserved, reserved);
         assertEq(position.snapshotHash, oddsTicketHash);
+        assertEq(position.edgeBps, 0, "sports tickets carry no house-edge allocation (SSOT v1.6 A9)");
         assertEq(uint256(position.state), uint256(SSOTTypes.PositionState.Held));
 
         assertEq(sportsBank.totalReserved(), reserved);

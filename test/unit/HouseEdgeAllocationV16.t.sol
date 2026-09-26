@@ -386,6 +386,43 @@ contract HouseEdgeAllocationV16Test is Test {
         assertEq(hub.getDeltaSkyline(o.id).length, 0);
     }
 
+    function test_staleAffiliateEdgeIsClampedToALowerCap() external {
+        _enableMarkup(100);
+        vm.prank(alice);
+        hub.bindReferrer(bob);
+        vm.prank(bob);
+        hub.setAffiliateHouseEdge(300);
+
+        vm.prank(gov);
+        hub.setMaxAffiliateDeltaBps(50);
+
+        Outcome memory o = _play(STAKE, false);
+        assertEq(o.a.edgeBps, 250, "a 300 bps setting prices at the 250 bps cap");
+        // E = 2.5, E_b = 2, O = 1.25, markup budget = 0.25
+        _assertAllocation(o, 2.5 ether, 1.25 ether, 0.2 ether, 0.4 ether, 0, 0.25 ether, 0.4 ether);
+    }
+
+    /// Every share is rounded down and remainders become protocol fees, never another payee's share.
+    function test_roundingRemaindersAccrueToProtocol() external {
+        _enableMarkup(100);
+        vm.prank(bob);
+        refRegistry.bind(bob, carol);
+        vm.prank(alice);
+        hub.bindReferrer(bob);
+        vm.prank(bob);
+        hub.setAffiliateHouseEdge(250); // +50 bps
+        vm.prank(carol);
+        hub.setAffiliateHouseEdge(270); // +20 bps
+
+        Outcome memory o = _play(1_234_567, false);
+
+        // E = floor(1234567 * 2.7%) = 33333, E_b = 24691, O = 16666, markup budget = floor(8642 / 2) = 4321.
+        // R0 = 2469, R1 = 4938, R2 = 1234; markup: bob floor(4321 * 50/70) = 3086, carol floor(4321 * 20/70) =
+        // 1234, one unit unallocated.
+        _assertAllocation(o, 33_333, 16_666, 2_469, 4_938, 1_234, 4_320, 3_705);
+        assertEq(bank.xpAccruedOf(carol) + bank.xpHoldbackOf(carol), 1_234 + 1_234);
+    }
+
     function test_playerMaxHouseEdgeStillProtectsAgainstMarkup() external {
         _enableMarkup(100);
         vm.prank(alice);
