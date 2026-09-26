@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Poll the app health endpoint and alert when it stops reporting "ok".
 #
-# Always logs to the journal, so it is useful even before a webhook is set.
-# Set ALERT_WEBHOOK_URL in /opt/arbigamefi-v15/ops/alert.env to get pushed alerts.
+# Always logs to the journal, so it is useful even before a channel is set.
+# Set ALERT_WEBHOOK_URL, or TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID, in
+# /opt/arbigamefi-v15/ops/alert.env to get pushed alerts.
 set -uo pipefail
 umask 077
 
@@ -17,6 +18,7 @@ mkdir -p "$(dirname "$STATE")"
 # Keep the existing alert transitions/webhook while preserving failure evidence.
 # The helper never logs bodies, URLs, cookies or credentials.
 PROBE="$(cd -- "$(dirname -- "$0")" && pwd)/healthz-probe.py"
+NOTIFY="$(cd -- "$(dirname -- "$0")" && pwd)/alert-notify.py"
 if ! probe_json=$(python3 "$PROBE" "$URL" --local-url "${HEALTHZ_LOCAL_URL:-http://127.0.0.1:3400/api/healthz}" 2>/dev/null); then
   probe_json='{"status":"probe_error","error":"health probe process failed"}'
 fi
@@ -49,6 +51,15 @@ notify() {
       "$(printf '%s' "$subject $text" | python3 -c 'import json,sys;print(json.dumps(sys.stdin.read()))')")
     curl -s --max-time 15 -X POST -H 'content-type: application/json' -d "$payload" "$ALERT_WEBHOOK_URL" >/dev/null || \
       logger -t arbigamefi-healthz "webhook delivery failed"
+  fi
+  if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
+    # The token reaches the helper through its environment, never argv (world-readable in /proc).
+    local err
+    if ! err=$(printf '%s' "$text" | TELEGRAM_BOT_TOKEN="$TELEGRAM_BOT_TOKEN" TELEGRAM_CHAT_ID="$TELEGRAM_CHAT_ID" \
+        TELEGRAM_API_BASE="${TELEGRAM_API_BASE:-https://api.telegram.org}" \
+        python3 "$NOTIFY" --subject "$subject" 2>&1 >/dev/null); then
+      logger -t arbigamefi-healthz "${err:-telegram delivery failed}"
+    fi
   fi
 }
 

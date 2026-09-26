@@ -12,6 +12,22 @@ from urllib.parse import urlsplit
 
 
 TIMINGS = ("time_namelookup", "time_connect", "time_appconnect", "time_starttransfer", "time_total")
+CHECK_STATES = ("ok", "degraded", "unhealthy", "error", "unknown")
+
+
+def check_states(payload):
+    """Per-check status words only (for example keeper=degraded); never names or values outside an allowlist."""
+    checks = payload.get("checks") if isinstance(payload, dict) else None
+    if not isinstance(checks, dict):
+        return {}
+    states = {}
+    for name, check in checks.items():
+        if (isinstance(name, str) and re.fullmatch(r"[A-Za-z][A-Za-z0-9_]{0,31}", name)
+                and isinstance(check, dict) and check.get("status") in CHECK_STATES):
+            states[name] = check["status"]
+        if len(states) == 10:
+            break
+    return states
 
 
 def summarize(returncode, metadata, headers, body):
@@ -27,7 +43,7 @@ def summarize(returncode, metadata, headers, body):
         payload = json.loads(body)
         app_status = payload.get("status") if isinstance(payload, dict) else None
     except (ValueError, TypeError):
-        app_status = None
+        payload, app_status = None, None
     if returncode:
         status = "unreachable"
     elif not 200 <= code < 300:
@@ -39,6 +55,9 @@ def summarize(returncode, metadata, headers, body):
     else:
         status = "unparseable"
     result = {"status": status, "httpCode": code, "curlExitCode": returncode}
+    checks = check_states(payload) if status != "unparseable" else {}
+    if checks:
+        result["checks"] = checks
     for name in TIMINGS:
         value = meta.get(name)
         if isinstance(value, (float, int)) and 0 <= value < 3600:

@@ -31,6 +31,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    # Loopback only: lets the host's healthz alert tell a proxy or Cloudflare failure from an app failure.
+    ports:
+      - "127.0.0.1:3400:3000"
     volumes:
       - keeper_health:/var/lib/arbigamefi/casino-keeper:ro
     healthcheck:

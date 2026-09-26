@@ -40,6 +40,19 @@ class HealthProbeTests(unittest.TestCase):
         self.assertNotIn("secret", json.dumps(result))
         self.assertEqual(result["remoteIp"], "104.21.31.55")
 
+    def test_check_states_keep_only_allowlisted_names_and_status_words(self):
+        body = json.dumps({"status": "degraded", "checks": {
+            "release": {"status": "ok", "warnings": ["secret"]},
+            "keeper": {"status": "degraded", "detail": "secret"},
+            "bad name!": {"status": "ok"},
+            "weird": {"status": "<script>secret</script>"},
+            "nested": "secret",
+        }})
+        result = PROBE.summarize(0, '{"http_code":200}', "", body)
+        self.assertEqual(result["status"], "degraded")
+        self.assertEqual(result["checks"], {"release": "ok", "keeper": "degraded"})
+        self.assertNotIn("secret", json.dumps(result))
+
     def test_local_success_never_recovers_public_failure(self):
         with patch.object(PROBE, "probe", side_effect=[{"status":"unreachable"}, {"status":"ok"}]) as call:
             result = PROBE.collect("https://example.com/api/healthz", "http://127.0.0.1:3400/api/healthz")
