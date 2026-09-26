@@ -60,7 +60,8 @@ Constants of the release unit:
 
 ## 2. Allocation at settlement
 
-When a casino position settles through `finalize`, the hub MUST compute, in this order:
+When a casino position settles through `finalize`, the hub (in the reference implementation, through its
+referral engine) MUST compute, in this order:
 
 1. `E`, `E_b`, `E_Δ` from `U` and the snapshotted `h_b`, `h_e`.
 2. `O = floor(E × (10000 − LP_SHARE_BPS) / 10000)`.

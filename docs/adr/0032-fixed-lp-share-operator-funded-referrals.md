@@ -94,7 +94,8 @@ increments, and any unallocated amount becomes protocol fees.
 
 ### 6. The settlement boundary enforces the LP share
 
-The hub computes the split; the SettlementRouter enforces the LP floor without trusting it. The Router
+The hub computes the split (through its referral engine); the SettlementRouter enforces the LP floor without
+trusting it. The Router
 stores `h_e` when a position is opened, bounded by the constant `MAX_HOUSE_EDGE_BPS = 500`, and on
 settlement requires:
 
@@ -145,9 +146,9 @@ The source implements this decision for the next release unit. The deployed v1.5
 | Part | Where |
 | --- | --- |
 | Constants and the shared `turnoverEdge` / `operatorShare` arithmetic | `src/libs/HouseEdgeLib.sol` |
-| Allocation, payee snapshot, schedules, delayed edge changes, `HouseEdgeAllocated` event | `src/core/GameHub.sol` |
+| Payee snapshot, schedules, delayed edge changes (`queueEdgeChange`, `activateEdgeChange`, `cancelEdgeChange`), `HouseEdgeAllocated` event | `src/core/GameHub.sol` |
+| The allocation (`E`, `O`, `R0`–`R2`, markup, protocol fee) and the XP awards that pay it | `DefaultReferralEngine.allocate` in `src/engines/referral/DefaultReferralEngine.sol` |
 | Edge recorded at `openPosition`; settlement cap; `allocationCap` view | `src/core/SettlementRouter.sol` |
-| L0/L1/L2 amounts and markup split | `src/engines/referral/DefaultReferralEngine.sol` |
 | Sports positions opened with edge `0` | `src/core/SportsHub.sol` |
 | Obligations A1–A9, B1–B2, G1–G4 | [ExecutableSSOT v1.6](../constitution/ExecutableSSOT.v1.6.md#test-mapping) |
 
@@ -163,6 +164,11 @@ Choices the decision above left open:
 - XP awards carry the reasons `REF_L0`, `REF_L1`, `REF_L2` and `REF_MARKUP`.
 - The Router exposes `allocationCap(positionId, refundAmount)` so indexers and auditors can check each
   settlement against the cap.
+- The allocation arithmetic lives in the referral engine rather than GameHub. GameHub was already at the
+  EIP-170 code-size limit: the deployed v1.5 GameHub is 24,455 of 24,576 bytes, and computing the allocation
+  inline took it to 25,686. With the engine doing the arithmetic, GameHub is 23,978 bytes.
+  `test/unit/ContractSizes.t.sol` checks every contract the deploy script deploys, because Forge's test EVM
+  does not enforce the limit. Further growth of GameHub needs a split.
 
 ## Alternatives considered
 
