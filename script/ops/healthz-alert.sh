@@ -3,7 +3,8 @@
 #
 # Always logs to the journal, so it is useful even before a channel is set.
 # Set ALERT_WEBHOOK_URL, or TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID, in
-# /opt/arbigamefi-v15/ops/alert.env to get pushed alerts.
+# /opt/arbigamefi-v15/ops/alert.env to get pushed alerts. A status is pushed only
+# after ALERT_AFTER_FAILURES consecutive probes, so one-off timeouts stay in the journal.
 set -uo pipefail
 umask 077
 
@@ -13,6 +14,7 @@ CONF="${ALERT_CONFIG_FILE:-/opt/arbigamefi-v15/ops/alert.env}"
 URL="${HEALTHZ_URL:-https://arbigamefi.com/api/healthz}"
 STATE="${ALERT_STATE_FILE:-/var/lib/arbigamefi/healthz-alert.state}"
 REMIND_SECONDS="${ALERT_REMIND_SECONDS:-21600}"   # re-alert every 6h while still bad
+AFTER="${ALERT_AFTER_FAILURES:-3}"                  # consecutive failed probes (timer: 2 min) before a push
 mkdir -p "$(dirname "$STATE")"
 
 # Keep the existing alert transitions/webhook while preserving failure evidence.
@@ -36,10 +38,25 @@ if [ "$status" != "ok" ]; then
   printf '[DIAGNOSTIC] %s\n' "$probe_json"
 fi
 
-prev_status=""; prev_ts=0
-[ -f "$STATE" ] && { prev_status=$(cut -d' ' -f1 "$STATE" 2>/dev/null); prev_ts=$(cut -d' ' -f2 "$STATE" 2>/dev/null); }
-: "${prev_ts:=0}"
+# State: status alert_ts fails same alerted since. fails counts consecutive failed probes, same counts
+# consecutive probes with this exact status, alerted is the status last pushed in the current failure
+# episode ("-" when none), and since is when the episode began.
+prev_status=""; alert_ts=""; fails=""; same=""; alerted=""; since=""
+[ -f "$STATE" ] && read -r prev_status alert_ts fails same alerted since < "$STATE"
+if [ -z "$fails" ] && [ -n "$prev_status" ] && [ "$prev_status" != "ok" ]; then
+  # The previous version stored only "status timestamp" and pushed every failure at once.
+  fails=$AFTER; same=$AFTER; alerted=$prev_status; since=$alert_ts
+fi
+num() { case "$1" in ''|*[!0-9]*) echo 0 ;; *) echo "$1" ;; esac; }
+alert_ts=$(num "$alert_ts"); fails=$(num "$fails"); same=$(num "$same"); since=$(num "$since")
+[ -n "$alerted" ] || alerted="-"
 now=$(date +%s)
+utc() { python3 -c 'import sys,time;print(time.strftime("%Y-%m-%d %H:%M UTC",time.gmtime(int(sys.argv[1]))))' "$1"; }
+elapsed() {
+  local m=$(( ($1 + 59) / 60 ))
+  [ "$m" -gt 0 ] || m=1
+  if [ "$m" -ge 120 ]; then echo "$(( m / 60 ))h $(( m % 60 ))m"; else echo "$m min"; fi
+}
 
 notify() {
   local subject="$1" text="$2"
@@ -64,16 +81,21 @@ notify() {
 }
 
 if [ "$status" = "ok" ]; then
-  if [ -n "$prev_status" ] && [ "$prev_status" != "ok" ]; then
-    notify "[RECOVERED] arbigamefi healthz" "status is ok again (was $prev_status)"
+  # Recovery is pushed only for an episode that was pushed; a suppressed blip ends silently.
+  if [ "$alerted" != "-" ]; then
+    notify "[RECOVERED] arbigamefi healthz" "status is ok again after $(elapsed $(( now - since ))) (was $alerted)"
   fi
+  fails=0; same=0; alerted="-"; since=0
 else
-  age=$(( now - prev_ts ))
-  if [ "$prev_status" != "$status" ] || [ "$age" -ge "$REMIND_SECONDS" ]; then
-    notify "[ALERT] arbigamefi healthz = $status" "$detail"
-    prev_ts=$now
+  [ "$fails" -gt 0 ] || since=$now
+  fails=$(( fails + 1 ))
+  if [ "$status" = "$prev_status" ]; then same=$(( same + 1 )); else same=1; fi
+  if { [ "$alerted" = "-" ] && [ "$fails" -ge "$AFTER" ]; } ||
+     { [ "$alerted" != "-" ] && [ "$status" != "$alerted" ] && [ "$same" -ge "$AFTER" ]; } ||
+     { [ "$status" = "$alerted" ] && [ $(( now - alert_ts )) -ge "$REMIND_SECONDS" ]; }; then
+    notify "[ALERT] arbigamefi healthz = $status (since $(utc "$since"))" "$detail"
+    alerted=$status; alert_ts=$now
   fi
 fi
 
-[ "$status" = "$prev_status" ] || prev_ts=$now
-echo "$status $prev_ts" > "$STATE"
+echo "$status $alert_ts $fails $same $alerted $since" > "$STATE"

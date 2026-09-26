@@ -94,7 +94,7 @@ class HealthProbeTests(unittest.TestCase):
                 root = Path(directory)
                 state = root / "state"
                 config = root / "alert.env"
-                config.write_text(f"ALERT_STATE_FILE='{state}'\nALERT_WEBHOOK_URL=''\n")
+                config.write_text(f"ALERT_STATE_FILE='{state}'\nALERT_WEBHOOK_URL=''\nALERT_AFTER_FAILURES='1'\n")
                 logger = root / "logger"
                 logger.write_text('#!/bin/sh\nprintf "%s\\n" "$*" >> "$LOG_CAPTURE"\n')
                 logger.chmod(0o700)

@@ -12,7 +12,14 @@
 
 公网失败时额外探测本机 `http://127.0.0.1:3400/api/healthz`，超时上限五秒；`compose.production.yml` 把 web 只发布在 loopback 的 3400 端口，外网不可达。这是应用层对照，不经过 Caddy 或 Cloudflare；它成功也不能解除公网告警。公网探测仍使用正常 TLS 校验，连接上限五秒、总时限二十秒，不自动重试或跟随跳转。
 
-故障详情每次写入 journal 的 `[DIAGNOSTIC]`，受现有 journal 的 256 MB/14 天保留策略约束。既有通知只在状态变化、恢复或达到六小时提醒间隔时发送，健康期间不增加通知。不要手工运行告警脚本来测试通知渠道。
+故障详情每次写入 journal 的 `[DIAGNOSTIC]`，受现有 journal 的 256 MB/14 天保留策略约束。通知（journal 的 `[ALERT]`、`[RECOVERED]` 以及 Telegram 或 webhook 推送）只针对持续的故障：
+
+- 连续 `ALERT_AFTER_FAILURES` 次探测失败（默认 3 次，timer 两分钟一次，约 6 分钟）才发第一条告警，标题注明故障开始时间。
+- 同一次故障中状态变成另一种（例如从 `degraded` 变为 `unreachable`），新状态同样连续 3 次才再发。
+- 仍未恢复时，每六小时就已推送的状态提醒一次。
+- 恢复时发一条，注明持续时长；从未推送过的故障恢复时不发。
+
+失败一两次就自愈的偶发超时只留 `[DIAGNOSTIC]`。按 2026-09-21 至 26 日的 journal 回放，旧规则会推送 44 次故障，新规则只推送 3 次：09-23 两次约 6 分钟的中断，以及 09-25 起持续 19 小时的 RPC 额度故障。健康期间不增加通知。不要手工运行告警脚本来测试通知渠道。
 
 告警正文会列出 healthz 各检查项的状态（例如 `keeper=degraded`）。探测器只保留检查项名称和固定的状态词，不保留检查项里的其他字段。
 
@@ -57,7 +64,7 @@ cat /var/lib/arbigamefi/healthz-alert.state.probe.json
 
 ## 更新方式
 
-先通过 ops 测试与 CI，再将三个经校验的文件安装到 `/opt/arbigamefi-v15/ops/`，权限均为 0755。先安装两个 helper（`healthz-probe.py`、`alert-notify.py`），再原子替换 alert wrapper。保留 `/opt/arbigamefi-v15/ops/alert.env` 和 systemd unit，不重启 keeper 或数据库，也不新增 timer。web 的 loopback 端口随下一次 web 容器重建生效。
+先通过 ops 测试与 CI，再将三个经校验的文件安装到 `/opt/arbigamefi-v15/ops/`，权限均为 0755。先安装两个 helper（`healthz-probe.py`、`alert-notify.py`），再原子替换 alert wrapper。保留 `/opt/arbigamefi-v15/ops/alert.env` 和 systemd unit，不重启 keeper 或数据库，也不新增 timer。状态文件由“状态 时间戳”两个字段扩展为六个字段，新脚本兼容旧格式：替换时如有未恢复的告警，会按已推送处理，恢复时照常发送 `[RECOVERED]`。web 的 loopback 端口随下一次 web 容器重建生效。
 
 可单独运行以下只读探测器检验安装；它不会读取通知配置、发送通知或改写监控状态：
 

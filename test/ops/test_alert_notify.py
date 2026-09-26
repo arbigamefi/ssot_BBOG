@@ -136,7 +136,7 @@ class AlertWrapperTelegramTests(unittest.TestCase):
                 config = root / "alert.env"
                 config.write_text(
                     f"ALERT_STATE_FILE='{root / 'state'}'\nTELEGRAM_BOT_TOKEN='{TOKEN}'\n"
-                    f"TELEGRAM_CHAT_ID='555'\nTELEGRAM_API_BASE='{base}'\n")
+                    f"TELEGRAM_CHAT_ID='555'\nTELEGRAM_API_BASE='{base}'\nALERT_AFTER_FAILURES='1'\n")
                 logger = root / "logger"
                 logger.write_text('#!/bin/sh\nprintf "%s\\n" "$*" >> "$LOG_CAPTURE"\n')
                 logger.chmod(0o700)
