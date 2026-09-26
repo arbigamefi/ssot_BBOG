@@ -4,103 +4,51 @@ pragma solidity ^0.8.20;
 import {IReferralEngine} from "./IReferralEngine.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Errors} from "../../libs/Errors.sol";
+import {HouseEdgeLib} from "../../libs/HouseEdgeLib.sol";
 
-/// @notice Reference deterministic referral engine.
+/// @notice Reference deterministic referral engine (SSOT v1.6).
 ///
 /// This implementation is intentionally simple and auditable:
-/// - Base plan: allocate per-level fixed BPS shares of `baseBudget`.
-/// - Delta plan: allocate budget proportionally to skyline `incBps`.
+/// - Base plan: L0 (player rakeback), L1 and L2 are fixed bps of the base turnover edge. L0 and L1 require a
+///   referrer bound at acceptance; L2 requires that referrer's own referrer. Nothing is paid beyond L2.
+/// - Delta plan: the markup budget is split in proportion to skyline `incBps`.
+/// - Every share is rounded down. Missing payees and rounding remainders are simply not paid; the hub
+///   accrues them as protocol fees.
 /// - Eligibility: if `playerTurnover >= minTurnover`, non-holdback becomes immediate; otherwise locked.
-/// - Holdback: fixed `holdbackBps` split into holdback bucket.
-/// - Any missing payees and all rounding remainder are returned as `sink`.
+/// - Holdback: fixed `holdbackBps` split into holdback bucket. L0 rakeback has no holdback or lock.
 contract DefaultReferralEngine is IReferralEngine {
     uint16 internal constant BPS = 10_000;
     uint8 internal constant MAX_SEGMENTS = 6;
 
     function splitBase(BaseInput calldata input) external pure override returns (Plan memory plan) {
-        uint256 budget = input.baseBudget;
-        if (budget == 0) {
-            plan.payees = new address[](0);
-            plan.immediate = new uint256[](0);
-            plan.locked = new uint256[](0);
-            plan.holdback = new uint256[](0);
-            return plan;
-        }
+        uint256 rates = uint256(input.l0Bps) + uint256(input.l1Bps) + uint256(input.l2Bps);
+        if (rates > HouseEdgeLib.MAX_REFERRAL_BPS) revert Errors.InvalidBps(rates);
 
-        uint8 levels = input.levels;
-        if (levels == 0 || levels > 6) revert Errors.InvalidConfig();
+        address[] memory payees = new address[](2);
+        uint256[] memory amounts = new uint256[](2);
 
-        // Upper bound: 5 uplines
-        address[] memory payees = new address[](levels > 0 ? (levels - 1) : 0);
-        uint256[] memory amounts = new uint256[](payees.length);
-
-        uint256 accounted = 0;
-
-        // L0: player kickback (kept as a separate scalar)
-        uint256 kick = Math.mulDiv(budget, uint256(input.levelBps[0]), BPS);
-        if (kick > budget) kick = budget;
-        plan.playerKick = kick;
-        accounted += kick;
-
-        // L1..Lk: uplines
-        uint256 idx = 0;
-        for (uint8 l = 1; l < levels; ++l) {
-            if (accounted >= budget) break;
-            uint256 share = Math.mulDiv(budget, uint256(input.levelBps[l]), BPS);
-            uint256 remaining = budget - accounted;
-            if (share > remaining) share = remaining;
-            if (share == 0) continue;
-            accounted += share;
-
-            address p = address(0);
-            uint256 u = uint256(l - 1);
-            if (u < input.uplines.length) {
-                p = input.uplines[u];
+        if (input.l1 != address(0)) {
+            plan.playerRakeback = Math.mulDiv(input.baseEdge, uint256(input.l0Bps), BPS);
+            payees[0] = input.l1;
+            amounts[0] = Math.mulDiv(input.baseEdge, uint256(input.l1Bps), BPS);
+            if (input.l2 != address(0)) {
+                payees[1] = input.l2;
+                amounts[1] = Math.mulDiv(input.baseEdge, uint256(input.l2Bps), BPS);
             }
-
-            if (p == address(0)) {
-                // missing upline => sink
-                plan.sink += share;
-                continue;
-            }
-
-            payees[idx] = p;
-            amounts[idx] = share;
-            idx++;
         }
 
-        // Trim arrays to idx
-        assembly ("memory-safe") {
-            mstore(payees, idx)
-            mstore(amounts, idx)
-        }
-
-        // Rounding remainder goes to sink
-        if (accounted < budget) {
-            plan.sink += (budget - accounted);
-        }
-
-        (plan.payees, plan.immediate, plan.locked, plan.holdback) = _splitAmounts(
-            payees,
-            amounts,
-            input.holdbackBps,
-            input.minTurnover,
-            input.playerTurnover
-        );
+        (plan.payees, plan.immediate, plan.locked, plan.holdback) =
+            _splitAmounts(payees, amounts, input.holdbackBps, input.minTurnover, input.playerTurnover);
     }
 
-    function splitDelta(bytes calldata skyline, DeltaPolicy calldata policy) external pure override returns (Plan memory plan) {
-        uint256 budget = policy.deltaBudget;
-        if (budget == 0) {
-            plan.payees = new address[](0);
-            plan.immediate = new uint256[](0);
-            plan.locked = new uint256[](0);
-            plan.holdback = new uint256[](0);
-            return plan;
-        }
-
-        if (skyline.length == 0) {
-            plan.sink = budget;
+    function splitDelta(bytes calldata skyline, DeltaPolicy calldata policy)
+        external
+        pure
+        override
+        returns (Plan memory plan)
+    {
+        uint256 budget = policy.markupBudget;
+        if (budget == 0 || skyline.length == 0) {
             plan.payees = new address[](0);
             plan.immediate = new uint256[](0);
             plan.locked = new uint256[](0);
@@ -122,47 +70,16 @@ contract DefaultReferralEngine is IReferralEngine {
             sumInc += uint256(bps);
         }
 
-        if (sumInc == 0) {
-            plan.sink = budget;
-            plan.payees = new address[](0);
-            plan.immediate = new uint256[](0);
-            plan.locked = new uint256[](0);
-            plan.holdback = new uint256[](0);
-            return plan;
-        }
-
-        uint256 last = 0;
-        for (uint256 i = 0; i < k; ++i) {
-            if (inc[i] > 0) last = i;
-        }
-
         uint256[] memory amounts = new uint256[](k);
-        uint256 distributed = 0;
-        for (uint256 i = 0; i < k; ++i) {
-            uint256 share;
-            if (i == last) {
-                share = budget - distributed;
-            } else {
-                share = Math.mulDiv(budget, uint256(inc[i]), sumInc);
-                distributed += share;
-            }
-
-            // missing payee => sink
-            if (payees[i] == address(0) || share == 0) {
-                plan.sink += share;
-                amounts[i] = 0;
-            } else {
-                amounts[i] = share;
+        if (sumInc > 0) {
+            for (uint256 i = 0; i < k; ++i) {
+                if (payees[i] == address(0)) continue;
+                amounts[i] = Math.mulDiv(budget, uint256(inc[i]), sumInc);
             }
         }
 
-        (plan.payees, plan.immediate, plan.locked, plan.holdback) = _splitAmounts(
-            payees,
-            amounts,
-            policy.holdbackBps,
-            policy.minTurnover,
-            policy.playerTurnover
-        );
+        (plan.payees, plan.immediate, plan.locked, plan.holdback) =
+            _splitAmounts(payees, amounts, policy.holdbackBps, policy.minTurnover, policy.playerTurnover);
     }
 
     function _splitAmounts(
@@ -171,7 +88,11 @@ contract DefaultReferralEngine is IReferralEngine {
         uint16 holdbackBps,
         uint256 minTurnover,
         uint256 playerTurnover
-    ) internal pure returns (address[] memory outPayees, uint256[] memory immediate, uint256[] memory locked, uint256[] memory holdback) {
+    )
+        internal
+        pure
+        returns (address[] memory outPayees, uint256[] memory immediate, uint256[] memory locked, uint256[] memory holdback)
+    {
         if (holdbackBps > BPS) revert Errors.InvalidBps(holdbackBps);
         uint256 n = payees.length;
 

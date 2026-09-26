@@ -71,9 +71,7 @@ contract GameHubE2E is Test {
         ReferralRegistry refRegistry = new ReferralRegistry(gov);
         DefaultReferralEngine refEngine = new DefaultReferralEngine();
 
-        uint16[6] memory levelBps;
-        levelBps[1] = 10_000;
-
+        // ADR-0032 initial schedule: L0 10%, L1 20%, L2 5% of the base edge, 30% holdback.
         gameHub = new GameHub(
             address(router),
             address(vrf),
@@ -82,12 +80,10 @@ contract GameHubE2E is Test {
             gov,
             3600,
             200,
-            0,
-            10_000,
-            10_000,
-            3000,
-            levelBps,
-            2
+            1000,
+            2000,
+            500,
+            3000
         );
 
         vm.startPrank(gov);
@@ -197,7 +193,8 @@ contract GameHubE2E is Test {
         SSOTTypes.BetTerminal memory terminal = gameHub.getBetTerminal(settledId);
         SSOTTypes.SSOT memory s = bankA.getSSOT();
         assertEq(terminal.feeOnPayout, 0);
-        assertEq(s.PF + s.XP, 0.2 ether, "liabilities follow used turnover, not payout fees");
+        // E = 2% of 10 = 0.2; the operator half accrues as PF + XP even though the bet paid no fee.
+        assertEq(s.PF + s.XP, 0.1 ether, "liabilities follow used turnover, not payout fees");
         assertEq(s.R, gameHub.getBet(heldId).reserved);
         assertGt(s.R, 0);
         assertGe(s.NAV, s.R);
@@ -406,6 +403,9 @@ contract GameHubE2E is Test {
 
         vm.prank(gov);
         gameHub.setMaxAffiliateDeltaBps(100);
+        (, uint64 activatesAt) = gameHub.pendingMaxAffiliateDelta();
+        vm.warp(activatesAt);
+        gameHub.activateMaxAffiliateDelta();
         vm.prank(bob);
         gameHub.setAffiliateHouseEdge(300);
 

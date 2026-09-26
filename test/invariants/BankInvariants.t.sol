@@ -9,6 +9,7 @@ import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
 import {MockERC20} from "../../src/mocks/MockERC20.sol";
 import {DefaultReferralEngine} from "../../src/engines/referral/DefaultReferralEngine.sol";
 import {IReferralEngine} from "../../src/engines/referral/IReferralEngine.sol";
+import {HouseEdgeLib} from "../../src/libs/HouseEdgeLib.sol";
 
 /// @dev Drives the Bank through the six classes of operation that move its
 ///      accounting: deposit, withdraw, hold, settle, refund, and the optional
@@ -135,8 +136,8 @@ contract BankHandler is Test {
         uint256 maxGross = b.reserved - refundAmount;
         uint256 payoutGross = maxGross == 0 ? 0 : grossRaw % (maxGross + 1);
 
-        // A 2% base edge plus a permitted affiliate delta, up to 10% total.
-        uint16 deltaBps = uint16(feeBpsRaw % 801);
+        // A 2% base edge plus a permitted affiliate markup, up to the 5% edge cap.
+        uint16 deltaBps = uint16(feeBpsRaw % 301);
         uint256 effectiveHouseEdgeBps = 200 + uint256(deltaBps);
         uint256 feeOnPayout = (payoutGross * effectiveHouseEdgeBps) / 10_000;
         uint256 payoutNet = payoutGross - feeOnPayout;
@@ -217,29 +218,28 @@ contract BankHandler is Test {
 
     // ------------------------------------------------------------------ helpers
 
+    /// @dev SSOT v1.6 allocation for a bet with a 2% base edge plus `deltaBps` markup: payees[0] is the player's
+    ///      referrer (L1, no L2) and payees[1] owns the single markup segment. Protocol fees take whatever of the
+    ///      operator share the awards do not.
     function _turnoverAwards(HeldBet memory b, uint256 refundAmount, uint16 deltaBps)
         internal
         view
         returns (uint256 pfAccrual, SSOTTypes.XPAward[] memory awards)
     {
         uint256 usedTurnover = b.stake - refundAmount;
-        uint256 baseHEAmount = (usedTurnover * 200) / 10_000;
-        uint256 deltaHEAmount = (usedTurnover * uint256(deltaBps)) / 10_000;
-        uint256 baseBudget = (baseHEAmount * 5_000) / 10_000;
-        uint256 deltaBudget = (deltaHEAmount * 7_500) / 10_000;
+        uint256 baseEdge = HouseEdgeLib.turnoverEdge(usedTurnover, 200);
+        uint256 edge = HouseEdgeLib.turnoverEdge(usedTurnover, 200 + uint256(deltaBps));
         uint256 turnoverAfter = bank.playerTurnover(b.player) + usedTurnover;
         uint256 minTurnover = bank.minPlayerTurnoverForUnlock();
 
-        uint16[6] memory levelBps;
-        levelBps[1] = 10_000;
-        address[] memory uplines = new address[](1);
-        uplines[0] = payees[0];
         IReferralEngine.Plan memory basePlan = referralEngine.splitBase(
             IReferralEngine.BaseInput({
-                baseBudget: baseBudget,
-                levelBps: levelBps,
-                levels: 2,
-                uplines: uplines,
+                baseEdge: baseEdge,
+                l0Bps: 1_000,
+                l1Bps: 2_000,
+                l2Bps: 500,
+                l1: payees[0],
+                l2: address(0),
                 holdbackBps: 3_000,
                 minTurnover: minTurnover,
                 playerTurnover: turnoverAfter
@@ -248,28 +248,58 @@ contract BankHandler is Test {
         IReferralEngine.Plan memory deltaPlan = referralEngine.splitDelta(
             abi.encodePacked(payees[1], deltaBps),
             IReferralEngine.DeltaPolicy({
-                deltaBudget: deltaBudget, holdbackBps: 3_000, minTurnover: minTurnover, playerTurnover: turnoverAfter
+                markupBudget: HouseEdgeLib.operatorShare(edge - baseEdge),
+                holdbackBps: 3_000,
+                minTurnover: minTurnover,
+                playerTurnover: turnoverAfter
             })
         );
-        pfAccrual = baseHEAmount - baseBudget + deltaHEAmount - deltaBudget + basePlan.sink + deltaPlan.sink;
 
-        // L0 is zero in this configuration, matching GameHub's absence of a
-        // player-kick award. The base upline and one skyline segment each get
-        // the exact bucket amounts returned by DefaultReferralEngine.
-        uint256 baseCount = basePlan.payees.length;
-        awards = new SSOTTypes.XPAward[](baseCount + deltaPlan.payees.length);
-        for (uint256 i = 0; i < awards.length; ++i) {
-            IReferralEngine.Plan memory plan = i < baseCount ? basePlan : deltaPlan;
-            uint256 index = i < baseCount ? i : i - baseCount;
-            awards[i] = SSOTTypes.XPAward({
-                payee: plan.payees[index],
+        SSOTTypes.XPAward[] memory tmp = new SSOTTypes.XPAward[](3);
+        uint256 n;
+        uint256 allocated;
+        if (basePlan.playerRakeback > 0) {
+            tmp[n++] = SSOTTypes.XPAward({
+                payee: b.player,
                 sourcePlayer: b.player,
-                accrued: plan.immediate[index],
-                locked: plan.locked[index],
-                holdback: plan.holdback[index],
-                reason: i < baseCount ? bytes32("base") : bytes32("delta")
+                accrued: basePlan.playerRakeback,
+                locked: 0,
+                holdback: 0,
+                reason: bytes32("l0")
             });
+            allocated += basePlan.playerRakeback;
         }
+        (n, allocated) = _appendAward(tmp, n, allocated, basePlan, 0, b.player, bytes32("l1"));
+        (n, allocated) = _appendAward(tmp, n, allocated, deltaPlan, 0, b.player, bytes32("markup"));
+
+        pfAccrual = HouseEdgeLib.operatorShare(edge) - allocated;
+        awards = new SSOTTypes.XPAward[](n);
+        for (uint256 i = 0; i < n; ++i) {
+            awards[i] = tmp[i];
+        }
+    }
+
+    function _appendAward(
+        SSOTTypes.XPAward[] memory tmp,
+        uint256 n,
+        uint256 allocated,
+        IReferralEngine.Plan memory plan,
+        uint256 i,
+        address sourcePlayer,
+        bytes32 reason
+    ) internal pure returns (uint256, uint256) {
+        if (i >= plan.payees.length || plan.payees[i] == address(0)) return (n, allocated);
+        uint256 total = plan.immediate[i] + plan.locked[i] + plan.holdback[i];
+        if (total == 0) return (n, allocated);
+        tmp[n++] = SSOTTypes.XPAward({
+            payee: plan.payees[i],
+            sourcePlayer: sourcePlayer,
+            accrued: plan.immediate[i],
+            locked: plan.locked[i],
+            holdback: plan.holdback[i],
+            reason: reason
+        });
+        return (n, allocated + total);
     }
 
     function _removeOpenBet(uint256 idx) internal {
@@ -422,13 +452,13 @@ contract BankInvariants is StdInvariant, Test {
         handler.action_hold(2, 200e6, 3); // stake 201, reserve 804
         assertEq(handler.openBetCount(), 3);
 
-        // No payout, a partial refund, and 5% of used turnover still accrues.
+        // No payout, a partial refund, and the operator half of the 5% used-turnover edge still accrues.
         // The old payout-fee model would incorrectly accrue nothing here.
         handler.action_settle(0, 0, 300, 2e6);
         assertEq(handler.settleCount(), 1);
         assertEq(bank.totalFeeOnPayout(), 0);
         assertEq(bank.totalTurnover(), 8e6);
-        assertEq(bank.protocolFeesPayable() + bank.externalPayablesTotal(), 400_000);
+        assertEq(bank.protocolFeesPayable() + bank.externalPayablesTotal(), 200_000);
         assertGt(bank.xpLockedTotal(), 0, "below-threshold referral amount must lock");
         assertGt(bank.xpHoldbackTotal(), 0, "holdback must be exercised");
         _assertOpenReserveSolvency(303e6 + 804e6);

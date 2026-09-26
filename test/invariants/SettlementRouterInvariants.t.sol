@@ -8,6 +8,7 @@ import {Bank} from "../../src/core/Bank.sol";
 import {PoolRegistry} from "../../src/core/PoolRegistry.sol";
 import {SettlementRouter} from "../../src/core/SettlementRouter.sol";
 import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
+import {HouseEdgeLib} from "../../src/libs/HouseEdgeLib.sol";
 import {MockERC20} from "../../src/mocks/MockERC20.sol";
 
 contract SettlementRouterHandler is Test {
@@ -33,6 +34,9 @@ contract SettlementRouterHandler is Test {
     uint256 public vUnauthorizedSettlement;
     uint256 public vBankBypass;
     uint256 public vWrongPoolOpen;
+    uint256 public vAllocationAboveCap;
+    uint256 public vEdgeAboveMax;
+    uint256 public settledWithinCap;
 
     struct Mirror {
         address ownerHub;
@@ -42,6 +46,7 @@ contract SettlementRouterHandler is Test {
         uint256 stake;
         uint256 reserved;
         bytes32 snapshotHash;
+        uint16 edgeBps;
         SSOTTypes.PositionState state;
     }
 
@@ -84,7 +89,7 @@ contract SettlementRouterHandler is Test {
         return positionIds.length;
     }
 
-    function action_openPosition(uint256 seed, uint256 stakeRaw, uint256 reserveRaw) external {
+    function action_openPosition(uint256 seed, uint256 stakeRaw, uint256 reserveRaw, uint16 edgeRaw) external {
         (uint64 poolId, address ownerHub, Bank bank) = _pickPool(seed);
         try poolRegistry.isPoolActive(poolId) returns (bool active) {
             if (!active) return;
@@ -96,9 +101,11 @@ contract SettlementRouterHandler is Test {
         uint256 stake = bound(stakeRaw, 1e6, 5_000e6);
         uint256 reserved = bound(reserveRaw, stake, stake * 10);
         bytes32 snapshotHash = keccak256(abi.encode(poolId, ownerHub, player, stake, reserved, openedCount));
+        // Casino hubs price with an edge up to the cap; sports hubs carry none.
+        uint16 edgeBps = ownerHub == casinoHub ? uint16(bound(edgeRaw, 0, HouseEdgeLib.MAX_HOUSE_EDGE_BPS)) : 0;
 
         vm.prank(ownerHub);
-        try router.openPosition(poolId, player, stake, reserved, snapshotHash) returns (uint256 positionId) {
+        try router.openPosition(poolId, player, stake, reserved, snapshotHash, edgeBps) returns (uint256 positionId) {
             positionIds.push(positionId);
             heldPositionIds.push(positionId);
             heldIndexPlusOne[positionId] = heldPositionIds.length;
@@ -112,6 +119,7 @@ contract SettlementRouterHandler is Test {
                 stake: stake,
                 reserved: reserved,
                 snapshotHash: snapshotHash,
+                edgeBps: edgeBps,
                 state: SSOTTypes.PositionState.Held
             });
 
@@ -120,7 +128,16 @@ contract SettlementRouterHandler is Test {
         } catch {}
     }
 
-    function action_settlePosition(uint256 seed, uint256 payoutRaw, uint256 refundRaw, uint16 feeBpsRaw) external {
+    /// @dev Splits a claimed allocation between protocol fees and one XP award, and sometimes claims more than
+    ///      the operator share of the recorded edge. The Router must accept exactly the claims within the cap.
+    function action_settlePosition(
+        uint256 seed,
+        uint256 payoutRaw,
+        uint256 refundRaw,
+        uint16 feeBpsRaw,
+        uint256 allocRaw,
+        uint256 splitRaw
+    ) external {
         uint256 positionId = _pickHeldPosition(seed);
         if (positionId == 0) return;
 
@@ -131,12 +148,27 @@ contract SettlementRouterHandler is Test {
         uint256 refundAmount = bound(refundRaw, 0, refundMax);
 
         uint16 feeBps = uint16(bound(uint256(feeBpsRaw), 0, 1_000));
-        uint256 fee = payoutGross * uint256(feeBps) / 10_000;
-        uint256 payoutNet = payoutGross - fee;
-        SSOTTypes.XPAward[] memory awards = new SSOTTypes.XPAward[](0);
+        uint256 payoutNet = payoutGross - payoutGross * uint256(feeBps) / 10_000;
+
+        uint256 cap = HouseEdgeLib.operatorShare(HouseEdgeLib.turnoverEdge(m.stake - refundAmount, m.edgeBps));
+        uint256 allocated = bound(allocRaw, 0, cap + 2);
+        uint256 xp = bound(splitRaw, 0, allocated);
+        SSOTTypes.XPAward[] memory awards = new SSOTTypes.XPAward[](xp == 0 ? 0 : 1);
+        if (xp > 0) {
+            awards[0] = SSOTTypes.XPAward({
+                payee: players[(seed >> 8) % players.length],
+                sourcePlayer: m.player,
+                accrued: xp / 2,
+                locked: 0,
+                holdback: xp - xp / 2,
+                reason: bytes32("fuzz")
+            });
+        }
 
         vm.prank(m.ownerHub);
-        try router.settlePosition(positionId, payoutGross, payoutNet, refundAmount, fee, awards) {
+        try router.settlePosition(positionId, payoutGross, payoutNet, refundAmount, allocated - xp, awards) {
+            if (allocated > cap) ++vAllocationAboveCap;
+            else ++settledWithinCap;
             _terminalize(positionId, SSOTTypes.PositionState.Settled);
         } catch {}
     }
@@ -180,6 +212,18 @@ contract SettlementRouterHandler is Test {
         } catch {}
     }
 
+    function action_edgeAboveMaxCannotOpen(uint256 seed, uint256 stakeRaw, uint16 edgeRaw) external {
+        (uint64 poolId, address ownerHub,) = _pickPool(seed);
+        address player = players[seed % players.length];
+        uint256 stake = bound(stakeRaw, 1e6, 5_000e6);
+        uint16 edgeBps = uint16(bound(edgeRaw, uint256(HouseEdgeLib.MAX_HOUSE_EDGE_BPS) + 1, type(uint16).max));
+
+        vm.prank(ownerHub);
+        try router.openPosition(poolId, player, stake, stake, keccak256("EDGE"), edgeBps) returns (uint256) {
+            ++vEdgeAboveMax;
+        } catch {}
+    }
+
     function action_registeredHubCannotOpenWrongPool(uint256 seed, uint256 stakeRaw, uint256 reserveRaw) external {
         (uint64 poolId, address ownerHub,) = _pickPool(seed);
         address wrongHub = ownerHub == casinoHub ? sportsHub : casinoHub;
@@ -188,7 +232,7 @@ contract SettlementRouterHandler is Test {
         uint256 reserved = bound(reserveRaw, stake, stake * 10);
 
         vm.prank(wrongHub);
-        try router.openPosition(poolId, player, stake, reserved, keccak256("WRONG_POOL")) returns (uint256) {
+        try router.openPosition(poolId, player, stake, reserved, keccak256("WRONG_POOL"), 0) returns (uint256) {
             ++vWrongPoolOpen;
         } catch {}
     }
@@ -243,6 +287,7 @@ contract SettlementRouterHandler is Test {
         assertEq(pos.stake, m.stake, "stake changed");
         assertEq(pos.reserved, m.reserved, "reserved changed");
         assertEq(pos.snapshotHash, m.snapshotHash, "snapshot changed");
+        assertEq(pos.edgeBps, m.edgeBps, "edge changed");
         assertEq(uint256(pos.state), uint256(m.state), "position state changed unexpectedly");
 
         _assertBankHold(positionId, m);
@@ -347,7 +392,7 @@ contract SettlementRouterInvariants is StdInvariant, Test {
         );
         targetContract(address(handler));
 
-        bytes4[] memory selectors = new bytes4[](7);
+        bytes4[] memory selectors = new bytes4[](8);
         selectors[0] = SettlementRouterHandler.action_openPosition.selector;
         selectors[1] = SettlementRouterHandler.action_settlePosition.selector;
         selectors[2] = SettlementRouterHandler.action_refundPosition.selector;
@@ -355,6 +400,7 @@ contract SettlementRouterInvariants is StdInvariant, Test {
         selectors[4] = SettlementRouterHandler.action_wrongOwnerCannotSettleOrRefund.selector;
         selectors[5] = SettlementRouterHandler.action_registeredHubCannotOpenWrongPool.selector;
         selectors[6] = SettlementRouterHandler.action_verticalHubCannotBypassRouter.selector;
+        selectors[7] = SettlementRouterHandler.action_edgeAboveMaxCannotOpen.selector;
 
         targetSelector(FuzzSelector({addr: address(handler), selectors: selectors}));
     }
@@ -372,6 +418,13 @@ contract SettlementRouterInvariants is StdInvariant, Test {
         assertEq(handler.vUnauthorizedSettlement(), 0, "wrong owner settled/refunded");
         assertEq(handler.vBankBypass(), 0, "hub bypassed router");
         assertEq(handler.vWrongPoolOpen(), 0, "hub opened unallowed pool");
+    }
+
+    /// @notice ExecutableSSOT v1.6 A2 and A8: no settlement accrues more than the operator share of the edge the
+    ///         position was opened with, and no position opens above MAX_HOUSE_EDGE_BPS.
+    function invariant_allocation_never_exceeds_operator_share() external view {
+        assertEq(handler.vAllocationAboveCap(), 0, "settlement accrued above the operator share");
+        assertEq(handler.vEdgeAboveMax(), 0, "position opened above the edge cap");
     }
 
     function invariant_next_position_id_matches_successful_opens() external view {
