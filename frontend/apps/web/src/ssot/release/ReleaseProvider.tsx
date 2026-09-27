@@ -145,3 +145,8 @@ export function useRelease() {
   if (!ctx) throw new Error("useRelease must be used within ReleaseProvider");
   return ctx;
 }
+
+/** The release context, or null outside a ReleaseProvider (for components that also render bare). */
+export function useOptionalRelease() {
+  return React.useContext(ReleaseContext);
+}

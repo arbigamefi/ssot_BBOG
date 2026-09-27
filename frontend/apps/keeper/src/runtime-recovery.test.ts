@@ -121,11 +121,11 @@ describe("runtime recovery composition", () => {
     await runtime.start();
     await vi.advanceTimersByTimeAsync(0);
     expect(await mock.store!.getCursor(8453, "gamehub-events", hub)).toBeNull();
-    expect(await mock.store!.getBet({ chainId: 8453, betId: 9 })).toBeNull();
+    expect(await mock.store!.getBet({ chainId: 8453, gameHub: hub, betId: 9 })).toBeNull();
     expect(runtime.health.snapshot().status).toBe("degraded");
     await vi.advanceTimersByTimeAsync(300_000);
     expect(await mock.store!.getCursor(8453, "gamehub-events", hub)).toBe(120n);
-    expect(await mock.store!.getBet({ chainId: 8453, betId: 9 })).toMatchObject({
+    expect(await mock.store!.getBet({ chainId: 8453, gameHub: hub, betId: 9 })).toMatchObject({
       payout: "196000",
       refundAmount: "100000",
       state: "finalized"

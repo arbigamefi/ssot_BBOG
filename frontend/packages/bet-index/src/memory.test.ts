@@ -52,7 +52,7 @@ describe("memory bet index store", () => {
     ]);
 
     const recent = await store.getRecentBets({ chainId: 84532, limit: 10 });
-    const single = await store.getBet({ betId: "7", chainId: 84532 });
+    const single = await store.getBet({ betId: "7", chainId: 84532, gameHub: GAME_HUB });
     const player = await store.getPlayerBets({ chainId: 84532, limit: 10, player: PLAYER });
     const affiliate = await store.getAffiliateBets({
       affiliate: AFFILIATE,
@@ -164,6 +164,33 @@ describe("memory bet index store", () => {
     await expect(store.getCursor(84532, "gamehub-events", GAME_HUB)).resolves.toBe(123n);
   });
 
+  it("keeps bets of two GameHub deployments apart when their ids collide", async () => {
+    const store = createMemoryBetIndexStore();
+    const otherHub = "0x00000000000000000000000000000000000000a6" as const;
+    const placed = (gameHub: `0x${string}`, blockNumber: bigint, stake: bigint) => ({
+      chainId: 84532,
+      gameHub,
+      blockNumber,
+      txHash: `0x${blockNumber.toString(16).padStart(64, "0")}` as `0x${string}`,
+      logIndex: 0,
+      eventName: "BetPlaced" as const,
+      args: { positionId: 1n, stake }
+    });
+    await store.writeGameHubEvents([placed(GAME_HUB, 10n, 100n), placed(otherHub, 20n, 200n)]);
+
+    expect(await store.getBet({ betId: "1", chainId: 84532, gameHub: GAME_HUB })).toMatchObject({
+      stake: "100"
+    });
+    expect(await store.getBet({ betId: "1", chainId: 84532, gameHub: otherHub })).toMatchObject({
+      stake: "200",
+      id: `84532:${otherHub}:1`
+    });
+    expect(await store.getRecentBets({ chainId: 84532, limit: 10 })).toHaveLength(2);
+    expect(
+      await store.getRecentBets({ chainId: 84532, gameHub: otherHub, limit: 10 })
+    ).toHaveLength(1);
+  });
+
   it("writes verified receipt rows directly", async () => {
     const store = createMemoryBetIndexStore();
     await store.writeBetRows([
@@ -172,8 +199,9 @@ describe("memory bet index store", () => {
         betId: "42",
         chainId: 84532,
         finalizedTxHash: "0xABC",
+        gameHub: GAME_HUB,
         gameId: GAME_ID,
-        id: "84532:42",
+        id: `84532:${GAME_HUB}:42`,
         lastEventName: "BetFinalized",
         lastTxHash: "0xABC",
         payout: "1980000",
@@ -192,7 +220,9 @@ describe("memory bet index store", () => {
       }
     ]);
 
-    await expect(store.getBet({ betId: "42", chainId: 84532 })).resolves.toMatchObject({
+    await expect(
+      store.getBet({ betId: "42", chainId: 84532, gameHub: GAME_HUB })
+    ).resolves.toMatchObject({
       betId: "42",
       finalizedTxHash: "0xabc",
       lastTxHash: "0xabc",

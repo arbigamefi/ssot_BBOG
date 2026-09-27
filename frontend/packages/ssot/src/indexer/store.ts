@@ -23,8 +23,14 @@ export interface GameHubEventRow {
 }
 
 export interface BetRow {
-  id: string; // `${chainId}:${betId}`
+  id: string; // `${chainId}:${betId}`, unique within one release-scoped DB
   chainId: number;
+  /**
+   * The GameHub that issued the bet. Bet ids restart at 1 in every deployment, so rows from
+   * different releases need it to stay apart. Rows cached before it was recorded lack it; they
+   * belong to the GameHub of their release-scoped DB.
+   */
+  gameHub?: Address;
   betId: string; // bigint string
   state: BetLifecycleState;
   gameId?: Hex;

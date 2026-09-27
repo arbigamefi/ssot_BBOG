@@ -19,7 +19,8 @@ export function usePlayerBets({
   player?: string;
   errorMessage?: string;
 }) {
-  const { chainId } = useRelease();
+  const { chainId, release } = useRelease();
+  const gameHub = release?.contracts.gameHub;
   const { db } = useSSOTRuntime();
   const normalizedPlayer = player?.toLowerCase();
 
@@ -61,8 +62,8 @@ export function usePlayerBets({
   });
 
   const data = React.useMemo(
-    () => mergeBetRows(serverQuery.data ?? [], localQuery.data ?? [], limit),
-    [limit, localQuery.data, serverQuery.data]
+    () => mergeBetRows(serverQuery.data ?? [], localQuery.data ?? [], limit, gameHub),
+    [gameHub, limit, localQuery.data, serverQuery.data]
   );
 
   return {
@@ -79,17 +80,25 @@ export function usePlayerBets({
   };
 }
 
+/**
+ * Merges index rows with the browser's cached rows. Bet ids restart in every GameHub deployment,
+ * so rows are matched by chain, hub and bet id; a cached row without a hub belongs to the release
+ * of its release-scoped cache, whose hub is `gameHub`.
+ */
 export function mergeBetRows(
   serverRows: readonly BetRow[],
   localRows: readonly BetRow[],
-  limit: number
+  limit: number,
+  gameHub?: string
 ) {
+  const key = (row: BetRow) =>
+    `${row.chainId}:${(row.gameHub ?? gameHub ?? "").toLowerCase()}:${row.betId}`;
   const merged = new Map<string, BetRow>();
-  for (const row of serverRows) merged.set(row.id, row);
+  for (const row of serverRows) merged.set(key(row), row);
   for (const row of localRows) {
-    const existing = merged.get(row.id);
+    const existing = merged.get(key(row));
     if (!existing || row.updatedBlock >= existing.updatedBlock) {
-      merged.set(row.id, row);
+      merged.set(key(row), row);
     }
   }
   return [...merged.values()].sort(compareBetRows).slice(0, limit);

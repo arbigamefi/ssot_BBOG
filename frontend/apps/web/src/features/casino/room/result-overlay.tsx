@@ -12,6 +12,8 @@ import { cn } from "@ssot/ui";
 import { getExplorerTxUrl } from "../../../app-shell/chain-registry";
 import { Modal } from "../../../components/overlay";
 import { buildCasinoReceiptFromTerminalResult } from "../receipt/view-model";
+import { buildReceiptPath } from "../receipt/receipt-path";
+import { useOptionalRelease } from "../../../ssot/release/ReleaseProvider";
 import { SharePanel } from "../../share/SharePanel";
 import { buildShareUrl } from "../../share/share-link";
 import { formatNativeFee } from "./casino-round";
@@ -654,6 +656,8 @@ export function GameRoomResultOverlay({
   onPlayAgain?: () => void;
 }) {
   const t = useTranslations();
+  // Rounds are played on the active release, so its GameHub issued the bet; receipt links name it.
+  const gameHub = useOptionalRelease()?.release?.contracts.gameHub;
   const [fairnessOpen, setFairnessOpen] = React.useState(false);
   const primaryActionRef = React.useRef<HTMLButtonElement | null>(null);
   const outcome = getOutcome(result, t);
@@ -693,9 +697,10 @@ export function GameRoomResultOverlay({
   const fairnessProof = buildFairnessProof({ result, chainId, txHash });
   const shareText = `${outcome.label} · ${receiptModel.signedNetValue} · ${receiptModel.gameLabel}`;
   const receiptPath = chainId
-    ? buildReceiptSharePath({
+    ? buildReceiptPath({
         betId: result.betId,
-        chainId
+        chainId,
+        gameHub
       })
     : undefined;
   const shareUrl = receiptPath
@@ -896,8 +901,4 @@ export function GameRoomResultOverlay({
       </div>
     </Modal>
   );
-}
-
-export function buildReceiptSharePath({ betId, chainId }: { betId: bigint; chainId: number }) {
-  return `/casino/receipt/${chainId}/${betId.toString()}`;
 }

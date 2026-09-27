@@ -74,6 +74,8 @@ export function applyGameHubEventToBet(
     next.refundedTxHash = ev.txHash;
   }
 
+  next.gameHub = ev.gameHub;
+
   // state transitions
   next.state = reduceState(next.state, ev.eventName);
   next.updatedBlock = Math.max(next.updatedBlock, ev.blockNumber);

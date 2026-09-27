@@ -46,7 +46,9 @@ describe("settled refund enrichment", () => {
       const store = createMemoryBetIndexStore();
       await store.writeGameHubEvents(enriched);
       await store.writeGameHubEvents([event, ...enriched, event]);
-      expect(await store.getBet({ chainId: 84532, betId: 9 })).toMatchObject({
+      expect(
+        await store.getBet({ chainId: 84532, gameHub: event.gameHub, betId: 9 })
+      ).toMatchObject({
         state: "finalized",
         payout: "196000",
         refundAmount: refundAmount.toString()
@@ -87,7 +89,7 @@ describe("settled refund enrichment", () => {
     expect(read).not.toHaveBeenCalled();
     const store = createMemoryBetIndexStore();
     await store.writeGameHubEvents(events);
-    expect(await store.getBet({ chainId: 84532, betId: 9 })).toMatchObject({
+    expect(await store.getBet({ chainId: 84532, gameHub: event.gameHub, betId: 9 })).toMatchObject({
       state: "refunded",
       payout: "200000",
       refundAmount: "200000"
