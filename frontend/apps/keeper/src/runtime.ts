@@ -25,7 +25,14 @@ import {
 
 import { GAME_HUB_KEEPER_ABI, SPORTS_HUB_KEEPER_ABI, VRF_HUB_KEEPER_ABI } from "./abi.js";
 import { fetchBankProviderLedgerRows } from "./bank-provider-ledger.js";
+import { describeError } from "./errors.js";
 import { finalizeIfReady, retryDelayMs } from "./finalizer.js";
+import {
+  fetchGameHubLogs,
+  GAME_HUB_INDEX_EVENTS,
+  type GameHubIndexEventName,
+  type GameHubLog
+} from "./gamehub-logs.js";
 import { createFileHealthSink, KeeperHealthReporter } from "./health.js";
 import { FinalizeQueue, type QueueItem } from "./queue.js";
 import { isScanTruncated, splitBlockRange, type BlockRange } from "./scan.js";
@@ -55,11 +62,17 @@ const SPORTS_TERMINALIZER_EVENTS: SportsTerminalizerEventName[] = [
 const BET_INDEX_CURSOR_SOURCE = "gamehub-events";
 const BANK_PROVIDER_LEDGER_CURSOR_SOURCE = "bank-provider-ledger";
 const CASINO_RECOVERY_PAGE_SIZE = 50;
+/**
+ * Indexed-bet recovery re-reads every requeued bet on chain, so after scans it runs
+ * about this often however short the poll interval is.
+ */
+const CASINO_RECOVERY_INTERVAL_MS = 300_000;
 const RPC_USAGE_WINDOW_MS = 60_000;
 const TRACKED_RPC_METHODS = new Set([
   "getBlock",
   "getBlockNumber",
   "getContractEvents",
+  "getLogs",
   "getTransactionReceipt",
   "readContract",
   "simulateContract",
@@ -250,6 +263,12 @@ export function createKeeperRuntime({
   let bankProviderLedgerLastScannedBlock = config.startBlock ?? 0n;
   let recoveryAfterBetId = 0n;
   let recoveringIndexedBets = false;
+  // Counting scans rather than elapsed time keeps a 300s poll recovering on every scan.
+  const scansPerRecovery =
+    config.pollIntervalMs > 0
+      ? Math.max(1, Math.ceil(CASINO_RECOVERY_INTERVAL_MS / config.pollIntervalMs))
+      : 1;
+  let scansSinceRecovery = 0;
   const betIndexStore =
     config.betIndexWriteEnabled && config.betIndexDatabaseUrl
       ? createPostgresBetIndexStore({
@@ -260,9 +279,7 @@ export function createKeeperRuntime({
 
   const writeHealth = (op: Promise<void>) => {
     void op.catch((error) => {
-      logger.error("casino.keeper.health_write_failed", {
-        message: (error as Error)?.message ?? "unknown error"
-      });
+      logger.error("casino.keeper.health_write_failed", { error: describeError(error) });
     });
   };
 
@@ -493,13 +510,12 @@ export function createKeeperRuntime({
       } else {
         queue.complete(item.betId);
       }
+      const description = describeError(error);
       logger.error("casino.keeper.process_failed", {
         betId: item.betId.toString(),
-        message: (error as Error)?.message ?? "unknown error"
+        error: description
       });
-      writeHealth(
-        health.recordError((error as Error)?.message ?? "unknown process failure", queue.size)
-      );
+      writeHealth(health.recordError(description, queue.size, "finalize"));
     }
   };
 
@@ -551,7 +567,7 @@ export function createKeeperRuntime({
     } catch (error) {
       logger.error("casino.keeper.bet_index_write_failed", {
         eventName,
-        message: (error as Error)?.message ?? "index write failed"
+        error: describeError(error)
       });
       throw error;
     }
@@ -576,7 +592,7 @@ export function createKeeperRuntime({
     } catch (error) {
       logger.error("casino.keeper.sports_ticket_index_write_failed", {
         eventName,
-        message: (error as Error)?.message ?? "sports ticket index write failed"
+        error: describeError(error)
       });
     }
   };
@@ -601,7 +617,7 @@ export function createKeeperRuntime({
       await sportsRecovery.scan();
       await sportsRecovery.runDue();
     })().catch((error) => {
-      logger.error("sports.terminalizer.enqueue_failed", { message: (error as Error).message });
+      logger.error("sports.terminalizer.enqueue_failed", { error: describeError(error) });
     });
   };
 
@@ -645,9 +661,7 @@ export function createKeeperRuntime({
       }
       await requeueIndexedBets();
     } catch (error) {
-      logger.error("casino.keeper.bet_index_migrate_failed", {
-        message: (error as Error)?.message ?? "migration failed"
-      });
+      logger.error("casino.keeper.bet_index_migrate_failed", { error: describeError(error) });
       if (sportsRecovery) throw error;
     }
   };
@@ -700,30 +714,35 @@ export function createKeeperRuntime({
       maxChunks: config.scanMaxChunksPerPass
     });
     reportScanCap("gamehub-events", ranges, latest);
+    // One eth_getLogs per range serves both finalization and the bet index.
+    const indexing = config.scanIndexEventsEnabled && betIndexStore !== undefined;
     for (const range of ranges) {
-      const logs = await publicClient.getContractEvents({
-        address: config.gameHub,
-        abi: GAME_HUB_KEEPER_ABI,
-        eventName: "BetRandomReady",
-        fromBlock: range.fromBlock,
-        toBlock: range.toBlock
-      });
-      for (const log of logs) {
-        if (log.args.betId == null) continue;
+      const logsByEvent = await fetchGameHubLogs(
+        publicClient,
+        config.gameHub,
+        indexing ? GAME_HUB_INDEX_EVENTS : ["BetRandomReady"],
+        range
+      );
+      const readyLogs = logsByEvent.get("BetRandomReady") ?? [];
+      for (const log of readyLogs) {
+        const args = log.args as
+          | { betId?: bigint; requestId?: bigint; randomHash?: Hex }
+          | undefined;
+        if (args?.betId == null) continue;
         enqueue({
           source: "scan",
-          betId: BigInt(log.args.betId),
-          requestId: log.args.requestId == null ? undefined : BigInt(log.args.requestId),
-          randomHash: log.args.randomHash,
+          betId: BigInt(args.betId),
+          requestId: args.requestId == null ? undefined : BigInt(args.requestId),
+          randomHash: args.randomHash,
           blockNumber: log.blockNumber,
           txHash: log.transactionHash,
           receivedAt: Date.now()
         });
       }
       if (config.scanIndexEventsEnabled) {
-        await writeBetIndexRange(betIndexStore, publicClient, config, range, logger);
+        await writeBetIndexRange(betIndexStore, publicClient, config, range, logsByEvent, logger);
       } else {
-        await writeBetIndexLogs("BetRandomReady", logs);
+        await writeBetIndexLogs("BetRandomReady", readyLogs);
         if (betIndexStore) {
           await betIndexStore.setCursor({
             blockNumber: range.toBlock,
@@ -771,12 +790,16 @@ export function createKeeperRuntime({
       try {
         await scanMissedEvents();
       } finally {
-        await requeueIndexedBets();
+        scansSinceRecovery += 1;
+        if (scansSinceRecovery >= scansPerRecovery) {
+          scansSinceRecovery = 0;
+          await requeueIndexedBets();
+        }
       }
     } catch (error) {
-      const message = (error as Error)?.message ?? "scan failed";
-      logger.error("casino.keeper.scan_failed", { message });
-      writeHealth(health.recordError(message, queue.size));
+      const description = describeError(error);
+      logger.error("casino.keeper.scan_failed", { error: description });
+      writeHealth(health.recordError(description, queue.size, "scan"));
     } finally {
       scanning = false;
     }
@@ -787,14 +810,23 @@ export function createKeeperRuntime({
     bankProviderLedgerScanning = true;
     try {
       await scanBankProviderLedgerEvents();
+      writeHealth(health.recordLedgerScan(queue.size));
     } catch (error) {
-      const message = (error as Error)?.message ?? "bank provider ledger scan failed";
-      logger.error("casino.keeper.bank_provider_ledger_scan_failed", { message });
-      writeHealth(health.recordError(message, queue.size));
+      const description = describeError(error);
+      logger.error("casino.keeper.bank_provider_ledger_scan_failed", { error: description });
+      writeHealth(health.recordError(description, queue.size, "ledger"));
     } finally {
       bankProviderLedgerScanning = false;
     }
   };
+
+  /**
+   * viem hands a watcher the raw socket error. Node's WebSocket reports a refused, rejected
+   * (HTTP 401/429) or dropped connection as an ErrorEvent whose message is empty, and viem's
+   * own socket errors put the RPC URL in theirs, so neither is logged as-is.
+   */
+  const logWatchError = (event: string, error: unknown, eventName?: string) =>
+    logger.error(event, { eventName, transport: "websocket", error: describeError(error) });
 
   const start = async () => {
     logger.info("casino.keeper.starting", {
@@ -837,8 +869,7 @@ export function createKeeperRuntime({
             logs.forEach(enqueueBetRandomReadyLog);
             void writeBetIndexLogs("BetRandomReady", logs).catch(() => undefined);
           },
-          onError: (error) =>
-            logger.error("casino.keeper.gamehub_watch_error", { message: error.message })
+          onError: (error) => logWatchError("casino.keeper.gamehub_watch_error", error)
         })
       );
       if (betIndexStore) {
@@ -850,10 +881,7 @@ export function createKeeperRuntime({
               eventName,
               onLogs: (logs) => void writeBetIndexLogs(eventName, logs).catch(() => undefined),
               onError: (error) =>
-                logger.error("casino.keeper.gamehub_index_watch_error", {
-                  eventName,
-                  message: error.message
-                })
+                logWatchError("casino.keeper.gamehub_index_watch_error", error, eventName)
             })
           );
         }
@@ -866,10 +894,7 @@ export function createKeeperRuntime({
                 eventName,
                 onLogs: (logs) => void writeSportsTicketIndexLogs(eventName, logs),
                 onError: (error) =>
-                  logger.error("casino.keeper.sports_ticket_index_watch_error", {
-                    eventName,
-                    message: error.message
-                  })
+                  logWatchError("casino.keeper.sports_ticket_index_watch_error", error, eventName)
               })
             );
           }
@@ -883,11 +908,7 @@ export function createKeeperRuntime({
               abi: SPORTS_HUB_KEEPER_ABI,
               eventName,
               onLogs: (logs) => scheduleSportsTerminalizerLogs(eventName, logs),
-              onError: (error) =>
-                logger.error("sports.terminalizer.watch_error", {
-                  eventName,
-                  message: error.message
-                })
+              onError: (error) => logWatchError("sports.terminalizer.watch_error", error, eventName)
             })
           );
         }
@@ -898,8 +919,7 @@ export function createKeeperRuntime({
           abi: VRF_HUB_KEEPER_ABI,
           eventName: "Fulfilled",
           onLogs: (logs) => logs.forEach(enqueueFulfilledLog),
-          onError: (error) =>
-            logger.error("casino.keeper.vrfhub_watch_error", { message: error.message })
+          onError: (error) => logWatchError("casino.keeper.vrfhub_watch_error", error)
         })
       );
     }
@@ -914,7 +934,7 @@ export function createKeeperRuntime({
           () =>
             void requeueIndexedBets().catch((error) => {
               logger.error("casino.keeper.indexed_recovery_failed", {
-                message: (error as Error).message
+                error: describeError(error)
               });
             }),
           300_000
@@ -963,23 +983,13 @@ async function writeBetIndexRange(
   publicClient: PublicClient,
   config: KeeperConfig,
   range: { fromBlock: bigint; toBlock: bigint },
+  logsByEvent: ReadonlyMap<GameHubIndexEventName, GameHubLog[]>,
   logger: KeeperLogger
 ) {
   if (!store) return;
   try {
-    for (const eventName of [
-      "BetPlaced",
-      "BetRandomReady",
-      "BetFinalized",
-      "BetRefunded"
-    ] as const) {
-      const logs = await publicClient.getContractEvents({
-        address: config.gameHub,
-        abi: GAME_HUB_KEEPER_ABI,
-        eventName,
-        fromBlock: range.fromBlock,
-        toBlock: range.toBlock
-      });
+    for (const eventName of GAME_HUB_INDEX_EVENTS) {
+      const logs = logsByEvent.get(eventName) ?? [];
       const stampedLogs = await attachBlockTimestamps(publicClient, logs);
       const events = stampedLogs
         .map((log) => toBetIndexEvent(config.chainId, config.gameHub, eventName, log))
@@ -995,7 +1005,7 @@ async function writeBetIndexRange(
   } catch (error) {
     logger.error("casino.keeper.bet_index_scan_failed", {
       fromBlock: range.fromBlock.toString(),
-      message: (error as Error)?.message ?? "index scan failed",
+      error: describeError(error),
       toBlock: range.toBlock.toString()
     });
     throw error;
@@ -1010,13 +1020,13 @@ async function writeBankProviderLedgerRange(
   logger: KeeperLogger
 ) {
   try {
-    for (const pool of config.bankProviderLedgerPools) {
-      const rows = await fetchBankProviderLedgerRows({
-        chainId: config.chainId,
-        pool,
-        publicClient,
-        range
-      });
+    const rowsByPool = await fetchBankProviderLedgerRows({
+      chainId: config.chainId,
+      pools: config.bankProviderLedgerPools,
+      publicClient,
+      range
+    });
+    for (const { rows } of rowsByPool) {
       await store.writeBankProviderLedgerRows(rows);
     }
     await store.setCursor({
@@ -1028,7 +1038,7 @@ async function writeBankProviderLedgerRange(
   } catch (error) {
     logger.error("casino.keeper.bank_provider_ledger_scan_failed", {
       fromBlock: range.fromBlock.toString(),
-      message: (error as Error)?.message ?? "bank provider ledger scan failed",
+      error: describeError(error),
       toBlock: range.toBlock.toString()
     });
     throw error;

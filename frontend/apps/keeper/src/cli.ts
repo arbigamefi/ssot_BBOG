@@ -1,4 +1,5 @@
 import { loadKeeperConfig } from "./env.js";
+import { describeError } from "./errors.js";
 import { logger } from "./logger.js";
 import { createKeeperRuntime } from "./runtime.js";
 
@@ -20,8 +21,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  logger.error("casino.keeper.fatal", {
-    message: (error as Error)?.message ?? "unknown error"
-  });
+  logger.error("casino.keeper.fatal", { error: describeError(error) });
   process.exit(1);
 });

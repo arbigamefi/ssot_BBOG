@@ -1,4 +1,5 @@
 import type { Hex } from "viem";
+import { describeError } from "./errors.js";
 import type { KeeperLogger } from "./types.js";
 
 export type SportsMarketStateName =
@@ -199,8 +200,8 @@ export async function terminalizeSportsMarket(
       skipped
     };
   } catch (error) {
-    const reason = (error as Error)?.message ?? "sports terminalization failed";
-    logger.error("sports.terminalizer.failed", { marketId: marketId.toString(), reason });
+    const reason = describeError(error);
+    logger.error("sports.terminalizer.failed", { marketId: marketId.toString(), error: reason });
     return { kind: "failed", reason, retryable: true };
   }
 }

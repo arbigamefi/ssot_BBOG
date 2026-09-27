@@ -1,3 +1,4 @@
+import { HttpRequestError } from "viem";
 import { describe, expect, it, vi } from "vitest";
 import { finalizeIfReady, retryDelayMs } from "./finalizer.js";
 import type { BetRead, KeeperEvent } from "./types.js";
@@ -84,7 +85,7 @@ describe("finalizeIfReady", () => {
       "casino.finalize.receipt_materialize_failed",
       expect.objectContaining({
         betId: "12",
-        message: "postgres unavailable",
+        error: "Error: postgres unavailable",
         txHash: "0xabc"
       })
     );
@@ -122,6 +123,30 @@ describe("finalizeIfReady", () => {
 
     expect(outcome.kind).toBe("failed");
     expect(outcome).toMatchObject({ retryable: true });
+  });
+
+  it("keeps the RPC URL out of a failure reason, which the health snapshot publishes", async () => {
+    const logger = { error: vi.fn(), info: vi.fn(), warn: vi.fn() };
+    const outcome = await finalizeIfReady(baseEvent, {
+      readBet: vi.fn(async () => bet("randomReady")),
+      simulateFinalize: vi.fn(async () => {
+        throw new HttpRequestError({
+          body: { method: "eth_call" },
+          status: 429,
+          url: "https://base-mainnet.infura.io/v3/rpc-api-key"
+        });
+      }),
+      writeFinalize: vi.fn(),
+      waitFinalizeReceipt: vi.fn(),
+      logger
+    });
+
+    const reason = "HttpRequestError [status=429]: HTTP request failed.";
+    expect(outcome).toEqual({ kind: "failed", reason, retryable: true });
+    expect(logger.error).toHaveBeenCalledWith("casino.finalize.failed", {
+      betId: "12",
+      error: reason
+    });
   });
 });
 

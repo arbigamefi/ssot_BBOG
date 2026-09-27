@@ -1,6 +1,7 @@
 import type { BetIndexStore, SportsMarketWork, SportsTicketIndexEvent } from "@ssot/bet-index";
 import type { PublicClient } from "viem";
 import { SPORTS_HUB_KEEPER_ABI } from "./abi.js";
+import { describeError } from "./errors.js";
 import { retryDelayMs } from "./finalizer.js";
 import { splitBlockRange } from "./scan.js";
 import { terminalizeSportsMarket, type SportsTerminalizerDeps } from "./sports-terminalizer.js";
@@ -47,9 +48,7 @@ export function createSportsRecovery({
   const timers: Array<ReturnType<typeof setInterval>> = [];
   let warnedCoverageMismatch = false;
   const reportError = (error: unknown) =>
-    logger.error("sports.recovery.failed", {
-      message: (error as Error)?.message ?? "sports recovery failed"
-    });
+    logger.error("sports.recovery.failed", { error: describeError(error) });
 
   async function enqueue(marketId: bigint, requiredBlock: bigint, finalizesAt?: number) {
     if (!config.sportsTerminalizerEnabled || stopped) return;

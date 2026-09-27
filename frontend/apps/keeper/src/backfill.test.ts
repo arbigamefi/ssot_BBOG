@@ -101,10 +101,11 @@ describe("terminal refund backfill", () => {
       const client = {
         getBlockNumber: vi.fn(async () => 123n),
         getBlock: vi.fn(async () => ({ timestamp: 1000n })),
-        getContractEvents: vi.fn(async ({ eventName }) =>
-          eventName === "BetFinalized"
+        getLogs: vi.fn(async ({ events }: { events: Array<{ name: string }> }) =>
+          events.some((event) => event.name === "BetFinalized")
             ? [
                 {
+                  eventName: "BetFinalized",
                   args: { positionId: 9n, ...amounts },
                   blockNumber: 123n,
                   logIndex: 1,

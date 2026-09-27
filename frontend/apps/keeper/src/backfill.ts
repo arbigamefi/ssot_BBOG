@@ -14,12 +14,13 @@ import {
   type BetIndexStore
 } from "@ssot/bet-index";
 
-import { GAME_HUB_KEEPER_ABI } from "./abi.js";
 import {
   fetchBankProviderLedgerRows,
   type BankProviderLedgerPool
 } from "./bank-provider-ledger.js";
+import { fetchGameHubLogs, GAME_HUB_INDEX_EVENTS } from "./gamehub-logs.js";
 import { loadRelease } from "./env.js";
+import { describeError } from "./errors.js";
 import { logger } from "./logger.js";
 import { splitBlockRange } from "./scan.js";
 
@@ -37,13 +38,6 @@ type BackfillConfig = {
   releasePath: string;
   bankProviderLedgerPools: BankProviderLedgerPool[];
 };
-
-const GAME_HUB_INDEX_EVENTS = [
-  "BetPlaced",
-  "BetRandomReady",
-  "BetFinalized",
-  "BetRefunded"
-] as const satisfies readonly BetIndexEvent["eventName"][];
 
 function cleanEnvValue(value: string | undefined) {
   const trimmed = value?.trim();
@@ -184,14 +178,14 @@ export async function runBetIndexBackfill({
       toBlock: range.toBlock,
       chunkSize: config.scanChunkBlocks
     })) {
+      const logsByEvent = await fetchGameHubLogs(
+        publicClient,
+        config.gameHub,
+        GAME_HUB_INDEX_EVENTS,
+        chunk
+      );
       for (const eventName of GAME_HUB_INDEX_EVENTS) {
-        const logs = await publicClient.getContractEvents({
-          address: config.gameHub,
-          abi: GAME_HUB_KEEPER_ABI,
-          eventName,
-          fromBlock: chunk.fromBlock,
-          toBlock: chunk.toBlock
-        });
+        const logs = logsByEvent.get(eventName) ?? [];
         const stampedLogs = await attachBlockTimestamps(publicClient, logs);
         const events = stampedLogs
           .map((log) =>
@@ -209,13 +203,13 @@ export async function runBetIndexBackfill({
           await indexStore.writeGameHubEvents(await enrichFinalizedBetEvents(publicClient, events))
         ).length;
       }
-      for (const pool of config.bankProviderLedgerPools) {
-        const rows = await fetchBankProviderLedgerRows({
-          chainId: config.chainId,
-          pool,
-          publicClient,
-          range: chunk
-        });
+      const rowsByPool = await fetchBankProviderLedgerRows({
+        chainId: config.chainId,
+        pools: config.bankProviderLedgerPools,
+        publicClient,
+        range: chunk
+      });
+      for (const { rows } of rowsByPool) {
         bankProviderLedgerRowCount += (await indexStore.writeBankProviderLedgerRows(rows)).length;
       }
       await indexStore.setCursor({
@@ -324,9 +318,7 @@ async function main() {
 
 if (process.argv[1]?.endsWith("backfill.js")) {
   main().catch((error) => {
-    logger.error("casino.keeper.bet_index_backfill_failed", {
-      message: (error as Error)?.message ?? "unknown error"
-    });
+    logger.error("casino.keeper.bet_index_backfill_failed", { error: describeError(error) });
     process.exit(1);
   });
 }
