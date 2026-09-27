@@ -1,0 +1,11 @@
+[Unit]
+Description=Back up the ArbiGameFi bet index daily
+
+[Timer]
+OnCalendar=*-*-* 03:30:00 UTC
+RandomizedDelaySec=15min
+Persistent=true
+Unit=arbigamefi-db-backup.service
+
+[Install]
+WantedBy=timers.target
