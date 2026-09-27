@@ -123,11 +123,15 @@ describe("terminal refund backfill", () => {
       if (fails) {
         await expect(run).rejects.toThrow("terminal RPC unavailable");
         expect(await store.getCursor(config.chainId, "gamehub-events", config.gameHub)).toBeNull();
-        expect(await store.getBet({ chainId: config.chainId, betId: 9 })).toBeNull();
+        expect(
+          await store.getBet({ chainId: config.chainId, gameHub: config.gameHub, betId: 9 })
+        ).toBeNull();
       } else {
         await run;
         expect(await store.getCursor(config.chainId, "gamehub-events", config.gameHub)).toBe(123n);
-        expect(await store.getBet({ chainId: config.chainId, betId: 9 })).toMatchObject({
+        expect(
+          await store.getBet({ chainId: config.chainId, gameHub: config.gameHub, betId: 9 })
+        ).toMatchObject({
           payout: "196000",
           refundAmount: "100000"
         });

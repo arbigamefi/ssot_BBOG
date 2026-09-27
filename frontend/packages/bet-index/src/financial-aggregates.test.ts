@@ -17,10 +17,12 @@ const affiliate = "0x5555555555555555555555555555555555555555" as const;
 const gameId = `0x${"11".repeat(32)}` as const;
 const chainId = 84532;
 const scope = { asset, chainId };
+const gameHub = "0x6666666666666666666666666666666666666666" as const;
 function row(betId: number, override: Partial<BetRow> = {}): BetRow {
   return {
-    id: `${chainId}:${betId}`,
+    id: `${chainId}:${gameHub}:${betId}`,
     chainId,
+    gameHub,
     betId: String(betId),
     asset,
     gameId,
@@ -110,6 +112,48 @@ for (const backend of ["memory", "postgres"] as const) {
       ]);
       // House/game award less consumed stake agrees with all individual player net amounts.
       expect(BigInt(totals.payout) - BigInt(totals.turnover)).toBe(-8000n);
+    });
+
+    it("scopes lists and aggregates to one GameHub deployment", async () => {
+      // Bet ids restart at 1 in every deployment.
+      const otherHub = "0x7777777777777777777777777777777777777777" as const;
+      const other = (betId: number, override: Partial<BetRow> = {}) =>
+        row(betId, { gameHub: otherHub, id: `${chainId}:${otherHub}:${betId}`, ...override });
+      await store.writeBetRows([
+        row(1, { refundAmount: "100000" }),
+        other(1, { stake: "300000", payout: "0", payoutGross: "0" }),
+        // An unproven refund in the other deployment must not hold back this one.
+        other(2, { refundAmount: undefined })
+      ]);
+      const hubScope = { ...scope, gameHub };
+      const player = row(1).player!;
+      const totals = { betCount: 1, turnover: "100000", payout: "196000" };
+      expect(await store.getCasinoStats(hubScope)).toMatchObject(totals);
+      expect(await store.getAffiliateStats({ ...hubScope, affiliate })).toMatchObject(totals);
+      expect(await store.getGameVolumes(hubScope)).toMatchObject([totals]);
+      expect(await store.getCasinoTimeseries({ ...hubScope, days: 7 })).toMatchObject([totals]);
+      expect(await store.getCasinoLeaderboard({ ...hubScope, limit: 10 })).toMatchObject([
+        { player, ...totals }
+      ]);
+      expect(await store.getCasinoPlayerRank({ ...hubScope, player })).toMatchObject({
+        rank: 1,
+        betCount: 1
+      });
+      expect(await store.getCasinoTopWins({ ...hubScope, limit: 10 })).toMatchObject([
+        { betId: "1", gameHub, multiplierPpm: "1960000" }
+      ]);
+      await expect(store.getCasinoStats(scope)).rejects.toThrow();
+
+      expect(await store.getPlayerBets({ chainId, limit: 10, player })).toHaveLength(2);
+      expect(await store.getPlayerBets({ chainId, gameHub, limit: 10, player })).toMatchObject([
+        { betId: "1", gameHub, stake: "200000" }
+      ]);
+      expect(
+        await store.getAffiliateBets({ affiliate, chainId, gameHub: otherHub, limit: 10 })
+      ).toHaveLength(2);
+      expect(await store.getBet({ betId: 1, chainId, gameHub: otherHub })).toMatchObject({
+        stake: "300000"
+      });
     });
 
     it.each([undefined, "", "-1", "200001"])(

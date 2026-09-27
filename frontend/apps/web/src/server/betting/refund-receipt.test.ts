@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { encodeAbiParameters, encodeEventTopics, parseAbi, type PublicClient } from "viem";
+import {
+  encodeAbiParameters,
+  encodeEventTopics,
+  getAddress,
+  parseAbi,
+  type PublicClient
+} from "viem";
 import { loadEmbeddedRelease } from "@ssot/ssot/release";
 import type { BetRow } from "@ssot/bet-index";
 const factory = vi.hoisted(() => vi.fn());
@@ -21,7 +27,11 @@ const terminal = {
   protocolFeeAccrual: 2000n,
   refundAmount: 100000n
 };
+const activeRelease = loadEmbeddedRelease(84532);
+if (!activeRelease.ok) throw new Error(activeRelease.error);
+const activeHub = activeRelease.release.contracts.gameHub.toLowerCase() as `0x${string}`;
 let stored: BetRow;
+let getBet: ReturnType<typeof vi.fn>;
 let writeBetRows: ReturnType<typeof vi.fn>;
 function clientWithTerminal(proof = terminal) {
   const release = loadEmbeddedRelease(84532);
@@ -65,8 +75,9 @@ beforeEach(() => {
   vi.stubEnv("BET_RECEIPT_RPC_FALLBACK_ENABLED", "true");
   clearRecentBetsCache();
   stored = {
-    id: "84532:42",
+    id: `84532:${activeHub}:42`,
     chainId: 84532,
+    gameHub: activeHub,
     betId: "42",
     state: "finalized",
     stake: "200000",
@@ -79,7 +90,8 @@ beforeEach(() => {
   writeBetRows = vi.fn(async (rows: BetRow[]) => {
     stored = rows[0]!;
   });
-  factory.mockReturnValue({ getBet: vi.fn(async () => stored), writeBetRows });
+  getBet = vi.fn(async () => stored);
+  factory.mockReturnValue({ getBet, writeBetRows });
 });
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -101,6 +113,29 @@ describe("receipt refund proof repair", () => {
     expect(writeBetRows).not.toHaveBeenCalled();
     expect(stored.refundAmount).toBeUndefined();
   });
+  it("reads an earlier deployment's receipt from the index and never from the chain", async () => {
+    const earlierHub = getAddress("0x00000000000000000000000000000000000000e1");
+    stored = { ...stored, gameHub: earlierHub, id: `84532:${earlierHub.toLowerCase()}:42` };
+    const client = clientWithTerminal();
+    const result = await queryBetReceipt({
+      betId: "42",
+      chainId: 84532,
+      client,
+      gameHub: earlierHub
+    });
+    expect(getBet).toHaveBeenCalledWith({ betId: "42", chainId: 84532, gameHub: earlierHub });
+    // The chain fallbacks read the active release's hub, which issued a different bet 42.
+    expect(client.readContract).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ source: "postgres", row: { gameHub: earlierHub } });
+  });
+  it("reads the active release's hub when the receipt names none", async () => {
+    await queryBetReceipt({ betId: "42", chainId: 84532, client: clientWithTerminal() });
+    expect(getBet).toHaveBeenCalledWith({
+      betId: "42",
+      chainId: 84532,
+      gameHub: getAddress(activeHub)
+    });
+  });
   it("respects explicit RPC fallback disablement without inventing a refund", async () => {
     vi.stubEnv("BET_RECEIPT_RPC_FALLBACK_ENABLED", "false");
     const client = clientWithTerminal();
@@ -117,6 +152,7 @@ describe("receipt refund proof repair", () => {
     });
     expect(result).toMatchObject({ source: "postgres", row: { refundAmount: "100000" } });
     expect(writeBetRows).toHaveBeenCalledOnce();
+    expect(writeBetRows.mock.calls[0]![0][0]).toMatchObject({ gameHub: getAddress(activeHub) });
     expect(stored.refundAmount).toBe("100000");
   });
   it("does not materialize a getter receipt whose settlement amounts disagree with the event", async () => {

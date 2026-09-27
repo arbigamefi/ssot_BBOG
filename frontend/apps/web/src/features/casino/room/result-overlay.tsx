@@ -12,6 +12,7 @@ import { cn } from "@ssot/ui";
 import { getExplorerTxUrl } from "../../../app-shell/chain-registry";
 import { Modal } from "../../../components/overlay";
 import { buildCasinoReceiptFromTerminalResult } from "../receipt/view-model";
+import { buildReceiptPath } from "../receipt/receipt-path";
 import { SharePanel } from "../../share/SharePanel";
 import { buildShareUrl } from "../../share/share-link";
 import { formatNativeFee } from "./casino-round";
@@ -620,6 +621,7 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
 export function GameRoomResultOverlay({
   result,
   chainId,
+  gameHub,
   assetSymbol = "UNIT",
   assetDecimals = 6,
   gameSlug,
@@ -637,6 +639,8 @@ export function GameRoomResultOverlay({
 }: {
   result: CasinoTerminalRoundResult;
   chainId?: number;
+  /** The GameHub of the release the round was played on; receipt links name it. */
+  gameHub?: string;
   assetSymbol?: string;
   assetDecimals?: number;
   gameSlug: string;
@@ -693,9 +697,10 @@ export function GameRoomResultOverlay({
   const fairnessProof = buildFairnessProof({ result, chainId, txHash });
   const shareText = `${outcome.label} · ${receiptModel.signedNetValue} · ${receiptModel.gameLabel}`;
   const receiptPath = chainId
-    ? buildReceiptSharePath({
+    ? buildReceiptPath({
         betId: result.betId,
-        chainId
+        chainId,
+        gameHub
       })
     : undefined;
   const shareUrl = receiptPath
@@ -896,8 +901,4 @@ export function GameRoomResultOverlay({
       </div>
     </Modal>
   );
-}
-
-export function buildReceiptSharePath({ betId, chainId }: { betId: bigint; chainId: number }) {
-  return `/casino/receipt/${chainId}/${betId.toString()}`;
 }

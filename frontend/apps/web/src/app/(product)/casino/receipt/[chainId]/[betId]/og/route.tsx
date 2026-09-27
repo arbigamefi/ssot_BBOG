@@ -7,7 +7,11 @@ import {
   renderOgCard
 } from "../../../../../../og/render";
 import { parseStrictRequestChainId } from "../../../../../../../server/chain";
-import { normalizeBetId, queryBetReceipt } from "../../../../../../../server/betting/recent-bets";
+import {
+  normalizeBetId,
+  normalizeOptionalGameHubAddress,
+  queryBetReceipt
+} from "../../../../../../../server/betting/recent-bets";
 import { formatTokenAmount } from "../../../../../../../features/portfolio/activity/detail/format";
 import { getCasinoGamePresentation } from "../../../../../../../features/casino/game-presentation";
 import {
@@ -47,7 +51,8 @@ export async function GET(
   const { betId: rawBetId, chainId: rawChainId } = await params;
   const betId = safeNormalizeBetId(rawBetId);
   const chainId = parseStrictRequestChainId(rawChainId);
-  if (!betId || !chainId) {
+  const gameHub = safeNormalizeGameHub(new URL(request.url).searchParams.getAll("hub"));
+  if (!betId || !chainId || gameHub === null) {
     return renderOgCard({
       eyebrow: "Casino receipt",
       title: "Receipt unavailable",
@@ -62,7 +67,8 @@ export async function GET(
 
   const receipt = await queryBetReceipt({
     betId,
-    chainId
+    chainId,
+    gameHub
   });
   const row = receipt.row;
   if (!row || getCasinoCashReturned(row) == null) {
@@ -125,6 +131,17 @@ export async function GET(
     footerItems: ["Public receipt", "Indexed data", "Verify on explorer"],
     headers: mergeHeaders(RECEIPT_OG_TERMINAL_HEADERS, quota.headers)
   });
+}
+
+/** The `hub` parameter: undefined when absent, null when it is not one address. */
+function safeNormalizeGameHub(values: string[]) {
+  if (values.length === 0) return undefined;
+  if (values.length > 1) return null;
+  try {
+    return normalizeOptionalGameHubAddress(values[0]);
+  } catch {
+    return null;
+  }
 }
 
 function safeNormalizeBetId(value: string) {

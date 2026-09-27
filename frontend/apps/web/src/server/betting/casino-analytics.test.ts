@@ -26,6 +26,7 @@ describe("casino analytics asset resolution", () => {
             symbol: "USDT"
           }
         ],
+        contracts: { gameHub: "0x0000000000000000000000000000000000000003" },
         gamesMeta: [],
         pools: [
           {

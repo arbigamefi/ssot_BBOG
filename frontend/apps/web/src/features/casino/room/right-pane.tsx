@@ -109,6 +109,7 @@ export function GameRoomRightPane({
   casinoOutcome,
   resultProof,
   chainId,
+  gameHub,
   assetSymbol,
   assetDecimals,
   onResultClose,
@@ -156,6 +157,7 @@ export function GameRoomRightPane({
   casinoOutcome?: CasinoOutcome | null;
   resultProof: CasinoRoundResult | null;
   chainId?: number;
+  gameHub?: string;
   assetSymbol?: string;
   assetDecimals?: number;
   onResultClose?: () => void;
@@ -325,6 +327,7 @@ export function GameRoomRightPane({
         <GameRoomResultOverlay
           result={resultProof}
           chainId={chainId}
+          gameHub={gameHub}
           assetSymbol={assetSymbol}
           assetDecimals={assetDecimals}
           gameSlug={gameSlug}
