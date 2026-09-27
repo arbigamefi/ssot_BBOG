@@ -224,7 +224,7 @@
       },
       {
         "q": "Casino avantajı (house edge) nedir?",
-        "a": "Casino avantajı, her oyunun ödemelerine yerleştirilmiş marjdır. Mevcut v1.5 kurallarına göre protokol ücretlerini ve yönlendirme ödüllerini finanse eder; LP'lere ödenmez. Her oyun kesin güncel değeri Oyun Bilgisi sekmesinde gösterir; pazarlama tahmini yerine aktif release yapılandırması kullanılır."
+        "a": "Casino avantajı, her oyunun ödemelerine yerleştirilmiş marjdır. Base ana ağında, mevcut v1.5 kurallarına göre protokol ücretlerini ve yönlendirme ödüllerini finanse eder; LP'lere ödenmez. Her oyun kesin güncel değeri Oyun Bilgisi sekmesinde gösterir; pazarlama tahmini yerine aktif release yapılandırması kullanılır."
       },
       {
         "q": "Bahsim neden beklemede?",

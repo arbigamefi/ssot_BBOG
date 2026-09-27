@@ -8,6 +8,7 @@ import {
 } from "viem";
 import { loadEmbeddedRelease } from "@ssot/ssot/release";
 import type { BetRow } from "@ssot/bet-index";
+import { HOUSE_EDGE_ALLOCATED_ABI } from "@ssot/bet-index/house-edge";
 const factory = vi.hoisted(() => vi.fn());
 vi.mock("@ssot/bet-index", () => ({ createPostgresBetIndexStore: factory }));
 import { clearRecentBetsCache, materializeBetReceipt, queryBetReceipt } from "./recent-bets";
@@ -33,7 +34,29 @@ const activeHub = activeRelease.release.contracts.gameHub.toLowerCase() as `0x${
 let stored: BetRow;
 let getBet: ReturnType<typeof vi.fn>;
 let writeBetRows: ReturnType<typeof vi.fn>;
-function clientWithTerminal(proof = terminal) {
+let writeGameHubEvents: ReturnType<typeof vi.fn>;
+// What a v1.6 GameHub emits in the same transaction, before BetFinalized.
+function houseEdgeLog(address: string) {
+  return {
+    address,
+    logIndex: 0,
+    topics: encodeEventTopics({
+      abi: HOUSE_EDGE_ALLOCATED_ABI,
+      eventName: "HouseEdgeAllocated",
+      args: { positionId: 42n }
+    }),
+    data: encodeAbiParameters(
+      [
+        { type: "uint256" },
+        { type: "uint16" },
+        ...Array.from({ length: 8 }, () => ({ type: "uint256" as const }))
+      ],
+      [100000n, 200, 2000n, 1000n, 1000n, 300n, 200n, 400n, 100n, 0n]
+    )
+  };
+}
+
+function clientWithTerminal(proof = terminal, extraLogs: unknown[] = []) {
   const release = loadEmbeddedRelease(84532);
   if (!release.ok) throw new Error(release.error);
   return {
@@ -55,9 +78,12 @@ function clientWithTerminal(proof = terminal) {
     ),
     getTransactionReceipt: vi.fn().mockResolvedValue({
       blockNumber: 1000n,
+      transactionHash: txHash,
       logs: [
+        ...extraLogs,
         {
           address: release.release.contracts.gameHub,
+          logIndex: 1,
           topics: encodeEventTopics({ abi, eventName: "BetFinalized", args: { positionId: 42n } }),
           data: encodeAbiParameters(
             [{ type: "uint256" }, { type: "uint256" }, { type: "uint256" }, { type: "uint256" }],
@@ -91,7 +117,8 @@ beforeEach(() => {
     stored = rows[0]!;
   });
   getBet = vi.fn(async () => stored);
-  factory.mockReturnValue({ getBet, writeBetRows });
+  writeGameHubEvents = vi.fn(async () => []);
+  factory.mockReturnValue({ getBet, writeBetRows, writeGameHubEvents });
 });
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -154,6 +181,31 @@ describe("receipt refund proof repair", () => {
     expect(writeBetRows).toHaveBeenCalledOnce();
     expect(writeBetRows.mock.calls[0]![0][0]).toMatchObject({ gameHub: getAddress(activeHub) });
     expect(stored.refundAmount).toBe("100000");
+  });
+  it("stores the settlement's house-edge allocation with the hydrated receipt", async () => {
+    const hub = activeRelease.release.contracts.gameHub;
+    const result = await materializeBetReceipt({
+      betId: "42",
+      chainId: 84532,
+      terminalTxHash: txHash,
+      // Another contract's look-alike log must not count.
+      client: clientWithTerminal(terminal, [
+        { ...houseEdgeLog("0x00000000000000000000000000000000000000e1"), logIndex: 5 },
+        houseEdgeLog(hub)
+      ])
+    });
+    expect(writeGameHubEvents).toHaveBeenCalledOnce();
+    expect(writeGameHubEvents.mock.calls[0]![0]).toMatchObject([
+      { eventName: "HouseEdgeAllocated", logIndex: 0, txHash, blockNumber: 1000n }
+    ]);
+    // The durable read is the mock's stored row; the proof itself carries the split.
+    expect(writeBetRows.mock.calls[0]![0][0].houseEdge).toMatchObject({
+      edge: "2000",
+      lpRetained: "1000",
+      r1: "400",
+      effectiveHouseEdgeBps: 200
+    });
+    expect(result.source).toBe("postgres");
   });
   it("does not materialize a getter receipt whose settlement amounts disagree with the event", async () => {
     const result = await materializeBetReceipt({

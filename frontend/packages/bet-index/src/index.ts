@@ -13,12 +13,45 @@ export { enrichFinalizedBetEvents, readSettledBetRefund } from "./terminal-refun
 export type BetLifecycleState = "placed" | "randomReady" | "finalized" | "refunded";
 export type SportsTicketLifecycleState = "held" | "settled" | "refunded" | "voided";
 
-export type GameHubEventName = "BetPlaced" | "BetRandomReady" | "BetFinalized" | "BetRefunded";
+/** GameHub events that move a bet through its lifecycle. */
+export type GameHubLifecycleEventName =
+  | "BetPlaced"
+  | "BetRandomReady"
+  | "BetFinalized"
+  | "BetRefunded";
+/**
+ * GameHub events the index stores. A v1.6 GameHub also emits HouseEdgeAllocated when it settles a
+ * bet: it annotates the bet and never changes its lifecycle.
+ */
+export type GameHubEventName = GameHubLifecycleEventName | "HouseEdgeAllocated";
 export type SportsHubEventName =
   | "TicketPlaced"
   | "TicketSettled"
   | "TicketRefunded"
   | "TicketVoided";
+
+/**
+ * How a settled bet's house edge was allocated, from the GameHub's HouseEdgeAllocated event (v1.6).
+ * Amounts are bigint strings in the bet's asset; lpRetained + protocolFee + r0 + r1 + r2 + markup = edge.
+ */
+export type BetHouseEdgeAllocation = {
+  /** Stake less the refunded part. */
+  usedTurnover: string;
+  effectiveHouseEdgeBps: number;
+  edge: string;
+  /** The operator's half of the edge, which pays referrals, markup and the protocol fee. */
+  operatorShare: string;
+  lpRetained: string;
+  protocolFee: string;
+  /** Player rakeback (L0). */
+  r0: string;
+  /** First-level referrer (L1). */
+  r1: string;
+  /** Second-level referrer (L2). */
+  r2: string;
+  /** Affiliate markup share. */
+  markup: string;
+};
 
 export type BetRow = {
   /** `${chainId}:${gameHub}:${betId}`. Bet ids restart at 1 in every GameHub deployment. */
@@ -47,6 +80,11 @@ export type BetRow = {
   lastTxHash: Hex;
   lastEventName: string;
   updatedAt: number;
+  /**
+   * Read from the indexed HouseEdgeAllocated event; writeBetRows does not store it. Absent for v1.5
+   * hubs, refunds and bets not yet settled.
+   */
+  houseEdge?: BetHouseEdgeAllocation;
 };
 
 export type BetIndexEvent = {
@@ -571,6 +609,11 @@ export function createMemoryBetIndexStore(): BetIndexStore {
   const bankProviderLedger = new Map<string, BankProviderLedgerRow>();
   const cursors = new Map<string, bigint>();
   const gameHubEvents = new Map<string, BetIndexEvent>();
+  const houseEdges = new Map<string, BetHouseEdgeAllocation>();
+  const withHouseEdge = (row: BetRow): BetRow => {
+    const houseEdge = houseEdges.get(row.id);
+    return houseEdge ? { ...row, houseEdge } : row;
+  };
 
   const writeGameHubEvents = async (input: readonly BetIndexEvent[]) => {
     const changed = new Map<string, BetRow>();
@@ -578,6 +621,11 @@ export function createMemoryBetIndexStore(): BetIndexStore {
     for (const event of sorted) {
       gameHubEvents.set(`${event.chainId}:${event.txHash}:${event.logIndex}`, event);
       const key = betKey(event.chainId, event.gameHub, betIdOf(event));
+      if (!isLifecycleEvent(event)) {
+        const houseEdge = houseEdgeFromArgs(event.args);
+        if (houseEdge && !houseEdges.has(key)) houseEdges.set(key, houseEdge);
+        continue;
+      }
       const existing = bets.get(key);
       const next = applyEventToBet(existing, event);
       if (!existing || next.updatedBlock >= existing.updatedBlock) {
@@ -652,15 +700,19 @@ export function createMemoryBetIndexStore(): BetIndexStore {
         .filter((row) => row.chainId === chainId && sameHub(row, gameHub))
         .filter((row) => !gameId || row.gameId?.toLowerCase() === gameId.toLowerCase())
         .sort(compareBetRows)
-        .slice(0, limit),
-    getBet: async ({ betId, chainId, gameHub }) =>
-      bets.get(betKey(chainId, gameHub, betId)) ?? null,
+        .slice(0, limit)
+        .map(withHouseEdge),
+    getBet: async ({ betId, chainId, gameHub }) => {
+      const row = bets.get(betKey(chainId, gameHub, betId));
+      return row ? withHouseEdge(row) : null;
+    },
     getPlayerBets: async ({ chainId, gameHub, player, limit }) =>
       [...bets.values()]
         .filter((row) => row.chainId === chainId && sameHub(row, gameHub))
         .filter((row) => row.player?.toLowerCase() === player.toLowerCase())
         .sort(compareBetRows)
-        .slice(0, limit),
+        .slice(0, limit)
+        .map(withHouseEdge),
     getPlayerSportsTickets: async ({ chainId, player, limit }) =>
       [...sportsTickets.values()]
         .filter((row) => row.chainId === chainId)
@@ -689,7 +741,8 @@ export function createMemoryBetIndexStore(): BetIndexStore {
         .filter((row) => row.pricingAffiliate?.toLowerCase() === affiliate.toLowerCase())
         .filter((row) => !asset || row.asset?.toLowerCase() === asset.toLowerCase())
         .sort(compareBetRows)
-        .slice(0, limit),
+        .slice(0, limit)
+        .map(withHouseEdge),
     getAffiliateStats: async ({ affiliate, asset, chainId, gameHub }) =>
       affiliateStatsFromRows({
         affiliate,
@@ -886,6 +939,18 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
   const gross = sql`case when state = 'finalized' then nullif(payout_gross, '')::numeric else 0 end`;
   const hubFilter = (gameHub: Address | undefined) =>
     gameHub ? sql`and game_hub = ${gameHub.toLowerCase()}` : sql``;
+  // Bet rows with the settlement's HouseEdgeAllocated event, found through gamehub_events_recovery_idx.
+  const betsWithHouseEdge = sql`
+    bets left join lateral (
+      select e.args_json from gamehub_events e
+      where e.chain_id = bets.chain_id and e.game_hub = bets.game_hub
+        and e.event_name = 'HouseEdgeAllocated'
+        and coalesce(e.args_json->>'positionId', e.args_json->>'betId', e.args_json->>'id', '0')::numeric
+          = bets.bet_id::numeric
+      order by e.block_number, e.log_index
+      limit 1
+    ) house_edge_event on true
+  `;
   async function requireFinancialCoverage(chainId: number, asset?: Address, gameHub?: Address) {
     const missing = await sql`
       select bet_id from bets where chain_id = ${chainId}
@@ -1096,7 +1161,7 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
     getRecentBets: async ({ chainId, gameHub, gameId, limit }) => {
       const gameFilter = gameId ? sql`and game_id = ${gameId.toLowerCase()}` : sql``;
       const rows = await sql`
-        select * from bets
+        select bets.*, house_edge_event.args_json as house_edge from ${betsWithHouseEdge}
         where chain_id = ${chainId} ${hubFilter(gameHub)} ${gameFilter}
         order by updated_block desc, bet_id desc
         limit ${limit}
@@ -1105,7 +1170,7 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
     },
     getBet: async ({ betId, chainId, gameHub }) => {
       const rows = await sql`
-        select * from bets
+        select bets.*, house_edge_event.args_json as house_edge from ${betsWithHouseEdge}
         where chain_id = ${chainId} and game_hub = ${gameHub.toLowerCase()} and bet_id = ${String(betId)}
         limit 1
       `;
@@ -1113,7 +1178,7 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
     },
     getPlayerBets: async ({ chainId, gameHub, player, limit }) => {
       const rows = await sql`
-        select * from bets
+        select bets.*, house_edge_event.args_json as house_edge from ${betsWithHouseEdge}
         where chain_id = ${chainId} and player = ${player.toLowerCase()} ${hubFilter(gameHub)}
         order by updated_block desc, bet_id desc
         limit ${limit}
@@ -1169,7 +1234,7 @@ export function createPostgresBetIndexStoreFromSql(sql: Sql): BetIndexStore {
     getAffiliateBets: async ({ affiliate, asset, chainId, gameHub, limit }) => {
       const assetFilter = asset ? sql`and asset = ${asset.toLowerCase()}` : sql``;
       const rows = await sql`
-        select * from bets
+        select bets.*, house_edge_event.args_json as house_edge from ${betsWithHouseEdge}
         where chain_id = ${chainId} and pricing_affiliate = ${affiliate.toLowerCase()}
         ${assetFilter} ${hubFilter(gameHub)}
         order by updated_block desc, bet_id desc
@@ -1444,6 +1509,43 @@ function serializeValue(value: unknown): unknown {
   return value;
 }
 
+type BetLifecycleEvent = BetIndexEvent & { eventName: GameHubLifecycleEventName };
+
+function isLifecycleEvent(event: BetIndexEvent): event is BetLifecycleEvent {
+  return event.eventName !== "HouseEdgeAllocated";
+}
+
+const HOUSE_EDGE_AMOUNTS = [
+  "usedTurnover",
+  "edge",
+  "operatorShare",
+  "lpRetained",
+  "protocolFee",
+  "r0",
+  "r1",
+  "r2",
+  "markup"
+] as const;
+
+/** Parses HouseEdgeAllocated arguments, as decoded or as stored JSON; undefined if any is malformed. */
+function houseEdgeFromArgs(args: unknown): BetHouseEdgeAllocation | undefined {
+  if (!args || typeof args !== "object") return undefined;
+  const values = args as Record<string, unknown>;
+  const amounts: Partial<Record<(typeof HOUSE_EDGE_AMOUNTS)[number], string>> = {};
+  for (const key of HOUSE_EDGE_AMOUNTS) {
+    const value = values[key];
+    const text = typeof value === "bigint" || typeof value === "number" ? String(value) : value;
+    if (typeof text !== "string" || !/^\d+$/.test(text)) return undefined;
+    amounts[key] = text;
+  }
+  const bps = Number(values.effectiveHouseEdgeBps);
+  if (!Number.isInteger(bps) || bps < 0) return undefined;
+  return {
+    ...(amounts as Omit<BetHouseEdgeAllocation, "effectiveHouseEdgeBps">),
+    effectiveHouseEdgeBps: bps
+  };
+}
+
 function betIdOf(event: BetIndexEvent) {
   return String(event.args.positionId ?? event.args.betId ?? event.args.id ?? "0");
 }
@@ -1461,6 +1563,7 @@ export function foldBetIndexEvents(events: readonly BetIndexEvent[]) {
   const sorted = [...events].sort(compareEvents);
 
   for (const event of sorted) {
+    if (!isLifecycleEvent(event)) continue;
     const key = betKey(event.chainId, event.gameHub, betIdOf(event));
     rows.set(key, applyEventToBet(rows.get(key), event));
   }
@@ -1485,7 +1588,7 @@ export function compareBetRows(a: BetRow, b: BetRow) {
   return bId > aId ? 1 : -1;
 }
 
-function normalizeBetRow(row: BetRow): BetRow {
+function normalizeBetRow({ houseEdge: _derived, ...row }: BetRow): BetRow {
   return {
     ...row,
     asset: row.asset?.toLowerCase() as Address | undefined,
@@ -1813,7 +1916,7 @@ function eventTimestampMs(event: BetIndexEvent) {
   return event.blockTimestamp ?? Date.now();
 }
 
-function applyEventToBet(prev: BetRow | undefined, event: BetIndexEvent): BetRow {
+function applyEventToBet(prev: BetRow | undefined, event: BetLifecycleEvent): BetRow {
   const betId = betIdOf(event);
   const timestamp = eventTimestampMs(event);
   const next: BetRow = prev
@@ -1960,6 +2063,7 @@ function reduceState(prev: BetLifecycleState, eventName: BetIndexEvent["eventNam
 }
 
 function rowFromDatabase(row: Record<string, unknown>): BetRow {
+  const houseEdge = houseEdgeFromArgs(row.houseEdge);
   return {
     asset: optionalAddress(row.asset),
     betId: String(row.betId),
@@ -1984,7 +2088,8 @@ function rowFromDatabase(row: Record<string, unknown>): BetRow {
     stake: optionalString(row.stake),
     terminalTxHash: optionalHex(row.terminalTxHash),
     updatedAt: row.updatedAt instanceof Date ? row.updatedAt.getTime() : Date.now(),
-    updatedBlock: Number(row.updatedBlock)
+    updatedBlock: Number(row.updatedBlock),
+    ...(houseEdge ? { houseEdge } : {})
   };
 }
 

@@ -224,7 +224,7 @@
       },
       {
         "q": "O que é a vantagem da casa?",
-        "a": "A vantagem da casa é a margem embutida nos pagamentos de cada jogo. Pelas regras atuais da v1.5, ela financia as taxas do protocolo e as recompensas de indicação; não é paga aos LPs. Cada jogo mostra o valor atual exato na aba Info do jogo, usando a configuração da release ativa em vez de uma estimativa de marketing."
+        "a": "A vantagem da casa é a margem embutida nos pagamentos de cada jogo. Na Base mainnet, pelas regras atuais da v1.5, ela financia as taxas do protocolo e as recompensas de indicação; não é paga aos LPs. Cada jogo mostra o valor atual exato na aba Info do jogo, usando a configuração da release ativa em vez de uma estimativa de marketing."
       },
       {
         "q": "Por que minha aposta está pendente?",

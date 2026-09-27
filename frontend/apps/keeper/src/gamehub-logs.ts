@@ -1,13 +1,25 @@
-import type { AbiEvent, Address, Hex, PublicClient } from "viem";
+import {
+  decodeEventLog,
+  getAddress,
+  type AbiEvent,
+  type Address,
+  type Hex,
+  type PublicClient
+} from "viem";
+import type { BetIndexEvent } from "@ssot/bet-index";
 
 import { GAME_HUB_KEEPER_ABI } from "./abi.js";
 
-/** GameHub events written to the bet index, in the order the keeper writes them. */
+/**
+ * GameHub events written to the bet index, in the order the keeper writes them. HouseEdgeAllocated
+ * annotates a settled bet (v1.6) and does not change its lifecycle, so its order does not matter.
+ */
 export const GAME_HUB_INDEX_EVENTS = [
   "BetPlaced",
   "BetRandomReady",
   "BetFinalized",
-  "BetRefunded"
+  "BetRefunded",
+  "HouseEdgeAllocated"
 ] as const;
 
 export type GameHubIndexEventName = (typeof GAME_HUB_INDEX_EVENTS)[number];

@@ -22,6 +22,27 @@ export interface GameHubEventRow {
   createdAt: number;
 }
 
+/**
+ * How a settled bet's house edge was allocated (v1.6 HouseEdgeAllocated). Amounts are bigint strings
+ * in the bet's asset; lpRetained + protocolFee + r0 + r1 + r2 + markup = edge.
+ */
+export interface BetHouseEdgeAllocation {
+  usedTurnover: string;
+  effectiveHouseEdgeBps: number;
+  edge: string;
+  operatorShare: string;
+  lpRetained: string;
+  protocolFee: string;
+  /** Player rakeback (L0). */
+  r0: string;
+  /** First-level referrer (L1). */
+  r1: string;
+  /** Second-level referrer (L2). */
+  r2: string;
+  /** Affiliate markup share. */
+  markup: string;
+}
+
 export interface BetRow {
   id: string; // `${chainId}:${betId}`, unique within one release-scoped DB
   chainId: number;
@@ -52,6 +73,8 @@ export interface BetRow {
   lastTxHash: Hex;
   lastEventName: string;
   updatedAt: number;
+  /** From the server's bet index; absent for v1.5 hubs, refunds and unsettled bets. */
+  houseEdge?: BetHouseEdgeAllocation;
 }
 
 export interface CursorRow {

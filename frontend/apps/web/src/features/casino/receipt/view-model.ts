@@ -8,6 +8,22 @@ import { formatUnits } from "../../betting/model/units";
 export type CasinoReceiptState = "finalized" | "refunded";
 export type CasinoReceiptTone = "win" | "loss" | "neutral";
 
+/** Where a settled bet's house edge went (v1.6), formatted in the bet's asset. */
+export type CasinoReceiptHouseEdge = {
+  edgeValue: string;
+  /** The effective edge as a percentage, e.g. "2.00%". */
+  rateLabel: string;
+  turnoverValue: string;
+  lpRetainedValue: string;
+  protocolFeeValue: string;
+  /** Player rakeback (L0); absent when zero. */
+  playerRakebackValue?: string;
+  /** Both referral levels (L1 + L2); absent when zero. */
+  referrersValue?: string;
+  /** The referrer's markup share; absent when zero. */
+  affiliateMarkupValue?: string;
+};
+
 export type CasinoReceiptViewModel = {
   assetAddress?: string;
   assetDecimals: number;
@@ -17,6 +33,7 @@ export type CasinoReceiptViewModel = {
   gameId?: string;
   gameLabel: string;
   gameSlug?: string;
+  houseEdge?: CasinoReceiptHouseEdge;
   lastEventName?: string;
   multiplierValue: string;
   net: bigint;
@@ -96,7 +113,7 @@ export function buildCasinoReceiptFromBetRow({
   row: BetRow;
 }): CasinoReceiptViewModel {
   const state: CasinoReceiptState = row.state === "refunded" ? "refunded" : "finalized";
-  return buildCasinoReceiptViewModel({
+  const model = buildCasinoReceiptViewModel({
     assetAddress: row.asset,
     assetDecimals,
     assetSymbol,
@@ -119,6 +136,45 @@ export function buildCasinoReceiptFromBetRow({
     payout: getRowPayout(row),
     updatedAt: row.updatedAt
   });
+  const houseEdge = row.houseEdge
+    ? buildReceiptHouseEdge(row.houseEdge, assetDecimals, assetSymbol)
+    : undefined;
+  return houseEdge ? { ...model, houseEdge } : model;
+}
+
+function buildReceiptHouseEdge(
+  allocation: NonNullable<BetRow["houseEdge"]>,
+  decimals: number,
+  symbol: string
+): CasinoReceiptHouseEdge | undefined {
+  const amount = (key: Exclude<keyof typeof allocation, "effectiveHouseEdgeBps">) =>
+    bigintFromString(allocation[key]);
+  const edge = amount("edge");
+  const turnover = amount("usedTurnover");
+  const lpRetained = amount("lpRetained");
+  const protocolFee = amount("protocolFee");
+  const r0 = amount("r0");
+  const r1 = amount("r1");
+  const r2 = amount("r2");
+  const markup = amount("markup");
+  if ([edge, turnover, lpRetained, protocolFee, r0, r1, r2, markup].some((v) => v == null)) {
+    return undefined;
+  }
+  // Small bets in an 18-decimal asset would round their shares to 0 at the usual 4 digits.
+  const format = (value: bigint) =>
+    formatReceiptTokenAmount(value, decimals, symbol, Math.min(decimals, 8));
+  const optional = (value: bigint) => (value > 0n ? format(value) : undefined);
+  const bps = allocation.effectiveHouseEdgeBps;
+  return {
+    edgeValue: format(edge!),
+    rateLabel: `${Math.floor(bps / 100)}.${String(bps % 100).padStart(2, "0")}%`,
+    turnoverValue: format(turnover!),
+    lpRetainedValue: format(lpRetained!),
+    protocolFeeValue: format(protocolFee!),
+    playerRakebackValue: optional(r0!),
+    referrersValue: optional(r1! + r2!),
+    affiliateMarkupValue: optional(markup!)
+  };
 }
 
 export function buildCasinoReceiptProofText({
@@ -144,6 +200,22 @@ export function buildCasinoReceiptProofText({
     `Player: ${model.player ?? "—"}`,
     `VRF request: ${model.requestId ?? "—"}`,
     `Random hash: ${model.randomHash ?? "—"}`,
+    ...(model.houseEdge
+      ? [
+          `House edge: ${model.houseEdge.edgeValue} (${model.houseEdge.rateLabel} of ${model.houseEdge.turnoverValue})`,
+          `Kept by LPs: ${model.houseEdge.lpRetainedValue}`,
+          ...(model.houseEdge.playerRakebackValue
+            ? [`Player rakeback: ${model.houseEdge.playerRakebackValue}`]
+            : []),
+          ...(model.houseEdge.referrersValue
+            ? [`Referrers: ${model.houseEdge.referrersValue}`]
+            : []),
+          ...(model.houseEdge.affiliateMarkupValue
+            ? [`Referrer markup: ${model.houseEdge.affiliateMarkupValue}`]
+            : []),
+          `Protocol fee: ${model.houseEdge.protocolFeeValue}`
+        ]
+      : []),
     `Transaction: ${lastTx}`
   ].join("\n");
 }

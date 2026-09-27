@@ -7,6 +7,12 @@ import { requestWalletConnect } from "../../app-shell/wallet-connect-events";
 
 vi.mock("../../app-shell/wallet-connect-events", () => ({ requestWalletConnect: vi.fn() }));
 
+const release = vi.hoisted(() => ({ schema: undefined as string | undefined }));
+vi.mock("../../ssot/release/ReleaseProvider", () => ({
+  useOptionalRelease: () =>
+    release.schema ? { release: { meta: { releaseLock: { schema: release.schema } } } } : null
+}));
+
 vi.mock("next-intl", () => ({
   useTranslations: () => (key: string) => key
 }));
@@ -129,6 +135,22 @@ describe("EarnActionPanel", () => {
     expect(screen.queryByRole("textbox", { name: "earn.actions.amount" })).toBeNull();
     expect(screen.queryByRole("button", { name: "earn.actions.submit.deposit" })).toBeNull();
     expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("states the v1.5 terms, or the v1.6 LP share, as the closed deposits' reason", () => {
+    renderPanel(baseFlow, { depositsClosed: true });
+    expect(screen.getByRole("status").textContent).toContain("earn.actions.depositsClosed.body");
+    cleanup();
+
+    release.schema = "SSOT_RELEASE_DIGEST_V16";
+    try {
+      renderPanel(baseFlow, { depositsClosed: true });
+      expect(screen.getByRole("status").textContent).toContain(
+        "earn.actions.depositsClosed.bodyLpShare"
+      );
+    } finally {
+      release.schema = undefined;
+    }
   });
 
   it("keeps the withdraw form available while deposits are closed", () => {

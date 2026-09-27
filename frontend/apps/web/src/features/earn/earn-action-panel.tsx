@@ -6,6 +6,7 @@ import type { DomainError } from "@ssot/ssot";
 import { TokenLogo } from "../../components/TokenLogo";
 import { requestWalletConnect } from "../../app-shell/wallet-connect-events";
 import type { EarnAmountMode, EarnTab } from "./types";
+import { useLpsKeepHouseEdgeShare } from "./terms";
 
 const TABS: Array<{ key: EarnTab; label: string; description: string }> = [
   {
@@ -83,6 +84,7 @@ export function EarnActionPanel({
   depositsClosed?: boolean;
 }) {
   const t = useTranslations();
+  const lpShare = useLpsKeepHouseEdgeShare();
   const displayedAvailableValue = connected ? availableValue : "—";
   const activeTab = TABS.find((item) => item.key === tab);
   const showDepositsClosed = tab === "deposit" && depositsClosed;
@@ -170,7 +172,13 @@ export function EarnActionPanel({
             className="rounded-md border border-warn/30 bg-warn/10 p-4 text-sm leading-6"
           >
             <div className="font-bold text-fg">{t("earn.actions.depositsClosed.title")}</div>
-            <p className="mt-1 text-fg-muted">{t("earn.actions.depositsClosed.body")}</p>
+            <p className="mt-1 text-fg-muted">
+              {t(
+                lpShare
+                  ? "earn.actions.depositsClosed.bodyLpShare"
+                  : "earn.actions.depositsClosed.body"
+              )}
+            </p>
           </div>
         ) : (
           <>
