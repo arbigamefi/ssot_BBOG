@@ -1,6 +1,6 @@
 # ArbiGameFi v1.5 Docker Production Deploy
 
-Use the [v1.5 release and cutover workflow](../../../docs/deploy/v15-release.md) first. The new Compose project and database are `arbigamefi-v15` and `arbigamefi_v15`; do not reuse the old bet-index projection.
+The stack was created by the [v1.5 release and cutover workflow](../../../docs/deploy/v15-release.md); its Compose project and database are `arbigamefi-v15` and `arbigamefi_v15`. A later release line switches a chain inside this stack; see the [v1.6 release](../../../docs/deploy/v16-release.md#switching-base-sepolia). The bet index keys bets by GameHub, so it keeps both lines' bets apart.
 
 This path runs the production app as normal long-lived processes:
 
@@ -133,7 +133,7 @@ docker compose -p arbigamefi-v15 -f compose.production.yml pull postgres caddy w
 python3 deploy/docker/check-release-images.py
 ```
 
-The image guard requires matching v1.5 releases on both chains and matching OCI source revisions. It rejects the previous embedded manifests. `IMAGE_TAG`, mutable application image tags and implicit `latest` are no longer deployment inputs.
+The image guard requires matching releases on both chains, each of the v1.5 or v1.6 line, and matching OCI source revisions. It rejects manifests of retired lines. `IMAGE_TAG`, mutable application image tags and implicit `latest` are no longer deployment inputs.
 
 ## 4. Cut over
 

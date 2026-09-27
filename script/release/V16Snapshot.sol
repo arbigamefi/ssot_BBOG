@@ -14,13 +14,13 @@ import {ChainlinkV2PlusWrapperAdapter} from "../../src/adapters/chainlink/Chainl
 import {SafeGovernance} from "../common/SafeGovernance.sol";
 
 /// @dev Shared target enumeration prevents acceptance packages and release checks diverging.
-library V15Snapshot {
+library V16Snapshot {
     using stdJson for string;
     VmSafe private constant vm = VmSafe(address(uint160(uint256(keccak256("hevm cheat code")))));
 
     function targets(string memory snap) internal pure returns (address[] memory list) {
         require(
-            keccak256(bytes(snap.readString(".architectureVersion"))) == keccak256("v1.5-safe-governance"), "not v1.5"
+            keccak256(bytes(snap.readString(".architectureVersion"))) == keccak256("v1.6-house-edge-allocation"), "not v1.6"
         );
         uint256 pools = snap.readUint(".numPools");
         require(pools > 0 && pools <= 32, "bad pool count");

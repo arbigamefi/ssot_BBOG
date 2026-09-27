@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SNAPSHOT_PATH="${SNAPSHOT_PATH:-deployments/latest-v15.json}"
+SNAPSHOT_PATH="${SNAPSHOT_PATH:-deployments/latest-v16.json}"
 
 if [[ ! -f "$SNAPSHOT_PATH" ]]; then
   echo "missing snapshot: $SNAPSHOT_PATH"
-  echo "hint: run a deploy (writes deployments/latest-v15.json) and include the artifacts in the release commit/tag."
+  echo "hint: run a deploy (writes deployments/latest-v16.json) and include the artifacts in the release commit/tag."
   exit 1
 fi
 
@@ -72,5 +72,5 @@ if [[ -n "${FORK_BLOCK_NUMBER:-}" ]]; then
   echo "[fork gate] blockNumber=$FORK_BLOCK_NUMBER"
 fi
 
-SNAPSHOT_PATH="$SNAPSHOT_PATH" forge script script/release/VerifyGovernanceV15.s.sol:VerifyGovernanceV15 --rpc-url "$RPC_URL"
+SNAPSHOT_PATH="$SNAPSHOT_PATH" forge script script/release/VerifyGovernanceV16.s.sol:VerifyGovernanceV16 --rpc-url "$RPC_URL"
 forge test --match-path "test/fork/*" -vvv

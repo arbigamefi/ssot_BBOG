@@ -15,7 +15,7 @@ A release binds a deployment snapshot, signed release digest, frontend manifest,
 
 Active SDK manifests and ABIs live under `frontend/packages/ssot/src/release/embedded/` and `frontend/packages/ssot/src/abis/release/`. Local generated `deployments/` and `dist/` contents are ignored; they are not authoritative merely because their filenames contain `latest`.
 
-After deployment and verified Safe governance acceptance, use `make release-v15` with the chain-specific snapshot, RPC and approved release signer. This runs governance verification, metadata generation, digest verification and guarded packaging. Import a verified package with `pnpm -C frontend ssot:sync -- --from <bundle>` and the trusted signer configuration described in the workflow.
+After deployment and verified Safe governance acceptance, use `make release-v16` with the chain-specific snapshot, RPC and approved release signer. This runs governance verification, metadata generation, digest verification and guarded packaging. Import a verified package with `pnpm -C frontend ssot:sync -- --from <bundle>` and the trusted signer configuration described in the workflow.
 
 Production application images are built by CI and deployed by immutable digest. Use [the Docker runbook](../../frontend/deploy/docker/README.md); do not compile on the production VPS.
 

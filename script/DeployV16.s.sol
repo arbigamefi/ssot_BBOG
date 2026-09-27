@@ -31,12 +31,12 @@ import {SlotsModule} from "../src/modules/slots/SlotsModule.sol";
 
 import {ChainlinkV2PlusWrapperAdapter} from "../src/adapters/chainlink/ChainlinkV2PlusWrapperAdapter.sol";
 
-interface IERC20MetadataLikeV15 {
+interface IERC20MetadataLikeV16 {
     function symbol() external view returns (string memory);
     function decimals() external view returns (uint8);
 }
 
-/// @notice Deployment script for SSOT v1.5 Safe-governed router/pool topology.
+/// @notice Deployment script for SSOT v1.6 Safe-governed router/pool topology.
 ///
 /// Required env:
 ///   DEPLOYER (bootstrap public address), GOV (final 2/3 Safe), CHAIN_ID, GUARDIAN, KEEPER_ADDRESS,
@@ -68,8 +68,8 @@ interface IERC20MetadataLikeV15 {
 ///   SPORTS_DERIVE_ROLE_SET_HASHES=true derives final hashes from deployed SportsHub + bootstrap roles
 ///
 /// Example:
-///   forge script script/DeployV15.s.sol:DeployV15 --rpc-url $RPC_URL --broadcast -vvv
-contract DeployV15 is Script {
+///   forge script script/DeployV16.s.sol:DeployV16 --rpc-url $RPC_URL --broadcast -vvv
+contract DeployV16 is Script {
     bytes32 internal constant GAME_DICE = keccak256("DICE");
     bytes32 internal constant GAME_COIN = keccak256("COIN_TOSS");
     bytes32 internal constant GAME_ROULETTE = keccak256("ROULETTE");
@@ -329,7 +329,7 @@ contract DeployV15 is Script {
         if (_shouldWriteArtifacts()) {
             _writeArtifacts(cfg, pools, d);
         } else {
-            console2.log("Skipping v1.5 deployment artifact writes during dry run.");
+            console2.log("Skipping v1.6 deployment artifact writes during dry run.");
             console2.log("Set WRITE_DRY_RUN_ARTIFACTS=true to write simulated artifacts intentionally.");
         }
     }
@@ -521,7 +521,7 @@ contract DeployV15 is Script {
         string memory obj = "ssot";
         string memory json;
 
-        json = vm.serializeString(obj, "architectureVersion", "v1.5-safe-governance");
+        json = vm.serializeString(obj, "architectureVersion", "v1.6-house-edge-allocation");
         json = vm.serializeUint(obj, "chainId", block.chainid);
         json = vm.serializeUint(obj, "blockNumber", block.number);
         json = vm.serializeUint(obj, "timestamp", block.timestamp);
@@ -591,21 +591,21 @@ contract DeployV15 is Script {
         _safeCreateDir("deployments/snapshots");
         _safeCreateDir("deployments/verify");
         string memory json = _snapshotJson(cfg, pools, d);
-        string memory tag = string.concat(vm.toString(block.chainid), "-", vm.toString(block.number), "-v15");
+        string memory tag = string.concat(vm.toString(block.chainid), "-", vm.toString(block.number), "-v16");
         string memory snapPath = string.concat("deployments/snapshots/deploy-", tag, ".json");
 
         _safeWriteJson(json, snapPath);
-        _safeWriteJson(json, "deployments/latest-v15.json");
-        console2.log("Wrote v1.5 deployment snapshot:", snapPath);
-        console2.log("Wrote v1.5 deployment snapshot:", "deployments/latest-v15.json");
+        _safeWriteJson(json, "deployments/latest-v16.json");
+        console2.log("Wrote v1.6 deployment snapshot:", snapPath);
+        console2.log("Wrote v1.6 deployment snapshot:", "deployments/latest-v16.json");
 
         string memory sh = _verifyScript(cfg, pools, d);
         string memory verifyPath = string.concat("deployments/verify/verify-", tag, ".sh");
 
         _safeWriteFile(verifyPath, sh);
-        _safeWriteFile("deployments/verify-latest-v15.sh", sh);
-        console2.log("Wrote v1.5 verify helper:", verifyPath);
-        console2.log("Wrote v1.5 verify helper:", "deployments/verify-latest-v15.sh");
+        _safeWriteFile("deployments/verify-latest-v16.sh", sh);
+        console2.log("Wrote v1.6 verify helper:", verifyPath);
+        console2.log("Wrote v1.6 verify helper:", "deployments/verify-latest-v16.sh");
     }
 
     function _writeConfigJson(string memory obj, string memory json, DeployConfig memory cfg)
@@ -1014,10 +1014,10 @@ contract DeployV15 is Script {
         if (token.code.length == 0) {
             return (sym, dec);
         }
-        try IERC20MetadataLikeV15(token).symbol() returns (string memory s) {
+        try IERC20MetadataLikeV16(token).symbol() returns (string memory s) {
             sym = s;
         } catch {}
-        dec = IERC20MetadataLikeV15(token).decimals();
+        dec = IERC20MetadataLikeV16(token).decimals();
         require(dec <= 77, "asset decimals out of range");
     }
 

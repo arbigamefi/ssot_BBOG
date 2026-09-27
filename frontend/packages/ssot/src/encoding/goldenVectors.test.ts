@@ -17,6 +17,14 @@ const SRC_ROOT = path.resolve(THIS_DIR, "..");
 const FIXTURES_ROOT = path.resolve(SRC_ROOT, "fixtures", "release-bundles");
 const EMBEDDED_ROOT = path.resolve(SRC_ROOT, "release", "embedded");
 
+// Release lines whose embedded releases must ship exact vectors. Each chain runs one line; mainnet
+// can stay on v1.5 while a testnet runs v1.6.
+const CURRENT_LINES: Record<string, string> = {
+  SSOT_RELEASE_DIGEST_V15: "v1.5-safe-governance",
+  SSOT_RELEASE_DIGEST_V16: "v1.6-house-edge-allocation"
+};
+const FIXTURE_SUFFIXES = ["v16", "v15", "v14", "v13"];
+
 function normalizeHex(x: string): string {
   const s = String(x).trim();
   return s.startsWith("0x") ? "0x" + s.slice(2).toLowerCase() : "0x" + s.toLowerCase();
@@ -42,11 +50,7 @@ async function listGoldenVectorFiles(): Promise<string[]> {
     const releases = await fs.readdir(chainDir);
     for (const r of releases) {
       const relDir = path.join(chainDir, r);
-      for (const name of [
-        "golden-vectors-latest-v15.json",
-        "golden-vectors-latest-v14.json",
-        "golden-vectors-latest-v13.json"
-      ]) {
+      for (const name of FIXTURE_SUFFIXES.map((suffix) => `golden-vectors-latest-${suffix}.json`)) {
         const gv = path.join(relDir, name);
         if (await pathExists(gv)) files.push(gv);
       }
@@ -56,11 +60,7 @@ async function listGoldenVectorFiles(): Promise<string[]> {
 }
 
 async function readReleaseLock(dir: string): Promise<any | null> {
-  for (const name of [
-    "release-latest-v15.json",
-    "release-latest-v14.json",
-    "release-latest-v13.json"
-  ]) {
+  for (const name of FIXTURE_SUFFIXES.map((suffix) => `release-latest-${suffix}.json`)) {
     const lockPath = path.join(dir, name);
     if (await pathExists(lockPath)) return JSON.parse(await fs.readFile(lockPath, "utf8"));
   }
@@ -84,16 +84,16 @@ describe("golden vectors (exact-hex)", () => {
     const embeddedFiles = (await fs.readdir(EMBEDDED_ROOT)).filter((name) =>
       name.endsWith(".json")
     );
-    const expectedV15 = (
+    const expectedCurrent = (
       await Promise.all(
         embeddedFiles.map(async (name) =>
           JSON.parse(await fs.readFile(path.join(EMBEDDED_ROOT, name), "utf8"))
         )
       )
-    ).filter((release) => release.meta?.releaseLock?.schema === "SSOT_RELEASE_DIGEST_V15");
-    const checkedV15 = new Set<number>();
+    ).filter((release) => release.meta?.releaseLock?.schema in CURRENT_LINES);
+    const checkedCurrent = new Set<number>();
     if (files.length === 0) {
-      if (STRICT_VECTORS || expectedV15.length > 0) {
+      if (STRICT_VECTORS || expectedCurrent.length > 0) {
         throw new Error(
           "No versioned golden-vectors-latest-v*.json found under src/fixtures/release-bundles. Run `pnpm ssot:sync ...` and commit outputs."
         );
@@ -157,8 +157,8 @@ describe("golden vectors (exact-hex)", () => {
         // Current ABI exports support exact calldata checks for the current release.
         if (!isCurrentRelease) continue;
 
-        if (raw.architectureVersion === "v1.5-safe-governance") {
-          checkedV15.add(chainId);
+        if (raw.architectureVersion === CURRENT_LINES[embedded.meta?.releaseLock?.schema]) {
+          checkedCurrent.add(chainId);
           const game = embedded.gamesMeta.find(
             (entry: any) => normalizeHex(entry.gameId) === normalizeHex(v.gameId)
           );
@@ -193,10 +193,10 @@ describe("golden vectors (exact-hex)", () => {
         expect(normalizeHex(calldata)).toBe(normalizeHex(v.placeBetCalldata));
       }
     }
-    for (const release of expectedV15) {
+    for (const release of expectedCurrent) {
       expect(
-        checkedV15.has(release.chainId),
-        `missing current v1.5 vectors for ${release.chainId}`
+        checkedCurrent.has(release.chainId),
+        `missing current ${CURRENT_LINES[release.meta.releaseLock.schema]} vectors for ${release.chainId}`
       ).toBe(true);
     }
   });

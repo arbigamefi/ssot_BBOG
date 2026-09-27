@@ -28,4 +28,4 @@
 
 - [Incident + postmortem templates](incident-templates.md)
 
-> Tip: always record the **release digest** from the chain-specific verified `release-latest-v15.json` bundle in incident notes.
+> Tip: always record the **release digest** from the chain-specific verified release lock (`release-latest-v16.json` for a v1.6 release) in incident notes.

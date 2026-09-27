@@ -28,13 +28,13 @@ GH = "src/core/GameHub.sol"
 SR = "src/core/SettlementRouter.sol"
 EN = "src/engines/referral/DefaultReferralEngine.sol"
 SH = "src/core/SportsHub.sol"
-SNAP = "script/release/V15Snapshot.sol"
+SNAP = "script/release/V16Snapshot.sol"
 
 V16 = "test/unit/HouseEdgeAllocationV16.t.sol"
 RT = "test/unit/SettlementRouter.t.sol"
 RINV = "test/invariants/SettlementRouterInvariants.t.sol"
 DIFF = "test/diff/StatefulSystemDiff.t.sol"
-DEPLOY = "test/unit/DeploymentV15.t.sol"
+DEPLOY = "test/unit/DeploymentV16.t.sol"
 
 MUTANTS = [
     {"id": "M01", "guarantee": "the Router cap",

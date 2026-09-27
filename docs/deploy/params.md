@@ -19,8 +19,8 @@ This repo intentionally makes the **parameter policy explicit**.
 
 After deploy, the script writes:
 
-- `deployments/latest-v15.json` (+ `deployments/snapshots/deploy-<chainid>-<block>-v15.json`)
-- `deployments/verify-latest-v15.sh` (+ `deployments/verify/verify-<chainid>-<block>-v15.sh`)
+- `deployments/latest-v16.json` (+ `deployments/snapshots/deploy-<chainid>-<block>-v16.json`)
+- `deployments/verify-latest-v16.sh` (+ `deployments/verify/verify-<chainid>-<block>-v16.sh`)
 
 ## GameHub pricing + referral policy
 
@@ -63,7 +63,7 @@ delay. The script refuses the retired v1.5 variables `MAX_AFFILIATE_DELTA_BPS`, 
 
 ## Pool banks
 
-`script/DeployV15.s.sol:DeployV15` uses pools, not assets, as the deployment unit.
+`script/DeployV16.s.sol:DeployV16` uses pools, not assets, as the deployment unit.
 
 For each `i in [0..NUM_POOLS-1]`:
 
@@ -77,7 +77,7 @@ For public-network preflight, `LP_DECIMALS_i` is required and must match `POOL_A
 on chain. This prevents release metadata from treating 6-decimal assets such as USDC as 18-decimal
 assets.
 
-The deploy script writes `deployments/latest-v15.json` and `deployments/verify-latest-v15.sh`.
+The deploy script writes `deployments/latest-v16.json` and `deployments/verify-latest-v16.sh`.
 Casino pools are allowlisted for `GameHub`; Sports pools are allowlisted for `SportsHub`; Future pools
 are registered and wired to `SettlementRouter` but still need their own vertical hub before risk-in can
 open positions.
@@ -131,7 +131,7 @@ snapshot with `make release-digest-v15`.
 
 These are only needed when you want a tamper-evident release lock for a deployment snapshot.
 
-- `SNAPSHOT_PATH` (optional, default `deployments/latest-v15.json`): snapshot input file.
+- `SNAPSHOT_PATH` (optional, default `deployments/latest-v16.json`): snapshot input file.
 - `SIGNER_PRIVATE_KEY` (optional): if set, used to sign the release digest. If unset, falls back to `PRIVATE_KEY`.
 - `GOV` (recommended): if set, the release digest generator enforces that the signer address equals `GOV`.
 

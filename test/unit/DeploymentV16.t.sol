@@ -4,11 +4,11 @@ pragma solidity ^0.8.24;
 import "forge-std/Test.sol";
 import "forge-std/StdJson.sol";
 import {SafeGovernance} from "../../script/common/SafeGovernance.sol";
-import {DeployV15} from "../../script/DeployV15.s.sol";
-import {V15Snapshot} from "../../script/release/V15Snapshot.sol";
-import {ReleaseDigestV15} from "../../script/release/ReleaseDigestV15.s.sol";
-import {VerifyReleaseV15} from "../../script/release/VerifyReleaseV15.s.sol";
-import {GenerateGoldenVectorsV15} from "../../script/release/GenerateGoldenVectorsV15.s.sol";
+import {DeployV16} from "../../script/DeployV16.s.sol";
+import {V16Snapshot} from "../../script/release/V16Snapshot.sol";
+import {ReleaseDigestV16} from "../../script/release/ReleaseDigestV16.s.sol";
+import {VerifyReleaseV16} from "../../script/release/VerifyReleaseV16.s.sol";
+import {GenerateGoldenVectorsV16} from "../../script/release/GenerateGoldenVectorsV16.s.sol";
 import {IGameModule} from "../../src/core/interfaces/IGameModule.sol";
 import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
 import {Governable} from "../../src/access/Governable.sol";
@@ -20,7 +20,7 @@ import {MockERC20} from "../../src/mocks/MockERC20.sol";
 import {Errors} from "../../src/libs/Errors.sol";
 
 // Configuration mock only: these tests do not claim to prove actual Safe quorum/signature execution.
-contract SafeConfigMockV15 {
+contract SafeConfigMockV16 {
     uint256 public threshold = 2;
     address public guard;
 
@@ -61,7 +61,7 @@ contract SafeConfigMockV15 {
     }
 }
 
-contract DeployHarnessV15 is DeployV15 {
+contract DeployHarnessV16 is DeployV16 {
     string public snapshot;
 
     function _shouldWriteArtifacts() internal pure override returns (bool) {
@@ -77,13 +77,13 @@ contract DeployHarnessV15 is DeployV15 {
     }
 }
 
-contract SnapshotVerifierV15 {
+contract SnapshotVerifierV16 {
     function verify(string memory snap, bool accepted) external view {
-        V15Snapshot.verify(snap, accepted);
+        V16Snapshot.verify(snap, accepted);
     }
 }
 
-contract DigestHarnessV15 is ReleaseDigestV15 {
+contract DigestHarnessV16 is ReleaseDigestV16 {
     using stdJson for string;
 
     function digest(string memory snap) external pure returns (bytes32) {
@@ -91,11 +91,11 @@ contract DigestHarnessV15 is ReleaseDigestV15 {
     }
 }
 
-contract DeploymentV15Test is Test {
+contract DeploymentV16Test is Test {
     using stdJson for string;
-    DeployHarnessV15 deployer;
-    SafeConfigMockV15 safe;
-    SnapshotVerifierV15 verifier;
+    DeployHarnessV16 deployer;
+    SafeConfigMockV16 safe;
+    SnapshotVerifierV16 verifier;
     MockERC20 asset;
     address bootstrap;
     address guardian = address(77);
@@ -103,10 +103,10 @@ contract DeploymentV15Test is Test {
     function setUp() public {
         bootstrap = vm.addr(0xBEEF);
         vm.deal(bootstrap, 100 ether);
-        safe = new SafeConfigMockV15();
+        safe = new SafeConfigMockV16();
         asset = new MockERC20("Test USD", "TUSD", 6);
-        deployer = new DeployHarnessV15();
-        verifier = new SnapshotVerifierV15();
+        deployer = new DeployHarnessV16();
+        verifier = new SnapshotVerifierV16();
         _configureEnv();
     }
 
@@ -150,29 +150,29 @@ contract DeploymentV15Test is Test {
     function _deploy() internal returns (string memory snap, address[] memory targets) {
         deployer.run();
         snap = deployer.snapshot();
-        targets = V15Snapshot.targets(snap);
+        targets = V16Snapshot.targets(snap);
     }
 
     function testGeneratedGoldenVectorsAreAcceptedByAllEightModules() public isolatedEnv {
         (string memory snap,) = _deploy();
-        string memory input = "deployments/test-golden-v15-snapshot.json";
-        string memory latest = "deployments/golden-vectors-latest-v15.json";
+        string memory input = "deployments/test-golden-v16-snapshot.json";
+        string memory latest = "deployments/golden-vectors-latest-v16.json";
         string memory tagged = string.concat(
             "deployments/release/golden-vectors-",
             vm.toString(block.chainid),
             "-",
             vm.toString(block.number),
-            "-v15.json"
+            "-v16.json"
         );
         bool hadLatest = vm.exists(latest);
         bool hadTagged = vm.exists(tagged);
         string memory oldLatest = hadLatest ? vm.readFile(latest) : "";
         string memory oldTagged = hadTagged ? vm.readFile(tagged) : "";
-        string memory oldInput = vm.envOr("SNAPSHOT_PATH", string("deployments/latest-v15.json"));
+        string memory oldInput = vm.envOr("SNAPSHOT_PATH", string("deployments/latest-v16.json"));
         vm.createDir("deployments/release", true);
         vm.writeFile(input, snap);
         vm.setEnv("SNAPSHOT_PATH", input);
-        new GenerateGoldenVectorsV15().run();
+        new GenerateGoldenVectorsV16().run();
         string memory vectors = vm.readFile(latest);
         // Restore local release evidence before semantic checks can fail.
         vm.setEnv("SNAPSHOT_PATH", oldInput);
@@ -334,20 +334,20 @@ contract DeploymentV15Test is Test {
 
     function testReleaseDigestBindsAuthorityAndRuntime() public isolatedEnv {
         (string memory snap,) = _deploy();
-        DigestHarnessV15 digest = new DigestHarnessV15();
+        DigestHarnessV16 digest = new DigestHarnessV16();
         bytes32 original = digest.digest(snap);
-        vm.serializeJson("tampered-v15", snap);
-        string memory changed = vm.serializeAddress("tampered-v15", "guardian", address(100));
+        vm.serializeJson("tampered-v16", snap);
+        string memory changed = vm.serializeAddress("tampered-v16", "guardian", address(100));
         assertNotEq(digest.digest(changed), original);
-        vm.serializeJson("tampered-v15", snap);
-        changed = vm.serializeAddress("tampered-v15", "releaseSigner", address(101));
+        vm.serializeJson("tampered-v16", snap);
+        changed = vm.serializeAddress("tampered-v16", "releaseSigner", address(101));
         assertNotEq(digest.digest(changed), original);
-        vm.serializeJson("tampered-v15", snap);
-        changed = vm.serializeBytes32("tampered-v15", "codeHash_poolBank_0", bytes32(uint256(1)));
+        vm.serializeJson("tampered-v16", snap);
+        changed = vm.serializeBytes32("tampered-v16", "codeHash_poolBank_0", bytes32(uint256(1)));
         assertNotEq(digest.digest(changed), original);
-        vm.serializeJson("tampered-v15", snap);
-        changed = vm.serializeString("tampered-v15", "architectureVersion", "v1.4-bank-observability");
-        vm.expectRevert("not a v1.5 snapshot");
+        vm.serializeJson("tampered-v16", snap);
+        changed = vm.serializeString("tampered-v16", "architectureVersion", "v1.5-safe-governance");
+        vm.expectRevert("not a v1.6 snapshot");
         digest.digest(changed);
     }
 
