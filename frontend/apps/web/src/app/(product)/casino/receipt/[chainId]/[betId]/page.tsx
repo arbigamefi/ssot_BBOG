@@ -7,7 +7,11 @@ import { loadEmbeddedRelease } from "@ssot/ssot/release";
 import { buildPageMetadata } from "../../../../../../i18n/metadata";
 import { getRequestI18n } from "../../../../../../i18n/request";
 import { parseStrictRequestChainId } from "../../../../../../server/chain";
-import { normalizeBetId, queryBetReceipt } from "../../../../../../server/betting/recent-bets";
+import {
+  normalizeBetId,
+  normalizeOptionalGameHubAddress,
+  queryBetReceipt
+} from "../../../../../../server/betting/recent-bets";
 import { SITE_URL } from "../../../../../../config/site";
 import {
   formatTimestamp,
@@ -19,29 +23,40 @@ import {
   buildCasinoReceiptFromBetRow,
   buildCasinoReceiptProofText
 } from "../../../../../../features/casino/receipt/view-model";
+import { buildReceiptPath } from "../../../../../../features/casino/receipt/receipt-path";
 import { PageTransition } from "../../../../../../components/PageTransition";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+type ReceiptSearchParams = Promise<Record<string, string | string[] | undefined>>;
+
 export async function generateMetadata({
-  params
+  params,
+  searchParams
 }: {
   params: Promise<{ betId: string; chainId: string }>;
+  searchParams: ReceiptSearchParams;
 }): Promise<Metadata> {
   const { betId, chainId: rawChainId } = await params;
+  const gameHub = parseReceiptGameHub((await searchParams).hub);
   const { messages } = await getRequestI18n();
   const chainId = parseStrictRequestChainId(rawChainId);
   const meta = buildPageMetadata(
     messages,
     "casinoReceipt",
     { betId },
-    { noindex: true, path: `/casino/receipt/${rawChainId}/${betId}` }
+    {
+      noindex: true,
+      path: `/casino/receipt/${rawChainId}/${betId}${gameHub ? `?hub=${gameHub.toLowerCase()}` : ""}`
+    }
   );
   if (!chainId) return meta;
 
   // Old receipt images were cached as immutable before refunds were included.
-  const imageUrl = `${SITE_URL}/casino/receipt/${chainId}/${betId}/og?v=refund-v1`;
+  const imageUrl = `${SITE_URL}/casino/receipt/${chainId}/${betId}/og?v=refund-v1${
+    gameHub ? `&hub=${gameHub.toLowerCase()}` : ""
+  }`;
   meta.openGraph = {
     ...(meta.openGraph ?? {}),
     images: [{ url: imageUrl, width: 1200, height: 630, alt: `ArbiGameFi bet #${betId}` }]
@@ -56,11 +71,15 @@ export async function generateMetadata({
 type ReceiptTone = "win" | "loss" | "neutral";
 
 export default async function CasinoReceiptPage({
-  params
+  params,
+  searchParams
 }: {
   params: Promise<{ betId: string; chainId: string }>;
+  searchParams: ReceiptSearchParams;
 }) {
   const { betId: rawBetId, chainId: rawChainId } = await params;
+  const gameHub = parseReceiptGameHub((await searchParams).hub);
+  if (gameHub === null) notFound();
   const { messages } = await getRequestI18n();
   const labels = messages.casino.room.receipt;
   const shareLabels = messages.casino.room.result.actions;
@@ -72,7 +91,8 @@ export default async function CasinoReceiptPage({
 
   const receipt = await queryBetReceipt({
     betId,
-    chainId
+    chainId,
+    gameHub
   });
   const releaseResult = loadEmbeddedRelease(chainId);
   const release = releaseResult.ok ? releaseResult.release : undefined;
@@ -130,7 +150,8 @@ export default async function CasinoReceiptPage({
 
   // Lead with the same signed net shown in the in-room result dialog.
   const heroValue = receiptModel.signedNetValue;
-  const receiptHref = `/casino/receipt/${chainId}/${betId}`;
+  // Re-shared links name the hub even when this one did not.
+  const receiptHref = buildReceiptPath({ betId, chainId, gameHub: row.gameHub ?? gameHub });
   const shareText = receiptModel.shareText;
   const proofText = buildCasinoReceiptProofText({
     assetLabel: asset?.symbol ?? shortHex(row.asset),
@@ -207,6 +228,57 @@ export default async function CasinoReceiptPage({
             tone={receiptModel.net >= 0n ? "success" : "danger"}
           />
         </div>
+
+        {/* Where the house edge went (v1.6 hubs only), from the settlement's event. */}
+        {receiptModel.houseEdge ? (
+          <details className="group min-h-0 border-b border-border-soft">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle transition-colors hover:text-fg">
+              <span>{labels.houseEdge.title}</span>
+              <span className="flex min-w-0 items-center gap-2">
+                <span className="truncate font-mono text-xs normal-case tracking-normal text-fg-muted">
+                  {receiptModel.houseEdge.edgeValue}
+                </span>
+                <ChevronDownIcon className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180" />
+              </span>
+            </summary>
+            <div className="min-w-0 pb-1">
+              <Fact
+                label={labels.houseEdge.edge}
+                value={interpolate(labels.houseEdge.edgeValue, {
+                  amount: receiptModel.houseEdge.edgeValue,
+                  rate: receiptModel.houseEdge.rateLabel,
+                  turnover: receiptModel.houseEdge.turnoverValue
+                })}
+              />
+              <Fact label={labels.houseEdge.lps} value={receiptModel.houseEdge.lpRetainedValue} />
+              {receiptModel.houseEdge.playerRakebackValue ? (
+                <Fact
+                  label={labels.houseEdge.playerRakeback}
+                  value={receiptModel.houseEdge.playerRakebackValue}
+                />
+              ) : null}
+              {receiptModel.houseEdge.referrersValue ? (
+                <Fact
+                  label={labels.houseEdge.referrers}
+                  value={receiptModel.houseEdge.referrersValue}
+                />
+              ) : null}
+              {receiptModel.houseEdge.affiliateMarkupValue ? (
+                <Fact
+                  label={labels.houseEdge.affiliateMarkup}
+                  value={receiptModel.houseEdge.affiliateMarkupValue}
+                />
+              ) : null}
+              <Fact
+                label={labels.houseEdge.protocol}
+                value={receiptModel.houseEdge.protocolFeeValue}
+              />
+              <p className="px-4 pb-2 pt-1 text-[11px] leading-5 text-fg-subtle">
+                {labels.houseEdge.note}
+              </p>
+            </div>
+          </details>
+        ) : null}
 
         {/* Verifiable facts — collapsed by default so the card reads clean on a
             phone, one tap from the full on-chain detail. */}
@@ -296,6 +368,17 @@ export default async function CasinoReceiptPage({
       </article>
     </PageTransition>
   );
+}
+
+/** The `hub` parameter: undefined when absent, null when it is not one address. */
+function parseReceiptGameHub(value: string | string[] | undefined) {
+  if (value === undefined) return undefined;
+  if (Array.isArray(value)) return null;
+  try {
+    return normalizeOptionalGameHubAddress(value);
+  } catch {
+    return null;
+  }
 }
 
 function safeNormalizeBetId(value: string) {

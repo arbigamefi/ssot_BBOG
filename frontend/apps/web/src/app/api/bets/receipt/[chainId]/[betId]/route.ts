@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 
 import { parseStrictRequestChainId } from "../../../../../../server/chain";
-import { normalizeBetId, queryBetReceipt } from "../../../../../../server/betting/recent-bets";
+import {
+  normalizeBetId,
+  normalizeOptionalGameHubAddress,
+  queryBetReceipt
+} from "../../../../../../server/betting/recent-bets";
 import {
   mergeHeaders,
   noStoreHeaders,
@@ -36,7 +40,11 @@ export async function GET(
     if (!chainId) return jsonError("Unsupported receipt chain.", 400, "UNSUPPORTED_CHAIN");
 
     const betId = normalizeBetId(rawBetId);
-    const response = await queryBetReceipt({ betId, chainId });
+    const hubs = new URL(request.url).searchParams.getAll("hub");
+    if (hubs.length > 1) return jsonError("hub must be a single address.");
+    // Bet ids restart in every GameHub deployment; without a hub this reads the active release.
+    const gameHub = normalizeOptionalGameHubAddress(hubs[0]);
+    const response = await queryBetReceipt({ betId, chainId, gameHub });
 
     return NextResponse.json(response, {
       headers: mergeHeaders(noStoreHeaders(), quota.headers)

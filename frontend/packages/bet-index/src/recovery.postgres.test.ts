@@ -70,10 +70,14 @@ describe.skipIf(!url)("PostgreSQL recovery integration", () => {
         args: { positionId: betId, payoutNet: 196_000n, payoutGross: 200_000n }
       };
       await first.writeGameHubEvents([event]);
-      expect((await second.getBet({ chainId: 84532, betId }))?.refundAmount).toBeUndefined();
+      expect(
+        (await second.getBet({ chainId: 84532, gameHub: scope.sportsHub, betId }))?.refundAmount
+      ).toBeUndefined();
       await second.writeGameHubEvents([{ ...event, args: { ...event.args, refundAmount } }]);
       await first.writeGameHubEvents([event]);
-      expect(await second.getBet({ chainId: 84532, betId })).toMatchObject({
+      expect(
+        await second.getBet({ chainId: 84532, gameHub: scope.sportsHub, betId })
+      ).toMatchObject({
         payout: "196000",
         payoutGross: "200000",
         refundAmount: refundAmount.toString()

@@ -220,7 +220,11 @@ export async function runBetIndexBackfill({
       });
     }
 
-    const recent = await indexStore.getRecentBets({ chainId: config.chainId, limit: 5 });
+    const recent = await indexStore.getRecentBets({
+      chainId: config.chainId,
+      gameHub: config.gameHub,
+      limit: 5
+    });
     return {
       chainId: config.chainId,
       dryRun: config.dryRun,

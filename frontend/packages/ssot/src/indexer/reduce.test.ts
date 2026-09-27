@@ -113,6 +113,15 @@ describe("indexer reducer", () => {
     });
   });
 
+  it("records the issuing GameHub, also on rows cached before it was recorded", () => {
+    expect(applyGameHubEventToBet(undefined, mk("BetPlaced", 10, TX1)).gameHub).toBe(HUB);
+    const { gameHub: _omitted, ...cached } = applyGameHubEventToBet(
+      undefined,
+      mk("BetPlaced", 10, TX1)
+    );
+    expect(applyGameHubEventToBet(cached, mk("BetRandomReady", 11, TX2)).gameHub).toBe(HUB);
+  });
+
   // ——— Refund from placed (skip finalized) ———
   it("placed -> refunded directly", () => {
     let bet = applyGameHubEventToBet(undefined, mk("BetPlaced", 10, TX1));

@@ -11,6 +11,7 @@ import {
 } from "viem";
 import { getCasinoFinancials } from "@ssot/bet-index/financials";
 import { readSettledBetRefund } from "@ssot/bet-index/terminal-refund";
+import { decodeHouseEdgeLog } from "@ssot/bet-index/house-edge";
 import { createPostgresBetIndexStore, type BetIndexStore } from "@ssot/bet-index";
 import { applyGameHubEventToBet, type BetRow, type GameHubEventName } from "@ssot/ssot/indexer";
 import { loadEmbeddedRelease, type SSOTRelease } from "@ssot/ssot/release";
@@ -22,6 +23,7 @@ import type {
   RecentBetsResponse
 } from "../../features/betting/recent-bets";
 import { resolveServerRpcUrl } from "../rpc";
+import { getActiveGameHub, isSameGameHub } from "./active-game-hub";
 
 const GAME_HUB_EVENTS: GameHubEventName[] = [
   "BetPlaced",
@@ -131,11 +133,12 @@ function getDurableBetIndexStore() {
 
 async function tryGetBetFromDurableStore(
   store: BetIndexStore | null,
-  query: { betId: string; chainId: number }
+  query: { betId: string; chainId: number; gameHub: Address | null }
 ) {
-  if (!store) return null;
+  const { gameHub } = query;
+  if (!store || !gameHub) return null;
   try {
-    return await store.getBet(query);
+    return await store.getBet({ ...query, gameHub });
   } catch {
     return null;
   }
@@ -197,6 +200,16 @@ export function normalizeAffiliateAddress(affiliate: string | undefined) {
     return getAddress(value);
   } catch {
     throw new Error("affiliate must be a valid address.");
+  }
+}
+
+export function normalizeOptionalGameHubAddress(gameHub: string | undefined) {
+  const value = cleanEnvValue(gameHub);
+  if (!value) return undefined;
+  try {
+    return getAddress(value);
+  } catch {
+    throw new Error("hub must be a valid address.");
   }
 }
 
@@ -561,20 +574,34 @@ export async function queryBetReceipt({
   betId,
   chainId,
   client,
+  gameHub,
   now = () => Date.now()
 }: {
   betId: string;
   chainId: number;
   client?: PublicClient;
+  /** The GameHub that issued the bet; the active release's when omitted. */
+  gameHub?: Address;
   now?: () => number;
 }): Promise<BetReceiptResponse> {
   const normalizedBetId = normalizeBetId(betId);
   const store = getDurableBetIndexStore();
-  let row = await tryGetBetFromDurableStore(store, { betId: normalizedBetId, chainId });
+  const activeGameHub = getActiveGameHub(chainId);
+  const receiptGameHub = gameHub ?? activeGameHub;
+  // The chain fallbacks read the active release's hub; an earlier hub's receipt is index-only.
+  const onActiveGameHub = Boolean(
+    activeGameHub && receiptGameHub && isSameGameHub(activeGameHub, receiptGameHub)
+  );
+  let row = await tryGetBetFromDurableStore(store, {
+    betId: normalizedBetId,
+    chainId,
+    gameHub: receiptGameHub
+  });
   let enriched = false;
   if (
     row?.state === "finalized" &&
     !getCasinoFinancials(row) &&
+    onActiveGameHub &&
     shouldUseRpcFallback("BET_RECEIPT_RPC_FALLBACK_ENABLED", false)
   ) {
     const terminalTxHash = row.terminalTxHash ?? row.finalizedTxHash ?? row.lastTxHash;
@@ -590,7 +617,7 @@ export async function queryBetReceipt({
       numberEnv("BET_RECEIPT_RPC_TIMEOUT_MS", DEFAULT_RECEIPT_RPC_TIMEOUT_MS)
     ).catch(() => null);
     if (proven) {
-      row = { ...row, ...proven };
+      row = { ...row, ...proven.row };
       enriched = true;
     }
   }
@@ -606,7 +633,7 @@ export async function queryBetReceipt({
     };
   }
 
-  if (shouldUseRpcFallback("BET_RECEIPT_RPC_FALLBACK_ENABLED", false)) {
+  if (onActiveGameHub && shouldUseRpcFallback("BET_RECEIPT_RPC_FALLBACK_ENABLED", false)) {
     const fallbackRow = await queryBetReceiptRpcFallback({
       betId: normalizedBetId,
       chainId,
@@ -649,7 +676,12 @@ export async function materializeBetReceipt({
 }): Promise<BetReceiptResponse> {
   const normalizedBetId = normalizeBetId(betId);
   const store = getDurableBetIndexStore();
-  const existing = await tryGetBetFromDurableStore(store, { betId: normalizedBetId, chainId });
+  // Hydration proves a terminal transaction of the active release's hub.
+  const existing = await tryGetBetFromDurableStore(store, {
+    betId: normalizedBetId,
+    chainId,
+    gameHub: getActiveGameHub(chainId)
+  });
   if (existing && getCasinoFinancials(existing)) {
     return {
       schemaVersion: 1,
@@ -662,7 +694,7 @@ export async function materializeBetReceipt({
     };
   }
 
-  const row = await queryBetReceiptTerminalTxFallback({
+  const proof = await queryBetReceiptTerminalTxFallback({
     betId: normalizedBetId,
     chainId,
     client,
@@ -671,7 +703,7 @@ export async function materializeBetReceipt({
     terminalTxHash
   });
 
-  if (!row) {
+  if (!proof) {
     return {
       schemaVersion: 1,
       betId: normalizedBetId,
@@ -683,6 +715,7 @@ export async function materializeBetReceipt({
     };
   }
 
+  const { houseEdgeEvent, row } = proof;
   if (!store) {
     return {
       schemaVersion: 1,
@@ -697,6 +730,8 @@ export async function materializeBetReceipt({
 
   try {
     await store.writeBetRows([row]);
+    // The index reads a bet's allocation from its event, so the receipt stores the event itself.
+    if (houseEdgeEvent) await store.writeGameHubEvents([houseEdgeEvent]);
   } catch {
     return {
       schemaVersion: 1,
@@ -715,7 +750,12 @@ export async function materializeBetReceipt({
     cached: false,
     chainId,
     generatedAt: now(),
-    row: (await tryGetBetFromDurableStore(store, { betId: normalizedBetId, chainId })) ?? row,
+    row:
+      (await tryGetBetFromDurableStore(store, {
+        betId: normalizedBetId,
+        chainId,
+        gameHub: row.gameHub
+      })) ?? row,
     source: "postgres"
   };
 }
@@ -762,10 +802,21 @@ async function queryBetReceiptTerminalTxFallback({
         : undefined;
     const updatedAt = blockTimestamp ?? now();
     const updatedBlock = txReceipt.blockNumber ? Number(txReceipt.blockNumber) : 0;
-    const row: BetRow = {
+    const houseEdgeEvent =
+      terminal.eventName === "BetFinalized"
+        ? decodeHouseEdgeLog({
+            betId: receiptBetId,
+            blockTimestamp: updatedAt,
+            chainId,
+            gameHub: loaded.gameHub,
+            receipt: txReceipt
+          })
+        : null;
+    const row: BetRow & { gameHub: Address } = {
       asset: getAddress(bet.asset) as Address,
       betId,
       chainId,
+      gameHub: loaded.gameHub,
       gameId: bet.gameId as Hex,
       id: `${chainId}:${betId}`,
       lastEventName: terminal.eventName,
@@ -798,10 +849,27 @@ async function queryBetReceiptTerminalTxFallback({
       row.refundAmount = bigintStringFromUnknown(terminal.args.refundAmount);
       row.payout = row.refundAmount;
     }
-    return row;
+    const houseEdge = houseEdgeEvent ? houseEdgeFromEvent(houseEdgeEvent.args) : undefined;
+    if (houseEdge) row.houseEdge = houseEdge;
+    return { houseEdgeEvent, row };
   } catch {
     return null;
   }
+}
+
+function houseEdgeFromEvent(args: Record<string, unknown>): BetRow["houseEdge"] {
+  return {
+    edge: bigintStringFromUnknown(args.edge),
+    effectiveHouseEdgeBps: Number(args.effectiveHouseEdgeBps),
+    lpRetained: bigintStringFromUnknown(args.lpRetained),
+    markup: bigintStringFromUnknown(args.markup),
+    operatorShare: bigintStringFromUnknown(args.operatorShare),
+    protocolFee: bigintStringFromUnknown(args.protocolFee),
+    r0: bigintStringFromUnknown(args.r0),
+    r1: bigintStringFromUnknown(args.r1),
+    r2: bigintStringFromUnknown(args.r2),
+    usedTurnover: bigintStringFromUnknown(args.usedTurnover)
+  };
 }
 
 function decodeTerminalReceiptLog({
@@ -1294,9 +1362,10 @@ async function queryDurableRecentBets({
   limit: number;
 }) {
   const store = getDurableBetIndexStore();
-  if (!store) return [];
+  const gameHub = getActiveGameHub(chainId);
+  if (!store || !gameHub) return [];
   try {
-    return await store.getRecentBets({ chainId, gameId, limit });
+    return await store.getRecentBets({ chainId, gameHub, gameId, limit });
   } catch {
     return [];
   }
@@ -1312,9 +1381,10 @@ async function queryDurablePlayerBets({
   player: Address;
 }) {
   const store = getDurableBetIndexStore();
-  if (!store) return [];
+  const gameHub = getActiveGameHub(chainId);
+  if (!store || !gameHub) return [];
   try {
-    return await store.getPlayerBets({ chainId, limit, player });
+    return await store.getPlayerBets({ chainId, gameHub, limit, player });
   } catch {
     return [];
   }
@@ -1332,9 +1402,10 @@ async function queryDurableAffiliateBets({
   limit: number;
 }) {
   const store = getDurableBetIndexStore();
-  if (!store) return [];
+  const gameHub = getActiveGameHub(chainId);
+  if (!store || !gameHub) return [];
   try {
-    return await store.getAffiliateBets({ affiliate, asset, chainId, limit });
+    return await store.getAffiliateBets({ affiliate, asset, chainId, gameHub, limit });
   } catch {
     return [];
   }
@@ -1350,9 +1421,10 @@ async function queryDurableAffiliateStats({
   chainId: number;
 }) {
   const store = getDurableBetIndexStore();
-  if (!store) return null;
+  const gameHub = getActiveGameHub(chainId);
+  if (!store || !gameHub) return null;
   try {
-    return await store.getAffiliateStats({ affiliate, asset, chainId });
+    return await store.getAffiliateStats({ affiliate, asset, chainId, gameHub });
   } catch {
     return null;
   }

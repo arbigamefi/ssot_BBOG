@@ -20,6 +20,7 @@ import {
   queryRecentBets,
   queryPlayerBets
 } from "./recent-bets";
+import { getAddress } from "viem";
 import { loadEmbeddedRelease } from "@ssot/ssot/release";
 
 const GAME_ID = `0x${"11".repeat(32)}` as const;
@@ -270,7 +271,13 @@ describe("recent bets server aggregation", () => {
       now: () => 1234
     });
 
-    expect(getBet).toHaveBeenCalledWith({ betId: "9", chainId: 84532 });
+    const release = loadEmbeddedRelease(84532);
+    if (!release.ok) throw new Error(release.error);
+    expect(getBet).toHaveBeenCalledWith({
+      betId: "9",
+      chainId: 84532,
+      gameHub: getAddress(release.release.contracts.gameHub)
+    });
     expect(response).toMatchObject({
       betId: "9",
       chainId: 84532,

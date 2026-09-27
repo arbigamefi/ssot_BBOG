@@ -26,8 +26,16 @@ continue settling even if Postgres is degraded.
 
 ## 2. Schema And Migration
 
-The keeper creates the schema through `@ssot/bet-index` on startup. Before
-public traffic, run a bounded migration/backfill canary:
+The keeper creates the schema through `@ssot/bet-index` on startup.
+
+An index created before bets were keyed by `GameHub` is re-keyed on the first
+start of a newer keeper, in one transaction. Take a dump with
+`script/ops/bet-index-backup.sh` right before that deploy: older images cannot
+write the new key, so a rollback restores that dump. The migration stops, and
+the keeper does not start, if a bet row has no indexed event naming its hub.
+See [durable-bet-index.md](../../design/durable-bet-index.md#deployment-identity).
+
+Before public traffic, run a bounded migration/backfill canary:
 
 ```bash
 KEEPER_CHAIN_ID=8453 \
@@ -65,10 +73,15 @@ pnpm -C frontend keeper:backfill
 
 If the RPC provider rejects the log range, lower `BET_INDEX_SCAN_CHUNK_BLOCKS`
 and rerun. Backfill is idempotent because event tables use
-`(chain_id, tx_hash, log_index)` as the primary key and bet/ticket rows are
-folded by chain id plus id.
+`(chain_id, tx_hash, log_index)` as the primary key and bet rows are folded by
+chain id, `GameHub` and bet id (ticket rows by chain id and ticket id).
 
 ## 4. Backup
+
+Production (v1.5) runs the bet index in self-hosted Postgres inside Docker, not
+a managed service. Its daily dumps, restore drill and rebuild after losing the
+host are in [bet-index-backup.zh-CN.md](bet-index-backup.zh-CN.md). The steps
+below apply to a managed database.
 
 Before public traffic, record the managed provider's backup policy and run one
 manual logical backup:

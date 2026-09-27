@@ -2,7 +2,7 @@
 
 | Owner | Frontend Lead + SRE |
 | Status | Accepted |
-| Last Updated | 2026-05-17 |
+| Last Updated | 2026-09-27 |
 | Depends-on | `indexing-strategy.md`, `adr/0005-postgres-durable-bet-index.md`, `../frontend/casino-keeper-v1.md` |
 | Supersedes | Phase 3 placeholder in `indexing-strategy.md` |
 
@@ -82,34 +82,37 @@ Primary key: `(chain_id, tx_hash, log_index)`.
 
 Folded current state, using the same reducer semantics as browser Dexie replay.
 
-| Column            | Type        | Notes                                            |
-| ----------------- | ----------- | ------------------------------------------------ |
-| `chain_id`        | integer     | release chain id                                 |
-| `bet_id`          | text        | bigint string                                    |
-| `state`           | text        | `placed`, `randomReady`, `finalized`, `refunded` |
-| `game_id`         | text        | nullable                                         |
-| `asset`           | text        | nullable                                         |
-| `player`          | text        | nullable wallet address                          |
-| `stake`           | text        | nullable raw asset amount from `BetPlaced`       |
-| `payout`          | text        | nullable raw net payout/refund for UI rows       |
-| `payout_gross`    | text        | nullable raw gross payout from `BetFinalized`    |
-| `refund_amount`   | text        | nullable raw refund amount from `BetRefunded`    |
-| `request_id`      | text        | nullable VRF request id                          |
-| `random_hash`     | text        | nullable VRF random hash                         |
-| `terminal_tx_hash` | text       | nullable finalized/refunded tx hash              |
-| `finalized_tx_hash` | text      | nullable `BetFinalized` tx hash                  |
-| `refunded_tx_hash` | text       | nullable `BetRefunded` tx hash                   |
-| `placed_block`    | bigint      | nullable                                         |
-| `updated_block`   | bigint      | latest folded event block                        |
-| `last_tx_hash`    | text        | latest folded event tx                           |
-| `last_event_name` | text        | latest folded event name                         |
-| `updated_at`      | timestamptz | latest fold time                                 |
+| Column              | Type        | Notes                                            |
+| ------------------- | ----------- | ------------------------------------------------ |
+| `chain_id`          | integer     | release chain id                                 |
+| `game_hub`          | text        | issuing GameHub, lowercase                       |
+| `bet_id`            | text        | bigint string                                    |
+| `state`             | text        | `placed`, `randomReady`, `finalized`, `refunded` |
+| `game_id`           | text        | nullable                                         |
+| `asset`             | text        | nullable                                         |
+| `player`            | text        | nullable wallet address                          |
+| `stake`             | text        | nullable raw asset amount from `BetPlaced`       |
+| `payout`            | text        | nullable raw net payout/refund for UI rows       |
+| `payout_gross`      | text        | nullable raw gross payout from `BetFinalized`    |
+| `refund_amount`     | text        | nullable raw refund amount from `BetRefunded`    |
+| `request_id`        | text        | nullable VRF request id                          |
+| `random_hash`       | text        | nullable VRF random hash                         |
+| `terminal_tx_hash`  | text        | nullable finalized/refunded tx hash              |
+| `finalized_tx_hash` | text        | nullable `BetFinalized` tx hash                  |
+| `refunded_tx_hash`  | text        | nullable `BetRefunded` tx hash                   |
+| `placed_block`      | bigint      | nullable                                         |
+| `updated_block`     | bigint      | latest folded event block                        |
+| `last_tx_hash`      | text        | latest folded event tx                           |
+| `last_event_name`   | text        | latest folded event name                         |
+| `updated_at`        | timestamptz | latest fold time                                 |
 
-Primary key: `(chain_id, bet_id)`.
+Primary key: `(chain_id, game_hub, bet_id)`. Bet ids restart at 1 in every
+`GameHub` deployment, so the hub is part of a bet's identity.
 
 Indexes:
 
 - `(chain_id, updated_block desc, bet_id desc)`
+- `(chain_id, game_hub, updated_block desc, bet_id desc)`
 - `(chain_id, player, updated_block desc)`
 - `(chain_id, game_id, updated_block desc)`
 - `(chain_id, state, updated_block desc)`
@@ -127,6 +130,42 @@ Replay cursor per source.
 | `updated_at`   | timestamptz | write time                        |
 
 Primary key: `(chain_id, source, cursor_key)`.
+
+### Deployment identity
+
+A new release deploys a new `GameHub` on the same chain, and its bet ids start
+again at 1. The index keeps the rows of every deployment it has indexed:
+
+- the site reads the index through the active release's `GameHub`: the recent,
+  player and affiliate feeds, the casino analytics and a receipt without a hub;
+- a receipt link names its hub, `/casino/receipt/<chainId>/<betId>?hub=<gameHub>`,
+  and keeps resolving to that bet after a new release. Links made before the
+  hub was added resolve to the active release;
+- the RPC fallbacks and receipt hydration read only the active release's hub,
+  so a receipt of an earlier deployment comes from the index alone.
+
+Tables created before `game_hub` existed were keyed by `(chain_id, bet_id)`.
+The keeper's migration derives each row's hub from its first indexed
+`gamehub_events` row and then re-keys the table in the same transaction. It
+stops if a row has no such event. The change is one way: an image from before
+it cannot write the new key, so rolling back needs the dump taken before the
+upgrade.
+
+### House-edge allocation (v1.6)
+
+A v1.6 `GameHub` emits `HouseEdgeAllocated` when it settles a bet: the used
+turnover, the effective edge, and how the edge splits between LPs, referral
+levels L0 to L2, affiliate markup and the protocol fee. The index stores it in
+`gamehub_events` like the other events, but it never changes a bet's lifecycle:
+the fold that maintains `bets` skips it, so it can arrive before or after
+`BetFinalized` without moving the bet's state. Bet reads attach it as
+`houseEdge` through a lateral join on `gamehub_events_recovery_idx`.
+`writeBetRows` ignores a `houseEdge` passed with a row; the keeper and receipt
+hydration store the event itself from the settlement receipt. v1.5 hubs, refunds
+and unsettled bets have no allocation.
+
+`sport_tickets` is still keyed by `(chain_id, ticket_id)`. No release has a
+`SportsHub` yet; key tickets by hub the same way before the first one does.
 
 ## 5. API Contract
 

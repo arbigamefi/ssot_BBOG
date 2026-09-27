@@ -18,7 +18,13 @@ vi.mock("@ssot/bet-index", async (importOriginal) => ({
 }));
 
 const hub = "0x0000000000000000000000000000000000000001" as const;
-const INDEX_EVENTS = ["BetPlaced", "BetRandomReady", "BetFinalized", "BetRefunded"];
+const INDEX_EVENTS = [
+  "BetPlaced",
+  "BetRandomReady",
+  "BetFinalized",
+  "BetRefunded",
+  "HouseEdgeAllocated"
+];
 type LogQuery = { events: Array<{ name: string }>; fromBlock: bigint };
 const eventNames = (query: LogQuery) => query.events.map((event) => event.name);
 const logQueries = () =>
@@ -121,11 +127,11 @@ describe("runtime recovery composition", () => {
     await runtime.start();
     await vi.advanceTimersByTimeAsync(0);
     expect(await mock.store!.getCursor(8453, "gamehub-events", hub)).toBeNull();
-    expect(await mock.store!.getBet({ chainId: 8453, betId: 9 })).toBeNull();
+    expect(await mock.store!.getBet({ chainId: 8453, gameHub: hub, betId: 9 })).toBeNull();
     expect(runtime.health.snapshot().status).toBe("degraded");
     await vi.advanceTimersByTimeAsync(300_000);
     expect(await mock.store!.getCursor(8453, "gamehub-events", hub)).toBe(120n);
-    expect(await mock.store!.getBet({ chainId: 8453, betId: 9 })).toMatchObject({
+    expect(await mock.store!.getBet({ chainId: 8453, gameHub: hub, betId: 9 })).toMatchObject({
       payout: "196000",
       refundAmount: "100000",
       state: "finalized"

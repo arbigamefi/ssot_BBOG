@@ -157,6 +157,8 @@ function resolveAnalyticsAsset(
   requestedAsset?: Address
 ): {
   asset: PrimaryAsset;
+  /** Analytics cover the active release's GameHub; bet ids restart in every deployment. */
+  gameHub: Address;
   games: Array<{ gameId: Hex; label: string; slug: string }>;
 } {
   const releaseResult = loadEmbeddedRelease(chainId);
@@ -177,6 +179,7 @@ function resolveAnalyticsAsset(
       decimals: asset.decimals,
       symbol: asset.symbol
     },
+    gameHub: getAddress(releaseResult.release.contracts.gameHub),
     games: releaseResult.release.gamesMeta.map((game) => ({
       gameId: game.gameId as Hex,
       label: game.label,
@@ -266,7 +269,7 @@ export async function queryCasinoStats({
   windowDays?: number;
   now?: () => number;
 }): Promise<CasinoStatsResponse> {
-  const { asset, games } = resolveAnalyticsAsset(chainId, requestedAsset);
+  const { asset, gameHub, games } = resolveAnalyticsAsset(chainId, requestedAsset);
   const generatedAt = now();
   const window = clampCasinoWindowDays(windowDays);
   const since = windowSince(window, now);
@@ -284,8 +287,18 @@ export async function queryCasinoStats({
 
   try {
     const [stats, volumes] = await Promise.all([
-      store.getCasinoStats({ asset: asset.address, chainId, ...(since != null ? { since } : {}) }),
-      store.getGameVolumes({ asset: asset.address, chainId, ...(since != null ? { since } : {}) })
+      store.getCasinoStats({
+        asset: asset.address,
+        chainId,
+        gameHub,
+        ...(since != null ? { since } : {})
+      }),
+      store.getGameVolumes({
+        asset: asset.address,
+        chainId,
+        gameHub,
+        ...(since != null ? { since } : {})
+      })
     ]);
     const byGame = new Map(volumes.map((row) => [row.gameId.toLowerCase(), row]));
     return {
@@ -350,7 +363,7 @@ export async function queryCasinoLeaderboard({
   player?: Address;
   now?: () => number;
 }): Promise<CasinoLeaderboardResponse> {
-  const { asset } = resolveAnalyticsAsset(chainId, requestedAsset);
+  const { asset, gameHub } = resolveAnalyticsAsset(chainId, requestedAsset);
   const generatedAt = now();
   const normalizedGameId = (gameId?.toLowerCase() as Hex | undefined) ?? null;
   const window = clampCasinoWindowDays(windowDays);
@@ -377,6 +390,7 @@ export async function queryCasinoLeaderboard({
         ? await store.getCasinoTopWins({
             asset: asset.address,
             chainId,
+            gameHub,
             limit,
             ...(gameId ? { gameId } : {}),
             ...(since != null ? { since } : {})
@@ -384,6 +398,7 @@ export async function queryCasinoLeaderboard({
         : await store.getCasinoLeaderboard({
             asset: asset.address,
             chainId,
+            gameHub,
             limit,
             ...(gameId ? { gameId } : {}),
             ...(since != null ? { since } : {})
@@ -396,6 +411,7 @@ export async function queryCasinoLeaderboard({
         const rank = await store.getCasinoPlayerRank({
           asset: asset.address,
           chainId,
+          gameHub,
           player,
           ...(gameId ? { gameId } : {}),
           ...(since != null ? { since } : {})
@@ -467,7 +483,7 @@ export async function queryCasinoTimeseries({
   gameId?: Hex;
   now?: () => number;
 }): Promise<CasinoTimeseriesResponse> {
-  const { asset } = resolveAnalyticsAsset(chainId, requestedAsset);
+  const { asset, gameHub } = resolveAnalyticsAsset(chainId, requestedAsset);
   const generatedAt = now();
   const boundedDays = clampCasinoTimeseriesDays(days);
   const normalizedGameId = (gameId?.toLowerCase() as Hex | undefined) ?? null;
@@ -489,6 +505,7 @@ export async function queryCasinoTimeseries({
     const points = await store.getCasinoTimeseries({
       asset: asset.address,
       chainId,
+      gameHub,
       days: boundedDays,
       ...(gameId ? { gameId } : {})
     });

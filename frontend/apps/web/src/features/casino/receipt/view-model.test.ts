@@ -182,4 +182,69 @@ describe("casino receipt view model", () => {
       })
     ).toThrow("not ready");
   });
+
+  it("shows where a v1.6 bet's house edge went, keeping small 18-decimal shares visible", () => {
+    const row: BetRow = {
+      asset: ASSET,
+      betId: "9",
+      chainId: 84532,
+      gameHub: "0x00000000000000000000000000000000000000a6",
+      gameId: GAME,
+      id: "84532:0x00000000000000000000000000000000000000a6:9",
+      lastEventName: "BetFinalized",
+      lastTxHash: TX,
+      payout: "0",
+      payoutGross: "0",
+      refundAmount: "0",
+      stake: "1000000000000000",
+      state: "finalized",
+      terminalTxHash: TX,
+      updatedAt: 1,
+      updatedBlock: 1,
+      houseEdge: {
+        usedTurnover: "1000000000000000",
+        effectiveHouseEdgeBps: 200,
+        edge: "20000000000000",
+        operatorShare: "10000000000000",
+        lpRetained: "10000000000000",
+        protocolFee: "3000000000000",
+        r0: "2000000000000",
+        r1: "4000000000000",
+        r2: "1000000000000",
+        markup: "0"
+      }
+    };
+    const model = buildCasinoReceiptFromBetRow({
+      assetDecimals: 18,
+      assetSymbol: "WETH",
+      chainId: 84532,
+      gameLabel: "Dice",
+      row
+    });
+    expect(model.houseEdge).toEqual({
+      edgeValue: "0.00002 WETH",
+      rateLabel: "2.00%",
+      turnoverValue: "0.001 WETH",
+      lpRetainedValue: "0.00001 WETH",
+      protocolFeeValue: "0.000003 WETH",
+      playerRakebackValue: "0.000002 WETH",
+      referrersValue: "0.000005 WETH",
+      affiliateMarkupValue: undefined
+    });
+    const proof = buildCasinoReceiptProofText({ lastTx: TX, model, status: "Settled" });
+    expect(proof).toContain("House edge: 0.00002 WETH (2.00% of 0.001 WETH)");
+    expect(proof).toContain("Kept by LPs: 0.00001 WETH");
+    expect(proof).not.toContain("Referrer markup");
+
+    const { houseEdge: _none, ...v15Row } = row;
+    expect(
+      buildCasinoReceiptFromBetRow({
+        assetDecimals: 18,
+        assetSymbol: "WETH",
+        chainId: 8453,
+        gameLabel: "Dice",
+        row: v15Row
+      }).houseEdge
+    ).toBeUndefined();
+  });
 });
