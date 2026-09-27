@@ -14,6 +14,7 @@ import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
 import {Governable} from "../../src/access/Governable.sol";
 import {Bank} from "../../src/core/Bank.sol";
 import {GameHub} from "../../src/core/GameHub.sol";
+import {IGameHub} from "../../src/core/interfaces/IGameHub.sol";
 import {PoolRegistry} from "../../src/core/PoolRegistry.sol";
 import {MockERC20} from "../../src/mocks/MockERC20.sol";
 import {Errors} from "../../src/libs/Errors.sol";
@@ -376,5 +377,63 @@ contract DeploymentV15Test is Test {
             Governable(list[i]).acceptGovernance();
         }
         verifier.verify(snap, true);
+    }
+
+    function _acceptAll(address[] memory list) internal {
+        for (uint256 i; i < list.length; ++i) {
+            vm.prank(address(safe));
+            Governable(list[i]).acceptGovernance();
+        }
+    }
+
+    // A change queued between the acceptance package and the Safe's acceptance keeps the current values intact,
+    // so only the check after acceptance can see it (audit finding F-01).
+    function _assertQueueInHandoffWindowBlocksRelease(IGameHub.EdgeParam param, uint16 bps) internal {
+        (string memory snap, address[] memory list) = _deploy();
+        GameHub hub = GameHub(snap.readAddress(".gameHub"));
+        verifier.verify(snap, false);
+        vm.prank(bootstrap);
+        hub.queueEdgeChange(param, bps);
+        _acceptAll(list);
+        assertEq(hub.defaultHouseEdgeBps(), snap.readUint(".defaultHouseEdgeBps"));
+        assertEq(hub.maxAffiliateDeltaBps(), snap.readUint(".maxAffiliateDeltaBps"));
+        vm.expectRevert("pending edge change is not part of the release");
+        verifier.verify(snap, true);
+    }
+
+    function testBaseEdgeQueuedInHandoffWindowBlocksRelease() public isolatedEnv {
+        _assertQueueInHandoffWindowBlocksRelease(IGameHub.EdgeParam.BaseHouseEdge, 500);
+    }
+
+    function testMarkupIncreaseQueuedInHandoffWindowBlocksRelease() public isolatedEnv {
+        _assertQueueInHandoffWindowBlocksRelease(IGameHub.EdgeParam.MaxAffiliateDelta, 100);
+    }
+
+    function testQueuedEdgeChangeFailsTheAcceptancePackageCheck() public isolatedEnv {
+        (string memory snap,) = _deploy();
+        vm.prank(bootstrap);
+        GameHub(snap.readAddress(".gameHub")).queueEdgeChange(IGameHub.EdgeParam.BaseHouseEdge, 300);
+        vm.expectRevert("pending edge change is not part of the release");
+        verifier.verify(snap, false);
+    }
+
+    function testSafeCancellingInheritedQueuesUnblocksRelease() public isolatedEnv {
+        (string memory snap, address[] memory list) = _deploy();
+        GameHub hub = GameHub(snap.readAddress(".gameHub"));
+        vm.startPrank(bootstrap);
+        hub.queueEdgeChange(IGameHub.EdgeParam.BaseHouseEdge, 500);
+        hub.queueEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta, 100);
+        vm.stopPrank();
+        _acceptAll(list);
+        vm.prank(address(safe));
+        hub.cancelEdgeChange(IGameHub.EdgeParam.BaseHouseEdge);
+        vm.expectRevert("pending edge change is not part of the release");
+        verifier.verify(snap, true);
+        vm.prank(address(safe));
+        hub.cancelEdgeChange(IGameHub.EdgeParam.MaxAffiliateDelta);
+        verifier.verify(snap, true);
+        vm.prank(bootstrap);
+        vm.expectRevert(IGameHub.NoPendingEdgeChange.selector);
+        hub.activateEdgeChange(IGameHub.EdgeParam.BaseHouseEdge);
     }
 }

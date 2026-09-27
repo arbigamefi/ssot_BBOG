@@ -5,6 +5,7 @@ import "forge-std/StdJson.sol";
 import {Governable} from "../../src/access/Governable.sol";
 import {Bank} from "../../src/core/Bank.sol";
 import {GameHub} from "../../src/core/GameHub.sol";
+import {IGameHub} from "../../src/core/interfaces/IGameHub.sol";
 import {PoolRegistry} from "../../src/core/PoolRegistry.sol";
 import {VRFHub} from "../../src/core/VRFHub.sol";
 import {SportsHub} from "../../src/core/SportsHub.sol";
@@ -151,6 +152,13 @@ library V15Snapshot {
             "game configuration mismatch"
         );
         require(hub.LP_SHARE_BPS() == snap.readUint(".lpShareBps"), "LP share mismatch");
+        // A change the bootstrap queued while it still governed would activate after the Safe takes over, and
+        // anyone may activate it. The release approves only the values above, so nothing may be pending, both
+        // before acceptance and in the final check after it.
+        for (uint8 p; p <= uint8(type(IGameHub.EdgeParam).max); ++p) {
+            (, uint64 activatesAt) = hub.pendingEdgeChange(IGameHub.EdgeParam(p));
+            require(activatesAt == 0, "pending edge change is not part of the release");
+        }
         (uint16 l0, uint16 l1, uint16 l2, uint16 holdback) = hub.getReferralConfig(hub.activeReferralConfigId());
         require(
             l0 == snap.readUint(".refL0Bps") && l1 == snap.readUint(".refL1Bps") && l2 == snap.readUint(".refL2Bps")
