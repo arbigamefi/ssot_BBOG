@@ -179,8 +179,10 @@ settlement. Websocket index errors are recovered by the historical scanner when
 still need an audited backfill; upgrading does not prove an old cursor's history.
 Concurrent migrations take one transaction-scoped PostgreSQL advisory lock.
 
-At startup and each scan, the keeper requeues up to 50 indexed `BetRandomReady`
-IDs by chain and GameHub. A numeric keyset advances past stale or repeatedly
+At startup, and after scans, the keeper requeues up to 50 indexed
+`BetRandomReady` IDs by chain and GameHub. Each requeued ID costs an on-chain
+`getBet` read, so with polls shorter than 300 seconds this runs every nth scan
+(every fifth at 60 seconds), about every 300 seconds. A numeric keyset advances past stale or repeatedly
 failing IDs and wraps at the end. This closes the crash window between persisting
 a scan cursor and draining the in-memory settlement queue. If RPC scanning is
 disabled, a database-only recovery pass runs every 300 seconds. Recorded terminal
@@ -252,10 +254,11 @@ the keeper, scans `BetPlaced`, `BetRandomReady`, `BetFinalized`, and
 range and recent rows. Use
 `BET_INDEX_DRY_RUN=true` to verify RPC/event access without writing Postgres.
 
-`KEEPER_SCAN_CHUNK_BLOCKS` defaults to `10` so Base Sepolia free RPC providers
-with tight `eth_getLogs` range limits can still catch delayed events. Increase it
-only for providers with a documented larger logs range. Alchemy's free tier
-rejects anything above 10 with `-32600`; public Base endpoints accept ~900.
+`KEEPER_SCAN_CHUNK_BLOCKS` defaults to `10` so free RPC providers with tight
+`eth_getLogs` range limits can still catch delayed events. Match it to the
+`KEEPER_RPC_HTTP` provider's logs range: Alchemy's free tier rejects anything
+above 10 with `-32600`, public Base endpoints accept 1,000 (Sepolia) to 2,000
+(mainnet), and production runs 1,000 on Infura, which accepted 10,000 in testing.
 
 `KEEPER_SCAN_MAX_CHUNKS_PER_PASS` defaults to `50` and bounds how much ground one
 catch-up pass covers. Without it a cursor that has fallen far behind expands into
@@ -263,16 +266,20 @@ one provider request per chunk with no ceiling — a two-month gap at a 10-block
 chunk size is ~750k `eth_getLogs` calls, which exhausts a monthly quota in days
 and then keeps doing it after every quota reset.
 
-A chunk is not one request. With `KEEPER_SCAN_INDEX_EVENTS_ENABLED=true` a
-gamehub chunk costs five (`BetRandomReady`, then the four index events), and a
-bank-ledger chunk costs two per configured pool (`Deposit` and `Withdraw`),
-plus block timestamp reads when needed. Sports recovery costs one ticket event
-request per chunk, or four when the public ticket feed is enabled, plus four
-market event requests. Budget each independent scanner accordingly.
+Providers bill `eth_getLogs` per call, not per event, so each casino scanner
+fetches a chunk with one call. A gamehub chunk is one `eth_getLogs` for
+`BetPlaced`, `BetRandomReady`, `BetFinalized` and `BetRefunded`, which serves
+both settlement and the index; with index scanning off it asks for
+`BetRandomReady` alone. A bank-ledger chunk is one `eth_getLogs` for `Deposit`
+and `Withdraw` across every configured pool. Block timestamp reads are added only
+when events are found. Sports recovery still costs one ticket event request per
+chunk, or four when the public ticket feed is enabled, plus four market event
+requests. Budget each independent scanner accordingly.
 
 At the 10-block chunk size a 300s pass needs only ~15 chunks to keep pace with
 Base's 2s blocks, so the default leaves roughly 3x headroom and still drains a
-short outage quickly. When a pass is capped the keeper logs
+short outage quickly. Production's 1,000-block chunks and 60-second polls need
+one chunk per pass. When a pass is capped the keeper logs
 `casino.keeper.scan_capped` with the remaining block count. Occasional entries
 after a restart are normal. Sustained capping requires a bounded recovery plan
 with a provider budget and an audit of outstanding bets. **Do not fast-forward
@@ -298,7 +305,17 @@ For dedicated keeper RPC provider apps, set `KEEPER_RPC_MIN_INTERVAL_MS=250` in
 each keeper env file. The keeper then serializes tracked in-process RPC calls
 without adding seconds of avoidable settlement latency after a VRF callback. Use
 `1000` to `2000` only when the keeper shares a severely constrained free-tier
-RPC app with other traffic. This does not coordinate across separate keeper
+RPC app with other traffic. Production runs `1200`: both keepers share one
+Infura free-tier key, whose 500 credits per second they stay under even when
+every call is a 255-credit `eth_getLogs`.
+
+The daily budget on that key (3M credits, reset daily; `eth_getLogs` 255,
+`eth_blockNumber` 80) is set by the poll and ledger intervals. With 60-second
+polls and a 300-second ledger interval, one keeper uses
+`1,440 × (80 + 255) + 288 × (80 + 255)` ≈ 0.58M credits a day, so the mainnet and
+testnet keepers together use about 1.16M. Settlements add a few reads and a
+transaction each. Without WebSocket events, the poll interval is the longest
+wait between a VRF callback and settlement. This does not coordinate across separate keeper
 processes or the web app, so production should still use separate provider
 apps/keys for the browser API, mainnet keeper, and testnet keeper where possible.
 

@@ -18,6 +18,13 @@ vi.mock("@ssot/bet-index", async (importOriginal) => ({
 }));
 
 const hub = "0x0000000000000000000000000000000000000001" as const;
+const INDEX_EVENTS = ["BetPlaced", "BetRandomReady", "BetFinalized", "BetRefunded"];
+type LogQuery = { events: Array<{ name: string }>; fromBlock: bigint };
+const eventNames = (query: LogQuery) => query.events.map((event) => event.name);
+const logQueries = () =>
+  vi
+    .mocked(mock.client.getLogs as ReturnType<typeof vi.fn>)
+    .mock.calls.map(([query]) => query as LogQuery);
 const hash = `0x${"aa".repeat(32)}` as const;
 const base: KeeperConfig = {
   chainId: 8453,
@@ -59,19 +66,18 @@ describe("runtime recovery composition", () => {
     mock.client = {
       getBlockNumber: vi.fn(async () => 120n),
       getBlock: vi.fn(async () => ({ timestamp: 1000n })),
-      getContractEvents: vi.fn(
-        async ({ eventName, fromBlock }: { eventName: string; fromBlock: bigint }) => {
-          if (fromBlock !== 101n || !["BetRandomReady", "BetPlaced"].includes(eventName)) return [];
-          return [
-            {
-              args: { betId: 1n, requestId: 1n },
-              blockNumber: 105n,
-              transactionHash: hash,
-              logIndex: 0
-            }
-          ];
-        }
-      ),
+      getLogs: vi.fn(async (query: LogQuery) => {
+        if (query.fromBlock !== 101n) return [];
+        return eventNames(query)
+          .filter((eventName) => ["BetRandomReady", "BetPlaced"].includes(eventName))
+          .map((eventName) => ({
+            eventName,
+            args: { betId: 1n, requestId: 1n },
+            blockNumber: 105n,
+            transactionHash: hash,
+            logIndex: 0
+          }));
+      }),
       readContract: vi.fn(async () => ({ betId: 1n, requestId: 1n, state: 4 })),
       writeContract: vi.fn(),
       simulateContract: vi.fn()
@@ -92,11 +98,12 @@ describe("runtime recovery composition", () => {
       feeOnPayout: 4_000n,
       protocolFeeAccrual: 2_000n
     };
-    vi.mocked(mock.client.getContractEvents as ReturnType<typeof vi.fn>).mockImplementation(
-      async ({ eventName, fromBlock }) =>
-        eventName === "BetFinalized" && fromBlock === 101n
+    vi.mocked(mock.client.getLogs as ReturnType<typeof vi.fn>).mockImplementation(
+      async (query: LogQuery) =>
+        eventNames(query).includes("BetFinalized") && query.fromBlock === 101n
           ? [
               {
+                eventName: "BetFinalized",
                 args: { positionId: 9n, ...amounts },
                 blockNumber: 105n,
                 transactionHash: hash,
@@ -141,10 +148,11 @@ describe("runtime recovery composition", () => {
       expect(runtime.health.snapshot().status).toBe("degraded");
       await vi.advanceTimersByTimeAsync(300_000);
       expect(await mock.store!.getCursor(8453, "gamehub-events", hub)).toBe(120n);
-      const calls = vi.mocked(mock.client.getContractEvents as ReturnType<typeof vi.fn>).mock.calls;
-      expect(
-        calls.filter(([q]) => q.eventName === "BetRandomReady").map(([q]) => q.fromBlock)
-      ).toEqual(fullScan ? [101n, 101n, 101n, 111n, 111n] : [101n, 101n, 111n]);
+      // One query per range: the failed range once per pass, then the next range.
+      expect(logQueries().map((query) => query.fromBlock)).toEqual([101n, 101n, 111n]);
+      for (const query of logQueries()) {
+        expect(eventNames(query)).toEqual(fullScan ? INDEX_EVENTS : ["BetRandomReady"]);
+      }
       expect(write).toHaveBeenCalled();
     }
   );
@@ -173,12 +181,12 @@ describe("runtime recovery composition", () => {
     expect(await mock.store!.getCursor(8453, "gamehub-events", hub)).toBe(120n);
     expect(runtime.queue.has(1n)).toBe(true);
     await runtime.stop();
-    vi.mocked(mock.client.getContractEvents as ReturnType<typeof vi.fn>).mockClear();
+    vi.mocked(mock.client.getLogs as ReturnType<typeof vi.fn>).mockClear();
     runtime = make();
     await runtime.start();
     await vi.advanceTimersByTimeAsync(0);
     expect(runtime.queue.has(1n)).toBe(true);
-    expect(mock.client.getContractEvents).not.toHaveBeenCalled();
+    expect(mock.client.getLogs).not.toHaveBeenCalled();
   });
 
   it.each([300_000, 0])(
@@ -241,7 +249,43 @@ describe("runtime recovery composition", () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(runtime.queue.has(1n)).toBe(true);
     expect(runtime.health.snapshot().lastScannedBlock).toBe("120");
-    const calls = vi.mocked(mock.client.getContractEvents as ReturnType<typeof vi.fn>).mock.calls;
-    expect(calls.every(([q]) => q.eventName === "BetRandomReady")).toBe(true);
+    expect(logQueries().map(eventNames)).toEqual([["BetRandomReady"], ["BetRandomReady"]]);
+  });
+
+  it("indexes and finalizes from one metered query per range", async () => {
+    runtime = make();
+    await runtime.start();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(runtime.queue.has(1n)).toBe(true);
+    expect(await mock.store!.getCursor(8453, "gamehub-events", hub)).toBe(120n);
+    expect(logQueries().map((query) => query.fromBlock)).toEqual([101n, 111n]);
+    // The heartbeat publishes RPC usage: getLogs is metered and throttled like every tracked method.
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(runtime.health.snapshot().rpc?.total).toMatchObject({ getLogs: 2 });
+  });
+
+  it("recovers indexed bets about every five minutes however short the poll", async () => {
+    const recovery = vi.spyOn(mock.store!, "getRandomReadyBetIds");
+    runtime = make({ ...base, pollIntervalMs: 60_000 });
+    await runtime.start();
+    await vi.advanceTimersByTimeAsync(0); // startup recovery, then the startup scan
+    const afterStart = recovery.mock.calls.length;
+    expect(afterStart).toBe(1);
+    await vi.advanceTimersByTimeAsync(180_000); // scans 2-4
+    expect(recovery.mock.calls.length).toBe(1);
+    await vi.advanceTimersByTimeAsync(60_000); // scan 5
+    expect(recovery.mock.calls.length).toBe(2);
+    await vi.advanceTimersByTimeAsync(300_000); // scans 6-10
+    expect(recovery.mock.calls.length).toBe(3);
+  });
+
+  it("still recovers after every scan at a five-minute poll", async () => {
+    const recovery = vi.spyOn(mock.store!, "getRandomReadyBetIds");
+    runtime = make();
+    await runtime.start();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(recovery.mock.calls.length).toBe(2); // startup recovery and the startup scan
+    await vi.advanceTimersByTimeAsync(300_000);
+    expect(recovery.mock.calls.length).toBe(3);
   });
 });

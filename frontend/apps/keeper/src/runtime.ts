@@ -27,6 +27,12 @@ import { GAME_HUB_KEEPER_ABI, SPORTS_HUB_KEEPER_ABI, VRF_HUB_KEEPER_ABI } from "
 import { fetchBankProviderLedgerRows } from "./bank-provider-ledger.js";
 import { describeError } from "./errors.js";
 import { finalizeIfReady, retryDelayMs } from "./finalizer.js";
+import {
+  fetchGameHubLogs,
+  GAME_HUB_INDEX_EVENTS,
+  type GameHubIndexEventName,
+  type GameHubLog
+} from "./gamehub-logs.js";
 import { createFileHealthSink, KeeperHealthReporter } from "./health.js";
 import { FinalizeQueue, type QueueItem } from "./queue.js";
 import { isScanTruncated, splitBlockRange, type BlockRange } from "./scan.js";
@@ -56,11 +62,17 @@ const SPORTS_TERMINALIZER_EVENTS: SportsTerminalizerEventName[] = [
 const BET_INDEX_CURSOR_SOURCE = "gamehub-events";
 const BANK_PROVIDER_LEDGER_CURSOR_SOURCE = "bank-provider-ledger";
 const CASINO_RECOVERY_PAGE_SIZE = 50;
+/**
+ * Indexed-bet recovery re-reads every requeued bet on chain, so after scans it runs
+ * about this often however short the poll interval is.
+ */
+const CASINO_RECOVERY_INTERVAL_MS = 300_000;
 const RPC_USAGE_WINDOW_MS = 60_000;
 const TRACKED_RPC_METHODS = new Set([
   "getBlock",
   "getBlockNumber",
   "getContractEvents",
+  "getLogs",
   "getTransactionReceipt",
   "readContract",
   "simulateContract",
@@ -251,6 +263,12 @@ export function createKeeperRuntime({
   let bankProviderLedgerLastScannedBlock = config.startBlock ?? 0n;
   let recoveryAfterBetId = 0n;
   let recoveringIndexedBets = false;
+  // Counting scans rather than elapsed time keeps a 300s poll recovering on every scan.
+  const scansPerRecovery =
+    config.pollIntervalMs > 0
+      ? Math.max(1, Math.ceil(CASINO_RECOVERY_INTERVAL_MS / config.pollIntervalMs))
+      : 1;
+  let scansSinceRecovery = 0;
   const betIndexStore =
     config.betIndexWriteEnabled && config.betIndexDatabaseUrl
       ? createPostgresBetIndexStore({
@@ -696,30 +714,35 @@ export function createKeeperRuntime({
       maxChunks: config.scanMaxChunksPerPass
     });
     reportScanCap("gamehub-events", ranges, latest);
+    // One eth_getLogs per range serves both finalization and the bet index.
+    const indexing = config.scanIndexEventsEnabled && betIndexStore !== undefined;
     for (const range of ranges) {
-      const logs = await publicClient.getContractEvents({
-        address: config.gameHub,
-        abi: GAME_HUB_KEEPER_ABI,
-        eventName: "BetRandomReady",
-        fromBlock: range.fromBlock,
-        toBlock: range.toBlock
-      });
-      for (const log of logs) {
-        if (log.args.betId == null) continue;
+      const logsByEvent = await fetchGameHubLogs(
+        publicClient,
+        config.gameHub,
+        indexing ? GAME_HUB_INDEX_EVENTS : ["BetRandomReady"],
+        range
+      );
+      const readyLogs = logsByEvent.get("BetRandomReady") ?? [];
+      for (const log of readyLogs) {
+        const args = log.args as
+          | { betId?: bigint; requestId?: bigint; randomHash?: Hex }
+          | undefined;
+        if (args?.betId == null) continue;
         enqueue({
           source: "scan",
-          betId: BigInt(log.args.betId),
-          requestId: log.args.requestId == null ? undefined : BigInt(log.args.requestId),
-          randomHash: log.args.randomHash,
+          betId: BigInt(args.betId),
+          requestId: args.requestId == null ? undefined : BigInt(args.requestId),
+          randomHash: args.randomHash,
           blockNumber: log.blockNumber,
           txHash: log.transactionHash,
           receivedAt: Date.now()
         });
       }
       if (config.scanIndexEventsEnabled) {
-        await writeBetIndexRange(betIndexStore, publicClient, config, range, logger);
+        await writeBetIndexRange(betIndexStore, publicClient, config, range, logsByEvent, logger);
       } else {
-        await writeBetIndexLogs("BetRandomReady", logs);
+        await writeBetIndexLogs("BetRandomReady", readyLogs);
         if (betIndexStore) {
           await betIndexStore.setCursor({
             blockNumber: range.toBlock,
@@ -767,7 +790,11 @@ export function createKeeperRuntime({
       try {
         await scanMissedEvents();
       } finally {
-        await requeueIndexedBets();
+        scansSinceRecovery += 1;
+        if (scansSinceRecovery >= scansPerRecovery) {
+          scansSinceRecovery = 0;
+          await requeueIndexedBets();
+        }
       }
     } catch (error) {
       const description = describeError(error);
@@ -956,23 +983,13 @@ async function writeBetIndexRange(
   publicClient: PublicClient,
   config: KeeperConfig,
   range: { fromBlock: bigint; toBlock: bigint },
+  logsByEvent: ReadonlyMap<GameHubIndexEventName, GameHubLog[]>,
   logger: KeeperLogger
 ) {
   if (!store) return;
   try {
-    for (const eventName of [
-      "BetPlaced",
-      "BetRandomReady",
-      "BetFinalized",
-      "BetRefunded"
-    ] as const) {
-      const logs = await publicClient.getContractEvents({
-        address: config.gameHub,
-        abi: GAME_HUB_KEEPER_ABI,
-        eventName,
-        fromBlock: range.fromBlock,
-        toBlock: range.toBlock
-      });
+    for (const eventName of GAME_HUB_INDEX_EVENTS) {
+      const logs = logsByEvent.get(eventName) ?? [];
       const stampedLogs = await attachBlockTimestamps(publicClient, logs);
       const events = stampedLogs
         .map((log) => toBetIndexEvent(config.chainId, config.gameHub, eventName, log))
@@ -1003,13 +1020,13 @@ async function writeBankProviderLedgerRange(
   logger: KeeperLogger
 ) {
   try {
-    for (const pool of config.bankProviderLedgerPools) {
-      const rows = await fetchBankProviderLedgerRows({
-        chainId: config.chainId,
-        pool,
-        publicClient,
-        range
-      });
+    const rowsByPool = await fetchBankProviderLedgerRows({
+      chainId: config.chainId,
+      pools: config.bankProviderLedgerPools,
+      publicClient,
+      range
+    });
+    for (const { rows } of rowsByPool) {
       await store.writeBankProviderLedgerRows(rows);
     }
     await store.setCursor({
