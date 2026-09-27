@@ -27,6 +27,7 @@ import {SlotsParams} from "../../src/modules/slots/SlotsParams.sol";
 import {ReferralRegistry} from "../../src/engines/referral/ReferralRegistry.sol";
 import {DefaultReferralEngine} from "../../src/engines/referral/DefaultReferralEngine.sol";
 import {IGameHub} from "../../src/core/interfaces/IGameHub.sol";
+import {IBank} from "../../src/core/interfaces/IBank.sol";
 import {SSOTTypes} from "../../src/core/interfaces/SSOTTypes.sol";
 import {IGameModule} from "../../src/core/interfaces/IGameModule.sol";
 
@@ -371,13 +372,13 @@ contract StatefulSystemDiff is Test {
         address affiliate,
         uint16 maxHE,
         uint256 msgValue
-    ) internal virtual returns (uint256 betId, bool ok) {
+    ) internal virtual returns (uint256 betId, bool ok, bytes memory reason) {
         uint64 poolId = _poolIdForAsset(asset);
         vm.prank(player);
         try hub.placeBet{value: msgValue}(gameId, poolId, params, spec, affiliate, maxHE) returns (uint256 id) {
-            return (id, true);
-        } catch {
-            return (0, false);
+            return (id, true, "");
+        } catch (bytes memory err) {
+            return (0, false, err);
         }
     }
 
@@ -393,6 +394,27 @@ contract StatefulSystemDiff is Test {
         if (asset == address(assetA)) return POOL_A;
         if (asset == address(assetB)) return POOL_B;
         revert("unknown asset");
+    }
+
+    // Outcome counters for one run. Every rejected placement must be explained, and a run must accept and
+    // settle bets, so a regression that makes placement fail cannot pass as "all bets rejected".
+    uint256 internal nAccepted;
+    uint256 internal nFinalized;
+    uint256 internal nRefunded;
+    uint256 internal nRejectedByEdge;
+    uint256 internal nRejectedBySolvency;
+
+    /// @dev Measured over 36 runs of 24 steps: 420 rejections for the edge, 4 for solvency, nothing else.
+    function _recordRejection(bool pricingAccepted, bytes memory reason) internal {
+        bytes4 selector = reason.length >= 4 ? bytes4(reason) : bytes4(0);
+        if (!pricingAccepted) {
+            assertEq(selector, IGameHub.HouseEdgeTooHigh.selector, "bet above the player's max edge rejected otherwise");
+            nRejectedByEdge++;
+        } else {
+            // A correctly priced bet may only be refused because the Bank cannot cover its reserve.
+            assertEq(selector, IBank.SolvencyViolation.selector, "correctly priced bet rejected unexpectedly");
+            nRejectedBySolvency++;
+        }
     }
 
     function testFuzz_stateful_system_diff(uint256 seed) external {
@@ -508,14 +530,16 @@ contract StatefulSystemDiff is Test {
             RefPricing memory pricing = _modelComputePricing(player, affiliate, maxHE);
 
             // execute placeBet (may legitimately fail)
-            uint256 betId = _doPlaceBet(player, gameId, asset, params, spec, affiliate, maxHE);
+            (uint256 betId, bytes memory reason) = _doPlaceBet(player, gameId, asset, params, spec, affiliate, maxHE);
             if (betId == 0) {
+                _recordRejection(pricing.accepted, reason);
                 // placeBet reverted => no on-chain state change, roll back any speculative first-touch bind
                 mReferrer[player] = oldRef;
                 _assertBankMatches(asset);
                 continue;
             }
             assertTrue(pricing.accepted, "hub accepted a bet above the player's max house edge");
+            nAccepted++;
 
             // assert placement snapshot matches reference pricing
             {
@@ -552,6 +576,7 @@ contract StatefulSystemDiff is Test {
                 _modelRefund(betId, asset);
                 vm.prank(anyone);
                 _hubRefund(betId);
+                nRefunded++;
 
                 // late fulfill should have no effect
                 uint256 requestId = _hubGetBet(betId).requestId;
@@ -571,11 +596,16 @@ contract StatefulSystemDiff is Test {
                 vm.prank(anyone);
                 _hubFinalize(betId);
                 assertEq(hub.getBetTerminal(betId).protocolFeeAccrual, expectedPF, "terminal protocol fee");
+                nFinalized++;
             }
 
             // post-check: key bank + per-payee bucket values
             _assertBankMatches(asset);
         }
+
+        // About half the steps are accepted, so a run with none (p ~ 6e-8 over 24 steps) means placement broke.
+        assertGt(nAccepted, 0, "no bet was accepted");
+        assertEq(nFinalized + nRefunded, nAccepted, "an accepted bet was not settled or refunded");
     }
 
     // -------------------------
@@ -737,16 +767,15 @@ contract StatefulSystemDiff is Test {
         SSOTTypes.StakeSpec memory spec,
         address affiliate,
         uint16 maxHE
-    ) internal returns (uint256 betId) {
-        // Risk-in can legitimately fail (pause, solvency, invalid params, etc.).
-        // The diff model must treat such failures as "bet rejected" (no state change).
+    ) internal returns (uint256 betId, bytes memory reason) {
+        // A rejected bet changes no state; the runner checks that the rejection was expected.
         (uint256 fee,) = _hubQuoteVRFFee(spec.betCount);
         uint256 overpay = _vrfOverpayWei(player, spec.betCount, fee);
         uint256 msgValue = fee + overpay;
         bool ok;
-        (betId, ok) = _hubPlaceBet(player, gameId, asset, params, spec, affiliate, maxHE, msgValue);
+        (betId, ok, reason) = _hubPlaceBet(player, gameId, asset, params, spec, affiliate, maxHE, msgValue);
         if (!ok) {
-            return 0;
+            return (0, reason);
         }
 
         // On success, model the risk-in transfers using the *actual* on-chain snapshot.
