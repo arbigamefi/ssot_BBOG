@@ -70,6 +70,11 @@ folded by chain id plus id.
 
 ## 4. Backup
 
+Production (v1.5) runs the bet index in self-hosted Postgres inside Docker, not
+a managed service. Its daily dumps, restore drill and rebuild after losing the
+host are in [bet-index-backup.zh-CN.md](bet-index-backup.zh-CN.md). The steps
+below apply to a managed database.
+
 Before public traffic, record the managed provider's backup policy and run one
 manual logical backup:
 
