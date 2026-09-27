@@ -11,6 +11,7 @@ import {
 } from "viem";
 import { getCasinoFinancials } from "@ssot/bet-index/financials";
 import { readSettledBetRefund } from "@ssot/bet-index/terminal-refund";
+import { decodeHouseEdgeLog } from "@ssot/bet-index/house-edge";
 import { createPostgresBetIndexStore, type BetIndexStore } from "@ssot/bet-index";
 import { applyGameHubEventToBet, type BetRow, type GameHubEventName } from "@ssot/ssot/indexer";
 import { loadEmbeddedRelease, type SSOTRelease } from "@ssot/ssot/release";
@@ -616,7 +617,7 @@ export async function queryBetReceipt({
       numberEnv("BET_RECEIPT_RPC_TIMEOUT_MS", DEFAULT_RECEIPT_RPC_TIMEOUT_MS)
     ).catch(() => null);
     if (proven) {
-      row = { ...row, ...proven };
+      row = { ...row, ...proven.row };
       enriched = true;
     }
   }
@@ -693,7 +694,7 @@ export async function materializeBetReceipt({
     };
   }
 
-  const row = await queryBetReceiptTerminalTxFallback({
+  const proof = await queryBetReceiptTerminalTxFallback({
     betId: normalizedBetId,
     chainId,
     client,
@@ -702,7 +703,7 @@ export async function materializeBetReceipt({
     terminalTxHash
   });
 
-  if (!row) {
+  if (!proof) {
     return {
       schemaVersion: 1,
       betId: normalizedBetId,
@@ -714,6 +715,7 @@ export async function materializeBetReceipt({
     };
   }
 
+  const { houseEdgeEvent, row } = proof;
   if (!store) {
     return {
       schemaVersion: 1,
@@ -728,6 +730,8 @@ export async function materializeBetReceipt({
 
   try {
     await store.writeBetRows([row]);
+    // The index reads a bet's allocation from its event, so the receipt stores the event itself.
+    if (houseEdgeEvent) await store.writeGameHubEvents([houseEdgeEvent]);
   } catch {
     return {
       schemaVersion: 1,
@@ -798,6 +802,16 @@ async function queryBetReceiptTerminalTxFallback({
         : undefined;
     const updatedAt = blockTimestamp ?? now();
     const updatedBlock = txReceipt.blockNumber ? Number(txReceipt.blockNumber) : 0;
+    const houseEdgeEvent =
+      terminal.eventName === "BetFinalized"
+        ? decodeHouseEdgeLog({
+            betId: receiptBetId,
+            blockTimestamp: updatedAt,
+            chainId,
+            gameHub: loaded.gameHub,
+            receipt: txReceipt
+          })
+        : null;
     const row: BetRow & { gameHub: Address } = {
       asset: getAddress(bet.asset) as Address,
       betId,
@@ -835,10 +849,27 @@ async function queryBetReceiptTerminalTxFallback({
       row.refundAmount = bigintStringFromUnknown(terminal.args.refundAmount);
       row.payout = row.refundAmount;
     }
-    return row;
+    const houseEdge = houseEdgeEvent ? houseEdgeFromEvent(houseEdgeEvent.args) : undefined;
+    if (houseEdge) row.houseEdge = houseEdge;
+    return { houseEdgeEvent, row };
   } catch {
     return null;
   }
+}
+
+function houseEdgeFromEvent(args: Record<string, unknown>): BetRow["houseEdge"] {
+  return {
+    edge: bigintStringFromUnknown(args.edge),
+    effectiveHouseEdgeBps: Number(args.effectiveHouseEdgeBps),
+    lpRetained: bigintStringFromUnknown(args.lpRetained),
+    markup: bigintStringFromUnknown(args.markup),
+    operatorShare: bigintStringFromUnknown(args.operatorShare),
+    protocolFee: bigintStringFromUnknown(args.protocolFee),
+    r0: bigintStringFromUnknown(args.r0),
+    r1: bigintStringFromUnknown(args.r1),
+    r2: bigintStringFromUnknown(args.r2),
+    usedTurnover: bigintStringFromUnknown(args.usedTurnover)
+  };
 }
 
 function decodeTerminalReceiptLog({

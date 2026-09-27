@@ -58,6 +58,24 @@ export const GAME_HUB_KEEPER_ABI = [
     ]
   },
   {
+    // v1.6: emitted by finalize, before BetFinalized. v1.5 hubs never emit it.
+    type: "event",
+    name: "HouseEdgeAllocated",
+    inputs: [
+      { indexed: true, name: "positionId", type: "uint256" },
+      { indexed: false, name: "usedTurnover", type: "uint256" },
+      { indexed: false, name: "effectiveHouseEdgeBps", type: "uint16" },
+      { indexed: false, name: "edge", type: "uint256" },
+      { indexed: false, name: "operatorShare", type: "uint256" },
+      { indexed: false, name: "lpRetained", type: "uint256" },
+      { indexed: false, name: "protocolFee", type: "uint256" },
+      { indexed: false, name: "r0", type: "uint256" },
+      { indexed: false, name: "r1", type: "uint256" },
+      { indexed: false, name: "r2", type: "uint256" },
+      { indexed: false, name: "markup", type: "uint256" }
+    ]
+  },
+  {
     type: "function",
     name: "finalize",
     stateMutability: "nonpayable",

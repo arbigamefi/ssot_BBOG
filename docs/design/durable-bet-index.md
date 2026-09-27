@@ -151,6 +151,19 @@ stops if a row has no such event. The change is one way: an image from before
 it cannot write the new key, so rolling back needs the dump taken before the
 upgrade.
 
+### House-edge allocation (v1.6)
+
+A v1.6 `GameHub` emits `HouseEdgeAllocated` when it settles a bet: the used
+turnover, the effective edge, and how the edge splits between LPs, referral
+levels L0 to L2, affiliate markup and the protocol fee. The index stores it in
+`gamehub_events` like the other events, but it never changes a bet's lifecycle:
+the fold that maintains `bets` skips it, so it can arrive before or after
+`BetFinalized` without moving the bet's state. Bet reads attach it as
+`houseEdge` through a lateral join on `gamehub_events_recovery_idx`.
+`writeBetRows` ignores a `houseEdge` passed with a row; the keeper and receipt
+hydration store the event itself from the settlement receipt. v1.5 hubs, refunds
+and unsettled bets have no allocation.
+
 `sport_tickets` is still keyed by `(chain_id, ticket_id)`. No release has a
 `SportsHub` yet; key tickets by hub the same way before the first one does.
 

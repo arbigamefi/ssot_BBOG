@@ -23,15 +23,16 @@ import {
   type SportsTicketIndexEvent
 } from "@ssot/bet-index";
 
+import { decodeHouseEdgeLog } from "@ssot/bet-index/house-edge";
 import { GAME_HUB_KEEPER_ABI, SPORTS_HUB_KEEPER_ABI, VRF_HUB_KEEPER_ABI } from "./abi.js";
 import { fetchBankProviderLedgerRows } from "./bank-provider-ledger.js";
 import { describeError } from "./errors.js";
 import { finalizeIfReady, retryDelayMs } from "./finalizer.js";
 import {
-  fetchGameHubLogs,
   GAME_HUB_INDEX_EVENTS,
   type GameHubIndexEventName,
-  type GameHubLog
+  type GameHubLog,
+  fetchGameHubLogs
 } from "./gamehub-logs.js";
 import { createFileHealthSink, KeeperHealthReporter } from "./health.js";
 import { FinalizeQueue, type QueueItem } from "./queue.js";
@@ -360,7 +361,7 @@ export function createKeeperRuntime({
 
   const materializeCasinoReceipt = async (event: KeeperEvent, txHash: Hex) => {
     if (!betIndexStore) return;
-    const row = await buildTerminalBetRow({
+    const { row, houseEdge } = await buildTerminalBetRow({
       betId: event.betId,
       chainId: config.chainId,
       gameHub: config.gameHub,
@@ -368,6 +369,7 @@ export function createKeeperRuntime({
       txHash
     });
     await betIndexStore.writeBetRows([row]);
+    if (houseEdge) await betIndexStore.writeGameHubEvents([houseEdge]);
     logger.info("casino.keeper.receipt_materialized", {
       betId: event.betId.toString(),
       eventName: row.lastEventName,
@@ -1156,7 +1158,7 @@ async function buildTerminalBetRow({
   gameHub: Address;
   publicClient: PublicClient;
   txHash: Hex;
-}): Promise<BetRow> {
+}): Promise<{ row: BetRow; houseEdge: BetIndexEvent | null }> {
   const [bet, receipt] = await Promise.all([
     publicClient.readContract({
       address: gameHub,
@@ -1219,7 +1221,10 @@ async function buildTerminalBetRow({
     row.payout = row.refundAmount;
   }
 
-  return row;
+  return {
+    row,
+    houseEdge: decodeHouseEdgeLog({ betId, blockTimestamp: updatedAt, chainId, gameHub, receipt })
+  };
 }
 
 function decodeTerminalLog({

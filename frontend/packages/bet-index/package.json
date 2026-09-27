@@ -14,6 +14,10 @@
       "types": "./dist/terminal-refund.d.ts",
       "import": "./dist/terminal-refund.js"
     },
+    "./house-edge": {
+      "types": "./dist/house-edge.d.ts",
+      "import": "./dist/house-edge.js"
+    },
     "./financials": {
       "types": "./dist/financials.d.ts",
       "import": "./dist/financials.js"
