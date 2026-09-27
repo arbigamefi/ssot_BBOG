@@ -29,7 +29,8 @@ The contract sources implement the v1.6 allocation ([SSOT v1.6](../constitution/
 edge and referral rewards are paid from the operator's 50%. The deploy script keeps its V15 name until the
 v1.6 release. For the parameters of the live v1.5 deployment, read this file at commit `7ee449b88`.
 
-- `REFUND_TIMEOUT_SECONDS` (default `3600`): when a player can claim a timeout refund.
+- `REFUND_TIMEOUT_SECONDS` (default `3600`, at most `86400`): when a player can claim a timeout refund. The
+  hub refuses a longer timeout at deployment and later.
 - `DEFAULT_HOUSE_EDGE_BPS` (default `200` = 2%): the initial base edge, `1..500`. Later changes are queued
   on chain and take effect after 7 days.
 

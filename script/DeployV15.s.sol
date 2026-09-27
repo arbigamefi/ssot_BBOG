@@ -362,6 +362,9 @@ contract DeployV15 is Script {
             revert("REQUEST_GAS_PRICE_WEI required off local chain");
         }
         cfg.refundTimeoutSeconds = vm.envOr("REFUND_TIMEOUT_SECONDS", uint256(3600));
+        require(
+            cfg.refundTimeoutSeconds <= HouseEdgeLib.MAX_REFUND_TIMEOUT_SECONDS, "REFUND_TIMEOUT_SECONDS above one day"
+        );
         cfg.defaultHouseEdgeBps = _bps("DEFAULT_HOUSE_EDGE_BPS", 200);
         require(
             cfg.defaultHouseEdgeBps > 0 && cfg.defaultHouseEdgeBps <= HouseEdgeLib.MAX_HOUSE_EDGE_BPS,

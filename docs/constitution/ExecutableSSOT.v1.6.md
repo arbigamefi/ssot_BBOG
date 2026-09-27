@@ -93,8 +93,8 @@ For every settled sports position: `PF_new = XP_new = 0` and `edge[i] = 0`.
 
 ### G1. Constants
 
-`LP_SHARE_BPS = 5000`, `MAX_REFERRAL_BPS = 3500`, `MAX_HOUSE_EDGE_BPS = 500` and
-`EDGE_CHANGE_DELAY = 7 days` have no setter.
+`LP_SHARE_BPS = 5000`, `MAX_REFERRAL_BPS = 3500`, `MAX_HOUSE_EDGE_BPS = 500`,
+`EDGE_CHANGE_DELAY = 7 days` and `MAX_REFUND_TIMEOUT_SECONDS = 1 day` have no setter.
 
 ### G2. Delayed changes
 
@@ -109,23 +109,30 @@ No referral schedule with `l0 + l1 + l2 > MAX_REFERRAL_BPS` can be created or ac
 
 The guardian can pause and cannot change any allocation parameter.
 
+### G5. Refund timeout bound
+
+No refund timeout above `MAX_REFUND_TIMEOUT_SECONDS` can be set, at deployment or later. A bet still pending
+VRF is therefore refundable at most one day after placement, and `placedAt + refundTimeoutSeconds` cannot
+overflow.
+
 ## Test mapping
 
-| Obligation | Tests |
-| --- | --- |
-| A1 Conservation | `HouseEdgeAllocationV16`: worked examples and `testFuzz_allocationConservesTheEdge`; `StatefulSystemDiff` recomputes every settlement independently |
-| A2 LP floor at the Router | `SettlementRouter.t.sol` cap tests and `testFuzz_settlementAcceptedIffWithinOperatorShare`; `SettlementRouterInvariants.invariant_allocation_never_exceeds_operator_share` |
-| A3 Referral cap | `testFuzz_allocationConservesTheEdge`; `test_scheduleCapAndVersions` |
-| A4 Payee existence | `test_workedExample_noReferrer`, `test_nothingIsPaidBeyondL2`, fuzzed chains of depth 0 to 2 |
-| A5 Unclaimed share to protocol | worked examples; `test_roundingRemaindersAccrueToProtocol` |
-| A6 Refunds allocate nothing | `test_timeoutRefundAllocatesNothing`, `test_partialRefundAllocatesOnUsedTurnoverOnly`; `SecurityFixes` invalid-result refunds |
-| A7 Non-retroactivity | `test_bindingAfterAcceptanceDoesNotAddPayees`, `test_uplineBindingAfterAcceptanceDoesNotAddL2`, `test_scheduleChangeAfterAcceptanceDoesNotApply`, `test_baseEdgeChangeWaitsForDelayAndIsNotRetroactive`; `StatefulSystemDiff` late bindings and governance changes |
-| A8 Edge bound | `test_openPosition_rejectsEdgeAboveMax` and the Router invariant; `test_markupStartsDisabled`, `test_staleAffiliateEdgeIsClampedToTheCurrentCap`, `test_staleAffiliateEdgeIsClampedToALowerCap` |
-| A9 Sports positions | `SportsHubTicket` asserts edge `0`; `test_zeroEdgePositionCannotAccrueAnything` |
-| B1 NAV identity, B2 solvency | checked after every settlement in `HouseEdgeAllocationV16`; `BankInvariants` |
-| G1 Constants | `test_constants` |
-| G2 Delayed changes | `test_baseEdgeChangeWaitsForDelayAndIsNotRetroactive`, `test_markupIncreaseWaitsForDelay_decreaseIsImmediate`, `test_cancelledBaseEdgeChangeCannotActivate` |
-| G3 Schedule validity | `test_scheduleCapAndVersions`; `SecurityFixes` referral-config tests |
-| G4 Guardian scope | `test_onlyGovernanceChangesAllocationParameters` |
+| Obligation                     | Tests                                                                                                                                                                                                                                                              |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| A1 Conservation                | `HouseEdgeAllocationV16`: worked examples and `testFuzz_allocationConservesTheEdge`; `StatefulSystemDiff` recomputes every settlement independently                                                                                                                |
+| A2 LP floor at the Router      | `SettlementRouter.t.sol` cap tests and `testFuzz_settlementAcceptedIffWithinOperatorShare`; `SettlementRouterInvariants.invariant_allocation_never_exceeds_operator_share`                                                                                         |
+| A3 Referral cap                | `testFuzz_allocationConservesTheEdge`; `test_scheduleCapAndVersions`                                                                                                                                                                                               |
+| A4 Payee existence             | `test_workedExample_noReferrer`, `test_nothingIsPaidBeyondL2`, fuzzed chains of depth 0 to 2                                                                                                                                                                       |
+| A5 Unclaimed share to protocol | worked examples; `test_roundingRemaindersAccrueToProtocol`                                                                                                                                                                                                         |
+| A6 Refunds allocate nothing    | `test_timeoutRefundAllocatesNothing`, `test_partialRefundAllocatesOnUsedTurnoverOnly`; `SecurityFixes` invalid-result refunds                                                                                                                                      |
+| A7 Non-retroactivity           | `test_bindingAfterAcceptanceDoesNotAddPayees`, `test_uplineBindingAfterAcceptanceDoesNotAddL2`, `test_scheduleChangeAfterAcceptanceDoesNotApply`, `test_baseEdgeChangeWaitsForDelayAndIsNotRetroactive`; `StatefulSystemDiff` late bindings and governance changes |
+| A8 Edge bound                  | `test_openPosition_rejectsEdgeAboveMax` and the Router invariant; `test_markupStartsDisabled`, `test_staleAffiliateEdgeIsClampedToTheCurrentCap`, `test_staleAffiliateEdgeIsClampedToALowerCap`                                                                    |
+| A9 Sports positions            | `SportsHubTicket` asserts edge `0`; `test_zeroEdgePositionCannotAccrueAnything`                                                                                                                                                                                    |
+| B1 NAV identity, B2 solvency   | checked after every settlement in `HouseEdgeAllocationV16`; `BankInvariants`                                                                                                                                                                                       |
+| G1 Constants                   | `test_constants`                                                                                                                                                                                                                                                   |
+| G2 Delayed changes             | `test_baseEdgeChangeWaitsForDelayAndIsNotRetroactive`, `test_markupIncreaseWaitsForDelay_decreaseIsImmediate`, `test_cancelledBaseEdgeChangeCannotActivate`                                                                                                        |
+| G3 Schedule validity           | `test_scheduleCapAndVersions`; `SecurityFixes` referral-config tests                                                                                                                                                                                               |
+| G4 Guardian scope              | `test_onlyGovernanceChangesAllocationParameters`                                                                                                                                                                                                                   |
+| G5 Refund timeout bound        | `test_refundTimeoutIsBoundedToOneDay`, `test_constructorRefusesARefundTimeoutAboveOneDay`; `DeploymentV15.testRefundTimeoutAboveOneDayIsRefusedBeforeBroadcast`                                                                                                    |
 
 Unless another file is named, tests are in `test/unit/HouseEdgeAllocationV16.t.sol`.

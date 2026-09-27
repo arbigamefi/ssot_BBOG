@@ -22,6 +22,11 @@ library HouseEdgeLib {
     /// @notice Minimum time between queueing and activating a base-edge change or a markup-cap increase.
     uint256 internal constant EDGE_CHANGE_DELAY = 7 days;
 
+    /// @notice Longest refund timeout the casino hub accepts, so governance can delay the refund of an
+    ///         unfulfilled bet by at most a day. Kept here with the other release-unit constants so the
+    ///         deploy script checks the same value.
+    uint256 internal constant MAX_REFUND_TIMEOUT_SECONDS = 1 days;
+
     /// @notice Turnover edge: floor(usedTurnover * edgeBps / 10000).
     function turnoverEdge(uint256 usedTurnover, uint256 edgeBps) internal pure returns (uint256) {
         return Math.mulDiv(usedTurnover, edgeBps, BPS);

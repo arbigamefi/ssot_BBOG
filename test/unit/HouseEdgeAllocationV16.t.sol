@@ -459,6 +459,38 @@ contract HouseEdgeAllocationV16Test is Test {
         assertEq(hub.MAX_REFERRAL_BPS(), 3500);
         assertEq(hub.MAX_HOUSE_EDGE_BPS(), 500);
         assertEq(hub.EDGE_CHANGE_DELAY(), 7 days);
+        assertEq(hub.MAX_REFUND_TIMEOUT_SECONDS(), 1 days);
+    }
+
+    // Audit O-06: governance can delay refunds of unfulfilled bets by at most a day, and the timeout can no longer
+    // be set so high that `placedAt + refundTimeoutSeconds` overflows.
+    function test_refundTimeoutIsBoundedToOneDay() external {
+        vm.prank(dave);
+        vm.expectRevert(Errors.Unauthorized.selector);
+        hub.setRefundTimeout(60);
+
+        vm.startPrank(gov);
+        hub.setRefundTimeout(1 days);
+        vm.expectRevert(abi.encodeWithSelector(IGameHub.InvalidRefundTimeout.selector, uint256(1 days + 1)));
+        hub.setRefundTimeout(1 days + 1);
+        vm.expectRevert(abi.encodeWithSelector(IGameHub.InvalidRefundTimeout.selector, type(uint256).max));
+        hub.setRefundTimeout(type(uint256).max);
+        vm.stopPrank();
+        assertEq(hub.refundTimeoutSeconds(), 1 days);
+
+        // A bet placed under the longest timeout is refundable after it.
+        uint256 id = _place(DICE, abi.encode(true, uint8(50)), STAKE, 1, 0, address(0));
+        vm.warp(uint256(hub.getBet(id).placedAt) + 1 days);
+        hub.refund(id);
+        assertEq(uint256(hub.getBet(id).state), uint256(SSOTTypes.BetState.Refunded));
+    }
+
+    function test_constructorRefusesARefundTimeoutAboveOneDay() external {
+        address engine = address(new DefaultReferralEngine());
+        vm.expectRevert(abi.encodeWithSelector(IGameHub.InvalidRefundTimeout.selector, uint256(1 days + 1)));
+        new GameHub(
+            address(router), address(vrf), address(refRegistry), engine, gov, 1 days + 1, 200, 1000, 2000, 500, 3000
+        );
     }
 
     function test_edgeBoundsAreEnforced() external {

@@ -107,7 +107,7 @@ A position that ends in a pure refund, including a VRF timeout refund, MUST allo
 - If markup is enabled, the player's `maxHouseEdgeBps` check at placement continues to apply, and `h_e` MUST
   NOT exceed `MAX_HOUSE_EDGE_BPS`.
 - An affiliate's stored edge MUST be clamped to the current cap `min(h_b + maxAffiliateDeltaBps,
-  MAX_HOUSE_EDGE_BPS)` when a bet is priced, so a lower cap or base edge applies to new bets at once.
+MAX_HOUSE_EDGE_BPS)` when a bet is priced, so a lower cap or base edge applies to new bets at once.
 - The markup operator share is `M_total = floor(E_Δ × (10000 − LP_SHARE_BPS) / 10000)`. It MUST be paid to the
   snapshotted skyline payees in proportion to their increments, each share rounded down. Any unallocated
   remainder accrues to `PF_new`.
@@ -138,6 +138,7 @@ result or the correctness of `payoutGross`; module review, randomness and hub au
 | Base edge `h_b`                                                               | governance (Safe) | MUST be queued and MAY be activated only after `EDGE_CHANGE_DELAY`; applies to bets accepted after activation |
 | `maxAffiliateDeltaBps`                                                        | governance (Safe) | Increases MUST be queued with `EDGE_CHANGE_DELAY`; decreases MAY take effect immediately                      |
 | Referral schedule `(l0, l1, l2)`                                              | governance (Safe) | Created as a new immutable version; activation MAY be immediate; applies to bets accepted after activation    |
+| Refund timeout                                                                | governance (Safe) | MUST NOT exceed `MAX_REFUND_TIMEOUT_SECONDS = 1 day`, at deployment or later                                  |
 
 - Every bet MUST snapshot `h_b`, `h_e`, the referral schedule version and its payees.
 - Only governance MAY queue or cancel a delayed change. Once the delay has passed, anyone MAY activate it.

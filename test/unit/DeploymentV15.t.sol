@@ -143,6 +143,7 @@ contract DeploymentV15Test is Test {
         vm.setEnv("POOL_ID_0", "1");
         vm.setEnv("POOL_ID_1", "3");
         vm.setEnv("DEFAULT_HOUSE_EDGE_BPS", "200");
+        vm.setEnv("REFUND_TIMEOUT_SECONDS", "3600");
         vm.setEnv("WRITE_DRY_RUN_ARTIFACTS", "false");
     }
 
@@ -435,5 +436,11 @@ contract DeploymentV15Test is Test {
         vm.prank(bootstrap);
         vm.expectRevert(IGameHub.NoPendingEdgeChange.selector);
         hub.activateEdgeChange(IGameHub.EdgeParam.BaseHouseEdge);
+    }
+
+    function testRefundTimeoutAboveOneDayIsRefusedBeforeBroadcast() public isolatedEnv {
+        vm.setEnv("REFUND_TIMEOUT_SECONDS", vm.toString(uint256(1 days + 1)));
+        vm.expectRevert("REFUND_TIMEOUT_SECONDS above one day");
+        deployer.run();
     }
 }

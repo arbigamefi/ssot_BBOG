@@ -35,6 +35,8 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
     uint16 public constant override MAX_REFERRAL_BPS = HouseEdgeLib.MAX_REFERRAL_BPS;
     uint16 public constant override MAX_HOUSE_EDGE_BPS = HouseEdgeLib.MAX_HOUSE_EDGE_BPS;
     uint256 public constant override EDGE_CHANGE_DELAY = HouseEdgeLib.EDGE_CHANGE_DELAY;
+    /// @dev The bound also keeps `placedAt + refundTimeoutSeconds` from overflowing and blocking refunds.
+    uint256 public constant override MAX_REFUND_TIMEOUT_SECONDS = HouseEdgeLib.MAX_REFUND_TIMEOUT_SECONDS;
 
     address public immutable override settlementRouter;
     address public immutable override vrfHub;
@@ -114,8 +116,7 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
         referralRegistry = referralRegistry_;
         referralEngine = referralEngine_;
 
-        refundTimeoutSeconds = refundTimeoutSeconds_;
-        emit RefundTimeoutSet(refundTimeoutSeconds_);
+        _setRefundTimeout(refundTimeoutSeconds_);
 
         // Affiliate markup starts disabled (SSOT v1.6 section 4); enabling it goes through the delay.
         defaultHouseEdgeBps = defaultHouseEdgeBps_;
@@ -135,6 +136,11 @@ contract GameHub is IGameHub, Governable, ReentrancyGuard {
     // --- governance ---
 
     function setRefundTimeout(uint256 seconds_) external onlyGov {
+        _setRefundTimeout(seconds_);
+    }
+
+    function _setRefundTimeout(uint256 seconds_) private {
+        if (seconds_ > MAX_REFUND_TIMEOUT_SECONDS) revert InvalidRefundTimeout(seconds_);
         refundTimeoutSeconds = seconds_;
         emit RefundTimeoutSet(seconds_);
     }

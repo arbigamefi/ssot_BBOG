@@ -18,6 +18,7 @@ interface IGameHub {
 
     function riskInPaused(uint64 poolId) external view returns (bool);
     function refundTimeoutSeconds() external view returns (uint256);
+    function MAX_REFUND_TIMEOUT_SECONDS() external view returns (uint256);
 
     // --- house-edge allocation constants (SSOT v1.6); no setters exist ---
     function LP_SHARE_BPS() external view returns (uint16);
@@ -159,6 +160,7 @@ interface IGameHub {
     error BetNotFound(uint256 positionId);
     error BadState(uint256 positionId, SSOTTypes.BetState got, SSOTTypes.BetState want);
     error RefundNotReady(uint256 positionId, uint256 nowTs, uint256 readyAt);
+    error InvalidRefundTimeout(uint256 seconds_);
     error NotVRFHub();
     error InsufficientVRFFee(uint256 paid, uint256 required);
     error HouseEdgeTooLow(uint16 got, uint16 minAllowed);
