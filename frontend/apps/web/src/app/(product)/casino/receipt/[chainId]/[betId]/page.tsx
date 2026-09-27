@@ -229,6 +229,57 @@ export default async function CasinoReceiptPage({
           />
         </div>
 
+        {/* Where the house edge went (v1.6 hubs only), from the settlement's event. */}
+        {receiptModel.houseEdge ? (
+          <details className="group min-h-0 border-b border-border-soft">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-fg-subtle transition-colors hover:text-fg">
+              <span>{labels.houseEdge.title}</span>
+              <span className="flex min-w-0 items-center gap-2">
+                <span className="truncate font-mono text-xs normal-case tracking-normal text-fg-muted">
+                  {receiptModel.houseEdge.edgeValue}
+                </span>
+                <ChevronDownIcon className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180" />
+              </span>
+            </summary>
+            <div className="min-w-0 pb-1">
+              <Fact
+                label={labels.houseEdge.edge}
+                value={interpolate(labels.houseEdge.edgeValue, {
+                  amount: receiptModel.houseEdge.edgeValue,
+                  rate: receiptModel.houseEdge.rateLabel,
+                  turnover: receiptModel.houseEdge.turnoverValue
+                })}
+              />
+              <Fact label={labels.houseEdge.lps} value={receiptModel.houseEdge.lpRetainedValue} />
+              {receiptModel.houseEdge.playerRakebackValue ? (
+                <Fact
+                  label={labels.houseEdge.playerRakeback}
+                  value={receiptModel.houseEdge.playerRakebackValue}
+                />
+              ) : null}
+              {receiptModel.houseEdge.referrersValue ? (
+                <Fact
+                  label={labels.houseEdge.referrers}
+                  value={receiptModel.houseEdge.referrersValue}
+                />
+              ) : null}
+              {receiptModel.houseEdge.affiliateMarkupValue ? (
+                <Fact
+                  label={labels.houseEdge.affiliateMarkup}
+                  value={receiptModel.houseEdge.affiliateMarkupValue}
+                />
+              ) : null}
+              <Fact
+                label={labels.houseEdge.protocol}
+                value={receiptModel.houseEdge.protocolFeeValue}
+              />
+              <p className="px-4 pb-2 pt-1 text-[11px] leading-5 text-fg-subtle">
+                {labels.houseEdge.note}
+              </p>
+            </div>
+          </details>
+        ) : null}
+
         {/* Verifiable facts — collapsed by default so the card reads clean on a
             phone, one tap from the full on-chain detail. */}
         <details className="group min-h-0 border-b border-border-soft">

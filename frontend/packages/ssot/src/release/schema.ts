@@ -95,7 +95,9 @@ export const ReleaseSchema = z.object({
     .object({
       blockNumber: z.number().int().nonnegative().optional(),
       schemaVersion: z.literal(2).optional(),
-      generatedAt: z.number().int().optional()
+      generatedAt: z.number().int().optional(),
+      // The signed release lock; its schema names the release line.
+      releaseLock: z.object({ schema: z.string().optional() }).optional()
     })
     .partial()
     .optional()

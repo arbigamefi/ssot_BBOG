@@ -3,6 +3,7 @@ import { useTranslations } from "next-intl";
 import { CircleStackIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
 
 import type { EarnMetric } from "./types";
+import { useLpsKeepHouseEdgeShare } from "./terms";
 
 export function EarnHero({
   symbol,
@@ -14,6 +15,7 @@ export function EarnHero({
   metrics: readonly EarnMetric[];
 }) {
   const t = useTranslations();
+  const lpShare = useLpsKeepHouseEdgeShare();
 
   return (
     <section className="grid gap-5 border-b border-border-soft pb-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(420px,0.7fr)] lg:items-end lg:gap-8 lg:pb-8">
@@ -31,7 +33,7 @@ export function EarnHero({
         </div>
 
         <p className="mt-5 max-w-2xl text-sm leading-6 text-fg-muted sm:text-base sm:leading-7">
-          {t("earn.hero.description")}
+          {t(lpShare ? "earn.hero.descriptionLpShare" : "earn.hero.description")}
         </p>
         <p className="mt-3 max-w-2xl text-xs leading-5 text-fg-subtle sm:text-sm sm:leading-6">
           {t("earn.hero.disclosure")}

@@ -720,6 +720,17 @@
           "lastEvent": "Last event",
           "lastTx": "Last tx"
         },
+        "houseEdge": {
+          "title": "Where the house edge went",
+          "edge": "House edge",
+          "edgeValue": "{amount} · {rate} of {turnover}",
+          "lps": "Kept by LPs",
+          "playerRakeback": "Rakeback",
+          "referrers": "Referrers",
+          "affiliateMarkup": "Referrer markup",
+          "protocol": "Protocol fee",
+          "note": "LPs keep half of the edge. The other half pays referral rewards and any referrer markup; what remains is the protocol fee. Amounts come from this bet's HouseEdgeAllocated event."
+        },
         "actions": {
           "play": "Play this game",
           "explorer": "View transaction",
@@ -2728,6 +2739,7 @@
       "eyebrow": "Bankroll provider",
       "title": "Provide payout capital to the {symbol} pool.",
       "description": "LPs back casino payouts and carry the variance of game results. Under the current v1.5 rules, the house edge accrues to protocol fees and referral rewards, not to LP shares.",
+      "descriptionLpShare": "LPs back casino payouts and carry the variance of game results. Under the v1.6 rules, LPs keep half of every settled bet's house edge; the other half funds referral rewards and protocol fees.",
       "disclosure": "Reserve, share price, and lifetime performance (gross gaming revenue, hold, velocity) are read on-chain from the Bank contract and are verifiable. Only the daily trend chart and max drawdown are indexed and may lag.",
       "bankAddress": "Bank address"
     },
@@ -2839,7 +2851,8 @@
       },
       "depositsClosed": {
         "title": "Mainnet deposits are closed",
-        "body": "Under the current v1.5 rules, LPs carry the variance of game results, while the house edge accrues to protocol fees and referral rewards rather than LP shares. New deposits stay closed on mainnet until the pool terms change. Existing shares can still be withdrawn under the pool's rules."
+        "body": "Under the current v1.5 rules, LPs carry the variance of game results, while the house edge accrues to protocol fees and referral rewards rather than LP shares. New deposits stay closed on mainnet until the pool terms change. Existing shares can still be withdrawn under the pool's rules.",
+        "bodyLpShare": "New deposits stay closed on mainnet until this pool opens them. Existing shares can still be withdrawn under the pool's rules."
       }
     },
     "flows": {
@@ -2946,6 +2959,7 @@
         "d30": "30d"
       },
       "note": "Lifetime gross gaming revenue comes from Bank.getPerformance() on-chain (turnover minus gross payouts). It is not LP profit: the LP share price also reflects the payout fees the pool keeps and the protocol fees and referral rewards accrued against it. Capital velocity is lifetime turnover divided by current chain-read vault assets. The daily chart below is indexed and may lag. Not promised yield.",
+      "noteLpShare": "Lifetime gross gaming revenue comes from Bank.getPerformance() on-chain (turnover minus gross payouts). It is not LP profit: the LP share price also reflects the payout fees the pool keeps and the referral rewards and protocol fees accrued against it, which together take at most half of each bet's house edge. Capital velocity is lifetime turnover divided by current chain-read vault assets. The daily chart below is indexed and may lag. Not promised yield.",
       "equityTitle": "Cumulative gross gaming revenue",
       "peak": "Peak",
       "trough": "Trough",
@@ -3768,7 +3782,7 @@
       },
       {
         "q": "What is house edge?",
-        "a": "House edge is the margin built into each game's payouts. Under the current v1.5 rules it funds protocol fees and referral rewards; it is not paid to LPs. Each game shows its exact current value in the Game Info tab, using the live release configuration rather than a marketing estimate."
+        "a": "House edge is the margin built into each game's payouts. On Base mainnet, under the current v1.5 rules, it funds protocol fees and referral rewards; it is not paid to LPs. Each game shows its exact current value in the Game Info tab, using the live release configuration rather than a marketing estimate."
       },
       {
         "q": "Why is my bet pending?",

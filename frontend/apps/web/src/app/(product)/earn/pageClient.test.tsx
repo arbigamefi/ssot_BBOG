@@ -59,14 +59,15 @@ vi.mock("next-intl", async () => {
   };
 });
 
-vi.mock("../../../ssot/release/ReleaseProvider", () => ({
-  useRelease: () => ({
+vi.mock("../../../ssot/release/ReleaseProvider", () => {
+  const value = () => ({
     release: state.release,
     readOnly: state.readOnly,
     readOnlyReason: state.readOnlyReason,
     chainId: state.chainId
-  })
-}));
+  });
+  return { useRelease: value, useOptionalRelease: value };
+});
 
 vi.mock("../../../ssot/sdk", () => ({
   useSSOTSDK: () => ({
