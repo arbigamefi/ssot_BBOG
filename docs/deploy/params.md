@@ -5,6 +5,7 @@
 This repo intentionally makes the **parameter policy explicit**.
 
 ## VRF / fee
+
 - `VRF_WRAPPER` (required): Chainlink VRF v2.5 Wrapper address on the target chain.
 - `REQUEST_GAS_PRICE_WEI`: used by the wrapper fee estimator.
   - Local-only deployments may leave it at `0`.
@@ -12,10 +13,12 @@ This repo intentionally makes the **parameter policy explicit**.
   - In production you typically set this to a conservative gas price or moving average used by your UI.
 
 ## Explorer verification (optional)
+
 - `ETHERSCAN_API_KEY`: Etherscan-family API key. BaseScan/Arbiscan use the same Etherscan v2 unified key model.
 - `VERIFIER_URL` (optional): override explorer API endpoint (e.g. `https://api.etherscan.io/v2/api?chainid=8453`). If not set, the deploy script chooses a default for Base/Base Sepolia/Arbitrum/Arbitrum Sepolia.
 
 After deploy, the script writes:
+
 - `deployments/latest-v15.json` (+ `deployments/snapshots/deploy-<chainid>-<block>-v15.json`)
 - `deployments/verify-latest-v15.sh` (+ `deployments/verify/verify-<chainid>-<block>-v15.sh`)
 
@@ -31,11 +34,25 @@ v1.6 release. For the parameters of the live v1.5 deployment, read this file at 
   on chain and take effect after 7 days.
 
 Referral schedule, in bps of the base edge (defaults are the ADR-0032 initial rates):
+
 - `REF_L0_BPS` (default `1000`): player rakeback, paid only to players with a referrer.
 - `REF_L1_BPS` (default `2000`): direct referrer.
 - `REF_L2_BPS` (default `500`): the referrer's referrer.
 - `REF_HOLDBACK_BPS` (default `3000`): share of L1, L2 and markup rewards that vests linearly.
 - `REF_L0_BPS + REF_L1_BPS + REF_L2_BPS` must not exceed `3500`.
+
+The rates apply to the base turnover edge `E_b = used turnover × base edge`, not to the operator's half and
+not to the stake. Whatever the operator's half does not pay out, rounding remainders included, is protocol
+fee. At a 2% base edge with markup off, 100 USDC of used turnover gives:
+
+| Case                |  LPs | L0 (player) |   L1 |   L2 | Protocol fee |
+| ------------------- | ---: | ----------: | ---: | ---: | -----------: |
+| No referrer         | 1.00 |           0 |    0 |    0 |         1.00 |
+| Referrer only       | 1.00 |        0.20 | 0.40 |    0 |         0.40 |
+| Referrer and upline | 1.00 |        0.20 | 0.40 | 0.10 |         0.30 |
+
+So referrals take at most 35% of the edge (70% of the operator's half), and the protocol keeps between 15%
+and 50% of the edge.
 
 Affiliate markup always starts disabled; governance can enable it after deployment through the 7-day
 delay. The script refuses the retired v1.5 variables `MAX_AFFILIATE_DELTA_BPS`, `REF_BASE_BUDGET_BPS`,
@@ -44,9 +61,11 @@ delay. The script refuses the retired v1.5 variables `MAX_AFFILIATE_DELTA_BPS`, 
 `MAX_AFFILIATE_DELTA_BPS`.
 
 ## Pool banks
+
 `script/DeployV15.s.sol:DeployV15` uses pools, not assets, as the deployment unit.
 
 For each `i in [0..NUM_POOLS-1]`:
+
 - `POOL_ID_i` (default `i + 1`): protocol risk/accounting domain id.
 - `POOL_ASSET_i` (required): ERC20 address.
 - `POOL_DOMAIN_i` (default `1`): `1=Casino`, `2=Sports`, `3=Future`.
@@ -63,6 +82,7 @@ are registered and wired to `SettlementRouter` but still need their own vertical
 open positions.
 
 When any `POOL_DOMAIN_i=2` pool exists, the following Sports deployment parameters are required:
+
 - `SPORTS_MAX_STAKE`: default per-ticket stake cap in raw asset units.
 - `SPORTS_MAX_PAYOUT`: default per-ticket payout cap in raw asset units.
 - `SPORTS_MAX_MARKET_RESERVED`: default total reserved exposure cap per market.
@@ -83,6 +103,7 @@ When any `POOL_DOMAIN_i=2` pool exists, the following Sports deployment paramete
   on-chain arbitration decision hash.
 
 Optional per-Sports-pool overrides:
+
 - `SPORTS_MAX_STAKE_POOL_i`
 - `SPORTS_MAX_PAYOUT_POOL_i`
 - `SPORTS_MAX_MARKET_RESERVED_POOL_i`
@@ -90,6 +111,7 @@ Optional per-Sports-pool overrides:
 - `SPORTS_MAX_EVENT_RESERVED_POOL_i`
 
 Optional one-address bootstrap allowlists:
+
 - `SPORTS_ODDS_SIGNER`: if set, the deploy script immediately allowlists this address.
 - `SPORTS_RESULT_REPORTER`: if set, the deploy script immediately allowlists this address.
 - `SPORTS_RESULT_CHALLENGER`: if set, the deploy script immediately allowlists this address.
@@ -101,9 +123,11 @@ into the v1.3 snapshot. For production deployments, pick caps per target pool as
 snapshot with `make release-digest-v15`.
 
 ## Callback gas policy (fixed in code)
+
 `GameHub.quoteVRFFee(betCount)` sets `callbackGasLimit = 300k + 20k * betCount`, capped at 2,000,000.
 
 ## Release artifact lock (digest + signature)
+
 These are only needed when you want a tamper-evident release lock for a deployment snapshot.
 
 - `SNAPSHOT_PATH` (optional, default `deployments/latest-v15.json`): snapshot input file.
@@ -111,6 +135,7 @@ These are only needed when you want a tamper-evident release lock for a deployme
 - `GOV` (recommended): if set, the release digest generator enforces that the signer address equals `GOV`.
 
 Commands:
+
 ```bash
 make release-digest
 make release-verify
@@ -118,6 +143,7 @@ STRICT=1 make release-check
 ```
 
 For v1.3 router/pool snapshots:
+
 ```bash
 make release-digest
 make release-notes
