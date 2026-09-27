@@ -60,21 +60,8 @@ contract GameHubRouterTest is Test {
         refRegistry = new ReferralRegistry(gov);
         refEngine = new DefaultReferralEngine();
 
-        uint16[6] memory levelBps;
         gameHub = new GameHub(
-            address(router),
-            address(vrf),
-            address(refRegistry),
-            address(refEngine),
-            gov,
-            3600,
-            200,
-            0,
-            0,
-            0,
-            0,
-            levelBps,
-            1
+            address(router), address(vrf), address(refRegistry), address(refEngine), gov, 3600, 200, 0, 0, 0, 0
         );
 
         vm.startPrank(gov);
@@ -139,10 +126,11 @@ contract GameHubRouterTest is Test {
         assertEq(terminal.payoutGross, 10e6);
         assertEq(terminal.payoutNet, 9_800_000);
         assertEq(terminal.feeOnPayout, 200_000);
-        assertEq(terminal.protocolFeeAccrual, 200_000);
+        // No referrer: the operator half of the 0.2 USDC turnover edge accrues as protocol fees; LPs keep the rest.
+        assertEq(terminal.protocolFeeAccrual, 100_000);
         assertEq(terminal.refundAmount, 0);
         assertEq(bank.totalReserved(), 0);
-        assertEq(bank.protocolFeesPayable(), 200_000);
+        assertEq(bank.protocolFeesPayable(), 100_000);
         assertEq(asset.balanceOf(player), 99_800_000);
     }
 

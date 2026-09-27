@@ -39,6 +39,7 @@ library SSOTTypes {
         uint256 stake;
         uint256 reserved;
         bytes32 snapshotHash;
+        uint16 edgeBps; // house edge recorded at open; caps protocol fees + XP at settlement (SSOT v1.6)
         PositionState state;
     }
 

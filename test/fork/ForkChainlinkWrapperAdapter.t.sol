@@ -87,22 +87,8 @@ contract ForkChainlinkWrapperAdapter is Test {
         ReferralRegistry refReg = new ReferralRegistry(gov);
         DefaultReferralEngine refEng = new DefaultReferralEngine();
 
-        uint16[6] memory levelBps;
-        levelBps[1] = 10_000;
         hub = new GameHub(
-            address(router),
-            address(vrf),
-            address(refReg),
-            address(refEng),
-            gov,
-            3600,
-            200,
-            0,
-            10_000,
-            10_000,
-            3000,
-            levelBps,
-            2
+            address(router), address(vrf), address(refReg), address(refEng), gov, 3600, 200, 1000, 2000, 500, 3000
         );
 
         vm.startPrank(gov);

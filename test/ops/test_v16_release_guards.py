@@ -1,4 +1,4 @@
-"""Exercise v1.5 release boundaries with real entrypoints and synthetic artifacts."""
+"""Exercise v1.6 release boundaries with real entrypoints and synthetic artifacts."""
 import importlib.util
 import json
 import os
@@ -17,9 +17,13 @@ DIGEST = "0x" + "1" * 64
 REAL_CHECK_OUTPUT = subprocess.check_output
 
 
+# Mainnet stays on the v1.5 line while Base Sepolia runs v1.6.
+LINES = {8453: "SSOT_RELEASE_DIGEST_V15", 84532: "SSOT_RELEASE_DIGEST_V16"}
+
+
 def manifest(chain):
     return {"chainId": chain, "releaseDigest": DIGEST,
-            "meta": {"releaseLock": {"schema": "SSOT_RELEASE_DIGEST_V15", "chainId": chain, "digest": DIGEST}},
+            "meta": {"releaseLock": {"schema": LINES[chain], "chainId": chain, "digest": DIGEST}},
             "contracts": {"gameHub": "0x" + "2" * 40}, "assets": [{"bank": "0x" + "3" * 40}]}
 
 
@@ -49,7 +53,7 @@ class ImageGuardTests(unittest.TestCase):
             GUARD.check("image", REVISION)
         self.assertEqual(self.probe_calls, 0)
 
-    def test_old_schema_or_digest_mismatch_rejected_by_actual_probe(self):
+    def test_retired_schema_or_digest_mismatch_rejected_by_actual_probe(self):
         for field, value in [("schema", "SSOT_RELEASE_DIGEST_V14"), ("digest", "0x" + "4" * 64)]:
             with self.subTest(field=field):
                 self.manifests = {str(c): manifest(c) for c in (8453, 84532)}
@@ -77,21 +81,21 @@ class SyncGuardTests(unittest.TestCase):
                 bundle = root / "bundle"
                 (bundle / "deployments").mkdir(parents=True)
                 (bundle / "abis").mkdir()
-                common = {"chainId": 8453, "blockNumber": 100, "architectureVersion": "v1.5-safe-governance"}
-                rows = {"frontend-manifest-latest-v15.json": dict(common), "latest-v15.json": dict(common),
-                        "golden-vectors-latest-v15.json": dict(common),
-                        "release-latest-v15.json": {**common, "schema": "SSOT_RELEASE_DIGEST_V15"}}
+                common = {"chainId": 8453, "blockNumber": 100, "architectureVersion": "v1.6-house-edge-allocation"}
+                rows = {"frontend-manifest-latest-v16.json": dict(common), "latest-v16.json": dict(common),
+                        "golden-vectors-latest-v16.json": dict(common),
+                        "release-latest-v16.json": {**common, "schema": "SSOT_RELEASE_DIGEST_V16"}}
                 if failure == "old-schema":
-                    rows["release-latest-v15.json"]["schema"] = "SSOT_RELEASE_DIGEST_V14"
+                    rows["release-latest-v16.json"]["schema"] = "SSOT_RELEASE_DIGEST_V15"
                 if failure == "wrong-chain":
-                    rows["golden-vectors-latest-v15.json"]["chainId"] = 84532
+                    rows["golden-vectors-latest-v16.json"]["chainId"] = 84532
                 for name, row in rows.items():
                     (bundle / "deployments" / name).write_text(json.dumps(row))
                 (bundle / "abis/index.json").write_text(json.dumps(common))
                 env = {k: v for k, v in os.environ.items() if k not in ("RELEASE_SIGNER", "RPC_URL")}
                 result = subprocess.run(["node", str(ROOT / "frontend/scripts/ssot-sync.mjs"), "--from", str(bundle)], cwd=frontend, env=env, capture_output=True, timeout=10)
                 self.assertNotEqual(result.returncode, 0)
-                expected = {"old-schema": b"Only a v1.5", "wrong-chain": b"Mixed chain or deployment block", "no-trust-anchor": b"trusted RELEASE_SIGNER"}[failure]
+                expected = {"old-schema": b"Only a v1.6", "wrong-chain": b"Mixed chain or deployment block", "no-trust-anchor": b"trusted RELEASE_SIGNER"}[failure]
                 self.assertIn(expected, result.stderr)
                 self.assertEqual(sentinel.read_bytes(), b"existing active release")
                 self.assertEqual(len(list(frontend.rglob("*.json"))), 1)
@@ -115,13 +119,13 @@ class PackageGuardTests(unittest.TestCase):
                    **{key: str(artifact) for key in ["RELEASE_PATH", "SNAPSHOT_PATH", "NOTES_PATH", "FRONTEND_MANIFEST_PATH", "GOLDEN_VECTORS_PATH", "ABIS_INDEX_PATH"]}}
             result = subprocess.run(["bash", str(ROOT / "script/release/package_release.sh")], cwd=root, env=env, capture_output=True, timeout=10)
             self.assertNotEqual(result.returncode, 0)
-            self.assertIn("VerifyGovernanceV15", (root / "forge-call.txt").read_text())
+            self.assertIn("VerifyGovernanceV16", (root / "forge-call.txt").read_text())
             self.assertFalse((root / "dist").exists())
 
 
 class VerifyHelperGuardTests(unittest.TestCase):
     def test_retired_snapshots_cannot_generate_executable_helpers(self):
-        for version in ("v1.3-router", "v1.4-bank"):
+        for version in ("v1.3-router", "v1.4-bank", "v1.5-safe-governance"):
             with self.subTest(version=version), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 snapshot = root / "snapshot.json"
@@ -130,7 +134,7 @@ class VerifyHelperGuardTests(unittest.TestCase):
                 result = subprocess.run(["python3", str(ROOT / "script/tools/gen_verify_helpers.py"),
                                          str(snapshot)], cwd=root, capture_output=True, timeout=10)
                 self.assertEqual(result.returncode, 2)
-                self.assertIn(b"expected a v1.5 Safe-governance snapshot", result.stderr)
+                self.assertIn(b"expected a v1.6 snapshot", result.stderr)
                 self.assertFalse((root / "deployments").exists())
 
 

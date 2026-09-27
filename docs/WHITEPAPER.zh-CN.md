@@ -1,12 +1,12 @@
 # ArbiGameFi 技术白皮书
 
-> 文档编号：AGF-WP-TECH-2026.09-r3 · 文档状态：External Review Draft（外部审阅稿）
+> 文档编号：AGF-WP-TECH-2026.09-r4 · 文档状态：External Review Draft（外部审阅稿）
 >
-> 设计方向日期：2026-09-26 · 语言：zh-CN，附英文摘要 · 架构：Single Source of Truth（SSOT）
+> 设计方向日期：2026-09-26，第 3 节于 2026-09-27 按 SSOT v1.6 重写 · 语言：zh-CN，附英文摘要 · 架构：Single Source of Truth（SSOT）
 >
 > 读者：协议研究者、技术尽调与审计人员、集成开发者、专业 LP 的技术顾问
 >
-> 版本口径：本文选定下一经济版本的技术设计方向；部署事实以独立的 v1.5 发布事实表为准。本稿不表示该设计已经批准发布或上线。
+> 版本口径：本文描述下一经济版本 v1.6 的技术设计，源码已实现、尚未完成外部审计；部署事实以独立的 v1.5 发布事实表为准。本稿不表示 v1.6 已经批准在主网上线。
 
 本文解释 ArbiGameFi 的资金机制、经济约束、结算协议和信任假设，供外部读者判断设计是否自洽、实现应满足哪些条件、哪些风险无法仅由合约消除。商业定位见[项目与商业白皮书](WHITEPAPER.product.zh-CN.md)，简要介绍见[项目简介](ARBIGAMEFI-EXECUTIVE-BRIEF.zh-CN.md)。[产品架构](strategy/fullstack-product-architecture.md)保留整体设计背景；实施状态、历史问题和演进顺序分别由[发布事实表](release/STATUS-v1.5.zh-CN.md)、[系统复盘](audit/RepositoryReview-2026-09-25.zh-CN.md)和[路线图](roadmap.md)承载。
 
@@ -14,7 +14,7 @@
 
 ArbiGameFi 采用按资产与业务域划分的资金池。每个 Bank 是相应资产、LP 份额、应付款和未结算预留的唯一资金账本；SettlementRouter 将每个头寸绑定到固定的资金池及结算主体；GameHub 与 SportsHub 分别处理随机游戏和现实体育事件的业务规则。统一结算内核约束资金如何移动，业务 hub 负责证明某次结算为什么成立。两者缺一不可。
 
-本稿选定的下一经济版本，将 casino 的协议收入与推广奖励限制在实际派彩扣减的费用之内，并将剩余费用留在 LP 净值中。该约束使一笔投注在支付玩家并增加外部应付款之后，对 LP 净值的最大消耗仍可由接受投注时的最大毛赔付预留覆盖。比例需要校准，预算来源与偿付关系已经选定。
+下一经济版本 v1.6 让 LP 固定保留每笔 casino 投注按流水计算的 house edge 的一半；推荐奖励与协议费只能来自另一半，由结算路由按其对头寸的自有记录执行上限。只要每笔投注的预留不低于本金，支付玩家并计提应付款后对 LP 净值的消耗，仍被接受投注时的预留覆盖。
 
 Casino 的结果依赖规则模块、随机数提供方和链上执行；sportsbook 的结果依赖赔率授权、赛事证据、结果报告与争议裁决。两类业务默认使用独立资本，不将随机数可验证性当作现实赛事真实性的证明，也不将账面偿付能力等同于随时退出或长期盈利。
 
@@ -22,7 +22,7 @@ Casino 的结果依赖规则模块、随机数提供方和链上执行；sportsb
 
 ArbiGameFi separates asset accounting, settlement authorization and business-specific outcome determination. Each Bank accounts for one pool's assets, LP shares, external payables and open-position reserves. A settlement router binds positions to their originating hubs, while casino and sportsbook use distinct evidence and capital domains.
 
-The selected design direction for the next economic version allocates protocol and referral payables only from actual casino payout deductions. The remainder stays in LP net asset value. This paper derives the resulting reserve bound, describes share accounting and settlement finality, and identifies the governance, oracle and asset assumptions on which those properties depend. Sports uses independently signed odds and an evidence-based result process. This is an external review draft of the target design; deployed v1.5 behavior and implementation gaps are identified separately.
+The next economic version, v1.6, lets LPs keep a fixed half of every casino bet's turnover house edge. Referral rewards and protocol fees come only from the other half, and the settlement router enforces that cap from its own record of each position. As long as each bet's reserve is at least its stake, the reserve taken when the bet is accepted still covers what its settlement pays out and accrues. This paper derives that bound, describes share accounting and settlement finality, and identifies the governance, oracle and asset assumptions on which those properties depend. Sports uses independently signed odds and an evidence-based result process. v1.6 is implemented in source and not yet audited; deployed v1.5 behavior and implementation gaps are identified separately.
 
 ## 1. 设计问题与架构选择
 
@@ -105,93 +105,114 @@ V = 10^assetDecimals
 
 模型假设资产按请求数量精确转移，且余额不会因 rebase 或转账税自行变化。校验代币 decimals 只保证单位配置一致，不能替代对代币转账语义、冻结权限和发行方风险的判断。
 
-## 3. 下一经济版本：从实际派彩费用分配
+## 3. v1.6：LP 固定保留一半 house edge
 
-> **审阅提示（2026-09-26）：本节描述的"按实际派彩费用分配"方案已被 [ADR-0032](adr/0032-fixed-lp-share-operator-funded-referrals.md) 取代，待按 [SSOT v1.6 草案](constitution/SSOT.v1.6.md) 重写。**新方案按流水计提，LP 固定保留每注理论 house edge 的 50%，推荐从运营份额中支付。在重写完成前，本节不应作为对外说明使用。
+> 版本口径（2026-09-27）：本节描述 v1.6 发布单元，规范见 [SSOT v1.6](constitution/SSOT.v1.6.md)，决策见 [ADR-0032](adr/0032-fixed-lp-share-operator-funded-referrals.md)。源码已实现，[审计范围](audit/v1.6-audit-scope.md)已冻结，外部审计尚未完成。Base 主网仍运行 v1.5。
 
-### 3.1 选定的预算来源
+### 3.1 v1.5 的问题
 
-本稿采用 **Design direction 2026-09-26：casino 的 PF 与 XP 仅从实际 fee-on-payout `F` 分配，余款留在 LP NAV**。这是目标经济版本的机制选择；比例和各玩法参数仍需校准。体育业务不继承这项 casino 费用规则。
+对公平的游戏模块，从中奖毛派彩中扣留的费用 `F` 的期望，等于按实际流水计算的 house edge `E`。v1.5 在结算时把 `E` 全部计为协议费（PF）和推荐奖励（XP）应付款，这两项相互抵消：LP 承担游戏结果的方差，house edge 的期望份额却为零（[系统复盘](audit/RepositoryReview-2026-09-25.zh-CN.md) R01）。推荐预算和层级参数只能在 PF 与 XP 之间转移价值，无法通过配置改变这一点。
 
-对一个完整回合，观察区间从接收押注之前到该回合结算之后，定义：
+### 3.2 计提基数与分配
 
-| 符号               | 单位与含义                                             |
-| ------------------ | ------------------------------------------------------ |
-| `S`                | 资产最小单位；玩家提交的总押注                         |
-| `Q`                | 资产最小单位；停止条件等原因产生的未使用押注退款       |
-| `U = S − Q`        | 资产最小单位；实际参与游戏的押注                       |
-| `G`                | 资产最小单位；规则计算的毛派彩，不包含 `Q`             |
-| `h`                | 无量纲费率；数学定义域 `0 ≤ h ≤ 1`，可发布范围另行约束 |
-| `F = floor(G × h)` | 资产最小单位；实际从毛派彩扣留的费用                   |
-| `N = G − F`        | 资产最小单位；玩家净派彩，不包含 `Q`                   |
-| `P`、`X`           | 资产最小单位；本回合新增的协议与奖励应付款             |
-| `L = F − P − X`    | 资产最小单位；费用中留在 LP 净值的部分                 |
+金额以资产最小单位计，费率以 basis points 计，`floor` 为整数除法。
 
-金额以对应代币的整数最小单位计算。`h` 若以 basis points 存储，合约换算为 `floor(G × hBps / 10000)`；比例与资产金额不能直接相加。单回合和批量回合的取整次序也必须固定，不能假设先求和再取整与逐项取整始终相同。
+| 符号                                            | 含义                                                                        |
+| ----------------------------------------------- | --------------------------------------------------------------------------- |
+| `S`                                             | 投注托管的本金                                                              |
+| `Q`                                             | 结算时退回的未使用本金，`0 ≤ Q ≤ S`                                         |
+| `U = S − Q`                                     | 实际流水                                                                    |
+| `h_b`、`h_e`                                    | 接受投注时快照的基础 edge 与有效 edge，`h_e = h_b + Δ`，`Δ` 为推广加价      |
+| `E = floor(U × h_e / 10000)`                    | 流水 edge                                                                   |
+| `E_b = floor(U × h_b / 10000)`、`E_Δ = E − E_b` | 基础部分与加价部分                                                          |
+| `O`                                             | 运营份额；LP 保留 `E − O`                                                   |
+| `R0`、`R1`、`R2`                                | L0 玩家返水、L1 推荐人与 L2 推荐人的奖励                                    |
+| `M`                                             | 加价部分付给推广方的份额                                                    |
+| `PF_new`、`XP_new`                              | 本次结算新增的协议费与全部推荐应付款                                        |
+| `G`、`F`、`N`                                   | 规则毛派彩、从毛派彩扣留的费用 `floor(G × h_e / 10000)`、玩家净派彩 `G − F` |
 
-分配参数满足：
-
-```text
-αL + αP + αX = 1
-0 < αL < 1,  αP ≥ 0,  αX ≥ 0
-λ = αL
-P ≤ floor(αP × F)
-X ≤ floor(αX × F)
-L = F − P − X
-```
-
-`λ` 是产品经济描述中的 LP 费用保留比例，与这里的 `αL` 为同一参数。未使用的奖励预算、没有合格接收人的预算和取整余数留在 NAV，不额外形成应付款。因此实际留存 `L` 可以高于名义份额 `αL × F`。奖励在即时、锁定和 holdback 账户之间分配只改变领取条件，不能使其总额超过 `X`；延迟支付不能隐藏新增负债。
-
-选择实际派彩费用作为预算源，是为了将外部应付款绑定到该笔结算确实扣留的资产。若按 turnover 另行计提费用，相关负债可能在 `F = 0` 的回合仍产生，需要额外的资本和预留分析；若按周期净利润分配，还需要周期结账、亏损结转和分配先后规则。本设计选择逐回合费用预算，保持资金约束可以在一笔结算中检查，但不保证协议或推广方每个回合都有收入。
-
-### 3.2 LP 损益与预留覆盖
-
-在没有其他外部资金流的完整回合内：
+结算时依次计算：
 
 ```text
-ΔNAV = S − N − Q − P − X
-     = U − G + F − P − X
-     = U − G + L
+E、E_b、E_Δ   由 U 与快照的 h_b、h_e 得出
+O      = floor(E × (10000 − LP_SHARE_BPS) / 10000)       LP_SHARE_BPS = 5000
+R0     = floor(E_b × l0 / 10000)    仅当玩家接受投注时已绑定推荐人，付给玩家
+R1     = floor(E_b × l1 / 10000)    仅当 L1 推荐人存在
+R2     = floor(E_b × l2 / 10000)    仅当 L2 推荐人存在
+M      ≤ floor(E_Δ × 5000 / 10000)  按增量比例付给快照中的推广方，加价关闭时为 0
+PF_new = O − R0 − R1 − R2 − M
+LP 保留 = E − O
 ```
 
-`U − G` 是未扣派彩费用的游戏毛损益，`L` 是 LP 获得的费用留存。不能将全部 `F` 同时列为 LP 收入，又将 `P`、`X` 当作不影响 LP 的额外奖励。
+`LP_SHARE_BPS = 5000`、`MAX_REFERRAL_BPS = 3500`（`l0 + l1 + l2` 的上限）、`MAX_HOUSE_EDGE_BPS = 500` 和 `EDGE_CHANGE_DELAY = 7 天` 是发布单元的常量，没有设置函数。`E − O` 不计为任何应付款，留在 `NAV = B − PF − XP` 中。由于 `R0 + R1 + R2 ≤ floor(E_b × 3500 / 10000)` 且 `M ≤ floor(E_Δ / 2)`，`PF_new` 不会为负。缺失的推荐人和全部取整余数计为协议费，不转给其他接收人，也不增加 LP 的份额。纯退款（包括 VRF 超时退款）不计提任何金额。
 
-由 `P + X ≤ F` 可直接得到：
+从中奖毛派彩扣留的 `F` 仍照旧适用于玩家。它留在 Bank 中，是 LP 承担的游戏结果的一部分，不再作为第二个分配基数。
+
+计提以流水 edge `E` 为基数而不是 `F`，因为 `F` 只在中奖回合出现：以 `F` 为基数，推荐人和协议的收入随每回合结果起落；以 `E` 为基数，每笔投注按其理论 edge 计提，LP 的份额是发布单元的常量。代价是未中奖回合 `F = 0` 时仍计提 `O`，3.3 节说明这不破坏偿付条件。
+
+示例：押注 100 USDC、无退款、`h_b = h_e = 200`、推荐比例 `(l0, l1, l2) = (1000, 2000, 500)`。此时 `E = E_b = 2.00`，`O = 1.00`，LP 保留 1.00。
+
+| 情形     |   R0 |   R1 |   R2 | PF_new | LP 保留 |
+| -------- | ---: | ---: | ---: | -----: | ------: |
+| 无推荐人 |    0 |    0 |    0 |   1.00 |    1.00 |
+| 仅 L1    | 0.20 | 0.40 |    0 |   0.40 |    1.00 |
+| L1 与 L2 | 0.20 | 0.40 | 0.10 |   0.30 |    1.00 |
+
+链上无法阻止玩家用自己的其他地址充当推荐人。这样做最多取回 `E_b` 的 35%：以 2% 基础 edge 计，有效 edge 最低约 1.3%。ADR-0032 将其作为可接受的最大折扣，它不影响 LP 保留的份额。
+
+### 3.3 结算边界与偿付
+
+SettlementRouter 在开仓时记录每个头寸的 edge：casino 为 `h_e`，体育为 0，且不得超过 `MAX_HOUSE_EDGE_BPS`。结算时它只按自己的记录计算上限：
 
 ```text
-N + Q + P + X ≤ G + Q
+cap = floor(floor((S − Q) × edge / 10000) × 5000 / 10000)
+PF_new + XP_new ≤ cap
 ```
 
-若接受投注时的预留 `r` 覆盖该规则全部有效路径的 `G + Q`，则：
+超过上限的结算会被拒绝；hub 可以少计提，差额留给 LP。这个上限不依赖 hub 的算术，因此任何已授权的 hub 都不能取走超过运营份额的 edge。它不能验证游戏结果或 `G` 是否正确，这些仍依赖模块审阅、随机数和 hub 准入。
+
+偿付关系需要重新推导。一笔结算对 NAV 的消耗为：
 
 ```text
-N + Q + P + X ≤ G + Q ≤ r
+C = N + Q + PF_new + XP_new ≤ (G − F) + Q + O
 ```
 
-左侧既包含现金付出，也包含新增外部应付款，正是从押注已经入账的状态到结算结束时的 NAV 消耗。可允许的异常退款也必须被 `r` 覆盖；例如允许全额退回 `S` 时，规则的最大预留不能低于 `S`。
+Router 还要求 `G + Q ≤ r`，`r` 为开仓预留。分两种情况：
 
-这项关系给出偿付条件的归纳证明。设开仓后净值为 `NAVhold`，其他头寸预留为 `Rold`，且开仓检查已保证 `NAVhold ≥ Rold + r`。该笔结算最多消耗 `r` 的 NAV，并释放相同预留，故：
+- `O ≤ F`：`C ≤ G + Q ≤ r`。
+- `O > F`：由 `O ≤ U × h_e / 20000` 与 `F > G × h_e / 10000 − 1` 得 `G < U / 2`，于是 `C < U / 2 + Q + U / 40 < S`（`h_e ≤ 500`）。
+
+因此只要每笔投注的预留 `r ≥ S`，每条有效路径都有 `C ≤ r`。允许全额退款的投注本来就要求 `r ≥ S`；最大毛派彩不低于本金的赌场玩法也满足它，但这须由模块审阅保证。
+
+由此得到偿付条件的归纳证明。设开仓后净值为 `NAVhold`，其他头寸预留为 `Rold`，开仓检查已保证 `NAVhold ≥ Rold + r`。该笔结算最多消耗 `r` 的 NAV，并释放相同预留，故：
 
 ```text
 NAVafter ≥ NAVhold − r ≥ Rold = Rafter
 ```
 
-证明依赖三个前提：最大预留计算覆盖有效结算与退款路径；实际转账与负债记账符合定义；每笔头寸只结算一次。目标经济版本要求 Router／Bank 结算边界由本次 `G − N` 推导 F，核对其与开仓时冻结的扣减率一致，并汇总全部新增奖励负债。该边界独立校验 `P + X ≤ F`、`P ≤ floor(αP × F)` 与 `X ≤ floor(αX × F)`，由不可改写的回合配置保证最低 LP 留存。只有总预算校验会允许 `F=100、P=100、X=0` 而让 LP 留存归零，因此不足以执行已定义的分配条款。不能只依赖前端或费用展示。保留一个配置完善的费用公式，却允许被授权 hub 绕过该预算，不能建立上述全系统性质。
+证明依赖三个前提：预留覆盖全部有效结算与退款路径且不低于本金；实际转账与负债记账符合定义；每笔头寸只结算一次。实现以不变量测试检查 `B ≥ PF + XP` 与 `NAV ≥ R`（ExecutableSSOT v1.6 的 B2）。
 
-### 3.3 期望收益不是盈利保证
+### 3.4 期望收益不是盈利保证
 
-以固定实际押注 `U` 的玩法为例，设未扣费用的毛回报率 `rj = E[G] / U`。忽略整数取整，并假设费用比例固定且预算全部使用，则：
+在没有其他外部资金流的完整回合内，按全部运营份额计提时：
 
 ```text
-E[玩家净派彩] / U = (1 − h) × rj
-E[LP 回合损益] / U = 1 − rj + αL × h × rj
-E[协议计提] / U = αP × h × rj
-E[奖励计提] / U = αX × h × rj
+ΔNAV = S − N − Q − PF_new − XP_new = U − G + F − O
 ```
 
-一个仅用于说明单位的例子：押注 1 USDC，等概率毛派彩为 2 USDC 或 0，`h = 2%`，费用按 LP 50%、协议 25%、奖励 25% 使用。中奖回合的 `F = 0.04`、`N = 1.96`、`P = X = 0.01` USDC，LP 损益为 `−0.98` USDC；未中奖回合 LP 损益为 `+1` USDC。LP 的单回合期望为 `+0.01` USDC，协议与奖励各为 `0.005` USDC。这不是对现有某个玩法或实际费率的承诺。
+对公平模块，`E[G] = U`，`E[F] = E`，故 `E[ΔNAV] = E − O ≈ E / 2`：LP 的期望损益约为流水的 `h_e / 2`，推荐奖励与协议费合计约为另一半。v1.5 中这一期望约为 0。
 
-当提前停止使 `U` 与结果相关时，应计算联合期望 `E[U − G + L]`，不能直接套用固定押注公式。正期望也不保证有限样本盈利：方差、连续高赔付、资本集中、合约缺陷、资产风险和运营成本都会影响实际结果。随机数费用与交易 gas 若由玩家另付，应计入玩家总成本；若由协议补贴，应计入相应经营成本，不能因为它们不在 Bank 的本轮损益式中就忽略。
+一个仅用于说明单位的例子：押注 1 USDC，等概率毛派彩为 2 USDC 或 0，`h = 2%`，无推荐人。每回合 `E = 0.02`、`O = 0.01` USDC。中奖回合 `F = 0.04`、`N = 1.96`，LP 损益为 `−0.97` USDC；未中奖回合 LP 损益为 `+0.99` USDC。LP 的单回合期望为 `+0.01` USDC，协议费每回合为 `0.01` USDC。这不是对现有某个玩法或实际费率的承诺。
+
+当提前停止使 `U` 与结果相关时，应计算联合期望 `E[U − G + F − O]`，不能直接套用固定押注公式。正期望也不保证有限样本盈利：方差、连续高赔付、资本集中、合约缺陷、资产风险和运营成本都会影响实际结果。随机数费用与交易 gas 若由玩家另付，应计入玩家总成本；若由协议补贴，应计入相应经营成本，不能因为它们不在 Bank 的本轮损益式中就忽略。
+
+### 3.5 治理与不溯及既往
+
+- 每笔投注在接受时快照 `h_b`、`h_e`、推荐比例版本及推荐人；之后的任何变更都不改变已接受投注的分配。
+- 基础 edge 的变更和加价上限的提高须先排队，满 7 天后任何人都可以激活；Safe 可在激活前取消。加价上限的降低立即生效，并取消排队中的提高。
+- 推荐比例不能修改，只能创建新版本并由 Safe 激活，且只作用于此后接受的投注。
+- guardian 只能暂停，不能改动任何分配参数。
+- 退款等待时间仍是全局参数，治理变更会影响等待中的投注，但其上限为一天。
 
 ## 4. 预留、可选出金与退出边界
 
@@ -306,17 +327,17 @@ Keeper 是推进工具，不是结果真值或资金授权来源。公开可执�
 
 ## 8. 目标设计与已部署版本的边界
 
-上述资金架构沿用现有 SSOT 方向，实际派彩费用预算是本稿对下一经济版本作出的选择。以下差异集中列示，以免将源码、目标模型和某次部署混为一谈：
+上述资金架构沿用现有 SSOT 方向，v1.6 的 house edge 分配是其中的经济规则变化。以下差异集中列示，以免将源码、目标模型和某次部署混为一谈：
 
-| 项目               | 版本边界                                                                                                                                   |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Casino PF/XP 预算  | v1.5 的既有路径包含按 used turnover 与 base house edge 计算的预算；本稿选定的 `P + X ≤ F` 和 LP 费用留存规则不能反向当作 v1.5 已具有的性质 |
-| 分配比例与玩法参数 | `λ = αL`、预算来源和范围已经定义；具体比例、各玩法毛回报、费率及资本限额仍需量化校准和独立审阅，本稿没有公布已生效参数                     |
-| 退款期限           | 现有 casino 超时判断读取全局 `refundTimeoutSeconds`，并非为每笔投注快照固定退款截止时间；治理变化可能影响等待中的投注                      |
-| 治理约束           | 不能由 Safe 地址或设计原则推断已有通用 timelock、参数变更宽限期或不受暂停影响的 LP 退出机制                                                |
-| 体育业务           | 存在独立合约与设计材料，不代表生产体育赔率、报告者、裁决与市场生命周期已经运行；v1.5 发布事实表将体育列为未部署                            |
+| 项目               | 版本边界                                                                                                                                                                                                          |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Casino PF/XP 预算  | v1.5 把按流水计算的 edge 全部计为 PF 与 XP，LP 不保留份额；v1.6 让 LP 固定保留一半，并由 Router 上限执行。v1.6 的性质不能反向当作 v1.5 已具有的性质                                                               |
+| 分配比例与玩法参数 | v1.6 的常量（LP 50%、推荐上限 35%、edge 上限 500 bps、7 天延迟）已固定；Base Sepolia 初始参数为基础 edge 200 bps、推荐比例 `(1000, 2000, 500)`、holdback 3000。主网参数、各玩法毛回报及资本限额仍需校准和独立审阅 |
+| 退款期限           | casino 超时判断读取全局 `refundTimeoutSeconds`，并非为每笔投注快照固定退款截止时间，治理变化可能影响等待中的投注；v1.6 将其上限定为一天                                                                           |
+| 治理约束           | v1.6 对基础 edge 的变更和加价上限的提高设 7 天延迟；除此之外，不能由 Safe 地址或设计原则推断已有通用 timelock 或不受暂停影响的 LP 退出机制                                                                        |
+| 体育业务           | 存在独立合约与设计材料，不代表生产体育赔率、报告者、裁决与市场生命周期已经运行；v1.5 发布事实表将体育列为未部署                                                                                                   |
 
-为让费用预算与 LP 下限在资金边界独立执行，目标经济版本采用新的 Bank／Router／Hub 发布单元。旧头寸及旧 PF/XP 仍由原版本处理；LP 在清楚新条款后选择是否进入新池。辅助组件复用须保持旧请求和回调的正确归属。仅更换 Hub 而沿用缺少独立校验的旧资金组合，不具备本稿定义的完整性质。
+为让 LP 份额在资金边界独立执行，v1.6 是新的 Bank／Router／Hub 发布单元。旧头寸及旧 PF/XP 仍由 v1.5 处理；LP 在清楚新条款后自行选择是否进入新池。辅助组件复用须保持旧请求和回调的正确归属。仅更换 Hub 而沿用缺少独立校验的旧资金组合，不具备本稿定义的完整性质。
 
 源码中的机制、历史测试和历史交易各自证明不同范围。本文引用源码用于解释实现接口与差异；只有将部署地址、字节码、配置和相应链上状态连接起来，才能判断某个具体实例具有哪些性质。当前实例的资产、网络和开放状态见[发布事实表](release/STATUS-v1.5.zh-CN.md)，实现风险及历史证据见[系统复盘](audit/RepositoryReview-2026-09-25.zh-CN.md)。
 
@@ -328,7 +349,7 @@ Keeper 是推进工具，不是结果真值或资金授权来源。公开可执�
 
 随后重建资金池账本：在相同区块读取实际资产余额、协议应付款、全部 XP 应付款、LP 总份额和未结束预留，复算 `NAV` 与可选出金条件。事件用于解释变化，状态读取用于确定该区块的实际余额与负债；汇总全部资金流时，还应识别直接转入、费用返还和 LP 存取。
 
-对 casino，沿投注输入、模块身份、已存参数、费用配置、随机数请求及输出复算 `G`、`Q`、`F`、`N` 和新增 `P`、`X`。目标经济版本需要同时满足预算上界和完整回合的 `ΔNAV` 等式；终态只能出现一次，并应与 Router、Bank 和实际转账一致。对一组投注做抽样可以发现不一致，却不能代替对 `maxPayout` 全部参数域的证明。
+对 casino，沿投注输入、模块身份、已存参数、快照的 edge 与推荐版本、随机数请求及输出复算 `G`、`Q`、`F`、`N`，以及 `E`、`O`、`R0`–`R2`、`M` 与 `PF_new`。v1.6 的每笔结算都发出 `HouseEdgeAllocated` 事件，应核对 LP 保留、`PF_new` 与 `XP_new` 之和等于 `E`，`PF_new + XP_new` 不超过 Router 上限，以及完整回合的 `ΔNAV` 等式；终态只能出现一次，并应与 Router、Bank 和实际转账一致。对一组投注做抽样可以发现不一致，却不能代替对 `maxPayout` 全部参数域的证明。
 
 对 sports，沿原始赔率签名和域、票据接受时的版本与风险参数、结果提案、挑战或裁决记录，复算最终赔付或退款。应取得哈希对应的规则和证据内容，并核查签名权属于哪些主体。仅看到已结算交易不足以证明赛事结论正确。
 

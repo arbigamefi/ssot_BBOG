@@ -82,39 +82,39 @@ fork:
 	@$(MAKE) check-deps
 	FOUNDRY_PROFILE=$(FOUNDRY_PROFILE) forge test --match-path "test/fork/*" -vvv
 
-deploy: deploy-v15
+deploy: deploy-v16
 
-deploy-v15:
+deploy-v16:
 	@$(MAKE) check-deps
 	# Retain broadcast traces; a failed broadcast must be inspected and resumed, not erased.
-	FOUNDRY_PROFILE=$(DEPLOY_PROFILE) forge script script/DeployV15.s.sol:DeployV15 --rpc-url "$$RPC_URL" --account "$${DEPLOY_ACCOUNT:?Set the approved Foundry keystore account}" --broadcast --slow -vvv
+	FOUNDRY_PROFILE=$(DEPLOY_PROFILE) forge script script/DeployV16.s.sol:DeployV16 --rpc-url "$$RPC_URL" --account "$${DEPLOY_ACCOUNT:?Set the approved Foundry keystore account}" --broadcast --slow -vvv
 
-verify: verify-v15
-verify-helpers: verify-helpers-v15
-verify-v15:
+verify: verify-v16
+verify-helpers: verify-helpers-v16
+verify-v16:
 	@$(MAKE) check-deps
-	@$(MAKE) verify-helpers-v15
+	@$(MAKE) verify-helpers-v16
 	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge build src
-	bash deployments/verify-latest-v15.sh
+	bash deployments/verify-latest-v16.sh
 
-verify-helpers-v15:
-	@test -n "$$SNAPSHOT_PATH" || { echo "Set SNAPSHOT_PATH to the chain-specific v1.5 snapshot"; exit 1; }
+verify-helpers-v16:
+	@test -n "$$SNAPSHOT_PATH" || { echo "Set SNAPSHOT_PATH to the chain-specific v1.6 snapshot"; exit 1; }
 	$(PYTHON) script/tools/gen_verify_helpers.py "$$SNAPSHOT_PATH"
 
-sports-dry-run-v15:
+sports-dry-run-v16:
 	@$(MAKE) check-deps
-	FOUNDRY_PROFILE=pr forge test --threads 1 --match-path test/unit/DeploymentV15.t.sol --match-test testSports -vv
+	FOUNDRY_PROFILE=pr forge test --threads 1 --match-path test/unit/DeploymentV16.t.sol --match-test testSports -vv
 
 sports-lifecycle-dry-run:
 	@$(MAKE) check-deps
 	FOUNDRY_PROFILE=pr forge test --match-path test/unit/SportsHubLifecycle.t.sol -vv
 
 sports-phase0-readiness:
-	@$(MAKE) sports-dry-run-v15
+	@$(MAKE) sports-dry-run-v16
 	@$(MAKE) sports-lifecycle-dry-run
 
 # --- Release artifacts (digest + signature) ---
-# 1) After a successful deploy that produced deployments/latest-v15.json:
+# 1) After a successful deploy that produced deployments/latest-v16.json:
 #      make release-digest
 # 2) Verify locally:
 #      make release-verify
@@ -123,20 +123,20 @@ sports-phase0-readiness:
 
 
 # The only supported deployment/release line.
-.PHONY: deploy-v15 deploy-dryrun verify-v15 verify-helpers-v15 sports-dry-run-v15 release-v15 release-governance-check safe-acceptance-v15
+.PHONY: deploy-v16 deploy-dryrun verify-v16 verify-helpers-v16 sports-dry-run-v16 release-v16 release-governance-check safe-acceptance-v16
 
 deploy-dryrun:
-	FOUNDRY_PROFILE=$(DEPLOY_PROFILE) forge script script/DeployV15.s.sol:DeployV15 --rpc-url "$$RPC_URL" -vvv
+	FOUNDRY_PROFILE=$(DEPLOY_PROFILE) forge script script/DeployV16.s.sol:DeployV16 --rpc-url "$$RPC_URL" -vvv
 
-safe-acceptance-v15:
-	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge script script/release/PrepareSafeAcceptanceV15.s.sol:PrepareSafeAcceptanceV15 --rpc-url "$$RPC_URL" -vvv
+safe-acceptance-v16:
+	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge script script/release/PrepareSafeAcceptanceV16.s.sol:PrepareSafeAcceptanceV16 --rpc-url "$$RPC_URL" -vvv
 
 release-governance-check:
 	@test -n "$$SNAPSHOT_PATH" -a -n "$$RPC_URL" || { echo "Set chain-specific SNAPSHOT_PATH and RPC_URL"; exit 1; }
-	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge script script/release/VerifyGovernanceV15.s.sol:VerifyGovernanceV15 --rpc-url "$$RPC_URL" -vvv
+	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge script script/release/VerifyGovernanceV16.s.sol:VerifyGovernanceV16 --rpc-url "$$RPC_URL" -vvv
 
-release: release-v15
-release-v15:
+release: release-v16
+release-v16:
 	@$(MAKE) release-governance-check
 	@$(MAKE) release-digest
 	@$(MAKE) release-notes
@@ -147,26 +147,26 @@ release-v15:
 	@$(MAKE) release-package
 
 release-digest:
-	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge script script/release/ReleaseDigestV15.s.sol:ReleaseDigestV15 --account "$${RELEASE_ACCOUNT:?Set the approved release signer keystore account}" -vvv
+	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge script script/release/ReleaseDigestV16.s.sol:ReleaseDigestV16 --account "$${RELEASE_ACCOUNT:?Set the approved release signer keystore account}" -vvv
 
 release-verify:
-	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge script script/release/VerifyReleaseV15.s.sol:VerifyReleaseV15 -vvv
+	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge script script/release/VerifyReleaseV16.s.sol:VerifyReleaseV16 -vvv
 
 release-check:
 	PYTHON="$(PYTHON)" bash script/release/check_release.sh
 
 release-notes:
-	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge script script/release/GenerateReleaseNotesV15.s.sol:GenerateReleaseNotesV15 -vvv
+	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge script script/release/GenerateReleaseNotesV16.s.sol:GenerateReleaseNotesV16 -vvv
 
 release-frontend-manifest:
-	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge script script/release/GenerateFrontendManifestV15.s.sol:GenerateFrontendManifestV15 -vvv
+	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge script script/release/GenerateFrontendManifestV16.s.sol:GenerateFrontendManifestV16 -vvv
 
 release-golden-vectors:
-	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge script script/release/GenerateGoldenVectorsV15.s.sol:GenerateGoldenVectorsV15 -vvv
+	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge script script/release/GenerateGoldenVectorsV16.s.sol:GenerateGoldenVectorsV16 -vvv
 
 release-abis:
 	FOUNDRY_PROFILE=$(VERIFY_PROFILE) forge build src
-	$(PYTHON) script/release/export_frontend_abis.py --manifest deployments/frontend-manifest-latest-v15.json --dest deployments/abis-v15 --tag-suffix=-v15
+	$(PYTHON) script/release/export_frontend_abis.py --manifest deployments/frontend-manifest-latest-v16.json --dest deployments/abis-v16 --tag-suffix=-v16
 
 release-package:
 	PYTHON="$(PYTHON)" bash script/release/package_release.sh

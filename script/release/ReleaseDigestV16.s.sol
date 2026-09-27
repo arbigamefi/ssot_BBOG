@@ -5,55 +5,73 @@ import "forge-std/Script.sol";
 import "forge-std/StdJson.sol";
 import "forge-std/console2.sol";
 
-/// @notice Verifies a v1.5 release digest + signature against a router/pool snapshot.
-contract VerifyReleaseV15 is Script {
+/// @notice Computes and signs a deterministic v1.6 release digest for router/pool snapshots.
+///
+/// Inputs:
+/// - SNAPSHOT_PATH (default: deployments/latest-v16.json)
+/// - Foundry unlocked keystore or hardware signer supplied with --account/--ledger
+/// - RELEASE_SIGNER (required independent metadata trust anchor; governance is the Safe)
+///
+/// Outputs:
+/// - deployments/release-latest-v16.json
+/// - deployments/release/release-<chain>-<block>-v16.json
+contract ReleaseDigestV16 is Script {
     using stdJson for string;
 
-    bytes32 internal constant SCHEMA = keccak256("SSOT_RELEASE_DIGEST_V15");
+    bytes32 internal constant SCHEMA = keccak256("SSOT_RELEASE_DIGEST_V16");
 
-    function run() external view {
-        string memory releasePath = vm.envOr("RELEASE_PATH", string("deployments/release-latest-v15.json"));
-        string memory rel = _readFileOrDie(releasePath);
+    function run() external {
+        vm.createDir("deployments/release", true);
 
-        string memory snapshotPathFromRel = rel.readString(".snapshotPath");
-        string memory snapshotPath = vm.envOr("SNAPSHOT_PATH", snapshotPathFromRel);
+        string memory snapshotPath = vm.envOr("SNAPSHOT_PATH", string("deployments/latest-v16.json"));
         string memory snap = _readFileOrDie(snapshotPath);
 
-        bytes32 schemaHash = rel.readBytes32(".schemaHash");
-        require(schemaHash == SCHEMA, "schema mismatch");
-
-        bytes32 digestExpected = rel.readBytes32(".digest");
-        address signerExpected = rel.readAddress(".signer");
-        uint8 v = uint8(rel.readUint(".v"));
-        bytes32 r = rel.readBytes32(".r");
-        bytes32 s = rel.readBytes32(".s");
-
+        uint256 chainId = snap.readUint(".chainId");
+        uint256 blockNumber = snap.readUint(".blockNumber");
         uint256 numPools = snap.readUint(".numPools");
         require(numPools >= 1 && numPools <= 32, "numPools out of range");
 
-        bytes32 digestActual = _digestStatic(snap);
-        digestActual = _digestPools(digestActual, snap, numPools);
-        require(digestActual == digestExpected, "digest mismatch");
+        bytes32 digest = _digestStatic(snap);
+        digest = _digestPools(digest, snap, numPools);
 
-        address recovered = ecrecover(digestActual, v, r, s);
-        require(signerExpected != address(0), "zero signer");
-        require(recovered == signerExpected, "signature mismatch");
-        require(signerExpected == snap.readAddress(".releaseSigner"), "snapshot signer mismatch");
-        require(signerExpected == vm.envAddress("RELEASE_SIGNER"), "release signer not trusted");
-        require(rel.readUint(".chainId") == snap.readUint(".chainId"), "release chain mismatch");
-        require(rel.readUint(".blockNumber") == snap.readUint(".blockNumber"), "release block mismatch");
+        address signer = vm.envAddress("RELEASE_SIGNER");
+        require(signer == snap.readAddress(".releaseSigner"), "release signer mismatch");
+        // Foundry resolves this address only from explicitly supplied unlocked wallets.
+        // No raw key is read into the script environment or embedded into traces.
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signer, digest);
+        require(ecrecover(digest, v, r, s) == signer, "bad signature");
 
-        console2.log("OK v1.5 release artifact verified");
-        console2.log("release:", releasePath);
+        string memory obj = "release";
+        string memory json;
+
+        json = vm.serializeString(obj, "schema", "SSOT_RELEASE_DIGEST_V16");
+        json = vm.serializeBytes32(obj, "schemaHash", SCHEMA);
+        json = vm.serializeString(obj, "snapshotPath", snapshotPath);
+        json = vm.serializeUint(obj, "chainId", chainId);
+        json = vm.serializeUint(obj, "blockNumber", blockNumber);
+        json = vm.serializeAddress(obj, "signer", signer);
+        json = vm.serializeBytes32(obj, "digest", digest);
+        json = vm.serializeUint(obj, "v", v);
+        json = vm.serializeBytes32(obj, "r", r);
+        json = vm.serializeBytes32(obj, "s", s);
+
+        string memory tag = string.concat(vm.toString(chainId), "-", vm.toString(blockNumber), "-v16");
+        string memory outPath = string.concat("deployments/release/release-", tag, ".json");
+
+        vm.writeJson(json, outPath);
+        vm.writeJson(json, "deployments/release-latest-v16.json");
+
         console2.log("snapshot:", snapshotPath);
-        console2.log("signer:", signerExpected);
-        console2.log("digest:", vm.toString(digestActual));
+        console2.log("digest:", vm.toString(digest));
+        console2.log("signer:", signer);
+        console2.log("wrote:", outPath);
+        console2.log("wrote:", "deployments/release-latest-v16.json");
     }
 
     function _digestStatic(string memory snap) internal pure returns (bytes32 digest) {
         require(
-            keccak256(bytes(snap.readString(".architectureVersion"))) == keccak256("v1.5-safe-governance"),
-            "not a v1.5 snapshot"
+            keccak256(bytes(snap.readString(".architectureVersion"))) == keccak256("v1.6-house-edge-allocation"),
+            "not a v1.6 snapshot"
         );
         digest = keccak256(abi.encode(SCHEMA, keccak256(bytes(snap.readString(".architectureVersion")))));
         digest = keccak256(
@@ -148,22 +166,17 @@ contract VerifyReleaseV15 is Script {
                 snap.readUint(".refundTimeoutSeconds"),
                 snap.readUint(".defaultHouseEdgeBps"),
                 snap.readUint(".maxAffiliateDeltaBps"),
-                snap.readUint(".refBaseBudgetBps"),
-                snap.readUint(".refDeltaBudgetBps"),
-                snap.readUint(".refHoldbackBps"),
-                snap.readUint(".refLevels")
+                snap.readUint(".lpShareBps"),
+                snap.readUint(".refL0Bps"),
+                snap.readUint(".refL1Bps"),
+                snap.readUint(".refL2Bps")
             )
         );
 
         digest = keccak256(
             abi.encode(
                 digest,
-                snap.readUint(".refLevel0Bps"),
-                snap.readUint(".refLevel1Bps"),
-                snap.readUint(".refLevel2Bps"),
-                snap.readUint(".refLevel3Bps"),
-                snap.readUint(".refLevel4Bps"),
-                snap.readUint(".refLevel5Bps"),
+                snap.readUint(".refHoldbackBps"),
                 snap.readUint(".sportsEnabled"),
                 snap.readUint(".sportsMaxStake"),
                 snap.readUint(".sportsMaxPayout"),
@@ -235,10 +248,10 @@ contract VerifyReleaseV15 is Script {
 
     function _readFileOrDie(string memory path) internal view returns (string memory) {
         try vm.readFile(path) returns (string memory contents) {
-            require(bytes(contents).length != 0, "file empty");
+            require(bytes(contents).length != 0, "snapshot file empty");
             return contents;
         } catch {
-            revert(string.concat("missing file: ", path));
+            revert(string.concat("missing snapshot file: ", path));
         }
     }
 }

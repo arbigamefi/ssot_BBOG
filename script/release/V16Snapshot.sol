@@ -5,6 +5,7 @@ import "forge-std/StdJson.sol";
 import {Governable} from "../../src/access/Governable.sol";
 import {Bank} from "../../src/core/Bank.sol";
 import {GameHub} from "../../src/core/GameHub.sol";
+import {IGameHub} from "../../src/core/interfaces/IGameHub.sol";
 import {PoolRegistry} from "../../src/core/PoolRegistry.sol";
 import {VRFHub} from "../../src/core/VRFHub.sol";
 import {SportsHub} from "../../src/core/SportsHub.sol";
@@ -13,13 +14,13 @@ import {ChainlinkV2PlusWrapperAdapter} from "../../src/adapters/chainlink/Chainl
 import {SafeGovernance} from "../common/SafeGovernance.sol";
 
 /// @dev Shared target enumeration prevents acceptance packages and release checks diverging.
-library V15Snapshot {
+library V16Snapshot {
     using stdJson for string;
     VmSafe private constant vm = VmSafe(address(uint160(uint256(keccak256("hevm cheat code")))));
 
     function targets(string memory snap) internal pure returns (address[] memory list) {
         require(
-            keccak256(bytes(snap.readString(".architectureVersion"))) == keccak256("v1.5-safe-governance"), "not v1.5"
+            keccak256(bytes(snap.readString(".architectureVersion"))) == keccak256("v1.6-house-edge-allocation"), "not v1.6"
         );
         uint256 pools = snap.readUint(".numPools");
         require(pools > 0 && pools <= 32, "bad pool count");
@@ -150,18 +151,20 @@ library V15Snapshot {
                 && hub.refundTimeoutSeconds() == snap.readUint(".refundTimeoutSeconds"),
             "game configuration mismatch"
         );
-        (uint16 base, uint16 delta, uint16 holdback, uint16[6] memory bps, uint8 levels) =
-            hub.getReferralConfig(hub.activeReferralConfigId());
+        require(hub.LP_SHARE_BPS() == snap.readUint(".lpShareBps"), "LP share mismatch");
+        // A change the bootstrap queued while it still governed would activate after the Safe takes over, and
+        // anyone may activate it. The release approves only the values above, so nothing may be pending, both
+        // before acceptance and in the final check after it.
+        for (uint8 p; p <= uint8(type(IGameHub.EdgeParam).max); ++p) {
+            (, uint64 activatesAt) = hub.pendingEdgeChange(IGameHub.EdgeParam(p));
+            require(activatesAt == 0, "pending edge change is not part of the release");
+        }
+        (uint16 l0, uint16 l1, uint16 l2, uint16 holdback) = hub.getReferralConfig(hub.activeReferralConfigId());
         require(
-            base == snap.readUint(".refBaseBudgetBps") && delta == snap.readUint(".refDeltaBudgetBps")
-                && holdback == snap.readUint(".refHoldbackBps") && levels == snap.readUint(".refLevels"),
+            l0 == snap.readUint(".refL0Bps") && l1 == snap.readUint(".refL1Bps") && l2 == snap.readUint(".refL2Bps")
+                && holdback == snap.readUint(".refHoldbackBps"),
             "referral configuration mismatch"
         );
-        for (uint256 i; i < 6; ++i) {
-            require(
-                bps[i] == snap.readUint(string.concat(".refLevel", vm.toString(i), "Bps")), "referral levels mismatch"
-            );
-        }
         string[8] memory games =
             [string("DICE"), "COIN_TOSS", "ROULETTE", "KENO", "PLINKO", "SIC_BO", "SLOTS", "BACCARAT"];
         string[8] memory modules = [

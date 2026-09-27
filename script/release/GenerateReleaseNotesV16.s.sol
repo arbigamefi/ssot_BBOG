@@ -4,15 +4,15 @@ pragma solidity ^0.8.20;
 import "forge-std/Script.sol";
 import "forge-std/StdJson.sol";
 
-/// @notice Generates Markdown release notes for v1.5 router/pool deployment snapshots.
-contract GenerateReleaseNotesV15 is Script {
+/// @notice Generates Markdown release notes for v1.6 router/pool deployment snapshots.
+contract GenerateReleaseNotesV16 is Script {
     using stdJson for string;
 
     function run() external {
         vm.createDir("deployments/release", true);
 
-        string memory releasePath = vm.envOr("RELEASE_PATH", string("deployments/release-latest-v15.json"));
-        string memory snapshotPath = vm.envOr("SNAPSHOT_PATH", string("deployments/latest-v15.json"));
+        string memory releasePath = vm.envOr("RELEASE_PATH", string("deployments/release-latest-v16.json"));
+        string memory snapshotPath = vm.envOr("SNAPSHOT_PATH", string("deployments/latest-v16.json"));
         string memory tagName = vm.envOr("TAG_NAME", string(""));
 
         string memory rel = _readFileOrDie(releasePath);
@@ -27,7 +27,7 @@ contract GenerateReleaseNotesV15 is Script {
         bytes32 s = rel.readBytes32(".s");
 
         if (bytes(tagName).length == 0) {
-            tagName = string.concat("chain-", vm.toString(chainId), "-", vm.toString(blockNumber), "-v15");
+            tagName = string.concat("chain-", vm.toString(chainId), "-", vm.toString(blockNumber), "-v16");
         }
 
         string memory md = _header(tagName, chainId, blockNumber, snap);
@@ -39,15 +39,15 @@ contract GenerateReleaseNotesV15 is Script {
         md = string.concat(
             md,
             "\n## Verification\n\n",
-            "- Verify release lock locally (offline): `make release-verify-v15`\n",
-            "- Generate v1.5 frontend manifest: `make release-frontend-manifest-v15`\n",
-            "- Generate v1.5 golden vectors: `make release-golden-vectors-v15`\n",
-            "- Package artifacts: `make release-package-v15`\n"
+            "- Verify release lock locally (offline): `make release-verify`\n",
+            "- Generate v1.6 frontend manifest: `make release-frontend-manifest`\n",
+            "- Generate v1.6 golden vectors: `make release-golden-vectors`\n",
+            "- Package artifacts: `make release-package`\n"
         );
 
-        string memory outLatest = "deployments/release-notes-latest-v15.md";
+        string memory outLatest = "deployments/release-notes-latest-v16.md";
         string memory out = string.concat(
-            "deployments/release/release-notes-", vm.toString(chainId), "-", vm.toString(blockNumber), "-v15.md"
+            "deployments/release/release-notes-", vm.toString(chainId), "-", vm.toString(blockNumber), "-v16.md"
         );
         vm.writeFile(outLatest, md);
         vm.writeFile(out, md);
@@ -87,7 +87,7 @@ contract GenerateReleaseNotesV15 is Script {
         string memory releasePath
     ) internal pure returns (string memory) {
         return string.concat(
-            "## Release lock (v1.5 params digest)\n\n",
+            "## Release lock (v1.6 params digest)\n\n",
             "- **Digest**: `",
             vm.toString(digest),
             "`\n",
@@ -194,6 +194,20 @@ contract GenerateReleaseNotesV15 is Script {
             "\n",
             "- maxAffiliateDeltaBps: ",
             vm.toString(snap.readUint(".maxAffiliateDeltaBps")),
+            "\n",
+            "- lpShareBps: ",
+            vm.toString(snap.readUint(".lpShareBps")),
+            "\n",
+            "- referral L0/L1/L2/holdback bps: ",
+            string.concat(
+                vm.toString(snap.readUint(".refL0Bps")),
+                "/",
+                vm.toString(snap.readUint(".refL1Bps")),
+                "/",
+                vm.toString(snap.readUint(".refL2Bps")),
+                "/",
+                vm.toString(snap.readUint(".refHoldbackBps"))
+            ),
             "\n",
             "- sportsEnabled: ",
             snap.readUint(".sportsEnabled") == 0 ? "false" : "true",

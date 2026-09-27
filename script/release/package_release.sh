@@ -3,32 +3,32 @@ set -euo pipefail
 
 # Build a release bundle that is tied to a release digest and contains
 # *all* frontend-facing artifacts:
-#   - release-latest-v15.json (lock)
-#   - frontend-manifest-latest-v15.json (mapping)
-#   - golden-vectors-latest-v15.json (provable encoding)
-#   - abis-v15/ (frontend-only trimmed ABIs)
+#   - release-latest-v16.json (lock)
+#   - frontend-manifest-latest-v16.json (mapping)
+#   - golden-vectors-latest-v16.json (provable encoding)
+#   - abis-v16/ (frontend-only trimmed ABIs)
 #
 # Output: dist/ssot-release-<TAG>-<digestPrefix>.tar.gz
 
-RELEASE_PATH="${RELEASE_PATH:-deployments/release-latest-v15.json}"
+RELEASE_PATH="${RELEASE_PATH:-deployments/release-latest-v16.json}"
 PYTHON="${PYTHON:-python}"
-SNAPSHOT_PATH="${SNAPSHOT_PATH:-deployments/latest-v15.json}"
-NOTES_PATH="${NOTES_PATH:-deployments/release-notes-latest-v15.md}"
+SNAPSHOT_PATH="${SNAPSHOT_PATH:-deployments/latest-v16.json}"
+NOTES_PATH="${NOTES_PATH:-deployments/release-notes-latest-v16.md}"
 
-FRONTEND_MANIFEST_PATH="${FRONTEND_MANIFEST_PATH:-deployments/frontend-manifest-latest-v15.json}"
-GOLDEN_VECTORS_PATH="${GOLDEN_VECTORS_PATH:-deployments/golden-vectors-latest-v15.json}"
+FRONTEND_MANIFEST_PATH="${FRONTEND_MANIFEST_PATH:-deployments/frontend-manifest-latest-v16.json}"
+GOLDEN_VECTORS_PATH="${GOLDEN_VECTORS_PATH:-deployments/golden-vectors-latest-v16.json}"
 
-ABIS_DIR="${ABIS_DIR:-deployments/abis-v15}"
-ABIS_INDEX_PATH="${ABIS_INDEX_PATH:-deployments/abis-v15/index.json}"
+ABIS_DIR="${ABIS_DIR:-deployments/abis-v16}"
+ABIS_INDEX_PATH="${ABIS_INDEX_PATH:-deployments/abis-v16/index.json}"
 
 TAG_NAME="${TAG_NAME:-}"
-RELEASE_TAG_SUFFIX="${RELEASE_TAG_SUFFIX:--v15}"
+RELEASE_TAG_SUFFIX="${RELEASE_TAG_SUFFIX:--v16}"
 
-SNAPSHOT_LATEST_NAME="${SNAPSHOT_LATEST_NAME:-latest-v15.json}"
-RELEASE_LATEST_NAME="${RELEASE_LATEST_NAME:-release-latest-v15.json}"
-NOTES_LATEST_NAME="${NOTES_LATEST_NAME:-release-notes-latest-v15.md}"
-FRONTEND_MANIFEST_LATEST_NAME="${FRONTEND_MANIFEST_LATEST_NAME:-frontend-manifest-latest-v15.json}"
-GOLDEN_VECTORS_LATEST_NAME="${GOLDEN_VECTORS_LATEST_NAME:-golden-vectors-latest-v15.json}"
+SNAPSHOT_LATEST_NAME="${SNAPSHOT_LATEST_NAME:-latest-v16.json}"
+RELEASE_LATEST_NAME="${RELEASE_LATEST_NAME:-release-latest-v16.json}"
+NOTES_LATEST_NAME="${NOTES_LATEST_NAME:-release-notes-latest-v16.md}"
+FRONTEND_MANIFEST_LATEST_NAME="${FRONTEND_MANIFEST_LATEST_NAME:-frontend-manifest-latest-v16.json}"
+GOLDEN_VECTORS_LATEST_NAME="${GOLDEN_VECTORS_LATEST_NAME:-golden-vectors-latest-v16.json}"
 
 [[ -f "$RELEASE_PATH" ]] || { echo "missing $RELEASE_PATH (run: make release-digest)"; exit 1; }
 [[ -f "$SNAPSHOT_PATH" ]] || { echo "missing $SNAPSHOT_PATH (run: make deploy)"; exit 1; }
@@ -46,7 +46,7 @@ export RELEASE_PATH SNAPSHOT_PATH NOTES_PATH FRONTEND_MANIFEST_PATH GOLDEN_VECTO
 export ABI_INDEX_PATH="$ABIS_INDEX_PATH"
 STRICT=1 PYTHON="$PYTHON" bash script/release/check_release.sh
 FOUNDRY_PROFILE="${VERIFY_PROFILE:-default}" forge script \
-  script/release/VerifyGovernanceV15.s.sol:VerifyGovernanceV15 --rpc-url "$RPC_URL"
+  script/release/VerifyGovernanceV16.s.sol:VerifyGovernanceV16 --rpc-url "$RPC_URL"
 
 "$PYTHON" - <<'PY'
 import json, os, sys

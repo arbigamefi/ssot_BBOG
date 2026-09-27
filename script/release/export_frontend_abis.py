@@ -6,8 +6,8 @@ This is intentionally a "trimmed ABI" export:
   - We only export the `abi` array needed by frontend tooling.
 
 Default outputs:
-  - deployments/abis-v15/index.json
-  - deployments/abis-v15/<Contract>.abi.json (one per contract type)
+  - deployments/abis-v16/index.json
+  - deployments/abis-v16/<Contract>.abi.json (one per contract type)
 
 The index is tied to the release identity (chainId + blockNumber) so that
 frontend can be zero-inference: copy+consume.
@@ -88,11 +88,11 @@ def _contract_key_to_address(addresses: Dict[str, str], key: str) -> Optional[st
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--manifest", default="deployments/frontend-manifest-latest-v15.json")
+    ap.add_argument("--manifest", default="deployments/frontend-manifest-latest-v16.json")
     ap.add_argument("--out", default="out")
-    ap.add_argument("--dest", default="deployments/abis-v15")
+    ap.add_argument("--dest", default="deployments/abis-v16")
     ap.add_argument("--schema", type=int, default=2)
-    ap.add_argument("--tag-suffix", default="-v15")
+    ap.add_argument("--tag-suffix", default="-v16")
     ap.add_argument("--git-sha", default=os.environ.get("GIT_SHA", ""))
     args = ap.parse_args()
 

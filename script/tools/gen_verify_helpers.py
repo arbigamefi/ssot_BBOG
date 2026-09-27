@@ -6,8 +6,8 @@ Why this exists
 - Contract verification should use the unified Etherscan API V2 endpoint.
 
 This tool regenerates versioned helpers such as:
-- deployments/verify-latest-v15.sh
-- deployments/verify/verify-<chainid>-<block>-v15.sh
+- deployments/verify-latest-v16.sh
+- deployments/verify/verify-<chainid>-<block>-v16.sh
 
 The scripts default to:
   https://api.etherscan.io/v2/api?chainid=<CHAIN_ID>
@@ -62,7 +62,7 @@ def _verify_line(addr: str, contract_id: str, ctor_args: str) -> str:
 
 
 def main() -> int:
-    in_path = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("deployments/latest-v15.json")
+    in_path = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("deployments/latest-v16.json")
     if not in_path.exists():
         print(f"error: {in_path} not found", file=sys.stderr)
         return 2
@@ -71,10 +71,10 @@ def main() -> int:
     chain_id = int(_must(data, "chainId"))
     block_number = int(_must(data, "blockNumber"))
     architecture_version = str(data.get("architectureVersion", ""))
-    if architecture_version != "v1.5-safe-governance":
-        print(f"error: expected a v1.5 Safe-governance snapshot, got architectureVersion={architecture_version!r}", file=sys.stderr)
+    if architecture_version != "v1.6-house-edge-allocation":
+        print(f"error: expected a v1.6 snapshot, got architectureVersion={architecture_version!r}", file=sys.stderr)
         return 2
-    release_version = "v15"
+    release_version = "v16"
     tag = f"{chain_id}-{block_number}-{release_version}"
 
     out_dir = Path("deployments")

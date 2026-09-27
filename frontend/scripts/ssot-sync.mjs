@@ -4,11 +4,12 @@
  *
  * Synchronize a **contract release bundle** into this repo.
  *
- * The bundle is the single source of truth and MUST contain:
- *   - deployments/frontend-manifest-latest-v15.json
- *   - deployments/golden-vectors-latest-v15.json
- *   - deployments/release-latest-v15.json
- *   - deployments/latest-v15.json (required for verification)
+ * The bundle is the single source of truth and MUST contain, for this checkout's
+ * release line (RELEASE_LINE below):
+ *   - deployments/frontend-manifest-latest-v16.json
+ *   - deployments/golden-vectors-latest-v16.json
+ *   - deployments/release-latest-v16.json
+ *   - deployments/latest-v16.json (required for verification)
  *   - abis/index.json + abis/*.abi.json
  *   - (optional) MANIFEST.sha256
  *
@@ -29,6 +30,16 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
+
+// The bundle is verified with this checkout's release scripts and contracts, so only a bundle of
+// the same release line can be imported here. Import another line from a checkout of that line.
+const RELEASE_LINE = {
+  name: "v1.6",
+  suffix: "v16",
+  architectureVersion: "v1.6-house-edge-allocation",
+  schema: "SSOT_RELEASE_DIGEST_V16",
+  scriptSuffix: "V16"
+};
 
 const args = process.argv.slice(2);
 const getArg = (name) => {
@@ -341,12 +352,17 @@ async function main() {
   const deploymentsDir = path.join(bundleRoot, "deployments");
   const abisDir = path.join(bundleRoot, "abis");
 
+  const { suffix } = RELEASE_LINE;
   const manifestPath = await firstExistingPath(deploymentsDir, [
-    "frontend-manifest-latest-v15.json"
+    `frontend-manifest-latest-${suffix}.json`
   ]);
-  const vectorsPath = await firstExistingPath(deploymentsDir, ["golden-vectors-latest-v15.json"]);
-  const releaseLockPath = await firstExistingPath(deploymentsDir, ["release-latest-v15.json"]);
-  const latestSnapshotPath = await firstExistingPath(deploymentsDir, ["latest-v15.json"]);
+  const vectorsPath = await firstExistingPath(deploymentsDir, [
+    `golden-vectors-latest-${suffix}.json`
+  ]);
+  const releaseLockPath = await firstExistingPath(deploymentsDir, [
+    `release-latest-${suffix}.json`
+  ]);
+  const latestSnapshotPath = await firstExistingPath(deploymentsDir, [`latest-${suffix}.json`]);
   const abiIndexPath = path.join(abisDir, "index.json");
 
   for (const p of [
@@ -375,11 +391,13 @@ async function main() {
 
   // Verify the supplied bundle before changing embedded addresses or deleting a fixture directory.
   if (
-    manifest.architectureVersion !== "v1.5-safe-governance" ||
-    latestSnapshot.architectureVersion !== "v1.5-safe-governance" ||
-    releaseLock.schema !== "SSOT_RELEASE_DIGEST_V15"
+    manifest.architectureVersion !== RELEASE_LINE.architectureVersion ||
+    latestSnapshot.architectureVersion !== RELEASE_LINE.architectureVersion ||
+    releaseLock.schema !== RELEASE_LINE.schema
   ) {
-    throw new Error("Only a v1.5 release bundle can become the active deployment.");
+    throw new Error(
+      `Only a ${RELEASE_LINE.name} release bundle can become the active deployment from this checkout.`
+    );
   }
   for (const item of [vectors, releaseLock, latestSnapshot, abiIndex]) {
     if (item.chainId !== manifest.chainId || item.blockNumber !== manifest.blockNumber) {
@@ -388,11 +406,13 @@ async function main() {
   }
   if (!process.env.RELEASE_SIGNER || !process.env.RPC_URL) {
     throw new Error(
-      "Set the trusted RELEASE_SIGNER and chain-specific RPC_URL before importing v1.5."
+      `Set the trusted RELEASE_SIGNER and chain-specific RPC_URL before importing ${RELEASE_LINE.name}.`
     );
   }
   const repoRoot = path.resolve(ROOT, "..");
-  const verificationDir = await fs.mkdtemp(path.join(repoRoot, "deployments", ".verify-v15-"));
+  const verificationDir = await fs.mkdtemp(
+    path.join(repoRoot, "deployments", `.verify-${suffix}-`)
+  );
   await fs.copyFile(latestSnapshotPath, path.join(verificationDir, "snapshot.json"));
   await fs.copyFile(releaseLockPath, path.join(verificationDir, "release.json"));
   const verificationEnv = {
@@ -412,14 +432,14 @@ async function main() {
         "--snapshot",
         latestSnapshotPath,
         "--notes",
-        path.join(deploymentsDir, "release-notes-latest-v15.md"),
+        path.join(deploymentsDir, `release-notes-latest-${suffix}.md`),
         "--manifest",
         manifestPath,
         "--vectors",
         vectorsPath,
         "--schema",
         "2",
-        "--tag-suffix=-v15",
+        `--tag-suffix=-${suffix}`,
         "--abis-index",
         abiIndexPath
       ],
@@ -427,14 +447,17 @@ async function main() {
     );
     await execFileAsync(
       "forge",
-      ["script", "script/release/VerifyReleaseV15.s.sol:VerifyReleaseV15"],
+      [
+        "script",
+        `script/release/VerifyRelease${RELEASE_LINE.scriptSuffix}.s.sol:VerifyRelease${RELEASE_LINE.scriptSuffix}`
+      ],
       { cwd: repoRoot, env: verificationEnv }
     );
     await execFileAsync(
       "forge",
       [
         "script",
-        "script/release/VerifyGovernanceV15.s.sol:VerifyGovernanceV15",
+        `script/release/VerifyGovernance${RELEASE_LINE.scriptSuffix}.s.sol:VerifyGovernance${RELEASE_LINE.scriptSuffix}`,
         "--rpc-url",
         process.env.RPC_URL
       ],
@@ -442,7 +465,7 @@ async function main() {
     );
   } catch {
     throw new Error(
-      "v1.5 bundle or live governance verification failed; active release was not changed."
+      `${RELEASE_LINE.name} bundle or live governance verification failed; active release was not changed.`
     );
   } finally {
     await fs.rm(verificationDir, { recursive: true, force: true });
