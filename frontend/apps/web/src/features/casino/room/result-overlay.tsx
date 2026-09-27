@@ -13,6 +13,7 @@ import { getExplorerTxUrl } from "../../../app-shell/chain-registry";
 import { Modal } from "../../../components/overlay";
 import { buildCasinoReceiptFromTerminalResult } from "../receipt/view-model";
 import { buildReceiptPath } from "../receipt/receipt-path";
+import { useOptionalRelease } from "../../../ssot/release/ReleaseProvider";
 import { SharePanel } from "../../share/SharePanel";
 import { buildShareUrl } from "../../share/share-link";
 import { formatNativeFee } from "./casino-round";
@@ -621,7 +622,6 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
 export function GameRoomResultOverlay({
   result,
   chainId,
-  gameHub,
   assetSymbol = "UNIT",
   assetDecimals = 6,
   gameSlug,
@@ -639,8 +639,6 @@ export function GameRoomResultOverlay({
 }: {
   result: CasinoTerminalRoundResult;
   chainId?: number;
-  /** The GameHub of the release the round was played on; receipt links name it. */
-  gameHub?: string;
   assetSymbol?: string;
   assetDecimals?: number;
   gameSlug: string;
@@ -658,6 +656,8 @@ export function GameRoomResultOverlay({
   onPlayAgain?: () => void;
 }) {
   const t = useTranslations();
+  // Rounds are played on the active release, so its GameHub issued the bet; receipt links name it.
+  const gameHub = useOptionalRelease()?.release?.contracts.gameHub;
   const [fairnessOpen, setFairnessOpen] = React.useState(false);
   const primaryActionRef = React.useRef<HTMLButtonElement | null>(null);
   const outcome = getOutcome(result, t);

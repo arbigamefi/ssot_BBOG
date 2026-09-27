@@ -540,7 +540,6 @@ export function GamePageClient({ slug }: { slug: string }) {
       casinoOutcome={casinoOutcome}
       resultProof={resultProof}
       chainId={chainId}
-      gameHub={release?.contracts.gameHub}
       assetSymbol={assetSymbol}
       assetDecimals={assetDecimals}
       onResultClose={handleResultClose}
