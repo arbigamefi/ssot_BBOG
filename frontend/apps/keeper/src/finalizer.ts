@@ -1,4 +1,5 @@
 import type { Hex } from "viem";
+import { describeError } from "./errors.js";
 import { isTerminalState, shouldFinalize } from "./state.js";
 import type { BetRead, FinalizeOutcome, KeeperEvent, KeeperLogger } from "./types.js";
 
@@ -71,7 +72,7 @@ export async function finalizeIfReady(
         } catch (error) {
           logger.warn("casino.finalize.receipt_materialize_failed", {
             betId: event.betId.toString(),
-            message: (error as Error)?.message ?? "receipt materialization failed",
+            error: describeError(error),
             txHash
           });
         }
@@ -91,9 +92,10 @@ export async function finalizeIfReady(
       retryable: true
     };
   } catch (error) {
-    const message = (error as Error)?.message ?? "finalize failed";
-    logger.error("casino.finalize.failed", { betId: event.betId.toString(), message });
-    return { kind: "failed", reason: message, retryable: true };
+    // The reason also lands in the public health snapshot, so it must not carry the RPC URL.
+    const reason = describeError(error);
+    logger.error("casino.finalize.failed", { betId: event.betId.toString(), error: reason });
+    return { kind: "failed", reason, retryable: true };
   }
 }
 

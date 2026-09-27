@@ -25,6 +25,7 @@ import {
 
 import { GAME_HUB_KEEPER_ABI, SPORTS_HUB_KEEPER_ABI, VRF_HUB_KEEPER_ABI } from "./abi.js";
 import { fetchBankProviderLedgerRows } from "./bank-provider-ledger.js";
+import { describeError } from "./errors.js";
 import { finalizeIfReady, retryDelayMs } from "./finalizer.js";
 import { createFileHealthSink, KeeperHealthReporter } from "./health.js";
 import { FinalizeQueue, type QueueItem } from "./queue.js";
@@ -260,9 +261,7 @@ export function createKeeperRuntime({
 
   const writeHealth = (op: Promise<void>) => {
     void op.catch((error) => {
-      logger.error("casino.keeper.health_write_failed", {
-        message: (error as Error)?.message ?? "unknown error"
-      });
+      logger.error("casino.keeper.health_write_failed", { error: describeError(error) });
     });
   };
 
@@ -493,17 +492,12 @@ export function createKeeperRuntime({
       } else {
         queue.complete(item.betId);
       }
+      const description = describeError(error);
       logger.error("casino.keeper.process_failed", {
         betId: item.betId.toString(),
-        message: (error as Error)?.message ?? "unknown error"
+        error: description
       });
-      writeHealth(
-        health.recordError(
-          (error as Error)?.message ?? "unknown process failure",
-          queue.size,
-          "finalize"
-        )
-      );
+      writeHealth(health.recordError(description, queue.size, "finalize"));
     }
   };
 
@@ -555,7 +549,7 @@ export function createKeeperRuntime({
     } catch (error) {
       logger.error("casino.keeper.bet_index_write_failed", {
         eventName,
-        message: (error as Error)?.message ?? "index write failed"
+        error: describeError(error)
       });
       throw error;
     }
@@ -580,7 +574,7 @@ export function createKeeperRuntime({
     } catch (error) {
       logger.error("casino.keeper.sports_ticket_index_write_failed", {
         eventName,
-        message: (error as Error)?.message ?? "sports ticket index write failed"
+        error: describeError(error)
       });
     }
   };
@@ -605,7 +599,7 @@ export function createKeeperRuntime({
       await sportsRecovery.scan();
       await sportsRecovery.runDue();
     })().catch((error) => {
-      logger.error("sports.terminalizer.enqueue_failed", { message: (error as Error).message });
+      logger.error("sports.terminalizer.enqueue_failed", { error: describeError(error) });
     });
   };
 
@@ -649,9 +643,7 @@ export function createKeeperRuntime({
       }
       await requeueIndexedBets();
     } catch (error) {
-      logger.error("casino.keeper.bet_index_migrate_failed", {
-        message: (error as Error)?.message ?? "migration failed"
-      });
+      logger.error("casino.keeper.bet_index_migrate_failed", { error: describeError(error) });
       if (sportsRecovery) throw error;
     }
   };
@@ -778,9 +770,9 @@ export function createKeeperRuntime({
         await requeueIndexedBets();
       }
     } catch (error) {
-      const message = (error as Error)?.message ?? "scan failed";
-      logger.error("casino.keeper.scan_failed", { message });
-      writeHealth(health.recordError(message, queue.size, "scan"));
+      const description = describeError(error);
+      logger.error("casino.keeper.scan_failed", { error: description });
+      writeHealth(health.recordError(description, queue.size, "scan"));
     } finally {
       scanning = false;
     }
@@ -793,13 +785,21 @@ export function createKeeperRuntime({
       await scanBankProviderLedgerEvents();
       writeHealth(health.recordLedgerScan(queue.size));
     } catch (error) {
-      const message = (error as Error)?.message ?? "bank provider ledger scan failed";
-      logger.error("casino.keeper.bank_provider_ledger_scan_failed", { message });
-      writeHealth(health.recordError(message, queue.size, "ledger"));
+      const description = describeError(error);
+      logger.error("casino.keeper.bank_provider_ledger_scan_failed", { error: description });
+      writeHealth(health.recordError(description, queue.size, "ledger"));
     } finally {
       bankProviderLedgerScanning = false;
     }
   };
+
+  /**
+   * viem hands a watcher the raw socket error. Node's WebSocket reports a refused, rejected
+   * (HTTP 401/429) or dropped connection as an ErrorEvent whose message is empty, and viem's
+   * own socket errors put the RPC URL in theirs, so neither is logged as-is.
+   */
+  const logWatchError = (event: string, error: unknown, eventName?: string) =>
+    logger.error(event, { eventName, transport: "websocket", error: describeError(error) });
 
   const start = async () => {
     logger.info("casino.keeper.starting", {
@@ -842,8 +842,7 @@ export function createKeeperRuntime({
             logs.forEach(enqueueBetRandomReadyLog);
             void writeBetIndexLogs("BetRandomReady", logs).catch(() => undefined);
           },
-          onError: (error) =>
-            logger.error("casino.keeper.gamehub_watch_error", { message: error.message })
+          onError: (error) => logWatchError("casino.keeper.gamehub_watch_error", error)
         })
       );
       if (betIndexStore) {
@@ -855,10 +854,7 @@ export function createKeeperRuntime({
               eventName,
               onLogs: (logs) => void writeBetIndexLogs(eventName, logs).catch(() => undefined),
               onError: (error) =>
-                logger.error("casino.keeper.gamehub_index_watch_error", {
-                  eventName,
-                  message: error.message
-                })
+                logWatchError("casino.keeper.gamehub_index_watch_error", error, eventName)
             })
           );
         }
@@ -871,10 +867,7 @@ export function createKeeperRuntime({
                 eventName,
                 onLogs: (logs) => void writeSportsTicketIndexLogs(eventName, logs),
                 onError: (error) =>
-                  logger.error("casino.keeper.sports_ticket_index_watch_error", {
-                    eventName,
-                    message: error.message
-                  })
+                  logWatchError("casino.keeper.sports_ticket_index_watch_error", error, eventName)
               })
             );
           }
@@ -888,11 +881,7 @@ export function createKeeperRuntime({
               abi: SPORTS_HUB_KEEPER_ABI,
               eventName,
               onLogs: (logs) => scheduleSportsTerminalizerLogs(eventName, logs),
-              onError: (error) =>
-                logger.error("sports.terminalizer.watch_error", {
-                  eventName,
-                  message: error.message
-                })
+              onError: (error) => logWatchError("sports.terminalizer.watch_error", error, eventName)
             })
           );
         }
@@ -903,8 +892,7 @@ export function createKeeperRuntime({
           abi: VRF_HUB_KEEPER_ABI,
           eventName: "Fulfilled",
           onLogs: (logs) => logs.forEach(enqueueFulfilledLog),
-          onError: (error) =>
-            logger.error("casino.keeper.vrfhub_watch_error", { message: error.message })
+          onError: (error) => logWatchError("casino.keeper.vrfhub_watch_error", error)
         })
       );
     }
@@ -919,7 +907,7 @@ export function createKeeperRuntime({
           () =>
             void requeueIndexedBets().catch((error) => {
               logger.error("casino.keeper.indexed_recovery_failed", {
-                message: (error as Error).message
+                error: describeError(error)
               });
             }),
           300_000
@@ -1000,7 +988,7 @@ async function writeBetIndexRange(
   } catch (error) {
     logger.error("casino.keeper.bet_index_scan_failed", {
       fromBlock: range.fromBlock.toString(),
-      message: (error as Error)?.message ?? "index scan failed",
+      error: describeError(error),
       toBlock: range.toBlock.toString()
     });
     throw error;
@@ -1033,7 +1021,7 @@ async function writeBankProviderLedgerRange(
   } catch (error) {
     logger.error("casino.keeper.bank_provider_ledger_scan_failed", {
       fromBlock: range.fromBlock.toString(),
-      message: (error as Error)?.message ?? "bank provider ledger scan failed",
+      error: describeError(error),
       toBlock: range.toBlock.toString()
     });
     throw error;

@@ -325,6 +325,39 @@ Each failure clears only on its own path's next success, so a settled bet does
 not hide a failing scan. A single RPC error no longer keeps the keeper degraded
 until the next bet settles.
 
+## Logs
+
+Each line is one JSON object. `level`, `message` and `ts` come first and are
+written by the logger: `message` is always the event name, such as
+`casino.keeper.scan_failed`, and no field can replace it. Error text goes in
+`error`. It is built from the error's structured fields (viem's `shortMessage`,
+`details`, `code` or `status`, and the root cause) because viem's own `message`
+embeds the RPC URL and its API key. Any URL that remains is written as
+`[redacted-url]`. The health snapshot's `lastError` and
+`lastFinalizeFailure.reason`, which `/ops/casino-keeper-health.json` serves
+publicly, carry the same text.
+
+Websocket watcher failures are logged as `*_watch_error` with
+`"transport":"websocket"`, one line per watcher:
+
+```text
+{"level":"error","message":"casino.keeper.gamehub_index_watch_error","ts":"2026-09-26T16:11:29.000Z","eventName":"BetPlaced","transport":"websocket","error":"ErrorEvent: error event without a message"}
+```
+
+`ErrorEvent: error event without a message` is how Node's WebSocket reports a
+connection that the `KEEPER_RPC_WS` provider refused, rejected or dropped. It
+does not expose the HTTP status, so a 401 (bad key) and a 429 (such as an
+exhausted Alchemy monthly quota) look the same; check the provider dashboard.
+When an established connection drops, each watcher also logs
+`SocketClosedError: The socket has been closed.`, and viem reconnects and
+resubscribes about two seconds later. If that one reconnect fails, viem does not
+try again. If the first connection at startup fails, the watchers are never
+subscribed, even though viem opens a new socket two seconds later. Either way
+they stay down until the keeper restarts, even after the provider recovers.
+Settlement then relies on the HTTP scan every `KEEPER_POLL_INTERVAL_SECONDS`, and
+`/api/healthz` still reports `ok`. Restart the keeper once the provider accepts
+connections again.
+
 ## Recovery regression checks
 
 Run `pnpm -C frontend/apps/keeper test` and `pnpm -C frontend/packages/bet-index test`.

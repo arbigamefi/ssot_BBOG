@@ -2,7 +2,7 @@
 
 | Owner | Frontend Lead + SRE |
 | Status | Accepted v1 |
-| Last Updated | 2026-05-17 |
+| Last Updated | 2026-09-27 |
 | Depends-on | `../design/casino-placebet-ux.md`, `../design/durable-bet-index.md`, `25-observability.md`, `30-build-and-release.md` |
 | Supersedes | manual-by-default casino finalize operations |
 
@@ -25,14 +25,14 @@ casino round.
 
 ## 3. Runtime
 
-| Dimension | v1 decision |
-| --- | --- |
-| Language | Node.js + TypeScript |
-| Chain client | `viem` |
-| Transport | WebSocket for events, HTTP fallback scan |
-| Wallet | dedicated keeper EOA with bounded native balance |
-| Deployment | one primary instance, one backup instance after canary |
-| Secrets | env vars only, never committed |
+| Dimension    | v1 decision                                            |
+| ------------ | ------------------------------------------------------ |
+| Language     | Node.js + TypeScript                                   |
+| Chain client | `viem`                                                 |
+| Transport    | WebSocket for events, HTTP fallback scan               |
+| Wallet       | dedicated keeper EOA with bounded native balance       |
+| Deployment   | one primary instance, one backup instance after canary |
+| Secrets      | env vars only, never committed                         |
 
 Production systemd and environment templates live in:
 
@@ -147,45 +147,49 @@ restarts cheap while preserving the same idempotent replay path for backfills.
 
 ## 8. Observability
 
-Emit structured logs:
+Emit structured logs, one JSON object per line:
 
 ```json
 {
-  "event": "casino.finalize.mined",
-  "chainId": 84532,
+  "level": "info",
+  "message": "casino.finalize.mined",
+  "ts": "2026-05-17T09:30:04.210Z",
   "betId": "14",
   "requestId": "8890...",
   "txHash": "0x...",
-  "latencyMs": 4210,
-  "keeper": "primary"
+  "latencyMs": 4210
 }
 ```
 
+`message` is always the event name; no field can replace it. Error text goes in
+`error` and never contains an RPC URL, since those carry API keys. See the
+[keeper README](../../frontend/apps/keeper/README.md#logs).
+
 Required metrics:
 
-| Metric | Target | Alert |
-| --- | --- | --- |
-| `random_ready_to_settled_ms.p50` | < 5s | p95 > 15s |
-| `casino_keeper_finalize_success_rate` | > 99.5% | < 99% |
-| `casino_keeper_last_success_age_seconds` | < 60s | > 300s |
-| `casino_keeper_random_ready_stuck_count` | 0 | > 0 |
+| Metric                                   | Target  | Alert     |
+| ---------------------------------------- | ------- | --------- |
+| `random_ready_to_settled_ms.p50`         | < 5s    | p95 > 15s |
+| `casino_keeper_finalize_success_rate`    | > 99.5% | < 99%     |
+| `casino_keeper_last_success_age_seconds` | < 60s   | > 300s    |
+| `casino_keeper_random_ready_stuck_count` | 0       | > 0       |
 
 Required health snapshot fields:
 
-| Field | Meaning |
-| --- | --- |
-| `status` | `starting`, `running`, `degraded`, or `stopped` |
-| `role` | `primary` or `backup` |
-| `chainId` | release chain id |
-| `gameHub` / `vrfHub` | watched contract addresses |
-| `keeper` | keeper EOA address |
-| `startedAt` / `updatedAt` | ISO timestamps |
-| `lastScannedBlock` | latest scan cursor |
-| `queueDepth` | pending finalize queue size |
-| `lastEnqueuedAt` | last RandomReady / Fulfilled / scan enqueue |
-| `lastFinalizeSuccessAt` | last successful terminal finalize verification |
-| `lastFinalizeFailureAt` | last failed finalize attempt |
-| `lastError` | latest operational error summary, if any |
+| Field                     | Meaning                                         |
+| ------------------------- | ----------------------------------------------- |
+| `status`                  | `starting`, `running`, `degraded`, or `stopped` |
+| `role`                    | `primary` or `backup`                           |
+| `chainId`                 | release chain id                                |
+| `gameHub` / `vrfHub`      | watched contract addresses                      |
+| `keeper`                  | keeper EOA address                              |
+| `startedAt` / `updatedAt` | ISO timestamps                                  |
+| `lastScannedBlock`        | latest scan cursor                              |
+| `queueDepth`              | pending finalize queue size                     |
+| `lastEnqueuedAt`          | last RandomReady / Fulfilled / scan enqueue     |
+| `lastFinalizeSuccessAt`   | last successful terminal finalize verification  |
+| `lastFinalizeFailureAt`   | last failed finalize attempt                    |
+| `lastError`               | latest operational error summary, if any        |
 
 `/ops` must treat a missing or stale snapshot as warning/degraded rather than
 as a healthy worker.

@@ -66,8 +66,18 @@ export type FinalizeOutcome =
   | { kind: "skipped"; state: BetStateName }
   | { kind: "failed"; reason: string; retryable: boolean };
 
+/**
+ * `level`, `message` and `ts` belong to the logger, and `message` is always the
+ * event name. Error text goes in `error`, from `describeError`.
+ */
+export type KeeperLogFields = Record<string, unknown> & {
+  level?: never;
+  message?: never;
+  ts?: never;
+};
+
 export type KeeperLogger = {
-  info: (message: string, fields?: Record<string, unknown>) => void;
-  warn: (message: string, fields?: Record<string, unknown>) => void;
-  error: (message: string, fields?: Record<string, unknown>) => void;
+  info: (message: string, fields?: KeeperLogFields) => void;
+  warn: (message: string, fields?: KeeperLogFields) => void;
+  error: (message: string, fields?: KeeperLogFields) => void;
 };
