@@ -5,7 +5,7 @@
 
 ## Context
 
-Legacy refactors provide multi-roll games (Dice/Roulette/Keno) with:
+Multi-roll games (Dice/Roulette/Keno) use:
 - a single VRF word used as a **seed**
 - deterministic per-roll RNG derived from that seed
 - early stopping via `stopGain` / `stopLoss`

@@ -9,10 +9,6 @@ const REPO_ROOT = path.resolve(FRONTEND_ROOT, "..");
 const KEEPER_DEPLOY_ENV_DIR = path.join(FRONTEND_ROOT, "deploy/casino-keeper");
 const DEFAULT_KEEPER_ENV_FILE = "primary.env";
 const DEFAULT_ALL_KEEPER_ENV_FILES = ["primary.base-mainnet.env", "primary.env"];
-const LEGACY_PUBLIC_HEALTH_PATH = path.join(
-  FRONTEND_ROOT,
-  "apps/web/public/ops/casino-keeper-health.json"
-);
 const DEFAULT_DEV_REWIND_BLOCKS = 2_000n;
 const DEFAULT_LOCAL_BET_INDEX_DATABASE_URL =
   "postgres://arbigamefi:arbigamefi_dev_only@127.0.0.1:54329/arbigamefi";
@@ -187,20 +183,6 @@ async function applyDevStartBlock(env) {
   }
 }
 
-function cleanupLegacyPublicHealthFile() {
-  try {
-    fs.rmSync(LEGACY_PUBLIC_HEALTH_PATH, { force: true });
-  } catch {
-    // Best effort only: a stale public health file makes Next.js route resolution fail.
-  }
-
-  try {
-    fs.rmdirSync(path.dirname(LEGACY_PUBLIC_HEALTH_PATH));
-  } catch {
-    // Directory may be absent or contain unrelated files.
-  }
-}
-
 async function keeperEnv({ envFile }) {
   const env = { ...process.env };
   const externalHealthPath = process.env.KEEPER_HEALTH_PATH?.trim();
@@ -261,7 +243,6 @@ function stop(child) {
 }
 
 async function main() {
-  cleanupLegacyPublicHealthFile();
   const args = process.argv.slice(2);
   const withWeb = args.includes("--with-web");
   const allKeepers = args.includes("--all-keepers");

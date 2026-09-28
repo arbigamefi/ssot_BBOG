@@ -52,8 +52,8 @@ class ImageGuardTests(unittest.TestCase):
             GUARD.check("image", REVISION)
         self.assertEqual(self.probe_calls, 0)
 
-    def test_retired_schema_or_digest_mismatch_rejected_by_actual_probe(self):
-        for field, value in [("schema", "SSOT_RELEASE_DIGEST_V14"), ("digest", "0x" + "4" * 64)]:
+    def test_unknown_schema_or_digest_mismatch_rejected_by_actual_probe(self):
+        for field, value in [("schema", "SSOT_RELEASE_DIGEST_OTHER"), ("digest", "0x" + "4" * 64)]:
             with self.subTest(field=field):
                 self.manifests = {str(c): manifest(c) for c in (8453, 84532)}
                 self.manifests["8453"]["meta"]["releaseLock"][field] = value
@@ -69,7 +69,7 @@ class ImageGuardTests(unittest.TestCase):
 
 class SyncGuardTests(unittest.TestCase):
     def test_rejected_bundles_leave_active_files_untouched(self):
-        for failure in ("old-schema", "wrong-chain", "no-trust-anchor"):
+        for failure in ("unknown-schema", "wrong-chain", "no-trust-anchor"):
             with self.subTest(failure=failure), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 frontend = root / "frontend"
@@ -84,8 +84,8 @@ class SyncGuardTests(unittest.TestCase):
                 rows = {"frontend-manifest-latest-v16.json": dict(common), "latest-v16.json": dict(common),
                         "golden-vectors-latest-v16.json": dict(common),
                         "release-latest-v16.json": {**common, "schema": "SSOT_RELEASE_DIGEST_V16"}}
-                if failure == "old-schema":
-                    rows["release-latest-v16.json"]["schema"] = "SSOT_RELEASE_DIGEST_V15"
+                if failure == "unknown-schema":
+                    rows["release-latest-v16.json"]["schema"] = "SSOT_RELEASE_DIGEST_OTHER"
                 if failure == "wrong-chain":
                     rows["golden-vectors-latest-v16.json"]["chainId"] = 84532
                 for name, row in rows.items():
@@ -94,7 +94,7 @@ class SyncGuardTests(unittest.TestCase):
                 env = {k: v for k, v in os.environ.items() if k not in ("RELEASE_SIGNER", "RPC_URL")}
                 result = subprocess.run(["node", str(ROOT / "frontend/scripts/ssot-sync.mjs"), "--from", str(bundle)], cwd=frontend, env=env, capture_output=True, timeout=10)
                 self.assertNotEqual(result.returncode, 0)
-                expected = {"old-schema": b"Only a v1.6", "wrong-chain": b"Mixed chain or deployment block", "no-trust-anchor": b"trusted RELEASE_SIGNER"}[failure]
+                expected = {"unknown-schema": b"Only a v1.6", "wrong-chain": b"Mixed chain or deployment block", "no-trust-anchor": b"trusted RELEASE_SIGNER"}[failure]
                 self.assertIn(expected, result.stderr)
                 self.assertEqual(sentinel.read_bytes(), b"existing active release")
                 self.assertEqual(len(list(frontend.rglob("*.json"))), 1)
@@ -123,8 +123,8 @@ class PackageGuardTests(unittest.TestCase):
 
 
 class VerifyHelperGuardTests(unittest.TestCase):
-    def test_retired_snapshots_cannot_generate_executable_helpers(self):
-        for version in ("v1.3-router", "v1.4-bank", "v1.5-safe-governance"):
+    def test_other_snapshots_cannot_generate_executable_helpers(self):
+        for version in ("", "unknown-architecture"):
             with self.subTest(version=version), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 snapshot = root / "snapshot.json"

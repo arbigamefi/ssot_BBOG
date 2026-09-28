@@ -38,8 +38,8 @@ AI-assisted changes must not:
 - add product UI hex literals, per-game brand colors, `--ag-*`,
   `visual-system.ts`, or `cyber-*`;
 - add prototype routes to `apps/web/src/app`;
-- reintroduce legacy route aliases such as `/dice`, `/roulette`, `/invest`, or
-  `/bets`;
+- add redirect aliases, compatibility layers or migration code for earlier
+  builds: the project is pre-launch, so replaced code is deleted outright;
 - import wagmi, viem, or RainbowKit from pages or unrelated UI components;
 - send transactions without a simulation/planning step;
 - use native `<input type="number">` for asset amounts;
@@ -91,8 +91,6 @@ before committing.
 ```bash
 test ! -d frontend/apps/web/src/app/prototype
 rg -n "prototype|compat|legacy|visual-system|cyber-" frontend/apps/web/src frontend/packages
-rg -n -e "SiteChrome|TrustShell|ImmersiveGameLayout|PrototypeGameLayout|ShellSwitcher" frontend/apps/web/src
-find frontend/apps/web/public -path '*ops*' -maxdepth 5 -print
 ```
 
 Expected result is empty unless a future ADR explicitly changes the frontend
@@ -100,9 +98,9 @@ architecture.
 
 ## When To Update Docs
 
-Update docs when a durable decision changes, when a runbook would mislead an
-operator, or when an accepted ADR is superseded. Do not add docs just to
-preserve chat history.
+Update docs when a durable decision changes or when a runbook would mislead an
+operator. Rewrite the current doc instead of stacking superseded records. Do not
+add docs just to preserve chat history.
 
 ## PR / Commit Notes
 

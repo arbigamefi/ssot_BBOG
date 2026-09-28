@@ -42,9 +42,6 @@ portfolio, LP, and ops surfaces accessible.
 /legal/disclaimer
 ```
 
-Legacy aliases such as `/dice`, `/roulette`, `/games`, `/bets`, `/account`,
-`/invest`, `/liquidity`, and `/prototype/*` are not product routes.
-
 ## 3. Primary Journeys
 
 ### Player Casino

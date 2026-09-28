@@ -1,7 +1,7 @@
 # Docker deployment
 
 Use this for the first deployment of the current application and verified contract release.
-The Compose project and database are `arbigamefi`. No version migration or old-stack handover is required.
+The Compose project and database are `arbigamefi`.
 
 This path runs the production app as normal long-lived processes:
 

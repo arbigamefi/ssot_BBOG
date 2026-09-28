@@ -28,10 +28,11 @@ import { formatTokenAmount, getExplorerBaseUrl, shortHex } from "../../../featur
 import type { EarnAmountMode, EarnBankData, EarnTab } from "../../../features/earn/types";
 import { useBankProviderLedger } from "../../../features/earn/useBankProviderLedger";
 import { useBankRecovery } from "../../../features/earn/useBankRecovery";
+import { useEarnAsyncActions } from "../../../features/earn/useEarnAsyncActions";
 import { EarnRecoveryPanel } from "../../../features/earn/earn-recovery-panel";
 import { getPoolAssetContext, type PoolAssetContext } from "../../../features/assets/pool-asset";
 import { formatUnits, parseDecimalToUnits } from "../../../features/betting/model/units";
-import { useDirectTxAction, useSequencedTxAction } from "../../../features/tx/useDirectTxAction";
+import { useSequencedTxAction } from "../../../features/tx/useDirectTxAction";
 import { useRelease } from "../../../ssot/release/ReleaseProvider";
 import { useSSOTSDK } from "../../../ssot/sdk";
 import { toast } from "@ssot/ui";
@@ -132,18 +133,17 @@ export function EarnPageClient() {
   const redemptionState = loadError
     ? null
     : getEarnRedemptionView(bankData?.snapshot, bankData?.position);
-  const [asyncBusy, setAsyncBusy] = React.useState(false);
-  const [asyncAction, setAsyncAction] = React.useState("REQUEST_REDEEM");
-  const asyncBusyRef = React.useRef(false);
-  const asyncFlow = useDirectTxAction({
-    action: asyncAction,
-    errorMessage: t("app.errors.transactionFailed"),
-    labels: {
-      preflight: t("earn.flows.preflight.title"),
-      submit: t("earn.flows.direct.submit"),
-      confirm: t("earn.flows.direct.confirm")
-    }
+  const otherFlowBusyRef = React.useRef(false);
+  const asyncActions = useEarnAsyncActions({
+    sdk,
+    poolId,
+    bankAddress,
+    enabled: !readOnly && writesSupportedForSelectedAsset && ready,
+    otherFlowBusy: otherFlowBusyRef
   });
+  const asyncFlow = asyncActions.flow;
+  const asyncBusy = asyncActions.busy;
+  const handleAsyncAction = asyncActions.run;
 
   const [tab, setTab] = React.useState<EarnTab>(() => (depositsEnabled ? "deposit" : "withdraw"));
   const [amountMode, setAmountMode] = React.useState<EarnAmountMode>("assets");
@@ -218,6 +218,7 @@ export function EarnPageClient() {
 
   const currentFlow =
     tab === "withdraw" ? asyncFlow : amountMode === "shares" ? mintFlow : depositFlow;
+  otherFlowBusyRef.current = currentFlow.busy;
   const flow: EarnFlowState = {
     status: currentFlow.status,
     steps: currentFlow.steps,
@@ -289,7 +290,7 @@ export function EarnPageClient() {
   }, [amountMode, decimals, maxMintShares, tab, walletBalance]);
 
   const handleSubmit = React.useCallback(async () => {
-    if (asyncBusyRef.current || !bankLoaded || bankPaused || tab !== "deposit") {
+    if (asyncActions.busyRef.current || !bankLoaded || bankPaused || tab !== "deposit") {
       toast.error(t(!bankLoaded ? "earn.async.unknown" : "earn.async.paused"));
       return;
     }
@@ -399,99 +400,6 @@ export function EarnPageClient() {
     t,
     writesSupportedForSelectedAsset
   ]);
-
-  const handleAsyncAction = async (
-    action: "request" | "cancel" | "claim" | "player" | "recovery",
-    shares?: bigint,
-    epochId?: bigint
-  ) => {
-    if (
-      !sdk?.account ||
-      !poolId ||
-      readOnly ||
-      !writesSupportedForSelectedAsset ||
-      !ready ||
-      asyncBusyRef.current ||
-      currentFlow.busy
-    )
-      return;
-    asyncBusyRef.current = true;
-    setAsyncBusy(true);
-    let toastId: string | number | undefined;
-    try {
-      const account = sdk.account;
-      const snapshot = await sdk.bank.getSnapshot(poolId);
-      if (snapshot.bank?.toLowerCase() !== bankAddress) throw new Error(t("earn.async.unknown"));
-      const position = await sdk.bank.getPosition(poolId, account, {
-        blockNumber: snapshot.updatedAtBlock
-      });
-      const fresh = getEarnRedemptionView(snapshot, position);
-      if (!fresh) throw new Error(t("earn.async.unknown"));
-      if ((action === "claim" || action === "recovery") && fresh.paused)
-        throw new Error(t("earn.async.paused"));
-      if (action === "request" && (shares == null || shares <= 0n || shares > fresh.walletShares))
-        throw new Error(t("earn.errors.exceedsRedeemable"));
-      if (action === "cancel" && fresh.cancellableShares === 0n)
-        throw new Error(t("earn.async.cancelDetail"));
-      if (action === "claim" && fresh.claimableShares === 0n) return;
-      if (action === "player" && (position.playerPayable ?? 0n) === 0n) return;
-      if (action === "recovery") {
-        if (epochId == null) return;
-        const right = await sdk.bank.getRecovery(poolId, epochId, account, {
-          blockNumber: snapshot.updatedAtBlock
-        });
-        if (right.updatedAtBlock !== snapshot.updatedAtBlock || right.epochId !== epochId)
-          throw new Error(t("earn.recovery.error"));
-        if (right.claimableAssets <= 0n) return;
-      }
-      toastId = toast.loading(t("earn.toast.processing"));
-      setAsyncAction(
-        action === "request"
-          ? "REQUEST_REDEEM"
-          : action === "cancel"
-            ? "CANCEL_REDEEM"
-            : action === "recovery"
-              ? "CLAIM_RECOVERY"
-              : action === "player"
-                ? "CLAIM_PLAYER_PAYABLE"
-                : "REDEEM"
-      );
-      const result = await asyncFlow.execute(() =>
-        action === "request"
-          ? sdk.bank.requestRedeem(poolId, shares!, account, account)
-          : action === "cancel"
-            ? sdk.bank.cancelRedeemRequest(poolId, account)
-            : action === "recovery"
-              ? sdk.bank.claimRecovery(poolId, epochId!, account, account)
-              : action === "player"
-                ? sdk.bank.claimPlayerPayable(poolId, account)
-                : sdk.bank.redeem(poolId, fresh.claimableShares, account, account)
-      );
-      if (!result.ok) throw new Error(result.error?.message ?? t("earn.toast.failed"));
-      toast.success(
-        t(
-          action === "request"
-            ? "earn.async.requested"
-            : action === "cancel"
-              ? "earn.async.cancelled"
-              : action === "recovery"
-                ? "earn.recovery.claimed"
-                : action === "player"
-                  ? "earn.async.playerClaimed"
-                  : "earn.async.claimed"
-        ),
-        { id: toastId }
-      );
-      toastId = undefined;
-    } catch (error) {
-      toast.error((error as Error)?.message ?? t("earn.toast.failed"));
-    } finally {
-      if (toastId != null) toast.dismiss(toastId);
-      await queryClient.invalidateQueries({ queryKey: ["ssot", "earn"] });
-      asyncBusyRef.current = false;
-      setAsyncBusy(false);
-    }
-  };
 
   if (!release) {
     return (

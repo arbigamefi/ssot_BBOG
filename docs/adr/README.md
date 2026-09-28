@@ -1,8 +1,8 @@
 # Current design decisions
 
 Core accounting, authority, buffer and encoding rules are consolidated in the
-[current constitution](../constitution/SSOT.v1.6.md). The records below describe decisions still relevant
-to this implementation; completed implementation plans and superseded proposals are removed.
+[current constitution](../constitution/SSOT.v1.6.md). The records below describe the decisions behind this
+implementation.
 
 - [ADR-0005: Referral liabilities as XP buckets; permissionless unlock + rolling linear vesting](0005-referral-permissionless-linear-vesting.md)
 - [ADR-0006: VRFHub fulfill never reverts (soft-ignore + try/catch)](0006-vrfhub-fulfill-never-revert.md)

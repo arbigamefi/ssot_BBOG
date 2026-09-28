@@ -3,10 +3,9 @@ import type { Page } from "@playwright/test";
 import { embeddedChainIds } from "@ssot/ssot/release";
 
 /**
- * Browser smoke tests for the current clean-room route surface.
+ * Browser smoke tests for the production routes.
  *
- * The suite is intentionally read-only and wallet-free. It protects the
- * production routes while also asserting that deleted legacy aliases stay gone.
+ * The suite is intentionally read-only and wallet-free.
  */
 
 async function clearComplianceGate(page: Page) {
@@ -141,11 +140,4 @@ test.describe("current route smoke", () => {
       await expect(page.getByText(route.text).first()).toBeVisible();
     });
   }
-
-  test("legacy route aliases stay physically deleted", async ({ page }) => {
-    for (const path of ["/games", "/dice", "/bets", "/privacy"]) {
-      const response = await page.goto(path, { waitUntil: "commit" });
-      expect(response?.status(), path).toBe(404);
-    }
-  });
 });

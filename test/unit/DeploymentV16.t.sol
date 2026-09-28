@@ -335,7 +335,7 @@ contract DeploymentV16Test is Test {
         changed = vm.serializeBytes32("tampered-v16", "codeHash_poolBank_0", bytes32(uint256(1)));
         assertNotEq(digest.digest(changed), original);
         vm.serializeJson("tampered-v16", snap);
-        changed = vm.serializeString("tampered-v16", "architectureVersion", "v1.5-safe-governance");
+        changed = vm.serializeString("tampered-v16", "architectureVersion", "tampered-architecture");
         vm.expectRevert("not a v1.6 snapshot");
         digest.digest(changed);
     }

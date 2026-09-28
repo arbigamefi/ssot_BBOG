@@ -2,7 +2,6 @@
 
 The project is in development and has not launched. v1.6 is the only supported contract and release
 format. Start with a fresh deployment, a fresh database schema, and the current application build.
-There is no older deployment to migrate or preserve in this workflow.
 
 ## Before deployment
 
