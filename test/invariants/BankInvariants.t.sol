@@ -11,6 +11,7 @@ import {BlacklistToken} from "../mocks/BlacklistToken.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {DefaultReferralEngine} from "../../src/engines/referral/DefaultReferralEngine.sol";
 import {IReferralEngine} from "../../src/engines/referral/IReferralEngine.sol";
+import {BankCurve} from "../utils/BankCurve.sol";
 
 /// @dev Drives the Bank through the classes of operation that move its
 ///      accounting: deposit, redemption Requests and their batches and claims
@@ -188,8 +189,7 @@ contract BankHandler is Test {
     }
 
     function _realPool(uint256 assets_, uint256 supply_) internal view returns (uint256) {
-        uint256 v = 10 ** bank.decimals();
-        return Math.min(Math.mulDiv(supply_, assets_ + v, supply_ + v), assets_);
+        return BankCurve.realEquity(supply_, assets_, BankCurve.virtualOffset(bank.decimals()));
     }
 
     function action_claimRecovery(uint256 epochRaw, uint256 seed) external {
@@ -632,8 +632,7 @@ contract BankInvariants is StdInvariant, Test {
     }
 
     function _pool(uint256 assets_, uint256 supply_) internal view returns (uint256) {
-        uint256 v = 10 ** bank.decimals();
-        return Math.min(Math.mulDiv(supply_, assets_ + v, supply_ + v), assets_);
+        return BankCurve.realEquity(supply_, assets_, BankCurve.virtualOffset(bank.decimals()));
     }
 
     /// Reserved is mirrored two ways: the handler's running total and the sum of

@@ -120,21 +120,23 @@ contract SecurityFixes is Test {
         asset.transfer(address(bank), donation);
         vm.stopPrank();
 
+        // A deposit that would round to zero shares reverts instead of silently losing the victim's funds.
         vm.startPrank(victim);
         asset.approve(address(bank), type(uint256).max);
-        uint256 victimShares = bank.deposit(100e6, victim);
+        vm.expectRevert(Errors.InsufficientBalance.selector);
+        bank.deposit(100e6, victim);
         vm.stopPrank();
+        assertEq(asset.balanceOf(victim), 100e6, "the victim keeps its funds");
 
-        assertGt(victimShares, 0, "victim deposit must not mint zero shares");
-
+        // The 0.001-token virtual position captures almost all of the donation: the attacker's one share exits
+        // for about a thousandth of it.
         vm.prank(attacker);
         bank.requestRedeem(1, attacker, attacker);
         vm.warp(bank.redeemBatch(1).cutoff);
         bank.activateBatch();
         vm.prank(attacker);
         uint256 swept = bank.redeem(1, attacker, attacker);
-        assertLt(swept, donation + 1, "attacker must not profit from direct donation inflation");
-        assertLt(swept, 2e6, "virtual reserve should capture almost all donated value");
+        assertLt(swept, donation / 1000, "the attacker recovers under a thousandth of the donation");
     }
 
     function test_referralConfigRejectsOverBudgetLevels() external {

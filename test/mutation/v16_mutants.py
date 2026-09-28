@@ -214,7 +214,10 @@ MUTANTS = [
     {"id": "M50", "guarantee": "full-exit liquid allocation dust never becomes a later depositor windfall",
      "patches": [(BANK, "            if (b.fullExit) _accrueProtocolCapital(id, dust, 3);", "            if (b.fullExit && totalSupply == 0) _accrueProtocolCapital(id, dust, 3);")],
      "tests": [ASYNC]},
-
+    {"id": "M51", "guarantee": "the virtual position is one thousandth of a token, so its residual stays negligible",
+     "patches": [(BANK, "_virtualOffset = decimals_ > 3 ? 10 ** uint256(decimals_ - 3) : 1;",
+                  "_virtualOffset = 10 ** uint256(decimals_);")],
+     "tests": [ASYNC, "test/unit/SecurityFixes.t.sol"]},
 ]
 
 

@@ -44,9 +44,10 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     uint256 public override totalBetsSettled;
     uint256 public override totalBetsRefunded;
 
-    /// @dev Virtual reserves keep the initial share price 1:1 while making direct
-    ///      asset donations economically captured by the vault instead of letting
-    ///      a dust first-depositor dilute later LPs to zero shares.
+    /// @dev Virtual assets and shares of one thousandth of a token (one base unit below three decimals). They
+    ///      keep the initial share price 1:1, and a first-depositor donation must be about a thousand times the
+    ///      deposit it attacks and is almost all captured by the virtual position. That position is kept this
+    ///      small because exits and recoveries release its share of value to protocol capital (ADR-0035).
     uint256 private immutable _virtualOffset;
 
     // XP buckets (external payables; E-class)
@@ -171,7 +172,7 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
         name = name_;
         symbol = symbol_;
         decimals = decimals_;
-        _virtualOffset = 10 ** uint256(decimals_);
+        _virtualOffset = decimals_ > 3 ? 10 ** uint256(decimals_ - 3) : 1;
 
         // referral/xp defaults (governance can update)
         holdbackVestingSeconds = 30 days;
@@ -232,10 +233,10 @@ contract Bank is IBank, Governable, Pausable, ReentrancyGuard {
     function setMinPlayerTurnoverForUnlock(uint256 turnover_) external onlyGov {
         // Compare the exact asset-unit ceiling when it fits uint256. If it
         // exceeds uint256, every representable threshold is already below it.
-        if (
-            _virtualOffset <= type(uint256).max / MAX_MIN_TURNOVER_UNITS
-                && turnover_ > MAX_MIN_TURNOVER_UNITS * _virtualOffset
-        ) revert Errors.InvalidConfig();
+        uint256 unit = 10 ** uint256(decimals);
+        if (unit <= type(uint256).max / MAX_MIN_TURNOVER_UNITS && turnover_ > MAX_MIN_TURNOVER_UNITS * unit) {
+            revert Errors.InvalidConfig();
+        }
         minPlayerTurnoverForUnlock = turnover_;
     }
 

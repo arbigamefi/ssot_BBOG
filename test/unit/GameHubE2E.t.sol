@@ -37,6 +37,7 @@ import {SicBoModule} from "../../src/modules/sicbo/SicBoModule.sol";
 import {SicBoParams} from "../../src/modules/sicbo/SicBoParams.sol";
 import {SlotsModule} from "../../src/modules/slots/SlotsModule.sol";
 import {SlotsParams} from "../../src/modules/slots/SlotsParams.sol";
+import {BankCurve} from "../utils/BankCurve.sol";
 
 contract GameHubE2E is Test {
     uint64 internal constant POOL_A = 1;
@@ -470,7 +471,7 @@ contract GameHubE2E is Test {
         IBank.RecoveryEpoch memory epoch = bankA.recoveryEpoch(1);
         assertEq(epoch.remainingHolds, 0);
         assertEq(epoch.settledCost, 19.8 ether, "winner plus both turnover allocations");
-        uint256 expected = 1_992 ether + _expectedRecovery(epoch, 1 ether);
+        uint256 expected = 1_992 ether + _expectedRecovery(epoch, BankCurve.virtualOffset(18));
         assertEq(_claimGovExit(bankA, 2_000 ether, 1), expected);
         uint256 afterClaim = _place(alice, GAME_DICE, POOL_A, abi.encode(true, uint8(50)), spec, address(0));
         assertEq(router.getPosition(afterClaim).bank, address(bankA));
@@ -1181,7 +1182,7 @@ contract GameHubE2E is Test {
             assertEq(terminal.refundAmount, 0);
             assertEq(historical.remainingHolds, 0);
             assertEq(historical.settledCost, terminal.payoutNet + 0.025 ether);
-            assertEq(historical.recoveredAssets, _expectedRecovery(historical, 1 ether));
+            assertEq(historical.recoveredAssets, _expectedRecovery(historical, BankCurve.virtualOffset(18)));
             assertEq(bankA.totalAssets(), activeBefore);
             assertEq(bankA.activeReserved(), currentReserve);
             assertEq(bankA.totalReserved(), currentReserve);
@@ -1298,13 +1299,13 @@ contract GameHubE2E is Test {
         assertEq(epoch.snapshotSupply, 5_000 ether);
         assertEq(epoch.initialReserve, gameHub.getBet(id).reserved);
         assertEq(epoch.settledCost, terminal.payoutNet + 0.025 ether);
-        assertEq(epoch.recoveredAssets, _expectedRecovery(epoch, 1 ether));
+        assertEq(epoch.recoveredAssets, _expectedRecovery(epoch, BankCurve.virtualOffset(18)));
     }
 
     function _claimAdmissionExit() internal {
         IBank.RecoveryEpoch memory epoch = bankA.recoveryEpoch(1);
         uint256 liquid = bankA.redeemBatch(1).assets;
-        uint256 expected = liquid + _expectedRecovery(epoch, 1 ether);
+        uint256 expected = liquid + _expectedRecovery(epoch, BankCurve.virtualOffset(18));
         uint256 cashBefore = assetA.balanceOf(gov);
         assertEq(_claimGovExit(bankA, 5_000 ether, 1), expected);
         assertEq(assetA.balanceOf(gov) - cashBefore, expected);

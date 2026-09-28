@@ -25,7 +25,7 @@ The Bank still enforces available capital and independent emergency pauses. Thes
 
 ## One frozen curve, then holder allocation
 
-Keep the virtual offset `V` used by synchronous deposits. Compute the aggregate real-LP curve before allocating to individual holders:
+Keep the virtual offset `V` used by synchronous deposits. `V` is one thousandth of a token, in both assets and shares (one base unit for assets below three decimals). The virtual position's share of value, about `V/(S+V)` of each recovery in a profitable pool, goes to protocol capital under the residual rules below; a one-token `V` would take about 14% of every recovery in a 6 USDC pool. At one thousandth it is negligible, while a first-depositor donation must still be about a thousand times the deposit it attacks and is almost all captured by the virtual position. Compute the aggregate real-LP curve before allocating to individual holders:
 
 ```text
 G(x) = min(floor(S * (x + V) / (S + V)), x)

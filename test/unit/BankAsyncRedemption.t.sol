@@ -10,6 +10,7 @@ import {Errors} from "../../src/libs/Errors.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {BlacklistToken} from "../mocks/BlacklistToken.sol";
+import {BankCurve} from "../utils/BankCurve.sol";
 
 /// @notice ADR-0035 in the Bank: liquid ERC-7540 claims, historical risk ownership and player payables.
 ///         This test is the Bank's SettlementRouter; GameHubE2E covers the real game path.
@@ -97,7 +98,7 @@ contract BankAsyncRedemptionTest is Test {
         _deposit(alice, 1_000e6);
         _winBet(10e6, 110e6); // NAV 900 over 1000 shares
         uint256 preview = bank.previewDeposit(100e6);
-        assertEq(preview, 111_098_779);
+        assertEq(preview, 111_111_098);
         assertEq(_deposit(bob, 100e6), preview, "the deposit mints what the preview said");
         uint256 cost = bank.previewMint(50e6);
         asset.mint(bob, cost);
@@ -393,12 +394,13 @@ contract BankAsyncRedemptionTest is Test {
         _settle(betId, 0); // NAV 1100 over 1000 shares
 
         _priceDue();
-        // The virtual residual belongs to protocol capital on a full real-share exit.
-        assertEq(bank.redeemBatch(1).assets, 1_099_900_099);
+        // 1000 * (1100 + V) / (1000 + V) with V = 0.001 USDC. The virtual residual that goes to protocol capital on
+        // a full real-share exit is 100 base units; with a one-token offset it was 99,901.
+        assertEq(bank.redeemBatch(1).assets, 1_099_999_900);
         assertEq(bank.totalSupply(), 0);
-        assertEq(bank.exitPayable(), 1_099_900_099);
+        assertEq(bank.exitPayable(), 1_099_999_900);
         assertEq(bank.totalAssets(), 0);
-        assertEq(bank.protocolFeesPayable(), 99_901);
+        assertEq(bank.protocolFeesPayable(), 100);
         assertEq(bank.totalProtocolFeeAccrued(), 0, "protocol capital is not a gameplay fee");
     }
 
@@ -881,7 +883,7 @@ contract BankAsyncRedemptionTest is Test {
         assertEq(s.PF + s.XP, 0);
         assertEq(s.NAV, 800e6);
         assertEq(bank.totalAssets(), s.NAV);
-        assertEq(bank.convertToAssets(1e6), Math.mulDiv(1e6, s.NAV + 1e6, 1_000e6 + 1e6));
+        assertEq(bank.convertToAssets(1e6), Math.mulDiv(1e6, s.NAV + 1e3, 1_000e6 + 1e3));
 
         // The risk-in check sees the same NAV: a reserve above it is refused.
         asset.setBlocked(player, false);
@@ -1399,8 +1401,8 @@ contract BankAsyncRedemptionTest is Test {
         assertEq(bank.exitPayable(), 0);
     }
 
-    function _g(uint256 assets_, uint256 supply_) internal pure returns (uint256) {
-        return Math.min(Math.mulDiv(supply_, assets_ + 1e6, supply_ + 1e6), assets_);
+    function _g(uint256 assets_, uint256 supply_) internal view returns (uint256) {
+        return BankCurve.realEquity(supply_, assets_, BankCurve.virtualOffset(bank.decimals()));
     }
 
     function _claimRecovery(uint256 epoch, address owner) internal returns (uint256) {
