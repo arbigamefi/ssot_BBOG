@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Replayable mutation check for the v1.6 house-edge allocation unit.
+"""Replayable mutation check for the v1.6 release unit: the house-edge allocation and the Bank's asynchronous
+redemptions (ADR-0034, M20 on).
 
-Each mutant removes one guarantee of SSOT v1.6 and names the tests that must catch it. The runner applies one
+Each mutant removes one guarantee of SSOT v1.6 or ADR-0034 and names the tests that must catch it. The runner applies one
 mutant at a time, runs those tests with FOUNDRY_PROFILE=pr, restores the source and reports whether the mutant
 was killed (the named tests fail). It exits non-zero if a mutant survives, if a mutant does not compile, or if an
 anchor is not found exactly once, which means the source moved and the mutant needs updating.
@@ -29,12 +30,16 @@ SR = "src/core/SettlementRouter.sol"
 EN = "src/engines/referral/DefaultReferralEngine.sol"
 SH = "src/core/SportsHub.sol"
 SNAP = "script/release/V16Snapshot.sol"
+BANK = "src/core/Bank.sol"
 
 V16 = "test/unit/HouseEdgeAllocationV16.t.sol"
 RT = "test/unit/SettlementRouter.t.sol"
 RINV = "test/invariants/SettlementRouterInvariants.t.sol"
 DIFF = "test/diff/StatefulSystemDiff.t.sol"
 DEPLOY = "test/unit/DeploymentV16.t.sol"
+ASYNC = "test/unit/BankAsyncRedemption.t.sol"
+PENDING = "test/unit/BankPendingExposure.t.sol"
+BINV = "test/invariants/BankInvariants.t.sol"
 
 MUTANTS = [
     {"id": "M01", "guarantee": "the Router cap",
@@ -114,6 +119,87 @@ MUTANTS = [
                   "if (stakeSpec.betCount == 0 || stakeSpec.betCount > MAX_BET_COUNT || stakeSpec.betCount == 3) "
                   "revert Errors.InvalidConfig();")],
      "tests": [DIFF]},
+    # ADR-0034: asynchronous LP redemptions settled in drained batches.
+    {"id": "M20", "guarantee": "a batch is priced only once every position has ended",
+     "patches": [(BANK, "        if (open != 0) revert OpenHolds(open);\n", "")],
+     "tests": [PENDING, ASYNC]},
+    {"id": "M21", "guarantee": "betting closes at the cutoff",
+     "patches": [(BANK, "        if (redemptionDraining()) revert RedemptionDraining();\n", "")],
+     "tests": [ASYNC, BINV]},
+    {"id": "M22", "guarantee": "the real-equity ceiling on batch pricing",
+     "patches": [(BANK, "Math.min(Math.mulDiv(q, n + _virtualOffset, supply + _virtualOffset), Math.mulDiv(q, n, supply))",
+                  "Math.mulDiv(q, n + _virtualOffset, supply + _virtualOffset)")],
+     "tests": [ASYNC, PENDING, BINV]},
+    {"id": "M23", "guarantee": "cancellation only before the cutoff",
+     "patches": [(BANK, "if (id < firstUnpricedBatch || block.timestamp >= _batches[id].cutoff) revert NothingToCancel();",
+                  "if (id < firstUnpricedBatch) revert NothingToCancel();")],
+     "tests": [ASYNC, BINV]},
+    {"id": "M24", "guarantee": "a batch's rounding remainder returns to NAV",
+     "patches": [(BANK, "                exitPayable -= b.assets - assignedAssets;\n", "")],
+     "tests": [ASYNC, BINV]},
+    {"id": "M25", "guarantee": "rescue cannot take escrowed shares",
+     "patches": [(BANK, "if (token == asset || token == address(this)) revert Errors.InvalidConfig();",
+                  "if (token == asset) revert Errors.InvalidConfig();")],
+     "tests": [ASYNC]},
+    {"id": "M26", "guarantee": "NAV subtracts player payables",
+     "patches": [(BANK, "return AccountingLib.nav(B, PF, XP + exitPayable + playerPayableTotal);",
+                  "return AccountingLib.nav(B, PF, XP + exitPayable);")],
+     "tests": [ASYNC, BINV]},
+    {"id": "M27", "guarantee": "NAV subtracts priced exits",
+     "patches": [(BANK, "return AccountingLib.nav(B, PF, XP + exitPayable + playerPayableTotal);",
+                  "return AccountingLib.nav(B, PF, XP + playerPayableTotal);")],
+     "tests": [ASYNC, PENDING, BINV]},
+    {"id": "M28", "guarantee": "a refused payout does not block settlement",
+     "patches": [(BANK, "        if (_assetToken.trySafeTransfer(player, amount)) return;\n",
+                  "        _assetToken.safeTransfer(player, amount);\n        return;\n")],
+     "tests": [ASYNC, BINV]},
+    {"id": "M29", "guarantee": "a payout that ran out of gas is not a refusal",
+     "patches": [(BANK, "        if (gasleft() < gasBefore / 63) revert PayoutOutOfGas();\n", "")],
+     "tests": [ASYNC]},
+    {"id": "M30", "guarantee": "only the controller or its operator claims",
+     "patches": [(BANK, "        _checkController(controller);\n        _syncRedeem(controller);\n        return _redeemAccounts",
+                  "        _syncRedeem(controller);\n        return _redeemAccounts")],
+     "tests": [ASYNC]},
+    {"id": "M31", "guarantee": "a withdrawal cannot strand assets",
+     "patches": [(BANK, "        if (shares_ == claimableShares && assets_ != claimableAssets) revert ClaimWouldStrandAssets();\n",
+                  "")],
+     "tests": [ASYNC, BINV]},
+    {"id": "M32", "guarantee": "a request spends a finite allowance",
+     "patches": [(BANK, "                allowance[owner][msg.sender] = allowed - shares_;\n", "")],
+     "tests": [ASYNC]},
+    {"id": "M33", "guarantee": "LP claims stop while paused",
+     "patches": [(BANK, "returns (RedeemAccount storage a) {\n        if (paused()) revert RiskInPaused();\n",
+                  "returns (RedeemAccount storage a) {\n")],
+     "tests": [ASYNC, "test/unit/GameHubE2E.t.sol"]},
+    {"id": "M34", "guarantee": "at most two unpriced batches",
+     "patches": [(BANK, "if (id - first >= 2) revert RedeemBatchesFull();", "if (id - first >= 3) revert RedeemBatchesFull();")],
+     "tests": [ASYNC, BINV]},
+    {"id": "M35", "guarantee": "a request on the cutoff joins the next batch",
+     "patches": [(BANK, "if (id > first && block.timestamp < _batches[id - 1].cutoff) return id - 1;",
+                  "if (id > first && block.timestamp <= _batches[id - 1].cutoff) return id - 1;")],
+     "tests": [ASYNC, BINV]},
+    {"id": "M36", "guarantee": "a player payable pays only the player",
+     "patches": [(BANK, "        _assetToken.safeTransfer(player, amount);\n        emit PlayerPayablePaid(",
+                  "        _assetToken.safeTransfer(msg.sender, amount);\n        emit PlayerPayablePaid(")],
+     "tests": [ASYNC]},
+    {"id": "M37", "guarantee": "player payables are claimable while paused",
+     "patches": [(BANK, "        amount = playerPayable[player];\n",
+                  "        if (paused()) revert RiskInPaused();\n        amount = playerPayable[player];\n")],
+     "tests": [ASYNC]},
+    {"id": "M38", "guarantee": "priced assets move to exitPayable",
+     "patches": [(BANK, "            exitPayable += assets_;\n", "")],
+     "tests": [ASYNC, PENDING, BINV]},
+    {"id": "M39", "guarantee": "views compute entitlements as synchronization does",
+     "patches": [(BANK, "                claimableAssets += Math.mulDiv(s, b.assets, b.shares);\n",
+                  "                claimableAssets += Math.mulDiv(s, b.assets, b.shares, Math.Rounding.Ceil);\n")],
+     "tests": [ASYNC, BINV]},
+    {"id": "M40", "guarantee": "a request synchronizes before reusing a slot",
+     "patches": [(BANK, "        uint256 id = _batchForRequest();\n        _syncRedeem(controller);\n",
+                  "        uint256 id = _batchForRequest();\n")],
+     "tests": [ASYNC, BINV]},
+    {"id": "M41", "guarantee": "an empty batch is retired",
+     "patches": [(BANK, "        if (remaining == 0) {\n", "        if (remaining == 0 && remaining == 1) {\n")],
+     "tests": [ASYNC]},
 ]
 
 

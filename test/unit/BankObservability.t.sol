@@ -36,7 +36,7 @@ contract BankObservabilityTest is Test {
         new Bank(address(asset), gov, 0, "LP USDC Bad Decimals", "lpUSDC-BAD", 18);
     }
 
-    function test_erc4626EventsAndOwnerScopedMaxWithdraw() external {
+    function test_erc4626EventsAndControllerScopedClaims() external {
         asset.mint(alice, 1_000e6);
 
         vm.startPrank(alice);
@@ -47,29 +47,32 @@ contract BankObservabilityTest is Test {
         uint256 shares = bank.deposit(100e6, alice);
         assertEq(shares, 100e6, "initial shares should be 1:1");
 
-        assertEq(bank.maxWithdraw(alice), 100e6, "owner max withdraw should use owner shares");
-        assertEq(bank.maxWithdraw(bob), 0, "non-owner max withdraw must not expose global bank cap");
-
-        vm.expectEmit(true, true, true, true, address(bank));
-        emit Withdraw(alice, alice, alice, 25e6, 25e6);
-        uint256 burned = bank.withdraw(25e6, alice, alice);
-        assertEq(burned, 25e6, "withdraw should burn expected shares");
-        assertEq(bank.maxWithdraw(alice), 75e6, "max withdraw should track remaining owner shares");
-
         vm.expectEmit(true, true, false, true, address(bank));
         emit Deposit(alice, bob, 10e6, 10e6);
         uint256 assetsIn = bank.mint(10e6, bob);
         assertEq(assetsIn, 10e6, "mint should use 1:1 assets at current share price");
+
+        // Exits are Requests: nothing is claimable until the batch is priced (ADR-0034).
+        bank.requestRedeem(25e6, alice, alice);
+        assertEq(bank.maxWithdraw(alice), 0, "a pending request is not claimable");
         vm.stopPrank();
 
-        vm.prank(bob);
+        vm.warp(bank.redeemBatch(1).cutoff);
+        bank.settleBatch();
+        assertEq(bank.maxWithdraw(alice), 25e6, "the controller's priced claim");
+        assertEq(bank.maxWithdraw(bob), 0, "claims are scoped to the controller, not the global cap");
+
+        vm.prank(alice);
         vm.expectEmit(true, true, true, true, address(bank));
-        emit Withdraw(bob, bob, bob, 10e6, 10e6);
-        uint256 assetsOut = bank.redeem(10e6, bob, bob);
-        assertEq(assetsOut, 10e6, "redeem should emit and return expected assets");
+        emit Withdraw(alice, bob, alice, 25e6, 25e6);
+        uint256 burned = bank.withdraw(25e6, bob, alice);
+        assertEq(burned, 25e6, "the claim consumes the priced shares");
+        assertEq(asset.balanceOf(bob), 25e6, "the controller chooses the receiver");
+        assertEq(bank.maxWithdraw(alice), 0);
+        assertEq(bank.balanceOf(alice), 75e6, "unrequested shares stay in the wallet");
     }
 
-    function test_withdrawalBufferIsSeparateFromRiskReserve() external {
+    function test_exitsAreExemptFromTheWithdrawalBuffer() external {
         Bank bufferedBank = new Bank(address(asset), gov, 9000, "LP USDC Buffered", "lpUSDC-B", 6);
         vm.prank(gov);
         bufferedBank.setSettlementRouterOnce(address(this));
@@ -78,21 +81,22 @@ contract BankObservabilityTest is Test {
         assertEq(bufferedBank.riskReserveBps(), 9000, "risk reserve should initialize from legacy ctor arg");
         assertEq(bufferedBank.withdrawalBufferBps(), 9000, "withdrawal buffer defaults to legacy ctor arg");
 
-        vm.prank(gov);
-        bufferedBank.setWithdrawalBufferBps(1000);
-
         asset.mint(alice, 1_000e6);
         vm.startPrank(alice);
         asset.approve(address(bufferedBank), type(uint256).max);
         bufferedBank.deposit(1_000e6, alice);
-
-        assertEq(bufferedBank.maxWithdraw(alice), 900e6, "withdraw max should use withdrawal buffer, not risk reserve");
-        bufferedBank.withdraw(900e6, alice, alice);
-        assertEq(bufferedBank.totalAssets(), 100e6, "withdraw should preserve the configured buffer");
+        bufferedBank.requestRedeem(1_000e6, alice, alice);
         vm.stopPrank();
+
+        vm.warp(bufferedBank.redeemBatch(1).cutoff);
+        bufferedBank.settleBatch();
+        vm.prank(alice);
+        bufferedBank.withdraw(1_000e6, alice, alice);
+        assertEq(bufferedBank.totalAssets(), 0, "a priced exit draws on exitPayable, not on the 90% buffer");
+        assertEq(asset.balanceOf(alice), 1_000e6);
     }
 
-    function test_withdrawalBufferAccountsForReservedRisk() external {
+    function test_withdrawalBufferAccountsForReservedRiskOnFeeClaims() external {
         Bank bufferedBank = new Bank(address(asset), gov, 0, "LP USDC Buffered", "lpUSDC-B", 6);
         vm.prank(gov);
         bufferedBank.setSettlementRouterOnce(address(this));
@@ -100,7 +104,7 @@ contract BankObservabilityTest is Test {
         bufferedBank.setWithdrawalBufferBps(1000);
 
         asset.mint(alice, 1_000e6);
-        asset.mint(player, 10e6);
+        asset.mint(player, 20e6);
 
         vm.startPrank(alice);
         asset.approve(address(bufferedBank), type(uint256).max);
@@ -110,20 +114,24 @@ contract BankObservabilityTest is Test {
         vm.prank(player);
         asset.approve(address(bufferedBank), type(uint256).max);
 
-        bufferedBank.holdBet(1, player, 10e6, 50e6, bytes32(uint256(1)));
+        // A lost bet accrues a protocol fee, then an open bet reserves most of the pool.
+        SSOTTypes.XPAward[] memory awards = new SSOTTypes.XPAward[](0);
+        bufferedBank.holdBet(1, player, 10e6, 20e6, bytes32(uint256(1)));
+        bufferedBank.settleBet(1, 0, 0, 0, 5e6, awards);
+        bufferedBank.holdBet(2, player, 10e6, 915e6, bytes32(uint256(2)));
 
-        uint256 nav = bufferedBank.totalAssets();
-        uint256 expectedBuffer = (nav * 1000) / 10_000;
-        uint256 expectedMax = nav - bufferedBank.totalReserved() - expectedBuffer;
-        assertEq(nav, 1_010e6, "player stake should enter NAV while the bet is open");
-        assertEq(expectedMax, 859e6, "test vector");
-        assertEq(bufferedBank.maxWithdraw(alice), expectedMax, "maxWithdraw should preserve R plus withdrawal buffer");
+        SSOTTypes.SSOT memory s = bufferedBank.getSSOT();
+        assertEq(s.NAV, 1_015e6, "player stakes enter NAV while the bets are open");
+        assertEq(s.withdrawalBuffer, 101_500_000);
+        assertEq(s.withdrawable, 0, "NAV - R is below the buffer");
 
-        vm.startPrank(alice);
+        vm.prank(gov);
         vm.expectRevert(IBank.OptionalOutflowDomainViolation.selector);
-        bufferedBank.withdraw(expectedMax + 1, alice, alice);
-        bufferedBank.withdraw(expectedMax, alice, alice);
-        vm.stopPrank();
+        bufferedBank.claimProtocolFees(5e6, gov);
+
+        bufferedBank.refundBet(2, 10e6);
+        vm.prank(gov);
+        assertEq(bufferedBank.claimProtocolFees(5e6, gov), 5e6, "the buffer holds once the reserve is released");
     }
 
     function test_performanceCountersTrackSettledTurnoverPayoutFeesAndRefunds() external {

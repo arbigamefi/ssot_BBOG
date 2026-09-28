@@ -3,7 +3,13 @@ pragma solidity ^0.8.20;
 
 import {SSOTTypes} from "./SSOTTypes.sol";
 
-interface IERC4626Minimal {
+/// @notice ERC-4626 vault with synchronous deposits and ERC-7540 asynchronous redemptions (ADR-0034).
+/// @dev The Bank is its own share token, so ERC-7575 `share()` returns the Bank and `vault(asset)` points back to it.
+///      The claim functions `withdraw` and `redeem` take a `controller`, the owner of the redemption Request.
+///      ERC-165 IDs: 0xe3bc4e65 (ERC-7540 operators), 0x620ee8e4 (ERC-7540 asynchronous redemption),
+///      0x2f0a18c5 (ERC-7575 vault) and 0xf815c03d (ERC-7575 share).
+interface IBankVault {
+    // -------- ERC-4626 --------
     function asset() external view returns (address);
     function totalAssets() external view returns (uint256);
 
@@ -13,25 +19,70 @@ interface IERC4626Minimal {
     function convertToShares(uint256 assets) external view returns (uint256);
     function convertToAssets(uint256 shares) external view returns (uint256);
 
-    function maxWithdraw(address owner) external view returns (uint256);
-    function maxRedeem(address owner) external view returns (uint256);
-
+    function maxDeposit(address receiver) external view returns (uint256);
+    function previewDeposit(uint256 assets) external view returns (uint256 shares);
     function deposit(uint256 assets, address receiver) external returns (uint256 shares);
+
+    function maxMint(address receiver) external view returns (uint256);
+    function previewMint(uint256 shares) external view returns (uint256 assets);
     function mint(uint256 shares, address receiver) external returns (uint256 assets);
-    function withdraw(uint256 assets, address receiver, address owner) external returns (uint256 shares);
-    function redeem(uint256 shares, address receiver, address owner) external returns (uint256 assets);
+
+    /// @notice Assets `controller` can claim now. Zero while LP claims are paused; excludes pending requests.
+    function maxWithdraw(address controller) external view returns (uint256);
+    /// @dev Reverts: redemptions are asynchronous.
+    function previewWithdraw(uint256 assets) external view returns (uint256 shares);
+    /// @notice Claim exactly `assets` of `controller`'s priced redemptions.
+    function withdraw(uint256 assets, address receiver, address controller) external returns (uint256 shares);
+
+    /// @notice Shares `controller` can claim now. Zero while LP claims are paused; excludes pending requests.
+    function maxRedeem(address controller) external view returns (uint256);
+    /// @dev Reverts: redemptions are asynchronous.
+    function previewRedeem(uint256 shares) external view returns (uint256 assets);
+    /// @notice Claim `shares` of `controller`'s priced redemptions.
+    function redeem(uint256 shares, address receiver, address controller) external returns (uint256 assets);
 
     event Deposit(address indexed sender, address indexed owner, uint256 assets, uint256 shares);
     event Withdraw(
         address indexed sender, address indexed receiver, address indexed owner, uint256 assets, uint256 shares
     );
+
+    // -------- ERC-7540 asynchronous redemption --------
+    /// @notice Escrow `owner`'s shares in a redemption Request controlled by `controller`. Returns request ID 0:
+    ///         requests aggregate per controller.
+    function requestRedeem(uint256 shares, address controller, address owner) external returns (uint256 requestId);
+    function pendingRedeemRequest(uint256 requestId, address controller) external view returns (uint256 shares);
+    function claimableRedeemRequest(uint256 requestId, address controller) external view returns (uint256 shares);
+
+    function isOperator(address controller, address operator) external view returns (bool);
+    function setOperator(address operator, bool approved) external returns (bool);
+
+    event RedeemRequest(
+        address indexed controller, address indexed owner, uint256 indexed requestId, address sender, uint256 shares
+    );
+    event OperatorSet(address indexed controller, address indexed operator, bool approved);
+
+    // -------- ERC-7575 and ERC-165 --------
+    function share() external view returns (address);
+    function vault(address asset) external view returns (address);
+    function supportsInterface(bytes4 interfaceId) external view returns (bool);
 }
 
 /// @notice Bank = funds + accounting SSOT.
-///         - totalAssets() == NAV == B - PF - XP
+///         - totalAssets() == NAV == B - PF - XP - exitPayable - playerPayableTotal
 ///         - bet funds interface callable ONLY by SettlementRouter
-///         - riskInPaused freezes Risk-In + Optional Outflow, but never blocks settle/refund
-interface IBank is IERC4626Minimal {
+///         - riskInPaused freezes Risk-In + Optional Outflow, but never blocks settle/refund or player payables
+///         - LP exits are Requests priced in batches once every open position has ended (ADR-0034)
+interface IBank is IBankVault {
+    /// @notice A redemption batch. Its cutoff is fixed when it opens; its shares are fixed from the cutoff on.
+    struct RedeemBatch {
+        uint64 cutoff; // first multiple of batchPeriod strictly after the batch's first request
+        bool priced;
+        uint256 shares; // escrowed shares in the batch
+        uint256 assets; // assets the batch was priced at
+        uint256 assignedShares; // shares whose entitlement has been assigned to their controllers
+        uint256 assignedAssets; // assets assigned to controllers so far
+    }
+
     // -------- wiring --------
     function settlementRouter() external view returns (address);
 
@@ -146,6 +197,55 @@ interface IBank is IERC4626Minimal {
     function unlockXPLocked(address payee, address sourcePlayer) external returns (uint256 unlocked);
     function syncXPHoldback(address payee) external returns (uint256 released);
 
+    // -------- asynchronous redemptions (ADR-0034) --------
+    function MIN_BATCH_PERIOD() external view returns (uint256);
+    function MAX_BATCH_PERIOD() external view returns (uint256);
+    /// @notice Spacing of redemption cutoffs in Unix time. A change applies to batches opened after it.
+    function batchPeriod() external view returns (uint256);
+    /// @notice Oldest unpriced batch. The unpriced batches are exactly [firstUnpricedBatch, nextBatchId), at most two.
+    function firstUnpricedBatch() external view returns (uint256);
+    function nextBatchId() external view returns (uint256);
+    function redeemBatch(uint256 batchId) external view returns (RedeemBatch memory);
+    /// @notice Positions not yet settled or refunded: totalBetsHeld - totalBetsSettled - totalBetsRefunded.
+    function openHolds() external view returns (uint256);
+    /// @notice True from a batch's cutoff until it is priced. New positions are refused meanwhile.
+    function redemptionDraining() external view returns (bool);
+    /// @notice Priced LP exits not yet claimed, a liability outside NAV.
+    function exitPayable() external view returns (uint256);
+    /// @notice `controller`'s effective redemption state, as if `syncRedeem(controller)` had just run.
+    function redeemRequestOf(address controller)
+        external
+        view
+        returns (uint256 pendingShares, uint256 claimableShares, uint256 claimableAssets);
+
+    function setBatchPeriod(uint256 period) external;
+    /// @notice Withdraw every share `controller` has in the batch that has not reached its cutoff.
+    function cancelRedeemRequest(address controller) external returns (uint256 shares);
+    /// @notice Assign `controller`'s priced batch entitlements to its claimable totals. Permissionless; moves nothing.
+    function syncRedeem(address controller) external;
+    /// @notice Price every due batch once no position is open. Permissionless, except while paused.
+    function settleBatch() external returns (uint256 priced);
+
+    event BatchPeriodSet(uint256 period);
+    event RedeemBatchOpened(uint256 indexed batchId, uint64 cutoff);
+    event RedeemBatchRetired(uint256 indexed batchId);
+    event RedeemBatchPriced(uint256 indexed batchId, uint256 shares, uint256 assets);
+    event RedeemRequestCancelled(
+        address indexed controller, address indexed sender, uint256 indexed batchId, uint256 shares
+    );
+    event RedeemClaimable(address indexed controller, uint256 indexed batchId, uint256 shares, uint256 assets);
+    event RedeemRemainderReleased(uint256 indexed batchId, uint256 assets);
+
+    // -------- player payables (ADR-0034) --------
+    /// @notice Payouts and refunds whose transfer the asset refused, a liability outside NAV.
+    function playerPayableTotal() external view returns (uint256);
+    function playerPayable(address player) external view returns (uint256);
+    /// @notice Pay `player` what it is owed. Anyone may call it, also while paused; it pays only the player.
+    function claimPlayerPayable(address player) external returns (uint256 amount);
+
+    event PlayerPayableCreated(uint256 indexed betId, address indexed player, uint256 amount);
+    event PlayerPayablePaid(address indexed player, address indexed caller, uint256 amount);
+
     // -------- events (audit surface) --------
     event BetHeld(uint256 indexed betId, address indexed player, uint256 stake, uint256 reserved, bytes32 snapshotHash);
     event BetReserveReleased(uint256 indexed betId, address indexed player, uint256 reserved);
@@ -191,4 +291,13 @@ interface IBank is IERC4626Minimal {
     error OptionalOutflowDomainViolation();
     error XPInvalidAward(address payee);
     error XPTooManyAwards(uint256 n);
+    error AsyncRedemption();
+    error RedemptionDraining();
+    error RedeemBatchesFull();
+    error NothingToCancel();
+    error NoBatchDue();
+    error OpenHolds(uint256 openHolds);
+    error ExceedsClaimable();
+    error ClaimWouldStrandAssets();
+    error PayoutOutOfGas();
 }

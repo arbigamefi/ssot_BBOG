@@ -8,6 +8,7 @@ replaces the v1.0 turnover-budget obligations for casino positions in a v1.6 rel
 > Related ADR:
 >
 > - [ADR-0032](../adr/0032-fixed-lp-share-operator-funded-referrals.md) (fixed LP share, operator-funded referrals)
+> - [ADR-0034](../adr/0034-async-lp-redemption-drained-batches.md) (asynchronous LP redemptions, section L)
 
 **Status: implemented in source; not audited or deployed.** Every obligation below has tests, listed in
 [Test mapping](#test-mapping). The v1.5 baseline they replace was pinned by
@@ -83,11 +84,59 @@ For every settled sports position: `PF_new = XP_new = 0` and `edge[i] = 0`.
 
 ### B1. NAV identity
 
-`NAV = B − PF − XP` and `totalAssets() == NAV` hold after every settlement.
+`NAV = B − PF − XP − exitPayable − playerPayableTotal` and `totalAssets() == NAV` hold after every operation.
+`getSSOT()` keeps its tuple, so its `NAV` field is not `B − PF − XP` once either payable is non-zero.
 
 ### B2. Solvency
 
-`B ≥ PF + XP` and `NAV ≥ R` hold after every settlement.
+`B ≥ PF + XP + exitPayable + playerPayableTotal` and `NAV ≥ R` hold after every operation.
+
+## L — LP exits (ADR-0034)
+
+### L1. Exits wait for every position
+
+A batch is priced only after its cutoff and while no position is open (`openHolds == 0`). Requested shares
+stay in `totalSupply` and bear the pool's results until then. The scan's two counterexamples fail against the
+synchronous Bank and pass.
+
+### L2. Cutoffs close betting
+
+From a batch's cutoff until it is priced, `holdBet` refuses new positions. A cutoff is the first multiple of
+`batchPeriod` strictly after the batch's first request and never moves. At most two batches are unpriced; a
+request that would need a third reverts. Cancelling every request before the cutoff retires the batch.
+
+### L3. Pricing
+
+A batch of `q` shares is priced at `min(q × (N + V) / (S + V), q × N / S)`, with `N`, `S` read in the same
+transaction, burned at once and added to `exitPayable`. Later bets neither pay into nor draw on it.
+
+### L4. Claims
+
+Only the controller or its operator claims, to a receiver it chooses, and not while paused. Claims draw on
+`exitPayable` only, without the withdrawal buffer. The order of partial claims does not change the total, and
+no claim leaves claimable assets without claimable shares.
+
+### L5. Assignment
+
+Synchronization is permissionless and idempotent, touches at most two slots, and agrees with the views. Once
+every share of a batch is assigned, its rounding remainder leaves `exitPayable` exactly once.
+
+### L6. Escrow
+
+The Bank holds exactly the unpriced batches' shares. Rescue, allowances and other controllers cannot move
+them. Cancellation returns shares to the controller.
+
+### L7. Player payables
+
+A refused payout or refund becomes a player payable and the position still ends. A transfer that ran out of
+gas reverts instead. Anyone may trigger a payable claim, also while paused; it pays only the player, and a
+failed claim keeps the debt.
+
+### L8. Standard surface
+
+The Bank answers ERC-165 for ERC-7540 operators (`0xe3bc4e65`), asynchronous redemption (`0x620ee8e4`),
+ERC-7575 (`0x2f0a18c5`) and its share (`0xf815c03d`), and not for asynchronous deposits. `previewRedeem` and
+`previewWithdraw` revert.
 
 ## G — Governance
 
@@ -117,22 +166,30 @@ overflow.
 
 ## Test mapping
 
-| Obligation                     | Tests                                                                                                                                                                                                                                                              |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| A1 Conservation                | `HouseEdgeAllocationV16`: worked examples and `testFuzz_allocationConservesTheEdge`; `StatefulSystemDiff` recomputes every settlement independently                                                                                                                |
-| A2 LP floor at the Router      | `SettlementRouter.t.sol` cap tests and `testFuzz_settlementAcceptedIffWithinOperatorShare`; `SettlementRouterInvariants.invariant_allocation_never_exceeds_operator_share`                                                                                         |
-| A3 Referral cap                | `testFuzz_allocationConservesTheEdge`; `test_scheduleCapAndVersions`                                                                                                                                                                                               |
-| A4 Payee existence             | `test_workedExample_noReferrer`, `test_nothingIsPaidBeyondL2`, fuzzed chains of depth 0 to 2                                                                                                                                                                       |
-| A5 Unclaimed share to protocol | worked examples; `test_roundingRemaindersAccrueToProtocol`                                                                                                                                                                                                         |
-| A6 Refunds allocate nothing    | `test_timeoutRefundAllocatesNothing`, `test_partialRefundAllocatesOnUsedTurnoverOnly`; `SecurityFixes` invalid-result refunds                                                                                                                                      |
-| A7 Non-retroactivity           | `test_bindingAfterAcceptanceDoesNotAddPayees`, `test_uplineBindingAfterAcceptanceDoesNotAddL2`, `test_scheduleChangeAfterAcceptanceDoesNotApply`, `test_baseEdgeChangeWaitsForDelayAndIsNotRetroactive`; `StatefulSystemDiff` late bindings and governance changes |
-| A8 Edge bound                  | `test_openPosition_rejectsEdgeAboveMax` and the Router invariant; `test_markupStartsDisabled`, `test_staleAffiliateEdgeIsClampedToTheCurrentCap`, `test_staleAffiliateEdgeIsClampedToALowerCap`                                                                    |
-| A9 Sports positions            | `SportsHubTicket` asserts edge `0`; `test_zeroEdgePositionCannotAccrueAnything`                                                                                                                                                                                    |
-| B1 NAV identity, B2 solvency   | checked after every settlement in `HouseEdgeAllocationV16`; `BankInvariants`                                                                                                                                                                                       |
-| G1 Constants                   | `test_constants`                                                                                                                                                                                                                                                   |
-| G2 Delayed changes             | `test_baseEdgeChangeWaitsForDelayAndIsNotRetroactive`, `test_markupIncreaseWaitsForDelay_decreaseIsImmediate`, `test_cancelledBaseEdgeChangeCannotActivate`                                                                                                        |
-| G3 Schedule validity           | `test_scheduleCapAndVersions`; `SecurityFixes` referral-config tests                                                                                                                                                                                               |
-| G4 Guardian scope              | `test_onlyGovernanceChangesAllocationParameters`                                                                                                                                                                                                                   |
-| G5 Refund timeout bound        | `test_refundTimeoutIsBoundedToOneDay`, `test_constructorRefusesARefundTimeoutAboveOneDay`; `DeploymentV16.testRefundTimeoutAboveOneDayIsRefusedBeforeBroadcast`                                                                                                    |
+| Obligation                     | Tests                                                                                                                                                                                                                                                                                 |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A1 Conservation                | `HouseEdgeAllocationV16`: worked examples and `testFuzz_allocationConservesTheEdge`; `StatefulSystemDiff` recomputes every settlement independently                                                                                                                                   |
+| A2 LP floor at the Router      | `SettlementRouter.t.sol` cap tests and `testFuzz_settlementAcceptedIffWithinOperatorShare`; `SettlementRouterInvariants.invariant_allocation_never_exceeds_operator_share`                                                                                                            |
+| A3 Referral cap                | `testFuzz_allocationConservesTheEdge`; `test_scheduleCapAndVersions`                                                                                                                                                                                                                  |
+| A4 Payee existence             | `test_workedExample_noReferrer`, `test_nothingIsPaidBeyondL2`, fuzzed chains of depth 0 to 2                                                                                                                                                                                          |
+| A5 Unclaimed share to protocol | worked examples; `test_roundingRemaindersAccrueToProtocol`                                                                                                                                                                                                                            |
+| A6 Refunds allocate nothing    | `test_timeoutRefundAllocatesNothing`, `test_partialRefundAllocatesOnUsedTurnoverOnly`; `SecurityFixes` invalid-result refunds                                                                                                                                                         |
+| A7 Non-retroactivity           | `test_bindingAfterAcceptanceDoesNotAddPayees`, `test_uplineBindingAfterAcceptanceDoesNotAddL2`, `test_scheduleChangeAfterAcceptanceDoesNotApply`, `test_baseEdgeChangeWaitsForDelayAndIsNotRetroactive`; `StatefulSystemDiff` late bindings and governance changes                    |
+| A8 Edge bound                  | `test_openPosition_rejectsEdgeAboveMax` and the Router invariant; `test_markupStartsDisabled`, `test_staleAffiliateEdgeIsClampedToTheCurrentCap`, `test_staleAffiliateEdgeIsClampedToALowerCap`                                                                                       |
+| A9 Sports positions            | `SportsHubTicket` asserts edge `0`; `test_zeroEdgePositionCannotAccrueAnything`                                                                                                                                                                                                       |
+| B1 NAV identity, B2 solvency   | checked after every settlement in `HouseEdgeAllocationV16`; `BankInvariants`                                                                                                                                                                                                          |
+| L1 Exits wait                  | `BankPendingExposure` (both counterexamples); `test_settleBatchWaitsForTheCutoffEveryPositionAndUnpause`, `test_requestEscrowsSharesThatKeepBearingResults`                                                                                                                           |
+| L2 Cutoffs                     | `test_cutoffIsTheFirstBoundaryStrictlyAfterTheFirstRequest`, `test_bettingClosesAtTheCutoffWithoutAnyCall`, `test_aRequestNeedingAThirdUnpricedBatchReverts`, `test_cancellingEveryRequestRetiresTheBatch`; `BankInvariants.invariant_batches_close_betting_and_price_at_real_equity` |
+| L3 Pricing                     | `test_profitablePoolPricesAtTheVirtualOffsetQuote`, `test_depletedPoolPricesAtItsRealEquity`, `test_zeroNavBatchClearsItsSharesWithoutATransfer`, `test_twoDueBatchesArePricedInOneCall`, `test_pricedAssetsAreIsolatedFromLaterBets`; the invariant above                            |
+| L4 Claims                      | `test_partialClaimOrderDoesNotChangeTheTotal`, `test_withdrawCannotConsumeEveryShareAndLeaveAssets`, `test_onlyTheControllerOrItsOperatorClaimsAndPicksTheReceiver`, `test_pauseStopsClaimsButNotRequestsSyncOrCancellation`, `test_exitsAreExemptFromTheWithdrawalBuffer`            |
+| L5 Assignment                  | `test_remainderReturnsToNavOnceEveryShareIsAssigned`, `test_viewsAgreeWithStoredStateAfterSync`; `BankInvariants.invariant_priced_exits_are_conserved`                                                                                                                                |
+| L6 Escrow                      | `test_escrowedSharesCannotBeRescuedOrMovedByOthers`, `test_cancelReturnsSharesToTheControllerBeforeTheCutoffOnly`, `test_requestSpendsAFiniteAllowanceButNotAnOperatorOrInfiniteOne`; `BankInvariants.invariant_escrow_matches_pending_requests`                                      |
+| L7 Player payables             | `test_refusedPayoutBecomesAPayableAndTheBatchStillPrices`, `test_refusedRefundBecomesAPayable`, `test_payoutThatRanOutOfGasRevertsInsteadOfBecomingAPayable`, `test_everyNavComputationSubtractsBothPayables`; `BankInvariants` blocks and unblocks players                           |
+| L8 Standard surface            | `test_supportsTheErc7540RedeemAndErc7575InterfaceIds`, `test_theBankIsItsOwnShareToken`, `test_redemptionPreviewsRevertAndDepositViewsFollowPause`                                                                                                                                    |
+| G1 Constants                   | `test_constants`                                                                                                                                                                                                                                                                      |
+| G2 Delayed changes             | `test_baseEdgeChangeWaitsForDelayAndIsNotRetroactive`, `test_markupIncreaseWaitsForDelay_decreaseIsImmediate`, `test_cancelledBaseEdgeChangeCannotActivate`                                                                                                                           |
+| G3 Schedule validity           | `test_scheduleCapAndVersions`; `SecurityFixes` referral-config tests                                                                                                                                                                                                                  |
+| G4 Guardian scope              | `test_onlyGovernanceChangesAllocationParameters`                                                                                                                                                                                                                                      |
+| G5 Refund timeout bound        | `test_refundTimeoutIsBoundedToOneDay`, `test_constructorRefusesARefundTimeoutAboveOneDay`; `DeploymentV16.testRefundTimeoutAboveOneDayIsRefusedBeforeBroadcast`                                                                                                                       |
 
 Unless another file is named, tests are in `test/unit/HouseEdgeAllocationV16.t.sol`.

@@ -4,6 +4,9 @@
 > only. Deployed v1.5 contracts are immutable and keep their current allocation.
 > Decision record: [ADR-0032](../adr/0032-fixed-lp-share-operator-funded-referrals.md). Executable
 > invariants and the tests that check them: [ExecutableSSOT v1.6](ExecutableSSOT.v1.6.md).
+> [ADR-0034](../adr/0034-async-lp-redemption-drained-batches.md) changes how LPs exit the v1.6 Banks: exits
+> become Requests priced in batches once every position has ended. Its two new liabilities, `exitPayable` and
+> `playerPayableTotal`, are subtracted wherever this document writes NAV.
 
 This document is **normative**. Keywords **MUST / MUST NOT / SHOULD / MAY** are used as defined in RFC 2119.
 
@@ -73,7 +76,7 @@ referral engine) MUST compute, in this order:
 5. `PF_new = O − R0 − R1 − R2 − M`.
 
 LPs retain `E − O`. That amount MUST NOT be accrued as a liability of any kind; it remains in
-`NAV = B − PF − XP`.
+`NAV = B − PF − XP − exitPayable − playerPayableTotal` (the last two per ADR-0034).
 
 `PF_new ≥ 0` always holds, because `R0 + R1 + R2 ≤ floor(E_b × MAX_REFERRAL_BPS / 10000) ≤ floor(E_b / 2)`,
 `M ≤ floor(E_Δ / 2)` and `O ≥ floor(E_b / 2) + floor(E_Δ / 2)`.

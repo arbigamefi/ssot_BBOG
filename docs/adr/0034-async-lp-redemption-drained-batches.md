@@ -138,6 +138,49 @@ These become tests.
 15. `maxWithdraw`, `maxRedeem`, pending/claimable views, SDK balances and events agree on wallet, escrowed, priced and paid amounts. Keeper restart and missed-event recovery reach settlement or eligible refund, then batch pricing, without relying on a player to return.
 16. LP exit assets reach a controller's receiver only through that controller's (or its operator's) claim. Players are still paid directly at settlement, and only a failed payout transfer becomes a claimable payable.
 
+## Implementation
+
+Stage 1 of 4 implements the decision in the Bank. Casino end-to-end tests (stage 2), the SDK, Earn page, indexer and keeper (stage 3), and the candidate freeze with the audit scope (stage 4) follow.
+
+| Part                                                                             | Where                                                                            |
+| -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| Requests, batches, `settleBatch`, claims, operators, ERC-165 and ERC-7575        | `src/core/Bank.sol`; `IBankVault` and `IBank` in `src/core/interfaces/IBank.sol` |
+| The one NAV function, subtracting PF, XP, `exitPayable` and `playerPayableTotal` | `Bank._nav`                                                                      |
+| Player payables                                                                  | `Bank._payPlayer`, `Bank.claimPlayerPayable`                                     |
+| Obligations B1–B2 and L1–L8                                                      | [ExecutableSSOT v1.6](../constitution/ExecutableSSOT.v1.6.md#test-mapping)       |
+
+Choices the decision above left open:
+
+- **Batch IDs** start at 1 and increase. The unpriced batches are exactly `[firstUnpricedBatch, nextBatchId)`. A retired batch is always the newest, so the next batch reuses its ID: indexers see `RedeemBatchRetired(id)` and later `RedeemBatchOpened(id, cutoff)` again.
+- **Controller slots** are indexed by the parity of the batch ID. The two unpriced batches have consecutive IDs, so they never share a slot, and a request synchronizes first, which frees any priced slot.
+- **`batchPeriod`** starts at 1 day. Governance sets it within `MIN_BATCH_PERIOD` (1 hour) and `MAX_BATCH_PERIOD` (7 days). The constructor is unchanged.
+- **`settleBatch`** prices every due batch in order, at most two, and returns how many it priced.
+- **Requests, cancellations and synchronization work while paused.** They move only shares. Pause stops pricing and claims.
+- **A payout that runs out of gas reverts** with `PayoutOutOfGas` instead of becoming a payable. A call forwards at most 63/64 of the remaining gas (EIP-150). So a transfer that failed with less than 1/63 of the gas left ran out of gas and was not refused by the asset. Without this, any caller of `finalize` could turn a winner's payout into a payable by under-funding the call. Section 5 converts only refusals.
+- **`claimPlayerPayable`** returns 0 when nothing is owed.
+- **No `deposit` or `mint` overloads with a `controller`.** ERC-7540 lists them, but they belong to the asynchronous deposit interface: its ID `0xce3bbe50` includes them. Deposits here are synchronous.
+- **ERC-165.** The Bank answers for `0xe3bc4e65` (operators), `0x620ee8e4` (asynchronous redemption) and `0x2f0a18c5` (ERC-7575). As its own share token it also answers for `0xf815c03d`, with `vault(asset)` returning the Bank.
+- **`pendingRedeemRequest` and `claimableRedeemRequest`** return 0 for any request ID other than 0.
+- **New views:**
+  - `redeemRequestOf(controller)`: pending shares, claimable shares and claimable assets. Unlike `maxRedeem` and `maxWithdraw`, it also answers while paused.
+  - `redeemBatch(id)`, `openHolds()` and `redemptionDraining()`.
+  - `exitPayable()`, `playerPayableTotal()` and `playerPayable(player)`.
+- **Events:**
+  - ERC-7540's `RedeemRequest` and `OperatorSet`.
+  - `RedeemBatchOpened`, `RedeemBatchRetired`, `RedeemBatchPriced` and `RedeemRequestCancelled`.
+  - `RedeemClaimable` when an entitlement is assigned, and `RedeemRemainderReleased`.
+  - `PlayerPayableCreated`, `PlayerPayablePaid` and `BatchPeriodSet`.
+  - Claims emit ERC-4626 `Withdraw` with the controller as owner.
+- **Size.** The Bank is 21,357 bytes, 3,219 under EIP-170. It was 16,873.
+
+Stage 1 verification:
+
+- The scan's two counterexamples are rewritten as safety assertions in `test/unit/BankPendingExposure.t.sol`, and they pass. The same assertions against the synchronous Bank of `979be07a6` fail with the scan's numbers:
+  - 1,049,975,012 instead of 1,000,000,000 for the bettor-LP;
+  - 1,049,975,012 against 950,024,987 for the result observer.
+- `BankInvariants` drives requests, cancellations, pricing, claims, time and blacklisted players. Probes confirmed that its runs price batches, claim, cancel, create payables, hold two unpriced batches and release remainders.
+- Mutants M20–M41 in `test/mutation/v16_mutants.py` each remove one guarantee of this ADR. The tests kill all 22.
+
 ## Alternatives considered
 
 - **Two-sided batching** (deposits queued too): gives the clearest risk attribution, since new LPs bear risk only from the next batch. Deposits then wait up to a batch, and pending deposits need an escrow ledger. Deferred; adopt it if institutional LPs require it or if in-flight exposure becomes material.

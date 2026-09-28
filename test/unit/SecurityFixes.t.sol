@@ -128,6 +128,10 @@ contract SecurityFixes is Test {
         assertGt(victimShares, 0, "victim deposit must not mint zero shares");
 
         vm.prank(attacker);
+        bank.requestRedeem(1, attacker, attacker);
+        vm.warp(bank.redeemBatch(1).cutoff);
+        bank.settleBatch();
+        vm.prank(attacker);
         uint256 swept = bank.redeem(1, attacker, attacker);
         assertLt(swept, donation + 1, "attacker must not profit from direct donation inflation");
         assertLt(swept, 2e6, "virtual reserve should capture almost all donated value");

@@ -57,7 +57,7 @@ library SSOTTypes {
         uint256 B; // ASSET.balanceOf(Bank)
         uint256 PF; // protocolFeesPayable
         uint256 XP; // externalPayablesTotal (== xpAccruedTotal + xpLockedTotal + xpHoldbackTotal)
-        uint256 NAV; // B - PF - XP (no-underflow; underflow => violation)
+        uint256 NAV; // B - PF - XP - exitPayable - playerPayableTotal (ADR-0034); underflow => violation
         uint256 R; // totalReserved
         uint256 minLiquidityBps; // [0..10_000]
         uint256 minLiq; // NAV * bps / 10_000
