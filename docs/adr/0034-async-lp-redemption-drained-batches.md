@@ -31,26 +31,32 @@ Exposure on 2026-09-28: the mainnet v1.5 USDC Bank held 6.02 USDC, with every sh
 
 ### 1. Deposits stay synchronous
 
-`deposit` and `mint` keep their ERC-4626 behaviour at the current book price. A depositor shares, like every LP, in the positions open at that moment. Because casino bets settle within about a minute, those in-flight positions are normally a very small part of the pool. The Earn page states this rule. Two-sided batching is the upgrade path (see Alternatives).
+`deposit` and `mint` keep their current virtual-offset book price. A depositor shares, like every LP, in the positions open at that moment. Settlement latency alone does not bound the amount of in-flight exposure. The Earn page states this risk and the real-equity ceiling on redemptions below, including the resulting deposit/redemption price difference when the pool has lost value. Two-sided batching is the upgrade path (see Alternatives).
 
 ### 2. Redemptions become asynchronous (ERC-7540, redeem side)
 
 - `requestRedeem(shares, controller, owner)` moves `shares` from `owner` into the Bank's custody. The owner, an approved spender or an operator of the owner may call it.
+- A successful request assigns its rights to `controller`, including when `owner` is different. A finite ERC-20 allowance is consumed on the request unless the caller is the owner or an approved operator of the owner; it grants no subsequent authority over another controller's requests.
 - Requests are aggregated per controller, with `requestId = 0` as ERC-7540 allows. Internally, a controller has pending shares in at most two batches: the one draining and the next one.
-- `cancelRedeemRequest(controller)` returns shares that are pending in a batch whose cutoff has not passed. ERC-7540 does not define cancellation; this is our extension.
+- `cancelRedeemRequest(controller)` may be called only by that controller or its current operator. It returns all that controller's shares in the batch whose cutoff has not passed to the controller itself. ERC-7540 does not define cancellation; this is our extension. No per-original-owner cancellation ledger is needed.
 - Requested shares remain in `totalSupply` and keep bearing the pool's results until their batch is priced.
 - `redeem(shares, receiver, controller)` and `withdraw(assets, receiver, controller)` only claim priced amounts. `previewRedeem` and `previewWithdraw` revert, as ERC-7540 requires for asynchronous redemption.
 - `setOperator(operator, approved)` lets a controller authorize an operator, such as a keeper, to claim on its behalf. The Bank never pushes assets without a claim.
+- Claim authorization is checked against the controller and its current operators, not against the former owner's ERC-20 allowance. Only an authorized claimant chooses the receiver. Reject zero controller/receiver addresses and zero-share requests.
+- Escrowed shares are protected from every other outflow: `rescueToken` rejects both the underlying asset and the Bank's own share token (`address(this)`). A direct share transfer to the Bank creates no redemption request or claim; batch burns and cancellations use only the recorded escrow amounts.
+
+**Interface completeness.** The current Bank is ERC-4626-like, not a complete ERC-7540 implementation. The new Bank must supply the standard request views and events, operator methods, ERC-165 support and ERC-7575 `share()` view, as well as the synchronous ERC-4626 deposit views and previews. `share()` returns the Bank itself. `maxWithdraw(controller)` and `maxRedeem(controller)` report the effective claimable totals after lazy synchronization, return zero while LP claims are paused, and do not quote pending requests or wallet-held shares. Their values must not be inferred from the live share conversion. Claimable shares are accounting units already burned at batch pricing, so claims never burn them a second time. Standard conformance is an explicit implementation gate against the linked specifications, including applicable overloads; the name of the interface alone is not evidence of conformance.
 
 **Allocation within a batch.** Pricing records the batch's total shares `S_b` and assets `A_b` and adds `A_b` to `exitPayable`; it does not visit any user.
 
 - A controller holding `s` of the batch's shares is entitled to `floor(s × A_b / S_b)`.
-- The entitlement is added to the controller's claimable totals the first time the controller interacts with the Bank after pricing: a request, a cancellation or a claim. View functions return the same values without writing them.
-- Each batch counts the shares and assets assigned this way. Once all `S_b` shares are assigned, the unassigned remainder `A_b − assigned assets` leaves `exitPayable` and returns to NAV. Until then it stays a liability of at most one unit per participant.
+- Before a request, cancellation or claim, the Bank checks the controller's at most two batch slots, adds each priced entitlement to its claimable totals exactly once, and clears that slot before reusing it. View functions return the same effective values without writing them.
+- Anyone may call `syncRedeem(controller)` to perform this same bounded bookkeeping, including while the Bank is paused. It cannot transfer assets or shares, cancel a request, choose a receiver or change an authorization. An inactive controller therefore need not return before its entitlement can be assigned and the batch's rounding remainder released.
+- Each batch counts the shares and assets assigned this way. Until all `S_b` shares are assigned, `A_b − assigned assets` includes the full entitlements of controllers not yet synchronized and stays in `exitPayable`. Once all shares are assigned, only the rounding remainder is left unassigned; it leaves `exitPayable` and returns to NAV exactly once. This final remainder is nonnegative and strictly less than one smallest asset unit per participating controller in total. Assigned but unclaimed assets remain in `exitPayable`.
 
 **Claims across batches.** Each controller keeps two running totals, `claimableShares` and `claimableAssets`. Priced batches only add to them; nothing is ever overwritten.
 
-- `redeem(s)` pays `floor(s × claimableAssets / claimableShares)`. Redeeming every claimable share pays every claimable asset.
+- `redeem(s)` pays `floor(s × claimableAssets / claimableShares)`. Redeeming every claimable share pays every claimable asset. If those assets are zero, redeeming the remaining shares still clears them and returns zero without attempting a token transfer.
 - `withdraw(a)` pays exactly `a` and consumes `ceil(a × claimableShares / claimableAssets)` shares. It reverts if it would consume every remaining share while leaving assets behind; the controller then withdraws all its assets or redeems all its shares instead.
 
 The order of partial claims therefore cannot change what a controller receives in total, and no claim leaves assets without shares.
@@ -58,19 +64,21 @@ The order of partial claims therefore cannot change what a controller receives i
 ### 3. Batches by time, settled by anyone
 
 - Cutoffs fall on fixed boundaries every `batchPeriod`. Governance sets `batchPeriod` within `[MIN_BATCH_PERIOD, MAX_BATCH_PERIOD]`. Proposed: 1 hour to 7 days, initially 1 day. A change applies to batches opened after it.
-- A batch opens with its first request and takes the next boundary as its cutoff. Without pending requests there is no batch, and betting is never stopped.
+- A batch opens with its first request and takes the next boundary as its cutoff. If every request is cancelled before that cutoff, the empty batch is retired immediately and frees its slot; it neither blocks betting nor needs pricing. No allocation divides by zero batch shares. A later request opens a batch at the next fixed boundary as usual. Without pending requests there is no batch, and betting is never stopped.
 - **The cutoff takes effect by time, not by a call.** `holdBet` itself rejects new positions while any unpriced batch has reached its cutoff. Requests and cancellations are split by the same timestamp: at or after the cutoff, a request joins the next batch and the draining batch can no longer be cancelled.
 - The Bank holds at most two unpriced batches: the one draining and the next. If the next batch also reaches its cutoff while the first is still draining, a request that would open a third batch reverts. No cutoff is ever extended.
 - `settleBatch()` can be called by anyone and prices batches in order. It requires that the cutoff has passed, the batch is not yet priced, and `openHolds == 0`, where `openHolds = totalBetsHeld − totalBetsSettled − totalBetsRefunded`. Every hold ends exactly once, through `settleBet` or `refundBet`, so no new counter is needed; `totalReserved == 0` is not used as the signal. `settleBatch()` then:
-  - prices the batch's shares with the Bank's own conversion, `_convertToAssets(batchShares, Floor)`, which is the formula deposits use, virtual offset included;
+  - snapshots `N = totalAssets()`, `S = totalSupply` and `Q = batchShares`, with `0 < Q <= S`, and computes `A_b = min(_convertToAssets(Q, Floor), floor(Q * N / S))` using `Math.mulDiv`;
   - burns those shares and moves the assets into `exitPayable`;
   - records the batch as priced. Betting resumes only when no unpriced batch has reached its cutoff. If the next batch has already reached its cutoff, it can be priced at once, because no position was opened after the first cutoff.
 - Deposits stay open while a batch drains.
 
+**Real-equity ceiling.** The virtual asset offset is not cash. If `N < S`, converting all real shares with the unbounded virtual formula can exceed `N`; the existing optional-outflow check used to reject that payment. For example, with six decimals, `S = 10e6`, `N = 5e6` and `V = 1e6`, the virtual quote is `5_454_545`, although only `5_000_000` asset units belong to LPs. The proportional ceiling above preserves both backing and the remaining LPs' proportionate real equity. Capping only at the whole pool's NAV would allow an early batch to consume the remaining LPs' share of a severely depleted pool. When `N >= S`, the original virtual quote is unchanged; when `N == 0`, the batch prices at zero and its shares can still be burned and cleared. This ceiling is a solvency rule, independent of the withdrawal buffer. All pricing inputs, the burn and the new liability are one atomic operation.
+
 ### 4. Exit payables are isolated
 
 - `exitPayable` is a liability outside NAV, like PF and XP. Later bets neither pay into it nor draw on it.
-- Claims draw only on `exitPayable`, so the ADR-0031 withdrawal buffer does not apply to them. "The last LP can exit in full" means all the equity of their shares; the virtual offset's portion stays in the pool as dust.
+- Claims draw only on `exitPayable`, so the ADR-0031 withdrawal buffer does not apply to them. The real-equity ceiling always applies when pricing. If the whole real supply exits after a loss, the batch receives the available NAV; in a profitable pool the virtual offset can retain a residual. Per-controller rounding is handled separately above.
 - PF and XP are already deducted from NAV. Settling a batch does not wait for any payee to claim.
 
 ### 5. A payout transfer cannot block settlement
@@ -78,15 +86,18 @@ The order of partial claims therefore cannot change what a controller receives i
 - `settleBet` and `refundBet` attempt the transfer to the player. If it fails, the amount is credited to `playerPayable[player]` and the reserve is released, so the position still reaches its terminal state.
 - A player payable is a debt, like a payout. Claiming it is exempt from `pause` and from every buffer, and it pays only to the player's own address. A payable owed to an address the issuer has blacklisted therefore waits until the issuer lifts the block; it cannot be redirected elsewhere.
 - Only transfer failures are converted. Other settlement reverts, such as the Router's allocation cap or the reserve check, indicate a bug and are kept unreachable by review and tests. A valid winner is never turned into a refund to finish a drain.
+- Reuse the pinned OpenZeppelin `SafeERC20.trySafeTransfer` for the initial payout/refund attempt; do not add a general catch around settlement. This requires admitted assets to leave balances unchanged on a failed transfer: `trySafeTransfer` returning false does not itself undo a token's side effects. A token that moves funds and then returns false fails admission. A successful transfer and a new payable are mutually exclusive. Payable claims decrease the player balance and aggregate liability before the transfer, use the existing reentrancy guard, and revert atomically on failure so the debt is preserved. An aggregate `playerPayableTotal` supports constant-time NAV; it is distinct from the derived open-position count. Settlement counters continue to record the amount owed at terminalization and are not incremented again on claim. Separate payable-created/paid events let consumers distinguish an unpaid award from cash received.
 - An issuer-wide token pause still stops payouts and claims. That is an external assumption, stated on the pool page.
 
-With `exitPayable` and `playerPayable`:
+With `exitPayable` and the aggregate `playerPayableTotal`:
 
 ```text
-NAV = B − PF − XP − exitPayable − playerPayable
+NAV = B − PF − XP − exitPayable − playerPayableTotal
 ```
 
 This holds in every place the Bank computes NAV, through one internal function: the share price, `getSSOT`, the risk-in check in `holdBet`, the optional-outflow cap and the claim checks.
+
+At every externally observable completed operation, `B >= PF + XP + exitPayable + playerPayableTotal + totalReserved`. Paying either new payable to an external receiver reduces cash and that liability equally and leaves NAV unchanged; an authorized LP claim directed to the Bank itself is instead a donation back to NAV. Pricing a batch reduces NAV and increases `exitPayable` by the same amount. Asset admission retains the existing exact-transfer, non-rebasing accounting assumption; changing token behavior or an issuer removing backing is outside this guarantee.
 
 ### 6. Emergency pause
 
@@ -96,10 +107,12 @@ This holds in every place the Bank computes NAV, through one internal function: 
 
 Batch exits require that every position a pool can hold has a public, bounded path to a terminal state. The first version admits casino hubs and modules that pass that acceptance. Sports pools are not admitted until the sports deadlines (ADR-0033 and its successors) are complete.
 
+Admission is enforced with the existing PoolRegistry Hub/pool allowlist and deployment verification, covering every pool ID that points to a Bank. Removing an admission stops new positions without disabling settlement of existing ones. `PendingVRF` refunds currently read a mutable global timeout, but its contract maximum is one day: absent fulfillment, every position accepted before a cutoff is refund-eligible by cutoff plus one day regardless of later permitted timeout changes. This is an eligibility bound, not an inclusion or payout guarantee. `RandomReady` positions continue through the admitted module and referral engine's valid finalization path. Maximum bet count, referral allocation, all refund branches, gas bounds and duplicate/late callbacks must pass end-to-end acceptance; no generic timeout cancels an already valid winner.
+
 ### 8. Operating targets, not guarantees
 
 - A batch should drain within one VRF round, about a minute today. There is no proven upper bound: the bound depends on section 5 and on every `RandomReady` bet being finalizable.
-- Keepers call `settleBatch` and alert when a drain runs longer than 10 minutes.
+- Keepers discover the Bank's batches, finalize `RandomReady` bets, submit eligible `PendingVRF` refunds, and then call `settleBatch` in order. They reconcile missed events and restarts from on-chain state, tolerate another caller winning a race, and alert when a drain runs longer than 10 minutes. A healthy finalizer that simply skips `PendingVRF` does not satisfy this requirement. Drain age is measured from the chain cutoff and survives a keeper restart; alert-delivery state advances only after successful delivery, using the existing health/notification path.
 - Players see betting on the pool pause while it drains. LPs see exits priced within one `batchPeriod` plus the drain.
 
 ## Invariants
@@ -108,15 +121,19 @@ These become tests.
 
 1. Shares in a redemption request bear the pool's results until their batch is priced.
 2. No position opened at or after a batch's cutoff counts toward that batch, and the cutoff cannot be extended. There are at most two unpriced batches, and betting is closed while any unpriced batch has reached its cutoff.
-3. The batch price equals the Bank's own conversion at settlement. A deposit and a batch exit made at the same state convert at the same rate, rounding aside.
+3. Batch assets equal the virtual-offset quote bounded by the batch's proportional real NAV at the same settlement state. They never exceed that real equity, including zero-NAV and all-share exits; the uncapped virtual quote still applies when `NAV >= totalSupply`.
 4. A priced batch's assets are isolated: `exitPayable` is untouched by later bets.
 5. Every open position can reach a terminal state; a failed payout transfer does not revert settlement.
 6. PF and XP are deducted before pricing, and settlement does not wait for any claim.
 7. Claims are independent of one another and cannot be repeated. Pricing a batch does not iterate over users. The order of a controller's partial claims does not change its total, and no partial withdrawal leaves claimable assets without claimable shares.
-8. Once every share of a priced batch is assigned, `exitPayable` holds no unassigned remainder of that batch.
+8. Once every share of a priced batch is assigned, `exitPayable` holds no unassigned remainder of that batch. Synchronization is permissionless and idempotent, touches at most two controller slots, and leaves assigned but unclaimed assets reserved. Stored and view-computed entitlements agree after synchronization.
 9. Player-payable claims succeed while the Bank is paused and pay only the player.
 10. Every NAV computation subtracts both new payables.
 11. The scan's two counterexamples (`BankPendingExposureEvidence`), rewritten as safety assertions, fail against the current Bank and pass against the new one.
+12. Cancelling every request before cutoff retires the empty batch without pricing or blocking betting. Zero-asset entitlements can be cleared by redeeming their shares, without a token transfer.
+13. The Bank's share balance covers every pending escrowed share. Neither rescue nor another controller's allowance/operator can remove them. Cancellation returns shares to the request controller, and claims never burn shares twice.
+14. Cash covers PF, XP, both new payables and remaining reserves. A failed transfer creates exactly one payable without moving assets; a failed claim preserves it; successful external claims do not change NAV or count the payout again. An LP claiming to the Bank itself explicitly donates the amount back to NAV.
+15. `maxWithdraw`, `maxRedeem`, pending/claimable views, SDK balances and events agree on wallet, escrowed, priced and paid amounts. Keeper restart and missed-event recovery reach settlement or eligible refund, then batch pricing, without relying on a player to return.
 
 ## Alternatives considered
 
@@ -128,9 +145,11 @@ These become tests.
 ## Consequences
 
 - The Bank ABI changes (the ERC-7540 redeem side, new events). The SDK, Earn page, indexer and keeper follow; the keeper calls `settleBatch` and alerts on long drains.
+- Keep v1.5 contract addresses, ABIs and synchronous flows associated with their deployed identity. Detect async capability per Bank; a chain ID alone does not identify the Bank version. Preserve the existing `getSSOT` tuple shape and add separate views for new liabilities/batches, updating consumers so they do not infer `NAV = B - PF - XP` for the async Bank. The SDK reads actual claimable asset amounts rather than `convertToAssets(maxRedeem)`, and its LP position includes requested and claimable rights after wallet shares enter escrow. Player receipts distinguish a finalized payable from a completed cash transfer.
 - `src/core/Bank.sol` and `IBank` change, so the v1.6 audit scope reopens and is frozen again after implementation.
 - v1.5 Banks are unchanged. The mainnet v1.5 pool holds only operator capital, and no new LP capital is added before a Bank with this design ships.
 - A new Base Sepolia deployment exercises full batch cycles before the external audit.
+- The two release-import findings and the Sports finding from the original scan remain open. Their deferred remediation is separate from the LP implementation. A public release still needs an accepted artifact-authentication path; async-redemption tests cannot close those findings. The preserved remediation worktree's earlier two-sided-cohort plan is historical evidence, superseded for LP architecture by this ADR.
 
 ## Open parameters
 
