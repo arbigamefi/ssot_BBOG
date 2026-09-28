@@ -1,6 +1,6 @@
 # ArbiGameFi Product Roadmap
 
-> Revision: 2026.09-r3 · Updated: 2026-09-26 · External review copy
+> Revision: 2026.09-r4 · Updated: 2026-09-29 · External review copy
 >
 > Audience: users, capital and ecosystem partners, and people following the project
 >
@@ -32,7 +32,8 @@ Partners should understand the source and conditions of referral compensation.
 
 The current casino model reserves a fixed 50% of the turnover edge for LPs. The operator half funds
 referrals and protocol fees. Deposits are immediate; redemptions use a request, isolation of old risk and
-batch claim. Launch requires audit and network acceptance of these rules and the remaining recovery policy.
+batch claim, and they never pause betting. A bet that can never settle affects only its own reserve, not
+later exits. Launch requires an external audit and network acceptance of these rules.
 
 ## 3. Bounded service and responsible growth
 
@@ -41,8 +42,10 @@ funded and supported. Growth is evaluated using successful completion, voluntary
 return, service quality and economic contribution together. Subsidies and test
 activity are identified separately.
 
-Broader acquisition follows evidence that the experience works, capital is
-adequately understood and compensated, and support can handle failures. Product
+Real-money service opens only after the operating entity, jurisdictions and enforced compliance
+controls (geo-blocking, sanctions screening, player limits) are in place. Broader acquisition follows
+evidence that the experience works, capital is adequately understood and compensated, and support can
+handle failures. Product
 information and partner materials describe what people can actually use.
 
 ## 4. A dedicated fixed-odds sportsbook

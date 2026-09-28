@@ -15,5 +15,6 @@ verified against the configured signer and chain, then imported into the applica
 With no imported manifest the application reports that no release is available and offers no contract
 writes. Do not insert old addresses or test fixtures to make the application appear connected.
 
-Required before launch: final audit scope, external audit, resolution of ADR-0034's stalled-position
-exit policy, fresh network acceptance and operational readiness.
+Required before launch: final audit scope, external audit, fresh network acceptance, compliance
+readiness (operating entity, jurisdictions, server-side geo-blocking, sanctions screening and player-limit
+enforcement, terms including compensation for bets that can never settle) and operational readiness.

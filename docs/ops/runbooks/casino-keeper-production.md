@@ -5,7 +5,8 @@ Deploy the current keeper using the [Docker stack](../../../frontend/deploy/dock
 dedicated signer, chain-specific RPC and the current PostgreSQL schema.
 
 The keeper finalizes eligible casino results, refunds timed-out PendingVRF positions, handles admitted
-sports terminal paths, and activates LP queues to price liquid cash without waiting for old positions. It does not hold user claim permissions.
+sports terminal paths, activates LP queues to price liquid cash without waiting for old positions, and
+claims player payables, which always pay the player's own address. It does not hold user claim permissions.
 Requests/claims are not inferred from health status; check contract events and actual receipts.
 
 Monitor health, backlog, oldest open positions, historical-recovery age and discovery completeness, write failures and database replay

@@ -275,7 +275,11 @@ describe.skipIf(!rpc)("Bank SDK on isolated Anvil", () => {
       expect(await sdk.bank.getAssetBalance(token.address, owner)).toBe(ownerBefore + 32_000_000n);
       await write(bank, "holdBet", [2n, player, 5_000_000n, 15_000_000n, hash]);
       expect((await sdkFor(depositor).bank.deposit(1, 20_000_000n, depositor)).ok).toBe(true);
-      expect((await sdkFor(depositor).bank.getPosition(1, depositor)).shares).toBe(22_592_592n);
+      // floor(20 × (60 + V) / (53 + V)) with the Bank's virtual offset V of 0.001 USDC (1,000 base units).
+      const virtualOffset = 1_000n;
+      expect((await sdkFor(depositor).bank.getPosition(1, depositor)).shares).toBe(
+        (20_000_000n * (60_000_000n + virtualOffset)) / (53_000_000n + virtualOffset)
+      );
       expect(await sdk.bank.getRecovery(1, 1n, owner)).toMatchObject({
         shares: rightsBefore.shares,
         pendingAssets: rightsBefore.pendingAssets,

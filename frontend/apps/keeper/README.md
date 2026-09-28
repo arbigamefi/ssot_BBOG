@@ -1,7 +1,8 @@
 # Casino Keeper
 
 The keeper finalizes casino results, refunds expired pending VRF bets, activates
-eligible Bank redemption queues and monitors historical recovery. It uses the current generated contract ABIs
+eligible Bank redemption queues, monitors historical recovery and claims player payables
+on the players' behalf. It uses the current generated contract ABIs
 from `@ssot/ssot/abis` and the addresses in `KEEPER_RELEASE_PATH`.
 
 This repository does not contain a live deployment configuration. Supply a
@@ -62,9 +63,15 @@ rescans the recent overlap for reorgs and polls at most 50 known epochs per turn
 alerts are retained; incomplete discovery reports degraded health rather than claiming complete
 coverage. This monitor does not gate betting or later exits.
 
-Casino finalization, timeout refunds and batch activation share a serialized write
-path. Pausing a Bank does not block settlement/refund debt-out. The keeper does
-not request or cancel LP redemptions, claim LP/player funds, or set operators.
+Player payables are discovered from `PlayerPayableCreated` events from the release origin, with the
+same reorg overlap. The keeper claims each positive `playerPayable(player)` with `claimPlayerPayable`,
+which always pays the player's own address. A refused claim (a blacklisted player, a paused token)
+leaves the debt owed and is retried with exponential backoff from 5 minutes to 6 hours. Payables are
+reported in health without degrading it, because an owed debt is not a keeper fault.
+
+Casino finalization, timeout refunds, batch activation and payable claims share a serialized write
+path. Pausing a Bank does not block settlement/refund debt-out or payable claims. The keeper does
+not request or cancel LP redemptions, claim LP funds, or set operators.
 Shutdown stops scheduling, waits for in-flight scans and writes, then closes the
 database and marks health stopped.
 
