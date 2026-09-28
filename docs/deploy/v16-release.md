@@ -53,7 +53,7 @@ The release gate refuses a snapshot while either edge-change queue holds a chang
 Mainnet and Base Sepolia share one production stack (Compose project `arbigamefi-v15`, database `arbigamefi_v15`). The Sepolia switch is an application release inside that stack, not a new stack.
 
 1. Settle the v1.5 Sepolia GameHub first. Pause new risk on its Banks (`setRiskInPaused(true)`, from the guardian or the Safe) and let the keeper finalize or refund every open bet. After the switch the keeper no longer settles that hub.
-2. Take a bet-index dump with `script/ops/bet-index-backup.sh`. The first keeper start after [#88](https://github.com/arbigamefi/ssot_BBOG/pull/88) re-keys the `bets` table by GameHub, and older images cannot write the new key.
+2. Take a bet-index dump with `script/ops/bet-index-backup.sh` as a restore point for incidents. The switch does not migrate the index: production was re-keyed by GameHub ([#88](https://github.com/arbigamefi/ssot_BBOG/pull/88)) with the `979be07a6` deploy on 2026-09-27, and every image since writes that key.
 3. Build the Web and keeper images in CI from the commit that carries the imported release, and deploy them by digest. The image guard accepts a v1.5 or v1.6 release on each chain, so mainnet on v1.5 and Base Sepolia on v1.6 pass together.
 4. The Sepolia keepers start indexing the new GameHub from its release block. Bets of the v1.5 Sepolia hub stay in the index; receipt links that name that hub (`?hub=`) still open them, while feeds and analytics show the active release only.
 
@@ -71,7 +71,9 @@ Local tests use a Safe configuration mock. They do not prove owner custody or th
 
 ## Rollback
 
-Deployed contracts cannot be rolled back. An application rollback returns Base Sepolia to the v1.5 embedded release while its contracts are still usable. Restore the dump from step 2 of the switch at the same time, because the bet-index migration is one way.
+Deployed contracts cannot be rolled back, and their open bets still have to end. Before an application rollback, pause new risk on the v1.6 Banks and let every open bet on the v1.6 GameHub finalize or refund: after the rollback, the keeper no longer settles that hub.
+
+The rollback redeploys the previous Web and keeper images by digest. This returns Base Sepolia to the v1.5 embedded release while its contracts are still usable. Do not restore a database dump. Those images already use the GameHub-keyed index, and the database also serves mainnet, so a restore would discard mainnet rows too. The v1.6 hub's bets stay in the index.
 
 ## Local checks
 

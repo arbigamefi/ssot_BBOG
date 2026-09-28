@@ -29,11 +29,18 @@ continue settling even if Postgres is degraded.
 The keeper creates the schema through `@ssot/bet-index` on startup.
 
 An index created before bets were keyed by `GameHub` is re-keyed on the first
-start of a newer keeper, in one transaction. Take a dump with
-`script/ops/bet-index-backup.sh` right before that deploy: older images cannot
-write the new key, so a rollback restores that dump. The migration stops, and
-the keeper does not start, if a bet row has no indexed event naming its hub.
-See [durable-bet-index.md](../../design/durable-bet-index.md#deployment-identity).
+start of a newer keeper, in one transaction. The migration stops, and the
+keeper does not start, if a bet row has no indexed event naming its hub.
+Production was re-keyed by the `979be07a6` deploy on 2026-09-27, after the
+dump `bet-index-20260927T153920Z.dump`. See
+[durable-bet-index.md](../../design/durable-bet-index.md#deployment-identity).
+
+Older images cannot write the new key, so fix forward after the migration. If
+an older image must run again, restore the pre-migration dump into a separate
+database, point that image's Web and keeper at it, and let the keeper replay
+from the dump's cursors. Do not restore it over the production database. That
+database serves mainnet and Base Sepolia, and the restore would discard every
+row either chain wrote since the dump (see section 8).
 
 Before public traffic, run a bounded migration/backfill canary:
 

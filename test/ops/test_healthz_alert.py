@@ -1,10 +1,12 @@
 """Alert policy of healthz-alert.sh: one-off failures stay in the journal, sustained ones are pushed once."""
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import json
 import os
 from pathlib import Path
 import subprocess
 import tempfile
 import threading
+import time
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -13,6 +15,8 @@ WRAPPER = ROOT / "script/ops/healthz-alert.sh"
 
 class Handler(BaseHTTPRequestHandler):
     mode = "ok"
+    refused = set()  # channels ("telegram", "webhook") whose deliveries fail
+    deliveries = []  # (channel, accepted, text) for every delivery attempt
 
     def do_GET(self):
         mode = Handler.mode if self.path == "/public" else "ok"
@@ -22,6 +26,15 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(b'{"status":"degraded","checks":{"keeper":{"status":"degraded"}}}')
         else:
             self.wfile.write(b'{"status":"ok"}')
+
+    def do_POST(self):
+        body = json.loads(self.rfile.read(int(self.headers.get("content-length", 0))) or b"{}")
+        channel = "telegram" if self.path.startswith("/telegram/") else "webhook"
+        accepted = channel not in Handler.refused
+        Handler.deliveries.append((channel, accepted, body.get("text", "")))
+        self.send_response(200 if accepted else 502)
+        self.end_headers()
+        self.wfile.write(b'{"ok":true}' if accepted else b'{"ok":false}')
 
     def log_message(self, *args):
         pass
@@ -40,6 +53,8 @@ class HealthzAlertPolicyTests(unittest.TestCase):
         logger.chmod(0o700)
         self.configure()
         Handler.mode = "ok"
+        Handler.refused = set()
+        Handler.deliveries = []
 
     def tearDown(self):
         self.server.shutdown()
@@ -52,10 +67,20 @@ class HealthzAlertPolicyTests(unittest.TestCase):
         lines += [f"{key}='{value}'" for key, value in settings.items()]
         (self.root / "alert.env").write_text("\n".join(lines) + "\n")
 
+    def configure_telegram(self, **settings):
+        base = f"http://127.0.0.1:{self.server.server_port}"
+        self.configure(TELEGRAM_BOT_TOKEN="test-token", TELEGRAM_CHAT_ID="1",
+                       TELEGRAM_API_BASE=base + "/telegram", **settings)
+
+    def state_fields(self):
+        return self.state.read_text().split()
+
     def run_probe(self, mode):
         Handler.mode = mode
         base = f"http://127.0.0.1:{self.server.server_port}"
-        env = {**os.environ, "PATH": str(self.root) + os.pathsep + os.environ["PATH"],
+        # A developer's own alert channel must never receive test alerts.
+        inherited = {k: v for k, v in os.environ.items() if not k.startswith(("TELEGRAM_", "ALERT_"))}
+        env = {**inherited, "PATH": str(self.root) + os.pathsep + os.environ["PATH"],
                "ALERT_CONFIG_FILE": str(self.root / "alert.env"), "HEALTHZ_URL": base + "/public",
                "HEALTHZ_LOCAL_URL": base + "/local", "LOG_CAPTURE": str(self.root / "journal")}
         result = subprocess.run(["bash", str(WRAPPER)], env=env, text=True, capture_output=True,
@@ -108,6 +133,59 @@ class HealthzAlertPolicyTests(unittest.TestCase):
         self.assertRegex(recovered[0], r"^\[RECOVERED\] .* after \d+h \d+m \(was degraded\)$")
         self.state.write_text("ok 1000\n")
         self.assertEqual(self.run_probe("degraded"), [])
+
+    def test_an_undelivered_alert_is_retried_on_the_next_probe(self):
+        self.configure_telegram()
+        Handler.refused = {"telegram"}
+        for _ in range(3):
+            self.run_probe("degraded")
+        self.assertEqual(self.state_fields()[4], "-")
+        self.run_probe("degraded")  # retried now, not after the reminder period
+        Handler.refused = set()
+        self.run_probe("degraded")
+        self.assertEqual([accepted for _, accepted, _ in Handler.deliveries], [False, False, True])
+        self.assertEqual(self.state_fields()[4], "degraded")
+        self.run_probe("degraded")
+        self.assertEqual(len(Handler.deliveries), 3)
+        self.assertEqual((self.root / "journal").read_text().count("alert not delivered"), 2)
+
+    def test_an_undelivered_recovery_is_retried_with_its_first_duration(self):
+        self.configure_telegram()
+        now = int(time.time())
+        self.state.write_text(f"degraded {now - 900} 7 7 degraded {now - 900} 0\n")
+        Handler.refused = {"telegram"}
+        self.run_probe("ok")
+        status, _, fails, _, alerted, since, recovered = self.state_fields()
+        self.assertEqual((status, fails, alerted, since), ("ok", "0", "degraded", str(now - 900)))
+        self.assertGreaterEqual(int(recovered), now)
+        # Five minutes later the channel works again: the episode lasted 15 minutes, not 20.
+        self.state.write_text(f"ok {now - 1200} 0 0 degraded {now - 1200} {now - 300}\n")
+        Handler.refused = set()
+        self.assertEqual(self.run_probe("ok"),
+                         ["[RECOVERED] arbigamefi healthz | status is ok again after 15 min (was degraded)"])
+        self.assertEqual(self.state_fields()[4:], ["-", "0", "0"])
+        self.assertEqual(self.run_probe("ok"), [])
+        self.assertEqual([accepted for _, accepted, _ in Handler.deliveries], [False, True])
+
+    def test_a_failure_before_the_recovery_notice_continues_the_episode(self):
+        self.configure_telegram()
+        now = int(time.time())
+        self.state.write_text(f"ok {now - 60} 0 0 degraded {now - 900} {now - 30}\n")
+        self.assertEqual(self.run_probe("degraded"), [])  # the user was never told it recovered
+        self.assertEqual(self.state_fields()[4:], ["degraded", str(now - 900), "0"])
+        self.assertEqual(Handler.deliveries, [])
+
+    def test_any_accepting_channel_delivers_and_http_errors_do_not(self):
+        base = f"http://127.0.0.1:{self.server.server_port}"
+        self.configure_telegram(ALERT_WEBHOOK_URL=base + "/webhook", ALERT_AFTER_FAILURES=1)
+        Handler.refused = {"webhook", "telegram"}
+        self.run_probe("degraded")
+        self.assertEqual(self.state_fields()[4], "-")
+        Handler.refused = {"webhook"}
+        self.run_probe("degraded")
+        self.assertEqual(self.state_fields()[4], "degraded")
+        self.assertEqual([(channel, accepted) for channel, accepted, _ in Handler.deliveries],
+                         [("webhook", False), ("telegram", False), ("webhook", False), ("telegram", True)])
 
 
 if __name__ == "__main__":

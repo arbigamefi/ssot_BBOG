@@ -148,8 +148,11 @@ Tables created before `game_hub` existed were keyed by `(chain_id, bet_id)`.
 The keeper's migration derives each row's hub from its first indexed
 `gamehub_events` row and then re-keys the table in the same transaction. It
 stops if a row has no such event. The change is one way: an image from before
-it cannot write the new key, so rolling back needs the dump taken before the
-upgrade.
+it cannot write the new key, so the fix after an upgrade is a newer image. An
+older image that must run again gets its own database, restored from the dump
+taken before the upgrade, and replays from that dump's cursors. Restoring that
+dump over the shared production database would discard every row written since,
+on every chain the database serves.
 
 ### House-edge allocation (v1.6)
 
