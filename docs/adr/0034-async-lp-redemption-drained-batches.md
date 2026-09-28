@@ -1,6 +1,6 @@
 # ADR-0034: Asynchronous LP redemptions, settled in drained batches
 
-- **Status:** Proposed (2026-09-28). The owner accepts or amends it before implementation starts.
+- **Status:** Accepted (2026-09-28), after two design reviews. Strict draining is the implementation baseline. The bounded-exit decision under Open decisions must be settled before the final audit freeze: Banks cannot be upgraded, and adding recovery rights later could require a redeployment.
 - **Applies to:** Banks of the v1.6 release unit and later. Deployed v1.5 Banks are immutable and keep synchronous exits.
 - **Amends, for those Banks:** [ADR-0031](0031-bank-risk-reserve-and-withdrawal-buffer.md). Priced batch exits and player payables are exempt from the withdrawal buffer, and synchronous `withdraw`/`redeem` are replaced.
 - **Standards:** [ERC-4626](https://eips.ethereum.org/EIPS/eip-4626) for deposits; [ERC-7540](https://eips.ethereum.org/EIPS/eip-7540), redeem side only, for redemptions.
